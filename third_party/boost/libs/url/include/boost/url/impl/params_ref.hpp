@@ -192,7 +192,7 @@ replace(
         u_->edit_params(
             from.it_, to.it_,
             detail::make_params_iter(
-                first, last)),
+                first, last, opt_.space_as_plus)),
         opt_);
 }
 
@@ -212,7 +212,7 @@ assign(FwdIt first, FwdIt last,
         begin().it_,
         end().it_,
         detail::make_params_iter(
-            first, last));
+            first, last, opt_.space_as_plus));
 }
 
 template<class FwdIt>
@@ -230,7 +230,7 @@ insert(
             before.it_,
             before.it_,
             detail::make_params_iter(
-                first, last)),
+                first, last, opt_.space_as_plus)),
         opt_);
 }
 

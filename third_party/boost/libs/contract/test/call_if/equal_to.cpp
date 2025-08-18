@@ -11,7 +11,7 @@
 
 #include "../detail/oteststream.hpp"
 #include <boost/contract/call_if.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/type_traits/has_equal_to.hpp>
 #include <boost/detail/lightweight_test.hpp>
 #include <functional>

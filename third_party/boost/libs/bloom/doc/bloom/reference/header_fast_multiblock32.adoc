@@ -1,0 +1,17 @@
+[#header_fast_multiblock32]
+== `<boost/bloom/fast_multiblock32.hpp>`
+
+:idprefix: header_fast_multiblock32_
+
+[listing,subs="+macros,+quotes"]
+-----
+namespace boost{
+namespace bloom{
+
+template<std::size_t K>
+struct xref:fast_multiblock32[fast_multiblock32];
+
+} // namespace bloom
+} // namespace boost
+-----
+

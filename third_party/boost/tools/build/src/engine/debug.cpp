@@ -20,14 +20,14 @@ static profile_info    profile_total = { 0 };
 
 profile_frame * profile_init( OBJECT * rulename, profile_frame * frame )
 {
-    if ( DEBUG_PROFILE ) profile_enter( rulename, frame );
+    if ( is_debug_profile() ) profile_enter( rulename, frame );
     return frame;
 }
 
 
 void profile_enter( OBJECT * rulename, profile_frame * frame )
 {
-    if ( DEBUG_PROFILE )
+    if ( is_debug_profile() )
     {
         double start = profile_clock();
         profile_info * p;
@@ -75,7 +75,7 @@ void profile_enter( OBJECT * rulename, profile_frame * frame )
 
 void profile_memory( size_t mem )
 {
-    if ( DEBUG_PROFILE )
+    if ( is_debug_profile() )
         if ( profile_stack && profile_stack->info )
             profile_stack->info->memory += ((double)mem) / 1024;
 }
@@ -83,7 +83,7 @@ void profile_memory( size_t mem )
 
 void profile_exit( profile_frame * frame )
 {
-    if ( DEBUG_PROFILE )
+    if ( is_debug_profile() )
     {
         /* Cumulative time for this call. */
         double t = profile_clock() - frame->entry_time - frame->overhead;
@@ -147,7 +147,7 @@ double profile_clock()
 
 OBJECT * profile_make_local( char const * scope )
 {
-    if ( DEBUG_PROFILE )
+    if ( is_debug_profile() )
     {
         return object_new( scope );
     }

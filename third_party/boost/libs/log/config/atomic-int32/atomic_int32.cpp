@@ -5,9 +5,9 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 
-#include <boost/atomic.hpp>
+#include <boost/atomic/capabilities.hpp>
 
-#if !defined(BOOST_ATOMIC_INT32_LOCK_FREE) || (BOOST_ATOMIC_INT32_LOCK_FREE+0) != 2
+#if !defined(BOOST_ATOMIC_INT32_LOCK_FREE) || (BOOST_ATOMIC_INT32_LOCK_FREE != 2)
 #error Boost.Log: Native 32-bit atomic operations are required but not supported by Boost.Atomic on the target platform
 #endif
 

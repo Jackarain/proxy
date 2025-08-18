@@ -1,4 +1,5 @@
 // Copyright 2021-2022 Christian Mazakas.
+// Copyright 2025 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -42,7 +43,34 @@ namespace test {
     }
   };
 
+  template <class T>
+  struct non_const_pred;
+
+  template<class T, class U>
+  struct non_const_pred<std::pair<const T, U> >
+  {
+    bool operator()(std::pair<const T, U>& x) const
+    {
+      U u = std::move(x.second);
+      (void)u;
+      return true;
+    }
+  };
+
 } // namespace test
+
+template <class UnorderedMap> void test_map_nonconst_erase_if()
+{
+  typedef UnorderedMap map_type;
+  typedef typename map_type::value_type value_type;
+  typedef typename map_type::size_type size_type;
+
+  map_type m;
+  m.insert(value_type());
+  size_type num_erased = erase_if(m, test::non_const_pred<value_type>());
+  BOOST_TEST(m.empty());
+  BOOST_TEST_EQ(num_erased, 1u);
+}
 
 template <class UnorderedMap> void test_map_erase_if()
 {
@@ -71,6 +99,8 @@ template <class UnorderedMap> void test_map_erase_if()
   num_erased = erase_if(map, test::is_even());
   BOOST_TEST_EQ(map.size(), 2u);
   BOOST_TEST_EQ(num_erased, size - map.size());
+
+  test_map_nonconst_erase_if<map_type>();
 }
 
 template <class UnorderedSet> void test_set_erase_if()

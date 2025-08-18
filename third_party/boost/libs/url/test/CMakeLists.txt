@@ -47,10 +47,7 @@ if (BOOST_URL_WARNINGS_AS_ERRORS)
     endif()
 endif()
 
-
-set(SUITE_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../extra/test_main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../extra/test_suite.hpp)
+file(GLOB_RECURSE SUITE_FILES CONFIGURE_DEPENDS ../extra/test_suite/*.cpp ../extra/test_suite/*.hpp)
 
 add_subdirectory(unit)
 add_subdirectory(extra)

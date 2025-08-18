@@ -1,20 +1,28 @@
-// Copyright John Maddock 2011.
-
-// Use, modification and distribution are subject to the
-// Boost Software License, Version 1.0.
-// (See accompanying file LICENSE_1_0.txt
-// or copy at http://www.boost.org/LICENSE_1_0.txt)
+///////////////////////////////////////////////////////////////
+//  Copyright 2011 - 2025 John Maddock.
+//  Copyright Christopher Kormanyos 2002 - 2025.
+//  Distributed under the Boost
+//  Software License, Version 1.0. (See accompanying file
+//  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
+//
 
 #ifdef _MSC_VER
 #define _SCL_SECURE_NO_WARNINGS
 #endif
 
-#if !defined(TEST_MPF_50) && !defined(TEST_CPP_DEC_FLOAT) && !defined(TEST_MPFR_50) && !defined(TEST_MPFI_50) && !defined(TEST_FLOAT128)
+#include <test.hpp>
+
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int.hpp>
+
+#if !defined(TEST_MPF_50) && !defined(TEST_CPP_DEC_FLOAT) && !defined(TEST_CPP_BIN_FLOAT) && !defined(TEST_MPFR_50) && !defined(TEST_MPFI_50) && !defined(TEST_FLOAT128) && !defined(TEST_CPP_DOUBLE_FLOAT)
 #define TEST_MPF_50
 #define TEST_CPP_DEC_FLOAT
+#define TEST_CPP_BIN_FLOAT
 #define TEST_MPFR_50
 #define TEST_MPFI_50
 #define TEST_FLOAT128
+#define TEST_CPP_DOUBLE_FLOAT
 
 #ifdef _MSC_VER
 #pragma message("CAUTION!!: No backend type specified so testing everything.... this will take some time!!")
@@ -24,6 +32,8 @@
 #endif
 
 #endif
+
+#include <test_traits.hpp> // Note: include this AFTER the test-backends are defined
 
 #if defined(TEST_MPF_50)
 #include <boost/multiprecision/gmp.hpp>
@@ -37,13 +47,16 @@
 #ifdef TEST_CPP_DEC_FLOAT
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #endif
+#ifdef TEST_CPP_BIN_FLOAT
+#include <boost/multiprecision/cpp_bin_float.hpp>
+#endif
 #ifdef TEST_FLOAT128
 #include <boost/multiprecision/float128.hpp>
 #endif
+#ifdef TEST_CPP_DOUBLE_FLOAT
+#include <boost/multiprecision/cpp_double_fp.hpp>
+#endif
 
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/random/uniform_int.hpp>
-#include "test.hpp"
 #include <array>
 #include <iostream>
 #include <iomanip>
@@ -52,6 +65,13 @@
 #pragma warning(disable : 4127)
 #endif
 
+#if defined(TEST_CPP_DOUBLE_FLOAT)
+template <class FloatingPointType, boost::multiprecision::expression_template_option ET>
+bool has_bad_bankers_rounding(const boost::multiprecision::number<boost::multiprecision::backends::cpp_double_fp_backend<FloatingPointType>, ET>&)
+{
+   return true;
+}
+#endif
 #if defined(TEST_MPF_50)
 template <unsigned N, boost::multiprecision::expression_template_option ET>
 bool has_bad_bankers_rounding(const boost::multiprecision::number<boost::multiprecision::gmp_float<N>, ET>&)
@@ -106,14 +126,17 @@ void print_flags(std::ios_base::fmtflags f)
 template <class T>
 void test()
 {
-   typedef T                                mp_t;
+   typedef T mp_t;
+
+   std::cout << "Testing type of test: " << typeid(mp_t).name() << std::endl;
+
    std::array<std::ios_base::fmtflags, 9> f =
        {{std::ios_base::fmtflags(0), std::ios_base::showpoint, std::ios_base::showpos, std::ios_base::scientific, std::ios_base::scientific | std::ios_base::showpos,
          std::ios_base::scientific | std::ios_base::showpoint, std::ios_base::fixed, std::ios_base::fixed | std::ios_base::showpoint,
          std::ios_base::fixed | std::ios_base::showpos}};
 
    std::array<std::array<const char*, 13 * 9>, 40> string_data = {{
-#include "libs/multiprecision/test/string_data.ipp"
+#include "string_data.ipp"
    }};
 
    double num   = 123456789.0;
@@ -135,7 +158,7 @@ void test()
             {
                if (has_bad_bankers_rounding(mp_t()) && is_bankers_rounding_error(ss.str(), expect))
                {
-                  std::cout << "Ignoring bankers-rounding error with GMP mp_f.\n";
+                  std::cout << "Ignoring bankers-rounding error with " << typeid(T).name() << ".\n";
                }
                else
                {
@@ -233,7 +256,22 @@ T generate_random()
    e_type e;
    val = frexp(val, &e);
 
-   static boost::random::uniform_int_distribution<e_type> ui(0, std::numeric_limits<T>::max_exponent - 10);
+   constexpr auto exp_range =
+     (::has_poor_exp_range_or_precision_support<T>::value)
+       ? static_cast<int>
+         (
+            static_cast<float>
+            (
+                 static_cast<float>(std::numeric_limits<T>::max_exponent10)
+               - static_cast<float>(static_cast<float>(std::numeric_limits<T>::max_digits10) * 1.1F)
+            )
+            / 0.301F
+         )
+       : std::numeric_limits<T>::max_exponent - 10
+       ;
+
+   static boost::random::uniform_int_distribution<e_type> ui(0, exp_range);
+
    return ldexp(val, ui(gen));
 }
 
@@ -272,9 +310,11 @@ void do_round_trip(const T& val, std::ios_base::fmtflags f)
    ss.flags(f);
    ss << val;
    T new_val = static_cast<T>(ss.str());
-   BOOST_CHECK_EQUAL(new_val, val);
+   //BOOST_CHECK_EQUAL(new_val, val);
+   BOOST_CHECK_CLOSE_FRACTION(new_val, val, std::numeric_limits<T>::epsilon() * 100000);
    new_val = static_cast<T>(val.str(f & std::ios_base::fixed ? std::numeric_limits<T>::max_digits10 : 0, f));
-   BOOST_CHECK_EQUAL(new_val, val);
+   //BOOST_CHECK_EQUAL(new_val, val);
+   BOOST_CHECK_CLOSE_FRACTION(new_val, val, std::numeric_limits<T>::epsilon() * 100000);
 }
 
 template <class T>
@@ -289,6 +329,8 @@ void do_round_trip(const T& val)
 template <class T>
 void test_round_trip()
 {
+   std::cout << "Testing type of test_round_trip: " << typeid(T).name() << std::endl;
+
    for (unsigned i = 0; i < 1000; ++i)
    {
       T val = generate_random<T>();
@@ -302,6 +344,8 @@ void test_round_trip()
 template<typename T>
 void test_to_string()
 {
+   std::cout << "Testing type of test_to_string: " << typeid(T).name() << std::endl;
+
    using std::to_string;
    T x0{"23.43"};
    BOOST_CHECK_EQUAL(to_string(x0), "23.430000");
@@ -370,6 +414,17 @@ int main()
    test_to_string<boost::multiprecision::cpp_dec_float_100>();
 
 #endif
+#ifdef TEST_CPP_BIN_FLOAT
+   test<boost::multiprecision::cpp_bin_float_50>();
+   test<boost::multiprecision::cpp_bin_float_100>();
+
+   test_round_trip<boost::multiprecision::cpp_bin_float_50>();
+   test_round_trip<boost::multiprecision::cpp_bin_float_100>();
+
+   test_to_string<boost::multiprecision::cpp_bin_float_50>();
+   test_to_string<boost::multiprecision::cpp_bin_float_100>();
+
+#endif
 #ifdef TEST_MPF_50
    test<boost::multiprecision::mpf_float_50>();
    test<boost::multiprecision::mpf_float_100>();
@@ -387,6 +442,21 @@ int main()
 #ifndef BOOST_INTEL
    test_round_trip<boost::multiprecision::float128>();
 #endif
+#endif
+#ifdef TEST_CPP_DOUBLE_FLOAT
+   test<boost::multiprecision::cpp_double_double>();
+   test_to_string<boost::multiprecision::cpp_double_double>();
+   test_round_trip<boost::multiprecision::cpp_double_double>();
+
+   test<boost::multiprecision::cpp_double_long_double>();
+   test_to_string<boost::multiprecision::cpp_double_long_double>();
+   test_round_trip<boost::multiprecision::cpp_double_long_double>();
+
+   #if defined(BOOST_MP_CPP_DOUBLE_FP_HAS_FLOAT128)
+   test<boost::multiprecision::cpp_double_float128>();
+   test_to_string<boost::multiprecision::cpp_double_float128>();
+   test_round_trip<boost::multiprecision::cpp_double_float128>();
+   #endif
 #endif
    return boost::report_errors();
 }

@@ -51,6 +51,7 @@
 # For more information on CCE, search for Cray publication S-2529 on the
 # Cray publications website (https://pubs.cray.com).
 
+import args ;
 import "class" : new ;
 import common ;
 import feature ;
@@ -204,7 +205,7 @@ rule check-prgenv-module ( toolset )
                              : toolset initialization failed
                              : please load the PrgEnv-$(default-compiler) module next time ;
         # Do not abort, as suggested by:
-        # https://www.bfgroup.xyz/b2/manual/release/index.html#bbv2.extending.toolset_modules.
+        # https://www.bfgroup.xyz/b2/manual/release/index.html#b2.extending.toolset_modules.
     }
 }
 
@@ -233,27 +234,10 @@ rule set-cray-feature-defaults ( )
 ### Command line options
 ###
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
-    # Check if '--debug-configuration' was passed on the command line. This is
-    # inspired by 'common.jam' and other modules.
-
-    # Variable names with a '.' prefix are intended to be globals.
-    #
-    # Refer to: CONTRIBUTING.adoc
-
-    # The Jam language uses dynamic scoping. Setting '.debug-configuration' in
-    # this module influences the behavior of methods called from this module.
-
-    .debug-configuration = true ;
-}
-
-if [ MATCH (--debug-driver) : [ modules.peek : ARGV ] ]
-{
-
-    .debug-driver = true ;
-}
+args.add-arg debug-driver : --debug-driver : "?" ;
+.debug-driver = [ args.get-arg debug-driver ] ;
 
 ###
 ### Features

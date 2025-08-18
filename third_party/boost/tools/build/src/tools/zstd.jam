@@ -22,6 +22,7 @@ import modules ;
 import indirect ;
 import property ;
 import property-set ;
+import args ;
 
 header = zstd.h ;
 # libzstd only needed for VisualC++ builds
@@ -30,10 +31,7 @@ names = zstd zstd_static libzstd libzstd_static ;
 
 library-id = 0 ;
 
-if --debug-configuration in [ modules.peek : ARGV ]
-{
-    .debug =  true ;
-}
+.debug =  [ args.get-arg debug-configuration ] ;
 
 rule init (
     version ?

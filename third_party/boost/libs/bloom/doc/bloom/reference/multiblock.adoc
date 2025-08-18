@@ -1,0 +1,47 @@
+[#multiblock]
+== Class Template `multiblock`
+
+:idprefix: multiblock_
+
+`boost::bloom::multiblock` -- A xref:subfilter[subfilter] over an array of an integral type.
+
+=== Synopsis
+
+[listing,subs="+macros,+quotes"]
+-----
+// #include <boost/bloom/multiblock.hpp>
+
+namespace boost{
+namespace bloom{
+
+template<typename Block, std::size_t K>
+struct multiblock
+{
+  static constexpr std::size_t k = K;
+  using value_type               = Block[k];
+
+  // the rest of the interface is not public
+
+} // namespace bloom
+} // namespace boost
+-----
+
+=== Description
+
+*Template Parameters*
+
+[cols="1,4"]
+|===
+
+|`Block`
+|An unsigned integral type or an array of 2^`N`^ elements of unsigned integral type.
+
+|`K`
+| Number of bits set/checked per operation. Must be greater than zero.
+
+|===
+
+Each of the `K` bits set/checked is located in a different element of the
+`Block[K]` array.
+
+'''

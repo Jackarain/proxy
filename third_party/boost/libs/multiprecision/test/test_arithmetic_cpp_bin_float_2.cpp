@@ -7,7 +7,7 @@
 
 #include <boost/multiprecision/cpp_bin_float.hpp>
 
-#include "libs/multiprecision/test/test_arithmetic.hpp"
+#include "test_arithmetic.hpp"
 
 template <unsigned Digits, boost::multiprecision::backends::digit_base_type DigitBase, class Allocator, class Exponent, Exponent MinExponent, Exponent MaxExponent, boost::multiprecision::expression_template_option ET>
 struct related_type<boost::multiprecision::number<boost::multiprecision::cpp_bin_float<Digits, DigitBase, Allocator, Exponent, MinExponent, MaxExponent>, ET> >

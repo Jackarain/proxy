@@ -1,4 +1,4 @@
-# Copyright 2021-2024 Andrey Semashev
+# Copyright 2021-2025 Andrey Semashev
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
@@ -85,32 +85,50 @@ jobs:
               - g++-8
           - toolset: gcc-9
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - g++-9
           - toolset: gcc-10
             cxxstd: "11,14,17,20"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - g++-10
           - toolset: gcc-11
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
             os: ubuntu-22.04
             install:
               - g++-11
           - toolset: gcc-12
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
             os: ubuntu-22.04
             install:
               - g++-12
+          - toolset: gcc-13
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            os: ubuntu-24.04
+            install:
+              - g++-13
+          - toolset: gcc-14
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            os: ubuntu-24.04
+            install:
+              - g++-14
+          - toolset: gcc-15
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install:
+              - g++-15
           - name: UBSAN
-            toolset: gcc-11
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            toolset: gcc-13
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
             ubsan: 1
             build_variant: debug
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
-              - g++-11
+              - g++-13
 
           # Linux, clang
           - toolset: clang
@@ -189,13 +207,15 @@ jobs:
           - toolset: clang
             compiler: clang++-9
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - clang-9
           - toolset: clang
             compiler: clang++-10
             cxxstd: "11,14,17,20"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - clang-10
           - toolset: clang
@@ -206,7 +226,7 @@ jobs:
               - clang-11
           - toolset: clang
             compiler: clang++-12
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
             os: ubuntu-22.04
             install:
               - clang-12
@@ -214,7 +234,7 @@ jobs:
             gcc_toolchain: 11
           - toolset: clang
             compiler: clang++-13
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
             os: ubuntu-22.04
             install:
               - clang-13
@@ -222,7 +242,7 @@ jobs:
             gcc_toolchain: 11
           - toolset: clang
             compiler: clang++-14
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
             os: ubuntu-22.04
             install:
               - clang-14
@@ -230,73 +250,73 @@ jobs:
             gcc_toolchain: 11
           - toolset: clang
             compiler: clang++-15
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
             os: ubuntu-22.04
             install:
               - clang-15
               - g++-11
             gcc_toolchain: 11
           - toolset: clang
-            compiler: clang++-15
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
-            os: ubuntu-22.04
-            install:
-              - clang-15
-              - libc++-15-dev
-              - libc++abi-15-dev
-            cxxflags: -stdlib=libc++
-            linkflags: -stdlib=libc++
-          - toolset: clang
             compiler: clang++-16
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
-            os: ubuntu-22.04
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
+            os: ubuntu-24.04
             install:
               - clang-16
-            sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
+              - g++-11
+            gcc_toolchain: 11
           - toolset: clang
             compiler: clang++-17
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
-            os: ubuntu-22.04
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            os: ubuntu-24.04
             install:
               - clang-17
-            sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
+              - g++-11
+            gcc_toolchain: 11
           - toolset: clang
-            compiler: clang++-17
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
-            os: ubuntu-22.04
+            compiler: clang++-18
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            os: ubuntu-24.04
             install:
-              - clang-17
-              - libc++-17-dev
-              - libc++abi-17-dev
-            sources:
-              - "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
+              - clang-18
+              - g++-13
+          - toolset: clang
+            compiler: clang++-19
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            os: ubuntu-24.04
+            install:
+              - clang-19
+          - toolset: clang
+            compiler: clang++-20
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install:
+              - clang-20
+          - toolset: clang
+            compiler: clang++-20
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install:
+              - clang-20
+              - libc++-20-dev
+              - libc++abi-20-dev
           - name: UBSAN
             toolset: clang
-            compiler: clang++-15
-            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
+            compiler: clang++-18
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
             ubsan: 1
             build_variant: debug
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
-              - clang-15
-              - libc++-15-dev
-              - libc++abi-15-dev
+              - clang-18
+              - libc++-18-dev
+              - libc++abi-18-dev
 
-          - toolset: clang
-            cxxstd: "11,14,17,20,2b"
-            os: macos-12
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
@@ -321,6 +341,22 @@ jobs:
                 echo "GHA_CONTAINER=${{matrix.container}}" >> $GITHUB_ENV
                 if [ -f "/etc/debian_version" ]
                 then
+                    # Use Azure APT mirrors in containers to avoid HTTP errors due to DDoS filters triggered by lots of CI jobs launching concurrently.
+                    # Note that not all Ubuntu versions support "mirror+file:..." URIs in APT sources, so just use Azure mirrors exclusively.
+                    # Note also that on recent Ubuntu versions DEB822 format is used for source files.
+                    APT_SOURCES=()
+                    if [ -d "/etc/apt/sources.list.d" ]
+                    then
+                        readarray -t APT_SOURCES < <(find "/etc/apt/sources.list.d" -type f -name '*.sources' -print)
+                    fi
+                    if [ -f "/etc/apt/sources.list" ]
+                    then
+                        APT_SOURCES+=("/etc/apt/sources.list")
+                    fi
+                    if [ "${#APT_SOURCES[@]}" -gt 0 ]
+                    then
+                        sed -i -E -e 's!([^ ]+) (http|https)://(archive|security)\.ubuntu\.com/ubuntu[^ ]*(.*)!\1 http://azure.archive.ubuntu.com/ubuntu/\4!' "${APT_SOURCES[@]}"
+                    fi
                     apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
                     if [ "$(apt-cache search "^python-is-python3$" | wc -l)" -ne 0 ]
                     then
@@ -520,14 +556,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: "14"
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
@@ -537,9 +565,9 @@ jobs:
             addrmd: 32,64
             os: windows-2022
           - toolset: gcc
-            cxxstd: "11,14,17,2a"
+            cxxstd: "11,14,17,20,23"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
 
     timeout-minutes: 15
     runs-on: ${{matrix.os}}

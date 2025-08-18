@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.force-include]]`force-include`::
+[[b2.builtin.features.force-include]]`force-include`::
 Specifies an include path that has to be included in a way like if
 `#include "file"` appeared as the first line of every target's source file.
 

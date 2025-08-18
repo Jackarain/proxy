@@ -8,6 +8,7 @@
 #include <iostream>
 #include <iomanip>
 #include <boost/multiprecision/cpp_bin_float.hpp>
+#include <bit>
 
 int main()
 {

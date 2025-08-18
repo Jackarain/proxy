@@ -150,7 +150,7 @@ struct char_constants< char >
     {
         using namespace std; // to make sure we can use C functions unqualified
         int n = 0;
-        if (isdigit(c))
+        if (isdigit(static_cast< unsigned char >(c)))
             n = c - '0';
         else if (c >= 'a' && c <= 'f')
             n = c - 'a' + 10;

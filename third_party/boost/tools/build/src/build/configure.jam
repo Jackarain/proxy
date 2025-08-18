@@ -11,6 +11,7 @@
 #   process.
 # - Reporting what is built, and how it is configured.
 
+import args ;
 import "class" : new ;
 import common ;
 import indirect ;
@@ -25,6 +26,13 @@ import modules ;
 import sequence ;
 import utility ;
 import virtual-target ;
+
+
+args.add-arg reconfigure : --reconfigure
+    : "Recreated shared toolset configuration files."
+    : flag ;
+
+.reconfigure = [ args.get-arg reconfigure ] ;
 
 
 rule log-summary ( )
@@ -159,11 +167,6 @@ rule print-configure-checks-summary ( )
         }
         ECHO ;
     }
-}
-
-if --reconfigure in [ modules.peek : ARGV ]
-{
-    .reconfigure = true ;
 }
 
 # Handle the --reconfigure option

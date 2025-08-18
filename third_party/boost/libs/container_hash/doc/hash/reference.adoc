@@ -1,7 +1,7 @@
 ////
 Copyright 2005-2008 Daniel James
 Copyright 2022 Christian Mazakas
-Copyright 2022 Peter Dimov
+Copyright 2022, 2025 Peter Dimov
 Distributed under the Boost Software License, Version 1.0.
 https://www.boost.org/LICENSE_1_0.txt
 ////
@@ -43,6 +43,8 @@ template<class It> std::size_t hash_range( It first, It last );
 
 template<class It> void hash_unordered_range( std::size_t& seed, It first, It last );
 template<class It> std::size_t hash_unordered_range( It first, It last );
+
+template<class Hash> struct hash_is_avalanching;
 
 } // namespace boost
 ----
@@ -571,6 +573,56 @@ where `x` is the currently contained value in `v`.
 
 Throws: ::
 `std::bad_variant_access` when `v.valueless_by_exception()` is `true`.
+
+== <boost/container_hash/{zwsp}hash_is_avalanching.hpp>
+
+Defines the trait `boost::hash_is_avalanching`.
+
+[source]
+----
+namespace boost
+{
+
+template<class Hash> struct hash_is_avalanching;
+
+} // namespace boost
+----
+
+=== hash_is_avalanching<Hash>
+
+[source]
+----
+template<class Hash> struct hash_is_avalanching
+{
+    static constexpr bool value = /* see below */;
+};
+----
+
+`hash_is_avalanching<Hash>::value` is:
+
+* `false` if `Hash::is_avalanching` is not present,
+* `Hash::is_avalanching::value` if this is present and convertible at compile time to a `bool`,
+* `true` if `Hash::is_avalanching` is `void` (this usage is deprecated),
+* ill-formed otherwise.
+
+A hash function is said to have the _avalanching property_ if small changes
+in the input translate to large changes in the returned hash code
+&#8212;ideally, flipping one bit in the representation of the input value results
+in each bit of the hash code flipping with probability 50%. Libraries
+such as link:../../../unordered/index.html[Boost.Unordered] consult this trait
+to determine if the supplied hash function is of high quality.
+`boost::hash` for `std::basic_string<Ch>` and `std::basic_string_view<Ch>`
+has this trait set to `true` when `Ch` is an integral type (this includes
+`std::string` and `std::string_view`, among others).
+Users can set this trait for a particular `Hash` type by:
+
+* Inserting the nested `is_avalanching` typedef in the class definition
+if they have access to its source code.
+* Writing a specialization of `boost::hash_is_avalanching`
+for `Hash`.
+
+Note that usage of this trait is not restricted to hash functions produced
+with Boost.ContainerHash.
 
 == <boost/container_hash/{zwsp}is_range.hpp>
 

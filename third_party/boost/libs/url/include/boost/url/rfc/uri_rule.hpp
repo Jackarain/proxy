@@ -16,37 +16,6 @@
 
 namespace boost {
 namespace urls {
-
-/** Rule for URI
-
-    @par Value Type
-    @code
-    using value_type = url_view;
-    @endcode
-
-    @par Example
-    Rules are used with the function @ref grammar::parse.
-    @code
-    system::result< url_view > rv = grammar::parse( "https://www.example.com/index.htm?id=guest#s1", uri_rule );
-    @endcode
-
-    @par BNF
-    @code
-    URI           = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
-    @endcode
-
-    @par Specification
-    @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3"
-        >3. Syntax Components (rfc3986)</a>
-
-    @see
-        @ref grammar::parse,
-        @ref parse_uri,
-        @ref url_view.
-*/
-#ifdef BOOST_URL_DOCS
-constexpr __implementation_defined__ uri_rule{};
-#else
 namespace implementation_defined {
 struct uri_rule_t
 {
@@ -90,7 +59,6 @@ struct uri_rule_t
         @ref url_view.
 */
 constexpr implementation_defined::uri_rule_t uri_rule{};
-#endif
 
 } // urls
 } // boost

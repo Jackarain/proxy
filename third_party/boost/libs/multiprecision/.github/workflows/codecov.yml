@@ -40,23 +40,23 @@ jobs:
       matrix:
         include:
           - { name: Collect coverage 1, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'arithmetic_tests' }
+              compiler: gcc-13,     cxxstd: '20',          os: ubuntu-24.04, install: 'g++-13-multilib', address-model: '64', suite: 'arithmetic_tests' }
           - { name: Collect coverage 2, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'cpp_int_tests' }
+              compiler: gcc-13,     cxxstd: '20',          os: ubuntu-24.04, install: 'g++-13-multilib', address-model: '64', suite: 'cpp_int_tests' }
           - { name: Collect coverage 3, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'functions_and_limits' }
+              compiler: gcc-13,     cxxstd: '20',          os: ubuntu-24.04, install: 'g++-13-multilib', address-model: '64', suite: 'functions_and_limits' }
           - { name: Collect coverage 4, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'conversions' }
+              compiler: gcc-13,     cxxstd: '20',          os: ubuntu-24.04, install: 'g++-13-multilib', address-model: '64', suite: 'conversions' }
           - { name: Collect coverage 5, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'performance' }
+              compiler: gcc-13,     cxxstd: '20',          os: ubuntu-24.04, install: 'g++-13-multilib', address-model: '64', suite: 'performance' }
           - { name: Collect coverage 6, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'misc' }
+              compiler: gcc-13,     cxxstd: '20',          os: ubuntu-24.04, install: 'g++-13-multilib', address-model: '64', suite: 'misc' }
           - { name: Collect coverage 7, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'compile_fail' }
+              compiler: gcc-13,     cxxstd: '20',          os: ubuntu-24.04, install: 'g++-13-multilib', address-model: '64', suite: 'compile_fail' }
           - { name: Collect coverage 8, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'examples' }
+              compiler: gcc-13,     cxxstd: '20',          os: ubuntu-24.04, install: 'g++-13-multilib', address-model: '64', suite: 'examples' }
           - { name: Collect coverage 9, coverage: yes,
-              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'concepts' }
+              compiler: gcc-13,     cxxstd: '20',          os: ubuntu-24.04, install: 'g++-13-multilib', address-model: '64', suite: 'concepts' }
 
     #timeout-minutes: 120
     runs-on: ${{matrix.os}}

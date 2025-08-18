@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
    }
    else{
       //Open managed shared memory
-      managed_shared_memory segment(open_only, argv[2]);
+      managed_shared_memory segment(open_only, test::get_argv_2(argv));
 
       std::pair<MyType*, managed_shared_memory::size_type> res;
 

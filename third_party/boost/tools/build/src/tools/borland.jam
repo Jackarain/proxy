@@ -7,7 +7,7 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.tools.compiler.borland]]
+[[b2.reference.tools.compiler.borland]]
 = Borland C++ Compiler
 
 The `borland` module supports the 32-bit command line C++ compilers

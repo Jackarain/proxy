@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstddef>
+#include <limits>
 #include <list>
 #include <string>
 #include <locale>
@@ -55,7 +56,6 @@
 #include <boost/log/attributes/time_traits.hpp>
 #include <boost/log/sinks/auto_newline_mode.hpp>
 #include <boost/log/sinks/text_file_backend.hpp>
-#include "unique_ptr.hpp"
 
 #if !defined(BOOST_LOG_NO_THREADS)
 #include <mutex>
@@ -133,7 +133,7 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
         static bool is_digit(char c)
         {
             using namespace std;
-            return (isdigit(c) != 0);
+            return (isdigit(static_cast< unsigned char >(c)) != 0);
         }
         static std::string default_file_name_pattern() { return "%5N.log"; }
     };
@@ -262,9 +262,7 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
         //! The position in the pattern where the file counter placeholder is
         path_string_type::size_type m_FileCounterPosition;
         //! File counter width
-        std::streamsize m_Width;
-        //! The file counter formatting stream
-        mutable std::basic_ostringstream< path_char_type > m_Stream;
+        unsigned int m_Width;
 
     public:
         //! Initializing constructor
@@ -272,26 +270,44 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
             m_FileCounterPosition(pos),
             m_Width(width)
         {
-            typedef file_char_traits< path_char_type > traits_t;
-            m_Stream.fill(traits_t::zero);
         }
         //! Copy constructor
         file_counter_formatter(file_counter_formatter const& that) :
             m_FileCounterPosition(that.m_FileCounterPosition),
             m_Width(that.m_Width)
         {
-            m_Stream.fill(that.m_Stream.fill());
         }
 
         //! The function formats the file counter into the file name
         path_string_type operator()(path_string_type const& pattern, unsigned int counter) const
         {
+            typedef file_char_traits< path_char_type > traits_t;
+
+            // Perform formatting that does not depend on the locale. This is important to be able to parse the counter match_pattern.
+            path_char_type buf[(std::numeric_limits< unsigned int >::digits10 + 1u) < 64u ? 64u : (std::numeric_limits< unsigned int >::digits10 + 1u)];
+            path_char_type* e = buf + sizeof(buf) / sizeof(*buf);
+            path_char_type* p = e;
+            do
+            {
+                --p;
+                *p = traits_t::zero + (counter % 10u);
+                counter /= 10u;
+            }
+            while (counter > 0u);
+
+            while (static_cast< std::size_t >(e - p) < m_Width && p > buf)
+            {
+                --p;
+                *p = traits_t::zero;
+            }
+
             path_string_type file_name = pattern;
 
-            m_Stream.str(path_string_type());
-            m_Stream.width(m_Width);
-            m_Stream << counter;
-            file_name.insert(m_FileCounterPosition, m_Stream.str());
+            typename path_string_type::size_type const size = static_cast< typename path_string_type::size_type >(e - p);
+            file_name.insert(m_FileCounterPosition, p, size);
+
+            if (size < m_Width)
+                file_name.insert(m_FileCounterPosition, static_cast< typename path_string_type::size_type >(m_Width - size), traits_t::zero);
 
             return file_name;
         }

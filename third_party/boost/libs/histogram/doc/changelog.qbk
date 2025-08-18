@@ -7,6 +7,42 @@
 
 [section:changelog Changelog]
 
+[heading Boost 1.89]
+
+* Update CMake minimum version and Python detection in CMake
+* Improve documentation
+  * Add example on how to make an axis which accepts multiple value types that are not implicitly convertible
+  * Show how to use `histogram::fill` with a multidimensional histogram efficiently when data per dimension is already available as contiguous data
+* Don't use deprecated form of user-defined literal operator
+* Add support for modular build structure with b2
+* Fixed warnings in MSVC about narrowed types
+* Added collector accumulator, which stores all values in a bin
+* Internal changes to tests and classes in detail namespace
+
+[heading Boost 1.88]
+
+* No changes.
+
+[heading Boost 1.87]
+
+* No changes.
+
+[heading Boost 1.86]
+
+* No changes.
+
+[heading Boost 1.85]
+
+* No changes.
+
+[heading Boost 1.84]
+
+* No changes.
+
+[heading Boost 1.83]
+
+* No changes.
+
 [heading Boost 1.82]
 
 * Replace `detail::span` and `detail::make_span` with implementations in `boost::core`
@@ -20,7 +56,7 @@
 * Added new `accumulators::fraction` to compute fractions, their variance, and confidence intervals
 * Added interval computers for fractions: `utility::clopper_pearson`, `utility::wilson_interval`, `utility::jeffreys_interval`, `utility::wald_interval` which can compute intervals with arbitrary confidence level
 * Added `utility::confidence_level` and `utility::deviation` types to pass confidence levels as probabilities or in multiples of standard deviation for all interval computers, respectively
-* Fixed internal `sub_array` and `span` in C++20
+* Fixed internal `static_vector` and `span` in C++20
 
 [heading Boost 1.80]
 

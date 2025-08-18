@@ -7,8 +7,8 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.find-shared-library]]`find-shared-library`::
-Adds a shared library to link to. Usually link:#bbv2.tasks.libraries[`lib`]
+[[b2.builtin.features.find-shared-library]]`find-shared-library`::
+Adds a shared library to link to. Usually link:#b2.tasks.libraries[`lib`]
 targets should be preferred over using this feature.
 
 |# # end::doc[]
@@ -19,8 +19,8 @@ feature.feature find-shared-library
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.find-static-library]]`find-static-library`::
-Adds a static library to link to. Usually link:#bbv2.tasks.libraries[`lib`]
+[[b2.builtin.features.find-static-library]]`find-static-library`::
+Adds a static library to link to. Usually link:#b2.tasks.libraries[`lib`]
 targets should be preferred over using this feature.
 
 |# # end::doc[]
@@ -31,7 +31,7 @@ feature.feature find-static-library
 
 #| tag::path-doc[]
 
-[[bbv2.builtin.features.library-path]]`library-path`::
+[[b2.builtin.features.library-path]]`library-path`::
 Adds to the list of directories which will be used by the linker to search for
 libraries.
 

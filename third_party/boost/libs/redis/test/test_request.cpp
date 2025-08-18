@@ -7,9 +7,9 @@
 #include <iostream>
 
 #define BOOST_TEST_MODULE request
-#include <boost/test/included/unit_test.hpp>
-
 #include <boost/redis/request.hpp>
+
+#include <boost/test/included/unit_test.hpp>
 
 using boost::redis::request;
 
@@ -39,9 +39,14 @@ BOOST_AUTO_TEST_CASE(multiple_args)
 
 BOOST_AUTO_TEST_CASE(container_and_range)
 {
-   std::map<std::string, std::string> in{{"key1", "value1"}, {"key2", "value2"}};
+   std::map<std::string, std::string> in{
+      {"key1", "value1"},
+      {"key2", "value2"}
+   };
 
-   char const* res = "*6\r\n$4\r\nHSET\r\n$3\r\nkey\r\n$4\r\nkey1\r\n$6\r\nvalue1\r\n$4\r\nkey2\r\n$6\r\nvalue2\r\n";
+   char const* res =
+      "*6\r\n$4\r\nHSET\r\n$3\r\nkey\r\n$4\r\nkey1\r\n$6\r\nvalue1\r\n$4\r\nkey2\r\n$"
+      "6\r\nvalue2\r\n";
 
    request req1;
    req1.push_range("HSET", "key", in);

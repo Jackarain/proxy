@@ -1,0 +1,43 @@
+[#header_filter]
+== `<boost/bloom/filter.hpp>`
+
+:idprefix: header_filter_
+
+Defines `xref:filter[boost::bloom::filter]`
+and associated functions.
+
+[listing,subs="+macros,+quotes"]
+-----
+namespace boost{
+namespace bloom{
+
+template<
+  typename T, std::size_t K,
+  typename Subfilter = block<unsigned char, 1>, std::size_t Stride = 0,
+  typename Hash = boost::hash<T>, 
+  typename Allocator = std::allocator<unsigned char>
+>
+class xref:filter[filter];
+
+template<
+  typename T, std::size_t K, typename SF, std::size_t S, typename H, typename A
+>
+bool xref:filter_operator[operator+++==+++](
+  const filter<T, K, SF, S, H, A>& x, const filter<T, K, SF, S, H, A>& y);
+
+template<
+  typename T, std::size_t K, typename SF, std::size_t S, typename H, typename A
+>
+bool xref:filter_operator_2[operator!=](
+  const filter<T, K, SF, S, H, A>& x, const filter<T, K, SF, S, H, A>& y);
+
+template<
+  typename T, std::size_t K, typename SF, std::size_t S, typename H, typename A
+>
+void xref:filter_swap_2[swap](filter<T, K, SF, S, H, A>& x, filter<T, K, SF, S, H, A>& y)
+  noexcept(noexcept(x.swap(y)));
+
+} // namespace bloom
+} // namespace boost
+-----
+

@@ -118,13 +118,13 @@ Things you should know when using this type:
 care should be taken to avoid numeric overflow when using this type
 unless you actually want modulo-arithmetic behavior.
 * The type uses a sign-magnitude representation internally, so type `int128_t` has 128-bits of precision plus an extra sign bit.
-In this respect the behaviour of these types differs from __fundamental 2's complement types.  In might be tempting to use a
-127-bit type instead, and indeed this does work, but behaviour is still slightly different from a 2's complement __fundamental type
-as the minimum and maximum values are identical (apart from the sign), where as they differ by one for a true 2's complement type.
-That said it should be noted that there's no requirement for fundamental_types to be 2's complement either - it's simply that this
-is the most common format by far.
-* Attempting to print negative values as either an Octal or Hexadecimal string results in a `std::runtime_error` being thrown,
-this is a direct consequence of the sign-magnitude representation.
+In this respect the behaviours of these types differ from __fundamental 2's complement types.  It might be tempting to use a
+127-bit type instead, and indeed this does work, but the behaviour is still slightly different from a 2's complement __fundamental type
+as the minimum and maximum values are identical (apart from the sign), whereas they differ by one for a true 2's complement type.
+It should be noted that there is a requirement for __fundamental types to be 2's complement as of C++20, so this is a slight difference
+regarding internal representation.
+* Attempting to print negative values as either an Octal or Hexadecimal string results in a `std::runtime_error` being thrown.
+This is a direct consequence of the sign-magnitude representation.
 * The fixed precision types `[checked_][u]intXXX_t` have expression template support turned off - it seems to make little
 difference to the performance of these types either way - so we may as well have the faster compile times by turning
 the feature off.
@@ -136,7 +136,7 @@ the feature off.
  been thrown.
 * Unary negation of unsigned types results in a compiler error (static assertion).
 * This backend supports rvalue-references and is move-aware, making instantiations of `number` on this backend move aware.
-* When used at fixed precision, the size of this type is always one machine word (plus any compiler-applied alignment padding) 
+* When used at fixed precision, the size of this type is always one machine word (plus any compiler-applied alignment padding)
 larger than you would expect for an N-bit integer:
 the extra word stores both the sign, and how many machine words in the integer are actually in use.
 The latter is an optimisation for larger fixed precision integers, so that a 1024-bit integer has almost the same performance

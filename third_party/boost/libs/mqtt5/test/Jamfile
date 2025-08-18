@@ -7,6 +7,7 @@
 
 import-search /boost/config/checks ;
 import ac ;
+import testing ;
 
 # Use these requirements as both regular and usage requirements across all tests
 local requirements =

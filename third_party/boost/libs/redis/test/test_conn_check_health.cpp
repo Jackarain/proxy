@@ -6,12 +6,15 @@
 
 #include <boost/redis/connection.hpp>
 #include <boost/redis/response.hpp>
-#include <boost/system/errc.hpp>
-#define BOOST_TEST_MODULE check-health
+
+#include <cstddef>
+#define BOOST_TEST_MODULE check_health
 #include <boost/test/included/unit_test.hpp>
+
+#include "common.hpp"
+
 #include <iostream>
 #include <thread>
-#include "common.hpp"
 
 namespace net = boost::asio;
 namespace redis = boost::redis;
@@ -22,8 +25,11 @@ using boost::redis::ignore;
 using boost::redis::operation;
 using boost::redis::generic_response;
 using boost::redis::consume_one;
+using namespace std::chrono_literals;
 
-// TODO: Test cancel(health_check) 
+// TODO: Test cancel(health_check)
+
+namespace {
 
 struct push_callback {
    connection* conn1;
@@ -35,7 +41,7 @@ struct push_callback {
 
    void operator()(error_code ec = {}, std::size_t = 0)
    {
-      BOOST_ASIO_CORO_REENTER (coro) for (;;)
+      BOOST_ASIO_CORO_REENTER(coro) for (;;)
       {
          BOOST_ASIO_CORO_YIELD
          conn2->async_receive(*this);
@@ -79,10 +85,13 @@ BOOST_AUTO_TEST_CASE(check_health)
    auto cfg1 = make_test_config();
    cfg1.health_check_id = "conn1";
    cfg1.reconnect_wait_interval = std::chrono::seconds::zero();
-   error_code res1;
-   conn1.async_run(cfg1, {}, [&](auto ec) {
+
+   bool run1_finished = false, run2_finished = false, exec_finished = false;
+
+   conn1.async_run(cfg1, {}, [&](error_code ec) {
+      run1_finished = true;
       std::cout << "async_run 1 completed: " << ec.message() << std::endl;
-      res1 = ec;
+      BOOST_TEST(ec != error_code());
    });
 
    //--------------------------------
@@ -93,10 +102,10 @@ BOOST_AUTO_TEST_CASE(check_health)
 
    auto cfg2 = make_test_config();
    cfg2.health_check_id = "conn2";
-   error_code res2;
-   conn2.async_run(cfg2, {}, [&](auto ec){
+   conn2.async_run(cfg2, {}, [&](error_code ec) {
+      run2_finished = true;
       std::cout << "async_run 2 completed: " << ec.message() << std::endl;
-      res2 = ec;
+      BOOST_TEST(ec != error_code());
    });
 
    request req2;
@@ -104,22 +113,25 @@ BOOST_AUTO_TEST_CASE(check_health)
    generic_response resp2;
    conn2.set_receive_response(resp2);
 
-   conn2.async_exec(req2, ignore, [](auto ec, auto) {
+   conn2.async_exec(req2, ignore, [&exec_finished](error_code ec, std::size_t) {
+      exec_finished = true;
       std::cout << "async_exec: " << std::endl;
-      BOOST_TEST(!ec);
+      BOOST_TEST(ec == error_code());
    });
 
    //--------------------------------
-   
-   push_callback{&conn1, &conn2, &resp2, &req1}(); // Starts reading pushes.
 
-   ioc.run();
+   push_callback{&conn1, &conn2, &resp2, &req1}();  // Starts reading pushes.
 
-   BOOST_TEST(!!res1);
-   BOOST_TEST(!!res2);
+   ioc.run_for(2 * test_timeout);
+
+   BOOST_TEST(run1_finished);
+   BOOST_TEST(run2_finished);
+   BOOST_TEST(exec_finished);
 
    // Waits before exiting otherwise it might cause subsequent tests
    // to fail.
    std::this_thread::sleep_for(std::chrono::seconds{10});
 }
 
+}  // namespace

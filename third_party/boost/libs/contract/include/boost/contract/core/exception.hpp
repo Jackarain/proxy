@@ -1,4 +1,3 @@
-
 #ifndef BOOST_CONTRACT_EXCEPTION_HPP_
 #define BOOST_CONTRACT_EXCEPTION_HPP_
 
@@ -96,16 +95,18 @@ public:
 
     @b Throws: This is declared @c noexcept (or @c throw() before C++11).
     */
-    virtual ~bad_virtual_result_cast()
-            /** @cond */ BOOST_NOEXCEPT_OR_NOTHROW /** @endcond */;
+    ~bad_virtual_result_cast()
+            /** @cond */ BOOST_NOEXCEPT_OR_NOTHROW /** @endcond */
+            BOOST_OVERRIDE;
 
     /**
     Description for this error (containing both from- and to- type names).
 
     @b Throws: This is declared @c noexcept (or @c throw() before C++11).
     */
-    virtual char const* what() const
-            /** @cond */ BOOST_NOEXCEPT_OR_NOTHROW /** @endcond */;
+    char const* what() const
+            /** @cond */ BOOST_NOEXCEPT_OR_NOTHROW /** @endcond */
+            BOOST_OVERRIDE;
 
 /** @cond */
 private:
@@ -166,8 +167,9 @@ public:
 
     @b Throws: This is declared @c noexcept (or @c throw() before C++11).
     */
-    virtual ~assertion_failure()
-            /** @cond */ BOOST_NOEXCEPT_OR_NOTHROW /** @endcond */;
+    ~assertion_failure()
+            /** @cond */ BOOST_NOEXCEPT_OR_NOTHROW /** @endcond */
+            BOOST_OVERRIDE;
 
     /**
     String describing the failed assertion.
@@ -180,8 +182,9 @@ public:
             File, line, and code will be omitted from this string if they were
             not specified when constructing this object.
     */
-    virtual char const* what() const
-            /** @cond */ BOOST_NOEXCEPT_OR_NOTHROW /** @endcond */;
+    char const* what() const
+            /** @cond */ BOOST_NOEXCEPT_OR_NOTHROW /** @endcond */
+            BOOST_OVERRIDE;
 
     /**
     Name of the file containing the assertion.
@@ -956,4 +959,3 @@ from_failure_handler const& set_invariant_failure(from_failure_handler const& f)
 } } // namespace
 
 #endif // #include guard
-

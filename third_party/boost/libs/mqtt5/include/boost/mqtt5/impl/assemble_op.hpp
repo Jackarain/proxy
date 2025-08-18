@@ -63,8 +63,6 @@ class assemble_op {
 
     struct on_read {};
 
-    static constexpr uint32_t max_recv_size = 65'536;
-
     client_service& _svc;
     handler_type _handler;
 
@@ -99,17 +97,6 @@ public:
 
     template <typename CompletionCondition>
     void perform(CompletionCondition cc) {
-        _read_buff.erase(
-            _read_buff.cbegin(), _data_span.first()
-        );
-        _read_buff.resize(
-            _svc.connect_property(prop::maximum_packet_size).value_or(max_recv_size)
-        );
-        _data_span = {
-            _read_buff.cbegin(),
-            _read_buff.cbegin() + _data_span.size()
-        };
-
         if (cc(error_code {}, 0) == 0 && _data_span.size()) {
             return asio::post(
                 _svc.get_executor(),
@@ -120,8 +107,11 @@ public:
             );
         }
 
+        prepare_buffer(1);
+
         // Must be evaluated before this is moved
-        auto store_begin = _read_buff.data() + _data_span.size();
+        auto store_begin = _read_buff.data()
+            + std::distance(_read_buff.cbegin(), _data_span.last());
         auto store_size = std::distance(_data_span.last(), _read_buff.cend());
 
         _svc._stream.async_read_some(
@@ -141,7 +131,7 @@ public:
         if (ec == asio::error::try_again) {
             _svc.update_session_state();
             _svc._async_sender.resend();
-            _data_span = { _read_buff.cend(), _read_buff.cend() };
+            _data_span = { _read_buff.cbegin(), _read_buff.cbegin() };
             return perform(std::move(cc));
         }
 
@@ -168,13 +158,16 @@ public:
             return complete(client::error::malformed_packet, 0, {}, {});
         }
 
-        auto recv_size = _svc.connect_property(prop::maximum_packet_size)
-            .value_or(max_recv_size);
-        if (static_cast<uint32_t>(*varlen) > recv_size - std::distance(_data_span.first(), first))
-            return complete(client::error::malformed_packet, 0, {}, {});
+        if (
+            static_cast<uint32_t>(*varlen)
+                > max_recv_size() - std::distance(_data_span.first(), first)
+        )
+            return complete(client::error::packet_too_large, 0, {}, {});
 
-        if (std::distance(first, _data_span.last()) < *varlen)
+        if (std::distance(first, _data_span.last()) < *varlen) {
+            prepare_buffer(*varlen - std::distance(first, _data_span.last()));
             return perform(asio::transfer_at_least(1));
+        }
 
         _data_span.remove_prefix(
             std::distance(_data_span.first(), first) + *varlen
@@ -184,6 +177,30 @@ public:
     }
 
 private:
+    void prepare_buffer(std::ptrdiff_t extra_len) {
+        if (std::distance(_data_span.last(), _read_buff.cend()) >= extra_len)
+            return;
+
+        // make room for the packet by erasing bytes we already parsed from the
+        // beginning of the read buffer
+
+        const auto data_span_size = _data_span.size();
+        _read_buff.erase(_read_buff.cbegin(), _data_span.first());
+        _read_buff.resize(max_recv_size());
+        _data_span = {
+            _read_buff.cbegin(),
+            _read_buff.cbegin() + data_span_size
+        };
+    }
+
+    uint32_t max_recv_size() const {
+        return (std::min)(
+            _svc.connect_property(prop::maximum_packet_size)
+                .value_or(default_max_recv_size),
+            static_cast<uint32_t>(default_max_send_size)
+        );
+    }
+
     duration compute_read_timeout() const {
         auto negotiated_ka = _svc.negotiated_keep_alive();
         return negotiated_ka ?
@@ -234,7 +251,7 @@ private:
         byte_citer first, byte_citer last
     ) {
         if (ec)
-            _data_span = { _read_buff.cend(), _read_buff.cend() };
+            _data_span = { _read_buff.cbegin(), _read_buff.cbegin() };
         std::move(_handler)(ec, control_code, first, last);
     }
 };

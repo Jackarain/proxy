@@ -1,0 +1,302 @@
+//
+// Copyright (c) 2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+= Requests and responses
+
+== Requests
+
+Redis requests are composed of one or more commands. In the
+Redis documentation, requests are called
+https://redis.io/topics/pipelining[pipelines]. For example:
+
+[source,cpp]
+----
+// Some example containers.
+std::list<std::string> list {...};
+std::map<std::string, mystruct> map { ...};
+
+// The request can contain multiple commands.
+request req;
+
+// Command with variable length of arguments.
+req.push("SET", "key", "some value", "EX", "2");
+
+// Pushes a list.
+req.push_range("SUBSCRIBE", list);
+
+// Same as above but as an iterator range.
+req.push_range("SUBSCRIBE", std::cbegin(list), std::cend(list));
+
+// Pushes a map.
+req.push_range("HSET", "key", map);
+----
+
+Sending a request to Redis is performed by
+xref:reference:boost/redis/basic_connection/async_exec-02.adoc[`connection::async_exec`]
+as already stated. Requests accept a xref:reference:boost/redis/request/config[`boost::redis::request::config`]
+object when constructed that dictates how requests are handled in situations like
+reconnection. The reader is advised to read it carefully.
+
+## Responses
+
+Boost.Redis uses the following strategy to deal with Redis responses:
+
+* xref:reference:boost/redis/response.adoc[`boost::redis::response`] should be used
+  when the request's number of commands is known at compile-time.
+* xref:reference:boost/redis/generic_response.adoc[`boost::redis::generic_response`] should be
+  used when the number of commands is dynamic.
+
+For example, the request below has three commands:
+
+[source,cpp]
+----
+request req;
+req.push("PING");
+req.push("INCR", "key");
+req.push("QUIT");
+----
+
+Therefore, its response will also contain three elements.
+The following response object can be used:
+
+[source,cpp]
+----
+response<std::string, int, std::string>
+----
+
+The response behaves as a `std::tuple` and must
+have as many elements as the request has commands (exceptions below).
+It is also necessary that each tuple element is capable of storing the
+response to the command it refers to, otherwise an error will occur.
+
+To ignore responses to individual commands in the request use the tag
+xref:reference:boost/redis/ignore_t.adoc[`boost::redis::ignore_t`]. For example:
+
+[source,cpp]
+----
+// Ignore the second and last responses.
+response<std::string, ignore_t, std::string, ignore_t>
+----
+
+The following table provides the RESP3-types returned by some Redis
+commands:
+
+[cols="3*"]
+|===
+
+| *Command* | *RESP3 type* | *Documentation*
+
+| `lpush`    | Number                              | https://redis.io/commands/lpush[]
+| `lrange`   | Array                               | https://redis.io/commands/lrange[]
+| `set`      | Simple-string, null or blob-string  | https://redis.io/commands/set[]
+| `get`      | Blob-string                         | https://redis.io/commands/get[]
+| `smembers` | Set                                 | https://redis.io/commands/smembers[]
+| `hgetall`  | Map                                 | https://redis.io/commands/hgetall[]
+
+|===
+
+To map these RESP3 types into a pass:[C++] data structure use the table below:
+
+[cols="3*"]
+|===
+
+| *RESP3 type*   | *Possible pass:[C++] type*                                        | *Type*
+
+| Simple-string  | `std::string`                                              | Simple
+| Simple-error   | `std::string`                                              | Simple
+| Blob-string    | `std::string`, `std::vector`                               | Simple
+| Blob-error     | `std::string`, `std::vector`                               | Simple
+| Number         | `long long`, `int`, `std::size_t`, `std::string`           | Simple
+| Double         | `double`, `std::string`                                    | Simple
+| Null           | `std::optional<T>`                                         | Simple
+| Array          | `std::vector`, `std::list`, `std::array`, `std::deque`     | Aggregate
+| Map            | `std::vector`, `std::map`, `std::unordered_map`            | Aggregate
+| Set            | `std::vector`, `std::set`, `std::unordered_set`            | Aggregate
+| Push           | `std::vector`, `std::map`, `std::unordered_map`            | Aggregate
+
+|===
+
+For example, the response to the request
+
+[source,cpp]
+----
+request req;
+req.push("HELLO", 3);
+req.push_range("RPUSH", "key1", vec);
+req.push_range("HSET", "key2", map);
+req.push("LRANGE", "key3", 0, -1);
+req.push("HGETALL", "key4");
+req.push("QUIT");
+----
+
+Can be read in the following response object:
+
+[source,cpp]
+----
+response<
+   redis::ignore_t,  // hello
+   int,              // rpush
+   int,              // hset
+   std::vector<T>,   // lrange
+   std::map<U, V>,   // hgetall
+   std::string       // quit
+> resp;
+----
+
+To execute the request and read the response use
+xref:reference:boost/redis/basic_connection/async_exec-02.adoc[`async_exec`]:
+
+[source,cpp]
+----
+co_await conn->async_exec(req, resp);
+----
+
+If the intention is to ignore responses altogether, use
+xref:reference:boost/redis/ignore.adoc[`ignore`]:
+
+[source,cpp]
+----
+// Ignores the response
+co_await conn->async_exec(req, ignore);
+----
+
+Responses that contain nested aggregates or heterogeneous data
+types will be given special treatment later in xref:#the-general-case[the general case].  As
+of this writing, not all RESP3 types are used by the Redis server,
+which means in practice users will be concerned with a reduced
+subset of the RESP3 specification.
+
+### Pushes
+
+Commands that have no response, like
+
+* `"SUBSCRIBE"`
+* `"PSUBSCRIBE"`
+* `"UNSUBSCRIBE"`
+
+must **NOT** be included in the response tuple. For example, the following request
+
+[source,cpp]
+----
+request req;
+req.push("PING");
+req.push("SUBSCRIBE", "channel");
+req.push("QUIT");
+----
+
+must be read in the response object `response<std::string, std::string>`.
+
+### Null
+
+It is not uncommon for apps to access keys that do not exist or that
+have already expired in the Redis server. To deal with these use cases,
+wrap the type within a `std::optional`:
+
+[source,cpp]
+----
+response<
+   std::optional<A>,
+   std::optional<B>,
+   ...
+   > resp;
+----
+
+Everything else stays the same.
+
+### Transactions
+
+To read responses to transactions we must first observe that Redis
+will queue the transaction commands and send their individual
+responses as elements of an array. The array itself is the response to
+the `EXEC` command.  For example, to read the response to this request
+
+[source,cpp]
+----
+req.push("MULTI");
+req.push("GET", "key1");
+req.push("LRANGE", "key2", 0, -1);
+req.push("HGETALL", "key3");
+req.push("EXEC");
+----
+
+Use the following response type:
+
+[source,cpp]
+----
+response<
+   ignore_t,  // multi
+   ignore_t,  // QUEUED
+   ignore_t,  // QUEUED
+   ignore_t,  // QUEUED
+   response<
+      std::optional<std::string>, // get
+      std::optional<std::vector<std::string>>, // lrange
+      std::optional<std::map<std::string, std::string>> // hgetall
+   > // exec
+> resp;
+----
+
+For a complete example, see {site-url}/example/cpp20_containers.cpp[cpp20_containers.cpp].
+
+[#the-general-case]
+### The general case
+
+There are cases where responses to Redis
+commands won't fit in the model presented above. Some examples are:
+
+* Commands (like `set`) whose responses don't have a fixed
+  RESP3 type. Expecting an `int` and receiving a blob-string
+  results in an error.
+* RESP3 aggregates that contain nested aggregates can't be read in STL containers.
+* Transactions with a dynamic number of commands can't be read in a `response`.
+
+To deal with these cases Boost.Redis provides the xref:reference:boost/redis/resp3/node.adoc[`boost::redis::resp3::node`] type
+abstraction, that is the most general form of an element in a
+response, be it a simple RESP3 type or the element of an aggregate. It
+is defined like:
+
+[source,cpp]
+----
+template <class String>
+struct basic_node {
+   // The RESP3 type of the data in this node.
+   type data_type;
+
+   // The number of elements of an aggregate (or 1 for simple data).
+   std::size_t aggregate_size;
+
+   // The depth of this node in the response tree.
+   std::size_t depth;
+
+   // The actual data. For aggregate types this is always empty.
+   String value;
+};
+----
+
+Any response to a Redis command can be parsed into a
+xref:reference:boost/redis/generic_response.adoc[boost::redis::generic_response].
+The vector can be seen as a pre-order view of the response tree.
+Using it is not different than using other types:
+
+[source,cpp]
+----
+// Receives any RESP3 simple or aggregate data type.
+boost::redis::generic_response resp;
+co_await conn->async_exec(req, resp);
+----
+
+For example, suppose we want to retrieve a hash data structure
+from Redis with `HGETALL`, some of the options are
+
+* `boost::redis::generic_response`: always works.
+* `std::vector<std::string>`: efficient and flat, all elements as string.
+* `std::map<std::string, std::string>`: efficient if you need the data as a `std::map`.
+* `std::map<U, V>`: efficient if you are storing serialized data. Avoids temporaries and requires `boost_redis_from_bulk` for `U` and `V`.
+
+In addition to the above users can also use unordered versions of the
+containers. The same reasoning applies to sets e.g. `SMEMBERS`
+and other data structures in general.

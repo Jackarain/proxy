@@ -216,7 +216,8 @@ CO_TEST_CASE(raceable)
 {
     cobalt::channel<int>  ci{0u};
     cobalt::channel<void> cv{0u};
-    auto [r1, r2] = co_await cobalt::gather(cobalt::race(ci.read(), cv.read()), cv.write());
+    auto r = co_await cobalt::gather(cobalt::race(ci.read(), cv.read()), cv.write());
+    auto [r1, r2] = std::move(r);
     r1.value();
     BOOST_REQUIRE(r1.has_value());
     BOOST_CHECK(r1->index() == 1u);
@@ -227,9 +228,10 @@ CO_TEST_CASE(raceable_1)
 {
   cobalt::channel<int>  ci{1u};
   cobalt::channel<void> cv{1u};
-  auto [r1, r2] = co_await cobalt::gather(
+  auto r = co_await cobalt::gather(
       cobalt::race(ci.read(), cv.read()),
       cv.write());
+  auto [r1, r2] = std::move(r);
   BOOST_CHECK(r1->index() == 1u);
   BOOST_CHECK(!r2.has_error());
 }
@@ -361,6 +363,122 @@ CO_TEST_CASE(data_loss)
         break;
     }
   }
+}
+
+
+
+CO_TEST_CASE(interrupt_1)
+{
+  cobalt::channel<int> c{1u};
+
+  auto lr = co_await cobalt::left_race(c.write(42), c.read());
+  BOOST_CHECK(lr.index() == 0);
+  BOOST_CHECK(c.read().await_ready());
+  BOOST_CHECK(!c.write(12).await_ready());
+  lr = co_await cobalt::left_race(c.write(43), c.read());
+  BOOST_CHECK(lr.index() == 1);
+  BOOST_CHECK(get<1u>(lr) == 42);
+  auto rl =  co_await cobalt::left_race(c.read(), c.write(42));
+  BOOST_CHECK(rl.index() == 1);
+}
+
+CO_TEST_CASE(interrupt_void_1)
+{
+  cobalt::channel<void> c{1};
+  auto lr = co_await cobalt::left_race(c.write(), c.read());
+  BOOST_CHECK(lr == 0);
+  lr = co_await cobalt::left_race(c.write(), c.read());
+  BOOST_CHECK(lr == 1);
+  auto rl =  co_await cobalt::left_race(c.read(), c.write());
+  BOOST_CHECK(rl == 1);
+}
+
+
+
+cobalt::promise<void> do_write(cobalt::channel<void> & c, int times = 1)
+{
+  while (times --> 0)
+    co_await c.write();
+};
+
+CO_TEST_CASE(interrupt_0_void)
+{
+  cobalt::channel<void> c{0};
+  auto w = do_write(c);
+
+  BOOST_CHECK(!w.ready());
+  auto [ec] = co_await cobalt::as_tuple(test_interrupt(c.read()));
+  BOOST_CHECK_MESSAGE(ec == asio::error::operation_aborted, ec.to_string());
+  co_await asio::post(co_await this_coro::executor);
+  BOOST_CHECK(!w.ready());
+  co_await c.read();
+  co_await asio::post(co_await this_coro::executor);
+  BOOST_CHECK(w.ready());
+}
+
+
+CO_TEST_CASE(interrupt_1_void)
+{
+  cobalt::channel<void> c{1};
+  auto w = do_write(c, 2);
+
+  BOOST_CHECK(!w.ready());
+  auto [ec] = co_await cobalt::as_tuple(test_interrupt(c.read()));
+  BOOST_CHECK_MESSAGE(ec == asio::error::operation_aborted, ec.to_string());
+  co_await asio::post(co_await this_coro::executor);
+  BOOST_CHECK(!w.ready());
+  co_await c.read();
+  co_await asio::post(co_await this_coro::executor);
+  BOOST_CHECK(w.ready());
+  co_await c.read();
+  co_await asio::post(co_await this_coro::executor);
+  BOOST_CHECK(w.ready());
+}
+
+cobalt::promise<void> do_write(cobalt::channel<int> & c, int times = 1)
+{
+  int i = 0;
+  while (times --> 0)
+    co_await c.write(i++);
+};
+
+
+CO_TEST_CASE(interrupt_0_int)
+{
+  cobalt::channel<int> c{0};
+  auto w = do_write(c);
+
+  BOOST_CHECK(!w.ready());
+  auto [ec, i] = co_await cobalt::as_tuple(test_interrupt(c.read()));
+
+  BOOST_CHECK_MESSAGE(ec == asio::error::operation_aborted, ec.to_string());
+  co_await asio::post(co_await this_coro::executor);
+  BOOST_CHECK(!w.ready());
+  i = co_await c.read();
+  BOOST_CHECK_EQUAL(i, 0);
+  co_await asio::post(co_await this_coro::executor);
+  BOOST_CHECK(w.ready());
+}
+
+
+CO_TEST_CASE(interrupt_1_int)
+{
+  cobalt::channel<int> c{1};
+  auto w = do_write(c, 2);
+
+  BOOST_CHECK(!w.ready());
+  auto [ec, i] = co_await cobalt::as_tuple(test_interrupt(c.read()));
+  BOOST_CHECK_MESSAGE(ec == asio::error::operation_aborted, ec.to_string());
+  co_await asio::post(co_await this_coro::executor);
+  BOOST_CHECK(!w.ready());
+  i = co_await c.read();
+  BOOST_CHECK_EQUAL(i, 0);
+  co_await asio::post(co_await this_coro::executor);
+  BOOST_CHECK(w.ready());
+  i = co_await c.read();
+  BOOST_CHECK_EQUAL(i, 1);
+  co_await asio::post(co_await this_coro::executor);
+  BOOST_CHECK(w.ready());
 }
 
 }

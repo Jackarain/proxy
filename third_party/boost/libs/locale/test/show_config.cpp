@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2022-2025 Alexander Grund
 //
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
@@ -45,70 +46,70 @@ const char* env(const char* s)
 
 void check_locales(const std::vector<const char*>& names)
 {
-    std::cout << std::setw(32) << "locale" << std::setw(7) << "POSIX" << std::setw(5) << "STD" << std::setw(5) << "WIN"
+    std::cerr << std::setw(32) << "locale" << std::setw(7) << "POSIX" << std::setw(5) << "STD" << std::setw(5) << "WIN"
               << std::endl;
     for(const char* name : names) {
-        std::cout << std::setw(32) << name;
-        std::cout << std::setw(7) << (has_posix_locale(name) ? "Yes" : "No");
-        std::cout << std::setw(5) << (has_std_locale(name) ? "Yes" : "No");
-        std::cout << std::setw(5) << (has_win_locale(name) ? "Yes" : "No");
-        std::cout << std::endl;
+        std::cerr << std::setw(32) << name;
+        std::cerr << std::setw(7) << (has_posix_locale(name) ? "Yes" : "No");
+        std::cerr << std::setw(5) << (has_std_locale(name) ? "Yes" : "No");
+        std::cerr << std::setw(5) << (has_win_locale(name) ? "Yes" : "No");
+        std::cerr << std::endl;
     }
 }
 
 void test_main(int /*argc*/, char** /*argv*/)
 {
-    std::cout << "- char8_t: ";
+    std::cerr << "- char8_t: ";
 #ifdef __cpp_char8_t
-    std::cout << "yes\n";
+    std::cerr << "yes\n";
 #else
-    std::cout << "no\n";
+    std::cerr << "no\n";
 #endif
-    std::cout << "- std::basic_string<char8_t>: ";
+    std::cerr << "- std::basic_string<char8_t>: ";
 #ifdef __cpp_lib_char8_t
-    std::cout << "yes\n";
+    std::cerr << "yes\n";
 #else
-    std::cout << "no\n";
+    std::cerr << "no\n";
 #endif
-    std::cout << "- Backends: ";
+    std::cerr << "- Backends: ";
 #ifdef BOOST_LOCALE_WITH_ICU
-    std::cout << "icu:" << U_ICU_VERSION << " ";
+    std::cerr << "icu:" << U_ICU_VERSION << " ";
 #endif
 #ifndef BOOST_LOCALE_NO_STD_BACKEND
-    std::cout << "std ";
+    std::cerr << "std ";
 #endif
 #ifndef BOOST_LOCALE_NO_POSIX_BACKEND
-    std::cout << "posix ";
+    std::cerr << "posix ";
 #endif
 #ifndef BOOST_LOCALE_NO_WINAPI_BACKEND
-    std::cout << "winapi";
+    std::cerr << "winapi";
 #endif
-    std::cout << std::endl;
+    std::cerr << std::endl;
 #ifdef BOOST_LOCALE_WITH_ICONV
-    std::cout << "- With iconv\n";
+    std::cerr << "- With iconv\n";
 #else
-    std::cout << "- Without iconv\n";
+    std::cerr << "- Without iconv\n";
 #endif
-    std::cout << "- Environment \n";
-    std::cout << "  LANG=" << env("LANG") << std::endl;
-    std::cout << "  LC_ALL=" << env("LC_ALL") << std::endl;
-    std::cout << "  LC_CTYPE=" << env("LC_CTYPE") << std::endl;
-    std::cout << "  TZ=" << env("TZ") << std::endl;
+    std::cerr << "- Environment \n";
+    std::cerr << "  LANG=" << env("LANG") << std::endl;
+    std::cerr << "  LC_ALL=" << env("LC_ALL") << std::endl;
+    std::cerr << "  LC_CTYPE=" << env("LC_CTYPE") << std::endl;
+    std::cerr << "  TZ=" << env("TZ") << std::endl;
 
     const char* clocale = setlocale(LC_ALL, "");
     if(!clocale)
         clocale = "undetected"; // LCOV_EXCL_LINE
-    std::cout << "- C locale: " << clocale << std::endl;
+    std::cerr << "- C locale: " << clocale << std::endl;
 
     try {
         std::locale loc("");
 #if defined(BOOST_CLANG) && BOOST_CLANG_VERSION < 30800
-        std::cout << "- C++ locale: n/a on Clang < 3.8\n";
+        std::cerr << "- C++ locale: n/a on Clang < 3.8\n";
 #else
-        std::cout << "- C++ locale: " << loc.name() << std::endl;
+        std::cerr << "- C++ locale: " << loc.name() << std::endl;
 #endif
     } catch(const std::exception&) {                     // LCOV_EXCL_LINE
-        std::cout << "- C++ locale: is not supported\n"; // LCOV_EXCL_LINE
+        std::cerr << "- C++ locale: is not supported\n"; // LCOV_EXCL_LINE
     }
 
     const std::vector<const char*> locales_to_check = {
@@ -130,25 +131,25 @@ void test_main(int /*argc*/, char** /*argv*/)
       "C.UTF-8",
       "C.utf8",
     };
-    std::cout << "- Testing locales availability on the operation system:" << std::endl;
+    std::cerr << "- Testing locales availability on the operation system:" << std::endl;
     check_locales(locales_to_check);
-    std::cout << "--- Testing Japanese_Japan.932 is working: ";
-    std::cout << (test_std_supports_SJIS_codecvt("Japanese_Japan.932") ? "Yes" : "No") << std::endl;
+    std::cerr << "--- Testing Japanese_Japan.932 is working: ";
+    std::cerr << (test_std_supports_SJIS_codecvt("Japanese_Japan.932") ? "Yes" : "No") << std::endl;
 
-    std::cout << "- Testing timezone and time " << std::endl;
+    std::cerr << "- Testing timezone and time " << std::endl;
     {
         setlocale(LC_ALL, "C");
         time_t now = std::time(nullptr);
         char buf[1024];
         strftime(buf, sizeof(buf), "%%c=%c; %%Z=%Z; %%z=%z", localtime_wrap(&now));
-        std::cout << "  Local Time    :" << buf << std::endl;
+        std::cerr << "  Local Time    :" << buf << std::endl;
         strftime(buf, sizeof(buf), "%%c=%c; %%Z=%Z; %%z=%z", gmtime_wrap(&now));
-        std::cout << "  Universal Time:" << buf << std::endl;
+        std::cerr << "  Universal Time:" << buf << std::endl;
     }
-    std::cout << "- Boost.Locale's locale: ";
+    std::cerr << "- Boost.Locale's locale: ";
     boost::locale::generator gen;
     std::locale l = gen("");
-    std::cout << (std::has_facet<boost::locale::info>(l) ? std::use_facet<boost::locale::info>(l).name() : "Unknown")
+    std::cerr << (std::has_facet<boost::locale::info>(l) ? std::use_facet<boost::locale::info>(l).name() : "Unknown")
               << std::endl;
 }
 

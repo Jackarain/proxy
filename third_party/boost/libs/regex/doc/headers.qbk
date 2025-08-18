@@ -10,8 +10,7 @@
 
 There are two main headers used by this library: `<boost/regex.hpp>` 
 provides full access to the main template library, while `<boost/cregex.hpp>` 
-provides access to the (deprecated) high level class RegEx, and the 
-POSIX API functions.
+provides access to the POSIX API functions.
 
 There is also a header containing only forward declarations 
 `<boost/regex_fwd.hpp>` for use when an interface is dependent upon 

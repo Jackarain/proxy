@@ -6,7 +6,7 @@
 
 # Usage: bjam [OPTION]... DIR[-CPP_FILE_NAME]
 # Build and run Boost.Contract tests and examples.
-# 
+#
 # Options (common to BJam):
 #   toolset=msvc,gcc,clang,...  specify compiler
 #   cxxstd=03,11,14,17,...      specify C++ standard version
@@ -49,7 +49,7 @@
 import boost_contract_no ;
 import feature ;
 import testing ;
-import ../../config/checks/config : requires ;
+import config : requires ;
 
 # Iff "no", link to boost_contract (else, no lib build so don't link to it).
 feature.feature bc_hdr : lib only :
@@ -64,7 +64,7 @@ for local comb in [ boost_contract_no.combinations ] {
 }
 
 module boost_contract_build {
-        
+
 rule project_requirements ( subdir ) {
     return
         <bc_hdr>lib:<library>../build//boost_contract

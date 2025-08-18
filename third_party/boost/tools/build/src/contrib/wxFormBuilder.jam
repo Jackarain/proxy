@@ -53,6 +53,7 @@
 #
 ################################################################################
 
+import args ;
 import generators ;
 import os         ;
 import path       ;
@@ -189,7 +190,4 @@ rule is-initialized ( )
 .executable = ;
 .initialized = ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;

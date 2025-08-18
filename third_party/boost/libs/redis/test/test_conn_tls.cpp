@@ -4,54 +4,50 @@
  * accompanying file LICENSE.txt)
  */
 
-#include <boost/asio/ssl/host_name_verification.hpp>
-#include <boost/system/error_code.hpp>
 #include <boost/redis/connection.hpp>
-#define BOOST_TEST_MODULE conn-tls
+#include <boost/redis/ignore.hpp>
+
+#include <boost/asio/ssl/host_name_verification.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/system/error_code.hpp>
+
+#include <cstddef>
+#include <string_view>
+#define BOOST_TEST_MODULE conn_tls
 #include <boost/test/included/unit_test.hpp>
+
 #include "common.hpp"
 
 namespace net = boost::asio;
-
-using connection = boost::redis::connection;
-using boost::redis::request;
-using boost::redis::response;
-using boost::redis::config;
+using namespace boost::redis;
+using namespace std::chrono_literals;
 using boost::system::error_code;
+
+namespace {
 
 // CA certificate that signed the test server's certificate.
 // This is a self-signed CA created for testing purposes.
 // This must match tools/tls/ca.crt contents
 static constexpr const char* ca_certificate = R"%(-----BEGIN CERTIFICATE-----
-MIIFSzCCAzOgAwIBAgIUNd7VUuGK4+ylzCOrmeckg2+TqX8wDQYJKoZIhvcNAQEL
-BQAwNTETMBEGA1UECgwKUmVkaXMgVGVzdDEeMBwGA1UEAwwVQ2VydGlmaWNhdGUg
-QXV0aG9yaXR5MB4XDTI0MDMzMTE0MjUyM1oXDTM0MDMyOTE0MjUyM1owNTETMBEG
-A1UECgwKUmVkaXMgVGVzdDEeMBwGA1UEAwwVQ2VydGlmaWNhdGUgQXV0aG9yaXR5
-MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA5AMV5V66wt+MM4+oCzH0
-xPi++j23p8AOa0o3dxNd4tm5y++gAdKfoxj7oh32ZuYHA5V+sGNEalN/b3GlKXMm
-ThdVPSwqOQduny19wrb126ZeQXCfqwgSZQ+rgzaIYpw8/GRRuLDunmsdaR2eiptp
-dbv6g6P/aIF6P9mfuekwCC9KBCV6ftqOEnzulNLVw4JjY0rKB9NZqONKVMfWpNyC
-zJLCkGmza7BOpybhloZIxGJz033yCjDvIQr9GUWsA5rU9LdUiL+F1W0pWkIel1qo
-Evo0EIl3+EOcSSzETI7NPHgnSzNau39ZShV4UBj2lw0DWeNcobeMBQ8ItmqEU6V0
-gCEqfUnt10bGIDdmV3D5FKPgvhFvEjQULnblLeLDQ6XDFf+xbGEVjvTzVkLjvyKm
-H2D+SKw2O+eDU/0+xhpAf+QsWlm6pmvKWjXI5wK1rh2yssBK2pmY3LuuZCdGrvXb
-KX4j/4S9qMr43Hmyoyz0gE5I5rplqot8TvT9O/JsgQYd9fYSvdB+HbqAlJzpBZFl
-xbVBXxl0AlDFwQtNMX5ylEQPvYVDKA1M+DTqRTgQKctTfccwvovY3YMV7m5YoODZ
-ya2YSBRfQim6VsC+QPYs7p2dk1larIoMMaTaU02oMY+qT2d/eyhWKBv5W9LuowTQ
-bWa3ZhWN8lXriPgJOQnZ6iUCAwEAAaNTMFEwHQYDVR0OBBYEFCpEPlClLrgu1zFN
-Fmas5G4ybNRJMB8GA1UdIwQYMBaAFCpEPlClLrgu1zFNFmas5G4ybNRJMA8GA1Ud
-EwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggIBAFLl1NZHp0NT5Av4GKmsJFeI
-cJOgcIygjR4SBGDAxyPqVpZk0x1q64gJsfOe1ARyI4olQPqO08FZMeB+VBYuqR3S
-fEVQZz2FT5U7IVAEZwWHOcWkrrVpEZC6PZktYJ7Yqju6+ic93inoPrHhGNZ5XA/Y
-GSfwriWkyWm2SOk35ChFH67MbPWmve8CRAXRmrOCByXwXF87wdqVYZUvH9xDe6WU
-snFWXVHr2NA7Re8ZIGp7yJOwwW+CZagepNCPUDwnI0fWOahtOTzonIjq8bfgTZPx
-2e7lBuAr9tVMpoeyUytVOlNJDojZAtKOpfMwhAG8ydhk+78aK07VVbnSYVhv7ctU
-kkkldqP/S3lBlWo44oOxenwLc9vDQNh64py7eQTD7Qv+TjqAG0ljHIDbVqlkQsgR
-pQsu7keG9O1xASSTLZVZN2/alNewpqE/eFRfPM3mtUiTiIZvSxiQnWQMbKofAZH5
-HwhVli4RKWRWPqpof4GFNkB8XwfBE+gdlFuWtyg0oRyV3sJ6Zn7E+lUpbQX4CFx3
-97vekaFNBchNYMcP3TZ9LwxTx1xOWZ5HHrHyzASG3uz2rqwAsEmdRbmK03KfEQyQ
-YpNY718btZ1D6lLino9VMgzaPhUs79bHC64O4ncl7hRclK9qa3KLQdCG1cbIR7G0
-2XVYrfsnPHX0CsPDIy7L
+MIIDhzCCAm+gAwIBAgIUZGttu4o/Exs08EHCneeD3gHw7KkwDQYJKoZIhvcNAQEL
+BQAwUjELMAkGA1UEBhMCRVMxGjAYBgNVBAoMEUJvb3N0LlJlZGlzIENJIENBMQsw
+CQYDVQQLDAJJVDEaMBgGA1UEAwwRYm9vc3QtcmVkaXMtY2ktY2EwIBcNMjUwNjA3
+MTI0NzUwWhgPMjA4MDAzMTAxMjQ3NTBaMFIxCzAJBgNVBAYTAkVTMRowGAYDVQQK
+DBFCb29zdC5SZWRpcyBDSSBDQTELMAkGA1UECwwCSVQxGjAYBgNVBAMMEWJvb3N0
+LXJlZGlzLWNpLWNhMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu7XV
+sOoHB2J/5VtyJmMOzxhBbHKyQgW1YnMvYIb1JqIm7VuICA831SUw76n3j8mIK3zz
+FfK2eYyUWf4Uo2j3uxmXDyjujqzIaUJNLcB53CQXkmIbqDigNhzUTPZ5A2MQ7xT+
+t1eDbjsZ7XIM+aTShgtrpyxiccsgPJ3/XXme2RrqKeNvYsTYY6pquWZdyLOg/LOH
+IeSJyL1/eQDRu/GsZjnR8UOE6uHfbjrLWls7Tifj/1IueVYCEhQZpJSWS8aUMLBZ
+fi+t9YMCCK4DGy+6QlznGgVqdFFbTUt2C7tzqz+iF5dxJ8ogKMUPEeFrWiZpozoS
+t60jV8fKwdXz854jLQIDAQABo1MwUTAdBgNVHQ4EFgQU2SoWvvZUW8JiDXtyuXZK
+deaYYBswHwYDVR0jBBgwFoAU2SoWvvZUW8JiDXtyuXZKdeaYYBswDwYDVR0TAQH/
+BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAqY4hGcdCFFPL4zveSDhR9H/akjae
+uXbpo/9sHZd8e3Y4BtD8K05xa3417H9u5+S2XtyLQg5MON6J2LZueQEtE3wiR3ja
+QIWbizqp8W54O5hTLQs6U/mWggfuL2R/HUw7ab4M8JobwHNEMK/WKZW71z0So/kk
+W3wC0+1RH2PjMOZrCIflsD7EXYKIIr9afypAbhCQmCfu/GELuNx+LmaPi5JP4TTE
+tDdhzWL04JLcZnA0uXb2Mren1AR9yKYH2I5tg5kQ3Bn/6v9+JiUhiejP3Vcbw84D
+yFwRzN54bLanrJNILJhHPwnNIABXOtGUV05SZbYazJpiMst1a6eqDZhv/Q==
 -----END CERTIFICATE-----)%";
 
 static config make_tls_config()
@@ -63,13 +59,14 @@ static config make_tls_config()
    return cfg;
 }
 
-BOOST_AUTO_TEST_CASE(ping_internal_ssl_context)
+// Using the default TLS context allows establishing TLS connections and execute requests
+BOOST_AUTO_TEST_CASE(exec_default_ssl_context)
 {
    auto const cfg = make_tls_config();
-   std::string const in = "Kabuf";
+   constexpr std::string_view ping_value = "Kabuf";
 
    request req;
-   req.push("PING", in);
+   req.push("PING", ping_value);
 
    response<std::string> resp;
 
@@ -80,30 +77,39 @@ BOOST_AUTO_TEST_CASE(ping_internal_ssl_context)
    // that is not trusted by default - skip verification.
    conn.next_layer().set_verify_mode(net::ssl::verify_none);
 
-   conn.async_exec(req, resp, [&](error_code ec, auto) {
-      BOOST_TEST(ec == std::error_code());
+   bool exec_finished = false, run_finished = false;
+
+   conn.async_exec(req, resp, [&](error_code ec, std::size_t) {
+      exec_finished = true;
+      BOOST_TEST(ec == error_code());
       conn.cancel();
    });
 
-   conn.async_run(cfg, {}, [](auto) { });
+   conn.async_run(cfg, {}, [&](error_code ec) {
+      run_finished = true;
+      BOOST_TEST(ec == net::error::operation_aborted);
+   });
 
-   ioc.run();
+   ioc.run_for(test_timeout);
 
-   BOOST_CHECK_EQUAL(in, std::get<0>(resp).value());
+   BOOST_TEST(exec_finished);
+   BOOST_TEST(run_finished);
+   BOOST_TEST(std::get<0>(resp).value() == ping_value);
 }
 
-BOOST_AUTO_TEST_CASE(ping_custom_ssl_context)
+// Users can pass a custom context with TLS config
+BOOST_AUTO_TEST_CASE(exec_custom_ssl_context)
 {
    auto const cfg = make_tls_config();
-   std::string const in = "Kabuf";
+   constexpr std::string_view ping_value = "Kabuf";
 
    request req;
-   req.push("PING", in);
+   req.push("PING", ping_value);
 
    response<std::string> resp;
 
    net::io_context ioc;
-   net::ssl::context ctx{boost::asio::ssl::context::tls_client};
+   net::ssl::context ctx{net::ssl::context::tls_client};
 
    // Configure the SSL context to trust the CA that signed the server's certificate.
    // The test certificate uses "redis" as its common name, regardless of the actual server's hostname
@@ -113,14 +119,75 @@ BOOST_AUTO_TEST_CASE(ping_custom_ssl_context)
 
    connection conn{ioc, std::move(ctx)};
 
-   conn.async_exec(req, resp, [&](auto ec, auto) {
-      BOOST_TEST(ec == std::error_code());
+   bool exec_finished = false, run_finished = false;
+
+   conn.async_exec(req, resp, [&](error_code ec, std::size_t) {
+      exec_finished = true;
+      BOOST_TEST(ec == error_code());
       conn.cancel();
    });
 
-   conn.async_run(cfg, {}, [](auto) { });
+   conn.async_run(cfg, {}, [&](error_code ec) {
+      run_finished = true;
+      BOOST_TEST(ec == net::error::operation_aborted);
+   });
 
-   ioc.run();
+   ioc.run_for(test_timeout);
 
-   BOOST_CHECK_EQUAL(in, std::get<0>(resp).value());
+   BOOST_TEST(exec_finished);
+   BOOST_TEST(run_finished);
+   BOOST_TEST(std::get<0>(resp).value() == ping_value);
 }
+
+// After an error, a TLS connection can recover.
+// Force an error using QUIT, then issue a regular request to verify that we could reconnect
+BOOST_AUTO_TEST_CASE(reconnection)
+{
+   // Setup
+   net::io_context ioc;
+   net::steady_timer timer{ioc};
+   connection conn{ioc};
+   auto cfg = make_tls_config();
+   cfg.reconnect_wait_interval = 10ms;  // make the test run faster
+
+   request ping_request;
+   ping_request.push("PING", "some_value");
+
+   request quit_request;
+   quit_request.push("QUIT");
+
+   bool exec_finished = false, run_finished = false;
+
+   // Run the connection
+   conn.async_run(cfg, {}, [&](error_code ec) {
+      run_finished = true;
+      BOOST_TEST(ec == net::error::operation_aborted);
+   });
+
+   // The PING is the end of the callback chain
+   auto ping_callback = [&](error_code ec, std::size_t) {
+      exec_finished = true;
+      BOOST_TEST(ec == error_code());
+      conn.cancel();
+   };
+
+   auto quit_callback = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+
+      // If a request is issued immediately after QUIT, the request sometimes
+      // fails, probably due to a race condition. This dispatches any pending
+      // handlers, triggering the reconnection process.
+      // TODO: this should not be required.
+      ioc.poll();
+      conn.async_exec(ping_request, ignore, ping_callback);
+   };
+
+   conn.async_exec(quit_request, ignore, quit_callback);
+
+   ioc.run_for(test_timeout);
+
+   BOOST_TEST(exec_finished);
+   BOOST_TEST(run_finished);
+}
+
+}  // namespace

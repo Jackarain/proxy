@@ -1,0 +1,32 @@
+# Copyright René Ferdinand Rivera Morell 2023-2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+path-constant BOOST_CONFIG_ROOT : . ;
+import-search $(BOOST_CONFIG_ROOT)/checks ;
+
+project /boost/config
+    : common-requirements
+        <include>include
+    ;
+
+explicit
+    [ alias boost_config : : : : <library>$(boost_dependencies) ]
+    [ alias all : boost_config test ]
+    [ alias testing
+        : # sources
+        : # requirements
+        : # default-buidl
+        : # usage-requirements
+            <include>test
+        ]
+    ;
+
+call-if : boost-library config
+    ;
+
+use-project /boost/architecture : checks/architecture ;
+

@@ -115,3 +115,4 @@ compile zip_view.cpp ;
 run string.cpp ;
 
 run issue_69.cpp ;
+run issue_84.cpp ;

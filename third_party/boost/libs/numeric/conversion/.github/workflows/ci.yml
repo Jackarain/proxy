@@ -44,27 +44,32 @@ jobs:
             address-model: 32,64
           - toolset: gcc-8
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:18.04
             install: g++-8-multilib
             address-model: 32,64
           - toolset: gcc-9
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: g++-9-multilib
             address-model: 32,64
           - toolset: gcc-10
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: g++-10-multilib
             address-model: 32,64
           - toolset: gcc-11
-            cxxstd: "03,11,14,17,20"
-            os: ubuntu-20.04
+            cxxstd: "03,11,14,17,2a"
+            os: ubuntu-latest
+            container: ubuntu:24.04
             install: g++-11-multilib
             address-model: 32,64
           - toolset: gcc-12
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-22.04
+            os: ubuntu-latest
+            container: ubuntu:22.04
             install: g++-12-multilib
             address-model: 32,64
           - toolset: clang
@@ -88,68 +93,91 @@ jobs:
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "03,11,14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-6.0
           - toolset: clang
             compiler: clang++-7
             cxxstd: "03,11,14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-7
           - toolset: clang
             compiler: clang++-8
             cxxstd: "03,11,14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-8
           - toolset: clang
             compiler: clang++-9
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-9
           - toolset: clang
             compiler: clang++-10
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
+            install: clang-10
           - toolset: clang
             compiler: clang++-11
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
+            install: clang-11
           - toolset: clang
             compiler: clang++-12
             cxxstd: "03,11,14,17,20"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
+            install: clang-12
           - toolset: clang
             compiler: clang++-13
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-22.04
+            os: ubuntu-latest
+            container: ubuntu:22.04
             install: clang-13
           - toolset: clang
             compiler: clang++-14
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-22.04
+            os: ubuntu-latest
+            container: ubuntu:22.04
             install: clang-14
           - toolset: clang
-            cxxstd: "03,11,14,17,2a"
-            os: macos-11
+            cxxstd: "03,11,14,17,20"
+            os: macos-latest
 
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     defaults:
       run:
         shell: bash
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup container environment
         if: matrix.container
         run: |
           apt-get update
-          apt-get -y install sudo python git g++
+          apt-get -y install sudo python3 git g++ curl xz-utils
+
+      - name: Install nodejs20glibc2.17
+        if: ${{ startsWith( matrix.container, 'ubuntu:1' ) }}
+        run: |
+          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+          ldd /__e/node20/bin/node
 
       - name: Install packages
         if: matrix.install
         run: sudo apt-get -y install ${{matrix.install}}
+
+      - uses: actions/checkout@v3
 
       - name: Setup Boost
         run: |
@@ -165,7 +193,7 @@ jobs:
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
           ./bootstrap.sh
           ./b2 -d0 headers
 
@@ -184,14 +212,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: 14,latest
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
@@ -203,7 +223,7 @@ jobs:
           - toolset: gcc
             cxxstd: "03,11,14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
 
     runs-on: ${{matrix.os}}
 
@@ -224,7 +244,7 @@ jobs:
           cd boost-root
           xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY:/=\%\
           git submodule update --init tools/boostdep
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
           cmd /c bootstrap
           b2 -d0 headers
 

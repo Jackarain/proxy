@@ -6,22 +6,24 @@
 
 #include <boost/redis/connection.hpp>
 #include <boost/redis/logger.hpp>
+
+#include <boost/asio/experimental/channel_error.hpp>
 #include <boost/system/errc.hpp>
-#include <boost/asio/detached.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/as_tuple.hpp>
-#define BOOST_TEST_MODULE conn-push
+
+#define BOOST_TEST_MODULE conn_push
 #include <boost/test/included/unit_test.hpp>
-#include <iostream>
+
 #include "common.hpp"
+
+#include <cstddef>
+#include <iostream>
 
 namespace net = boost::asio;
 namespace redis = boost::redis;
 
 using boost::redis::operation;
-using connection = boost::redis::connection;
-using error_code = boost::system::error_code;
-using net::as_tuple;
+using boost::redis::connection;
+using boost::system::error_code;
 using boost::redis::request;
 using boost::redis::response;
 using boost::redis::ignore;
@@ -29,6 +31,8 @@ using boost::redis::ignore_t;
 using boost::system::error_code;
 using boost::redis::logger;
 using namespace std::chrono_literals;
+
+namespace {
 
 BOOST_AUTO_TEST_CASE(receives_push_waiting_resps)
 {
@@ -47,20 +51,22 @@ BOOST_AUTO_TEST_CASE(receives_push_waiting_resps)
 
    auto conn = std::make_shared<connection>(ioc);
 
-   auto c3 =[](auto ec, auto...)
-   {
+   bool push_received = false, c1_called = false, c2_called = false, c3_called = false;
+
+   auto c3 = [&](error_code ec, std::size_t) {
+      c3_called = true;
       std::cout << "c3: " << ec.message() << std::endl;
    };
 
-   auto c2 =[&, conn](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
+   auto c2 = [&, conn](error_code ec, std::size_t) {
+      c2_called = true;
+      BOOST_TEST(ec == error_code());
       conn->async_exec(req3, ignore, c3);
    };
 
-   auto c1 =[&, conn](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
+   auto c1 = [&, conn](error_code ec, std::size_t) {
+      c1_called = true;
+      BOOST_TEST(ec == error_code());
       conn->async_exec(req2, ignore, c2);
    };
 
@@ -68,17 +74,19 @@ BOOST_AUTO_TEST_CASE(receives_push_waiting_resps)
 
    run(conn, make_test_config(), {});
 
-   bool push_received = false;
-   conn->async_receive([&, conn](auto ec, auto){
+   conn->async_receive([&, conn](error_code ec, std::size_t) {
       std::cout << "async_receive" << std::endl;
-      BOOST_TEST(!ec);
+      BOOST_TEST(ec == error_code());
       push_received = true;
       conn->cancel();
    });
 
-   ioc.run();
+   ioc.run_for(test_timeout);
 
    BOOST_TEST(push_received);
+   BOOST_TEST(c1_called);
+   BOOST_TEST(c2_called);
+   BOOST_TEST(c3_called);
 }
 
 BOOST_AUTO_TEST_CASE(push_received1)
@@ -94,17 +102,19 @@ BOOST_AUTO_TEST_CASE(push_received1)
    req.push("SUBSCRIBE", "channel1");
    req.push("SUBSCRIBE", "channel2");
 
-   conn->async_exec(req, ignore, [conn](auto ec, auto){
+   bool push_received = false, exec_finished = false;
+
+   conn->async_exec(req, ignore, [&, conn](error_code ec, std::size_t) {
+      exec_finished = true;
       std::cout << "async_exec" << std::endl;
-      BOOST_TEST(!ec);
+      BOOST_TEST(ec == error_code());
    });
 
-   bool push_async_received = false;
-   conn->async_receive([&, conn](auto ec, auto){
+   conn->async_receive([&, conn](error_code ec, std::size_t) {
+      push_received = true;
       std::cout << "(1) async_receive" << std::endl;
 
-      BOOST_TEST(!ec);
-      push_async_received = true;
+      BOOST_TEST(ec == error_code());
 
       // Receives the second push synchronously.
       error_code ec2;
@@ -116,15 +126,18 @@ BOOST_AUTO_TEST_CASE(push_received1)
       // Tries to receive a third push synchronously.
       ec2 = {};
       res = conn->receive(ec2);
-      BOOST_CHECK_EQUAL(ec2, boost::redis::make_error_code(boost::redis::error::sync_receive_push_failed));
+      BOOST_CHECK_EQUAL(
+         ec2,
+         boost::redis::make_error_code(boost::redis::error::sync_receive_push_failed));
 
       conn->cancel();
    });
 
    run(conn);
-   ioc.run();
+   ioc.run_for(test_timeout);
 
-   BOOST_TEST(push_async_received);
+   BOOST_TEST(exec_finished);
+   BOOST_TEST(push_received);
 }
 
 BOOST_AUTO_TEST_CASE(push_filtered_out)
@@ -139,60 +152,50 @@ BOOST_AUTO_TEST_CASE(push_filtered_out)
    req.push("QUIT");
 
    response<ignore_t, std::string, std::string> resp;
-   conn->async_exec(req, resp, [conn](auto ec, auto){
-      BOOST_TEST(!ec);
+
+   bool exec_finished = false, push_received = false;
+
+   conn->async_exec(req, resp, [conn, &exec_finished](error_code ec, std::size_t) {
+      exec_finished = true;
+      BOOST_TEST(ec == error_code());
    });
 
-   conn->async_receive([&, conn](auto ec, auto){
-      BOOST_TEST(!ec);
+   conn->async_receive([&, conn](error_code ec, std::size_t) {
+      push_received = true;
+      BOOST_TEST(ec == error_code());
       conn->cancel(operation::reconnection);
    });
 
    run(conn);
 
-   ioc.run();
+   ioc.run_for(test_timeout);
+   BOOST_TEST(exec_finished);
+   BOOST_TEST(push_received);
 
    BOOST_CHECK_EQUAL(std::get<1>(resp).value(), "PONG");
    BOOST_CHECK_EQUAL(std::get<2>(resp).value(), "OK");
 }
 
-#ifdef BOOST_ASIO_HAS_CO_AWAIT
-net::awaitable<void>
-push_consumer1(std::shared_ptr<connection> conn, bool& push_received)
-{
-   {
-      auto [ec, ev] = co_await conn->async_receive(as_tuple(net::use_awaitable));
-      BOOST_TEST(!ec);
-   }
-
-   {
-      auto [ec, ev] = co_await conn->async_receive(as_tuple(net::use_awaitable));
-      BOOST_CHECK_EQUAL(ec, boost::system::errc::errc_t::operation_canceled);
-   }
-
-   push_received = true;
-}
-
-struct response_error_tag{};
+struct response_error_tag { };
 response_error_tag error_tag_obj;
 
 struct response_error_adapter {
-   void
-   operator()(
-      std::size_t, boost::redis::resp3::basic_node<std::string_view> const&, boost::system::error_code& ec)
+   void operator()(
+      std::size_t,
+      boost::redis::resp3::basic_node<std::string_view> const&,
+      boost::system::error_code& ec)
    {
       ec = boost::redis::error::incompatible_size;
    }
 
    [[nodiscard]]
    auto get_supported_response_size() const noexcept
-      { return static_cast<std::size_t>(-1);}
+   {
+      return static_cast<std::size_t>(-1);
+   }
 };
 
-auto boost_redis_adapt(response_error_tag&)
-{
-   return response_error_adapter{};
-}
+auto boost_redis_adapt(response_error_tag&) { return response_error_adapter{}; }
 
 BOOST_AUTO_TEST_CASE(test_push_adapter)
 {
@@ -207,31 +210,43 @@ BOOST_AUTO_TEST_CASE(test_push_adapter)
 
    conn->set_receive_response(error_tag_obj);
 
-   conn->async_receive([&, conn](auto ec, auto) {
+   bool push_received = false, exec_finished = false, run_finished = false;
+
+   conn->async_receive([&, conn](error_code ec, std::size_t) {
       BOOST_CHECK_EQUAL(ec, boost::asio::experimental::error::channel_cancelled);
       conn->cancel(operation::reconnection);
+      push_received = true;
    });
 
-   conn->async_exec(req, ignore, [](auto ec, auto){
+   conn->async_exec(req, ignore, [&exec_finished](error_code ec, std::size_t) {
       BOOST_CHECK_EQUAL(ec, boost::system::errc::errc_t::operation_canceled);
+      exec_finished = true;
    });
 
    auto cfg = make_test_config();
-   conn->async_run(cfg, {}, [](auto ec){
+   conn->async_run(cfg, {}, [&run_finished](error_code ec) {
       BOOST_CHECK_EQUAL(ec, redis::error::incompatible_size);
+      run_finished = true;
    });
 
-   ioc.run();
+   ioc.run_for(test_timeout);
+   BOOST_TEST(push_received);
+   BOOST_TEST(exec_finished);
+   BOOST_TEST(run_finished);
 
    // TODO: Reset the ioc reconnect and send a quit to ensure
    // reconnection is possible after an error.
 }
 
-net::awaitable<void> push_consumer3(std::shared_ptr<connection> conn)
+void launch_push_consumer(std::shared_ptr<connection> conn)
 {
-   for (;;) {
-      co_await conn->async_receive(net::use_awaitable);
-   }
+   conn->async_receive([conn](error_code ec, std::size_t) {
+      if (ec) {
+         BOOST_TEST(ec == net::experimental::error::channel_cancelled);
+         return;
+      }
+      launch_push_consumer(conn);
+   });
 }
 
 BOOST_AUTO_TEST_CASE(many_subscribers)
@@ -255,72 +270,65 @@ BOOST_AUTO_TEST_CASE(many_subscribers)
    net::io_context ioc;
    auto conn = std::make_shared<connection>(ioc);
 
-   auto c11 =[&](auto ec, auto...)
-   {
-      std::cout << "quit sent: " << ec.message() << std::endl;
+   bool finished = false;
+
+   auto c11 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
       conn->cancel(operation::reconnection);
+      finished = true;
    };
-   auto c10 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
+   auto c10 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
       conn->async_exec(req3, ignore, c11);
    };
-   auto c9 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
+   auto c9 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
       conn->async_exec(req2, ignore, c10);
    };
-   auto c8 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
-      conn->async_exec(req1, ignore,  c9);
+   auto c8 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      conn->async_exec(req1, ignore, c9);
    };
-   auto c7 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
-      conn->async_exec(req2, ignore,  c8);
+   auto c7 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      conn->async_exec(req2, ignore, c8);
    };
-   auto c6 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
-      conn->async_exec(req2, ignore,  c7);
+   auto c6 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      conn->async_exec(req2, ignore, c7);
    };
-   auto c5 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
-      conn->async_exec(req1, ignore,  c6);
+   auto c5 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      conn->async_exec(req1, ignore, c6);
    };
-   auto c4 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
-      conn->async_exec(req2, ignore,  c5);
+   auto c4 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      conn->async_exec(req2, ignore, c5);
    };
-   auto c3 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
-      conn->async_exec(req1, ignore,  c4);
+   auto c3 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      conn->async_exec(req1, ignore, c4);
    };
-   auto c2 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
-      conn->async_exec(req2, ignore,  c3);
+   auto c2 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      conn->async_exec(req2, ignore, c3);
    };
-   auto c1 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
-      conn->async_exec(req2, ignore,  c2);
+   auto c1 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      conn->async_exec(req2, ignore, c2);
    };
-   auto c0 =[&](auto ec, auto...)
-   {
-      BOOST_TEST(!ec);
-      conn->async_exec(req1, ignore,  c1);
+   auto c0 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      conn->async_exec(req1, ignore, c1);
    };
 
-   conn->async_exec(req0, ignore,  c0);
+   conn->async_exec(req0, ignore, c0);
+   launch_push_consumer(conn);
 
    run(conn, make_test_config(), {});
 
-   net::co_spawn(ioc.get_executor(), push_consumer3(conn), net::detached);
-   ioc.run();
+   ioc.run_for(test_timeout);
+   BOOST_TEST(finished);
 }
-#endif
+
+}  // namespace

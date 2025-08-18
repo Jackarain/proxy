@@ -8,6 +8,7 @@ import testing ;
 
 project
   : requirements <library>/boost/charconv//boost_charconv
+    <library>/boost/parser//boost_parser
   ;
 
 compile compile_all_t.cpp ;

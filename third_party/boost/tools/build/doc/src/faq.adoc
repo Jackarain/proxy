@@ -1,7 +1,7 @@
-[[bbv2.faq]]
+[[b2.faq]]
 = Frequently Asked Questions
 
-[[bbv2.faq.featurevalue]]
+[[b2.faq.featurevalue]]
 == How do I get the current value of feature in Jamfile?
 
 This is not possible, since Jamfile does not have "current" value of any
@@ -17,12 +17,12 @@ A feature has a specific value only when building a target, and there
 are two ways you can use that value:
 
 * Use conditional requirements or indirect conditional requirements. See
-link:#bbv2.overview.targets.requirements.conditional[the section called “Requirements”].
+link:#b2.overview.targets.requirements.conditional[the section called “Requirements”].
 * Define a custom generator and a custom main target type. The custom
 generator can do arbitrary processing or properties. See the
-link:#bbv2.extender[extender manual]
+link:#b2.extender[extender manual]
 
-[[bbv2.faq.duplicate]]
+[[b2.faq.duplicate]]
 == I am getting a "Duplicate name of actual target" error. What does that mean?
 
 The most likely case is that you are trying to compile the same file
@@ -108,13 +108,13 @@ in half of the cases, while in the other half it would be silently doing
 the wrong thing. It is simpler and safer to ask the user to clarify his
 intention in such cases.
 
-[[bbv2.faq.envar]]
+[[b2.faq.envar]]
 == Accessing environment variables
 
 Many users would like to use environment variables in Jamfiles, for
 example, to control the location of external libraries. In many cases it
 is better to declare those external libraries in the site-config.jam
-file, as documented in the link:#bbv2.recipes.site-config[recipes
+file, as documented in the link:#b2.recipes.site-config[recipes
 section]. However, if the users already have the environment variables
 set up, it may not be convenient for them to set up their
 site-config.jam files as well and using the environment variables might
@@ -140,7 +140,7 @@ local SOME_LIBRARY_PATH = [ os.environ SOME_LIBRARY_PATH ] ;
 exe a : a.cpp : <include>$(SOME_LIBRARY_PATH) ;
 ----
 
-[[bbv2.faq.proporder]]
+[[b2.faq.proporder]]
 == How to control properties order?
 
 For internal reasons, B2 sorts all the properties
@@ -167,7 +167,7 @@ should be preserved. You are advised to use this feature only when the
 order of properties really matters and not as a convenient shortcut.
 Using it everywhere might negatively affect performance.
 
-[[bbv2.faq.liborder]]
+[[b2.faq.liborder]]
 == How to control the library linking order on Unix?
 
 On Unix-like operating systems, the order in which static libraries are
@@ -200,7 +200,7 @@ lib png : : <use>z ;
 exe viewer : viewer png z ;
 ----
 
-[[bbv2.faq.external]]
+[[b2.faq.external]]
 == Can I get capture external program output using a Boost.Jam variable?
 
 The `SHELL` builtin rule may be used for this purpose:
@@ -210,7 +210,7 @@ The `SHELL` builtin rule may be used for this purpose:
 local gtk_includes = [ SHELL "gtk-config --cflags" ] ;
 ----
 
-[[bbv2.faq.projectroot]]
+[[b2.faq.projectroot]]
 == How to get the project root (a.k.a. Jamroot) location?
 
 You might want to use your project's root location in your Jamfiles. To
@@ -223,7 +223,7 @@ path-constant TOP : . ;
 
 After that, the `TOP` variable can be used in every Jamfile.
 
-[[bbv2.faq.flags]]
+[[b2.faq.flags]]
 == How to change compilation flags for one file?
 
 If one file must be compiled with special options, you need to
@@ -245,7 +245,7 @@ exe a : a.cpp b ;
 obj b : b.cpp : <cflags>-g ;
 ----
 
-You can also use link:#bbv2.tutorial.conditions[conditional properties]
+You can also use link:#b2.tutorial.conditions[conditional properties]
 for finer control:
 
 [source,jam]
@@ -254,8 +254,8 @@ exe a : a.cpp b ;
 obj b : b.cpp : <variant>release:<optimization>off ;
 ----
 
-[[bbv2.faq.dll-path]]
-== Why are the link:#bbv2.builtin.features.dll-path[`dll-path`] and link:#bbv2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`] properties useful?
+[[b2.faq.dll-path]]
+== Why are the link:#b2.builtin.features.dll-path[`dll-path`] and link:#b2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`] properties useful?
 
 NOTE: This entry is specific to Unix systems.
 
@@ -275,8 +275,8 @@ system location. This can be inconvenient when developing, since the
 libraries are not yet ready to be installed, and cluttering system paths
 may be undesirable. Luckily, on Unix there is another way.
 
-Using the link:#bbv2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`]
-and link:#bbv2.builtin.features.dll-path[`dll-path`] features,
+Using the link:#b2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`]
+and link:#b2.builtin.features.dll-path[`dll-path`] features,
 a target can be linked with an additional list of library directory paths
 that will be searched before the system paths --
 these are called "_runtime library search paths_" or "_run paths_", or
@@ -287,21 +287,21 @@ https://en.wikipedia.org/wiki/Rpath[Wikipedia] for more.
 NOTE: We'll just use _rpath list_ for conciseness below.
 
 === `hardcode-dll-paths`
-The link:#bbv2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`]
-feature for link:#bbv2.reference.rules.exe[`exe`] targets, is especially
+The link:#b2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`]
+feature for link:#b2.reference.rules.exe[`exe`] targets, is especially
 helpful for development; As the build system already knows the paths to all
 the used shared libraries, it will by default automatically add them to the
 executable _rpath list_.
 
 When the executable is installed however, the story is different;
 Obviously, installed executables should not contain hardcoded paths to
-your development tree. The link:#bbv2.reference.rules.install[`install`]
+your development tree. The link:#b2.reference.rules.install[`install`]
 rule therefore implicitly (i.e. by default) negates the
-link:#bbv2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`]
+link:#b2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`]
 feature, by re-linking an executable _without_ the automatic paths
 if necessary.
 
-    - For the link:#bbv2.reference.rules.exe[`exe`] rule:
+    - For the link:#b2.reference.rules.exe[`exe`] rule:
         * With `<hardcode-dll-paths>true` (default), the paths to all
           directories with used shared libraries are _automatically_ added
           to the target's _rpath list_.
@@ -310,11 +310,11 @@ if necessary.
           _disable_ the automatic adding  of directory paths to the shared
           libraries.
 
-    - For the link:#bbv2.reference.rules.install[`install`] rule:
+    - For the link:#b2.reference.rules.install[`install`] rule:
         * If so desired, an explicit `<hardcode-dll-paths>true` is needed
           to propagate the _rpath list_, added to the source
           targets, through to the `install` targets. (This include explicit
-          link:#bbv2.builtin.features.dll-path[`dll-path`] entries added
+          link:#b2.builtin.features.dll-path[`dll-path`] entries added
           to the source targets.)
 
         * By default, the implicit `<hardcode-dll-paths>false` property,
@@ -322,11 +322,11 @@ if necessary.
           propagated through to the `install` targets.
 
     - The `<hardcode-dll-paths>` feature is ignored for the
-      link:#bbv2.reference.rules.lib[`lib`] rule.
+      link:#b2.reference.rules.lib[`lib`] rule.
 
 === `dll-path`
 As an alternative -- or in addition -- you can use the
-link:#bbv2.builtin.features.dll-path[`dll-path`] feature to add explicit
+link:#b2.builtin.features.dll-path[`dll-path`] feature to add explicit
 directory paths manually to the _rpath list_. +
 For example:
 
@@ -376,7 +376,7 @@ that they should always be used.
 |`hardcode-dll-paths` |`true`
 |Propagate _rpath list_ from the sources (`exe` & `lib` targets)
  to the installed binary. (This include explicit
- link:#bbv2.builtin.features.dll-path[`dll-path`]
+ link:#b2.builtin.features.dll-path[`dll-path`]
  entries added to the source targets.)
 
 |`install`
@@ -403,7 +403,7 @@ that they should always be used.
  command line invocation, thus severely limited in practical use.
 |===
 
-[[bbv2.recipes.site-config]]
+[[b2.recipes.site-config]]
 == Targets in site-config.jam
 
 It is desirable to declare standard libraries available on a given
@@ -430,7 +430,7 @@ exe hello : hello.cpp /site-config//zlib ;
 
 in any Jamfile.
 
-[[bbv2.faq.header-only-libraries]]
+[[b2.faq.header-only-libraries]]
 == Header-only libraries
 
 In modern {CPP}, libraries often consist of just header files, without any
@@ -470,7 +470,7 @@ project my : usage-requirements <include>whatever ;
 alias mylib ;
 ----
 
-[[bbv2.faq.names]]
+[[b2.faq.names]]
 == What is the difference between B2, `b2`, `bjam` and Perforce Jam?
 
 B2 is the name of the complete build system. The executable

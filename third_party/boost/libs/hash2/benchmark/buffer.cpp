@@ -5,11 +5,13 @@
 #include <boost/hash2/fnv1a.hpp>
 #include <boost/hash2/siphash.hpp>
 #include <boost/hash2/xxhash.hpp>
+#include <boost/hash2/xxh3.hpp>
 #include <boost/hash2/md5.hpp>
 #include <boost/hash2/sha1.hpp>
 #include <boost/hash2/sha2.hpp>
 #include <boost/hash2/sha3.hpp>
 #include <boost/hash2/ripemd.hpp>
+#include <boost/hash2/blake2.hpp>
 #include <boost/hash2/hash_append.hpp>
 #include <boost/hash2/get_integral_result.hpp>
 #include <boost/core/type_name.hpp>
@@ -50,6 +52,7 @@ void test( int N, int M )
     test_<fnv1a_64>( data, N, M );
     test_<xxhash_32>( data, N, M );
     test_<xxhash_64>( data, N, M );
+    test_<xxh3_128>( data, N, M );
     test_<siphash_32>( data, N, M );
     test_<siphash_64>( data, N, M );
     test_<md5_128>( data, N, M );
@@ -61,6 +64,8 @@ void test( int N, int M )
     test_<sha3_256>( data, N, M );
     test_<sha3_512>( data, N, M );
     test_<shake_128>( data, N, M );
+    test_<blake2b_512>( data, N, M );
+    test_<blake2s_256>( data, N, M );
 
     puts( "--" );
 }

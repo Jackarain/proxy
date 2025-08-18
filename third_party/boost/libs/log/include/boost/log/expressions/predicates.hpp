@@ -24,6 +24,8 @@
 #include <boost/log/expressions/predicates/matches.hpp>
 #include <boost/log/expressions/predicates/is_in_range.hpp>
 
+#include <boost/log/expressions/predicates/wrap_filter.hpp>
+
 #include <boost/log/expressions/predicates/is_debugger_present.hpp>
 #include <boost/log/expressions/predicates/channel_severity_filter.hpp>
 

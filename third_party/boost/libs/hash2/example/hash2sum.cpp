@@ -7,7 +7,9 @@
 #include <boost/hash2/md5.hpp>
 #include <boost/hash2/sha1.hpp>
 #include <boost/hash2/sha2.hpp>
+#include <boost/hash2/sha3.hpp>
 #include <boost/hash2/ripemd.hpp>
+#include <boost/hash2/blake2.hpp>
 #include <boost/mp11.hpp>
 #include <array>
 #include <string>
@@ -69,8 +71,14 @@ using hashes = mp_list<
     sha2_384,
     sha2_512_256,
     sha2_512_224,
+    sha3_256,
+    sha3_224,
+    sha3_512,
+    sha3_384,
     ripemd_160,
-    ripemd_128
+    ripemd_128,
+    blake2b_512,
+    blake2s_256
 
 >;
 
@@ -84,9 +92,14 @@ constexpr char const* names[] = {
     "sha2_384",
     "sha2_512_256",
     "sha2_512_224",
+    "sha3_256",
+    "sha3_224",
+    "sha3_512",
+    "sha3_384",
     "ripemd_160",
-    "ripemd_128"
-
+    "ripemd_128",
+    "blake2b_512",
+    "blake2s_256"
 };
 
 int main( int argc, char const* argv[] )

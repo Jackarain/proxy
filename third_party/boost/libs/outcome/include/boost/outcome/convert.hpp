@@ -1,5 +1,5 @@
 /* Says how to convert value, error and exception types
-(C) 2017-2024 Niall Douglas <http://www.nedproductions.biz/> (12 commits)
+(C) 2017-2025 Niall Douglas <http://www.nedproductions.biz/> (12 commits)
 File Created: Nov 2017
 
 

@@ -49,36 +49,6 @@ namespace grammar {
     @see
         @ref grammar::parse.
 */
-#ifdef BOOST_URL_DOCS
-template<class Unsigned>
-struct unsigned_rule;
-#else
-/** Match an unsigned decimal
-
-    Extra leading zeroes are disallowed.
-
-    @par Value Type
-    @code
-    using value_type = Unsigned;
-    @endcode
-
-    @par Example
-    Rules are used with the function @ref parse.
-    @code
-    system::result< unsigned short > rv = parse( "32767", unsigned_rule< unsigned short >{} );
-    @endcode
-
-    @par BNF
-    @code
-    unsigned      = "0" / ( ["1"..."9"] *DIGIT )
-    @endcode
-
-    @tparam Unsigned The unsigned integer type used
-    to store the result.
-
-    @see
-        @ref grammar::parse.
-*/
 template<class Unsigned>
 struct unsigned_rule
 {
@@ -97,8 +67,6 @@ struct unsigned_rule
             ) const noexcept ->
         system::result<value_type>;
 };
-#endif
-
 } // grammar
 } // urls
 } // boost

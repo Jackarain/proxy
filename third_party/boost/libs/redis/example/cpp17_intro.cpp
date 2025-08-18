@@ -5,7 +5,9 @@
  */
 
 #include <boost/redis/connection.hpp>
+
 #include <boost/asio/detached.hpp>
+
 #include <iostream>
 
 namespace asio = boost::asio;
@@ -14,7 +16,7 @@ using boost::redis::request;
 using boost::redis::response;
 using boost::redis::config;
 
-auto main(int argc, char * argv[]) -> int
+auto main(int argc, char* argv[]) -> int
 {
    try {
       config cfg;
@@ -32,7 +34,7 @@ auto main(int argc, char * argv[]) -> int
       asio::io_context ioc;
       connection conn{ioc};
 
-      conn.async_run(cfg, {}, asio::detached);
+      conn.async_run(cfg, asio::detached);
 
       conn.async_exec(req, resp, [&](auto ec, auto) {
          if (!ec)
@@ -47,4 +49,3 @@ auto main(int argc, char * argv[]) -> int
       return 1;
    }
 }
-

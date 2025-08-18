@@ -194,5 +194,7 @@ void test_replace()
    TEST_REGEX_REPLACE("(a*)", perl, "aabb", match_default, "{$1}", "{aa}{}b{}b{}");
    TEST_REGEX_REPLACE("(a*)", boost::regex::extended, "aabb", match_default, "{$1}", "{aa}{}b{}b{}");
    TEST_REGEX_REPLACE("(a*)", boost::regex::extended, "aabb", match_default|match_posix, "{$1}", "{aa}b{}b{}");
+   // DOS protection:
+   TEST_REGEX_REPLACE("foo", boost::regex::perl, "foobar", match_default|format_all, "(((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((", "(((((((((((((((((((((bar");
 }
 

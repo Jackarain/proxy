@@ -1,7 +1,7 @@
 # Copyright (c) 2003, 2006 Beman Dawes
 # Copyright (c) 2012 Artyom Beilis (Tonkikh)
 # Copyright (c) 2020-2022 Alexander Grund
-# 
+#
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
@@ -23,11 +23,11 @@ project : requirements
   <include>.
   <warnings>pedantic
   <warnings-as-errors>on
-  [ check-target-builds ../config//cxx11_moveable_fstreams "std::fstream is moveable and swappable" : : <build>no ] 
+  [ check-target-builds ../config//cxx11_moveable_fstreams "std::fstream is moveable and swappable" : : <build>no ]
   ;
 
 lib shell32 ;
-lib file_test_helpers : file_test_helpers.cpp : <link>static -<library>/boost/nowide//boost_nowide ;
+lib file_test_helpers : file_test_helpers.cpp : <link>static -<library>/boost/nowide//boost_nowide <use>/boost/nowide//boost_nowide ;
 explicit file_test_helpers ;
 
 run test_codecvt.cpp ;

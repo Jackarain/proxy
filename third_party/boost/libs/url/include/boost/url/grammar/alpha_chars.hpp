@@ -16,35 +16,6 @@
 namespace boost {
 namespace urls {
 namespace grammar {
-
-/** The set of all letters
-
-    @par Example
-    Character sets are used with rules and the
-    functions @ref find_if and @ref find_if_not.
-    @code
-    system::result< core::string_view > rv = parse( "JohnDoe", token_rule( alpha_chars ) );
-    @endcode
-
-    @par BNF
-    @code
-    ALPHA       = %x41-5A / %x61-7A
-                ; A-Z / a-z
-    @endcode
-
-    @par Specification
-    @li <a href="https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1"
-        >B.1. Core Rules (rfc5234)</a>
-
-    @see
-        @ref find_if,
-        @ref find_if_not,
-        @ref parse,
-        @ref token_rule.
-*/
-#ifdef BOOST_URL_DOCS
-constexpr __implementation_defined__ alpha_chars;
-#else
 namespace implementation_defined {
 struct alpha_chars_t
 {
@@ -108,7 +79,6 @@ struct alpha_chars_t
         @ref token_rule.
 */
 constexpr implementation_defined::alpha_chars_t alpha_chars{};
-#endif
 
 } // grammar
 } // urls

@@ -65,6 +65,7 @@ import testing ;
 import toolset ;
 import type ;
 import path ;
+import args ;
 
 feature mpi.run-flags : : free incidental ;
 
@@ -72,10 +73,7 @@ feature mpi.run-flags : : free incidental ;
 project.initialize $(__name__) ;
 project mpi ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-  .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 # Assuming the first part of the command line is the given prefix
 # followed by some non-empty value, remove the first argument. Returns

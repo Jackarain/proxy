@@ -15,7 +15,7 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.tools.compiler.msvc]]
+[[b2.reference.tools.compiler.msvc]]
 = Microsoft Visual C++
 
 The `msvc` module supports the
@@ -129,7 +129,7 @@ The filename of the target platform specific environment setup script
 to run before invoking any of the tools defined in this toolset. If
 not specified the global environment setup script is used.
 
-[[bbv2.reference.tools.compiler.msvc.64]]
+[[b2.reference.tools.compiler.msvc.64]]
 == 64-bit support
 
 Starting with version 8.0, Microsoft Visual Studio can generate binaries
@@ -174,7 +174,7 @@ of those options depending on the value of the`instruction-set` feature.
 Starting with version 14.0, Microsoft Visual Studio can generate binaries
 using native arm64 tools to compile for x86, x86_64, and arm64.
 
-[[bbv2.reference.tools.compiler.msvc.winrt]]
+[[b2.reference.tools.compiler.msvc.winrt]]
 == Windows Runtime support
 
 Starting with version 11.0, Microsoft Visual Studio can produce binaries
@@ -216,6 +216,7 @@ http://blogs.msdn.com/b/vcblog/archive/2014/07/18/using-boost-libraries-in-windo
 #
 ################################################################################
 
+import args ;
 import "class" : new ;
 import common ;
 import feature ;
@@ -243,10 +244,10 @@ type.register MANIFEST : manifest ;
 
 #| tag::embed-doc[]
 
-[[bbv2.builtin.features.embed-manifest]]`embed-manifest`::
+[[b2.builtin.features.embed-manifest]]`embed-manifest`::
 *Allowed values:* `on`, `off`.
 +
-This feature is specific to the `msvc` toolset (see <<Microsoft Visual C++>>),
+This feature is specific to the `msvc` toolset (see <<b2.reference.tools.compiler.msvc>>),
 and controls whether the manifest files should be embedded inside executables
 and shared libraries, or placed alongside them. This feature corresponds to the
 IDE option found in the project settings dialog, under Configuration Properties
@@ -258,8 +259,8 @@ feature.feature embed-manifest : on off : incidental propagated ;
 
 #| tag::embed-doc[]
 
-[[bbv2.builtin.features.embed-manifest-file]]`embed-manifest-file`::
-This feature is specific to the `msvc` toolset (see <<Microsoft Visual C++>>),
+[[b2.builtin.features.embed-manifest-file]]`embed-manifest-file`::
+This feature is specific to the `msvc` toolset (see <<b2.reference.tools.compiler.msvc>>),
 and controls which manifest files should be embedded inside executables and
 shared libraries. This feature corresponds to the IDE option found in the
 project settings dialog, under Configuration Properties -> Manifest Tool ->
@@ -271,8 +272,8 @@ feature.feature embed-manifest-file : : free dependency ;
 
 #| tag::embed-doc[]
 
-[[bbv2.builtin.features.embed-manifest-via]]`embed-manifest-via`::
-This feature is specific to the `msvc` toolset (see <<Microsoft Visual C++>>),
+[[b2.builtin.features.embed-manifest-via]]`embed-manifest-via`::
+This feature is specific to the `msvc` toolset (see <<b2.reference.tools.compiler.msvc>>),
 and controls whether a manifest should be embedded via linker or manifest tool.
 
 |# # end::embed-doc[]
@@ -2112,10 +2113,7 @@ local rule register-configuration ( version : path ? )
 #
 ################################################################################
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 # Miscellaneous constants.
 .RM = [ common.rm-command ] ;

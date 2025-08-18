@@ -10,9 +10,9 @@ set -e
 
 repo_base=$(realpath $(dirname $(realpath $0))/../..)
 
-BK=b2
-IMAGE=build-clang11
-SHA=61b5b771ffefa8c04c43ddc9e023152461a8295f
+BK=cmake
+IMAGE=build-cmake3_8
+SHA=e9696175806589fc91e160399eedeac8fdc88c68
 CONTAINER=builder-$IMAGE
 FULL_IMAGE=ghcr.io/anarthal-containers/$IMAGE:$SHA
 DB=mysql-8.4.1
@@ -50,12 +50,18 @@ case $BK in
     cmake) cmd="$db_args
             --cmake-build-type=Debug
             --build-shared-libs=1
-            --cxxstd=20
-            --install-test=1
+            --cxxstd=11
+            --install-test=0
             "
         ;;
     
     fuzz) cmd="$db_args" ;;
+
+    bench) cmd="$db_args
+                --protocol-iters=10
+                --connection-pool-iters=0
+                "
+        ;;
 
     *) cmd="" ;;
 esac

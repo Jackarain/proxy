@@ -5,6 +5,7 @@
 # Automatic configuration for the xsltproc toolset. To use, just import this
 # module.
 
+import args ;
 import os ;
 import toolset : using ;
 
@@ -28,7 +29,7 @@ local rule locate-executable ( name )
 local xsltproc-exe = [ locate-executable xsltproc ] ;
 if $(xsltproc-exe)
 {
-    if --debug-configuration in [ modules.peek : ARGV ]
+    if [ args.get-arg debug-configuration ]
     {
         ECHO notice\: using xsltproc ":" $(xsltproc-exe) ;
     }

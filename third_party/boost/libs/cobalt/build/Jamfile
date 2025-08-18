@@ -9,7 +9,15 @@ import-search /boost/config/checks ;
 import config : requires ;
 import-search /boost/cobalt ;
 import boost-cobalt ;
+import ac ;
 
+using openssl ;
+
+explicit
+        [ searched-lib ws2_32 : : <target-os>windows ]
+        [ searched-lib mswsock : : <target-os>windows ]
+        [ searched-lib bcrypt : : <target-os>windows ]
+        ;
 
 project : requirements
   <define>BOOST_ASIO_NO_DEPRECATED
@@ -52,7 +60,7 @@ lib boost_cobalt
       : <conditional>@set-pmr-std
       : <conditional>@set-pmr-boost
       ]
-
+    <target-os>windows,<toolset>gcc:<library>ws2_32
    : usage-requirements
      <boost.cobalt.pmr>boost-container:<library>/boost/container//boost_container
      <link>shared:<define>BOOST_COBALT_DYN_LINK=1
@@ -63,7 +71,53 @@ lib boost_cobalt
       : <conditional>@set-pmr-std
       : <conditional>@set-pmr-boost
       ]
+    <target-os>windows,<toolset>gcc:<library>ws2_32
   ;
+
+alias cobalt_io_sources
+   : io/steady_timer.cpp
+     io/system_timer.cpp
+     io/sleep.cpp
+     io/signal_set.cpp
+     io/serial_port.cpp
+     io/write.cpp
+     io/read.cpp
+     io/pipe.cpp
+     io/file.cpp
+     io/random_access_file.cpp
+     io/stream_file.cpp
+     io/endpoint.cpp
+     io/socket.cpp
+     io/datagram_socket.cpp
+     io/seq_packet_socket.cpp
+     io/stream_socket.cpp
+     io/resolver.cpp
+     io/acceptor.cpp
+   ;
+
+
+lib boost_cobalt_io
+    : cobalt_io_sources boost_cobalt
+    : requirements <define>BOOST_COBALT_IO_SOURCE=1
+      <link>shared:<define>BOOST_COBALT_DYN_LINK=1
+      <target-os>windows,<toolset>gcc:<library>bcrypt
+      <target-os>windows,<toolset>gcc:<library>mswsock
+    : usage-requirements
+      <target-os>windows,<toolset>gcc:<library>bcrypt
+      <target-os>windows,<toolset>gcc:<library>mswsock
+    ;
+
+lib boost_cobalt_io_ssl
+    : io/ssl.cpp boost_cobalt_io
+    : requirements <define>BOOST_COBALT_SSL_SOURCE=1
+                   <link>shared:<define>BOOST_COBALT_DYN_LINK=1
+                   [ ac.check-library /openssl//ssl : <library>/openssl//ssl/<link>shared : <build>no ]
+                   [ ac.check-library /openssl//crypto : <library>/openssl//crypto/<link>shared : <build>no ]
+    : usage-requirements
+                   [ ac.check-library /openssl//ssl : <library>/openssl//ssl/<link>shared : <build>no ]
+                   [ ac.check-library /openssl//crypto : <library>/openssl//crypto/<link>shared : <build>no ]
+    ;
+
 
 rule set-pmr-boost ( props * )
 {

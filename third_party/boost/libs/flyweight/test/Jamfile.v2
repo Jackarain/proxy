@@ -7,6 +7,8 @@
 #
 # See http://www.boost.org/libs/flyweight for library home page.
 
+import testing ;
+
 project
     : requirements
       <library>/boost/flyweight//boost_flyweight

@@ -1,13 +1,13 @@
-[[bbv2.extender]]
+[[b2.extender]]
 = Extender Manual
 
-[[bbv2.extender.intro]]
+[[b2.extender.intro]]
 == Introduction
 
 This section explains how to extend B2 to accommodate your local
 requirements -- primarily to add support for non-standard tools you
 have. Before we start, be sure you have read and understood the concept
-of metatarget, <<bbv2.overview.concepts>>, which is critical to
+of metatarget, <<b2.overview.concepts>>, which is critical to
 understanding the remaining material.
 
 The current version of B2 has three levels of targets, listed
@@ -31,24 +31,24 @@ WARNING: All of the Boost.Jam target-related builtin functions, like
 `DEPENDS` or `ALWAYS` operate on jam targets. Applying them to metatargets or
 concrete targets has no effect.
 
-[[bbv2.extender.overview.metatargets]]
+[[b2.extender.overview.metatargets]]
 === Metatargets
 
 Metatarget is an object that records information specified in Jamfile,
 such as metatarget kind, name, sources and properties, and can be called
 with specific properties to generate concrete targets. At the code level
 it is represented by an instance of class derived from
-link:#bbv2.reference.class.abstract-target[abstract-target].
+link:#b2.reference.class.abstract-target[abstract-target].
 footnote:[This name is historic, and will be eventually changed to
 `metatarget`]
 
-The link:#bbv2.reference.class.abstract-target.generate[generate] method
+The link:#b2.reference.class.abstract-target.generate[generate] method
 takes the build properties (as an instance of the
-link:#bbv2.reference.class.property-set[property-set] class) and returns
+link:#b2.reference.class.property-set[property-set] class) and returns
 a list containing:
 
 * As front element -- Usage-requirements from this invocation (an
-instance of link:#bbv2.reference.class.property-set[property-set])
+instance of link:#b2.reference.class.property-set[property-set])
 
 * As subsequent elements -- created concrete targets ( instances of the
 `virtual-target` class.)
@@ -58,55 +58,55 @@ It's possible to lookup a metatarget by target-id using the
 `targets.generate-from-reference` function can both lookup and generate
 a metatarget.
 
-The link:#bbv2.reference.class.abstract-target[abstract-target] class
+The link:#b2.reference.class.abstract-target[abstract-target] class
 has three immediate derived classes:
 
-* link:#bbv2.reference.class.project-target[project-target] that
+* link:#b2.reference.class.project-target[project-target] that
 corresponds to a project and is not intended for further subclassing.
-The link:#bbv2.reference.class.project-target.generate[generate] method
+The link:#b2.reference.class.project-target.generate[generate] method
 of this class builds all targets in the project that are not marked as
 explicit.
 
-* link:#bbv2.reference.class.main-target[main-target] corresponds to a
+* link:#b2.reference.class.main-target[main-target] corresponds to a
 target in a project and contains one or more target alternatives. This
 class also should not be subclassed. The
-link:#bbv2.reference.class.main-target.generate[generate] method of this
+link:#b2.reference.class.main-target.generate[generate] method of this
 class selects an alternative to build, and calls the
-link:#bbv2.reference.class.basic-target.generate[generate] method of
+link:#b2.reference.class.basic-target.generate[generate] method of
 that alternative.
 
-* link:#bbv2.reference.class.basic-target[basic-target] corresponds to a
+* link:#b2.reference.class.basic-target[basic-target] corresponds to a
 specific target alternative. This is base class, with a number of
 derived classes. The
-link:#bbv2.reference.class.basic-target.generate[generate] method
+link:#b2.reference.class.basic-target.generate[generate] method
 processes the target requirements and requested build properties to
 determine final properties for the target, builds all sources, and
 finally calls the abstract
-link:#bbv2.reference.class.basic-target.construct[construct] method with
+link:#b2.reference.class.basic-target.construct[construct] method with
 the list of source virtual targets, and the final properties.
 
 The instances of the
-link:#bbv2.reference.class.project-target[project-target] and
-link:#bbv2.reference.class.main-target[main-target] classes are created
+link:#b2.reference.class.project-target[project-target] and
+link:#b2.reference.class.main-target[main-target] classes are created
 implicitly -- when loading a new Jamfiles, or when a new target
 alternative with as-yet unknown name is created. The instances of the
 classes derived from
-link:#bbv2.reference.class.basic-target[basic-target] are typically
+link:#b2.reference.class.basic-target[basic-target] are typically
 created when Jamfile calls a metatarget rule, such as such as `exe`.
 
 It it permissible to create a custom class derived from
-link:#bbv2.reference.class.basic-target[basic-target] and create new
+link:#b2.reference.class.basic-target[basic-target] and create new
 metatarget rule that creates instance of such target. However, in the
 majority of cases, a specific subclass of
-link:#bbv2.reference.class.basic-target[basic-target] --
-link:#bbv2.reference.class.typed-target[typed-target] is used. That
+link:#b2.reference.class.basic-target[basic-target] --
+link:#b2.reference.class.typed-target[typed-target] is used. That
 class is associated with a type and relays to generators to construct
 concrete targets of that type. This process will be explained below.
 When a new type is declared, a new metatarget rule is automatically
 defined. That rule creates new instance of type-target, associated with
 that type.
 
-[[bbv2.extender.overview.targets]]
+[[b2.extender.overview.targets]]
 === Concrete targets
 
 Concrete targets are represented by instance of classes derived from
@@ -114,7 +114,7 @@ Concrete targets are represented by instance of classes derived from
 file target is associated with an action that creates it --  an
 instance of the `action` class. The action, in turn, hold a list of
 source targets. It also holds the
-link:#bbv2.reference.class.property-set[property-set] instance with the
+link:#b2.reference.class.property-set[property-set] instance with the
 build properties that should be used for the action.
 
 Here's an example of creating a target from another target, `source`
@@ -127,7 +127,7 @@ local t = [ new file-target $(name) : CPP : $(project) : $(a) ] ;
 
 The first line creates an instance of the `action` class. The first
 parameter is the list of sources. The second parameter is the name a
-jam-level link:#bbv2.overview.jam_language.actions[action]. The third
+jam-level link:#b2.overview.jam_language.actions[action]. The third
 parameter is the property-set applying to this action. The second line
 creates a target. We specify a name, a type and a project. We also pass
 the action object created earlier. If the action creates several
@@ -150,7 +150,7 @@ return [ virtual-target.register $(t) ] ;
 return [ sequence.transform virtual-target.register : $(targets) ] ;
 ----
 
-[[bbv2.extender.overview.generators]]
+[[b2.extender.overview.generators]]
 === Generators
 
 In theory, every kind of metatarget in B2 (like `exe`, `lib` or
@@ -164,12 +164,12 @@ In practice, most files have specific types, and most tools consume and
 produce files of specific type. To take advantage of this fact,
 B2 defines concept of target type and generators generators,
 and has special metatarget class
-link:#bbv2.reference.class.typed-target[typed-target]. Target type is
+link:#b2.reference.class.typed-target[typed-target]. Target type is
 merely an identifier. It is associated with a set of file extensions
 that correspond to that type. Generator is an abstraction of a tool. It
 advertises the types it produces and, if called with a set of input
 target, tries to construct output targets of the advertised types.
-Finally, link:#bbv2.reference.class.typed-target[typed-target] is
+Finally, link:#b2.reference.class.typed-target[typed-target] is
 associated with specific target type, and relays the generator (or
 generators) for that type.
 
@@ -177,7 +177,7 @@ A generator is an instance of a class derived from `generator`. The
 `generator` class itself is suitable for common cases. You can define
 derived classes for custom scenarios.
 
-[[bbv2.extender.example]]
+[[b2.extender.example]]
 == Example: 1-to-1 generator
 
 Say you're writing an application that generates {CPP} code. If you ever
@@ -209,7 +209,7 @@ type.register VERBATIM : verbatim ;
 ----
 
 The first parameter to
-link:#bbv2.reference.modules.type.register[type.register] gives the name
+link:#b2.reference.modules.type.register[type.register] gives the name
 of the declared type. By convention, it's uppercase. The second
 parameter is the suffix for files of this type. So, if B2 sees
 `code.verbatim` in a list of sources, it knows that it's of type
@@ -254,10 +254,10 @@ In subsequent sections, we will extend this example, and review all the
 mechanisms in detail. The complete code is available in the
 `example/customization` directory.
 
-[[bbv2.extending.targets]]
+[[b2.extending.targets]]
 == Target types
 
-The first thing we did in the link:#bbv2.extender.intro[introduction]
+The first thing we did in the link:#b2.extender.intro[introduction]
 was declaring a new target type:
 
 [source,jam]
@@ -307,9 +307,9 @@ plugins to an application.
 A type can be defined as "main", in which case B2 will
 automatically declare a main target rule for building targets of that
 type. More details can be found
-link:#bbv2.extending.rules.main-type[later].
+link:#b2.extending.rules.main-type[later].
 
-[[bbv2.extending.scanners]]
+[[b2.extending.scanners]]
 == Scanners
 
 Sometimes, a file can refer to other files via some include system. To
@@ -359,7 +359,7 @@ type.set-scanner VERBATIM : verbatim-scanner ;
 
 That's enough for scanning include dependencies.
 
-[[bbv2.extending.tools]]
+[[b2.extending.tools]]
 == Tools and generators
 
 This section will describe how B2 can be extended to support
@@ -379,7 +379,7 @@ Each generator should be an instance of a class derived from the
 `generator` class. In the simplest case, you don't need to create a
 derived class, but simply create an instance of the `generator` class.
 Let's review the example we've seen in the
-link:#bbv2.extender.intro[introduction].
+link:#b2.extender.intro[introduction].
 
 [source,jam]
 ----
@@ -555,7 +555,7 @@ calling `generators.construct` and passing the {CPP} source and the
 libraries. At this point, we also change the extension's name, if
 necessary.
 
-[[bbv2.extending.features]]
+[[b2.extending.features]]
 == Features
 
 Often, we need to control the options passed the invoked tools. This is
@@ -601,7 +601,7 @@ allow the user to pass any value to the command line parameters for a
 particular tool, if so desired. For example, the `<cxxflags>` feature
 allows you to pass any command line options to a {CPP} compiler. The
 `<include>` feature allows you to pass any string preceded by `-I` and
-the interpretation is tool-specific. (See <<bbv2.faq.external>>
+the interpretation is tool-specific. (See <<b2.faq.external>>
 for an example of very smart usage of that feature). Of course one
 should always strive to use portable features, but these are still be
 provided as a backdoor just to make sure B2 does not take away
@@ -625,7 +625,7 @@ Adding a feature requires three steps:
 
 1.  Declaring a feature. For that, the "feature.feature" rule is used.
 You have to decide on the set of
-link:#bbv2.reference.features.attributes[feature attributes]:
+link:#b2.reference.features.attributes[feature attributes]:
 * if you want a feature value set for one target to automatically
 propagate to its dependent targets then make it “propagated”.
 * if a feature does not have a fixed list of values, it must be “free.”
@@ -735,15 +735,15 @@ feature.compose <parallelism>fake : <library>/mpi//fake/<parallelism>none ;
 This will allow you to specify the value of feature `parallelism`, which
 will expand to link to the necessary library.
 
-[[bbv2.extending.rules]]
+[[b2.extending.rules]]
 == Main target rules
 
-A main target rule (e.g “link:#bbv2.tasks.programs[exe]” Or
-“link:#bbv2.tasks.libraries[lib]”) creates a top-level target. It's
+A main target rule (e.g “link:#b2.tasks.programs[exe]” Or
+“link:#b2.tasks.libraries[lib]”) creates a top-level target. It's
 quite likely that you'll want to declare your own and there are two ways
 to do that.
 
-[[bbv2.extending.rules.main-type]]The first way applies when your target rule
+[[b2.extending.rules.main-type]]The first way applies when your target rule
 should just produce a target
 of specific type. In that case, a rule is already defined for you! When
 you define a new type, B2 automatically defines a corresponding
@@ -797,7 +797,7 @@ type, the logic of building can be rather complicated. For example, the
 generator for that type. You can use that as example if your main target
 rule is non-trivial.
 
-[[bbv2.extending.toolset_modules]]
+[[b2.extending.toolset_modules]]
 == Toolset modules
 
 If your extensions will be used only on one project, they can be placed

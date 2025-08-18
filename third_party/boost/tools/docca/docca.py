@@ -108,6 +108,27 @@ class UrlLink(Phrase):
             result = self.url
         return result
 
+class EmDash:
+    def __init__(self, *args, **kw):
+        pass
+
+    @property
+    def text(self):
+        return '\u2014'
+
+    def __len__(self):
+        return 0
+
+class EnDash:
+    def __init__(self, *args, **kw):
+        pass
+
+    @property
+    def text(self):
+        return '\u2013'
+
+    def __len__(self):
+        return 0
 
 class Block:
     pass
@@ -453,6 +474,8 @@ def make_phrase(element, index, allow_missing_refs=False):
         'ulink': make_url_link,
         'linebreak': make_linebreak,
         'ref': make_entity_reference,
+        'mdash': EmDash,
+        'ndash': EnDash,
     }[element.tag]
     return func(element, index, allow_missing_refs=allow_missing_refs)
 
@@ -759,12 +782,14 @@ class Scope(Entity):
                     'enum': Enum,
                 }[kind]
                 member = factory(member_def, section, self, index)
-                if member is None:
-                    continue
                 if type(member) is OverloadSet:
                     key = (member.name, member.access, member.kind)
                     self.members[key] = member
                 else:
+                    if member and member.name in self.members:
+                        member = work_around_repeated_member(self, member)
+                    if member is None:
+                        continue
                     assert member.name not in self.members
                     self.members[member.name] = member
 
@@ -1123,6 +1148,28 @@ class TypeAlias(Member, Type):
         delattr(self, '_aliased')
 
 
+def work_around_repeated_member(scope, member):
+    scope_loc = scope.location
+    member_loc = member.location
+    old_member = scope.members[member.name]
+    old_member_loc = old_member.location
+    if (scope.is_specialization and
+            scope_loc and
+            member_loc and
+            old_member_loc and
+            member_loc.file == scope_loc.file and
+            member_loc.line >= scope_loc.line and
+            (old_member_loc.file != scope_loc.file or
+                old_member_loc.line < scope_loc.line)):
+        # the new member's declaration is in the same file as the
+        # specialization's declaration and follows it; the old member's
+        # declarattion is either in a different file or preceeds the
+        # specialization's declaration
+        del scope.members[member.name]
+        return member
+    return None
+
+
 class AcceptOneorNone(argparse.Action):
     def __init__(self, option_strings, dest, **kwargs):
         if kwargs.get('nargs') is not None:
@@ -1211,6 +1258,13 @@ def load_configs(args):
     for file_name in args.config:
         with open(file_name, 'r', encoding='utf-8') as file:
             result.update( json.load(file) )
+    if 'allowed_prefixes' not in result:
+        allowed_prefixes = ['']
+        default_ns = result.get('default_namespace')
+        if default_ns:
+            allowed_prefixes[0] = default_ns + '::'
+        result['allowed_prefixes'] = allowed_prefixes
+
     return result
 
 def collect_compound_refs(file):
@@ -1316,6 +1370,8 @@ def construct_environment(loader, config):
     env.tests['Monospaced'] = lambda x: isinstance(x, Monospaced)
     env.tests['EntityRef'] = lambda x: isinstance(x, EntityRef)
     env.tests['UrlLink'] = lambda x: isinstance(x, UrlLink)
+    env.tests['EmDash'] = lambda x: isinstance(x, EmDash)
+    env.tests['EnDash'] = lambda x: isinstance(x, EnDash)
 
     env.tests['Block'] = lambda x: isinstance(x, Block)
     env.tests['Paragraph'] = lambda x: isinstance(x, Paragraph)

@@ -11,7 +11,7 @@
 #define FULL_TEST
 
 #include <boost/math/special_functions/math_fwd.hpp>
-#include "libs/math/test/test_ibeta_inv_ab.hpp"
+#include "test_ibeta_inv_ab.hpp"
 
 void expected_results()
 {

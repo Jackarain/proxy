@@ -1,46 +1,46 @@
 parameters:
-- name: b2_opts
-  type: string
-  default: ''
+  - name: b2_opts
+    type: string
+    default: ""
 
 steps:
-- bash: |
-    set -e
-    uname -a
-    ./.ci/linux-cxx-install.sh
-    python3 --version
-  displayName: Install
-- bash: |
-    set -e
-    cd src/engine
-    set PATH=${PATH};${CXX_PATH}
-    ./build.sh ${TOOLSET}
-    ./b2 -v
-    cd ../..
-    echo "using ${TOOLSET%%-[0-9]*} : : ${CXX} ;" > ${HOME}/user-config.jam
-  displayName: Build
-- bash: |
-    set -e
-    echo "Available system locales:"
-    locale -a
-    echo "Switch to C.UTF-8 locale."
-    export LC_ALL=C.UTF-8
-    cd test
-    ./test_all.py ${TOOLSET}
-    cd ..
-  displayName: Test
-- bash: |
-    set -e
-    ./src/engine/b2 b2 warnings-as-errors=on variant=debug,release ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
-  displayName: "No Warnings"
-- bash: |
-    set -e
-    ./bootstrap.sh ${TOOLSET}
-    ./b2 --prefix=$HOME/temp/.b2 install ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
-    rm ./b2
-    export PATH=$HOME/temp/.b2/bin:$PATH
-    cd $HOME
-    touch build.jam
-    b2 -v
-    b2 -n --debug-configuration ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
-  displayName: Bootstrap
+  - bash: |
+      set -e
+      uname -a
+      ./.ci/linux-cxx-install.sh
+      python3 --version
+    displayName: Install
+  - bash: |
+      set -e
+      cd src/engine
+      set PATH=${PATH};${CXX_PATH}
+      ./build.sh ${TOOLSET}
+      ./b2 -v
+      cd ../..
+      echo "using ${TOOLSET%%-[0-9]*} : : ${CXX} ;" > ${HOME}/user-config.jam
+    displayName: Build
+  - bash: |
+      set -e
+      echo "Available system locales:"
+      locale -a
+      echo "Switch to C.UTF-8 locale."
+      export LC_ALL=C.UTF-8
+      cd test
+      ./test_all.py ${TOOLSET}
+      cd ..
+    displayName: Test
+  - bash: |
+      set -e
+      ./src/engine/b2 b2 warnings-as-errors=on variant=debug,release ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
+    displayName: "No Warnings"
+  - bash: |
+      set -e
+      ./bootstrap.sh ${TOOLSET}
+      ./b2 --prefix=$HOME/temp/.b2 install ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
+      rm ./b2
+      export PATH=$HOME/temp/.b2/bin:$PATH
+      cd $HOME
+      touch build.jam
+      b2 -v
+      b2 -n --debug-configuration ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
+    displayName: Bootstrap

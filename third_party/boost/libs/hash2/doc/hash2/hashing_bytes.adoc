@@ -306,6 +306,17 @@ in Algorithm 8, step 8 of FIPS 202.
 
 SHA-3 uses 64 bit operations for all of the algorithms in the family.
 
+### BLAKE-2
+
+https://www.blake2.net[BLAKE-2] is a cryptographic hash function boasting fast speeds, far exceeding that of other common algorithms such as MD5, SHA-1, SHA-2, and SHA-3.
+BLAKE2b (optimized for 64-bit platforms) and BLAKE2s (optimized for 8- to 32-bit platforms) are implemented. BLAKE2b has a fixed-sized digest of 512 bits and BLAKE2s uses
+a digest of 256 bits.
+
+BLAKE2 is also designed explicitly with keyed hashing in mind, making it functionally equivalent to a Message Authentication Code (MAC). The seeded constructors act as the
+keys, BLAKE2b using a maximum of the first 64 bytes of input as the key and BLAKE2s using a maximum of the first 32 bytes. Excess input is handled by passing it to the `update()` function
+and then `result()` is called. HMAC typedefs are still provided for convenience and for compatibility with existing protocols such as https://noiseprotocol.org/noise.html[Noise]. BLAKE2
+behaves as all other cryptographic hash functions do when used with `hmac<H>`.
+
 ### RIPEMD-160, RIPEMD-128
 
 Designed in 1996, https://en.wikipedia.org/wiki/RIPEMD[RIPEMD-160] is a cryptographic hash function that was less well known than MD5 and SHA-1,

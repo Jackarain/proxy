@@ -1,0 +1,33 @@
+# copyright John Maddock 2022
+# Distributed under the Boost Software License, Version 1.0. 
+# (See accompanying file LICENSE_1_0.txt or copy at 
+# http://www.boost.org/LICENSE_1_0.txt.
+
+project
+    : requirements 
+      <threading>multi 
+      <toolset>msvc:<asynch-exceptions>on
+      <toolset>msvc:<cxxstd>latest
+      <toolset>gcc:<cxxflags>-fmodules-ts
+    ;
+
+obj regex : ../../module/regex.cxx : <toolset>msvc:<cxxflags>-interface [ check-target-builds ./config//test_has_module_support : : <build>no ] ;
+
+exe credit_card_example : credit_card_example.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe partial_regex_grep : partial_regex_grep.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe partial_regex_iterate : partial_regex_iterate.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe partial_regex_match : partial_regex_match.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_grep_example_1 : regex_grep_example_1.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_grep_example_2 : regex_grep_example_2.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_grep_example_3 : regex_grep_example_3.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_iterator_example : regex_iterator_example.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_match_example : regex_match_example.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_merge_example : regex_merge_example.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_replace_example : regex_replace_example.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_search_example : regex_search_example.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_split_example_1 : regex_split_example_1.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_split_example_2 : regex_split_example_2.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_token_iterator_eg_1 : regex_token_iterator_eg_1.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+exe regex_token_iterator_eg_2 : regex_token_iterator_eg_2.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;
+
+compile ../concepts/module_concept_check.cpp regex : [ check-target-builds ./config//test_has_module_support : : <build>no ] <dependency>regex ;

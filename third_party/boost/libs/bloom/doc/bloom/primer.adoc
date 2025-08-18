@@ -1,0 +1,126 @@
+[#primer]
+= Bloom Filter Primer
+
+:idprefix: primer_
+
+A Bloom filter (named after its inventor Burton Howard Bloom) is a probabilistic data
+structure where inserted elements can be looked up with 100% accuracy, whereas looking
+up for a non-inserted element may fail with some probability called the filter's
+_false positive rate_ or FPR. The tradeoff here is that Bloom filters occupy much less
+space than traditional non-probabilistic containers (typically, around 8-20 bits per
+element) for an acceptably low FPR. The greater the filter's _capacity_ (its size in bits),
+the lower the resulting FPR.
+
+In general, Bloom filters are useful to prevent/mitigate queries against large data sets
+when exact retrieval is costly and/or can't be made in main memory.
+
+[.boxed]
+====
+*Example: Speeding up unsuccessful requests to a database*
+
+One prime application of Bloom filters and similar data structures is for the prevention
+of expensive disk/network accesses when these would fail to retrieve a given piece of
+information.
+For instance, suppose we are developing a frontend for a database with access time
+10 ms and we know 50% of the requests will not succeed (the record does not exist).
+Inserting a Bloom filter with a lookup time of 200 ns and a FPR of 0.5% will reduce the
+average response time of the system from 10 ms to
+
+[.formula-center]
+(10 + 0.0002) &times; 50.25% + 0.0002 &times; 49.75% &cong; 5.03 ms, 
+
+that is, we get a &times;1.99 overall speedup. If the database holds 1 billion records,
+an in-memory filter with say 8 bits per element will occupy 0.93 GB,
+which is perfectly realizable.
+
+image::db_speedup.png[align=center, title="Improving DB negative access time with a Bloom filter."]
+
+====
+
+Applications have been described in the areas of web caching,
+dictionary compression, network routing and genomics, among others.
+https://www.eecs.harvard.edu/~michaelm/postscripts/im2005b.pdf[Broder and Mitzenmacher^]
+provide a rather extensive review of use cases with a focus on networking.
+
+== Implementation
+
+The implementation of a classical Bloom filter consists of an array of _m_ bits, initially set to zero.
+Inserting an element _x_ reduces to selecting _k_ positions pseudorandomly (with the help
+of _k_ independent hash functions) and setting them to one.
+
+image::bloom_insertion.png[align=center, title="Insertion in a classical Bloom filter with _k_ = 6 different hash functions. Inserting _x_ reduces to setting to one the bits at positions 10, 14, 43, 58, 1, and 39 as indicated by _h_~1~(_x_), ... , _h_~6~(_x_)."]
+
+To check if an element _y_ is in the filter, we follow the same procedure and see if
+the selected bits are all set to one. In the example figure there are two unset bits, which
+definitely indicates _y_ was not inserted in the filter.
+
+image::bloom_lookup.png[align=center, title="Lookup in a classical Bloom filter. Value _y_ is not in the filter because bits at positions 20 and 61 are not set to one."]
+
+A false positive occurs when the bits checked happen to be all set to one due to
+other, unrelated insertions. The probability of having a false positive increases as we
+add more elements to the filter, whereas for a given number _n_ of inserted elements, a filter
+with greater capacity (larger bit array) will have a lower FPR.
+The number _k_ of bits set per operation also affects the FPR, albeit in a more complicated way:
+when the array is sparsely populated, a higher value of _k_ improves (decreases) the FPR,
+as there are more chances that we hit a non-set bit; however, if _k_ is very high
+the array will have more and more bits set to one as new elements are inserted, which
+eventually will reach a point where we lose out to a filter with a lower _k_ and
+thus a smaller proportions of set bits. For given values of _n_ and _m_, the optimum _k_ is
+{small}stem:[\lfloor k_{\text{opt}}\rfloor]{small-end} or
+{small}stem:[\lceil k_{\text{opt}}\rceil]{small-end}, with
+
+[.formula-center]
+{small}stem:[k_{\text{opt}}=\displaystyle\frac{m\cdot\ln2}{n},]{small-end}
+
+for a minimum FPR close to
+{small}stem:[1/2^{k_{\text{opt}}} \approx 0.6185^{m/n}]{small-end}. See the appendix
+on xref:fpr_estimation[FPR estimation] for more details.
+
+image::fpr_n_k.png[align=center, title="FPR vs. number of inserted elements for two filters with _m_ = 10^5^ bits. _k_ = 6 (red) has a better (lower) FPR than _k_ = 2 (blue) for small values of _n_, but eventually degrades more as _n_ grows. The dotted line shows the minimum attainable FPR resulting from selecting the optimum value of _k_ for each value of _n_."]
+
+== Variations on the Classical Filter
+
+=== Block Filters
+
+An operation on a Bloom filter involves accessing _k_ different positions in memory,
+which, for large arrays, results in _k_ CPU cache misses and affects the
+operation's performance. A variation on the classical approach called a
+_block filter_ seeks to minimize cache misses by concentrating all bit
+setting/checking in a small block of _b_ bits pseudorandomly selected from the
+entire array. If the block is small enough, it will fit in a CPU cacheline,
+thus drastically reducing the number of cache misses.
+
+image::block_insertion.png[align=center, title="Block filter. A block of _b_ bits is selected based on _h_~0~(x), and all subsequent bit setting is constrained there."]
+
+The downside is that the resulting FPR is worse than that of a classical filter for
+the same values of _n_, _m_ and _k_. Intuitively, block filters reduce the
+uniformity of the distribution of bits in the array, which ultimately hurts their
+probabilistic performance.
+
+image::fpr_n_k_bk.png[align=center, title="FPR (logarithmic scale) vs. number of inserted elements for a classical and a block filter with the same _k_ = 4, _m_ = 10^5^ bits."]
+
+A further variation in this idea is to have operations select _k_ blocks
+with _k'_ bits set on each. This, again, will have a worse FPR than a classical
+filter with _k&middot;k'_ bits per operation, but improves on a plain
+_k&middot;k'_ block filter.
+
+image::block_multi_insertion.png[align=center, title="Block filter with multi-insertion. _k_ = 2 blocks are selected, and _k_' = 3 bits are set in each."]
+
+=== Multiblock Filters
+
+_Multiblock filters_ take block filters' approach further by having
+bit setting/checking done on a sequence of consecutive blocks of size _b_,
+so that each block takes exactly one bit. This still maintains a good cache
+locality but improves FPR with respect to block filters because bits set to one
+are more spread out across the array.
+
+image::multiblock_insertion.png[align=center, title="Multiblock filter. A range of _k_' = 4 consecutive blocks is selected based on _h_~0~(x), and a bit is set to one in each of the blocks."]
+
+Multiblock filters can also be combined with multi-insertion. In general,
+for the same number of bits per operation and equal values of _n_ and _m_,
+a classical Bloom filter will have the better (lower) FPR, followed by
+multiblock filters and then block filters. Execution speed will roughly go
+in the reverse order. When considering block/multiblock filters with
+multi-insertion, the number of available configurations grows quickly and
+you will need to do some experimenting to locate your preferred point in the
+(FPR, capacity, speed) tradeoff space.

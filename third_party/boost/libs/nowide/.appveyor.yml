@@ -1,6 +1,6 @@
 # Copyright 2016, 2017 Peter Dimov
 # Copyright 2017 - 2019 James E. King III
-# Copyright 2019 - 2022 Alexander Grund
+# Copyright 2019 - 2025 Alexander Grund
 #
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
@@ -13,10 +13,23 @@ branches:
   only:
     - master
     - develop
+    - /appveyor\/.*/
     - /bugfix\/.*/
     - /feature\/.*/
     - /fix\/.*/
     - /pr\/.*/
+
+skip_commits:
+  files:
+    - .drone.star
+    - .github/workflows/*
+    - .travis.yml
+    - azure-pipelines/*
+    - drone/*
+    - travis/*
+    - LICENSE
+    - meta/*
+    - README.md
 
 matrix:
   fast_finish: false

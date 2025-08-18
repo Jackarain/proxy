@@ -8,7 +8,7 @@
 #define TEST_UDT
 
 #include <boost/math/special_functions/math_fwd.hpp>
-#include "libs/math/test/test_igamma_inva.hpp"
+#include "test_igamma_inva.hpp"
 
 void expected_results()
 {

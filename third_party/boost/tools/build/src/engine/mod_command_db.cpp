@@ -10,6 +10,7 @@ Distributed under the Boost Software License, Version 1.0.
 #include "cwd.h"
 #include "events.h"
 #include "lists.h"
+#include "mod_args.h"
 #include "mod_db.h"
 #include "output.h"
 #include "pathsys.h"
@@ -52,20 +53,25 @@ struct database
 		// Set up for the format and create the output database.
 		output_flag = true;
 		output_format = f;
-		prop_db.reset(new property_db);
 
 		// Default to all targets and no regular action output.
-		++globs.noexec;
+		globs.noexec = true;
 		for (int i = 0; i < DEBUG_MAX; ++i) globs.debug[i] = 0;
-		++anyhow;
+		globs.anyhow = true;
 
-		// Events to track the commands and exit to generate the output.
-		add_event_callback(event_tag::pre_exec_cmd,
-			std::function<void(TARGET *)>(
-				[](TARGET * t) { database::get().pre_exec_cmd(t); }));
-		add_event_callback(event_tag::exit_main,
-			std::function<void(int)>(
-				[](int s) { database::get().exit_main(s); }));
+		if (!prop_db)
+		{
+			prop_db.reset(new property_db);
+			// Events to track the commands and exit to generate the output.
+			add_event_callback(event_tag::pre_exec_cmd,
+				std::function<void(TARGET *)>([](TARGET * t) {
+					database::get().pre_exec_cmd(t);
+				}));
+			add_event_callback(
+				event_tag::exit_main, std::function<void(int)>([](int s) {
+					database::get().exit_main(s);
+				}));
+		}
 	}
 
 	void set_output_filename(const std::string & f) { output_filename = f; }
@@ -124,13 +130,17 @@ struct database
 	void exit_main(int status)
 	{
 		if (status == EXIT_FAIL) return;
-		std::string filename = output_filename;
+		std::string filename;
 		if (!b2::paths::is_rooted(output_filename))
 		{
 			if (!b2::paths::is_rooted(output_directory))
 				filename = b2::cwd_str() + "/";
-			filename += output_directory + "/" + output_filename;
-			filename = b2::paths::normalize(filename);
+			filename = b2::paths::normalize(
+				filename + output_directory + "/" + output_filename);
+		}
+		else
+		{
+			filename = b2::paths::normalize(output_filename);
 		}
 		if (prop_db->write_file(filename, output_format))
 			out_printf("...wrote command database '%s'...\n", filename.c_str());
@@ -140,26 +150,32 @@ struct database
 	}
 };
 
-void declare_args(lyra::cli & cli)
-{
-	cli |= lyra::opt(
-		[](const std::string & f) { database::get().set_output_format(f); },
-		"format")
-			   .name("--command-database")
-			   .help("Output a compile commands database as format.");
-	cli |= lyra::opt(
-		[](const std::string & f) { database::get().set_output_filename(f); },
-		"filename")
-			   .name("--command-database-out")
-			   .help(
-				   "Filename to output the command database to. "
-				   "A relative path for the filename is rooted to the project "
-				   "build-dir.");
-}
-
 void set_output_dir(value_ref dirname)
 {
 	database::get().output_directory = dirname;
 }
 
 }} // namespace b2::command_db
+
+void b2::command_db_module::declare_args()
+{
+	b2::args::lyra_cli()
+		|= lyra::opt(
+			[](const std::string & f) {
+				command_db::database::get().set_output_format(f);
+			},
+			"format")
+			   .name("--command-database")
+			   .help("Output a compile commands database as format.");
+	b2::args::lyra_cli()
+		|= lyra::opt(
+			[](const std::string & f) {
+				command_db::database::get().set_output_filename(f);
+			},
+			"filename")
+			   .name("--command-database-out")
+			   .help(
+				   "Filename to output the command database to. "
+				   "A relative path for the filename is rooted to the project "
+				   "build-dir.");
+}

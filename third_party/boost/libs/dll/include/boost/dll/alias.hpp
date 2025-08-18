@@ -180,8 +180,30 @@ namespace boost { namespace dll {
     namespace _autoaliases {                                                                    \
         extern "C" BOOST_SYMBOL_EXPORT const void *FunctionOrVar;                               \
     } /* namespace _autoaliases */                                                              \
-    /**/
-#else    
+/**/
+#elif BOOST_OS_CYGWIN
+#define BOOST_DLL_ALIAS_SECTIONED(FunctionOrVar, AliasName, SectionName)                        \
+    namespace _autoaliases {                                                                    \
+        extern "C" BOOST_SYMBOL_EXPORT const void *AliasName;                                   \
+        BOOST_DLL_SECTION(SectionName, read)                                                    \
+        const void * AliasName = reinterpret_cast<const void*>(reinterpret_cast<intptr_t>(      \
+            &FunctionOrVar                                                                      \
+        ));                                                                                     \
+    } /* namespace _autoaliases */                                                              \
+/**/
+
+#define BOOST_DLL_AUTO_ALIAS(FunctionOrVar)                                                     \
+    namespace _autoaliases {                                                                    \
+        const void * dummy_ ## FunctionOrVar                                                    \
+            = reinterpret_cast<const void*>(reinterpret_cast<intptr_t>(                         \
+                &FunctionOrVar                                                                  \
+            ));                                                                                 \
+        extern "C" BOOST_SYMBOL_EXPORT const void *FunctionOrVar;                               \
+        BOOST_DLL_SECTION(boostdll, read)                                                       \
+        const void * FunctionOrVar = dummy_ ## FunctionOrVar;                                   \
+    } /* namespace _autoaliases */                                                              \
+/**/
+#else
 // Note: we can not use `aggressive_ptr_cast` here, because in that case GCC applies
 // different permissions to the section and it causes Segmentation fault.
 // Note: we can not use `std::addressof()` here, because in that case GCC 

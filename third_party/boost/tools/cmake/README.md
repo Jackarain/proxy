@@ -319,6 +319,13 @@ are given below.
   Defaults to ON under Windows when WinDbg support is autodetected and when
   `thread_local` is supported, otherwise OFF.
 
+### Test
+
+* `BOOST_TEST_HEADERS_ONLY`
+
+  When ON, installs only headers required for using the header-only variant of
+  the Unit Test Framework. Defaults to OFF.
+
 ### Thread
 
 * `BOOST_THREAD_THREADAPI`

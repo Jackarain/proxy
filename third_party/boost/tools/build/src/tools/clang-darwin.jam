@@ -5,6 +5,7 @@
 # (See accompanying file LICENSE.txt
 # or copy at https://www.bfgroup.xyz/b2/LICENSE.txt)
 
+import args ;
 import clang ;
 import feature : feature ;
 import os ;
@@ -30,10 +31,7 @@ toolset.inherit-flags clang-darwin : clang-linux
           <architecture>x86/<address-model>64
         ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 # Initializes the clang-darwin toolset
 #   version in optional

@@ -126,7 +126,7 @@ namespace json {
         }
     };
 
-    bp::parser_interface<bp::uint_parser<uint32_t, 16, 4, 4>> const hex_4_def;
+    auto const hex_4_def = boost::parser::uint_.base<16>().digits<4>();
 
     auto const escape_seq_def = "\\u" > hex_4;
 

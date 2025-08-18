@@ -1,16 +1,16 @@
-[[bbv2.tasks]]
+[[b2.tasks]]
 = Common tasks
 
 This section describes main targets types that B2 supports
 out-of-the-box. Unless otherwise noted, all mentioned main target rules
 have the common signature, described in
-link:#bbv2.overview.targets[the section called “Declaring Targets”].
+link:#b2.overview.targets[the section called “Declaring Targets”].
 
-[[bbv2.tasks.programs]]
+[[b2.tasks.programs]]
 == Programs
 
 Programs are created using the `exe` rule, which follows the
-link:#bbv2.main-target-rule-syntax[common syntax]. For example:
+link:#b2.main-target-rule-syntax[common syntax]. For example:
 
 [source]
 ----
@@ -32,13 +32,13 @@ possible to immediately run the application, because the `PATH` environment
 variable should include the path to the libraries. It means you have to either
 add the paths manually, or have the build place the application and the
 libraries into the same directory. See
-link:#bbv2.tasks.installing[the section called “Installing”].
+link:#b2.tasks.installing[the section called “Installing”].
 
-[[bbv2.tasks.libraries]]
+[[b2.tasks.libraries]]
 == Libraries
 
 Library targets are created using the `lib` rule, which follows the
-link:#bbv2.main-target-rule-syntax[common syntax]. For example:
+link:#b2.main-target-rule-syntax[common syntax]. For example:
 
 [source]
 ----
@@ -48,7 +48,7 @@ lib helpers : helpers.cpp ;
 This will define a library target named `helpers` built from the
 `helpers.cpp` source file. It can be either a static library or a shared
 library, depending on the value of the
-link:#bbv2.builtin.features.link[`<link>`] feature.
+link:#b2.builtin.features.link[`<link>`] feature.
 
 Library targets can represent:
 
@@ -152,7 +152,7 @@ executables that link to `a` to link to `b` also. In this case, even for
 shared linking, the `a` library will not refer to `b`.
 ====
 
-link:#bbv2.overview.targets[Usage requirements] are often very useful
+link:#b2.overview.targets[Usage requirements] are often very useful
 for defining library targets. For example, imagine that you want you
 build a `helpers` library and its interface is described in its
 `helpers.hpp` header file located in the same directory as the
@@ -169,7 +169,7 @@ defined (and where the library's header file is located) to the
 compiler's include path for all targets using the `helpers` library.
 This feature greatly simplifies Jamfiles.
 
-[[bbv2.tasks.alias]]
+[[b2.tasks.alias]]
 == Alias
 
 The `alias` rule gives an alternative name to a group of targets. For
@@ -218,7 +218,7 @@ exe main : main.cpp static_libraries ;
 will compile `main.cpp` with additional includes required for using the
 specified static libraries.
 
-[[bbv2.tasks.installing]]
+[[b2.tasks.installing]]
 == Installing
 
 This section describes various ways to install built targets and
@@ -227,7 +227,7 @@ arbitrary files.
 === Basic install
 
 For installing a built target you should use the `install` rule, which
-follows the link:#bbv2.main-target-rule-syntax[common syntax]. For
+follows the link:#b2.main-target-rule-syntax[common syntax]. For
 example:
 
 [source]
@@ -259,8 +259,8 @@ install dist : hello helpers :
 install dist2 : hello helpers : <location>$(DIST) ;
 ----
 
-See also link:#bbv2.reference.variants.propcond[conditional properties]
-and link:#bbv2.faq.envar[environment variables]
+See also link:#b2.reference.variants.propcond[conditional properties]
+and link:#b2.faq.envar[environment variables]
 
 === Installing with all dependencies
 
@@ -280,7 +280,7 @@ will find all targets that `hello` depends on, and install all of those
 which are either executables or libraries. More specifically, for each
 target, other targets that were specified as sources or as dependency
 properties, will be recursively found. One exception is that targets
-referred with the link:#bbv2.builtin.features.use[`use`] feature are not
+referred with the link:#b2.builtin.features.use[`use`] feature are not
 considered, as that feature is typically used to refer to header-only
 libraries. If the set of target types is specified, only targets of that
 type will be installed, otherwise, all found target will be installed.
@@ -304,13 +304,13 @@ install headers
 
 the a file named `/tmp/b/c.h` will be created.
 
-The link:#bbv2.reference.glob-tree[`glob-tree`] rule can be used to find
+The link:#b2.reference.glob-tree[`glob-tree`] rule can be used to find
 all files below a given directory, making it easy to install an entire
 directory tree.
 
 === Installing into Several Directories
 
-The link:#bbv2.tasks.alias[`alias`] rule can be used when targets need
+The link:#b2.tasks.alias[`alias`] rule can be used when targets need
 to be installed into several directories:
 
 [source]
@@ -322,11 +322,11 @@ install install-lib : helper : /usr/lib ;
 
 Because the `install` rule just copies targets, most free features
 footnote:[see the definition of "free" in
-link:#bbv2.reference.features.attributes[the section called “Feature Attributes”].]
+link:#b2.reference.features.attributes[the section called “Feature Attributes”].]
 have no effect when used in requirements of the `install` rule. The only two
 that matter are
-link:#bbv2.builtin.features.dependency[`dependency`] and, on Unix,
-link:#bbv2.builtin.features.dll-path[`dll-path`].
+link:#b2.builtin.features.dependency[`dependency`] and, on Unix,
+link:#b2.builtin.features.dll-path[`dll-path`].
 
 NOTE: (Unix specific) On Unix, executables built using B2 typically
 contain the list of paths to all used shared libraries. For installing,
@@ -334,19 +334,19 @@ this is not desired, so B2 relinks the executable with an empty
 list of paths. You can also specify additional paths for installed
 executables using the `dll-path` feature.
 
-[[bbv2.builtins.testing]]
+[[b2.builtins.testing]]
 == Testing
 
 B2 has convenient support for running unit tests. The simplest
 way is the `unit-test` rule, which follows the
-link:#bbv2.main-target-rule-syntax[common syntax]. For example:
+link:#b2.main-target-rule-syntax[common syntax]. For example:
 
 [source]
 ----
 unit-test helpers_test : helpers_test.cpp helpers ;
 ----
 
-The `unit-test` rule behaves like the link:#bbv2.tasks.programs[exe]
+The `unit-test` rule behaves like the link:#b2.tasks.programs[exe]
 rule, but after the executable is created it is also run. If the
 executable returns an error code, the build system will also return an
 error and will try running the executable on the next invocation until
@@ -463,13 +463,13 @@ valgrind bin/$toolset/debug/helpers_test
 A description of the test. This is displayed as part of the
 `--dump-tests` command-line option.
 
-[[bbv2.builtins.raw]]
+[[b2.builtins.raw]]
 == Custom commands
 
 For most main target rules, B2 automatically figures out the
 commands to run. When you want to use new file types or support new
 tools, one approach is to extend B2 to support them smoothly,
-as documented in link:#bbv2.extender[Extender Manual]. However, if the new
+as documented in link:#b2.extender[Extender Manual]. However, if the new
 tool is only used in a single place, it might be easier just to specify the
 commands to run explicitly.
 
@@ -501,7 +501,7 @@ actions in2out
 If you run `b2` and `file.out` does not exist, B2 will run the
 `in2out` command to create that file. For more details on specifying
 actions, see
-link:#bbv2.overview.jam_language.actions[the section called “Boost.Jam Language”].
+link:#b2.overview.jam_language.actions[the section called “Boost.Jam Language”].
 
 It could be that you just want to run some command unconditionally, and
 that command does not create any specific files. For that you can use
@@ -542,7 +542,7 @@ list of `virtual-target` instances. The interface of the
 B2 distribution illustrates how the `generate` rule can be
 used.
 
-[[bbv2.reference.precompiled_headers]]
+[[b2.reference.precompiled_headers]]
 == Precompiled Headers
 
 Precompiled headers is a mechanism to speed up compilation by creating a
@@ -592,7 +592,7 @@ details.
 was required to include the header at the top of every source file
 the precompiled header will be used with.
 
-[[bbv2.reference.generated_headers]]
+[[b2.reference.generated_headers]]
 == Generated headers
 
 Usually, B2 handles implicit dependencies completely
@@ -623,14 +623,14 @@ The above example tells the build system that when scanning all sources
 of "app" for implicit-dependencies, it should consider targets from
 "parser" as potential dependencies.
 
-[[bbv2.tasks.crosscompile]]
+[[b2.tasks.crosscompile]]
 == Cross-compilation
 
 B2 supports cross compilation with the gcc and msvc toolsets.
 
 When using gcc, you first need to specify your cross compiler in
 `user-config.jam` (see
-link:#bbv2.overview.configuration[the section called “Configuration”]), for
+link:#b2.overview.configuration[the section called “Configuration”]), for
 example:
 
 [source]
@@ -659,15 +659,15 @@ b2 toolset=gcc-mingw target-os=windows
 ----
 
 For the complete list of allowed operating system names, please see the
-documentation for link:#bbv2.builtin.features.target-os[target-os
+documentation for link:#b2.builtin.features.target-os[target-os
 feature].
 
 When using the msvc compiler, it's only possible to cross-compile to a
 64-bit system on a 32-bit host. Please see
-link:#bbv2.reference.tools.compiler.msvc.64[the section called “64-bit support”]
+link:#b2.reference.tools.compiler.msvc.64[the section called “64-bit support”]
 for details.
 
-[[bbv2.tasks.packagemanagers]]
+[[b2.tasks.packagemanagers]]
 == Package Managers
 
 B2 supports automatic, or manual, loading of generated build files
@@ -727,7 +727,7 @@ managers. Currently the supported ones are:
 * Conan (`conan`): currently supports the
   link:https://docs.conan.io/en/latest/reference/generators/b2.html[`b2 generator`].
 
-[[bbv2.tasks.projectsearch]]
+[[b2.tasks.projectsearch]]
 == Searching For Projects
 
 B2 supports automatic searching for referenced global projects. For example,
@@ -736,7 +736,7 @@ can find the B2 project for it and automatically resolve the reference. The
 searching supports two modes: finding regular B2 project directories, and
 package/config style loading of single jam files.
 
-[[bbv2.tasks.projectsearch.path]]
+[[b2.tasks.projectsearch.path]]
 === Search Path
 
 To control which and where projects are found one can use different methods:
@@ -763,7 +763,7 @@ The _project-id_ in the search path specification maps that project root to the
 indicated _path_. Which B2 will use to search for any projects and sub-projects
 with that _project-id_ root.
 
-[[bbv2.tasks.projectsearch.process]]
+[[b2.tasks.projectsearch.process]]
 === Search Process
 
 Regardless of how the search path is specified, how the search happens is the
@@ -806,7 +806,7 @@ And given the `/boost/core` _project-id_ to resolve, we search for:
 The first project jamfile will be assigned to the _project-id_. Or the first
 `*.jam` file found will be loaded.
 
-[[bbv2.tasks.projectsearch.loading]]
+[[b2.tasks.projectsearch.loading]]
 === Loading Process
 
 Depending on whether a project jamfile or `*.jam` file determines how the

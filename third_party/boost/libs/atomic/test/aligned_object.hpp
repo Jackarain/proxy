@@ -1,4 +1,4 @@
-//  Copyright (c) 2020 Andrey Semashev
+//  Copyright (c) 2020-2025 Andrey Semashev
 //
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
@@ -8,9 +8,8 @@
 #define BOOST_ATOMIC_TESTS_ALIGNED_OBJECT_HPP_INCLUDED_
 
 #include <cstddef>
+#include <cstdint>
 #include <new>
-#include <boost/config.hpp>
-#include <boost/cstdint.hpp>
 
 //! A wrapper that creates an object that has at least the specified alignment
 template< typename T, std::size_t Alignment >
@@ -31,26 +30,26 @@ public:
         m_p = new (get_aligned_storage()) T(value);
     }
 
-    ~aligned_object() BOOST_NOEXCEPT
+    aligned_object(aligned_object const&) = delete;
+    aligned_object& operator= (aligned_object const&) = delete;
+
+    ~aligned_object() noexcept
     {
         m_p->~T();
     }
 
-    T& get() const BOOST_NOEXCEPT
+    T& get() const noexcept
     {
         return *m_p;
     }
 
-    BOOST_DELETED_FUNCTION(aligned_object(aligned_object const&))
-    BOOST_DELETED_FUNCTION(aligned_object& operator= (aligned_object const&))
-
 private:
     unsigned char* get_aligned_storage()
     {
-#if defined(BOOST_HAS_INTPTR_T)
-        typedef boost::uintptr_t uintptr_type;
+#if defined(UINTPTR_MAX)
+        using uintptr_type = std::uintptr_t;
 #else
-        typedef std::size_t uintptr_type;
+        using uintptr_type = std::size_t;
 #endif
         unsigned char* p = m_storage;
         uintptr_type misalignment = ((uintptr_type)p) & (Alignment - 1u);

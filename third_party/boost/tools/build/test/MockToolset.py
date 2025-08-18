@@ -195,7 +195,7 @@ import modules ;
 import common ;
 import type ;
 
-.python-cmd = "\"%s\"" ;
+.python-cmd = "%s" ;
 
 # Behave the same as gcc on Windows, because that's what
 # the test system expects
@@ -206,7 +206,7 @@ rule init ( )
 {
     local here = [ path.make [ modules.binding $(__name__) ] ] ;
     here = [ path.native [ path.root [ path.parent $(here) ] [ path.pwd ] ] ] ;
-    .config-cmd = [ common.variable-setting-command JAM_CWD : $(here) ] $(.python-cmd) -B ;
+    .config-cmd = [ common.variable-setting-command JAM_CWD : $(here) ] "\\"$(.python-cmd:J= )\\"" -B ;
 }
 
 feature.extend toolset : mock ;
@@ -253,7 +253,7 @@ actions link.dll
     $(.config-cmd) mock.py --dll "$(>)" -o "$(<)" $(USER_OPTIONS) -L"$(LINK_PATH)" --static-lib=$(FINDLIBS-STATIC) --shared-lib=$(FINDLIBS-SHARED)
 }
 
-''' % sys.executable.replace('\\', '\\\\'))
+''' % sys.executable.replace('\\', '/'))
 
 def set_expected(t, markup):
   verbose = "True" if t.verbose else "False"

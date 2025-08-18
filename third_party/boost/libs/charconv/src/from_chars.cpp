@@ -229,7 +229,7 @@ boost::charconv::from_chars_result boost::charconv::from_chars_erange(const char
     return r;
 }
 
-#elif !defined(BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE)
+#elif !defined(BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE) && !defined(BOOST_CHARCONV_LDBL_IS_FLOAT128)
 
 boost::charconv::from_chars_result boost::charconv::from_chars_erange(const char* first, const char* last, long double& value, boost::charconv::chars_format fmt) noexcept
 {

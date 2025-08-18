@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.visibility]]`visibility`::
+[[b2.builtin.features.visibility]]`visibility`::
 *Allowed values:* `global`, `protected`, `hidden`.
 +
 Specifies the default symbol visibility in compiled binaries. Not all values

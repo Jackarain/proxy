@@ -2,20 +2,36 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
+// due to aggressiving inlining effects, it seems we can only reliably silence this warning
+// in the end TU itself
+#include <boost/config/workaround.hpp>
+#if BOOST_WORKAROUND(BOOST_GCC, >= 110000 && BOOST_GCC < 120000)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wstringop-overread"
+#endif
+
+#if BOOST_WORKAROUND(BOOST_GCC, >= 80000 && BOOST_GCC < 90000)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 #include <boost/hash2/fnv1a.hpp>
 #include <boost/hash2/siphash.hpp>
 #include <boost/hash2/xxhash.hpp>
+#include <boost/hash2/xxh3.hpp>
 #include <boost/hash2/md5.hpp>
 #include <boost/hash2/sha1.hpp>
 #include <boost/hash2/sha2.hpp>
 #include <boost/hash2/sha3.hpp>
 #include <boost/hash2/ripemd.hpp>
+#include <boost/hash2/blake2.hpp>
 #include <boost/hash2/digest.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/core/lightweight_test_trait.hpp>
 #include <array>
 #include <type_traits>
 #include <limits>
+#include <vector>
 #include <cstddef>
 #include <cstdint>
 
@@ -133,6 +149,72 @@ template<class H> void test_byte_seed_constructible( bool is_hmac )
 
             BOOST_TEST( h1.result() == h2.result() );
         }
+    }
+
+    {
+        unsigned char const seed1[ 1 ] = { 0x01 };
+        unsigned char const seed2[ 1 ] = { 0x02 };
+
+        H h1( seed1, sizeof( seed1 ) );
+        H h2( seed2, sizeof( seed2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+    }
+
+    {
+        unsigned char const seed1[ 4 ] = { 0x01 };
+        unsigned char const seed2[ 4 ] = { 0x02 };
+
+        H h1( seed1, sizeof( seed1 ) );
+        H h2( seed2, sizeof( seed2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+    }
+
+    {
+        unsigned char const seed1[ 8 ] = { 0x01 };
+        unsigned char const seed2[ 8 ] = { 0x02 };
+
+        H h1( seed1, sizeof( seed1 ) );
+        H h2( seed2, sizeof( seed2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+    }
+
+    {
+        unsigned char const seed1[ 256 ] = { 0x01 };
+        unsigned char const seed2[ 256 ] = { 0x02 };
+
+        H h1( seed1, sizeof( seed1 ) );
+        H h2( seed2, sizeof( seed2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+    }
+
+    {
+        unsigned char seed1[ 256 ] = {};
+        unsigned char seed2[ 256 ] = {};
+
+        seed1[ 255 ] = 0x01;
+        seed2[ 255 ] = 0x02;
+
+        H h1( seed1, sizeof( seed1 ) );
+        H h2( seed2, sizeof( seed2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+    }
+
+    {
+        std::vector<unsigned char> seed1( 256, 0x01 );
+        std::vector<unsigned char> seed2( 256, 0x01 );
+
+        H h1( seed1.data(), seed1.size() );
+        H h2( seed2.data(), seed2.size() );
+
+        seed2.clear();
+        seed2.shrink_to_fit();
+
+        BOOST_TEST( h1.result() == h2.result() );
     }
 
     if( !is_hmac )
@@ -509,6 +591,7 @@ int main()
     test<boost::hash2::fnv1a_64>();
     test<boost::hash2::xxhash_32>();
     test<boost::hash2::xxhash_64>();
+    test<boost::hash2::xxh3_128>();
     test<boost::hash2::siphash_32>();
     test<boost::hash2::siphash_64>();
 
@@ -528,6 +611,8 @@ int main()
     test<boost::hash2::shake_256>();
     test<boost::hash2::ripemd_160>();
     test<boost::hash2::ripemd_128>();
+    test<boost::hash2::blake2b_512>();
+    test<boost::hash2::blake2s_256>();
 
     test<boost::hash2::hmac_md5_128>( true );
     test<boost::hash2::hmac_sha1_160>( true );

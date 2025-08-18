@@ -1,0 +1,133 @@
+[#implementation_notes]
+= Appendix B: Implementation Notes
+
+:idprefix: implementation_notes_
+
+== Hash Mixing
+
+This is the bit-mixing post-process we use to improve the statistical properties
+of the hash function when it doesn't have the avalanching property:
+
+[.formula-center]
+{small}stem:[m\leftarrow\text{mul}(h,C)]{small-end}, +
+{small}stem:[h'\leftarrow\text{high}(m)\text{ xor }\text{low}(m)]{small-end},
+
+where {small}stem:[\text{mul}]{small-end} denotes 128-bit multiplication of two 64-bit factors,
+{small}stem:[\text{high}(m)]{small-end} and {small}stem:[\text{low}(m)]{small-end}
+are the high and low 64-bit words of {small}stem:[m]{small-end}, respectively,
+{small}stem:[C=\lfloor 2^{64}/\varphi \rfloor]{small-end} and
+{small}stem:[\varphi]{small-end} is the https://en.wikipedia.org/wiki/Golden_ratio[golden ratio^].
+
+== 32-bit mode
+
+Internally, we always use 64-bit hash values even if in 32-bit mode, where
+the user-provided hash function produces 32-bit outputs. To expand
+a 32-bit hash value to 64 bits, we use the same mixing procedure
+described
+xref:implementation_notes_hash_mixing[above].
+
+== Dispensing with Multiple Hash Functions
+
+Direct implementations of a Bloom filter with {small}stem:[k]{small-end}
+bits per operation require {small}stem:[k]{small-end} different and independent
+hash functions {small}stem:[h_i(x)]{small-end}, which incurs an important
+performance penalty, particularly if the objects are expensive to hash
+(e.g. strings). https://www.eecs.harvard.edu/~michaelm/postscripts/rsa2008.pdf[Kirsch and Mitzenmacher^]
+show how to relax this requirement down to two different hash functions
+{small}stem:[h_1(x)]{small-end} and {small}stem:[h_2(x)]{small-end} linearly
+combined as
+
+[.formula-center]
+{small}stem:[g_i(x)=h_1(x)+ih_2(x).]{small-end}
+
+Without formal justification, we have relaxed this even further to just one
+initial hash value {small}stem:[h_0=h_0(x)]{small-end}, where new values
+{small}stem:[h_i]{small-end} are computed from  {small}stem:[h_{i-1}]{small-end}
+by means of very cheap mixing schemes. In what follows
+{small}stem:[k]{small-end}, {small}stem:[k']{small-end} are the homonym values
+in a filter of the form `boost::bloom::filter<T, K, {block|multiblock}<Block, K'>>`,
+{small}stem:[b]{small-end} is `sizeof(Block) * CHAR_BIT`,
+and {small}stem:[r]{small-end} is the number of subarrays in the filter.
+
+=== Subarray Location
+
+To produce a location (i.e. a number {small}stem:[p]{small-end} in {small}stem:[[0,r)]{small-end}) from
+{small}stem:[h_{i-1}]{small-end}, instead of the straightforward but costly
+procedure {small}stem:[p\leftarrow h_{i-1}\bmod r]{small-end} we resort to
+Lemire's https://arxiv.org/pdf/1805.10941[fastrange technique^]:
+
+[.formula-center]
+{small}stem:[m\leftarrow\text{mul}(h_{i-1},r),]{small-end} +
+{small}stem:[p\leftarrow\lfloor m/2^{64} \rfloor=\text{high}(m).]{small-end}
+
+To decorrelate {small}stem:[p]{small-end} from further uses of the hash value,
+we produce {small}stem:[h_{i}]{small-end} from {small}stem:[h_{i-1}]{small-end} as
+
+[.formula-center]
+{small}stem:[h_i\leftarrow c \cdot h_{i-1} \bmod 2^{64}=\text{low}(c \cdot h_{i-1}),]{small-end}
+
+with {small}stem:[c=\text{0xf1357aea2e62a9c5}]{small-end} (64-bit mode),
+{small}stem:[c=\text{0xe817fb2d}]{small-end} (32-bit mode) obtained
+from https://arxiv.org/pdf/2001.05304[Steele and Vigna^].
+The transformation {small}stem:[h_{i-1} \rightarrow h_i]{small-end} is
+a simple https://en.wikipedia.org/wiki/Linear_congruential_generator[multiplicative congruential generator^]
+over {small}stem:[2^{64}]{small-end}. For this MCG to produce long
+cycles {small}stem:[h_0]{small-end} must be odd, so the implementation adjusts
+{small}stem:[h_0]{small-end} to {small}stem:[h_0'= (h_0\text{ or }1)]{small-end},
+which renders the least significant bit of {small}stem:[h_i]{small-end}
+unsuitable for pseudorandomization (it is always one).
+
+=== Bit selection
+
+Inside a subfilter, we must produce {small}stem:[k']{small-end}
+values from {small}stem:[h_i]{small-end} in the range
+{small}stem:[[0,b)]{small-end} (the positions of the {small}stem:[k']{small-end}
+bits). We do this by successively taking {small}stem:[\log_2b]{small-end} bits
+from {small}stem:[h_i]{small-end} without utilizing the portion containing
+its least significant bit (which is always one as we have discussed).
+If we run out of bits (which happens when
+{small}stem:[k'> 63/\log_2b]{small-end}), we produce a new hash value
+{small}stem:[h_{i+1}]{small-end} from {small}stem:[h_{i}]{small-end}
+using the mixing procedure
+xref:implementation_notes_hash_mixing[already described].
+
+== SIMD algorithms
+
+=== `fast_multiblock32`
+
+When using AVX2, we select up to 8 bits at a time by creating
+a `+++__+++m256i` of 32-bit values {small}stem:[(x_0,x_1,...,x_7)]{small-end}
+where each {small}stem:[x_i]{small-end} is constructed from
+a different 5-bit portion of the hash value, and calculating from this
+the `+++__+++m256i` {small}stem:[(2^{x_0},2^{x_1},...,2^{x_7})]{small-end}
+with https://www.intel.com/content/www/us/en/docs/cpp-compiler/developer-guide-reference/2021-10/mm256-sllv-epi32-64.html[`+++_+++mm256_sllv_epi32`^].
+If more bits are needed, we generate a new hash value as
+xref:implementation_notes_hash_mixing[described before] and repeat.
+
+For little-endian Neon, the algorithm is similar but the computations
+are carried out with two `uint32x4_t`+++s+++ in parallel as Neon does not have
+256-bit registers.
+
+In the case of SSE2, we don't have the 128-bit equivalent of
+`+++_+++mm256_sllv_epi32`, so we use the following, mildly interesting
+technique: a `+++__+++m128i` of the form
+
+[.formula-center]
+{small}stem:[((x_0+127)\cdot 2^{23},(x_1+127)\cdot 2^{23},(x_2+127)\cdot 2^{23},(x_3+127)\cdot 2^{23}),]{small-end}
+
+where each {small}stem:[x_i]{small-end} is in {small}stem:[[0,32)]{small-end},
+can be `reinterpret_cast`+++ed+++ to (i.e., has the same binary representation as)
+the `+++__+++m128` (register of `float`+++s+++)
+
+[.formula-center]
+{small}stem:[(2^{x_0},2^{x_1},2^{x_2},2^{x_3}),]{small-end}
+
+from which our desired `+++__+++m128i` of shifted 1s can be obtained
+with https://www.intel.com/content/www/us/en/docs/cpp-compiler/developer-guide-reference/2021-10/conversion-intrinsics-003.html#GUID-B1CFE576-21E9-4E70-BE5E-B9B18D598C12[`+++_+++mm_cvttps_epi32`^].
+
+=== `fast_multiblock64`
+
+We only provide a SIMD implementation for AVX2 that relies in two
+parallel `+++__+++m256i`+++s+++ for the generation of up
+to 8 64-bit values with shifted 1s. For Neon and SSE2, emulation
+through 4 128-bit registers proved slower than non-SIMD `multiblock<uint64_t, K>`.

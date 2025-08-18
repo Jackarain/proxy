@@ -5,7 +5,7 @@
 // See: http://www.boost.org/doc/libs/release/libs/contract/doc/html/index.html
 
 #include "no_lambdas.hpp"
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <cassert>
 
 //[no_lambdas_cpp

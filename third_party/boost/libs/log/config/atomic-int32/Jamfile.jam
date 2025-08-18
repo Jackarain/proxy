@@ -6,12 +6,13 @@
 #
 
 import project ;
-import log-platform-config ;
+import ../../build/log-platform-config ;
 
-project /boost/log/atomic-int32
+project
     : source-location .
     : requirements
         <conditional>@log-platform-config.set-platform-defines
+        <library>/boost/atomic//boost_atomic
         <pch>off
     ;
 

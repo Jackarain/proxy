@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.instruction-set]]`instruction-set`::
+[[b2.builtin.features.instruction-set]]`instruction-set`::
 *Allowed values:* depends on the used toolset.
 +
 Specifies for which specific instruction set the code should be generated. The
@@ -16,7 +16,7 @@ sets.
 +
 While B2 allows a large set of possible values for this features,
 whether a given value works depends on which compiler you use. Please see
-the section <<C++ Compilers>> for details.
+the section <<b2.reference.tools.compilers>> for details.
 
 |# # end::doc[]
 

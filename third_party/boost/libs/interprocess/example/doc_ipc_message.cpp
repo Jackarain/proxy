@@ -60,7 +60,7 @@ int main (int argc, char *argv[])
    }
    else{
       //Open managed segment
-      managed_shared_memory segment(open_only, argv[2]);
+      managed_shared_memory segment(open_only, test::get_argv_2(argv));
 
       //An handle from the base address can identify any byte of the shared
       //memory segment even if it is mapped in different base addresses

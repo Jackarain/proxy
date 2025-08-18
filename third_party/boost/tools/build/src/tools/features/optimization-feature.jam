@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.optimization]]`optimization`::
+[[b2.builtin.features.optimization]]`optimization`::
 *Allowed values:* `off`, `speed`, `space`, 'minimal', 'debug'.
 +
 Enables optimization. `speed` optimizes for faster code, `space` optimizes for
@@ -21,7 +21,7 @@ feature.feature optimization
 
 #| tag::inline-doc[]
 
-[[bbv2.builtin.features.inlining]]`inlining`::
+[[b2.builtin.features.inlining]]`inlining`::
 *Allowed values:* `off`, `on`, `full`.
 +
 Enables inlining.
@@ -34,7 +34,7 @@ feature.feature inlining
 
 #| tag::vector-doc[]
 
-[[bbv2.builtin.features.vectorize]]`vectorize`::
+[[b2.builtin.features.vectorize]]`vectorize`::
 *Allowed values:* `off`, `on`, `full`.
 +
 Enables vectorization.

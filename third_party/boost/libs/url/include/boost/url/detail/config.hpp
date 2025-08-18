@@ -135,7 +135,7 @@
 #endif
 
 // deprecated attribute
-#if defined(BOOST_MSVC) || defined(BOOST_URL_DOCS)
+#if defined(BOOST_MSVC)
 #define BOOST_URL_DEPRECATED(msg)
 #else
 #define BOOST_URL_DEPRECATED(msg) BOOST_DEPRECATED(msg)

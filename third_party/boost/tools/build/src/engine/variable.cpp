@@ -201,14 +201,14 @@ LIST * var_get( struct module_t * module, OBJECT * symbol )
 
         if ( ( n = module_get_fixed_var( module, symbol ) ) != -1 )
         {
-            if ( DEBUG_VARGET )
+            if ( is_debug_varget() )
                 var_dump( symbol, module->fixed_variables[ n ], "get" );
             result = module->fixed_variables[ n ];
         }
         else if ( module->variables && ( v = (VARIABLE *)hash_find(
             module->variables, symbol ) ) )
         {
-            if ( DEBUG_VARGET )
+            if ( is_debug_varget() )
                 var_dump( v->symbol, v->value, "get" );
             result = v->value;
         }
@@ -252,7 +252,7 @@ LIST * var_get( struct module_t * module, OBJECT * symbol )
                 if ( module->variables && ( v = (VARIABLE *)hash_find(
                     module->variables, symbol ) ) )
                 {
-                    if ( DEBUG_VARGET )
+                    if ( is_debug_varget() )
                         var_dump( v->symbol, v->value, "get" );
                     result = v->value;
                 }
@@ -295,7 +295,7 @@ void var_set( struct module_t * module, OBJECT * symbol, LIST * value, int flag
 {
     LIST * * v = var_enter( module, symbol );
 
-    if ( DEBUG_VARSET )
+    if ( is_debug_varset() )
         var_dump( symbol, value, "set" );
 
     switch ( flag )
@@ -327,7 +327,7 @@ LIST * var_swap( struct module_t * module, OBJECT * symbol, LIST * value )
 {
     LIST * * v = var_enter( module, symbol );
     LIST * oldvalue = *v;
-    if ( DEBUG_VARSET )
+    if ( is_debug_varset() )
         var_dump( symbol, value, "set" );
     *v = value;
     return oldvalue;

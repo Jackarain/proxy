@@ -5,10 +5,12 @@
  */
 
 #include <boost/redis/connection.hpp>
-#include <boost/asio/signal_set.hpp>
+
+#include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/redirect_error.hpp>
-#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/signal_set.hpp>
+
 #include <iostream>
 
 #if defined(BOOST_ASIO_HAS_CO_AWAIT)
@@ -22,10 +24,8 @@ using boost::system::error_code;
 using boost::redis::connection;
 using namespace std::chrono_literals;
 
-auto
-echo_server_session(
-   asio::ip::tcp::socket socket,
-   std::shared_ptr<connection> conn) -> asio::awaitable<void>
+auto echo_server_session(asio::ip::tcp::socket socket, std::shared_ptr<connection> conn)
+   -> asio::awaitable<void>
 {
    request req;
    response<std::string> resp;
@@ -60,11 +60,11 @@ auto co_main(config cfg) -> asio::awaitable<void>
    auto ex = co_await asio::this_coro::executor;
    auto conn = std::make_shared<connection>(ex);
    asio::co_spawn(ex, listener(conn), asio::detached);
-   conn->async_run(cfg, {}, asio::consign(asio::detached, conn));
+   conn->async_run(cfg, asio::consign(asio::detached, conn));
 
    signal_set sig_set(ex, SIGINT, SIGTERM);
    co_await sig_set.async_wait();
    conn->cancel();
 }
 
-#endif // defined(BOOST_ASIO_HAS_CO_AWAIT)
+#endif  // defined(BOOST_ASIO_HAS_CO_AWAIT)

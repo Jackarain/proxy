@@ -1,7 +1,8 @@
 [/
-  Copyright 2011 - 2020 John Maddock.
+  Copyright 2011 - 2025 John Maddock.
   Copyright 2013 - 2019 Paul A. Bristow.
-  Copyright 2013 Christopher Kormanyos.
+  Copyright 2013 - 2025 Christopher Kormanyos.
+  Copyright 2021 - 2025 Fahad Syed.
 
   Distributed under the Boost Software License, Version 1.0.
   (See accompanying file LICENSE_1_0.txt or copy at
@@ -10,15 +11,15 @@
 
 [library Boost.Multiprecision
     [quickbook 1.7]
-    [copyright 2002-2020 John Maddock and Christopher Kormanyos]
+    [copyright 2002-2025 Matthew Borland, Paul A. Bristow, Christopher Kormanyos, Janek Kozicki, John Maddock and Fahad Syed]
     [purpose Multiprecision Number library]
     [license
          Distributed under the Boost Software License, Version 1.0.
          (See accompanying file LICENSE_1_0.txt or copy at
          [@http://www.boost.org/LICENSE_1_0.txt])
     ]
-    [authors [Maddock, John], [Kormanyos, Christopher]]
-    [/last-revision $Date: 2011-07-08 18:51:46 +0100 (Fri, 08 Jul 2011) $]
+    [authors [Borland, Matthew], [Bristow, Paul A.], [Kormanyos, Christopher], [Kozicki, Janek], [Maddock, John], [Syed, Fahad]]
+    [/last-revision $Date$]
 ]
 
 [import html4_symbols.qbk] [/Ideally this should be the same as Boost.Math I:\boost\libs\math\doc]
@@ -59,7 +60,7 @@
 [template mpf_class[] [@http://gmplib.org/manual/C_002b_002b-Interface-Floats.html#C_002b_002b-Interface-Floats mpf_class]]
 [template mpfr_class[] [@http://math.berkeley.edu/~wilken/code/gmpfrxx/ mpfr_class]]
 [template mpreal[] [@http://www.holoborodko.com/pavel/mpfr/ mpreal]]
-[template mpir[] [@http://mpir.org/ MPIR]]
+[template mpir[] [@https://github.com/wbhart/mpir/ MPIR]]
 [template tommath[] [@http://libtom.net libtommath]]
 [template quadmath[] [@http://gcc.gnu.org/onlinedocs/libquadmath/ libquadmath]]
 

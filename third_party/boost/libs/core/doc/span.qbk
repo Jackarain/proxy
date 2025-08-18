@@ -38,7 +38,7 @@ and return type use spans.
 
 ```
 auto sha1(boost::span<const unsigned char> input,
-    boost::span<unsigned char, SHA_DIGEST_LENGTH> ouput)
+    boost::span<unsigned char, SHA_DIGEST_LENGTH> output)
 {
     SHA_CTX context;
     SHA1_Init(&context);

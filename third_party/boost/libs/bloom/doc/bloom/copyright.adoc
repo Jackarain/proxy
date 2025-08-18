@@ -1,0 +1,10 @@
+[#copyright]
+= Copyright and License
+
+:idprefix: copyright_
+
+Of this documentation:
+
+* Copyright &copy; 2025 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz
+
+Distributed under the http://www.boost.org/LICENSE_1_0.txt[Boost Software License, Version 1.0^].

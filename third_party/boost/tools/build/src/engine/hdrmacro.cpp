@@ -73,7 +73,7 @@ void macro_headers( TARGET * t )
     FILE * f;
     char buf[ 1024 ];
 
-    if ( DEBUG_HEADER )
+    if ( is_debug_header() )
         out_printf( "macro header scan for %s\n", object_str( t->name ) );
 
     if ( !( f = fopen( object_str( t->boundname ), "r" ) ) )
@@ -97,7 +97,7 @@ void macro_headers( TARGET * t )
             std::string macro(re_i[1].begin(), re_i[1].end());
             std::string filename(re_i[2].begin(), re_i[2].end());
 
-            if ( DEBUG_HEADER )
+            if ( is_debug_header() )
                 out_printf( "macro '%s' used to define filename '%s' in '%s'\n",
                     macro.c_str(), filename.c_str(), object_str( t->boundname )
                     );
@@ -132,7 +132,7 @@ OBJECT * macro_header_get( OBJECT * macro_name )
     if ( header_macros_hash && ( v = (HEADER_MACRO *)hash_find(
         header_macros_hash, macro_name ) ) )
     {
-        if ( DEBUG_HEADER )
+        if ( is_debug_header() )
             out_printf( "### macro '%s' evaluated to '%s'\n", object_str( macro_name
                 ), object_str( v->filename ) );
         return v->filename;

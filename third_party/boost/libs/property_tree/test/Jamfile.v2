@@ -13,17 +13,17 @@ import testing ;
 
 project
     : requirements
-
+      <library>/boost/property_tree//boost_property_tree
       <link>static
-      <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS=1
-
       <warnings>extra
-      <toolset>msvc:<warnings-as-errors>on
-      <toolset>clang:<warnings-as-errors>on
-      <toolset>gcc:<warnings-as-errors>on
+      <warnings-as-errors>on
+      <target-os>windows:<define>_SCL_SECURE_NO_WARNINGS
+      <target-os>windows:<define>_SCL_SECURE_NO_DEPRECATE
+      <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS
+      <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE
     ;
 
-run test_property_tree.cpp /boost/serialization//boost_serialization/<warnings>off ;
+run test_property_tree.cpp ;
 run test_rapidxml.cpp ;
 run test_info_parser.cpp ;
 run test_json_parser.cpp ;
@@ -31,18 +31,18 @@ run test_json_parser2.cpp ;
 compile test_json_parser3.cpp ;
 run test_ini_parser.cpp ;
 run test_xml_parser_rapidxml.cpp ;
-
 run test_multi_module1.cpp test_multi_module2.cpp ;
 
 # Ensure that all headers are self-contained.
 for local file in [ glob-tree-ex ../include : *.hpp ]
 {
-    local rel_name = [ path.relative-to ../include $(file) ] ;
-    compile self_contained_header.cpp : <define>HEADER_PATH=$(rel_name) : [ regex.replace $(rel_name) "/" "_" ] ;
+    local rel_path = [ path.relative-to ../include $(file) ] ;
+    local rel_name = [ path.relative-to ../include/boost/property_tree $(file) ] ;
+    compile self_contained_header.cpp : <define>HEADER_PATH=$(rel_path) : [ regex.replace $(rel_name) "/" "_" ] ;
 }
 
 compile ../examples/custom_data_type.cpp ;
-compile ../examples/debug_settings.cpp ;
+compile ../examples/debug_settings.cpp /boost/foreach//boost_foreach ;
 compile ../examples/empty_ptree_trick.cpp ;
 compile ../examples/info_grammar_spirit.cpp ;
-compile ../examples/speed_test.cpp ;
+compile ../examples/speed_test.cpp /boost/format//boost_format ;

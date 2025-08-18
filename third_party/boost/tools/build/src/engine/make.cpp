@@ -92,7 +92,7 @@ static char const * target_bind[] =
  * make() - make a target, given its name.
  */
 
-int32_t make( LIST * targets, int32_t anyhow )
+int32_t make( LIST * targets, bool anyhow )
 {
     COUNTS counts[ 1 ];
     int32_t status = 0;  /* 1 if anything fails */
@@ -125,7 +125,7 @@ int32_t make( LIST * targets, int32_t anyhow )
     }
 
 #ifdef OPT_GRAPH_DEBUG_EXT
-    if ( DEBUG_GRAPH )
+    if ( is_debug_graph() )
     {
         LISTITER iter, end;
         for ( iter = list_begin( targets ), end = list_end( targets ); iter != end; iter = list_next( iter ) )
@@ -133,7 +133,7 @@ int32_t make( LIST * targets, int32_t anyhow )
     }
 #endif
 
-    if ( DEBUG_MAKE )
+    if ( is_debug_make() )
     {
         if ( counts->targets )
             out_printf( "...found %d target%s...\n", counts->targets,
@@ -186,7 +186,7 @@ static void update_dependants( TARGET * t )
         {
             p->fate = T_FATE_UPDATE;
 
-            if ( DEBUG_FATE )
+            if ( is_debug_fate() )
             {
                 out_printf( "fate change  %s from %s to %s (as dependent of %s)\n",
                         object_str( p->name ), target_fate[ (int32_t) fate0 ], target_fate[ (int32_t) p->fate ], object_str( t->name ) );
@@ -218,7 +218,7 @@ static void force_rebuilds( TARGET * t )
         /* If it is not already being rebuilt for other reasons. */
         if ( r->fate < T_FATE_BUILD )
         {
-            if ( DEBUG_FATE )
+            if ( is_debug_fate() )
                 out_printf( "fate change  %s from %s to %s (by rebuild)\n",
                         object_str( r->name ), target_fate[ (int32_t) r->fate ], target_fate[ T_FATE_REBUILD ] );
 
@@ -284,7 +284,7 @@ void make0
     TARGET * p,       /* parent */
     int32_t      depth,   /* for display purposes */
     COUNTS * counts,  /* for reporting */
-    int32_t      anyhow,
+    bool      anyhow,
     TARGET * rescanning
 )  /* forcibly touch all (real) targets */
 {
@@ -303,14 +303,14 @@ void make0
     int32_t oldTimeStamp;
 #endif
 
-    if ( DEBUG_MAKEPROG )
+    if ( is_debug_makeprog() )
         out_printf( "make\t--\t%s%s\n", spaces( depth ), object_str( t->name ) );
 
     /*
      * Step 1: Initialize.
      */
 
-    if ( DEBUG_MAKEPROG )
+    if ( is_debug_makeprog() )
         out_printf( "make\t--\t%s%s\n", spaces( depth ), object_str( t->name ) );
 
     t->fate = T_FATE_MAKING;
@@ -381,7 +381,7 @@ void make0
      * Pause for a little progress reporting.
      */
 
-    if ( DEBUG_BIND )
+    if ( is_debug_bind() )
     {
         if ( !object_equal( t->name, t->boundname ) )
             out_printf( "bind\t--\t%s%s: %s\n", spaces( depth ),
@@ -510,7 +510,7 @@ void make0
         fate = max( fate, c->target->fate );
 
 #ifdef OPT_GRAPH_DEBUG_EXT
-        if ( DEBUG_FATE )
+        if ( is_debug_fate() )
             if ( fate < c->target->fate )
                 out_printf( "fate change %s from %s to %s by dependency %s\n",
                     object_str( t->name ), target_fate[ (int32_t)fate ],
@@ -539,7 +539,7 @@ void make0
     if ( t->flags & T_FLAG_NOUPDATE )
     {
 #ifdef OPT_GRAPH_DEBUG_EXT
-        if ( DEBUG_FATE )
+        if ( is_debug_fate() )
             if ( fate != T_FATE_STABLE )
                 out_printf( "fate change  %s back to stable, NOUPDATE.\n",
                     object_str( t->name ) );
@@ -636,7 +636,7 @@ void make0
         fate = T_FATE_STABLE;
     }
 #ifdef OPT_GRAPH_DEBUG_EXT
-    if ( DEBUG_FATE && ( fate != savedFate ) )
+    if ( is_debug_fate() && ( fate != savedFate ) )
 	{
         if ( savedFate == T_FATE_STABLE )
             out_printf( "fate change  %s set to %s%s\n", object_str( t->name ),
@@ -659,7 +659,7 @@ void make0
         if ( t->flags & T_FLAG_NOCARE )
         {
 #ifdef OPT_GRAPH_DEBUG_EXT
-            if ( DEBUG_FATE )
+            if ( is_debug_fate() )
                 out_printf( "fate change %s to STABLE from %s, "
                     "no actions, no dependencies and do not care\n",
                     object_str( t->name ), target_fate[ fate ] );
@@ -736,7 +736,7 @@ void make0
 #ifdef OPT_IMPROVED_PATIENCE_EXT
         ++counts->targets;
 #else
-        if ( !( ++counts->targets % 1000 ) && DEBUG_MAKE )
+        if ( !( ++counts->targets % 1000 ) && is_debug_make() )
         {
             out_printf( "...patience...\n" );
             out_flush();
@@ -760,7 +760,7 @@ void make0
         &p->time ) > 0 )
         flag = "*";
 
-    if ( DEBUG_MAKEPROG )
+    if ( is_debug_makeprog() )
         out_printf( "made%s\t%s\t%s%s\n", flag, target_fate[ (int32_t)t->fate ],
             spaces( depth ), object_str( t->name ) );
 }

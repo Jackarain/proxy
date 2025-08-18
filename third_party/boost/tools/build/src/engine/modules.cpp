@@ -202,7 +202,7 @@ static void stat_module( void * xmodule, void * data )
 {
     module_t *m = (module_t *)xmodule;
 
-    if ( DEBUG_MEM || DEBUG_PROFILE )
+    if ( is_debug_mem() || is_debug_profile() )
     {
         struct hash * class_info = (struct hash *)data;
         if ( m->class_module )
@@ -259,7 +259,7 @@ void modules_done()
 {
     if ( module_hash )
     {
-        if ( DEBUG_MEM || DEBUG_PROFILE )
+        if ( is_debug_mem() || is_debug_profile() )
         {
             struct hash * class_hash = hashinit( sizeof( struct module_stats ), "object info" );
             hashenumerate( module_hash, stat_module, (void *)class_hash );

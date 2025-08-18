@@ -1,6 +1,6 @@
 [library Boost.TypeIndex
     [quickbook 1.6]
-    [version 4.1]
+    [version 4.2]
     [copyright 2012-2025 Antony Polukhin]
     [category Language Features Emulation]
     [license
@@ -311,6 +311,40 @@ Sometimes there may be a need to create your own type info system. This may be u
 [type_index_my_type_index_worldwide_typedefs]
 [type_index_my_type_index_worldwide_usage]
 [endsect]
+
+[endsect]
+
+[section C++20 module]
+
+[caution C++20 module support is on early stage, targets, flags and behavior may change in the future]
+
+If using modern CMake define CMake option `-DBOOST_USE_MODULES=1` to build a C++20 module and
+make the `Boost::type_index` CMake target provide it. After that an explicit usage of C++20 module `boost.type_index` is allowed:
+
+[import ../modules/usage_sample.cpp]
+[type_index_module_example]
+
+The `Boost::type_index` CMake target gives an ability to mix includes and imports of the library in different translation units. Moreover,
+if `BOOST_USE_MODULES` macro is defined then all the `boost/type_index/...` includes implicilty do `import boost.type_index;` to give all the
+benifits of modules without changing the existing code.
+
+[note For better compile times make sure that `import std;` is available when building the `boost.type_index` module (in CMake logs there should be
+      a 'Using `import std;`' message). ]
+
+If not using CMake, then the module could be build manually from the `modules/boost_type_index.cppm` file.
+
+For manual module build the following commands can be used for clang compiler:
+
+```
+cd type_index/modules
+clang++ -I ../include -std=c++20 --precompile -x c++-module boost_type_index.cppm
+```
+
+After that, the module could be used in the following way:
+
+```
+clang++ -std=c++20 -fmodule-file=boost_type_index.pcm boost_type_index.pcm usage_sample.cpp
+```
 
 [endsect]
 

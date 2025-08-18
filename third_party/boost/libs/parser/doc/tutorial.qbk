@@ -584,7 +584,7 @@ things:
 
 * This rule object itself is called `doubles`.
 
-* We've given `doubles` the diagnstic text `"doubles"` so that _Parser_ knows
+* We've given `doubles` the diagnostic text `"doubles"` so that _Parser_ knows
   how to refer to it when producing a trace of the parser during debugging.
 
 Ok, so if `doubles` is a parser, what does it do?  We define the rule's
@@ -828,7 +828,7 @@ the same character must be used on both sides.
 [quoted_string_example_4]
 
 Another common thing to do in a quoted string parser is to recognize escape
-sequences.  If you have simple escape sequencecs that do not require any real
+sequences.  If you have simple escape sequences that do not require any real
 parsing, like say the simple escape sequences from C++, you can provide a
 _symbols_ object as well.  The template parameter `T` to _symbols_t_ must be
 `char` or `char32_t`.  You don't need to include the escaped backslash or the
@@ -837,10 +837,10 @@ escaped quote character, since those always work.
 [quoted_string_example_5]
 
 Additionally, with each of the forms shown above, you can optionally provide a
-parser as a final argument, to will be used to parse each character inside the
-quotes.  You have to provide an actual full parser here; you cannot provide a
-character or string literal.  If you do not provide a character parser, _ch_
-is used.
+parser as a final argument, which will be used to parse each character inside
+the quotes.  You have to provide an actual full parser here; you cannot
+provide a character or string literal.  If you do not provide a character
+parser, _ch_ is used.
 
 [quoted_string_example_6]
 
@@ -1159,7 +1159,7 @@ erase and clear for the current parse, and another that applies only to
 subsequent parses.  The full set of operations can be found in the _symbols_
 API docs.
 
-[mpte There are two versions of each of the _symbols_ `*_for_next_parse()`
+[note There are two versions of each of the _symbols_ `*_for_next_parse()`
 functions _emdash_ one that takes a context, and one that does not.  The one
 with the context is meant to be used within a semantic action.  The one
 without the context is for use outside of any parse.]
@@ -1248,22 +1248,25 @@ these parsers is in a subsequent section.  The attributes are repeated here so
 you can use see all the properties of the parsers in one place.]
 
 If you have an integral type `IntType` that is not covered by any of the
-_Parser_ parsers, you can use a more verbose declaration to declare a parser
-for `IntType`.  If `IntType` were unsigned, you would use `uint_parser`.  If
-it were signed, you would use `int_parser`.  For example:
+_Parser_ parsers, you can explicitly specify a base/radix or bounds on the
+number of digits.  You do this by calling the `base()` and `digits()` member
+functions on an existing parser of the right integral type.  So if `IntType`
+were unsigned, you would use `uint_`.  If it were signed, you would use
+`int_`.  For example:
 
-    constexpr parser_interface<int_parser<IntType>> hex_int;
+    constexpr auto hex_int = bp::uint_.base<16>();
 
-`uint_parser` and `int_parser` accept three more non-type template parameters
-after the type parameter.  They are `Radix`, `MinDigits`, and `MaxDigits`.
-`Radix` defaults to `10`, `MinDigits` to `1`, and `MaxDigits` to `-1`, which
-is a sentinel value meaning that there is no max number of digits.
+You simply chain together the constraints you want to use, like
+`.base<16>().digits<2>()` or .digits<4>().base<8>()`.
 
 So, if you wanted to parse exactly eight hexadecimal digits in a row in order
 to recognize Unicode character literals like C++ has (e.g. `\Udeadbeef`), you
 could use this parser for the digits at the end:
 
-    constexpr parser_interface<uint_parser<unsigned int, 16, 8, 8>> hex_int;
+    constexpr auto hex_4_def = bp::uint_.base<16>().digits<8>();
+
+If you want to specify an acceptable range of digits, use `.digits<LO, HI>()`.
+Both `HI` and `LO` are inclusive bounds.
 
 [endsect]
 
@@ -1283,7 +1286,7 @@ parsers; we won't say much about them here.
 [heading Interaction with sequence, alternative, and permutation parsers]
 
 Sequence, alternative, and permutation parsers do not nest in most cases.
-(Let's consider just sequence parsers to keep thinkgs simple, but most of this
+(Let's consider just sequence parsers to keep things simple, but most of this
 logic applies to alternative parsers as well.)  `a >> b >> c` is the same as
 `(a >> b) >> c` and `a >> (b >> c)`, and they are each represented by a single
 _seq_p_ with three subparsers, `a`, `b`, and `c`.  However, if something
@@ -1692,7 +1695,7 @@ the following steps applied:
   wrapped in a `std::optional`, like `std::optional<std::variant</*...*/>>`;
 
 * duplicates in the `std::variant` template parameters `<T1, T2, ... Tn>` are
-  removed; every type that appears does so exacly once;
+  removed; every type that appears does so exactly once;
 
 * if the attribute is `std::variant<T>` or `std::optional<std::variant<T>>`,
   the attribute becomes instead `T` or `std::optional<T>`, respectively; and
@@ -2490,8 +2493,8 @@ the earlier expectation:
 ]
 
 Not nearly as nice.  The problem is that the expectation is on `(value %
-',')`.  So, even thought we gave `value` reasonable dianostic text, we put the
-text on the wrong thing.  We can introduce a new rule to put the diagnstic
+',')`.  So, even thought we gave `value` reasonable diagnostic text, we put the
+text on the wrong thing.  We can introduce a new rule to put the diagnostic
 text in the right place.
 
     namespace bp = boost::parser;
@@ -2577,7 +2580,7 @@ Also, consider this rule:
     bp::rule<struct ints_tag, std::vector<int>> ints = "ints";
     auto const ints_def = bp::int_ >> ints | bp::eps;
 
-What is the default attribute type for ints_def?  It sure looks like
+What is the default attribute type for `ints_def`?  It sure looks like
 `std::optional<std::vector<int>>`.  Inside the evaluation of `ints`, _Parser_
 must evaluate `ints_def`, and then produce a `std::vector<int>` _emdash_ the
 return type of `ints` _emdash_ from it.  How?  How do you turn a
@@ -2585,7 +2588,7 @@ return type of `ints` _emdash_ from it.  How?  How do you turn a
 seems obvious, but the metaprogramming that properly handles this simple
 example and the general case is certainly beyond me.
 
-_Parser_ has a specific semantic for what consitutes a recursive rule.  Each
+_Parser_ has a specific semantic for what constitutes a recursive rule.  Each
 rule has a tag type associated with it, and if _Parser_ enters a rule with a
 certain tag `Tag`, and the currently-evaluating rule (if there is one) also
 has the tag `Tag`, then rule instance being entered is considered to be a
@@ -2659,7 +2662,7 @@ semantics, is a lot easier to read, and is a lot less code.]
 
 The _r_ template takes another template parameter we have not discussed yet.
 You can pass a third parameter `LocalState` to _r_, which will be defaulted
-csontructed by the _r_, and made available within semantic actions used in the
+constructed by the _r_, and made available within semantic actions used in the
 rule as `_locals_np_(ctx)`.  This gives your rule some local state, if it
 needs it.  The type of `LocalState` can be anything regular.  It could be a
 single value, a struct containing multiple values, or a tuple, among others.
@@ -3399,9 +3402,9 @@ _w_eh_ (see _p_api_).  If you do not set one, _default_eh_ will be used.
 [heading How diagnostics are generated]
 
 _Parser_ only generates error messages like the ones in this page at failed
-expectation points, like `a > b`, where you have successfully parsed `a`, but
-then cannot successfully parse `b`.  This may seem limited to you.  It's
-actually the best that we can do.
+expectation points (like `a > b`, where you have successfully parsed `a`, but
+then cannot successfully parse `b`), and at an unexpected end of input.  This
+may seem limited to you.  It's actually the best that we can do.
 
 In order for error handling to happen other than at expectation points, we
 have to know that there is no further processing that might take place.  This
@@ -3409,21 +3412,26 @@ is true because _Parser_ has `P1 | P2 | ... | Pn` parsers ("`or_parser`s").
 If any one of these parsers `Pi` fails to match, it is not allowed to fail the
 parse _emdash_ the next one (`Pi+1`) might match.  If we get to the end of the
 alternatives of the or_parser and `Pn` fails, we still cannot fail the
-top-level parse, because the `or_parser` might be a subparser within a parent
-`or_parser`.
+top-level parse, because this `or_parser` might be a subparser within a parent
+`or_parser`.  The only exception to this is when: we have finished the
+top-level parse; the top-level parse is *not* a prefix parse; and there is
+still a part of the input range that is left over.  In that case, there is an
+implicit expectation that the end of the parse and the end of input are the
+same location, and this implicit expectation has just been violated.
 
-Ok, so what might we do?  Perhaps we could at least indicate when we ran into
-end-of-input.  But we cannot, for exactly the same reason already stated.  For
-any parser `P`, reaching end-of-input is a failure for `P`, but not
-necessarily for the whole parse.
+Note that we cannot fail the top-level parse when we run into end-of-input.
+We cannot for exactly the same reason already stated.  For any parser `P`,
+reaching end-of-input is a failure for `P`, but not necessarily for the whole
+parse.
 
-Perhaps we could record the farthest point ever reached during the parse, and
-report that at the top level, if the top level parser fails.  That would be
-little help without knowing which parser was active when we reached that
-point.  This would require some sort of repeated memory allocation, since in
-_Parser_ the progress point of the parser is stored exclusively on the stack
-_emdash_ by the time we fail the top-level parse, all those far-reaching stack
-frames are long gone.  Not the best.
+Ok, so what other kinds of error reporting might we do?  Perhaps we could
+record the farthest point ever reached during the parse, and report that at
+the top level, if the top level parser fails.  That would be little help
+without knowing which parser was active when we reached that point.  This
+would require some sort of repeated memory allocation, since in _Parser_ the
+progress point of the parser is stored exclusively on the stack _emdash_ by
+the time we fail the top-level parse, all those far-reaching stack frames are
+long gone.  Not the best.
 
 Worse still, knowing how far you got in the parse and which parser was active
 is not very useful.  Consider this.
@@ -3440,15 +3448,16 @@ Was the error in the input putting the `'a'` at the beginning or putting the
 failed, and never mention `c_b`, you are potentially just steering them in the
 wrong direction.
 
-All error messages must come from failed expectation points.  Consider parsing
-JSON.  If you open a list with `'['`, you know that you're parsing a list, and
-if the list is ill-formed, you'll get an error message saying so.  If you open
-an object with `'{'`, the same thing is possible _emdash_ when missing the
-matching `'}'`, you can tell the user, "That's not an object", and this is
-useful feedback.  The same thing with a partially parsed number, etc.  If the
-JSON parser does not build in expectations like matched braces and brackets,
-how can _Parser_ know that a missing `'}'` is really a problem, and that no
-later parser will match the input even without the `'}'`?
+All error messages must come from failed expectation points (or unexpected end
+of input).  Consider parsing JSON.  If you open a list with `'['`, you know
+that you're parsing a list, and if the list is ill-formed, you'll get an error
+message saying so.  If you open an object with `'{'`, the same thing is
+possible _emdash_ when missing the matching `'}'`, you can tell the user,
+"That's not an object", and this is useful feedback.  The same thing with a
+partially parsed number, etc.  If the JSON parser does not build in
+expectations like matched braces and brackets, how can _Parser_ know that a
+missing `'}'` is really a problem, and that no later parser will match the
+input even without the `'}'`?
 
 [important The bottom line is that you should build expectation points into
 your parsers using `operator>` as much as possible.]
@@ -3551,7 +3560,7 @@ We just define a `logging_error_handler`, and pass it by reference to _w_eh_,
 which decorates the top-level parser with the error handler.  We *could not*
 have written `bp::with_error_handler(parser,
 logging_error_handler("parse.log"))`, because _w_eh_ does not accept rvalues.
-This is becuse the error handler eventually goes into the parse context.  The
+This is because the error handler eventually goes into the parse context.  The
 parse context only stores pointers and iterators, keeping it cheap to copy.
 
 If we run the example and give it the input `"1,"`, this shows up in the log
@@ -3599,7 +3608,7 @@ to `_trace_::off`.
 
 If we trace a substantial parser, we will see a *lot* of output.  Each code
 point of the input must be considered, one at a time, to see if a certain rule
-matches.  An an example, let's trace a parse using the JSON parser from
+matches.  As an example, let's trace a parse using the JSON parser from
 _ex_json_.  The input is `"null"`.  `null` is one of the types that a
 Javascript value can have; the top-level parser in the JSON parser example is:
 
@@ -3786,7 +3795,7 @@ _Parser_ seldom allocates memory.  The exceptions to this are:
   which implies allocation.  You can avoid this allocation by explicitly using
   a different sequence container for the attribute that does not allocate.
   `boost::container::static_vector` or C++26's `std::inplace_vector` may be
-  useful as such replacements.
+  useful for such replacements.
 
 With the exception of allocating the name of the parser that was expected in a
 failed expectation situation, _Parser_ does not does not allocate unless you
@@ -3863,9 +3872,9 @@ Some things to note:
   want to know how to fix their input.  For either rule, the fix is the same:
   put a hexadecimal escape sequence there.
 
-- `single_escaped_char` has a terrible-looking name.  However, it's not really
-  used as a name anywhere per se.  In error messages, it works nicely, though.
-  The error will be "Expected '"', '\', '/', 'b', 'f', 'n', 'r', or 't' here",
+- `single_escaped_char` has a terrible-looking name.  However, it's not
+  actually used as a name.  In error messages, it works nicely, though.  The
+  error will be "Expected '"', '\', '/', 'b', 'f', 'n', 'r', or 't' here",
   which is pretty helpful.
 
 [heading Have a simple test that you can run to find ill-formed-code-as-asserts]

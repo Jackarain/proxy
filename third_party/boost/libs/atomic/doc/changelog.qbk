@@ -1,11 +1,22 @@
 [/
- / Copyright (c) 2021-2024 Andrey Semashev
+ / Copyright (c) 2021-2025 Andrey Semashev
  /
  / Distributed under the Boost Software License, Version 1.0. (See accompanying
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  /]
 
 [section:changelog Changelog]
+
+[heading Boost 1.89]
+
+* Added TSAN instrumentation in asm-based x86, AArch32, AArch64 and PPC backends. This silences TSAN false errors for code using Boost.Atomic for thread synchronization.
+* Following the announcement in Boost 1.84, removed support for Windows versions older than Windows 10.
+  * A note to MinGW-w64 users. Since Windows SDK headers on MinGW-w64 define `_WIN32_WINNT` to an older Windows version by default, you may need to define `_WIN32_WINNT=0x0A00` or `BOOST_USE_WINAPI_VERSION=0x0A00` when compiling Boost.Atomic and the code that uses Boost.Atomic.
+* Support for Windows CE is deprecated and will be removed in a future release.
+* Added support for timed waiting operations.
+* Exposed `thread_pause` operation, which can be used as a backoff measure in spin loops. Added support for PowerPC and improved support for AArch64 in `thread_pause`.
+* Removed `BOOST_ATOMIC_NO_ATOMIC_FLAG_INIT` macro definition. Since the library now requires C++11, `BOOST_ATOMIC_FLAG_INIT` is always supported.
+* Enabled bitwise operations for atomic enumerations. This can be useful when enumerations are used to implement bit masks.
 
 [heading Boost 1.87]
 

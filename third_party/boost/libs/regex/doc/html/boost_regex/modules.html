@@ -1,0 +1,108 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module Support (Experimental)</title>
+<link rel="stylesheet" href="../../../../../doc/src/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Boost.Regex 7.0.1">
+<link rel="up" href="../index.html" title="Boost.Regex 7.0.1">
+<link rel="prev" href="install.html" title="Building and Installing the Library">
+<link rel="next" href="intro.html" title="Introduction and Overview">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="install.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="intro.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="boost_regex.modules"></a><a class="link" href="modules.html" title="Module Support (Experimental)">Module Support (Experimental)</a>
+</h2></div></div></div>
+<p>
+      This library has experimental support for C++ modules (C++20 or later), currently
+      the support is experimental not least because at the time of writing (2025)
+      build tools have yet to catch up with module support.
+    </p>
+<p>
+      In order to use this library as a module you simply add a:
+    </p>
+<pre class="programlisting"><span class="identifier">import</span> <span class="identifier">boost</span><span class="special">.</span><span class="identifier">regex</span><span class="special">;</span>
+</pre>
+<p>
+      to your code.
+    </p>
+<p>
+      Before that you must first build the module, which consists of these steps:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Depending on your compiler, you may need to build the standard library
+          module, and place the standard module somewhere that your compiler can
+          find it.
+        </li>
+<li class="listitem">
+          Build <code class="computeroutput"><span class="identifier">libs</span><span class="special">/</span><span class="identifier">regex</span><span class="special">/</span><span class="identifier">module</span><span class="special">/</span><span class="identifier">regex</span><span class="special">.</span><span class="identifier">cxx</span></code> into the boost.regex module, and
+          place the module definition file somewhere that your compiler can find
+          it.
+        </li>
+<li class="listitem">
+          Build all the source files in <code class="computeroutput"><span class="identifier">libs</span><span class="special">/</span><span class="identifier">regex</span><span class="special">/</span><span class="identifier">module</span></code>
+          (including regex.cxx) into a library, and place the result somewhere your
+          linker can find it.
+        </li>
+</ul></div>
+<p>
+      Visual studio users can simplify all of the above into one step, by placing
+      everything in <code class="computeroutput"><span class="identifier">libs</span><span class="special">/</span><span class="identifier">regex</span><span class="special">/</span><span class="identifier">module</span></code>
+      into a static library project, and then adding the <code class="computeroutput"><span class="special">/</span><span class="identifier">interface</span></code> command line option to the regex.cxx
+      source file.
+    </p>
+<p>
+      Known limitations:
+    </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          As of the start of 2025, only very recent versions of clang and msvc are
+          supported. GCC is definitely not supported.
+        </li>
+<li class="listitem">
+          The regex library must always be consumed via <code class="computeroutput"><span class="identifier">import</span>
+          <span class="identifier">boost</span><span class="special">.</span><span class="identifier">regex</span><span class="special">;</span></code>
+          and you can never mix this with <code class="computeroutput"><span class="preprocessor">#includes</span>
+          <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">regex</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>.
+        </li>
+<li class="listitem">
+          Ideally the standard library should always be used via <code class="computeroutput"><span class="identifier">import</span>
+          <span class="identifier">std</span></code> and not via #includes: more
+          recent compilers are mostly making this work, but are still very fragile.
+        </li>
+<li class="listitem">
+          The regex version imported, is always the "standalone" version
+          which includes no other Boost headers.
+        </li>
+</ul></div>
+<p>
+      Finally... there are some build and test scripts in <code class="computeroutput"><span class="identifier">libs</span><span class="special">/</span><span class="identifier">regex</span><span class="special">/</span><span class="identifier">test</span><span class="special">/</span><span class="identifier">module</span></code>
+      for msvc and clang.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 1998-2013 John Maddock<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="install.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="intro.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

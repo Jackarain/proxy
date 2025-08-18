@@ -475,7 +475,7 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     windows_pipeline(
         "Windows VS2017 msvc-14.1",
         "cppalliance/dronevs2017",
-        { TOOLSET: 'msvc-14.1', CXXSTD: '14,17,latest' },
+        { TOOLSET: 'msvc-14.1', CXXSTD: '14,17,latest', ADDRMD: '32,64' },
     ),
 
     windows_pipeline(

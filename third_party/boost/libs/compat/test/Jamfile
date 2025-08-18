@@ -113,5 +113,7 @@ run function_ref_fn_noexcept_test.cpp ;
 run function_ref_mfn_noexcept_test.cpp ;
 run function_ref_obj_noexcept_test.cpp ;
 
+run move_only_function_test.cpp ;
+
 run to_array_lvalue_test.cpp ;
 run to_array_rvalue_test.cpp ;

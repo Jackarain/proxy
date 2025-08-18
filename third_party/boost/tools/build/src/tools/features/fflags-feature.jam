@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.fflags]]`fflags`::
+[[b2.builtin.features.fflags]]`fflags`::
 The value of this feature is passed without modification to the tool when
 compiling Fortran sources.
 

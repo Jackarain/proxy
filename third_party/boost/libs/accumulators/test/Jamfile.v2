@@ -19,8 +19,9 @@ project
     : default-build
       <link>static
     : requirements
-      <library>/boost/test//boost_unit_test_framework
-      <include>../../..
+      <library>/boost/accumulators//boost_accumulators
+      <library>/boost/test//boost_unit_test_framework/<link>static
+      <library>/boost/random//boost_random
       <toolset>msvc:<define>_SCL_SECURE_NO_DEPRECATE
       # MSVC's iterator debugging causes some tests to run forever.
       <toolset>msvc:<iterator_debugging>off
@@ -28,7 +29,6 @@ project
       <toolset>gcc:<cxxflags>"-Wno-deprecated-declarations"
       <toolset>clang:<cxxflags>"-Wno-deprecated-declarations"
       <toolset>intel-linux:<cxxflags>"-Wno-deprecated-declarations"
-      <library>/boost/serialization
     ;
 
 alias accumulators_regular_tests
@@ -57,7 +57,7 @@ alias accumulators_regular_tests
       [ run skewness.cpp ]
       [ run sum.cpp ]
       [ run sum_kahan.cpp ]
-      [ run tail.cpp ]
+      [ run tail.cpp : : : <library>/boost/foreach//boost_foreach ]
       [ run tail_mean.cpp ]
       [ run tail_quantile.cpp ]
       [ run variance.cpp ]

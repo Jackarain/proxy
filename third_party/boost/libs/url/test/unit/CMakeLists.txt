@@ -1,6 +1,7 @@
 #
 # Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
 # Copyright (c) 2021 Dmitry Arkhipov (grisumbras@gmail.com)
+# Copyright (c) 2023 Alan de Freitas (alandefreitas@gmail.com)
 #
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -20,9 +21,9 @@ list(APPEND BOOST_URL_TESTS_FILES CMakeLists.txt Jamfile)
 set(EXAMPLE_FILES ../../example/router/impl/matches.cpp ../../example/router/detail/impl/router.cpp)
 
 # Test target
-add_executable(boost_url_unit_tests EXCLUDE_FROM_ALL ${BOOST_URL_TESTS_FILES} ${SUITE_FILES} ${EXAMPLE_FILES})
-target_include_directories(boost_url_unit_tests PRIVATE . ../../extra ../../example/router)
-target_link_libraries(boost_url_unit_tests PUBLIC Boost::url)
+add_executable(boost_url_unit_tests EXCLUDE_FROM_ALL ${BOOST_URL_TESTS_FILES} ${EXAMPLE_FILES})
+target_include_directories(boost_url_unit_tests PRIVATE . ../../example/router)
+target_link_libraries(boost_url_unit_tests PUBLIC Boost::url boost_url_test_suite_with_main)
 foreach (BOOST_URL_UNIT_TEST_LIBRARY ${BOOST_URL_UNIT_TEST_LIBRARIES})
     target_link_libraries(boost_url_unit_tests PUBLIC Boost::${BOOST_URL_UNIT_TEST_LIBRARY})
 endforeach ()
@@ -37,10 +38,11 @@ endif()
 
 # Folders
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${BOOST_URL_TESTS_FILES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../../extra PREFIX "_extra" FILES ${SUITE_FILES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../../extra/test_suite PREFIX "_extra" FILES ${SUITE_FILES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../../example/router PREFIX "_router" FILES ${EXAMPLE_FILES})
 
-# CTest target
-add_test(NAME boost_url_unit_tests COMMAND boost_url_unit_tests)
-add_dependencies(tests boost_url_unit_tests)
+# Register individual tests with CTest
+boost_url_test_suite_discover_tests(boost_url_unit_tests)
 
+# Add the main test target to Boost's test suite
+add_dependencies(tests boost_url_unit_tests)

@@ -7,6 +7,7 @@
 #include <boost/hash2/md5.hpp>
 #include <boost/hash2/sha1.hpp>
 #include <boost/hash2/sha2.hpp>
+#include <boost/hash2/blake2.hpp>
 #include <boost/hash2/digest.hpp>
 #include <boost/array.hpp>
 #include <boost/core/lightweight_test.hpp>
@@ -94,6 +95,8 @@ int main()
     test<boost::hash2::sha2_256>();
     test<boost::hash2::sha2_384>();
     test<boost::hash2::sha2_512>();
+    test<boost::hash2::blake2b_512>();
+    test<boost::hash2::blake2s_256>();
 
     test< H1<std::uint8_t> >();
     test< H1<std::uint16_t> >();

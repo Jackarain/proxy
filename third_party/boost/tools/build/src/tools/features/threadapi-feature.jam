@@ -10,7 +10,7 @@ import features/os-feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.threadapi]]`threadapi`::
+[[b2.builtin.features.threadapi]]`threadapi`::
 *Allowed values:* `pthread`, `win32`.
 +
 Selects threading implementation. The default is `win32` if `<target-os>` is

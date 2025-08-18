@@ -35,18 +35,22 @@
 import os ;
 import indirect ;
 import path ;
-import configure ; 
+import configure ;
 import threadapi-feature ;
 
 exe has_atomic_flag_lockfree : ../build/has_atomic_flag_lockfree_test.cpp ;
 
-project boost/thread
+project
     : source-location ../src
+    : common-requirements
+        <library>$(boost_dependencies)
+        <include>../include
     : requirements <threading>multi
       #<link>static:<define>BOOST_THREAD_STATIC_LINK=1
       #<link>shared:<define>BOOST_THREAD_DYN_LINK=1
       <link>static:<define>BOOST_THREAD_BUILD_LIB=1
       <link>shared:<define>BOOST_THREAD_BUILD_DLL=1
+      -<tag>@%boostcpp.tag
       -<tag>@$(BOOST_JAMROOT_MODULE)%$(BOOST_JAMROOT_MODULE).tag
       <tag>@$(__name__).tag
       <toolset>gcc:<cxxflags>-Wno-long-long
@@ -139,6 +143,7 @@ project boost/thread
       #<define>BOOST_THREAD_THROW_IF_PRECONDITION_NOT_SATISFIED
       #<define>BOOST_SYSTEM_NO_DEPRECATED
       #<define>BOOST_THREAD_DONT_PROVIDE_INTERRUPTIONS
+      <define>BOOST_THREAD_NO_LIB=1
     ;
 
 rule tag ( name : type ? : property-set )
@@ -156,8 +161,15 @@ rule tag ( name : type ? : property-set )
     }
 
     # forward to the boost tagging rule
-    return  [ indirect.call $(BOOST_JAMROOT_MODULE)%$(BOOST_JAMROOT_MODULE).tag
-                $(result) : $(type) : $(property-set) ] ;
+    if $(BOOST_JAMROOT_MODULE)
+    {
+        return  [ indirect.call $(BOOST_JAMROOT_MODULE)%$(BOOST_JAMROOT_MODULE).tag
+                    $(result) : $(type) : $(property-set) ] ;
+    }
+    else
+    {
+        return $(result) ;
+    }
 }
 
 rule win32_pthread_paths ( properties * )
@@ -269,10 +281,10 @@ rule requirements ( properties * )
             }
         }
         result += <define>BOOST_THREAD_DONT_USE_CHRONO ;
-        if ! [ configure.builds has_atomic_flag_lockfree 
-            : $(properties) : "lockfree boost::atomic_flag" ]  { 
-           result += <library>/boost/atomic//boost_atomic ; 
-        } 
+        if ! [ configure.builds has_atomic_flag_lockfree
+            : $(properties) : "lockfree boost::atomic_flag" ]  {
+           result += <library>/boost/atomic//boost_atomic ;
+        }
     } else {
         if <threadapi>win32 in $(properties)
         {
@@ -315,5 +327,3 @@ lib boost_thread
       <link>static:<define>BOOST_THREAD_USE_LIB=1
       <conditional>@usage-requirements
     ;
-
-boost-install boost_thread ;

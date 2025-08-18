@@ -5,7 +5,7 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.tools.compiler.intel]]
+[[b2.reference.tools.compiler.intel]]
 = Intel C++
 
 The `intel-*` modules support the Intel C++ command-line compiler.

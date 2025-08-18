@@ -8,33 +8,39 @@ Official repository: https://github.com/boostorg/json
 #}
 
 {% macro write_entity(entity) -%}
-    {% if entity.access != Access.private or Config.include_private -%}
-        {%- if entity is Namespace -%}
-            {{ write_namespace(entity) }}
-        {%- elif entity is Type -%}
-            {{ write_type(entity) }}
-        {%- elif entity is OverloadSet -%}
-            {{ write_overload_set(entity) }}
-        {%- elif entity is Variable -%}
-            {{ write_variable(entity) }}
-        {%- elif entity is Function -%}
-            {{ write_function(entity) }}
-        {%- endif -%}
+    {% if (entity.access != Access.private or Config.include_private)
+            and not is_external(entity) -%}
+        {%- for prefix in Config.allowed_prefixes %}
+            {%- set fqn = entity.fully_qualified_name -%}
+            {%- if fqn.startswith(prefix) or prefix.startswith(fqn) -%}
+                {%- if entity is Namespace -%}
+                    {{ write_namespace(entity) }}
+                {%- elif entity is Type -%}
+                    {{ write_type(entity) }}
+                {%- elif entity is OverloadSet -%}
+                    {{ write_overload_set(entity) }}
+                {%- elif entity is Variable -%}
+                    {{ write_variable(entity) }}
+                {%- elif entity is Function -%}
+                    {{ write_function(entity) }}
+                {%- endif -%}
+            {%- endif -%}
+        {%- endfor -%}
     {%- endif -%}
 {%- endmacro %}
 
 
 {% macro write_namespace(entity) -%}
     {%- for m in entity.members.values() | select("Type") | sort -%}
-        {{ write_type(m) }}
+        {{ write_entity(m) }}
     {%- endfor -%}
 
     {%- for m in entity.members.values() | select("OverloadSet") | sort -%}
-        {{ write_overload_set(m) }}
+        {{ write_entity(m) }}
     {%- endfor -%}
 
     {%- for m in entity.members.values() | select("Variable") | sort -%}
-        {{ write_variable(m) }}
+        {{ write_entity(m) }}
     {%- endfor -%}
 {%- endmacro %}
 
@@ -673,6 +679,10 @@ Convenience header {{ source_header(Config.convenience_header) }}
 {% macro phrase_part(part, in_code=False) -%}
     {%- if part is string -%}
         {{ text_helper(part, in_code=in_code) }}
+    {%- elif part is EmDash -%}
+        {{ part.text }}
+    {%- elif part is EnDash -%}
+        {{ part.text }}
     {%- elif part is Monospaced -%}
         `{{ phrase(part, in_code=True) }}`
     {%- elif part is Emphasised -%}
@@ -681,9 +691,7 @@ Convenience header {{ source_header(Config.convenience_header) }}
         [*{{ phrase(part, in_code=in_code) }}]
     {%- elif part is EntityRef -%}
         {%- if in_code %}``{% endif -%}
-        {%- if Config.get('external_marker')
-            and (part.entity.brief | map(attribute="text") | join | trim)
-                == Config.get('external_marker') -%}
+        {%- if is_external(part.entity) -%}
             [@
             {%- for part in part.entity.description -%}
                 {%- if part is Section and part.kind == Section.See -%}
@@ -833,3 +841,19 @@ Convenience header {{ source_header(Config.convenience_header) }}
 {% macro escape(s) -%}
     {{ s.replace("[", "\\[").replace("]", "\\]") }}
 {%- endmacro %}
+
+
+{%- macro is_external(entity) -%}
+    {%- if not Config.get('external_marker') -%}
+    {%- else -%}
+        {%- set ns = namespace(brief=entity.brief) -%}
+        {%- if entity is OverloadSet -%}
+            {%- set ns.brief = ns.brief[0] -%}
+        {%- endif -%}
+        {%- if (ns.brief | map(attribute="text") | join | trim)
+                == Config.get('external_marker') -%}
+            1
+        {%- else -%}
+        {%- endif -%}
+    {%- endif -%}
+{%- endmacro -%}

@@ -17,6 +17,20 @@
 #   include <boost/winapi/dll.hpp>
 #   include <boost/dll/detail/windows/path_from_handle.hpp>
 #else
+#if BOOST_OS_CYGWIN
+// `Dl_info` & `dladdr` is hidden by `__GNU_VISIBLE`
+typedef struct Dl_info Dl_info;
+
+struct Dl_info
+{
+    char        dli_fname[PATH_MAX];  /* Filename of defining object */
+    void       *dli_fbase;            /* Load address of that object */
+    const char *dli_sname;            /* Name of nearest lower symbol */
+    void       *dli_saddr;            /* Exact value of nearest symbol */
+};
+
+extern "C" int dladdr (const void *addr, Dl_info *info);
+#endif
 #   include <dlfcn.h>
 #   include <boost/dll/detail/posix/program_location_impl.hpp>
 #endif

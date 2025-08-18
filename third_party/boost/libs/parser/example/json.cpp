@@ -151,12 +151,10 @@ namespace json {
         }
     };
 
-    // This is the verbose form of declaration for the integer and unsigned
-    // integer parsers int_parser and uint_parser.  In this case, we don't
-    // want to use boost::parser::hex directly, since it has a variable number
-    // of digits.  We want to match exactly 4 digits, and this is how we
-    // declare a hexadecimal parser that matches exactly 4.
-    bp::parser_interface<bp::uint_parser<uint32_t, 16, 4, 4>> const hex_4_def;
+    // We don't want to use boost::parser::hex directly, since it has a
+    // variable number of digits.  We want to match exactly 4 digits, and this
+    // is how we declare a hexadecimal parser that matches exactly 4.
+    auto const hex_4_def = boost::parser::uint_.base<16>().digits<4>();
 
     // We use > here instead of >>, because once we see \u, we know that
     // exactly four hex digits must follow -- no other production rule starts

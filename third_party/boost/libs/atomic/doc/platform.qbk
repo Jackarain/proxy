@@ -94,11 +94,11 @@ These must be implemented as partial template specializations for
     explicit platform_atomic_integral(T v) : i(v) {}
     platform_atomic_integral(void) {}
 
-    T load(memory_order order=memory_order_seq_cst) const volatile
+    T load(memory_order order=memory_order::seq_cst) const volatile
     {
       // platform-specific code
     }
-    void store(T v, memory_order order=memory_order_seq_cst) volatile
+    void store(T v, memory_order order=memory_order::seq_cst) volatile
     {
       // platform-specific code
     }
@@ -130,17 +130,17 @@ At the minimum, an implementor must provide the
     my_atomic_32() {}
     my_atomic_32(T initial_value) : value(initial_value) {}
 
-    T load(memory_order order=memory_order_seq_cst) volatile const
+    T load(memory_order order=memory_order::seq_cst) volatile const
     {
       // platform-specific code
     }
-    void store(T new_value, memory_order order=memory_order_seq_cst) volatile
+    void store(T new_value, memory_order order=memory_order::seq_cst) volatile
     {
       // platform-specific code
     }
     bool compare_exchange_weak(T &expected, T desired,
       memory_order success_order,
-      memory_order_failure_order) volatile
+      memory_order failure_order) volatile
     {
       // platform-specific code
     }

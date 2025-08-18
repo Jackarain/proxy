@@ -15,7 +15,9 @@
 #include <boost/container/devector.hpp>
 #include <boost/container/deque.hpp>
 
+#ifndef BOOST_CONTAINER_STD_PAIR_IS_MOVABLE
 #include <boost/container/detail/container_or_allocator_rebind.hpp>
+#endif
 
 #include "flat_map_test.hpp"
 #include <map>
@@ -32,13 +34,21 @@ struct GetMapContainer
       typedef flat_map< ValueType
                  , ValueType
                  , std::less<ValueType>
+                  #ifdef BOOST_CONTAINER_STD_PAIR_IS_MOVABLE
+                 , VoidAllocatorOrContainer
+                  #else
                  , typename boost::container::dtl::container_or_allocator_rebind<VoidAllocatorOrContainer, type_t>::type
+                  #endif
                  > map_type;
 
       typedef flat_multimap< ValueType
                  , ValueType
                  , std::less<ValueType>
+                  #ifdef BOOST_CONTAINER_STD_PAIR_IS_MOVABLE
+                 , VoidAllocatorOrContainer
+                  #else
                  , typename boost::container::dtl::container_or_allocator_rebind<VoidAllocatorOrContainer, type_t>::type
+                  #endif
                  > multimap_type;
    };
 };

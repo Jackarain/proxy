@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.dll-path]]`dll-path` (_Unix_ only)::
+[[b2.builtin.features.dll-path]]`dll-path` (_Unix_ only)::
 *Allowed values:* A directory path to shared libraries.
 +
 Specifies an additional directory where the system should look for shared
@@ -17,9 +17,9 @@ WARNING: Note that a relative path will be prepended with the directory of the r
 `jam` file - as supplied on the `b2` command line - thus _severely_ limiting its
 practical use!.
 +
-Please see the link:#bbv2.faq.dll-path[FAQ entry on the
+Please see the link:#b2.faq.dll-path[FAQ entry on the
 `dll-path` and `hardcode-dll-paths`] for details, and the
-link:#bbv2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`] feature
+link:#b2.builtin.features.hardcode-dll-paths[`hardcode-dll-paths`] feature
 to automatically add paths for development.
 
 |# # end::doc[]
@@ -30,11 +30,11 @@ feature.feature dll-path
 
 #| tag::hardcode-doc[]
 
-[[bbv2.builtin.features.hardcode-dll-paths]]`hardcode-dll-paths` (_Unix_ only)::
+[[b2.builtin.features.hardcode-dll-paths]]`hardcode-dll-paths` (_Unix_ only)::
 *Allowed values:* `true`, `false`. +
-*Defaults to:* `true`(link:#bbv2.reference.rules.exe[`exe`]),
-               `false`(link:#bbv2.reference.rules.install[`install`]) +
-*Ignored for:* link:#bbv2.reference.rules.lib[`lib`]
+*Defaults to:* `true`(link:#b2.reference.rules.exe[`exe`]),
+               `false`(link:#b2.reference.rules.install[`install`]) +
+*Ignored for:* link:#b2.reference.rules.lib[`lib`]
 
 +
 When an ``exe``cutable is built with `<hardcode-dll-paths>true` (default),
@@ -42,14 +42,14 @@ the target binary will be linked with an _rpath list_ that contains all the
 paths to the directories of used shared libraries.
 +
 When a target is ``install``ed with `<hardcode-dll-paths>true`, those same
-paths, and any added with link:bbv2.builtin.features.dll-path[`<dll-path>`],
+paths, and any added with link:b2.builtin.features.dll-path[`<dll-path>`],
 are propagated through to the resulting binary.
 +
 The purpose of this feature is to aid development; the resulting executable
 (`exe` - but not `install` target) can by default be run, without
 changing system paths to shared libraries or installing the libraries to
 system paths. +
-Please see the <<bbv2.faq.dll-path,FAQ entry>> for details.
+Please see the <<b2.faq.dll-path,FAQ entry>> for details.
 
 |# # end::hardcode-doc[]
 
@@ -67,7 +67,7 @@ feature.feature xdll-path
 
 #| tag::def-doc[]
 
-[[bbv2.builtin.features.def-file]]`def-file`::
+[[b2.builtin.features.def-file]]`def-file`::
 Provides a means to specify def-file for windows DLLs.
 
 |# # end::def-doc[]
@@ -78,7 +78,7 @@ feature.feature def-file
 
 #| tag::suppress-doc[]
 
-[[bbv2.builtin.features.suppress-import-lib]]`suppress-import-lib`::
+[[b2.builtin.features.suppress-import-lib]]`suppress-import-lib`::
 Suppresses creation of import library by the linker.
 
 |# # end::suppress-doc[]

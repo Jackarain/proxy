@@ -1,0 +1,210 @@
+////
+Copyright 2025 Christian Mazakas
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_blake2]
+# <boost/hash2/blake2.hpp>
+:idprefix: ref_blake2_
+
+```
+#include <boost/hash2/digest.hpp>
+#include <boost/hash2/hmac.hpp>
+
+namespace boost {
+namespace hash2 {
+
+class blake2b_512;
+class blake2s_256;
+
+using hmac_blake2b_512 = hmac<blake2b_512>;
+using hmac_blake2s_256 = hmac<blake2s_256>;
+
+} // namespace hash2
+} // namespace boost
+```
+
+This header implements the https://www.blake2.net/[BLAKE2] family of functions.
+
+`blake2b_512` is a 512-bit digest function that is optimized for 64-bit platforms while
+`blake2s_256` is a 256-bit digest function optimized for 8- to 32-bit platforms.
+
+BLAKE2 directly supports keyed-hashing so there is no need to use the <<ref_hmac,hmac>> class template
+for MAC purposes (though typedefs are still provided for convenience). Like the `hmac<H>` template, the
+seed and byte sequence constructors use their input as the secret key. See the documentation of those
+constructors for more information on how key sizes are handled.
+
+## blake2b_512
+
+```
+class blake2b_512
+{
+    using result_type = digest<64>;
+
+    static constexpr std::size_t block_size = 128;
+
+    constexpr blake2b_512();
+    constexpr explicit blake2b_512( std::uint64_t seed );
+    blake2b_512( void const* p, std::size_t n );
+    constexpr blake2b_512( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr blake2b_512();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the BLAKE2b algorithm to its initial values.
+
+```
+constexpr explicit blake2b_512( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the state using the little-endian representation of the `seed` as an 8-byte secret key.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+blake2b_512( void const* p, std::size_t n );
+constexpr blake2b_512( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state using a maximum of the first 64 bytes (`k`) of input as the secret key. The rest of the
+  input is processed by a call to `update( p + k, n - k ); result();`, if any input remains.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the BLAKE2b algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Pads the accumulated message and finalizes the digest.
+
+Returns: ::
+  The BLAKE2b digest of the message formed from the byte sequences of the preceding calls to `update` and
+  the secret key, if it was assigned during construction.
+
+Remarks: ::
+  Repeated calls to `result()` return a pseudorandom sequence of `result_type` values, effectively extending the output.
+
+## blake2s_256
+
+```
+class blake2s_256
+{
+    using result_type = digest<32>;
+
+    static constexpr std::size_t block_size = 64;
+
+    constexpr blake2s_256();
+    constexpr explicit blake2s_256( std::uint64_t seed );
+    blake2s_256( void const* p, std::size_t n );
+    constexpr blake2s_256( unsigned char const* p, std::size_t n );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr blake2s_256();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the BLAKE2s algorithm to its initial values.
+
+```
+constexpr explicit blake2s_256( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the state using the little-endian representation of the `seed` as an 8-byte secret key.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+blake2s_256( void const* p, std::size_t n );
+constexpr blake2s_256( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state using a maximum of the first 32 bytes (`k`) of input as the secret key. The rest of the
+  input is processed by a call to `update( p + k, n - k ); result();`, if any input remains.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the BLAKE2s algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Pads the accumulated message and finalizes the digest.
+
+Returns: ::
+  The BLAKE2s digest of the message formed from the byte sequences of the preceding calls to `update` and
+  the secret key, if it was assigned during construction.
+
+Remarks: ::
+  Repeated calls to `result()` return a pseudorandom sequence of `result_type` values, effectively extending the output.

@@ -387,7 +387,11 @@ private:
 
     Depending on where the object was obtained,
     the strings may or may not contain percent
-    escapes.
+    escapes. Some functions and objects might
+    expect encoded strings in this view, while
+    others expect decoded strings. The caller
+    should be aware of the context in which
+    the object will be used.
 
     For most usages, key comparisons are
     case-sensitive and duplicate keys in

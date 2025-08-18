@@ -13,9 +13,10 @@ project
     : requirements
       <library>/boost/filesystem//boost_filesystem/<warnings>off
       <library>/boost/url//boost_url
-      <source>../../extra/test_main.cpp
+      <source>../../extra/test_suite/test_main.cpp
+      <source>../../extra/test_suite/test_suite.cpp
       <include>.
-      <include>../../extra
+      <include>../../extra/test_suite
       <include>../../example/router
     ;
 
@@ -103,7 +104,7 @@ local SOURCES =
     ;
 for local f in $(SOURCES)
 {
-    run $(f) : : : ;
+    run $(f) ;
 }
 run doc_grammar.cpp /boost/url//boost_url : : : <warnings>off ;
 run doc_3_urls.cpp /boost/url//boost_url : : : <warnings>off ;

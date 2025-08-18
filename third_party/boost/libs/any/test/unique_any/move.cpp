@@ -6,6 +6,8 @@
 
 #include <boost/any/unique_any.hpp>
 
+#include <memory>
+
 #include <boost/core/lightweight_test.hpp>
 
 void test_move_construct_unique_ptr() {

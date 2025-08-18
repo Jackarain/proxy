@@ -1,1 +1,5 @@
+project : requirements
+    <library>/boost/rational//boost_rational
+    ;
+
 exe minimal_rational :  main.cpp ;

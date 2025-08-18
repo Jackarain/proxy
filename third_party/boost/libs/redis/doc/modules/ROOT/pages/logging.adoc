@@ -1,0 +1,45 @@
+//
+// Copyright (c) 2025 Marcelo Zimbres Silva (mzimbres@gmail.com),
+// Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+= Logging
+
+xref:reference:boost/redis/basic_connection/async_run-04.adoc[`connection::async_run`]
+is a complex algorithm, with features like built-in reconnection.
+This can make configuration problems, like a misconfigured hostname, difficult to debug -
+Boost.Redis will keep retrying to connect to the same hostname over and over.
+For this reason, Boost.Redis incorporates a lightweight logging solution, and
+*will log some status messages to stderr by default*.
+
+Logging can be customized by passing a
+xref:reference:boost/redis/logger.adoc[`logger`] object to the connection's constructor. For example, logging can be disabled by writing:
+
+[source,cpp]
+----
+asio::io_context ioc;
+connection conn {ioc, logger{logger::level::disabled}};
+----
+
+Every message logged by the library is attached a
+https://en.wikipedia.org/wiki/Syslog#Severity_level[syslog-like severity]
+tag (a xref:reference:boost/redis/logger/level.adoc[`logger::level`]).
+You can filter messages by severity by creating a `logger` with a specific level:
+
+[source,cpp]
+----
+asio::io_context ioc;
+
+// Logs to stderr messages with severity >= level::error.
+// This will hide all informational output.
+connection conn {ioc, logger{logger::level::error}};
+----
+
+The `logger` constructor accepts a `std::function<void(logger::level, std::string_view)>`
+as second argument. If supplied, Boost.Redis will call this function when logging
+instead of printing to stderr. This can be used to integrate third-party logging
+libraries. See our {site-url}/example/cpp17_spdlog.cpp[spdlog integration example]
+for sample code.

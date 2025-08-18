@@ -51,10 +51,12 @@ if (NOT BOOST_COBALT_IS_ROOT)
             Boost::circular_buffer
             Boost::config
             Boost::core
+            Boost::endian
             Boost::intrusive
             Boost::mp11
             Boost::preprocessor
             Boost::smart_ptr
+            Boost::static_string
             Boost::system
             Boost::throw_exception
             Boost::variant2
@@ -70,15 +72,56 @@ if (NOT BOOST_COBALT_IS_ROOT)
         target_compile_definitions(boost_cobalt PUBLIC _WIN32_WINNT=0x0601)
     endif()
 
+    if(MINGW OR CYGWIN)
+        target_link_libraries(boost_cobalt PUBLIC ws2_32)
+    endif()
+
     if (BOOST_COBALT_USE_BOOST_CONTAINER)
         target_link_libraries(boost_cobalt PUBLIC Boost::container)
         target_compile_definitions(boost_cobalt PUBLIC BOOST_COBALT_USE_BOOST_CONTAINER_PMR=1 )
     endif()
 
     if(BUILD_SHARED_LIBS)
-        target_compile_definitions(boost_cobalt PUBLIC BOOST_COBALT_DYN_LINK)
+        target_compile_definitions(boost_cobalt PUBLIC BOOST_COBALT_DYN_LINK=1)
     else()
-        target_compile_definitions(boost_cobalt PUBLIC BOOST_COBALT_STATIC_LINK)
+        target_compile_definitions(boost_cobalt PUBLIC BOOST_COBALT_STATIC_LINK=1)
+    endif()
+
+    add_library(boost_cobalt_io
+            src/io/steady_timer.cpp
+            src/io/system_timer.cpp
+            src/io/signal_set.cpp
+            src/io/sleep.cpp
+            src/io/read.cpp
+            src/io/write.cpp
+            src/io/serial_port.cpp
+            src/io/pipe.cpp
+            src/io/file.cpp
+            src/io/random_access_file.cpp
+            src/io/stream_file.cpp
+            src/io/endpoint.cpp
+            src/io/socket.cpp
+            src/io/datagram_socket.cpp
+            src/io/seq_packet_socket.cpp
+            src/io/stream_socket.cpp
+            src/io/resolver.cpp
+            src/io/acceptor.cpp
+       )
+
+    target_link_libraries(boost_cobalt_io PUBLIC boost_cobalt )
+    target_compile_definitions(boost_cobalt_io PRIVATE BOOST_COBALT_IO_SOURCE=1)
+    add_library(Boost::cobalt::io ALIAS boost_cobalt_io)
+
+    find_package(OpenSSL)
+
+    if (OPENSSL_FOUND)
+        add_library(boost_cobalt_io_ssl
+                   src/io/ssl.cpp
+        )
+
+        target_link_libraries(boost_cobalt_io_ssl PUBLIC boost_cobalt_io OpenSSL::SSL OpenSSL::Crypto)
+        target_compile_definitions(boost_cobalt_io_ssl PRIVATE BOOST_COBALT_SSL_SOURCE=1)
+        add_library(Boost::cobalt::io::ssl ALIAS boost_cobalt_io_ssl)
     endif()
 
     if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
@@ -153,6 +196,7 @@ else()
             Threads::Threads)
     target_compile_definitions(boost_cobalt PRIVATE BOOST_COBALT_SOURCE=1 )
 
+
     if (BOOST_COBALT_USE_BOOST_CONTAINER)
         target_link_libraries(boost_cobalt PUBLIC Boost::container)
         target_compile_definitions(boost_cobalt PUBLIC BOOST_COBALT_USE_BOOST_CONTAINER_PMR=1 )
@@ -161,14 +205,57 @@ else()
     target_compile_features(boost_cobalt PUBLIC cxx_std_20)
     add_library(Boost::cobalt ALIAS boost_cobalt)
 
+    if (MSVC)
+        target_compile_definitions(boost_cobalt PUBLIC _WIN32_WINNT=0x0601)
+    endif()
+
+    if(MINGW OR CYGWIN)
+        target_link_libraries(boost_cobalt PUBLIC ws2_32)
+    endif()
+
     if(BUILD_SHARED_LIBS)
         target_compile_definitions(boost_cobalt PUBLIC BOOST_COBALT_DYN_LINK=1)
     else()
         target_compile_definitions(boost_cobalt PUBLIC BOOST_COBALT_STATIC_LINK=1)
     endif()
 
+    add_library(boost_cobalt_io
+                src/io/steady_timer.cpp
+                src/io/system_timer.cpp
+                src/io/signal_set.cpp
+                src/io/sleep.cpp
+                src/io/read.cpp
+                src/io/write.cpp
+                src/io/serial_port.cpp
+                src/io/pipe.cpp
+                src/io/file.cpp
+                src/io/random_access_file.cpp
+                src/io/stream_file.cpp
+                src/io/endpoint.cpp
+                src/io/socket.cpp
+                src/io/datagram_socket.cpp
+                src/io/seq_packet_socket.cpp
+                src/io/stream_socket.cpp
+                src/io/resolver.cpp
+                src/io/acceptor.cpp
+                )
+
+    target_link_libraries(boost_cobalt_io PUBLIC boost_cobalt)
+    target_compile_definitions(boost_cobalt_io PRIVATE BOOST_COBALT_IO_SOURCE=1)
+    add_library(Boost::cobalt::io ALIAS boost_cobalt_io)
+
+    find_package(OpenSSL)
+
+    if (OPENSSL_FOUND)
+        add_library(boost_cobalt_io_ssl src/io/ssl.cpp)
+
+        target_link_libraries(boost_cobalt_io_ssl PUBLIC boost_cobalt_io OpenSSL::SSL OpenSSL::Crypto)
+        target_compile_definitions(boost_cobalt_io_ssl PRIVATE BOOST_COBALT_SSL_SOURCE=1)
+        add_library(Boost::cobalt::io::ssl ALIAS boost_cobalt_io_ssl)
+    endif()
+
     if(BOOST_COBALT_INSTALL AND NOT BOOST_SUPERPROJECT_VERSION)
-        install(TARGETS boost_cobalt
+        install(TARGETS boost_cobalt boost_cobalt_io
                 RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
                 LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
                 ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"

@@ -9,7 +9,7 @@
 // objects to be swapped would themselves be from the boost namespace.
 // If so, boost::core::invoke_swap itself might be found by argument dependent lookup.
 // The implementation of boost::core::invoke_swap resolves this issue by giving
-// boost::core::invoke_swap two template argumetns, thereby making it less specialized
+// boost::core::invoke_swap two template arguments, thereby making it less specialized
 // than std::swap.
 
 #include <boost/core/invoke_swap.hpp>

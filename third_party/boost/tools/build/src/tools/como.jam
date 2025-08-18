@@ -5,7 +5,7 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.tools.compiler.como]]
+[[b2.reference.tools.compiler.como]]
 = Comeau C/C++ Compiler
 
 The `como-linux` and the `como-win` modules supports the

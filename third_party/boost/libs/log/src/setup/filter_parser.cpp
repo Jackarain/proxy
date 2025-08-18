@@ -123,6 +123,7 @@ private:
     typedef CharT char_type;
     typedef const char_type* iterator_type;
     typedef typename log::aux::encoding< char_type >::type encoding;
+    typedef typename encoding::classify_type char_classify_type;
     typedef log::aux::encoding_specific< encoding > encoding_specific;
     typedef std::basic_string< char_type > string_type;
     typedef log::aux::char_constants< char_type > constants;
@@ -314,7 +315,7 @@ private:
             else
             {
                 // Check for custom relation
-                while (next != end && (encoding::isalnum(*next) || *next == constants::char_underline))
+                while (next != end && (encoding::isalnum(static_cast< char_classify_type >(*next)) || *next == constants::char_underline))
                     ++next;
                 if (p == next)
                     goto DoneL;
@@ -347,7 +348,7 @@ private:
             char_type c1 = *p, c2 = *keyword;
             if (c2 == 0)
             {
-                if (encoding::isspace(c1))
+                if (encoding::isspace(static_cast< char_classify_type >(c1)))
                 {
                     next = p;
                     return true;

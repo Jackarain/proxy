@@ -6,6 +6,7 @@
 
 #include "performance.hpp"
 #include <list>
+#include <deque>
 #include <fstream>
 #include <iostream>
 #include <iomanip>

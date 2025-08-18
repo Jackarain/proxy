@@ -30,10 +30,10 @@
 #include <boost/memory_order.hpp>
 #include <boost/atomic/ipc_atomic.hpp>
 #include <boost/atomic/capabilities.hpp>
+#include <boost/atomic/thread_pause.hpp>
 #include <boost/log/exceptions.hpp>
 #include <boost/log/utility/ipc/reliable_message_queue.hpp>
 #include <boost/log/support/exception.hpp>
-#include <boost/log/detail/pause.hpp>
 #include <boost/exception/info.hpp>
 #include <boost/exception/enable_error_info.hpp>
 #include <boost/align/align_up.hpp>
@@ -472,7 +472,7 @@ private:
             {
                 for (unsigned int j = 0; j < spins; ++j)
                 {
-                    boost::log::aux::pause();
+                    boost::atomics::thread_pause();
                 }
             }
             else

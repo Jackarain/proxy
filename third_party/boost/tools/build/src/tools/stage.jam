@@ -8,7 +8,7 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.modules.stage]]
+[[b2.reference.modules.stage]]
 = stage
 This module defines the `install` rule, used to copy a set of targets to a
 single location.
@@ -16,6 +16,7 @@ single location.
 |# # end::doc[]
 
 
+import args ;
 import "class" : new ;
 import feature ;
 import generators ;
@@ -27,6 +28,18 @@ import targets ;
 import type ;
 import types/register ;
 import virtual-target ;
+
+
+args.add-arg prefix : --prefix
+    : "Install to a tree rooted at prefix." ;
+args.add-arg bindir : --bindir
+    : "Install binaries to this directory. [default: <prefix>/bin]" ;
+args.add-arg libdir : --libdir
+    : "Install libraries to this directory. [default: <prefix>/lib]" ;
+args.add-arg includedir : --includedir
+    : "install include files to this directory. [default: <prefix>/include]" ;
+args.add-arg datarootdir : --datarootdir
+    : "Install shared data files to this directory. [default: <prefix>/share]" ;
 
 
 feature.feature <install-dependencies> : off on : incidental      ;
@@ -41,7 +54,7 @@ feature.feature <install-no-version-symlinks> : on : optional incidental ;
 
 #| tag::features-install-package-doc[]
 
-[[bbv2.builtin.features.install-package]]`install-package`::
+[[b2.builtin.features.install-package]]`install-package`::
 Specifies the name of the package to which installed files belong.  This is
 used for default installation prefix on certain platforms.
 
@@ -52,13 +65,13 @@ feature.feature install-package : : free ;
 
 #| tag::doc[]
 
-[[bbv2.reference.modules.stage.add-install-dir]]
+[[b2.reference.modules.stage.add-install-dir]]
 . `rule add-install-dir ( name : suffix ? : parent ? : options * )`
 +
 Defines a named installation directory.
 +
 For example, `add-install-dir foo : bar : baz ;` creates feature
-<<bbv2.builtin.features.install-prefix,`<install-foo>`>> and adds support for
+<<b2.builtin.features.install-prefix,`<install-foo>`>> and adds support for
 named directory `(foo)` to `install` rule. The rule will try to use the value
 of `<install-foo>` property if present, otherwise will fallback to `(baz)/bar`.
 +
@@ -114,8 +127,8 @@ rule install-dir-names ( )
 
 #| tag::features-install-prefix-doc[]
 
-[[bbv2.builtin.features.install-prefix]]`install-<name>`::
-Specifies installation prefix for <<bbv2.tasks.installing,`install`>> targets.
+[[b2.builtin.features.install-prefix]]`install-<name>`::
+Specifies installation prefix for <<b2.tasks.installing,`install`>> targets.
 These named installation prefixes are registered by default:
 +
 * `prefix`: `C:\<package name>` if `<target-os>windows` is in the property set,
@@ -144,7 +157,7 @@ These named installation prefixes are registered by default:
 * `mandir`: `(datarootdir)/man`
 
 If more are necessary, they could be added with
-<<bbv2.reference.modules.stage.add-install-dir,`stage.add-install-dir`>>.
+<<b2.reference.modules.stage.add-install-dir,`stage.add-install-dir`>>.
 
 |# # end::features-install-prefix-doc[]
 
@@ -175,8 +188,8 @@ add-install-dir mandir : man : datarootdir ;
 
 #| tag::features-staging-prefix-doc[]
 
-[[bbv2.builtin.features.staging-prefix]]`staging-prefix`::
-Specifies staging prefix for <<bbv2.tasks.installing,`install`>> targets.
+[[b2.builtin.features.staging-prefix]]`staging-prefix`::
+Specifies staging prefix for <<b2.tasks.installing,`install`>> targets.
 If present, it will be used instead of the path to named directory `prefix`.
 Example:
 +
@@ -724,7 +737,7 @@ that were registered with `package-suffix` option and also to construct
 +
 Available `flags`:
 +
-* `staged`: take <<bbv2.builtin.features.staging-prefix,`staging-prefix`>> into
+* `staged`: take <<b2.builtin.features.staging-prefix,`staging-prefix`>> into
   account.
 * `relative`: return the path to `name` relative to its base directory.
 
@@ -798,7 +811,7 @@ rule get-dir ( name : property-set : package-name : flags * )
             local rel = [ path.relative $(result) $(prefix) : no-error ] ;
             if not-a-child != $(rel)
             {
-                result = [ path.root $(rel) $(prefix) ] ;
+                result = [ path.root $(rel) $(stage) ] ;
             }
         }
     }
@@ -856,7 +869,7 @@ local rule get-install-prefix ( property-set : package-name : flags * )
 +
 Returns the package name that will be used for `install` targets when
 constructing installation location. The rule uses the value of
-<<bbv2.builtin.features.install-package,`<install-package>`>> property if it's
+<<b2.builtin.features.install-package,`<install-package>`>> property if it's
 present in `property-set`. Otherwise it deduces the package name using
 ``project-module``'s attributes. It traverses the project hierarchy up to the
 root searching for the first project with an id. If none is found, the base

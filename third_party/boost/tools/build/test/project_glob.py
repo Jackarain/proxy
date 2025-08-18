@@ -52,8 +52,8 @@ exe a : [ glob *.cpp ] ../d2/d//l ;
     t.write("d2/d/l.cpp", """\
 #if defined(_WIN32)
 __declspec(dllexport)
-void force_import_lib_creation() {}
 #endif
+void force_import_lib_creation() {}
 """)
     t.write("d2/d/jamfile.jam", "lib l : [ glob *.cpp ] ;")
 
@@ -82,8 +82,8 @@ exe a : [ glob foo/*.cpp bar/*.cpp : bar/bad* ] ../d2/d//l ;
     t.write("d2/d/l.cpp", """\
 #if defined(_WIN32)
 __declspec(dllexport)
-void force_import_lib_creation() {}
 #endif
+void force_import_lib_creation() {}
 """)
     t.write("d2/d/jamfile.jam", "lib l : [ glob *.cpp ] ;")
 
@@ -109,8 +109,8 @@ exe a : [ glob-tree *.cpp : bad* ] ../d2/d//l ;
     t.write("d2/d/l.cpp", """\
 #if defined(_WIN32)
 __declspec(dllexport)
-void force_import_lib_creation() {}
 #endif
+void force_import_lib_creation() {}
 """)
     t.write("d2/d/jamfile.jam", "lib l : [ glob *.cpp ] ;")
 
@@ -168,8 +168,8 @@ exe a : [ glob $(pwd)/src/foo/*.cpp $(pwd)/src/bar/*.cpp ] ../d2/d//l ;
     t.write("d2/d/l.cpp", """\
 #if defined(_WIN32)
 __declspec(dllexport)
-void force_import_lib_creation() {}
 #endif
+void force_import_lib_creation() {}
 """)
     t.write("d2/d/jamfile.jam", "lib l : [ glob *.cpp ] ;")
 

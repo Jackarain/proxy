@@ -128,7 +128,7 @@ class child
     /** Same as valid, for convenience. */
     explicit operator bool() const;
 
-    /** Check if the the chlid process is in any process group. */
+    /** Check if the the child process is in any process group. */
     bool in_group() const;
 
     /** \overload bool in_group() const */

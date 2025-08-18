@@ -393,6 +393,12 @@ inline disconnect_props dprops_with_reason_string(const std::string& reason_stri
     return dprops;
 }
 
+static const auto dflt_cprops = std::invoke([] {
+    connect_props ret;
+    ret[prop::maximum_packet_size] = ::boost::mqtt5::detail::default_max_recv_size;
+    return ret;
+});
+
 } // end namespace boost::mqtt5::test
 
 #endif // BOOST_MQTT5_TEST_PACKET_UTIL_HPP

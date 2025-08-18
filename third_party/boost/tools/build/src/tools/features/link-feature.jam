@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.link]]`link`::
+[[b2.builtin.features.link]]`link`::
 *Allowed values:* `shared`, `static`
 +
 Controls how libraries are built.

@@ -1,0 +1,26 @@
+//
+// Copyright (c) 2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+= Serializing and parsing into custom types
+
+Boost.Redis supports serialization of user defined types by means of
+the following customization points
+
+[source,cpp]
+----
+// Serialize
+void boost_redis_to_bulk(std::string& to, mystruct const& obj);
+
+// Deserialize
+void boost_redis_from_bulk(mystruct& u, node_view const& node, boost::system::error_code&);
+----
+
+These functions are accessed over ADL and therefore they must be
+imported in the global namespace by the user. The following examples might be of interest:
+
+* {site-url}/example/cpp20_json.cpp[cpp20_json.cpp]: serializes and parses JSON objects.
+* {site-url}/example/cpp20_protobuf.cpp[cpp20_protobuf.cpp]: serializes and parses https://protobuf.dev/[protobuf] objects.

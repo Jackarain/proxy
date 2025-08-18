@@ -11,6 +11,7 @@
 #include <boost/container/allocator_traits.hpp>
 #include <boost/container/detail/type_traits.hpp>
 #include <boost/container/detail/function_detector.hpp>
+#include <boost/container/detail/pair.hpp>
 #include <boost/move/utility_core.hpp>
 #include <memory>
 #if defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
@@ -420,6 +421,20 @@ int main()
       SAllocTraits::construct(s_alloc, &c, 0, 1, 2);
       BOOST_TEST(!c.copymoveconstructed() && !c.moved());
    }
+
+   {
+      boost::container::dtl::pair<copymovable, copymovable> cp;
+      copymovable k(99, 100, 101);
+      SAllocTraits::construct(s_alloc, &cp, boost::container::try_emplace_t(), boost::move(k), 1, 2, 3);
+      BOOST_TEST(cp.first.moved() && !cp.second.copymoveconstructed() && !cp.second.moved());
+   }
+   {
+      boost::container::dtl::pair<copymovable, copymovable> cp;
+      copymovable k(99, 100, 101);
+      CAllocTraits::construct(c_alloc, &cp, boost::container::try_emplace_t(), boost::move(k), 1, 2, 3);
+      BOOST_TEST(cp.first.moved() && !cp.second.copymoveconstructed() && !cp.second.moved());
+   }
+
    //storage_is_unpropagable
    {
       SAlloc s_alloc2;

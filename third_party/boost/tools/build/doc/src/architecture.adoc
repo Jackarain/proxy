@@ -1,10 +1,10 @@
-[[bbv2.arch]]
+[[b2.arch]]
 B2 v2 architecture
 ---------------------------
 
 This document is work-in progress. Do not expect much from it yet.
 
-[[bbv2.arch.overview]]
+[[b2.arch.overview]]
 Overview
 --------
 
@@ -18,7 +18,7 @@ functionality. It mostly allows declaring specific kinds of main
 targets, as well as registering available tools, which are then used
 when creating the dependency graph.
 
-[[bbv2.arch.build]]
+[[b2.arch.build]]
 The build layer
 ---------------
 
@@ -55,7 +55,7 @@ instance, the `actualize` method is called to setup nodes and updating
 actions in the dependency graph kept inside B2 engine. This
 dependency graph is then updated, which runs necessary commands.
 
-[[bbv2.arch.build.metatargets]]
+[[b2.arch.build.metatargets]]
 Metatargets
 ~~~~~~~~~~~
 
@@ -106,7 +106,7 @@ to eliminate all such subclasses at the moment.
 Note that the `build/targets.jam` file contains an UML diagram which
 might help.
 
-[[bbv2.arch.build.virtual]]
+[[b2.arch.build.virtual]]
 Virtual targets
 ~~~~~~~~~~~~~~~
 
@@ -141,7 +141,7 @@ functionality is part of the "toolset" module.
 Note that the `build/virtual-targets.jam` file contains an UML diagram
 which might help.
 
-[[bbv2.arch.build.properties]]
+[[b2.arch.build.properties]]
 Properties
 ~~~~~~~~~~
 
@@ -154,13 +154,13 @@ caching for all operations, so most work is avoided. The
 `property-set.create` is the factory function used to create instances
 of the `property-set` class.
 
-[[bbv2.arch.tools]]
+[[b2.arch.tools]]
 The tools layer
 ---------------
 
 Write me!
 
-[[bbv2.arch.targets]]
+[[b2.arch.targets]]
 Targets
 -------
 
@@ -179,14 +179,14 @@ constructed from file targets. User has no way to create file targets
 but can specify rules for detecting source file types, as well as rules
 for transforming between file targets of different types. That
 information is used in constructing the final dependency graph, as
-described in the link:#bbv2.arch.depends[next section]. **Note:**File
+described in the link:#b2.arch.depends[next section]. **Note:**File
 targets are not the same entities as Jam targets; the latter are created
 from file targets at the latest possible moment. *Note:*"File target" is
 an originally proposed name for what we now call virtual targets. It is
 more understandable by users, but has one problem: virtual targets can
 potentially be "phony", and not correspond to any file.
 
-[[bbv2.arch.depends]]
+[[b2.arch.depends]]
 Dependency scanning
 -------------------
 
@@ -194,18 +194,18 @@ Dependency scanning is the process of finding implicit dependencies,
 like "#include" statements in {CPP}. The requirements for correct
 dependency scanning mechanism are:
 
-* link:#bbv2.arch.depends.different-scanning-algorithms[Support for
+* link:#b2.arch.depends.different-scanning-algorithms[Support for
 different scanning algorithms]. {CPP} and XML have quite different syntax
 for includes and rules for looking up the included files.
-* link:#bbv2.arch.depends.same-file-different-scanners[Ability to scan
+* link:#b2.arch.depends.same-file-different-scanners[Ability to scan
 the same file several times]. For example, a single {CPP} file may be
 compiled using different include paths.
-* link:#bbv2.arch.depends.dependencies-on-generated-files[Proper
+* link:#b2.arch.depends.dependencies-on-generated-files[Proper
 detection of dependencies on generated files.]
-* link:#bbv2.arch.depends.dependencies-from-generated-files[Proper
+* link:#b2.arch.depends.dependencies-from-generated-files[Proper
 detection of dependencies from a generated file.]
 
-[[bbv2.arch.depends.different-scanning-algorithms]]
+[[b2.arch.depends.different-scanning-algorithms]]
 Support for different scanning algorithms
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -213,7 +213,7 @@ Different scanning algorithm are encapsulated by objects called
 "scanners". Please see the "scanner" module documentation for more
 details.
 
-[[bbv2.arch.depends.same-file-different-scanners]]
+[[b2.arch.depends.same-file-different-scanners]]
 Ability to scan the same file several times
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -243,7 +243,7 @@ a.cpp (installed copy)    <--(copy) ----------------------- a.cpp (no scanner)
                        a.verbose --------------------------------+
 ....
 
-[[bbv2.arch.depends.dependencies-on-generated-files]]
+[[b2.arch.depends.dependencies-on-generated-files]]
 Proper detection of dependencies on generated files.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -347,7 +347,7 @@ seem to be causing any problems in practice.
 For target types other than {CPP}, adding of include paths must be
 implemented anew.
 
-[[bbv2.arch.depends.dependencies-from-generated-files]]
+[[b2.arch.depends.dependencies-from-generated-files]]
 Proper detection of dependencies from generated files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -441,7 +441,7 @@ Types
 A file target can be given a type, which determines what transformations
 can be applied to the file. The `type.register` rule declares new types.
 File type can also be assigned a scanner, which is then used to find
-implicit dependencies. See "link:#bbv2.arch.depends[dependency
+implicit dependencies. See "link:#b2.arch.depends[dependency
 scanning]".
 
 Target paths

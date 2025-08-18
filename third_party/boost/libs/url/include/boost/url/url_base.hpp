@@ -30,7 +30,6 @@
 namespace boost {
 namespace urls {
 
-#ifndef BOOST_URL_DOCS
 namespace detail {
 struct any_params_iter;
 struct any_segments_iter;
@@ -38,7 +37,6 @@ struct params_iter_impl;
 struct segments_iter_impl;
 struct pattern;
 }
-#endif
 
 /** Common functionality for containers
 
@@ -73,9 +71,7 @@ class BOOST_URL_DECL
     friend class segments_ref;
     friend class segments_encoded_ref;
     friend class params_encoded_ref;
-#ifndef BOOST_URL_DOCS
     friend struct detail::pattern;
-#endif
 
     struct op_t
     {
@@ -250,7 +246,6 @@ public:
     url_base&
     set_scheme(core::string_view s);
 
-#ifndef BOOST_URL_DOCS
     /** Set the scheme
 
         This function sets the scheme to the specified
@@ -285,41 +280,6 @@ public:
     */
     url_base&
     set_scheme_id(urls::scheme id);
-#else
-    /** Set the scheme
-
-        This function sets the scheme to the specified
-        known @ref urls::scheme id, which may not be
-        @ref scheme::unknown or else an exception is
-        thrown. If the id is @ref scheme::none, this
-        function behaves as if @ref remove_scheme
-        were called.
-
-        @par Example
-        @code
-        assert( url( "http://example.com/echo.cgi" ).set_scheme_id( scheme::wss ).buffer() == "wss://example.com/echo.cgi" );
-        @endcode
-
-        @par Complexity
-        Linear in `this->size()`.
-
-        @par Exception Safety
-        Strong guarantee.
-        Calls to allocate may throw.
-        Exceptions thrown on invalid input.
-
-        @throw system_error
-        The scheme is invalid.
-
-        @param id The scheme to set.
-
-        @par Specification
-        @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.1">
-            3.1. Scheme (rfc3986)</a>
-    */
-    url_base&
-    set_scheme_id(scheme id);
-#endif
 
     /** Remove the scheme
 
@@ -2918,9 +2878,27 @@ private:
         detail::any_params_iter&&) ->
             detail::params_iter_impl;
 
+    // Decode any unnecessary percent-escapes
+    // and ensures hexadecimals are uppercase.
+    // The encoding of ignored characters is
+    // preserved.
+    template
+        <class AllowedCharSet,
+         class IgnoredCharSet>
+    void
+    normalize_octets_impl(
+        int,
+        AllowedCharSet const& allowed,
+        IgnoredCharSet const& ignored,
+        op_t&) noexcept;
+
     template<class CharSet>
-    void normalize_octets_impl(int,
-        CharSet const& allowed, op_t&) noexcept;
+    void
+    normalize_octets_impl(
+        int,
+        CharSet const& allowed,
+        op_t&) noexcept;
+
     void decoded_to_lower_impl(int id) noexcept;
     void to_lower_impl(int id) noexcept;
 };

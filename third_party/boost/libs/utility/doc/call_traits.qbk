@@ -7,7 +7,7 @@
  /]
 
 [/===============]
-[section Call Traits]
+[section:call_traits Call Traits]
 [/===============]
 
 [section Introduction]
@@ -19,9 +19,9 @@ The template class __call_traits_T__ encapsulates the
 "best" method to pass a parameter of some type `T` to or
 from a function, and consists of a collection of `typedef`s defined
 as in the table below. The purpose of __call_traits__ is to ensure
-that problems like [link sec:refs "references to references"]
+that problems like [link utility.utilities.call_traits.examples.refs "references to references"]
 never occur, and that parameters are passed in the most efficient
-manner possible, as in the [link sec:examples examples]. In each
+manner possible, as in the [link utility.utilities.call_traits.examples examples]. In each
 case, if your existing practice is to use the type defined on the
 left, then replace it with the __call_traits__ defined type on the
 right.
@@ -100,7 +100,7 @@ used to solve the reference to reference problem.
 Notes:
 
 # If `T` is already reference type, then __call_traits__ is
-        defined such that [link sec:refs "references to references"]
+        defined such that [link utility.utilities.call_traits.examples.refs "references to references"]
         do not occur (requires partial specialization).
 # If `T` is an array type, then __call_traits__ defines `value_type`
         as a "constant pointer to type" rather than an
@@ -145,8 +145,7 @@ If `T` is an assignable type the following assignments are possible:
 ]
 [endsect]
 
-[#sec:examples]
-[section Examples]
+[section:examples Examples]
 
 The following table shows the effect that __call_traits__ has on
 various types.
@@ -204,8 +203,7 @@ struct contained
 ```
 [endsect]
 
-[#sec:refs]
-[section Example 2 (the reference to reference problem):]
+[section:refs Example 2 (the reference to reference problem):]
 
 Consider the definition of __std_binder1st__:
 
@@ -241,8 +239,7 @@ the no "reference to reference" occurs.
 
 [endsect]
 
-[#sec:example3]
-[section Example 3 (the `make_pair` problem):]
+[section:example3 Example 3 (the `make_pair` problem):]
 
 If we pass the name of an array as one (or both) arguments to `__std_make_pair__`,
 then template argument deduction deduces the passed parameter as
@@ -277,8 +274,7 @@ __std_make_pair__ are not expressed in terms of __call_traits__: doing so
 would prevent template argument deduction from functioning.
 [endsect]
 
-[#sec:example4]
-[section Example 4 (optimising fill):]
+[section:example4 Example 4 (optimising fill):]
 
 The __call_traits__ template will "optimize" the passing
 of a small built-in type as a function parameter. This mainly has
@@ -359,12 +355,12 @@ Small built-in types, what the standard calls [@https://en.cppreference.com/w/cp
 types], differ from existing practice only in the `param_type`
 `typedef`. In this case passing `T const` is compatible
 with existing practice, but may improve performance in some cases
-(see [link sec:example4 Example 4]). In any case this should never
+(see [link utility.utilities.call_traits.examples.example4 Example 4]). In any case this should never
 be any worse than existing practice.
 
 Pointers follow the same rationale as small built-in types.
 
-For reference types the rationale follows [link sec:refs Example 2]
+For reference types the rationale follows [link utility.utilities.call_traits.examples.refs Example 2]
 - references to references are not allowed, so the __call_traits__
 members must be defined such that these problems do
 not occur. There is a proposal to modify the language such that
@@ -425,7 +421,7 @@ For `value_type` (return by value), again only a pointer may be
 returned, not a copy of the whole array, and again __call_traits__
 makes the degradation explicit. The `value_type` member is useful
 whenever an array must be explicitly degraded to a pointer -
-[link sec:example3 Example 3] provides the test case.
+[link utility.utilities.call_traits.examples.example3 Example 3] provides the test case.
 
 Footnote: the array specialisation for __call_traits__ is the least
 well understood of all the __call_traits__ specialisations. If the given

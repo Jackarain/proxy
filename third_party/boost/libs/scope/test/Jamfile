@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Andrey Semashev
+# Copyright 2023-2025 Andrey Semashev
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at
@@ -21,25 +21,18 @@ project
         <c++-template-depth>1024
 
         [ requires
-            # Requirements of Boost.Scope implementation
             exceptions
-            sfinae_expr
-            cxx11_constexpr
-            cxx11_noexcept
-            cxx11_rvalue_references
-            cxx11_decltype
-            cxx11_template_aliases
-            cxx11_variadic_templates
-            cxx11_defaulted_functions
-            cxx11_deleted_functions
-            cxx11_function_template_default_args
-            cxx11_hdr_type_traits
-
-            # Requirements of Boost.Scope tests
             cxx11_nullptr
             cxx11_lambdas
+            cxx11_decltype
+            cxx11_noexcept
+            cxx11_constexpr
+            cxx11_template_aliases
+            cxx11_rvalue_references
             cxx11_auto_declarations
             cxx11_unified_initialization_syntax
+            cxx11_defaulted_functions
+            cxx11_deleted_functions
             cxx11_hdr_system_error
         ]
 

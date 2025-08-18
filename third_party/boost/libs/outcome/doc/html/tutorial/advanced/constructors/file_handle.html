@@ -42,7 +42,11 @@ which uses this design pattern<sup class="footnote-ref" id="fnref:1"><a href="#f
 
   <span class="c1">// Moves but not copies permitted
 </span><span class="c1"></span>  <span class="n">file_handle</span><span class="p">(</span><span class="k">const</span> <span class="n">file_handle</span> <span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
-  <span class="n">file_handle</span><span class="p">(</span><span class="n">file_handle</span> <span class="o">&amp;&amp;</span><span class="n">o</span><span class="p">)</span> <span class="k">noexcept</span> <span class="o">:</span> <span class="n">_fd</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">_fd</span><span class="p">)</span> <span class="p">{</span> <span class="n">o</span><span class="p">.</span><span class="n">_fd</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span> <span class="p">}</span>
+  <span class="n">file_handle</span><span class="p">(</span><span class="n">file_handle</span> <span class="o">&amp;&amp;</span><span class="n">o</span><span class="p">)</span> <span class="k">noexcept</span>
+      <span class="o">:</span> <span class="n">_fd</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">_fd</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="n">o</span><span class="p">.</span><span class="n">_fd</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
   <span class="n">file_handle</span> <span class="o">&amp;</span><span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">file_handle</span> <span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
   <span class="n">file_handle</span> <span class="o">&amp;</span><span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="n">file_handle</span> <span class="o">&amp;&amp;</span><span class="n">o</span><span class="p">)</span> <span class="k">noexcept</span>
   <span class="p">{</span>

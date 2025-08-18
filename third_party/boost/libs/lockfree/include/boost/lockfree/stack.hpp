@@ -29,6 +29,7 @@
 #include <boost/lockfree/detail/uses_optional.hpp>
 #include <boost/lockfree/lockfree_forward.hpp>
 
+#include <cstdint>
 #include <tuple>
 #include <type_traits>
 

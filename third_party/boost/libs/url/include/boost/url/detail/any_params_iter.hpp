@@ -63,8 +63,7 @@ public:
     void
     rewind() noexcept = 0;
 
-    // Measure and increment current element
-    // element.
+    // Measure and increment current element.
     // Returns false on end of range.
     // n is increased by encoded size.
     // Can throw on bad percent-escape
@@ -84,19 +83,19 @@ public:
 
 //------------------------------------------------
 //
-// query_iter
+// query_string_iter
 //
 //------------------------------------------------
 
 // A string of plain query params
 struct BOOST_SYMBOL_VISIBLE
-    query_iter
+    query_string_iter
     : any_params_iter
 {
     // ne = never empty
     BOOST_URL_DECL
     explicit
-    query_iter(
+    query_string_iter(
         core::string_view s,
         bool ne = false) noexcept;
 
@@ -121,16 +120,18 @@ private:
 // A 1-param range allowing
 // self-intersection
 struct BOOST_SYMBOL_VISIBLE
-    param_iter
+    single_param_iter
     : any_params_iter
 {
     explicit
-    param_iter(
-        param_view const&) noexcept;
+    single_param_iter(
+        param_view const&,
+        bool space_as_plus) noexcept;
 
 private:
     bool has_value_;
     bool at_end_ = false;
+    bool space_as_plus_ = false;
 
     void rewind() noexcept override;
     bool measure(std::size_t&) noexcept override;
@@ -145,10 +146,15 @@ private:
 
 struct params_iter_base
 {
+    bool space_as_plus_ = true;
 protected:
+    explicit params_iter_base(
+        bool space_as_plus) noexcept
+        : space_as_plus_(space_as_plus)
+        {}
+
     // return encoded size
     BOOST_URL_DECL
-    static
     void
     measure_impl(
         std::size_t& n,
@@ -156,7 +162,6 @@ protected:
 
     // encode to dest
     BOOST_URL_DECL
-    static
     void
     copy_impl(
         char*& dest,
@@ -180,9 +185,11 @@ struct params_iter
 
     params_iter(
         FwdIt first,
-        FwdIt last) noexcept
+        FwdIt last,
+        bool space_as_plus) noexcept
         : any_params_iter(
             first == last)
+        , params_iter_base(space_as_plus)
         , it0_(first)
         , it_(first)
         , end_(last)
@@ -404,10 +411,10 @@ private:
 template<class FwdIt>
 params_iter<FwdIt>
 make_params_iter(
-    FwdIt first, FwdIt last)
+    FwdIt first, FwdIt last, bool space_as_plus)
 {
     return params_iter<
-        FwdIt>(first, last);
+        FwdIt>(first, last, space_as_plus);
 }
 
 template<class FwdIt>

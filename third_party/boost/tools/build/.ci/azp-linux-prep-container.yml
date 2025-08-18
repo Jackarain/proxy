@@ -1,8 +1,17 @@
 steps:
-- script: |
-    which docker
-    /tmp/docker exec -t -u root container mv /etc/sudoers /etc/sudoers.bak
-    /tmp/docker exec -t -u root container apt-get -qq update
-    /tmp/docker exec -t -u root container apt-get -qq install sudo
-    /tmp/docker exec -t -u root container mv /etc/sudoers.bak /etc/sudoers
-  displayName: Sudorize
+  - task: CmdLine@2
+    displayName: Sudorize
+    target: host
+    inputs:
+      script: |
+        /usr/bin/docker exec -t -u root container mv /etc/sudoers /etc/sudoers.bak
+        /usr/bin/docker exec -t -u root container apt-get -qq update
+        /usr/bin/docker exec -t -u root container apt-get -qq install sudo
+        /usr/bin/docker exec -t -u root container mv /etc/sudoers.bak /etc/sudoers
+
+# - script: |
+#     # Node 20 doesn't work with Ubuntu 16/18 glibc: https://github.com/actions/checkout/issues/1590
+#     sudo apt-get -qq install curl xz-utils
+#     sudo curl -sLO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
+#     sudo tar -xJ --strip-components 1 -C /node20217 -f node-v20.9.0-linux-x64-glibc-217.tar.xz
+#   displayName: Node

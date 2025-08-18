@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
    }
    else{
       //Open already created shared memory object.
-      shared_memory_object shm (open_only, argv[2], read_only);
+      shared_memory_object shm (open_only, test::get_argv_2(argv), read_only);
 
       //Map the whole shared memory in this process
       mapped_region region(shm, read_only);

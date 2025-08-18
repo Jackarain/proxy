@@ -2,24 +2,44 @@
 #
 #  Copyright (c) 2011 Helge Bahmann
 #  Copyright (c) 2012 Tim Blechmann
-#  Copyright (c) 2020-2023 Andrey Semashev
+#  Copyright (c) 2020-2025 Andrey Semashev
 #
 #  Distributed under the Boost Software License, Version 1.0. (See
 #  accompanying file LICENSE_1_0.txt or copy at
 #  http://www.boost.org/LICENSE_1_0.txt)
 
 import testing ;
+import-search /boost/config/checks ;
+import config : requires ;
+
+local cxx_requirements = [ requires
+      cxx11_constexpr
+      cxx11_noexcept
+      cxx11_nullptr
+      cxx11_lambdas
+      cxx11_static_assert
+      cxx11_defaulted_functions
+      cxx11_deleted_functions
+      cxx11_hdr_chrono
+      cxx11_hdr_mutex
+      cxx11_hdr_condition_variable
+      cxx11_hdr_thread
+    ]
+    [ check-target-builds ../config//has_sufficient_cxx11_type_traits "has sufficient <type_traits>" : : <build>no ]
+    ;
 
 project boost/atomic/test
     : requirements
       <include>.
       <threading>multi
       <library>/boost/atomic//boost_atomic
+      <library>/boost/config//boost_config
+      <library>/boost/core//boost_core
+      <library>/boost/detail//boost_detail
+      <library>/boost/type_traits//boost_type_traits
       <target-os>windows:<define>BOOST_USE_WINDOWS_H
       <toolset>gcc,<target-os>windows:<linkflags>"-lkernel32"
-      # Variadic macros and empty macro arguments are used by Boost.Preprocessor even in C++03 mode, which makes gcc and clang complain
-      <toolset>gcc:<cxxflags>"-Wno-variadic-macros"
-      <toolset>clang:<cxxflags>"-Wno-c99-extensions"
+      $(cxx_requirements)
     ;
 
 test-suite atomic

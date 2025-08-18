@@ -120,7 +120,7 @@ void out_action
         out_printf( "%s %s\n", action, target );
 
     /* Print out the command executed if given -d+2. */
-    if ( DEBUG_EXEC )
+    if ( is_debug_exec() )
     {
         out_puts( command );
         out_putc( '\n' );

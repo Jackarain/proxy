@@ -4,8 +4,8 @@
  * accompanying file LICENSE.txt)
  */
 
-#include <boost/redis/resp3/serialization.hpp>
 #include <boost/redis/resp3/parser.hpp>
+#include <boost/redis/resp3/serialization.hpp>
 
 namespace boost::redis::resp3 {
 
@@ -35,8 +35,5 @@ void add_blob(std::string& payload, std::string_view blob)
    payload += parser::sep;
 }
 
-void add_separator(std::string& payload)
-{
-   payload += parser::sep;
-}
-} // boost::redis::resp3
+void add_separator(std::string& payload) { payload += parser::sep; }
+}  // namespace boost::redis::resp3

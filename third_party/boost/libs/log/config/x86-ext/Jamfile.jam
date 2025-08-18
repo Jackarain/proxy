@@ -6,9 +6,9 @@
 #
 
 import project ;
-import log-arch-config ;
+import ../../build/log-arch-config ;
 
-project /boost/log/x86-extensions
+project
     : source-location .
     : requirements
         <pch>off

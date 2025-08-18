@@ -1,0 +1,18 @@
+# Copyright 2025 Joaquín M López Muñoz.
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+#
+# See http://www.boost.org/libs/bloom for library home page.
+
+import-search /boost/config/checks ;
+
+import config : requires ;
+
+project 
+    : default-build release <link>static 
+    : requirements [ requires cxx14_generic_lambdas  ]
+    ;
+
+exe comparison_table : comparison_table.cpp ;
+exe fpr_c : fpr_c.cpp ;

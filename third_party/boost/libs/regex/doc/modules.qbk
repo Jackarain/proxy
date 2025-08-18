@@ -1,0 +1,40 @@
+[/ 
+  Copyright 2024 John Maddock.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:modules Module Support (Experimental)]
+
+This library has experimental support for C++ modules (C++20 or later), currently the support is experimental
+not least because at the time of writing (2025) build tools have yet to catch up with module support.
+
+In order to use this library as a module you simply add a:
+
+```
+import boost.regex;
+```
+
+to your code.
+
+Before that you must first build the module, which consists of these steps:
+
+* Depending on your compiler, you may need to build the standard library module, and place the standard module somewhere that your compiler can find it.
+* Build `libs/regex/module/regex.cxx` into the boost.regex module, and place the module definition file somewhere that your compiler can find it.
+* Build all the source files in `libs/regex/module` (including regex.cxx) into a library, and place the result somewhere your linker can find it.
+
+Visual studio users can simplify all of the above into one step, by placing everything in `libs/regex/module` into a static library project, and then adding the `/interface`
+command line option to the regex.cxx source file.
+
+Known limitations:
+
+* As of the start of 2025, only very recent versions of clang and msvc are supported.  GCC is definitely not supported.
+* The regex library must always be consumed via `import boost.regex;` and you can never mix this with `#includes <boost/regex.hpp>`.
+* Ideally the standard library should always be used via `import std` and not via #includes: more recent compilers are mostly making this work, but are still very fragile.
+* The regex version imported, is always the "standalone" version which includes no other Boost headers.
+
+Finally... there are some build and test scripts in `libs/regex/test/module` for msvc and clang.
+
+[endsect]
+

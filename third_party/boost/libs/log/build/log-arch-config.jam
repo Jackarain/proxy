@@ -13,68 +13,22 @@ import path ;
 import property ;
 import feature ;
 
-local here = [ modules.binding $(__name__) ] ;
-
-project.push-current [ project.current ] ;
-project.load [ path.join [ path.make $(here:D) ] ../../config/checks/architecture ] ;
-project.pop-current ;
-
 rule deduce-address-model ( properties * )
 {
-    local address_model = [ feature.get-values "address-model" : $(properties) ] ;
-    if $(address_model)
-    {
-        return $(address_model) ;
-    }
-    else
-    {
-        if [ configure.builds /boost/architecture//32 : $(properties) : 32-bit ]
-        {
-            return 32 ;
-        }
-        else if [ configure.builds /boost/architecture//64 : $(properties) : 64-bit ]
-        {
-            return 64 ;
-        }
-    }
+    # The address-model is always set to a deduced value using the predef.address-model checks.
+    return [ feature.get-values <address-model> : $(properties) ] ;
 }
 
 rule deduce-architecture ( properties * )
 {
-    local architecture = [ feature.get-values "architecture" : $(properties) ] ;
-    if $(architecture)
-    {
-        return $(architecture) ;
-    }
-    else
-    {
-        if [ configure.builds /boost/architecture//x86 : $(properties) : x86 ]
-        {
-            return x86 ;
-        }
-        else if [ configure.builds /boost/architecture//arm : $(properties) : arm ]
-        {
-            return arm ;
-        }
-        else if [ configure.builds /boost/architecture//mips : $(properties) : mips ]
-        {
-            return mips ;
-        }
-        else if [ configure.builds /boost/architecture//power : $(properties) : power ]
-        {
-            return power ;
-        }
-        else if [ configure.builds /boost/architecture//sparc : $(properties) : sparc ]
-        {
-            return sparc ;
-        }
-    }
+    # The architecture is always set to a deduced value using the predef.architecture checks.
+    return [ feature.get-values <architecture> : $(properties) ] ;
 }
 
 rule deduce-instruction-set ( properties * )
 {
     local result ;
-    local instruction_set = [ feature.get-values "instruction-set" : $(properties) ] ;
+    local instruction_set = [ feature.get-values <instruction-set> : $(properties) ] ;
 
     if $(instruction_set)
     {
@@ -95,7 +49,6 @@ rule deduce-instruction-set ( properties * )
 rule ssse3-flags ( properties * )
 {
     local result ;
-
     if <toolset>intel in $(properties)
     {
         if <toolset-intel:platform>win in $(properties)
@@ -111,7 +64,7 @@ rule ssse3-flags ( properties * )
     {
         # MSVC doesn't really care about these switches, all SSE intrinsics are always available, but still...
         # Also 64 bit MSVC doesn't have the /arch:SSE2 switch as it is the default.
-        if 32 in [ deduce-address-model $(properties) ]
+        if <address-model>32 in $(properties)
         {
             result = <cxxflags>"/arch:SSE2" ;
         }

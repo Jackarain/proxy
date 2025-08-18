@@ -11,18 +11,11 @@ import testing ;
 
 project
     : requirements
-      <source>../../extra/test_main.cpp
+      <source>../../extra/test_suite/test_main.cpp
+      <source>../../extra/test_suite/test_suite.cpp
       <include>.
-      <include>../../extra
+      <include>../../extra/test_suite
       <library>/boost/assert//boost_assert
     ;
 
-
-local SOURCES =
-    test_suite.cpp
-    ;
-
-for local f in $(SOURCES)
-{
-    run $(f) ../../extra/test_main.cpp ;
-}
+run test_test_suite.cpp ;

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@cppalliance/antora-cpp-reference-extension": "^0.0.6",
+    "antora": "^3.1.10"
+  }
+}

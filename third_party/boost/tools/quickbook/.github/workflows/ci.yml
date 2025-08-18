@@ -30,24 +30,28 @@ jobs:
             os: ubuntu-latest
             install: g++-6
           - toolset: gcc-7
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-7
 # gcc-8 variant=release crashes
 #          - toolset: gcc-8
 #            os: ubuntu-20.04
 #            install: g++-8
           - toolset: gcc-9
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
           - toolset: gcc-10
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-10
           - toolset: gcc-11
             os: ubuntu-22.04
+            install: g++-11
           - toolset: gcc-12
             os: ubuntu-22.04
             install: g++-12
           - toolset: gcc-13
-            container: ubuntu:23.04
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: g++-13
           - toolset: gcc-14
@@ -71,31 +75,38 @@ jobs:
             install: clang-5.0
           - toolset: clang
             compiler: clang++-6.0
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-6.0
           - toolset: clang
             compiler: clang++-7
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-7
           - toolset: clang
             compiler: clang++-8
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-8
           - toolset: clang
             compiler: clang++-9
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-9
           - toolset: clang
             compiler: clang++-10
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-10
           - toolset: clang
             compiler: clang++-11
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-11
           - toolset: clang
             compiler: clang++-12
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-12
           - toolset: clang
             compiler: clang++-13
@@ -111,12 +122,12 @@ jobs:
             install: clang-15
           - toolset: clang
             compiler: clang++-16
-            container: ubuntu:23.04
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-16
           - toolset: clang
             compiler: clang++-17
-            container: ubuntu:23.10
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-17
           - toolset: clang
@@ -125,14 +136,18 @@ jobs:
             os: ubuntu-latest
             install: clang-18
           - toolset: clang
-            os: macos-12
-          - toolset: clang
             os: macos-13
           - toolset: clang
             os: macos-14
+          - toolset: clang
+            os: macos-15
 
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     defaults:
       run:
@@ -140,13 +155,20 @@ jobs:
 
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup container environment
         if: matrix.container
         run: |
           apt-get update
-          apt-get -y install sudo python3 git g++
+          apt-get -y install sudo python3 git g++ curl xz-utils
+
+      - name: Install nodejs20glibc2.17
+        if: ${{ startsWith( matrix.container, 'ubuntu:1' ) }}
+        run: |
+          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+          ldd /__e/node20/bin/node
+
+      - uses: actions/checkout@v3
 
       - name: Install packages
         if: matrix.install

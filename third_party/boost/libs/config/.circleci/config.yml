@@ -6,7 +6,7 @@ jobs:
       - BOOST_LIBRARY=config
       - CXX_STANDARD=gnu++11
     docker:
-      - image: gcc:7
+      - image: gcc:13
     steps:
       - checkout
       - run:
@@ -46,7 +46,7 @@ jobs:
       - run:
           name: Building inspect
           command: |
-            cd $BOOST/boost/tools/inspect/build && ../../../b2 -j2 address-model=64 architecture=x86 toolset=gcc cxxflags="-std=gnu++14" release dist-bin
+            cd $BOOST/boost/tools/inspect && ../../b2 -j2 address-model=64 architecture=x86 toolset=gcc cxxflags="-std=gnu++14" release dist-bin
       - run:
           name: Building docs
           command: |

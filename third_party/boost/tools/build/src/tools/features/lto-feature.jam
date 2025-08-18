@@ -7,12 +7,12 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.lto]]`lto`::
+[[b2.builtin.features.lto]]`lto`::
 *Allowed values:* `on`.
 +
 Enables link time optimizations (also known as interprocedural optimizations or
-whole-program optimizations). Currently supported toolsets are <<GNU {CPP}>>,
-clang and <<Microsoft Visual {CPP}>>. The feature is optional.
+whole-program optimizations). Currently supported toolsets are <b2.reference.tools.compiler.gcc>>,
+clang and <<b2.reference.tools.compiler.msvc>>. The feature is optional.
 
 |# # end::doc[]
 
@@ -22,7 +22,7 @@ feature.feature lto
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.lto-mode]]`lto-mode`::
+[[b2.builtin.features.lto-mode]]`lto-mode`::
 *Subfeature of* `lto`
 +
 *Allowed values:* `full`, `thin`, `fat`.

@@ -70,9 +70,10 @@ namespace boost { namespace dll { namespace detail {
         mib[2] = KERN_PROC_PATHNAME;
         mib[3] = -1;
         char path[1024];
-        size_t size = sizeof(buf);
-        if (sysctl(mib, 4, path, &size, nullptr, 0) == 0)
+        size_t size = sizeof(path);
+        if (sysctl(mib, 4, path, &size, nullptr, 0) == 0) {
             return boost::dll::fs::path(path);
+        }
 
         const auto errno_snapshot = static_cast<std::errc>(errno);
         if (errno_snapshot != std::errc::not_enough_memory) {

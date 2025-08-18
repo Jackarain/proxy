@@ -13,30 +13,27 @@
 #include <tuple>
 #include <type_traits>
 
-namespace boost::redis
-{
+namespace boost::redis {
 
 /** @brief Type used to ignore responses.
- *  @ingroup high-level-api
  *
- *  For example
+ *  For example:
  *
  *  @code
  *  response<ignore_t, std::string, ignore_t> resp;
  *  @endcode
  *
- *  will ignore the first and third responses. RESP3 errors won't be
+ *  This will ignore the first and third responses. RESP3 errors won't be
  *  ignore but will cause `async_exec` to complete with an error.
  */
 using ignore_t = std::decay_t<decltype(std::ignore)>;
 
 /** @brief Global ignore object.
- *  @ingroup high-level-api
  *
- *  Can be used to ignore responses to a request
+ *  Can be used to ignore responses to a request. For example:
  *
  *  @code
- *  conn->async_exec(req, ignore, ...);
+ *  co_await conn.async_exec(req, ignore);
  *  @endcode
  *
  *  RESP3 errors won't be ignore but will cause `async_exec` to
@@ -44,6 +41,6 @@ using ignore_t = std::decay_t<decltype(std::ignore)>;
  */
 extern ignore_t ignore;
 
-} // boost::redis
+}  // namespace boost::redis
 
-#endif // BOOST_REDIS_IGNORE_HPP
+#endif  // BOOST_REDIS_IGNORE_HPP

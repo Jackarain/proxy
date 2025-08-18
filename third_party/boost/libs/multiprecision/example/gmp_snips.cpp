@@ -76,7 +76,6 @@ void t3()
 {
 //[mpq_eg
 //=#include <boost/multiprecision/gmp.hpp>
-//=#include <boost/multiprecision/gmp.hpp>
 //=#include <iostream>
 //=
 //=int main()

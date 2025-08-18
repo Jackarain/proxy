@@ -23,9 +23,7 @@
 namespace boost {
 namespace urls {
 
-#ifndef BOOST_URL_DOCS
 class ipv4_address;
-#endif
 
 /** An IP version 6 style address.
 

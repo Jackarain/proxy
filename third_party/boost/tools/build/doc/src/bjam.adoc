@@ -1,4 +1,4 @@
-[[bbv2.jam]]
+[[b2.jam]]
 = Boost.Jam Documentation
 
 ____

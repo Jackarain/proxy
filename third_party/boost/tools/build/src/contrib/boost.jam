@@ -48,6 +48,7 @@
 # find the correct pre-built library.
 #
 
+import args ;
 import common ;
 import modules ;
 import numbers ;
@@ -58,10 +59,7 @@ import toolset ;
 
 .boost.auto_config = [ property-set.create <layout>system ] ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 # Configuration of the boost library to use.
 #

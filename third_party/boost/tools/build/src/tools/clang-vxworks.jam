@@ -3,6 +3,7 @@
 # (See accompanying file LICENSE.txt
 # or copy at https://www.bfgroup.xyz/b2/LICENSE.txt)
 
+import args ;
 import clang ;
 import feature : feature get-values ;
 import os ;
@@ -27,10 +28,8 @@ toolset.inherit-generators clang-vxworks
 toolset.inherit-rules clang-vxworks : clang-linux ;
 toolset.inherit-flags clang-vxworks : clang-linux ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
+
 # Initializes the clang-vxworks toolset
 #   version in optional
 #   compile and link options allow you to specify addition command line options for each version
@@ -42,7 +41,7 @@ rule init ( version ? :  command * : options * )
     linker = [ get-values <linker> : $(options) ] ;
 
     # Determine the version
-    local command-string = $(command:J=" ") ;
+    local command-string = [ common.make-command-string $(command) ] ;
     if $(command)
     {
         version ?= [ MATCH "^([0-9.]+)"

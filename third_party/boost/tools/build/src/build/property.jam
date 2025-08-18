@@ -14,6 +14,7 @@ import string ;
 import sequence ;
 import set ;
 import utility ;
+import args ;
 
 
 # Refines 'properties' by overriding any non-free and non-conditional properties
@@ -280,7 +281,9 @@ local rule identity ( string )
 }
 
 
-if --abbreviate-paths in [ modules.peek : ARGV ]
+args.add-arg abbreviate-paths : --abbreviate-paths
+    : "Compresses target paths by abbreviating each component." ;
+if [ args.get-arg abbreviate-paths ]
 {
     .abbrev = abbreviate-dashed ;
 }

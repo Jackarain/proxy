@@ -114,7 +114,7 @@ io_context ios;
 child c("ls", ios, on_exit=[](int exit, const std::error_code& ec_in){});
 
 std::future<int> exit_code;
-chlid c2("ls", ios, on_exit=exit_code);
+child c2("ls", ios, on_exit=exit_code);
 
 \endcode
 

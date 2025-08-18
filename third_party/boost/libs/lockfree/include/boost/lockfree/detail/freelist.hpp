@@ -10,6 +10,7 @@
 #define BOOST_LOCKFREE_FREELIST_HPP_INCLUDED
 
 #include <array>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <memory>

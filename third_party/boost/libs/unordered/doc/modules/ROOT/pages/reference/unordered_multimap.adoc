@@ -1486,6 +1486,8 @@ for (auto i = c.begin(), last = c.end(); i != last; ) {
 }
 return original_size - c.size();
 ```
++
+Note that the references passed to `pred` are non-const.
 
 === Serialization
 

@@ -36,7 +36,7 @@ do to add all the "template<...>" prefixes to the functions.
 struct skeleton_backend
 {
    //
-   // Each backend need to declare 3 type lists which declare the types
+   // Each backend needs to declare 3 type lists which declare the types
    // with which this can interoperate.  These lists must at least contain
    // the widest type in each category - so "long long" must be the final
    // type in the signed_types list for example.  Any narrower types if not

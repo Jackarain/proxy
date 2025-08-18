@@ -25,6 +25,9 @@ git submodule update --init libs/detail
 git submodule update --init libs/core
 git submodule update --init libs/assert
 git submodule update --init libs/type_traits
+git submodule update --init libs/throw_exception
+git submodule update --init libs/static_assert
+git submodule update --init libs/preprocessor
 cp -r $TRAVIS_BUILD_DIR/* libs/config
 ./bootstrap.sh
 ./b2 headers

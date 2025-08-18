@@ -5,15 +5,16 @@
  */
 
 #include <boost/redis/connection.hpp>
-#include <boost/system/errc.hpp>
-#define BOOST_TEST_MODULE conn-exec-cancel
+
+#include <cstddef>
+#define BOOST_TEST_MODULE conn_exec_cancel
 #include <boost/test/included/unit_test.hpp>
-#include <boost/asio/detached.hpp>
+
 #include "common.hpp"
+
 #include <iostream>
 
 #ifdef BOOST_ASIO_HAS_CO_AWAIT
-#include <boost/asio/experimental/awaitable_operators.hpp>
 
 // NOTE1: Sends hello separately. I have observed that if hello and
 // blpop are sent toguether, Redis will send the response of hello
@@ -22,7 +23,6 @@
 
 namespace net = boost::asio;
 using error_code = boost::system::error_code;
-using namespace net::experimental::awaitable_operators;
 using boost::redis::operation;
 using boost::redis::request;
 using boost::redis::response;
@@ -33,6 +33,8 @@ using boost::redis::config;
 using boost::redis::logger;
 using boost::redis::connection;
 using namespace std::chrono_literals;
+
+namespace {
 
 auto async_ignore_explicit_cancel_of_req_written() -> net::awaitable<void>
 {
@@ -49,49 +51,45 @@ auto async_ignore_explicit_cancel_of_req_written() -> net::awaitable<void>
    // See NOTE1.
    request req0;
    req0.push("PING", "async_ignore_explicit_cancel_of_req_written");
-   co_await conn->async_exec(req0, gresp, net::use_awaitable);
+   co_await conn->async_exec(req0, gresp);
 
    request req1;
    req1.push("BLPOP", "any", 3);
 
    bool seen = false;
-   conn->async_exec(req1, gresp, [&](auto ec, auto) mutable{
-      // No error should occur since the cancelation should be
-      // ignored.
+   conn->async_exec(req1, gresp, [&](error_code ec, std::size_t) {
+      // No error should occur since the cancellation should be ignored
       std::cout << "async_exec (1): " << ec.message() << std::endl;
-      BOOST_TEST(!ec);
+      BOOST_TEST(ec == error_code());
       seen = true;
    });
 
    // Will complete while BLPOP is pending.
-   boost::system::error_code ec1;
-   co_await st.async_wait(net::redirect_error(net::use_awaitable, ec1));
+   error_code ec;
+   co_await st.async_wait(net::redirect_error(ec));
    conn->cancel(operation::exec);
 
-   BOOST_TEST(!ec1);
+   BOOST_TEST(ec == error_code());
 
-   request req3;
-   req3.push("PING");
+   request req2;
+   req2.push("PING");
 
    // Test whether the connection remains usable after a call to
    // cancel(exec).
-   co_await conn->async_exec(req3, gresp, net::redirect_error(net::use_awaitable, ec1));
+   co_await conn->async_exec(req2, gresp, net::redirect_error(ec));
    conn->cancel();
 
-   BOOST_TEST(!ec1);
+   BOOST_TEST(ec == error_code());
    BOOST_TEST(seen);
 }
 
 BOOST_AUTO_TEST_CASE(test_ignore_explicit_cancel_of_req_written)
 {
-   net::io_context ioc;
-   net::co_spawn(ioc, async_ignore_explicit_cancel_of_req_written(), net::detached);
-   ioc.run();
+   run_coroutine_test(async_ignore_explicit_cancel_of_req_written());
 }
 
+}  // namespace
+
 #else
-BOOST_AUTO_TEST_CASE(dummy)
-{
-   BOOST_TEST(true);
-}
+BOOST_AUTO_TEST_CASE(dummy) { }
 #endif

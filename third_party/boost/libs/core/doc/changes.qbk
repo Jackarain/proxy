@@ -7,6 +7,13 @@
 
 [section Revision History]
 
+[section Changes in 1.89.0]
+
+* Fixed `bit_ceil` to return 1 for input 0 as per specification. ([github_pr 199])
+* Added support for `std::format` to `boost::core::string_view`. ([github_issue 190])
+
+[endsect]
+
 [section Changes in 1.86.0]
 
 * Added a [link core.pointer_in_range `boost/core/pointer_in_range.hpp`] header with a `pointer_in_range`

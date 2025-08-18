@@ -43,7 +43,7 @@ using namespace std::chrono_literals;
 
 std::string connect_with_keep_alive(uint16_t keep_alive) {
     return encoders::encode_connect(
-        "", std::nullopt, std::nullopt, keep_alive, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, keep_alive, false, test::dflt_cprops, std::nullopt
     );
 }
 

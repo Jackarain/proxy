@@ -63,6 +63,7 @@ import toolset : flags ;
 import os ;
 import virtual-target ;
 import scanner ;
+import args ;
 
 # Qt3Support control feature
 #
@@ -97,14 +98,11 @@ project qt ;
 .project = [ project.current ] ;
 
 # Helper utils for easy debug output
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = TRUE ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 local rule debug-message ( message * )
 {
-    if $(.debug-configuration) = TRUE
+    if $(.debug-configuration)
     {
         ECHO notice\: "[qt4-cfg]" $(message) ;
     }

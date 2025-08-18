@@ -1038,7 +1038,7 @@ struct function_address_holder
    }
 
    public:
-   static farproc_t get(const unsigned int id)
+   static void* get(const unsigned int id)
    {
       BOOST_ASSERT(id < (unsigned int)NumFunction);
       for(unsigned i = 0; FunctionStates[id] < 2; ++i){
@@ -1054,7 +1054,7 @@ struct function_address_holder
             sleep_tick();
          }
       }
-      return FunctionAddresses[id];
+      return reinterpret_cast<void*>(FunctionAddresses[id]);
    }
 };
 

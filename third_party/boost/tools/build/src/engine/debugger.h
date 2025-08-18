@@ -32,13 +32,12 @@ struct debug_child_data_t
 extern struct debug_child_data_t debug_child_data;
 extern b2::list_ref debug_print_result;
 extern const char debugger_opt[];
-extern int debug_interface;
 
-#define DEBUG_INTERFACE_CONSOLE 1
-#define DEBUG_INTERFACE_MI 2
-#define DEBUG_INTERFACE_CHILD 3
+#define DEBUG_INTERFACE_CONSOLE (global_config::debug_interface_console)
+#define DEBUG_INTERFACE_MI (global_config::debug_interface_mi)
+#define DEBUG_INTERFACE_CHILD (global_config::debug_interface_child)
 
-#define debug_is_debugging() ( debug_interface != 0 )
+#define debug_is_debugging() ( globs.debug_interface != global_config::debug_interface_no )
 #define debug_on_enter_function( frame, name, file, line )      \
     ( debug_is_debugging()?                                     \
         debug_on_enter_function( frame, name, file, line ) :    \

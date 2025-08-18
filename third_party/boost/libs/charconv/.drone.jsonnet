@@ -23,6 +23,9 @@ local linux_pipeline(name, image, environment, packages = "", sources = [], arch
         os: "linux",
         arch: arch
     },
+    "clone": {
+       "retries": 5
+    },
     steps:
     [
         {

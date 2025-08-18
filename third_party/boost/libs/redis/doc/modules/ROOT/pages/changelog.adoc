@@ -1,0 +1,397 @@
+//
+// Copyright (c) 2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+= Changelog
+
+== Boost 1.88
+
+* (Issue https://github.com/boostorg/redis/issues/233[233])
+  To deal with keys that might not exits in the Redis server, the
+  library supports `std::optional`, for example
+  `response<std::optional<std::vector<std::string>>>`. In some cases
+  however, such as the https://redis.io/docs/latest/commands/mget/[MGET] command,
+  each element in the vector might be non exiting, now it is possible
+  to specify a response as `response<std::optional<std::vector<std::optional<std::string>>>>`.
+
+* (Issue https://github.com/boostorg/redis/issues/225[225])
+  Use `deferred` as the connection default completion token.
+
+* (Issue https://github.com/boostorg/redis/issues/128[128])
+  Adds a new `async_exec` overload that allows passing response
+  adapters. This makes it possible to receive Redis responses directly
+  in custom data structures thereby avoiding unnecessary data copying.
+  Thanks to Ruben Perez (@anarthal) for implementing this feature.
+
+* There are also other multiple small improvements in this release,
+  users can refer to the git history for more details.
+
+== Boost 1.87
+
+* (Issue https://github.com/boostorg/redis/issues/205[205])
+  Improves reaction time to disconnection by using `wait_for_one_error`
+  instead of `wait_for_all`. The function `connection::async_run` was
+  also changed to return EOF to the user when that error is received
+  from the server. That is a breaking change.
+
+* (Issue https://github.com/boostorg/redis/issues/210[210])
+  Fixes the adapter of empty nested responses.
+
+* (Issues https://github.com/boostorg/redis/issues/211[211] and https://github.com/boostorg/redis/issues/212[212])
+  Fixes the reconnect loop that would hang under certain conditions,
+  see the linked issues for more details.
+
+* (Issue https://github.com/boostorg/redis/issues/219[219])
+  Changes the default log level from `disabled` to `debug`.
+
+== Boost 1.85
+
+* (Issue https://github.com/boostorg/redis/issues/170[170])
+  Under load and on low-latency networks it is possible to start
+  receiving responses before the write operation completed and while
+  the request is still marked as staged and not written. This messes
+  up with the heuristics that classifies responses as unsolicited or
+  not.
+
+* (Issue https://github.com/boostorg/redis/issues/168[168]).
+  Provides a way of passing a custom SSL context to the connection.
+  The design here differs from that of Boost.Beast and Boost.MySql
+  since in Boost.Redis the connection owns the context instead of only
+  storing a reference to a user provided one. This is ok so because
+  apps need only one connection for their entire application, which
+  makes the overhead of one ssl-context per connection negligible.
+
+* (Issue https://github.com/boostorg/redis/issues/181[181]).
+  See a detailed description of this bug in
+  https://github.com/boostorg/redis/issues/181#issuecomment-1913346983[this comment].
+
+* (Issue https://github.com/boostorg/redis/issues/182[182]).
+  Sets `"default"` as the default value of `config::username`. This
+  makes it simpler to use the `requirepass` configuration in Redis.
+
+* (Issue https://github.com/boostorg/redis/issues/189[189]).
+  Fixes narrowing conversion by using `std::size_t` instead of
+  `std::uint64_t` for the sizes of bulks and aggregates. The code
+  relies now on `std::from_chars` returning an error if a value
+  greater than 32 is received on platforms on which the size
+  of `std::size_t` is 32.
+
+
+== Boost 1.84 (First release in Boost)
+
+* Deprecates the `async_receive` overload that takes a response. Users
+  should now first call `set_receive_response` to avoid constantly and
+  unnecessarily setting the same response.
+
+* Uses `std::function` to type erase the response adapter. This change
+  should not influence users in any way but allowed important
+  simplification in the connections internals. This resulted in
+  massive performance improvement.
+
+* The connection has a new member `get_usage()` that returns the
+  connection usage information, such as number of bytes written,
+  received etc.
+
+* There are massive performance improvements in the consuming of
+  server pushes which are now communicated with an `asio::channel` and
+  therefore can be buffered which avoids blocking the socket read-loop.
+  Batch reads are also supported by means of `channel.try_send` and
+  buffered messages can be consumed synchronously with
+  `connection::receive`. The function `boost::redis::cancel_one` has
+  been added to simplify processing multiple server pushes contained
+  in the same `generic_response`.  *IMPORTANT*: These changes may
+  result in more than one push in the response when
+  `connection::async_receive` resumes. The user must therefore be
+  careful when calling `resp.clear()`: either ensure that all message
+  have been processed or just use `consume_one`.
+
+== v1.4.2 (incorporates changes to conform the boost review and more)
+
+* Adds `boost::redis::config::database_index` to make it possible to
+  choose a database before starting running commands e.g. after an
+  automatic reconnection.
+
+* Massive performance improvement. One of my tests went from
+  140k req/s to 390k/s. This was possible after a parser
+  simplification that reduced the number of reschedules and buffer
+  rotations.
+
+* Adds Redis stream example.
+
+* Renames the project to Boost.Redis and moves the code into namespace
+  `boost::redis`.
+
+* As pointed out in the reviews the `to_bulk` and `from_bulk` names were too
+  generic for ADL customization points. They gained the prefix `boost_redis_`.
+
+* Moves `boost::redis::resp3::request` to `boost::redis::request`.
+
+* Adds new typedef `boost::redis::response` that should be used instead of
+  `std::tuple`.
+
+* Adds new typedef `boost::redis::generic_response` that should be used instead
+  of `std::vector<resp3::node<std::string>>`.
+
+* Renames `redis::ignore` to `redis::ignore_t`.
+
+* Changes `async_exec` to receive a `redis::response` instead of an adapter,
+  namely, instead of passing `adapt(resp)` users should pass `resp` directly.
+
+* Introduces `boost::redis::adapter::result` to store responses to commands
+  including possible resp3 errors without losing the error diagnostic part. To
+  access values now use `std::get<N>(resp).value()` instead of
+  `std::get<N>(resp)`.
+
+* Implements full-duplex communication. Before these changes the connection
+  would wait for a response to arrive before sending the next one. Now requests
+  are continuously coalesced and written to the socket. `request::coalesce`
+  became unnecessary and was removed. I could measure significative performance
+  gains with these changes.
+
+* Improves serialization examples using Boost.Describe to serialize to JSON and protobuf. See
+  cpp20_json.cpp and cpp20_protobuf.cpp for more details.
+
+* Upgrades to Boost 1.81.0.
+
+* Fixes build with pass:[libc++].
+
+* Adds high-level functionality to the connection classes. For
+  example, `boost::redis::connection::async_run` will automatically
+  resolve, connect, reconnect and perform health checks.
+
+== v1.4.0-1
+
+* Renames `retry_on_connection_lost` to `cancel_if_unresponded`.  (v1.4.1)
+* Removes dependency on Boost.Hana, `boost::string_view`, Boost.Variant2 and Boost.Spirit.
+* Fixes build and setup CI on windows.
+
+== v1.3.0-1
+
+* Upgrades to Boost 1.80.0
+
+* Removes automatic sending of the `HELLO` command. This can't be
+  implemented properly without bloating the connection class. It is
+  now a user responsibility to send HELLO. Requests that contain it have
+  priority over other requests and will be moved to the front of the
+  queue, see `aedis::request::config` 
+
+* Automatic name resolving and connecting have been removed from
+  `aedis::connection::async_run`. Users have to do this step manually
+  now. The reason for this change is that having them built-in doesn't
+  offer enough flexibility that is need for boost users.
+
+* Removes healthy checks and idle timeout. This functionality must now
+  be implemented by users, see the examples. This is
+  part of making Aedis useful to a larger audience and suitable for
+  the Boost review process.
+
+* The `aedis::connection` is now using a typeddef to a
+  `net::ip::tcp::socket` and  `aedis::ssl::connection` to
+  `net::ssl::stream<net::ip::tcp::socket>`.  Users that need to use
+  other stream type must now specialize `aedis::basic_connection`.
+
+* Adds a low level example of async code.
+
+== v1.2.0
+
+* `aedis::adapt` supports now tuples created with `std::tie`.
+  `aedis::ignore` is now an alias to the type of `std::ignore`.
+
+* Provides allocator support for the internal queue used in the
+  `aedis::connection` class.
+
+* Changes the behaviour of `async_run` to complete with success if
+  asio::error::eof is received. This makes it easier to  write
+  composed operations with awaitable operators.
+
+* Adds allocator support in the `aedis::request` (a
+  contribution from Klemens Morgenstern).
+
+* Renames `aedis::request::push_range2` to `push_range`. The
+  suffix 2 was used for disambiguation. Klemens fixed it with SFINAE.
+
+* Renames `fail_on_connection_lost` to
+  `aedis::request::config::cancel_on_connection_lost`. Now, it will
+  only cause connections to be canceled when `async_run` completes.
+
+* Introduces `aedis::request::config::cancel_if_not_connected` which will
+  cause a request to be canceled if `async_exec` is called before a
+  connection has been established.
+
+* Introduces new request flag `aedis::request::config::retry` that if
+  set to true will cause the request to not be canceled when it was
+  sent to Redis but remained unresponded after `async_run` completed.
+  It provides a way to avoid executing commands twice.
+
+* Removes the `aedis::connection::async_run` overload that takes
+  request and adapter as parameters.
+
+* Changes the way `aedis::adapt()` behaves with
+  `std::vector<aedis::resp3::node<T>>`. Receiving RESP3 simple errors,
+  blob errors or null won't causes an error but will be treated as
+  normal response.  It is the user responsibility to check the content
+  in the vector.
+
+* Fixes a bug in `connection::cancel(operation::exec)`. Now this
+  call will only cancel non-written requests.
+
+* Implements per-operation implicit cancellation support for
+  `aedis::connection::async_exec`. The following call will `co_await (conn.async_exec(...) || timer.async_wait(...))`
+  will cancel the request as long as it has not been written.
+
+* Changes `aedis::connection::async_run` completion signature to
+  `f(error_code)`. This is how is was in the past, the second
+  parameter was not helpful.
+
+* Renames `operation::receive_push` to `aedis::operation::receive`.
+
+== v1.1.0-1
+
+* Removes `coalesce_requests` from the `aedis::connection::config`, it
+  became a request property now, see `aedis::request::config::coalesce`.
+
+* Removes `max_read_size` from the `aedis::connection::config`. The maximum
+  read size can be specified now as a parameter of the
+  `aedis::adapt()` function.
+
+* Removes `aedis::sync` class, see intro_sync.cpp for how to perform
+  synchronous and thread safe calls. This is possible in Boost. 1.80
+  only as it requires `boost::asio::deferred`. 
+
+* Moves from `boost::optional` to `std::optional`. This is part of
+  moving to pass:[C++17].
+
+* Changes the behaviour of the second `aedis::connection::async_run` overload
+  so that it always returns an error when the connection is lost.
+
+* Adds TLS support, see intro_tls.cpp.
+
+* Adds an example that shows how to resolve addresses over sentinels,
+  see subscriber_sentinel.cpp.
+
+* Adds a `aedis::connection::timeouts::resp3_handshake_timeout`. This is
+  timeout used to send the `HELLO` command.
+
+* Adds `aedis::endpoint` where in addition to host and port, users can
+  optionally provide username, password and the expected server role
+  (see `aedis::error::unexpected_server_role`).
+
+* `aedis::connection::async_run` checks whether the server role received in
+  the hello command is equal to the expected server role specified in
+  `aedis::endpoint`. To skip this check let the role variable empty.
+
+* Removes reconnect functionality from `aedis::connection`. It
+  is possible in simple reconnection strategies but bloats the class
+  in more complex scenarios, for example, with sentinel,
+  authentication and TLS. This is trivial to implement in a separate
+  coroutine. As a result the `enum event` and `async_receive_event`
+  have been removed from the class too.
+
+* Fixes a bug in `connection::async_receive_push` that prevented
+  passing any response adapter other that `adapt(std::vector<node>)`.
+
+* Changes the behaviour of `aedis::adapt()` that caused RESP3 errors
+  to be ignored. One consequence of it is that `connection::async_run`
+  would not exit with failure in servers that required authentication.
+
+* Changes the behaviour of `connection::async_run` that would cause it
+  to complete with success when an error in the
+  `connection::async_exec` occurred.
+
+* Ports the buildsystem from autotools to CMake.
+
+== v1.0.0
+
+* Adds experimental cmake support for windows users.
+
+* Adds new class `aedis::sync` that wraps an `aedis::connection` in
+  a thread-safe and synchronous API.  All free functions from the
+  `sync.hpp` are now member functions of `aedis::sync`.
+
+* Split `aedis::connection::async_receive_event` in two functions, one
+  to receive events and another for server side pushes, see
+  `aedis::connection::async_receive_push`.
+
+* Removes collision between `aedis::adapter::adapt` and
+  `aedis::adapt`.
+
+* Adds `connection::operation` enum to replace `cancel_*` member
+  functions with a single cancel function that gets the operations
+  that should be cancelled as argument.
+
+* Bugfix: a bug on reconnect from a state where the `connection` object
+  had unsent commands. It could cause `async_exec` to never
+  complete under certain conditions.
+
+* Bugfix: Documentation of `adapt()` functions were missing from
+  Doxygen.
+
+== v0.3.0
+
+* Adds `experimental::exec` and `receive_event` functions to offer a
+  thread safe and synchronous way of executing requests across
+  threads. See `intro_sync.cpp` and `subscriber_sync.cpp` for
+  examples.
+
+* `connection::async_read_push` was renamed to `async_receive_event`.
+
+* `connection::async_receive_event` is now being used to communicate
+  internal events to the user, such as resolve, connect, push etc. For
+  examples see cpp20_subscriber.cpp and `connection::event`.
+
+* The `aedis` directory has been moved to `include` to look more
+  similar to Boost libraries. Users should now replace `-I/aedis-path`
+  with `-I/aedis-path/include` in the compiler flags.
+
+* The `AUTH` and `HELLO` commands are now sent automatically. This change was
+  necessary to implement reconnection. The username and password
+  used in `AUTH` should be provided by the user on
+  `connection::config`.
+
+* Adds support for reconnection. See `connection::enable_reconnect`.
+
+* Fixes a bug in the `connection::async_run(host, port)` overload
+  that was causing crashes on reconnection.
+
+* Fixes the executor usage in the connection class. Before these
+  changes it was imposing `any_io_executor` on users.
+
+* `connection::async_receiver_event` is not cancelled anymore when
+  `connection::async_run` exits. This change makes user code simpler.
+
+* `connection::async_exec` with host and port overload has been
+  removed. Use the other `connection::async_run` overload.
+
+* The host and port parameters from `connection::async_run` have been
+  move to `connection::config` to better support authentication and
+  failover.
+
+* Many simplifications in the `chat_room` example.
+
+* Fixes build in clang the compilers and makes some improvements in
+  the documentation.
+
+== v0.2.0-1
+
+* Fixes a bug that happens on very high load. (v0.2.1) 
+* Major rewrite of the high-level API. There is no more need to use the low-level API anymore.
+* No more callbacks: Sending requests follows the ASIO asynchronous model.
+* Support for reconnection: Pending requests are not canceled when a connection is lost and are re-sent when a new one is established.
+* The library is not sending HELLO-3 on user behalf anymore. This is important to support AUTH properly.
+
+== v0.1.0-2
+
+* Adds reconnect coroutine in the `echo_server` example. (v0.1.2)
+* Corrects `client::async_wait_for_data` with `make_parallel_group` to launch operation. (v0.1.2)
+* Improvements in the documentation. (v0.1.2)
+* Avoids dynamic memory allocation in the client class after reconnection. (v0.1.2)
+* Improves the documentation and adds some features to the high-level client. (v.0.1.1)
+* Improvements in the design and documentation.
+
+== v0.0.1
+
+* First release to collect design feedback.
+

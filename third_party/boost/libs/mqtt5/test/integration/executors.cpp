@@ -44,7 +44,7 @@ void run_test(
 
     // packets
     auto connect = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, 60, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
     );
     auto connack = encoders::encode_connack(false, reason_codes::success.value(), {});
     auto publish_0 = encoders::encode_publish(

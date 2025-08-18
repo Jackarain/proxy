@@ -9,9 +9,6 @@ project
 
 EX_SOURCES = 
    posix_api.cpp
-   regex.cpp
-   regex_debug.cpp
-   static_mutex.cpp
    wide_posix_api.cpp ;
        
 lib boost_regex_extra : $(EX_SOURCES) ../../build//icu_options

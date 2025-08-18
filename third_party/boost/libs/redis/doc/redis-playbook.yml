@@ -1,0 +1,45 @@
+#
+# Copyright (c) 2025 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+#
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+site:
+  url: https://github.com/boostorg/redis/blob/master
+  title: Boost.Redis
+  robots: allow
+  start_page: redis::index.adoc
+
+antora:
+  extensions:
+    - require: '@cppalliance/antora-cpp-reference-extension'
+      dependencies:
+        - name: 'boost'
+          repo: 'https://github.com/boostorg/boost.git'
+          tag: 'develop'
+          variable: 'BOOST_SRC_DIR'
+          system-env: 'BOOST_SRC_DIR'
+
+asciidoc:
+  attributes:
+    # Scrolling problems appear without this
+    page-pagination: ''
+
+content:
+  sources:
+    - url: ..
+      start_path: doc
+
+ui: 
+  bundle:
+    url: https://github.com/boostorg/website-v2-docs/releases/download/ui-master/ui-bundle.zip
+    snapshot: true
+  output_dir: _
+
+output:
+  dir: html
+
+runtime:
+  log:
+    failure_level: error

@@ -4,12 +4,40 @@
 # (See accompanying file LICENSE.txt
 # or copy at https://www.bfgroup.xyz/b2/LICENSE.txt)
 
+#| tag::doc[]
+
+[[b2.reference.tools.compiler.emscripten]]
+= Emscripten
+
+The `emscripten` module supports https://emscripten.org[Emscripten toolchain]
+and has the same options as link:#b2.reference.tools.compiler.clang-linux[`clang-linux`]
+toolset.
+
+WARNING: Emscripten toolset defaults to static linkage because it is what
+generally expected and limitations of the toolchain itself
+(`wasm-ld` does not support `rpath`; js launcher does not respect
+`LD_LIBRARY_PATH`/`PATH` when looking for shared objects).
+
+Additional link:#b2.overview.invocation.properties[features]
+supported by Emscripten toolset exclusively:
+
+`debug-symbols-source-map`::
+Setting to `on` will enable source map generation, more info could be found in
+https://emscripten.org/docs/tools_reference/emcc.html#emcc-gsource-map[Emscripten documentation].
+
+`exception-handling-method`::
+Setting to `js` will result in using Emscripten’s JavaScript-based exception
+support instead of native WebAssembly exception handling.
+
+|# # end::doc[]
+
 import feature ;
 import os ;
 import toolset ;
 import common ;
 import type ;
 import version ;
+import args ;
 
 feature.extend toolset : emscripten ;
 
@@ -20,7 +48,7 @@ feature.subfeature debug-symbols : source-map : on : optional propagated ;
 feature.subfeature exception-handling : demangle-support : on : optional propagated ;
 feature.subfeature exception-handling : method : js : optional propagated link-incompatible ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
+if [ args.get-arg debug-configuration ]
 {
     local rule .debug-configuration ( messages * )
     {

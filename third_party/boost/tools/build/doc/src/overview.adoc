@@ -1,11 +1,11 @@
-[[bbv2.overview]]
+[[b2.overview]]
 = Overview
 
 This section will provide the information necessary to create your own
 projects using B2. The information provided here is relatively
-high-level, and the link:#bbv2.reference[Reference] as well as the on-line
+high-level, and the link:#b2.reference[Reference] as well as the on-line
 help system must be used to obtain low-level documentation (see
-link:#bbv2.overview.invocation.options.help[`--help`]).
+link:#b2.overview.invocation.options.help[`--help`]).
 
 B2 has two parts — a build engine with its own interpreted
 language, and B2 itself, implemented in that language. The
@@ -13,7 +13,7 @@ chain of events when you type `b2` on the command line is as follows:
 
 1.  The B2 executable tries to find B2 modules and
 loads the top-level module. The exact process is described in
-link:#bbv2.reference.init[the section called “Initialization”]
+link:#b2.reference.init[the section called “Initialization”]
 2.  The top-level module loads user-defined configuration files,
 `user-config.jam` and `site-config.jam`, which define available
 toolsets.
@@ -28,13 +28,13 @@ running the scheduled build action commands.
 So, to be able to successfully use B2, you need to know only
 four things:
 
-* link:#bbv2.overview.configuration[How to configure B2]
-* link:#bbv2.overview.targets[How to declare targets in Jamfiles]
-* link:#bbv2.overview.build_process[How the build process works]
+* link:#b2.overview.configuration[How to configure B2]
+* link:#b2.overview.targets[How to declare targets in Jamfiles]
+* link:#b2.overview.build_process[How the build process works]
 * Some Basics about the Boost.Jam language. See
-link:#bbv2.overview.jam_language[the section called “Boost.Jam Language”].
+link:#b2.overview.jam_language[the section called “Boost.Jam Language”].
 
-[[bbv2.overview.concepts]]
+[[b2.overview.concepts]]
 == Concepts
 
 B2 has a few unique concepts that are introduced in this
@@ -115,7 +115,7 @@ same properties. Instead, the "top-level" metatargets are called with
 the properties specified on the command line. Each metatarget can elect
 to augment or override some properties (in particular, using the
 requirements mechanism, see
-link:#bbv2.overview.targets.requirements[the section called “Requirements”]).
+link:#b2.overview.targets.requirements[the section called “Requirements”]).
 Then, the dependency metatargets are called with the modified properties and
 produce concrete targets that are then used in the build process. Of
 course, dependency metatargets maybe in turn modify build properties and
@@ -125,23 +125,23 @@ For a more in-depth treatment of the requirements and concepts, you may
 refer to http://syrcose.ispras.ru/2009/files/04_paper.pdf[SYRCoSE 2009
 B2 article].
 
-[[bbv2.overview.jam_language]]
+[[b2.overview.jam_language]]
 == Boost.Jam Language
 
 This section will describe the basics of the Boost.Jam language—just
 enough for writing Jamfiles. For more information, please see the
-link:#bbv2.jam[Boost.Jam] documentation.
+link:#b2.jam[Boost.Jam] documentation.
 
-link:#bbv2.jam[Boost.Jam] has an interpreted, procedural language. On
-the lowest level, a link:#bbv2.jam[Boost.Jam] program consists of
+link:#b2.jam[Boost.Jam] has an interpreted, procedural language. On
+the lowest level, a link:#b2.jam[Boost.Jam] program consists of
 variables and _rules_ (the Jam term for functions). They are grouped
 into modules—there is one global module and a number of named modules.
-Besides that, a link:#bbv2.jam[Boost.Jam] program contains classes and
+Besides that, a link:#b2.jam[Boost.Jam] program contains classes and
 class instances.
 
-Syntactically, a link:#bbv2.jam[Boost.Jam] program consists of two kinds
+Syntactically, a link:#b2.jam[Boost.Jam] program consists of two kinds
 of elements—keywords (which have a special meaning to
-link:#bbv2.jam[Boost.Jam]) and literals. Consider this code:
+link:#b2.jam[Boost.Jam]) and literals. Consider this code:
 
 [source]
 ----
@@ -163,7 +163,7 @@ value can be quoted:
 a = "=" ;
 ----
 
-All variables in link:#bbv2.jam[Boost.Jam] have the same type—list of
+All variables in link:#b2.jam[Boost.Jam] have the same type—list of
 strings. To define a variable one assigns a value to it, like in the
 previous example. An undefined variable is the same as a variable with
 an empty value. Variables can be accessed using the `$(variable)`
@@ -196,7 +196,7 @@ have exactly one value. The list passed as the second argument can
 either have one value of be empty. The two remaining arguments can be
 arbitrarily long, but the third argument may not be empty.
 
-The overview of link:#bbv2.jam[Boost.Jam] language statements is given
+The overview of link:#b2.jam[Boost.Jam] language statements is given
 below:
 
 [source]
@@ -257,7 +257,7 @@ are made available using the qualified name: `module.rule`. The second form
 imports the specified rules only, and they can be called using unqualified
 names.
 
-[[bbv2.overview.jam_language.actions]]
+[[b2.overview.jam_language.actions]]
 Sometimes, you need to specify the actual command lines to be used when
 creating targets. In the jam language, you use named actions to do this.
 For example:
@@ -304,7 +304,7 @@ actions would be impossible.
 More details can be found in the Jam reference,
 link:#jam.language.rules[the section called “Rules”].
 
-[[bbv2.overview.configuration]]
+[[b2.overview.configuration]]
 == Configuration
 
 On startup, B2 searches and reads three configuration files:
@@ -367,13 +367,13 @@ searched.
 |===
 
 Any of these files may also be overridden
-link:#bbv2.reference.init.options.config[on the command line].
+link:#b2.reference.init.options.config[on the command line].
 
 TIP: You can use the `--debug-configuration` option to find which
 configuration files are actually loaded.
 
 Usually, `user-config.jam` just defines the available compilers and
-other tools (see link:#bbv2.recipes.site-config[the section called “Targets
+other tools (see link:#b2.recipes.site-config[the section called “Targets
 in site-config.jam”] for more advanced usage). A tool is configured using
 the following syntax:
 
@@ -399,7 +399,7 @@ The general principle is that descriptions in Jamfile should be
 maintained as portable while configuration files are system specific.
 
 All the supported tools are documented in
-link:#bbv2.reference.tools[the section called “Builtin tools”], including the
+link:#b2.reference.tools[the section called “Builtin tools”], including the
 specific options they take. Some general notes that apply to most {CPP}
 compilers are below.
 
@@ -511,7 +511,7 @@ to syntax used to specify requirements in Jamfiles, the toolset options are
 not the same as features. Don't try to specify a feature value in
 toolset initialization.
 
-[[bbv2.overview.invocation]]
+[[b2.overview.invocation]]
 == Invocation
 
 To invoke B2, type `b2` on the command line. Three kinds of
@@ -530,7 +530,7 @@ target::
   targets to build. The available targets entirely depend on the project
   you are building.
 
-[[bbv2.overview.invocation.examples]]
+[[b2.overview.invocation.examples]]
 === Examples
 
 To build all targets defined in the Jamfile in the current directory
@@ -556,12 +556,12 @@ command line:
 b2 toolset=gcc variant=debug optimization=space
 ----
 
-[[bbv2.overview.invocation.options]]
+[[b2.overview.invocation.options]]
 === Options
 
 B2 recognizes the following command line options.
 
-[[bbv2.overview.invocation.options.help]]`--help`::
+[[b2.overview.invocation.options.help]]`--help`::
   Invokes the online help system. This prints general information on how
   to use the help system with additional --help* options.
 `--clean`::
@@ -584,14 +584,14 @@ B2 recognizes the following command line options.
 `--abbreviate-paths`::
   Compresses target paths by abbreviating each component. This option is
   useful to keep paths from becoming longer than the filesystem
-  supports. See also link:#bbv2.reference.buildprocess.targetpath[the
+  supports. See also link:#b2.reference.buildprocess.targetpath[the
   section called “Target Paths”].
 `--hash`::
   Compresses target paths using an MD5 hash. This option is useful to
   keep paths from becoming longer than the filesystem supports. This
   option produces shorter paths than `--abbreviate-paths` does, but at the
   cost of making them less understandable. See also
-  link:#bbv2.reference.buildprocess.targetpath[the section called “Target
+  link:#b2.reference.buildprocess.targetpath[the section called “Target
   Paths”].
 `--version`::
   Prints information on the B2 and Boost.Jam versions.
@@ -607,14 +607,14 @@ B2 recognizes the following command line options.
   of detected available CPU threads. Note: There are circumstances when that
   default can be larger than the allocated cpu resources, for instance in some
   virtualized container installs.
-`--config=filename`[[bbv2.reference.init.options.config]]::
-  Override all link:#bbv2.overview.configuration[configuration files]
+`--config=filename`[[b2.reference.init.options.config]]::
+  Override all link:#b2.overview.configuration[configuration files]
 `--site-config=filename`::
-  Override the default link:#bbv2.overview.configuration[site-config.jam]
+  Override the default link:#b2.overview.configuration[site-config.jam]
 `--user-config=filename`::
-  Override the default link:#bbv2.overview.configuration[user-config.jam]
+  Override the default link:#b2.overview.configuration[user-config.jam]
 `--project-config=filename`::
-  Override the default link:#bbv2.overview.configuration[project-config.jam]
+  Override the default link:#b2.overview.configuration[project-config.jam]
 `--debug-configuration`::
   Produces debug information about the loading of B2 and
   toolset files.
@@ -658,13 +658,13 @@ B2 recognizes the following command line options.
 `--command-database-out=_file_`::
   Specify the _file_ path to output the commands database to.
 
-[[bbv2.overview.invocation.properties]]
+[[b2.overview.invocation.properties]]
 === Properties
 
 In the simplest case, the build is performed with a single set of
 properties, that you specify on the command line with elements in the
 form `feature=value`. The complete list of features can be found in
-link:#bbv2.overview.builtins.features[the section called “Builtin features”].
+link:#b2.overview.builtins.features[the section called “Builtin features”].
 The most common features are summarized below.
 
 [cols=",,a",options="header"]
@@ -688,15 +688,13 @@ in the source code itself.
 |32,64
 |Explicitly request either 32-bit or 64-bit code
 generation. This typically requires that your compiler is appropriately
-configured. Please refer to
-link:#bbv2.reference.tools.compilers[the section called “C++ Compilers”]
-and your compiler documentation in case of problems.
+configured. Please refer to <<b2.reference.tools.compilers>> and your
+compiler documentation in case of problems.
 
 |toolset
 |(Depends on configuration)
-|The {CPP} compiler to use. See
-link:#bbv2.reference.tools.compilers[the section called “C++ Compilers”]
-for a detailed list.
+|The {CPP} compiler to use. See <<b2.reference.tools.compilers>> for a
+detailed list.
 
 |include
 |(Arbitrary string)
@@ -767,26 +765,26 @@ b2 gcc/link=shared msvc/link=static,shared
 
 This will build 3 different variants, altogether.
 
-[[bbv2.overview.invocation.targets]]
+[[b2.overview.invocation.targets]]
 === Targets
 
 All command line elements that are neither options nor properties are
-the names of the targets to build. See link:#bbv2.reference.ids[the section
+the names of the targets to build. See link:#b2.reference.ids[the section
 called “Target identifiers and references”]. If no target is specified, the
 project in the current directory is built.
 
-[[bbv2.overview.targets]]
+[[b2.overview.targets]]
 == Declaring Targets
 
-[[bbv2.overview.targets.main]]
+[[b2.overview.targets.main]]
 A Main target is a user-defined named entity that can be built, for
 example an executable file. Declaring a main target is usually done
 using one of the main target rules described in
-link:#bbv2.reference.rules[the section called “Builtin rules”]. The user can
+link:#b2.reference.rules[the section called “Builtin rules”]. The user can
 also declare custom main target rules as shown in
-link:#bbv2.extending.rules[the section called “Main target rules”].
+link:#b2.extending.rules[the section called “Main target rules”].
 
-anchor:bbv2.main-target-rule-syntax[]
+anchor:b2.main-target-rule-syntax[]
 Most main target rules in B2 have the same common signature:
 
 [source]
@@ -820,7 +818,7 @@ The actual requirements for a target are obtained by refining the
 requirements of the project where the target is declared with the
 explicitly specified requirements. The same is true for
 usage-requirements. More details can be found in
-link:#bbv2.reference.variants.proprefine[the section called “Property refinement”].
+link:#b2.reference.variants.proprefine[the section called “Property refinement”].
 
 === Name
 
@@ -850,7 +848,7 @@ The list of sources specifies what should be processed to get the
 resulting targets. Most of the time, it's just a list of files.
 Sometimes, you'll want to automatically construct the list of source
 files rather than having to spell it out manually, in which case you can
-use the link:#bbv2.reference.rules.glob[glob] rule. Here are two
+use the link:#b2.reference.rules.glob[glob] rule. Here are two
 examples:
 
 [source]
@@ -864,7 +862,7 @@ exe b : [ glob *.cpp ] ; <2>
 Unless you specify a file with an absolute path, the name is considered
 relative to the source directory — which is typically the directory
 where the Jamfile is located, but can be changed as described in
-link:#bbv2.overview.projects.attributes.projectrule[the section called “Projects”].
+link:#b2.overview.projects.attributes.projectrule[the section called “Projects”].
 
 The list of sources can also refer to other main targets. Targets in the
 same project can be referred to by name, while targets in other projects
@@ -888,10 +886,10 @@ one uses some target (most likely a library) defined by a Jamfile one
 level higher. Finally, the third target uses a http://boost.org[{CPP}
 Boost] library, referring to it using its absolute symbolic name. More
 information about target references can be found in
-link:#bbv2.tutorial.libs[the section called “Dependent Targets”] and
-link:#bbv2.reference.ids[the section called “Target identifiers and references”].
+link:#b2.tutorial.libs[the section called “Dependent Targets”] and
+link:#b2.reference.ids[the section called “Target identifiers and references”].
 
-[[bbv2.overview.targets.requirements]]
+[[b2.overview.targets.requirements]]
 === Requirements
 
 Requirements are the properties that should always be present when
@@ -903,7 +901,7 @@ exe hello : hello.cpp : <include>/opt/boost <define>MY_DEBUG ;
 ----
 
 There are a number of other features, listed in
-link:#bbv2.overview.builtins.features[the section called “Builtin features”].
+link:#b2.overview.builtins.features[the section called “Builtin features”].
 For example if a library can only be built statically, or a file can't be
 compiled with optimization due to a compiler bug, one can use.
 
@@ -913,7 +911,7 @@ lib util : util.cpp : <link>static ;
 obj main : main.cpp : <optimization>off ;
 ----
 
-[[bbv2.overview.targets.requirements.conditional]]Sometimes, particular
+[[b2.overview.targets.requirements.conditional]]Sometimes, particular
 relationships need to be
 maintained among a target's build properties. This can be achieved with
 _conditional requirements_. For example, you might want to set specific
@@ -1047,14 +1045,14 @@ to build only helpers, one should run `b2 hello..helpers`.
 When no target is requested on the command line, all targets in the
 current project will be built. If a target should be built only by
 explicit request, this can be expressed by the
-link:#bbv2.reference.rules.explicit[explicit] rule:
+link:#b2.reference.rules.explicit[explicit] rule:
 
 [source]
 ----
 explicit install_programs ;
 ----
 
-[[bbv2.overview.projects]]
+[[b2.overview.projects]]
 == Projects
 
 As mentioned before, targets are grouped into projects, and each Jamfile
@@ -1088,7 +1086,7 @@ The possible attributes are listed below.
 
 _Project id_ is a short way to denote a project, as opposed to the
 Jamfile's pathname. It is a hierarchical path, unrelated to filesystem,
-such as "boost/thread". link:#bbv2.reference.ids[Target references] make
+such as "boost/thread". link:#b2.reference.ids[Target references] make
 use of project ids to specify a target.
 
 _Source location_ specifies the directory where sources for the project
@@ -1100,7 +1098,7 @@ the projects as well as all sub-projects.
 _Default build_ is the build request that should be used when no build
 request is specified explicitly.
 
-[[bbv2.overview.projects.attributes.projectrule]]
+[[b2.overview.projects.attributes.projectrule]]
 The default values for those attributes are given in the table below.
 
 [cols=",,,",options="header",]
@@ -1128,7 +1126,7 @@ passed value, interpreted as relative to the project's location.
 Besides defining projects and main targets, Jamfiles often invoke
 various utility rules. For the full list of rules that can be directly
 used in Jamfile see
-link:#bbv2.reference.rules[the section called “Builtin rules”].
+link:#b2.reference.rules[the section called “Builtin rules”].
 
 Each subproject inherits attributes, constants and rules from its parent
 project, which is defined by the nearest Jamfile in an ancestor
@@ -1150,7 +1148,7 @@ NOTE: Giving the root project the special name “`Jamroot`” ensures that
 B2 won't misinterpret a directory above it as the project root
 just because the directory contains a Jamfile.
 
-[[bbv2.overview.build_process]]
+[[b2.overview.build_process]]
 == The Build Process
 
 When you've described your targets, you want B2 to run the
@@ -1171,7 +1169,7 @@ TIP: This means that for B2, you cannot directly obtain a build
 variant from a Jamfile. There could be several variants requested by the
 user, and each target can be built with different properties.
 
-[[bbv2.overview.build_request]]
+[[b2.overview.build_request]]
 === Build Request
 
 The command line specifies which targets to build and with which
@@ -1184,7 +1182,7 @@ b2 app1 lib1//lib1 toolset=gcc variant=debug optimization=full
 
 would build two targets, "app1" and "lib1//lib1" with the specified
 properties. You can refer to any targets, using
-link:#bbv2.reference.ids[target id] and specify arbitrary properties.
+link:#b2.reference.ids[target id] and specify arbitrary properties.
 Some of the properties are very common, and for them the name of the
 property can be omitted. For example, the above can be written as:
 
@@ -1194,14 +1192,14 @@ b2 app1 lib1//lib1 gcc debug optimization=full
 ----
 
 The complete syntax, which has some additional shortcuts, is described
-in link:#bbv2.overview.invocation[the section called “Invocation”].
+in link:#b2.overview.invocation[the section called “Invocation”].
 
 === Building a main target
 
 When you request, directly or indirectly, a build of a main target with
 specific requirements, the following steps are done. Some brief
 explanation is provided, and more details are given in
-link:#bbv2.reference.buildprocess[the section called “Build process”].
+link:#b2.reference.buildprocess[the section called “Build process”].
 
 1.  Applying default build. If the default-build property of a target
 specifies a value of a feature that is not present in the build request,
@@ -1211,14 +1209,14 @@ we look how many properties are present both in alternative's
 requirements, and in build request. The alternative with largest number
 of matching properties is selected.
 3.  Determining "common" properties. The build request is
-link:#bbv2.reference.variants.proprefine[refined] with target's
+link:#b2.reference.variants.proprefine[refined] with target's
 requirements. The conditional properties in requirements are handled as
 well. Finally, default values of features are added.
 4.  Building targets referred by the sources list and dependency
 properties. The list of sources and the properties can refer to other
-target using link:#bbv2.reference.ids[target references]. For each
+target using link:#b2.reference.ids[target references]. For each
 reference, we take all
-link:#bbv2.reference.features.attributes.propagated[propagated]
+link:#b2.reference.features.attributes.propagated[propagated]
 properties, refine them by explicit properties specified in the target
 reference, and pass the resulting properties as build request to the
 other target.

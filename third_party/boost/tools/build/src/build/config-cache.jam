@@ -8,6 +8,7 @@ import regex ;
 import path ;
 import project ;
 import os ;
+import args ;
 
 rule get ( name )
 {
@@ -68,7 +69,7 @@ rule load ( cache-file )
         errors.error duplicate load of cache file ;
     }
     cache-file = [ path.native $(cache-file) ] ;
-    if [ path.exists $(cache-file) ] && ! ( --reconfigure in [ modules.peek : ARGV ] )
+    if [ path.exists $(cache-file) ] && ! [ args.get-arg reconfigure ]
     {
         FILE_CONTENTS on <old-cache-file>$(cache-file) = "" ;
         config-cache.write <old-cache-file>$(cache-file) ;

@@ -1,5 +1,5 @@
 /* Example use of std::error implicit conversion
-(C) 2024 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2024-2025 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Sept 2018
 
 

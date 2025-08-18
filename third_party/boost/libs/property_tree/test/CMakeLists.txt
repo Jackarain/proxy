@@ -8,6 +8,4 @@ if(HAVE_BOOST_TEST)
 
 boost_test_jamfile(FILE Jamfile.v2 LINK_LIBRARIES Boost::property_tree Boost::format Boost::foreach)
 
-boost_test(TYPE run SOURCES test_property_tree.cpp LINK_LIBRARIES Boost::property_tree Boost::serialization)
-
 endif()

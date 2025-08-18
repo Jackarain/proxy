@@ -9,16 +9,22 @@ on:
     branches:
       - master
       - develop
+      - feature/**
+      - cve-*
   pull_request:
   release:
     types: [published, created, edited]
+
+env:
+  UBSAN_OPTIONS: print_stacktrace=1
+
 jobs:
-  ubuntu-focal:
-    runs-on: ubuntu-20.04
+  ubuntu-jammy:
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ g++-9, g++-10, clang++-9, clang++-10 ]
+        compiler: [ g++-11, g++-12, g++-13 ]
         standard: [ c++11, c++14, c++17, c++2a ]
     steps:
       - uses: actions/checkout@v2
@@ -34,7 +40,7 @@ jobs:
       - name: Add repository
         run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
       - name: Install packages
-        run: sudo apt install g++-9 g++-10 clang-9 clang-10  libicu-dev
+        run: sudo apt install g++-11 g++-12 g++-13
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update tools/boostdep
@@ -55,14 +61,11 @@ jobs:
       - name: Generate user config
         run: 'echo "using $TOOLSET : : ${{ matrix.compiler }} : <cxxflags>-std=${{ matrix.standard }} ;" > ~/user-config.jam'
         working-directory: ../boost-root
-      - name: Config info install
-        run: ../../../b2 config_info_travis_install toolset=$TOOLSET
-        working-directory: ../boost-root/libs/config/test
       - name: Config info
-        run: ./config_info_travis
+        run: ../../../b2 print_config_info toolset=$TOOLSET
         working-directory: ../boost-root/libs/config/test
       - name: Test
-        run: ../../../b2 toolset=$TOOLSET
+        run: ../../../b2 toolset=$TOOLSET variant=debug,release ${{ startsWith(matrix.compiler, 'g++-13') && 'address-sanitizer=norecover undefined-sanitizer=norecover' || '' }}
         working-directory: ../boost-root/libs/regex/test
   ubuntu-jammy-standalone:
     runs-on: ubuntu-22.04
@@ -89,12 +92,12 @@ jobs:
       - name: Test
         run: ${{ matrix.compiler }} -std=${{ matrix.standard }}  -I../../include *.cpp ../../src/*.cpp -o regress && ./regress
         working-directory: ./test/regress
-  ubuntu-bionic:
-    runs-on: ubuntu-18.04
+  ubuntu-jammy-clang:
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        compiler: [ g++-7, g++-8, clang++-7, clang++-8 ]
+        compiler: [ clang++-15 ]
         standard: [ c++11, c++14, c++17 ]
     steps:
       - uses: actions/checkout@v2
@@ -110,7 +113,7 @@ jobs:
       - name: Add repository
         run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
       - name: Install packages
-        run: sudo apt install g++-7 g++-8 clang-7 clang-8 libicu-dev
+        run: sudo apt install clang-15
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update tools/boostdep
@@ -131,14 +134,94 @@ jobs:
       - name: Generate user config
         run: 'echo "using $TOOLSET : : ${{ matrix.compiler }} : <cxxflags>-std=${{ matrix.standard }} ;" > ~/user-config.jam'
         working-directory: ../boost-root
-      - name: Config info install
-        run: ../../../b2 config_info_travis_install toolset=$TOOLSET
-        working-directory: ../boost-root/libs/config/test
       - name: Config info
-        run: ./config_info_travis
+        run: ../../../b2 print_config_info toolset=$TOOLSET
         working-directory: ../boost-root/libs/config/test
       - name: Test
         run: ../../../b2 toolset=$TOOLSET define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER
+        working-directory: ../boost-root/libs/regex/test
+  ubuntu-jammy-clang-18-modules:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+      - uses: mstachniuk/ci-skip@v1
+        with:
+          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[windows];[Windows];[WINDOWS];[apple];[Apple];[APPLE]'
+          commit-filter-separator: ';'
+          fail-fast: true
+      - name: Grab install script
+        run: wget https://apt.llvm.org/llvm.sh && chmod u+x llvm.sh
+      - name: Install clang 18 packages
+        run: sudo ./llvm.sh 18 && clang++-18 --version
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: cp -r $GITHUB_WORKSPACE/* libs/regex
+        working-directory: ../boost-root
+      - name: Install deps
+        run: python tools/boostdep/depinst/depinst.py -I example -g "--jobs 3" regex
+        working-directory: ../boost-root
+      - name: Bootstrap
+        run: ./bootstrap.sh
+        working-directory: ../boost-root
+      - name: Generate headers
+        run: ./b2 headers
+        working-directory: ../boost-root
+      - name: Test
+        run: CXX=clang++-18 LIBRARIES="-licuuc -licudata -licui18n" ./test_clang.sh
+        working-directory: ../boost-root/libs/regex/test/module
+  ubuntu-noble-clang:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [ clang++-16, clang++-17, clang++-18 ]
+        standard: [ c++11, c++14, c++17, c++20 ]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+      - uses: mstachniuk/ci-skip@v1
+        with:
+          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[windows];[Windows];[WINDOWS];[apple];[Apple];[APPLE]'
+          commit-filter-separator: ';'
+          fail-fast: true
+      - name: Set TOOLSET
+        run: echo ${{ matrix.compiler }} | awk '/^g/ { print "TOOLSET=gcc" } /^clang/ { print "TOOLSET=clang" }' >> $GITHUB_ENV
+      - name: Add repository
+        run: sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
+      - name: Install packages
+        run: sudo apt install clang-16 clang-17 clang-18
+      - name: Checkout main boost
+        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+      - name: Update tools/boostdep
+        run: git submodule update --init tools/boostdep
+        working-directory: ../boost-root
+      - name: Copy files
+        run: cp -r $GITHUB_WORKSPACE/* libs/regex
+        working-directory: ../boost-root
+      - name: Install deps
+        run: python tools/boostdep/depinst/depinst.py -I example -g "--jobs 3" regex
+        working-directory: ../boost-root
+      - name: Bootstrap
+        run: ./bootstrap.sh
+        working-directory: ../boost-root
+      - name: Generate headers
+        run: ./b2 headers
+        working-directory: ../boost-root
+      - name: Generate user config
+        run: 'echo "using $TOOLSET : : ${{ matrix.compiler }} : <cxxflags>-std=${{ matrix.standard }} ;" > ~/user-config.jam'
+        working-directory: ../boost-root
+      - name: Config info
+        run: ../../../b2 print_config_info toolset=$TOOLSET
+        working-directory: ../boost-root/libs/config/test
+      - name: Test
+        run: ../../../b2 toolset=$TOOLSET define=CI_SUPPRESS_KNOWN_ISSUES define=SLOW_COMPILER variant=debug,release ${{ startsWith(matrix.compiler, 'clang++-18') && 'address-sanitizer=norecover undefined-sanitizer=norecover' || '' }}
         working-directory: ../boost-root/libs/regex/test
   macos:
     runs-on: macos-latest
@@ -344,6 +427,9 @@ jobs:
           commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[apple];[Apple];[APPLE];[linux];[Linux];[LINUX]'
           commit-filter-separator: ';'
           fail-fast: true
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
+        with:
+          arch: x64
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update tools/boostdep
@@ -370,6 +456,9 @@ jobs:
       - name: Test
         run: ..\..\..\b2 --hash %ARGS%
         working-directory: ../boost-root/libs/regex/test
+      - name: Module Test
+        run: msvc_test.bat
+        working-directory: ../boost-root/libs/regex/test/module
   ubuntu-cmake-install:
     runs-on: ubuntu-20.04
     strategy:

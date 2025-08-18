@@ -858,7 +858,7 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V2 {
             return access::base(lhs) <=> access::base(rhs);
           } else {
             using diff_type = typename D1::difference_type;
-            diff_type const diff = rhs - lhs;
+            diff_type const diff = lhs - rhs;
             return diff < diff_type(0) ? std::strong_ordering::less :
               diff_type(0) < diff ? std::strong_ordering::greater :
               std::strong_ordering::equal;
@@ -1052,7 +1052,7 @@ namespace boost { namespace stl_interfaces { BOOST_STL_INTERFACES_NAMESPACE_V3 {
             return access::base(lhs) <=> access::base(rhs);
           } else {
             using diff_type = typename D1::difference_type;
-            diff_type const diff = rhs - lhs;
+            diff_type const diff = lhs - rhs;
             return diff < diff_type(0) ? std::strong_ordering::less :
               diff_type(0) < diff ? std::strong_ordering::greater :
               std::strong_ordering::equal;

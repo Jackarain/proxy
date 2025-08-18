@@ -8,7 +8,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.coverage]]`coverage`::
+[[b2.builtin.features.coverage]]`coverage`::
 *Allowed values:* `off`, `on`.
 +
 Enables code instrumentation to generate coverage data during execution.

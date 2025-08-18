@@ -5,13 +5,15 @@
  */
 
 #include <boost/redis/connection.hpp>
-#include <boost/asio/signal_set.hpp>
+
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
-#include <boost/asio/redirect_error.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
-#include <unistd.h>
+#include <boost/asio/redirect_error.hpp>
+#include <boost/asio/signal_set.hpp>
+
 #include <iostream>
+#include <unistd.h>
 
 #if defined(BOOST_ASIO_HAS_CO_AWAIT)
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
@@ -38,8 +40,7 @@ using namespace std::chrono_literals;
 // Chat over Redis pubsub. To test, run this program from multiple
 // terminals and type messages to stdin.
 
-auto
-receiver(std::shared_ptr<connection> conn) -> awaitable<void>
+auto receiver(std::shared_ptr<connection> conn) -> awaitable<void>
 {
    request req;
    req.push("SUBSCRIBE", "channel");
@@ -48,7 +49,6 @@ receiver(std::shared_ptr<connection> conn) -> awaitable<void>
    conn->set_receive_response(resp);
 
    while (conn->will_reconnect()) {
-
       // Subscribe to channels.
       co_await conn->async_exec(req, ignore);
 
@@ -56,19 +56,17 @@ receiver(std::shared_ptr<connection> conn) -> awaitable<void>
       for (error_code ec;;) {
          co_await conn->async_receive(redirect_error(use_awaitable, ec));
          if (ec)
-            break; // Connection lost, break so we can reconnect to channels.
-         std::cout
-            << resp.value().at(1).value
-            << " " << resp.value().at(2).value
-            << " " << resp.value().at(3).value
-            << std::endl;
+            break;  // Connection lost, break so we can reconnect to channels.
+         std::cout << resp.value().at(1).value << " " << resp.value().at(2).value << " "
+                   << resp.value().at(3).value << std::endl;
          resp.value().clear();
       }
    }
 }
 
 // Publishes stdin messages to a Redis channel.
-auto publisher(std::shared_ptr<stream_descriptor> in, std::shared_ptr<connection> conn) -> awaitable<void>
+auto publisher(std::shared_ptr<stream_descriptor> in, std::shared_ptr<connection> conn)
+   -> awaitable<void>
 {
    for (std::string msg;;) {
       auto n = co_await async_read_until(*in, dynamic_buffer(msg, 1024), "\n");
@@ -88,7 +86,7 @@ auto co_main(config cfg) -> awaitable<void>
 
    co_spawn(ex, receiver(conn), detached);
    co_spawn(ex, publisher(stream, conn), detached);
-   conn->async_run(cfg, {}, consign(detached, conn));
+   conn->async_run(cfg, consign(detached, conn));
 
    signal_set sig_set{ex, SIGINT, SIGTERM};
    co_await sig_set.async_wait();
@@ -96,11 +94,11 @@ auto co_main(config cfg) -> awaitable<void>
    stream->cancel();
 }
 
-#else // defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
+#else   // defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 auto co_main(config const&) -> awaitable<void>
 {
    std::cout << "Requires support for posix streams." << std::endl;
    co_return;
 }
-#endif // defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
-#endif // defined(BOOST_ASIO_HAS_CO_AWAIT)
+#endif  // defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
+#endif  // defined(BOOST_ASIO_HAS_CO_AWAIT)

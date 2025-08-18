@@ -20,7 +20,7 @@
 
 #include <dlfcn.h>
 #include <cstring> // strncmp
-#if !BOOST_OS_MACOS && !BOOST_OS_IOS && !BOOST_OS_QNX
+#if !BOOST_OS_MACOS && !BOOST_OS_IOS && !BOOST_OS_QNX && !BOOST_OS_CYGWIN
 #   include <link.h>
 #elif BOOST_OS_QNX
 // QNX's copy of <elf.h> and <link.h> reside in sys folder

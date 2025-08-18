@@ -7,16 +7,24 @@ cmake_minimum_required(VERSION 3.5...3.16)
 
 project(boost_random VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
-add_library(boost_random
-  src/random_device.cpp
-)
+option(BOOST_RANDOM_ENABLE_RANDOM_DEVICE "Build boost::random_device" ON)
+
+if(BOOST_RANDOM_ENABLE_RANDOM_DEVICE)
+  add_library(boost_random
+    src/random_device.cpp
+  )
+  set(_populate PUBLIC)
+else()
+  add_library(boost_random INTERFACE)
+  set(_populate INTERFACE)
+endif()
 
 add_library(Boost::random ALIAS boost_random)
 
-target_include_directories(boost_random PUBLIC include)
+target_include_directories(boost_random ${_populate} include)
 
 target_link_libraries(boost_random
-  PUBLIC
+  ${_populate}
     Boost::assert
     Boost::config
     Boost::core
@@ -30,18 +38,20 @@ target_link_libraries(boost_random
     Boost::utility
 )
 
-target_compile_features(boost_random PUBLIC cxx_std_11)
+target_compile_features(boost_random ${_populate} cxx_std_11)
 
 target_compile_definitions(boost_random
-  PUBLIC BOOST_RANDOM_NO_LIB
+  ${_populate} BOOST_RANDOM_NO_LIB
   # Source files already define BOOST_RANDOM_SOURCE
   # PRIVATE BOOST_RANDOM_SOURCE
 )
 
-if(BUILD_SHARED_LIBS)
-  target_compile_definitions(boost_random PUBLIC BOOST_RANDOM_DYN_LINK)
-else()
-  target_compile_definitions(boost_random PUBLIC BOOST_RANDOM_STATIC_LINK)
+if(BOOST_RANDOM_ENABLE_RANDOM_DEVICE)
+  if(BUILD_SHARED_LIBS)
+    target_compile_definitions(boost_random PUBLIC BOOST_RANDOM_DYN_LINK)
+  else()
+    target_compile_definitions(boost_random PUBLIC BOOST_RANDOM_STATIC_LINK)
+  endif()
 endif()
 
 if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")

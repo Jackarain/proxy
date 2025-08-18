@@ -405,6 +405,9 @@ compile sv_construct_test_cx2.cpp ;
 
 run sv_hash_test.cpp : : : $(CPP11) <library>/boost/container_hash//boost_container_hash ;
 
+run sv_format_test.cpp
+  : : : $(pedantic-errors) ;
+
 run span_test.cpp ;
 run span_types_test.cpp ;
 run span_constructible_test.cpp ;

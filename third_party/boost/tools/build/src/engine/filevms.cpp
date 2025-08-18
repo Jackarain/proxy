@@ -345,7 +345,7 @@ void file_archscan( char const * arch, scanback func, void * closure )
 
     if ( filelist_empty( archive->members ) )
     {
-        if ( DEBUG_BINDSCAN )
+        if ( is_debug_bindscan() )
             out_printf( "scan archive %s\n", object_str( archive->file->name ) );
 
         if ( file_collect_archive_content_( archive ) < 0 )

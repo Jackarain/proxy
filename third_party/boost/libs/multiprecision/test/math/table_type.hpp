@@ -6,7 +6,7 @@
 #ifndef BOOST_MP_TABLE_TYPE
 #define BOOST_MP_TABLE_TYPE
 
-#include <libs/math/test/table_type.hpp>
+#include <table_type.hpp>
 #include <boost/multiprecision/number.hpp>
 
 struct string_table_entry

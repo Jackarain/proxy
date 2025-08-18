@@ -8,6 +8,6 @@ A special thank you goes to [http://www.intra2net.com/(Intra2net AG) (especially
 
 Great thanks also goes to Boris Schaeling, who despite having boost.process rejected, went on to work on it and maintained it up until this day and participated in the development of the current version.
 
-Many Thanks, to [https://github.com/time-killer-games](Samuel Venable) for contributing the <<v2::ext>> functionality and all the research that went into it.
+Many Thanks, to [https://github.com/samuelvenable](Samuel Venable) for contributing the <<v2::ext>> functionality and all the research that went into it.
 
 

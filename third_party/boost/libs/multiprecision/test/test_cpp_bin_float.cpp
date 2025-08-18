@@ -15,7 +15,7 @@
 #endif
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
-#include "libs/multiprecision/test/test.hpp"
+#include "test.hpp"
 #include <iostream>
 #include <iomanip>
 

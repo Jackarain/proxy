@@ -18,7 +18,7 @@ boostbook standalone
         # Index generation:
         # Path for links to Boost:
         <xsl:param>boost.root=../../../..
-        
+
         # Some general style settings:
         <xsl:param>table.footnote.number.format=1
         <xsl:param>footnote.number.format=1
@@ -36,7 +36,7 @@ boostbook standalone
         <xsl:param>toc.max.depth=4
         # How far down we go with TOC's
         <xsl:param>generate.section.toc.level=10
-        
+
         # PDF Options:
         # TOC Generation: this is needed for FOP-0.9 and later:
         <xsl:param>fop1.extensions=0
@@ -62,7 +62,7 @@ boostbook standalone
         <format>pdf:<auto-index-internal>off
         <format>html:<auto-index-internal>on
         <auto-index-script>$(here)/index.idx
-        <auto-index-prefix>$(here)/../../.. 
+        <auto-index-prefix>$(here)/../include
         <auto-index>on
     ;
 

@@ -26,7 +26,7 @@ xml type_erasure : type_erasure.qbk : <dependency>reference ;
 
 doxygen reference
   :
-    [ glob ../../../boost/type_erasure/*.hpp ]
+    [ glob ../include/boost/type_erasure/*.hpp ]
   :
     <doxygen:param>EXPAND_ONLY_PREDEF=YES
     <doxygen:param>"ALIASES= \\

@@ -7,9 +7,9 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.location]]`location`::
+[[b2.builtin.features.location]]`location`::
 Specifies the build directory for a target. The feature is used primarily with
-<<bbv2.tasks.installing,`<install>`>> rule.
+<<b2.tasks.installing,`<install>`>> rule.
 
 |# # end::doc[]
 

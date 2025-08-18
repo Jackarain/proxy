@@ -7,11 +7,14 @@ UseTab: Always
 Language: Cpp
 AccessModifierOffset: 0
 AlignAfterOpenBracket: DontAlign
-AlignConsecutiveAssignments: false
-AlignConsecutiveDeclarations: false
+AlignArrayOfStructures: None
+AlignConsecutiveAssignments: None
+AlignConsecutiveBitFields: None
+AlignConsecutiveDeclarations: None
+AlignConsecutiveMacros: None
 AlignEscapedNewlines: DontAlign
 AlignOperands: DontAlign
-AlignTrailingComments: false
+AlignTrailingComments: { Kind: Never }
 AllowAllArgumentsOnNextLine: true
 AllowAllConstructorInitializersOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
@@ -29,22 +32,22 @@ BinPackParameters: false
 BitFieldColonSpacing: Both
 BreakBeforeBraces: Custom
 BraceWrapping:
-  AfterCaseLabel: true
-  AfterClass: true
-  AfterControlStatement: Always
-  AfterEnum: true
-  AfterExternBlock: true
-  AfterFunction: true
-  AfterNamespace: false
-  AfterStruct: true
-  AfterUnion: true
-  BeforeCatch: true
-  BeforeElse: true
-  BeforeWhile: true
-  IndentBraces: false
-  SplitEmptyFunction: false
-  SplitEmptyNamespace: true
-  SplitEmptyRecord: false
+ AfterCaseLabel: true
+ AfterClass: true
+ AfterControlStatement: Always
+ AfterEnum: true
+ AfterExternBlock: true
+ AfterFunction: true
+ AfterNamespace: false
+ AfterStruct: true
+ AfterUnion: true
+ BeforeCatch: true
+ BeforeElse: true
+ BeforeWhile: true
+ IndentBraces: false
+ SplitEmptyFunction: false
+ SplitEmptyNamespace: true
+ SplitEmptyRecord: false
 BreakBeforeBinaryOperators: All
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeComma
@@ -70,6 +73,7 @@ NamespaceIndentation: None
 PenaltyBreakBeforeFirstCallParameter: 0
 PenaltyBreakFirstLessLess: 0
 PenaltyReturnTypeOnItsOwnLine: 999999
+PenaltyIndentedWhitespace: 999999
 PointerAlignment: Middle
 PPIndentWidth: 0
 ReflowComments: true

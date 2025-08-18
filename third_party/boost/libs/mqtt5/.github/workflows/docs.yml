@@ -15,7 +15,7 @@ jobs:
     name: "Docs ${{ matrix.container }}"
 
     runs-on: ubuntu-latest
-    container: ubuntu:22.04
+    container: ubuntu:24.04
     defaults:
       run:
         shell: bash
@@ -29,8 +29,10 @@ jobs:
           apt-get update
           export DEBIAN_FRONTEND=noninteractive # for tzdata
           apt-get -y install --no-install-recommends \
-            doxygen docbook-xsl docutils-doc xsltproc wget ca-certificates g++ \
-            python3 python-is-python3 python3-jinja2 rsync git unzip
+            docbook docbook-xml docbook-xsl docutils-doc docutils-common \
+            doxygen xsltproc \
+            wget ca-certificates g++ rsync git unzip \
+            python3 python-is-python3 python3-jinja2
 
       - name: Setup Boost
         run: |

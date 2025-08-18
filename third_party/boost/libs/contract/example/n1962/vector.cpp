@@ -6,7 +6,7 @@
 
 //[n1962_vector
 #include <boost/contract.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/optional.hpp>
 #include <boost/algorithm/cxx11/all_of.hpp>
 #include <boost/type_traits/has_equal_to.hpp>

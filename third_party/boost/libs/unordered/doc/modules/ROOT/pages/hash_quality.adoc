@@ -43,7 +43,8 @@ struct my_string_hash_function
 ----
 
 By setting the
-`xref:reference/hash_traits.adoc#hash_traits_hash_is_avalanching[hash_is_avalanching]` trait, we inform Boost.Unordered
+`link:../../../../container_hash/doc/html/hash.html#ref_hash_is_avalanchinghash[hash_is_avalanching]`
+trait, we inform Boost.Unordered
 that `my_string_hash_function` is of sufficient quality to be used directly without
 any post-mixing safety net. This comes at the risk of degraded performance in the
 cases where the hash function is not as well-behaved as we've declared.

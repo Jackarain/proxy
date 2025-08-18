@@ -79,9 +79,9 @@ BOOST_CONTRACT_DETAIL_DECLINLINE
 void assertion_failure::init() {
     std::ostringstream text;
     text << "assertion";
-    if(std::string(code_) != "") text << " \"" << code_ << "\"";
+    if(!std::string(code_).empty()) text << " \"" << code_ << "\"";
     text << " failed";
-    if(std::string(file_) != "") {
+    if(!std::string(file_).empty()) {
         text << ": file \"" << file_ << "\"";
         if(line_ != 0) text << ", line " << line_;
     }
@@ -101,7 +101,7 @@ namespace exception_ {
 
     template<failure_key Key>
     void default_handler() {
-        std::string k = "";
+        std::string k;
         switch(Key) {
             case check_failure_key: k = "check "; break;
             case pre_failure_key: k = "precondition "; break;

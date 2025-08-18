@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2015.
+ *          Copyright Andrey Semashev 2007 - 2025.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -17,7 +17,9 @@
 #include <cstddef>
 #include <new>
 #include <chrono>
+#include <memory>
 #include <vector>
+#include <random>
 #include <algorithm>
 #include <boost/cstdint.hpp>
 #include <boost/assert.hpp>
@@ -27,7 +29,6 @@
 #include <boost/smart_ptr/shared_ptr.hpp>
 #include <boost/smart_ptr/make_shared_object.hpp>
 #include <boost/range/iterator_range_core.hpp>
-#include <boost/random/taus88.hpp>
 #include <boost/move/core.hpp>
 #include <boost/move/utility_core.hpp>
 #include <boost/log/core/core.hpp>
@@ -44,7 +45,7 @@
 #include <boost/log/detail/light_rw_mutex.hpp>
 #include <boost/log/detail/thread_id.hpp>
 #endif
-#include "unique_ptr.hpp"
+#include "xorshift.hpp"
 #include "default_sink.hpp"
 #include "stateless_allocator.hpp"
 #include "alignment_gap_between.hpp"
@@ -239,7 +240,7 @@ public:
         //! Thread-specific attribute set
         attribute_set m_thread_attributes;
         //! Random number generator for shuffling
-        random::taus88 m_rng;
+        log::aux::xorshift64 m_rng;
 
         thread_data() : m_rng(get_random_seed())
         {
@@ -247,14 +248,27 @@ public:
 
     private:
         //! Creates a seed for RNG
-        static uint32_t get_random_seed()
+        static uint64_t get_random_seed()
         {
-            uint64_t now = static_cast< uint64_t >(std::chrono::system_clock::now().time_since_epoch().count());
-            uint32_t seed = static_cast< uint32_t >(now) ^ static_cast< uint32_t >(now >> 32u);
+            try
+            {
+                std::random_device rng;
+                std::uniform_int_distribution< uint64_t > distrib(1u);
+                return distrib(rng);
+            }
+            catch (...)
+            {
+                uint64_t seed;
+                do
+                {
+                    seed = static_cast< uint64_t >(std::chrono::system_clock::now().time_since_epoch().count());
 #if !defined(BOOST_LOG_NO_THREADS)
-            seed += static_cast< uint32_t >(log::aux::this_thread::get_id().native_id());
+                    seed += static_cast< uint64_t >(log::aux::this_thread::get_id().native_id()) * UINT64_C(0x2545F4914F6CDD1D);
 #endif
-            return seed;
+                }
+                while (seed == 0u);
+                return seed;
+            }
         }
     };
 
@@ -282,7 +296,7 @@ public:
 
 #else
     //! Thread-specific data
-    log::aux::unique_ptr< thread_data > m_thread_data;
+    std::unique_ptr< thread_data > m_thread_data;
 #endif
 
     //! The global state of logging
@@ -427,7 +441,7 @@ private:
         BOOST_LOG_EXPR_IF_MT(scoped_write_lock lock(m_mutex);)
         if (!m_thread_data.get())
         {
-            log::aux::unique_ptr< thread_data > p(new thread_data());
+            std::unique_ptr< thread_data > p(new thread_data());
             m_thread_data.reset(p.get());
 #if defined(BOOST_LOG_USE_COMPILER_TLS)
             m_thread_data_cache = p.release();

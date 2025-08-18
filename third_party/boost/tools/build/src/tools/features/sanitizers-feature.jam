@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::addr-doc[]
 
-[[bbv2.builtin.features.address-sanitizer]]`address-sanitizer`::
+[[b2.builtin.features.address-sanitizer]]`address-sanitizer`::
 *Allowed values:* `on`, `norecover`.
 +
 Enables address sanitizer. Value `norecover` disables recovery for the
@@ -21,7 +21,7 @@ feature.feature address-sanitizer
 
 #| tag::leak-doc[]
 
-[[bbv2.builtin.features.leak-sanitizer]]`leak-sanitizer`::
+[[b2.builtin.features.leak-sanitizer]]`leak-sanitizer`::
 *Allowed values:* `on`, `norecover`.
 +
 Enables leak sanitizer. Value `norecover` disables recovery for the
@@ -35,7 +35,7 @@ feature.feature leak-sanitizer
 
 #| tag::thread-doc[]
 
-[[bbv2.builtin.features.thread-sanitizer]]`thread-sanitizer`::
+[[b2.builtin.features.thread-sanitizer]]`thread-sanitizer`::
 *Allowed values:* `on`, `norecover`.
 +
 Enables thread sanitizer. Value `norecover` disables recovery for the
@@ -49,7 +49,7 @@ feature.feature thread-sanitizer
 
 #| tag::undef-doc[]
 
-[[bbv2.builtin.features.undefined-sanitizer]]`undefined-sanitizer`::
+[[b2.builtin.features.undefined-sanitizer]]`undefined-sanitizer`::
 *Allowed values:* `on`, `norecover`.
 +
 Enables undefined behavior sanitizer. Value `norecover` disables recovery for

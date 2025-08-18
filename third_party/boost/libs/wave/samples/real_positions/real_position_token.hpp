@@ -17,7 +17,7 @@
 #include <boost/wave/util/file_position.hpp>
 #include <boost/wave/token_ids.hpp>  
 #include <boost/wave/language_support.hpp>
-#include <boost/detail/atomic_count.hpp>
+#include <boost/smart_ptr/detail/atomic_count.hpp>
 #include <boost/optional.hpp>
 
 ///////////////////////////////////////////////////////////////////////////////

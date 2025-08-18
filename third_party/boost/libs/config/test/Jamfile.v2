@@ -10,15 +10,18 @@
 
 import feature ;
 import testing ;
+import notfile ;
 
 project
     : requirements
       <toolset>gcc:<cxxflags>-Wno-deprecated-declarations
+      <library>/boost/core//boost_core
 ;
 
 
 import modules ;
-import ../checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 
 local is_unix = [ modules.peek : UNIX ] ;
 
@@ -87,9 +90,9 @@ test-suite config
      [ run config_info.cpp : : : <test-info>always_show_run_output <exception-handling>off
           <target-os>vxworks:<build>no
           : config_info_no_except ]
-     [ run math_info.cpp : : : <test-info>always_show_run_output <toolset>borland:<runtime-link>static <toolset>borland:<link>static ]
+     [ run math_info.cpp : : : <library>/boost/type_traits//boost_type_traits <test-info>always_show_run_output <toolset>borland:<runtime-link>static <toolset>borland:<link>static ]
      [ run abi/abi_test.cpp abi/main.cpp ]
-     [ run limits_test.cpp ]
+     [ run limits_test.cpp : : : <library>/boost/detail//boost_detail ]
      [ run link/main.cpp link//link_test
           : #args
           : #input-files
@@ -98,7 +101,7 @@ test-suite config
           <threading>single
           <define>BOOST_DYN_LINK=1
           <define>BOOST_CONFIG_NO_LIB=1
-          <target-os>vxworks:<link>shared  
+          <target-os>vxworks:<link>shared
           :
           config_link_test
     ]
@@ -124,7 +127,7 @@ explicit has_clang_implicit_fallthrough ;
 
 exe config_info_printer : config_info.cpp ;
 explicit config_info_printer ;
-exe math_info_printer : math_info.cpp ;
+exe math_info_printer : math_info.cpp : <library>/boost/type_traits//boost_type_traits ;
 explicit math_info_printer ;
 
 actions print-run

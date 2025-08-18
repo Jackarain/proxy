@@ -734,6 +734,11 @@
       <xsl:value-of select="."/>
       <xsl:text>]</xsl:text>
     </xsl:when>
+    <xsl:when test="@refid = 'async_op_requirements'">
+      <xsl:text>[link boost_asio.reference.asynchronous_operations </xsl:text>
+      <xsl:value-of select="."/>
+      <xsl:text>]</xsl:text>
+    </xsl:when>
     <xsl:when test="@refid = 'async_result_requirements'">
       <xsl:text>[link boost_asio.reference.asynchronous_operations.completion_tokens_and_handlers </xsl:text>
       <xsl:value-of select="."/>
@@ -876,6 +881,15 @@
       <xsl:text>[^boost/asio/ssl.hpp]</xsl:text>
     </xsl:when>
     <xsl:when test="contains($file, 'boost/asio/spawn')">
+      <xsl:text>None</xsl:text>
+    </xsl:when>
+    <xsl:when test="contains($file, 'boost/asio/basic_deadline_timer')">
+      <xsl:text>None</xsl:text>
+    </xsl:when>
+    <xsl:when test="contains($file, 'boost/asio/deadline_timer')">
+      <xsl:text>None</xsl:text>
+    </xsl:when>
+    <xsl:when test="contains($file, 'boost/asio/time_traits')">
       <xsl:text>None</xsl:text>
     </xsl:when>
     <xsl:when test="contains($file, 'boost/asio/experimental')">

@@ -239,7 +239,7 @@ erase(
     return u_->edit_params(
         first.it_,
         last.it_,
-        detail::query_iter(s));
+        detail::query_string_iter(s));
 }
 
 } // urls

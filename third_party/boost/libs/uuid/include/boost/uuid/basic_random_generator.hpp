@@ -56,14 +56,9 @@ public:
     {
         UniformRandomNumberGenerator& gen = p_? *p_: g_;
 
-        std::uniform_int_distribution<std::uint32_t> dist;
-
         result_type u;
 
-        detail::store_native_u32( u.data +  0, dist( gen ) );
-        detail::store_native_u32( u.data +  4, dist( gen ) );
-        detail::store_native_u32( u.data +  8, dist( gen ) );
-        detail::store_native_u32( u.data + 12, dist( gen ) );
+        fill_data( gen, u );
 
         // set variant
         // must be 0b10xxxxxx
@@ -79,6 +74,38 @@ public:
     }
 
 private:
+
+    template<class URNG> static void fill_data_impl( URNG& gen, uuid& u, std::false_type, std::false_type )
+    {
+        std::uniform_int_distribution<std::uint32_t> dist;
+
+        detail::store_little_u32( u.data +  0, dist( gen ) );
+        detail::store_little_u32( u.data +  4, dist( gen ) );
+        detail::store_little_u32( u.data +  8, dist( gen ) );
+        detail::store_little_u32( u.data + 12, dist( gen ) );
+    }
+
+    template<class URNG> static void fill_data_impl( URNG& gen, uuid& u, std::true_type, std::false_type )
+    {
+        detail::store_little_u32( u.data +  0, static_cast<std::uint32_t>( gen() ) );
+        detail::store_little_u32( u.data +  4, static_cast<std::uint32_t>( gen() ) );
+        detail::store_little_u32( u.data +  8, static_cast<std::uint32_t>( gen() ) );
+        detail::store_little_u32( u.data + 12, static_cast<std::uint32_t>( gen() ) );
+    }
+
+    template<class URNG> static void fill_data_impl( URNG& gen, uuid& u, std::false_type, std::true_type )
+    {
+        detail::store_little_u64( u.data +  0, static_cast<std::uint64_t>( gen() ) );
+        detail::store_little_u64( u.data +  8, static_cast<std::uint64_t>( gen() ) );
+    }
+
+    template<class URNG> static void fill_data( URNG& gen, uuid& u )
+    {
+        fill_data_impl( gen, u,
+            std::integral_constant<bool, (URNG::min)() == 0 && (URNG::max)() == static_cast<std::uint32_t>( -1 )>(),
+            std::integral_constant<bool, (URNG::min)() == 0 && (URNG::max)() == static_cast<std::uint64_t>( -1 )>()
+        );
+    }
 
     // Detect whether UniformRandomNumberGenerator has a seed() method which indicates that
     // it is a PseudoRandomNumberGenerator and needs a seed to initialize it.  This allows

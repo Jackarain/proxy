@@ -42,6 +42,10 @@
 #pragma warning(disable: 4456)
 // declaration of 'A' hides global declaration
 #pragma warning(disable: 4459)
+// copy constructor was implicitly defined as deleted because a base class copy constructor is inaccessible or deleted
+#pragma warning(disable: 4625)
+// assignment operator was implicitly defined as deleted because a base class assignment operator is inaccessible or deleted
+#pragma warning(disable: 4626)
 // 'X': This function or variable may be unsafe. Consider using Y instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
 #pragma warning(disable: 4996)
 

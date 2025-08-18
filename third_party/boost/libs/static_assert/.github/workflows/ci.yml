@@ -1,0 +1,152 @@
+name: GitHub Actions CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - develop
+      - githubactions*
+      - feature/**
+      - fix/**
+      - pr/**
+
+jobs:
+  cpp-matrix:
+    runs-on: ubuntu-latest
+    name: Generate Test Matrix
+    outputs:
+      matrix: ${{ steps.cpp-matrix.outputs.matrix }}
+    steps:
+      - name: Generate Test Matrix
+        uses: alandefreitas/cpp-actions/cpp-matrix@master
+        id: cpp-matrix
+        with:
+          extra-values: |
+            boost-lib: static_assert
+            scan-dirs: test
+          compilers: |
+            gcc >= 4.8
+            clang >= 3.5
+            msvc >= 14.0
+            apple-clang *
+            mingw *
+            clang-cl *
+          subrange-policy: |
+            msvc: one-per-minor
+          standards: ">=11"
+          latest-factors: |
+            gcc Asan TSan UBSan
+            clang BoundsSan IntSan
+          factors: |
+            gcc Shared
+            msvc Shared x86
+            mingw Shared
+          trace-commands: true
+  build:
+    needs: cpp-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.cpp-matrix.outputs.matrix) }}
+
+    # use matrix entries
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container }}
+
+    steps:
+      # GitHub Actions no longer support older containers.
+      # The workaround is to install our own Node.js for the actions.
+      - name: Patch Node
+        # The containers that need Node.js 20 will have volumes set up so that
+        # the Node.js 20 installation can go there.
+        if: ${{ matrix.container.volumes }}
+        run: |
+          set -x
+          apt-get update
+          apt-get install -y curl xz-utils
+          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+          ldd /__e/node20/bin/node
+
+      - name: Setup C++ Compiler
+        uses: alandefreitas/cpp-actions/setup-cpp@master
+        id: setup-cpp
+        with:
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
+
+      - name: Install Packages
+        if: matrix.install != ''
+        uses: alandefreitas/cpp-actions/package-install@master
+        id: package-install
+        with:
+          apt-get: ${{ matrix.install }}
+
+      - name: Clone Library
+        uses: actions/checkout@v4
+
+      - name: Clone Boost
+        uses: alandefreitas/cpp-actions/boost-clone@master
+        id: boost-clone
+        with:
+          branch: ${{ (github.ref_name == 'master' && github.ref_name) || 'develop' }}
+          boost-dir: ../boost-root
+          scan-modules-dir: .
+          scan-modules-ignore: ${{ matrix.boost-lib }}
+          modules-scan-paths: ${{ matrix.scan-dirs }}
+          cache: false
+
+      - name: Copy Library
+        shell: bash
+        run: |
+          workspace_root=$(echo "$GITHUB_WORKSPACE" | sed 's/\\/\//g')
+          cd ../boost-root
+          rm -rf "libs/${{ matrix.boost-lib }}"
+          mkdir "libs/${{ matrix.boost-lib }}"
+          cp -r "$workspace_root"/* "libs/${{ matrix.boost-lib }}"
+
+      - name: B2 Workflow
+        uses: alandefreitas/cpp-actions/b2-workflow@master
+        with:
+          source-dir: ${{ steps.boost-clone.outputs.boost-dir }}
+          modules: ${{ matrix.boost-lib }}
+          toolset: ${{ matrix.b2-toolset }}
+          build-variant: ${{ matrix.build-type }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx || '' }}
+          cxxstd: ${{ matrix.cxxstd }}
+          address-model: ${{ matrix.address-model }}
+          asan: ${{ matrix.asan }}
+          ubsan: ${{ matrix.ubsan }}
+          tsan: ${{ matrix.tsan }}
+          shared: ${{ matrix.shared }}
+          abbreviate-paths: false
+          hash: true
+          debug-configuration: true
+          trace-commands: true
+
+      - name: CMake Workflow
+        uses: alandefreitas/cpp-actions/cmake-workflow@master
+        with:
+          source-dir: ${{ steps.boost-clone.outputs.boost-dir }}/libs/${{ matrix.boost-lib }}
+          build-dir: _build_dir_
+          run-tests: ignore
+          install: true
+          cmake-version: ">=3.31"
+          generator: ${{ matrix.generator }}
+          generator-toolset: ${{ matrix.generator-toolset }}
+          toolchain: ${{ steps.package-install.outputs.vcpkg-toolchain }}
+          build-type: ${{ matrix.build-type }}
+          install-prefix: .local
+          cxxstd: ${{ matrix.cxxstd }}
+          cc: ${{ steps.setup-cpp.outputs.cc }}
+          ccflags: ${{ matrix.ccflags }}
+          cxx: ${{ steps.setup-cpp.outputs.cxx }}
+          cxxflags: ${{ matrix.cxxflags }}
+          shared: ${{ matrix.shared }}
+          extra-args:
+            "${{ ( !matrix.no-deps && format('-D BOOST_SRC_DIR=\"{0}\"', steps.boost-clone.outputs.boost-dir)\
+            \ ) || '' }} \n${{ ( matrix.no-deps && '-D CPP_ACTIONS_NO_DEPS=ON' ) || '' }}\n"
+          export-compile-commands: ${{ matrix.time-trace }}
+          trace-commands: true

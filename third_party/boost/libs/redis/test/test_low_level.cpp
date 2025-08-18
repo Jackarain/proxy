@@ -4,26 +4,24 @@
  * accompanying file LICENSE.txt)
  */
 
-#include <boost/redis/request.hpp>
-#include <boost/redis/response.hpp>
 #include <boost/redis/adapter/adapt.hpp>
+#include <boost/redis/request.hpp>
 #include <boost/redis/resp3/parser.hpp>
+#include <boost/redis/response.hpp>
 
-#define BOOST_TEST_MODULE low level
+#define BOOST_TEST_MODULE low_level
 #include <boost/test/included/unit_test.hpp>
 
 #include <map>
-#include <iostream>
 #include <optional>
 #include <sstream>
 
 // TODO: Test with empty strings.
 
-namespace std
-{
-auto operator==(boost::redis::ignore_t, boost::redis::ignore_t) noexcept {return true;}
-auto operator!=(boost::redis::ignore_t, boost::redis::ignore_t) noexcept {return false;}
-}
+namespace std {
+auto operator==(boost::redis::ignore_t, boost::redis::ignore_t) noexcept { return true; }
+auto operator!=(boost::redis::ignore_t, boost::redis::ignore_t) noexcept { return false; }
+}  // namespace std
 
 namespace redis = boost::redis;
 namespace resp3 = boost::redis::resp3;
@@ -56,12 +54,20 @@ using array_type = result<std::array<int, 3>>;
 using array_type2 = result<std::array<int, 1>>;
 
 // Map
-using map_type =    result<std::map<std::string, std::string>>;
-using mmap_type =   result<std::multimap<std::string, std::string>>;
-using umap_type =   result<std::unordered_map<std::string, std::string>>;
-using mumap_type =  result<std::unordered_multimap<std::string, std::string>>;
+using map_type = result<std::map<std::string, std::string>>;
+using mmap_type = result<std::multimap<std::string, std::string>>;
+using umap_type = result<std::unordered_map<std::string, std::string>>;
+using mumap_type = result<std::unordered_multimap<std::string, std::string>>;
 using op_map_type = result<std::optional<std::map<std::string, std::string>>>;
-using tuple8_type = result<response<std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string>>;
+using tuple8_type = result<response<
+   std::string,
+   std::string,
+   std::string,
+   std::string,
+   std::string,
+   std::string,
+   std::string,
+   std::string>>;
 
 // Null
 using op_type_01 = result<std::optional<bool>>;
@@ -85,7 +91,11 @@ struct expect {
 };
 
 template <class Result>
-auto make_expected(std::string in, Result expected, error_code ec = {}, resp3::type error_type = resp3::type::invalid)
+auto make_expected(
+   std::string in,
+   Result expected,
+   error_code ec = {},
+   resp3::type error_type = resp3::type::invalid)
 {
    return expect<Result>{in, expected, ec, error_type};
 }
@@ -99,7 +109,7 @@ void test_sync(expect<Result> e)
    error_code ec;
    auto const res = parse(p, e.in, adapter, ec);
 
-   BOOST_TEST(res); // None of these tests need more data.
+   BOOST_TEST(res);  // None of these tests need more data.
 
    if (ec) {
       BOOST_CHECK_EQUAL(ec, e.ec);
@@ -123,7 +133,7 @@ void test_sync2(expect<Result> e)
    error_code ec;
    auto const res = parse(p, e.in, adapter, ec);
 
-   BOOST_TEST(res); // None of these tests need more data.
+   BOOST_TEST(res);  // None of these tests need more data.
    BOOST_CHECK_EQUAL(ec, e.ec);
 }
 
@@ -132,8 +142,6 @@ auto make_blob()
    std::string str(100000, 'a');
    str[1000] = '\r';
    str[1001] = '\n';
-   return str;
-
    return str;
 }
 
@@ -153,6 +161,8 @@ auto make_blob_string(std::string const& b)
 
 result<std::optional<int>> op_int_ok = 11;
 result<std::optional<bool>> op_bool_ok = true;
+
+// clang-format off
 
 // TODO: Test a streamed string that is not finished with a string of
 // size 0 but other command comes in.
@@ -461,12 +471,11 @@ generic_response const attr_e1b
    test(make_expected(S10b, node_type{{resp3::type::simple_error, 1UL, 0UL, {""}}}, {}, resp3::type::simple_error)); \
    test(make_expected(S12a, node_type{{resp3::type::blob_error, 1UL, 0UL, {"SYNTAX invalid syntax"}}}, {}, resp3::type::blob_error));\
    test(make_expected(S12b, node_type{{resp3::type::blob_error, 1UL, 0UL, {}}}, {}, resp3::type::blob_error));\
-   test(make_expected(S12c, result<ignore_t>{}, boost::redis::error::resp3_blob_error));\
+   test(make_expected(S12c, result<ignore_t>{}, boost::redis::error::resp3_blob_error));
 
-BOOST_AUTO_TEST_CASE(sansio)
-{
-   NUMBER_TEST_CONDITIONS(test_sync)
-}
+// clang-format on
+
+BOOST_AUTO_TEST_CASE(sansio){NUMBER_TEST_CONDITIONS(test_sync)}
 
 BOOST_AUTO_TEST_CASE(ignore_adapter_simple_error)
 {
@@ -478,10 +487,7 @@ BOOST_AUTO_TEST_CASE(ignore_adapter_blob_error)
    test_sync2(make_expected(S12a, ignore, boost::redis::error::resp3_blob_error));
 }
 
-BOOST_AUTO_TEST_CASE(ignore_adapter_no_error)
-{
-   test_sync2(make_expected(S05b, ignore));
-}
+BOOST_AUTO_TEST_CASE(ignore_adapter_no_error) { test_sync2(make_expected(S05b, ignore)); }
 
 //-----------------------------------------------------------------------------------
 void check_error(char const* name, boost::redis::error ev)
@@ -492,10 +498,9 @@ void check_error(char const* name, boost::redis::error ev)
    BOOST_TEST(!ec.message().empty());
    BOOST_TEST(cat.equivalent(
       static_cast<std::underlying_type<boost::redis::error>::type>(ev),
-          ec.category().default_error_condition(
-              static_cast<std::underlying_type<boost::redis::error>::type>(ev))));
-   BOOST_TEST(cat.equivalent(ec,
-      static_cast<std::underlying_type<boost::redis::error>::type>(ev)));
+      ec.category().default_error_condition(
+         static_cast<std::underlying_type<boost::redis::error>::type>(ev))));
+   BOOST_TEST(cat.equivalent(ec, static_cast<std::underlying_type<boost::redis::error>::type>(ev)));
 }
 
 BOOST_AUTO_TEST_CASE(cover_error)
@@ -606,7 +611,7 @@ BOOST_AUTO_TEST_CASE(adapter_as)
    result<std::set<std::string>> set;
    auto adapter = adapt2(set);
 
-   for (auto const& e: set_expected1a.value()) {
+   for (auto const& e : set_expected1a.value()) {
       error_code ec;
       adapter(e, ec);
    }

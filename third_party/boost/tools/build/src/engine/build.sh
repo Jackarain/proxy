@@ -65,8 +65,8 @@ You can specify the toolset as the argument, i.e.:
     ./build.sh [options] gcc
 
 Toolsets supported by this script are:
-    acc, clang, como, gcc, intel-darwin, intel-linux, kcc, kylix, mipspro,
-    pathscale, pgi, qcc, sun, sunpro, tru64cxx, vacpp
+    acc, clang, como, gcc, ibmcxx-clang, intel-darwin, intel-linux,
+    kcc, kylix, mipspro, pathscale, pgi, qcc, sun, sunpro, tru64cxx
 
 For any toolset you can override the path to the compiler with the '--cxx'
 option. You can also use additional flags for the compiler with the
@@ -223,20 +223,9 @@ check_toolset ()
     if test_toolset tru64cxx && test_uname OSF1 && test_compiler cc ; then B2_TOOLSET=mipspro ; return ${TRUE} ; fi
     # QNX (qcc)
     if test_toolset qcc && test_uname QNX && test_compiler QCC ; then B2_TOOLSET=qcc ; return ${TRUE} ; fi
-    # Linux XL/VA C++ (xlcpp, vacpp)
-    if test_toolset xlcpp vacpp && test_uname Linux && test_compiler xlC_r ; then
-        if /usr/bin/lscpu | grep Byte | grep Little > /dev/null 2>&1 ; then
-            # Little endian linux
-            B2_TOOLSET=xlcpp
-            return ${TRUE}
-        else
-            # Big endian linux
-            B2_TOOLSET=vacpp
-            return ${TRUE}
-        fi
-    fi
-    # AIX VA C++ (vacpp)
-    if test_toolset vacpp && test_uname AIX && test_compiler xlC_r ; then B2_TOOLSET=vacpp ; return ${TRUE} ; fi
+    # AIX IBM Open XL (ibmcxx-clang)
+    IBMCXX=`ls -1 -r /opt/IBM/openxlC/17.*/bin/ibm-clang++_r`
+    if test_toolset ibmcxx-clang && test_uname AIX && test "" != "${IBMCXX}" && test_compiler "${IBMCXX}" ; then B2_TOOLSET=ibmcxx-clang ; return ${TRUE} ; fi
     # PGI (pgi)
     if test_toolset pgi && test_compiler pgc++ -std=c++11 ; then B2_TOOLSET=pgi ; return ${TRUE} ; fi
     # Pathscale C++ (pathscale)
@@ -335,16 +324,10 @@ case "${B2_TOOLSET}" in
         B2_CXXFLAGS_DEBUG="-O0 -g -static-intel"
     ;;
 
-    vacpp)
-        CXX_VERSION_OPT=${CXX_VERSION_OPT:--qversion}
-        B2_CXXFLAGS_RELEASE="-O3 -s -qstrict -qinline"
-        B2_CXXFLAGS_DEBUG="-g -qNOOPTimize -qnoinline -pg"
-    ;;
-
-    xlcpp)
-        CXX_VERSION_OPT=${CXX_VERSION_OPT:--qversion}
-        B2_CXXFLAGS_RELEASE="-s -O3 -qstrict -qinline"
-        B2_CXXFLAGS_DEBUG="-g -qNOOPTimize -qnoinline -pg"
+    ibmcxx-clang)
+        CXX_VERSION_OPT=${CXX_VERSION_OPT:---version}
+        B2_CXXFLAGS_RELEASE="-O3 -Wl,-s -Wno-deprecated-declarations"
+        B2_CXXFLAGS_DEBUG="-O0 -fno-inline -g -Wno-deprecated-declarations"
     ;;
 
     como)
@@ -472,7 +455,6 @@ md5.cpp \
 mem.cpp \
 modules.cpp \
 native.cpp \
-option.cpp \
 output.cpp \
 parse.cpp \
 pathnt.cpp \
@@ -488,6 +470,7 @@ timestamp.cpp \
 value.cpp \
 variable.cpp \
 w32_getreg.cpp \
+mod_args.cpp \
 mod_command_db.cpp \
 mod_db.cpp \
 mod_jam_builtin.cpp \

@@ -21,9 +21,10 @@ project
     # Warnings in dependencies
     <toolset>gcc:<cxxflags>"-Wno-unused-but-set-variable"
     <toolset>gcc:<cxxflags>"-Wno-maybe-uninitialized"
+    <toolset>gcc-15:<cxxflags>"-Wno-deprecated-declarations"
+    <toolset>gcc,<target-os>windows:<cxxflags>"-Wno-error=array-bounds"
     <toolset>clang:<cxxflags>"-Wno-unused-but-set-variable"
     <toolset>clang:<cxxflags>"-Wno-unused-parameter"
-    <toolset>gcc,<target-os>windows:<cxxflags>"-Wno-error=array-bounds"
     <toolset>clang:<cxxflags>"-Wno-unknown-warning-option"
     <toolset>clang-13:<cxxflags>"-Wno-unused-but-set-variable"
     <toolset>clang-14:<cxxflags>"-Wno-unused-but-set-variable"

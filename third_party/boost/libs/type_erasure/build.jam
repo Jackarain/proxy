@@ -1,0 +1,34 @@
+# Copyright René Ferdinand Rivera Morell 2023-2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/assert//boost_assert
+    /boost/config//boost_config
+    /boost/core//boost_core
+    /boost/fusion//boost_fusion
+    /boost/iterator//boost_iterator
+    /boost/mp11//boost_mp11
+    /boost/mpl//boost_mpl
+    /boost/preprocessor//boost_preprocessor
+    /boost/smart_ptr//boost_smart_ptr
+    /boost/throw_exception//boost_throw_exception
+    /boost/type_traits//boost_type_traits
+    /boost/typeof//boost_typeof
+    /boost/vmd//boost_vmd ;
+
+project /boost/type_erasure
+    ;
+
+explicit
+    [ alias boost_type_erasure : build//boost_type_erasure ]
+    [ alias all : boost_type_erasure example test ]
+    ;
+
+call-if : boost-library type_erasure
+    : install boost_type_erasure
+    ;
+

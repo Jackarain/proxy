@@ -439,7 +439,7 @@ BOOST_AUTO_TEST_CASE(client_disconnect) {
 
         // packets
         auto connect = encoders::encode_connect(
-            "", std::nullopt, std::nullopt, 60, false, {}, std::nullopt
+            "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
         );
         auto connack = encoders::encode_connack(false, uint8_t(0x00), {});
 

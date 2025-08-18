@@ -602,7 +602,7 @@ boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* la
     return boost::charconv::detail::to_chars_float_impl(first, last, static_cast<double>(value), fmt, precision);
 }
 
-#elif !defined(BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE)
+#elif !defined(BOOST_CHARCONV_UNSUPPORTED_LONG_DOUBLE) && !defined(BOOST_CHARCONV_LDBL_IS_FLOAT128)
 
 boost::charconv::to_chars_result boost::charconv::to_chars(char* first, char* last, long double value,
                                                            boost::charconv::chars_format fmt) noexcept

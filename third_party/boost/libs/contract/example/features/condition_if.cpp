@@ -6,7 +6,7 @@
 
 #include <boost/contract.hpp>
 #include <boost/type_traits/has_equal_to.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <vector>
 #include <functional>
 #include <cassert>

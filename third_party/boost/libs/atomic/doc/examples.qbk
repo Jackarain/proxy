@@ -27,12 +27,12 @@ soon as the reference counter reaches zero.
     mutable boost::atomic<int> refcount_;
     friend void intrusive_ptr_add_ref(const X * x)
     {
-      x->refcount_.fetch_add(1, boost::memory_order_relaxed);
+      x->refcount_.fetch_add(1, boost::memory_order::relaxed);
     }
     friend void intrusive_ptr_release(const X * x)
     {
-      if (x->refcount_.fetch_sub(1, boost::memory_order_release) == 1) {
-        boost::atomic_thread_fence(boost::memory_order_acquire);
+      if (x->refcount_.fetch_sub(1, boost::memory_order::release) == 1) {
+        boost::atomic_thread_fence(boost::memory_order::acquire);
         delete x;
       }
     }
@@ -51,7 +51,7 @@ soon as the reference counter reaches zero.
 [section Discussion]
 
 Increasing the reference counter can always be done with
-[^memory_order_relaxed]: New references to an object can only
+[^memory_order::relaxed]: New references to an object can only
 be formed from an existing reference, and passing an existing
 reference from one thread to another must already provide any
 required synchronization.
@@ -64,7 +64,7 @@ access to the object through this reference must obviously
 happened before), and an "acquire" operation before
 deleting the object.
 
-It would be possible to use [^memory_order_acq_rel] for the
+It would be possible to use [^memory_order::acq_rel] for the
 [^fetch_sub] operation, but this results in unneeded "acquire"
 operations when the reference counter does not yet reach zero
 and may impose a performance penalty.
@@ -97,13 +97,13 @@ unless you are certain that you understand the consequences.]
 
     void lock()
     {
-      while (state_.exchange(Locked, boost::memory_order_acquire) == Locked) {
+      while (state_.exchange(Locked, boost::memory_order::acquire) == Locked) {
         /* busy-wait */
       }
     }
     void unlock()
     {
-      state_.store(Unlocked, boost::memory_order_release);
+      state_.store(Unlocked, boost::memory_order::release);
     }
   };
 
@@ -135,10 +135,10 @@ way:
 
   lock()
   {
-    while (state_.exchange(Locked, boost::memory_order_relaxed) == Locked) {
+    while (state_.exchange(Locked, boost::memory_order::relaxed) == Locked) {
       /* busy-wait */
     }
-    atomic_thread_fence(boost::memory_order_acquire);
+    atomic_thread_fence(boost::memory_order::acquire);
   }
 
 This "optimization" is however a) useless and b) may in fact hurt:
@@ -172,13 +172,13 @@ object should be as light-weight as possible.
   public:
     static X * instance()
     {
-      X * tmp = instance_.load(boost::memory_order_consume);
+      X * tmp = instance_.load(boost::memory_order::consume);
       if (!tmp) {
         boost::mutex::scoped_lock guard(instantiation_mutex);
-        tmp = instance_.load(boost::memory_order_consume);
+        tmp = instance_.load(boost::memory_order::consume);
         if (!tmp) {
           tmp = new X;
-          instance_.store(tmp, boost::memory_order_release);
+          instance_.store(tmp, boost::memory_order::release);
         }
       }
       return tmp;
@@ -206,12 +206,12 @@ object should be as light-weight as possible.
 The mutex makes sure that only one instance of the object is
 ever created. The [^instance] method must make sure that any
 dereference of the object strictly "happens after" creating
-the instance in another thread. The use of [^memory_order_release]
-after creating and initializing the object and [^memory_order_consume]
+the instance in another thread. The use of [^memory_order::release]
+after creating and initializing the object and [^memory_order::consume]
 before dereferencing the object provides this guarantee.
 
-It would be permissible to use [^memory_order_acquire] instead of
-[^memory_order_consume], but this provides a stronger guarantee
+It would be permissible to use [^memory_order::acquire] instead of
+[^memory_order::consume], but this provides a stronger guarantee
 than is required since only operations depending on the value of
 the pointer need to be ordered.
 
@@ -241,21 +241,21 @@ or for communication with interrupt/signal handlers.
 
     bool push(const T & value)
     {
-      size_t head = head_.load(boost::memory_order_relaxed);
+      size_t head = head_.load(boost::memory_order::relaxed);
       size_t next_head = next(head);
-      if (next_head == tail_.load(boost::memory_order_acquire))
+      if (next_head == tail_.load(boost::memory_order::acquire))
         return false;
       ring_[head] = value;
-      head_.store(next_head, boost::memory_order_release);
+      head_.store(next_head, boost::memory_order::release);
       return true;
     }
     bool pop(T & value)
     {
-      size_t tail = tail_.load(boost::memory_order_relaxed);
-      if (tail == head_.load(boost::memory_order_acquire))
+      size_t tail = tail_.load(boost::memory_order::relaxed);
+      if (tail == head_.load(boost::memory_order::acquire))
         return false;
       value = ring_[tail];
-      tail_.store(next(tail), boost::memory_order_release);
+      tail_.store(next(tail), boost::memory_order::release);
       return true;
     }
   private:
@@ -326,10 +326,10 @@ retrieved and processed in FIFO order by a single consumer.
     {
       node * n = new node;
       n->data = data;
-      node * stale_head = head_.load(boost::memory_order_relaxed);
+      node * stale_head = head_.load(boost::memory_order::relaxed);
       do {
         n->next = stale_head;
-      } while (!head_.compare_exchange_weak(stale_head, n, boost::memory_order_release));
+      } while (!head_.compare_exchange_weak(stale_head, n, boost::memory_order::release));
     }
 
     node * pop_all(void)
@@ -349,7 +349,7 @@ retrieved and processed in FIFO order by a single consumer.
     // alternative interface if ordering is of no importance
     node * pop_all_reverse(void)
     {
-      return head_.exchange(0, boost::memory_order_consume);
+      return head_.exchange(0, boost::memory_order::consume);
     }
   private:
     boost::atomic<node *> head_;

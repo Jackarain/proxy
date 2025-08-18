@@ -53,6 +53,8 @@ Listing Brokers from different clusters may lead to inconsistencies between MQTT
 * *Assign a custom user-implemented authenticator:* The custom authentication will be used for __ENHANCED_AUTH__ ([refmem mqtt_client authenticator]).
 * *Defining CONNECT Packet Properties:* Specify properties that will be included in the __CONNECT__ packet sent during connection initiation (see [refmem mqtt_client connect_property] and [refmem mqtt_client connect_properties]).
 
+[note If the user does not set the `maximum_packet_size` CONNECT property, it defaults to `64KB`. This is the only CONNECT property with a default value. ]
+
 Firstly, we will specify the Broker we want to connect to using the [refmem mqtt_client brokers] function.
 This can be __HIVEMQ__'s public Broker available at `broker.hivemq.com`:1883.
 Additionally, we can set the Client Identifier using the [refmem mqtt_client credentials] function. This is not mandatory, as some Brokers allow anonymous connections.

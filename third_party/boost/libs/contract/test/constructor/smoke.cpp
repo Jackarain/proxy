@@ -13,7 +13,7 @@
 #include <boost/contract/assert.hpp>
 #include <boost/contract/old.hpp>
 #include <boost/contract/check.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/ref.hpp>
 #include <boost/detail/lightweight_test.hpp>
 #include <sstream>

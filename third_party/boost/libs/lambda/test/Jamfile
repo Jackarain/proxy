@@ -1,17 +1,19 @@
 # Lambda library
 
-# Copyright (C) 2001-2003 Jaakko Järvi
+# Copyright (C) 2001-2003 Jaakko Jï¿½rvi
 
-# Use, modification and distribution is subject to the Boost Software License, 
-# Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at 
-# http://www.boost.org/LICENSE_1_0.txt) 
+# Use, modification and distribution is subject to the Boost Software License,
+# Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
 
 # For more information, see http://www.boost.org/
 
 import testing ;
 
+project : requirements <library>/boost/lambda//boost_lambda ;
+
 run algorithm_test.cpp ;
-run bind_tests_advanced.cpp ;
+run bind_tests_advanced.cpp : : : <library>/boost/any//boost_any ;
 run bind_tests_simple.cpp ;
 run bind_tests_simple_f_refs.cpp ;
 run bll_and_function.cpp ;

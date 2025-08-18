@@ -215,8 +215,8 @@ public:
 
         auto host_ = as_<std::string>(+unreserved_)[to_(host)];
         auto port_ = as_<std::string>(':' >> +digit_)[to_(port)];
-        auto path_ = as_<std::string>(x3::char_('/') >> *unreserved_)[to_(path)];
-        auto uri_ = *x3::omit[x3::space] >> (host_ >> *port_ >> *path_) >>
+        auto path_ = as_<std::string>(+(x3::char_('/') >> *unreserved_))[to_(path)];
+        auto uri_ = *x3::omit[x3::space] >> (host_ >> -port_ >> -path_) >>
             (*x3::omit[x3::space] >> x3::omit[separator_ | x3::eoi]);
 
         for (auto b = hosts.begin(); b != hosts.end(); ) {

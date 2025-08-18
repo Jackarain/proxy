@@ -7,9 +7,7 @@
  /]
 
 [/===============]
-[#sec:value_init]
-[section Value Init]
-
+[section:value_init Value Init]
 [/===============]
 
 [section Introduction]
@@ -61,7 +59,7 @@ the syntax did not allow for a class that has an explicitly declared constructor
 The fourth form is the most generic form of them, as it can be used to initialize
 arithmetic types, class types, aggregates, pointers, and other types.
 The declaration,  `T4 var4 = T4()`, should be read as follows: First a temporary
-object is created, by `T4()`. This object is [link sec:valueinit value-initialized].
+object is created, by `T4()`. This object is [link utility.utilities.value_init.details.value_initialization value-initialized].
 Next the temporary object is copied to the named variable, `var4`. Afterwards,
 the temporary is destroyed. While the copying and the destruction are likely to
 be optimized away, C++ still requires the type `T4` to be __CopyConstructible__.
@@ -69,11 +67,11 @@ So `T4` needs to be ['both] __DefaultConstructible__ ['and] __CopyConstructible_
 
 A class may not be CopyConstructible, for example because it may have a
 private and undefined copy constructor, or because it may be derived from
-`boost::noncopyable`. Scott Meyers \[[link sec:references 2]\] explains why a
+`boost::noncopyable`. Scott Meyers \[[link utility.utilities.value_init.references 2]\] explains why a
 class would be defined like that.
 
 There is another, less obvious disadvantage to the fourth form, `T4 var4 = T4()`:
-It suffers from various [link sec:compiler_issues compiler issues], causing
+It suffers from various [link utility.utilities.value_init.details.compiler_issues compiler issues], causing
 a variable to be left uninitialized in some compiler specific cases.
 
 The template __value_initialized__ offers a generic way to initialize
@@ -103,13 +101,12 @@ but robust against the aforementioned compiler issues.
 
 [endsect]
 
-[#sec:details]
-[section Details]
+[section:details Details]
 
-The C++ standard \[[link sec:references 3]\] contains the definitions
+The C++ standard \[[link utility.utilities.value_init.references 3]\] contains the definitions
 of `zero-initialization` and `default-initialization`. Informally, zero-initialization
 means that the object is given the initial value `0` converted to the type and
-default-initialization means that [@https://en.cppreference.com/w/cpp/named_req/PODType POD] \[[link sec:references 4]\] types are zero-initialized,
+default-initialization means that [@https://en.cppreference.com/w/cpp/named_req/PODType POD] \[[link utility.utilities.value_init.references 4]\] types are zero-initialized,
 while non-POD class types are initialized with their corresponding default constructors.
 
 A ['declaration] can contain an ['initializer], which specifies the
@@ -136,8 +133,7 @@ foo ( __std_string__() ) ;
 // as indicated by the initializer ()
 ```
 
-[#sec:valueinit]
-[h5 value-initialization]
+[section:value_initialization value-initialization]
 
 The first [@http://www.open-std.org/JTC1/SC22/WG21/docs/cwg_defects.html Technical
 Corrigendum for the C++ Standard] (TC1), whose draft was released to the public in
@@ -173,8 +169,9 @@ eat ( int() ) ; // value-initialized
 eat ( __std_string__() ) ; // value-initialized
 ```
 
-[#sec:valueinitsyn]
-[h5 value-initialization syntax]
+[endsect]
+
+[section:syntax value-initialization syntax]
 
 Value initialization is specified using `()`. However, the empty set of
 parentheses is not permitted by the syntax of initializers because it is
@@ -224,8 +221,9 @@ This is the solution as it was supplied by earlier versions of the
 `__value_initialized__<T>` template class. Unfortunately this approach
 suffered from various compiler issues.
 
-[#sec:compiler_issues]
-[h5 Compiler issues]
+[endsect]
+
+[section:compiler_issues Compiler issues]
 
 Various compilers have not yet fully implemented value-initialization.
 So when an object should be ['value-initialized] according to the C++ Standard,
@@ -241,8 +239,6 @@ go wrong on various compilers.
 
 At the moment of writing, May 2010, the following reported issues regarding
 value-initialization are still there in current compiler releases:
-
-
 
 * [@https://connect.microsoft.com/VisualStudio/feedback/details/100744 Microsoft Visual Studio Feedback ID 100744, Value-initialization in new-expression]: Reported by Pavel Kuznetsov (MetaCommunications Engineering), 2005.
 * [@http://connect.microsoft.com/VisualStudio/feedback/details/484295 Microsoft Visual Studio Feedback ID 484295, VC++ does not value-initialize members of derived classes without user-declared constructor] Reported by Sylvester Hesp, 2009.
@@ -267,11 +263,11 @@ compiler defect macro] `BOOST_NO_COMPLETE_VALUE_INITIALIZATION`.
 
 [endsect]
 
-[#sec:types]
-[section Types and objects]
+[endsect]
 
-[#sec:val_init]
-[section `template class value_initialized<T>`]
+[section:types Types and objects]
+
+[section:val_init `template class value_initialized<T>`]
 
 ```
 namespace boost {
@@ -323,7 +319,7 @@ void swap ( __value_initialized__<T>& lhs, __value_initialized__<T>& rhs )
 ```
 
 An object of this template class is a `T`-wrapper convertible to `'T&'` whose
-wrapped object (data member of type `T`) is [link sec:valueinit value-initialized] upon default-initialization
+wrapped object (data member of type `T`) is [link utility.utilities.value_init.details.value_initialization value-initialized] upon default-initialization
 of this wrapper class:
 
 ```
@@ -338,7 +334,7 @@ assert( y == def ) ;
 
 The purpose of this wrapper is to provide a consistent syntax for value initialization
 of scalar, union and class types (POD and non-POD) since the correct syntax for value
-initialization varies (see [link sec:valueinitsyn value-initialization syntax]).
+initialization varies (see [link utility.utilities.value_init.details.syntax value-initialization syntax]).
 
 The wrapped object can be accessed either through the conversion operator
 `T&`, the member function `data()`, or the non-member function `get()`:
@@ -404,7 +400,7 @@ supports the idea of logical constness.
 
 ]
 
-[h5 Recommended practice: The non-member get() idiom]
+[section Recommended practice: The non-member get() idiom]
 
 The obscure behavior of being able to modify a non-`const`
 wrapped object from within a constant wrapper (as was supported by previous
@@ -426,8 +422,9 @@ get(cx_c) = 1; // ERROR: Cannot modify a const object
 
 [endsect]
 
-[#sec:initialized]
-[section `template class initialized<T>`]
+[endsect]
+
+[section:initialized `template class initialized<T>`]
 
 
 ```
@@ -491,8 +488,7 @@ direct-initialized, none of the two wrappers really needs to be used.
 
 [endsect]
 
-[#sec:initialized_value]
-[section `initialized_value`]
+[section:initialized_value `initialized_value`]
 
 ```
 namespace boost {
@@ -538,8 +534,7 @@ T var = __initialized_value__;
 [endsect]
 [endsect]
 
-[#sec:references]
-[section References]
+[section:references References]
 
 # Bjarne Stroustrup, Gabriel Dos Reis, and J. Stephen Adamczyk wrote various papers,
 proposing to extend the support for brace-enclosed ['initializer lists]
@@ -561,8 +556,7 @@ compiler-generated functions you do not want], [@http://www.aristeia.com/books.h
 [xinclude tmp/value_init_reference.xml]
 [/===============]
 
-[#sec:acknowledgements]
-[section Acknowledgements]
+[section:acknowledgements Acknowledgements]
 
 __value_initialized__ was developed by Fernando Cacciola, with help and suggestions
 from David Abrahams and Darin Adler.

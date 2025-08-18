@@ -11,7 +11,7 @@
 
 // most of the workarounds and headers we need are already in here:
 #include <boost/regex.hpp> 
-#include <boost/regex/v4/primary_transform.hpp>
+#include <boost/regex/v5/primary_transform.hpp>
 #include <assert.h>
 #include <boost/detail/lightweight_main.hpp>
 #include <iostream>
@@ -19,15 +19,6 @@
 
 #ifdef BOOST_INTEL
 #pragma warning(disable:1418 981 983 2259)
-#endif
-
-#ifdef BOOST_NO_STDC_NAMESPACE
-namespace std{
-   using ::strxfrm;
-#ifndef BOOST_NO_WREGEX
-   using ::wcsxfrm;
-#endif
-}
 #endif
 
 #include <iostream>

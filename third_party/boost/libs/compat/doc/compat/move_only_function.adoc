@@ -1,0 +1,252 @@
+////
+Copyright 2025 Christian Mazakas
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#move_only_function]
+# <boost/compat/move_only_function.hpp>
+:idprefix: ref_move_only_function_
+
+## Description
+
+The header `<boost/compat/move_only_function.hpp>` implements the {cpp}23 class https://en.cppreference.com/w/cpp/utility/functional/move_only_function.html[std::move_only_function].
+
+`move_only_function` is a polymorphic wrapper that stores and manages a https://en.cppreference.com/w/cpp/named_req/Callable[Callable], only requiring that the type supports move construction and move assignment.
+This is in contrast to the commonly used `std::function` which requires copyability of the underlying managed object.
+
+`move_only_function` supports every combination of `const`, `noexcept` and reference qualification (none, `&`, `&&`).
+
+## Example
+
+```cpp
+struct moveonly
+{
+    std::unique_ptr<int> p_ = std::make_unique<int>( 1234 );
+    auto operator()( int x ) noexcept { return *p_ + x; }
+};
+
+boost::compat::move_only_function<int( int ) noexcept> f( moveonly{} );
+std::cout << f( 4321 ) << std::endl;
+```
+
+## Synopsis
+
+```cpp
+namespace boost {
+namespace compat {
+
+template<class... S>
+class move_only_function;
+
+template< class T >
+struct in_place_type_t { explicit in_place_type_t() = default; };
+
+template<class R, class ...Args>
+class move_only_function<R( Args... ) /* cv */ /* ref */ noexcept( /* noex */)>
+{
+    move_only_function() noexcept;
+    move_only_function( std::nullptr_t ) noexcept;
+
+    template<class F>
+    move_only_function( F&& f );
+
+    template<class T, class ...CArgs>
+    explicit move_only_function( in_place_type_t<T>, CArgs&& ... args );
+
+    template<class T, class U, class ...CArgs>
+    explicit move_only_function( in_place_type_t<T>,
+                                 std::initializer_list<U> il, CArgs&& ... args );
+
+    move_only_function( move_only_function const& ) = delete;
+    move_only_function( move_only_function&& ) = default;
+
+    ~move_only_function() = default;
+
+    move_only_function& operator=( move_only_function&& rhs );
+    move_only_function& operator=( std::nullptr_t ) noexcept;
+    template<class F> move_only_function& operator=( F&& f );
+
+    friend bool operator==( move_only_function const& fn, std::nullptr_t ) noexcept;
+    friend bool operator!=( move_only_function const& fn, std::nullptr_t ) noexcept;
+
+    void swap( move_only_function& rhs ) noexcept;
+    friend void swap( move_only_function& lhs, move_only_function& rhs ) noexcept;
+
+    explicit operator bool() const noexcept;
+
+    R operator()( Args... args ) /* cv */ /* ref */ noexcept( /* noex */ );
+};
+
+} // namespace compat
+} // namespace boost
+
+```
+
+## Constructors
+
+### Default Constructor
+
+```cpp
+move_only_function() noexcept;
+```
+
+[horizontal]
+Effects::
+Constructs an empty `move_only_function` which manages no object.
+
+### Null Constructor
+
+```cpp
+move_only_function( std::nullptr_t ) noexcept;
+```
+
+[horizontal]
+Effects::
+Explicitly constructs an empty `move_only_function` using a nullptr value. Equivalent to default construction.
+
+### Object Constructor
+
+```cpp
+template<class F>
+move_only_function( F&& f );
+```
+
+[horizontal]
+Effects:;; Given `using VT = decay_t<F>`, directly constructs an instance of `VT` using `forward<F>(f)` and stores it as the target object. +
++
+If `F` is an empty function pointer, pointer-to-member or specialization of `move_only_function` then the constructed `move_only_function` is empty.
+Constraints:;;
++
+--
+* `remove_cv_ref<F>` is not the same type as `move_only_function`
+* `remove_cv_ref<F>` is not a specialization of `in_place_type_t`
+* `VT` must be callable with the provided cvref qualifiers and the provided argument types
+--
+
+### In-Place Constructor
+
+```cpp
+template<class T, class ...CArgs>
+explicit move_only_function( in_place_type_t<T>, CArgs&& ... args );
+```
+
+[horizontal]
+Effects:;; Constructs an object of type `T` using the provided args directly, storing it as the target object.
+Constraints:;;
++
+--
+* `is_constructible_v<T, CArgs...>` must be true
+* `T` must be callable with the provided cvref qualifiers and the provided argument types
+--
+
+### List In-Place Constructor
+
+```cpp
+template<class T, class U, class ...CArgs>
+explicit move_only_function( in_place_type_t<T>,
+                             std::initializer_list<U> il, CArgs&& ... args );
+```
+
+[horizontal]
+Effects:;; Constructs an object of type `T` using the provided initializer_list and args directly, storing it as the target Callable.
+Constraints:;;
++
+--
+* `is_constructible_v<T, std::initializer_list<U>&, CArgs...>` must be true
+* `T` must be callable with the provided cvref qualifiers and the provided argument types
+--
+
+### Move Constructor
+
+```cpp
+move_only_function( move_only_function&& f ) = default;
+```
+
+[horizontal]
+Effects::
+Tranfers ownership of the object managed by `f` to `*this`. After this operation completes, `f` is empty and manages no object.
+
+## Assignment
+
+### Move Assignment
+
+```cpp
+move_only_function& operator=( move_only_function&& rhs );
+```
+
+[horizontal]
+Effects:;; Releases the currently managed object and takes ownership of the object managed by `rhs`, if applicable.
+`rhs` is empty after move.
+
+### Null Assigment
+
+```cpp
+move_only_function& operator=( std::nullptr_t ) noexcept;
+```
+
+[horizontal]
+Effects:;; Releases the currently managed object, if applicable.
+
+### Callable Assignment
+
+```cpp
+template<class F> move_only_function& operator=( F&& f );
+```
+
+[horizontal]
+Effects:;; Releases the currently managed object and then does the equivalent of: `move_only_function(std::forward<F>(f)).swap(*this)`.
+
+## Utility
+
+### Null Equality
+
+```cpp
+friend bool operator==( move_only_function const& fn, std::nullptr_t ) noexcept;
+friend bool operator!=( move_only_function const& fn, std::nullptr_t ) noexcept;
+```
+
+[horizontal]
+Effects:;; Returns whether or not `fn` contains a target object.
+
+### Swap
+
+```cpp
+void swap( move_only_function& rhs ) noexcept;
+friend void swap( move_only_function& lhs, move_only_function& rhs ) noexcept;
+```
+
+[horizontal]
+Effects:;; Exchanges the managed objects.
+
+## Invocation
+
+### Boolean Conversion
+
+```cpp
+explicit operator bool() const noexcept;
+```
+
+[horizontal]
+Effects:;; Returns `true` if `*this` is managing an object, or `false` if `*this` is empty.
+
+### Call Operator
+
+```cpp
+R operator()( Args... args ) /* cv */ /* ref */ noexcept( /* noex */ );
+```
+
+[horizontal]
+Preconditions:;; `*this` currently manages an object.
+Effects:;; Invokes the underlying target object. Equivalent to:
++
+--
+```cpp
+return INVOKE<R>(static_cast<F inv-quals>(f), std::forward<Args>(args)...);
+```
+
+where `f` is the target object, and _inv-quals_ is defined by the standard:
+
+* If _ref_ is empty, let _inv-quals_ be _cv&_,
+* otherwise, let _inv-quals_ be _cv ref_.
+--

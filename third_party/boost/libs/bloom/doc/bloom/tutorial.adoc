@@ -1,0 +1,349 @@
+[#tutorial]
+= Tutorial
+
+:idprefix: tutorial_
+
+A `boost::bloom::filter` can be regarded as a bit array divided into _subarrays_ that
+are selected pseudo-randomly (based on a hash function) upon insertion:
+each of the subarrays is passed to a _subfilter_ that marks several of its bits according
+to some associated strategy.
+
+Note that although `boost::bloom::filter` mimics the interface of a container
+and provides operations such as `insert`, it is actually _not_ a
+container: for instance, insertion does not involve the actual storage
+of the element in the data stucture, but merely sets some bits in the internal
+array based on the hash value of the element.
+
+== Filter Definition
+
+[listing,subs="+macros,+quotes"]
+-----
+template<
+  typename T, std::size_t K,
+  typename Subfilter = block<unsigned char, 1>, std::size_t Stride = 0,
+  typename Hash = boost::hash<T>,
+  typename Allocator = std::allocator<unsigned char>  
+>
+class filter;
+-----
+
+* `T`: Type of the elements inserted.
+* `K`: Number of subarrays marked per insertion.
+* `xref:tutorial_subfilter[Subfilter]`: Type of subfilter used.
+* `xref:tutorial_stride[Stride`]: Distance in bytes between the initial positions of consecutive subarrays.
+* `xref:tutorial_hash[Hash]`: A hash function for `T`.
+* `Allocator`: An allocator for `unsigned char`.
+
+=== `Subfilter`
+
+A subfilter defines the local strategy for setting or checking bits within
+a selected subarray of the bit array. It determines how many bits are
+modified per operation, how they are arranged in memory, and how memory is accessed.
+The following subfilters are provided:
+
+++++
+<div style="overflow-x: auto;">
+++++
+[options="header"]
+|===
+| Subfilter | Description | Pros | Cons
+
+| `block<Block, K'>`
+| Sets `K'` bits in a subarray of type `Block`
+| Very fast access time
+| FPR is worse (higher) the smaller `Block` is
+
+| `multiblock<Block, K'>`
+| Sets one bit in each of the elements of a `Block[K']` subarray
+| Better (lower) FPR than `block<Block, K'>` for the same `Block` type
+| Performance may worsen if cacheline boundaries are crossed when accessing the subarray
+
+| `fast_multiblock32<K'>`
+| Statistically equivalent to `multiblock<uint32_t, K'>`, but uses
+faster SIMD-based algorithms when SSE2, AVX2 or Neon are enabled at
+compile time
+| Always prefer it to `multiblock<uint32_t, K'>` when SSE2/AVX2/Neon is available
+| FPR is worse (higher) than `fast_multiblock64<K'>` for the same `K'`
+
+| `fast_multiblock64<K'>`
+| Statistically equivalent to `multiblock<uint64_t, K'>`, but uses a
+faster SIMD-based algorithm when AVX2 is enabled at compile time
+| Always prefer it to `multiblock<uint64_t, K'>` when AVX2 is available
+| Slower than `fast_multiblock32<K'>` for the same `K'`
+|===
+++++
+</div>
+++++
+
+In the table above, `Block` can be an unsigned integral type
+(e.g. `unsigned char`, `uint32_t`, `uint64_t`), or
+an array of 2^`N`^ unsigned integrals (e.g. `uint64_t[8]`). In general,
+the wider `Block` is, the better (lower) the resulting FPR, but
+cache locality worsens and performance may suffer as a result.
+
+Note that the total number of of bits set/checked for a
+`boost::bloom::filter<T, K, _subfilter_<..., K'>>` is `K * K'`. The
+default configuration `boost::bloom::filter<T, K>` = 
+`boost::bloom::filter<T, K, block<unsigned char, 1>>`, which corresponds to a
+xref:primer_implementation[classical Bloom filter], has the best (lowest) FPR among all filters
+with the same number of bits per operation, but is also the slowest: a new
+subarray is accessed for each bit set/checked. Consult the
+xref:benchmarks[benchmarks section] to see different tradeoffs between FPR and
+performance.
+
+Once a subfilter have been selected, the parameter `K'` can be tuned
+to its optimum value (minimum FPR) if the number of elements that will be inserted is
+known in advance, as explained in a xref:configuration[dedicated section];
+otherwise, low values of `K'` will generally be faster and preferred to
+higher values as long as the resulting FPR is at acceptable levels.
+
+=== `Stride`
+
+As we have seen, `Subfilter` defines the subarray (`Block` in the case of
+`block<Block, K'>`, `Block[K']` for `multiblock<Block, K'>`) used by
+`boost::bloom::filter`: contiguous portions of the underlying bit array
+are then accessed and treated as those subarrays. The `Stride` parameter
+controls the distance in bytes between the initial positions of
+consecutive subarrays.
+
+When the default value 0 is used, the stride is automatically set
+to the size of the subarrays, and so there's no overlapping between them.
+If `Stride` is set to a smaller value than that size, contiguous
+subarrays superimpose on one another: the level of overlap is larger
+for smaller values of `Stride`, with maximum overlap happening when
+`Stride` is 1 byte.
+
+image::stride.png[align=center, title="Two different configurations of `Stride`: (a) non-overlapping subarrays, (b) overlapping subarrays.+++<br/>+++Each subarray is associated to the stride of the same color."]
+
+As it happens, overlapping improves (decreases) the resulting FPR
+with respect to the non-overlapping case, the tradeoff being that
+subarrays may not be aligned in memory, which can impact performance
+negatively.
+
+=== `Hash`
+
+Unlike other Bloom filter implementations requiring several hash functions per operation,
+`boost::bloom::filter` uses only one.
+By default, link:../../../container_hash/index.html[Boost.ContainerHash] is used.
+Consult this library's link:../../../container_hash/doc/html/hash.html#user[dedicated section]
+if you need to extend `boost::hash` for your own types.
+
+When the provided hash function is of sufficient quality, it is used
+as is; otherwise, a bit-mixing post-process is applied to hash values that improves
+their statistical properties so that the resulting FPR approaches its
+theoretical limit. The hash function is determined to be of high quality
+(more precisely, to have the so-called _avalanching_ property) via the
+`link:../../../container_hash/doc/html/hash.html#ref_hash_is_avalanchinghash[boost::hash_is_avalanching]`
+trait.
+
+== Capacity
+
+The size of the filter's internal array is specified at construction time:
+
+[source,subs="+macros,+quotes"]
+-----
+using filter = boost::bloom::filter<std::string, 8>;
+filter f(1'000'000); // array of 1'000'000 **bits**
+std::cout << f.capacity(); // >= 1'000'000
+-----
+
+Note that `boost::bloom::filter` default constructor specifies a capacity
+of zero, which in general won't be of much use -- the assigned array
+is null.
+
+Instead of specifying the array's capacity directly, we can let the library
+figure it out based on the number of elements we plan to insert and the
+desired FPR:
+
+[source]
+-----
+// we'll insert 100'000 elements and want a FPR ~ 1%
+filter f(100'000, 0.01);
+
+// this is equivalent
+filter f2(filter::capacity_for(100'000, 0.01));
+-----
+
+Be careful when the FPR specified is very small, as the resulting capacity
+may be too large to fit in memory:
+
+[source]
+-----
+// resulting capacity ~ 1.4E12, out of memory std::bad_alloc is thrown
+filter f3(100'000, 1E-50);
+-----
+
+Once a filter is constructed, its array is fixed (for instance, it won't
+grow dynamically as elements are inserted). The only way to change it is
+by assignment/swapping from a different filter, or using `reset`:
+
+[source,subs="+macros,+quotes"]
+-----
+f.reset(2'000'000); // change to 2'000'000 bits **and clears the filter**
+f.reset(100'000, 0.005); // equivalent to reset(filter::capacity_for(100'000, 0.005));
+f.reset(); // null array (capacity == 0)
+-----
+
+== Insertion and Lookup
+
+Insertion is done in much the same way as with a traditional container:
+
+[source]
+-----
+f.insert("hello");
+f.insert(data.begin(), data.end());
+-----
+
+Of course, in this context "insertion" does not involve any actual
+storage of elements into the filter, but rather the setting of bits in the
+internal array based on the hash values of those elements.
+Lookup goes as follows:
+
+[source]
+-----
+bool b1 = f.may_contain("hello"); // b1 is true since we actually inserted "hello"
+bool b2 = f.may_contain("bye"); // b2 is most likely false
+-----
+
+As its name suggests, `may_contain` can return `true` even if the
+element has not been previously inserted, that is, it may yield false
+positives -- this is the essence of probabilistic data structures.
+`fpr_for` provides an estimation of the false positive rate:
+
+[source]
+-----
+// we have inserted 100 elements so far, what's our FPR?
+std::cout<< filter::fpr_for(100, f.capacity());
+-----
+
+Note that in the example we provided the number 100 externally:
+`boost::bloom::filter` does not keep track of the number of elements
+that have been inserted -- in other words, it does not have a `size`
+operation.
+
+Once inserted, there is no way to remove a specific element from the filter.
+We can only clear up the filter entirely:
+
+[source]
+-----
+f.clear(); // sets all the bits in the array to zero
+-----
+
+== Filter Combination
+
+`boost::bloom::filter`+++s+++ can be combined by doing the OR logical operation
+of the bits of their arrays:
+
+[source]
+-----
+filter f2 = ...;
+...
+f |= f2; // f and f2 must have exactly the same capacity
+-----
+
+The result is equivalent to a filter "containing" the set union of the elements
+of `f` and `f2`. AND combination, on the other hand, results in a filter
+holding the _intersection_ of the elements:
+
+[source]
+-----
+filter f3 = ...;
+...
+f &= f3; // f and f3 must have exactly the same capacity
+-----
+
+For AND combination, be aware that the resulting FPR will be in general
+worse (higher) than if the filter had been constructed from scratch
+by inserting only the commom elements -- don't trust `fpr_for` in this
+case.
+
+== Direct Access to the Array
+
+The contents of the bit array can be accessed directly with the `array`
+member function, which can be leveraged for filter serialization:
+
+[source]
+-----
+filter f1 = ...;
+...
+
+// save filter
+std::ofstream out("filter.bin", std::ios::binary);
+std::size_t c1=f1.capacity();
+out.write(reinterpret_cast<const char*>(&c1), sizeof(c1)); // save capacity (bits)
+boost::span<const unsigned char> s1 = f1.array();
+out.write(reinterpret_cast<const char*>(s1.data()), s1.size()); // save array
+out.close();
+
+// load filter
+filter f2;
+std::ifstream in("filter.bin", std::ios::binary);
+std::size_t c2;
+in.read(reinterpret_cast<char*>(&c2), sizeof(c2));
+f2.reset(c2); // restore capacity
+boost::span<unsigned char> s2 = f2.array();
+in.read(reinterpret_cast<char*>(s2.data()), s2.size()); // load array
+in.close();
+-----
+
+Note that `array()` is a span over `unsigned char`+++s+++ whereas
+capacities are measured in bits, so `array.size()` is
+`capacity() / CHAR_BIT`. If you load a serialized filter in a computer
+other than the one where it was saved, take into account that
+the CPU architectures at each end must have the same
+https://es.wikipedia.org/wiki/Endianness[endianness^] for the
+reconstruction to work.
+
+== Debugging
+
+=== Visual Studio Natvis
+
+Add the link:../../extra/boost_bloom.natvis[`boost_bloom.natvis`^] visualizer
+to your project to allow for user-friendly inspection of `boost::bloom::filter`+++s+++.
+
+image::natvis.png[align=center, title="View of a `boost::bloom::filter` with `boost_bloom.natvis`."]
+
+=== GDB Pretty-Printer
+
+`boost::bloom::filter` comes with a dedicated
+https://sourceware.org/gdb/current/onlinedocs/gdb.html/Pretty-Printing.html#Pretty-Printing[pretty-printer^]
+for visual inspection when debugging with GDB:
+
+[source,plaintext]
+-----
+(gdb) print f
+$1 = boost::bloom::filter with {capacity = 2000, data = 0x6da840, size = 250} = {[0] = 0 '\000',
+  [1] = 0 '\000', [2] = 0 '\000', [3] = 0 '\000', [4] = 0 '\000', [5] = 1 '\001'...}
+
+(gdb) # boost::bloom::filter does not have an operator[]. The following expression
+(gdb) # is used in place of print f.array()[30]
+(gdb) print f[30]
+$2 = 128 '\200'
+-----
+
+Remember to enable pretty-printing in GDB (typically a one-time setup):
+
+[source,plaintext]
+-----
+(gdb) set print pretty on
+-----
+
+The pretty-printer is automatically embedded in the program if your compiled binary
+format is ELF and the macro `BOOST_ALL_NO_EMBEDDED_GDB_SCRIPTS` is _not_ defined;
+embedded pretty-printers are enabled for a particular GDB session
+with this command (or by default by adding it to your `.gdbinit` configuration
+file):
+
+[source,plaintext,subs="+quotes"]
+-----
+(gdb) add-auto-load-safe-path _<path-to-executable>_
+-----
+
+Alternatively to the use of the embedded pretty-printer, you can explicitly
+load the link:../../extra/boost_bloom_printers.py[`boost_bloom_printers.py`^]
+script:
+
+[source,plaintext,subs="+quotes"]
+-----
+(gdb) source _<path-to-boost>_/libs/bloom/extra/boost_bloom_printers.py
+-----

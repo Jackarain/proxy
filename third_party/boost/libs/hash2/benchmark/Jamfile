@@ -1,7 +1,8 @@
 # Copyright 2020 Peter Dimov
 # Distributed under the Boost Software License, Version 1.0.
 
-project : default-build release <link>static ;
+project : default-build release <link>static
+    : requirements <library>/boost/hash2//boost_hash2 ;
 
 exe buffer : buffer.cpp ;
 exe unordered : unordered.cpp ;

@@ -104,7 +104,7 @@ public:
 
     template< typename OtherIterator, typename = enable_if_convertible_t< OtherIterator, Iterator > >
     filter_iterator(filter_iterator< Predicate, OtherIterator > const& t) :
-        super_t(t.base()), m_storage(t.m_storage.predicate(), m_storage.m_end)
+        super_t(t.base()), m_storage(t.m_storage.predicate(), t.m_storage.m_end)
     {}
 
     Predicate predicate() const { return m_storage.predicate(); }

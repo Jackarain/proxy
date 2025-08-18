@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.mflags]]`mflags`::
+[[b2.builtin.features.mflags]]`mflags`::
 The value of this feature is passed without modification to the tool when
 compiling Objective C sources.
 
@@ -20,7 +20,7 @@ feature.feature mflags
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.mmflags]]`mmflags`::
+[[b2.builtin.features.mmflags]]`mmflags`::
 The value of this feature is passed without modification to the tool when
 compiling Objective {CPP} sources.
 

@@ -3,6 +3,7 @@
 # (See accompanying file LICENSE.txt or copy at
 # https://www.bfgroup.xyz/b2/LICENSE.txt)
 
+import args ;
 import path ;
 import project ;
 import modules ;
@@ -190,13 +191,16 @@ local rule define-library ( name caller-module ? : root )
     }
 }
 
+args.add-arg modular-search-dir : --modular-search-dir
+    : "" ;
+
 local rule process-args ( )
 {
     if ! $(.did-process-args)
     {
         .did-process-args = yes ;
         local argv = [ modules.peek : ARGV ] ;
-        local dirs = [ MATCH ^--modular-search-dir=(.*)$ : $(argv) ] ;
+        local dirs = [ args.get-arg modular-search-dir ] ;
         for local dir in $(dirs)
         {
             add-location $(dir) : [ path.pwd ] ;

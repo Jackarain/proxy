@@ -1,4 +1,4 @@
-//  Copyright (c) 2020-2021 Andrey Semashev
+//  Copyright (c) 2020-2025 Andrey Semashev
 //
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
@@ -7,8 +7,8 @@
 #include <boost/atomic/ipc_atomic_ref.hpp>
 #include <boost/memory_order.hpp>
 
+#include <cstdint>
 #include <boost/config.hpp>
-#include <boost/cstdint.hpp>
 
 #include "aligned_object.hpp"
 #include "atomic_wrapper.hpp"
@@ -16,17 +16,17 @@
 
 int main(int, char *[])
 {
-    test_lock_free_integral_api< ipc_atomic_ref_wrapper, boost::uint8_t >();
-    test_lock_free_integral_api< ipc_atomic_ref_wrapper, boost::int8_t >();
+    test_lock_free_integral_api< ipc_atomic_ref_wrapper, std::uint8_t >();
+    test_lock_free_integral_api< ipc_atomic_ref_wrapper, std::int8_t >();
 
-    test_lock_free_integral_api< ipc_atomic_ref_wrapper, boost::uint16_t >();
-    test_lock_free_integral_api< ipc_atomic_ref_wrapper, boost::int16_t >();
+    test_lock_free_integral_api< ipc_atomic_ref_wrapper, std::uint16_t >();
+    test_lock_free_integral_api< ipc_atomic_ref_wrapper, std::int16_t >();
 
-    test_lock_free_integral_api< ipc_atomic_ref_wrapper, boost::uint32_t >();
-    test_lock_free_integral_api< ipc_atomic_ref_wrapper, boost::int32_t >();
+    test_lock_free_integral_api< ipc_atomic_ref_wrapper, std::uint32_t >();
+    test_lock_free_integral_api< ipc_atomic_ref_wrapper, std::int32_t >();
 
-    test_lock_free_integral_api< ipc_atomic_ref_wrapper, boost::uint64_t >();
-    test_lock_free_integral_api< ipc_atomic_ref_wrapper, boost::int64_t >();
+    test_lock_free_integral_api< ipc_atomic_ref_wrapper, std::uint64_t >();
+    test_lock_free_integral_api< ipc_atomic_ref_wrapper, std::int64_t >();
 
 #if defined(BOOST_HAS_INT128) && !defined(BOOST_ATOMIC_TESTS_NO_INT128)
     test_lock_free_integral_api< ipc_atomic_ref_wrapper, boost::int128_type >();

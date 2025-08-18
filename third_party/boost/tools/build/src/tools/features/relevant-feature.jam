@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.relevant]]`relevant`::
+[[b2.builtin.features.relevant]]`relevant`::
 *Allowed values:* the name of any feature.
 +
 Indicates which other features are relevant for a given target. It is usually

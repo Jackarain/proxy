@@ -73,7 +73,8 @@ def run_tests(critical_tests, other_tests):
             max_test_name_len = len(x)
 
     cancelled = False
-    executor = concurrent.futures.ProcessPoolExecutor()
+    max_workers = 1 if "--not-parallel" in sys.argv else None
+    executor = concurrent.futures.ProcessPoolExecutor(max_workers=max_workers)
 
     def handler(sig, frame):
         cancelled = True

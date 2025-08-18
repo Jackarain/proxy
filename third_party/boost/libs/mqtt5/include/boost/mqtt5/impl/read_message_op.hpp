@@ -75,7 +75,13 @@ public:
     ) {
         if (ec == client::error::malformed_packet)
             return on_malformed_packet(
+                disconnect_rc_e::malformed_packet,
                 "Malformed Packet received from the Server"
+            );
+        else if (ec == client::error::packet_too_large)
+            return on_malformed_packet(
+                disconnect_rc_e::packet_too_large,
+                "The packet size is greater than Maximum Packet Size"
             );
 
         if (ec == asio::error::no_recovery)
@@ -108,6 +114,7 @@ private:
                 );
                 if (!msg.has_value())
                     return on_malformed_packet(
+                        disconnect_rc_e::malformed_packet,
                         "Malformed PUBLISH received: cannot decode"
                     );
 
@@ -120,6 +127,7 @@ private:
                 );
                 if (!rv.has_value())
                     return on_malformed_packet(
+                        disconnect_rc_e::malformed_packet,
                         "Malformed DISCONNECT received: cannot decode"
                     );
 
@@ -140,6 +148,7 @@ private:
                 );
                 if (!rv.has_value())
                     return on_malformed_packet(
+                        disconnect_rc_e::malformed_packet,
                         "Malformed AUTH received: cannot decode"
                     );
 
@@ -153,13 +162,13 @@ private:
         perform();
     }
 
-    void on_malformed_packet(const std::string& reason) {
+    void on_malformed_packet(disconnect_rc_e rc, const std::string& reason) {
         auto props = disconnect_props {};
         props[prop::reason_string] = reason;
         auto svc_ptr = _svc_ptr; // copy before this is moved
 
         async_disconnect(
-            disconnect_rc_e::malformed_packet, props, svc_ptr,
+            rc, props, svc_ptr,
             asio::prepend(std::move(*this), on_disconnect {})
         );
     }

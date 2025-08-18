@@ -13,7 +13,7 @@ The major changes are
 * separate compilation
 * fd safe by default
 
-Version 2 is now the defauled. In order to discourage usage of the deprecated v1, it's documentation has been removed.
+Version 2 is now the default. In order to discourage usage of the deprecated v1, it's documentation has been removed.
 
 == Simplified Interface
 

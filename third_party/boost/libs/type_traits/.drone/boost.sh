@@ -19,23 +19,12 @@ cd ..
 git clone -b $TRAVIS_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
 cd boost-root
 git submodule update --init tools/build
+git submodule update --init libs/config
 git submodule update --init tools/boost_install
 git submodule update --init libs/headers
-git submodule update --init libs/config
-git submodule update --init libs/assert
-git submodule update --init libs/bind
-git submodule update --init libs/core
-git submodule update --init libs/detail
-git submodule update --init libs/function
-git submodule update --init libs/integer
-git submodule update --init libs/move
-git submodule update --init libs/mpl
-git submodule update --init libs/preprocessor
-git submodule update --init libs/static_assert
-git submodule update --init libs/throw_exception
-git submodule update --init libs/type_index
-git submodule update --init libs/utility
+git submodule update --init tools/boostdep
 cp -r $TRAVIS_BUILD_DIR/* libs/type_traits
+python tools/boostdep/depinst/depinst.py type_traits
 ./bootstrap.sh
 ./b2 headers
 

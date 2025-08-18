@@ -8,7 +8,7 @@
 #define TEST_UDT
 
 #include <boost/math/special_functions/math_fwd.hpp>
-#include "libs/math/test/test_hermite.hpp"
+#include "test_hermite.hpp"
 
 void expected_results()
 {

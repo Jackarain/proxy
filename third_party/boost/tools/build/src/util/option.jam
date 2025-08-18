@@ -1,10 +1,12 @@
 #  Copyright (c) 2005 Vladimir Prus.
+# Copyright René Ferdinand Rivera Morell
 #
 #  Use, modification and distribution is subject to the Boost Software
 #  License Version 1.0. (See accompanying file LICENSE.txt or
 #  https://www.bfgroup.xyz/b2/LICENSE.txt)
 
 import modules ;
+import args ;
 
 # Set a value for a named option, to be used when not overridden on the command
 # line.
@@ -15,27 +17,26 @@ rule set ( name : value ? )
 
 rule get ( name : default-value ? : implied-value ? )
 {
-    local m = [ MATCH --$(name)=(.*) : [ modules.peek : ARGV ] ] ;
-    if $(m)
+    local m = [ args.get-arg $(name) ] ;
+    # For backwards compat also check ARGV directly in case the arg has not been
+    # declared.
+    if ! $(m) && ! [ args.has-arg $(name) ]
+    {
+        m = [ MATCH --$(name)=(.*) : [ modules.peek : ARGV ] ] ;
+    }
+    if $(m) && $(m) != true
     {
         return $(m[1]) ;
     }
-    else
+    if $(m) && $(implied-value)
     {
-        m = [ MATCH (--$(name)) : [ modules.peek : ARGV ] ] ;
-        if $(m) && $(implied-value)
-        {
-            return $(implied-value) ;
-        }
-        else if $(.option.$(name))
-        {
-            return $(.option.$(name)) ;
-        }
-        else
-        {
-            return $(default-value) ;
-        }
+        return $(implied-value) ;
     }
+    if $(.option.$(name))
+    {
+        return $(.option.$(name)) ;
+    }
+    return $(default-value) ;
 }
 
 

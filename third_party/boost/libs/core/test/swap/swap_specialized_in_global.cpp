@@ -12,7 +12,7 @@
 //Put test class in the global namespace
 #include "./swap_test_class.hpp"
 
-//Provide swap function in gloabl namespace
+//Provide swap function in global namespace
 void swap(swap_test_class& left, swap_test_class& right)
 {
   left.swap(right);

@@ -16,53 +16,6 @@
 
 namespace boost {
 namespace urls {
-
-/** Rule for An IP version 6 style address
-
-    @par Value Type
-    @code
-    using value_type = ipv6_address;
-    @endcode
-
-    @par Example
-    Rules are used with the function @ref grammar::parse.
-    @code
-    system::result< ipv6_address > rv = grammar::parse( "2001:0db8:85a3:0000:0000:8a2e:0370:7334", ipv6_address_rule );
-    @endcode
-
-    @par BNF
-    @code
-    IPv6address =                            6( h16 ":" ) ls32
-                /                       "::" 5( h16 ":" ) ls32
-                / [               h16 ] "::" 4( h16 ":" ) ls32
-                / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
-                / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
-                / [ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
-                / [ *4( h16 ":" ) h16 ] "::"              ls32
-                / [ *5( h16 ":" ) h16 ] "::"              h16
-                / [ *6( h16 ":" ) h16 ] "::"
-
-    ls32        = ( h16 ":" h16 ) / IPv4address
-                ; least-significant 32 bits of address
-
-    h16         = 1*4HEXDIG
-                ; 16 bits of address represented in hexadecimal
-    @endcode
-
-    @par Specification
-    @li <a href="https://datatracker.ietf.org/doc/html/rfc4291"
-        >IP Version 6 Addressing Architecture (rfc4291)</a>
-    @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2"
-        >3.2.2. Host (rfc3986)</a>
-
-    @see
-        @ref ipv6_address,
-        @ref parse_ipv6_address,
-        @ref grammar::parse.
-*/
-#ifdef BOOST_URL_DOCS
-constexpr __implementation_defined__ ipv6_address_rule;
-#else
 namespace implementation_defined {
 struct ipv6_address_rule_t
 {
@@ -123,7 +76,6 @@ struct ipv6_address_rule_t
         @ref grammar::parse.
 */
 constexpr implementation_defined::ipv6_address_rule_t ipv6_address_rule{};
-#endif
 
 } // urls
 } // boost

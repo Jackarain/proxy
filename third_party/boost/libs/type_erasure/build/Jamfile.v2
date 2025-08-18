@@ -6,12 +6,17 @@
 # accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
-project /boost/type_erasure
+constant boost_dependencies_private :
+    /boost/thread//boost_thread
+    ;
+
+project
   : source-location ../src
+  : common-requirements <include>../include <library>$(boost_dependencies)
   : requirements <link>shared:<define>BOOST_TYPE_ERASURE_DYN_LINK
+    <library>$(boost_dependencies_private)
   : usage-requirements <link>shared:<define>BOOST_TYPE_ERASURE_DYN_LINK
+    <define>BOOST_TYPE_ERASURE_NO_LIB=1
 ;
 
-lib boost_type_erasure : dynamic_binding.cpp /boost//thread ;
-
-boost-install boost_type_erasure ;
+lib boost_type_erasure : dynamic_binding.cpp /boost/thread//boost_thread ;

@@ -1,0 +1,146 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Rust FFI - Boost.Outcome documentation</title>
+<link rel="stylesheet" href="../css/boost.css" type="text/css">
+<meta name="generator" content="Hugo 0.52 with Boostdoc theme">
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+
+<link rel="icon" href="../images/favicon.ico" type="image/ico"/>
+<body><div class="spirit-nav">
+<a accesskey="p" href="../recipes/foreign-try.html"><img src="../images/prev.png" alt="Prev"></a>
+    <a accesskey="u" href="../recipes.html"><img src="../images/up.png" alt="Up"></a>
+    <a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="../experimental.html"><img src="../images/next.png" alt="Next"></a></div><div id="content">
+  <div class="titlepage"><div><div><h1 style="clear: both">Rust FFI</h1></div></div></div>
+  <p>A nice side effect of <a href="../experimental/c-api.html">Outcome.Experimental&rsquo;s excellent C support</a>
+is that teaching Rust about Outcome&rsquo;s <code>result&lt;T&gt;</code> becomes trivially
+easy. C and C++ results propagate <em>losslessly</em> into Rust Results, and the
+full power of the Outcome C API is available to Rust code for semantic
+equivalence comparison et al.</p>
+
+<p>Here&rsquo;s a quick snippet to get you started. This assumes that you have declared
+your C result using <code>BOOST_OUTCOME_C_DECLARE_RESULT_SYSTEM(outcome, intptr_t)</code> in order
+to produce a C result named &ldquo;outcome&rdquo; compatible with an erased system code C++ result:</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="c1">// Rust representation of an Outcome.Experimental Result
+</span><span class="c1"></span><span class="k">pub</span><span class="w"> </span><span class="k">type</span> <span class="nc">OutcomeCResult</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">cxx_status_code_system</span><span class="o">&gt;</span><span class="p">;</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">unsafe</span><span class="w"> </span><span class="k">impl</span><span class="w"> </span><span class="nb">Send</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">cxx_status_code_system</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span><span class="w"></span><span class="k">unsafe</span><span class="w"> </span><span class="k">impl</span><span class="w"> </span><span class="nb">Sync</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">cxx_status_code_system</span><span class="w"> </span><span class="p">{}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">impl</span><span class="w"> </span><span class="n">std</span>::<span class="n">fmt</span>::<span class="n">Display</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">cxx_status_code_system</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">fn</span> <span class="nf">fmt</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">f</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">std</span>::<span class="n">fmt</span>::<span class="n">Formatter</span><span class="o">&lt;</span><span class="na">&#39;_</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">std</span>::<span class="n">fmt</span>::<span class="nb">Result</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">        </span><span class="n">write</span><span class="o">!</span><span class="p">(</span><span class="w">
+</span><span class="w">            </span><span class="n">f</span><span class="p">,</span><span class="w">
+</span><span class="w">            </span><span class="s">&#34;{}&#34;</span><span class="p">,</span><span class="w">
+</span><span class="w">            </span><span class="nb">String</span>::<span class="n">from_utf8_lossy</span><span class="p">(</span><span class="k">unsafe</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">                </span><span class="n">CStr</span>::<span class="n">from_ptr</span><span class="p">(</span><span class="n">outcome_status_code_message</span><span class="p">(</span><span class="w">
+</span><span class="w">                    </span><span class="bp">self</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="o">*</span><span class="k">const</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="o">*</span><span class="k">const</span><span class="w"> </span>::<span class="n">std</span>::<span class="n">os</span>::<span class="n">raw</span>::<span class="n">c_void</span><span class="p">,</span><span class="w">
+</span><span class="w">                </span><span class="p">))</span><span class="w">
+</span><span class="w">                </span><span class="p">.</span><span class="n">to_bytes</span><span class="p">()</span><span class="w">
+</span><span class="w">            </span><span class="p">})</span><span class="w">
+</span><span class="w">        </span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">impl</span><span class="w"> </span><span class="n">std</span>::<span class="n">fmt</span>::<span class="n">Debug</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">cxx_status_code_system</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">fn</span> <span class="nf">fmt</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">f</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">std</span>::<span class="n">fmt</span>::<span class="n">Formatter</span><span class="o">&lt;</span><span class="na">&#39;_</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">std</span>::<span class="n">fmt</span>::<span class="nb">Result</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">        </span><span class="n">write</span><span class="o">!</span><span class="p">(</span><span class="w">
+</span><span class="w">            </span><span class="n">f</span><span class="p">,</span><span class="w">
+</span><span class="w">            </span><span class="s">&#34;{}&#34;</span><span class="p">,</span><span class="w">
+</span><span class="w">            </span><span class="nb">String</span>::<span class="n">from_utf8_lossy</span><span class="p">(</span><span class="k">unsafe</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">                </span><span class="n">CStr</span>::<span class="n">from_ptr</span><span class="p">(</span><span class="n">outcome_status_code_message</span><span class="p">(</span><span class="w">
+</span><span class="w">                    </span><span class="bp">self</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="o">*</span><span class="k">const</span><span class="w"> </span><span class="n">_</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="o">*</span><span class="k">const</span><span class="w"> </span>::<span class="n">std</span>::<span class="n">os</span>::<span class="n">raw</span>::<span class="n">c_void</span><span class="p">,</span><span class="w">
+</span><span class="w">                </span><span class="p">))</span><span class="w">
+</span><span class="w">                </span><span class="p">.</span><span class="n">to_bytes</span><span class="p">()</span><span class="w">
+</span><span class="w">            </span><span class="p">})</span><span class="w">
+</span><span class="w">        </span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="c1">// Tell Rust that this meets the `Error` trait
+</span><span class="c1"></span><span class="k">impl</span><span class="w"> </span><span class="n">std</span>::<span class="n">error</span>::<span class="n">Error</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">cxx_status_code_system</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">fn</span> <span class="nf">source</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nb">Option</span><span class="o">&lt;&amp;</span><span class="p">(</span><span class="n">dyn</span><span class="w"> </span><span class="n">std</span>::<span class="n">error</span>::<span class="n">Error</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">&#39;static</span><span class="p">)</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">        </span><span class="nb">None</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="c1">// Tell Rust how to make an `io::Result&lt;T&gt;` from a `OutcomeCResult&lt;T&gt;`
+</span><span class="c1"></span><span class="k">impl</span><span class="w"> </span><span class="nb">From</span><span class="o">&lt;</span><span class="n">cxx_status_code_system</span><span class="o">&gt;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">std</span>::<span class="n">io</span>::<span class="n">Error</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">fn</span> <span class="nf">from</span><span class="p">(</span><span class="n">val</span>: <span class="nc">cxx_status_code_system</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">Self</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">        </span><span class="c1">// This is nasty, and we ought to figure out a better way of doing this
+</span><span class="c1"></span><span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="mi">1</span><span class="p">..</span><span class="mi">200</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="k">unsafe</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">                </span><span class="n">outcome_status_code_equal_generic</span><span class="p">(</span><span class="w">
+</span><span class="w">                    </span><span class="o">&amp;</span><span class="n">val</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="o">*</span><span class="k">const</span><span class="w"> </span><span class="n">cxx_status_code_system</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="o">*</span><span class="k">const</span><span class="w"> </span>::<span class="n">std</span>::<span class="n">os</span>::<span class="n">raw</span>::<span class="n">c_void</span><span class="p">,</span><span class="w">
+</span><span class="w">                    </span><span class="n">n</span><span class="p">,</span><span class="w">
+</span><span class="w">                </span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w">
+</span><span class="w">            </span><span class="p">}</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="n">Self</span>::<span class="n">new</span><span class="p">(</span><span class="n">Self</span>::<span class="n">from_raw_os_error</span><span class="p">(</span><span class="n">n</span><span class="p">).</span><span class="n">kind</span><span class="p">(),</span><span class="w"> </span><span class="n">val</span><span class="p">);</span><span class="w">
+</span><span class="w">            </span><span class="p">}</span><span class="w">
+</span><span class="w">        </span><span class="p">}</span><span class="w">
+</span><span class="w">        </span><span class="n">Self</span>::<span class="n">new</span><span class="p">(</span><span class="n">std</span>::<span class="n">io</span>::<span class="n">ErrorKind</span>::<span class="n">Other</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">impl</span><span class="w"> </span><span class="n">std</span>::<span class="n">fmt</span>::<span class="n">Debug</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">cxx_result_status_code_system_outcome</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">fn</span> <span class="nf">fmt</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">f</span>: <span class="kp">&amp;</span><span class="nc">mut</span><span class="w"> </span><span class="n">std</span>::<span class="n">fmt</span>::<span class="n">Formatter</span><span class="o">&lt;</span><span class="na">&#39;_</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">std</span>::<span class="n">fmt</span>::<span class="nb">Result</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">            </span><span class="kd">let</span><span class="w"> </span><span class="n">v</span>: <span class="nc">OutcomeCResult</span><span class="o">&lt;</span><span class="kt">isize</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Ok</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">value</span><span class="p">);</span><span class="w">
+</span><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">fmt</span><span class="p">(</span><span class="n">f</span><span class="p">);</span><span class="w">
+</span><span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">            </span><span class="kd">let</span><span class="w"> </span><span class="n">v</span>: <span class="nc">OutcomeCResult</span><span class="o">&lt;</span><span class="kt">isize</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Err</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">error</span><span class="p">);</span><span class="w">
+</span><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">fmt</span><span class="p">(</span><span class="n">f</span><span class="p">);</span><span class="w">
+</span><span class="w">        </span><span class="p">}</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">to_result</span><span class="p">(</span><span class="n">res</span>: <span class="nc">cxx_result_status_code_system_outcome</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">OutcomeCResult</span><span class="o">&lt;</span><span class="kt">isize</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">Ok</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">value</span><span class="p">);</span><span class="w">
+</span><span class="w">    </span><span class="p">}</span><span class="w">
+</span><span class="w">    </span><span class="nb">Err</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">error</span><span class="p">)</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">success</span><span class="p">(</span><span class="n">val</span>: <span class="kt">isize</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">outcome_c_result</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="c1">// You will need to export BOOST_OUTCOME_C_MAKE_RESULT_SYSTEM_SUCCESS(outcome, v) as
+</span><span class="c1"></span><span class="w">    </span><span class="c1">// FFI outcome_c_make_success()
+</span><span class="c1"></span><span class="w">    </span><span class="k">unsafe</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">outcome_c_make_success</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w">
+</span><span class="w"></span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">failure_from_errno</span><span class="p">(</span><span class="n">val</span>: ::<span class="n">std</span>::<span class="n">os</span>::<span class="n">raw</span>::<span class="n">c_int</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">outcome_c_result</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="c1">// You will need to export BOOST_OUTCOME_C_MAKE_RESULT_SYSTEM_FAILURE_SYSTEM(outcome, v) as
+</span><span class="c1"></span><span class="w">    </span><span class="c1">// FFI outcome_c_make_failure()
+</span><span class="c1"></span><span class="w">    </span><span class="k">unsafe</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">outcome_c_make_failure</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w"></span></code></pre></div>
+<p>Let&rsquo;s say there is an FFI function like this:</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="k">unsafe</span><span class="w"> </span><span class="k">extern</span><span class="w"> </span><span class="s">&#34;C&#34;</span><span class="w"> </span><span class="p">{</span><span class="w">
+</span><span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">file_read</span><span class="p">(</span><span class="w">
+</span><span class="w">        </span><span class="n">arg1</span>: <span class="o">*</span><span class="k">mut</span><span class="w"> </span><span class="n">db</span><span class="p">,</span><span class="w">
+</span><span class="w">        </span><span class="n">buffer</span>: <span class="o">*</span><span class="k">mut</span><span class="w"> </span><span class="kt">u8</span><span class="p">,</span><span class="w">
+</span><span class="w">        </span><span class="n">bytes</span>: <span class="kt">usize</span><span class="p">,</span><span class="w">
+</span><span class="w">    </span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">outcome_c_result</span><span class="p">;</span><span class="w">
+</span><span class="w"></span><span class="p">}</span><span class="w">
+</span><span class="w"></span></code></pre></div>
+<p>You can now do:</p>
+<div class="highlight"><pre class="chroma"><code class="language-rust" data-lang="rust"><span class="c1">// Make a Rust Result equivalent to the Outcome Result
+</span><span class="c1"></span><span class="kd">let</span><span class="w"> </span><span class="n">res</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">to_result</span><span class="p">(</span><span class="k">unsafe</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">file_read</span><span class="p">(</span><span class="n">db</span><span class="p">,</span><span class="w"> </span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="mi">256</span><span class="p">)</span><span class="w"> </span><span class="p">});</span><span class="w">
+</span><span class="w"></span><span class="c1">// Asks Outcome for the message automatically
+</span><span class="c1"></span><span class="n">println</span><span class="o">!</span><span class="p">(</span><span class="s">&#34;Message: {}&#34;</span><span class="p">,</span><span class="w"> </span><span class="n">res</span><span class="p">.</span><span class="n">err</span><span class="p">().</span><span class="n">unwrap</span><span class="p">());</span><span class="w">
+</span><span class="w"></span></code></pre></div>
+<p>You can use the standard Rust <code>?</code> to TRY Rust Results, same as anywhere else in Rust.</p>
+
+<p>As we taught Rust how to lossy map <code>OutcomeCResult&lt;T&gt;</code> into an <code>io::Result&lt;T&gt;</code>, you
+can also <code>?</code> from an Outcome C Result function into an i/o Result function. Note that
+this is <strong>lossy</strong>, and you may not wish to allow that by removing the <code>From</code> trait
+definition above.</p>
+
+<p>Easy as pie!</p>
+
+
+        </div><p><small>Last revised: April 30, 2025 at 22:36:03 &#43;0100</small></p>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../recipes/foreign-try.html"><img src="../images/prev.png" alt="Prev"></a>
+    <a accesskey="u" href="../recipes.html"><img src="../images/up.png" alt="Up"></a>
+    <a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="../experimental.html"><img src="../images/next.png" alt="Next"></a></div></body>
+</html>

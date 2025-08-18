@@ -1,5 +1,5 @@
 #
-#          Copyright Andrey Semashev 2007 - 2023.
+#          Copyright Andrey Semashev 2007 - 2025.
 # Distributed under the Boost Software License, Version 1.0.
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,18 +12,15 @@ import path ;
 import project ;
 import feature ;
 import configure ;
+import-search /boost/config/checks ;
 import config : requires ;
 import log-arch-config ;
 import log-platform-config ;
 import log-build-config ;
+import-search /boost/predef/tools/check ;
+import predef ;
 
 using mc ;
-
-local here = [ modules.binding $(__name__) ] ;
-
-project.push-current [ project.current ] ;
-project.load [ path.join [ path.make $(here:D) ] ../config/x86-ext ] ;
-project.pop-current ;
 
 # Windows libs
 lib psapi ;
@@ -40,25 +37,94 @@ lib nsl ;
 lib ipv6 ;
 explicit rt socket nsl ipv6 ;
 
-local log_cxx_public_requirements = [ requires
+constant boost_log_public_deps :
+    <library>/boost/assert//boost_assert
+    <library>/boost/config//boost_config
+    <library>/boost/core//boost_core
+    <library>/boost/date_time//boost_date_time
+    <library>/boost/filesystem//boost_filesystem
+    <library>/boost/function_types//boost_function_types
+    <library>/boost/fusion//boost_fusion
+    <library>/boost/intrusive//boost_intrusive
+    <library>/boost/move//boost_move
+    <library>/boost/mpl//boost_mpl
+    <library>/boost/parameter//boost_parameter
+    <library>/boost/phoenix//boost_phoenix
+    <library>/boost/predef//boost_predef
+    <library>/boost/preprocessor//boost_preprocessor
+    <library>/boost/proto//boost_proto
+    <library>/boost/range//boost_range
+    <library>/boost/smart_ptr//boost_smart_ptr
+    <library>/boost/system//boost_system
+    <library>/boost/throw_exception//boost_throw_exception
+    <library>/boost/type_index//boost_type_index
+    <library>/boost/type_traits//boost_type_traits
+    <library>/boost/utility//boost_utility
+    <target-os>windows:<library>/boost/winapi//boost_winapi
+    [ requires
         cxx11_static_assert
-    ] ;
+    ]
+    ;
 
-local log_cxx_private_requirements = [ requires
+constant boost_log_private_deps :
+    <library>/boost/align//boost_align
+    <library>/boost/bind//boost_bind
+    <library>/boost/exception//boost_exception
+    <library>/boost/interprocess//boost_interprocess
+    <library>/boost/optional//boost_optional
+    <library>/boost/spirit//boost_spirit
+    <conditional>@log-build-config.check-asio
+    [ requires
         cxx11_lambdas
-    ] ;
+    ]
+    ;
 
-local log_setup_cxx_public_requirements = [ requires
+constant boost_log_setup_public_deps :
+    <library>/boost/assert//boost_assert
+    <library>/boost/config//boost_config
+    <library>/boost/core//boost_core
+    <library>/boost/iterator//boost_iterator
+    <library>/boost/move//boost_move
+    <library>/boost/optional//boost_optional
+    <library>/boost/parameter//boost_parameter
+    <library>/boost/phoenix//boost_phoenix
+    <library>/boost/preprocessor//boost_preprocessor
+    <library>/boost/property_tree//boost_property_tree
+    <library>/boost/smart_ptr//boost_smart_ptr
+    <library>/boost/type_traits//boost_type_traits
+    [ requires
         cxx11_static_assert
         cxx11_unified_initialization_syntax
-    ] ;
+    ]
+    ;
 
-local log_setup_cxx_public_requirements = [ requires
+constant boost_log_setup_private_deps :
+    <library>/boost/bind//boost_bind
+    <library>/boost/date_time//boost_date_time
+    <library>/boost/exception//boost_exception
+    <library>/boost/filesystem//boost_filesystem
+    <library>/boost/io//boost_io
+    <library>/boost/log//boost_log
+    <library>/boost/spirit//boost_spirit
+    <library>/boost/throw_exception//boost_throw_exception
+    <library>/boost/utility//boost_utility
+    <conditional>@log-build-config.check-asio
+    [ requires
         cxx11_lambdas
-    ] ;
+    ]
+    ;
 
-project boost/log
+constant boost_log_support_public_deps :
+    <library>/boost/log//boost_log
+    <library>/boost/exception//boost_exception
+    <library>/boost/spirit//boost_spirit
+    <library>/boost/xpressive//boost_xpressive
+    ;
+
+project
     : source-location ../src
+    : common-requirements
+        <include>../include
     : requirements
         <conditional>@log-arch-config.check-instruction-set
         <conditional>@log-build-config.check-atomic-int32
@@ -129,6 +195,10 @@ project boost/log
         <target-os>freebsd:<library>rt
         <target-os>qnxnto:<library>socket
         <toolset>pgi:<library>rt
+
+        # Set these to computed values according to the build.
+        [ predef.address-model ]
+        [ predef.architecture ]
     : usage-requirements
         <toolset>clang:<cxxflags>-Wno-bind-to-temporary-copy
         <toolset>clang:<cxxflags>-Wno-unused-function
@@ -218,16 +288,16 @@ rule select-arch-specific-sources ( properties * )
 {
     local result ;
 
-    if x86 in [ log-arch-config.deduce-architecture $(properties) ]
+    if <architecture>x86 in $(properties)
     {
-        local has_ssse3 = [ configure.builds /boost/log/x86-extensions//ssse3 : $(properties) : "compiler supports SSSE3" ] ;
+        local has_ssse3 = [ configure.builds /boost/log/config/x86-ext//ssse3 : $(properties) : "compiler supports SSSE3" ] ;
         if $(has_ssse3)
         {
             result += <define>BOOST_LOG_USE_SSSE3 ;
             result += <source>$(BOOST_LOG_COMMON_SSSE3_SRC) ;
         }
 
-        local has_avx2 = [ configure.builds /boost/log/x86-extensions//avx2 : $(properties) : "compiler supports AVX2" ] ;
+        local has_avx2 = [ configure.builds /boost/log/config/x86-ext//avx2 : $(properties) : "compiler supports AVX2" ] ;
         if $(has_avx2)
         {
             result += <define>BOOST_LOG_USE_AVX2 ;
@@ -302,13 +372,14 @@ lib boost_log
         <conditional>@select-platform-specific-sources
         <link>shared:<define>BOOST_LOG_DLL
         <define>BOOST_LOG_BUILDING_THE_LIB=1
-        $(log_cxx_public_requirements)
-        $(log_cxx_private_requirements)
+        $(boost_log_private_deps)
+        $(boost_log_public_deps)
     : ## default-build ##
     : ## usage-requirements ##
         <link>shared:<define>BOOST_LOG_DYN_LINK=1
         <threading>single:<define>BOOST_LOG_NO_THREADS
-        $(log_cxx_public_requirements)
+        <define>BOOST_LOG_NO_LIB=1
+        $(boost_log_public_deps)
     ;
 
 
@@ -344,14 +415,19 @@ lib boost_log_setup
         <link>shared:<define>BOOST_LOG_DYN_LINK=1
         <link>shared:<define>BOOST_LOG_SETUP_DLL
         <define>BOOST_LOG_SETUP_BUILDING_THE_LIB=1
-        $(log_setup_cxx_public_requirements)
-        $(log_setup_cxx_private_requirements)
-        <library>boost_log
+        $(boost_log_setup_private_deps)
+        $(boost_log_setup_public_deps)
     : ## default-build ##
     : ## usage-requirements ##
         <link>shared:<define>BOOST_LOG_SETUP_DYN_LINK=1
         <threading>single:<define>BOOST_LOG_NO_THREADS
-        $(log_setup_cxx_public_requirements)
+        <define>BOOST_LOG_SETUP_NO_LIB=1
+        $(boost_log_setup_public_deps)
     ;
 
-boost-install boost_log boost_log_setup ;
+alias boost_log_with_support
+    : requirements
+        $(boost_log_support_public_deps)
+    : usage-requirements
+        $(boost_log_support_public_deps)
+    ;

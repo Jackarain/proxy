@@ -1,4 +1,4 @@
-[[bbv2.reference.class.abstract-target]]
+[[b2.reference.class.abstract-target]]
 = Class abstract-target
 
 Base class for all abstract targets.
@@ -16,7 +16,7 @@ class abstract-target {
 ----
 
 Classes derived from
-link:#bbv2.reference.class.abstract-target[abstract-target]:
+link:#b2.reference.class.abstract-target[abstract-target]:
 
 * project-target
 * main-target
@@ -28,7 +28,7 @@ link:#bbv2.reference.class.abstract-target[abstract-target]:
 `name`::
   The name of the target in the Jamfile.
 `project`::
-  The link:#bbv2.reference.class.project-target[project] to which this
+  The link:#b2.reference.class.project-target[project] to which this
   target belongs.
 
 2. `rule name ( )`
@@ -37,7 +37,7 @@ Returns the name of this target.
 
 3. `rule project ( )`
 +
-Returns the link:#bbv2.reference.class.project-target[project] for this
+Returns the link:#b2.reference.class.project-target[project] for this
 target.
 
 4. `rule location ( )`
@@ -48,7 +48,7 @@ Returns the location where the target was declared.
 +
 Returns a user-readable name for this target.
 
-6. [[bbv2.reference.class.abstract-target.generate]] `rule generate ( property-set )`
+6. [[b2.reference.class.abstract-target.generate]] `rule generate ( property-set )`
 +
 Generates virtual targets for this abstract target using the specified
 properties, unless a different value of some feature is required by the

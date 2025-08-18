@@ -1,5 +1,5 @@
 /* A partial result based on std::variant and proposed std::error
-(C) 2020-2024 Niall Douglas <http://www.nedproductions.biz/> (11 commits)
+(C) 2020-2025 Niall Douglas <http://www.nedproductions.biz/> (11 commits)
 File Created: Jan 2020
 
 

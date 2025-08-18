@@ -6,6 +6,6 @@
 
 project : default-build release ;
 
-exe boostdep : ../src/boostdep.cpp /boost//filesystem ;
+exe boostdep : ../src/boostdep.cpp /boost/filesystem//boost_filesystem ;
 
-install dist-bin : boostdep : <location>../../../dist/bin ;
+alias dist-bin : ..//dist-bin ;

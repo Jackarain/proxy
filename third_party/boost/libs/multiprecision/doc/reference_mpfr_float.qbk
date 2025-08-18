@@ -23,7 +23,7 @@
 
    }} // namespaces
 
-Class template `mpfr_float_backend` fulfils all of the requirements for a [link boost_multiprecision.ref.backendconc Backend] type.
+Class template `mpfr_float_backend` fulfills all of the requirements for a [link boost_multiprecision.ref.backendconc Backend] type.
 Its members and non-member functions are deliberately not documented: these are considered implementation details that are subject
 to change.
 

@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.rtti]]`rtti`::
+[[b2.builtin.features.rtti]]`rtti`::
 *Allowed values:* `on`, `off`.
 +
 Disables run-time type information.

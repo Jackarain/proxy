@@ -62,7 +62,7 @@
 #include <boost/log/utility/setup/from_settings.hpp>
 #include <boost/log/utility/setup/filter_parser.hpp>
 #include <boost/log/utility/setup/formatter_parser.hpp>
-#if !defined(BOOST_LOG_NO_ASIO)
+#if !defined(BOOST_LOG_WITHOUT_ASIO)
 #include <boost/asio/ip/address.hpp>
 #endif
 #if !defined(BOOST_LOG_NO_THREADS)
@@ -116,7 +116,8 @@ struct is_case_insensitive_equal
     result_type operator() (CharT left, CharT right) const BOOST_NOEXCEPT
     {
         typedef typename boost::log::aux::encoding< CharT >::type encoding;
-        return encoding::tolower(left) == encoding::tolower(right);
+        typedef typename encoding::classify_type char_classify_type;
+        return encoding::tolower(static_cast< char_classify_type >(left)) == encoding::tolower(static_cast< char_classify_type >(right));
     }
 };
 
@@ -170,14 +171,14 @@ inline sinks::auto_newline_mode param_cast_to_auto_newline_mode(const char* para
     }
 }
 
-#if !defined(BOOST_LOG_NO_ASIO)
+#if !defined(BOOST_LOG_WITHOUT_ASIO)
 //! Extracts a network address from parameter value
 template< typename CharT >
 inline std::string param_cast_to_address(const char* param_name, std::basic_string< CharT > const& value)
 {
     return log::aux::to_narrow(value);
 }
-#endif // !defined(BOOST_LOG_NO_ASIO)
+#endif // !defined(BOOST_LOG_WITHOUT_ASIO)
 
 template< typename CharT >
 inline bool is_weekday(const CharT* str, std::size_t len, boost::log::basic_string_literal< CharT > const& weekday, boost::log::basic_string_literal< CharT > const& short_weekday)
@@ -193,6 +194,7 @@ sinks::file::rotation_at_time_point param_cast_to_rotation_time_point(const char
     typedef CharT char_type;
     typedef boost::log::aux::char_constants< char_type > constants;
     typedef typename boost::log::aux::encoding< char_type >::type encoding;
+    typedef typename encoding::classify_type char_classify_type;
     typedef qi::extract_uint< unsigned short, 10, 1, 2 > day_extract;
     typedef qi::extract_uint< unsigned char, 10, 2, 2 > time_component_extract;
 
@@ -202,14 +204,14 @@ sinks::file::rotation_at_time_point param_cast_to_rotation_time_point(const char
     unsigned char hour = 0, minute = 0, second = 0;
     const char_type* begin = value.c_str(), *end = begin + value.size();
 
-    if (!encoding::isalnum(*begin)) // begin is null-terminated, so we also check that the string is not empty here
+    if (!encoding::isalnum(static_cast< char_classify_type >(*begin))) // begin is null-terminated, so we also check that the string is not empty here
         throw_invalid_value(param_name);
 
     const char_type* p = begin + 1;
-    if (encoding::isalpha(*begin))
+    if (encoding::isalpha(static_cast< char_classify_type >(*begin)))
     {
         // This must be a weekday
-        while (encoding::isalpha(*p))
+        while (encoding::isalpha(static_cast< char_classify_type >(*p)))
             ++p;
 
         std::size_t len = p - begin;
@@ -233,10 +235,10 @@ sinks::file::rotation_at_time_point param_cast_to_rotation_time_point(const char
     else
     {
         // This may be either a month day or an hour
-        while (encoding::isdigit(*p))
+        while (encoding::isdigit(static_cast< char_classify_type >(*p)))
             ++p;
 
-        if (encoding::isspace(*p))
+        if (encoding::isspace(static_cast< char_classify_type >(*p)))
         {
             // This is a month day
             unsigned short mday = 0;
@@ -256,7 +258,7 @@ sinks::file::rotation_at_time_point param_cast_to_rotation_time_point(const char
     }
 
     // Skip spaces
-    while (encoding::isspace(*p))
+    while (encoding::isspace(static_cast< char_classify_type >(*p)))
         ++p;
 
     // Parse hour
@@ -587,14 +589,14 @@ public:
         // For now we use only the default level mapping. Will add support for configuration later.
         backend->set_severity_mapper(sinks::syslog::direct_severity_mapping< >(log::aux::default_attribute_names::severity()));
 
-#if !defined(BOOST_LOG_NO_ASIO)
+#if !defined(BOOST_LOG_WITHOUT_ASIO)
         // Setup local and remote addresses
         if (optional< string_type > local_address_param = params["LocalAddress"])
             backend->set_local_address(param_cast_to_address("LocalAddress", local_address_param.get()));
 
         if (optional< string_type > target_address_param = params["TargetAddress"])
             backend->set_target_address(param_cast_to_address("TargetAddress", target_address_param.get()));
-#endif // !defined(BOOST_LOG_NO_ASIO)
+#endif // !defined(BOOST_LOG_WITHOUT_ASIO)
 
         return base_type::init_sink(backend, params);
     }

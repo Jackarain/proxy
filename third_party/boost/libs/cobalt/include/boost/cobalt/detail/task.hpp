@@ -79,7 +79,7 @@ struct task_value_holder<void>
   inline void return_void();
 
   constexpr task_value_holder() noexcept = default;
-  constexpr task_value_holder(noop<void> n) noexcept {}
+  constexpr task_value_holder(noop<void>) noexcept {}
 };
 
 
@@ -173,17 +173,18 @@ struct task_receiver : task_value_holder<T>
     bool await_ready() const { return self->done; }
 
     template<typename Promise>
-    BOOST_NOINLINE std::coroutine_handle<void> await_suspend(std::coroutine_handle<Promise> h)
+    BOOST_COBALT_MSVC_NOINLINE
+    std::coroutine_handle<void> await_suspend(std::coroutine_handle<Promise> h)
     {
       if (self->done) // ok, so we're actually done already, so noop
         return std::coroutine_handle<void>::from_address(h.address());
 
-      if constexpr (requires (Promise p) {p.get_cancellation_slot();})
+      if constexpr (requires {h.promise().get_cancellation_slot();})
         if ((cl = h.promise().get_cancellation_slot()).is_connected())
           cl.emplace<forward_cancellation>(self->promise->signal);
 
 
-      if constexpr (requires (Promise p) {p.get_executor();})
+      if constexpr (requires {h.promise().get_executor();})
         self->promise->exec.emplace(h.promise().get_executor());
       else
         self->promise->exec.emplace(this_thread::get_executor());
@@ -353,7 +354,7 @@ struct task_promise
       return promise->receiver && promise->receiver->awaited_from.get() == nullptr;
     }
 
-    BOOST_NOINLINE
+    BOOST_COBALT_MSVC_NOINLINE
     auto await_suspend(std::coroutine_handle<task_promise> h) noexcept
     {
       std::coroutine_handle<void> res = std::noop_coroutine();

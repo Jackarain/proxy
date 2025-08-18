@@ -1,0 +1,54 @@
+[#fast_multiblock32]
+== Class Template `fast_multiblock32`
+
+:idprefix: fast_multiblock32_
+
+`boost::bloom::fast_multiblock32` -- A faster replacement of
+`xref:multiblock[multiblock]<std::uint32_t, K>`.
+
+=== Synopsis
+
+[listing,subs="+macros,+quotes"]
+-----
+// #include <boost/bloom/fast_multiblock32.hpp>
+
+namespace boost{
+namespace bloom{
+
+template<std::size_t K>
+struct fast_multiblock32
+{
+  static constexpr std::size_t k               = K;
+  using value_type                             = _implementation-defined_;
+
+  // might not be present
+  static constexpr std::size_t used_value_size = _implementation-defined_;
+
+  // the rest of the interface is not public
+
+} // namespace bloom
+} // namespace boost
+-----
+
+=== Description
+
+*Template Parameters*
+
+[cols="1,4"]
+|===
+
+|`K`
+| Number of bits set/checked per operation. Must be greater than zero.
+
+|===
+
+`fast_multiblock32<K>` is statistically equivalent to
+`xref:multiblock[multiblock]<std::uint32_t, K>`, but takes advantage
+of selected SIMD technologies, when available at compile time, to perform faster.
+Currently supported: AVX2, little-endian Neon, SSE2.
+The non-SIMD case falls back to regular `multiblock`.
+
+`xref:subfilters_used_value_size[_used-value-size_]<fast_multiblock32<K>>` is
+`4 * K`.
+
+'''

@@ -364,7 +364,7 @@ The size of the bucket array can be automatically increased by a call to `insert
 greater than `max_load_factor()`, except possibly for small sizes where the implementation may decide to
 allow for higher loads.
 
-If `xref:reference/hash_traits.adoc#hash_traits_hash_is_avalanching[hash_is_avalanching]<Hash>::value` is `true`, the hash function
+If `link:../../../../../container_hash/doc/html/hash.html#ref_hash_is_avalanchinghash[hash_is_avalanching]<Hash>::value` is `true`, the hash function
 is used as-is; otherwise, a bit-mixing post-processing stage is added to increase the quality of hashing
 at the expense of extra computational cost.
 
@@ -1429,7 +1429,9 @@ Erases the element `x` with key equivalent to `k` if it exists and `f(x)` is `tr
 [horizontal]
 Returns:;; The number of elements erased (0 or 1).
 Throws:;; Only throws an exception if it is thrown by `hasher`, `key_equal` or `f`.
-Notes:;; The `template<class K, class F>` overload only participates in overload resolution if `std::is_execution_policy_v<std::remove_cvref_t<ExecutionPolicy>>` is `false`. +
+Notes:;; `f` is passed a non-const reference to `x`. +
++
+The `template<class K, class F>` overload only participates in overload resolution if `std::is_execution_policy_v<std::remove_cvref_t<ExecutionPolicy>>` is `false`. +
 +
 The `template<class K, class F>` overload only participates in overload resolution if `Hash::is_transparent` and `Pred::is_transparent` are valid member typedefs. The library assumes that `Hash` is callable with both `K` and `Key` and that `Pred` is transparent. This enables heterogeneous lookup which avoids the cost of instantiating an instance of the `Key` type.
 
@@ -1440,7 +1442,7 @@ The `template<class K, class F>` overload only participates in overload resoluti
 template<class F> size_type erase_if(F f);
 ```
 
-Successively invokes `f` with references to each of the elements in the table, and erases those for which `f` returns `true`.
+Successively invokes `f` with non-const references to each of the elements in the table, and erases those for which `f` returns `true`.
 
 [horizontal]
 Returns:;; The number of elements erased.
@@ -1453,7 +1455,7 @@ Throws:;; Only throws an exception if it is thrown by `f`.
 template<class ExecutionPolicy, class  F> void erase_if(ExecutionPolicy&& policy, F f);
 ```
 
-Invokes `f` with references to each of the elements in the table, and erases those for which `f` returns `true`.
+Invokes `f` with non-const references to each of the elements in the table, and erases those for which `f` returns `true`.
 Execution is parallelized according to the semantics of the execution policy specified.
 
 [horizontal]

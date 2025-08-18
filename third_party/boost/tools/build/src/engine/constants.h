@@ -45,15 +45,8 @@ extern OBJECT * constant_TMPNAME;                   /* "TMPNAME" */
 extern OBJECT * constant_TMPFILE;                   /* "TMPFILE" */
 extern OBJECT * constant_STDOUT;                    /* "STDOUT" */
 extern OBJECT * constant_STDERR;                    /* "STDERR" */
-extern OBJECT * constant_JAMDATE;                   /* "JAMDATE" */
-extern OBJECT * constant_JAM_TIMESTAMP_RESOLUTION;  /* "JAM_TIMESTAMP_RESOLUTION" */
-extern OBJECT * constant_JAM_VERSION;               /* "JAM_VERSION" */
-extern OBJECT * constant_JAMUNAME;                  /* "JAMUNAME" */
 extern OBJECT * constant_ENVIRON;                   /* ".ENVIRON" */
-extern OBJECT * constant_ARGV;                      /* "ARGV" */
 extern OBJECT * constant_all;                       /* "all" */
-extern OBJECT * constant_PARALLELISM;               /* "PARALLELISM" */
-extern OBJECT * constant_KEEP_GOING;                /* "KEEP_GOING" */
 extern OBJECT * constant_other;                     /* "[OTHER]" */
 extern OBJECT * constant_total;                     /* "[TOTAL]" */
 extern OBJECT * constant_FILE_DIRSCAN;              /* "FILE_DIRSCAN" */

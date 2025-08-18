@@ -40,7 +40,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     env:
-      CXXFLAGS: ${{ matrix.cxxflags }} /D_WIN32_WINNT=0x0601 /DWIN32_LEAN_AND_MEAN=1 /DNOMINMAX=1 /D_FILE_OFFSET_BITS=64 /DBOOST_ALL_NO_LIB /EHsc /bigobj
+      CXXFLAGS: ${{ matrix.cxxflags }} /D_WIN32_WINNT=0x0A00 /DWIN32_LEAN_AND_MEAN=1 /D_FILE_OFFSET_BITS=64 /DBOOST_ALL_NO_LIB /EHsc /bigobj
       LDFLAGS: ${{ matrix.ldflags }}
       CMAKE_BUILD_PARALLEL_LEVEL: 4
   
@@ -164,7 +164,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     env:
-      CXXFLAGS: ${{ matrix.cxxflags }} /D_WIN32_WINNT=0x0601 /DWIN32_LEAN_AND_MEAN=1 /DNOMINMAX=1 /D_FILE_OFFSET_BITS=64 /DBOOST_ALL_NO_LIB /EHsc /bigobj
+      CXXFLAGS: ${{ matrix.cxxflags }} /D_WIN32_WINNT=0x0A00 /DWIN32_LEAN_AND_MEAN=1 /D_FILE_OFFSET_BITS=64 /DBOOST_ALL_NO_LIB /EHsc /bigobj
       LDFLAGS: ${{ matrix.ldflags }}
   
     steps:

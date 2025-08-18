@@ -5,11 +5,13 @@
 #include <boost/hash2/fnv1a.hpp>
 #include <boost/hash2/siphash.hpp>
 #include <boost/hash2/xxhash.hpp>
+#include <boost/hash2/xxh3.hpp>
 #include <boost/hash2/md5.hpp>
 #include <boost/hash2/sha1.hpp>
 #include <boost/hash2/sha2.hpp>
 #include <boost/hash2/sha3.hpp>
 #include <boost/hash2/ripemd.hpp>
+#include <boost/hash2/blake2.hpp>
 #include <boost/hash2/get_integral_result.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <cstdint>
@@ -33,6 +35,7 @@ int main()
     test<boost::hash2::fnv1a_64>();
     test<boost::hash2::xxhash_32>();
     test<boost::hash2::xxhash_64>();
+    test<boost::hash2::xxh3_128>();
     test<boost::hash2::siphash_32>();
     test<boost::hash2::siphash_64>();
 
@@ -52,6 +55,8 @@ int main()
     test<boost::hash2::shake_256>();
     test<boost::hash2::ripemd_160>();
     test<boost::hash2::ripemd_128>();
+    test<boost::hash2::blake2b_512>();
+    test<boost::hash2::blake2s_256>();
 
     test<boost::hash2::hmac_md5_128>();
     test<boost::hash2::hmac_sha1_160>();

@@ -12,7 +12,7 @@
 #include <boost/cobalt/detail/sbo_resource.hpp>
 #include <boost/cobalt/result.hpp>
 #include <boost/core/no_exceptions_support.hpp>
-
+#include <boost/config.hpp>
 #include <boost/asio/deferred.hpp>
 
 
@@ -21,7 +21,7 @@ namespace boost::cobalt
 
 
 template<typename ... Args>
-struct op
+struct BOOST_SYMBOL_VISIBLE op
 {
   virtual void ready(cobalt::handler<Args...>) {};
   virtual void initiate(cobalt::completion_handler<Args...> complete) = 0 ;
@@ -83,7 +83,7 @@ struct op
       }
       BOOST_CATCH_END
     }
-
+    BOOST_COBALT_MSVC_NOINLINE
     auto await_resume(const boost::source_location & loc = BOOST_CURRENT_LOCATION)
     {
       if (init_ep)
@@ -131,7 +131,7 @@ struct op
     }
   };
 
-  awaitable operator co_await() &&
+  awaitable operator co_await()
   {
     return awaitable{this};
   }

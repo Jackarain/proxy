@@ -122,7 +122,7 @@ struct block_header
       BOOST_ASSERT(namelen == m_num_char);
       return get_rounded_size
                ( size_type(sizeof(Header))
-            , size_type(::boost::container::dtl::alignment_of<block_header<size_type> >::value))
+               , size_type(::boost::container::dtl::alignment_of<block_header<size_type> >::value))
            + this->template total_named_size<0, char>(namelen);
    }
 
@@ -392,7 +392,9 @@ struct block_header
 
    size_type name_length_offset() const
    {
-      return this->value_offset() + get_rounded_size(m_value_bytes, ::boost::move_detail::alignment_of<name_len_t>::value);
+      return this->value_offset() +
+         get_rounded_size( size_type(m_value_bytes)
+                         , size_type(::boost::move_detail::alignment_of<name_len_t>::value));
    }
 };
 

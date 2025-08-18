@@ -40,7 +40,6 @@
 [template boost_extended_format[] [link boost_regex.format.boost_format_syntax Boost-Extended]]
 
 [/depricated stuff:]
-[template RegEx[] [link boost_regex.ref.deprecated.old_regex `RegEx`]]
 [template regcomp[] [link boost_regex.ref.posix.regcomp `regcomp`]]
 [template regexec[] [link boost_regex.ref.posix.regexec `regexec`]]
 [template regerror[] [link boost_regex.ref.posix.regerror `regerror`]]
@@ -52,6 +51,7 @@ PDF version of this manual is also available].
 
 [include configuration.qbk]
 [include install.qbk]
+[include modules.qbk]
 [include introduction.qbk]
 [include unicode.qbk]
 [include captures.qbk]
@@ -85,7 +85,6 @@ PDF version of this manual is also available].
 [include regex_format.qbk]
 [include regex_grep.qbk]
 [include regex_split.qbk]
-[include old_regex.qbk]
 [endsect]
 
 [section:internals Internal Details]
@@ -104,7 +103,6 @@ PDF version of this manual is also available].
 [include faq.qbk]
 [include performance.qbk]
 [include standards.qbk]
-[include redistributables.qbk]
 [include acknowledgements.qbk]
 [include history.qbk]
 

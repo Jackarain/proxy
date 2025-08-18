@@ -11,12 +11,13 @@ import testing ;
 
 project
     : requirements
-      <source>../../extra/test_main.cpp
+      <source>../../extra/test_suite/test_main.cpp
+      <source>../../extra/test_suite/test_suite.cpp
       <include>.
-      <include>../../extra
+      <include>../../extra/test_suite
     ;
 
-run limits.cpp ../../extra/test_main.cpp /boost/url//url_sources
+run limits.cpp /boost/url//url_sources
     : requirements
         <define>BOOST_URL_MAX_SIZE=16
         <define>BOOST_URL_NO_LIB

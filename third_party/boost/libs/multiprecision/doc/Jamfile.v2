@@ -17,7 +17,7 @@ boostbook standalone
     :
         # Path for links to Boost:
         <xsl:param>boost.root=../../../..
-        
+
         # Some general style settings:
         <xsl:param>table.footnote.number.format=1
         <xsl:param>footnote.number.format=1
@@ -42,8 +42,8 @@ boostbook standalone
         # extending 'standard' BOOST_ROOT/doc/src/boostbook.css with
         # @import url('../../../../doc/src/boostbook.css');
         # in location multiprecision/doc/html/multiprecision.css
-    
-       
+
+
         # PDF Options:
         # TOC Generation: this is needed for FOP-0.9 and later:
         <xsl:param>fop1.extensions=0
@@ -65,7 +65,7 @@ boostbook standalone
         # default PNG graphics are awful in PDF form,
         # better use SVGs instead:
         <format>pdf:<xsl:param>admon.graphics.extension=".svg"
-        <format>pdf:<xsl:param>use.role.for.mediaobject=1 
+        <format>pdf:<xsl:param>use.role.for.mediaobject=1
         <format>pdf:<xsl:param>preferred.mediaobject.role=print
         <format>pdf:<xsl:param>img.src.path=$(images_location)/
         <format>pdf:<xsl:param>draft.mode="no"
@@ -76,19 +76,19 @@ boostbook standalone
 #  .SVG files are roughly twice the .png size and so a bit gross.
 # This also changes the admonitions icons.
 #       <format>html:<xsl:param>admon.graphics.extension=".svg"
-        <format>html:<xsl:param>use.role.for.mediaobject=1 
+        <format>html:<xsl:param>use.role.for.mediaobject=1
         <format>html:<xsl:param>preferred.mediaobject.role=print
      #   <format>html:<xsl:param>img.src.path=$(images_location)/ isn't right for html.
         <format>html:<xsl:param>draft.mode="no"
         <format>html:<xsl:param>boost.url.prefix=http\://www.boost.org/doc/libs/release/libs/multiprecision/doc/html
-        
+
         # Index generation:
         <auto-index>on
         <auto-index-script>$(here)/index.idx
-        <auto-index-prefix>$(here)/../../.. 
+        <auto-index-prefix>$(here)/../include
         <auto-index-verbose>on
         <format>html:<auto-index-internal>on
-        <quickbook-define>enable_index 
+        <quickbook-define>enable_index
         <format>pdf:<xsl:param>index.on.type=1
     ;
 

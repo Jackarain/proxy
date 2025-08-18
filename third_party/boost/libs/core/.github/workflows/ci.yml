@@ -1,5 +1,5 @@
 # Copyright 2020-2021 Peter Dimov
-# Copyright 2021-2024 Andrey Semashev
+# Copyright 2021-2025 Andrey Semashev
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
@@ -100,13 +100,13 @@ jobs:
           - toolset: gcc-9
             cxxstd: "03,11,14,17,2a"
             address-model: 32,64
-            os: ubuntu-20.04
+            os: ubuntu-24.04
             install:
               - g++-9-multilib
           - toolset: gcc-10
             cxxstd: "03,11,14,17,20"
             address-model: 32,64
-            os: ubuntu-20.04
+            os: ubuntu-24.04
             install:
               - g++-10-multilib
           - toolset: gcc-11
@@ -135,6 +135,13 @@ jobs:
             container: ubuntu:24.04
             install:
               - g++-14-multilib
+          - toolset: gcc-15
+            cxxstd: "03,11,14,17,20,23,2c"
+            address-model: 32,64
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install:
+              - g++-15-multilib
           - name: UBSAN
             toolset: gcc-12
             cxxstd: "03,11,14,17,20,23"
@@ -220,13 +227,15 @@ jobs:
           - toolset: clang
             compiler: clang++-9
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - clang-9
           - toolset: clang
             compiler: clang++-10
             cxxstd: "03,11,14,17,20"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - clang-10
           - toolset: clang
@@ -316,11 +325,22 @@ jobs:
             compiler: clang++-19
             cxxstd: "03,11,14,17,20,2b"
             os: ubuntu-latest
-            container: ubuntu:24.10
+            container: ubuntu:24.04
             install:
               - clang-19
               - libc++-19-dev
               - libc++abi-19-dev
+            cxxflags: -stdlib=libc++
+            linkflags: -stdlib=libc++
+          - toolset: clang
+            compiler: clang++-20
+            cxxstd: "03,11,14,17,20,2b,2c"
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install:
+              - clang-20
+              - libc++-20-dev
+              - libc++abi-20-dev
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
           - name: UBSAN
@@ -335,6 +355,14 @@ jobs:
               - clang-15
               - libc++-15-dev
               - libc++abi-15-dev
+
+          - name: ARM
+            toolset: gcc-13
+            cxxstd: "03-gnu,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            os: ubuntu-24.04-arm
+            container: ubuntu:24.04
+            install:
+              - g++-13
 
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
@@ -363,6 +391,22 @@ jobs:
                 echo "GHA_CONTAINER=${{matrix.container}}" >> $GITHUB_ENV
                 if [ -f "/etc/debian_version" ]
                 then
+                    # Use Azure APT mirrors in containers to avoid HTTP errors due to DDoS filters triggered by lots of CI jobs launching concurrently.
+                    # Note that not all Ubuntu versions support "mirror+file:..." URIs in APT sources, so just use Azure mirrors exclusively.
+                    # Note also that on recent Ubuntu versions DEB822 format is used for source files.
+                    APT_SOURCES=()
+                    if [ -d "/etc/apt/sources.list.d" ]
+                    then
+                        readarray -t APT_SOURCES < <(find "/etc/apt/sources.list.d" -type f -name '*.sources' -print)
+                    fi
+                    if [ -f "/etc/apt/sources.list" ]
+                    then
+                        APT_SOURCES+=("/etc/apt/sources.list")
+                    fi
+                    if [ "${#APT_SOURCES[@]}" -gt 0 ]
+                    then
+                        sed -i -E -e 's!([^ ]+) (http|https)://(archive|security)\.ubuntu\.com/ubuntu[^ ]*(.*)!\1 http://azure.archive.ubuntu.com/ubuntu/\4!' "${APT_SOURCES[@]}"
+                    fi
                     apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
                     if [ "$(apt-cache search "^python-is-python3$" | wc -l)" -ne 0 ]
                     then
@@ -563,14 +607,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: "14"
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
@@ -582,7 +618,14 @@ jobs:
           - toolset: gcc
             cxxstd: "03,11,14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
+
+          # Windows SDK 32-bit ARM libs not installed in this image
+          - name: ARM
+            toolset: msvc-14.3
+            cxxstd: "14,17,20,latest"
+            addrmd: 64
+            os: windows-11-arm
 
     runs-on: ${{matrix.os}}
     timeout-minutes: 45
@@ -635,7 +678,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -703,7 +745,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -781,7 +822,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -863,8 +903,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
           - os: windows-2022
+          - os: windows-2025
 
     runs-on: ${{matrix.os}}
     timeout-minutes: 10
@@ -925,8 +965,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
           - os: windows-2022
+          - os: windows-2025
 
     runs-on: ${{matrix.os}}
     timeout-minutes: 10
@@ -1005,8 +1045,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
           - os: windows-2022
+          - os: windows-2025
 
     runs-on: ${{matrix.os}}
     timeout-minutes: 20

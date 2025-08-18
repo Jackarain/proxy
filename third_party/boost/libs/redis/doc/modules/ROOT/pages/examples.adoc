@@ -1,0 +1,27 @@
+//
+// Copyright (c) 2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+= Examples
+
+The examples below show how to use the features discussed throughout this documentation:
+
+* {site-url}/example/cpp20_intro.cpp[cpp20_intro.cpp]: Does not use awaitable operators.
+* {site-url}/example/cpp20_intro_tls.cpp[cpp20_intro_tls.cpp]: Communicates over TLS.
+* {site-url}/example/cpp20_unix_sockets.cpp[cpp20_unix_sockets.cpp]: Communicates over UNIX domain sockets.
+* {site-url}/example/cpp20_containers.cpp[cpp20_containers.cpp]: Shows how to send and receive STL containers and how to use transactions.
+* {site-url}/example/cpp20_json.cpp[cpp20_json.cpp]: Shows how to serialize types using Boost.Json.
+* {site-url}/example/cpp20_protobuf.cpp[cpp20_protobuf.cpp]: Shows how to serialize types using protobuf.
+* {site-url}/example/cpp20_resolve_with_sentinel.cpp[cpp20_resolve_with_sentinel.cpp]: Shows how to resolve a master address using sentinels.
+* {site-url}/example/cpp20_subscriber.cpp[cpp20_subscriber.cpp]: Shows how to implement pubsub with reconnection re-subscription.
+* {site-url}/example/cpp20_echo_server.cpp[cpp20_echo_server.cpp]: A simple TCP echo server.
+* {site-url}/example/cpp20_chat_room.cpp[cpp20_chat_room.cpp]: A command line chat built on Redis pubsub.
+* {site-url}/example/cpp17_intro.cpp[cpp17_intro.cpp]: Uses callbacks and requires pass:[C++17].
+* {site-url}/example/cpp17_intro_sync.cpp[cpp17_intro_sync.cpp]: Runs `async_run` in a separate thread and performs synchronous calls to `async_exec`.
+* {site-url}/example/cpp17_spdlog.cpp[cpp17_spdlog.cpp]: Shows how to use third-party logging libraries like `spdlog` with Boost.Redis.
+
+The main function used in some async examples has been factored out in
+the {site-url}/example/main.cpp[main.cpp] file.

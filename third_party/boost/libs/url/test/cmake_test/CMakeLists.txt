@@ -5,7 +5,7 @@
 # https://www.boost.org/LICENSE_1_0.txt
 #
 
-cmake_minimum_required(VERSION 3.5...3.16)
+cmake_minimum_required(VERSION 3.8...3.20)
 
 project(cmake_subdir_test LANGUAGES CXX)
 set(__ignore__ ${CMAKE_C_COMPILER})

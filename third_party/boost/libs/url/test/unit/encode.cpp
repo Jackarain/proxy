@@ -26,6 +26,20 @@
 namespace boost {
 namespace urls {
 
+template <bool allow_plus, bool allow_space>
+struct space_as_plus_test_chars
+{
+    constexpr
+    bool
+    operator()(char c) const noexcept
+    {
+        return
+            (allow_plus && c == '+') ||
+            (allow_space && c == ' ') ||
+            unreserved_chars(c);
+    }
+};
+
 class encode_test
 {
 public:
@@ -133,8 +147,35 @@ public:
                 " ", test_chars{}, opt, {}) == "+");
             BOOST_TEST(encode(
                 "A", test_chars{}, opt, {}) == "A");
-            BOOST_TEST(encode(
-                " A+", test_chars{}, opt, {}) == "+A+");
+            BOOST_TEST_EQ(encode(
+                " A+", test_chars{}, opt, {}), "+A%2B");
+        }
+
+        // optimization of space-as-plus when the charset
+        // already includes or excludes plus or space
+        {
+            encoding_opts opt;
+            opt.space_as_plus = true;
+            BOOST_TEST_EQ(
+                encode(
+                    "a +",
+                    space_as_plus_test_chars<true, true>{},
+                    opt), "a+%2B");
+            BOOST_TEST_EQ(
+                encode(
+                    "a +",
+                    space_as_plus_test_chars<true, false>{},
+                    opt), "a+%2B");
+            BOOST_TEST_EQ(
+                encode(
+                    "a +",
+                    space_as_plus_test_chars<false, true>{},
+                    opt), "a+%2B");
+            BOOST_TEST_EQ(
+                encode(
+                    "a +",
+                    space_as_plus_test_chars<false, false>{},
+                    opt), "a+%2B");
         }
     }
 

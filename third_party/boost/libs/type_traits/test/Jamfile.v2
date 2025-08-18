@@ -18,6 +18,10 @@ if [ os.environ CI ]
 # regular
 
 project : requirements
+   <library>/boost/core//boost_core
+   <library>/boost/move//boost_move
+   <library>/boost/mpl//boost_mpl
+
    # default to all warnings on:
    <warnings>all
    # set warnings as errors for those compilers we know we get warning free:

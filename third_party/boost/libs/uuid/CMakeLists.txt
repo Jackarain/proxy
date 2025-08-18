@@ -32,9 +32,16 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT WIN32)
 
   set(_def_linkatomic ON)
+
+endif()
+
+# CLANGARM64 does not have libatomic, disable it
+if(MINGW AND CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64")
+
+  set(_def_linkatomic OFF)
 
 endif()
 

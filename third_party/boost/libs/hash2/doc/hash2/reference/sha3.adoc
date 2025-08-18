@@ -39,7 +39,7 @@ The only differences between them are the size of the message digest and the siz
 which is by truncating the bottom portion of the 1600-bit state.
 
 The `shake_128` and `shake_256` functions are similar to the fixed-digest functions except they use a different delimiter to denote finalization of the
-digest and extending the output has defined behavior, unlike the default pseudorandom behavior used elsewhere in the library. But they work similary
+digest and extending the output has defined behavior, unlike the default pseudorandom behavior used elsewhere in the library. But they work similarly
 in that truncations of the 1600-bit state are returned as the digest.
 
 ## sha3_256

@@ -8,6 +8,7 @@
 # This file is part of Boost Build version 2. You can think of it as forming the
 # main() routine. It is invoked by the bootstrapping code in bootstrap.jam.
 
+import args ;
 import build-request ;
 import builtin ;
 import "class" : new ;
@@ -43,7 +44,7 @@ import virtual-target ;
 
 # Flag indicating we should display additional debugging information related to
 # locating and loading Boost Build configuration files.
-.debug-config = [ MATCH ^(--debug-configuration)$ : $(.argv) ] ;
+.debug-config = [ args.get-arg debug-configuration ] ;
 
 # Virtual targets obtained when building main targets references on the command
 # line. When running 'bjam --clean main_target' we want to clean only files
@@ -52,7 +53,9 @@ import virtual-target ;
 .results-of-main-targets = ;
 
 # Was an XML dump requested?
-.out-xml = [ MATCH ^--out-xml=(.*)$ : $(.argv) ] ;
+args.add-arg out-xml : --out-xml
+    : "Output build information to an XML file." ;
+.out-xml = [ args.get-arg out-xml ] ;
 
 # Default toolset & version to be used in case no other toolset has been used
 # explicitly by either the loaded configuration files, the loaded project build
@@ -281,7 +284,7 @@ local rule load-config ( module-name : filename : path + : must-find ? )
 #
 local rule handle-config-option ( name : env ? )
 {
-    local result = [ MATCH ^--$(name)=(.*)$ : $(.argv) ] ;
+    local result = [ args.get-arg $(name) ] ;
     if ! $(result)-is-defined && $(env)
     {
         result = [ os.environ $(env) ] ;
@@ -311,12 +314,16 @@ local rule handle-config-option ( name : env ? )
 # If this configuration file is loaded, regular site and user configuration
 # files will not be. If a relative path is specified, file is searched for in
 # the current folder.
+args.add-arg test-config : --test-config
+    : "Override all configuration files, without error if not found." ;
 #
 #   -- all-config --
 #   Loaded only if specified on the command-line using the --config command
 # line option.  If a file name is specified, it must exist and replaces all
 # other configuration files.  If an empty file name is passed, no configuration
 # files will be loaded.
+args.add-arg all-config : --config
+    : "Override all configuration files." ;
 #
 #   -- site-config --
 #   Named site-config.jam by default or may be named explicitly using the
@@ -327,6 +334,11 @@ local rule handle-config-option ( name : env ? )
 # order.  Not loaded in case the test-config configuration file is loaded,
 # the file is explicitly set to the empty string or the --ignore-site-config
 # command-line option is specified.
+args.add-arg site-config : --site-config
+    : "Override the default site-config.jam." ;
+args.add-arg ignore-site-config : --ignore-site-config
+    : "Do not load a site-config.jam."
+    : flag ;
 #
 #   -- user-config --
 #   Named user-config.jam by default or may be named explicitly using the
@@ -337,6 +349,8 @@ local rule handle-config-option ( name : env ? )
 # case either the test-config configuration file is loaded or an empty file name
 # is explicitly specified. If the file name has been given explicitly then the
 # file must exist.
+args.add-arg user-config : --user-config
+    : "Override the default user-config.jam." ;
 #
 #   -- project-config --
 #   Named project-config.jam. Looked up in the current working folder and
@@ -345,6 +359,8 @@ local rule handle-config-option ( name : env ? )
 # is specified explicitly, it is found relative to the current working
 # directory and must exist.  If an empty file name is passed, project-config
 # will not be loaded.
+args.add-arg project-config : --project-config
+    : "Override the default project-config.jam." ;
 #
 # Test configurations have been added primarily for use by Boost Build's
 # internal unit testing system but may be used freely in other places as well.
@@ -352,8 +368,7 @@ local rule handle-config-option ( name : env ? )
 local rule load-configuration-files
 {
     # Flag indicating that site configuration should not be loaded.
-    local ignore-site-config =
-        [ MATCH ^(--ignore-site-config)$ : $(.argv) ] ;
+    local ignore-site-config = [ args.get-arg ignore-site-config ] ;
     local ignore-user-config ;
     local ignore-project-config ;
 
@@ -377,7 +392,7 @@ local rule load-configuration-files
     }
 
     initialize-config-module all-config ;
-    local all-config = [ handle-config-option config ] ;
+    local all-config = [ handle-config-option all-config ] ;
     if $(all-config)
     {
         load-config all-config : $(all-config:D=) : $(all-config:D) : required ;
@@ -405,7 +420,7 @@ local rule load-configuration-files
         site-path = [ modules.peek : SystemRoot ] $(user-path) ;
     }
 
-    if $(.debug-config) && $(ignore-site-config) = --ignore-site-config
+    if $(.debug-config) && [ args.get-arg ignore-site-config ]
     {
         ECHO "notice: Site configuration files will be ignored due to the" ;
         ECHO "notice: --ignore-site-config command-line option." ;
@@ -501,12 +516,14 @@ local rule load-configuration-files
 # toolset=xx,yy,...zz in the command line. May return additional properties to
 # be processed as if they had been specified by the user.
 #
+args.add-arg toolsets : --toolset
+    : "Autoconfigure toolsets (--toolset=xx,yy,...zz or toolset=xx,yy,...zz)." ;
 local rule process-explicit-toolset-requests
 {
     local extra-properties ;
 
-    local option-toolsets  = [ regex.split-list [ MATCH ^--toolset=(.*)$ : $(.argv) ] : "," ] ;
-    local feature-toolsets = [ regex.split-list [ MATCH   ^toolset=(.*)$ : $(.argv) ] : "," ] ;
+    local option-toolsets  = [ regex.split-list [ args.get-arg toolsets ] : "," ] ;
+    local feature-toolsets = [ regex.split-list [ MATCH ^toolset=(.*)$ : $(.argv) ] : "," ] ;
 
     for local t in $(option-toolsets) $(feature-toolsets)
     {
@@ -596,10 +613,14 @@ local rule should-clean-project ( project )
 ################################################################################
 
 {
-    if --version in $(.argv)
+    args.add-arg version : --version
+        : "Display version, and other information. (same as -v)"
+        : flag ;
+
+    if [ args.get-arg version ]
     {
         version.print ;
-        EXIT ;
+        EXIT : 0 ;
     }
 
     version.verify-engine-version ;
@@ -653,7 +674,7 @@ local rule should-clean-project ( project )
         ECHO "warning: If the default is wrong, your build may not work correctly." ;
         ECHO "warning: Use the \"toolset=xxxxx\" option to override our guess." ;
         ECHO "warning: For more configuration options, please consult" ;
-        ECHO "warning: https://www.bfgroup.xyz/b2/manual/release/index.html#bbv2.overview.configuration" ;
+        ECHO "warning: https://www.bfgroup.xyz/b2/manual/release/index.html#b2.overview.configuration" ;
 
         toolset.using $(default-toolset) : $(default-toolset-version) ;
     }
@@ -685,8 +706,14 @@ local rule should-clean-project ( project )
     # clean existing instead of create new targets. Note that these are not the
     # final flag values as they may get changed later on due to some special
     # targets being specified on the command line.
-    local clean    ; if "--clean"     in $(.argv) { clean    = true ; }
-    local cleanall ; if "--clean-all" in $(.argv) { cleanall = true ; }
+    args.add-arg clean : --clean
+        : "Remove known build results instead of building them."
+        : flag ;
+    local clean = [ args.get-arg clean ] ;
+    args.add-arg clean-all : --clean-all
+        : "Remove known build results instead of building them."
+        : flag ;
+    local cleanall = [ args.get-arg clean-all ] ;
 
 
     # List of explicitly requested files to build. Any target references read
@@ -745,7 +772,10 @@ local rule should-clean-project ( project )
         targets += [ project.target [ project.module-name "." ] ] ;
     }
 
-    if [ option.get dump-generators : : true ]
+    args.add-arg dump-generators : --dump-generators
+        : "Display the active build generators."
+        ;
+    if [ args.get-arg dump-generators ]
     {
         generators.dump ;
     }
@@ -811,7 +841,10 @@ local rule should-clean-project ( project )
         }
     }
 
-    local durations = [ MATCH "(--durations(=([0-9]+))?)" : $(.argv) ] ;
+    args.add-arg durations : --durations
+        : "Record the timing of some number (default 10) of actions."
+        ;
+    local durations = [ args.get-arg durations ] ;
     if $(durations) {
         durations = $(durations[3]) ;
         durations ?= 10 ;
@@ -1022,32 +1055,20 @@ local rule should-clean-project ( project )
             ;
     }
 
-    local j = [ option.get jobs ] ;
-    if $(j)
-    {
-        modules.poke : PARALLELISM : $(j) ;
-    }
-
-    local k = [ option.get keep-going : true : true ] ;
-    if $(k) in "on" "yes" "true"
-    {
-        modules.poke : KEEP_GOING : 1 ;
-    }
-    else if $(k) in "off" "no" "false"
-    {
-        modules.poke : KEEP_GOING : 0 ;
-    }
-    else
-    {
-        EXIT "error: Invalid value for the --keep-going option" ;
-    }
-
     # The 'all' pseudo target is not strictly needed expect in the case when we
     # use it below but people often assume they always have this target
     # available and do not declare it themselves before use which may cause
     # build failures with an error message about not being able to build the
     # 'all' target.
     NOTFILE all ;
+
+    # Skip building (i.e. updating) if the user is asking for help. We need all
+    # the declarations to get ad-hoc help arguments declared. But we don't
+    # want to update while also asking for help.
+    if [ args.get-arg help ]
+    {
+        return ;
+    }
 
     # And now that all the actual raw Jam targets and all the dependencies
     # between them have been prepared all that is left is to tell Jam to update

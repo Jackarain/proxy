@@ -19,7 +19,6 @@
 #include <ostream>
 #include <utility>
 #include <stdexcept>
-#include <type_traits>
 
 template< typename Resource >
 struct empty_resource_deleter
@@ -1589,7 +1588,14 @@ void check_simple_resource_traits()
 
     g_n = 0;
     {
+#if !defined(BOOST_MSVC) || (BOOST_MSVC >= 1920)
         boost::scope::unique_resource< int*, global_deleter_ptr, boost::scope::unallocated_resource< nullptr > > ur{ &g_n };
+#else
+        // MSVC 14.1 fails with ICE on check_simple_resource_traits. It's not clear what exactly upsets the compiler,
+        // but fiddling with this constructor call seems to allow the compilation to succeed.
+        // https://developercommunity.visualstudio.com/t/ICE-when-compiling-NTTP-related-BoostSc/10922599
+        boost::scope::unique_resource< int*, global_deleter_ptr, boost::scope::unallocated_resource< nullptr > > ur{ &g_n, global_deleter_ptr() };
+#endif
         BOOST_TEST_EQ(ur.get(), &g_n);
         BOOST_TEST(ur.allocated());
         BOOST_TEST(!!ur);

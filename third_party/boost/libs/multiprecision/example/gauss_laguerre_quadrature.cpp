@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-//      Copyright Christopher Kormanyos 2012 - 2015, 2020.
+//      Copyright Christopher Kormanyos 2012 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -9,6 +9,7 @@
 // a high-precision Gauss-Laguerre quadrature integration.
 // The quadrature is used to calculate the airy_ai(x) function
 // for real-valued x on the positive axis with x.ge.1.
+// This is in the non-oscillating region of airy_ai(x).
 
 // In this way, the integral representation could be seen
 // as part of a scheme to calculate real-valued Airy functions
@@ -20,16 +21,29 @@
 // ranging from 21...301, by adjusting the parameter
 // local::my_digits10 at compile time.
 
+// References:
+
 // The quadrature integral representaion of airy_ai(x) used
 // in this example can be found in:
 
 // A. Gil, J. Segura, N.M. Temme, "Numerical Methods for Special
 // Functions" (SIAM Press 2007), Sect. 5.3.3, in particular Eq. 5.110,
-// page 145. Subsequently, Gil et al's book cites the another work:
+// page 145. Subsequently, Gil et al's book cites another work:
 // W. Gautschi, "Computation of Bessel and Airy functions and of
 // related Gaussian quadrature formulae", BIT, 42 (2002), pp. 110-118.
 
+#include <boost/cstdfloat.hpp>
+#include <boost/math/constants/constants.hpp>
+#include <boost/math/special_functions/bessel.hpp>
+#include <boost/math/special_functions/cbrt.hpp>
+#include <boost/math/special_functions/factorials.hpp>
+#include <boost/math/special_functions/gamma.hpp>
+#include <boost/math/tools/roots.hpp>
+#include <boost/multiprecision/cpp_dec_float.hpp>
+#include <boost/noncopyable.hpp>
+
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <iomanip>
@@ -38,16 +52,6 @@
 #include <sstream>
 #include <tuple>
 #include <vector>
-
-#include <boost/cstdfloat.hpp>
-#include <boost/math/constants/constants.hpp>
-#include <boost/math/special_functions/cbrt.hpp>
-#include <boost/math/special_functions/bessel.hpp>
-#include <boost/math/special_functions/factorials.hpp>
-#include <boost/math/special_functions/gamma.hpp>
-#include <boost/math/tools/roots.hpp>
-#include <boost/multiprecision/cpp_dec_float.hpp>
-#include <boost/noncopyable.hpp>
 
 namespace gauss { namespace laguerre {
 
@@ -76,24 +80,17 @@ namespace detail
   class laguerre_l_object BOOST_FINAL
   {
   public:
-    laguerre_l_object(const int n, const T a) noexcept
+    explicit laguerre_l_object(const int n, const T a) noexcept
       : order(n),
-        alpha(a),
-        p1   (0),
-        d2   (0) { }
+        alpha(a) { }
 
-    laguerre_l_object& operator=(const laguerre_l_object& other)
-    {
-      if(this != other)
-      {
-        order = other.order;
-        alpha = other.alpha;
-        p1    = other.p1;
-        d2    = other.d2;
-      }
+    laguerre_l_object(const laguerre_l_object&) = default;
 
-      return *this;
-    }
+    laguerre_l_object(laguerre_l_object&&) noexcept = default;
+
+    laguerre_l_object& operator=(const laguerre_l_object&) = default;
+
+    laguerre_l_object& operator=(laguerre_l_object&&) noexcept = default;
 
     T operator()(const T& x) const noexcept
     {
@@ -150,10 +147,10 @@ namespace detail
     }
 
   private:
-    const   int order;
-    const   T   alpha;
-    mutable T   p1;
-    mutable T   d2;
+    int order;
+    T   alpha;
+    mutable T   p1 { };
+    mutable T   d2 { };
   };
 
   template<typename T>

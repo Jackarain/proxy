@@ -8,7 +8,7 @@ import numbers ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.cpp-template-depth]]`c++-template-depth`::
+[[b2.builtin.features.cpp-template-depth]]`c++-template-depth`::
 *Allowed values:* Any positive integer.
 +
 Allows configuring a {CPP} compiler with the maximal template instantiation

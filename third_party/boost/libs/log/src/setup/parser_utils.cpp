@@ -60,7 +60,7 @@ const char_constants< char >::char_type char_constants< char >::char_paren_brack
 const char* char_constants< char >::trim_spaces_left(const char_type* begin, const char_type* end)
 {
     using namespace std;
-    while (begin != end && isspace(*begin))
+    while (begin != end && isspace(static_cast< unsigned char >(*begin)))
         ++begin;
     return begin;
 }
@@ -69,7 +69,7 @@ const char* char_constants< char >::trim_spaces_left(const char_type* begin, con
 const char* char_constants< char >::trim_spaces_right(const char_type* begin, const char_type* end)
 {
     using namespace std;
-    while (begin != end && isspace(*(end - 1)))
+    while (begin != end && isspace(static_cast< unsigned char >(*(end - 1))))
         --end;
     return end;
 }
@@ -81,7 +81,7 @@ const char* char_constants< char >::scan_attr_placeholder(const char_type* begin
     while (begin != end)
     {
         char_type c = *begin;
-        if (!isalnum(c) && c != char_underline)
+        if (!isalnum(static_cast< unsigned char >(c)) && c != char_underline)
             break;
         ++begin;
     }
@@ -132,7 +132,7 @@ const char* char_constants< char >::parse_operand(const char_type* begin, const 
         for (++p; p != end; ++p)
         {
             c = *p;
-            if (!isalnum(c) && c != '_' && c != '-' && c != '+' && c != '.')
+            if (!isalnum(static_cast< unsigned char >(c)) && c != '_' && c != '-' && c != '+' && c != '.')
                 break;
         }
 
@@ -174,7 +174,7 @@ void char_constants< char >::translate_escape_sequences(string_type& str)
                     if (std::distance(++b, str.end()) >= 2)
                     {
                         char_type c1 = *b++, c2 = *b++;
-                        if (isxdigit(c1) && isxdigit(c2))
+                        if (isxdigit(static_cast< unsigned char >(c1)) && isxdigit(static_cast< unsigned char >(c2)))
                         {
                             *it++ = char_type((to_number(c1) << 4) | to_number(c2));
                             it = str.erase(it, b);

@@ -17,54 +17,6 @@
 
 namespace boost {
 namespace urls {
-
-/** Rule for a string with percent-encoded escapes
-
-    This function returns a rule which matches
-    a percent-encoded string, permitting characters
-    in the string which are also in the specified
-    character set to be used unescaped.
-   
-    @par Value Type
-    @code
-    using value_type = pct_string_view;
-    @endcode
-
-    @par Example
-    Rules are used with the function @ref grammar::parse.
-    @code
-    //  pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
-
-    system::result< pct_string_view > rv = grammar::parse( "Program%20Files", pct_encoded_rule( pchars ) );
-    @endcode
-
-    @par BNF
-    @code
-    pct-encoded   = "%" HEXDIG HEXDIG
-    @endcode
-
-    @param cs The character set indicating
-    which characters are allowed without escapes.
-    Any character which is not in this set must be
-    escaped, or else parsing returns an error.
-
-    @par Specification
-    @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-2.1">
-        2.1. Percent-Encoding (rfc3986)</a>
-
-    @see
-        @ref grammar::parse,
-        @ref pchars,
-        @ref pct_string_view.
-*/
-#ifdef BOOST_URL_DOCS
-/**@{*/
-template<class CharSet>
-constexpr
-__implementation_defined__
-pct_encoded_rule( CharSet const& cs ) noexcept;
-/**@}*/
-#else
 namespace implementation_defined {
 template<class CharSet>
 struct pct_encoded_rule_t
@@ -145,8 +97,6 @@ pct_encoded_rule(CS const& cs) noexcept ->
 
     return implementation_defined::pct_encoded_rule_t<CS>(cs);
 }
-
-#endif
 
 } // urls
 } // boost

@@ -6,7 +6,7 @@
 
 #include <boost/contract.hpp>
 #include <boost/local_function.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <cassert>
 
 class iarray :

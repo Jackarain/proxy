@@ -57,7 +57,7 @@ private:
         std::remove_reference< reference >
     >;
 
- public:
+public:
     using type = iterator_adaptor<
         transform_iterator< UnaryFunc, Iterator, Reference, Value >,
         Iterator,

@@ -29,11 +29,13 @@ namespace urls {
 #   pragma warning(disable: 4251)
 #endif
 
-/** Common functionality for containers
+/** Common functionality for query parameter containers
 
-    This base class is used by the library
+    The library uses this base class
     to provide common member functions for
-    containers. This cannot be instantiated
+    containers of query parameters.
+
+    This class should not be instantiated
     directly; Instead, use one of the
     containers or functions:
 

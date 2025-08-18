@@ -7,7 +7,7 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.tools.compiler.acc]]
+[[b2.reference.tools.compiler.acc]]
 = HP aC++ compiler
 
 The `acc` module supports the

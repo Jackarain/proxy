@@ -1,7 +1,8 @@
 import testing ;
 
-project metaparse :
+project :
   requirements
+    <library>/boost/metaparse//boost_metaparse
     <toolset>gcc:<cxxflags>"-ftemplate-depth-300"
     <toolset>clang:<cxxflags>"-ftemplate-depth-300"
 

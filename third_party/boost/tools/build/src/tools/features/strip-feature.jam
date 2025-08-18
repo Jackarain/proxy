@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.strip]]`strip`::
+[[b2.builtin.features.strip]]`strip`::
 *Allowed values:* `off`, `on`.
 +
 Controls whether the binary should be stripped -- that is have everything not

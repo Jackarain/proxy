@@ -1,5 +1,5 @@
 /* Configure Boost.Outcome with Boost
-(C) 2015-2024 Niall Douglas <http://www.nedproductions.biz/> (7 commits)
+(C) 2015-2025 Niall Douglas <http://www.nedproductions.biz/> (7 commits)
 File Created: August 2015
 
 

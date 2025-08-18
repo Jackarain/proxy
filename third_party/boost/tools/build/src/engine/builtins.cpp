@@ -1092,7 +1092,7 @@ LIST * builtin_hdrmacro( FRAME * frame, int flags )
         TARGET * const t = bindtarget( list_item( iter ) );
 
         /* Scan file for header filename macro definitions. */
-        if ( DEBUG_HEADER )
+        if ( is_debug_header() )
             out_printf( "scanning '%s' for header file macro definitions\n",
                 object_str( list_item( iter ) ) );
 
@@ -1480,7 +1480,6 @@ LIST * builtin_update( FRAME * frame, int flags )
     return result;
 }
 
-extern int anyhow;
 int last_update_now_status;
 
 /* Takes a list of target names and immediately updates them.
@@ -1503,8 +1502,8 @@ LIST * builtin_update_now( FRAME * frame, int flags )
     int status;
     int original_stdout = 0;
     int original_stderr = 0;
-    int original_noexec = 0;
-    int original_quitquick = 0;
+    bool original_noexec = false;
+    bool original_quitquick = false;
 
     if ( !list_empty( log ) )
     {
@@ -1519,16 +1518,16 @@ LIST * builtin_update_now( FRAME * frame, int flags )
     if ( !list_empty( force ) )
     {
         original_noexec = globs.noexec;
-        globs.noexec = 0;
+        globs.noexec = false;
     }
 
     if ( !list_empty( continue_ ) )
     {
         original_quitquick = globs.quitquick;
-        globs.quitquick = 0;
+        globs.quitquick = false;
     }
 
-    status = make( targets, anyhow );
+    status = make( targets, globs.anyhow );
 
     if ( !list_empty( force ) )
     {

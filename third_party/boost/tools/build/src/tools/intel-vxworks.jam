@@ -13,6 +13,7 @@ import common ;
 import errors ;
 import generators ;
 import regex ;
+import args ;
 
 feature.extend-subfeature toolset intel : platform : vxworks ;
 
@@ -35,10 +36,7 @@ toolset.inherit-flags intel-vxworks : gcc
           <architecture>x86/<address-model>64
         ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 # Initializes the intel-vxworks toolset
 #   version in mandatory

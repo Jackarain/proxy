@@ -193,11 +193,13 @@ class asciidoctor-generator : generator
         for local p in [ $(property-set).raw ]
         {
             if $(p:G) in <asciidoctor-attribute> <asciidoctor-doctype>
-                <flags>
+                <flags> <location>
             {
                 raw-set += $(p) ;
             }
         }
+        local relevant-ps = [ $(property-set).relevant $(property-set) ] ;
+        raw-set += [ $(relevant-ps).raw ] ;
         raw-set = [ feature.expand-composites $(raw-set) ] ;
         raw-set += [ $(property-set).incidental ] ;
         property-set = [ property-set.create $(raw-set) ] ;

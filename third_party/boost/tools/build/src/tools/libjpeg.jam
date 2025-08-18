@@ -22,6 +22,7 @@ import modules ;
 import indirect ;
 import property ;
 import property-set ;
+import args ;
 
 header = jpeglib.h ;
 
@@ -40,10 +41,7 @@ sources =   jaricom.c jcapimin.c jcapistd.c jcarith.c jccoefct.c jccolor.c
 
 library-id = 0 ;
 
-if --debug-configuration in [ modules.peek : ARGV ]
-{
-    .debug =  true ;
-}
+.debug =  [ args.get-arg debug-configuration ] ;
 
 # Initializes the libjpeg library.
 #

@@ -1,0 +1,741 @@
+[#filter]
+== Class Template `filter`
+
+:idprefix: filter_
+
+`boost::bloom::filter` -- A data structure that supports element insertion
+and _probabilistic_ lookup, where an element can be determined to be in the filter
+with high confidence or else not be with absolute certainty. The probability
+that lookup erroneously classifies a non-present element as present is called
+the filter's _false positive rate_ (FPR).
+
+`boost::bloom::filter` maintains an internal array of `m` bits where `m` is the
+filter's _capacity_.  Unlike traditional containers, inserting an
+element `x` does not store a copy of `x` within the filter, but rather results
+in a fixed number of bits in the array being set to one, where the positions
+of the bits are pseudorandomly produced from the hash value of `x`. Lookup
+for `y` simply checks whether all the bits associated to `y` are actually set.
+
+* For a given filter,  the FPR increases as new elements are inserted.
+* For a given number of inserted elements, a filter with higher capacity
+has a lower FPR.
+
+By convention, we say that a filter is _empty_ if its capacity is zero or
+all the bits in the internal array are set to zero.
+
+=== Synopsis
+
+[listing,subs="+macros,+quotes"]
+-----
+// #include <boost/bloom/filter.hpp>
+
+namespace boost{
+namespace bloom{
+
+template<
+  typename T, std::size_t K,
+  typename Subfilter = block<unsigned char, 1>, std::size_t Stride = 0,
+  typename Hash = boost::hash<T>,
+  typename Allocator = std::allocator<unsigned char>
+>
+class filter
+{
+public:
+  // types and constants
+  using value_type                         = T;
+  static constexpr std::size_t k           = K;
+  using subfilter                          = Subfilter;
+  static constexpr std::size_t xref:filter_stride[stride]      = xref:filter_stride[__see below__];
+  using hasher                             = Hash;
+  using allocator_type                     = Allocator;
+  using size_type                          = std::size_t;
+  using difference_type                    = std::ptrdiff_t;
+  using reference                          = value_type&;
+  using const_reference                    = const value_type&;
+  using pointer                            = value_type*;
+  using const_pointer                      = const value_type*;
+
+  // construct/copy/destroy
+  xref:#filter_default_constructor[filter]();
+  explicit xref:#filter_capacity_constructor[filter](
+    size_type m, const hasher& h = hasher(),
+    const allocator_type& al = allocator_type());
+  xref:#filter_capacity_constructor[filter](
+    size_type n, double fpr, const hasher& h = hasher(),
+    const allocator_type& al = allocator_type());
+  template<typename InputIterator>
+    xref:#filter_iterator_range_constructor[filter](
+      InputIterator first, InputIterator last,
+      size_type m, const hasher& h = hasher(),
+      const allocator_type& al = allocator_type());
+  template<typename InputIterator>
+    xref:#filter_iterator_range_constructor[filter](
+      InputIterator first, InputIterator last,
+      size_type n, double fpr, const hasher& h = hasher(),
+      const allocator_type& al = allocator_type());
+  xref:#filter_copy_constructor[filter](const filter& x);
+  xref:#filter_move_constructor[filter](filter&& x);
+  template<typename InputIterator>
+    xref:#filter_iterator_range_constructor_with_allocator[filter](
+      InputIterator first, InputIterator last,
+      size_type m, const allocator_type& al);
+  template<typename InputIterator>
+    xref:#filter_iterator_range_constructor_with_allocator[filter](
+      InputIterator first, InputIterator last,
+      size_type n, double fpr, const allocator_type& al);
+  explicit xref:#filter_allocator_constructor[filter](const allocator_type& al);
+  xref:#filter_copy_constructor_with_allocator[filter](const filter& x, const allocator_type& al);
+  xref:#filter_move_constructor_with_allocator[filter](filter&& x, const allocator_type& al);
+  xref:#filter_initializer_list_constructor[filter](
+    std::initializer_list<value_type> il,
+    size_type m, const hasher& h = hasher(),
+    const allocator_type& al = allocator_type());
+  xref:#filter_initializer_list_constructor[filter](
+    std::initializer_list<value_type> il,
+    size_type n, double fpr, const hasher& h = hasher(),
+    const allocator_type& al = allocator_type());
+  xref:#filter_capacity_constructor_with_allocator[filter](size_type m, const allocator_type& al);
+  xref:#filter_capacity_constructor_with_allocator[filter](size_type n, double fpr, const allocator_type& al);
+  xref:#filter_initializer_list_constructor_with_allocator[filter](
+    std::initializer_list<value_type> il,
+    size_type m, const allocator_type& al);
+  xref:#filter_initializer_list_constructor_with_allocator[filter](
+    std::initializer_list<value_type> il,
+    size_type n, double fpr, const allocator_type& al);
+  xref:#filter_destructor[~filter]();
+  filter& xref:#filter_copy_assignment[operator+++=+++](const filter& x);
+  filter& xref:#filter_move_assignment[operator+++=+++](filter&& x)
+    noexcept(
+	  std::allocator_traits<Allocator>::is_always_equal::value ||
+      std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value);
+  filter& xref:#filter_initializer_list_assignment[operator+++=+++](std::initializer_list<value_type> il);
+  allocator_type xref:#filter_get_allocator[get_allocator]() const noexcept;
+
+  // capacity
+  size_type xref:#filter_capacity_2[capacity]() const noexcept;
+  static size_type xref:#filter_capacity_estimation[capacity_for](size_type n, double fpr);
+  static double xref:#filter_fpr_estimation[fpr_for](size_type n,size_type m)
+
+  // data access
+  boost::span<unsigned char>       xref:#filter_array[array]() noexcept;
+  boost::span<const unsigned char> xref:#filter_array[array]() const noexcept;
+
+  // modifiers
+  void xref:#filter_insert[insert](const value_type& x);
+  template<typename U>
+    void xref:#filter_insert[insert](const U& x);
+  template<typename InputIterator>
+    void xref:#filter_insert_iterator_range[insert](InputIterator first, InputIterator last);
+  void xref:#filter_insert_initializer_list[insert](std::initializer_list<value_type> il);
+
+  void xref:#filter_swap[swap](filter& x)
+    noexcept(std::allocator_traits<Allocator>::is_always_equal::value ||
+             std::allocator_traits<Allocator>::propagate_on_container_swap::value);
+  void xref:#filter_clear[clear]() noexcept;
+  void xref:#filter_reset[reset](size_type m = 0);
+  void xref:#filter_reset[reset](size_type n, double fpr);
+
+  filter& xref:#filter_combine_with_and[operator&=](const filter& x);
+  filter& xref:#filter_combine_with_or[operator|=](const filter& x);
+
+  // observers
+  hasher xref:#filter_hash_function[hash_function]() const;
+
+  // lookup
+  bool xref:#filter_may_contain[may_contain](const value_type& x) const;
+  template<typename U>
+    bool xref:#filter_may_contain[may_contain](const U& x) const;
+};
+
+} // namespace bloom
+} // namespace boost
+-----
+
+=== Description
+
+*Template Parameters*
+
+[cols="1,4"]
+|===
+
+|`T`
+|The cv-unqualified object type of the elements inserted into the filter.
+
+|`K`
+| Number of times the associated subfilter is invoked per element upon insertion or lookup.
+`K` must be greater than zero.
+
+|`Subfilter`
+| A xref:subfilter[subfilter] type providing the exact algorithm for
+bit setting/checking into the filter's internal array. The subfilter is invoked `K` times
+per operation on `K` pseudorandomly selected portions of the array (_subarrays_) of width
+`xref:subfilters_used_value_size[_used-value-size_]<Subfilter>`.
+
+|`Stride`
+| Distance in bytes between the initial positions of consecutive subarrays.
+If `Stride` is specified as zero, the actual distance is automatically selected to
+`_used-value-size_<Subfilter>` (non-overlapping subarrays).
+Otherwise, `Stride` must be not greater than `_used-value-size_<Subfilter>`.
+
+|`Hash`
+|A https://en.cppreference.com/w/cpp/named_req/Hash[Hash^] type over `T`.
+
+|`Allocator`
+|An https://en.cppreference.com/w/cpp/named_req/Allocator[Allocator^] whose value type is
+`unsigned char`.
+
+|===
+
+Allocation and deallocation of the internal array is done through an internal copy of the
+provided allocator. If `xref:filter_stride[stride]` is a
+multiple of _a_ = `alignof(Subfilter::value_type)`, the array is byte-aligned to
+max(64, _a_).
+
+If `link:../../../container_hash/doc/html/hash.html#ref_hash_is_avalanchinghash[boost::hash_is_avalanching]<Hash>::value`
+is `true` and `sizeof(std::size_t) >= 8`, 
+the hash function is used as-is; otherwise, a bit-mixing post-processing stage
+is added to increase the quality of hashing at the expense of extra computational cost.
+
+*Exception Safety Guarantees*
+
+Except when explicitly noted, all non-const member functions and associated functions taking
+`boost::bloom::filter` by non-const reference provide the
+https://en.cppreference.com/w/cpp/language/exceptions#Exception_safety[basic exception guarantee^],
+whereas all const member functions and associated functions taking
+`boost::bloom::filter` by const reference provide the 
+https://en.cppreference.com/w/cpp/language/exceptions#Exception_safety[strong exception guarantee^].
+
+Except when explicitly noted, no operation throws an exception unless that exception
+is thrown by the filter's `Hash` or `Allocator` object (if any).
+
+=== Types and Constants
+
+[[filter_stride]]
+[listing,subs="+macros,+quotes"]
+----
+static constexpr std::size_t stride;
+----
+
+Equal to `Stride` if that parameter was specified as distinct from zero.
+Otherwise, equal to `xref:subfilters_used_value_size[_used-value-size_]<subfilter>`.
+
+=== Constructors
+
+==== Default Constructor
+[listing,subs="+macros,+quotes"]
+----
+filter();
+----
+
+Constructs an empty filter using `hasher()` as the hash function and
+`allocator_type()` as the allocator.
+
+[horizontal]
+Preconditions:;; `hasher`, and `allocator_type` must be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+Postconditions:;; `capacity() == 0`.
+
+==== Capacity Constructor
+[listing,subs="+macros,+quotes"]
+----
+explicit filter(
+  size_type m, const hasher& h = hasher(),
+  const allocator_type& al = allocator_type());
+filter(
+  size_type n, double fpr, const hasher& h = hasher(),
+  const allocator_type& al = allocator_type());
+----
+
+Constructs an empty filter using copies of `h` and `al` as the hash function and allocator, respectively.
+
+[horizontal]
+Preconditions:;; `fpr` is between 0.0 and 1.0.
+Postconditions:;; `capacity() == 0` if `m == 0`, `capacity() >= m` otherwise (first overload). +
+`capacity() == capacity_for(n, fpr)` (second overload).
+
+==== Iterator Range Constructor
+[listing,subs="+macros,+quotes"]
+----
+template<typename InputIterator>
+  filter(
+    InputIterator first, InputIterator last,
+    size_type m, const hasher& h = hasher(),
+    const allocator_type& al = allocator_type());
+template<typename InputIterator>
+  filter(
+    InputIterator first, InputIterator last,
+    size_type n, double fpr, const hasher& h = hasher(),
+    const allocator_type& al = allocator_type());
+----
+
+Constructs a filter using copies of `h` and `al` as the hash function and allocator, respectively,
+and inserts the values from `[first, last)` into it.
+
+[horizontal]
+Preconditions:;; `InputIterator` is a https://en.cppreference.com/w/cpp/named_req/InputIterator[LegacyInputIterator^] referring to `value_type`. +
+`[first, last)` is a valid range. +
+`fpr` is between 0.0 and 1.0.
+Postconditions:;; `capacity() == 0` if `m == 0`, `capacity() >= m` otherwise (first overload). +
+`capacity() == capacity_for(n, fpr)` (second overload). +
+`may_contain(x)` for all values `x` from `[first, last)`.
+
+==== Copy Constructor
+[listing,subs="+macros,+quotes"]
+----
+filter(const filter& x);
+----
+
+Constructs a filter using copies of `x`++'++s internal array, `x.hash_function()`
+and `std::allocator_traits<Allocator>::select_on_container_copy_construction(x.get_allocator())`.
+
+[horizontal]
+Postconditions:;; `*this == x`.
+
+==== Move Constructor
+
+[listing,subs="+macros,+quotes"]
+----
+filter(filter&& x);
+----
+
+Constructs a filter tranferring `x`++'++s internal array to `*this` and using
+a hash function and allocator move-constructed from `x`++'++s hash function
+and allocator, respectively.
+
+[horizontal]
+Postconditions:;; `x.capacity() == 0`.
+
+==== Iterator Range Constructor with Allocator
+
+[listing,subs="+macros,+quotes"]
+----
+template<typename InputIterator>
+  filter(
+    InputIterator first, InputIterator last,
+    size_type m, const allocator_type& al);
+template<typename InputIterator>
+  filter(
+    InputIterator first, InputIterator last,
+    size_type n, double fpr, const allocator_type& al);
+----
+
+Equivalent to `xref:#filter_iterator_range_constructor[filter](first, last, m, hasher(), al)` (first overload)
+or `xref:#filter_iterator_range_constructor[filter](first, last, n, fpr, hasher(), al)` (second overload).
+
+==== Allocator Constructor
+
+[listing,subs="+macros,+quotes"]
+----
+explicit filter(const allocator_type& al);
+----
+
+Constructs an empty filter using `hasher()` as the hash function and
+a copy of `al` as the allocator.
+
+[horizontal]
+Preconditions:;; `hasher` must be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+Postconditions:;; `capacity() == 0`.
+
+==== Copy Constructor with Allocator
+
+[listing,subs="+macros,+quotes"]
+----
+filter(const filter& x, const allocator_type& al);
+----
+
+Constructs a filter using copies of `x`++'++s internal array, `x.hash_function()`
+and `al`.
+
+[horizontal]
+Postconditions:;; `*this == x`.
+
+==== Move Constructor with Allocator
+
+[listing,subs="+macros,+quotes"]
+----
+filter(filter&& x, const allocator_type& al);
+----
+
+Constructs a filter tranferring `x`++'++s internal array to `*this` if
+`al == x.get_allocator()`, or using a copy of the array otherwise.
+The hash function of the new filter is move-constructed from `x`++'++s
+hash function and the allocator is a copy of `al`.
+
+[horizontal]
+Postconditions:;; `x.capacity() == 0`.
+
+==== Initializer List Constructor
+
+[listing,subs="+macros,+quotes"]
+----
+filter(
+  std::initializer_list<value_type> il,
+  size_type m, const hasher& h = hasher(),
+  const allocator_type& al = allocator_type());
+filter(
+  std::initializer_list<value_type> il,
+  size_type n, double fpr, const hasher& h = hasher(),
+  const allocator_type& al = allocator_type());
+----
+
+Equivalent to `xref:#filter_iterator_range_constructor[filter](il.begin(), il.end(), m, h, al)` (first overload)
+or `xref:#filter_iterator_range_constructor[filter](il.begin(), il.end(), n, fpr, h, al)` (second overload).
+
+==== Capacity Constructor with Allocator
+
+[listing,subs="+macros,+quotes"]
+----
+filter(size_type m, const allocator_type& al);
+filter(size_type n, double fpr, const allocator_type& al);
+----
+
+Equivalent to `xref:#filter_capacity_constructor[filter](m, hasher(), al)` (first overload)
+or `xref:#filter_capacity_constructor[filter](n, fpr, hasher(), al)` (second overload).
+
+==== Initializer List Constructor with Allocator
+
+[listing,subs="+macros,+quotes"]
+----
+filter(
+  std::initializer_list<value_type> il,
+  size_type m, const allocator_type& al);
+filter(
+  std::initializer_list<value_type> il,
+  size_type n, double fpr, const allocator_type& al);
+----
+
+Equivalent to `xref:#filter_initializer_list_constructor[filter](il, m, hasher(), al)` (first overload)
+or `xref:#filter_initializer_list_constructor[filter](il, n, fpr, hasher(), al)` (second overload).
+
+=== Destructor
+
+[listing,subs="+macros,+quotes"]
+----
+~filter();
+----
+
+Deallocates the internal array and destructs the internal hash function and allocator.
+
+=== Assignment
+
+==== Copy Assignment
+
+[listing,subs="+macros,+quotes"]
+----
+filter& operator=(const filter& x);
+----
+
+Let `pocca` be `std::allocator_traits<Allocator>::propagate_on_container_copy_assignment::value`.
+If `pocca`, replaces the internal allocator `al` with a copy of `x.get_allocator()`.
+If `capacity() != x.capacity()` or `pocca && al != x.get_allocator()`, replaces the internal array
+with a new one with capacity  `x.capacity()`.
+Copies the values of `x`++'++s internal array.
+Replaces the internal hash function with a copy of `x.hash_function()`.
+
+[horizontal]
+Preconditions:;; If `pocca`,
+`Allocator` is nothrow https://en.cppreference.com/w/cpp/named_req/CopyAssignable[CopyAssignable^]. +
+`hasher` is nothrow https://en.cppreference.com/w/cpp/named_req/Swappable[Swappable^].
+Postconditions:;; `*this == x`.
+Returns:;; `*this`.
+Exception Safety:;; Strong.
+
+==== Move Assignment
+
+[listing,subs="+macros,+quotes"]
+----
+filter& operator=(filter&& x)
+  noexcept(
+    std::allocator_traits<Allocator>::is_always_equal::value ||
+    std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value);
+----
+
+Let `pocma` be `std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value`.
+If `pocma`, replaces the internal allocator with a copy of `x.get_allocator()`.
+If `get_allocator() == x.get_allocator()`, transfers `x`++'++s internal array to `*this`;
+otherwise, replaces the internal array with a new one with capacity `x.capacity()`
+and copies the values of `x`++'++s internal array.
+Replaces the internal hash function with a copy of `x.hash_function()`.
+
+[horizontal]
+Preconditions:;; If `pocma`,
+`Allocator` is nothrow https://en.cppreference.com/w/cpp/named_req/CopyAssignable[CopyAssignable^]. +
+`hasher` is nothrow https://en.cppreference.com/w/cpp/named_req/Swappable[Swappable^].
+Postconditions:;; `x.capacity() == 0`.
+Returns:;; `*this`.
+Exception Safety:;; Nothrow as indicated, otherwise strong.
+
+==== Initializer List Assignment
+
+[listing,subs="+macros,+quotes"]
+----
+filter& operator=(std::initializer_list<value_type> il);
+----
+
+Clears the filter and inserts the values from `il`.
+
+[horizontal]
+Returns:;; `*this`.
+
+=== Capacity
+
+==== Capacity
+
+[listing,subs="+macros,+quotes"]
+----
+size_type capacity() const noexcept;
+----
+
+[horizontal]
+Postconditions:;; `capacity()` is a multiple of `CHAR_BIT`.
+Returns:;; The size in bits of the internal array.
+
+==== Capacity Estimation
+
+[listing,subs="+macros,+quotes"]
+----
+static size_type capacity_for(size_type n, double fpr);
+----
+
+[horizontal]
+Preconditions:;; `fpr` is between 0.0 and 1.0.
+Postconditions:;; `filter(capacity_for(n, fpr)).capacity() == capacity_for(n, fpr)`. +
+`capacity_for(n, 1.0) == 0`.
+Returns:;; An estimation of the capacity required by a `filter` to attain a false positive rate
+equal to `fpr` when `n` distinct elements have been inserted.
+
+==== FPR Estimation
+
+[listing,subs="+macros,+quotes"]
+----
+static double fpr_for(size_type n, size_type m);
+----
+
+[horizontal]
+Postconditions:;; `fpr_for(n, m)` is between 0.0 and 1.0. +
+`fpr_for(n, 0) == 1.0`. +
+`fpr_for(0, m) == 0.0`  (if `m != 0`). +
+Returns:;; An estimation of the resulting false positive rate when
+`n` distinct elements have been inserted into a `filter`
+with capacity `m`.
+
+=== Data Access
+
+==== Array
+
+[listing,subs="+macros,+quotes"]
+----
+boost::span<unsigned char>       array() noexcept;
+boost::span<const unsigned char> array() const noexcept;
+----
+
+[horizontal]
+Postconditions:;; `array().size() == capacity() / CHAR_BIT`.
+Returns:;; A span over the internal array.
+
+=== Modifiers
+
+==== Insert
+
+[listing,subs="+macros,+quotes"]
+----
+void insert(const value_type& x);
+template<typename U> void insert(const U& x);
+----
+
+If `capacity() != 0`, sets to one `k * subfilter::k` (not necessarily distinct)
+bits of the internal array deterministically selected from the value
+`hash_function()(x)`.
+
+[horizontal]
+Postconditions:;; `may_contain(x)`.
+Exception Safety:;; Strong.
+Notes:;; The second overload only participates in overload resolution if
+`hasher::is_transparent` is a valid member typedef.
+
+==== Insert Iterator Range
+
+[listing,subs="+macros,+quotes"]
+----
+template<typename InputIterator>
+  void insert(InputIterator first, InputIterator last);
+----
+
+Equivalent to `while(first != last) xref:#filter_insert[insert](*first++)`.
+
+[horizontal]
+Preconditions:;; `InputIterator` is a https://en.cppreference.com/w/cpp/named_req/InputIterator[LegacyInputIterator^] referring to `value_type`. +
+`[first, last)` is a valid range.
+
+==== Insert Initializer List
+
+[listing,subs="+macros,+quotes"]
+----
+void insert(std::initializer_list<value_type> il);
+----
+
+Equivalent to `xref:#filter_insert_iterator_range[insert](il.begin(), il.end())`.
+
+==== Swap
+
+[listing,subs="+macros,+quotes"]
+----
+void swap(filter& x)
+  noexcept(std::allocator_traits<Allocator>::is_always_equal::value ||
+           std::allocator_traits<Allocator>::propagate_on_container_swap::value);
+----
+
+Let `pocs` be `std::allocator_traits<Allocator>::propagate_on_container_swap::value`.
+Swaps the internal array and hash function with those of `x`.
+If `pocs`, swaps the internal allocator with that of `x`.
+
+[horizontal]
+Preconditions:;; `pocs || get_allocator() == x.get_allocator()`. +
+If `pocs`, `Allocator` is nothrow https://en.cppreference.com/w/cpp/named_req/Swappable[Swappable^]. +
+`hasher` is nothrow https://en.cppreference.com/w/cpp/named_req/Swappable[Swappable^].
+Exception Safety:;; Nothrow.
+
+==== Clear
+
+[listing,subs="+macros,+quotes"]
+----
+void clear() noexcept;
+----
+
+Sets to zero all the bits in the internal array.
+
+==== Reset
+
+[listing,subs="+macros,+quotes"]
+----
+void reset(size_type m = 0);
+void reset(size_type n, double fpr);
+----
+
+First overload: Replaces the internal array if the resulting capacity calculated from `m` is not
+equal to `capacity()`, and clears the filter. +
+Second overload: Equivalent to `reset(capacity_for(n, fpr))`.
+
+[horizontal]
+Preconditions:;; `fpr` is between 0.0 and 1.0.
+Postconditions:;; In general, `capacity() >= m`. +
+If `m == 0` or `m == capacity()` or `m == capacity_for(n, fpr)` for some `n` and `fpr`, then `capacity() == m`.
+Exception Safety:;; If `m == 0` or `capacity_for(n, fpr) == 0`, nothrow, otherwise strong.
+
+==== Combine with AND
+
+[listing,subs="+macros,+quotes"]
+----
+filter& operator&=(const filter& x);
+----
+
+If `capacity() != x.capacity()`, throws a `std::invalid_argument` exception;
+otherwise, changes the value of each bit in the internal array with the result of
+doing a logical AND operation of that bit and the corresponding one in `x`.
+
+[horizontal]
+Preconditions:;; The `Hash` objects of `x` and `y` are equivalent.
+Returns:;; `*this`;
+Exception Safety:;; Strong.
+
+==== Combine with OR
+
+[listing,subs="+macros,+quotes"]
+----
+filter& operator|=(const filter& x);
+----
+
+If `capacity() != x.capacity()`, throws an `std::invalid_argument` exception;
+otherwise, changes the value of each bit in the internal array with the result of
+doing a logical OR operation of that bit and the corresponding one in `x`.
+
+[horizontal]
+Preconditions:;; The `Hash` objects of `x` and `y` are equivalent.
+Returns:;; `*this`;
+Exception Safety:;; Strong.
+
+=== Observers
+
+==== get_allocator
+
+[listing,subs="+macros,+quotes"]
+----
+allocator_type get_allocator() const noexcept;
+----
+
+[horizontal]
+Returns:;; A copy of the internal allocator.
+
+==== hash_function
+
+[listing,subs="+macros,+quotes"]
+----
+hasher hash_function() const;
+----
+
+[horizontal]
+Returns:;; A copy of the internal hash function.
+
+=== Lookup
+
+==== may_contain
+
+[listing,subs="+macros,+quotes"]
+----
+bool may_contain(const value_type& x) const;
+template<typename U> bool may_contain(const U& x) const;
+----
+
+[horizontal]
+Returns:;; `true` iff all the bits selected by a hypothetical
+`xref:filter_insert[insert](x)` operation are set to one.
+Notes:;; The second overload only participates in overload resolution if
+`hasher::is_transparent` is a valid member typedef.
+
+=== Comparison
+
+==== operator==
+
+[listing,subs="+macros,+quotes"]
+----
+template<
+  typename T, std::size_t K, typename S, std::size_t B, typename H, typename A
+>
+bool operator==(
+  const filter<T, K, S, B, H, A>& x, const filter<T, K, S, B, H, A>& y);
+----
+
+[horizontal]
+Preconditions:;; The `Hash` objects of `x` and `y` are equivalent.
+Returns:;; `true` iff `x.capacity() == y.capacity()` and 
+`x`++'++s and `y`++'++s internal arrays are bitwise identical.
+
+==== operator!=
+
+[listing,subs="+macros,+quotes"]
+----
+template<
+  typename T, std::size_t K, typename S, std::size_t B, typename H, typename A
+>
+bool operator!=(
+  const filter<T, K, S, B, H, A>& x, const filter<T, K, S, B, H, A>& y);
+----
+
+[horizontal]
+Preconditions:;; The `Hash` objects of `x` and `y` are equivalent.
+Returns:;; `!(x xref:filter_operator[==] y)`.
+
+
+=== Swap
+
+[listing,subs="+macros,+quotes"]
+----
+template<
+  typename T, std::size_t K, typename S, std::size_t B, typename H, typename A
+>
+void swap(filter<T, K, S, B, H, A>& x, filter<T, K, S, B, H, A>& y)
+  noexcept(noexcept(x.swap(y)));
+----
+
+Equivalent to `x.xref:filter_swap[swap](y)`.
+
+'''

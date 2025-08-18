@@ -1,4 +1,5 @@
-# copyright John Maddock 2013
+# copyright John Maddock 2013 - 2025
+# copyright Christopher Kormanyos 2021 - 2025
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt.
@@ -20,7 +21,6 @@ project : requirements
    <include>$(mpfi_path)
    <include>$(mpfi_path)/src
    <include>$(tommath_path)
-   <include>../../..
    # We set these to make it easier to set up and test GMP and MPFR under Win32:
    #<toolset>msvc:<runtime-link>static
    #<toolset>msvc:<link>static
@@ -71,6 +71,7 @@ lib test_instances_mpfr : [ generate_objs "_mpfr" : 4 : <define>TEST_MPFR_50 ] :
 lib test_instances_cpp_dec_float : [ generate_objs "_cpp_dec_float" : 3 : <define>TEST_CPP_DEC_FLOAT ] : ;
 lib test_instances_cpp_bin_float : [ generate_objs "_cpp_bin_float" : 1 : <define>TEST_CPP_BIN_FLOAT ] : ;
 lib test_instances_float128 : [ generate_objs "_float128" : 1 : <define>TEST_FLOAT128 ] : [ check-target-builds ../../../config//has_float128 : : <build>no ] ;
+lib test_instances_cpp_double_double : [ generate_objs "_cpp_double_double" : 1 : <define>TEST_CPP_DOUBLE_FLOAT ] : ;
 lib test_instances_intel_quad : [ generate_objs "_intel_quad" : 1 : <define>TEST_FLOAT128 <cxxflags>-Qoption,cpp,--extended_float_type ] : [ check-target-builds ../../../config//has_intel_quad : <cxxflags>-Qoption,cpp,--extended_float_type : <build>no ] ;
 
 explicit test_instances_mpf ;
@@ -78,5 +79,5 @@ explicit test_instances_mpfr ;
 explicit test_instances_cpp_dec_float ;
 explicit test_instances_cpp_bin_float ;
 explicit test_instances_float128 ;
+explicit test_instances_cpp_double_double ;
 explicit test_instances_intel_quad ;
-

@@ -5,11 +5,13 @@
 #include <boost/hash2/fnv1a.hpp>
 #include <boost/hash2/siphash.hpp>
 #include <boost/hash2/xxhash.hpp>
+#include <boost/hash2/xxh3.hpp>
 #include <boost/hash2/md5.hpp>
 #include <boost/hash2/sha1.hpp>
 #include <boost/hash2/sha2.hpp>
 #include <boost/hash2/sha3.hpp>
 #include <boost/hash2/ripemd.hpp>
+#include <boost/hash2/blake2.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <algorithm>
 #include <cstddef>
@@ -89,6 +91,84 @@ template<class H> void test()
         BOOST_TEST( h1.result() != h2.result() );
         BOOST_TEST( h1.result() != h2.result() );
     }
+
+    {
+        unsigned char const seq1[ 1 ] = { 0x01 };
+        unsigned char const seq2[ 1 ] = { 0x02 };
+
+        H h1; h1.update( seq1, sizeof( seq1 ) );
+        H h2; h2.update( seq2, sizeof( seq2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+    }
+
+    {
+        unsigned char const seq1[ 4 ] = { 0x01 };
+        unsigned char const seq2[ 4 ] = { 0x02 };
+
+        H h1; h1.update( seq1, sizeof( seq1 ) );
+        H h2; h2.update( seq2, sizeof( seq2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+    }
+
+    {
+        unsigned char const seq1[ 9 ] = { 0x01 };
+        unsigned char const seq2[ 9 ] = { 0x02 };
+
+        H h1; h1.update( seq1, sizeof( seq1 ) );
+        H h2; h2.update( seq2, sizeof( seq2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+    }
+
+    {
+        unsigned char const seq1[ 17 ] = { 0x01 };
+        unsigned char const seq2[ 17 ] = { 0x02 };
+
+        H h1; h1.update( seq1, sizeof( seq1 ) );
+        H h2; h2.update( seq2, sizeof( seq2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+    }
+
+    {
+        unsigned char const seq1[ 129 ] = { 0x01 };
+        unsigned char const seq2[ 129 ] = { 0x02 };
+
+        H h1; h1.update( seq1, sizeof( seq1 ) );
+        H h2; h2.update( seq2, sizeof( seq2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+    }
+
+    {
+        unsigned char const seq1[ 241 ] = { 0x01 };
+        unsigned char const seq2[ 241 ] = { 0x02 };
+
+        H h1; h1.update( seq1, sizeof( seq1 ) );
+        H h2; h2.update( seq2, sizeof( seq2 ) );
+
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+        BOOST_TEST( h1.result() != h2.result() );
+    }
 }
 
 int main()
@@ -97,6 +177,7 @@ int main()
     test<boost::hash2::fnv1a_64>();
     test<boost::hash2::xxhash_32>();
     test<boost::hash2::xxhash_64>();
+    test<boost::hash2::xxh3_128>();
     test<boost::hash2::siphash_32>();
     test<boost::hash2::siphash_64>();
 
@@ -116,6 +197,8 @@ int main()
     test<boost::hash2::shake_256>();
     test<boost::hash2::ripemd_160>();
     test<boost::hash2::ripemd_128>();
+    test<boost::hash2::blake2b_512>();
+    test<boost::hash2::blake2s_256>();
 
     test<boost::hash2::hmac_md5_128>();
     test<boost::hash2::hmac_sha1_160>();

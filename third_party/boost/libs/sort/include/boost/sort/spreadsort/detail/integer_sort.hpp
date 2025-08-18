@@ -433,7 +433,7 @@ namespace spreadsort {
       || sizeof(Div_type) <= sizeof(boost::uintmax_t), void >::type
     //defaulting to boost::sort::pdqsort when integer_sort won't work
     integer_sort(RandomAccessIter first, RandomAccessIter last, Div_type,
-                Right_shift shift, Compare comp)
+                Right_shift /* shift */, Compare comp)
     {
       boost::sort::pdqsort(first, last, comp);
     }
@@ -475,7 +475,7 @@ namespace spreadsort {
       || sizeof(Div_type) <= sizeof(boost::uintmax_t), void >::type
     //defaulting to boost::sort::pdqsort when integer_sort won't work
     integer_sort(RandomAccessIter first, RandomAccessIter last, Div_type,
-                Right_shift shift)
+                Right_shift /* shift */)
     {
       boost::sort::pdqsort(first, last);
     }

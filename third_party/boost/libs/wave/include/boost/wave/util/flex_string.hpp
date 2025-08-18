@@ -1407,7 +1407,7 @@ class flex_string : private Storage
 #else
     template <typename Exception>
     static inline void Enforce(bool condition, Exception*, const char* msg)
-    { BOOST_ASSERT(condition && msg); }
+    { BOOST_VERIFY(condition && msg); }
 #endif // defined(BOOST_WAVE_FLEXSTRING_THROW_ON_ENFORCE)
 
 #ifndef NDEBUG

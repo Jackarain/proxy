@@ -96,9 +96,9 @@ struct channel
     }
 
     struct cancel_impl;
-    bool await_ready() { return !chn->buffer_.empty(); }
+    bool await_ready() { return !chn->buffer_.empty() || chn->is_closed_; }
     template<typename Promise>
-    BOOST_NOINLINE 
+    BOOST_COBALT_MSVC_NOINLINE
     std::coroutine_handle<void> await_suspend(std::coroutine_handle<Promise> h);
     T await_resume();
     std::tuple<system::error_code, T> await_resume(const struct as_tuple_tag & );
@@ -115,7 +115,7 @@ struct channel
         T*>;
     ref_t ref;
     boost::source_location loc;
-    bool cancelled = false, direct = false;
+    bool cancelled = false, direct = false, closed = !chn->is_open();
     asio::cancellation_slot cancel_slot{};
 
     unique_handle<void> awaited_from{nullptr};
@@ -140,9 +140,9 @@ struct channel
 
     struct cancel_impl;
 
-    bool await_ready() { return !chn->buffer_.full(); }
+    bool await_ready() { return !chn->buffer_.full() || chn->is_closed_; }
     template<typename Promise>
-    BOOST_NOINLINE 
+    BOOST_COBALT_MSVC_NOINLINE
     std::coroutine_handle<void> await_suspend(std::coroutine_handle<Promise> h);
     void await_resume();
     std::tuple<system::error_code> await_resume(const struct as_tuple_tag & );
@@ -155,18 +155,14 @@ struct channel
  public:
   read_op   read(const boost::source_location & loc = BOOST_CURRENT_LOCATION)  {return  read_op{{}, this, loc}; }
 
-#if defined(BOOST_WINDOWS_API)
-  BOOST_NOINLINE
-#endif
+  BOOST_COBALT_MSVC_NOINLINE
   write_op write(const T  && value, const boost::source_location & loc = BOOST_CURRENT_LOCATION)
     requires std::is_copy_constructible_v<T>
   {
     return write_op{{}, this, &value, loc};
   }
 
-#if defined(BOOST_WINDOWS_API)
-  BOOST_NOINLINE
-#endif
+  BOOST_COBALT_MSVC_NOINLINE
   write_op write(const T  &  value, const boost::source_location & loc = BOOST_CURRENT_LOCATION)
     requires std::is_copy_constructible_v<T>
   {
@@ -174,17 +170,13 @@ struct channel
   }
 
 
-#if defined(BOOST_WINDOWS_API)
-  BOOST_NOINLINE
-#endif
+  BOOST_COBALT_MSVC_NOINLINE
   write_op write(      T &&  value, const boost::source_location & loc = BOOST_CURRENT_LOCATION)
   {
     return write_op{{}, this, &value, loc};
   }
 
-#if defined(BOOST_WINDOWS_API)
-  BOOST_NOINLINE
-#endif
+  BOOST_COBALT_MSVC_NOINLINE
   write_op write(      T  &  value, const boost::source_location & loc = BOOST_CURRENT_LOCATION)
   {
     return write_op{{}, this, &value, loc};
@@ -265,9 +257,13 @@ struct channel<void>
     }
 
     struct cancel_impl;
-    bool await_ready() { return (chn->n_ > 0); }
+    bool await_ready()
+    {
+      return (chn->n_ > 0) || chn->is_closed_;
+    }
+
     template<typename Promise>
-    BOOST_NOINLINE 
+    BOOST_COBALT_MSVC_NOINLINE
     std::coroutine_handle<void> await_suspend(std::coroutine_handle<Promise> h);
     BOOST_COBALT_DECL void await_resume();
     BOOST_COBALT_DECL std::tuple<system::error_code> await_resume(const struct as_tuple_tag & );
@@ -279,7 +275,7 @@ struct channel<void>
   {
     channel * chn;
     boost::source_location loc;
-    bool cancelled = false, direct = false;
+    bool cancelled = false, direct = false, closed = !chn->is_open();
     asio::cancellation_slot cancel_slot{};
     unique_handle<void> awaited_from{nullptr};
     void (*begin_transaction)(void*) = nullptr;
@@ -304,11 +300,11 @@ struct channel<void>
     struct cancel_impl;
     bool await_ready()
     {
-      return chn->n_ < chn->limit_;
+      return chn->n_ < chn->limit_ || chn->is_closed_;
     }
 
     template<typename Promise>
-    BOOST_NOINLINE 
+    BOOST_COBALT_MSVC_NOINLINE
     std::coroutine_handle<void> await_suspend(std::coroutine_handle<Promise> h);
 
     BOOST_COBALT_DECL void await_resume();

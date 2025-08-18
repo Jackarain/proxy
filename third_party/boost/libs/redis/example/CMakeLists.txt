@@ -29,6 +29,7 @@ make_testable_example(cpp20_intro 20)
 make_testable_example(cpp20_containers 20)
 make_testable_example(cpp20_json 20)
 make_testable_example(cpp20_intro_tls 20)
+make_testable_example(cpp20_unix_sockets 20)
 
 make_example(cpp20_subscriber 20)
 make_example(cpp20_streams 20)
@@ -49,4 +50,13 @@ endif()
 
 if (NOT MSVC)
   make_example(cpp20_chat_room 20)
+endif()
+
+# We build and test the spdlog integration example only if the library is found
+find_package(spdlog)
+if (spdlog_FOUND)
+  make_testable_example(cpp17_spdlog 17)
+  target_link_libraries(cpp17_spdlog PRIVATE spdlog::spdlog)
+else()
+  message(STATUS "Skipping the spdlog example because the spdlog package couldn't be found")
 endif()

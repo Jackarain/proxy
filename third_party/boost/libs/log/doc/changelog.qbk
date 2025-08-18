@@ -9,6 +9,12 @@
 
 [section:changelog Changelog]
 
+[heading 2.32, Boost 1.89]
+
+* Added support for `BOOST_LOG_WITHOUT_ASIO` configuration macro, which can be used to remove the dependency on __boost_asio__ and disable the related functionality.
+* Use locale-independent formatting of the file counter in `text_file_backend` when composing log file names. This fixes failures in the subsequent parsing of the file names in `file_collector::scan_for_files`. ([pull_request 246])
+* Added a new [link log.detailed.expressions.predicates.wrap_filter `wrap_filter`] utility that simplifies injecting user-defined function objects in filtering expressions.  ([github_issue 195])
+
 [heading 2.31, Boost 1.88]
 
 * Disabled usage of `std::codecvt<char16_t>` and `std::codecvt<char32_t>` locale facets in C++20 and later modes as they were deprecated in C++20. This means character code conversions to/from `char16_t` and `char32_t` is no longer available in C++20 and later.

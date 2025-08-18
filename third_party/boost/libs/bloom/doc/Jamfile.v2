@@ -1,0 +1,23 @@
+# Copyright 2025 Joaquín M López Muñoz.
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+#
+# See http://www.boost.org/libs/bloom for library home page.
+
+import asciidoctor ;
+
+html bloom.html : bloom.adoc ;
+
+install html_ : bloom.html : <location>html ;
+
+pdf bloom.pdf : bloom.adoc ;
+explicit bloom.pdf ;
+
+install pdf_ : bloom.pdf : <location>bloom ;
+explicit pdf_ ;
+
+alias boostdoc ;
+explicit boostdoc ;
+alias boostrelease : html_ ;
+explicit boostrelease ;

@@ -31,6 +31,9 @@ constexpr char const* const empty_c_str_ = "";
 // This is the private 'guts' of a
 // url_view, exposed so different parts
 // of the implementation can work on it.
+// It stores the offsets and properties of
+// a URL string stored elsewhere and pointed
+// to by cs_.
 struct BOOST_URL_DECL url_impl : parts_base
 {
     static
@@ -139,8 +142,9 @@ public:
 
 //------------------------------------------------
 
-// this allows a params to come from a
-// url_impl or a separate core::string_view
+// This class represents a query string, which
+// can originate from either an url_impl object
+// or an independent core::string_view.
 class BOOST_URL_DECL query_ref
     : private parts_base
 {

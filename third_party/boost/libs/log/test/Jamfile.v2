@@ -16,6 +16,7 @@ import ../build/log-build-config ;
 project
     : requirements
         <conditional>@log-platform-config.set-platform-defines
+        <conditional>@log-build-config.check-atomic-int32  # sets BOOST_LOG_WITHOUT_IPC if native atomic int32 is not supported
         <conditional>@log-build-config.check-regex-header-only
 
         <include>common
@@ -71,8 +72,8 @@ rule test_all
 
     if ! [ os.environ BOOST_LOG_TEST_WITHOUT_SELF_CONTAINED_HEADER_TESTS ]
     {
-        local headers_path = [ path.make $(BOOST_ROOT)/libs/log/include/boost/log ] ;
-        for file in [ path.glob-tree $(headers_path) : *.hpp : detail ]
+        local headers_path = ../include/boost/log ;
+        for file in [ glob-tree-ex $(headers_path) : *.hpp : detail ]
         {
             local rel_file = [ path.relative-to $(headers_path) $(file) ] ;
             # Note: The test name starts with '~' in order to group these tests in the test report table, preferably at the end.

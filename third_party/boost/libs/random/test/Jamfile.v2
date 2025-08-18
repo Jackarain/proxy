@@ -17,6 +17,8 @@ project /boost/random/test : requirements
     <library>/boost/random//boost_random
 
     <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
+
+    [ requires cxx11_noexcept cxx11_rvalue_references sfinae_expr cxx11_auto_declarations cxx11_lambdas cxx11_unified_initialization_syntax cxx11_hdr_tuple cxx11_hdr_initializer_list cxx11_constexpr cxx11_nullptr cxx11_numeric_limits cxx11_decltype cxx11_hdr_array cxx11_hdr_type_traits cxx11_explicit_conversion_operators ]
 ;
 
 run test_const_mod.cpp /boost/test//boost_unit_test_framework ;
@@ -83,6 +85,8 @@ run test_xoshiro128mm.cpp /boost/test//boost_unit_test_framework ;
 run test_comp_xoshiro128mm.cpp ;
 run test_xoshiro128f.cpp /boost/test//boost_unit_test_framework ;
 run test_comp_xoshiro128f.cpp ;
+
+run github_issue_133.cpp ;
 
 run niederreiter_base2_validate.cpp /boost/test//boost_unit_test_framework ;
 run sobol_validate.cpp /boost/test//boost_unit_test_framework ;

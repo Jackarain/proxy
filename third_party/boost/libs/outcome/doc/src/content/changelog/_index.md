@@ -4,9 +4,21 @@ weight = 80
 +++
 
 ---
-## v2.2.12 ? (Boost 1.88) [[release]](https://github.com/ned14/outcome/releases/tag/v2.2.12)
+## v2.2.13 ? (Boost 1.89) [[release]](https://github.com/ned14/outcome/releases/tag/v2.2.13)
 
 ### Enhancements:
+
+[#312](https://github.com/ned14/outcome/issues/312)
+- `iostream_support.hpp` has been split into `iostream_support_result.hpp` and `iostream_support.hpp`.
+
+[#313](https://github.com/ned14/outcome/issues/313)
+- Bump min cmake required to 3.10 amongst other cmake modernisation fixes to please cmake 4.0.
+
+### Bug fixes:
+
+
+---
+## v2.2.12 10th April 2025 (Boost 1.88) [[release]](https://github.com/ned14/outcome/releases/tag/v2.2.12)
 
 ### Bug fixes:
 

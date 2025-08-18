@@ -109,7 +109,7 @@ def _setup_boost(
     copytree(
         str(source_dir),
         str(lib_dir),
-        ignore=ignore_patterns('__build*__', '.git')
+        ignore=ignore_patterns('__build*__')
     )
 
     # Install Boost dependencies
@@ -295,6 +295,8 @@ def _run_b2_tests(
         'toolset={}'.format(toolset),
         'cxxstd={}'.format(cxxstd),
         'variant={}'.format(variant),
+        'warnings=extra',
+        'warnings-as-errors=on',
         '-j4',
         'libs/redis/test'
     ])

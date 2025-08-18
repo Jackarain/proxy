@@ -105,7 +105,7 @@ void set_explicit_binding( OBJECT * target, OBJECT * locate )
 
     path_build( f, buf );
     boundname = object_new( buf->value );
-    if ( DEBUG_SEARCH )
+    if ( is_debug_search() )
         out_printf( "explicit locate %s: %s\n", object_str( target ), buf->value );
     string_free( buf );
     key = path_as_key( boundname );
@@ -171,7 +171,7 @@ OBJECT * search( OBJECT * target, timestamp * const time,
 
         path_build( f, buf );
 
-        if ( DEBUG_SEARCH )
+        if ( is_debug_search() )
             out_printf( "locate %s: %s\n", object_str( target ), buf->value );
 
         key = object_new( buf->value );
@@ -197,7 +197,7 @@ OBJECT * search( OBJECT * target, timestamp * const time,
             string_truncate( buf, 0 );
             path_build( f, buf );
 
-            if ( DEBUG_SEARCH )
+            if ( is_debug_search() )
                 out_printf( "search %s: %s\n", object_str( target ), buf->value );
 
             test_path = object_new( buf->value );
@@ -208,7 +208,7 @@ OBJECT * search( OBJECT * target, timestamp * const time,
 
             if ( ( ba = (BINDING *)hash_find( explicit_bindings, key ) ) )
             {
-                if ( DEBUG_SEARCH )
+                if ( is_debug_search() )
                     out_printf(" search %s: found explicitly located target %s\n",
                         object_str( target ), object_str( ba->target ) );
                 if ( another_target )
@@ -244,7 +244,7 @@ OBJECT * search( OBJECT * target, timestamp * const time,
         string_truncate( buf, 0 );
         path_build( f, buf );
 
-        if ( DEBUG_SEARCH )
+        if ( is_debug_search() )
             out_printf( "search %s: %s\n", object_str( target ), buf->value );
 
         key = object_new( buf->value );

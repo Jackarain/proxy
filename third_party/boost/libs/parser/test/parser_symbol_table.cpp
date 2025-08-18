@@ -316,7 +316,7 @@ int main()
             add_parser >> roman_numerals >> next_delete_parser >>
             roman_numerals);
         BOOST_TEST(result);
-        BOOST_TEST(*result == std::tuple(100, 100));
+        BOOST_TEST(*result == detail::hl::make_tuple(100, 100));
     }
 
     {

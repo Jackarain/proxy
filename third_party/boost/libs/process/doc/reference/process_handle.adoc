@@ -100,9 +100,10 @@ struct basic_process_handle
     // Check if the process handle is referring to an existing process.
     bool is_open() const;
 
-    // Asynchronously wait for the process to exit and deliver the native exit-code in the completion handler.
-    template<BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(void(error_code, native_exit_code_type))
+    // Asynchronously wait for the process to exit and assign the native exit-code to the reference.
+    // The exit_status can indicate that a process has already be waited for, e.g. when terminate is called.
+    template<BOOST_PROCESS_V2_COMPLETION_TOKEN_FOR(void(error_code))
              WaitHandler = net::default_completion_token_t<executor_type>>
-    auto async_wait(WaitHandler &&handler = net::default_completion_token_t<executor_type>());
+    auto async_wait(native_exit_code_type &exit_status, WaitHandler &&handler = net::default_completion_token_t<executor_type>());
 };
 ----

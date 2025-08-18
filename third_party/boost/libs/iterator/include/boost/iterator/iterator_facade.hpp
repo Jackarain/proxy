@@ -9,6 +9,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <utility>
 #include <type_traits>
 
 #include <boost/config.hpp>
@@ -346,62 +347,51 @@ class operator_brackets_proxy
     // Iterator is actually an iterator_facade, so we do not have to
     // go through iterator_traits to access the traits.
     using reference = typename Iterator::reference;
-    using value_type = typename Iterator::value_type;
 
 public:
-    operator_brackets_proxy(Iterator const& iter) :
+    explicit operator_brackets_proxy(Iterator const& iter) noexcept(std::is_nothrow_copy_constructible< Iterator >::value) :
         m_iter(iter)
     {}
 
-    operator reference() const
+    operator reference() const noexcept(noexcept(*std::declval< Iterator const& >()))
     {
         return *m_iter;
     }
 
-    operator_brackets_proxy& operator=(value_type const& val)
+    template< typename T >
+    typename std::enable_if<
+        detail::conjunction<
+            detail::negation<
+                std::is_same<
+                    operator_brackets_proxy< Iterator >,
+                    typename std::remove_cv< typename std::remove_reference< T >::type >::type
+                >
+            >,
+            std::is_assignable< reference, T&& >
+        >::value,
+        operator_brackets_proxy&
+    >::type operator= (T&& val) noexcept(noexcept(*std::declval< Iterator& >() = std::declval< T&& >()))
     {
-        *m_iter = val;
+        *m_iter = static_cast< T&& >(val);
         return *this;
+    }
+
+    // Provides it[n]->foo(). Leverages chaining of operator->.
+    reference operator->() const noexcept(noexcept(*std::declval< Iterator const& >()))
+    {
+        return *m_iter;
+    }
+
+    // Provides (*it[n]).foo()
+    template< typename Ref = reference, typename Result = decltype(*std::declval< Ref >()) >
+    Result operator*() const noexcept(noexcept(**std::declval< Iterator const& >()))
+    {
+        return **m_iter;
     }
 
 private:
     Iterator m_iter;
 };
-
-// A metafunction that determines whether operator[] must return a
-// proxy, or whether it can simply return a copy of the value_type.
-template< typename ValueType, typename Reference >
-struct use_operator_brackets_proxy :
-    public detail::negation<
-        detail::conjunction<
-            std::is_copy_constructible< ValueType >,
-            std::is_trivial< ValueType >,
-            iterator_writability_disabled< ValueType, Reference >
-        >
-    >
-{};
-
-template< typename Iterator, typename Value, typename Reference >
-struct operator_brackets_result
-{
-    using type = typename std::conditional<
-        use_operator_brackets_proxy<Value, Reference>::value,
-        operator_brackets_proxy<Iterator>,
-        Value
-    >::type;
-};
-
-template< typename Iterator >
-inline operator_brackets_proxy<Iterator> make_operator_brackets_result(Iterator const& iter, std::true_type)
-{
-    return operator_brackets_proxy< Iterator >(iter);
-}
-
-template< typename Iterator >
-inline typename Iterator::value_type make_operator_brackets_result(Iterator const& iter, std::false_type)
-{
-    return *iter;
-}
 
 // A binary metafunction class that always returns bool.
 template< typename Iterator1, typename Iterator2 >
@@ -679,13 +669,9 @@ public:
     using difference_type = typename base_type::difference_type;
 
 public:
-    typename boost::iterators::detail::operator_brackets_result< Derived, Value, reference >::type
-    operator[](difference_type n) const
+    operator_brackets_proxy< Derived > operator[](difference_type n) const
     {
-        return boost::iterators::detail::make_operator_brackets_result< Derived >(
-            this->derived() + n,
-            std::integral_constant< bool, boost::iterators::detail::use_operator_brackets_proxy< Value, Reference >::value >{}
-        );
+        return operator_brackets_proxy< Derived >(this->derived() + n);
     }
 
     Derived& operator+=(difference_type n)

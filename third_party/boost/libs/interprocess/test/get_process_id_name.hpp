@@ -129,6 +129,13 @@ inline std::wstring get_wfilename()
 
 #endif
 
+namespace test {
+
+inline const char *get_argv_2(char *argv[])
+{  return argv[2]; }
+
+}  //namespace test {
+
 }  //namespace interprocess{
 }  //namespace boost{
 

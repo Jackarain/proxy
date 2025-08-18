@@ -355,7 +355,7 @@ void exec_cmd
     if ( list_empty( shell ) )
         shell = default_shell;
 
-    if ( DEBUG_EXECCMD )
+    if ( is_debug_execcmd() )
     {
         if ( is_raw_cmd )
             out_printf( "Executing raw command directly\n" );
@@ -550,7 +550,7 @@ static void invoke_cmd( char const * const command, int32_t const slot )
     /* Let the child inherit stdin, as some commands assume it is available. */
     si.hStdInput = GetStdHandle( STD_INPUT_HANDLE );
 
-    if ( DEBUG_EXECCMD )
+    if ( is_debug_execcmd() )
         out_printf( "Command string for CreateProcessA(): '%s'\n", command );
 
     /* Run the command by creating a sub-process for it. */

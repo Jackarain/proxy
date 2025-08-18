@@ -265,7 +265,7 @@ void exec_cmd
 
         fclose( f );
 
-        if ( DEBUG_EXECCMD )
+        if ( is_debug_execcmd() )
         {
             FILE * f;
             char buf[ WRTLEN + 1 ] = { 0 };

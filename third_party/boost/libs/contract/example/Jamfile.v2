@@ -4,8 +4,10 @@
 # file LICENSE_1_0.txt or a copy at http://www.boost.org/LICENSE_1_0.txt).
 # See: http://www.boost.org/doc/libs/release/libs/contract/doc/html/index.html
 
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
 import ../build/boost_contract_build ;
-import ../../config/checks/config : requires ;
+import config : requires ;
 
 test-suite features :
     [ boost_contract_build.subdir-run features : introduction_comments ]
@@ -25,7 +27,7 @@ test-suite features :
     [ boost_contract_build.subdir-run-cxx11 features :
             private_protected_virtual_multi ]
     [ boost_contract_build.subdir-run-cxx11 features : check ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 features : friend ]
     [ boost_contract_build.subdir-run-cxx11 features : friend_invariant ]
     [ boost_contract_build.subdir-run-cxx11 features : old ]
@@ -54,7 +56,8 @@ test-suite features :
     [ boost_contract_build.subdir-run-cxx11 features : old_no_macro ]
     # Still needs C++11 for OLDOF variadic macros.
     [ boost_contract_build.subdir-run-cxx11 features : no_lambdas ]
-    [ boost_contract_build.subdir-run-cxx11 features : no_lambdas_local_func ]
+    [ boost_contract_build.subdir-run-cxx11 features : no_lambdas_local_func :
+        <library>/boost/local_function//boost_local_function ]
 ;
 
 test-suite n1962 :

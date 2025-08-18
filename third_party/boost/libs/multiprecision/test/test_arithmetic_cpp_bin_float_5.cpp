@@ -5,7 +5,7 @@
 
 #include <boost/multiprecision/cpp_bin_float.hpp>
 
-#include "libs/multiprecision/test/test_arithmetic.hpp"
+#include "test_arithmetic.hpp"
 
 using namespace boost::multiprecision;
 

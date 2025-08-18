@@ -1,4 +1,4 @@
-[[bbv2.reference.class.project-target]]
+[[b2.reference.class.project-target]]
 = Class project-target
 
 [source,jam]
@@ -23,10 +23,10 @@ This class has the following responsibilities:
 * Maintaining a list of main targets in this project and building them.
 
 --
-1. [[bbv2.reference.class.project-target.generate]] `rule generate ( property-set )`
+1. [[b2.reference.class.project-target.generate]] `rule generate ( property-set )`
 +
 Overrides
-link:#bbv2.reference.class.abstract-target.generate[abstract-target.generate].
+link:#b2.reference.class.abstract-target.generate[abstract-target.generate].
 Generates virtual targets for all the targets contained in this project.
 +
 On success, returns:
@@ -40,13 +40,13 @@ Returns the root build directory of the project.
 
 3. `rule main-target ( name )`
 +
-Returns a link:#bbv2.reference.class.main-target[main-target] class
+Returns a link:#b2.reference.class.main-target[main-target] class
 instance corresponding to `name`. Can only be called after the project
 has been fully loaded.
 
 4. `rule has-main-target ( name )`
 +
-Returns whether a link:#bbv2.reference.class.main-target[main-target]
+Returns whether a link:#b2.reference.class.main-target[main-target]
 with the specified name exists. Can only be called after the project has
 been fully loaded.
 

@@ -21,7 +21,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.dependency]]`dependency`::
+[[b2.builtin.features.dependency]]`dependency`::
 Introduces a dependency on the target named by the value of this feature (so it
 will be brought up-to-date whenever the target being declared is). The
 dependency is not used in any other way.
@@ -34,7 +34,7 @@ feature.feature dependency
 
 #| tag::impl-doc[]
 
-[[bbv2.builtin.features.implicit-dependency]]`implicit-dependency`::
+[[b2.builtin.features.implicit-dependency]]`implicit-dependency`::
 Indicates that the target named by the value of this feature may produce files
 that are included by the sources of the target being declared. See the section
 <<Generated headers>> for more information.
@@ -47,7 +47,7 @@ feature.feature implicit-dependency
 
 #| tag::use-doc[]
 
-[[bbv2.builtin.features.use]]`use`::
+[[b2.builtin.features.use]]`use`::
 Introduces a dependency on the target named by the value of this feature (so it
 will be brought up-to-date whenever the target being declared is), and adds its
 usage requirements to the build properties of the target being declared. The

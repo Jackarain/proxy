@@ -18,7 +18,12 @@ on:
       - bugfix/**
       - feature/**
       - fix/**
+      - github/**
       - pr/**
+    paths-ignore:
+      - LICENSE
+      - meta/**
+      - README.md
 
 concurrency:
   group: ${{format('{0}:{1}', github.repository, github.ref)}}
@@ -79,7 +84,6 @@ jobs:
     defaults:
       run:
         shell: bash
-
     strategy:
       fail-fast: false
       matrix:
@@ -92,17 +96,17 @@ jobs:
             # GCC 7 & 8 on Ubuntu 20 show failures in basic_filebuf::_M_convert_to_external conversion
           - { compiler: gcc-7,     cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:18.04' }
           - { compiler: gcc-8,     cxxstd: '11,14,17,2a',    os: ubuntu-latest, container: 'ubuntu:18.04' }
-          - { compiler: gcc-9,     cxxstd: '11,14,17,2a',    os: ubuntu-20.04 }
+          - { compiler: gcc-9,     cxxstd: '11,14,17,2a',    os: ubuntu-22.04 }
           - { compiler: gcc-10,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
           - { compiler: gcc-11,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
           - { compiler: gcc-12,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
           - { compiler: gcc-13,    cxxstd: '11,14,17,20,2b', os: ubuntu-24.04 }
           - { compiler: gcc-14,    cxxstd: '11,14,17,20,2b', os: ubuntu-24.04 }
-          
+
           - { name: GCC w/ sanitizers, sanitize: yes,
               compiler: gcc-13,    cxxstd: '11,14,17,20',    os: ubuntu-24.04 }
           - { name: Collect coverage, coverage: yes,
-              compiler: gcc-8,     cxxstd: '11,2a',          os: ubuntu-20.04, install: 'g++-8-multilib', address-model: '32,64' }
+              compiler: gcc-8,     cxxstd: '11,2a',          os: ubuntu-latest, container: 'ubuntu:20.04', install: 'g++-8-multilib', address-model: '32,64' }
 
           # Linux, clang
           - { compiler: clang-3.5, cxxstd: '11',             os: ubuntu-latest, container: 'ubuntu:16.04' }
@@ -112,29 +116,28 @@ jobs:
           - { compiler: clang-3.9, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04' }
           - { compiler: clang-4.0, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04' }
           - { compiler: clang-5.0, cxxstd: '11,14,1z',       os: ubuntu-latest, container: 'ubuntu:18.04' }
-          - { compiler: clang-6.0, cxxstd: '11,14,17',       os: ubuntu-20.04 }
-          - { compiler: clang-7,   cxxstd: '11,14,17',       os: ubuntu-20.04 }
+          - { compiler: clang-6.0, cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-7,   cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:20.04' }
           # Note: clang-8 does not fully support C++20, so it is not compatible with some libstdc++ versions in this mode
-          - { compiler: clang-8,   cxxstd: '11,14,17,2a',    os: ubuntu-20.04 , gcc_toolchain: 7 }
-          - { compiler: clang-9,   cxxstd: '11,14,17,2a',    os: ubuntu-20.04 }
-          - { compiler: clang-10,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
-          - { compiler: clang-11,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
-          - { compiler: clang-12,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
-          # Clang isn't compatible with libstdc++-13, so use the slightly older one
-          - { compiler: clang-13,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, gcc_toolchain: 11 }
-          - { compiler: clang-14,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, gcc_toolchain: 11 }
-          - { compiler: clang-15,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, gcc_toolchain: 12 }
+          - { compiler: clang-8,   cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-9,   cxxstd: '11,14,17,2a',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-10,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-11,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-12,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-13,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:22.04' }
+          - { compiler: clang-14,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:22.04' }
+          - { compiler: clang-15,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:22.04' }
           - { compiler: clang-16,  cxxstd: '11,14,17,20,2b', os: ubuntu-24.04 }
-          # https://github.com/llvm/llvm-project/issues/59827: disabled 2b/23 for clang-17 with libstdc++13 in 24.04
-          - { compiler: clang-17,  cxxstd: '11,14,17,20',    os: ubuntu-24.04 }
+          - { compiler: clang-17,  cxxstd: '11,14,17,20,23', os: ubuntu-latest, container: 'ubuntu:24.04' }
           - { compiler: clang-18,  cxxstd: '11,14,17,20,23,2c', os: ubuntu-24.04 }
           - { name: Run code fuzzer, fuzzing: yes,
               compiler: clang-18,  cxxstd: '20',             os: ubuntu-24.04, variant: debug, link: static }
 
           # libc++
-          - { compiler: clang-6.0, cxxstd: '11,14',       os: ubuntu-22.04, container: 'ubuntu:18.04', stdlib: libc++, install: 'clang-6.0 libc++-dev libc++abi-dev' }
+          - { compiler: clang-6.0, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04', stdlib: libc++, install: 'clang-6.0 libc++-dev libc++abi-dev' }
+          - { compiler: clang-12,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:20.04', stdlib: libc++ }
           - { name: Clang w/ sanitizers, sanitize: yes,
-              compiler: clang-12,  cxxstd: '11,14,17,20', os: ubuntu-20.04, stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev' }
+              compiler: clang-17,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:24.04', stdlib: libc++ }
 
           # OSX, clang
           - { name: MacOS w/ clang and sanitizers,
@@ -160,16 +163,27 @@ jobs:
             fi
             if [ -n "${{matrix.container}}" ] && [ -f "/etc/debian_version" ]; then
                 apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
-                apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y sudo software-properties-common curl
+                apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y -q --no-install-suggests --no-install-recommends install sudo software-properties-common curl
                 # Need (newer) git, and the older Ubuntu container may require requesting the key manually using port 80
-                curl -sSL --retry ${NET_RETRY_COUNT:-5} 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xE1DD270288B4E6030699E45FA1715D88E1DF1F24' | sudo gpg --dearmor > /etc/apt/trusted.gpg.d/git-core_ubuntu_ppa.gpg
+                curl -sSL --retry ${NET_RETRY_COUNT:-5} 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xE1DD270288B4E6030699E45FA1715D88E1DF1F24' | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/git-core_ubuntu_ppa.gpg
                 for i in {1..${NET_RETRY_COUNT:-3}}; do sudo -E add-apt-repository -y ppa:git-core/ppa && break || sleep 10; done
                 apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
-                apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y g++ python libpython-dev git locales
+                osver=$(lsb_release -sr | cut -f1 -d.)
+                pkgs="g++ git xz-utils"
+                # Ubuntu 22+ has only Python 3 in the repos
+                if [ -n "$osver" ] && [ "$osver" -ge "20" ]; then
+                  pkgs+=" python-is-python3 libpython3-dev"
+                else
+                  pkgs+=" python libpython-dev"
+                fi
+                apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y -q --no-install-suggests --no-install-recommends install $pkgs
             fi
             # For jobs not compatible with ccache, use "ccache: no" in the matrix
             if [[ "${{ matrix.ccache }}" == "no" ]]; then
                 echo "B2_USE_CCACHE=0" >> $GITHUB_ENV
+            fi
+            if [[ "${{ matrix.sanitize }}" == "yes" ]]; then
+                echo "LSAN_OPTIONS=suppressions=${GITHUB_WORKSPACE}/test/suppressions.txt" >> $GITHUB_ENV
             fi
             git config --global pack.threads 0
             if [[ "${{matrix.container}}" == "ubuntu:1"* ]]; then
@@ -206,8 +220,8 @@ jobs:
       - name: Install packages
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-            SOURCE_KEYS=(${{join(matrix.source_keys, ' ')}})
-            SOURCES=(${{join(matrix.sources, ' ')}})
+            SOURCE_KEYS=("${{join(matrix.source_keys, '" "')}}")
+            SOURCES=("${{join(matrix.sources, '" "')}}")
 
             [[ "${{matrix.address-model}}" != *32* ]] || sudo dpkg --add-architecture i386
 
@@ -218,14 +232,19 @@ jobs:
 
             sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
             if [[ -z "${{matrix.install}}" ]]; then
-                pkgs="${{matrix.compiler}}"
-                pkgs="${pkgs/gcc-/g++-}"
+                compiler="${{matrix.compiler}}"
+                pkgs="${compiler/gcc-/g++-}"
                 [[ -z "${{matrix.gcc_toolchain}}" ]] || pkgs+=" g++-${{matrix.gcc_toolchain}}"
+                if [[ "${{matrix.stdlib}}" == "libc++" && $compiler == "clang-"* ]]; then
+                    ver=${compiler#*-}
+                    pkgs+=" libc++-${ver}-dev libc++abi-${ver}-dev"
+                fi
             else
                 pkgs="${{matrix.install}}"
             fi
+            pkgs+=" libicu-dev"
             [[ "${{matrix.address-model}}" != *32* ]] || pkgs+=" libicu-dev:i386"
-            sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y $pkgs libicu-dev
+            sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y -q --no-install-suggests --no-install-recommends install $pkgs
 
       - name: Setup GCC Toolchain
         if: matrix.gcc_toolchain
@@ -233,7 +252,7 @@ jobs:
             GCC_TOOLCHAIN_ROOT="$HOME/gcc-toolchain"
             echo "GCC_TOOLCHAIN_ROOT=$GCC_TOOLCHAIN_ROOT" >> $GITHUB_ENV
             if ! command -v dpkg-architecture; then
-                apt-get install -y dpkg-dev
+                apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y -q --no-install-suggests --no-install-recommends install dpkg-dev
             fi
             MULTIARCH_TRIPLET="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
             mkdir -p "$GCC_TOOLCHAIN_ROOT"
@@ -244,19 +263,16 @@ jobs:
 
       - name: Setup multiarch
         if: matrix.multiarch
-        run: |
-          sudo apt-get install --no-install-recommends -y binfmt-support qemu-user-static
-          sudo docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-          git clone https://github.com/jeking3/bdde.git
-          echo "$(pwd)/bdde/bin/linux" >> ${GITHUB_PATH}
-          echo "BDDE_DISTRO=${{ matrix.distro }}" >> ${GITHUB_ENV}
-          echo "BDDE_EDITION=${{ matrix.edition }}" >> ${GITHUB_ENV}
-          echo "BDDE_ARCH=${{ matrix.arch }}" >> ${GITHUB_ENV}
-          echo "B2_WRAPPER=bdde" >> ${GITHUB_ENV}
+        run: ci/github/setup_bdde.sh
+        env:
+          BDDE_DISTRO: ${{matrix.distro}}
+          BDDE_EDITION: ${{matrix.edition}}
+          BDDE_ARCH: ${{matrix.arch}}
 
       - name: Install locales
         if: startsWith(matrix.os, 'ubuntu')
         run: |
+          command -v locale-gen || sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT install --no-install-recommends -y locales
           locales=$(locale -a)
           echo "Installed locales: $locales"
           function gen_locale() {
@@ -384,10 +400,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { toolset: msvc-14.2, cxxstd: '14,17,20',       addrmd: '32,64', os: windows-2019 }
           - { name: Collect coverage, coverage: yes,
               toolset: msvc-14.3, cxxstd: '14,17,20',       addrmd: '32,64', os: windows-2022 }
-          - { toolset: gcc,       cxxstd: '03,11,14,17,2a', addrmd: '64',    os: windows-2019 }
+          - { toolset: msvc-14.4, cxxstd: '14,17,20',       addrmd: '32,64', os: windows-2025 }
+          - { toolset: gcc,       cxxstd: '03,11,14,17,2a', addrmd: '64',    os: windows-2022 }
 
     runs-on: ${{matrix.os}}
     env: {ICU_VERSION: '71.1'}
@@ -485,7 +501,7 @@ jobs:
         with:
           disable_search: true
           files: __out/cobertura.xml
-          name: Github Actions
+          name: Github Actions (Windows)
           token: ${{secrets.CODECOV_TOKEN}}
           verbose: true
 
@@ -555,13 +571,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-20.04, build_shared: ON,  build_type: Debug, generator: 'Unix Makefiles' }
-          - { os: ubuntu-20.04, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles' }
-          - { os: ubuntu-20.04, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles', icu: '71.1' }
-          - { os: ubuntu-22.04, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles', icu: '72.1' }
-          - { os: ubuntu-22.04, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles', icu: '73.1' }
-          - { os: windows-2019, build_shared: ON,  build_type: Debug, generator: 'Visual Studio 16 2019', icu: '71.1' }
-          - { os: windows-2019, build_shared: OFF, build_type: Debug, generator: 'Visual Studio 16 2019', icu: '73.1' }
+          - { os: ubuntu-latest, build_shared: ON,  build_type: Debug, generator: 'Unix Makefiles' }
+          - { os: ubuntu-latest, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles' }
+          - { os: ubuntu-latest, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles', icu: '71.1' }
+          - { os: ubuntu-22.04,  build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles', icu: '72.1' }
+          - { os: ubuntu-22.04,  build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles', icu: '73.1' }
+          - { os: windows-2022,  build_shared: ON,  build_type: Debug, generator: 'Visual Studio 17 2022', icu: '71.1' }
+          - { os: windows-2022,  build_shared: OFF, build_type: Debug, generator: 'Visual Studio 17 2022', icu: '73.1' }
 
     timeout-minutes: 120
     runs-on: ${{matrix.os}}

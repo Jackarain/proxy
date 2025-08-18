@@ -1,0 +1,37 @@
+//
+// Copyright (c) 2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+= Acknowledgements
+
+Acknowledgement to people that helped shape Boost.Redis
+
+* Richard Hodges (https://github.com/madmongo1[madmongo1]): For very helpful support with Asio, the design of asynchronous programs, etc.
+* Vinícius dos Santos Oliveira (https://github.com/vinipsmaker[vinipsmaker]): For useful discussion about how Boost.Redis consumes buffers in the read operation.
+* Petr Dannhofer (https://github.com/Eddie-cz[Eddie-cz]): For helping me understand how the `AUTH` and `HELLO` command can influence each other.
+* Mohammad Nejati (https://github.com/ashtum[ashtum]): For pointing out scenarios where calls to `async_exec` should fail when the connection is lost.
+* Klemens Morgenstern (https://github.com/klemens-morgenstern[klemens-morgenstern]): For useful discussion about timeouts, cancellation, synchronous interfaces and general help with Asio.
+* Vinnie Falco (https://github.com/vinniefalco[vinniefalco]): For general suggestions about how to improve the code and the documentation.
+* Bram Veldhoen (https://github.com/bveldhoen[bveldhoen]): For contributing a Redis-streams example.
+
+Also many thanks to all individuals that participated in the Boost
+review
+
+* Zach Laine: https://lists.boost.org/Archives/boost/2023/01/253883.php
+* Vinnie Falco: https://lists.boost.org/Archives/boost/2023/01/253886.php
+* Christian Mazakas: https://lists.boost.org/Archives/boost/2023/01/253900.php
+* Ruben Perez: https://lists.boost.org/Archives/boost/2023/01/253915.php
+* Dmitry Arkhipov: https://lists.boost.org/Archives/boost/2023/01/253925.php
+* Alan de Freitas: https://lists.boost.org/Archives/boost/2023/01/253927.php
+* Mohammad Nejati: https://lists.boost.org/Archives/boost/2023/01/253929.php
+* Sam Hartsfield: https://lists.boost.org/Archives/boost/2023/01/253931.php
+* Miguel Portilla: https://lists.boost.org/Archives/boost/2023/01/253935.php
+* Robert A.H. Leahy: https://lists.boost.org/Archives/boost/2023/01/253928.php
+
+The Reviews can be found at:
+https://lists.boost.org/Archives/boost/2023/01/date.php. The thread
+with the ACCEPT from the review manager can be found here:
+https://lists.boost.org/Archives/boost/2023/01/253944.php.

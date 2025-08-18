@@ -28,12 +28,6 @@ jobs:
             cxxstd: "03,11,14,17,2a"
             os: ubuntu-22.04
           - toolset: clang
-            compiler: clang++-10
-            cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
-            cxxflags: "cxxflags=-fsanitize=address,undefined,integer -fno-sanitize-recover=undefined,integer"
-            linkflags: "linkflags=-fsanitize=address,undefined,integer"
-          - toolset: clang
             compiler: clang++-14
             cxxstd: "03,11,14,17,2a"
             os: ubuntu-22.04
@@ -73,7 +67,7 @@ jobs:
           python tools/boostdep/depinst/depinst.py --include benchmark --include example --include examples --include tools --git_args "--depth 10 --jobs 3" $LIBRARY
           ./bootstrap.sh
           ./b2 -d0 headers
-          ./b2 -j4 variant=debug tools/inspect/build
+          ./b2 -j4 variant=debug tools/inspect
 
       - name: Run tests
         run: |

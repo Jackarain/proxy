@@ -1,0 +1,17 @@
+[#header_multiblock]
+== `<boost/bloom/multiblock.hpp>`
+
+:idprefix: header_multiblock_
+
+[listing,subs="+macros,+quotes"]
+-----
+namespace boost{
+namespace bloom{
+
+template<typename Block, std::size_t K>
+struct xref:multiblock[multiblock];
+
+} // namespace bloom
+} // namespace boost
+-----
+

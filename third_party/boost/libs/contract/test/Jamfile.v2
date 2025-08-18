@@ -4,8 +4,15 @@
 # file LICENSE_1_0.txt or a copy at http://www.boost.org/LICENSE_1_0.txt).
 # See: http://www.boost.org/doc/libs/release/libs/contract/doc/html/index.html
 
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
 import ../build/boost_contract_build ;
-import ../../config/checks/config : requires ;
+import config : requires ;
+
+project
+    : requirements
+        <library>/boost/iostreams//boost_iostreams
+    ;
 
 test-suite constructor :
     [ boost_contract_build.subdir-run-cxx11 constructor : smoke ]
@@ -14,12 +21,12 @@ test-suite constructor :
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_pre_ends ]
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_pre_mid ]
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_pre_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_post_all ]
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_post_ends ]
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_post_mid ]
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_post_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 constructor :
             decl_entry_static_inv_all ]
     [ boost_contract_build.subdir-run-cxx11 constructor :
@@ -28,7 +35,7 @@ test-suite constructor :
             decl_entry_static_inv_mid ]
     [ boost_contract_build.subdir-run-cxx11 constructor :
             decl_entry_static_inv_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 constructor :
             decl_exit_static_inv_all ]
     [ boost_contract_build.subdir-run-cxx11 constructor :
@@ -37,16 +44,16 @@ test-suite constructor :
             decl_exit_static_inv_mid ]
     [ boost_contract_build.subdir-run-cxx11 constructor :
             decl_exit_static_inv_none ]
-    
+
     # No decl_entry_static_inv_... (as no obj before ctor).
 
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_exit_inv_all ]
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_exit_inv_ends ]
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_exit_inv_mid ]
     [ boost_contract_build.subdir-run-cxx11 constructor : decl_exit_inv_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 constructor : access ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 constructor : ifdef ]
     [ boost_contract_build.subdir-run-cxx11 constructor : ifdef_macro ]
 
@@ -55,7 +62,7 @@ test-suite constructor :
     [ boost_contract_build.subdir-run-cxx11 constructor : throwing_body ]
     [ boost_contract_build.subdir-run-cxx11 constructor : throwing_post ]
     # No throwing_except test (as throwing twice calls terminate).
-    
+
     [ boost_contract_build.subdir-compile-fail-cxx11 constructor : pre_error ]
 ;
 
@@ -63,12 +70,12 @@ test-suite destructor :
     [ boost_contract_build.subdir-run-cxx11 destructor : smoke ]
 
     # No decl_pre_... (as dtors have no pre).
-    
+
     [ boost_contract_build.subdir-run-cxx11 destructor : decl_post_all ]
     [ boost_contract_build.subdir-run-cxx11 destructor : decl_post_ends ]
     [ boost_contract_build.subdir-run-cxx11 destructor : decl_post_mid ]
     [ boost_contract_build.subdir-run-cxx11 destructor : decl_post_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 destructor :
             decl_entry_static_inv_all ]
     [ boost_contract_build.subdir-run-cxx11 destructor :
@@ -77,7 +84,7 @@ test-suite destructor :
             decl_entry_static_inv_mid ]
     [ boost_contract_build.subdir-run-cxx11 destructor :
             decl_entry_static_inv_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 destructor :
             decl_exit_static_inv_all ]
     [ boost_contract_build.subdir-run-cxx11 destructor :
@@ -86,14 +93,14 @@ test-suite destructor :
             decl_exit_static_inv_mid ]
     [ boost_contract_build.subdir-run-cxx11 destructor :
             decl_exit_static_inv_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 destructor : decl_entry_inv_all ]
     [ boost_contract_build.subdir-run-cxx11 destructor : decl_entry_inv_ends ]
     [ boost_contract_build.subdir-run-cxx11 destructor : decl_entry_inv_mid ]
     [ boost_contract_build.subdir-run-cxx11 destructor : decl_entry_inv_none ]
 
     # No decl_exit_inv_... (as no obj after dtor).
-    
+
     [ boost_contract_build.subdir-run-cxx11 destructor : access ]
 
     [ boost_contract_build.subdir-run-cxx11 destructor : ifdef ]
@@ -120,7 +127,7 @@ test-suite public_function :
     [ boost_contract_build.subdir-run-cxx11 public_function : decl_post_ends ]
     [ boost_contract_build.subdir-run-cxx11 public_function : decl_post_mid ]
     [ boost_contract_build.subdir-run-cxx11 public_function : decl_post_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function :
             decl_entry_static_inv_all ]
     [ boost_contract_build.subdir-run-cxx11 public_function :
@@ -129,7 +136,7 @@ test-suite public_function :
             decl_entry_static_inv_mid ]
     [ boost_contract_build.subdir-run-cxx11 public_function :
             decl_entry_static_inv_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function :
             decl_exit_static_inv_all ]
     [ boost_contract_build.subdir-run-cxx11 public_function :
@@ -138,7 +145,7 @@ test-suite public_function :
             decl_exit_static_inv_mid ]
     [ boost_contract_build.subdir-run-cxx11 public_function :
             decl_exit_static_inv_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function :
             decl_entry_inv_all ]
     [ boost_contract_build.subdir-run-cxx11 public_function :
@@ -147,7 +154,7 @@ test-suite public_function :
             decl_entry_inv_mid ]
     [ boost_contract_build.subdir-run-cxx11 public_function :
             decl_entry_inv_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function :
             decl_exit_inv_all ]
     [ boost_contract_build.subdir-run-cxx11 public_function :
@@ -156,9 +163,9 @@ test-suite public_function :
             decl_exit_inv_mid ]
     [ boost_contract_build.subdir-run-cxx11 public_function :
             decl_exit_inv_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function : access ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function : ifdef ]
     [ boost_contract_build.subdir-run-cxx11 public_function : ifdef_macro ]
 
@@ -174,7 +181,7 @@ test-suite public_function :
     [ boost_contract_build.subdir-compile-fail public_function :
             protected_error ]
     [ boost_contract_build.subdir-run-cxx11 public_function : friend ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function : throwing_pre ]
     [ boost_contract_build.subdir-run-cxx11 public_function : throwing_old ]
     [ boost_contract_build.subdir-run-cxx11 public_function : throwing_body ]
@@ -184,41 +191,25 @@ test-suite public_function :
             throwing_body_virtual_branch ]
     [ boost_contract_build.subdir-run-cxx11 public_function : throwing_post ]
     # No throwing_except test (as throwing twice calls terminate).
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function : max_args0 :
             <define>BOOST_CONTRACT_MAX_ARGS=0 ]
-    [ boost_contract_build.subdir-run-cxx11 public_function : max_args0_no_tva :
-        <define>BOOST_CONTRACT_MAX_ARGS=0
-        <define>BOOST_NO_CXX11_VARIADIC_TEMPLATES
-    ]
     [ boost_contract_build.subdir-run-cxx11 public_function : max_args1 :
             <define>BOOST_CONTRACT_MAX_ARGS=1 ]
-    [ boost_contract_build.subdir-run-cxx11 public_function : max_args1_no_tva :
-        <define>BOOST_CONTRACT_MAX_ARGS=1
-        <define>BOOST_NO_CXX11_VARIADIC_TEMPLATES
-    ]
     [ boost_contract_build.subdir-run-cxx11 public_function : max_args2 :
-        <define>BOOST_CONTRACT_MAX_ARGS=2 ]
-    [ boost_contract_build.subdir-run-cxx11 public_function : max_args2_no_tva :
-        <define>BOOST_CONTRACT_MAX_ARGS=2
-        <define>BOOST_NO_CXX11_VARIADIC_TEMPLATES
-    ]
+            <define>BOOST_CONTRACT_MAX_ARGS=2 ]
     [ boost_contract_build.subdir-run-cxx11 public_function : max_args ]
-    [ boost_contract_build.subdir-run-cxx11 public_function : max_args_no_tva :
-            <define>BOOST_NO_CXX11_VARIADIC_TEMPLATES ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function :
             max_bases ] # C++11 for BASES(...) variadic macros.
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function : overload ]
-    [ boost_contract_build.subdir-run-cxx11 public_function : overload_no_tva :
-            <define>BOOST_NO_CXX11_VARIADIC_TEMPLATES ]
 
     [ boost_contract_build.subdir-compile-fail-cxx11 public_function :
             override_error ] # C++11 for BASES(...) variadic macros.
     [ boost_contract_build.subdir-run-cxx11 public_function : # C++11 for BASES.
             override_permissive : <define>BOOST_CONTRACT_PERMISSIVE ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 public_function : static ]
     [ boost_contract_build.subdir-run-cxx11 public_function : static_ifdef ]
     [ boost_contract_build.subdir-run-cxx11 public_function :
@@ -233,7 +224,7 @@ test-suite public_function :
             static_throwing_post ]
     # No throwing_except test (as throwing twice calls terminate).
 ;
-    
+
 test-suite invariant :
     [ boost_contract_build.subdir-run-cxx11 invariant : decl_static_cv_const ]
     [ boost_contract_build.subdir-run-cxx11 invariant : decl_static_cv ]
@@ -243,7 +234,7 @@ test-suite invariant :
     [ boost_contract_build.subdir-run-cxx11 invariant : decl_cv ]
     [ boost_contract_build.subdir-run-cxx11 invariant : decl_const ]
     [ boost_contract_build.subdir-run-cxx11 invariant : decl_nothing ]
-    
+
     [ boost_contract_build.subdir-run invariant : ifdef ]
     [ boost_contract_build.subdir-run-cxx11 invariant : ifdef_macro ]
 
@@ -261,7 +252,7 @@ test-suite invariant :
     [ boost_contract_build.subdir-compile-fail invariant : static_cv_error ]
     [ boost_contract_build.subdir-run invariant : static_cv_permissive :
             <define>BOOST_CONTRACT_PERMISSIVE ]
-    
+
     [ boost_contract_build.subdir-compile-fail invariant : static_error ]
     [ boost_contract_build.subdir-run invariant : static_permissive :
             <define>BOOST_CONTRACT_PERMISSIVE ]
@@ -278,7 +269,7 @@ test-suite function :
 
     [ boost_contract_build.subdir-run-cxx11 function : decl_pre_all ]
     [ boost_contract_build.subdir-run-cxx11 function : decl_pre_none ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 function : decl_post_all ]
     [ boost_contract_build.subdir-run-cxx11 function : decl_post_none ]
 
@@ -295,10 +286,10 @@ test-suite function :
 test-suite check :
     [ boost_contract_build.subdir-run-cxx11 check : decl_class ]
     [ boost_contract_build.subdir-run-cxx11 check : decl_macro ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 check : ifdef ]
     [ boost_contract_build.subdir-run-cxx11 check : ifdef_macro ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 check : audit :
             <define>BOOST_CONTRACT_AUDITS ]
     [ boost_contract_build.subdir-compile-fail-cxx11 check : audit_error ]
@@ -310,7 +301,8 @@ test-suite check :
 ;
 
 test-suite result :
-    [ boost_contract_build.subdir-run-cxx11 result : mixed_optional ]
+    # https://github.com/boostorg/contract/issues/37
+    # [ boost_contract_build.subdir-run-cxx11 result : mixed_optional ]
     [ boost_contract_build.subdir-run-cxx11 result : mixed_optional_ref ]
 
     [ boost_contract_build.subdir-compile-fail-cxx11 result :
@@ -331,7 +323,7 @@ test-suite old :
     [ boost_contract_build.subdir-run-cxx11 old : if_copyable ]
     [ boost_contract_build.subdir-compile-fail-cxx11 old : if_copyable_error ]
     [ boost_contract_build.subdir-run-cxx11 old : if_copyable_macro ]
-    
+
     [ boost_contract_build.subdir-run old : copyable_traits ]
 ;
 
@@ -348,10 +340,10 @@ test-suite disable :
     ]
     [ boost_contract_build.subdir-run-cxx11 disable : other_assertions_lib :
             <library>disable-lib_a <library>disable-lib_b ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 disable : other_assertions_unit
             disable/lib_a.cpp disable/lib_b.cpp ]
-    
+
     [ boost_contract_build.subdir-lib-cxx11 disable : lib_x :
         <define>BOOST_CONTRACT_NO_POSTCONDITIONS
         <define>BOOST_CONTRACT_NO_EXCEPTS
@@ -363,15 +355,17 @@ test-suite disable :
         <define>BOOST_CONTRACT_NO_EXCEPTS
         <link>shared:<define>BOOST_CONTRACT_TEST_LIB_Y_DYN_LINK
     ]
-    [ boost_contract_build.subdir-run-cxx11 disable : no_post_except_lib :
-            <library>disable-lib_x <library>disable-lib_y ]
-    
+
+    # https://github.com/boostorg/contract/issues/36
+    # [ boost_contract_build.subdir-run-cxx11 disable : no_post_except_lib :
+    #         <library>disable-lib_x <library>disable-lib_y ]
+
     [ boost_contract_build.subdir-run-cxx11 disable : no_post_except_unit
             disable/lib_x.cpp disable/lib_y.cpp :
         <define>BOOST_CONTRACT_NO_POSTCONDITIONS
         <define>BOOST_CONTRACT_NO_EXCEPTS
     ]
-    
+
     [ boost_contract_build.subdir-run disable : audit :
             <define>BOOST_CONTRACT_AUDITS ]
     [ boost_contract_build.subdir-compile-fail disable : audit_error ]
@@ -383,7 +377,7 @@ test-suite disable :
 
 test-suite specify :
     [ boost_contract_build.subdir-run-cxx11 specify : pre_old_post_except ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 specify : pre_old_post ]
     [ boost_contract_build.subdir-run-cxx11 specify : pre_old_except ]
     [ boost_contract_build.subdir-run-cxx11 specify : pre_post_except ]
@@ -402,7 +396,7 @@ test-suite specify :
     [ boost_contract_build.subdir-run-cxx11 specify : except ]
 
     [ boost_contract_build.subdir-run specify : nothing ]
-    
+
     [ boost_contract_build.subdir-compile-fail-cxx11 specify :
             except_post_error ]
     [ boost_contract_build.subdir-compile-fail-cxx11 specify :
@@ -412,7 +406,7 @@ test-suite specify :
     [ boost_contract_build.subdir-compile-fail-cxx11 specify : post_old_error ]
     [ boost_contract_build.subdir-compile-fail-cxx11 specify : post_pre_error ]
     [ boost_contract_build.subdir-compile-fail-cxx11 specify : old_pre_error ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 specify : missing_check :
         <define>BOOST_CONTRACT_ON_MISSING_CHECK_DECL=\"\{\ throw\ err()\;\ \}\"
     ]
@@ -437,11 +431,11 @@ test-suite call_if :
 
     [ boost_contract_build.subdir-run-cxx11 call_if : true_void ]
     [ boost_contract_build.subdir-run-cxx11 call_if : false_void ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 call_if : equal_to ]
     [ boost_contract_build.subdir-run-cxx11 call_if : equal_to_cxx14 :
             [ requires cxx14_generic_lambdas ] ]
-    
+
     [ boost_contract_build.subdir-run-cxx11 call_if : no_equal_condition_if ]
     [ boost_contract_build.subdir-run-cxx11 call_if : no_equal_call_if ]
     [ boost_contract_build.subdir-compile-fail-cxx11 call_if : no_equal_error ]

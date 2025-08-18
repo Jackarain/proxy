@@ -1,0 +1,15 @@
+{
+    "key": "bloom",
+    "name": "Bloom",
+    "authors": [
+        "Joaqu\u00edn M L\u00f3pez Mu\u00f1oz"
+    ],
+    "description": "Bloom filters.",
+    "cxxstd": "11",
+    "category": [
+        "Containers"
+    ],
+    "maintainers": [
+        "Joaquin M Lopez Munoz <joaquin.lopezmunoz -at- gmail.com>"
+    ]
+}

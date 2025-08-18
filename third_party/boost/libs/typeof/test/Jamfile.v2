@@ -8,6 +8,10 @@
 import testing ;
 import set ;
 
+project : requirements
+    <library>/boost/core//boost_core
+    ;
+
 # The special requirement is not ported yet.
 #
 #local rule special-requirements ( toolset variant : properties * )
@@ -22,7 +26,7 @@ import set ;
 #                [ replace-properties $(properties) : <build>no ] ;
 #        }
 #    }
-#    
+#
 #    return $(properties) ;
 #}
 
@@ -31,8 +35,8 @@ rule typeof-test ( source )
    return [ compile $(source) : <define>BOOST_TYPEOF_NATIVE :
                 $(source:B)_native ]
           [ compile $(source) : <define>BOOST_TYPEOF_EMULATION :
-                $(source:B)_emulation ] 
-          ;        
+                $(source:B)_emulation ]
+          ;
 }
 
 rule all-tests ( )
@@ -46,12 +50,12 @@ rule all-tests ( )
     all += [ run odr1.cpp odr2.cpp : : : <define>BOOST_TYPEOF_NATIVE :
                 odr_native ] ;
     all += [ run odr1.cpp odr2.cpp : : : <define>BOOST_TYPEOF_EMULATION :
-                odr_emulation ] ;		
-    all += [ run odr_no_uns1.cpp odr_no_uns2.cpp : : : <define>BOOST_TYPEOF_EMULATION : 
-                odr_no_uns ] ;		
-    return $(all) ;    
+                odr_emulation ] ;
+    all += [ run odr_no_uns1.cpp odr_no_uns2.cpp : : : <define>BOOST_TYPEOF_EMULATION :
+                odr_no_uns ] ;
+    return $(all) ;
 }
 
-test-suite "typeof" 
+test-suite "typeof"
 	:  [ all-tests ]
     ;

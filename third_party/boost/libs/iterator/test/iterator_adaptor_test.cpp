@@ -189,6 +189,16 @@ main()
     boost::const_nonconst_iterator_test(i, ++j);
   }
 
+  // Test that operator_brackets_proxy forwards operator-> and operator*
+  {
+    dummyT* ptr_array[] = { array + 0, array + 1, array + 2,
+                            array + 3, array + 4, array + 5 };
+
+    ptr_iterator<dummyT*> i(ptr_array);
+    BOOST_TEST_EQ(i[2]->foo(), 2);
+    BOOST_TEST_EQ((*i[2]).foo(), 2);
+  }
+
   int test;
   // Test the iterator_traits
   {

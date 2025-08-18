@@ -8,6 +8,7 @@
 import toolset ;
 import toolset : flags ;
 
+import args ;
 import common ;
 import errors ;
 import feature ;
@@ -37,10 +38,7 @@ toolset.inherit-flags intel-linux : gcc
           <warnings-as-errors>off <warnings-as-errors>on
         ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 .home = [ os.home-directories ] ;
 .home = $(.home[1]) ;

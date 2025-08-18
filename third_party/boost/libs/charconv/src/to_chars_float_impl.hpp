@@ -770,7 +770,7 @@ to_chars_result to_chars_float_impl(char* first, char* last, Real value, chars_f
     return boost::charconv::detail::to_chars_hex(first, last, value, precision);
 }
 
-#if (BOOST_CHARCONV_LDBL_BITS == 80 || BOOST_CHARCONV_LDBL_BITS == 128)
+#if (BOOST_CHARCONV_LDBL_BITS == 80 || BOOST_CHARCONV_LDBL_BITS == 128) && !defined(BOOST_CHARCONV_LDBL_IS_FLOAT128)
 
 template <>
 to_chars_result to_chars_float_impl(char* first, char* last, long double value, chars_format fmt, int precision) noexcept

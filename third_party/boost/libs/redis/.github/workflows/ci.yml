@@ -21,8 +21,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { toolset: msvc-14.2, os: windows-2019, generator: "Visual Studio 16 2019", cxxstd: '17', build-type: 'Debug',   build-shared-libs: 1 }
-          - { toolset: msvc-14.2, os: windows-2019, generator: "Visual Studio 16 2019", cxxstd: '17', build-type: 'Release', build-shared-libs: 0 }
+          #- { toolset: msvc-14.2, os: windows-2019, generator: "Visual Studio 16 2019", cxxstd: '17', build-type: 'Debug',   build-shared-libs: 1 }
+          #- { toolset: msvc-14.2, os: windows-2019, generator: "Visual Studio 16 2019", cxxstd: '17', build-type: 'Release', build-shared-libs: 0 }
           - { toolset: msvc-14.3, os: windows-2022, generator: "Visual Studio 17 2022", cxxstd: '20', build-type: 'Debug',   build-shared-libs: 0 }
           - { toolset: msvc-14.3, os: windows-2022, generator: "Visual Studio 17 2022", cxxstd: '20', build-type: 'Release', build-shared-libs: 1 }
     env:
@@ -100,7 +100,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { toolset: msvc-14.2, os: windows-2019 }
+          #- { toolset: msvc-14.2, os: windows-2019 }
           - { toolset: msvc-14.3, os: windows-2022 }
     env:
       OPENSSL_ROOT: "C:\\Program Files\\OpenSSL"
@@ -133,49 +133,49 @@ jobs:
         include:
           - toolset: gcc-11
             install: g++-11
-            os: ubuntu-latest
+            container: ubuntu:22.04
             cxxstd: '17'
             build-type: 'Debug'
             ldflags: ''
 
           - toolset: gcc-11
             install: g++-11
-            os: ubuntu-latest
+            container: ubuntu:22.04
             cxxstd: '20'
             build-type: 'Release'
             ldflags: ''
 
           - toolset: clang-11
             install: clang-11
-            os: ubuntu-latest
+            container: ubuntu:22.04
             cxxstd: '17'
             build-type: 'Debug'
             ldflags: ''
 
           - toolset: clang-11
             install: clang-11
-            os: ubuntu-latest
+            container: ubuntu:22.04
             cxxstd: '20'
             build-type: 'Debug'
             ldflags: ''
 
           - toolset: clang-13
             install: clang-13
-            os: ubuntu-latest
+            container: ubuntu:22.04
             cxxstd: '17'
             build-type: 'Release'
             ldflags: ''
 
           - toolset: clang-13
             install: clang-13
-            os: ubuntu-latest
+            container: ubuntu:22.04
             cxxstd: '20'
             build-type: 'Release'
             ldflags: ''
 
           - toolset: clang-14
             install: 'clang-14 libc++-14-dev libc++abi-14-dev'
-            os: ubuntu-latest
+            container: ubuntu:22.04
             cxxstd: '17'
             build-type: 'Debug'
             cxxflags: '-stdlib=libc++'
@@ -183,13 +183,36 @@ jobs:
 
           - toolset: clang-14
             install: 'clang-14 libc++-14-dev libc++abi-14-dev'
-            os: ubuntu-latest
+            container: ubuntu:22.04
             cxxstd: '20'
             build-type: 'Release'
             cxxflags: '-stdlib=libc++'
             ldflags: '-lc++'
+          
+          - toolset: clang-19
+            install: 'clang-19'
+            container: ubuntu:24.04
+            cxxstd: '23'
+            build-type: 'Debug'
+            cxxflags: '-fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all'
+            ldflags: '-fsanitize=address -fsanitize=undefined'
 
-    runs-on: ${{ matrix.os }}
+          - toolset: gcc-14
+            install: 'g++-14'
+            container: ubuntu:24.04
+            cxxstd: '23'
+            build-type: 'Debug'
+            cxxflags: '-DBOOST_ASIO_DISABLE_LOCAL_SOCKETS=1' # If a system had no UNIX socket support, we build correctly
+          
+          - toolset: gcc-14
+            install: 'g++-14'
+            container: ubuntu:24.04
+            cxxstd: '23'
+            build-type: 'Debug'
+            cxxflags: '-fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all'
+            ldflags: '-fsanitize=address -fsanitize=undefined'
+
+    runs-on: ubuntu-latest
     env:
       CXXFLAGS: ${{matrix.cxxflags}} -Wall -Wextra
       LDFLAGS:  ${{matrix.ldflags}}
@@ -201,7 +224,7 @@ jobs:
     
     - name: Set up the required containers
       run: |
-        docker compose -f tools/docker-compose.yml up -d --wait || (docker compose logs; exit 1)
+        IMAGE=${{ matrix.container }} docker compose -f tools/docker-compose.yml up -d --wait || (docker compose logs; exit 1)
       
     - name: Install dependencies
       run: |
@@ -311,3 +334,24 @@ jobs:
           --toolset ${{ matrix.toolset }} \
           --cxxstd ${{ matrix.cxxstd }} \
           --variant debug,release
+
+  # Checks that we don't have any errors in docs
+  check-docs:
+    name: Check docs
+    defaults:
+      run:
+        shell: bash
+
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Boost
+      run: ./tools/ci.py setup-boost --source-dir=$(pwd)
+    
+    - name: Build docs
+      run: |
+        cd ~/boost-root
+        ./b2 libs/redis/doc
+        [ -f ~/boost-root/libs/redis/doc/html/index.html ]

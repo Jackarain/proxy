@@ -16,20 +16,20 @@
 #include "object.h"
 #include "rules.h"
 
-int32_t make( LIST * targets, int32_t anyhow );
+int32_t make( LIST * targets, bool anyhow );
 int32_t make1( LIST * t );
 
-typedef struct {
+struct COUNTS {
     int32_t temp;
     int32_t updating;
     int32_t cantfind;
     int32_t cantmake;
     int32_t targets;
     int32_t made;
-} COUNTS ;
+};
 
 
-void make0( TARGET * t, TARGET * p, int32_t depth, COUNTS * counts, int32_t anyhow,
+void make0( TARGET * t, TARGET * p, int32_t depth, COUNTS * counts, bool anyhow,
     TARGET * rescanning );
 
 

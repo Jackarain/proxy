@@ -33,7 +33,7 @@ struct shared_test_data {
     error_code fail = asio::error::not_connected;
 
     const std::string connect = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, 60, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
     );
     const std::string connack = encoders::encode_connack(
         false, reason_codes::success.value(), {}

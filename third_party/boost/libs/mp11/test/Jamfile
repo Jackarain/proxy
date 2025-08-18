@@ -250,6 +250,7 @@ run mp_similar.cpp ;
 run mp_map_find.cpp ;
 run mp_map_find_2.cpp ;
 run mp_map_find_3.cpp ;
+run mp_map_find_4.cpp ;
 run mp_map_contains.cpp ;
 run mp_map_insert.cpp ;
 run mp_map_replace.cpp ;

@@ -71,7 +71,7 @@ void headers( TARGET * t )
     if ( list_empty( hdrrule ) )
         return;
 
-    if ( DEBUG_HEADER )
+    if ( is_debug_header() )
         out_printf( "header scan %s\n", object_str( t->name ) );
 
     /* Compile all regular expressions in HDRSCAN */
@@ -128,7 +128,7 @@ LIST * headers1( LIST * l, OBJECT * file, int rec, b2::regex::program re[] )
 #ifdef OPT_IMPROVED_PATIENCE_EXT
     static int count = 0;
     ++count;
-    if ( ( ( count == 100 ) || !( count % 1000 ) ) && DEBUG_MAKE )
+    if ( ( ( count == 100 ) || !( count % 1000 ) ) && is_debug_make() )
     {
         out_printf( "...patience...\n" );
         out_flush();
@@ -158,7 +158,7 @@ LIST * headers1( LIST * l, OBJECT * file, int rec, b2::regex::program re[] )
             if ( re_i && re_i[ 1 ].begin() )
             {
                 std::string header(re_i[ 1 ].begin(), re_i[ 1 ].end());
-                if ( DEBUG_HEADER )
+                if ( is_debug_header() )
                     out_printf( "header found: %s\n", header.c_str() );
                 l = list_push_back( l, object_new( header.c_str() ) );
             }
@@ -170,21 +170,21 @@ LIST * headers1( LIST * l, OBJECT * file, int rec, b2::regex::program re[] )
         {
             std::string macro_name(re_macros_i[ 1 ].begin(), re_macros_i[ 1 ].end());
 
-            if ( DEBUG_HEADER )
+            if ( is_debug_header() )
                 out_printf( "macro header found: %s", macro_name.c_str() );
 
             b2::value_ref macro_name_v(macro_name);
             b2::value_ref header_filename_v(macro_header_get( macro_name_v ));
             if ( header_filename_v.has_value() )
             {
-                if ( DEBUG_HEADER )
+                if ( is_debug_header() )
                     out_printf( " resolved to '%s'\n", header_filename_v->str()
                         );
                 l = list_push_back( l, header_filename_v );
             }
             else
             {
-                if ( DEBUG_HEADER )
+                if ( is_debug_header() )
                     out_printf( " ignored !!\n" );
             }
         }

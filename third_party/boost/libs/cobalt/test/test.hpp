@@ -25,7 +25,10 @@ inline void test_run(boost::cobalt::task<void> (*func) ())
     spawn(ctx, func(),
           +[](std::exception_ptr e)
           {
-            BOOST_CHECK(e == nullptr);
+            if (e)
+              try { std::rethrow_exception(e); }
+              catch(std::exception & ex) { BOOST_CHECK_MESSAGE(e == nullptr, ex.what());}
+
           });
     std::size_t n;
     n = ctx.run();
@@ -167,6 +170,49 @@ struct posted_handle
   {
     if (state != 0)
       BOOST_CHECK(state == 3);
+  }
+};
+
+template<boost::cobalt::awaitable_type Aw>
+struct test_interrupt
+{
+  Aw aw;
+
+  test_interrupt(Aw && aw) : aw(std::move(aw)) {}
+
+  bool await_ready()
+  {
+    auto res = aw.await_ready();
+    aw.interrupt_await();
+    return res;
+  }
+
+  template<typename T>
+  auto await_suspend(std::coroutine_handle<T> h)
+  {
+    using type = decltype(aw.await_suspend(h));
+    if constexpr (std::is_void_v<type>)
+    {
+      aw.await_suspend(h);
+      aw.interrupt_await();
+    }
+    else
+    {
+      auto r = aw.await_suspend(h);
+      aw.interrupt_await();
+      return r;
+    }
+  }
+
+  template<typename T>
+  auto await_resume(const T & tag)
+  {
+    return aw.await_resume(tag);
+  }
+
+  auto await_resume()
+  {
+    return aw.await_resume();
   }
 };
 

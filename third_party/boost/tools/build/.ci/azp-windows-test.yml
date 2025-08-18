@@ -26,7 +26,7 @@ steps:
     $env:path = 'C:\Windows\system32;C:\Windows;' + $env:CXX_PATH
     cd test
     echo "using" $env:TEST_TOOLSET ":" ":" $env:CXX ";" > ${env:HOME}/user-config.jam
-    py -X utf8 test_all.py $env:TEST_TOOLSET
+    py -X utf8 test_all.py $env:TEST_TOOLSET --not-parallel
     cd ..
   displayName: Test
 - powershell: |

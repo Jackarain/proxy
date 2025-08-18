@@ -1,0 +1,17 @@
+[#header_fast_multiblock64]
+== `<boost/bloom/fast_multiblock64.hpp>`
+
+:idprefix: header_fast_multiblock64_
+
+[listing,subs="+macros,+quotes"]
+-----
+namespace boost{
+namespace bloom{
+
+template<std::size_t K>
+struct xref:fast_multiblock64[fast_multiblock64];
+
+} // namespace bloom
+} // namespace boost
+-----
+

@@ -9,7 +9,7 @@
 #define TEST4
 
 #include <boost/math/special_functions/math_fwd.hpp>
-#include "libs/math/test/test_carlson.hpp"
+#include "test_carlson.hpp"
 
 void expected_results()
 {

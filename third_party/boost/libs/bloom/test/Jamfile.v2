@@ -1,0 +1,33 @@
+# Copyright 2025 Joaquín M López Muñoz.
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+#
+# See http://www.boost.org/libs/bloom for library home page.
+
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
+
+import testing ;
+import config : requires ;
+
+project
+    : requirements
+      <library>/boost/bloom//boost_bloom
+      <library>/boost/config//boost_config
+      <library>/boost/core//boost_core
+      <library>/boost/mp11//boost_mp11
+      [ requires cxx11_noexcept ] # used as a proxy for C++11 support
+      <toolset>msvc:<cxxflags>-D_SCL_SECURE_NO_WARNINGS
+    ;
+
+run test_array.cpp ;
+run test_boost_bloom_hpp.cpp ;
+run test_capacity.cpp ;
+run test_combination.cpp ;
+run test_comparison.cpp ;
+run test_construction.cpp ;
+run test_fpr.cpp ;
+run test_insertion.cpp ;
+
+compile test_visualization.cpp ;

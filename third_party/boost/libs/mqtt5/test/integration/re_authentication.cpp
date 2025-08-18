@@ -51,7 +51,7 @@ struct shared_test_data {
     );
 
     connect_props init_connect_props() {
-        connect_props cprops;
+        auto cprops = test::dflt_cprops;
         cprops[prop::authentication_method] = "method";
         cprops[prop::authentication_data] = "";
         return cprops;
@@ -226,7 +226,7 @@ BOOST_FIXTURE_TEST_CASE(async_auth_fail, shared_test_data) {
 
 BOOST_FIXTURE_TEST_CASE(unexpected_auth, shared_test_data) {
     auto connect_no_auth = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, 60, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
     );
     auto disconnect = encoders::encode_disconnect(
         reason_codes::protocol_error.value(),
@@ -249,7 +249,7 @@ BOOST_FIXTURE_TEST_CASE(unexpected_auth, shared_test_data) {
 
 BOOST_FIXTURE_TEST_CASE(re_auth_without_authenticator, shared_test_data) {
     auto connect_no_auth = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, 60, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
     );
 
     test::msg_exchange broker_side;

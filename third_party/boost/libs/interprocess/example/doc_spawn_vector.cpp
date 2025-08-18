@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
    }
    else{ //Child process
       //Open the managed segment
-      managed_shared_memory segment(open_only, argv[2]);
+      managed_shared_memory segment(open_only, test::get_argv_2(argv));
 
       //Find the vector using the c-string name
       MyVector *myvector = segment.find<MyVector>("MyVector").first;

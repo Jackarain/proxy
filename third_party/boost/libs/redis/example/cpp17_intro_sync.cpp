@@ -6,15 +6,15 @@
 
 #include "sync_connection.hpp"
 
-#include <string>
 #include <iostream>
+#include <string>
 
 using boost::redis::sync_connection;
 using boost::redis::request;
 using boost::redis::response;
 using boost::redis::config;
 
-auto main(int argc, char * argv[]) -> int
+auto main(int argc, char* argv[]) -> int
 {
    try {
       config cfg;

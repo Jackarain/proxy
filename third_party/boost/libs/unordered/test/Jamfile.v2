@@ -1,7 +1,7 @@
 
 # Copyright 2006-2008 Daniel James.
 # Copyright 2022-2023 Christian Mazakas
-# Copyright 2024 Joaquin M Lopez Munoz
+# Copyright 2024-2025 Joaquin M Lopez Munoz
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -156,7 +156,9 @@ run unordered/serialization_tests.cpp
       <toolset>gcc:<optimization>space
       <toolset>clang:<inlining>on
       <toolset>clang:<optimization>space
-      <library>/boost/serialization//boost_serialization/<warnings>off ;
+      <library>/boost/serialization//boost_serialization/<warnings>off
+      <library>/boost/container//boost_container/<warnings-as-errors>off
+      <toolset>gcc,<target-os>windows:<build>no ; # Boost.Atomic no longer supports MinGW
 
 compile-fail unordered/insert_node_type_fail.cpp : <define>UNORDERED_TEST_MAP      : insert_node_type_fail_map ;
 compile-fail unordered/insert_node_type_fail.cpp : <define>UNORDERED_TEST_MULTIMAP : insert_node_type_fail_multimap ;
@@ -241,6 +243,7 @@ local FOA_TESTS =
   hash_is_avalanching_test
   fancy_pointer_noleak
   pmr_allocator_tests
+  pull_tests
   stats_tests
   node_handle_allocator_tests
 ;
@@ -265,6 +268,8 @@ run unordered/serialization_tests.cpp
       <toolset>clang:<inlining>on
       <toolset>clang:<optimization>space
       <library>/boost/serialization//boost_serialization/<warnings>off
+      <library>/boost/container//boost_container/<warnings-as-errors>off
+      <toolset>gcc,<target-os>windows:<build>no # Boost.Atomic no longer supports MinGW
     : foa_serialization_tests ;
 
 local FOA_EXCEPTION_TESTS =
@@ -401,6 +406,10 @@ run cfoa/serialization_tests.cpp
       <toolset>clang:<inlining>on
       <toolset>clang:<optimization>space
       <library>/boost/serialization//boost_serialization/<warnings>off
+      <library>/boost/container//boost_container/<warnings-as-errors>off
+      <toolset>gcc,<target-os>windows:<build>no # Boost.Atomic no longer supports MinGW
+      <toolset>gcc,<thread-sanitizer>norecover:<build>no # TSAN does not support atomic_thread_fence
+      <toolset>clang,<thread-sanitizer>norecover:<build>no # idem
     : cfoa_serialization_tests ;
 
 rule make_cfoa_interprocess_concurrency_tests ( name : defines ? )

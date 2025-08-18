@@ -4,11 +4,13 @@
  * accompanying file LICENSE.txt)
  */
 
-#include <boost/redis/connection.hpp>
 #include <boost/redis/config.hpp>
+#include <boost/redis/connection.hpp>
+
 #include <boost/asio/co_spawn.hpp>
-#include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/use_awaitable.hpp>
+
 #include <iostream>
 
 namespace asio = boost::asio;
@@ -19,7 +21,7 @@ using boost::redis::logger;
 
 extern asio::awaitable<void> co_main(config);
 
-auto main(int argc, char * argv[]) -> int
+auto main(int argc, char* argv[]) -> int
 {
    try {
       config cfg;
@@ -42,7 +44,7 @@ auto main(int argc, char * argv[]) -> int
    }
 }
 
-#else // defined(BOOST_ASIO_HAS_CO_AWAIT)
+#else  // defined(BOOST_ASIO_HAS_CO_AWAIT)
 
 auto main() -> int
 {
@@ -50,4 +52,4 @@ auto main() -> int
    return 0;
 }
 
-#endif // defined(BOOST_ASIO_HAS_CO_AWAIT)
+#endif  // defined(BOOST_ASIO_HAS_CO_AWAIT)

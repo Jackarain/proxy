@@ -7,7 +7,6 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-
 #include <boost/url/detail/config.hpp>
 #include <boost/url/rfc/query_rule.hpp>
 #include "detail/charsets.hpp"

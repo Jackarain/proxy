@@ -1,0 +1,17 @@
+[#header_block]
+== `<boost/bloom/block.hpp>`
+
+:idprefix: header_block_
+
+[listing,subs="+macros,+quotes"]
+-----
+namespace boost{
+namespace bloom{
+
+template<typename Block, std::size_t K>
+struct xref:block[block];
+
+} // namespace bloom
+} // namespace boost
+-----
+

@@ -5,6 +5,17 @@
 # (See accompanying file LICENSE.txt
 # or copy at https://www.bfgroup.xyz/b2/LICENSE.txt)
 
+#| tag::doc[]
+
+[[b2.reference.tools.compiler.clang-win]]
+= Clang (MSVC frontend)
+
+The `clang-win` module supports Clang with MSVC frontend and has the same
+options as link:#b2.reference.tools.compiler.msvc[`msvc`] toolset.
+
+|# # end::doc[]
+
+import args ;
 import common ;
 import errors ;
 import feature ;
@@ -24,7 +35,7 @@ toolset.inherit-flags clang-win : msvc : : YLOPTION ;
 toolset.inherit-rules clang-win : msvc ;
 
 
-if [ MATCH (--debug-(clang-(win-)?)?configuration) : [ modules.peek : ARGV ] ]
+if [ args.get-arg debug-configuration ]
 {
     local rule .notice ( messages * )
     {

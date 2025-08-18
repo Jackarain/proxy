@@ -66,12 +66,12 @@ insert(
     param_view const& p) ->
         iterator
 {
-    return iterator(
+    return {
         u_->edit_params(
             before.it_,
             before.it_,
-            detail::param_iter(p)),
-        opt_);
+            detail::single_param_iter(p, opt_.space_as_plus)),
+        opt_};
 }
 
 auto
@@ -130,7 +130,7 @@ replace(
         u_->edit_params(
             pos.it_,
             std::next(pos).it_,
-            detail::param_iter(p)),
+            detail::single_param_iter(p, opt_.space_as_plus)),
         opt_);
 }
 
@@ -232,7 +232,7 @@ erase(
         u_->edit_params(
             first.it_,
             last.it_,
-            detail::query_iter(s)),
+            detail::query_string_iter(s)),
         opt_);
 }
 

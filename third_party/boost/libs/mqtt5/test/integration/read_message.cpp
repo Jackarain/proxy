@@ -12,6 +12,7 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <chrono>
@@ -30,11 +31,11 @@ using test::after;
 using namespace std::chrono_literals;
 
 void test_receive_malformed_packet(
-    std::string malformed_packet, std::string reason_string
+    std::string malformed_packet, reason_code rc, std::string reason_string
 ) {
     // packets
     auto connect = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, 60, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
     );
     connack_props co_props;
     co_props[prop::maximum_packet_size] = 2000;
@@ -42,9 +43,7 @@ void test_receive_malformed_packet(
 
     disconnect_props dc_props;
     dc_props[prop::reason_string] = reason_string;
-    auto disconnect = encoders::encode_disconnect(
-        reason_codes::malformed_packet.value(), dc_props
-    );
+    auto disconnect = encoders::encode_disconnect(rc.value(), dc_props);
 
     error_code success {};
     test::msg_exchange broker_side;
@@ -82,6 +81,7 @@ void test_receive_malformed_packet(
 BOOST_AUTO_TEST_CASE(forbidden_packet_type) {
     test_receive_malformed_packet(
         std::string({ 0x00 }),
+        reason_codes::malformed_packet,
         "Malformed Packet received from the Server"
     );
 }
@@ -89,6 +89,7 @@ BOOST_AUTO_TEST_CASE(forbidden_packet_type) {
 BOOST_AUTO_TEST_CASE(malformed_varint) {
     test_receive_malformed_packet(
         std::string({ 0x10, -1 /* 0xFF */, -1, -1, -1 }),
+        reason_codes::malformed_packet,
         "Malformed Packet received from the Server"
     );
 }
@@ -96,6 +97,7 @@ BOOST_AUTO_TEST_CASE(malformed_varint) {
 BOOST_AUTO_TEST_CASE(malformed_fixed_header) {
     test_receive_malformed_packet(
         std::string({ 0x60, 1, 0 }),
+        reason_codes::malformed_packet,
         "Malformed Packet received from the Server"
     );
 }
@@ -103,13 +105,15 @@ BOOST_AUTO_TEST_CASE(malformed_fixed_header) {
 BOOST_AUTO_TEST_CASE(packet_larger_than_allowed) {
     test_receive_malformed_packet(
         std::string({ 0x10, -1, -1, -1, 0 }),
-        "Malformed Packet received from the Server"
+        reason_codes::packet_too_large,
+        "The packet size is greater than Maximum Packet Size"
     );
 }
 
 BOOST_AUTO_TEST_CASE(receive_malformed_publish) {
     test_receive_malformed_packet(
         std::string({ 0x30, 1, -1 }),
+        reason_codes::malformed_packet,
         "Malformed PUBLISH received: cannot decode"
     );
 }
@@ -122,7 +126,7 @@ struct shared_test_data {
     const std::string payload = "payload";
 
     const std::string connect = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, 60, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
     );
     const std::string connack = encoders::encode_connack(false, uint8_t(0x00), {});
 
@@ -221,7 +225,7 @@ BOOST_FIXTURE_TEST_CASE(receive_disconnect_while_reconnecting, shared_test_data)
 template <typename VerifyFun>
 void run_receive_test(
     test::msg_exchange broker_side, int num_of_receives,
-    VerifyFun&& verify_fun
+    uint32_t max_packet_size, VerifyFun&& verify_fun
 ) {
     const int expected_handlers_called = num_of_receives;
     int handlers_called = 0;
@@ -235,6 +239,7 @@ void run_receive_test(
     using client_type = mqtt_client<test::test_stream>;
     client_type c(executor);
     c.brokers("127.0.0.1,127.0.0.1") // to avoid reconnect backoff
+        .connect_property(prop::maximum_packet_size, max_packet_size)
         .async_run(asio::detached);
 
     for (int i = 0; i < num_of_receives; ++i)
@@ -274,7 +279,47 @@ BOOST_FIXTURE_TEST_CASE(receive_byte_by_byte, shared_test_data) {
         BOOST_TEST(payload == payload_);
     };
 
-    run_receive_test(std::move(broker_side), 1, std::move(verify_fun));
+    run_receive_test(std::move(broker_side), 1, 65'536, std::move(verify_fun));
+}
+
+namespace bdata = boost::unit_test::data;
+
+BOOST_DATA_TEST_CASE_F(
+    shared_test_data, receive_with_different_max_packet_sizes,
+    bdata::make(5, 500, 50'000) * bdata::make(1, 2) * bdata::xrange(-1, 5),
+    publish_payload_size, max_packet_size_multiplier, max_packet_size_offset
+) {
+    auto payload1 = std::string(publish_payload_size, 'a');
+    auto publish1 = encoders::encode_publish(
+        0, topic, payload1, qos_e::at_most_once, retain_e::no, dup_e::no, {}
+    );
+
+    const uint32_t max_packet_size = (std::max)(
+        publish1.size(),
+        publish1.size() * max_packet_size_multiplier + max_packet_size_offset
+    );
+    connect_props cprops;
+    cprops[prop::maximum_packet_size] = max_packet_size;
+    auto connect1 = encoders::encode_connect(
+        "", std::nullopt, std::nullopt, 60, false, cprops, std::nullopt
+    );
+
+    test::msg_exchange broker_side;
+    broker_side
+        .expect(connect1)
+            .complete_with(success, after(1ms))
+            .reply_with(connack, after(2ms))
+        .send(publish1, publish1, publish1, publish1, publish1, after(100ms));
+
+    auto verify_fun = [&](
+        error_code ec, std::string topic_, std::string payload_, publish_props
+    ) {
+        BOOST_TEST(!ec);
+        BOOST_TEST(topic == topic_);
+        BOOST_TEST(payload1 == payload_);
+    };
+
+    run_receive_test(std::move(broker_side), 5, max_packet_size, std::move(verify_fun));
 }
 
 BOOST_FIXTURE_TEST_CASE(receive_multiple_packets_at_once, shared_test_data) {
@@ -287,13 +332,13 @@ BOOST_FIXTURE_TEST_CASE(receive_multiple_packets_at_once, shared_test_data) {
 
     auto verify_fun = [&](
         error_code ec, std::string topic_, std::string payload_, publish_props
-        ) {
-            BOOST_TEST(!ec);
-            BOOST_TEST(topic == topic_);
-            BOOST_TEST(payload == payload_);
-        };
+    ) {
+        BOOST_TEST(!ec);
+        BOOST_TEST(topic == topic_);
+        BOOST_TEST(payload == payload_);
+    };
 
-    run_receive_test(std::move(broker_side), 5, std::move(verify_fun));
+    run_receive_test(std::move(broker_side), 5, 65'536, std::move(verify_fun));
 }
 
 BOOST_FIXTURE_TEST_CASE(receive_multiple_packets_with_malformed, shared_test_data) {
@@ -326,7 +371,7 @@ BOOST_FIXTURE_TEST_CASE(receive_multiple_packets_with_malformed, shared_test_dat
         BOOST_TEST(payload == payload_);
     };
 
-    run_receive_test(std::move(broker_side), 3, std::move(verify_fun));
+    run_receive_test(std::move(broker_side), 3, 65'536, std::move(verify_fun));
 }
 
 BOOST_AUTO_TEST_SUITE_END();

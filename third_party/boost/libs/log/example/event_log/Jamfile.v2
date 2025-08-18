@@ -29,7 +29,7 @@ rule check-message-compiler ( properties * )
     {
         if ! [ has-config-flag BOOST_LOG_WITHOUT_EVENT_LOG : $(properties) ]
         {
-            local has_mc = [ configure.builds /boost/log/message-compiler//test-availability : $(properties) : message-compiler ] ;
+            local has_mc = [ configure.builds /boost/log/config/message-compiler//test-availability : $(properties) : message-compiler ] ;
             if ! $(has_mc)
             {
                 result += <build>no ;

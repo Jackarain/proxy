@@ -292,6 +292,15 @@ int main()
             }
             BOOST_TEST(parse(str, parser_1));
             BOOST_TEST(!parse(str, parser_2));
+            {
+                BOOST_TEST(!parse(str, char_));
+                std::ostringstream err, warn;
+                stream_error_handler eh("", err, warn);
+                BOOST_TEST(!parse(str, with_error_handler(char_, eh)));
+                BOOST_TEST(
+                    err.str() ==
+                    "1:1: error: Expected end of input here:\nab\n ^\n");
+            }
         }
         {
             std::string str = "ab";

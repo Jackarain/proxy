@@ -13,8 +13,8 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.tools.compiler.gcc]]
-= GNU C++
+[[b2.reference.tools.compiler.gcc]]
+= GCC - GNU Compiler Collection
 
 The `gcc` module supports the http://gcc.gnu.org[GNU C++ compiler] on
 Linux, a number of Unix-like system including SunOS and on Windows
@@ -117,15 +117,13 @@ import type ;
 import unix ;
 import virtual-target ;
 import errors ;
+import args ;
 
 
 # Used in actions for multi argument options
 _ = " " ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 
 feature.extend toolset : gcc ;
@@ -449,7 +447,8 @@ local rule compile-link-flags ( * )
     local rule init-cxxstd-flags ( condition * : version )
     {
         local std ;
-        if [ version-ge $(version) : 11 ] { std = 23 ; }
+        if [ version-ge $(version) : 14 ] { std = 26 ; }
+        else if [ version-ge $(version) : 11 ] { std = 23 ; }
         else if [ version-ge $(version) : 10 ] { std = 20 ; }
         else if [ version-ge $(version) : 8 ] { std = 2a ; }
         else if [ version-ge $(version) : 6 ] { std = 17 ; }

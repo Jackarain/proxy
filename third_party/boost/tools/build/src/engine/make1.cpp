@@ -258,12 +258,12 @@ int32_t make1( LIST * targets )
     clear_state_freelist();
 
     /* Talk about it. */
-    if ( DEBUG_MAKE && counts->made )
+    if ( is_debug_make() && counts->made )
     {
         out_printf( "\n...updated %d target%s...\n", counts->made,
             counts->made > 1 ? "s" : "" );
     }
-    if ( DEBUG_MAKE && counts->skipped )
+    if ( is_debug_make() && counts->skipped )
     {
         out_printf( "\n...skipped %d target%s...\n",
             make_summary->count(targets_skipped),
@@ -473,7 +473,7 @@ static void make1b( state * const pState )
             break;
 
         case T_FATE_ISTMP:
-            if ( DEBUG_MAKE )
+            if ( is_debug_make() )
                 out_printf( "...using %s...\n", object_str( t->name ) );
             break;
 
@@ -490,7 +490,7 @@ static void make1b( state * const pState )
             if ( t->actions )
             {
                 ++counts->total;
-                if ( DEBUG_MAKE && !( counts->total % 100 ) )
+                if ( is_debug_make() && !( counts->total % 100 ) )
                     out_printf( "...on %dth target...\n", counts->total );
 
                 t->cmds = (char *)make1cmds( t );
@@ -516,7 +516,7 @@ static void make1b( state * const pState )
 
     if ( t->cmds == NULL || --( ( CMD * )t->cmds )->asynccnt == 0 )
         push_state( &state_stack, t, NULL, T_STATE_MAKE1C );
-    else if ( DEBUG_EXECCMD )
+    else if ( is_debug_execcmd() )
     {
         CMD * cmd = ( CMD * )t->cmds;
         out_printf( "Delaying %s %s: %d targets not ready\n", object_str( cmd->rule->name ), object_str( t->boundname ), cmd->asynccnt );
@@ -569,8 +569,8 @@ static void make1c( state const * const pState )
         /* Increment the jobs running counter. */
         ++cmdsrunning;
 
-        if ( ( globs.jobs == 1 ) && ( DEBUG_MAKEQ ||
-            ( DEBUG_MAKE && !( cmd->rule->actions->flags & RULE_QUIETLY ) ) ) )
+        if ( ( globs.jobs == 1 ) && ( is_debug_makeq() ||
+            ( is_debug_make() && !( cmd->rule->actions->flags & RULE_QUIETLY ) ) ) )
         {
             OBJECT * action  = cmd->rule->name;
             OBJECT * target = list_front( lol_get( (LOL *)&cmd->args, 0 ) );
@@ -578,7 +578,7 @@ static void make1c( state const * const pState )
             out_printf( "%s %s\n", object_str( action ), object_str( target ) );
 
             /* Print out the command executed if given -d+2. */
-            if ( DEBUG_EXEC )
+            if ( is_debug_exec() )
             {
                 out_puts( cmd->buf->value );
                 out_putc( '\n' );
@@ -925,8 +925,8 @@ static void make1c_closure
             t->status = EXEC_CMD_OK;
     }
 
-    if ( DEBUG_MAKEQ ||
-        ( DEBUG_MAKE && !( cmd->rule->actions->flags & RULE_QUIETLY ) ) )
+    if ( is_debug_makeq() ||
+        ( is_debug_make() && !( cmd->rule->actions->flags & RULE_QUIETLY ) ) )
     {
         rule_name = object_str( cmd->rule->name );
         target_name = object_str( list_front( lol_get( (LOL *)&cmd->args, 0 ) )
@@ -949,7 +949,7 @@ static void make1c_closure
     if ( !globs.noexec )
     {
         call_timing_rule( t, time );
-        if ( DEBUG_EXECCMD )
+        if ( is_debug_execcmd() )
             out_printf( "%f sec system; %f sec user; %f sec clock\n",
                 time->system, time->user,
                 timestamp_delta_seconds(&time->start, &time->end) );
@@ -959,10 +959,10 @@ static void make1c_closure
     }
 
     /* Print command text on failure. */
-    if ( t->status == EXEC_CMD_FAIL && DEBUG_MAKE &&
+    if ( t->status == EXEC_CMD_FAIL && is_debug_make() &&
         ! ( t->flags & T_FLAG_FAIL_EXPECTED ) )
     {
-        if ( !DEBUG_EXEC )
+        if ( !is_debug_exec() )
             out_printf( "%s\n", cmd->buf->value );
 
         out_printf( "...failed %s ", object_str( cmd->rule->name ) );
@@ -1041,7 +1041,7 @@ static void push_cmds( CMDLIST * cmds, int32_t status )
                 first_target->cmds = (char *)next_cmd;
                 push_state( &state_stack, first_target, NULL, T_STATE_MAKE1C );
             }
-            else if ( DEBUG_EXECCMD )
+            else if ( is_debug_execcmd() )
             {
                 TARGET * first_target = bindtarget( list_front( lol_get( &next_cmd->args, 0 ) ) );
                 out_printf( "Delaying %s %s: %d targets not ready\n", object_str( next_cmd->rule->name ), object_str( first_target->boundname ), next_cmd->asynccnt );
@@ -1494,7 +1494,7 @@ static int32_t cmd_sem_lock( TARGET * t )
     {
         if ( iter->target->asynccnt > 0 )
         {
-            if ( DEBUG_EXECCMD )
+            if ( is_debug_execcmd() )
                 out_printf( "SEM: %s is busy, delaying launch of %s\n",
                     object_str( iter->target->name ), object_str( t->name ) );
             targetentry( iter->target->parents, t );
@@ -1505,7 +1505,7 @@ static int32_t cmd_sem_lock( TARGET * t )
     for ( iter = cmd->lock; iter; iter = iter->next.get() )
     {
         ++iter->target->asynccnt;
-        if ( DEBUG_EXECCMD )
+        if ( is_debug_execcmd() )
             out_printf( "SEM: %s now used by %s\n", object_str( iter->target->name
                 ), object_str( t->name ) );
     }
@@ -1524,7 +1524,7 @@ static void cmd_sem_unlock( TARGET * t )
     /* Release the semaphores. */
     for ( iter = cmd->unlock.get(); iter; iter = iter->next.get() )
     {
-        if ( DEBUG_EXECCMD )
+        if ( is_debug_execcmd() )
             out_printf( "SEM: %s is now free\n", object_str(
                 iter->target->name ) );
         --iter->target->asynccnt;

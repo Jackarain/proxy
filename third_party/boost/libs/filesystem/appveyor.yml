@@ -1,5 +1,5 @@
 # Copyright 2016, 2017 Peter Dimov
-# Copyright 2019-2022 Andrey Semashev
+# Copyright 2019-2025 Andrey Semashev
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
@@ -51,11 +51,6 @@ environment:
     - TOOLSET: gcc
       CXXSTD: 11,14,1z
       ADDPATH: C:\cygwin64\bin;
-      EXTRA_TESTS: 1
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-    - TOOLSET: gcc
-      CXXSTD: 11,14,1z
-      ADDPATH: C:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64\bin;
       EXTRA_TESTS: 1
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     - TOOLSET: gcc

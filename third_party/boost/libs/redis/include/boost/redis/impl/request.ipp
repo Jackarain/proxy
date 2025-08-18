@@ -12,10 +12,13 @@ namespace boost::redis::detail {
 
 auto has_response(std::string_view cmd) -> bool
 {
-   if (cmd == "SUBSCRIBE") return true;
-   if (cmd == "PSUBSCRIBE") return true;
-   if (cmd == "UNSUBSCRIBE") return true;
+   if (cmd == "SUBSCRIBE")
+      return true;
+   if (cmd == "PSUBSCRIBE")
+      return true;
+   if (cmd == "UNSUBSCRIBE")
+      return true;
    return false;
 }
 
-} // boost:redis::detail
+}  // namespace boost::redis::detail

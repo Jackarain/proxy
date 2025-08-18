@@ -10,6 +10,7 @@ Distributed under the Boost Software License, Version 1.0.
 #include "cwd.h"
 #include "filesys.h"
 #include "frames.h"
+#include "mod_args.h"
 #include "mod_jam_modules.h"
 #include "modules.h"
 #include "object.h"
@@ -51,17 +52,14 @@ LIST * b2::startup::builtin_boost_build(FRAME * frame, int flags)
 {
 	// Do nothing, but keep the rule, for backwards compatability.
 	// But do record the path passed in as a fallback to the loading.
-	b2::jam::variable(".boost-build-dir")
-		= b2::list_ref(lol_get(frame->args, 0));
+	b2::jam::variable(".boost-build-dir") = b2::list_ref(lol_get(frame->args, 0));
 	return L0;
 }
 
 extern char const * saved_argv0;
 
-void bootstrap_dirscan(void * dirs,
-	OBJECT * path,
-	int found,
-	timestamp const * const)
+void bootstrap_dirscan(
+	void * dirs, OBJECT * path, int found, timestamp const * const)
 {
 	if (file_is_file(path) == 1) return;
 	_pathname p(object_str(path));
@@ -72,18 +70,6 @@ void bootstrap_dirscan(void * dirs,
 
 bool b2::startup::bootstrap(FRAME * frame)
 {
-	b2::value_ref opt_debug_configuration { "--debug-configuration" };
-	b2::jam::variable dot_OPTION__debug_configuration { ".OPTION",
-		"debug-configration" };
-	for (auto arg : *b2::jam::variable("ARGV"))
-	{
-		if (opt_debug_configuration == arg)
-		{
-			dot_OPTION__debug_configuration = "true";
-			break;
-		}
-	}
-
 	// We use the executable path as a root for searches.
 	char * b2_exe_path_pchar = executable_path(saved_argv0);
 	const std::string b2_exe_path { b2_exe_path_pchar };
@@ -162,10 +148,10 @@ bool b2::startup::bootstrap(FRAME * frame)
 	}
 
 	// Show where we found it, if asked.
-	if (!b2_file_path.empty() && dot_OPTION__debug_configuration)
+	if (!b2_file_path.empty()
+		&& !b2::args::get_arg("debug-configuration").empty())
 	{
-		out_printf(
-			"notice: found boost-build.jam at %s\n", b2_file_path.c_str());
+		out_printf("notice: found boost-build.jam at %s\n", b2_file_path.c_str());
 	}
 
 	// Load the boost-build file if we find it for backwards compatability. We
@@ -191,8 +177,8 @@ bool b2::startup::bootstrap(FRAME * frame)
 	// Check various locations relative to executable.
 	if (buildsystem_file.empty())
 	{
-		const char * dirs[] = {
-			// Check relative to the executable for portable install location.
+		const char * dirs[] = { // Check relative to the executable for portable
+								// install location.
 			".b2/",
 			// Check relative to the exec for system install location.
 			"../share/b2/",
@@ -246,8 +232,7 @@ bool b2::startup::bootstrap(FRAME * frame)
 	// Last resort, search in the directory referenced by the boost-build rule.
 	if (buildsystem_file.empty())
 	{
-		b2::list_cref dot_boost_build_dir
-			= b2::jam::variable(".boost-build-dir");
+		b2::list_cref dot_boost_build_dir = b2::jam::variable(".boost-build-dir");
 		if (!dot_boost_build_dir.empty())
 		{
 			std::string dir = b2::value_ref(*dot_boost_build_dir.begin());
@@ -275,7 +260,8 @@ bool b2::startup::bootstrap(FRAME * frame)
 	}
 
 	// Show where we found the bootstrap, if asked.
-	if (!buildsystem_file.empty() && dot_OPTION__debug_configuration)
+	if (!buildsystem_file.empty()
+		&& !b2::args::get_arg("debug-configuration").empty())
 	{
 		out_printf("notice: loading B2 from %s\n", buildsystem_file.c_str());
 	}
@@ -284,11 +270,10 @@ bool b2::startup::bootstrap(FRAME * frame)
 	// parse_file(b2::value_ref { buildsystem_file }, frame);
 
 	// Add any subdirs to the build-system.jam to search for the jam files.
-	std::string buildsystem_dir
-		= b2::paths::normalize(buildsystem_file + "/..");
+	std::string buildsystem_dir = b2::paths::normalize(buildsystem_file + "/..");
 	std::vector<std::string> buildsystem_subdirs;
-	file_dirscan(value_ref(buildsystem_dir), &bootstrap_dirscan,
-		&buildsystem_subdirs);
+	file_dirscan(
+		value_ref(buildsystem_dir), &bootstrap_dirscan, &buildsystem_subdirs);
 	b2::jam::variable boost_build_path_v("BOOST_BUILD_PATH");
 	for (auto subdir : buildsystem_subdirs) boost_build_path_v += subdir;
 	boost_build_path_v += buildsystem_dir;

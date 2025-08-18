@@ -18,11 +18,19 @@ The template also expects a Config global dictionary that contains
 configuration parameters from the merged JSON config files passed to the docca
 program. By default the dictionary looks like this:
 {
-    "include_private": False
+    "include_private": False,
+    "legacy_behavior": True,
+    "allowed_prefixes": [""],
 }
 In adition:
-* It uses "default_namespace" Config key to only output entities in a specific
-    namespace.
+* It uses "default_namespace" Config key to strip fully qualifed names of
+  entities in that namespace from the prefix {default_namespace}::.
+* It uses "allowed_prefixes" Config key to only output entities in a specific
+    scope. This is done by checking if the FQN of the entity is prefixed with
+    an allowed prefix, or if it is itself a prefix of an allowed prefix. By
+    default this setting is [""] (allow any entity) unless "default_namespace"
+    is set, in which case it looks like ["{default_namespace}::"] (allow
+    everything in the default namespace).
 * It uses "link_prefix" Config key as prefix for every generated cross-link.
 * It uses "convenience_header" Config key for "Convenience Header" subsections.
 * It uses "show_defaulted" Config key to determine whether to display if a
@@ -84,6 +92,14 @@ class EntityRef(Phrase): # text with associated entity
 class UrlLink(Phrase): # a direct full or relative link, similar to HTML <a>
     url -> str
 
+class EmDash(Phrase): # an em-dash
+    text -> str # the Unicode character for em-dashes
+    def __len__(self) -> int # always 0
+
+class EnDash(Phrase): # an en-dash
+    text -> str # the Unicode character for en-dashes
+    def __len__(self) -> int # always 0
+
 class Block(): # A single block or hierarchy of blocks
     pass
 
@@ -127,10 +143,10 @@ class Section(Block): # A sequence of blocks with an optional title
     def __getitem__(self, pos) -> Block
 
 class ParameterList(Block):
-    parameters = 'param'
-    return_values = 'retval'
-    exceptions = 'exception'
-    template_parameters = 'templateparam'
+    Parameters = 'param'
+    ReturnValues = 'retval'
+    Exceptions = 'exception'
+    TemplateParameters = 'templateparam'
 
     self.kind -> str # 'param', 'templateparam', etc
 
@@ -309,16 +325,11 @@ are enabled.
 #}
 
 
-{% import "docca/quickbook/components.jinja2" as comps -%}
+{%- import "docca/quickbook/components.jinja2" as comps -%}
 
-{% for entity in entities.values() -%}
-    {% if entity is not Namespace -%}
-        {% continue %}
+{%- for entity in entities.values() -%}
+    {%- if entity is not Namespace -%}
+        {%- continue -%}
     {%- endif -%}
-    {% if Config.get('default_namespace')
-        and entity.fully_qualified_name != Config.default_namespace -%}
-        {% continue %}
-    {%- endif -%}
-
-    {{ comps.write_namespace(entity) }}
+    {{ comps.write_entity(entity) }}
 {%- endfor %}

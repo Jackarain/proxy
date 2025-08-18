@@ -8,11 +8,13 @@
 #define BOOST_REDIS_RESP3_PARSER_HPP
 
 #include <boost/redis/resp3/node.hpp>
+
 #include <boost/system/error_code.hpp>
+
 #include <array>
-#include <string_view>
 #include <cstdint>
 #include <optional>
+#include <string_view>
 
 namespace boost::redis::resp3 {
 
@@ -54,7 +56,9 @@ private:
    // returns type::invalid.
    [[nodiscard]]
    auto bulk_expected() const noexcept -> bool
-      { return bulk_ != type::invalid; }
+   {
+      return bulk_ != type::invalid;
+   }
 
 public:
    parser();
@@ -76,12 +80,7 @@ public:
 // parser is either done or an error occured, that can be checked on
 // ec.
 template <class Adapter>
-bool
-parse(
-   resp3::parser& p,
-   std::string_view const& msg,
-   Adapter& adapter,
-   system::error_code& ec)
+bool parse(resp3::parser& p, std::string_view const& msg, Adapter& adapter, system::error_code& ec)
 {
    while (!p.done()) {
       auto const res = p.consume(msg, ec);
@@ -99,6 +98,6 @@ parse(
    return true;
 }
 
-} // boost::redis::resp3
+}  // namespace boost::redis::resp3
 
-#endif // BOOST_REDIS_RESP3_PARSER_HPP
+#endif  // BOOST_REDIS_RESP3_PARSER_HPP

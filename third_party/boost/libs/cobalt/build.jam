@@ -16,10 +16,12 @@ constant boost_dependencies :
     /boost/container//boost_container
     /boost/context//boost_context
     /boost/core//boost_core
+    /boost/endian//boost_endian
     /boost/intrusive//boost_intrusive
     /boost/mp11//boost_mp11
     /boost/preprocessor//boost_preprocessor
     /boost/smart_ptr//boost_smart_ptr
+    /boost/static_string//boost_static_string
     /boost/system//boost_system
     /boost/throw_exception//boost_throw_exception
     /boost/variant2//boost_variant2 ;
@@ -31,10 +33,12 @@ project /boost/cobalt
 
 explicit
     [ alias boost_cobalt : build//boost_cobalt ]
-    [ alias all : boost_cobalt test example ]
+    [ alias boost_cobalt_io : build//boost_cobalt_io ]
+    [ alias boost_cobalt_io_ssl : build//boost_cobalt_io_ssl ]
+    [ alias all : boost_cobalt boost_cobalt_io test example ]
     ;
 
 call-if : boost-library cobalt
-        : install boost_cobalt
+        : install boost_cobalt boost_cobalt_io
     ;
 

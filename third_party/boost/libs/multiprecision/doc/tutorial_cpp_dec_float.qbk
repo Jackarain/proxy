@@ -12,7 +12,7 @@
 
 `#include <boost/multiprecision/cpp_dec_float.hpp>`
 
-   namespace boost{ namespace multiprecision{
+   namespace boost { namespace multiprecision {
 
    template <unsigned Digits10, class ExponentType = std::int32_t, class Allocator = void>
    class cpp_dec_float;
@@ -20,7 +20,7 @@
    typedef number<cpp_dec_float<50> > cpp_dec_float_50;
    typedef number<cpp_dec_float<100> > cpp_dec_float_100;
 
-   }} // namespaces
+   } } // namespaces
 
 The `cpp_dec_float` back-end is used in conjunction with `number`: It acts as an entirely C++ (header only and dependency free)
 floating-point number type that is a drop-in replacement for the native C++ floating-point types, but with

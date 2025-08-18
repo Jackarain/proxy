@@ -11,6 +11,7 @@
 #include <boost/contract/check.hpp>
 #include <boost/contract/base_types.hpp>
 #include <boost/contract/override.hpp>
+#include <boost/preprocessor/repetition/enum.hpp>
 #include <boost/preprocessor/repetition/repeat.hpp>
 #include <boost/preprocessor/arithmetic/inc.hpp>
 #include <boost/preprocessor/control/expr_iif.hpp>

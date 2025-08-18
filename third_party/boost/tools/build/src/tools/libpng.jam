@@ -22,6 +22,7 @@ import modules ;
 import indirect ;
 import property ;
 import property-set ;
+import args ;
 
 header = png.h ;
 
@@ -35,10 +36,7 @@ sources =   png.c pngerror.c pngget.c pngmem.c pngpread.c pngread.c pngrio.c png
 
 library-id = 0 ;
 
-if --debug-configuration in [ modules.peek : ARGV ]
-{
-    .debug =  true ;
-}
+.debug =  [ args.get-arg debug-configuration ] ;
 
 # Initializes the libpng library.
 #

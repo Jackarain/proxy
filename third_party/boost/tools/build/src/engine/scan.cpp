@@ -763,7 +763,7 @@ int yylex()
             do_token_warning();
     }
 
-    if ( DEBUG_SCAN )
+    if ( is_debug_scan() )
         out_printf( "scan %s\n", symdump( &yylval ).c_str() );
 
     return yylval.type;

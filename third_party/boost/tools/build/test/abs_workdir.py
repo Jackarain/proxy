@@ -10,18 +10,22 @@ import tempfile
 
 # Python 2.7 does not implement os.path.samefile on Windows
 import ntpath
+
 if not hasattr(ntpath, "samefile"):
+
     def samefile(f1, f2):
         try:
             from os.path.nt import _getfinalpathname
+
             return os.path._getfinalpathname(f1) == os.path._getfinalpathname(f2)
         except (NotImplementedError, ImportError):
             return os.path.abspath(f1) == os.path.abspath(f2)
 
     ntpath.samefile = samefile
 
-t = BoostBuild.Tester(["-ffile.jam"], workdir=os.getcwd(), pass_d0=False,
-    pass_toolset=False)
+t = BoostBuild.Tester(
+    ["-ffile.jam"], workdir=os.getcwd(), pass_d0=False, pass_toolset=False
+)
 
 t.write("file.jam", "EXIT [ PWD ] : 0 ;")
 
@@ -29,8 +33,10 @@ t.run_build_system()
 t.fail_test(not os.path.samefile(t.stdout().rstrip("\n"), os.getcwd()))
 
 try:
-    t.run_build_system(status=123, subdir="/must/fail/with/absolute/path",
-        stderr=None)
+    t.run_build_system(
+        status=123,
+        subdir=os.path.join(os.getcwd(), "must", "fail", "with", "absolute", "path"),
+    )
 except ValueError as e:
     assert "subdir" in str(e), e
 else:

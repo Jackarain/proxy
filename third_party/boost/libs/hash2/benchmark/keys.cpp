@@ -7,9 +7,7 @@
 #include <boost/hash2/fnv1a.hpp>
 #include <boost/hash2/siphash.hpp>
 #include <boost/hash2/xxhash.hpp>
-#include <boost/hash2/md5.hpp>
-#include <boost/hash2/sha1.hpp>
-#include <boost/hash2/ripemd.hpp>
+#include <boost/hash2/xxh3.hpp>
 #include <boost/hash2/hash_append.hpp>
 #include <boost/hash2/get_integral_result.hpp>
 #include <boost/core/type_name.hpp>
@@ -131,6 +129,7 @@ int main()
     test2<fnv1a_64>( N, v );
     test2<xxhash_32>( N, v );
     test2<xxhash_64>( N, v );
+    test2<xxh3_128>( N, v );
     test2<siphash_32>( N, v );
     test2<siphash_64>( N, v );
 

@@ -1,3 +1,4 @@
+import args ;
 import feature ;
 
 # This module is imported by testing.py. The definitions here are
@@ -179,8 +180,10 @@ else
 }
 
 
+args.add-arg verbose-test : --verbose-test
+    : "Include output of tests when run." ;
 .VERBOSE_TEST = 0 ;
-if --verbose-test in [ modules.peek : ARGV ]
+if [ args.get-arg verbose-test ]
 {
     .VERBOSE_TEST = 1 ;
 }

@@ -1548,7 +1548,7 @@ namespace boost { namespace parser {
         {
             std::optional<T> retval;
             if (success)
-                retval = x;
+                retval = std::move(x);
             return retval;
         }
 
@@ -2715,20 +2715,28 @@ namespace boost { namespace parser {
             }
         }
 
-        template<typename I, typename S, typename T>
-        std::optional<T>
-        if_full_parse(I & first, S last, std::optional<T> retval)
+        template<typename I, typename S, typename ErrorHandler, typename T>
+        T if_full_parse(
+            I initial_first,
+            I & first,
+            S last,
+            ErrorHandler const & error_handler,
+            T retval)
         {
-            if (first != last)
-                retval = std::nullopt;
-            return retval;
-        }
-        template<typename I, typename S>
-        bool if_full_parse(I & first, S last, bool retval)
-        {
-            if (first != last)
-                retval = false;
-            return retval;
+            if (first != last) {
+                if (retval && error_handler(
+                                  initial_first,
+                                  last,
+                                  parse_error<I>(first, "end of input")) ==
+                                  error_handler_result::rethrow) {
+                    throw;
+                }
+                if constexpr (std::is_same_v<T, bool>)
+                    retval = false;
+                else
+                    retval = std::nullopt;
+            }
+            return std::move(retval);
         }
 
         // The notion of comaptibility is that, given a parser with the
@@ -2801,6 +2809,8 @@ namespace boost { namespace parser {
         {
             if constexpr (is_nope_v<ParserAttr>) {
                 return nope{};
+            } else if constexpr (is_optional_v<ParserAttr>) {
+                return ParserAttr{};
             } else {
                 using value_type = range_value_t<GivenContainerAttr>;
                 return std::conditional_t<
@@ -5401,9 +5411,28 @@ namespace boost { namespace parser {
             if constexpr (CanUseCallbacks && Context::use_callbacks) {
                 call(first, last, context, skip, flags, success);
             } else {
-                auto attr = call(first, last, context, skip, flags, success);
-                if (success)
-                    detail::assign(retval, std::move(attr));
+                locals_type locals = detail::make_locals<locals_type>(context);
+                auto params = detail::resolve_rule_params(context, params_);
+                tag_type * const tag_ptr = nullptr;
+                auto const rule_context = detail::make_rule_context(
+                    context, tag_ptr, retval, locals, params);
+
+                [[maybe_unused]] auto _ = detail::scoped_trace(
+                    *this, first, last, rule_context, flags, retval);
+
+                bool dont_assign = false;
+                parse_rule(
+                    tag_ptr,
+                    first,
+                    last,
+                    rule_context,
+                    skip,
+                    flags,
+                    success,
+                    dont_assign,
+                    retval);
+                if (!success || dont_assign)
+                    retval = Attribute_();
             }
         }
 
@@ -5412,6 +5441,29 @@ namespace boost { namespace parser {
     };
 
 #endif
+
+    namespace detail {
+        template<typename T>
+        using base_member_function_template_expr =
+            decltype(std::declval<T>().template base<2>());
+        template<typename T>
+        constexpr bool has_base_member_function_template_v =
+            is_detected_v<base_member_function_template_expr, T>;
+
+        template<typename T>
+        using has_digits1_member_function_template_expr =
+            decltype(std::declval<T>().template digits<1>());
+        template<typename T>
+        constexpr bool has_digits1_member_function_template_v =
+            is_detected_v<has_digits1_member_function_template_expr, T>;
+
+        template<typename T>
+        using has_digits2_member_function_template_expr =
+            decltype(std::declval<T>().template digits<1, 2>());
+        template<typename T>
+        constexpr bool has_digits2_member_function_template_v =
+            is_detected_v<has_digits2_member_function_template_expr, T>;
+    }
 
     // Parser interface.
 
@@ -5752,7 +5804,7 @@ namespace boost { namespace parser {
             return parser_.call(first, last, context, skip, flags, success);
         }
 
-        /** Applies `parser_`, assiging the parsed attribute, if any, to
+        /** Applies `parser_`, assinging the parsed attribute, if any, to
             `attr`, unless the attribute is reported via callback. */
         template<
             typename Iter,
@@ -5770,6 +5822,60 @@ namespace boost { namespace parser {
             Attribute & attr) const
         {
             parser_.call(first, last, context, skip, flags, success, attr);
+        }
+
+        /** Returns a new `parser_interface` constructed from
+            `parser_.base<Radix2>()`.  Note that this only works for integral
+            numeric parsers like `int_` and `uint_`. */
+        template<int Radix2>
+        constexpr auto base() const noexcept
+        {
+            if constexpr (detail::has_base_member_function_template_v<
+                              parser_type>) {
+                return parser::parser_interface{
+                    parser_.template base<Radix2>()};
+            } else {
+                static_assert(
+                    detail::has_base_member_function_template_v<parser_type>,
+                    "Only certain parsers have a .base<>() member function. "
+                    "This is not one of them.");
+            }
+        }
+
+        /** Returns a new `parser_interface` constructed from
+            `parser_.digits<Digits>()`.  Note that this only works for
+            integral numeric parsers like `int_` and `uint_`. */
+        template<int Digits>
+        constexpr auto digits() const noexcept
+        {
+            if constexpr (detail::has_digits1_member_function_template_v<
+                              parser_type>) {
+                return parser::parser_interface{
+                    parser_.template digits<Digits>()};
+            } else {
+                static_assert(
+                    detail::has_digits1_member_function_template_v<parser_type>,
+                    "Only certain parsers have a .base<>() member function. "
+                    "This is not one of them.");
+            }
+        }
+
+        /** Returns a new `parser_interface` constructed from
+            `parser_.digits<MinDigits2, MaxDigits2>()`.  Note that this only
+            works for integral numeric parsers like `int_` and `uint_`. */
+        template<int MinDigits2, int MaxDigits2>
+        constexpr auto digits() const noexcept
+        {
+            if constexpr (detail::has_digits2_member_function_template_v<
+                              parser_type>) {
+                return parser::parser_interface{
+                    parser_.template digits<MinDigits2, MaxDigits2>()};
+            } else {
+                static_assert(
+                    detail::has_digits2_member_function_template_v<parser_type>,
+                    "Only certain parsers have a .base<>() member function. "
+                    "This is not one of them.");
+            }
         }
 
         parser_type parser_;
@@ -6063,7 +6169,7 @@ namespace boost { namespace parser {
         SkipParser const & skip,                                               \
         boost::parser::detail::flags flags,                                    \
         bool & success,                                                        \
-        bool & dont_assign,                                                    \
+        bool & /*dont_assign*/,                                                \
         Attribute & retval)                                                    \
     {                                                                          \
         auto const & parser = BOOST_PARSER_PP_CAT(rule_name_, _def);           \
@@ -7830,7 +7936,7 @@ namespace boost { namespace parser {
             lower;
 
     /** The lower case character parser.  Matches the full set of Unicode
-        lower case code points (class "Lu"). */
+        upper case code points (class "Lu"). */
     inline BOOST_PARSER_ALGO_CONSTEXPR
         parser_interface<char_set_parser<detail::upper_case_chars>>
             upper;
@@ -7918,7 +8024,11 @@ namespace boost { namespace parser {
         typename Expected>
     struct uint_parser
     {
-        static_assert(2 <= Radix && Radix <= 36, "Unsupported radix.");
+        static_assert(
+            Radix == 2 || Radix == 8 || Radix == 10 || Radix == 16,
+            "Unsupported radix.");
+        static_assert(1 <= MinDigits);
+        static_assert(MaxDigits == -1 || MinDigits <= MaxDigits);
 
         constexpr uint_parser() {}
         explicit constexpr uint_parser(Expected expected) : expected_(expected)
@@ -7984,6 +8094,33 @@ namespace boost { namespace parser {
             return parser_interface{parser_t{expected}};
         }
 
+        /** Returns a `uint_parser` identical to `*this`, except that it
+            parses digits as base-`Radix2` instead of base-`Radix`. */
+        template<int Radix2>
+        constexpr auto base() const noexcept
+        {
+            return uint_parser<T, Radix2, MinDigits, MaxDigits, Expected>{
+                expected_};
+        }
+
+        /** Returns a `uint_parser` identical to `*this`, except that it only
+            accepts numbers exactly `Digits` digits. */
+        template<int Digits>
+        constexpr auto digits() const noexcept
+        {
+            return uint_parser<T, Radix, Digits, Digits, Expected>{expected_};
+        }
+
+        /** Returns a `uint_parser` identical to `*this`, except that it
+            only accepts numbers `D` digits long, where `D` is in
+            [`MinDigits2`, MaxDigits2`]. */
+        template<int MinDigits2, int MaxDigits2>
+        constexpr auto digits() const noexcept
+        {
+            return uint_parser<T, Radix, MinDigits2, MaxDigits2, Expected>{
+                expected_};
+        }
+
         Expected expected_;
     };
 
@@ -8031,6 +8168,8 @@ namespace boost { namespace parser {
         static_assert(
             Radix == 2 || Radix == 8 || Radix == 10 || Radix == 16,
             "Unsupported radix.");
+        static_assert(1 <= MinDigits);
+        static_assert(MaxDigits == -1 || MinDigits <= MaxDigits);
 
         constexpr int_parser() {}
         explicit constexpr int_parser(Expected expected) : expected_(expected)
@@ -8094,6 +8233,33 @@ namespace boost { namespace parser {
             using parser_t =
                 int_parser<T, Radix, MinDigits, MaxDigits, Expected2>;
             return parser_interface{parser_t{expected}};
+        }
+
+        /** Returns an `int_parser` identical to `*this`, except that it
+            parses digits as base-`Radix2` instead of base-`Radix`. */
+        template<int Radix2>
+        constexpr auto base() const noexcept
+        {
+            return int_parser<T, Radix2, MinDigits, MaxDigits, Expected>{
+                expected_};
+        }
+
+        /** Returns an `int_parser` identical to `*this`, except that it only
+            accepts numbers exactly `Digits` digits. */
+        template<int Digits>
+        constexpr auto digits() const noexcept
+        {
+            return int_parser<T, Radix, Digits, Digits, Expected>{expected_};
+        }
+
+        /** Returns an `int_parser` identical to `*this`, except that it
+            only accepts numbers `D` digits long, where `D` is in
+            [`MinDigits2`, MaxDigits2`]. */
+        template<int MinDigits2, int MaxDigits2>
+        constexpr auto digits() const noexcept
+        {
+            return int_parser<T, Radix, MinDigits2, MaxDigits2, Expected>{
+                expected_};
         }
 
         Expected expected_;
@@ -8817,9 +8983,12 @@ namespace boost { namespace parser {
         auto r_ = detail::make_input_subrange(r);
         auto first = r_.begin();
         auto const last = r_.end();
+        auto const initial_first = first;
         return reset = detail::if_full_parse(
+                   initial_first,
                    first,
                    last,
+                   parser.error_handler_,
                    parser::prefix_parse(first, last, parser, attr, trace_mode));
     }
 
@@ -8922,8 +9091,13 @@ namespace boost { namespace parser {
         auto r_ = detail::make_input_subrange(r);
         auto first = r_.begin();
         auto const last = r_.end();
+        auto const initial_first = first;
         return detail::if_full_parse(
-            first, last, parser::prefix_parse(first, last, parser, trace_mode));
+            initial_first,
+            first,
+            last,
+            parser.error_handler_,
+            parser::prefix_parse(first, last, parser, trace_mode));
     }
 
     /** Parses `[first, last)` using `parser`, skipping all input recognized
@@ -9058,9 +9232,12 @@ namespace boost { namespace parser {
         auto r_ = detail::make_input_subrange(r);
         auto first = r_.begin();
         auto const last = r_.end();
+        auto const initial_first = first;
         return reset = detail::if_full_parse(
+                   initial_first,
                    first,
                    last,
+                   parser.error_handler_,
                    parser::prefix_parse(
                        first, last, parser, skip, attr, trace_mode));
     }
@@ -9169,9 +9346,12 @@ namespace boost { namespace parser {
         auto r_ = detail::make_input_subrange(r);
         auto first = r_.begin();
         auto const last = r_.end();
+        auto const initial_first = first;
         return detail::if_full_parse(
+            initial_first,
             first,
             last,
+            parser.error_handler_,
             parser::prefix_parse(first, last, parser, skip, trace_mode));
     }
 
@@ -9287,9 +9467,12 @@ namespace boost { namespace parser {
         auto r_ = detail::make_input_subrange(r);
         auto first = r_.begin();
         auto const last = r_.end();
+        auto const initial_first = first;
         return detail::if_full_parse(
+            initial_first,
             first,
             last,
+            parser.error_handler_,
             parser::callback_prefix_parse(first, last, parser, callbacks));
     }
 
@@ -9423,9 +9606,12 @@ namespace boost { namespace parser {
         auto r_ = detail::make_input_subrange(r);
         auto first = r_.begin();
         auto const last = r_.end();
+        auto const initial_first = first;
         return detail::if_full_parse(
+            initial_first,
             first,
             last,
+            parser.error_handler_,
             parser::callback_prefix_parse(
                 first, last, parser, skip, callbacks, trace_mode));
     }

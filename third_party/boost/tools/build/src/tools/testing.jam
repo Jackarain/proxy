@@ -34,6 +34,7 @@
 
 
 import alias ;
+import args ;
 import build-system ;
 import "class" ;
 import common ;
@@ -224,7 +225,8 @@ rule dump-tests
     }
 }
 
-if ( --dump-tests in [ modules.peek : ARGV ] )
+args.add-arg dump-tests : --dump-tests : "?" ;
+if [ args.get-arg dump-tests ]
 {
     IMPORT testing : dump-tests : : testing.dump-tests ;
     build-system.add-pre-build-hook testing.dump-tests ;
@@ -243,7 +245,7 @@ local rule get-library-name ( path )
     if $(match1) { return $(match1[2]) ; }
     else if $(match2) { return $(match2[2]) ; }
     else if $(match3) { return "" ; }
-    else if --dump-tests in [ modules.peek : ARGV ]
+    else if [ args.get-arg dump-tests ]
     {
         # The 'run' rule and others might be used outside boost. In that case,
         # just return the path, since the 'library name' makes no sense.
@@ -253,7 +255,7 @@ local rule get-library-name ( path )
 
 
 # Was an XML dump requested?
-.out-xml = [ MATCH --out-xml=(.*) : [ modules.peek : ARGV ] ] ;
+.out-xml = [ args.get-arg out-xml ] ;
 
 
 # Takes a target (instance of 'basic-target') and prints
@@ -517,7 +519,9 @@ toolset.flags testing.capture-output LAUNCHER <testing.launcher> ;
 toolset.uses-features testing.capture-output :
     <testing.launcher> <testing.execute> <dll-path> <xdll-path> <target-os> ;
 
-if --remove-test-targets in [ modules.peek : ARGV ]
+args.add-arg remove-test-targets : --remove-test-targets
+    : "Delete intermediate test files for successful tests." ;
+if [ args.get-arg remove-test-targets ]
 {
     feature.set-default preserve-test-targets : off ;
 }
@@ -644,8 +648,10 @@ else
 .NULL_OUT = [ modules.peek common : NULL_OUT ] ;
 
 
+args.add-arg verbose-test : --verbose-test
+    : "Include output of tests when run." ;
 .VERBOSE_TEST = 0 ;
-if --verbose-test in [ modules.peek : ARGV ]
+if [ args.get-arg verbose-test ]
 {
     .VERBOSE_TEST = 1 ;
 }

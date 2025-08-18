@@ -36,7 +36,7 @@ explicit has_posix_at_apis ;
 obj has_fallocate : has_fallocate.cpp : <include>../src ;
 explicit has_fallocate ;
 
-searched-lib bcrypt ;
+lib bcrypt ;
 explicit bcrypt ;
 
 exe has_bcrypt : has_bcrypt.cpp : <include>../src <library>bcrypt ;

@@ -14,7 +14,7 @@
 # Project
 #
 #-------------------------------------------------
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.8...3.20)
 set(BOOST_URL_VERSION 2)
 if (BOOST_SUPERPROJECT_VERSION)
     set(BOOST_URL_VERSION ${BOOST_SUPERPROJECT_VERSION})
@@ -175,6 +175,7 @@ if (BUILD_TESTING OR BOOST_URL_BUILD_TESTS)
     if (BOOST_URL_IS_ROOT)
         include(CTest)
     endif ()
+    add_subdirectory(extra/test_suite)
     add_subdirectory(test)
 endif ()
 

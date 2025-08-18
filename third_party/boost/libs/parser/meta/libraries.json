@@ -4,5 +4,6 @@
     "authors": [ "T. Zachary Laine" ],
     "maintainers": [ "Zach Laine <whatwasthataddress -at- gmail.com>" ],
     "description": "A parser combinator library.",
-    "category": [ "Parsing" ]
+    "category": [ "Parsing" ],
+    "cxxstd": "17"
 }

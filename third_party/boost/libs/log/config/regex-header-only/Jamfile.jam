@@ -6,12 +6,13 @@
 #
 
 import project ;
-import log-platform-config ;
+import ../../build/log-platform-config ;
 
-project /boost/log/regex-header-only
+project
     : source-location .
     : requirements
         <conditional>@log-platform-config.set-platform-defines
+        <library>/boost/regex//boost_regex
         <pch>off
     ;
 

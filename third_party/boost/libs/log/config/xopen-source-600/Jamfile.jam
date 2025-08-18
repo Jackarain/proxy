@@ -7,7 +7,7 @@
 
 import project ;
 
-project /boost/log/xopen-source-600
+project
     : source-location .
     : requirements
         <pch>off

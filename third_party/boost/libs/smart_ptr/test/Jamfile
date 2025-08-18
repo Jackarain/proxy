@@ -245,6 +245,7 @@ run atomic_sp_test.cpp ;
 
 run sp_constexpr_test.cpp ;
 run sp_constexpr_test2.cpp ;
+compile ip_constexpr_test.cpp ;
 
 run atomic_sp_constexpr_test.cpp ;
 

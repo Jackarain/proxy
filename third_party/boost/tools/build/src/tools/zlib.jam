@@ -23,6 +23,7 @@ import indirect ;
 import os ;
 import property ;
 import property-set ;
+import args ;
 
 header = zlib.h ;
 names = z zlib zll zdll ;
@@ -33,10 +34,7 @@ sources = adler32.c compress.c
 
 library-id = 0 ;
 
-if --debug-configuration in [ modules.peek : ARGV ]
-{
-    .debug =  true ;
-}
+.debug =  [ args.get-arg debug-configuration ] ;
 
 # Initializes the zlib library.
 #

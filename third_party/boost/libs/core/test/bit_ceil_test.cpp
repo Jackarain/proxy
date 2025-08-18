@@ -19,14 +19,15 @@ template<class T> void test_bit_ceil( T x )
 
     T y = boost::core::bit_ceil( x );
 
+    BOOST_TEST( boost::core::has_single_bit( y ) );
+    BOOST_TEST_GE( +y, +x );
+
     if( x == 0 )
     {
-        BOOST_TEST_EQ( y, 0 );
+        BOOST_TEST_EQ( y, 1 );
     }
     else
     {
-        BOOST_TEST( boost::core::has_single_bit( y ) );
-        BOOST_TEST_GE( +y, +x );
         BOOST_TEST_LT( y >> 1, +x );
     }
 }

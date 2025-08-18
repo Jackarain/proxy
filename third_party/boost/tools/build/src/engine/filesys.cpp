@@ -150,7 +150,7 @@ void file_archivescan( OBJECT * path, archive_scanback func, void * closure )
 
 void file_build1( PATHNAME * const f, string * file )
 {
-    if ( DEBUG_SEARCH )
+    if ( is_debug_search() )
     {
         out_printf( "build file: " );
         if ( f->f_root.len )
@@ -384,7 +384,7 @@ static void file_archivescan_impl( OBJECT * path, archive_scanback func, void * 
     /* Lazy collect the archive content information. */
     if ( filelist_empty( archive->members ) )
     {
-        if ( DEBUG_BINDSCAN )
+        if ( is_debug_bindscan() )
             printf( "scan archive %s\n", object_str( archive->file->name ) );
         if ( file_collect_archive_content_( archive ) < 0 )
             return;
@@ -430,7 +430,7 @@ static void file_dirscan_impl( OBJECT * dir, scanback func, void * closure )
     /* Lazy collect the directory content information. */
     if ( list_empty( d->files ) )
     {
-        if ( DEBUG_BINDSCAN )
+        if ( is_debug_bindscan() )
             out_printf( "scan directory %s\n", object_str( d->name ) );
         if ( file_collect_dir_content_( d ) < 0 )
             return;

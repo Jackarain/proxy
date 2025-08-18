@@ -1,0 +1,9 @@
+[#release_notes]
+= Release Notes
+
+:idprefix: release_notes_
+
+== Boost 1.89
+
+* Initial release.
+

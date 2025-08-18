@@ -246,7 +246,7 @@ env_view env(boost::process::v2::pid_type pid, error_code & ec)
 	return {};
 }
 
-#elif (defined(__APPLE___) || defined(__MACH__)) && !TARGET_OS_IOS
+#elif (defined(__APPLE__) && defined(__MACH__)) && !TARGET_OS_IOS
 
 env_view env(boost::process::v2::pid_type pid, error_code & ec)
 {
@@ -309,7 +309,7 @@ env_view env(boost::process::v2::pid_type pid, error_code & ec)
     return ev;
 }
 
-#elif (defined(__linux__) || defined(__ANDROID__))
+#elif (defined(__linux__) || defined(__ANDROID__)) || defined(__gnu_hurd__)
 
 env_view env(boost::process::v2::pid_type pid, error_code & ec)
 {

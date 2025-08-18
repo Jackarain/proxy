@@ -35,6 +35,7 @@ import feature ;
 import set ;
 import builtin ;
 import property-set ;
+import args ;
 
 
 # Make this module a project.
@@ -241,7 +242,7 @@ local rule invokes-cygwin-symlink ( cmd )
 
 local rule debug-message ( message * )
 {
-    if --debug-configuration in [ modules.peek : ARGV ]
+    if [ args.get-arg debug-configuration ]
     {
         ECHO "notice:" "[python-cfg]" $(message) ;
     }

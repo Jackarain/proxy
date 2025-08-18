@@ -180,7 +180,7 @@ params_base::
 end() const noexcept ->
     iterator
 {
-    return iterator(ref_, opt_, 0);
+    return {ref_, opt_, 0};
 }
 
 //------------------------------------------------

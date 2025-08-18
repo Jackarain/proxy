@@ -2,12 +2,20 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
+require-b2 5.2 ;
+
 import package ;
 import path ;
 import sequence ;
 import set ;
-import ../../../tools/boost_install/boost-install ;
-import ../../../tools/boost_install/boost-install-dirs ;
+import project ;
+import regex ;
+
+import-search /boost/boost_install ;
+import boost-install ;
+import boost-install-dirs ;
+
+path-constant LIBS_ROOT : ../.. ;
 
 # header-subdir
 
@@ -18,13 +26,17 @@ header-subdir ?= "" ;
 
 # first, the 'modular' headers
 
-local modular-headers = $(BOOST_MODULARLAYOUT) ;
+local modular-headers
+    = [ SORT [ MATCH .*libs/(.*)/include/boost : [ glob
+        $(LIBS_ROOT)/*/include/boost
+        $(LIBS_ROOT)/numeric/*/include/boost
+        ] ] ] ;
 
 local skip-headers ;
 
 for local lib in $(modular-headers)
 {
-    local header-root = $(BOOST_ROOT)/libs/$(lib)/include ;
+    local header-root = $(LIBS_ROOT)/$(lib)/include ;
     local header-boost = $(header-root)/boost ;
 
     local headers =
@@ -46,11 +58,17 @@ for local lib in $(modular-headers)
 
 # then, the non-modular headers in boost/, minus the modular ones
 
-local header-root = [ path.make $(BOOST_ROOT) ] ;
+local headers ;
+local header-root ;
 
-local headers =
-    [ path.glob-tree $(BOOST_ROOT)/boost : *.hpp *.ipp *.h *.inc ]
-    [ path.glob-tree $(BOOST_ROOT)/boost/compatibility/cpp_c_headers : c* ] ;
+if $(BOOST_ROOT)
+{
+    header-root = [ path.make $(BOOST_ROOT) ] ;
+
+    headers =
+        [ path.glob-tree $(BOOST_ROOT)/boost : *.hpp *.ipp *.h *.inc ]
+        [ path.glob-tree $(BOOST_ROOT)/boost/compatibility/cpp_c_headers : c* ] ;
+}
 
 headers = [ set.difference $(headers) : $(header-root)/$(skip-headers) ] ;
 
@@ -63,6 +81,26 @@ install install-boost-headers
 ;
 
 explicit install-boost-headers ;
+
+# Boost version format: XYYYZZ
+
+if ! [ modules.peek boostcpp : BOOST_VERSION ]
+{
+    local boost-config = [ project.search /boost/config ] ;
+    ECHO "[INFO] boost-config:" $(boost-config) ;
+    if $(boost-config)
+    {
+        local boost-version-num = [ regex.grep
+            [ path.native [ path.join $(boost-config) include boost ] ]
+            : version.hpp : "BOOST_VERSION ([0-9]+)" : 1 ] ;
+        boost-version-num = [ MATCH "(.*)(...)(..)" : $(boost-version-num[2]) ] ;
+        boost-version-num =
+            [ CALC $(boost-version-num[1]) + 0 ]
+            [ CALC $(boost-version-num[2]) + 0 ]
+            [ CALC $(boost-version-num[3]) + 0 ] ;
+        modules.poke boostcpp : BOOST_VERSION : $(boost-version-num:J=.) ;
+    }
+}
 
 #
 

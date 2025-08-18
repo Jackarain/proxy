@@ -19,7 +19,10 @@ on:
         "appveyor.yml",
         "azure-pipelines.yml",
         ".ci/azp-*.yml",
+        ".github/workflows/backport.yml",
+        ".github/workflows/core_tests.yml",
         ".github/workflows/installer_*.yml",
+        ".github/workflows/release_archives.yml",
       ]
 
 jobs:
@@ -28,24 +31,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {
-              name: "Ubuntu 22.04 Jammy (armhf)",
-              image: "multiarch/ubuntu-debootstrap:armhf-jammy",
-              cxx: "g++",
-              toolset: "gcc",
-            }
-          - {
-              name: "Ubuntu 22.04 Jammy (arm64)",
-              image: "multiarch/ubuntu-debootstrap:arm64-jammy",
-              cxx: "g++",
-              toolset: "gcc",
-            }
-          - {
-              name: "Ubuntu 22.04 Jammy (ppc64el)",
-              image: "multiarch/ubuntu-debootstrap:ppc64el-jammy",
-              cxx: "g++",
-              toolset: "gcc",
-            }
           - {
               name: "Ubuntu 20.04 Focal (armhf)",
               image: "multiarch/ubuntu-debootstrap:armhf-focal",

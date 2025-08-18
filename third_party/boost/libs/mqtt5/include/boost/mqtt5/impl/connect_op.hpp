@@ -215,6 +215,8 @@ public:
     }
 
     void send_connect() {
+        if (!_ctx.co_props[prop::maximum_packet_size].has_value())
+            _ctx.co_props[prop::maximum_packet_size] = default_max_recv_size;
         auto packet = control_packet<allocator_type>::of(
             no_pid, get_allocator(),
             encoders::encode_connect,

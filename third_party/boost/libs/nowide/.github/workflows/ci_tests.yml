@@ -1,4 +1,4 @@
-# Copyright 2019 - 2024 Alexander Grund
+# Copyright 2019 - 2025 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
@@ -13,7 +13,12 @@ on:
       - bugfix/**
       - feature/**
       - fix/**
+      - github/**
       - pr/**
+    paths-ignore:
+      - LICENSE
+      - meta/**
+      - README.md
 
 concurrency:
   group: ${{format('ci_tests{0}:{1}', github.repository, github.ref)}}
@@ -31,16 +36,16 @@ jobs:
         shell: bash
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-2019]
-        buildType: [Debug, Release]
+        os: [ubuntu-22.04, windows-2022]
         standalone: [Boost, Standalone]
+        buildType: [Debug, Release]
         shared_lib: [ON, OFF]
-        generator: ['Visual Studio 16 2019', 'MinGW Makefiles', 'Unix Makefiles']
+        generator: ['Visual Studio 17 2022', 'MinGW Makefiles', 'Unix Makefiles']
         exclude:
           - os: ubuntu-22.04
             generator: MinGW Makefiles
           - os: ubuntu-22.04
-            generator: Visual Studio 16 2019
+            generator: Visual Studio 17 2022
           - os: ubuntu-22.04
             buildType: Debug
     runs-on: ${{matrix.os}}
@@ -71,7 +76,7 @@ jobs:
         ref: boost-${{env.BOOST_VERSION}}
         path: __buildBoost
         fetch-depth: 1
-    - name: Build Boost
+    - name: Bootstrap Boost
       if: matrix.standalone == 'Boost' && steps.cache-boost.outputs.cache-hit != 'true'
       run: |
         cd __buildBoost
@@ -81,9 +86,24 @@ jobs:
         [[ "${{matrix.os}}" =~ "windows" ]] && toolset=mingw || toolset=gcc
         ./bootstrap.sh --with-toolset="$toolset" --with-libraries=system,filesystem threading=multi || (cat bootstrap.log && false)
         sed -i 's/mingw/gcc/' project-config.jam
-        [[ "${{matrix.generator}}" =~ "Visual Studio" ]] && toolset=msvc-14.0 || toolset=gcc
+        [[ "${{matrix.generator}}" =~ "Visual Studio" ]] && toolset=msvc-14.3 || toolset=gcc
+        echo "B2_TOOLSET=$toolset" >> $GITHUB_ENV
         ./b2 headers
-        ./b2 link=static toolset=$toolset address-model=64 -j$(nproc) --prefix="$BOOST_ROOT" install
+    - name: Build Boost (Linux)
+      if: matrix.standalone == 'Boost' && steps.cache-boost.outputs.cache-hit != 'true' && startsWith(matrix.os, 'ubuntu')
+      shell: bash
+      run: |
+        cd __buildBoost
+        ./b2 link=static toolset=$B2_TOOLSET address-model=64 -j$(nproc) --prefix="$BOOST_ROOT" install
+        cd ..
+        rm -r __buildBoost || true
+    # Requires cmd shell as on windows-2022 with msvc-14.3 'cl' won't be found with bash
+    - name: Build Boost (Windows)
+      if: matrix.standalone == 'Boost' && steps.cache-boost.outputs.cache-hit != 'true' && startsWith(matrix.os, 'windows')
+      shell: cmd
+      run: |
+        cd __buildBoost
+        b2 link=static toolset=$B2_TOOLSET address-model=64 -j$(nproc) --prefix="$BOOST_ROOT" install
         cd ..
         rm -r __buildBoost || true
     - name: Create standalone
@@ -96,7 +116,7 @@ jobs:
     - name: Configure
       working-directory: build
       run: |
-        extraFlags="-DBoost_DEBUG=ON -DBoost_NO_BOOST_CMAKE=ON -DCMAKE_INSTALL_PREFIX=~/.local"
+        extraFlags="-DBoost_DEBUG=ON -DBoost_NO_BOOST_CMAKE=ON -DCMAKE_INSTALL_PREFIX=$HOME/local"
         if ! [[ "${{matrix.generator}}" =~ "Visual Studio" ]]; then
           # Enable warning to find missing defines, especially important for the standalone version
           extraFlags="$extraFlags -DCMAKE_CXX_FLAGS=-Wundef"
@@ -124,7 +144,7 @@ jobs:
       working-directory: build
       run: |
         rm -r *
-        cmake -DBOOST_NOWIDE_INSTALL_TEST=ON -DBoost_ARCHITECTURE=-x64 -DCMAKE_PREFIX_PATH=~/.local -G "${{matrix.generator}}" ../test/cmake_test
+        cmake -DBOOST_NOWIDE_INSTALL_TEST=ON -DBoost_ARCHITECTURE=-x64 -DCMAKE_PREFIX_PATH=$HOME/local -G "${{matrix.generator}}" ../test/cmake_test
         cmake --build . --config ${{matrix.buildType}}
         ctest --output-on-failure -C ${{matrix.buildType}}
 

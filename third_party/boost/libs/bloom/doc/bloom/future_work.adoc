@@ -1,0 +1,71 @@
+[#future_work]
+= Future Work
+
+:idprefix: future_work_
+
+A number of features asked by reviewers and users of Boost.Bloom are
+considered for inclusion into future versions of the library. 
+
+== Bulk operations
+
+Each insertion/lookup operation for `boost::bloom::filter` likely involves one or more
+cache misses in the access to the internal bit array. Following a similar
+approach to that of
+https://bannalia.blogspot.com/2023/10/bulk-visitation-in-boostconcurrentflatm.html[bulk visitation^]
+in Boost.Unordered, we can pipeline several operations so that
+cache miss stalls are leveraged to do useful computation. The interface
+for this functionality could be as follows:
+
+[source]
+-----
+f.insert(first1, last1);
+f.may_contain(first2, last2, [] (const value_type& x, bool res) {
+  // x is (likely) in the filter if res == true
+});
+-----
+
+== `try_insert`
+
+To avoid inserting an already present element, we now have to do:
+
+[source]
+-----
+if(!f.may_contain(x)) f.insert(x);
+-----
+
+These two calls can be combined in a potentially faster,
+single operation:
+
+[source]
+-----
+bool res = f.try_insert(x); // returns true if x was not present
+-----
+
+== Estimation of number of elements inserted
+
+For a classical Bloom filter, the number of elements actually inserted
+can be estimated from the number {small}stem:[B]{small-end} of bits set
+to one in the array as
+
+[.formula-center]
+{small}stem:[n\approx-\displaystyle\frac{m}{k}\ln\left(1-\displaystyle\frac{B}{m}\right),]{small-end}
+
+which can be used for the implementation of a member function
+`estimated_size`. As of this writing, we don't know how to extend the
+formula to the case of block and multiblock filters. Any help on this
+problem is much appreciated.
+
+== Run-time specification of _k_
+
+Currently, the number _k_ of bits set per operation is configured at compile time.
+A variation of (or extension to) `boost::bloom::filter` can be provided
+where the value of _k_ is specified at run-time, the tradeoff being that
+its performance will be worse than the static case (preliminary experiments
+show an increase in execution time of around 10-20%).
+
+== Alternative filters
+
+We can consider adding additional data structures such as
+https://en.wikipedia.org/wiki/Cuckoo_filter[cuckoo^] and
+https://arxiv.org/pdf/1912.08258[xor^] filters, which are more
+space efficient and potentially faster.

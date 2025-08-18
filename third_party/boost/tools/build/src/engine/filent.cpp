@@ -422,7 +422,7 @@ int file_collect_archive_content_( file_archive_info_t * const archive )
 
     offset = SARMAG;
 
-    if ( DEBUG_BINDSCAN )
+    if ( is_debug_bindscan() )
         out_printf( "scan archive %s\n", path );
 
     while ( ( read( fd, &ar_hdr, SARHDR ) == SARHDR ) &&

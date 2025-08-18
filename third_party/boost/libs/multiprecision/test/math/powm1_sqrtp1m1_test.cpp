@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
-//  Copyright Christopher Kormanyos 2002 - 2011.
-//  Copyright 2011 John Maddock. Distributed under the Boost
+//  Copyright Christopher Kormanyos 2002 - 2025.
+//  Copyright 2011 - 2025 John Maddock. Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
 //
@@ -16,7 +16,7 @@
 
 #include "table_type.hpp"
 
-#include "libs/math/test/powm1_sqrtp1m1_test.hpp"
+#include "powm1_sqrtp1m1_test.hpp"
 
 //
 // DESCRIPTION:
@@ -57,6 +57,15 @@ void expected_results()
        ".*",                         // test function
        300,                          // Max Peek error
        50);                          // Max mean error
+   add_expected_result(
+       ".*",                         // compiler
+       ".*",                         // stdlib
+       ".*",                         // platform
+       ".*cpp_double_double.*",      // test type(s)
+       ".*",                         // test data group
+       ".*",                         // test function
+       50,                           // Max Peek error
+       15);                          // Max mean error
    add_expected_result(
        ".*", // compiler
        ".*", // stdlib

@@ -13,16 +13,18 @@ implements a
 [novel data structure](http://www.boost.org/doc/html/poly_collection/an_efficient_polymorphic_data_st.html)
 that is able to contiguously store polymorphic objects without such indirection,
 thus providing a value-semantics user interface and better performance.
-Three *polymorphic collections* are provided:
+Four *polymorphic collections* are provided:
 
 * [`boost::base_collection`](http://www.boost.org/doc/html/poly_collection/tutorial.html#poly_collection.tutorial.basics.boost_base_collection) 
 * [`boost::function_collection`](http://www.boost.org/doc/html/poly_collection/tutorial.html#poly_collection.tutorial.basics.boost_function_collection)
 * [`boost::any_collection`](http://www.boost.org/doc/html/poly_collection/tutorial.html#poly_collection.tutorial.basics.boost_any_collection)
+* [`boost::variant_collection`](http://www.boost.org/doc/html/poly_collection/tutorial.html#poly_collection.tutorial.basics.boost_variant_collection)
 
 dealing respectively with classic base/derived or OOP polymorphism, function wrapping
-in the spirit of `std::function` and so-called
+in the spirit of `std::function`, so-called
 [*duck typing*](https://en.wikipedia.org/wiki/Duck_typing) as implemented by
-[Boost.TypeErasure](http://www.boost.org/libs/type_erasure).
+[Boost.TypeErasure](http://www.boost.org/libs/type_erasure),
+and variant-like _closed polymorphism_.
 
 ## Learn about Boost.PolyCollection
 

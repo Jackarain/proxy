@@ -16,7 +16,7 @@ Below is a list of possible __CONNECT__ Properties, along with descriptions of t
     [[Identifier] [Value type] [Description]]
     [[session_expiry_interval] [`uint32_t`] [Represents the Session Expiry Internal in seconds.]]
     [[receive_maximum] [`uint16_t`] [The maximum number of QoS 1 and QoS 2 publications that the Client is willing to process concurrently.]]
-    [[maximum_packet_size] [`uint32_t`] [The maximum __PACKET_SIZE__ in bytes as defined by the specification that the Client is willing to process.]]
+    [[maximum_packet_size] [`uint32_t`] [The maximum __PACKET_SIZE__ in bytes as defined by the specification that the Client is willing to process. [* Default: `65536` (`64KB`)]]]
     [[topic_alias_maximum] [`uint16_t`] [The highest value that the Client will accept as a Topic Alias sent by the Server.]]
     [[request_response_information] [`uint8_t`] [The value of 0 signals that the Server MUST NOT return Response Information in __CONNACK__. If the value if 1, it MAY return it.]]
     [[request_problem_information] [`uint8_t`] [The value of 0 signals that the Server MAY return a Reason String or User Properties on a __CONNACK__ or __DISCONNECT__ packet, 

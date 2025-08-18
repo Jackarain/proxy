@@ -30,14 +30,14 @@ class c-scanner : scanner
 
     rule pattern ( )
     {
-        return "^[ \t]*#[ \t]*include[ \t]*(<(.+)>|\"(.+)\")" ;
+        return "^[ \t]*#[ \t]*include[ \t]*(<[^<]+>|\"[^\"]+\")" ;
     }
 
     rule process ( target : matches * : binding )
     {
-        local angle = [ regex.transform $(matches) : "<(.*)>" ] ;
+        local angle = [ regex.transform $(matches) : "<([^<]+)>" ] ;
         angle = [ sequence.transform path.native : $(angle) ] ;
-        local quoted = [ regex.transform $(matches) : "\"(.*)\"" ] ;
+        local quoted = [ regex.transform $(matches) : "\"([^\"]+)\"" ] ;
         quoted = [ sequence.transform path.native : $(quoted) ] ;
 
         # CONSIDER: the new scoping rules seem to defeat "on target" variables.

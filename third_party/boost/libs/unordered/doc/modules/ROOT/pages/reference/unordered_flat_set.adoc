@@ -135,6 +135,7 @@ namespace unordered {
     void      xref:#unordered_flat_set_swap[swap](unordered_flat_set& other)
       noexcept(boost::allocator_traits<Allocator>::is_always_equal::value ||
                boost::allocator_traits<Allocator>::propagate_on_container_swap::value);
+    init_type xref:#unordered_flat_set_pull[pull](const_iterator position);
     void      xref:#unordered_flat_set_clear[clear]() noexcept;
 
     template<class H2, class P2>
@@ -265,7 +266,7 @@ The size of the bucket array can be automatically increased by a call to `insert
 greater than `max_load_factor()`, except possibly for small sizes where the implementation may decide to
 allow for higher loads.
 
-If `xref:reference/hash_traits.adoc#hash_traits_hash_is_avalanching[hash_is_avalanching]<Hash>::value` is `true`, the hash function
+If `link:../../../../../container_hash/doc/html/hash.html#ref_hash_is_avalanchinghash[hash_is_avalanching]<Hash>::value` is `true`, the hash function
 is used as-is; otherwise, a bit-mixing post-processing stage is added to increase the quality of hashing
 at the expense of extra computational cost.
 
@@ -929,6 +930,16 @@ If `Allocator::propagate_on_container_swap` is declared and `Allocator::propagat
 
 [horizontal]
 Throws:;; Nothing unless `key_equal` or `hasher` throw on swapping.
+
+---
+
+==== pull
+```c++
+init_type pull(const_iterator position);
+```
+
+Move-constructs an `init_value` `x` from the element pointed to by `position`,
+erases the element and returns `x`.
 
 ---
 

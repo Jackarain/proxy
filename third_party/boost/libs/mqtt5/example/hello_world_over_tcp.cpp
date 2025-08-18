@@ -48,6 +48,7 @@ int main(int argc, char** argv) {
     //[configure_tcp_client
     client.brokers(cfg.brokers, cfg.port) // Set the Broker to connect to.
         .credentials(cfg.client_id) // Set the Client Identifier. (optional)
+        .connect_property(boost::mqtt5::prop::session_expiry_interval, 60) // optional
         .async_run(boost::asio::detached); // Start the Client.
     //]
 

@@ -1,0 +1,32 @@
+[#acknowledgements]
+= Acknowledgements
+
+:idprefix: acknowledgements_
+
+Peter Dimov and Christian Mazakas reviewed significant portions of the code
+and documentation during the development phase. Sam Darwin provided support
+for CI setup and documentation building. Braden Ganetsky contributed the
+GDB pretty-printer for `boost::bloom::filter`.
+
+The Boost acceptance review took place between the 13th and 22nd of May,
+2025. Big thanks to Arnaud Becheler for his expert managing. The
+following people participated in the review: 
+Dmitry Arkhipov,
+David Bien,
+Claudio DeSouza,
+Peter Dimov,
+Vinnie Falco,
+Alexander Grund,
+Seth Heeren,
+Andrzej Krzemie&nacute;ski,
+Ivan Matek,
+Christian Mazakas,
+Rub&eacute;n P&eacute;rez,
+Kostas Savvidis,
+Peter Turcan,
+Tomer Vromen. Many thanks to all of them for their very helpful feedback.
+
+Boost.Bloom was designed and written in
+https://en.wikipedia.org/wiki/C%C3%A1ceres%2c_Spain[C&aacute;ceres^] and
+https://en.wikipedia.org/wiki/Oropesa,_Spain[Oropesa^],
+January-June 2025.

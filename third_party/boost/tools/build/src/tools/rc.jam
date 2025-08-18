@@ -9,16 +9,14 @@
 #  License Version 1.0. (See accompanying file LICENSE.txt or
 #  https://www.bfgroup.xyz/b2/LICENSE.txt)
 
+import args ;
 import generators ;
 import feature ;
 import scanner ;
 import toolset : flags ;
 import type ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 type.register RC : rc ;
 
@@ -93,23 +91,31 @@ class res-scanner : scanner
     import path ;
     import regex ;
     import scanner ;
+    import sequence ;
+    import toolset ;
     import virtual-target ;
 
     rule __init__ ( includes * )
     {
         scanner.__init__ ;
-        self.includes = $(includes) ;
+
+        # toolset.handle-flag-value is a bit of overkill, but it
+        # does correctly handle the topological sort of && separated
+        # include paths
+        self.includes = [ toolset.handle-flag-value <include> : $(includes) ] ;
     }
 
     rule pattern ( )
     {
-        return "(([^ ]+[ ]+(BITMAP|CURSOR|FONT|ICON|MESSAGETABLE|RT_MANIFEST)[ ]+([^ \"]+|\"[^\"]+\"))|(#include[ ]*(<[^<]+>|\"[^\"]+\")))" ;
+        return "(([^ ]+[ ]+(BITMAP|CURSOR|FONT|ICON|MESSAGETABLE|RT_MANIFEST)[ ]+([^ \"]+|\"[^\"]+\"))|(^[ \t]*#[ \t]*include[ \t]*(<[^<]+>|\"[^\"]+\")))" ;
     }
 
     rule process ( target : matches * : binding )
     {
-        local angle = [ regex.transform $(matches) : "#include[ ]*<([^<]+)>" ] ;
-        local quoted = [ regex.transform $(matches) : "#include[ ]*\"([^\"]+)\"" ] ;
+        local angle = [ regex.transform $(matches) : "#include[ \t]*<([^<]+)>" ] ;
+        angle = [ sequence.transform path.native : $(angle) ] ;
+        local quoted = [ regex.transform $(matches) : "#include[ \t]*\"([^\"]+)\"" ] ;
+        quoted = [ sequence.transform path.native : $(quoted) ] ;
         local res = [ regex.transform $(matches) : "[^ ]+[ ]+(BITMAP|CURSOR|FONT|ICON|MESSAGETABLE|RT_MANIFEST)[ ]+(([^ \"]+)|\"([^\"]+)\")" : 3 4 ] ;
 
         # Icons and other includes may be referenced as

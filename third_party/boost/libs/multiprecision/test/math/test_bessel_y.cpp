@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
-//  Copyright Christopher Kormanyos 2002 - 2011.
-//  Copyright 2011 John Maddock. Distributed under the Boost
+//  Copyright Christopher Kormanyos 2002 - 2025.
+//  Copyright 2011 - 2025 John Maddock. Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
 //
@@ -12,7 +12,7 @@
 #include "table_type.hpp"
 
 #include <boost/math/special_functions/math_fwd.hpp>
-#include "libs/math/test/test_bessel_y.hpp"
+#include "test_bessel_y.hpp"
 
 void expected_results()
 {
@@ -41,6 +41,13 @@ void expected_results()
        ".*mpfr_float_backend<0>.*", // test type(s)
        ".*(Y[nv]|y).*Random.*",     // test data group
        ".*", 150000, 15000);        // test function
+   add_expected_result(
+       ".*",                    // compiler
+       ".*",                    // stdlib
+       ".*",                    // platform
+       ".*cpp_double_double.*", // test type(s)
+       ".*",                    // test data group
+       ".*", 800000, 60000);    // test function
    add_expected_result(
        ".*",                    // compiler
        ".*",                    // stdlib

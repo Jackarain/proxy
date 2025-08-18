@@ -40,11 +40,13 @@ import stage ;
 import targets ;
 import modules ;
 import os ;
+import args ;
 
 feature.feature install-default-prefix : : free incidental ;
 
 class package-paths
 {
+    import args ;
     import feature ;
     import modules ;
     import option ;
@@ -52,10 +54,11 @@ class package-paths
     import path ;
     rule __init__ ( default-prefix )
     {
-        local explicit-options = [ MATCH --(prefix|bindir|libdir|includedir|datarootdir)=.*
-          : [ modules.peek : ARGV ] ] ;
-        self.has-$(explicit-options) = true ;
-        if prefix in $(explicit-options)
+        for local explicit-option in prefix bindir libdir includedir datarootdir
+        {
+            self.has-$(explicit-option) = [ args.get-arg $(explicit-option) ] ;
+        }
+        if $(self.has-prefix)
         {
             # If --prefix is explicitly specified on the command line,
             # then we need wipe away any settings of libdir/includir that

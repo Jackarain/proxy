@@ -5,7 +5,7 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.tools.compiler.hp_cxx]]
+[[b2.reference.tools.compiler.hp_cxx]]
 = HP C++ Compiler for Tru64 Unix
 
 The `hp_cxx` modules supports the

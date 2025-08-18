@@ -38,7 +38,7 @@ struct HashAlgorithm
 };
 ```
 
-See [the documentation](https://pdimov.github.io/hash2/) for more information.
+See [the documentation](https://boost.org/libs/hash2/) for more information.
 
 ## Supported compilers
 
@@ -48,7 +48,7 @@ The library requires C++11. The following compilers:
 * clang++ 3.9 or later
 * Visual Studio 2015 and above
 
-are being tested on [Github Actions](https://github.com/pdimov/hash2/actions/) and [Appveyor](https://ci.appveyor.com/project/pdimov/hash2/).
+are being tested on [Github Actions](https://github.com/boostorg/hash2/actions/) and [Appveyor](https://ci.appveyor.com/project/pdimov/hash2/).
 
 ## License
 

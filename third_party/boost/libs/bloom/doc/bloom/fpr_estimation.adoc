@@ -1,0 +1,79 @@
+[#fpr_estimation]
+= Appendix A: FPR Estimation
+
+:idprefix: fpr_estimation_
+
+For a classical Bloom filter, the theoretical false positive rate, under some simplifying assumptions,
+is given by
+
+[.formula-center]
+{small}stem:[\text{FPR}(n,m,k)=\left(1 - \left(1 - \displaystyle\frac{1}{m}\right)^{kn}\right)^k \approx \left(1 - e^{-kn/m}\right)^k]{small-end} for large {small}stem:[m]{small-end},
+
+where {small}stem:[n]{small-end} is the number of elements inserted in the filter, {small}stem:[m]{small-end} its capacity in bits and {small}stem:[k]{small-end} the
+number of bits set per insertion (see a https://en.wikipedia.org/wiki/Bloom_filter#Probability_of_false_positives[derivation^]
+of this formula). For a fixed inverse load factor {small}stem:[c=m/n]{small-end}, 
+the expression reaches at
+
+[.formula-center]
+{small}stem:[k_{\text{opt}}=c\cdot\ln2]{small-end}
+
+its minimum value
+{small}stem:[1/2^{k_{\text{opt}}} \approx 0.6185^{c}]{small-end}.
+The optimum {small}stem:[k]{small-end}, which must be an integer,
+is either
+{small}stem:[\lfloor k_{\text{opt}}\rfloor]{small-end} or
+{small}stem:[\lceil k_{\text{opt}}\rceil]{small-end}.
+
+In the case of filter of the form `boost::bloom::filter<T, K, block<Block, K'>>`, we can extend
+the approach from https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=f376ff09a64b388bfcde2f5353e9ddb44033aac8[Putze et al.^]
+to derive the (approximate but very precise) formula:
+
+[.formula-center]
+{small}stem:[\text{FPR}_{\text{block}}(n,m,b,k,k')=\left(\displaystyle\sum_{i=0}^{\infty} \text{Pois}(i,nbk/m) \cdot \text{FPR}(i,b,k')\right)^{k},]{small-end}
+
+where
+
+[.formula-center]
+{small}stem:[\text{Pois}(i,\lambda)=\displaystyle\frac{\lambda^i e^{-\lambda}}{i!}]{small-end}
+
+is the probability mass function of a https://en.wikipedia.org/wiki/Poisson_distribution[Poisson distribution^]
+with mean {small}stem:[\lambda]{small-end}, and {small}stem:[b]{small-end} is the size of `Block` in bits. If we're using `multiblock<Block,K'>`, we have
+
+[.formula-center]
+{small}stem:[\text{FPR}_\text{multiblock}(n,m,b,k,k')=\left(\displaystyle\sum_{i=0}^{\infty} \text{Pois}(i,nbkk'/m) \cdot \text{FPR}(i,b,1)^{k'}\right)^{k}.]{small-end}
+
+As we have commented xref:primer_multiblock_filters[before], in general 
+
+[.formula-center]
+{small}stem:[\text{FPR}_\text{block}(n,m,b,k,k') \geq \text{FPR}_\text{multiblock}(n,m,b,k,k') \geq \text{FPR}(n,m,kk'),]{small-end}
+
+that is, block and multiblock filters have worse FPR than the classical filter for the same number of bits
+set per insertion, but they will be faster. We have the particular case
+
+[.formula-center]
+{small}stem:[\text{FPR}_{\text{block}}(n,m,b,k,1)=\text{FPR}_{\text{multiblock}}(n,m,b,k,1)=\text{FPR}(n,m,k),]{small-end}
+
+which follows simply from the observation that using `{block|multiblock}<Block, 1>` behaves exactly as
+a classical Bloom filter.
+
+We don't know of any closed, simple formula for the FPR of block and multiblock filters when
+`Stride` is not its "natural" size `xref:subfilters_used_value_size[_used-value-size_]<Subfilter>`,
+that is, when subfilter subarrays overlap.
+We can use the following approximations ({small}stem:[s]{small-end} = `Stride` in bits):
+
+[.formula-center]
+{small}stem:[\text{FPR}_{\text{block}}(n,m,b,s,k,k')=\left(\displaystyle\sum_{i=0}^{\infty} \text{Pois}\left(i,\frac{n(2b-s)k}{m}\right) \cdot \text{FPR}(i,2b-s,k')\right)^{k},]{small-end} +
+{small}stem:[\text{FPR}_\text{multiblock}(n,m,b,s,k,k')=\left(\displaystyle\sum_{i=0}^{\infty} \text{Pois}\left(i,\frac{n(2bk'-s)k}{m}\right) \cdot \text{FPR}\left(i,\frac{2bk'-s}{k'},1\right)^{k'}\right)^{k},]{small-end}
+
+where the replacement of {small}stem:[b]{small-end} with {small}stem:[2b-s]{small-end} 
+(or {small}stem:[bk']{small-end} with {small}stem:[2bk'-s]{small-end} for multiblock filters) accounts
+for the fact that the window of hashing positions affecting a particular bit spreads due to
+overlapping. Note that the formulas reduce to the non-overlapping case when {small}stem:[s]{small-end} takes its
+default value (stem:[b] for block, stem:[bk'] for multiblock). These approximations are acceptable for
+low values of {small}stem:[k']{small-end} but tend to underestimate the actual FPR as {small}stem:[k']{small-end} grows.
+In general, the use of overlapping improves (decreases) FPR by a factor ranging from
+0.6 to 0.9 for typical filter configurations.
+
+{small}stem:[\text{FPR}_{\text{block}}(n,m,b,s,k,k')]{small-end} and {small}stem:[\text{FPR}_\text{multiblock}(n,m,b,s,k,k')]{small-end}
+are the formulas used by the implementation of
+`xref:filter_fpr_estimation[boost::filter::fpr_for]`.

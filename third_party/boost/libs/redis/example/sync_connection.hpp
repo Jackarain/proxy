@@ -7,16 +7,17 @@
 
 #include <boost/redis/connection.hpp>
 #include <boost/redis/request.hpp>
+
 #include <boost/asio/deferred.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/use_future.hpp>
-#include <thread>
+
 #include <chrono>
+#include <thread>
 
 using namespace std::chrono_literals;
 
-namespace boost::redis
-{
+namespace boost::redis {
 
 class sync_connection {
 public:
@@ -25,33 +26,32 @@ public:
    , conn_{std::make_shared<connection>(ioc_)}
    { }
 
-   ~sync_connection()
-   {
-      thread_.join();
-   }
+   ~sync_connection() { thread_.join(); }
 
    void run(config cfg)
    {
       // Starts a thread that will can io_context::run on which the
       // connection will run.
       thread_ = std::thread{[this, cfg]() {
-         conn_->async_run(cfg, {}, asio::detached);
+         conn_->async_run(cfg, asio::detached);
          ioc_.run();
       }};
    }
 
    void stop()
    {
-      asio::dispatch(ioc_, [this]() { conn_->cancel(); });
+      asio::dispatch(ioc_, [this]() {
+         conn_->cancel();
+      });
    }
 
    template <class Response>
    auto exec(request const& req, Response& resp)
    {
-      asio::dispatch(
-         conn_->get_executor(),
-         asio::deferred([this, &req, &resp]() { return conn_->async_exec(req, resp, asio::deferred); }))
-         (asio::use_future).get();
+      asio::dispatch(conn_->get_executor(), asio::deferred([this, &req, &resp]() {
+                        return conn_->async_exec(req, resp, asio::deferred);
+                     }))(asio::use_future)
+         .get();
    }
 
 private:
@@ -60,4 +60,4 @@ private:
    std::thread thread_;
 };
 
-}
+}  // namespace boost::redis

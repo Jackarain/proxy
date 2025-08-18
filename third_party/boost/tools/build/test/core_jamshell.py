@@ -45,7 +45,7 @@ run test-py ;
 DEPENDS all : test-raw test-raw-fail test-py ;
 """)
 
-t.run_build_system(["-ffile.jam", "-d1", "-sPYTHON=" + sys.executable], status=1)
+t.run_build_system(["-ffile.jam", "-d1", '-sPYTHON="' + sys.executable + '"'], status=1)
 t.expect_output_lines([
     "...failed run test-raw-fail...",
     "0,1,2",

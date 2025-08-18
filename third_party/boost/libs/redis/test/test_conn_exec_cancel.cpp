@@ -5,18 +5,30 @@
  */
 
 #include <boost/redis/connection.hpp>
+#include <boost/redis/ignore.hpp>
+#include <boost/redis/request.hpp>
+
+#include <boost/asio/bind_cancellation_slot.hpp>
+#include <boost/asio/cancellation_signal.hpp>
+#include <boost/asio/cancellation_type.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/system/errc.hpp>
-#define BOOST_TEST_MODULE conn-exec-cancel
-#include <boost/test/included/unit_test.hpp>
+
+#include <cstddef>
+#define BOOST_TEST_MODULE conn_exec_cancel
 #include <boost/asio/detached.hpp>
+#include <boost/test/included/unit_test.hpp>
+
 #include "common.hpp"
-#include <iostream>
 
 #ifdef BOOST_ASIO_HAS_CO_AWAIT
 #include <boost/asio/experimental/awaitable_operators.hpp>
 
+using namespace std::chrono_literals;
+
 // NOTE1: I have observed that if hello and
-// blpop are sent toguether, Redis will send the response of hello
+// blpop are sent together, Redis will send the response of hello
 // right away, not waiting for blpop.
 
 namespace net = boost::asio;
@@ -33,6 +45,8 @@ using boost::redis::logger;
 using boost::redis::connection;
 using namespace std::chrono_literals;
 
+namespace {
+
 auto implicit_cancel_of_req_written() -> net::awaitable<void>
 {
    auto ex = co_await net::this_coro::executor;
@@ -45,7 +59,7 @@ auto implicit_cancel_of_req_written() -> net::awaitable<void>
    // See NOTE1.
    request req0;
    req0.push("PING");
-   co_await conn->async_exec(req0, ignore, net::use_awaitable);
+   co_await conn->async_exec(req0, ignore);
 
    // Will be cancelled after it has been written but before the
    // response arrives.
@@ -57,24 +71,19 @@ auto implicit_cancel_of_req_written() -> net::awaitable<void>
 
    // Achieves implicit cancellation when the timer fires.
    boost::system::error_code ec1, ec2;
-   co_await (
-      conn->async_exec(req1, ignore, redir(ec1)) ||
-      st.async_wait(redir(ec2))
-   );
+   co_await (conn->async_exec(req1, ignore, redir(ec1)) || st.async_wait(redir(ec2)));
 
    conn->cancel();
 
    // I have observed this produces terminal cancellation so it can't
    // be ignored, an error is expected.
-   BOOST_CHECK_EQUAL(ec1, net::error::operation_aborted);
-   BOOST_TEST(!ec2);
+   BOOST_TEST(ec1 == net::error::operation_aborted);
+   BOOST_TEST(ec2 == error_code());
 }
 
 BOOST_AUTO_TEST_CASE(test_ignore_implicit_cancel_of_req_written)
 {
-   net::io_context ioc;
-   net::co_spawn(ioc, implicit_cancel_of_req_written(), net::detached);
-   ioc.run();
+   run_coroutine_test(implicit_cancel_of_req_written());
 }
 
 BOOST_AUTO_TEST_CASE(test_cancel_of_req_written_on_run_canceled)
@@ -92,14 +101,15 @@ BOOST_AUTO_TEST_CASE(test_cancel_of_req_written_on_run_canceled)
    req1.get_config().cancel_if_unresponded = true;
    req1.push("BLPOP", "any", 0);
 
-   auto c1 = [&](auto ec, auto)
-   {
+   bool finished = false;
+
+   auto c1 = [&](error_code ec, std::size_t) {
       BOOST_CHECK_EQUAL(ec, net::error::operation_aborted);
+      finished = true;
    };
 
-   auto c0 = [&](auto ec, auto)
-   {
-      BOOST_TEST(!ec);
+   auto c0 = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
       conn->async_exec(req1, ignore, c1);
    };
 
@@ -111,18 +121,62 @@ BOOST_AUTO_TEST_CASE(test_cancel_of_req_written_on_run_canceled)
 
    net::steady_timer st{ioc};
    st.expires_after(std::chrono::seconds{1});
-   st.async_wait([&](auto ec){
-      BOOST_TEST(!ec);
+   st.async_wait([&](error_code ec) {
+      BOOST_TEST(ec == error_code());
       conn->cancel(operation::run);
       conn->cancel(operation::reconnection);
    });
 
-   ioc.run();
+   ioc.run_for(test_timeout);
+   BOOST_TEST(finished);
 }
 
-#else
-BOOST_AUTO_TEST_CASE(dummy)
+// We can cancel requests that haven't been written yet.
+// All cancellation types are supported here.
+BOOST_AUTO_TEST_CASE(test_cancel_pending)
 {
-   BOOST_TEST(true);
+   struct {
+      const char* name;
+      net::cancellation_type_t cancel_type;
+   } test_cases[] = {
+      {"terminal", net::cancellation_type_t::terminal},
+      {"partial",  net::cancellation_type_t::partial },
+      {"total",    net::cancellation_type_t::total   },
+   };
+
+   for (const auto& tc : test_cases) {
+      BOOST_TEST_CONTEXT(tc.name)
+      {
+         // Setup
+         net::io_context ctx;
+         connection conn(ctx);
+         request req;
+         req.push("get", "mykey");
+
+         // Issue a request without calling async_run(), so the request stays waiting forever
+         net::cancellation_signal sig;
+         bool called = false;
+         conn.async_exec(
+            req,
+            ignore,
+            net::bind_cancellation_slot(sig.slot(), [&](error_code ec, std::size_t sz) {
+               BOOST_TEST(ec == net::error::operation_aborted);
+               BOOST_TEST(sz == 0u);
+               called = true;
+            }));
+
+         // Issue a cancellation
+         sig.emit(tc.cancel_type);
+
+         // Prevent the test for deadlocking in case of failure
+         ctx.run_for(3s);
+         BOOST_TEST(called);
+      }
+   }
 }
+
+}  // namespace
+
+#else
+BOOST_AUTO_TEST_CASE(dummy) { }
 #endif

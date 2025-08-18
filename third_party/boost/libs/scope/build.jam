@@ -1,9 +1,14 @@
 # Copyright René Ferdinand Rivera Morell 2024
+# Copyright Andrey Semashev 2025
+#
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
 require-b2 5.2 ;
+
+import-search /boost/config/checks ;
+import config : requires ;
 
 constant boost_dependencies :
     /boost/assert//boost_assert
@@ -11,13 +16,30 @@ constant boost_dependencies :
     /boost/core//boost_core
     /boost/type_traits//boost_type_traits ;
 
+local cxx_requirements =
+    [ requires
+        exceptions
+        sfinae_expr
+        cxx11_constexpr
+        cxx11_noexcept
+        cxx11_decltype
+        cxx11_rvalue_references
+        cxx11_template_aliases
+        cxx11_variadic_templates
+        cxx11_defaulted_functions
+        cxx11_deleted_functions
+        cxx11_function_template_default_args
+    ]
+    [ check-target-builds config//has_sufficient_cxx11_type_traits "has <type_traits> sufficient for Boost.Scope" : : <build>no ]
+    ;
+
 project /boost/scope
     : common-requirements
         <include>include
     ;
 
 explicit
-    [ alias boost_scope : : : : <library>$(boost_dependencies) ]
+    [ alias boost_scope : : $(cxx_requirements) : : $(cxx_requirements) <library>$(boost_dependencies) ]
     [ alias all : boost_scope test ]
     ;
 

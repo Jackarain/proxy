@@ -1,5 +1,5 @@
 /* Exception types throwable
-(C) 2017-2024 Niall Douglas <http://www.nedproductions.biz/> (9 commits)
+(C) 2017-2025 Niall Douglas <http://www.nedproductions.biz/> (9 commits)
 File Created: Oct 2017
 
 

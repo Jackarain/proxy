@@ -1,4 +1,4 @@
-# Copyright 2021-2024 Andrey Semashev
+# Copyright 2021-2025 Andrey Semashev
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
@@ -37,32 +37,8 @@ jobs:
           # Note: In the matrix below, we always use a Docker container when we test 32-bit targets since the host runner
           # does not have permissions to configure dpkg/apt, which prevents adding i386 target architecture.
           # Linux, gcc
-          - toolset: gcc-4.6
-            cxxstd64: "0x"
-            cxxstd32: "0x"
-            # Workaround for missing std::this_thread::sleep_* functions
-            cxxflags: -D_GLIBCXX_USE_NANOSLEEP
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - g++-4.6
-              - g++-4.6-multilib
-              - linux-libc-dev:i386
-            sources:
-              - "ppa:ubuntu-toolchain-r/test"
-          - toolset: gcc-4.7
-            cxxstd64: "11"
-            cxxstd32: "11"
-            # Workaround for missing std::this_thread::sleep_* functions
-            cxxflags: -D_GLIBCXX_USE_NANOSLEEP
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - g++-4.7
-              - g++-4.7-multilib
-              - linux-libc-dev:i386
           - toolset: gcc-4.8
-            cxxstd64: "11"
+            cxxstd64: "11,1y"
             cxxstd32: "11"
             os: ubuntu-latest
             container: ubuntu:18.04
@@ -71,7 +47,7 @@ jobs:
               - g++-4.8-multilib
               - linux-libc-dev:i386
           - toolset: gcc-4.9
-            cxxstd64: "11"
+            cxxstd64: "11,14"
             cxxstd32: "11"
             os: ubuntu-latest
             container: ubuntu:16.04
@@ -161,13 +137,22 @@ jobs:
               - g++-13-multilib
               - linux-libc-dev:i386
           - toolset: gcc-14
-            cxxstd64: "11,14,17,20,23,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            cxxstd64: "11,14,17,20,23,26,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
             cxxstd32: "11,11-gnu"
             os: ubuntu-latest
             container: ubuntu:24.04
             install:
               - g++-14
               - g++-14-multilib
+              - linux-libc-dev:i386
+          - toolset: gcc-15
+            cxxstd64: "11,14,17,20,23,26,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            cxxstd32: "11,11-gnu"
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install:
+              - g++-15
+              - g++-15-multilib
               - linux-libc-dev:i386
           - name: UBSAN
             toolset: gcc-13
@@ -181,56 +166,18 @@ jobs:
               - g++-13
               - g++-13-multilib
               - linux-libc-dev:i386
+          - name: TSAN
+            toolset: gcc-13
+            cxxstd64: "11,14,17,20,23,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            tsan: 1
+            build_variant: debug
+            os: ubuntu-latest
+            container: ubuntu:24.04
+            install:
+              - g++-13
+              - g++-13-multilib
 
           # Linux, clang
-          - toolset: clang
-            compiler: clang++-3.5
-            cxxstd64: "11"
-            cxxstd32: "11"
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - clang-3.5
-              - g++-4.9
-              - g++-4.9-multilib
-              - linux-libc-dev:i386
-            gcc_toolchain: 4.9
-          - toolset: clang
-            compiler: clang++-3.6
-            cxxstd64: "11,14"
-            cxxstd32: "11"
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - clang-3.6
-              - g++-4.9
-              - g++-4.9-multilib
-              - linux-libc-dev:i386
-            gcc_toolchain: 4.9
-          - toolset: clang
-            compiler: clang++-3.7
-            cxxstd64: "11,14"
-            cxxstd32: "11"
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - clang-3.7
-              - g++-4.9
-              - g++-4.9-multilib
-              - linux-libc-dev:i386
-            gcc_toolchain: 4.9
-          - toolset: clang
-            compiler: clang++-3.8
-            cxxstd64: "11,14"
-            cxxstd32: "11"
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - clang-3.8
-              - g++-4.9
-              - g++-4.9-multilib
-              - linux-libc-dev:i386
-            gcc_toolchain: 4.9
           - toolset: clang
             compiler: clang++-3.9
             cxxstd64: "11,14"
@@ -426,7 +373,7 @@ jobs:
             gcc_toolchain: 11
           - toolset: clang
             compiler: clang++-18
-            cxxstd64: "11,14,17,20,23,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            cxxstd64: "11,14,17,20,23,26,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
             cxxstd32: "11,11-gnu"
             os: ubuntu-latest
             container: ubuntu:24.04
@@ -437,7 +384,7 @@ jobs:
               - linux-libc-dev:i386
           - toolset: clang
             compiler: clang++-19
-            cxxstd64: "11,14,17,20,23,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            cxxstd64: "11,14,17,20,23,26,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
             cxxstd32: "11,11-gnu"
             os: ubuntu-latest
             container: ubuntu:24.04
@@ -446,24 +393,28 @@ jobs:
               - g++-13
               - g++-13-multilib
               - linux-libc-dev:i386
-            sources:
-              - "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
           - toolset: clang
-            compiler: clang++-19
+            compiler: clang++-20
+            cxxstd64: "11,14,17,20,23,26,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            cxxstd32: "11,11-gnu"
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install:
+              - clang-20
+              - g++-13
+              - g++-13-multilib
+              - linux-libc-dev:i386
+          - toolset: clang
+            compiler: clang++-20
             cxxstd64: "11,14,17,20,23,26"
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
-            os: ubuntu-24.04
+            os: ubuntu-latest
+            container: ubuntu:25.04
             install:
-              - clang-19
-              - libc++-19-dev
-              - libc++abi-19-dev
-            sources:
-              - "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main"
-            source_keys:
-              - "https://apt.llvm.org/llvm-snapshot.gpg.key"
+              - clang-20
+              - libc++-20-dev
+              - libc++abi-20-dev
           - name: UBSAN
             toolset: clang
             compiler: clang++-18
@@ -477,17 +428,73 @@ jobs:
               - clang-18
               - libc++-18-dev
               - libc++abi-18-dev
+          - name: TSAN
+            toolset: clang
+            compiler: clang++-18
+            cxxstd64: "11,14,17,20,23,26,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            cxxflags: -stdlib=libc++
+            linkflags: -stdlib=libc++
+            tsan: 1
+            build_variant: debug
+            os: ubuntu-24.04
+            install:
+              - clang-18
+              - libc++-18-dev
+              - libc++abi-18-dev
+
+          - name: ARM
+            toolset: gcc-13
+            cxxstd64: "11,14,17,20,23,11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            cxxstd32: "11,11-gnu"
+            instruction_set: "-"
+            os: ubuntu-24.04-arm
+            container: ubuntu:24.04
+            install:
+              - g++-13
 
           - toolset: clang
+            vm: freebsd
+            version: "15.0"
+            cxxstd64: "11,14,17,20,23,26"
+            os: ubuntu-latest
+
+          - toolset: clang
+            vm: openbsd
+            version: "7.7"
             cxxstd64: "11,14,17,20,2b"
+            os: ubuntu-latest
+
+          - toolset: gcc
+            vm: netbsd
+            version: "10.1"
+            cxxstd64: "11,14,17,20"
+            os: ubuntu-latest
+
+          - toolset: gcc
+            vm: dragonflybsd
+            version: "6.4.0"
+            cxxstd64: "11,14,17,2a"
+            os: ubuntu-latest
+
+          - toolset: gcc
+            vm: solaris
+            version: "11.4-gcc"
+            cxxstd64: "11,14,17,20,23,26"
+            os: ubuntu-latest
+
+          - toolset: clang
             os: macos-13
-          - toolset: clang
             cxxstd64: "11,14,17,20,2b"
+            instruction_set: "-"
+          - toolset: clang
             os: macos-14
+            cxxstd64: "11,14,17,20,2b"
+            instruction_set: "-"
 
           - toolset: clang
-            cxxstd64: "11,14,17,20,2b"
             os: macos-latest
+            cxxstd64: "11,14,17,20,2b"
+            instruction_set: "-"
             macosx_version_min: 11
 
           - name: CMake tests
@@ -515,6 +522,22 @@ jobs:
                 echo "GHA_CONTAINER=${{matrix.container}}" >> $GITHUB_ENV
                 if [ -f "/etc/debian_version" ]
                 then
+                    # Use Azure APT mirrors in containers to avoid HTTP errors due to DDoS filters triggered by lots of CI jobs launching concurrently.
+                    # Note that not all Ubuntu versions support "mirror+file:..." URIs in APT sources, so just use Azure mirrors exclusively.
+                    # Note also that on recent Ubuntu versions DEB822 format is used for source files.
+                    APT_SOURCES=()
+                    if [ -d "/etc/apt/sources.list.d" ]
+                    then
+                        readarray -t APT_SOURCES < <(find "/etc/apt/sources.list.d" -type f -name '*.sources' -print)
+                    fi
+                    if [ -f "/etc/apt/sources.list" ]
+                    then
+                        APT_SOURCES+=("/etc/apt/sources.list")
+                    fi
+                    if [ "${#APT_SOURCES[@]}" -gt 0 ]
+                    then
+                        sed -i -E -e 's!([^ ]+) (http|https)://(archive|security)\.ubuntu\.com/ubuntu[^ ]*(.*)!\1 http://azure.archive.ubuntu.com/ubuntu/\4!' "${APT_SOURCES[@]}"
+                    fi
                     apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
                     if [ "$(apt-cache search "^python-is-python3$" | wc -l)" -ne 0 ]
                     then
@@ -668,25 +691,23 @@ jobs:
             git submodule update --init tools/boostdep
             DEPINST_ARGS+=("$LIBRARY")
             python tools/boostdep/depinst/depinst.py "${DEPINST_ARGS[@]}"
-            if [ -z "${{matrix.cmake_tests}}" ]
-            then
-                ./bootstrap.sh
-                ./b2 headers
-                if [ -n "${{matrix.compiler}}" -o -n "$GCC_TOOLCHAIN_ROOT" ]
-                then
-                    echo -n "using ${{matrix.toolset}} : : ${{matrix.compiler}}" > ~/user-config.jam
-                    if [ -n "$GCC_TOOLCHAIN_ROOT" ]
-                    then
-                        echo -n " : <compileflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\" <linkflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\"" >> ~/user-config.jam
-                    fi
-                    echo " ;" >> ~/user-config.jam
-                fi
-            fi
-
-      - name: Run tests
-        if: matrix.cmake_tests == ''
-        run: |
+            rm -rf ".git"
+            cd ..
+            cat > b2-run-tests.sh << "EOF"
+            #!/usr/bin/env bash
+            set -e
             cd boost-root
+            ./bootstrap.sh
+            ./b2 headers
+            if [ -n "${{matrix.compiler}}" -o -n "$GCC_TOOLCHAIN_ROOT" ]
+            then
+                echo -n "using ${{matrix.toolset}} : : ${{matrix.compiler}}" > ~/user-config.jam
+                if [ -n "$GCC_TOOLCHAIN_ROOT" ]
+                then
+                    echo -n " : <compileflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\" <linkflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\"" >> ~/user-config.jam
+                fi
+                echo " ;" >> ~/user-config.jam
+            fi
             B2_ARGS=("-j" "$BUILD_JOBS" "toolset=${{matrix.toolset}}")
             if [ -n "${{matrix.build_variant}}" ]
             then
@@ -699,6 +720,10 @@ jobs:
                 export UBSAN_OPTIONS="print_stacktrace=1"
                 B2_ARGS+=("cxxflags=-fsanitize=undefined -fno-sanitize-recover=undefined" "linkflags=-fsanitize=undefined -fuse-ld=gold" "define=UBSAN=1" "debug-symbols=on" "visibility=global")
             fi
+            if [ -n "${{matrix.tsan}}" ]
+            then
+                B2_ARGS+=("cxxflags=-fsanitize=thread" "linkflags=-fsanitize=thread -fuse-ld=gold" "define=TSAN=1" "debug-symbols=on" "visibility=global")
+            fi
             if [ -n "${{matrix.cxxflags}}" ]
             then
                 B2_ARGS+=("cxxflags=${{matrix.cxxflags}}")
@@ -709,8 +734,12 @@ jobs:
             fi
             if [ -n "${{matrix.instruction_set}}" ]
             then
-                B2_ARGS+=("instruction-set=${{matrix.instruction_set}}")
-            else
+                if [ "${{matrix.instruction_set}}" != "-" ]
+                then
+                    B2_ARGS+=("instruction-set=${{matrix.instruction_set}}")
+                fi
+            elif [ -n "$DEFAULT_INSTRUCTION_SET" ]
+            then
                 B2_ARGS+=("instruction-set=$DEFAULT_INSTRUCTION_SET")
             fi
             if [ -n "${{matrix.macosx_version_min}}" ]
@@ -733,6 +762,141 @@ jobs:
                 echo ""
                 ./b2 "${B2_ARGS[@]}" "address-model=32" "cxxstd=${{matrix.cxxstd32}}" "libs/$LIBRARY/test"
             fi
+            EOF
+            chmod +x b2-run-tests.sh
+
+      # Note: The VMs must be created after the workspace is fully prepared, as it will be copied to the VM only once
+      - name: Setup FreeBSD VM
+        if: matrix.vm == 'freebsd'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LIBRARY DEFAULT_BUILD_VARIANT DEFAULT_INSTRUCTION_SET BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          prepare: |
+              pkg install -y bash
+          run: |
+              uname -mrs
+              sysctl hw.model
+              sysctl hw.ncpu
+              sysctl hw.physmem
+              sysctl hw.usermem
+              pwd
+              ls -la
+
+      - name: Setup OpenBSD VM
+        if: matrix.vm == 'openbsd'
+        uses: vmactions/openbsd-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LIBRARY DEFAULT_BUILD_VARIANT DEFAULT_INSTRUCTION_SET BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          prepare: |
+              pkg_add bash
+          run: |
+              uname -mrs
+              sysctl hw.model
+              sysctl hw.ncpu
+              sysctl hw.physmem
+              sysctl hw.usermem
+              pwd
+              ls -la
+
+      - name: Setup NetBSD VM
+        if: matrix.vm == 'netbsd'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LIBRARY DEFAULT_BUILD_VARIANT DEFAULT_INSTRUCTION_SET BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          run: |
+              uname -mrs
+              /sbin/sysctl hw.model
+              /sbin/sysctl hw.ncpu
+              /sbin/sysctl hw.physmem64
+              /sbin/sysctl hw.usermem64
+              pwd
+              ls -la
+
+      - name: Setup DragonFlyBSD VM
+        if: matrix.vm == 'dragonflybsd'
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LIBRARY DEFAULT_BUILD_VARIANT DEFAULT_INSTRUCTION_SET BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          prepare: |
+              pkg install -y bash
+          run: |
+              uname -mrs
+              sysctl hw.model
+              sysctl hw.ncpu
+              sysctl hw.physmem
+              sysctl hw.usermem
+              pwd
+              ls -la
+
+      - name: Setup Solaris VM
+        if: matrix.vm == 'solaris'
+        uses: vmactions/solaris-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LIBRARY DEFAULT_BUILD_VARIANT DEFAULT_INSTRUCTION_SET BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          run: |
+              uname -mrs
+              pwd
+              ls -la
+
+      - name: Run tests (native)
+        if: matrix.cmake_tests == '' && matrix.vm == ''
+        run: |
+            bash ./b2-run-tests.sh
+
+      - name: Run tests (FreeBSD VM)
+        if: matrix.cmake_tests == '' && matrix.vm == 'freebsd'
+        shell: freebsd {0}
+        run: |
+            cd "$GITHUB_WORKSPACE"
+            bash ./b2-run-tests.sh
+
+      - name: Run tests (OpenBSD VM)
+        if: matrix.cmake_tests == '' && matrix.vm == 'openbsd'
+        shell: openbsd {0}
+        run: |
+            cd "$GITHUB_WORKSPACE"
+            bash ./b2-run-tests.sh
+
+      - name: Run tests (NetBSD VM)
+        if: matrix.cmake_tests == '' && matrix.vm == 'netbsd'
+        shell: netbsd {0}
+        run: |
+            cd "$GITHUB_WORKSPACE"
+            bash ./b2-run-tests.sh
+
+      - name: Run tests (DragonFlyBSD VM)
+        if: matrix.cmake_tests == '' && matrix.vm == 'dragonflybsd'
+        shell: dragonflybsd {0}
+        run: |
+            cd "$GITHUB_WORKSPACE"
+            bash ./b2-run-tests.sh
+
+      - name: Run tests (Solaris VM)
+        if: matrix.cmake_tests == '' && matrix.vm == 'solaris'
+        shell: solaris {0}
+        run: |
+            cd "$GITHUB_WORKSPACE"
+            bash ./b2-run-tests.sh
 
       - name: Build CMake tests
         if: matrix.cmake_tests
@@ -768,16 +932,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd64: "14"
-            cxxstd32: "14"
-            cxxflags: "/arch:AVX"
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd64: "14,17,20,latest"
-            cxxstd32: "14"
-            cxxflags: "/arch:AVX"
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd64: "14,17,20,latest"
             cxxstd32: "14"
@@ -789,8 +943,15 @@ jobs:
             cxxflags: "-mavx -mcx16"
             os: windows-2022
           - toolset: gcc
-            cxxstd64: "11-gnu,14-gnu,17-gnu,2a-gnu"
-            os: windows-2019
+            cxxstd64: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu"
+            os: windows-2022
+
+          # Windows SDK 32-bit ARM libs not installed in this image
+          - name: ARM
+            toolset: msvc-14.3
+            cxxstd64: "14,17,20,latest"
+            instruction_set: "-"
+            os: windows-11-arm
 
           - name: CMake MSVC tests
             cmake_tests: 1
@@ -847,7 +1008,11 @@ jobs:
             cd boost-root
             set "B2_ARGS=-j %NUMBER_OF_PROCESSORS% toolset=${{matrix.toolset}} embed-manifest-via=linker"
             if not "${{matrix.build_variant}}" == "" ( set "B2_ARGS=%B2_ARGS% variant=${{matrix.build_variant}}" ) else ( set "B2_ARGS=%B2_ARGS% variant=%DEFAULT_BUILD_VARIANT%" )
-            if not "${{matrix.instruction_set}}" == "" ( set "B2_ARGS=%B2_ARGS% instruction-set=${{matrix.instruction_set}}" ) else ( set "B2_ARGS=%B2_ARGS% instruction-set=%DEFAULT_INSTRUCTION_SET%" )
+            if not "${{matrix.instruction_set}}" == "" (
+                if not "${{matrix.instruction_set}}" == "-" set "B2_ARGS=%B2_ARGS% instruction-set=${{matrix.instruction_set}}"
+            ) else (
+                set "B2_ARGS=%B2_ARGS% instruction-set=%DEFAULT_INSTRUCTION_SET%"
+            )
             if not "${{matrix.cxxflags}}" == "" set "B2_ARGS=%B2_ARGS% ^"cxxflags=${{matrix.cxxflags}}^""
             if not "${{matrix.linkflags}}" == "" set "B2_ARGS=%B2_ARGS% ^"linkflags=${{matrix.linkflags}}^""
             if not "${{matrix.cxxstd64}}" == "" (

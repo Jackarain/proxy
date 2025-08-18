@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.conditional]]`conditional`::
+[[b2.builtin.features.conditional]]`conditional`::
 Used to introduce indirect conditional requirements. The value should have the
 form:
 +

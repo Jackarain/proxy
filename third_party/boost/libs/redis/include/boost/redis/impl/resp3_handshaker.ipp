@@ -6,8 +6,7 @@
 
 #include <boost/redis/detail/resp3_handshaker.hpp>
 
-namespace boost::redis::detail
-{
+namespace boost::redis::detail {
 
 void push_hello(config const& cfg, request& req)
 {
@@ -24,4 +23,4 @@ void push_hello(config const& cfg, request& req)
       req.push("SELECT", cfg.database_index.value());
 }
 
-} // boost::redis::detail
+}  // namespace boost::redis::detail

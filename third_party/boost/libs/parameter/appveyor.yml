@@ -1,6 +1,6 @@
 # Copyright 2017 Edward Diener
 # Copyright 2017 Cromwell D. Enage
-# Copyright 2021-2022 Andrey Semashev
+# Copyright 2021-2025 Andrey Semashev
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at
 # http://boost.org/LICENSE_1_0.txt)
@@ -25,8 +25,12 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     - ARGS: toolset=msvc-14.3 address-model=32,64 cxxstd=14,17,20,latest
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
-    - ARGS: toolset=clang-win address-model=32,64 cxxstd=14,17,latest
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    - ARGS: toolset=clang-win address-model=64 cxxstd=14,17,latest
+      ENV_SCRIPT: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    - ARGS: toolset=clang-win address-model=32 cxxstd=14,17,latest
+      ENV_SCRIPT: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars32.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     - ARGS: toolset=gcc address-model=32 cxxstd=11,14,1z
       PATH: C:\cygwin\bin;%PATH%
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
@@ -37,11 +41,14 @@ environment:
       PATH: C:\mingw-w64\i686-5.3.0-posix-dwarf-rt_v4-rev0\mingw32\bin;%PATH%
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     - ARGS: toolset=gcc address-model=64 cxxstd=11,14,1z
-      PATH: C:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64\bin;%PATH%
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-    - ARGS: toolset=gcc address-model=64 cxxstd=11,14,1z
       PATH: C:\mingw-w64\x86_64-7.3.0-posix-seh-rt_v5-rev0\mingw64\bin;%PATH%
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - ARGS: toolset=gcc address-model=64 cxxstd=11,14,17,2a
+      PATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin;%PATH%
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - ARGS: toolset=gcc address-model=32 cxxstd=11,14,17,2a
+      PATH: C:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin;%PATH%
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
 
 install:
   - set GIT_FETCH_JOBS=8
@@ -64,4 +71,5 @@ install:
 build: off
 
 test_script:
+  - if not "%ENV_SCRIPT%" == "" call "%ENV_SCRIPT%"
   - b2 -j %NUMBER_OF_PROCESSORS% libs/parameter/test %ARGS%

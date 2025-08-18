@@ -1,4 +1,4 @@
-//  Copyright (c) 2020 Andrey Semashev
+//  Copyright (c) 2020-2025 Andrey Semashev
 //
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
@@ -12,9 +12,9 @@
 
 struct test_stream_type
 {
-    typedef std::ios_base& (*ios_base_manip)(std::ios_base&);
-    typedef std::basic_ios< char, std::char_traits< char > >& (*basic_ios_manip)(std::basic_ios< char, std::char_traits< char > >&);
-    typedef std::ostream& (*stream_manip)(std::ostream&);
+    using ios_base_manip = std::ios_base& (std::ios_base&);
+    using basic_ios_manip = std::basic_ios< char, std::char_traits< char > >& (std::basic_ios< char, std::char_traits< char > >&);
+    using stream_manip = std::ostream& (std::ostream&);
 
     template< typename T >
     test_stream_type const& operator<< (T const& value) const
@@ -23,17 +23,17 @@ struct test_stream_type
         return *this;
     }
 
-    test_stream_type const& operator<< (ios_base_manip manip) const
+    test_stream_type const& operator<< (ios_base_manip* manip) const
     {
         std::cerr << manip;
         return *this;
     }
-    test_stream_type const& operator<< (basic_ios_manip manip) const
+    test_stream_type const& operator<< (basic_ios_manip* manip) const
     {
         std::cerr << manip;
         return *this;
     }
-    test_stream_type const& operator<< (stream_manip manip) const
+    test_stream_type const& operator<< (stream_manip* manip) const
     {
         std::cerr << manip;
         return *this;

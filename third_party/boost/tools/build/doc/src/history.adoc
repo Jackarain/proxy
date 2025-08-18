@@ -1,11 +1,67 @@
 [[b2.history]]
 = History
 
+== Version 5.3.2
+
+Fix regression for handling of the `--command-database` option. The new command
+line arguments parsing made the output to be reset and cleared causing nothing
+to get output for the commands. Thanks to _Dmitry Arkhipov_ for the fix.
+
+== Version 5.3.1
+
+Fix backward incompatibility of `option.get` if an argument is not added with
+`args.add-arg`. When such an argument isn't registered we fail to check `ARGV`
+directly as a backup, for backward compatibility. This fixes that problem by
+checking if an argument is registered, and if not falling back on the direct
+`ARGV` check.
+
+== Version 5.3.0
+
+Biggest changes for this release is the creation of two new toolsets: `ibmcxx`
+and `cc`. The former covers all the IBM compilers, and the latter is a generic
+C compiler toolset.
+
+* *New*: Replace the old `vacpp` and `xlcpp` with a new `ibmcxx` toolset that
+  supports the old compilers and the new "IBM XL" and  "IBM Open XL" compilers.
+  -- _René Ferdinand Rivera Morell_ and _Chris Ward_
+* *New*: Add generic `cc` toolset for simply, direct, configuration of unknown
+  C compiler toolsets (for example `tcc`).
+  -- _René Ferdinand Rivera Morell_
+* *New*: Add `args` module for common handling of both native and Jam side
+  command line arguments.
+  -- _René Ferdinand Rivera Morell_
+* Fix command database output file path when an output dir is not given.
+  -- _René Ferdinand Rivera Morell_
+* Fix asciidoctor ignoring relevant features when building which caused invalid
+  reuse of the target.
+  -- _René Ferdinand Rivera Morell_
+* Add documentation for clang and emscripten toolsets.
+  -- _Nikita Kniazev_
+* Fix doxygen tool to properly handle paths relative to the wording dir or
+  absolute paths.
+  -- _Dmitry Arkhipov_
+* Fix staging path calculation when using install prefix's.
+  -- _Dmitry Arkhipov_
+* Make `toolset.using` preserve current project to allow for calling it in more
+  contexts with minimal effort.
+  -- _Dmitry Arkhipov_
+* Updated cxxstd=latest for gcc and clang to account for {CPP} 26.
+  -- _Andrey Semashev_
+* Fix Building on Haiku OS which doesn't have `wait4`.
+  -- _Fas Xmut_
+* Rewrite the command like argument parsing to use the Lyra library. The result
+  is that arguments from Jam and native are integrated and available with the
+  built-in `-h` help.
+  -- _René Ferdinand Rivera Morell_
+
+WARNING: The `vacpp` and `xlcpp` have been removed in favor of `ibmcxx` as the
+latter covers the same support.
+
 == Version 5.2.1
 
 This patch reverts the change to define `_HAS_EXCEPTIONS=0` for Dinkumware
 std library. It has the undesired effect of changing the ABI. It's better for
-user code to handle the conbination of turning off exceptions while treating
+user code to handle the combination of turning off exceptions while treating
 warnings as errors, and getting warnings/errors from the std library by having
 the users silence the warning themselves.
 

@@ -1,8 +1,9 @@
-// Copyright 2022 Peter Dimov.
+// Copyright 2022, 2025 Peter Dimov.
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/container_hash/hash.hpp>
+#include <boost/container_hash/hash_is_avalanching.hpp>
 #include <boost/core/lightweight_test_trait.hpp>
 #include <boost/config.hpp>
 #include <boost/config/pragma_message.hpp>
@@ -14,14 +15,13 @@ int main() {}
 
 #else
 
-#include <boost/unordered/hash_traits.hpp>
 #include <string_view>
 
 enum my_char { min = 0, max = 255 };
 
 int main()
 {
-    using boost::unordered::hash_is_avalanching;
+    using boost::hash_is_avalanching;
 
     BOOST_TEST_TRAIT_TRUE(( hash_is_avalanching< boost::hash<std::string_view> > ));
     BOOST_TEST_TRAIT_TRUE(( hash_is_avalanching< boost::hash<std::wstring_view> > ));

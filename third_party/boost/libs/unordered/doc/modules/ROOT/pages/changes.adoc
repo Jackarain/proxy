@@ -6,6 +6,15 @@
 :github-pr-url: https://github.com/boostorg/unordered/pull
 :cpp: C++
 
+== Release 1.89.0
+
+* Deprecated `boost::unordered::hash_is_avalanching` is now a using-declaration of
+`boost::hash_is_avalanching` in `<boost/container_hash/hash_is_avalanching.hpp>`.
+Use that header directly instead. `<boost/unordered/hash_traits.hpp>` will be
+removed in the future.
+* Added `pull(const_iterator)` to open-addressing containers. This operation
+allows for efficient removal and retrieval of an element via move construction.
+
 == Release 1.88.0
 
 * Migrated the documentation to a multipage format using Antora.

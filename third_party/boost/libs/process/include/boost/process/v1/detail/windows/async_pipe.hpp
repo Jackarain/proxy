@@ -31,6 +31,8 @@ inline std::string make_pipe_name()
     static std::atomic_size_t cnt{0};
     name += std::to_string(pid);
     name += "_";
+    name += std::to_string(intptr_t(&cnt)); // to unclash Boost instances in plug-in DLLs
+    name += "_";
     name += std::to_string(cnt++);
 
     return name;
@@ -59,8 +61,6 @@ public:
 
     async_pipe(boost::asio::io_context & ios_source, boost::asio::io_context & ios_sink, const std::string & name)
             : async_pipe(ios_source, ios_sink, name, false) {}
-
-
 
     inline async_pipe(const async_pipe& rhs);
     async_pipe(async_pipe&& rhs)  : _source(std::move(rhs._source)), _sink(std::move(rhs._sink))
@@ -152,7 +152,6 @@ public:
     {
         return _sink.write_some(buffers);
     }
-
 
     template<typename MutableBufferSequence>
     std::size_t read_some(const MutableBufferSequence & buffers, boost::system::error_code & ec) noexcept
@@ -281,7 +280,6 @@ async_pipe::async_pipe(const async_pipe& p)  :
         _sink.  assign(sink);
 }
 
-
 async_pipe::async_pipe(boost::asio::io_context & ios_source,
                        boost::asio::io_context & ios_sink,
                        const std::string & name, bool private_) : _source(ios_source), _sink(ios_sink)
@@ -297,7 +295,6 @@ async_pipe::async_pipe(boost::asio::io_context & ios_source,
             ::boost::winapi::PIPE_ACCESS_INBOUND_
             | FILE_FLAG_OVERLAPPED_, //write flag
             0, private_ ? 1 : ::boost::winapi::PIPE_UNLIMITED_INSTANCES_, 8192, 8192, 0, nullptr);
-
 
     if (source == boost::winapi::INVALID_HANDLE_VALUE_)
         ::boost::process::v1::detail::throw_last_error("create_named_pipe(" + name + ") failed");

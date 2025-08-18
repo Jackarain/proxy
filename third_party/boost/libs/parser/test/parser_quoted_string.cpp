@@ -323,8 +323,7 @@ int main()
     assert(result1);
     std::cout << *result1 << "\n"; // Prints: some text
 
-    auto result2 =
-        bp::parse("\"some \\\"text\\\"\"", bp::quoted_string, bp::ws);
+    auto result2 = bp::parse(R"("some \"text\"")", bp::quoted_string, bp::ws);
     assert(result2);
     std::cout << *result2 << "\n"; // Prints: some "text"
     //]

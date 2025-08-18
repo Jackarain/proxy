@@ -6,7 +6,6 @@
 
 #include <boost/redis/ignore.hpp>
 
-namespace boost::redis
-{
+namespace boost::redis {
 ignore_t ignore;
 }

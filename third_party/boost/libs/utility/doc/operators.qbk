@@ -7,8 +7,7 @@
  /]
 
 [/===============]
-[#sec:operators]
-[section Operators]
+[section:operators Operators]
 [/===============]
 
 [section Introduction]
@@ -20,8 +19,7 @@ operators provided by the class.
 
 [endsect]
 
-[#sec:rationale]
-[section Rationale]
+[section:rationale Rationale]
 
 Overloaded operators for class types typically occur in groups. If you
 can write `x + y`, you probably also want to be able to write `x += y`.
@@ -60,23 +58,22 @@ class MyInt
 then the __operators__<> template adds more than a dozen additional operators, such as
 `operator>`, `operator<=`, `operator>=`, and the binary `operator+`.
 
-[link sec:two_arg Two-argument forms] of the templates are also provided to allow interaction with other types.
+[link utility.utilities.operators.usage.two_arg Two-argument forms] of the templates are also provided to allow interaction with other types.
 
-[#sec:semantics]
+[#utility.utilities.operators.rationale.semantics]
 This is a ['Summary of Template Semantics]:
 
 # Each operator template completes the concept(s) it describes by defining overloaded operators for its target class.
-# The name of an operator class template indicates the [link sec:concepts_note concept] that its target class will model.
+# The name of an operator class template indicates the [link utility.utilities.operators.rationale.concepts_note concept] that its target class will model.
 # Usually, the target class uses an instantiation of the operator class template as a base class. Some operator templates support an
-  [link sec:explicit_instantiation alternate method].
+  [link utility.utilities.operators.usage.explicit_instantiation alternate method].
 # The concept can be compound, i.e. it may represent a common combination of other, simpler concepts.
 # Most operator templates require their target class to support operations related to the operators supplied by
   the template. In accordance with widely accepted [@http://www.gotw.ca/gotw/004.htm coding style recommendations], the
   target class is often required to supply the assignment counterpart operator of the concept's "main operator."
   For example, the `addable` template requires `operator+=(T const&)` and in turn supplies `operator+(T const&, T const&)`.
 
-[#sec:concepts_note]
-
+[#utility.utilities.operators.rationale.concepts_note]
 ['Note on the use of concepts]: The discussed concepts are not necessarily the standard library's
 concepts, such as __CopyConstructible__, although some of them could
 be; they are what we call ['concepts with a small 'c']. In
@@ -94,10 +91,9 @@ target classes from different domains, i.e. eventually more useful.
 
 [endsect]
 
-[#sec:example]
-[section Example]
+[section:example Example]
 
-This example shows how some of the [link sec:arithmetic arithmetic
+This example shows how some of the [link utility.utilities.operators.arithmetic arithmetic
 operator templates] can be used with a geometric point class
 template.
 
@@ -151,17 +147,13 @@ const point<float> pi_over_4_normalized = pi_over_4 / length(pi_over_4);
 
 [endsect]
 
-[#sec:usage]
-[section Usage]
+[section:usage Usage]
 
-[#sec:two_arg]
-[h5 Two-Argument Template Forms]
-
-[#sec:two_arg_gen]
+[section:two_arg Two-Argument Template Forms]
 
 The arguments to a binary operator commonly have identical types, but
 it is not unusual to want to define operators which combine different
-types. For [link sec:example example], one might want to multiply a
+types. For [link utility.utilities.operators.example example], one might want to multiply a
 mathematical vector by a scalar. The two-argument template forms of the
 arithmetic operator templates are supplied for this purpose. When
 applying the two-argument form of a template, the desired return type of
@@ -169,22 +161,21 @@ the operators typically determines which of the two types in question
 should be derived from the operator template.
 
 For example, if the result of `T + U` is of type `T`, then `T` (not `U`)
-should be derived from [link table:addable2 `addable<T, U>`]. The comparison
-templates [link table:less_than_comparable2 `less_than_comparable<T,U>`],
-[link table:equality_comparable2 `equality_comparable<T, U>`],
-[link table:equivalent2 `equivalent<T, U>`], and
-[link table:partially_ordered2 `partially_ordered<T, U>`] are exceptions to
+should be derived from [link utility.utilities.operators.arithmetic.smpl_oprs.addable2 `addable<T, U>`]. The comparison
+templates [link utility.utilities.operators.arithmetic.smpl_oprs.less_than_comparable2 `less_than_comparable<T,U>`],
+[link utility.utilities.operators.arithmetic.smpl_oprs.equality_comparable2 `equality_comparable<T, U>`],
+[link utility.utilities.operators.arithmetic.smpl_oprs.equivalent2 `equivalent<T, U>`], and
+[link utility.utilities.operators.arithmetic.smpl_oprs.partially_ordered2 `partially_ordered<T, U>`] are exceptions to
 this guideline, since the return type of the operators they define is `bool`.
 
 On compilers which do not support partial specialization, the
 two-argument forms must be specified by using the names shown below with
 the trailing `'2'`. The single-argument forms with the
 trailing `'1'` are provided for symmetry and to enable certain
-applications of the [link sec:chaining base class chaining]
+applications of the [link utility.utilities.operators.usage.chaining base class chaining]
 technique.
 
-[#sec:mixed_arithmetics]
-
+[#utility.utilities.operators.usage.two_arg.mixed_arithmetics]
 ['Mixed Arithmetics]: Another application of the
  two-argument template forms is for mixed
 arithmetics between a type `T` and a type `U` that
@@ -205,9 +196,9 @@ be different from the user's intention.
 
 To define a complete set of operator signatures, additional 'left'
 forms of the two-argument template forms are provided
-[link table:subtractable2_left `subtractable2_left<T, U>`],
-[link table:dividable2_left `dividable2_left<T, U>`], and
-[link table:modable2_left `modable2_left<T, U>`] that
+[link utility.utilities.operators.arithmetic.smpl_oprs.subtractable2_left `subtractable2_left<T, U>`],
+[link utility.utilities.operators.arithmetic.smpl_oprs.dividable2_left `dividable2_left<T, U>`], and
+[link utility.utilities.operators.arithmetic.smpl_oprs.modable2_left `modable2_left<T, U>`] that
 define the signatures for non-commutative operators where
  `U` appears on the left hand side (`operator-(const U&, const T&)`,
 `operator/(const U&, const T&)`, `operator%(const U&, const T&)`).
@@ -226,21 +217,22 @@ conversion from `U` to `T` and have an implementation equivalent to the code
 that would be automatically created by the compiler if it considered the
 single type binary operator to be the best match.
 
-[#sec:chaining]
-[h5 Base Class Chaining and Object Size]
+[endsect]
 
-Every operator class template, except the [link sec:ex_oprs arithmetic examples]
-and the [link sec:iterator iterator helpers], has an additional, but optional,
+[section:chaining Base Class Chaining and Object Size]
+
+Every operator class template, except the [link utility.utilities.operators.arithmetic.ex_oprs arithmetic examples]
+and the [link utility.utilities.operators.deref.iterator iterator helpers], has an additional, but optional,
 template type parameter `B`. This parameter will be a publicly-derived base class of
 the instantiated template. This means it must be a class type. It can be
 used to avoid the bloating of object sizes that is commonly associated
 with multiple-inheritance from several empty base classes. See the
-[link sec:old_lib_note note for users of older versions] for more
+[link utility.utilities.operators.old_lib_note note for users of older versions] for more
 details.
 
 To provide support for a group of operators, use the
 `B` parameter to chain operator templates into a single-base
-class hierarchy, demostrated in the [link sec:example usage example].
+class hierarchy, demostrated in the [link utility.utilities.operators.example usage example].
 The technique is also used by the composite operator templates to group
 operator definitions. If a chain becomes too long for the compiler to
 support, try replacing some of the operator templates with a single
@@ -249,14 +241,15 @@ length limit only applies to the number of templates directly in the
 chain, not those hidden in group templates.
 
 ['Caveat]: to chain to a base class which is ['not] a Boost operator
-template when using the [link sec:two_arg single-argument form] of a Boost
+template when using the [link utility.utilities.operators.usage.two_arg single-argument form] of a Boost
 operator template, you must specify the operator template with the
 trailing `'1'` in its name. Otherwise the library will assume you mean
 to define a binary operation combining the class you intend to use as
 a base class and the class you're deriving.
 
-[#sec:explicit_instantiation]
-[h5 Separate Explicit Instantiation]
+[endsect]
+
+[section:explicit_instantiation Separate Explicit Instantiation]
 
 On some compilers (e.g. Borland, GCC) even single-inheritance
 seems to cause an increase in object size in some cases. If you are not
@@ -279,16 +272,14 @@ template struct addable<my_class,long>;
 template struct subtractable<my_class,long>;
 ```
 
-
-
 Note that some operator templates cannot use this workaround and must
 be a base class of their primary operand type. Those templates define
 operators which must be member functions, and the workaround needs the
 operators to be independent `friend` functions. The relevant templates
 are:
 
-* [link table:dereferenceable `dereferenceable<>`]
-* [link table:indexable `indexable<>`]
+* [link utility.utilities.operators.deref.dereference.dereferenceable `dereferenceable<>`]
+* [link utility.utilities.operators.deref.dereference.indexable `indexable<>`]
 * Any composite operator template that includes at least one of the above
 
 As Daniel Krugler pointed out, this technique violates C++11 [sect]14.6.5/2 \[temp.inject\]
@@ -298,23 +289,25 @@ rules given by C++11 [sect]3.4.2/2 \[basic.lookup.argdep\], since `my_class` is 
 an associated class of `less_than_comparable<my_class>`. Thus only use this technique
 if all else fails.
 
-[#sec:portability]
-[h5 Requirement Portability]
+[endsect]
+
+[section:portability Requirement Portability]
 
 Many compilers (e.g. MSVC 6.3, GCC 2.95.2) will not enforce the
 requirements in the operator template tables unless the operations which
 depend on them are actually used. This is not standard-conforming
 behavior. In particular, although it would be convenient to derive all
-your classes which need binary operators from the [link table:operators1 `operators<>`]
-and [link table:operators2 `operators2<>`] templates, regardless of
+your classes which need binary operators from the [link utility.utilities.operators.arithmetic.ex_oprs.operators1 `operators<>`]
+and [link utility.utilities.operators.arithmetic.ex_oprs.operators2 `operators2<>`] templates, regardless of
 whether they implement all the requirements of those templates, this
 shortcut is not portable. Even if this currently works with your
 compiler, it may not work later.
 
 [endsect]
 
-[#sec:arithmetic]
-[section Arithmetic Operators]
+[endsect]
+
+[section:arithmetic Arithmetic Operators]
 
 The arithmetic operator templates ease the task of creating a custom
 numeric type. Given a core set of operators, the templates add related
@@ -332,13 +325,12 @@ what other templates they use. The supplied operations and requirements
 of the composite operator templates can be inferred from the operations
 and requirements of the listed components.
 
-[#sec:smpl_oprs]
-[h5 Simple Arithmetic Operators]
+[section:smpl_oprs Simple Arithmetic Operators]
 
 These templates are "simple" since they provide operators based on a
 single operation the base type has to provide. They have an additional
 optional template parameter `B`, which is not shown, for the
-[link sec:chaining base class chaining] technique.
+[link utility.utilities.operators.usage.chaining base class chaining] technique.
 
 The primary operand type `T` needs to be of class type,
 built-in types are not supported.
@@ -355,7 +347,7 @@ built-in types are not supported.
     [[Template] [Supplied Operations] [Requirements] [Propagates constexpr]]
     [
         [
-          [#table:less_than_comparable1] `less_than_comparable<T>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.less_than_comparable1] `less_than_comparable<T>`
 
           __less_than_comparable1__`<T>`
         ]
@@ -371,7 +363,7 @@ built-in types are not supported.
         [
          `t < t1`.
 
-         Return convertible to `bool`. See the [link sec:ordering Ordering Note]
+         Return convertible to `bool`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.ordering Ordering Note]
         ]
 
         [
@@ -381,7 +373,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:less_than_comparable2]`less_than_comparable<T,U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.less_than_comparable2]`less_than_comparable<T,U>`
 
           __less_than_comparable2__`<T, U>`
         ]
@@ -403,7 +395,7 @@ built-in types are not supported.
         [
          `t < u`. `t > u`.
 
-         Returns convertible to `bool`. See the [link sec:ordering Ordering Note].
+         Returns convertible to `bool`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.ordering Ordering Note].
         ]
 
         [
@@ -413,7 +405,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:equality_comparable1]`equality_comparable<T>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.equality_comparable1]`equality_comparable<T>`
 
            __equality_comparable1__`<T>`
         ]
@@ -435,7 +427,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:equality_comparable2]`equality_comparable<T,U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.equality_comparable2]`equality_comparable<T,U>`
 
           __equality_comparable2__`<T, U>`
         ]
@@ -461,7 +453,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:addable1]`addable<T>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.addable1]`addable<T>`
 
           `addable1<T>`
         ]
@@ -473,7 +465,7 @@ built-in types are not supported.
         [
          `T temp(t); temp += t1`.
 
-         Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+         Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -481,7 +473,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:addable2]`addable<T, U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.addable2]`addable<T, U>`
 
           `addable2<T, U>`
         ]
@@ -495,7 +487,7 @@ built-in types are not supported.
         [
          `T temp(t); temp += u`.
 
-         Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+         Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -503,7 +495,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:subtractable1]`subtractable<T>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.subtractable1]`subtractable<T>`
 
            `subtractable1<T>`
         ]
@@ -515,7 +507,7 @@ built-in types are not supported.
         [
          `T temp(t); temp -= t1`.
 
-         Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+         Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -523,7 +515,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:subtractable2]`subtractable<T,U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.subtractable2]`subtractable<T,U>`
 
           `subtractable2<T, U>`
         ]
@@ -535,7 +527,7 @@ built-in types are not supported.
         [
          `T temp(t); temp -= u`.
 
-         Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+         Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -543,7 +535,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:subtractable2_left]`subtractable2_left<T,U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.subtractable2_left]`subtractable2_left<T,U>`
         ]
 
         [
@@ -561,7 +553,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:multipliable1]`multipliable<T>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.multipliable1]`multipliable<T>`
 
           `multipliable1<T>`
         ]
@@ -573,7 +565,7 @@ built-in types are not supported.
         [
          `T temp(t); temp *= t1`.
 
-         Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+         Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -581,7 +573,7 @@ built-in types are not supported.
 
       [
         [
-           [#table:multipliable2]`multipliable<T,U>`
+           [#utility.utilities.operators.arithmetic.smpl_oprs.multipliable2]`multipliable<T,U>`
 
            `multipliable2<T, U>`
         ]
@@ -595,7 +587,7 @@ built-in types are not supported.
         [
          `T temp(t); temp *= u`.
 
-         Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+         Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -603,7 +595,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:dividable1]`dividable<T>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.dividable1]`dividable<T>`
 
           `dividable1<T>`
         ]
@@ -615,7 +607,7 @@ built-in types are not supported.
         [
           `T temp(t); temp /= t1`.
 
-          Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+          Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -623,7 +615,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:dividable2]`dividable<T, U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.dividable2]`dividable<T, U>`
 
           `dividable2<T, U>`
         ]
@@ -635,7 +627,7 @@ built-in types are not supported.
         [
           `T temp(t); temp /= u`.
 
-          Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+          Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -643,7 +635,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:dividable2_left]`dividable2_left<T,U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.dividable2_left]`dividable2_left<T,U>`
         ]
 
         [
@@ -661,7 +653,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:modable1]`modable<T>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.modable1]`modable<T>`
 
          `modable1<T>`
        ]
@@ -673,7 +665,7 @@ built-in types are not supported.
         [
          `T temp(t); temp %= t1`.
 
-         Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+         Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -681,7 +673,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:modable2]`modable<T, U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.modable2]`modable<T, U>`
 
          `modable2<T, U>`
         ]
@@ -693,7 +685,7 @@ built-in types are not supported.
         [
           `T temp(t); temp %= u`.
 
-          Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+          Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -701,7 +693,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:modable2_left]`modable2_left<T,U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.modable2_left]`modable2_left<T,U>`
         ]
 
         [
@@ -719,7 +711,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:orable1]`orable<T>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.orable1]`orable<T>`
 
           `orable1<T>`
         ]
@@ -731,7 +723,7 @@ built-in types are not supported.
         [
           `T temp(t); temp |= t1`.
 
-          Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+          Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -739,7 +731,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:orable2]`orable<T, U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.orable2]`orable<T, U>`
 
           `orable2<T, U>`
         ]
@@ -753,7 +745,7 @@ built-in types are not supported.
         [
           `T temp(t); temp |= u`.
 
-          Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+          Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -761,7 +753,7 @@ built-in types are not supported.
 
       [
         [
-           [#table:andable1]`andable<T>`
+           [#utility.utilities.operators.arithmetic.smpl_oprs.andable1]`andable<T>`
 
            `andable1<T>`
         ]
@@ -773,7 +765,7 @@ built-in types are not supported.
         [
            `T temp(t); temp &= t1`.
 
-           Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+           Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -781,7 +773,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:andable2]`andable<T, U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.andable2]`andable<T, U>`
 
           `andable2<T, U>`
        ]
@@ -795,7 +787,7 @@ built-in types are not supported.
         [
           `T temp(t); temp &= u`.
 
-          Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+          Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -803,7 +795,7 @@ built-in types are not supported.
 
       [
         [
-           [#table:xorable1]`xorable<T>`
+           [#utility.utilities.operators.arithmetic.smpl_oprs.xorable1]`xorable<T>`
 
            `xorable1<T>`
         ]
@@ -815,7 +807,7 @@ built-in types are not supported.
         [
             `T temp(t); temp ^= t1`.
 
-             Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+             Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -823,7 +815,7 @@ built-in types are not supported.
 
       [
          [
-             [#table:xorable2]`xorable<T, U>`
+             [#utility.utilities.operators.arithmetic.smpl_oprs.xorable2]`xorable<T, U>`
 
              `xorable2<T, U>`
          ]
@@ -837,7 +829,7 @@ built-in types are not supported.
          [
              `T temp(t); temp ^= u`.
 
-             Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+             Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
          ]
 
          [No]
@@ -845,7 +837,7 @@ built-in types are not supported.
 
       [
         [
-           [#table:incrementable]`incrementable<T>`
+           [#utility.utilities.operators.arithmetic.smpl_oprs.incrementable]`incrementable<T>`
         ]
 
         [
@@ -863,7 +855,7 @@ built-in types are not supported.
 
       [
         [
-            [#table:decrementable]`decrementable<T>`
+            [#utility.utilities.operators.arithmetic.smpl_oprs.decrementable]`decrementable<T>`
         ]
 
         [
@@ -881,7 +873,7 @@ built-in types are not supported.
 
       [
         [
-            [#table:left_shiftable1]`left_shiftable<T>`
+            [#utility.utilities.operators.arithmetic.smpl_oprs.left_shiftable1]`left_shiftable<T>`
 
             `left_shiftable1<T>`
         ]
@@ -893,7 +885,7 @@ built-in types are not supported.
         [
             `T temp(t); temp <<= t1`.
 
-            Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+            Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -901,7 +893,7 @@ built-in types are not supported.
 
       [
         [
-            [#table:left_shiftable2]`left_shiftable<T,U>`
+            [#utility.utilities.operators.arithmetic.smpl_oprs.left_shiftable2]`left_shiftable<T,U>`
 
             `left_shiftable2<T, U>`
         ]
@@ -913,7 +905,7 @@ built-in types are not supported.
         [
             `T temp(t); temp <<= u`.
 
-            Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+            Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -921,7 +913,7 @@ built-in types are not supported.
 
       [
          [
-             [#table:right_shiftable1]`right_shiftable<T>`
+             [#utility.utilities.operators.arithmetic.smpl_oprs.right_shiftable1]`right_shiftable<T>`
 
              `right_shiftable1<T>`
          ]
@@ -933,7 +925,7 @@ built-in types are not supported.
          [
              `T temp(t); temp >>= t1`.
 
-             Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+             Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
          ]
 
          [No]
@@ -941,7 +933,7 @@ built-in types are not supported.
 
       [
         [
-            [#table:right_shiftable2]`right_shiftable<T,U>`
+            [#utility.utilities.operators.arithmetic.smpl_oprs.right_shiftable2]`right_shiftable<T,U>`
 
             `right_shiftable2<T, U>`
         ]
@@ -953,7 +945,7 @@ built-in types are not supported.
         [
             `T temp(t); temp >>= u`.
 
-            Return convertible to `T`. See the [link sec:symmetry Symmetry Note].
+            Return convertible to `T`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.symmetry Symmetry Note].
         ]
 
         [No]
@@ -961,7 +953,7 @@ built-in types are not supported.
 
       [
         [
-            [#table:equivalent1]`equivalent<T>`
+            [#utility.utilities.operators.arithmetic.smpl_oprs.equivalent1]`equivalent<T>`
 
             __equivalent1__`<T>`
         ]
@@ -973,7 +965,7 @@ built-in types are not supported.
         [
             `t < t1`.
 
-            Return convertible to `bool`. See the [link sec:ordering Ordering Note].
+            Return convertible to `bool`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.ordering Ordering Note].
         ]
 
         [
@@ -983,7 +975,7 @@ built-in types are not supported.
 
       [
         [
-            [#table:equivalent2]`equivalent<T, U>`
+            [#utility.utilities.operators.arithmetic.smpl_oprs.equivalent2]`equivalent<T, U>`
 
             __equivalent2__`<T, U>`
         ]
@@ -995,7 +987,7 @@ built-in types are not supported.
         [
             `t < u`. `t > u`.
 
-             Returns convertible to `bool`. See the [link sec:ordering Ordering Note].
+             Returns convertible to `bool`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.ordering Ordering Note].
         ]
 
         [
@@ -1005,7 +997,7 @@ built-in types are not supported.
 
       [
         [
-            [#table:partially_ordered1]`partially_ordered<T>`
+            [#utility.utilities.operators.arithmetic.smpl_oprs.partially_ordered1]`partially_ordered<T>`
 
              __partially_ordered1__`<T>`
         ]
@@ -1021,7 +1013,7 @@ built-in types are not supported.
         [
            `t < t1`. `t == t1`.
 
-            Returns convertible to `bool`. See the [link sec:ordering Ordering Note].
+            Returns convertible to `bool`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.ordering Ordering Note].
         ]
 
         [
@@ -1031,7 +1023,7 @@ built-in types are not supported.
 
       [
         [
-          [#table:partially_ordered2]`partially_ordered<T,U>`
+          [#utility.utilities.operators.arithmetic.smpl_oprs.partially_ordered2]`partially_ordered<T,U>`
 
          __partially_ordered2__`<T, U>`
         ]
@@ -1053,7 +1045,7 @@ built-in types are not supported.
         [
             `t < u`. `t > u`. `t == u`.
 
-            Returns convertible to `bool`. See the [link sec:ordering Ordering Note].
+            Returns convertible to `bool`. See the [link utility.utilities.operators.arithmetic.smpl_oprs.ordering Ordering Note].
         ]
 
         [
@@ -1062,24 +1054,24 @@ built-in types are not supported.
       ]
 ]
 
-[#sec:ordering]
-['Ordering Note]: The [link table:less_than_comparable1 `less_than_comparable<T>`] and
-[link table:partially_ordered1 `partially_ordered<T>`] templates provide the same set
-of operations. However, the workings of [link table:less_than_comparable1 `less_than_comparable<T>`] assume
+[#utility.utilities.operators.arithmetic.smpl_oprs.ordering]
+['Ordering Note]: The [link utility.utilities.operators.arithmetic.smpl_oprs.less_than_comparable1 `less_than_comparable<T>`] and
+[link utility.utilities.operators.arithmetic.smpl_oprs.partially_ordered1 `partially_ordered<T>`] templates provide the same set
+of operations. However, the workings of [link utility.utilities.operators.arithmetic.smpl_oprs.less_than_comparable1 `less_than_comparable<T>`] assume
 that all values of type `T` can be placed in a total order. If
 that is not true (e.g. Not-a-Number values in IEEE floating point
-arithmetic), then [link table:partially_ordered1 `partially_ordered<T>`] should be
-used. The [link table:partially_ordered1 `partially_ordered<T>`] template can
+arithmetic), then [link utility.utilities.operators.arithmetic.smpl_oprs.partially_ordered1 `partially_ordered<T>`] should be
+used. The [link utility.utilities.operators.arithmetic.smpl_oprs.partially_ordered1 `partially_ordered<T>`] template can
 be used for a totally-ordered type, but it is not as efficient as
-[link table:less_than_comparable1 `less_than_comparable<T>`]. This
-rule also applies for [link table:less_than_comparable2 `less_than_comparable<T, U>`] and
-[link table:partially_ordered2 `partially_ordered<T,U>`] with respect to the ordering
+[link utility.utilities.operators.arithmetic.smpl_oprs.less_than_comparable1 `less_than_comparable<T>`]. This
+rule also applies for [link utility.utilities.operators.arithmetic.smpl_oprs.less_than_comparable2 `less_than_comparable<T, U>`] and
+[link utility.utilities.operators.arithmetic.smpl_oprs.partially_ordered2 `partially_ordered<T,U>`] with respect to the ordering
 of all `T` and `U` values, and for both versions of
-[link table:equivalent1 `equivalent<>`]. The solution for
-[link table:equivalent1 `equivalent<>`] is to write a custom
+[link utility.utilities.operators.arithmetic.smpl_oprs.equivalent1 `equivalent<>`]. The solution for
+[link utility.utilities.operators.arithmetic.smpl_oprs.equivalent1 `equivalent<>`] is to write a custom
 `operator==` for the target class.
 
-[#sec:symmetry]
+[#utility.utilities.operators.arithmetic.smpl_oprs.symmetry]
 ['Symmetry Note]: Before talking about symmetry, we need to talk about optimizations to
 understand the reasons for the different implementation styles of
 operators. Let's have a look at `operator+` for a class
@@ -1163,15 +1155,16 @@ signature or a strict symmetric behaviour, you should set
 will force the NRVO-friendly implementation to be used even for compilers
 that do not implement the NRVO.
 
-[#sec:grpd_oprs]
-[h5 Grouped Arithmetic Operators]
+[endsect]
+
+[section:grpd_oprs Grouped Arithmetic Operators]
 
 The following templates provide common groups of related operations.
 For example, since a type which is addable is usually also subtractable,
-the [link table:additive1 `additive`] template provides the
+the [link utility.utilities.operators.arithmetic.grpd_oprs.additive1 `additive`] template provides the
 combined operators of both. The grouped operator templates have an
 additional optional template parameter `B`, which is not
-shown, for the [link sec:chaining base class chaining] technique.
+shown, for the [link utility.utilities.operators.usage.chaining base class chaining] technique.
 
 [table Notation
     [[Key] [Description]]
@@ -1187,364 +1180,364 @@ shown, for the [link sec:chaining base class chaining] technique.
   ]
   [
     [
-        [#table:totally_ordered1] `totally_ordered<T>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered1] `totally_ordered<T>`
 
         __totally_ordered1__`<T>`
     ]
     [
-        [link table:less_than_comparable1 `less_than_comparable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.less_than_comparable1 `less_than_comparable<T>`]
 
-        [link table:equality_comparable1 `equality_comparable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.equality_comparable1 `equality_comparable<T>`]
     ]
   ]
   [
     [
-        [#table:totally_ordered2]`totally_ordered<T,U>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered2]`totally_ordered<T,U>`
 
         __totally_ordered2__`<T, U>`
      ]
      [
-        [link table:less_than_comparable2 `less_than_comparable<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.less_than_comparable2 `less_than_comparable<T,U>`]
 
-        [link table:equality_comparable2 `equality_comparable<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.equality_comparable2 `equality_comparable<T,U>`]
      ]
   ]
   [
     [
-       [#table:additive1]`additive<T>`
+       [#utility.utilities.operators.arithmetic.grpd_oprs.additive1]`additive<T>`
 
        __additive1__`<T>`
      ]
      [
-        [link table:addable1 `addable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.addable1 `addable<T>`]
 
-        [link table:subtractable1 `subtractable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.subtractable1 `subtractable<T>`]
      ]
   ]
   [
     [
-       [#table:additive2]`additive<T, U>`
+       [#utility.utilities.operators.arithmetic.grpd_oprs.additive2]`additive<T, U>`
 
        __additive2__`<T, U>`
      ]
     [
-        [link table:addable2 `addable<T, U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.addable2 `addable<T, U>`]
 
-        [link table:subtractable2 `subtractable<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.subtractable2 `subtractable<T,U>`]
     ]
   ]
   [
     [
-        [#table:multiplicative1] `multiplicative<T>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.multiplicative1] `multiplicative<T>`
 
         __multiplicative1__`<T>`
     ]
     [
-        [link table:multipliable1 `multipliable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.multipliable1 `multipliable<T>`]
 
-        [link table:dividable1 `dividable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.dividable1 `dividable<T>`]
     ]
   ]
   [
     [
-       [#table:multiplicative2]`multiplicative<T,U>`
+       [#utility.utilities.operators.arithmetic.grpd_oprs.multiplicative2]`multiplicative<T,U>`
 
        __multiplicative2__`<T, U>`
     ]
     [
-        [link table:multipliable2 `multipliable<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.multipliable2 `multipliable<T,U>`]
 
-        [link table:dividable2 `dividable<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.dividable2 `dividable<T,U>`]
     ]
   ]
   [
      [
-        [#table:integer_multiplicative1] `integer_multiplicative<T>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.integer_multiplicative1] `integer_multiplicative<T>`
 
         __integer_multiplicative1__`<T>`
      ]
      [
-        [link table:multiplicative1 `multiplicative<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.multiplicative1 `multiplicative<T>`]
 
-        [link table:modable1 `modable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.modable1 `modable<T>`]
      ]
   ]
   [
      [
-        [#table:integer_multiplicative2] `integer_multiplicative<T,U>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.integer_multiplicative2] `integer_multiplicative<T,U>`
 
         __integer_multiplicative2__`<T, U>`
      ]
      [
-         [link table:multiplicative2 `multiplicative<T,U>`]
+         [link utility.utilities.operators.arithmetic.grpd_oprs.multiplicative2 `multiplicative<T,U>`]
 
-         [link table:modable2 `modable<T, U>`]
+         [link utility.utilities.operators.arithmetic.smpl_oprs.modable2 `modable<T, U>`]
      ]
   ]
   [
     [
-        [#table:arithmetic1]`arithmetic<T>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.arithmetic1]`arithmetic<T>`
 
         __arithmetic1__`<T>`
      ]
      [
-        [link table:additive1 `additive<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.additive1 `additive<T>`]
 
-        [link table:multiplicative1 `multiplicative<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.multiplicative1 `multiplicative<T>`]
      ]
   ]
   [
     [
-        [#table:arithmetic2]`arithmetic<T, U>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.arithmetic2]`arithmetic<T, U>`
 
         __arithmetic2__`<T, U>`
     ]
     [
-        [link table:additive2 `additive<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.additive2 `additive<T,U>`]
 
-        [link table:multiplicative2 `multiplicative<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.multiplicative2 `multiplicative<T,U>`]
     ]
   ]
   [
     [
-       [#table:integer_arithmetic1] `integer_arithmetic<T>`
+       [#utility.utilities.operators.arithmetic.grpd_oprs.integer_arithmetic1] `integer_arithmetic<T>`
 
        __integer_arithmetic1__`<T>`
     ]
     [
-        [link table:additive1 `additive<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.additive1 `additive<T>`]
 
-        [link table:integer_multiplicative1 `integer_multiplicative<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.integer_multiplicative1 `integer_multiplicative<T>`]
     ]
   ]
   [
     [
-        [#table:integer_arithmetic2]`integer_arithmetic<T, U>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.integer_arithmetic2]`integer_arithmetic<T, U>`
 
         __integer_arithmetic2__`<T, U>`
     ]
     [
-        [link table:additive2 `additive<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.additive2 `additive<T,U>`]
 
-        [link table:integer_multiplicative2 `integer_multiplicative<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.integer_multiplicative2 `integer_multiplicative<T,U>`]
     ]
   ]
   [
     [
-       [#table:bitwise1]`bitwise<T>`
+       [#utility.utilities.operators.arithmetic.grpd_oprs.bitwise1]`bitwise<T>`
 
        __bitwise1__`<T>`
     ]
     [
-        [link table:xorable1 `xorable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.xorable1 `xorable<T>`]
 
-        [link table:andable1 `andable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.andable1 `andable<T>`]
 
-        [link table:orable1 `orable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.orable1 `orable<T>`]
     ]
   ]
   [
     [
-        [#table:bitwise2]`bitwise<T, U>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.bitwise2]`bitwise<T, U>`
 
         __bitwise2__`<T, U>`
     ]
     [
-        [link table:xorable2 `xorable<T, U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.xorable2 `xorable<T, U>`]
 
-        [link table:andable2 `andable<T, U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.andable2 `andable<T, U>`]
 
-        [link table:orable2 `orable<T, U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.orable2 `orable<T, U>`]
     ]
   ]
   [
     [
-        [#table:unit_steppable] `unit_steppable<T>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.unit_steppable] `unit_steppable<T>`
     ]
     [
-        [link table:incrementable `incrementable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.incrementable `incrementable<T>`]
 
-        [link table:decrementable `decrementable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.decrementable `decrementable<T>`]
     ]
   ]
   [
     [
-        [#table:shiftable1]`shiftable<T>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.shiftable1]`shiftable<T>`
 
         __shiftable1__`<T>`
     ]
     [
-        [link table:left_shiftable1 `left_shiftable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.left_shiftable1 `left_shiftable<T>`]
 
-        [link table:right_shiftable1 `right_shiftable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.right_shiftable1 `right_shiftable<T>`]
     ]
   ]
   [
     [
-        [#table:shiftable2]`shiftable<T, U>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.shiftable2]`shiftable<T, U>`
 
         __shiftable2__`<T, U>`
     ]
     [
-        [link table:left_shiftable2 `left_shiftable<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.left_shiftable2 `left_shiftable<T,U>`]
 
-        [link table:right_shiftable2 `right_shiftable<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.right_shiftable2 `right_shiftable<T,U>`]
     ]
   ]
   [
      [
-         [#table:ring_operators1] `ring_operators<T>`
+         [#utility.utilities.operators.arithmetic.grpd_oprs.ring_operators1] `ring_operators<T>`
 
          __ring_operators1__`<T>`
      ]
      [
-        [link table:additive1 `additive<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.additive1 `additive<T>`]
 
-        [link table:multipliable1 `multipliable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.multipliable1 `multipliable<T>`]
     ]
   ]
   [
     [
-       [#table:ring_operators2]`ring_operators<T,U>`
+       [#utility.utilities.operators.arithmetic.grpd_oprs.ring_operators2]`ring_operators<T,U>`
 
        __ring_operators2__`<T, U>`
     ]
     [
-        [link table:additive2 `additive<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.additive2 `additive<T,U>`]
 
-        [link table:subtractable2_left `subtractable2_left<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.subtractable2_left `subtractable2_left<T,U>`]
 
-        [link table:multipliable2 `multipliable<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.multipliable2 `multipliable<T,U>`]
     ]
   ]
   [
     [
-        [#table:ordered_ring_operators1] `ordered_ring_operators<T>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.ordered_ring_operators1] `ordered_ring_operators<T>`
 
         __ordered_ring_operators1__`<T>`
     ]
     [
-        [link table:ring_operators1 `ring_operators<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.ring_operators1 `ring_operators<T>`]
 
-        [link table:totally_ordered1 `totally_ordered<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered1 `totally_ordered<T>`]
     ]
   ]
   [
      [
-        [#table:ordered_ring_operators2] `ordered_ring_operators<T,U>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.ordered_ring_operators2] `ordered_ring_operators<T,U>`
 
         __ordered_ring_operators2__`<T, U>`
      ]
      [
-        [link table:ring_operators2 `ring_operators<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.ring_operators2 `ring_operators<T,U>`]
 
-        [link table:totally_ordered2 `totally_ordered<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered2 `totally_ordered<T,U>`]
      ]
   ]
   [
     [
-        [#table:field_operators1]`field_operators<T>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.field_operators1]`field_operators<T>`
 
         __field_operators1__`<T>`
     ]
     [
-        [link table:ring_operators1 `ring_operators<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.ring_operators1 `ring_operators<T>`]
 
-        [link table:dividable1 `dividable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.dividable1 `dividable<T>`]
     ]
   ]
   [
     [
-       [#table:field_operators2]`field_operators<T,U>`
+       [#utility.utilities.operators.arithmetic.grpd_oprs.field_operators2]`field_operators<T,U>`
 
        __field_operators2__`<T, U>`
     ]
     [
-        [link table:ring_operators2 `ring_operators<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.ring_operators2 `ring_operators<T,U>`]
 
-        [link table:dividable2 `dividable<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.dividable2 `dividable<T,U>`]
 
-        [link table:dividable2_left `dividable2_left<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.dividable2_left `dividable2_left<T,U>`]
     ]
   ]
   [
     [
-        [#table:ordered_field_operators1]`ordered_field_operators<T>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.ordered_field_operators1]`ordered_field_operators<T>`
 
         __ordered_field_operators1__`<T>`
     ]
     [
-        [link table:field_operators1 `field_operators<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.field_operators1 `field_operators<T>`]
 
-        [link table:totally_ordered1 `totally_ordered<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered1 `totally_ordered<T>`]
     ]
   ]
   [
     [
-         [#table:ordered_field_operators2]`ordered_field_operators<T,U>`
+         [#utility.utilities.operators.arithmetic.grpd_oprs.ordered_field_operators2]`ordered_field_operators<T,U>`
 
          __ordered_field_operators2__`<T, U>`
     ]
     [
-        [link table:field_operators2 `field_operators<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.field_operators2 `field_operators<T,U>`]
 
-        [link table:totally_ordered2 `totally_ordered<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered2 `totally_ordered<T,U>`]
     ]
   ]
   [
     [
-        [#table:euclidean_ring_operators1]`euclidean_ring_operators<T>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.euclidean_ring_operators1]`euclidean_ring_operators<T>`
 
         __euclidean_ring_operators1__`<T>`
     ]
     [
-        [link table:ring_operators1 `ring_operators<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.ring_operators1 `ring_operators<T>`]
 
-        [link table:dividable1 `dividable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.dividable1 `dividable<T>`]
 
-        [link table:modable1 `modable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.modable1 `modable<T>`]
     ]
   ]
   [
     [
-        [#table:euclidean_ring_operators2] `euclidean_ring_operators<T,U>`
+        [#utility.utilities.operators.arithmetic.grpd_oprs.euclidean_ring_operators2] `euclidean_ring_operators<T,U>`
 
         __euclidean_ring_operators2__`<T, U>`
     ]
     [
-        [link table:ring_operators2 `ring_operators<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.ring_operators2 `ring_operators<T,U>`]
 
-        [link table:dividable2 `dividable<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.dividable2 `dividable<T,U>`]
 
-        [link table:dividable2_left `dividable2_left<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.dividable2_left `dividable2_left<T,U>`]
 
-        [link table:modable2 `modable<T, U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.modable2 `modable<T, U>`]
 
-        [link table:modable2_left `modable2_left<T,U>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.modable2_left `modable2_left<T,U>`]
     ]
   ]
   [
     [
-         [#table:ordered_euclidean_ring_operators1] `ordered_euclidean_ring_operators<T>`
+         [#utility.utilities.operators.arithmetic.grpd_oprs.ordered_euclidean_ring_operators1] `ordered_euclidean_ring_operators<T>`
 
          __ordered_euclidean_ring_operators1__`<T>`
     ]
     [
-        [link table:euclidean_ring_operators1 `euclidean_ring_operators<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.euclidean_ring_operators1 `euclidean_ring_operators<T>`]
 
-        [link table:totally_ordered1 `totally_ordered<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered1 `totally_ordered<T>`]
     ]
   ]
   [
      [
-         [#table:ordered_euclidean_ring_operators2]`ordered_euclidean_ring_operators<T,U>`
+         [#utility.utilities.operators.arithmetic.grpd_oprs.ordered_euclidean_ring_operators2]`ordered_euclidean_ring_operators<T,U>`
 
          __ordered_euclidean_ring_operators2__`<T, U>`
      ]
      [
-        [link table:euclidean_ring_operators2 `euclidean_ring_operators<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.euclidean_ring_operators2 `euclidean_ring_operators<T,U>`]
 
-        [link table:totally_ordered2 `totally_ordered<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered2 `totally_ordered<T,U>`]
      ]
   ]
 ]
@@ -1554,13 +1547,14 @@ Boost.Operators library used "`euclidian`", but it was pointed out that
 "`euclidean`" is the more common spelling. To be compatible with older
 version, the library now supports both spellings.
 
-[#sec:ex_oprs]
-[h5 Example Templates]
+[endsect]
 
-The arithmetic operator class templates [link table:operators1 `operators<>`] and
-[link table:operators2 `operators2<>`] are examples of non-extensible operator
+[section:ex_oprs Example Templates]
+
+The arithmetic operator class templates [link utility.utilities.operators.arithmetic.ex_oprs.operators1 `operators<>`] and
+[link utility.utilities.operators.arithmetic.ex_oprs.operators2 `operators2<>`] are examples of non-extensible operator
 grouping classes. These legacy class templates, from previous versions
-of the header, cannot be used for [link sec:chaining base class chaining].
+of the header, cannot be used for [link utility.utilities.operators.usage.chaining base class chaining].
 
 [table Notation
     [[Key] [Description]]
@@ -1576,35 +1570,35 @@ of the header, cannot be used for [link sec:chaining base class chaining].
   ]
   [
     [
-       [#table:operators1]__operators__`<T>`
+       [#utility.utilities.operators.arithmetic.ex_oprs.operators1]__operators__`<T>`
     ]
     [
-        [link table:totally_ordered1 `totally_ordered<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered1 `totally_ordered<T>`]
 
-        [link table:integer_arithmetic1 `integer_arithmetic<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.integer_arithmetic1 `integer_arithmetic<T>`]
 
-        [link table:bitwise1 `bitwise<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.bitwise1 `bitwise<T>`]
 
-        [link table:unit_steppable `unit_steppable<T>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.unit_steppable `unit_steppable<T>`]
     ]
   ]
   [
     [
-        [#table:operators2]__operators__`<T, U>`
+        [#utility.utilities.operators.arithmetic.ex_oprs.operators2]__operators__`<T, U>`
 
         __operators2__`<T, U>`
     ]
     [
-        [link table:totally_ordered2 `totally_ordered<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered2 `totally_ordered<T,U>`]
 
-        [link table:integer_arithmetic2 `integer_arithmetic<T,U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.integer_arithmetic2 `integer_arithmetic<T,U>`]
 
-        [link table:bitwise2 `bitwise<T, U>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.bitwise2 `bitwise<T, U>`]
     ]
   ]
 ]
 
-[#sec:a_demo]
+[#utility.utilities.operators.arithmetic.grpd_oprs.a_demo]
 ['Arithmetic Operators Demonstration and Test Program]: The
 [@../../../test/operators_test.cpp `operators_test.cpp`]
 program demonstrates the use of the arithmetic operator templates, and
@@ -1613,16 +1607,17 @@ report for the test results with selected platforms.
 
 [endsect]
 
-[#sec:deref]
-[section Dereference Operators and Iterator Helpers]
+[endsect]
 
-The [link sec:iterator iterator helper] templates ease the task of
+[section:deref Dereference Operators and Iterator Helpers]
+
+The [link utility.utilities.operators.deref.iterator iterator helper] templates ease the task of
 creating a custom iterator. Similar to arithmetic types, a complete
 iterator has many operators that are "redundant" and can be implemented
 in terms of the core set of operators.
 
-The [link sec:dereference dereference operators] were motivated by
-the [link sec:iterator iterator helpers], but are often useful in
+The [link utility.utilities.operators.deref.dereference dereference operators] were motivated by
+the [link utility.utilities.operators.deref.iterator iterator helpers], but are often useful in
 non-iterator contexts as well. Many of the redundant iterator operators
 are also arithmetic operators, so the iterator helper classes borrow many
 of the operators defined above. In fact, only two new operators need to
@@ -1635,12 +1630,11 @@ their return type. The composite operator templates list their component
 templates, which the instantiating type must support, and possibly other
 requirements.
 
-[#sec:dereference]
-[h5 Dereference Operators]
+[section:dereference Dereference Operators]
 
 All the dereference operator templates in this table accept an
 optional template parameter (not shown) to be used for
-[link sec:chaining base class chaining].
+[link utility.utilities.operators.usage.chaining base class chaining].
 
 [table Notation
     [[Key] [Description]]
@@ -1662,7 +1656,7 @@ optional template parameter (not shown) to be used for
   ]
   [
     [
-      [#table:dereferenceable]__dereferenceable__`<T,P>`
+      [#utility.utilities.operators.deref.dereference.dereferenceable]__dereferenceable__`<T,P>`
     ]
     [
       `P operator->() const`
@@ -1673,7 +1667,7 @@ optional template parameter (not shown) to be used for
   ]
   [
     [
-       [#table:indexable]__indexable__`<T, D, R>`
+       [#utility.utilities.operators.deref.dereference.indexable]__indexable__`<T, D, R>`
     ]
     [
        `R operator[](D n) const`
@@ -1684,14 +1678,15 @@ optional template parameter (not shown) to be used for
   ]
 ]
 
-[#sec:grpd_iter_oprs]
-[h5 Grouped Iterator Operators]
+[endsect]
+
+[section:grpd_iter_oprs Grouped Iterator Operators]
 
 There are five iterator operator class templates, each for a different
 category of iterator. The following table shows the operator groups for
 any category that a custom iterator could define. These class templates
 have an additional optional template parameter `B`, which is
-not shown, to support [link sec:chaining base class chaining].
+not shown, to support [link utility.utilities.operators.usage.chaining base class chaining].
 
 [table Notation
     [[Key] [Description]]
@@ -1710,66 +1705,67 @@ not shown, to support [link sec:chaining base class chaining].
   ]
   [
     [
-        [#table:input_iteratable]__input_iteratable__`<T, P>`
+        [#utility.utilities.operators.deref.grpd_iter_oprs.input_iteratable]__input_iteratable__`<T, P>`
     ]
     [
-        [link table:equality_comparable1 `equality_comparable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.equality_comparable1 `equality_comparable<T>`]
 
-        [link table:incrementable `incrementable<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.incrementable `incrementable<T>`]
 
-        [link table:dereferenceable `dereferenceable<T,P>`]
+        [link utility.utilities.operators.deref.dereference.dereferenceable `dereferenceable<T,P>`]
     ]
   ]
   [
     [
-        [#table:output_iteratable]__output_iteratable__`<T>`
+        [#utility.utilities.operators.deref.grpd_iter_oprs.output_iteratable]__output_iteratable__`<T>`
     ]
     [
-        [link table:incrementable `incrementable<T>`]
-    ]
-  ]
-  [
-    [
-        [#table:forward_iteratable]__forward_iteratable__`<T, P>`
-    ]
-    [
-        [link table:input_iteratable `input_iteratable<T,P>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.incrementable `incrementable<T>`]
     ]
   ]
   [
     [
-        [#table:bidirectional_iteratable] __bidirectional_iteratable__`<T,P>`
+        [#utility.utilities.operators.deref.grpd_iter_oprs.forward_iteratable]__forward_iteratable__`<T, P>`
     ]
     [
-        [link table:forward_iteratable `forward_iteratable<T, P>`]
-
-        [link table:decrementable `decrementable<T>`]
+        [link utility.utilities.operators.deref.grpd_iter_oprs.input_iteratable `input_iteratable<T,P>`]
     ]
   ]
   [
     [
-        [#table:random_access_iteratable] __random_access_iteratable__`<T, P, D, R>`
+        [#utility.utilities.operators.deref.grpd_iter_oprs.bidirectional_iteratable] __bidirectional_iteratable__`<T,P>`
     ]
     [
-        [link table:bidirectional_iteratable `bidirectional_iteratable<T, P>`]
+        [link utility.utilities.operators.deref.grpd_iter_oprs.forward_iteratable `forward_iteratable<T, P>`]
 
-        [link table:totally_ordered1 `totally_ordered<T>`]
+        [link utility.utilities.operators.arithmetic.smpl_oprs.decrementable `decrementable<T>`]
+    ]
+  ]
+  [
+    [
+        [#utility.utilities.operators.deref.grpd_iter_oprs.random_access_iteratable] __random_access_iteratable__`<T, P, D, R>`
+    ]
+    [
+        [link utility.utilities.operators.deref.grpd_iter_oprs.bidirectional_iteratable `bidirectional_iteratable<T, P>`]
 
-        [link table:additive2 `additive<T, D>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.totally_ordered1 `totally_ordered<T>`]
 
-        [link table:indexable `indexable<T, D, R>`]
+        [link utility.utilities.operators.arithmetic.grpd_oprs.additive2 `additive<T, D>`]
+
+        [link utility.utilities.operators.deref.dereference.indexable `indexable<T, D, R>`]
     ]
   ]
 ]
 
-[#sec:iterator]
-[h5 Iterator Helpers]
+[endsect]
+
+[section:iterator Iterator Helpers]
 
 There are also five iterator helper class templates, each
 corresponding to a different iterator category. These classes cannot be
-used for [link sec:chaining base class chaining]. The following
+used for [link utility.utilities.operators.usage.chaining base class chaining]. The following
 summaries show that these class templates supply both the iterator
-operators from the [link sec:grpd_iter_oprs iterator operator class
+operators from the [link utility.utilities.operators.deref.grpd_iter_oprs iterator operator class
 templates] and the iterator `typedef`s required by the C++ standard,
 such as `iterator_category` and `value_type`.
 
@@ -1791,52 +1787,51 @@ such as `iterator_category` and `value_type`.
   ]
   [
     [
-       [#table:input_iterator_helper]__input_iterator_helper__`<T, V, D, P, R>`
+       [#utility.utilities.operators.deref.iterator.input_iterator_helper]__input_iterator_helper__`<T, V, D, P, R>`
     ]
     [
-        Supports the operations and has the requirements of [link table:input_iteratable `input_iteratable<T, P>`]
+        Supports the operations and has the requirements of [link utility.utilities.operators.deref.grpd_iter_oprs.input_iteratable `input_iteratable<T, P>`]
     ]
   ]
   [
     [
-        [#table:output_iterator_helper]__output_iterator_helper__`<T>`
+        [#utility.utilities.operators.deref.iterator.output_iterator_helper]__output_iterator_helper__`<T>`
     ]
     [
-        Supports the operations and has the requirements of [link table:output_iteratable `output_iteratable<T>`]
+        Supports the operations and has the requirements of [link utility.utilities.operators.deref.grpd_iter_oprs.output_iteratable `output_iteratable<T>`]
 
         See also \[[link note:1 1]\], \[[link note:2 2]\].
     ]
   ]
   [
     [
-        [#table:forward_iterator_helper] __forward_iterator_helper__`<T, V, D, P, R>`
+        [#utility.utilities.operators.deref.iterator.forward_iterator_helper] __forward_iterator_helper__`<T, V, D, P, R>`
     ]
     [
-        Supports the operations and has the requirements of [link table:forward_iteratable `forward_iteratable<T, P>`]
-    ]
-  ]
-  [
-    [
-        [#table:bidirectional_iterator_helper] __bidirectional_iterator_helper__`<T, V, D, P, R>`
-    ]
-    [
-        Supports the operations and has the requirements of [link table:bidirectional_iteratable `bidirectional_iteratable<T, P>`]
+        Supports the operations and has the requirements of [link utility.utilities.operators.deref.grpd_iter_oprs.forward_iteratable `forward_iteratable<T, P>`]
     ]
   ]
   [
     [
-        [#table:random_access_iterator_helper]__random_access_iterator_helper__`<T, V, D, P, R>`
+        [#utility.utilities.operators.deref.iterator.bidirectional_iterator_helper] __bidirectional_iterator_helper__`<T, V, D, P, R>`
     ]
     [
-        Supports the operations and has the requirements of [link table:random_access_iteratable `random_access_iteratable<T, P, D, R>`]
+        Supports the operations and has the requirements of [link utility.utilities.operators.deref.grpd_iter_oprs.bidirectional_iteratable `bidirectional_iteratable<T, P>`]
+    ]
+  ]
+  [
+    [
+        [#utility.utilities.operators.deref.iterator.random_access_iterator_helper]__random_access_iterator_helper__`<T, V, D, P, R>`
+    ]
+    [
+        Supports the operations and has the requirements of [link utility.utilities.operators.deref.grpd_iter_oprs.random_access_iteratable `random_access_iteratable<T, P, D, R>`]
 
         To satisfy __RandomAccessIterator__, `x1 - x2` with return convertible to `D` is also required.
     ]
   ]
 ]
 
-[#sec:iterator_helpers_notes]
-
+[#utility.utilities.operators.deref.iterator.iterator_helpers_notes]
 ['Iterator Helper Notes]:
 
 # [#note:1] Unlike other iterator helpers templates, __output_iterator_helper__ takes only one template parameter -
@@ -1880,8 +1875,9 @@ definition of `operator*` or/and `operator++`, then
 these operators will get used and the ones supplied by
 __output_iterator_helper__ will never be instantiated.
 
-[#sec:i_demo]
-[h5 Iterator Demonstration and Test Program]
+[endsect]
+
+[section:i_demo Iterator Demonstration and Test Program]
 
 The [@../../../test/iterators_test.cpp `iterators_test.cpp`]
 program demonstrates the use of the iterator templates, and can also be
@@ -1922,23 +1918,24 @@ test results with selected platforms.
 
 [endsect]
 
-[#sec:old_lib_note]
-[section Note for Users of Older Versions]
+[endsect]
 
-The [link sec:chaining changes in the library interface and
+[section:old_lib_note Note for Users of Older Versions]
+
+The [link utility.utilities.operators.usage.chaining changes in the library interface and
 recommended usage] were motivated by some practical issues described
 below. The new version of the library is still backward-compatible with
 the former one, so you are not ['forced] to change any existing code,
 but the old usage is deprecated.
 
 Though it was arguably simpler and more intuitive than using
-[link sec:chaining base class chaining], it has been discovered
+[link utility.utilities.operators.usage.chaining base class chaining], it has been discovered
 that the old practice of deriving from multiple operator
 templates can cause the resulting classes to be much larger than they
 should be. Most modern C++ compilers significantly bloat the size of
 classes derived from multiple empty base classes, even though the base
 classes themselves have no state. For instance, the size of
-`point<int>` from the [link sec:example example]
+`point<int>` from the [link utility.utilities.operators.example example]
 above was 12-24 bytes on various compilers for the Win32 platform,
 instead of the expected 8 bytes.
 
@@ -1972,20 +1969,19 @@ library to remain backward-compatible.
 
 [endsect]
 
-[#sec:contributors]
-[section Acknowledgments]
+[section:contributors Acknowledgments]
 
 * [@http://www.boost.org/people/dave_abrahams.htm Dave Abrahams]:
   Started the library and contributed the arithmetic operators in
   [@../../../../boost/operators.hpp `boost/operators.hpp`].
 
 * [@http://www.boost.org/people/jeremy_siek.htm Jeremy Siek]:
-  Contributed the [link sec:deref dereference operators and iterator
+  Contributed the [link utility.utilities.operators.deref dereference operators and iterator
   helpers] in [@../../../../boost/operators.hpp boost/operators.hpp].
   Also contributed [@../../../test/iterators_test.cpp iterators_test.cpp].
 
 * [@http://www.boost.org/people/aleksey_gurtovoy.htm Aleksey Gurtovoy]:
-  Contributed the code to support [link sec:chaining base class
+  Contributed the code to support [link utility.utilities.operators.usage.chaining base class
   chaining] while remaining backward-compatible with old versions of
   the library.
 

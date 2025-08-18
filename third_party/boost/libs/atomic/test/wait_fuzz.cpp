@@ -1,4 +1,4 @@
-//  Copyright (c) 2020 Andrey Semashev
+//  Copyright (c) 2020-2025 Andrey Semashev
 //
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
@@ -18,12 +18,11 @@
 #include <memory>
 #include <iostream>
 #include <boost/config.hpp>
-#include "test_clock.hpp"
 #include "test_barrier.hpp"
 
 boost::atomic< unsigned int > g_atomic(0u);
 
-BOOST_CONSTEXPR_OR_CONST unsigned int loop_count = 4096u;
+constexpr unsigned int loop_count = 4096u;
 
 void thread_func(test_barrier* barrier)
 {
@@ -52,7 +51,7 @@ int main()
     barrier.arrive_and_wait();
 
     // Let the threads block on the atomic counter
-    std::this_thread::sleep_for(chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     while (true)
     {

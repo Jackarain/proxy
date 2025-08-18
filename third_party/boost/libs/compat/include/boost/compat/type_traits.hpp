@@ -2,7 +2,7 @@
 #define BOOST_COMPAT_TYPE_TRAITS_HPP_INCLUDED
 
 // Copyright 2024 Peter Dimov
-// Copyright 2024 Christian Mazakas
+// Copyright 2024-2025 Christian Mazakas
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
@@ -11,10 +11,14 @@
 namespace boost {
 namespace compat {
 
+template<class T> using add_lvalue_reference_t = typename std::add_lvalue_reference<T>::type;
+template<class T> using add_rvalue_reference_t = typename std::add_rvalue_reference<T>::type;
+
 template<class T> using remove_const_t = typename std::remove_const<T>::type;
 template<class T> using remove_cv_t = typename std::remove_cv<T>::type;
 template<class T> using remove_reference_t = typename std::remove_reference<T>::type;
 template<class T> using remove_cvref_t = remove_cv_t< remove_reference_t<T> >;
+template<class T> using remove_pointer_t = typename std::remove_pointer<T>::type;
 
 template<class T> using decay_t = typename std::decay<T>::type;
 
@@ -34,6 +38,11 @@ template<class...> struct make_void
 template<class... T> using void_t = typename detail::make_void<T...>::type;
 
 template<class T> using add_const_t = typename std::add_const<T>::type;
+
+template<class T> struct type_identity
+{
+    using type = T;
+};
 
 } // namespace compat
 } // namespace boost

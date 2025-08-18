@@ -89,7 +89,7 @@ BOOST_FIXTURE_TEST_CASE(assign_credentials, shared_test_data) {
     std::string password = "password";
 
     auto connect = encoders::encode_connect(
-        client_id, username, password, 60, false, {}, std::nullopt
+        client_id, username, password, 60, false, test::dflt_cprops, std::nullopt
     );
 
     test::msg_exchange broker_side;
@@ -111,7 +111,7 @@ BOOST_FIXTURE_TEST_CASE(assign_will, shared_test_data) {
     std::optional<will> will_opt { std::move(w) };
 
     auto connect = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, 60, false, {}, will_opt
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, will_opt
     );
 
     test::msg_exchange broker_side;
@@ -143,7 +143,7 @@ BOOST_FIXTURE_TEST_CASE(assign_keep_alive, shared_test_data) {
     uint16_t keep_alive = 120;
 
     auto connect = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, keep_alive, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, keep_alive, false, test::dflt_cprops, std::nullopt
     );
 
     test::msg_exchange broker_side;
@@ -259,7 +259,7 @@ struct shared_connack_prop_test_data {
 
     // packets
     const std::string connect = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, 60, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
     );
     const std::string connack = encoders::encode_connack(
         false, reason_codes::success.value(), cprops

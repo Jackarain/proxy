@@ -15,7 +15,7 @@ import quickbook ;
 
 doxygen autodoc
     :
-        [ glob ../../../boost/property_tree/*.hpp ]
+        [ glob ../include/boost/property_tree/*.hpp ]
     :
         <doxygen:param>EXTRACT_ALL=YES
         <doxygen:param>"PREDEFINED=\"BOOST_PROPERTY_TREE_DOXYGEN_INVOKED\" \\

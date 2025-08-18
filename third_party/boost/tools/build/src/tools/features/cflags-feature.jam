@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.cflags]]`cflags`; `cxxflags`; `linkflags`::
+[[b2.builtin.features.cflags]]`cflags`; `cxxflags`; `linkflags`::
 The value of these features is passed without modification to the corresponding
 tools. For `cflags` that is both the C and {CPP} compilers, for `cxxflags` that
 is the {CPP} compiler, and for `linkflags` that is the linker. The features are

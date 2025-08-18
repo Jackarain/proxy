@@ -1,4 +1,4 @@
-//  Copyright (c) 2020 Andrey Semashev
+//  Copyright (c) 2020-2025 Andrey Semashev
 //
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
@@ -39,7 +39,7 @@
 #include <functional>
 #include <boost/config.hpp>
 #include <boost/core/lightweight_test.hpp>
-#include "test_clock.hpp"
+#include "test_config.hpp"
 
 /* helper class to let two instances of a function race against each
 other, with configurable timeout and early abort on detection of error */
@@ -49,7 +49,7 @@ public:
     /* concurrently run the function in two threads, until either timeout
     or one of the functions returns "false"; returns true if timeout
     was reached, or false if early abort and updates timeout accordingly */
-    static bool execute(std::function< bool (std::size_t) > const& fn, steady_clock::duration& timeout)
+    static bool execute(std::function< bool (std::size_t) > const& fn, std::chrono::steady_clock::duration& timeout)
     {
         concurrent_runner runner(fn);
         runner.wait_finish(timeout);
@@ -63,10 +63,10 @@ public:
         second_thread_ = std::thread([this, fn]() { thread_function(fn, 1); });
     }
 
-    void wait_finish(steady_clock::duration& timeout)
+    void wait_finish(std::chrono::steady_clock::duration& timeout)
     {
-        steady_clock::time_point start = steady_clock::now();
-        steady_clock::time_point end = start + timeout;
+        std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+        std::chrono::steady_clock::time_point end = start + timeout;
 
         {
             std::unique_lock< std::mutex > guard(m_);
@@ -82,7 +82,7 @@ public:
         first_thread_.join();
         second_thread_.join();
 
-        steady_clock::duration duration = steady_clock::now() - start;
+        std::chrono::steady_clock::duration duration = std::chrono::steady_clock::now() - start;
         if (duration < timeout)
             timeout = duration;
     }
@@ -124,6 +124,7 @@ private:
     std::thread second_thread_;
 };
 
+BOOST_ATOMIC_TEST_NO_SANITIZE_THREAD
 bool racy_add(unsigned int volatile& value, std::size_t instance)
 {
     std::size_t shift = instance * 8;
@@ -146,6 +147,7 @@ bool racy_add(unsigned int volatile& value, std::size_t instance)
 }
 
 /* compute estimate for average time between races being observable, in usecs */
+BOOST_ATOMIC_TEST_NO_SANITIZE_THREAD
 double estimate_avg_race_time(void)
 {
     double sum = 0.0;
@@ -153,7 +155,7 @@ double estimate_avg_race_time(void)
     /* take 10 samples */
     for (std::size_t n = 0; n < 10; ++n)
     {
-        steady_clock::duration timeout = std::chrono::seconds(10);
+        std::chrono::steady_clock::duration timeout = std::chrono::seconds(10);
 
         volatile unsigned int value(0);
         bool success = concurrent_runner::execute(
@@ -252,14 +254,14 @@ int main(int, char *[])
     double avg_race_time = estimate_avg_race_time();
 
     /* 5.298 = 0.995 quantile of exponential distribution */
-    const steady_clock::duration timeout = std::chrono::microseconds(static_cast< std::chrono::microseconds::rep >(5.298 * avg_race_time));
+    const std::chrono::steady_clock::duration timeout = std::chrono::microseconds(static_cast< std::chrono::microseconds::rep >(5.298 * avg_race_time));
 
     {
         unsigned int value = 0;
 
         /* testing two different operations in this loop, therefore
         enlarge timeout */
-        steady_clock::duration tmp(timeout * 2);
+        std::chrono::steady_clock::duration tmp(timeout * 2);
 
         bool success = concurrent_runner::execute(
             [&value](std::size_t instance) { return test_arithmetic< unsigned int, 0 >(value, instance); },
@@ -274,7 +276,7 @@ int main(int, char *[])
 
         /* testing three different operations in this loop, therefore
         enlarge timeout */
-        steady_clock::duration tmp(timeout * 3);
+        std::chrono::steady_clock::duration tmp(timeout * 3);
 
         bool success = concurrent_runner::execute(
             [&value](std::size_t instance) { return test_bitops< unsigned int, 0 >(value, instance); },

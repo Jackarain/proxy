@@ -1,5 +1,7 @@
 ///////////////////////////////////////////////////////////////
-//  Copyright 2012 John Maddock. Distributed under the Boost
+//  Copyright 2012 - 2025 John Maddock.
+//  Copyright 2021 - 2025 Christopher Kormanyos.
+//  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
 
@@ -1213,6 +1215,11 @@ void test_float_funcs(const std::integral_constant<bool, true>&)
    a        = 4;
    a        = sqrt(a);
    BOOST_CHECK_CLOSE_FRACTION(a, 2, tol);
+   BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::is_specialized && std::numeric_limits<Real>::has_infinity)
+   {
+      a = std::numeric_limits<Real>::infinity();
+      BOOST_CHECK((boost::math::isinf)(a));
+   }
    a = 3;
    a = exp(a);
    BOOST_CHECK_CLOSE_FRACTION(a, Real(exp(Real(3))), tol);
@@ -1729,6 +1736,25 @@ void test_float_ops(const std::integral_constant<int, boost::multiprecision::num
          BOOST_CHECK((boost::math::isnan)(t));
          #endif
       }
+   }
+
+   BOOST_IF_CONSTEXPR(std::numeric_limits<Real>::is_specialized && std::numeric_limits<Real>::has_infinity && std::numeric_limits<Real>::max_exponent10 > 18 && std::numeric_limits<Real>::min_exponent10 < -18)
+   {
+      Real a = (std::numeric_limits<Real>::max)();
+
+      a /= 1000000;
+      a /= 1000000;
+      a /= 1000000;
+
+      BOOST_CHECK((boost::math::isfinite)(a));
+
+      a = (std::numeric_limits<Real>::min)();
+
+      a *= 1000000;
+      a *= 1000000;
+      a *= 1000000;
+
+      BOOST_CHECK((boost::math::isfinite)(a));
    }
 
    test_float_funcs<Real>(std::integral_constant<bool, std::numeric_limits<Real>::is_specialized>());
@@ -3205,6 +3231,18 @@ test_relationals(T a, T b)
 template <class T>
 const T& self(const T& a) { return a; }
 
+#if defined(BOOST_HAS_INT128)
+template <class Real> typename std::enable_if< std::is_constructible<Real, boost::int128_type >::value, void>::type test_mixed_int128 () { boost::multiprecision::is_number<Real> tag; test_mixed<Real, boost::int128_type>(tag); }
+template <class Real> typename std::enable_if<!std::is_constructible<Real, boost::int128_type >::value, void>::type test_mixed_int128 () { }
+template <class Real> typename std::enable_if< std::is_constructible<Real, boost::uint128_type>::value, void>::type test_mixed_uint128() { boost::multiprecision::is_number<Real> tag; test_mixed<Real, boost::uint128_type>(tag); }
+template <class Real> typename std::enable_if<!std::is_constructible<Real, boost::uint128_type>::value, void>::type test_mixed_uint128() { }
+#endif
+
+#if defined(BOOST_HAS_FLOAT128)
+template <class Real> typename std::enable_if< std::is_constructible<Real, __float128>::value, void>::type test_mixed_float128 () { boost::multiprecision::is_number<Real> tag; test_mixed<Real, __float128>(tag); }
+template <class Real> typename std::enable_if<!std::is_constructible<Real, __float128>::value, void>::type test_mixed_float128 () { }
+#endif
+
 template <class Real>
 void test()
 {
@@ -3225,19 +3263,15 @@ void test()
    test_mixed<Real, long long>(tag);
    test_mixed<Real, unsigned long long>(tag);
 #endif
-#if defined(BOOST_HAS_INT128) && !defined(BOOST_NO_CXX17_IF_CONSTEXPR)
-   if constexpr (std::is_constructible<Real, boost::int128_type>::value)
-   {
-      test_mixed<Real, boost::int128_type>(tag);
-      test_mixed<Real, boost::uint128_type>(tag);
-   }
+#if defined(BOOST_HAS_INT128)
+   test_mixed_int128<Real>();
+   test_mixed_uint128<Real>();
 #endif
    test_mixed<Real, float>(tag);
    test_mixed<Real, double>(tag);
    test_mixed<Real, long double>(tag);
-#if defined(BOOST_HAS_FLOAT128) && !defined(BOOST_NO_CXX17_IF_CONSTEXPR)
-   if constexpr (std::is_constructible<Real, __float128>::value)
-      test_mixed<Real, __float128>(tag);
+#if defined(BOOST_HAS_FLOAT128)
+   test_mixed_float128<Real>();
 #endif
 
    typedef typename related_type<Real>::type                                                                      related_type;

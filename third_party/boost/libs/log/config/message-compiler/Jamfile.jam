@@ -6,10 +6,10 @@
 #
 
 import project ;
-import log-platform-config ;
+import ../../build/log-platform-config ;
 using mc ;
 
-project /boost/log/message-compiler
+project
     : source-location ../../src
     : requirements
         <conditional>@log-platform-config.set-platform-defines

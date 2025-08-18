@@ -13,6 +13,7 @@ import property ;
 import sequence ;
 import set ;
 import option ;
+import args ;
 
 # Class for storing a set of properties.
 #
@@ -113,11 +114,9 @@ class property-set
             local result ;
             local features = [ $(features-ps).get <relevant> ] ;
             features = <$(features)> ;
-            local ignore-relevance = [ modules.peek
-                property-set : .ignore-relevance ] ;
             for local p in $(self.raw)
             {
-                if $(ignore-relevance) || $(p:G) in $(features)
+                if $(p:G) in $(features)
                 {
                     local att = [ feature.attributes $(p:G) ] ;
                     if ! ( incidental in $(att) )
@@ -395,10 +394,9 @@ class property-set
         local relevant-features = [ get <relevant> ] ;
         relevant-features = [ feature.expand-relevant $(relevant-features) ] ;
         relevant-features = <$(relevant-features)> ;
-        ignore-relevance = [ modules.peek property-set : .ignore-relevance ] ;
         for local p in $(self.raw)
         {
-            if $(ignore-relevance) || $(p:G) in $(relevant-features)
+            if $(p:G) in $(relevant-features)
             {
                 local att = [ feature.attributes $(p:G) ] ;
                 if ! ( incidental in $(att) )
@@ -449,14 +447,6 @@ class property-set
         }
         self.conditional-initialized = true ;
     }
-}
-
-# This is a temporary measure to help users work around
-# any problems.  Remove it once we've verified that
-# everything works.
-if --ignore-relevance in [ modules.peek : ARGV ]
-{
-    .ignore-relevance = true ;
 }
 
 # Creates a new 'property-set' instance for the given raw properties or returns
@@ -578,8 +568,10 @@ rule empty ( )
     return $(.empty) ;
 }
 
-
-if [ option.get hash : : yes ] = yes
+args.add-arg hash : --hash
+    : "Compress target paths using an MD5 hash."
+    : flag ;
+if [ args.get-arg hash ]
 {
     rule hash-maybe ( path ? )
     {

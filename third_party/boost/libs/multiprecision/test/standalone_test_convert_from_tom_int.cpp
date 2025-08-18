@@ -179,7 +179,7 @@ void test_convert_to_builtin()
    for (unsigned i = 0; i < 100; ++i)
    {
       From from = generate_random<From>(bits_wanted);
-      To t1 = from;
+      To t1{ from };
       To t2 = from.template convert_to<To>();
       BOOST_CHECK_EQUAL(t1, t2);
    }

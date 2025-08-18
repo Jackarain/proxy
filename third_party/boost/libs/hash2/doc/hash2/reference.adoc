@@ -15,6 +15,7 @@ https://www.boost.org/LICENSE_1_0.txt
 
 include::reference/fnv1a.adoc[]
 include::reference/xxhash.adoc[]
+include::reference/xxh3.adoc[]
 include::reference/siphash.adoc[]
 include::reference/hmac.adoc[]
 include::reference/md5.adoc[]
@@ -22,6 +23,7 @@ include::reference/sha1.adoc[]
 include::reference/sha2.adoc[]
 include::reference/sha3.adoc[]
 include::reference/ripemd.adoc[]
+include::reference/blake2.adoc[]
 
 :leveloffset: -2
 

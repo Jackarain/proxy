@@ -276,7 +276,7 @@ private:
         _stream(_executor, _stream_context, _log),
         _replies(_executor),
         _async_sender(*this),
-        _active_span(_read_buff.cend(), _read_buff.cend()),
+        _active_span(_read_buff.cbegin(), _read_buff.cbegin()),
         _rec_channel(_executor, (std::numeric_limits<size_t>::max)()),
         _ping_timer(_executor),
         _sentry_timer(_executor)
@@ -296,7 +296,7 @@ public:
         _stream(ex, _stream_context, _log),
         _replies(ex),
         _async_sender(*this),
-        _active_span(_read_buff.cend(), _read_buff.cend()),
+        _active_span(_read_buff.cbegin(), _read_buff.cbegin()),
         _rec_channel(ex, (std::numeric_limits<size_t>::max)()),
         _ping_timer(ex),
         _sentry_timer(ex)

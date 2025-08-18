@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.runtime-debugging]]`runtime-debugging`::
+[[b2.builtin.features.runtime-debugging]]`runtime-debugging`::
 *Allowed values:* `on`, `off`.
 +
 Specifies whether produced object files, executables, and libraries should
@@ -24,7 +24,7 @@ feature.feature runtime-debugging
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.runtime-link]]`runtime-link`::
+[[b2.builtin.features.runtime-link]]`runtime-link`::
 *Allowed values:* `shared`, `static`
 +
 Controls if a static or shared C/{CPP} runtime should be used. There are some

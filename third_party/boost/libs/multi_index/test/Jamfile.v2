@@ -8,6 +8,7 @@
 # See http://www.boost.org/libs/multi_index for library home page.
 
 import os ;
+import testing ;
 import type ;
 
 # Windows Vista UAC has an heuristic by which executable files whose name

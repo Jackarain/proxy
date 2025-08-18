@@ -7,11 +7,21 @@
 #  License Version 1.0. (See accompanying file LICENSE.txt or
 #  https://www.bfgroup.xyz/b2/LICENSE.txt)
 
+#| tag::doc[]
+
+[[b2.reference.tools.compiler.clang-linux]]
+= Clang (GCC frontend)
+
+The `clang-linux` module supports Clang with GCC frontend and has the same
+options as link:#b2.reference.tools.compiler.gcc[`gcc`] toolset.
+
+|# # end::doc[]
+
+import args ;
 import common ;
 import toolset ;
 import feature ;
 import toolset : flags ;
-
 import clang ;
 import gcc ;
 import common ;
@@ -45,9 +55,7 @@ toolset.inherit-flags clang-linux : gcc
   : INCLUDE-GCH
   ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ] {
-  .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 rule init ( version ? :  command * : options * ) {
   command = [ common.find-compiler clang-linux : clang++ : $(version) : $(command) ] ;

@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.debug-symbols]]`debug-symbols`::
+[[b2.builtin.features.debug-symbols]]`debug-symbols`::
 *Allowed values:* `on`, `off`.
 +
 Specifies if produced object files, executables, and libraries should include
@@ -23,7 +23,7 @@ feature.feature debug-symbols
 
 #| tag::prof-doc[]
 
-[[bbv2.builtin.features.profiling]]`profiling`::
+[[b2.builtin.features.profiling]]`profiling`::
 *Allowed values:* `off`, `on`.
 +
 Enables generation of extra code to write profile information.

@@ -7,6 +7,7 @@ https://www.boost.org/LICENSE_1_0.txt
 include::bind_back.adoc[]
 include::bind_front.adoc[]
 include::function_ref.adoc[]
+include::move_only_function.adoc[]
 include::integer_sequence.adoc[]
 include::invoke.adoc[]
 include::latch.adoc[]

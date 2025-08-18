@@ -8,7 +8,7 @@
 # this file in place, or you can place it in a permanent location so that it
 # does not get overwritten should you get a new version of B2. See:
 #
-#   https://www.bfgroup.xyz/b2/manual/release/index.html#bbv2.overview.configuration
+#   https://www.bfgroup.xyz/b2/manual/release/index.html#b2.overview.configuration
 #
 # for documentation about possible permanent locations.
 
@@ -17,7 +17,7 @@
 # example lines and adjust them to taste. The complete list of supported tools,
 # and configuration instructions can be found at:
 #
-#   https://www.bfgroup.xyz/b2/manual/release/index.html#bbv2.reference.tools
+#   https://www.bfgroup.xyz/b2/manual/release/index.html#b2.reference.tools
 #
 
 #   This file uses Jam language syntax to describe available tools. Mostly,

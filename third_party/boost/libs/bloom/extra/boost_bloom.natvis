@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2025 Joaquin M Lopez Munoz.
+Distributed under the Boost Software License, Version 1.0. (See accompanying
+file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+See https://www.boost.org/libs/bloom for library home page. 
+-->
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	
+<Type Name="boost::bloom::filter&lt;*&gt;" Inheritable="false">
+	<Intrinsic Name="core" Expression="*static_cast&lt;super*&gt;(this)" />
+	<Intrinsic Name="has_array" Expression="core().ar.data!=nullptr" />
+	<Intrinsic Name="data" Expression="has_array()?core().ar.array:nullptr" />
+	<Intrinsic
+		Name="array_size" 
+		Expression="
+			has_array()?
+				core().hs.rng*super::stride+(super::used_value_size-super::stride):
+				0"
+	/>
+	<Intrinsic Name="capacity" Expression="array_size()*8" />
+	
+	<DisplayString>{{ capacity={capacity()} }}</DisplayString>
+	<Expand>
+		<Item Name="[hash_function]">
+			*reinterpret_cast&lt;hasher*&gt;(static_cast&lt;hash_base*&gt;(this))
+		</Item>
+		<Item Name="[allocator]">
+			*reinterpret_cast&lt;super::allocator_type*&gt;(static_cast&lt;super::allocator_base*&gt;(this))
+		</Item>
+		<Item Name="[capacity]">
+			capacity()
+		</Item>
+		<Synthetic Name="[array]">
+			<DisplayString>{{ data={(void*)data()} size={array_size()} }}</DisplayString>
+			<Expand>
+				<ArrayItems>
+					<Size>array_size()</Size>
+					<ValuePointer>data()</ValuePointer>
+				</ArrayItems>
+			</Expand>
+		</Synthetic>
+	</Expand>
+</Type>
+
+</AutoVisualizer>

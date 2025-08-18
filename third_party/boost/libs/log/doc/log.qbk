@@ -45,12 +45,16 @@
 [def __boost_scope_exit__ [@https://www.boost.org/doc/libs/release/libs/scope_exit/doc/html/index.html Boost.ScopeExit]]
 [def __boost_any__ [@https://www.boost.org/doc/libs/release/doc/html/any.html Boost.Any]]
 [def __boost_property_tree__ [@https://www.boost.org/doc/libs/release/doc/html/property_tree.html Boost.PropertyTree]]
-[def __boost_asio__ [@https://www.boost.org/doc/libs/release/doc/html/boost_asio.html Boost.ASIO]]
+[def __boost_asio__ [@https://www.boost.org/doc/libs/release/doc/html/boost_asio.html Boost.Asio]]
 [def __boost_move__ [@https://www.boost.org/doc/libs/release/doc/html/move.html Boost.Move]]
 [def __boost_locale__ [@https://www.boost.org/doc/libs/release/libs/locale/doc/html/index.html Boost.Locale]]
 [def __boost_type_index__ [@https://www.boost.org/doc/libs/release/doc/html/boost_typeindex.html Boost.TypeIndex]]
 [def __boost_utility__ [@https://www.boost.org/doc/libs/release/libs/utility/doc/html/index.html Boost.Utility]]
 [def __boost_quickbook__ [@https://www.boost.org/doc/libs/release/doc/html/quickbook.html Boost.Quickbook]]
+
+[def __boost_phoenix_adapt__ [@https://www.boost.org/doc/libs/release/libs/phoenix/doc/html/phoenix/modules/function/adapting_functions.html `BOOST_PHOENIX_ADAPT_*`]]
+[def __boost_phoenix_bind__ [@https://www.boost.org/doc/libs/release/libs/phoenix/doc/html/phoenix/modules/bind.html `boost::phoenix::bind`]]
+
 
 [template ticket[key]'''<ulink url="https://svn.boost.org/trac/boost/ticket/'''[key]'''">#'''[key]'''</ulink>''']
 [template github_issue[key]'''<ulink url="https://github.com/boostorg/log/issues/'''[key]'''">GH#'''[key]'''</ulink>''']
@@ -87,6 +91,10 @@
 [import ../example/doc/expressions_keyword_fmt_tag.cpp]
 [import ../example/doc/expressions_has_attr_stat_accum.cpp]
 [import ../example/doc/expressions_channel_severity_filter.cpp]
+[import ../example/doc/expressions_filter_adapt_function.cpp]
+[import ../example/doc/expressions_wrap_filter.cpp]
+[import ../example/doc/expressions_formatter_adapt_function.cpp]
+[import ../example/doc/expressions_wrap_formatter.cpp]
 [import ../example/doc/sources_net_connection.cpp]
 [import ../example/doc/sources_net_connection_chan.cpp]
 [import ../example/doc/sources_net_connection_dynamic_chan.cpp]

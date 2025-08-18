@@ -173,7 +173,7 @@ class sass-generator : generator
     local rule recognized-feature ( feature )
     {
         local result ;
-        if $(feature:G) in <include> <flags>
+        if $(feature:G) in <include> <flags> <location>
         {
           result = true ;
         }

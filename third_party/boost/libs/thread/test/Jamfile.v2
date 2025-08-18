@@ -268,16 +268,15 @@ rule generate_self_contained_header_tests
 
     if ! [ os.environ BOOST_THREAD_TEST_WITHOUT_SELF_CONTAINED_HEADER_TESTS ]
     {
-        local headers_path = [ path.make $(BOOST_ROOT)/libs/thread/include/boost/thread ] ;
-        for file in [ path.glob-tree $(headers_path) : *.hpp : detail pthread win32 ]
+        for file in [ glob-tree-ex ../include/boost/thread : *.hpp : detail pthread win32 ]
         {
-            local rel_file = [ path.relative-to $(headers_path) $(file) ] ;
+            local rel_file = [ path.relative-to ../include/boost/thread $(file) ] ;
             # Note: The test name starts with '~' in order to group these tests in the test report table, preferably at the end.
             #       All '/' are replaced with '-' because apparently test scripts have a problem with test names containing slashes.
             local test_name = [ regex.replace ~hdr/$(rel_file) "/" "-" ] ;
             #ECHO $(rel_file) ;
-            all_rules += [ compile self_contained_header.cpp : <define>"BOOST_THREAD_TEST_HEADER=$(rel_file)" <dependency>$(file) : $(test_name) ] ;
-            all_rules += [ compile self_contained_header.cpp : <define>"BOOST_THREAD_TEST_HEADER=$(rel_file)" <define>"BOOST_THREAD_TEST_POST_WINDOWS_H" <dependency>$(file) <conditional>@windows-cygwin-specific : $(test_name)-post_winh ] ;
+            all_rules += [ compile self_contained_header.cpp : <define>"BOOST_THREAD_TEST_HEADER=$(rel_file)" <dependency>$(file) <use>../build//boost_thread : $(test_name) ] ;
+            all_rules += [ compile self_contained_header.cpp : <define>"BOOST_THREAD_TEST_HEADER=$(rel_file)" <define>"BOOST_THREAD_TEST_POST_WINDOWS_H" <dependency>$(file) <conditional>@windows-cygwin-specific <use>../build//boost_thread : $(test_name)-post_winh ] ;
         }
     }
 
@@ -1012,7 +1011,7 @@ rule generate_self_contained_header_tests
           #[ thread-run test_10128.cpp ]
           #[ thread-run test_10340.cpp ]
     ;
-    
+
     explicit ts_more_cpp11 ;
     test-suite ts_more_cpp11
     :
@@ -1033,13 +1032,13 @@ rule generate_self_contained_header_tests
     :
           [ thread-run2-noit ./experimental/parallel/v1/exception_list_pass.cpp : exception_list_p ]
     ;
-    
+
     #explicit ts_task_region ;
     test-suite ts_task_region
     :
           [ thread-run2-noit ./experimental/parallel/v2/task_region_pass.cpp : task_region_p ]
     ;
-    
+
     explicit ts_other ;
     test-suite ts_other
     :
@@ -1050,7 +1049,7 @@ rule generate_self_contained_header_tests
     explicit ts_ ;
     test-suite ts_
     :
-          #[ thread-run test_11256.cpp ] 
+          #[ thread-run test_11256.cpp ]
           #[ thread-run test_11256.cpp ]
           #[ thread-run test_11499.cpp ]
           #[ thread-run test_11611.cpp ]
@@ -1060,7 +1059,7 @@ rule generate_self_contained_header_tests
           #[ thread-run test_12949.cpp ]
           #[ thread-run test_13480b.cpp ]
           [ thread-run test_13561.cpp ]
-          
+
     ;
 
     explicit test_time_jumps_1_obj ;

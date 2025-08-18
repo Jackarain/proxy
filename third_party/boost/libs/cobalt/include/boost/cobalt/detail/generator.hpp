@@ -129,7 +129,7 @@ struct generator_receiver : generator_receiver_base<Yield, Push>
 
   generator_receiver& operator=(generator_receiver && lhs) noexcept
   {
-    if (*reference == this)
+    if (reference && *reference == this)
     {
       *reference = nullptr;
     }
@@ -155,8 +155,8 @@ struct generator_receiver : generator_receiver_base<Yield, Push>
     return *this;
   }
 
-  generator_receiver  **reference;
-  asio::cancellation_signal * cancel_signal;
+  generator_receiver  **reference = nullptr;
+  asio::cancellation_signal * cancel_signal = nullptr;
 
   using yield_awaitable = generator_yield_awaitable<Yield, Push>;
 
@@ -216,7 +216,7 @@ struct generator_receiver : generator_receiver_base<Yield, Push>
       if (ex)
         return h;
 
-      if constexpr (requires (Promise p) {p.get_cancellation_slot();})
+      if constexpr (requires {h.promise().get_cancellation_slot();})
         if ((cl = h.promise().get_cancellation_slot()).is_connected())
           cl.emplace<forward_cancellation>(*self->cancel_signal);
 
@@ -446,7 +446,7 @@ struct generator_promise
 
   generator_receiver<Yield, Push>* receiver{nullptr};
 
-  auto await_transform(this_coro::initial_t val)
+  auto await_transform(this_coro::initial_t)
   {
     if(receiver)
     {

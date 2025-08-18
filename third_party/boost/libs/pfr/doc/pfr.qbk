@@ -1,6 +1,6 @@
 [library Boost.PFR
     [quickbook 1.6]
-    [version 2.2]
+    [version 2.3]
     [copyright 2016-2025 Antony Polukhin]
     [category Language Features Emulation]
     [license
@@ -554,34 +554,34 @@ parameters provided to `BOOST_PFR_CORE_NAME_PARSING` macro [*and] the initial ou
 
 [section PFR as a C++20 module]
 
-[caution C++20 PFR module support is on early stage, targets and flags may change in the future]
+[caution C++20 PFR module support is on early stage, targets, flags and behavior may change in the future]
 
-If using CMake of version 3.28.0 or higher define CMake option `-DBUILD_MODULE=1`
-to make the `Boost::pfr_module` and `Boost::pfr_module_migration` libraries
-available. With `Boost::pfr_module` C++20 module Boost.PFR could be used:
+If using modern CMake define CMake option `-DBOOST_USE_MODULES=1` to build a C++20 module and
+make the `Boost::pfr` CMake target provide it. After that an explicit usage of C++20 module `boost.pfr` is allowed:
 
-[import ../module/usage_sample.cpp]
+[import ../modules/usage_sample.cpp]
 [pfr_module_example]
 
-The `Boost::pfr_module_migration` CMake target gives an ability to
-mix includes and imports of the PFR library in different translation units.
+The `Boost::pfr` CMake target gives an ability to mix includes and imports of the PFR library in different translation units. Moreover,
+if `BOOST_USE_MODULES` macro is defined then all the `boost/pfr/...` includes implicitly do `import boost.pfr;` to give all the
+benifits of modules without changing the existing code.
 
-If not using CMake, then the module could be build manually from the
-`module/pfr.cppm` file. If mixing of includes in imports is desired, additionally
-define `BOOST_PFR_ATTACH_TO_GLOBAL_MODULE` preprocessor macro to attach all the
-module entities to a global module and avoid ODR issues.
+[note For better compile times make sure that `import std;` is available when building the `boost.pfr` module (in CMake logs there should be
+      a 'Using `import std;`' message). ]
 
-For manual module build the following commands could be used for clang compiler:
+If not using CMake, then the module could be build manually from the `modules/boost_pfr.cppm` file.
+
+For manual module build the following commands can be used for clang compiler:
 
 ```
 cd pfr/module
-clang++ -I ../include -std=c++20 --precompile -x c++-module pfr.cppm
+clang++ -I ../include -std=c++20 --precompile -x c++-module boost_pfr.cppm
 ```
 
 After that, the module could be used in the following way:
 
 ```
-clang++ -std=c++20 -fmodule-file=pfr.pcm pfr.pcm usage_sample.cpp
+clang++ -std=c++20 -fmodule-file=boost_pfr.pcm boost_pfr.pcm usage_sample.cpp
 ```
 
 [endsect]

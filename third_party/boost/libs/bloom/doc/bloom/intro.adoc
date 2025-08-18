@@ -1,0 +1,68 @@
+[#intro]
+= Introduction
+
+:idprefix: intro_
+
+Boost.Bloom provides the class template `xref:tutorial[boost::bloom::filter]`
+that can be configured to implement a classical Bloom filter as well as
+variations discussed in the literature such as block filters, multiblock filters,
+and more.
+
+[source,subs="+macros,+quotes"]
+-----
+#include <boost/bloom.hpp>
+#include <cassert>
+#include <iostream>
+#include <string>
+
+int main()
+{
+  // Bloom filter of strings with 5 bits set per insertion
+  using filter = boost::bloom::filter<std::string, 5>;
+
+  // create filter with a capacity of 1'000'000 **bits**
+  filter f(1'000'000);
+
+  // insert elements (they can't be erased, Bloom filters are insert-only)
+  f.insert("hello");
+  f.insert("Boost");
+
+  // elements inserted are always correctly checked as such
+  assert(f.may_contain("hello") == true);
+
+  // elements not inserted may incorrectly be identified as such with a
+  // false positive rate (FPR) which is a function of the array capacity,
+  // the number of bits set per element and generally how the boost::bloom::filter
+  // was specified
+  if(f.may_contain("bye")) { // likely false
+    std::cout << "false positive\n";
+  }
+  else {
+    std::cout << "everything worked as expected\n";
+  }
+}
+-----
+
+The different filter variations supported are specified at compile time
+as part of the `boost::bloom::filter` instantiation definition.
+Boost.Bloom has been implemented with a focus on performance;
+SIMD technologies such as AVX2, Neon and SSE2 can be leveraged to speed up
+operations.
+
+== Getting Started
+
+Consult the website
+https://www.boost.org/doc/user-guide/getting-started.html[section^]
+on how to install the entire Boost project or only Boost.Bloom
+and its dependencies.
+
+Boost.Bloom is a header-only library, so no additional build phase is
+needed. C++11 or later required. The library has been verified to
+work with GCC 4.8, Clang 3.9 and Visual Studio 2015 (and later versions
+of those). You can check that your environment is correctly set up
+by compiling the 
+link:../../example/basic.cpp[example program] shown above.
+
+If you are not familiar with Bloom filters in general, see the
+xref:primer[primer]; otherwise, you can jump directly to the
+xref:tutorial[tutorial].

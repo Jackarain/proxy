@@ -22,6 +22,7 @@ import property-set ;
 import quickbook ;
 import saxonhe ;
 import sequence ;
+import targets ;
 import toolset ;
 import type ;
 import virtual-target ;
@@ -54,7 +55,6 @@ rule reference ( target : sources * : requirements * : default-build *
     target-dir = $(target-dir:B=_$(target-dir:B)-dir) ;
 
     # Generate doxygen configuration file from sources
-    sources = [ sequence.transform fix-source $(project) : $(sources) ] ;
     doxyfile $(target-dir)/sources.dox
         : $(sources)
         : $(requirements)
@@ -181,100 +181,155 @@ rule pyreference ( target : sources * : requirements * : default-build *
     param.handle-named-params
         sources requirements default-build usage-requirements ;
 
-    local project = [ project.current ] ;
-    local target-dir = $(target:S=) ;
-    target-dir = $(target-dir:B=_$(target-dir:B)-dir) ;
-
-    # Generate doxygen configuration file from sources
-    sources = [ sequence.transform fix-source $(project) : $(sources) ] ;
-    doxyfile $(target-dir)/sources.dox
+    targets.create-metatarget docca-reference-target-class
+        : [ project.current ]
+        : $(target)
         : $(sources)
         : $(requirements)
-          <doxygen:param>GENERATE_HTML=NO
-          <doxygen:param>GENERATE_XML=YES
-          <doxygen:param>XML_OUTPUT=$(target-dir)
-        : $(default-build)
-        ;
-    $(project).mark-target-as-explicit $(target-dir)/sources.dox ;
-
-    #--------------------------------------------------------------------------
-    #
-    # Invoke Doxygen to process the header files and produce the XML
-    # containing the description of the C++ declarations and extracted
-    # Javadoc comments.
-    doxygen-xml-multifile $(target-dir)/stamp
-        : $(target-dir)/sources.dox
-        : $(requirements)
-        : $(default-build)
-        ;
-    $(project).mark-target-as-explicit $(target-dir)/stamp ;
-
-    # Adopt as a target index.xml which was created as a side-effect
-    make-explicit $(target-dir)/index.xml $(project)
-        : $(target-dir)/stamp
-        : @docca.touch-action
-        ;
-
-    # Construct a config file from parameters provided by the build system
-    make $(target-dir)/docca-config.json
-        :
-        : @docca.make-docca-config
-        : $(requirements)
-        : $(default-build)
-        ;
-
-    generate $(target)
-        : $(target-dir)/index.xml
-        : <generating-rule>@docca.make-qbk2
-          $(requirements)
-          <docca:config>$(target-dir)/docca-config.json
         : $(default-build)
         : $(usage-requirements)
         ;
 }
 
-
-rule make-qbk2 ( project name : property-set : source )
+class docca-reference-target-class : basic-target
 {
-    local template = [ $(property-set).get <docca:template> ] ;
-    if $(template[2])
+    import generators ;
+    import path ;
+    import project ;
+    import toolset ;
+    import type ;
+
+    rule __init__ ( name : project : sources * : requirements *
+        : default-build * : usage-requirements * )
     {
-        local paths ;
-        for local tmpl in $(templates)
-        {
-            paths += [ $(tmpl).path ] ;
-        }
-        import errors ;
-        errors.user-error "Several templates specified for docca:" $(paths) ;
-    }
-    if ! $(template)
-    {
-        template =
-            [ virtual-target.from-file quickbook.jinja2
-            : $(.here)/include/docca
-            : $(project)
-            ] ;
+        basic-target.__init__ $(name) : $(project) : $(sources) :
+            $(requirements) : $(default-build) : $(usage-requirements) ;
+        self.docca-location = [ modules.peek docca : .here ] ;
     }
 
-    local action-name = docca.generate-reference ;
-    local relevant = [ toolset.relevant $(action-name) ] ;
-    local action = [
-          new action
-            $(source)
-            $(template)
-            [ $(property-set).get <docca:config> ]
-            [ $(property-set).get <docca:extension> ]
-        : $(action-name)
-        : [ $(property-set).relevant $(relevant) ]
-        ] ;
-    local target = [
-          new file-target $(name) exact
-        : [ type.type $(name) ]
-        : $(project)
-        : $(action)
-        ] ;
-    local path = [ path.root $(name) [ $(target).path ] ] ;
-    return [ property-set.create <include>$(path:D) ] $(target) ;
+    rule construct ( name : sources * : property-set )
+    {
+        local target-dir = $(name:S=) ;
+        target-dir = $(target-dir:B=_$(target-dir:B)-dir) ;
+
+        local doxydir ;
+        local ps ;
+        if $(sources) && ( ! $(sources[2-]) )
+            && ( [ $(sources).type ] = DOXYGEN_XML_MULTIFILE )
+        {
+            doxydir = $(sources[1]) ;
+            ps = $(property-set) ;
+        }
+        else
+        {
+            # Generate doxygen configuration file from sources
+            ps = [ $(property-set).add-raw
+                <doxygen:param>GENERATE_HTML=NO
+                <doxygen:param>GENERATE_XML=YES
+                <doxygen:param>XML_OUTPUT=$(target-dir)
+                ] ;
+            local doxyfile = [ generators.construct
+                  $(self.project) $(target-dir)/sources.dox
+                : DOXYFILE
+                : $(ps)
+                : $(sources)
+                : top-level
+                ] ;
+            ps = [ $(property-set).add $(doxyfile[1]) ] ;
+            doxyfile = [ virtual-target.register $(doxyfile[2]) ] ;
+
+            # Invoke Doxygen to process the header files and produce the XML
+            # containing the description of the C++ declarations and extracted
+            # Javadoc comments.
+            doxydir = [ generators.construct
+                  $(self.project) $(target-dir)/stamp
+                : DOXYGEN_XML_MULTIFILE
+                : $(ps)
+                : $(doxyfile)
+                : top-level
+                ] ;
+            ps = [ $(property-set).add $(doxydir[1]) ] ;
+            doxydir = [ virtual-target.register $(doxydir[2]) ] ;
+        }
+
+        # Adopt as a target index.xml which was created as a side-effect
+        local path = [ $(doxydir).name ] ;
+        local a = [ new action $(doxydir)
+            : docca.touch-action
+            : [ property-set.empty ]
+            ] ;
+        local index = [ new file-target [ path.join $(path:D) index.xml ] exact
+            : XML
+            : $(self.project)
+            : $(a)
+            ] ;
+        index = [ virtual-target.register $(index) ] ;
+
+        local template = [ get-template $(ps) ] ;
+        local configs = [ get-configs $(target-dir) : $(ps) ] ;
+
+        local action-name = docca.generate-reference ;
+        local relevant = [ toolset.relevant $(action-name) ] ;
+        a = [
+              new action $(index) $(template) $(configs) $(config)
+            : $(action-name)
+            : [ $(property-set).relevant $(relevant) ]
+            ] ;
+        local target = [
+              new file-target $(name) exact
+            : [ type.type $(name) ]
+            : $(self.project)
+            : $(a)
+            ] ;
+        local path = [ path.root $(name) [ $(target).path ] ] ;
+        return [ property-set.create <include>$(path:D) ]
+            [ virtual-target.register $(target) ] ;
+    }
+
+    local rule get-template ( property-set )
+    {
+        local template = [ $(property-set).get <docca:template> ] ;
+        if $(template[2])
+        {
+            local paths ;
+            for local tmpl in $(templates)
+            {
+                paths += [ $(tmpl).path ] ;
+            }
+            import errors ;
+            errors.user-error
+                "Several templates specified for docca:" $(paths) ;
+        }
+
+        if ! $(template)
+        {
+            template =
+                [ virtual-target.from-file quickbook.jinja2
+                : $(self.docca-location)/include/docca
+                : $(self.project)
+                ] ;
+        }
+
+        return $(template) ;
+    }
+
+    local rule get-configs ( dir : property-set )
+    {
+        # Construct a config file from parameters provided by the build system
+        local config ;
+        if [ $(property-set).get <docca:param> ]
+        {
+            local a = [ new action : docca.make-docca-config : $(property-set) ] ;
+            config = [ new file-target $(dir)/docca-config.json exact
+                : [ type.type docca-config.json ]
+                : $(self.project)
+                : $(a)
+                ] ;
+            config = [ virtual-target.register $(config) ] ;
+        }
+
+        return [ $(property-set).get <docca:config> ] $(config) ;
+    }
 }
 
 rule make-qbk ( project name : property-set : sources * )
@@ -328,22 +383,6 @@ local rule make-explicit ( target project : sources * : make-rule + : reqs *
 }
 
 
-local rule fix-source ( project path )
-{
-    # Unfortunately, rule doxygen.run was written with the assumption that
-    # current project is located in the current directory (which is very likely
-    # to not be the case). We have to convert paths into a form that is both
-    # usable by doxygen and usable by b2 from the current project. This
-    # effectively means absolute paths.
-    #
-    # NOTE: doxygen.run should really do this by itself.
-
-    path = [ path.root $(path) [ $(project).location ] ] ;
-    path = [ path.root $(path) [ path.pwd ] ] ;
-    return $(path) ;
-}
-
-
 .TOUCH = [ common.file-touch-command ] ;
 actions touch-action
 {
@@ -358,7 +397,6 @@ rule null-action ( target : srcs * : props * )
 rule generate-reference ( target : sources + : properties * )
 {
     RUNNER on $(target) = [ path.native $(.here)/docca.py ] ;
-
 }
 actions generate-reference bind CONFIGS EXTENSIONS
 {

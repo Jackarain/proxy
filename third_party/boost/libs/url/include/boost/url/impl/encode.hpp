@@ -30,14 +30,15 @@ template<BOOST_URL_CONSTRAINT(grammar::CharSet) CS>
 std::size_t
 encoded_size(
     core::string_view s,
-    CS const& unreserved,
+    CS const& allowed,
     encoding_opts opt) noexcept
 {
-/*  If you get a compile error here, it
-    means that the value you passed does
-    not meet the requirements stated in
-    the documentation.
-*/
+    /*
+        If you get a compilation error here, it
+        means that the value you passed does
+        not meet the requirements stated in
+        the documentation.
+    */
     BOOST_STATIC_ASSERT(
         grammar::is_charset<CS>::value);
 
@@ -45,29 +46,49 @@ encoded_size(
     auto it = s.data();
     auto const last = it + s.size();
 
-    if(! opt.space_as_plus ||
-        unreserved(' '))
+    if (!opt.space_as_plus)
     {
-        while(it != last)
+        while (it != last)
         {
-            if(unreserved(*it))
-                n += 1;
+            char const c = *it;
+            if (allowed(c))
+            {
+                ++n;
+            }
             else
+            {
                 n += 3;
+            }
             ++it;
         }
     }
     else
     {
-        while(it != last)
+        // '+' is always encoded (thus
+        // spending 3 chars) even if
+        // allowed because "%2B" and
+        // "+" have different meanings
+        // when space as plus is enabled
+        using FNT = bool (*)(CS const& allowed, char);
+        FNT takes_one_char =
+            allowed('+') ?
+                (allowed(' ') ?
+                     FNT([](CS const& allowed, char c){ return allowed(c) && c != '+'; }) :
+                     FNT([](CS const& allowed, char c){ return (allowed(c) || c == ' ') && c != '+'; })) :
+                (allowed(' ') ?
+                     FNT([](CS const& allowed, char c){ return allowed(c); }) :
+                     FNT([](CS const& allowed, char c){ return allowed(c) || c == ' '; }));
+        while (it != last)
         {
-            auto c = *it;
-            if(unreserved(c))
+            char const c = *it;
+            if (takes_one_char(allowed, c))
+            {
                 ++n;
-            else if(c == ' ')
-                ++n;
+            }
             else
+            {
                 n += 3;
+            }
             ++it;
         }
     }
@@ -82,10 +103,10 @@ encode(
     char* dest,
     std::size_t size,
     core::string_view s,
-    CS const& unreserved,
+    CS const& allowed,
     encoding_opts opt)
 {
-/*  If you get a compile error here, it
+/*  If you get a compilation error here, it
     means that the value you passed does
     not meet the requirements stated in
     the documentation.
@@ -94,7 +115,7 @@ encode(
         grammar::is_charset<CS>::value);
 
     // '%' must be reserved
-    BOOST_ASSERT(! unreserved('%'));
+    BOOST_ASSERT(!allowed('%'));
 
     char const* const hex =
         detail::hexdigs[opt.lower_case];
@@ -113,42 +134,32 @@ encode(
     auto const dest0 = dest;
     auto const end3 = end - 3;
 
-    if(! opt.space_as_plus)
+    if (!opt.space_as_plus)
     {
         while(it != last)
         {
-            if(unreserved(*it))
+            char const c = *it;
+            if (allowed(c))
             {
                 if(dest == end)
                     return dest - dest0;
-                *dest++ = *it++;
+                *dest++ = c;
+                ++it;
                 continue;
             }
-            if(dest > end3)
+            if (dest > end3)
                 return dest - dest0;
-            encode(dest, *it++);
+            encode(dest, c);
+            ++it;
         }
         return dest - dest0;
     }
-    else if(! unreserved(' '))
+    else
     {
-        // VFALCO space is usually reserved,
-        // and we depend on this for an
-        // optimization. if this assert
-        // goes off we can split the loop
-        // below into two versions.
-        BOOST_ASSERT(! unreserved(' '));
-
-        while(it != last)
+        while (it != last)
         {
-            if(unreserved(*it))
-            {
-                if(dest == end)
-                    return dest - dest0;
-                *dest++ = *it++;
-                continue;
-            }
-            if(*it == ' ')
+            char const c = *it;
+            if (c == ' ')
             {
                 if(dest == end)
                     return dest - dest0;
@@ -156,9 +167,20 @@ encode(
                 ++it;
                 continue;
             }
+            else if (
+                allowed(c) &&
+                c != '+')
+            {
+                if(dest == end)
+                    return dest - dest0;
+                *dest++ = c;
+                ++it;
+                continue;
+            }
             if(dest > end3)
                 return dest - dest0;
-            encode(dest, *it++);
+            encode(dest, c);
+            ++it;
         }
     }
     return dest - dest0;
@@ -175,14 +197,14 @@ encode_unsafe(
     char* dest,
     std::size_t size,
     core::string_view s,
-    CS const& unreserved,
+    CS const& allowed,
     encoding_opts opt)
 {
     BOOST_STATIC_ASSERT(
         grammar::is_charset<CS>::value);
 
     // '%' must be reserved
-    BOOST_ASSERT(! unreserved('%'));
+    BOOST_ASSERT(!allowed('%'));
 
     auto it = s.data();
     auto const last = it + s.size();
@@ -204,42 +226,44 @@ encode_unsafe(
     };
 
     auto const dest0 = dest;
-    if(! opt.space_as_plus)
+    if (!opt.space_as_plus)
     {
         while(it != last)
         {
             BOOST_ASSERT(dest != end);
-            if(unreserved(*it))
-                *dest++ = *it++;
+            char const c = *it;
+            if(allowed(c))
+            {
+                *dest++ = c;
+            }
             else
-                encode(dest, *it++);
+            {
+                encode(dest, c);
+            }
+            ++it;
         }
     }
     else
     {
-        // VFALCO space is usually reserved,
-        // and we depend on this for an
-        // optimization. if this assert
-        // goes off we can split the loop
-        // below into two versions.
-        BOOST_ASSERT(! unreserved(' '));
-
         while(it != last)
         {
             BOOST_ASSERT(dest != end);
-            if(unreserved(*it))
-            {
-                *dest++ = *it++;
-            }
-            else if(*it == ' ')
+            char const c = *it;
+            if (c == ' ')
             {
                 *dest++ = '+';
-                ++it;
+            }
+            else if (
+                allowed(c) &&
+                c != '+')
+            {
+                *dest++ = c;
             }
             else
             {
-                encode(dest, *it++);
+                encode(dest, c);
             }
+            ++it;
         }
     }
     return dest - dest0;
@@ -253,7 +277,7 @@ template<
 BOOST_URL_STRTOK_RETURN
 encode(
     core::string_view s,
-    CS const& unreserved,
+    CS const& allowed,
     encoding_opts opt,
     StringToken&& token) noexcept
 {
@@ -261,11 +285,11 @@ encode(
         grammar::is_charset<CS>::value);
 
     auto const n = encoded_size(
-        s, unreserved, opt);
+        s, allowed, opt);
     auto p = token.prepare(n);
     if(n > 0)
         encode_unsafe(
-            p, n, s, unreserved, opt);
+            p, n, s, allowed, opt);
     return token.result();
 }
 

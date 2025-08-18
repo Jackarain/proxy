@@ -44,19 +44,19 @@ exe quickbook
     block_element_grammar.cpp
     phrase_element_grammar.cpp
     doc_info_grammar.cpp
-    /boost//program_options
-    /boost//filesystem
-    : #<define>QUICKBOOK_NO_DATES
-      <define>BOOST_FILESYSTEM_NO_DEPRECATED
-      <toolset>msvc:<cxxflags>/wd4355
-      <toolset>msvc:<cxxflags>/wd4511
-      <toolset>msvc:<cxxflags>/wd4512
-      <toolset>msvc:<cxxflags>/wd4701
-      <toolset>msvc:<cxxflags>/wd4702
-      <toolset>msvc:<cxxflags>/wd4244
-      <toolset>msvc:<cxxflags>/wd4267
-      <toolset>msvc:<cxxflags>/wd4800
-      <toolset>msvc:<define>_CRT_SECURE_NO_DEPRECATE
-      <toolset>msvc:<define>_SCL_SECURE_NO_DEPRECATE
-      <target-os>windows:<library>shell32
+    /boost/program_options//boost_program_options/<link>static
+    /boost/filesystem//boost_filesystem/<link>static
+    :   #<define>QUICKBOOK_NO_DATES
+        <define>BOOST_FILESYSTEM_NO_DEPRECATED
+        <toolset>msvc:<cxxflags>/wd4355
+        <toolset>msvc:<cxxflags>/wd4511
+        <toolset>msvc:<cxxflags>/wd4512
+        <toolset>msvc:<cxxflags>/wd4701
+        <toolset>msvc:<cxxflags>/wd4702
+        <toolset>msvc:<cxxflags>/wd4244
+        <toolset>msvc:<cxxflags>/wd4267
+        <toolset>msvc:<cxxflags>/wd4800
+        <toolset>msvc:<define>_CRT_SECURE_NO_DEPRECATE
+        <toolset>msvc:<define>_SCL_SECURE_NO_DEPRECATE
+        <target-os>windows:<library>shell32
     ;

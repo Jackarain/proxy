@@ -21,7 +21,8 @@ struct [[nodiscard]] with_impl
     bool await_ready() { return false;}
 
     template<typename Promise>
-    BOOST_NOINLINE auto await_suspend(std::coroutine_handle<Promise> h) -> std::coroutine_handle<promise_type>;
+    BOOST_COBALT_MSVC_NOINLINE
+    auto await_suspend(std::coroutine_handle<Promise> h) -> std::coroutine_handle<promise_type>;
     inline T await_resume();
 
   private:
@@ -40,9 +41,9 @@ struct with_promise_value
       result.emplace(std::move(*value));
   }
 
-  T get_result()
+  std::optional<T> get_result()
   {
-    return std::move(result).value();
+    return std::move(result);
   }
 };
 
@@ -89,7 +90,7 @@ struct with_impl<T>::promise_type
     {
       return false;
     }
-    BOOST_NOINLINE
+    BOOST_COBALT_MSVC_NOINLINE
     auto await_suspend(std::coroutine_handle<promise_type> h) noexcept -> std::coroutine_handle<void>
     {
       return std::coroutine_handle<void>::from_address(h.promise().awaited_from.address());
@@ -116,12 +117,12 @@ template<typename T>
 T with_impl<T>::await_resume()
 {
     auto e = promise.e;
-    auto res = std::move(promise.get_result());
+    auto res = promise.get_result();
     std::coroutine_handle<promise_type>::from_promise(promise).destroy();
     if (e)
         std::rethrow_exception(e);
 
-    return std::move(res);
+    return *std::move(res);
 }
 
 template<>
@@ -137,12 +138,12 @@ template<typename T>
 template<typename Promise>
 auto with_impl<T>::await_suspend(std::coroutine_handle<Promise> h) -> std::coroutine_handle<promise_type>
 {
-    if constexpr (requires (Promise p) {p.get_executor();})
+    if constexpr (requires {h.promise().get_executor();})
         promise.exec.emplace(h.promise().get_executor());
     else
         promise.exec.emplace(this_thread::get_executor());
 
-    if constexpr (requires (Promise p) {p.get_cancellation_slot();})
+    if constexpr (requires {h.promise().get_cancellation_slot();})
         promise.slot_ = h.promise().get_cancellation_slot();
 
     promise.awaited_from = h;

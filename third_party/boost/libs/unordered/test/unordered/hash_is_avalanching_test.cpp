@@ -1,10 +1,9 @@
 // Copyright 2022 Peter Dimov
-// Copyright 2024 Joaquin M Lopez Munoz
+// Copyright 2024-2025 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
 // an imitation of a third-party header specializing hash_is_avalanching
-// (boost/container_hash/hash.hpp is an example doing that)
 
 #include <boost/type_traits/integral_constant.hpp>
 
@@ -14,13 +13,10 @@ struct X3
 
 namespace boost
 {
-namespace unordered
-{
 
     template<class T> struct hash_is_avalanching;
     template<> struct hash_is_avalanching< ::X3 >: boost::true_type {};
 
-} // namespace unordered
 } // namespace boost
 
 //

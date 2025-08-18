@@ -342,7 +342,7 @@ cleanup:
         goto bail;
     }
 
-    if ( DEBUG_HEADER )
+    if ( is_debug_header() )
         out_printf( "hcache read from file %s\n", hcachename );
 
 bail:
@@ -409,7 +409,7 @@ void hcache_done()
     }
     write_netstring( f, "%s", CACHE_RECORD_END );
 
-    if ( DEBUG_HEADER )
+    if ( is_debug_header() )
         out_printf( "hcache written to %s.   %d dependencies, %.0f%% hit rate\n",
             hcachename, header_count, queries ? 100.0 * hits / queries : 0 );
 
@@ -458,7 +458,7 @@ LIST * hcache( TARGET * t, int rec, b2::regex::program re[], LIST * hdrscan )
             }
             if ( iter1 != end1 || iter2 != end2 )
             {
-                if ( DEBUG_HEADER )
+                if ( is_debug_header() )
                 {
                     out_printf( "HDRSCAN out of date in cache for %s\n",
                         object_str( t->boundname ) );
@@ -476,7 +476,7 @@ LIST * hcache( TARGET * t, int rec, b2::regex::program re[], LIST * hdrscan )
             }
             else
             {
-                if ( DEBUG_HEADER )
+                if ( is_debug_header() )
                     out_printf( "using header cache for %s\n", object_str(
                         t->boundname ) );
                 c->age = 0;
@@ -486,7 +486,7 @@ LIST * hcache( TARGET * t, int rec, b2::regex::program re[], LIST * hdrscan )
         }
         else
         {
-            if ( DEBUG_HEADER )
+            if ( is_debug_header() )
                 out_printf ("header cache out of date for %s\n", object_str(
                     t->boundname ) );
             list_free( c->includes );

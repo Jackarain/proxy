@@ -165,7 +165,7 @@ BOOST_PROCESS_V2_END_NAMESPACE
 
 #include <sys/syscall.h>
 
-#if defined(SYS_pidfd_open)
+#if defined(SYS_pidfd_open) && !defined(BOOST_PROCESS_V2_DISABLE_PIDFD_OPEN)
 #define BOOST_PROCESS_V2_PIDFD_OPEN 1
 #define BOOST_PROCESS_V2_HAS_PROCESS_HANDLE 1
 #endif

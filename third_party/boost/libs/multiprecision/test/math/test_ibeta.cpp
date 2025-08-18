@@ -10,7 +10,7 @@
 #define TEST_DATA 1
 
 #include <boost/math/special_functions/math_fwd.hpp>
-#include "libs/math/test/test_ibeta.hpp"
+#include "test_ibeta.hpp"
 
 void expected_results()
 {

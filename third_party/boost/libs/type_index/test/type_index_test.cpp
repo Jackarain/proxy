@@ -7,7 +7,7 @@
 
 #include <boost/type_index.hpp>
 
-#include <boost/lexical_cast.hpp>
+#include <sstream>
 
 #include <boost/core/lightweight_test.hpp>
 
@@ -209,15 +209,20 @@ void type_id_storing_modifiers_vs_nonstoring()
     BOOST_TEST(t1.pretty_name() == "const int" || t1.pretty_name() == "int const");
 }
 
-void type_index_stream_operator_via_lexical_cast_testing()
+void type_index_stream_operator_via_stringstream_testing()
 {
     using namespace boost::typeindex;
 
-    std::string s_int2 = boost::lexical_cast<std::string>(type_id<int>());
-    BOOST_TEST_EQ(s_int2, "int");
-
-    std::string s_double2 = boost::lexical_cast<std::string>(type_id<double>());
-    BOOST_TEST_EQ(s_double2, "double");
+    {
+        std::ostringstream oss;
+        oss << type_id<int>();
+        BOOST_TEST_EQ(oss.str(), "int");
+    }
+    {
+        std::ostringstream oss;
+        oss << type_id<double>();
+        BOOST_TEST_EQ(oss.str(), "double");
+    }
 }
 
 void type_index_stripping_cvr_test()
@@ -386,7 +391,7 @@ int main() {
 
     type_id_storing_modifiers();
     type_id_storing_modifiers_vs_nonstoring();
-    type_index_stream_operator_via_lexical_cast_testing();
+    type_index_stream_operator_via_stringstream_testing();
     type_index_stripping_cvr_test();
     type_index_user_defined_class_test();
 

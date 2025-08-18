@@ -25,6 +25,7 @@
 # <format> is an implicit feature, so for example, typing pdf on the command
 # line is a short-cut for format=pdf.
 
+import args ;
 import build-system ;
 import "class" : new ;
 import common ;
@@ -51,8 +52,7 @@ import xsltproc ;
 project.initialize $(__name__) ;
 project boostbook ;
 
-.debug-configuration = [ MATCH ^(--debug-configuration)$ : [ modules.peek : ARGV
-    ] ] ;
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 feature.feature format
     : html xhtml htmlhelp onehtml man pdf ps docbook fo tests none

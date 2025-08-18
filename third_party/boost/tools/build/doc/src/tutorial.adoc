@@ -1,11 +1,11 @@
-[[bbv2.tutorial]]
+[[b2.tutorial]]
 = Tutorial
 
 This section will guide you through the most basic features of
 B2. We will start with the “Hello, world” example, learn how to
 use libraries, and finish with testing and installing features.
 
-[[bbv2.tutorial.hello]]
+[[b2.tutorial.hello]]
 == Hello, world
 
 The simplest project that B2 can construct is stored in
@@ -66,7 +66,7 @@ b2 hello2
 b2 --clean hello2
 ----
 
-[[bbv2.tutorial.properties]]
+[[b2.tutorial.properties]]
 == Properties
 
 To represent aspects of target configuration such as debug and release
@@ -108,9 +108,9 @@ an _implicit_ feature—B2 will deduce its identity just from the
 name of one of its values.
 
 A complete description of features can be found in
-link:#bbv2.reference.features[the section called “Features and properties”].
+link:#b2.reference.features[the section called “Features and properties”].
 
-[[bbv2.tutorial.properties.requirements]]
+[[b2.tutorial.properties.requirements]]
 === Build Requests and Target Requirements
 
 The set of properties specified on the command line constitutes a _build
@@ -120,7 +120,7 @@ project in the current directory). The _actual_ properties used for
 building targets are typically a combination of the build request and
 properties derived from the project's `Jamfile` (and its other Jamfiles,
 as described in
-link:#bbv2.tutorial.hierarchy[the section called “Project Hierarchies”]).
+link:#b2.tutorial.hierarchy[the section called “Project Hierarchies”]).
 For example, the locations of `#include`d header files are normally not
 specified on the command-line, but described in Jamfiles as _target
 requirements_ and automatically combined with the build request for those
@@ -141,13 +141,13 @@ be present. If the build request given on the `b2` command-line
 explicitly contradicts a target's requirements, the target requirements
 usually override (or, in the case of “free” features like
 `<include>`, footnote:[See
-link:#bbv2.reference.features.attributes[the section called “Feature Attributes”]]
+link:#b2.reference.features.attributes[the section called “Feature Attributes”]]
 augment) the build request.
 
 TIP: The value of the `<include>` feature is relative to the location of
 `Jamfile` where it is used.
 
-[[bbv2.tutorial.properties.project_attributes]]
+[[b2.tutorial.properties.project_attributes]]
 === Project Attributes
 
 If we want the same requirements for our other target, `hello2`, we
@@ -169,7 +169,7 @@ exe hello2 : hello.cpp ;
 The effect would be as if we specified the same requirement for both
 `hello` and `hello2`.
 
-[[bbv2.tutorial.hierarchy]]
+[[b2.tutorial.hierarchy]]
 == Project Hierarchies
 
 So far we have only considered examples with one project, with one
@@ -219,8 +219,8 @@ in its requirements, then all of its sub-projects will have it in their
 requirements, too. Of course, any project can add include paths to those
 specified by its parents. footnote:[Many features will be overridden,
 rather than added-to, in sub-projects See
-link:#bbv2.reference.features.attributes[the section called “Feature Attributes”] for more information] More
-details can be found in link:#bbv2.overview.projects[the section called “Projects”].
+link:#b2.reference.features.attributes[the section called “Feature Attributes”] for more information] More
+details can be found in link:#b2.overview.projects[the section called “Projects”].
 
 Invoking `b2` without explicitly specifying any targets on the command
 line builds the project rooted in the current directory. Building a
@@ -237,7 +237,7 @@ which would cause the project in `top/app/` to be built whenever the
 project in `top/` is built. However, targets in `top/util/foo/` will be
 built only if they are needed by targets in `top/` or `top/app/`.
 
-[[bbv2.tutorial.libs]]
+[[b2.tutorial.libs]]
 == Dependent Targets
 
 When building a target `X` that depends on first building another target
@@ -346,7 +346,7 @@ project
 ====
 
 
-[[bbv2.tutorial.linkage]]
+[[b2.tutorial.linkage]]
 == Static and shared libraries
 
 Libraries can be either _static_, which means they are included in
@@ -374,7 +374,7 @@ lib l : l.cpp : <link>static ;
 We can also use the `<link>` property to express linking requirements on
 a per-target basis. For example, if a particular executable can be
 correctly built only with the static version of a library, we can
-qualify the executable's link:#bbv2.reference.targets.references[target
+qualify the executable's link:#b2.reference.targets.references[target
 reference] to the library as follows:
 
 [source]
@@ -408,7 +408,7 @@ exe e1 : e1.cpp foo ;
 exe e10 : e10.cpp foo ;
 ----
 
-The link:#bbv2.tasks.alias[alias] rule is specifically used to rename a
+The link:#b2.tasks.alias[alias] rule is specifically used to rename a
 reference to a target and possibly change the properties.
 
 [TIP]
@@ -438,7 +438,7 @@ This restriction is lifted when you use B2 testing
 facilities—the `PATH` variable will be automatically adjusted before
 running the executable.
 
-[[bbv2.tutorial.conditions]]
+[[b2.tutorial.conditions]]
 == Conditions and alternatives
 
 Sometimes, particular relationships need to be maintained among a
@@ -480,7 +480,7 @@ selected, and when building with `<toolset>msvc` alternative *(3)* will be
 selected. In all other cases, the most generic alternative *(1)* will be
 built.
 
-[[bbv2.tutorial.prebuilt]]
+[[b2.tutorial.prebuilt]]
 == Prebuilt targets
 
 To link to libraries whose build instructions aren't given in a Jamfile,
@@ -549,5 +549,5 @@ lib pythonlib : : <name>python22_d <variant>debug ;
 ----
 
 A more advanced use of prebuilt targets is described in
-link:#bbv2.recipes.site-config[the section called “Targets in
+link:#b2.recipes.site-config[the section called “Targets in
 site-config.jam”].

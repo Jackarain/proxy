@@ -1,4 +1,4 @@
-# Copyright 2019 - 2023 Andrey Semashev
+# Copyright 2019 - 2025 Andrey Semashev
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
@@ -35,18 +35,16 @@ environment:
       ADDRESS_MODEL: 64
       CXXSTD: 11
       ADDPATH: C:\cygwin64\bin
-      EXTRA_TESTS: 1
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-    - TOOLSET: gcc
-      ADDRESS_MODEL: 64
-      CXXSTD: 11,14
-      ADDPATH: C:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64\bin
-      EXTRA_TESTS: 1
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     - TOOLSET: gcc
       ADDRESS_MODEL: 64
       CXXSTD: 11,14,17
       ADDPATH: C:\mingw-w64\x86_64-7.3.0-posix-seh-rt_v5-rev0\mingw64\bin
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - TOOLSET: gcc
+      ADDRESS_MODEL: 64
+      CXXSTD: 11,14,17,2a
+      ADDPATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     - TOOLSET: clang-win
       ADDRESS_MODEL: 64
@@ -73,8 +71,8 @@ environment:
     - TOOLSET: gcc
       ADDRESS_MODEL: 32
       CXXSTD: 11,14
-      ADDPATH: C:\mingw-w64\i686-6.3.0-posix-dwarf-rt_v5-rev1\mingw32\bin
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      ADDPATH: C:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     - TOOLSET: clang-win
       ADDRESS_MODEL: 32
       CXXSTD: 14,17

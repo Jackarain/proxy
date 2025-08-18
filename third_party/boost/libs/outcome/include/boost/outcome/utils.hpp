@@ -1,5 +1,5 @@
 /* Tries to convert an exception ptr into its equivalent error code
-(C) 2017-2024 Niall Douglas <http://www.nedproductions.biz/> (11 commits)
+(C) 2017-2025 Niall Douglas <http://www.nedproductions.biz/> (11 commits)
 File Created: July 2017
 
 

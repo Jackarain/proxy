@@ -42,6 +42,7 @@ BOOST_LOG_API format_description< CharT > parse_format(const CharT* begin, const
     typedef CharT char_type;
     typedef format_description< char_type > description;
     typedef typename encoding< char_type >::type traits;
+    typedef typename traits::classify_type char_classify_type;
 
     const char_type* original_begin = begin;
     description descr;
@@ -74,7 +75,7 @@ BOOST_LOG_API format_description< CharT > parse_format(const CharT* begin, const
             }
 
             // Check if this is a positional argument
-            if (traits::isdigit(c))
+            if (traits::isdigit(static_cast< char_classify_type >(c)))
             {
                 if (c != static_cast< char_type >('0'))
                 {

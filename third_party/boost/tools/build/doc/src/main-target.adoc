@@ -1,4 +1,4 @@
-[[bbv2.reference.class.main-target]]
+[[b2.reference.class.main-target]]
 = Class main-target
 
 [source,jam]
@@ -14,18 +14,18 @@ class main-target : abstract-target {
 }
 ----
 
-A link:#bbv2.reference.class.main-target[main-target] represents a named
+A link:#b2.reference.class.main-target[main-target] represents a named
 top-level target in a Jamfile.
 
 --
-1. [[bbv2.reference.class.main-target.generate]] `rule generate ( property-set )`
+1. [[b2.reference.class.main-target.generate]] `rule generate ( property-set )`
 +
 Overrides
-link:#bbv2.reference.class.abstract-target.generate[abstract-target.generate].
+link:#b2.reference.class.abstract-target.generate[abstract-target.generate].
 Select an alternative for this main target, by finding all alternatives
 whose requirements are satisfied by `property-set` and picking the one
 with the longest requirements set. Returns the result of calling
-link:#bbv2.reference.class.basic-target.generate[generate] on that
+link:#b2.reference.class.basic-target.generate[generate] on that
 alternative.
 +
 On success, returns:

@@ -1,4 +1,4 @@
-//  Copyright (c) 2020 Andrey Semashev
+//  Copyright (c) 2020-2025 Andrey Semashev
 //
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
@@ -7,17 +7,17 @@
 #include <boost/atomic/atomic_ref.hpp>
 #include <boost/atomic/capabilities.hpp>
 
+#include <cstdint>
 #include <boost/config.hpp>
-#include <boost/cstdint.hpp>
 
 #include "wait_test_helpers.hpp"
 
 int main(int, char *[])
 {
-    test_wait_notify_api< atomic_ref_wrapper, boost::uint8_t >(1, 2, 3, BOOST_ATOMIC_HAS_NATIVE_INT8_WAIT_NOTIFY);
-    test_wait_notify_api< atomic_ref_wrapper, boost::uint16_t >(1, 2, 3, BOOST_ATOMIC_HAS_NATIVE_INT16_WAIT_NOTIFY);
-    test_wait_notify_api< atomic_ref_wrapper, boost::uint32_t >(1, 2, 3, BOOST_ATOMIC_HAS_NATIVE_INT32_WAIT_NOTIFY);
-    test_wait_notify_api< atomic_ref_wrapper, boost::uint64_t >(1, 2, 3, BOOST_ATOMIC_HAS_NATIVE_INT64_WAIT_NOTIFY);
+    test_wait_notify_api< atomic_ref_wrapper, std::uint8_t >(1, 2, 3, BOOST_ATOMIC_HAS_NATIVE_INT8_WAIT_NOTIFY);
+    test_wait_notify_api< atomic_ref_wrapper, std::uint16_t >(1, 2, 3, BOOST_ATOMIC_HAS_NATIVE_INT16_WAIT_NOTIFY);
+    test_wait_notify_api< atomic_ref_wrapper, std::uint32_t >(1, 2, 3, BOOST_ATOMIC_HAS_NATIVE_INT32_WAIT_NOTIFY);
+    test_wait_notify_api< atomic_ref_wrapper, std::uint64_t >(1, 2, 3, BOOST_ATOMIC_HAS_NATIVE_INT64_WAIT_NOTIFY);
 #if defined(BOOST_HAS_INT128) && !defined(BOOST_ATOMIC_TESTS_NO_INT128)
     test_wait_notify_api< atomic_ref_wrapper, boost::uint128_type >(1, 2, 3, BOOST_ATOMIC_HAS_NATIVE_INT128_WAIT_NOTIFY);
 #endif

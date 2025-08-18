@@ -230,7 +230,7 @@ the input they match unless otherwise stated in the table below.]
     [[ _ui_ ]
      [ Matches an unsigned integral value. ]
      [ `unsigned int` ]
-     []]
+     [ To specify a base/radix of `N`, use _ui_`.base<N>()`.  To specify exactly `D` digits, use _ui_`.digits<D>()`.  To specify a minimum of `LO` digits and a maximum of `HI` digits, use _ui_`.digits<LO, HI>()`.  These calls can be chained, as in _ui_`.base<2>().digits<8>()`. ]]
 
     [[ `_ui_(arg0)` ]
      [ Matches exactly the unsigned integral value `_RES_np_(arg0)`. ]
@@ -270,7 +270,7 @@ the input they match unless otherwise stated in the table below.]
     [[ _i_ ]
      [ Matches a signed integral value. ]
      [ `int` ]
-     []]
+     [ To specify a base/radix of `N`, use _i_`.base<N>()`.  To specify exactly `D` digits, use _i_`.digits<D>()`.  To specify a minimum of `LO` digits and a maximum of `HI` digits, use _i_`.digits<LO, HI>()`.  These calls can be chained, as in _i_`.base<2>().digits<8>()`. ]]
 
     [[ `_i_(arg0)` ]
      [ Matches exactly the signed integral value `_RES_np_(arg0)`. ]
@@ -505,7 +505,7 @@ attribute type is `char32_t`:
     static_assert(std::is_same_v<decltype(result), std::optional<char32_t>>));
 
 The good news is that usually you don't parse characters individually.  When
-you parse with _ch_, you usually parse repetition of then, which will produce
+you parse with _ch_, you usually parse repetition of them, which will produce
 a _std_str_, regardless of whether you're in Unicode parsing mode or not.  If
 you do need to parse individual characters, and want to lock down their
 attribute type, you can use _cp_ and/or _cu_ to enforce a non-polymorphic
@@ -551,7 +551,7 @@ tables below:
     [[`p1 || p2`]                       [`_bp_tup_<_ATTR_np_(p1), _ATTR_np_(p2)>`]]
     [[`p1 || p2 || p3`]                 [`_bp_tup_<_ATTR_np_(p1), _ATTR_np_(p2), _ATTR_np_(p3)>`]]
 
-    [[`p1 % p2`]                        [`std::string` if `_ATTR_np_(p)` is `char` or `char32_t`, otherwise `std::vector<_ATTR_np_(p1)>`]]
+    [[`p1 % p2`]                        [`std::string` if `_ATTR_np_(p1)` is `char` or `char32_t`, otherwise `std::vector<_ATTR_np_(p1)>`]]
 
     [[`p[a]`]                           [None.]]
 

@@ -1,4 +1,6 @@
-//  Copyright 2013 John Maddock. Distributed under the Boost
+//  Copyright John Maddock 2013 - 2025.
+//  Copyright Christopher Kormanyos 2023 - 2025.
+//  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
 
@@ -13,12 +15,13 @@
 #undef BOOST_MATH_SMALL_CONSTANT
 #define BOOST_MATH_SMALL_CONSTANT(x) x
 
-#if !defined(TEST_MPF_50) && !defined(TEST_BACKEND) && !defined(TEST_CPP_DEC_FLOAT) && !defined(TEST_MPFR_50) && !defined(TEST_FLOAT128) && !defined(TEST_CPP_BIN_FLOAT)
+#if !defined(TEST_MPF_50) && !defined(TEST_BACKEND) && !defined(TEST_CPP_DEC_FLOAT) && !defined(TEST_MPFR_50) && !defined(TEST_FLOAT128) && !defined(TEST_CPP_BIN_FLOAT) && !defined(TEST_CPP_DOUBLE_FLOAT)
 #define TEST_MPF_50
 #define TEST_MPFR_50
 #define TEST_CPP_DEC_FLOAT
 #define TEST_FLOAT128
 #define TEST_CPP_BIN_FLOAT
+#define TEST_CPP_DOUBLE_FLOAT
 
 #ifdef _MSC_VER
 #pragma message("CAUTION!!: No backend type specified so testing everything.... this will take some time!!")
@@ -139,24 +142,39 @@ typedef boost::multiprecision::float128 test_type_1;
 
 #endif
 
+#ifdef TEST_CPP_DOUBLE_FLOAT
+#include <boost/multiprecision/cpp_double_fp.hpp>
+
+#define CPP_DOUBLE_FLOAT_TESTS test(cpp_double_double(), "cpp_double_double");
+
+typedef boost::multiprecision::cpp_double_double test_type_1;
+
+#else
+
+#define CPP_DOUBLE_FLOAT_TESTS
+
+#endif
+
 #ifndef BOOST_MATH_TEST_TYPE
 #define BOOST_TEST_MAIN
 #include <boost/test/unit_test.hpp>
-#include <boost/test/floating_point_comparison.hpp>
+#include <boost/test/tools/floating_point_comparison.hpp>
 #endif
 
-#define ALL_TESTS      \
-   MPF_TESTS           \
-   MPFR_TESTS          \
-   CPP_DEC_FLOAT_TESTS \
-   FLOAT128_TESTS      \
-   CPP_BIN_FLOAT_TESTS
+#define ALL_TESTS          \
+   MPF_TESTS               \
+   MPFR_TESTS              \
+   CPP_DEC_FLOAT_TESTS     \
+   FLOAT128_TESTS          \
+   CPP_BIN_FLOAT_TESTS     \
+   CPP_DOUBLE_FLOAT_TESTS
 
-#define ALL_SMALL_TESTS \
-   MPF_SMALL_TESTS      \
-   MPFR_TESTS           \
-   CPP_DEC_FLOAT_TESTS  \
-   FLOAT128_TESTS       \
-   CPP_BIN_FLOAT_TESTS
+#define ALL_SMALL_TESTS    \
+   MPF_SMALL_TESTS         \
+   MPFR_TESTS              \
+   CPP_DEC_FLOAT_TESTS     \
+   FLOAT128_TESTS          \
+   CPP_BIN_FLOAT_TESTS     \
+   CPP_DOUBLE_FLOAT_TESTS
 
 #endif

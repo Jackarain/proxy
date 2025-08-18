@@ -66,7 +66,7 @@ LIST * evaluate_rule( RULE * rule, OBJECT * rulename, FRAME * frame )
     profile_frame   prof[ 1 ];
     module_t      * prev_module = frame->module;
 
-    if ( DEBUG_COMPILE )
+    if ( is_debug_compile() )
     {
         /* Try hard to indicate in which module the rule is going to execute. */
         char buf[ 256 ] = "";
@@ -98,7 +98,7 @@ LIST * evaluate_rule( RULE * rule, OBJECT * rulename, FRAME * frame )
     {
         frame->rulename = object_str( rulename );
         /* And enter record profile info. */
-        if ( DEBUG_PROFILE )
+        if ( is_debug_profile() )
             profile_enter( function_rulename( rule->procedure ), prof );
     }
 
@@ -153,10 +153,10 @@ LIST * evaluate_rule( RULE * rule, OBJECT * rulename, FRAME * frame )
         result.reset( function_run( function.get(), frame ) );
     }
 
-    if ( DEBUG_PROFILE && rule->procedure )
+    if ( is_debug_profile() && rule->procedure )
         profile_exit( prof );
 
-    if ( DEBUG_COMPILE )
+    if ( is_debug_compile() )
         debug_compile( -1, 0, frame );
 
     return result.release();

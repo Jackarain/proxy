@@ -510,8 +510,8 @@ lightweight version of `std::unique_lock`.]
 
 Since [class_scope_defer_guard] effectively provides no interface to interact with after construction, it is better suited for anonymous
 "set up and forget" kind of scope guards. To emphasize this affinity, the library provides a `BOOST_SCOPE_DEFER` macro, which acts as
-a keyword defining a uniquely named [class_scope_defer_guard] scope guard. The macro should be followed by the function object to be
-invoked on scope exit.
+a keyword defining a uniquely named [class_scope_defer_guard] object. The macro should be followed by the function object to be invoked
+on scope exit.
 
     BOOST_SCOPE_DEFER []
     {

@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.user-interface]]`user-interface`::
+[[b2.builtin.features.user-interface]]`user-interface`::
 *Allowed values:* `console`, `gui`, `wince`, `native`, `auto`.
 +
 Specifies the environment for the executable which affects the entry point

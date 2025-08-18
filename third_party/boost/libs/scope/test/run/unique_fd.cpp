@@ -45,6 +45,11 @@ void noop_invalid_parameter(const wchar_t* expression, const wchar_t* function, 
 #define fstat _fstat
 #endif // defined(BOOST_WINDOWS)
 
+#if defined(__GNUC__)
+// missing initializer for member 'stat::...'
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#endif
+
 int main(int argc, char* args[])
 {
 #if defined(_MSC_VER) && defined(_CPPLIB_VER)

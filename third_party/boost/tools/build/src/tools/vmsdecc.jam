@@ -18,12 +18,10 @@ import common ;
 import unix ;
 import path ;
 import regex ;
+import args ;
 
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 feature.extend toolset : vmsdecc ;
 

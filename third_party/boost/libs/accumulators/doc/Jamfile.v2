@@ -52,8 +52,8 @@ else
 # features shows the dependency relationships between them.
 doxygen tagfile
     :
-        ../../../boost/accumulators/framework/depends_on.hpp
-        ../../../boost/accumulators/framework/extractor.hpp
+        ../include/boost/accumulators/framework/depends_on.hpp
+        ../include/boost/accumulators/framework/extractor.hpp
     :
         <doxygen:param>MACRO_EXPANSION=YES
         <doxygen:param>EXPAND_ONLY_PREDEF=YES
@@ -68,10 +68,10 @@ doxygen tagfile
 
 doxygen accdoc
     :
-        [ glob ../../../boost/accumulators/accumulators*.hpp ]
-        [ glob ../../../boost/accumulators/framework/*.hpp ]
-        [ glob ../../../boost/accumulators/framework/parameters/*.hpp ]
-        [ glob ../../../boost/accumulators/framework/accumulators/*.hpp ]
+        [ glob ../include/boost/accumulators/accumulators*.hpp ]
+        [ glob ../include/boost/accumulators/framework/*.hpp ]
+        [ glob ../include/boost/accumulators/framework/parameters/*.hpp ]
+        [ glob ../include/boost/accumulators/framework/accumulators/*.hpp ]
     :
         <doxygen:param>EXTRACT_ALL=YES
         <doxygen:param>"PREDEFINED=\"BOOST_ACCUMULATORS_DOXYGEN_INVOKED=1\" \\
@@ -97,9 +97,9 @@ doxygen accdoc
 # generate .png images for the LaTeX formulas embedded in the doc comments.
 doxygen statsdoc.html
     :
-        [ glob ../../../boost/accumulators/statistics*.hpp ]
-        [ glob ../../../boost/accumulators/statistics/*.hpp ]
-        [ glob ../../../boost/accumulators/statistics/variates/*.hpp ]
+        [ glob ../include/boost/accumulators/statistics*.hpp ]
+        [ glob ../include/boost/accumulators/statistics/*.hpp ]
+        [ glob ../include/boost/accumulators/statistics/variates/*.hpp ]
     :
         <dependency>latex.check
         <dependency>dvips.check
@@ -141,9 +141,9 @@ make statsdoclatex.tag
 
 doxygen statsdoc
     :
-        [ glob ../../../boost/accumulators/statistics*.hpp ]
-        [ glob ../../../boost/accumulators/statistics/*.hpp ]
-        [ glob ../../../boost/accumulators/statistics/variates/*.hpp ]
+        [ glob ../include/boost/accumulators/statistics*.hpp ]
+        [ glob ../include/boost/accumulators/statistics/*.hpp ]
+        [ glob ../include/boost/accumulators/statistics/variates/*.hpp ]
     :
         <doxygen:param>EXTRACT_ALL=YES
         <doxygen:param>"PREDEFINED=\"BOOST_ACCUMULATORS_DOXYGEN_INVOKED=1\" \\
@@ -171,8 +171,8 @@ doxygen statsdoc
 
 doxygen opdoc
     :
-        [ glob ../../../boost/accumulators/numeric/functional.hpp ]
-        [ glob ../../../boost/accumulators/numeric/functional/*.hpp ]
+        [ glob ../include/boost/accumulators/numeric/functional.hpp ]
+        [ glob ../include/boost/accumulators/numeric/functional/*.hpp ]
     :
         <doxygen:param>EXTRACT_ALL=YES
         <doxygen:param>"PREDEFINED=\"BOOST_NUMERIC_FUNCTIONAL_DOXYGEN_INVOKED=1\" \\

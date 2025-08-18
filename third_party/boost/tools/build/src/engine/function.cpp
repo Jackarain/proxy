@@ -4194,7 +4194,7 @@ LIST * function_execute_write_file(
         char const * out = object_str( list_front( filename.inner ) );
         OBJECT * tmp_filename = nullptr;
         FILE * out_file = nullptr;
-        bool out_debug = DEBUG_EXEC != 0;
+        bool out_debug = is_debug_exec();
 
         /* For stdout/stderr we will create a temp file and generate a
         * command that outputs the content as needed.

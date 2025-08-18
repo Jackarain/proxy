@@ -1,0 +1,84 @@
+[/
+  Copyright 2021 - 2025 Fahad Syed.
+  Copyright 2025 Christopher Kormanyos.
+
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:cpp_double_fp_backend cpp_double_fp_backend]
+
+`#include <boost/multiprecision/cpp_double_fp_backend.hpp>`
+
+   namespace boost { namespace multiprecision {
+
+   template <class FloatingPointType>
+   class cpp_double_fp_backend;
+
+   typedef number<cpp_double_fp_backend<float>, et_off> cpp_double_float;
+   typedef number<cpp_double_fp_backend<double>, et_off> cpp_double_double;
+   typedef number<cpp_double_fp_backend<long double>, et_off> cpp_double_long_double;
+   typedef number<cpp_double_fp_backend<boost::float128_type>, et_off> cpp_double_float128; // Only when boost::float128_type is available
+
+   } } // namespaces
+
+The `cpp_double_fp_backend` back-end is the sum of two IEEE floating-point numbers
+combined to create a type having rougly twice the composite width of one of its parts.
+The `cpp_double_fp_backend` back-end is used in conjunction with `number`
+and acts as an entirely C++ header only floating-point number type.
+
+The implementation relies on double-word arithmetic which is a technique
+used to represent a real number as the sum of two floating-point numbers.
+Other commonly used names for this include `double-double` of `double-word` arithmetic.
+
+The `cpp_double_fp_backend` types have fixed width and do not allocate.
+The type `cpp_double_double`, for instance, (composed of two double-precision IEEE floating-point numebers)
+has (on most common systems) 106 binary digits of precision and approximately
+32 decimal digits of precision.
+
+The exponent ranges of the types are slightly limited (on the negative side) compared to those of the composite type.
+Consider again the type `cpp_double_double`, composed of two double-precision IEEE double-precision
+floating-point numebers. On common systems, this type has a maximum decimal exponent of 308
+(as does a single double-precision floating point number). The negative minimum exponent, however,
+is about -291, which is less range than the -307 from standalone double. The reason for
+the limitation is because the composite lower-limb has lower value than its upper limb and would
+underflow or become subnormal if the upper limb had its usual minimum value.
+
+There is full standard library and `std::numeric_limits` support available for this type.
+
+Note that the availability of `cpp_double_float128` depends on the availability
+of `boost::float128_type`, which can be queried at compile-time via the
+configuration macro `BOOST_HAS_FLOAT128`. This is available at the moment
+predominantly with GCC compilers in GNU-standard mode and (with GCC 14 and later)
+also in strict ANSI mode.
+
+Run-time performance is a top-level requirement for the `cpp_double_fp_backend` types.
+The types still do, however, support infinities, NaNs and (of course) zeros.
+Signed negative zero, however, is not supported (in favor of efficiency)
+and all zeros are treated as positive.
+
+The `cpp_double_fp_backend` types interoperate with Boost.Math and Boost.Math.Constants.
+This offers the wealth of Boost-related mathematical tools instantiated with
+the `cpp_double_fp_backend` types.
+
+Things you should know when using the `cpp_double_fp_backend` types:
+
+* Although the types are created from two individual IEEE floating-point components, they specifically and clearly are not IEEE types in their composite forms.
+* As a result these types can behave subtly differently from IEEE floating-point types.
+* The types can not be used with compiler variations of _fast_-_math_ (i.e., `-ffast-math` on GCC can not be used and `/fp:precise` is mandatory on MSVC compilers). This is because the algorithms (particularly those for addition, subtraction, multiplication and square root) rely on precise floating-point rouunding.
+* The composite types are not as precise as their constituents. For information on error-bounds, see Joldes et al. in the references below.
+* There are `std::numeric_limits` specializations for these types.
+* Large parts (but not all) of the `cpp_double_fp_backend` implementation are `constexpr`. Future evolution is anticipated to make this library entirely `constexpr`.
+* Conversions to and from string internally use an intermediate `cpp_bin_float` value (which is a bit awkward may be eliminated in future refinements).
+
+The `cpp_double_fp_backend` back-end has been inspired by original works and types such as the historical `doubledouble`
+and more. These include the following:
+
+* K. Briggs, the `doubledouble` library, 1998.
+* V. Shoup, the class `quad_float` in the NTL number-theory library [@https://libntl.org].
+* Yozo Hida, X. Li, and D. H. Bailey, Quad-Double Arithmetic: Algorithms, Implementation, and Application, Lawrence Berkeley National Laboratory Technical Report LBNL-46996 (2000). Also Y. Hida et al., Library for double-double and quad-double arithmetic [@https://web.mit.edu/tabbott/Public/quaddouble-debian/qd-2.3.4-old/docs/qd.pdf].
+* Mioara Maria Joldes, Jean-Michel Muller, Valentina Popescu. Tight and rigourous error bounds for basic building blocks of double-word arithmetic. ACM Transactions on Mathematical Software, 2017, 44 (2), pp. 1 - 27. ff10.1145/3121432ff. ffhal-01351529v3f.
+* The foundational `cpp_double_fp_backend` draft was originally created by Fahad Syed in BoostGSoC2021 _multiprecision_ [@https://github.com/BoostGSoC21/multiprecision].
+
+[endsect]

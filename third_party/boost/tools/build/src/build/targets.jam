@@ -76,6 +76,7 @@ import property-set ;
 import sequence ;
 import set ;
 import toolset ;
+import args ;
 
 
 # Base class for all abstract targets.
@@ -147,10 +148,9 @@ class abstract-target
 }
 
 
-if --debug-building in [ modules.peek : ARGV ]
-{
-    modules.poke : .debug-building : true ;
-}
+args.add-arg debug-building : --debug-building
+    : "Prints what targets are being built and with what properties." ;
+modules.poke : .debug-building : [ args.get-arg debug-building ] ;
 
 
 rule indent ( )
@@ -1675,7 +1675,7 @@ class typed-target : basic-target
                 ECHO "error: no generators were found for type '$(self.type)'" ;
                 ECHO "error: and the requested properties" ;
                 ECHO "error: make sure you've configured the needed tools" ;
-                ECHO "See https://www.bfgroup.xyz/b2/manual/release/index.html#bbv2.overview.configuration" ;
+                ECHO "See https://www.bfgroup.xyz/b2/manual/release/index.html#b2.overview.configuration" ;
                 EXIT "To debug this problem, try the --debug-generators option."
                     ;
             }

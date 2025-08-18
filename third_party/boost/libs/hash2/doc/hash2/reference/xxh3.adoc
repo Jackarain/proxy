@@ -1,0 +1,158 @@
+////
+Copyright 2025 Christian Mazakas
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#ref_xxh3]
+# <boost/hash2/xxh3.hpp>
+:idprefix: ref_xxh3_
+
+```
+#include <boost/hash2/digest.hpp>
+
+namespace boost {
+namespace hash2 {
+
+class xxh3_128;
+
+} // namespace hash2
+} // namespace boost
+```
+
+This header implements the https://xxhash.com/[XXH3-128 algorithm], defined https://github.com/Cyan4973/xxHash/blob/dev/doc/xxhash_spec.md[here].
+
+## xxh3_128
+
+```
+class xxh3_128
+{
+public:
+
+    using result_type = digest<16>;
+
+    constexpr xxh3_128();
+    explicit constexpr xxh3_128( std::uint64_t seed );
+    xxh3_128( void const* p, std::size_t n );
+    constexpr xxh3_128( unsigned char const* p, std::size_t n );
+
+    // XXH3-specific named constructors, matching the reference implementation
+
+    static constexpr xxh3_128 with_seed( std::uint64_t seed );
+
+    static xxh3_128 with_secret( void const* p, std::size_t n );
+    static constexpr xxh3_128 with_secret( unsigned char const* p, std::size_t n );
+
+    static xxh3_128 with_secret_and_seed( void const* p, std::size_t n, std::uint64_t seed );
+    static constexpr xxh3_128 with_secret_and_seed( unsigned char const* p, std::size_t n, std::uint64_t seed );
+
+    void update( void const* p, std::size_t n );
+    constexpr void update( unsigned char const* p, std::size_t n );
+
+    constexpr result_type result();
+};
+```
+
+### Constructors
+
+```
+constexpr xxh3_128();
+```
+
+Default constructor.
+
+Effects: ::
+  Initializes the internal state of the XXH3-128 algorithm to its initial values.
+
+```
+explicit constexpr xxh3_128( std::uint64_t seed );
+```
+
+Constructor taking an integer seed value.
+
+Effects: ::
+  Initializes the internal state of the XXH3 algorithm using the given `seed`.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+xxh3_128( void const* p, std::size_t n );
+constexpr xxh3_128( unsigned char const* p, std::size_t n );
+```
+
+Constructor taking a byte sequence seed.
+
+Effects: ::
+  Initializes the state as if by default construction, then if `n` is not zero, a secret and seed are both derived from the input and are used internally by the algorithm.
+
+Remarks: ::
+  By convention, if `n` is zero, the effect of this constructor is the same as default construction.
+
+### Named Constructors
+
+```
+static constexpr xxh3_128 with_seed( std::uint64_t seed );
+```
+
+An alias for the seed constructor, provided for compatibility with the specification.
+
+Effects: ::
+  Initializes the internal state of the XXH3 algorithm using the given `seed`.
+
+Remarks: ::
+  By convention, if `seed` is zero, the effect of this constructor is the same as default construction.
+
+```
+static xxh3_128 with_secret( void const* p, std::size_t n );
+static constexpr xxh3_128 with_secret( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
++
+--
+Initializes the state of the algorithm using the provided key in a way that maximizes adherence to the XXH3 spec.
+
+If `n` is less than the minimum default secret length of 136 bytes, the default secret is used. If `n` is larger than the size of the default key (192 bytes) then a secret is synthesized by accumulating the supplied byte sequence into a 192 byte block. Otherwise, the provided secret is used as is specified in the https://github.com/Cyan4973/xxHash/blob/dev/doc/xxhash_spec.md[XXH3 spec].
+--
+
+```
+static xxh3_128 with_secret_and_seed( void const* p, std::size_t n, std::uint64_t seed );
+static constexpr xxh3_128 with_secret_and_seed( unsigned char const* p, std::size_t n, std::uint64_t seed );
+```
+
+Effects: ::
++
+--
+Initializes the algorithm using both the provided seed and secret.
+
+Because of how the algorithm is defined, this is equivalent to using `with_seed` for all inputs &le; 240 bytes and `with_secret` for all inputs larger than 240 bytes.
+--
+
+### update
+
+```
+void update( void const* p, std::size_t n );
+constexpr void update( unsigned char const* p, std::size_t n );
+```
+
+Effects: ::
+  Updates the internal state of the XXH3-128 algorithm from the byte sequence `[p, p+n)`.
+
+Remarks: ::
+  Consecutive calls to `update` are equivalent to a single call with the concatenated byte sequences of the individual calls.
+
+### result
+
+```
+constexpr result_type result();
+```
+
+Effects: ::
+  Obtains a 128 bit hash value from the state as specified by XXH3-128, then updates the state.
+
+Returns: ::
+  The obtained hash value.
+
+Remarks: ::
+  The state is updated to allow repeated calls to `result()` to return a pseudorandom sequence of `result_type` values, effectively extending the output.

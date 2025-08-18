@@ -1,4 +1,4 @@
-[[bbv2.reference.modules.sequence]]
+[[b2.reference.modules.sequence]]
 = sequence
 
 Various useful list functions. Note that algorithms in this module

@@ -80,6 +80,16 @@ compare_encoded(
     core::string_view lhs,
     core::string_view rhs) noexcept;
 
+// compare two core::string_views as if they are both
+// percent-decoded but do not consider the special
+// query chars ("&=+") equivalent unless they are
+// both decoded or encoded the same way, because
+// that gives them different meanings
+int
+compare_encoded_query(
+    core::string_view lhs,
+    core::string_view rhs) noexcept;
+
 // digest a core::string_view as if it were
 // percent-decoded
 void

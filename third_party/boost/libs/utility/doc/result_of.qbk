@@ -7,7 +7,7 @@
  /]
 
 [/===============]
-[section Result of]
+[section:result_of Result of]
 [/===============]
 
 [section Introduction]
@@ -122,7 +122,7 @@ and is not implemented by some compilers.
 the actual result type deduced by __decltype__, then using TR1 with a __decltype__ fallback
 will allow you to work with both your existing TR1 function objects and new C++11
 function object. This situation could occur if your legacy function objects
-misused the TR1 protocol. See the documentation on known [link sec:result_of_tr1_diff differences]
+misused the TR1 protocol. See the documentation on known [link utility.utilities.result_of.result_of_tr1_diff differences]
 between __boost_result_of__ and TR1.
 
 * [#BOOST_NO_RESULT_OF] This implementation of __result_of__ requires class template
@@ -138,8 +138,7 @@ or, for motivation and design rationale, the __result_of__
 
 [endsect]
 
-[#sec:result_of_guidelines]
-[section Usage guidelines for __boost_result_of__]
+[section:result_of_guidelines Usage guidelines for __boost_result_of__]
 
 The following are general suggestions about when and how to use __boost_result_of__.
 
@@ -151,7 +150,7 @@ there's no reason to stop using it.
 # If you are targeting C++11 but may port your code to legacy compilers
 at some time in the future, then use __boost_result_of__ with __decltype__.
 When __decltype__ is used __boost_result_of__ and `__std_result_of__` are usually
-interchangeable. See the documentation on known [link sec:result_of_cxx11_diff differences]
+interchangeable. See the documentation on known [link utility.utilities.result_of.result_of_cxx11_diff differences]
 between __boost_result_of__ and C++11 __std_result_of__.
 
 # If compiler portability is required, use __boost_result_of__ with the TR1 protocol
@@ -195,8 +194,7 @@ typedef __boost_result_of__<
 
 [endsect]
 
-[#sec:result_of_tr1_protocol_guidelines]
-[section Usage guidelines for the TR1 result_of protocol]
+[section:result_of_tr1_protocol_guidelines Usage guidelines for the TR1 result_of protocol]
 
 On compliant C++11 compilers, __boost_result_of__ can
 use __decltype__ to deduce the type of any
@@ -212,7 +210,7 @@ argument types or the cv-qualification of the
 function object, simply
 define `result_type`. There is no need
 to use the `result` template unless the
-return type varies.</li>
+return type varies.
 
 * Use the protocol specified type when defining
 function prototypes. This can help ensure the
@@ -274,8 +272,7 @@ struct functor {
 
 [endsect]
 
-[#sec:result_of_tr1_diff]
-[section Known differences between __boost_result_of__ and __boost_tr1_result_of__]
+[section:result_of_tr1_diff Known differences between __boost_result_of__ and __boost_tr1_result_of__]
 
 When using __decltype__, __boost_result_of__ ignores the TR1 protocol and instead deduces the
 return type of function objects directly via __decltype__. In most situations, users
@@ -399,8 +396,7 @@ BOOST_STATIC_ASSERT((
 
 [endsect]
 
-[#sec:result_of_cxx11_diff]
-[section Known differences between __boost_result_of__ and C++11 result_of]
+[section:result_of_cxx11_diff Known differences between __boost_result_of__ and C++11 result_of]
 
 When using __decltype__, __boost_result_of__ implements most of the C++11 __std_result_of__
 specification. One known exception is that __boost_result_of__ does not implement the

@@ -54,7 +54,7 @@ void init_native_syslog()
 //->
 
 //<-
-#if !defined(BOOST_LOG_NO_ASIO)
+#if !defined(BOOST_LOG_WITHOUT_ASIO)
 //->
 void init_builtin_syslog()
 {
@@ -89,7 +89,7 @@ int main(int, char*[])
 {
 #if defined(BOOST_LOG_USE_NATIVE_SYSLOG)
     init_native_syslog();
-#elif !defined(BOOST_LOG_NO_ASIO)
+#elif !defined(BOOST_LOG_WITHOUT_ASIO)
     init_builtin_syslog();
 #endif
 

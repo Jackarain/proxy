@@ -404,8 +404,8 @@ namespace boost { namespace parser {
         and at most `MaxDigits`, producing an attribute of type `T`.  Fails on
         any other input.  The parse will also fail if `Expected` is anything
         but `detail::nope` (which it is by default), and the produced
-        attribute is not equal to `expected_`.  `Radix` must be in `[2,
-        36]`. */
+        attribute is not equal to `expected_`.  `Radix` must be one of `2`,
+        `8`, `10`, or `16`. */
     template<
         typename T,
         int Radix = 10,

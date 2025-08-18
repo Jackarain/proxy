@@ -1,9 +1,5 @@
 name: GitHub Actions CI
 
-# permit node16 use as a workaround for node20's differing glibc version
-env:
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
-
 on:
   pull_request:
   push:
@@ -25,7 +21,7 @@ jobs:
             buildtype: "boost"
             packages: ""
             packages_to_remove: ""
-            os: "ubuntu-20.04"
+            os: ubuntu-latest
             container: "ubuntu:16.04"
             cxx: "g++"
             sources: ""
@@ -37,7 +33,7 @@ jobs:
             buildtype: "boost"
             packages: "g++-5"
             packages_to_remove: ""
-            os: "ubuntu-20.04"
+            os: ubuntu-latest
             container: "ubuntu:16.04"
             cxx: "g++-5"
             sources: ""
@@ -49,7 +45,7 @@ jobs:
             buildtype: "boost"
             packages: "g++-6"
             packages_to_remove: ""
-            os: "ubuntu-20.04"
+            os: ubuntu-latest
             container: "ubuntu:16.04"
             cxx: "g++-6"
             sources: ""
@@ -61,7 +57,7 @@ jobs:
             buildtype: "boost"
             packages: "g++-7"
             packages_to_remove: ""
-            os: "ubuntu-20.04"
+            os: ubuntu-latest
             container: "ubuntu:16.04"
             cxx: "g++-7"
             sources: ""
@@ -73,7 +69,7 @@ jobs:
             buildtype: "boost"
             packages: "g++-9"
             packages_to_remove: ""
-            os: "ubuntu-20.04"
+            os: ubuntu-latest
             container: "ubuntu:16.04"
             cxx: "g++-9"
             sources: ""
@@ -85,7 +81,7 @@ jobs:
             buildtype: "boost"
             packages: ""
             packages_to_remove: ""
-            os: "ubuntu-20.04"
+            os: "ubuntu-24.04"
             cxx: "clang++"
             sources: ""
             llvm_os: ""
@@ -94,9 +90,14 @@ jobs:
             cxxstd: "11,14,17,20"
 
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     steps:
+
       - name: Check if running in container
         if: matrix.container != ''
         run: echo "GHA_CONTAINER=${{ matrix.container }}" >> $GITHUB_ENV
@@ -110,8 +111,10 @@ jobs:
             sudo wget https://bootstrap.pypa.io/pip/$python_version/get-pip.py
             sudo python3 get-pip.py
             sudo /usr/local/bin/pip install cmake
+            # Node 20 doesn't work with Ubuntu 16/18  glibc: https://github.com/actions/checkout/issues/1590
+            curl -sL https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: linux
         shell: bash
@@ -197,7 +200,7 @@ jobs:
           - name: "TOOLSET=clang CXXSTD=11,14,17,20 Job 5"
             buildtype: "boost"
             packages: ""
-            os: "macos-12"
+            os: "macos-13"
             cxx: "clang++"
             sources: ""
             llvm_os: ""
@@ -209,7 +212,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set DEVELOPER_DIR
         if: matrix.xcode_version != ''

@@ -775,7 +775,7 @@ namespace spreadsort {
     inline typename boost::disable_if_c< sizeof(boost::uintmax_t) >=
       sizeof(Div_type), void >::type
     float_sort(RandomAccessIter first, RandomAccessIter last, Div_type,
-               Right_shift rshift)
+               Right_shift /* rshift */)
     {
       boost::sort::pdqsort(first, last);
     }
@@ -816,7 +816,7 @@ namespace spreadsort {
     inline typename boost::disable_if_c< sizeof(boost::uintmax_t) >=
       sizeof(Div_type), void >::type
     float_sort(RandomAccessIter first, RandomAccessIter last, Div_type,
-               Right_shift rshift, Compare comp)
+               Right_shift /* rshift */, Compare comp)
     {
       boost::sort::pdqsort(first, last, comp);
     }

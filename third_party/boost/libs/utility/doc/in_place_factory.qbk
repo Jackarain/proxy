@@ -7,8 +7,7 @@
  /]
 
 [/===============]
-[#sec:in_place_factory]
-[section In-place Factory]
+[section:in_place_factory In-place Factory]
 [/===============]
 
 [section Introduction]
@@ -296,7 +295,6 @@ void foo()
 [endsect]
 
 [/===============]
-[#boost.typed_in_place_factory_base]
 [xinclude tmp/in_place_factory_reference.xml]
 [/===============]
 

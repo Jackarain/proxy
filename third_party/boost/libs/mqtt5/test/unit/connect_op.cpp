@@ -35,7 +35,7 @@ struct shared_test_data {
     error_code fail = asio::error::not_connected;
 
     const std::string connect = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, 60, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
     );
     const std::string connack = encoders::encode_connack(
         true, reason_codes::success.value(), {}
@@ -246,7 +246,7 @@ struct shared_test_auth_data {
     const std::string auth_response = auth_challenge;
 
     connect_props init_connect_props() {
-        connect_props cprops;
+        auto cprops = test::dflt_cprops;
         cprops[prop::authentication_method] = "method";
         cprops[prop::authentication_data] = "";
         return cprops;

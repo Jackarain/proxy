@@ -1,4 +1,4 @@
-//  Copyright (c) 2023 Andrey Semashev
+//  Copyright (c) 2023-2025 Andrey Semashev
 //
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
@@ -11,7 +11,6 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include "test_clock.hpp"
 
 //! Test thread class with the ability to join the thread with a timeout
 class test_thread
@@ -53,7 +52,7 @@ public:
     template< typename Rep, typename Period >
     bool try_join_for(std::chrono::duration< Rep, Period > dur)
     {
-        return try_join_until(steady_clock::now() + dur);
+        return try_join_until(std::chrono::steady_clock::now() + dur);
     }
 
     template< typename Clock, typename Duration >

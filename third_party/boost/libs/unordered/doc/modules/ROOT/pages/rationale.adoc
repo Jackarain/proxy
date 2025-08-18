@@ -94,15 +94,16 @@ As it happens, `boost::hash` for integral and other basic types does not possess
 the statistical properties required by open addressing; to cope with this,
 we implement a post-mixing stage:
 
-{nbsp}{nbsp}{nbsp}{nbsp} _a_ <- _h_ *mulx* _C_, +
+{nbsp}{nbsp}{nbsp}{nbsp} _a_ <- _h_ *mul* _C_, +
 {nbsp}{nbsp}{nbsp}{nbsp} _h_ <- *high*(_a_) *xor* *low*(_a_),
 
-where *mulx* is an _extended multiplication_ (128 bits in 64-bit architectures, 64 bits in 32-bit environments),
+where *mul* is an _extended multiplication_ (128 bits in 64-bit architectures, 64 bits in 32-bit environments),
 and *high* and *low* are the upper and lower halves of an extended word, respectively.
 In 64-bit architectures, _C_ is the integer part of 2^64^&#8725;https://en.wikipedia.org/wiki/Golden_ratio[_&phi;_],
 whereas in 32 bits _C_ = 0xE817FB2Du has been obtained from https://arxiv.org/abs/2001.05304[Steele and Vigna (2021)^].
 
-When using a hash function directly suitable for open addressing, post-mixing can be opted out of via a dedicated `xref:reference/hash_traits.adoc#hash_traits_hash_is_avalanching[hash_is_avalanching]` trait.
+When using a hash function directly suitable for open addressing, post-mixing can be opted out of via a dedicated 
+`link:../../../../container_hash/doc/html/hash.html#ref_hash_is_avalanchinghash[hash_is_avalanching]` trait.
 `boost::hash` specializations for string types are marked as avalanching.
 
 === Platform Interoperability

@@ -1,6 +1,6 @@
 # Copyright 2018 Mike Dev
 # Copyright 2019 Peter Dimov
-# Copyright 2020-2024 Andrey Semashev
+# Copyright 2020-2025 Andrey Semashev
 #
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
@@ -71,25 +71,14 @@ if (BOOST_ATOMIC_TARGET_X86)
     endif()
 endif()
 
-if (WIN32)
-    set(boost_atomic_sources ${boost_atomic_sources} src/wait_on_address.cpp)
-endif()
-
-if (WIN32)
-    # Note: We can't use the Boost::library targets here as they may not yet be included by the superproject when this CMakeLists.txt is included.
-    set(CMAKE_REQUIRED_INCLUDES ${BOOST_LIBRARY_INCLUDES})
-    set(CMAKE_REQUIRED_LIBRARIES synchronization)
-    check_cxx_source_compiles("#include <${CMAKE_CURRENT_SOURCE_DIR}/config/has_synchronization_lib.cpp>" BOOST_ATOMIC_HAS_SYNCHRONIZATION_LIB)
-    unset(CMAKE_REQUIRED_LIBRARIES)
-    unset(CMAKE_REQUIRED_INCLUDES)
-endif()
+set(CMAKE_REQUIRED_INCLUDES ${BOOST_LIBRARY_INCLUDES})
+check_cxx_source_compiles("#include <${CMAKE_CURRENT_SOURCE_DIR}/config/pthread_cond_clockwait.cpp>" BOOST_ATOMIC_HAS_PTHREAD_COND_CLOCKWAIT)
+unset(CMAKE_REQUIRED_INCLUDES)
 
 add_library(boost_atomic ${boost_atomic_sources})
 add_library(Boost::atomic ALIAS boost_atomic)
 
-target_compile_features(boost_atomic PUBLIC
-    cxx_static_assert
-)
+target_compile_features(boost_atomic PUBLIC cxx_std_11)
 
 target_include_directories(boost_atomic PUBLIC include)
 target_include_directories(boost_atomic PRIVATE src)
@@ -111,12 +100,15 @@ if (WIN32)
     target_link_libraries(boost_atomic
         PUBLIC
             Boost::winapi
+
+            synchronization
     )
 
-    if (BOOST_ATOMIC_HAS_SYNCHRONIZATION_LIB)
-        target_link_libraries(boost_atomic PUBLIC synchronization)
-    else()
-        target_compile_definitions(boost_atomic PUBLIC BOOST_ATOMIC_NO_SYNCHRONIZATION_LIB)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        # MinGW-w64 defines _WIN32_WINNT to _WIN32_WINNT_WS03 by default, which disables WaitOnAddress API that is required by Boost.Atomic.
+        # Define the macro ourselves to the Windows version required by Boost.Atomic.
+        # https://github.com/boostorg/atomic/issues/73
+        target_compile_definitions(boost_atomic PUBLIC _WIN32_WINNT=0x0A00)
     endif()
 endif()
 
@@ -131,6 +123,10 @@ if (BUILD_SHARED_LIBS)
     target_compile_definitions(boost_atomic PUBLIC BOOST_ATOMIC_DYN_LINK)
 else()
     target_compile_definitions(boost_atomic PUBLIC BOOST_ATOMIC_STATIC_LINK)
+endif()
+
+if (BOOST_ATOMIC_HAS_PTHREAD_COND_CLOCKWAIT)
+    target_compile_definitions(boost_atomic PRIVATE BOOST_ATOMIC_HAS_PTHREAD_COND_CLOCKWAIT)
 endif()
 
 if (BOOST_ATOMIC_COMPILER_HAS_SSE2)

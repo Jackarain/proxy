@@ -16,7 +16,7 @@ doxygen reference
     [ glob
     ../include/boost/contract.hpp
     ../include/boost/contract_macro.hpp
-    
+
     ../include/boost/contract/assert.hpp
     ../include/boost/contract/base_types.hpp
     ../include/boost/contract/call_if.hpp
@@ -36,7 +36,7 @@ doxygen reference
     ../include/boost/contract/core/specify.hpp
     ../include/boost/contract/core/virtual.hpp
     ]
-:   
+:
     <reftitle>"Reference"
     # Quickbook's Doxygen does not show destructor exception specs.
     <doxygen:param>PREDEFINED="BOOST_CONTRACT_DETAIL_DOXYGEN BOOST_PP_VARIADICS"
@@ -59,6 +59,9 @@ xml contract : main.qbk : <dependency>reference ;
 
 boostbook boostrelease : contract
 :
+
+    <flags>"--maxdepth 100000"
+    <flags>"--maxvars 300000"
     <location>html
     <xsl:param>boost.defaults=Boost
     <xsl:param>boost.root=../../../..
@@ -67,10 +70,11 @@ boostbook boostrelease : contract
     <format>pdf:<xsl:param>admon.graphics.extension=".svg"
     <format>pdf:<xsl:param>img.src.path=$(images_location)/
     <format>pdf:<xsl:param>draft.mode="no"
-    
+
 ;
 
 install pdfinstall : doc/<format>pdf :
         <location>. <install-type>PDF <name>local_function.pdf ;
 explicit pdfinstall ;
 
+explicit [ alias boostdoc ] ;

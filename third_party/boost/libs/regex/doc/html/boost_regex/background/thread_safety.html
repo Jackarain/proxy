@@ -8,6 +8,7 @@
 <link rel="up" href="../background.html" title="Background Information">
 <link rel="prev" href="locale.html" title="Localization">
 <link rel="next" href="examples.html" title="Test and Example Programs">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <table cellpadding="2" width="100%"><tr>
@@ -52,12 +53,6 @@
         can also be shared between threads.
       </p>
 <p>
-        The <a class="link" href="../ref/deprecated/old_regex.html" title="High Level Class RegEx (Deprecated)">class RegEx</a>
-        is only thread safe if each thread gets its own RegEx instance (apartment
-        threading) - this is a consequence of RegEx handling both compiling and matching
-        regular expressions.
-      </p>
-<p>
         Finally note that changing the global locale invalidates all compiled regular
         expressions, therefore calling <code class="computeroutput"><span class="identifier">set_locale</span></code>
         from one thread while another uses regular expressions will produce unpredictable
@@ -68,14 +63,11 @@
         to the start of main().
       </p>
 </div>
-<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
-<td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright © 1998-2013 John Maddock<p>
+<div class="copyright-footer">Copyright © 1998-2013 John Maddock<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
-</div></td>
-</tr></table>
+</div>
 <hr>
 <div class="spirit-nav">
 <a accesskey="p" href="locale.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../background.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="examples.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>

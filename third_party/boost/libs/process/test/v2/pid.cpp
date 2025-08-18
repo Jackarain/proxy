@@ -7,6 +7,8 @@
 #include <boost/process/v2/pid.hpp>
 #include <boost/process/v2/process.hpp>
 
+#include <boost/asio/io_context.hpp>
+
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>

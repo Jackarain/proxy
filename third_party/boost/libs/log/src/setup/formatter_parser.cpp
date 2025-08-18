@@ -183,6 +183,7 @@ private:
     typedef basic_formatter< char_type > formatter_type;
     typedef boost::log::aux::char_constants< char_type > constants;
     typedef typename log::aux::encoding< char_type >::type encoding;
+    typedef typename encoding::classify_type char_classify_type;
     typedef log::aux::encoding_specific< encoding > encoding_specific;
     typedef formatter_factory< char_type > formatter_factory_type;
     typedef typename formatter_factory_type::args_map args_map;
@@ -299,14 +300,14 @@ private:
 
             // Read argument name
             iterator_type start = p;
-            if (!encoding::isalpha(*p))
+            if (!encoding::isalpha(static_cast< char_classify_type >(*p)))
                 BOOST_LOG_THROW_DESCR(parse_error, "Placeholder argument name is invalid");
             for (++p; p != end; ++p)
             {
                 c = *p;
-                if (encoding::isspace(c) || c == constants::char_equal)
+                if (encoding::isspace(static_cast< char_classify_type >(c)) || c == constants::char_equal)
                     break;
-                if (!encoding::isalnum(c) && c != constants::char_underline)
+                if (!encoding::isalnum(static_cast< char_classify_type >(c)) && c != constants::char_underline)
                     BOOST_LOG_THROW_DESCR(parse_error, "Placeholder argument name is invalid");
             }
 

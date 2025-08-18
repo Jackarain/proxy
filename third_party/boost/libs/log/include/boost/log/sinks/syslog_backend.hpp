@@ -57,11 +57,11 @@ namespace syslog {
     {
 #ifdef BOOST_LOG_USE_NATIVE_SYSLOG
         native = 0                  //!< Use native syslog API
-#ifndef BOOST_LOG_NO_ASIO
+#ifndef BOOST_LOG_WITHOUT_ASIO
         ,
 #endif
 #endif
-#ifndef BOOST_LOG_NO_ASIO
+#ifndef BOOST_LOG_WITHOUT_ASIO
         udp_socket_based = 1        //!< Use UDP sockets, according to RFC3164
 #endif
     };
@@ -205,7 +205,7 @@ public:
      */
     BOOST_LOG_API void set_severity_mapper(severity_mapper_type const& mapper);
 
-#if !defined(BOOST_LOG_NO_ASIO)
+#if !defined(BOOST_LOG_WITHOUT_ASIO)
 
     /*!
      * The method sets the local host name which log records will be sent from. The host name
@@ -247,7 +247,7 @@ public:
      */
     BOOST_LOG_API void set_target_address(boost::asio::ip::address const& addr, unsigned short port = 514);
 
-#endif // !defined(BOOST_LOG_NO_ASIO)
+#endif // !defined(BOOST_LOG_WITHOUT_ASIO)
 
     /*!
      * The method passes the formatted message to the syslog API or sends to a syslog server
@@ -262,7 +262,7 @@ private:
     {
         construct(
             args[keywords::facility | syslog::user],
-#if !defined(BOOST_LOG_NO_ASIO)
+#if !defined(BOOST_LOG_WITHOUT_ASIO)
             args[keywords::use_impl | syslog::udp_socket_based],
 #else
             args[keywords::use_impl | syslog::native],

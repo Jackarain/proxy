@@ -51,12 +51,12 @@ import regex ;
 import type ;
 import utility ;
 import virtual-target ;
+import args ;
 
 
-if "--debug-generators" in [ modules.peek : ARGV ]
-{
-    .debug = true ;
-}
+args.add-arg debug-generators : --debug-generators
+    : "Produces debug output from the generator search process." ;
+.debug = [ args.get-arg debug-generators ] ;
 
 
 # Updated cached viable source target type information as needed after a new

@@ -85,7 +85,7 @@ int main(int argc, char * argv[])
           {
             if (kind == CTRL_CLOSE_EVENT)
             {
-              // windows doesn't like us doing antyhing else
+              // windows doesn't like us doing anything else
               ::exit(0);
               if (tim_p != nullptr)
                 tim_p->cancel();

@@ -1,0 +1,31 @@
+#
+# Copyright (c) 2025 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+#
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+source-root: ../include
+compilation-database: ./CMakeLists.txt
+include-symbols:
+  - "boost::redis::**"
+exclude-symbols:
+  - "boost::redis::detail::**"
+  - "boost::redis::adapter::detail::**"
+  - "boost::redis::resp3::detail::**"
+  - "boost::redis::basic_connection::run_is_canceled"
+  - "boost::redis::basic_connection::this_type"
+  - "boost::redis::any_adapter::impl_t"
+  - "boost::redis::any_adapter::fn_type"
+  - "boost::redis::any_adapter::create_impl"
+  - "boost::redis::any_adapter::impl_"
+  - "boost::redis::request::payload"
+  - "boost::redis::request::has_hello_priority"
+see-below:
+  - "boost::redis::adapter::ignore"
+sort-members: false
+base-url: https://github.com/boostorg/redis/blob/master/include/
+use-system-libc: true
+warn-as-error: true
+warn-if-undocumented: false
+warn-no-paramdoc: false

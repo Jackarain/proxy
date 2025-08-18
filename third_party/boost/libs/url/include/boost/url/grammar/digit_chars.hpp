@@ -16,35 +16,6 @@
 namespace boost {
 namespace urls {
 namespace grammar {
-
-/** The set of decimal digits
-
-    @par Example
-    Character sets are used with rules and the
-    functions @ref find_if and @ref find_if_not.
-    @code
-    system::result< core::string_view > rv = parse( "2022", token_rule( digit_chars ) );
-    @endcode
-
-    @par BNF
-    @code
-    DIGIT       = %x30-39
-                ; 0-9
-    @endcode
-
-    @par Specification
-    @li <a href="https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1"
-        >B.1. Core Rules (rfc5234)</a>
-
-    @see
-        @ref find_if,
-        @ref find_if_not,
-        @ref parse,
-        @ref token_rule.
-*/
-#ifdef BOOST_URL_DOCS
-constexpr __implementation_defined__ digit_chars;
-#else
 namespace implementation_defined {
 struct digit_chars_t
 {
@@ -103,7 +74,6 @@ struct digit_chars_t
         @ref token_rule.
 */
 constexpr implementation_defined::digit_chars_t digit_chars{};
-#endif
 
 } // grammar
 } // urls

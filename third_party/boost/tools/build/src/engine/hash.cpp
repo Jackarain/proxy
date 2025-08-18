@@ -153,7 +153,7 @@ HASHDATA * hash_insert( struct hash * hp, OBJECT * key, int32_t * found )
 
     #ifdef HASH_DEBUG_PROFILE
     profile_frame prof[ 1 ];
-    if ( DEBUG_PROFILE )
+    if ( is_debug_profile() )
         profile_enter( 0, prof );
     #endif
 
@@ -186,7 +186,7 @@ HASHDATA * hash_insert( struct hash * hp, OBJECT * key, int32_t * found )
     }
 
     #ifdef HASH_DEBUG_PROFILE
-    if ( DEBUG_PROFILE )
+    if ( is_debug_profile() )
         profile_exit( prof );
     #endif
 
@@ -205,14 +205,14 @@ HASHDATA * hash_find( struct hash * hp, OBJECT * key )
 
     #ifdef HASH_DEBUG_PROFILE
     profile_frame prof[ 1 ];
-    if ( DEBUG_PROFILE )
+    if ( is_debug_profile() )
         profile_enter( 0, prof );
     #endif
 
     if ( !hp->items.nel )
     {
         #ifdef HASH_DEBUG_PROFILE
-        if ( DEBUG_PROFILE )
+        if ( is_debug_profile() )
             profile_exit( prof );
         #endif
         return 0;
@@ -221,7 +221,7 @@ HASHDATA * hash_find( struct hash * hp, OBJECT * key )
     i = hash_search( hp, keyval, key, 0 );
 
     #ifdef HASH_DEBUG_PROFILE
-    if ( DEBUG_PROFILE )
+    if ( is_debug_profile() )
         profile_exit( prof );
     #endif
 
@@ -388,7 +388,7 @@ void hashdone( struct hash * hp )
 {
     if ( !hp )
         return;
-    if ( DEBUG_MEM || DEBUG_PROFILE )
+    if ( is_debug_mem() || is_debug_profile() )
         hashstat( hp );
     hash_free( hp );
 }

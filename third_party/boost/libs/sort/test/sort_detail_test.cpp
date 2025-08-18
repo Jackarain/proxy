@@ -70,7 +70,7 @@ void get_min_count_test()
 {
   const unsigned min_log_size = log_mean_bin_size + log_min_split_count;
   size_t prev_min_count = absolute_min_count;
-  for (int log_range = 0; log_range <= max_int_bits; ++log_range) {
+  for (unsigned log_range = 0; log_range <= max_int_bits; ++log_range) {
     size_t min_count = get_min_count<log_mean_bin_size, log_min_split_count, 
                                      log_finishing_count>(log_range);
     BOOST_CHECK(min_count >= prev_min_count);
@@ -83,7 +83,7 @@ void get_min_count_test()
       int iterations = rough_log_2_size(min_count) - min_log_size;
       BOOST_CHECK(iterations >= 1);
       int base_iterations = max_splits - log_min_split_count;
-      int covered_log_range = 0;
+      unsigned covered_log_range = 0;
       if (iterations > base_iterations) {
         covered_log_range += max_splits * (iterations - base_iterations);
       } else {

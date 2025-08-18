@@ -4,9 +4,10 @@
  * accompanying file LICENSE.txt)
  */
 
+#include <boost/redis/adapter/any_adapter.hpp>
 #include <boost/redis/ignore.hpp>
 #include <boost/redis/response.hpp>
-#include <boost/redis/adapter/any_adapter.hpp>
+
 #include <string>
 #define BOOST_TEST_MODULE any_adapter
 #include <boost/test/included/unit_test.hpp>
@@ -33,17 +34,17 @@ BOOST_AUTO_TEST_CASE(any_adapter_copy_move)
 {
    // any_adapter can be copied/moved
    response<int, std::string> r;
-   any_adapter ad1 {r};
+   any_adapter ad1{r};
 
    // copy constructor
-   any_adapter ad2 {ad1};
-   
+   any_adapter ad2{ad1};
+
    // move constructor
-   any_adapter ad3 {std::move(ad2)};
+   any_adapter ad3{std::move(ad2)};
 
    // copy assignment
    BOOST_CHECK_NO_THROW(ad2 = ad1);
 
    // move assignment
-   BOOST_CHECK_NO_THROW(ad2 = std::move(ad1)); 
+   BOOST_CHECK_NO_THROW(ad2 = std::move(ad1));
 }

@@ -13,9 +13,11 @@ from pathlib import Path
 
 def read_text(path, root):
     try:
-        return path.read_text('utf-8')
+        with path.open(encoding='utf-8') as f:
+            return f.read()
     except UnicodeDecodeError as e:
-        data = path.read_bytes()
+        with path.open() as f:
+            data = f.read()
         i = data.rfind(b'\n', 0, e.start) + 1
         j = data.find(b'\n', e.end)
         e.reason += '\nOn line: {}\nIn file {}'.format(data[i:j],path.relative_to(root))

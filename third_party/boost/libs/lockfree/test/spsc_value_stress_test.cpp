@@ -16,6 +16,7 @@
 #include <boost/optional.hpp>
 
 #include <atomic>
+#include <cstdint>
 #include <thread>
 
 // #define BOOST_LOCKFREE_STRESS_TEST

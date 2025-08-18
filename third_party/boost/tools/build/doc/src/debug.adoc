@@ -1,10 +1,10 @@
-[[bbv2.util]]
+[[b2.util]]
 = Utilities
 
-[[bbv2.util.debugger]]
+[[b2.util.debugger]]
 == Debugger
 
-[[bbv2.util.debugger.overview]]
+[[b2.util.debugger.overview]]
 === Overview
 
 B2 comes with a debugger for Jamfiles. To run the debugger,
@@ -21,7 +21,7 @@ Breakpoint 1, gcc.init ( ) at /usr/share/b2/tools/gcc.jam:74
 (b2db) quit
 ....
 
-[[bbv2.util.debugger.running]]
+[[b2.util.debugger.running]]
 === Running the Program
 
 The `run` command is used to start a new `b2` subprocess for debugging.
@@ -37,7 +37,7 @@ until the current function returns.
 
 The `kill` command terminates the current child immediately.
 
-[[bbv2.util.debugger.break]]
+[[b2.util.debugger.break]]
 === Breakpoints
 
 Breakpoints are set using the `break` command. The location of the
@@ -73,7 +73,7 @@ Deleted breakpoint 1
 (b2db) delete 2
 ....
 
-[[bbv2.util.debugger.stack]]
+[[b2.util.debugger.stack]]
 === Examining the Stack
 
 The `backtrace` command will print a summary of every frame on the
@@ -88,7 +88,7 @@ The `print` command can be used to show the value of an expression.
 Jamfile.jam
 ....
 
-[[bbv2.util.debugger.misc]]
+[[b2.util.debugger.misc]]
 === Miscellaneous Commands
 
 `quit` exits the debugger. `help` describes the available commands.

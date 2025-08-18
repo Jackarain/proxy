@@ -1,1 +1,5 @@
+project : requirements
+    <library>/boost/xpressive//boost_xpressive
+    ;
+
 exe regexp :  main.cpp ;

@@ -6,6 +6,7 @@
 ################################################################################
 
 import testing ;
+import config : requires ;
 
 build-project container_fwd ;
 
@@ -27,6 +28,7 @@ import config : requires ;
 
 run binary_search_test.cpp ;
 run blank_test.cpp ;
+run bitmask_test.cpp : : : [ requires cxx11_scoped_enums ] ;
 run is_sorted_test.cpp /boost/array//boost_array ;
 run numeric_traits_test.cpp ;
 run is_xxx_test.cpp /boost/preprocessor//boost_preprocessor ;

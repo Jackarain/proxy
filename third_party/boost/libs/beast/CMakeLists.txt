@@ -1,6 +1,6 @@
 #
 # Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
-# Copyright (c) 2021 DMitry Arkhipov (grisumbras@gmail.com)
+# Copyright (c) 2021 Dmitry Arkhipov (grisumbras@gmail.com)
 # Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 # Copyright (c) 2024 Mohammad Nejati
 #
@@ -16,7 +16,7 @@
 #
 #-------------------------------------------------
 cmake_minimum_required(VERSION 3.8...3.20)
-set(BOOST_BEAST_VERSION 357)
+set(BOOST_BEAST_VERSION 358)
 if (BOOST_SUPERPROJECT_VERSION)
     set(BOOST_BEAST_VERSION ${BOOST_SUPERPROJECT_VERSION})
 endif ()

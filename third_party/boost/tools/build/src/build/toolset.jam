@@ -7,6 +7,7 @@
 
 #  Support for toolset definition.
 
+import args ;
 import errors ;
 import feature ;
 import generators ;
@@ -28,10 +29,9 @@ import utility ;
 
 # This is used only for testing, to make sure we do not get random extra
 # elements in paths.
-if --ignore-toolset-requirements in [ modules.peek : ARGV ]
-{
-    .ignore-requirements = 1 ;
-}
+args.add-arg ignore-toolset-requirements : --ignore-toolset-requirements
+    : "?" ;
+.ignore-requirements = [ args.get-arg ignore-toolset-requirements ] ;
 
 
 # Initializes an additional toolset-like module. First load the 'toolset-module'
@@ -39,9 +39,18 @@ if --ignore-toolset-requirements in [ modules.peek : ARGV ]
 #
 rule using ( toolset-module : * )
 {
+    local saved-project = [ modules.peek project : .current-project ] ;
+
     import $(toolset-module) ;
     $(toolset-module).init $(2) : $(3) : $(4) : $(5) : $(6) : $(7) : $(8) : $(9)
         ;
+
+    # The above might have clobbered .current-project in case it caused a
+    # new project instance to be created (which would then automatically
+    # get set as the 'current' project). Restore the correct value so any
+    # main targets declared after this do not get mapped to the loaded
+    # module's project.
+    modules.poke project : .current-project : $(saved-project) ;
 }
 
 

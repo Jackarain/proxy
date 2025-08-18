@@ -1,5 +1,5 @@
 [/
-              Copyright Andrey Semashev 2007 - 2022.
+              Copyright Andrey Semashev 2007 - 2025.
      Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at
               http://www.boost.org/LICENSE_1_0.txt)
@@ -259,6 +259,42 @@ This filter is implemented for Windows only. The `is_debugger_present` filter re
 [example_sinks_debugger]
 
 [@boost:/libs/log/example/doc/sinks_debugger.cpp See the complete code].
+
+[endsect]
+
+[section:wrap_filter Injecting user-defined functions in filtering expressions]
+
+    #include <``[boost_log_expressions_predicates_wrap_filter_hpp]``>
+
+Users may want to combine their custom filtering function objects with the filters provided by Boost.Log. In order to be able to integrate the user-defined function into a filtering expression, the function must be adapted as a __boost_phoenix__ function object. One way to do this is to use one of the __boost_phoenix_adapt__ macros provided by __boost_phoenix__ to create a lazy function for the user's filtering function. For example:
+
+[example_expressions_filter_adapt_function]
+
+[@boost:/libs/log/example/doc/expressions_filter_adapt_function.cpp See the complete code].
+
+Here, using the `BOOST_PHOENIX_ADAPT_FUNCTION` macro we created a `lazy::my_filter` factory function that, when called, creates a function object that is compatible with __boost_phoenix__ template expressions. This created function object becomes part of the filtering expression and, when invoked during log record filtering, will forward the call to the wrapped `my_filter` function defined by the user. The `_1` placeholder in the filtering expression designates the set of attribute values that will be forwarded to the `my_filter` function. The function must return `true` to indicate that the log record passed the filter and `false` otherwise.
+
+[tip It is also possible to use __boost_phoenix_bind__ instead of the `BOOST_PHOENIX_ADAPT_*` macros. `boost::phoenix::bind` also creates a function object that can integrate with __boost_phoenix__ expressions:
+
+```
+logging::add_console_log
+(
+    std::clog,
+    keywords::filter =
+        severity >= critical || boost::phoenix::bind(&my_filter, boost::phoenix::placeholders::_1),
+    keywords::format =
+        expr::stream << "<" << severity << "> [" << channel << "] " << expr::smessage
+);
+```
+]
+
+However, Boost.Log provides a dedicated [funcref boost::log::expressions::wrap_filter `wrap_filter`] utility that removes the need to create a factory function or specify argument placeholders. The function wraps user-defined function object and enables it to participate in filtering expressions. The above example can be simplified as follows:
+
+[example_expressions_wrap_filter]
+
+[@boost:/libs/log/example/doc/expressions_wrap_filter.cpp See the complete code].
+
+Note that `wrap_filter` allows for wrapping arbitrary function objects, including C++11 lambda functions, as long as the wrapped function object is callable with a single argument of type `attribute_value_set` and returns a value convertible to `bool`.
 
 [endsect]
 
@@ -668,6 +704,50 @@ The above formatter can produce output like this:
 ]
 
 [endsect]
+
+[endsect]
+
+[section:wrap_formatter Injecting user-defined functions in formatting expressions]
+
+    #include <``[boost_log_expressions_formatters_wrap_formatter_hpp]``>
+
+Given that formatting expressions are __boost_phoenix__ expressions, it is possible to inject user-defined functions into the formatter by using __boost_phoenix__ facilities, such as __boost_phoenix_adapt__ macros or __boost_phoenix_bind__.
+
+[example_expressions_formatter_adapt_function]
+
+[@boost:/libs/log/example/doc/expressions_formatter_adapt_function.cpp See the complete code].
+
+Here, using the `BOOST_PHOENIX_ADAPT_FUNCTION` macro we created a `lazy::extract_channel` factory function that, when called, creates a function object that is compatible with __boost_phoenix__ template expressions. This function object, when called as part of the formatter, forwards the call to our `extract_channel` function to do the actual work.
+
+Remember that formatters have the following signature:
+
+    void (logging::``[class_log_record_view]`` const& rec, logging::``[class_log_basic_formatting_ostream]``< CharT >& stream) const
+
+Here, `rec` is a log [link log.detailed.core.record record view] that contains all captured attribute values and `stream` is the output stream that receives the formatted output. In order to pass the log record to the `extract_channel` function we use the `_1` placeholder to identify the first argument of the formatter.
+
+The `extract_channel` function accepts a log record view and returns the object that will be output into the stream as part of the formatting expression. In our case, the returned string is simply the value of the "Channel" attribute from the log record, if one is present, or a replacement string if it is missing. If needed, the output stream will perform character encoding conversion as it receives the string returned by `extract_channel`.
+
+[tip In order to use `boost::phoenix::bind` instead of the `BOOST_PHOENIX_ADAPT_*` macros one could write the formatting expression as follows:
+
+```
+logging::add_console_log
+(
+    std::clog,
+    keywords::format =
+        expr::stream << "<" << severity << "> ["
+            << boost::phoenix::bind(&extract_channel, boost::phoenix::placeholders::_1)
+            << "] " << expr::smessage
+);
+```
+]
+
+The protocol of returning an object to output in the formatting stream, while simple and expressive, may be too limiting or inefficient when a more elaborate formatting logic is required. To address these advanced use cases, Boost.Log provides a [funcref boost::log::expressions::wrap_formatter `wrap_formatter`] utility that wraps a user-defined formatter function and invokes it as part of the formatting process. The user-defined formatter can be any callable that supports the signature defined above, and as such doesn't need to return anything and can use the provided stream directly for output.
+
+[example_expressions_wrap_formatter]
+
+[@boost:/libs/log/example/doc/expressions_wrap_formatter.cpp See the complete code].
+
+In this example, the application uses a "Host" attribute with values of a custom `host_address` type to identify network hosts to which the application connects. The application may emit log records that are related or unrelated to a given host, as indicated by the presence of the "Host" attribute. We define our `format_host` function to implement the entire formatting logic for host addresses and then use the `wrap_formatter` utility to inject it into the formatting expression. Note that despite that the syntax of the formatting expression suggests that the value returned by `wrap_formatter` is output into the formatting stream, this is not actually the case.
 
 [endsect]
 

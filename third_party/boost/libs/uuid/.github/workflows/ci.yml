@@ -43,17 +43,20 @@ jobs:
             address-model: 32,64
           - toolset: gcc-7
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-7-multilib
             address-model: 32,64
           - toolset: gcc-8
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-8-multilib
             address-model: 32,64
           - toolset: gcc-9
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-9-multilib
             address-model: 32,64
           - toolset: gcc-10
@@ -198,7 +201,7 @@ jobs:
           - toolset: clang
             compiler: clang++-19
             cxxstd: "11,14,17,20,2b"
-            container: ubuntu:24.10
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-19
           - toolset: clang
@@ -314,14 +317,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: 14,latest
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
@@ -333,7 +328,7 @@ jobs:
           - toolset: gcc
             cxxstd: "11,14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
 
     runs-on: ${{matrix.os}}
 
@@ -373,7 +368,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: ubuntu-latest
@@ -424,7 +418,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: ubuntu-latest
@@ -485,7 +478,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: ubuntu-latest
@@ -544,8 +536,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
           - os: windows-latest
             opts: "-G \"MinGW Makefiles\""
           - os: windows-latest
@@ -597,8 +588,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
           - os: windows-latest
             opts: "-G \"MinGW Makefiles\""
           - os: windows-latest
@@ -668,8 +658,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
           - os: windows-latest
             opts: "-G \"MinGW Makefiles\""
           - os: windows-latest

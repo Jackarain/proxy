@@ -173,17 +173,17 @@ This includes C++ built-in pointers, `std::shared_ptr`,
     // Throws: std::bad_cast if ( dynamic_cast<Derived>(x) == 0 )
     // Returns: dynamic_cast<Derived>(x)
     template <class Derived, class Base>
-    inline Derived polymorphic_cast(Base* x);
+    constexpr Derived polymorphic_cast(Base* x);
 
     // Effects: assert( dynamic_cast<Derived>(x) == x );
     // Returns: static_cast<Derived>(x)
     template <class Derived, class Base>
-    inline Derived polymorphic_downcast(Base* x);
+    constexpr Derived polymorphic_downcast(Base* x);
 
     // Effects: assert( dynamic_cast<Derived>(&x) == &x );
     // Returns: static_cast<Derived>(x)
     template <class Derived, class Base>
-    inline Derived polymorphic_downcast(Base& x);
+    constexpr Derived polymorphic_downcast(Base& x);
 
     // Throws: std::bad_cast if ( dynamic_pointer_cast<Derived>(x) == 0 )
     // Returns: dynamic_pointer_cast<Derived>(x)

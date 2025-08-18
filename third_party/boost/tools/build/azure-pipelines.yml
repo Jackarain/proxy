@@ -31,22 +31,69 @@ pr:
     - appveyor.yml
 
 variables:
-- { name: linux_latest_vm, value: 'ubuntu-22.04' }
-- { name: linux_latest_os, value: 'focal' }
+- { name: linux_latest_vm, value: 'ubuntu-24.04' }
+- { name: linux_latest_os, value: 'noble' }
 - { name: windows_latest_vm, value: 'windows-2022' }
-- { name: clang_latest, value: '17' }
-- { name: clang_latest_libstdcxx, value: 9 }
-- { name: gcc_latest, value: '13' }
+- { name: clang_latest, value: '20' }
+- { name: clang_latest_libstdcxx, value: '12' }
+- { name: gcc_latest, value: '14' }
 - { name: vc_latest, value: 'vc143' }
 - { name: vs_latest, value: '2022' }
-- { name: xc_latest, value: '15.0.1' }
-- { name: macos_latest_vm, value: 'macOS-13' }
+- { name: xc_latest, value: '16.0' }
+- { name: macos_latest_vm, value: 'macOS-15' }
+- { name: co_options, value: '--name container' }
 
 resources:
   containers:
-    - { container: ubuntu_2004, image: 'ubuntu:20.04', options: '--name container -v /usr/bin/docker:/tmp/docker:ro' }
-    - { container: ubuntu_1804, image: 'ubuntu:18.04', options: '--name container -v /usr/bin/docker:/tmp/docker:ro' }
-    - { container: ubuntu_1604, image: 'ubuntu:16.04', options: '--name container -v /usr/bin/docker:/tmp/docker:ro' }
+    - { container: ubuntu_2404,
+        image: 'ubuntu:24.04',
+        options: "${{variables.co_options}}" }
+    - { container: ubuntu_2204,
+        image: 'ubuntu:22.04',
+        options: "${{variables.co_options}}" }
+    - { container: ubuntu_1804,
+        image: 'ubuntu:18.04',
+        options: "${{variables.co_options}}",
+        volumes: [
+          "/node20217:/node20217:rw,rshared",
+          "/node20217:/__e/node20:ro,rshared" ] }
+    - { container: ubuntu_1604,
+        image: 'ubuntu:16.04',
+        options: "${{variables.co_options}}",
+        volumes: [
+          "/node20217:/node20217:rw,rshared",
+          "/node20217:/__e/node20:ro,rshared" ] }
+    - { container: linux_gcc15, image: 'teeks99/gcc-ubuntu:15', options: "${{variables.co_options}}" }
+    - { container: linux_gcc14, image: 'teeks99/gcc-ubuntu:14', options: "${{variables.co_options}}" }
+    - { container: linux_gcc13, image: 'teeks99/gcc-ubuntu:13', options: "${{variables.co_options}}" }
+    - { container: linux_gcc12, image: 'teeks99/gcc-ubuntu:12', options: "${{variables.co_options}}" }
+    - { container: linux_gcc11, image: 'teeks99/gcc-ubuntu:11', options: "${{variables.co_options}}" }
+    - { container: linux_gcc10, image: 'teeks99/gcc-ubuntu:10', options: "${{variables.co_options}}" }
+    - { container: linux_gcc9, image: 'teeks99/gcc-ubuntu:9', options: "${{variables.co_options}}" }
+    - { container: linux_gcc8, image: 'teeks99/gcc-ubuntu:8', options: "${{variables.co_options}}" }
+    - { container: linux_gcc7, image: 'teeks99/gcc-ubuntu:7', options: "${{variables.co_options}}" }
+    - { container: linux_gcc6, image: 'teeks99/gcc-ubuntu:6', options: "${{variables.co_options}}" }
+    - { container: linux_gcc5, image: 'teeks99/gcc-ubuntu:5', options: "${{variables.co_options}}" }
+    - { container: linux_gcc49, image: 'teeks99/gcc-ubuntu:4.9', options: "${{variables.co_options}}" }
+    - { container: linux_gcc48, image: 'teeks99/gcc-ubuntu:4.8', options: "${{variables.co_options}}" }
+    - { container: linux_clang20, image: 'teeks99/clang-ubuntu:20', options: "${{variables.co_options}}" }
+    - { container: linux_clang19, image: 'teeks99/clang-ubuntu:19', options: "${{variables.co_options}}" }
+    - { container: linux_clang18, image: 'teeks99/clang-ubuntu:18', options: "${{variables.co_options}}" }
+    - { container: linux_clang17, image: 'teeks99/clang-ubuntu:17', options: "${{variables.co_options}}" }
+    - { container: linux_clang16, image: 'teeks99/clang-ubuntu:16', options: "${{variables.co_options}}" }
+    - { container: linux_clang15, image: 'teeks99/clang-ubuntu:15', options: "${{variables.co_options}}" }
+    - { container: linux_clang14, image: 'teeks99/clang-ubuntu:14', options: "${{variables.co_options}}" }
+    - { container: linux_clang13, image: 'teeks99/clang-ubuntu:13', options: "${{variables.co_options}}" }
+    - { container: linux_clang12, image: 'teeks99/clang-ubuntu:12', options: "${{variables.co_options}}" }
+    - { container: linux_clang11, image: 'teeks99/clang-ubuntu:11', options: "${{variables.co_options}}" }
+    - { container: linux_clang10, image: 'teeks99/clang-ubuntu:10', options: "${{variables.co_options}}" }
+    - { container: linux_clang9, image: 'teeks99/clang-ubuntu:9', options: "${{variables.co_options}}" }
+    - { container: linux_clang8, image: 'teeks99/clang-ubuntu:8', options: "${{variables.co_options}}" }
+    - { container: linux_clang7, image: 'teeks99/clang-ubuntu:7', options: "${{variables.co_options}}" }
+    - { container: linux_clang6, image: 'teeks99/clang-ubuntu:6', options: "${{variables.co_options}}" }
+    - { container: linux_clang5, image: 'teeks99/clang-ubuntu:5', options: "${{variables.co_options}}" }
+    - { container: linux_clang4, image: 'teeks99/clang-ubuntu:4', options: "${{variables.co_options}}" }
+    - { container: linux_clang3, image: 'teeks99/clang-ubuntu:3.9', options: "${{variables.co_options}}" }
 
 stages:
 
@@ -218,49 +265,47 @@ stages:
   dependsOn: [Core, Extra]
   jobs:
 
-  - job: 'Linux'
-    strategy:
-      matrix:
-        GCC 12: {TOOLSET: gcc-12, PACKAGES: g++-12, VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        GCC 11: {TOOLSET: gcc-11, PACKAGES: g++-11, VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        GCC 10: {TOOLSET: gcc-10, PACKAGES: g++-10, VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        GCC 9: {TOOLSET: gcc-9, PACKAGES: g++-9, VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        Clang 16: {TOOLSET: clang-16, PACKAGES: clang-16, LLVM_VER: 16, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        Clang 15: {TOOLSET: clang-15, PACKAGES: clang-15, LLVM_VER: 15, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        Clang 14: {TOOLSET: clang-14, PACKAGES: clang-14, LLVM_VER: 14, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        Clang 13: {TOOLSET: clang-13, PACKAGES: clang-13, LLVM_VER: 13, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        Clang 12: {TOOLSET: clang-12, PACKAGES: clang-12, LLVM_VER: 12, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        Clang 11: {TOOLSET: clang-11, PACKAGES: clang-11, LLVM_VER: 11, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
-        Clang 10: {TOOLSET: clang-10, PACKAGES: clang-10, LLVM_VER: 10, LLVM_OS: "${{variables.linux_latest_os}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
-    pool:
-      vmImage: $(VM_IMAGE)
-    steps:
-    - template: .ci/azp-linux-test.yml
-
   - job: 'Co_Linux'
     strategy:
       matrix:
-        GCC 8: {CXX: g++-8, TOOLSET: gcc-8, PACKAGES: g++-8, CONTAINER: "ubuntu_1804"}
-        GCC 7: {CXX: g++-7, TOOLSET: gcc-7, PACKAGES: g++-7, CONTAINER: "ubuntu_1804"}
-        GCC 6: {CXX: g++-6, TOOLSET: gcc-6, PACKAGES: g++-6, CONTAINER: "ubuntu_1804"}
-        GCC 5: {CXX: g++-5, TOOLSET: gcc-5, PACKAGES: g++-5, CONTAINER: "ubuntu_1804"}
-        GCC 4.9: {CXX: g++-4.9, TOOLSET: gcc-4.9, PACKAGES: g++-4.9, CONTAINER: "ubuntu_1604"}
-        GCC 4.8: {CXX: g++-4.8, TOOLSET: gcc-4.8, PACKAGES: g++-4.8, CONTAINER: "ubuntu_1804"}
-        # GCC 4.7: {CXX: g++-4.7, TOOLSET: gcc-4.7, PACKAGES: g++-4.7, CONTAINER: "ubuntu_1604"}
-        Clang 9: {CXX: clang++-9, TOOLSET: clang-9, PACKAGES: clang-9, LLVM_VER: 9, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
-        Clang 8: {CXX: clang++-8, TOOLSET: clang-8, PACKAGES: clang-8, LLVM_VER: 8, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
-        Clang 7: {CXX: clang++-7, TOOLSET: clang-7, PACKAGES: clang-7, LLVM_VER: 7, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
-        Clang 6: {CXX: clang++-6.0, TOOLSET: clang-6.0, PACKAGES: clang-6.0, LLVM_VER: 6.0, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
-        Clang 5: {CXX: clang++-5.0, TOOLSET: clang-5.0, PACKAGES: clang-5.0, LLVM_VER: 5.0, LLVM_OS: 'bionic', CONTAINER: "ubuntu_1804"}
-        Clang 4: {CXX: clang++-4.0, TOOLSET: clang-4.0, PACKAGES: clang-4.0, CONTAINER: "ubuntu_1804"}
-        Clang 3.9: {CXX: clang++-3.9, TOOLSET: clang-3.9, PACKAGES: clang-3.9, CONTAINER: "ubuntu_1804"}
-        Clang 3.8: {CXX: clang++-3.8, TOOLSET: clang-3.8, PACKAGES: clang-3.8, CONTAINER: "ubuntu_1604"}
-        Clang 3.7: {CXX: clang++-3.7, TOOLSET: clang-3.7, PACKAGES: clang-3.7, CONTAINER: "ubuntu_1604"}
-        Clang 3.6: {CXX: clang++-3.6, TOOLSET: clang-3.6, PACKAGES: clang-3.6, CONTAINER: "ubuntu_1604"}
+        GCC 13: {CXX: g++-13, TOOLSET: gcc-13, CONTAINER: "linux_gcc13"}
+        GCC 12: {CXX: g++-12, TOOLSET: gcc-12, CONTAINER: "linux_gcc12"}
+        GCC 11: {CXX: g++-11, TOOLSET: gcc-11, CONTAINER: "linux_gcc11"}
+        GCC 10: {CXX: g++-10, TOOLSET: gcc-10, CONTAINER: "linux_gcc10"}
+        GCC 9: {CXX: g++-9, TOOLSET: gcc-9, CONTAINER: "linux_gcc9"}
+        GCC 8: {CXX: g++-8, TOOLSET: gcc-8, CONTAINER: "linux_gcc8"}
+        GCC 7: {CXX: g++-7, TOOLSET: gcc-7, CONTAINER: "linux_gcc7"}
+        GCC 6: {CXX: g++-6, TOOLSET: gcc-6, CONTAINER: "linux_gcc6"}
+        GCC 5: {CXX: g++-5, TOOLSET: gcc-5, CONTAINER: "linux_gcc5"}
+        GCC 4.9: {CXX: g++-4.9, TOOLSET: gcc-4.9, CONTAINER: "linux_gcc49"}
+        GCC 4.8: {CXX: g++-4.8, TOOLSET: gcc-4.8, CONTAINER: "linux_gcc48"}
+        Clang 19: {CXX: clang++-19, TOOLSET: clang-19, CONTAINER: "linux_clang19"}
+        Clang 18: {CXX: clang++-18, TOOLSET: clang-18, CONTAINER: "linux_clang18"}
+        Clang 17: {CXX: clang++-17, TOOLSET: clang-17, CONTAINER: "linux_clang17"}
+        Clang 16: {CXX: clang++-16, TOOLSET: clang-16, CONTAINER: "linux_clang16"}
+        Clang 15: {CXX: clang++-15, TOOLSET: clang-15, CONTAINER: "linux_clang15"}
+        Clang 14: {CXX: clang++-14, TOOLSET: clang-14, CONTAINER: "linux_clang14"}
+        Clang 13: {CXX: clang++-13, TOOLSET: clang-13, CONTAINER: "linux_clang13"}
+        Clang 12: {CXX: clang++-12, TOOLSET: clang-12, CONTAINER: "linux_clang12"}
+        Clang 11: {CXX: clang++-11, TOOLSET: clang-11, CONTAINER: "linux_clang11"}
+        Clang 10: {CXX: clang++-10, TOOLSET: clang-10, CONTAINER: "linux_clang10"}
+        Clang 9: {CXX: clang++-9, TOOLSET: clang-9, CONTAINER: "linux_clang9"}
+        Clang 8: {CXX: clang++-8, TOOLSET: clang-8, CONTAINER: "linux_clang8"}
+        Clang 7: {CXX: clang++-7, TOOLSET: clang-7, CONTAINER: "linux_clang7"}
+        Clang 6: {CXX: clang++-6.0, TOOLSET: clang-6.0, CONTAINER: "linux_clang6"}
+        Clang 5: {CXX: clang++-5.0, TOOLSET: clang-5.0, CONTAINER: "linux_clang5"}
+        Clang 4: {CXX: clang++-4.0, TOOLSET: clang-4.0, CONTAINER: "linux_clang4"}
+        Clang 3.9: {CXX: clang++-3.9, TOOLSET: clang-3.9, CONTAINER: "linux_clang3"}
     pool:
-      vmImage: 'ubuntu-20.04'
+      vmImage: 'ubuntu-latest'
     container: $[ variables['CONTAINER'] ]
     steps:
+    - bash: |
+        uname -a
+        id
+        which sudo
+        which su
+      displayName: Info
     - template: .ci/azp-linux-prep-container.yml
     - template: .ci/azp-linux-test.yml
 
@@ -278,14 +323,15 @@ stages:
   - job: 'macOS'
     strategy:
       matrix:
+        Xcode 15.4: {XCODE_APP: /Applications/Xcode_15.4.app, VM_IMAGE: 'macOS-14'}
         Xcode 14.3.1: {XCODE_APP: /Applications/Xcode_14.3.1.app, VM_IMAGE: 'macOS-13'}
         Xcode 14.2: {XCODE_APP: /Applications/Xcode_14.2.app, VM_IMAGE: 'macOS-13'}
         Xcode 14.1: {XCODE_APP: /Applications/Xcode_14.1.app, VM_IMAGE: 'macOS-13'}
-        Xcode 14.0.1: {XCODE_APP: /Applications/Xcode_14.0.1.app, VM_IMAGE: 'macOS-12'}
-        Xcode 13.4.1: {XCODE_APP: /Applications/Xcode_13.4.1.app, VM_IMAGE: 'macOS-12'}
-        Xcode 12.5.1: {XCODE_APP: /Applications/Xcode_12.5.1.app, VM_IMAGE: 'macOS-11'}
-        Xcode 12.4: {XCODE_APP: /Applications/Xcode_12.4.app, VM_IMAGE: 'macOS-11'}
-        Xcode 11.7: {XCODE_APP: /Applications/Xcode_11.7.app, VM_IMAGE: 'macOS-11'}
+        # Xcode 14.0.1: {XCODE_APP: /Applications/Xcode_14.0.1.app, VM_IMAGE: 'macOS-12'}
+        # Xcode 13.4.1: {XCODE_APP: /Applications/Xcode_13.4.1.app, VM_IMAGE: 'macOS-12'}
+        # Xcode 12.5.1: {XCODE_APP: /Applications/Xcode_12.5.1.app, VM_IMAGE: 'macOS-11'}
+        # Xcode 12.4: {XCODE_APP: /Applications/Xcode_12.4.app, VM_IMAGE: 'macOS-11'}
+        # Xcode 11.7: {XCODE_APP: /Applications/Xcode_11.7.app, VM_IMAGE: 'macOS-11'}
     pool:
       vmImage: $(VM_IMAGE)
     steps:
@@ -399,6 +445,7 @@ stages:
     displayName: 'Release Linux'
     strategy:
       matrix:
+        1.86.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.86.0, BOOST_VERSION_U: 1_86_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         1.85.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.85.0, BOOST_VERSION_U: 1_85_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         1.84.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.84.0, BOOST_VERSION_U: 1_84_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         1.83.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.83.0, BOOST_VERSION_U: 1_83_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
@@ -450,6 +497,7 @@ stages:
       vmImage: "${{variables.macos_latest_vm}}"
     strategy:
       matrix:
+        1.86.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.86.0, BOOST_VERSION_U: 1_86_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         1.85.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.85.0, BOOST_VERSION_U: 1_85_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         1.84.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.84.0, BOOST_VERSION_U: 1_84_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         1.83.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.83.0, BOOST_VERSION_U: 1_83_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
@@ -500,6 +548,7 @@ stages:
       vmImage: "${{variables.windows_latest_vm}}"
     strategy:
       matrix:
+        1.86.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.86.0, BOOST_VERSION_U: 1_86_0, TOOLSET: "${{variables.vc_latest}}"}
         1.85.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.85.0, BOOST_VERSION_U: 1_85_0, TOOLSET: "${{variables.vc_latest}}"}
         1.84.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.84.0, BOOST_VERSION_U: 1_84_0, TOOLSET: "${{variables.vc_latest}}"}
         1.83.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.83.0, BOOST_VERSION_U: 1_83_0, TOOLSET: "${{variables.vc_latest}}"}

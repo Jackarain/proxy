@@ -1,5 +1,5 @@
 //  Copyright (c) 2011 Helge Bahmann
-//  Copyright (c) 2017 - 2021 Andrey Semashev
+//  Copyright (c) 2017-2025 Andrey Semashev
 //
 //  Distributed under the Boost Software License, Version 1.0.
 //  See accompanying file LICENSE_1_0.txt or copy at
@@ -9,24 +9,23 @@
 #define BOOST_ATOMIC_API_TEST_HELPERS_HPP
 
 #include <boost/atomic.hpp>
+
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <cstdlib>
 #include <limits>
 #include <vector>
 #include <iostream>
+#include <type_traits>
 #include <boost/config.hpp>
-#include <boost/cstdint.hpp>
 #include <boost/type.hpp>
-#include <boost/core/enable_if.hpp>
-#include <boost/type_traits/integral_constant.hpp>
+#include <boost/detail/bitmask.hpp>
 #include <boost/type_traits/alignment_of.hpp>
-#include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/is_signed.hpp>
 #include <boost/type_traits/is_unsigned.hpp>
 #include <boost/type_traits/make_signed.hpp>
 #include <boost/type_traits/make_unsigned.hpp>
-#include <boost/type_traits/conditional.hpp>
 
 #include "lightweight_test_stream.hpp"
 #include "value_with_epsilon.hpp"
@@ -36,48 +35,44 @@ const unsigned int max_weak_cas_loops = 1000;
 
 template< typename T >
 struct is_atomic :
-    public boost::false_type
+    public std::false_type
 {
 };
 
 template< typename T >
 struct is_atomic< boost::atomic< T > > :
-    public boost::true_type
+    public std::true_type
 {
 };
 
 template< typename T >
 struct is_atomic< boost::ipc_atomic< T > > :
-    public boost::true_type
+    public std::true_type
 {
 };
 
 template< typename T >
 struct is_atomic_ref :
-    public boost::false_type
+    public std::false_type
 {
 };
 
 template< typename T >
 struct is_atomic_ref< boost::atomic_ref< T > > :
-    public boost::true_type
+    public std::true_type
 {
 };
 
 template< typename T >
 struct is_atomic_ref< boost::ipc_atomic_ref< T > > :
-    public boost::true_type
+    public std::true_type
 {
 };
 
 template< typename Flag >
 inline void test_flag_api(void)
 {
-#ifndef BOOST_ATOMIC_NO_ATOMIC_FLAG_INIT
     Flag f = BOOST_ATOMIC_FLAG_INIT;
-#else
-    Flag f;
-#endif
 
     BOOST_TEST( !f.test() );
     BOOST_TEST( !f.test_and_set() );
@@ -90,13 +85,13 @@ inline void test_flag_api(void)
 }
 
 template< typename T >
-inline typename boost::enable_if< is_atomic< T > >::type test_atomic_type_traits(boost::type< T >)
+inline typename std::enable_if< is_atomic< T >::value >::type test_atomic_type_traits(boost::type< T >)
 {
     BOOST_TEST_GE(sizeof(T), sizeof(typename T::value_type));
 }
 
 template< typename T >
-inline typename boost::enable_if< is_atomic_ref< T > >::type test_atomic_type_traits(boost::type< T >)
+inline typename std::enable_if< is_atomic_ref< T >::value >::type test_atomic_type_traits(boost::type< T >)
 {
     if (T::is_always_lock_free)
     {
@@ -235,7 +230,6 @@ void test_base_operators(T value1, T value2, T value3)
 template< typename T >
 void test_constexpr_ctor()
 {
-#ifndef BOOST_ATOMIC_DETAIL_NO_CXX11_CONSTEXPR_UNION_INIT
     static constexpr T value = T();
 
     constexpr boost::atomic<T> tester_default;
@@ -243,7 +237,6 @@ void test_constexpr_ctor()
 
     constexpr boost::atomic<T> tester_init(value);
     BOOST_TEST_EQ(tester_init.load(boost::memory_order_relaxed), value);
-#endif
 }
 
 //! The type traits provides max and min values of type D that can be added/subtracted to T(0) without signed overflow
@@ -251,17 +244,17 @@ template< typename T, typename D, bool IsSigned = boost::is_signed< D >::value >
 struct distance_limits
 {
     //! Difference type D promoted to the width of type T
-    typedef typename boost::conditional<
+    using promoted_difference_type = typename std::conditional<
         IsSigned,
         boost::make_signed< T >,
         boost::make_unsigned< T >
-    >::type::type promoted_difference_type;
+    >::type::type;
 
-    static D min BOOST_PREVENT_MACRO_SUBSTITUTION () BOOST_NOEXCEPT
+    static D min BOOST_PREVENT_MACRO_SUBSTITUTION () noexcept
     {
         return (std::numeric_limits< D >::min)();
     }
-    static D max BOOST_PREVENT_MACRO_SUBSTITUTION () BOOST_NOEXCEPT
+    static D max BOOST_PREVENT_MACRO_SUBSTITUTION () noexcept
     {
         return (std::numeric_limits< D >::max)();
     }
@@ -278,16 +271,16 @@ template< typename T, typename D >
 struct distance_limits< T*, D, true >
 {
     //! Difference type D promoted to the width of type T
-    typedef std::ptrdiff_t promoted_difference_type;
+    using promoted_difference_type = std::ptrdiff_t;
 
-    static D min BOOST_PREVENT_MACRO_SUBSTITUTION () BOOST_NOEXCEPT
+    static D min BOOST_PREVENT_MACRO_SUBSTITUTION () noexcept
     {
         const std::ptrdiff_t ptrdiff = (std::numeric_limits< std::ptrdiff_t >::min)() / static_cast< std::ptrdiff_t >(sizeof(T));
         const D diff = (std::numeric_limits< D >::min)();
         // Both values are negative. Return the closest value to zero.
         return diff < ptrdiff ? static_cast< D >(ptrdiff) : diff;
     }
-    static D max BOOST_PREVENT_MACRO_SUBSTITUTION () BOOST_NOEXCEPT
+    static D max BOOST_PREVENT_MACRO_SUBSTITUTION () noexcept
     {
         const std::ptrdiff_t ptrdiff = (std::numeric_limits< std::ptrdiff_t >::max)() / static_cast< std::ptrdiff_t >(sizeof(T));
         const D diff = (std::numeric_limits< D >::max)();
@@ -300,13 +293,13 @@ template< typename T, typename D >
 struct distance_limits< T*, D, false >
 {
     //! Difference type D promoted to the width of type T
-    typedef std::size_t promoted_difference_type;
+    using promoted_difference_type = std::size_t;
 
-    static D min BOOST_PREVENT_MACRO_SUBSTITUTION () BOOST_NOEXCEPT
+    static D min BOOST_PREVENT_MACRO_SUBSTITUTION () noexcept
     {
         return (std::numeric_limits< D >::min)();
     }
-    static D max BOOST_PREVENT_MACRO_SUBSTITUTION () BOOST_NOEXCEPT
+    static D max BOOST_PREVENT_MACRO_SUBSTITUTION () noexcept
     {
         const std::size_t ptrdiff = static_cast< std::size_t >((std::numeric_limits< std::ptrdiff_t >::max)()) / sizeof(T);
         const D diff = (std::numeric_limits< D >::max)();
@@ -322,13 +315,13 @@ template< typename T, bool IsSigned >
 struct distance_limits< T, boost::int128_type, IsSigned >
 {
     //! Difference type D promoted to the width of type T
-    typedef boost::int128_type promoted_difference_type;
+    using promoted_difference_type = boost::int128_type;
 
-    static boost::int128_type min BOOST_PREVENT_MACRO_SUBSTITUTION () BOOST_NOEXCEPT
+    static boost::int128_type min BOOST_PREVENT_MACRO_SUBSTITUTION () noexcept
     {
         return -(max)() - 1;
     }
-    static boost::int128_type max BOOST_PREVENT_MACRO_SUBSTITUTION () BOOST_NOEXCEPT
+    static boost::int128_type max BOOST_PREVENT_MACRO_SUBSTITUTION () noexcept
     {
         return static_cast< boost::int128_type >((~static_cast< boost::uint128_type >(0u)) >> 1);
     }
@@ -338,13 +331,13 @@ template< typename T, bool IsSigned >
 struct distance_limits< T, boost::uint128_type, IsSigned >
 {
     //! Difference type D promoted to the width of type T
-    typedef boost::uint128_type promoted_difference_type;
+    using promoted_difference_type = boost::uint128_type;
 
-    static boost::uint128_type min BOOST_PREVENT_MACRO_SUBSTITUTION () BOOST_NOEXCEPT
+    static boost::uint128_type min BOOST_PREVENT_MACRO_SUBSTITUTION () noexcept
     {
         return 0u;
     }
-    static boost::uint128_type max BOOST_PREVENT_MACRO_SUBSTITUTION () BOOST_NOEXCEPT
+    static boost::uint128_type max BOOST_PREVENT_MACRO_SUBSTITUTION () noexcept
     {
         return ~static_cast< boost::uint128_type >(0u);
     }
@@ -367,13 +360,13 @@ void test_additive_operators_with_type_and_test()
 {
 #if defined(UBSAN)
     // clang UBSAN flags this test when AddType is a pointer as it considers subtracting from a null pointer (zero_add) an UB
-    if (boost::is_pointer< AddType >::value)
+    if (std::is_pointer< AddType >::value)
         return;
 #endif
 
     // Note: This set of tests is extracted to a separate function because otherwise MSVC-10 for x64 generates broken code
-    typedef typename distance_limits< T, D >::promoted_difference_type promoted_difference_type;
-    typedef typename boost::make_unsigned< promoted_difference_type >::type unsigned_promoted_difference_type;
+    using promoted_difference_type = typename distance_limits< T, D >::promoted_difference_type;
+    using unsigned_promoted_difference_type = typename boost::make_unsigned< promoted_difference_type >::type;
     const T zero_value = 0;
     const D zero_diff = 0;
     const D one_diff = 1;
@@ -1175,7 +1168,7 @@ void test_bit_operators(T value, T delta)
 }
 
 template< template< typename > class Wrapper, typename T >
-void do_test_integral_api(boost::false_type)
+void do_test_integral_api(std::false_type)
 {
     test_base_operators< Wrapper, T >(42, 43, 44);
     test_additive_operators< Wrapper, T, T >(42, 17);
@@ -1184,7 +1177,7 @@ void do_test_integral_api(boost::false_type)
 // cast truncates constant value
 #pragma warning(disable: 4310)
 #endif
-    test_bit_operators< Wrapper, T >((T)0x5f5f5f5f5f5f5f5fULL, (T)0xf5f5f5f5f5f5f5f5ULL);
+    test_bit_operators< Wrapper, T >((T)0x5f5f5f5f5f5f5f5full, (T)0xf5f5f5f5f5f5f5f5ull);
 #if defined(BOOST_MSVC)
 #pragma warning(pop)
 #endif
@@ -1198,14 +1191,14 @@ void do_test_integral_api(boost::false_type)
 }
 
 template< template< typename > class Wrapper, typename T >
-void do_test_integral_api(boost::true_type)
+void do_test_integral_api(std::true_type)
 {
-    do_test_integral_api< Wrapper, T >(boost::false_type());
+    do_test_integral_api< Wrapper, T >(std::false_type());
 
     test_additive_wrap< Wrapper, T >(0u);
-    BOOST_CONSTEXPR_OR_CONST T all_ones = (T)-1;
+    constexpr T all_ones = (T)-1;
     test_additive_wrap< Wrapper, T >(all_ones);
-    BOOST_CONSTEXPR_OR_CONST T max_signed_twos_compl = all_ones >> 1;
+    constexpr T max_signed_twos_compl = all_ones >> 1;
     test_additive_wrap< Wrapper, T >(all_ones ^ max_signed_twos_compl);
     test_additive_wrap< Wrapper, T >(max_signed_twos_compl);
 }
@@ -1213,27 +1206,27 @@ void do_test_integral_api(boost::true_type)
 template< template< typename > class Wrapper, typename T >
 inline void test_integral_api(void)
 {
-    do_test_integral_api< Wrapper, T >(boost::is_unsigned<T>());
+    do_test_integral_api< Wrapper, T >(std::integral_constant< bool, boost::is_unsigned< T >::value >());
 
     if (boost::is_signed<T>::value)
         test_negation< Wrapper, T >();
 }
 
 template< template< typename > class Wrapper, typename T >
-inline void test_lock_free_integral_api(boost::true_type)
+inline void test_lock_free_integral_api(std::true_type)
 {
     test_integral_api< Wrapper, T >();
 }
 
 template< template< typename > class Wrapper, typename T >
-inline void test_lock_free_integral_api(boost::false_type)
+inline void test_lock_free_integral_api(std::false_type)
 {
 }
 
 template< template< typename > class Wrapper, typename T >
 inline void test_lock_free_integral_api(void)
 {
-    test_lock_free_integral_api< Wrapper, T >(boost::integral_constant< bool, Wrapper< T >::atomic_type::is_always_lock_free >());
+    test_lock_free_integral_api< Wrapper, T >(std::integral_constant< bool, Wrapper< T >::atomic_type::is_always_lock_free >());
 }
 
 #if !defined(BOOST_ATOMIC_NO_FLOATING_POINT)
@@ -1362,20 +1355,20 @@ void test_floating_point_api(void)
 }
 
 template< template< typename > class Wrapper, typename T >
-inline void test_lock_free_floating_point_api(boost::true_type)
+inline void test_lock_free_floating_point_api(std::true_type)
 {
     test_floating_point_api< Wrapper, T >();
 }
 
 template< template< typename > class Wrapper, typename T >
-inline void test_lock_free_floating_point_api(boost::false_type)
+inline void test_lock_free_floating_point_api(std::false_type)
 {
 }
 
 template< template< typename > class Wrapper, typename T >
 inline void test_lock_free_floating_point_api(void)
 {
-    test_lock_free_floating_point_api< Wrapper, T >(boost::integral_constant< bool, Wrapper< T >::atomic_type::is_always_lock_free >());
+    test_lock_free_floating_point_api< Wrapper, T >(std::integral_constant< bool, Wrapper< T >::atomic_type::is_always_lock_free >());
 }
 
 
@@ -1390,66 +1383,100 @@ void test_pointer_api(void)
 
     test_base_operators< Wrapper, void* >(&values[0], &values[1], &values[2]);
 
-#if defined(BOOST_HAS_INTPTR_T)
-    Wrapper<void*> wrapper_ptr;
-    typename Wrapper<void*>::atomic_reference_type ptr = wrapper_ptr.a;
-    Wrapper<boost::intptr_t> wrapper_integral;
-    typename Wrapper<boost::intptr_t>::atomic_reference_type integral = wrapper_integral.a;
+#if defined(UINTPTR_MAX)
+    Wrapper< void* > wrapper_ptr;
+    typename Wrapper< void* >::atomic_reference_type ptr = wrapper_ptr.a;
+    Wrapper< std::intptr_t > wrapper_integral;
+    typename Wrapper< std::intptr_t >::atomic_reference_type integral = wrapper_integral.a;
     BOOST_TEST_EQ( ptr.is_lock_free(), integral.is_lock_free() );
 #endif
 }
 
-enum test_enum
-{
-    foo, bar, baz
-};
-
 template< template< typename > class Wrapper, typename T >
-inline void test_lock_free_pointer_api(boost::true_type)
+inline void test_lock_free_pointer_api(std::true_type)
 {
     test_pointer_api< Wrapper, T >();
 }
 
 template< template< typename > class Wrapper, typename T >
-inline void test_lock_free_pointer_api(boost::false_type)
+inline void test_lock_free_pointer_api(std::false_type)
 {
 }
 
 template< template< typename > class Wrapper, typename T >
 inline void test_lock_free_pointer_api(void)
 {
-    test_lock_free_pointer_api< Wrapper, T >(boost::integral_constant< bool, Wrapper< T >::atomic_type::is_always_lock_free >());
+    test_lock_free_pointer_api< Wrapper, T >(std::integral_constant< bool, Wrapper< T >::atomic_type::is_always_lock_free >());
 }
 
+
+enum test_enum
+{
+    foo, bar, baz
+};
+
+enum test_enum_bitmask : unsigned int
+{
+    test_enum_bitmask_1 = 1u, test_enum_bitmask_2 = 2u, test_enum_bitmask_4 = 4u
+};
+
+BOOST_BITMASK(test_enum_bitmask)
+
+enum class test_enum_class_bitmask : unsigned int
+{
+    one = 1u, two = 2u, four = 4u
+};
+
+BOOST_BITMASK(test_enum_class_bitmask)
+
+template< typename Char, typename Traits >
+inline std::basic_ostream< Char, Traits >& operator<< (std::basic_ostream< Char, Traits >& strm, test_enum_class_bitmask val)
+{
+    strm << static_cast< unsigned int >(val);
+    return strm;
+}
 
 template< template< typename > class Wrapper >
 void test_enum_api(void)
 {
     test_base_operators< Wrapper >(foo, bar, baz);
+    test_base_operators< Wrapper >(test_enum_bitmask_1, test_enum_bitmask_2, test_enum_bitmask_4);
+    test_base_operators< Wrapper >(test_enum_class_bitmask::one, test_enum_class_bitmask::two, test_enum_class_bitmask::four);
+
+#if defined(BOOST_MSVC)
+#pragma warning(push)
+// cast truncates constant value
+#pragma warning(disable: 4310)
+#endif
+    test_bit_operators< Wrapper, test_enum_bitmask >((test_enum_bitmask)0x5f5f5f5fu, (test_enum_bitmask)0xf5f5f5f5u);
+    test_bit_operators< Wrapper, test_enum_class_bitmask >((test_enum_class_bitmask)0x5f5f5f5fu, (test_enum_class_bitmask)0xf5f5f5f5u);
+#if defined(BOOST_MSVC)
+#pragma warning(pop)
+#endif
 }
 
 template< template< typename > class Wrapper >
-inline void test_lock_free_enum_api(boost::true_type)
+inline void test_lock_free_enum_api(std::true_type)
 {
     test_enum_api< Wrapper >();
 }
 
 template< template< typename > class Wrapper >
-inline void test_lock_free_enum_api(boost::false_type)
+inline void test_lock_free_enum_api(std::false_type)
 {
 }
 
 template< template< typename > class Wrapper >
 inline void test_lock_free_enum_api(void)
 {
-    test_lock_free_enum_api< Wrapper >(boost::integral_constant< bool, Wrapper< test_enum >::atomic_type::is_always_lock_free >());
+    test_lock_free_enum_api< Wrapper >(std::integral_constant< bool, Wrapper< test_enum >::atomic_type::is_always_lock_free >());
 }
 
 
 template< typename T >
 struct test_struct
 {
-    typedef T value_type;
+    using value_type = T;
     value_type i;
     inline bool operator==(test_struct const& c) const { return i == c.i; }
     inline bool operator!=(test_struct const& c) const { return !operator==(c); }
@@ -1481,7 +1508,7 @@ void test_struct_api(void)
 template< typename T >
 struct test_struct_x2
 {
-    typedef T value_type;
+    using value_type = T;
     value_type i, j;
     inline bool operator==(test_struct_x2 const& c) const { return i == c.i && j == c.j; }
     inline bool operator!=(test_struct_x2 const& c) const { return !operator==(c); }
@@ -1532,7 +1559,7 @@ void test_large_struct_api(void)
 
 struct test_struct_with_ctor
 {
-    typedef unsigned int value_type;
+    using value_type = unsigned int;
     value_type i;
     test_struct_with_ctor() : i(0x01234567) {}
     inline bool operator==(test_struct_with_ctor const& c) const { return i == c.i; }

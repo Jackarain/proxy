@@ -5,11 +5,13 @@
  */
 
 #include <boost/redis/connection.hpp>
-#include <boost/asio/detached.hpp>
+
 #include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
+
+#include <iostream>
 #include <map>
 #include <vector>
-#include <iostream>
 
 #if defined(BOOST_ASIO_HAS_CO_AWAIT)
 
@@ -24,38 +26,41 @@ using boost::asio::awaitable;
 using boost::asio::detached;
 using boost::asio::consign;
 
-template<class T>
+template <class T>
 std::ostream& operator<<(std::ostream& os, std::optional<T> const& opt)
 {
-    if (opt.has_value())
-        std::cout << opt.value();
-    else
-        std::cout << "null";
+   if (opt.has_value())
+      std::cout << opt.value();
+   else
+      std::cout << "null";
 
-    return os;
+   return os;
 }
 
 void print(std::map<std::string, std::string> const& cont)
 {
-   for (auto const& e: cont)
+   for (auto const& e : cont)
       std::cout << e.first << ": " << e.second << "\n";
 }
 
 template <class T>
 void print(std::vector<T> const& cont)
 {
-   for (auto const& e: cont) std::cout << e << " ";
+   for (auto const& e : cont)
+      std::cout << e << " ";
    std::cout << "\n";
 }
 
 // Stores the content of some STL containers in Redis.
 auto store(std::shared_ptr<connection> conn) -> awaitable<void>
 {
-   std::vector<int> vec
-      {1, 2, 3, 4, 5, 6};
+   std::vector<int> vec{1, 2, 3, 4, 5, 6};
 
-   std::map<std::string, std::string> map
-      {{"key1", "value1"}, {"key2", "value2"}, {"key3", "value3"}};
+   std::map<std::string, std::string> map{
+      {"key1", "value1"},
+      {"key2", "value2"},
+      {"key3", "value3"}
+   };
 
    request req;
    req.push_range("RPUSH", "rpush-key", vec);
@@ -100,22 +105,22 @@ auto transaction(std::shared_ptr<connection> conn) -> awaitable<void>
 {
    request req;
    req.push("MULTI");
-   req.push("LRANGE", "rpush-key", 0, -1); // Retrieves
-   req.push("HGETALL", "hset-key"); // Retrieves
+   req.push("LRANGE", "rpush-key", 0, -1);  // Retrieves
+   req.push("HGETALL", "hset-key");         // Retrieves
    req.push("MGET", "key", "non-existing-key");
    req.push("EXEC");
 
    response<
-      ignore_t, // multi
-      ignore_t, // lrange
-      ignore_t, // hgetall
-      ignore_t, // mget
+      ignore_t,  // multi
+      ignore_t,  // lrange
+      ignore_t,  // hgetall
+      ignore_t,  // mget
       response<
          std::optional<std::vector<int>>,
          std::optional<std::map<std::string, std::string>>,
-         std::optional<std::vector<std::optional<std::string>>>
-      > // exec
-   > resp;
+         std::optional<std::vector<std::optional<std::string>>>>  // exec
+      >
+      resp;
 
    co_await conn->async_exec(req, resp);
 
@@ -128,7 +133,7 @@ auto transaction(std::shared_ptr<connection> conn) -> awaitable<void>
 awaitable<void> co_main(config cfg)
 {
    auto conn = std::make_shared<connection>(co_await asio::this_coro::executor);
-   conn->async_run(cfg, {}, consign(detached, conn));
+   conn->async_run(cfg, consign(detached, conn));
 
    co_await store(conn);
    co_await transaction(conn);
@@ -137,4 +142,4 @@ awaitable<void> co_main(config cfg)
    conn->cancel();
 }
 
-#endif // defined(BOOST_ASIO_HAS_CO_AWAIT)
+#endif  // defined(BOOST_ASIO_HAS_CO_AWAIT)

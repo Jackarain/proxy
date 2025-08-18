@@ -100,7 +100,7 @@ struct exit_code_category final : public error_category
 #            if defined(SIGILL)
                     case SIGILL: return "SIGILL:    Illegal Instruction";
 #            endif
-#            if defined(SIGINFO)
+#            if defined(SIGINFO) && SIGINFO != SIGPWR
                     case SIGINFO: return "SIGINFO:   A synonym for SIGPWR";
 #            endif
 #            if defined(SIGINT)

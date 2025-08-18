@@ -1,5 +1,5 @@
 /* Storage for a very simple basic_result type
-(C) 2017-2024 Niall Douglas <http://www.nedproductions.biz/> (6 commits)
+(C) 2017-2025 Niall Douglas <http://www.nedproductions.biz/> (6 commits)
 File Created: Oct 2017
 
 

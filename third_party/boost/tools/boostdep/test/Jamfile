@@ -8,11 +8,11 @@ import testing ;
 path-constant ROOT : ../../.. ;
 path-constant HERE : . ;
 
-run ../src/boostdep.cpp /boost//filesystem : --boost-root $(ROOT) --capture-output assert --compare-output $(HERE)/assert-primary.txt : : : assert-primary-txt ;
-run ../src/boostdep.cpp /boost//filesystem : --boost-root $(ROOT) --capture-output --secondary bind --compare-output $(HERE)/bind-secondary.txt : : : bind-secondary-txt ;
+run ../src/boostdep.cpp /boost/filesystem//boost_filesystem : --boost-root $(ROOT) --capture-output assert --compare-output $(HERE)/assert-primary.txt : : : assert-primary-txt ;
+run ../src/boostdep.cpp /boost/filesystem//boost_filesystem : --boost-root $(ROOT) --capture-output --secondary bind --compare-output $(HERE)/bind-secondary.txt : : : bind-secondary-txt ;
 
-run ../src/boostdep.cpp /boost//filesystem : --boost-root $(ROOT) --capture-output --html --primary assert --compare-output $(HERE)/assert-primary.html : : : assert-primary-html ;
-run ../src/boostdep.cpp /boost//filesystem : --boost-root $(ROOT) --capture-output --html --secondary bind --compare-output $(HERE)/bind-secondary.html : : : bind-secondary-html ;
+run ../src/boostdep.cpp /boost/filesystem//boost_filesystem : --boost-root $(ROOT) --capture-output --html --primary assert --compare-output $(HERE)/assert-primary.html : : : assert-primary-html ;
+run ../src/boostdep.cpp /boost/filesystem//boost_filesystem : --boost-root $(ROOT) --capture-output --html --secondary bind --compare-output $(HERE)/bind-secondary.html : : : bind-secondary-html ;
 
-run ../src/boostdep.cpp /boost//filesystem : --boost-root $(ROOT) --csv --capture-output --primary assert --compare-output $(HERE)/assert-primary.csv : : : assert-primary-csv ;
-run ../src/boostdep.cpp /boost//filesystem : --boost-root $(ROOT) --csv --capture-output --secondary bind --compare-output $(HERE)/bind-secondary.csv : : : bind-secondary-csv ;
+run ../src/boostdep.cpp /boost/filesystem//boost_filesystem : --boost-root $(ROOT) --csv --capture-output --primary assert --compare-output $(HERE)/assert-primary.csv : : : assert-primary-csv ;
+run ../src/boostdep.cpp /boost/filesystem//boost_filesystem : --boost-root $(ROOT) --csv --capture-output --secondary bind --compare-output $(HERE)/bind-secondary.csv : : : bind-secondary-csv ;

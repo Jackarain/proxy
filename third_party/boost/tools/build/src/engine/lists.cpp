@@ -95,7 +95,7 @@ LIST * list_push_back(LIST * head, OBJECT * value)
 {
 	int32_t size = list_length(head);
 
-	if (DEBUG_LISTS) out_printf("list > %s <\n", object_str(value));
+	if (is_debug_lists()) out_printf("list > %s <\n", object_str(value));
 
 	/* If the size is a power of 2, reallocate. */
 	if (size == 0)

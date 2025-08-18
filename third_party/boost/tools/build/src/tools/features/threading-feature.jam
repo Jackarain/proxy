@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.threading]]`threading`::
+[[b2.builtin.features.threading]]`threading`::
 *Allowed values:* `single`, `multi`
 +
 Controls if the project should be built in multi-threaded mode. This feature

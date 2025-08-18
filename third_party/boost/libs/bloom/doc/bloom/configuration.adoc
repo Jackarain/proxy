@@ -1,0 +1,112 @@
+[#configuration]
+= Choosing a Filter Configuration
+
+:idprefix: configuration_
+
+Boost.Bloom offers a plethora of compile-time and run-time configuration options,
+so it may be difficult to make a choice.
+If you're aiming for a given FPR or have a particular capacity in mind and
+you'd like to choose the most appropriate filter type, the following chart
+may come handy.
+
+image::fpr_c.png[align=center, title="FPR vs. _c_ for different filter types."]
+
+The chart plots FPR vs. _c_ (capacity / number of elements inserted) for several
+`boost::bloom::filter`+++s+++ where `K` has been set to its optimum value (minimum FPR)
+as shown in the table below.
+
++++
+<div style="overflow-x: auto;">
+<table class="bordered_table" style="text-align: center; font-size: 85%;">
+    <tr>
+        <th rowspan="2"></th>
+		<th colspan="21"><i>c</i> = capacity / number of elements inserted</th>
+	</tr>
+    <tr>
+        <th>4</th> <th>5</th> <th>6</th> <th>7</th> <th>8</th> <th>9</th> <th>10</th> <th>11</th> <th>12</th> <th>13</th>
+        <th>14</th> <th>15</th> <th>16</th> <th>17</th> <th>18</th> <th>19</th> <th>20</th> <th>21</th> <th>22</th> <th>23</th> <th>24</th>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,1,block&lt;uint32_t,K&gt;&gt;</code></td> <td>3</td> <td>3</td> <td>3</td> <td>4</td> <td>4</td> <td>5</td> <td>5</td> <td>5</td> <td>5</td> <td>5</td>
+        <td>5</td> <td>5</td> <td>6</td> <td>6</td> <td>7</td> <td>7</td> <td>7</td> <td>7</td> <td>7</td> <td>7</td> <td>7</td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,1,block&lt;uint32_t,K&gt;,1&gt;</code></td> <td>2</td> <td>3</td> <td>4</td> <td>4</td> <td>4</td> <td>4</td> <td>5</td> <td>5</td> <td>5</td> <td>6</td>
+        <td>6</td> <td>6</td> <td>6</td> <td>6</td> <td>6</td> <td>6</td> <td>7</td> <td>7</td> <td>7</td> <td>7</td> <td>7</td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,1,block&lt;uint64_t,K&gt;&gt;</code></td> <td>2</td> <td>3</td> <td>4</td> <td>4</td> <td>5</td> <td>5</td> <td>5</td> <td>5</td> <td>5</td> <td>6</td>
+        <td>6</td> <td>6</td> <td>6</td> <td>6</td> <td>7</td> <td>7</td> <td>7</td> <td>7</td> <td>7</td> <td>7</td> <td>7</td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,1,block&lt;uint64_t,K&gt;,1&gt;</code></td> <td>2</td> <td>3</td> <td>4</td> <td>4</td> <td>4</td> <td>5</td> <td>6</td> <td>6</td> <td>6</td> <td>7</td>
+        <td>7</td> <td>7</td> <td>7</td> <td>7</td> <td>8</td> <td>8</td> <td>8</td> <td>8</td> <td>8</td> <td>9</td> <td>9</td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,1,multiblock&lt;uint32_t,K&gt;&gt;</code></td> <td>3</td> <td>3</td> <td>4</td> <td>5</td> <td>6</td> <td>6</td> <td>8</td> <td>8</td> <td>8</td> <td>8</td>
+        <td>9</td> <td>9</td> <td>9</td> <td>10</td> <td>13</td> <td>13</td> <td>15</td> <td>15</td> <td>15</td> <td>16</td> <td>16</td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,1,block&lt;uint64_t[8],K&gt;&gt;</code></td> <td>4</td> <td>4</td> <td>4</td> <td>5</td> <td>5</td> <td>6</td> <td>7</td> <td>7</td> <td>7</td> <td>8</td>
+		<td>8</td> <td>9</td> <td>9</td> <td>10</td> <td>10</td> <td>11</td> <td>12</td> <td>12</td> <td>12</td> <td>12</td> <td>12</td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,1,multiblock&lt;uint32_t,K&gt;,1&gt;</code></td> <td>3</td> <td>3</td> <td>4</td> <td>5</td> <td>6</td> <td>6</td> <td>7</td> <td>7</td> <td>8</td> <td>8</td>
+        <td>9</td> <td>9</td> <td>10</td> <td>10</td> <td>12</td> <td>12</td> <td>14</td> <td>14</td> <td>14</td> <td>14</td> <td>15</td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,1,block&lt;uint64_t[8],K&gt;,1&gt;</code></td> <td>3</td> <td>3</td> <td>4</td> <td>5</td> <td>6</td> <td>6</td> <td>7</td> <td>7</td> <td>7</td> <td>8</td>
+		<td>8</td> <td>8</td> <td>10</td> <td>11</td> <td>11</td> <td>12</td> <td>12</td> <td>12</td> <td>12</td> <td>12</td> <td>13</td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,1,multiblock&lt;uint64_t,K&gt;&gt;</code></td> <td>4</td> <td>4</td> <td>5</td> <td>5</td> <td>6</td> <td>6</td> <td>6</td> <td>7</td> <td>8</td> <td>8</td>
+        <td>10</td> <td>10</td> <td>12</td> <td>13</td> <td>14</td> <td>15</td> <td>15</td> <td>15</td> <td>15</td> <td>16</td> <td>17</td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,1,multiblock&lt;uint64_t,K&gt;,1&gt;</code></td> <td>3</td> <td>3</td> <td>4</td> <td>5</td> <td>5</td> <td>6</td> <td>6</td> <td>7</td> <td>9</td> <td>10</td>
+        <td>10</td> <td>11</td> <td>11</td> <td>12</td> <td>12</td> <td>13</td> <td>13</td> <td>13</td> <td>15</td> <td>16</td> <td>16</td>
+    </tr>
+    <tr>
+        <td style="text-align: left;"><code>filter&lt;T,K&gt;</code></td> <td>3</td> <td>4</td> <td>4</td> <td>5</td> <td>5</td> <td>6</td> <td>6</td> <td>8</td> <td>8</td> <td>9</td>
+        <td>10</td> <td>11</td> <td>12</td> <td>13</td> <td>13</td> <td>13</td> <td>14</td> <td>16</td> <td>16</td> <td>16</td> <td>17</td>
+    </tr>
+</table>
+</div>
++++
+
+Let's see how this can be used by way of an example. Suppose we plan to insert 10M elements
+and want to keep the FPR at 10^&minus;4^. The chart gives us five different
+values of _c_ (the array capacity divided by the number of elements, in our case 10M):
+
+* `filter<T, K>` -> _c_ &cong; 19 bits per element
+* `filter<T, 1, multiblock<uint64_t, K>, 1>` -> _c_ &cong; 20 bits per element
+* `filter<T, 1, multiblock<uint64_t, K>>` -> _c_ &cong; 21 bits per element
+* `filter<T, 1, block<uint64_t[8], K>, 1>` -> _c_ &cong; 21 bits per element
+* `filter<T, 1, multiblock<uint32_t, K>, 1>` -> _c_ &cong; 21.5 bits per element
+* `filter<T, 1, block<uint64_t[8], K>>` -> _c_ &cong; 22 bits per element
+* `filter<T, 1, multiblock<uint32_t, K>>` -> _c_ &cong; 23 bits per element
+
+These options have different tradeoffs in terms of space used and performance. If
+we choose `filter<T, 1, multiblock<uint32_t, K>, 1>` as a compromise (or better yet,
+`filter<T, 1, fast_multiblock32<K>, 1>`), the only remaining step is to consult the
+value of `K` in the table for _c_ = 21 or 22, and we get our final configuration:
+
+[source,subs="+macros,+quotes"]
+-----
+using my_filter=filter<std::string, 1, fast_multiblock32<**14**>, 1>;
+-----
+
+The resulting filter can be constructed in any of the following ways:
+
+[source]
+-----
+// 1) calculate the capacity from the value of c we got from the chart
+my_filter f((std::size_t)(10'000'000 * 21.5));
+
+// 2) let the library calculate the capacity from n and target fpr
+// expect some deviation from the capacity in 1)
+my_filter f(10'000'000, 1E-4);
+
+// 3) equivalent to 2)
+my_filter f(my_filter::capacity_for(10'000'000, 1E-4));
+-----

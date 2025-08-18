@@ -103,9 +103,9 @@
 #   define BOOST_LOG_NO_CXX11_CODECVT_FACETS
 #endif
 
-#if defined(__CYGWIN__)
+#if defined(__CYGWIN__) && !defined(BOOST_LOG_WITHOUT_ASIO)
     // Boost.ASIO is broken on Cygwin
-#   define BOOST_LOG_NO_ASIO
+#   define BOOST_LOG_WITHOUT_ASIO
 #endif
 
 #if defined(__VXWORKS__)
@@ -121,7 +121,7 @@
 #    define BOOST_LOG_NO_GETPWUID_R
 #endif
 
-#if !defined(BOOST_LOG_USE_NATIVE_SYSLOG) && defined(BOOST_LOG_NO_ASIO)
+#if !defined(BOOST_LOG_USE_NATIVE_SYSLOG) && defined(BOOST_LOG_WITHOUT_ASIO)
 #   ifndef BOOST_LOG_WITHOUT_SYSLOG
 #       define BOOST_LOG_WITHOUT_SYSLOG
 #   endif

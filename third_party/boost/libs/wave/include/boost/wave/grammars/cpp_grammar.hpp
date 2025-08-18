@@ -729,7 +729,7 @@ boost::spirit::classic::tree_parse_info<
 >
 cpp_grammar_gen<LexIteratorT, TokenContainerT>::parse_cpp_grammar (
     LexIteratorT const &first, LexIteratorT const &last,
-    position_type const &act_pos, bool &found_eof,
+    position_type const &/* act_pos */, bool &found_eof,
     token_type &found_directive, token_container_type &found_eoltokens)
 {
     using namespace boost::spirit::classic;

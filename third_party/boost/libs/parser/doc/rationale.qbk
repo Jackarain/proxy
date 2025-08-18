@@ -325,4 +325,24 @@ always equal to `A()` if the parser fails.  It is equal to whatever the parser
 sets it to _emdash_ or its previous value, if the parser does not mutate it
 _emdash_ if the parse succeeds.
 
+[heading There are no _Spirit_-style character class parsers]
+
+_Spirit_ has these character class parsers that recognize the same set of
+characters as the C standard library's character class functions.  For
+instance, _Spirit_'s `alnum` recognizes the characters recognized by
+`std::isalnum()`, its `punct` recognizes the characters recognized by
+`std::ispunct()`, etc.
+
+The problem with this is that those `std::is*()` functions are badly broken.
+They do not even work correctly for ASCII values.  This is because they use
+the C standard library's locale mechanism, which can be set to anything the
+current platform supports, and can be set by any code anywhere in your
+program; the locale is mutable global state.  So, even if you use the default
+"C locale in your program, if you link against a library that sets the locale
+to something that breaks ASCII character recognition (an EBCDIC locale, for
+instance), your program is now incorrect, regardless of the code you wrote.
+
+For this reason, I firmly believe that no one, anywhere, should use those C
+functions in production code, and I am not supporting their use via _Parser_.
+
 [endsect]

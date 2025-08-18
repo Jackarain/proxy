@@ -1,0 +1,44 @@
+[/
+  Copyright 2021 - 2025 Fahad Syed.
+  Copyright 2025 Christopher Kormanyos.
+
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+[section:cpp_double_fp_ref cpp_double_fp_backend]
+
+   namespace boost{ namespace multiprecision {
+
+   template <class FloatingPointType>
+   class cpp_double_fp_backend;
+
+   typedef number<cpp_double_fp_backend<float>, et_off> cpp_double_float;
+   typedef number<cpp_double_fp_backend<double>, et_off> cpp_double_double;
+   typedef number<cpp_double_fp_backend<long double>, et_off> cpp_double_long_double;
+   typedef number<cpp_double_fp_backend<boost::float128_type>, et_off> cpp_double_float128; // Only when boost::float128_type is available
+
+   }} // namespaces
+
+The `cpp_double_fp_backend` back-end is the sum of two IEEE floating-point numbers
+combined to create a type having roughly twice the composite width of one of its parts.
+The `cpp_double_fp_backend` back-end is used in conjunction with `number`
+and acts as an entirely C++ header only floating-point number type.
+
+Class template `cpp_double_fp_backend` fulfills all of the requirements for a [link boost_multiprecision.ref.backendconc Backend] type.
+Its members and non-member functions are deliberately not documented: these are considered implementation details that are subject
+to change.
+
+The class takes one template parameter:
+
+[variablelist
+[[FloatingPointType][The consituent IEEE floating-point value of the two limbs of the composite type.
+This can be `float`, `double`, `long double` or when available `boost::float128_type`.]]
+]
+
+The type of `number_category<cpp_dec_float<Args...> >::type` is `std::integral_constant<int, number_kind_floating_point>`.
+
+More information on this type can be found in the [link boost_multiprecision.tut.floats.cpp_double_fp_backend tutorial].
+
+[endsect]

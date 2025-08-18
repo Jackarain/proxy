@@ -1328,7 +1328,7 @@ set_query(
     edit_params(
         detail::params_iter_impl(impl_),
         detail::params_iter_impl(impl_, 0),
-        detail::query_iter(s, true));
+        detail::query_string_iter(s, true));
     return *this;
 }
 
@@ -1401,7 +1401,7 @@ params_ref
 url_base::
 params(encoding_opts opt) noexcept
 {
-    return params_ref(*this, opt);
+    return {*this, opt};
 }
 
 params_encoded_ref
@@ -1635,12 +1635,15 @@ resolve(
 //
 //------------------------------------------------
 
-template <class Charset>
+template <
+    class AllowedCharset,
+    class IgnoredCharset>
 void
 url_base::
 normalize_octets_impl(
     int id,
-    Charset const& allowed,
+    AllowedCharset const& allowed,
+    IgnoredCharset const& ignored,
     op_t& op) noexcept
 {
     char* it = s_ + impl_.offset(id);
@@ -1660,7 +1663,8 @@ normalize_octets_impl(
 
         // decode unreserved octets
         d = detail::decode_one(it + 1);
-        if (allowed(d))
+        if (allowed(d) &&
+            !ignored(d))
         {
             *dest = d;
             it += 3;
@@ -1681,6 +1685,18 @@ normalize_octets_impl(
         shrink_impl(id, n, op);
         s_[size()] = '\0';
     }
+}
+
+template<class CharSet>
+void
+url_base::
+normalize_octets_impl(
+    int idx,
+    CharSet const& allowed,
+    op_t& op) noexcept
+{
+    return normalize_octets_impl(
+        idx, allowed, detail::empty_chars, op);
 }
 
 url_base&
@@ -1884,7 +1900,10 @@ normalize_query()
 {
     op_t op(*this);
     normalize_octets_impl(
-        id_query, detail::query_chars, op);
+        id_query,
+        detail::query_chars,
+        detail::query_ignore_chars,
+        op);
     return *this;
 }
 
@@ -2647,20 +2666,16 @@ edit_params(
     auto pos1 = pos0 + it1.pos;
     pos0 = pos0 + it0.pos;
 
-    // Iterator doesn't belong to this url
+    // Iterators belong to this url
     BOOST_ASSERT(it0.ref.alias_of(impl_));
-
-    // Iterator doesn't belong to this url
     BOOST_ASSERT(it1.ref.alias_of(impl_));
 
-    // Iterator is in the wrong order
+    // Iterators is in the right order
     BOOST_ASSERT(it0.index <= it1.index);
 
-    // Iterator is out of range
+    // Iterators are within range
     BOOST_ASSERT(it0.index <= impl_.nparam_);
     BOOST_ASSERT(pos0 <= impl_.offset(id_frag));
-
-    // Iterator is out of range
     BOOST_ASSERT(it1.index <= impl_.nparam_);
     BOOST_ASSERT(pos1 <= impl_.offset(id_frag));
 

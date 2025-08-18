@@ -48,7 +48,7 @@
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/tools/rational.hpp>
 #include <boost/math/distributions/non_central_t.hpp>
-#include <libs/math/test/table_type.hpp>
+#include <table_type.hpp>
 #include <boost/chrono.hpp>
 #include <array>
 #include <boost/thread.hpp>
@@ -85,8 +85,8 @@ Real test_bessel()
    {
 #define T double
 #define SC_(x) x
-#include "libs/math/test/bessel_i_int_data.ipp"
-#include "libs/math/test/bessel_i_data.ipp"
+#include "bessel_i_int_data.ipp"
+#include "bessel_i_data.ipp"
 
       Real r;
 
@@ -99,25 +99,25 @@ Real test_bessel()
          r += boost::math::cyl_bessel_i(Real(bessel_i_data[i][0]), Real(bessel_i_data[i][1]));
       }
 
-#include "libs/math/test/bessel_j_int_data.ipp"
+#include "bessel_j_int_data.ipp"
       for (unsigned i = 0; i < bessel_j_int_data.size(); ++i)
       {
          r += boost::math::cyl_bessel_j(Real(bessel_j_int_data[i][0]), Real(bessel_j_int_data[i][1]));
       }
 
-#include "libs/math/test/bessel_j_data.ipp"
+#include "bessel_j_data.ipp"
       for (unsigned i = 0; i < bessel_j_data.size(); ++i)
       {
          r += boost::math::cyl_bessel_j(Real(bessel_j_data[i][0]), Real(bessel_j_data[i][1]));
       }
 
-#include "libs/math/test/bessel_j_large_data.ipp"
+#include "bessel_j_large_data.ipp"
       for (unsigned i = 0; i < bessel_j_large_data.size(); ++i)
       {
          r += boost::math::cyl_bessel_j(Real(bessel_j_large_data[i][0]), Real(bessel_j_large_data[i][1]));
       }
 
-#include "libs/math/test/sph_bessel_data.ipp"
+#include "sph_bessel_data.ipp"
       for (unsigned i = 0; i < sph_bessel_data.size(); ++i)
       {
          r += boost::math::sph_bessel(static_cast<unsigned>(sph_bessel_data[i][0]), Real(sph_bessel_data[i][1]));
@@ -148,7 +148,7 @@ template <class Real>
 Real test_nct()
 {
 #define T double
-#include "libs/math/test/nct.ipp"
+#include "nct.ipp"
 
    Real result = 0;
    for (unsigned i = 0; i < nct.size(); ++i)

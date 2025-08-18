@@ -20,14 +20,14 @@ Over time,
 When the component has moved to another Boost library, Boost.Utility headers still lead to the appropriate headers
 in other libraries.
 
-[table:id Components
+[table Components
     [[Boost.Utility] [Moved to Boost] [C++ Standard variant]]
     [[[@boost:/libs/core/doc/html/core/addressof.html `addressof`]] [[@boost:/libs/core/index.html Boost.Core]] [C++11 __std_addressof__]]
-    [[__base_from_member__]      [] []]
+    [[[link utility.utilities.base_from_member `base_from_member`]]      [] []]
     [[__BOOST_BINARY__] [] [C++14 [@https://en.cppreference.com/w/cpp/language/integer_literal Binary integer literal]]]
-    [[__call_traits__]      [] []]
+    [[[link utility.utilities.call_traits `call_traits`]]      [] []]
     [[[@boost:/libs/core/doc/html/core/checked_delete.html `checked_delete`]] [[@boost:/libs/core/index.html Boost.Core]] []]
-    [[__compressed_pair__]      [] []]
+    [[[link utility.utilities.compressed_pair `compressed_pair`]]      [] []]
     [[[@boost:/libs/type_traits/doc/html/boost_typetraits/reference/declval.html `declval`]] [[@boost:/libs/type_traits/index.html Boost.TypeTraits]] [C++11 __std_declval__]]
     [[[@boost:/libs/core/doc/html/core/enable_if.html `enable_if`]] [[@boost:/libs/core/index.html Boost.Core]] [C++11 __std_enable_if__]]
     [[[@boost:/libs/iterator/doc/generator_iterator.htm generator iterator adaptors]] [[@boost:/libs/iterator/index.html Boost.Iterator]] []]
@@ -35,12 +35,12 @@ in other libraries.
     [[[@boost:/libs/iterator/index.html `iterator_adaptors`]]      [[@boost:/libs/iterator/index.html Boost.Iterator]] []]
     [[[@boost:/libs/iterator/doc/html/iterator/algorithms/next_prior.html `next` / `prior`]] [[@boost:/libs/iterator/index.html Boost.Iterator]] [C++11 __std_next__ / __std_prev__]]
     [[[@boost:/libs/core/doc/html/core/noncopyable.html `noncopyable`]] [[@boost:/libs/core/index.html Boost.Core]] []]
-    [[[link sec:operators `operators`]]      [] []]
+    [[[link utility.utilities.operators `operators`]]      [] []]
     [[[@boost:/libs/io/doc/html/io.html `ostream_string`]] [[@boost:/libs/io/index.html Boost.IO]] []]
-    [[__result_of__]      [] [C++11 __std_result_of__]]
-    [[__string_view__]      [] [C++17 __std_string_view__]]
+    [[[link utility.utilities.result_of `result_of`]]      [] [C++11 __std_result_of__]]
+    [[[link utility.utilities.string_view `string_view`]]      [] [C++17 __std_string_view__]]
     [[[@boost:/libs/throw_exception/doc/html/throw_exception.html#using_boost_throw_exception `throw_exception`]] [[@boost:/libs/throw_exception/index.html Boost.ThrowException]] []]
-    [[[link sec:value_init `value_init`]]      [] [C++11 [@https://en.cppreference.com/w/cpp/language/list_initialization List initialization]]]
+    [[[link utility.utilities.value_init `value_init`]]      [] [C++11 [@https://en.cppreference.com/w/cpp/language/list_initialization List initialization]]]
 ]
 
 [endsect]

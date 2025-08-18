@@ -98,7 +98,7 @@ void run_connect_to_localhost_test(int succeed_after) {
     error_code success {};
 
     const std::string connect = encoders::encode_connect(
-        "", std::nullopt, std::nullopt, 60, false, {}, std::nullopt
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
     );
     const std::string connack = encoders::encode_connack(
         true, reason_codes::success.value(), {}

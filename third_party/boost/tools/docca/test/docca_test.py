@@ -517,6 +517,14 @@ def test_phrases():
     assert isinstance(p[0], docca.Phrase)
     assert p[0].text == ''
 
+    p = docca.make_phrase(make_elem({'tag': 'mdash'}), None)
+    assert isinstance(p, docca.EmDash)
+    assert p.text == '\u2014'
+
+    p = docca.make_phrase(make_elem({'tag': 'ndash'}), None)
+    assert isinstance(p, docca.EnDash)
+    assert p.text == '\u2013'
+
 def test_namespace():
     ns = docca.Namespace(
         make_elem({
@@ -2274,6 +2282,7 @@ def test_load_configs(tmpdir):
     assert conf == {
         'include_private': False,
         'legacy_behavior': True,
+        'allowed_prefixes': [''],
     }
 
     c = os.path.join(tmpdir, 'c1')
@@ -2285,6 +2294,7 @@ def test_load_configs(tmpdir):
         'include_private': False,
         'legacy_behavior': True,
         'A': 1,
+        'allowed_prefixes': [''],
     }
 
     c = os.path.join(tmpdir, 'c2')
@@ -2297,6 +2307,7 @@ def test_load_configs(tmpdir):
         'legacy_behavior': True,
         'A': 1,
         'B': 2,
+        'allowed_prefixes': [''],
     }
 
     c = os.path.join(tmpdir, 'c3')
@@ -2310,6 +2321,37 @@ def test_load_configs(tmpdir):
         'A': 3,
         'B': 2,
         'C': True,
+        'allowed_prefixes': [''],
+    }
+
+    c = os.path.join(tmpdir, 'c4')
+    with open(c, 'w', encoding='utf-8') as f:
+        f.write('{ "default_namespace": "qwerty::uiop12" }')
+    args.config.append(c)
+    conf = docca.load_configs(args)
+    assert conf == {
+        'include_private': False,
+        'legacy_behavior': True,
+        'A': 3,
+        'B': 2,
+        'C': True,
+        'default_namespace': 'qwerty::uiop12',
+        'allowed_prefixes': ['qwerty::uiop12::'],
+    }
+
+    c = os.path.join(tmpdir, 'c5')
+    with open(c, 'w', encoding='utf-8') as f:
+        f.write('{ "allowed_prefixes": ["a::", "b::c::"] }')
+    args.config.append(c)
+    conf = docca.load_configs(args)
+    assert conf == {
+        'include_private': False,
+        'legacy_behavior': True,
+        'A': 3,
+        'B': 2,
+        'C': True,
+        'default_namespace': 'qwerty::uiop12',
+        'allowed_prefixes': ['a::', 'b::c::'],
     }
 
 def test_docca_include_dir():

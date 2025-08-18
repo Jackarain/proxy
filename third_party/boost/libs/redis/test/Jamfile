@@ -14,6 +14,8 @@ local requirements =
         <define>BOOST_ASIO_DISABLE_BOOST_BIND=1
         <define>BOOST_ASIO_DISABLE_BOOST_DATE_TIME=1
         <define>BOOST_ASIO_DISABLE_BOOST_REGEX=1
+        <define>BOOST_ALLOW_DEPRECATED=1  # we need to test deprecated fns
+        <define>_CRT_SECURE_NO_WARNINGS=1 # suppress MSVC warnings
         <toolset>msvc:<cxxflags>"/bigobj"
         <target-os>windows:<define>_WIN32_WINNT=0x0601
         [ requires
@@ -31,7 +33,7 @@ local requirements =
         ]
         [ ac.check-library /openssl//ssl    : <library>/openssl//ssl/<link>shared : <build>no ]
         [ ac.check-library /openssl//crypto : <library>/openssl//crypto/<link>shared : <build>no ]
-        <library>/boost/test//boost_unit_test_framework
+        <library>/boost/test//boost_unit_test_framework/<warnings-as-errors>off
     ;
 
 
@@ -47,11 +49,14 @@ lib redis_test_common
 # B2 runs tests in parallel, and some tests rely on having exclusive
 # access to a Redis server, so we only run the ones that don't require a DB server.
 local tests =
-    test_low_level_sync_sans_io
     test_low_level
     test_request
-    test_run
+    test_low_level_sync_sans_io
     test_any_adapter
+    test_exec_fsm
+    test_log_to_file
+    test_conn_logging
+    test_reader_fsm
 ;
 
 # Build and run the tests

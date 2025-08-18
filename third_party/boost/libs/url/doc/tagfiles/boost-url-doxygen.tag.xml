@@ -44,8 +44,6 @@
         <class kind="class">boost::urls::format</class>
         <class kind="class">boost::urls::format_to</class>
         <class kind="class">boost::urls::operator&lt;&lt;</class>
-        <class kind="class">boost::urls::operator==</class>
-        <class kind="class">boost::urls::operator!=</class>
         <class kind="class">boost::urls::operator&lt;</class>
         <class kind="class">boost::urls::operator&lt;=</class>
         <class kind="class">boost::urls::operator&gt;</class>
@@ -85,7 +83,7 @@
             <name>encode_unsafe</name>
             <anchorfile>boost/urls/encode_unsafe.adoc</anchorfile>
             <anchor/>
-            <arglist>(char* dest, std::size_t size, core::string_view s, const CS&amp; unreserved, encoding_opts opt)
+            <arglist>(char* dest, std::size_t size, core::string_view s, const CS&amp; allowed, encoding_opts opt)
             </arglist>
         </member>
         <member kind="function">
@@ -93,7 +91,7 @@
             <name>encoded_size</name>
             <anchorfile>boost/urls/encoded_size.adoc</anchorfile>
             <anchor/>
-            <arglist>(core::string_view s, const CS&amp; unreserved, encoding_opts opt)</arglist>
+            <arglist>(core::string_view s, const CS&amp; allowed, encoding_opts opt)</arglist>
         </member>
         <member kind="function">
             <type>system::result&lt;pct_string_view&gt;</type>
@@ -828,23 +826,23 @@
     </compound>
     <compound kind="class">
         <name>boost::urls::grammar::ci_is_equal</name>
-        <filename>boost/urls/grammar/ci_is_equal-08.adoc</filename>
+        <filename>boost/urls/grammar/ci_is_equal-0b2.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::grammar::delim_rule</name>
-        <filename>boost/urls/grammar/delim_rule-011.adoc</filename>
+        <filename>boost/urls/grammar/delim_rule-0a.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::grammar::parse</name>
-        <filename>boost/urls/grammar/parse-0d.adoc</filename>
+        <filename>boost/urls/grammar/parse-09.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::grammar::range_rule</name>
-        <filename>boost/urls/grammar/range_rule-0f.adoc</filename>
+        <filename>boost/urls/grammar/range_rule-02.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::grammar::ref</name>
-        <filename>boost/urls/grammar/ref-07.adoc</filename>
+        <filename>boost/urls/grammar/ref-01.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::grammar::all_chars</name>
@@ -1167,6 +1165,13 @@
             <anchor/>
             <arglist>(StringToken&amp;&amp; token)</arglist>
         </member>
+        <member kind="function">
+            <type>void</type>
+            <name>authority_view</name>
+            <anchorfile>boost/urls/authority_view/2constructor-08.adoc</anchorfile>
+            <anchor/>
+            <arglist>(const detail::url_impl&amp; u)</arglist>
+        </member>
     </compound>
     <compound kind="class">
         <name>boost::urls::decode_view</name>
@@ -1360,7 +1365,7 @@
             <name>operator=</name>
             <anchorfile>boost/urls/ipv6_address/operator_assign.adoc</anchorfile>
             <anchor/>
-            <arglist>(const ipv6_address&amp; )</arglist>
+            <arglist>(const ipv6_address&amp; other)</arglist>
         </member>
         <member kind="function">
             <type>bool</type>
@@ -1411,6 +1416,20 @@
             <anchor/>
             <arglist>()</arglist>
         </member>
+        <member kind="function">
+            <type>std::size_t</type>
+            <name>print_impl</name>
+            <anchorfile>boost/urls/ipv6_address/print_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(char* dest)</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>to_string_impl</name>
+            <anchorfile>boost/urls/ipv6_address/to_string_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(string_token::arg&amp; t)</arglist>
+        </member>
     </compound>
     <compound kind="class">
         <name>boost::urls::no_value_t</name>
@@ -1425,6 +1444,13 @@
             <anchorfile>boost/urls/param/operator_ptr.adoc</anchorfile>
             <anchor/>
             <arglist>()</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>param</name>
+            <anchorfile>boost/urls/param/2constructor-097.adoc</anchorfile>
+            <anchor/>
+            <arglist>(core::string_view key, const detail::optional_string&amp; value)</arglist>
         </member>
     </compound>
     <compound kind="class">
@@ -1451,6 +1477,13 @@
             <anchor/>
             <arglist>()</arglist>
         </member>
+        <member kind="function">
+            <type>void</type>
+            <name>param_pct_view</name>
+            <anchorfile>boost/urls/param_pct_view/2constructor-08.adoc</anchorfile>
+            <anchor/>
+            <arglist>(pct_string_view key, const detail::optional_string&amp; value)</arglist>
+        </member>
     </compound>
     <compound kind="class">
         <name>boost::urls::param_view</name>
@@ -1468,6 +1501,13 @@
             <anchorfile>boost/urls/param_view/2conversion.adoc</anchorfile>
             <anchor/>
             <arglist>()</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>param_view</name>
+            <anchorfile>boost/urls/param_view/2constructor-039.adoc</anchorfile>
+            <anchor/>
+            <arglist>(core::string_view key, const detail::optional_string&amp; value)</arglist>
         </member>
     </compound>
     <compound kind="class">
@@ -1529,6 +1569,27 @@
             <anchor/>
             <arglist>()</arglist>
         </member>
+        <member kind="function">
+            <type>params_base&amp;</type>
+            <name>operator=</name>
+            <anchorfile>boost/urls/params_base/operator_assign.adoc</anchorfile>
+            <anchor/>
+            <arglist>(const params_base&amp; )</arglist>
+        </member>
+        <member kind="function">
+            <type>detail::params_iter_impl</type>
+            <name>find_impl</name>
+            <anchorfile>boost/urls/params_base/find_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(detail::params_iter_impl , core::string_view , ignore_case_param )</arglist>
+        </member>
+        <member kind="function">
+            <type>detail::params_iter_impl</type>
+            <name>find_last_impl</name>
+            <anchorfile>boost/urls/params_base/find_last_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(detail::params_iter_impl , core::string_view , ignore_case_param )</arglist>
+        </member>
     </compound>
     <compound kind="class">
         <name>boost::urls::params_encoded_base</name>
@@ -1588,6 +1649,27 @@
             <anchorfile>boost/urls/params_encoded_base/max_size.adoc</anchorfile>
             <anchor/>
             <arglist>()</arglist>
+        </member>
+        <member kind="function">
+            <type>params_encoded_base&amp;</type>
+            <name>operator=</name>
+            <anchorfile>boost/urls/params_encoded_base/operator_assign.adoc</anchorfile>
+            <anchor/>
+            <arglist>(const params_encoded_base&amp; )</arglist>
+        </member>
+        <member kind="function">
+            <type>detail::params_iter_impl</type>
+            <name>find_impl</name>
+            <anchorfile>boost/urls/params_encoded_base/find_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(detail::params_iter_impl , pct_string_view , ignore_case_param )</arglist>
+        </member>
+        <member kind="function">
+            <type>detail::params_iter_impl</type>
+            <name>find_last_impl</name>
+            <anchorfile>boost/urls/params_encoded_base/find_last_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(detail::params_iter_impl , pct_string_view , ignore_case_param )</arglist>
         </member>
     </compound>
     <compound kind="class">
@@ -1765,6 +1847,13 @@
             <anchor/>
             <arglist>()</arglist>
         </member>
+        <member kind="function">
+            <type>void</type>
+            <name>params_encoded_view</name>
+            <anchorfile>boost/urls/params_encoded_view/2constructor-0d.adoc</anchorfile>
+            <anchor/>
+            <arglist>(const detail::query_ref&amp; ref)</arglist>
+        </member>
     </compound>
     <compound kind="class">
         <name>boost::urls::params_ref</name>
@@ -1926,6 +2015,13 @@
             <anchorfile>boost/urls/params_base/max_size.adoc</anchorfile>
             <anchor/>
             <arglist>()</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>params_view</name>
+            <anchorfile>boost/urls/params_view/2constructor-0a.adoc</anchorfile>
+            <anchor/>
+            <arglist>(const detail::query_ref&amp; ref, encoding_opts opt)</arglist>
         </member>
     </compound>
     <compound kind="class">
@@ -2800,13 +2896,6 @@
             <arglist>()</arglist>
         </member>
         <member kind="function">
-            <type>params_encoded_view</type>
-            <name>encoded_params</name>
-            <anchorfile>boost/urls/url_base/encoded_params-02.adoc</anchorfile>
-            <anchor/>
-            <arglist>()</arglist>
-        </member>
-        <member kind="function">
             <type>pct_string_view</type>
             <name>encoded_password</name>
             <anchorfile>boost/urls/url_view_base/encoded_password.adoc</anchorfile>
@@ -2831,13 +2920,6 @@
             <type>pct_string_view</type>
             <name>encoded_resource</name>
             <anchorfile>boost/urls/url_view_base/encoded_resource.adoc</anchorfile>
-            <anchor/>
-            <arglist>()</arglist>
-        </member>
-        <member kind="function">
-            <type>segments_encoded_ref</type>
-            <name>encoded_segments</name>
-            <anchorfile>boost/urls/url_base/encoded_segments-0e8.adoc</anchorfile>
             <anchor/>
             <arglist>()</arglist>
         </member>
@@ -3146,13 +3228,6 @@
             <type>urls::scheme</type>
             <name>scheme_id</name>
             <anchorfile>boost/urls/url_view_base/scheme_id.adoc</anchorfile>
-            <anchor/>
-            <arglist>()</arglist>
-        </member>
-        <member kind="function">
-            <type>urls::segments_ref</type>
-            <name>segments</name>
-            <anchorfile>boost/urls/url_base/segments-0ec.adoc</anchorfile>
             <anchor/>
             <arglist>()</arglist>
         </member>
@@ -3518,13 +3593,6 @@
             <arglist>()</arglist>
         </member>
         <member kind="function">
-            <type>params_encoded_view</type>
-            <name>encoded_params</name>
-            <anchorfile>boost/urls/url_base/encoded_params-02.adoc</anchorfile>
-            <anchor/>
-            <arglist>()</arglist>
-        </member>
-        <member kind="function">
             <type>pct_string_view</type>
             <name>encoded_password</name>
             <anchorfile>boost/urls/url_view_base/encoded_password.adoc</anchorfile>
@@ -3549,13 +3617,6 @@
             <type>pct_string_view</type>
             <name>encoded_resource</name>
             <anchorfile>boost/urls/url_view_base/encoded_resource.adoc</anchorfile>
-            <anchor/>
-            <arglist>()</arglist>
-        </member>
-        <member kind="function">
-            <type>segments_encoded_ref</type>
-            <name>encoded_segments</name>
-            <anchorfile>boost/urls/url_base/encoded_segments-0e8.adoc</anchorfile>
             <anchor/>
             <arglist>()</arglist>
         </member>
@@ -3864,13 +3925,6 @@
             <type>urls::scheme</type>
             <name>scheme_id</name>
             <anchorfile>boost/urls/url_view_base/scheme_id.adoc</anchorfile>
-            <anchor/>
-            <arglist>()</arglist>
-        </member>
-        <member kind="function">
-            <type>urls::segments_ref</type>
-            <name>segments</name>
-            <anchorfile>boost/urls/url_base/segments-0ec.adoc</anchorfile>
             <anchor/>
             <arglist>()</arglist>
         </member>
@@ -4278,13 +4332,6 @@
             <arglist>()</arglist>
         </member>
         <member kind="function">
-            <type>params_encoded_view</type>
-            <name>encoded_params</name>
-            <anchorfile>boost/urls/url_base/encoded_params-02.adoc</anchorfile>
-            <anchor/>
-            <arglist>()</arglist>
-        </member>
-        <member kind="function">
             <type>pct_string_view</type>
             <name>encoded_password</name>
             <anchorfile>boost/urls/url_view_base/encoded_password.adoc</anchorfile>
@@ -4309,13 +4356,6 @@
             <type>pct_string_view</type>
             <name>encoded_resource</name>
             <anchorfile>boost/urls/url_view_base/encoded_resource.adoc</anchorfile>
-            <anchor/>
-            <arglist>()</arglist>
-        </member>
-        <member kind="function">
-            <type>segments_encoded_ref</type>
-            <name>encoded_segments</name>
-            <anchorfile>boost/urls/url_base/encoded_segments-0e8.adoc</anchorfile>
             <anchor/>
             <arglist>()</arglist>
         </member>
@@ -4624,13 +4664,6 @@
             <type>urls::scheme</type>
             <name>scheme_id</name>
             <anchorfile>boost/urls/url_view_base/scheme_id.adoc</anchorfile>
-            <anchor/>
-            <arglist>()</arglist>
-        </member>
-        <member kind="function">
-            <type>urls::segments_ref</type>
-            <name>segments</name>
-            <anchorfile>boost/urls/url_base/segments-0ec.adoc</anchorfile>
             <anchor/>
             <arglist>()</arglist>
         </member>
@@ -5625,6 +5658,129 @@
             <anchor/>
             <arglist>(std::size_t salt)</arglist>
         </member>
+        <member kind="function">
+            <type>void</type>
+            <name>~url_base</name>
+            <anchorfile>boost/urls/url_base/2destructor.adoc</anchorfile>
+            <anchor/>
+            <arglist>()</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>check_invariants</name>
+            <anchorfile>boost/urls/url_base/check_invariants.adoc</anchorfile>
+            <anchor/>
+            <arglist>()</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>cleanup</name>
+            <anchorfile>boost/urls/url_base/cleanup.adoc</anchorfile>
+            <anchor/>
+            <arglist>(op_t&amp; )</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>clear_impl</name>
+            <anchorfile>boost/urls/url_base/clear_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>()</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>copy</name>
+            <anchorfile>boost/urls/url_base/copy.adoc</anchorfile>
+            <anchor/>
+            <arglist>(const url_view_base&amp; )</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>decoded_to_lower_impl</name>
+            <anchorfile>boost/urls/url_base/decoded_to_lower_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(int id)</arglist>
+        </member>
+        <member kind="function">
+            <type>detail::params_iter_impl</type>
+            <name>edit_params</name>
+            <anchorfile>boost/urls/url_base/edit_params.adoc</anchorfile>
+            <anchor/>
+            <arglist>(const detail::params_iter_impl&amp; , const detail::params_iter_impl&amp; ,
+                detail::any_params_iter&amp;&amp; )
+            </arglist>
+        </member>
+        <member kind="function">
+            <type>detail::segments_iter_impl</type>
+            <name>edit_segments</name>
+            <anchorfile>boost/urls/url_base/edit_segments.adoc</anchorfile>
+            <anchor/>
+            <arglist>(const detail::segments_iter_impl&amp; , const detail::segments_iter_impl&amp; ,
+                detail::any_segments_iter&amp;&amp; it0, int absolute)
+            </arglist>
+        </member>
+        <member kind="function">
+            <type>core::string_view</type>
+            <name>first_segment</name>
+            <anchorfile>boost/urls/url_base/first_segment.adoc</anchorfile>
+            <anchor/>
+            <arglist>()</arglist>
+        </member>
+        <member kind="function">
+            <type>char*</type>
+            <name>set_host_impl</name>
+            <anchorfile>boost/urls/url_base/set_host_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(std::size_t n, op_t&amp; op)</arglist>
+        </member>
+        <member kind="function">
+            <type>char*</type>
+            <name>set_password_impl</name>
+            <anchorfile>boost/urls/url_base/set_password_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(std::size_t n, op_t&amp; op)</arglist>
+        </member>
+        <member kind="function">
+            <type>char*</type>
+            <name>set_path_impl</name>
+            <anchorfile>boost/urls/url_base/set_path_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(std::size_t n, op_t&amp; op)</arglist>
+        </member>
+        <member kind="function">
+            <type>char*</type>
+            <name>set_port_impl</name>
+            <anchorfile>boost/urls/url_base/set_port_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(std::size_t n, op_t&amp; op)</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>set_scheme_impl</name>
+            <anchorfile>boost/urls/url_base/set_scheme_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(core::string_view , urls::scheme )</arglist>
+        </member>
+        <member kind="function">
+            <type>char*</type>
+            <name>set_user_impl</name>
+            <anchorfile>boost/urls/url_base/set_user_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(std::size_t n, op_t&amp; op)</arglist>
+        </member>
+        <member kind="function">
+            <type>char*</type>
+            <name>set_userinfo_impl</name>
+            <anchorfile>boost/urls/url_base/set_userinfo_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(std::size_t n, op_t&amp; op)</arglist>
+        </member>
+        <member kind="function">
+            <type>void</type>
+            <name>to_lower_impl</name>
+            <anchorfile>boost/urls/url_base/to_lower_impl.adoc</anchorfile>
+            <anchor/>
+            <arglist>(int id)</arglist>
+        </member>
     </compound>
     <compound kind="class">
         <name>boost::urls::url_view</name>
@@ -6013,13 +6169,6 @@
             <anchorfile>boost/urls/url_view_base/digest.adoc</anchorfile>
             <anchor/>
             <arglist>(std::size_t salt)</arglist>
-        </member>
-        <member kind="function">
-            <type>void</type>
-            <name>url_view</name>
-            <anchorfile>boost/urls/url_view/2constructor-080.adoc</anchorfile>
-            <anchor/>
-            <arglist>(const detail::url_impl&amp; impl)</arglist>
         </member>
     </compound>
     <compound kind="class">
@@ -6439,43 +6588,35 @@
     </compound>
     <compound kind="class">
         <name>boost::urls::encode</name>
-        <filename>boost/urls/encode-04e.adoc</filename>
+        <filename>boost/urls/encode-0d.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::format</name>
-        <filename>boost/urls/format-07.adoc</filename>
+        <filename>boost/urls/format-06.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::format_to</name>
-        <filename>boost/urls/format_to-09.adoc</filename>
+        <filename>boost/urls/format_to-01.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::operator&lt;&lt;</name>
-        <filename>boost/urls/operator_lshift-0d1.adoc</filename>
-    </compound>
-    <compound kind="class">
-        <name>boost::urls::operator==</name>
-        <filename>boost/urls/operator_eq-05.adoc</filename>
-    </compound>
-    <compound kind="class">
-        <name>boost::urls::operator!=</name>
-        <filename>boost/urls/operator_not_eq-08a.adoc</filename>
+        <filename>boost/urls/operator_lshift-04.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::operator&lt;</name>
-        <filename>boost/urls/operator_lt-07.adoc</filename>
+        <filename>boost/urls/operator_lt-05c.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::operator&lt;=</name>
-        <filename>boost/urls/operator_le-0a0.adoc</filename>
+        <filename>boost/urls/operator_le-0b.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::operator&gt;</name>
-        <filename>boost/urls/operator_gt-05.adoc</filename>
+        <filename>boost/urls/operator_gt-0f.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::operator&gt;=</name>
-        <filename>boost/urls/operator_ge-04.adoc</filename>
+        <filename>boost/urls/operator_ge-07.adoc</filename>
     </compound>
     <compound kind="class">
         <name>boost::urls::absolute_uri_rule</name>

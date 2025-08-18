@@ -6,7 +6,7 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.tools.compiler.sun]]
+[[b2.reference.tools.compiler.sun]]
 = Sun Studio
 
 The `sun` module supports the

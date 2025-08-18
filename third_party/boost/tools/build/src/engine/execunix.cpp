@@ -203,7 +203,7 @@ void exec_cmd
      */
     argv_from_shell( argv, shell, command->value, slot );
 
-    if ( DEBUG_EXECCMD )
+    if ( is_debug_execcmd() )
     {
         int i;
         out_printf( "Using shell: " );
@@ -537,9 +537,16 @@ void exec_wait()
                     close_streams( i, ERR );
 
                 /* Reap the child and release resources. */
+            #ifdef __HAIKU__
+                while ((pid = waitpid(cmdtab[i].pid, &status, 0)) == -1)
+                    if (errno != EINTR)
+                        break;
+                getrusage(RUSAGE_CHILDREN, &cmd_usage);
+            #else
                 while ( ( pid = wait4( cmdtab[ i ].pid, &status, 0, &cmd_usage ) ) == -1 )
                     if ( errno != EINTR )
                         break;
+            #endif
                 if ( pid != cmdtab[ i ].pid )
                 {
                     err_printf( "unknown pid %d with errno = %d\n", pid, errno );

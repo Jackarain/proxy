@@ -172,6 +172,7 @@ namespace unordered {
     node_type xref:#unordered_node_map_extract_by_position[extract](const_iterator position);
     node_type xref:#unordered_node_map_extract_by_key[extract](const key_type& key);
     template<class K> node_type xref:#unordered_node_map_extract_by_key[extract](K&& key);
+    init_type xref:#unordered_node_map_pull[pull](const_iterator position);
     void      xref:#unordered_node_map_clear[clear]() noexcept;
 
     template<class H2, class P2>
@@ -319,7 +320,7 @@ The size of the bucket array can be automatically increased by a call to `insert
 greater than `max_load_factor()`, except possibly for small sizes where the implementation may decide to
 allow for higher loads.
 
-If `xref:reference/hash_traits.adoc#hash_traits_hash_is_avalanching[hash_is_avalanching]<Hash>::value` is `true`, the hash function
+If `link:../../../../../container_hash/doc/html/hash.html#ref_hash_is_avalanchinghash[hash_is_avalanching]<Hash>::value` is `true`, the hash function
 is used as-is; otherwise, a bit-mixing post-processing stage is added to increase the quality of hashing
 at the expense of extra computational cost.
 
@@ -1224,6 +1225,16 @@ Notes:;; The `template<class K>` overload only participates in overload resoluti
 
 ---
 
+==== pull
+```c++
+init_type pull(const_iterator position);
+```
+
+Move-constructs an `init_value` `x` from the element pointed to by `position`,
+erases the element and returns `x`.
+
+---
+
 ==== clear
 ```c++
 void clear() noexcept;
@@ -1607,6 +1618,8 @@ for (auto i = c.begin(), last = c.end(); i != last; ) {
 }
 return original_size - c.size();
 ```
++
+Note that the references passed to `pred` are non-const.
 
 === Serialization
 

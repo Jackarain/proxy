@@ -13,6 +13,8 @@
 #    include <boost/test/unit_test.hpp>
 #endif
 
+#include <cstdint>
+
 BOOST_AUTO_TEST_CASE( spsc_value_test )
 {
     boost::lockfree::spsc_value< uint64_t > v;

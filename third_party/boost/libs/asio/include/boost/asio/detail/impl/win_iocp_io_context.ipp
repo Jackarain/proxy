@@ -107,17 +107,42 @@ win_iocp_io_context::win_iocp_io_context(
   if (own_thread)
   {
     ::InterlockedIncrement(&outstanding_work_);
-    thread_.reset(new boost::asio::detail::thread(thread_function(this)));
+    thread_ = thread(thread_function(this));
+  }
+}
+
+win_iocp_io_context::win_iocp_io_context(
+    win_iocp_io_context::internal, boost::asio::execution_context& ctx)
+  : execution_context_service_base<win_iocp_io_context>(ctx),
+    iocp_(),
+    outstanding_work_(0),
+    stopped_(0),
+    stop_event_posted_(0),
+    shutdown_(0),
+    gqcs_timeout_(get_gqcs_timeout()),
+    dispatch_required_(0),
+    concurrency_hint_(-1)
+{
+  BOOST_ASIO_HANDLER_TRACKING_INIT;
+
+  iocp_.handle = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0,
+      static_cast<DWORD>(concurrency_hint_ >= 0
+        ? concurrency_hint_ : DWORD(~0)));
+  if (!iocp_.handle)
+  {
+    DWORD last_error = ::GetLastError();
+    boost::system::error_code ec(last_error,
+        boost::asio::error::get_system_category());
+    boost::asio::detail::throw_error(ec, "iocp");
   }
 }
 
 win_iocp_io_context::~win_iocp_io_context()
 {
-  if (thread_.get())
+  if (thread_.joinable())
   {
     stop();
-    thread_->join();
-    thread_.reset();
+    thread_.join();
   }
 }
 
@@ -125,18 +150,17 @@ void win_iocp_io_context::shutdown()
 {
   ::InterlockedExchange(&shutdown_, 1);
 
-  if (timer_thread_.get())
+  if (timer_thread_.joinable())
   {
     LARGE_INTEGER timeout;
     timeout.QuadPart = 1;
     ::SetWaitableTimer(waitable_timer_.handle, &timeout, 1, 0, 0, FALSE);
   }
 
-  if (thread_.get())
+  if (thread_.joinable())
   {
     stop();
-    thread_->join();
-    thread_.reset();
+    thread_.join();
     ::InterlockedDecrement(&outstanding_work_);
   }
 
@@ -169,11 +193,7 @@ void win_iocp_io_context::shutdown()
     }
   }
 
-  if (timer_thread_.get())
-  {
-    timer_thread_->join();
-    timer_thread_.reset();
-  }
+  timer_thread_.join();
 }
 
 boost::system::error_code win_iocp_io_context::register_handle(
@@ -574,10 +594,10 @@ void win_iocp_io_context::do_add_timer_queue(timer_queue_base& queue)
         &timeout, max_timeout_msec, 0, 0, FALSE);
   }
 
-  if (!timer_thread_.get())
+  if (!timer_thread_.joinable())
   {
     timer_thread_function thread_function = { this };
-    timer_thread_.reset(new thread(thread_function, 65536));
+    timer_thread_ = thread(thread_function, 65536);
   }
 }
 
@@ -590,7 +610,7 @@ void win_iocp_io_context::do_remove_timer_queue(timer_queue_base& queue)
 
 void win_iocp_io_context::update_timeout()
 {
-  if (timer_thread_.get())
+  if (timer_thread_.joinable())
   {
     // There's no point updating the waitable timer if the new timeout period
     // exceeds the maximum timeout. In that case, we might as well wait for the

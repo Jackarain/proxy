@@ -10,7 +10,7 @@
 
 #| tag::doc[]
 
-[[bbv2.reference.tools.compiler.dmc]]
+[[b2.reference.tools.compiler.dmc]]
 = Digital Mars C/C++ Compiler
 
 The `dmc` module supports the http://www.digitalmars.com/[Digital Mars

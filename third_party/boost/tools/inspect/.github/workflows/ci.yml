@@ -17,15 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-            toolset: gcc
           - os: ubuntu-22.04
             toolset: gcc
-          - os: macos-11
-            toolset: clang
-          - os: macos-12
-            toolset: clang
+          - os: ubuntu-24.04
+            toolset: gcc
           - os: macos-13
+            toolset: clang
+          - os: macos-14
+            toolset: clang
+          - os: macos-15
             toolset: clang
 
     runs-on: ${{matrix.os}}

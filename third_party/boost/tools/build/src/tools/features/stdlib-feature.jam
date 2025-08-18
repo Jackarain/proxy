@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.stdlib]]`stdlib`::
+[[b2.builtin.features.stdlib]]`stdlib`::
 *Allowed values*: `native`, `gnu`, `gnu11`, `libc++`, `sun-stlport`, `apache`.
 +
 Specifies C++ standard library to link to and in some cases the library ABI to

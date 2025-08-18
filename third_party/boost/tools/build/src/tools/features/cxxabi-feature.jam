@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.cxxabi]]`c++abi`::
+[[b2.builtin.features.cxxabi]]`c++abi`::
 Selects a specific variant of C++ ABI if the compiler supports several.
 
 

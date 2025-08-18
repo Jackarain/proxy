@@ -14,6 +14,7 @@
 #include "decode.hpp"
 #include <boost/url/segments_encoded_view.hpp>
 #include <boost/url/grammar/ci_string.hpp>
+#include <boost/url/grammar/lut_chars.hpp>
 #include <boost/assert.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <cstring>
@@ -64,6 +65,60 @@ compare_encoded(
             return -1;
         if (c1 < c0)
             return 1;
+    }
+    n0 += detail::decode_bytes_unsafe(lhs);
+    n1 += detail::decode_bytes_unsafe(rhs);
+    if (n0 == n1)
+        return 0;
+    if (n0 < n1)
+        return -1;
+    return 1;
+}
+
+int
+compare_encoded_query(
+    core::string_view lhs,
+    core::string_view rhs) noexcept
+{
+    static constexpr
+    grammar::lut_chars
+    query_compare_exception_lut = "&=+";
+
+    std::size_t n0 = 0;
+    std::size_t n1 = 0;
+    char c0 = 0;
+    char c1 = 0;
+    while(
+        !lhs.empty() &&
+        !rhs.empty())
+    {
+        bool const lhs_was_decoded = lhs.front() != '%';
+        bool const rhs_was_decoded = rhs.front() != '%';
+        pop_encoded_front(lhs, c0, n0);
+        pop_encoded_front(rhs, c1, n1);
+        if (c0 < c1)
+            return -1;
+        if (c1 < c0)
+            return 1;
+        // The decoded chars are the same, but
+        // are these query exceptions that have
+        // different meanings when decoded?
+        if (query_compare_exception_lut(c0))
+        {
+            // If so, we only continue if both
+            // chars were decoded or encoded
+            // the same way.
+            if (lhs_was_decoded == rhs_was_decoded)
+                continue;
+            // Otherwise, we return a value != 0
+            // because these chars are not equal.
+            // If rhs was the decoded one, it contains
+            // an ascii char higher than '%'
+            if (rhs_was_decoded)
+                return -1;
+            else
+                return 1;
+        }
     }
     n0 += detail::decode_bytes_unsafe(lhs);
     n1 += detail::decode_bytes_unsafe(rhs);

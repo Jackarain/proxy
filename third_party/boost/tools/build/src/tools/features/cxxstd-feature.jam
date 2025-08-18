@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.cxxstd]]`cxxstd`::
+[[b2.builtin.features.cxxstd]]`cxxstd`::
 *Allowed values*: `98`, `03`, `0x`, `11`, `1y`, `14`, `1z`, `17`, `2a`, `20`,
 `2b`, `23`, `2c`, `26`, `latest`.
 +
@@ -33,7 +33,7 @@ feature.feature cxxstd
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.cxxstd-dialect]]`cxxstd-dialect`::
+[[b2.builtin.features.cxxstd-dialect]]`cxxstd-dialect`::
 *Subfeature of* `cxxstd`
 +
 *Allowed values*: `iso`, `gnu`, `ms`.

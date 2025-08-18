@@ -20,6 +20,7 @@ import version ;
 import property-set ;
 import regex ;
 import errors ;
+import args ;
 
 ## Use a framework.
 feature framework : : free ;
@@ -37,10 +38,7 @@ feature force-load : : free dependency incidental ;
 
 _ = " " ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 feature.extend toolset : darwin ;
 import gcc ;
@@ -115,7 +113,7 @@ rule init ( version ? : command * : options * : requirement * )
     {
         # - The 'command' variable can have multiple elements. When calling
         #   the SHELL builtin we need a single string.
-        local command-string = $(command:J=" ") ;
+        local command-string = [ common.make-command-string $(command) ] ;
         real-version = [ MATCH "^([0-9.]+)"
             : [ SHELL "$(command-string) -dumpversion" ] ] ;
         version ?= $(real-version) ;

@@ -9,7 +9,7 @@ import property ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.variant]]`variant`::
+[[b2.builtin.features.variant]]`variant`::
 *Allowed values:* `debug`, `release`, `profile`.
 +
 A feature combining several low-level features, making it easy to

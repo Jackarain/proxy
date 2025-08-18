@@ -19,7 +19,7 @@ from docca_test_helpers import make_elem
 
 @pytest.fixture
 def cfg():
-    return dict(legacy_behavior=False)
+    return dict(legacy_behavior=False, allowed_prefixes=[''])
 
 @pytest.fixture
 def entities():
@@ -594,9 +594,11 @@ def test_phrase(entities, cfg, render):
         docca.Emphasised(['emph ', docca.Strong(['bold'])]),
         docca.Linebreak(),
         docca.UrlLink('http://a.b/c', ['link text']),
+        docca.EmDash(),
         docca.EntityRef(entities['g1'], ['ref text']),
         docca.Linebreak(),
         docca.EntityRef(entities['ostream'], ['output stream']),
+        docca.EnDash(),
         docca.Phrase([' ', 'more text']),
         docca.Linebreak(),
         docca.EntityRef(entities['o[]'], 'operator[]'),
@@ -604,9 +606,9 @@ def test_phrase(entities, cfg, render):
     assert render(parts) == textwrap.dedent('''\
         regular text `monospaced text` ['emph [*bold]]
 
-        [@http://a.b/c link text][link ns1__ns2__klass.g `ref text`]
+        [@http://a.b/c link text]\u2014[link ns1__ns2__klass.g `ref text`]
 
-        [@http://ostream.org `output stream`] more text
+        [@http://ostream.org `output stream`]\u2013 more text
 
         [link ns1__ns2__klass.operator__lb__rb_ `operator[]`]''')
 
@@ -616,9 +618,9 @@ def test_phrase(entities, cfg, render):
     assert render(parts) == textwrap.dedent('''\
         regular text `monospaced text` ['emph [*bold]]
 
-        [@http://a.b/c link text]``[link ns1__ns2__klass.g [^ns1::ns2::klass::g]]``
+        [@http://a.b/c link text]\u2014``[link ns1__ns2__klass.g [^ns1::ns2::klass::g]]``
 
-        ``[@http://ostream.org [^std::ostream]]`` more text
+        ``[@http://ostream.org [^std::ostream]]``\u2013 more text
 
         ``[link ns1__ns2__klass.operator__lb__rb_ [^ns1::ns2::klass::operator\[\]]]``''')
 

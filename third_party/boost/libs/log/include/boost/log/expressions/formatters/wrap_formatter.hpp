@@ -274,7 +274,7 @@ public:
  * function object must be compatible with the following signature:
  *
  * <pre>
- * void (record_view const&, basic_formatting_ostream< CharT >&)
+ * void (record_view const&, basic_formatting_ostream< CharT >&) const
  * </pre>
  *
  * where \c CharT is the character type of the formatting expression.
@@ -293,7 +293,7 @@ BOOST_FORCEINLINE wrapped_formatter_actor< FunT, typename aux::default_char_type
  * function object must be compatible with the following signature:
  *
  * <pre>
- * void (record_view const&, basic_formatting_ostream< CharT >&)
+ * void (record_view const&, basic_formatting_ostream< CharT >&) const
  * </pre>
  *
  * where \c CharT is the character type of the formatting expression.

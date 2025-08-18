@@ -66,6 +66,7 @@ If the supplied hash function has good quality, then:
 * For unsuccessful lookups, the average number of element comparisons should be close to 0.0.
 
 These statistics can be used to determine if a given hash function
-can be marked as xref:reference/hash_traits.adoc#hash_traits_hash_is_avalanching[__avalanching__].
+can be marked as 
+link:../../../../../container_hash/doc/html/hash.html#ref_hash_is_avalanchinghash[__avalanching__].
 
 ---

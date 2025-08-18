@@ -22,6 +22,7 @@ import modules ;
 import indirect ;
 import property ;
 import property-set ;
+import args ;
 
 header = lzma.h ;
 # liblzma only needed for VisualC++ builds
@@ -29,10 +30,7 @@ names = lzma liblzma ;
 
 library-id = 0 ;
 
-if --debug-configuration in [ modules.peek : ARGV ]
-{
-    .debug =  true ;
-}
+.debug =  [ args.get-arg debug-configuration ] ;
 
 # Initializes the lzma library.
 #

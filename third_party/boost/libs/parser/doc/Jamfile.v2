@@ -39,7 +39,7 @@ rule run_doxygen ( files * : name : expand ? )
 
 }
 
-run_doxygen [ glob $(here)/../../../boost/parser/*.hpp : $(here)/../../../boost/parser/concepts.hpp ] : "Headers" ;
+run_doxygen [ glob $(here)/../include/boost/parser/*.hpp : $(here)/../include/boost/parser/concepts.hpp ] : "Headers" ;
 
 install images_standalone : [ glob *.png ] : <location>html/parser/img ;
 explicit images_standalone ;

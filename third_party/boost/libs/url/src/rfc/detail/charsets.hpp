@@ -18,6 +18,20 @@ namespace boost {
 namespace urls {
 namespace detail {
 
+struct empty_chars_t
+{
+    constexpr
+    bool
+    operator()(char) const noexcept
+    {
+        return false;
+    }
+};
+
+constexpr
+empty_chars_t
+empty_chars{};
+
 constexpr
 auto
 user_chars =
@@ -57,6 +71,11 @@ constexpr
 auto
 query_chars =
     pchars + '/' + '?' + '[' + ']';
+
+constexpr
+grammar::lut_chars
+query_ignore_chars =
+    "&=+";
 
 constexpr
 auto

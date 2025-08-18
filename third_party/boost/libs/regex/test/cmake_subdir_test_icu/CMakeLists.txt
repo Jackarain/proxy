@@ -19,4 +19,4 @@ target_link_libraries(quick_icu Boost::regex_icu)
 enable_testing()
 add_test(quick_icu quick_icu)
 
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)
+add_custom_target(check VERBATIM COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -C $<CONFIG>)

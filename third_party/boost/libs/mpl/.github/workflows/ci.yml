@@ -51,9 +51,9 @@ jobs:
           - { compiler: gcc-4.9,   cxxstd: '03,11',          os: ubuntu-latest, container: 'ubuntu:16.04' }
           - { compiler: gcc-5,     cxxstd: '03,11,14,1z',    os: ubuntu-latest, container: 'ubuntu:18.04' }
           - { compiler: gcc-6,     cxxstd: '03,11,14,17',    os: ubuntu-latest, container: 'ubuntu:18.04' }
-          - { compiler: gcc-7,     cxxstd: '03,11,14,17',    os: ubuntu-20.04 }
-          - { compiler: gcc-8,     cxxstd: '03,11,14,17,2a', os: ubuntu-20.04 }
-          - { compiler: gcc-9,     cxxstd: '03,11,14,17,2a', os: ubuntu-20.04 }
+          - { compiler: gcc-7,     cxxstd: '03,11,14,17',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: gcc-8,     cxxstd: '03,11,14,17,2a', os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: gcc-9,     cxxstd: '03,11,14,17,2a', os: ubuntu-latest, container: 'ubuntu:20.04' }
           - { compiler: gcc-10,    cxxstd: '03,11,14,17,20', os: ubuntu-22.04 }
           - { compiler: gcc-11,    cxxstd: '03,11,14,17,20', os: ubuntu-22.04 }
           - { compiler: gcc-12,    cxxstd: '03,11,14,17,20', os: ubuntu-22.04 }
@@ -72,14 +72,13 @@ jobs:
           - { compiler: clang-3.9, cxxstd: '03,11,14',       os: ubuntu-latest, container: 'ubuntu:18.04' }
           - { compiler: clang-4.0, cxxstd: '03,11,14',       os: ubuntu-latest, container: 'ubuntu:18.04' }
           - { compiler: clang-5.0, cxxstd: '03,11,14,1z',    os: ubuntu-latest, container: 'ubuntu:18.04' }
-          - { compiler: clang-6.0, cxxstd: '03,11,14,17',    os: ubuntu-20.04 }
-          - { compiler: clang-7,   cxxstd: '03,11,14,17',    os: ubuntu-20.04 }
-          # Note: clang-8 does not fully support C++20, so it is not compatible with some libstdc++ versions in this mode
-          - { compiler: clang-8,   cxxstd: '03,11,14,17,2a', os: ubuntu-20.04 , install: 'clang-8 g++-7', gcc_toolchain: 7 }
-          - { compiler: clang-9,   cxxstd: '03,11,14,17,2a', os: ubuntu-20.04 }
-          - { compiler: clang-10,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
-          - { compiler: clang-11,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
-          - { compiler: clang-12,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04 }
+          - { compiler: clang-6.0, cxxstd: '03,11,14,17',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-7,   cxxstd: '03,11,14,17',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-8,   cxxstd: '03,11,14,17',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-9,   cxxstd: '03,11,14,17,2a', os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-10,  cxxstd: '03,11,14,17,20', os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-11,  cxxstd: '03,11,14,17,20', os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-12,  cxxstd: '03,11,14,17,20', os: ubuntu-latest, container: 'ubuntu:20.04' }
           # Clang isn't compatible with libstdc++-13, so use the slightly older one
           - { compiler: clang-13,  cxxstd: '03,11,14,17,20', os: ubuntu-22.04, install: 'clang-13 g++-12', gcc_toolchain: 12 }
           - { compiler: clang-14,  cxxstd: '03,11,14,17,20', os: ubuntu-22.04, install: 'clang-14 g++-12', gcc_toolchain: 12 }
@@ -91,9 +90,9 @@ jobs:
 
           # libc++
           - { compiler: clang-6.0, cxxstd: '03,11,14',       os: ubuntu-latest, container: 'ubuntu:18.04', stdlib: libc++, install: 'clang-6.0 libc++-dev libc++abi-dev' }
-          - { compiler: clang-7,   cxxstd: '03,11,14,17',    os: ubuntu-20.04, stdlib: libc++, install: 'clang-7 libc++-7-dev libc++abi-7-dev' }
+          - { compiler: clang-7,   cxxstd: '03,11,14,17',    os: ubuntu-latest, container: 'ubuntu:20.04', stdlib: libc++, install: 'clang-7 libc++-7-dev libc++abi-7-dev' }
           - { name: Clang w/ sanitizers, sanitize: yes,
-              compiler: clang-12,  cxxstd: '03,11,14,17,20', os: ubuntu-20.04, stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev' }
+              compiler: clang-12,  cxxstd: '03,11,14,17,20', os: ubuntu-latest, container: 'ubuntu:20.04', stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev' }
 
           - { name: MacOS w/ clang and sanitizers,
               compiler: clang,     cxxstd: '03,11,14,17,20,2b', os: macos-13, sanitize: yes }
@@ -104,7 +103,7 @@ jobs:
           # requires two github secrets in repo to activate; see ci/github/coverity.sh
           # does not run on pull requests, only on pushes into develop and master
           - { name: Coverity, coverity: yes,
-              compiler: clang-12,  cxxstd: '03,20',          os: ubuntu-20.04, ccache: no }
+              compiler: clang-12,  cxxstd: '03,20',          os: ubuntu-latest, container: 'ubuntu:20.04', ccache: no }
 
           # multiarch (bigendian testing) - does not support coverage yet
           - { name: Big-endian, multiarch: yes,
@@ -140,7 +139,9 @@ jobs:
                 if [ -n "$osver" ] && [ "$osver" -ge "22" ]; then
                   pkgs+=" python-is-python3 libpython3-dev"
                 else
-                  pkgs+=" python libpython-dev"
+                  # ubuntu:20.04 has no libpython-dev and I'm not sure why we need it
+                  # pkgs+=" python libpython-dev"
+                  pkgs+=" python"
                 fi
                 apt-get -o Acquire::Retries=$NET_RETRY_COUNT install -y $pkgs
             fi
@@ -280,7 +281,7 @@ jobs:
           - { name: Collect coverage, coverage: yes,
               toolset: msvc-14.3, cxxstd: 'latest',         addrmd: '64',    os: windows-2022 }
           - { toolset: clang-win, cxxstd: '14,17,latest',   addrmd: '32,64', os: windows-2022 }
-          - { toolset: gcc,       cxxstd: '03,11,14,17,2a', addrmd: '64',    os: windows-2019 }
+          - { toolset: gcc,       cxxstd: '03,11,14,17,2a', addrmd: '64',    os: windows-2022 }
 
     runs-on: ${{matrix.os}}
 
@@ -395,10 +396,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-20.04, build_shared: ON,  build_type: Debug, generator: 'Unix Makefiles' }
-          - { os: ubuntu-20.04, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles' }
-          - { os: windows-2019, build_shared: ON,  build_type: Debug, generator: 'Visual Studio 16 2019' }
-          - { os: windows-2019, build_shared: OFF, build_type: Debug, generator: 'Visual Studio 16 2019' }
+          - { os: ubuntu-latest, build_shared: ON,  build_type: Debug, generator: 'Unix Makefiles' }
+          - { os: ubuntu-latest, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles' }
+          - { os: windows-2025, build_shared: ON,  build_type: Debug, generator: 'Visual Studio 17 2022' }
+          - { os: windows-2025, build_shared: OFF, build_type: Debug, generator: 'Visual Studio 17 2022' }
 
     timeout-minutes: 120
     runs-on: ${{matrix.os}}

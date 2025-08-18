@@ -11,6 +11,7 @@
 #
 # /bzip2//bzip2 -- The bzip library
 
+import args ;
 import project ;
 import ac ;
 import errors ;
@@ -34,10 +35,7 @@ sources = blocksort.c bzlib.c compress.c crctable.c
 
 library-id = 0 ;
 
-if --debug-configuration in [ modules.peek : ARGV ]
-{
-    .debug =  true ;
-}
+.debug = [ args.get-arg debug-configuration ] ;
 
 # Initializes the bzip library.
 #

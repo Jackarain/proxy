@@ -701,7 +701,7 @@ compare(const url_view_base& other) const noexcept
 
     if (has_query())
     {
-        comp = detail::compare_encoded(
+        comp = detail::compare_encoded_query(
             encoded_query(),
             other.encoded_query());
         if ( comp != 0 )

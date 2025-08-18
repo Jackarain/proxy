@@ -23,6 +23,7 @@ import indirect ;
 import os ;
 import property ;
 import property-set ;
+import args ;
 
 header = openssl.h ;
 ssl_names = ssl ssleay32 ;
@@ -30,10 +31,7 @@ crypto_names = crypto libeay32 ;
 
 library-id = 0 ;
 
-if --debug-configuration in [ modules.peek : ARGV ]
-{
-    .debug =  true ;
-}
+.debug =  [ args.get-arg debug-configuration ] ;
 
 # Initializes the openssl library.
 #

@@ -7,7 +7,7 @@
 
 #include <boost/multiprecision/cpp_bin_float.hpp>
 
-#include "libs/multiprecision/test/test_arithmetic.hpp"
+#include "test_arithmetic.hpp"
 
 #ifndef _WIN64 // object file too large
 template <unsigned Digits, boost::multiprecision::backends::digit_base_type DigitBase, class Allocator, class Exponent, Exponent MinExponent, Exponent MaxExponent, boost::multiprecision::expression_template_option ET>

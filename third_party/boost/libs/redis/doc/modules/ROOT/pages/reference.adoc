@@ -1,0 +1,90 @@
+//
+// Copyright (c) 2025 Marcelo Zimbres Silva (mzimbres@gmail.com),
+// Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+[#reference]
+= Reference
+
+[width=100%,cols="5*"]
+|===
+
+| *Connections*
+| *Requests and responses*
+| *Adapters*
+| *RESP3 protocol*
+| *Unstable low-level APIs*
+
+|
+xref:reference:boost/redis/connection.adoc[`connection`]
+
+xref:reference:boost/redis/basic_connection.adoc[`basic_connection`]
+
+xref:reference:boost/redis/address.adoc[`address`]
+
+xref:reference:boost/redis/config.adoc[`config`]
+
+xref:reference:boost/redis/error.adoc[`error`]
+
+xref:reference:boost/redis/logger.adoc[`logger`]
+
+xref:reference:boost/redis/logger/level.adoc[`logger::level`]
+
+xref:reference:boost/redis/operation.adoc[`operation`]
+
+xref:reference:boost/redis/usage.adoc[`usage`]
+
+
+|
+xref:reference:boost/redis/ignore_t.adoc[`ignore_t`]
+
+xref:reference:boost/redis/ignore.adoc[`ignore`]
+
+xref:reference:boost/redis/request.adoc[`request`]
+
+xref:reference:boost/redis/request/config.adoc[`request::config`]
+
+xref:reference:boost/redis/response.adoc[`response`]
+
+xref:reference:boost/redis/generic_response.adoc[`generic_response`]
+
+xref:reference:boost/redis/consume_one-08.adoc[`consume_one`]
+
+
+|
+xref:reference:boost/redis/adapter/boost_redis_adapt.adoc[`boost_redis_adapt`]
+
+xref:reference:boost/redis/adapter/ignore.adoc[`adapter::ignore`]
+
+xref:reference:boost/redis/adapter/error.adoc[`adapter::error`]
+
+xref:reference:boost/redis/adapter/result.adoc[`adapter::result`]
+
+xref:reference:boost/redis/any_adapter.adoc[`any_adapter`]
+
+|
+xref:reference:boost/redis/resp3/basic_node.adoc[`basic_node`]
+
+xref:reference:boost/redis/resp3/node.adoc[`node`]
+
+xref:reference:boost/redis/resp3/node_view.adoc[`node_view`]
+
+xref:reference:boost/redis/resp3/boost_redis_to_bulk-08.adoc[`boost_redis_to_bulk`]
+
+xref:reference:boost/redis/resp3/type.adoc[`type`]
+
+xref:reference:boost/redis/resp3/is_aggregate.adoc[`is_aggregate`]
+
+
+|
+
+xref:reference:boost/redis/adapter/adapt2.adoc[`adapter::adapt2`]
+
+xref:reference:boost/redis/resp3/parser.adoc[`parser`]
+
+xref:reference:boost/redis/resp3/parse.adoc[`parse`]
+
+|===

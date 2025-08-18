@@ -26,6 +26,7 @@
 #include <windows.h> // for error codes
 #include <cstddef>
 #include <limits>
+#include <memory>
 #include <string>
 #include <utility>
 #include <boost/assert.hpp>
@@ -34,7 +35,6 @@
 #include <boost/memory_order.hpp>
 #include <boost/core/snprintf.hpp>
 #include <boost/atomic/atomic.hpp>
-#include "unique_ptr.hpp"
 #include "windows/ipc_sync_wrappers.hpp"
 #include <boost/log/detail/header.hpp>
 
@@ -413,7 +413,7 @@ interprocess_condition_variable::semaphore_info* interprocess_condition_variable
     {
         // We need to open the semaphore. It is possible that the semaphore does not exist because all processes that had it opened terminated.
         // Because of this we also attempt to create it.
-        boost::log::aux::unique_ptr< semaphore_info > p(new semaphore_info(id));
+        std::unique_ptr< semaphore_info > p(new semaphore_info(id));
         generate_semaphore_name(id);
         p->m_semaphore.create_or_open(m_semaphore_name.c_str(), m_perms);
 

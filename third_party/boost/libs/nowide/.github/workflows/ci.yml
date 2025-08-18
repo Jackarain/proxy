@@ -18,7 +18,12 @@ on:
       - bugfix/**
       - feature/**
       - fix/**
+      - github/**
       - pr/**
+    paths-ignore:
+      - LICENSE
+      - meta/**
+      - README.md
 
 concurrency:
   group: ${{format('{0}:{1}', github.repository, github.ref)}}
@@ -51,9 +56,9 @@ jobs:
           - { compiler: gcc-4.9,   cxxstd: '03,11',          os: ubuntu-latest, container: 'ubuntu:16.04' }
           - { compiler: gcc-5,     cxxstd: '03,11,14,1z',    os: ubuntu-latest, container: 'ubuntu:18.04' }
           - { compiler: gcc-6,     cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:18.04' }
-          - { compiler: gcc-7,     cxxstd: '11,14,17',       os: ubuntu-20.04 }
-          - { compiler: gcc-8,     cxxstd: '11,14,17,2a',    os: ubuntu-20.04 }
-          - { compiler: gcc-9,     cxxstd: '11,14,17,2a',    os: ubuntu-20.04 }
+          - { compiler: gcc-7,     cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: gcc-8,     cxxstd: '11,14,17,2a',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: gcc-9,     cxxstd: '11,14,17,2a',    os: ubuntu-22.04 }
           - { compiler: gcc-10,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
           - { compiler: gcc-11,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
           - { compiler: gcc-12,    cxxstd: '11,14,17,20',    os: ubuntu-22.04 }
@@ -63,7 +68,7 @@ jobs:
           - { name: GCC w/ sanitizers, sanitize: yes,
               compiler: gcc-13,    cxxstd: '11,14,17,20',    os: ubuntu-24.04 }
           - { name: Collect coverage, coverage: yes,
-              compiler: gcc-8,     cxxstd: '11,14,17,2a',    os: ubuntu-20.04, install: 'g++-8-multilib', address-model: '32,64' }
+              compiler: gcc-8,     cxxstd: '11,2a',          os: ubuntu-latest, container: 'ubuntu:20.04', install: 'g++-8-multilib', address-model: '32,64' }
 
           # Linux, clang
           - { compiler: clang-3.5, cxxstd: '11',             os: ubuntu-latest, container: 'ubuntu:16.04' }
@@ -73,28 +78,26 @@ jobs:
           - { compiler: clang-3.9, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04' }
           - { compiler: clang-4.0, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04' }
           - { compiler: clang-5.0, cxxstd: '11,14,1z',       os: ubuntu-latest, container: 'ubuntu:18.04' }
-          - { compiler: clang-6.0, cxxstd: '11,14,17',       os: ubuntu-20.04 }
-          - { compiler: clang-7,   cxxstd: '11,14,17',       os: ubuntu-20.04 }
+          - { compiler: clang-6.0, cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-7,   cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:20.04' }
           # Note: clang-8 does not fully support C++20, so it is not compatible with some libstdc++ versions in this mode
-          - { compiler: clang-8,   cxxstd: '11,14,17,2a',    os: ubuntu-20.04 , install: 'clang-8 g++-7', gcc_toolchain: 7 }
-          - { compiler: clang-9,   cxxstd: '11,14,17,2a',    os: ubuntu-20.04 }
-          - { compiler: clang-10,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
-          - { compiler: clang-11,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
-          - { compiler: clang-12,  cxxstd: '11,14,17,20',    os: ubuntu-20.04 }
-          # Clang isn't compatible with libstdc++-13, so use the slightly older one
-          - { compiler: clang-13,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, install: 'clang-13 g++-12', gcc_toolchain: 12 }
-          - { compiler: clang-14,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, install: 'clang-14 g++-12', gcc_toolchain: 12 }
-          - { compiler: clang-15,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, install: 'clang-15 g++-12', gcc_toolchain: 12 }
+          - { compiler: clang-8,   cxxstd: '11,14,17',       os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-9,   cxxstd: '11,14,17,2a',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-10,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-11,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-12,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:20.04' }
+          - { compiler: clang-13,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:22.04' }
+          - { compiler: clang-14,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:22.04' }
+          - { compiler: clang-15,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:22.04' }
           - { compiler: clang-16,  cxxstd: '11,14,17,20,2b', os: ubuntu-24.04 }
-          # https://github.com/llvm/llvm-project/issues/59827: disabled 2b/23 for clang-17 with libstdc++13 in 24.04
-          - { compiler: clang-17,  cxxstd: '11,14,17,20',    os: ubuntu-24.04 }
+          - { compiler: clang-17,  cxxstd: '11,14,17,20,23', os: ubuntu-latest, container: 'ubuntu:24.04' }
           - { compiler: clang-18,  cxxstd: '11,14,17,20,23,2c', os: ubuntu-24.04 }
 
           # libc++
           - { compiler: clang-6.0, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04', stdlib: libc++, install: 'clang-6.0 libc++-dev libc++abi-dev' }
-          - { compiler: clang-12,  cxxstd: '11,14,17,20',    os: ubuntu-20.04, stdlib: libc++, install: 'clang-12 libc++-12-dev libc++abi-12-dev' }
+          - { compiler: clang-12,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:20.04', stdlib: libc++ }
           - { name: Clang w/ sanitizers, sanitize: yes,
-              compiler: clang-14,  cxxstd: '11,14,17,20',    os: ubuntu-22.04, stdlib: libc++, install: 'clang-14 libc++-14-dev libc++abi-14-dev' }
+              compiler: clang-17,  cxxstd: '11,14,17,20',    os: ubuntu-latest, container: 'ubuntu:24.04', stdlib: libc++ }
 
           # OSX, clang
           - { name: MacOS w/ clang and sanitizers,
@@ -128,7 +131,7 @@ jobs:
                 osver=$(lsb_release -sr | cut -f1 -d.)
                 pkgs="g++ git xz-utils"
                 # Ubuntu 22+ has only Python 3 in the repos
-                if [ -n "$osver" ] && [ "$osver" -ge "22" ]; then
+                if [ -n "$osver" ] && [ "$osver" -ge "20" ]; then
                   pkgs+=" python-is-python3 libpython3-dev"
                 else
                   pkgs+=" python libpython-dev"
@@ -191,8 +194,13 @@ jobs:
 
             sudo apt-get -o Acquire::Retries=$NET_RETRY_COUNT update
             if [[ -z "${{matrix.install}}" ]]; then
-                pkgs="${{matrix.compiler}}"
-                pkgs="${pkgs/gcc-/g++-}"
+                compiler="${{matrix.compiler}}"
+                pkgs="${compiler/gcc-/g++-}"
+                [[ -z "${{matrix.gcc_toolchain}}" ]] || pkgs+=" g++-${{matrix.gcc_toolchain}}"
+                if [[ "${{matrix.stdlib}}" == "libc++" && $compiler == "clang-"* ]]; then
+                    ver=${compiler#*-}
+                    pkgs+=" libc++-${ver}-dev libc++abi-${ver}-dev"
+                fi
             else
                 pkgs="${{matrix.install}}"
             fi
@@ -215,11 +223,11 @@ jobs:
 
       - name: Setup multiarch
         if: matrix.multiarch
+        run: ci/github/setup_bdde.sh
         env:
           BDDE_DISTRO: ${{matrix.distro}}
           BDDE_EDITION: ${{matrix.edition}}
           BDDE_ARCH: ${{matrix.arch}}
-        run: ci/github/setup_bdde.sh
 
       - name: Setup Boost
         env:
@@ -261,10 +269,9 @@ jobs:
           fail_ci_if_error: true
           disable_search: true
           files: coverage.info
-          name: Github Actions
+          name: ${{env.CODECOV_NAME}} (POSIX)
           token: ${{secrets.CODECOV_TOKEN}}
           verbose: true
-          working-directory: ${{env.BOOST_CI_SRC_FOLDER}}
 
       - name: Run coverity
         if: matrix.coverity && github.event_name == 'push' && (github.ref_name == 'develop' || github.ref_name == 'master')
@@ -338,10 +345,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-20.04, build_shared: ON,  build_type: Debug, generator: 'Unix Makefiles' }
-          - { os: ubuntu-20.04, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles' }
-          - { os: windows-2019, build_shared: ON,  build_type: Debug, generator: 'Visual Studio 16 2019' }
-          - { os: windows-2019, build_shared: OFF, build_type: Debug, generator: 'Visual Studio 16 2019' }
+          - { os: ubuntu-latest, build_shared: ON,  build_type: Debug, generator: 'Unix Makefiles' }
+          - { os: ubuntu-latest, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles' }
+          - { os: windows-2022, build_shared: ON,  build_type: Debug, generator: 'Visual Studio 17 2022' }
+          - { os: windows-2022, build_shared: OFF, build_type: Debug, generator: 'Visual Studio 17 2022' }
 
     timeout-minutes: 120
     runs-on: ${{matrix.os}}
@@ -385,7 +392,7 @@ jobs:
         run: |
             cd "$BOOST_ROOT"
             mkdir __build_cmake_install_test__ && cd __build_cmake_install_test__
-            cmake -G "${{matrix.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBOOST_INCLUDE_LIBRARIES=$SELF -DBUILD_SHARED_LIBS=${{matrix.build_shared}} -DCMAKE_INSTALL_PREFIX=~/.local -DBoost_VERBOSE=ON -DBoost_DEBUG=ON ..
+            cmake -G "${{matrix.generator}}" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBOOST_INCLUDE_LIBRARIES=$SELF -DBUILD_SHARED_LIBS=${{matrix.build_shared}} -DCMAKE_INSTALL_PREFIX=$HOME/local -DBoost_VERBOSE=ON -DBoost_DEBUG=ON ..
             cmake --build . --target install --config ${{matrix.build_type}} -j$B2_JOBS
       - name: Run CMake install tests
         run: |
@@ -393,6 +400,6 @@ jobs:
             [ -d "$cmake_test_folder" ] || cmake_test_folder="$BOOST_ROOT/libs/$SELF/test/cmake_install_test"
             cd "$cmake_test_folder"
             mkdir __build_cmake_install_test__ && cd __build_cmake_install_test__
-            cmake -G "${{matrix.generator}}" -DBOOST_CI_INSTALL_TEST=ON -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_SHARED_LIBS=${{matrix.build_shared}} -DCMAKE_PREFIX_PATH=~/.local ..
+            cmake -G "${{matrix.generator}}" -DBOOST_CI_INSTALL_TEST=ON -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_SHARED_LIBS=${{matrix.build_shared}} -DCMAKE_PREFIX_PATH=$HOME/local ..
             cmake --build . --config ${{matrix.build_type}} -j$B2_JOBS
             ctest --output-on-failure --build-config ${{matrix.build_type}}

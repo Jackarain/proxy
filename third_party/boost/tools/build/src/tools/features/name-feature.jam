@@ -7,7 +7,7 @@ import feature ;
 
 #| tag::doc[]
 
-[[bbv2.builtin.features.name]]`name`::
+[[b2.builtin.features.name]]`name`::
 When used in requirements of a prebuilt library target this feature specifies
 the name of the library (the name of the library file without any
 platform-specific suffixes or prefixes). See <<Prebuilt targets>> for examples.

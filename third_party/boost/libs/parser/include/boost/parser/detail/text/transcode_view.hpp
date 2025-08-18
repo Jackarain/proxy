@@ -88,10 +88,12 @@ namespace boost::parser::detail { namespace text {
     {
         V base_ = V();
 
-        template<bool Const>
-        class iterator;
+        // HACK: SentType is here to work around irritating big-3
+        // implementation inconsistencies.
         template<bool Const>
         class sentinel;
+        template<bool Const, typename SentType = sentinel<Const>>
+        class iterator;
 
     public:
         constexpr project_view()
@@ -140,7 +142,7 @@ namespace boost::parser::detail { namespace text {
 #else
     template<typename V, typename F>
 #endif
-    template<bool Const>
+    template<bool Const, typename SentType>
     class project_view<V, F>::iterator
         : public boost::parser::detail::stl_interfaces::proxy_iterator_interface<
               iterator<Const>,
@@ -161,7 +163,7 @@ namespace boost::parser::detail { namespace text {
             decltype(detail::function_for_tag<F>(0))
 #endif
             ;
-        using sentinel = project_view<V, F>::sentinel<Const>;
+        using sentinel = SentType;
 
         friend boost::parser::detail::stl_interfaces::access;
         iterator_type & base_reference() noexcept { return it_; }
@@ -169,7 +171,7 @@ namespace boost::parser::detail { namespace text {
 
         iterator_type it_ = iterator_type();
 
-        friend project_view<V, F>::sentinel<Const>;
+        friend project_view<V, F>::template sentinel<Const>;
 
         template<bool OtherConst>
 #if BOOST_PARSER_DETAIL_TEXT_USE_CONCEPTS

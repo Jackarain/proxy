@@ -8,12 +8,14 @@
 # bring in rules for testing
 import testing ;
 
+project : requirements <library>/boost/utility//boost_utility ;
+
 run base_from_member_test.cpp ;
 run base_from_member_ref_test.cpp ;
 
 run binary_test.cpp ;
 
-run call_traits_test.cpp : -u ;
+run call_traits_test.cpp : -u : : <library>/boost/type_traits//testing ;
 
 run compressed_pair_test.cpp ;
 run compressed_pair_final_test.cpp ;
@@ -31,7 +33,7 @@ run string_ref_test2.cpp ;
 run string_ref_test_io.cpp ;
 # compile-fail string_view_from_rvalue.cpp ;
 compile string_view_constexpr_test1.cpp ;
-run string_view_test1.cpp ;
+run string_view_test1.cpp : : : <library>/boost/container_hash//boost_container_hash ;
 run string_view_test2.cpp ;
 run string_view_test_io.cpp ;
 

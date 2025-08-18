@@ -1,7 +1,9 @@
 ///////////////////////////////////////////////////////////////
-//  Copyright 2011 John Maddock. Distributed under the Boost
-//  Software License, Version 1.0. (See accompanying file
+//  Copyright 2011 - 2025 John Maddock.
+//  Copyright Christopher Kormanyos 2021 - 2025.
+//  Distributed under the Boost Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
+//
 
 #include "setup.hpp"
 #include "table_type.hpp"
@@ -10,7 +12,7 @@
 #define TEST_DATA 2
 
 #include <boost/math/special_functions/math_fwd.hpp>
-#include "libs/math/test/test_ibeta.hpp"
+#include "test_ibeta.hpp"
 
 void expected_results()
 {
@@ -39,6 +41,13 @@ void expected_results()
        ".*mpfr_float_backend<0>.*", // test type(s)
        "(?i).*medium.*",            // test data group
        ".*", 400, 100);             // test function
+   add_expected_result(
+       "[^|]*",                     // compiler
+       "[^|]*",                     // stdlib
+       "[^|]*",                     // platform
+       "cpp_double_double",         // test type(s)
+       ".*",                        // test data group
+       ".*", 800, 400);             // test function
    add_expected_result(
        "[^|]*",         // compiler
        "[^|]*",         // stdlib

@@ -8,6 +8,7 @@
 #   Provides actions common to all toolsets, such as creating directories and
 # removing files.
 
+import args ;
 import os ;
 import modules ;
 import utility ;
@@ -21,14 +22,10 @@ import toolset ;
 import virtual-target ;
 import numbers ;
 
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = true ;
-}
-if [ MATCH (--show-configuration) : [ modules.peek : ARGV ] ]
-{
-    .show-configuration = true ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
+
+args.add-arg show-configuration : --show-configuration : "?" ;
+.show-configuration = [ args.get-arg show-configuration ] ;
 
 # Configurations
 #

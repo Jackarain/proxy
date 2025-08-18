@@ -1,0 +1,152 @@
+#|
+Copyright 2025 René Ferdinand Rivera Morell
+Distributed under the Boost Software License, Version 1.0.
+See https://www.bfgroup.xyz/b2/LICENSE.txt
+|#
+
+
+#| tag::doc[]
+
+[[b2.reference.tools.compiler.cc]]
+= CC - Generic C Compiler
+
+The `cc` modules supports a simple, generic, compiler that can be configured
+to specify the options a particular unknown compiler supports.
+
+The `cc` modules is initialize using the following syntax:
+
+----
+using cc : <version> : <compile-command> : [compiler options] ;
+----
+
+This statement may be repeated several times, if you want to configure
+several versions of the compiler. The `version` and `compile-command` are
+required to differentiate multiple such configuration, for the former. And to
+have a command as there is no default, for the latter.
+
+The following options can be provided, using
+_`<option-name>option-value syntax`_:
+
+`asmflags`::
+Specifies additional compiler flags that will be used when compiling assembler
+sources.
+
+`cflags`::
+Specifies additional compiler flags that will be used when compiling C sources.
+
+`compileflags`::
+Specifies additional compiler flags that will be used when compiling any
+language sources.
+
+`linkflags`::
+Specifies additional command line options that will be passed to the linker.
+
+`-o`, `-L`, `-l`, `-D`, `-U`, `-I`, `-c`, `-shared`, `-g`, `-E`, `-P`::
+Specifies the option the compiler accepts for the given GCC style option. If
+not given teh default is to use the same GCC style option.
+For example: `\<-o>--output`.
+
+`-soname`::
+Like the compiler options above, but this does not have a default. And only
+when it's specified is it used.
+
+.Example configuration for TinyCC.
+[example]
+----
+using cc : tcc~c11~0.98 : tcc : <cflags>"-std=c11" <-soname>-soname ;
+----
+
+|# # end::doc[]
+
+import toolset : flags ;
+import feature ;
+import generators ;
+import common ;
+
+rule init ( version : compile-command + : options * )
+{
+    local condition = [ common.check-init-parameters cc
+        : version $(version) ] ;
+
+    local command = [ common.get-invocation-command cc : cc
+        : $(compile-command) ] ;
+
+    common.handle-options cc : $(condition) : $(command) : $(options) ;
+
+    for local flag in -o -L -l -D -U -I -c -shared -g -E -P
+    {
+        local v = [ feature.get-values <$(flag)> ] ;
+        flags cc.compile $(flag) : $(v:E=$(flag)) : unchecked ;
+        flags cc.link $(flag) : $(v:E=$(flag)) : unchecked ;
+    }
+}
+
+feature.extend toolset : cc ;
+toolset.inherit-generators cc : unix : unix.link unix.link.dll ;
+toolset.inherit-flags cc : unix ;
+toolset.inherit-rules cc : unix ;
+
+generators.register-c-compiler cc.compile.c
+    : C : OBJ
+    : <toolset>cc ;
+generators.register-c-compiler cc.compile.c.preprocess
+    : C : PREPROCESSED_C
+    : <toolset>gc ;
+generators.register-archiver cc.archive
+    : OBJ : STATIC_LIB
+    : <toolset>cc ;
+generators.register-linker cc.link
+    : OBJ SEARCHED_LIB STATIC_LIB IMPORT_LIB : EXE
+    : <toolset>cc ;
+generators.register-linker cc.link.dll
+    : OBJ SEARCHED_LIB STATIC_LIB IMPORT_LIB : SHARED_LIB IMPORT_LIB
+    : <toolset>cc ;
+
+# Compile to OBJs..
+
+flags cc.compile CFLAGS <cflags> ;
+flags cc.compile UNDEFS <undef> ;
+flags cc.compile DEFINES <define> ;
+flags cc.compile HDRS <include> ;
+flags cc.compile F-g <debug-symbols>on : -g ;
+
+actions cc.compile.c
+{
+    "$(CONFIG_COMMAND)" $(-c) $($(F-g)) $(CFLAGS) $(-U)$(UNDEFS) $(-D)$(DEFINES) $(-I)"$(HDRS)" $(OPTIONS) $(-o) "$(<[1])" "$(>)"
+}
+
+# Preprocess..
+
+flags cc.compile.c.preprocess F-P <linemarkers>off : -P ;
+
+actions cc.compile.c.preprocess
+{
+    "$(CONFIG_COMMAND)" $(-E) $($(-P)) $($(F-g)) $(CFLAGS) $(-U)$(UNDEFS) $(-D)$(DEFINES) $(-I)"$(HDRS)" $(OPTIONS) $(-o) "$(<[1])" "$(>)"
+}
+
+# Link to archive library..
+
+flags cc.archive ARFLAGS <arflags> ;
+
+actions updated together piecemeal cc.archive
+{
+    "$(CONFIG_COMMAND)" $(ARFLAGS:E="") "$(<)" "$(>)"
+}
+
+# Link to executable or shared library..
+
+flags cc.link LINKFLAGS <linkflags> ;
+flags cc.link LIBPATH <library-path> ;
+flags cc.link NEEDLIBS <library-file> ;
+flags cc.link FINDLIBS <find-shared-library> ;
+flags cc.link FINDLIBS <find-static-library> ;
+
+actions cc.link bind NEEDLIBS
+{
+    "$(CONFIG_COMMAND)" $(LINKFLAGS) $(-L)"$(LIBPATH)" "$(NEEDLIBS)" "$(NEEDLIBS)" $(-l)$(FINDLIBS) $(OPTIONS) $(-o) "$(<[1])" "$(>)"
+}
+
+actions cc.link.dll bind NEEDLIBS
+{
+    "$(CONFIG_COMMAND)" $(-shared) $(-soname)"$(<[1]:D=)" $(LINKFLAGS) $(-L)"$(LIBPATH)" "$(NEEDLIBS)" "$(NEEDLIBS)" $(-l)$(FINDLIBS) $(OPTIONS) $(-o) "$(<[1])" "$(>)"
+}

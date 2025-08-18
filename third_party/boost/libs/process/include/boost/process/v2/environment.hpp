@@ -40,7 +40,7 @@ namespace environment
 /// A char traits type that reflects the OS rules for string representing environment keys.
 /** Can be an alias of std::char_traits. May only be defined for `char` and `wchar_t`.
  * 
- * Windows treats keys as case-insensitive yet perserving. The char traits are made to reflect 
+ * Windows treats keys as case-insensitive yet preserving. The char traits are made to reflect 
  * that behaviour.
 */
 template<typename Char>
@@ -1371,6 +1371,8 @@ struct current_view
       private:
         environment::native_iterator iterator_;
     };
+
+    using const_iterator = iterator;
 
     iterator begin() const {return iterator(handle_.get());}
     iterator   end() const {return iterator(detail::find_end(handle_.get()));}

@@ -1,0 +1,46 @@
+# Copyright René Ferdinand Rivera Morell 2023-2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/assert//boost_assert
+    /boost/atomic//boost_atomic
+    /boost/bind//boost_bind
+    /boost/chrono//boost_chrono
+    /boost/concept_check//boost_concept_check
+    /boost/config//boost_config
+    /boost/container//boost_container
+    /boost/container_hash//boost_container_hash
+    /boost/core//boost_core
+    /boost/date_time//boost_date_time
+    /boost/exception//boost_exception
+    /boost/function//boost_function
+    /boost/io//boost_io
+    /boost/move//boost_move
+    /boost/optional//boost_optional
+    /boost/predef//boost_predef
+    /boost/preprocessor//boost_preprocessor
+    /boost/smart_ptr//boost_smart_ptr
+    /boost/static_assert//boost_static_assert
+    /boost/system//boost_system
+    /boost/throw_exception//boost_throw_exception
+    /boost/tuple//boost_tuple
+    /boost/type_traits//boost_type_traits
+    /boost/utility//boost_utility
+    /boost/winapi//boost_winapi ;
+
+project /boost/thread
+    ;
+
+explicit
+    [ alias boost_thread : build//boost_thread ]
+    [ alias all : boost_thread example test ]
+    ;
+
+call-if : boost-library thread
+    : install boost_thread
+    ;
+

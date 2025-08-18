@@ -4,8 +4,9 @@
  * accompanying file LICENSE.txt)
  */
 
-#include <iostream>
 #include <boost/asio.hpp>
+
+#include <iostream>
 #if defined(BOOST_ASIO_HAS_CO_AWAIT)
 
 namespace net = boost::asio;
@@ -26,9 +27,9 @@ auto example(boost::asio::ip::tcp::endpoint ep, std::string msg, int n) -> net::
       auto dbuffer = net::dynamic_buffer(buffer);
       for (int i = 0; i < n; ++i) {
          co_await net::async_write(socket, net::buffer(msg));
-         auto n = co_await net::async_read_until(socket, dbuffer, "\n");
+         auto bytes_read = co_await net::async_read_until(socket, dbuffer, "\n");
          //std::printf("> %s", buffer.data());
-         dbuffer.consume(n);
+         dbuffer.consume(bytes_read);
       }
 
       //std::printf("Ok: %s", msg.data());
@@ -62,6 +63,10 @@ int main(int argc, char* argv[])
       std::cerr << e.what() << std::endl;
    }
 }
-#else // defined(BOOST_ASIO_HAS_CO_AWAIT)
-auto main() -> int {std::cout << "Requires coroutine support." << std::endl; return 1;}
-#endif // defined(BOOST_ASIO_HAS_CO_AWAIT)
+#else   // defined(BOOST_ASIO_HAS_CO_AWAIT)
+auto main() -> int
+{
+   std::cout << "Requires coroutine support." << std::endl;
+   return 1;
+}
+#endif  // defined(BOOST_ASIO_HAS_CO_AWAIT)

@@ -39,15 +39,18 @@ jobs:
             install: g++-6
           - toolset: gcc-7
             cxxstd: "03,11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-7
           - toolset: gcc-8
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-8
           - toolset: gcc-9
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
           - toolset: gcc-10
             cxxstd: "03,11,14,17,2a"
             os: ubuntu-22.04
@@ -65,10 +68,15 @@ jobs:
             container: ubuntu:24.04
             install: g++-13
           - toolset: gcc-14
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "03,11,14,17,20,23,2c"
             os: ubuntu-latest
             container: ubuntu:24.04
             install: g++-14
+          - toolset: gcc-15
+            cxxstd: "03,11,14,17,20,23,2c"
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install: g++-15
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "03,11,14"
@@ -90,35 +98,45 @@ jobs:
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "03,11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-6.0
           - toolset: clang
             compiler: clang++-7
             cxxstd: "03,11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-7
           - toolset: clang
             compiler: clang++-8
             cxxstd: "03,11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-8
           - toolset: clang
             compiler: clang++-9
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-9
           - toolset: clang
             compiler: clang++-10
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
+            install: clang-10
           - toolset: clang
             compiler: clang++-11
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
+            install: clang-11
           - toolset: clang
             compiler: clang++-12
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
+            install: clang-12
           - toolset: clang
             compiler: clang++-13
             cxxstd: "03,11,14,17,20,2b"
@@ -157,10 +175,16 @@ jobs:
             install: clang-18
           - toolset: clang
             compiler: clang++-19
-            cxxstd: "03,11,14,17,20,2b"
-            container: ubuntu:24.10
+            cxxstd: "03,11,14,17,20,23,2c"
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-19
+          - toolset: clang
+            compiler: clang++-20
+            cxxstd: "03,11,14,17,20,23,2c"
+            container: ubuntu:25.04
+            os: ubuntu-latest
+            install: clang-20
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-13
@@ -298,7 +322,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -347,7 +370,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -406,7 +428,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -463,7 +484,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -492,7 +512,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -530,7 +549,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -562,7 +580,7 @@ jobs:
           ctest --output-on-failure --no-tests=error
 
   cuda-linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4

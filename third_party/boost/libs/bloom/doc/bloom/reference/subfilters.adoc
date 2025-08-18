@@ -1,0 +1,59 @@
+[#subfilter]
+== Subfilters
+
+:idprefix: subfilters_
+
+A _subfilter_ implements a specific algorithm for bit setting (insertion) and
+bit checking (lookup) for `boost::bloom::filter`. Subfilters operate
+on portions of the filter's internal array called _subarrays_. The
+exact width of these subarrays is statically dependent on the subfilter type.
+
+The full interface of a conforming subfilter is not exposed publicly, hence
+users can't provide their own subfilters and may only use those natively
+provided by the library. What follows is the publicly available interface.
+
+[listing,subs="+macros,+quotes"]
+-----
+Subfilter::k
+-----
+
+[horizontal]
+Result:;; A compile-time `std::size_t` value indicating
+the number of (not necessarily distinct) bits set/checked per operation.
+
+[listing,subs="+macros,+quotes"]
+-----
+typename Subfilter::value_type
+-----
+
+[horizontal]
+Result:;; A cv-unqualified,
+https://en.cppreference.com/w/cpp/named_req/TriviallyCopyable[TriviallyCopyable^]
+type to which the subfilter projects assigned subarrays.
+
+[listing,subs="+macros,+quotes"]
+-----
+Subfilter::used_value_size
+-----
+
+[horizontal]
+Result:;; A compile-time `std::size_t` value indicating
+the size of the effective portion of `Subfilter::value_type` used
+for bit setting/checking (assumed to begin at the lowest address in memory).
+Postconditions:;; Greater than zero and not greater than `sizeof(Subfilter::value_type)`.
+Notes:;; Optional.
+
+=== _used-value-size_
+
+[listing,subs="+macros,+quotes"]
+-----
+template<typename Subfilter>
+constexpr std::size_t _used-value-size_; // exposition only
+-----
+
+`_used-value-size_<Subfilter>` is `Subfilter::used_value_size` if this nested
+constant exists, or `sizeof(Subfilter::value_type)` otherwise.
+The value is the effective size in bytes of the subarrays upon which a
+given subfilter operates.
+
+'''

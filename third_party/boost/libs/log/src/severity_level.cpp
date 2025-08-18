@@ -14,6 +14,7 @@
  */
 
 #include <boost/log/detail/config.hpp>
+#include <memory>
 #include <boost/cstdint.hpp>
 #include <boost/log/sources/severity_feature.hpp>
 
@@ -22,7 +23,6 @@
 #include <boost/log/detail/singleton.hpp>
 #include <boost/log/detail/thread_specific.hpp>
 #endif
-#include "unique_ptr.hpp"
 #include <boost/log/detail/header.hpp>
 
 namespace boost {
@@ -61,7 +61,7 @@ BOOST_LOG_API uintmax_t& get_severity_level()
     uintmax_t* p = tss.get();
     if (BOOST_UNLIKELY(!p))
     {
-        log::aux::unique_ptr< uintmax_t > ptr(new uintmax_t(0));
+        std::unique_ptr< uintmax_t > ptr(new uintmax_t(0));
         tss.set(ptr.get());
         p = ptr.release();
         boost::this_thread::at_thread_exit([p]() { delete p; });

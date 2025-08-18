@@ -4,20 +4,20 @@
  * accompanying file LICENSE.txt)
  */
 
-#include <boost/redis/response.hpp>
 #include <boost/redis/error.hpp>
+#include <boost/redis/response.hpp>
+
 #include <boost/assert.hpp>
 
-namespace boost::redis
-{
+namespace boost::redis {
 
 void consume_one(generic_response& r, system::error_code& ec)
 {
    if (r.has_error())
-      return; // Nothing to consume.
+      return;  // Nothing to consume.
 
    if (std::empty(r.value()))
-      return; // Nothing to consume.
+      return;  // Nothing to consume.
 
    auto const depth = r.value().front().depth;
 
@@ -29,8 +29,9 @@ void consume_one(generic_response& r, system::error_code& ec)
       return;
    }
 
-   auto f = [depth](auto const& e)
-      { return e.depth == depth; };
+   auto f = [depth](auto const& e) {
+      return e.depth == depth;
+   };
 
    auto match = std::find_if(std::next(std::cbegin(r.value())), std::cend(r.value()), f);
 
@@ -45,4 +46,4 @@ void consume_one(generic_response& r)
       throw system::system_error(ec);
 }
 
-} // boost::redis::resp3
+}  // namespace boost::redis

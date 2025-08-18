@@ -50,10 +50,10 @@ exe testing_crossmodule_anonymous_no_rtti : testing_crossmodule_anonymous.cpp te
 
 test-suite type_index
   :
-    [ run type_index_test.cpp /boost/lexical_cast//boost_lexical_cast ]
+    [ run type_index_test.cpp ]
     [ run type_index_runtime_cast_test.cpp /boost/smart_ptr//boost_smart_ptr ]
     [ run type_index_constexpr_test.cpp ]
-    [ run type_index_test.cpp /boost/lexical_cast//boost_lexical_cast : : : <rtti>off $(norttidefines) : type_index_test_no_rtti ]
+    [ run type_index_test.cpp : : : <rtti>off $(norttidefines) : type_index_test_no_rtti ]
     [ run ctti_print_name.cpp : : : <test-info>always_show_run_output ]
     [ run testing_crossmodule.cpp test_lib_rtti ]
     [ run testing_crossmodule.cpp test_lib_nortti : : : <rtti>off $(norttidefines) : testing_crossmodule_no_rtti ]

@@ -133,7 +133,7 @@ struct promise_receiver : promise_value_holder<T>
 
   promise_receiver& operator=(promise_receiver && lhs) noexcept
   {
-    if (*reference == this)
+    if (reference && *reference == this)
     {
       *reference = nullptr;
     }
@@ -201,7 +201,7 @@ struct promise_receiver : promise_value_holder<T>
         return false;
       }
 
-      if constexpr (requires (Promise p) {p.get_cancellation_slot();})
+      if constexpr (requires {h.promise().get_cancellation_slot();})
         if ((cl = h.promise().get_cancellation_slot()).is_connected())
           cl.emplace<forward_cancellation>(*self->cancel_signal);
 
@@ -259,8 +259,8 @@ struct promise_receiver : promise_value_holder<T>
     }
   };
 
-  promise_receiver  **reference;
-  asio::cancellation_signal * cancel_signal;
+  promise_receiver  **reference = nullptr;
+  asio::cancellation_signal * cancel_signal= nullptr;
 
   awaitable get_awaitable() {return awaitable{this};}
 

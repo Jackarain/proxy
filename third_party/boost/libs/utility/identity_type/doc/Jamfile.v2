@@ -8,7 +8,7 @@
 import quickbook ;
 using boostbook ;
 
-doxygen reference : ../../../../boost/utility/identity_type.hpp
+doxygen reference : ../../include/boost/utility/identity_type.hpp
     :   <reftitle>"Reference"
         <doxygen:param>PREDEFINED="DOXYGEN"
         <doxygen:param>QUIET=YES

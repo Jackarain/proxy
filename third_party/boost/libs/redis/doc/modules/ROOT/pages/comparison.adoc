@@ -1,0 +1,121 @@
+//
+// Copyright (c) 2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+= Comparison with other Redis clients
+
+## Comparison
+
+The main reason for why I started writing Boost.Redis was to have a client
+compatible with the Asio asynchronous model. As I made progresses I could
+also address what I considered weaknesses in other libraries.  Due to
+time constraints I won't be able to give a detailed comparison with
+each client listed in the
+https://redis.io/docs/clients/#cpp[official list].
+Instead, I will focus on the most popular pass:[C++] client on github in number of stars, namely:
+
+https://github.com/sewenew/redis-plus-plus[]
+
+### Boost.Redis vs Redis-plus-plus
+
+Before we start it is important to mention some of the things
+redis-plus-plus does not support
+
+* The latest version of the communication protocol RESP3. Without that it is impossible to support some important Redis features like client side caching, among other things.
+* Coroutines.
+* Reading responses directly in user data structures to avoid creating temporaries.
+* Error handling with support for error-code.
+* Cancellation.
+
+The remaining points will be addressed individually.  Let us first
+have a look at what sending a command a pipeline and a transaction
+look like
+
+[source,cpp]
+----
+auto redis = Redis("tcp://127.0.0.1:6379");
+
+// Send commands
+redis.set("key", "val");
+auto val = redis.get("key"); // val is of type OptionalString.
+if (val)
+    std::cout << *val << std::endl;
+
+// Sending pipelines
+auto pipe = redis.pipeline();
+auto pipe_replies = pipe.set("key", "value")
+                        .get("key")
+                        .rename("key", "new-key")
+                        .rpush("list", {"a", "b", "c"})
+                        .lrange("list", 0, -1)
+                        .exec();
+
+// Parse reply with reply type and index.
+auto set_cmd_result = pipe_replies.get<bool>(0);
+// ...
+
+// Sending a transaction
+auto tx = redis.transaction();
+auto tx_replies = tx.incr("num0")
+                    .incr("num1")
+                    .mget({"num0", "num1"})
+                    .exec();
+
+auto incr_result0 = tx_replies.get<long long>(0);
+// ...
+----
+
+Some of the problems with this API are
+
+* Heterogeneous treatment of commands, pipelines and transaction. This makes auto-pipelining impossible.
+* Any Api that sends individual commands has a very restricted scope of usability and should be avoided for performance reasons.
+* The API imposes exceptions on users, no error-code overload is provided.
+* No way to reuse the buffer for new calls to e.g. redis.get in order to avoid further dynamic memory allocations.
+* Error handling of resolve and connection not clear.
+
+According to the documentation, pipelines in redis-plus-plus have
+the following characteristics
+
+> +NOTE+: By default, creating a Pipeline object is NOT cheap, since
+> it creates a new connection.
+
+This is clearly a downside in the API as pipelines should be the
+default way of communicating and not an exception, paying such a
+high price for each pipeline imposes a severe cost in performance.
+Transactions also suffer from the very same problem:
+
+> +NOTE+: Creating a Transaction object is NOT cheap, since it
+> creates a new connection.
+
+In Boost.Redis there is no difference between sending one command, a
+pipeline or a transaction because requests are decoupled
+from the I/O objects.
+
+> redis-plus-plus also supports async interface, however, async
+> support for Transaction and Subscriber is still on the way.
+> 
+> The async interface depends on third-party event library, and so
+> far, only libuv is supported.
+
+Async code in redis-plus-plus looks like the following
+
+[source,cpp]
+----
+auto async_redis = AsyncRedis(opts, pool_opts);
+
+Future<string> ping_res = async_redis.ping();
+
+cout << ping_res.get() << endl;
+----
+
+As the reader can see, the async interface is based on futures
+which is also known to have a bad performance.  The biggest
+problem however with this async design is that it makes it
+impossible to write asynchronous programs correctly since it
+starts an async operation on every command sent instead of
+enqueueing a message and triggering a write when it can be sent.
+It is also not clear how are pipelines realised with this design
+(if at all).

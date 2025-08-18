@@ -63,6 +63,7 @@ import toolset : flags ;
 import os ;
 import virtual-target ;
 import scanner ;
+import args ;
 
 # The Qt version used for requirements
 # Valid are <qt>5.0 or <qt>5.1.0
@@ -80,14 +81,11 @@ project qt5 ;
 .project = [ project.current ] ;
 
 # Helper utils for easy debug output
-if [ MATCH (--debug-configuration) : [ modules.peek : ARGV ] ]
-{
-    .debug-configuration = TRUE ;
-}
+.debug-configuration = [ args.get-arg debug-configuration ] ;
 
 local rule debug-message ( message * )
 {
-    if $(.debug-configuration) = TRUE
+    if $(.debug-configuration)
     {
         ECHO notice\: "[qt5-cfg]" $(message) ;
     }

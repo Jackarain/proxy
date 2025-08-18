@@ -2,7 +2,7 @@ name: Sync boostlook.css to website-v2 & website-v2-docs
 
 on:
   push:
-    branches: ["master"]
+    branches: ["develop"]
     paths:
       - "boostlook.css"
   workflow_dispatch:

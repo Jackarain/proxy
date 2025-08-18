@@ -23,7 +23,6 @@ namespace urls {
 
 //------------------------------------------------
 
-#ifndef BOOST_URL_DOCS
 class decode_view;
 
 namespace detail {
@@ -35,7 +34,6 @@ make_decode_view(
     Args&&... args) noexcept;
 
 } // detail
-#endif
 
 //------------------------------------------------
 
@@ -76,13 +74,11 @@ class decode_view
     std::size_t dn_ = 0;
     bool space_as_plus_ = true;
 
-#ifndef BOOST_URL_DOCS
     template<class... Args>
     friend
     decode_view
     detail::make_decode_view(
         Args&&... args) noexcept;
-#endif
 
     // unchecked
     BOOST_CXX14_CONSTEXPR
@@ -1060,7 +1056,6 @@ pct_string_view::operator*() const noexcept
     return decode_view(*this);
 }
 
-#ifndef BOOST_URL_DOCS
 namespace detail {
 template<class... Args>
 decode_view
@@ -1071,7 +1066,6 @@ make_decode_view(
         std::forward<Args>(args)...);
 }
 } // detail
-#endif
 
 //------------------------------------------------
 

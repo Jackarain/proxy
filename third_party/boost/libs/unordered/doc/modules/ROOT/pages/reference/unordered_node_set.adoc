@@ -140,6 +140,7 @@ namespace unordered {
     node_type xref:#unordered_node_set_extract_by_position[extract](const_iterator position);
     node_type xref:#unordered_node_set_extract_by_key[extract](const key_type& key);
     template<class K> node_type xref:#unordered_node_set_extract_by_key[extract](K&& key);
+    init_type xref:#unordered_node_set_pull[pull](const_iterator position);
     void      xref:#unordered_node_set_clear[clear]() noexcept;
 
     template<class H2, class P2>
@@ -269,7 +270,7 @@ The size of the bucket array can be automatically increased by a call to `insert
 greater than `max_load_factor()`, except possibly for small sizes where the implementation may decide to
 allow for higher loads.
 
-If `xref:reference/hash_traits.adoc#hash_traits_hash_is_avalanching[hash_is_avalanching]<Hash>::value` is `true`, the hash function
+If `link:../../../../../container_hash/doc/html/hash.html#ref_hash_is_avalanchinghash[hash_is_avalanching]<Hash>::value` is `true`, the hash function
 is used as-is; otherwise, a bit-mixing post-processing stage is added to increase the quality of hashing
 at the expense of extra computational cost.
 
@@ -1031,6 +1032,16 @@ Extracts the element with key equivalent to `k`, if it exists.
 Returns:;; A `node_type` object holding the extracted element, or empty if no element was extracted.
 Throws:;; Only throws an exception if it is thrown by `hasher` or `key_equal`.
 Notes:;; The `template<class K>` overload only participates in overload resolution if `Hash::is_transparent` and `Pred::is_transparent` are valid member typedefs. The library assumes that `Hash` is callable with both `K` and `Key` and that `Pred` is transparent. This enables heterogeneous lookup which avoids the cost of instantiating an instance of the `Key` type.
+
+---
+
+==== pull
+```c++
+init_type pull(const_iterator position);
+```
+
+Move-constructs an `init_value` `x` from the element pointed to by `position`,
+erases the element and returns `x`.
 
 ---
 
