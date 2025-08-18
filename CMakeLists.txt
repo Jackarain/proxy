@@ -306,6 +306,8 @@ if (ENABLE_USE_OPENSSL)
 				set(CMAKE_EXE_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_EXE_LINKER_FLAGS}")
 			endif()
 		endif()
+		add_library(OpenSSL::SSL ALIAS ssl)
+		add_library(OpenSSL::Crypto ALIAS crypto)
 	endif()
 
 	# 包含 openssl 的头文件和库文件.
@@ -349,6 +351,9 @@ if (ENABLE_USE_WOLFSSL)
 	# WOLFSSL_LIBRARIES 用于 wolfssl 的库文件包含.
 	set(WOLFSSL_LIBRARIES wolfssl::wolfssl)
 
+	add_library(OpenSSL::SSL ALIAS wolfssl)
+	add_library(OpenSSL::Crypto ALIAS wolfssl)
+
 	# 包含 wolfssl 的头文件和库文件.
 	include_directories(${WOLFSSL_INCLUDE_DIRS})
 	link_libraries(${WOLFSSL_LIBRARIES})
@@ -368,6 +373,9 @@ if (ENABLE_USE_BORINGSSL)
 
 	# BORINGSSL_LIBRARIES 用于 boringssl 的库文件包含.
 	set(BORINGSSL_LIBRARIES crypto ssl)
+
+	add_library(OpenSSL::SSL ALIAS ssl)
+	add_library(OpenSSL::Crypto ALIAS crypto)
 
 	# 包含 boringssl 的头文件和库文件.
 	include_directories(${BORINGSSL_INCLUDE_DIRS})
