@@ -338,8 +338,8 @@ int main(int argc, char** argv)
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users(default user: jack:1111) (e.g: user1:passwd1 user2:passwd2).")
 		("users_rate_limit", po::value<std::vector<std::string>>(&users_rate_limit)->multitoken(), "List of users rate limit (e.g: user1:1000000 user2:800000).")
 
-		("allow_region", po::value<std::vector<std::string>>(&allow_region)->multitoken(), "Allow region (e.g: 北京|河南|武汉).")
-		("deny_region", po::value<std::vector<std::string>>(&deny_region)->multitoken(), "Deny region (e.g: 广东|上海|山东).")
+		("allow_region", po::value<std::vector<std::string>>(&allow_region)->multitoken(), "Allow region (e.g: 北京|河南|武汉|192.168.1.2|192.168.1.0/24|2001:0db8::1|2001:db8::/32).")
+		("deny_region", po::value<std::vector<std::string>>(&deny_region)->multitoken(), "Deny region (e.g: 广东|上海|山东|192.168.1.2|192.168.1.0/24|2001:0db8::1|2001:db8::/32).")
 
 		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify next proxy pass (e.g: socks5://user:passwd@ip:port).")
 		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL for the next proxy pass.")
