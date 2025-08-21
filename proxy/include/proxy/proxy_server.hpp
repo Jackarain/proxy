@@ -48,6 +48,8 @@
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/ip/host_name.hpp>
 #include <boost/asio/ip/address.hpp>
+#include <boost/asio/ip/network_v4.hpp>
+#include <boost/asio/ip/network_v6.hpp>
 
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -5287,11 +5289,13 @@ R"x*x*x(<html>
 				static std::atomic_size_t id{ 1 };
 				size_t connection_id = id++;
 
+				std::vector<std::string> local_info;
+
 				auto endp = socket.remote_endpoint(error);
 				auto client = endp.address().to_string();
-				client += ":" + std::to_string(endp.port());
 
-				std::vector<std::string> local_info;
+				local_info.push_back(client);
+				client += ":" + std::to_string(endp.port());
 
 				if (m_ipip)
 				{
@@ -5301,7 +5305,7 @@ R"x*x*x(<html>
 						for (auto& c : ret)
 							client += " " + c;
 
-						local_info = ret;
+						local_info.insert(local_info.end(), ret.begin(), ret.end());
 					}
 
 					if (!isp.empty())
@@ -5488,6 +5492,52 @@ R"x*x*x(<html>
 			}
 		}
 
+		// 判断 IP 地址是否在指定的 CIDR 范围.
+		inline bool ip_filter(const std::string& ip_cidr, const std::string& ip) const noexcept
+		{
+			if (ip_cidr.empty() || ip.empty())
+				return false;
+
+			boost::system::error_code ec;
+
+			auto ipaddr = net::ip::make_address(ip, ec);
+			if (ec)
+				return false;
+
+			try
+			{
+				auto iponly = net::ip::make_address(ip_cidr, ec);
+				if (!ec)
+				{
+					if (iponly == ipaddr)
+						return true;
+					return false;
+				}
+
+				auto netaddr4 = net::ip::make_network_v4(ip_cidr, ec);
+				if (!ec)
+				{
+					auto target = net::ip::make_network_v4(ipaddr.to_v4(), netaddr4.netmask());
+					if (target == netaddr4)
+						return true;
+					return false;
+				}
+
+				auto netaddr6 = net::ip::make_network_v6(ip_cidr, ec);
+				if (!ec)
+				{
+					auto target = net::ip::make_network_v6(ipaddr.to_v6(), netaddr6.prefix_length());
+					if (target == netaddr6)
+						return true;
+					return false;
+				}
+			}
+			catch (const std::exception&)
+			{}
+
+			return false;
+		}
+
 		inline bool region_filter(const std::vector<std::string>& local_info) const noexcept
 		{
 			auto& deny_region = m_option.deny_regions_;
@@ -5495,7 +5545,7 @@ R"x*x*x(<html>
 
 			std::optional<bool> allow;
 
-			if (m_ipip && (!allow_region.empty() || !deny_region.empty()))
+			if (!allow_region.empty() || !deny_region.empty())
 			{
 				for (auto& region : allow_region)
 				{
@@ -5506,6 +5556,13 @@ R"x*x*x(<html>
 							allow.emplace(true);
 							break;
 						}
+
+						if (ip_filter(region, l))
+						{
+							allow.emplace(true);
+							break;
+						}
+
 						allow.emplace(false);
 					}
 
@@ -5524,6 +5581,13 @@ R"x*x*x(<html>
 								allow.emplace(false);
 								break;
 							}
+
+							if (ip_filter(region, l))
+							{
+								allow.emplace(false);
+								break;
+							}
+
 							allow.emplace(true);
 						}
 
