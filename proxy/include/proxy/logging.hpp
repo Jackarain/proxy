@@ -155,6 +155,7 @@ namespace std {
 #include <chrono>
 #include <mutex>
 #include <memory>
+#include <memory_resource>
 #include <string>
 #include <tuple>
 #include <thread>
