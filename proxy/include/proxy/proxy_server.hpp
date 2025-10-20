@@ -397,7 +397,7 @@ R"x*x*x(<html>
 		// auth_users_ 为空时, 表示不需要认证.
 		// auth_users_ 可以是多个用户, 例如:
 		// { {"user1", "passwd1"}, {"user2", "passwd2"} };
-		using auth_users = std::tuple<std::string, std::string>;
+		using auth_users = std::tuple<std::string, std::string, std::string>;
 		std::vector<auth_users> auth_users_;
 
 		// 指定用户限速设置.
@@ -709,6 +709,27 @@ R"x*x*x(<html>
 		tcp::socket& net_tcp_socket(Stream& socket)
 		{
 			return static_cast<tcp::socket&>(socket.lowest_layer());
+		}
+
+		// 更新 session 发起连接时使用的本地绑定地址.
+		void update_bind_interface(const std::string& addr)
+		{
+			if (addr.empty())
+				return;
+
+			boost::system::error_code ec;
+			auto bind_if = net::ip::make_address(addr, ec);
+			if (ec)
+			{
+				// bind 地址有问题, 忽略 bind 参数, 并输出日志.
+				log_conn_warning()
+					<< ", bind address: " << addr
+					<< ", invalid: " << ec.message();
+			}
+			else
+			{
+				m_bind_interface = bind_if;
+			}
 		}
 
 		// session 的连接日志输出函数, 用于输出连接 id 相关的日志信息, 简化重复
@@ -2106,12 +2127,13 @@ R"x*x*x(<html>
 			// 用户认证逻辑.
 			bool verify_passed = m_option.auth_users_.empty();
 
-			for (const auto& [user, pwd] : m_option.auth_users_)
+			for (const auto& [user, pwd, addr] : m_option.auth_users_)
 			{
 				if (user == userid)
 				{
 					verify_passed = true;
 					user_rate_limit_config(user);
+					update_bind_interface(addr);
 					break;
 				}
 			}
@@ -2278,12 +2300,13 @@ R"x*x*x(<html>
 
 			bool verify_passed = m_option.auth_users_.empty();
 
-			for (auto [user, pwd] : m_option.auth_users_)
+			for (auto [user, pwd, addr] : m_option.auth_users_)
 			{
 				if (uname == user && passwd == pwd)
 				{
 					verify_passed = true;
 					user_rate_limit_config(user);
+					update_bind_interface(addr);
 					break;
 				}
 			}
@@ -2760,12 +2783,13 @@ R"x*x*x(<html>
 			// 用户认证逻辑.
 			bool verify_passed = m_option.auth_users_.empty();
 
-			for (auto [user, pwd] : m_option.auth_users_)
+			for (auto [user, pwd, addr] : m_option.auth_users_)
 			{
 				if (uname == user && passwd == pwd)
 				{
 					verify_passed = true;
 					user_rate_limit_config(user);
+					update_bind_interface(addr);
 					break;
 				}
 			}

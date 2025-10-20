@@ -127,17 +127,43 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		);
 	}
 
-	for (const auto& user : auth_users)
+	for (const auto& auth_user : auth_users)
 	{
-		if (user.empty())
+		if (auth_user.empty())
 			continue;
 
-		auto pos = user.find(':');
+		auto pos = auth_user.find(':');
 		if (pos == std::string::npos)
-			opt.auth_users_.emplace_back(user, "");
-		else
-			opt.auth_users_.emplace_back(
-				user.substr(0, pos), user.substr(pos + 1));
+		{
+			opt.auth_users_.emplace_back(auth_user, "", "");
+			continue;
+		}
+
+		auto user = auth_user.substr(0, pos);
+		auto pwd = auth_user.substr(pos + 1);
+
+		auto addr_pos = pwd.find(':');
+		if (addr_pos != std::string::npos)
+		{
+			auto addr = pwd.substr(addr_pos + 1);
+
+			// 检查 addr 是否是合法的 IP 地址，否则当作
+			// 密码的一部分处理.
+			boost::system::error_code ec;
+			net::ip::make_address(addr, ec);
+			if (ec)
+			{
+				opt.auth_users_.emplace_back(user, pwd, "");
+				continue;
+			}
+
+			pwd = pwd.substr(0, addr_pos);
+
+			opt.auth_users_.emplace_back(user, pwd, addr);
+			continue;
+		}
+
+		opt.auth_users_.emplace_back(user, pwd, "");
 	}
 
 	for (const auto& user : users_rate_limit)
