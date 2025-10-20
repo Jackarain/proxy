@@ -633,6 +633,23 @@ R"x*x*x(<html>
 			}
 		}
 
+		// session 的连接日志输出函数, 用于输出连接 id 相关的日志信息, 简化重复
+		// 的 connection id 这些信息的代码.
+		auto log_conn_error() noexcept
+		{
+			return std::move(XLOG_FERR("connection id: {}", m_connection_id));
+		}
+
+		auto log_conn_warning() noexcept
+		{
+			return std::move(XLOG_FWARN("connection id: {}", m_connection_id));
+		}
+
+		auto log_conn_debug() noexcept
+		{
+			return std::move(XLOG_FDBG("connection id: {}", m_connection_id));
+		}
+
 		// http_ranges 用于保存 http range 请求头的解析结果.
 		// 例如: bytes=0-100,200-300,400-500
 		// 解析后的结果为: { {0, 100}, {200, 300}, {400, 500} }
@@ -730,23 +747,6 @@ R"x*x*x(<html>
 			{
 				m_bind_interface = bind_if;
 			}
-		}
-
-		// session 的连接日志输出函数, 用于输出连接 id 相关的日志信息, 简化重复
-		// 的 connection id 这些信息的代码.
-		auto log_conn_error() noexcept
-		{
-			return std::move(XLOG_FERR("connection id: {}", m_connection_id));
-		}
-
-		auto log_conn_warning() noexcept
-		{
-			return std::move(XLOG_FWARN("connection id: {}", m_connection_id));
-		}
-
-		auto log_conn_debug() noexcept
-		{
-			return std::move(XLOG_FDBG("connection id: {}", m_connection_id));
 		}
 
 	public:
@@ -2199,12 +2199,13 @@ R"x*x*x(<html>
 						ec);
 				if (ec)
 				{
-					XLOG_FWARN("connection id: {},"
-						" connect to target {}:{} error: {}",
-						m_connection_id,
-						dst_endpoint.address().to_string(),
-						port,
-						ec.message());
+					log_conn_warning()
+						<< ", connect to target "
+						<< dst_endpoint.address().to_string()
+						<< ":"
+						<< port
+						<< " error: "
+						<< ec.message();
 					error_code = SOCKS4_CANNOT_CONNECT_TARGET_SERVER;
 				}
 			}
@@ -2491,12 +2492,13 @@ R"x*x*x(<html>
 						port ? port : 80, ec, true);
 					if (ec)
 					{
-						XLOG_FWARN("connection id: {},"
-							" connect to target {}:{} error: {}",
-							m_connection_id,
-							host,
-							port,
-							ec.message());
+						log_conn_warning()
+							<< ", connect to target "
+							<< host
+							<< ":"
+							<< port
+							<< " error: "
+							<< ec.message();
 
 						co_return !first;
 					}
@@ -2630,12 +2632,14 @@ R"x*x*x(<html>
 				static_cast<uint16_t>(std::atol(port.c_str())), ec, true);
 			if (ec)
 			{
-				XLOG_FWARN("connection id: {},"
-					" connect to target {}:{} error: {}",
-					m_connection_id,
-					host,
-					port,
-					ec.message());
+				log_conn_warning()
+					<< ", connect to target "
+					<< host
+					<< ":"
+					<< port
+					<< " error: "
+					<< ec.message();
+
 				co_return false;
 			}
 
@@ -2649,12 +2653,14 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_FWARN("connection id: {},"
-					" async write response {}:{} error: {}",
-					m_connection_id,
-					host,
-					port,
-					ec.message());
+				log_conn_warning()
+					<< ", write http connect response "
+					<< host
+					<< ":"
+					<< port
+					<< " error: "
+					<< ec.message();
+
 				co_return false;
 			}
 
@@ -2969,12 +2975,13 @@ R"x*x*x(<html>
 
 				if (ec)
 				{
-					XLOG_FWARN("connection id: {},"
-						" resolver to next proxy {}:{} error: {}",
-						m_connection_id,
-						std::string(m_bridge_proxy->host()),
-						std::string(m_bridge_proxy->port()),
-						ec.message());
+					log_conn_warning()
+						<< ", resolve next proxy "
+						<< proxy_host
+						<< ":"
+						<< proxy_port
+						<< " error: "
+						<< ec.message();
 
 					co_return false;
 				}
@@ -3039,12 +3046,13 @@ R"x*x*x(<html>
 
 			if (ec)
 			{
-				XLOG_FWARN("connection id: {},"
-					" connect to next proxy {}:{} error: {}",
-					m_connection_id,
-					std::string(m_bridge_proxy->host()),
-					std::string(m_bridge_proxy->port()),
-					ec.message());
+				log_conn_warning()
+					<< ", connect to next proxy "
+					<< proxy_host
+					<< ":"
+					<< proxy_port
+					<< " error: "
+					<< ec.message();
 
 				co_return false;
 			}
@@ -3077,12 +3085,11 @@ R"x*x*x(<html>
 						m_option.ssl_cacert_path_, ec);
 					if (ec)
 					{
-						XLOG_FWARN("connection id: {}, "
-							"load cert path: {}, "
-							"error: {}",
-							m_connection_id,
-							m_option.ssl_cacert_path_,
-							ec.message());
+						log_conn_warning()
+							<< ", load cert path: "
+							<< m_option.ssl_cacert_path_
+							<< ", error: "
+							<< ec.message();
 
 						co_return false;
 					}
@@ -3115,10 +3122,9 @@ R"x*x*x(<html>
 						ec);
 					if (ec)
 					{
-						XLOG_FWARN("connection id: {},"
-							" add_certificate_authority error: {}",
-							m_connection_id,
-							ec.message());
+						log_conn_warning()
+							<< ", load default root cert error: "
+							<< ec.message();
 					}
 
 					m_ssl_cli_context.use_tmp_dh(
@@ -3128,10 +3134,9 @@ R"x*x*x(<html>
 						net::ssl::host_name_verification(proxy_host), ec);
 					if (ec)
 					{
-						XLOG_FWARN("connection id: {},"
-							" set_verify_callback error: {}",
-							m_connection_id,
-							ec.message());
+						log_conn_warning()
+							<< ", load set_verify_callback error: "
+							<< ec.message();
 					}
 
 					// 生成 ssl socket 对象.
@@ -3168,10 +3173,11 @@ R"x*x*x(<html>
 					if (!SSL_set_tlsext_host_name(
 						ssl_socket.native_handle(), sni.c_str()))
 					{
-						XLOG_FWARN("connection id: {},"
-						" SSL_set_tlsext_host_name error: {}",
-							m_connection_id,
-							::ERR_get_error());
+						log_conn_warning()
+							<< ", set ssl sni name: "
+							<< sni
+							<< " failed, error: "
+							<< ::ERR_get_error();
 					}
 
 					log_conn_debug()
@@ -3183,10 +3189,9 @@ R"x*x*x(<html>
 						net_awaitable[ec]);
 					if (ec)
 					{
-						XLOG_FWARN("connection id: {},"
-							" ssl client protocol handshake error: {}",
-							m_connection_id,
-							ec.message());
+						log_conn_warning()
+							<< ", ssl client protocol handshake error: "
+							<< ec.message();
 					}
 
 					log_conn_debug()
@@ -3269,13 +3274,15 @@ R"x*x*x(<html>
 
 			if (ec)
 			{
-				XLOG_FWARN("connection id: {}"
-					", {} connect to next host {}:{} error: {}",
-					m_connection_id,
-					std::string(scheme),
-					target_host,
-					target_port,
-					ec.message());
+				log_conn_warning()
+					<< ", "
+					<< std::string(scheme) <<
+					" connect to next host "
+					<< target_host
+					<< ":"
+					<< target_port
+					<< " error: "
+					<< ec.message();
 
 				co_return false;
 			}
@@ -3397,11 +3404,13 @@ R"x*x*x(<html>
 
 				if (ec)
 				{
-					XLOG_FWARN("connection id: {}, connect to target {}:{} error: {}",
-						m_connection_id,
-						target_host,
-						target_port,
-						ec.message());
+					log_conn_warning()
+						<< ", connect to target "
+						<< target_host
+						<< ":"
+						<< target_port
+						<< " error: "
+						<< ec.message();
 
 					co_return false;
 				}
