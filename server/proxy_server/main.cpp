@@ -372,14 +372,22 @@ int main(int argc, char** argv)
 
 	// 解析命令行.
 	po::variables_map vm;
-	po::store(
-		po::command_line_parser(argc, argv)
-		.options(desc)
-		.style(po::command_line_style::unix_style
-			| po::command_line_style::allow_long_disguise)
-		.run()
-		, vm);
-	po::notify(vm);
+
+	try {
+		po::store(
+			po::command_line_parser(argc, argv)
+			.options(desc)
+			.style(po::command_line_style::unix_style
+				| po::command_line_style::allow_long_disguise)
+			.run()
+			, vm);
+		po::notify(vm);
+	}
+	catch (const po::error& e)
+	{
+		std::cerr << "Error parsing command line: " << e.what() << "\n";
+		return EXIT_FAILURE;
+	}
 
 	// 帮助输出.
 	if (vm.count("help") || argc == 1)
