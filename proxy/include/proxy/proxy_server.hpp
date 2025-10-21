@@ -761,7 +761,6 @@ R"x*x*x(<html>
 			, m_local_socket(std::move(socket))
 			, m_remote_socket(init_proxy_stream(executor))
 			, m_udp_socket(executor)
-			, m_timer(executor)
 			, m_connection_id(id)
 			, m_tproxy(tproxy)
 			, m_local_buffer(10485760u) // 10MB max buffer size.
@@ -871,9 +870,6 @@ R"x*x*x(<html>
 			m_remote_socket.close(ignore_ec);
 
 			m_udp_socket.close(ignore_ec);
-
-			// 取消所有定时器.
-			m_timer.cancel();
 		}
 
 		void set_tproxy_remote(
@@ -1669,14 +1665,11 @@ R"x*x*x(<html>
 				m_local_udp_endpoint.address(remote_endp.address());
 				m_local_udp_endpoint.port(dst_endpoint.port());
 
-				// 开启udp socket数据接收, 并计时, 如果在一定时间内没有接收到数据包
-				// 则关闭 udp socket 等相关资源.
-				net::co_spawn(executor,
-					tick(), net::detached);
-
+				// 启动 udp 转发协程.
 				net::co_spawn(executor,
 					forward_udp(), net::detached);
 
+				// 开始回复客户端 udp 关联成功消息.
 				wbuf.consume(wbuf.size());
 				auto wp = (char*)wbuf.prepare(64 + domain.size()).data();
 
@@ -1724,6 +1717,11 @@ R"x*x*x(<html>
 						<< ec.message();
 					co_return;
 				}
+
+				// 在此等待 tcp 连接断开.
+				co_await m_local_socket.async_read_some(
+					m_local_buffer.prepare(1), net_awaitable[ec]);
+				m_udp_socket.close(ec);
 
 				co_return;
 			} while (0);
@@ -1990,38 +1988,6 @@ R"x*x*x(<html>
 				<< ", send total: "
 				<< send_total
 				<< ", forward_udp quit";
-
-			co_return;
-		}
-
-		inline net::awaitable<void> tick()
-		{
-			[[maybe_unused]] auto self = shared_from_this();
-			boost::system::error_code ec;
-
-			while (!m_abort)
-			{
-				m_timer.expires_after(std::chrono::seconds(1));
-				co_await m_timer.async_wait(net_awaitable[ec]);
-				if (ec)
-				{
-					log_conn_warning()
-						<< ", ec: "
-						<< ec.message();
-					break;
-				}
-
-				if (--m_udp_timeout <= 0)
-				{
-					log_conn_debug()
-						<< ", udp socket expired";
-					m_udp_socket.close(ec);
-					break;
-				}
-			}
-
-			log_conn_debug()
-				<< ", udp expired timer quit";
 
 			co_return;
 		}
@@ -4645,10 +4611,6 @@ R"x*x*x(<html>
 
 		// m_local_udp_endpoint 用于保存 udp 通信时, 本地的地址.
 		udp::endpoint m_local_udp_endpoint;
-
-		// m_timer 用于定时检查 udp 会话是否过期, 由于 udp 通信是无连接的, 如果 2 端长时间
-		// 没有数据通信, 则可能会话已经失效, 此时应该关闭 udp socket 以及相关资源.
-		net::steady_timer m_timer;
 
 		// m_timeout udp 会话超时时间, 默认 60 秒.
 		int m_udp_timeout{ udp_session_expired_time };
