@@ -1646,9 +1646,11 @@ R"x*x*x(<html>
 					break;
 				}
 
-				// 创建UDP端口.
-				auto protocol = dst_endpoint.address().is_v4()
+				auto remote_endp = m_local_socket.remote_endpoint();
+				auto protocol = remote_endp.address().is_v4()
 					? udp::v4() : udp::v6();
+
+				// 创建UDP端口.
 				m_udp_socket.open(protocol, ec);
 				if (ec)
 					break;
@@ -1662,11 +1664,9 @@ R"x*x*x(<html>
 				if (ec)
 					break;
 
-				auto remote_endp = m_local_socket.remote_endpoint();
-
 				// 所有发向 udp socket 的数据, 都将转发到 m_local_udp_endpoint
 				// 除非地址是 m_local_udp_endpoint 本身除外.
-				m_local_udp_endpoint.address(dst_endpoint.address());
+				m_local_udp_endpoint.address(remote_endp.address());
 				m_local_udp_endpoint.port(dst_endpoint.port());
 
 				// 开启udp socket数据接收, 并计时, 如果在一定时间内没有接收到数据包
