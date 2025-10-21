@@ -1594,6 +1594,12 @@ R"x*x*x(<html>
 					domain.push_back(read<int8_t>(p));
 				port = read<uint16_t>(p);
 
+				dst_endpoint.port(port);
+				dst_endpoint.address(
+					net::ip::make_address(domain, ec));
+				if (ec || dst_endpoint.address() == net::ip::make_address("0"))
+					dst_endpoint.address(m_local_socket.remote_endpoint().address());
+
 				log_conn_debug()
 					<< ", "
 					<< m_local_socket.remote_endpoint()
@@ -1640,24 +1646,6 @@ R"x*x*x(<html>
 					break;
 				}
 
-				if (atyp == SOCKS5_ATYP_DOMAINNAME)
-				{
-					tcp::resolver resolver{ executor };
-
-					auto targets = co_await resolver.async_resolve(
-						domain,
-						std::to_string(port),
-						net_awaitable[ec]);
-					if (ec)
-						break;
-
-					for (const auto& target : targets)
-					{
-						dst_endpoint = target.endpoint();
-						break;
-					}
-				}
-
 				// 创建UDP端口.
 				auto protocol = dst_endpoint.address().is_v4()
 					? udp::v4() : udp::v6();
@@ -1665,16 +1653,21 @@ R"x*x*x(<html>
 				if (ec)
 					break;
 
-				m_udp_socket.bind(
-					udp::endpoint(protocol, dst_endpoint.port()), ec);
+				// 绑定输出网络.
+				auto bind_if = udp::endpoint(protocol, 0);
+				if (m_bind_interface)
+					bind_if.address(*m_bind_interface);
+
+				m_udp_socket.bind(bind_if, ec);
 				if (ec)
 					break;
 
 				auto remote_endp = m_local_socket.remote_endpoint();
 
-				// 所有发向 udp socket 的数据, 都将转发到 m_local_udp_address
-				// 除非地址是 m_local_udp_address 本身除外.
-				m_local_udp_address = remote_endp.address();
+				// 所有发向 udp socket 的数据, 都将转发到 m_local_udp_endpoint
+				// 除非地址是 m_local_udp_endpoint 本身除外.
+				m_local_udp_endpoint.address(dst_endpoint.address());
+				m_local_udp_endpoint.port(dst_endpoint.port());
 
 				// 开启udp socket数据接收, 并计时, 如果在一定时间内没有接收到数据包
 				// 则关闭 udp socket 等相关资源.
@@ -1697,7 +1690,7 @@ R"x*x*x(<html>
 
 				log_conn_debug()
 					<< ", local udp address: "
-					<< m_local_udp_address.to_string()
+					<< m_local_udp_endpoint
 					<< ", udp socket: "
 					<< local_endp;
 
@@ -1874,7 +1867,7 @@ R"x*x*x(<html>
 				auto rp = rbuf;
 
 				// 如果数据包来自 socks 客户端, 则解析数据包并将数据转发给目标主机.
-				if (remote_endp.address() == m_local_udp_address)
+				if (remote_endp == m_local_udp_endpoint)
 				{
 					local_endp = remote_endp;
 
@@ -4650,8 +4643,8 @@ R"x*x*x(<html>
 		// m_bind_interface 用于向外发起连接时, 指定的 bind 地址.
 		std::optional<net::ip::address> m_bind_interface;
 
-		// m_local_udp_address 用于保存 udp 通信时, 本地的地址.
-		net::ip::address m_local_udp_address;
+		// m_local_udp_endpoint 用于保存 udp 通信时, 本地的地址.
+		udp::endpoint m_local_udp_endpoint;
 
 		// m_timer 用于定时检查 udp 会话是否过期, 由于 udp 通信是无连接的, 如果 2 端长时间
 		// 没有数据通信, 则可能会话已经失效, 此时应该关闭 udp socket 以及相关资源.
