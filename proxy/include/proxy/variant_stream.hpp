@@ -88,6 +88,14 @@ namespace util {
 				}, *this);
 		}
 
+		tcp::endpoint local_endpoint()
+		{
+			return boost::variant2::visit([&](auto& t) mutable
+				{
+					return t.lowest_layer().local_endpoint();
+				}, *this);
+		}
+
 		void shutdown(net::socket_base::shutdown_type what,
 			boost::system::error_code& ec)
 		{

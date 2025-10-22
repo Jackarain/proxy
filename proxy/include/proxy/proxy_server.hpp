@@ -1690,6 +1690,8 @@ R"x*x*x(<html>
 				if (local_endp.address().is_v4())
 				{
 					auto uaddr = local_endp.address().to_v4().to_uint();
+					if (uaddr == 0)
+						uaddr = m_local_socket.local_endpoint().address().to_v4().to_uint();
 
 					write<uint8_t>(SOCKS5_ATYP_IPV4, wp);
 					write<uint32_t>(uaddr, wp);
