@@ -760,7 +760,6 @@ R"x*x*x(<html>
 			: m_executor(executor)
 			, m_local_socket(std::move(socket))
 			, m_remote_socket(init_proxy_stream(executor))
-			, m_udp_socket(executor)
 			, m_connection_id(id)
 			, m_tproxy(tproxy)
 			, m_local_buffer(10485760u) // 10MB max buffer size.
@@ -868,8 +867,6 @@ R"x*x*x(<html>
 			// 关闭所有 socket.
 			m_local_socket.close(ignore_ec);
 			m_remote_socket.close(ignore_ec);
-
-			m_udp_socket.close(ignore_ec);
 		}
 
 		void set_tproxy_remote(
@@ -1647,16 +1644,28 @@ R"x*x*x(<html>
 					? udp::v4() : udp::v6();
 
 				// 创建UDP端口.
-				m_udp_socket.open(protocol, ec);
+				udp::socket local_udp_socket(m_executor);
+				local_udp_socket.open(protocol, ec);
 				if (ec)
 					break;
+
+				// 如果有指定绑定本地地址, 则创建绑定到指定地址的 udp socket 用于数据发送.
+				std::optional<udp::socket> remote_bind_socket;
 
 				// 绑定输出网络.
 				auto bind_if = udp::endpoint(protocol, 0);
 				if (m_bind_interface)
+				{
 					bind_if.address(*m_bind_interface);
 
-				m_udp_socket.bind(bind_if, ec);
+					remote_bind_socket.emplace(m_executor);
+					remote_bind_socket->open(protocol, ec);
+					if (ec)
+						break;
+					remote_bind_socket->bind(bind_if, ec);
+				}
+
+				local_udp_socket.bind(udp::endpoint(), ec);
 				if (ec)
 					break;
 
@@ -1664,10 +1673,6 @@ R"x*x*x(<html>
 				// 除非地址是 m_local_udp_endpoint 本身除外.
 				m_local_udp_endpoint.address(remote_endp.address());
 				m_local_udp_endpoint.port(dst_endpoint.port());
-
-				// 启动 udp 转发协程.
-				net::co_spawn(executor,
-					forward_udp(), net::detached);
 
 				// 开始回复客户端 udp 关联成功消息.
 				wbuf.consume(wbuf.size());
@@ -1677,7 +1682,7 @@ R"x*x*x(<html>
 				write<uint8_t>(0, wp);					// REP
 				write<uint8_t>(0x00, wp);				// RSV
 
-				auto local_endp = m_udp_socket.local_endpoint(ec);
+				auto local_endp = local_udp_socket.local_endpoint(ec);
 				if (ec)
 					break;
 
@@ -1721,9 +1726,26 @@ R"x*x*x(<html>
 				}
 
 				// 在此等待 tcp 连接断开.
-				co_await m_local_socket.async_read_some(
-					m_local_buffer.prepare(1), net_awaitable[ec]);
-				m_udp_socket.close(ec);
+				if (!remote_bind_socket)
+				{
+					co_await(m_local_socket.async_read_some(m_local_buffer.prepare(1), net_awaitable[ec])
+						||
+						forward_udp(local_udp_socket, local_udp_socket));
+				}
+				else
+				{
+					co_await(m_local_socket.async_read_some(m_local_buffer.prepare(1), net_awaitable[ec])
+						||
+						forward_udp(local_udp_socket, *remote_bind_socket)
+						||
+						forward_udp(*remote_bind_socket, local_udp_socket)
+						);
+				}
+
+				// 关闭 udp socket.
+				local_udp_socket.close(ec);
+				if (remote_bind_socket)
+					remote_bind_socket->close(ec);
 
 				co_return;
 			} while (0);
@@ -1835,7 +1857,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<void> forward_udp()
+		inline net::awaitable<void> forward_udp(udp::socket& client, udp::socket& server)
 		{
 			[[maybe_unused]] auto self = shared_from_this();
 			auto executor = co_await net::this_coro::executor;
@@ -1843,7 +1865,6 @@ R"x*x*x(<html>
 			boost::system::error_code ec;
 
 			udp::endpoint remote_endp;
-			udp::endpoint local_endp;
 
 			char read_buffer[4096];
 			size_t send_total = 0;
@@ -1856,7 +1877,7 @@ R"x*x*x(<html>
 				// 重置 udp 超时时间.
 				m_udp_timeout = m_option.udp_timeout_;
 
-				auto bytes = co_await m_udp_socket.async_receive_from(
+				auto bytes = co_await client.async_receive_from(
 					net::buffer((char*)rbuf, 4000),
 					remote_endp,
 					net_awaitable[ec]);
@@ -1868,8 +1889,6 @@ R"x*x*x(<html>
 				// 如果数据包来自 socks 客户端, 则解析数据包并将数据转发给目标主机.
 				if (remote_endp == m_local_udp_endpoint)
 				{
-					local_endp = remote_endp;
-
 					//  +----+------+------+----------+-----------+----------+
 					//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT  |   DATA   |
 					//  +----+------+------+----------+-----------+----------+
@@ -1935,7 +1954,7 @@ R"x*x*x(<html>
 
 					send_total++;
 
-					co_await m_udp_socket.async_send_to(
+					co_await server.async_send_to(
 						net::buffer(rp, udp_size),
 						remote_endp,
 						net_awaitable[ec]);
@@ -1976,9 +1995,9 @@ R"x*x*x(<html>
 					// 指向 udp header 位置开始发送数据.
 					auto wbuf = rbuf - head_size;
 
-					co_await m_udp_socket.async_send_to(
+					co_await server.async_send_to(
 						net::buffer(wbuf, udp_size),
-						local_endp,
+						m_local_udp_endpoint,
 						net_awaitable[ec]);
 				}
 			}
@@ -4603,9 +4622,6 @@ R"x*x*x(<html>
 
 		// m_remote_socket 远程 socket, 即连接远程代理服务端或远程服务的 socket.
 		variant_stream_type m_remote_socket;
-
-		// 用于 socsks5 代理中的 udp 通信.
-		udp::socket m_udp_socket;
 
 		// m_bind_interface 用于向外发起连接时, 指定的 bind 地址.
 		std::optional<net::ip::address> m_bind_interface;
