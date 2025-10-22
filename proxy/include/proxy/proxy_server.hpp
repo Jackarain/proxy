@@ -1848,7 +1848,6 @@ R"x*x*x(<html>
 			size_t recv_total = 0;
 
 			const char* rbuf = &read_buffer[96];
-			char* wbuf = &read_buffer[96];
 
 			while (!m_abort)
 			{
@@ -1856,7 +1855,7 @@ R"x*x*x(<html>
 				m_udp_timeout = m_option.udp_timeout_;
 
 				auto bytes = co_await m_udp_socket.async_receive_from(
-					net::buffer(wbuf, 4000),
+					net::buffer((char*)rbuf, 4000),
 					remote_endp,
 					net_awaitable[ec]);
 				if (ec)
@@ -1947,7 +1946,7 @@ R"x*x*x(<html>
 					auto udp_size = bytes + head_size;
 
 					// 在数据包前面添加 socks5 udp 头部, 然后转发给 socks 客户端.
-					auto wp = wbuf - head_size;
+					char* wp = (char*)(rbuf - head_size);
 
 					write<uint16_t>(0x0, wp); // rsv
 					write<uint8_t>(0x0, wp); // frag
@@ -1972,8 +1971,8 @@ R"x*x*x(<html>
 
 					recv_total++;
 
-					// 更新 wbuf 指针到 udp header 位置.
-					wbuf = wbuf - head_size;
+					// 指向 udp header 位置开始发送数据.
+					auto wbuf = rbuf - head_size;
 
 					co_await m_udp_socket.async_send_to(
 						net::buffer(wbuf, udp_size),
