@@ -1593,7 +1593,7 @@ R"x*x*x(<html>
 				dst_endpoint.address(
 					net::ip::make_address(domain, ec));
 				if (ec ||
-					dst_endpoint.address() == net::ip::make_address_v4("0") ||
+					dst_endpoint.address() == net::ip::make_address_v4("0.0.0.0") ||
 					dst_endpoint.address() == net::ip::make_address_v6("::0"))
 				{
 					dst_endpoint.address(m_local_socket.remote_endpoint().address());
@@ -1688,9 +1688,17 @@ R"x*x*x(<html>
 						port = local_udp_socket.local_endpoint(ec).port();
 
 					co_await start_connect_host(
-						"0", port, ec, true, SOCKS5_CMD_UDP);
+						"0.0.0.0", port, ec, true, SOCKS5_CMD_UDP);
 					if (ec)
+					{
+						log_conn_warning()
+							<< ", start connect SOCKS5_CMD_UDP error: "
+							<< ec.message();
 						break;
+					}
+
+					log_conn_debug()
+						<< ", start connect SOCKS5_CMD_UDP success";
 				}
 
 				// 所有发向 udp socket 的数据, 都将转发到 m_local_udp_endpoint
@@ -3292,7 +3300,7 @@ R"x*x*x(<html>
 				if (endpoint)
 				{
 					m_remote_udp_endpoint = *endpoint;
-					if (m_remote_udp_endpoint.address() == net::ip::make_address_v4("0") ||
+					if (m_remote_udp_endpoint.address() == net::ip::make_address_v4("0.0.0.0") ||
 						m_remote_udp_endpoint.address() == net::ip::make_address_v6("::0"))
 					{
 						m_remote_udp_endpoint.address(
