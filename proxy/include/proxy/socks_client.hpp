@@ -23,6 +23,7 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/udp.hpp>
+#include <boost/asio/ip/address.hpp>
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
@@ -37,6 +38,7 @@ namespace proxy {
 	namespace net = boost::asio;
 
 	using net::ip::tcp;
+	using net::ip::udp;
 
 	using io_util::write;
 	using io_util::read;
@@ -60,18 +62,25 @@ namespace proxy {
 		// socks version: 4 or 5
 		int version{ socks5_version };
 
+		// command: connect, bind, udp associate, bind not supported yet
+		int command{ SOCKS_CMD_CONNECT };
+
 		// pass hostname to proxy
 		bool proxy_hostname{ true };
 	};
 
+	using endpoint_opt = std::optional<udp::endpoint>;
+
 	namespace detail {
 
 		template <typename Stream>
-		net::awaitable<void> do_socks5(
+		net::awaitable<endpoint_opt> do_socks5(
 			Stream& socket,
 			socks_client_option opt,
 			boost::system::error_code& ec)
 		{
+			endpoint_opt endp;
+
 			[[maybe_unused]] auto& username = opt.username;
 			[[maybe_unused]] auto& passwd = opt.password;
 			[[maybe_unused]] auto& hostname = opt.target_host;
@@ -109,7 +118,7 @@ namespace proxy {
 					socket,
 					request,
 					net_awaitable[ec]);
-			if (ec) co_return;
+			if (ec) co_return endp;
 			BOOST_ASSERT(bytes_to_write == bytes);
 
 			net::streambuf response(5242880u);
@@ -118,7 +127,7 @@ namespace proxy {
 				response,
 				net::transfer_exactly(2),
 				net_awaitable[ec]);
-			if (ec) co_return;
+			if (ec) co_return endp;
 			BOOST_ASSERT(response.size() == 2);
 
 			auto resp = static_cast<const char*>(
@@ -129,7 +138,7 @@ namespace proxy {
 			if (version != SOCKS_VERSION_5)
 			{
 				ec = proxy::errc::socks_unsupported_version;
-				co_return;
+				co_return endp;
 			}
 
 			if (method == SOCKS5_AUTH) // need username&password auth...
@@ -137,7 +146,7 @@ namespace proxy {
 				if (username.empty())
 				{
 					ec = proxy::errc::socks_username_required;
-					co_return;
+					co_return endp;
 				}
 
 				request.consume(request.size());
@@ -172,7 +181,7 @@ namespace proxy {
 					socket,
 					request,
 					net_awaitable[ec]);
-				if (ec) co_return;
+				if (ec) co_return endp;
 				BOOST_ASSERT(bytes_to_write == bytes);
 
 				response.consume(response.size());
@@ -181,7 +190,7 @@ namespace proxy {
 					response,
 					net::transfer_exactly(2),
 					net_awaitable[ec]);
-				if (ec) co_return;
+				if (ec) co_return endp;
 				BOOST_ASSERT(response.size() == 2);
 
 				resp = static_cast<const char*>(response.data().data());
@@ -190,13 +199,13 @@ namespace proxy {
 				if (version != 0x01)	// auth version.
 				{
 					ec = proxy::errc::socks_unsupported_authentication_version;
-					co_return;
+					co_return endp;
 				}
 
 				if (status != 0x00)
 				{
 					ec = errc::socks_authentication_error;
-					co_return;
+					co_return endp;
 				}
 			}
 			else if (method == SOCKS5_AUTH_NONE) // no need auth...
@@ -206,7 +215,7 @@ namespace proxy {
 			else
 			{
 				ec = proxy::errc::socks_unsupported_authentication_version;
-				co_return;
+				co_return endp;
 			}
 
 			request.consume(request.size());
@@ -216,7 +225,7 @@ namespace proxy {
 					bytes_to_write, 22)).data());
 
 			write<uint8_t>(SOCKS_VERSION_5, req);	// SOCKS VERSION 5.
-			write<uint8_t>(SOCKS_CMD_CONNECT, req); // CONNECT command.
+			write<uint8_t>(opt.command, req); // SOCKS command.
 			write<uint8_t>(0, req);					// reserved.
 
 			if (opt.proxy_hostname)
@@ -239,7 +248,7 @@ namespace proxy {
 			}
 			else
 			{
-				auto endp = net::ip::make_address(hostname, ec);
+				auto endpoint = net::ip::make_address(hostname, ec);
 				if (ec)
 				{
 					auto executor = co_await net::this_coro::executor;
@@ -251,29 +260,29 @@ namespace proxy {
 							hostname,
 							std::to_string(port),
 							net_awaitable[ec]);
-					if (ec) co_return;
+					if (ec) co_return endp;
 
 					if (target_endpoints.empty())
 					{
 						ec = error;
-						co_return;
+						co_return endp;
 					}
 
 					auto it = *target_endpoints.begin();
-					endp = it.endpoint().address().to_v4();
+					endpoint = it.endpoint().address().to_v4();
 				}
 
-				if (endp.is_v4())
+				if (endpoint.is_v4())
 				{
 					write<uint8_t>(SOCKS5_ATYP_IPV4, req); // ipv4.
-					write<uint32_t>(endp.to_v4().to_uint(), req);
+					write<uint32_t>(endpoint.to_v4().to_uint(), req);
 					write<uint16_t>(port, req);
 					bytes_to_write = 10;
 				}
 				else
 				{
 					write<uint8_t>(SOCKS5_ATYP_IPV6, req); // ipv6.
-					auto v6_bytes = endp.to_v6().to_bytes();
+					auto v6_bytes = endpoint.to_v6().to_bytes();
 					std::copy(v6_bytes.begin(), v6_bytes.end(), req);
 					req += 16;
 					write<uint16_t>(port, req);
@@ -286,7 +295,7 @@ namespace proxy {
 				socket,
 				request,
 				net_awaitable[ec]);
-			if (ec) co_return;
+			if (ec) co_return endp;
 			BOOST_ASSERT(bytes_to_write == bytes);
 
 			response.consume(response.size());
@@ -295,7 +304,7 @@ namespace proxy {
 				response,
 				net::transfer_exactly(10),
 				net_awaitable[ec]);
-			if (ec) co_return;
+			if (ec) co_return endp;
 			BOOST_ASSERT(response.size() == bytes);
 
 			resp = static_cast<const char*>(response.data().data());
@@ -307,14 +316,14 @@ namespace proxy {
 			if (version != SOCKS_VERSION_5)
 			{
 				ec = errc::socks_unsupported_version;
-				co_return;
+				co_return endp;
 			}
 			else if (atyp != SOCKS5_ATYP_IPV4 &&
 				atyp != SOCKS5_ATYP_DOMAINNAME &&
 				atyp != SOCKS5_ATYP_IPV6)
 			{
 				ec = errc::socks_general_failure;
-				co_return;
+				co_return endp;
 			}
 			else if (atyp == SOCKS5_ATYP_DOMAINNAME)
 			{
@@ -324,7 +333,7 @@ namespace proxy {
 					response,
 					net::transfer_exactly(domain_length - 3),
 					net_awaitable[ec]);
-				if (ec) co_return;
+				if (ec) co_return endp;
 			}
 			else if (atyp == SOCKS5_ATYP_IPV6)
 			{
@@ -332,7 +341,7 @@ namespace proxy {
 					response,
 					net::transfer_exactly(12),
 					net_awaitable[ec]);
-				if (ec) co_return;
+				if (ec) co_return endp;
 			}
 
 			resp = static_cast<const char*>(response.data().data());
@@ -352,8 +361,7 @@ namespace proxy {
 			}
 			else if (atyp == SOCKS5_ATYP_IPV4)
 			{
-				net::ip::tcp::endpoint remote_endp(
-					net::ip::address_v4(read<uint32_t>(resp)),
+				endp.emplace(net::ip::address_v4(read<uint32_t>(resp)),
 					read<uint16_t>(resp));
 			}
 			else if (atyp == SOCKS5_ATYP_IPV6)
@@ -362,8 +370,7 @@ namespace proxy {
 				for (auto i = 0; i < 16; i++)
 					v6_bytes[i] = read<uint8_t>(resp);
 
-				net::ip::tcp::endpoint remote_endp(
-					net::ip::address_v6(v6_bytes),
+				endp.emplace(net::ip::address_v6(v6_bytes),
 					read<uint16_t>(resp));
 			}
 
@@ -388,19 +395,19 @@ namespace proxy {
 				default:
 					ec = errc::socks_unassigned; break;
 				}
-
-				co_return;
 			}
 
-			co_return;
+			co_return endp;
 		}
 
 		template <typename Stream>
-		net::awaitable<void> do_socks4(
+		net::awaitable<endpoint_opt> do_socks4(
 			Stream& socket,
 			socks_client_option opt,
 			boost::system::error_code& ec)
 		{
+			endpoint_opt endp;
+
 			auto& username = opt.username;
 			auto& hostname = opt.target_host;
 			auto& port = opt.target_port;
@@ -428,12 +435,12 @@ namespace proxy {
 					hostname,
 					std::to_string(port),
 					net_awaitable[ec]);
-				if (ec) co_return;
+				if (ec) co_return endp;
 
 				if (target_endpoints.empty())
 				{
 					ec = error;
-					co_return;
+					co_return endp;
 				}
 
 				auto it = *target_endpoints.begin();
@@ -452,7 +459,7 @@ namespace proxy {
 				{
 					if (username[i] == '\0') {
 						ec = errc::socks_invalid_userid;
-						co_return;
+						co_return endp;
 					}
 					write<uint8_t>(username[i], req);    // USERID
 				}
@@ -473,7 +480,7 @@ namespace proxy {
 				socket,
 				request,
 				net_awaitable[ec]);
-			if (ec) co_return;
+			if (ec) co_return endp;
 
 			net::streambuf response(5242880u);
 			co_await net::async_read(
@@ -481,7 +488,7 @@ namespace proxy {
 				response,
 				net::transfer_exactly(8),
 				net_awaitable[ec]);
-			if (ec) co_return;
+			if (ec) co_return endp;
 
 			auto resp = static_cast<const unsigned char*>(
 				response.data().data());
@@ -509,30 +516,28 @@ namespace proxy {
 				}
 			}
 
-			co_return;
+			co_return endp;
 		}
 
 		template <typename Stream>
-		net::awaitable<boost::system::error_code>
-			do_socks_handshake(Stream& socket, socks_client_option opt = {})
+		net::awaitable<endpoint_opt>
+		do_socks_handshake(Stream& socket, socks_client_option opt, boost::system::error_code& ec)
 		{
-			boost::system::error_code ec;
-
 			if (opt.version == socks5_version)
 			{
-				co_await do_socks5(socket, opt, ec);
+				co_return co_await do_socks5(socket, opt, ec);
 			}
 			else if (opt.version == socks4_version ||
 				opt.version == socks4a_version)
 			{
-				co_await do_socks4(socket, opt, ec);
+				co_return co_await do_socks4(socket, opt, ec);
 			}
 			else
 			{
 				ec = proxy::errc::socks_unsupported_version;
 			}
 
-			co_return ec;
+			co_return endpoint_opt{};
 		}
 
 		struct initiate_do_socks_proxy
@@ -546,8 +551,9 @@ namespace proxy {
 				[socket, opt = opt, handler = std::move(handler)]
 				() mutable -> net::awaitable<void>
 				{
-					auto ec = co_await do_socks_handshake(*socket, opt);
-					handler(ec);
+					boost::system::error_code ec;
+					endpoint_opt endpoint = co_await do_socks_handshake(*socket, opt, ec);
+					handler(ec, endpoint);
 
 					co_return;
 				}, net::detached);
@@ -560,7 +566,7 @@ namespace proxy {
 		socks_client_option opt, Handler&& handler)
 	{
 		return net::async_initiate<Handler,
-			void(boost::system::error_code)>(
+			void(boost::system::error_code, endpoint_opt)>(
 				detail::initiate_do_socks_proxy(), handler, &socket, opt);
 	}
 
