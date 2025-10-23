@@ -361,7 +361,8 @@ namespace proxy {
 			}
 			else if (atyp == SOCKS5_ATYP_IPV4)
 			{
-				endp.emplace(net::ip::address_v4(read<uint32_t>(resp)),
+				net::ip::address_v4 addr(read<uint32_t>(resp));
+				endp.emplace(addr,
 					read<uint16_t>(resp));
 			}
 			else if (atyp == SOCKS5_ATYP_IPV6)
