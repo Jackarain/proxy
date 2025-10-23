@@ -1348,9 +1348,10 @@ R"x*x*x(<html>
 				auto ret = co_await http_proxy_get();
 				if (!ret)
 				{
+					auto date_string = server_date_string();
 					auto fake_page =
 						fmt::vformat(fake_400_content_fmt,
-							fmt::make_format_args(server_date_string()));
+							fmt::make_format_args(date_string));
 
 					co_await net::async_write(
 						m_local_socket,
@@ -1371,9 +1372,10 @@ R"x*x*x(<html>
 				auto ret = co_await http_proxy_connect();
 				if (!ret)
 				{
+					auto date_string = server_date_string();
 					auto fake_page =
 						fmt::vformat(fake_400_content_fmt,
-							fmt::make_format_args(server_date_string()));
+							fmt::make_format_args(date_string));
 
 					co_await net::async_write(
 						m_local_socket,
@@ -2632,8 +2634,9 @@ R"x*x*x(<html>
 					<< ", proxy err: "
 					<< pauth_error_message(auth);
 
+				auto date_string = server_date_string();
 				auto fake_page = fmt::vformat(fake_407_content_fmt,
-					fmt::make_format_args(server_date_string()));
+					fmt::make_format_args(date_string));
 
 				co_await net::async_write(
 					m_local_socket,
@@ -3532,8 +3535,9 @@ R"x*x*x(<html>
 
 				if (beast::websocket::is_upgrade(req))
 				{
+					auto date_string = server_date_string();
 					auto fake_page = fmt::vformat(fake_404_content_fmt,
-						fmt::make_format_args(server_date_string()));
+						fmt::make_format_args(date_string));
 
 					co_await net::async_write(
 						m_local_socket,
@@ -4194,8 +4198,9 @@ R"x*x*x(<html>
 					<< hctx.target_
 					<< " file not exists";
 
+				auto date_string = server_date_string();
 				auto fake_page = fmt::vformat(fake_404_content_fmt,
-					fmt::make_format_args(server_date_string()));
+					fmt::make_format_args(date_string));
 
 				co_await net::async_write(
 					m_local_socket,
