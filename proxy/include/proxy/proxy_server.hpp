@@ -1909,15 +1909,17 @@ R"x*x*x(<html>
 				// 桥接代理模式下, 直接转发数据包到桥接服务器.
 				if (m_bridge_proxy)
 				{
-					if (remote_endp == m_local_udp_endpoint)
+					if (remote_endp.address() == m_local_udp_endpoint.address())
 					{
+						m_local_udp_endpoint = remote_endp;
+
 						send_total++;
 						co_await server.async_send_to(
 							net::buffer(rbuf, bytes),
 							m_remote_udp_endpoint,
 							net_awaitable[ec]);
 					}
-					else if (remote_endp == m_remote_udp_endpoint)
+					else if (remote_endp.address() == m_remote_udp_endpoint.address())
 					{
 						recv_total++;
 						co_await server.async_send_to(
@@ -1932,8 +1934,10 @@ R"x*x*x(<html>
 				auto rp = rbuf;
 
 				// 如果数据包来自 socks 客户端, 则解析数据包并将数据转发给目标主机.
-				if (remote_endp == m_local_udp_endpoint)
+				if (remote_endp.address() == m_local_udp_endpoint.address())
 				{
+					m_local_udp_endpoint = remote_endp;
+
 					//  +----+------+------+----------+-----------+----------+
 					//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT  |   DATA   |
 					//  +----+------+------+----------+-----------+----------+
