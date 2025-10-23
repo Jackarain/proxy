@@ -1590,8 +1590,12 @@ R"x*x*x(<html>
 				dst_endpoint.port(port);
 				dst_endpoint.address(
 					net::ip::make_address(domain, ec));
-				if (ec || dst_endpoint.address() == net::ip::make_address("0"))
+				if (ec ||
+					dst_endpoint.address() == net::ip::make_address_v4("0") ||
+					dst_endpoint.address() == net::ip::make_address_v6("::0"))
+				{
 					dst_endpoint.address(m_local_socket.remote_endpoint().address());
+				}
 
 				log_conn_debug()
 					<< ", "
@@ -1668,6 +1672,24 @@ R"x*x*x(<html>
 				local_udp_socket.bind(udp::endpoint(), ec);
 				if (ec)
 					break;
+
+				if (m_bridge_proxy)
+				{
+					// 如果是代理桥接模式, 则连接桥接服务器, 然后所有接收到 client 端的数据
+					// 统统转发给桥接服务器, 桥接服务器上接收到的数据再转发给客户端.
+					// 中间不需要解包和封包 udp 数据报.
+
+					uint16_t port;
+					if (remote_bind_socket)
+						port = remote_bind_socket->local_endpoint(ec).port();
+					else
+						port = local_udp_socket.local_endpoint(ec).port();
+
+					co_await start_connect_host(
+						"0", port, ec, true, SOCKS5_CMD_UDP);
+					if (ec)
+						break;
+				}
 
 				// 所有发向 udp socket 的数据, 都将转发到 m_local_udp_endpoint
 				// 除非地址是 m_local_udp_endpoint 本身除外.
@@ -1883,6 +1905,29 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 				if (ec)
 					break;
+
+				// 桥接代理模式下, 直接转发数据包到桥接服务器.
+				if (m_bridge_proxy)
+				{
+					if (remote_endp == m_local_udp_endpoint)
+					{
+						send_total++;
+						co_await server.async_send_to(
+							net::buffer(rbuf, bytes),
+							m_remote_udp_endpoint,
+							net_awaitable[ec]);
+					}
+					else if (remote_endp == m_remote_udp_endpoint)
+					{
+						recv_total++;
+						co_await server.async_send_to(
+							net::buffer(rbuf, bytes),
+							m_local_udp_endpoint,
+							net_awaitable[ec]);
+					}
+
+					continue;
+				}
 
 				auto rp = rbuf;
 
@@ -2911,7 +2956,8 @@ R"x*x*x(<html>
 		connect_bridge_proxy(tcp::socket& remote_socket,
 			std::string target_host,
 			uint16_t target_port,
-			boost::system::error_code& ec)
+			boost::system::error_code& ec,
+			int command = SOCKS_CMD_CONNECT)
 		{
 			auto executor = co_await net::this_coro::executor;
 
@@ -3223,6 +3269,7 @@ R"x*x*x(<html>
 				opt.target_host = target_host;
 				opt.target_port = target_port;
 				opt.proxy_hostname = true;
+				opt.command = command;
 				opt.username = std::string(m_bridge_proxy->user());
 				opt.password = std::string(m_bridge_proxy->password());
 
@@ -3231,10 +3278,20 @@ R"x*x*x(<html>
 				else if (scheme == "socks4a")
 					opt.version = socks4a_version;
 
-				co_await async_socks_handshake(
+				auto endpoint = co_await async_socks_handshake(
 					m_remote_socket,
 					opt,
 					net_awaitable[ec]);
+				if (endpoint)
+				{
+					m_remote_udp_endpoint = *endpoint;
+					if (m_remote_udp_endpoint.address() == net::ip::make_address_v4("0") ||
+						m_remote_udp_endpoint.address() == net::ip::make_address_v6("::0"))
+					{
+						m_remote_udp_endpoint.address(
+							remote_socket.remote_endpoint().address());
+					}
+				}
 			}
 			else if (scheme.starts_with("http"))
 			{
@@ -3273,7 +3330,8 @@ R"x*x*x(<html>
 			std::string target_host,
 			uint16_t target_port,
 			boost::system::error_code& ec,
-			bool resolve = false)
+			bool resolve = false,
+			int command = SOCKS_CMD_CONNECT)
 		{
 			auto executor = co_await net::this_coro::executor;
 
@@ -3286,7 +3344,8 @@ R"x*x*x(<html>
 					remote_socket,
 					target_host,
 					target_port,
-					ec);
+					ec,
+					command);
 
 				co_return ret;
 			}
@@ -4628,6 +4687,8 @@ R"x*x*x(<html>
 
 		// m_local_udp_endpoint 用于保存 udp 通信时, 本地的地址.
 		udp::endpoint m_local_udp_endpoint;
+		// m_remote_udp_endpoint 用于保存 udp 通信时, 远程的地址, 用于作为 UDP 代理桥接时使用.
+		udp::endpoint m_remote_udp_endpoint;
 
 		// m_timeout udp 会话超时时间, 默认 60 秒.
 		int m_udp_timeout{ udp_session_expired_time };
