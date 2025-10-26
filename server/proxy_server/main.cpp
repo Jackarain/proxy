@@ -129,41 +129,30 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 	for (const auto& auth_user : auth_users)
 	{
-		if (auth_user.empty())
-			continue;
+		// 解析 user:password:addr:proxy_pass 格式.
+		std::vector<std::string> parts;
+		std::string token;
+		std::stringstream ss(auth_user);
 
-		auto pos = auth_user.find(':');
-		if (pos == std::string::npos)
+		for (int i = 0; i < 3 && std::getline(ss, token, ':'); i++)
+			parts.push_back(token);
+
+		if (ss)
 		{
-			opt.auth_users_.emplace_back(auth_user, "", "");
-			continue;
+			std::string remaining;
+			std::getline(ss, remaining);
+			if (!remaining.empty())
+				parts.push_back(remaining);
 		}
 
-		auto user = auth_user.substr(0, pos);
-		auto pwd = auth_user.substr(pos + 1);
+		std::string user, password, addr, proxy_pass;
 
-		auto addr_pos = pwd.find(':');
-		if (addr_pos != std::string::npos)
-		{
-			auto addr = pwd.substr(addr_pos + 1);
+		if (parts.size() > 0) user = parts[0];
+		if (parts.size() > 1) password = parts[1];
+		if (parts.size() > 2) addr = parts[2];
+		if (parts.size() > 3) proxy_pass = parts[3];
 
-			// 检查 addr 是否是合法的 IP 地址，否则当作
-			// 密码的一部分处理.
-			boost::system::error_code ec;
-			net::ip::make_address(addr, ec);
-			if (ec)
-			{
-				opt.auth_users_.emplace_back(user, pwd, "");
-				continue;
-			}
-
-			pwd = pwd.substr(0, addr_pos);
-
-			opt.auth_users_.emplace_back(user, pwd, addr);
-			continue;
-		}
-
-		opt.auth_users_.emplace_back(user, pwd, "");
+		opt.auth_users_.emplace_back(user, password, addr, proxy_pass);
 	}
 
 	for (const auto& user : users_rate_limit)

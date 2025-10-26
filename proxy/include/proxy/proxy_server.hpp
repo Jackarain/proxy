@@ -393,11 +393,12 @@ R"x*x*x(<html>
 		std::vector<std::tuple<tcp::endpoint, bool>> listens_;
 
 		// 授权信息.
-		// auth_users 的第1个元素为用户名, 第2个元素为密码.
+		// auth_users 的第1个元素为用户名, 第2个元素为密码, 第3个元素为
+		// 该用户绑定的网络出口 IP 接口, 第4个为该用户指定的 proxy_pass.
 		// auth_users_ 为空时, 表示不需要认证.
 		// auth_users_ 可以是多个用户, 例如:
 		// { {"user1", "passwd1"}, {"user2", "passwd2"} };
-		using auth_users = std::tuple<std::string, std::string, std::string>;
+		using auth_users = std::tuple<std::string, std::string, std::string, std::string>;
 		std::vector<auth_users> auth_users_;
 
 		// 指定用户限速设置.
@@ -2165,8 +2166,25 @@ R"x*x*x(<html>
 			// 用户认证逻辑.
 			bool verify_passed = m_option.auth_users_.empty();
 
-			for (const auto& [user, pwd, addr] : m_option.auth_users_)
+			for (const auto& [user, pwd, addr, proxy_pass] : m_option.auth_users_)
 			{
+				if (!proxy_pass.empty())
+				{
+					try
+					{
+						m_bridge_proxy =
+							std::make_unique<urls::url_view>(proxy_pass);
+					}
+					catch (const std::exception& e)
+					{
+						log_conn_warning()
+							<< ", auth_users params proxy_pass error: "
+							<< proxy_pass
+							<< ", exception: "
+							<< e.what();
+					}
+				}
+
 				if (user == userid)
 				{
 					verify_passed = true;
@@ -2339,8 +2357,25 @@ R"x*x*x(<html>
 
 			bool verify_passed = m_option.auth_users_.empty();
 
-			for (auto [user, pwd, addr] : m_option.auth_users_)
+			for (auto [user, pwd, addr, proxy_pass] : m_option.auth_users_)
 			{
+				if (!proxy_pass.empty())
+				{
+					try
+					{
+						m_bridge_proxy =
+							std::make_unique<urls::url_view>(proxy_pass);
+					}
+					catch (const std::exception& e)
+					{
+						log_conn_warning()
+							<< ", auth_users params proxy_pass error: "
+							<< proxy_pass
+							<< ", exception: "
+							<< e.what();
+					}
+				}
+
 				if (uname == user && passwd == pwd)
 				{
 					verify_passed = true;
@@ -2828,8 +2863,25 @@ R"x*x*x(<html>
 			// 用户认证逻辑.
 			bool verify_passed = m_option.auth_users_.empty();
 
-			for (auto [user, pwd, addr] : m_option.auth_users_)
+			for (auto [user, pwd, addr, proxy_pass] : m_option.auth_users_)
 			{
+				if (!proxy_pass.empty())
+				{
+					try
+					{
+						m_bridge_proxy =
+							std::make_unique<urls::url_view>(proxy_pass);
+					}
+					catch (const std::exception& e)
+					{
+						log_conn_warning()
+							<< ", auth_users params proxy_pass error: "
+							<< proxy_pass
+							<< ", exception: "
+							<< e.what();
+					}
+				}
+
 				if (uname == user && passwd == pwd)
 				{
 					verify_passed = true;
