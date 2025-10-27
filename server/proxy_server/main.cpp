@@ -152,6 +152,9 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		if (parts.size() > 2) addr = parts[2];
 		if (parts.size() > 3) proxy_pass = parts[3];
 
+		if (user.empty() && password.empty() && addr.empty() && proxy_pass.empty())
+			continue;
+
 		opt.auth_users_.emplace_back(user, password, addr, proxy_pass);
 	}
 
