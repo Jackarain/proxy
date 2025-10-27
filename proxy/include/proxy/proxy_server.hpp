@@ -3167,6 +3167,19 @@ R"x*x*x(<html>
 					<< ", with upstream noise completed";
 			}
 
+			auto scheme = boost::to_lower_copy(std::string(m_bridge_proxy->scheme()));
+
+			// 判断是否使用 ssl 加密与下一级代理通信.
+			// 这里仅当 scheme 为 socks协议后辍是 s 时启用 ssl 加密.
+			// 其它 scheme 仍按 scheme 含义中是否包括 ssl 加密来处理.
+			if (scheme == "socks5s" ||
+				scheme == "sockss" ||
+				scheme == "socks4as" ||
+				scheme == "socks4s")
+			{
+				m_option.proxy_pass_use_ssl_ = true;
+			}
+
 			// 使用ssl加密与下一级代理通信.
 			if (m_option.proxy_pass_use_ssl_)
 			{
@@ -3187,8 +3200,6 @@ R"x*x*x(<html>
 					}
 				}
 			}
-
-			auto scheme = m_bridge_proxy->scheme();
 
 			auto instantiate_stream =
 				[this,
@@ -3340,10 +3351,10 @@ R"x*x*x(<html>
 				opt.username = std::string(m_bridge_proxy->user());
 				opt.password = std::string(m_bridge_proxy->password());
 
-				if (scheme == "socks4")
-					opt.version = socks4_version;
-				else if (scheme == "socks4a")
+				if (scheme.starts_with("socks4a"))
 					opt.version = socks4a_version;
+				else if (scheme.starts_with("socks4"))
+					opt.version = socks4_version;
 
 				auto endpoint = co_await async_socks_handshake(
 					m_remote_socket,
