@@ -2168,28 +2168,30 @@ R"x*x*x(<html>
 
 			for (const auto& [user, pwd, addr, proxy_pass] : m_option.auth_users_)
 			{
-				if (!proxy_pass.empty())
-				{
-					try
-					{
-						m_bridge_proxy =
-							std::make_unique<urls::url>(proxy_pass);
-					}
-					catch (const std::exception& e)
-					{
-						log_conn_warning()
-							<< ", auth_users params proxy_pass error: "
-							<< proxy_pass
-							<< ", exception: "
-							<< e.what();
-					}
-				}
-
 				if (user == userid)
 				{
 					verify_passed = true;
+
 					user_rate_limit_config(user);
 					update_bind_interface(addr);
+
+					if (!proxy_pass.empty())
+					{
+						try
+						{
+							m_bridge_proxy =
+								std::make_unique<urls::url>(proxy_pass);
+						}
+						catch (const std::exception& e)
+						{
+							log_conn_warning()
+								<< ", auth_users params proxy_pass error: "
+								<< proxy_pass
+								<< ", exception: "
+								<< e.what();
+						}
+					}
+
 					break;
 				}
 			}
@@ -2359,28 +2361,30 @@ R"x*x*x(<html>
 
 			for (auto [user, pwd, addr, proxy_pass] : m_option.auth_users_)
 			{
-				if (!proxy_pass.empty())
-				{
-					try
-					{
-						m_bridge_proxy =
-							std::make_unique<urls::url>(proxy_pass);
-					}
-					catch (const std::exception& e)
-					{
-						log_conn_warning()
-							<< ", auth_users params proxy_pass error: "
-							<< proxy_pass
-							<< ", exception: "
-							<< e.what();
-					}
-				}
-
 				if (uname == user && passwd == pwd)
 				{
 					verify_passed = true;
+
 					user_rate_limit_config(user);
 					update_bind_interface(addr);
+
+					if (!proxy_pass.empty())
+					{
+						try
+						{
+							m_bridge_proxy =
+								std::make_unique<urls::url>(proxy_pass);
+						}
+						catch (const std::exception& e)
+						{
+							log_conn_warning()
+								<< ", auth_users params proxy_pass error: "
+								<< proxy_pass
+								<< ", exception: "
+								<< e.what();
+						}
+					}
+
 					break;
 				}
 			}
@@ -2789,7 +2793,7 @@ R"x*x*x(<html>
 				co_return false;
 			}
 			int name_length = read<uint8_t>(p);
-			if (name_length <= 0 || name_length > 255)
+			if (name_length < 0 || name_length > 255)
 			{
 				log_conn_warning()
 					<< ", socks negotiation, invalid name length";
@@ -2823,7 +2827,7 @@ R"x*x*x(<html>
 				uname.push_back(read<int8_t>(p));
 
 			int passwd_len = read<uint8_t>(p);
-			if (passwd_len <= 0 || passwd_len > 255)
+			if (passwd_len < 0 || passwd_len > 255)
 			{
 				log_conn_warning()
 					<< ", socks negotiation, invalid passwd length";
@@ -2865,28 +2869,30 @@ R"x*x*x(<html>
 
 			for (auto [user, pwd, addr, proxy_pass] : m_option.auth_users_)
 			{
-				if (!proxy_pass.empty())
-				{
-					try
-					{
-						m_bridge_proxy =
-							std::make_unique<urls::url>(proxy_pass);
-					}
-					catch (const std::exception& e)
-					{
-						log_conn_warning()
-							<< ", auth_users params proxy_pass error: "
-							<< proxy_pass
-							<< ", exception: "
-							<< e.what();
-					}
-				}
-
 				if (uname == user && passwd == pwd)
 				{
 					verify_passed = true;
+
 					user_rate_limit_config(user);
 					update_bind_interface(addr);
+
+					if (!proxy_pass.empty())
+					{
+						try
+						{
+							m_bridge_proxy =
+								std::make_unique<urls::url>(proxy_pass);
+						}
+						catch (const std::exception& e)
+						{
+							log_conn_warning()
+								<< ", auth_users params proxy_pass error: "
+								<< proxy_pass
+								<< ", exception: "
+								<< e.what();
+						}
+					}
+
 					break;
 				}
 			}
