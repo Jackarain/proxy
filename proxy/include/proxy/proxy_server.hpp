@@ -80,7 +80,7 @@
 # pragma warning(disable: 4819)
 #endif
 
-#include <boost/json/src.hpp>
+#include <boost/json.hpp>
 
 #ifdef _MSC_VER
 # pragma warning(pop)
