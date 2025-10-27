@@ -816,7 +816,7 @@ R"x*x*x(<html>
 				try
 				{
 					m_bridge_proxy =
-						std::make_unique<urls::url_view>(
+						std::make_unique<urls::url>(
 							m_option.proxy_pass_);
 				}
 				catch (const std::exception& e)
@@ -2173,7 +2173,7 @@ R"x*x*x(<html>
 					try
 					{
 						m_bridge_proxy =
-							std::make_unique<urls::url_view>(proxy_pass);
+							std::make_unique<urls::url>(proxy_pass);
 					}
 					catch (const std::exception& e)
 					{
@@ -2364,7 +2364,7 @@ R"x*x*x(<html>
 					try
 					{
 						m_bridge_proxy =
-							std::make_unique<urls::url_view>(proxy_pass);
+							std::make_unique<urls::url>(proxy_pass);
 					}
 					catch (const std::exception& e)
 					{
@@ -2870,7 +2870,7 @@ R"x*x*x(<html>
 					try
 					{
 						m_bridge_proxy =
-							std::make_unique<urls::url_view>(proxy_pass);
+							std::make_unique<urls::url>(proxy_pass);
 					}
 					catch (const std::exception& e)
 					{
@@ -4786,7 +4786,7 @@ R"x*x*x(<html>
 		proxy_server_option m_option;
 
 		// m_bridge_proxy 作为中继桥接的时候, 下游代理服务器的地址.
-		std::unique_ptr<urls::url_view> m_bridge_proxy;
+		std::unique_ptr<urls::url> m_bridge_proxy;
 
 		// m_outin_key 用于身份为客户端时, 与下游代理服务器加密通信时, 解密接收到
 		// 下游代理服务器数据的 key.
