@@ -1673,12 +1673,10 @@ R"x*x*x(<html>
 					// 绑定到指定的地址.
 					remote_bind_socket->bind(bind_if, ec);
 				}
-				else
-				{
-					// 绑定到和 tcp socket 相同的地址.
-					bind_if.address(m_local_socket.local_endpoint().address());
-					local_udp_socket.bind(bind_if, ec);
-				}
+
+				// 绑定到和 tcp socket 相同的地址.
+				udp::endpoint local_udp_endp(m_local_socket.local_endpoint().address(), 0);
+				local_udp_socket.bind(local_udp_endp, ec);
 
 				if (ec)
 					break;
@@ -1734,7 +1732,7 @@ R"x*x*x(<html>
 					<< ", tcp local socket: "
 					<< m_local_socket.local_endpoint()
 					<< ", udp bind interface: "
-					<< bind_if;
+					<< bind_if.address().to_string();
 
 				if (local_endp.address().is_v4())
 				{
