@@ -3395,10 +3395,17 @@ R"x*x*x(<html>
 				opt.username = std::string(m_bridge_proxy->user());
 				opt.password = std::string(m_bridge_proxy->password());
 
-				co_await async_http_proxy_handshake(
-					m_remote_socket,
-					opt,
-					net_awaitable[ec]);
+				if (command == SOCKS5_CMD_UDP)
+				{
+					ec = net::error::operation_not_supported;
+				}
+				else
+				{
+					co_await async_http_proxy_handshake(
+						m_remote_socket,
+						opt,
+						net_awaitable[ec]);
+				}
 			}
 
 			if (ec)
