@@ -3821,6 +3821,24 @@ R"x*x*x(<html>
 			std::vector<std::wstring> path_list;
 			std::vector<std::wstring> file_list;
 
+			auto leaf_name = [this](const fs::path& p) -> std::string
+			{
+				static const std::codecvt_utf8<wchar_t> utf8_cvt;
+
+				try {
+					fs::path normalized = p.lexically_normal();
+					return boost::nowide::narrow(normalized.filename().wstring(utf8_cvt));
+				}
+				catch (const std::exception& e)
+				{
+					log_conn_warning()
+						<< ", exception in path normalization: "
+						<< e.what();
+				}
+
+				return "";
+			};
+
 			for (; it != end && !m_abort; it++)
 			{
 				const auto& item = it->path();
@@ -3832,7 +3850,7 @@ R"x*x*x(<html>
 
 				if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))
 				{
-					auto leaf = boost::nowide::narrow(item.filename().wstring());
+					auto leaf = leaf_name(item);
 					leaf = leaf + "/";
 					rpath = boost::nowide::widen(leaf);
 					int width = 50 - static_cast<int>(rpath.size());
@@ -3854,7 +3872,7 @@ R"x*x*x(<html>
 				}
 				else
 				{
-					auto leaf =  boost::nowide::narrow(item.filename().wstring());
+					auto leaf = leaf_name(item);
 					rpath = boost::nowide::widen(leaf);
 					int width = 50 - (int)rpath.size();
 					width = width < 0 ? 0 : width;
