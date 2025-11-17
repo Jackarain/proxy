@@ -533,6 +533,7 @@ if (WIN32)
 		link_libraries(
 			Secur32.lib
 			Bcrypt.lib
+			Crypt32.lib
 			Winmm.lib
 			Mswsock.lib
 		)
