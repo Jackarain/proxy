@@ -5106,7 +5106,7 @@ R"x*x*x(<html>
 
 				// 设置证书过期时间和域名.
 				X509* x509_cert = SSL_CTX_get0_certificate(ssl_ctx.native_handle());
-				const auto expire_date = X509_get_notAfter(x509_cert);
+				const auto expire_date = X509_getm_notAfter(x509_cert);
 
 #ifdef OPENSSL_IS_BORINGSSL
 				std::time_t expiration_time;
