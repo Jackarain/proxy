@@ -1,7 +1,7 @@
 /*
- * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -15,7 +15,7 @@
  */
 
 #include "internal/cryptlib.h"
-#include "bn_lcl.h"
+#include "bn_local.h"
 
 #define MONT_WORD               /* use the faster word-based algorithm */
 
@@ -42,7 +42,7 @@ int bn_mul_mont_fixed_top(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
     int num = mont->N.top;
 
 #if defined(OPENSSL_BN_ASM_MONT) && defined(MONT_WORD)
-    if (num > 1 && a->top == num && b->top == num) {
+    if (num > 1 && num <= BN_SOFT_LIMIT && a->top == num && b->top == num) {
         if (bn_wexpand(r, num) == NULL)
             return 0;
         if (bn_mul_mont(r->d, a->d, b->d, mont->N.d, mont->n0, num)) {
@@ -229,10 +229,8 @@ BN_MONT_CTX *BN_MONT_CTX_new(void)
 {
     BN_MONT_CTX *ret;
 
-    if ((ret = OPENSSL_malloc(sizeof(*ret))) == NULL) {
-        BNerr(BN_F_BN_MONT_CTX_NEW, ERR_R_MALLOC_FAILURE);
+    if ((ret = OPENSSL_malloc(sizeof(*ret))) == NULL)
         return NULL;
-    }
 
     BN_MONT_CTX_init(ret);
     ret->flags = BN_FLG_MALLOCED;
@@ -430,14 +428,15 @@ BN_MONT_CTX *BN_MONT_CTX_set_locked(BN_MONT_CTX **pmont, CRYPTO_RWLOCK *lock,
 {
     BN_MONT_CTX *ret;
 
-    CRYPTO_THREAD_read_lock(lock);
+    if (!CRYPTO_THREAD_read_lock(lock))
+        return NULL;
     ret = *pmont;
     CRYPTO_THREAD_unlock(lock);
     if (ret)
         return ret;
 
     /*
-     * We don't want to serialise globally while doing our lazy-init math in
+     * We don't want to serialize globally while doing our lazy-init math in
      * BN_MONT_CTX_set. That punishes threads that are doing independent
      * things. Instead, punish the case where more than one thread tries to
      * lazy-init the same 'pmont', by having each do the lazy-init math work
@@ -453,7 +452,11 @@ BN_MONT_CTX *BN_MONT_CTX_set_locked(BN_MONT_CTX **pmont, CRYPTO_RWLOCK *lock,
     }
 
     /* The locked compare-and-set, after the local work is done. */
-    CRYPTO_THREAD_write_lock(lock);
+    if (!CRYPTO_THREAD_write_lock(lock)) {
+        BN_MONT_CTX_free(ret);
+        return NULL;
+    }
+
     if (*pmont) {
         BN_MONT_CTX_free(ret);
         ret = *pmont;
@@ -461,4 +464,46 @@ BN_MONT_CTX *BN_MONT_CTX_set_locked(BN_MONT_CTX **pmont, CRYPTO_RWLOCK *lock,
         *pmont = ret;
     CRYPTO_THREAD_unlock(lock);
     return ret;
+}
+
+int ossl_bn_mont_ctx_set(BN_MONT_CTX *ctx, const BIGNUM *modulus, int ri, const unsigned char *rr,
+                         int rrlen, uint32_t nlo, uint32_t nhi)
+{
+    if (BN_copy(&ctx->N, modulus) == NULL)
+        return 0;
+    if (BN_bin2bn(rr, rrlen, &ctx->RR) == NULL)
+        return 0;
+    ctx->ri = ri;
+#if (BN_BITS2 <= 32) && defined(OPENSSL_BN_ASM_MONT)
+    ctx->n0[0] = nlo;
+    ctx->n0[1] = nhi;
+#elif BN_BITS2 <= 32
+    ctx->n0[0] = nlo;
+    ctx->n0[1] = 0;
+#else
+    ctx->n0[0] = ((BN_ULONG)nhi << 32)| nlo;
+    ctx->n0[1] = 0;
+#endif
+
+    return 1;
+}
+
+int ossl_bn_mont_ctx_eq(const BN_MONT_CTX *m1, const BN_MONT_CTX *m2)
+{
+    if (m1->ri != m2->ri)
+        return 0;
+    if (BN_cmp(&m1->RR, &m2->RR) != 0)
+        return 0;
+    if (m1->flags != m2->flags)
+        return 0;
+#ifdef MONT_WORD
+    if (m1->n0[0] != m2->n0[0])
+        return 0;
+    if (m1->n0[1] != m2->n0[1])
+        return 0;
+#else
+    if (BN_cmp(&m1->Ni, &m2->Ni) != 0)
+        return 0;
+#endif
+    return 1;
 }

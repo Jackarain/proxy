@@ -1,14 +1,14 @@
 /*
- * Copyright 2016-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2020 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
 
 /* This must be the first #include file */
-#include "async_locl.h"
+#include "async_local.h"
 
 #include <openssl/err.h>
 
@@ -40,6 +40,7 @@ void ASYNC_WAIT_CTX_free(ASYNC_WAIT_CTX *ctx)
 
     OPENSSL_free(ctx);
 }
+
 int ASYNC_WAIT_CTX_set_wait_fd(ASYNC_WAIT_CTX *ctx, const void *key,
                                OSSL_ASYNC_FD fd, void *custom_data,
                                void (*cleanup)(ASYNC_WAIT_CTX *, const void *,
@@ -47,10 +48,8 @@ int ASYNC_WAIT_CTX_set_wait_fd(ASYNC_WAIT_CTX *ctx, const void *key,
 {
     struct fd_lookup_st *fdlookup;
 
-    if ((fdlookup = OPENSSL_zalloc(sizeof(*fdlookup))) == NULL) {
-        ASYNCerr(ASYNC_F_ASYNC_WAIT_CTX_SET_WAIT_FD, ERR_R_MALLOC_FAILURE);
+    if ((fdlookup = OPENSSL_zalloc(sizeof(*fdlookup))) == NULL)
         return 0;
-    }
 
     fdlookup->key = key;
     fdlookup->fd = fd;
@@ -180,6 +179,41 @@ int ASYNC_WAIT_CTX_clear_fd(ASYNC_WAIT_CTX *ctx, const void *key)
         curr = curr->next;
     }
     return 0;
+}
+
+int ASYNC_WAIT_CTX_set_callback(ASYNC_WAIT_CTX *ctx,
+                                ASYNC_callback_fn callback,
+                                void *callback_arg)
+{
+      if (ctx == NULL)
+          return 0;
+
+      ctx->callback = callback;
+      ctx->callback_arg = callback_arg;
+      return 1;
+}
+
+int ASYNC_WAIT_CTX_get_callback(ASYNC_WAIT_CTX *ctx,
+                                ASYNC_callback_fn *callback,
+                                void **callback_arg)
+{
+      if (ctx->callback == NULL)
+          return 0;
+
+      *callback = ctx->callback;
+      *callback_arg = ctx->callback_arg;
+      return 1;
+}
+
+int ASYNC_WAIT_CTX_set_status(ASYNC_WAIT_CTX *ctx, int status)
+{
+      ctx->status = status;
+      return 1;
+}
+
+int ASYNC_WAIT_CTX_get_status(ASYNC_WAIT_CTX *ctx)
+{
+      return ctx->status;
 }
 
 void async_wait_ctx_reset_counts(ASYNC_WAIT_CTX *ctx)

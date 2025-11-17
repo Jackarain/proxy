@@ -1,7 +1,7 @@
 /*
- * Copyright 2017-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2017-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -27,12 +27,7 @@
 #include <string.h>
 #include <openssl/crypto.h>
 
-#include "internal/siphash.h"
-#include "siphash_local.h"
-
-/* default: SipHash-2-4 */
-#define SIPHASH_C_ROUNDS 2
-#define SIPHASH_D_ROUNDS 4
+#include "crypto/siphash.h"
 
 #define ROTL(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))
 
@@ -100,12 +95,12 @@ int SipHash_set_hash_size(SIPHASH *ctx, size_t hash_size)
      */
 
     /* Start by adjusting the stored size, to make things easier */
-    ctx->hash_size = siphash_adjust_hash_size(ctx->hash_size);
+    ctx->hash_size = (unsigned int)siphash_adjust_hash_size(ctx->hash_size);
 
     /* Now, adjust ctx->v1 if the old and the new size differ */
     if ((size_t)ctx->hash_size != hash_size) {
         ctx->v1 ^= 0xee;
-        ctx->hash_size = hash_size;
+        ctx->hash_size = (unsigned int)hash_size;
     }
     return 1;
 }
@@ -117,7 +112,7 @@ int SipHash_Init(SIPHASH *ctx, const unsigned char *k, int crounds, int drounds)
     uint64_t k1 = U8TO64_LE(k + 8);
 
     /* If the hash size wasn't set, i.e. is zero */
-    ctx->hash_size = siphash_adjust_hash_size(ctx->hash_size);
+    ctx->hash_size = (unsigned int)siphash_adjust_hash_size(ctx->hash_size);
 
     if (drounds == 0)
         drounds = SIPHASH_D_ROUNDS;
@@ -146,7 +141,7 @@ void SipHash_Update(SIPHASH *ctx, const unsigned char *in, size_t inlen)
     uint64_t m;
     const uint8_t *end;
     int left;
-    int i;
+    unsigned int i;
     uint64_t v0 = ctx->v0;
     uint64_t v1 = ctx->v1;
     uint64_t v2 = ctx->v2;
@@ -161,7 +156,7 @@ void SipHash_Update(SIPHASH *ctx, const unsigned char *in, size_t inlen)
         /* not enough to fill leavings */
         if (inlen < available) {
             memcpy(&ctx->leavings[ctx->len], in, inlen);
-            ctx->len += inlen;
+            ctx->len += (unsigned int)inlen;
             return;
         }
 
@@ -202,35 +197,35 @@ void SipHash_Update(SIPHASH *ctx, const unsigned char *in, size_t inlen)
 int SipHash_Final(SIPHASH *ctx, unsigned char *out, size_t outlen)
 {
     /* finalize hash */
-    int i;
+    unsigned int i;
     uint64_t b = ctx->total_inlen << 56;
     uint64_t v0 = ctx->v0;
     uint64_t v1 = ctx->v1;
     uint64_t v2 = ctx->v2;
     uint64_t v3 = ctx->v3;
 
-    if (outlen != (size_t)ctx->hash_size)
+    if (ctx->crounds == 0 || outlen == 0 || outlen != (size_t)ctx->hash_size)
         return 0;
 
     switch (ctx->len) {
     case 7:
         b |= ((uint64_t)ctx->leavings[6]) << 48;
-        /* fall thru */
+        /* fall through */
     case 6:
         b |= ((uint64_t)ctx->leavings[5]) << 40;
-        /* fall thru */
+        /* fall through */
     case 5:
         b |= ((uint64_t)ctx->leavings[4]) << 32;
-        /* fall thru */
+        /* fall through */
     case 4:
         b |= ((uint64_t)ctx->leavings[3]) << 24;
-        /* fall thru */
+        /* fall through */
     case 3:
         b |= ((uint64_t)ctx->leavings[2]) << 16;
-        /* fall thru */
+        /* fall through */
     case 2:
         b |= ((uint64_t)ctx->leavings[1]) <<  8;
-        /* fall thru */
+        /* fall through */
     case 1:
         b |= ((uint64_t)ctx->leavings[0]);
     case 0:

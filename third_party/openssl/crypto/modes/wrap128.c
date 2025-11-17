@@ -1,7 +1,7 @@
 /*
- * Copyright 2013-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2013-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -196,7 +196,7 @@ size_t CRYPTO_128_wrap_pad(void *key, const unsigned char *icv,
     const size_t padding_len = padded_len - inlen;
     /* RFC 5649 section 3: Alternative Initial Value */
     unsigned char aiv[8];
-    int ret;
+    size_t ret;
 
     /* Section 1: use 32-bit fixed field for plaintext octet length */
     if (inlen == 0 || inlen >= CRYPTO128_WRAP_MAX)

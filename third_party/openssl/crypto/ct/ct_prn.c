@@ -1,7 +1,7 @@
 /*
- * Copyright 2016 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -14,7 +14,7 @@
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 
-#include "ct_locl.h"
+#include "ct_local.h"
 
 static void SCT_signature_algorithms_print(const SCT *sct, BIO *out)
 {
@@ -82,7 +82,7 @@ void SCT_print(const SCT *sct, BIO *out, int indent,
 
     if (sct->version != SCT_VERSION_V1) {
         BIO_printf(out, "unknown\n%*s", indent + 16, "");
-        BIO_hex_string(out, indent + 16, 16, sct->sct, sct->sct_len);
+        BIO_hex_string(out, indent + 16, 16, sct->sct, (int)sct->sct_len);
         return;
     }
 
@@ -94,7 +94,7 @@ void SCT_print(const SCT *sct, BIO *out, int indent,
     }
 
     BIO_printf(out, "\n%*sLog ID    : ", indent + 4, "");
-    BIO_hex_string(out, indent + 16, 16, sct->log_id, sct->log_id_len);
+    BIO_hex_string(out, indent + 16, 16, sct->log_id, (int)sct->log_id_len);
 
     BIO_printf(out, "\n%*sTimestamp : ", indent + 4, "");
     timestamp_print(sct->timestamp, out);
@@ -103,12 +103,12 @@ void SCT_print(const SCT *sct, BIO *out, int indent,
     if (sct->ext_len == 0)
         BIO_printf(out, "none");
     else
-        BIO_hex_string(out, indent + 16, 16, sct->ext, sct->ext_len);
+        BIO_hex_string(out, indent + 16, 16, sct->ext, (int)sct->ext_len);
 
     BIO_printf(out, "\n%*sSignature : ", indent + 4, "");
     SCT_signature_algorithms_print(sct, out);
     BIO_printf(out, "\n%*s            ", indent + 4, "");
-    BIO_hex_string(out, indent + 16, 16, sct->sig, sct->sig_len);
+    BIO_hex_string(out, indent + 16, 16, sct->sig, (int)sct->sig_len);
 }
 
 void SCT_LIST_print(const STACK_OF(SCT) *sct_list, BIO *out, int indent,

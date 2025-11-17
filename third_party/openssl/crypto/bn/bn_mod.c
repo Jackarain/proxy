@@ -1,14 +1,15 @@
 /*
- * Copyright 1998-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1998-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
 
 #include "internal/cryptlib.h"
-#include "bn_lcl.h"
+#include "internal/nelem.h"
+#include "bn_local.h"
 
 int BN_nnmod(BIGNUM *r, const BIGNUM *m, const BIGNUM *d, BN_CTX *ctx)
 {
@@ -16,6 +17,11 @@ int BN_nnmod(BIGNUM *r, const BIGNUM *m, const BIGNUM *d, BN_CTX *ctx)
      * like BN_mod, but returns non-negative remainder (i.e., 0 <= r < |d|
      * always holds)
      */
+
+    if (r == d) {
+        ERR_raise(ERR_LIB_BN, ERR_R_PASSED_INVALID_ARGUMENT);
+        return 0;
+    }
 
     if (!(BN_mod(r, m, d, ctx)))
         return 0;
@@ -53,12 +59,14 @@ int bn_mod_add_fixed_top(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
     BN_ULONG carry, temp, mask, *rp, *tp = storage;
     const BN_ULONG *ap, *bp;
 
-    if (bn_wexpand(r, mtop) == NULL)
+    if (bn_wexpand(r, (int)mtop) == NULL)
         return 0;
 
-    if (mtop > sizeof(storage) / sizeof(storage[0])
-        && (tp = OPENSSL_malloc(mtop * sizeof(BN_ULONG))) == NULL)
-        return 0;
+    if (mtop > OSSL_NELEM(storage)) {
+        tp = OPENSSL_malloc_array(mtop, sizeof(BN_ULONG));
+        if (tp == NULL)
+            return 0;
+    }
 
     ap = a->d != NULL ? a->d : tp;
     bp = b->d != NULL ? b->d : tp;
@@ -77,12 +85,12 @@ int bn_mod_add_fixed_top(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
         bi += (i - b->dmax) >> (8 * sizeof(i) - 1);
     }
     rp = r->d;
-    carry -= bn_sub_words(rp, tp, m->d, mtop);
+    carry -= bn_sub_words(rp, tp, m->d, (int)mtop);
     for (i = 0; i < mtop; i++) {
         rp[i] = (carry & tp[i]) | (~carry & rp[i]);
         ((volatile BN_ULONG *)tp)[i] = 0;
     }
-    r->top = mtop;
+    r->top = (int)mtop;
     r->flags |= BN_FLG_FIXED_TOP;
     r->neg = 0;
 
@@ -132,7 +140,7 @@ int bn_mod_sub_fixed_top(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
     BN_ULONG borrow, carry, ta, tb, mask, *rp;
     const BN_ULONG *ap, *bp;
 
-    if (bn_wexpand(r, mtop) == NULL)
+    if (bn_wexpand(r, (int)mtop) == NULL)
         return 0;
 
     rp = r->d;
@@ -168,7 +176,7 @@ int bn_mod_sub_fixed_top(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
         carry += (rp[i] < ta);
     }
 
-    r->top = mtop;
+    r->top = (int)mtop;
     r->flags |= BN_FLG_FIXED_TOP;
     r->neg = 0;
 
@@ -182,6 +190,11 @@ int bn_mod_sub_fixed_top(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
 int BN_mod_sub_quick(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
                      const BIGNUM *m)
 {
+    if (r == m) {
+        ERR_raise(ERR_LIB_BN, ERR_R_PASSED_INVALID_ARGUMENT);
+        return 0;
+    }
+
     if (!BN_sub(r, a, b))
         return 0;
     if (r->neg)
@@ -291,7 +304,7 @@ int BN_mod_lshift_quick(BIGNUM *r, const BIGNUM *a, int n, const BIGNUM *m)
         /* max_shift >= 0 */
 
         if (max_shift < 0) {
-            BNerr(BN_F_BN_MOD_LSHIFT_QUICK, BN_R_INPUT_NOT_REDUCED);
+            ERR_raise(ERR_LIB_BN, BN_R_INPUT_NOT_REDUCED);
             return 0;
         }
 

@@ -1,7 +1,7 @@
 /*
- * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -11,15 +11,15 @@
 #include <limits.h>
 #include "internal/cryptlib.h"
 #include <openssl/evp.h>
-#include "evp_locl.h"
-#include "internal/evp_int.h"
+#include "crypto/evp.h"
+#include "evp_local.h"
 
 static unsigned char conv_ascii2bin(unsigned char a,
                                     const unsigned char *table);
 static int evp_encodeblock_int(EVP_ENCODE_CTX *ctx, unsigned char *t,
                                const unsigned char *f, int dlen);
 static int evp_decodeblock_int(EVP_ENCODE_CTX *ctx, unsigned char *t,
-                               const unsigned char *f, int n);
+                               const unsigned char *f, int n, int eof);
 
 #ifndef CHARSET_EBCDIC
 # define conv_bin2ascii(a, table)       ((table)[(a)&0x3f])
@@ -134,7 +134,7 @@ void EVP_ENCODE_CTX_free(EVP_ENCODE_CTX *ctx)
     OPENSSL_free(ctx);
 }
 
-int EVP_ENCODE_CTX_copy(EVP_ENCODE_CTX *dctx, EVP_ENCODE_CTX *sctx)
+int EVP_ENCODE_CTX_copy(EVP_ENCODE_CTX *dctx, const EVP_ENCODE_CTX *sctx)
 {
     memcpy(dctx, sctx, sizeof(EVP_ENCODE_CTX));
 
@@ -209,7 +209,7 @@ int EVP_EncodeUpdate(EVP_ENCODE_CTX *ctx, unsigned char *out, int *outl,
     if (inl != 0)
         memcpy(&(ctx->enc_data[0]), in, inl);
     ctx->num = inl;
-    *outl = total;
+    *outl = (int)total;
 
     return 1;
 }
@@ -369,14 +369,14 @@ int EVP_DecodeUpdate(EVP_ENCODE_CTX *ctx, unsigned char *out, int *outl,
         }
 
         if (n == 64) {
-            decoded_len = evp_decodeblock_int(ctx, out, d, n);
+            decoded_len = evp_decodeblock_int(ctx, out, d, n, eof);
             n = 0;
-            if (decoded_len < 0 || eof > decoded_len) {
+            if (decoded_len < 0 || (decoded_len == 0 && eof > 0)) {
                 rv = -1;
                 goto end;
             }
-            ret += decoded_len - eof;
-            out += decoded_len - eof;
+            ret += decoded_len;
+            out += decoded_len;
         }
     }
 
@@ -388,13 +388,13 @@ int EVP_DecodeUpdate(EVP_ENCODE_CTX *ctx, unsigned char *out, int *outl,
 tail:
     if (n > 0) {
         if ((n & 3) == 0) {
-            decoded_len = evp_decodeblock_int(ctx, out, d, n);
+            decoded_len = evp_decodeblock_int(ctx, out, d, n, eof);
             n = 0;
-            if (decoded_len < 0 || eof > decoded_len) {
+            if (decoded_len < 0 || (decoded_len == 0 && eof > 0)) {
                 rv = -1;
                 goto end;
             }
-            ret += (decoded_len - eof);
+            ret += decoded_len;
         } else if (seof) {
             /* EOF in the middle of a base64 block. */
             rv = -1;
@@ -411,19 +411,23 @@ end:
 }
 
 static int evp_decodeblock_int(EVP_ENCODE_CTX *ctx, unsigned char *t,
-                               const unsigned char *f, int n)
+                               const unsigned char *f, int n,
+                               int eof)
 {
     int i, ret = 0, a, b, c, d;
     unsigned long l;
     const unsigned char *table;
+
+    if (eof < -1 || eof > 2)
+        return -1;
 
     if (ctx != NULL && (ctx->flags & EVP_ENCODE_CTX_USE_SRP_ALPHABET) != 0)
         table = srpdata_ascii2bin;
     else
         table = data_ascii2bin;
 
-    /* trim white space from the start of the line. */
-    while ((conv_ascii2bin(*f, table) == B64_WS) && (n > 0)) {
+    /* trim whitespace from the start of the line. */
+    while ((n > 0) && (conv_ascii2bin(*f, table) == B64_WS)) {
         f++;
         n--;
     }
@@ -437,13 +441,16 @@ static int evp_decodeblock_int(EVP_ENCODE_CTX *ctx, unsigned char *t,
 
     if (n % 4 != 0)
         return -1;
+    if (n == 0)
+        return 0;
 
-    for (i = 0; i < n; i += 4) {
+    /* all 4-byte blocks except the last one do not have padding. */
+    for (i = 0; i < n - 4; i += 4) {
         a = conv_ascii2bin(*(f++), table);
         b = conv_ascii2bin(*(f++), table);
         c = conv_ascii2bin(*(f++), table);
         d = conv_ascii2bin(*(f++), table);
-        if ((a & 0x80) || (b & 0x80) || (c & 0x80) || (d & 0x80))
+        if ((a | b | c | d) & 0x80)
             return -1;
         l = ((((unsigned long)a) << 18L) |
              (((unsigned long)b) << 12L) |
@@ -453,12 +460,43 @@ static int evp_decodeblock_int(EVP_ENCODE_CTX *ctx, unsigned char *t,
         *(t++) = (unsigned char)(l) & 0xff;
         ret += 3;
     }
+
+    /* process the last block that may have padding. */
+    a = conv_ascii2bin(*(f++), table);
+    b = conv_ascii2bin(*(f++), table);
+    c = conv_ascii2bin(*(f++), table);
+    d = conv_ascii2bin(*(f++), table);
+    if ((a | b | c | d) & 0x80)
+        return -1;
+    l = ((((unsigned long)a) << 18L) |
+         (((unsigned long)b) << 12L) |
+         (((unsigned long)c) << 6L) | (((unsigned long)d)));
+
+    if (eof == -1)
+        eof = (f[2] == '=') + (f[3] == '=');
+
+    switch (eof) {
+    case 2:
+        *(t++) = (unsigned char)(l >> 16L) & 0xff;
+        break;
+    case 1:
+        *(t++) = (unsigned char)(l >> 16L) & 0xff;
+        *(t++) = (unsigned char)(l >> 8L) & 0xff;
+        break;
+    case 0:
+        *(t++) = (unsigned char)(l >> 16L) & 0xff;
+        *(t++) = (unsigned char)(l >> 8L) & 0xff;
+        *(t++) = (unsigned char)(l) & 0xff;
+        break;
+    }
+    ret += 3 - eof;
+
     return ret;
 }
 
 int EVP_DecodeBlock(unsigned char *t, const unsigned char *f, int n)
 {
-    return evp_decodeblock_int(NULL, t, f, n);
+    return evp_decodeblock_int(NULL, t, f, n, 0);
 }
 
 int EVP_DecodeFinal(EVP_ENCODE_CTX *ctx, unsigned char *out, int *outl)
@@ -467,7 +505,7 @@ int EVP_DecodeFinal(EVP_ENCODE_CTX *ctx, unsigned char *out, int *outl)
 
     *outl = 0;
     if (ctx->num != 0) {
-        i = evp_decodeblock_int(ctx, out, ctx->enc_data, ctx->num);
+        i = evp_decodeblock_int(ctx, out, ctx->enc_data, ctx->num, -1);
         if (i < 0)
             return -1;
         ctx->num = 0;

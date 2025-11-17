@@ -1,8 +1,8 @@
 /*
- * Copyright 2002-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2002-2025 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -12,9 +12,10 @@
 #include <limits.h>
 #include <stdio.h>
 #include "internal/cryptlib.h"
-#include "bn_lcl.h"
+#include "bn_local.h"
 
 #ifndef OPENSSL_NO_EC2M
+# include <openssl/ec.h>
 
 /*
  * Maximum number of iterations before BN_GF2m_mod_solve_quad_arr should
@@ -297,7 +298,7 @@ int BN_GF2m_mod_arr(BIGNUM *r, const BIGNUM *a, const int p[])
 
     bn_check_top(a);
 
-    if (!p[0]) {
+    if (p[0] == 0) {
         /* reduction mod 1 => return 0 */
         BN_zero(r);
         return 1;
@@ -343,7 +344,7 @@ int BN_GF2m_mod_arr(BIGNUM *r, const BIGNUM *a, const int p[])
         d0 = p[0] % BN_BITS2;
         d1 = BN_BITS2 - d0;
         z[j - n] ^= (zz >> d0);
-        if (d0)
+        if (ossl_likely(d0))
             z[j - n - 1] ^= (zz << d1);
     }
 
@@ -357,7 +358,7 @@ int BN_GF2m_mod_arr(BIGNUM *r, const BIGNUM *a, const int p[])
         d1 = BN_BITS2 - d0;
 
         /* clear up the top d1 bits */
-        if (d0)
+        if (ossl_likely(d0))
             z[dN] = (z[dN] << d1) >> d1;
         else
             z[dN] = 0;
@@ -395,7 +396,7 @@ int BN_GF2m_mod(BIGNUM *r, const BIGNUM *a, const BIGNUM *p)
     bn_check_top(p);
     ret = BN_GF2m_poly2arr(p, arr, OSSL_NELEM(arr));
     if (!ret || ret > (int)OSSL_NELEM(arr)) {
-        BNerr(BN_F_BN_GF2M_MOD, BN_R_INVALID_LENGTH);
+        ERR_raise(ERR_LIB_BN, BN_R_INVALID_LENGTH);
         return 0;
     }
     ret = BN_GF2m_mod_arr(r, a, arr);
@@ -467,15 +468,18 @@ int BN_GF2m_mod_mul(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
 {
     int ret = 0;
     const int max = BN_num_bits(p) + 1;
-    int *arr = NULL;
+    int *arr;
+
     bn_check_top(a);
     bn_check_top(b);
     bn_check_top(p);
-    if ((arr = OPENSSL_malloc(sizeof(*arr) * max)) == NULL)
-        goto err;
+
+    arr = OPENSSL_malloc_array(max, sizeof(*arr));
+    if (arr == NULL)
+        return 0;
     ret = BN_GF2m_poly2arr(p, arr, max);
     if (!ret || ret > max) {
-        BNerr(BN_F_BN_GF2M_MOD_MUL, BN_R_INVALID_LENGTH);
+        ERR_raise(ERR_LIB_BN, BN_R_INVALID_LENGTH);
         goto err;
     }
     ret = BN_GF2m_mod_mul_arr(r, a, b, arr, ctx);
@@ -525,15 +529,17 @@ int BN_GF2m_mod_sqr(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 {
     int ret = 0;
     const int max = BN_num_bits(p) + 1;
-    int *arr = NULL;
+    int *arr;
 
     bn_check_top(a);
     bn_check_top(p);
-    if ((arr = OPENSSL_malloc(sizeof(*arr) * max)) == NULL)
-        goto err;
+
+    arr = OPENSSL_malloc_array(max, sizeof(*arr));
+    if (arr == NULL)
+        return 0;
     ret = BN_GF2m_poly2arr(p, arr, max);
     if (!ret || ret > max) {
-        BNerr(BN_F_BN_GF2M_MOD_SQR, BN_R_INVALID_LENGTH);
+        ERR_raise(ERR_LIB_BN, BN_R_INVALID_LENGTH);
         goto err;
     }
     ret = BN_GF2m_mod_sqr_arr(r, a, arr, ctx);
@@ -706,8 +712,8 @@ static int BN_GF2m_mod_inv_vartime(BIGNUM *r, const BIGNUM *a,
     ret = 1;
 
  err:
-# ifdef BN_DEBUG                /* BN_CTX_end would complain about the
-                                 * expanded form */
+# ifdef BN_DEBUG
+    /* BN_CTX_end would complain about the expanded form */
     bn_correct_top(c);
     bn_correct_top(u);
     bn_correct_top(v);
@@ -725,15 +731,21 @@ int BN_GF2m_mod_inv(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 {
     BIGNUM *b = NULL;
     int ret = 0;
+    int numbits;
 
     BN_CTX_start(ctx);
     if ((b = BN_CTX_get(ctx)) == NULL)
         goto err;
 
+    /* Fail on a non-sensical input p value */
+    numbits = BN_num_bits(p);
+    if (numbits <= 1)
+        goto err;
+
     /* generate blinding value */
     do {
-        if (!BN_priv_rand(b, BN_num_bits(p) - 1,
-                          BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY))
+        if (!BN_priv_rand_ex(b, numbits - 1,
+                             BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, ctx))
             goto err;
     } while (BN_is_zero(b));
 
@@ -899,15 +911,18 @@ int BN_GF2m_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
 {
     int ret = 0;
     const int max = BN_num_bits(p) + 1;
-    int *arr = NULL;
+    int *arr;
+
     bn_check_top(a);
     bn_check_top(b);
     bn_check_top(p);
-    if ((arr = OPENSSL_malloc(sizeof(*arr) * max)) == NULL)
-        goto err;
+
+    arr = OPENSSL_malloc_array(max, sizeof(*arr));
+    if (arr == NULL)
+        return 0;
     ret = BN_GF2m_poly2arr(p, arr, max);
     if (!ret || ret > max) {
-        BNerr(BN_F_BN_GF2M_MOD_EXP, BN_R_INVALID_LENGTH);
+        ERR_raise(ERR_LIB_BN, BN_R_INVALID_LENGTH);
         goto err;
     }
     ret = BN_GF2m_mod_exp_arr(r, a, b, arr, ctx);
@@ -929,7 +944,7 @@ int BN_GF2m_mod_sqrt_arr(BIGNUM *r, const BIGNUM *a, const int p[],
 
     bn_check_top(a);
 
-    if (!p[0]) {
+    if (p[0] == 0) {
         /* reduction mod 1 => return 0 */
         BN_zero(r);
         return 1;
@@ -959,14 +974,17 @@ int BN_GF2m_mod_sqrt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)
 {
     int ret = 0;
     const int max = BN_num_bits(p) + 1;
-    int *arr = NULL;
+    int *arr;
+
     bn_check_top(a);
     bn_check_top(p);
-    if ((arr = OPENSSL_malloc(sizeof(*arr) * max)) == NULL)
-        goto err;
+
+    arr = OPENSSL_malloc_array(max, sizeof(*arr));
+    if (arr == NULL)
+        return 0;
     ret = BN_GF2m_poly2arr(p, arr, max);
     if (!ret || ret > max) {
-        BNerr(BN_F_BN_GF2M_MOD_SQRT, BN_R_INVALID_LENGTH);
+        ERR_raise(ERR_LIB_BN, BN_R_INVALID_LENGTH);
         goto err;
     }
     ret = BN_GF2m_mod_sqrt_arr(r, a, arr, ctx);
@@ -988,7 +1006,7 @@ int BN_GF2m_mod_solve_quad_arr(BIGNUM *r, const BIGNUM *a_, const int p[],
 
     bn_check_top(a_);
 
-    if (!p[0]) {
+    if (p[0] == 0) {
         /* reduction mod 1 => return 0 */
         BN_zero(r);
         return 1;
@@ -1031,7 +1049,8 @@ int BN_GF2m_mod_solve_quad_arr(BIGNUM *r, const BIGNUM *a_, const int p[],
         if (tmp == NULL)
             goto err;
         do {
-            if (!BN_priv_rand(rho, p[0], BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY))
+            if (!BN_priv_rand_ex(rho, p[0], BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY,
+                                 0, ctx))
                 goto err;
             if (!BN_GF2m_mod_arr(rho, rho, p))
                 goto err;
@@ -1053,7 +1072,7 @@ int BN_GF2m_mod_solve_quad_arr(BIGNUM *r, const BIGNUM *a_, const int p[],
             count++;
         } while (BN_is_zero(w) && (count < MAX_ITERATIONS));
         if (BN_is_zero(w)) {
-            BNerr(BN_F_BN_GF2M_MOD_SOLVE_QUAD_ARR, BN_R_TOO_MANY_ITERATIONS);
+            ERR_raise(ERR_LIB_BN, BN_R_TOO_MANY_ITERATIONS);
             goto err;
         }
     }
@@ -1063,7 +1082,7 @@ int BN_GF2m_mod_solve_quad_arr(BIGNUM *r, const BIGNUM *a_, const int p[],
     if (!BN_GF2m_add(w, z, w))
         goto err;
     if (BN_GF2m_cmp(w, a)) {
-        BNerr(BN_F_BN_GF2M_MOD_SOLVE_QUAD_ARR, BN_R_NO_SOLUTION);
+        ERR_raise(ERR_LIB_BN, BN_R_NO_SOLUTION);
         goto err;
     }
 
@@ -1089,14 +1108,17 @@ int BN_GF2m_mod_solve_quad(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 {
     int ret = 0;
     const int max = BN_num_bits(p) + 1;
-    int *arr = NULL;
+    int *arr;
+
     bn_check_top(a);
     bn_check_top(p);
-    if ((arr = OPENSSL_malloc(sizeof(*arr) * max)) == NULL)
+
+    arr = OPENSSL_malloc_array(max, sizeof(*arr));
+    if (arr == NULL)
         goto err;
     ret = BN_GF2m_poly2arr(p, arr, max);
     if (!ret || ret > max) {
-        BNerr(BN_F_BN_GF2M_MOD_SOLVE_QUAD, BN_R_INVALID_LENGTH);
+        ERR_raise(ERR_LIB_BN, BN_R_INVALID_LENGTH);
         goto err;
     }
     ret = BN_GF2m_mod_solve_quad_arr(r, a, arr, ctx);
@@ -1109,16 +1131,26 @@ int BN_GF2m_mod_solve_quad(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 /*
  * Convert the bit-string representation of a polynomial ( \sum_{i=0}^n a_i *
  * x^i) into an array of integers corresponding to the bits with non-zero
- * coefficient.  Array is terminated with -1. Up to max elements of the array
- * will be filled.  Return value is total number of array elements that would
- * be filled if array was large enough.
+ * coefficient.  The array is intended to be suitable for use with
+ * `BN_GF2m_mod_arr()`, and so the constant term of the polynomial must not be
+ * zero.  This translates to a requirement that the input BIGNUM `a` is odd.
+ *
+ * Given sufficient room, the array is terminated with -1.  Up to max elements
+ * of the array will be filled.
+ *
+ * The return value is total number of array elements that would be filled if
+ * array was large enough, including the terminating `-1`.  It is `0` when `a`
+ * is not odd or the constant term is zero contrary to requirement.
+ *
+ * The return value is also `0` when the leading exponent exceeds
+ * `OPENSSL_ECC_MAX_FIELD_BITS`, this guards against CPU exhaustion attacks,
  */
 int BN_GF2m_poly2arr(const BIGNUM *a, int p[], int max)
 {
     int i, j, k = 0;
     BN_ULONG mask;
 
-    if (BN_is_zero(a))
+    if (!BN_is_odd(a))
         return 0;
 
     for (i = a->top - 1; i >= 0; i--) {
@@ -1136,12 +1168,13 @@ int BN_GF2m_poly2arr(const BIGNUM *a, int p[], int max)
         }
     }
 
-    if (k < max) {
-        p[k] = -1;
-        k++;
-    }
+    if (k > 0 && p[0] > OPENSSL_ECC_MAX_FIELD_BITS)
+        return 0;
 
-    return k;
+    if (k < max)
+        p[k] = -1;
+
+    return k + 1;
 }
 
 /*

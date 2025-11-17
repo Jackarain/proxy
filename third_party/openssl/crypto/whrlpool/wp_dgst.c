@@ -1,7 +1,7 @@
 /*
- * Copyright 2005-2016 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2005-2023 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -52,8 +52,14 @@
  * input. This is done for performance.
  */
 
+/*
+ * Whirlpool low level APIs are deprecated for public use, but still ok for
+ * internal use.
+ */
+#include "internal/deprecated.h"
+
 #include <openssl/crypto.h>
-#include "wp_locl.h"
+#include "wp_local.h"
 #include <string.h>
 
 int WHIRLPOOL_Init(WHIRLPOOL_CTX *c)
@@ -114,7 +120,7 @@ void WHIRLPOOL_BitUpdate(WHIRLPOOL_CTX *c, const void *_inp, size_t bits)
             } else {
                 unsigned int byteoff = bitoff / 8;
 
-                bitrem = WHIRLPOOL_BBLOCK - bitoff; /* re-use bitrem */
+                bitrem = WHIRLPOOL_BBLOCK - bitoff; /* reuse bitrem */
                 if (bits >= bitrem) {
                     bits -= bitrem;
                     bitrem /= 8;

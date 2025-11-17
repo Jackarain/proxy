@@ -1,7 +1,7 @@
 /*
- * Copyright 2000-2016 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2000-2023 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -10,7 +10,7 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/ocsp.h>
-#include "ocsp_lcl.h"
+#include "ocsp_local.h"
 #include "internal/cryptlib.h"
 #include <openssl/pem.h>
 
@@ -79,7 +79,9 @@ const char *OCSP_crl_reason_str(long s)
         {OCSP_REVOKED_STATUS_SUPERSEDED, "superseded"},
         {OCSP_REVOKED_STATUS_CESSATIONOFOPERATION, "cessationOfOperation"},
         {OCSP_REVOKED_STATUS_CERTIFICATEHOLD, "certificateHold"},
-        {OCSP_REVOKED_STATUS_REMOVEFROMCRL, "removeFromCRL"}
+        {OCSP_REVOKED_STATUS_REMOVEFROMCRL, "removeFromCRL"},
+        {OCSP_REVOKED_STATUS_PRIVILEGEWITHDRAWN, "privilegeWithdrawn"},
+        {OCSP_REVOKED_STATUS_AACOMPROMISE, "aACompromise"}
     };
     return table2string(s, reason_tbl);
 }

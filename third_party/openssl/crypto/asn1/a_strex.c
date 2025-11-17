@@ -1,7 +1,7 @@
 /*
- * Copyright 2000-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2000-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -10,7 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "internal/cryptlib.h"
-#include "internal/asn1_int.h"
+#include "internal/sizes.h"
+#include "crypto/asn1.h"
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
 #include <openssl/asn1.h>
@@ -32,7 +33,7 @@
                   ASN1_STRFLGS_ESC_MSB)
 
 /*
- * Three IO functions for sending data to memory, a BIO and and a FILE
+ * Three IO functions for sending data to memory, a BIO and a FILE
  * pointer.
  */
 static int send_bio_chars(void *arg, const void *buf, int len)
@@ -152,13 +153,13 @@ static int do_buf(unsigned char *buf, int buflen,
     switch (charwidth) {
     case 4:
         if (buflen & 3) {
-            ASN1err(ASN1_F_DO_BUF, ASN1_R_INVALID_UNIVERSALSTRING_LENGTH);
+            ERR_raise(ERR_LIB_ASN1, ASN1_R_INVALID_UNIVERSALSTRING_LENGTH);
             return -1;
         }
         break;
     case 2:
         if (buflen & 1) {
-            ASN1err(ASN1_F_DO_BUF, ASN1_R_INVALID_BMPSTRING_LENGTH);
+            ERR_raise(ERR_LIB_ASN1, ASN1_R_INVALID_BMPSTRING_LENGTH);
             return -1;
         }
         break;
@@ -234,15 +235,14 @@ static int do_buf(unsigned char *buf, int buflen,
 static int do_hex_dump(char_io *io_ch, void *arg, unsigned char *buf,
                        int buflen)
 {
-    static const char hexdig[] = "0123456789ABCDEF";
     unsigned char *p, *q;
     char hextmp[2];
+
     if (arg) {
         p = buf;
         q = buf + buflen;
         while (p != q) {
-            hextmp[0] = hexdig[*p >> 4];
-            hextmp[1] = hexdig[*p & 0xf];
+            ossl_to_hex(hextmp, *p);
             if (!io_ch(arg, hextmp, 2))
                 return -1;
             p++;
@@ -280,10 +280,10 @@ static int do_dump(unsigned long lflags, char_io *io_ch, void *arg,
     t.type = str->type;
     t.value.ptr = (char *)str;
     der_len = i2d_ASN1_TYPE(&t, NULL);
-    if ((der_buf = OPENSSL_malloc(der_len)) == NULL) {
-        ASN1err(ASN1_F_DO_DUMP, ERR_R_MALLOC_FAILURE);
+    if (der_len <= 0)
         return -1;
-    }
+    if ((der_buf = OPENSSL_malloc(der_len)) == NULL)
+        return -1;
     p = der_buf;
     i2d_ASN1_TYPE(&t, &p);
     outlen = do_hex_dump(io_ch, arg, der_buf, der_len);
@@ -343,8 +343,10 @@ static int do_print_ex(char_io *io_ch, void *arg, unsigned long lflags,
 
     if (lflags & ASN1_STRFLGS_SHOW_TYPE) {
         const char *tagname;
+
         tagname = ASN1_tag2str(type);
-        outlen += strlen(tagname);
+        /* We can directly cast here as tagname will never be too large. */
+        outlen += (int)strlen(tagname);
         if (!io_ch(arg, tagname, outlen) || !io_ch(arg, ":", 1))
             return -1;
         outlen++;
@@ -370,7 +372,7 @@ static int do_print_ex(char_io *io_ch, void *arg, unsigned long lflags,
 
     if (type == -1) {
         len = do_dump(lflags, io_ch, arg, str);
-        if (len < 0)
+        if (len < 0 || len > INT_MAX - outlen)
             return -1;
         outlen += len;
         return outlen;
@@ -389,7 +391,7 @@ static int do_print_ex(char_io *io_ch, void *arg, unsigned long lflags,
     }
 
     len = do_buf(str->data, str->length, type, flags, &quotes, io_ch, NULL);
-    if (len < 0)
+    if (len < 0 || len > INT_MAX - 2 - outlen)
         return -1;
     outlen += len;
     if (quotes)
@@ -525,7 +527,7 @@ static int do_name_ex(char_io *io_ch, void *arg, const X509_NAME *n,
                     objbuf = "";
                 }
             }
-            objlen = strlen(objbuf);
+            objlen = (int)strlen(objbuf);
             if (!io_ch(arg, objbuf, objlen))
                 return -1;
             if ((objlen < fld_len) && (flags & XN_FLAG_FN_ALIGN)) {

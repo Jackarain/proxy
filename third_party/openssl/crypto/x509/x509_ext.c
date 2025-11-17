@@ -1,7 +1,7 @@
 /*
- * Copyright 1995-2017 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -13,7 +13,7 @@
 #include <openssl/objects.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
-#include "internal/x509_int.h"
+#include "crypto/x509.h"
 #include <openssl/x509v3.h>
 
 int X509_CRL_get_ext_count(const X509_CRL *x)
@@ -42,9 +42,21 @@ X509_EXTENSION *X509_CRL_get_ext(const X509_CRL *x, int loc)
     return X509v3_get_ext(x->crl.extensions, loc);
 }
 
+static X509_EXTENSION *delete_ext(STACK_OF(X509_EXTENSION) **sk, int loc)
+{
+    X509_EXTENSION *ret = X509v3_delete_ext(*sk, loc);
+
+    /* Empty extension lists are omitted. */
+    if (*sk != NULL && sk_X509_EXTENSION_num(*sk) == 0) {
+        sk_X509_EXTENSION_pop_free(*sk, X509_EXTENSION_free);
+        *sk = NULL;
+    }
+    return ret;
+}
+
 X509_EXTENSION *X509_CRL_delete_ext(X509_CRL *x, int loc)
 {
-    return X509v3_delete_ext(x->crl.extensions, loc);
+    return delete_ext(&x->crl.extensions, loc);
 }
 
 void *X509_CRL_get_ext_d2i(const X509_CRL *x, int nid, int *crit, int *idx)
@@ -91,7 +103,7 @@ X509_EXTENSION *X509_get_ext(const X509 *x, int loc)
 
 X509_EXTENSION *X509_delete_ext(X509 *x, int loc)
 {
-    return X509v3_delete_ext(x->cert_info.extensions, loc);
+    return delete_ext(&x->cert_info.extensions, loc);
 }
 
 int X509_add_ext(X509 *x, X509_EXTENSION *ex, int loc)
@@ -139,7 +151,7 @@ X509_EXTENSION *X509_REVOKED_get_ext(const X509_REVOKED *x, int loc)
 
 X509_EXTENSION *X509_REVOKED_delete_ext(X509_REVOKED *x, int loc)
 {
-    return X509v3_delete_ext(x->extensions, loc);
+    return delete_ext(&x->extensions, loc);
 }
 
 int X509_REVOKED_add_ext(X509_REVOKED *x, X509_EXTENSION *ex, int loc)

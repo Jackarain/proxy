@@ -1,22 +1,23 @@
 /*
- * Copyright 2008-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2008-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
 
 #include <stdio.h>
-#include "internal/ctype.h"
+#include "crypto/ctype.h"
 #include "internal/cryptlib.h"
 #include <openssl/rand.h>
 #include <openssl/x509.h>
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
-#include "internal/evp_int.h"
+#include <openssl/cms.h>
+#include "crypto/evp.h"
 #include "internal/bio.h"
-#include "asn1_locl.h"
+#include "asn1_local.h"
 
 /*
  * Generalised MIME like utilities for streaming ASN1. Although many have a
@@ -53,7 +54,7 @@ static int mime_param_cmp(const MIME_PARAM *const *a,
                           const MIME_PARAM *const *b);
 static void mime_param_free(MIME_PARAM *param);
 static int mime_bound_check(char *line, int linelen, const char *bound, int blen);
-static int multi_split(BIO *bio, const char *bound, STACK_OF(BIO) **ret);
+static int multi_split(BIO *bio, int flags, const char *bound, STACK_OF(BIO) **ret);
 static int strip_eol(char *linebuf, int *plen, int flags);
 static MIME_HEADER *mime_hdr_find(STACK_OF(MIME_HEADER) *hdrs, const char *name);
 static MIME_PARAM *mime_param_find(MIME_HEADER *hdr, const char *name);
@@ -64,18 +65,24 @@ static void mime_hdr_free(MIME_HEADER *hdr);
 
 /* Output an ASN1 structure in BER format streaming if necessary */
 
+/* unfortunately cannot constify this due to CMS_stream() and PKCS7_stream() */
 int i2d_ASN1_bio_stream(BIO *out, ASN1_VALUE *val, BIO *in, int flags,
                         const ASN1_ITEM *it)
 {
+    int rv = 1;
+
     /* If streaming create stream BIO and copy all content through it */
     if (flags & SMIME_STREAM) {
         BIO *bio, *tbio;
         bio = BIO_new_NDEF(out, val, it);
         if (!bio) {
-            ASN1err(ASN1_F_I2D_ASN1_BIO_STREAM, ERR_R_MALLOC_FAILURE);
+            ERR_raise(ERR_LIB_ASN1, ERR_R_BUF_LIB);
             return 0;
         }
-        SMIME_crlf_copy(in, bio, flags);
+        if (!SMIME_crlf_copy(in, bio, flags)) {
+            rv = 0;
+        }
+
         (void)BIO_flush(bio);
         /* Free up successive BIOs until we hit the old output BIO */
         do {
@@ -89,8 +96,8 @@ int i2d_ASN1_bio_stream(BIO *out, ASN1_VALUE *val, BIO *in, int flags,
      * internally
      */
     else
-        ASN1_item_i2d_bio(it, out, val);
-    return 1;
+        rv = ASN1_item_i2d_bio(it, out, val);
+    return rv;
 }
 
 /* Base 64 read and write of ASN1 structure */
@@ -102,7 +109,7 @@ static int B64_write_ASN1(BIO *out, ASN1_VALUE *val, BIO *in, int flags,
     int r;
     b64 = BIO_new(BIO_f_base64());
     if (b64 == NULL) {
-        ASN1err(ASN1_F_B64_WRITE_ASN1, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_ASN1, ERR_R_BIO_LIB);
         return 0;
     }
     /*
@@ -121,26 +128,25 @@ static int B64_write_ASN1(BIO *out, ASN1_VALUE *val, BIO *in, int flags,
 int PEM_write_bio_ASN1_stream(BIO *out, ASN1_VALUE *val, BIO *in, int flags,
                               const char *hdr, const ASN1_ITEM *it)
 {
-    int r;
-    BIO_printf(out, "-----BEGIN %s-----\n", hdr);
-    r = B64_write_ASN1(out, val, in, flags, it);
-    BIO_printf(out, "-----END %s-----\n", hdr);
-    return r;
+    return BIO_printf(out, "-----BEGIN %s-----\n", hdr) >= 0
+        && B64_write_ASN1(out, val, in, flags, it)
+        && BIO_printf(out, "-----END %s-----\n", hdr) >= 0;
 }
 
-static ASN1_VALUE *b64_read_asn1(BIO *bio, const ASN1_ITEM *it)
+static ASN1_VALUE *b64_read_asn1(BIO *bio, const ASN1_ITEM *it, ASN1_VALUE **x,
+                                 OSSL_LIB_CTX *libctx, const char *propq)
 {
     BIO *b64;
     ASN1_VALUE *val;
 
     if ((b64 = BIO_new(BIO_f_base64())) == NULL) {
-        ASN1err(ASN1_F_B64_READ_ASN1, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_ASN1, ERR_R_BIO_LIB);
         return 0;
     }
     bio = BIO_push(b64, bio);
-    val = ASN1_item_d2i_bio(it, bio, NULL);
+    val = ASN1_item_d2i_bio_ex(it, bio, x, libctx, propq);
     if (!val)
-        ASN1err(ASN1_F_B64_READ_ASN1, ASN1_R_DECODE_ERROR);
+        ERR_raise(ERR_LIB_ASN1, ASN1_R_DECODE_ERROR);
     (void)BIO_flush(bio);
     BIO_pop(bio);
     BIO_free(b64);
@@ -156,18 +162,33 @@ static int asn1_write_micalg(BIO *out, STACK_OF(X509_ALGOR) *mdalgs)
     have_unknown = 0;
     write_comma = 0;
     for (i = 0; i < sk_X509_ALGOR_num(mdalgs); i++) {
-        if (write_comma)
-            BIO_write(out, ",", 1);
+        if (write_comma && BIO_puts(out, ",") < 0)
+            goto err;
         write_comma = 1;
         md_nid = OBJ_obj2nid(sk_X509_ALGOR_value(mdalgs, i)->algorithm);
+
+        /* RFC 8702 does not define a micalg for SHAKE, assuming "shake-<bitlen>" */
+        if (md_nid == NID_shake128) {
+            if (BIO_puts(out, "shake-128") < 0)
+                goto err;
+            continue;
+        }
+        if (md_nid == NID_shake256) {
+            if (BIO_puts(out, "shake-256") < 0)
+                goto err;
+            continue;
+        }
+
         md = EVP_get_digestbynid(md_nid);
         if (md && md->md_ctrl) {
             int rv;
             char *micstr;
             rv = md->md_ctrl(NULL, EVP_MD_CTRL_MICALG, 0, &micstr);
             if (rv > 0) {
-                BIO_puts(out, micstr);
+                rv = BIO_puts(out, micstr);
                 OPENSSL_free(micstr);
+                if (rv < 0)
+                    goto err;
                 continue;
             }
             if (rv != -2)
@@ -175,34 +196,51 @@ static int asn1_write_micalg(BIO *out, STACK_OF(X509_ALGOR) *mdalgs)
         }
         switch (md_nid) {
         case NID_sha1:
-            BIO_puts(out, "sha1");
+            if (BIO_puts(out, "sha1") < 0)
+                goto err;
             break;
 
         case NID_md5:
-            BIO_puts(out, "md5");
+            if (BIO_puts(out, "md5") < 0)
+                goto err;
             break;
 
         case NID_sha256:
-            BIO_puts(out, "sha-256");
+            if (BIO_puts(out, "sha-256") < 0)
+                goto err;
             break;
 
         case NID_sha384:
-            BIO_puts(out, "sha-384");
+            if (BIO_puts(out, "sha-384") < 0)
+                goto err;
             break;
 
         case NID_sha512:
-            BIO_puts(out, "sha-512");
+            if (BIO_puts(out, "sha-512") < 0)
+                goto err;
             break;
 
         case NID_id_GostR3411_94:
-            BIO_puts(out, "gostr3411-94");
-            goto err;
+            if (BIO_puts(out, "gostr3411-94") < 0)
+                goto err;
+            break;
+
+        case NID_id_GostR3411_2012_256:
+            if (BIO_puts(out, "gostr3411-2012-256") < 0)
+                goto err;
+            break;
+
+        case NID_id_GostR3411_2012_512:
+            if (BIO_puts(out, "gostr3411-2012-512") < 0)
+                goto err;
+            break;
 
         default:
-            if (have_unknown)
+            if (have_unknown) {
                 write_comma = 0;
-            else {
-                BIO_puts(out, "unknown");
+            } else {
+                if (BIO_puts(out, "unknown") < 0)
+                    goto err;
                 have_unknown = 1;
             }
             break;
@@ -219,14 +257,16 @@ static int asn1_write_micalg(BIO *out, STACK_OF(X509_ALGOR) *mdalgs)
 
 /* SMIME sender */
 
-int SMIME_write_ASN1(BIO *bio, ASN1_VALUE *val, BIO *data, int flags,
-                     int ctype_nid, int econt_nid,
-                     STACK_OF(X509_ALGOR) *mdalgs, const ASN1_ITEM *it)
+int SMIME_write_ASN1_ex(BIO *bio, ASN1_VALUE *val, BIO *data, int flags,
+                        int ctype_nid, int econt_nid,
+                        STACK_OF(X509_ALGOR) *mdalgs, const ASN1_ITEM *it,
+                        OSSL_LIB_CTX *libctx, const char *propq)
 {
     char bound[33], c;
     int i;
     const char *mime_prefix, *mime_eol, *cname = "smime.p7m";
     const char *msg_type = NULL;
+
     if (flags & SMIME_OLDMIME)
         mime_prefix = "application/x-pkcs7-";
     else
@@ -239,7 +279,7 @@ int SMIME_write_ASN1(BIO *bio, ASN1_VALUE *val, BIO *data, int flags,
     if ((flags & SMIME_DETACHED) && data) {
         /* We want multipart/signed */
         /* Generate a random boundary */
-        if (RAND_bytes((unsigned char *)bound, 32) <= 0)
+        if (RAND_bytes_ex(libctx, (unsigned char *)bound, 32, 0) <= 0)
             return 0;
         for (i = 0; i < 32; i++) {
             c = bound[i] & 0xf;
@@ -250,39 +290,47 @@ int SMIME_write_ASN1(BIO *bio, ASN1_VALUE *val, BIO *data, int flags,
             bound[i] = c;
         }
         bound[32] = 0;
-        BIO_printf(bio, "MIME-Version: 1.0%s", mime_eol);
-        BIO_printf(bio, "Content-Type: multipart/signed;");
-        BIO_printf(bio, " protocol=\"%ssignature\";", mime_prefix);
-        BIO_puts(bio, " micalg=\"");
-        asn1_write_micalg(bio, mdalgs);
-        BIO_printf(bio, "\"; boundary=\"----%s\"%s%s",
-                   bound, mime_eol, mime_eol);
-        BIO_printf(bio, "This is an S/MIME signed message%s%s",
-                   mime_eol, mime_eol);
-        /* Now write out the first part */
-        BIO_printf(bio, "------%s%s", bound, mime_eol);
+        if (BIO_printf(bio, "MIME-Version: 1.0%s"
+                       "Content-Type: multipart/signed; protocol=\"%ssignature\";"
+                       " micalg=\"", /* not 'macalg', seee RFC 2311 section 3.4.3.2 */
+                       mime_eol, mime_prefix) < 0)
+            return 0;
+        if (!asn1_write_micalg(bio, mdalgs))
+            return 0;
+        if (BIO_printf(bio, "\"; boundary=\"----%s\"%s%s"
+                       "This is an S/MIME signed message%s%s"
+                       /* Now comes the first part */
+                       "------%s%s",
+                       bound, mime_eol, mime_eol,
+                       mime_eol, mime_eol,
+                       bound, mime_eol) < 0)
+            return 0;
         if (!asn1_output_data(bio, data, val, flags, it))
             return 0;
-        BIO_printf(bio, "%s------%s%s", mime_eol, bound, mime_eol);
+        if (BIO_printf(bio, "%s------%s%s", mime_eol, bound, mime_eol) < 0)
+            return 0;
 
         /* Headers for signature */
 
-        BIO_printf(bio, "Content-Type: %ssignature;", mime_prefix);
-        BIO_printf(bio, " name=\"smime.p7s\"%s", mime_eol);
-        BIO_printf(bio, "Content-Transfer-Encoding: base64%s", mime_eol);
-        BIO_printf(bio, "Content-Disposition: attachment;");
-        BIO_printf(bio, " filename=\"smime.p7s\"%s%s", mime_eol, mime_eol);
-        B64_write_ASN1(bio, val, NULL, 0, it);
-        BIO_printf(bio, "%s------%s--%s%s", mime_eol, bound,
-                   mime_eol, mime_eol);
+        if (BIO_printf(bio, "Content-Type: %ssignature; name=\"smime.p7s\"%s"
+                       "Content-Transfer-Encoding: base64%s"
+                       "Content-Disposition: attachment; filename=\"smime.p7s\"%s%s",
+                       mime_prefix, mime_eol,
+                       mime_eol, mime_eol, mime_eol) < 0)
+            return 0;
+        if (!B64_write_ASN1(bio, val, NULL, 0, it)
+            || BIO_printf(bio, "%s------%s--%s%s", mime_eol, bound, mime_eol, mime_eol) < 0)
+            return 0;
         return 1;
     }
 
     /* Determine smime-type header */
 
-    if (ctype_nid == NID_pkcs7_enveloped)
+    if (ctype_nid == NID_pkcs7_enveloped) {
         msg_type = "enveloped-data";
-    else if (ctype_nid == NID_pkcs7_signed) {
+    } else if (ctype_nid == NID_id_smime_ct_authEnvelopedData) {
+        msg_type = "authEnveloped-data";
+    } else if (ctype_nid == NID_pkcs7_signed) {
         if (econt_nid == NID_id_smime_ct_receipt)
             msg_type = "signed-receipt";
         else if (sk_X509_ALGOR_num(mdalgs) >= 0)
@@ -294,23 +342,34 @@ int SMIME_write_ASN1(BIO *bio, ASN1_VALUE *val, BIO *data, int flags,
         cname = "smime.p7z";
     }
     /* MIME headers */
-    BIO_printf(bio, "MIME-Version: 1.0%s", mime_eol);
-    BIO_printf(bio, "Content-Disposition: attachment;");
-    BIO_printf(bio, " filename=\"%s\"%s", cname, mime_eol);
-    BIO_printf(bio, "Content-Type: %smime;", mime_prefix);
-    if (msg_type)
-        BIO_printf(bio, " smime-type=%s;", msg_type);
-    BIO_printf(bio, " name=\"%s\"%s", cname, mime_eol);
-    BIO_printf(bio, "Content-Transfer-Encoding: base64%s%s",
-               mime_eol, mime_eol);
+    if (BIO_printf(bio, "MIME-Version: 1.0%s"
+                   "Content-Disposition: attachment;"
+                   " filename=\"%s\"%s", mime_eol, cname, mime_eol) < 0)
+        return 0;
+    if (BIO_printf(bio, "Content-Type: %smime;", mime_prefix) < 0)
+        return 0;
+    if (msg_type != NULL && BIO_printf(bio, " smime-type=%s;", msg_type) < 0)
+        return 0;
+    if (BIO_printf(bio, " name=\"%s\"%s"
+                   "Content-Transfer-Encoding: base64%s%s",
+                   cname, mime_eol, mime_eol, mime_eol) < 0)
+        return 0;
     if (!B64_write_ASN1(bio, val, data, flags, it))
         return 0;
-    BIO_printf(bio, "%s", mime_eol);
-    return 1;
+    return BIO_printf(bio, "%s", mime_eol) >= 0;
+}
+
+int SMIME_write_ASN1(BIO *bio, ASN1_VALUE *val, BIO *data, int flags,
+                     int ctype_nid, int econt_nid,
+                     STACK_OF(X509_ALGOR) *mdalgs, const ASN1_ITEM *it)
+{
+    return SMIME_write_ASN1_ex(bio, val, data, flags, ctype_nid, econt_nid,
+                               mdalgs, it, NULL, NULL);
 }
 
 /* Handle output of ASN1 data */
 
+/* cannot constify val because of CMS_dataFinal() */
 static int asn1_output_data(BIO *out, BIO *data, ASN1_VALUE *val, int flags,
                             const ASN1_ITEM *it)
 {
@@ -324,12 +383,11 @@ static int asn1_output_data(BIO *out, BIO *data, ASN1_VALUE *val, int flags,
      * set up to finalise when it is written through.
      */
     if (!(flags & SMIME_DETACHED) || (flags & PKCS7_REUSE_DIGEST)) {
-        SMIME_crlf_copy(data, out, flags);
-        return 1;
+        return SMIME_crlf_copy(data, out, flags);
     }
 
     if (!aux || !aux->asn1_cb) {
-        ASN1err(ASN1_F_ASN1_OUTPUT_DATA, ASN1_R_STREAMING_NOT_SUPPORTED);
+        ERR_raise(ERR_LIB_ASN1, ASN1_R_STREAMING_NOT_SUPPORTED);
         return 0;
     }
 
@@ -343,7 +401,8 @@ static int asn1_output_data(BIO *out, BIO *data, ASN1_VALUE *val, int flags,
         return 0;
 
     /* Copy data across, passing through filter BIOs for processing */
-    SMIME_crlf_copy(data, sarg.ndef_bio, flags);
+    if (!SMIME_crlf_copy(data, sarg.ndef_bio, flags))
+        rv = 0;
 
     /* Finalize structure */
     if (aux->asn1_cb(ASN1_OP_DETACHED_POST, &val, it, &sarg) <= 0)
@@ -367,7 +426,9 @@ static int asn1_output_data(BIO *out, BIO *data, ASN1_VALUE *val, int flags,
  * opaque this is set to NULL
  */
 
-ASN1_VALUE *SMIME_read_ASN1(BIO *bio, BIO **bcont, const ASN1_ITEM *it)
+ASN1_VALUE *SMIME_read_ASN1_ex(BIO *bio, int flags, BIO **bcont,
+                               const ASN1_ITEM *it, ASN1_VALUE **x,
+                               OSSL_LIB_CTX *libctx, const char *propq)
 {
     BIO *asnin;
     STACK_OF(MIME_HEADER) *headers = NULL;
@@ -381,14 +442,14 @@ ASN1_VALUE *SMIME_read_ASN1(BIO *bio, BIO **bcont, const ASN1_ITEM *it)
         *bcont = NULL;
 
     if ((headers = mime_parse_hdr(bio)) == NULL) {
-        ASN1err(ASN1_F_SMIME_READ_ASN1, ASN1_R_MIME_PARSE_ERROR);
+        ERR_raise(ERR_LIB_ASN1, ASN1_R_MIME_PARSE_ERROR);
         return NULL;
     }
 
     if ((hdr = mime_hdr_find(headers, "content-type")) == NULL
         || hdr->value == NULL) {
         sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-        ASN1err(ASN1_F_SMIME_READ_ASN1, ASN1_R_NO_CONTENT_TYPE);
+        ERR_raise(ERR_LIB_ASN1, ASN1_R_NO_CONTENT_TYPE);
         return NULL;
     }
 
@@ -397,15 +458,15 @@ ASN1_VALUE *SMIME_read_ASN1(BIO *bio, BIO **bcont, const ASN1_ITEM *it)
     if (strcmp(hdr->value, "multipart/signed") == 0) {
         /* Split into two parts */
         prm = mime_param_find(hdr, "boundary");
-        if (!prm || !prm->param_value) {
+        if (prm == NULL || prm->param_value == NULL) {
             sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-            ASN1err(ASN1_F_SMIME_READ_ASN1, ASN1_R_NO_MULTIPART_BOUNDARY);
+            ERR_raise(ERR_LIB_ASN1, ASN1_R_NO_MULTIPART_BOUNDARY);
             return NULL;
         }
-        ret = multi_split(bio, prm->param_value, &parts);
+        ret = multi_split(bio, flags, prm->param_value, &parts);
         sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
         if (!ret || (sk_BIO_num(parts) != 2)) {
-            ASN1err(ASN1_F_SMIME_READ_ASN1, ASN1_R_NO_MULTIPART_BODY_FAILURE);
+            ERR_raise(ERR_LIB_ASN1, ASN1_R_NO_MULTIPART_BODY_FAILURE);
             sk_BIO_pop_free(parts, BIO_vfree);
             return NULL;
         }
@@ -414,7 +475,7 @@ ASN1_VALUE *SMIME_read_ASN1(BIO *bio, BIO **bcont, const ASN1_ITEM *it)
         asnin = sk_BIO_value(parts, 1);
 
         if ((headers = mime_parse_hdr(asnin)) == NULL) {
-            ASN1err(ASN1_F_SMIME_READ_ASN1, ASN1_R_MIME_SIG_PARSE_ERROR);
+            ERR_raise(ERR_LIB_ASN1, ASN1_R_MIME_SIG_PARSE_ERROR);
             sk_BIO_pop_free(parts, BIO_vfree);
             return NULL;
         }
@@ -424,23 +485,23 @@ ASN1_VALUE *SMIME_read_ASN1(BIO *bio, BIO **bcont, const ASN1_ITEM *it)
         if ((hdr = mime_hdr_find(headers, "content-type")) == NULL
             || hdr->value == NULL) {
             sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
-            ASN1err(ASN1_F_SMIME_READ_ASN1, ASN1_R_NO_SIG_CONTENT_TYPE);
+            ERR_raise(ERR_LIB_ASN1, ASN1_R_NO_SIG_CONTENT_TYPE);
             sk_BIO_pop_free(parts, BIO_vfree);
             return NULL;
         }
 
         if (strcmp(hdr->value, "application/x-pkcs7-signature") &&
             strcmp(hdr->value, "application/pkcs7-signature")) {
-            ASN1err(ASN1_F_SMIME_READ_ASN1, ASN1_R_SIG_INVALID_MIME_TYPE);
-            ERR_add_error_data(2, "type: ", hdr->value);
+            ERR_raise_data(ERR_LIB_ASN1, ASN1_R_SIG_INVALID_MIME_TYPE,
+                           "type: %s", hdr->value);
             sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
             sk_BIO_pop_free(parts, BIO_vfree);
             return NULL;
         }
         sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
         /* Read in ASN1 */
-        if ((val = b64_read_asn1(asnin, it)) == NULL) {
-            ASN1err(ASN1_F_SMIME_READ_ASN1, ASN1_R_ASN1_SIG_PARSE_ERROR);
+        if ((val = b64_read_asn1(asnin, it, x, libctx, propq)) == NULL) {
+            ERR_raise(ERR_LIB_ASN1, ASN1_R_ASN1_SIG_PARSE_ERROR);
             sk_BIO_pop_free(parts, BIO_vfree);
             return NULL;
         }
@@ -449,8 +510,9 @@ ASN1_VALUE *SMIME_read_ASN1(BIO *bio, BIO **bcont, const ASN1_ITEM *it)
             *bcont = sk_BIO_value(parts, 0);
             BIO_free(asnin);
             sk_BIO_free(parts);
-        } else
+        } else {
             sk_BIO_pop_free(parts, BIO_vfree);
+        }
         return val;
     }
 
@@ -458,20 +520,24 @@ ASN1_VALUE *SMIME_read_ASN1(BIO *bio, BIO **bcont, const ASN1_ITEM *it)
 
     if (strcmp(hdr->value, "application/x-pkcs7-mime") &&
         strcmp(hdr->value, "application/pkcs7-mime")) {
-        ASN1err(ASN1_F_SMIME_READ_ASN1, ASN1_R_INVALID_MIME_TYPE);
-        ERR_add_error_data(2, "type: ", hdr->value);
+        ERR_raise_data(ERR_LIB_ASN1, ASN1_R_INVALID_MIME_TYPE,
+                       "type: %s", hdr->value);
         sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
         return NULL;
     }
 
     sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
 
-    if ((val = b64_read_asn1(bio, it)) == NULL) {
-        ASN1err(ASN1_F_SMIME_READ_ASN1, ASN1_R_ASN1_PARSE_ERROR);
+    if ((val = b64_read_asn1(bio, it, x, libctx, propq)) == NULL) {
+        ERR_raise(ERR_LIB_ASN1, ASN1_R_ASN1_PARSE_ERROR);
         return NULL;
     }
     return val;
+}
 
+ASN1_VALUE *SMIME_read_ASN1(BIO *bio, BIO **bcont, const ASN1_ITEM *it)
+{
+    return SMIME_read_ASN1_ex(bio, 0, bcont, it, NULL, NULL, NULL);
 }
 
 /* Copy text from one BIO to another making the output CRLF at EOL */
@@ -481,44 +547,64 @@ int SMIME_crlf_copy(BIO *in, BIO *out, int flags)
     char eol;
     int len;
     char linebuf[MAX_SMLEN];
+    int ret = 0;
+
+    if (in == NULL || out == NULL) {
+        ERR_raise(ERR_LIB_ASN1, ERR_R_PASSED_NULL_PARAMETER);
+        return 0;
+    }
+
     /*
      * Buffer output so we don't write one line at a time. This is useful
      * when streaming as we don't end up with one OCTET STRING per line.
      */
     bf = BIO_new(BIO_f_buffer());
-    if (bf == NULL)
+    if (bf == NULL) {
+        ERR_raise(ERR_LIB_ASN1, ERR_R_BIO_LIB);
         return 0;
+    }
     out = BIO_push(bf, out);
     if (flags & SMIME_BINARY) {
-        while ((len = BIO_read(in, linebuf, MAX_SMLEN)) > 0)
-            BIO_write(out, linebuf, len);
+        while ((len = BIO_read(in, linebuf, MAX_SMLEN)) > 0) {
+            if (BIO_write(out, linebuf, len) != len && out != NULL)
+                goto err;
+        }
     } else {
         int eolcnt = 0;
-        if (flags & SMIME_TEXT)
-            BIO_printf(out, "Content-Type: text/plain\r\n\r\n");
+
+        if ((flags & SMIME_TEXT) != 0
+                && BIO_puts(out, "Content-Type: text/plain\r\n\r\n") < 0)
+            goto err;
         while ((len = BIO_gets(in, linebuf, MAX_SMLEN)) > 0) {
             eol = strip_eol(linebuf, &len, flags);
-            if (len) {
+            if (len > 0) {
                 /* Not EOF: write out all CRLF */
                 if (flags & SMIME_ASCIICRLF) {
                     int i;
                     for (i = 0; i < eolcnt; i++)
-                        BIO_write(out, "\r\n", 2);
+                        if (BIO_puts(out, "\r\n") < 0)
+                            goto err;
                     eolcnt = 0;
                 }
-                BIO_write(out, linebuf, len);
-                if (eol)
-                    BIO_write(out, "\r\n", 2);
-            } else if (flags & SMIME_ASCIICRLF)
+                if (BIO_write(out, linebuf, len) != len && out != NULL)
+                    goto err;
+                if (eol && BIO_puts(out, "\r\n") < 0)
+                    goto err;
+            } else if (flags & SMIME_ASCIICRLF) {
                 eolcnt++;
-            else if (eol)
-                BIO_write(out, "\r\n", 2);
+            } else if (eol) {
+                if (BIO_puts(out, "\r\n") < 0)
+                    goto err;
+            }
         }
     }
-    (void)BIO_flush(out);
+    ret = 1;
+
+ err:
+    ret = BIO_flush(out) > 0 && ret;
     BIO_pop(out);
     BIO_free(bf);
-    return 1;
+    return ret;
 }
 
 /* Strip off headers if they are text/plain */
@@ -530,27 +616,26 @@ int SMIME_text(BIO *in, BIO *out)
     MIME_HEADER *hdr;
 
     if ((headers = mime_parse_hdr(in)) == NULL) {
-        ASN1err(ASN1_F_SMIME_TEXT, ASN1_R_MIME_PARSE_ERROR);
+        ERR_raise(ERR_LIB_ASN1, ASN1_R_MIME_PARSE_ERROR);
         return 0;
     }
     if ((hdr = mime_hdr_find(headers, "content-type")) == NULL
         || hdr->value == NULL) {
-        ASN1err(ASN1_F_SMIME_TEXT, ASN1_R_MIME_NO_CONTENT_TYPE);
+        ERR_raise(ERR_LIB_ASN1, ASN1_R_MIME_NO_CONTENT_TYPE);
         sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
         return 0;
     }
     if (strcmp(hdr->value, "text/plain")) {
-        ASN1err(ASN1_F_SMIME_TEXT, ASN1_R_INVALID_MIME_TYPE);
-        ERR_add_error_data(2, "type: ", hdr->value);
+        ERR_raise_data(ERR_LIB_ASN1, ASN1_R_INVALID_MIME_TYPE,
+                       "type: %s", hdr->value);
         sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
         return 0;
     }
     sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
     while ((len = BIO_read(in, iobuf, sizeof(iobuf))) > 0)
-        BIO_write(out, iobuf, len);
-    if (len < 0)
-        return 0;
-    return 1;
+        if (BIO_write(out, iobuf, len) != len && out != NULL)
+            return 0;
+    return len >= 0;
 }
 
 /*
@@ -558,16 +643,19 @@ int SMIME_text(BIO *in, BIO *out)
  * canonical parts in a STACK of bios
  */
 
-static int multi_split(BIO *bio, const char *bound, STACK_OF(BIO) **ret)
+static int multi_split(BIO *bio, int flags, const char *bound, STACK_OF(BIO) **ret)
 {
     char linebuf[MAX_SMLEN];
     int len, blen;
+    size_t blen_s = strlen(bound);
     int eol = 0, next_eol = 0;
     BIO *bpart = NULL;
     STACK_OF(BIO) *parts;
     char state, part, first;
 
-    blen = strlen(bound);
+    if (blen_s > MAX_SMLEN)
+        return 0;
+    blen = (int)blen_s;
     part = 0;
     state = 0;
     first = 1;
@@ -575,7 +663,7 @@ static int multi_split(BIO *bio, const char *bound, STACK_OF(BIO) **ret)
     *ret = parts;
     if (*ret == NULL)
         return 0;
-    while ((len = BIO_gets(bio, linebuf, MAX_SMLEN)) > 0) {
+    while ((len = BIO_get_line(bio, linebuf, MAX_SMLEN)) > 0) {
         state = mime_bound_check(linebuf, len, bound, blen);
         if (state == 1) {
             first = 1;
@@ -586,9 +674,9 @@ static int multi_split(BIO *bio, const char *bound, STACK_OF(BIO) **ret)
                 return 0;
             }
             return 1;
-        } else if (part) {
-            /* Strip CR+LF from linebuf */
-            next_eol = strip_eol(linebuf, &len, 0);
+        } else if (part != 0) {
+            /* Strip (possibly CR +) LF from linebuf */
+            next_eol = strip_eol(linebuf, &len, flags);
             if (first) {
                 first = 0;
                 if (bpart)
@@ -600,11 +688,24 @@ static int multi_split(BIO *bio, const char *bound, STACK_OF(BIO) **ret)
                 if (bpart == NULL)
                     return 0;
                 BIO_set_mem_eof_return(bpart, 0);
-            } else if (eol)
-                BIO_write(bpart, "\r\n", 2);
+            } else if (eol) {
+                if (
+#ifndef OPENSSL_NO_CMS
+                    (flags & CMS_BINARY) == 0
+#else
+                    1
+#endif
+                        || (flags & SMIME_CRLFEOL) != 0) {
+                    if (BIO_puts(bpart, "\r\n") < 0)
+                        return 0;
+                } else {
+                    if (BIO_puts(bpart, "\n") < 0)
+                        return 0;
+                }
+            }
             eol = next_eol;
-            if (len)
-                BIO_write(bpart, linebuf, len);
+            if (len > 0 && BIO_write(bpart, linebuf, len) != len)
+                return 0;
         }
     }
     BIO_free(bpart);
@@ -628,7 +729,7 @@ static STACK_OF(MIME_HEADER) *mime_parse_hdr(BIO *bio)
     char linebuf[MAX_SMLEN];
     MIME_HEADER *mhdr = NULL, *new_hdr = NULL;
     STACK_OF(MIME_HEADER) *headers;
-    int len, state, save_state = 0;
+    int i, len, state, save_state = 0;
 
     headers = sk_MIME_HEADER_new(mime_hdr_cmp);
     if (headers == NULL)
@@ -727,15 +828,22 @@ static STACK_OF(MIME_HEADER) *mime_parse_hdr(BIO *bio)
                 goto err;
             mhdr = new_hdr;
             new_hdr = NULL;
-        } else if (state == MIME_VALUE)
+        } else if (state == MIME_VALUE) {
             mime_hdr_addparam(mhdr, ntmp, strip_ends(q));
+        }
         if (p == linebuf)
             break;              /* Blank line means end of headers */
     }
 
+    /* Sort the headers and their params for faster searching */
+    sk_MIME_HEADER_sort(headers);
+    for (i = 0; i < sk_MIME_HEADER_num(headers); i++)
+        if ((mhdr = sk_MIME_HEADER_value(headers, i)) != NULL
+                && mhdr->params != NULL)
+            sk_MIME_PARAM_sort(mhdr->params);
     return headers;
 
-err:
+ err:
     mime_hdr_free(new_hdr);
     sk_MIME_HEADER_pop_free(headers, mime_hdr_free);
     return NULL;
@@ -750,7 +858,7 @@ static char *strip_ends(char *name)
 static char *strip_start(char *name)
 {
     char *p, c;
-    /* Look for first non white space or quote */
+    /* Look for first non whitespace or quote */
     for (p = name; (c = *p); p++) {
         if (c == '"') {
             /* Next char is start of string if non null */
@@ -771,7 +879,7 @@ static char *strip_end(char *name)
     char *p, c;
     if (!name)
         return NULL;
-    /* Look for first non white space or quote */
+    /* Look for first non whitespace or quote */
     for (p = name + strlen(name) - 1; p >= name; p--) {
         c = *p;
         if (c == '"') {
@@ -857,8 +965,8 @@ static int mime_hdr_addparam(MIME_HEADER *mhdr, const char *name, const char *va
 static int mime_hdr_cmp(const MIME_HEADER *const *a,
                         const MIME_HEADER *const *b)
 {
-    if (!(*a)->name || !(*b)->name)
-        return ! !(*a)->name - ! !(*b)->name;
+    if ((*a)->name == NULL || (*b)->name == NULL)
+        return ((*a)->name != NULL) - ((*b)->name != NULL);
 
     return strcmp((*a)->name, (*b)->name);
 }
@@ -866,8 +974,8 @@ static int mime_hdr_cmp(const MIME_HEADER *const *a,
 static int mime_param_cmp(const MIME_PARAM *const *a,
                           const MIME_PARAM *const *b)
 {
-    if (!(*a)->param_name || !(*b)->param_name)
-        return ! !(*a)->param_name - ! !(*b)->param_name;
+    if ((*a)->param_name == NULL || (*b)->param_name == NULL)
+        return ((*a)->param_name != NULL) - ((*b)->param_name != NULL);
     return strcmp((*a)->param_name, (*b)->param_name);
 }
 
@@ -923,21 +1031,14 @@ static void mime_param_free(MIME_PARAM *param)
  */
 static int mime_bound_check(char *line, int linelen, const char *bound, int blen)
 {
-    if (linelen == -1)
-        linelen = strlen(line);
-    if (blen == -1)
-        blen = strlen(bound);
+    if (linelen < 0 || blen < 0)
+        return 0;
     /* Quickly eliminate if line length too short */
     if (blen + 2 > linelen)
         return 0;
     /* Check for part boundary */
-    if ((strncmp(line, "--", 2) == 0)
-        && strncmp(line + 2, bound, blen) == 0) {
-        if (strncmp(line + blen + 2, "--", 2) == 0)
-            return 2;
-        else
-            return 1;
-    }
+    if ((CHECK_AND_SKIP_PREFIX(line, "--")) && strncmp(line, bound, blen) == 0)
+        return HAS_PREFIX(line + blen, "--") ? 2 : 1;
     return 0;
 }
 
@@ -947,11 +1048,26 @@ static int strip_eol(char *linebuf, int *plen, int flags)
     char *p, c;
     int is_eol = 0;
 
+#ifndef OPENSSL_NO_CMS
+    if ((flags & CMS_BINARY) != 0) {
+        if (len <= 0 || linebuf[len - 1] != '\n')
+            return 0;
+        if ((flags & SMIME_CRLFEOL) != 0) {
+            if (len <= 1 || linebuf[len - 2] != '\r')
+                return 0;
+            len--;
+        }
+        len--;
+        *plen = len;
+        return 1;
+    }
+#endif
+
     for (p = linebuf + len - 1; len > 0; len--, p--) {
         c = *p;
         if (c == '\n') {
             is_eol = 1;
-        } else if (is_eol && flags & SMIME_ASCIICRLF && c == 32) {
+        } else if (is_eol && (flags & SMIME_ASCIICRLF) != 0 && c == 32) {
             /* Strip trailing space on a line; 32 == ASCII for ' ' */
             continue;
         } else if (c != '\r') {
