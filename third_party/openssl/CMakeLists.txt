@@ -1203,6 +1203,10 @@ target_compile_definitions(ssl INTERFACE -DOPENSSL_NO_ENGINE)
 #	target_compile_definitions(crypto PUBLIC -DTHIRTY_TWO_BIT)
 #endif()
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    message(FATAL_ERROR "32-bit builds are not supported !!!")
+endif()
+
 if (APPLE)
 	target_compile_definitions(crypto PRIVATE -DASYNC_NULL)
 endif()
