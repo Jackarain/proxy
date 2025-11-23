@@ -4190,7 +4190,7 @@ R"x*x*x(<html>
 			// 查找目录下是否存在 index.html 或 index.htm 文件, 如果存在则返回该文件.
 			// 否则返回目录下的文件列表.
 			auto index_html = fs::path(hctx.target_path_) / "index.html";
-			fs::exists(index_html, ec) ? index_html = index_html :
+			if (!fs::exists(index_html, ec))
 				index_html = fs::path(hctx.target_path_) / "index.htm";
 
 			if (fs::exists(index_html, ec))
