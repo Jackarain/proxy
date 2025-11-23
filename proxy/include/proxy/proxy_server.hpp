@@ -1436,21 +1436,20 @@ R"x*x*x(<html>
 			{
 				int m = read<int8_t>(p);
 
-				if (auth_required)
+				if (!auth_required)
 				{
-					if (m == SOCKS5_AUTH)
+					if (m == SOCKS5_AUTH_NONE)
 					{
 						method = m;
 						break;
 					}
+
+					method = m;
 				}
-				else
+				else if (m == SOCKS5_AUTH)
 				{
-					if (m == SOCKS5_AUTH_NONE || m == SOCKS5_AUTH)
-					{
-						method = m;
-						break;
-					}
+					method = m;
+					break;
 				}
 
 				bytes--;
