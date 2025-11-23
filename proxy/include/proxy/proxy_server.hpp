@@ -2958,8 +2958,8 @@ R"x*x*x(<html>
 
 			constexpr auto buf_size = 512 * 1024;
 
-			std::unique_ptr<char, decltype(&std::free)> buf0((char*)std::malloc(buf_size), &std::free);
-			std::unique_ptr<char, decltype(&std::free)> buf1((char*)std::malloc(buf_size), &std::free);
+			auto buf0 = std::make_unique_for_overwrite<char[]>(buf_size);
+			auto buf1 = std::make_unique_for_overwrite<char[]>(buf_size);
 
 			// 分别使用主从缓冲指针用于并发读写.
 			auto primary_buf = buf0.get();
@@ -3927,7 +3927,7 @@ R"x*x*x(<html>
 
 			boost::uuids::detail::sha1 sha1;
 			const auto buf_size = 1024 * 1024 * 4;
-			std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(buf_size), &std::free);
+			auto bufs = std::make_unique_for_overwrite<char[]>(buf_size);
 
 			while (file.read(bufs.get(), buf_size) || file.gcount())
 				sha1.process_bytes(bufs.get(), file.gcount());
@@ -4508,7 +4508,7 @@ R"x*x*x(<html>
 			if (m_option.tcp_rate_limit_ > 0 && m_option.tcp_rate_limit_ < buf_size)
 				buf_size = m_option.tcp_rate_limit_;
 
-			std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(buf_size), &std::free);
+			auto bufs = std::make_unique_for_overwrite<char[]>(buf_size);
 			char* buf = bufs.get();
 			std::streamsize total = 0;
 
