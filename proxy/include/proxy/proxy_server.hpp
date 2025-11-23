@@ -1908,6 +1908,8 @@ R"x*x*x(<html>
 			boost::system::error_code ec;
 
 			udp::endpoint remote_endp;
+			udp::endpoint final_remote_endp;
+			std::string latest_domain;
 
 			char read_buffer[4096];
 			size_t send_total = 0;
@@ -1977,9 +1979,9 @@ R"x*x*x(<html>
 
 					if (atyp == SOCKS5_ATYP_IPV4)
 					{
-						remote_endp.address(
+						final_remote_endp.address(
 							net::ip::address_v4(read<uint32_t>(rp)));
-						remote_endp.port(read<uint16_t>(rp));
+						final_remote_endp.port(read<uint16_t>(rp));
 					}
 					else if (atyp == SOCKS5_ATYP_DOMAINNAME)
 					{
@@ -1990,20 +1992,23 @@ R"x*x*x(<html>
 							domain.push_back(read<int8_t>(rp));
 						auto port = read<uint16_t>(rp);
 
-						udp::resolver resolver{ executor };
-
-						auto targets =
-							co_await resolver.async_resolve(
-							domain,
-							std::to_string(port),
-							net_awaitable[ec]);
-						if (ec)
-							break;
-
-						for (const auto& target : targets)
+						if (latest_domain != domain)
 						{
-							remote_endp = target.endpoint();
-							break;
+							udp::resolver resolver{ executor };
+
+							auto targets =
+								co_await resolver.async_resolve(
+									domain,
+									std::to_string(port),
+									net_awaitable[ec]);
+							if (ec)
+								break;
+
+							if (targets.empty())
+								continue;
+
+							final_remote_endp = targets.begin()->endpoint();
+							latest_domain = domain;
 						}
 					}
 					else if (atyp == SOCKS5_ATYP_IPV6)
@@ -2015,8 +2020,8 @@ R"x*x*x(<html>
 							*i = read<int8_t>(rp);
 						}
 
-						remote_endp.address(net::ip::address_v6(addr));
-						remote_endp.port(read<uint16_t>(rp));
+						final_remote_endp.address(net::ip::address_v6(addr));
+						final_remote_endp.port(read<uint16_t>(rp));
 					}
 
 					auto head_size = rp - rbuf;
@@ -2026,7 +2031,7 @@ R"x*x*x(<html>
 
 					co_await server.async_send_to(
 						net::buffer(rp, udp_size),
-						remote_endp,
+						final_remote_endp,
 						net_awaitable[ec]);
 				}
 				else // 如果数据包来自远程主机, 则解析数据包并将数据转发给 socks 客户端.
