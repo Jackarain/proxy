@@ -1338,6 +1338,8 @@ R"x*x*x(<html>
 				co_await socks_connect_v4();
 				co_return;
 			}
+
+			bool ret = false;
 			if (socks_version == 'G' || socks_version == 'P')
 			{
 				if (m_option.disable_http_)
@@ -1347,20 +1349,7 @@ R"x*x*x(<html>
 					co_return;
 				}
 
-				auto ret = co_await http_proxy_get();
-				if (!ret)
-				{
-					auto date_string = server_date_string();
-					auto fake_page =
-						fmt::vformat(fake_400_content_fmt,
-							fmt::make_format_args(date_string));
-
-					co_await net::async_write(
-						m_local_socket,
-						net::buffer(fake_page),
-						net::transfer_all(),
-						net_awaitable[ec]);
-				}
+				ret = co_await http_proxy_get();
 			}
 			else if (socks_version == 'C')
 			{
@@ -1371,20 +1360,21 @@ R"x*x*x(<html>
 					co_return;
 				}
 
-				auto ret = co_await http_proxy_connect();
-				if (!ret)
-				{
-					auto date_string = server_date_string();
-					auto fake_page =
-						fmt::vformat(fake_400_content_fmt,
-							fmt::make_format_args(date_string));
+				ret = co_await http_proxy_connect();
+			}
 
-					co_await net::async_write(
-						m_local_socket,
-						net::buffer(fake_page),
-						net::transfer_all(),
-						net_awaitable[ec]);
-				}
+			if (!ret)
+			{
+				auto date_string = server_date_string();
+				auto fake_page =
+					fmt::vformat(fake_400_content_fmt,
+						fmt::make_format_args(date_string));
+
+				co_await net::async_write(
+					m_local_socket,
+					net::buffer(fake_page),
+					net::transfer_all(),
+					net_awaitable[ec]);
 			}
 
 			co_return;
