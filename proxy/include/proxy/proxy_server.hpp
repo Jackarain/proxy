@@ -815,9 +815,10 @@ R"x*x*x(<html>
 			{
 				try
 				{
-					m_bridge_proxy =
-						std::make_unique<urls::url>(
-							m_option.proxy_pass_);
+					// 解析 proxy_pass_ 字符串为 url 对象, 因为 proxy_pass_ 是固定不变的参数, 所以
+					// 存储为 static 对象, 以避免多次重复解析.
+					static const urls::url proxy_pass_url = urls::url(m_option.proxy_pass_);
+					m_bridge_proxy = std::make_unique<urls::url>(proxy_pass_url);
 				}
 				catch (const std::exception& e)
 				{
