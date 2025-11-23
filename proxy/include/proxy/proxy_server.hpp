@@ -2461,8 +2461,8 @@ R"x*x*x(<html>
 
 				// http 代理认证, 如果请求的 rarget 不是 http url 或认证
 				// 失败, 则按正常 web 请求处理.
-				auto auth = http_authorization(pa);
-				if (auth != PROXY_AUTH_SUCCESS || !get_url_proxy)
+				auto auth_result = http_authorization(pa);
+				if (auth_result != PROXY_AUTH_SUCCESS || !get_url_proxy)
 				{
 					auto expect_url = urls::parse_absolute_uri(target_view);
 
@@ -2470,7 +2470,7 @@ R"x*x*x(<html>
 					{
 						log_conn_warning()
 							<< ", proxy err: "
-							<< pauth_error_message(auth);
+							<< pauth_error_message(auth_result);
 
 						co_return !first;
 					}
@@ -2485,18 +2485,16 @@ R"x*x*x(<html>
 					{
 						// 处理 http 认证, 如果客户没有传递认证信息, 则返回 401.
 						// 如果用户认证信息没有设置, 则直接返回 401.
-						auto auth = req[http::field::authorization];
-						if (auth.empty() || m_option.auth_users_.empty())
+						if (pa.empty() || m_option.auth_users_.empty())
 						{
 							log_conn_warning()
 								<< ", auth error: "
-								<< (auth.empty() ? "no auth" : "no user");
+								<< (pa.empty() ? "no auth" : "no user");
 
 							co_await unauthorized_http_route(req);
 							co_return true;
 						}
 
-						auto auth_result = http_authorization(auth);
 						if (auth_result != PROXY_AUTH_SUCCESS)
 						{
 							log_conn_warning()
