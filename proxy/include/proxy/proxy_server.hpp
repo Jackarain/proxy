@@ -2124,8 +2124,8 @@ R"x*x*x(<html>
 			dst_endpoint.address(net::ip::address_v4(read<uint32_t>(p)));
 
 			bool socks4a = false;
-			auto tmp = dst_endpoint.address().to_v4().to_uint() ^ 0x000000ff;
-			if (0xff > tmp)
+			auto ip_bytes = dst_endpoint.address().to_v4().to_bytes();
+			if (ip_bytes[0] == 0 && ip_bytes[1] == 0 && ip_bytes[2] == 0 && ip_bytes[3] != 0)
 				socks4a = true;
 
 			//  +----+----+----+----+----+----+----+----+----+----+....+----+
