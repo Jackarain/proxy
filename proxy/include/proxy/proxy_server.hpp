@@ -2463,15 +2463,6 @@ R"x*x*x(<html>
 				auto auth_result = http_authorization(pa);
 				if (auth_result != PROXY_AUTH_SUCCESS || !get_url_proxy)
 				{
-					if (!expect_url.has_error())
-					{
-						log_conn_warning()
-							<< ", proxy err: "
-							<< pauth_error_message(auth_result);
-
-						co_return !first;
-					}
-
 					// 如果 doc 目录为空, 则不允许访问目录
 					// 这里直接返回错误页面.
 					if (m_option.doc_directory_.empty())
@@ -2524,6 +2515,16 @@ R"x*x*x(<html>
 					// 按正常 http 目录请求来处理.
 					co_await normal_web_server(req, parser);
 					co_return true;
+				}
+
+				// 检查 url 是否解析成功.
+				if (expect_url.has_error())
+				{
+					log_conn_warning()
+						<< ", parse url: " << target_view
+						<< ", error: " << expect_url.error().message();
+
+					co_return false;
 				}
 
 				// 解构 url 中的信息.
