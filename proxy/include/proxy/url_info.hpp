@@ -62,8 +62,12 @@ namespace proxy {
 			// 计算 authority 部分的结束位置.
 			char const* authority_start = it;
 			char const* authority_end = it;
-			while (authority_end < end && *authority_end != '/')
+
+			while (authority_end < end &&
+				*authority_end != '/' && *authority_end != '?' && *authority_end != '#')
+			{
 				++authority_end;
+			}
 
 			// 确保 authority 部分不为空.
 			if (authority_start == authority_end)
@@ -120,8 +124,9 @@ namespace proxy {
 				host = std::string_view(host_start, host_end - host_start);
 			}
 
-			// 解析 resource 部分, 包括路径和查询参数和所有参数.
-			resource = std::string_view(authority_end, end - authority_end);
+			// 解析 resource 部分, 包括路径和查询参数, 除了 fragment.
+			char const* fragment_delim = std::find(authority_end, end, '#');
+			resource = std::string_view(authority_end, fragment_delim - authority_end);
 
 			// 移动迭代器到末尾.
 			it = end;
