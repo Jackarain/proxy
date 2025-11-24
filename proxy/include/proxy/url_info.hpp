@@ -48,6 +48,7 @@ namespace proxy {
 				return boost::urls::grammar::error::invalid;
 
 			scheme = *scheme_res;
+			uint16_t port_num = boost::urls::default_port(boost::urls::string_to_scheme(scheme));
 
 			// 匹配 "://"
 			auto r = boost::urls::grammar::parse(it, end,
@@ -65,7 +66,7 @@ namespace proxy {
 				++authority_end;
 
 			// 确保 authority 部分不为空.
-			if (authority_end == authority_start)
+			if (authority_start == authority_end)
 				return boost::urls::grammar::error::invalid;
 
 			std::string_view authority(authority_start, authority_end - authority_start);
@@ -105,26 +106,25 @@ namespace proxy {
 				char const* port_end = host_end;
 
 				port = std::string_view(port_start, port_end - port_start);
-				host_end = host_start + found;
+				if (!port.empty())
+				{
+					try {
+						port_num = static_cast<uint16_t>(std::stoul(std::string(port)));
+					}
+					catch (...) {
+						return boost::urls::grammar::error::invalid;
+					}
+				}
 
+				host_end = host_start + found;
 				host = std::string_view(host_start, host_end - host_start);
 			}
 
+			// 解析 resource 部分, 包括路径和查询参数和所有参数.
 			resource = std::string_view(authority_end, end - authority_end);
 
 			// 移动迭代器到末尾.
 			it = end;
-
-			uint16_t port_num = boost::urls::default_port(boost::urls::string_to_scheme(scheme));
-			if (!port.empty())
-			{
-				try {
-					port_num = static_cast<uint16_t>(std::stoul(std::string(port)));
-				}
-				catch (...) {
-					return boost::urls::grammar::error::invalid;
-				}
-			}
 
 			return url_info{ scheme, user, passwd, host, port_num, resource };
 		}
