@@ -915,10 +915,15 @@ R"x*x*x(<html>
 
 			boost::system::error_code ec;
 
+			// 查询网关代理中继服务器域名信息.
+			auto targets = co_await resolve_proxy_pass_targets();
+
+			// 发起连接到网关代理中继服务器.
 			bool ret = co_await connect_bridge_proxy(
 				remote_socket,
 				m_tproxy_remote.address().to_string(),
 				m_tproxy_remote.port(),
+				targets,
 				ec);
 
 			if (!ret)
@@ -3013,83 +3018,15 @@ R"x*x*x(<html>
 		connect_bridge_proxy(tcp::socket& remote_socket,
 			std::string target_host,
 			uint16_t target_port,
+			tcp::resolver::results_type targets,
 			boost::system::error_code& ec,
 			int command = SOCKS_CMD_CONNECT)
 		{
-			auto proxy_host = std::string(m_bridge_proxy->host());
-			uint16_t proxy_port_number = 0;
-			std::string proxy_port;
-
-			if (m_bridge_proxy->port_number() == 0)
-				proxy_port_number = urls::default_port(m_bridge_proxy->scheme_id());
-			else
-				proxy_port_number = m_bridge_proxy->port_number();
-
-			proxy_port = std::to_string(proxy_port_number);
-			if (proxy_port.empty())
-				proxy_port = m_bridge_proxy->scheme();
+			auto proxy_hostname = m_bridge_proxy->encoded_origin();
 
 			log_conn_debug()
 				<< ", connect to next proxy: "
-				<< proxy_host
-				<< ":"
-				<< proxy_port;
-
-			tcp::resolver::results_type targets;
-
-			if (!detect_hostname(proxy_host))
-			{
-				net::ip::tcp::endpoint endp(
-					net::ip::make_address(proxy_host),
-					m_bridge_proxy->port_number() ?
-						m_bridge_proxy->port_number() :
-							urls::default_port(m_bridge_proxy->scheme_id()));
-
-				targets = tcp::resolver::results_type::create(
-					endp, proxy_host, m_bridge_proxy->scheme());
-			}
-			else
-			{
-				targets = get_resolver_from_cache(proxy_host, proxy_port_number);
-
-				// 如果从缓存中查询失败, 则发起查询.
-				if (targets.empty())
-				{
-					auto executor = m_executor;
-
-					if (!m_scheduler_locking)
-					{
-						co_await net::post(net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
-						executor = m_backend_context.get_executor();
-					}
-
-					tcp::resolver resolver{ executor };
-					targets = co_await resolver.async_resolve(
-						proxy_host,
-						proxy_port,
-						net_awaitable[ec]);
-
-					if (!m_scheduler_locking)
-						co_await net::post(net::bind_executor(m_executor, net::use_awaitable));
-
-					if (ec)
-					{
-						log_conn_warning()
-							<< ", resolve next proxy "
-							<< proxy_host
-							<< ":"
-							<< proxy_port
-							<< " error: "
-							<< ec.message();
-
-						co_return false;
-					}
-
-					// 更新 dns 缓存.
-					dns_result result = std::make_tuple(targets, std::chrono::steady_clock::now());
-					m_dns_cache.put(proxy_host, std::move(result));
-				}
-			}
+				<< proxy_hostname;
 
 			if (m_option.happyeyeballs_)
 			{
@@ -3151,11 +3088,9 @@ R"x*x*x(<html>
 			if (ec)
 			{
 				log_conn_warning()
-					<< ", connect to next proxy "
-					<< proxy_host
-					<< ":"
-					<< proxy_port
-					<< " error: "
+					<< ", connect to next proxy: "
+					<< proxy_hostname
+					<< ", error: "
 					<< ec.message();
 
 				co_return false;
@@ -3163,10 +3098,8 @@ R"x*x*x(<html>
 
 			log_conn_debug()
 				<< ", connect to next proxy: "
-				<< proxy_host
-				<< ":"
-				<< proxy_port
-				<< " success";
+				<< proxy_hostname
+				<< ", success";
 
 			// 如果启用了 noise, 则在向上游代理服务器发起 tcp 连接成功后, 发送 noise
 			// 数据以及接收 noise 数据.
@@ -3216,7 +3149,7 @@ R"x*x*x(<html>
 			auto instantiate_stream =
 				[this,
 				&scheme,
-				&proxy_host,
+				&proxy_hostname,
 				&remote_socket,
 				&ec]
 			() mutable -> net::awaitable<variant_stream_type>
@@ -3225,8 +3158,8 @@ R"x*x*x(<html>
 
 				log_conn_debug()
 					<< ", connect to next proxy: "
-					<< proxy_host
-					<< " instantiate stream";
+					<< proxy_hostname
+					<< ", instantiate stream";
 
 				if (m_option.proxy_pass_use_ssl_ || scheme == "https")
 				{
@@ -3245,6 +3178,7 @@ R"x*x*x(<html>
 					m_ssl_cli_context.use_tmp_dh(
 						net::buffer(default_dh_param()), ec);
 
+					auto proxy_host = std::string(m_bridge_proxy->host());
 					m_ssl_cli_context.set_verify_callback(
 						net::ssl::host_name_verification(proxy_host), ec);
 					if (ec)
@@ -3346,10 +3280,8 @@ R"x*x*x(<html>
 
 			log_conn_debug()
 				<< ", connect to next proxy: "
-				<< proxy_host
-				<< ":"
-				<< proxy_port
-				<< " start upstream handshake with "
+				<< proxy_hostname
+				<< ", start upstream handshake with "
 				<< std::string(scheme);
 
 			if (scheme.starts_with("socks"))
@@ -3430,15 +3362,20 @@ R"x*x*x(<html>
 			bool resolve = false,
 			int command = SOCKS_CMD_CONNECT)
 		{
-			tcp::socket& remote_socket =
-				net_tcp_socket(m_remote_socket);
+			tcp::socket& remote_socket = net_tcp_socket(m_remote_socket);
+			tcp::resolver::results_type targets;
 
 			if (m_bridge_proxy)
 			{
+				// 查询网关代理中继服务器域名信息.
+				targets = co_await resolve_proxy_pass_targets();
+
+				// 发起连接到网关代理中继服务器.
 				auto ret = co_await connect_bridge_proxy(
 					remote_socket,
 					target_host,
 					target_port,
+					targets,
 					ec,
 					command);
 
@@ -3446,44 +3383,9 @@ R"x*x*x(<html>
 			}
 			else
 			{
-				net::ip::basic_resolver_results<tcp> targets;
 				if (resolve)
 				{
-					targets = get_resolver_from_cache(target_host, target_port);
-					if (targets.empty())
-					{
-						auto executor = m_executor;
-						if (!m_scheduler_locking)
-						{
-							co_await net::post(net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
-							executor = m_backend_context.get_executor();
-						}
-
-						tcp::resolver resolver{ executor };
-
-						targets = co_await resolver.async_resolve(
-							target_host,
-							std::to_string(target_port),
-							net_awaitable[ec]);
-
-						if (!m_scheduler_locking)
-							co_await net::post(net::bind_executor(m_executor, net::use_awaitable));
-
-						if (ec)
-						{
-							log_conn_warning()
-								<< ", resolve: "
-								<< target_host
-								<< ", error: "
-								<< ec.message();
-
-							co_return false;
-						}
-
-						// 更新 dns 缓存.
-						dns_result result = std::make_tuple(targets, std::chrono::steady_clock::now());
-						m_dns_cache.put(target_host, std::move(result));
-					}
+					targets = co_await resolve_targets(target_host, target_port);
 				}
 				else
 				{
@@ -3496,80 +3398,81 @@ R"x*x*x(<html>
 					targets = net::ip::basic_resolver_results<tcp>::create(
 						dst_endpoint, "", "");
 				}
+			}
 
-				if (m_option.happyeyeballs_)
+			if (m_option.happyeyeballs_)
+			{
+				co_await asio_util::async_connect(
+					remote_socket,
+					targets,
+					[this](const auto& ec, auto& stream, auto& endp) {
+						return check_condition(ec, stream, endp);
+					},
+					net_awaitable[ec]);
+			}
+			else
+			{
+				for (auto endpoint : targets)
 				{
-					co_await asio_util::async_connect(
-						remote_socket,
-						targets,
-						[this](const auto& ec, auto& stream, auto& endp) {
-							return check_condition(ec, stream, endp);
-						},
-						net_awaitable[ec]);
-				}
-				else
-				{
-					for (auto endpoint : targets)
+					ec = boost::asio::error::host_not_found;
+
+					if (m_option.connect_v4_only_)
 					{
-						ec = boost::asio::error::host_not_found;
+						if (endpoint.endpoint().address().is_v6())
+							continue;
+					}
+					else if (m_option.connect_v6_only_)
+					{
+						if (endpoint.endpoint().address().is_v4())
+							continue;
+					}
 
-						if (m_option.connect_v4_only_)
-						{
-							if (endpoint.endpoint().address().is_v6())
-								continue;
-						}
-						else if (m_option.connect_v6_only_)
-						{
-							if (endpoint.endpoint().address().is_v4())
-								continue;
-						}
+					boost::system::error_code ignore_ec;
+					remote_socket.close(ignore_ec);
 
-						boost::system::error_code ignore_ec;
-						remote_socket.close(ignore_ec);
+					if (m_bind_interface)
+					{
+						tcp::endpoint bind_endpoint(
+							*m_bind_interface,
+							0);
 
-						if (m_bind_interface)
-						{
-							tcp::endpoint bind_endpoint(
-								*m_bind_interface,
-								0);
+						remote_socket.open(
+							bind_endpoint.protocol(),
+							ec);
+						if (ec)
+							break;
 
-							remote_socket.open(
-								bind_endpoint.protocol(),
-								ec);
-							if (ec)
-								break;
-
-							remote_socket.bind(
-								bind_endpoint,
-								ec);
-							if (ec)
-								break;
-						}
-
-						co_await remote_socket.async_connect(
-							endpoint,
-							net_awaitable[ec]);
-						if (!ec)
+						remote_socket.bind(
+							bind_endpoint,
+							ec);
+						if (ec)
 							break;
 					}
+
+					co_await remote_socket.async_connect(
+						endpoint,
+						net_awaitable[ec]);
+					if (!ec)
+						break;
 				}
-
-				if (ec)
-				{
-					log_conn_warning()
-						<< ", connect to target "
-						<< target_host
-						<< ":"
-						<< target_port
-						<< " error: "
-						<< ec.message();
-
-					co_return false;
-				}
-
-				m_remote_socket = init_proxy_stream(
-					std::move(remote_socket));
 			}
+
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", connect to target "
+					<< target_host
+					<< ":"
+					<< target_port
+					<< " error: "
+					<< ec.message();
+
+				co_return false;
+			}
+
+			m_remote_socket = init_proxy_stream(
+				std::move(remote_socket));
+
 
 			co_return true;
 		}
@@ -4820,6 +4723,86 @@ R"x*x*x(<html>
 			}
 
 			return {};
+		}
+
+		inline net::awaitable<tcp::resolver::results_type>
+		resolve_targets(const std::string& hostname, uint16_t port_number)
+		{
+			net::ip::basic_resolver_results<tcp> targets;
+
+			targets = get_resolver_from_cache(hostname, port_number);
+			if (!targets.empty())
+				co_return targets;
+
+			boost::system::error_code ec;
+
+			auto executor = m_executor;
+			if (!m_scheduler_locking)
+			{
+				co_await net::post(net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
+				executor = m_backend_context.get_executor();
+			}
+
+			tcp::resolver resolver{ executor };
+
+			targets = co_await resolver.async_resolve(
+				hostname,
+				std::to_string(port_number),
+				net_awaitable[ec]);
+
+			if (!m_scheduler_locking)
+				co_await net::post(net::bind_executor(m_executor, net::use_awaitable));
+
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", resolve: "
+					<< hostname
+					<< ", error: "
+					<< ec.message();
+
+				co_return targets;
+			}
+
+			// 更新 dns 缓存.
+			dns_result result = std::make_tuple(targets, std::chrono::steady_clock::now());
+			m_dns_cache.put(hostname, std::move(result));
+
+			co_return targets;
+		}
+
+		inline net::awaitable<tcp::resolver::results_type>
+		resolve_proxy_pass_targets()
+		{
+			tcp::resolver::results_type targets;
+
+			if (!m_bridge_proxy)
+				co_return targets;
+
+			auto proxy_host = std::string(m_bridge_proxy->host());
+			uint16_t proxy_port_number = 0;
+
+			if (m_bridge_proxy->port_number() == 0)
+				proxy_port_number = urls::default_port(m_bridge_proxy->scheme_id());
+			else
+				proxy_port_number = m_bridge_proxy->port_number();
+
+			// 如果是 IP 地址, 则直接构造而不需要 DNS 查询.
+			if (!detect_hostname(proxy_host))
+			{
+				net::ip::tcp::endpoint endp(
+					net::ip::make_address(proxy_host), proxy_port_number);
+
+				targets = tcp::resolver::results_type::create(
+					endp, proxy_host, m_bridge_proxy->scheme());
+			}
+			else
+			{
+				// 进行 DNS 查询.
+				targets = co_await resolve_targets(proxy_host, proxy_port_number);
+			}
+
+			co_return targets;
 		}
 
 	private:
