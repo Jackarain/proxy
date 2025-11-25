@@ -100,6 +100,8 @@ int udp_timeout;
 int tcp_timeout;
 int rate_limit;
 
+std::string asio_config;
+
 //////////////////////////////////////////////////////////////////////////
 
 net::awaitable<void>
@@ -386,6 +388,8 @@ int main(int argc, char** argv)
 
 		("scramble", po::value<bool>(&scramble)->value_name("")->default_value(false, "false"), "Noise-based data security.")
 		("noise_length", po::value<uint16_t>(&noise_length)->value_name("length")->default_value(0x0fff), "Length of the noise data.")
+
+		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Enable asio config from environment variables.")
 	;
 
 	// 解析命令行.
@@ -452,14 +456,7 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 	for (const auto& server_listen : server_listens)
 		XLOG_DBG << "Start server: " << server_listen;
 
-	auto cfg = net::config_from_string(
-		"scheduler.concurrency_hint=1\n"
-		"scheduler.locking_spin_count=1\n"
-		"scheduler.locking=0\n"
-		"reactor.registration_locking=0\n"
-		"reactor.preallocated_io_objects=128\n"
-		"reactor.io_locking=0"
-	);
+	auto cfg = net::config_from_env(asio_config);
 	net::io_context ioc(cfg);
 	net::signal_set terminator_signal(ioc);
 	server_ptr server;
