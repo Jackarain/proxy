@@ -31,6 +31,7 @@
 
 #include "proxy/proxy_stream.hpp"
 #include "proxy/url_info.hpp"
+#include "proxy/dns_cache.hpp"
 
 
 #include <fmt/xchar.h>
@@ -51,6 +52,7 @@
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/ip/network_v4.hpp>
 #include <boost/asio/ip/network_v6.hpp>
+#include <boost/asio/bind_executor.hpp>
 
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -754,12 +756,18 @@ R"x*x*x(<html>
 	public:
 		proxy_session(
 			net::any_io_executor executor,
+			net::io_context& backend_context,
+			bool scheduler_locking,
+			dns_cache& cache,
 			variant_stream_type&& socket,
 			size_t id,
 			std::weak_ptr<proxy_server_base> server,
 			bool tproxy = false
 		)
 			: m_executor(executor)
+			, m_backend_context(backend_context)
+			, m_scheduler_locking(scheduler_locking)
+			, m_dns_cache(cache)
 			, m_local_socket(std::move(socket))
 			, m_remote_socket(init_proxy_stream(executor))
 			, m_connection_id(id)
@@ -1893,7 +1901,6 @@ R"x*x*x(<html>
 		inline net::awaitable<void> forward_udp(udp::socket& client, udp::socket& server)
 		{
 			[[maybe_unused]] auto self = shared_from_this();
-			auto executor = co_await net::this_coro::executor;
 
 			boost::system::error_code ec;
 
@@ -1984,6 +1991,13 @@ R"x*x*x(<html>
 
 						if (latest_domain != domain)
 						{
+							auto executor = m_executor;
+							if (!m_scheduler_locking)
+							{
+								co_await net::post(net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
+								executor = m_backend_context.get_executor();
+							}
+
 							udp::resolver resolver{ executor };
 
 							auto targets =
@@ -1991,6 +2005,10 @@ R"x*x*x(<html>
 									domain,
 									std::to_string(port),
 									net_awaitable[ec]);
+
+							if (!m_scheduler_locking)
+								co_await net::post(net::bind_executor(m_executor, net::use_awaitable));
+
 							if (ec)
 								break;
 
@@ -2998,16 +3016,16 @@ R"x*x*x(<html>
 			boost::system::error_code& ec,
 			int command = SOCKS_CMD_CONNECT)
 		{
-			auto executor = co_await net::this_coro::executor;
-
-			tcp::resolver resolver{ executor };
-
 			auto proxy_host = std::string(m_bridge_proxy->host());
+			uint16_t proxy_port_number = 0;
 			std::string proxy_port;
+
 			if (m_bridge_proxy->port_number() == 0)
-				proxy_port = std::to_string(urls::default_port(m_bridge_proxy->scheme_id()));
+				proxy_port_number = urls::default_port(m_bridge_proxy->scheme_id());
 			else
-				proxy_port = std::to_string(m_bridge_proxy->port_number());
+				proxy_port_number = m_bridge_proxy->port_number();
+
+			proxy_port = std::to_string(proxy_port_number);
 			if (proxy_port.empty())
 				proxy_port = m_bridge_proxy->scheme();
 
@@ -3032,22 +3050,44 @@ R"x*x*x(<html>
 			}
 			else
 			{
-				targets = co_await resolver.async_resolve(
-					proxy_host,
-					proxy_port,
-					net_awaitable[ec]);
+				targets = get_resolver_from_cache(proxy_host, proxy_port_number);
 
-				if (ec)
+				// 如果从缓存中查询失败, 则发起查询.
+				if (targets.empty())
 				{
-					log_conn_warning()
-						<< ", resolve next proxy "
-						<< proxy_host
-						<< ":"
-						<< proxy_port
-						<< " error: "
-						<< ec.message();
+					auto executor = m_executor;
 
-					co_return false;
+					if (!m_scheduler_locking)
+					{
+						co_await net::post(net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
+						executor = m_backend_context.get_executor();
+					}
+
+					tcp::resolver resolver{ executor };
+					targets = co_await resolver.async_resolve(
+						proxy_host,
+						proxy_port,
+						net_awaitable[ec]);
+
+					if (!m_scheduler_locking)
+						co_await net::post(net::bind_executor(m_executor, net::use_awaitable));
+
+					if (ec)
+					{
+						log_conn_warning()
+							<< ", resolve next proxy "
+							<< proxy_host
+							<< ":"
+							<< proxy_port
+							<< " error: "
+							<< ec.message();
+
+						co_return false;
+					}
+
+					// 更新 dns 缓存.
+					dns_result result = std::make_tuple(targets, std::chrono::steady_clock::now());
+					m_dns_cache.put(proxy_host, std::move(result));
 				}
 			}
 
@@ -3390,8 +3430,6 @@ R"x*x*x(<html>
 			bool resolve = false,
 			int command = SOCKS_CMD_CONNECT)
 		{
-			auto executor = co_await net::this_coro::executor;
-
 			tcp::socket& remote_socket =
 				net_tcp_socket(m_remote_socket);
 
@@ -3411,21 +3449,40 @@ R"x*x*x(<html>
 				net::ip::basic_resolver_results<tcp> targets;
 				if (resolve)
 				{
-					tcp::resolver resolver{ executor };
-
-					targets = co_await resolver.async_resolve(
-						target_host,
-						std::to_string(target_port),
-						net_awaitable[ec]);
-					if (ec)
+					targets = get_resolver_from_cache(target_host, target_port);
+					if (targets.empty())
 					{
-						log_conn_warning()
-							<< ", resolve: "
-							<< target_host
-							<< ", error: "
-							<< ec.message();
+						auto executor = m_executor;
+						if (!m_scheduler_locking)
+						{
+							co_await net::post(net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
+							executor = m_backend_context.get_executor();
+						}
 
-						co_return false;
+						tcp::resolver resolver{ executor };
+
+						targets = co_await resolver.async_resolve(
+							target_host,
+							std::to_string(target_port),
+							net_awaitable[ec]);
+
+						if (!m_scheduler_locking)
+							co_await net::post(net::bind_executor(m_executor, net::use_awaitable));
+
+						if (ec)
+						{
+							log_conn_warning()
+								<< ", resolve: "
+								<< target_host
+								<< ", error: "
+								<< ec.message();
+
+							co_return false;
+						}
+
+						// 更新 dns 缓存.
+						dns_result result = std::make_tuple(targets, std::chrono::steady_clock::now());
+						m_dns_cache.put(target_host, std::move(result));
 					}
 				}
 				else
@@ -4749,9 +4806,34 @@ R"x*x*x(<html>
 				}, stream);
 		}
 
+		inline tcp::resolver::results_type
+		get_resolver_from_cache(const std::string& hostname, uint16_t port)
+		{
+			auto dns = m_dns_cache.get(hostname);
+			if (dns)
+			{
+				[[maybe_unused]] auto& [result, tp] = *dns;
+				for (auto& d : result)
+					d.endpoint().port(port);
+
+				return result;
+			}
+
+			return {};
+		}
+
 	private:
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
+
+		// backend resolver 用于解析域名.
+		net::io_context& m_backend_context;
+
+		// 记录 asio 调度器是否启用锁标识.
+		bool m_scheduler_locking;
+
+		// 作为中继桥接的时候, 下游代理服务器解析的地址缓存.
+		dns_cache& m_dns_cache;
 
 		// m_local_socket 本地 socket, 即客户端连接的 socket.
 		variant_stream_type m_local_socket;
@@ -5313,6 +5395,18 @@ R"x*x*x(<html>
 	public:
 		inline void start() noexcept
 		{
+			m_scheduler_locking = net::config(m_executor.context()).get("scheduler", "locking", true);
+
+			// 运行后端任务线程.
+			if (!m_scheduler_locking)
+			{
+				auto self = shared_from_this();
+				m_backend_thread = std::make_unique<std::thread>([this, self]() mutable
+					{
+						backend_thread_run();
+					});
+			}
+
 			// 如果作为透明代理.
 			if (m_option.transparent_)
 			{
@@ -5368,6 +5462,10 @@ R"x*x*x(<html>
 		{
 			boost::system::error_code ignore_ec;
 			m_abort = true;
+
+			m_backend_context.stop();
+			if (m_backend_thread && m_backend_thread->joinable())
+				m_backend_thread->join();
 
 			m_timer.cancel();
 
@@ -5493,6 +5591,9 @@ R"x*x*x(<html>
 				auto new_session =
 					std::make_shared<proxy_session>(
 						m_executor,
+						m_backend_context,
+						m_scheduler_locking,
+						m_dns_cache,
 							init_proxy_stream(std::move(socket)),
 								connection_id,
 									self);
@@ -5575,6 +5676,9 @@ R"x*x*x(<html>
 				auto new_session =
 					std::make_shared<proxy_session>(
 						m_executor,
+						m_backend_context,
+						m_scheduler_locking,
+						m_dns_cache,
 							init_proxy_stream(std::move(socket)),
 								connection_id,
 									self, true);
@@ -5615,9 +5719,21 @@ R"x*x*x(<html>
 				co_return;
 			}
 
-			tcp::resolver resolver(m_executor);
+			// 切换线程到后端线程池中执行同步 dns 解析操作.
+			auto executor = m_executor;
+			if (!m_scheduler_locking)
+			{
+				co_await net::post(net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
+				executor = m_backend_context.get_executor();
+			}
+
+			tcp::resolver resolver(executor);
 
 			auto results = co_await resolver.async_resolve(hostname, "", net_awaitable[ec]);
+
+			if (!m_scheduler_locking)
+				co_await net::post(net::bind_executor(m_executor, net::use_awaitable));
+
 			if (ec)
 			{
 				XLOG_WARN
@@ -5746,9 +5862,35 @@ R"x*x*x(<html>
 			return *allow;
 		}
 
+		inline void backend_thread_run() noexcept
+		{
+			auto work = net::make_work_guard(m_backend_context);
+
+			try
+			{
+				m_backend_context.run();
+			}
+			catch (const std::exception&)
+			{}
+		}
+
 	private:
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
+
+		// 用于处理一些同步转异步操作的 io_context.
+		// 如执行 dns 解析时, 实际上并不是异步的, 需要在线程池中执行同步操作,
+		// 然后切换回当前 io_context 继续执行异步操作.
+		net::io_context m_backend_context{ 1 };
+
+		// 用于运行 m_backend_context 的线程.
+		std::unique_ptr<std::thread> m_backend_thread;
+
+		// 作为中继桥接的时候, 下游代理服务器解析的地址缓存.
+		dns_cache m_dns_cache{ 128 };
+
+		// 记录 asio 调度器是否启用锁标识.
+		bool m_scheduler_locking;
 
 		// m_tcp_acceptors 用于侦听客户端 tcp 连接请求.
 		std::vector<tcp_acceptor> m_tcp_acceptors;
