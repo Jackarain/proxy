@@ -455,6 +455,7 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 	auto cfg = net::config_from_string(
 		"scheduler.concurrency_hint=1\n"
 		"scheduler.locking_spin_count=1\n"
+		"scheduler.locking=0\n"
 		"reactor.registration_locking=0\n"
 		"reactor.preallocated_io_objects=128\n"
 		"reactor.io_locking=0"
