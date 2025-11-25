@@ -41,6 +41,7 @@ namespace proxy {
 		using list_value = dns_result;
 		using list_type = std::list<std::pair<key_type, list_value>>;
 
+		// 缓存最大 5 分钟, 超过 5 分钟则失效.
 		const std::chrono::seconds expire_time = std::chrono::seconds(300);
 
 	public:
@@ -80,7 +81,8 @@ namespace proxy {
 			// 更新 map 中的迭代器.
 			it->second = m_lru_list.begin();
 			// 更新时间点.
-			it->second->second = std::make_tuple(std::get<0>(it->second->second), now);
+			// 这里注释掉是因为如果访问频繁的域名将可能永远得不到更新!!!
+			// it->second->second = std::make_tuple(std::get<0>(it->second->second), now);
 
 			// 返回 dns_result
 			return it->second->second;
