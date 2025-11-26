@@ -5215,7 +5215,7 @@ R"x*x*x(<html>
 			return self->sni_callback(ssl, ad);
 		}
 
-		inline int sni_callback(SSL *ssl, int *ad) noexcept
+		inline int sni_callback(SSL *ssl, [[maybe_unused]] int *ad) noexcept
 		{
 			const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
 			if (servername)
