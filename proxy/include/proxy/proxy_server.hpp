@@ -77,6 +77,7 @@
 #include <boost/regex.hpp>
 
 #include <boost/nowide/convert.hpp>
+#include <boost/nowide/fstream.hpp>
 
 #ifdef _MSC_VER
 # pragma warning(push)
@@ -3577,7 +3578,7 @@ R"x*x*x(<html>
 		{
 			ec = {};
 
-			std::ifstream file(p.string(), std::ios::binary);
+			boost::nowide::fstream file(p, std::ios::in | std::ios::binary);
 			if (!file)
 			{
 				ec = boost::system::error_code(errno,
@@ -3849,13 +3850,13 @@ R"x*x*x(<html>
 
 			// 查找目录下是否存在 index.html 或 index.htm 文件, 如果存在则返回该文件.
 			// 否则返回目录下的文件列表.
-			auto index_html = fs::path(hctx.target_path_) / "index.html";
-			if (!fs::exists(index_html, ec))
-				index_html = fs::path(hctx.target_path_) / "index.htm";
+			auto index_html_path = fs::path(hctx.target_path_) / "index.html";
+			if (!fs::exists(index_html_path, ec))
+				index_html_path = fs::path(hctx.target_path_) / "index.htm";
 
-			if (fs::exists(index_html, ec))
+			if (fs::exists(index_html_path, ec))
 			{
-				std::ifstream file(index_html.string(), std::ios::binary);
+				boost::nowide::fstream file(index_html_path, std::ios::in | std::ios::binary);
 				if (file)
 				{
 					std::string content(
@@ -3865,7 +3866,7 @@ R"x*x*x(<html>
 					string_response res{ http::status::ok, request.version() };
 					res.set(http::field::server, version_string);
 					res.set(http::field::date, server_date_string());
-					auto ext = strutil::to_lower(index_html.extension().string());
+					auto ext = strutil::to_lower(index_html_path.extension().string());
 					if (global_mimes.count(ext))
 						res.set(http::field::content_type, global_mimes.at(ext));
 					else
@@ -4026,7 +4027,7 @@ R"x*x*x(<html>
 				co_return;
 			}
 
-			std::fstream file(path.string(),
+			boost::nowide::fstream file(path,
 				std::ios_base::binary |
 				std::ios_base::in);
 
@@ -4111,7 +4112,7 @@ R"x*x*x(<html>
 			res.set(http::field::server, version_string);
 			res.set(http::field::date, server_date_string());
 
-			auto ext = strutil::to_lower(fs::path(path).extension().string());
+			auto ext = strutil::to_lower(path.extension().string());
 
 			if (global_mimes.count(ext))
 				res.set(http::field::content_type, global_mimes.at(ext));
@@ -4874,20 +4875,20 @@ R"x*x*x(<html>
 			return p == p_end && !*h;
 		}
 
-		inline pem_file determine_pem_type(const std::string& filepath) noexcept
+		inline pem_file determine_pem_type(const fs::path& filepath) noexcept
 		{
 			pem_file result{ filepath, pem_type::none };
 
-			std::ifstream file(filepath);
+			boost::nowide::fstream file(filepath, std::ios::in | std::ios::binary);
 			if (!file.is_open())
 				return result;
 
-			if (fs::path(filepath).filename() == "password.txt" ||
-				fs::path(filepath).filename() == "passwd.txt" ||
-				fs::path(filepath).filename() == "passwd" ||
-				fs::path(filepath).filename() == "password" ||
-				fs::path(filepath).filename() == "passphrase" ||
-				fs::path(filepath).filename() == "passphrase.txt")
+			if (filepath.filename() == "password.txt" ||
+				filepath.filename() == "passwd.txt" ||
+				filepath.filename() == "passwd" ||
+				filepath.filename() == "password" ||
+				filepath.filename() == "passphrase" ||
+				filepath.filename() == "passphrase.txt")
 			{
 				result.type_ = pem_type::pwd;
 				return result;
@@ -4945,7 +4946,7 @@ R"x*x*x(<html>
 				if (entry.is_regular_file())
 				{
 					// 读取文件, 并判断文件类型.
-					auto type = determine_pem_type(entry.path().string());
+					auto type = determine_pem_type(entry.path());
 					switch (type.type_)
 					{
 						case pem_type::cert:
