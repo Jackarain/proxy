@@ -610,7 +610,7 @@ R"x*x*x(<html>
 			std::string target_;
 
 			// 保存 http 客户端请求目标的具体路径, 即: doc 目录 + target_ 组成的路径.
-			std::string target_path_;
+			fs::path target_path_;
 		};
 
 		enum {
@@ -3367,19 +3367,21 @@ R"x*x*x(<html>
 		};
 
 		template<typename Path>
-		inline std::string make_unc_path(const Path& path)
+		inline fs::path make_unc_path(const Path& path)
 		{
+#ifndef WIN32
+			return path;
+#elif _WIN32_WINNT >= 0x0A00
+			return path;
+#else
 			auto ret = path.string();
-
-#ifdef WIN32
 			if (ret.size() > MAX_PATH)
 			{
 				boost::replace_all(ret, "/", "\\");
 				return "\\\\?\\" + ret;
 			}
-#endif
-
 			return ret;
+#endif
 		}
 
 		inline std::wstring make_target_path(const std::string& target)
@@ -3397,7 +3399,7 @@ R"x*x*x(<html>
 			return boost::nowide::widen(target);
 		}
 
-		inline std::string make_real_target_path(const std::string& target)
+		inline fs::path make_real_target_path(const std::string& target)
 		{
 			auto target_path = make_target_path(target);
 			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
@@ -3468,7 +3470,7 @@ R"x*x*x(<html>
 		}
 
 		inline std::vector<std::wstring>
-		format_path_list(const std::string& path, boost::system::error_code& ec)
+		format_path_list(const fs::path& path, boost::system::error_code& ec)
 		{
 			fs::directory_iterator end;
 			fs::directory_iterator it(path, fs::directory_options::skip_permission_denied, ec);
@@ -3850,9 +3852,9 @@ R"x*x*x(<html>
 
 			// 查找目录下是否存在 index.html 或 index.htm 文件, 如果存在则返回该文件.
 			// 否则返回目录下的文件列表.
-			auto index_html_path = fs::path(hctx.target_path_) / "index.html";
+			auto index_html_path = hctx.target_path_ / "index.html";
 			if (!fs::exists(index_html_path, ec))
-				index_html_path = fs::path(hctx.target_path_) / "index.htm";
+				index_html_path = hctx.target_path_ / "index.htm";
 
 			if (fs::exists(index_html_path, ec))
 			{
@@ -4878,6 +4880,13 @@ R"x*x*x(<html>
 		inline pem_file determine_pem_type(const fs::path& filepath) noexcept
 		{
 			pem_file result{ filepath, pem_type::none };
+
+			boost::system::error_code ec;
+
+			// 文件过大跳过, ssl 证书及密钥相关文件通常不可能超过1M大小.
+			auto filesize = fs::file_size(filepath, ec);
+			if (filesize > 1 * 1024 * 1024 || ec)
+				return result;
 
 			boost::nowide::fstream file(filepath, std::ios::in | std::ios::binary);
 			if (!file.is_open())
