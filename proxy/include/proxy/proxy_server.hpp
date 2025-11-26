@@ -4229,7 +4229,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline std::string server_date_string()
+		inline std::string server_date_string() const noexcept
 		{
 			auto time = std::time(nullptr);
 			auto gmt = gmtime((const time_t*)&time);
