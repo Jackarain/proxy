@@ -3028,63 +3028,7 @@ R"x*x*x(<html>
 				<< ", connect to next proxy: "
 				<< proxy_hostname;
 
-			if (m_option.happyeyeballs_)
-			{
-				co_await asio_util::async_connect(
-					remote_socket,
-					targets,
-					[this](const auto& ec, auto& stream, auto& endp) {
-						return check_condition(ec, stream, endp);
-					},
-					net_awaitable[ec]);
-			}
-			else
-			{
-				for (auto endpoint : targets)
-				{
-					ec = boost::asio::error::host_not_found;
-
-					if (m_option.connect_v4_only_)
-					{
-						if (endpoint.endpoint().address().is_v6())
-							continue;
-					}
-					else if (m_option.connect_v6_only_)
-					{
-						if (endpoint.endpoint().address().is_v4())
-							continue;
-					}
-
-					boost::system::error_code ignore_ec;
-					remote_socket.close(ignore_ec);
-
-					if (m_bind_interface)
-					{
-						tcp::endpoint bind_endpoint(
-							*m_bind_interface,
-							0);
-
-						remote_socket.open(
-							bind_endpoint.protocol(),
-							ec);
-						if (ec)
-							break;
-
-						remote_socket.bind(
-							bind_endpoint,
-							ec);
-						if (ec)
-							break;
-					}
-
-					co_await remote_socket.async_connect(
-						endpoint,
-						net_awaitable[ec]);
-					if (!ec)
-						break;
-				}
-			}
-
+			ec = co_await async_connect_targets(remote_socket, targets);
 			if (ec)
 			{
 				log_conn_warning()
@@ -3400,63 +3344,7 @@ R"x*x*x(<html>
 				}
 			}
 
-			if (m_option.happyeyeballs_)
-			{
-				co_await asio_util::async_connect(
-					remote_socket,
-					targets,
-					[this](const auto& ec, auto& stream, auto& endp) {
-						return check_condition(ec, stream, endp);
-					},
-					net_awaitable[ec]);
-			}
-			else
-			{
-				for (auto endpoint : targets)
-				{
-					ec = boost::asio::error::host_not_found;
-
-					if (m_option.connect_v4_only_)
-					{
-						if (endpoint.endpoint().address().is_v6())
-							continue;
-					}
-					else if (m_option.connect_v6_only_)
-					{
-						if (endpoint.endpoint().address().is_v4())
-							continue;
-					}
-
-					boost::system::error_code ignore_ec;
-					remote_socket.close(ignore_ec);
-
-					if (m_bind_interface)
-					{
-						tcp::endpoint bind_endpoint(
-							*m_bind_interface,
-							0);
-
-						remote_socket.open(
-							bind_endpoint.protocol(),
-							ec);
-						if (ec)
-							break;
-
-						remote_socket.bind(
-							bind_endpoint,
-							ec);
-						if (ec)
-							break;
-					}
-
-					co_await remote_socket.async_connect(
-						endpoint,
-						net_awaitable[ec]);
-					if (!ec)
-						break;
-				}
-			}
-
+			ec = co_await async_connect_targets(remote_socket, targets);
 			if (ec)
 			{
 				log_conn_warning()
@@ -3472,7 +3360,6 @@ R"x*x*x(<html>
 
 			m_remote_socket = init_proxy_stream(
 				std::move(remote_socket));
-
 
 			co_return true;
 		}
@@ -4803,6 +4690,71 @@ R"x*x*x(<html>
 			}
 
 			co_return targets;
+		}
+
+		inline net::awaitable<boost::system::error_code>
+		async_connect_targets(tcp::socket& socket, tcp::resolver::results_type& targets)
+		{
+			boost::system::error_code ec;
+
+			if (m_option.happyeyeballs_)
+			{
+				co_await asio_util::async_connect(
+					socket,
+					targets,
+					[this](const auto& ec, auto& stream, auto& endp) {
+						return check_condition(ec, stream, endp);
+					},
+					net_awaitable[ec]);
+
+				co_return ec;
+			}
+
+			for (auto endpoint : targets)
+			{
+				ec = boost::asio::error::host_not_found;
+
+				if (m_option.connect_v4_only_)
+				{
+					if (endpoint.endpoint().address().is_v6())
+						continue;
+				}
+				else if (m_option.connect_v6_only_)
+				{
+					if (endpoint.endpoint().address().is_v4())
+						continue;
+				}
+
+				boost::system::error_code ignore_ec;
+				socket.close(ignore_ec);
+
+				if (m_bind_interface)
+				{
+					tcp::endpoint bind_endpoint(
+						*m_bind_interface,
+						0);
+
+					socket.open(
+						bind_endpoint.protocol(),
+						ec);
+					if (ec)
+						break;
+
+					socket.bind(
+						bind_endpoint,
+						ec);
+					if (ec)
+						break;
+				}
+
+				co_await socket.async_connect(
+					endpoint,
+					net_awaitable[ec]);
+				if (!ec)
+					break;
+			}
+
+			co_return ec;
 		}
 
 	private:
