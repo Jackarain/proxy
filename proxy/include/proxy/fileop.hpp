@@ -16,7 +16,6 @@
 #include <boost/nowide/fstream.hpp>
 
 #include <cstdint>
-#include <fstream>
 #include <span>
 #include <streambuf>
 #include <string>
