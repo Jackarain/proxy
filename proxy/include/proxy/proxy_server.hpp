@@ -5262,11 +5262,11 @@ R"x*x*x(<html>
 			auto self = shared_from_this();
 			boost::system::error_code ec;
 
-			// 定时检查证书是否过期, 按照过期时间排序, 从最小时间开始检查.
+			// 定时检查证书是否有过期, 如果有过期证书, 则5分钟检查一次证书信息.
 			while (!m_abort)
 			{
-				auto now = boost::posix_time::second_clock::universal_time();
-				std::chrono::seconds duration(std::chrono::days(1));
+				auto now = boost::posix_time::second_clock::local_time();
+				std::chrono::seconds duration(std::chrono::years(1));
 
 				auto& certificates = *m_certificates;
 
@@ -5280,11 +5280,15 @@ R"x*x*x(<html>
 							<< "', dhparam: '" << ctx.dhparam_.filepath_.string()
 							<< "', pwd: '" << ctx.pwd_.filepath_.string()
 							<< "', expired: '" << ctx.expire_date_ << "'";
+
+						// 有证书过期, 设定为5分钟检查一次证书目录.
+						duration = std::chrono::minutes(5);
 						continue;
 					}
 
-					duration = std::chrono::seconds((ctx.expire_date_ - now).total_seconds());
-					break;
+					// 设置为过期时检查证书.
+					auto expire_date = std::chrono::seconds((ctx.expire_date_ - now).total_seconds());
+					duration = std::min(duration, expire_date);
 				}
 
 				// 每隔 duration 检查一次证书是否过期.
