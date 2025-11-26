@@ -5244,7 +5244,7 @@ R"x*x*x(<html>
 							}
 						}
 					}
-					if (ctx.domain_.empty())
+					if (!default_ctx)
 						default_ctx = &ctx;
 				}
 
