@@ -3576,7 +3576,7 @@ R"x*x*x(<html>
 			return path_list;
 		}
 
-		inline std::string file_hash(const fs::path& p, boost::system::error_code& ec)
+		inline std::string file_hash(const fs::path& p, boost::system::error_code& ec) const noexcept
 		{
 			ec = {};
 
