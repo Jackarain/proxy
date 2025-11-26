@@ -640,17 +640,17 @@ R"x*x*x(<html>
 
 		// session 的连接日志输出函数, 用于输出连接 id 相关的日志信息, 简化重复
 		// 的 connection id 这些信息的代码.
-		auto log_conn_error() noexcept
+		auto log_conn_error() const noexcept
 		{
 			return std::move(XLOG_FERR("connection id: {}", m_connection_id));
 		}
 
-		auto log_conn_warning() noexcept
+		auto log_conn_warning() const noexcept
 		{
 			return std::move(XLOG_FWARN("connection id: {}", m_connection_id));
 		}
 
-		auto log_conn_debug() noexcept
+		auto log_conn_debug() const noexcept
 		{
 			return std::move(XLOG_FDBG("connection id: {}", m_connection_id));
 		}
@@ -3220,7 +3220,7 @@ R"x*x*x(<html>
 		}
 
 		// is_crytpo_stream 判断当前连接是否为加密连接.
-		inline bool is_crytpo_stream() const
+		inline bool is_crytpo_stream() const noexcept
 		{
 			return boost::variant2::holds_alternative<ssl_stream>(m_remote_socket);
 		}
@@ -3336,7 +3336,7 @@ R"x*x*x(<html>
 		}
 
 		inline fs::path path_cat(
-			const std::wstring& doc, const std::wstring& target)
+			const std::wstring& doc, const std::wstring& target) const noexcept
 		{
 			size_t start_pos = 0;
 			for (auto& c : target)
@@ -3367,7 +3367,7 @@ R"x*x*x(<html>
 		};
 
 		template<typename Path>
-		inline fs::path make_unc_path(const Path& path)
+		inline fs::path make_unc_path(const Path& path) const noexcept
 		{
 #ifndef WIN32
 			return path;
@@ -3384,7 +3384,7 @@ R"x*x*x(<html>
 #endif
 		}
 
-		inline std::wstring make_target_path(const std::string& target)
+		inline std::wstring make_target_path(const std::string& target) const noexcept
 		{
 			try
 			{
@@ -3399,7 +3399,7 @@ R"x*x*x(<html>
 			return boost::nowide::widen(target);
 		}
 
-		inline fs::path make_real_target_path(const std::string& target)
+		inline fs::path make_real_target_path(const std::string& target) const noexcept
 		{
 			auto target_path = make_target_path(target);
 			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
@@ -3413,7 +3413,7 @@ R"x*x*x(<html>
 			return ret;
 		}
 
-		inline std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file)
+		inline std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file) const noexcept
 		{
 			static auto loc_time = [](auto t) -> struct tm*
 			{
@@ -3470,7 +3470,7 @@ R"x*x*x(<html>
 		}
 
 		inline std::vector<std::wstring>
-		format_path_list(const fs::path& path, boost::system::error_code& ec)
+		format_path_list(const fs::path& path, boost::system::error_code& ec) const
 		{
 			fs::directory_iterator end;
 			fs::directory_iterator it(path, fs::directory_options::skip_permission_denied, ec);
