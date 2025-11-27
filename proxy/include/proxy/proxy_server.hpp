@@ -5608,6 +5608,11 @@ R"x*x*x(<html>
 				remote_endp.port(port);
 			}
 
+			XLOG_DBG << "connection id: "
+				<< connection_id
+				<< ", tproxy, remote: "
+				<< remote_endp;
+
 			// 创建透明代理, 开始连接通过代理服务器连接与当前客户端通信.
 			auto it = std::find_if(m_local_addrs.begin(),
 				m_local_addrs.end(), [&](const auto& addr)
@@ -5619,11 +5624,6 @@ R"x*x*x(<html>
 
 			if (it == m_local_addrs.end())
 			{
-				XLOG_DBG << "connection id: "
-					<< connection_id
-					<< ", is tproxy, remote: "
-					<< remote_endp;
-
 				auto self = shared_from_this();
 
 				// 创建 proxy_session 对象用于 tproxy.
