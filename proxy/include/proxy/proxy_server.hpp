@@ -582,7 +582,7 @@ R"x*x*x(<html>
 		virtual ~proxy_session_base() {}
 		virtual void start() = 0;
 		virtual void close() = 0;
-		virtual void set_tproxy_remote(const net::ip::tcp::endpoint&) = 0;
+		virtual void setup_tproxy(const net::ip::tcp::endpoint&) = 0;
 		virtual size_t connection_id() = 0;
 	};
 
@@ -879,9 +879,12 @@ R"x*x*x(<html>
 			m_remote_socket.close(ignore_ec);
 		}
 
-		void set_tproxy_remote(
+		void setup_tproxy(
 			const net::ip::tcp::endpoint& tproxy_remote) override
 		{
+			log_conn_debug()
+				<< ", tproxy setup: " << tproxy_remote;
+
 			m_tproxy_remote = tproxy_remote;
 		}
 
@@ -5520,7 +5523,7 @@ R"x*x*x(<html>
 #if defined (__linux__)
 				std::optional<net::ip::tcp::endpoint> tproxy_endpoint;
 				if (m_option.transparent_)
-					tproxy_endpoint = co_await start_transparent_proxy(socket, connection_id);
+					tproxy_endpoint = co_await setup_tproxy(socket, connection_id);
 #endif
 
 				// 在启用 scramble 时, 刻意开启 Nagle's algorithm 以尽量保证数据包
@@ -5547,7 +5550,7 @@ R"x*x*x(<html>
 
 #if defined (__linux__)
 				if (tproxy_endpoint)
-					new_session->set_tproxy_remote(*tproxy_endpoint);
+					new_session->setup_tproxy(*tproxy_endpoint);
 #endif
 
 				// 启动 proxy_session 对象.
@@ -5559,7 +5562,7 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<std::optional<net::ip::tcp::endpoint>>
-		start_transparent_proxy(proxy_tcp_socket& socket, size_t connection_id) noexcept
+		setup_tproxy(proxy_tcp_socket& socket, size_t connection_id) noexcept
 		{
 #ifndef SO_ORIGINAL_DST
 #  define SO_ORIGINAL_DST 80
