@@ -1665,6 +1665,12 @@ R"x*x*x(<html>
 
 					// 绑定到指定的地址.
 					remote_bind_socket->bind(bind_if, ec);
+
+					if (m_option.so_mark_)
+					{
+						auto socket_fd = remote_bind_socket->native_handle();
+						co_await tproxy_set_mark(socket_fd);
+					}
 				}
 
 				// 绑定到和 tcp socket 相同的地址.
@@ -4538,19 +4544,18 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<void>
-		tproxy_set_mark(tcp::socket& remote_socket) const noexcept
+		tproxy_set_mark(int socket_fd) const noexcept
 		{
 #if defined (__linux__)
 			if (!m_option.so_mark_)
 				co_return;
 
-			auto sockfd = remote_socket.native_handle();
 			uint32_t mark = m_option.so_mark_.value();
 
-			if (::setsockopt(sockfd, SOL_SOCKET, SO_MARK, &mark, sizeof(uint32_t)) < 0)
+			if (::setsockopt(socket_fd, SOL_SOCKET, SO_MARK, &mark, sizeof(uint32_t)) < 0)
 			{
 				log_conn_warning()
-					<< ", tproxy setsockopt: " << sockfd
+					<< ", tproxy setsockopt: " << socket_fd
 					<< ", mark: " << mark
 					<< ", error: " << strerror(errno);
 			}
@@ -4574,7 +4579,7 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 
 				if (m_option.transparent_)
-					co_await tproxy_set_mark(socket);
+					co_await tproxy_set_mark(socket.native_handle());
 
 				co_return ec;
 			}
@@ -4622,7 +4627,7 @@ R"x*x*x(<html>
 				if (!ec)
 				{
 					if (m_option.transparent_)
-						co_await tproxy_set_mark(socket);
+						co_await tproxy_set_mark(socket.native_handle());
 
 					break;
 				}
