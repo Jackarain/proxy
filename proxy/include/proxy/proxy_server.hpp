@@ -902,18 +902,6 @@ R"x*x*x(<html>
 			tcp::socket& remote_socket =
 				net_tcp_socket(m_remote_socket);
 
-#if defined (__linux__)
-			if (m_option.so_mark_)
-			{
-				auto sockfd = remote_socket.native_handle();
-				uint32_t mark = m_option.so_mark_.value();
-
-				if (::setsockopt(sockfd, SOL_SOCKET, SO_MARK, &mark, sizeof(uint32_t)) < 0)
-					XLOG_FWARN("connection id: {}, setsockopt({}, SO_MARK: {}",
-						m_connection_id, sockfd, strerror(errno));
-			}
-#endif
-
 			boost::system::error_code ec;
 
 			// 查询网关代理中继服务器域名信息.
@@ -4549,6 +4537,27 @@ R"x*x*x(<html>
 			co_return targets;
 		}
 
+		inline net::awaitable<void>
+		tproxy_set_mark(tcp::socket& remote_socket) const noexcept
+		{
+#if defined (__linux__)
+			if (!m_option.so_mark_)
+				co_return;
+
+			auto sockfd = remote_socket.native_handle();
+			uint32_t mark = m_option.so_mark_.value();
+
+			if (::setsockopt(sockfd, SOL_SOCKET, SO_MARK, &mark, sizeof(uint32_t)) < 0)
+			{
+				log_conn_warning()
+					<< ", tproxy setsockopt: " << sockfd
+					<< ", mark: " << mark
+					<< ", error: " << strerror(errno);
+			}
+#endif
+			co_return;
+		}
+
 		inline net::awaitable<boost::system::error_code>
 		async_connect_targets(tcp::socket& socket, tcp::resolver::results_type& targets)
 		{
@@ -4563,6 +4572,9 @@ R"x*x*x(<html>
 						return check_condition(ec, stream, endp);
 					},
 					net_awaitable[ec]);
+
+				if (m_option.transparent_)
+					co_await tproxy_set_mark(socket);
 
 				co_return ec;
 			}
@@ -4608,7 +4620,12 @@ R"x*x*x(<html>
 					endpoint,
 					net_awaitable[ec]);
 				if (!ec)
+				{
+					if (m_option.transparent_)
+						co_await tproxy_set_mark(socket);
+
 					break;
+				}
 			}
 
 			co_return ec;
