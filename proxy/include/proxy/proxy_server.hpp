@@ -1667,10 +1667,7 @@ R"x*x*x(<html>
 					remote_bind_socket->bind(bind_if, ec);
 
 					if (m_option.so_mark_)
-					{
-						auto socket_fd = remote_bind_socket->native_handle();
-						co_await tproxy_set_mark(socket_fd);
-					}
+						co_await tproxy_set_mark((int)remote_bind_socket->native_handle());
 				}
 
 				// 绑定到和 tcp socket 相同的地址.
@@ -4579,7 +4576,7 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 
 				if (m_option.transparent_)
-					co_await tproxy_set_mark(socket.native_handle());
+					co_await tproxy_set_mark((int)socket.native_handle());
 
 				co_return ec;
 			}
@@ -4627,7 +4624,7 @@ R"x*x*x(<html>
 				if (!ec)
 				{
 					if (m_option.transparent_)
-						co_await tproxy_set_mark(socket.native_handle());
+						co_await tproxy_set_mark((int)socket.native_handle());
 
 					break;
 				}
