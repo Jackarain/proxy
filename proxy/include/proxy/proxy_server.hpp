@@ -762,8 +762,7 @@ R"x*x*x(<html>
 			dns_cache& cache,
 			variant_stream_type&& socket,
 			size_t id,
-			std::weak_ptr<proxy_server_base> server,
-			bool tproxy = false
+			std::weak_ptr<proxy_server_base> server
 		)
 			: m_executor(executor)
 			, m_backend_context(backend_context)
@@ -772,7 +771,6 @@ R"x*x*x(<html>
 			, m_local_socket(std::move(socket))
 			, m_remote_socket(init_proxy_stream(executor))
 			, m_connection_id(id)
-			, m_tproxy(tproxy)
 			, m_local_buffer(10485760u) // 10MB max buffer size.
 			, m_proxy_server(server)
 		{
@@ -846,7 +844,7 @@ R"x*x*x(<html>
 			auto self = this->shared_from_this();
 
 			// 如果是透明代理, 则启动透明代理协程.
-			if (m_tproxy)
+			if (m_tproxy_remote)
 			{
 				net::co_spawn(m_executor,
 					[this, self, server]() -> net::awaitable<void>
@@ -910,8 +908,8 @@ R"x*x*x(<html>
 			// 发起连接到网关代理中继服务器.
 			bool ret = co_await connect_proxy_pass(
 				remote_socket,
-				m_tproxy_remote.address().to_string(),
-				m_tproxy_remote.port(),
+				m_tproxy_remote->address().to_string(),
+				m_tproxy_remote->port(),
 				targets,
 				ec);
 
@@ -4786,11 +4784,8 @@ R"x*x*x(<html>
 		// m_connection_id 当前连接的 id, 用于日志输出.
 		size_t m_connection_id;
 
-		// m_tproxy 是否是 tproxy 模式.
-		bool m_tproxy{ false };
-
 		// m_tproxy_remote tproxy 模式下, 客户端期望请求远程地址.
-		net::ip::tcp::endpoint m_tproxy_remote;
+		std::optional<net::ip::tcp::endpoint> m_tproxy_remote;
 
 		// m_local_buffer 本地缓冲区, 用于接收客户端的数据的 buffer.
 		net::streambuf m_local_buffer;
@@ -5523,11 +5518,9 @@ R"x*x*x(<html>
 
 				// 是否启用透明代理.
 #if defined (__linux__)
+				std::optional<net::ip::tcp::endpoint> tproxy_endpoint;
 				if (m_option.transparent_)
-				{
-					if (co_await start_transparent_proxy(socket, connection_id))
-						continue;
-				}
+					tproxy_endpoint = co_await start_transparent_proxy(socket, connection_id);
 #endif
 
 				// 在启用 scramble 时, 刻意开启 Nagle's algorithm 以尽量保证数据包
@@ -5552,6 +5545,11 @@ R"x*x*x(<html>
 				// 保存 proxy_session 对象到 m_clients 中.
 				m_clients[connection_id] = new_session;
 
+#if defined (__linux__)
+				if (tproxy_endpoint)
+					new_session->set_tproxy_remote(*tproxy_endpoint);
+#endif
+
 				// 启动 proxy_session 对象.
 				new_session->start();
 			}
@@ -5560,13 +5558,14 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<bool>
+		inline net::awaitable<std::optional<net::ip::tcp::endpoint>>
 		start_transparent_proxy(proxy_tcp_socket& socket, size_t connection_id) noexcept
 		{
 #ifndef SO_ORIGINAL_DST
 #  define SO_ORIGINAL_DST 80
 #endif
 			auto sockfd = socket.native_handle();
+			std::optional<net::ip::tcp::endpoint> remote_endp;
 
 			sockaddr_storage addr;
 			socklen_t addrlen = sizeof(addr);
@@ -5578,13 +5577,13 @@ R"x*x*x(<html>
 			{
 				XLOG_FWARN("connection id: {}, getsockopt: {}, SO_ORIGINAL_DST: {}",
 					connection_id, (int)sockfd, strerror(errno));
-				co_return false;
+				co_return remote_endp;
 			}
-
-			net::ip::tcp::endpoint remote_endp;
 
 			if (addr.ss_family == AF_INET6)
 			{
+				remote_endp.emplace();
+
 				auto addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
 				auto port = ntohs(addr6->sin6_port);
 
@@ -5593,60 +5592,49 @@ R"x*x*x(<html>
 				std::copy(std::begin(addr6->sin6_addr.s6_addr),
 					std::end(addr6->sin6_addr.s6_addr), std::begin(bt));
 
-				remote_endp.address(net::ip::make_address_v6(bt));
-				remote_endp.port(port);
+				remote_endp->address(net::ip::make_address_v6(bt));
+				remote_endp->port(port);
 			}
 			else
 			{
+				remote_endp.emplace();
+
 				auto addr4 = reinterpret_cast<sockaddr_in*>(&addr);
 				auto port = ntohs(addr4->sin_port);
 
-				remote_endp.address(net::ip::address_v4(htonl(addr4->sin_addr.s_addr)));
-				remote_endp.port(port);
+				remote_endp->address(net::ip::address_v4(htonl(addr4->sin_addr.s_addr)));
+				remote_endp->port(port);
 			}
 
 			XLOG_DBG << "connection id: "
 				<< connection_id
 				<< ", tproxy, remote: "
-				<< remote_endp;
+				<< *remote_endp;
+
+			if (remote_endp->address().is_loopback())
+			{
+				// 请求的是本机的回环连接, 而不是 TPROXY 代理.
+				remote_endp.reset();
+
+				co_return remote_endp;
+			}
 
 			// 创建透明代理, 开始连接通过代理服务器连接与当前客户端通信.
 			auto it = std::find_if(m_local_addrs.begin(),
 				m_local_addrs.end(), [&](const auto& addr)
 				{
-					if (addr == remote_endp.address())
+					if (addr == remote_endp->address())
 						return true;
 					return false;
 				});
 
 			if (it == m_local_addrs.end())
-			{
-				auto self = shared_from_this();
+				co_return remote_endp;
 
-				// 创建 proxy_session 对象用于 tproxy.
-				auto new_session =
-					std::make_shared<proxy_session>(
-						m_executor,
-						m_backend_context,
-						m_scheduler_locking,
-						m_dns_cache,
-							init_proxy_stream(std::move(socket)),
-								connection_id,
-									self, true);
+			// 请求的是本机的 socket 连接, 而不是 TPROXY 代理.
+			remote_endp.reset();
 
-				// 保存 proxy_session 对象到 m_clients 中.
-				m_clients[connection_id] = new_session;
-
-				// 设置 tproxy 的 remote 到 session 对象.
-				new_session->set_tproxy_remote(remote_endp);
-				// 启动 proxy_session 对象.
-				new_session->start();
-
-				co_return true;
-			}
-
-			// 执行到这里, 表示客户端直接请求本代理服务, 则按普通代理服务请求处理.
-			co_return false;
+			co_return remote_endp;
 		}
 
 		inline net::awaitable<void> get_local_address() noexcept
