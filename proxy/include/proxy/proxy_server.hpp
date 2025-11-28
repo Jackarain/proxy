@@ -583,7 +583,7 @@ R"x*x*x(<html>
 		virtual void start() = 0;
 		virtual void close() = 0;
 		virtual void setup_tproxy(const net::ip::tcp::endpoint&) = 0;
-		virtual size_t connection_id() = 0;
+		virtual size_t connection_id() const = 0;
 	};
 
 
@@ -728,13 +728,13 @@ R"x*x*x(<html>
 
 		// net_tcp_socket 用于将 stream 转换为 tcp::socket 对象.
 		template <typename Stream>
-		tcp::socket& net_tcp_socket(Stream& socket)
+		tcp::socket& net_tcp_socket(Stream& socket) noexcept
 		{
 			return static_cast<tcp::socket&>(socket.lowest_layer());
 		}
 
 		// 更新 session 发起连接时使用的本地绑定地址.
-		void update_bind_interface(const std::string& addr)
+		void update_bind_interface(const std::string& addr) noexcept
 		{
 			if (addr.empty())
 				return;
@@ -792,7 +792,7 @@ R"x*x*x(<html>
 		}
 
 	public:
-		void start() override
+		void start() noexcept override
 		{
 			auto server = m_proxy_server.lock();
 			if (!server)
@@ -865,7 +865,7 @@ R"x*x*x(<html>
 				}, net::detached);
 		}
 
-		void close() override
+		void close() noexcept override
 		{
 			if (m_abort)
 				return;
@@ -880,7 +880,7 @@ R"x*x*x(<html>
 		}
 
 		void setup_tproxy(
-			const net::ip::tcp::endpoint& tproxy_remote) override
+			const net::ip::tcp::endpoint& tproxy_remote) noexcept override
 		{
 			log_conn_debug()
 				<< ", tproxy setup: " << tproxy_remote;
@@ -888,7 +888,7 @@ R"x*x*x(<html>
 			m_tproxy_remote = tproxy_remote;
 		}
 
-		size_t connection_id() override
+		size_t connection_id() const noexcept override
 		{
 			return m_connection_id;
 		}
@@ -896,7 +896,7 @@ R"x*x*x(<html>
 	private:
 
 		inline net::awaitable<void>
-		transparent_proxy()
+		transparent_proxy() noexcept
 		{
 			auto executor = co_await net::this_coro::executor;
 
@@ -940,7 +940,7 @@ R"x*x*x(<html>
 
 		inline net::awaitable<bool>
 		noise_handshake(tcp::socket& socket,
-			std::vector<uint8_t>& inkey, std::vector<uint8_t>& outkey)
+			std::vector<uint8_t>& inkey, std::vector<uint8_t>& outkey) noexcept
 		{
 			boost::system::error_code error;
 
@@ -1041,7 +1041,7 @@ R"x*x*x(<html>
 		}
 
 		// 协议侦测协程.
-		inline net::awaitable<void> proto_detect(bool handshake_before = true)
+		inline net::awaitable<void> proto_detect(bool handshake_before = true) noexcept
 		{
 			// 如果 server 对象已经撤销, 说明服务已经关闭则直接退出这个 session 连接不再
 			// 进行任何处理.
@@ -1273,7 +1273,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<void> start_proxy()
+		inline net::awaitable<void> start_proxy() noexcept
 		{
 			// read
 			//  +----+----------+----------+
@@ -1384,7 +1384,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<void> socks_connect_v5()
+		inline net::awaitable<void> socks_connect_v5() noexcept
 		{
 			auto p = (const char*)m_local_buffer.data().data();
 
@@ -1896,7 +1896,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<void> forward_udp(udp::socket& client, udp::socket& server)
+		inline net::awaitable<void> forward_udp(udp::socket& client, udp::socket& server) noexcept
 		{
 			[[maybe_unused]] auto self = shared_from_this();
 
@@ -2093,7 +2093,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<void> socks_connect_v4()
+		inline net::awaitable<void> socks_connect_v4() noexcept
 		{
 			auto self = shared_from_this();
 			auto p = (const char*)m_local_buffer.data().data();
@@ -2347,7 +2347,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline int http_authorization(std::string_view pa)
+		inline int http_authorization(std::string_view pa) noexcept
 		{
 			if (m_option.auth_users_.empty())
 				return PROXY_AUTH_SUCCESS;
@@ -2420,7 +2420,7 @@ R"x*x*x(<html>
 			return PROXY_AUTH_SUCCESS;
 		}
 
-		inline net::awaitable<bool> http_proxy_get()
+		inline net::awaitable<bool> http_proxy_get() noexcept
 		{
 			boost::system::error_code ec;
 			bool keep_alive = false;
@@ -2628,7 +2628,7 @@ R"x*x*x(<html>
 			co_return true;
 		}
 
-		inline net::awaitable<bool> http_proxy_connect()
+		inline net::awaitable<bool> http_proxy_connect() noexcept
 		{
 			http::request<http::string_body> req;
 			boost::system::error_code ec;
@@ -2743,7 +2743,7 @@ R"x*x*x(<html>
 			co_return true;
 		}
 
-		inline net::awaitable<bool> socks_auth()
+		inline net::awaitable<bool> socks_auth() noexcept
 		{
 			//  +----+------+----------+------+----------+
 			//  |VER | ULEN |  UNAME   | PLEN |  PASSWD  |
@@ -2922,7 +2922,7 @@ R"x*x*x(<html>
 		}
 
 		template<typename S1, typename S2>
-		net::awaitable<void> transfer(S1& from, S2& to, size_t& bytes_transferred)
+		net::awaitable<void> transfer(S1& from, S2& to, size_t& bytes_transferred) noexcept
 		{
 			bytes_transferred = 0;
 
@@ -2988,7 +2988,7 @@ R"x*x*x(<html>
 
 		template <typename Stream, typename Endpoint>
 		inline bool check_condition(
-			const boost::system::error_code&, Stream& stream, Endpoint&) const
+			const boost::system::error_code&, Stream& stream, Endpoint&) const noexcept
 		{
 			if (!m_bind_interface)
 				return true;
@@ -3013,7 +3013,7 @@ R"x*x*x(<html>
 			uint16_t target_port,
 			tcp::resolver::results_type targets,
 			boost::system::error_code& ec,
-			int command = SOCKS_CMD_CONNECT)
+			int command = SOCKS_CMD_CONNECT) noexcept
 		{
 			auto proxy_hostname = m_proxy_pass->encoded_origin();
 
@@ -3151,7 +3151,7 @@ R"x*x*x(<html>
 			uint16_t target_port,
 			boost::system::error_code& ec,
 			bool resolve = false,
-			int command = SOCKS_CMD_CONNECT)
+			int command = SOCKS_CMD_CONNECT) noexcept
 		{
 			tcp::socket& remote_socket = net_tcp_socket(m_remote_socket);
 			tcp::resolver::results_type targets;
@@ -3218,7 +3218,7 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<void>
-		normal_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser)
+		normal_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser) noexcept
 		{
 			boost::system::error_code ec;
 
@@ -3598,7 +3598,7 @@ R"x*x*x(<html>
 		}
 
 		template <typename CompletionToken>
-		inline auto async_hash_file(const fs::path& path, CompletionToken&& token)
+		inline auto async_hash_file(const fs::path& path, CompletionToken&& token) const noexcept
 		{
 			auto self = shared_from_this();
 
@@ -3627,7 +3627,7 @@ R"x*x*x(<html>
 					}, token);
 		}
 
-		inline net::awaitable<void> on_http_all_json(const http_context& hctx)
+		inline net::awaitable<void> on_http_all_json(const http_context& hctx) noexcept
 		{
 			boost::system::error_code ec;
 			auto& request = hctx.request_;
@@ -3731,7 +3731,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<void> on_http_json(const http_context& hctx)
+		inline net::awaitable<void> on_http_json(const http_context& hctx) noexcept
 		{
 			boost::system::error_code ec;
 			auto& request = hctx.request_;
@@ -3835,7 +3835,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<void> on_http_dir(const http_context& hctx)
+		inline net::awaitable<void> on_http_dir(const http_context& hctx) noexcept
 		{
 			using namespace std::literals;
 
@@ -3948,7 +3948,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<void> on_http_get(const http_context& hctx)
+		inline net::awaitable<void> on_http_get(const http_context& hctx) noexcept
 		{
 			boost::system::error_code ec;
 
@@ -4234,7 +4234,7 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<void> default_http_route(
-			const string_request& request, std::string response, http::status status)
+			const string_request& request, std::string response, http::status status) noexcept
 		{
 			boost::system::error_code ec;
 
@@ -4260,7 +4260,7 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<void> location_http_route(
-			const string_request& request, const std::string& path)
+			const string_request& request, const std::string& path) noexcept
 		{
 			boost::system::error_code ec;
 
@@ -4286,7 +4286,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<void> forbidden_http_route(const string_request& request)
+		inline net::awaitable<void> forbidden_http_route(const string_request& request) noexcept
 		{
 			boost::system::error_code ec;
 
@@ -4312,7 +4312,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline net::awaitable<void> unauthorized_http_route(const string_request& request)
+		inline net::awaitable<void> unauthorized_http_route(const string_request& request) noexcept
 		{
 			boost::system::error_code ec;
 
@@ -4339,7 +4339,7 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline void user_rate_limit_config(const std::string& user)
+		inline void user_rate_limit_config(const std::string& user) noexcept
 		{
 			// 在这里使用用户指定的速率设置替换全局速率配置.
 			auto found = m_option.users_rate_limit_.find(user);
@@ -4350,7 +4350,7 @@ R"x*x*x(<html>
 			}
 		}
 
-		inline void stream_expires_never(variant_stream_type& stream)
+		inline void stream_expires_never(variant_stream_type& stream) const noexcept
 		{
 			boost::variant2::visit([](auto& s) mutable
 			{
@@ -4373,7 +4373,8 @@ R"x*x*x(<html>
 			}, stream);
 		}
 
-		inline void stream_expires_after(variant_stream_type& stream, net::steady_timer::duration expiry_time)
+		inline void stream_expires_after(
+			variant_stream_type& stream, net::steady_timer::duration expiry_time) const noexcept
 		{
 			if (expiry_time.count() < 0)
 				return;
@@ -4399,7 +4400,8 @@ R"x*x*x(<html>
 			}, stream);
 		}
 
-		inline void stream_expires_at(variant_stream_type& stream, net::steady_timer::time_point expiry_time)
+		inline void stream_expires_at(
+			variant_stream_type& stream, net::steady_timer::time_point expiry_time) const noexcept
 		{
 			boost::variant2::visit([expiry_time](auto& s) mutable
 			{
@@ -4422,7 +4424,7 @@ R"x*x*x(<html>
 			}, stream);
 		}
 
-		inline void stream_rate_limit(variant_stream_type& stream, int rate)
+		inline void stream_rate_limit(variant_stream_type& stream, int rate) const noexcept
 		{
 			boost::variant2::visit([rate](auto& s) mutable
 				{
@@ -4446,7 +4448,7 @@ R"x*x*x(<html>
 		}
 
 		inline tcp::resolver::results_type
-		get_resolver_from_cache(const std::string& hostname, uint16_t port)
+		get_resolver_from_cache(const std::string& hostname, uint16_t port) noexcept
 		{
 			auto dns = m_dns_cache.get(hostname);
 			if (dns)
@@ -4462,7 +4464,7 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<tcp::resolver::results_type>
-		resolve_targets(const std::string& hostname, uint16_t port_number)
+		resolve_targets(const std::string& hostname, uint16_t port_number) noexcept
 		{
 			net::ip::basic_resolver_results<tcp> targets;
 
@@ -4508,7 +4510,7 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<tcp::resolver::results_type>
-		resolve_proxy_pass_targets()
+		resolve_proxy_pass_targets() noexcept
 		{
 			tcp::resolver::results_type targets;
 
@@ -4562,7 +4564,7 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<boost::system::error_code>
-		async_connect_targets(tcp::socket& socket, tcp::resolver::results_type& targets)
+		async_connect_targets(tcp::socket& socket, tcp::resolver::results_type& targets) noexcept
 		{
 			boost::system::error_code ec;
 
@@ -4635,7 +4637,7 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<variant_stream_type>
-		instantiate_proxy_pass(tcp::socket remote_socket, bool proxy_pass_use_ssl)
+		instantiate_proxy_pass(tcp::socket remote_socket, bool proxy_pass_use_ssl) noexcept
 		{
 			boost::system::error_code ec;
 
