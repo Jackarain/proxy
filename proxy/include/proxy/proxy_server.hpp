@@ -5179,22 +5179,31 @@ R"x*x*x(<html>
 		inline void update_certificate(
 			const fs::path& directory, std::vector<certificate_file>& certificates) noexcept
 		{
-			walk_certificate(m_option.ssl_cert_path_, certificates);
+			// 清空现有证书.
+			certificates.clear();
+
+			// 扫描证书文件.
+			walk_certificate(directory, certificates);
 
 			// 按过期时间排序.
-			std::sort(certificates.begin(), certificates.end(),
+			std::stable_sort(certificates.begin(), certificates.end(),
 				[](const certificate_file& a, const certificate_file& b) {
 					return a.expire_date_ < b.expire_date_;
 				});
+
+			auto print_path = [](const std::string& prefix, const fs::path path)
+			{
+				return path.empty() ? "" : prefix + path.string();
+			};
 
 			for (const auto& ctx : certificates)
 			{
 				XLOG_DBG << "domain: '" << ctx.domain_
 					<< "', expire: '" << ctx.expire_date_
-					<< "', cert: '" << ctx.cert_.filepath_.string()
-					<< "', key: '" << ctx.key_.filepath_.string()
-					<< "', dhparam: '" << ctx.dhparam_.filepath_.string()
-					<< "', pwd: '" << ctx.pwd_.filepath_.string() << "'";
+					<< print_path("', cert: '", ctx.cert_.filepath_)
+					<< print_path("', key: '", ctx.key_.filepath_)
+					<< print_path("', dhparam: '", ctx.dhparam_.filepath_)
+					<< print_path("', pwd: '", ctx.pwd_.filepath_);
 			}
 		}
 
@@ -5313,13 +5322,11 @@ R"x*x*x(<html>
 				// 热更新证书, 交替更新证书容器 master/slave.
 				if (m_certificates == &m_certificate_master)
 				{
-					m_certificate_slave.clear();
 					update_certificate(m_option.ssl_cert_path_, m_certificate_slave);
 					m_certificates = &m_certificate_slave;
 				}
 				else
 				{
-					m_certificate_master.clear();
 					update_certificate(m_option.ssl_cert_path_, m_certificate_master);
 					m_certificates = &m_certificate_master;
 				}
