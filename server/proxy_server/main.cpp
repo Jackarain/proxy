@@ -22,7 +22,6 @@
 
 #ifdef USE_SNMALLOC
 # ifdef NDEBUG
-#  define NO_BOOTSTRAP_ALLOCATOR
 #  include "src/snmalloc/override/malloc.cc"
 #  include "src/snmalloc/override/new.cc"
 # endif
