@@ -212,16 +212,6 @@ if (${COMPILER_HAS_COLOR})
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 endif()
 
-#if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-#	if (COMPILER_HAS_FCOROUTINES)
-#		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
-#	endif()
-#endif()
-
-#if (COMPILER_HAS_FCOROUTINES_TS)
-#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines-ts")
-#endif()
-
 if (ENABLE_SYSTEMD_LOGGING)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_SYSTEMD_LOGGING")
 endif()
