@@ -8,13 +8,6 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "proxy/proxy_server.hpp"
-#include "proxy/socks_client.hpp"
-#include "proxy/logging.hpp"
-
-#include "proxy/use_awaitable.hpp"
-#include "proxy/ipip.hpp"
-
 #ifdef _MSC_VER
 # pragma warning(push)
 # pragma warning(disable: 4005)
@@ -22,6 +15,7 @@
 
 #ifdef USE_SNMALLOC
 # ifdef NDEBUG
+#  define SNMALLOC_STATIC_LIBRARY_PREFIX sn_
 #  include "src/snmalloc/override/malloc.cc"
 #  include "src/snmalloc/override/new.cc"
 # endif
@@ -30,6 +24,13 @@
 #ifdef _MSC_VER
 # pragma warning(pop)
 #endif
+
+#include "proxy/proxy_server.hpp"
+#include "proxy/socks_client.hpp"
+#include "proxy/logging.hpp"
+
+#include "proxy/use_awaitable.hpp"
+#include "proxy/ipip.hpp"
 
 #include "main.hpp"
 
