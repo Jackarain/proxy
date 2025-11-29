@@ -301,9 +301,6 @@ R"x*x*x(<html>
 
 	//////////////////////////////////////////////////////////////////////////
 
-	// udp_session_expired_time 用于指定 udp session 的默认过期时间, 单位为秒.
-	inline const int udp_session_expired_time = 60;
-
 	// tcp_session_expired_time 用于指定 tcp session 的默认过期时间, 单位为秒.
 	inline const int tcp_session_expired_time = 60;
 
@@ -472,9 +469,6 @@ R"x*x*x(<html>
 
 		// so_mark 用于指定发起连接时的 so_mark, 仅在 transparent_ 为 true.
 		std::optional<uint32_t> so_mark_;
-
-		// udp 超时时间, 用于指定 udp 连接的超时时间, 单位为秒.
-		int udp_timeout_{ udp_session_expired_time };
 
 		// tcp 超时时间, 用于指定 tcp 连接的超时时间, 单位为秒.
 		int tcp_timeout_{ tcp_session_expired_time };
@@ -800,9 +794,6 @@ R"x*x*x(<html>
 
 			// 保存 server 的参数选项.
 			m_option = server->option();
-
-			// 设置 udp 超时时间.
-			m_udp_timeout = m_option.udp_timeout_;
 
 			// 将 local_ip 转换为 ip::address 对象, 用于后面向外发起连接时
 			// 绑定到指定的本地地址.
@@ -1914,9 +1905,6 @@ R"x*x*x(<html>
 
 			while (!m_abort)
 			{
-				// 重置 udp 超时时间.
-				m_udp_timeout = m_option.udp_timeout_;
-
 				auto bytes = co_await client.async_receive_from(
 					net::buffer((char*)rbuf, 4000),
 					remote_endp,
@@ -4782,9 +4770,6 @@ R"x*x*x(<html>
 		udp::endpoint m_local_udp_endpoint;
 		// m_remote_udp_endpoint 用于保存 udp 通信时, 远程的地址, 用于作为 UDP 代理桥接时使用.
 		udp::endpoint m_remote_udp_endpoint;
-
-		// m_timeout udp 会话超时时间, 默认 60 秒.
-		int m_udp_timeout{ udp_session_expired_time };
 
 		// m_connection_id 当前连接的 id, 用于日志输出.
 		size_t m_connection_id;

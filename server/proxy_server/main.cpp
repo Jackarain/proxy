@@ -96,7 +96,6 @@ bool ssl_prefer_server_ciphers = false;
 
 int64_t linux_so_mark;
 uint16_t noise_length;
-int udp_timeout;
 int tcp_timeout;
 int rate_limit;
 
@@ -191,7 +190,6 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.scramble_ = scramble;
 	opt.noise_length_ = noise_length;
 	opt.local_ip_ = local_ip;
-	opt.udp_timeout_ = udp_timeout;
 	opt.tcp_timeout_ = tcp_timeout;
 	opt.tcp_rate_limit_ = rate_limit;
 
@@ -351,7 +349,6 @@ int main(int argc, char** argv)
 		("transparent", po::value<bool>(&transparent)->default_value(false, "false"), "Enable transparent proxy mode(only linux).")
 		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set SO_MARK for linux transparent proxy mode.")
 
-		("udp_timeout", po::value<int>(&udp_timeout)->default_value(60), "Set UDP timeout for UDP connections.")
 		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(-1), "Set TCP timeout for TCP connections.")
 		("rate_limit", po::value<int>(&rate_limit)->default_value(-1), "Set TCP rate limit for connection.")
 

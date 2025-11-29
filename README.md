@@ -118,7 +118,6 @@ docker build . -t proxy:v1
 | ipip_db | 指定一个 ipip 数据库文件，用于获取客户端的地区信息，数据库下载地址： [17monipdb](https://github.com/Jackarain/proxy/releases/download/v7.0.0/17monipdb.7z) |
 | allow_region | 指定允许连接的客户端地区 (如: `北京\|河南\|武汉\|192.168.1.2\|192.168.1.0/24\|2001:0db8::1\|2001:db8::/32`) |
 | deny_region | 指定拒绝连接的客户端地区 (如: `广东\|上海\|山东\|192.168.1.2\|192.168.1.0/24\|2001:0db8::1\|2001:db8::/32`) |
-| udp_timeout | 在启用 udp 中转的情况下，超过指定时间即回收 udp socket 等相关资源，时间单位为秒 |
 | tcp_timeout | 设置 tcp 连接的读写超时，小于0表示没有超时设置，时间单位为秒 |
 | rate_limit | 设置 tcp 连接的 I/O 速率设置，单位为字节/秒，默认无限速 |
 | users_rate_limit | 设置指定认证用户的 tcp 连接的 I/O 速率设置，单位为字节/秒，默认无限速，参数格式如：`user1:102400 user2:204800` |
