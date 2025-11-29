@@ -21,11 +21,11 @@
 #endif // _MSC_VER
 
 #ifdef USE_SNMALLOC
-# define NO_BOOTSTRAP_ALLOCATOR
-# ifndef NDEBUG
-#  define NDEBUG
+# ifdef NDEBUG
+#  define NO_BOOTSTRAP_ALLOCATOR
+#  include "src/snmalloc/override/malloc.cc"
+#  include "src/snmalloc/override/new.cc"
 # endif
-# include "src/snmalloc/override/new.cc"
 #endif // USE_SNMALLOC
 
 #ifdef _MSC_VER
