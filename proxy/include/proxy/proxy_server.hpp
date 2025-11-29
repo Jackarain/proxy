@@ -634,17 +634,17 @@ R"x*x*x(<html>
 
 		// session 的连接日志输出函数, 用于输出连接 id 相关的日志信息, 简化重复
 		// 的 connection id 这些信息的代码.
-		auto log_conn_error() const noexcept
+		inline auto log_conn_error() const noexcept
 		{
 			return std::move(XLOG_FERR("connection id: {}", m_connection_id));
 		}
 
-		auto log_conn_warning() const noexcept
+		inline auto log_conn_warning() const noexcept
 		{
 			return std::move(XLOG_FWARN("connection id: {}", m_connection_id));
 		}
 
-		auto log_conn_debug() const noexcept
+		inline auto log_conn_debug() const noexcept
 		{
 			return std::move(XLOG_FDBG("connection id: {}", m_connection_id));
 		}
@@ -728,7 +728,7 @@ R"x*x*x(<html>
 		}
 
 		// 更新 session 发起连接时使用的本地绑定地址.
-		void update_bind_interface(const std::string& addr) noexcept
+		inline void update_bind_interface(const std::string& addr) noexcept
 		{
 			if (addr.empty())
 				return;
@@ -786,7 +786,7 @@ R"x*x*x(<html>
 		}
 
 	public:
-		void start() noexcept override
+		inline void start() noexcept override
 		{
 			auto server = m_proxy_server.lock();
 			if (!server)
@@ -856,7 +856,7 @@ R"x*x*x(<html>
 				}, net::detached);
 		}
 
-		void close() noexcept override
+		inline void close() noexcept override
 		{
 			if (m_abort)
 				return;
@@ -870,7 +870,7 @@ R"x*x*x(<html>
 			m_remote_socket.close(ignore_ec);
 		}
 
-		void setup_tproxy(
+		inline void setup_tproxy(
 			const net::ip::tcp::endpoint& tproxy_remote) noexcept override
 		{
 			log_conn_debug()
@@ -879,7 +879,7 @@ R"x*x*x(<html>
 			m_tproxy_remote = tproxy_remote;
 		}
 
-		size_t connection_id() const noexcept override
+		inline size_t connection_id() const noexcept override
 		{
 			return m_connection_id;
 		}
