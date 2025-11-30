@@ -72,7 +72,7 @@ option(ENABLE_STATIC_LINK_TO_GCC	"Build static link to gcc" ON)
 option(ENABLE_TCMALLOC_STATIC		"Build with Tcmalloc support" OFF)
 option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
 option(ENABLE_MIMALLOC_STATIC		"Build with mimalloc support" OFF)
-option(ENABLE_SNMALLOC_STATIC		"Build with snmalloc support" OFF)
+option(ENABLE_SNMALLOC_STATIC		"Build with snmalloc support" ON)
 
 option(ENABLE_BUILD_EXAMPLES		"Build proxy examples" OFF)
 option(ENABLE_LINKE_TO_LIBATOMIC	"Link to libatomic.so - some platform requires it" OFF)
