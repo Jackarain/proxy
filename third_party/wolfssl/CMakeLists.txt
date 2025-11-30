@@ -2445,36 +2445,6 @@ set(INSTALLED_EXAMPLES
     ${CMAKE_CURRENT_SOURCE_DIR}/examples/benchmark/tls_bench.c
     ${CMAKE_CURRENT_SOURCE_DIR}/examples/client/client.c)
 
-# Install the library
-install(TARGETS wolfssl
-        EXPORT wolfssl-targets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        )
-# Install the headers
-install(DIRECTORY ${WOLFSSL_OUTPUT_BASE}/wolfssl/
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/wolfssl
-        FILES_MATCHING PATTERN "*.h"
-        REGEX ${EXCLUDED_HEADERS_REGEX} EXCLUDE)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/wolfssl
-        FILES_MATCHING PATTERN "*.h"
-        REGEX ${EXCLUDED_HEADERS_REGEX} EXCLUDE)
-
-# Install the examples
-install(FILES ${INSTALLED_EXAMPLES}
-        DESTINATION ${CMAKE_INSTALL_DOCDIR}/example)
-# Install README.txt and taoCert.txt
-install(FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/doc/README.txt
-        ${CMAKE_CURRENT_SOURCE_DIR}/certs/taoCert.txt
-        DESTINATION ${CMAKE_INSTALL_DOCDIR})
-# Install the export set
-install(EXPORT wolfssl-targets
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/wolfssl
-        FILE wolfssl-targets.cmake
-        NAMESPACE wolfssl::)
 
 # TODO: Distro build + rules for what to include in the distro.
 #       See various include.am files.
@@ -2485,10 +2455,6 @@ set(libdir "\${exec_prefix}/lib")
 set(includedir "\${prefix}/include")
 set(VERSION ${PROJECT_VERSION})
 
-configure_file(support/wolfssl.pc.in ${CMAKE_CURRENT_BINARY_DIR}/support/wolfssl.pc @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/support/wolfssl.pc
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-
 include(CMakePackageConfigHelpers)
 configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in
   "${CMAKE_CURRENT_BINARY_DIR}/wolfssl-config.cmake"
@@ -2497,19 +2463,9 @@ configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in
   NO_CHECK_REQUIRED_COMPONENTS_MACRO
 )
 
-export(EXPORT wolfssl-targets
-  FILE "${CMAKE_CURRENT_BINARY_DIR}/wolfssl-targets.cmake"
-  NAMESPACE wolfssl::
-)
-
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/wolfssl-config-version.cmake"
   VERSION "${wolfssl_VERSION_MAJOR}.${wolfssl_VERSION_MINOR}"
   COMPATIBILITY AnyNewerVersion
 )
 
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/wolfssl-config.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/wolfssl-config-version.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/wolfssl
-)
