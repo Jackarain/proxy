@@ -118,6 +118,7 @@ if (ENABLE_SNMALLOC_STATIC)
 	set(SNMALLOC_HEADER_ONLY_LIBRARY ON)
 
 	add_definitions(-DUSE_SNMALLOC)
+	add_definitions(-DSNMALLOC_USE_WAIT_ON_ADDRESS=1)
 	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/snmalloc EXCLUDE_FROM_ALL)
 
 	link_libraries(snmalloc)
