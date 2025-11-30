@@ -15,13 +15,15 @@ namespace snmalloc
   template<typename Rep, size_t MIN_SIZE_BITS, size_t MAX_SIZE_BITS>
   class Buddy
   {
+    static_assert(MAX_SIZE_BITS > MIN_SIZE_BITS);
+
     struct Entry
     {
       typename Rep::Contents cache[3];
       RBTree<Rep> tree{};
     };
 
-    std::array<Entry, MAX_SIZE_BITS - MIN_SIZE_BITS> entries{};
+    stl::Array<Entry, MAX_SIZE_BITS - MIN_SIZE_BITS> entries{};
     // All RBtrees at or above this index should be empty.
     size_t empty_at_or_above{0};
 
@@ -98,6 +100,7 @@ namespace snmalloc
 
   public:
     constexpr Buddy() = default;
+
     /**
      * Add a block to the buddy allocator.
      *
@@ -164,7 +167,7 @@ namespace snmalloc
       {
         if (Rep::equal(Rep::null, addr) || Rep::compare(e, addr))
         {
-          addr = std::exchange(e, addr);
+          addr = stl::exchange(e, addr);
         }
       }
 

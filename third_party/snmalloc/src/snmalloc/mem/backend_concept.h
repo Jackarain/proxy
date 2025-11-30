@@ -4,7 +4,8 @@
 #  include "../ds/ds.h"
 #  include "sizeclasstable.h"
 
-#  include <cstddef>
+#  include <stddef.h>
+
 namespace snmalloc
 {
   /**
@@ -60,7 +61,7 @@ namespace snmalloc
   concept IsPagemapWithRegister = requires(capptr::Arena<void> p, size_t sz) {
                                     {
                                       Pagemap::register_range(p, sz)
-                                      } -> ConceptSame<void>;
+                                      } -> ConceptSame<bool>;
                                   };
 
   /**
@@ -106,7 +107,7 @@ namespace snmalloc
       {
         Backend::alloc_chunk(local_state, size, ras, sizeclass)
         } -> ConceptSame<
-          std::pair<capptr::Chunk<void>, typename Backend::SlabMetadata*>>;
+          stl::Pair<capptr::Chunk<void>, typename Backend::SlabMetadata*>>;
     } &&
     requires(LocalState* local_state, size_t size) {
       {
@@ -147,7 +148,7 @@ namespace snmalloc
    *
    */
   template<typename Config>
-  concept IsConfig = std::is_base_of<CommonConfig, Config>::value &&
+  concept IsConfig = stl::is_base_of_v<CommonConfig, Config> &&
     IsPAL<typename Config::Pal> &&
     IsBackend<typename Config::LocalState,
               typename Config::PagemapEntry,
@@ -163,14 +164,14 @@ namespace snmalloc
     } &&
     (
                        requires() {
-                         Config::Options.CoreAllocIsPoolAllocated == true;
+                         Config::Options.AllocIsPoolAllocated == true;
                          typename Config::GlobalPoolState;
                          {
                            Config::pool()
                            } -> ConceptSame<typename Config::GlobalPoolState&>;
                        } ||
                        requires() {
-                         Config::Options.CoreAllocIsPoolAllocated == false;
+                         Config::Options.AllocIsPoolAllocated == false;
                        });
 
   /**

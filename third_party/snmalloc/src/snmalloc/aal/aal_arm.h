@@ -12,7 +12,8 @@
 #  endif
 #endif
 
-#include <cstddef>
+#include <stddef.h>
+
 namespace snmalloc
 {
   /**

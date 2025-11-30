@@ -1,25 +1,27 @@
 #pragma once
 
 #include "../aal/aal.h"
-#include "pal_tid_default.h"
 #include "pal_timer_default.h"
 #if defined(SNMALLOC_BACKTRACE_HEADER)
 #  include SNMALLOC_BACKTRACE_HEADER
 #endif
+#include "snmalloc/stl/array.h"
+#include "snmalloc/stl/utility.h"
+
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <sys/mman.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include <utility>
+
 #if __has_include(<sys/random.h>)
 #  include <sys/random.h>
 #endif
-
-extern "C" int puts(const char* str);
 
 namespace snmalloc
 {
@@ -38,8 +40,7 @@ namespace snmalloc
    * working when an early-malloc error appears.
    */
   template<class OS, auto writev = ::writev, auto fsync = ::fsync>
-  class PALPOSIX : public PalTimerDefaultImpl<PALPOSIX<OS>>,
-                   public PalTidDefault
+  class PALPOSIX : public PalTimerDefaultImpl<PALPOSIX<OS>>
   {
     /**
      * Helper class to access the `default_mmap_flags` field of `OS` if one
@@ -129,8 +130,16 @@ namespace snmalloc
       | Entropy
 #endif
       ;
-
+#ifdef SNMALLOC_PAGESIZE
+    static_assert(
+      bits::is_pow2(SNMALLOC_PAGESIZE), "Page size must be a power of 2");
+    static constexpr size_t page_size = SNMALLOC_PAGESIZE;
+#elif defined(PAGESIZE)
+    static constexpr size_t page_size =
+      bits::max(Aal::smallest_page_size, static_cast<size_t>(PAGESIZE));
+#else
     static constexpr size_t page_size = Aal::smallest_page_size;
+#endif
 
     /**
      * Address bits are potentially mediated by some POSIX OSes, but generally
@@ -207,7 +216,7 @@ namespace snmalloc
       {
         // Fill memory so that when we switch the pages back on we don't make
         // assumptions on the content.
-        if constexpr (DEBUG)
+        if constexpr (Debug)
           memset(p, 0x5a, size);
 
         mprotect(p, size, PROT_NONE);
@@ -226,7 +235,7 @@ namespace snmalloc
      * function, or we have initially mapped the pages as PROT_NONE.
      */
     template<ZeroMem zero_mem>
-    static void notify_using(void* p, size_t size) noexcept
+    static bool notify_using(void* p, size_t size) noexcept
     {
       SNMALLOC_ASSERT(
         is_aligned_block<OS::page_size>(p, size) || (zero_mem == NoZero));
@@ -240,6 +249,8 @@ namespace snmalloc
 
       if constexpr (zero_mem == YesZero)
         zero<true>(p, size);
+
+      return true;
     }
 
     /**
@@ -248,7 +259,7 @@ namespace snmalloc
      * On POSIX platforms, lazy commit means that this is a no-op, unless
      * we have initially mapped the pages as PROT_NONE.
      */
-    static void notify_using_readonly(void* p, size_t size) noexcept
+    static bool notify_using_readonly(void* p, size_t size) noexcept
     {
       SNMALLOC_ASSERT(is_aligned_block<OS::page_size>(p, size));
 
@@ -258,6 +269,8 @@ namespace snmalloc
       {
         UNUSED(p, size);
       }
+
+      return true;
     }
 
     /**
@@ -398,6 +411,7 @@ namespace snmalloc
         uint64_t result;
         char buffer[sizeof(uint64_t)];
       };
+
       ssize_t ret;
       int flags = O_RDONLY;
 #if defined(O_CLOEXEC)
@@ -406,8 +420,8 @@ namespace snmalloc
       auto fd = open("/dev/urandom", flags, 0);
       if (fd > 0)
       {
-        auto current = std::begin(buffer);
-        auto target = std::end(buffer);
+        auto current = stl::begin(buffer);
+        auto target = stl::end(buffer);
         while (auto length = static_cast<size_t>(target - current))
         {
           ret = read(fd, current, length);

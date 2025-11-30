@@ -6,8 +6,6 @@
 #include "empty_range.h"
 #include "range_helpers.h"
 
-#include <string>
-
 namespace snmalloc
 {
   /**
@@ -230,7 +228,7 @@ namespace snmalloc
        * covers the whole range.  Uses template insanity to make this work.
        */
       template<bool exists = MAX_SIZE_BITS != (bits::BITS - 1)>
-      std::enable_if_t<exists>
+      stl::enable_if_t<exists>
       parent_dealloc_range(capptr::Arena<void> base, size_t size)
       {
         static_assert(
@@ -345,7 +343,7 @@ namespace snmalloc
       /* The large buddy allocator always deals in Arena-bounded pointers. */
       using ChunkBounds = capptr::bounds::Arena;
       static_assert(
-        std::is_same_v<typename ParentRange::ChunkBounds, ChunkBounds>);
+        stl::is_same_v<typename ParentRange::ChunkBounds, ChunkBounds>);
 
       constexpr Type() = default;
 
@@ -354,7 +352,7 @@ namespace snmalloc
         SNMALLOC_ASSERT(size >= MIN_CHUNK_SIZE);
         SNMALLOC_ASSERT(bits::is_pow2(size));
 
-        if (size >= (bits::one_at_bit(MAX_SIZE_BITS) - 1))
+        if (size >= bits::mask_bits(MAX_SIZE_BITS))
         {
           if (ParentRange::Aligned)
             return parent.alloc_range(size);
@@ -378,7 +376,7 @@ namespace snmalloc
 
         if constexpr (MAX_SIZE_BITS != (bits::BITS - 1))
         {
-          if (size >= (bits::one_at_bit(MAX_SIZE_BITS) - 1))
+          if (size >= bits::mask_bits(MAX_SIZE_BITS))
           {
             parent_dealloc_range(base, size);
             return;

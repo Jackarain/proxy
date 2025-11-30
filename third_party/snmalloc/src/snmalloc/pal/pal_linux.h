@@ -3,6 +3,7 @@
 #if defined(__linux__)
 #  include "../ds_core/ds_core.h"
 #  include "pal_posix.h"
+#  include "snmalloc/stl/array.h"
 
 #  include <string.h>
 #  include <sys/mman.h>
@@ -14,7 +15,11 @@
 #    include <linux/random.h>
 #  endif
 
-extern "C" int puts(const char* str);
+#  if defined(SNMALLOC_HAS_LINUX_FUTEX_H)
+#    include <linux/futex.h>
+#  endif
+
+#  include <stdio.h>
 
 namespace snmalloc
 {
@@ -27,8 +32,12 @@ namespace snmalloc
      *
      * We always make sure that linux has entropy support.
      */
-    static constexpr uint64_t pal_features =
-      PALPOSIX::pal_features | Entropy | CoreDump;
+    static constexpr uint64_t pal_features = PALPOSIX::pal_features | Entropy |
+      CoreDump
+#  ifdef SNMALLOC_HAS_LINUX_FUTEX_H
+      | WaitOnAddress
+#  endif
+      ;
 
     static constexpr size_t page_size =
       Aal::aal_name == PowerPC ? 0x10000 : PALPOSIX::page_size;
@@ -118,11 +127,12 @@ namespace snmalloc
 
     static void notify_not_using(void* p, size_t size) noexcept
     {
+      KeepErrno k;
       SNMALLOC_ASSERT(is_aligned_block<page_size>(p, size));
 
       // Fill memory so that when we switch the pages back on we don't make
       // assumptions on the content.
-      if constexpr (DEBUG)
+      if constexpr (Debug)
         memset(p, 0x5a, size);
 
       madvise(p, size, madvise_free_flags);
@@ -138,6 +148,7 @@ namespace snmalloc
      */
     static void notify_do_dump(void* p, size_t size) noexcept
     {
+      KeepErrno k;
       madvise(p, size, MADV_DODUMP);
     }
 
@@ -146,11 +157,14 @@ namespace snmalloc
      */
     static void notify_do_not_dump(void* p, size_t size) noexcept
     {
+      KeepErrno k;
       madvise(p, size, MADV_DONTDUMP);
     }
 
     static uint64_t get_entropy64()
     {
+      KeepErrno k;
+
       // TODO: If the system call fails then the POSIX PAL calls libc
       // functions that can require malloc, which may result in deadlock.
 
@@ -164,18 +178,19 @@ namespace snmalloc
         uint64_t result;
         char buffer[sizeof(uint64_t)];
       };
+
       ssize_t ret;
 
       // give a try to SYS_getrandom
 #  ifdef SYS_getrandom
-      static std::atomic_bool syscall_not_working = false;
+      static stl::AtomicBool syscall_not_working = false;
       // Relaxed ordering should be fine here. This function will be called
       // during early initialisation, which will examine the availability in a
       // protected routine.
-      if (false == syscall_not_working.load(std::memory_order_relaxed))
+      if (false == syscall_not_working.load(stl::memory_order_relaxed))
       {
-        auto current = std::begin(buffer);
-        auto target = std::end(buffer);
+        auto current = stl::begin(buffer);
+        auto target = stl::end(buffer);
         while (auto length = target - current)
         {
           // Reading data via syscall from system entropy pool.
@@ -215,7 +230,7 @@ namespace snmalloc
           // in this routine, the only possible situations should be ENOSYS
           // or EPERM (forbidden by seccomp, for example).
           SNMALLOC_ASSERT(errno == ENOSYS || errno == EPERM);
-          syscall_not_working.store(true, std::memory_order_relaxed);
+          syscall_not_working.store(true, stl::memory_order_relaxed);
         }
         else
         {
@@ -232,6 +247,60 @@ namespace snmalloc
       // its APIs are not exception-free.
       return dev_urandom();
     }
+
+#  ifdef SNMALLOC_HAS_LINUX_FUTEX_H
+    using WaitingWord = int;
+
+    template<class T>
+    static void wait_on_address(stl::Atomic<T>& addr, T expected)
+    {
+      KeepErrno k;
+      static_assert(
+        sizeof(T) == sizeof(WaitingWord) && alignof(T) == alignof(WaitingWord),
+        "T must be the same size and alignment as WaitingWord");
+      while (addr.load(stl::memory_order_relaxed) == expected)
+      {
+        // Man page
+        // (https://www.man7.org/linux/man-pages/man2/futex.2.html#RETURN_VALUE)
+        // says:
+        //  FUTEX_WAIT
+        //    Returns 0 if the caller was woken up.  Note that a wake-up
+        //    can also be caused by common futex usage patterns in
+        //    unrelated code that happened to have previously used the
+        //    futex word's memory location (e.g., typical futex-based
+        //    implementations of Pthreads mutexes can cause this under
+        //    some conditions).  Therefore, callers should always
+        //    conservatively assume that a return value of 0 can mean a
+        //    spurious wake-up, and use the futex word's value (i.e., the
+        //    user-space synchronization scheme) to decide whether to
+        //    continue to block or not.
+        // We ignore the return and recheck.
+        syscall(
+          SYS_futex, &addr, FUTEX_WAIT_PRIVATE, expected, nullptr, nullptr, 0);
+      }
+    }
+
+    template<class T>
+    static void notify_one_on_address(stl::Atomic<T>& addr)
+    {
+      KeepErrno k;
+      static_assert(
+        sizeof(T) == sizeof(WaitingWord) && alignof(T) == alignof(WaitingWord),
+        "T must be the same size and alignment as WaitingWord");
+      syscall(SYS_futex, &addr, FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
+    }
+
+    template<class T>
+    static void notify_all_on_address(stl::Atomic<T>& addr)
+    {
+      KeepErrno k;
+      static_assert(
+        sizeof(T) == sizeof(WaitingWord) && alignof(T) == alignof(WaitingWord),
+        "T must be the same size and alignment as WaitingWord");
+      syscall(
+        SYS_futex, &addr, FUTEX_WAKE_PRIVATE, INT_MAX, nullptr, nullptr, 0);
+    }
+#  endif
   };
 } // namespace snmalloc
 #endif

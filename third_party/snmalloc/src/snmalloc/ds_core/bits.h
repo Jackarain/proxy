@@ -1,17 +1,17 @@
 #pragma once
 
-#include <cstddef>
-#include <limits>
+#include <stddef.h>
 
 // #define USE_LZCNT
 
 #include "defines.h"
+#include "snmalloc/stl/atomic.h"
+#include "snmalloc/stl/type_traits.h"
 
-#include <atomic>
-#include <climits>
-#include <cstdint>
-#include <type_traits>
+#include <limits.h>
+#include <stdint.h>
 #if defined(_MSC_VER)
+#  include <intrin.h>
 #  include <intsafe.h>
 #endif
 
@@ -45,18 +45,32 @@ namespace snmalloc
     static constexpr size_t BITS = sizeof(size_t) * CHAR_BIT;
 
     /**
-     * Returns a value of type T that has a single bit set,
+     * Returns a value of type T that has a single bit set at the given index,
+     * with 0 being the least significant bit.
+     *
+     * S, the type of the bit index, is a template parameter because callers
+     * use either `int` or `size_t` and either is valid to represent a number in
+     * the range 0-63 (or 0-127 if we want to use `__uint128_t` as `T`).
+     */
+    template<typename T = size_t, typename S>
+    constexpr T one_at_bit(S shift)
+    {
+      static_assert(stl::is_integral_v<T>, "Type must be integral");
+      SNMALLOC_ASSERT(sizeof(T) * 8 > static_cast<size_t>(shift));
+      return (static_cast<T>(1)) << shift;
+    }
+
+    /**
+     * Returns a value of type T that has its n LSBs all set.
      *
      * S is a template parameter because callers use either `int` or `size_t`
      * and either is valid to represent a number in the range 0-63 (or 0-127 if
      * we want to use `__uint128_t` as `T`).
      */
     template<typename T = size_t, typename S>
-    constexpr T one_at_bit(S shift)
+    constexpr T mask_bits(S n)
     {
-      static_assert(std::is_integral_v<T>, "Type must be integral");
-      SNMALLOC_ASSERT(sizeof(T) * 8 > static_cast<size_t>(shift));
-      return (static_cast<T>(1)) << shift;
+      return one_at_bit<T>(n) - 1;
     }
 
     inline SNMALLOC_FAST_PATH size_t clz(size_t x)
@@ -81,15 +95,15 @@ namespace snmalloc
       return BITS - index - 1;
 #  endif
 #else
-      if constexpr (std::is_same_v<unsigned long, std::size_t>)
+      if constexpr (stl::is_same_v<unsigned long, size_t>)
       {
         return static_cast<size_t>(__builtin_clzl(x));
       }
-      else if constexpr (std::is_same_v<unsigned long long, std::size_t>)
+      else if constexpr (stl::is_same_v<unsigned long long, size_t>)
       {
         return static_cast<size_t>(__builtin_clzll(x));
       }
-      else if constexpr (std::is_same_v<unsigned int, std::size_t>)
+      else if constexpr (stl::is_same_v<unsigned int, size_t>)
       {
         return static_cast<size_t>(__builtin_clz(x));
       }
@@ -168,15 +182,15 @@ namespace snmalloc
       return _tzcnt_u32(static_cast<unsigned int>(x));
 #  endif
 #else
-      if constexpr (std::is_same_v<unsigned long, std::size_t>)
+      if constexpr (stl::is_same_v<unsigned long, size_t>)
       {
         return static_cast<size_t>(__builtin_ctzl(x));
       }
-      else if constexpr (std::is_same_v<unsigned long long, std::size_t>)
+      else if constexpr (stl::is_same_v<unsigned long long, size_t>)
       {
         return static_cast<size_t>(__builtin_ctzll(x));
       }
-      else if constexpr (std::is_same_v<unsigned int, std::size_t>)
+      else if constexpr (stl::is_same_v<unsigned int, size_t>)
       {
         return static_cast<size_t>(__builtin_ctz(x));
       }
@@ -326,7 +340,7 @@ namespace snmalloc
     constexpr size_t to_exp_mant_const(size_t value)
     {
       constexpr size_t LEADING_BIT = one_at_bit(MANTISSA_BITS + LOW_BITS) >> 1;
-      constexpr size_t MANTISSA_MASK = one_at_bit(MANTISSA_BITS) - 1;
+      constexpr size_t MANTISSA_MASK = mask_bits(MANTISSA_BITS);
 
       value = value - 1;
 
@@ -344,7 +358,7 @@ namespace snmalloc
       if (MANTISSA_BITS > 0)
       {
         m_e = m_e + 1;
-        constexpr size_t MANTISSA_MASK = one_at_bit(MANTISSA_BITS) - 1;
+        constexpr size_t MANTISSA_MASK = mask_bits(MANTISSA_BITS);
         size_t m = m_e & MANTISSA_MASK;
         size_t e = m_e >> MANTISSA_BITS;
         size_t b = e == 0 ? 0 : 1;

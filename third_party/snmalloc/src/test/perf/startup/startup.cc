@@ -3,6 +3,7 @@
 #include "test/usage.h"
 #include "test/xoroshiro.h"
 
+#include <algorithm>
 #include <iostream>
 #include <snmalloc/snmalloc.h>
 #include <thread>
@@ -70,17 +71,17 @@ public:
 
 int main()
 {
-  counters.resize(std::thread::hardware_concurrency());
+  auto nthreads = std::thread::hardware_concurrency();
+  counters.resize(nthreads);
 
   ParallelTest test(
     [](size_t id) {
       auto start = Aal::tick();
-      auto& alloc = snmalloc::ThreadAlloc::get();
-      alloc.dealloc(alloc.alloc(1));
+      snmalloc::dealloc(snmalloc::alloc(1));
       auto end = Aal::tick();
       counters[id] = end - start;
     },
-    counters.size());
+    nthreads);
 
   std::cout << "Taken: " << test.time() << std::endl;
   std::sort(counters.begin(), counters.end());

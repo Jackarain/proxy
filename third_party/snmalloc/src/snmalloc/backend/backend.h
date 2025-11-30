@@ -59,7 +59,6 @@ namespace snmalloc
 
       if (p == nullptr)
       {
-        errno = ENOMEM;
         return nullptr;
       }
 
@@ -87,7 +86,7 @@ namespace snmalloc
      *   (remote, sizeclass, slab_metadata)
      * where slab_metadata, is the second element of the pair return.
      */
-    static std::pair<capptr::Chunk<void>, SlabMetadata*> alloc_chunk(
+    static stl::Pair<capptr::Chunk<void>, SlabMetadata*> alloc_chunk(
       LocalState& local_state,
       size_t size,
       uintptr_t ras,
@@ -112,7 +111,6 @@ namespace snmalloc
 
       if (meta == nullptr)
       {
-        errno = ENOMEM;
         return {nullptr, nullptr};
       }
 
@@ -124,7 +122,6 @@ namespace snmalloc
       if (p == nullptr)
       {
         local_state.get_meta_range().dealloc_range(meta_cap, meta_size);
-        errno = ENOMEM;
 #ifdef SNMALLOC_TRACING
         message<1024>("Out of memory");
 #endif
@@ -186,6 +183,14 @@ namespace snmalloc
         capptr::Arena<void>::unsafe_from(&slab_metadata), meta_size);
 
       local_state.get_object_range()->dealloc_range(arena, size);
+    }
+
+    SNMALLOC_FAST_PATH static capptr::Alloc<void>
+    capptr_rederive_alloc(capptr::Alloc<void> a, size_t objsize)
+    {
+      return capptr_to_user_address_control(
+        Aal::capptr_bound<void, capptr::bounds::AllocFull>(
+          Authmap::amplify(a), objsize));
     }
 
     template<bool potentially_out_of_range = false>

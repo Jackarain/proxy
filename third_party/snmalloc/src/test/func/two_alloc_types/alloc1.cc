@@ -10,10 +10,10 @@
 
 // Specify type of allocator
 #define SNMALLOC_PROVIDE_OWN_CONFIG
+
 namespace snmalloc
 {
-  using CustomGlobals = FixedRangeConfig<PALNoAlloc<DefaultPal>>;
-  using Alloc = LocalAllocator<CustomGlobals>;
+  using Config = FixedRangeConfig<PALNoAlloc<DefaultPal>>;
 }
 
 #define SNMALLOC_NAME_MANGLE(a) enclave_##a
@@ -21,6 +21,5 @@ namespace snmalloc
 
 extern "C" void oe_allocator_init(void* base, void* end)
 {
-  snmalloc::CustomGlobals::init(
-    nullptr, base, address_cast(end) - address_cast(base));
+  snmalloc::Config::init(nullptr, base, address_cast(end) - address_cast(base));
 }

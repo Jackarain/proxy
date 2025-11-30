@@ -1,9 +1,9 @@
 #pragma once
 
-#include <array>
-#include <cstddef>
-#include <cstdint>
-#include <string>
+#include "snmalloc/stl/array.h"
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace snmalloc
 {
@@ -61,7 +61,7 @@ namespace snmalloc
         } -> ConceptSameModRef<const typename Rep::Contents>;
       {
         typename Rep::Handle{const_cast<
-          std::remove_const_t<std::remove_reference_t<decltype(Rep::root)>>*>(
+          stl::remove_const_t<stl::remove_reference_t<decltype(Rep::root)>>*>(
           &Rep::root)}
         } -> ConceptSame<typename Rep::Handle>;
     };
@@ -71,7 +71,7 @@ namespace snmalloc
     RBRepTypes<Rep> //
     && RBRepMethods<Rep> //
     &&
-    ConceptSame<decltype(Rep::null), std::add_const_t<typename Rep::Contents>>;
+    ConceptSame<decltype(Rep::null), stl::add_const_t<typename Rep::Contents>>;
 #endif
 
   /**
@@ -87,7 +87,7 @@ namespace snmalloc
    */
   template<
     SNMALLOC_CONCEPT(RBRep) Rep,
-    bool run_checks = DEBUG,
+    bool run_checks = Debug,
     bool TRACE = false>
   class RBTree
   {
@@ -138,6 +138,7 @@ namespace snmalloc
       {
         return ptr != t.ptr;
       }
+
       ///@}
 
       bool is_null()
@@ -156,7 +157,7 @@ namespace snmalloc
     };
 
     // Root field of the tree
-    typename std::remove_const_t<std::remove_reference_t<decltype(Rep::root)>>
+    typename stl::remove_const_t<stl::remove_reference_t<decltype(Rep::root)>>
       root{Rep::root};
 
     static ChildRef get_dir(bool direction, K k)
@@ -259,7 +260,7 @@ namespace snmalloc
     {
       friend class RBTree;
 
-      std::array<RBStep, 128> path;
+      stl::Array<RBStep, 128> path;
       size_t length = 0;
 
       RBPath(typename Rep::Handle root)
@@ -439,9 +440,27 @@ namespace snmalloc
           depth);
         if (!(get_dir(true, curr).is_null() && get_dir(false, curr).is_null()))
         {
-          auto s_indent = std::string(indent);
-          print(get_dir(true, curr), (s_indent + "|").c_str(), depth + 1);
-          print(get_dir(false, curr), (s_indent + " ").c_str(), depth + 1);
+          // As the tree should be balanced, the depth should not exceed 128 if
+          // there are 2^64 elements in the tree. This is a debug feature, and
+          // it would be impossible to debug something of this size, so this is
+          // considerably larger than required.
+          // If there is a bug that leads to an unbalanced tree, this might be
+          // insufficient to accurately display the tree, but it will still be
+          // memory safe as the search code is bounded by the string size.
+          static constexpr size_t max_depth = 128;
+          char s_indent[max_depth];
+          size_t end = 0;
+          for (; end < max_depth - 1; end++)
+          {
+            if (indent[end] == 0)
+              break;
+            s_indent[end] = indent[end];
+          }
+          s_indent[end] = '|';
+          s_indent[end + 1] = 0;
+          print(get_dir(true, curr), s_indent, depth + 1);
+          s_indent[end] = ' ';
+          print(get_dir(false, curr), s_indent, depth + 1);
         }
       }
     }
