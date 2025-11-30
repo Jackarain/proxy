@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.8...3.20)
 project(boost_asio VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
 # core functionality
+option(BOOST_ASIO_BUILD_CONTEXT "Build boost::asio with boost.context" ON)
 
 add_library(boost_asio_core INTERFACE)
 add_library(Boost::asio_core ALIAS boost_asio_core)
@@ -42,19 +43,20 @@ target_link_libraries(boost_asio_deadline_timer
 target_compile_features(boost_asio_deadline_timer INTERFACE cxx_std_11)
 
 # spawn (stackful coroutines) support
+if (BOOST_ASIO_BUILD_CONTEXT)
+  add_library(boost_asio_spawn INTERFACE)
+  add_library(Boost::asio_spawn ALIAS boost_asio_spawn)
 
-add_library(boost_asio_spawn INTERFACE)
-add_library(Boost::asio_spawn ALIAS boost_asio_spawn)
+  target_include_directories(boost_asio_spawn INTERFACE include)
 
-target_include_directories(boost_asio_spawn INTERFACE include)
+  target_link_libraries(boost_asio_spawn
+    INTERFACE
+      Boost::asio_core
+      Boost::context
+  )
 
-target_link_libraries(boost_asio_spawn
-  INTERFACE
-    Boost::asio_core
-    Boost::context
-)
-
-target_compile_features(boost_asio_spawn INTERFACE cxx_std_11)
+  target_compile_features(boost_asio_spawn INTERFACE cxx_std_11)
+endif()
 
 # the works
 
@@ -63,11 +65,18 @@ add_library(Boost::asio ALIAS boost_asio)
 
 target_include_directories(boost_asio INTERFACE include)
 
+set(BOOST_ASIO_DEPENDENCIES
+  Boost::asio_core
+  Boost::asio_deadline_timer
+)
+
+if (BOOST_ASIO_BUILD_CONTEXT)
+  list(APPEND BOOST_ASIO_DEPENDENCIES Boost::asio_spawn)
+endif()
+
 target_link_libraries(boost_asio
   INTERFACE
-    Boost::asio_core
-    Boost::asio_deadline_timer
-    Boost::asio_spawn
+  ${BOOST_ASIO_DEPENDENCIES}
 )
 
 target_compile_features(boost_asio INTERFACE cxx_std_11)
@@ -75,9 +84,7 @@ target_compile_features(boost_asio INTERFACE cxx_std_11)
 if (BOOST_SUPERPROJECT_VERSION AND NOT CMAKE_VERSION VERSION_LESS 3.13)
   boost_install(
     TARGETS
-      boost_asio_core
-      boost_asio_deadline_timer
-      boost_asio_spawn
+      ${BOOST_ASIO_DEPENDENCIES}
       boost_asio
     VERSION
       "${BOOST_SUPERPROJECT_VERSION}"
