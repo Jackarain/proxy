@@ -98,7 +98,7 @@ jobs:
           git clone https://github.com/microsoft/mimalloc.git
           cd mimalloc && mkdir build && cd build && git checkout tags/v2.1.2
           echo "Building mimalloc..."
-          cmake -DCMAKE_BUILD_TYPE=Release -DMI_BUILD_STATIC=ON -DMI_BUILD_SHARED=OFF -DMI_BUILD_TESTS=OFF -DMI_BUILD_OBJECT=ON ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=OFF -DMI_BUILD_STATIC=ON -DMI_BUILD_SHARED=OFF -DMI_BUILD_TESTS=OFF -DMI_BUILD_OBJECT=ON ..
           make -j4
           echo "Installing mimalloc..."
           sudo make install
