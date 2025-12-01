@@ -433,6 +433,7 @@ set(BOOST_EXCLUDE_LIBRARIES "context;coroutine;fiber;iostreams;graph;math;stackt
 add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
 
 set_property(TARGET boost_assert PROPERTY FOLDER "third_party/boost")
+set_property(TARGET boost_container PROPERTY FOLDER "third_party/boost")
 set_property(TARGET boost_atomic PROPERTY FOLDER "third_party/boost")
 set_property(TARGET boost_chrono PROPERTY FOLDER "third_party/boost")
 set_property(TARGET boost_core PROPERTY FOLDER "third_party/boost")
