@@ -5572,8 +5572,9 @@ R"x*x*x(<html>
 
 			if (::getsockopt(sockfd, protocol, SO_ORIGINAL_DST, (char*)&addr, &addrlen) < 0)
 			{
-				XLOG_FWARN("connection id: {}, getsockopt: {}, SO_ORIGINAL_DST: {}",
-					connection_id, (int)sockfd, strerror(errno));
+				XLOG_WARN << "connection id: " << connection_id
+					<< ", getsockopt: " << (int)sockfd
+					<< ", SO_ORIGINAL_DST: " << strerror(errno);
 				co_return remote_endp;
 			}
 
@@ -5603,10 +5604,8 @@ R"x*x*x(<html>
 				remote_endp->port(port);
 			}
 
-			XLOG_DBG << "connection id: "
-				<< connection_id
-				<< ", tproxy, remote: "
-				<< *remote_endp;
+			XLOG_DBG << "connection id: " << connection_id
+				<< ", tproxy, remote: " << *remote_endp;
 
 			if (remote_endp->address().is_loopback())
 			{
