@@ -44,7 +44,7 @@
 ``` text
 版本控制: git
 
-C++ 编译器: Linux 平台 gcc 11 以上，或 clang 14 以上，windows 平台要求 visual studio 2019 或以上。
+C++ 编译器: Linux 平台 gcc 11 以上，或 clang 14 以上，windows 平台要求 visual studio 2022 或以上。
 
 构建工具: cmake 3.5 以上。
 
