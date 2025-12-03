@@ -8,7 +8,6 @@ workflows:
     jobs:
       - build-x86_64
       - build-arm64
-      - build-windows
 
 jobs:
   build-x86_64:
@@ -52,22 +51,3 @@ jobs:
 
       - store_artifacts:
           path: build/docker
-
-  build-windows:
-    executor:
-      name: win/server-2022
-      shell: powershell.exe
-    steps:
-
-      - checkout
-      - run:
-          name: Install cmake
-          command: choco install -y cmake --installargs 'ADD_CMAKE_TO_PATH=System'
-      - run:
-          name: Build on windows
-          command: |
-            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF
-            cmake --build build --config Release
-
-      - store_artifacts:
-          path: build/bin/release/proxy_server.exe
