@@ -3351,8 +3351,6 @@ R"x*x*x(<html>
 		{
 #ifndef WIN32
 			return path;
-#elif _WIN32_WINNT >= 0x0A00
-			return path;
 #else
 			auto ret = path.string();
 			if (ret.size() > MAX_PATH)
