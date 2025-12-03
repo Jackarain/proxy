@@ -4475,10 +4475,20 @@ R"x*x*x(<html>
 			if (dns)
 			{
 				[[maybe_unused]] auto& [result, tp] = *dns;
-				for (auto& d : result)
-					d.endpoint().port(port);
 
-				return result;
+				std::vector<tcp::endpoint> new_endpoints;
+				new_endpoints.reserve(result.size());
+
+				std::transform(result.begin(), result.end(),
+					std::back_inserter(new_endpoints),
+					[port](const tcp::endpoint& ep)
+					{
+						return tcp::endpoint(ep.address(), port);
+					});
+
+				return tcp::resolver::results_type::create(
+					new_endpoints.begin(), new_endpoints.end(),
+					hostname, std::to_string(port));
 			}
 
 			return {};
