@@ -331,6 +331,12 @@ int main(int argc, char** argv)
 
 	std::string config;
 
+#ifdef NDEBUG
+	const bool default_logs = true;
+#else
+	const bool default_logs = false;
+#endif
+
 	po::options_description desc("Options");
 	desc.add_options()
 		("help,h", "Help message.")
@@ -377,7 +383,7 @@ int main(int argc, char** argv)
 		("autoindex", po::value<bool>(&autoindex)->default_value(false, "false"), "Enable directory listing.")
 		("logs_path", po::value<std::string>(&log_dir)->value_name(""), "Specify directory for log files.")
 
-		("disable_logs", po::value<bool>(&disable_logs)->value_name("")->default_value(false), "Disable logging.")
+		("disable_logs", po::value<bool>(&disable_logs)->value_name("")->default_value(default_logs), "Disable print logging in screen.")
 		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false, "false"), "Disable HTTP protocol.")
 		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false, "false"), "Disable SOCKS proxy protocol.")
 		("disable_udp", po::value<bool>(&disable_udp)->value_name("")->default_value(false, "false"), "Disable UDP protocol.")

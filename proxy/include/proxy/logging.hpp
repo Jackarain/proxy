@@ -884,12 +884,12 @@ private:
 	int64_t m_log_size{ 0 };
 };
 
-#ifndef DISABLE_LOGGER_THREAD_SAFE
-#define LOGGER_LOCKS_() std::lock_guard \
+#ifndef DISABLE_XLOGGER_THREAD_SAFE
+#define XLOGGER_LOCKS_() std::lock_guard \
 	lock(logger_aux__::lock_single<std::mutex>())
 #else
-#define LOGGER_LOCKS_() ((void)0)
-#endif // LOGGER_THREAD_SAFE
+#define XLOGGER_LOCKS_() ((void)0)
+#endif // DISABLE_XLOGGER_THREAD_SAFE
 
 #ifndef LOGGER_DBG_VIEW_
 #if defined(WIN32) && \
@@ -933,12 +933,12 @@ inline void logger_output_console__([[maybe_unused]] const logger_level__& level
 {
 #if defined(WIN32)
 
-#if !defined(DISABLE_LOGGER_TO_CONSOLE) || !defined(DISABLE_LOGGER_TO_DBGVIEW)
+#if !defined(DISABLE_XLOGGER_TO_CONSOLE) || !defined(DISABLE_XLOGGER_TO_DBGVIEW)
 	std::wstring title = *logger_aux__::utf8_utf16(prefix);
 	std::wstring msg = *logger_aux__::utf8_utf16(message);
 #endif
 
-#if !defined(DISABLE_LOGGER_TO_CONSOLE)
+#if !defined(DISABLE_XLOGGER_TO_CONSOLE)
 	HANDLE handle_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	GetConsoleScreenBufferInfo(handle_stdout, &csbi);
@@ -973,11 +973,11 @@ inline void logger_output_console__([[maybe_unused]] const logger_level__& level
 	SetConsoleTextAttribute(handle_stdout, csbi.wAttributes);
 #endif
 
-#if !defined(DISABLE_LOGGER_TO_DBGVIEW)
+#if !defined(DISABLE_XLOGGER_TO_DBGVIEW)
 	LOGGER_DBG_VIEW_(title + msg);
 #endif
 
-#elif !defined(DISABLE_LOGGER_TO_CONSOLE)
+#elif !defined(DISABLE_XLOGGER_TO_CONSOLE)
 	std::string out;
 
 	switch (level)
@@ -1091,7 +1091,7 @@ inline void logger_writer__(int64_t time, const logger_level__& level,
 	const std::string& message,
 	[[maybe_unused]] bool disable_cout = false) noexcept
 {
-	LOGGER_LOCKS_();
+	XLOGGER_LOCKS_();
 	static auto& logger = xlogger::logger_aux__::writer_single<
 		xlogger::auto_logger_file__>();
 	char ts[64] = { 0 };
@@ -1853,8 +1853,7 @@ public:
 };
 } // namespace xlogger
 
-#if (defined(DEBUG) || defined(_DEBUG) || \
-	defined(ENABLE_LOGGER)) && !defined(DISABLE_LOGGER)
+#if (!defined(NDEBUG) || defined(ENABLE_XLOGGER)) && !defined(DISABLE_XLOGGER)
 
 // API for logging.
 namespace xlogger {
