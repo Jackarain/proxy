@@ -55,7 +55,7 @@ jobs:
 
   build-windows:
     executor:
-      name: win/default
+      name: win/server-2022
       shell: powershell.exe
     steps:
 
