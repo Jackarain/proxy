@@ -2919,6 +2919,10 @@ R"x*x*x(<html>
 
 			stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
 
+			// 记录 from 和 to 的endpoint.
+			auto from_endpoint = from.remote_endpoint();
+			auto to_endpoint = to.remote_endpoint();
+
 			constexpr auto buf_size = 512 * 1024;
 
 			auto buf0 = std::make_unique_for_overwrite<char[]>(buf_size);
@@ -2933,13 +2937,31 @@ R"x*x*x(<html>
 			auto bytes = co_await from.async_read_some(net::buffer(primary_buf, buf_size), net_awaitable[ec]);
 			if (ec || m_abort)
 			{
+				if (ec != net::error::eof)
+				{
+					log_conn_warning()
+						<< ", read from endpoint: " << from_endpoint
+						<< ", error: " << ec.message();
+				}
+
 				if (bytes > 0)
+				{
 					co_await net::async_write(to,
 						net::buffer(primary_buf, bytes), net_awaitable[ec]);
+					if (ec && ec != net::error::eof)
+					{
+						log_conn_warning()
+							<< ", write to endpoint: " << to_endpoint
+							<< ", error: " << ec.message();
+					}
+				}
 
 				to.shutdown(net::socket_base::shutdown_send, ec);
 				co_return;
 			}
+
+			boost::system::error_code from_ec;
+			boost::system::error_code to_ec;
 
 			for (; !m_abort;)
 			{
@@ -2950,10 +2972,10 @@ R"x*x*x(<html>
 				auto [write_bytes, read_bytes] =
 					co_await(
 						net::async_write(to,
-							net::buffer(primary_buf, bytes), net_awaitable[ec])
+							net::buffer(primary_buf, bytes), net_awaitable[to_ec])
 						&&
 						from.async_read_some(
-							net::buffer(secondary_buf, buf_size), net_awaitable[ec])
+							net::buffer(secondary_buf, buf_size), net_awaitable[from_ec])
 					);
 
 				// 交换主从缓冲区.
@@ -2965,8 +2987,21 @@ R"x*x*x(<html>
 				// 如果 async_write 失败, 则也无需要再读取数据, 如果
 				// async_read_some 失败, 则也无数据可用于写, 所以无论哪一种情况
 				// 都可以直接退出.
-				if (ec)
+				if (from_ec || to_ec)
 				{
+					if (from_ec && from_ec != net::error::eof)
+					{
+						log_conn_warning()
+							<< ", read from endpoint: " << from_endpoint
+							<< ", error: " << from_ec.message();
+					}
+					if (to_ec && to_ec != net::error::eof)
+					{
+						log_conn_warning()
+							<< ", write to endpoint: " << to_endpoint
+							<< ", error: " << to_ec.message();
+					}
+
 					to.shutdown(net::socket_base::shutdown_send, ec);
 					from.shutdown(net::socket_base::shutdown_receive, ec);
 					co_return;
