@@ -25,6 +25,7 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/ipip.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/url_info.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/dns_cache.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/uds_socket.hpp
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ipip.cpp
