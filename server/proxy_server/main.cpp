@@ -38,6 +38,7 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/signal_set.hpp>
+#include <boost/asio/local/stream_protocol.hpp>
 
 #include <boost/nowide/args.hpp>
 #include <boost/algorithm/string/join.hpp>
@@ -45,7 +46,6 @@
 namespace po = boost::program_options;
 
 #include <limits>
-
 
 namespace net = boost::asio;
 using namespace proxy;
@@ -108,12 +108,22 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 {
 	proxy_server_option opt;
 	auto& listens = opt.listens_;
+	auto& uds_listens = opt.uds_listens_;
 	boost::system::error_code ec;
 
 	for (const auto& listen : server_listens)
 	{
 		std::string host, port;
 		bool v6only = false;
+
+		if (listen.starts_with("unix://"))
+		{
+			auto uds_path = listen.substr(7);
+			uds_listens.emplace_back(uds_path);
+			fs::remove(uds_path, ec);
+
+			continue;
+		}
 
 		if (!parse_endpoint_string(listen, host, port, v6only))
 		{
