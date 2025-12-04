@@ -108,6 +108,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 {
 	proxy_server_option opt;
 	auto& listens = opt.listens_;
+	boost::system::error_code ec;
 
 	for (const auto& listen : server_listens)
 	{
@@ -116,16 +117,25 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 
 		if (!parse_endpoint_string(listen, host, port, v6only))
 		{
-			std::cerr << "Parse endpoint fail: " << listen << std::endl;
+			XLOG_ERR << "Parse listen endpoint fail: " << listen;
 			co_return;
 		}
 
 		listens.emplace_back(
 			tcp::endpoint{
-				net::ip::make_address(host),
+				net::ip::make_address(host, ec),
 				(unsigned short)atoi(port.c_str())},
 			v6only
 		);
+
+		if (ec)
+		{
+			XLOG_ERR << "Parse make endpoint fail: " << listen
+				<< ", error: " << ec.message();
+			co_return;
+		}
+
+		co_return;
 	}
 
 	for (const auto& auth_user : auth_users)
