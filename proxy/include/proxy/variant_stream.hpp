@@ -48,7 +48,9 @@ namespace util {
 		variant_stream(variant_stream&&) = default;
 
 		using executor_type = net::any_io_executor;
-		using lowest_layer_type = tcp::socket::lowest_layer_type;
+		// using lowest_layer_type = tcp::socket::lowest_layer_type;
+
+
 
 		executor_type get_executor()
 		{
@@ -56,9 +58,10 @@ namespace util {
 				{ return t.get_executor(); }, *this);
 		}
 
-		lowest_layer_type& lowest_layer()
+		template<typename LowestLayer>
+		LowestLayer& lowest_layer()
 		{
-			return boost::variant2::visit([&](auto& t) mutable -> lowest_layer_type&
+			return boost::variant2::visit([&](auto& t) mutable -> LowestLayer&
 				{ return t.lowest_layer(); }, *this);
 		}
 
@@ -80,7 +83,7 @@ namespace util {
 						std::forward<WriteHandler>(handler)); }, *this);
 		}
 
-		tcp::endpoint remote_endpoint()
+		auto remote_endpoint()
 		{
 			return boost::variant2::visit([&](auto& t) mutable
 				{
@@ -88,7 +91,7 @@ namespace util {
 				}, *this);
 		}
 
-		tcp::endpoint local_endpoint()
+		auto local_endpoint()
 		{
 			return boost::variant2::visit([&](auto& t) mutable
 				{
