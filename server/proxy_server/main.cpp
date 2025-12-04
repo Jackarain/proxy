@@ -134,8 +134,6 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 				<< ", error: " << ec.message();
 			co_return;
 		}
-
-		co_return;
 	}
 
 	for (const auto& auth_user : auth_users)
