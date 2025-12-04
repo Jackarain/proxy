@@ -16,12 +16,14 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/local/stream_protocol.hpp>
 
 #include <cstdint>
 #include <type_traits>
 
 
 namespace util {
+	namespace net = boost::asio;
 
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 
@@ -42,6 +44,8 @@ namespace util {
 
 	using proxy_tcp_socket = proxy_stream<tcp_socket>;
 	using tcp_acceptor = tcp::acceptor;
+
+	using unix_acceptor = net::local::stream_protocol::acceptor;
 
 	using ssl_stream = net::ssl::stream<proxy_tcp_socket>;
 	using variant_stream_type = variant_stream<proxy_tcp_socket, ssl_stream>;

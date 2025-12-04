@@ -53,6 +53,7 @@
 #include <boost/asio/ip/network_v4.hpp>
 #include <boost/asio/ip/network_v6.hpp>
 #include <boost/asio/bind_executor.hpp>
+#include <boost/asio/local/stream_protocol.hpp>
 
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -392,6 +393,10 @@ R"x*x*x(<html>
 		// 可同时侦听在多个 endpoint 上
 		// 其中 bool 表示是在 endpoint 是 v6 地址的情况下否是 v6only.
 		std::vector<std::tuple<tcp::endpoint, bool>> listens_;
+
+		// proxy server 侦听在 unix domain socket.
+		// 可同时侦听在多个 endpoint 上
+		std::vector<net::local::stream_protocol::endpoint> uds_listens_;
 
 		// 授权信息.
 		// auth_users 的第1个元素为用户名, 第2个元素为密码, 第3个元素为
@@ -5223,6 +5228,22 @@ R"x*x*x(<html>
 
 				m_tcp_acceptors.emplace_back(std::move(acceptor));
 			}
+
+			auto& uds_endps = m_option.uds_listens_;
+
+			for (const auto& endp : uds_endps)
+			{
+				try
+				{
+					m_unix_acceptors.emplace_back(m_executor, endp);
+				}
+				catch (const std::exception& e)
+				{
+					XLOG_ERR << "unix domain socket acceptor listen: " << endp.path()
+						<< ", error: " << e.what();
+					continue;
+				}
+			}
 		}
 
 		inline void update_certificate(
@@ -5878,6 +5899,8 @@ R"x*x*x(<html>
 
 		// m_tcp_acceptors 用于侦听客户端 tcp 连接请求.
 		std::vector<tcp_acceptor> m_tcp_acceptors;
+		// m_unix_acceptors 用于侦听客户端 UDS 连接请求.
+		std::vector<unix_acceptor> m_unix_acceptors;
 
 		// m_option 保存当前服务器各选项配置.
 		proxy_server_option m_option;
