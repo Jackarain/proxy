@@ -5,6 +5,9 @@ orbs:
 
 workflows:
   build-workflow:
+    filters:
+      branches:
+        only: master
     jobs:
       - build-x86_64
       - build-arm64
