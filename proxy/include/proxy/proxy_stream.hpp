@@ -12,6 +12,7 @@
 #include "proxy/variant_stream.hpp"
 #include "proxy/scramble.hpp"
 #include "proxy/tcp_socket.hpp"
+#include "proxy/uds_socket.hpp"
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/stream.hpp>
@@ -43,12 +44,14 @@ namespace util {
 	class proxy_stream;
 
 	using proxy_tcp_socket = proxy_stream<tcp_socket>;
+	using proxy_uds_socket = proxy_stream<uds_socket>;
+
 	using tcp_acceptor = tcp::acceptor;
 
 	using unix_acceptor = net::local::stream_protocol::acceptor;
 
 	using ssl_stream = net::ssl::stream<proxy_tcp_socket>;
-	using variant_stream_type = variant_stream<proxy_tcp_socket, ssl_stream>;
+	using variant_stream_type = variant_stream<proxy_tcp_socket, proxy_uds_socket, ssl_stream>;
 
 	//////////////////////////////////////////////////////////////////////////
 
