@@ -19,12 +19,15 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
 
+#include <boost/beast/core/stream_traits.hpp>
+
 #include <cstdint>
 #include <type_traits>
 
 
 namespace util {
 	namespace net = boost::asio;
+	namespace beast = boost::beast;
 
 	using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
 
@@ -51,7 +54,9 @@ namespace util {
 	using unix_acceptor = net::local::stream_protocol::acceptor;
 
 	using ssl_stream = net::ssl::stream<proxy_tcp_socket>;
-	using variant_stream_type = variant_stream<proxy_tcp_socket, proxy_uds_socket, ssl_stream>;
+	using ssl_uds_stream = net::ssl::stream<proxy_uds_socket>;
+
+	using variant_stream_type = variant_stream<proxy_tcp_socket, proxy_uds_socket, ssl_stream, ssl_uds_stream>;
 
 	//////////////////////////////////////////////////////////////////////////
 
@@ -155,16 +160,6 @@ namespace util {
 		native_handle_type native_handle()
 		{
 			return next_layer_.lowest_layer().native_handle();
-		}
-
-		tcp::endpoint remote_endpoint()
-		{
-			return next_layer_.lowest_layer().remote_endpoint();
-		}
-
-		tcp::endpoint remote_endpoint(boost::system::error_code& ec)
-		{
-			return next_layer_.lowest_layer().remote_endpoint(ec);
 		}
 
 		void shutdown(net::socket_base::shutdown_type what)
@@ -349,50 +344,402 @@ namespace util {
 
 	//////////////////////////////////////////////////////////////////////////
 
-	inline variant_stream_type init_proxy_stream(
-		variant_stream_type& s)
+	template <typename Stream>
+	tcp::endpoint tcp_remote_endpoint(Stream& sock) noexcept
 	{
-		return variant_stream_type(proxy_tcp_socket(s.get_executor()));
+		using StreamType = std::decay_t<Stream>;
+
+		if constexpr (std::same_as<StreamType, proxy_tcp_socket> || std::same_as<StreamType, tcp_socket>)
+		{
+			auto& lowest_layer = beast::get_lowest_layer(sock);
+			tcp::endpoint endp = lowest_layer.remote_endpoint();
+
+			return endp;
+		}
+		else if constexpr (std::same_as<StreamType, variant_stream_type>)
+		{
+			return boost::variant2::visit(
+				[](auto& sock) -> tcp::endpoint {
+					try
+					{
+						using S = std::decay_t<decltype(sock)>;
+						if constexpr (std::same_as<S, proxy_tcp_socket> || std::same_as<S, ssl_stream>)
+						{
+							auto& lowest_layer = beast::get_lowest_layer(sock);
+							tcp::endpoint endp = lowest_layer.remote_endpoint();
+							return endp;
+						}
+						else
+						{
+							return {};
+						}
+					}
+					catch (const std::exception&)
+					{
+						return {};
+					}
+				}, sock);
+		}
+		else
+		{
+			static_assert(!std::same_as<StreamType, StreamType>, "unknown socket type!");
+		}
+
+		return {};
 	}
 
-	inline variant_stream_type init_proxy_stream(
-		net::any_io_executor executor)
+	template <typename Stream>
+	tcp::endpoint tcp_local_endpoint(Stream& sock) noexcept
+	{
+		using StreamType = std::decay_t<Stream>;
+
+		if constexpr (std::same_as<StreamType, proxy_tcp_socket> || std::same_as<StreamType, tcp_socket>)
+		{
+			auto& lowest_layer = beast::get_lowest_layer(sock);
+			tcp::endpoint endp = lowest_layer.local_endpoint();
+
+			return endp;
+		}
+		else if constexpr (std::same_as<StreamType, variant_stream_type>)
+		{
+			return boost::variant2::visit(
+				[](auto& sock) -> tcp::endpoint {
+					try
+					{
+						using S = std::decay_t<decltype(sock)>;
+						if constexpr (std::same_as<S, proxy_tcp_socket> || std::same_as<S, ssl_stream>)
+						{
+							auto& lowest_layer = beast::get_lowest_layer(sock);
+							tcp::endpoint endp = lowest_layer.local_endpoint();
+							return endp;
+						}
+						else
+						{
+							return {};
+						}
+					}
+					catch (const std::exception&)
+					{
+						return {};
+					}
+				}, sock);
+		}
+		else
+		{
+			static_assert(!std::same_as<StreamType, StreamType>, "unknown socket type!");
+		}
+
+		return {};
+	}
+
+	template <typename Stream>
+	net::local::stream_protocol::endpoint uds_remote_endpoint(Stream& sock) noexcept
+	{
+		using StreamType = std::decay_t<Stream>;
+
+		if constexpr (std::same_as<StreamType, proxy_uds_socket> || std::same_as<StreamType, uds_socket>)
+		{
+			auto& lowest_layer = beast::get_lowest_layer(sock);
+			net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
+			return endp;
+		}
+		else if constexpr (std::same_as<StreamType, variant_stream_type>)
+		{
+			return boost::variant2::visit(
+				[](auto& sock) -> net::local::stream_protocol::endpoint {
+					try
+					{
+						using S = std::decay_t<decltype(sock)>;
+						if constexpr (std::same_as<S, proxy_uds_socket> || std::same_as<S, ssl_uds_stream>)
+						{
+							auto& lowest_layer = beast::get_lowest_layer(sock);
+							net::local::stream_protocol::endpoint endp = lowest_layer.remote_endpoint();
+							return endp;
+						}
+						else
+						{
+							return {};
+						}
+					}
+					catch (const std::exception&)
+					{
+						return {};
+					}
+				}, sock);
+		}
+		else
+		{
+			static_assert(!std::same_as<StreamType, StreamType>, "unknown socket type!");
+		}
+
+		return {};
+	}
+
+	template <typename Stream>
+	net::local::stream_protocol::endpoint uds_local_endpoint(Stream& sock) noexcept
+	{
+		using StreamType = std::decay_t<Stream>;
+
+		if constexpr (std::same_as<StreamType, proxy_uds_socket> || std::same_as<StreamType, uds_socket>)
+		{
+			auto& lowest_layer = beast::get_lowest_layer(sock);
+			net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
+
+			return endp;
+		}
+		else if constexpr (std::same_as<StreamType, variant_stream_type>)
+		{
+			return boost::variant2::visit(
+				[](auto& sock) -> net::local::stream_protocol::endpoint {
+					try
+					{
+						using S = std::decay_t<decltype(sock)>;
+						if constexpr (std::same_as<S, proxy_uds_socket> || std::same_as<S, ssl_uds_stream>)
+						{
+							auto& lowest_layer = beast::get_lowest_layer(sock);
+							net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
+							return endp;
+						}
+						else
+						{
+							return {};
+						}
+					}
+					catch (const std::exception&)
+					{
+						return {};
+					}
+				}, sock);
+		}
+		else
+		{
+			static_assert(!std::same_as<StreamType, StreamType>, "unknown socket type!");
+		}
+
+		return {};
+	}
+
+	inline std::string remote_endpoint_string(variant_stream_type& sock) noexcept
+	{
+		return boost::variant2::visit(
+			[](auto& sock) -> std::string {
+				try
+				{
+					using S = std::decay_t<decltype(sock)>;
+					if constexpr (std::same_as<S, proxy_tcp_socket>)
+					{
+						auto& lowest_layer = beast::get_lowest_layer(sock);
+						tcp::endpoint endp = lowest_layer.remote_endpoint();
+
+						std::string endpoint_str = endp.address().to_string();
+						endpoint_str += ":" + std::to_string(endp.port());
+						return endpoint_str;
+					}
+					else if constexpr (std::same_as<S, proxy_uds_socket>)
+					{
+						auto& lowest_layer = beast::get_lowest_layer(sock);
+						net::local::stream_protocol::endpoint endp = lowest_layer.remote_endpoint();
+						return endp.path();
+					}
+					else if constexpr (std::same_as<S, ssl_stream>)
+					{
+						auto& lowest_layer = beast::get_lowest_layer(sock);
+						tcp::endpoint endp = lowest_layer.remote_endpoint();
+
+						std::string endpoint_str = endp.address().to_string();
+						endpoint_str += ":" + std::to_string(endp.port());
+						return endpoint_str;
+					}
+					else if constexpr (std::same_as<S, ssl_uds_stream>)
+					{
+						auto& lowest_layer = beast::get_lowest_layer(sock);
+						net::local::stream_protocol::endpoint endp = lowest_layer.remote_endpoint();
+						return endp.path();
+					}
+					else
+					{
+						static_assert(!std::same_as<S, S>, "unknown socket type!");
+					}
+				}
+				catch (const std::exception&)
+				{
+					return {};
+				}
+			}, sock);
+	}
+
+	inline std::string local_endpoint_string(variant_stream_type& sock) noexcept
+	{
+		return boost::variant2::visit(
+			[](auto& sock) -> std::string {
+				try
+				{
+					using S = std::decay_t<decltype(sock)>;
+					if constexpr (std::same_as<S, proxy_tcp_socket>)
+					{
+						auto& lowest_layer = beast::get_lowest_layer(sock);
+						tcp::endpoint endp = lowest_layer.local_endpoint();
+
+						std::string endpoint_str = endp.address().to_string();
+						endpoint_str += ":" + std::to_string(endp.port());
+						return endpoint_str;
+					}
+					else if constexpr (std::same_as<S, proxy_uds_socket>)
+					{
+						auto& lowest_layer = beast::get_lowest_layer(sock);
+						net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
+						return endp.path();
+					}
+					else if constexpr (std::same_as<S, ssl_stream>)
+					{
+						auto& lowest_layer = beast::get_lowest_layer(sock);
+						tcp::endpoint endp = lowest_layer.local_endpoint();
+
+						std::string endpoint_str = endp.address().to_string();
+						endpoint_str += ":" + std::to_string(endp.port());
+						return endpoint_str;
+					}
+					else if constexpr (std::same_as<S, ssl_uds_stream>)
+					{
+						auto& lowest_layer = beast::get_lowest_layer(sock);
+						net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
+						return endp.path();
+					}
+					else
+					{
+						static_assert(!std::same_as<S, S>, "unknown socket type!");
+					}
+				}
+				catch (const std::exception&)
+				{
+					return {};
+				}
+			}, sock);
+	}
+
+
+	template <typename Stream>
+	tcp::socket& net_tcp_socket(Stream& socket)
+	{
+		using StreamType = std::decay_t<Stream>;
+		if constexpr (std::same_as<StreamType, variant_stream_type>)
+		{
+			if (boost::variant2::holds_alternative<proxy_tcp_socket>(socket))
+			{
+				return static_cast<tcp::socket&>(boost::variant2::get<proxy_tcp_socket>(socket).lowest_layer());
+			}
+			else if (boost::variant2::holds_alternative<ssl_stream>(socket))
+			{
+				return static_cast<tcp::socket&>(boost::variant2::get<ssl_stream>(socket).lowest_layer());
+			}
+		}
+		else if constexpr (std::same_as<StreamType, proxy_tcp_socket>
+			|| std::same_as<StreamType, ssl_stream>)
+		{
+			return static_cast<tcp::socket&>(socket.lowest_layer());
+		}
+
+		throw boost::variant2::bad_variant_access{};
+	}
+
+	template <typename Stream>
+	net::local::stream_protocol::socket& net_uds_socket(Stream& socket)
+	{
+		using StreamType = std::decay_t<Stream>;
+		if constexpr (std::same_as<StreamType, variant_stream_type>)
+		{
+			if (boost::variant2::holds_alternative<proxy_tcp_socket>(socket))
+			{
+				return static_cast<net::local::stream_protocol::socket&>(
+					boost::variant2::get<proxy_uds_socket>(socket).lowest_layer());
+			}
+			else if (boost::variant2::holds_alternative<ssl_stream>(socket))
+			{
+				return static_cast<net::local::stream_protocol::socket&>(
+					boost::variant2::get<ssl_uds_stream>(socket).lowest_layer());
+			}
+		}
+		else if constexpr (std::same_as<StreamType, proxy_uds_socket>
+			|| std::same_as<StreamType, ssl_uds_stream>)
+		{
+			return static_cast<net::local::stream_protocol::socket&>(socket.lowest_layer());
+		}
+
+		throw boost::variant2::bad_variant_access{};
+	}
+
+	template <typename CompletionToken>
+	inline auto async_wait(variant_stream_type& socket, CompletionToken&& token) noexcept
+	{
+		return net::async_initiate<CompletionToken,
+			void(boost::system::error_code)>([&socket](auto&& handler) mutable
+				{
+					boost::variant2::visit(
+						[handler = std::move(handler)](auto& sock) mutable
+						{
+							auto& lowest_layer = boost::beast::get_lowest_layer(sock);
+							lowest_layer.async_wait(net::socket_base::wait_read, std::move(handler));
+						}, socket);
+				}, token);
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+
+	inline variant_stream_type init_proxy_stream(net::any_io_executor executor)
 	{
 		return variant_stream_type(proxy_tcp_socket(executor));
 	}
 
-	inline variant_stream_type init_proxy_stream(
-		net::io_context& ioc)
+	inline variant_stream_type init_proxy_stream(net::io_context& ioc)
 	{
 		return variant_stream_type(proxy_tcp_socket(ioc));
 	}
 
 	template <typename Stream>
-	inline variant_stream_type init_proxy_stream(
-		Stream&& s)
+	variant_stream_type init_proxy_stream(Stream&& s)
 	{
 		using StreamType = std::decay_t<Stream>;
 
-		if constexpr (std::same_as<StreamType, proxy_tcp_socket>)
+		if constexpr (std::same_as<StreamType, tcp::socket>)
+			return variant_stream_type(proxy_tcp_socket(std::move(s)));
+		else if constexpr (std::same_as<StreamType, net::local::stream_protocol::socket>)
+			return variant_stream_type(proxy_uds_socket(std::move(s)));
+		else if constexpr (std::same_as<StreamType, proxy_tcp_socket>)
+			return variant_stream_type(std::move(s));
+		else if constexpr (std::same_as<StreamType, proxy_uds_socket>)
 			return variant_stream_type(std::move(s));
 		else if constexpr (std::same_as<StreamType, ssl_stream>)
 			return variant_stream_type(std::move(s));
-		else
-			return variant_stream_type(proxy_tcp_socket(std::move(s)));
+		else if constexpr (std::same_as<StreamType, ssl_uds_stream>)
+			return variant_stream_type(std::move(s));
+		else {
+			static_assert(!std::same_as<StreamType, StreamType>, "unknown socket type!");
+		}
 	}
 
 	template <typename Stream>
-	inline variant_stream_type init_proxy_stream(
-		Stream&& s, net::ssl::context& sslctx)
+	variant_stream_type init_proxy_stream(Stream&& s, net::ssl::context& sslctx)
 	{
-		if constexpr (std::same_as<std::decay_t<Stream>, tcp::socket>)
+		using StreamType = std::decay_t<Stream>;
+
+		if constexpr (std::same_as<StreamType, tcp::socket>)
 		{
-			return variant_stream_type(ssl_stream(
-				std::forward<tcp::socket>(s), sslctx));
+			return variant_stream_type(ssl_stream(proxy_tcp_socket(std::move(s)), sslctx));
+		}
+		else if constexpr (std::same_as<StreamType, proxy_tcp_socket>)
+		{
+			return variant_stream_type(ssl_stream(proxy_tcp_socket(std::move(s)), sslctx));
+		}
+		else if constexpr (std::same_as<StreamType, net::local::stream_protocol::socket>)
+		{
+			return variant_stream_type(ssl_uds_stream(proxy_uds_socket(std::move(s)), sslctx));
+		}
+		else if constexpr (std::same_as<StreamType, proxy_uds_socket>)
+		{
+			return variant_stream_type(ssl_uds_stream(proxy_uds_socket(std::move(s)), sslctx));
 		}
 		else {
-			return variant_stream_type(ssl_stream(
-				proxy_tcp_socket(std::move(s)), sslctx));
+			static_assert(!std::same_as<StreamType, StreamType>, "unknown socket type!");
 		}
 	}
 

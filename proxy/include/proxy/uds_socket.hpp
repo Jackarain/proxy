@@ -86,6 +86,16 @@ namespace util {
 			return impl_->socket();
 		}
 
+		endpoint_type remote_endpoint() const
+		{
+			return impl_->socket().remote_endpoint();
+		}
+
+		endpoint_type local_endpoint() const
+		{
+			return impl_->socket().local_endpoint();
+		}
+
 		bool is_open() const noexcept
 		{
 			return lowest_layer().is_open();
