@@ -725,13 +725,6 @@ R"x*x*x(<html>
 			return results;
 		}
 
-		// net_tcp_socket 用于将 stream 转换为 tcp::socket 对象.
-		template <typename Stream>
-		tcp::socket& net_tcp_socket(Stream& socket) noexcept
-		{
-			return static_cast<tcp::socket&>(socket.lowest_layer());
-		}
-
 		// 更新 session 发起连接时使用的本地绑定地址.
 		inline void update_bind_interface(const std::string& addr) noexcept
 		{
@@ -895,41 +888,48 @@ R"x*x*x(<html>
 		transparent_proxy() noexcept
 		{
 			auto executor = co_await net::this_coro::executor;
-
-			tcp::socket& remote_socket =
-				net_tcp_socket(m_remote_socket);
-
 			boost::system::error_code ec;
 
-			// 查询网关代理中继服务器域名信息.
-			auto targets = co_await resolve_proxy_pass_targets();
+			try
+			{
+				tcp::socket& remote_socket = net_tcp_socket(m_remote_socket);
 
-			// 发起连接到网关代理中继服务器.
-			bool ret = co_await connect_proxy_pass(
-				remote_socket,
-				m_tproxy_remote->address().to_string(),
-				m_tproxy_remote->port(),
-				targets,
-				ec);
+				// 查询网关代理中继服务器域名信息.
+				auto targets = co_await resolve_proxy_pass_targets();
 
-			if (!ret)
-				co_return;
+				// 发起连接到网关代理中继服务器.
+				bool ret = co_await connect_proxy_pass(
+					remote_socket,
+					m_tproxy_remote->address().to_string(),
+					m_tproxy_remote->port(),
+					targets,
+					ec);
 
-			size_t l2r_transferred = 0;
-			size_t r2l_transferred = 0;
+				if (!ret)
+					co_return;
 
-			co_await(
-				transfer(m_local_socket, m_remote_socket, l2r_transferred)
-				&&
-				transfer(m_remote_socket, m_local_socket, r2l_transferred)
-				);
+				size_t l2r_transferred = 0;
+				size_t r2l_transferred = 0;
 
-			log_conn_debug()
-				<< ", transfer completed"
-				<< ", local to remote: "
-				<< l2r_transferred
-				<< ", remote to local: "
-				<< r2l_transferred;
+				co_await(
+					transfer(m_local_socket, m_remote_socket, l2r_transferred)
+					&&
+					transfer(m_remote_socket, m_local_socket, r2l_transferred)
+					);
+
+				log_conn_debug()
+					<< ", transfer completed"
+					<< ", local to remote: "
+					<< l2r_transferred
+					<< ", remote to local: "
+					<< r2l_transferred;
+
+			}
+			catch (const std::exception& e)
+			{
+				log_conn_error()
+					<< ", transparent_proxy exception: " << e.what();
+			}
 
 			co_return;
 		}
@@ -1445,7 +1445,7 @@ R"x*x*x(<html>
 				bytes--;
 			}
 
-			net::streambuf wbuf;
+			net::streambuf wbuf{};
 
 			// 回复客户端, server所选择的代理方式.
 			auto wp = (char*)wbuf.prepare(1024).data();
@@ -1570,7 +1570,7 @@ R"x*x*x(<html>
 
 				log_conn_debug()
 					<< ", "
-					<< m_local_socket.remote_endpoint()
+					<< remote_endpoint_string(m_local_socket)
 					<< " to ipv4: "
 					<< dst_endpoint;
 			}
@@ -1587,12 +1587,13 @@ R"x*x*x(<html>
 					dst_endpoint.address() == net::ip::make_address_v4("0.0.0.0") ||
 					dst_endpoint.address() == net::ip::make_address_v6("::0"))
 				{
-					dst_endpoint.address(m_local_socket.remote_endpoint().address());
+					auto address = tcp_remote_endpoint(m_local_socket).address();
+					dst_endpoint.address(address);
 				}
 
 				log_conn_debug()
 					<< ", "
-					<< m_local_socket.remote_endpoint()
+					<< remote_endpoint_string(m_local_socket)
 					<< " to domain: "
 					<< domain
 					<< ":"
@@ -1615,7 +1616,7 @@ R"x*x*x(<html>
 
 				log_conn_debug()
 					<< ", "
-					<< m_local_socket.remote_endpoint()
+					<< remote_endpoint_string(m_local_socket)
 					<< " to ipv6: "
 					<< dst_endpoint;
 			}
@@ -1636,9 +1637,8 @@ R"x*x*x(<html>
 					break;
 				}
 
-				auto remote_endp = m_local_socket.remote_endpoint();
-				auto protocol = remote_endp.address().is_v4()
-					? udp::v4() : udp::v6();
+				auto remote_endp = tcp_remote_endpoint(m_local_socket);
+				auto protocol = remote_endp.address().is_v4() ? udp::v4() : udp::v6();
 
 				// 创建UDP端口.
 				udp::socket local_udp_socket(m_executor);
@@ -1668,7 +1668,7 @@ R"x*x*x(<html>
 				}
 
 				// 绑定到和 tcp socket 相同的地址.
-				udp::endpoint local_udp_endp(m_local_socket.local_endpoint().address(), 0);
+				udp::endpoint local_udp_endp(tcp_remote_endpoint(m_local_socket).address(), 0);
 				local_udp_socket.bind(local_udp_endp, ec);
 
 				if (ec)
@@ -1680,7 +1680,7 @@ R"x*x*x(<html>
 					// 统统转发给桥接服务器, 桥接服务器上接收到的数据再转发给客户端.
 					// 中间不需要解包和封包 udp 数据报.
 
-					uint16_t port;
+					uint16_t port = 0;
 					if (remote_bind_socket)
 						port = remote_bind_socket->local_endpoint(ec).port();
 					else
@@ -1723,7 +1723,7 @@ R"x*x*x(<html>
 					<< ", udp local socket: "
 					<< local_endp
 					<< ", tcp local socket: "
-					<< m_local_socket.local_endpoint()
+					<< local_endpoint_string(m_local_socket)
 					<< ", udp bind interface: "
 					<< bind_if.address().to_string();
 
@@ -1731,7 +1731,7 @@ R"x*x*x(<html>
 				{
 					auto uaddr = local_endp.address().to_v4().to_uint();
 					if (uaddr == 0)
-						uaddr = m_local_socket.local_endpoint().address().to_v4().to_uint();
+						uaddr = tcp_local_endpoint(m_local_socket).address().to_v4().to_uint();
 
 					write<uint8_t>(SOCKS5_ATYP_IPV4, wp);
 					write<uint32_t>(uaddr, wp);
@@ -2403,10 +2403,6 @@ R"x*x*x(<html>
 				}
 			}
 
-			auto endp = m_local_socket.remote_endpoint();
-			auto client = endp.address().to_string();
-			client += ":" + std::to_string(endp.port());
-
 			if (!verify_passed)
 				return PROXY_AUTH_FAILED;
 
@@ -2834,12 +2830,7 @@ R"x*x*x(<html>
 			for (size_t i = 0; i < bytes; i++)
 				passwd.push_back(read<int8_t>(p));
 
-			// SOCKS5验证用户和密码.
-			auto endp = m_local_socket.remote_endpoint();
-			auto client = endp.address().to_string();
-			client += ":" + std::to_string(endp.port());
-
-			// 用户认证逻辑.
+			// SOCKS5验证用户和密码, 用户认证逻辑.
 			bool verify_passed = m_option.auth_users_.empty();
 
 			for (auto [user, pwd, addr, proxy_pass] : m_option.auth_users_)
@@ -2878,9 +2869,10 @@ R"x*x*x(<html>
 				<< ", passwd: "
 				<< passwd
 				<< ", client: "
-				<< client;
+				<< remote_endpoint_string(m_local_socket);
 
-			net::streambuf wbuf;
+			net::streambuf wbuf{};
+
 			auto wp = (char*)wbuf.prepare(16).data();
 			write<uint8_t>(0x01, wp);			// version 只能是1.
 			if (verify_passed)
@@ -2925,8 +2917,8 @@ R"x*x*x(<html>
 			stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
 
 			// 记录 from 和 to 的endpoint.
-			auto from_endpoint = from.remote_endpoint();
-			auto to_endpoint = to.remote_endpoint();
+			auto from_endpoint = tcp_remote_endpoint(from);
+			auto to_endpoint = tcp_remote_endpoint(to);
 
 			constexpr auto buf_size = 512 * 1024;
 
@@ -3233,8 +3225,7 @@ R"x*x*x(<html>
 				co_return false;
 			}
 
-			m_remote_socket = init_proxy_stream(
-				std::move(remote_socket));
+			m_remote_socket = init_proxy_stream(std::move(remote_socket));
 
 			co_return true;
 		}
@@ -3349,8 +3340,7 @@ R"x*x*x(<html>
 				continue;
 			}
 
-			co_await m_local_socket.lowest_layer().async_wait(
-				net::socket_base::wait_read, net_awaitable[ec]);
+			co_await async_wait(m_local_socket, net_awaitable[ec]);
 
 			co_return;
 		}
@@ -5558,7 +5548,7 @@ R"x*x*x(<html>
 
 					std::vector<std::string> local_info;
 
-					auto endp = socket.remote_endpoint(error);
+					auto endp = tcp_remote_endpoint(socket);
 					auto client = endp.address().to_string();
 
 					local_info.push_back(client);
