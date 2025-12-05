@@ -4596,7 +4596,7 @@ R"x*x*x(<html>
 
 			if (targets.empty())
 			{
-				ec = net::error::not_found;
+				ec = net::error::host_not_found;
 				co_return ec;
 			}
 
