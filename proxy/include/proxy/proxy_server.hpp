@@ -2553,7 +2553,7 @@ R"x*x*x(<html>
 							<< " error: "
 							<< ec.message();
 
-						co_return !first;
+						co_return true;
 					}
 				}
 
@@ -2693,7 +2693,7 @@ R"x*x*x(<html>
 					<< " error: "
 					<< ec.message();
 
-				co_return false;
+				co_return true;
 			}
 
 			http::response<http::empty_body> res{
@@ -4603,6 +4603,12 @@ R"x*x*x(<html>
 		async_connect_targets(tcp::socket& socket, tcp::resolver::results_type& targets) noexcept
 		{
 			boost::system::error_code ec;
+
+			if (targets.empty())
+			{
+				ec = net::error::not_found;
+				co_return ec;
+			}
 
 			if (m_option.happyeyeballs_)
 			{
