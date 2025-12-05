@@ -1620,6 +1620,16 @@ R"x*x*x(<html>
 				// 连接目标主机.
 				co_await start_connect_host(
 					domain, port, ec, atyp == SOCKS5_ATYP_DOMAINNAME);
+				if (ec)
+				{
+					log_conn_warning()
+						<< ", connect to target "
+						<< domain
+						<< ":"
+						<< port
+						<< " error: "
+						<< ec.message();
+				}
 			}
 			else if (command == SOCKS5_CMD_UDP)
 			do {
@@ -3216,17 +3226,7 @@ R"x*x*x(<html>
 
 			ec = co_await async_connect_targets(remote_socket, targets);
 			if (ec)
-			{
-				log_conn_warning()
-					<< ", connect to target "
-					<< target_host
-					<< ":"
-					<< target_port
-					<< " error: "
-					<< ec.message();
-
 				co_return false;
-			}
 
 			m_remote_socket = init_proxy_stream(
 				std::move(remote_socket));
