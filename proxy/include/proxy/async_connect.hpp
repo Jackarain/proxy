@@ -56,11 +56,15 @@ void do_result(Handler &&handle, const boost::system::error_code &error,
 
 template <typename Stream, typename Handler, typename Executor,
           typename Iterator, typename ResultType = void>
-void callback(Handler &&handler, Executor ex, Iterator &begin,
+void callback(Handler &&handler, Executor ex, Iterator &begin, Iterator& end,
               const boost::system::error_code &error) {
-  net::post(ex, [error, h = std::move(handler), begin]() mutable {
-    if constexpr (std::same_as<ResultType, typename Stream::endpoint_type>)
-      do_result(h, error, *begin);
+  net::post(ex, [error, h = std::move(handler), begin, end]() mutable {
+    if constexpr (std::same_as<ResultType, typename Stream::endpoint_type>) {
+      std::decay_t<decltype(*begin)> endp;
+      if (begin != end)
+          endp = *begin;
+      do_result(h, error, endp);
+    }
 
     if constexpr (!std::same_as<ResultType, typename Stream::endpoint_type>)
       do_result(h, error, begin);
@@ -128,7 +132,7 @@ struct initiate_do_connect {
       boost::system::error_code error = net::error::not_found;
 
       callback<Stream, Handler, Executor, Iterator, ResultType>(
-          std::move(context->handler_), ex, begin, error);
+          std::move(context->handler_), ex, begin, end, error);
 
       return false;
     }
@@ -158,7 +162,7 @@ struct initiate_do_connect {
             typename Iterator, typename ConnectCondition,
             typename ResultType = void>
   void
-  do_connect(Iterator iter, Stream &stream,
+  do_connect(Iterator iter, Iterator end, Stream &stream,
              boost::local_shared_ptr<connect_context<Stream, Handler>> &context,
              Executor ex, boost::local_shared_ptr<Stream> sock,
              ConnectCondition connect_condition) {
@@ -167,14 +171,14 @@ struct initiate_do_connect {
         boost::system::error_code error = net::error::not_found;
 
         callback<Stream, Handler, Executor, Iterator, ResultType>(
-            std::forward<Handler>(context->handler_), ex, iter, error);
+            std::forward<Handler>(context->handler_), ex, iter, end, error);
       }
 
       return;
     }
 
     sock->async_connect(
-        *iter, [&stream, context, ex, iter,
+        *iter, [&stream, context, ex, iter, end,
                 sock](const boost::system::error_code &error) mutable {
           if (!error) {
             if (context->flag_.exchange(true))
@@ -201,7 +205,7 @@ struct initiate_do_connect {
           }
 
           callback<Stream, Handler, Executor, Iterator, ResultType>(
-              std::forward<Handler>(context->handler_), ex, iter, error);
+              std::forward<Handler>(context->handler_), ex, iter, end, error);
         });
   }
 
@@ -235,11 +239,11 @@ struct initiate_do_connect {
 
       context->socket_.emplace_back(sock);
 
-      auto conn_func = [this, iter = begin, &stream, context, executor, sock,
+      auto conn_func = [this, iter = begin, end = end, &stream, context, executor, sock,
                         connect_condition]() mutable {
         do_connect<Stream, Handler, decltype(executor), Iterator,
                    ConnectCondition, ResultType>(
-            iter, stream, context, executor, sock, connect_condition);
+            iter, end, stream, context, executor, sock, connect_condition);
       };
 
       auto v4 = begin->endpoint().address().is_v4();
@@ -294,27 +298,6 @@ struct initiate_do_connect {
 };
 } // namespace detail
 
-template <typename Protocol, typename Executor,
-          typename Iterator, typename ConnectHandler>
-inline auto async_connect(
-    net::basic_stream_socket<Protocol, Executor>& s,
-    Iterator begin,
-    ConnectHandler handler = net::default_completion_token_t<Executor>(),
-    typename net::enable_if<!net::is_endpoint_sequence<Iterator>::value>::type* = 0)
-{
-    return net::async_initiate<
-        ConnectHandler,
-        void(boost::system::error_code, Iterator)
-    >(
-        detail::initiate_do_connect{},
-        handler,
-        &s,
-        begin,
-        Iterator(),
-        detail::default_connect_condition{}
-    );
-}
-
 template <typename Protocol, typename Executor, typename Iterator,
           typename ConnectHandler = net::default_completion_token_t<Executor>>
 auto async_connect(
@@ -356,31 +339,6 @@ auto async_connect(
         &s,
         endpoints,
         detail::default_connect_condition{}
-    );
-}
-
-template <typename Protocol, typename Executor, typename Iterator,
-          typename ConnectCondition,
-          typename ConnectHandler = net::default_completion_token_t<Executor>>
-auto async_connect(
-    net::basic_stream_socket<Protocol, Executor>& s,
-    Iterator begin,
-    ConnectCondition connect_condition,
-    ConnectHandler&& handler = net::default_completion_token_t<Executor>(),
-    typename net::enable_if<!net::is_endpoint_sequence<Iterator>::value>::type* = 0)
-{
-    using HandlerType = void(boost::system::error_code, Iterator);
-
-    return net::async_initiate<
-        ConnectHandler,
-        HandlerType
-    >(
-        detail::initiate_do_connect{},
-        handler,
-        &s,
-        begin,
-        Iterator(),
-        connect_condition
     );
 }
 
