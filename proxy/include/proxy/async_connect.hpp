@@ -129,7 +129,7 @@ struct initiate_do_connect {
     context->num_ = std::distance(begin, end);
 
     if (context->num_ == 0) {
-      boost::system::error_code error = net::error::not_found;
+      boost::system::error_code error = net::error::host_not_found;
 
       callback<Stream, Handler, Executor, Iterator, ResultType>(
           std::move(context->handler_), ex, begin, end, error);
@@ -168,7 +168,7 @@ struct initiate_do_connect {
              ConnectCondition connect_condition) {
     if (!check_condition({}, *sock, *iter, connect_condition)) {
       if (reject == context->num_) {
-        boost::system::error_code error = net::error::not_found;
+        boost::system::error_code error = net::error::host_not_found;
 
         callback<Stream, Handler, Executor, Iterator, ResultType>(
             std::forward<Handler>(context->handler_), ex, iter, end, error);
