@@ -904,7 +904,15 @@ R"x*x*x(<html>
 			net::co_spawn(m_executor,
 				[this, self, server]() -> net::awaitable<void>
 				{
-					co_await proto_detect();
+					if (boost::variant2::holds_alternative<proxy_tcp_socket>(m_local_socket))
+					{
+						co_await proto_detect<proxy_tcp_socket>();
+					}
+					else if (boost::variant2::holds_alternative<proxy_uds_socket>(m_local_socket))
+					{
+						co_await proto_detect<proxy_uds_socket>();
+					}
+
 					co_return;
 				}, net::detached);
 		}
@@ -989,9 +997,9 @@ R"x*x*x(<html>
 			co_return;
 		}
 
+		template <typename T>
 		inline net::awaitable<bool>
-		noise_handshake(tcp::socket& socket,
-			std::vector<uint8_t>& inkey, std::vector<uint8_t>& outkey) noexcept
+		noise_handshake(T& socket, std::vector<uint8_t>& inkey, std::vector<uint8_t>& outkey) noexcept
 		{
 			boost::system::error_code error;
 
@@ -1092,6 +1100,7 @@ R"x*x*x(<html>
 		}
 
 		// 协议侦测协程.
+		template <typename T>
 		inline net::awaitable<void> proto_detect(bool handshake_before = true) noexcept
 		{
 			// 如果 server 对象已经撤销, 说明服务已经关闭则直接退出这个 session 连接不再
@@ -1103,18 +1112,15 @@ R"x*x*x(<html>
 			auto self = shared_from_this();
 
 			// 从 m_local_socket 中获取 tcp::socket 对象的引用.
-			auto& socket = boost::variant2::get<proxy_tcp_socket>(m_local_socket);
+			auto& socket = boost::variant2::get<T>(m_local_socket);
 
 			boost::system::error_code error;
 
 			// 等待 read 事件以确保下面 recv 偷看数据时能有数据.
-			co_await socket.async_wait(
-				net::socket_base::wait_read, net_awaitable[error]);
+			co_await async_wait(m_local_socket, net_awaitable[error]);
 			if (error)
 			{
-				log_conn_warning()
-					<< ", socket.async_wait error: "
-					<< error.message();
+				log_conn_warning() << ", socket.async_wait error: " << error.message();
 				co_return;
 			}
 
@@ -1127,12 +1133,13 @@ R"x*x*x(<html>
 					return;
 
 				using Stream = std::decay_t<decltype(sock)>;
-				using ProxySocket = util::proxy_tcp_socket;
 
-				if constexpr (std::same_as<Stream, tcp::socket>)
+				if constexpr (std::same_as<Stream, tcp::socket> ||
+					std::same_as<Stream, net::local::stream_protocol::socket>)
 					return;
 
-				if constexpr (std::same_as<Stream, ProxySocket>)
+				if constexpr (std::same_as<Stream, proxy_tcp_socket> ||
+					std::same_as<Stream, proxy_uds_socket>)
 				{
 					sock.set_scramble_key(m_inout_key);
 					sock.set_unscramble_key(m_inin_key);
@@ -1154,17 +1161,13 @@ R"x*x*x(<html>
 			uint8_t detect[5] = { 0 };
 
 #if defined(WIN32) || defined(__APPLE__)
-			auto ret = recv(fd, (char*)detect, sizeof(detect),
-				MSG_PEEK);
+			auto ret = recv(fd, (char*)detect, sizeof(detect), MSG_PEEK);
 #else
-			auto ret = recv(fd, (void*)detect, sizeof(detect),
-				MSG_PEEK | MSG_NOSIGNAL | MSG_DONTWAIT);
+			auto ret = recv(fd, (void*)detect, sizeof(detect), MSG_PEEK | MSG_NOSIGNAL | MSG_DONTWAIT);
 #endif
 			if (ret <= 0)
 			{
-				log_conn_warning()
-					<< ", peek message return: "
-					<< ret;
+				log_conn_warning() << ", peek message return: " << ret;
 				co_return;
 			}
 
@@ -1185,12 +1188,13 @@ R"x*x*x(<html>
 					return;
 
 				using Stream = std::decay_t<decltype(sock)>;
-				using ProxySocket = util::proxy_tcp_socket;
 
-				if constexpr (std::same_as<Stream, tcp::socket>)
+				if constexpr (std::same_as<Stream, tcp::socket> ||
+					std::same_as<Stream, net::local::stream_protocol::socket>)
 					return;
 
-				if constexpr (std::same_as<Stream, ProxySocket>)
+				if constexpr (std::same_as<Stream, proxy_tcp_socket> ||
+					std::same_as<Stream, proxy_uds_socket>)
 				{
 					auto& unscramble = sock.unscramble();
 					unscramble.peek_data(detect);
@@ -1229,8 +1233,7 @@ R"x*x*x(<html>
 
 				if (detect[0] != 0x16 && !noise_proto)
 				{
-					log_conn_debug()
-						<< ", insecure protocol disabled";
+					log_conn_debug() << ", insecure protocol disabled";
 					co_return;
 				}
 			}
@@ -1240,42 +1243,32 @@ R"x*x*x(<html>
 			{
 				if (m_option.disable_socks_)
 				{
-					log_conn_debug()
-						<< ", socks protocol disabled";
+					log_conn_debug() << ", socks protocol disabled";
 					co_return;
 				}
 
-				log_conn_debug()
-					<< ", plain socks4/5 protocol";
+				log_conn_debug() << ", plain socks4/5 protocol";
 
 				// 开始启动代理协议.
 				co_await start_proxy();
 			}
 			else if (detect[0] == 0x16) // http/socks proxy with ssl crypto protocol.
 			{
-				log_conn_debug()
-					<< ", ssl protocol";
+				log_conn_debug() << ", ssl protocol";
 
 				auto& srv_ssl_context = server->ssl_context();
 
 				// instantiate socks stream with ssl context.
-				auto ssl_socks_stream = init_proxy_stream(
-					std::move(socket), srv_ssl_context);
+				auto ssl_socks_stream = init_proxy_stream(std::move(socket), srv_ssl_context);
 
 				// get origin ssl stream type.
-				ssl_stream& ssl_socket =
-					boost::variant2::get<ssl_stream>(ssl_socks_stream);
+				ssl_stream& ssl_socket = boost::variant2::get<ssl_stream>(ssl_socks_stream);
 
 				// do async ssl handshake.
-				co_await ssl_socket.async_handshake(
-					net::ssl::stream_base::server,
-					net_awaitable[error]);
-
+				co_await ssl_socket.async_handshake(net::ssl::stream_base::server, net_awaitable[error]);
 				if (error)
 				{
-					log_conn_debug()
-						<< ", ssl server protocol handshake error: "
-						<< error.message();
+					log_conn_debug() << ", ssl server protocol handshake error: " << error.message();
 					co_return;
 				}
 
@@ -1291,13 +1284,11 @@ R"x*x*x(<html>
 			{
 				if (m_option.disable_http_)
 				{
-					log_conn_debug()
-						<< ", http protocol disabled";
+					log_conn_debug() << ", http protocol disabled";
 					co_return;
 				}
 
-				log_conn_debug()
-					<< ", plain http protocol";
+				log_conn_debug() << ", plain http protocol";
 
 				// 开始启动代理协议.
 				co_await start_proxy();
@@ -1305,20 +1296,27 @@ R"x*x*x(<html>
 			else if (handshake_before && m_option.scramble_)
 			{
 				// 进入噪声握手协议, 即: 返回一段噪声给客户端, 并等待客户端返回噪声.
-				log_conn_debug()
-					<< ", noise protocol";
+				log_conn_debug() << ", noise protocol";
 
-				if (!co_await noise_handshake(
-					net_tcp_socket(socket), m_inin_key, m_inout_key))
-					co_return;
+				if constexpr (std::same_as<T, proxy_tcp_socket>)
+				{
+					if (!co_await noise_handshake<tcp::socket>(
+						net_tcp_socket(socket), m_inin_key, m_inout_key))
+						co_return;
+				}
+				else if constexpr (std::same_as<T, proxy_uds_socket>)
+				{
+					if (!co_await noise_handshake<net::local::stream_protocol::socket>(
+						net_uds_socket(socket), m_inin_key, m_inout_key))
+						co_return;
+				}
 
 				// 在完成 noise 握手后, 重新检测被混淆之前的代理协议.
-				co_await proto_detect(false);
+				co_await proto_detect<T>(false);
 			}
 			else
 			{
-				log_conn_debug()
-					<< ", unknown protocol";
+				log_conn_debug() << ", unknown protocol";
 			}
 
 			co_return;
