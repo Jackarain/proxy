@@ -669,7 +669,7 @@ namespace util {
 	}
 
 	template <typename CompletionToken>
-	inline auto async_wait(variant_stream_type& socket, CompletionToken&& token) noexcept
+	auto async_wait(variant_stream_type& socket, CompletionToken&& token) noexcept
 	{
 		return net::async_initiate<CompletionToken,
 			void(boost::system::error_code)>([&socket](auto&& handler) mutable
