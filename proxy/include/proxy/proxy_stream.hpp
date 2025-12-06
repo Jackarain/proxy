@@ -46,17 +46,20 @@ namespace util {
 	template <typename Stream>
 	class proxy_stream;
 
+	// tcp 和 unix domain socket （UDS）相关 socket 类型定义
 	using proxy_tcp_socket = proxy_stream<tcp_socket>;
 	using proxy_uds_socket = proxy_stream<uds_socket>;
 
-	using tcp_acceptor = tcp::acceptor;
-
-	using unix_acceptor = net::local::stream_protocol::acceptor;
-
+	// TLS 加密的 tcp 和 unix domain socket （UDS）相关 socket 类型定义
 	using ssl_tcp_stream = net::ssl::stream<proxy_tcp_socket>;
 	using ssl_uds_stream = net::ssl::stream<proxy_uds_socket>;
 
+	// variant_stream_type 支持 proxy_tcp_socket, proxy_uds_socket, ssl_tcp_stream, ssl_uds_stream
 	using variant_stream_type = variant_stream<proxy_tcp_socket, proxy_uds_socket, ssl_tcp_stream, ssl_uds_stream>;
+
+	// tcp_acceptor 和 unix_acceptor 类型声明.
+	using tcp_acceptor = tcp::acceptor;
+	using unix_acceptor = net::local::stream_protocol::acceptor;
 
 	//////////////////////////////////////////////////////////////////////////
 
