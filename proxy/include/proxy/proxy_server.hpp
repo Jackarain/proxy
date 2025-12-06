@@ -3699,9 +3699,9 @@ R"x*x*x(<html>
 		inline net::awaitable<void> on_http_all_json(const http_context& hctx) noexcept
 		{
 			boost::system::error_code ec;
-			auto& request = hctx.request_;
 
-			auto target = fs::path(make_real_target_path(hctx.command_[0])).lexically_normal();
+			auto& request = hctx.request_;
+			auto target = hctx.target_path_;
 
 			fs::recursive_directory_iterator end;
 			auto it = fs::recursive_directory_iterator(target, fs::directory_options::skip_permission_denied, ec);
@@ -3803,9 +3803,9 @@ R"x*x*x(<html>
 		inline net::awaitable<void> on_http_json(const http_context& hctx) noexcept
 		{
 			boost::system::error_code ec;
-			auto& request = hctx.request_;
 
-			auto target = fs::path(make_real_target_path(hctx.command_[0])).lexically_normal();
+			auto& request = hctx.request_;
+			auto target = hctx.target_path_;
 
 			fs::directory_iterator end;
 			fs::directory_iterator it(target, fs::directory_options::skip_permission_denied, ec);
@@ -3980,6 +3980,8 @@ R"x*x*x(<html>
 			}
 
 			auto target_path = make_target_path(hctx.target_);
+			log_conn_debug() << ", httpd_dir access: " << target_path;
+
 			std::wstring head = fmt::format(head_fmt,
 				target_path,
 				target_path);
