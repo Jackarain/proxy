@@ -4294,7 +4294,7 @@ R"x*x*x(<html>
 						<< total;
 					co_return;
 				}
-			} while (!sr.is_done());
+			} while (!sr.is_done() && !m_abort);
 #endif
 
 			XLOG_DBG << "connection id: "
