@@ -1,13 +1,36 @@
 # 此配置文件示例作为 server 运行在远程，如墙外，运行在端口 443，这样可以伪装成 web 服务.
-# auth_users 表示认证用户名密码, 可以同时配置多个用户密码.
-# ssl_certificate_dir 表示相关 ssl 证书文件位置，证书的目录名可以以证书的域名命名，支持多份不同证书加载.
+
+# 相关参数介绍
+
+# server_listen 监听的地址以及端口，格式为 addr:port，支持 v6only(如: addr:port-v6only)，支持同时监听在多个地址上，也支持 unix domain socket 监听, 格式为： server_listen=unix://path/unix.sock
+
+# transparent 启用透明代理，默认禁用，此选项仅 linux 平台有效
+
+# auth_users 表示认证用户名密码, 可以同时配置多个 auth_users 用于多用户认证.
+
+# proxy_pass 当前服务作为中间级联服务时，proxy_pass 指定上游代理服务地址，格式为 url 格式，如果有认证信息并必须包含认证信息，如: https://jack:1111@example.com:1080/
+
+# ssl_certificate_dir 表示相关 ssl 证书文件位置（如：/etc/letsencrypt/live/），支持多份不同证书加载，proxy_server 将自动搜索匹配.
+
 # http_doc 表示探测者在没有得到正确认证时，伪装成 web 文件服务的目录.
+
 # autoindex 表示是否开启目录浏览, 如果为 true, 则通过浏览器打开服务器时可以看到 http_doc 目录下的文件列表.
-# logs_path 用于设置日志输出目录.
-# disable_logs 表示关闭日志输出, 如果不需要日志则可以设置这个选项为 true.
+
+# htpasswd 表示是否启用 htpasswd 认证访问 web 目录, 如果启用，则使用 auth_users 上的用户密码认证.
+
+# logs_path 用于设置日志输出目录，如果不指定该参数，则不输出日志.
+
+# disable_logs 表示关闭日志 stdout 输出(屏幕输出).
+
 # scramble 用于添加噪声混淆数据，设置后将会通过噪声混淆数据来伪装流量, 使得数据流量难以被分析, 注意需要 server 与 client 同时设置, 如无必要通常用不建议设置.
+
 # disable_insecure 用于禁止不安全的连接，例如未加密的 http, socks4/5 等，只允许通过 tls 加密传输的安全的连接, 建议使用.
-#
+
+
+
+
+
+
 
 server_listen=0.0.0.0:443
 
