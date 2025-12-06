@@ -5529,6 +5529,8 @@ R"x*x*x(<html>
 
 			for (auto& acceptor : m_tcp_acceptors)
 				acceptor.close(ignore_ec);
+			for (auto& acceptor : m_unix_acceptors)
+				acceptor.close(ignore_ec);
 
 			for (auto& [id, c] : m_clients)
 			{
