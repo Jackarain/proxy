@@ -53,6 +53,7 @@
 #include <boost/asio/ip/network_v4.hpp>
 #include <boost/asio/ip/network_v6.hpp>
 #include <boost/asio/bind_executor.hpp>
+#include <boost/asio/stream_file.hpp>
 
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -198,6 +199,15 @@ namespace proxy {
 
 	inline const char* version_string =
 R"x*x*x(nginx/1.20.2)x*x*x";
+
+	inline const char* fake_500_content_fmt =
+R"x*x*x(<html>
+<head><title>500 Internal Server Error</title></head>
+<body>
+<center><h1>500 Internal Server Error</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>)x*x*x";
 
 	inline const char* fake_400_content_fmt =
 R"x*x*x(HTTP/1.1 400 Bad Request
@@ -3340,7 +3350,7 @@ R"x*x*x(<html>
 					ON_HTTP_ROUTE(R"(^(?!.*\/$).*$)", on_http_get)
 				END_HTTP_ROUTE()
 
-				if (!keep_alive) break;
+				if (!keep_alive || !m_local_socket.is_open()) break;
 				continue;
 			}
 
@@ -4042,9 +4052,33 @@ R"x*x*x(<html>
 				co_return;
 			}
 
-			boost::nowide::fstream file(path,
-				std::ios_base::binary |
-				std::ios_base::in);
+#if defined (BOOST_ASIO_HAS_FILE)
+# if defined(_WIN32)
+			net::stream_file file(co_await net::this_coro::executor);
+
+			file.assign(::CreateFileW(path.wstring().c_str(),
+				GENERIC_READ, FILE_SHARE_READ, 0,
+				OPEN_EXISTING,
+				FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED | FILE_FLAG_SEQUENTIAL_SCAN, 0), ec);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", http "
+					<< hctx.target_
+					<< " open file error: "
+					<< ec.message();
+
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+
+				co_return;
+			}
+# else
+			net::stream_file file(co_await net::this_coro::executor, path.string(), net::stream_file::read_only);
+# endif
+#else
+			boost::nowide::fstream file(path, std::ios_base::binary | std::ios_base::in);
+#endif
 
 			std::string user_agent;
 			if (request.count(http::field::user_agent))
@@ -4119,7 +4153,11 @@ R"x*x*x(<html>
 					}
 				}
 
+#if defined (BOOST_ASIO_HAS_FILE)
+				file.seek(r.first, net::stream_file::seek_set);
+#else
 				file.seekg(r.first, std::ios_base::beg);
+#endif
 			}
 
 			buffer_response res{ st, request.version() };
@@ -4186,10 +4224,34 @@ R"x*x*x(<html>
 
 			auto bufs = std::make_unique_for_overwrite<char[]>(buf_size);
 			char* buf = bufs.get();
+
 			std::streamsize total = 0;
 
 			stream_rate_limit(m_local_socket, m_option.tcp_rate_limit_);
 
+#if defined (BOOST_ASIO_HAS_FILE)
+			for (; !m_abort;)
+			{
+				auto bytes_transferred = co_await file.async_read_some(net::buffer(buf, buf_size), net_awaitable[ec]);
+				if (ec)
+					co_return;
+
+				total += bytes_transferred;
+				co_await net::async_write(m_local_socket, net::buffer(buf, bytes_transferred), net_awaitable[ec]);
+				if (ec)
+				{
+					log_conn_warning()
+						<< ", http async_write: "
+						<< ec.message()
+						<< ", already write: "
+						<< total;
+					co_return;
+				}
+
+				if (total >= (std::streamsize)content_length)
+					break;
+			}
+#else
 			do
 			{
 				auto bytes_transferred = fileop::read(file, std::span<char>(buf, buf_size));
@@ -4232,6 +4294,7 @@ R"x*x*x(<html>
 					co_return;
 				}
 			} while (!sr.is_done());
+#endif
 
 			XLOG_DBG << "connection id: "
 				<< m_connection_id
