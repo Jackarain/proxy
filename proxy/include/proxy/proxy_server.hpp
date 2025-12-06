@@ -4128,6 +4128,12 @@ R"x*x*x(<html>
 			if (request.count(http::field::referer))
 				referer = std::string(request[http::field::referer]);
 
+			// 解析 http 协议中的 range 部分.
+			auto range = parser_http_ranges(request["Range"]);
+
+			// 计算 range 得到偏移位置.
+			auto [http_range_start, http_range_end, st] = offset_from_range(range, content_length);
+
 			log_conn_debug()
 				<< ", http file: "
 				<< hctx.target_
@@ -4135,6 +4141,7 @@ R"x*x*x(<html>
 				<< content_length
 				<< (request.count("Range") ?
 					", range: " + std::string(request["Range"])
+					+ ", range size: " + std::to_string(http_range_end - http_range_start + 1)
 					: std::string())
 				<< (!user_agent.empty() ?
 					", user_agent: " + user_agent
@@ -4142,12 +4149,6 @@ R"x*x*x(<html>
 				<< (!referer.empty() ?
 					", referer: " + referer
 					: std::string());
-
-			// 解析 http 协议中的 range 部分.
-			auto range = parser_http_ranges(request["Range"]);
-
-			// 计算 range 得到偏移位置.
-			auto [http_range_start, http_range_end, st] = offset_from_range(range, content_length);
 
 			// 超出范围之外，返回 416 错误.
 			if (st == http::status::range_not_satisfiable ||
