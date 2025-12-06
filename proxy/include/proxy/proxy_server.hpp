@@ -1262,7 +1262,7 @@ R"x*x*x(<html>
 				auto ssl_socks_stream = init_proxy_stream(std::move(socket), srv_ssl_context);
 
 				// get origin ssl stream type.
-				ssl_stream& ssl_socket = boost::variant2::get<ssl_stream>(ssl_socks_stream);
+				ssl_tcp_stream& ssl_socket = boost::variant2::get<ssl_tcp_stream>(ssl_socks_stream);
 
 				// do async ssl handshake.
 				co_await ssl_socket.async_handshake(net::ssl::stream_base::server, net_awaitable[error]);
@@ -3286,7 +3286,7 @@ R"x*x*x(<html>
 		// is_crytpo_stream 判断当前连接是否为加密连接.
 		inline bool is_crytpo_stream() const noexcept
 		{
-			return boost::variant2::holds_alternative<ssl_stream>(m_remote_socket);
+			return boost::variant2::holds_alternative<ssl_tcp_stream>(m_remote_socket);
 		}
 
 		inline net::awaitable<void>
@@ -4449,7 +4449,7 @@ R"x*x*x(<html>
 						auto& next_layer = s.next_layer();
 						next_layer.expires_never();
 					}
-					else if constexpr (std::same_as<util::ssl_stream, ValueType>)
+					else if constexpr (std::same_as<util::ssl_tcp_stream, ValueType>)
 					{
 						auto& next_layer = s.next_layer().next_layer();
 						next_layer.expires_never();
@@ -4476,7 +4476,7 @@ R"x*x*x(<html>
 						auto& next_layer = s.next_layer();
 						next_layer.expires_after(expiry_time);
 					}
-					else if constexpr (std::same_as<util::ssl_stream, ValueType>)
+					else if constexpr (std::same_as<util::ssl_tcp_stream, ValueType>)
 					{
 						auto& next_layer = s.next_layer().next_layer();
 						next_layer.expires_after(expiry_time);
@@ -4499,7 +4499,7 @@ R"x*x*x(<html>
 							auto& next_layer = s.next_layer();
 							next_layer.rate_limit(rate);
 						}
-						else if constexpr (std::same_as<util::ssl_stream, ValueType>)
+						else if constexpr (std::same_as<util::ssl_tcp_stream, ValueType>)
 						{
 							auto& next_layer = s.next_layer().next_layer();
 							next_layer.rate_limit(rate);
@@ -4785,7 +4785,7 @@ R"x*x*x(<html>
 				std::move(remote_socket), m_ssl_cli_context);
 
 			// get origin ssl stream type.
-			ssl_stream& ssl_socket = boost::variant2::get<ssl_stream>(sock_stream);
+			ssl_tcp_stream& ssl_socket = boost::variant2::get<ssl_tcp_stream>(sock_stream);
 
 			if (m_option.scramble_)
 			{
