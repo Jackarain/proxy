@@ -735,6 +735,51 @@ R"x*x*x(<html>
 			return results;
 		}
 
+		// 根据 range 计算文件偏移位置.
+		inline std::tuple<int64_t, int64_t, http::status>
+		offset_from_range(const http_ranges& range, int64_t content_length)
+		{
+			if (range.size() != 1)
+				return { -1, -1, http::status::ok };
+
+			auto& r = range.front();
+			int64_t offset = r.first;
+			int64_t end = r.second;
+
+			// 起始位置为 -1, 表示从文件末尾开始读取, 例如 Range: -500
+			// 则表示读取文件末尾的 500 字节.
+			if (offset == -1)
+			{
+				// 如果第二个参数也为 -1, 则表示请求有问题, 返回 416.
+				if (r.second < 0)
+					return { offset, end, http::status::range_not_satisfiable };
+
+				// 计算起始位置和结束位置, 例如 Range: -5
+				// 则表示读取文件末尾的 5 字节.
+				// content_length - r.second 表示起始位置.
+				// content_length - 1 表示结束位置.
+				// 例如文件长度为 10 字节, 则起始位置为 5,
+				// 结束位置为 9(数据总长度为[0-9]), 一共 5 字节.
+				offset = content_length - r.second;
+				end = content_length - 1;
+			}
+			else if (end == -1)
+			{
+				// 起始位置为正数, 表示从文件头开始读取, 例如 Range: 500
+				// 则表示读取文件头的 500 字节.
+				if (r.first < 0)
+					return { offset, end,  http::status::range_not_satisfiable };
+
+				offset = r.first;
+				end = content_length - 1;
+			}
+
+			if (offset == -1)
+				return { offset, end, http::status::ok };
+
+			return { offset, end, http::status::partial_content };
+		}
+
 		// 更新 session 发起连接时使用的本地绑定地址.
 		inline void update_bind_interface(const std::string& addr) noexcept
 		{
@@ -4098,60 +4143,28 @@ R"x*x*x(<html>
 					", referer: " + referer
 					: std::string());
 
-			http::status st = http::status::ok;
+			// 解析 http 协议中的 range 部分.
 			auto range = parser_http_ranges(request["Range"]);
 
-			// 只支持一个 range 的请求, 不支持多个 range 的请求.
-			if (range.size() == 1)
+			// 计算 range 得到偏移位置.
+			auto [http_range_start, http_range_end, st] = offset_from_range(range, content_length);
+
+			// 超出范围之外，返回 416 错误.
+			if (st == http::status::range_not_satisfiable ||
+				(http_range_end < http_range_start && http_range_end >= 0))
 			{
-				st = http::status::partial_content;
-				auto& r = range.front();
+				co_await default_http_route(request,
+					fake_416_content,
+					http::status::range_not_satisfiable);
+				co_return;
+			}
 
-				// 起始位置为 -1, 表示从文件末尾开始读取, 例如 Range: -500
-				// 则表示读取文件末尾的 500 字节.
-				if (r.first == -1)
-				{
-					// 如果第二个参数也为 -1, 则表示请求有问题, 返回 416.
-					if (r.second < 0)
-					{
-						co_await default_http_route(request,
-							fake_416_content,
-							http::status::range_not_satisfiable);
-						co_return;
-					}
-					else if (r.second >= 0)
-					{
-						// 计算起始位置和结束位置, 例如 Range: -5
-						// 则表示读取文件末尾的 5 字节.
-						// content_length - r.second 表示起始位置.
-						// content_length - 1 表示结束位置.
-						// 例如文件长度为 10 字节, 则起始位置为 5,
-						// 结束位置为 9(数据总长度为[0-9]), 一共 5 字节.
-						r.first = content_length - r.second;
-						r.second = content_length - 1;
-					}
-				}
-				else if (r.second == -1)
-				{
-					// 起始位置为正数, 表示从文件头开始读取, 例如 Range: 500
-					// 则表示读取文件头的 500 字节.
-					if (r.first < 0)
-					{
-						co_await default_http_route(request,
-							fake_416_content,
-							http::status::range_not_satisfiable);
-						co_return;
-					}
-					else
-					{
-						r.second = content_length - 1;
-					}
-				}
-
+			if (st == http::status::partial_content)
+			{
 #if defined (BOOST_ASIO_HAS_FILE)
-				file.seek(r.first, net::stream_file::seek_set);
+				file.seek(http_range_start, net::stream_file::seek_set);
 #else
-				file.seekg(r.first, std::ios_base::beg);
+				file.seekg(http_range_start, std::ios_base::beg);
 #endif
 			}
 
@@ -4172,23 +4185,13 @@ R"x*x*x(<html>
 
 			if (st == http::status::partial_content)
 			{
-				const auto& r = range.front();
-
-				if (r.second < r.first && r.second >= 0)
-				{
-					co_await default_http_route(request,
-						fake_416_content,
-						http::status::range_not_satisfiable);
-					co_return;
-				}
-
 				std::string content_range = fmt::format(
 					"bytes {}-{}/{}",
-					r.first,
-					r.second,
+					http_range_start,
+					http_range_end,
 					content_length);
 
-				content_length = r.second - r.first + 1;
+				content_length = http_range_end - http_range_start + 1;
 				res.set(http::field::content_range, content_range);
 			}
 
