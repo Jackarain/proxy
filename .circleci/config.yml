@@ -5,12 +5,17 @@ orbs:
 
 workflows:
   build-workflow:
-    filters:
-      branches:
-        only: master
     jobs:
-      - build-x86_64
-      - build-arm64
+      - build-x86_64:
+          filters:
+            branches:
+              only:
+                - master
+      - build-arm64:
+          filters:
+            branches:
+              only:
+                - master
 
 jobs:
   build-x86_64:
@@ -29,7 +34,8 @@ jobs:
             docker build . -t proxy:v1
             docker create --name ps proxy:v1
             mkdir -p build/docker
-            docker cp ps:/usr/local/bin/proxy_server build/docker
+            docker cp ps:/usr/local/bin/proxy_server build/docker/
+            docker rm ps
 
       - store_artifacts:
           path: build/docker
@@ -50,7 +56,8 @@ jobs:
             docker build . -t proxy:v1
             docker create --name ps proxy:v1
             mkdir -p build/docker
-            docker cp ps:/usr/local/bin/proxy_server build/docker
+            docker cp ps:/usr/local/bin/proxy_server build/docker/
+            docker rm ps
 
       - store_artifacts:
           path: build/docker
