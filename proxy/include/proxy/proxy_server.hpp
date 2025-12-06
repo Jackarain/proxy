@@ -4234,6 +4234,8 @@ R"x*x*x(<html>
 				if (ec)
 					co_return;
 
+				stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
+
 				total += bytes_transferred;
 				co_await net::async_write(m_local_socket, net::buffer(buf, bytes_transferred), net_awaitable[ec]);
 				if (ec)
@@ -4477,30 +4479,6 @@ R"x*x*x(<html>
 					{
 						auto& next_layer = s.next_layer().next_layer();
 						next_layer.expires_after(expiry_time);
-					}
-				}
-			}, stream);
-		}
-
-		inline void stream_expires_at(
-			variant_stream_type& stream, net::steady_timer::time_point expiry_time) const noexcept
-		{
-			boost::variant2::visit([expiry_time](auto& s) mutable
-			{
-				using ValueType = std::decay_t<decltype(s)>;
-				using NextLayerType = util::proxy_tcp_socket::next_layer_type;
-
-				if constexpr (std::same_as<NextLayerType, util::tcp_socket>)
-				{
-					if constexpr (std::same_as<util::proxy_tcp_socket, ValueType>)
-					{
-						auto& next_layer = s.next_layer();
-						next_layer.expires_at(expiry_time);
-					}
-					else if constexpr (std::same_as<util::ssl_stream, ValueType>)
-					{
-						auto& next_layer = s.next_layer().next_layer();
-						next_layer.expires_at(expiry_time);
 					}
 				}
 			}, stream);
