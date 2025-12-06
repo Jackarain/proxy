@@ -5559,11 +5559,8 @@ R"x*x*x(<html>
 		}
 
 	private:
-		// start_proxy_listen 启动一个协程, 用于监听 proxy client 的连接.
-		// 当有新的连接到来时, 会创建一个 proxy_session 对象, 并启动 proxy_session
-		// 的对象.
-		template <typename T>
-		inline net::awaitable<void> start_proxy_listen(T& acceptor) noexcept
+		template <typename T, typename S>
+		net::awaitable<void> start_accept(T& acceptor, S& socket)
 		{
 			boost::system::error_code error;
 			net::socket_base::keep_alive keep_alive_opt(true);
@@ -5572,106 +5569,126 @@ R"x*x*x(<html>
 
 			auto self = shared_from_this();
 
+			co_await acceptor.async_accept(
+				socket.lowest_layer(), net_awaitable[error]);
+			if (error)
+			{
+				if (!m_abort)
+					XLOG_ERR << "start_proxy_listen"
+					", async_accept: " << error.message();
+				co_return;
+			}
+
+			static std::atomic_size_t id{ 1 };
+			size_t connection_id = id++;
+
+			std::vector<std::string> local_info;
+			std::string client;
+
+			if constexpr (std::same_as<S, proxy_tcp_socket>)
+			{
+				auto endp = tcp_remote_endpoint(socket);
+				client = endp.address().to_string();
+
+				local_info.push_back(client);
+				client += ":" + std::to_string(endp.port());
+
+				if (m_ipip)
+				{
+					auto [ret, isp] = m_ipip->lookup(endp.address());
+					if (!ret.empty())
+					{
+						for (auto& c : ret)
+							client += " " + c;
+
+						local_info.insert(local_info.end(), ret.begin(), ret.end());
+					}
+
+					if (!isp.empty())
+						client += " " + isp;
+				}
+			}
+			else if constexpr (std::same_as<S, proxy_uds_socket>)
+			{
+				auto endp = uds_remote_endpoint(socket);
+				client = endp.path();
+			}
+
+			XLOG_DBG << "connection id: "
+				<< connection_id
+				<< ", start client incoming: "
+				<< client;
+
+			if (!region_filter(local_info))
+			{
+				XLOG_WARN << "connection id: "
+					<< connection_id
+					<< ", region filter: "
+					<< client;
+				co_return;
+			}
+
+			socket.set_option(keep_alive_opt, error);
+
+			// 是否启用透明代理.
+#if defined (__linux__)
+			std::optional<net::ip::tcp::endpoint> tproxy_endpoint;
+			if (m_option.transparent_)
+				tproxy_endpoint = co_await setup_tproxy(socket, connection_id);
+#endif
+
+			// 在启用 scramble 时, 刻意开启 Nagle's algorithm 以尽量保证数据包
+			// 被重组, 尽最大可能避免观察者通过观察 ip 数据包大小的规律来分析 tcp
+			// 数据发送调用, 从而增加噪声加扰的强度.
+			if (m_option.scramble_)
+				socket.set_option(delay_opt, error);
+			else
+				socket.set_option(no_delay_opt, error);
+
+			// 创建 proxy_session 对象.
+			auto new_session =
+				std::make_shared<proxy_session>(
+					m_executor,
+					m_backend_context,
+					m_scheduler_locking,
+					m_dns_cache,
+					init_proxy_stream(std::move(socket)),
+					connection_id,
+					self);
+
+			// 保存 proxy_session 对象到 m_clients 中.
+			m_clients[connection_id] = new_session;
+
+#if defined (__linux__)
+			if (tproxy_endpoint)
+				new_session->setup_tproxy(*tproxy_endpoint);
+#endif
+
+			// 启动 proxy_session 对象.
+			new_session->start();
+
+			co_return;
+		}
+
+		// start_proxy_listen 启动一个协程, 用于监听 proxy client 的连接.
+		// 当有新的连接到来时, 会创建一个 proxy_session 对象, 并启动 proxy_session
+		// 的对象.
+		template <typename T>
+		net::awaitable<void> start_proxy_listen(T& acceptor) noexcept
+		{
+			auto self = shared_from_this();
+
 			while (!m_abort)
 			{
 				if constexpr (std::same_as<std::decay_t<T>, tcp_acceptor>)
 				{
 					proxy_tcp_socket socket(m_executor);
-
-					co_await acceptor.async_accept(
-						socket.lowest_layer(), net_awaitable[error]);
-					if (error)
-					{
-						if (!m_abort)
-							XLOG_ERR << "start_proxy_listen"
-							", async_accept: " << error.message();
-						co_return;
-					}
-
-					static std::atomic_size_t id{ 1 };
-					size_t connection_id = id++;
-
-					std::vector<std::string> local_info;
-
-					auto endp = tcp_remote_endpoint(socket);
-					auto client = endp.address().to_string();
-
-					local_info.push_back(client);
-					client += ":" + std::to_string(endp.port());
-
-					if (m_ipip)
-					{
-						auto [ret, isp] = m_ipip->lookup(endp.address());
-						if (!ret.empty())
-						{
-							for (auto& c : ret)
-								client += " " + c;
-
-							local_info.insert(local_info.end(), ret.begin(), ret.end());
-						}
-
-						if (!isp.empty())
-							client += " " + isp;
-					}
-
-					XLOG_DBG << "connection id: "
-						<< connection_id
-						<< ", start client incoming: "
-						<< client;
-
-					if (!region_filter(local_info))
-					{
-						XLOG_WARN << "connection id: "
-							<< connection_id
-							<< ", region filter: "
-							<< client;
-
-						continue;
-					}
-
-					socket.set_option(keep_alive_opt, error);
-
-					// 是否启用透明代理.
-#if defined (__linux__)
-					std::optional<net::ip::tcp::endpoint> tproxy_endpoint;
-					if (m_option.transparent_)
-						tproxy_endpoint = co_await setup_tproxy(socket, connection_id);
-#endif
-
-					// 在启用 scramble 时, 刻意开启 Nagle's algorithm 以尽量保证数据包
-					// 被重组, 尽最大可能避免观察者通过观察 ip 数据包大小的规律来分析 tcp
-					// 数据发送调用, 从而增加噪声加扰的强度.
-					if (m_option.scramble_)
-						socket.set_option(delay_opt, error);
-					else
-						socket.set_option(no_delay_opt, error);
-
-					// 创建 proxy_session 对象.
-					auto new_session =
-						std::make_shared<proxy_session>(
-							m_executor,
-							m_backend_context,
-							m_scheduler_locking,
-							m_dns_cache,
-							init_proxy_stream(std::move(socket)),
-							connection_id,
-							self);
-
-					// 保存 proxy_session 对象到 m_clients 中.
-					m_clients[connection_id] = new_session;
-
-#if defined (__linux__)
-					if (tproxy_endpoint)
-						new_session->setup_tproxy(*tproxy_endpoint);
-#endif
-
-					// 启动 proxy_session 对象.
-					new_session->start();
+					co_await start_accept(acceptor, socket);
 				}
 				else if constexpr (std::same_as<std::decay_t<T>, unix_acceptor>)
 				{
-					XLOG_WARN << "start unix domain listen...";
-					co_return;
+					proxy_uds_socket socket(m_executor);
+					co_await start_accept(acceptor, socket);
 				}
 			}
 
