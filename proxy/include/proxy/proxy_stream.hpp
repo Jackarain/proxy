@@ -254,7 +254,7 @@ namespace util {
 		class initiate_async_read_some
 		{
 		public:
-			typedef typename proxy_stream::executor_type executor_type;
+			using executor_type = typename proxy_stream::executor_type;
 
 			explicit initiate_async_read_some(proxy_stream* self)
 				: self_(self)
@@ -298,7 +298,7 @@ namespace util {
 		class initiate_async_write_some
 		{
 		public:
-			typedef typename proxy_stream::executor_type executor_type;
+			using executor_type = typename proxy_stream::executor_type;
 
 			explicit initiate_async_write_some(proxy_stream* self)
 				: self_(self)
