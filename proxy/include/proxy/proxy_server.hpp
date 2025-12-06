@@ -5628,11 +5628,14 @@ R"x*x*x(<html>
 
 			socket.set_option(keep_alive_opt, error);
 
-			// 是否启用透明代理.
 #if defined (__linux__)
 			std::optional<net::ip::tcp::endpoint> tproxy_endpoint;
-			if (m_option.transparent_)
-				tproxy_endpoint = co_await setup_tproxy(socket, connection_id);
+			// 是否启用透明代理.
+			if constexpr (std::same_as<S, proxy_tcp_socket>)
+			{
+				if (m_option.transparent_)
+					tproxy_endpoint = co_await setup_tproxy(socket, connection_id);
+			}
 #endif
 
 			// 在启用 scramble 时, 刻意开启 Nagle's algorithm 以尽量保证数据包
@@ -5658,8 +5661,13 @@ R"x*x*x(<html>
 			m_clients[connection_id] = new_session;
 
 #if defined (__linux__)
-			if (tproxy_endpoint)
-				new_session->setup_tproxy(*tproxy_endpoint);
+			if constexpr (std::same_as<S, proxy_tcp_socket>)
+			{
+				if (tproxy_endpoint)
+				{
+					new_session->setup_tproxy(*tproxy_endpoint);
+				}
+			}
 #endif
 
 			// 启动 proxy_session 对象.
