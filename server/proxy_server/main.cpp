@@ -40,6 +40,7 @@
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
 
+#include <boost/url/parse.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/program_options.hpp>
@@ -145,6 +146,22 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		}
 	}
 
+	static const auto parse_proxy_pass = [](const std::string& str)
+	{
+		std::vector<urls::url> results;
+		std::string token;
+		std::stringstream ss(str);
+
+		for (int i = 0; std::getline(ss, token, '|'); i++)
+		{
+			auto result = urls::parse_uri(token);
+			if (result.has_value())
+				results.emplace_back(result.value());
+		}
+
+		return results;
+	};
+
 	for (const auto& auth_user : auth_users)
 	{
 		// 解析 user:password:addr:proxy_pass 格式.
@@ -173,13 +190,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		if (user.empty() && password.empty() && addr.empty() && proxy_pass.empty())
 			continue;
 
-		urls::url url;
-		if (!proxy_pass.empty())
-		{
-			url(m_option.proxy_pass_)
-		}
-
-		opt.auth_users_.emplace_back(user, password, addr, proxy_pass);
+		opt.auth_users_.emplace_back(user, password, addr, parse_proxy_pass(proxy_pass));
 	}
 
 	for (const auto& user : users_rate_limit)
@@ -198,6 +209,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	}
 
 	opt.proxy_pass_ = proxy_pass;
+	opt.proxy_urls_ = parse_proxy_pass(proxy_pass);
 
 	opt.ssl_cert_path_ = ssl_cert_dir;
 	opt.ssl_cacert_path_ = ssl_cacert_dir;
