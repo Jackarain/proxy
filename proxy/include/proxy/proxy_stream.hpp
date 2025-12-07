@@ -686,6 +686,37 @@ namespace util {
 				}, token);
 	}
 
+	template <typename CompletionToken>
+	auto async_shutdown(variant_stream_type& socket, CompletionToken&& token)
+	{
+		return net::async_initiate<CompletionToken,
+			void(boost::system::error_code)>([&socket](auto&& handler) mutable
+				{
+					boost::variant2::visit(
+						[handler = std::move(handler)](auto& sock) mutable
+						{
+							using StreamType = std::decay_t<decltype(sock)>;
+							if constexpr (std::same_as<StreamType, proxy_tcp_socket> ||
+								std::same_as<StreamType, proxy_uds_socket>)
+							{
+ 								auto& lowest_layer = boost::beast::get_lowest_layer(sock);
+								boost::system::error_code ec;
+								lowest_layer.shutdown(net::socket_base::shutdown_send, ec);
+								handler(ec);
+							}
+
+// 							else if constexpr (std::same_as<StreamType, ssl_tcp_stream> ||
+// 								std::same_as<StreamType, ssl_uds_stream>)
+// 							{
+// 								sock.async_shutdown([handler = std::move(handler)](auto ec) mutable
+// 									{
+// 										handler(ec);
+// 									});
+// 							}
+						}, socket);
+				}, token);
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 
 	inline variant_stream_type init_proxy_stream(net::any_io_executor executor)
