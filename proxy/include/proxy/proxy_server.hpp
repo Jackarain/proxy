@@ -465,7 +465,7 @@ R"x*x*x(<html>
 		// 多层代理模式中, 与下一个代理服务器(next_proxy_)是否使用tls加密(ssl).
 		// 该参数只能当 next_proxy_ 是 socks 代理时才有作用, 如果 next_proxy_
 		// 是 http proxy，则由 url 指定的 protocol 决定是否使用 ssl.
-		bool proxy_pass_use_ssl_{ false };
+		// bool proxy_pass_use_ssl_{ false };
 
 		// 启用 proxy protocol (haproxy)协议.
 		// 当前服务将会在连接到 proxy_pass_ 成功后，首先传递 proxy protocol
@@ -813,6 +813,31 @@ R"x*x*x(<html>
 			}
 		}
 
+		// 检查用户密码等相关配置信息, 包括更新绑定的本地网络地址和限速等信息.
+		inline bool check_userpasswd(
+			const std::string& username,
+			const std::string& passwd, bool skip_passwd = false) noexcept
+		{
+			for (auto [user, pwd, addr, proxy_pass] : m_option.auth_users_)
+			{
+				if (username == user)
+				{
+					if (!skip_passwd && passwd != pwd)
+						continue;
+
+					user_rate_limit_config(user);
+					update_bind_interface(addr);
+
+					if (proxy_pass.empty())
+						m_proxy_urls = proxy_pass;
+
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 	public:
 		proxy_session(
 			net::any_io_executor executor,
@@ -869,31 +894,6 @@ R"x*x*x(<html>
 			{
 				// bind 地址有问题, 忽略bind参数.
 				m_bind_interface.reset();
-			}
-
-			// 如果指定了 proxy_pass_ 参数, 则解析它, 这说明它是一个
-			// 多层代理, 本服务器将会连接到下一个代理服务器.
-			// 所有数据将会通过本服务器转发到由 proxy_pass_ 指定的下一
-			// 个代理服务器.
-			if (!m_option.proxy_pass_.empty())
-			{
-				try
-				{
-					// 解析 proxy_pass_ 字符串为 url 对象, 因为 proxy_pass_ 是固定不变的参数, 所以
-					// 存储为 static 对象, 以避免多次重复解析.
-					static const urls::url proxy_pass_url = urls::url(m_option.proxy_pass_);
-					m_proxy_pass = std::make_unique<urls::url>(proxy_pass_url);
-				}
-				catch (const std::exception& e)
-				{
-					log_conn_error()
-						<< ", params next_proxy error: "
-						<< m_option.proxy_pass_
-						<< ", exception: "
-						<< e.what();
-
-					return;
-				}
 			}
 
 			// 保持 self 对象指针, 以防止在协程完成后 this 被销毁.
@@ -1749,7 +1749,7 @@ R"x*x*x(<html>
 				if (ec)
 					break;
 
-				if (m_proxy_pass)
+				if (!m_proxy_urls.empty())
 				{
 					// 如果是代理桥接模式, 则连接桥接服务器, 然后所有接收到 client 端的数据
 					// 统统转发给桥接服务器, 桥接服务器上接收到的数据再转发给客户端.
@@ -1981,6 +1981,7 @@ R"x*x*x(<html>
 			size_t send_total = 0;
 			size_t recv_total = 0;
 
+			const bool proxy_pass = !m_proxy_urls.empty();
 			const char* rbuf = &read_buffer[96];
 
 			while (!m_abort)
@@ -1993,7 +1994,7 @@ R"x*x*x(<html>
 					break;
 
 				// 桥接代理模式下, 直接转发数据包到桥接服务器.
-				if (m_proxy_pass)
+				if (proxy_pass)
 				{
 					if (remote_endp.address() == m_local_udp_endpoint.address())
 					{
@@ -2255,35 +2256,8 @@ R"x*x*x(<html>
 			// 用户认证逻辑.
 			bool verify_passed = m_option.auth_users_.empty();
 
-			for (const auto& [user, pwd, addr, proxy_pass] : m_option.auth_users_)
-			{
-				if (user == userid)
-				{
-					verify_passed = true;
-
-					user_rate_limit_config(user);
-					update_bind_interface(addr);
-
-					if (!proxy_pass.empty())
-					{
-						try
-						{
-							m_proxy_pass =
-								std::make_unique<urls::url>(proxy_pass);
-						}
-						catch (const std::exception& e)
-						{
-							log_conn_warning()
-								<< ", auth_users params proxy_pass error: "
-								<< proxy_pass
-								<< ", exception: "
-								<< e.what();
-						}
-					}
-
-					break;
-				}
-			}
+			if (!m_option.auth_users_.empty())
+				verify_passed = check_userpasswd(userid, "", true);
 
 			if (verify_passed)
 				log_conn_debug()
@@ -2448,35 +2422,8 @@ R"x*x*x(<html>
 
 			bool verify_passed = m_option.auth_users_.empty();
 
-			for (auto [user, pwd, addr, proxy_pass] : m_option.auth_users_)
-			{
-				if (uname == user && passwd == pwd)
-				{
-					verify_passed = true;
-
-					user_rate_limit_config(user);
-					update_bind_interface(addr);
-
-					if (!proxy_pass.empty())
-					{
-						try
-						{
-							m_proxy_pass =
-								std::make_unique<urls::url>(proxy_pass);
-						}
-						catch (const std::exception& e)
-						{
-							log_conn_warning()
-								<< ", auth_users params proxy_pass error: "
-								<< proxy_pass
-								<< ", exception: "
-								<< e.what();
-						}
-					}
-
-					break;
-				}
-			}
+			if (!m_option.auth_users_.empty())
+				verify_passed = check_userpasswd(uname, passwd);
 
 			if (!verify_passed)
 				return PROXY_AUTH_FAILED;
@@ -2908,35 +2855,8 @@ R"x*x*x(<html>
 			// SOCKS5验证用户和密码, 用户认证逻辑.
 			bool verify_passed = m_option.auth_users_.empty();
 
-			for (auto [user, pwd, addr, proxy_pass] : m_option.auth_users_)
-			{
-				if (uname == user && passwd == pwd)
-				{
-					verify_passed = true;
-
-					user_rate_limit_config(user);
-					update_bind_interface(addr);
-
-					if (!proxy_pass.empty())
-					{
-						try
-						{
-							m_proxy_pass =
-								std::make_unique<urls::url>(proxy_pass);
-						}
-						catch (const std::exception& e)
-						{
-							log_conn_warning()
-								<< ", auth_users params proxy_pass error: "
-								<< proxy_pass
-								<< ", exception: "
-								<< e.what();
-						}
-					}
-
-					break;
-				}
-			}
+			if (!m_option.auth_users_.empty())
+				verify_passed = check_userpasswd(uname, passwd);
 
 			log_conn_debug()
 				<< ", auth: "
@@ -3209,6 +3129,118 @@ R"x*x*x(<html>
 				opt.target_port = target_port;
 				opt.username = std::string(m_proxy_pass->user());
 				opt.password = std::string(m_proxy_pass->password());
+
+				if (command == SOCKS5_CMD_UDP)
+				{
+					ec = net::error::operation_not_supported;
+				}
+				else
+				{
+					co_await async_http_proxy_handshake(
+						m_remote_socket,
+						opt,
+						net_awaitable[ec]);
+				}
+			}
+
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", "
+					<< std::string(scheme) <<
+					" connect to next host "
+					<< target_host
+					<< ":"
+					<< target_port
+					<< " error: "
+					<< ec.message();
+
+				co_return false;
+			}
+
+			co_return true;
+		}
+
+		inline net::awaitable<bool> proxy_handshake(tcp::socket& remote_socket,
+			const std::string& target_host, uint16_t target_port,
+			const std::string& username, const std::string& password,
+			const urls::url& proxy_url, int command = SOCKS_CMD_CONNECT)
+		{
+			auto proxy_hostname = proxy_url.encoded_origin();
+
+			// 如果启用了 noise, 则在向上游代理服务器发起 tcp 连接成功后, 发送 noise
+			// 数据以及接收 noise 数据进行握手.
+			if (m_option.scramble_)
+			{
+				if (!co_await noise_handshake(remote_socket, m_outin_key, m_outout_key))
+					co_return false;
+
+				log_conn_debug()
+					<< ", next proxy: " << proxy_hostname
+					<< ", with upstream noise completed";
+			}
+
+			bool proxy_pass_use_ssl = false;
+
+			auto scheme = boost::to_lower_copy(std::string(proxy_url.scheme()));
+
+			// 判断是否使用 ssl 加密与下一级代理通信.
+			// 这里仅当 scheme 为 socks协议后辍是 s 时启用 ssl 加密.
+			// 其它 scheme 仍按 scheme 含义中是否包括 ssl 加密来处理.
+			if (scheme.ends_with("s"))
+				proxy_pass_use_ssl = true;
+
+			// 初始化 m_remote_socket 为 variant_stream_type 类型, 若是 ssl/tls 加
+			// 密, 则初始化为 ssl_tcp_stream.
+			m_remote_socket = std::move(
+				co_await instantiate_proxy_pass(std::move(remote_socket), proxy_pass_use_ssl));
+
+			log_conn_debug()
+				<< ", connect to next proxy: "
+				<< proxy_hostname
+				<< ", start upstream handshake with "
+				<< std::string(scheme);
+
+			// 根据 scheme 向 proxy_pass 进行代理握手相关实现.
+			if (scheme.starts_with("socks"))
+			{
+				socks_client_option opt;
+
+				opt.target_host = target_host;
+				opt.target_port = target_port;
+				opt.proxy_hostname = true;
+				opt.command = command;
+				opt.username = username;
+				opt.password = password;
+
+				if (scheme.starts_with("socks4a"))
+					opt.version = socks4a_version;
+				else if (scheme.starts_with("socks4"))
+					opt.version = socks4_version;
+
+				auto endpoint = co_await async_socks_handshake(
+					m_remote_socket,
+					opt,
+					net_awaitable[ec]);
+				if (endpoint)
+				{
+					m_remote_udp_endpoint = *endpoint;
+					if (m_remote_udp_endpoint.address() == net::ip::make_address_v4("0.0.0.0") ||
+						m_remote_udp_endpoint.address() == net::ip::make_address_v6("::0"))
+					{
+						m_remote_udp_endpoint.address(
+							remote_socket.remote_endpoint().address());
+					}
+				}
+			}
+			else if (scheme.starts_with("http"))
+			{
+				http_proxy_client_option opt;
+
+				opt.target_host = target_host;
+				opt.target_port = target_port;
+				opt.username = username;
+				opt.password = password;
 
 				if (command == SOCKS5_CMD_UDP)
 				{
@@ -4726,7 +4758,8 @@ R"x*x*x(<html>
 		}
 
 		inline net::awaitable<variant_stream_type>
-		instantiate_proxy_pass(tcp::socket remote_socket, bool proxy_pass_use_ssl) noexcept
+		instantiate_proxy_pass(
+			tcp::socket remote_socket, const std::string proxy_host, bool proxy_pass_use_ssl) noexcept
 		{
 			boost::system::error_code ec;
 
@@ -4780,9 +4813,7 @@ R"x*x*x(<html>
 
 			m_ssl_cli_context.use_tmp_dh(net::buffer(default_dh_param()), ec);
 
-			// 获取 proxy_pass 的主机名称.
-			auto proxy_host = std::string(m_proxy_pass->host());
-
+			// 验证 proxy_pass 的主机名称.
 			m_ssl_cli_context.set_verify_callback(
 				net::ssl::host_name_verification(proxy_host), ec);
 			if (ec)
@@ -4792,9 +4823,8 @@ R"x*x*x(<html>
 					<< ec.message();
 			}
 
-			// 生成 ssl socket 对象.
-			auto sock_stream = init_proxy_stream(
-				std::move(remote_socket), m_ssl_cli_context);
+			// 使用 remote_socket 生成 ssl socket 对象.
+			auto sock_stream = init_proxy_stream(std::move(remote_socket), m_ssl_cli_context);
 
 			// get origin ssl stream type.
 			ssl_tcp_stream& ssl_socket = boost::variant2::get<ssl_tcp_stream>(sock_stream);
@@ -4812,12 +4842,11 @@ R"x*x*x(<html>
 				}
 			}
 
-			std::string sni = m_option.proxy_ssl_name_.empty()
-				? proxy_host : m_option.proxy_ssl_name_;
+			// 如果用户指定了 SNI, 则使用用户指定的 SNI, 否则默认使用 proxy_host 来验证 hostname.
+			std::string sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;
 
 			// Set SNI Hostname.
-			if (!SSL_set_tlsext_host_name(
-				ssl_socket.native_handle(), sni.c_str()))
+			if (!SSL_set_tlsext_host_name(ssl_socket.native_handle(), sni.c_str()))
 			{
 				log_conn_warning()
 					<< ", set ssl sni name: "
@@ -4826,11 +4855,10 @@ R"x*x*x(<html>
 					<< ::ERR_get_error();
 			}
 
-			log_conn_debug() << ", do async ssl handshake...";
+			log_conn_debug() << ", " << proxy_host << " do async ssl handshake...";
 
-			// do async handshake.
-			co_await ssl_socket.async_handshake(
-				net::ssl::stream_base::client, net_awaitable[ec]);
+			// 执行 async handshake.
+			co_await ssl_socket.async_handshake(net::ssl::stream_base::client, net_awaitable[ec]);
 			if (ec)
 			{
 				log_conn_warning()
@@ -4838,9 +4866,7 @@ R"x*x*x(<html>
 					<< ec.message();
 			}
 
-			log_conn_debug()
-				<< ", " << proxy_host
-				<< " ssl handshake completed";
+			log_conn_debug() << ", " << proxy_host << " ssl handshake completed";
 
 			co_return sock_stream;
 		}
@@ -4893,7 +4919,7 @@ R"x*x*x(<html>
 		proxy_server_option m_option;
 
 		// m_proxy_pass 作为中继桥接的时候, 下游代理服务器的地址.
-		std::unique_ptr<urls::url> m_proxy_pass;
+		// std::unique_ptr<urls::url> m_proxy_pass;
 		// m_proxy_urls 保存整个代理链的 url 地址信息.
 		std::vector<urls::url> m_proxy_urls;
 

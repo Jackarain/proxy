@@ -156,7 +156,25 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		{
 			auto result = urls::parse_uri(token);
 			if (result.has_value())
-				results.emplace_back(result.value());
+			{
+				auto& url = result.value();
+				auto scheme_str = url.scheme();
+				if (scheme_str.starts_with("http") || scheme_str.starts_with("socks"))
+				{
+					if (scheme_str == "socks")
+					{
+						XLOG_ERR << "Parse proxy_pass ambiguity, socks4 or socks5? "
+							<< std::string(scheme_str);
+						throw std::runtime_error("proxy_pass ambiguity");
+					}
+
+					results.emplace_back(result.value());
+				}
+
+				XLOG_ERR << "Parse proxy_pass invalid: "
+					<< std::string(scheme_str);
+				throw std::runtime_error("proxy_pass invalid");
+			}
 		}
 
 		return results;
@@ -190,7 +208,15 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		if (user.empty() && password.empty() && addr.empty() && proxy_pass.empty())
 			continue;
 
-		opt.auth_users_.emplace_back(user, password, addr, parse_proxy_pass(proxy_pass));
+		try
+		{
+			auto result = parse_proxy_pass(proxy_pass);
+			opt.auth_users_.emplace_back(user, password, addr, result);
+		}
+		catch (const std::exception&)
+		{
+			co_return;
+		}
 	}
 
 	for (const auto& user : users_rate_limit)
