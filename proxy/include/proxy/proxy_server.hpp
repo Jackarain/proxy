@@ -414,7 +414,8 @@ R"x*x*x(<html>
 		// auth_users_ 为空时, 表示不需要认证.
 		// auth_users_ 可以是多个用户, 例如:
 		// { {"user1", "passwd1"}, {"user2", "passwd2"} };
-		using auth_users = std::tuple<std::string, std::string, std::string, std::string>;
+		using proxy_urls = std::vector<urls::url>;
+		using auth_users = std::tuple<std::string, std::string, std::string, proxy_urls>;
 		std::vector<auth_users> auth_users_;
 
 		// 指定用户限速设置.
@@ -444,11 +445,22 @@ R"x*x*x(<html>
 		//
 		// 当 proxy_pass_ 是 socks5 代理时, 默认使用 hostname 模式, 即 dns
 		// 解析在远程执行.
-		//
-		// 在配置了 proxy_protocol (haproxy)协议时, proxy_pass_ 通常为
-		// 下一个 proxy_protocol 或直接目标服务器(目标服务器需要支持
-		// proxy_protocol).
 		std::string proxy_pass_;
+
+		// 多层代理, 当前服务器级连下一个服务器, 对于 client 而言是无感的,
+		// 这是当前服务器通过 proxy_urls_ 指定的下一级或多级代理服务器, 为 client
+		// 实现多层代理.
+		// 例如 proxy_urls_ 可以是:
+		// socks5://user:passwd@proxy.server1.com:1080
+		// socks5://user:passwd@proxy.server2.com:1080
+		// 或:
+		// socks5://user:passwd@proxy.server1.com:1080
+		// socks5://user:passwd@proxy.server2.com:1080
+		// https://user:passwd@proxy.server3.com:1080
+		//
+		// 当 proxy_urls_ 是 socks5 代理时, 默认使用 hostname 模式, 即 dns
+		// 解析在远程执行.
+		std::vector<urls::url> proxy_urls_;
 
 		// 多层代理模式中, 与下一个代理服务器(next_proxy_)是否使用tls加密(ssl).
 		// 该参数只能当 next_proxy_ 是 socks 代理时才有作用, 如果 next_proxy_
@@ -4882,6 +4894,8 @@ R"x*x*x(<html>
 
 		// m_proxy_pass 作为中继桥接的时候, 下游代理服务器的地址.
 		std::unique_ptr<urls::url> m_proxy_pass;
+		// m_proxy_urls 保存整个代理链的 url 地址信息.
+		std::vector<urls::url> m_proxy_urls;
 
 		// m_outin_key 用于身份为客户端时, 与下游代理服务器加密通信时, 解密接收到
 		// 下游代理服务器数据的 key.

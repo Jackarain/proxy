@@ -89,7 +89,6 @@ bool disable_udp = false;
 bool happyeyeballs = true;
 bool connect_v6only = false;
 bool connect_v4only = false;
-bool proxy_pass_ssl = false;
 bool reuse_port = false;
 bool scramble = false;
 bool ssl_prefer_server_ciphers = false;
@@ -174,6 +173,12 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		if (user.empty() && password.empty() && addr.empty() && proxy_pass.empty())
 			continue;
 
+		urls::url url;
+		if (!proxy_pass.empty())
+		{
+			url(m_option.proxy_pass_)
+		}
+
 		opt.auth_users_.emplace_back(user, password, addr, proxy_pass);
 	}
 
@@ -193,7 +198,6 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	}
 
 	opt.proxy_pass_ = proxy_pass;
-	opt.proxy_pass_use_ssl_ = proxy_pass_ssl;
 
 	opt.ssl_cert_path_ = ssl_cert_dir;
 	opt.ssl_cacert_path_ = ssl_cacert_dir;
@@ -383,7 +387,6 @@ int main(int argc, char** argv)
 		("deny_region", po::value<std::vector<std::string>>(&deny_region)->multitoken(), "Deny region (e.g: 广东|上海|山东|192.168.1.2|192.168.1.0/24|2001:0db8::1|2001:db8::/32).")
 
 		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify next proxy pass (e.g: socks5://user:passwd@ip:port).")
-		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL for the next proxy pass.")
 
 		("ssl_certificate_dir", po::value<std::string>(&ssl_cert_dir)->value_name("path"), "Directory containing SSL certificates.")
 		("ssl_cacert_dir", po::value<std::string>(&ssl_cacert_dir)->value_name("path"), "Directory containing SSL CA certificates.")
