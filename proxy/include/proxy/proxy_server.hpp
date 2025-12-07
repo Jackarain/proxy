@@ -2987,8 +2987,7 @@ R"x*x*x(<html>
 							<< ", error: " << to_ec.message();
 					}
 
-					to.shutdown(net::socket_base::shutdown_send, ec);
-					from.shutdown(net::socket_base::shutdown_receive, ec);
+					co_await async_shutdown(to, net_awaitable[ec]);
 					co_return;
 				}
 			}
