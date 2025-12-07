@@ -164,17 +164,32 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 				parts.push_back(remaining);
 		}
 
-		std::string user, password, addr, proxy_pass;
+		std::string user, password, addr, proxy_url;
 
 		if (parts.size() > 0) user = parts[0];
 		if (parts.size() > 1) password = parts[1];
 		if (parts.size() > 2) addr = parts[2];
-		if (parts.size() > 3) proxy_pass = parts[3];
+		if (parts.size() > 3) proxy_url = parts[3];
 
-		if (user.empty() && password.empty() && addr.empty() && proxy_pass.empty())
+		if (user.empty() && password.empty() && addr.empty() && proxy_url.empty())
 			continue;
 
-		opt.auth_users_.emplace_back(user, password, addr, proxy_pass);
+		std::optional<urls::url> proxy_url_result;
+		if (!proxy_url.empty())
+		{
+			auto result = urls::parse_uri(proxy_url);
+			if (result.has_value())
+			{
+				proxy_url_result = result.value();
+			}
+			else
+			{
+				XLOG_ERR << "Parse user: " << user << ", proxy url: " << result.error().message();
+				co_return;
+			}
+		}
+
+		opt.auth_users_.emplace_back(user, password, addr, proxy_url_result);
 	}
 
 	for (const auto& user : users_rate_limit)
@@ -192,7 +207,20 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		opt.users_rate_limit_.insert_or_assign(name, rate);
 	}
 
-	opt.proxy_pass_ = proxy_pass;
+	if (!proxy_pass.empty())
+	{
+		auto result = urls::parse_uri(proxy_pass);
+		if (result.has_value())
+		{
+			opt.proxy_pass_ = result.value();
+		}
+		else
+		{
+			XLOG_ERR << "Parse proxy url: " << result.error().message();
+			co_return;
+		}
+	}
+
 	opt.proxy_pass_use_ssl_ = proxy_pass_ssl;
 
 	opt.ssl_cert_path_ = ssl_cert_dir;
@@ -242,6 +270,14 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.connect_v4_only_ = connect_v4only;
 	opt.connect_v6_only_ = connect_v6only;
 	opt.transparent_ = transparent;
+	if (opt.transparent_)
+	{
+		if (proxy_pass.empty())
+		{
+			XLOG_ERR << "transparent proxy requires a proxy_pass";
+			co_return;
+		}
+	}
 	if (linux_so_mark > 0 && linux_so_mark <= std::numeric_limits<uint32_t>::max())
 		opt.so_mark_.emplace(linux_so_mark);
 

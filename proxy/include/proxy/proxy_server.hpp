@@ -414,7 +414,7 @@ R"x*x*x(<html>
 		// auth_users_ 为空时, 表示不需要认证.
 		// auth_users_ 可以是多个用户, 例如:
 		// { {"user1", "passwd1"}, {"user2", "passwd2"} };
-		using auth_users = std::tuple<std::string, std::string, std::string, std::string>;
+		using auth_users = std::tuple<std::string, std::string, std::string, std::optional<urls::url>>;
 		std::vector<auth_users> auth_users_;
 
 		// 指定用户限速设置.
@@ -448,7 +448,7 @@ R"x*x*x(<html>
 		// 在配置了 proxy_protocol (haproxy)协议时, proxy_pass_ 通常为
 		// 下一个 proxy_protocol 或直接目标服务器(目标服务器需要支持
 		// proxy_protocol).
-		std::string proxy_pass_;
+		std::optional<urls::url> proxy_pass_;
 
 		// 多层代理模式中, 与下一个代理服务器(next_proxy_)是否使用tls加密(ssl).
 		// 该参数只能当 next_proxy_ 是 socks 代理时才有作用, 如果 next_proxy_
@@ -801,6 +801,41 @@ R"x*x*x(<html>
 			}
 		}
 
+		// 检查是否需要认证.
+		inline bool auth_required() const noexcept
+		{
+			return !m_option.auth_users_.empty();
+		}
+
+		// 检查用户密码等相关配置信息, 包括更新绑定的本地网络地址和限速等信息.
+		inline bool check_userpasswd(
+			const std::string& username,
+			const std::string& passwd, bool skip_passwd = false) noexcept
+		{
+			// 若不需要认证, 直接返回 true.
+			if (!auth_required())
+				return true;
+
+			for (const auto& [user, pwd, addr, proxy_pass] : m_option.auth_users_)
+			{
+				if (username == user)
+				{
+					if (!skip_passwd && passwd != pwd)
+						continue;
+
+					user_rate_limit_config(user);
+					update_bind_interface(addr);
+
+					if (proxy_pass)
+						m_proxy_pass = proxy_pass;
+
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 	public:
 		proxy_session(
 			net::any_io_executor executor,
@@ -851,38 +886,17 @@ R"x*x*x(<html>
 			// 将 local_ip 转换为 ip::address 对象, 用于后面向外发起连接时
 			// 绑定到指定的本地地址.
 			boost::system::error_code ec;
-			m_bind_interface = net::ip::make_address(
-				m_option.local_ip_, ec);
+			m_bind_interface = net::ip::make_address(m_option.local_ip_, ec);
 			if (ec)
 			{
 				// bind 地址有问题, 忽略bind参数.
 				m_bind_interface.reset();
 			}
 
-			// 如果指定了 proxy_pass_ 参数, 则解析它, 这说明它是一个
-			// 多层代理, 本服务器将会连接到下一个代理服务器.
-			// 所有数据将会通过本服务器转发到由 proxy_pass_ 指定的下一
-			// 个代理服务器.
-			if (!m_option.proxy_pass_.empty())
-			{
-				try
-				{
-					// 解析 proxy_pass_ 字符串为 url 对象, 因为 proxy_pass_ 是固定不变的参数, 所以
-					// 存储为 static 对象, 以避免多次重复解析.
-					static const urls::url proxy_pass_url = urls::url(m_option.proxy_pass_);
-					m_proxy_pass = std::make_unique<urls::url>(proxy_pass_url);
-				}
-				catch (const std::exception& e)
-				{
-					log_conn_error()
-						<< ", params next_proxy error: "
-						<< m_option.proxy_pass_
-						<< ", exception: "
-						<< e.what();
-
-					return;
-				}
-			}
+			// 如果指定了 proxy_pass_ 参数, 则记录这个参数, 在后面若用户又特指了更具体的
+			// proxy_pass, 则在 check_userpasswd 中更新 m_proxy_pass 为用户特定的
+			// proxy_pass.
+			m_proxy_pass = m_option.proxy_pass_;
 
 			// 保持 self 对象指针, 以防止在协程完成后 this 被销毁.
 			auto self = this->shared_from_this();
@@ -931,8 +945,7 @@ R"x*x*x(<html>
 			m_remote_socket.close(ignore_ec);
 		}
 
-		inline void setup_tproxy(
-			const net::ip::tcp::endpoint& tproxy_remote) noexcept override
+		inline void setup_tproxy(const net::ip::tcp::endpoint& tproxy_remote) noexcept override
 		{
 			log_conn_debug()
 				<< ", tproxy setup: " << tproxy_remote;
@@ -947,11 +960,16 @@ R"x*x*x(<html>
 
 	private:
 
-		inline net::awaitable<void>
-		transparent_proxy() noexcept
+		inline net::awaitable<void> transparent_proxy() noexcept
 		{
 			auto executor = co_await net::this_coro::executor;
 			boost::system::error_code ec;
+
+			if (!m_proxy_pass)
+			{
+				XLOG_ERR << "transparent proxy requires a proxy_pass";
+				co_return;
+			}
 
 			try
 			{
@@ -961,7 +979,7 @@ R"x*x*x(<html>
 				auto targets = co_await resolve_proxy_pass_targets();
 
 				// 发起连接到网关代理中继服务器.
-				bool ret = co_await connect_proxy_pass(
+				auto ret = co_await connect_proxy_pass(
 					remote_socket,
 					m_tproxy_remote->address().to_string(),
 					m_tproxy_remote->port(),
@@ -1469,7 +1487,7 @@ R"x*x*x(<html>
 			}
 
 			// 服务端是否需要认证.
-			auto auth_required = !m_option.auth_users_.empty();
+			auto is_auth_required = auth_required();
 
 			// 循环读取客户端支持的代理方式.
 			p = (const char*)m_local_buffer.data().data();
@@ -1479,7 +1497,7 @@ R"x*x*x(<html>
 			{
 				int m = read<int8_t>(p);
 
-				if (!auth_required)
+				if (!is_auth_required)
 				{
 					if (m == SOCKS5_AUTH_NONE)
 					{
@@ -2240,45 +2258,16 @@ R"x*x*x(<html>
 				<< (socks4a ? "domain: " : "ip: ")
 				<< (socks4a ? hostname : dst_endpoint.address().to_string());
 
-			// 用户认证逻辑.
-			bool verify_passed = m_option.auth_users_.empty();
+			// 用户认证逻辑, 如果用户认证列表为空, 则表示不需要用户认证.
+			bool verify_passed = check_userpasswd(userid, "", true);
 
-			for (const auto& [user, pwd, addr, proxy_pass] : m_option.auth_users_)
+			if (auth_required())
 			{
-				if (user == userid)
-				{
-					verify_passed = true;
-
-					user_rate_limit_config(user);
-					update_bind_interface(addr);
-
-					if (!proxy_pass.empty())
-					{
-						try
-						{
-							m_proxy_pass =
-								std::make_unique<urls::url>(proxy_pass);
-						}
-						catch (const std::exception& e)
-						{
-							log_conn_warning()
-								<< ", auth_users params proxy_pass error: "
-								<< proxy_pass
-								<< ", exception: "
-								<< e.what();
-						}
-					}
-
-					break;
-				}
+				if (verify_passed)
+					log_conn_debug() << ", socks4 userid: " << userid << ", user authenticated successfully";
+				else
+					log_conn_warning() << ", socks4 userid: " << userid << ", user authentication failed";
 			}
-
-			if (verify_passed)
-				log_conn_debug()
-					<< ", auth passed";
-			else
-				log_conn_warning()
-					<< ", auth no pass";
 
 			if (!verify_passed)
 			{
@@ -2405,7 +2394,7 @@ R"x*x*x(<html>
 
 		inline int http_authorization(std::string_view pa) noexcept
 		{
-			if (m_option.auth_users_.empty())
+			if (!auth_required())
 				return PROXY_AUTH_SUCCESS;
 
 			if (pa.empty())
@@ -2434,38 +2423,7 @@ R"x*x*x(<html>
 			std::string uname = userinfo.substr(0, pos);
 			std::string passwd = userinfo.substr(pos + 1);
 
-			bool verify_passed = m_option.auth_users_.empty();
-
-			for (auto [user, pwd, addr, proxy_pass] : m_option.auth_users_)
-			{
-				if (uname == user && passwd == pwd)
-				{
-					verify_passed = true;
-
-					user_rate_limit_config(user);
-					update_bind_interface(addr);
-
-					if (!proxy_pass.empty())
-					{
-						try
-						{
-							m_proxy_pass =
-								std::make_unique<urls::url>(proxy_pass);
-						}
-						catch (const std::exception& e)
-						{
-							log_conn_warning()
-								<< ", auth_users params proxy_pass error: "
-								<< proxy_pass
-								<< ", exception: "
-								<< e.what();
-						}
-					}
-
-					break;
-				}
-			}
-
+			bool verify_passed = check_userpasswd(uname, passwd);
 			if (!verify_passed)
 				return PROXY_AUTH_FAILED;
 
@@ -2541,7 +2499,7 @@ R"x*x*x(<html>
 					{
 						// 处理 http 认证, 如果客户没有传递认证信息, 则返回 401.
 						// 如果用户认证信息没有设置, 则直接返回 401.
-						if (pa.empty() || m_option.auth_users_.empty())
+						if (pa.empty() || auth_required())
 						{
 							log_conn_warning()
 								<< ", auth error: "
@@ -2894,45 +2852,15 @@ R"x*x*x(<html>
 				passwd.push_back(read<int8_t>(p));
 
 			// SOCKS5验证用户和密码, 用户认证逻辑.
-			bool verify_passed = m_option.auth_users_.empty();
+			bool verify_passed = check_userpasswd(uname, passwd);
 
-			for (auto [user, pwd, addr, proxy_pass] : m_option.auth_users_)
+			if (auth_required())
 			{
-				if (uname == user && passwd == pwd)
-				{
-					verify_passed = true;
-
-					user_rate_limit_config(user);
-					update_bind_interface(addr);
-
-					if (!proxy_pass.empty())
-					{
-						try
-						{
-							m_proxy_pass =
-								std::make_unique<urls::url>(proxy_pass);
-						}
-						catch (const std::exception& e)
-						{
-							log_conn_warning()
-								<< ", auth_users params proxy_pass error: "
-								<< proxy_pass
-								<< ", exception: "
-								<< e.what();
-						}
-					}
-
-					break;
-				}
+				if (verify_passed)
+					log_conn_debug() << ", socks5 userid: " << uname << ", user authenticated successfully";
+				else
+					log_conn_warning() << ", socks5 userid: " << uname << ", user authentication failed";
 			}
-
-			log_conn_debug()
-				<< ", auth: "
-				<< uname
-				<< ", passwd: "
-				<< passwd
-				<< ", client: "
-				<< remote_endpoint_string(m_local_socket);
 
 			net::streambuf wbuf{};
 
@@ -4881,7 +4809,7 @@ R"x*x*x(<html>
 		proxy_server_option m_option;
 
 		// m_proxy_pass 作为中继桥接的时候, 下游代理服务器的地址.
-		std::unique_ptr<urls::url> m_proxy_pass;
+		std::optional<urls::url> m_proxy_pass;
 
 		// m_outin_key 用于身份为客户端时, 与下游代理服务器加密通信时, 解密接收到
 		// 下游代理服务器数据的 key.
