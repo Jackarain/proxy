@@ -991,22 +991,7 @@ R"x*x*x(<html>
 				if (!ec)
 					co_return;
 
-				size_t l2r_transferred = 0;
-				size_t r2l_transferred = 0;
-
-				co_await(
-					transfer(m_local_socket, m_remote_socket, l2r_transferred)
-					&&
-					transfer(m_remote_socket, m_local_socket, r2l_transferred)
-					);
-
-				log_conn_debug()
-					<< ", transfer completed"
-					<< ", local to remote: "
-					<< l2r_transferred
-					<< ", remote to local: "
-					<< r2l_transferred;
-
+				co_await concurrent_transfer();
 			}
 			catch (const std::exception& e)
 			{
@@ -1948,21 +1933,7 @@ R"x*x*x(<html>
 			// 发起数据传输协程.
 			if (command == SOCKS_CMD_CONNECT)
 			{
-				size_t l2r_transferred = 0;
-				size_t r2l_transferred = 0;
-
-				co_await(
-					transfer(m_local_socket, m_remote_socket, l2r_transferred)
-					&&
-					transfer(m_remote_socket, m_local_socket, r2l_transferred)
-					);
-
-				log_conn_debug()
-					<< ", transfer completed"
-					<< ", local to remote: "
-					<< l2r_transferred
-					<< ", remote to local: "
-					<< r2l_transferred;
+				co_await concurrent_transfer();
 			}
 			else
 			{
@@ -2372,21 +2343,8 @@ R"x*x*x(<html>
 			if (error_code != SOCKS4_REQUEST_GRANTED)
 				co_return;
 
-			size_t l2r_transferred = 0;
-			size_t r2l_transferred = 0;
+			co_await concurrent_transfer();
 
-			co_await(
-				transfer(m_local_socket, m_remote_socket, l2r_transferred)
-				&&
-				transfer(m_remote_socket, m_local_socket, r2l_transferred)
-				);
-
-			log_conn_debug()
-				<< ", transfer completed"
-				<< ", local to remote: "
-				<< l2r_transferred
-				<< ", remote to local: "
-				<< r2l_transferred;
 			co_return;
 		}
 
@@ -2629,8 +2587,16 @@ R"x*x*x(<html>
 					<< bytes;
 
 				first = false;
+
 				if (!keep_alive)
+				{
+					if (m_local_socket.is_open())
+						co_await async_shutdown(m_local_socket, net_awaitable[ec]);
+					if (m_remote_socket.is_open())
+						co_await async_shutdown(m_remote_socket, net_awaitable[ec]);
+
 					break;
+				}
 			}
 
 			co_return true;
@@ -2731,21 +2697,7 @@ R"x*x*x(<html>
 				co_return false;
 			}
 
-			size_t l2r_transferred = 0;
-			size_t r2l_transferred = 0;
-
-			co_await(
-				transfer(m_local_socket, m_remote_socket, l2r_transferred)
-				&&
-				transfer(m_remote_socket, m_local_socket, r2l_transferred)
-				);
-
-			log_conn_debug()
-				<< ", transfer completed"
-				<< ", local to remote: "
-				<< l2r_transferred
-				<< ", remote to local: "
-				<< r2l_transferred;
+			co_await concurrent_transfer();
 
 			co_return true;
 		}
@@ -2987,8 +2939,6 @@ R"x*x*x(<html>
 							<< ", error: " << to_ec.message();
 					}
 
-					to.shutdown(net::socket_base::shutdown_send, ec);
-					from.shutdown(net::socket_base::shutdown_receive, ec);
 					co_return;
 				}
 			}
@@ -3319,8 +3269,12 @@ R"x*x*x(<html>
 					ON_HTTP_ROUTE(R"(^(?!.*\/$).*$)", on_http_get)
 				END_HTTP_ROUTE()
 
-				if (!keep_alive || !m_local_socket.is_open()) break;
-				continue;
+				if (!keep_alive || !m_local_socket.is_open())
+				{
+					if (m_local_socket.is_open())
+						co_await async_shutdown(m_local_socket, net_awaitable[ec]);
+					break;
+				}
 			}
 
 			co_await async_wait(m_local_socket, net_awaitable[ec]);
@@ -4744,6 +4698,39 @@ R"x*x*x(<html>
 			log_conn_debug() << ", TLS handshake with " << proxy_host << " completed successfully";
 
 			co_return sock_stream;
+		}
+
+		inline net::awaitable<void> concurrent_transfer()
+		{
+			size_t l2r_transferred = 0;
+			size_t r2l_transferred = 0;
+
+			// 并发读写, 在 local 和 remote 之间互传数据.
+			co_await(
+				transfer(m_local_socket, m_remote_socket, l2r_transferred)
+				&&
+				transfer(m_remote_socket, m_local_socket, r2l_transferred)
+				);
+
+			boost::system::error_code ignore_ec;
+
+			// 由于在 TLS 中的 async_shutdown 中, 会操作 next_layer 进行读写, 而在上面并发读写
+			// transfer 函数中必然会有一个处理 read 或 write 当中, 于是会在一个 next_layer 上同
+			// 时发生多次 IO 操作, 在一个 tcp 流上执行多次异步 IO 是未定义行为.
+			// 为避免上述问题，故将 async_shutdown 操作放在下面执行便可避免这个问题.
+			if (m_local_socket.is_open())
+				co_await async_shutdown(m_local_socket, net_awaitable[ignore_ec]);
+			if (m_remote_socket.is_open())
+				co_await async_shutdown(m_remote_socket, net_awaitable[ignore_ec]);
+
+			log_conn_debug()
+				<< ", transfer completed"
+				<< ", local to remote: "
+				<< l2r_transferred
+				<< ", remote to local: "
+				<< r2l_transferred;
+
+			co_return;
 		}
 
 	private:
