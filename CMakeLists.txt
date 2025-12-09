@@ -67,6 +67,7 @@ option(ENABLE_USE_WOLFSSL			"Build with wolfssl support" OFF)
 
 option(ENABLE_MOLD					"Build using mold" OFF)
 option(ENABLE_LLD					"Build using lld" OFF)
+option(ENABLE_ASIO_HANDLER_TRACKING "Enable asio handler tracking" OFF)
 
 option(ENABLE_STATIC_LINK_TO_GCC	"Build static link to gcc" ON)
 
@@ -389,6 +390,10 @@ endif()
 
 if (ENABLE_BUILD_TESTS)
 	set(USE_BOOST_TEST ON)
+endif()
+
+if (ENABLE_ASIO_HANDLER_TRACKING)
+	add_definitions(-DBOOST_ASIO_ENABLE_HANDLER_TRACKING)
 endif()
 
 set(Boost_USE_STATIC_LIBS ON)
