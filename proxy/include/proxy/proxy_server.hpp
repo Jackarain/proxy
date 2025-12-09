@@ -980,7 +980,7 @@ R"x*x*x(<html>
 
 				// 发起连接到网关代理中继服务器.
 				ec = co_await connect_proxy_pass(remote_socket, targets);
-				if (!ec)
+				if (ec)
 					co_return;
 
 				// 与网关中继服务器握手.
@@ -988,7 +988,7 @@ R"x*x*x(<html>
 					m_tproxy_remote->address().to_string(),
 					m_tproxy_remote->port(),
 					*m_proxy_pass);
-				if (!ec)
+				if (ec)
 					co_return;
 
 				co_await concurrent_transfer();
