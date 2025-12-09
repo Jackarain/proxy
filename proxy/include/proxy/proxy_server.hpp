@@ -2591,9 +2591,9 @@ R"x*x*x(<html>
 				if (!keep_alive)
 				{
 					if (m_local_socket.is_open())
-						co_await async_shutdown(m_local_socket, net_awaitable[ec]);
+						co_await async_shutdown(m_local_socket, true, net_awaitable[ec]);
 					if (m_remote_socket.is_open())
-						co_await async_shutdown(m_remote_socket, net_awaitable[ec]);
+						co_await async_shutdown(m_remote_socket, true, net_awaitable[ec]);
 
 					break;
 				}
@@ -2847,14 +2847,10 @@ R"x*x*x(<html>
 		}
 
 		template<typename S1, typename S2>
-		net::awaitable<void> transfer(S1& from, S2& to, size_t& bytes_transferred) noexcept
+		net::awaitable<void>
+		transfer(S1& from, S2& to, size_t& bytes_transferred) noexcept
 		{
 			bytes_transferred = 0;
-
-			stream_rate_limit(from, m_option.tcp_rate_limit_);
-			stream_rate_limit(to, m_option.tcp_rate_limit_);
-
-			stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
 
 			// 记录 from 和 to 的endpoint.
 			auto from_endpoint = tcp_remote_endpoint(from);
@@ -2869,43 +2865,37 @@ R"x*x*x(<html>
 			auto primary_buf = buf0.get();
 			auto secondary_buf = buf1.get();
 
+			boost::system::error_code from_ec;
+			boost::system::error_code to_ec;
+
+			// 设置传输限速.
+			stream_rate_limit(from, m_option.tcp_rate_limit_);
+			stream_rate_limit(to, m_option.tcp_rate_limit_);
+
+			// 设置超时.
+			stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
+
 			// 首先读取第一个数据作为预备, 以用于后面的交替读写逻辑.
-			boost::system::error_code ec;
-			auto bytes = co_await from.async_read_some(net::buffer(primary_buf, buf_size), net_awaitable[ec]);
-			if (ec || m_abort)
+			auto bytes = co_await from.async_read_some(net::buffer(primary_buf, buf_size), net_awaitable[from_ec]);
+			if (from_ec || m_abort)
 			{
-				if (ec != net::error::eof)
+				if (from_ec != net::error::eof)
 				{
 					log_conn_warning()
 						<< ", read from endpoint: " << from_endpoint
-						<< ", error: " << ec.message();
+						<< ", error: " << from_ec.message();
 				}
 
-				if (bytes > 0)
-				{
-					co_await net::async_write(to,
-						net::buffer(primary_buf, bytes), net_awaitable[ec]);
-					if (ec && ec != net::error::eof)
-					{
-						log_conn_warning()
-							<< ", write to endpoint: " << to_endpoint
-							<< ", error: " << ec.message();
-					}
-				}
-
-				to.shutdown(net::socket_base::shutdown_send, ec);
 				co_return;
 			}
-
-			boost::system::error_code from_ec;
-			boost::system::error_code to_ec;
 
 			for (; !m_abort;)
 			{
 				stream_expires_after(to, std::chrono::seconds(m_option.tcp_timeout_));
 				stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
 
-				// 并发读写.
+				// 并发读写, 将上次接收到的数据 primary_buf 发送给 to, 同时异步读取 from 的数
+				// 据到 secondary_buf 中.
 				auto [write_bytes, read_bytes] =
 					co_await(
 						net::async_write(to,
@@ -2918,12 +2908,12 @@ R"x*x*x(<html>
 				// 交换主从缓冲区.
 				std::swap(primary_buf, secondary_buf);
 
+				// 保存接收到的数据大小用于转发给 to 端, 以及计算整个传输数据量.
 				bytes = read_bytes;
 				bytes_transferred += bytes;
 
-				// 如果 async_write 失败, 则也无需要再读取数据, 如果
-				// async_read_some 失败, 则也无数据可用于写, 所以无论哪一种情况
-				// 都可以直接退出.
+				// 如果 async_write 失败, 则也无需要再读取数据, 如果 async_read_some 失败, 则
+				// 也无数据可用于写, 所以无论哪一种情况都可以直接退出.
 				if (from_ec || to_ec)
 				{
 					if (from_ec && from_ec != net::error::eof)
@@ -2939,9 +2929,17 @@ R"x*x*x(<html>
 							<< ", error: " << to_ec.message();
 					}
 
+					// shutdown 当前连接, 只关闭非 TLS 连接, 而 TLS 连接需要在 transfer 完成后再
+					// 操作, 否则有可能因为 async_shutdown 内部异步 io 导致未定义行业.
+					to.shutdown(net::socket_base::shutdown_send, to_ec);
+					from.shutdown(net::socket_base::shutdown_receive, from_ec);
+
+					// 只要出错即可退出.
 					co_return;
 				}
 			}
+
+			co_return;
 		}
 
 		template <typename Stream, typename Endpoint>
@@ -3272,7 +3270,7 @@ R"x*x*x(<html>
 				if (!keep_alive || !m_local_socket.is_open())
 				{
 					if (m_local_socket.is_open())
-						co_await async_shutdown(m_local_socket, net_awaitable[ec]);
+						co_await async_shutdown(m_local_socket, true, net_awaitable[ec]);
 					break;
 				}
 			}
@@ -4710,24 +4708,7 @@ R"x*x*x(<html>
 				transfer(m_local_socket, m_remote_socket, l2r_transferred)
 				&&
 				transfer(m_remote_socket, m_local_socket, r2l_transferred)
-				);
-
-			boost::system::error_code ignore_ec;
-
-			// 由于在 TLS 中的 async_shutdown 中, 会操作 next_layer 进行读写, 而在上面并发读写
-			// transfer 函数中必然会有一个处理 read 或 write 当中, 于是会在一个 next_layer 上同
-			// 时发生多次 IO 操作, 在一个 tcp 流上执行多次异步 IO 是未定义行为.
-			// 为避免上述问题，故将 async_shutdown 操作放在下面执行便可避免这个问题.
-			if (m_local_socket.is_open())
-			{
-				stream_expires_after(m_local_socket, std::chrono::seconds(1));
-				co_await async_shutdown(m_local_socket, net_awaitable[ignore_ec]);
-			}
-			if (m_remote_socket.is_open())
-			{
-				stream_expires_after(m_remote_socket, std::chrono::seconds(1));
-				co_await async_shutdown(m_remote_socket, net_awaitable[ignore_ec]);
-			}
+			);
 
 			log_conn_debug()
 				<< ", transfer completed"

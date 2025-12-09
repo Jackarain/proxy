@@ -695,27 +695,41 @@ namespace util {
 	}
 
 	template <typename CompletionToken>
-	auto async_shutdown(variant_stream_type& socket, CompletionToken&& token)
+	auto async_shutdown(variant_stream_type& socket, bool ssl_stream, CompletionToken&& token)
 	{
 		return net::async_initiate<CompletionToken,
-			void(boost::system::error_code)>([&socket](auto&& handler) mutable
+			void(boost::system::error_code)>([&socket, ssl_stream](auto&& handler) mutable
 				{
 					boost::variant2::visit(
-						[handler = std::move(handler)](auto& sock) mutable
+						[handler = std::move(handler), ssl_stream](auto& sock) mutable
 						{
 							using StreamType = std::decay_t<decltype(sock)>;
 
 							if constexpr (std::same_as<StreamType, proxy_tcp_socket> ||
 								std::same_as<StreamType, proxy_uds_socket>)
 							{
-								auto& lowest_layer = boost::beast::get_lowest_layer(sock);
 								boost::system::error_code ec;
+
+								if (ssl_stream)
+								{
+									handler(ec);
+									return;
+								}
+
+								auto& lowest_layer = boost::beast::get_lowest_layer(sock);
 								lowest_layer.lowest_layer().shutdown(net::socket_base::shutdown_send, ec);
 								handler(ec);
 							}
 							else if constexpr (std::same_as<StreamType, ssl_tcp_stream> ||
 								std::same_as<StreamType, ssl_uds_stream>)
 							{
+								if (!ssl_stream)
+								{
+									boost::system::error_code ec;
+									handler(ec);
+									return;
+								}
+
 								sock.async_shutdown(std::move(handler));
 							}
 						}, socket);
