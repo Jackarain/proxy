@@ -4719,9 +4719,15 @@ R"x*x*x(<html>
 			// 时发生多次 IO 操作, 在一个 tcp 流上执行多次异步 IO 是未定义行为.
 			// 为避免上述问题，故将 async_shutdown 操作放在下面执行便可避免这个问题.
 			if (m_local_socket.is_open())
+			{
+				stream_expires_after(m_local_socket, std::chrono::seconds(1));
 				co_await async_shutdown(m_local_socket, net_awaitable[ignore_ec]);
+			}
 			if (m_remote_socket.is_open())
+			{
+				stream_expires_after(m_remote_socket, std::chrono::seconds(1));
 				co_await async_shutdown(m_remote_socket, net_awaitable[ignore_ec]);
+			}
 
 			log_conn_debug()
 				<< ", transfer completed"
