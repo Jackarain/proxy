@@ -354,10 +354,16 @@ namespace util {
 
 		if constexpr (std::same_as<StreamType, proxy_tcp_socket> || std::same_as<StreamType, tcp_socket>)
 		{
-			auto& lowest_layer = beast::get_lowest_layer(sock);
-			tcp::endpoint endp = lowest_layer.remote_endpoint();
+			try
+			{
+				auto& lowest_layer = beast::get_lowest_layer(sock);
+				tcp::endpoint endp = lowest_layer.remote_endpoint();
+				return endp;
+			}
+			catch (const std::exception&)
+			{}
 
-			return endp;
+			return {};
 		}
 		else if constexpr (std::same_as<StreamType, variant_stream_type>)
 		{
@@ -372,15 +378,11 @@ namespace util {
 							tcp::endpoint endp = lowest_layer.remote_endpoint();
 							return endp;
 						}
-						else
-						{
-							return {};
-						}
 					}
 					catch (const std::exception&)
-					{
-						return {};
-					}
+					{}
+
+					return {};
 				}, sock);
 		}
 		else
@@ -398,10 +400,16 @@ namespace util {
 
 		if constexpr (std::same_as<StreamType, proxy_tcp_socket> || std::same_as<StreamType, tcp_socket>)
 		{
-			auto& lowest_layer = beast::get_lowest_layer(sock);
-			tcp::endpoint endp = lowest_layer.local_endpoint();
+			try
+			{
+				auto& lowest_layer = beast::get_lowest_layer(sock);
+				tcp::endpoint endp = lowest_layer.local_endpoint();
+				return endp;
+			}
+			catch (const std::exception&)
+			{}
 
-			return endp;
+			return {};
 		}
 		else if constexpr (std::same_as<StreamType, variant_stream_type>)
 		{
@@ -416,15 +424,11 @@ namespace util {
 							tcp::endpoint endp = lowest_layer.local_endpoint();
 							return endp;
 						}
-						else
-						{
-							return {};
-						}
 					}
 					catch (const std::exception&)
-					{
-						return {};
-					}
+					{}
+
+					return {};
 				}, sock);
 		}
 		else
@@ -442,9 +446,16 @@ namespace util {
 
 		if constexpr (std::same_as<StreamType, proxy_uds_socket> || std::same_as<StreamType, uds_socket>)
 		{
-			auto& lowest_layer = beast::get_lowest_layer(sock);
-			net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
-			return endp;
+			try
+			{
+				auto& lowest_layer = beast::get_lowest_layer(sock);
+				net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
+				return endp;
+			}
+			catch (const std::exception&)
+			{}
+
+			return {};
 		}
 		else if constexpr (std::same_as<StreamType, variant_stream_type>)
 		{
@@ -459,15 +470,11 @@ namespace util {
 							net::local::stream_protocol::endpoint endp = lowest_layer.remote_endpoint();
 							return endp;
 						}
-						else
-						{
-							return {};
-						}
 					}
 					catch (const std::exception&)
-					{
-						return {};
-					}
+					{}
+
+					return {};
 				}, sock);
 		}
 		else
@@ -499,19 +506,20 @@ namespace util {
 						using S = std::decay_t<decltype(sock)>;
 						if constexpr (std::same_as<S, proxy_uds_socket> || std::same_as<S, ssl_uds_stream>)
 						{
-							auto& lowest_layer = beast::get_lowest_layer(sock);
-							net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
-							return endp;
-						}
-						else
-						{
-							return {};
+							try
+							{
+								auto& lowest_layer = beast::get_lowest_layer(sock);
+								net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
+								return endp;
+							}
+							catch (const std::exception&)
+							{}
 						}
 					}
 					catch (const std::exception&)
-					{
-						return {};
-					}
+					{}
+
+					return {};
 				}, sock);
 		}
 		else
