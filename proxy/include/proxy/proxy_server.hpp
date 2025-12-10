@@ -2931,8 +2931,8 @@ R"x*x*x(<html>
 
 					// shutdown 当前连接, 只关闭非 TLS 连接, 而 TLS 连接需要在 transfer 完成后再
 					// 操作, 否则有可能因为 async_shutdown 内部异步 io 导致未定义行业.
-					to.shutdown(net::socket_base::shutdown_send, to_ec);
-					from.shutdown(net::socket_base::shutdown_receive, from_ec);
+					if (from_ec)
+						to.shutdown(net::socket_base::shutdown_send, to_ec);
 
 					// 只要出错即可退出.
 					co_return;
