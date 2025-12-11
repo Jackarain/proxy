@@ -719,6 +719,7 @@ namespace util {
 							{
 								boost::system::error_code ec;
 
+								auto& lowest_layer = boost::beast::get_lowest_layer(sock);
 								auto native_handle = sock.native_handle();
 								BIO* wbio = ::SSL_get_wbio(native_handle);
 								if (!wbio)
@@ -794,12 +795,11 @@ namespace util {
 									{
 										auto bufptr = bufs.get();
 										net::async_write(sock.next_layer(), net::buffer(bufptr, length),
-											[&sock, handler = std::move(handler), bufs = std::move(bufs)]
+											[&lowest_layer, handler = std::move(handler), bufs = std::move(bufs)]
 											(boost::system::error_code ec, auto) mutable
 											{
 												if (ec)
 												{
-													auto& lowest_layer = boost::beast::get_lowest_layer(sock);
 													lowest_layer.lowest_layer().shutdown(net::socket_base::shutdown_send, ec);
 													handler(ec);
 													return;
@@ -811,7 +811,6 @@ namespace util {
 								}
 								else
 								{
-									auto& lowest_layer = boost::beast::get_lowest_layer(sock);
 									lowest_layer.lowest_layer().shutdown(net::socket_base::shutdown_send, ec);
 									handler(ec);
 								}
