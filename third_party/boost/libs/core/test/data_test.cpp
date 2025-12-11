@@ -9,6 +9,7 @@ Distributed under the Boost Software License, Version 1.0.
 #if !defined(BOOST_NO_CXX11_CONSTEXPR) && !defined(BOOST_NO_CXX11_DECLTYPE)
 #include <boost/core/data.hpp>
 #include <boost/core/lightweight_test.hpp>
+#include <iterator>
 
 class range {
 public:
@@ -52,12 +53,28 @@ void test_initializer_list()
     BOOST_TEST_EQ(boost::data(l), l.begin());
 }
 
+void test_ambiguity_with_std_data()
+{
+// Note: This preprocessor check should be equivalent to that in boost/core/data.hpp
+#if (defined(__cpp_lib_nonmember_container_access) && (__cpp_lib_nonmember_container_access >= 201411l)) || \
+    (defined(_MSC_VER) && (_MSC_VER >= 1900))
+
+    // https://github.com/boostorg/core/issues/206
+    range c;
+    using std::data;
+    using boost::data;
+    BOOST_TEST_EQ(data(c), c.data());
+
+#endif
+}
+
 int main()
 {
     test_range();
     test_const_range();
     test_array();
     test_initializer_list();
+    test_ambiguity_with_std_data();
     return boost::report_errors();
 }
 #else

@@ -185,9 +185,9 @@ namespace boost::msm::front::puml {
     struct Action<by_name("resume_playback2")>
     {
         template <class EVT, class FSM, class SourceState, class TargetState>
-        void operator()(EVT& e, FSM&, SourceState&, TargetState&)
+        void operator()(EVT const& e, FSM&, SourceState&, TargetState&)
         {
-            ++e.cpt_;
+            ++(*const_cast<EVT*>(&e)).cpt_;
         }
     };
     template<>
@@ -229,9 +229,9 @@ namespace boost::msm::front::puml {
     struct Action<by_name("TestFct")>
     {
         template <class EVT, class FSM, class SourceState, class TargetState>
-        void operator()(EVT& e, FSM& fsm, SourceState&, TargetState&)
+        void operator()(EVT const& e, FSM& fsm, SourceState&, TargetState&)
         {
-            ++e.cpt_;
+            ++(*const_cast<EVT*>(&e)).cpt_;
             ++fsm.test_fct_counter;
         }
     };

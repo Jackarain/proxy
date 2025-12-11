@@ -20,7 +20,7 @@ Optional requirements have default implementations that are called if the backen
 its own.  Typically the backend will implement these to improve performance.
 
 In the following tables, type B is the `Backend` template argument to `number`, `b` and `b2` are
-a variables of type B, `pb` is a variable of type B*, `cb`, `cb2` and `cb3` are constant variables of type `const B`,
+variables of type B, `pb` is a variable of type B*, `cb`, `cb2` and `cb3` are constant variables of type `const B`,
 `rb` is a variable of type `B&&`, `a` and `a2` are variables of Arithmetic type,
 `s` is a variable of type `const char*`, `ui` is a variable of type `unsigned`, `bb` is a variable of type `bool`,
 `pa` is a variable of type pointer-to-arithmetic-type, `exp` is a variable of type `B::exp_type`,
@@ -40,17 +40,17 @@ and `ff` is a variable of type `std::ios_base::fmtflags`.
 [[`B()`][ ][Default constructor.][[space]]]
 [[`B(cb)`][ ][Copy Constructor.][[space]]]
 [[`b = b`][`B&`][Assignment operator.][[space]]]
-[[`b = a`][`B&`][Assignment from an Arithmetic type.  The type of `a` shall be listed in one of the type lists
+[[`b = a`][`B&`][Assignment from an Arithmetic type.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.][[space]]]
 [[`b = s`][`B&`][Assignment from a string.][Throws a `std::runtime_error` if the string could not be interpreted as a valid number.]]
 [[`b.swap(b)`][`void`][Swaps the contents of its arguments.][`noexcept`]]
 [[`cb.str(ss, ff)`][`std::string`][Returns the string representation of `b` with `ss` digits and formatted according to the flags set in `ff`.
-                  If `ss` is zero, then returns as many digits as are required to reconstruct the original value.][[space]]]
+                  If `ss` is zero and `std::ios_base::fixed` is not set in `ff`, then returns as many digits as are required to reconstruct the original value.][[space]]]
 [[`b.negate()`][`void`][Negates `b`.][[space]]]
 [[`cb.compare(cb2)`][`int`][Compares `cb` and `cb2`, returns a value less than zero if `cb < cb2`, a value greater than zero if `cb > cb2` and zero
                    if `cb == cb2`.][`noexcept`]]
 [[`cb.compare(a)`][`int`][Compares `cb` and `a`, returns a value less than zero if `cb < a`, a value greater than zero if `cb > a` and zero
-                   if `cb == a`.  The type of `a` shall be listed in one of the type lists
+                   if `cb == a`.  The type of `a` shall be listed in
                    `B::signed_types`, `B::unsigned_types` or `B::float_types`.][[space]]]
 [[`eval_add(b, cb)`][`void`][Adds `cb` to `b`.][[space]]]
 [[`eval_subtract(b, cb)`][`void`][Subtracts `cb` from `b`.][[space]]]
@@ -65,7 +65,7 @@ and `ff` is a variable of type `std::ios_base::fmtflags`.
 [[`eval_complement(b, cb)`][`void`][Computes the ones-complement of `cb` and stores the result in `b`, only required when `B` is an integer type.][[space]]]
 [[`eval_left_shift(b, ui)`][`void`][Computes `b <<= ui`, only required when `B` is an integer type.][[space]]]
 [[`eval_right_shift(b, ui)`][`void`][Computes `b >>= ui`, only required when `B` is an integer type.][[space]]]
-[[`eval_convert_to(pa, cb)`][`void`][Converts `cb` to the type of `*pa` and store the result in `*pa`.  Type `B` shall support
+[[`eval_convert_to(pa, cb)`][`void`][Converts `cb` to the type of `*pa` and stores the result in `*pa`.  Type `B` shall support
                      conversion to at least types `std::intmax_t`, `std::uintmax_t` and `long long`.
                      Conversion to other arithmetic types can then be synthesised using other operations.
                      Conversions to other types are entirely optional.][[space]]]
@@ -77,7 +77,7 @@ and `ff` is a variable of type `std::ios_base::fmtflags`.
 [[`eval_floor(b, cb)`][`void`][Stores the floor of `cb` in `b`, only required when `B` is a floating-point type.][[space]]]
 [[`eval_ceil(b, cb)`][`void`][Stores the ceiling of `cb` in `b`, only required when `B` is a floating-point type.][[space]]]
 [[`eval_sqrt(b, cb)`][`void`][Stores the square root of `cb` in `b`, only required when `B` is a floating-point type.][[space]]]
-[[`boost::multiprecision::number_category<B>::type`][`std::integral_constant<int, N>`][`N` is one of the values `number_kind_integer`, `number_kind_floating_point`, `number_kind_complex`, `number_kind_rational` or `number_kind_fixed_point`.
+[[`boost::multiprecision::number_category<B>::type`][`std::integral_constant<int, N>`][`N` is the value `number_kind_integer`, `number_kind_floating_point`, `number_kind_complex`, `number_kind_rational` or `number_kind_fixed_point`.
                                                 Defaults to `number_kind_floating_point`.][[space]]]
 [[`eval_conj(b, cb)`][`void`][Sets `b` to the complex conjugate of `cb`.  Required for complex types only - other types have a sensible default.][[space]]]
 [[`eval_proj(b, cb)`][`void`][Sets `b` to the Riemann projection of `cb`.  Required for complex types only - other types have a sensible default.][[space]]]
@@ -95,7 +95,7 @@ and `ff` is a variable of type `std::ios_base::fmtflags`.
       Only destruction and assignment to the moved-from variable `rb` need be supported after the operation.][`noexcept`]]
 [[`b = rb`][`B&`][Move-assign.  Afterwards variable `rb` shall be in sane state, albeit with unspecified value.
       Only destruction and assignment to the moved-from variable `rb` need be supported after the operation.][`noexcept`]]
-[[`B(a)`][`B`][Direct construction from an arithmetic type.  The type of `a` shall be listed in one of the type lists
+[[`B(a)`][`B`][Direct construction from an arithmetic type.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, this operation is simulated using default-construction followed by assignment.][[space]]]
 [[`B(b2)`][`B`][Copy constructor from a different back-end type.  When not provided, a generic interconversion routine is used.
@@ -112,31 +112,31 @@ and `ff` is a variable of type `std::ios_base::fmtflags`.
 [[`eval_eq(cb, cb2)`][`bool`][Returns `true` if `cb` and `cb2` are equal in value.
             When not provided, the default implementation returns `cb.compare(cb2) == 0`.][`noexcept`]]
 [[`eval_eq(cb, a)`][`bool`][Returns `true` if `cb` and `a` are equal in value.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, return the equivalent of `eval_eq(cb, B(a))`.][[space]]]
 [[`eval_eq(a, cb)`][`bool`][Returns `true` if `cb` and `a` are equal in value.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default version returns `eval_eq(cb, a)`.][[space]]]
 [[`eval_lt(cb, cb2)`][`bool`][Returns `true` if `cb` is less than `cb2` in value.
             When not provided, the default implementation returns `cb.compare(cb2) < 0`.][`noexcept`]]
 [[`eval_lt(cb, a)`][`bool`][Returns `true` if `cb` is less than `a` in value.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default implementation returns `eval_lt(cb, B(a))`.][[space]]]
 [[`eval_lt(a, cb)`][`bool`][Returns `true` if `a` is less than `cb` in value.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default implementation returns `eval_gt(cb, a)`.][[space]]]
 [[`eval_gt(cb, cb2)`][`bool`][Returns `true` if `cb` is greater than `cb2` in value.
             When not provided, the default implementation returns `cb.compare(cb2) > 0`.][`noexcept`]]
 [[`eval_gt(cb, a)`][`bool`][Returns `true` if `cb` is greater than `a` in value.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default implementation returns `eval_gt(cb, B(a))`.][[space]]]
 [[`eval_gt(a, cb)`][`bool`][Returns `true` if `a` is greater than `cb` in value.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default implementation returns `eval_lt(cb, a)`.][[space]]]
 [[`eval_is_zero(cb)`][`bool`][Returns `true` if `cb` is zero, otherwise `false`.  The default version of this function
@@ -148,87 +148,87 @@ and `ff` is a variable of type `std::ios_base::fmtflags`.
             `typename std::tuple_element<0, typename B::unsigned_types>::type`.][[space]]]
 
 [[['Basic arithmetic:]]]
-[[`eval_add(b, a)`][`void`][Adds `a` to `b`.  The type of `a` shall be listed in one of the type lists
+[[`eval_add(b, a)`][`void`][Adds `a` to `b`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default version calls `eval_add(b, B(a))`][[space]]]
-[[`eval_add(b, cb, cb2)`][`void`][Add `cb` to `cb2` and stores the result in `b`.
+[[`eval_add(b, cb, cb2)`][`void`][Adds `cb` to `cb2` and stores the result in `b`.
             When not provided, does the equivalent of `b = cb; eval_add(b, cb2)`.][[space]]]
-[[`eval_add(b, cb, a)`][`void`][Add `cb` to `a` and stores the result in `b`.  The type of `a` shall be listed in one of the type lists
+[[`eval_add(b, cb, a)`][`void`][Adds `cb` to `a` and stores the result in `b`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_add(b, cb, B(a))`.][[space]]]
-[[`eval_add(b, a, cb)`][`void`][Add `a` to `cb` and stores the result in `b`.  The type of `a` shall be listed in one of the type lists
+[[`eval_add(b, a, cb)`][`void`][Adds `a` to `cb` and stores the result in `b`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_add(b, cb, a)`.][[space]]]
-[[`eval_subtract(b, a)`][`void`][Subtracts `a` from `b`.  The type of `a` shall be listed in one of the type lists
+[[`eval_subtract(b, a)`][`void`][Subtracts `a` from `b`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default version calls `eval_subtract(b, B(a))`][[space]]]
 [[`eval_subtract(b, cb, cb2)`][`void`][Subtracts `cb2` from `cb` and stores the result in `b`.
             When not provided, does the equivalent of `b = cb; eval_subtract(b, cb2)`.][[space]]]
-[[`eval_subtract(b, cb, a)`][`void`][Subtracts `a` from `cb` and stores the result in `b`.  The type of `a` shall be listed in one of the type lists
+[[`eval_subtract(b, cb, a)`][`void`][Subtracts `a` from `cb` and stores the result in `b`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_subtract(b, cb, B(a))`.][[space]]]
-[[`eval_subtract(b, a, cb)`][`void`][Subtracts `cb` from `a` and stores the result in `b`.  The type of `a` shall be listed in one of the type lists
+[[`eval_subtract(b, a, cb)`][`void`][Subtracts `cb` from `a` and stores the result in `b`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_subtract(b, cb, a); b.negate();`.][[space]]]
-[[`eval_multiply(b, a)`][`void`][Multiplies `b` by `a`.  The type of `a` shall be listed in one of the type lists
+[[`eval_multiply(b, a)`][`void`][Multiplies `b` by `a`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default version calls `eval_multiply(b, B(a))`][[space]]]
 [[`eval_multiply(b, cb, cb2)`][`void`][Multiplies `cb` by `cb2` and stores the result in `b`.
             When not provided, does the equivalent of `b = cb; eval_multiply(b, cb2)`.][[space]]]
-[[`eval_multiply(b, cb, a)`][`void`][Multiplies `cb` by `a` and stores the result in `b`.  The type of `a` shall be listed in one of the type lists
+[[`eval_multiply(b, cb, a)`][`void`][Multiplies `cb` by `a` and stores the result in `b`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_multiply(b, cb, B(a))`.][[space]]]
-[[`eval_multiply(b, a, cb)`][`void`][Multiplies `a` by `cb` and stores the result in `b`.  The type of `a` shall be listed in one of the type lists
+[[`eval_multiply(b, a, cb)`][`void`][Multiplies `a` by `cb` and stores the result in `b`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_multiply(b, cb, a)`.][[space]]]
 [[`eval_multiply_add(b, cb, cb2)`][`void`][Multiplies `cb` by `cb2` and adds the result to `b`.
             When not provided does the equivalent of creating a temporary `B t` and `eval_multiply(t, cb, cb2)` followed by
             `eval_add(b, t)`.][[space]]]
 [[`eval_multiply_add(b, cb, a)`][`void`][Multiplies `a` by `cb` and adds the result to `b`.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided does the equivalent of creating a temporary `B t` and `eval_multiply(t, cb, a)` followed by
             `eval_add(b, t)`.][[space]]]
 [[`eval_multiply_add(b, a, cb)`][`void`][Multiplies `a` by `cb` and adds the result to `b`.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided does the equivalent of  `eval_multiply_add(b, cb, a)`.][[space]]]
 [[`eval_multiply_subtract(b, cb, cb2)`][`void`][Multiplies `cb` by `cb2` and subtracts the result from `b`.
             When not provided does the equivalent of creating a temporary `B t` and `eval_multiply(t, cb, cb2)` followed by
             `eval_subtract(b, t)`.][[space]]]
 [[`eval_multiply_subtract(b, cb, a)`][`void`][Multiplies `a` by `cb` and subtracts the result from `b`.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided does the equivalent of creating a temporary `B t` and `eval_multiply(t, cb, a)` followed by
             `eval_subtract(b, t)`.][[space]]]
 [[`eval_multiply_subtract(b, a, cb)`][`void`][Multiplies `a` by `cb` and subtracts the result from `b`.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided does the equivalent of  `eval_multiply_subtract(b, cb, a)`.][[space]]]
 [[`eval_multiply_add(b, cb, cb2, cb3)`][`void`][Multiplies `cb` by `cb2` and adds the result to `cb3` storing the result in `b`.
             When not provided does the equivalent of `eval_multiply(b, cb, cb2)` followed by
             `eval_add(b, cb3)`.
             For brevity, only a version showing all arguments of type `B` is shown here, but you can replace up to any 2 of
-            `cb`, `cb2` and `cb3` with any type listed in one of the type lists
+            `cb`, `cb2` and `cb3` with any type listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.][[space]]]
 [[`eval_multiply_subtract(b, cb, cb2, cb3)`][`void`][Multiplies `cb` by `cb2` and subtracts from the result `cb3` storing the result in `b`.
             When not provided does the equivalent of `eval_multiply(b, cb, cb2)` followed by
             `eval_subtract(b, cb3)`.
             For brevity, only a version showing all arguments of type `B` is shown here, but you can replace up to any 2 of
-            `cb`, `cb2` and `cb3` with any type listed in one of the type lists
+            `cb`, `cb2` and `cb3` with any type listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.][[space]]]
-[[`eval_divide(b, a)`][`void`][Divides `b` by `a`.  The type of `a` shall be listed in one of the type lists
+[[`eval_divide(b, a)`][`void`][Divides `b` by `a`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default version calls `eval_divide(b, B(a))`]
             [`std::overflow_error` if `a` has the value zero, and `std::numeric_limits<number<B> >::has_infinity == false`]]
 [[`eval_divide(b, cb, cb2)`][`void`][Divides `cb` by `cb2` and stores the result in `b`.
             When not provided, does the equivalent of `b = cb; eval_divide(b, cb2)`.]
             [`std::overflow_error` if `cb2` has the value zero, and `std::numeric_limits<number<B> >::has_infinity == false`]]
-[[`eval_divide(b, cb, a)`][`void`][Divides `cb` by `a` and stores the result in `b`.  The type of `a` shall be listed in one of the type lists
+[[`eval_divide(b, cb, a)`][`void`][Divides `cb` by `a` and stores the result in `b`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_divide(b, cb, B(a))`.]
             [`std::overflow_error` if `a` has the value zero, and `std::numeric_limits<number<B> >::has_infinity == false`]]
-[[`eval_divide(b, a, cb)`][`void`][Divides `a` by `cb` and stores the result in `b`.  The type of `a` shall be listed in one of the type lists
+[[`eval_divide(b, a, cb)`][`void`][Divides `a` by `cb` and stores the result in `b`.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_divide(b, B(a), cb)`.]
             [`std::overflow_error` if cb has the value zero, and `std::numeric_limits<number<B> >::has_infinity == false`]]
@@ -240,52 +240,52 @@ and `ff` is a variable of type `std::ios_base::fmtflags`.
             Where `ui_type` is `typename std::tuple_element<0, typename B::unsigned_types>::type`.][[space]]]
 
 [[['Integer specific operations:]]]
-[[`eval_modulus(b, a)`][`void`][Computes `b %= cb`, only required when `B` is an integer type.  The type of `a` shall be listed in one of the type lists
+[[`eval_modulus(b, a)`][`void`][Computes `b %= cb`, only required when `B` is an integer type.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default version calls `eval_modulus(b, B(a))`]
             [`std::overflow_error` if `a` has the value zero.]]
 [[`eval_modulus(b, cb, cb2)`][`void`][Computes `cb % cb2` and stores the result in `b`, only required when `B` is an integer type.
             When not provided, does the equivalent of `b = cb; eval_modulus(b, cb2)`.]
             [`std::overflow_error` if `a` has the value zero.]]
-[[`eval_modulus(b, cb, a)`][`void`][Computes `cb % a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in one of the type lists
+[[`eval_modulus(b, cb, a)`][`void`][Computes `cb % a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_modulus(b, cb, B(a))`.]
             [`std::overflow_error` if `a` has the value zero.]]
-[[`eval_modulus(b, a, cb)`][`void`][Computes `cb % a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in one of the type lists
+[[`eval_modulus(b, a, cb)`][`void`][Computes `cb % a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_modulus(b, B(a), cb)`.]
             [`std::overflow_error` if `a` has the value zero.]]
-[[`eval_bitwise_and(b, a)`][`void`][Computes `b &= cb`, only required when `B` is an integer type.  The type of `a` shall be listed in one of the type lists
+[[`eval_bitwise_and(b, a)`][`void`][Computes `b &= cb`, only required when `B` is an integer type.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default version calls `eval_bitwise_and(b, B(a))`][[space]]]
 [[`eval_bitwise_and(b, cb, cb2)`][`void`][Computes `cb & cb2` and stores the result in `b`, only required when `B` is an integer type.
             When not provided, does the equivalent of `b = cb; eval_bitwise_and(b, cb2)`.][[space]]]
-[[`eval_bitwise_and(b, cb, a)`][`void`][Computes `cb & a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in one of the type lists
+[[`eval_bitwise_and(b, cb, a)`][`void`][Computes `cb & a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_bitwise_and(b, cb, B(a))`.][[space]]]
-[[`eval_bitwise_and(b, a, cb)`][`void`][Computes `cb & a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in one of the type lists
+[[`eval_bitwise_and(b, a, cb)`][`void`][Computes `cb & a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_bitwise_and(b, cb, a)`.][[space]]]
-[[`eval_bitwise_or(b, a)`][`void`][Computes `b |= cb`, only required when `B` is an integer type.  The type of `a` shall be listed in one of the type lists
+[[`eval_bitwise_or(b, a)`][`void`][Computes `b |= cb`, only required when `B` is an integer type.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default version calls `eval_bitwise_or(b, B(a))`][[space]]]
 [[`eval_bitwise_or(b, cb, cb2)`][`void`][Computes `cb | cb2` and stores the result in `b`, only required when `B` is an integer type.
             When not provided, does the equivalent of `b = cb; eval_bitwise_or(b, cb2)`.][[space]]]
-[[`eval_bitwise_or(b, cb, a)`][`void`][Computes `cb | a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in one of the type lists
+[[`eval_bitwise_or(b, cb, a)`][`void`][Computes `cb | a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_bitwise_or(b, cb, B(a))`.][[space]]]
-[[`eval_bitwise_or(b, a, cb)`][`void`][Computes `cb | a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in one of the type lists
+[[`eval_bitwise_or(b, a, cb)`][`void`][Computes `cb | a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_bitwise_or(b, cb, a)`.][[space]]]
-[[`eval_bitwise_xor(b, a)`][`void`][Computes `b ^= cb`, only required when `B` is an integer type.  The type of `a` shall be listed in one of the type lists
+[[`eval_bitwise_xor(b, a)`][`void`][Computes `b ^= cb`, only required when `B` is an integer type.  The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, the default version calls `eval_bitwise_xor(b, B(a))`][[space]]]
 [[`eval_bitwise_xor(b, cb, cb2)`][`void`][Computes `cb ^ cb2` and stores the result in `b`, only required when `B` is an integer type.
             When not provided, does the equivalent of `b = cb; eval_bitwise_xor(b, cb2)`.][[space]]]
-[[`eval_bitwise_xor(b, cb, a)`][`void`][Computes `cb ^ a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in one of the type lists
+[[`eval_bitwise_xor(b, cb, a)`][`void`][Computes `cb ^ a` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_bitwise_xor(b, cb, B(a))`.][[space]]]
-[[`eval_bitwise_xor(b, a, cb)`][`void`][Computes `a ^ cb` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in one of the type lists
+[[`eval_bitwise_xor(b, a, cb)`][`void`][Computes `a ^ cb` and stores the result in `b`, only required when `B` is an integer type. The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             When not provided, does the equivalent of `eval_bitwise_xor(b, cb, a)`.][[space]]]
 [[`eval_left_shift(b, cb, ui)`][`void`][Computes `cb << ui` and stores the result in `b`, only required when `B` is an integer type.
@@ -315,37 +315,37 @@ and `ff` is a variable of type `std::ios_base::fmtflags`.
 [[`eval_lcm(b, cb, cb2)`][`void`][Sets `b` to the least common multiple of `cb` and `cb2`.  Only required when `B` is an integer type.
             The default version of this function is synthesised from other operations above.][[space]]]
 [[`eval_gcd(b, cb, a)`][`void`][Sets `b` to the greatest common divisor of `cb` and `cb2`.  Only required when `B` is an integer type.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             The default version of this function calls `eval_gcd(b, cb, B(a))`.][[space]]]
 [[`eval_lcm(b, cb, a)`][`void`][Sets `b` to the least common multiple of `cb` and `cb2`.  Only required when `B` is an integer type.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             The default version of this function calls `eval_lcm(b, cb, B(a))`.][[space]]]
 [[`eval_gcd(b, a, cb)`][`void`][Sets `b` to the greatest common divisor of `cb` and `a`.  Only required when `B` is an integer type.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             The default version of this function calls `eval_gcd(b, cb, a)`.][[space]]]
 [[`eval_lcm(b, a, cb)`][`void`][Sets `b` to the least common multiple of `cb` and `a`.  Only required when `B` is an integer type.
-            The type of `a` shall be listed in one of the type lists
+            The type of `a` shall be listed in
             `B::signed_types`, `B::unsigned_types` or `B::float_types`.
             The default version of this function calls `eval_lcm(b, cb, a)`.][[space]]]
 [[`eval_powm(b, cb, cb2, cb3)`][`void`][Sets `b` to the result of ['(cb^cb2)%cb3].
             The default version of this function is synthesised from other operations above.][[space]]]
 [[`eval_powm(b, cb, cb2, a)`][`void`][Sets `b` to the result of ['(cb^cb2)%a].
-            The type of `a` shall be listed in one of the type lists
-            `B::signed_types`, `B::unsigned_types`.
+            The type of `a` shall be listed in
+            `B::signed_types` or `B::unsigned_types`.
             The default version of this function is synthesised from other operations above.][[space]]]
 [[`eval_powm(b, cb, a, cb2)`][`void`][Sets `b` to the result of ['(cb^a)%cb2].
-            The type of `a` shall be listed in one of the type lists
-            `B::signed_types`, `B::unsigned_types`.
+            The type of `a` shall be listed in
+            `B::signed_types` or `B::unsigned_types`.
             The default version of this function is synthesised from other operations above.][[space]]]
 [[`eval_powm(b, cb, a, a2)`][`void`][Sets `b` to the result of ['(cb^a)%a2].
-            The type of `a` shall be listed in one of the type lists
-            `B::signed_types`, `B::unsigned_types`.
+            The type of `a` shall be listed in
+            `B::signed_types` or `B::unsigned_types`.
             The default version of this function is synthesised from other operations above.][[space]]]
 [[`eval_integer_sqrt(b, cb, b2)`][`void`][Sets `b` to the largest integer which when squared is less than `cb`, also
-            sets `b2` to the remainder, ie to ['cb - b[super 2]].
+            sets `b2` to the remainder, i.e. to ['cb - b[super 2]].
             The default version of this function is synthesised from other operations above.][[space]]]
 
 [[['Sign manipulation:]]]
@@ -357,39 +357,39 @@ and `ff` is a variable of type `std::ios_base::fmtflags`.
             `eval_get_sign(cb) < 0`.][[space]]]
 
 [[['floating-point functions:]]]
-[[`eval_fpclassify(cb)`][`int`][Returns one of the same values returned by `std::fpclassify`.  Only required when `B` is an floating-point type.
+[[`eval_fpclassify(cb)`][`int`][Returns one of the same values returned by `std::fpclassify`.  Only required when `B` is a floating-point type.
             The default version of this function will only test for zero `cb`.][[space]]]
-[[`eval_trunc(b, cb)`][`void`][Performs the equivalent operation to `std::trunc` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_trunc(b, cb)`][`void`][Performs the equivalent operation to `std::trunc` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_round(b, cb)`][`void`][Performs the equivalent operation to `std::round` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_round(b, cb)`][`void`][Performs the equivalent operation to `std::round` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_exp(b, cb)`][`void`][Performs the equivalent operation to `std::exp` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_exp(b, cb)`][`void`][Performs the equivalent operation to `std::exp` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_exp2(b, cb)`][`void`][Performs the equivalent operation to `std::exp2` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_exp2(b, cb)`][`void`][Performs the equivalent operation to `std::exp2` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is implemented in terms of `eval_pow`.][[space]]]
-[[`eval_log(b, cb)`][`void`][Performs the equivalent operation to `std::log` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_log(b, cb)`][`void`][Performs the equivalent operation to `std::log` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_log10(b, cb)`][`void`][Performs the equivalent operation to `std::log10` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_log10(b, cb)`][`void`][Performs the equivalent operation to `std::log10` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_sin(b, cb)`][`void`][Performs the equivalent operation to `std::sin` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_sin(b, cb)`][`void`][Performs the equivalent operation to `std::sin` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_cos(b, cb)`][`void`][Performs the equivalent operation to `std::cos` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_cos(b, cb)`][`void`][Performs the equivalent operation to `std::cos` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_tan(b, cb)`][`void`][Performs the equivalent operation to `std::exp` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_tan(b, cb)`][`void`][Performs the equivalent operation to `std::exp` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_asin(b, cb)`][`void`][Performs the equivalent operation to `std::asin` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_asin(b, cb)`][`void`][Performs the equivalent operation to `std::asin` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_acos(b, cb)`][`void`][Performs the equivalent operation to `std::acos` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_acos(b, cb)`][`void`][Performs the equivalent operation to `std::acos` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_atan(b, cb)`][`void`][Performs the equivalent operation to `std::atan` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_atan(b, cb)`][`void`][Performs the equivalent operation to `std::atan` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_sinh(b, cb)`][`void`][Performs the equivalent operation to `std::sinh` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_sinh(b, cb)`][`void`][Performs the equivalent operation to `std::sinh` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_cosh(b, cb)`][`void`][Performs the equivalent operation to `std::cosh` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_cosh(b, cb)`][`void`][Performs the equivalent operation to `std::cosh` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_tanh(b, cb)`][`void`][Performs the equivalent operation to `std::tanh` on argument `cb` and stores the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_tanh(b, cb)`][`void`][Performs the equivalent operation to `std::tanh` on argument `cb` and stores the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
-[[`eval_fmod(b, cb, cb2)`][`void`][Performs the equivalent operation to `std::fmod` on arguments `cb` and `cb2`, and store the result in `b`.  Only required when `B` is an floating-point type.
+[[`eval_fmod(b, cb, cb2)`][`void`][Performs the equivalent operation to `std::fmod` on arguments `cb` and `cb2`, and store the result in `b`.  Only required when `B` is a floating-point type.
             The default version of this function is synthesised from other operations above.][[space]]]
 [[`eval_modf(b, cb, pb)`][`void`][Performs the equivalent operation to `std::modf` on argument `cb`, and store the integer result in `*pb` and the fractional part in `b`.
             Only required when `B` is an floating-point type.

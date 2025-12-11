@@ -118,6 +118,7 @@ public:
     char const* data() const noexcept;
     char const* end() const noexcept;
     std::size_t nseg() const noexcept;
+    std::size_t decoded_size() const noexcept;
 
     bool
     alias_of(

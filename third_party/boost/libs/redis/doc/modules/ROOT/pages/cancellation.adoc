@@ -1,0 +1,79 @@
+//
+// Copyright (c) 2025 Marcelo Zimbres Silva (mzimbres@gmail.com),
+// Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+= Cancellation and timeouts
+
+By default, running a request with xref:reference:boost/redis/basic_connection/async_exec-02.adoc[`async_exec`]
+will wait until a connection to the Redis server is established by `async_run`.
+This may take a very long time if the server is down.
+
+For this reason, it is usually a good idea to set a timeout to `async_exec`
+operations using the
+https://www.boost.org/doc/libs/latest/doc/html/boost_asio/reference/cancel_after.html[`asio::cancel_after`]
+completion token:
+
+
+[source,cpp]
+----
+using namespace std::chrono_literals;
+
+// Compose a request with a SET command
+request req;
+req.push("SET", "my_key", 42);
+
+// If the request hasn't completed after 10 seconds, it will be cancelled
+// and an exception will be thrown.
+co_await conn.async_exec(req, ignore, asio::cancel_after(10s));
+----
+
+See our {site-url}/example/cpp20_timeouts.cpp[example on timeouts]
+for a full code listing.
+
+You can also use `cancel_after` with other completion styles, like
+callbacks and futures.
+
+`cancel_after` works because `async_exec` supports the per-operation
+cancellation mechanism. This is used by Boost.Asio to implement features
+like `cancel_after` and parallel groups. All asynchronous operations
+in the library support this mechanism. Please consult the documentation
+for individual operations for more info.
+
+
+== Retrying idempotent requests
+
+We mentioned that `async_exec` waits until the server is up
+before sending the request. But what happens if there is a communication
+error after sending the request, but before receiving a response?
+
+In this situation there is no way to know if the request was processed by the server or not.
+By default, the library will consider the request as failed,
+and `async_exec` will complete with an `asio::error::operation_aborted`
+error code.
+
+Some requests can be executed several times and result in the same outcome
+as executing them only once. We say that these requests are _idempotent_.
+The `SET` command is idempotent, while `INCR` is not.
+
+If you know that a `request` object contains only idempotent commands,
+you can instruct Boost.Redis to retry the request on failure, even
+if the library is unsure about the server having processed the request or not.
+You can do so by setting `cancel_if_unresponded`
+in xref:reference:boost/redis/request/config.adoc[`request::config`]
+to false:
+
+[source,cpp]
+----
+// Compose a request
+request req;
+req.push("SET", "my_key", 42); // idempotent
+req.get_config().cancel_if_unresponded = false; // Retry the request even if it was written but not responded
+
+// Makes sure that the key is set, even in the presence of network errors.
+// This may suspend for an unspecified period of time if the server is down.
+co_await conn.async_exec(req, ignore);
+----

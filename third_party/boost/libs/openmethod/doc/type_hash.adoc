@@ -1,0 +1,99 @@
+
+## type_hash
+
+### Synopsis
+
+Defined in <boost/openmethod/policies/basic_policy.hpp>.
+
+```c++
+namespace boost::openmethod::policies {
+
+struct type_hash : policy {};
+
+} // boost::openmethod::policies
+```
+
+### Description
+
+`type_hash` is a policy that provides a hash function for a fixed set of
+`type_id`{empty}s.
+
+### Requirements
+
+### hash_type_id
+
+```c++
+static auto hash_type_id(type_id type) -> type_id;
+```
+
+Returns the hash of `type`.
+
+#### hash_initialize
+
+```c++
+template<typename ForwardIterator>
+static auto hash_initialize(ForwardIterator first, ForwardIterator last)
+  -> Report;
+```
+
+Finds a hash function for the `type_id`{empty}s in the range `[first, last)`.
+`ForwardIterator` is the same as in `vptr_vector::register_vptrs`.
+
+`hash_initialize` returns a `Report` object which is required to have two
+members, `first` and `last`, which define the range `[first, last)` of the
+possible output values of the hash function.
+
+## fast_perfect_hash
+
+### Synopsis
+
+Defined in <boost/openmethod/policies/fast_perfect_hash.hpp>.
+
+```c++
+class fast_perfect_hash : type_hash
+{
+  public:
+    static auto hash_type_id(type_id type) -> type_id;
+    template<typename ForwardIterator>
+    static auto hash_initialize(ForwardIterator first, ForwardIterator last) -> Report;
+};
+```
+
+### Description
+
+`fast_perfect_hash` implements a very fast, perfect (but not minimal) hash
+function for `type_id`{empty}s.
+
+### Members
+
+Find two factors
+
+#### hash_type_id
+
+```c++
+static auto hash_type_id(type_id type) -> type_id;
+```
+
+Returns `(type * M) >> S`, where `M` and `S` are factors found by
+`hash_initialize`.
+
+If the policy has a `runtime_checks` policy, `hash_type_id` checks that `type`
+corresponds to a registered class. If not, it reports a `unknown_class_error`
+using the policy's error_handler policy, if present, then calls `abort`.
+
+#### hash_initialize
+
+```c++
+template<typename ForwardIterator>
+auto hash_initialize(ForwardIterator first, ForwardIterator last) -> Report;
+```
+
+Finds factors `M` and `S` such that `hash_type_id` is a collision-free hash
+function.
+
+If no such factors cannot be found, `hash_initialize` reports a
+`hash_search_error` using the policy's error_handler policy, if present, the
+calls `abort`.
+
+If the policy has a `trace` policy, `hash_initialize` uses it to write a
+summary of the search.

@@ -36,6 +36,9 @@ struct usage {
 
    /// Number of push-bytes received.
    std::size_t push_bytes_received = 0;
+
+   /// Number of bytes rotated in the read buffer.
+   std::size_t bytes_rotated = 0;
 };
 
 }  // namespace boost::redis

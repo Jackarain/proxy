@@ -63,7 +63,7 @@ The atomic state is used by the generators to ensure that no duplicate UUIDs are
 time_generator_v1();
 ```
 
-Effects: :: Using entropy from `std::random_device`, generates a pseudorandom 48 bit node identifier in `node_` and a pseudorandom 14 bit clock sequence in `state_.clock_seq`. Initalizes `state_.timestamp` to zero.
+Effects: :: Using entropy from `std::random_device`, generates a pseudorandom 48 bit node identifier in `node_` and a pseudorandom 14 bit clock sequence in `state_.clock_seq`. Initializes `state_.timestamp` to zero.
 
 Remarks: :: The multicast bit of `node_` is set to denote a local node identifier, as recommended in https://www.rfc-editor.org/rfc/rfc4122.html#section-4.5[RFC 4122 Section 4.5].
 

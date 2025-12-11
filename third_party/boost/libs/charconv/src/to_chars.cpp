@@ -313,12 +313,6 @@ namespace boost { namespace charconv { namespace detail { namespace to_chars_det
     {
         auto buffer = first;
 
-        const std::ptrdiff_t total_length = total_buffer_length(17, exponent, false);
-        if (total_length > (last - first))
-        {
-            return {last, std::errc::value_too_large};
-        }
-
         // Print significand by decomposing it into a 9-digit block and a 8-digit block.
         std::uint32_t first_block;
         std::uint32_t second_block {};
@@ -335,6 +329,12 @@ namespace boost { namespace charconv { namespace detail { namespace to_chars_det
         {
             first_block = std::uint32_t(significand);
             no_second_block = true;
+        }
+
+        const std::ptrdiff_t total_length = total_buffer_length(no_second_block ? 9 : 17, exponent, false);;
+        if (total_length > (last - first))
+        {
+            return {last, std::errc::value_too_large};
         }
 
         if (no_second_block)

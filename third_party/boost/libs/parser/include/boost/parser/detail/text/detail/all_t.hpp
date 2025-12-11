@@ -126,7 +126,7 @@ namespace boost::parser::detail::text::detail {
             else if constexpr (can_ref_view<R>)
                 return ref_view(r);
             else
-                return owning_view<T>(std::move(r));
+                return owning_view<T>((R &&)r);
         }
     };
 

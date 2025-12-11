@@ -12,10 +12,10 @@
     <Type Name="boost::system::error_code">
         <DisplayString Condition="lc_flags_ == 0">{d1_.val_} [system] ✓</DisplayString>
 
-        <DisplayString Condition="lc_flags_ == 1 &amp;&amp; ((std::error_code*)d2_)->_Mycat->_Addr==1">{((std::error_code*)d2_)->_Myval} [std:future]</DisplayString>
-        <DisplayString Condition="lc_flags_ == 1 &amp;&amp; ((std::error_code*)d2_)->_Mycat->_Addr==3">{((std::error_code*)d2_)->_Myval} [std:generic]</DisplayString>
-        <DisplayString Condition="lc_flags_ == 1 &amp;&amp; ((std::error_code*)d2_)->_Mycat->_Addr==5">{((std::error_code*)d2_)->_Myval} [std:iostream]</DisplayString>
-        <DisplayString Condition="lc_flags_ == 1 &amp;&amp; ((std::error_code*)d2_)->_Mycat->_Addr==7">{((std::error_code*)d2_)->_Myval} [std:system]</DisplayString>
+        <DisplayString Condition="lc_flags_ == 1 &amp;&amp; ((std::error_code*)d2_)->_Mycat->_Addr._Num==1">{((std::error_code*)d2_)->_Myval} [std:future]</DisplayString>
+        <DisplayString Condition="lc_flags_ == 1 &amp;&amp; ((std::error_code*)d2_)->_Mycat->_Addr._Num==3">{((std::error_code*)d2_)->_Myval} [std:generic]</DisplayString>
+        <DisplayString Condition="lc_flags_ == 1 &amp;&amp; ((std::error_code*)d2_)->_Mycat->_Addr._Num==5">{((std::error_code*)d2_)->_Myval} [std:iostream]</DisplayString>
+        <DisplayString Condition="lc_flags_ == 1 &amp;&amp; ((std::error_code*)d2_)->_Mycat->_Addr._Num==7">{((std::error_code*)d2_)->_Myval} [std:system]</DisplayString>
         <DisplayString Condition="lc_flags_ == 1">{((std::error_code*)d2_)->_Myval} std@{((uintptr_t)((std::error_code*)d2_)->_Mycat),x}</DisplayString>
 
         <DisplayString Condition="d1_.cat_->id_ == 0xb2ab117a257edfd0 &amp;&amp;

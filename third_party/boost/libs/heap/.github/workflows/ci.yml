@@ -57,24 +57,6 @@ jobs:
             install: g++-14
             supported: true
           - toolset: clang
-            install: clang-10
-            compiler: clang++-10
-            cxxstd: "14,17,2a"
-            os: ubuntu-20.04
-            supported: true
-          - toolset: clang
-            install: clang-11
-            compiler: clang++-11
-            cxxstd: "14,17,2a"
-            os: ubuntu-20.04
-            supported: true
-          - toolset: clang
-            install: clang-12
-            compiler: clang++-12
-            cxxstd: "14,17,20"
-            os: ubuntu-22.04
-            supported: true
-          - toolset: clang
             install: clang-13
             compiler: clang++-13
             cxxstd: "14,17,20"
@@ -92,12 +74,25 @@ jobs:
             cxxstd: "14,17,20"
             os: ubuntu-22.04
             supported: true
-          # - toolset: clang
-          #   install: clang-16
-          #   compiler: clang++-16
-          #   cxxstd: "14,17,20"
-          #   os: ubuntu-22.04
-          #   supported: true
+          - toolset: clang
+            install: clang-16
+            compiler: clang++-16
+            cxxstd: "14,17,20"
+            os: ubuntu-24.04
+            supported: true
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd: "14,17,20,2b"
+            os: ubuntu-24.04
+            install: clang-17
+            supported: true
+          - toolset: clang
+            compiler: clang++-18
+            cxxstd: "14,17,20,2b"
+            os: ubuntu-24.04
+            install: clang-18
+            supported: true
+
 
           # macos
           - description: macos-13

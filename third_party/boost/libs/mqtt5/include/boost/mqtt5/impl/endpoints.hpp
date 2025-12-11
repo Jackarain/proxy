@@ -8,9 +8,8 @@
 #ifndef BOOST_MQTT5_ENDPOINTS_HPP
 #define BOOST_MQTT5_ENDPOINTS_HPP
 
-#include <boost/mqtt5/types.hpp>
-
 #include <boost/mqtt5/detail/log_invoke.hpp>
+#include <boost/mqtt5/detail/internal_types.hpp>
 
 #include <boost/asio/append.hpp>
 #include <boost/asio/associated_allocator.hpp>
@@ -23,7 +22,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/prepend.hpp>
-#include <boost/spirit/home/x3.hpp>
 
 #include <array>
 #include <chrono>
@@ -155,16 +153,6 @@ class endpoints {
     template <typename Owner, typename Handler>
     friend class resolve_op;
 
-    template <typename T>
-    static constexpr auto to_(T& arg) {
-        return [&](auto& ctx) { arg = boost::spirit::x3::_attr(ctx); };
-    }
-
-    template <typename T, typename Parser>
-    static constexpr auto as_(Parser&& p){
-        return boost::spirit::x3::rule<struct _, T>{} = std::forward<Parser>(p);
-    }
-
 public:
     template <typename Executor>
     endpoints(
@@ -202,38 +190,72 @@ public:
     }
 
     void brokers(std::string hosts, uint16_t default_port) {
-        namespace x3 = boost::spirit::x3;
-
         _servers.clear();
 
-        std::string host, port, path;
-
         // loosely based on RFC 3986
-        auto unreserved_ = x3::char_("-a-zA-Z_0-9._~");
-        auto digit_ = x3::char_("0-9");
-        auto separator_ = x3::char_(',');
+        for (auto it = hosts.cbegin(), end = hosts.cend(); it != end;) {
+            skip_spaces(it, end);
 
-        auto host_ = as_<std::string>(+unreserved_)[to_(host)];
-        auto port_ = as_<std::string>(':' >> +digit_)[to_(port)];
-        auto path_ = as_<std::string>(+(x3::char_('/') >> *unreserved_))[to_(path)];
-        auto uri_ = *x3::omit[x3::space] >> (host_ >> -port_ >> -path_) >>
-            (*x3::omit[x3::space] >> x3::omit[separator_ | x3::eoi]);
+            auto host = std::string(match_while("A-Za-z0-9._~-", it, end));
+            if (host.empty()) break;
 
-        for (auto b = hosts.begin(); b != hosts.end(); ) {
-            host.clear(); port.clear(); path.clear();
-            if (phrase_parse(b, hosts.end(), uri_, x3::eps(false))) {
-                _servers.push_back({
-                    std::move(host),
-                    port.empty()
-                        ? std::to_string(default_port)
-                        : std::move(port),
-                    std::move(path)
-                });
+            std::string port;
+            if (it < end && *it == ':') {
+                port = std::string(match_while("0-9", ++it, end));
+                if (port.empty()) break;
             }
-            else b = hosts.end();
+
+            std::string path;
+            if (it < end && *it == '/')
+                path = std::string(match_while("/A-Za-z0-9._~-", it, end));
+
+            _servers.push_back({
+                std::move(host),
+                port.empty()
+                    ? std::to_string(default_port)
+                    : std::move(port),
+                std::move(path)
+            });
+
+            skip_spaces(it, end);
+            if (it == end || *it++ != ',') break;
         }
     }
 
+private:
+    static constexpr void skip_spaces(
+        byte_citer& it, const byte_citer& end
+    ) {
+        match_while(" \t\r\n\f\v", it, end);
+    };
+
+
+    static constexpr std::string_view match_while(
+        const char* chs, byte_citer& it, const byte_citer& end
+    ) {
+        if (it == end)
+            return {};
+
+        auto beg = it;
+        while (it < end && is_any_of(chs, *it)) ++it;
+
+        return { &*beg, static_cast<size_t>(it - beg) };
+    }
+
+    static constexpr bool is_any_of(const char* chs, char c) {
+        while (*chs)
+            if (*(chs + 1) == '-' && *(chs + 2)) {
+                if (c >= *chs && c <= *(chs + 2))
+                    return true;
+                chs += 3;
+            }
+            else {
+                if (c == *chs)
+                    return true;
+                ++chs;
+            }
+        return false;
+    }
 };
 
 

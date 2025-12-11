@@ -300,6 +300,10 @@ void test_config_file(const char* config_file)
     check_value(a2[6], "m1.v3", "3");
 }
 
+#if defined(__CYGWIN__)
+  extern "C" int putenv (char *__string);
+#endif
+
 void test_environment()
 {
     options_description desc;
@@ -308,7 +312,7 @@ void test_environment()
         ("bar", new untyped_value, "")
         ;
 
-#if (defined(_WIN32) && ! defined(BOOST_BORLANDC) && ! defined(BOOST_EMBTC)) || (defined(__CYGWIN__))
+#if defined(_WIN32) && ! defined(BOOST_BORLANDC) && ! defined(BOOST_EMBTC)
     _putenv("PO_TEST_FOO=1");
 #else
     putenv(const_cast<char*>("PO_TEST_FOO=1"));

@@ -6,38 +6,43 @@
 
 #include <boost/redis/adapter/adapt.hpp>
 #include <boost/redis/adapter/any_adapter.hpp>
-#include <boost/redis/detail/multiplexer.hpp>
-#include <boost/redis/detail/resp3_handshaker.hpp>
+#include <boost/redis/detail/read_buffer.hpp>
+#include <boost/redis/request.hpp>
 #include <boost/redis/resp3/node.hpp>
 #include <boost/redis/resp3/serialization.hpp>
 #include <boost/redis/resp3/type.hpp>
-#define BOOST_TEST_MODULE conn_quit
+#include <boost/redis/response.hpp>
+
+#define BOOST_TEST_MODULE low_level_sync_sans_io
 #include <boost/test/included/unit_test.hpp>
 
 #include <iostream>
 #include <string>
 
 using boost::redis::request;
-using boost::redis::config;
-using boost::redis::detail::push_hello;
-using boost::redis::response;
 using boost::redis::adapter::adapt2;
 using boost::redis::adapter::result;
-using boost::redis::resp3::detail::deserialize;
-using boost::redis::ignore_t;
-using boost::redis::detail::multiplexer;
 using boost::redis::generic_response;
+using boost::redis::ignore_t;
+using boost::redis::resp3::detail::deserialize;
 using boost::redis::resp3::node;
 using boost::redis::resp3::to_string;
+using boost::redis::response;
 using boost::redis::any_adapter;
+using boost::system::error_code;
+
+#define RESP3_SET_PART1 "~6\r\n+orange\r"
+#define RESP3_SET_PART2 "\n+apple\r\n+one"
+#define RESP3_SET_PART3 "\r\n+two\r"
+#define RESP3_SET_PART4 "\n+three\r\n+orange\r\n"
+char const* resp3_set = RESP3_SET_PART1 RESP3_SET_PART2 RESP3_SET_PART3 RESP3_SET_PART4;
 
 BOOST_AUTO_TEST_CASE(low_level_sync_sans_io)
 {
    try {
       result<std::set<std::string>> resp;
 
-      char const* wire = "~6\r\n+orange\r\n+apple\r\n+one\r\n+two\r\n+three\r\n+orange\r\n";
-      deserialize(wire, adapt2(resp));
+      deserialize(resp3_set, adapt2(resp));
 
       for (auto const& e : resp.value())
          std::cout << e << std::endl;
@@ -46,61 +51,6 @@ BOOST_AUTO_TEST_CASE(low_level_sync_sans_io)
       std::cerr << e.what() << std::endl;
       exit(EXIT_FAILURE);
    }
-}
-
-BOOST_AUTO_TEST_CASE(config_to_hello)
-{
-   config cfg;
-   cfg.clientname = "";
-   request req;
-
-   push_hello(cfg, req);
-
-   std::string_view const expected = "*2\r\n$5\r\nHELLO\r\n$1\r\n3\r\n";
-   BOOST_CHECK_EQUAL(req.payload(), expected);
-}
-
-BOOST_AUTO_TEST_CASE(config_to_hello_with_select)
-{
-   config cfg;
-   cfg.clientname = "";
-   cfg.database_index = 10;
-   request req;
-
-   push_hello(cfg, req);
-
-   std::string_view const expected =
-      "*2\r\n$5\r\nHELLO\r\n$1\r\n3\r\n"
-      "*2\r\n$6\r\nSELECT\r\n$2\r\n10\r\n";
-
-   BOOST_CHECK_EQUAL(req.payload(), expected);
-}
-
-BOOST_AUTO_TEST_CASE(config_to_hello_cmd_clientname)
-{
-   config cfg;
-   request req;
-
-   push_hello(cfg, req);
-
-   std::string_view const
-      expected = "*4\r\n$5\r\nHELLO\r\n$1\r\n3\r\n$7\r\nSETNAME\r\n$11\r\nBoost.Redis\r\n";
-   BOOST_CHECK_EQUAL(req.payload(), expected);
-}
-
-BOOST_AUTO_TEST_CASE(config_to_hello_cmd_auth)
-{
-   config cfg;
-   cfg.clientname = "";
-   cfg.username = "foo";
-   cfg.password = "bar";
-   request req;
-
-   push_hello(cfg, req);
-
-   std::string_view const
-      expected = "*5\r\n$5\r\nHELLO\r\n$1\r\n3\r\n$4\r\nAUTH\r\n$3\r\nfoo\r\n$3\r\nbar\r\n";
-   BOOST_CHECK_EQUAL(req.payload(), expected);
 }
 
 BOOST_AUTO_TEST_CASE(issue_210_empty_set)
@@ -239,163 +189,127 @@ BOOST_AUTO_TEST_CASE(issue_233_optional_array_with_null)
    }
 }
 
-//===========================================================================
-// Multiplexer
-
-std::ostream& operator<<(std::ostream& os, node const& nd)
+BOOST_AUTO_TEST_CASE(read_buffer_prepare_error)
 {
-   os << to_string(nd.data_type) << "\n"
-      << nd.aggregate_size << "\n"
-      << nd.depth << "\n"
-      << nd.value;
+   using boost::redis::detail::read_buffer;
 
-   return os;
+   read_buffer buf;
+
+   // Usual case, max size is bigger then requested size.
+   buf.set_config({10, 10});
+   auto ec = buf.prepare();
+   BOOST_TEST(!ec);
+   buf.commit(10);
+
+   // Corner case, max size is equal to the requested size.
+   buf.set_config({10, 20});
+   ec = buf.prepare();
+   BOOST_TEST(!ec);
+   buf.commit(10);
+   buf.consume(20);
+
+   auto const tmp = buf;
+
+   // Error case, max size is smaller to the requested size.
+   buf.set_config({10, 9});
+   ec = buf.prepare();
+   BOOST_TEST(ec == error_code{boost::redis::error::exceeds_maximum_read_buffer_size});
+
+   // Check that an error call has no side effects.
+   auto const res = buf == tmp;
+   BOOST_TEST(res);
 }
 
-BOOST_AUTO_TEST_CASE(multiplexer_push)
+BOOST_AUTO_TEST_CASE(read_buffer_prepare_consume_only_committed_data)
 {
-   multiplexer mpx;
-   generic_response resp;
-   mpx.set_receive_response(resp);
+   using boost::redis::detail::read_buffer;
 
-   mpx.get_read_buffer() = ">2\r\n+one\r\n+two\r\n";
+   read_buffer buf;
 
-   boost::system::error_code ec;
-   auto const ret = mpx.consume_next(ec);
+   buf.set_config({10, 10});
+   auto ec = buf.prepare();
+   BOOST_TEST(!ec);
 
-   BOOST_TEST(ret.first.value());
-   BOOST_CHECK_EQUAL(ret.second, 16u);
+   auto res = buf.consume(5);
 
-   // TODO: Provide operator << for generic_response so we can compare
-   // the whole vector.
-   BOOST_CHECK_EQUAL(resp.value().size(), 3u);
-   BOOST_CHECK_EQUAL(resp.value().at(1).value, "one");
-   BOOST_CHECK_EQUAL(resp.value().at(2).value, "two");
+   // No data has been committed yet so nothing can be consummed.
+   BOOST_CHECK_EQUAL(res.consumed, 0u);
 
-   for (auto const& e : resp.value())
-      std::cout << e << std::endl;
+   // If nothing was consumed, nothing got rotated.
+   BOOST_CHECK_EQUAL(res.rotated, 0u);
+
+   buf.commit(10);
+   res = buf.consume(5);
+
+   // All five bytes should have been consumed.
+   BOOST_CHECK_EQUAL(res.consumed, 5u);
+
+   // We added a total of 10 bytes and consumed 5, that means, 5 were
+   // rotated.
+   BOOST_CHECK_EQUAL(res.rotated, 5u);
+
+   res = buf.consume(7);
+
+   // Only the remaining five bytes can be consumed
+   BOOST_CHECK_EQUAL(res.consumed, 5u);
+
+   // No bytes to rotated.
+   BOOST_CHECK_EQUAL(res.rotated, 0u);
 }
 
-BOOST_AUTO_TEST_CASE(multiplexer_push_needs_more)
+BOOST_AUTO_TEST_CASE(read_buffer_check_buffer_size)
 {
-   multiplexer mpx;
-   generic_response resp;
-   mpx.set_receive_response(resp);
+   using boost::redis::detail::read_buffer;
 
-   // Only part of the message.
-   mpx.get_read_buffer() = ">2\r\n+one\r";
+   read_buffer buf;
 
-   boost::system::error_code ec;
-   auto ret = mpx.consume_next(ec);
+   buf.set_config({10, 10});
+   auto ec = buf.prepare();
+   BOOST_TEST(!ec);
 
-   BOOST_TEST(!ret.first.has_value());
-
-   mpx.get_read_buffer().append("\n+two\r\n");
-   ret = mpx.consume_next(ec);
-
-   BOOST_TEST(ret.first.value());
-   BOOST_CHECK_EQUAL(ret.second, 16u);
-
-   // TODO: Provide operator << for generic_response so we can compare
-   // the whole vector.
-   BOOST_CHECK_EQUAL(resp.value().size(), 3u);
-   BOOST_CHECK_EQUAL(resp.value().at(1).value, "one");
-   BOOST_CHECK_EQUAL(resp.value().at(2).value, "two");
+   BOOST_CHECK_EQUAL(buf.get_prepared().size(), 10u);
 }
 
-struct test_item {
-   request req;
-   generic_response resp;
-   std::shared_ptr<multiplexer::elem> elem_ptr;
-   bool done = false;
-
-   test_item(bool cmd_with_response = true)
-   {
-      // The exact command is irrelevant because it is not being sent
-      // to Redis.
-      req.push(cmd_with_response ? "PING" : "SUBSCRIBE", "cmd-arg");
-
-      elem_ptr = std::make_shared<multiplexer::elem>(req, any_adapter(resp).impl_.adapt_fn);
-
-      elem_ptr->set_done_callback([this]() {
-         done = true;
-      });
-   }
-};
-
-BOOST_AUTO_TEST_CASE(multiplexer_pipeline)
+BOOST_AUTO_TEST_CASE(check_counter_adapter)
 {
-   test_item item1{};
-   test_item item2{false};
-   test_item item3{};
+   using boost::redis::any_adapter;
+   using boost::redis::resp3::parse;
+   using boost::redis::resp3::parser;
+   using boost::redis::resp3::node_view;
+   using boost::system::error_code;
 
-   // Add some requests to the multiplexer.
-   multiplexer mpx;
-   mpx.add(item1.elem_ptr);
-   mpx.add(item3.elem_ptr);
-   mpx.add(item2.elem_ptr);
+   int init = 0;
+   int node = 0;
+   int done = 0;
 
-   // These requests haven't been written yet so their statuses should
-   // be "waiting.".
-   BOOST_TEST(item1.elem_ptr->is_waiting());
-   BOOST_TEST(item2.elem_ptr->is_waiting());
-   BOOST_TEST(item3.elem_ptr->is_waiting());
+   auto counter_adapter = [&](any_adapter::parse_event ev, node_view const&, error_code&) mutable {
+      switch (ev) {
+         case any_adapter::parse_event::init: init++; break;
+         case any_adapter::parse_event::node: node++; break;
+         case any_adapter::parse_event::done: done++; break;
+      }
+   };
 
-   // There are three requests to coalesce, a second call should do
-   // nothing.
-   BOOST_CHECK_EQUAL(mpx.prepare_write(), 3u);
-   BOOST_CHECK_EQUAL(mpx.prepare_write(), 0u);
+   any_adapter wrapped{any_adapter::impl_t{counter_adapter}};
 
-   // After coalescing the requests for writing their statuses should
-   // be changed to "staged".
-   BOOST_TEST(item1.elem_ptr->is_staged());
-   BOOST_TEST(item2.elem_ptr->is_staged());
-   BOOST_TEST(item3.elem_ptr->is_staged());
+   error_code ec;
+   parser p;
 
-   // There are no waiting requests to cancel since they are all
-   // staged.
-   BOOST_CHECK_EQUAL(mpx.cancel_waiting(), 0u);
+   auto const ret1 = parse(p, RESP3_SET_PART1, wrapped, ec);
+   auto const ret2 = parse(p, RESP3_SET_PART1 RESP3_SET_PART2, wrapped, ec);
+   auto const ret3 = parse(p, RESP3_SET_PART1 RESP3_SET_PART2 RESP3_SET_PART3, wrapped, ec);
+   auto const ret4 = parse(
+      p,
+      RESP3_SET_PART1 RESP3_SET_PART2 RESP3_SET_PART3 RESP3_SET_PART4,
+      wrapped,
+      ec);
 
-   // Since the requests haven't been sent (written) the done
-   // callback should not have been called yet.
-   BOOST_TEST(!item1.done);
-   BOOST_TEST(!item2.done);
-   BOOST_TEST(!item3.done);
+   BOOST_TEST(!ret1);
+   BOOST_TEST(!ret2);
+   BOOST_TEST(!ret3);
+   BOOST_TEST(ret4);
 
-   // The commit_write call informs the multiplexer the payload was
-   // sent (e.g.  written to the socket). This step releases requests
-   // that has no response.
-   BOOST_CHECK_EQUAL(mpx.commit_write(), 1u);
-
-   // The staged status should now have changed to written.
-   BOOST_TEST(item1.elem_ptr->is_written());
-   BOOST_TEST(item2.elem_ptr->is_done());
-   BOOST_TEST(item3.elem_ptr->is_written());
-
-   // The done status should still be unchanged on requests that
-   // expect a response.
-   BOOST_TEST(!item1.done);
-   BOOST_TEST(item2.done);
-   BOOST_TEST(!item3.done);
-
-   // Simulates a socket read by putting some data in the read buffer.
-   mpx.get_read_buffer().append("+one\r\n");
-
-   // Consumes the next message in the read buffer.
-   boost::system::error_code ec;
-   auto const ret = mpx.consume_next(ec);
-
-   // The read operation should have been successfull.
-   BOOST_TEST(ret.first.has_value());
-   BOOST_TEST(ret.second != 0u);
-
-   // The read buffer should also be empty now
-   BOOST_TEST(mpx.get_read_buffer().empty());
-
-   // The last request still did not get a response.
-   BOOST_TEST(item1.done);
-   BOOST_TEST(item2.done);
-   BOOST_TEST(!item3.done);
-
-   // TODO: Check the first request was removed from the queue.
+   BOOST_CHECK_EQUAL(init, 1);
+   BOOST_CHECK_EQUAL(node, 7);
+   BOOST_CHECK_EQUAL(done, 1);
 }

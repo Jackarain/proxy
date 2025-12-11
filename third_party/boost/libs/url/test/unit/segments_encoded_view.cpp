@@ -13,12 +13,13 @@
 #include <boost/url/parse.hpp>
 #include <boost/url/parse_path.hpp>
 #include <boost/url/url_view.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 #include <boost/core/ignore_unused.hpp>
 
 #include "test_suite.hpp"
 
 #include <sstream>
+#include <string>
 
 #ifdef assert
 #undef assert
@@ -28,19 +29,19 @@
 namespace boost {
 namespace urls {
 
-BOOST_STATIC_ASSERT(
+BOOST_CORE_STATIC_ASSERT(
     std::is_default_constructible<
         segments_encoded_view>::value);
 
-BOOST_STATIC_ASSERT(
+BOOST_CORE_STATIC_ASSERT(
     std::is_copy_constructible<
         segments_encoded_view>::value);
 
-BOOST_STATIC_ASSERT(
+BOOST_CORE_STATIC_ASSERT(
     std::is_copy_assignable<
         segments_encoded_view>::value);
 
-BOOST_STATIC_ASSERT(
+BOOST_CORE_STATIC_ASSERT(
     std::is_default_constructible<
         segments_encoded_view::iterator>::value);
 
@@ -93,6 +94,48 @@ struct segments_const_encoded_view_test
             BOOST_TEST_THROWS(segments_encoded_view("%FX"), system::system_error);
             BOOST_TEST_THROWS(segments_encoded_view("%%"), system::system_error);
             BOOST_TEST_THROWS(segments_encoded_view("FA%"), system::system_error);
+        }
+
+        // segments_encoded_view(iterator, iterator)
+        {
+            segments_encoded_view ps = parse_path("/a/b/c").value();
+            auto first = std::next(ps.begin());
+            auto last  = ps.end();
+            segments_encoded_view sub(first, last);
+
+            BOOST_TEST_EQ(sub.size(), 2u);
+            BOOST_TEST(sub.is_absolute());
+            BOOST_TEST_EQ(sub.buffer(), "/b/c");
+
+            auto it = sub.begin();
+            BOOST_TEST_EQ(*it++, "b");
+            BOOST_TEST_EQ(*it++, "c");
+            BOOST_TEST(it == sub.end());
+        }
+
+        // relative source: mid slices become absolute
+        {
+            segments_encoded_view ps = parse_path("a/b/c").value();
+
+            segments_encoded_view head(ps.begin(), std::next(ps.begin()));
+            BOOST_TEST(!head.is_absolute());
+            BOOST_TEST_EQ(head.buffer(), "a");
+
+            segments_encoded_view tail(std::next(ps.begin()), ps.end());
+            BOOST_TEST(tail.is_absolute());
+            BOOST_TEST_EQ(tail.buffer(), "/b/c");
+
+            std::string rebuilt(
+                head.buffer().data(),
+                head.buffer().size());
+            rebuilt.append(
+                tail.buffer().data(),
+                tail.buffer().size());
+            BOOST_TEST_EQ(rebuilt, ps.buffer());
+            BOOST_TEST_EQ(
+                head.buffer().decoded_size() +
+                    tail.buffer().decoded_size(),
+                ps.buffer().decoded_size());
         }
 
         // operator=(segments_encoded_view)

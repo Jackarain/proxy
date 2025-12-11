@@ -17,7 +17,7 @@
 
    }}
 
-Class template `complex_adaptor` is designed to sit inbetween class `number` and an actual floating point backend,
+Class template `complex_adaptor` is designed to sit in between class `number` and an actual floating point backend,
 in order to create a new complex number type.
 
 It is the means by which we implement __cpp_complex and __complex128.

@@ -61,9 +61,11 @@ private:
     const value_type& x,std::uint64_t hash,
     std::true_type /* extended block */)
   {
-    return loop_while(hash,[&](std::uint64_t h){
-      return block_ops::get_at_lsb(x,h&mask)&1;
+    int res=1;
+    loop(hash,[&](std::uint64_t h){
+      res&=block_ops::get_at_lsb(x,h&mask);
     });
+    return res;
   }
 };
 

@@ -1,0 +1,17 @@
+
+# BOOST_OPENMETHOD_OVERRIDER
+
+## Synopsis
+
+Defined in link:{{BASE_URL}}/include/boost/openmethod/macros.hpp[<boost/openmethod/macros.hpp>].
+
+```c++
+#define BOOST_OPENMETHOD_OVERRIDER(ID, (PARAMETERS...), RETURN_TYPE)
+```
+
+## Description
+
+Expands to the specialization of the class template that contains the overrider
+for with the given name, parameter list and return type.
+
+NOTE: `ID` must be an *identifier*. Qualified names are not allowed.

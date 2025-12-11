@@ -37,7 +37,7 @@ template <typename P> struct channel_type;
 ////////////////////////////////////////////////////////////////////////////////////////
 
 /// \ingroup ColorConvert
-/// \brief Color Convertion function object. To be specialized for every src/dst color space
+/// \brief Color Conversion function object. To be specialized for every src/dst color space
 template <typename C1, typename C2>
 struct default_color_converter_impl
 {
@@ -47,7 +47,7 @@ struct default_color_converter_impl
 };
 
 /// \ingroup ColorConvert
-/// \brief When the color space is the same, color convertion performs channel depth conversion
+/// \brief When the color space is the same, color conversion performs channel depth conversion
 template <typename C>
 struct default_color_converter_impl<C,C> {
     template <typename P1, typename P2>
@@ -319,7 +319,7 @@ struct default_color_converter_impl<rgba_t,rgba_t> {
     }
 };
 
-/// @defgroup ColorConvert Color Space Converion
+/// @defgroup ColorConvert Color Space Conversion
 /// \ingroup ColorSpaces
 /// \brief Support for conversion between pixels of different color spaces and channel depths
 

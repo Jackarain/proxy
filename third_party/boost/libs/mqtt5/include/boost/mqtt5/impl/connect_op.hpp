@@ -240,8 +240,10 @@ public:
         if (is_cancelled())
             return complete(asio::error::operation_aborted);
 
-        if (ec)
+        if (ec) {
+            _log.at_transport_error(ec);
             return do_shutdown(ec);
+        }
 
         _buffer_ptr = std::make_unique<std::string>(min_packet_sz, char(0));
 
@@ -258,8 +260,10 @@ public:
         if (is_cancelled())
             return complete(asio::error::operation_aborted);
 
-        if (ec)
+        if (ec) {
+            _log.at_transport_error(ec);
             return do_shutdown(ec);
+        }
 
         auto code = control_code_e((*_buffer_ptr)[0] & 0b11110000);
 
@@ -301,8 +305,10 @@ public:
         if (is_cancelled())
             return complete(asio::error::operation_aborted);
 
-        if (ec)
+        if (ec) {
+            _log.at_transport_error(ec);
             return do_shutdown(ec);
+        }
 
         if (code == control_code_e::connack)
             return on_connack(first, last);
@@ -402,8 +408,10 @@ public:
         if (is_cancelled())
             return complete(asio::error::operation_aborted);
 
-        if (ec)
+        if (ec) {
+            _log.at_transport_error(ec);
             return do_shutdown(ec);
+        }
 
         auto buff = asio::buffer(_buffer_ptr->data(), min_packet_sz);
         asio::async_read(

@@ -1,0 +1,141 @@
+:example: ../examples/core_api/1
+
+[#core_api]
+
+OpenMethod provides a macro-free interface: the core API. This is useful in
+certain situations, for example when combining open-methods and templates.
+
+Let's rewrite the `postfix` method using the core API. An open-method is
+implemented as an instance of the `method` class template. Its parameters are an
+identifier type and a function type:
+
+[source,c++]
+----
+#include <boost/openmethod/core.hpp>
+
+struct postfix_method_id;
+
+using postfix = method<
+    postfix_method_id, void(virtual_ptr<const Node> node, std::ostream& os)>;
+----
+
+The `postfix_method_id` class acts as the method's identifier: it separates it
+from other methods with the same signature. For example, we could have another
+method, `prefix`, which writes expressions in prefix notation. It would have the
+same signature. Without the identifier argument, `prefix` and `postfix` would be the
+same method.
+
+The exact name of the identifier class does not matter. The class needs not be
+defined, only declared.
+
+Inventing identifier class names can get tedious, so OpenMethod provides a macro
+for that: xref:BOOST_OPENMETHOD_ID.adoc[BOOST_OPENMETHOD_ID]. Let's use it:
+
+[source,c++]
+----
+include::{example}/core_api.cpp[tag=method]
+----
+
+We said macro-free interface, but here is a macro again! Well, we are not forced
+to use the macro. There is a benefit though: it is used in the implementation of
+high-level macros like xref:BOOST_OPENMETHOD.adoc[BOOST_OPENMETHOD]. This makes
+it possible to mix the two styles, for example to define a method using the
+macro, and add overriders using the core API.
+
+We call the method via the nested function object `fn`:
+
+[source,c++]
+----
+postfix::fn(node, std::cout);
+----
+
+Overriders are ordinary functions. We add them to the method via the class
+template `override`, nested in the method class. Its constructor adds the
+functions passed as template arguments to the method.
+
+[source,c++]
+----
+include::{example}/core_api.cpp[tag=variable_overrider]
+----
+
+Once again we find ourselves inventing a name for a single use. In C++26, we
+will probably have the Python-like `_` for this.
+
+We can also use a small macro:
+xref:BOOST_OPENMETHOD_REGISTER.adoc[BOOST_OPENMETHOD_REGISTER]. It takes a
+class, and instantiates a static object with an obfuscated name:
+
+[source,c++]
+----
+include::{example}/core_api.cpp[tag=binary_overriders]
+----
+
+Again, use of this macro is completely optional.
+
+We register the classes with `use_classes`:
+
+[source,c++]
+----
+include::{example}/core_api.cpp[tag=use_classes]
+----
+
+Finally, we call the method via the static member of the method class `fn`:
+
+[source,c++]
+----
+include::{example}/core_api.cpp[tag=main]
+----
+
+:example: ../examples/core_api/2
+
+### Methods and Templates
+
+The primary purpose of the core API is to make open-methods inter-operate with
+templates.
+
+`Plus` and `Times` are obvious candidates for templatization. They only differ
+by the operation they perform, and we already have templates for that in the
+standard library:
+
+[source,c++]
+----
+include::{example}/core_api.cpp[tag=classes]
+----
+
+Let's go back to defining postfix using `BOOST_OPENMETHOD`. It is more
+convenient, as it generates `postfix` as an ordinary inline function, which can
+be overloaded, passed around by address, etc. The overrider for `Variable` does
+not involve templates, so we can write it as before:
+
+[source,c++]
+----
+include::{example}/core_api.cpp[tag=method]
+----
+
+We write a function template that renders binary operations in postfix
+notation:
+
+[source,c++]
+----
+include::{example}/core_api.cpp[tag=postfix_binary]
+----
+
+Macro xref:BOOST_OPENMETHOD_TYPE.adoc[BOOST_OPENMETHOD_TYPE] takes the same
+parameters as `BOOST_OPENMETHOD`, and expands to the core cpp:method[method]
+instance. That is how we access its nested `overrider` class template:
+
+[source,c++]
+----
+include::{example}/core_api.cpp[tag=add_postfix_binary]
+----
+
+We can register the classes with `BOOST_OPENMETHOD_CLASSES`, and write `main`
+like so:
+
+[source,c++]
+----
+include::{example}/core_api.cpp[tag=main]
+----
+
+This example only scratches the surface of what can be done by combining
+templates, the core API, and libraries such as Boost.Mp11.

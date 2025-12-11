@@ -42,8 +42,9 @@ net::awaitable<void> test_reconnect_impl()
    // cancel_on_connection_lost is required because async_run might detect the failure
    // after the 2nd async_exec is issued
    request regular_req;
-   regular_req.push("GET", "mykey");
+   regular_req.push("PING", "SomeValue");
    regular_req.get_config().cancel_on_connection_lost = false;
+   regular_req.get_config().cancel_if_unresponded = false;
 
    auto conn = std::make_shared<connection>(ex);
    auto cfg = make_test_config();
@@ -54,16 +55,14 @@ net::awaitable<void> test_reconnect_impl()
       BOOST_TEST_CONTEXT("i=" << i)
       {
          // Issue a quit request, which will cause the server to close the connection.
-         // This request will fail
+         // This request will succeed, since this happens before the connection is lost.
          error_code ec;
          co_await conn->async_exec(quit_req, ignore, net::redirect_error(ec));
          BOOST_TEST(ec == error_code());
 
-         // This should trigger reconnection, which will now succeed.
-         // We should be able to execute requests successfully now.
-         // TODO: this is currently unreliable - find our why and fix
+         // Reconnection will happen, and this request will succeed, too.
          co_await conn->async_exec(regular_req, ignore, net::redirect_error(ec));
-         // BOOST_TEST(ec == error_code());
+         BOOST_TEST(ec == error_code());
       }
    }
 

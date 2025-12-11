@@ -58,7 +58,7 @@
       bool is_zero()const;
       int sign()const;
       // string conversion:
-      std::string str()const;
+      std::string str(std::streamsize digits = 0, std::ios_base::fmtflags f = std::ios_base::fmtflags(0))const;
       // Generic conversion mechanism
       template <class T>
       T convert_to()const;
@@ -398,7 +398,7 @@ integer type with a positive value (negative values result in a `std::runtime_er
 
 Returns an ['unmentionable-type] that is usable in Boolean contexts (this allows `number` to be used in any
 Boolean context - if statements, conditional statements, or as an argument to a logical operator - without
-type `number` being convertible to type `bool`.
+type `number` being convertible to type `bool`).
 
 This operator also enables the use of `number` with any of the following operators:
 `!`, `||`, `&&` and `?:`.
@@ -416,10 +416,10 @@ Returns `true` is `*this` is zero, otherwise `false`.
 Returns a value less than zero if `*this` is negative, a value greater than zero if `*this` is positive, and zero
 if `*this` is zero.
 
-      std::string str(unsigned precision, bool scientific = true)const;
+      std::string str(std::streamsize digits = 0, std::ios_base::fmtflags f = std::ios_base::fmtflags(0))const;
 
-Returns the number formatted as a string, with at least /precision/ digits, and in scientific format
-if /scientific/ is true.
+Returns the number formatted as a string, with at least /precision/ digits, and adhering to the format
+flags in /f/ if provided.
 
       template <class T>
       T convert_to()const;
@@ -633,7 +633,7 @@ that allows arithmetic to be performed on native integer types producing an exte
    bool                                      isunordered(const ``['number-or-expression-template-type]``&, const ``['number-or-expression-template-type]``&);
 
 These functions all behave exactly as their standard library C++11 counterparts do: their argument is either an instance of `number` or
-an expression template derived from it; If the argument is of type `number<Backend, et_off>` then that is also the return type,
+an expression template derived from it; if the argument is of type `number<Backend, et_off>` then that is also the return type,
 otherwise the return type is an expression template unless otherwise stated.
 
 The integer type arguments to `ldexp`, `frexp`, `scalbn` and `ilogb` may be either type `int`, or the actual
@@ -651,7 +651,7 @@ Complex number types support the following functions:
    ``['number]``                                    proj  (const ``['number-or-expression-template-type]``&);
    ``['number]``                                    polar (const ``['number-or-expression-template-type]``&, const ``['number-or-expression-template-type]``&);
 
-In addition the functions `real`, `imag`, `arg`, `norm`, `conj` and `proj` are overloaded for scalar (ie non-complex) types in the same
+In addition the functions `real`, `imag`, `arg`, `norm`, `conj` and `proj` are overloaded for scalar (i.e. non-complex) types in the same
 manner as `<complex>` and treat the argument as a value whose imaginary part is zero.
 
 There are also some functions implemented for compatibility with the Boost.Math functions of the same name:
@@ -668,7 +668,7 @@ don't have native support for these functions.  Please note however, that this d
 to be a compile time constant - this means for example that the [gmp] MPF Backend will not work with these functions when that type is
 used at variable precision.
 
-Also note that with the exception of `abs` that these functions can only be used with floating-point Backend types (if any other types
+Also note that with the exception of `abs` these functions can only be used with floating-point Backend types (if any other types
 such as fixed precision or complex types are added to the library later, then these functions may be extended to support those number types).
 
 The precision of these functions is generally determined by the backend implementation.  For example the precision
@@ -693,7 +693,7 @@ here are exact (tested on Win32 with VC++10, MPFR-3.0.0, MPIR-2.1.1):
 [[acos][0eps][0eps][0eps]]
 [[asin][0eps][0eps][0eps]]
 [[atan][1eps][0eps][0eps]]
-[[cosh][1045eps[footnote It's likely that the inherent error in the input values to our test cases are to blame here.]][0eps][0eps]]
+[[cosh][1045eps[footnote It's likely that inherent errors in the input values to our test cases are to blame here.]][0eps][0eps]]
 [[sinh][2eps][0eps][0eps]]
 [[tanh][1eps][0eps][0eps]]
 [[pow][0eps][4eps][3eps]]

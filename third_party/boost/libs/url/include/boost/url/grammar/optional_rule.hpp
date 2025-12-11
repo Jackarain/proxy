@@ -15,6 +15,7 @@
 #include <boost/url/error_types.hpp>
 #include <boost/url/grammar/type_traits.hpp>
 #include <boost/core/empty_value.hpp>
+#include <boost/core/detail/static_assert.hpp>
 #include <boost/assert.hpp>
 
 namespace boost {
@@ -88,7 +89,7 @@ optional_rule(
     R const& r) ->
         implementation_defined::optional_rule_t<R>
 {
-    BOOST_STATIC_ASSERT(grammar::is_rule<R>::value);
+    BOOST_CORE_STATIC_ASSERT(grammar::is_rule<R>::value);
     return { r };
 }
 

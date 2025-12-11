@@ -28,10 +28,7 @@
 #include <string>
 #include <typeinfo>
 
-#if defined(__clang__)
-#  pragma clang diagnostic push
-#  pragma clang diagnostic ignored "-Wfloat-equal"
-#elif defined(__GNUC__)
+#if (defined(__clang__) || defined(__GNUC__))
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wfloat-equal"
 #endif
@@ -97,13 +94,13 @@ namespace local
     {
       delta = fabs(a - b); // LCOV_EXCL_LINE
 
-      result_is_ok = (delta < tol); // LCOV_EXCL_LINE
+      result_is_ok = (delta <= tol); // LCOV_EXCL_LINE
     }
     else
     {
       delta = fabs(1 - (a / b));
 
-      result_is_ok = (delta < tol);
+      result_is_ok = (delta <= tol);
     }
 
     return result_is_ok;
@@ -496,6 +493,103 @@ namespace local
         };
 
       BOOST_TEST(result_is_ok = (result_finite_is_ok && result_is_ok));
+    }
+
+    return result_is_ok;
+  }
+
+  template<typename FloatType>
+  auto test_fdim_edge() -> bool
+  {
+    using float_type = FloatType;
+
+    std::mt19937_64 gen { time_point<typename std::mt19937_64::result_type>() };
+
+    std::uniform_real_distribution<float>
+      dist
+      (
+        static_cast<float>(-125.5L),
+        static_cast<float>(+125.5L)
+      );
+
+    auto result_is_ok = true;
+
+    for(auto i = static_cast<unsigned>(UINT8_C(0)); i < static_cast<unsigned>(UINT8_C(4)); ++i)
+    {
+      static_cast<void>(i);
+
+      const float_type val_nrm = ::my_one<float_type>() * static_cast<float_type>(dist(gen));
+      const float_type val_nan = std::numeric_limits<float_type>::quiet_NaN() * static_cast<float_type>(dist(gen));
+      const float_type val_inf = std::numeric_limits<float_type>::infinity() * static_cast<float_type>(dist(gen));
+
+      const double flt_nrm = static_cast<double>(val_nrm);
+      const double flt_nan = std::numeric_limits<double>::quiet_NaN() * static_cast<double>(dist(gen));
+      const double flt_inf = std::numeric_limits<double>::infinity() * static_cast<double>(dist(gen));
+
+      using std::fdim;
+      using std::fpclassify;
+
+      float_type result_fdim { fdim(val_nrm, val_nan) };
+      bool result_fdim_is_ok = (fpclassify(result_fdim) == FP_ZERO);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      result_fdim = fdim(val_nrm, val_inf);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_ZERO);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      result_fdim = fdim(val_nan, val_nrm);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_ZERO);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      result_fdim = fdim(val_inf, val_nrm);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_INFINITE);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      // MP-type argument-a mixed with built-in argument-b.
+      result_fdim = fdim(val_nrm, flt_nan);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_ZERO);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      result_fdim = fdim(val_nrm, flt_inf);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_ZERO);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      result_fdim = fdim(val_nan, flt_nrm);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_ZERO);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      result_fdim = fdim(val_inf, flt_nrm);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_INFINITE);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      // Built-in argument-a mixed with MP-type argument-b.
+      result_fdim = fdim(flt_nrm, val_nan);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_ZERO);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      result_fdim = fdim(flt_nrm, val_inf);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_ZERO);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      result_fdim = fdim(flt_nan, val_nrm);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_ZERO);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
+
+      result_fdim = fdim(flt_inf, val_nrm);
+      result_fdim_is_ok = (fpclassify(result_fdim) == FP_INFINITE);
+      BOOST_TEST(result_fdim_is_ok);
+      result_is_ok = (result_fdim_is_ok && result_is_ok);
     }
 
     return result_is_ok;
@@ -1324,6 +1418,9 @@ namespace local
     }
 
     #ifdef BOOST_HAS_INT128
+
+    #define BOOST_MP_TEST_DISABLE_INT128_NON_FINITE
+
     constexpr bool is_24_digit_float { (std::numeric_limits<float>::digits == 24) };
 
     constexpr bool is_cpp_double_float
@@ -1392,20 +1489,35 @@ namespace local
         const auto result_val_uinf_is_ok = (u128_inf == static_cast<boost::uint128_type>(std::numeric_limits<float>::infinity()));
         const auto result_val_uzer_is_ok = (u128_zer == static_cast<boost::uint128_type>(0));
 
+        #if defined(BOOST_MP_TEST_DISABLE_INT128_NON_FINITE)
+        static_cast<void>(result_val_nan_is_ok);
+        static_cast<void>(result_val_inf_is_ok);
+        static_cast<void>(result_val_unan_is_ok);
+        static_cast<void>(result_val_uinf_is_ok);
+        #endif
+
+        #if !defined(BOOST_MP_TEST_DISABLE_INT128_NON_FINITE)
         BOOST_TEST(result_val_nan_is_ok);
         BOOST_TEST(result_val_inf_is_ok);
+        #endif
         BOOST_TEST(result_val_zer_is_ok);
 
+        #if !defined(BOOST_MP_TEST_DISABLE_INT128_NON_FINITE)
         BOOST_TEST(result_val_unan_is_ok);
         BOOST_TEST(result_val_uinf_is_ok);
+        #endif
         BOOST_TEST(result_val_uzer_is_ok);
 
+        #if !defined(BOOST_MP_TEST_DISABLE_INT128_NON_FINITE)
         result_is_ok = (result_val_nan_is_ok && result_is_ok);
         result_is_ok = (result_val_inf_is_ok && result_is_ok);
+        #endif
         result_is_ok = (result_val_zer_is_ok && result_is_ok);
 
+        #if !defined(BOOST_MP_TEST_DISABLE_INT128_NON_FINITE)
         result_is_ok = (result_val_unan_is_ok && result_is_ok);
         result_is_ok = (result_val_uinf_is_ok && result_is_ok);
+        #endif
         result_is_ok = (result_val_uzer_is_ok && result_is_ok);
       }
     }
@@ -1479,39 +1591,44 @@ namespace local
         const boost::int128_type n128_inf { static_cast<boost::int128_type>(flt_inf) };
         const boost::int128_type n128_zer { static_cast<boost::int128_type>(flt_zer) };
 
-        #define BOOST_MP_TEST_DISABLE_U128_NON_FINITE
-
-        #if !defined(BOOST_MP_TEST_DISABLE_U128_NON_FINITE)
         const boost::uint128_type u128_nan { static_cast<boost::uint128_type>(flt_nan) };
         const boost::uint128_type u128_inf { static_cast<boost::uint128_type>(flt_inf) };
-        #endif
         const boost::uint128_type u128_zer { static_cast<boost::uint128_type>(flt_zer) };
 
         const auto result_val_nan_is_ok = (n128_nan == static_cast<boost::int128_type>(std::numeric_limits<double>::quiet_NaN()));
         const auto result_val_inf_is_ok = (n128_inf == static_cast<boost::int128_type>(std::numeric_limits<double>::infinity()));
         const auto result_val_zer_is_ok = (n128_zer == static_cast<boost::int128_type>(0));
 
-        #if !defined(BOOST_MP_TEST_DISABLE_U128_NON_FINITE)
         const auto result_val_unan_is_ok = (u128_nan == static_cast<boost::uint128_type>(std::numeric_limits<double>::quiet_NaN()));
         const auto result_val_uinf_is_ok = (u128_inf == static_cast<boost::uint128_type>(std::numeric_limits<double>::infinity()));
-        #endif
         const auto result_val_uzer_is_ok = (u128_zer == static_cast<boost::uint128_type>(0));
 
+        #if defined(BOOST_MP_TEST_DISABLE_INT128_NON_FINITE)
+        static_cast<void>(result_val_nan_is_ok);
+        static_cast<void>(result_val_inf_is_ok);
+        static_cast<void>(result_val_unan_is_ok);
+        static_cast<void>(result_val_uinf_is_ok);
+        #endif
+
+        #if !defined(BOOST_MP_TEST_DISABLE_INT128_NON_FINITE)
         BOOST_TEST(result_val_nan_is_ok);
         BOOST_TEST(result_val_inf_is_ok);
+        #endif
         BOOST_TEST(result_val_zer_is_ok);
 
-        #if !defined(BOOST_MP_TEST_DISABLE_U128_NON_FINITE)
+        #if !defined(BOOST_MP_TEST_DISABLE_INT128_NON_FINITE)
         BOOST_TEST(result_val_unan_is_ok);
         BOOST_TEST(result_val_uinf_is_ok);
         #endif
         BOOST_TEST(result_val_uzer_is_ok);
 
+        #if !defined(BOOST_MP_TEST_DISABLE_INT128_NON_FINITE)
         result_is_ok = (result_val_nan_is_ok && result_is_ok);
         result_is_ok = (result_val_inf_is_ok && result_is_ok);
+        #endif
         result_is_ok = (result_val_zer_is_ok && result_is_ok);
 
-        #if !defined(BOOST_MP_TEST_DISABLE_U128_NON_FINITE)
+        #if !defined(BOOST_MP_TEST_DISABLE_INT128_NON_FINITE)
         result_is_ok = (result_val_unan_is_ok && result_is_ok);
         result_is_ok = (result_val_uinf_is_ok && result_is_ok);
         #endif
@@ -1523,10 +1640,74 @@ namespace local
 
     return result_is_ok;
   }
+
+  auto test_sqrt_integral_and_constexpr() -> void
+  {
+    #ifndef BOOST_MP_NO_CONSTEXPR_DETECTION
+    {
+      // Select some pseudo-random integers
+
+      // Table[N[Exp[Pi  EulerGamma*m], 36], {m, 1, 301, 100}]
+      // 6.13111418242260482895474318171556018 632831453348
+      // 3.47920348866883608793309754527486715 109524826009*10^79
+      // 1.97433232450131483625758030703105499 465632954349*10^158
+      // 1.12036796360599148200087404494586705 923184966483*10^237
+
+      // N[Sqrt[613111418242260482895474318171556018], 50]
+      // N[Sqrt[347920348866883608793309754527486715], 50]
+      // N[Sqrt[197433232450131483625758030703105499], 50]
+      // N[Sqrt[112036796360599148200087404494586705], 50]
+
+      // 7.8301431547722068635982391629827009581580426009374*10^17
+      // 5.8984773362867438315481181521503243715373594761667*10^17
+      // 4.4433459515339505424085647442953457083310383400346*10^17
+      // 3.3471898117764273004961506045440891118909367547368*10^17
+
+      // 783014315477220686
+      // 589847733628674383
+      // 444334595153395054
+      // 334718981177642730
+
+      constexpr boost::multiprecision::uint128_t un0 = boost::multiprecision::uint128_t(UINT64_C(613111418242260482)) * boost::multiprecision::uint128_t(UINT64_C(1000000000000000000)) + boost::multiprecision::uint128_t(UINT64_C(895474318171556018));
+      constexpr boost::multiprecision::uint128_t un1 = boost::multiprecision::uint128_t(UINT64_C(347920348866883608)) * boost::multiprecision::uint128_t(UINT64_C(1000000000000000000)) + boost::multiprecision::uint128_t(UINT64_C(793309754527486715));
+      constexpr boost::multiprecision::uint128_t un2 = boost::multiprecision::uint128_t(UINT64_C(197433232450131483)) * boost::multiprecision::uint128_t(UINT64_C(1000000000000000000)) + boost::multiprecision::uint128_t(UINT64_C(625758030703105499));
+      constexpr boost::multiprecision::uint128_t un3 = boost::multiprecision::uint128_t(UINT64_C(112036796360599148)) * boost::multiprecision::uint128_t(UINT64_C(1000000000000000000)) + boost::multiprecision::uint128_t(UINT64_C(200087404494586705));
+
+      constexpr boost::multiprecision::uint128_t sqrt_un0(sqrt(un0));
+      constexpr boost::multiprecision::uint128_t sqrt_un1(sqrt(un1));
+      constexpr boost::multiprecision::uint128_t sqrt_un2(sqrt(un2));
+      constexpr boost::multiprecision::uint128_t sqrt_un3(sqrt(un3));
+
+      static_assert(static_cast<std::uint64_t>(sqrt_un0) == UINT64_C(783014315477220686), "Error in constexpr integer square root");
+      static_assert(static_cast<std::uint64_t>(sqrt_un1) == UINT64_C(589847733628674383), "Error in constexpr integer square root");
+      static_assert(static_cast<std::uint64_t>(sqrt_un2) == UINT64_C(444334595153395054), "Error in constexpr integer square root");
+      static_assert(static_cast<std::uint64_t>(sqrt_un3) == UINT64_C(334718981177642730), "Error in constexpr integer square root");
+
+      static_assert(sqrt(boost::multiprecision::uint128_t(0)) == 0, "Error in constexpr integer square root");
+      static_assert(sqrt(boost::multiprecision::uint128_t(1)) == 1, "Error in constexpr integer square root");
+      static_assert(sqrt(boost::multiprecision::uint128_t(2)) == 1, "Error in constexpr integer square root");
+
+      // N[Sqrt[2^128 - 1], 50]
+      // 1.8446744073709551615999999999999999999972894945688*10^19
+      static_assert(sqrt((std::numeric_limits<boost::multiprecision::uint128_t>::max)()) == boost::multiprecision::uint128_t(UINT64_C(18446744073709551615)), "Error in constexpr integer square root");
+
+      BOOST_TEST(sqrt(boost::multiprecision::uint128_t("613111418242260482895474318171556018")) == boost::multiprecision::uint128_t(UINT64_C(783014315477220686)));
+      BOOST_TEST(sqrt(boost::multiprecision::uint128_t("347920348866883608793309754527486715")) == boost::multiprecision::uint128_t(UINT64_C(589847733628674383)));
+      BOOST_TEST(sqrt(boost::multiprecision::uint128_t("197433232450131483625758030703105499")) == boost::multiprecision::uint128_t(UINT64_C(444334595153395054)));
+      BOOST_TEST(sqrt(boost::multiprecision::uint128_t("112036796360599148200087404494586705")) == boost::multiprecision::uint128_t(UINT64_C(334718981177642730)));
+
+      BOOST_TEST(sqrt(boost::multiprecision::uint128_t("0")) == boost::multiprecision::uint128_t(UINT8_C(0)));
+      BOOST_TEST(sqrt(boost::multiprecision::uint128_t("1")) == boost::multiprecision::uint128_t(UINT8_C(1)));
+      BOOST_TEST(sqrt(boost::multiprecision::uint128_t("2")) == boost::multiprecision::uint128_t(UINT8_C(1)));
+    }
+    #endif // !BOOST_MP_NO_CONSTEXPR_DETECTION
+  }
 } // namespace local
 
 auto main() -> int
 {
+  local::test_sqrt_integral_and_constexpr();
+
   #if defined(TEST_CPP_DOUBLE_FLOAT)
   {
     using float_type = boost::multiprecision::cpp_double_float;
@@ -1535,6 +1716,7 @@ auto main() -> int
 
     static_cast<void>(local::test_edges<float_type>());
     static_cast<void>(local::test_edges_extra<float_type>());
+    local::test_fdim_edge<float_type>();
     local::test_sqrt_edge<float_type>();
     local::test_exp_edge<float_type>();
     local::test_log_edge<float_type>();
@@ -1549,6 +1731,7 @@ auto main() -> int
 
     static_cast<void>(local::test_edges<float_type>());
     static_cast<void>(local::test_edges_extra<float_type>());
+    local::test_fdim_edge<float_type>();
     local::test_sqrt_edge<float_type>();
     local::test_exp_edge<float_type>();
     local::test_log_edge<float_type>();
@@ -1563,6 +1746,7 @@ auto main() -> int
 
     static_cast<void>(local::test_edges<float_type>());
     static_cast<void>(local::test_edges_extra<float_type>());
+    local::test_fdim_edge<float_type>();
     local::test_sqrt_edge<float_type>();
     local::test_exp_edge<float_type>();
     local::test_log_edge<float_type>();
@@ -1580,6 +1764,7 @@ auto main() -> int
     std::cout << "Testing type: " << typeid(float_type).name() << std::endl;
 
     static_cast<void>(local::test_edges<float_type>());
+    local::test_fdim_edge<float_type>();
     local::test_sqrt_edge<float_type>();
     local::test_exp_edge<float_type>();
     local::test_log_edge<float_type>();
@@ -1595,6 +1780,7 @@ auto main() -> int
     std::cout << "Testing type: " << typeid(float_type).name() << std::endl;
 
     static_cast<void>(local::test_edges<float_type>());
+    local::test_fdim_edge<float_type>();
     local::test_sqrt_edge<float_type>();
     local::test_exp_edge<float_type>();
     local::test_log_edge<float_type>();
@@ -1610,6 +1796,7 @@ auto main() -> int
     std::cout << "Testing type: " << typeid(float_type).name() << std::endl;
 
     static_cast<void>(local::test_edges<float_type>());
+    local::test_fdim_edge<float_type>();
     local::test_sqrt_edge<float_type>();
     local::test_exp_edge<float_type>();
     local::test_log_edge<float_type>();
@@ -1626,8 +1813,6 @@ template<typename FloatType> auto my_inf () noexcept -> FloatType& { using float
 template<typename FloatType> auto my_nan () noexcept -> FloatType& { using float_type = FloatType; static float_type val_nan  { std::numeric_limits<float_type>::quiet_NaN() }; return val_nan; }
 template<typename FloatType> auto my_exp1() noexcept -> FloatType& { using float_type = FloatType; static float_type val_exp1 { "2.718281828459045235360287471352662497757247093699959574966967627724076630353547594571382178525166427427466391932003059921817413596629043572900334295260595630738132328627943490763233829880753195251019011573834187930702154089149934884167509244761460668082265" }; return val_exp1; }
 
-#if defined(__clang__)
-#  pragma clang diagnostic pop
-#elif defined(__GNUC__)
+#if (defined(__clang__) || defined(__GNUC__))
 #  pragma GCC diagnostic pop
 #endif

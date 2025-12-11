@@ -227,7 +227,7 @@ BOOST_FIXTURE_TEST_CASE(fail_to_receive_pubcomp, shared_test_data) {
             .reply_with(pubrec, after(2ms))
         .expect(pubrel)
             .complete_with(success, after(1ms))
-        .send(fail, after(100ms))
+        .send(fail, after(30ms))
         .expect(connect)
             .complete_with(success, after(1ms))
             .reply_with(connack, after(2ms))

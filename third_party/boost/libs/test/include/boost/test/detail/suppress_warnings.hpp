@@ -30,6 +30,10 @@
 # pragma clang diagnostic push
 # pragma clang diagnostic ignored "-Wvariadic-macros"
 # pragma clang diagnostic ignored "-Wmissing-declarations"
+# pragma clang diagnostic ignored "-Wdeprecated-declarations"
+# if BOOST_CLANG_VERSION >= 190000
+#  pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+# endif
 #endif
 
 #if defined(BOOST_GCC) && (BOOST_GCC >= 4 * 10000 + 6 * 100)

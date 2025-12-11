@@ -71,7 +71,7 @@ public:
 /**
  * Boolean meta function, std::true_type if the pixel type \a PixelType is supported
  * by the image format identified with \a FormatTag.
- * \todo the name is_supported is to generic, pick something more IO realted.
+ * \todo the name is_supported is to generic, pick something more I/O-related.
  */
 // Depending on image type the parameter Pixel can be a reference type
 // for bit_aligned images or a pixel for byte images.

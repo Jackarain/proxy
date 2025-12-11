@@ -9,11 +9,13 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+// EUML is not supported by backmp11
+#define BOOST_MSM_TEST_SKIP_BACKMP11
+#include "BackCommon.hpp"
 #include <boost/msm/front/euml/euml.hpp>
 
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
-#define BOOST_TEST_MODULE MyTest
+#define BOOST_TEST_MODULE anonymous_euml_test
 #endif
 #include <boost/test/unit_test.hpp>
 
@@ -107,11 +109,11 @@ namespace
                                       my_machine_) //fsm name
 
     // Pick a back-end
-    typedef msm::back::state_machine<my_machine_> my_machine;
+    typedef get_test_machines<my_machine_> my_machines;
 
     //static char const* const state_names[] = { "State1", "State2", "State3", "State4" };
 
-    BOOST_AUTO_TEST_CASE( my_test )
+    BOOST_AUTO_TEST_CASE_TEMPLATE( anonymous_euml_test, my_machine, my_machines )
     {        
         my_machine p;
 
@@ -119,19 +121,19 @@ namespace
         // in this case it will also immediately trigger all anonymous transitions
         p.start(); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 3,"State4 should be active"); //State4
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State1)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State1)&>().get_attribute(exit_counter) == 1,
                             "State1 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State1)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State1)&>().get_attribute(entry_counter) == 1,
                             "State1 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State2)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State2)&>().get_attribute(exit_counter) == 1,
                             "State2 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State2)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State2)&>().get_attribute(entry_counter) == 1,
                             "State2 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State3)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State3)&>().get_attribute(exit_counter) == 1,
                             "State3 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State3)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State3)&>().get_attribute(entry_counter) == 1,
                             "State3 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State4)&>().get_attribute(entry_counter)== 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State4)&>().get_attribute(entry_counter)== 1,
                             "State4 entry not called correctly");
         BOOST_CHECK_MESSAGE(p.get_attribute(always_true_counter) == 1,"guard not called correctly");
         BOOST_CHECK_MESSAGE(p.get_attribute(always_false_counter) == 1,"guard not called correctly");
@@ -142,19 +144,19 @@ namespace
         // this event will bring us back to the initial state and thus, a new "loop" will be started
         p.process_event(event1);
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 3,"State4 should be active"); //State4
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State1)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State1)&>().get_attribute(exit_counter) == 2,
                             "State1 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State1)&>().get_attribute(entry_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State1)&>().get_attribute(entry_counter) == 2,
                             "State1 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State2)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State2)&>().get_attribute(exit_counter) == 2,
                             "State2 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State2)&>().get_attribute(entry_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State2)&>().get_attribute(entry_counter) == 2,
                             "State2 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State3)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State3)&>().get_attribute(exit_counter) == 2,
                             "State3 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State3)&>().get_attribute(entry_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State3)&>().get_attribute(entry_counter) == 2,
                             "State3 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(State4)&>().get_attribute(entry_counter)== 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(State4)&>().get_attribute(entry_counter)== 2,
                             "State4 entry not called correctly");
         BOOST_CHECK_MESSAGE(p.get_attribute(always_true_counter) == 2,"guard not called correctly");
         BOOST_CHECK_MESSAGE(p.get_attribute(always_false_counter) == 2,"guard not called correctly");
@@ -163,4 +165,3 @@ namespace
 
     }
 }
-

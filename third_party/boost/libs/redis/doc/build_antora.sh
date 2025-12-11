@@ -16,4 +16,4 @@ cd "$SCRIPT_DIR"
 export BOOST_SRC_DIR=$(realpath $SCRIPT_DIR/../../..)
 
 npm ci
-npx antora --log-format=pretty redis-playbook.yml
+npx antora --log-format=pretty --stacktrace --log-level info redis-playbook.yml

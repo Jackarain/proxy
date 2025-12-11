@@ -18,7 +18,7 @@ Filters, kernels, weights
 
 Those three words usually mean the same thing, unless context is clear
 about a different usage. Simply put, they are matrices, that are used to
-achieve certain effects on the image. Lets consider a simple one, 3 by 3
+achieve certain effects on the image. Let's consider a simple one, 3 by 3
 Scharr filter
 
 ``ScharrX = [1,0,-1][1,0,-1][1,0,-1]``
@@ -46,9 +46,9 @@ Curvature
 
 The word, when used alone, will mean the curvature that would be
 generated if values of an image would be plotted in 3D graph. X and Z
-axises (which form horizontal plane) will correspond to X and Y indices
+axes (which form horizontal plane) will correspond to X and Y indices
 of an image, and Y axis will correspond to value at that pixel. By
-little stretch of an imagination, filters (another names are kernels,
+little stretch of an imagination, filters (other names are kernels,
 weights) could be considered an image (or any 2D matrix). A mean filter
 would draw a flat plane, whereas Gaussian filter would draw a hill that
-gets sharper depending on it's sigma value.
+gets sharper depending on its sigma value.

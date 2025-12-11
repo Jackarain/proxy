@@ -7,7 +7,7 @@
 # NOTE: CMake support for Boost.Filesystem is currently experimental at best
 #       and the interface is likely to change in the future
 
-cmake_minimum_required(VERSION 3.5...3.16)
+cmake_minimum_required(VERSION 3.8...3.16)
 project(BoostFilesystem VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
 include(CheckCXXSourceCompiles)

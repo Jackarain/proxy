@@ -1192,6 +1192,41 @@ struct url_base_test
 
         set_host_ipv6("1::6:c0a8:1", "//[1::6:c0a8:1]");
 
+        // set_zone_id
+        {
+            // Round-trip: set and get zone id
+            url u;
+            BOOST_TEST_NO_THROW(u.set_host_ipv6(ipv6_address("fe80::1")));
+            BOOST_TEST_NO_THROW(u.set_zone_id("eth0"));
+            BOOST_TEST_EQ(u.host_ipv6_address().to_string(), "fe80::1");
+            BOOST_TEST_EQ(u.zone_id(), "eth0");
+            BOOST_TEST_EQ(u.buffer(), "//[fe80::1%25eth0]");
+
+            // set_zone_id when no IPv6 host: should create default
+            // constructed IPv6
+            url u2;
+            BOOST_TEST_NO_THROW(u2.set_zone_id("zone42"));
+            BOOST_TEST_EQ(u2.host_type(), host_type::ipv6);
+            BOOST_TEST_EQ(u2.zone_id(), "zone42");
+            BOOST_TEST_EQ(u2.buffer(), "//[::%25zone42]");
+
+            // set_encoded_zone_id: round-trip
+            url u3;
+            BOOST_TEST_NO_THROW(u3.set_host_ipv6(ipv6_address("fe80::2")));
+            BOOST_TEST_NO_THROW(u3.set_encoded_zone_id("en%30"));
+            BOOST_TEST_EQ(u3.zone_id(), "en0");
+            BOOST_TEST_EQ(u3.encoded_zone_id(), "en%30");
+            BOOST_TEST_EQ(u3.buffer(), "//[fe80::2%25en%30]");
+
+            // set_encoded_zone_id when no IPv6 host: should create default
+            // constructed IPv6
+            url u4;
+            BOOST_TEST_NO_THROW(u4.set_encoded_zone_id("zone%34"));
+            BOOST_TEST_EQ(u4.host_type(), host_type::ipv6);
+            BOOST_TEST_EQ(u4.zone_id(), "zone4");
+            BOOST_TEST_EQ(u4.buffer(), "//[::%25zone%34]");
+        }
+
         set_host_ipvfuture("v42.69", "//[v42.69]");
         BOOST_TEST_THROWS(url().set_host_ipvfuture("127.0.0.1"), system::system_error);
 

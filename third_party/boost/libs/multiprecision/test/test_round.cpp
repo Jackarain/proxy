@@ -60,7 +60,10 @@
 #include <boost/multiprecision/float128.hpp>
 #endif
 #ifdef TEST_CPP_DOUBLE_FLOAT
+#if (defined(BOOST_GCC) && !defined(BOOST_CLANG) && (BOOST_GCC < 80000))
+#else
 #include <boost/multiprecision/cpp_double_fp.hpp>
+#endif
 #endif
 
 #ifdef BOOST_MSVC
@@ -98,15 +101,15 @@ typename std::enable_if<!boost::multiprecision::is_interval_number<T>::value>::t
 
    if (fabs(a - u) > 0.5f)
    {
-      BOOST_ERROR("Rounded result differed by more than 0.5 from the original");
-      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)
-                << std::left << a << u << std::endl;
+      BOOST_ERROR("Rounded result differed by more than 0.5 from the original"); // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)     // LCOV_EXCL_LINE
+                << std::left << a << u << std::endl;                             // LCOV_EXCL_LINE
    }
    if ((fabs(a - u) == 0.5f) && (fabs(static_cast<T>(u)) < fabs(a)))
    {
-      BOOST_ERROR("Rounded result was towards zero with boost::round");
-      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)
-                << std::left << a << u << std::endl;
+      BOOST_ERROR("Rounded result was towards zero with boost::round");      // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40) // LCOV_EXCL_LINE
+                << std::left << a << u << std::endl;                         // LCOV_EXCL_LINE
    }
 }
 template <class T, class U>
@@ -115,15 +118,15 @@ typename std::enable_if<boost::multiprecision::is_interval_number<T>::value>::ty
    BOOST_MATH_STD_USING
    if (upper(T(fabs(a - u))) > 0.5f)
    {
-      BOOST_ERROR("Rounded result differed by more than 0.5 from the original");
-      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)
-                << std::left << a << u << std::endl;
+      BOOST_ERROR("Rounded result differed by more than 0.5 from the original"); // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)     // LCOV_EXCL_LINE
+                << std::left << a << u << std::endl;                             // LCOV_EXCL_LINE
    }
    if ((upper(T(fabs(a - u))) == 0.5f) && (fabs(static_cast<T>(u)) < fabs(a)))
    {
-      BOOST_ERROR("Rounded result was towards zero with boost::round");
-      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)
-                << std::left << a << u << std::endl;
+      BOOST_ERROR("Rounded result was towards zero with boost::round");      // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40) // LCOV_EXCL_LINE
+                << std::left << a << u << std::endl;                         // LCOV_EXCL_LINE
    }
 }
 
@@ -155,23 +158,23 @@ void check_trunc_result(T a, U u)
 
    if (fabs(a - u) >= 1)
    {
-      BOOST_ERROR("Rounded result differed by more than 1 from the original");
-      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)
-                << std::left << a << u << std::endl;
+      BOOST_ERROR("Rounded result differed by more than 1 from the original"); // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)   // LCOV_EXCL_LINE
+                << std::left << a << u << std::endl;                           // LCOV_EXCL_LINE
    }
 
    if (abs(a) < safe_abs(u))
    {
-      BOOST_ERROR("Truncated result had larger absolute value than the original");
-      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)
-                << std::left << abs(a) << safe_abs(u) << std::endl;
+      BOOST_ERROR("Truncated result had larger absolute value than the original"); // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)       // LCOV_EXCL_LINE
+                << std::left << abs(a) << safe_abs(u) << std::endl;                // LCOV_EXCL_LINE
    }
 
    if (fabs(static_cast<T>(u)) > fabs(a))
    {
-      BOOST_ERROR("Rounded result was away from zero with boost::trunc");
-      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)
-                << std::left << a << u << std::endl;
+      BOOST_ERROR("Rounded result was away from zero with boost::trunc");    // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40) // LCOV_EXCL_LINE
+                << std::left << a << u << std::endl;                         // LCOV_EXCL_LINE
    }
 }
 
@@ -203,28 +206,28 @@ void check_modf_result(T a, T fract, U ipart)
 
    if (local::modf_fail_gate<T>(sum, a))
    {
-      BOOST_ERROR("Fractional and integer results do not add up to the original value");
-      std::cerr << "Values were: " << std::setprecision(35) << " "
-                << std::left << a << ipart << " " << fract << std::endl;
+      BOOST_ERROR("Fractional and integer results do not add up to the original value"); // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << " "                       // LCOV_EXCL_LINE
+                << std::left << a << ipart << " " << fract << std::endl;                 // LCOV_EXCL_LINE
    }
 
    if ((boost::math::sign(a) != boost::math::sign(fract)) && boost::math::sign(fract))
    {
-      BOOST_ERROR("Original and fractional parts have differing signs");
-      std::cerr << "Values were: " << std::setprecision(35) << " "
-                << std::left << a << ipart << " " << fract << std::endl;
+      BOOST_ERROR("Original and fractional parts have differing signs"); // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << " "       // LCOV_EXCL_LINE
+                << std::left << a << ipart << " " << fract << std::endl; // LCOV_EXCL_LINE
    }
    if ((boost::math::sign(a) != boost::math::sign(ipart)) && boost::math::sign(ipart))
    {
-      BOOST_ERROR("Original and integer parts have differing signs");
-      std::cerr << "Values were: " << std::setprecision(35) << " "
-                << std::left << a << ipart << " " << ipart << std::endl;
+      BOOST_ERROR("Original and integer parts have differing signs");    // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << " "       // LCOV_EXCL_LINE
+                << std::left << a << ipart << " " << ipart << std::endl; // LCOV_EXCL_LINE
    }
    if (fabs(a - ipart) >= 1)
    {
-      BOOST_ERROR("Rounded result differed by more than 1 from the original");
-      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)
-                << std::left << a << ipart << std::endl;
+      BOOST_ERROR("Rounded result differed by more than 1 from the original"); // LCOV_EXCL_LINE
+      std::cerr << "Values were: " << std::setprecision(35) << std::setw(40)   // LCOV_EXCL_LINE
+                << std::left << a << ipart << std::endl;                       // LCOV_EXCL_LINE
    }
 }
 
@@ -510,12 +513,17 @@ int main()
    test<boost::multiprecision::float128>();
 #endif
 #ifdef TEST_CPP_DOUBLE_FLOAT
+
+   #if (defined(BOOST_GCC) && !defined(BOOST_CLANG) && (BOOST_GCC < 80000))
+   #else
    test<boost::multiprecision::cpp_double_float>();
    test<boost::multiprecision::cpp_double_double>();
    test<boost::multiprecision::cpp_double_long_double>();
    #if defined(BOOST_MP_CPP_DOUBLE_FP_HAS_FLOAT128)
    test<boost::multiprecision::cpp_double_float128>();
    #endif
+   #endif
+
 #endif
 
    return boost::report_errors();

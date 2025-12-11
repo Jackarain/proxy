@@ -100,7 +100,10 @@ namespace boost { namespace dll { namespace detail {
 
 namespace boost { namespace dll { namespace detail {
     inline boost::dll::fs::path program_location_impl(std::error_code &ec) {
-        return boost::dll::fs::read_symlink("/proc/curproc/exe", ec);
+        boost::dll::fs::error_code fs_errc;
+        auto result = boost::dll::fs::read_symlink("/proc/curproc/exe", fs_errc);
+        ec = fs_errc;
+        return result;
     }
 }}} // namespace boost::dll::detail
 
@@ -109,7 +112,10 @@ namespace boost { namespace dll { namespace detail {
 
 namespace boost { namespace dll { namespace detail {
     inline boost::dll::fs::path program_location_impl(std::error_code &ec) {
-        return boost::dll::fs::read_symlink("/proc/curproc/file", ec);
+        boost::dll::fs::error_code fs_errc;
+        auto result = boost::dll::fs::read_symlink("/proc/curproc/file", fs_errc);
+        ec = fs_errc;
+        return result;
     }
 }}} // namespace boost::dll::detail
 

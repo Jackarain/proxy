@@ -1,0 +1,57 @@
+# ============================================================================
+#                       Copyright 2023 Alan de Freitas.
+#                        Copyright 2025 Gennaro Prota.
+#
+#          Distributed under the Boost Software License, Version 1.0.
+#              (See accompanying file LICENSE_1_0.txt or copy at
+#                    http://www.boost.org/LICENSE_1_0.txt)
+# ============================================================================
+#
+#       An antora playbook used for local development.
+#       The playbook includes Boost.DynamicBitset as its only component.
+# ----------------------------------------------------------------------------
+
+site:
+  title: Boost.DynamicBitset
+  start_page: dynamic_bitset::index.adoc
+  robots: allow
+  keys:
+    repo_url: 'https://github.com/boostorg/dynamic_bitset'
+
+content:
+  sources:
+    - url: ..
+      start_path: doc
+      edit_url: 'https://github.com/boostorg/dynamic_bitset/edit/{refname}/{path}'
+
+output:
+  dir: html
+  
+ui:
+  bundle:
+    url: https://github.com/boostorg/website-v2-docs/releases/download/ui-master/ui-bundle.zip
+    snapshot: true
+
+antora:
+  extensions:
+    - require: '@antora/lunr-extension' # https://gitlab.com/antora/antora-lunr-extension
+      index_latest_only: true
+    - require: '@cppalliance/antora-cpp-tagfiles-extension'
+      cpp-tagfiles:
+        using-namespaces:
+          - 'boost::'
+    - require: '@cppalliance/antora-cpp-reference-extension'
+      dependencies:
+        - name: 'boost'
+          repo: 'https://github.com/boostorg/boost.git'
+          tag: 'develop'
+          variable: 'BOOST_SRC_DIR'
+          system-env: 'BOOST_SRC_DIR'
+
+asciidoc:
+  attributes:
+    # Enable pagination
+    page-pagination: ''
+  extensions:
+    - '@cppalliance/asciidoctor-boost-links'
+    - '@asciidoctor/tabs'

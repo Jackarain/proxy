@@ -27,22 +27,10 @@ parser::parser() { reset(); }
 void parser::reset()
 {
    depth_ = 0;
-   sizes_ = {{1}};
-   bulk_length_ = (std::numeric_limits<std::size_t>::max)();
+   sizes_ = default_sizes;
+   bulk_length_ = default_bulk_length;
    bulk_ = type::invalid;
    consumed_ = 0;
-   sizes_[0] = 2;  // The sentinel must be more than 1.
-}
-
-std::size_t parser::get_suggested_buffer_growth(std::size_t hint) const noexcept
-{
-   if (!bulk_expected())
-      return hint;
-
-   if (hint < bulk_length_ + 2)
-      return bulk_length_ + 2;
-
-   return hint;
 }
 
 std::size_t parser::get_consumed() const noexcept { return consumed_; }
@@ -206,4 +194,13 @@ auto parser::consume_impl(type t, std::string_view elem, system::error_code& ec)
 
    return ret;
 }
+
+bool parser::is_parsing() const noexcept
+{
+   auto const v = depth_ == 0 && sizes_ == default_sizes && bulk_length_ == default_bulk_length &&
+                  bulk_ == type::invalid && consumed_ == 0;
+
+   return !v;
+}
+
 }  // namespace boost::redis::resp3

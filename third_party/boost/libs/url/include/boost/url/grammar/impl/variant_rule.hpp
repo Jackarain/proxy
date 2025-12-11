@@ -12,7 +12,7 @@
 
 #include <boost/url/grammar/error.hpp>
 #include <boost/url/grammar/parse.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 #include <cstdint>
 #include <type_traits>
 
@@ -107,7 +107,7 @@ variant_rule(
     Rn const&... rn) noexcept ->
         implementation_defined::variant_rule_t<R0, Rn...>
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         mp11::mp_all<
             is_rule<R0>,
             is_rule<Rn>...>::value);

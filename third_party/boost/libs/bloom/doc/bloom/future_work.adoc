@@ -6,24 +6,6 @@
 A number of features asked by reviewers and users of Boost.Bloom are
 considered for inclusion into future versions of the library. 
 
-== Bulk operations
-
-Each insertion/lookup operation for `boost::bloom::filter` likely involves one or more
-cache misses in the access to the internal bit array. Following a similar
-approach to that of
-https://bannalia.blogspot.com/2023/10/bulk-visitation-in-boostconcurrentflatm.html[bulk visitation^]
-in Boost.Unordered, we can pipeline several operations so that
-cache miss stalls are leveraged to do useful computation. The interface
-for this functionality could be as follows:
-
-[source]
------
-f.insert(first1, last1);
-f.may_contain(first2, last2, [] (const value_type& x, bool res) {
-  // x is (likely) in the filter if res == true
-});
------
-
 == `try_insert`
 
 To avoid inserting an already present element, we now have to do:

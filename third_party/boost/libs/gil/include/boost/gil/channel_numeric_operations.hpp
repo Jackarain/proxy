@@ -148,7 +148,7 @@ struct channel_minus_scalar_t
     /// \param scalar - subtrahend operand of the subtraction.
     auto operator()(ChannelRef channel, Scalar const& scalar) const -> ChannelResult
     {
-        // TODO: Convertion after subtraction vs conversion of operands in channel_minus_t?
+        // TODO: Conversion after subtraction vs conversion of operands in channel_minus_t?
         return ChannelResult(channel - scalar);
     }
 };

@@ -23,6 +23,7 @@ project
 
 run test_array.cpp ;
 run test_boost_bloom_hpp.cpp ;
+run test_bulk_operations.cpp ;
 run test_capacity.cpp ;
 run test_combination.cpp ;
 run test_comparison.cpp ;

@@ -90,7 +90,8 @@ class file_wrapper
    //!After the call, "moved" does not represent any file.
    //!Does not throw
    file_wrapper(BOOST_RV_REF(file_wrapper) moved)
-      :  m_handle(file_handle_t(ipcdetail::invalid_file()))
+      : m_handle(file_handle_t(ipcdetail::invalid_file()))
+      , m_mode(read_only)
    {  this->swap(moved);   }
 
    //!Moves the ownership of "moved"'s file to *this.

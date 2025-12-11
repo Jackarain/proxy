@@ -338,16 +338,6 @@ jobs:
               - linux-libc-dev:i386
             gcc_toolchain: 11
           - toolset: clang
-            compiler: clang++-15
-            cxxstd64: "11,14,17,20,2b"
-            cxxflags: -stdlib=libc++
-            linkflags: -stdlib=libc++
-            os: ubuntu-22.04
-            install:
-              - clang-15
-              - libc++-15-dev
-              - libc++abi-15-dev
-          - toolset: clang
             compiler: clang++-16
             cxxstd64: "11,14,17,20,2b,11-gnu,14-gnu,17-gnu,20-gnu,2b-gnu"
             cxxstd32: "11,11-gnu"
@@ -454,7 +444,7 @@ jobs:
 
           - toolset: clang
             vm: freebsd
-            version: "15.0"
+            version: "14.3"
             cxxstd64: "11,14,17,20,23,26"
             os: ubuntu-latest
 

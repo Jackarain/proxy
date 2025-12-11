@@ -1,0 +1,57 @@
+////
+Copyright 2025 Braden Ganetsky
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#to_underlying]
+# <boost/compat/to_underlying.hpp>
+:idprefix: ref_to_underlying_
+
+## Description
+
+The header `<boost/compat/to_underlying.hpp>` implements the {cpp}23 function https://en.cppreference.com/w/cpp/utility/to_underlying.html[std::to_underlying].
+
+`to_underlying` is a terse way of converting a value of enumeration type to its underlying type, avoiding accidental narrowing or widening. This function is ill-formed if the given value is not of enumeration type.
+
+## Example
+
+```cpp
+enum e : std::uint16_t
+{
+    e_value = 5
+};
+auto output = boost::compat::to_underlying(e_value);
+static_assert(std::is_same<decltype(output), std::uint16_t>::value);
+assert((
+    output == 5
+));
+```
+
+## Synopsis
+
+```cpp
+namespace boost
+{
+namespace compat
+{
+
+template <class E>
+constexpr typename std::underlying_type<E>::type to_underlying(E e) noexcept;
+
+} // namespace compat
+} // namespace boost
+```
+
+## to_underlying
+
+```cpp
+template <class E>
+constexpr typename std::underlying_type<E>::type to_underlying(E e) noexcept;
+```
+
+[horizontal]
+Effects:;; Casts the value `e` of enumeration type `E` to its underlying type.
+           Equivalent to `static_cast<typename std::underlying_type<E>::type>(e)`.
+Type requirements:;; `std::is_enum<E>::value`.
+                     Otherwise, the function is ill-formed.

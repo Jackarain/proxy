@@ -18,7 +18,7 @@ The cpp:encode[] can be used to percent-encode strings with the specified __Char
 include::example$unit/snippets.cpp[tag=snippet_encoding_1,indent=0]
 ----
 
-A few parameters, such as encoding spaces as plus (cpp:+[]), can be adjusted with cpp:encoding_opts[]:
+A few parameters, such as encoding spaces as plus (`+`), can be adjusted with cpp:encoding_opts[]:
 
 // snippet_encoding_2
 [source,cpp]
@@ -53,7 +53,7 @@ include::example$unit/snippets.cpp[tag=snippet_encoding_5,indent=0]
 
 == Validating
 
-The class cpp:pct_string_view[] represents a reference percent-encoded strings:
+The class cpp:pct_string_view[] represents a reference to a percent-encoded string:
 
 // snippet_encoding_6
 [source,cpp]
@@ -109,13 +109,13 @@ include::example$unit/snippets.cpp[tag=snippet_encoding_10,indent=0]
 
 In the example above,
 cpp:url_base::set_encoded_path[set_encoded_path]
-does not to revalidate any information from
+does not revalidate any information from
 cpp:encoded_path[]
 because these references are passed as cpp:pct_string_view[].
 
 == Decode
 
-The class cpp:pct_string_view[] represents a reference percent-encoded strings.
+The class cpp:pct_string_view[] represents a reference to a percent-encoded string.
 cpp:decode_view[] is analogous to cpp:pct_string_view[], with the main difference that the underlying buffer always dereferences to decoded characters.
 
 // snippet_encoding_11
@@ -126,7 +126,7 @@ include::example$unit/snippets.cpp[tag=snippet_encoding_11,indent=0]
 
 A cpp:decode_view[] can also be created from a cpp:pct_string_view[] with the
 cpp:pct_string_view::operator*[operator*].
-The also gives us an opportunity to validate external strings:
+This also gives us an opportunity to validate external strings:
 
 // snippet_encoding_12
 [source,cpp]
@@ -134,7 +134,7 @@ The also gives us an opportunity to validate external strings:
 include::example$unit/snippets.cpp[tag=snippet_encoding_12,indent=0]
 ----
 
-This is particularly useful when the decoded string need to be accessed for comparisons with no necessity to explicitly decoding the string into a buffer:
+This is particularly useful when the decoded string needs to be accessed for comparisons with no necessity to explicitly decode the string into a buffer:
 
 // snippet_encoding_13
 [source,cpp]

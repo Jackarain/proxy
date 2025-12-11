@@ -9,6 +9,12 @@
 
 [section:changelog Changelog]
 
+[heading 2.33, Boost 1.90]
+
+* Fixed a missed optimization in `value_ref` visitation.
+* Fixed a possible long and useless loop on log file rotation in [link log.detailed.sink_backends.text_file `text_file_backend`], if the log file name pattern did not include a file counter and the log file size exceeded the `rotation_size` limit. The sink backend would repeatedly try to open a new log file with a different counter value and end up opening the same file every time. ([github_issue 252])
+* Made file size checks more robust against integer overflows in [link log.detailed.sink_backends.text_file `text_file_backend`].
+
 [heading 2.32, Boost 1.89]
 
 * Added support for `BOOST_LOG_WITHOUT_ASIO` configuration macro, which can be used to remove the dependency on __boost_asio__ and disable the related functionality.

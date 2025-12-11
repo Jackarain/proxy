@@ -1,0 +1,68 @@
+
+[#smart_pointers]
+
+If we want maximum performance, we want to use `virtual_ptr`{empty}s in place of
+ordinary pointers or references. However, we may also want to use smart pointers
+for lifetime management; think of `std::unique_ptr`, `std::shared_ptr`, or
+`boost::intrusive_ptr`.
+
+Does it mean that we have to choose between the performance of `virtual_ptr` and
+the convenience of `std::unique_ptr`? Or carry around both types of smart
+pointers? Fortunately, no. `virtual_ptr` can inter-operate with smart pointers.
+
+If `virtual_ptr` recognizes that its template argument is a smart pointer class,
+it uses that smart pointer to track the underlying object, instead of a plain
+pointer. `virtual_ptr<const Node>` and `virtual_ptr<std::unique_ptr<const
+Node>>` both point to a `const Node`; the former uses a plain `const Node*`
+while the latter uses a `std::unique_ptr<const Node>`. Both carry the same
+v-table pointer.
+
+Smart `virtual_ptr`{empty}s automatically convert to their non-smart, "plain"
+counterparts - e.g. from `virtual_ptr<std::unique_ptr<const Node>>` to
+`virtual_ptr<const Node>`. Methods and overriders typically use plain
+`virtual_ptr`{empty}s, although it is not always the case footnote:[For example,
+consider a `transpose` method for matrices. If the matrix is symmetric, the
+overrider should return its argument. This can be implemented by passing a
+`virtual_ptr<std::shared_ptr<const Matrix>>` to the method.].
+
+The reverse conversion, from plain to smart, does not exist, because it would
+have the potential to accidentally create smart pointers. Likewise, a smart
+`virtual_ptr` can be constructed from a smart pointer, but not directly from a
+plain reference or pointer.
+
+The library provides aliases for standard smart pointers:
+
+- `unique_virtual_ptr<Class>` is an alias for `virtual_ptr<std::unique_ptr<Class>>`
+
+- `shared_virtual_ptr<Class>` is an alias for `virtual_ptr<std::shared_ptr<Class>>`
+
+The standard library provides `std::make_unique` and `std::make_shared` to
+create smart pointers. They are convenient, robust in presence of exceptions,
+and, in the case of `std::shared_ptr`, more efficient. OpenMethod provides
+these counterparts:
+
+- `make_unique_virtual_ptr<Class>(...)`
+
+- `make_shared_virtual_ptr<Class>(...)`
+
+Since these functions create the object, they know its exact type with
+certainty. Thus they don't need to perform a hash table lookup to find the
+appropriate v-table; they simply read it from a static variable. As a
+consequence, they don't require `Class` to be polymorphic.
+
+The aliases and the `make_*` functions are aliased in `namespace
+boost::openmethod::aliases`, making it convenient to import constructs that are
+likely to be used together.
+
+Smart `virtual_ptr`{empty}s are implemented in their own headers, found in the
+`interop` subdirectory. For example, support for `std::unique_ptr` is provided
+in `<boost/openmethod/interop/std_unique_ptr.hpp>`. `<boost/openmethod.hpp>`
+does not include smart pointer headers, so they must be included explicitly.
+
+Here is a variation of the AST example that uses dynamic allocation and unique
+pointers:
+
+[source,c++]
+----
+include::example$ast_unique_ptr.cpp[tag=content]
+----

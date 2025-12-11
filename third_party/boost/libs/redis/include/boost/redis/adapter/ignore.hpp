@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -19,7 +19,10 @@ namespace boost::redis::adapter {
  *  RESP3 errors won't be ignored.
  */
 struct ignore {
-   void operator()(resp3::basic_node<std::string_view> const& nd, system::error_code& ec)
+   void on_init() { }
+   void on_done() { }
+
+   void on_node(resp3::basic_node<std::string_view> const& nd, system::error_code& ec)
    {
       switch (nd.data_type) {
          case resp3::type::simple_error: ec = redis::error::resp3_simple_error; break;

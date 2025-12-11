@@ -70,6 +70,19 @@ char const * s49 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, 
 char const * s50 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X);
 char const * s51 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y);
 char const * s52 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
+char const * s53 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1);
+char const * s54 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2);
+char const * s55 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2, 3);
+char const * s56 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2, 3, 4);
+char const * s57 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2, 3, 4, 5);
+char const * s58 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2, 3, 4, 5, 6);
+char const * s59 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2, 3, 4, 5, 6, 7);
+char const * s60 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2, 3, 4, 5, 6, 7, 8);
+char const * s61 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+char const * s62 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0);
+char const * s63 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, @);
+char const * s64 = BOOST_DESCRIBE_PP_FOR_EACH(F1, ~, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, @, _);
+
 
 int main()
 {
@@ -126,6 +139,18 @@ int main()
     BOOST_TEST_CSTR_EQ( s50, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX" );
     BOOST_TEST_CSTR_EQ( s51, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY" );
     BOOST_TEST_CSTR_EQ( s52, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" );
+    BOOST_TEST_CSTR_EQ( s53, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1" );
+    BOOST_TEST_CSTR_EQ( s54, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12" );
+    BOOST_TEST_CSTR_EQ( s55, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123" );
+    BOOST_TEST_CSTR_EQ( s56, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234" );
+    BOOST_TEST_CSTR_EQ( s57, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12345" );
+    BOOST_TEST_CSTR_EQ( s58, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456" );
+    BOOST_TEST_CSTR_EQ( s59, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567" );
+    BOOST_TEST_CSTR_EQ( s60, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12345678" );
+    BOOST_TEST_CSTR_EQ( s61, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789" );
+    BOOST_TEST_CSTR_EQ( s62, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890" );
+    BOOST_TEST_CSTR_EQ( s63, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890@" );
+    BOOST_TEST_CSTR_EQ( s64, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890@_" );
 
     return boost::report_errors();
 }

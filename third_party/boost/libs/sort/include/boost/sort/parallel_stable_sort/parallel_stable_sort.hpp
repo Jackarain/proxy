@@ -13,7 +13,6 @@
 #ifndef __BOOST_SORT_PARALLEL_DETAIL_PARALLEL_STABLE_SORT_HPP
 #define __BOOST_SORT_PARALLEL_DETAIL_PARALLEL_STABLE_SORT_HPP
 
-#include <ciso646>
 #include <functional>
 #include <future>
 #include <iterator>
@@ -131,7 +130,7 @@ parallel_stable_sort <Iter_t, Compare>
     nelem = range_initial.size();
     size_t nptr = (nelem + 1) >> 1;
 
-    if (nelem < nelem_min or nthread < 2)
+    if (nelem < nelem_min || nthread < 2)
     {
         bss::spinsort<Iter_t, Compare>
             (range_initial.first, range_initial.last, comp);
@@ -141,13 +140,13 @@ parallel_stable_sort <Iter_t, Compare>
     //------------------- check if sort --------------------------------------
     bool sw = true;
     for (Iter_t it1 = first, it2 = first + 1;
-         it2 != last and (sw = not comp(*it2, *it1)); it1 = it2++);
+         it2 != last && (sw = ! comp(*it2, *it1)); it1 = it2++);
     if (sw) return;
 
     //------------------- check if reverse sort ---------------------------
     sw = true;
     for (Iter_t it1 = first, it2 = first + 1;
-         it2 != last and (sw = comp(*it2, *it1)); it1 = it2++);
+         it2 != last && (sw = comp(*it2, *it1)); it1 = it2++);
     if (sw)
     {
 	using std::swap;

@@ -1,0 +1,311 @@
+[[functor-front-end]]
+
+= Functor front-end
+
+The functor front-end is the preferred front-end at the moment. It is
+more powerful than the standard front-end and has a more readable
+transition table. It also makes it easier to reuse parts of state
+machines. Like `eUML`, it also comes with a good deal of predefined
+actions. Actually, eUML generates a functor front-end through
+Boost.Typeof and Boost.Proto so both offer the same functionality.
+
+The rows which MSM offered in the previous front-end come in different
+flavors. We saw the a_row, g_row, _row, row, not counting internal rows.
+This is already much to know, so why define new rows? These types have
+some disadvantages:
+
+* They are more typing and information than we would wish. This means
+syntactic noise and more to learn.
+* Function pointers are weird in C++.
+* The action/guard signature is limited and does not allow for more
+variations of parameters (source state, target state, current state
+machine, etc.).
+* It is not easy to reuse action code from a state machine to another.
+
+[[transition-table]]
+
+== Transition table
+
+We can change the definition of the simple tutorial's transition table
+to:
+
+....
+struct transition_table : mpl::vector<
+//    Start     Event        Target      Action                      Guard 
+//   +---------+------------+-----------+---------------------------+----------------------------+ 
+Row  < Stopped , play       ,  Playing  , start_playback            , none                       >,
+Row  < Stopped , open_close ,  Open     , open_drawer               , none                       >,
+Row  < Stopped , stop       ,  Stopped  , none                      , none                       >,
+//   +---------+------------+-----------+---------------------------+----------------------------+ 
+Row  < Open    , open_close ,  Empty    , close_drawer              , none                       >,
+//   +---------+------------+-----------+---------------------------+----------------------------+ 
+Row  < Empty   , open_close ,  Open     , open_drawer               , none                       >,
+Row  < Empty   , cd_detected,  Stopped  , store_cd_info             , good_disk_format           >,
+g_row< Empty   , cd_detected,  Playing  , &player_::store_cd_info   , &player_::auto_start       >,
+//   +---------+------------+-----------+---------------------------+----------------------------+ 
+Row  < Playing , stop       ,  Stopped  , stop_playback             , none                       >,
+Row  < Playing , pause      ,  Paused   , pause_playback            , none                       >,
+Row  < Playing , open_close ,  Open     , stop_and_open             , none                       >,
+//   +---------+------------+-----------+---------------------------+----------------------------+ 
+Row  < Paused  , end_pause  ,  Playing  , resume_playback           , none                       >,
+Row  < Paused  , stop       ,  Stopped  , stop_playback             , none                       >,
+Row  < Paused  , open_close ,  Open     , stop_and_open             , none                       >
+//   +---------+------------+-----------+---------------------------+----------------------------+ 
+> {};
+                        
+....
+
+Transitions are now of type "Row" with exactly 5 template arguments:
+source state, event, target state, action and guard. Wherever there is
+nothing (for example actions and guards), write "none". Actions and
+guards are no more methods but functors getting as arguments the
+detected event, the state machine, source and target state:
+
+....
+struct store_cd_info 
+{ 
+    template <class Fsm,class Evt,class SourceState,class TargetState> 
+    void operator()(Evt const&, Fsm& fsm, SourceState&,TargetState& ) 
+    {
+        cout << "player::store_cd_info" << endl;
+        fsm.process_event(play());
+    } 
+}; 
+....
+
+The advantage of functors compared to functions is that functors are
+generic and reusable. They also allow passing more parameters than just
+events. The guard functors are the same but have an operator() returning
+a bool.
+
+It is also possible to mix rows from different front-ends. To show this,
+a g_row has been left in the transition table. _Note:_ in case the
+action functor is used in the transition table of a state machine
+contained inside a top-level state machine, the ``fsm'' parameter refers
+to the lowest-level state machine (referencing this action), not the
+top-level one.
+
+To illustrate the reusable point, MSM comes with a whole set of
+predefined functors. Please refer to eUML for the
+link:#Reference-begin[full list]. For example, we are now going to
+replace the first action by an action sequence and the guard by a more
+complex functor.
+
+We decide we now want to execute two actions in the first transition
+(Stopped -> Playing). We only need to change the action start_playback
+to
+
+....
+ActionSequence_< mpl::vector<some_action, start_playback> >
+....
+
+and now will execute some_action and start_playback every time the
+transition is taken. ActionSequence_ is a functor calling each action of
+the mpl::vector in sequence.
+
+We also want to replace good_disk_format by a condition of the type:
+``good_disk_format && (some_condition || some_other_condition)''. We can
+achieve this using And_ and Or_ functors:
+
+....
+And_<good_disk_format,Or_< some_condition , some_other_condition> >
+....
+
+It even starts looking like functional programming. MSM ships with
+functors for operators, state machine usage, STL algorithms or container
+methods.
+
+[[defining-states-with-entryexit-actions]]
+
+== Defining states with entry/exit actions
+
+You probably noticed that we just showed a different transition table
+and that we even mixed rows from different front-ends. This means that
+you can do this and leave the definitions for states unchanged. Most
+examples are doing this as it is the simplest solution. You still enjoy
+the simplicity of the first front-end with the extended power of the new
+transition types. This xref:attachment$SimpleWithFunctors.cpp[tutorial],
+adapted from the earlier example, does just this.
+
+Of course, it is also possible to define states where entry and exit
+actions are also provided as functors as these are generated by eUML and
+both front-ends are equivalent. For example, we can define a state as:
+
+....
+struct Empty_Entry 
+{ 
+    template <class Event,class Fsm,class State> 
+    void operator()(Event const&,Fsm&,State&) 
+    {
+        ... 
+    } 
+}; // same for Empty_Exit
+struct Empty_tag {};
+struct Empty : public msm::front::euml::func_state<Empty_tag,Empty_Entry,Empty_Exit>{};
+....
+
+This also means that you can, like in the transition table, write entry
+/ exit actions made of more complicated action combinations. The
+previous example can therefore xref:attachment$SimpleWithFunctors2.cpp[be
+rewritten].
+
+Usually, however, one will probably use the standard state definition as
+it provides the same capabilities as this front-end state definition,
+unless one needs some of the shipped predefined functors or is a fan of
+functional programming.
+
+[[functor-front-end-actions]]
+
+== What do you actually do inside actions / guards (Part 2)?
+
+Using the basic front-end, we saw how to pass data to actions through
+the event, that data common to all states could be stored in the state
+machine, state relevant data could be stored in the state and access as
+template parameter in the entry / exit actions. What was however missing
+was the capability to access relevant state data in the transition
+action. This is possible with this front-end. A transition's source and
+target state are also given as arguments. If the current calculation's
+state was to be found in the transition's source state (whatever it is),
+we could access it:
+
+....
+struct send_rocket 
+{ 
+    template <class Fsm,class Evt,class SourceState,class TargetState> 
+    void operator()(Evt const&, Fsm& fsm, SourceState& src,TargetState& ) 
+    {
+        fire_rocket(evt.direction, src.current_calculation);
+    } 
+}; 
+....
+
+It was a little awkward to generate new events inside actions with the
+basic front-end. With the functor front-end it is much cleaner:
+
+....
+struct send_rocket 
+{ 
+    template <class Fsm,class Evt,class SourceState,class TargetState> 
+    void operator()(Evt const& evt, Fsm& fsm, SourceState& src,TargetState&) 
+    {
+        fire_rocket(evt.direction, src.current_calculation);
+        fsm.process_event(rocket_launched());
+    } 
+}; 
+....
+
+[[defining-a-simple-state-machine]]
+
+== Defining a simple state machine
+
+Like states, state machines can be defined using the previous front-end,
+as the previous example showed, or with the functor front-end, which
+allows you to define state machine entry and exit functions as functors,
+as in xref:attachment$SimpleWithFunctors2.cpp[this example].
+
+[[anonymous-transitions]]
+
+== Anonymous transitions
+
+Anonymous (completion) transitions are transitions without a named
+event. We saw how this front-end uses `none` when no action or guard is
+required. We can also use `none` instead of an event to mark an
+anonymous transition. For example, the following transition makes an
+immediate transition from State1 to State2:
+
+....
+Row < State1 , none , State2 >
+....
+
+The following transition does the same but calling an action in the
+process:
+
+....
+Row < State1 , none , State2 , State1ToState2, none >
+....
+
+The following diagram shows an example and its
+xref:attachment$AnonymousTutorialWithFunctors.cpp[implementation]:
+
+image:Anonymous.jpg[image] ###
+
+[[functor-internal-transitions]]Internal transitions
+
+The xref:attachment$SimpleTutorialInternalFunctors.cpp[following example]
+uses internal transitions with the functor front-end. As for the simple
+standard front-end, both methods of defining internal transitions are
+supported:
+
+* providing a `Row` in the state machine's transition table with `none`
+as target state defines an internal transition.
+* providing an `internal_transition_table` made of `Internal` rows
+inside a state or submachine defines UML-conforming internal transitions
+with higher priority.
+* transitions defined inside `internal_transition_table` require no
+source or target state as the source state is known (`Internal` really
+are `Row` without a source or target state).
+
+Like for the `standard front-end internal transitions`, internal
+transition tables are added into the main state machine's table, thus
+allowing you to distribute the transition table definition and reuse
+states.
+
+There is an added bonus offered for submachines, which can have both the
+standard transition_table and an internal_transition_table (which has
+higher priority). This makes it easier if you decide to make a full
+submachine from a state later. It is also slightly faster than the
+standard alternative, adding orthogonal regions, because event
+dispatching will, if accepted by the internal table, not continue to the
+subregions. This gives you an O(1) dispatch instead of O(number of
+regions). While the example is with eUML, the same is also possible with
+this front-end.
+
+[[any-event]]
+
+== Kleene (any) event
+
+Normally, MSM requires an event to fire a transition. But there are
+cases, where any event, no matter which one, would do:
+
+* If you want to reduce the number of transitions: any event would do,
+possibly will guards decide what happens.
+* Pseudo entry states do not necessarily want to know the event which
+caused their activation, or they might want to know only a property of
+it.
+
+MSM supports a boost::any as an acceptable event. This event will match
+any event, meaning that if a transition with boost::any as event
+originates from the current state, this transition would fire (provided
+no guards or transition with a higher priority fires first). This event
+is named Kleene, as a reference to the Kleene star used in a regex.
+
+For example, this transition on a state machine instance named fsm:
+
+....
+Row < State1, boost::any, State2>
+....
+
+will fire if State1 is active and an event is processed:
+
+....
+fsm.process_event(whatever_event());
+....
+
+At this point, you can use this _any_ event in transition actions to get
+back to the original event by calling for example _boost::any::type()_.
+
+It is also possible to support your own Kleene events by specializing
+boost::msm::is_kleene_event for a given event, for example:
+
+....
+namespace boost { namespace msm{
+    template<> 
+    struct is_kleene_event< my_event >
+    { 
+      typedef boost::mpl::true_ type;
+    };
+}}
+....
+
+The only requirement is that this event must have a copy constructor
+from the event originally processed on the state machine.

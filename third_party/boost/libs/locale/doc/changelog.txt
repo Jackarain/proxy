@@ -76,7 +76,7 @@
     - Fixed wired FreeBSD/clang issue on optimized build. Probably compiler workaround
     - Added workaround for failing MSVC tests due to 932 codepage codecvt issue
     - Fixed bugs 6851, 12572, 12453
-    - Fixed missing throw in case of failure in icu/date_time
+    - Fixed missing throw in case of failure in ICU/date_time
     - Fixed build agains Boost.Thread v4
     - Fixed Year of week instead of year ICU backend formatting
     - Fixed formatting test for ICU 56.1 and above

@@ -44,8 +44,13 @@ std::basic_string<CharOut, Traits, Allocator> conv_string(
     if (ec)
         detail::throw_error(ec, "size_as_utf8");
 
+
     std::basic_string<CharOut, Traits, Allocator> res(allocator);
     res.resize(req_size);
+
+    if (req_size == 0)
+        return res;
+
 
     auto res_size = convert_to_utf8(data, size, &res.front(), req_size,  ec);
     if (ec)
@@ -69,6 +74,9 @@ std::basic_string<CharOut, Traits, Allocator> conv_string(
 
     std::basic_string<CharOut, Traits, Allocator> res(allocator);
     res.resize(req_size);
+
+    if (req_size == 0)
+        return res;
 
     auto res_size = convert_to_wide(data, size, &res.front(), req_size,  ec);
     if (ec)

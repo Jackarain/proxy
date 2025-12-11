@@ -8,6 +8,11 @@ https://www.boost.org/LICENSE_1_0.txt
 # Revision History
 :idprefix: changelog_
 
+## Changes in 1.90.0
+
+* More functions have been marked as `constexpr`, including `~variant`.
+  This didn't matter before {cpp}20, but does now.
+
 ## Changes in 1.88.0
 
 * Use the smallest appropriate unsigned type for the index.

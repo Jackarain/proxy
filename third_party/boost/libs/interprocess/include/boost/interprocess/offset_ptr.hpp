@@ -681,38 +681,38 @@ inline std::basic_istream<E, T> & operator>>
 {  return is >> p.get_offset();  }
 
 //!Simulation of static_cast between pointers. Never throws.
-template<class T1, class P1, class O1, std::size_t A1, class T2, class P2, class O2, std::size_t A2>
-BOOST_INTERPROCESS_FORCEINLINE boost::interprocess::offset_ptr<T1, P1, O1, A1>
-   static_pointer_cast(const boost::interprocess::offset_ptr<T2, P2, O2, A2> & r) BOOST_NOEXCEPT
+template<class T1, class P, class O, std::size_t A, class T2>
+BOOST_INTERPROCESS_FORCEINLINE boost::interprocess::offset_ptr<T1, P, O, A>
+   static_pointer_cast(const boost::interprocess::offset_ptr<T2, P, O, A> & r) BOOST_NOEXCEPT
 {
-   return boost::interprocess::offset_ptr<T1, P1, O1, A1>
+   return boost::interprocess::offset_ptr<T1, P, O, A>
             (r, boost::interprocess::ipcdetail::static_cast_tag());
 }
 
 //!Simulation of const_cast between pointers. Never throws.
-template<class T1, class P1, class O1, std::size_t A1, class T2, class P2, class O2, std::size_t A2>
-BOOST_INTERPROCESS_FORCEINLINE boost::interprocess::offset_ptr<T1, P1, O1, A1>
-   const_pointer_cast(const boost::interprocess::offset_ptr<T2, P2, O2, A2> & r) BOOST_NOEXCEPT
+template<class T1, class P, class O, std::size_t A, class T2>
+BOOST_INTERPROCESS_FORCEINLINE boost::interprocess::offset_ptr<T1, P, O, A>
+   const_pointer_cast(const boost::interprocess::offset_ptr<T2, P, O, A> & r) BOOST_NOEXCEPT
 {
-   return boost::interprocess::offset_ptr<T1, P1, O1, A1>
+   return boost::interprocess::offset_ptr<T1, P, O, A>
             (r, boost::interprocess::ipcdetail::const_cast_tag());
 }
 
 //!Simulation of dynamic_cast between pointers. Never throws.
-template<class T1, class P1, class O1, std::size_t A1, class T2, class P2, class O2, std::size_t A2>
-BOOST_INTERPROCESS_FORCEINLINE boost::interprocess::offset_ptr<T1, P1, O1, A1>
-   dynamic_pointer_cast(const boost::interprocess::offset_ptr<T2, P2, O2, A2> & r) BOOST_NOEXCEPT
+template<class T1, class P, class O, std::size_t A, class T2>
+BOOST_INTERPROCESS_FORCEINLINE boost::interprocess::offset_ptr<T1, P, O, A>
+   dynamic_pointer_cast(const boost::interprocess::offset_ptr<T2, P, O, A> & r) BOOST_NOEXCEPT
 {
-   return boost::interprocess::offset_ptr<T1, P1, O1, A1>
+   return boost::interprocess::offset_ptr<T1, P, O, A>
             (r, boost::interprocess::ipcdetail::dynamic_cast_tag());
 }
 
 //!Simulation of reinterpret_cast between pointers. Never throws.
-template<class T1, class P1, class O1, std::size_t A1, class T2, class P2, class O2, std::size_t A2>
-BOOST_INTERPROCESS_FORCEINLINE boost::interprocess::offset_ptr<T1, P1, O1, A1>
-   reinterpret_pointer_cast(const boost::interprocess::offset_ptr<T2, P2, O2, A2> & r) BOOST_NOEXCEPT
+template<class T1, class P, class O, std::size_t A, class T2>
+BOOST_INTERPROCESS_FORCEINLINE boost::interprocess::offset_ptr<T1, P, O, A>
+   reinterpret_pointer_cast(const boost::interprocess::offset_ptr<T2, P, O, A> & r) BOOST_NOEXCEPT
 {
-   return boost::interprocess::offset_ptr<T1, P1, O1, A1>
+   return boost::interprocess::offset_ptr<T1, P, O, A>
             (r, boost::interprocess::ipcdetail::reinterpret_cast_tag());
 }
 

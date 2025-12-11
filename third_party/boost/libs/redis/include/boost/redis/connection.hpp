@@ -10,42 +10,43 @@
 #include <boost/redis/adapter/adapt.hpp>
 #include <boost/redis/adapter/any_adapter.hpp>
 #include <boost/redis/config.hpp>
-#include <boost/redis/detail/connection_logger.hpp>
+#include <boost/redis/detail/connection_state.hpp>
 #include <boost/redis/detail/exec_fsm.hpp>
-#include <boost/redis/detail/health_checker.hpp>
-#include <boost/redis/detail/helper.hpp>
 #include <boost/redis/detail/multiplexer.hpp>
 #include <boost/redis/detail/reader_fsm.hpp>
 #include <boost/redis/detail/redis_stream.hpp>
-#include <boost/redis/detail/resp3_handshaker.hpp>
+#include <boost/redis/detail/run_fsm.hpp>
+#include <boost/redis/detail/writer_fsm.hpp>
 #include <boost/redis/error.hpp>
 #include <boost/redis/logger.hpp>
 #include <boost/redis/operation.hpp>
 #include <boost/redis/request.hpp>
 #include <boost/redis/resp3/type.hpp>
+#include <boost/redis/response.hpp>
 #include <boost/redis/usage.hpp>
 
 #include <boost/asio/any_completion_handler.hpp>
 #include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/associated_cancellation_slot.hpp>
 #include <boost/asio/basic_stream_socket.hpp>
+#include <boost/asio/bind_cancellation_slot.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/buffer.hpp>
-#include <boost/asio/cancel_after.hpp>
-#include <boost/asio/coroutine.hpp>
+#include <boost/asio/cancel_at.hpp>
+#include <boost/asio/cancellation_signal.hpp>
+#include <boost/asio/cancellation_type.hpp>
 #include <boost/asio/deferred.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/experimental/cancellation_condition.hpp>
 #include <boost/asio/experimental/channel.hpp>
 #include <boost/asio/experimental/parallel_group.hpp>
 #include <boost/asio/immediate.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/prepend.hpp>
-#include <boost/asio/read_until.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <boost/asio/write.hpp>
 #include <boost/assert.hpp>
 #include <boost/config.hpp>
-#include <boost/core/ignore_unused.hpp>
 
 #include <array>
 #include <chrono>
@@ -57,238 +58,259 @@
 namespace boost::redis {
 namespace detail {
 
-template <class AsyncReadStream, class DynamicBuffer>
-class append_some_op {
-private:
-   AsyncReadStream& stream_;
-   DynamicBuffer buf_;
-   std::size_t size_ = 0;
-   std::size_t tmp_ = 0;
-   asio::coroutine coro_{};
-
-public:
-   append_some_op(AsyncReadStream& stream, DynamicBuffer buf, std::size_t size)
-   : stream_{stream}
-   , buf_{std::move(buf)}
-   , size_{size}
-   { }
-
-   template <class Self>
-   void operator()(Self& self, system::error_code ec = {}, std::size_t n = 0)
-   {
-      BOOST_ASIO_CORO_REENTER(coro_)
-      {
-         tmp_ = buf_.size();
-         buf_.grow(size_);
-
-         BOOST_ASIO_CORO_YIELD
-         stream_.async_read_some(buf_.data(tmp_, size_), std::move(self));
-         if (ec) {
-            self.complete(ec, 0);
-            return;
-         }
-
-         buf_.shrink(buf_.size() - tmp_ - n);
-         self.complete({}, n);
-      }
-   }
-};
-
-template <class AsyncReadStream, class DynamicBuffer, class CompletionToken>
-auto async_append_some(
-   AsyncReadStream& stream,
-   DynamicBuffer buffer,
-   std::size_t size,
-   CompletionToken&& token)
+// Given a timeout value, compute the expiry time. A zero timeout is considered to mean "no timeout"
+inline std::chrono::steady_clock::time_point compute_expiry(
+   std::chrono::steady_clock::duration timeout)
 {
-   return asio::async_compose<CompletionToken, void(system::error_code, std::size_t)>(
-      append_some_op<AsyncReadStream, DynamicBuffer>{stream, buffer, size},
-      token,
-      stream);
+   return timeout.count() == 0 ? (std::chrono::steady_clock::time_point::max)()
+                               : std::chrono::steady_clock::now() + timeout;
 }
 
 template <class Executor>
-using exec_notifier_type = asio::experimental::channel<
-   Executor,
-   void(system::error_code, std::size_t)>;
+struct connection_impl {
+   using clock_type = std::chrono::steady_clock;
+   using clock_traits_type = asio::wait_traits<clock_type>;
+   using timer_type = asio::basic_waitable_timer<clock_type, clock_traits_type, Executor>;
 
-template <class Conn>
-struct exec_op {
-   using executor_type = typename Conn::executor_type;
+   using receive_channel_type = asio::experimental::channel<
+      Executor,
+      void(system::error_code, std::size_t)>;
+   using exec_notifier_type = asio::experimental::channel<
+      Executor,
+      void(system::error_code, std::size_t)>;
 
-   Conn* conn_ = nullptr;
-   std::shared_ptr<exec_notifier_type<executor_type>> notifier_ = nullptr;
-   detail::exec_fsm fsm_;
+   redis_stream<Executor> stream_;
+   timer_type writer_timer_;     // timer used for write timeouts
+   timer_type writer_cv_;        // condition variable, cancelled when there is new data to write
+   timer_type reader_timer_;     // timer used for read timeouts
+   timer_type reconnect_timer_;  // to wait the reconnection period
+   timer_type ping_timer_;       // to wait between pings
+   receive_channel_type receive_channel_;
+   asio::cancellation_signal run_signal_;
+   connection_state st_;
 
-   template <class Self>
-   void operator()(Self& self, system::error_code = {}, std::size_t = 0)
-   {
-      while (true) {
-         // Invoke the state machine
-         auto act = fsm_.resume(conn_->is_open(), self.get_cancellation_state().cancelled());
+   using executor_type = Executor;
 
-         // Do what the FSM said
-         switch (act.type()) {
-            case detail::exec_action_type::setup_cancellation:
-               self.reset_cancellation_state(asio::enable_total_cancellation());
-               continue;  // this action does not require yielding
-            case detail::exec_action_type::immediate:
-               asio::async_immediate(self.get_io_executor(), std::move(self));
-               return;
-            case detail::exec_action_type::notify_writer:
-               conn_->writer_timer_.cancel();
-               continue;  // this action does not require yielding
-            case detail::exec_action_type::wait_for_response:
-               notifier_->async_receive(std::move(self));
-               return;
-            case detail::exec_action_type::cancel_run:
-               conn_->cancel(operation::run);
-               continue;  // this action does not require yielding
-            case detail::exec_action_type::done:
-               notifier_.reset();
-               self.complete(act.error(), act.bytes_read());
-               return;
-         }
-      }
-   }
-};
+   executor_type get_executor() noexcept { return writer_cv_.get_executor(); }
 
-template <class Conn>
-struct writer_op {
-   Conn* conn_;
-   asio::coroutine coro{};
+   struct exec_op {
+      connection_impl* obj_ = nullptr;
+      std::shared_ptr<exec_notifier_type> notifier_ = nullptr;
+      exec_fsm fsm_;
 
-   template <class Self>
-   void operator()(Self& self, system::error_code ec = {}, std::size_t n = 0)
-   {
-      ignore_unused(n);
-
-      BOOST_ASIO_CORO_REENTER(coro) for (;;)
+      template <class Self>
+      void operator()(Self& self, system::error_code = {}, std::size_t = 0)
       {
-         while (conn_->mpx_.prepare_write() != 0) {
-            BOOST_ASIO_CORO_YIELD
-            asio::async_write(
-               conn_->stream_,
-               asio::buffer(conn_->mpx_.get_write_buffer()),
-               std::move(self));
+         while (true) {
+            // Invoke the state machine
+            auto act = fsm_.resume(obj_->is_open(), self.get_cancellation_state().cancelled());
 
-            conn_->logger_.on_write(ec, conn_->mpx_.get_write_buffer().size());
-
-            if (ec) {
-               conn_->logger_.trace("writer_op (1)", ec);
-               conn_->cancel(operation::run);
-               self.complete(ec);
-               return;
-            }
-
-            conn_->mpx_.commit_write();
-
-            // A socket.close() may have been called while a
-            // successful write might had already been queued, so we
-            // have to check here before proceeding.
-            if (!conn_->is_open()) {
-               conn_->logger_.trace("writer_op (2): connection is closed.");
-               self.complete({});
-               return;
+            // Do what the FSM said
+            switch (act.type()) {
+               case exec_action_type::setup_cancellation:
+                  self.reset_cancellation_state(asio::enable_total_cancellation());
+                  continue;  // this action does not require yielding
+               case exec_action_type::immediate:
+                  asio::async_immediate(self.get_io_executor(), std::move(self));
+                  return;
+               case exec_action_type::notify_writer:
+                  obj_->writer_cv_.cancel();
+                  continue;  // this action does not require yielding
+               case exec_action_type::wait_for_response:
+                  notifier_->async_receive(std::move(self));
+                  return;
+               case exec_action_type::done:
+                  notifier_.reset();
+                  self.complete(act.error(), act.bytes_read());
+                  return;
             }
          }
+      }
+   };
 
-         BOOST_ASIO_CORO_YIELD
-         conn_->writer_timer_.async_wait(std::move(self));
-         if (!conn_->is_open()) {
-            conn_->logger_.trace("writer_op (3): connection is closed.");
-            // Notice this is not an error of the op, stoping was
-            // requested from the outside, so we complete with
-            // success.
-            self.complete({});
+   connection_impl(Executor&& ex, asio::ssl::context&& ctx, logger&& lgr)
+   : stream_{ex, std::move(ctx)}
+   , writer_timer_{ex}
+   , writer_cv_{ex}
+   , reader_timer_{ex}
+   , reconnect_timer_{ex}
+   , ping_timer_{ex}
+   , receive_channel_{ex, 256}
+   , st_{{std::move(lgr)}}
+   {
+      set_receive_adapter(any_adapter{ignore});
+      writer_cv_.expires_at((std::chrono::steady_clock::time_point::max)());
+   }
+
+   void cancel(operation op)
+   {
+      switch (op) {
+         case operation::exec:    st_.mpx.cancel_waiting(); break;
+         case operation::receive: receive_channel_.cancel(); break;
+         case operation::reconnection:
+            st_.cfg.reconnect_wait_interval = std::chrono::seconds::zero();
+            break;
+         case operation::run:
+         case operation::resolve:
+         case operation::connect:
+         case operation::ssl_handshake:
+         case operation::health_check:  cancel_run(); break;
+         case operation::all:
+            st_.mpx.cancel_waiting();                                        // exec
+            receive_channel_.cancel();                                       // receive
+            st_.cfg.reconnect_wait_interval = std::chrono::seconds::zero();  // reconnect
+            cancel_run();                                                    // run
+            break;
+         default: /* ignore */;
+      }
+   }
+
+   void cancel_run()
+   {
+      // Individual operations should see a terminal cancellation, regardless
+      // of what we got requested. We take enough actions to ensure that this
+      // doesn't prevent the object from being re-used (e.g. we reset the TLS stream).
+      run_signal_.emit(asio::cancellation_type_t::terminal);
+
+      // Name resolution doesn't support per-operation cancellation
+      stream_.cancel_resolve();
+
+      // Receive is technically not part of run, but we also cancel it for
+      // backwards compatibility.
+      receive_channel_.cancel();
+   }
+
+   bool is_open() const noexcept { return stream_.is_open(); }
+
+   bool will_reconnect() const noexcept
+   {
+      return st_.cfg.reconnect_wait_interval != std::chrono::seconds::zero();
+   }
+
+   template <class CompletionToken>
+   auto async_exec(request const& req, any_adapter adapter, CompletionToken&& token)
+   {
+      auto notifier = std::make_shared<exec_notifier_type>(get_executor(), 1);
+      auto info = make_elem(req, std::move(adapter));
+
+      info->set_done_callback([notifier]() {
+         notifier->try_send(std::error_code{}, 0);
+      });
+
+      return asio::async_compose<CompletionToken, void(system::error_code, std::size_t)>(
+         exec_op{this, notifier, exec_fsm(st_.mpx, std::move(info))},
+         token,
+         writer_cv_);
+   }
+
+   void set_receive_adapter(any_adapter adapter)
+   {
+      st_.mpx.set_receive_adapter(std::move(adapter));
+   }
+};
+
+template <class Executor>
+struct writer_op {
+   connection_impl<Executor>* conn_;
+   writer_fsm fsm_;
+
+   explicit writer_op(connection_impl<Executor>& conn) noexcept
+   : conn_(&conn)
+   { }
+
+   template <class Self>
+   void operator()(Self& self, system::error_code ec = {}, std::size_t bytes_written = 0u)
+   {
+      auto* conn = conn_;  // Prevent potential use-after-move errors with cancel_after
+      auto act = fsm_.resume(
+         conn->st_,
+         ec,
+         bytes_written,
+         self.get_cancellation_state().cancelled());
+
+      switch (act.type()) {
+         case writer_action_type::done: self.complete(act.error()); return;
+         case writer_action_type::write_some:
+            conn->stream_.async_write_some(
+               asio::buffer(conn->st_.mpx.get_write_buffer()),
+               asio::cancel_at(
+                  conn->writer_timer_,
+                  compute_expiry(act.timeout()),
+                  std::move(self)));
             return;
-         }
+         case writer_action_type::wait:
+            conn->writer_cv_.expires_at(compute_expiry(act.timeout()));
+            conn->writer_cv_.async_wait(std::move(self));
+            return;
       }
    }
 };
 
-template <class Conn>
+template <class Executor>
 struct reader_op {
-   using dyn_buffer_type = asio::dynamic_string_buffer<
-      char,
-      std::char_traits<char>,
-      std::allocator<char>>;
-
-   // TODO: Move this to config so the user can fine tune?
-   static constexpr std::size_t buffer_growth_hint = 4096;
-
-   Conn* conn_;
-   detail::reader_fsm fsm_;
+   connection_impl<Executor>* conn_;
+   reader_fsm fsm_;
 
 public:
-   reader_op(Conn& conn) noexcept
+   reader_op(connection_impl<Executor>& conn) noexcept
    : conn_{&conn}
-   , fsm_{conn.mpx_}
    { }
 
    template <class Self>
    void operator()(Self& self, system::error_code ec = {}, std::size_t n = 0)
    {
-      using dyn_buffer_type = asio::dynamic_string_buffer<
-         char,
-         std::char_traits<char>,
-         std::allocator<char>>;
-
       for (;;) {
-         auto act = fsm_.resume(n, ec, self.get_cancellation_state().cancelled());
+         auto* conn = conn_;  // Prevent potential use-after-move errors with cancel_after
+         auto act = fsm_.resume(conn->st_, n, ec, self.get_cancellation_state().cancelled());
 
-         conn_->logger_.on_fsm_resume(act);
-
-         switch (act.type_) {
-            case reader_fsm::action::type::setup_cancellation:
-               self.reset_cancellation_state(asio::enable_terminal_cancellation());
-               continue;
-            case reader_fsm::action::type::needs_more:
-            case reader_fsm::action::type::append_some:
-               async_append_some(
-                  conn_->stream_,
-                  dyn_buffer_type{conn_->mpx_.get_read_buffer(), conn_->cfg_.max_read_size},
-                  conn_->mpx_.get_parser().get_suggested_buffer_growth(buffer_growth_hint),
-                  std::move(self));
+         switch (act.get_type()) {
+            case reader_fsm::action::type::read_some:
+               conn->stream_.async_read_some(
+                  asio::buffer(conn->st_.mpx.get_prepared_read_buffer()),
+                  asio::cancel_at(
+                     conn->reader_timer_,
+                     compute_expiry(act.timeout()),
+                     std::move(self)));
                return;
             case reader_fsm::action::type::notify_push_receiver:
-               if (conn_->receive_channel_.try_send(ec, act.push_size_)) {
+               if (conn->receive_channel_.try_send(ec, act.push_size())) {
                   continue;
                } else {
-                  conn_->receive_channel_.async_send(ec, act.push_size_, std::move(self));
-                  return;
+                  conn->receive_channel_.async_send(ec, act.push_size(), std::move(self));
                }
                return;
-            case reader_fsm::action::type::cancel_run: conn_->cancel(operation::run); continue;
-            case reader_fsm::action::type::done:       self.complete(act.ec_); return;
+            case reader_fsm::action::type::done: self.complete(act.error()); return;
          }
       }
    }
 };
 
-inline system::error_code check_config(const config& cfg)
-{
-   if (!cfg.unix_socket.empty()) {
-#ifndef BOOST_ASIO_HAS_LOCAL_SOCKETS
-      return error::unix_sockets_unsupported;
-#endif
-      if (cfg.use_ssl)
-         return error::unix_sockets_ssl_unsupported;
-   }
-   return system::error_code{};
-}
-
-template <class Conn>
+template <class Executor>
 class run_op {
 private:
-   Conn* conn_ = nullptr;
-   asio::coroutine coro_{};
-   system::error_code stored_ec_;
+   connection_impl<Executor>* conn_;
+   run_fsm fsm_{};
 
-   using order_t = std::array<std::size_t, 5>;
+   template <class CompletionToken>
+   auto reader(CompletionToken&& token)
+   {
+      return asio::async_compose<CompletionToken, void(system::error_code)>(
+         reader_op<Executor>{*conn_},
+         std::forward<CompletionToken>(token),
+         conn_->writer_cv_);
+   }
+
+   template <class CompletionToken>
+   auto writer(CompletionToken&& token)
+   {
+      return asio::async_compose<CompletionToken, void(system::error_code)>(
+         writer_op<Executor>{*conn_},
+         std::forward<CompletionToken>(token),
+         conn_->writer_cv_);
+   }
 
 public:
-   run_op(Conn* conn) noexcept
+   run_op(connection_impl<Executor>* conn) noexcept
    : conn_{conn}
    { }
 
@@ -296,113 +318,71 @@ public:
    template <class Self>
    void operator()(
       Self& self,
-      order_t order,
-      system::error_code ec0,
-      system::error_code ec1,
-      system::error_code ec2,
-      system::error_code ec3,
-      system::error_code)
+      std::array<std::size_t, 2u> order,
+      system::error_code reader_ec,
+      system::error_code writer_ec)
    {
-      system::error_code final_ec;
-
-      if (order[0] == 0 && !!ec0) {
-         // The hello op finished first and with an error
-         final_ec = ec0;
-      } else if (order[0] == 2 && ec2 == error::pong_timeout) {
-         // The check ping timeout finished first. Use the ping error code
-         final_ec = ec1;
-      } else {
-         // Use the reader error code
-         final_ec = ec3;
-      }
-
-      (*this)(self, final_ec);
+      (*this)(self, order[0u] == 0u ? reader_ec : writer_ec);
    }
 
-   // TODO: this op doesn't handle per-operation cancellation correctly
    template <class Self>
    void operator()(Self& self, system::error_code ec = {})
    {
-      BOOST_ASIO_CORO_REENTER(coro_)
-      {
-         // Check config
-         ec = check_config(conn_->cfg_);
-         if (ec) {
-            conn_->logger_.log(logger::level::err, "Invalid configuration", ec);
-            stored_ec_ = ec;
-            BOOST_ASIO_CORO_YIELD asio::async_immediate(self.get_io_executor(), std::move(self));
-            self.complete(stored_ec_);
+      auto act = fsm_.resume(conn_->st_, ec, self.get_cancellation_state().cancelled());
+
+      switch (act.type) {
+         case run_action_type::done: self.complete(act.ec); return;
+         case run_action_type::immediate:
+            asio::async_immediate(self.get_io_executor(), std::move(self));
             return;
-         }
-
-         for (;;) {
-            // Try to connect
-            BOOST_ASIO_CORO_YIELD
-            conn_->stream_.async_connect(&conn_->cfg_, &conn_->logger_, std::move(self));
-
-            // If we were successful, run all the connection tasks
-            if (!ec) {
-               conn_->mpx_.reset();
-
-               // Note: Order is important here because the writer might
-               // trigger an async_write before the async_hello thereby
-               // causing an authentication problem.
-               BOOST_ASIO_CORO_YIELD
-               asio::experimental::make_parallel_group(
-                  [this](auto token) {
-                     return conn_->handshaker_.async_hello(*conn_, token);
-                  },
-                  [this](auto token) {
-                     return conn_->health_checker_.async_ping(*conn_, token);
-                  },
-                  [this](auto token) {
-                     return conn_->health_checker_.async_check_timeout(*conn_, token);
-                  },
-                  [this](auto token) {
-                     return conn_->reader(token);
-                  },
-                  [this](auto token) {
-                     return conn_->writer(token);
-                  })
-                  .async_wait(asio::experimental::wait_for_one_error(), std::move(self));
-
-               // The parallel group result will be translated into a single error
-               // code by the specialized operator() overload
-
-               // The receive operation must be cancelled because channel
-               // subscription does not survive a reconnection but requires
-               // re-subscription.
-               conn_->cancel(operation::receive);
-            }
-
-            // If we are not going to try again, we're done
-            if (!conn_->will_reconnect()) {
-               self.complete(ec);
-               return;
-            }
-
-            // Wait for the reconnection interval
-            conn_->reconnect_timer_.expires_after(conn_->cfg_.reconnect_wait_interval);
-            BOOST_ASIO_CORO_YIELD
+         case run_action_type::connect:
+            conn_->stream_.async_connect(conn_->st_.cfg, conn_->st_.logger, std::move(self));
+            return;
+         case run_action_type::parallel_group:
+            asio::experimental::make_parallel_group(
+               [this](auto token) {
+                  return this->reader(token);
+               },
+               [this](auto token) {
+                  return this->writer(token);
+               })
+               .async_wait(asio::experimental::wait_for_one(), std::move(self));
+            return;
+         case run_action_type::cancel_receive:
+            conn_->receive_channel_.cancel();
+            (*this)(self);  // this action does not require suspending
+            return;
+         case run_action_type::wait_for_reconnection:
+            conn_->reconnect_timer_.expires_after(conn_->st_.cfg.reconnect_wait_interval);
             conn_->reconnect_timer_.async_wait(std::move(self));
-
-            // If the timer was cancelled, exit
-            if (ec) {
-               self.complete(ec);
-               return;
-            }
-
-            // If we won't reconnect, exit
-            if (!conn_->will_reconnect()) {
-               self.complete(asio::error::operation_aborted);
-               return;
-            }
-         }
+            return;
+         default: BOOST_ASSERT(false);
       }
    }
 };
 
 logger make_stderr_logger(logger::level lvl, std::string prefix);
+
+template <class Executor>
+class run_cancel_handler {
+   connection_impl<Executor>* conn_;
+
+public:
+   explicit run_cancel_handler(connection_impl<Executor>& conn) noexcept
+   : conn_(&conn)
+   { }
+
+   void operator()(asio::cancellation_type_t cancel_type) const
+   {
+      // We support terminal and partial cancellation
+      constexpr auto mask = asio::cancellation_type_t::terminal |
+                            asio::cancellation_type_t::partial;
+
+      if ((cancel_type & mask) != asio::cancellation_type_t::none) {
+         conn_->cancel(operation::run);
+      }
+   }
+};
 
 }  // namespace detail
 
@@ -445,16 +425,12 @@ public:
       executor_type ex,
       asio::ssl::context ctx = asio::ssl::context{asio::ssl::context::tlsv12_client},
       logger lgr = {})
-   : stream_{ex, std::move(ctx)}
-   , writer_timer_{ex}
-   , reconnect_timer_{ex}
-   , receive_channel_{ex, 256}
-   , health_checker_{ex}
-   , logger_{std::move(lgr)}
-   {
-      set_receive_response(ignore);
-      writer_timer_.expires_at((std::chrono::steady_clock::time_point::max)());
-   }
+   : impl_(
+        std::make_unique<detail::connection_impl<Executor>>(
+           std::move(ex),
+           std::move(ctx),
+           std::move(lgr)))
+   { }
 
    /** @brief Constructor from an executor and a logger.
     *
@@ -504,7 +480,7 @@ public:
    { }
 
    /// Returns the associated executor.
-   executor_type get_executor() noexcept { return writer_timer_.get_executor(); }
+   executor_type get_executor() noexcept { return impl_->writer_cv_.get_executor(); }
 
    /** @brief Starts the underlying connection operations.
     *
@@ -515,25 +491,21 @@ public:
     *      @ref boost::redis::config::addr.
     *  @li Establishes a physical connection to the server. For TCP connections,
     *      connects to one of the endpoints obtained during name resolution.
-    *      For UNIX domain socket connections, it connects to @ref boost::redis::config::unix_socket.
+    *      For UNIX domain socket connections, it connects to @ref boost::redis::config::unix_sockets.
     *  @li If @ref boost::redis::config::use_ssl is `true`, performs the TLS handshake.
-    *  @li Sends a `HELLO` command where
-    *      each of its parameters are read from `cfg`.
-    *  @li Starts a health-check operation where ping commands are sent
+    *  @li Executes the setup request, as defined by the passed @ref config object.
+    *      By default, this is a `HELLO` command, but it can contain any other arbitrary
+    *      commands. See the @ref config::setup docs for more info.
+    *  @li Starts a health-check operation where `PING` commands are sent
     *      at intervals specified by
-    *      @ref boost::redis::config::health_check_interval. 
-    *      The message passed to `PING` will be @ref boost::redis::config::health_check_id. 
-    *      Passing an interval with a zero value will disable health-checks. If the Redis
-    *      server does not respond to a health-check within two times the value
-    *      specified here, it will be considered unresponsive and the connection
-    *      will be closed.
+    *      @ref config::health_check_interval when the connection is idle.
+    *      See the documentation of @ref config::health_check_interval for more info.
     *  @li Starts read and write operations. Requests issued using @ref async_exec
     *      before `async_run` is called will be written to the server immediately.
     *
     *  When a connection is lost for any reason, a new one is
-    *  established automatically. To disable reconnection call
-    *  `boost::redis::connection::cancel(operation::reconnection)`
-    *  or set @ref boost::redis::config::reconnect_wait_interval to zero.
+    *  established automatically. To disable reconnection
+    *  set @ref boost::redis::config::reconnect_wait_interval to zero.
     *
     *  The completion token must have the following signature
     *
@@ -541,23 +513,33 @@ public:
     *  void f(system::error_code);
     *  @endcode
     *
-    *  For example on how to call this function refer to
-    *  cpp20_intro.cpp or any other example.
+    * @par Per-operation cancellation
+    * This operation supports the following cancellation types:
     *
-    *  @param cfg Configuration parameters.
-    *  @param token Completion token.
+    *   @li `asio::cancellation_type_t::terminal`.
+    *   @li `asio::cancellation_type_t::partial`.
+    *
+    * In both cases, cancellation is equivalent to calling @ref basic_connection::cancel
+    * passing @ref operation::run as argument.
+    *
+    * After the operation completes, the token's associated cancellation slot
+    * may still have a cancellation handler associated to this connection.
+    * You should make sure to not invoke it after the connection has been destroyed.
+    * This is consistent with what other Asio I/O objects do.
+    *
+    * For example on how to call this function refer to
+    * cpp20_intro.cpp or any other example.
+    *
+    * @param cfg Configuration parameters.
+    * @param token Completion token.
     */
    template <class CompletionToken = asio::default_completion_token_t<executor_type>>
    auto async_run(config const& cfg, CompletionToken&& token = {})
    {
-      cfg_ = cfg;
-      health_checker_.set_config(cfg);
-      handshaker_.set_config(cfg);
-
-      return asio::async_compose<CompletionToken, void(system::error_code)>(
-         detail::run_op<this_type>{this},
+      return asio::async_initiate<CompletionToken, void(system::error_code)>(
+         run_initiation{impl_.get()},
          token,
-         writer_timer_);
+         &cfg);
    }
 
    /**
@@ -613,30 +595,37 @@ public:
 
    /** @brief Receives server side pushes asynchronously.
     *
-    *  When pushes arrive and there is no `async_receive` operation in
-    *  progress, pushed data, requests, and responses will be paused
-    *  until `async_receive` is called again. Apps will usually want
-    *  to call `async_receive` in a loop. 
+    * When pushes arrive and there is no `async_receive` operation in
+    * progress, pushed data, requests, and responses will be paused
+    * until `async_receive` is called again. Apps will usually want
+    * to call `async_receive` in a loop. 
     *
-    *  To cancel an ongoing receive operation apps should call
-    *  `basic_connection::cancel(operation::receive)`.
+    * For an example see cpp20_subscriber.cpp. The completion token must
+    * have the following signature
     *
-    *  For an example see cpp20_subscriber.cpp. The completion token must
-    *  have the following signature
+    * @code
+    * void f(system::error_code, std::size_t);
+    * @endcode
     *
-    *  @code
-    *  void f(system::error_code, std::size_t);
-    *  @endcode
-    *
-    *  Where the second parameter is the size of the push received in
-    *  bytes.
+    * Where the second parameter is the size of the push received in
+    * bytes.
     * 
-    *  @param token Completion token.
+    * @par Per-operation cancellation
+    * This operation supports the following cancellation types:
+    *
+    *   @li `asio::cancellation_type_t::terminal`.
+    *   @li `asio::cancellation_type_t::partial`.
+    *   @li `asio::cancellation_type_t::total`.
+    *
+    * Calling `basic_connection::cancel(operation::receive)` will
+    * also cancel any ongoing receive operations.
+    * 
+    * @param token Completion token.
     */
    template <class CompletionToken = asio::default_completion_token_t<executor_type>>
    auto async_receive(CompletionToken&& token = {})
    {
-      return receive_channel_.async_receive(std::forward<CompletionToken>(token));
+      return impl_->receive_channel_.async_receive(std::forward<CompletionToken>(token));
    }
 
    /** @brief Receives server pushes synchronously without blocking.
@@ -658,7 +647,7 @@ public:
          size = n;
       };
 
-      auto const res = receive_channel_.try_receive(f);
+      auto const res = impl_->receive_channel_.try_receive(f);
       if (ec)
          return 0;
 
@@ -670,108 +659,107 @@ public:
 
    /** @brief Executes commands on the Redis server asynchronously.
     *
-    *  This function sends a request to the Redis server and waits for
-    *  the responses to each individual command in the request. If the
-    *  request contains only commands that don't expect a response,
-    *  the completion occurs after it has been written to the
-    *  underlying stream.  Multiple concurrent calls to this function
-    *  will be automatically queued by the implementation.
+    * This function sends a request to the Redis server and waits for
+    * the responses to each individual command in the request. If the
+    * request contains only commands that don't expect a response,
+    * the completion occurs after it has been written to the
+    * underlying stream.  Multiple concurrent calls to this function
+    * will be automatically queued by the implementation.
     *
-    *  For an example see cpp20_echo_server.cpp.
+    * For an example see cpp20_echo_server.cpp.
     *
     * The completion token must have the following signature:
     *
-    *  @code
-    *  void f(system::error_code, std::size_t);
-    *  @endcode
+    * @code
+    * void f(system::error_code, std::size_t);
+    * @endcode
     *
-    *  Where the second parameter is the size of the response received
-    *  in bytes.
+    * Where the second parameter is the size of the response received
+    * in bytes.
     *
     * @par Per-operation cancellation
-    * This operation supports per-operation cancellation. The following cancellation types
-    * are supported:
+    * This operation supports per-operation cancellation. Depending on the state of the request
+    * when cancellation is requested, we can encounter two scenarios:
     *
-    *   @li `asio::cancellation_type_t::terminal`. Always supported. May cause the current
-    *       `async_run` operation to be cancelled.
-    *   @li `asio::cancellation_type_t::partial` and `asio::cancellation_type_t::total`.
-    *       Supported only if the request hasn't been written to the network yet.
+    *   @li If the request hasn't been sent to the server yet, cancellation will prevent it
+    *       from being sent to the server. In this situation, all cancellation types are supported
+    *       (`asio::cancellation_type_t::terminal`, `asio::cancellation_type_t::partial` and
+    *       `asio::cancellation_type_t::total`).
+    *   @li If the request has been sent to the server but the response hasn't arrived yet,
+    *       cancellation will cause `async_exec` to complete immediately. When the response
+    *       arrives from the server, it will be ignored. In this situation, only
+    *       `asio::cancellation_type_t::terminal` and `asio::cancellation_type_t::partial`
+    *       are supported. Cancellation requests specifying `asio::cancellation_type_t::total`
+    *       only will be ignored.
+    *
+    * In any case, connections can be safely used after cancelling `async_exec` operations.
     *
     * @par Object lifetimes
     * Both `req` and `res` should be kept alive until the operation completes.
     * No copies of the request object are made.
     *
-    *  @param req The request to be executed.
-    *  @param resp The response object to parse data into.
-    *  @param token Completion token.
+    * @param req The request to be executed.
+    * @param resp The response object to parse data into.
+    * @param token Completion token.
     */
    template <
       class Response = ignore_t,
       class CompletionToken = asio::default_completion_token_t<executor_type>>
    auto async_exec(request const& req, Response& resp = ignore, CompletionToken&& token = {})
    {
-      return this->async_exec(req, any_adapter(resp), std::forward<CompletionToken>(token));
+      return this->async_exec(req, any_adapter{resp}, std::forward<CompletionToken>(token));
    }
 
    /** @brief Executes commands on the Redis server asynchronously.
     *
-    *  This function sends a request to the Redis server and waits for
-    *  the responses to each individual command in the request. If the
-    *  request contains only commands that don't expect a response,
-    *  the completion occurs after it has been written to the
-    *  underlying stream.  Multiple concurrent calls to this function
-    *  will be automatically queued by the implementation.
+    * This function sends a request to the Redis server and waits for
+    * the responses to each individual command in the request. If the
+    * request contains only commands that don't expect a response,
+    * the completion occurs after it has been written to the
+    * underlying stream.  Multiple concurrent calls to this function
+    * will be automatically queued by the implementation.
     *
-    *  For an example see cpp20_echo_server.cpp.
+    * For an example see cpp20_echo_server.cpp.
     *
     * The completion token must have the following signature:
     *
-    *  @code
-    *  void f(system::error_code, std::size_t);
-    *  @endcode
+    * @code
+    * void f(system::error_code, std::size_t);
+    * @endcode
     *
-    *  Where the second parameter is the size of the response received
-    *  in bytes.
+    * Where the second parameter is the size of the response received
+    * in bytes.
     *
     * @par Per-operation cancellation
-    * This operation supports per-operation cancellation. The following cancellation types
-    * are supported:
+    * This operation supports per-operation cancellation. Depending on the state of the request
+    * when cancellation is requested, we can encounter two scenarios:
     *
-    *   @li `asio::cancellation_type_t::terminal`. Always supported. May cause the current
-    *       `async_run` operation to be cancelled.
-    *   @li `asio::cancellation_type_t::partial` and `asio::cancellation_type_t::total`.
-    *       Supported only if the request hasn't been written to the network yet.
+    *   @li If the request hasn't been sent to the server yet, cancellation will prevent it
+    *       from being sent to the server. In this situation, all cancellation types are supported
+    *       (`asio::cancellation_type_t::terminal`, `asio::cancellation_type_t::partial` and
+    *       `asio::cancellation_type_t::total`).
+    *   @li If the request has been sent to the server but the response hasn't arrived yet,
+    *       cancellation will cause `async_exec` to complete immediately. When the response
+    *       arrives from the server, it will be ignored. In this situation, only
+    *       `asio::cancellation_type_t::terminal` and `asio::cancellation_type_t::partial`
+    *       are supported. Cancellation requests specifying `asio::cancellation_type_t::total`
+    *       only will be ignored.
+    *
+    * In any case, connections can be safely used after cancelling `async_exec` operations.
     *
     * @par Object lifetimes
     * Both `req` and any response object referenced by `adapter`
     * should be kept alive until the operation completes.
     * No copies of the request object are made.
     *
-    *  @param req The request to be executed.
-    *  @param adapter An adapter object referencing a response to place data into.
-    *  @param token Completion token.
+    * @param req The request to be executed.
+    * @param adapter An adapter object referencing a response to place data into.
+    * @param token Completion token.
     */
    template <class CompletionToken = asio::default_completion_token_t<executor_type>>
    auto async_exec(request const& req, any_adapter adapter, CompletionToken&& token = {})
    {
-      auto& adapter_impl = adapter.impl_;
-      BOOST_ASSERT_MSG(
-         req.get_expected_responses() <= adapter_impl.supported_response_size,
-         "Request and response have incompatible sizes.");
-
-      auto notifier = std::make_shared<detail::exec_notifier_type<executor_type>>(
-         get_executor(),
-         1);
-      auto info = detail::make_elem(req, std::move(adapter_impl.adapt_fn));
-
-      info->set_done_callback([notifier]() {
-         notifier->try_send(std::error_code{}, 0);
-      });
-
-      return asio::async_compose<CompletionToken, void(system::error_code, std::size_t)>(
-         detail::exec_op<this_type>{this, notifier, detail::exec_fsm(mpx_, std::move(info))},
-         token,
-         writer_timer_);
+      return impl_->async_exec(req, std::move(adapter), std::forward<CompletionToken>(token));
    }
 
    /** @brief Cancel operations.
@@ -785,36 +773,10 @@ public:
     *
     *  @param op The operation to be cancelled.
     */
-   void cancel(operation op = operation::all)
-   {
-      switch (op) {
-         case operation::resolve: stream_.cancel_resolve(); break;
-         case operation::exec:    mpx_.cancel_waiting(); break;
-         case operation::reconnection:
-            cfg_.reconnect_wait_interval = std::chrono::seconds::zero();
-            break;
-         case operation::run:          cancel_run(); break;
-         case operation::receive:      receive_channel_.cancel(); break;
-         case operation::health_check: health_checker_.cancel(); break;
-         case operation::all:
-            stream_.cancel_resolve();
-            cfg_.reconnect_wait_interval = std::chrono::seconds::zero();
-            health_checker_.cancel();
-            cancel_run();               // run
-            receive_channel_.cancel();  // receive
-            mpx_.cancel_waiting();      // exec
-            break;
-         default: /* ignore */;
-      }
-   }
-
-   auto run_is_canceled() const noexcept { return mpx_.get_cancel_run_state(); }
+   void cancel(operation op = operation::all) { impl_->cancel(op); }
 
    /// Returns true if the connection will try to reconnect if an error is encountered.
-   bool will_reconnect() const noexcept
-   {
-      return cfg_.reconnect_wait_interval != std::chrono::seconds::zero();
-   }
+   bool will_reconnect() const noexcept { return impl_->will_reconnect(); }
 
    /**
     * @brief (Deprecated) Returns the ssl context.
@@ -828,7 +790,10 @@ public:
    BOOST_DEPRECATED(
       "ssl::context has no const methods, so this function should not be called. Set up any "
       "required TLS configuration before passing the ssl::context to the connection's constructor.")
-   asio::ssl::context const& get_ssl_context() const noexcept { return stream_.get_ssl_context(); }
+   asio::ssl::context const& get_ssl_context() const noexcept
+   {
+      return impl_->stream_.get_ssl_context();
+   }
 
    /**
     * @brief (Deprecated) Resets the underlying stream.
@@ -854,7 +819,7 @@ public:
    BOOST_DEPRECATED(
       "Accessing the underlying stream is deprecated and will be removed in the next release. Use "
       "the other member functions to interact with the connection.")
-   auto& next_layer() noexcept { return stream_.next_layer(); }
+   auto& next_layer() noexcept { return impl_->stream_.next_layer(); }
 
    /**
     * @brief (Deprecated) Returns a reference to the next layer.
@@ -870,17 +835,17 @@ public:
    BOOST_DEPRECATED(
       "Accessing the underlying stream is deprecated and will be removed in the next release. Use "
       "the other member functions to interact with the connection.")
-   auto const& next_layer() const noexcept { return stream_.next_layer(); }
+   auto const& next_layer() const noexcept { return impl_->stream_.next_layer(); }
 
    /// Sets the response object of @ref async_receive operations.
    template <class Response>
-   void set_receive_response(Response& response)
+   void set_receive_response(Response& resp)
    {
-      mpx_.set_receive_response(response);
+      impl_->set_receive_adapter(any_adapter{resp});
    }
 
    /// Returns connection usage information.
-   usage get_usage() const noexcept { return mpx_.get_usage(); }
+   usage get_usage() const noexcept { return impl_->st_.mpx.get_usage(); }
 
 private:
    using clock_type = std::chrono::steady_clock;
@@ -890,68 +855,54 @@ private:
    using receive_channel_type = asio::experimental::channel<
       executor_type,
       void(system::error_code, std::size_t)>;
-   using health_checker_type = detail::health_checker<Executor>;
-   using resp3_handshaker_type = detail::resp3_handshaker<executor_type>;
 
-   auto use_ssl() const noexcept { return cfg_.use_ssl; }
-
-   void cancel_run()
-   {
-      stream_.close();
-      writer_timer_.cancel();
-      receive_channel_.cancel();
-      mpx_.cancel_on_conn_lost();
-   }
+   auto use_ssl() const noexcept { return impl_->cfg_.use_ssl; }
 
    // Used by both this class and connection
    void set_stderr_logger(logger::level lvl, const config& cfg)
    {
-      logger_.reset(detail::make_stderr_logger(lvl, cfg.log_prefix));
+      impl_->st_.logger.lgr = detail::make_stderr_logger(lvl, cfg.log_prefix);
    }
 
-   template <class> friend struct detail::reader_op;
-   template <class> friend struct detail::writer_op;
-   template <class> friend struct detail::exec_op;
-   template <class, class> friend struct detail::hello_op;
-   template <class, class> friend class detail::ping_op;
-   template <class> friend class detail::run_op;
-   template <class, class> friend class detail::check_timeout_op;
+   // Initiation for async_run. This is required because we need access
+   // to the final handler (rather than the completion token) within the initiation,
+   // to modify the handler's cancellation slot.
+   struct run_initiation {
+      detail::connection_impl<Executor>* self;
+
+      using executor_type = Executor;
+      executor_type get_executor() const noexcept { return self->get_executor(); }
+
+      template <class Handler>
+      void operator()(Handler&& handler, config const* cfg)
+      {
+         self->st_.cfg = *cfg;
+         self->st_.mpx.set_config(*cfg);
+
+         // If the token's slot has cancellation enabled, it should just emit
+         // the cancellation signal in our connection. This lets us unify the cancel()
+         // function and per-operation cancellation
+         auto slot = asio::get_associated_cancellation_slot(handler);
+         if (slot.is_connected()) {
+            slot.template emplace<detail::run_cancel_handler<Executor>>(*self);
+         }
+
+         // Overwrite the token's cancellation slot: the composed operation
+         // should use the signal's slot so we can generate cancellations in cancel()
+         auto token_with_slot = asio::bind_cancellation_slot(
+            self->run_signal_.slot(),
+            std::forward<Handler>(handler));
+
+         asio::async_compose<decltype(token_with_slot), void(system::error_code)>(
+            detail::run_op<Executor>{self},
+            token_with_slot,
+            self->writer_cv_);
+      }
+   };
+
    friend class connection;
 
-   template <class CompletionToken>
-   auto reader(CompletionToken&& token)
-   {
-      return asio::async_compose<CompletionToken, void(system::error_code)>(
-         detail::reader_op<this_type>{*this},
-         std::forward<CompletionToken>(token),
-         writer_timer_);
-   }
-
-   template <class CompletionToken>
-   auto writer(CompletionToken&& token)
-   {
-      return asio::async_compose<CompletionToken, void(system::error_code)>(
-         detail::writer_op<this_type>{this},
-         std::forward<CompletionToken>(token),
-         writer_timer_);
-   }
-
-   bool is_open() const noexcept { return stream_.is_open(); }
-
-   detail::redis_stream<Executor> stream_;
-
-   // Notice we use a timer to simulate a condition-variable. It is
-   // also more suitable than a channel and the notify operation does
-   // not suspend.
-   timer_type writer_timer_;
-   timer_type reconnect_timer_;  // to wait the reconnection period
-   receive_channel_type receive_channel_;
-   health_checker_type health_checker_;
-   resp3_handshaker_type handshaker_;
-
-   config cfg_;
-   detail::multiplexer mpx_;
-   detail::connection_logger logger_;
+   std::unique_ptr<detail::connection_impl<Executor>> impl_;
 };
 
 /**  @brief A basic_connection that type erases the executor.
@@ -1040,11 +991,8 @@ public:
    auto async_run(config const& cfg, CompletionToken&& token = {})
    {
       return asio::async_initiate<CompletionToken, void(boost::system::error_code)>(
-         [](auto handler, connection* self, config const* cfg) {
-            self->async_run_impl(*cfg, std::move(handler));
-         },
+         initiation{this},
          token,
-         this,
          &cfg);
    }
 
@@ -1072,11 +1020,8 @@ public:
    auto async_run(config const& cfg, logger l, CompletionToken&& token = {})
    {
       return asio::async_initiate<CompletionToken, void(boost::system::error_code)>(
-         [](auto handler, connection* self, config const* cfg, logger l) {
-            self->async_run_impl(*cfg, std::move(l), std::move(handler));
-         },
+         initiation{this},
          token,
-         this,
          &cfg,
          std::move(l));
    }
@@ -1101,7 +1046,7 @@ public:
    template <class Response = ignore_t, class CompletionToken = asio::deferred_t>
    auto async_exec(request const& req, Response& resp = ignore, CompletionToken&& token = {})
    {
-      return async_exec(req, any_adapter(resp), std::forward<CompletionToken>(token));
+      return async_exec(req, any_adapter{resp}, std::forward<CompletionToken>(token));
    }
 
    /**
@@ -1115,11 +1060,8 @@ public:
    auto async_exec(request const& req, any_adapter adapter, CompletionToken&& token = {})
    {
       return asio::async_initiate<CompletionToken, void(boost::system::error_code, std::size_t)>(
-         [](auto handler, connection* self, request const* req, any_adapter&& adapter) {
-            self->async_exec_impl(*req, std::move(adapter), std::move(handler));
-         },
+         initiation{this},
          token,
-         this,
          &req,
          std::move(adapter));
    }
@@ -1136,7 +1078,7 @@ public:
       "the other member functions to interact with the connection.")
    asio::ssl::stream<asio::ip::tcp::socket>& next_layer() noexcept
    {
-      return impl_.stream_.next_layer();
+      return impl_.impl_->stream_.next_layer();
    }
 
    /// (Deprecated) Calls @ref boost::redis::basic_connection::next_layer.
@@ -1145,7 +1087,7 @@ public:
       "the other member functions to interact with the connection.")
    asio::ssl::stream<asio::ip::tcp::socket> const& next_layer() const noexcept
    {
-      return impl_.stream_.next_layer();
+      return impl_.impl_->stream_.next_layer();
    }
 
    /// @copydoc basic_connection::reset_stream
@@ -1170,10 +1112,38 @@ public:
       "required TLS configuration before passing the ssl::context to the connection's constructor.")
    asio::ssl::context const& get_ssl_context() const noexcept
    {
-      return impl_.stream_.get_ssl_context();
+      return impl_.impl_->stream_.get_ssl_context();
    }
 
 private:
+   // Function object to initiate the async ops that use asio::any_completion_handler.
+   // Required for asio::cancel_after to work.
+   // Since all ops have different arguments, a single struct with different overloads is enough.
+   struct initiation {
+      connection* self;
+
+      using executor_type = asio::any_io_executor;
+      executor_type get_executor() const noexcept { return self->get_executor(); }
+
+      template <class Handler>
+      void operator()(Handler&& handler, config const* cfg, logger l)
+      {
+         self->async_run_impl(*cfg, std::move(l), std::forward<Handler>(handler));
+      }
+
+      template <class Handler>
+      void operator()(Handler&& handler, config const* cfg)
+      {
+         self->async_run_impl(*cfg, std::forward<Handler>(handler));
+      }
+
+      template <class Handler>
+      void operator()(Handler&& handler, request const* req, any_adapter&& adapter)
+      {
+         self->async_exec_impl(*req, std::move(adapter), std::forward<Handler>(handler));
+      }
+   };
+
    void async_run_impl(
       config const& cfg,
       logger&& l,

@@ -31,6 +31,42 @@ int main ()
    BOOST_INTERPROCESS_TRY{
       const std::size_t FileSize = 99999*2;
       {
+         {
+            std::ofstream file(get_filename().c_str(), std::ios::binary | std::ios::trunc);
+         }
+         {
+            //Create an empty file mapping
+            file_mapping mapping(get_filename().c_str(), read_write);
+
+            //Obtain zero file size
+            offset_t filesize = 5;
+            if(!mapping.get_size(filesize) || filesize != 0)
+               return 1;
+
+            //Check mapping of empty file does not work
+            bool thrown = false;
+            BOOST_INTERPROCESS_TRY{
+               mapped_region region (mapping, read_write);
+            }
+            BOOST_INTERPROCESS_CATCH(...){
+               thrown = true;               
+            } BOOST_INTERPROCESS_CATCH_END
+            if(!thrown)
+               return file_mapping().swap(mapping), file_mapping::remove(get_filename().c_str()), 1;
+
+            thrown = false;
+            BOOST_INTERPROCESS_TRY{
+               mapped_region region (mapping, read_only);
+            }
+            BOOST_INTERPROCESS_CATCH(...){
+               thrown = true;               
+            } BOOST_INTERPROCESS_CATCH_END
+            if(!thrown)
+               return file_mapping().swap(mapping), file_mapping::remove(get_filename().c_str()), 1;
+         }
+         file_mapping::remove(get_filename().c_str());
+      }
+      {
          //Create file with given size
          std::ofstream file(get_filename().c_str(), std::ios::binary | std::ios::trunc);
          file.seekp(static_cast<std::streamoff>(FileSize-1));
@@ -166,7 +202,7 @@ int main ()
    }
    BOOST_INTERPROCESS_CATCH(std::exception &exc){
       file_mapping::remove(get_filename().c_str());
-      std::cout << "Unhandled exception: " << exc.what() << std::endl;
+      std::cout << "Unexpected Exception: " << exc.what() << std::endl;
       BOOST_INTERPROCESS_RETHROW
    } BOOST_INTERPROCESS_CATCH_END
    file_mapping::remove(get_filename().c_str());

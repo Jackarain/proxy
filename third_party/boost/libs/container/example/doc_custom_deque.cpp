@@ -20,6 +20,29 @@ int main ()
 {
    using namespace boost::container;
 
+   //This option specifies that a deque that will use "unsigned char" as
+   //the type to store capacity or size internally.
+   typedef deque_options< stored_size<unsigned char> >::type size_option_t;
+
+   //Size-optimized deque is smaller than the default one.
+   typedef deque<int, new_allocator<int>, size_option_t > size_optimized_deque_t;
+   assert(( sizeof(size_optimized_deque_t) < sizeof(deque<int>) ));
+
+   //Requesting capacity for more elements than representable by "unsigned char"
+   //is an error in the size optimized deque.
+   bool exception_thrown = false;
+   /*<-*/ 
+   #ifndef BOOST_NO_EXCEPTIONS
+   BOOST_CONTAINER_TRY{ size_optimized_deque_t v(256); } BOOST_CONTAINER_CATCH(...){ exception_thrown = true; } BOOST_CONTAINER_CATCH_END
+   #else
+   exception_thrown = true;
+   #endif   //BOOST_NO_EXCEPTIONS
+   /*->*/
+   //=try       { size_optimized_deque_t v(256); }
+   //=catch(...){ exception_thrown = true;        }
+
+   assert(exception_thrown == true);
+
    //This option specifies the desired block size for deque
    typedef deque_options< block_size<128u> >::type block_128_option_t;
 

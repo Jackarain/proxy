@@ -52,7 +52,7 @@ public:
 
     void * operator new(std::size_t)
     {
-        return std::allocator<X>().allocate(1, static_cast<X*>(0));
+        return std::allocator<X>().allocate(1);
     }
 
     void operator delete(void * p)
@@ -120,18 +120,6 @@ int main()
     std::cout << "BOOST_HAS_THREADS: (defined)\n";
 #else
     std::cout << "BOOST_HAS_THREADS: (not defined)\n";
-#endif
-
-#if defined(BOOST_SP_USE_STD_ALLOCATOR)
-    std::cout << "BOOST_SP_USE_STD_ALLOCATOR: (defined)\n";
-#else
-    std::cout << "BOOST_SP_USE_STD_ALLOCATOR: (not defined)\n";
-#endif
-
-#if defined(BOOST_SP_USE_QUICK_ALLOCATOR)
-    std::cout << "BOOST_SP_USE_QUICK_ALLOCATOR: (defined)\n";
-#else
-    std::cout << "BOOST_SP_USE_QUICK_ALLOCATOR: (not defined)\n";
 #endif
 
 #if defined(BOOST_QA_PAGE_SIZE)

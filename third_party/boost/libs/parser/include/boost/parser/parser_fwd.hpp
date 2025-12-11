@@ -115,7 +115,7 @@ namespace boost { namespace parser {
             bool & success,
             int & indent,
             ErrorHandler const & error_handler,
-            nope &,
+            nope const &,
             symbol_table_tries_t & symbol_table_tries,
             pending_symbol_table_operations_t &
                 pending_symbol_table_operations) noexcept;

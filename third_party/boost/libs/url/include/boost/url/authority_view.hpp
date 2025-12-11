@@ -51,8 +51,8 @@ namespace urls {
     @par Example 2
     The parsing function @ref parse_authority returns
     a `boost::system::result` containing either a valid
-    @ref authority_view upon succcess, otherwise it
-    contain an error. The error can be converted to
+    @ref authority_view upon success, otherwise it
+    contains an error. The error can be converted to
     an exception by the caller if desired:
     @code
     system::result< authority_view > rv = parse_authority( "user:pass@www.example.com:8080" );
@@ -121,12 +121,12 @@ public:
 
         This function attempts to construct
         an authority from the string `s`,
-        which must be a valid ['authority] or
+        which must be a valid authority or
         else an exception is thrown. Upon
         successful construction, the view
         refers to the characters in the
         buffer pointed to by `s`.
-        Ownership is not transferred; The
+        Ownership is not transferred; the
         caller is responsible for ensuring
         that the lifetime of the buffer
         extends until the view is destroyed.
@@ -1033,7 +1033,7 @@ public:
         If the host type is @ref host_type::name,
         this function returns the name as
         a string.
-        Otherwise, if the host type is not an
+        Otherwise, if the host type is not a
         name, it returns an empty string.
         Any percent-escapes in the string are
         decoded first.
@@ -1300,7 +1300,7 @@ public:
     int
     compare(authority_view const& other) const noexcept;
 
-    /** Return the result of comparing two authorities
+    /** Return the result of comparing two authorities.
         The authorities are compared component
         by component as if they were first
         normalized.
@@ -1324,7 +1324,7 @@ public:
         return a0.compare(a1) == 0;
     }
 
-    /** Return the result of comparing two authorities
+    /** Return the result of comparing two authorities.
         The authorities are compared component
         by component as if they were first
         normalized.
@@ -1348,7 +1348,7 @@ public:
         return ! (a0 == a1);
     }
 
-    /** Return the result of comparing two authorities
+    /** Return the result of comparing two authorities.
         The authorities are compared component
         by component as if they were first
         normalized.
@@ -1372,7 +1372,7 @@ public:
         return a0.compare(a1) < 0;
     }
 
-    /** Return the result of comparing two authorities
+    /** Return the result of comparing two authorities.
         The authorities are compared component
         by component as if they were first
         normalized.
@@ -1396,7 +1396,7 @@ public:
         return a0.compare(a1) <= 0;
     }
 
-    /** Return the result of comparing two authorities
+    /** Return the result of comparing two authorities.
         The authorities are compared component
         by component as if they were first
         normalized.
@@ -1420,7 +1420,7 @@ public:
         return a0.compare(a1) > 0;
     }
 
-    /** Return the result of comparing two authorities
+    /** Return the result of comparing two authorities.
         The authorities are compared component
         by component as if they were first
         normalized.

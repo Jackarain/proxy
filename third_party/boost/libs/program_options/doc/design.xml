@@ -74,7 +74,7 @@
       of the library -- ascii and Unicode.
     </para>
 
-    <para>Another important point is that ascii strings are passed though
+    <para>Another important point is that ascii strings are passed through
       without modification. In other words, it's not possible to just convert
       ascii to Unicode and process the Unicode further. The problem is that the
       default conversion mechanism -- the <code>codecvt</code> facet -- might
@@ -85,7 +85,7 @@
       don't support Unicode option names. Unicode support is hard and
       requires a Boost-wide solution. Even comparing two arbitrary Unicode
       strings is non-trivial. Finally, using Unicode in option names is
-      related to internationalization, which has it's own
+      related to internationalization, which has its own
       complexities. E.g. if option names depend on current locale, then all
       program parts and other parts which use the name must be
       internationalized too.

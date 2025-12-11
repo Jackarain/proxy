@@ -25,7 +25,7 @@ This library understands the grammars related to URLs and provides functionality
 == Features
 
 While the library is general purpose, special care has been taken to ensure that the implementation and data representation are friendly to network programs which need to handle URLs efficiently and securely, including the case where the inputs come from untrusted sources.
-Interfaces are provided for using error codes instead of exceptions as needed, and most algorithms have the means to opt-out of dynamic memory allocation.
+Interfaces are provided for using error codes instead of exceptions as needed, and most algorithms have the means to opt out of dynamic memory allocation.
 Another feature of the library is that all modifications leave the URL in a valid state.
 Code which uses this library is easy to read, flexible, and performant.
 

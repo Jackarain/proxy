@@ -45,7 +45,7 @@ int main(int argc, char** argv)
             " <operation1> <operation2> <operation3> <operation4> <operation5> "
             "<operation6>"
             " <operation7> <operation8>\n");
-        // User has to enter atleast one operation and they can enter maximum 8
+        // User has to enter at least one operation and they can enter maximum 8
         // operations considering binary conversion to be an
         // operation.Output_image_template argument is the common component which
         // will be added in names of all output images followed by a hyphen and

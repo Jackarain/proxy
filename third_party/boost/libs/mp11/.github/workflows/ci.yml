@@ -182,7 +182,7 @@ jobs:
           - toolset: clang
             compiler: clang++-20
             cxxstd: "03,11,14,17,20,23,2c"
-            container: ubuntu:25.04
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-20
           - toolset: clang
@@ -266,11 +266,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # msvc-14.0 not included, because it fails with "compiler is out of heap space"
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
@@ -282,7 +277,7 @@ jobs:
           - toolset: gcc
             cxxstd: "03,11,14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
 
     runs-on: ${{matrix.os}}
 
@@ -588,6 +583,10 @@ jobs:
         with:
           cuda: '11.7.1'
           linux-local-args: '["--toolkit"]'
+          use-local-cache: false
+          use-github-cache: false
+          method: network
+          sub-packages: '["nvcc"]'
 
       - name: Setup Boost
         run: |
@@ -615,11 +614,15 @@ jobs:
           nvcc -x cu -I ./include -I ../assert/include -I ../config/include -I ../core/include -std=c++17 -c test/mp_count_if.cpp
 
   cuda-windows:
-    runs-on: windows-2019
+    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
       - uses: Jimver/cuda-toolkit@v0.2.16
+        with:
+          use-local-cache: false
+          use-github-cache: false
+
       - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Setup Boost
@@ -643,8 +646,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
@@ -692,8 +694,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
@@ -759,8 +760,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 

@@ -7,7 +7,7 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef SYCL_LANGUAGE_VERSION
+#ifndef BOOST_MATH_ENABLE_SYCL
 #include <pch.hpp>
 #endif
 
@@ -30,7 +30,7 @@
 #define BOOST_MATH_OVERFLOW_ERROR_POLICY ignore_error
 #endif
 
-#ifdef SYCL_LANGUAGE_VERSION
+#ifdef BOOST_MATH_ENABLE_SYCL
 #include "sycl/sycl.hpp"
 #endif
 

@@ -14,6 +14,7 @@ constant boost_dependencies :
     /boost/core//boost_core
     /boost/function//boost_function
     /boost/fusion//boost_fusion
+    /boost/mp11//boost_mp11
     /boost/mpl//boost_mpl
     /boost/parameter//boost_parameter
     /boost/phoenix//boost_phoenix

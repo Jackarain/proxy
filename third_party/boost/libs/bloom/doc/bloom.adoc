@@ -12,6 +12,7 @@
 :stem: latexmath
 :small: pass:[<font style="font-size:90%">]
 :small-end: pass:[</font>]
+:cpp: C++
 
 ++++
 <style>

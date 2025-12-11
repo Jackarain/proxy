@@ -103,7 +103,7 @@ private:
                         , TRUE
                         );
 
-        // Needs to be done after jpeg_set_defaults() since it's overridding this value back to slow.
+        // Needs to be done after jpeg_set_defaults() since it's overriding this value back to slow.
         this->get()->dct_method = this->_info._dct_method;
 
 
@@ -138,7 +138,7 @@ private:
 };
 
 ///
-/// JPEG Dyamic Image Writer
+/// JPEG Dynamic Image Writer
 ///
 template< typename Device >
 class dynamic_image_writer< Device

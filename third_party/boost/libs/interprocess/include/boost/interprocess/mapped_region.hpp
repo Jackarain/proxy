@@ -102,6 +102,13 @@ class mapped_region
    //!offset "offset", and the mapping's size will be "size". The mapping
    //!can be opened for read only, read-write or copy-on-write.
    //!
+   //!The "mapping" object must be an non-empty mappable type (file, shared memory...)
+   //!or the function might fail. Check `shared_memory_object/file_mapping::get_size() != 0`
+   //!before trying to map the empty object and obtain an error.
+   //!
+   //!The "size" parameter must be bigger than zero or the function will fail
+   //!
+   //! 
    //!If an address is specified, both the offset and the address must be
    //!multiples of the page size.
    //!

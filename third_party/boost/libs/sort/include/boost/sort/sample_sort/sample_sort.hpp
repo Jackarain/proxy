@@ -13,7 +13,6 @@
 #ifndef __BOOST_SORT_PARALLEL_DETAIL_SAMPLE_SORT_HPP
 #define __BOOST_SORT_PARALLEL_DETAIL_SAMPLE_SORT_HPP
 
-#include <ciso646>
 #include <functional>
 #include <future>
 #include <iterator>
@@ -249,13 +248,13 @@ sample_sort<Iter_t, Compare>
     vfuture.resize(nthread);
 
     // Adjust when have many threads and only a few elements
-    while (nelem > thread_min and (nthread * nthread) > (nelem >> 3))
+    while (nelem > thread_min && (nthread * nthread) > (nelem >> 3))
     {
         nthread /= 2;
     };
     ninterval = (nthread << 3);
 
-    if (nthread < 2 or nelem <= (thread_min))
+    if (nthread < 2 || nelem <= (thread_min))
     {
         bss::spinsort<Iter_t, Compare>(first, last, comp);
         return;
@@ -264,13 +263,13 @@ sample_sort<Iter_t, Compare>
     //------------------- check if sort --------------------------------------
     bool sw = true;
     for (Iter_t it1 = first, it2 = first + 1;
-                    it2 != last and (sw = not comp(*it2, *it1)); it1 = it2++);
+                    it2 != last && (sw = ! comp(*it2, *it1)); it1 = it2++);
     if (sw) return;
 
     //------------------- check if reverse sort ---------------------------
     sw = true;
     for (Iter_t it1 = first, it2 = first + 1;
-                    it2 != last and (sw = comp(*it2, *it1)); it1 = it2++);
+                    it2 != last && (sw = comp(*it2, *it1)); it1 = it2++);
     if (sw)
     {
 	using std::swap;
@@ -307,7 +306,7 @@ sample_sort<Iter_t, Compare>
     {
         error = true;
     }
-    if (not error)
+    if (! error)
     {
         first_merge();
         construct = true;
@@ -334,7 +333,7 @@ void sample_sort<Iter_t, Compare>::destroy_all(void)
         destroy(global_buf);
         construct = false;
     }
-    if (global_buf.first != nullptr and owner)
+    if (global_buf.first != nullptr && owner)
         std::free(global_buf.first);
 }
 //

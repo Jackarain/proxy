@@ -44,6 +44,7 @@ struct stopwatch
    typename Clock::time_point m_start;
 };
 
+// LCOV_EXCL_START
 void print_flags(std::ios_base::fmtflags f)
 {
    std::cout << "Formatting flags were: ";
@@ -57,6 +58,7 @@ void print_flags(std::ios_base::fmtflags f)
       std::cout << "showpos ";
    std::cout << std::endl;
 }
+// LCOV_EXCL_STOP
 
 template <class T>
 void test()
@@ -88,6 +90,7 @@ void test()
             const char* expect = string_data[j][col];
             if (ss.str() != expect)
             {
+               // LCOV_EXCL_START
                std::cout << std::setprecision(20) << "Testing value " << val << std::endl;
                print_flags(f[i]);
                std::cout << "Precision is: " << prec << std::endl;
@@ -95,6 +98,7 @@ void test()
                std::cout << "Expected: " << expect << std::endl;
                ++boost::detail::test_errors();
                mp_t(val).str(prec, f[i]); // for debugging
+               // LCOV_EXCL_STOP
             }
          }
       }
@@ -120,6 +124,7 @@ void test()
          const char* expect = zeros[col];
          if (ss.str() != expect)
          {
+            // LCOV_EXCL_START
             std::cout << std::setprecision(20) << "Testing value " << val << std::endl;
             print_flags(f[i]);
             std::cout << "Precision is: " << prec << std::endl;
@@ -127,6 +132,7 @@ void test()
             std::cout << "Expected: " << expect << std::endl;
             ++boost::detail::test_errors();
             mp_t(val).str(prec, f[i]); // for debugging
+            // LCOV_EXCL_STOP
          }
       }
    }

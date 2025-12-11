@@ -38,11 +38,11 @@ Typical output is:
 
 [endsect] [/section:caveats Caveats]
 
-[section:jel Defining a Special Function.]
+[section:jel Defining a Special Function]
 
 [JEL]
 
-[endsect] [/section:jel Defining a Special Function.]
+[endsect] [/section:jel Defining a Special Function]
 
 
 [section:nd Calculating a Derivative]
@@ -108,9 +108,9 @@ needed for convergence when using various counts of base-10 digits.
 
 Let's calibrate, for instance, the number of coefficients needed at the point `x = 1`.
 
-Empirical data were used with __WolframAlpha :
+Empirical data were used with __WolframAlphaGLCoefs :
 ``
-Fit[{{21.0, 3.5}, {51.0, 11.1}, {101.0, 22.5}, {201.0, 46.8}}, {1, d, d^2}, d]FullSimplify[%]  
+Fit[{{21.0, 3.5}, {51.0, 11.1}, {101.0, 22.5}, {201.0, 46.8}}, {1, d, d^2}, d] FullSimplify[%]  
   0.0000178915 d^2 + 0.235487 d - 1.28301
   or
   -1.28301 + (0.235487 + 0.0000178915 d) d
@@ -127,7 +127,7 @@ followed by calculation of accurate abscissa and weights is:
 [gauss_laguerre_quadrature_output_1]
 
 Finally the result using Gauss-Laguerre quadrature is compared with a calculation using `cyl_bessel_k`,
-and both are listed, finally confirming that none differ more than a small tolerance.
+and both are listed, conclusively confirming that none differ by more than a small tolerance.
 [gauss_laguerre_quadrature_output_2]
 
 For more detail see comments in the source code for this example at [@../../example/gauss_laguerre_quadrature.cpp gauss_laguerre_quadrature.cpp].

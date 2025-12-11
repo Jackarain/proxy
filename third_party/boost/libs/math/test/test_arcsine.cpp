@@ -10,7 +10,7 @@
 
 // Tests for the arcsine Distribution.
 
-#ifndef SYCL_LANGUAGE_VERSION
+#ifndef BOOST_MATH_ENABLE_SYCL
 #include <pch.hpp> // Must be 1st include, and include_directory /libs/math/src/tr1/ is needed.
 #else
 #include "sycl/sycl.hpp"

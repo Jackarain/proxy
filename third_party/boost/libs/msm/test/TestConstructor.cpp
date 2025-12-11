@@ -9,11 +9,13 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+// set_states API is not supported by backmp11
+#define BOOST_MSM_TEST_SKIP_BACKMP11
+#include "BackCommon.hpp"
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
-#define BOOST_TEST_MODULE MyTest
+#define BOOST_TEST_MODULE test_constructor
 #endif
 #include <boost/test/unit_test.hpp>
 #include <boost/config.hpp>
@@ -55,9 +57,14 @@ namespace
         DiskTypeEnum disc_type;
     };
 
+    template<template <typename...> class Back, typename Policy = void>
+    struct hierarchical_state_machine
+    {
     // front-end: define the FSM structure 
     struct player_ : public msm::front::state_machine_def<player_>
     {
+        BOOST_MSM_TEST_DEFINE_DEPENDENT_TEMPLATES(player_)
+
         player_(SomeExternalContext& context,int someint)
             :context_(context)
         {
@@ -108,6 +115,8 @@ namespace
 
         struct Playing_ : public msm::front::state_machine_def<Playing_>
         {
+            BOOST_MSM_TEST_DEFINE_DEPENDENT_TEMPLATES(Playing_)
+
             // when playing, the CD is loaded and we are in either pause or playing (duh)
             template <class Event,class FSM>
             void on_entry(Event const&,FSM& ) {std::cout << "entering: Playing" << std::endl;}
@@ -168,7 +177,7 @@ namespace
             }
         };
         // back-end
-        typedef msm::back::state_machine<Playing_> Playing;
+        typedef Back<Playing_, Policy> Playing;
 
         // state not defining any entry or exit
         struct Paused : public msm::front::state<>
@@ -238,26 +247,31 @@ namespace
             BOOST_FAIL("no_transition called!");
         }
     };
+    typedef Back<player_, Policy> player;
+    };
     // Pick a back-end
-    typedef msm::back::state_machine<player_> player;
+    typedef get_hierarchical_test_machines<hierarchical_state_machine> test_machines;
 
 
-    BOOST_AUTO_TEST_CASE( my_test )
-    {     
+    BOOST_AUTO_TEST_CASE_TEMPLATE( test_constructor, test_machine, test_machines )
+    {
+        typedef typename test_machine::player player;
+        typedef typename test_machine::player_ player_;
+
         SomeExternalContext ctx(3);
         player p1(boost::ref(ctx),5);
         BOOST_CHECK_MESSAGE(p1.context_.bla == 10,"Wrong returned context value");
 
         ctx.bla = 3;
-        player p2(msm::back::states_ << player_::Empty(1),boost::ref(ctx),5);
-        BOOST_CHECK_MESSAGE(p2.get_state<player_::Empty&>().data_ == 1,"Wrong Empty value");
+        player p2(msm::back::states_ << typename player_::Empty(1),boost::ref(ctx),5);
+        BOOST_CHECK_MESSAGE(p2.template get_state<typename player_::Empty&>().data_ == 1,"Wrong Empty value");
 
-        p2.set_states(msm::back::states_ << player_::Empty(5));
-        BOOST_CHECK_MESSAGE(p2.get_state<player_::Empty&>().data_ == 5,"Wrong Empty value");
+        p2.set_states(msm::back::states_ << typename player_::Empty(5));
+        BOOST_CHECK_MESSAGE(p2.template get_state<typename player_::Empty&>().data_ == 5,"Wrong Empty value");
 
-        p2.set_states(msm::back::states_ << player_::Empty(7) << player_::Open(2));
-        BOOST_CHECK_MESSAGE(p2.get_state<player_::Empty&>().data_ == 7,"Wrong Empty value");
-        BOOST_CHECK_MESSAGE(p2.get_state<player_::Open&>().data_ == 2,"Wrong Open value");
+        p2.set_states(msm::back::states_ << typename player_::Empty(7) << typename player_::Open(2));
+        BOOST_CHECK_MESSAGE(p2.template get_state<typename player_::Empty&>().data_ == 7,"Wrong Empty value");
+        BOOST_CHECK_MESSAGE(p2.template get_state<typename player_::Open&>().data_ == 2,"Wrong Open value");
 
 #if defined(BOOST_MSVC) && BOOST_MSVC >= 1910 && BOOST_MSVC < 1930
 
@@ -270,10 +284,10 @@ namespace
 #else
 
         ctx.bla = 3;
-        player p(msm::back::states_ << player_::Empty(1) 
-                                    << player_::Playing(msm::back::states_ << player_::Playing_::Song1(8)),
+        player p(msm::back::states_ << typename player_::Empty(1) 
+                                    << typename player_::Playing(msm::back::states_ << typename player_::Playing_::Song1(8)),
                  boost::ref(ctx),5);
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Playing&>().get_state<player_::Playing_::Song1&>().data_ == 8,"Wrong Open value");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename player_::Playing&>().template get_state<typename player_::Playing_::Song1&>().data_ == 8,"Wrong Open value");
 
 #endif
     }

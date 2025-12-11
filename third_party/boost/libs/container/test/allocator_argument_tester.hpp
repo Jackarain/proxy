@@ -13,6 +13,7 @@
 
 #include <boost/container/uses_allocator.hpp>
 #include <boost/container/detail/mpl.hpp>
+#include <boost/container/detail/operator_new_helpers.hpp>
 #include <boost/move/core.hpp>
 
 template<class T, unsigned int Id, bool HasTrueTypes = false>
@@ -69,17 +70,10 @@ class propagation_test_allocator
    {  return std::size_t(-1);  }
 
    value_type* allocate(std::size_t count)
-   {  return static_cast<value_type*>(::operator new(count * sizeof(value_type))); }
+   {  return boost::container::dtl::operator_new_allocate<value_type>(count);  }
 
    void deallocate(value_type *ptr, std::size_t n)
-   {
-      (void)n;
-      # if __cpp_sized_deallocation
-      ::operator delete((void*)ptr, n * sizeof(value_type));
-      #else
-      ::operator delete((void*)ptr);
-      # endif
-   }
+   {  return boost::container::dtl::operator_delete_deallocate<T>(ptr, n);  }
 
    bool m_move_contructed;
    bool m_move_assigned;

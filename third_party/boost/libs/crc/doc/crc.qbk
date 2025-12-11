@@ -20,7 +20,7 @@
 
 [section:motivation  What is Boost.CRC?]
 
-CRCs (cyclic redundancy codes) is one common technique to confirming data
+CRCs (cyclic redundancy codes) are one common technique to confirming data
 integrity after transmission.  The [*Boost.CRC] library provides access to two
 styles of CRC computation, one as a function template, the other as a function
 template and two computation object class templates, where the two class
@@ -46,7 +46,7 @@ There are several possibilities after the receiver's check:
 
 * The check value matches at both places and the data was transmitted intact.
 * The data got corrupted and the check values do not match.
-* The data is intact, but the check value got corrupted.  This can't the
+* The data is intact, but the check value got corrupted.  This can't be
   distinguished from the previous case, but is a (relatively) safe false
   positive.
 * Either the data and/or check value gets corrupted, but such that the results
@@ -57,7 +57,7 @@ lot of churn per input, especially a variable amount.
 
 The check values are known as [*checksum]s because they are used to /check/ for
 data consistency and the first coding algorithms were addition- (i.e.
-['sum]ming-) based.
+['sum]ming-)based.
 
 [section:intro_crcs  CRCs]
 
@@ -79,8 +79,8 @@ checksum.
 
 For a given degree /x/ for the modulo-2 polynomial divisor, the remainder will
 have at most /x/ terms (from degree /x/ - 1 down to the constant term).  The
-coefficients are modulo-2, which means that they can be represented by 0's and
-1's.  So a remainder can be modeled by an (unsigned) integer of at least /x/
+coefficients are modulo-2, which means that they can be represented by 0s and
+1s.  So a remainder can be modeled by an (unsigned) integer of at least /x/
 bits in *width*.
 
 The divisor must have its /x/ degree term be one, which means it is always known
@@ -95,10 +95,10 @@ the input stream of data bits, where each new incoming bit is the next lower
 term of the dividend polynomial.  Long division can be processed in piecemeal,
 reading new upper terms as needed.  This maps to reading the data a byte (or
 bit) at a time, generating updated remainders just-in-time, without needing to
-read (and/or store(!)) the entire data message at once.
+read (and/or store (!)) the entire data message at once.
 
 Long division involves appending new dividend terms after the previous terms
-have been processed into the (interim) remainder.  So the remainder it the only
+have been processed into the (interim) remainder.  So the remainder is the only
 thing that has to change during each division step; a new input byte (or bit) is
 combined with the remainder to make the interim dividend, and then combined with
 the partial product (based on the divisor and top dividend bit(s)) to become a
@@ -140,16 +140,16 @@ applied.  Reflecting a built-in integer reverses the order of its bits, such
 that the lowest- and highest-order bits swap states, the next-lowest- and
 next-highest-order bits swap, etc.  The input reflection can be done by
 reflecting each byte as it comes in or keeping the bytes unchanged but reflect
-the other internal functioning.  The latter sounds harder, but what it usually
+the other internal functioning.  The latter sounds harder, but is what is usually
 done in the real world, since it's a one-time cost, unlike reflecting the bytes.
 
 Similarly, the final remainder is processed by some hardware in reverse order,
-which means software that simulate such systems need to flag that *output
+which means software that simulates such systems needs to flag that *output
 reflection* is in effect.
 
 Some CRCs don't return the remainder directly (reflected or not), but add an
 extra step complementing the output bits.  Complementing turns 1 values into 0
-values and vice versa.  This can simulated by using a XOR (exclusive-or) bit
+values and vice versa.  This can be simulated by using a XOR (exclusive-or) bit
 mask of all 1-values (of the same bit length as the remainder).  Some systems
 use a *final XOR mask* that isn't all 1-values, for variety.  (This mask takes
 place /after/ any output reflection.)
@@ -192,7 +192,7 @@ the specification points of a given CRC system (quoted):
    final value in the register is fed into the XOROUT stage directly,
    otherwise, if this parameter is TRUE, the final register value is
    reflected first.]]
-   [[XOROUT] [This is an W-bit value that should be specified as a
+   [[XOROUT] [This is a W-bit value that should be specified as a
    hexadecimal number. It is XORed to the final register value (after
    the REFOUT) stage before the value is returned as the official
    checksum.]]
@@ -313,7 +313,7 @@ field in the same relative order they were in the `crc_basic` constructor.
 (Some parameters have defaults.)  Objects based from `crc_optimal` can either be
 default-constructed, giving it the same behavior as a `crc_basic` object with
 the equivalent settings, or use one parameter, which overrides the initial
-remainder value[footnote i.e. The interim-remainder before any input is read.]
+remainder value[footnote i.e. the interim-remainder before any input is read.]
 without permanently affecting the initial-remainder attribute.
 
 Besides template parameters and construction, `crc_optimal` differs from
@@ -337,12 +337,12 @@ Besides template parameters and construction, `crc_optimal` differs from
   algorithms that expect generator objects[footnote Albeit this object won't
   change its return value within code that only uses it as a generator.].
 * Merging the two `reset` member functions into one.  (It uses a single
-  parameter that can have a default argument).
+  parameter that can have a default argument.)
 
 The major difference between `crc_basic` and `crc_optimal` is the internals.
 Objects from `crc_basic` run their CRC algorithm one bit at a time, no matter
 which unit is used as input.  Objects from `crc_optimal`, when /WIDTH/ is at
-least `CHAR_BIT`[footnote i.e. The optimizations are suspended if the /WIDTH/
+least `CHAR_BIT`[footnote i.e., the optimizations are suspended if the /WIDTH/
 only justifies using part of a single byte.], use a byte-indexed table-driven CRC
 algorithm which is a *lot* faster than processing individual bits.
 

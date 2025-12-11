@@ -176,6 +176,12 @@ jobs:
             os: ubuntu-latest
             install: clang-18
           - toolset: clang
+            compiler: clang++-19
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-19
+          - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
           - toolset: clang

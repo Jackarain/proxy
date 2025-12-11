@@ -1,6 +1,7 @@
 ///////////////////////////////////////////////////////////////
-//  Copyright Christopher Kormanyos 2002 - 2011.
-//  Copyright 2011 John Maddock. Distributed under the Boost
+//  Copyright 2011 - 2025 John Maddock.
+//  Copyright Christopher Kormanyos 2002 - 2025.
+//  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
 //
@@ -12,10 +13,10 @@
 #define _SCL_SECURE_NO_WARNINGS
 #endif
 
+#include <test.hpp>
+
 #include <boost/detail/lightweight_test.hpp>
-#include <array>
 #include <boost/math/special_functions/relative_difference.hpp>
-#include "test.hpp"
 
 #if !defined(TEST_MPF_50) && !defined(TEST_MPF) && !defined(TEST_CPP_DEC_FLOAT) && !defined(TEST_FLOAT128) && !defined(TEST_CPP_BIN_FLOAT) && !defined(TEST_MPFR_50)
 #define TEST_MPF_50
@@ -48,14 +49,23 @@
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #endif
 
+#include <array>
+
 template <class T>
 void test()
 {
-   typedef boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<1000> > mpfr_float_1000;
+   std::cout << "Testing type: " << typeid(T).name() << std::endl;
+   std::cout << "Round: n=";
 
    for (int n = -20; n <= 20; ++n)
    {
-      std::cout << "Testing n = " << n << std::endl;
+      if (n != -20)
+         std::cout << ",";
+
+      std::cout << n;
+
+      using mpfr_float_1000 = boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<1000>>;
+
       T boundary = boost::math::constants::half_pi<T>() * n;
       T val      = boundary;
       for (unsigned i = 0; i < 200; ++i)
@@ -65,10 +75,6 @@ void test()
          T found = cos(val);
          T expected = T(comparison);
          BOOST_CHECK_LE(boost::math::epsilon_difference(found, expected), 20);
-         //std::cout << std::setprecision(10) << val << std::endl;
-         //std::cout << std::setprecision(50) << found << std::endl;
-         //std::cout << std::setprecision(50) << comparison << std::endl;
-         //std::cout << std::setprecision(50) << expected << std::endl;
          val = boost::math::float_next(val);
       }
       val = boundary;
@@ -82,6 +88,8 @@ void test()
          BOOST_CHECK_LE(boost::math::epsilon_difference(found, expected), 20);
       }
    }
+
+   std::cout << std::endl;
 }
 
 int main()

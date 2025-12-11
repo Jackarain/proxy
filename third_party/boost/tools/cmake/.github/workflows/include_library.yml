@@ -1,0 +1,294 @@
+name: Include Library CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - develop
+      - feature/**
+    tags: ['**']
+
+jobs:
+  a-m:
+    strategy:
+      fail-fast: false
+      matrix:
+        library:
+          - accumulators
+          - algorithm
+          - align
+          - any
+          - array
+          - asio
+          - assert
+          - assign
+          - atomic
+          - beast
+          - bimap
+          - bind
+          - bloom
+          - callable_traits
+          - charconv
+          - chrono
+          - circular_buffer
+          - cobalt
+          - compat
+          - compute
+          - concept_check
+          - config
+          - container
+          - container_hash
+          - context
+          - contract
+          - conversion
+          - convert
+          - core
+          - coroutine
+          - coroutine2
+          - crc
+          - date_time
+          - describe
+          - detail
+          - dll
+          - dynamic_bitset
+          - endian
+          - exception
+          - fiber
+          - filesystem
+          - flyweight
+          - foreach
+          - format
+          - function
+          - functional
+          - function_types
+          - fusion
+          - geometry
+          - gil
+          - graph
+          - hana
+          - hash2
+          - headers
+          - heap
+          - histogram
+          - hof
+          - icl
+          - integer
+          - interprocess
+          - intrusive
+          - io
+          - iostreams
+          - iterator
+          - json
+          - lambda
+          - lambda2
+          - leaf
+          - lexical_cast
+          - locale
+          - local_function
+          - lockfree
+          - log
+          - logic
+          - math
+          - metaparse
+          - move
+          - mp11
+          - mpl
+          - mqtt5
+          - msm
+          - multiprecision
+          - multi_array
+          - multi_index
+          - mysql
+
+        testing: [ON, OFF]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        run: |
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update --init --jobs 3
+          rm -rf tools/cmake/*
+          cp -r $GITHUB_WORKSPACE/* tools/cmake
+
+      - name: Configure ${{matrix.library}}
+        working-directory: ../boost-root
+        run: cmake -DBUILD_TESTING=${{matrix.testing}} -DBOOST_INCLUDE_LIBRARIES=${{matrix.library}} -DBoost_DEBUG=ON -B __build__
+
+  n-z:
+    strategy:
+      fail-fast: false
+      matrix:
+        library:
+          - nowide
+          - numeric/conversion
+          - numeric/interval
+          - numeric/odeint
+          - numeric/ublas
+          - openmethod
+          - optional
+          - outcome
+          - parameter
+          - parser
+          - pfr
+          - phoenix
+          - polygon
+          - poly_collection
+          - pool
+          - predef
+          - preprocessor
+          - process
+          - program_options
+          - property_map
+          - property_tree
+          - proto
+          - ptr_container
+          - qvm
+          - random
+          - range
+          - ratio
+          - rational
+          - redis
+          - regex
+          - safe_numerics
+          - scope
+          - scope_exit
+          - serialization
+          - signals2
+          - smart_ptr
+          - sort
+          - spirit
+          - stacktrace
+          - statechart
+          - static_assert
+          - static_string
+          - stl_interfaces
+          - system
+          - test
+          - thread
+          - throw_exception
+          - timer
+          - tokenizer
+          - tti
+          - tuple
+          - typeof
+          - type_erasure
+          - type_index
+          - type_traits
+          - units
+          - unordered
+          - url
+          - utility
+          - uuid
+          - variant
+          - variant2
+          - vmd
+          - wave
+          - winapi
+          - xpressive
+          - yap
+
+        testing: [ON, OFF]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        run: |
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update --init --jobs 3
+          rm -rf tools/cmake/*
+          cp -r $GITHUB_WORKSPACE/* tools/cmake
+
+      - name: Configure ${{matrix.library}}
+        working-directory: ../boost-root
+        run: cmake -DBUILD_TESTING=${{matrix.testing}} -DBOOST_INCLUDE_LIBRARIES=${{matrix.library}} -DBoost_DEBUG=ON -B __build__
+
+  mpi:
+    strategy:
+      fail-fast: false
+      matrix:
+        library:
+          - graph_parallel
+          - mpi
+          - property_map_parallel
+
+        testing: [ON, OFF]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install packages
+        run: sudo apt-get install -y libopenmpi-dev
+
+      - name: Setup Boost
+        run: |
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update --init --jobs 3
+          rm -rf tools/cmake/*
+          cp -r $GITHUB_WORKSPACE/* tools/cmake
+
+      - name: Configure ${{matrix.library}}
+        working-directory: ../boost-root
+        run: cmake -DBUILD_TESTING=${{matrix.testing}} -DBOOST_INCLUDE_LIBRARIES=${{matrix.library}} -DBoost_DEBUG=ON -DBOOST_ENABLE_MPI=ON -B __build__
+
+  py:
+    strategy:
+      fail-fast: false
+      matrix:
+        library:
+          - parameter_python
+          - python
+
+        testing: [ON, OFF]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Boost
+        run: |
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update --init --jobs 3
+          rm -rf tools/cmake/*
+          cp -r $GITHUB_WORKSPACE/* tools/cmake
+
+      - name: Configure ${{matrix.library}}
+        working-directory: ../boost-root
+        run: cmake -DBUILD_TESTING=${{matrix.testing}} -DBOOST_INCLUDE_LIBRARIES=${{matrix.library}} -DBoost_DEBUG=ON -DBOOST_ENABLE_PYTHON=ON -B __build__

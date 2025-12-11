@@ -10,7 +10,6 @@
 ///
 /// @remarks
 //-----------------------------------------------------------------------------
-#include <ciso646>
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,7 +98,7 @@ void test02 (void)
     {
         BOOST_CHECK ((*(it - 1)) <= (*it));
     };
-    BOOST_CHECK (A[ 998 ] == 0 and A[ 999 ] == 0 and A[ 1000 + NELEM ] == 0 and
+    BOOST_CHECK (A[ 998 ] == 0 && A[ 999 ] == 0 && A[ 1000 + NELEM ] == 0 &&
                  A[ 1001 + NELEM ] == 0);
 
 
@@ -115,8 +114,8 @@ void test02 (void)
     {
         BOOST_CHECK ((*(it - 1)) <= (*it));
     };
-    BOOST_CHECK (A[ 998 ] == 999999999 and A[ 999 ] == 999999999 and
-                 A[ 1000 + NELEM ] == 999999999 and
+    BOOST_CHECK (A[ 998 ] == 999999999 && A[ 999 ] == 999999999 &&
+                 A[ 1000 + NELEM ] == 999999999 &&
                  A[ 1001 + NELEM ] == 999999999);
 };
 

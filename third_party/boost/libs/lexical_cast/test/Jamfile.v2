@@ -80,7 +80,7 @@ test-suite conversion
     [ run stream_traits_test.cpp ]
     [ compile-fail to_pointer_test.cpp ]
     [ compile-fail from_volatile.cpp ]
-    [ run filesystem_test.cpp /boost/filesystem//boost_filesystem/<link>static ]
+    [ run filesystem_test.cpp /boost/filesystem//boost_filesystem : : : <toolset>gcc,<target-os>windows:<build>no ] # Boost.Atomic no longer supports MinGW
     [ run try_lexical_convert.cpp ]
   ;
 

@@ -16,7 +16,7 @@
 # This is useful to avoid cluttering the output with debug messages but allowing
 # us to debug this script since the CMake debugger cannot step in here.
 function(debug_message)
-    if (DEFINED TEST_SUITE_SCRIPT_DEBUG)
+    if (TEST_SUITE_SCRIPT_DEBUG)
         message(STATUS "${ARGV0}")
     endif ()
 endfunction()

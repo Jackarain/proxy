@@ -1,0 +1,17 @@
+
+# BOOST_OPENMETHOD_REGISTER
+
+## Synopsis
+
+Defined in link:{{BASE_URL}}/include/boost/openmethod/macros.hpp[<boost/openmethod/macros.hpp>].
+
+```c++
+BOOST_OPENMETHOD_REGISTER(TYPE);
+```
+
+## Description
+
+Creates a registrar for `TYPE`, i.e. a static `TYPE` object with a unique
+generated name. At static initialization time, the object adds itself to a list:
+methods and class registrations add themselves to a cpp:registry[], and
+overriders add themselves to a method's overrider list.

@@ -10,6 +10,7 @@
 #define BOOST_BLOOM_TEST_TEST_UTILITIES_HPP
 
 #include <boost/bloom/filter.hpp>
+#include <iterator>
 #include <limits>
 #include <new>
 #include <string>
@@ -95,20 +96,53 @@ void* capped_new(std::size_t n)
 }
 
 template<typename Filter,typename Input>
+std::size_t may_contain_count(const Filter& f,const Input& input)
+{
+  using input_value_type=typename Input::value_type;
+  std::size_t res=0;
+  f.may_contain(
+    input.begin(),input.end(),
+    [&](const input_value_type&,bool b){res+=b;});
+  return res;
+}
+
+template<typename Filter,typename Input>
 bool may_contain(const Filter& f,const Input& input)
 {
-  std::size_t res=0;
-  for(const auto& x:input)res+=f.may_contain(x);
-  return res==input.size();
+  return may_contain_count(f,input)==input.size();
 }
 
 template<typename Filter,typename Input>
 bool may_not_contain(const Filter& f,const Input& input)
 {
-  std::size_t res=0;
-  for(const auto& x:input)res+=f.may_contain(x);
-  return res<input.size(); /* res should be 0 with high probability */
+  /* may_contain_count should be 0 with high probability */
+  return may_contain_count(f,input)<input.size();
 }
+
+template<typename Iterator>
+class input_iterator
+{
+  using traits=std::iterator_traits<Iterator>;
+  Iterator it;
+
+public:
+  using iterator_category=std::input_iterator_tag;
+  using value_type=typename traits::value_type;
+  using difference_type=typename traits::difference_type;
+  using pointer=Iterator;
+  using reference=typename traits::reference;
+
+  input_iterator(Iterator it_):it{it_}{}
+  reference operator*()const{return *it;}
+  pointer operator->()const{return it;}
+  input_iterator& operator++(){++it;return *this;}
+  input_iterator operator++(int){auto res=*this;++it;return res;}
+  bool operator==(const input_iterator& x)const{return it==x.it;}
+  bool operator!=(const input_iterator& x)const{return !(*this==x);}
+};
+
+template<typename Iterator>
+input_iterator<Iterator> make_input_iterator(Iterator it){return {it};}
 
 } /* namespace test_utilities */
 #endif

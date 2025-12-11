@@ -19,7 +19,7 @@
 #  pragma warning(disable: 4127) // conditional expression is constant.
 #endif
 
-#ifdef SYCL_LANGUAGE_VERSION
+#ifdef BOOST_MATH_ENABLE_SYCL
 #include "sycl/sycl.hpp"
 #endif
 

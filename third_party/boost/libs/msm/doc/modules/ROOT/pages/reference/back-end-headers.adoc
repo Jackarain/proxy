@@ -1,0 +1,438 @@
+= Back-end headers
+
+[[msmbackstate_machinehpp]]
+
+== msm/back/state_machine.hpp
+
+This header provides one type, state_machine, MSM's state machine engine
+implementation.
+
+template <class Derived,class HistoryPolicy=NoHistory,class
+CompilePolicy=favor_runtime_speed> state_machine
+
+[[template-arguments]]
+
+=== Template arguments
+
+[[derived]]
+
+==== Derived
+
+The name of the front-end state machine definition. All three front-ends
+are possible.
+
+[[historypolicy]]
+
+==== HistoryPolicy
+
+The desired history. This can be: AlwaysHistory, NoHistory,
+ShallowHistory. Default is NoHistory.
+
+[[compilepolicy]]
+
+==== CompilePolicy
+
+The trade-off performance / compile-time. There are two predefined
+policies, favor_runtime_speed and favor_compile_time. Default is
+favor_runtime_speed, best performance, longer compile-time. See
+link:#backend-tradeof-rt-ct[the backend].
+
+[[methods]]
+
+=== methods
+
+[[start]]
+
+==== start
+
+The start methods must be called before any call to process_event. It
+activates the entry action of the initial state(s). This allows you to
+choose when a state machine can start. See link:#backend-start[backend].
+
+void start
+
+[[process_event]]
+
+==== process_event
+
+The event processing method implements the double-dispatch. Each call to
+this function with a new event type instantiates a new dispatch
+algorithm and increases compile-time.
+
+template <class Event> HandledEnum process_event
+
+Event const&
+
+[[current_state]]
+
+==== current_state
+
+Returns the ids of currently active states. You will typically need it
+only for debugging or logging purposes.
+
+const int* current_state const
+
+[[get_state_by_id]]
+
+==== get_state_by_id
+
+Returns the state whose id is given. As all states of a concrete state
+machine share a common base state, the return value is a base state. If
+the id corresponds to no state, a null pointer is returned.
+
+const BaseState* get_state_by_id const
+
+int id
+
+[[is_contained]]
+
+==== is_contained
+
+Helper returning true if the state machine is contained as a submachine
+of another state machine.
+
+bool is_contained const
+
+==== get_state
+
+Returns the required state of the state machine as a pointer. A compile
+error will occur if the state is not to be found in the state machine.
+
+template <class State> State* get_state
+
+==== get_state
+
+Returns the required state of the state machine as a reference. A
+compile error will occur if the state is not to be found in the state
+machine.
+
+template <class State> State& get_state
+
+==== is_flag_active
+
+Returns true if the given flag is currently active. A flag is active if
+the active state of one region is tagged with this flag (using OR as
+BinaryOp) or active states of _all_ regions (using AND as BinaryOp)
+
+template <class Flag,class BinaryOp> bool is_flag_active
+
+==== is_flag_active
+
+Returns true if the given flag is currently active. A flag is active if
+the active state of one region is tagged with this flag.
+
+template <class Flag> bool is_flag_active
+
+==== visit_current_states
+
+Visits all active states and their substates. A state is visited using
+the `accept` method without argument. The base class of all states must
+provide an `accept_sig` type.
+
+void visit_current_states
+
+==== visit_current_states
+
+Visits all active states and their substates. A state is visited using
+the `accept` method with arguments. The base class of all states must
+provide an `accept_sig` type defining the signature and thus the number
+and type of the parameters.
+
+void visit_current_states
+
+any-type param1, any-type param2,...
+
+[[defer_event]]
+
+==== defer_event
+
+Defers the provided event. This method can be called only if at least
+one state defers an event or if the state machine provides the
+`activate_deferred_events` (see
+xref:attachment$Orthogonal-deferred2.cpp[example]) type either directly or
+using the deferred_events configuration of eUML
+(`configure_ << deferred_events`).
+
+template <class Event> void defer_event
+
+Event const&
+
+[[types]]
+
+=== Types
+
+[[nr_regions]]
+
+==== nr_regions
+
+The number of orthogonal regions contained in the state machine
+
+[[entry_pt]]
+
+==== entry_pt
+
+This nested type provides the necessary typedef for entry point
+pseudostates. `state_machine<...>::entry_pt<state_name>` is a
+transition's valid target inside the containing state machine's
+transition table.
+
+entry_pt
+
+[[exit_pt]]
+
+==== exit_pt
+
+This nested type provides the necessary typedef for exit point
+pseudostates. `state_machine<...>::exit_pt<state_name>` is a
+transition's valid source inside the containing state machine's
+transition table.
+
+exit_pt
+
+[[direct]]
+
+==== direct
+
+This nested type provides the necessary typedef for an explicit entry
+inside a submachine. `state_machine<...>::direct<state_name>` is a
+transition's valid target inside the containing state machine's
+transition table.
+
+direct
+
+[[stt]]
+
+==== stt
+
+Calling state_machine<frontend>::stt returns a mpl::vector containing
+the transition table of the state machine. This type can then be used
+with generate_state_set or generate_event_set.
+
+[[argshpp]]
+
+== args.hpp
+
+This header provides one type, args, which provides the necessary types
+for a visitor implementation.
+
+[[history-interface]]
+
+== msm/back/history_policies.hpp
+
+This header provides the out-of-the-box history policies supported by
+MSM. There are 3 such policies.
+
+[[every-history-policy-must-implement-the-following-methods]]
+
+=== Every history policy must implement the following methods:
+
+[[set_initial_states]]
+
+==== set_initial_states
+
+This method is called by msm::back::state_machine when constructed. It
+gives the policy a chance to save the ids of all initial states (passed
+as array).
+
+void set_initial_states
+
+int* const
+
+[[history_exit]]
+
+==== history_exit
+
+This method is called by msm::back::state_machine when the submachine is
+exited. It gives the policy a chance to remember the ids of the last
+active substates of this submachine (passed as array).
+
+void history_exit
+
+int* const
+
+[[history_entry]]
+
+==== history_entry
+
+This method is called by msm::back::state_machine when the submachine is
+entered. It gives the policy a chance to set the active states according
+to the policy's aim. The policy gets as parameter the event which
+activated the submachine and returns an array of active states ids.
+
+template <class Event> int* const history_exit
+
+Event const&
+
+[[out-of-the-box-policies]]
+
+=== Out-of-the-box policies:
+
+[[nohistory]]
+
+==== NoHistory
+
+This policy is the default used by state_machine. No active state of a
+submachine is remembered and at every new activation of the submachine,
+the initial state(s) are activated.
+
+[[alwayshistory]]
+
+==== AlwaysHistory
+
+This policy is a non-UML-standard extension. The active state(s) of a
+submachine is (are) always remembered at every new activation of the
+submachine.
+
+[[shallowhistory]]
+
+==== ShallowHistory
+
+This policy activates the active state(s) of a submachine if the event
+is found in the policy's event list.
+
+[[msmbackdefault_compile_policyhpp]]
+
+== msm/back/default_compile_policy.hpp
+
+This header contains the definition of favor_runtime_speed. This policy
+has two settings:
+
+* Submachines dispatch faster because their transitions are added into
+their containing machine's transition table instead of simply forwarding
+events.
+* It solves transition conflicts at compile-time
+
+[[msmbackfavor_compile_timehpp]]
+
+== msm/back/favor_compile_time.hpp
+
+This header contains the definition of favor_compile_time. This policy
+has two settings:
+
+* Submachines dispatch is slower because all events, even those with no
+dispatch chance, are forwarded to submachines. In exchange, no row is
+added into the containing machine's transition table, which reduces
+compile-time.
+* It solves transition conflicts at run-time.
+
+[[msmbackmetafunctionshpp]]
+
+== msm/back/metafunctions.hpp
+
+This header contains metafunctions for use by the library. Three
+metafunctions can be useful for the user:
+
+* `generate_state_set< stt >`: generates the list of all states
+referenced by the transition table stt. If stt is a recursive table
+(generated by `recursive_get_transition_table`), the metafunction finds
+recursively all states of the submachines. A non-recursive table can be
+obtained with some_backend_fsm::stt.
+* `generate_event_set< stt>`: generates the list of all events
+referenced by the transition table stt. If stt is a recursive table
+(generated by `recursive_get_transition_table`), the metafunction finds
+recursively all events of the submachines. A non-recursive table can be
+obtained with some_backend_fsm::stt.
+* `recursive_get_transition_table<fsm>`: recursively extends the
+transition table of the state machine fsm with tables from the
+submachines.
+
+[[msmbacktoolshpp]]
+
+== msm/back/tools.hpp
+
+This header contains a few metaprogramming tools to get some information
+out of a state machine.
+
+[[fill_state_names]]
+
+=== fill_state_names
+
+[[attributes]]
+
+==== attributes
+
+fill_state_names has for attribute:
+
+* `char const** m_names`: an already allocated array of const char*
+where the typeid-generated names of a state machine states will be
+witten.
+
+[[constructor]]
+
+==== constructor
+
+char const** names_to_fill
+
+[[usage]]
+
+==== usage
+
+fill_state_names is made for use in a mpl::for_each iterating on a state
+list and writing inside a pre-allocated array the state names. Example:
+
+....
+typedef some_fsm::stt Stt;
+typedef msm::back::generate_state_set<Stt>::type all_states; //states
+static char const* state_names[mpl::size<all_states>::value];
+// array to fill with names
+// fill the names of the states defined in the state machine
+mpl::for_each<all_states,boost::msm::wrap<mpl::placeholders::_1> > 
+    (msm::back::fill_state_names<Stt>(state_names));
+// display all active states
+for (unsigned int i=0;i<some_fsm::nr_regions::value;++i)
+{
+    std::cout << " -> " 
+              << state_names[my_fsm_instance.current_state()[i]] 
+              << std::endl;
+}
+....
+
+[[get_state_name]]
+
+=== get_state_name
+
+==== attributes
+
+get_state_name has for attributes:
+
+* std::string& m_name: the return value of the iteration
+* int m_state_id: the searched state's id
+
+==== constructor
+
+The constructor takes as argument a reference to the string to fill with
+the state name and the id which must be searched.
+
+string& name_to_fill,int state_id
+
+==== usage
+
+This type is made for the same search as in the previous example, using
+a mpl::for_each to iterate on states. After the iteration, the state
+name reference has been set.
+
+....
+// we need a fsm's table
+typedef player::stt Stt;
+typedef msm::back::generate_state_set<Stt>::type all_states; //all states
+std::string name_of_open; // id of Open is 1
+// fill name_of_open for state of id 1
+boost::mpl::for_each<all_states,boost::msm::wrap<mpl::placeholders::_1> > 
+          (msm::back::get_state_name<Stt>(name_of_open,1));
+std::cout << "typeid-generated name Open is: " <<  name_of_open << std::endl;
+....
+
+[[display_type]]
+
+=== display_type
+
+==== attributes
+
+none
+
+==== usage
+
+Reusing the state list from the previous example, we can output all
+state names:
+
+`mpl::for_each<all_states,boost::msm::wrap<mpl::placeholders::_1> >(msm::back::display_type ());`

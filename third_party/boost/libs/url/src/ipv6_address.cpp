@@ -96,6 +96,16 @@ loopback() noexcept
     return a;
 }
 
+void
+ipv6_address::
+write_ostream(
+    std::ostream& os) const
+{
+    char buf[ipv6_address::max_str_len];
+    auto const s = to_buffer(buf, sizeof(buf));
+    os << s;
+}
+
 std::size_t
 ipv6_address::
 print_impl(

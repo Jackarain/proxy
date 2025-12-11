@@ -19,6 +19,7 @@
 # pragma GCC diagnostic ignored "-Wunused"
 #endif
 
+#include <boost/core/detail/static_assert.hpp>
 #include <boost/json.hpp>
 
 #include <algorithm>
@@ -127,8 +128,8 @@ tag_invoke(
     boost::json::string& js = jv.emplace_string();
     js.resize( 4 * 3 + 3 + 1 ); // XXX.XXX.XXX.XXX\0
     auto it = addr.begin();
-    auto n = std::sprintf(
-        js.data(), "%hhu.%hhu.%hhu.%hhu", it[0], it[1], it[2], it[3] );
+    auto n = std::snprintf(
+        js.data(), js.size(), "%hhu.%hhu.%hhu.%hhu", it[0], it[1], it[2], it[3] );
     js.resize(n);
 }
 
@@ -983,13 +984,9 @@ usingSetAtPointer()
     // end::snippet_pointer_5[]
 }
 
-BOOST_STATIC_ASSERT(
-    has_value_from<customer>::value);
-
-BOOST_STATIC_ASSERT(
-    has_value_from<user_ns2::ip_address>::value);
-BOOST_STATIC_ASSERT(
-    has_value_to<user_ns2::ip_address>::value);
+BOOST_CORE_STATIC_ASSERT( has_value_from<customer>::value );
+BOOST_CORE_STATIC_ASSERT( has_value_from<user_ns2::ip_address>::value );
+BOOST_CORE_STATIC_ASSERT( has_value_to<user_ns2::ip_address>::value );
 
 void
 usingSpecializedTrait()

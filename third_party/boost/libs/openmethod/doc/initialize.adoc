@@ -1,0 +1,57 @@
+
+## initialize
+
+### Synopsis
+
+Defined in `<boost/openmethod/initialize.hpp>`.
+
+```c++
+namespace boost::openmethod {
+
+template<class Policy = BOOST_OPENMETHOD_DEFAULT_REGISTRY>
+auto initialize() -> /*unspecified*/;
+
+}
+```
+
+### Description
+
+Initializes dispatch data for the methods registered in `Policy`. This function
+must be called before any calls to those methods, and after loading or unloading
+a dynamic library that adds classes, methods or overriders to `Policy`.
+
+The return value is an object that contains a member variable, `report`, that
+contains the following information:
+
+* `std::size_t cells`: the number of cells used by the v-tables and the multiple
+dispatch tables.
+
+* `std::size_t not_implemented`: the number of methods that don't have an
+overrider for at least one combination of virtual arguments.
+
+* `std::size_t ambiguous`: the number of methods that have more than one
+overrider, none of which is more specific than the others, for at least one
+combination of virtual arguments.
+
+## finalize
+
+### Synopsis
+
+Defined in `<boost/openmethod/initialize.hpp>`.
+
+```c++
+namespace boost::openmethod {
+
+template<class Policy = BOOST_OPENMETHOD_DEFAULT_REGISTRY>
+auto finalize() -> void;
+
+}
+```
+
+### Description
+
+De-allocates the resources allocated by `initialize` for the `Policy`, including
+resources allocated by the policys in `Policy`. Resources are de-allocated in an
+arbitrary order. It is not necessary to call `finalize` between calls to
+`initialize`. It is provided mainly for the benefit of memory leak detection
+schemes.

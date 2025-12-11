@@ -5,30 +5,18 @@
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
+#include <boost/compat/detail/nontype.hpp>
 #include <boost/compat/invoke.hpp>
 #include <boost/compat/type_traits.hpp>
 
 #include <type_traits>
 #include <utility>
 
-#if defined(__cpp_nontype_template_parameter_auto) && __cpp_nontype_template_parameter_auto >= 201606L
-#define BOOST_COMPAT_HAS_AUTO_NTTP
-#endif
-
 namespace boost {
 namespace compat {
 
 template <class... S>
 struct function_ref;
-
-#if defined(BOOST_COMPAT_HAS_AUTO_NTTP)
-
-template <auto V>
-struct nontype_t {
-  explicit nontype_t() = default;
-};
-
-#endif
 
 namespace detail {
 
@@ -55,16 +43,14 @@ struct invoke_object_holder {
   }
 };
 
-#if defined(BOOST_COMPAT_HAS_AUTO_NTTP)
-
-template <auto f, bool Const, bool NoEx, class R, class... Args>
+template <class F, F f, bool Const, bool NoEx, class R, class... Args>
 struct invoke_mem_fn_holder {
   static R invoke_mem_fn(thunk_storage<NoEx> /* s */, Args&&... args) noexcept(NoEx) {
     return compat::invoke_r<R>(f, std::forward<Args>(args)...);
   }
 };
 
-template <auto f, class U, bool Const, bool NoEx, class R, class... Args>
+template <class F, F f, class U, bool Const, bool NoEx, class R, class... Args>
 struct invoke_target_mem_fn_holder {
   static R invoke_mem_fn(thunk_storage<NoEx> s, Args&&... args) noexcept(NoEx) {
     using T = remove_reference_t<U>;
@@ -73,15 +59,13 @@ struct invoke_target_mem_fn_holder {
   }
 };
 
-template <auto f, class T, bool Const, bool NoEx, class R, class... Args>
+template <class F, F f, class T, bool Const, bool NoEx, class R, class... Args>
 struct invoke_ptr_mem_fn_holder {
   static R invoke_mem_fn(thunk_storage<NoEx> s, Args&&... args) noexcept(NoEx) {
     using cv_T = conditional_t<Const, add_const_t<T>, T>;
     return compat::invoke_r<R>(f, static_cast<cv_T*>(s.pobj_), std::forward<Args>(args)...);
   }
 };
-
-#endif
 
 template <bool Const, bool NoEx, class R, class... Args>
 struct function_ref_base {
@@ -106,27 +90,23 @@ public:
     thunk_.pobj_ = const_cast<void*>(static_cast<void const*>(std::addressof(fn)));
   }
 
-#if defined(BOOST_COMPAT_HAS_AUTO_NTTP)
-
-  template <auto f, class F = decltype(f)>
-  function_ref_base(mem_fn_tag, nontype_t<f>)
-      : thunk_{}, invoke_(&invoke_mem_fn_holder<F{f}, Const, NoEx, R, Args...>::invoke_mem_fn) {
+  template <class F, F f>
+  function_ref_base(mem_fn_tag, nttp_holder<F, f>)
+      : thunk_{}, invoke_(&invoke_mem_fn_holder<F, f, Const, NoEx, R, Args...>::invoke_mem_fn) {
     thunk_.pobj_ = nullptr;
   }
 
-  template <auto f, class U, class F = decltype(f)>
-  function_ref_base(mem_fn_tag, nontype_t<f>, U&& obj)
-      : thunk_{}, invoke_(&invoke_target_mem_fn_holder<F{f}, U, Const, NoEx, R, Args...>::invoke_mem_fn) {
+  template <class F, F f, class U>
+  function_ref_base(mem_fn_tag, nttp_holder<F, f>, U&& obj)
+      : thunk_{}, invoke_(&invoke_target_mem_fn_holder<F, f, U, Const, NoEx, R, Args...>::invoke_mem_fn) {
     thunk_.pobj_ = const_cast<void*>(static_cast<void const*>(std::addressof(obj)));
   }
 
-  template <auto f, class T, class F = decltype(f)>
-  function_ref_base(mem_fn_tag, nontype_t<f>, T* obj)
-      : thunk_{}, invoke_(&invoke_ptr_mem_fn_holder<F{f}, T, Const, NoEx, R, Args...>::invoke_mem_fn) {
+  template <class F, F f, class T>
+  function_ref_base(mem_fn_tag, nttp_holder<F, f>, T* obj)
+      : thunk_{}, invoke_(&invoke_ptr_mem_fn_holder<F, f, T, Const, NoEx, R, Args...>::invoke_mem_fn) {
     thunk_.pobj_ = const_cast<void*>(static_cast<void const*>(obj));
   }
-
-#endif
 
   function_ref_base(const function_ref_base&) noexcept = default;
   function_ref_base& operator=(const function_ref_base&) noexcept = default;
@@ -157,19 +137,15 @@ public:
                         int> = 0>
   function_ref(F&& fn) noexcept : base_type(obj_tag{}, fn) {}
 
-#if defined(BOOST_COMPAT_HAS_AUTO_NTTP)
+  template <class F, F f, enable_if_t<is_invocable_using<F>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x) noexcept : base_type(mem_fn_tag{}, x) {}
 
-  template <auto f, class F = decltype(f), enable_if_t<is_invocable_using<F>::value, int> = 0>
-  function_ref(nontype_t<f> x) noexcept : base_type(mem_fn_tag{}, x) {}
+  template <class F, F f, class U, class T = remove_reference_t<U>,
+            enable_if_t<!std::is_rvalue_reference<U&&>::value && is_invocable_using<F, T&>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x, U&& obj) noexcept : base_type(mem_fn_tag{}, x, std::forward<U>(obj)) {}
 
-  template <auto f, class U, class T = remove_reference_t<U>, class F = decltype(f),
-            enable_if_t<!std::is_rvalue_reference_v<U&&> && is_invocable_using<F, T&>::value, int> = 0>
-  function_ref(nontype_t<f> x, U&& obj) noexcept : base_type(mem_fn_tag{}, x, std::forward<U>(obj)) {}
-
-  template <auto f, class T, class F = decltype(f), enable_if_t<is_invocable_using<F, T*>::value, int> = 0>
-  function_ref(nontype_t<f> x, T* obj) noexcept : base_type(mem_fn_tag{}, x, obj) {}
-
-#endif
+  template <class F, F f, class T, enable_if_t<is_invocable_using<F, T*>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x, T* obj) noexcept : base_type(mem_fn_tag{}, x, obj) {}
 
   function_ref(const function_ref&) noexcept = default;
   function_ref& operator=(const function_ref&) noexcept = default;
@@ -199,19 +175,15 @@ public:
                         int> = 0>
   function_ref(F&& fn) noexcept : base_type(obj_tag{}, fn) {}
 
-#if defined(BOOST_COMPAT_HAS_AUTO_NTTP)
+  template <class F, F f, enable_if_t<is_invocable_using<F>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x) noexcept : base_type(mem_fn_tag{}, x) {}
 
-  template <auto f, class F = decltype(f), enable_if_t<is_invocable_using<F>::value, int> = 0>
-  function_ref(nontype_t<f> x) noexcept : base_type(mem_fn_tag{}, x) {}
+  template <class F, F f, class U, class T = remove_reference_t<U>,
+            enable_if_t<!std::is_rvalue_reference<U&&>::value && is_invocable_using<F, T const&>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x, U&& obj) noexcept : base_type(mem_fn_tag{}, x, std::forward<U>(obj)) {}
 
-  template <auto f, class U, class T = remove_reference_t<U>, class F = decltype(f),
-            enable_if_t<!std::is_rvalue_reference_v<U&&> && is_invocable_using<F, T const&>::value, int> = 0>
-  function_ref(nontype_t<f> x, U&& obj) noexcept : base_type(mem_fn_tag{}, x, std::forward<U>(obj)) {}
-
-  template <auto f, class T, class F = decltype(f), enable_if_t<is_invocable_using<F, T const*>::value, int> = 0>
-  function_ref(nontype_t<f> x, T const* obj) noexcept : base_type(mem_fn_tag{}, x, obj) {}
-
-#endif
+  template <class F, F f, class T, enable_if_t<is_invocable_using<F, T const*>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x, T const* obj) noexcept : base_type(mem_fn_tag{}, x, obj) {}
 
   function_ref(const function_ref&) noexcept = default;
   function_ref& operator=(const function_ref&) noexcept = default;
@@ -243,19 +215,15 @@ public:
                         int> = 0>
   function_ref(F&& fn) noexcept : base_type(obj_tag{}, fn) {}
 
-#if defined(BOOST_COMPAT_HAS_AUTO_NTTP)
+  template <class F, F f, enable_if_t<is_invocable_using<F>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x) noexcept : base_type(mem_fn_tag{}, x) {}
 
-  template <auto f, class F = decltype(f), enable_if_t<is_invocable_using<F>::value, int> = 0>
-  function_ref(nontype_t<f> x) noexcept : base_type(mem_fn_tag{}, x) {}
+  template <class F, F f, class U, class T = remove_reference_t<U>,
+            enable_if_t<!std::is_rvalue_reference<U&&>::value && is_invocable_using<F, T&>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x, U&& obj) noexcept : base_type(mem_fn_tag{}, x, std::forward<U>(obj)) {}
 
-  template <auto f, class U, class T = remove_reference_t<U>, class F = decltype(f),
-            enable_if_t<!std::is_rvalue_reference_v<U&&> && is_invocable_using<F, T&>::value, int> = 0>
-  function_ref(nontype_t<f> x, U&& obj) noexcept : base_type(mem_fn_tag{}, x, std::forward<U>(obj)) {}
-
-  template <auto f, class T, class F = decltype(f), enable_if_t<is_invocable_using<F, T*>::value, int> = 0>
-  function_ref(nontype_t<f> x, T* obj) noexcept : base_type(mem_fn_tag{}, x, obj) {}
-
-#endif
+  template <class F, F f, class T, enable_if_t<is_invocable_using<F, T*>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x, T* obj) noexcept : base_type(mem_fn_tag{}, x, obj) {}
 
   function_ref(const function_ref&) noexcept = default;
   function_ref& operator=(const function_ref&) noexcept = default;
@@ -285,19 +253,15 @@ public:
                         int> = 0>
   function_ref(F&& fn) noexcept : base_type(obj_tag{}, fn) {}
 
-#if defined(BOOST_COMPAT_HAS_AUTO_NTTP)
+  template <class F, F f, enable_if_t<is_invocable_using<F>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x) noexcept : base_type(mem_fn_tag{}, x) {}
 
-  template <auto f, class F = decltype(f), enable_if_t<is_invocable_using<F>::value, int> = 0>
-  function_ref(nontype_t<f> x) noexcept : base_type(mem_fn_tag{}, x) {}
+  template <class F, F f, class U, class T = remove_reference_t<U>,
+            enable_if_t<!std::is_rvalue_reference<U&&>::value && is_invocable_using<F, T const&>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x, U&& obj) noexcept : base_type(mem_fn_tag{}, x, std::forward<U>(obj)) {}
 
-  template <auto f, class U, class T = remove_reference_t<U>, class F = decltype(f),
-            enable_if_t<!std::is_rvalue_reference_v<U&&> && is_invocable_using<F, T const&>::value, int> = 0>
-  function_ref(nontype_t<f> x, U&& obj) noexcept : base_type(mem_fn_tag{}, x, std::forward<U>(obj)) {}
-
-  template <auto f, class T, class F = decltype(f), enable_if_t<is_invocable_using<F, T const*>::value, int> = 0>
-  function_ref(nontype_t<f> x, T const* obj) noexcept : base_type(mem_fn_tag{}, x, obj) {}
-
-#endif
+  template <class F, F f, class T, enable_if_t<is_invocable_using<F, T const*>::value, int> = 0>
+  function_ref(detail::nttp_holder<F, f> x, T const* obj) noexcept : base_type(mem_fn_tag{}, x, obj) {}
 
   function_ref(const function_ref&) noexcept = default;
   function_ref& operator=(const function_ref&) noexcept = default;

@@ -143,7 +143,7 @@ environment:
       CXXSTD: 14
       GENERATOR: Visual Studio 14 2015 Win64
       configuration: Debug
-      BOOST_ROOT: C:\Libraries\boost_1_60_0
+      BOOST_ROOT: C:\Libraries\boost_1_66_0
     - CMAKE: true
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
       CXXSTD: 17
@@ -151,7 +151,7 @@ environment:
       CMAKE_FLAGS: -DBOOST_NOWIDE_DISABLE_CIN_TEST=ON
       GENERATOR: Visual Studio 17 2022
       configuration: Debug
-      BOOST_ROOT: C:\Libraries\boost_1_83_0
+      BOOST_ROOT: C:\Libraries\boost_1_89_0
 
     # Coverity
     - COVERITY: true

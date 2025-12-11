@@ -333,7 +333,7 @@ using R2 = mp_push_back<L2, char[1], char[2]>; // mp_list<void, char[1], char[2]
 .Using mp_push_back with mp_list_v
 ```
 using L3 = mp_list_v<0, 1>;
-using R3 = mp_push_front<L3, mp_true, mp_false>; // mp_list_v<0, 1, true, false>
+using R3 = mp_push_back<L3, mp_true, mp_false>; // mp_list_v<0, 1, true, false>
 ```
 
 ## mp_rename<L, Y>

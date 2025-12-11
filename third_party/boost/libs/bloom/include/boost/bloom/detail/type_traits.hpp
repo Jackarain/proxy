@@ -14,6 +14,7 @@
 #include <boost/config.hpp>
 #include <boost/type_traits/make_void.hpp>
 #include <cstddef>
+#include <iterator>
 #include <type_traits>
 #include <utility>
 
@@ -135,6 +136,25 @@ template<typename T,std::size_t N> struct array_size<T[N]>:
 
 template<std::size_t N>
 struct is_power_of_two:std::integral_constant<bool,(N!=0)&&((N&(N-1))==0)>{};
+
+#if defined(BOOST_NO_CXX20_HDR_CONCEPTS)
+template<typename Iterator>
+using is_forward_iterator=std::is_base_of<
+  std::forward_iterator_tag,
+  typename std::iterator_traits<Iterator>::iterator_category
+>;
+#else
+template<typename Iterator>
+using is_forward_iterator=std::integral_constant<
+  bool,
+  std::forward_iterator<Iterator>
+>;
+#endif
+
+#define BOOST_BLOOM_STATIC_ASSERT_IS_FORWARD_ITERATOR(Iterator) \
+static_assert(                                                  \
+  boost::bloom::detail::is_forward_iterator< Iterator >::value, \
+  #Iterator " must be a forward iterator")
 
 } /* namespace detail */
 } /* namespace bloom */

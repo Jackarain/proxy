@@ -1,0 +1,137 @@
+:shared: ../examples/shared_libs
+
+[#shared_libraries]
+
+This section discusses how OpenMethod interoperates with shared libraries on
+Linux, other POSIX-like platforms, and Windows.
+
+### Static Linking
+
+Statically linking to a shared library behaves the same way as linking to a
+static library on all platforms. Objects from the program and the shared
+libraries can contribute classes, methods and overriders to the default
+registry, or any registries.
+
+### Dynamic Linking
+
+By "dynamic linking", we mean a program loading a shared library after it has
+started, and accessing its content. A common application of dynamic linking is
+to implement plugin architectures.
+
+OpenMethod uses global data to keep track of methods, overriders and classes,
+all managed by static constructors and destructors. cpp:initialize[] uses that
+information to set up dispatch tables. These variables must be truly global and
+unique for the library to operate correctly.
+
+Under this condition, a shared library can dynamically add classes, methods and
+overriders to an existing registry. `initialize` must be called to rebuild the
+dispatch tables after loading or unloading a shared library.
+
+Dynamic linking on Linux and POSIX-like platforms fulfills the unicity
+requirement with little effort from the programmer. On Linux, it is just a
+matter of tossing in `-rdynamic`, or adding `ENABLE_EXPORTS ON` to the library's
+target properties if using `cmake`.
+
+If a library only uses its own registries, for example, if using open-methods as
+an implementation detail, it has its own global data, and there is no need to
+call `initialize`.
+
+Let's look at an example. The following header is included by the program and
+the shared library:
+
+[source,c++]
+----
+include::{shared}/animals.hpp[tag=content]
+----
+
+The shared library contains an object that adds two overriders, a new class,
+`Tiger`, and a factory function:
+
+[source,c++]
+----
+include::{shared}/extensions.cpp[tag=content]
+----
+
+The main program adds a couple of classes then calls `meet` method. At this
+point, we only have the catch-call overrider:
+
+[source,c++]
+----
+include::{shared}/dynamic_main.cpp[tag=before]
+----
+
+We load the shared library using Boost.DLL. After calling `initialize`, the new
+overriders are installed. The main program can also use `Tiger` objects, even
+though it has no knowledge of that class at compile time.
+
+[source,c++]
+----
+include::{shared}/dynamic_main.cpp[tag=load]
+----
+
+Finally, we unload the shared library and call `initialize` again. The
+overriders provided by the shared library are removed from the method.
+
+[source,c++]
+----
+include::{shared}/dynamic_main.cpp[tag=unload]
+----
+
+### Windows
+
+If we try the example on Windows, the result is disappointing:
+
+```
+Before loading the shared library.
+cow meets wolf -> greet
+wolf meets cow -> greet
+
+After loading the shared library.
+cow meets wolf -> greet
+wolf meets cow -> greet
+cow meets tiger -> unknown class struct Tiger
+```
+
+What happens here is that the program and the DLL have their own copies of
+"global" variables. When the DLL is loaded, its static constructors run, and
+they add overriders to _their_ copy of the method (the `method::fn` static
+variable for the given name and signature). They are ignored when the main
+program calls `initialize`.
+
+Likewise, `BOOST_OPENMETHOD_CLASSES(Tiger, Carnivore)` in the DLL adds `Tiger`
+to the DLL's copy of the registry. For the perspective of the program's
+registry, the class does not exist.
+
+In theory, this can be fixed by adding `__declspec(dllimport)` and
+`__declspec(dllexport)` attributes where needed. However, this is not practical,
+because programs and DLLs can both import and export registries and methods. The
+underlying objects are instantiated from templates, which complicates the
+matter. Research is being done on this subject. However, as of now, dynamic
+loading is supported on Windows only if it does not attempt to share a registry
+across modules.
+
+### Indirect Vptrs
+
+`initialize` rebuilds the v-tables in the registry. This invalidates all the
+`virtual_ptr`{empty}s, and also the v-table pointers stored in objects by
+cpp:inplace_vptr_base[], related to that registry. This is seldom an issue, as
+most programs that dynamically load shared libraries do so at the very beginning
+of their execution.
+
+Otherwise, indirect v-table pointers must be used. This is achieved by using a
+registry that contains the cpp:indirect_vptr[] policy.
+`<boost/openmethod/default_registry.hpp>` provides an cpp:indirect_registry[]
+that has the same policies as `default_registry`, plus `indirect_vptr`. We can
+use it to override the default registry, for example using a compiler
+command-line switch (`-DBOOST_OPENMETHOD_DEFAULT_REGISTRY=indirect_registry`).
+
+Here is an example of a program that carries `virtual_ptr`{empty}s across
+`initialize` calls:
+
+[source,c++]
+----
+include::{shared}/indirect_main.cpp[tag=content]
+----
+
+This program loads a shared library that is itself compiled with
+`-DBOOST_OPENMETHOD_DEFAULT_REGISTRY=indirect_registry`.

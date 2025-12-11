@@ -1,0 +1,99 @@
+
+[#motivation]
+
+Consider a class hierarchy that represents and evaluates arithmetic
+expressions:
+
+[source,cpp]
+----
+include::{examplesdir}/ast_virtual_function.cpp[tag=content]
+----
+
+We want to add a new operation that prints the expression in postfix
+notation. How do we do it?
+
+The simple way is: add a new virtual function. Like so:
+
+[source,cpp]
+----
+#include <iostream>
+
+struct Node {
+    // as before
+    virtual void postfix(std::ostream& os) const = 0;
+};
+
+struct Variable : Node {
+    // as before
+    virtual void postfix(std::ostream& os) const override { os << v; }
+};
+
+struct Plus : Node {
+    // as before
+    void postfix(std::ostream& os) const override {
+        left.postfix(os); os << ' '; right.postfix(os); os << " +";
+    }
+};
+
+struct Times : Node {
+    // as before
+    void postfix(std::ostream& os) const override {
+        left.postfix(os); os << ' '; right.postfix(os); os << " *";
+    }
+};
+
+int main() {
+    Variable a{2}, b{3}, c{4};
+    Plus d{a, b}; Times e{d, c};
+    e.postfix(std::cout); // 2 3 + 4 *
+    std::cout << " = " << e.value() << "\n"; // = 20
+}
+----
+
+If the classes are part of a small, self-contained program, this may be a
+reasonable solution.
+Otherwise, there are serious problems with this approach.
+
+* We need to modify all the classes in the hierarchy, which, in a real
+  program, may be numerous and spread across multiple files.
+  This assumes that we have access to their source code.
+
+* We need to recompile all the files that _use_ the Node classes, because
+  the layout of their virtual function tables (v-tables) has changed.
+
+* Programs that use the Node classes get the overriders of
+  `postfix`, even those that don't call `postfix` anywhere.
+
+* They also pull in `postfix`{empty}'s transitive dependencies, in this case
+  `std::ostream`, locales, facets, exceptions, etc. Note that now we need to
+  include `<iostream>` _before_ defining the classes.
+
+In C++, this problem is often "solved" with the Visitor design pattern. We may
+still need to modify Node to equip it with Visitor support, if it is not there
+already. But once that is done, we can add all the operations we want, albeit in
+a clumsy fashion.
+
+Sadly, it is now difficult to add new _Node_ classes, because we have to modify
+the Visitor's interface, and all its implementations, and recompile all the
+files that use the Visitor. We traded one problem for another.
+
+Paul Graham said that design patterns are essentially workarounds for features
+that are missing in less expressive languages. Indeed, in some languages, our
+problem does not even exist. C# has extension classes. Lisp, Clojure, Dylan,
+Julia, Cecil, TADS, and others, have multi-methods.
+
+But wait! What do multi-methods have to do with our problem? There is no
+multiple dispatch going on here! The thing is, "multi-methods" is not a very
+good name. Even in languages that support them, many "multi-methods" have a
+single virtual parameter - they are uni-methods
+footnote:[https://figshare.com/articles/thesis/Multiple_Dispatch_in_Practice/16959112[Multiple
+dispatch in practice], Radu Muschevici, 2008.]! For that reason, we prefer the
+term "open-methods", to emphasize the important feature: openness. Multiple
+dispatch is just a bonus.
+
+An open-method is like a virtual function, but it exists outside of a class, as
+a free-standing function. We can create all the open-methods we need, without
+ever needing to modify existing classes.
+
+This library implements open-methods for C++17 and above. Next we will see how
+to use them in the Node example.

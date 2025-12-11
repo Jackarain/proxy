@@ -14,6 +14,7 @@ branches:
   only:
     - develop
     - master
+    - /feature\/.*/
 
 matrix:
   allow_failures:
@@ -172,8 +173,10 @@ environment:
 install:
   - set SELF=winapi
   - set GIT_FETCH_JOBS=8
+  - set BOOST_BRANCH=develop
+  - if "%APPVEYOR_REPO_BRANCH%" == "master" set BOOST_BRANCH=master
   - cd ..
-  - git clone -b %APPVEYOR_REPO_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+  - git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
   - cd boost-root
   - git submodule init tools/boostdep
   - git submodule init tools/build

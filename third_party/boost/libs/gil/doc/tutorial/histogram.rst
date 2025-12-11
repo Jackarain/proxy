@@ -6,8 +6,8 @@ Tutorial: Histogram
    :depth: 1
 
 This is a short tutorial presenting an example of a very simple sample of code
-from an existing code base that calculates histogram of an image.
-Next, the program is rewritten using GIL featres.
+from an existing code base that calculates the histogram of an image.
+Next, the program is rewritten using GIL features.
 
 Original implementation
 -----------------------
@@ -58,7 +58,7 @@ GIL implementation
       grayimage_histogram(color_converted_view<gray8_pixel_t>(img),hist);
   }
 
-Using the Boost.Lambda library (or C++11 lambda) features it can written
+Using the Boost.Lambda library (or C++11 lambda) features it can be written
 even simpler:
 
 .. code-block:: cpp

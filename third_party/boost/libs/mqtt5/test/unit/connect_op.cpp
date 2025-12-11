@@ -195,8 +195,8 @@ BOOST_FIXTURE_TEST_CASE(fail_reading_connack_payload, shared_test_data) {
     broker_side
         .expect(connect)
             .complete_with(success, after(2ms))
-        .send(big_connack.substr(0, 5), after(5ms))
-        .send(fail, after(7ms));
+        .send(big_connack.substr(0, 5), after(30ms))
+        .send(fail, after(60ms));
 
     auto handler = [&](error_code ec) {
         BOOST_TEST(ec == fail);
@@ -216,7 +216,7 @@ BOOST_FIXTURE_TEST_CASE(receive_unexpected_auth, shared_test_data) {
     broker_side
         .expect(connect)
             .complete_with(success, after(2ms))
-        .send(auth, after(5ms));
+        .send(auth, after(30ms));
 
     auto handler = [&](error_code ec) {
         BOOST_TEST(ec == client::error::malformed_packet);

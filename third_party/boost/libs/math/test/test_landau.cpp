@@ -7,7 +7,7 @@
 #define BOOST_TEST_MAIN
 #define BOOST_TEST_MODULE StatsLandauTest
 
-#ifdef SYCL_LANGUAGE_VERSION
+#ifdef BOOST_MATH_ENABLE_SYCL
 #include "sycl/sycl.hpp"
 #endif
 

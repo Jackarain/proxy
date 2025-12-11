@@ -7,6 +7,7 @@
 #include <boost/redis/connection.hpp>
 
 #include <boost/asio/co_spawn.hpp>
+#include <boost/asio/consign.hpp>
 #include <boost/asio/detached.hpp>
 
 #include <iostream>

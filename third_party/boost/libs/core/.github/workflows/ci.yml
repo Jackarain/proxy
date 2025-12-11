@@ -152,20 +152,6 @@ jobs:
 
           # Linux, clang
           - toolset: clang
-            compiler: clang++-3.5
-            cxxstd: "03,11"
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - clang-3.5
-          - toolset: clang
-            compiler: clang++-3.6
-            cxxstd: "03,11,14"
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - clang-3.6
-          - toolset: clang
             compiler: clang++-3.7
             cxxstd: "03,11,14"
             os: ubuntu-latest
@@ -628,7 +614,7 @@ jobs:
             os: windows-11-arm
 
     runs-on: ${{matrix.os}}
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Setup Boost

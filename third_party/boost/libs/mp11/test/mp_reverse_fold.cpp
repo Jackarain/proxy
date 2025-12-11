@@ -1,11 +1,6 @@
-
-// Copyright 2015-2017 Peter Dimov.
-//
+// Copyright 2015-2025 Peter Dimov.
 // Distributed under the Boost Software License, Version 1.0.
-//
-// See accompanying file LICENSE_1_0.txt or copy at
-// http://www.boost.org/LICENSE_1_0.txt
-
+// https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/mp11/algorithm.hpp>
 #include <boost/mp11/list.hpp>
@@ -13,6 +8,7 @@
 #include <boost/core/lightweight_test_trait.hpp>
 #include <type_traits>
 #include <tuple>
+#include <utility>
 
 struct X1 {};
 struct X2 {};
@@ -48,6 +44,10 @@ int main()
         BOOST_TEST_TRAIT_TRUE((std::is_same<mp_reverse_fold<std::tuple<X1, X2>, void, F>, F<X1, F<X2, void>>>));
         BOOST_TEST_TRAIT_TRUE((std::is_same<mp_reverse_fold<std::tuple<X1, X2, X3>, void, F>, F<X1, F<X2, F<X3, void>>>>));
         BOOST_TEST_TRAIT_TRUE((std::is_same<mp_reverse_fold<std::tuple<X1, X2, X3, X4>, void, F>, F<X1, F<X2, F<X3, F<X4, void>>>>>));
+    }
+
+    {
+        BOOST_TEST_TRAIT_TRUE((std::is_same<mp_reverse_fold<std::pair<X1, X2>, void, F>, F<X1, F<X2, void>>>));
     }
 
     {

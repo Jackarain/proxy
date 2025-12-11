@@ -114,7 +114,7 @@ given location and we set it to the half-difference of its left and right
 neighbors. ``operator()`` returns a reference to a grayscale pixel.
 A grayscale pixel is convertible to its channel type (``unsigned char`` for
 ``src``) and it can be copy-constructed from a channel.
-(This is only true for grayscale pixels).
+(This is only true for grayscale pixels.)
 
 While the above code is easy to read, it is not very fast, because the binary
 ``operator()`` computes the location of the pixel in a 2D grid, which involves
@@ -308,7 +308,7 @@ second one is mutable and that their color spaces are compatible
 GIL does not require using its own built-in constructs. You are free
 to use your own channels, color spaces, iterators, locators, views and
 images. However, to work with the rest of GIL they have to satisfy a
-set of requirements; in other words, they have to \e model the
+set of requirements; in other words, they have to \emph model the
 corresponding GIL *concept*. GIL's concepts are defined in the user
 guide.
 
@@ -602,7 +602,7 @@ instead of references to pixels, pass to the generic function pixel
 locators. This allows for more powerful functions that can use the
 pixel neighbors through the passed locators. GIL algorithms iterate
 through the pixels using the more efficient two nested loops (as
-opposed to the single loop using 1-D iterators)
+opposed to the single loop using 1-D iterators).
 
 Color Conversion
 ----------------
@@ -610,7 +610,7 @@ Color Conversion
 Instead of computing the gradient of each color plane of an image, we
 often want to compute the gradient of the luminosity. In other words,
 we want to convert the color image to grayscale and compute the
-gradient of the result. Here how to compute the luminosity gradient of
+gradient of the result. Here is how to compute the luminosity gradient of
 a 32-bit float RGB image:
 
 .. code-block:: cpp
@@ -866,7 +866,7 @@ view transformation functions also work with run-time instantiated
 image views and binary algorithms, such as ``copy_pixels`` can have
 either or both arguments be variants.
 
-Lets make our ``x_luminosity_gradient`` algorithm take a variant image
+Let's make our ``x_luminosity_gradient`` algorithm take a variant image
 view. For simplicity, let's assume that only the source view can be a
 variant. As an example of using multiple variants, see GIL's image
 view algorithm overloads taking multiple variants.
@@ -952,7 +952,7 @@ view, whereas for image variants it returns a view variant. For
 example, the return type of ``view(runtime_image)`` is
 ``any_image_view<Views>`` where ``Views`` enumerates four views
 corresponding to the four image types. ``const_view(runtime_image)``
-returns a ``any_image_view`` of the four read-only view types, etc.
+returns an ``any_image_view`` of the four read-only view types, etc.
 
 A warning about using variants: instantiating an algorithm with a
 variant effectively instantiates it with every possible type the

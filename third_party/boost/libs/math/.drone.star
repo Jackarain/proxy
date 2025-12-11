@@ -18,6 +18,7 @@ def main(ctx):
   things_to_test = [ "special_fun", "distribution_tests", "mp", "misc", "interpolators", "quadrature", "autodiff", "long-running-tests", "float128_tests", "concepts" ]
   gcc13_things_to_test = [ "special_fun", "distribution_tests", "mp", "misc", "interpolators", "quadrature", "autodiff", "long-running-tests", "float128_tests", "concepts", "new_floats" ]
   sanitizer_test = [ "special_fun", "distribution_tests", "misc", "interpolators", "quadrature", "float128_tests" ]
+  reverse_mode_autodiff_test = [ "test_reverse_mode_autodiff", "autodiff-long-running-tests" ]
   gnu_5_stds = [ "gnu++14", "c++14" ]
   gnu_6_stds = [ "gnu++14", "c++14", "gnu++17", "c++17" ]
   clang_6_stds = [ "c++14", "c++17" ]
@@ -65,6 +66,10 @@ def main(ctx):
     for cxx in gnu_non_native:
       result.append(osx_cxx("M1 Clang " + cxx + " " + suite, "clang++", buildscript="drone", buildtype="boost", xcode_version="14.1", environment={'TOOLSET': 'clang', 'CXXSTD': cxx, 'TEST_SUITE': suite, 'DEFINE': 'BOOST_MATH_NO_REAL_CONCEPT_TESTS,BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS,BOOST_MATH_MULTI_ARCH_CI_RUN', }, globalenv=globalenv))
   for suite in gcc13_things_to_test:
+    for cxx in gcc13_stds:
+      result.append(linux_cxx("Ubuntu g++-13 " + cxx + " " + suite, "g++-13", packages="g++-13", buildtype="boost", image="cppalliance/droneubuntu2404:1", environment={'TOOLSET': 'gcc', 'COMPILER': 'g++-13', 'CXXSTD': cxx, 'TEST_SUITE': suite, }, globalenv=globalenv))
+      result.append(linux_cxx("Ubuntu g++-14 " + cxx + " " + suite, "g++-14", packages="g++-14", buildtype="boost", image="cppalliance/droneubuntu2404:1", environment={'TOOLSET': 'gcc', 'COMPILER': 'g++-14', 'CXXSTD': cxx, 'TEST_SUITE': suite, }, globalenv=globalenv))
+  for suite in reverse_mode_autodiff_test:
     for cxx in gcc13_stds:
       result.append(linux_cxx("Ubuntu g++-13 " + cxx + " " + suite, "g++-13", packages="g++-13", buildtype="boost", image="cppalliance/droneubuntu2404:1", environment={'TOOLSET': 'gcc', 'COMPILER': 'g++-13', 'CXXSTD': cxx, 'TEST_SUITE': suite, }, globalenv=globalenv))
       result.append(linux_cxx("Ubuntu g++-14 " + cxx + " " + suite, "g++-14", packages="g++-14", buildtype="boost", image="cppalliance/droneubuntu2404:1", environment={'TOOLSET': 'gcc', 'COMPILER': 'g++-14', 'CXXSTD': cxx, 'TEST_SUITE': suite, }, globalenv=globalenv))

@@ -51,8 +51,8 @@ Returns: :: A name-based UUID version 5 produced from a digest of the namespace 
 
 Remarks: :: The characters of `name` are converted to a sequence of octets in the following manner:
 +
-* If `Ch` is `char` or `char8_t`, the characters are processed as octets directly;
-* If `Ch` is `wchar_t`, the characters are converted to `uint32_t` and then serialized to four octets each using little-endian representation;
+* If `Ch` is `char` or `char8_t`, the characters are processed as octets directly.
+* If `Ch` is `wchar_t`, the characters are converted to `uint32_t` and then serialized to four octets each using little-endian representation.
 * Otherwise, the character sequence is converted to UTF-8 and the result is processed as octets.
 
 Example: ::

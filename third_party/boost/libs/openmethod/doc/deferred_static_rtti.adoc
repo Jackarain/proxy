@@ -1,0 +1,25 @@
+
+## deferred_static_rtti
+
+### Synopsis
+
+Defined in <boost/openmethod/policies/basic_policy.hpp>.
+
+```c++
+namespace boost::openmethod::policies {
+
+struct deferred_static_rtti : rtti {};
+
+}
+```
+
+### Description
+
+`deferred_static_rtti` is a policy that defers collection of static type ids.
+
+Some custom RTTI systems rely on static constructors to assign type ids.
+OpenMethod itself relies on static constructors to register classes, methods and
+overriders, calling the `static_type` function from the `rtti` policy in the
+process. This can result in collecting the type ids _before_ they have been
+initialized. Adding this policy to a policy moves the collection of type ids to
+`initialize`.

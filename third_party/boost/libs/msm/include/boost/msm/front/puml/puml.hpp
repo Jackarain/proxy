@@ -106,6 +106,10 @@ namespace detail {
         typedef ::boost::fusion::vector<>  internal_transition_table11;
         typedef ::boost::fusion::vector<>  transition_table;
         typedef ::boost::fusion::vector0<>       deferred_events;
+        struct internal
+        {
+            typedef state_tag   tag;
+        };
 
     };
     template <std::uint32_t hash>

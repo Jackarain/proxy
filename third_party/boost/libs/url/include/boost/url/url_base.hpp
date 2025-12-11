@@ -1355,6 +1355,63 @@ public:
     set_host_ipv6(
         ipv6_address const& addr);
 
+    /** Set the zone ID for an IPv6 address.
+
+        This function sets the zone ID for the host if the host is an IPv6 address.
+        Reserved characters in the string are percent-escaped in the result.
+
+        @par Example
+        @code
+        assert( u.set_host_ipv6( ipv6_address( "fe80::1" ) ).set_zone_id( "eth0" ).buffer() == "https://[fe80::1%25eth0]" );
+        @endcode
+
+        @par Complexity
+        Linear in `this->size()`.
+
+        @par Exception Safety
+        Strong guarantee. Calls to allocate may throw.
+
+        @param s The zone ID to set.
+        @return `*this`
+
+        @par Specification
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc6874">RFC 6874</a>
+
+    */
+    url_base&
+    set_zone_id(core::string_view s);
+
+    /** Set the zone ID for an IPv6 address (percent-encoded).
+
+        This function sets the zone ID for the host if the host is an IPv6 address.
+        Escapes in the string are preserved, and reserved characters in the string
+        are percent-escaped in the result.
+
+        @par Example
+        @code
+        assert( u.set_host_ipv6( ipv6_address( "fe80::1" ) ).set_encoded_zone_id( "eth0" ).buffer() == "https://[fe80::1%25eth0]" );
+        @endcode
+
+        @par Complexity
+        Linear in `this->size()`.
+
+        @par Exception Safety
+        Strong guarantee. Calls to allocate may throw.
+        Exceptions thrown on invalid input.
+
+        @throw system_error
+        `s` contains an invalid percent-encoding.
+
+        @param s The zone ID to set.
+        @return `*this`
+
+        @par Specification
+        @li <a href="https://datatracker.ietf.org/doc/html/rfc6874">RFC 6874</a>
+
+    */
+    url_base&
+    set_encoded_zone_id(pct_string_view s);
+
     /** Set the host to an address
 
         The host is set to the specified IPvFuture
@@ -1713,8 +1770,8 @@ public:
 
         @note
         The library may adjust the final result
-        to ensure that no other parts of the url
-        is semantically affected.
+        to ensure that no other parts of the URL
+        are semantically affected.
 
         @note
         This function does not encode '/' chars, which
@@ -2860,6 +2917,16 @@ private:
     char* set_host_impl(std::size_t n, op_t& op);
     char* set_port_impl(std::size_t n, op_t& op);
     char* set_path_impl(std::size_t n, op_t& op);
+
+    void
+    set_host_ipv6_and_zone_id(
+        ipv6_address const& addr,
+        core::string_view zone_id);
+
+    void
+    set_host_ipv6_and_encoded_zone_id(
+        ipv6_address const& addr,
+        pct_string_view zone_id);
 
     core::string_view
     first_segment() const noexcept;

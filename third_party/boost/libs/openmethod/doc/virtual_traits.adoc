@@ -1,0 +1,93 @@
+
+## virtual_traits
+
+### Synopsis
+
+Defined in <boost/openmethod/core.hpp>.
+
+```c++
+namespace boost::openmethod {
+
+template<class, class>
+struct virtual_traits; // not defined
+
+template<class Class, class Policy>
+struct virtual_traits<..., Policy> {
+    using virtual_type = ...;
+    static auto peek(const T& arg) -> const ...&;
+    template<typename Derived> static auto cast(T& obj) -> ...;
+    template<class Other> using rebind = ...; // for smart virtual pointers
+};
+
+}
+```
+
+### Description
+
+Specializations of `virtual_traits` provide an interface for `method` and
+`virtual_ptr` to manipulate virtual arguments.
+
+### Specializations
+
+Specializations are provided for:
+
+* `virtual_ptr<T, Policy>`
+* `const virtual_ptr<T, Policy>&`
+* `T&`
+* `T&&`
+* `T*`
+* `std::shared_ptr<T>`: defined in <boost/openmethod/interop/std_shared_ptr.hpp>
+* `const std::shared_ptr<T>&`: defined in <boost/openmethod/interop/std_shared_ptr.hpp>
+* `std::unique_ptr<T>`: defined in <boost/openmethod/interop/std_unique_ptr.hpp>
+
+### Members
+
+#### virtual_type
+
+```c++
+using virtual_type = ...;
+```
+
+The class used for method selection. It must be registered in Policy.
+
+For example, `virtual_type` in the following specializations are all `Class`:
+
+* `virtual_traits<virtual_ptr<Class, Policy>>`
+* `virtual_traits<const virtual_ptr<std::shared_ptr<Class>&, Policy>`
+* `virtual_traits<Class&, Policy>`
+* `virtual_traits<const std::shared_ptr<Class>&, Policy>`
+
+#### peek
+
+```c++
+static auto peek(T arg) -> const ...&;
+```
+
+Returns a value for the purpose of obtaining a v-table pointer for `arg`.
+
+For example, `peek` returns a `const T&` for a `T&`, a `const T&`, a `T&&`, and
+a `std::shared_ptr<T>`; and a `const virtual_ptr<Class, Policy>&` for a
+`const virtual_ptr<Class, Policy>&`.
+
+
+#### cast
+
+```c++
+template<typename Derived>
+static decltype(auto) cast(T& obj);
+```
+
+Casts argument `obj` to the type expected by an overrider.
+
+For example, if a method takes a `virtual_<Animal&>`, an overrider for `Cat&`
+uses `virtual_traits` to cast a `Animal&` to a `Cat&`.
+
+#### rebind
+
+```c++
+template<class Other> using rebind = ...;
+```
+
+For smart pointers only. Rebinds the smart pointer to a different type. For
+example, `virtual_traits<std::shared_ptr<T>, Policy>::rebind<U>` is
+`std::shared_ptr<U>`.

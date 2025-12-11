@@ -326,7 +326,7 @@ private:
 
                         break;
                     }
-                    case PHOTOMETRIC_SEPARATED: // CYMK
+                    case PHOTOMETRIC_SEPARATED: // CMYK
                     {
                         switch( this->_info._bits_per_sample )
                         {

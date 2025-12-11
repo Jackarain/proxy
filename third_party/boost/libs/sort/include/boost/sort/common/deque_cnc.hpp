@@ -14,7 +14,6 @@
 #ifndef __TOOLS_DEQUE_CNC_HPP
 #define __TOOLS_DEQUE_CNC_HPP
 
-#include <ciso646>
 #include <vector>
 #include <deque>
 #include <boost/sort/common/spinlock.hpp>

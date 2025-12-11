@@ -11,7 +11,7 @@ on: [push, pull_request]
 
 jobs:
   posix-cmake:
-    name: "CMake ${{ matrix.toolset }} std=c++${{ matrix.cxxstd }} ${{ matrix.cxxflags }}"
+    name: "CMake ${{ matrix.toolset-display-name || matrix.toolset }} std=c++${{ matrix.cxxstd }} ${{ matrix.cxxflags }}"
     defaults:
       run:
         shell: bash
@@ -128,6 +128,14 @@ jobs:
             cxxflags: '-fsanitize=address,undefined -fno-sanitize-recover=all'
             ldflags: '-fsanitize=address,undefined'
 
+          - toolset: clang
+            toolset-display-name: 'apple-clang-17'
+            os: macos-15
+            build-type: 'Debug'
+            cxxstd: 20
+            cxxflags: '-fsanitize=address,undefined -fno-sanitize-recover=all'
+            ldflags: '-fsanitize=address,undefined'
+
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
     env:
@@ -147,6 +155,7 @@ jobs:
              sudo git g++ cmake make openssl libssl-dev ca-certificates pkg-config python3
 
       - name: Install toolset
+        if: matrix.install
         run: sudo apt-get install -y ${{ matrix.install }}
 
       - name: Setup Boost
@@ -207,7 +216,7 @@ jobs:
             --toolset ${{ matrix.toolset }}
 
   posix-b2:
-    name: "B2 ${{ matrix.toolset }} std=c++${{ matrix.cxxstd }} ${{ matrix.cxxflags }}"
+    name: "B2 ${{ matrix.toolset-display-name || matrix.toolset }} std=c++${{ matrix.cxxstd }} ${{ matrix.cxxflags }}"
 
     defaults:
       run:
@@ -235,6 +244,14 @@ jobs:
             cxxflags: ''
             ldflags: ''
 
+          - toolset: clang
+            toolset-display-name: 'apple-clang-17'
+            os: macos-15
+            build-type: 'debug,release'
+            cxxstd: 17,20
+            cxxflags: ''
+            ldflags: ''
+
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
     env:
@@ -253,6 +270,7 @@ jobs:
              sudo git g++ ca-certificates pkg-config python3
 
       - name: Install toolset
+        if: matrix.install
         run: sudo apt-get install -y ${{ matrix.install }}
 
       - name: Setup Boost

@@ -61,7 +61,7 @@ Type requirements:;; `std::is_constructible_v<remove_cv_t<T>, T&> && !std::is_ar
 
 ```cpp
 template <class T, std::size_t N>
-constexpr std::array<remove_cvref_t<T>, N> to_array(T (&a)[N]);
+constexpr std::array<remove_cv_t<T>, N> to_array(T (&a)[N]);
 ```
 
 [horizontal]

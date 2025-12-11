@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(test_numeric_limits_snips)
   double write = 2./3; // Any arbitrary value that cannot be represented exactly.
   double read = 0;
   std::stringstream s;
-  s.precision(std::numeric_limits<double>::digits10); // or `float64_t` for 64-bit IEE754 double.
+  s.precision(std::numeric_limits<double>::digits10); // or `float64_t` for 64-bit IEEE 754 double.
   s << write;
   s >> read;
   if(read != write)
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(test_numeric_limits_snips)
   }
   {
 //[max_digits10_4
-/*`and similarly for a much higher precision type:
+/*`And similarly for a much higher precision type:
 */
 
   using namespace boost::multiprecision;
@@ -392,7 +392,7 @@ so the default expression template parameter has been replaced by `et_off`.]
 
     cpp_bin_float_quad expected = NaN;
     cpp_bin_float_quad calculated = 2 * NaN;
-    // Comparisons of NaN's always fail:
+    // Comparisons of NaNs always fail:
     bool b = expected == calculated;
     std::cout << b << std::endl;
     BOOST_CHECK_NE(expected, expected);
@@ -445,7 +445,7 @@ Then we can equally well use a multiprecision type cpp_bin_float_quad:
   infinity output was inf
   infinity input was inf
 ``
-Similarly we can do the same with NaN (except that we cannot use `assert` (because any comparisons with NaN always return false).
+Similarly we can do the same with NaN (except that we cannot use `assert` (because any comparisons with NaN always return false)).
 */
   {
     std::locale old_locale;

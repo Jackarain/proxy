@@ -12,11 +12,7 @@
 
 #include <boost/mqtt5/detail/traits.hpp>
 
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/container/deque.hpp>
-#include <boost/optional/optional.hpp>
-#include <boost/spirit/home/x3.hpp>
-#include <boost/spirit/home/x3/binary/binary.hpp>
+#include <boost/endian/conversion.hpp>
 
 #include <cstdint>
 #include <string>
@@ -24,217 +20,49 @@
 
 namespace boost::mqtt5::decoders {
 
-namespace x3 = boost::spirit::x3;
-
-template <typename T>
-struct convert { using type = T; };
-
-template <typename ...Args>
-struct convert<boost::fusion::deque<Args...>> {
-    using type = std::tuple<typename convert<Args>::type...>;
-};
-
-template <typename T>
-struct convert<boost::optional<T>> {
-    using type = std::optional<T>;
-};
-
-template <typename T>
-struct convert<std::vector<T>> {
-    using type = std::vector<typename convert<T>::type>;
-};
-
-template <typename T, typename Parser>
-constexpr auto as(Parser&& p) {
-    return x3::rule<struct _, T>{} = std::forward<Parser>(p);
-}
-
-
 template <typename It, typename Parser>
 auto type_parse(It& first, const It last, const Parser& p) {
-    using ctx_type = decltype(x3::make_context<struct _>(std::declval<Parser&>()));
-    using attr_type = typename x3::traits::attribute_of<Parser, ctx_type>::type;
-
-    using rv_type = typename convert<attr_type>::type;
+    using rv_type = typename Parser::attribute_type;
 
     std::optional<rv_type> rv;
     rv_type value {};
-    if (x3::phrase_parse(first, last, as<rv_type>(p), x3::eps(false), value))
-        rv = std::move(value);
-    return rv;
-}
-
-
-template <typename AttributeType, typename It, typename Parser>
-auto type_parse(It& first, const It last, const Parser& p) {
-    std::optional<AttributeType> rv;
-    AttributeType value {};
-    if (x3::phrase_parse(first, last, as<AttributeType>(p), x3::eps(false), value))
+    if (p.parse(first, last, value))
         rv = std::move(value);
     return rv;
 }
 
 namespace basic {
 
-template <typename T>
-constexpr auto to(T& arg) {
-    return [&](auto& ctx) {
-        using ctx_type = decltype(ctx);
-        using attr_type = decltype(x3::_attr(std::declval<const ctx_type&>()));
-        if constexpr (detail::is_boost_iterator<attr_type>)
-            arg = T { x3::_attr(ctx).begin(), x3::_attr(ctx).end() };
-        else
-            arg = x3::_attr(ctx);
-    };
-}
+template <typename Attr>
+struct int_parser {
+    using attribute_type = Attr;
 
-template <typename LenParser, typename Subject, typename Enable = void>
-class scope_limit {};
-
-template <typename LenParser, typename Subject>
-class scope_limit<
-    LenParser, Subject,
-    std::enable_if_t<x3::traits::is_parser<LenParser>::value>
-> :
-    public x3::unary_parser<Subject, scope_limit<LenParser, Subject>>
-{
-    using base_type = x3::unary_parser<Subject, scope_limit<LenParser, Subject>>;
-    LenParser _lp;
-public:
-    using ctx_type =
-        decltype(x3::make_context<struct _>(std::declval<Subject&>()));
-    using attribute_type =
-        typename x3::traits::attribute_of<Subject, ctx_type>::type;
-
-    static bool const has_attribute = true;
-
-    scope_limit(const LenParser& lp, const Subject& subject) :
-        base_type(subject), _lp(lp)
-    {}
-
-    template <typename It, typename Ctx, typename RCtx, typename Attr>
-    bool parse(
-        It& first, const It last,
-        const Ctx& ctx, RCtx& rctx, Attr& attr
-    ) const {
-
-        It iter = first;
-        typename x3::traits::attribute_of<LenParser, Ctx>::type len;
-        if (!_lp.parse(iter, last, ctx, rctx, len))
-            return false;
-        if (iter + len > last)
+    template <typename It>
+    bool parse(It& first, const It last, Attr& attr) const {
+        constexpr size_t byte_size = sizeof(Attr);
+        if (std::distance(first, last) < static_cast<ptrdiff_t>(byte_size))
             return false;
 
-        if (!base_type::subject.parse(iter, iter + len, ctx, rctx, attr))
-            return false;
+        using namespace boost::endian;
+        attr = endian_load<Attr, sizeof(Attr), order::big>(
+            reinterpret_cast<const uint8_t*>(static_cast<const char*>(&*first))
+        );
+        first += sizeof(Attr);
 
-        first = iter;
         return true;
     }
 };
 
-template <typename Size, typename Subject>
-class scope_limit<
-    Size, Subject,
-    std::enable_if_t<std::is_arithmetic_v<Size>>
-> :
-    public x3::unary_parser<Subject, scope_limit<Size, Subject>>
-{
-    using base_type = x3::unary_parser<Subject, scope_limit<Size, Subject>>;
-    size_t _limit;
-public:
-    using ctx_type =
-        decltype(x3::make_context<struct _>(std::declval<Subject&>()));
-    using attribute_type =
-        typename x3::traits::attribute_of<Subject, ctx_type>::type;
+inline constexpr int_parser<uint8_t> byte_;
+inline constexpr int_parser<uint16_t> word_;
+inline constexpr int_parser<uint32_t> dword_;
 
-    static bool const has_attribute = true;
-
-    scope_limit(Size limit, const Subject& subject) :
-        base_type(subject), _limit(limit)
-    {}
-
-    template <typename It, typename Ctx, typename RCtx, typename Attr>
-    bool parse(
-        It& first, const It last,
-        const Ctx& ctx, RCtx& rctx, Attr& attr
-    ) const {
-
-        It iter = first;
-        if (iter + _limit > last)
-            return false;
-
-        if (!base_type::subject.parse(iter, iter + _limit, ctx, rctx, attr))
-            return false;
-
-        first = iter;
-        return true;
-    }
-};
-
-template <typename LenParser, typename Enable = void>
-struct scope_limit_gen {
-    template <typename Subject>
-    auto operator[](const Subject& p) const {
-        return scope_limit<LenParser, Subject> { _lp, x3::as_parser(p) };
-    }
-    LenParser _lp;
-};
-
-template <typename Size>
-struct scope_limit_gen<
-    Size,
-    std::enable_if_t<std::is_arithmetic_v<Size>>
-> {
-    template <typename Subject>
-    auto operator[](const Subject& p) const {
-        return scope_limit<Size, Subject> { limit, x3::as_parser(p) };
-    }
-    Size limit;
-};
-
-template <
-    typename Parser,
-    std::enable_if_t<x3::traits::is_parser<Parser>::value, bool> = true
->
-scope_limit_gen<Parser> scope_limit_(const Parser& p) {
-    return { p };
-}
-
-template <
-    typename Size,
-    std::enable_if_t<std::is_arithmetic_v<Size>, bool> = true
->
-scope_limit_gen<Size> scope_limit_(Size limit) {
-    return { limit };
-}
-
-struct verbatim_parser : x3::parser<verbatim_parser> {
-    using attribute_type = std::string;
-    static bool const has_attribute = true;
-
-    template <typename It, typename Ctx, typename RCtx, typename Attr>
-    bool parse(It& first, const It last, const Ctx&, RCtx&, Attr& attr) const {
-        attr = std::string { first, last };
-        first = last;
-        return true;
-    }
-};
-
-constexpr auto verbatim_ = verbatim_parser{};
-
-struct varint_parser : x3::parser<varint_parser> {
+struct varint_parser {
     using attribute_type = int32_t;
-    static bool const has_attribute = true;
 
-    template <typename It, typename Ctx, typename RCtx, typename Attr>
-    bool parse(
-        It& first, const It last,
-        const Ctx& ctx, RCtx&, Attr& attr
-    ) const {
-
-        It iter = first;
-        x3::skip_over(iter, last, ctx);
+    template <typename It>
+    bool parse(It& first, const It last, int32_t& attr) const {
+        auto iter = first;
 
         if (iter == last)
             return false;
@@ -262,22 +90,17 @@ struct varint_parser : x3::parser<varint_parser> {
     }
 };
 
-constexpr varint_parser varint_{};
+inline constexpr varint_parser varint_;
 
-struct len_prefix_parser : x3::parser<len_prefix_parser> {
+struct len_prefix_parser {
     using attribute_type = std::string;
-    static bool const has_attribute = true;
 
-    template <typename It, typename Ctx, typename RCtx, typename Attr>
-    bool parse(
-        It& first, const It last,
-        const Ctx& ctx, RCtx& rctx, Attr& attr
-    ) const {
-        It iter = first;
-        x3::skip_over(iter, last, ctx);
+    template <typename It>
+    bool parse(It& first, const It last, std::string& attr) const {
+        auto iter = first;
 
-        typename x3::traits::attribute_of<decltype(x3::big_word), Ctx>::type len;
-        if (x3::big_word.parse(iter, last, ctx, rctx, len)) {
+        typename decltype(word_)::attribute_type len;
+        if (word_.parse(iter, last, len)) {
             if (std::distance(iter, last) < len)
                 return false;
         }
@@ -290,44 +113,25 @@ struct len_prefix_parser : x3::parser<len_prefix_parser> {
     }
 };
 
-constexpr len_prefix_parser utf8_ {};
-constexpr len_prefix_parser binary_ {};
-
-/*
-     Boost Spirit incorrectly deduces atribute type for a parser of the form
-         (eps(a) | parser1) >> (eps(b) | parser)
-    and we had to create if_ parser to remedy the issue
-*/
+inline constexpr len_prefix_parser utf8_ {};
+inline constexpr len_prefix_parser binary_ {};
 
 template <typename Subject>
-class conditional_parser :
-    public x3::unary_parser<Subject, conditional_parser<Subject>> {
+struct conditional_parser {
+    using subject_attr_type = typename Subject::attribute_type;
+    using attribute_type = std::optional<subject_attr_type>;
 
-    using base_type = x3::unary_parser<Subject, conditional_parser<Subject>>;
-    bool _condition;
-public:
-    using ctx_type =
-        decltype(x3::make_context<struct _>(std::declval<Subject&>()));
-    using subject_attr_type =
-        typename x3::traits::attribute_of<Subject, ctx_type>::type;
+    Subject p;
+    bool condition;
 
-    using attribute_type = boost::optional<subject_attr_type>;
-    static bool const has_attribute = true;
-
-    conditional_parser(const Subject& s, bool condition) :
-        base_type(s), _condition(condition) {}
-
-    template <typename It, typename Ctx, typename RCtx, typename Attr>
-    bool parse(
-        It& first, const It last,
-        const Ctx& ctx, RCtx& rctx, Attr& attr
-    ) const {
-        if (!_condition)
+    template <typename It>
+    bool parse(It& first, const It last, attribute_type& attr) const {
+        if (!condition)
             return true;
 
-        It iter = first;
+        auto iter = first;
         subject_attr_type sattr {};
-        if (!base_type::subject.parse(iter, last, ctx, rctx, sattr))
+        if (!p.parse(iter, last, sattr))
             return false;
 
         attr.emplace(std::move(sattr));
@@ -340,59 +144,155 @@ struct conditional_gen {
     bool _condition;
 
     template <typename Subject>
-    auto operator[](const Subject& p) const {
-        return conditional_parser<Subject> { p, _condition };
+    conditional_parser<Subject> operator[](const Subject& p) const {
+        return { p, _condition };
     }
 };
 
-inline conditional_gen if_(bool condition) {
+constexpr conditional_gen if_(bool condition) {
     return { condition };
+}
+
+struct verbatim_parser {
+    using attribute_type = std::string;
+
+    template <typename It>
+    bool parse(It& first, const It last, std::string& attr) const {
+        attr = std::string { first, last };
+        first = last;
+        return true;
+    }
+};
+
+inline constexpr auto verbatim_ = verbatim_parser{};
+
+template <typename... Ps>
+struct seq_parser {
+    using attribute_type = std::tuple<typename Ps::attribute_type...>;
+
+    std::tuple<Ps...> parsers;
+
+    template <typename It>
+    bool parse(It& first, const It last, attribute_type& attr) const {
+        return parse_impl(
+            first, last, attr, std::make_index_sequence<sizeof...(Ps)>{}
+        );
+    }
+
+private:
+    template <typename It, size_t... Is>
+    bool parse_impl(
+        It& first, const It last, attribute_type& attr,
+        std::index_sequence<Is...>
+    ) const {
+        auto iter = first;
+        bool rv = (
+            std::get<Is>(parsers).parse(iter, last, std::get<Is>(attr))
+                && ...
+        );
+        if (rv)
+            first = iter;
+        return rv;
+    }
+};
+
+template <typename... Ps, typename P2>
+constexpr seq_parser<Ps..., P2> operator>>(
+    const seq_parser<Ps...>& p1, const P2& p2
+) {
+    return { std::tuple_cat(p1.parsers, std::make_tuple(p2)) };
+}
+
+template <typename P1, typename P2>
+constexpr seq_parser<P1, P2> operator>>(const P1& p1, const P2& p2) {
+    return { std::make_tuple(p1, p2) };
+}
+
+template <typename Attr>
+struct attr_parser {
+    using attribute_type = Attr;
+
+    Attr attr;
+
+    template <typename It>
+    bool parse(It&, const It, Attr& attr) const {
+        attr = this->attr;
+        return true;
+    }
+};
+
+template <typename Attr>
+constexpr attr_parser<Attr> attr(const Attr& val) {
+    return { val };
+}
+
+template <typename Subject>
+struct plus_parser {
+    using subject_attr_type = typename Subject::attribute_type;
+    using attribute_type = std::vector<subject_attr_type>;
+
+    Subject p;
+
+    template <typename It, typename Attr>
+    bool parse(It& first, const It last, Attr& attr) const {
+        bool success = false;
+        while (first < last) {
+            subject_attr_type sattr {};
+            auto iter = first;
+            if (!p.parse(iter, last, sattr)) break;
+
+            success = true;
+            first = iter;
+            attr.push_back(std::move(sattr));
+        }
+
+        return success;
+    }
+};
+
+template <typename P>
+constexpr plus_parser<P> operator+(const P& p) {
+    return { p };
 }
 
 } // end namespace basic
 
-
 namespace prop {
-
-namespace basic = boost::mqtt5::decoders::basic;
 
 namespace detail {
 
-template <typename It, typename Ctx, typename RCtx, typename Prop>
-bool parse_to_prop(
-    It& iter, const It last,
-    const Ctx& ctx, RCtx& rctx, Prop& prop
-) {
+template <typename It, typename Prop>
+bool parse_to_prop(It& iter, const It last, Prop& prop) {
     using namespace boost::mqtt5::detail;
     using prop_type = std::remove_reference_t<decltype(prop)>;
 
     bool rv = false;
 
     if constexpr (std::is_same_v<prop_type, uint8_t>)
-        rv = x3::byte_.parse(iter, last, ctx, rctx, prop);
+        rv = basic::byte_.parse(iter, last, prop);
     else if constexpr (std::is_same_v<prop_type, uint16_t>)
-        rv = x3::big_word.parse(iter, last, ctx, rctx, prop);
+        rv = basic::word_.parse(iter, last, prop);
     else if constexpr (std::is_same_v<prop_type, int32_t>)
-        rv = basic::varint_.parse(iter, last, ctx, rctx, prop);
+        rv = basic::varint_.parse(iter, last, prop);
     else if constexpr (std::is_same_v<prop_type, uint32_t>)
-        rv = x3::big_dword.parse(iter, last, ctx, rctx, prop);
+        rv = basic::dword_.parse(iter, last, prop);
     else if constexpr (std::is_same_v<prop_type, std::string>)
-        rv = basic::utf8_.parse(iter, last, ctx, rctx, prop);
+        rv = basic::utf8_.parse(iter, last, prop);
 
     else if constexpr (is_optional<prop_type>) {
         typename prop_type::value_type val;
-        rv = parse_to_prop(iter, last, ctx, rctx, val);
+        rv = parse_to_prop(iter, last, val);
         if (rv) prop.emplace(std::move(val));
     }
 
     else if constexpr (is_pair<prop_type>) {
-        rv = parse_to_prop(iter, last, ctx, rctx, prop.first);
-        rv = parse_to_prop(iter, last, ctx, rctx, prop.second);
+        rv = parse_to_prop(iter, last, prop.first);
+        rv = parse_to_prop(iter, last, prop.second);
     }
 
     else if constexpr (is_vector<prop_type> || is_small_vector<prop_type>) {
         typename std::remove_reference_t<prop_type>::value_type value;
-        rv = parse_to_prop(iter, last, ctx, rctx, value);
+        rv = parse_to_prop(iter, last, value);
         if (rv) prop.push_back(std::move(value));
     }
 
@@ -402,28 +302,21 @@ bool parse_to_prop(
 } // end namespace detail
 
 template <typename Props>
-class prop_parser : public x3::parser<prop_parser<Props>> {
-public:
+struct prop_parser {
     using attribute_type = Props;
-    static bool const has_attribute = true;
 
-    template <typename It, typename Ctx, typename RCtx, typename Attr>
-    bool parse(
-        It& first, const It last,
-        const Ctx& ctx, RCtx& rctx, Attr& attr
-    ) const {
-
-        It iter = first;
-        x3::skip_over(iter, last, ctx);
+    template <typename It>
+    bool parse(It& first, const It last, Props& attr) const {
+        auto iter = first;
 
         if (iter == last)
             return true;
 
         int32_t props_length;
-        if (!basic::varint_.parse(iter, last, ctx, rctx, props_length))
+        if (!basic::varint_.parse(iter, last, props_length))
             return false;
 
-        const It scoped_last = iter + props_length;
+        const auto scoped_last = iter + props_length;
         // attr = Props{};
 
         while (iter < scoped_last) {
@@ -433,10 +326,8 @@ public:
 
             attr.apply_on(
                 prop_id,
-                [&rv, &iter, scoped_last, &ctx, &rctx](auto& prop) {
-                    rv = detail::parse_to_prop(
-                        iter, scoped_last, ctx, rctx, prop
-                    );
+                [&rv, &iter, scoped_last](auto& prop) {
+                    rv = detail::parse_to_prop(iter, scoped_last, prop);
                 }
             );
 
@@ -450,12 +341,10 @@ public:
     }
 };
 
-
 template <typename Props>
 constexpr auto props_ = prop_parser<Props> {};
 
 } // end namespace prop
-
 
 } // end namespace boost::mqtt5::decoders
 

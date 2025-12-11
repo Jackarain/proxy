@@ -22,7 +22,7 @@ namespace gil = boost::gil;
 // The function hough_circle_transform_brute, defined in include/boost/gil/image_processing/hough_transform.cpp,
 // accepts a greyscale edge map, the three Hough parameters allowing to do the drawing and the voting,
 // an accumulator in the form of an iterator of views of the parameter space and a utility rasterizer to produce the points.
-// The example outputs the voting cell of the centre of a circle drawn programatically.
+// The example outputs the voting cell of the centre of a circle drawn programmatically.
 // See also:
 // hough_transform_line.cpp - Hough transform to detect lines
 

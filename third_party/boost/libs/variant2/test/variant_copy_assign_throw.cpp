@@ -45,7 +45,7 @@ void test()
     variant<Y1, Y2> v1( in_place_type_t<Y1>{} );
     variant<Y1, Y2> v2( in_place_type_t<Y2>{} );
 
-    BOOST_TEST_THROWS( v1 = v2, std::runtime_error )
+    BOOST_TEST_THROWS( v1 = v2, std::runtime_error );
 }
 
 int main()

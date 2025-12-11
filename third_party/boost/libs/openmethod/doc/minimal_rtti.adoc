@@ -1,0 +1,47 @@
+
+## minimal_rtti
+
+### Synopsis
+
+```c++
+struct minimal_rtti : rtti {
+    template<class Class>
+    static constexpr bool is_polymorphic = false;
+
+    template<typename Class>
+    static auto static_type() -> type_id;
+};
+```
+
+### Description
+
+`minimal_rtti` is an implementation of the `rtti` policy that only uses static
+type information.
+
+`minimal_rtti` provides the only function strictly required for the `rtti`
+policy.
+
+This policy can be used in programs that call methods solely via
+`virtual_ptr`{empty}s created with the "final" constructs. Virtual inheritance
+is not supported. Classes are not required to be polymorphic.
+
+### Members
+
+
+#### is_polymorphic
+
+```c++
+template<class Class>
+static constexpr bool is_polymorphic = false;
+```
+
+This policy does not support polymorphic classes.
+
+#### static_type
+
+```c++
+template<class Class>
+static auto static_type() -> type_id;
+```
+
+Returns the address of a local static `char` variable, cast to `type_id`.

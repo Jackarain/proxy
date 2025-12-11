@@ -8,18 +8,21 @@
 #
 
 import testing ;
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 
 local defines =
     [ requires
     cxx11_constexpr
     cxx11_decltype
     cxx11_hdr_tuple
+    cxx11_hdr_type_traits
     cxx11_template_aliases
     cxx11_variadic_templates
     ]
     ;
 
-project : requirements $(defines) ;
+project : requirements $(defines)
+    <library>/boost/static_string//boost_static_string ;
 
 run static_string.cpp ;

@@ -8,7 +8,8 @@
 [#intro]
 = Introduction
 
-Boost.Redis is a high-level https://redis.io/[Redis] client library built on top of
+Boost.Redis is a high-level https://redis.io/[Redis] and https://valkey.io/[Valkey]
+client library built on top of
 https://www.boost.org/doc/libs/latest/doc/html/boost_asio.html[Boost.Asio]
 that implements the Redis protocol
 https://github.com/redis/redis-specifications/blob/master/protocol/RESP3.md[RESP3].
@@ -19,7 +20,8 @@ The requirements for using Boost.Redis are:
 
 * Boost 1.84 or higher. Boost.Redis is included in Boost installations since Boost 1.84.
 * pass:[C++17] or higher. Supported compilers include gcc 11 and later, clang 11 and later, and Visual Studio 16 (2019) and later.
-* Redis 6 or higher (must support RESP3).
+* Redis 6 or higher, or Valkey (any version). The database server must support RESP3.
+  We intend to maintain compatibility with both Redis and Valkey in the long-run.
 * OpenSSL.
 
 The documentation assumes basic-level knowledge about https://redis.io/docs/[Redis] and https://www.boost.org/doc/libs/latest/doc/html/boost_asio.html[Boost.Asio].
@@ -137,6 +139,7 @@ receiver(std::shared_ptr<connection> conn) -> net::awaitable<void>
 
 Here is a list of topics that you might be interested in:
 
+* xref:cancellation.adoc[Setting timeouts to requests and managing cancellation].
 * xref:requests_responses.adoc[More on requests and responses].
 * xref:serialization.adoc[Serializing and parsing into custom types].
 * xref:logging.adoc[Configuring logging].

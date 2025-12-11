@@ -17,6 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - toolset: gcc-14  # Do not remove! It is the only toolset that tests CMake tests down below
+            cxxstd: "03,11,14,17,20"
+            os: ubuntu-24.04
           - toolset: gcc-12
             cxxstd: "03,11,14,17,2a"
             os: ubuntu-22.04
@@ -85,10 +88,21 @@ jobs:
           cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
           python tools/boostdep/depinst/depinst.py --include benchmark --include example --include examples --include tools --git_args "--depth 10 --jobs 3" $LIBRARY
           ./bootstrap.sh
-          ./b2 -d0 headers
           ./b2 -j4 variant=debug tools/inspect
 
-      - name: Run modules tests wihtout 'import std;'
+      - name: Run CMake tests
+        if: ${{matrix.toolset == 'gcc-14'}}
+        run: |
+          cd ../boost-root/
+          mkdir __build
+          cd __build
+          cmake -DBUILD_TESTING=1 -DBOOST_INCLUDE_LIBRARIES=type_index -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_C_COMPILER=gcc-14 ..
+          cmake --build . --target tests
+          ctest --output-on-failure --no-tests=error
+          cd ..
+          rm -rf __build
+
+      - name: Run modules tests without 'import std;'
         if: ${{matrix.toolset == 'clang-19'}}
         run: |
           cd ../boost-root/libs/type_index
@@ -152,14 +166,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: "14,latest"
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
+          - toolset: msvc
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
-            os: windows-2019
+            os: windows-2025
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
@@ -171,7 +181,7 @@ jobs:
           - toolset: gcc
             cxxstd: "03,11,14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-2025
 
     runs-on: ${{matrix.os}}
 
@@ -198,37 +208,42 @@ jobs:
           git submodule update --init tools/boostdep
           python tools/boostdep/depinst/depinst.py --include benchmark --include example --include examples --include tools --git_args "--jobs 3" %LIBRARY%
           cmd /c bootstrap
-          b2 -d0 headers
 
-      - name: Run modules tests
+      - name: Run CMake tests
         if: ${{matrix.toolset == 'msvc-14.3'}}
         shell: cmd
         run: |
-          choco install --no-progress ninja
           call "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvarsall.bat" x64
-          cd ../boost-root/libs/type_index
-          mkdir build_module
-          cd build_module
-          cmake -DBOOST_USE_MODULES=1 -DBUILD_TESTING=1 -DCMAKE_CXX_STANDARD=23 -DCMAKE_EXPERIMENTAL_CXX_IMPORT_STD=0e5b6991-d74f-4b3d-a41c-cf096e0b2508 -G Ninja ../test/cmake_subdir_test/
+          cd ../boost-root
+          mkdir __build_cmake
+          cd __build_cmake
+          cmake -DBUILD_TESTING=1 -DBOOST_INCLUDE_LIBRARIES=type_index ..
+          cmake --build . --target tests --config Debug
+          ctest --output-on-failure --no-tests=error -C Debug
+
+      - name: Run modules tests
+        if: false  # No std module in ${{matrix.toolset == 'msvc-14.3'}}
+        shell: cmd
+        run: |
+          call "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvarsall.bat" x64
+          cd ../boost-root
+          mkdir __build_modules
+          cd __build_modules
+          cmake -DBOOST_USE_MODULES=1 -DBUILD_TESTING=1 -DCMAKE_CXX_STANDARD=23 -DCMAKE_EXPERIMENTAL_CXX_IMPORT_STD=0e5b6991-d74f-4b3d-a41c-cf096e0b2508 -G Ninja ../libs/type_index/test/cmake_subdir_test
           cmake --build .
           ctest --no-tests=error -V
-          cd ..
-          rm -rf build_module
 
       - name: Run modules tests without 'import std;'
         if: ${{matrix.toolset == 'msvc-14.3'}}
         shell: cmd
         run: |
-          choco install --no-progress ninja
           call "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvarsall.bat" x64
-          cd ../boost-root/libs/type_index
-          mkdir build_module
-          cd build_module
-          cmake -DBOOST_USE_MODULES=1 -DBUILD_TESTING=1 -DCMAKE_CXX_STANDARD=20 -G Ninja ../test/cmake_subdir_test/
+          cd ../boost-root
+          mkdir __build_modules_std
+          cd __build_modules_std
+          cmake -DBOOST_USE_MODULES=1 -DBUILD_TESTING=1 -DCMAKE_CXX_STANDARD=20 -G Ninja ../libs/type_index/test/cmake_subdir_test
           cmake --build .
           ctest --no-tests=error -V
-          cd ..
-          rm -rf build_module
 
       - name: Run tests
         shell: cmd

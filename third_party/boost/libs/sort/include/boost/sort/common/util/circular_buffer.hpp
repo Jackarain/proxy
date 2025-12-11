@@ -13,7 +13,6 @@
 #ifndef __BOOST_SORT_COMMON_UTIL_CIRCULAR_BUFFER_HPP
 #define __BOOST_SORT_COMMON_UTIL_CIRCULAR_BUFFER_HPP
 
-#include <ciso646>
 #include <memory>
 #include <cassert>
 #include <exception>

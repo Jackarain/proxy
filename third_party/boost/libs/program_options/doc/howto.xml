@@ -23,7 +23,7 @@ options groups/hidden options
     <title>Non-conventional Syntax</title>
 
     <para>Sometimes, standard command line syntaxes are not enough. For
-    example, the gcc compiler has "-frtti" and -fno-rtti" options, and this
+    example, the gcc compiler has "-frtti" and "-fno-rtti" options, and this
     syntax is not directly supported.
     </para>
 
@@ -66,7 +66,7 @@ store(command_line_parser(ac, av).options(desc).extra_parser(reg_foo)
 
     <indexterm><primary>response files</primary></indexterm>
 
-    <para>Some operating system have very low limits of the command line
+    <para>Some operating systems have very low limits of the command line
       length. The common way to work around those limitations is using
       <firstterm>response files</firstterm>.  A response file is just a
       configuration file which uses the same syntax as the command line. If
@@ -304,7 +304,7 @@ void validate(boost::any& v,
       for the value, and in this case is either empty or contains an instance of
       the <code>magic_number</code> class. The second is the list of strings
       found in the next occurrence of the option. The remaining two parameters
-      are needed to workaround the lack of partial template specialization and
+      are needed to work around the lack of partial template specialization and
       partial function template ordering on some compilers.
     </para>
 
@@ -346,7 +346,7 @@ void validate(boost::any& v,
     <emphasis>some</emphasis> Unicode-aware options. They are different from
     ordinary options in that they accept <code>wstring</code> input, and
     process it using wide character streams. Creating an Unicode-aware option
-    is easy: just use the the <code>wvalue</code> function instead of the
+    is easy: just use the <code>wvalue</code> function instead of the
     regular <code>value</code>.
     </para>
 
@@ -379,7 +379,7 @@ locale::global(locale(""));
       implementation, though. The quick test involves three steps:
       <orderedlist>
         <listitem>
-          <para>Go the the "test" directory and build the "test_convert" binary.</para>
+          <para>Go to the "test" directory and build the "test_convert" binary.</para>
         </listitem>
         <listitem>
           <para>Set some non-ascii locale in the environment. On Linux, one can

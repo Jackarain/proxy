@@ -98,7 +98,7 @@ T const& clamp(
 template<>
 struct default_color_converter_impl<ycbcr_601__t, rgb_t>
 {
-	// Note: the RGB_t channels range can be set later on by the users. We dont want to cast to uint8_t or anything here.
+	// Note: The RGB_t channels range can be set later on by the users. We don't want to cast to uint8_t or anything here.
 	template < typename SRCP, typename DSTP >
 	void operator()( const SRCP& src, DSTP& dst ) const
 	{
@@ -130,7 +130,7 @@ private:
 		src_channel_t cb = channel_convert<src_channel_t>( get_color(src, cb_t()));
 		src_channel_t cr = channel_convert<src_channel_t>( get_color(src, cr_t()));
 
-		// The intermediate results of the formulas require at least 16bits of precission.
+		// The intermediate results of the formulas require at least 16 bits of precision.
 		std::int_fast16_t c = y  - 16;
 		std::int_fast16_t d = cb - 128;
 		std::int_fast16_t e = cr - 128;

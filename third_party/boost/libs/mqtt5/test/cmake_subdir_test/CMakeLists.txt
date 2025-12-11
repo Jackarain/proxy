@@ -21,12 +21,9 @@ set(deps
   container
   core
   endian
-  fusion
-  optional
   random
   range
   smart_ptr
-  spirit
   system
   type_traits
   
@@ -42,10 +39,11 @@ set(deps
   intrusive
   # logic # Beast dependency
   mp11
+  optional
   preprocessor
   static_assert
   # static_string # Beast dependency
-  type_index
+  # type_index # Beast dependency
   winapi
   move
   function_types
@@ -64,12 +62,8 @@ set(deps
   iterator
   regex
   "function"
-  phoenix
   pool
-  proto
-  thread
   unordered
-  variant
   variant2
   describe
   predef
@@ -77,10 +71,8 @@ set(deps
   lexical_cast
   numeric/conversion
   tokenizer
-  atomic
-  chrono
+  fusion
   exception
-  ratio
 )
 
 foreach(dep IN LISTS deps)

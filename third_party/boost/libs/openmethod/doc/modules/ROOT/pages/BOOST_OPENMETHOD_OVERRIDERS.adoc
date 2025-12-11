@@ -1,0 +1,18 @@
+
+# BOOST_OPENMETHOD_OVERRIDERS
+
+## Synopsis
+
+Defined in link:{{BASE_URL}}/include/boost/openmethod/macros.hpp[<boost/openmethod/macros.hpp>].
+
+```c++
+#define BOOST_OPENMETHOD_OVERRIDERS(ID)                                      \
+    BOOST_PP_CAT(BOOST_OPENMETHOD_ID(ID), _overriders)
+```
+
+## Description
+
+`BOOST_OPENMETHOD_OVERRIDERS` expands to the name of the class template that
+contains the overriders for all the methods with a given name.
+
+NOTE: `ID` must be an *identifier*. Qualified names are not allowed.

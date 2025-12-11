@@ -1,0 +1,87 @@
+
+# BOOST_OPENMETHOD
+
+## Synopsis
+
+Defined in link:{{BASE_URL}}/include/boost/openmethod/macros.hpp[<boost/openmethod/macros.hpp>].
+
+```c++
+BOOST_OPENMETHOD(ID, (PARAMETERS...), RETURN_TYPE [, REGISTRY]);
+```
+
+## Description
+
+Declares a method, called `ID`, with the given `PARAMETERS` and `RETURN_TYPE`,
+and adds it to `REGISTRY`.
+
+`PARAMETERS` is a comma-separated list of types, possibly followed by parameter
+names, just like in a function declaration. Parameters with a type in the form
+`virtual_ptr<T>` or `virtual_<T>` are called virtual parameters. The dynamic
+type of the arguments passed in virtual parameters determines which overrider to
+call, following the same rules as overloaded function resolution:
+
+1. Form the set of all applicable overriders. An overrider is applicable
+   if it can be called with the arguments passed to the method.
+2. If the set is empty, call the error handler (if present in the
+   registry), then terminate the program with `abort`.
+3. Remove the overriders that are dominated by other overriders in the
+   set. Overrider A dominates overrider B if any of its virtual formal
+   parameters is more specialized than B's, and if none of B's virtual
+   parameters is more specialized than A's.
+4. If the resulting set contains exactly one overrider, call it.
+
+If a single most specialized overrider does not exist, the program is
+terminated via `abort`. If the registry contains an `error_handler`
+policy, its `error` function is called with an object that describes the
+error, prior calling `abort`. `error` may prevent termination by throwing an
+exception.
+
+[]
+
+For each virtual argument `arg`, the dispatch mechanism calls
+`virtual_traits::peek(arg)` and deduces the v-table pointer from the
+`result`, using the first of the following methods that applies:
+
+1. If `result` is a `virtual_ptr`, get the pointer to the v-table from it.
+2. If `boost_openmethod_vptr` can be called with `result` and a `Registry*`,
+   and it returns a `vptr_type`, call it.
+3. Call `Registry::vptr::dynamic_vptr(result)`.
+
+
+The macro creates an ordinary inline function in the current scope, with the
+`virtual_` decorators removed from the parameter types. `virtual_ptr`{empty}s
+are preserved.
+
+NOTE: `ID` must be an *identifier*. Qualified names are not allowed.
+
+NOTE: The default value for `REGISTRY` is the value of
+`BOOST_OPENMETHOD_DEFAULT_REGISTRY` at the point `<boost/openmethod/core.hpp>` is
+included. Changing the value of this symbol has no effect after that point.
+
+## Implementation Notes
+
+The macro creates several additional constructs:
+
+* A `struct` forward declaration that acts as the method's identifier:
+
+```c++
+struct BOOST_OPENMETHOD_ID(ID);
+```
+
+* A class template declaration that acts as a container for the method's
+overriders in the current scope:
+
+```c++
+template<typename...> struct BOOST_OPENMETHOD_OVERRIDERS(NAME);
+```
+
+* A _guide_ function used to match overriders with the method:
+
+```c++
+auto BOOST_OPENMETHOD_ID(ID)_guide(...)
+    -> ::boost::openmethod::method<
+        BOOST_OPENMETHOD_ID(ID)(PARAMETERS...), RETURN_TYPE [, REGISTRY]>;
+```
+
+* A xref:BOOST_OPENMETHOD_REGISTER.adoc[registrar] that adds the method to the
+registry.

@@ -60,7 +60,7 @@ but a header-only Boost license version is always available (if somewhat slower)
 
 Should you just wish to 'cut to the chase' just to get bigger integers and/or bigger and more precise reals as simply and portably as possible,
 close to 'drop-in' replacements for the __fundamental_type analogs,
-then use a fully Boost-licensed number type, and skip to one of more of :
+then use a fully Boost-licensed number type, and skip to one or more of:
 
 * __cpp_int for multiprecision integers, 
 * __cpp_rational for rational types,
@@ -133,8 +133,8 @@ Conversions are also allowed:
 
 However conversions that are inherently lossy are either declared explicit or else forbidden altogether:
 
-   d = 3.14;  // Error implicit conversion from double not allowed.
-   d = static_cast<mp::int512_t>(3.14);  // OK explicit construction is allowed
+   d = 3.14;  // Error, implicit conversion from double not allowed.
+   d = static_cast<mp::int512_t>(3.14);  // OK, explicit construction is allowed
 
 Mixed arithmetic will fail if the conversion is either ambiguous or explicit:
 
@@ -195,9 +195,9 @@ of references to the arguments of the function, plus some compile-time informati
 is.
 
 The great advantage of this method is the ['elimination of temporaries]: for example, the "naive" implementation
-of `operator*` above, requires one temporary for computing the result, and at least another one to return it.  It's true
+of `operator*` above requires one temporary for computing the result, and at least another one to return it.  It's true
 that sometimes this overhead can be reduced by using move-semantics, but it can't be eliminated completely.  For example,
-lets suppose we're evaluating a polynomial via Horner's method, something like this:
+let's suppose we're evaluating a polynomial via Horner's method, something like this:
 
     T a[7] = { /* some values */ };
     //....
@@ -206,9 +206,9 @@ lets suppose we're evaluating a polynomial via Horner's method, something like t
 If type `T` is a `number`, then this expression is evaluated ['without creating a single temporary value].  In contrast,
 if we were using the [mpfr_class] C++ wrapper for [mpfr] - then this expression would result in no less than 11
 temporaries (this is true even though [mpfr_class] does use expression templates to reduce the number of temporaries somewhat).  Had
-we used an even simpler wrapper around [mpfr] like [mpreal] things would have been even worse and no less that 24 temporaries
+we used an even simpler wrapper around [mpfr] like [mpreal] things would have been even worse and no less than 24 temporaries
 are created for this simple expression (note - we actually measure the number of memory allocations performed rather than
-the number of temporaries directly, note also that the [mpf_class] wrapper that will be supplied with GMP-5.1 reduces the number of
+the number of temporaries directly, note also that the [mpf_class] wrapper supplied with GMP-5.1 or later reduces the number of
 temporaries to pretty much zero).  Note that if we compile with expression templates disabled and rvalue-reference support
 on, then actually still have no wasted memory allocations as even though temporaries are created, their contents are moved
 rather than copied.
@@ -247,7 +247,7 @@ is created in this case.
 
 Given the comments above, you might be forgiven for thinking that expression-templates are some kind of universal-panacea:
 sadly though, all tricks like this have their downsides.  For one thing, expression template libraries
-like this one, tend to be slower to compile than their simpler cousins, they're also harder to debug
+like this one tend to be slower to compile than their simpler cousins, they're also harder to debug
 (should you actually want to step through our code!), and rely on compiler optimizations being turned
 on to give really good performance.  Also, since the return type from expressions involving `number`s
 is an "unmentionable implementation detail", you have to be careful to cast the result of an expression
@@ -256,23 +256,23 @@ to the actual number type when passing an expression to a template function.  Fo
    template <class T>
    void my_proc(const T&);
 
-Then calling:
+Then calling
 
    my_proc(a+b);
 
-Will very likely result in obscure error messages inside the body of `my_proc` - since we've passed it
+will very likely result in obscure error messages inside the body of `my_proc` - since we've passed it
 an expression template type, and not a number type.  Instead we probably need:
 
    my_proc(my_number_type(a+b));
 
 Having said that, these situations don't occur that often - or indeed not at all for non-template functions.
 In addition, all the functions in the Boost.Math library will automatically convert expression-template arguments
-to the underlying number type without you having to do anything, so:
+to the underlying number type without you having to do anything, so
 
    mpfr_float_100 a(20), delta(0.125);
    boost::math::gamma_p(a, a + delta);
 
-Will work just fine, with the `a + delta` expression template argument getting converted to an `mpfr_float_100`
+will work just fine, with the `a + delta` expression template argument getting converted to an `mpfr_float_100`
 internally by the Boost.Math library.
 
 [caution In C++11 you should never store an expression template using:
@@ -299,7 +299,7 @@ dramatic as the reduction in number of temporaries would suggest.  For example, 
 we see the following typical results for polynomial execution:
 
 [table Evaluation of Order 6 Polynomial.
-[[Library]         [Relative Time]   [Relative number of memory allocations]]
+[[Library]         [Relative Time]   [Relative Number of Memory Allocations]]
 [[number]          [1.0 (0.00957s)]  [1.0 (2996 total)]]
 [[[mpfr_class]]    [1.1 (0.0102s)]   [4.3 (12976 total)]]
 [[[mpreal]]        [1.6 (0.0151s)]   [9.3 (27947 total)]]
@@ -311,13 +311,13 @@ a number of reasons for this:
 * The cost of extended-precision multiplication and division is so great, that the times taken for these tend to
 swamp everything else.
 * The cost of an in-place multiplication (using `operator*=`) tends to be more than an out-of-place
-`operator*` (typically `operator *=` has to create a temporary workspace to carry out the multiplication, where
-as `operator*` can use the target variable as workspace).  Since the expression templates carry out their
+`operator*` (typically `operator *=` has to create a temporary workspace to carry out the multiplication,
+whereas `operator*` can use the target variable as workspace).  Since the expression templates carry out their
 magic by converting out-of-place operators to in-place ones, we necessarily take this hit.  Even so the
 transformation is more efficient than creating the extra temporary variable, just not by as much as
 one would hope.
 
-Finally, note that `number` takes a second template argument, which, when set to `et_off` disables all
+Finally, note that `number` takes a second template argument, which, when set to `et_off`, disables all
 the expression template machinery.  The result is much faster to compile, but slower at runtime.
 
 We'll conclude this section by providing some more performance comparisons between these three libraries,

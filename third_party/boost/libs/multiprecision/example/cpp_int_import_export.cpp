@@ -28,7 +28,7 @@ int main()
    using boost::multiprecision::cpp_int;
    // Create a cpp_int with just a couple of bits set:
    cpp_int i;
-   bit_set(i, 5000); // set the 5000'th bit
+   bit_set(i, 5000); // set the 5000th bit
    bit_set(i, 200);
    bit_set(i, 50);
    // export into 8-bit unsigned values, most significant bit first:

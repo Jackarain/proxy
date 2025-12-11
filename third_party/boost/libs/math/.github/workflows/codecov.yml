@@ -53,10 +53,12 @@ jobs:
               compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'interpolators' }
           - { name: Collect coverage autodiff, coverage: yes,
               compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'autodiff' }
+          - { name: Collect coverage reverse-autodiff, coverage: yes,
+              compiler: gcc-12,     cxxstd: '20',          os: ubuntu-22.04, install: 'g++-12-multilib', address-model: '64', suite: 'test_reverse_mode_autodiff' }
     timeout-minutes: 360
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
-    env: {B2_USE_CCACHE: 1}
+    env: {B2_USE_CCACHE: 0}
 
     steps:
       - name: Setup environment

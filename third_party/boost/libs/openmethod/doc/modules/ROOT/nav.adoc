@@ -1,0 +1,20 @@
+* xref:motivation.adoc[Motivation]
+* Basic Features
+** xref:basics.adoc[Methods and Overriders]
+** xref:performance.adoc[Performance]
+** xref:smart_pointers.adoc[Smart Pointers]
+** xref:headers.adoc[Header and Implementation Files]
+** xref:namespaces.adoc[Namespaces]
+** xref:friends.adoc[Friends]
+** xref:multiple_dispatch.adoc[Multiple Dispatch]
+* Advanced Features
+** xref:core_api.adoc[Core API]
+** xref:registries_and_policies.adoc[Registries and Policies]
+** xref:custom_rtti.adoc[Custom RTTI]
+** xref:error_handling.adoc[Error Handling]
+** xref:virtual_ptr_alt.adoc[Virtual Pointer Alternatives]
+** xref:shared_libraries.adoc[Shared Libraries]
+* Reference
+** xref:ref_headers.adoc[Headers]
+** xref:ref_macros.adoc[Macros]
+** xref:reference:boost/openmethod.adoc[Namespace boost::openmethod]

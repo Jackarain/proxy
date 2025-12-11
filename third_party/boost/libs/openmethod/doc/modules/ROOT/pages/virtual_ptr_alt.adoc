@@ -1,0 +1,104 @@
+:example: ../examples/virtual_ptr_alt
+
+[#virtual_ptr_alt]
+## Alternatives to virtual_ptr
+
+Virtual arguments can also be passed as plain references, plain pointers, or
+smart pointers, i.e. without using `virtual_ptr`. In a method declaration,
+parameters with a type wrappted in class template `virtual_` are considered in
+overrider selection (along with `virtual_ptr` parameters).
+
+For example, the `Node` example can be rewritten as follows:
+
+[source,c++]
+----
+include::{example}/1/virtual_ptr_alt.cpp[tag=content]
+----
+
+Note that `virtual_` is not used in the overrider. It is just a decorator used
+in the method. It is also removed from the method's signature.
+`BOOST_OPENMETHOD` generates:
+
+```c++
+inline auto postfix(const Node& node, std::ostream& os) -> void {
+    // examine the type of node
+    // select an overrider
+    // call it
+}
+```
+
+### `boost_openmethod_vptr`
+
+By itself, `virtual_` does not provide any benefits. Passing the virtual
+argument by reference almost compiles to the same code as creating a
+`virtual_ptr`, using it for one call, then throwing it way. The only difference
+is that the virtual argument is passed as one pointer instead of two.
+
+However, we can now customize how the vptr is obtained. When the method sees a
+`virtual_` parameter, it looks for a `boost_openmethod_vptr` function that can
+be called with the virtual argument (passed by const reference) and a pointer to
+a registry, and returns a `vptr_type`. If one is found, it is called to acquire
+the vptr.
+
+In the following example, we embed the vptr in the object, just like the vptr
+for native virtual functions. The v-table for a registered class can be found
+via a variable template `static_vptr`, nested in class `default_registry`.
+Classes used in `virtual_` parameters need not be polymorphic, in the C++ sense.
+This time we implement `value` as an open-method. Nodes don't have any virtual
+functions anymore.
+
+[source,c++]
+----
+include::{example}/2/virtual_ptr_alt.cpp[tag=content]
+----
+
+A call to `value`:
+
+[source,c++]
+----
+include::{example}/2/virtual_ptr_alt.cpp[tag=call_value]
+----
+
+...compiles to:
+
+[source,asm]
+----
+mov	rax, qword ptr [rdi]
+mov	rcx, qword ptr [rip + value::fn+88]
+jmp	qword ptr [rax + 8*rcx]         # TAILCALL
+----
+
+### `inplace_vptr`
+
+cpp:inplace_vptr_base[] and cpp:inplace_vptr_derived[] automate the creation and
+management of embedded vptrs. They are both
+https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern[CRTP]
+mixin classes.
+
+`inplace_vptr_base` is used at the root of a hierarchy. It defines a vptr member
+variable, and a `boost_openmethod_vptr` friend function that returns its value -
+just like in the previous example. `inplace_vptr_derived` is used in derived
+classes. Their constructors set the vptr member to point to v-table for the
+class.
+
+WARNING;; `inplace_vptr_derived` must be used at each level of the hierarchy,
+and reflect the actual inheritance relationships. Otherwise, the vptrs will not
+be set correctly, and the wrong overriders may be called.
+
+[source,c++]
+----
+include::{example}/3/virtual_ptr_alt.cpp[tag=content]
+----
+
+The rest of the program is as before, except that `BOOST_OPENMETHOD_CLASSES`
+needs not be called: `inplace_vptr_base` and `inplace_vptr_derived` take care of
+registering the classes and their inheritance relationships.
+
+`inplace_vptr_derived` supports multiple inheritance: more than one base class
+can be listed after the class being defined.
+
+The destructor of `inplace_vptr_derived` set the bases' vptrs back to the
+v-table for the bases, just like what C++ does for its native vptrs.
+
+`inplace_vptr_base` and `inplace_vptr_derived` are aliased in `namespace
+boost::openmethod::aliases`.

@@ -30,7 +30,7 @@ using namespace std::chrono_literals;
 
 namespace {
 
-BOOST_AUTO_TEST_CASE(request_retry_false)
+BOOST_AUTO_TEST_CASE(request_cancel_if_unresponded_true)
 {
    request req0;
    req0.get_config().cancel_on_connection_lost = true;
@@ -105,8 +105,12 @@ BOOST_AUTO_TEST_CASE(request_retry_false)
    BOOST_TEST(run_finished);
 }
 
-BOOST_AUTO_TEST_CASE(request_retry_true)
+BOOST_AUTO_TEST_CASE(request_cancel_if_unresponded_false)
 {
+   // The BLPOP request will block forever, causing the health checker
+   // to trigger a reconnection. Although req2 has been written,
+   // it has cancel_if_unresponded=false, so it will be retried
+   // after reconnection
    request req0;
    req0.get_config().cancel_on_connection_lost = true;
    req0.push("HELLO", 3);
@@ -126,23 +130,10 @@ BOOST_AUTO_TEST_CASE(request_retry_true)
    req3.push("QUIT");
 
    net::io_context ioc;
-   auto conn = std::make_shared<connection>(ioc);
+   auto conn = std::make_shared<connection>(ioc, logger::level::debug);
 
-   net::steady_timer st{ioc};
-
-   bool timer_finished = false, c0_called = false, c1_called = false, c2_called = false,
-        c3_called = false, run_finished = false;
-
-   st.expires_after(std::chrono::seconds{1});
-   st.async_wait([&](error_code ec) {
-      // Cancels the request before receiving the response. This
-      // should cause the third request to not complete with error
-      // since it has cancel_if_unresponded = true and cancellation
-      // comes after it was written.
-      timer_finished = true;
-      BOOST_TEST(ec == error_code());
-      conn->cancel(operation::run);
-   });
+   bool c0_called = false, c1_called = false, c2_called = false, c3_called = false,
+        run_finished = false;
 
    auto c3 = [&](error_code ec, std::size_t) {
       c3_called = true;
@@ -172,8 +163,8 @@ BOOST_AUTO_TEST_CASE(request_retry_true)
    conn->async_exec(req0, ignore, c0);
 
    auto cfg = make_test_config();
-   cfg.health_check_interval = 5s;
-   conn->async_run(cfg, {}, [&](error_code ec) {
+   cfg.health_check_interval = 200ms;
+   conn->async_run(cfg, [&](error_code ec) {
       run_finished = true;
       std::cout << ec.message() << std::endl;
       BOOST_TEST(ec != error_code());
@@ -181,7 +172,6 @@ BOOST_AUTO_TEST_CASE(request_retry_true)
 
    ioc.run_for(test_timeout);
 
-   BOOST_TEST(timer_finished);
    BOOST_TEST(c0_called);
    BOOST_TEST(c1_called);
    BOOST_TEST(c2_called);

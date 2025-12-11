@@ -3045,45 +3045,45 @@ void test_basic_conditionals(Real a, Real b)
 {
    if (a)
    {
-      BOOST_ERROR("Unexpected non-zero result");
+      BOOST_ERROR("Unexpected non-zero result"); // LCOV_EXCL_LINE
    }
    if (!a)
    {
    }
    else
    {
-      BOOST_ERROR("Unexpected zero result");
+      BOOST_ERROR("Unexpected zero result"); // LCOV_EXCL_LINE
    }
    b = 2;
    if (!b)
    {
-      BOOST_ERROR("Unexpected zero result");
+      BOOST_ERROR("Unexpected zero result"); // LCOV_EXCL_LINE
    }
    if (b)
    {
    }
    else
    {
-      BOOST_ERROR("Unexpected non-zero result");
+      BOOST_ERROR("Unexpected non-zero result"); // LCOV_EXCL_LINE
    }
    if (a && b)
    {
-      BOOST_ERROR("Unexpected zero result");
+      BOOST_ERROR("Unexpected zero result"); // LCOV_EXCL_LINE
    }
    if (!(a || b))
    {
-      BOOST_ERROR("Unexpected zero result");
+      BOOST_ERROR("Unexpected zero result"); // LCOV_EXCL_LINE
    }
    if (a + b)
    {
    }
    else
    {
-      BOOST_ERROR("Unexpected zero result");
+      BOOST_ERROR("Unexpected zero result"); // LCOV_EXCL_LINE
    }
    if (b - 2)
    {
-      BOOST_ERROR("Unexpected non-zero result");
+      BOOST_ERROR("Unexpected non-zero result"); // LCOV_EXCL_LINE
    }
 }
 

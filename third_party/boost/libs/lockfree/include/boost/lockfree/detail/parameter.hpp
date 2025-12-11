@@ -84,6 +84,6 @@ using extract_allow_multiple_reads
 
 //----------------------------------------------------------------------------------------------------------------------
 
-}}}    // namespace boost::lockfree::detail
+}}} // namespace boost::lockfree::detail
 
 #endif /* BOOST_LOCKFREE_DETAIL_PARAMETER_HPP */

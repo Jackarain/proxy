@@ -13,7 +13,6 @@
 #ifndef __BOOST_SORT_COMMON_PIVOT_HPP
 #define __BOOST_SORT_COMMON_PIVOT_HPP
 
-#include <ciso646>
 #include <cstdint>
 
 namespace boost

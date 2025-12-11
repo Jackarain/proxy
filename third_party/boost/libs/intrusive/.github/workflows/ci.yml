@@ -377,7 +377,7 @@ jobs:
             cxxstd: "11,14,17,20,2b"
             os: macos-15
 
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
 
@@ -594,28 +594,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: "14"
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
-            os: windows-2022
+            os: windows-2025
           - toolset: clang-win
             cxxstd: "14,17,latest"
             addrmd: 64
-            os: windows-2022
+            os: windows-2025
           - toolset: gcc
             cxxstd: "03,11,14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-2025
 
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: ${{matrix.os}}
 
     steps:

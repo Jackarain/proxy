@@ -1,0 +1,56 @@
+# BOOST_OPENMETHOD_DECLARE_OVERRIDER
+
+## Synopsis
+
+Defined in link:{{BASE_URL}}/include/boost/openmethod/macros.hpp[<boost/openmethod/macros.hpp>].
+
+```c++
+#define BOOST_OPENMETHOD_DECLARE_OVERRIDER(NAME, (PARAMETERS...), RETURN_TYPE)
+```
+
+## Description
+
+Declares an overrider for a method, but does not start its definition. This
+macro can be used in header files.
+
+`ID` is the identifier of the method to which the overrider is added.
+
+NOTE: `ID` must be an *identifier*. Qualified names are not allowed.
+
+`PARAMETERS` is a comma-separated list of types, possibly followed by parameter
+names, just like in a function declaration.
+
+The macro tries to locate a method that can be called with the same argument
+list as the overrider, possibly via argument dependent lookup.
+
+Each `virtual_ptr<T>` in the method's parameter list must have a corresponding
+`virtual_ptr<U>` parameter in the same position in the overrider's parameter
+list, such that `U` is the same as `T`, or has `T` as an accessible unambiguous
+base.
+
+Each `virtual_<T>` in the method's parameter list must have a corresponding `U`
+parameter in the same position in the overrider's parameter list, such that `U`
+is the same as `T`, or has `T` as an accessible unambiguous base.
+
+## Implementation Notes
+
+The macro creates additional entities in the current scope.
+
+* A class template declaration that acts as a container for the method's
+overriders in the current scope:
+
+```c++
+template<typename...> struct BOOST_OPENMETHOD_OVERRIDERS(NAME);
+```
+
+* A specialization of the container for the overrider:
++
+--
+```c++
+struct BOOST_OPENMETHOD_OVERRIDERS(ID)<RETURN_TYPE(PARAMETERS...)> {
+    static auto fn(PARAMETERS...) -> RETURN_TYPE;
+    static auto has_next() -> bool;
+    template<typename... Args>
+    static auto next(typename... Args) -> RETURN_TYPE;
+};
+```

@@ -10,7 +10,7 @@ http://www.boost.org/LICENSE_1_0.txt
 [#definitions]
 # Definitions
 
-A _list_ is a -- usually but not necessarily variadic -- template class whose parameters are all types,
+A _list_ is an instantiation of a -- usually but not necessarily variadic -- class template whose parameters are all types,
 for example `mp_list<char[], void>`, `mp_list<>`, `std::tuple<int, float, char>`, `std::pair<int, float>`, `std::shared_ptr<X>`.
 
 A _metafunction_ is a class template or a template alias whose parameters are all types, for example `std::add_pointer_t`,

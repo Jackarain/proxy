@@ -72,3 +72,5 @@ run github_issue_186.cpp ;
 run github_issue_212.cpp ;
 run github_issue_266.cpp ;
 run github_issue_267.cpp ;
+run github_issue_280.cpp ;
+run github_issue_282.cpp ;

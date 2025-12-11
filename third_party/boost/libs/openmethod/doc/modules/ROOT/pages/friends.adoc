@@ -1,0 +1,49 @@
+:example: ../examples/rolex
+
+[#friendship]
+
+Note;; This section uses overrider containers, described in the
+xref:headers.adoc[Headers] section.
+
+`friend` is a controversial feature. OpenMethod aims to interact well with all
+of C++, as much as feasible for a library, and leaves the choice of using
+`friend`, or not, to the user.
+
+Let's consider yet another variation of the `pay` example. This time, we want to
+update a `balance` variable in a `Payroll` class, when an employee is paid. Thus
+we pass the payroll object to the `pay` method:
+
+[source,c++]
+----
+include::{example}/5/main.cpp[tag=pay]
+----
+
+`BOOST_OPENMETHOD` declares an overrider container for `pay` in the current
+namespace, even though it does not define any overrider by itself. We can thus
+name the individual address containers in `friend` declarations. But note that
+at this point, the containers have not been specialized yet! In particular, the
+`fn` member function does not exist yet. Instead, we declare friendship to the
+container itself:
+
+[source,c++]
+----
+include::{example}/5/main.cpp[tag=payroll]
+----
+
+We can now implement the `pay` overriders:
+
+[source,c++]
+----
+include::{example}/5/main.cpp[tag=overriders]
+----
+
+We can also declare friendship _en_ _masse_:
+
+[source,c++]
+----
+include::{example}/6/main.cpp[tag=payroll]
+----
+
+Note, however, that this makes all the overriders of _any_ `pay` method, with
+any signature, in the current namespace, friends of `Payroll`. Unfortunately,
+C++ does not currently allow partial specialization of friend declarations.

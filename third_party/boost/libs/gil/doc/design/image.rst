@@ -8,7 +8,7 @@ Image
 Overview
 --------
 
-An image is a container that owns the pixels of a given image view
+An image is a container that owns the pixels of a given image view.
 It allocates them in its constructor and deletes them in the destructor.
 It has a deep assignment operator and copy constructor. Images are used
 rarely, just when data ownership is important. Most STL algorithms operate on

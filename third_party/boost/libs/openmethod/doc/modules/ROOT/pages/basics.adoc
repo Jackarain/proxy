@@ -1,0 +1,109 @@
+:exampledir: ../example
+
+[#basics]
+
+An _open-method_ is a free-standing function that has one or more _virtual_
+_parameters_. When it is called, it forwards to an _overrider_ selected from a
+set by examining the dynamic types of the virtual parameters.
+
+If this sounds like a virtual function, that's because because an open-method
+with one virtual parameter is equivalent to a virtual function - with one big
+difference: it exists outside of classes.
+
+A virtual parameter is in the form `virtual_ptr<Class>`. It is a pointer-like
+class that points to an instance of `Class`. `virtual_ptr` is defined in the library's main namespace,
+`boost::openmethod`.
+
+To create an open-method that implements the `postfix` operation, we use the
+xref:BOOST_OPENMETHOD.adoc[BOOST_OPENMETHOD] macro:
+
+```c++
+BOOST_OPENMETHOD(
+    postfix, (virtual_ptr<const Node> node, std::ostream& os), void);
+```
+
+`postfix` is the method's name. It takes one virtual parameter, `node`, and one
+non-virtual parameter, `os`. It returns `void`. The macro generates the
+following function:
+
+```c++
+inline auto postfix(virtual_ptr<const Node> node, std::ostream& os) -> void {
+    // examine the type of *node
+    // select an overrider
+    // call it
+}
+```
+
+Before we can call the method, we need to define overriders. For that we use the
+xref:BOOST_OPENMETHOD_OVERRIDE.adoc[BOOST_OPENMETHOD_OVERRIDE] macro:
+
+[source,cpp]
+----
+include::{examplesdir}/ast.cpp[tag=variable_overrider]
+----
+
+The overrider must have virtual parameters in the same positions as in the
+method. The classes in the method's virtual parameters must be accessible,
+non-ambiguous bases of the classes in the overrider. Note that this rules out
+repeated inheritance. Apart from this restriction, multiple and virtual
+inheritance are supported.
+
+The non-virtual parameters must have exactly the same types as in the method.
+
+Let's look at another overrider:
+
+[source,cpp]
+----
+include::{examplesdir}/ast.cpp[tag=plus_overrider]
+----
+
+This one calls `postfix` recursively to print the left and right
+sub-expressions. Note that we call the method just like an ordinary function.
+
+`postfix` expects a `virtual_ptr<const Node>`, and we are passing it a _plain_
+_reference_ to a `Node` object. This works because `virtual_ptr` has conversion
+constructors from plain references or pointers to objects, or from other
+`virtual_ptr`{empty}s.
+
+There are two more things we need to do.
+
+OpenMethod is a library, not a compiler. It needs to be informed of all the
+classes that may be used as virtual parameters, and in method calls, and their
+inheritance relationships. We provide that information with the
+xref:BOOST_OPENMETHOD_CLASSES.adoc[BOOST_OPENMETHOD_CLASSES] macro:
+
+
+[source,cpp]
+----
+include::{examplesdir}/ast.cpp[tag=class_registration]
+----
+
+Classes can be registered multiple times, in any order, and incrementally. Every
+direct base of a class must appear together with it in at least one call to
+`BOOST_OPENMETHOD_CLASSES`. This enables the library to deduce the complete
+inheritance lattice.
+
+The constructs used in this example require the classes to be polymorphic, in
+the standard C++ sense, i.e. they must have at least one virtual function. The
+library can also be used with non-polymorphic classes, with some restrictions.
+
+Finally, we need to call `boost::openmethod::initialize()` before the first call
+to an open-method. This builds the dispatch tables used during method calls. It
+is typically done once, at the very beginning of main, and requires the
+inclusion of `<boost/openmethod/initialize.hpp>`.
+
+```c++
+#include <boost/openmethod/initialize.hpp>
+
+int main() {
+    boost::openmethod::initialize();
+    // ...
+}
+```
+
+Putting it all together:
+
+[source,cpp]
+----
+include::{examplesdir}/ast.cpp[tag=content]
+----

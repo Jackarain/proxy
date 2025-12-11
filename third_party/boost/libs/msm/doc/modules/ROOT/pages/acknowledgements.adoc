@@ -1,0 +1,39 @@
+[[acknowledgements]]
+
+= Acknowledgements
+
+I am in debt to the following people who helped MSM along the way.
+
+[[msm-v2]]
+
+== MSM v2
+
+* Thanks to Dave Abrahams for managing the review.
+* Thanks to Eric Niebler for his patience correcting my grammar errors.
+* Special thanks to Joel de Guzman who gave me very good ideas at the
+BoostCon09. These ideas were the starting point of the redesign. Any
+time again, Joel. ☺
+* Thanks to Richard O’Hara for making Green Hills bring a patch in less
+than 1 week, thus adding one more compiler to the supported list.
+* Big thanks to those who took the time to write a review: Franz Alt,
+David Bergman, Michael Caisse, Barend Gehrels, Darryl Greene, Juraj
+Ivancic, Erik Nelson, Kenny Riddile.
+* Thanks to Matt Calabrese, Juraj Ivancic, Adam Merz and Joseph Wu for
+reporting bugs.
+* Thanks to Thomas Mistretta for providing an addition to the section
+"What do you actually do inside actions / guards".
+
+[[msm-v1]]
+
+== MSM v1
+
+* The original version of this framework is based on the brilliant work
+of David Abrahams and Aleksey Gurtovoy who laid down the base and the
+principles of the framework in their excellent book, ``C++ Template
+Metaprogramming''. The implementation also makes heavy use of the
+boost::mpl.
+* Thanks to Jeff Flinn for his idea of the user-defined base state and
+his review which allowed MSM to be presented at the BoostCon09.
+* Thanks to my MSM v1 beta testers, Christoph Woskowski and Franz Alt
+for using the framework with little documentation and to my private
+reviewer, Edouard Alligand.

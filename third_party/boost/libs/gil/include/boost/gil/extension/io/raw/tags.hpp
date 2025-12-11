@@ -122,7 +122,7 @@ struct raw_unpack_function_name : property_base< std::string > {};
 template<>
 struct image_read_info< raw_tag >
 {
-    /// Default contructor.
+    /// Default constructor.
     image_read_info()
     : _valid( false )
     {}
@@ -164,7 +164,7 @@ struct image_read_info< raw_tag >
     raw_libraw_version::type       _libraw_version;
     raw_unpack_function_name::type _unpack_function_name;
 
-    /// Used internaly to identify if the header has been read.
+    /// Used internally to identify if the header has been read.
     bool _valid;
 };
 

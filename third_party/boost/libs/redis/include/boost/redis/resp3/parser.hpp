@@ -27,6 +27,14 @@ public:
    static constexpr std::string_view sep = "\r\n";
 
 private:
+   using sizes_type = std::array<std::size_t, max_embedded_depth + 1>;
+
+   // sizes_[0] = 2 because the sentinel must be more than 1.
+   static constexpr sizes_type default_sizes = {
+      {2, 1, 1, 1, 1, 1}
+   };
+   static constexpr auto default_bulk_length = static_cast<std::size_t>(-1);
+
    // The current depth. Simple data types will have depth 0, whereas
    // the elements of aggregates will have depth 1. Embedded types
    // will have increasing depth.
@@ -35,7 +43,7 @@ private:
    // The parser supports up to 5 levels of nested structures. The
    // first element in the sizes stack is a sentinel and must be
    // different from 1.
-   std::array<std::size_t, max_embedded_depth + 1> sizes_;
+   sizes_type sizes_;
 
    // Contains the length expected in the next bulk read.
    std::size_t bulk_length_;
@@ -67,21 +75,26 @@ public:
    [[nodiscard]]
    auto done() const noexcept -> bool;
 
-   auto get_suggested_buffer_growth(std::size_t hint) const noexcept -> std::size_t;
-
    auto get_consumed() const noexcept -> std::size_t;
 
    auto consume(std::string_view view, system::error_code& ec) noexcept -> result;
 
    void reset();
+
+   bool is_parsing() const noexcept;
 };
 
 // Returns false if more data is needed. If true is returned the
 // parser is either done or an error occured, that can be checked on
 // ec.
 template <class Adapter>
-bool parse(resp3::parser& p, std::string_view const& msg, Adapter& adapter, system::error_code& ec)
+bool parse(parser& p, std::string_view const& msg, Adapter& adapter, system::error_code& ec)
 {
+   // This if could be avoid with a state machine that jumps into the
+   // correct position.
+   if (!p.is_parsing())
+      adapter.on_init();
+
    while (!p.done()) {
       auto const res = p.consume(msg, ec);
       if (ec)
@@ -90,11 +103,12 @@ bool parse(resp3::parser& p, std::string_view const& msg, Adapter& adapter, syst
       if (!res)
          return false;
 
-      adapter(res.value(), ec);
+      adapter.on_node(res.value(), ec);
       if (ec)
          return true;
    }
 
+   adapter.on_done();
    return true;
 }
 

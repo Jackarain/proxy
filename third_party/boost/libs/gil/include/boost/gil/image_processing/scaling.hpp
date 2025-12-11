@@ -16,13 +16,13 @@
 namespace boost { namespace gil {
 
 /// \defgroup ScalingAlgorithms
-/// \brief Algorthims suitable for rescaling
+/// \brief Algorithms suitable for rescaling
 ///
 /// These algorithms are used to improve image quality after image resizing is made.
 ///
 /// \defgroup DownScalingAlgorithms
 /// \ingroup ScalingAlgorithms
-/// \brief Algorthims suitable for downscaling
+/// \brief Algorithms suitable for downscaling
 ///
 /// These algorithms provide best results when used for downscaling. Using for upscaling will
 /// probably provide less than good results.

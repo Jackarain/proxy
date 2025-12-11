@@ -15,7 +15,7 @@
 #include <boost/url/error_types.hpp>
 #include <boost/url/grammar/charset.hpp>
 #include <boost/core/detail/string_view.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 #include <limits>
 #include <type_traits>
 
@@ -52,7 +52,7 @@ namespace grammar {
 template<class Unsigned>
 struct unsigned_rule
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::numeric_limits<
             Unsigned>::is_integer &&
         ! std::numeric_limits<

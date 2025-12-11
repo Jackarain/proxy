@@ -19,6 +19,8 @@
 
 #include <boost/move/utility_core.hpp>
 #include <boost/container/detail/mpl.hpp>
+#include <boost/container/detail/algorithm.hpp>
+#include <boost/container/detail/compare_functors.hpp>
 #include <boost/move/utility_core.hpp>
 #include <boost/move/iterator.hpp>
 #include <boost/move/make_unique.hpp>
@@ -209,6 +211,16 @@ bool vector_copyable_only(MyBoostVector &boostvector, MyStdVector &stdvector, bo
          ::boost::movelib::make_unique<MyBoostVector>(boostvectorp->begin(), boostvectorp->end());
       if(!test::CheckEqualContainers(*boostvectorp2, *stdvectorp)) return false;
    }
+   {  //Vector(It, It), input_iterator
+      ::boost::movelib::unique_ptr<MyStdVector> const stdvectorp =
+         ::boost::movelib::make_unique<MyStdVector>(100u);
+      ::boost::movelib::unique_ptr<MyBoostVector> const boostvectorp =
+         ::boost::movelib::make_unique<MyBoostVector>(100u);
+      ::boost::movelib::unique_ptr<MyBoostVector> const boostvectorp2 =
+         ::boost::movelib::make_unique<MyBoostVector>( make_input_from_forward_iterator(boostvectorp->begin())
+                                                     , make_input_from_forward_iterator(boostvectorp->end()));
+      if(!test::CheckEqualContainers(*boostvectorp2, *stdvectorp)) return false;
+   }
    {  //Vector(It, It, alloc)
       ::boost::movelib::unique_ptr<MyStdVector> const stdvectorp =
          ::boost::movelib::make_unique<MyStdVector>(100u);
@@ -216,6 +228,17 @@ bool vector_copyable_only(MyBoostVector &boostvector, MyStdVector &stdvector, bo
          ::boost::movelib::make_unique<MyBoostVector>(100u);
       ::boost::movelib::unique_ptr<MyBoostVector> const boostvectorp2 =
          ::boost::movelib::make_unique<MyBoostVector>(boostvectorp->begin(), boostvectorp->end(), typename MyBoostVector::allocator_type());
+      if(!test::CheckEqualContainers(*boostvectorp2, *stdvectorp)) return false;
+   }
+   {  //Vector(It, It, alloc), input_iterator
+      ::boost::movelib::unique_ptr<MyStdVector> const stdvectorp =
+         ::boost::movelib::make_unique<MyStdVector>(100u);
+      ::boost::movelib::unique_ptr<MyBoostVector> const boostvectorp =
+         ::boost::movelib::make_unique<MyBoostVector>(100u);
+      ::boost::movelib::unique_ptr<MyBoostVector> const boostvectorp2 =
+         ::boost::movelib::make_unique<MyBoostVector>( make_input_from_forward_iterator(boostvectorp->begin())
+                                                     , make_input_from_forward_iterator(boostvectorp->end())
+                                                     , typename MyBoostVector::allocator_type());
       if(!test::CheckEqualContainers(*boostvectorp2, *stdvectorp)) return false;
    }
    {  //resize(n, T)
@@ -368,6 +391,38 @@ int vector_move_assignable_only(boost::container::dtl::true_type)
          if(!test::CheckEqualContainers(boostvector, stdvector)) return 1;
       }
       {
+         //Initialize values
+         IntType aux_vect[50];
+         for(int i = 0; i < 50; ++i){
+            aux_vect[i] = -1;
+         }
+         int aux_vect2[50];
+         for(int i = 0; i < 50; ++i){
+            aux_vect2[i] = -1;
+         }
+         typename MyBoostVector::iterator insert_it =
+            boostvector.insert(boostvector.end()
+                           ,boost::make_move_iterator(&aux_vect[0])
+                           ,boost::make_move_iterator(aux_vect + 50));
+         if(boost::container::iterator_udistance(insert_it, boostvector.end()) != 50) return 1;
+         stdvector.insert(stdvector.end(), aux_vect2, aux_vect2 + 50);
+         if(!test::CheckEqualContainers(boostvector, stdvector)) return 1;
+
+         boostvector.erase(boostvector.begin(), boostvector.begin() + 5);
+         stdvector.erase(stdvector.begin(), stdvector.begin()+5);
+
+         boostvector.erase(boostvector.end() - 5, boostvector.end());
+         stdvector.erase(stdvector.end() - 5, stdvector.end());
+
+         boostvector.erase(boostvector.begin()+5, boostvector.begin() + 10);
+         stdvector.erase(stdvector.begin()+5, stdvector.begin()+10);
+
+         boostvector.erase(boostvector.end() - 10, boostvector.end()-5);
+         stdvector.erase(stdvector.end() - 10, stdvector.end()-5);
+
+         if(!test::CheckEqualContainers(boostvector, stdvector)) return 1;
+      }
+      {
          boostvector.resize(100u);
          stdvector.resize(100u);
          if(!test::CheckEqualContainers(boostvector, stdvector)) return 1;
@@ -505,6 +560,39 @@ int vector_move_assignable_only(boost::container::dtl::true_type)
       boostvector.resize(100u);
       if(!test_nth_index_of(boostvector))
          return 1;
+
+      //test erase/erase_if
+      IntType aux_vect[50];
+      for(int i = 0; i < 50; ++i){
+         aux_vect[i] = i;
+      }
+      int aux_vect2[50];
+      for(int i = 0; i < 50; ++i){
+         aux_vect2[i] = i;
+      }
+
+      boostvector.clear();
+      stdvector.clear();
+      boostvector.insert(boostvector.end()
+                     ,boost::make_move_iterator(&aux_vect[0])
+                     ,boost::make_move_iterator(aux_vect + 50));
+      stdvector.insert(stdvector.end(), aux_vect2, aux_vect2 + 50);
+
+      //erase
+      if (1 != erase(boostvector, 25))
+         return 1;
+      if (0 != erase(boostvector, 25))
+         return 1;
+      stdvector.erase(boost::container::find(stdvector.begin(), stdvector.end(), 25));
+      if(!test::CheckEqualContainers(boostvector, stdvector)) return false;
+
+      //erase_if
+      if (1 != erase_if(boostvector, equal_to_value<int>(24)))
+         return 1;
+      if (0 != erase_if(boostvector, equal_to_value<int>(24)))
+         return 1;
+      stdvector.erase(boost::container::find(stdvector.begin(), stdvector.end(), 24));
+      if(!test::CheckEqualContainers(boostvector, stdvector)) return false;
    }
    return 0;
 }
@@ -573,8 +661,11 @@ int vector_test()
       if(!test::CheckEqualContainers(*boostvectorp2, *stdvectorp)) return 1;
    }
 
-   if (0 != vector_test_fully_propagable<MyBoostVector>
-         ( dtl::bool_< !allocator_traits<typename MyBoostVector::allocator_type>::is_partially_propagable::value >() ))   return 1;
+   typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT(boost::container::dtl::, MyBoostVector,
+      is_partially_propagable, dtl::false_type)
+         is_partially_propagable_t;
+
+   if (0 != vector_test_fully_propagable<MyBoostVector>( dtl::bool_< !is_partially_propagable_t::value >() ))   return 1;
 
    if (0 != vector_move_assignable_only< MyBoostVector>(dtl::bool_<boost::container::test::is_move_assignable<IntType>::value>()))
       return 1;

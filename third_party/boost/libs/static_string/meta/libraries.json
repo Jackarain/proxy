@@ -7,7 +7,7 @@
     ],
     "description": "A fixed capacity dynamically sized string.",
     "category": [
-        "Container",
+        "Containers",
         "String"
     ],
     "maintainers": [

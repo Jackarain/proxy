@@ -195,7 +195,7 @@ void t4()
    using namespace boost::multiprecision;
    using namespace boost::random;
    //
-   // Generate some distruted values:
+   // Generate some distributed values:
    //
    uniform_real_distribution<cpp_bin_float_50> ur(-20, 20);
    gamma_distribution<cpp_bin_float_50> gd(20);
@@ -277,7 +277,7 @@ void t5()
    // Generate some multiprecision values, note that the generator is so large
    // that we have to allocate it on the heap, otherwise we may run out of
    // stack space!  We could avoid this by using a floating point type which
-   // allocates it's internal storage on the heap - cpp_bin_float will do
+   // allocates its internal storage on the heap - cpp_bin_float will do
    // this with the correct template parameters, as will the GMP or MPFR
    // based reals.
    //

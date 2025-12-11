@@ -21,6 +21,26 @@ environment:
       TOOLSET: msvc-14.1
       CXXSTD: 14,17
       ADDRMD: 32,64
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      TOOLSET: clang-win
+      CXXSTD: 14,17,latest
+      ADDRMD: 64
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      TOOLSET: msvc-14.2
+      CXXSTD: 14
+      ADDRMD: 32,64
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      TOOLSET: msvc-14.2
+      CXXSTD: 17
+      ADDRMD: 32,64
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      TOOLSET: msvc-14.2
+      CXXSTD: 20
+      ADDRMD: 32,64
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      TOOLSET: msvc-14.2
+      CXXSTD: latest
+      ADDRMD: 32,64
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       TOOLSET: clang-win
       CXXSTD: 14,17,latest
@@ -33,14 +53,14 @@ environment:
       ADDPATH: C:\cygwin64\bin;
       TOOLSET: gcc
       CXXSTD: 11,14,1z
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      ADDPATH: C:\mingw\bin;
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+      ADDPATH: C:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin;
       TOOLSET: gcc
-      CXXSTD: 11,14,1z
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      ADDPATH: C:\mingw-w64\x86_64-7.2.0-posix-seh-rt_v5-rev1\mingw64\bin;
+      CXXSTD: 11,14,17
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+      ADDPATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin;
       TOOLSET: gcc
-      CXXSTD: 11,14,1z
+      CXXSTD: 11,14,17
 
 install:
   - set BOOST_BRANCH=develop

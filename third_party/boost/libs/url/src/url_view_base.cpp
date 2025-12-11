@@ -347,7 +347,8 @@ encoded_host_address() const noexcept
     {
         BOOST_ASSERT(
             pi_->decoded_[id_host] ==
-                s.size());
+                s.size() ||
+            !this->encoded_zone_id().empty());
         BOOST_ASSERT(s.size() >= 2);
         BOOST_ASSERT(s.front() == '[');
         BOOST_ASSERT(s.back() == ']');
@@ -385,7 +386,7 @@ host_ipv6_address() const noexcept
     ipv6_address::bytes_type b{{}};
     std::memcpy(
         &b[0], &pi_->ip_addr_[0], b.size());
-    return urls::ipv6_address(b);
+    return {b};
 }
 
 core::string_view

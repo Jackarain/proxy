@@ -80,7 +80,7 @@ the input they match unless otherwise stated in the table below.]
     [[ _attr_np_`(arg0)` ]
      [ Always matches, and consumes no input.  Generates the attribute `_RES_np_(arg0)`. ]
      [ `decltype(_RES_np_(arg0))`. ]
-     [ An important use case for `_attr_` is to provide a default attribute value as a trailing alternative.  For instance, an *optional* comma-delmited list is: `int_ % ',' | attr(std::vector<int>)`.  Without the "`| attr(...)`", at least one `int_` match would be required. ]]
+     [ An important use case for `_attr_` is to provide a default attribute value as a trailing alternative.  For instance, an *optional* comma-delimited list is: `int_ % ',' | attr(std::vector<int>)`.  Without the "`| attr(...)`", at least one `int_` match would be required. ]]
 
     [[ _ch_ ]
      [ Matches any single code point. ]
@@ -138,7 +138,7 @@ the input they match unless otherwise stated in the table below.]
      []]
 
     [[ `_hex_digit_` ]
-     [ Matches a single hexidecimal digit code point. ]
+     [ Matches a single hexadecimal digit code point. ]
      [ The code point type in Unicode parsing, or `char` in non-Unicode parsing.  See the entry for _ch_. ]
      []]
 
@@ -319,7 +319,7 @@ the input they match unless otherwise stated in the table below.]
 
     [[ `_if_np_(pred)[p]` ]
      [ Equivalent to `_e_(pred) >> p`. ]
-     [ `std::optional<_ATTR_np_(p)>` ]
+     [ `_ATTR_np_(p)` ]
      [ It is an error to write `_if_np_(pred)`.  That is, it is an error to omit the conditionally matched parser `p`. ]]
 
     [[ `_sw_np_(arg0)(arg1, p1)(arg2, p2) ...` ]
@@ -328,9 +328,9 @@ the input they match unless otherwise stated in the table below.]
      [ It is an error to write `_sw_np_(arg0)`.  That is, it is an error to omit the conditionally matched parsers `p1`, `p2`, .... ]]
 
     [[ _symbols_t_ ]
-     [ _symbols_ is an associative container of key, value pairs.  Each key is a _std_str_ and each value has type `T`.  In the Unicode parsing path, the strings are considered to be UTF-8 encoded; in the non-Unicode path, no encoding is assumed.  _symbols_ Matches the longest prefix `pre` of the input that is equal to one of the keys `k`.  If the length `len` of `pre` is zero, and there is no zero-length key, it does not match the input.  If `len` is positive, the generated attribute is the value associated with `k`.]
+     [ _symbols_ is an associative container of key, value pairs.  Each key is a _std_str_ and each value has type `T`.  In the Unicode parsing path, the strings are considered to be UTF-8 encoded; in the non-Unicode path, no encoding is assumed.  _symbols_ matches the longest prefix `pre` of the input that is equal to one of the keys `k`.  If the length `len` of `pre` is zero, and there is no zero-length key, it does not match the input.  If `len` is positive, the generated attribute is the value associated with `k`.]
      [ `T` ]
-     [ Unlike the other entries in this table, _symbols_ is a type, not an object. ]]
+     [ Unlike the other entries in this table, _symbols_ is a type, not an object.  Inside of skippers, all _symbols_ will appear empty. ]]
 
     [[ _quot_str_ ]
      [ Matches `'"'`, followed by zero or more characters, followed by `'"'`. ]
@@ -368,7 +368,7 @@ character type (or use _attr_ to do so).]
 ]
 
 [template table_combining_operations
-Here are all the operator overloaded for parsers.  In the tables below:
+Here are all the operators overloaded for parsers.  In the tables below:
 
 * `c` is a character of type `char` or `char32_t`;
 
@@ -399,7 +399,7 @@ consume the input they match unless otherwise stated in the table below.]
     [[`p1 | p2`] [ Matches iff either `p1` matches or `p2` matches. ] [`std::variant<_ATTR_np_(p1), _ATTR_np_(p2)>` (See note.)] [ `|` is associative; `p1 | p2 | p3`, `(p1 | p2) | p3`, and `p1 | (p2 | p3)` are all equivalent.  This attribute type only applies to the case where `p1` and `p2` both generate attributes, and where the attribute types are different; see _attr_gen_ for the full rules. ]]
     [[`p | c`] [ Equivalent to `p | lit(c)`. ] [`_ATTR_np_(p)`] []]
     [[`p | r`] [ Equivalent to `p | lit(r)`. ] [`_ATTR_np_(p)`] []]
-    [[`p1 || p2`] [ Matches iff `p1` matches and `p2` matches, regardless of the order they match in. ] [`_bp_tup_<_ATTR_np_(p1), _ATTR_np_(p2)>`] [ `||` is associative; `p1 || p2 || p3`, `(p1 || p2) || p3`, and `p1 || (p2 || p3)` are all equivalent.  It is an error to include a _e_ (conditional or non-conditional) in an `operator||` expression.  Though the parsers are matched in any order, the attribute elements are always in the order written in the `operator||` expression. ]]
+    [[`p1 || p2`] [ Matches iff `p1` matches and `p2` matches, regardless of the order they match in. ] [`_bp_tup_<_ATTR_np_(p1), _ATTR_np_(p2)>`] [ `||` is associative; `p1 || p2 || p3`, `(p1 || p2) || p3`, and `p1 || (p2 || p3)` are all equivalent.  It is an error to include an _e_ (conditional or non-conditional) in an `operator||` expression.  Though the parsers are matched in any order, the attribute elements are always in the order written in the `operator||` expression. ]]
     [[`p1 - p2`] [ Equivalent to `!p2 >> p1`. ] [`_ATTR_np_(p1)`] []]
     [[`p - c`] [ Equivalent to `p - lit(c)`. ] [`_ATTR_np_(p)`] []]
     [[`p - r`] [ Equivalent to `p - lit(r)`. ] [`_ATTR_np_(p)`] []]
@@ -557,7 +557,7 @@ tables below:
 
     [[`_rpt_np_(arg0)[p]`]              [`std::string` if `_ATTR_np_(p)` is `char` or `char32_t`, otherwise `std::vector<_ATTR_np_(p)>`]]
     [[`_rpt_np_(arg0, arg1)[p]`]        [`std::string` if `_ATTR_np_(p)` is `char` or `char32_t`, otherwise `std::vector<_ATTR_np_(p)>`]]
-    [[`_if_np_(pred)[p]`]               [`std::optional<_ATTR_np_(p)>`]]
+    [[`_if_np_(pred)[p]`]               [`_ATTR_np_(p)`]]
     [[`_sw_np_(arg0)(arg1, p1)(arg2, p2)...`]
      [`std::variant<_ATTR_np_(p1), _ATTR_np_(p2), ...>`]]
 ]

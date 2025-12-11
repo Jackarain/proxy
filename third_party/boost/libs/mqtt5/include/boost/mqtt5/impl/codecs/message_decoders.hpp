@@ -32,7 +32,7 @@ using fixed_header = std::tuple<
 inline std::optional<fixed_header> decode_fixed_header(
     byte_citer& it, const byte_citer last
 ) {
-    auto fixed_header_ = x3::byte_ >> basic::varint_;
+    constexpr auto fixed_header_ = basic::byte_ >> basic::varint_;
     return type_parse(it, last, fixed_header_);
 }
 
@@ -41,7 +41,7 @@ using packet_id = uint16_t;
 inline std::optional<packet_id> decode_packet_id(
     byte_citer& it
 ) {
-    auto packet_id_ = x3::big_word;
+    constexpr auto packet_id_ = basic::word_;
     return type_parse(it, it + sizeof(uint16_t), packet_id_);
 }
 
@@ -58,11 +58,11 @@ using connect_message = std::tuple<
 inline std::optional<connect_message> decode_connect(
     uint32_t remain_length, byte_citer& it
 ) {
-    auto var_header_ =
+    constexpr auto var_header_ =
         basic::utf8_ >> // MQTT
-        x3::byte_ >> // (num 5)
-        x3::byte_ >> // conn_flags_
-        x3::big_word >> // keep_alive
+        basic::byte_ >> // (num 5)
+        basic::byte_ >> // conn_flags_
+        basic::word_ >> // keep_alive
         prop::props_<connect_props>;
 
     const byte_citer end = it + remain_length;
@@ -124,9 +124,7 @@ using connack_message = std::tuple<
 inline std::optional<connack_message> decode_connack(
     uint32_t remain_length, byte_citer& it
 ) {
-    auto connack_ = basic::scope_limit_(remain_length)[
-        x3::byte_ >> x3::byte_ >> prop::props_<connack_props>
-    ];
+    constexpr auto connack_ = basic::byte_ >> basic::byte_ >> prop::props_<connack_props>;
     return type_parse(it, it + remain_length, connack_);
 }
 
@@ -144,10 +142,10 @@ inline std::optional<publish_message> decode_publish(
     uint8_t flags = control_byte & 0b1111;
     auto qos = qos_e((flags >> 1) & 0b11);
 
-    auto publish_ = basic::scope_limit_(remain_length)[
-        basic::utf8_ >> basic::if_(qos != qos_e::at_most_once)[x3::big_word] >>
-            x3::attr(flags) >> prop::props_<publish_props> >> basic::verbatim_
-    ];
+    auto publish_ =
+        basic::utf8_ >> basic::if_(qos != qos_e::at_most_once)[basic::word_] >>
+            basic::attr(flags) >> prop::props_<publish_props> >>
+            basic::verbatim_;
     return type_parse(it, it + remain_length, publish_);
 }
 
@@ -161,9 +159,7 @@ inline std::optional<puback_message> decode_puback(
 ) {
     if (remain_length == 0)
         return puback_message {};
-    auto puback_ = basic::scope_limit_(remain_length)[
-        x3::byte_ >> prop::props_<puback_props>
-    ];
+    constexpr auto puback_ = basic::byte_ >> prop::props_<puback_props>;
     return type_parse(it, it + remain_length, puback_);
 }
 
@@ -177,9 +173,7 @@ inline std::optional<pubrec_message> decode_pubrec(
 ) {
     if (remain_length == 0)
         return pubrec_message {};
-    auto pubrec_ = basic::scope_limit_(remain_length)[
-        x3::byte_ >> prop::props_<pubrec_props>
-    ];
+    constexpr auto pubrec_ = basic::byte_ >> prop::props_<pubrec_props>;
     return type_parse(it, it + remain_length, pubrec_);
 }
 
@@ -193,9 +187,7 @@ inline std::optional<pubrel_message> decode_pubrel(
 ) {
     if (remain_length == 0)
         return pubrel_message {};
-    auto pubrel_ = basic::scope_limit_(remain_length)[
-        x3::byte_ >> prop::props_<pubrel_props>
-    ];
+    constexpr auto pubrel_ = basic::byte_ >> prop::props_<pubrel_props>;
     return type_parse(it, it + remain_length, pubrel_);
 }
 
@@ -209,9 +201,7 @@ inline std::optional<pubcomp_message> decode_pubcomp(
 ) {
     if (remain_length == 0)
         return pubcomp_message {};
-    auto pubcomp_ = basic::scope_limit_(remain_length)[
-        x3::byte_ >> prop::props_<pubcomp_props>
-    ];
+    constexpr auto pubcomp_ = basic::byte_ >> prop::props_<pubcomp_props>;
     return type_parse(it, it + remain_length, pubcomp_);
 }
 
@@ -223,9 +213,7 @@ using subscribe_message = std::tuple<
 inline std::optional<subscribe_message> decode_subscribe(
     uint32_t remain_length, byte_citer& it
 ) {
-    auto subscribe_ = basic::scope_limit_(remain_length)[
-        prop::props_<subscribe_props> >> +(basic::utf8_ >> x3::byte_)
-    ];
+    constexpr auto subscribe_ = prop::props_<subscribe_props> >> +(basic::utf8_ >> basic::byte_);
     return type_parse(it, it + remain_length, subscribe_);
 }
 
@@ -237,9 +225,7 @@ using suback_message = std::tuple<
 inline std::optional<suback_message> decode_suback(
     uint32_t remain_length, byte_citer& it
 ) {
-    auto suback_ = basic::scope_limit_(remain_length)[
-        prop::props_<suback_props> >> +x3::byte_
-    ];
+    constexpr auto suback_ = prop::props_<suback_props> >> +basic::byte_;
     return type_parse(it, it + remain_length, suback_);
 }
 
@@ -251,9 +237,7 @@ using unsubscribe_message = std::tuple<
 inline std::optional<unsubscribe_message> decode_unsubscribe(
     uint32_t remain_length, byte_citer& it
 ) {
-    auto unsubscribe_ = basic::scope_limit_(remain_length)[
-        prop::props_<unsubscribe_props> >> +basic::utf8_
-    ];
+    constexpr auto unsubscribe_ = prop::props_<unsubscribe_props> >> +basic::utf8_;
     return type_parse(it, it + remain_length, unsubscribe_);
 }
 
@@ -265,9 +249,7 @@ using unsuback_message = std::tuple<
 inline std::optional<unsuback_message> decode_unsuback(
     uint32_t remain_length, byte_citer& it
 ) {
-    auto unsuback_ = basic::scope_limit_(remain_length)[
-        prop::props_<unsuback_props> >> +x3::byte_
-    ];
+    constexpr auto unsuback_ = prop::props_<unsuback_props> >> +basic::byte_;
     return type_parse(it, it + remain_length, unsuback_);
 }
 
@@ -281,9 +263,7 @@ inline std::optional<disconnect_message> decode_disconnect(
 ) {
     if (remain_length == 0)
         return disconnect_message {};
-    auto disconnect_ = basic::scope_limit_(remain_length)[
-        x3::byte_ >> prop::props_<disconnect_props>
-    ];
+    constexpr auto disconnect_ = basic::byte_ >> prop::props_<disconnect_props>;
     return type_parse(it, it + remain_length, disconnect_);
 }
 
@@ -297,9 +277,7 @@ inline std::optional<auth_message> decode_auth(
 ) {
     if (remain_length == 0)
         return auth_message {};
-    auto auth_ = basic::scope_limit_(remain_length)[
-        x3::byte_ >> prop::props_<auth_props>
-    ];
+    constexpr auto auth_ = basic::byte_ >> prop::props_<auth_props>;
     return type_parse(it, it + remain_length, auth_);
 }
 

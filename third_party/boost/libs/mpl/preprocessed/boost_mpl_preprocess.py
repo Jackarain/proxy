@@ -29,7 +29,7 @@ def create_more_container_files(sourceDir, suffix, maxElements, containers, cont
             newFile = os.path.join( sourceDir, container, container + str(i+10) + suffix )
             shutil.copyfile( os.path.join( sourceDir, container, container + "20" + suffix ), newFile ) 
             # Adjust copy of "template"-file accordingly.
-            for line in fileinput.input( newFile, inplace=1, mode="rU" ):
+            for line in fileinput.input( newFile, inplace=1, mode="r" ):
                 line = re.sub(r'20', '%TWENTY%', line.rstrip())
                 line = re.sub(r'11', '%ELEVEN%', line.rstrip())
                 line = re.sub(r'10(?![0-9])', '%TEN%', line.rstrip())
@@ -43,7 +43,7 @@ def create_more_container_files(sourceDir, suffix, maxElements, containers, cont
             newFile = os.path.join( sourceDir, container, container + str(i+10) + "_c" + suffix )
             shutil.copyfile( os.path.join( sourceDir, container, container + "20_c" + suffix ), newFile ) 
             # Adjust copy of "template"-file accordingly.
-            for line in fileinput.input( newFile, inplace=1, mode="rU" ):
+            for line in fileinput.input( newFile, inplace=1, mode="r" ):
                 line = re.sub(r'20', '%TWENTY%', line.rstrip())
                 line = re.sub(r'11', '%ELEVEN%', line.rstrip())
                 line = re.sub(r'10(?![0-9])', '%TEN%', line.rstrip())
@@ -73,7 +73,7 @@ def adjust_container_limits_for_variadic_sequences(headerDir, containers, maxEle
         headerFile = os.path.join( headerDir, "limits", container + ".hpp" )
         regexMatch   = r'(define\s+BOOST_MPL_LIMIT_' + container.upper() + r'_SIZE\s+)[0-9]+'
         regexReplace = r'\g<1>' + re.escape( str(maxElements) )
-        for line in fileinput.input( headerFile, inplace=1, mode="rU" ):
+        for line in fileinput.input( headerFile, inplace=1, mode="r" ):
             line = re.sub(regexMatch, regexReplace, line.rstrip())
             print(line)
 
@@ -118,6 +118,11 @@ def to_existing_absolute_path(string):
 def main():
     """The main function."""
     
+    # Determine the currently running python executable.
+    python_executable = sys.executable
+    if python_executable == None or python_executable == "":
+        python_executable = python
+    
     # Find the current Boost source-directory in which this script is located.
     sourceDir = current_boost_dir()
     if sourceDir == None:
@@ -150,19 +155,19 @@ def main():
 
     # Some verbose debug output.
     if args.verbose:
-        print "Arguments extracted from command-line:"
-        print "  verbose          = ", args.verbose
-        print "  source directory = ", args.sourceDir
-        print "  num elements     = ", args.numElements
-        print "  sequence type    = ", args.seqType
-        print "  want: vector     = ", args.want_vector
-        print "  want: list       = ", args.want_list
-        print "  want: set        = ", args.want_set
-        print "  want: map        = ", args.want_map
+        print("Arguments extracted from command-line:")
+        print("  verbose          = ", args.verbose)
+        print("  source directory = ", args.sourceDir)
+        print("  num elements     = ", args.numElements)
+        print("  sequence type    = ", args.seqType)
+        print("  want: vector     = ", args.want_vector)
+        print("  want: list       = ", args.want_list)
+        print("  want: set        = ", args.want_set)
+        print("  want: map        = ", args.want_map)
 
     # Verify that we received any source-directory.
     if args.sourceDir == None:
-        print "You should specify a valid path to the Boost source-directory."
+        print("You should specify a valid path to the Boost source-directory.")
         sys.exit(0)
 
     # The directories for header- and source files of Boost.MPL.
@@ -177,13 +182,13 @@ def main():
         sourceDir = os.path.join( args.sourceDir, "preprocessed" )
         if not os.path.exists( headerDir ) or not os.path.exists( sourceDir ):
             cmdlineParser.print_usage()
-            print "error: Cannot find Boost.MPL header/source files in given Boost source-directory!"
+            print("error: Cannot find Boost.MPL header/source files in given Boost source-directory!")
             sys.exit(0)
 
     # Some verbose debug output.
     if args.verbose:
-        print "Chosen header-directory: ", headerDir
-        print "Chosen source-directory: ", sourceDir
+        print("Chosen header-directory: ", headerDir)
+        print("Chosen source-directory: ", sourceDir)
 
     # Create list of containers for which files shall be pre-processed.
     containers = []
@@ -196,23 +201,23 @@ def main():
     if args.want_map:
         containers.append('map')
     if containers == []:
-        print "Nothing to do."
-        print "(Why did you prevent generating pre-processed headers for all Boost.MPL container types?)"
+        print("Nothing to do.")
+        print("(Why did you prevent generating pre-processed headers for all Boost.MPL container types?)")
         sys.exit(0)
 
     # Possibly fix the header-comments of input-files needed for pre-processing.
     if args.verbose:
-        print "Checking if prior to pre-processing some input-files need fixing."
+        print("Checking if prior to pre-processing some input-files need fixing.")
     needFixing = fixmpl.check_input_files(headerDir, sourceDir, containers, args.seqType, args.verbose)
     if needFixing:
         if args.verbose:
-            print "Fixing of some input-files prior to pre-processing is needed."
-            print "Will fix them now!"
+            print("Fixing of some input-files prior to pre-processing is needed.")
+            print("Will fix them now!")
         fixmpl.fix_input_files(headerDir, sourceDir, containers, args.seqType, args.verbose)
 
     # Some verbose debug output.
     if args.verbose:
-        print "Containers for which to pre-process headers: ", containers
+        print("Containers for which to pre-process headers: ", containers)
 
     # Create (additional) input files for generating pre-processed headers of numbered sequence MPL containers.
     if args.seqType == "both" or args.seqType == "numbered":
@@ -226,24 +231,24 @@ def main():
     if args.seqType == "both" or args.seqType == "numbered":
         if args.want_vector:
             if args.verbose:
-                print "Pre-process headers for Boost.MPL numbered vectors."
-            os.system( "python " + os.path.join( sourceDir, "preprocess_vector.py" ) + " all " + args.sourceDir )
+                print("Pre-process headers for Boost.MPL numbered vectors.")
+            os.system( python_executable + " " + os.path.join( sourceDir, "preprocess_vector.py" ) + " all " + args.sourceDir )
         if args.want_list:
             if args.verbose:
-                print "Pre-process headers for Boost.MPL numbered lists."
-            os.system( "python " + os.path.join( sourceDir, "preprocess_list.py" ) + " all " + args.sourceDir )
+                print("Pre-process headers for Boost.MPL numbered lists.")
+            os.system( python_executable + " " + os.path.join( sourceDir, "preprocess_list.py" ) + " all " + args.sourceDir )
         if args.want_set:
             if args.verbose:
-                print "Pre-process headers for Boost.MPL numbered sets."
-            os.system( "python " + os.path.join( sourceDir, "preprocess_set.py" ) + " all " + args.sourceDir )
+                print("Pre-process headers for Boost.MPL numbered sets.")
+            os.system( python_executable + " " + os.path.join( sourceDir, "preprocess_set.py" ) + " all " + args.sourceDir )
         if args.want_map:
             if args.verbose:
-                print "Pre-process headers for Boost.MPL numbered maps."
-            os.system( "python " + os.path.join( sourceDir, "preprocess_map.py" ) + " all " + args.sourceDir )
+                print("Pre-process headers for Boost.MPL numbered maps.")
+            os.system( python_executable + " " + os.path.join( sourceDir, "preprocess_map.py" ) + " all " + args.sourceDir )
     if args.seqType == "both" or args.seqType == "variadic":
         if args.verbose:
-            print "Pre-process headers for Boost.MPL variadic containers."
-        os.system( "python " + os.path.join( sourceDir, "preprocess.py" ) + " all " + args.sourceDir )
+            print("Pre-process headers for Boost.MPL variadic containers.")
+        os.system( python_executable + " " + os.path.join( sourceDir, "preprocess.py" ) + " all " + args.sourceDir )
 
 
 if __name__ == '__main__':

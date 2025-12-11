@@ -17,6 +17,7 @@
 #include <boost/bloom/detail/sse2.hpp>
 #include <boost/config.hpp>
 #include <boost/core/allocator_traits.hpp>
+#include <boost/core/bit.hpp>
 #include <boost/core/empty_value.hpp>
 #include <boost/core/span.hpp>
 #include <boost/throw_exception.hpp>
@@ -31,7 +32,31 @@
 #include <type_traits>
 #include <utility>
 
-/* We use BOOST_BLOOM_PREFETCH[_WRITE] macros rather than proper
+#ifdef __has_builtin
+#define BOOST_BLOOM_HAS_BUILTIN(x) __has_builtin(x)
+#else
+#define BOOST_BLOOM_HAS_BUILTIN(x) 0
+#endif
+
+#if !defined(NDEBUG)
+#define BOOST_BLOOM_ASSUME(cond) BOOST_ASSERT(cond)
+#elif BOOST_BLOOM_HAS_BUILTIN(__builtin_assume)
+#define BOOST_BLOOM_ASSUME(cond) __builtin_assume(cond)
+#elif defined(__GNUC__) || BOOST_BLOOM_HAS_BUILTIN(__builtin_unreachable)
+#define BOOST_BLOOM_ASSUME(cond)    \
+  do{                                   \
+    if(!(cond))__builtin_unreachable(); \
+  }while(0)
+#elif defined(_MSC_VER)
+#define BOOST_BLOOM_ASSUME(cond) __assume(cond)
+#else
+#define BOOST_BLOOM_ASSUME(cond)  \
+  do{                                 \
+    static_cast<void>(false&&(cond)); \
+  }while(0)
+#endif
+
+ /* We use BOOST_BLOOM_PREFETCH[_WRITE] macros rather than proper
  * functions because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109985
  */
 
@@ -139,6 +164,20 @@ constexpr double constexpr_ldexp_1_positive(int exp)
   return exp==0?1.0:2.0*constexpr_ldexp_1_positive(exp-1);
 }
 
+inline unsigned int unchecked_countr_zero(std::uint64_t x)
+{
+#if defined(BOOST_MSVC)&&(defined(_M_X64)||defined(_M_ARM64))
+  unsigned long r;
+  _BitScanForward64(&r,x);
+  return (unsigned int)r;
+#elif defined(BOOST_GCC)||defined(BOOST_CLANG)
+  return (unsigned int)__builtin_ctzll(x);
+#else
+  BOOST_BLOOM_ASSUME(x!=0);
+  return (unsigned int)boost::core::countr_zero(x);
+#endif
+}
+
 struct filter_array
 {
   unsigned char* data;
@@ -217,6 +256,13 @@ public:
   using difference_type=std::ptrdiff_t;
   using pointer=unsigned char*;
   using const_pointer=const unsigned char*;
+  static constexpr std::size_t bulk_insert_size=
+    (64+prefetched_cachelines-1)/prefetched_cachelines;
+  static constexpr std::size_t bulk_may_contain_size=
+    (64+prefetched_cachelines-1)/prefetched_cachelines;
+  static_assert(
+    bulk_may_contain_size<=64, /* see results in bulk_may_contain */
+    "internal check, bulk_may_contain_size must be <= 64");
 
   explicit filter_core(std::size_t m=0):filter_core{m,allocator_type{}}{}
 
@@ -386,6 +432,63 @@ public:
     }
   }
 
+  template<typename HashStream>
+  void bulk_insert(HashStream h,std::size_t n)
+  {
+    std::uint64_t  hashes[bulk_insert_size];
+    unsigned char* positions[bulk_insert_size];
+
+    if(n>=2*bulk_insert_size){
+      for(auto i=bulk_insert_size;i--;){
+        auto& hash=hashes[i]=h();
+        auto& p=positions[i];
+        hs.prepare_hash(hash);
+        p=next_element(hash);
+      }
+      if(BOOST_UNLIKELY(ar.data==nullptr))return;
+      do{
+        for(auto j=k-1;j--;){
+          for(auto i=bulk_insert_size;i--;){
+            auto& hash=hashes[i];
+            auto& p=positions[i];
+            auto  hash0=hash;
+            auto  p0=p;
+            p=next_element(hash);
+            set(p0,hash0);
+          }
+        }
+        for(auto i=bulk_insert_size;i--;){
+          auto& hash=hashes[i];
+          auto& p=positions[i];
+          auto  hash0=hash;
+          auto  p0=p;
+          hash=h();
+          hs.prepare_hash(hash);
+          p=next_element(hash);
+          set(p0,hash0);
+        }
+        n-=bulk_insert_size;
+      }while(n>=2*bulk_insert_size);
+      for(auto j=k-1;j--;){
+        for(auto i=bulk_insert_size;i--;){
+          auto& hash=hashes[i];
+          auto& p=positions[i];
+          auto  hash0=hash;
+          auto  p0=p;
+          p=next_element(hash);
+          set(p0,hash0);
+        }
+      }
+      for(auto i=bulk_insert_size;i--;){
+        auto& hash=hashes[i];
+        auto& p=positions[i];
+        set(p,hash);
+      }
+      n-=bulk_insert_size;
+    }
+    while(n--)insert(h());
+  }
+
   void swap(filter_core& x)noexcept(
     allocator_propagate_on_container_swap_t<allocator_type>::value||
     allocator_is_always_equal_t<allocator_type>::value)
@@ -459,6 +562,111 @@ public:
     }
     return true;
 #endif
+  }
+
+  template<typename HashStream,typename F>
+  void bulk_may_contain(HashStream h,std::size_t n,F f)const
+  {
+    if(k==1){
+      std::uint64_t        hashes[bulk_may_contain_size];
+      const unsigned char* positions[bulk_may_contain_size];
+
+      if(n>=2*bulk_may_contain_size){
+        for(auto i=bulk_may_contain_size;i--;){
+          auto& hash=hashes[i]=h();
+          auto& p=positions[i];
+          hs.prepare_hash(hash);
+          p=next_element(hash);
+        }
+        do{
+          for(auto i=bulk_may_contain_size;i--;){
+            auto& hash=hashes[i];
+            auto& p=positions[i];
+            auto  hash0=hash;
+            auto  p0=p;
+            hash=h();
+            hs.prepare_hash(hash);
+            p=next_element(hash);
+            f(get(p0,hash0));
+          }
+          n-=bulk_may_contain_size;
+        }while(n>=2*bulk_may_contain_size);
+
+        for(auto i=bulk_may_contain_size;i--;){
+          auto& hash=hashes[i];
+          auto& p=positions[i];
+          f(get(p,hash));
+        }
+        n-=bulk_may_contain_size;
+      }
+
+      while(n--)f(may_contain(h()));
+    }
+    else{
+      static constexpr std::uint64_t initial_result_mask=
+        ((std::uint64_t(1)<<(bulk_may_contain_size/2))<<
+          ((bulk_may_contain_size+1)/2))-1;
+
+      std::uint64_t        hashes[bulk_may_contain_size];
+      const unsigned char* positions[bulk_may_contain_size];
+      std::uint64_t        results=initial_result_mask;
+
+      if(n>=2*bulk_may_contain_size){
+        for(std::size_t i=0;i<bulk_may_contain_size;++i){
+          auto& hash=hashes[i]=h();
+          auto& p=positions[i];
+          hs.prepare_hash(hash);
+          p=next_element(hash);
+        }
+        do{
+          for(auto j=k;j--;){
+            auto mask=results;
+            if(!mask)break;
+            do{
+              auto i=unchecked_countr_zero(mask);
+              auto& hash=hashes[i];
+              auto& p=positions[i];
+              auto  b=get(p,hash);
+              p=next_element(hash);
+              results&=~(std::uint64_t(!b)<<i);
+              mask&=mask-1;
+            }while(mask);
+          }
+          for(std::size_t i=0;i<bulk_may_contain_size;++i){
+            auto& hash=hashes[i];
+            auto& p=positions[i];
+            hash=h();
+            hs.prepare_hash(hash);
+            p=next_element(hash);
+            f(results&1);
+            results>>=1;
+          }
+          results=initial_result_mask;
+          n-=bulk_may_contain_size;
+        }while(n>=2*bulk_may_contain_size);
+
+        for(auto j=k;j--;){
+          auto mask=results;
+          if(!mask)break;
+          do{
+            auto i=unchecked_countr_zero(mask);
+            auto& hash=hashes[i];
+            auto& p=positions[i];
+            auto  b=get(p,hash);
+            p=next_element(hash);
+            results&=~(std::uint64_t(!b)<<i);
+            mask&=mask-1;
+          }while(mask);
+        }
+        for(std::size_t i=0;i<bulk_may_contain_size;++i){
+          f(results&1);
+          results>>=1;
+        }
+        n-=bulk_may_contain_size;
+      }
+
+      while(n--)f(may_contain(h()));
+    }
   }
 
   friend bool operator==(const filter_core& x,const filter_core& y)

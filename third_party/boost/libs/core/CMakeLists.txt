@@ -16,11 +16,10 @@ target_link_libraries(boost_core
   INTERFACE
     Boost::assert
     Boost::config
-    Boost::static_assert
     Boost::throw_exception
 )
 
-if(CMAKE_VERSION VERSION_GREATER 3.18 AND CMAKE_GENERATOR MATCHES "Visual Studio")
+if(NOT CMAKE_VERSION VERSION_LESS 3.19 AND CMAKE_GENERATOR MATCHES "Visual Studio")
 
   file(GLOB_RECURSE boost_core_IDEFILES CONFIGURE_DEPENDS include/*.hpp)
   source_group(TREE ${PROJECT_SOURCE_DIR}/include FILES ${boost_core_IDEFILES} PREFIX "Header Files")

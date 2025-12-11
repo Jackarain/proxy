@@ -37,7 +37,7 @@ criteria for inclusion is that the utility component be:
 * simple,
 * used by other Boost libraries, and
 * not dependent on any other Boost modules except Core
-  itself, Config, Assert, StaticAssert, or ThrowException.
+  itself, Config, Assert, or ThrowException.
 
 [endsect]
 

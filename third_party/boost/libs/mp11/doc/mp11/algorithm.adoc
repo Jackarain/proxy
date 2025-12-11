@@ -19,6 +19,8 @@ http://www.boost.org/LICENSE_1_0.txt
 
 `mp_transform<F, L1<T1...>, L2<T2...>, ..., Ln<Tn...>>` applies `F` to each successive tuple of elements and returns `L1<F<T1, T2, ..., Tn>...>`.
 
+All lists in `L...` must be of the same size. Otherwise, the result is a substitution failure.
+
 Has limited support of value lists as `L...` under {cpp}17 (for one to three lists.)
 In that case, elements are wrapped with `mp_value` before being passed to `F`, and
 are unwrapped afterwards. The result is `L1<F<mp_value<T1>, mp_value<T2>, ...>::value...>`.

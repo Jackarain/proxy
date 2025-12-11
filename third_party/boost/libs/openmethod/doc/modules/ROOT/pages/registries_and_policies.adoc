@@ -1,0 +1,107 @@
+
+[#registries_and_policies]
+
+Methods are scoped in a registry. A method can only reference classes in the
+same registry. If a class is used as a virtual parameter in methods using
+different registries, it must be registered with each of them.
+
+Class templates cpp:use_classes[], cpp:method[], cpp:virtual_ptr[], and macros
+xref:BOOST_OPENMETHOD.adoc[BOOST_OPENMETHOD] and
+xref:BOOST_OPENMETHOD_CLASSES.adoc[BOOST_OPENMETHOD_CLASSES], take an additional
+argument, a cpp:registry[] class, which defaults to cpp:default_registry[]. The
+default registry can be overriden by defining the macroprocessor symbol
+xref:BOOST_OPENMETHOD_DEFAULT_REGISTRY.adoc[BOOST_OPENMETHOD_DEFAULT_REGISTRY]
+_before_ including `<boost/openmethod/core.hpp>`. The value of the symbol is
+used as a default template parameter for `use_classes`, `method`, `virtual_ptr`,
+and others. Once the `core` header has been included, changing
+`BOOST_OPENMETHOD_DEFAULT_REGISTRY` has no effect.
+
+A registry has a collection of _policies_. Each policy belongs to a policy
+category. A registry may contain at most one policy of each category. Policies
+control how type information is obtained, how vptrs are acquired, how errors are
+handled and reported, etc. While the behavior of cpp:initialize[] can be
+customized via options, policies are primarily involved in method dispatch.
+
+Policies are placed in the cpp:boost::openmethod::policies[] namespace.
+
+`default_registry` contains the following policies:
+
+[cols="1,1,1"]
+|===
+|policy category |policy |role
+
+| rtti
+| std_rtti
+| provides type information for classes and objects
+
+| vptr
+| vptr_vector
+| stores vptrs in an indexed collection
+
+| type_hash
+| fast_perfect_hash
+| hashes type id to an index in a vector
+
+| error_handler
+| default_error_handler
+| calls an overridable handler function
+
+| output
+| stderr_output
+| prints diagnostics to `stderr`
+
+|===
+
+if
+xref:BOOST_OPENMETHOD_ENABLE_RUNTIME_CHECKS.adoc[BOOST_OPENMETHOD_ENABLE_RUNTIME_CHECKS]
+is defined, `default_registry` also contains the `runtime_checks` policy. This
+enables extra validations during method dispatch, which can detect missing class
+registrations that could not be caught by `initialize`.
+
+The library provides another predefined registry: cpp:indirect_registry[]. It is
+useful when shared libraries are dynamically loaded at runtime, and add methods
+and overriders across program and shared library boundaries. See the section
+about xref:shared_libraries.adoc[shared libraries].
+
+Registries can be created from scratch, using the `registry` template. Here is
+the definition of `default_registry`, copied from
+`<boost/openmethod/registry.hpp>`:
+
+[source,c++]
+----
+struct default_registry
+    : registry<
+          policies::std_rtti,
+          policies::vptr_vector, policies::fast_perfect_hash,
+          policies::default_error_handler,
+          policies::stderr_output
+#ifdef BOOST_OPENMETHOD_ENABLE_RUNTIME_CHECKS
+          ,
+          policies::runtime_checks
+#endif
+          > {
+};
+----
+
+When defining a new registry, it is recommended to define a new class, derived
+from `registry<...>`, rather than via a typedef, which would create excessively
+long symbol names and make debugging harder.
+
+A registry can calso be created by copying an existing registry's policies,
+using the cpp:with[] and cpp:without[] nested templates. For example,
+`indirect_registry` is a tweak of `default_registry`:
+
+[source,c++]
+----
+struct indirect_registry : default_registry::with<policies::indirect_vptr> {};
+----
+
+Policies are implemented as unary
+https://www.boost.org/doc/libs/1_89_0/libs/mp11/doc/html/mp11.html[Boost.MP11
+quoted metafunctions]. A policy is an ordinary class that contains a nested
+class template `fn`, which is instantiated by the registry, passing itself as
+the single template argument. The reason for this mechanism is to allow policies
+to have static data members, which each registry must have its own set of.
+`vptr_vector`, for example, stores v-table pointers in a `std::vector`. If it is
+used in two different registries, it needs to use two different vectors, one for
+each registry.

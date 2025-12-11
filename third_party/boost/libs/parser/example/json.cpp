@@ -5,7 +5,7 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //[ extended_json_example
 // This header includes a type called json::value that acts as a
-// Javascript-like polymorphic value type.
+// JavaScript-like polymorphic value type.
 #include "json.hpp"
 
 #include <boost/parser/parser.hpp>

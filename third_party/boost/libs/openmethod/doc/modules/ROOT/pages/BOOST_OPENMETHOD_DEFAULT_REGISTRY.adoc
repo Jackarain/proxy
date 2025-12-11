@@ -1,0 +1,36 @@
+# BOOST_OPENMETHOD_DEFAULT_REGISTRY
+
+Default value for Registry
+
+== Synopsis
+
+Defined in `&lt;https://www.github.com/boostorg/openmethod/blob/develop/include/boost/openmethod/core.hpp#L27[boost&sol;openmethod&sol;core&period;hpp]&gt;`
+
+```cpp
+#define BOOST_OPENMETHOD_DEFAULT_REGISTRY ::boost::openmethod::default_registry
+```
+
+== Description
+
+The name of the default registry.
+
+`BOOST_OPENMETHOD_DEFAULT_REGISTRY` is the default value for the `Registry`
+template parameter of cpp:method[], cpp:use_classes[], cpp:virtual_ptr[], and
+all the constructs that take a registry as a template argument.
+
+`BOOST_OPENMETHOD_DEFAULT_REGISTRY` can be defined by a program to change the
+default registry globally, *before* including `<boost/openmethod/core.hpp>`. After that, changing its value has no effect, even on other macros.
+
+To override the default registry, proceed as follows:
+
+1. Define a cpp:registry[] class, either from scratch, or by tuning an existing
+registry. Include `<boost/openmethod/preamble.hpp>`,
+`<boost/openmethod/default_registry.hpp>`, and headers under
+`boost/openmethod/policies` as needed.
+
+2. Set `BOOST_OPENMETHOD_DEFAULT_REGISTRY` to the new registry class.
+
+3. Include `<boost/openmethod/core.hpp>`.
+
+NOTE;; Use this feature with caution, as it will cause ODR violations if
+different translation units define different default registries.

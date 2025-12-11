@@ -167,6 +167,77 @@ public:
     segments_encoded_view(
         core::string_view s);
 
+    /** Constructor
+
+        This function creates a new @ref segments_encoded_view
+        from a pair of iterators referring to
+        elements of another encoded segments
+        view. The resulting view references
+        the same underlying character buffer
+        as the original.
+
+        The constructed view preserves the
+        original absolute flag when `first`
+        selects the first segment and otherwise
+        produces an absolute subview: if the
+        source path is relative and `first ==
+        ps.begin()` the new view is relative,
+        and in every other case the subview is
+        absolute with the separator immediately
+        preceding `*first` retained at the front.
+        This ensures the underlying text can be
+        reconstructed by concatenating the buffers
+        of adjacent subviews.
+
+        The caller is responsible for ensuring
+        that the lifetime of the original buffer
+        extends until the constructed view
+        is no longer referenced.
+
+        @par Example
+        @code
+        segments_encoded_view ps( "/path/to/file.txt" );
+
+        segments_encoded_view sub(
+            std::next(ps.begin()),
+            ps.end());
+
+        segments_encoded_view first_half(
+            ps.begin(),
+            std::next(ps.begin()));
+
+        // sub represents "/to/file.txt"
+        std::string combined(
+            first_half.buffer().data(),
+            first_half.buffer().size());
+        combined.append(
+            sub.buffer().data(),
+            sub.buffer().size());
+        BOOST_ASSERT(combined == ps.buffer());
+        @endcode
+
+        @par Preconditions
+        The iterators must be valid and belong to
+        the same @ref segments_encoded_view.
+
+        @par Postconditions
+        `sub.buffer()` references characters in the
+        original `ps.buffer()`.
+
+        @par Complexity
+        Constant
+
+        @par Exception Safety
+        Throws nothing.
+
+        @param first The beginning iterator.
+        @param last The ending iterator.
+    */
+    BOOST_URL_DECL
+    segments_encoded_view(
+        iterator first,
+        iterator last) noexcept;
+
     /** Assignment
 
         After assignment, both views

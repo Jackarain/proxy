@@ -7,6 +7,7 @@
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/generators.hpp>
+#include <boost/uuid/constants.hpp>
 
 #endif // #ifndef BOOST_UUID_HPP_INCLUDED

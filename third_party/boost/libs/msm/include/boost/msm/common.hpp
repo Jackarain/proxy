@@ -20,6 +20,12 @@ struct wrap{};
 // tag to use in grammars where states are seen (init_<<, states_<<...)
 struct state_tag{};
 
+// helper to print types within metafunctions
+// TODO:
+// Remove again
+template <typename... Ts>
+struct [[deprecated]] print_types {};
+
 } } // boost::msm
 #endif //BOOST_MSM_COMMON_H
 

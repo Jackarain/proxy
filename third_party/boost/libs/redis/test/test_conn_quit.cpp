@@ -43,6 +43,7 @@ BOOST_AUTO_TEST_CASE(test_async_run_exits)
    // Should fail since this request will be sent after quit.
    request req3;
    req3.get_config().cancel_if_not_connected = true;
+   req3.get_config().cancel_on_connection_lost = true;
    req3.push("PING");
 
    bool c1_called = false, c2_called = false, c3_called = false;

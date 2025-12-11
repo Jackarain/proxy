@@ -30,7 +30,7 @@ namespace boost { namespace gil {
 ///        Algorithm :-
 ///        1. Calculate histogram A(pixel) of input image and G(pixel) of reference image.
 ///        2. Compute the normalized cumulative(CDF) histograms of A and G.
-///        3. Match the histograms using transofrmation  => CDF(A(px)) = CDF(G(px'))
+///        3. Match the histograms using transformation  => CDF(A(px)) = CDF(G(px'))
 ///                                                      => px' = Inv-CDF (CDF(px))
 ///
 
@@ -73,7 +73,7 @@ auto histogram_matching(
         std::is_integral<SrcKeyType>::value &&
         std::is_integral<RefKeyType>::value &&
         std::is_integral<DstKeyType>::value,
-        "Source, Refernce or Destination histogram type is not appropriate.");
+        "Source, Reference or Destination histogram type is not appropriate.");
 
     using value_t = typename histogram<SrcKeyType>::value_type;
     dst_hist.clear();

@@ -8,11 +8,13 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/msm/back/state_machine.hpp>
+// EUML is not supported by backmp11
+#define BOOST_MSM_TEST_SKIP_BACKMP11
+#include "BackCommon.hpp"
 #include <boost/msm/front/euml/euml.hpp>
 
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
-#define BOOST_TEST_MODULE MyTest
+#define BOOST_TEST_MODULE serialize_simple_euml_test
 #endif
 #include <boost/test/unit_test.hpp>
 // include headers that implement a archive in simple text format
@@ -112,24 +114,24 @@ namespace
                                         ),
                                       player_) //fsm name
 
-    typedef msm::back::state_machine<player_> player;
+    typedef get_test_machines<player_> players;
 
 //    static char const* const state_names[] = { "Stopped", "Paused", "Open", "Empty", "Playing" };
 
 
-    BOOST_AUTO_TEST_CASE( my_test )
+    BOOST_AUTO_TEST_CASE_TEMPLATE( serialize_simple_euml_test, player, players )
     {     
         player p2;
 
         p2.start(); 
-        BOOST_CHECK_MESSAGE(p2.get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p2.template get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(entry_counter) == 1,
                             "Empty entry not called correctly");
 
         p2.process_event(open_close()); 
         BOOST_CHECK_MESSAGE(p2.current_state()[0] == 2,"Open should be active"); //Open
-        BOOST_CHECK_MESSAGE(p2.get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p2.template get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(exit_counter) == 1,
                             "Empty exit not called correctly");
-        BOOST_CHECK_MESSAGE(p2.get_state<BOOST_MSM_EUML_STATE_NAME(Open)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p2.template get_state<BOOST_MSM_EUML_STATE_NAME(Open)&>().get_attribute(entry_counter) == 1,
                             "Open entry not called correctly");
 
         // test the serialization
@@ -156,55 +158,55 @@ namespace
         p.process_event(
             cd_detected("louie, louie",DISK_DVD));
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 3,"Empty should be active"); //Empty
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Open)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Open)&>().get_attribute(exit_counter) == 1,
                             "Open exit not called correctly");
 
         p.process_event(
             cd_detected("louie, louie",DISK_CD)); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 1,
                             "Stopped entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 1,
                             "Stopped exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Playing)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Playing)&>().get_attribute(entry_counter) == 1,
                             "Playing entry not called correctly");
         BOOST_CHECK_MESSAGE(p.get_attribute(start_playback_counter) == 1,"action not called correctly");
         BOOST_CHECK_MESSAGE(p.get_attribute(test_fct_counter) == 1,"action not called correctly");
 
         p.process_event(pause());
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 1,"Paused should be active"); //Paused
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Playing)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Playing)&>().get_attribute(exit_counter) == 1,
                             "Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(entry_counter) == 1,
                             "Paused entry not called correctly");
 
         // go back to Playing
         p.process_event(end_pause());  
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(exit_counter) == 1,
                             "Paused exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Playing)&>().get_attribute(entry_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Playing)&>().get_attribute(entry_counter) == 2,
                             "Playing entry not called correctly");
 
         p.process_event(pause()); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 1,"Paused should be active"); //Paused
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Playing)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Playing)&>().get_attribute(exit_counter) == 2,
                             "Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(entry_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(entry_counter) == 2,
                             "Paused entry not called correctly");
 
         p.process_event(stop());  
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"Stopped should be active"); //Stopped
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(exit_counter) == 2,
                             "Paused exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 2,
                             "Stopped entry not called correctly");
 
         p.process_event(stop());  
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"Stopped should be active"); //Stopped
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 2,
                             "Stopped exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
                             "Stopped entry not called correctly");
     }
 }
@@ -212,4 +214,4 @@ namespace
 // eliminate object tracking (even if serialized through a pointer)
 // at the risk of a programming error creating duplicate objects.
 // this is to get rid of warning because p is not const
-BOOST_CLASS_TRACKING(player, boost::serialization::track_never)
+// BOOST_CLASS_TRACKING(player, boost::serialization::track_never)

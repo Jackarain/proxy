@@ -26,26 +26,6 @@ jobs:
           #------------------
           # Linux, gcc
           #------------------
-          # Linux, gcc-4.6
-          - toolset: gcc-4.6
-            cxxstd: "03,0x"
-            cxxflags: -pipe
-            address-model: 32,64
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - g++-4.6-multilib
-            sources:
-              - "ppa:ubuntu-toolchain-r/test"
-          # Linux, gcc-4.7
-          - toolset: gcc-4.7
-            cxxstd: "03,11"
-            cxxflags: -pipe
-            address-model: 32,64
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - g++-4.7-multilib
           # Linux, gcc-4.8
           - toolset: gcc-4.8
             cxxstd: "03,11"
@@ -165,15 +145,6 @@ jobs:
           #------------------
           # Linux, clang
           #------------------
-          # Linux, clang-3.5
-          - toolset: clang
-            compiler: clang++-3.5
-            cxxstd: "03,11"
-            cxxflags: -pipe
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - clang-3.5
           # Linux, clang-3.6
           - toolset: clang
             compiler: clang++-3.6
@@ -404,15 +375,15 @@ jobs:
           #------------------
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
-            os: macos-13
-          - toolset: clang
-            cxxstd: "11,14,17,20,2b"
             os: macos-14
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-15
+          - toolset: clang
+            cxxstd: "11,14,17,20,23,2c"
+            os: macos-26
 
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
 
@@ -524,6 +495,7 @@ jobs:
             BOOST_BRANCH=develop && [ "$REF" = "master" ] && BOOST_BRANCH=master || true
             echo BOOST_BRANCH: $BOOST_BRANCH
             BUILD_JOBS=$((nproc || sysctl -n hw.ncpu) 2> /dev/null)
+            echo BUILD_JOBS: $BUILD_JOBS
             echo "BUILD_JOBS=$BUILD_JOBS" >> $GITHUB_ENV
             echo "CMAKE_BUILD_PARALLEL_LEVEL=$BUILD_JOBS" >> $GITHUB_ENV
             DEPINST_ARGS=()
@@ -593,7 +565,7 @@ jobs:
         if: matrix.cmake_tests == ''
         run: |
             cd boost-root
-            B2_ARGS=("-j" "$BUILD_JOBS" "toolset=${{matrix.toolset}}" "cxxstd=${{matrix.cxxstd}}")
+            B2_ARGS=("-j" "$BUILD_JOBS" "toolset=${{matrix.toolset}}" "cxxstd=${{matrix.cxxstd}}" "debug-symbols=off")
             if [ -n "${{matrix.build_variant}}" ]
             then
                 B2_ARGS+=("variant=${{matrix.build_variant}}")
@@ -629,29 +601,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: "14"
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
+         #------------------
+         #Windows runners are much slower, split 32/64 bit jobs
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2022
+            addrmd: 32
+            os: windows-2025
+          - toolset: msvc-14.3
+            cxxstd: "14,17,20,latest"
+            addrmd: 64
+            os: windows-2025
           - toolset: clang-win
             cxxstd: "14,17,latest"
             addrmd: 64
-            os: windows-2022
+            os: windows-2025
           - toolset: gcc
             cxxstd: "03,11,14,17,2a"
-            cxxflags: -pipe
             addrmd: 64
-            os: windows-2019
+            os: windows-2025
 
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: ${{matrix.os}}
 
     steps:
@@ -668,6 +637,7 @@ jobs:
             set BOOST_BRANCH=develop
             for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
             echo BOOST_BRANCH: %BOOST_BRANCH%
+            echo NUMBER_OF_PROCESSORS: %NUMBER_OF_PROCESSORS%
             mkdir snapshot
             cd snapshot
             echo Downloading library snapshot: https://github.com/%GITHUB_REPOSITORY%/archive/%GITHUB_SHA%.zip
@@ -695,5 +665,5 @@ jobs:
         shell: cmd
         run: |
             cd boost-root
-            b2 -j %NUMBER_OF_PROCESSORS% libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} variant=debug,release embed-manifest-via=linker
+            b2 -j %NUMBER_OF_PROCESSORS% libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} variant=debug,release embed-manifest-via=linker debug-symbols=off
 

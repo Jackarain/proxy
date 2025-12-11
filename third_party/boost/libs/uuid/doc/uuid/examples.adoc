@@ -11,7 +11,7 @@
 // see boost/libs/uuid/test/test_tagging.cpp
 
 #include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/generators.hpp>
 
 class object
 {

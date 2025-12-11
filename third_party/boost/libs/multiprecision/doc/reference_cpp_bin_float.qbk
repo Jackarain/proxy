@@ -79,7 +79,7 @@ Square root uses integer square root in a manner analogous to division.
 
 Decimal string to binary conversion proceeds as follows: first parse the digits to
 produce an integer multiplied by a decimal exponent.  Note that we stop parsing digits
-once we have parsed as many as can possibly effect the result - this stops the integer
+once we have parsed as many as can possibly affect the result - this stops the integer
 part growing too large when there are a very large number of input digits provided.
 At this stage if the decimal exponent is positive then the result is an integer and we
 can in principle simply multiply by 10^N to get an exact integer result.  In practice
@@ -97,6 +97,6 @@ so that the result is an N bit integer assuming we want N digits printed in the 
 As before we use limited precision arithmetic to calculate the result and up the
 precision as necessary until the result is unambiguously correctly rounded.  In addition
 our initial calculation of the decimal exponent may be out by 1, so we have to correct
-that and loop as well in the that case.
+that and loop as well in that case.
 
 [endsect]

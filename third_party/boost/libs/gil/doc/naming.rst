@@ -17,7 +17,7 @@ where:
   For example, ``rgb``, ``bgr``, ``cmyk``, ``rgba``.
 
 - ``BitDepth`` indicates the bit depth of the color channel.
-  For example, ``8``,``16``,``32``.
+  For example, ``8``, ``16``, ``32``.
 
 - By default, type of channel is unsigned integral.
   The ``s`` tag indicates signed integral.
@@ -29,14 +29,14 @@ where:
 - ``_planar`` indicates planar organization (as opposed to interleaved).
 
 - ``_step`` indicates special image views, locators and iterators which
-  traverse the data in non-trivial way. For example, backwards or every other
+  traverse the data in a non-trivial way. For example, backwards or every other
   pixel.
 
 - ``ClassType`` is ``_image`` (image), ``_view`` (image view), ``_loc`` (pixel
   2D locator) ``_ptr`` (pixel iterator), ``_ref`` (pixel reference),
   ``_pixel`` (pixel value).
 
-- ``_t`` suffix indicaes it is a name of a type.
+- ``_t`` suffix indicates it is a name of a type.
 
 For example:
 

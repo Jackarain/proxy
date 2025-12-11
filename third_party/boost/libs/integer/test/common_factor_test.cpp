@@ -253,27 +253,6 @@ public:
 
 };  // std::numeric_limits<MyUnsigned1>
 
-#if BOOST_WORKAROUND(BOOST_MSVC,<1300)
-// MSVC 6.0 lacks operator<< for __int64, see
-// https://support.microsoft.com/kb/168440/
-
-inline ostream& operator<<(ostream& os, __int64 i)
-{
-    char buf[20];
-    sprintf(buf,"%I64d", i);
-    os << buf;
-    return os;
-}
-
-inline ostream& operator<<(ostream& os, unsigned __int64 i)
-{
-    char buf[20];
-    sprintf(buf,"%I64u", i);
-    os << buf;
-    return os;
-}
-#endif
-
 }  // namespace std
 
 // GCD tests

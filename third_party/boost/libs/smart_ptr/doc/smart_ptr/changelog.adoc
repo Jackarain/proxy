@@ -13,6 +13,24 @@ http://www.boost.org/LICENSE_1_0.txt
 :toc-title:
 :idprefix: changelog_
 
+## Changes in 1.90.0
+
+* The functionality enabled by the deprecated macros
+  `BOOST_SP_ENABLE_DEBUG_HOOKS`, `BOOST_SP_USE_STD_ALLOCATOR`,
+  and `BOOST_SP_USE_QUICK_ALLOCATOR` has been removed.
+* The header `<boost/smart_ptr/detail/quick_allocator.hpp>` has
+  been marked deprecated and will be removed in a future release.
+* Configurations that define `BOOST_NO_CXX11_HDR_ATOMIC` are no
+  longer supported; a conforming {cpp}11 `<atomic>` is now required.
+* The deprecated macros `BOOST_AC_USE_SPINLOCK`, `BOOST_AC_USE_PTHREADS`,
+  `BOOST_SP_USE_SPINLOCK`, and `BOOST_SP_USE_PTHREADS` are no longer
+  functional.
+* Platform-specific implementations of `atomic_count`, `sp_counted_base`
+  and `spinlock` are no longer used and have been removed.
+* Configurations that define `BOOST_NO_CXX11_HDR_MUTEX` are no
+  longer supported; a conforming {cpp}11 `<mutex>` is now required.
+* Some unused headers in `boost/smart_ptr/detail/` have been removed.
+
 ## Changes in 1.88.0
 
 * Fix `operator<<` for wide streams (accidentally broken in 1.87.0)

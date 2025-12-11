@@ -9,11 +9,11 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include "BackCommon.hpp"
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
-#define BOOST_TEST_MODULE MyTest
+#define BOOST_TEST_MODULE entries_test
 #endif
 #include <boost/test/unit_test.hpp>
 
@@ -34,9 +34,14 @@ namespace
         template <class Event>
         event6(Event const&){}
     };
+    template<template <typename...> class Back, typename Policy = void>
+    struct hierarchical_state_machine
+    {
     // front-end: define the FSM structure 
     struct Fsm_ : public msm::front::state_machine_def<Fsm_>
     {
+        BOOST_MSM_TEST_DEFINE_DEPENDENT_TEMPLATES(Fsm_)
+
         // The list of FSM states
         struct State1 : public msm::front::state<> 
         {
@@ -58,7 +63,7 @@ namespace
         };
         struct SubFsm2_ : public msm::front::state_machine_def<SubFsm2_>
         {
-            typedef msm::back::state_machine<SubFsm2_> SubFsm2;
+            BOOST_MSM_TEST_DEFINE_DEPENDENT_TEMPLATES(SubFsm2_)
 
             unsigned int entry_action_counter;
 
@@ -159,7 +164,7 @@ namespace
                 BOOST_FAIL("no_transition called!");
             }
         };
-        typedef msm::back::state_machine<SubFsm2_> SubFsm2;
+        typedef Back<SubFsm2_, Policy> SubFsm2;
 
         // the initial state of the player SM. Must be defined
         typedef State1 initial_state;
@@ -169,19 +174,19 @@ namespace
 
         // Transition table for Fsm
         struct transition_table : mpl::vector<
-            //    Start                 Event    Next                                 Action  Guard
-            //   +---------------------+--------+------------------------------------+-------+--------+
-            _row < State1              , event1 , SubFsm2                                             >,
-            _row < State1              , event2 , SubFsm2::direct<SubFsm2_::SubState2>                >,
-            _row < State1              , event3 , mpl::vector<SubFsm2::direct<SubFsm2_::SubState2>,
-                                                              SubFsm2::direct<SubFsm2_::SubState2b> > >,
-            _row < State1              , event4 , SubFsm2::entry_pt
-                                                        <SubFsm2_::PseudoEntry1>                      >,
-            //   +---------------------+--------+------------------------------------+-------+--------+
-            _row < SubFsm2             , event1 , State1                                              >,
-            _row < SubFsm2::exit_pt
-                <SubFsm2_::PseudoExit1>, event6 , State2                                              >
-            //   +---------------------+--------+------------------------------------+-------+--------+
+            //    Start                 Event    Next                                                  Action  Guard
+            //   +---------------------+--------+-----------------------------------------------------+-------+--------+
+            _row < State1              , event1 , SubFsm2                                                               >,
+            _row < State1              , event2 , typename SubFsm2::template direct<typename SubFsm2_::SubState2>                >,
+            _row < State1              , event3 , mpl::vector<typename SubFsm2::template direct<typename SubFsm2_::SubState2>,
+                                                              typename SubFsm2::template direct<typename SubFsm2_::SubState2b> > >,
+            _row < State1              , event4 , typename SubFsm2::template entry_pt
+                                                        <typename SubFsm2_::PseudoEntry1>                                        >,
+            //   +---------------------+--------+-----------------------------------------------------+-------+--------+
+            _row < SubFsm2             , event1 , State1                                                                >,
+            _row < typename SubFsm2::template exit_pt
+                <typename SubFsm2_::PseudoExit1>, event6 , State2                                                                >
+            //   +---------------------+--------+-----------------------------------------------------+-------+--------+
         > {};
 
         // Replaces the default no-transition response.
@@ -201,96 +206,105 @@ namespace
             fsm.template get_state<Fsm_::SubFsm2&>().entry_counter=0;
             fsm.template get_state<Fsm_::SubFsm2&>().exit_counter=0;
             fsm.template get_state<Fsm_::SubFsm2&>().entry_action_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::SubState1&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::SubState1&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::SubState1b&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::SubState1b&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::SubState2&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::SubState2&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::SubState2b&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::SubState2b&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::SubState3&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::SubState3&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::PseudoEntry1&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::PseudoEntry1&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::exit_pt<SubFsm2_::PseudoExit1>&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<Fsm_::SubFsm2::exit_pt<SubFsm2_::PseudoExit1>&>().exit_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState1&>().entry_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState1&>().exit_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState1b&>().entry_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState1b&>().exit_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState2&>().entry_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState2&>().exit_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState2b&>().entry_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState2b&>().exit_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState3&>().entry_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState3&>().exit_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::PseudoEntry1&>().entry_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::PseudoEntry1&>().exit_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::template exit_pt<typename SubFsm2_::PseudoExit1>&>().entry_counter=0;
+            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::template exit_pt<typename SubFsm2_::PseudoExit1>&>().exit_counter=0;
 
         }
     };
-    typedef msm::back::state_machine<Fsm_> Fsm;
+    typedef Back<Fsm_, Policy> Fsm;
+    };
+
+    typedef get_hierarchical_test_machines<hierarchical_state_machine> test_machines;
 //    static char const* const state_names[] = { "State1", "SubFsm2","State2"  };
 
 
-    BOOST_AUTO_TEST_CASE( entries_test )
-    {     
-        Fsm p;
+    BOOST_AUTO_TEST_CASE_TEMPLATE( entries_test, test_machine, test_machines )
+    {
+        typename test_machine::Fsm p;
+        typedef typename test_machine::Fsm_ Fsm_;
 
         p.start(); 
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::State1&>().entry_counter == 1,"State1 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::State1&>().entry_counter == 1,"State1 entry not called correctly");
 
         p.process_event(event1()); 
         p.process_event(event1()); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"State1 should be active");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::State1&>().exit_counter == 1,"State1 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::State1&>().entry_counter == 2,"State1 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().exit_counter == 1,"SubFsm2 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().entry_counter == 1,"SubFsm2 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::State1&>().exit_counter == 1,"State1 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::State1&>().entry_counter == 2,"State1 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().exit_counter == 1,"SubFsm2 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().entry_counter == 1,"SubFsm2 entry not called correctly");
 
         p.process_event(event2()); 
         p.process_event(event6()); 
         p.process_event(event1()); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"State1 should be active");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::State1&>().exit_counter == 2,"State1 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::State1&>().entry_counter == 3,"State1 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().exit_counter == 2,"SubFsm2 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().entry_counter == 2,"SubFsm2 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::SubState2&>().entry_counter == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::State1&>().exit_counter == 2,"State1 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::State1&>().entry_counter == 3,"State1 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().exit_counter == 2,"SubFsm2 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().entry_counter == 2,"SubFsm2 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::SubState2&>().entry_counter == 1,
                             "SubFsm2::SubState2 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::SubState2&>().exit_counter == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::SubState2&>().exit_counter == 1,
                             "SubFsm2::SubState2 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::SubState1&>().entry_counter == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::SubState1&>().entry_counter == 2,
                             "SubFsm2::SubState1 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::SubState1&>().exit_counter == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::SubState1&>().exit_counter == 2,
                             "SubFsm2::SubState1 exit not called correctly");
 
         p.process_event(event3()); 
         p.process_event(event1()); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"State1 should be active");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::State1&>().exit_counter == 3,"State1 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::State1&>().entry_counter == 4,"State1 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().exit_counter == 3,"SubFsm2 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().entry_counter == 3,"SubFsm2 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::SubState2&>().entry_counter == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::State1&>().exit_counter == 3,"State1 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::State1&>().entry_counter == 4,"State1 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().exit_counter == 3,"SubFsm2 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().entry_counter == 3,"SubFsm2 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::SubState2&>().entry_counter == 2,
                             "SubFsm2::SubState2 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::SubState2&>().exit_counter == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::SubState2&>().exit_counter == 2,
                             "SubFsm2::SubState2 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::SubState2b&>().entry_counter == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::SubState2b&>().entry_counter == 1,
                             "SubFsm2::SubState2b entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::SubState2b&>().exit_counter == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::SubState2b&>().exit_counter == 1,
                             "SubFsm2::SubState2b exit not called correctly");
 
         p.process_event(event4()); 
         p.process_event(event5()); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 2,"State2 should be active");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::State1&>().exit_counter == 4,"State1 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::State2&>().entry_counter == 1,"State2 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().exit_counter == 4,"SubFsm2 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().entry_counter == 4,"SubFsm2 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::PseudoEntry1&>().entry_counter == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::State1&>().exit_counter == 4,"State1 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::State2&>().entry_counter == 1,"State2 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().exit_counter == 4,"SubFsm2 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().entry_counter == 4,"SubFsm2 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::PseudoEntry1&>().entry_counter == 1,
                             "SubFsm2::PseudoEntry1 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::PseudoEntry1&>().exit_counter == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::PseudoEntry1&>().exit_counter == 1,
                             "SubFsm2::PseudoEntry1 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::SubState3&>().entry_counter == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::SubState3&>().entry_counter == 1,
                             "SubFsm2::SubState3 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2_::SubState3&>().exit_counter == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2_::SubState3&>().exit_counter == 1,
                             "SubFsm2::SubState3 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2::exit_pt<Fsm_::SubFsm2_::PseudoExit1>&>().entry_counter == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::template exit_pt<typename Fsm_::SubFsm2_::PseudoExit1>&>().entry_counter == 1,
                             "SubFsm2::PseudoExit1 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().get_state<Fsm_::SubFsm2::exit_pt<Fsm_::SubFsm2_::PseudoExit1>&>().exit_counter == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::template exit_pt<typename Fsm_::SubFsm2_::PseudoExit1>&>().exit_counter == 1,
                             "SubFsm2::PseudoExit1 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Fsm_::SubFsm2&>().entry_action_counter == 1,"Action not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<typename Fsm_::SubFsm2&>().entry_action_counter == 1,"Action not called correctly");
 
     }
 }
 
+#if !defined(BOOST_MSM_TEST_ONLY_BACKMP11)
+using back0 = hierarchical_state_machine<boost::msm::back::state_machine, boost::msm::back::favor_compile_time>::Fsm;
+using back1 = hierarchical_state_machine<boost::msm::back::state_machine, boost::msm::back::favor_compile_time>::Fsm_::SubFsm2;
+BOOST_MSM_BACK_GENERATE_PROCESS_EVENT(back1);
+#endif

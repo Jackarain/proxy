@@ -61,7 +61,7 @@ jobs:
     #timeout-minutes: 120
     runs-on: ${{matrix.os}}
     container: ${{matrix.container}}
-    env: {B2_USE_CCACHE: 1}
+    env: {B2_USE_CCACHE: 0}
 
     steps:
       - name: Setup environment

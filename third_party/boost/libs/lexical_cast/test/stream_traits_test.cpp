@@ -13,11 +13,13 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/utility/string_view.hpp>
 
+#include <type_traits>
+
 template <class T>
-struct is_optimized_stream : boost::false_type {};
+struct is_optimized_stream : std::false_type {};
 
 template <class CharT, class Traits, std::size_t CharacterBufferSize>
-struct is_optimized_stream< boost::detail::lcast::optimized_src_stream<CharT, Traits, CharacterBufferSize> > : boost::true_type {};
+struct is_optimized_stream< boost::detail::lcast::optimized_src_stream<CharT, Traits, CharacterBufferSize> > : std::true_type {};
 
 template <class Source, class Target>
 static void assert_optimized_stream()
@@ -32,21 +34,21 @@ static void test_optimized_types_to_string_const()
 {
     namespace de = boost::detail;
     typedef de::lexical_cast_stream_traits<T, std::string> trait_1;
-    BOOST_TEST((boost::is_same<typename trait_1::src_char_t, char>::value));
-    BOOST_TEST((boost::is_same<typename trait_1::target_char_t, char>::value));
-    BOOST_TEST((boost::is_same<typename trait_1::char_type, char>::value));
+    BOOST_TEST((std::is_same<typename trait_1::src_char_t, char>::value));
+    BOOST_TEST((std::is_same<typename trait_1::target_char_t, char>::value));
+    BOOST_TEST((std::is_same<typename trait_1::char_type, char>::value));
     assert_optimized_stream<T, std::string>();
     assert_optimized_stream<T, boost::container::string>();
 
     typedef de::lexical_cast_stream_traits<const T, std::string> trait_2;
-    BOOST_TEST((boost::is_same<typename trait_2::src_char_t, char>::value));
-    BOOST_TEST((boost::is_same<typename trait_2::target_char_t, char>::value));
-    BOOST_TEST((boost::is_same<typename trait_2::char_type, char>::value));
+    BOOST_TEST((std::is_same<typename trait_2::src_char_t, char>::value));
+    BOOST_TEST((std::is_same<typename trait_2::target_char_t, char>::value));
+    BOOST_TEST((std::is_same<typename trait_2::char_type, char>::value));
 
     typedef de::lexical_cast_stream_traits<T, std::wstring> trait_3;
-    BOOST_TEST((boost::is_same<typename trait_3::src_char_t, char>::value));
-    BOOST_TEST((boost::is_same<typename trait_3::target_char_t, wchar_t>::value));
-    BOOST_TEST((boost::is_same<typename trait_3::char_type, wchar_t>::value));
+    BOOST_TEST((std::is_same<typename trait_3::src_char_t, char>::value));
+    BOOST_TEST((std::is_same<typename trait_3::target_char_t, wchar_t>::value));
+    BOOST_TEST((std::is_same<typename trait_3::char_type, wchar_t>::value));
     assert_optimized_stream<T, std::wstring>();
     assert_optimized_stream<T, boost::container::wstring>();
 }
@@ -59,20 +61,20 @@ static void test_optimized_types_to_string()
 
     namespace de = boost::detail;
     typedef de::lexical_cast_stream_traits<std::string, T> trait_4;
-    BOOST_TEST((boost::is_same<typename trait_4::src_char_t, char>::value));
-    BOOST_TEST((boost::is_same<typename trait_4::target_char_t, char>::value));
-    BOOST_TEST((boost::is_same<typename trait_4::char_type, char>::value));
+    BOOST_TEST((std::is_same<typename trait_4::src_char_t, char>::value));
+    BOOST_TEST((std::is_same<typename trait_4::target_char_t, char>::value));
+    BOOST_TEST((std::is_same<typename trait_4::char_type, char>::value));
     assert_optimized_stream<std::string, T>();
 
     typedef de::lexical_cast_stream_traits<const std::string, T> trait_5;
-    BOOST_TEST((boost::is_same<typename trait_5::src_char_t, char>::value));
-    BOOST_TEST((boost::is_same<typename trait_5::target_char_t, char>::value));
-    BOOST_TEST((boost::is_same<typename trait_5::char_type, char>::value));
+    BOOST_TEST((std::is_same<typename trait_5::src_char_t, char>::value));
+    BOOST_TEST((std::is_same<typename trait_5::target_char_t, char>::value));
+    BOOST_TEST((std::is_same<typename trait_5::char_type, char>::value));
 
     typedef de::lexical_cast_stream_traits<const std::wstring, T> trait_6;
-    BOOST_TEST((boost::is_same<typename trait_6::src_char_t, wchar_t>::value));
-    BOOST_TEST((boost::is_same<typename trait_6::target_char_t, char>::value));
-    BOOST_TEST((boost::is_same<typename trait_6::char_type, wchar_t>::value));
+    BOOST_TEST((std::is_same<typename trait_6::src_char_t, wchar_t>::value));
+    BOOST_TEST((std::is_same<typename trait_6::target_char_t, char>::value));
+    BOOST_TEST((std::is_same<typename trait_6::char_type, wchar_t>::value));
 }
 
 

@@ -15,7 +15,7 @@
 
 // This example relies on the matrices and functions available in GIL to define the operation,
 // in include/boost/gil/extension/numeric/affine.hpp
-// and calls resample_pixels(), avaiable in the numeric extension, to apply it
+// and calls resample_pixels(), available in the numeric extension, to apply it.
 
 int main()
 {

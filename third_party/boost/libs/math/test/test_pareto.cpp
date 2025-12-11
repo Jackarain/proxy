@@ -24,7 +24,7 @@
 #  pragma warning(disable: 4100) // unreferenced formal parameter.
 #endif
 
-#ifdef SYCL_LANGUAGE_VERSION
+#ifdef BOOST_MATH_ENABLE_SYCL
 #include "sycl/sycl.hpp"
 #endif
 

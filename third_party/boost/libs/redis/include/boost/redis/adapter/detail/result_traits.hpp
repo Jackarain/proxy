@@ -132,8 +132,32 @@ public:
       }
    }
 
+   void on_init()
+   {
+      using std::visit;
+      for (auto& adapter : adapters_) {
+         visit(
+            [&](auto& arg) {
+               arg.on_init();
+            },
+            adapter);
+      }
+   }
+
+   void on_done()
+   {
+      using std::visit;
+      for (auto& adapter : adapters_) {
+         visit(
+            [&](auto& arg) {
+               arg.on_done();
+            },
+            adapter);
+      }
+   }
+
    template <class String>
-   void operator()(resp3::basic_node<String> const& elem, system::error_code& ec)
+   void on_node(resp3::basic_node<String> const& elem, system::error_code& ec)
    {
       using std::visit;
 
@@ -148,9 +172,9 @@ public:
 
       visit(
          [&](auto& arg) {
-            arg(elem, ec);
+            arg.on_node(elem, ec);
          },
-         adapters_[i_]);
+         adapters_.at(i_));
       count(elem);
    }
 };

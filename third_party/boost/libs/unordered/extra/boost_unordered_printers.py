@@ -1,4 +1,4 @@
-# Copyright 2024 Braden Ganetsky
+# Copyright 2024-2025 Braden Ganetsky
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
@@ -14,7 +14,7 @@ class BoostUnorderedHelpers:
             return n.cast(underlying_type)
         else:
             return n
-            
+
     def maybe_unwrap_foa_element(e):
         if f"{e.type.strip_typedefs()}".startswith("boost::unordered::detail::foa::element_type<"):
             return e["p"]
@@ -45,14 +45,15 @@ class BoostUnorderedPointerCustomizationPoint:
 
 class BoostUnorderedFcaPrinter:
     def __init__(self, val):
-        self.val = BoostUnorderedHelpers.maybe_unwrap_reference(val)
-        self.name = f"{self.val.type.strip_typedefs()}".split("<")[0]
+        val = BoostUnorderedHelpers.maybe_unwrap_reference(val)
+        self.table = val["table_"]
+        self.name = f"{val.type.strip_typedefs()}".split("<")[0]
         self.name = self.name.replace("boost::unordered::", "boost::")
         self.is_map = self.name.endswith("map")
-        self.cpo = BoostUnorderedPointerCustomizationPoint(self.val["table_"]["buckets_"]["buckets"])
+        self.cpo = BoostUnorderedPointerCustomizationPoint(self.table["buckets_"]["buckets"])
 
     def to_string(self):
-        size = self.val["table_"]["size_"]
+        size = self.table["size_"]
         return f"{self.name} with {size} elements"
 
     def display_hint(self):
@@ -60,7 +61,7 @@ class BoostUnorderedFcaPrinter:
 
     def children(self):
         def generator():
-            grouped_buckets = self.val["table_"]["buckets_"]
+            grouped_buckets = self.table["buckets_"]
 
             size = grouped_buckets["size_"]
             buckets = grouped_buckets["buckets"]
@@ -83,7 +84,7 @@ class BoostUnorderedFcaPrinter:
                     count += 1
                     node = self.cpo.to_address(node.dereference()["next"])
                 bucket_index += 1
-        
+
         return generator()
 
 class BoostUnorderedFcaIteratorPrinter:
@@ -118,7 +119,7 @@ class BoostUnorderedFoaTableCoreCumulativeStatsPrinter:
                 yield "", member
                 yield "", self.val[member]
         return generator()
-    
+
 class BoostUnorderedFoaCumulativeStatsPrinter:
     def __init__(self, val):
         self.val = val
@@ -127,7 +128,7 @@ class BoostUnorderedFoaCumulativeStatsPrinter:
 
     def display_hint(self):
         return "map"
-    
+
     def children(self):
         def generator():
             yield "", "count"
@@ -154,14 +155,20 @@ class BoostUnorderedFoaCumulativeStatsPrinter:
 
 class BoostUnorderedFoaPrinter:
     def __init__(self, val):
-        self.val = BoostUnorderedHelpers.maybe_unwrap_reference(val)
-        self.name = f"{self.val.type.strip_typedefs()}".split("<")[0]
+        val = BoostUnorderedHelpers.maybe_unwrap_reference(val)
+        self.table = val["table_"]
+        self.name = f"{val.type.strip_typedefs()}".split("<")[0]
         self.name = self.name.replace("boost::unordered::", "boost::")
         self.is_map = self.name.endswith("map")
-        self.cpo = BoostUnorderedPointerCustomizationPoint(self.val["table_"]["arrays"]["groups_"])
+        self.cpo = BoostUnorderedPointerCustomizationPoint(self.table["arrays"]["groups_"])
+        self.groups = self.cpo.to_address(self.table["arrays"]["groups_"])
+        self.elements = self.cpo.to_address(self.table["arrays"]["elements_"])
+
+        self.N = 15 # `self.groups.dereference()["N"]` may be optimized out
+        self.sentinel_ = 1 # `self.groups.dereference()["sentinel_"]` may be optimized out
 
     def to_string(self):
-        size = BoostUnorderedHelpers.maybe_unwrap_atomic(self.val["table_"]["size_ctrl"]["size"])
+        size = BoostUnorderedHelpers.maybe_unwrap_atomic(self.table["size_ctrl"]["size"])
         return f"{self.name} with {size} elements"
 
     def display_hint(self):
@@ -191,30 +198,21 @@ class BoostUnorderedFoaPrinter:
         m = group["m"]
         at = lambda b: BoostUnorderedHelpers.maybe_unwrap_atomic(m[b]["n"])
 
-        N = group["N"]
-        sentinel_ = group["sentinel_"]
         if self.is_regular_layout(group):
-            return pos == N-1 and at(N-1) == sentinel_
+            return pos == self.N-1 and at(self.N-1) == self.sentinel_
         else:
-            return pos == N-1 and (at(0) & 0x4000400040004000) == 0x4000 and (at(1) & 0x4000400040004000) == 0
+            return pos == self.N-1 and (at(0) & 0x4000400040004000) == 0x4000 and (at(1) & 0x4000400040004000) == 0
 
     def children(self):
         def generator():
-            table = self.val["table_"]
-            groups = self.cpo.to_address(table["arrays"]["groups_"])
-            elements = self.cpo.to_address(table["arrays"]["elements_"])
-
-            pc_ = groups.cast(gdb.lookup_type("unsigned char").pointer())
-            p_ = elements
+            pc_ = self.groups.cast(gdb.lookup_type("unsigned char").pointer())
+            p_ = self.elements
             first_time = True
-            mask = 0
-            n0 = 0
-            n = 0
 
             count = 0
             while p_ != 0:
                 # This if block mirrors the condition in the begin() call
-                if (not first_time) or (self.match_occupied(groups.dereference()) & 1):
+                if (not first_time) or (self.match_occupied(self.groups.dereference()) & 1):
                     pointer = BoostUnorderedHelpers.maybe_unwrap_foa_element(p_)
                     value = self.cpo.to_address(pointer).dereference()
                     if self.is_map:
@@ -228,17 +226,17 @@ class BoostUnorderedFoaPrinter:
                     count += 1
                 first_time = False
 
-                n0 = pc_.cast(gdb.lookup_type("uintptr_t")) % groups.dereference().type.sizeof
+                n0 = pc_.cast(gdb.lookup_type("uintptr_t")) % self.groups.dereference().type.sizeof
                 pc_ = self.cpo.next(pc_, -n0)
 
-                mask = (self.match_occupied(pc_.cast(groups.type).dereference()) >> (n0+1)) << (n0+1)
+                mask = (self.match_occupied(pc_.cast(self.groups.type).dereference()) >> (n0+1)) << (n0+1)
                 while mask == 0:
-                    pc_ = self.cpo.next(pc_, groups.dereference().type.sizeof)
-                    p_ = self.cpo.next(p_, groups.dereference()["N"])
-                    mask = self.match_occupied(pc_.cast(groups.type).dereference())
-                
+                    pc_ = self.cpo.next(pc_, self.groups.dereference().type.sizeof)
+                    p_ = self.cpo.next(p_, self.N)
+                    mask = self.match_occupied(pc_.cast(self.groups.type).dereference())
+
                 n = BoostUnorderedHelpers.countr_zero(mask)
-                if self.is_sentinel(pc_.cast(groups.type).dereference(), n):
+                if self.is_sentinel(pc_.cast(self.groups.type).dereference(), n):
                     p_ = 0
                 else:
                     pc_ = self.cpo.next(pc_, n)
@@ -284,7 +282,7 @@ def boost_unordered_build_pretty_printer():
     add_template_printer("boost::unordered::concurrent_flat_set", BoostUnorderedFoaPrinter)
     add_template_printer("boost::unordered::concurrent_node_map", BoostUnorderedFoaPrinter)
     add_template_printer("boost::unordered::concurrent_node_set", BoostUnorderedFoaPrinter)
-    
+
     add_template_printer("boost::unordered::detail::foa::table_iterator", BoostUnorderedFoaIteratorPrinter)
 
     add_concrete_printer("boost::unordered::detail::foa::table_core_cumulative_stats", BoostUnorderedFoaTableCoreCumulativeStatsPrinter)
@@ -301,7 +299,7 @@ gdb.printing.register_pretty_printer(gdb.current_objfile(), boost_unordered_buil
 class BoostUnorderedFoaGetStatsMethod(gdb.xmethod.XMethod):
     def __init__(self):
         gdb.xmethod.XMethod.__init__(self, "get_stats")
- 
+
     def get_worker(self, method_name):
         if method_name == "get_stats":
             return BoostUnorderedFoaGetStatsWorker()
@@ -312,19 +310,19 @@ class BoostUnorderedFoaGetStatsWorker(gdb.xmethod.XMethodWorker):
 
     def get_result_type(self, obj):
         return gdb.lookup_type("boost::unordered::detail::foa::table_core_cumulative_stats")
- 
+
     def __call__(self, obj):
         try:
             return obj["table_"]["cstats"]
         except gdb.error:
             print("Error: Binary was compiled without stats. Recompile with `BOOST_UNORDERED_ENABLE_STATS` defined.")
             return
- 
+
 class BoostUnorderedFoaMatcher(gdb.xmethod.XMethodMatcher):
     def __init__(self):
         gdb.xmethod.XMethodMatcher.__init__(self, 'BoostUnorderedFoaMatcher')
         self.methods = [BoostUnorderedFoaGetStatsMethod()]
- 
+
     def match(self, class_type, method_name):
         template_name = f"{class_type.strip_typedefs()}".split("<")[0]
         regex = "^boost::unordered::(unordered|concurrent)_(flat|node)_(map|set)$"
@@ -380,12 +378,12 @@ class MyFancyPtrPrinter:
     def boost_to_address(fancy_ptr):
         ...
         return ...
-        
+
     # Equivalent to `operator+()`
     def boost_next(raw_ptr, offset):
         ...
         return ...
-    
+
     ...
 ```
 """

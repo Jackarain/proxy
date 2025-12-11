@@ -171,7 +171,7 @@ also the comparison functor when an allocator is passed in the constructor:
 [doc_map]
 
 For a more advanced example including containers of containers, see the section
-[link interprocess.allocators_containers.containers_explained.containers_of_containers Containers of containers].
+[link interprocess.containers_explained.containers_of_containers Containers of containers].
 
 [endsect]
 
@@ -6774,6 +6774,18 @@ thank them:
 [endsect]
 
 [section:release_notes Release Notes]
+
+[section:release_notes_boost_1_90_00 Boost 1.90 Release]
+
+* Minor documentation fixes
+* Fixed bugs:
+   * [@https://github.com/boostorg/interprocess/pull/245   GitHub #245 (['"Fix UBSan runtime error (load of 'boost::interprocess::mode_t')"])].
+   * [@https://github.com/boostorg/interprocess/issues/261 GitHub #261 (['"Memory Mapping Empty Files Fails"])].
+   * [@https://github.com/boostorg/interprocess/pull/269   GitHub #269 (['"Minor documentation fixes and template parameter renames"])].
+   * [@https://github.com/boostorg/interprocess/issues/272 GitHub #272 (['"Regression boost 1.87: offset_ptr conversion from void no longer works"])].
+   * [@https://github.com/boostorg/interprocess/pull/275   GitHub #275 (['"Allow injection of custom atexit procedure"])].
+
+[endsect]
 
 [section:release_notes_boost_1_87_00 Boost 1.87 Release]
 

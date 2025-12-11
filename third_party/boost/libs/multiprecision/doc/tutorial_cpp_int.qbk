@@ -97,13 +97,13 @@ and unchecked integers have the following properties:
 
 [table
 [[Condition][Checked-Integer][Unchecked-Integer]]
-[[Numeric overflow in fixed precision arithmetic][Throws a `std::overflow_error`.][Performs arithmetic modulo 2[super MaxBits]]]
+[[Numeric overflow in fixed precision arithmetic][Throws a `std::overflow_error`.][Performs arithmetic modulo 2[super MaxBits].]]
 [[Constructing an integer from a value that can not be represented in the target type][Throws a `std::range_error`.]
 [Converts the value modulo 2[super MaxBits], signed to unsigned conversions extract the last MaxBits bits of the
 2's complement representation of the input value.]]
-[[Unsigned subtraction yielding a negative value.][Throws a `std::range_error`.][Yields the value that would
+[[Unsigned subtraction yielding a negative value][Throws a `std::range_error`.][Yields the value that would
 result from treating the unsigned type as a 2's complement signed type.]]
-[[Attempting a bitwise operation on a negative value.][Throws a `std::range_error`][Yields the value, but not the bit pattern,
+[[Attempting a bitwise operation on a negative value][Throws a `std::range_error`][Yields the value, but not the bit pattern,
 that would result from performing the operation on a 2's complement integer type.]]
 ]
 
@@ -150,7 +150,7 @@ this includes the "checked" variants.  Small signed types will always have an ex
 * When used at fixed precision and MaxBits is smaller than the number of bits in the largest native integer type, then
 internally `cpp_int_backend` switches to a "trivial" implementation where it is just a thin wrapper around a single
 integer.  Note that it will still be slightly slower than a bare native integer, as it emulates a
-signed-magnitude representation rather than simply using the platforms native sign representation: this ensures
+signed-magnitude representation rather than simply using the platform's native sign representation: this ensures
 there is no step change in behavior as a cpp_int grows in size.
 * Fixed precision `cpp_int`'s have some support for `constexpr` values and user-defined literals, see
 [link boost_multiprecision.tut.lits here] for the full description.  For example `0xfffff_cppi1024`

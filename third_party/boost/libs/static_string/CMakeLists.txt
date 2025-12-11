@@ -7,7 +7,7 @@
 # Official repository: https://github.com/boostorg/static_string
 #
 
-cmake_minimum_required(VERSION 3.5...3.16)
+cmake_minimum_required(VERSION 3.8...3.16)
 
 project(boost_static_string VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
@@ -45,7 +45,7 @@ if (BOOST_STATIC_STRING_FIND_PACKAGE_BOOST)
     find_package(Boost 1.78.0 REQUIRED COMPONENTS container)
 elseif (BOOST_STATIC_STRING_IS_ROOT)
     set(BOOST_STATIC_STRING_UNIT_TEST_LIBRARIES core)
-    set(BOOST_INCLUDE_LIBRARIES static_string assert container_hash static_assert throw_exception utility ${BOOST_STATIC_STRING_UNIT_TEST_LIBRARIES})
+    set(BOOST_INCLUDE_LIBRARIES static_string assert container_hash throw_exception utility ${BOOST_STATIC_STRING_UNIT_TEST_LIBRARIES})
     set(BOOST_EXCLUDE_LIBRARIES static_string)
     set(CMAKE_FOLDER Dependencies)
     add_subdirectory(../.. Dependencies/boost EXCLUDE_FROM_ALL)
@@ -90,7 +90,6 @@ else ()
             Boost::assert
             Boost::container_hash
             Boost::core
-            Boost::static_assert
             Boost::throw_exception
             Boost::utility
             )

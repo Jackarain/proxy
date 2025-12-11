@@ -63,7 +63,7 @@ is completely opaque, the suggestion would be to use an allocator with `char` `v
 The next template parameters determine the type and range of the exponent: parameter `Exponent` can be
 any signed integer type, but note that `MinExponent` and `MaxExponent` can not go right up to the limits
 of the `Exponent` type as there has to be a little extra headroom for internal calculations.  You will
-get a compile time error if this is the case.  In addition if MinExponent or MaxExponent are zero, then
+get a compile time error if this is the case.  In addition if MinExponent or MaxExponent is zero, then
 the library will choose suitable values that are as large as possible given the constraints of the type
 and need for extra headroom for internal calculations.
 
@@ -75,13 +75,13 @@ There is full standard library support available for this type, comparable with 
 
 Things you should know when using this type:
 
-* Default constructed `cpp_complex`s have a value of zero.
+* Default constructed `cpp_complex`es have a value of zero.
 * The radix of this type is 2, even when the precision is specified as decimal digits.
 * The type supports both infinities and NaNs.  An infinity is generated whenever the result would overflow,
 and a NaN is generated for any mathematically undefined operation.
 * There is no `std::numeric_limits` specialisation for this type: this is the same behaviour as `std::complex`.  If you need
 `std::numeric_limits` support you need to look at `std::numeric_limits<my_complex_number_type::value_type>`.
-* Any `number` instantiated on this type, is convertible to any other `number` instantiated on this type -
+* Any `number` instantiated on this type is convertible to any other `number` instantiated on this type -
 for example you can convert from `number<cpp_complex<50> >` to `number<cpp_bin_float<SomeOtherValue> >`.
 Narrowing conversions round to nearest and are `explicit`.
 * Conversion from a string results in a `std::runtime_error` being thrown if the string can not be interpreted

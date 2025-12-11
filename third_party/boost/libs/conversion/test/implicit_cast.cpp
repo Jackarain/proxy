@@ -4,8 +4,9 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/implicit_cast.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/type.hpp>
+
 using boost::implicit_cast;
 using boost::type;
 

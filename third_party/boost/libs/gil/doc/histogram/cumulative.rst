@@ -8,7 +8,7 @@ Overview
 
 A cumulative histogram is a histogram in which each bin stores the count / frequency of itself
 as well as all the bins with keys 'smaller' than the particular bin.
-As such, a notion of ordering among its keys should be existant in the histogram.
+As such, a notion of ordering among its keys should be existent in the histogram.
 
 The GIL histogram class has the ability to convert itself into its cumulative version. 
 

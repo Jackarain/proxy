@@ -184,7 +184,7 @@ struct process_io_binding
   process_io_binding & operator=(const process_io_binding &) = delete;
 
   process_io_binding(process_io_binding && other) noexcept
-          : fd(other.fd), fd_needs_closing(other.fd), ec(other.ec)
+          : fd(other.fd), fd_needs_closing(other.fd_needs_closing), ec(other.ec)
   {
     other.fd = target;
     other.fd_needs_closing = false;

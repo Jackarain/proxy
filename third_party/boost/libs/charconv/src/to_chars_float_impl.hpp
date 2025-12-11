@@ -680,6 +680,7 @@ to_chars_result to_chars_float_impl(char* first, char* last, Real value, chars_f
 
     auto abs_value = std::abs(value);
     constexpr auto max_fractional_value = std::is_same<Real, double>::value ? static_cast<Real>(1e16) : static_cast<Real>(1e7);
+    constexpr auto min_fractional_value = static_cast<Real>(1) / static_cast<Real>(100000); // 1e-1 takes more characters than 0.1
     constexpr auto max_value = static_cast<Real>((std::numeric_limits<Unsigned_Integer>::max)());
 
     // Unspecified precision so we always go with the shortest representation
@@ -687,7 +688,7 @@ to_chars_result to_chars_float_impl(char* first, char* last, Real value, chars_f
     {
         if (fmt == boost::charconv::chars_format::general)
         {
-            if (abs_value >= 1 && abs_value < max_fractional_value)
+            if (abs_value > min_fractional_value && abs_value < max_fractional_value)
             {
                 return to_chars_fixed_impl(first, last, value, fmt, precision);
             }

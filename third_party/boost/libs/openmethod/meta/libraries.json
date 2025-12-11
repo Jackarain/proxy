@@ -1,0 +1,15 @@
+{
+    "key": "openmethod",
+    "name": "OpenMethod",
+    "authors": [
+        "Jean-Louis Leroy"
+    ],
+    "maintainers": [
+        "Jean-Louis Leroy"
+    ],
+    "description": "Open-methods for C++17 and above.",
+    "category": [
+        "Emulation", "Programming"
+    ],
+    "cxxstd": "17"
+}

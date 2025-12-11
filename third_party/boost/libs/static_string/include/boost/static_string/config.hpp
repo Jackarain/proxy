@@ -139,18 +139,12 @@
 #ifndef BOOST_STATIC_STRING_THROW
 #define BOOST_STATIC_STRING_THROW(ex) BOOST_THROW_EXCEPTION(ex)
 #endif
-#ifndef BOOST_STATIC_STRING_STATIC_ASSERT
-#define BOOST_STATIC_STRING_STATIC_ASSERT(cond, msg) BOOST_STATIC_ASSERT_MSG(cond, msg)
-#endif
 #ifndef BOOST_STATIC_STRING_ASSERT
 #define BOOST_STATIC_STRING_ASSERT(cond) BOOST_ASSERT(cond)
 #endif
 #else
 #ifndef BOOST_STATIC_STRING_THROW
 #define BOOST_STATIC_STRING_THROW(ex) throw ex
-#endif
-#ifndef BOOST_STATIC_STRING_STATIC_ASSERT
-#define BOOST_STATIC_STRING_STATIC_ASSERT(cond, msg) static_assert(cond, msg)
 #endif
 #ifndef BOOST_STATIC_STRING_ASSERT
 #define BOOST_STATIC_STRING_ASSERT(cond) assert(cond)
@@ -161,7 +155,6 @@
 #include <boost/config.hpp>
 #include <boost/assert.hpp>
 #include <boost/container_hash/hash.hpp>
-#include <boost/static_assert.hpp>
 #include <boost/utility/string_view.hpp>
 #include <boost/core/detail/string_view.hpp>
 #include <boost/throw_exception.hpp>
@@ -175,27 +168,31 @@
 #include <cassert>
 #include <stdexcept>
 
+#if defined(__has_include)
+#  if !__has_include(<string_view>)
+#    define BOOST_STATIC_STRING_NO_CXX17_HDR_STRING_VIEW
+#  endif
 /*
  * Replicate the logic from Boost.Config
  */
 // GNU libstdc++3:
-#if defined(__GLIBCPP__) || defined(__GLIBCXX__)
-#if (BOOST_LIBSTDCXX_VERSION < 70100) || (__cplusplus <= 201402L)
-#  define BOOST_STATIC_STRING_NO_CXX17_HDR_STRING_VIEW
-#endif
+#elif defined(__GLIBCPP__) || defined(__GLIBCXX__)
+#  if ((__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) < 70100) || (__cplusplus <= 201402L)
+#    define BOOST_STATIC_STRING_NO_CXX17_HDR_STRING_VIEW
+#  endif
 // libc++:
 #elif defined(_LIBCPP_VERSION)
-#if (_LIBCPP_VERSION < 4000) || (__cplusplus <= 201402L)
-#  define BOOST_STATIC_STRING_NO_CXX17_HDR_STRING_VIEW
-#endif
+#  if (_LIBCPP_VERSION < 4000) || (__cplusplus <= 201402L)
+#    define BOOST_STATIC_STRING_NO_CXX17_HDR_STRING_VIEW
+#  endif
 // MSVC uses logic from catch all for BOOST_NO_CXX17_HDR_STRING_VIEW
 // catch all:
 #elif !defined(_YVALS) && !defined(_CPPLIB_VER)
-#if (!defined(__has_include) || (__cplusplus < 201700))
-#  define BOOST_STATIC_STRING_NO_CXX17_HDR_STRING_VIEW
-#elif !__has_include(<string_view>)
-#  define BOOST_STATIC_STRING_NO_CXX17_HDR_STRING_VIEW
-#endif
+#  if (!defined(__has_include) || (__cplusplus < 201700))
+#    define BOOST_STATIC_STRING_NO_CXX17_HDR_STRING_VIEW
+#  elif !__has_include(<string_view>)
+#    define BOOST_STATIC_STRING_NO_CXX17_HDR_STRING_VIEW
+#  endif
 #endif
 
 #if !defined(BOOST_STATIC_STRING_NO_CXX17_HDR_STRING_VIEW) || \
@@ -276,6 +273,10 @@ using basic_string_view =
 #endif
 } // static_strings
 } // boost
+#endif
+
+#if defined(__cpp_lib_to_string) && __cpp_lib_to_string >= 202306L // std::to_[w]string() redefined in terms of std::format()
+#define BOOST_STATIC_STRING_USE_STD_FORMAT
 #endif
 
 #endif

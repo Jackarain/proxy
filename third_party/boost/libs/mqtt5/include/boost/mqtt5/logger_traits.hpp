@@ -97,6 +97,15 @@ using at_disconnect_sig = decltype(
 template <typename T>
 constexpr bool has_at_disconnect = boost::is_detected<at_disconnect_sig, T>::value;
 
+// at_transport_error
+
+template <typename T>
+using at_transport_error = decltype(
+    std::declval<T&>().at_transport_error(std::declval<error_code>())
+);
+template <typename T>
+constexpr bool has_at_transport_error = boost::is_detected<at_transport_error, T>::value;
+
 } // end namespace boost::mqtt5
 
 

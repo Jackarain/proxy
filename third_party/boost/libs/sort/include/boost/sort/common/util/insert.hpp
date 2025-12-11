@@ -13,8 +13,6 @@
 #ifndef __BOOST_SORT_COMMON_UTIL_INSERT_HPP
 #define __BOOST_SORT_COMMON_UTIL_INSERT_HPP
 
-
-#include <ciso646>
 #include <cstdlib>
 #include <functional>
 #include <iterator>

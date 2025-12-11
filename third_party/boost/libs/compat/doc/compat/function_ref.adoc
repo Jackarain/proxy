@@ -18,6 +18,8 @@ The header `<boost/compat/function_ref.hpp>` implements the {cpp}26 class
 `function_ref` supports every combination of `const` and `noexcept` and is useful for writing higher-order functions as
 it can avoid a template parameter or an allocation (as `std::function` is known for).
 
+Since `nontype_t` requires {cpp}17 as it has a template parameter of type `auto`, the constructors taking `nontype_t<f>` are only available under {cpp}17 or later.
+
 ## Example
 
 ```cpp
@@ -48,19 +50,22 @@ struct function_ref;
 // cv is either `const` or empty
 // noex is either `true` or `false`
 template<class R, class... ArgTypes>
-class function_ref<R(ArgTypes...) cv noexcept(noex)> {
+class function_ref<R(ArgTypes...) cv noexcept(noex)>
+{
 public:
-  template<class F> function_ref(F*) noexcept;
-  template<class F> function_ref(F&&) noexcept;
-  template<auto f> function_ref(nontype_t<f>) noexcept;
-  template<auto f, class U> function_ref(nontype_t<f>, U&&) noexcept;
-  template<auto f, class T> function_ref(nontype_t<f>, cv T*) noexcept;
 
-  function_ref(const function_ref&) noexcept = default;
-  function_ref& operator=(const function_ref&) noexcept = default;
-  template<class T> function_ref& operator=(T) = delete;
+    template<class F> function_ref(F*) noexcept;
+    template<class F> function_ref(F&&) noexcept;
 
-  R operator()(ArgTypes...) const noexcept(noex);
+    template<auto f> function_ref(nontype_t<f>) noexcept;
+    template<auto f, class U> function_ref(nontype_t<f>, U&&) noexcept;
+    template<auto f, class T> function_ref(nontype_t<f>, cv T*) noexcept;
+
+    function_ref(const function_ref&) noexcept = default;
+    function_ref& operator=(const function_ref&) noexcept = default;
+    template<class T> function_ref& operator=(T) = delete;
+
+    R operator()(ArgTypes...) const noexcept(noex);
 };
 
 } // namespace compat
@@ -93,7 +98,7 @@ template<class F> function_ref(F&& fn) noexcept;
 Effects:;; Constructs a `function_ref` that stores the address of the supplied Callable object `fn`. This overload only
 participates in resolution when `fn` is not a pointer-to-member or pointer-to-member-function. +
 +
-Calling the `function_ref` is expression-equivalent to: + `invoke_r<R>(static_cast<cv T&>(f), call-args...)`.
+Calling the `function_ref` is expression-equivalent to `invoke_r<R>(static_cast<cv T&>(f), call-args...)`.
 
 ### Pointer to Member Function Constructor
 
@@ -105,7 +110,7 @@ template<auto f> function_ref(nontype_t<f>) noexcept;
 Effects:;; Constructs a `function_ref` using the supplied pointer to member function. This overload only participates
 in resolution when `f` is a pointer to member or pointer to member function. +
 +
-Calling the `function_ref` is express-equivalent to: `invoke_r<R>(f, class-args)`.
+Calling the `function_ref` is expression-equivalent to `invoke_r<R>(f, call-args)`.
 Example:;;
 +
 --
@@ -113,7 +118,7 @@ Example:;;
 struct point { int x = 1, y = 2; };
 
 point p;
-compat::function_ref<int(point const&)> f(compat::nontype_t<&point::x>{});
+compat::function_ref<int(point const&)> f(compat::nontype<&point::x>);
 
 BOOST_TEST_EQ(f(p), 1);
 ```
@@ -137,7 +142,7 @@ Example:;;
 struct point { int x = 1, y = 2; };
 
 point p;
-compat::function_ref<int()> f(compat::nontype_t<&point::x>{}, p);
+compat::function_ref<int()> f(compat::nontype<&point::x>, p);
 
 BOOST_TEST_EQ(f(), 1);
 ```
@@ -159,7 +164,7 @@ Example:;;
 struct point { int x = 1, y = 2; };
 
 point p;
-compat::function_ref<int()> f(compat::nontype_t<&point::x>{}, &p);
+compat::function_ref<int()> f(compat::nontype<&point::x>, &p);
 
 BOOST_TEST_EQ(f(), 1);
 ```

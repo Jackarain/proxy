@@ -52,12 +52,12 @@ void print_factorials()
       factorial *= i;
    }
    //
-   // Lets see how many digits the largest factorial was:
+   // Let's see how many digits the largest factorial was:
    unsigned digits = results.back().str().size();
    //
    // Now print them out, using right justification, while we're at it
    // we'll indicate the limit of each integer type, so begin by defining
-   // the limits for 16, 32, 64 etc bit integers:
+   // the limits for 16, 32, 64 etc. bit integers:
    cpp_int limits[] = {
       (cpp_int(1) << 16) - 1,
       (cpp_int(1) << 32) - 1,

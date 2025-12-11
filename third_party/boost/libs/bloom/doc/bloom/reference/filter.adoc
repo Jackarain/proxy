@@ -42,18 +42,22 @@ class filter
 {
 public:
   // types and constants
-  using value_type                         = T;
-  static constexpr std::size_t k           = K;
-  using subfilter                          = Subfilter;
-  static constexpr std::size_t xref:filter_stride[stride]      = xref:filter_stride[__see below__];
-  using hasher                             = Hash;
-  using allocator_type                     = Allocator;
-  using size_type                          = std::size_t;
-  using difference_type                    = std::ptrdiff_t;
-  using reference                          = value_type&;
-  using const_reference                    = const value_type&;
-  using pointer                            = value_type*;
-  using const_pointer                      = const value_type*;
+  using value_type                    = T;
+  static constexpr std::size_t k      = K;
+  using subfilter                     = Subfilter;
+  static constexpr std::size_t xref:filter_stride[stride] = xref:filter_stride[__see below__];
+  using hasher                        = Hash;
+  using allocator_type                = Allocator;
+  using size_type                     = std::size_t;
+  using difference_type               = std::ptrdiff_t;
+  using reference                     = value_type&;
+  using const_reference               = const value_type&;
+  using pointer                       = value_type*;
+  using const_pointer                 = const value_type*;
+  static constexpr std::size_t
+    xref:filter_bulk_insert_size[bulk_insert_size]                  = __implementation-defined__;
+  static constexpr std::size_t 
+    xref:filter_bulk_may_contain_size[bulk_may_contain_size]             = __implementation-defined__;
 
   // construct/copy/destroy
   xref:#filter_default_constructor[filter]();
@@ -145,6 +149,8 @@ public:
   bool xref:#filter_may_contain[may_contain](const value_type& x) const;
   template<typename U>
     bool xref:#filter_may_contain[may_contain](const U& x) const;
+  template<typename ForwardIterator, typename F>
+    void xref:#filter_bulk_may_contain[may_contain](ForwardIterator first, ForwardIterator last, F f) const;
 };
 
 } // namespace bloom
@@ -219,6 +225,24 @@ static constexpr std::size_t stride;
 Equal to `Stride` if that parameter was specified as distinct from zero.
 Otherwise, equal to `xref:subfilters_used_value_size[_used-value-size_]<subfilter>`.
 
+[[filter_bulk_insert_size]]
+[listing,subs="+macros,+quotes"]
+----
+static constexpr std::size_t bulk_insert_size;
+----
+
+Chunk size internally used in xref:filter_insert_iterator_range[bulk insert]
+operations.
+
+[[filter_bulk_may_contain_size]]
+[listing,subs="+macros,+quotes"]
+----
+static constexpr std::size_t bulk_may_contain_size;
+----
+
+Chunk size internally used in xref:filter_bulk_may_contain[bulk `may_contain`]
+operations.
+
 === Constructors
 
 ==== Default Constructor
@@ -268,10 +292,11 @@ template<typename InputIterator>
 ----
 
 Constructs a filter using copies of `h` and `al` as the hash function and allocator, respectively,
-and inserts the values from `[first, last)` into it.
+and calls `xref:#filter_insert_iterator_range[insert](first, last)`.
 
 [horizontal]
-Preconditions:;; `InputIterator` is a https://en.cppreference.com/w/cpp/named_req/InputIterator[LegacyInputIterator^] referring to `value_type`. +
+Preconditions:;; `InputIterator` is a https://en.cppreference.com/w/cpp/named_req/InputIterator[LegacyInputIterator^]
+dereferencing to a value xref:#filter_insert[insertable] in the filter. +
 `[first, last)` is a valid range. +
 `fpr` is between 0.0 and 1.0.
 Postconditions:;; `capacity() == 0` if `m == 0`, `capacity() >= m` otherwise (first overload). +
@@ -297,7 +322,7 @@ Postconditions:;; `*this == x`.
 filter(filter&& x);
 ----
 
-Constructs a filter tranferring `x`++'++s internal array to `*this` and using
+Constructs a filter transferring `x`++'++s internal array to `*this` and using
 a hash function and allocator move-constructed from `x`++'++s hash function
 and allocator, respectively.
 
@@ -355,7 +380,7 @@ Postconditions:;; `*this == x`.
 filter(filter&& x, const allocator_type& al);
 ----
 
-Constructs a filter tranferring `x`++'++s internal array to `*this` if
+Constructs a filter transferring `x`++'++s internal array to `*this` if
 `al == x.get_allocator()`, or using a copy of the array otherwise.
 The hash function of the new filter is move-constructed from `x`++'++s
 hash function and the allocator is a copy of `al`.
@@ -562,8 +587,16 @@ template<typename InputIterator>
 
 Equivalent to `while(first != last) xref:#filter_insert[insert](*first++)`.
 
+If `InputIterator` is a https://en.cppreference.com/w/cpp/named_req/ForwardIterator[LegacyForwardIterator^]
+({cpp}11 to {cpp}17) or satisfies https://en.cppreference.com/w/cpp/iterator/forward_iterator.html[`std::forward_iterator`^]
+({cpp}20 and later), the range `[first, last)` is processed in chunks
+of size xref:filter_bulk_insert_size[bulk_insert_size] using internal
+streamlining techniques to increase performance with respect to
+elementwise insertion.
+
 [horizontal]
-Preconditions:;; `InputIterator` is a https://en.cppreference.com/w/cpp/named_req/InputIterator[LegacyInputIterator^] referring to `value_type`. +
+Preconditions:;; `InputIterator` is a https://en.cppreference.com/w/cpp/named_req/InputIterator[LegacyInputIterator^] 
+dereferencing to a value xref:#filter_insert[insertable] in the filter. +
 `[first, last)` is a valid range.
 
 ==== Insert Initializer List
@@ -690,6 +723,28 @@ Returns:;; `true` iff all the bits selected by a hypothetical
 `xref:filter_insert[insert](x)` operation are set to one.
 Notes:;; The second overload only participates in overload resolution if
 `hasher::is_transparent` is a valid member typedef.
+
+==== Bulk may_contain
+
+[listing,subs="+macros,+quotes"]
+----
+template<typename ForwardIterator, typename F>
+  void may_contain(ForwardIterator first, ForwardIterator last, F f) const;
+----
+
+Equivalent to `for( ; first != last; ++first) f(*first, xref:may_contain[may_contain](*first))`.
+
+The range `[first, last)` is processed in chunks
+of size xref:filter_bulk_may_contain_size[bulk_may_contain_size] using internal
+streamlining techniques to increase performance with respect to
+elementwise lookup.
+
+[horizontal]
+Preconditions:;; `ForwardIterator` is a https://en.cppreference.com/w/cpp/named_req/ForwardIterator[LegacyForwardIterator^]
+({cpp}11 to {cpp}17) or satisfies https://en.cppreference.com/w/cpp/iterator/forward_iterator.html[`std::forward_iterator`^]
+({cpp}20 and later). +
+`ForwardIterator` dereferences to a value acceptable by elementwise xref:#filter_may_contain[`may_contain`]. +
+`[first, last)` is a valid range.
 
 === Comparison
 

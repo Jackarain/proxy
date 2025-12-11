@@ -1,4 +1,4 @@
-# Copyright 2018-2023 Peter Dimov
+# Copyright 2018-2025 Peter Dimov
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
 
@@ -214,7 +214,17 @@ function(boost_test)
 
   elseif(__TYPE STREQUAL "link-fail")
 
-    add_library(compile-${__NAME} OBJECT EXCLUDE_FROM_ALL ${BOOST_TEST_SOURCES})
+    if(CMAKE_VERSION VERSION_LESS 3.12)
+
+      # OBJECT libraries can't link to anything before CMake 3.12
+      add_library(compile-${__NAME} STATIC EXCLUDE_FROM_ALL ${BOOST_TEST_SOURCES})
+
+    else()
+
+      add_library(compile-${__NAME} OBJECT EXCLUDE_FROM_ALL ${BOOST_TEST_SOURCES})
+
+    endif()
+
     target_link_libraries(compile-${__NAME} ${BOOST_TEST_LINK_LIBRARIES})
     target_compile_definitions(compile-${__NAME} PRIVATE ${BOOST_TEST_COMPILE_DEFINITIONS})
     target_compile_options(compile-${__NAME} PRIVATE ${BOOST_TEST_COMPILE_OPTIONS})
@@ -227,7 +237,16 @@ function(boost_test)
       add_dependencies(tests-quick compile-${__NAME})
     endif()
 
-    add_executable(${__NAME} EXCLUDE_FROM_ALL $<TARGET_OBJECTS:compile-${__NAME}>)
+    if(CMAKE_VERSION VERSION_LESS 3.12)
+
+      add_executable(${__NAME} EXCLUDE_FROM_ALL ${BOOST_TEST_SOURCES})
+
+    else()
+
+      add_executable(${__NAME} EXCLUDE_FROM_ALL $<TARGET_OBJECTS:compile-${__NAME}>)
+
+    endif()
+
     target_link_libraries(${__NAME} ${BOOST_TEST_LINK_LIBRARIES})
     target_compile_definitions(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_DEFINITIONS})
     target_compile_options(${__NAME} PRIVATE ${BOOST_TEST_COMPILE_OPTIONS})

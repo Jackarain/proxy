@@ -140,7 +140,7 @@ bool sample(bilinear_sampler, SrcView const& src, point<F> const& p, DstP& resul
 		}
         else if (p0.y+1<src.height())
         {
-			// most common case - inside the image, not on the frist nor last row/column
+			// most common case - inside the image, not on the first nor last row/column
 			detail::add_dst_mul_src<SrcP,F,pixel<F,devicen_layout_t<num_channels<SrcView>::value> > >()(*loc,      (1-frac.x)*(1-frac.y),mp);
 			detail::add_dst_mul_src<SrcP,F,pixel<F,devicen_layout_t<num_channels<SrcView>::value> > >()(loc.x()[1],   frac.x *(1-frac.y),mp);
 			++loc.y();

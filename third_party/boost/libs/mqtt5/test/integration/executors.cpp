@@ -89,7 +89,7 @@ void run_test(
         .expect(pubrel)
             .complete_with(success, after(0ms))
             .reply_with(pubcomp, after(0ms))
-        .send(publish_0, after(50ms))
+        .send(publish_0, after(30ms))
         .expect(unsubscribe)
             .complete_with(success, after(0ms))
             .reply_with(unsuback, after(0ms))

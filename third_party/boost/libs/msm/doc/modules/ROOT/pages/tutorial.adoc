@@ -1,0 +1,25 @@
+[[tutorial]]
+
+= Tutorial
+
+MSM is divided between front-ends and back-ends. At the moment, there is
+just one back-end. On the front-end side, you will find three of them
+which are as many state machine description languages, with many more
+possible. For potential language writers, this document contains a
+link:#internals-front-back-interface[description of the interface
+between front-end and back-end].
+
+The first front-end is an adaptation of the example provided in the
+http://boostpro.com/mplbook[MPL book] with actions defined as pointers
+to state or state machine methods. The second one is based on functors.
+The third, eUML (embedded UML) is an experimental language based on
+Boost.Proto and Boost.Typeof and hiding most of the metaprogramming to
+increase readability. Both eUML and the functor front-end also offer a
+functional library (a bit like Boost.Phoenix) for use as action language
+(UML defining none).
+
+// * xref:tutorial/basic-front-end.adoc[Basic front-end]
+// * xref:tutorial/functor-front-end.adoc[Functor front-end]
+// * xref:tutorial/puml-front-end.adoc[PUML front-end (C++20, experimental)]
+// * xref:tutorial/euml-front-end.adoc[eUML front-end (deprecated)]
+// * xref:tutorial/back-end.adoc[Back-end]

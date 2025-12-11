@@ -45,14 +45,15 @@ struct fast_multiblock32:detail::multiblock_fpr_base<K>
 
   static BOOST_FORCEINLINE bool check(const value_type& x,std::uint64_t hash)
   {
+    bool res=true;
     for(std::size_t i=0;i<k/8;++i){
-      if(!check_m256i(x[i],hash,8))return false;
+      res&=check_m256i(x[i],hash,8);
       hash=detail::mulx64(hash);
     }
     if(k%8){
-      if(!check_m256i(x[k/8],hash,k%8))return false;
+      res&=check_m256i(x[k/8],hash,k%8);
     }
-    return true;
+    return res;
   }
 
 private:

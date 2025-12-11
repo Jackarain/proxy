@@ -1,0 +1,64 @@
+
+## extern_vptr
+
+### Synopsis
+
+Defined in <boost/openmethod/policies/basic_policy.hpp>.
+
+```c++
+namespace boost::openmethod::policies {
+
+struct extern_vptr : policy {};
+
+}
+```
+
+### Description
+
+`extern_vptr` is a policy that stores and returns pointers to v-tables for
+registered classes.
+
+### Requirements
+
+#### register_vptrs
+
+```c++
+template<typename ForwardIterator>
+auto register_vptrs(ForwardIterator first, ForwardIterator last) -> void;
+```
+
+`ForwardIterator` is a forward iterator over a range of objects that contain
+information about the type ids and the vptr of a registered class. They have the
+following member functions:
+
+```c++
+auto type_id_begin() const -> type_id_forward_iterator;
+auto type_id_end() const -> type_id_forward_iterator;
+auto vptr() const -> const vptr_type&;
+```
+
+`type_id_begin` and `type_id_end` return iterators delimiting a range of
+`type_id`s for a class.
+
+`vptr` returns a _reference_ to a _static_ variable containing a pointer to the
+v-table for a the class. Its value is set by `initialize`. While the value of
+the variable changes with each call to `initialize`, the variable itself remains
+the same.
+
+## indirect_vptr
+
+### Synopsis
+
+```c++
+struct indirect_vptr : policy {};
+```
+
+### Description
+
+`indirect_vptr` is a policy that makes `virtual_ptr`{empty}s and `inplace_vptr` use
+pointers to pointers to v-tables, instead of straight pointers. As a
+consequence, they remain valid after a call to `initialize`.
+
+### Requirements
+
+None. The policy is its own implementation.

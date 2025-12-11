@@ -36,9 +36,6 @@ target_link_libraries( boost_any
 
 add_library( Boost::any ALIAS boost_any )
 
-enable_testing()
-if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
-
-  add_subdirectory(test)
-
+if(BUILD_TESTING)
+    add_subdirectory(test)
 endif()

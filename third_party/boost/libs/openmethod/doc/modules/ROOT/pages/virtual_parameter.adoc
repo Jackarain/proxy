@@ -1,0 +1,5 @@
+[#virtual_parameter]
+= xref:virtual_parameter.adoc[Macros]
+
+A virtual parameter is a parameter of an open-method that is either a @ref
+virtual_ptr, or is decorated with @ref virtual_

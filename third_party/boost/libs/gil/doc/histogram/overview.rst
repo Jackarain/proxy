@@ -9,7 +9,7 @@ Description
 -----------
 
 The histogram class is built on top of std::unordered_map to keep it compatible with other
-STL algorithms. It can support any number of axes (known at compile time i.e. during class
+STL algorithms. It can support any number of axes (known at compile time, i.e. during class
 instantiation). Suitable conversion routines from GIL image constructs to the histogram bin 
 key are shipped with the class itself.
 

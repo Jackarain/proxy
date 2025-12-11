@@ -280,8 +280,8 @@
   --main-container: 90rem;
 
   /* New Look Typography */
-  --font-family-body: "Noto Sans";
-  --font-family-code: "Noto Sans Mono";
+  --font-family-body: "Noto Sans", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --font-family-code: "Noto Sans Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-size-3xs: 0.625rem;
   --font-size-2xs: 0.75rem;
   --font-size-xs: 0.875rem;
@@ -726,10 +726,15 @@ html:has(.boostlook) {
   /* Variable font weight range */
   font-variation-settings: "wght" 400, "wdth" 62.5;
   font-display: block;
-  /* Prevents FOIT */
-  src: url("/static/font/notosans.woff2") format("woff2"),
+  src: url("../font/NotoSansDisplay.ttf") format("truetype"),
+  url("/static/font/notosans.woff2") format("woff2"),
   url("../../../../tools/boostlook/notosans.woff2") format("woff2"),
   url("https://cppalliance.org/fonts/NotoSansDisplay.ttf") format("truetype");
+  /* Metric overrides to reduce CLS on swap */
+  size-adjust: 100%;
+  ascent-override: 92%;
+  descent-override: 22%;
+  line-gap-override: 0%;
 }
 
 /* Noto Sans Display - Italic */
@@ -741,10 +746,15 @@ html:has(.boostlook) {
   /* Variable font weight range */
   font-variation-settings: "wght" 400, "wdth" 62.5;
   font-display: block;
-  /* Prevents FOIT */
-  src: url("/static/font/notosans_mono_ext.woff") format("woff"),
-  url("../../../../tools/boostlook/notosans_mono_ext.woff") format("woff"),
-  url("https://cppalliance.org/fonts/NotoSansMono.ttf") format("truetype");
+  src: url("../font/NotoSansDisplay-Italic.ttf") format("truetype"),
+  url("/static/font/notosans_ext.woff2") format("woff2"),
+  url("../../../../tools/boostlook/notosans_ext.woff2") format("woff2"),
+  url("https://cppalliance.org/fonts/NotoSansDisplay-Italic.ttf") format("truetype");
+  /* Metric overrides to reduce CLS on swap */
+  size-adjust: 100%;
+  ascent-override: 92%;
+  descent-override: 22%;
+  line-gap-override: 0%;
 }
 
 /* Noto Sans Mono - Variable Weight */
@@ -756,10 +766,15 @@ html:has(.boostlook) {
   /* Variable font weight range */
   font-variation-settings: "wght" 400, "wdth" 62.5;
   font-display: block;
-  /* Prevents FOIT */
-  src: url("/static/font/notosans_mono.woff") format("woff"),
+  src: url("../font/NotoSansMono.ttf") format("truetype"),
+  url("/static/font/notosans_mono.woff") format("woff"),
   url("../../../../tools/boostlook/notosans_mono.woff") format("woff"),
   url("https://cppalliance.org/fonts/NotoSansMono.ttf") format("truetype");
+  /* Metric overrides to reduce CLS on swap */
+  size-adjust: 100%;
+  ascent-override: 92%;
+  descent-override: 22%;
+  line-gap-override: 0%;
 }
 
 /* Noto Sans Mono - Fixed Weight */
@@ -770,10 +785,15 @@ html:has(.boostlook) {
   /* Fixed weight for specific use cases */
   font-stretch: 62.5% 100%;
   font-display: block;
-  /* Prevents FOIT */
-  src: url("/static/font/notosans_mono.woff") format("woff"),
+  src: url("../font/NotoSansMono.ttf") format("truetype"),
+  url("/static/font/notosans_mono.woff") format("woff"),
   url("../../../../tools/boostlook/notosans_mono.woff") format("woff"),
   url("https://cppalliance.org/fonts/NotoSansMono.ttf") format("truetype");
+  /* Metric overrides to reduce CLS on swap */
+  size-adjust: 100%;
+  ascent-override: 92%;
+  descent-override: 22%;
+  line-gap-override: 0%;
 }
 
 /*----------------- Font-Face Declarations end -----------------*/
@@ -1258,12 +1278,6 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #conte
   cursor: pointer;
 }
 
-/* Link States */
-.boostlook p a:visited:not(:hover),
-.boostlook table a:visited:not(:hover) {
-  color: var(--text-main-text-body-tetriary, #62676b);
-}
-
 /* Emphasis within code */
 .boostlook em,
 .boostlook code em {
@@ -1344,8 +1358,10 @@ html.dark .boostlook pre.rouge,
 html.dark .boostlook .doc .content pre,
 html.dark .boostlook .doc pre.highlight,
 html.dark .boostlook .doc .listingblock pre:not(.highlight),
-html.dark .boostlook .doc .literalblock pre {
-  background: var(--atom-one-dark-bg, #282c34);
+html.dark .boostlook .doc .literalblock pre,
+html.dark .boostlook#libraryReadMe > pre:not(:last-child),
+html.dark .boostlook#libraryReadMe div.highlight:has(> pre):not(:is(dd pre, td pre)) {
+  background: var(--atom-one-dark-bg, #282c34) !important;
 }
 
 .boostlook .doc pre {

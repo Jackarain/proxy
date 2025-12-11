@@ -45,7 +45,7 @@ def main(ctx):
   linux_cxx("clang++-10 03,11,14,17,20", "clang++-10", packages="clang-10", llvm_os="xenial", llvm_ver="10", buildtype="boost", image="cppalliance/droneubuntu1804:1", environment={'TOOLSET': 'clang', 'COMPILER': 'clang++-10', 'CXXSTD': '03,11,14,17,20', }, globalenv=globalenv),
   linux_cxx("clang++-11 03,11,14,17,20", "clang++-11", packages="clang-11", llvm_os="focal", llvm_ver="11", buildtype="boost", image="cppalliance/droneubuntu2004:1", environment={'TOOLSET': 'clang', 'COMPILER': 'clang++-11', 'CXXSTD': '03,11,14,17,20', }, globalenv=globalenv),
   linux_cxx("clang++-12 03,11,14,17,20", "clang++-12", packages="clang-12", llvm_os="focal", llvm_ver="12", buildtype="boost", image="cppalliance/droneubuntu2004:1", environment={'TOOLSET': 'clang', 'COMPILER': 'clang++-12', 'CXXSTD': '03,11,14,17,20', }, globalenv=globalenv),
-  linux_cxx("Ubuntu g++-13", packages="g++-13", buildtype="boost", image="cppalliance/droneubuntu2304:1", environment={'TOOLSET': 'gcc', 'COMPILER': 'g++-13', 'CXXSTD': '14,17,20,23', }, globalenv=globalenv),
+  linux_cxx("Ubuntu g++-13", packages="g++-13", buildtype="boost", image="cppalliance/droneubuntu2404:1", environment={'TOOLSET': 'gcc', 'COMPILER': 'g++-13', 'CXXSTD': '14,17,20,23', }, globalenv=globalenv),
   osx_cxx("XCode-11.7 03,11,17,2a", "clang++", packages="", buildtype="boost", xcode_version="11.7", environment={'TOOLSET': 'clang', 'COMPILER': 'clang++', 'CXXSTD': '03,11,14,17,2a', }, globalenv=globalenv),
   osx_cxx("XCode-10.2 03,11,17,2a", "clang++", packages="", buildtype="boost", xcode_version="10.2", environment={'TOOLSET': 'clang', 'COMPILER': 'clang++', 'CXXSTD': '03,11,14,17,2a', }, globalenv=globalenv),
   ]

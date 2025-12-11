@@ -18,10 +18,6 @@ jobs:
         compiler_version: [g++-10, g++-11]
         cxx_std: [17, 20]
         os: [ubuntu-22.04]
-        include:
-          - compiler_version: g++-9
-            cxx_std: 17
-            os: ubuntu-20.04
 
     runs-on: ${{ matrix.os }}
 

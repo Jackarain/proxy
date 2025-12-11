@@ -15,7 +15,7 @@
 #include "../include_private/boost/math/tools/test.hpp"
 #define BOOST_TEST_MAIN
 
-#ifdef SYCL_LANGUAGE_VERSION
+#ifdef BOOST_MATH_ENABLE_SYCL
 #include "sycl/sycl.hpp"
 #endif
 

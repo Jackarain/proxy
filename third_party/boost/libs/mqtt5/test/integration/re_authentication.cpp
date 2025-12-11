@@ -238,7 +238,7 @@ BOOST_FIXTURE_TEST_CASE(unexpected_auth, shared_test_data) {
         .expect(connect_no_auth)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(1ms))
-        .send(auth_challenge, after(50ms))
+        .send(auth_challenge, after(30ms))
         .expect(disconnect)
             .complete_with(success, after(2ms));
 

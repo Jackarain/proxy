@@ -1,4 +1,3 @@
 # msm
 Boost.org msm module
-[Please look at the generated documentation](http://htmlpreview.github.com/?https://github.com/boostorg/msm/blob/master/doc/HTML/index.html)
-You might need to force browser reloading (F5)
+[Please look at the generated documentation](https://www.boost.org/doc/libs/master/libs/msm/doc/HTML/index.html)

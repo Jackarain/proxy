@@ -12,7 +12,7 @@
 
 Construction of multiprecision types from built-in floating-point types
 can lead to potentially unexpected, yet correct, results.
-Consider, for instance constructing an instance of `cpp_dec_float_50`
+Consider, for instance, constructing an instance of `cpp_dec_float_50`
 from the literal built-in floating-point `double` value 11.1.
 
    #include <iomanip>
@@ -35,7 +35,7 @@ from the literal built-in floating-point `double` value 11.1.
                << std::endl;
    }
 
-In this example, the system has a 64-bit built in `double` representation.
+In this example, the system has a 64-bit built-in `double` representation.
 The variable `f11` is initialized with the literal
 `double` value 11.1. Recall that built-in floating-point representations
 are based on successive binary fractional approximations.

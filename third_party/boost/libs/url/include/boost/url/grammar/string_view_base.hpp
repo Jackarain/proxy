@@ -28,7 +28,7 @@ namespace grammar {
     This base class is used to provide common
     member functions for reference types that
     behave like string views. This cannot be
-    instantiated directly; Instead, derive
+    instantiated directly; instead, derive
     from the type and provide constructors
     which offer any desired preconditions
     and invariants.

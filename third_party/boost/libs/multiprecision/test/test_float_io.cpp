@@ -109,6 +109,7 @@ bool is_bankers_rounding_error(const std::string& s, const char* expect)
    return true;
 }
 
+// LCOV_EXCL_START These lines are not expected to get hit in tests.
 void print_flags(std::ios_base::fmtflags f)
 {
    std::cout << "Formatting flags were: ";
@@ -122,6 +123,7 @@ void print_flags(std::ios_base::fmtflags f)
       std::cout << "showpos ";
    std::cout << std::endl;
 }
+// LCOV_EXCL_STOP These lines are not expected to get hit in tests.
 
 template <class T>
 void test()
@@ -162,6 +164,7 @@ void test()
                }
                else
                {
+                  // LCOV_EXCL_START These lines are not expected to get hit in tests.
                   std::cout << std::setprecision(20) << "Testing value " << val << std::endl;
                   print_flags(f[i]);
                   std::cout << "Precision is: " << prec << std::endl;
@@ -169,6 +172,7 @@ void test()
                   std::cout << "Expected: " << expect << std::endl;
                   ++boost::detail::test_errors();
                   mp_t(val).str(prec, f[i]); // for debugging
+                  // LCOV_EXCL_STOP These lines are not expected to get hit in tests.
                }
             }
          }
@@ -195,6 +199,7 @@ void test()
          const char* expect = zeros[col];
          if (ss.str() != expect)
          {
+            // LCOV_EXCL_START These lines are not expected to get hit in tests.
             std::cout << std::setprecision(20) << "Testing value " << val << std::endl;
             print_flags(f[i]);
             std::cout << "Precision is: " << prec << std::endl;
@@ -202,6 +207,7 @@ void test()
             std::cout << "Expected: " << expect << std::endl;
             ++boost::detail::test_errors();
             mp_t(val).str(prec, f[i]); // for debugging
+            // LCOV_EXCL_STOP These lines are not expected to get hit in tests.
          }
       }
    }

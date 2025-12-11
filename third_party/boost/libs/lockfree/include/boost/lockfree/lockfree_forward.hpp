@@ -39,7 +39,7 @@ struct allocator;
 template < typename T, typename... Options >
 #    if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
     requires( std::is_copy_assignable_v< T >,
-              std::is_trivially_assignable_v< T&, T >,
+              std::is_trivially_copy_assignable_v< T >,
               std::is_trivially_destructible_v< T > )
 #    endif
 class queue;
@@ -59,7 +59,7 @@ class spsc_queue;
 template < typename T, typename... Options >
 struct spsc_value;
 
-}}     // namespace boost::lockfree
+}} // namespace boost::lockfree
 
 #endif // BOOST_DOXYGEN_INVOKED
 #endif // BOOST_LOCKFREE_FORWARD_HPP_INCLUDED

@@ -16,7 +16,7 @@
 #include <boost/url/grammar/detail/tuple.hpp>
 #include <boost/url/grammar/type_traits.hpp>
 #include <boost/mp11/algorithm.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 #include <boost/core/empty_value.hpp>
 #include <tuple>
 
@@ -132,7 +132,7 @@ tuple_rule(
         implementation_defined::tuple_rule_t<
             R0, Rn...>
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         mp11::mp_all<
             is_rule<R0>,
             is_rule<Rn>...>::value);
@@ -223,7 +223,7 @@ constexpr
 BOOST_URL_IMPLEMENTATION_DEFINED(implementation_defined::squelch_rule_t<R>)
 squelch( R const& r ) noexcept
 {
-    BOOST_STATIC_ASSERT(is_rule<R>::value);
+    BOOST_CORE_STATIC_ASSERT(is_rule<R>::value);
     return { r };
 }
 

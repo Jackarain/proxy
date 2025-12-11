@@ -77,7 +77,7 @@ that presents it in native order (see [@http://www.boost.org/doc/libs/release/li
 
 [note
 Note that this function is optimized for the case where the data can be `memcpy`ed from the source to the integer - in this case both
-iterators much be pointers, and everything must be little-endian.]
+iterators must be pointers, and everything must be little-endian.]
 
 [h4 Examples]
 

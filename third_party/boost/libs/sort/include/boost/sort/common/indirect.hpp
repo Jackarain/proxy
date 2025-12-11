@@ -13,7 +13,7 @@
 #ifndef __BOOST_SORT_PARALLEL_COMMON_INDIRECT_HPP
 #define __BOOST_SORT_PARALLEL_COMMON_INDIRECT_HPP
 
-//#include <boost/sort/common/atomic.hpp>
+
 #include <boost/sort/common/util/traits.hpp>
 #include <functional>
 #include <iterator>

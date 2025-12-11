@@ -8,7 +8,7 @@ Hough circle transform capabilities in GIL are demonstrated by the program `houg
 
 The program doesn't take any argument on the command line.
 
-The program outputs the voting cell of the centre of a circle drawn programatically.
+The program outputs the voting cell of the centre of a circle drawn programmatically.
 
 ## Specific requirements
 

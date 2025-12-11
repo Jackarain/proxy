@@ -34,7 +34,6 @@ local linux_pipeline(name, image, environment, packages = "", sources = [], arch
                 'set -e',
                 'uname -a',
                 'echo $DRONE_STAGE_MACHINE',
-                'wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -',
             ] +
             (if sources != [] then [ ('apt-add-repository "' + source + '"') for source in sources ] else []) +
             (if packages != "" then [ 'apt-get update', 'apt-get -y install ' + packages ] else []) +
@@ -160,31 +159,24 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
-        "Linux 24.04 GCC 14 32 ASAN",
+        "Linux 24.04 GCC 14 32/64 ASAN",
         "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'gcc', COMPILER: 'g++-14', CXXSTD: '11,14,17,20,2b', ADDRMD: '32' } + asan,
+        { TOOLSET: 'gcc', COMPILER: 'g++-14', CXXSTD: '11,14,17,20,2b', ADDRMD: '32,64' } + asan,
         "g++-14-multilib",
     ),
 
     linux_pipeline(
-        "Linux 24.04 GCC 14 64 ASAN",
+        "Linux 24.04 GCC 14 32/64 UBSAN",
         "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'gcc', COMPILER: 'g++-14', CXXSTD: '11,14,17,20,2b', ADDRMD: '64' } + asan,
+        { TOOLSET: 'gcc', COMPILER: 'g++-14', CXXSTD: '11,14,17,20,2b', ADDRMD: '32,64' } + ubsan,
         "g++-14-multilib",
     ),
 
     linux_pipeline(
-        "Linux 24.04 GCC 14 32 UBSAN",
-        "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'gcc', COMPILER: 'g++-14', CXXSTD: '11,14,17,20,2b', ADDRMD: '32' } + ubsan,
-        "g++-14-multilib",
-    ),
-
-    linux_pipeline(
-        "Linux 24.04 GCC 14 64 UBSAN",
-        "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'gcc', COMPILER: 'g++-14', CXXSTD: '11,14,17,20,2b', ADDRMD: '64' } + ubsan,
-        "g++-14-multilib",
+        "Linux 25.10 GCC 15 32/64",
+        "cppalliance/droneubuntu2510:1",
+        { TOOLSET: 'gcc', COMPILER: 'g++-15', CXXSTD: '11,14,17,20,23,2c', ADDRMD: '32,64' },
+        "g++-15-multilib",
     ),
 
     linux_pipeline(
@@ -202,38 +194,45 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
-        "Linux 24.04 Clang 17 UBSAN",
+        "Linux 24.04 Clang 17",
         "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-17', CXXSTD: '11,14,17,20,2b' } + ubsan,
+        { TOOLSET: 'clang', COMPILER: 'clang++-17', CXXSTD: '11,14,17,20,2b' },
         "clang-17",
     ),
 
     linux_pipeline(
-        "Linux 24.04 Clang 17 ASAN",
+        "Linux 24.04 Clang 18",
         "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-17', CXXSTD: '11,14,17,20,2b' } + asan,
-        "clang-17",
-    ),
-
-    linux_pipeline(
-        "Linux 24.04 Clang 18 UBSAN",
-        "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-18', CXXSTD: '11,14,17,20,2b' } + ubsan,
+        { TOOLSET: 'clang', COMPILER: 'clang++-18', CXXSTD: '11,14,17,20,2b' },
         "clang-18",
     ),
 
     linux_pipeline(
-        "Linux 24.04 Clang 18 ASAN",
+        "Linux 24.04 Clang 19",
         "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-18', CXXSTD: '11,14,17,20,2b' } + asan,
-        "clang-18",
-    ),
-
-    linux_pipeline(
-        "Linux 24.10 Clang 19",
-        "cppalliance/droneubuntu2410:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-19', CXXSTD: '11,14,17,20,2b' },
         "clang-19",
+    ),
+
+    linux_pipeline(
+        "Linux 24.04 Clang 20 UBSAN",
+        "cppalliance/droneubuntu2404:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-20', CXXSTD: '11,14,17,20,23,2c' } + ubsan,
+        "clang-20",
+    ),
+
+    linux_pipeline(
+        "Linux 24.04 Clang 20 ASAN",
+        "cppalliance/droneubuntu2404:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-20', CXXSTD: '11,14,17,20,23,2c' } + asan,
+        "clang-20",
+    ),
+
+    linux_pipeline(
+        "Linux 25.10 Clang 21",
+        "cppalliance/droneubuntu2510:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-21', CXXSTD: '11,14,17,20,23,2c' },
+        "clang-21",
     ),
 
     macos_pipeline(
@@ -256,6 +255,18 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
         "MacOS 12.4 Xcode 13.4.1 ASAN",
         { TOOLSET: 'clang', COMPILER: 'clang++', CXXSTD: '11,14,17,20,2b' } + asan,
         xcode_version = "13.4.1", osx_version = "monterey", arch = "arm64",
+    ),
+
+    macos_pipeline(
+        "MacOS 14 Xcode 16.2.0 UBSAN",
+        { TOOLSET: 'clang', COMPILER: 'clang++', CXXSTD: '03,11,14,17,20,2b' } + ubsan,
+        xcode_version = "16.2.0", osx_version = "sonoma", arch = "arm64",
+    ),
+
+    macos_pipeline(
+        "MacOS 14 Xcode 16.2.0 ASAN",
+        { TOOLSET: 'clang', COMPILER: 'clang++', CXXSTD: '03,11,14,17,20,2b' } + asan,
+        xcode_version = "16.2.0", osx_version = "sonoma", arch = "arm64",
     ),
 
     windows_pipeline(

@@ -4,7 +4,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 // To compile manually use a command like the folowing:
-// clang++ -I ../include -std=c++20 --precompile -x c++-module pfr.cppm
+// clang++ -I ../include -std=c++20 --precompile -x c++-module boost_type_index.cppm
 
 module;
 
@@ -12,14 +12,18 @@ module;
 #include <cstddef>
 #include <cstdint>
 
+#if __has_include(<cxxabi.h>)
+#  include <cxxabi.h>
+#endif
+
 #include <boost/config.hpp>
 #include <boost/container_hash/hash_fwd.hpp>
 #include <boost/container_hash/hash.hpp>
-#include <boost/core/demangle.hpp>
 #include <boost/throw_exception.hpp>
 
 #ifndef BOOST_TYPE_INDEX_USE_STD_MODULE
 #include <cstring>
+#include <cstdlib>
 #include <iosfwd>
 #include <memory>
 #include <stdexcept>

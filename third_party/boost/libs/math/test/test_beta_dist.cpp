@@ -32,7 +32,7 @@
 # pragma warning (disable : 4224) // nonstandard extension used : formal parameter 'arg' was previously defined as a type.
 #endif
 
-#ifdef SYCL_LANGUAGE_VERSION
+#ifdef BOOST_MATH_ENABLE_SYCL
 #include "sycl/sycl.hpp"
 #endif
 

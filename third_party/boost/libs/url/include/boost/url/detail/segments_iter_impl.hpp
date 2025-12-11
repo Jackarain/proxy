@@ -23,11 +23,12 @@ namespace detail {
 struct segments_iter_impl
     : private parts_base
 {
-    path_ref ref;
-    std::size_t pos = 0;
-    std::size_t next = 0;
-    std::size_t index = 0;
-    std::size_t dn = 0;
+    path_ref ref; // parent path data the iterator aliases
+    std::size_t pos = 0; // encoded offset of current segment start
+    std::size_t next = 0; // encoded offset one past current segment
+    std::size_t index = 0; // segment index within the parent path
+    std::size_t dn = 0; // decoded length of current segment
+    std::size_t decoded_prefix = 0; // decoded chars preceding current segment
 private:
     pct_string_view s_;
 public:
@@ -67,6 +68,12 @@ public:
     dereference() const noexcept
     {
         return s_;
+    }
+
+    std::size_t
+    decoded_prefix_size() const noexcept
+    {
+        return decoded_prefix;
     }
 
     bool

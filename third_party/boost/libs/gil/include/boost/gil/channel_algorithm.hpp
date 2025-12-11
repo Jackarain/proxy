@@ -485,7 +485,7 @@ namespace detail
         return (tmp + (tmp >> 8)) >> 8;
     }
 
-    // fast integer divison by 32768
+    // fast integer division by 32768
     inline auto div32768(uint32_t in) -> uint32_t
     {
         return (in + 16384) >> 15;

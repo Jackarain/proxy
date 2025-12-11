@@ -14,7 +14,6 @@
 #ifndef __BOOST_SORT_PARALLEL_DETAIL_BACKBONE_HPP
 #define __BOOST_SORT_PARALLEL_DETAIL_BACKBONE_HPP
 
-#include <ciso646>
 #include <atomic>
 #include <future>
 #include <iostream>

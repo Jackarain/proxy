@@ -121,8 +121,8 @@ Which outputs:
 
 [pre 9.82266396479604757017335009796882833995903762577173e-01]
 
-Now that we've seen some non-template examples, lets repeat the code again, but this time as a template
-that can be called either with a builtin type (`float`, `double` etc), or with a multiprecision type:
+Now that we've seen some non-template examples, let's repeat the code again, but this time as a template
+that can be called either with a builtin type (`float`, `double` etc.), or with a multiprecision type:
 
 */
 

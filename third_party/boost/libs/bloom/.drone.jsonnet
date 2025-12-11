@@ -32,7 +32,9 @@ local linux_pipeline(name, image, environment, packages = "", sources = [], arch
             commands:
             [
                 'set -e',
-                'wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -',
+                'echo $DRONE_STAGE_MACHINE',
+                'uname -a',
+                'curl -sSL --retry 5 https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg',
             ] +
             (if sources != [] then [ ('apt-add-repository "' + source + '"') for source in sources ] else []) +
             (if packages != "" then [ 'apt-get update', 'apt-get -y install ' + packages ] else []) +
@@ -63,6 +65,9 @@ local macos_pipeline(name, environment, xcode_version = "12.2", osx_version = "c
             environment: environment + { "DEVELOPER_DIR": "/Applications/Xcode-" + xcode_version + ".app/Contents/Developer" },
             commands:
             [
+                'echo $DRONE_STAGE_MACHINE',
+                'sw_vers',
+                'uname -a',
                 'export LIBRARY=' + library,
                 './.drone/drone.sh',
             ]
@@ -89,6 +94,7 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
             environment: environment,
             commands:
             [
+                'echo $env:DRONE_STAGE_MACHINE',
                 'cmd /C .drone\\\\drone.bat ' + library,
             ]
         }

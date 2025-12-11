@@ -40,6 +40,12 @@
   </tr>
 </table>
 
+<h2>1.90.0</h2>
+<ul>
+  <li>Clear passed <code>error_code</code> argument on successful completion of the <code>permissions</code> operation. (<a href="https://github.com/boostorg/filesystem/pull/338">PR#338</a>)</li>
+  <li>On Windows, added a workaround for <code>directory_iterator</code> constructor failing with an "Invalid Signature" error for a Samba 3.0.2 share, when SMB signing is required. (<a href="https://github.com/boostorg/filesystem/issues/334">#334</a>)</li>
+</ul>
+
 <h2>1.89.0</h2>
 <ul>
   <li>Corrected ASAN warnings about comparing pointers to potentially unrelated objects in <code>path::append</code>. (<a href="https://github.com/boostorg/filesystem/issues/335">#335</a>)</li>

@@ -102,6 +102,7 @@ typename std::enable_if<boost::multiprecision::backends::is_fixed_precision<type
 
       if (last_error_count != (unsigned)boost::detail::test_errors())
       {
+         // LCOV_EXCL_START
          last_error_count = boost::detail::test_errors();
          std::cout << std::hex << std::showbase;
          std::cout << f1 << std::endl;
@@ -110,6 +111,7 @@ typename std::enable_if<boost::multiprecision::backends::is_fixed_precision<type
          std::cout << g << std::endl;
          std::cout << r1 << std::endl;
          std::cout << r << std::endl;
+         // LCOV_EXCL_STOP
       }
 
       static boost::random::mt19937             gen;
@@ -125,6 +127,7 @@ typename std::enable_if<boost::multiprecision::backends::is_fixed_precision<type
 
       if (last_error_count != (unsigned)boost::detail::test_errors())
       {
+         // LCOV_EXCL_START
          last_error_count = boost::detail::test_errors();
          std::cout << std::hex << std::showbase;
          std::cout << f1 << std::endl;
@@ -133,6 +136,7 @@ typename std::enable_if<boost::multiprecision::backends::is_fixed_precision<type
          std::cout << g << std::endl;
          std::cout << r1 << std::endl;
          std::cout << r << std::endl;
+         // LCOV_EXCL_STOP
       }
 
 #ifndef CI_SUPPRESS_KNOWN_ISSUES
@@ -174,12 +178,14 @@ typename std::enable_if<boost::multiprecision::backends::is_fixed_precision<type
 
       if (last_error_count != (unsigned)boost::detail::test_errors())
       {
+         // LCOV_EXCL_START
          last_error_count = boost::detail::test_errors();
          std::cout << std::hex << std::showbase;
          std::cout << a << std::endl;
          std::cout << x << std::endl;
          std::cout << b << std::endl;
          std::cout << y << std::endl;
+         // LCOV_EXCL_STOP
       }
    }
 }
@@ -213,6 +219,7 @@ typename std::enable_if<!(boost::multiprecision::backends::is_fixed_precision<ty
 
       if (last_error_count != (unsigned)boost::detail::test_errors())
       {
+         // LCOV_EXCL_START
          last_error_count = boost::detail::test_errors();
          std::cout << std::hex << std::showbase;
          std::cout << f1 << std::endl;
@@ -221,6 +228,7 @@ typename std::enable_if<!(boost::multiprecision::backends::is_fixed_precision<ty
          std::cout << g << std::endl;
          std::cout << r1 << std::endl;
          std::cout << r << std::endl;
+         // LCOV_EXCL_STOP
       }
 
 #ifndef CI_SUPPRESS_KNOWN_ISSUES
@@ -259,12 +267,14 @@ typename std::enable_if<!(boost::multiprecision::backends::is_fixed_precision<ty
 
       if (last_error_count != (unsigned)boost::detail::test_errors())
       {
+         // LCOV_EXCL_START
          last_error_count = boost::detail::test_errors();
          std::cout << std::hex << std::showbase;
          std::cout << a << std::endl;
          std::cout << x << std::endl;
          std::cout << b << std::endl;
          std::cout << y << std::endl;
+         // LCOV_EXCL_STOP
       }
    }
 }

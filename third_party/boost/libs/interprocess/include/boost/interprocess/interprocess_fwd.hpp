@@ -258,10 +258,10 @@ class offset_ptr;
 //////////////////////////////////////////////////////////////////////////////
 
 //Single segment memory allocation algorithms
-template<class MutexFamily, class VoidMutex = offset_ptr<void> >
+template<class MutexFamily, class VoidPointer = offset_ptr<void> >
 class simple_seq_fit;
 
-template<class MutexFamily, class VoidMutex = offset_ptr<void>, std::size_t MemAlignment = 0>
+template<class MutexFamily, class VoidPointer = offset_ptr<void>, std::size_t MemAlignment = 0>
 class rbtree_best_fit;
 
 //////////////////////////////////////////////////////////////////////////////

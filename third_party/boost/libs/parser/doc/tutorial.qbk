@@ -13,7 +13,7 @@ A /semantic action/ is an arbitrary bit of logic associated with a parser,
 that is only executed when the parser matches.
 
 Simpler parsers can be combined to form more complex parsers.  Given some
-combining operation `C`, and parsers `P0`, `P1`, ... `PN`, `C(P0, P1, ... PN)`
+combining operation `C`, and parsers `P0`, `P1`, ..., `PN`, `C(P0, P1, ..., PN)`
 creates a new parser `Q`.  This creates a /parse tree/.  `Q` is the parent of
 `P1`, `P2` is the child of `Q`, etc.  The parsers are applied in the top-down
 fashion implied by this topology.  When you use `Q` to parse a string, it
@@ -113,7 +113,7 @@ Also, just ignore for now the fact that _Parser_ somehow figured out that the
 result type of the `*bp::char_` parser is a _std_str_.  There are clear rules
 for this that we'll cover later.
 
-The effects of this call to _p_ is not very interesting _emdash_ since the
+The effects of this call to _p_ are not very interesting _emdash_ since the
 parser we gave it cannot ever fail, and because we're placing the output in
 the same type as the input, it just copies the contents of `input` to
 `result`.
@@ -403,7 +403,7 @@ Copying the entire context when mutating the context is therefore fast.  The
 context does no memory allocation.
 
 [tip All these functions that take the parse context as their first parameter
-will find by found by Argument-Dependent Lookup.  You will probably never need
+will be found by Argument-Dependent Lookup.  You will probably never need
 to qualify them with `boost::parser::`.]
 
 [heading Accessors for data that are always available]
@@ -414,7 +414,7 @@ underscore.
 
 [heading _pass_]
 
-_pass_ returns a reference to a `bool` indicating the success of failure of
+_pass_ returns a reference to a `bool` indicating the success or failure of
 the current parse.  This can be used to force the current parse to pass or
 fail:
 
@@ -632,7 +632,7 @@ All this is intended to introduce the notion of _rs_.  It still may be a bit
 unclear why you would want to use _rs_.  The use cases for, and lots of detail
 about, _rs_ is in a later section, _more_about_rules_.
 
-[note The existence of _rs_ means that will probably never have to write a
+[note The existence of _rs_ means that you will probably never have to write a
 low-level parser.  You can just put existing parsers together into _rs_
 instead.]
 
@@ -901,7 +901,7 @@ all parser in its sequence.  It then produces its attribute, a
 `bp::parse()`.
 
 Something to take note of between Steps #3 and #4: at the beginning of #4, the
-input position had returned to where is was at the beginning of #3.  This kind
+input position had returned to where it was at the beginning of #3.  This kind
 of backtracking happens in alternative parsers when an alternative fails.  The
 next page has more details on the semantics of backtracking.
 
@@ -1257,7 +1257,7 @@ were unsigned, you would use `uint_`.  If it were signed, you would use
     constexpr auto hex_int = bp::uint_.base<16>();
 
 You simply chain together the constraints you want to use, like
-`.base<16>().digits<2>()` or .digits<4>().base<8>()`.
+`.base<16>().digits<2>()` or `.digits<4>().base<8>()`.
 
 So, if you wanted to parse exactly eight hexadecimal digits in a row in order
 to recognize Unicode character literals like C++ has (e.g. `\Udeadbeef`), you
@@ -1296,7 +1296,7 @@ instance, `lexeme[a >> b] >> c` is a _seq_p_ containing two parsers, `lexeme[a
 in a _lex_p_.  This in turn turns off the sequence parser combining logic,
 since both sides of the second `operator>>` in `lexeme[a >> b] >> c` are not
 _seq_ps_.  Sequence parsers have several rules that govern what the overall
-attribute type of the parser is, based on the positions and attributes of it
+attribute type of the parser is, based on the positions and attributes of its
 subparsers (see _attr_gen_).  Therefore, it's important to know which
 directives create a new parser (and what kind), and which ones do not; this is
 indicated for each directive below.
@@ -1328,7 +1328,7 @@ Creates an _omt_p_.
 
 [heading _raw_]
 
-`_raw_np_[p]` changes the attribute from `_ATTR_np_(p)` to to a view that
+`_raw_np_[p]` changes the attribute from `_ATTR_np_(p)` to a view that
 delimits the subrange of the input that was matched by `p`.  The type of the
 view is `_v_<I>`, where `I` is the type of the iterator used within the parse.
 Note that this may not be the same as the iterator type passed to _p_.  For
@@ -1394,7 +1394,7 @@ need to support the multi-expanding code points, use the other overload, like:
 and if you do it to two bits of text `A` and `B`, then you can compare them
 bitwise to see if they are the same, except of case.  Case folding may
 sometimes expand a code point into multiple code points (e.g. case folding
-`"ẞ"` yields `"ss"`.  When such a multi-code point expansion occurs, the
+`"ẞ"` yields `"ss"`).  When such a multi-code point expansion occurs, the
 expanded code points are in the NFKC normalization form.]
 
 Creates a _noc_p_.
@@ -1510,7 +1510,7 @@ pretty useless.  You should never see this type in practice.  Within semantic
 actions, asking for the attribute of a non-attribute-producing parser (using
 `_attr(ctx)`) will yield a value of the special type `boost::parser::none`.
 When calling _p_ in a form that returns the attribute parsed, when there is no
-attribute, simply returns `bool`; this indicates the success of failure of the
+attribute, simply returns `bool`; this indicates the success or failure of the
 parse.]
 
 [warning _Parser_ assumes that all attributes are semi-regular (see
@@ -1686,7 +1686,7 @@ eligible for combining via `OP`.
 
 [heading Alternative parser attribute rules]
 
-The rules for alternative parsers are much simpler.  For an alternative parer
+The rules for alternative parsers are much simpler.  For an alternative parser
 `p`, let the list of attribute types for the subparsers of `p` be `a0, a1, a2,
 ..., an`.  The attribute of `p` is `std::variant<a0, a1, a2, ..., an>`, with
 the following steps applied:
@@ -1694,7 +1694,7 @@ the following steps applied:
 * all the `none` attributes are left out, and if any are, the attribute is
   wrapped in a `std::optional`, like `std::optional<std::variant</*...*/>>`;
 
-* duplicates in the `std::variant` template parameters `<T1, T2, ... Tn>` are
+* duplicates in the `std::variant` template parameters `<T1, T2, ..., Tn>` are
   removed; every type that appears does so exactly once;
 
 * if the attribute is `std::variant<T>` or `std::optional<std::variant<T>>`,
@@ -1790,7 +1790,7 @@ subparsers in the sequence parser to use the same variable for their
 attribute.
 
 Another directive, _sep_, also applies only to sequence parsers, but does the
-opposite of _merge_.  If forces all the attributes produced by the subparsers
+opposite of _merge_.  It forces all the attributes produced by the subparsers
 of the sequence parser to stay separate, even if they would have combined.
 For instance, consider this parser.
 
@@ -1844,7 +1844,7 @@ and _sep_ do not.  Since they operate only on sequence parsers, all they do is
 create a copy of the sequence parser they are given.  The _seq_p_ template has
 a template parameter `CombiningGroups`, and all _merge_ and _sep_ do is take a
 given _seq_p_ and create a copy of it with a different `CombiningGroups`
-template parameter.  This means that _merge_ and _sep_ are can be ignored in
+template parameter.  This means that _merge_ and _sep_ can be ignored in
 `operator>>` expressions much like parentheses are.  Consider an example.
 
     namespace bp = boost::parser;
@@ -1867,7 +1867,7 @@ given function `f`.  For example:
 
 Here, we have a function `str_sum` that we use for `f`.  It assumes each
 character in the given _std_str_ `s` is a digit, and returns the sum of all
-the digits in `s`.  Out parser `parser` would normally return a _std_str_.
+the digits in `s`.  Our parser `parser` would normally return a _std_str_.
 However, since `str_sum` returns a different type _emdash_ `int` _emdash_ that
 is the attribute type of the full parser,
 `bp::transform(by_value_str_sum)[parser]`, as you can see from the
@@ -1900,7 +1900,7 @@ common:
 * They each return a value contextually convertible to `bool`.
 
 * They each take at least a range to parse and a parser.  The "range to parse"
-  may be an iterator/sentinel pair or an single range object.
+  may be an iterator/sentinel pair or a single range object.
 
 * They each require forward iterability of the range to parse.
 
@@ -2241,7 +2241,7 @@ encoding.  Here is how it deduces which case the call falls under:
 
 * Otherwise, the input is in a UTF encoding.
 
-[tip if you want to want to parse in ASCII-only mode, or in some other
+[tip If you want to parse in ASCII-only mode, or in some other
 non-Unicode encoding, use only sequences of `char`, like _std_str_ or `char
 const *`.]
 
@@ -2265,7 +2265,7 @@ _eh_debugging_ section of the tutorial for details.
 [heading Globals and error handlers]
 
 Each call to _p_ can optionally have a globals object associated with it.  To
-use a particular globals object with you parser, you call _w_glb_ to create a
+use a particular globals object with your parser, you call _w_glb_ to create a
 new parser with the globals object in it:
 
     struct globals_t
@@ -2469,11 +2469,12 @@ defined somewhere.
     BOOST_PARSER_DEFINE_RULES(value);
 
 Notice the two expectation points.  One before `(value % ',')`, one before the
-final `'}'`.  Later, you call parse in some input:
+final `'}'`.  Later, you parse in some input:
 
     bp::parse("{ 4, 5 a", value, bp::ws);
 
-This runs should of the second expectation point, and produces output like this:
+This runs afoul of the second expectation point, and produces output like
+this:
 
 [pre
 1:7: error: Expected '}' here:
@@ -2493,7 +2494,7 @@ the earlier expectation:
 ]
 
 Not nearly as nice.  The problem is that the expectation is on `(value %
-',')`.  So, even thought we gave `value` reasonable diagnostic text, we put the
+',')`.  So, even though we gave `value` reasonable diagnostic text, we put the
 text on the wrong thing.  We can introduce a new rule to put the diagnostic
 text in the right place.
 
@@ -2520,7 +2521,7 @@ message:
 ]
 
 The _r_ `value` might be useful elsewhere in our code, perhaps in another
-parser.  It's diagnostic text is appropriate for those other potential uses.
+parser.  Its diagnostic text is appropriate for those other potential uses.
 
 [heading Recursive rules]
 
@@ -2571,7 +2572,7 @@ of a recursive _r_.  This is because each instance of the rule needs a place
 to put the attribute it generates from its parse.  However, we only want a
 single return value for the uppermost rule; if each instance had a separate
 value in `_val(ctx)`, then it would be impossible to build up the result of a
-recursive rule step by step during in the evaluation of the recursive
+recursive rule step by step during the evaluation of the recursive
 instantiations.
 
 Also, consider this rule:
@@ -2623,7 +2624,7 @@ use each other without introducing cycles:
 
     BOOST_PARSER_DEFINE_RULES(string, object_element, object, array, value);
 
-Here we have a parser for a Javascript-value-like type `value_type`.
+Here we have a parser for a JavaScript-value-like type `value_type`.
 `value_type` may be an array, which itself may contain other arrays, objects,
 strings, etc.  Since we need to be able to parse objects within arrays and
 vice versa, we need each of those two parsers to be able to refer to each
@@ -2661,7 +2662,7 @@ semantics, is a lot easier to read, and is a lot less code.]
 [heading Locals]
 
 The _r_ template takes another template parameter we have not discussed yet.
-You can pass a third parameter `LocalState` to _r_, which will be defaulted
+You can pass a third parameter `LocalState` to _r_, which will be default
 constructed by the _r_, and made available within semantic actions used in the
 rule as `_locals_np_(ctx)`.  This gives your rule some local state, if it
 needs it.  The type of `LocalState` can be anything regular.  It could be a
@@ -2773,7 +2774,7 @@ rewritten as:
 
     auto const foo_def = bp::repeat(bp::_p<0>)[' '_l];
 
-Using __p_ can prevent you from having to write a bunch of lambdas that get
+Using __p_ can prevent you from having to write a bunch of lambdas that
 each get an argument out of the parse context using `_params_np_(ctx)[0_c]` or
 similar.
 
@@ -3160,7 +3161,7 @@ worrying if the input is Unicode or not because, under the covers, what takes
 place is a simple comparison of two integral values.
 
 [note _Parser_ actually promotes any two values to a common type using
-`std::common_type` before comparing them.  This is almost always works because
+`std::common_type` before comparing them.  This almost always works because
 the input and any parameter passed to _ch_ must be character types. ]
 
 Since matches are always done at a code point level (remember, a "code point"
@@ -3441,7 +3442,7 @@ is not very useful.  Consider this.
     auto c_b = bp::char_('c') >> bp::char_('b');
     auto result = bp::parse("acb", a_b | c_b);
 
-If we reported the farthest-reaching parser and it's position, it would be the
+If we reported the farthest-reaching parser and its position, it would be the
 `a_b` parser, at position `"bc"` in the input.  Is this really enlightening?
 Was the error in the input putting the `'a'` at the beginning or putting the
 `'c'` in the middle?  If you point the user at `a_b` as the parser that
@@ -3610,7 +3611,7 @@ If we trace a substantial parser, we will see a *lot* of output.  Each code
 point of the input must be considered, one at a time, to see if a certain rule
 matches.  As an example, let's trace a parse using the JSON parser from
 _ex_json_.  The input is `"null"`.  `null` is one of the types that a
-Javascript value can have; the top-level parser in the JSON parser example is:
+JavaScript value can have; the top-level parser in the JSON parser example is:
 
     auto const value_p_def =
         number | bp::bool_ | null | string | array_p | object_p;
@@ -3798,7 +3799,7 @@ _Parser_ seldom allocates memory.  The exceptions to this are:
   useful for such replacements.
 
 With the exception of allocating the name of the parser that was expected in a
-failed expectation situation, _Parser_ does not does not allocate unless you
+failed expectation situation, _Parser_ does not allocate unless you
 tell it to, by using _symbols_, using a particular error_handler, turning on
 trace, or parsing into attributes that allocate.
 
@@ -3806,7 +3807,7 @@ trace, or parsing into attributes that allocate.
 
 [section Best Practices]
 
-[heading Parse unicode from the start]
+[heading Parse Unicode from the start]
 
 If you want to parse ASCII, using the Unicode parsing API will not actually
 cost you anything.  Your input will be parsed, `char` by `char`, and compared
@@ -3953,7 +3954,7 @@ First, let's look at the template and function parameters.
   `true` if the parse succeeds, and `false` otherwise.
 
 Now the body of the function. Notice that it just dispatches to the other
-`call()` overload.  This is really common, since both overloads need to to the
+`call()` overload.  This is really common, since both overloads need to do the
 same parsing; only the attribute may differ.  The first line of the body
 defines `attr_t`, the default attribute type of our wrapped parser `parser_`.
 It does this by getting the `decltype()` of a use of `parser_.call()`.  (This

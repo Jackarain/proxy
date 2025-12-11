@@ -1,0 +1,173 @@
+[[version-history]]
+
+= Version history
+
+== Boost 1.90
+
+* feat/backmp11: New back-end backmp11, requires C++ 17
+* fix/back: boost::any stopped working as Kleene event
+* feat: The documentation has been refurbished, it is now built with Antora
+
+[[boost-185]]
+
+== Boost 1.85
+
+* Backend update (back11). Requires C++ 11. The documentation now uses
+it as default.
+* New front-end (PlantUML). Requires C++ 20
+* Div. bugfixes
+
+[[boost-172]]
+
+== Boost 1.72
+
+* Merged from develop new implementation of deferred events
+* Div. bugfixes
+
+[[boost-157]]
+
+== Boost 1.57
+
+* Fixed BOOST_MSM_EUML_EVENT_WITH_ATTRIBUTES (broken in 1.56).
+* Fixed execute_queued_events, added execute_single_queued_event
+* Fixed warnings for unused variables
+
+[[boost-156]]
+
+== Boost 1.56
+
+* Bugfix: no_transition in case of an exception.
+* Bugfix: Trac 9280
+* Bugfix: incomplete namespace names in eUML
+
+[[boost-155]]
+
+== Boost 1.55
+
+* New feature: interrupt states now support a sequence of events to end
+the interruption
+* Bugfix: Trac 8686.
+
+[[boost-154]]
+
+== Boost 1.54
+
+* Bugfix: Exit points broken for the favor_compile_time policy.
+* Bugfix: copy breaks exit points of subsubmachines.
+* Bugfix: Trac 8046.
+
+[[from-v223-to-v224-boost-151]]
+
+== From V2.23 to V2.24 (Boost 1.51)
+
+* Support for `boost::any` or `kleene` as an acceptable event.
+* Bugfix: compiler error with fsm internal table and `none`(compound)
+event.
+* Bugfix: `euml::defer_` leading to stack overflow.
+
+[[from-v222-to-v223-boost-150]]
+
+== From V2.22 to V2.23 (Boost 1.50)
+
+* `eUML` : better syntax for front-ends defined with eUML as transititon
+table only. Caution: Breaking Change!
+* Bugfix: graph building was only working if `initial_state` defined as
+a sequence
+* Bugfix: flags defined for a Terminate or Interrupt state do not break
+the blocking function of these states any more.
+* Bugfix: multiple deferred events from several regions were not working
+in every case.
+* Bugfix: visitor was passed by value to submachines.
+* Bugfix: `no_transition` was not called for submachines who send an
+event to themselves.
+* Fixed warnings with gcc
+
+[[from-v221-to-v222-boost-148]]
+
+== From V2.21 to V2.22 (Boost 1.48)
+
+* eUML: added easier event reprocessing: `process(event_)` and
+`reprocess()`
+* Rewrite of internal transition tables. There were a few bugs (failing
+recursivity in internal transition tables of sub-sub machines) and a
+missing feature (unused internal transition table of the main state
+machine).
+* Bugfixes
+** Reverted favor_compile_time policy to Boost 1.46 state
+** `none` event now is convertible from any other event
+** eUML and pseudo exit states
+** Fixed not working Flag_AND
+** Fixed rare bugs causing multiple processing of the same event in a
+submachine whose transition table contains this event and a base event
+of it.
+** gcc warnings about unused variables
+* Breaking change: the new internal transition table feature causes a
+minor breaking change. In a submachine, the "Fsm" template parameter for
+guards / actions of an internal table declared using
+`internal_transition_table` now is the submachine, not the higher-level
+state machine. Internal transitions declared using internal rows in the
+higher-level state machine keep their behavior (the "Fsm" parameter is
+the higher-level state machine). To sum up, the internal transition
+"Fsm" parameter is the closest state machine containing this transition.
+
+[[from-v220-to-v221-boost-147]]
+
+== From V2.20 to V2.21 (Boost 1.47)
+
+* Added a `stop()` method in the back-end.
+* `Added partial support for Boost.Phoenix functors in eUML`
+* Added the possibility to choose when `state switching` occurs.
+* Bugfixes
+** Trac 5117, 5253, 5533, 5573
+** gcc warnings about unused variables
+** better implemenation of favor_compile_time back-end policy
+** bug with eUML and state construction
+** incorrect eUML event and state macros
+** incorrect event type passed to a direct entry state's on_entry action
+** more examples
+
+[[from-v212-to-v220-boost-146]]
+
+== From V2.12 to V2.20 (Boost 1.46)
+
+* Compile-time state machine analysis using mpl_graph:
+** `checking of region orthogonality`.
+** `search for unreachable states`.
+** `automatic region index search for pseudo entry or explicit entry states`.
+* `Boost.Parameter interface definition` for msm::back::state_machine<>
+template arguments.
+* `Possibility to provide a container` for the event and deferred event
+queues. A policy implementation based on a more efficient
+Boost.CircularBuffer is provided.
+* msm::back::state_machine<>::is_flag_active method made const.
+* added possibility to `enqueue events` for delayed processing.
+* Bugfixes
+** Trac 4926
+** stack overflow using the Defer functor
+** anonymous transition of a submachine not called for the initial state
+
+[[from-v210-to-v212-boost-145]]
+
+== From V2.10 to V2.12 (Boost 1.45)
+
+* Support for `serialization`
+* `Possibility to use normal functors` (from functor front-end) in eUML.
+* `New constructors` where substates / submachines can be taken as
+arguments. This allows passing arguments to the constructor of a
+submachine.
+* Bugfixes
+
+[[from-v20-to-v212-boost-144]]
+
+== From V2.0 to V2.12 (Boost 1.44)
+
+* New documentation
+* Internal transitions. Either as part of the transition table or using
+a state's internal transition table
+* increased dispatch and copy speed
+* `new row types` for the basic front-end
+* new eUML syntax, better attribute support, macros to ease developer's
+life. Even VC8 seems to like it better.
+* New policy for reduced compile-time at the cost of dispatch speed
+* Support for base events
+* possibility to choose the initial event

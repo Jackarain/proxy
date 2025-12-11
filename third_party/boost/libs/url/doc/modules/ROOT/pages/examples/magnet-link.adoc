@@ -12,7 +12,7 @@
 `magnet` is a URL scheme for identifying files by their content.
 These files are usually identified by cryptographic hash value.
 
-Magnet links are useful in peer-to-peer file sharing networks because they allow resources to be referred to without the need for a continuously available host..
+Magnet links are useful in peer-to-peer file sharing networks because they allow resources to be referred to without the need for a continuously available host.
 
 This example parses a magnet link into a new view type and prints its components to standard output.
 

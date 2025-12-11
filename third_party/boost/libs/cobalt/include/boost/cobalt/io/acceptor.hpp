@@ -9,6 +9,7 @@
 #define BOOST_COBALT_EXPERIMENTAL_IO_ACCEPTOR_HPP
 
 
+#include <boost/cobalt/io/detail/config.hpp>
 #include <boost/cobalt/io/ops.hpp>
 #include <boost/cobalt/io/stream_socket.hpp>
 #include <boost/cobalt/io/seq_packet_socket.hpp>
@@ -32,6 +33,7 @@ struct BOOST_SYMBOL_VISIBLE acceptor
   {
     void initiate(completion_handler<system::error_code> h) override;
 
+    accept_op(accept_op &&) noexcept = default;
     accept_op(asio::basic_socket_acceptor<protocol_type, executor> & acceptor, socket& sock)
             : acceptor_(acceptor), sock_(sock) {}
     ~accept_op() = default;
@@ -43,7 +45,8 @@ struct BOOST_SYMBOL_VISIBLE acceptor
   struct BOOST_COBALT_IO_DECL accept_stream_op final : op<system::error_code, stream_socket>
   {
     void initiate(completion_handler<system::error_code, stream_socket> h) override;
-
+    
+    accept_stream_op(accept_stream_op &&) noexcept = default;
     accept_stream_op(asio::basic_socket_acceptor<protocol_type, executor> & acceptor) : acceptor_(acceptor)   {}
     ~accept_stream_op() = default;
    private:
@@ -55,7 +58,8 @@ struct BOOST_SYMBOL_VISIBLE acceptor
   {
     void initiate(completion_handler<system::error_code, seq_packet_socket> h) override;
 
-    accept_seq_packet_op(asio::basic_socket_acceptor<protocol_type, executor> & acceptor) : acceptor_(acceptor)   {}
+     accept_seq_packet_op(accept_seq_packet_op &&) noexcept = default;
+     accept_seq_packet_op(asio::basic_socket_acceptor<protocol_type, executor> & acceptor) : acceptor_(acceptor)   {}
     ~accept_seq_packet_op() = default;
    private:
     asio::basic_socket_acceptor<protocol_type, executor> &acceptor_;

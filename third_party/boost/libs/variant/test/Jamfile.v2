@@ -63,7 +63,7 @@ test-suite variant
     [ run variant_swap_test.cpp ]
     [ run auto_visitors.cpp : : : <library>/boost/lexical_cast//boost_lexical_cast ]
     [ run issue42.cpp ]
-    [ run issue53.cpp : : : <library>/boost/thread//boost_thread ]
+    [ compile issue53.cpp : <library>/boost/thread//boost_thread ]
     [ run overload_selection.cpp : : : "<cxxstd>$(since_cpp20)"\:<build>no ]
     [ run recursive_wrapper_move_test.cpp : : : <library>/boost/array//boost_array ]
     [ run variant_over_joint_view_test.cpp ]

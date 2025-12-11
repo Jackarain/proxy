@@ -1,0 +1,17 @@
+# BOOST_OPENMETHOD_INLINE_OVERRIDE
+
+## Synopsis
+
+Defined in link:{{BASE_URL}}/include/boost/openmethod/macros.hpp[<boost/openmethod/macros.hpp>].
+
+```c++
+BOOST_OPENMETHOD_INLINE_OVERRIDE(ID, (PARAMETERS...), RETURN_TYPE) {
+    // body
+}
+```
+
+## Description
+
+`BOOST_OPENMETHOD_INLINE_OVERRIDE` performs the same function as
+xref:BOOST_OPENMETHOD_OVERRIDE.adoc[BOOST_OPENMETHOD_OVERRIDE], except that the
+overrider is marked `inline`.

@@ -1,0 +1,6 @@
+[[external-references-to-msm]]
+
+= External references to MSM
+
+An interesting mapping UML < - > MSM from Takatoshi Kondo can be found at
+http://redboltz.wikidot.com/boost-msm-guide[Redboltz].

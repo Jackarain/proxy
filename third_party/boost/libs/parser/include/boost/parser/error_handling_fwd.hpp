@@ -104,7 +104,7 @@ namespace boost { namespace parser {
 
     /** The error handler used when the user does not specify a custom one.
         This error handler prints warnings and errors to `std::cerr`, and does
-        not have an associcated filename. */
+        not have an associated filename. */
     struct default_error_handler
     {
         constexpr default_error_handler() = default;

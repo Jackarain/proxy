@@ -26,7 +26,7 @@
    }} // namespaces
 
 The `mpc_complex_backend` type is used in conjunction with `number`: It acts as a thin wrapper around the [mpc] `mpc_t`
-to provide an real-number type that is a drop-in replacement for `std::complex`, but with
+to provide a real-number type that is a drop-in replacement for `std::complex`, but with
 much greater precision.
 
 Type `mpc_complex_backend` can be used at fixed precision by specifying a non-zero `Digits10` template parameter, or

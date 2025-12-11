@@ -49,12 +49,9 @@ else()
     Boost::container
     Boost::core
     Boost::endian
-    Boost::fusion
-    Boost::optional
     Boost::random
     Boost::range
     Boost::smart_ptr
-    Boost::spirit
     Boost::system
     Boost::type_traits
     Threads::Threads

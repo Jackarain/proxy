@@ -1,0 +1,56 @@
+
+[#error_handling]
+
+Errors can occur during `initialize`, or during method dispatch, if the method's
+registry contains the `runtime_checks` policy. If the registry contains an
+`error_handler` policy, its `error_handler::error` member function is called
+with an error object, before terminating the program with a call to `abort`.
+`default_registry` contains such a policy: `default_error_handler`. It wraps the
+error object in a variant, and calls a handler via a `std::function`,
+initialized to a function that prints a short description of the error to
+`stderr`. The function can be changed, for example, to throw an exception:
+
+[source,c++]
+----
+include::example$default_error_handler.cpp[tag=example]
+----
+
+Output:
+
+[source,console]
+----
+spin
+not implemented
+spin
+----
+
+We can also replace the `error_handler` policy with our own.
+For example:
+
+
+[source,c++]
+----
+include::example$throw_error_handler.cpp[tag=example]
+----
+
+[source,console]
+----
+spin
+not implemented
+spin
+----
+
+Stock policy `throw_error_handler` does this for all the error types:
+
+```c++
+namespace boost::openmethod::policies {
+
+struct throw_error_handler : error_handler {
+    template<class Error>
+    [[noreturn]] static auto error(const Error& error) -> void {
+        throw error;
+    }
+};
+
+} // namespace boost::openmethod::policies
+```

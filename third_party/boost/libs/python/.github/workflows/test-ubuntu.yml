@@ -11,23 +11,27 @@ jobs:
       matrix:
         python: [python, python3]
         cxx: [g++, clang++]
-        std: [c++98, c++11, c++14, c++17]
+        std: [c++11, c++14, c++17]
         include:
           # Add the appropriate docker image for each compiler.
           # The images from teeks99/boost-python-test already have boost::python
           # pre-reqs installed, see:
           # https://github.com/teeks99/boost-python-test-docker
           - cxx: clang++
-            docker-img: teeks99/boost-python-test:clang-12_1.76.0
+            docker-img: teeks99/boost-python-test:clang-21_1.89.0
           - cxx: g++
-            docker-img: teeks99/boost-python-test:gcc-10_1.76.0
+            docker-img: teeks99/boost-python-test:gcc-15_1.89.0
 
     container:
       image: ${{ matrix.docker-img }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
+    - name: setup prerequisites
+      run: |
+        # Warning: this is not necessarily the same Python version as the one configured above !
+        python3 -m pip install -U faber --break-system-packages
     - name: build
       run: |
         ${{ matrix.python }} --version

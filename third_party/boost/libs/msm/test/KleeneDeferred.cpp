@@ -12,7 +12,7 @@
 #include <boost/fusion/include/std_tuple.hpp>
 
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include "BackCommon.hpp"
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 // functors
@@ -97,29 +97,35 @@ namespace
         
     };
     // Pick a back-end
-    typedef msm::back::state_machine<fsm_> Fsm;
+    typedef mpl::vector<
+#ifndef BOOST_MSM_TEST_SKIP_BACKMP11
+        boost::msm::backmp11::state_machine_adapter<fsm_>,
+#endif // BOOST_MSM_TEST_SKIP_BACKMP11
+        boost::msm::back::state_machine<fsm_>,
+        boost::msm::back11::state_machine<fsm_>
+        > Fsms;
 
-    BOOST_AUTO_TEST_CASE(kleene_deferred_test)
+    BOOST_AUTO_TEST_CASE_TEMPLATE(kleene_deferred_test, Fsm, Fsms)
     {     
         Fsm fsm;
 
         fsm.start(); 
-        BOOST_CHECK_MESSAGE(fsm.get_state<fsm_::StateA&>().entry_counter == 1,"StateA entry not called correctly");
+        BOOST_CHECK_MESSAGE(fsm.template get_state<fsm_::StateA&>().entry_counter == 1,"StateA entry not called correctly");
 
         fsm.process_event(event1()); 
         BOOST_CHECK_MESSAGE(fsm.current_state()[0] == 1,"StateB should be active"); 
-        BOOST_CHECK_MESSAGE(fsm.get_state<fsm_::StateA&>().exit_counter == 1,"StateA exit not called correctly");
-        BOOST_CHECK_MESSAGE(fsm.get_state<fsm_::StateB&>().entry_counter == 1,"StateB entry not called correctly");
+        BOOST_CHECK_MESSAGE(fsm.template get_state<fsm_::StateA&>().exit_counter == 1,"StateA exit not called correctly");
+        BOOST_CHECK_MESSAGE(fsm.template get_state<fsm_::StateB&>().entry_counter == 1,"StateB entry not called correctly");
 
         fsm.process_event(event1());
         BOOST_CHECK_MESSAGE(fsm.current_state()[0] == 1, "StateB should be active");
-        BOOST_CHECK_MESSAGE(fsm.get_state<fsm_::StateA&>().exit_counter == 1, "StateA exit not called correctly");
-        BOOST_CHECK_MESSAGE(fsm.get_state<fsm_::StateB&>().entry_counter == 1, "StateB entry not called correctly");
+        BOOST_CHECK_MESSAGE(fsm.template get_state<fsm_::StateA&>().exit_counter == 1, "StateA exit not called correctly");
+        BOOST_CHECK_MESSAGE(fsm.template get_state<fsm_::StateB&>().entry_counter == 1, "StateB entry not called correctly");
 
         fsm.process_event(event2());
         BOOST_CHECK_MESSAGE(fsm.current_state()[0] == 1, "StateB should be active");
-        BOOST_CHECK_MESSAGE(fsm.get_state<fsm_::StateA&>().exit_counter == 2, "StateA exit not called correctly");
-        BOOST_CHECK_MESSAGE(fsm.get_state<fsm_::StateB&>().entry_counter == 2, "StateB entry not called correctly");
+        BOOST_CHECK_MESSAGE(fsm.template get_state<fsm_::StateA&>().exit_counter == 2, "StateA exit not called correctly");
+        BOOST_CHECK_MESSAGE(fsm.template get_state<fsm_::StateB&>().entry_counter == 2, "StateB entry not called correctly");
 
     }
 }

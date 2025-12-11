@@ -251,6 +251,52 @@ struct url_test
             };
             f(url{"https://"}.set_host("special-api.com").set_path("some/path"));
         }
+
+        {
+            // issue #919
+            core::string_view s = "http://[fe80::1%25eth0]/";
+            url u0 = parse_uri(s).value();
+            BOOST_TEST_EQ(u0.host_type(), host_type::ipv6);
+
+            // Round-trip ipv6_address
+            ipv6_address a = u0.host_ipv6_address();
+            u0.set_host_ipv6(a);
+            BOOST_TEST_CSTR_EQ(u0.buffer(), s);
+
+            // Round-trip zone_id
+            std::string z = u0.zone_id();
+            u0.set_zone_id(z);
+            BOOST_TEST_CSTR_EQ(u0.buffer(), s);
+
+            // Round-trip encoded_zone_id
+            pct_string_view ez = u0.encoded_zone_id();
+            u0.set_encoded_zone_id(ez);
+            BOOST_TEST_CSTR_EQ(u0.buffer(), s);
+
+            // Round-trip host
+            std::string h = u0.host();
+            u0.set_host(h);
+            BOOST_TEST_CSTR_EQ(u0.buffer(), s);
+
+            // Round-trip encoded host
+            pct_string_view eh = u0.encoded_host();
+            u0.set_encoded_host(eh);
+            BOOST_TEST_CSTR_EQ(u0.buffer(), s);
+
+            // Round-trip host_address
+            std::string ha = u0.host_address();
+            u0.set_host_address(ha);
+            BOOST_TEST_CSTR_EQ(u0.buffer(), s);
+
+            // Round-trip encoded_host_address
+            pct_string_view eha = u0.encoded_host_address();
+            u0.set_encoded_host_address(eha);
+            BOOST_TEST_CSTR_EQ(u0.buffer(), s);
+
+            // Copy constructor
+            url u1b(s);
+            BOOST_TEST_EQ(u0, u1b);
+        }
     }
 
     //--------------------------------------------
@@ -858,6 +904,26 @@ struct url_test
             BOOST_TEST(u.set_path_absolute(true));
             u.encoded_segments().push_back("y");
             });
+
+        // issue #921: path %2F round-trip
+        {
+            url u("https://example.com/a/b/c/d%2Fe%2Ff/g/h");
+            BOOST_TEST_CSTR_EQ(u.buffer(), "https://example.com/a/b/c/d%2Fe%2Ff/g/h");
+            BOOST_TEST(u.encoded_path() == "/a/b/c/d%2Fe%2Ff/g/h");
+            BOOST_TEST(u.path() == "/a/b/c/d/e/f/g/h");
+
+            // set_encoded_path with encoded value (should round-trip correctly)
+            u.set_encoded_path(u.encoded_path());
+            BOOST_TEST_CSTR_EQ(u.buffer(), "https://example.com/a/b/c/d%2Fe%2Ff/g/h");
+            BOOST_TEST(u.encoded_path() == "/a/b/c/d%2Fe%2Ff/g/h");
+            BOOST_TEST(u.path() == "/a/b/c/d/e/f/g/h");
+
+            // set_path with decoded value (impossible to round-trip)
+            u.set_path(u.path());
+            BOOST_TEST_CSTR_EQ(u.buffer(), "https://example.com/a/b/c/d/e/f/g/h");
+            BOOST_TEST(u.encoded_path() == "/a/b/c/d/e/f/g/h");
+            BOOST_TEST(u.path() == "/a/b/c/d/e/f/g/h");
+        }
     }
 
     //--------------------------------------------
@@ -1026,6 +1092,15 @@ struct url_test
                 BOOST_TEST(u.resolve(ref));
                 BOOST_TEST_CSTR_EQ(u, "https:path2");
             }
+        }
+
+        // issue #920
+        {
+            url u("https://www.example.org/path/index.html?a%20b=5%206&x%20y=34#frag");
+            url ref("?asdf%20qwer=1%202%20");
+            BOOST_TEST(u.resolve(ref));
+            BOOST_TEST_CSTR_EQ(u.buffer(), "https://www.example.org/path/index.html?asdf%20qwer=1%202%20");
+            BOOST_TEST(!u.has_fragment());
         }
     }
 

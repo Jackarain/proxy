@@ -1,0 +1,166 @@
+
+:example: ../examples/custom_rtti
+
+[#custom_rtti]
+
+The original motivation for the policy mechanism is to make it possible to
+interface OpenMethod with custom RTTI systems.
+
+Stock registries use the `std_rtti` implementation of `rtti`.
+Here is its full source:
+
+[source,c++]
+----
+struct std_rtti : rtti {
+    template<class Registry>
+    struct fn {
+        template<class Class>
+        static constexpr bool is_polymorphic = std::is_polymorphic_v<Class>;
+
+        template<class Class>
+        static auto static_type() -> type_id {
+            return &typeid(Class);
+        }
+
+        template<class Class>
+        static auto dynamic_type(const Class& obj) -> type_id {
+            return &typeid(obj);
+        }
+
+        template<typename Stream>
+        static auto type_name(type_id type, Stream& stream) -> void {
+            stream << boost::core::demangle(
+                reinterpret_cast<const std::type_info*>(type)->name());
+        }
+
+        static auto type_index(type_id type) -> std::type_index {
+            return std::type_index(
+                *reinterpret_cast<const std::type_info*>(type));
+        }
+
+        template<typename D, typename B>
+        static auto dynamic_cast_ref(B&& obj) -> D {
+            return dynamic_cast<D>(obj);
+        }
+    };
+};
+----
+
+* `is_polymorphic` is used to check if a class is polymorphic.
+  This template is required.
+
+* `static_type` is called during class registration, by
+    `virtual_ptr`{empty}s "final" constructs.
+    It is also called to set `bad_call::method`.
+    This function is required.
+
+* `dynamic_type` is used to read the dynamic type of a virtual argument.
+  If only the `virtual_ptr` "final" constructs are used, or if
+  `boost_openmethod_vptr` is provided for all the classes in the registry,
+  this function can be omitted.
+
+* `type_name` writes a representation of a type to a
+   `LightweightOutputStream`.
+   It is used to format error and trace messages.
+   This function is optional; if it is not provided, _type_ is rendered as
+   "type_id(_type_)".
+
+* `type_index` returns an object that _uniquely_ identifies a class.
+    Some forms of RTTI (most notably, C{plus}{plus}'s `typeid` operator) do not
+    guarantee that the type information object for a class is unique within
+    the same program.
+    This function is optional; if not provided, `type` is assumed to be
+    unique, and used as is.
+
+* `dynamic_cast_ref` casts an object to a class.
+    It takes a reference, and returns a reference of the same category (and
+    cv-qualifier if applicable) as `B`.
+    This function is required only in presence of virtual inheritance.
+
+Let's rewrite the Node example using several variations of custom RTTIs.
+
+In the first example, we use a "static" scheme, where the type ids are
+compile-time constants:
+
+[source,c++]
+----
+include::{example}/1/custom_rtti.cpp[tag=classes]
+----
+
+Let's define a `rtti` policy for this scheme. We are going to replace the
+default registry globally, so we do _not_ include `<boost/openmethod/core.hpp>`
+or `<boost/openmethod.hpp>` - only what we need to implement the policy:
+
+[source,c++]
+----
+include::{example}/1/custom_rtti.cpp[tag=policy]
+----
+
+The policy's notion of "polymorphic" is different from C{plus}{plus}'s. Here, a
+class is "polymorphic" if it derives from `Node`, meaning that `dynamic_type`
+can extract the _runtime_ type of a virtual argument. In fact, this policy does
+not require Node to be polymorphic in the C++ sense. If we remove the virtual
+destructor and implement `value` as an open-method as well, the program will
+still work.
+
+The policy is quite minimal. It does not support virtual inheritance, because it
+does not provide a `dynamic_cast_ref` function. It would not produce good error
+or trace messages, because it does not provide a `type_name` function. Instead,
+it relies on the `type_name` inherited from cpp:rtti::defaults[]. It
+renders types as adorned integers, e.g. "type_id(2)". All non-"polymorphic"
+types would be rendered the same way, as "type_id(0)".
+
+cpp:rtti::defaults[] also provides a default implementation for `type_index`,
+which simply returns its argument.
+
+Now we need a policy to get a v-table pointer from an object. Our RTTI system
+has an interesting property: its type ids are monotonically allocated in a
+small, dense range. It means that we can use them as indexes in a vector.
+`vptr_vector` is perfect for that. So here is our registry:
+
+[source,c++]
+----
+include::{example}/1/custom_rtti.cpp[tag=registry]
+----
+
+Defining macro
+xref:BOOST_OPENMETHOD_DEFAULT_REGISTRY.adoc[BOOST_OPENMETHOD_DEFAULT_REGISTRY]
+sets the default registry used by all library components that need one.
+
+Next, we include the main header.
+Because `BOOST_OPENMETHOD_DEFAULT_REGISTRY` is defined, its value is used
+for the default registry.
+
+The rest of the example is unchanged.
+
+## Deferred RTTI
+
+In the previous example, the RTTI system assigns type ids statically. Another
+popular approach is to allocate type ids using a global counter, manipulated by
+static constructors. Like so:
+
+[source,c++]
+----
+include::{example}/2/custom_rtti.cpp[tag=classes]
+----
+
+The type ids are assigned in another translation unit:
+
+[source,c++]
+----
+include::{example}/2/custom_rtti.cpp[tag=type_ids]
+----
+
+This is a problem, because `static_type` is called by
+`BOOST_OPENMETHOD_CLASSES`, also during static construction. There no guarantee
+regarding the order of execution of static constructors across several
+translation units. `BOOST_OPENMETHOD_CLASSES` risks reading the type ids
+_before_ they have been assigned.
+
+The solution is to derive the rtti policy from `deferred_static_rtti`. Doing so
+postpones reading the type ids until `initialize` is called:
+
+[source,c++]
+----
+include::{example}/2/custom_rtti.cpp[tag=policy]
+----

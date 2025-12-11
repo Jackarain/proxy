@@ -10,6 +10,10 @@ http://www.boost.org/LICENSE_1_0.txt
 [#changelog]
 # Revision History
 
+## Changes in 1.90.0
+
+* Updated `mp_reverse_fold` to work on fixed size lists
+
 ## Changes in 1.88.0
 
 * Fixed `mp_from_sequence` for non-integral values (accidentally broken in 1.83.0 due to offset support)

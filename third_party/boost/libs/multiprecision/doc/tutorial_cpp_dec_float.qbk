@@ -52,7 +52,7 @@ Normally these should not be visible to the user.
 * The type supports both infinities and NaNs.  An infinity is generated whenever the result would overflow,
 and a NaN is generated for any mathematically undefined operation.
 * There is a `std::numeric_limits` specialisation for this type.
-* Any `number` instantiated on this type, is convertible to any other `number` instantiated on this type -
+* Any `number` instantiated on this type is convertible to any other `number` instantiated on this type -
 for example you can convert from `number<cpp_dec_float<50> >` to `number<cpp_dec_float<SomeOtherValue> >`.
 Narrowing conversions are truncating and `explicit`.
 * Conversion from a string results in a `std::runtime_error` being thrown if the string can not be interpreted

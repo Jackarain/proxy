@@ -13,10 +13,9 @@
 #define _SCL_SECURE_NO_WARNINGS
 #endif
 
-#include <array>
+#include <test.hpp>
 
 #include <boost/detail/lightweight_test.hpp>
-#include "test.hpp"
 
 #if !defined(TEST_MPF_50) && !defined(TEST_MPF) && !defined(TEST_BACKEND) && !defined(TEST_CPP_DEC_FLOAT) && !defined(TEST_MPFR) && !defined(TEST_MPFR_50) && !defined(TEST_MPFI_50) && !defined(TEST_FLOAT128) && !defined(TEST_CPP_BIN_FLOAT) && !defined(TEST_CPP_DOUBLE_FLOAT)
 #define TEST_MPF_50
@@ -63,6 +62,8 @@
 #ifdef TEST_CPP_DOUBLE_FLOAT
 #include <boost/multiprecision/cpp_double_fp.hpp>
 #endif
+
+#include <array>
 
 template <class T>
 struct has_poor_large_value_support

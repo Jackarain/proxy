@@ -1,0 +1,82 @@
+
+## std_rtti
+
+### Synopsis
+
+Defined in <boost/openmethod/policies/std_rtti.hpp>.
+
+```c++
+namespace boost::openmethod::policies {
+
+struct std_rtti : rtti {
+    template<class Class>
+    static auto static_type() -> type_id;
+
+    template<class Class>
+    static auto dynamic_type(const Class& obj) -> type_id;
+
+    template<typename Stream>
+    static auto type_name(type_id type, Stream& stream) -> void;
+
+    static auto type_index(type_id type) -> std::type_index;
+
+    template<typename D, typename B>
+    static auto dynamic_cast_ref(B&& obj) -> D;
+};
+
+} // boost::openmethod::policies
+```
+
+### Description
+
+`std_rtti` is an implementation of the `rtti` policy that uses standard RTTI.
+
+### Members
+
+#### static_type
+
+```c++
+template<class Class>
+static auto static_type() -> type_id;
+```
+
+Return the address of `Class`'s `type_info`, cast to a `type_id`.
+
+#### dynamic_type
+
+```c++
+template<class Class>
+static auto dynamic_type(const Class& obj) -> type_id;
+```
+
+Return the address of `obj`{empty}'s `type_info`, cast to a `type_id`.
+
+#### type_name
+
+```c++
+template<typename Stream>
+static auto type_name(type_id type, Stream& stream) -> void;
+```
+
+Write the demangled name of the class identified by `type` to `stream`.
+Execute `stream << reinterpret_cast<const std::type_info*>(type)->name()`.
+
+#### type_index
+
+```c++
+static auto type_index(type_id type) -> /*unspecified*/;
+```
+
+Return `std::type_index(*reinterpret_cast<const std::type_info*>(type))`.
+
+The function is required because C++ does *not* guarantee that there is a single
+instance of `std::type_info` for each specific type.
+
+#### dynamic_cast_ref
+
+```c++
+template<typename Derived, typename Base>
+static auto dynamic_cast_ref(Base&& obj) -> Derived;
+```
+
+Cast `obj` using the `dynamic_cast` operator.

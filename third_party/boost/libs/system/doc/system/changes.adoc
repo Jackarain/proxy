@@ -8,6 +8,15 @@ https://www.boost.org/LICENSE_1_0.txt
 # Revision History
 :idprefix:
 
+## Changes in Boost 1.89
+
+* The stub compiled library has been removed; System has been header-only since release 1.69.
++
+This may affect `CMakeLists.txt` files containing `find_package(Boost COMPONENTS system ...)`.
+The easiest fix is to just remove `system` from the list of components as it's no longer required.
+If compatibility with Boost releases earlier than 1.69 is to be preserved, one can use
+`find_package(Boost COMPONENTS ... OPTIONAL_COMPONENTS system)`.
+
 ## Changes in Boost 1.86
 
 * Support `result<T> & fv`, where `fv` returns `void`.

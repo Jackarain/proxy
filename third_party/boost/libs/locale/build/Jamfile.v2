@@ -21,11 +21,7 @@ constant boost_dependencies_private :
     /boost/thread//boost_thread
     ;
 
-project
-    : source-location $(TOP)/src
-    : common-requirements <library>$(boost_dependencies)
-    : requirements <library>$(boost_dependencies_private)
-    ;
+project : source-location $(TOP)/src ;
 
 local rule debug-message ( message * )
 {
@@ -408,7 +404,7 @@ local cxx_requirements = [ requires
     ] ;
 
 lib boost_locale
-    :
+    : sources
       encoding/codepage.cpp
       shared/date_time.cpp
       shared/format.cpp
@@ -424,7 +420,9 @@ lib boost_locale
       util/encoding.cpp
       util/info.cpp
       util/locale_data.cpp
-    : # requirements
+    : requirements
+      <library>$(boost_dependencies_private)/<warnings-as-errors>off
+      <library>$(boost_dependencies)/<warnings-as-errors>off
       $(cxx_requirements)
       <link>shared:<define>BOOST_LOCALE_DYN_LINK=1
       <define>BOOST_LOCALE_SOURCE
@@ -433,7 +431,8 @@ lib boost_locale
       <target-os>windows:<define>_SCL_SECURE_NO_WARNINGS
       # Meanwhile remove this
       <conditional>@configure
-    : : # usage-requirements
+    : usage-requirements
+      <library>$(boost_dependencies)/<warnings-as-errors>off
       $(cxx_requirements)
       <link>shared:<define>BOOST_LOCALE_DYN_LINK=1
       <define>BOOST_LOCALE_NO_LIB=1

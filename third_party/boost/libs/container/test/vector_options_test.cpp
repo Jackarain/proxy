@@ -43,14 +43,17 @@ void test_stored_size_type()
       < stored_size<Unsigned> >::type options_t;
    #endif
 
+   typedef vector<unsigned char, new_allocator<unsigned char> > default_vector_t;
    //Test first with a typical allocator
    {
       typedef vector<unsigned char, new_allocator<unsigned char>, options_t> vector_t;
+      BOOST_CONTAINER_STATIC_ASSERT(sizeof(vector_t) < sizeof(default_vector_t));
       test_stored_size_type_impl<Unsigned, vector_t>();
    }
    //Test with a V2 allocator
    {
       typedef vector<unsigned char, allocator<unsigned char>, options_t> vector_t;
+      BOOST_CONTAINER_STATIC_ASSERT(sizeof(vector_t) < sizeof(default_vector_t));
       test_stored_size_type_impl<Unsigned, vector_t>();
    }
 }
@@ -119,5 +122,6 @@ int main()
    test_growth_factor_100();
    test_stored_size_type<unsigned char>();
    test_stored_size_type<unsigned short>();
+
    return ::boost::report_errors();
 }

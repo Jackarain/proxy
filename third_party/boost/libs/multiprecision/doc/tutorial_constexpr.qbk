@@ -5,23 +5,23 @@
 
   Distributed under the Boost Software License, Version 1.0.
   (See accompanying file LICENSE_1_0.txt or copy at
-  http://www.boost.org/LICENSE_1_0.txt).
+  http://www.boost.org/LICENSE_1_0.txt.)
 ]
 
 [section:lits Literal Types and `constexpr` Support]
 
 There are two kinds of `constexpr` support in this library:
 
-* The more basic version requires only C++11 and allow the construction of some number types as literals.
+* The more basic version requires only C++11 and allows the construction of some number types as literals.
 * The more advanced support permits constexpr arithmetic and requires at least C++14 
-constexpr support, and for many operations C++2a support
+constexpr support, and for many operations C++2a support.
 
 [h4 Declaring numeric literals]
 
 There are two backend types which are literals:
 
 * __float128__ (which requires GCC), and
-* Instantiations of `cpp_int_backend` where the Allocator parameter is type `void`.
+* instantiations of `cpp_int_backend` where the Allocator parameter is type `void`.
 In addition, prior to C++14 the Checked parameter must be `boost::multiprecision::unchecked`.
 
 For example:
@@ -114,13 +114,13 @@ or GCC-6 or later in C++14 mode.
 Compilers other than GCC and without `std::is_constant_evaluated()` will support a very limited set of operations:
 expect to hit roadblocks rather easily.
 
-See __compiler_support for __is_constant_evaluated;
+See __compiler_support for __is_constant_evaluated.
 
-For example given:
+For example, given
 
 [constexpr_circle]
 
-We can now calculate areas and circumferences, using all compile-time `constexpr` arithmetic:
+we can now calculate areas and circumferences, using all compile-time `constexpr` arithmetic:
 
 [constexpr_circle_usage]
 

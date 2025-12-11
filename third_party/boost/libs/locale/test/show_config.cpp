@@ -40,8 +40,8 @@ const char* env(const char* s)
 #    pragma warning(pop)
 #endif
     if(r)
-        return r;
-    return "";
+        return r; // LCOV_EXCL_LINE
+    return "";    // LCOV_EXCL_LINE
 }
 
 void check_locales(const std::vector<const char*>& names)
@@ -59,12 +59,18 @@ void check_locales(const std::vector<const char*>& names)
 
 void test_main(int /*argc*/, char** /*argv*/)
 {
-    std::cerr << "- char8_t: ";
+    std::cerr << "- Character support: ";
+    std::cerr << (sizeof(wchar_t) * 8) << "bit-wchar_t ";
 #ifdef __cpp_char8_t
-    std::cerr << "yes\n";
-#else
-    std::cerr << "no\n";
+    std::cerr << "char8_t ";
 #endif
+#ifdef BOOST_LOCALE_ENABLE_CHAR16_T
+    std::cerr << "char16_t ";
+#endif
+#ifdef BOOST_LOCALE_ENABLE_CHAR32_T
+    std::cerr << "char32_t ";
+#endif
+    std::cerr << std::endl;
     std::cerr << "- std::basic_string<char8_t>: ";
 #ifdef __cpp_lib_char8_t
     std::cerr << "yes\n";
@@ -90,6 +96,7 @@ void test_main(int /*argc*/, char** /*argv*/)
 #else
     std::cerr << "- Without iconv\n";
 #endif
+
     std::cerr << "- Environment \n";
     std::cerr << "  LANG=" << env("LANG") << std::endl;
     std::cerr << "  LC_ALL=" << env("LC_ALL") << std::endl;

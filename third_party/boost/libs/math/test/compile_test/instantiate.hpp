@@ -369,6 +369,7 @@ void instantiate(RealType)
    boost::math::jacobi_theta4m1(v1, v2);
    boost::math::jacobi_theta4m1tau(v1, v2);
    boost::math::hypot(v1, v2);
+   boost::math::hypot(v1, v2, v3);
    boost::math::sinc_pi(v1);
    boost::math::sinhc_pi(v1);
    boost::math::asinh(v1);

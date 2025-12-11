@@ -33,7 +33,7 @@ In short, what does [*Boost.Container] offer?
 
 * Emplacement and move semantics are implemented, including emulation for pre-C++11 compilers.
 * Polymorphic allocators and memory resources, including implementation and emulation for pre-C++17 compilers
-* New advanced features (e.g. recursive containers) and configurability options [link container.configurable_containers] for containers.
+* New advanced features (e.g. recursive containers) and [link container.configurable_containers configurability options for containers].
 * Containers support stateful allocators and are compatible with [*Boost.Interprocess]
   (they can be safely placed in shared memory).
 * Users obtain a more uniform performance across all plataforms,
@@ -481,7 +481,7 @@ inserted predominantly on one extreme (e.g. pushed at one extreme and popped fro
 To avoid unbounded memory waste, Boost.Container's `devector` uses a different strategy:
 
 * If elements are inserted near a extreme and there is free space on that extreme, the insertion is performed
-  without any additional data movement (only the elements between the insertion point and the extreme are moved.
+  without any additional data movement (only the elements between the insertion point and the extreme are moved).
   
 * If elements are inserted near one extreme and the free space on that extreme is exhausted, all existing elements
   are relocated (moved) to the center of the internal memory buffer. This makes room in the exhausted extreme
@@ -492,7 +492,7 @@ To avoid unbounded memory waste, Boost.Container's `devector` uses a different s
   relocations must be limited ('relocation limit') and a reallocation (allocation of a new memory buffer) will be
   performed if the load-factor of the container defined as (size()/length_of_buffer) surpasses the relocation limit (see
   Lars Greger Nordland Hagen's [@http://larshagencpp.github.io/blog/2016/05/22/devector "Double-ended vector - is it useful?"]
-  article for more details.
+  article for more details).
 
 * This approach offers a reasonable balance between a reasonable memory overhead and performance.
 
@@ -833,6 +833,13 @@ Only one of these paratemers can be specified:
 *  [classref boost::container::block_size  block_size]: the number of elements deque will allocate contiguously.
    If this option is specified, `deque::get_block_size()` will return the specified `block_size`.
    A value of zero means the default value.
+
+*  [classref boost::container::stored_size stored_size]: the type that will be used to store size-related
+   parameters inside the deque. Sometimes, when the maximum deque capacity to be used is much less than
+   `std::size_t` capacity, it may be beneficial to use a smaller unsigned integer type to represent
+   positions and offsets inside the deque, so that the size of an empty deque object is minimized and cache 
+   performance is possibly improved. See [classref boost::container::stored_size stored_size] for more details.
+
 
 See the following example to see how [classref boost::container::deque_options deque_options] can be
 used to customize `deque`:
@@ -1377,6 +1384,8 @@ use [*Boost.Container]? There are several reasons for that:
 
 [import ../../../tools/auto_index/include/auto_index_helpers.qbk]
 
+[section:index_reference Indexes and Reference]
+
 [section:index Indexes]
 
 [named_index class_name Class Index]
@@ -1388,6 +1397,10 @@ use [*Boost.Container]? There are several reasons for that:
 [endsect]
 
 [xinclude autodoc.xml]
+
+[endsect]
+
+[section:ack_notes Acknowledgements and Release Notes]
 
 [section:acknowledgements_notes Acknowledgements, notes and links]
 
@@ -1420,6 +1433,35 @@ use [*Boost.Container]? There are several reasons for that:
 [endsect]
 
 [section:release_notes Release Notes]
+
+[section:release_notes_boost_1_90_00 Boost 1.90 Release]
+
+* Reimplemented [classref boost::container::deque]. The original implementation was based on
+   the SGI's original data structure (similar to libstdc++). Main changes:
+   * `sizeof(deque)` was 10 words, now is 4 words. Probably the lightest implementation around.
+   * `sizeof(deque::iterator)` was 4 words, now is is 2 words (similar to libc++ and MSVC).)
+   * Several internal algorithms were reimplemented to speed up the segmented nature of deque.
+   * Defaults were slightly changed, 64 bit platforms now use 1024 byte blocks by default
+     instead of classic SGI 512 byte blocks.
+   * The new implementation eases further deque-like variations and optimizations in the future.
+
+* Fixed bugs/issues:
+   * [@https://github.com/boostorg/container/issues/248 GitHub #248: ['"flat_map slow insertion introduced in boost-1.80.0"]].
+   * [@https://github.com/boostorg/container/issues/254 GitHub #254: ['"C++20 std::erase_if"]].
+   * [@https://github.com/boostorg/container/issues/293/ GitHub #293: ['"UBSAN reports unaligned access error"]].
+   * [@https://github.com/boostorg/container/pull/294 GitHub #294: ['"CMake: Add option to use header-only Boost::container"]].
+   * [@https://github.com/boostorg/container/issues/300 GitHub #300: ['"Warnings when building with clang-20"]].
+   * [@https://github.com/boostorg/container/issues/304 GitHub #304: ['"Usage of boost::container::small_vector with custom allocator"]].
+   * [@https://github.com/boostorg/container/pull/305 GitHub #305: ['"Warnings with -Wstrict-prototypes"]].
+   * [@https://github.com/boostorg/container/pull/307 GitHub #307: ['"Fix all instances of MSVC warning C4146 (unsigned negation)"]].
+   * [@https://github.com/boostorg/container/issues/309 GitHub #309: ['"Performance regression of boost::container::static_vector introduced in boost v1.86"]].
+   * [@https://github.com/boostorg/container/issues/306 GitHub #306: ['"new_allocator.hpp error: '__cpp_sized_deallocation' is not defined, evaluates to 0 [-Werror,-Wundef]"]].
+   * [@https://github.com/boostorg/container/issues/310 GitHub #310: ['"flat_map: Mention correct type in documentation of emplace and emplace_hint"]].
+   * [@https://github.com/boostorg/container/issues/312 GitHub #312: ['"flat_map std::allocator::is_always_equal is deprecated"]].
+   * [@https://github.com/boostorg/container/pull/317/ GitHub #317: ['"Partial revert of changes for Issue #209 - compiler warnings"]].
+   * [@https://github.com/boostorg/container/pull/321/ GitHub #321: ['"devector does not work with pmr allocators"]].
+
+[endsect]
 
 [section:release_notes_boost_1_89_00 Boost 1.89 Release]
 
@@ -2001,6 +2043,8 @@ use [*Boost.Container]? There are several reasons for that:
 
 *  First release. Container code from [*Boost.Interprocess] was deleted
    and redirected to [*Boost.Container ] via using directives.
+
+[endsect]
 
 [endsect]
 

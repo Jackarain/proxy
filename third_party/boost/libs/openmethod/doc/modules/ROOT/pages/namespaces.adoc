@@ -1,0 +1,50 @@
+:example: ../examples/rolex
+
+[#namespaces]
+
+Note;; This section uses overrider containers, described in the
+xref:headers.adoc[Headers and Implementation Files] section.
+
+xref:BOOST_OPENMETHOD.adoc[BOOST_OPENMETHOD] defines a method in the current
+namespace. xref:BOOST_OPENMETHOD_OVERRIDE.adoc[BOOST_OPENMETHOD_OVERRIDE] works
+_across_ namespaces. Overriders are not required to be in the same namespace as
+the method they override. The macro adds the overrider to a method that can be
+called with the same arguments as the overrider, possibly located via argument
+dependant lookup.
+
+Overrider containers are added to the current namespace. It follows that the
+same method can have overriders in multiple containers, in different namespaces.
+This must be taken into account when calling an overrider explicitly. Let's put
+Employee and Salesman in their own namespaces:
+
+[source,c++]
+----
+include::{example}/4/roles.hpp[tag=content]
+----
+
+When we try to compile `salesman.cpp`:
+
+[source,c++]
+----
+include::{example}/3/salesman.cpp[tag=content]
+----
+
+We get an error like:
+
+```
+error: implicit instantiation of undefined template
+'sales::pay_boost_openmethod_overriders<
+    double (boost::openmethod::virtual_ptr<const employees::Employee>)>
+```
+
+This is because the overrider container for `pay` in namespace `sales` is
+specialized for `Salesman`, but not for `Employee`.  The overrider for Employee
+is in a specialization of a different container, in namespace `employees`.
+
+The solution is to qualify the overrider container with the `employees`
+namespace:
+
+[source,c++]
+----
+include::{example}/4/salesman.cpp[tag=content]
+----

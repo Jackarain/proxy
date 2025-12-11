@@ -125,6 +125,11 @@ or `cmake-gui`:
   Directory in which to install the compiled libraries. Can be relative to
   `CMAKE_INSTALL_PREFIX`. Default `lib`.
 
+* [`CMAKE_INSTALL_DATADIR`](https://cmake.org/cmake/help/latest/module/GNUInstallDirs.html)
+
+  Directory in which to install the data files (e.g. debugger visualizers).
+  Can be relative to `CMAKE_INSTALL_PREFIX`. Default `share`.
+
 * `BOOST_INSTALL_CMAKEDIR`
 
   Directory in which to install the CMake configuration files. Default `lib/cmake`.

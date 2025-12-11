@@ -907,8 +907,8 @@ void test_uint64_format()
             TEST_NE(ss.str(), posix_value);
 
         uint64_t parsed_value{};
-        TEST(ss >> parsed_value);
-        TEST_EQ(parsed_value, value);
+        if TEST(ss >> parsed_value)
+            TEST_EQ(parsed_value, value);
     }
 #endif
 }

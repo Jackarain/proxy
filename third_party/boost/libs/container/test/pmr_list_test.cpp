@@ -21,5 +21,8 @@ int main()
    #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
       BOOST_CONTAINER_STATIC_ASSERT(( is_same<intcontainer_t, pmr::list<int> >::value ));
    #endif
+   intcontainer_t cont(pmr::get_default_resource());
+   typedef typename intcontainer_t::value_type value_type;
+   cont.push_back(value_type());
    return 0;
 }

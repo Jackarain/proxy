@@ -100,7 +100,7 @@ struct RandomAccessIteratorIsMemoryBasedConcept
         ignore_unused_variable_warning(bd);
 
         memunit_advance(it,3);
-        // for performace you may also provide a customized implementation of memunit_advanced_ref
+        // for performance you may also provide a customized implementation of memunit_advanced_ref
     }
     Iterator it;
 };

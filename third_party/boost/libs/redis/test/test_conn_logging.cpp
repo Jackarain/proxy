@@ -28,10 +28,6 @@ using namespace boost::redis;
 
 namespace {
 
-// user tests
-//     logging can be disabled
-//     logging can be changed verbosity
-
 template <class Conn>
 void run_with_invalid_config(net::io_context& ioc, Conn& conn)
 {

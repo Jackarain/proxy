@@ -41,7 +41,7 @@ If the input is valid; that is, if there are no invalid escape sequences, the ru
 cpp:decode_view[].
 This is a forward range of characters which performs percent-decoding when iterated.
 It also supports equality and comparison to unencoded strings, without allocating memory.
-In the example below we parse the string cpp:s[] as a series of zero or more cpp:pchars[]:
+In the example below we parse the string `s` as a series of zero or more cpp:pchars[]:
 
 [source,cpp]
 ----
@@ -101,9 +101,9 @@ unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
 
 == URL Rules
 
-When a URL can appear in the context of a larger grammar, it may be desired to express the enclosing grammar in a single rule that incoporates the URL as an element.
+When a URL can appear in the context of a larger grammar, it may be desired to express the enclosing grammar in a single rule that incorporates the URL as an element.
 To achieve this, the library makes public the rules used to implement high-level parsing of complete strings as URL components, so that these components may be parsed as part of a larger string containing non-URL elements.
-Here we present a rule suitable for parsing the the HTTP
+Here we present a rule suitable for parsing the HTTP
 https://datatracker.ietf.org/doc/html/rfc7230#section-3.1.1[__request-line__,window=blank_]:
 
 [source,cpp]

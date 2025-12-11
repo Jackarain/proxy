@@ -6,9 +6,13 @@
 
 #include <boost/redis/connection.hpp>
 #include <boost/redis/logger.hpp>
+#include <boost/redis/request.hpp>
+#include <boost/redis/response.hpp>
 
 #include <boost/asio/experimental/channel_error.hpp>
 #include <boost/system/errc.hpp>
+
+#include <string>
 
 #define BOOST_TEST_MODULE conn_push
 #include <boost/test/included/unit_test.hpp>
@@ -180,18 +184,14 @@ struct response_error_tag { };
 response_error_tag error_tag_obj;
 
 struct response_error_adapter {
-   void operator()(
-      std::size_t,
+   void on_init() { }
+   void on_done() { }
+
+   void on_node(
       boost::redis::resp3::basic_node<std::string_view> const&,
       boost::system::error_code& ec)
    {
       ec = boost::redis::error::incompatible_size;
-   }
-
-   [[nodiscard]]
-   auto get_supported_response_size() const noexcept
-   {
-      return static_cast<std::size_t>(-1);
    }
 };
 
@@ -214,7 +214,6 @@ BOOST_AUTO_TEST_CASE(test_push_adapter)
 
    conn->async_receive([&, conn](error_code ec, std::size_t) {
       BOOST_CHECK_EQUAL(ec, boost::asio::experimental::error::channel_cancelled);
-      conn->cancel(operation::reconnection);
       push_received = true;
    });
 
@@ -224,7 +223,8 @@ BOOST_AUTO_TEST_CASE(test_push_adapter)
    });
 
    auto cfg = make_test_config();
-   conn->async_run(cfg, {}, [&run_finished](error_code ec) {
+   cfg.reconnect_wait_interval = 0s;
+   conn->async_run(cfg, [&run_finished](error_code ec) {
       BOOST_CHECK_EQUAL(ec, redis::error::incompatible_size);
       run_finished = true;
    });
@@ -329,6 +329,73 @@ BOOST_AUTO_TEST_CASE(many_subscribers)
 
    ioc.run_for(test_timeout);
    BOOST_TEST(finished);
+}
+
+BOOST_AUTO_TEST_CASE(test_unsubscribe)
+{
+   net::io_context ioc;
+   connection conn{ioc};
+
+   // Subscribe to 3 channels and 2 patterns. Use CLIENT INFO to verify this took effect
+   request req_subscribe;
+   req_subscribe.push("SUBSCRIBE", "ch1", "ch2", "ch3");
+   req_subscribe.push("PSUBSCRIBE", "ch1*", "ch2*");
+   req_subscribe.push("CLIENT", "INFO");
+
+   // Then, unsubscribe from some of them, and verify again
+   request req_unsubscribe;
+   req_unsubscribe.push("UNSUBSCRIBE", "ch1");
+   req_unsubscribe.push("PUNSUBSCRIBE", "ch2*");
+   req_unsubscribe.push("CLIENT", "INFO");
+
+   // Finally, ping to verify that the connection is still usable
+   request req_ping;
+   req_ping.push("PING", "test_unsubscribe");
+
+   response<std::string> resp_subscribe, resp_unsubscribe, resp_ping;
+
+   bool subscribe_finished = false, unsubscribe_finished = false, ping_finished = false,
+        run_finished = false;
+
+   auto on_ping = [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      ping_finished = true;
+      BOOST_TEST(std::get<0>(resp_ping).has_value());
+      BOOST_TEST(std::get<0>(resp_ping).value() == "test_unsubscribe");
+      conn.cancel();
+   };
+
+   auto on_unsubscribe = [&](error_code ec, std::size_t) {
+      unsubscribe_finished = true;
+      BOOST_TEST(ec == error_code());
+      BOOST_TEST(std::get<0>(resp_unsubscribe).has_value());
+      BOOST_TEST(find_client_info(std::get<0>(resp_unsubscribe).value(), "sub") == "2");
+      BOOST_TEST(find_client_info(std::get<0>(resp_unsubscribe).value(), "psub") == "1");
+      conn.async_exec(req_ping, resp_ping, on_ping);
+   };
+
+   auto on_subscribe = [&](error_code ec, std::size_t) {
+      subscribe_finished = true;
+      BOOST_TEST(ec == error_code());
+      BOOST_TEST(std::get<0>(resp_subscribe).has_value());
+      BOOST_TEST(find_client_info(std::get<0>(resp_subscribe).value(), "sub") == "3");
+      BOOST_TEST(find_client_info(std::get<0>(resp_subscribe).value(), "psub") == "2");
+      conn.async_exec(req_unsubscribe, resp_unsubscribe, on_unsubscribe);
+   };
+
+   conn.async_exec(req_subscribe, resp_subscribe, on_subscribe);
+
+   conn.async_run(make_test_config(), [&run_finished](error_code ec) {
+      BOOST_TEST(ec == net::error::operation_aborted);
+      run_finished = true;
+   });
+
+   ioc.run_for(test_timeout);
+
+   BOOST_TEST(subscribe_finished);
+   BOOST_TEST(unsubscribe_finished);
+   BOOST_TEST(ping_finished);
+   BOOST_TEST(run_finished);
 }
 
 }  // namespace

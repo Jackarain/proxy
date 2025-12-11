@@ -165,7 +165,7 @@ Models
 GIL provides a model for ``ImageViewConcept`` called ``image_view``. It is
 templated over a model of ``PixelLocatorConcept``. (If instantiated with a
 model of ``MutablePixelLocatorConcept``, it models
-``MutableImageViewConcept``). Synopsis:
+``MutableImageViewConcept``.) Synopsis:
 
 .. code-block:: cpp
 
@@ -183,7 +183,7 @@ model of ``MutablePixelLocatorConcept``, it models
   };
 
 Image views are lightweight objects. A regular interleaved view is typically
-16 bytes long - two integers for the width and height (inside dimensions) one
+16 bytes long - two integers for the width and height (inside dimensions), one
 for the number of bytes between adjacent rows (inside the locator) and one
 pointer to the beginning of the pixel block.
 
@@ -253,7 +253,7 @@ to get the derived types:
     typedef ... type;
   };
 
-GIL Provides the following view transformations:
+GIL provides the following view transformations:
 
 .. code-block:: cpp
 

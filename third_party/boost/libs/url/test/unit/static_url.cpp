@@ -14,7 +14,7 @@
 #include <boost/url/url.hpp>
 #include <boost/url/url_view.hpp>
 #include <boost/core/ignore_unused.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 
 #include "test_suite.hpp"
 
@@ -26,23 +26,23 @@ namespace urls {
 
 struct static_url_test
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::is_default_constructible<
             static_url<10>>::value);
 
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::is_copy_constructible<
             static_url<10>>::value);
 
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::is_copy_assignable<
             static_url<10>>::value);
 
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::is_convertible<
             static_url<10>, url_view>::value);
 
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::is_convertible<
             static_url<10>, url>::value);
 

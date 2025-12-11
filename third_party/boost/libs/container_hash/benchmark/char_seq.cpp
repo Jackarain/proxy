@@ -79,11 +79,11 @@ int main()
 
             if( k & 1 )
             {
-                sprintf( buffer, "prefix_%llu_suffix", k );
+                std::snprintf( buffer, sizeof( buffer ), "prefix_%llu_suffix", k );
             }
             else
             {
-                sprintf( buffer, "{%u}", static_cast<unsigned>( k ) );
+                std::snprintf( buffer, sizeof( buffer ), "{%u}", static_cast<unsigned>( k ) );
             }
 
             v.push_back( buffer );

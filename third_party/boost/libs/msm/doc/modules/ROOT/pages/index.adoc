@@ -1,0 +1,7 @@
+= Meta State Machine (MSM)
+
+Christophe Henry
+
+Christian Granzin
+
+include::partial$toc.adoc[]

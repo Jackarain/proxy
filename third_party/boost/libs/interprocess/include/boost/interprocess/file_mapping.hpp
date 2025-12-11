@@ -109,6 +109,10 @@ class file_mapping
    //!used in the constructor.
    const char *get_name() const BOOST_NOEXCEPT;
 
+   //!Returns true if the size of the file memory object
+   //!can be obtained and writes the size in the passed reference.
+   bool get_size(offset_t &size) const BOOST_NOEXCEPT;
+
    //!Removes the file named "filename" even if it's been memory mapped.
    //!Returns true on success.
    //!The function might fail in some operating systems if the file is
@@ -146,6 +150,9 @@ inline file_mapping::~file_mapping()
 
 inline const char *file_mapping::get_name() const BOOST_NOEXCEPT
 {  return m_filename.getn(); }
+
+inline bool file_mapping::get_size(offset_t &size) const BOOST_NOEXCEPT
+{  return ipcdetail::get_file_size((file_handle_t)m_handle, size);  }
 
 inline void file_mapping::swap(file_mapping &other) BOOST_NOEXCEPT
 {

@@ -1,0 +1,18 @@
+
+# Copyright Daniel James 2005. Use, modification, and distribution are
+# subject to the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+import testing ;
+
+project :
+  requirements
+    <library>/boost/container_hash//boost_container_hash
+    <library>/boost/core//boost_core
+    <library>/boost/unordered//boost_unordered
+  ;
+
+link char_seq.cpp ;
+link unordered.cpp ;
+link unordered_flat.cpp : <cxxstd>11:<build>no <cxxstd>14:<build>no ;
+link word_count.cpp : <cxxstd>11:<build>no <cxxstd>14:<build>no ;

@@ -7,8 +7,10 @@
 #include <boost/redis/connection.hpp>
 
 #include <boost/asio/co_spawn.hpp>
+#include <boost/asio/consign.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
+#include <boost/asio/read_until.hpp>
 #include <boost/asio/redirect_error.hpp>
 #include <boost/asio/signal_set.hpp>
 

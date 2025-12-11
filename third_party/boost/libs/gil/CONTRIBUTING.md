@@ -465,7 +465,7 @@ Here is an example of such lightweight workflow in Linux environment (Debian-bas
       - option `-DBoost_ARCHITECTURE=-x64` to help CMake find Boost 1.66 and above
         add an architecture tag to the library file names in versioned build
         The option added in CMake 3.13.0.
-      - option `-DDBoost_ADDITIONAL_VERSIONS=<unreleased Boost version>` is especially usefull
+      - option `-DDBoost_ADDITIONAL_VERSIONS=<unreleased Boost version>` is especially useful
         when testing GIL with staged build of Boost from its `develop` branch.
       - if CMake is still failing to find Boost, you may try `-DBoost_DEBUG=ON` to
         get detailed diagnostics output from `FindBoost.cmake` module.

@@ -72,7 +72,7 @@ static const uint32_t bmp_signature = 0x4D42; /// Constant signature for bmp fil
 template<>
 struct image_read_info< bmp_tag >
 {
-    /// Default contructor.
+    /// Default constructor.
     image_read_info()
     : _top_down(false)
     , _valid( false )
@@ -118,7 +118,7 @@ struct image_read_info< bmp_tag >
 
     bmp_top_down::type _top_down;
 
-    /// Used internaly to identify is the header has been read.
+    /// Used internally to identify is the header has been read.
     bool _valid;
 };
 

@@ -26,7 +26,7 @@ value. GIL channels model the following concept:
       static const bool is_mutable;        // use channel_traits<T>::is_mutable to access it
 
       static T min_value();                // use channel_traits<T>::min_value to access it
-      static T max_value();                // use channel_traits<T>::min_value to access it
+      static T max_value();                // use channel_traits<T>::max_value to access it
   };
 
   concept MutableChannelConcept<ChannelConcept T> : Swappable<T>, Assignable<T> {};
@@ -182,7 +182,7 @@ transformation between the ranges of the source and destination channel.
 It maps precisely the minimum to the minimum and the maximum to the maximum.
 (For example, to convert from uint8_t to uint16_t GIL does not do a bit shift
 because it will not properly match the maximum values. Instead GIL multiplies
-the source by 257).
+the source by 257.)
 
 All channel models that GIL provides are convertible from/to an integral or
 floating point type. Thus they support arithmetic operations. Here are the

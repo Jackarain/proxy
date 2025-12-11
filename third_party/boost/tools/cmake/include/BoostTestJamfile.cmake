@@ -9,10 +9,6 @@ if(NOT CMAKE_VERSION VERSION_LESS 3.10)
   include_guard()
 endif()
 
-if(BUILD_TESTING AND CMAKE_VERSION VERSION_LESS 3.9)
-  message(AUTHOR_WARNING "BoostTestJamfile requires CMake 3.9") # CMAKE_MATCH_x
-endif()
-
 include(BoostMessage)
 
 # boost_test_jamfile( FILE jamfile [PREFIX prefix]

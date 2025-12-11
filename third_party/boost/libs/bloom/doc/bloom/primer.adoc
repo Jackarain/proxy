@@ -48,7 +48,7 @@ The implementation of a classical Bloom filter consists of an array of _m_ bits,
 Inserting an element _x_ reduces to selecting _k_ positions pseudorandomly (with the help
 of _k_ independent hash functions) and setting them to one.
 
-image::bloom_insertion.png[align=center, title="Insertion in a classical Bloom filter with _k_ = 6 different hash functions. Inserting _x_ reduces to setting to one the bits at positions 10, 14, 43, 58, 1, and 39 as indicated by _h_~1~(_x_), ... , _h_~6~(_x_)."]
+image::bloom_insertion.png[align=center, title="Insertion in a classical Bloom filter with _k_ = 6 different hash functions. Inserting _x_ reduces to setting to one the bits at positions 10, 14, 43, 58, 1, and 39 as indicated by _h_~1~(_x_), ..., _h_~6~(_x_)."]
 
 To check if an element _y_ is in the filter, we follow the same procedure and see if
 the selected bits are all set to one. In the example figure there are two unset bits, which
@@ -65,7 +65,7 @@ when the array is sparsely populated, a higher value of _k_ improves (decreases)
 as there are more chances that we hit a non-set bit; however, if _k_ is very high
 the array will have more and more bits set to one as new elements are inserted, which
 eventually will reach a point where we lose out to a filter with a lower _k_ and
-thus a smaller proportions of set bits. For given values of _n_ and _m_, the optimum _k_ is
+thus a smaller proportion of set bits. For given values of _n_ and _m_, the optimum _k_ is
 {small}stem:[\lfloor k_{\text{opt}}\rfloor]{small-end} or
 {small}stem:[\lceil k_{\text{opt}}\rceil]{small-end}, with
 

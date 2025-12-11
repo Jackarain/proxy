@@ -21,14 +21,9 @@ jobs:
       matrix:
         compiler: [ g++-13, g++-14 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: '0'
-      - uses: mstachniuk/ci-skip@v1
-        with:
-          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[windows];[Windows];[WINDOWS];[apple];[Apple];[APPLE]'
-          commit-filter-separator: ';'
-          fail-fast: true
       - name: Set TOOLSET
         run: echo ${{ matrix.compiler }} | awk '/^g/ { print "TOOLSET=gcc" } /^clang/ { print "TOOLSET=clang" }' >> $GITHUB_ENV
       - name: Add repository
@@ -65,14 +60,9 @@ jobs:
       matrix:
         compiler: [ g++-11, g++-12, g++-13 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: '0'
-      - uses: mstachniuk/ci-skip@v1
-        with:
-          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[windows];[Windows];[WINDOWS];[apple];[Apple];[APPLE]'
-          commit-filter-separator: ';'
-          fail-fast: true
       - name: Set TOOLSET
         run: echo ${{ matrix.compiler }} | awk '/^g/ { print "TOOLSET=gcc" } /^clang/ { print "TOOLSET=clang" }' >> $GITHUB_ENV
       - name: Add repository
@@ -109,14 +99,9 @@ jobs:
       matrix:
         compiler: [ clang++-15 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: '0'
-      - uses: mstachniuk/ci-skip@v1
-        with:
-          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[windows];[Windows];[WINDOWS];[apple];[Apple];[APPLE]'
-          commit-filter-separator: ';'
-          fail-fast: true
       - name: Set TOOLSET
         run: echo ${{ matrix.compiler }} | awk '/^g/ { print "TOOLSET=gcc" } /^clang/ { print "TOOLSET=clang" }' >> $GITHUB_ENV
       - name: Add repository
@@ -153,14 +138,9 @@ jobs:
       matrix:
         toolset: [ clang ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: '0'
-      - uses: mstachniuk/ci-skip@v1
-        with:
-          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[windows];[Windows];[WINDOWS];[linux];[Linux];[LINUX]'
-          commit-filter-separator: ';'
-          fail-fast: true
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update Dependencies
@@ -181,82 +161,6 @@ jobs:
       - name: Test
         run: ../../../b2 toolset=${{ matrix.toolset }} cxxstd=03,11,14,17,2a
         working-directory: ../boost-root/libs/config/test
-  windows_msvc_14_0:
-    runs-on: windows-2019
-    defaults:
-      run:
-        shell: cmd
-    strategy:
-      fail-fast: false
-      matrix:
-        toolset: [ msvc-14.0 ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: '0'
-      - uses: mstachniuk/ci-skip@v1
-        with:
-          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[apple];[Apple];[APPLE];[linux];[Linux];[LINUX]'
-          commit-filter-separator: ';'
-          fail-fast: true
-      - name: Checkout main boost
-        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
-      - name: Update Dependencies
-        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
-        working-directory: ../boost-root
-      - name: Copy files
-        run: xcopy /s /e /q %GITHUB_WORKSPACE% libs\config
-        working-directory: ../boost-root
-      - name: Bootstrap
-        run: bootstrap
-        working-directory: ../boost-root
-      - name: Generate headers
-        run: b2 headers
-        working-directory: ../boost-root
-      - name: Config info
-        run: ..\..\..\b2 print_config_info cxxstd=14,latest address-model=64 toolset=msvc-14.0
-        working-directory: ../boost-root/libs/config/test
-      - name: Test
-        run: ..\..\..\b2 --hash address-model=64 cxxstd=14,latest toolset=msvc-14.0
-        working-directory: ../boost-root/libs/config/test
-  windows_msvc_14_2:
-    runs-on: windows-2019
-    defaults:
-      run:
-        shell: cmd
-    strategy:
-      fail-fast: false
-      matrix:
-        toolset: [ msvc-14.2 ]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: '0'
-      - uses: mstachniuk/ci-skip@v1
-        with:
-          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[apple];[Apple];[APPLE];[linux];[Linux];[LINUX]'
-          commit-filter-separator: ';'
-          fail-fast: true
-      - name: Checkout main boost
-        run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
-      - name: Update Dependencies
-        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
-        working-directory: ../boost-root
-      - name: Copy files
-        run: xcopy /s /e /q %GITHUB_WORKSPACE% libs\config
-        working-directory: ../boost-root
-      - name: Bootstrap
-        run: bootstrap
-        working-directory: ../boost-root
-      - name: Generate headers
-        run: b2 headers
-        working-directory: ../boost-root
-      - name: Config info
-        run: ..\..\..\b2 print_config_info cxxstd=14,17,20,latest address-model=64 toolset=msvc-14.2
-        working-directory: ../boost-root/libs/config/test
-      - name: Test
-        run: ..\..\..\b2 --hash address-model=64 cxxstd=14,17,20,latest toolset=msvc-14.2
-        working-directory: ../boost-root/libs/config/test
   windows_msvc_14_3:
     runs-on: windows-2022
     defaults:
@@ -267,14 +171,9 @@ jobs:
       matrix:
         toolset: [ msvc-14.3 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: '0'
-      - uses: mstachniuk/ci-skip@v1
-        with:
-          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[apple];[Apple];[APPLE];[linux];[Linux];[LINUX]'
-          commit-filter-separator: ';'
-          fail-fast: true
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update Dependencies
@@ -305,14 +204,9 @@ jobs:
       matrix:
         toolset: [ clang-msvc-14.3 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: '0'
-      - uses: mstachniuk/ci-skip@v1
-        with:
-          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[apple];[Apple];[APPLE];[linux];[Linux];[LINUX]'
-          commit-filter-separator: ';'
-          fail-fast: true
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update Dependencies
@@ -340,7 +234,7 @@ jobs:
       matrix:
         qemu_arch: [ aarch64, s390x, ppc64le ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - uses: uraimo/run-on-arch-action@v3
         name: Run commands
         id: runcmd
@@ -376,7 +270,7 @@ jobs:
       matrix:
         qemu_arch: [ aarch64, ppc64le ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - uses: uraimo/run-on-arch-action@v3
         name: Run commands
         id: runcmd
@@ -413,14 +307,9 @@ jobs:
       matrix:
         compiler: [ emcc ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
         with:
           fetch-depth: '0'
-      - uses: mstachniuk/ci-skip@v1
-        with:
-          commit-filter: '[skip ci];[ci skip];[CI SKIP];[SKIP CI];***CI SKIP***;***SKIP CI***;[windows];[Windows];[WINDOWS];[apple];[Apple];[APPLE]'
-          commit-filter-separator: ';'
-          fail-fast: true
       - name: Install Emscripten
         run: |
          uname -a
@@ -476,10 +365,10 @@ jobs:
         run: |
          source ../emsdk/emsdk_env.sh
          emcc -pthread -s EXIT_RUNTIME=1 -s PTHREAD_POOL_SIZE=32 -I. -O3 -o config_info_pthread libs/config/test/config_info.cpp
-         node --experimental-wasm-threads config_info_pthread
+         node config_info_pthread
       - name: Test config_test (pthread)
         working-directory: ../boost-root
         run: |
          source ../emsdk/emsdk_env.sh
          emcc -pthread -s EXIT_RUNTIME=1 -s PTHREAD_POOL_SIZE=32 -s DISABLE_EXCEPTION_CATCHING=0 -I. -O3 -o config_test_pthread libs/config/test/config_test.cpp
-         node --experimental-wasm-threads config_test_pthread
+         node config_test_pthread

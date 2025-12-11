@@ -315,7 +315,7 @@ void merge_block<Iter_t, Compare, Power2>
     {   // The list B is finished
         rngA = get_range(*itxA);
         if (ntail != 0 && indexB.back() == (nblock - 1)) // exist tail
-        {   // add the tail block to indexA, and shift the element
+        {   // add the tail block to indexA, && shift the element
             indexA.push_back(indexB.back());
             size_t numA = size_t(itA - rngA.first);
             ptr_circ->pop_move_back(rngA.first, numA);

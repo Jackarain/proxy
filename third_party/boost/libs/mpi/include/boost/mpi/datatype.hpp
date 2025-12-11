@@ -213,8 +213,13 @@ BOOST_MPI_DATATYPE(packed, MPI_PACKED, builtin);
 BOOST_MPI_DATATYPE(char, MPI_CHAR, builtin);
 
 /// INTERNAL ONLY
+#if !defined(MSMPI_VER)
 /// We need to pick a boolean type, MPI_CXX_BOOL seems appropriate
 BOOST_MPI_DATATYPE(bool, MPI_CXX_BOOL, logical);
+#else
+/// but is not available on MSMPI
+BOOST_MPI_DATATYPE(bool, MPI_C_BOOL, logical);
+#endif
 
 /// INTERNAL ONLY
 BOOST_MPI_DATATYPE(short, MPI_SHORT, integer);

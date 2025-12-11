@@ -33,6 +33,7 @@
 [template refmem[class mem][reflink2 [class].[mem] [class]::[mem]]]
 [template refmemunq[class mem][reflink2 [class].[mem] [mem]]]
 [template asioreflink[id term][@boost:/doc/html/boost_asio/reference/[id].html [^boost::asio::[term]]]]
+[template asioreflink2[id term][@boost:/doc/html/boost_asio/reference/[id].html [term]]]
 [template beastreflink[id term][@boost:/libs/beast/doc/html/beast/ref/[id].html [^boost::beast::[term]]]]
 [template beastconceptslink[id term][@boost:/libs/beast/doc/html/beast/concepts/[id].html [term]]]
 [template mqttlink[id text][@https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc[id] [text]]]

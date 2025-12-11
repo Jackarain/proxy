@@ -1,6 +1,6 @@
 services:
   redis:
-    image: "redis:alpine"
+    image: ${SERVER_IMAGE}
     entrypoint: "/docker/entrypoint.sh"
     volumes:
       - ./docker:/docker
@@ -9,7 +9,7 @@ services:
       - 6379:6379
       - 6380:6380
   builder:
-    image: $IMAGE
+    image: ${BUILDER_IMAGE}
     container_name: builder
     tty: true
     environment:

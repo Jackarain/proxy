@@ -74,7 +74,7 @@ BOOST_FIXTURE_TEST_CASE(single_host, shared_test_data) {
 BOOST_FIXTURE_TEST_CASE(multiple_hosts, shared_test_data) {
     bool finished = false;
     // "example.invalid" will not be resolved
-    ep.brokers("127.0.0.1:1001,127.0.0.1/path1, example.invalid,   localhost:1002/path1/path-2/path.3_", 1000);
+    ep.brokers("127.0.0.1:1001,127.0.0.1/~path1, example.invalid,   localhost:1002/path1/path-2/path.3_", 1000);
 
     asio::co_spawn(ioc, [&]() -> asio::awaitable<void> {
         for (size_t i = 0; i < 3; ++i) {
@@ -90,7 +90,7 @@ BOOST_FIXTURE_TEST_CASE(multiple_hosts, shared_test_data) {
             BOOST_TEST(!eps.empty());
             BOOST_TEST(ap.host == "127.0.0.1");
             BOOST_TEST(ap.port == "1000");
-            BOOST_TEST(ap.path == "/path1");
+            BOOST_TEST(ap.path == "/~path1");
 
             std::tie(ec, eps, ap) = co_await ep.async_next_endpoint(use_nothrow_awaitable);
             BOOST_TEST(ec == success);

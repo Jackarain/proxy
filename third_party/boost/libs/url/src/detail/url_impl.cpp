@@ -402,6 +402,15 @@ nseg() const noexcept
     return nseg_;
 }
 
+std::size_t
+path_ref::
+decoded_size() const noexcept
+{
+    if(impl_)
+        return impl_->decoded_[id_path];
+    return dn_;
+}
+
 //------------------------------------------------
 //
 // query_ref
@@ -527,4 +536,3 @@ nparam() const noexcept
 } // detail
 } // urls
 } // boost
-

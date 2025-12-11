@@ -1,5 +1,7 @@
 ///////////////////////////////////////////////////////////////
-//  Copyright 2012 John Maddock. Distributed under the Boost
+//  Copyright 2012 - 2025 John Maddock.
+//  Copyright 2025 Christopher Kormanyos.
+//  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
 
@@ -17,12 +19,13 @@
 //
 #define BOOST_MP_USE_LIMB_SHIFT
 
-#include <boost/multiprecision/gmp.hpp>
+#include <timer.hpp>
+#include <test.hpp>
+
 #include <boost/multiprecision/cpp_int.hpp>
+#include <boost/multiprecision/gmp.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
-#include "timer.hpp"
-#include "test.hpp"
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4127) //  Conditional expression is constant
@@ -785,6 +788,7 @@ struct tester
 
          if (last_error_count != (unsigned)boost::detail::test_errors())
          {
+            // LCOV_EXCL_START These lines are not expected to get hit in tests.
             last_error_count = boost::detail::test_errors();
             std::cout << std::hex << std::showbase;
 
@@ -817,6 +821,7 @@ struct tester
             std::cout << "a1%b1  = " << a1 % b1 << std::endl;
             std::cout << "a%d    = " << a % d << std::endl;
             std::cout << "a1%d1  = " << a1 % d1 << std::endl;
+            // LCOV_EXCL_STOP These lines are not expected to get hit in tests.
          }
 
          //

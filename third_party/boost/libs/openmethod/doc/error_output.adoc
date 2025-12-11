@@ -1,0 +1,28 @@
+
+## output
+
+### Synopsis
+
+Defined in <boost/openmethod/policies/basic_policy.hpp>.
+
+```c++
+namespace boost::openmethod::policies {
+
+struct output : policy {};
+
+} // boost::openmethod::policies
+```
+
+### Description
+
+`output` is a policy that provides a stream for writing error messages.
+
+### Requirements
+
+#### error_stream
+
+```c++
+static LightweightOutputStream error_stream;
+```
+
+A static variable that satisfies the requirements of `LightweightOutputStream`.

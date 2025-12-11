@@ -9,12 +9,12 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include "BackCommon.hpp"
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/front/euml/euml.hpp>
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
-#define BOOST_TEST_MODULE MyOrthogonalDeferredEumlTest
+#define BOOST_TEST_MODULE orthogonal_deferred_euml_test
 #endif
 #include <boost/test/unit_test.hpp>
 
@@ -65,15 +65,23 @@ namespace
     BOOST_MSM_EUML_INTERRUPT_STATE(( end_error,++state_(entry_counter),++state_(exit_counter),attributes_ << entry_counter << exit_counter),
                                     ErrorMode)
 
-    // Playing is now a state machine itself.
+    // State machine attributes.
+    BOOST_MSM_EUML_DECLARE_ATTRIBUTE(unsigned int,start_playback_counter)
+    BOOST_MSM_EUML_DECLARE_ATTRIBUTE(unsigned int,can_close_drawer_counter)
+    BOOST_MSM_EUML_DECLARE_ATTRIBUTE(unsigned int,report_error_counter)
+    BOOST_MSM_EUML_DECLARE_ATTRIBUTE(unsigned int,report_end_error_counter)
     BOOST_MSM_EUML_DECLARE_ATTRIBUTE(unsigned int,start_next_song_counter)
     BOOST_MSM_EUML_DECLARE_ATTRIBUTE(unsigned int,start_prev_song_guard_counter)
 
+    // Playing is now a state machine itself.
     BOOST_MSM_EUML_STATE(( ++state_(entry_counter),++state_(exit_counter),
                            attributes_ << entry_counter << exit_counter, configure_<< FirstSongPlaying ),Song1)
     BOOST_MSM_EUML_STATE(( ++state_(entry_counter),++state_(exit_counter),attributes_ << entry_counter << exit_counter),Song2)
     BOOST_MSM_EUML_STATE(( ++state_(entry_counter),++state_(exit_counter),attributes_ << entry_counter << exit_counter),Song3)
 
+    template<template <typename...> class Back, typename Policy = void>
+    struct hierarchical_state_machine
+    {
     // Playing has a transition table 
    BOOST_MSM_EUML_TRANSITION_TABLE((
         //  +------------------------------------------------------------------------------+
@@ -95,14 +103,10 @@ namespace
                                         ),Playing_)
 
     // back-end
-    typedef msm::back::state_machine<Playing_> Playing_type;
+    typedef Back<Playing_, Policy> Playing_type;
     Playing_type const Playing;
 
     //fsm
-    BOOST_MSM_EUML_DECLARE_ATTRIBUTE(unsigned int,start_playback_counter)
-    BOOST_MSM_EUML_DECLARE_ATTRIBUTE(unsigned int,can_close_drawer_counter)
-    BOOST_MSM_EUML_DECLARE_ATTRIBUTE(unsigned int,report_error_counter)
-    BOOST_MSM_EUML_DECLARE_ATTRIBUTE(unsigned int,report_end_error_counter)
     BOOST_MSM_EUML_ACTION(No_Transition)
     {
         template <class FSM,class Event>
@@ -146,213 +150,221 @@ namespace
                                         ),
                                       player_) //fsm name
 
+    typedef Back<player_, Policy> player;
+    };
     // Pick a back-end
-    typedef msm::back::state_machine<player_> player;
+    typedef boost::mpl::vector<
+        hierarchical_state_machine<boost::msm::back::state_machine>
+        // TODO:
+        // Investigate reason for test failure in back11.
+        // hierarchical_state_machine<boost::msm::back11::state_machine>
+        > test_machines;
 
     //static char const* const state_names[] = { "Stopped", "Paused","Open", "Empty", "Playing" ,"AllOk","ErrorMode","ErrorTerminate" };
 
-    BOOST_AUTO_TEST_CASE(MyOrthogonalDeferredEumlTest)
+    BOOST_AUTO_TEST_CASE_TEMPLATE(orthogonal_deferred_euml_test, test_machine, test_machines)
     {
-        player p;
+        typename test_machine::player p;
+        typedef typename test_machine::Playing_type Playing_type;
+
         // needed to start the highest-level SM. This will call on_entry and mark the start of the SM
         p.start(); 
         // test deferred event
         // deferred in Empty and Open, will be handled only after event cd_detected
         p.process_event(play);
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 3,"Empty should be active"); //Empty
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Open)&>().get_attribute(exit_counter) == 0,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Open)&>().get_attribute(exit_counter) == 0,
                             "Open exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().get_attribute(entry_counter) == 0,"Playing entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().get_attribute(entry_counter) == 0,"Playing entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(entry_counter) == 1,
                             "Empty entry not called correctly");
         //flags
-        BOOST_CHECK_MESSAGE(p.is_flag_active<BOOST_MSM_EUML_FLAG_NAME(CDLoaded)>() == false,"CDLoaded should not be active");
+        BOOST_CHECK_MESSAGE(p.template is_flag_active<BOOST_MSM_EUML_FLAG_NAME(CDLoaded)>() == false,"CDLoaded should not be active");
 
         p.process_event(open_close); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 2,"Open should be active"); //Open
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(exit_counter) == 1,
                             "Empty exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Open)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Open)&>().get_attribute(entry_counter) == 1,
                             "Open entry not called correctly");
 
         p.process_event(open_close); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 3,"Empty should be active"); //Empty
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Open)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Open)&>().get_attribute(exit_counter) == 1,
                             "Open exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(entry_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(entry_counter) == 2,
                             "Empty entry not called correctly");
         BOOST_CHECK_MESSAGE(p.get_attribute(can_close_drawer_counter) == 1,"guard not called correctly");
 
         //deferred event should have been processed
         p.process_event(cd_detected("louie, louie")); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Empty)&>().get_attribute(exit_counter) == 2,
                             "Empty exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 1,
                             "Stopped entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 1,
                             "Stopped exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().get_attribute(entry_counter) == 1,"Playing entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().get_attribute(entry_counter) == 1,"Playing entry not called correctly");
         BOOST_CHECK_MESSAGE(p.get_attribute(start_playback_counter) == 1,"action not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().current_state()[0] == 0,"Song1 should be active");
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().current_state()[0] == 0,"Song1 should be active");
         BOOST_CHECK_MESSAGE(
-            p.get_state<Playing_type&>().get_state<BOOST_MSM_EUML_STATE_NAME(Song1)&>().get_attribute(entry_counter) == 1,
+            p.template get_state<Playing_type&>().template get_state<BOOST_MSM_EUML_STATE_NAME(Song1)&>().get_attribute(entry_counter) == 1,
             "Song1 entry not called correctly");
 
         //flags
-        BOOST_CHECK_MESSAGE(p.is_flag_active<BOOST_MSM_EUML_FLAG_NAME(PlayingPaused)>() == true,"PlayingPaused should be active");
-        BOOST_CHECK_MESSAGE(p.is_flag_active<BOOST_MSM_EUML_FLAG_NAME(FirstSongPlaying)>() == true,"FirstSongPlaying should be active");
+        BOOST_CHECK_MESSAGE(p.template is_flag_active<BOOST_MSM_EUML_FLAG_NAME(PlayingPaused)>() == true,"PlayingPaused should be active");
+        BOOST_CHECK_MESSAGE(p.template is_flag_active<BOOST_MSM_EUML_FLAG_NAME(FirstSongPlaying)>() == true,"FirstSongPlaying should be active");
 
 
         p.process_event(next_song);
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().current_state()[0] == 1,"Song2 should be active");
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().current_state()[0] == 1,"Song2 should be active");
         BOOST_CHECK_MESSAGE(
-            p.get_state<Playing_type&>().get_state<BOOST_MSM_EUML_STATE_NAME(Song2)&>().get_attribute(entry_counter) == 1,
+            p.template get_state<Playing_type&>().template get_state<BOOST_MSM_EUML_STATE_NAME(Song2)&>().get_attribute(entry_counter) == 1,
             "Song2 entry not called correctly");
         BOOST_CHECK_MESSAGE(
-            p.get_state<Playing_type&>().get_state<BOOST_MSM_EUML_STATE_NAME(Song1)&>().get_attribute(exit_counter) == 1,
+            p.template get_state<Playing_type&>().template get_state<BOOST_MSM_EUML_STATE_NAME(Song1)&>().get_attribute(exit_counter) == 1,
             "Song1 exit not called correctly");
         BOOST_CHECK_MESSAGE(
-            p.get_state<Playing_type&>().get_attribute(start_next_song_counter) == 0,
+            p.template get_state<Playing_type&>().get_attribute(start_next_song_counter) == 0,
             "submachine action not called correctly");
 
         p.process_event(next_song);
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().current_state()[0] == 2,"Song3 should be active");
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().current_state()[0] == 2,"Song3 should be active");
         BOOST_CHECK_MESSAGE(
-            p.get_state<Playing_type&>().get_state<BOOST_MSM_EUML_STATE_NAME(Song3)&>().get_attribute(entry_counter) == 1,
+            p.template get_state<Playing_type&>().template get_state<BOOST_MSM_EUML_STATE_NAME(Song3)&>().get_attribute(entry_counter) == 1,
             "Song3 entry not called correctly");
         BOOST_CHECK_MESSAGE(
-            p.get_state<Playing_type&>().get_state<BOOST_MSM_EUML_STATE_NAME(Song2)&>().get_attribute(exit_counter) == 1,
+            p.template get_state<Playing_type&>().template get_state<BOOST_MSM_EUML_STATE_NAME(Song2)&>().get_attribute(exit_counter) == 1,
             "Song2 exit not called correctly");
         BOOST_CHECK_MESSAGE(
-            p.get_state<Playing_type&>().get_attribute(start_next_song_counter) == 1,
+            p.template get_state<Playing_type&>().get_attribute(start_next_song_counter) == 1,
             "submachine action not called correctly");
 
         p.process_event(previous_song);
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().current_state()[0] == 1,"Song2 should be active");
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().current_state()[0] == 1,"Song2 should be active");
         BOOST_CHECK_MESSAGE(
-            p.get_state<Playing_type&>().get_state<BOOST_MSM_EUML_STATE_NAME(Song2)&>().get_attribute(entry_counter) == 2,
+            p.template get_state<Playing_type&>().template get_state<BOOST_MSM_EUML_STATE_NAME(Song2)&>().get_attribute(entry_counter) == 2,
             "Song2 entry not called correctly");
         BOOST_CHECK_MESSAGE(
-            p.get_state<Playing_type&>().get_state<BOOST_MSM_EUML_STATE_NAME(Song3)&>().get_attribute(exit_counter) == 1,
+            p.template get_state<Playing_type&>().template get_state<BOOST_MSM_EUML_STATE_NAME(Song3)&>().get_attribute(exit_counter) == 1,
             "Song3 exit not called correctly");
         BOOST_CHECK_MESSAGE(
-            p.get_state<Playing_type&>().get_attribute(start_prev_song_guard_counter) == 1,
+            p.template get_state<Playing_type&>().get_attribute(start_prev_song_guard_counter) == 1,
             "submachine guard not called correctly");
         //flags
-        BOOST_CHECK_MESSAGE(p.is_flag_active<BOOST_MSM_EUML_FLAG_NAME(PlayingPaused)>() == true,"PlayingPaused should be active");
-        BOOST_CHECK_MESSAGE(p.is_flag_active<BOOST_MSM_EUML_FLAG_NAME(FirstSongPlaying)>() == false,"FirstSongPlaying should not be active");
+        BOOST_CHECK_MESSAGE(p.template is_flag_active<BOOST_MSM_EUML_FLAG_NAME(PlayingPaused)>() == true,"PlayingPaused should be active");
+        BOOST_CHECK_MESSAGE(p.template is_flag_active<BOOST_MSM_EUML_FLAG_NAME(FirstSongPlaying)>() == false,"FirstSongPlaying should not be active");
 
         p.process_event(pause());
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 1,"Paused should be active"); //Paused
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().get_attribute(exit_counter) == 1,"Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().get_attribute(exit_counter) == 1,"Playing exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(entry_counter) == 1,
                             "Paused entry not called correctly");
         //flags
-        BOOST_CHECK_MESSAGE(p.is_flag_active<BOOST_MSM_EUML_FLAG_NAME(PlayingPaused)>() == true,"PlayingPaused should be active");
+        BOOST_CHECK_MESSAGE(p.template is_flag_active<BOOST_MSM_EUML_FLAG_NAME(PlayingPaused)>() == true,"PlayingPaused should be active");
 
         // go back to Playing
         p.process_event(end_pause);  
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(exit_counter) == 1,
                             "Paused exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().get_attribute(entry_counter) == 2,"Playing entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().get_attribute(entry_counter) == 2,"Playing entry not called correctly");
 
         p.process_event(pause); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 1,"Paused should be active"); //Paused
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().get_attribute(exit_counter) == 2,"Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(entry_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().get_attribute(exit_counter) == 2,"Playing exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(entry_counter) == 2,
                             "Paused entry not called correctly");
 
         p.process_event(stop);  
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"Stopped should be active"); //Stopped
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Paused)&>().get_attribute(exit_counter) == 2,
                             "Paused exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 2,
                             "Stopped entry not called correctly");
         //flags
-        BOOST_CHECK_MESSAGE(p.is_flag_active<BOOST_MSM_EUML_FLAG_NAME(PlayingPaused)>() == false,"PlayingPaused should not be active");
-        BOOST_CHECK_MESSAGE(p.is_flag_active<BOOST_MSM_EUML_FLAG_NAME(CDLoaded)>() == true,"CDLoaded should be active");
-        //BOOST_CHECK_MESSAGE(p.is_flag_active<BOOST_MSM_EUML_FLAG_NAME(CDLoaded),player::Flag_AND>() == false,"CDLoaded with AND should not be active");
+        BOOST_CHECK_MESSAGE(p.template is_flag_active<BOOST_MSM_EUML_FLAG_NAME(PlayingPaused)>() == false,"PlayingPaused should not be active");
+        BOOST_CHECK_MESSAGE(p.template is_flag_active<BOOST_MSM_EUML_FLAG_NAME(CDLoaded)>() == true,"CDLoaded should be active");
+        //BOOST_CHECK_MESSAGE(p.template is_flag_active<BOOST_MSM_EUML_FLAG_NAME(CDLoaded),player::Flag_AND>() == false,"CDLoaded with AND should not be active");
 
         p.process_event(stop);  
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"Stopped should be active"); //Stopped
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 2,
                             "Stopped exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
                             "Stopped entry not called correctly");
 
         //test interrupt
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 5,"AllOk should be active"); //AllOk
         p.process_event(error_found);
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 6,"ErrorMode should be active"); //ErrorMode
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(AllOk)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(AllOk)&>().get_attribute(exit_counter) == 1,
                             "AllOk exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(ErrorMode)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(ErrorMode)&>().get_attribute(entry_counter) == 1,
                             "ErrorMode entry not called correctly");
 
         // try generating more events
         p.process_event(play);
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 6,"ErrorMode should be active"); //ErrorMode
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(AllOk)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(AllOk)&>().get_attribute(exit_counter) == 1,
                             "AllOk exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(ErrorMode)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(ErrorMode)&>().get_attribute(entry_counter) == 1,
                             "ErrorMode entry not called correctly");
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"Stopped should be active"); //Stopped
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 2,
                             "Stopped exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
                             "Stopped entry not called correctly");
 
         p.process_event(end_error);
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 5,"AllOk should be active"); //AllOk
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(ErrorMode)&>().get_attribute(exit_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(ErrorMode)&>().get_attribute(exit_counter) == 1,
                             "ErrorMode exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(AllOk)&>().get_attribute(entry_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(AllOk)&>().get_attribute(entry_counter) == 2,
                             "AllOk entry not called correctly");
 
         p.process_event(play);
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 3,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(exit_counter) == 3,
                             "Stopped exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().get_attribute(entry_counter) == 3,"Playing entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().get_attribute(entry_counter) == 3,"Playing entry not called correctly");
 
         //test terminate
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 5,"AllOk should be active"); //AllOk
         p.process_event(do_terminate);
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 7,"ErrorTerminate should be active"); //ErrorTerminate
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(AllOk)&>().get_attribute(exit_counter) == 2,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(AllOk)&>().get_attribute(exit_counter) == 2,
                             "AllOk exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(ErrorTerminate)&>().get_attribute(entry_counter) == 1,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(ErrorTerminate)&>().get_attribute(entry_counter) == 1,
                             "ErrorTerminate entry not called correctly");
 
         // try generating more events
         p.process_event(stop);
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 7,"ErrorTerminate should be active"); //ErrorTerminate
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(ErrorTerminate)&>().get_attribute(exit_counter) == 0,
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(ErrorTerminate)&>().get_attribute(exit_counter) == 0,
                             "ErrorTerminate exit not called correctly");
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().get_attribute(exit_counter) == 2,"Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().get_attribute(exit_counter) == 2,"Playing exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
                             "Stopped entry not called correctly");
 
         p.process_event(end_error());
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 7,"ErrorTerminate should be active"); //ErrorTerminate
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().get_attribute(exit_counter) == 2,"Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().get_attribute(exit_counter) == 2,"Playing exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
                             "Stopped entry not called correctly");
 
         p.process_event(stop());
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 7,"ErrorTerminate should be active"); //ErrorTerminate
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<Playing_type&>().get_attribute(exit_counter) == 2,"Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
+        BOOST_CHECK_MESSAGE(p.template get_state<Playing_type&>().get_attribute(exit_counter) == 2,"Playing exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<BOOST_MSM_EUML_STATE_NAME(Stopped)&>().get_attribute(entry_counter) == 3,
                             "Stopped entry not called correctly");
 
     }
 }
-

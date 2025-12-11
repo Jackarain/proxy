@@ -232,7 +232,7 @@ private:
         if( process )
         {
             // We are reading a gray1_image like a gray8_image but the two pixel_t
-            // aren't compatible. Though, read_and_no_convert::read(...) wont work.
+            // aren't compatible. Though, read_and_no_convert::read(...) won't work.
             copy_data< View_Dst
                      , View_Src >( dst
                                  , src

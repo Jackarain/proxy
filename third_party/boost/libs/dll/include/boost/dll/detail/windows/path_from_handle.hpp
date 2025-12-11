@@ -32,23 +32,24 @@ namespace boost { namespace dll { namespace detail {
         constexpr boost::winapi::DWORD_ DEFAULT_PATH_SIZE_ = 260;
 
         ec.clear();
+        {
+            // If `handle` parameter is NULL, GetModuleFileName retrieves the path of the
+            // executable file of the current process.
+            boost::winapi::WCHAR_ path_hldr[DEFAULT_PATH_SIZE_];
+            const boost::winapi::DWORD_ size = boost::winapi::GetModuleFileNameW(handle, path_hldr, DEFAULT_PATH_SIZE_);
 
-        // If `handle` parameter is NULL, GetModuleFileName retrieves the path of the
-        // executable file of the current process.
-        boost::winapi::WCHAR_ path_hldr[DEFAULT_PATH_SIZE_];
-        const boost::winapi::DWORD_ size = boost::winapi::GetModuleFileNameW(handle, path_hldr, DEFAULT_PATH_SIZE_);
-
-        // If the function succeeds, the return value is the length of the string that is copied to the
-        // buffer, in characters, not including the terminating null character.  If the buffer is too
-        // small to hold the module name, the string is truncated to nSize characters including the
-        // terminating null character, the function returns nSize, and the function sets the last
-        // error to ERROR_INSUFFICIENT_BUFFER.
-        if (size != 0 && size < DEFAULT_PATH_SIZE_) {
-            // On success, GetModuleFileNameW() doesn't reset last error to ERROR_SUCCESS. Resetting it manually.
-            return boost::dll::fs::path(path_hldr);
+            // If the function succeeds, the return value is the length of the string that is copied to the
+            // buffer, in characters, not including the terminating null character.  If the buffer is too
+            // small to hold the module name, the string is truncated to nSize characters including the
+            // terminating null character, the function returns nSize, and the function sets the last
+            // error to ERROR_INSUFFICIENT_BUFFER.
+            if (size != 0 && size < DEFAULT_PATH_SIZE_) {
+                // On success, GetModuleFileNameW() doesn't reset last error to ERROR_SUCCESS. Resetting it manually.
+                return boost::dll::fs::path(path_hldr);
+            }
+            ec = boost::dll::detail::last_error_code();
         }
 
-        ec = boost::dll::detail::last_error_code();
         for (boost::winapi::DWORD_ new_size = 1024; new_size < 1024 * 1024 && static_cast<boost::winapi::DWORD_>(ec.value()) == ERROR_INSUFFICIENT_BUFFER_; new_size *= 2) {
             std::wstring p(new_size, L'\0');
             const std::size_t size = boost::winapi::GetModuleFileNameW(handle, &p[0], static_cast<boost::winapi::DWORD_>(p.size()));

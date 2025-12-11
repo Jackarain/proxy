@@ -50,7 +50,7 @@
     provides a class which stores all option values and that class can be
     freely passed around your program to modules which need access to the
     options. All the other components can be used only in the place where
-    the actual parsing is the done.  However, it might also make sense for the
+    the actual parsing is done.  However, it might also make sense for the
     individual program modules to describe their options and pass them to the
     main module, which will merge all options. Of course, this is only
     important when the number of options is large and declaring them in one
@@ -185,9 +185,9 @@ desc.add_options()
     ("email", value&lt;string&gt;()->multitoken(), "email to send to")
     ;
       </programlisting>
-      For the first parameter, we specify only the name and the
+      For the first option, we specify only the name and the
       description. No value can be specified in the parsed source.
-      For the first option, the user must specify a value, using a single
+      For the second option, the user must specify a value, using a single
       token. For the third option, the user may either provide a single token
       for the value, or no token at all. For the last option, the value can
       span several tokens. For example, the following command line is OK:
@@ -208,7 +208,7 @@ desc.add_options()
         <para>The description string has one or more paragraphs, separated by
         the newline character ('\n'). When an option is output, the library
         will compute the indentation for options's description. Each of the
-        paragraph is output as a separate line with that intentation. If
+        paragraph is output as a separate line with that indentation. If
         a paragraph does not fit on one line it is spanned over multiple
         lines (which will have the same indentation).
         </para>
@@ -538,7 +538,7 @@ desc.add_options()
       </para>
 
       <para>The environment variables can be parsed with the
-      &parse_environment; function. The function have several overloaded
+      &parse_environment; function. The function has several overloaded
       versions. The first parameter is always an &options_description;
       instance, and the second specifies what variables must be processed, and
       what option names must correspond to it. To describe the second
@@ -546,13 +546,13 @@ desc.add_options()
       variables.</para>
 
       <para>If you have an option that should be specified via environment
-      variable, you need make up the variable's name. To avoid name clashes,
+      variable, you need to make up the variable's name. To avoid name clashes,
       we suggest that you use a sufficiently unique prefix for environment
       variables. Also, while option names are most likely in lower case,
       environment variables conventionally use upper case. So, for an option
       name <literal>proxy</literal> the environment variable might be called
       <envar>BOOST_PROXY</envar>. During parsing, we need to perform reverse
-      conversion of the names. This is accomplished by passing the choosen
+      conversion of the names. This is accomplished by passing the chosen
       prefix as the second parameter of the &parse_environment; function.
       Say, if you pass <literal>BOOST_</literal> as the prefix, and there are
       two variables, <envar>CVSROOT</envar> and <envar>BOOST_PROXY</envar>, the
@@ -588,7 +588,7 @@ desc.add_options()
     representations that are available in C++ literals are not supported by
     lexical_cast, and thus will not work with program_options.</para>
 
-    <para>Booleans a special in that there are multiple ways to come at them. 
+    <para>Booleans are special in that there are multiple ways to come at them. 
     Similar to another value type, it can be specified as <code>("my-option",
     value&lt;bool&gt;())</code>, and then set as:</para>
     <screen>
@@ -648,7 +648,7 @@ example --other-switch
 
           <row>
             <entry>&parse_command_line;</entry>
-            <entry>parses command line (simpified interface)</entry>
+            <entry>parses command line (simplified interface)</entry>
           </row>
 
           <row>

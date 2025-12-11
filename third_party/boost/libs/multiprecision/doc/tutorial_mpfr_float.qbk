@@ -80,7 +80,7 @@ Things you should know when using this type:
 * No changes are made to [gmp] or [mpfr] global settings, so this type can coexist with existing
 [mpfr] or [gmp] code.
 * The code can equally use [mpir] in place of [gmp] - indeed that is the preferred option on Win32.
-* This backend supports rvalue-references and is move-aware, making instantiations of `number` on this backend move aware.
+* This backend supports rvalue-references and is move-aware, making instantiations of `number` on this backend move-aware.
 * Conversion from a string results in a `std::runtime_error` being thrown if the string can not be interpreted
 as a valid floating-point number.
 * Division by zero results in an infinity.

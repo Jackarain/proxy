@@ -14,7 +14,7 @@
 #include <boost/gil/image_view.hpp>
 #include <boost/gil/typedefs.hpp>
 #include <boost/gil/detail/math.hpp>
-// fixes ambigious call to std::abs, https://stackoverflow.com/a/30084734/4593721
+// fixes ambiguous call to std::abs, https://stackoverflow.com/a/30084734/4593721
 #include <cstdlib>
 #include <cmath>
 

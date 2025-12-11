@@ -388,7 +388,8 @@ struct block_header
 
    template<std::size_t CharAlign>
    size_type name_offset() const
-   {  return get_rounded_size(this->name_length_offset()+sizeof(name_len_t), CharAlign);  }
+   {  return get_rounded_size( size_type(this->name_length_offset()+sizeof(name_len_t))
+                             , size_type(CharAlign));  }
 
    size_type name_length_offset() const
    {

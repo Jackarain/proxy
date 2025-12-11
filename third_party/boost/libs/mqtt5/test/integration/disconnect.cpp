@@ -249,7 +249,7 @@ BOOST_FIXTURE_TEST_CASE(dont_resend_non_terminal_disconnect, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(malformed_publish_1, malformed_publish_2, after(10ms))
+        .send(malformed_publish_1, malformed_publish_2, after(30ms))
         .expect(disconnect_malformed_publish)
             .complete_with(success, after(0ms))
         .expect(connect)

@@ -31,7 +31,7 @@ The URL components to which replacement fields belong are identified before repl
 include::example$unit/snippets.cpp[tag=snippet_format_2,indent=0]
 ----
 
-Delimiters in the URL template, such as cpp:":"[], cpp:"//"[], cpp:"?"[], and cpp:"#"[], unambiguously associate each replacement field to a URL component.
+Delimiters in the URL template, such as `:`, `//`, `?`, and `#`, unambiguously associate each replacement field to a URL component.
 All other characters are normalized to ensure the URL is valid:
 
 

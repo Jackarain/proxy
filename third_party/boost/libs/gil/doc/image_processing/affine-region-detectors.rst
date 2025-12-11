@@ -28,7 +28,7 @@ Algorithm steps
 Harris and Hessian
 ^^^^^^^^^^^^^^^^^^
 
-Both are derived from a concept called Moravec window. Lets have a look
+Both are derived from a concept called Moravec window. Let's have a look
 at the image below:
 
 .. figure:: ./Moravec-window-corner.png
@@ -37,7 +37,7 @@ at the image below:
    Moravec window corner case
 
 As can be noticed, moving the yellow window in any direction will cause
-very big change in intensity. Now, lets have a look at the edge case:
+very big change in intensity. Now, let's have a look at the edge case:
 
 .. figure:: ./Moravec-window-edge.png
    :alt: Moravec window edge case
@@ -54,7 +54,7 @@ The algorithms have the same structure:
 
 1. Compute image derivatives
 
-2. Compute Weighted sum
+2. Compute weighted sum
 
 3. Compute response
 
@@ -103,7 +103,7 @@ Harris it will be in order of 100000000 and for Hessian will be in order
 of 10000. For simpler images values in order of 100s and 1000s should be
 enough. The numbers assume ``uint8_t`` gray image.
 
-To get deeper explanation please refer to following **paper**:
+To get a deeper explanation please refer to the following **papers**:
 
 `Harris, Christopher G., and Mike Stephens. "A combined corner and edge
 detector." In Alvey vision conference, vol. 15, no. 50, pp. 10-5244.

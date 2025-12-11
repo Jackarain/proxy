@@ -108,6 +108,8 @@ namespace detail {
 template <class Adapter>
 void deserialize(std::string_view const& data, Adapter adapter, system::error_code& ec)
 {
+   adapter.on_init();
+
    parser parser;
    while (!parser.done()) {
       auto const res = parser.consume(data, ec);
@@ -116,12 +118,14 @@ void deserialize(std::string_view const& data, Adapter adapter, system::error_co
 
       BOOST_ASSERT(res.has_value());
 
-      adapter(res.value(), ec);
+      adapter.on_node(res.value(), ec);
       if (ec)
          return;
    }
 
    BOOST_ASSERT(parser.get_consumed() == std::size(data));
+
+   adapter.on_done();
 }
 
 template <class Adapter>

@@ -346,8 +346,8 @@ void test_thirty_two_bit_contiguous_rgb_image()
 #endif  // BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES
 }
 
-// flower-rgb-planar-02.tif    73x43 2-bit seperated RGB image
-void test_two_bit_seperated_rgb_image()
+// flower-rgb-planar-02.tif    73x43 2-bit separated RGB image
+void test_two_bit_separated_rgb_image()
 {
     std::string filename(tiff_in + "libtiffpic/depth/flower-rgb-planar-02.tif");
 
@@ -360,8 +360,8 @@ void test_two_bit_seperated_rgb_image()
 #endif  // BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES
 }
 
-// flower-rgb-planar-04.tif    73x43 4-bit seperated RGB image
-void test_four_bit_seperated_rgb_image()
+// flower-rgb-planar-04.tif    73x43 4-bit separated RGB image
+void test_four_bit_separated_rgb_image()
 {
     std::string filename(tiff_in + "libtiffpic/depth/flower-rgb-planar-04.tif");
 
@@ -374,8 +374,8 @@ void test_four_bit_seperated_rgb_image()
 #endif  // BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES
 }
 
-// flower-rgb-planar-08.tif    73x43 8-bit seperated RGB image
-void test_eight_bit_seperated_rgb_image()
+// flower-rgb-planar-08.tif    73x43 8-bit separated RGB image
+void test_eight_bit_separated_rgb_image()
 {
     std::string filename(tiff_in + "libtiffpic/depth/flower-rgb-planar-08.tif");
 
@@ -388,8 +388,8 @@ void test_eight_bit_seperated_rgb_image()
 #endif  // BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES
 }
 
-// flower-rgb-planar-10.tif    73x43 10-bit seperated RGB image
-void test_ten_bit_seperated_rgb_image()
+// flower-rgb-planar-10.tif    73x43 10-bit separated RGB image
+void test_ten_bit_separated_rgb_image()
 {
     std::string filename(tiff_in + "libtiffpic/depth/flower-rgb-planar-10.tif");
 
@@ -402,8 +402,8 @@ void test_ten_bit_seperated_rgb_image()
 #endif  // BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES
 }
 
-// flower-rgb-planar-12.tif    73x43 12-bit seperated RGB image
-void test_twelve_bit_seperated_rgb_image()
+// flower-rgb-planar-12.tif    73x43 12-bit separated RGB image
+void test_twelve_bit_separated_rgb_image()
 {
     std::string filename(tiff_in + "libtiffpic/depth/flower-rgb-planar-12.tif");
 
@@ -416,8 +416,8 @@ void test_twelve_bit_seperated_rgb_image()
 #endif  // BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES
 }
 
-// flower-rgb-planar-14.tif    73x43 14-bit seperated RGB image
-void test_fourteen_bit_seperated_rgb_image()
+// flower-rgb-planar-14.tif    73x43 14-bit separated RGB image
+void test_fourteen_bit_separated_rgb_image()
 {
     std::string filename(tiff_in + "libtiffpic/depth/flower-rgb-planar-14.tif");
 
@@ -430,8 +430,8 @@ void test_fourteen_bit_seperated_rgb_image()
 #endif  // BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES
 }
 
-// flower-rgb-planar-16.tif    73x43 16-bit seperated RGB image
-void test_sixteen_bit_seperated_rgb_image()
+// flower-rgb-planar-16.tif    73x43 16-bit separated RGB image
+void test_sixteen_bit_separated_rgb_image()
 {
     std::string filename(tiff_in + "libtiffpic/depth/flower-rgb-planar-16.tif");
 
@@ -444,8 +444,8 @@ void test_sixteen_bit_seperated_rgb_image()
 #endif  // BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES
 }
 
-// flower-rgb-planar-24.tif    73x43 24-bit seperated RGB image
-void test_twenty_four_bit_seperated_rgb_image()
+// flower-rgb-planar-24.tif    73x43 24-bit separated RGB image
+void test_twenty_four_bit_separated_rgb_image()
 {
     std::string filename(tiff_in + "libtiffpic/depth/flower-rgb-planar-24.tif");
 
@@ -458,8 +458,8 @@ void test_twenty_four_bit_seperated_rgb_image()
 #endif  // BOOST_GIL_IO_TEST_ALLOW_WRITING_IMAGES
 }
 
-// flower-rgb-planar-32.tif    73x43 32-bit seperated RGB image
-void test_thirty_two_bit_seperated_rgb_image()
+// flower-rgb-planar-32.tif    73x43 32-bit separated RGB image
+void test_thirty_two_bit_separated_rgb_image()
 {
     std::string filename(tiff_in + "libtiffpic/depth/flower-rgb-planar-32.tif");
 
@@ -609,15 +609,15 @@ int main()
     test_sixteen_bit_contiguous_rgb_image();
     test_twenty_four_bit_contiguous_rgb_image();
     test_thirty_two_bit_contiguous_rgb_image();
-    test_two_bit_seperated_rgb_image();
-    test_four_bit_seperated_rgb_image();
-    test_eight_bit_seperated_rgb_image();
-    test_ten_bit_seperated_rgb_image();
-    test_twelve_bit_seperated_rgb_image();
-    test_fourteen_bit_seperated_rgb_image();
-    test_sixteen_bit_seperated_rgb_image();
-    test_twenty_four_bit_seperated_rgb_image();
-    test_thirty_two_bit_seperated_rgb_image();
+    test_two_bit_separated_rgb_image();
+    test_four_bit_separated_rgb_image();
+    test_eight_bit_separated_rgb_image();
+    test_ten_bit_separated_rgb_image();
+    test_twelve_bit_separated_rgb_image();
+    test_fourteen_bit_separated_rgb_image();
+    test_sixteen_bit_separated_rgb_image();
+    test_twenty_four_bit_separated_rgb_image();
+    test_thirty_two_bit_separated_rgb_image();
     test_eight_bit_contiguous_cmyk_image();
     test_sixteen_bit_contiguous_cmyk_image();
     test_eight_bit_separated_cmyk_image();

@@ -167,7 +167,7 @@ void test_make_dynamic_image_reader()
 
 void test_make_writer()
 {
-    // Empty files may be created, but noo image data is written.
+    // Empty files may be created, but no image data is written.
     {
         using writer_t = gil::get_writer<char const*, gil::bmp_tag>::type;
 
@@ -220,7 +220,7 @@ void test_make_writer()
 
 void test_make_dynamic_image_writer()
 {
-    // Empty files may be created, but noo image data is written.
+    // Empty files may be created, but no image data is written.
     {
         gil::get_dynamic_image_writer<const char*, gil::bmp_tag>::type writer_char =
             gil::make_dynamic_image_writer(

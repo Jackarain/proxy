@@ -168,7 +168,7 @@ BOOST_FIXTURE_TEST_CASE(sub_unsub_ordering_after_reconnect, shared_test_data) {
             .reply_with(connack, after(2ms))
         .expect(subscribe, unsubscribe)
             .complete_with(success, after(1ms))
-        .send(disconnect, after(50ms))
+        .send(disconnect, after(30ms))
         .expect(connect)
             .complete_with(success, after(1ms))
             .reply_with(connack, after(2ms))

@@ -8,7 +8,7 @@
 
 // test_uniform.cpp
 
-#ifndef SYCL_LANGUAGE_VERSION
+#ifndef BOOST_MATH_ENABLE_SYCL
 #include <pch.hpp>
 #else
 #include "sycl/sycl.hpp"

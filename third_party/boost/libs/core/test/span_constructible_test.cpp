@@ -25,6 +25,20 @@ struct range {
     }
 };
 
+struct buffer {
+    void* data() {
+        return 0;
+    }
+
+    const void* data() const {
+        return 0;
+    }
+
+    std::size_t size() const {
+        return 0;
+    }
+};
+
 struct base { };
 
 struct derived
@@ -138,6 +152,10 @@ void test_range()
         const range<int>&>));
     BOOST_TEST_TRAIT_FALSE((std::is_constructible<boost::span<base>,
         range<derived>&>));
+    BOOST_TEST_TRAIT_FALSE((std::is_constructible<boost::span<int>,
+        buffer>));
+    BOOST_TEST_TRAIT_FALSE((std::is_constructible<boost::span<int>,
+        const buffer&>));
 }
 
 void test_initializer_list()

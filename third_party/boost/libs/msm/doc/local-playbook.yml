@@ -1,0 +1,85 @@
+#
+# Copyright (c) 2024 The C++ Alliance, Inc. (https://cppalliance.org)
+#
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+# Official repository: https://github.com/boostorg/website-v2-docs
+#
+
+# This configures Antora for building library docs
+#
+#
+# Stable, indexed
+#
+#   /doc/                                         # aliased to /master/doc/
+#   /lib/doc/                                     # aliased to /current/doc/
+#
+# Unversioned
+#
+#   /master/doc/boost-review-process
+#   /master/doc/contributor-guide
+#   /master/doc/release-process
+#   /develop/doc/boost-review-process
+#   /develop/doc/contributor-guide
+#   /develop/doc/release-process
+#
+# Stable, versioned
+#
+#   /${version}/lib/index.html                    # List of libraries (release)
+#   /${version}/lib/${name}.html                  # Library info (release)
+#   /${version}/lib/doc/${name}/                  # Library docs
+#   /${version}/lib/doc/user-guide/               # User's Guide
+#
+# version:    "master" | "develop" | {semantic-version}
+#
+
+site:
+  url: https://antora.cppalliance.org/${page-boost-branch}/lib/doc
+  title: Boost Libraries Documentation
+  robots: allow
+
+antora:
+  extensions:
+    - require: '@cppalliance/antora-playbook-macros-extension'
+      macros:
+        # Default values for macros
+        # These values can be overridden with environment variables,
+        # asciidoc.attributes, or --attribute command line option.
+        page-boost-branch: develop
+        page-boost-ui-branch: develop
+        page-commit-id: '000000'
+    - require: '@cppalliance/antora-cpp-tagfiles-extension'
+      cpp-tagfiles:
+        using-namespaces:
+          - 'boost::'
+    # - require: '@cppalliance/antora-cpp-reference-extension'
+    #   dependencies:
+    #     - name: 'boost'
+    #       repo: 'https://github.com/boostorg/boost.git'
+    #       tag: 'develop'
+    #       variable: 'BOOST_SRC_DIR'
+    #       system-env: 'BOOST_SRC_DIR'
+
+asciidoc:
+  attributes:
+    # Enable pagination
+    page-pagination: ''
+  extensions:
+    - '@cppalliance/asciidoctor-boost-links'
+    - '@asciidoctor/tabs'
+
+# Libraries that support Antora should be included here
+content:
+  sources:
+    - url: .
+      start_path: .
+      # edit_url: 'https://github.com/boostorg/msm/edit/{refname}/{path}'
+
+ui:
+  bundle:
+    url: https://github.com/boostorg/website-v2-docs/releases/download/ui-master/ui-bundle.zip
+    snapshot: true
+
+output:
+  dir: ./build/lib/doc

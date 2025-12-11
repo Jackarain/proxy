@@ -243,3 +243,12 @@ It may be surprising that an empty query string ("?") produces a sequence with o
 This is by design, otherwise the sequence would not be distinguishable from the case where there is no query string (last two rows of the table above).
 
 For complete details on containers used to represent query strings as params please view the reference.
+
+[CAUTION]
+====
+The functions cpp:url_view_base::query[`query`] and cpp:url_base::set_query[`set_query`] for decoded paths as a whole cannot round-trip correctly when there are encoded delimiters in one of the parameters because the corresponding decoded delimiter character would not be used as a literal in the parameters.
+
+If a query itself contains an encoded delimiter, it would be interpreted as a query parameter separator when re-encoding, making it impossible to distinguish between actual delimiters and the encoded characters.
+
+For lossless round-tripping, use the cpp:url_base::encoded_query[`encoded_query`], cpp:boost::urls::url_base::set_encoded_query[`set_encoded_query`],  cpp:boost::urls::url_base::params[`params`], or cpp:boost::urls::url_base::encoded_params[`encoded_params`] API.
+====

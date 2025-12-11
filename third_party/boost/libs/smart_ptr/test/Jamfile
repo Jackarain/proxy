@@ -117,7 +117,6 @@ run shared_ptr_alloc11_test.cpp ;
 run shared_ptr_alloc_construct11_test.cpp ;
 run allocate_shared_alloc11_test.cpp ;
 run allocate_shared_construct11_test.cpp ;
-run sp_interlocked_test.cpp ;
 
 compile-fail array_fail_spa_sp_c.cpp ;
 compile-fail array_fail_sp_spa_c.cpp ;
@@ -238,8 +237,6 @@ compile-fail pointer_cast_dy_fail3.cpp ;
 run sp_nothrow_test.cpp ;
 
 compile make_shared_msvc_test.cpp ;
-
-compile lwm_win32_cs_test.cpp ;
 
 run atomic_sp_test.cpp ;
 
@@ -429,3 +426,6 @@ run sp_type_with_alignment_test.cpp ;
 run sp_ostream_test.cpp ;
 run ip_ostream_test.cpp ;
 run lsp_ostream_test.cpp ;
+
+run shared_ptr_alloc_test.cpp ;
+run quick_allocator_test.cpp ;

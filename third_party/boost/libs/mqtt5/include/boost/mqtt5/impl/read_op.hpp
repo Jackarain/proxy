@@ -76,13 +76,8 @@ public:
             );
         }
         else
-            asio::post(
-                _owner.get_executor(),
-                asio::prepend(
-                    std::move(*this), on_read {}, stream_ptr,
-                    std::array<size_t, 2> { 0, 1 },
-                    asio::error::not_connected, 0, error_code {}
-                )
+            _owner.async_reconnect(
+                stream_ptr, asio::prepend(std::move(*this), on_reconnect {})
             );
     }
 
@@ -100,13 +95,10 @@ public:
         if (!ec)
             return complete(ec, bytes_read);
 
-        // websocket returns operation_aborted if disconnected
-        if (should_reconnect(ec) || ec == asio::error::operation_aborted)
-            return _owner.async_reconnect(
-                stream_ptr, asio::prepend(std::move(*this), on_reconnect {})
-            );
-
-        return complete(asio::error::no_recovery, bytes_read);
+        _owner.log().at_transport_error(ec);
+        _owner.async_reconnect(
+            stream_ptr, asio::prepend(std::move(*this), on_reconnect {})
+        );
     }
 
     void operator()(on_reconnect, error_code ec) {
@@ -120,17 +112,6 @@ private:
     void complete(error_code ec, size_t bytes_read) {
         std::move(_handler)(ec, bytes_read);
     }
-
-    static bool should_reconnect(error_code ec) {
-        using namespace asio::error;
-        // note: Win ERROR_SEM_TIMEOUT == Posix ENOLINK (Reserved)
-        return ec.value() == 1236L || /* Win ERROR_CONNECTION_ABORTED */
-            ec.value() == 121L || /* Win ERROR_SEM_TIMEOUT */
-            ec == connection_aborted || ec == not_connected ||
-            ec == timed_out || ec == connection_reset ||
-            ec == broken_pipe || ec == asio::error::eof;
-    }
-
 };
 
 

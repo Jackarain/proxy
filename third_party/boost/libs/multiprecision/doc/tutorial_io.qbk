@@ -50,7 +50,7 @@ so a reasonable test strategy is to use a large number of random values.
 The test at
 [@../../test/test_cpp_bin_float_io.cpp test_cpp_bin_float_io.cpp]
 allows any floating-point type to be ['round_tripped] using a wide range of fairly random values.
-It also includes tests compared a collection of
+It also includes tests comparing a collection of
 [@../../test/string_data.ipp stringdata] test cases in a file.
 
 [h4 Comparing with output using __fundamental types]
@@ -102,7 +102,7 @@ So to conform to the C99 standard (incorporated by C++)
 Confusingly, Microsoft (and MinGW) do not conform to this standard and provide
 [*at least three digits], for example `1e+001`.
 So if you want the output to match that from
-__fundamental floating-point types on compilers that use Microsofts runtime then use:
+__fundamental floating-point types on compilers that use Microsoft's runtime then use:
 
   #define BOOST_MP_MIN_EXPONENT_DIGITS 3
 

@@ -10,7 +10,7 @@
 
 [section:interval Interval Number Types]
 
-There is one currently only one interval number type supported - [mpfi].
+There is currently only one interval number type supported - [mpfi].
 
 [section:mpfi mpfi_float]
 
@@ -30,13 +30,13 @@ There is one currently only one interval number type supported - [mpfi].
    }} // namespaces
 
 The `mpfi_float_backend` type is used in conjunction with `number`: It acts as a thin wrapper around the [mpfi] `mpfi_t`
-to provide an real-number type that is a drop-in replacement for the native C++ floating-point types, but with
+to provide a real-number type that is a drop-in replacement for the native C++ floating-point types, but with
 much greater precision and implementing interval arithmetic.
 
 Type `mpfi_float_backend` can be used at fixed precision by specifying a non-zero `Digits10` template parameter, or
 at variable precision by setting the template argument to zero.  The `typedef`s `mpfi_float_50`, `mpfi_float_100`,
 `mpfi_float_500`, `mpfi_float_1000` provide arithmetic types at 50, 100, 500 and 1000 decimal digits precision
-respectively.  The `typedef mpfi_float` provides a variable precision type whose precision can be controlled via theF
+respectively.  The `typedef mpfi_float` provides a variable precision type whose precision can be controlled via the
 `number`s member functions.
 
 [note This type only provides `numeric_limits` support when the precision is fixed at compile time.]
@@ -141,7 +141,7 @@ Returns `true` if `lower(a) == upper(a)`.
 
 [mpfi_eg]
 
-[endsect] [ section:mpfi mpfi_float]
+[endsect] [section:mpfi mpfi_float]
 
 [endsect] [/section:interval Interval Number Types]
 

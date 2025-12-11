@@ -1,0 +1,124 @@
+[#ref_headers]
+= xref:ref_headers.adoc[Headers]
+
+{empty}
+
+## Headers for General Use
+
+The following headers are sufficient for most basic uses of the library.
+
+* xref:#openmethod[`<boost/openmethod.hpp>`] to define open-methods and overriders using
+convenient macros.
+
+* xref:#initialize[`<boost/openmethod/initialize.hpp>`] to initialize the library.
+Typically only included in the translation unit containing `main`.
+
+The following headers make it possible to use standard smart pointers in virtual
+parameters:
+
+* xref:#std_shared_ptr[`<boost/openmethod/interop/std_shared_ptr.hpp>`] to use
+`std::shared_ptr` in virtual parameters.
+
+* xref:#std_unique_ptr[`<boost/openmethod/interop/std_unique_ptr.hpp>`] to use
+`std::unique_ptr` in virtual parameters.
+
+## High-level Headers
+
+[#core]
+### link:{{BASE_URL}}/include/boost/openmethod/core.hpp[<boost/openmethod/core.hpp>]
+
+Defines the main constructs of the library: methods, overriders and virtual
+pointers, and mechanisms to implement them. Does not define any public macros
+apart from `BOOST_OPENMETHOD_DEFAULT_REGISTRY`, if it is not defined already.
+
+[#macros]
+### link:{{BASE_URL}}/include/boost/openmethod/macros.hpp[<boost/openmethod/macros.hpp>]
+
+Defines the public macros of the library, such as `BOOST_OPENMETHOD`,
+`BOOST_OPENMETHOD_CLASSES`, etc.
+
+There is little point in including this header directly, as this has the same
+effect as including `boost/openmethod.hpp`, which is shorter.
+
+[#openmethod]
+### link:{{BASE_URL}}/include/boost/openmethod.hpp[<boost/openmethod.hpp>]
+
+Includes `core.hpp` and `macros.hpp`.
+
+[#initialize]
+### link:{{BASE_URL}}/include/boost/openmethod/initialize.hpp[<boost/initialize.hpp>]
+
+Provides the cpp:initialize[] and cpp:finalize[] functions. This header is
+typically included in the translation unit containing `main`. Translation units
+that dynamically load or unload shared libraries may also need to call those
+functions.
+
+[#std_shared_ptr]
+### link:{{BASE_URL}}/include/boost/openmethod/interop/std_shared_ptr.hpp[<boost/openmethod/interop/std_shared_ptr.hpp>]
+
+Provides a `virtual_traits` specialization that makes it possible to use a
+`std::shared_ptr` in place of a raw pointer or reference in virtual parameters.
+
+[#std_unique_ptr]
+### link:{{BASE_URL}}/include/boost/openmethod/interop/std_unique_ptr.hpp[<boost/openmethod/interop/std_unique_ptr.hpp>]
+
+Provides a `virtual_traits` specialization that makes it possible to use a
+`std::unique_ptr` in place of a raw pointer or reference in virtual parameters.
+
+*The headers below are for advanced use*.
+
+## Pre-Core Headers
+
+The following headers can be included before `core.hpp` to define custom
+registries and policies, and override the default registry by defining
+xref:BOOST_OPENMETHOD_DEFAULT_REGISTRY.adoc[`BOOST_OPENMETHOD_DEFAULT_REGISTRY`].
+
+### link:{{BASE_URL}}/include/boost/openmethod/preamble.hpp[<boost/openmethod/preamble.hpp>]
+
+Defines `registry` and stock policy categories. Also defines all types and
+functions necessary for the definition of `registry`.
+
+### link:{{BASE_URL}}/include/boost/openmethod/policies/std_rtti.hpp[<boost/openmethod/policies/std_rtti.hpp>]
+
+Provides an implementation of the `rtti` policy using standard RTTI.
+
+### link:{{BASE_URL}}/include/boost/openmethod/policies/fast_perfect_hash.hpp[<boost/openmethod/policies/fast_perfect_hash.hpp>]
+
+Provides an implementation of the `hash` policy using a fast perfect hash
+function.
+
+### link:{{BASE_URL}}/include/boost/openmethod/policies/vptr_vector.hpp[<boost/openmethod/policies/vptr_vector.hpp>]
+
+Provides an implementation of the `vptr` policy that stores the v-table pointers
+in a `std::vector` indexed by type ids, possibly hashed.
+
+### link:{{BASE_URL}}/include/boost/openmethod/policies/default_error_handler.hpp[<boost/openmethod/policies/default_error_handler.hpp>]
+
+Provides an implementation of the `error_handler` policy that calls a
+`std::function<void(openmethod_error)>` when an error is encountered, and before
+the library aborts the program.
+
+### link:{{BASE_URL}}/include/boost/openmethod/policies/stderr_output.hpp[<boost/openmethod/policies/stderr_output.hpp>]
+
+Provides an implementation of the `output` policy that writes diagnostics to
+the C standard error stream (not using iostreams).
+
+### link:{{BASE_URL}}/include/boost/openmethod/default_registry.hpp[<boost/openmethod/default_registry.hpp>]
+
+Defines the default registry, which contains all the stock policies listed
+above. Includes all the headers listed in this section so far.
+
+### link:{{BASE_URL}}/include/boost/openmethod/policies/static_rtti.hpp[<boost/openmethod/policies/static_rtti.hpp>]
+
+Provides a minimal implementation of the `rtti` policy that does not depend on
+standard RTTI.
+
+### link:{{BASE_URL}}/include/boost/openmethod/policies/throw_error_handler.hpp[<boost/openmethod/policies/throw_error_handler.hpp>]
+
+Provides an implementation of the `error_handler` policy that throws errors as
+exceptions.
+
+### link:{{BASE_URL}}/include/boost/openmethod/policies/vptr_map.hpp[<boost/openmethod/policies/vptr_map.hpp>]
+
+Provides an implementation of the `vptr` policy that stores the v-table pointers
+in a map (by default a `std::map`) indexed by type ids.

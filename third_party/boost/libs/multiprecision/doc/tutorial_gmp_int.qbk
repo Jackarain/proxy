@@ -37,7 +37,7 @@ existing code that uses [gmp].
 * Default constructed `gmp_int`s have the value zero (this is GMP's default behavior).
 * Formatted IO for this type does not support octal or hexadecimal notation for negative values,
 as a result performing formatted output on this type when the argument is negative and either of the flags
-`std::ios_base::oct` or `std::ios_base::hex` are set, will result in a `std::runtime_error` will be thrown.
+`std::ios_base::oct` or `std::ios_base::hex` are set will result in a `std::runtime_error` being thrown.
 * Conversion from a string results in a `std::runtime_error` being thrown if the string can not be interpreted
 as a valid integer.
 * Division by zero results in a `std::overflow_error` being thrown.

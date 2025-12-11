@@ -1,0 +1,28 @@
+[#constants]
+== <boost/uuid/constants.hpp>
+
+:idprefix: constants_
+
+=== Synopsis
+
+[source,c++]
+----
+#include <boost/uuid/namespaces.hpp>
+
+namespace boost {
+namespace uuids {
+
+uuid nil_uuid() noexcept;
+
+}} // namespace boost::uuids
+----
+
+=== Constants
+
+This header provides definitions of some well known UUID constants.
+
+```
+uuid nil_uuid() noexcept;
+```
+
+Returns: :: The nil UUID, `{00000000-0000-0000-0000-000000000000}`.

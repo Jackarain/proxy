@@ -162,7 +162,9 @@ struct exe_cmd_init : handler_base_ext
     }
     static exe_cmd_init<Char> exe_args_shell(string_type && exe, std::vector<string_type> && args)
     {
-        std::vector<string_type> args_ = {c_arg(Char()), std::move(exe)};
+        std::vector<string_type> args_ = {c_arg(Char())};
+        if (!exe.empty())
+            args_.emplace_back(std::move(exe));
         args_.insert(args_.end(), std::make_move_iterator(args.begin()), std::make_move_iterator(args.end()));
         string_type sh = get_shell(Char());
 

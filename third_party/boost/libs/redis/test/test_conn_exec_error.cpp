@@ -292,4 +292,38 @@ BOOST_AUTO_TEST_CASE(subscriber_wrong_syntax)
    BOOST_TEST(c3_called);
 }
 
+BOOST_AUTO_TEST_CASE(issue_287_generic_response_error_then_success)
+{
+   // Setup
+   auto cfg = make_test_config();
+   request req;
+   req.push("PING", "hello");
+   req.push("set", "mykey");  // This command has a missing argument and will cause an error
+   req.push("get", "mykey");  // This one is okay
+   generic_response resp;
+
+   // I/O objects
+   net::io_context ioc;
+   connection conn{ioc};
+   bool run_finished = false, exec_finished = false;
+
+   conn.async_run(cfg, [&](error_code ec) {
+      BOOST_TEST(ec == net::error::operation_aborted);
+      run_finished = true;
+   });
+
+   conn.async_exec(req, resp, [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      exec_finished = true;
+      conn.cancel();
+   });
+
+   ioc.run_for(test_timeout);
+
+   BOOST_TEST(run_finished);
+   BOOST_TEST(exec_finished);
+   BOOST_TEST(resp.has_error());
+   BOOST_TEST(resp.error().diagnostic == "ERR wrong number of arguments for 'set' command");
+}
+
 }  // namespace

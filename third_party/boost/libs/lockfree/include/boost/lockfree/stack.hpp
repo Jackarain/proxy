@@ -810,6 +810,6 @@ private:
 #endif
 };
 
-}}     // namespace boost::lockfree
+}} // namespace boost::lockfree
 
 #endif /* BOOST_LOCKFREE_STACK_HPP_INCLUDED */

@@ -345,9 +345,8 @@ public:
 
     /** Format the address to an output stream
 
-        This hidden friend function writes the
-        address to an output stream using
-        standard notation.
+        This function writes the address to an
+        output stream using standard notation.
 
         @return The output stream, for chaining.
 
@@ -361,15 +360,13 @@ public:
         std::ostream& os,
         ipv6_address const& addr)
     {
-        char buf[ipv6_address::max_str_len];
-        auto const s = addr.to_buffer(
-            buf, sizeof(buf));
-        os << s;
+        addr.write_ostream(os);
         return os;
     }
 
-
 private:
+    BOOST_URL_DECL void write_ostream(std::ostream&) const;
+
     BOOST_URL_DECL
     std::size_t
     print_impl(
@@ -382,22 +379,6 @@ private:
 
     bytes_type addr_{{}};
 };
-
-/** Format the address to an output stream
-
-    This function writes the address to an
-    output stream using standard notation.
-
-    @return The output stream, for chaining.
-
-    @param os The output stream to write to.
-
-    @param addr The address to write.
-*/
-std::ostream&
-operator<<(
-    std::ostream& os,
-    ipv6_address const& addr);
 
 //------------------------------------------------
 

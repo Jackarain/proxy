@@ -69,6 +69,8 @@ struct basic_process_handle_fd
     basic_process_handle_fd(executor_type executor, pid_type pid)
             : pid_(pid), descriptor_(executor, syscall(SYS_pidfd_open, pid, 0))
     {
+        if (descriptor_.native_handle() == -1)
+            detail::throw_error(detail::get_last_error(), "wait(pid)");
     }
 
     basic_process_handle_fd(executor_type executor, pid_type pid, native_handle_type process_handle)

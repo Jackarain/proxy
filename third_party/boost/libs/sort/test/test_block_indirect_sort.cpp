@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <vector>
-#include <ciso646>
 #include <boost/test/included/test_exec_monitor.hpp>
 #include <boost/test/test_tools.hpp>
 #include <boost/sort/sort.hpp>
@@ -165,7 +164,7 @@ void test_int_array(uint32_t NELEM)
 
     bsp::block_indirect_sort(V1.begin(), V1.end());
     for (unsigned i = 1; i < NELEM; i++)
-    {   BOOST_CHECK(not (V1[i] < V1[i-1]));
+    {   BOOST_CHECK (! (V1[i] < V1[i-1]));
     };
 };    
 void test3 (void)

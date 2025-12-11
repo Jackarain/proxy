@@ -51,7 +51,9 @@ jobs:
     runs-on: ${{matrix.os}}
     env:
       DEP_DIR: ${{github.workspace}}/dependencies
-      BOOST_VERSION: 1.56.0
+      # VS 2022 only supported by Boost.Build 1.78+ with changes to build files (e.g. in Boost.Thread) required that are introduced in Boost 1.66
+      # Boost.Iostreams doesn't support VS 2022 until 1.69
+      BOOST_VERSION: ${{ startsWith(matrix.generator, 'Visual Studio') && '1.69.0' || '1.66.0' }}
     steps:
     - uses: actions/checkout@v4
     - name: Sanity check version
@@ -68,6 +70,7 @@ jobs:
     - name: Set BOOST_ROOT
       if: matrix.standalone == 'Boost'
       run: echo "BOOST_ROOT=${DEP_DIR//\\/\/}/boost_${BOOST_VERSION//./_}" >> $GITHUB_ENV
+
     # Install Boost
     - uses: actions/checkout@v4
       if: matrix.standalone == 'Boost' && steps.cache-boost.outputs.cache-hit != 'true'
@@ -78,22 +81,44 @@ jobs:
         fetch-depth: 1
     - name: Bootstrap Boost
       if: matrix.standalone == 'Boost' && steps.cache-boost.outputs.cache-hit != 'true'
+      working-directory: __buildBoost
       run: |
-        cd __buildBoost
-        git submodule update --init --jobs 3 tools/boostdep libs/filesystem tools/inspect libs/wave # Last 2 are required for pre-1.64
-        (cd tools/boostdep && git fetch && git checkout boost-1.73.0 && git checkout boost-1.63.0 -- depinst/exceptions.txt)
-        python tools/boostdep/depinst/depinst.py --include tools --exclude test --git_args '--jobs 3' filesystem
-        [[ "${{matrix.os}}" =~ "windows" ]] && toolset=mingw || toolset=gcc
-        ./bootstrap.sh --with-toolset="$toolset" --with-libraries=system,filesystem threading=multi || (cat bootstrap.log && false)
-        sed -i 's/mingw/gcc/' project-config.jam
-        [[ "${{matrix.generator}}" =~ "Visual Studio" ]] && toolset=msvc-14.3 || toolset=gcc
+        git submodule update --init --jobs 3 tools/boostdep libs/filesystem
+        if [[ $BOOST_VERSION < '1.73.0' ]]; then
+          (cd tools/boostdep && git fetch origin && git checkout boost-1.73.0 && git checkout boost-1.63.0 -- depinst/exceptions.txt)
+        fi
+        python tools/boostdep/depinst/depinst.py --include tools --exclude test --git_args '--jobs 3 --depth 1' filesystem
+        if [[ "${{matrix.generator}}" =~ "Visual Studio" ]]; then
+          toolset=msvc-14.3
+          # Boost.Build doesn't support MSVC 2022 (14.3) until 1.78
+          if [[ $BOOST_VERSION < '1.78.0' ]]; then
+            (cd tools/build && git fetch --depth 1 origin boost-1.78.0 && git checkout FETCH_HEAD)
+            git fetch --depth 1 origin boost-1.78.0 && git checkout FETCH_HEAD -- bootstrap.bat
+          fi
+        else
+          toolset=gcc
+          ./bootstrap.sh --with-toolset=$toolset --with-libraries=system,filesystem threading=multi || (cat bootstrap.log && false)
+          ./b2 headers
+        fi
         echo "B2_TOOLSET=$toolset" >> $GITHUB_ENV
-        ./b2 headers
+    # The updated Boost requires a C++11 compiler which MinGW isn't and using VS implies using the CMD shell
+    - name: Bootstrap Boost (MSVC)
+      if: matrix.standalone == 'Boost' && steps.cache-boost.outputs.cache-hit != 'true' && startsWith(matrix.os, 'windows') && startsWith(matrix.generator, 'Visual Studio')
+      shell: cmd
+      working-directory: __buildBoost
+      run: |
+        CALL .\bootstrap.bat --with-toolset=%B2_TOOLSET% --with-libraries=system,filesystem threading=multi 
+        IF %ERRORLEVEL% NEQ 0 (
+            ECHO Build failed, printing log
+            TYPE bootstrap.log
+            EXIT /B 1
+        )
+        .\b2 headers
+
     - name: Build Boost (Linux)
       if: matrix.standalone == 'Boost' && steps.cache-boost.outputs.cache-hit != 'true' && startsWith(matrix.os, 'ubuntu')
-      shell: bash
+      working-directory: __buildBoost
       run: |
-        cd __buildBoost
         ./b2 link=static toolset=$B2_TOOLSET address-model=64 -j$(nproc) --prefix="$BOOST_ROOT" install
         cd ..
         rm -r __buildBoost || true
@@ -101,11 +126,12 @@ jobs:
     - name: Build Boost (Windows)
       if: matrix.standalone == 'Boost' && steps.cache-boost.outputs.cache-hit != 'true' && startsWith(matrix.os, 'windows')
       shell: cmd
+      working-directory: __buildBoost
       run: |
-        cd __buildBoost
-        b2 link=static toolset=$B2_TOOLSET address-model=64 -j$(nproc) --prefix="$BOOST_ROOT" install
+        .\b2 link=static toolset=%B2_TOOLSET% address-model=64 -j 3 --prefix="%BOOST_ROOT%" install
+        if %ERRORLEVEL% NEQ 0 EXIT /B %ERRORLEVEL%
         cd ..
-        rm -r __buildBoost || true
+        rmdir /s /q __buildBoost
     - name: Create standalone
       if: matrix.standalone == 'Standalone'
       run: |
@@ -119,7 +145,8 @@ jobs:
         extraFlags="-DBoost_DEBUG=ON -DBoost_NO_BOOST_CMAKE=ON -DCMAKE_INSTALL_PREFIX=$HOME/local"
         if ! [[ "${{matrix.generator}}" =~ "Visual Studio" ]]; then
           # Enable warning to find missing defines, especially important for the standalone version
-          extraFlags="$extraFlags -DCMAKE_CXX_FLAGS=-Wundef"
+          extraFlags+=" -DCMAKE_CXX_FLAGS=-Wundef"
+          extraFlags+=" -DBoost_ARCHITECTURE=-x64" # ABI tag for MinGW
         fi
         cmake -DCMAKE_BUILD_TYPE=${{matrix.buildType}} -DBUILD_SHARED_LIBS=${{matrix.shared_lib}} -G "${{matrix.generator}}" $extraFlags ..
     - name: Build

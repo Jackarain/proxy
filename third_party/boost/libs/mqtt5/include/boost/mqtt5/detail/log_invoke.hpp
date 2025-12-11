@@ -68,6 +68,10 @@ public:
             _logger.at_disconnect(rc, dc_props);
     }
 
+    void at_transport_error(error_code ec) {
+        if constexpr (has_at_transport_error<LoggerType>)
+            _logger.at_transport_error(ec);
+    }
 };
 
 } // end namespace boost::mqtt5::detail

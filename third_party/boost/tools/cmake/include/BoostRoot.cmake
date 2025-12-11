@@ -1,4 +1,5 @@
 # Copyright 2019-2023 Peter Dimov
+# Copyright 2025 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
 
@@ -13,7 +14,11 @@ include(BoostInstall)
 
 #
 
-boost_message(VERBOSE "Boost: using CMake ${CMAKE_VERSION}")
+if(CMAKE_SOURCE_DIR STREQUAL Boost_SOURCE_DIR)
+  boost_message(STATUS "Boost: using CMake ${CMAKE_VERSION}")
+else()
+  boost_message(VERBOSE "Boost: using CMake ${CMAKE_VERSION}")
+endif()
 
 #
 
@@ -177,14 +182,24 @@ function(__boost_auto_install __boost_lib)
 
     if(TARGET "Boost::${__boost_lib_target}" AND TARGET "boost_${__boost_lib_target}")
 
+      get_target_property(is_installed "boost_${__boost_lib_target}" _boost_is_installed)
+      if(is_installed)
+        return() # Ignore libraries for which boost_install was already called
+      endif()
+
       get_target_property(__boost_lib_incdir "boost_${__boost_lib_target}" INTERFACE_INCLUDE_DIRECTORIES)
 
       set(incdir "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/${__boost_lib}/include")
 
+      set(extradir "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/${__boost_lib}/extra")
+      if(NOT EXISTS "${extradir}")
+        set(extradir "")
+      endif()
+
       if("${__boost_lib_incdir}" STREQUAL "${incdir}" OR "${__boost_lib_incdir}" STREQUAL "$<BUILD_INTERFACE:${incdir}>")
 
         boost_message(DEBUG "Enabling installation for '${__boost_lib}'")
-        boost_install(TARGETS "boost_${__boost_lib_target}" VERSION "${BOOST_SUPERPROJECT_VERSION}" HEADER_DIRECTORY "${incdir}")
+        boost_install(TARGETS "boost_${__boost_lib_target}" VERSION "${BOOST_SUPERPROJECT_VERSION}" HEADER_DIRECTORY "${incdir}" EXTRA_DIRECTORY "${extradir}")
 
       else()
         boost_message(DEBUG "Not enabling installation for '${__boost_lib}'; interface include directory '${__boost_lib_incdir}' does not equal '${incdir}' or '$<BUILD_INTERFACE:${incdir}>'")
@@ -197,27 +212,76 @@ function(__boost_auto_install __boost_lib)
   endif()
 endfunction()
 
-function(__boost_scan_dependencies lib var)
+function(__boost_scan_dependencies lib var sub_folder)
 
+  # Libraries that define at least one library with a name like "<prefix>_"
+  set(prefix_names "asio" "dll" "fiber" "log" "regex" "stacktrace")
   set(result "")
 
-  if(EXISTS "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/${lib}/CMakeLists.txt")
+  set(cml_files "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/${lib}")
+  if(sub_folder)
+    file(GLOB_RECURSE cml_files "${cml_files}/${sub_folder}/CMakeLists.txt")
+  else()
+    string(APPEND cml_files "/CMakeLists.txt")
+  endif()
 
-    file(STRINGS "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/${lib}/CMakeLists.txt" data)
+  foreach(cml_file IN LISTS cml_files)
+    if(NOT EXISTS "${cml_file}")
+      CONTINUE()
+    endif()
+    set(libs_to_exclude "")
+
+    file(STRINGS "${cml_file}" data)
 
     foreach(line IN LISTS data)
+      if(line MATCHES "^ *# *Boost-(Include|Exclude):? *(.*)$")
+        set(type ${CMAKE_MATCH_1})
+        set(line ${CMAKE_MATCH_2})
+      else()
+        set(type "Include")
+      endif()
+      if(line MATCHES "^([^#]*Boost::[A-Za-z0-9_]+[^#]*)(#.*)?$")
+        string(REGEX MATCHALL "Boost::[A-Za-z0-9_]+" libs "${CMAKE_MATCH_1}")
 
-      if(line MATCHES "^[ ]*Boost::([A-Za-z0-9_]+)[ ]*$")
-
-        string(REGEX REPLACE "^numeric_" "numeric/" dep ${CMAKE_MATCH_1})
-        list(APPEND result ${dep})
+        foreach(dep IN LISTS libs)
+          string(REGEX REPLACE "^Boost::" "" dep ${dep})
+          if(dep STREQUAL "headers" OR dep STREQUAL "boost" OR dep MATCHES "linking")
+            continue()
+          endif()
+          if(dep MATCHES "(included_)?(unit_test_framework|prg_exec_monitor|test_exec_monitor)")
+            set(dep "test")
+          elseif(dep STREQUAL "numpy")
+            set(dep "python")
+          elseif(dep MATCHES "serialization")
+            set(dep "serialization")
+          else()
+            string(REGEX REPLACE "^numeric_" "numeric/" dep ${dep})
+            foreach(prefix IN LISTS prefix_names)
+              if(dep MATCHES "^${prefix}_")
+                set(dep ${prefix})
+                break()
+              endif()
+            endforeach()
+          endif()
+          if(NOT dep STREQUAL lib)
+            if(type STREQUAL "Exclude")
+              list(APPEND libs_to_exclude ${dep})
+            else()
+              list(APPEND result ${dep})
+            endif()
+          endif()
+        endforeach()
 
       endif()
 
     endforeach()
 
-  endif()
+  endforeach()
 
+  if(libs_to_exclude)
+    list(REMOVE_ITEM result ${libs_to_exclude})
+  endif()
+  list(REMOVE_DUPLICATES result)
   set(${var} ${result} PARENT_SCOPE)
 
 endfunction()
@@ -244,51 +308,86 @@ endmacro()
 file(GLOB __boost_libraries RELATIVE "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs" "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/*/CMakeLists.txt" "${BOOST_SUPERPROJECT_SOURCE_DIR}/libs/numeric/*/CMakeLists.txt")
 
 # Check for mistakes in BOOST_INCLUDE_LIBRARIES
+if(BOOST_INCLUDE_LIBRARIES)
 
-foreach(__boost_included_lib IN LISTS BOOST_INCLUDE_LIBRARIES)
+  set(__boost_any_library_found OFF)
 
-  if(NOT "${__boost_included_lib}/CMakeLists.txt" IN_LIST __boost_libraries)
+  foreach(__boost_included_lib IN LISTS BOOST_INCLUDE_LIBRARIES)
 
-    message(WARNING "Library '${__boost_included_lib}' given in BOOST_INCLUDE_LIBRARIES has not been found.")
+    if(NOT "${__boost_included_lib}/CMakeLists.txt" IN_LIST __boost_libraries)
 
-  endif()
+      message(WARNING "Library '${__boost_included_lib}' given in BOOST_INCLUDE_LIBRARIES has not been found.")
 
-endforeach()
+    else()
 
-# Scan for dependencies
+      set(__boost_any_library_found ON)
 
-set(__boost_include_libraries ${BOOST_INCLUDE_LIBRARIES})
-
-if(__boost_include_libraries)
-  list(REMOVE_DUPLICATES __boost_include_libraries)
-endif()
-
-set(__boost_libs_to_scan ${__boost_include_libraries})
-
-while(__boost_libs_to_scan)
-
-  boost_message(DEBUG "Scanning dependencies: ${__boost_libs_to_scan}")
-
-  set(__boost_dependencies "")
-
-  foreach(__boost_lib IN LISTS __boost_libs_to_scan)
-
-    __boost_scan_dependencies(${__boost_lib} __boost_deps)
-    list(APPEND __boost_dependencies ${__boost_deps})
+    endif()
 
   endforeach()
 
-  list(REMOVE_DUPLICATES __boost_dependencies)
+  if(NOT __boost_any_library_found)
 
-  set(__boost_libs_to_scan ${__boost_dependencies})
+    message(FATAL_ERROR "None of the libraries given in BOOST_INCLUDE_LIBRARIES has been found so no libraries would be built. Verify BOOST_INCLUDE_LIBRARIES ('${BOOST_INCLUDE_LIBRARIES}')")
 
-  if(__boost_libs_to_scan)
-    list(REMOVE_ITEM __boost_libs_to_scan ${__boost_include_libraries})
   endif()
 
-  list(APPEND __boost_include_libraries ${__boost_libs_to_scan})
+endif()
 
-endwhile()
+# Scan for dependencies
+
+function(__boost_gather_dependencies var input_list with_test)
+  set(result "")
+
+  set(libs_to_scan ${input_list})
+  while(libs_to_scan)
+
+    boost_message(DEBUG "Scanning dependencies: ${libs_to_scan}")
+
+    set(cur_dependencies "")
+
+    foreach(lib IN LISTS libs_to_scan)
+
+      __boost_scan_dependencies(${lib} new_deps "")
+      list(APPEND cur_dependencies ${new_deps})
+      # Only consider test dependencies of the input libraries, not transitively as those tests aren't build
+      if(with_test AND lib IN_LIST input_list)
+          __boost_scan_dependencies(${lib} new_deps "test")
+          list(APPEND cur_dependencies ${new_deps})
+          __boost_scan_dependencies(${lib} new_deps "example")
+          list(APPEND cur_dependencies ${new_deps})
+      endif()
+
+    endforeach()
+
+    list(REMOVE_DUPLICATES cur_dependencies)
+
+    if(cur_dependencies)
+      list(REMOVE_ITEM cur_dependencies ${libs_to_scan} ${result})
+      list(APPEND result ${cur_dependencies})
+    endif()
+
+    set(libs_to_scan ${cur_dependencies})
+
+  endwhile()
+
+  list(REMOVE_ITEM result ${input_list})
+  set(${var} ${result} PARENT_SCOPE)
+endfunction()
+
+if(BOOST_INCLUDE_LIBRARIES)
+  list(REMOVE_DUPLICATES BOOST_INCLUDE_LIBRARIES)
+  __boost_gather_dependencies(__boost_dependencies "${BOOST_INCLUDE_LIBRARIES}" OFF)
+  if(BUILD_TESTING)
+    __boost_gather_dependencies(__boost_test_dependencies "${BOOST_INCLUDE_LIBRARIES}" ON)
+    if(__boost_dependencies)
+      list(REMOVE_ITEM __boost_test_dependencies ${__boost_dependencies})
+    endif()
+  endif()
+else()
+  set(__boost_dependencies "")
+  set(__boost_test_dependencies "")
+endif()
 
 # Installing targets created in other directories requires CMake 3.13
 if(CMAKE_VERSION VERSION_LESS 3.13)
@@ -308,29 +407,53 @@ foreach(__boost_lib_cml IN LISTS __boost_libraries)
 
   if(__boost_lib IN_LIST BOOST_INCOMPATIBLE_LIBRARIES)
 
-    boost_message(DEBUG "Skipping incompatible Boost library ${__boost_lib}")
+    boost_message(DEBUG "Skipping incompatible Boost library '${__boost_lib}'")
 
   elseif(__boost_lib IN_LIST BOOST_EXCLUDE_LIBRARIES)
 
-    boost_message(DEBUG "Skipping excluded Boost library ${__boost_lib}")
+    boost_message(DEBUG "Skipping excluded Boost library '${__boost_lib}'")
 
   elseif(NOT BOOST_ENABLE_MPI AND __boost_lib IN_LIST __boost_mpi_libs)
 
-    boost_message(DEBUG "Skipping Boost library ${__boost_lib}, BOOST_ENABLE_MPI is OFF")
+    if(__boost_lib IN_LIST BOOST_INCLUDE_LIBRARIES)
+
+      message(SEND_ERROR "Boost library '${__boost_lib}' has been explicitly requested, but BOOST_ENABLE_MPI is OFF. Set BOOST_ENABLE_MPI to ON.")
+
+    elseif(NOT BOOST_INCLUDE_LIBRARIES)
+
+      message(STATUS "Skipping Boost library '${__boost_lib}', BOOST_ENABLE_MPI is OFF")
+
+    else()
+
+      boost_message(DEBUG "Skipping Boost library '${__boost_lib}', BOOST_ENABLE_MPI is OFF")
+
+    endif()
 
   elseif(NOT BOOST_ENABLE_PYTHON AND __boost_lib IN_LIST __boost_python_libs)
 
-    boost_message(DEBUG "Skipping Boost library ${__boost_lib}, BOOST_ENABLE_PYTHON is OFF")
+    if(__boost_lib IN_LIST BOOST_INCLUDE_LIBRARIES)
+
+      message(SEND_ERROR "Boost library '${__boost_lib}' has been explicitly requested, but BOOST_ENABLE_PYTHON is OFF. Set BOOST_ENABLE_PYTHON to ON.")
+
+    elseif(NOT BOOST_INCLUDE_LIBRARIES)
+
+      message(STATUS "Skipping Boost library '${__boost_lib}', BOOST_ENABLE_PYTHON is OFF")
+
+    else()
+
+      boost_message(DEBUG "Skipping Boost library '${__boost_lib}', BOOST_ENABLE_PYTHON is OFF")
+
+    endif()
 
   elseif(NOT BOOST_INCLUDE_LIBRARIES OR __boost_lib IN_LIST BOOST_INCLUDE_LIBRARIES)
 
-    boost_message(VERBOSE "Adding Boost library ${__boost_lib}")
+    boost_message(VERBOSE "Adding Boost library '${__boost_lib}'")
     add_subdirectory(libs/${__boost_lib})
 
     __boost_auto_install(${__boost_lib})
     __boost_add_header_only(${__boost_lib})
 
-  elseif(__boost_lib IN_LIST __boost_include_libraries OR __boost_lib STREQUAL "headers")
+  elseif(__boost_lib IN_LIST __boost_dependencies OR __boost_lib STREQUAL "headers")
 
     # Disable tests for dependencies
 
@@ -343,7 +466,7 @@ foreach(__boost_lib_cml IN LISTS __boost_libraries)
       set(CMAKE_FOLDER "Dependencies")
     endif()
 
-    boost_message(VERBOSE "Adding Boost dependency ${__boost_lib}")
+    boost_message(VERBOSE "Adding Boost dependency '${__boost_lib}'")
     add_subdirectory(libs/${__boost_lib})
 
     __boost_auto_install(${__boost_lib})
@@ -352,9 +475,9 @@ foreach(__boost_lib_cml IN LISTS __boost_libraries)
     set(BUILD_TESTING ${__boost_build_testing})
     set(CMAKE_FOLDER ${__boost_cmake_folder})
 
-  elseif(BUILD_TESTING)
+  elseif(__boost_lib IN_LIST __boost_test_dependencies)
 
-    # Disable tests and installation for libraries neither included nor dependencies
+    # Disable tests and installation for libraries not included but used as test dependencies
 
     set(__boost_build_testing ${BUILD_TESTING})
     set(BUILD_TESTING OFF) # hide cache variable
@@ -368,7 +491,7 @@ foreach(__boost_lib_cml IN LISTS __boost_libraries)
       set(CMAKE_FOLDER "Test Dependencies")
     endif()
 
-    boost_message(DEBUG "Adding Boost library ${__boost_lib} with EXCLUDE_FROM_ALL")
+    boost_message(DEBUG "Adding Boost test dependency '${__boost_lib}' with EXCLUDE_FROM_ALL")
     add_subdirectory(libs/${__boost_lib} EXCLUDE_FROM_ALL)
 
     set(BUILD_TESTING ${__boost_build_testing})

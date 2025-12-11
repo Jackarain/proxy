@@ -28,7 +28,7 @@ namespace boost { namespace gil {
 ///        1. If histogram A is to be equalized compute the cumulative histogram of A.
 ///        2. Let CFD(A) refer to the cumulative histogram of A
 ///        3. For a uniform histogram A', CDF(A') = A'
-///        4. We need to transfrom A to A' such that
+///        4. We need to transform A to A' such that
 ///        5. CDF(A') = CDF(A) => A' = CDF(A)
 ///        6. Hence the pixel transform , px => histogram_of_ith_channel[px].
 ///

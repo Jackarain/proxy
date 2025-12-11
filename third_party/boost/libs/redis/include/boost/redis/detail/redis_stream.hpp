@@ -8,8 +8,9 @@
 #define BOOST_REDIS_REDIS_STREAM_HPP
 
 #include <boost/redis/config.hpp>
-#include <boost/redis/detail/connection_logger.hpp>
+#include <boost/redis/detail/connect_fsm.hpp>
 #include <boost/redis/error.hpp>
+#include <boost/redis/logger.hpp>
 
 #include <boost/asio/basic_waitable_timer.hpp>
 #include <boost/asio/cancel_after.hpp>
@@ -31,14 +32,6 @@ namespace boost {
 namespace redis {
 namespace detail {
 
-// What transport is redis_stream using?
-enum class transport_type
-{
-   tcp,          // plaintext TCP
-   tcp_tls,      // TLS over TCP
-   unix_socket,  // UNIX domain sockets
-};
-
 template <class Executor>
 class redis_stream {
    asio::ssl::context ssl_ctx_;
@@ -48,134 +41,104 @@ class redis_stream {
    asio::basic_stream_socket<asio::local::stream_protocol, Executor> unix_socket_;
 #endif
    typename asio::steady_timer::template rebind_executor<Executor>::other timer_;
-
-   transport_type transport_{transport_type::tcp};
-   bool ssl_stream_used_{false};
+   redis_stream_state st_;
 
    void reset_stream() { stream_ = {resolv_.get_executor(), ssl_ctx_}; }
 
-   static transport_type transport_from_config(const config& cfg)
-   {
-      if (cfg.unix_socket.empty()) {
-         if (cfg.use_ssl) {
-            return transport_type::tcp_tls;
-         } else {
-            return transport_type::tcp;
-         }
-      } else {
-         BOOST_ASSERT(!cfg.use_ssl);
-         return transport_type::unix_socket;
-      }
-   }
-
    struct connect_op {
-      redis_stream& obj;
-      const config* cfg;
-      connection_logger* lgr;
-      asio::coroutine coro{};
+      redis_stream& obj_;
+      connect_fsm fsm_;
 
-      // This overload will be used for connects. We only need the endpoint
-      // for logging, so log it and call the coroutine
+      template <class Self>
+      void execute_action(Self& self, connect_action act)
+      {
+         auto& obj = this->obj_;  // prevent use-after-move errors
+         const auto& cfg = fsm_.get_config();
+
+         switch (act.type) {
+            case connect_action_type::unix_socket_close:
+#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
+            {
+               system::error_code ec;
+               obj.unix_socket_.close(ec);
+               (*this)(self, ec);  // This is a sync action
+            }
+#else
+               BOOST_ASSERT(false);
+#endif
+               return;
+            case connect_action_type::unix_socket_connect:
+#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
+               obj.unix_socket_.async_connect(
+                  cfg.unix_socket,
+                  asio::cancel_after(obj.timer_, cfg.connect_timeout, std::move(self)));
+#else
+               BOOST_ASSERT(false);
+#endif
+               return;
+
+            case connect_action_type::tcp_resolve:
+               obj.resolv_.async_resolve(
+                  cfg.addr.host,
+                  cfg.addr.port,
+                  asio::cancel_after(obj.timer_, cfg.resolve_timeout, std::move(self)));
+               return;
+            case connect_action_type::ssl_stream_reset:
+               obj.reset_stream();
+               // this action does not require yielding. Execute the next action immediately
+               (*this)(self);
+               return;
+            case connect_action_type::ssl_handshake:
+               obj.stream_.async_handshake(
+                  asio::ssl::stream_base::client,
+                  asio::cancel_after(obj.timer_, cfg.ssl_handshake_timeout, std::move(self)));
+               return;
+            case connect_action_type::done:        self.complete(act.ec); break;
+            // Connect should use the specialized handler, where resolver results are available
+            case connect_action_type::tcp_connect:
+            default:                               BOOST_ASSERT(false);
+         }
+      }
+
+      // This overload will be used for connects
       template <class Self>
       void operator()(
          Self& self,
          system::error_code ec,
          const asio::ip::tcp::endpoint& selected_endpoint)
       {
-         lgr->on_connect(ec, selected_endpoint);
-         (*this)(self, ec);
+         auto act = fsm_.resume(
+            ec,
+            selected_endpoint,
+            obj_.st_,
+            self.get_cancellation_state().cancelled());
+         execute_action(self, act);
       }
 
+      // This overload will be used for resolves
       template <class Self>
       void operator()(
          Self& self,
-         system::error_code ec = {},
-         asio::ip::tcp::resolver::results_type resolver_results = {})
+         system::error_code ec,
+         asio::ip::tcp::resolver::results_type endpoints)
       {
-         BOOST_ASIO_CORO_REENTER(coro)
-         {
-            // Record the transport that we will be using
-            obj.transport_ = transport_from_config(*cfg);
-
-            if (obj.transport_ == transport_type::unix_socket) {
-#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
-               // Directly connect to the socket
-               BOOST_ASIO_CORO_YIELD
-               obj.unix_socket_.async_connect(
-                  cfg->unix_socket,
-                  asio::cancel_after(obj.timer_, cfg->connect_timeout, std::move(self)));
-
-               // Log it
-               lgr->on_connect(ec, cfg->unix_socket);
-
-               // If this failed, we can't continue
-               if (ec) {
-                  self.complete(ec == asio::error::operation_aborted ? error::connect_timeout : ec);
-                  return;
-               }
-#else
-               BOOST_ASSERT(false);
-#endif
-            } else {
-               // ssl::stream doesn't support being re-used. If we're to use
-               // TLS and the stream has been used, re-create it.
-               // Must be done before anything else is done on the stream
-               if (cfg->use_ssl && obj.ssl_stream_used_)
-                  obj.reset_stream();
-
-               BOOST_ASIO_CORO_YIELD
-               obj.resolv_.async_resolve(
-                  cfg->addr.host,
-                  cfg->addr.port,
-                  asio::cancel_after(obj.timer_, cfg->resolve_timeout, std::move(self)));
-
-               // Log it
-               lgr->on_resolve(ec, resolver_results);
-
-               // If this failed, we can't continue
-               if (ec) {
-                  self.complete(ec == asio::error::operation_aborted ? error::resolve_timeout : ec);
-                  return;
-               }
-
-               // Connect to the address that the resolver provided us
-               BOOST_ASIO_CORO_YIELD
-               asio::async_connect(
-                  obj.stream_.next_layer(),
-                  std::move(resolver_results),
-                  asio::cancel_after(obj.timer_, cfg->connect_timeout, std::move(self)));
-
-               // Note: logging is performed in the specialized operator() function.
-               // If this failed, we can't continue
-               if (ec) {
-                  self.complete(ec == asio::error::operation_aborted ? error::connect_timeout : ec);
-                  return;
-               }
-
-               if (cfg->use_ssl) {
-                  // Mark the SSL stream as used
-                  obj.ssl_stream_used_ = true;
-
-                  // If we were configured to use TLS, perform the handshake
-                  BOOST_ASIO_CORO_YIELD
-                  obj.stream_.async_handshake(
-                     asio::ssl::stream_base::client,
-                     asio::cancel_after(obj.timer_, cfg->ssl_handshake_timeout, std::move(self)));
-
-                  lgr->on_ssl_handshake(ec);
-
-                  // If this failed, we can't continue
-                  if (ec) {
-                     self.complete(
-                        ec == asio::error::operation_aborted ? error::ssl_handshake_timeout : ec);
-                     return;
-                  }
-               }
-            }
-
-            // Done
-            self.complete(system::error_code());
+         auto act = fsm_.resume(ec, endpoints, obj_.st_, self.get_cancellation_state().cancelled());
+         if (act.type == connect_action_type::tcp_connect) {
+            auto& obj = this->obj_;  // prevent use-after-free errors
+            asio::async_connect(
+               obj.stream_.next_layer(),
+               std::move(endpoints),
+               asio::cancel_after(obj.timer_, fsm_.get_config().connect_timeout, std::move(self)));
+         } else {
+            execute_action(self, act);
          }
+      }
+
+      template <class Self>
+      void operator()(Self& self, system::error_code ec = {})
+      {
+         auto act = fsm_.resume(ec, obj_.st_, self.get_cancellation_state().cancelled());
+         execute_action(self, act);
       }
    };
 
@@ -199,7 +162,7 @@ public:
    bool is_open() const
    {
 #ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
-      if (transport_ == transport_type::unix_socket)
+      if (st_.type == transport_type::unix_socket)
          return unix_socket_.is_open();
 #endif
       return stream_.next_layer().is_open();
@@ -209,10 +172,10 @@ public:
 
    // I/O
    template <class CompletionToken>
-   auto async_connect(const config* cfg, connection_logger* l, CompletionToken&& token)
+   auto async_connect(const config& cfg, buffered_logger& l, CompletionToken&& token)
    {
       return asio::async_compose<CompletionToken, void(system::error_code)>(
-         connect_op{*this, cfg, l},
+         connect_op{*this, connect_fsm(cfg, l)},
          token);
    }
 
@@ -220,7 +183,7 @@ public:
    template <class ConstBufferSequence, class CompletionToken>
    void async_write_some(const ConstBufferSequence& buffers, CompletionToken&& token)
    {
-      switch (transport_) {
+      switch (st_.type) {
          case transport_type::tcp:
          {
             stream_.next_layer().async_write_some(buffers, std::forward<CompletionToken>(token));
@@ -245,7 +208,7 @@ public:
    template <class MutableBufferSequence, class CompletionToken>
    void async_read_some(const MutableBufferSequence& buffers, CompletionToken&& token)
    {
-      switch (transport_) {
+      switch (st_.type) {
          case transport_type::tcp:
          {
             return stream_.next_layer().async_read_some(
@@ -269,19 +232,11 @@ public:
       }
    }
 
-   // Cleanup
+   // Cancels resolve operations. Resolve operations don't support per-operation
+   // cancellation, but resolvers have a cancel() function. Resolve operations are
+   // in general blocking and run in a separate thread. cancel() has effect only
+   // if the operation hasn't started yet. Still, trying is better than nothing
    void cancel_resolve() { resolv_.cancel(); }
-
-   void close()
-   {
-      system::error_code ec;
-      if (stream_.next_layer().is_open())
-         stream_.next_layer().close(ec);
-#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
-      if (unix_socket_.is_open())
-         unix_socket_.close(ec);
-#endif
-   }
 };
 
 }  // namespace detail

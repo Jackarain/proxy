@@ -12,6 +12,7 @@
 # $Revision$
 
 import fileinput
+import functools
 import os
 import re
 import string
@@ -22,22 +23,21 @@ max_len = 79
 ident = 4
 
 def nearest_ident_pos(text):
-    return (len(text)/ident) * ident
+    return int((len(text)/ident) * ident)
     
 def block_format(limits, text, first_sep='  ', sep=',', need_last_ident=1 ):
-    if sep == ',' and string.find( text, '<' ) != -1:
+    if sep == ',' and str.find( text, '<' ) != -1:
         sep = '%s ' % sep
     
-    words = string.split(
-          string.join( string.split( text ), ' ' )
+    words = str.split(
+          ' '.join( str.split( text ) )
         , sep
         )
-
     s = ' ' * limits[0]
     max_len = limits[1]
     return '%s\n%s' \
         % (
-         reduce(
+         functools.reduce(
             lambda t,w,max_len=max_len,s=s,sep=sep:
                 if_else(t[1] + len(w) < max_len
                     , ('%s%s%s'% (t[0],t[2],w), t[1]+len(w)+len(t[2]), sep)
@@ -52,7 +52,6 @@ def block_format(limits, text, first_sep='  ', sep=',', need_last_ident=1 ):
 def handle_args( match ):
     if re.compile('^\s*(typedef|struct|static)\s+.*?$').match(match.group(0)):
         return match.group(0)
-    
     return '%s'\
         % block_format(
               (nearest_ident_pos(match.group(1)),max_len)
@@ -86,7 +85,7 @@ def handle_inline_args(match):
                  (nearest_ident_pos(match.group(1))+ident,max_len-len(match.group(9)))
                 , match.group(4)
                 )
-            , string.replace(match.group(1),',',' ')
+            , str.replace(match.group(1),',',' ')
             , match.group(9)
           )
 
@@ -98,18 +97,18 @@ def handle_simple_list(match):
     return if_else(single_arg,'%s<%s>','%s< %s >') %\
         (
           match.group(1)
-        , string.join(string.split(match.group(2)), '')
+        , ''.join(str.split(match.group(2)))
         )
 
 def handle_static(match):
     if len(match.group(0)) < max_len:
         return match.group(0)
 
-    (first_sep,sep) = if_else(string.find(match.group(0),'+') == -1, (' ',' '),('  ','+'))
+    (first_sep,sep) = if_else(str.find(match.group(0),'+') == -1, (' ',' '),('  ','+'))
     return '%s%s\n%s%s' %\
         (
           match.group(1)
-        , string.join(string.split(match.group(2)), ' ')
+        , ' '.join(str.split(match.group(2)))
         , block_format(
               (nearest_ident_pos(match.group(1))+ident,max_len)
             , match.group(4)
@@ -120,7 +119,7 @@ def handle_static(match):
         )
 
 def handle_typedefs(match):
-    if string.count(match.group(2), ';') == 1:
+    if str.count(match.group(2), ';') == 1:
         return match.group(0)
 
     join_sep = ';\n%s' % match.group(1)
@@ -128,7 +127,7 @@ def handle_typedefs(match):
     return '%s%s\n' \
         % (
             match.group(1)
-          , string.join(map(string.strip, string.split(match.group(2), ';')), join_sep)
+          , join_sep.join(list(map(str.strip, str.split(match.group(2), ';')))) 
           )
 
 def fix_angle_brackets( match ):

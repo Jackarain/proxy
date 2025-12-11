@@ -157,3 +157,12 @@ for local list-size in $(list-sizes)
 {
     run variant_index_type.cpp : : : $(index-type-reqs) <define>LIST_SIZE=$(list-size) : variant_index_type_$(list-size) ;
 }
+
+compile variant_default_construct_cx_2.cpp ;
+compile variant_default_construct_cx_3.cpp ;
+compile variant_default_construct_cx_4.cpp ;
+compile variant_default_construct_cx_5.cpp ;
+
+compile variant_value_construct_cx_2.cpp ;
+compile variant_value_construct_cx_3.cpp ;
+compile variant_value_construct_cx_4.cpp ;

@@ -18,7 +18,6 @@
 #include <ios>
 #include <cstdio>
 #include <cstdlib>
-#include <ciso646>
 #include <vector>
 #include <string>
 #include <fstream>
@@ -230,7 +229,7 @@ struct uint64_file_generator
     {   //---------------------------- begin ---------------------------------
         s = filename;
         input.open(filename, std::ios_base::in | std::ios_base::binary);
-        if (input.fail() or input.bad())
+        if (input.fail() || input.bad())
         {
             throw std::ios_base::failure("could not open file \n");
         };

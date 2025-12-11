@@ -1762,9 +1762,12 @@ struct process_environment
   std::vector<environment::key_value_pair> env_buffer;
   std::vector<wchar_t> unicode_env;
 
-  BOOST_PROCESS_V2_DECL
   error_code on_setup(windows::default_launcher & launcher,
-                      const filesystem::path &, const std::wstring &);
+                      const filesystem::path &, const std::wstring &)
+  {
+    return do_setup(launcher);
+  }                  
+  BOOST_PROCESS_V2_DECL error_code do_setup(windows::default_launcher & launcher);
 
 #else
 
@@ -1813,7 +1816,13 @@ struct process_environment
 
   BOOST_PROCESS_V2_DECL
   error_code on_setup(posix::default_launcher & launcher, 
-                      const filesystem::path &, const char * const *);
+                      const filesystem::path &, const char * const *)
+  {
+    return do_setup(launcher);
+  }
+
+  BOOST_PROCESS_V2_DECL error_code do_setup(posix::default_launcher & launcher);
+
 
   std::vector<environment::key_value_pair> env_buffer;
   std::vector<const char *> env;

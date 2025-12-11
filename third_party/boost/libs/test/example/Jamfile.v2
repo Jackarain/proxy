@@ -11,7 +11,8 @@ import testing ;
 import os ;
 
 # requirements
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 
 local HAS_UBSAN = "NO_UBSAN" ; # need to defined something
 if [ os.environ UBSAN ]
@@ -22,21 +23,22 @@ if [ os.environ UBSAN ]
 ECHO $(HAS_UBSAN:J) ;
 
 # Project
-project boost/test-examples
+project
     :
     : requirements
+      <library>/boost/test//boost_test
       <toolset>clang:<cxxflags>-Wno-c99-extensions <define>$(HAS_UBSAN:J)
     ;
 
 # Define aliases for the needed libs to get shorter names
 alias prg_exec_monitor
     : # sources
-        /boost//prg_exec_monitor
+        /boost/test//boost_prg_exec_monitor
     ;
 
 alias unit_test_framework
     : # sources
-        /boost//unit_test_framework
+        /boost/test//boost_unit_test_framework
     ;
 
 # make aliases explicit so the libraries will only be built when requested
@@ -60,7 +62,7 @@ alias boost_test_examples
     [ run      unit_test_example_08.cpp unit_test_framework ]
     [ run      unit_test_example_09_1.cpp
                unit_test_example_09_2.cpp unit_test_framework ]
-    [ run-fail unit_test_example_10.cpp unit_test_framework/<link>static ]
+    [ run-fail unit_test_example_10.cpp unit_test_framework/<link>static : : : <library>/boost/lexical_cast//boost_lexical_cast ]
     [ run-fail unit_test_example_11.cpp unit_test_framework/<link>static ]
     [ link     unit_test_example_12.cpp unit_test_framework/<link>static ]
     [ run      unit_test_example_13.cpp ]

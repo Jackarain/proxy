@@ -1,0 +1,870 @@
+[[functional-programming]]
+
+= Functional programming
+
+To use these functions, you need to include:
+
+`#include <msm/front/euml/stl.hpp>`
+
+or the specified header in the following tables.
+
+Table 11.1 — STL algorithms
+
+STL algorithms in querying.hpp
+
+Functor
+
+find_(first, last, value)
+
+Find_
+
+find_if_(first, last, value)
+
+FindIf_
+
+lower_bound_(first, last, value [,opᵃ])
+
+LowerBound_
+
+upper_bound_(first, last, value [,opᵃ])
+
+UpperBound_
+
+equal_range_(first, last, value [,opᵃ])
+
+EqualRange_
+
+binary_search_(first, last, value [,opᵃ])
+
+BinarySearch_
+
+min_element_(first, last[,opᵃ])
+
+MinElement_
+
+max_element_(first, last[,opᵃ])
+
+MaxElement_
+
+adjacent_find_(first, last[,opᵃ])
+
+AdjacentFind_
+
+find_end_( first1, last1, first2, last2 [,op ᵃ])
+
+FindEnd_
+
+find_first_of_( first1, last1, first2, last2 [,op ᵃ])
+
+FindFirstOf_
+
+equal_( first1, last1, first2 [,op ᵃ])
+
+Equal_
+
+search_( first1, last1, first2, last2 [,op ᵃ])
+
+Search_
+
+includes_( first1, last1, first2, last2 [,op ᵃ])
+
+Includes_
+
+lexicographical_compare_ ( first1, last1, first2, last2 [,op ᵃ])
+
+LexicographicalCompare_
+
+count_(first, last, value [,size])
+
+Count_
+
+count_if_(first, last, op ᵃ [,size])
+
+CountIf_
+
+distance_(first, last)
+
+Distance_
+
+mismatch _( first1, last1, first2 [,op ᵃ])
+
+Mismatch_
+
+Table 11.2 — STL algorithms
+
+STL algorithms in iteration.hpp
+
+Functor
+
+for_each_(first,last, unary opᵃ)
+
+ForEach_
+
+accumulate_first, last, init [,opᵃ])
+
+Accumulate_
+
+Table 11.3 — STL algorithms
+
+STL algorithms in transformation.hpp
+
+Functor
+
+copy_(first, last, result)
+
+Copy_
+
+copy_backward_(first, last, result)
+
+CopyBackward_
+
+reverse_(first, last)
+
+Reverse_
+
+reverse_copy_(first, last , result)
+
+ReverseCopy_
+
+remove_(first, last, value)
+
+Remove_
+
+remove_if_(first, last , opᵃ)
+
+RemoveIf_
+
+remove_copy_(first, last , output, value)
+
+RemoveCopy_
+
+remove_copy_if_(first, last, output, opᵃ)
+
+RemoveCopyIf_
+
+fill_(first, last, value)
+
+Fill_
+
+fill_n_(first, size, value)ᵇ
+
+FillN_
+
+generate_(first, last, generatorᵃ)
+
+Generate_
+
+generate_(first, size, generatorᵃ)ᵇ
+
+GenerateN_
+
+unique_(first, last [,opᵃ])
+
+Unique_
+
+unique_copy_(first, last, output [,opᵃ])
+
+UniqueCopy_
+
+random_shuffle_(first, last [,opᵃ])
+
+RandomShuffle_
+
+rotate_copy_(first, middle, last, output)
+
+RotateCopy_
+
+partition_ (first, last [,opᵃ])
+
+Partition_
+
+stable_partition_ (first, last [,opᵃ])
+
+StablePartition_
+
+stable_sort_(first, last [,opᵃ])
+
+StableSort_
+
+sort_(first, last [,opᵃ])
+
+Sort_
+
+partial_sort_(first, middle, last [,opᵃ])
+
+PartialSort_
+
+partial_sort_copy_ (first, last, res_first, res_last [,opᵃ])
+
+PartialSortCopy_
+
+nth_element_(first, nth, last [,opᵃ])
+
+NthElement_
+
+merge_( first1, last1, first2, last2, output [,op ᵃ])
+
+Merge_
+
+inplace_merge_(first, middle, last [,opᵃ])
+
+InplaceMerge_
+
+set_union_(first1, last1, first2, last2, output [,op ᵃ])
+
+SetUnion_
+
+push_heap_(first, last [,op ᵃ])
+
+PushHeap_
+
+pop_heap_(first, last [,op ᵃ])
+
+PopHeap_
+
+make_heap_(first, last [,op ᵃ])
+
+MakeHeap_
+
+sort_heap_(first, last [,op ᵃ])
+
+SortHeap_
+
+next_permutation_(first, last [,op ᵃ])
+
+NextPermutation_
+
+prev_permutation_(first, last [,op ᵃ])
+
+PrevPermutation_
+
+inner_product_(first1, last1, first2, init [,op1ᵃ] [,op2ᵃ])
+
+InnerProduct_
+
+partial_sum_(first, last, output [,opᵃ])
+
+PartialSum_
+
+adjacent_difference_(first, last, output [,opᵃ])
+
+AdjacentDifference_
+
+replace_(first, last, old_value, new_value)
+
+Replace_
+
+replace_if_(first, last, opᵃ, new_value)
+
+ReplaceIf_
+
+replace_copy_(first, last, result, old_value, new_value)
+
+ReplaceCopy_
+
+replace_copy_if_(first, last, result, opᵃ, new_value)
+
+ReplaceCopyIf_
+
+rotate_(first, middle, last)ᵇ
+
+Rotate_
+
+Table 11.4 — STL container methods
+
+STL container methods(common) in container.hpp
+
+Functor
+
+container::reference front_(container)
+
+Front_
+
+container::reference back_(container)
+
+Back_
+
+container::iterator begin_(container)
+
+Begin_
+
+container::iterator end_(container)
+
+End_
+
+container::reverse_iterator rbegin_(container)
+
+RBegin_
+
+container::reverse_iterator rend_(container)
+
+REnd_
+
+void push_back_(container, value)
+
+Push_Back_
+
+void pop_back_(container, value)
+
+Pop_Back_
+
+void push_front_(container, value)
+
+Push_Front_
+
+void pop_front_(container, value)
+
+Pop_Front_
+
+void clear_(container)
+
+Clear_
+
+size_type capacity_(container)
+
+Capacity_
+
+size_type size_(container)
+
+Size_
+
+size_type max_size_(container)
+
+Max_Size_
+
+void reserve_(container, value)
+
+Reserve _
+
+void resize_(container, value)
+
+Resize _
+
+iterator insert_(container, pos, value)
+
+Insert_
+
+void insert_( container , pos, first, last)
+
+Insert_
+
+void insert_( container , pos, number, value)
+
+Insert_
+
+void swap_( container , other_container)
+
+Swap_
+
+void erase_( container , pos)
+
+Erase_
+
+void erase_( container , first, last)
+
+Erase_
+
+bool empty_( container)
+
+Empty_
+
+Table 11.5 — STL list methods
+
+std::list methods in container.hpp
+
+Functor
+
+void list_remove_(container, value)
+
+ListRemove_
+
+void list_remove_if_(container, opᵃ)
+
+ListRemove_If_
+
+void list_merge_(container, other_list)
+
+ListMerge_
+
+void list_merge_(container, other_list, opᵃ)
+
+ListMerge_
+
+void splice_(container, iterator, other_list)
+
+Splice_
+
+void splice_(container, iterator, other_list, iterator)
+
+Splice_
+
+void splice_(container, iterator, other_list, first, last)
+
+Splice_
+
+void list_reverse_(container)
+
+ListReverse_
+
+void list_unique_(container)
+
+ListUnique_
+
+void list_unique_(container, opᵃ)
+
+ListUnique_
+
+void list_sort_(container)
+
+ListSort_
+
+void list_sort_(container, opᵃ)
+
+ListSort_
+
+Table 11.6 — STL associative container methods
+
+Associative container methods in container.hpp
+
+Functor
+
+iterator insert_(container, pos, value)
+
+Insert_
+
+void insert_( container , first, last)
+
+Insert_
+
+pair<iterator, bool> insert_( container , value)
+
+Insert_
+
+void associative_erase_( container , pos)
+
+Associative_Erase_
+
+void associative_erase_( container , first, last)
+
+Associative_Erase_
+
+size_type associative_erase_( container , key)
+
+Associative_Erase_
+
+iterator associative_find_( container , key)
+
+Associative_Find_
+
+size_type associative_count_( container , key)
+
+AssociativeCount_
+
+iterator associative_lower_bound_( container , key)
+
+Associative_Lower_Bound_
+
+iterator associative_upper_bound_( container , key)
+
+Associative_Upper_Bound_
+
+pair<iterator, iterator> associative_equal_range_( container , key)
+
+Associative_Equal_Range_
+
+Table 11.7 — STL pair
+
+std::pair in container.hpp
+
+Functor
+
+first_type first_(pair<T1, T2>)
+
+First_
+
+second_type second_(pair<T1, T2>)
+
+Second_
+
+Table 11.8 — STL string
+
+STL string method
+
+std::string method in container.hpp
+
+Functor
+
+substr (size_type pos, size_type size)
+
+string substr_(container, pos, length)
+
+Substr_
+
+int compare(string)
+
+int string_compare_(container, another_string)
+
+StringCompare_
+
+int compare(char*)
+
+int string_compare_(container, another_string)
+
+StringCompare_
+
+int compare(size_type pos, size_type size, string)
+
+int string_compare_(container, pos, size, another_string)
+
+StringCompare_
+
+int compare (size_type pos, size_type size, string, size_type length)
+
+int string_compare_(container, pos, size, another_string, length)
+
+StringCompare_
+
+string& append(const string&)
+
+string& append_(container, another_string)
+
+Append_
+
+string& append (charT*)
+
+string& append_(container, another_string)
+
+Append_
+
+string& append (string , size_type pos, size_type size)
+
+string& append_(container, other_string, pos, size)
+
+Append_
+
+string& append (charT*, size_type size)
+
+string& append_(container, another_string, length)
+
+Append_
+
+string& append (size_type size, charT)
+
+string& append_(container, size, char)
+
+Append_
+
+string& append (iterator begin, iterator end)
+
+string& append_(container, begin, end)
+
+Append_
+
+string& insert (size_type pos, charT*)
+
+string& string_insert_(container, pos, other_string)
+
+StringInsert_
+
+string& insert(size_type pos, charT*,size_type n)
+
+string& string_insert_(container, pos, other_string, n)
+
+StringInsert_
+
+string& insert(size_type pos,size_type n, charT c)
+
+string& string_insert_(container, pos, n, c)
+
+StringInsert_
+
+string& insert (size_type pos, const string&)
+
+string& string_insert_(container, pos, other_string)
+
+StringInsert_
+
+string& insert (size_type pos, const string&, size_type pos1, size_type
+n)
+
+string& string_insert_(container, pos, other_string, pos1, n)
+
+StringInsert_
+
+string& erase(size_type pos=0, size_type n=npos)
+
+string& string_erase_(container, pos, n)
+
+StringErase_
+
+string& assign(const string&)
+
+string& string_assign_(container, another_string)
+
+StringAssign_
+
+string& assign(const charT*)
+
+string& string_assign_(container, another_string)
+
+StringAssign_
+
+string& assign(const string&, size_type pos, size_type n)
+
+string& string_assign_(container, another_string, pos, n)
+
+StringAssign_
+
+string& assign(const charT*, size_type n)
+
+string& string_assign_(container, another_string, n)
+
+StringAssign_
+
+string& assign(size_type n, charT c)
+
+string& string_assign_(container, n, c)
+
+StringAssign_
+
+string& assign(iterator first, iterator last)
+
+string& string_assign_(container, first, last)
+
+StringAssign_
+
+string& replace(size_type pos, size_type n, const string&)
+
+string& string_replace_(container, pos, n, another_string)
+
+StringReplace_
+
+string& replace(size_type pos, size_type n, const charT*, size_type n1)
+
+string& string_replace_(container, pos, n, another_string, n1)
+
+StringReplace_
+
+string& replace(size_type pos, size_type n, const charT*)
+
+string& string_replace_(container, pos, n, another_string)
+
+StringReplace_
+
+string& replace(size_type pos, size_type n, size_type n1, charT c)
+
+string& string_replace_(container, pos, n, n1, c)
+
+StringReplace_
+
+string& replace(iterator first, iterator last, const string&)
+
+string& string_replace_(container, first, last, another_string)
+
+StringReplace_
+
+string& replace(iterator first, iterator last, const charT*, size_type
+n)
+
+string& string_replace_(container, first, last, another_string, n)
+
+StringReplace_
+
+string& replace(iterator first, iterator last, const charT*)
+
+string& string_replace_(container, first, last, another_string)
+
+StringReplace_
+
+string& replace(iterator first, iterator last, size_type n, charT c)
+
+string& string_replace_(container, first, last, n, c)
+
+StringReplace_
+
+string& replace(iterator first, iterator last, iterator f, iterator l)
+
+string& string_replace_(container, first, last, f, l)
+
+StringReplace_
+
+const charT* c_str()
+
+const charT* c_str_(container)
+
+CStr_
+
+const charT* data()
+
+const charT* string_data_(container)
+
+StringData_
+
+size_type copy(charT* buf, size_type n, size_type pos = 0)
+
+size_type string_copy_(container, buf, n, pos); size_type
+string_copy_(container, buf, n)
+
+StringCopy_
+
+size_type find(charT* s, size_type pos, size_type n)
+
+size_type string_find_(container, s, pos, n)
+
+StringFind_
+
+size_type find(charT* s, size_type pos=0)
+
+size_type string_find_(container, s, pos); size_type
+string_find_(container, s)
+
+StringFind_
+
+size_type find(const string& s, size_type pos=0)
+
+size_type string_find_(container, s, pos) size_type
+string_find_(container, s)
+
+StringFind_
+
+size_type find(charT c, size_type pos=0)
+
+size_type string_find_(container, c, pos) size_type
+string_find_(container, c)
+
+StringFind_
+
+size_type rfind(charT* s, size_type pos, size_type n)
+
+size_type string_rfind_(container, s, pos, n)
+
+StringRFind_
+
+size_type rfind(charT* s, size_type pos=npos)
+
+size_type string_rfind_(container, s, pos); size_type
+string_rfind_(container, s)
+
+StringRFind_
+
+size_type rfind(const string& s, size_type pos=npos)
+
+size_type string_rfind_(container, s, pos); size_type
+string_rfind_(container, s)
+
+StringRFind_
+
+size_type rfind(charT c, size_type pos=npos)
+
+size_type string_rfind_(container, c, pos) size_type
+string_rfind_(container, c)
+
+StringRFind_
+
+size_type find_first_of(charT* s, size_type pos, size_type n)
+
+size_type find_first_of_(container, s, pos, n)
+
+StringFindFirstOf_
+
+size_type find_first_of (charT* s, size_type pos=0)
+
+size_type find_first_of_(container, s, pos); size_type
+find_first_of_(container, s)
+
+StringFindFirstOf_
+
+size_type find_first_of (const string& s, size_type pos=0)
+
+size_type find_first_of_(container, s, pos); size_type
+find_first_of_(container, s)
+
+StringFindFirstOf_
+
+size_type find_first_of (charT c, size_type pos=0)
+
+size_type find_first_of_(container, c, pos) size_type
+find_first_of_(container, c)
+
+StringFindFirstOf_
+
+size_type find_first_not_of(charT* s, size_type pos, size_type n)
+
+size_type find_first_not_of_(container, s, pos, n)
+
+StringFindFirstNotOf_
+
+size_type find_first_not_of (charT* s, size_type pos=0)
+
+size_type find_first_not_of_(container, s, pos); size_type
+find_first_not_of_(container, s)
+
+StringFindFirstNotOf_
+
+size_type find_first_not_of (const string& s, size_type pos=0)
+
+size_type find_first_not_of_(container, s, pos); size_type
+find_first_not_of_(container, s)
+
+StringFindFirstNotOf_
+
+size_type find_first_not_of (charT c, size_type pos=0)
+
+size_type find_first_not_of_(container, c, pos); size_type
+find_first_not_of_(container, c)
+
+StringFindFirstNotOf_
+
+size_type find_last_of(charT* s, size_type pos, size_type n)
+
+size_type find_last_of_(container, s, pos, n)
+
+StringFindLastOf_
+
+size_type find_last_of (charT* s, size_type pos=npos)
+
+size_type find_last_of_(container, s, pos); size_type
+find_last_of_(container, s)
+
+StringFindLastOf_
+
+size_type find_last_of (const string& s, size_type pos=npos)
+
+size_type find_last_of_(container, s, pos); size_type
+find_last_of_(container, s)
+
+StringFindLastOf_
+
+size_type find_last_of (charT c, size_type pos=npos)
+
+size_type find_last_of_(container, c, pos); size_type
+find_last_of_(container, c)
+
+StringFindLastOf_
+
+size_type find_last_not_of(charT* s, size_type pos, size_type n)
+
+size_type find_last_not_of_(container, s, pos, n)
+
+StringFindLastNotOf_
+
+size_type find_last_not_of (charT* s, size_type pos=npos)
+
+size_type find_last_not_of_(container, s, pos); size_type
+find_last_of_(container, s)
+
+StringFindLastNotOf_
+
+size_type find_last_not_of (const string& s, size_type pos=npos)
+
+size_type find_last_not_of_(container, s, pos); size_type
+find_last_not_of_(container, s)
+
+StringFindLastNotOf_
+
+size_type find_last_not_of (charT c, size_type pos=npos)
+
+size_type find_last_not_of_(container, c, pos); size_type
+find_last_not_of_(container, c)
+
+StringFindLastNotOf_

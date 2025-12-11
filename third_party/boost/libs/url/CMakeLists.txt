@@ -59,7 +59,6 @@ set(BOOST_URL_DEPENDENCIES
         Boost::core
         Boost::mp11
         Boost::optional
-        Boost::static_assert
         Boost::system
         Boost::throw_exception
         Boost::type_traits
@@ -76,7 +75,7 @@ if (NOT BOOST_URL_MRDOCS_BUILD)
         set(BOOST_URL_UNIT_TEST_LIBRARIES container filesystem unordered)
     endif()
     if (BOOST_URL_BUILD_EXAMPLES)
-        set(BOOST_URL_EXAMPLE_LIBRARIES json regex beast)
+        set(BOOST_URL_EXAMPLE_LIBRARIES json regex beast filesystem)
     endif()
 endif()
 # Complete dependency list

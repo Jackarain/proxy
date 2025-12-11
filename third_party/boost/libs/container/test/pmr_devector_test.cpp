@@ -16,10 +16,14 @@ int main()
    using namespace boost::container;
    using boost::container::dtl::is_same;
 
-   typedef devector<int, growth_factor_60, pmr::polymorphic_allocator<int> > intcontainer_t;
+   typedef devector<int, pmr::polymorphic_allocator<int> > intcontainer_t;
    BOOST_CONTAINER_STATIC_ASSERT(( is_same<intcontainer_t, pmr::devector_of<int>::type >::value ));
    #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
       BOOST_CONTAINER_STATIC_ASSERT(( is_same<intcontainer_t, pmr::devector<int> >::value ));
    #endif
+
+   intcontainer_t cont(pmr::get_default_resource());
+   typedef typename intcontainer_t::value_type value_type;
+   cont.push_back(value_type());
    return 0;
 }

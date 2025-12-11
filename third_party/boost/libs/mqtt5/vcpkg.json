@@ -3,8 +3,7 @@
   "version-semver": "0.0.1",
   "dependencies": [
     "boost-asio",
-    "boost-beast",
-    "boost-spirit"
+    "boost-beast"
   ],
   "default-features": [],
   "features": {

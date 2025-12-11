@@ -1,0 +1,99 @@
+:example: ../examples/rolex
+
+[#Headers]
+
+Typically, `BOOST_OPENMETHOD` is used in headers, while
+`BOOST_OPENMETHOD_CLASSES` and `BOOST_OPENMETHOD_OVERRIDE` are used in
+implementation files.
+
+Let's use a payroll application as an example. We have two roles: `Employee` and
+`Salesman`, and a `pay` method that computes the monthly pay of an employee. We
+want to override and call `pay` from multiple translation units, so we put it in
+a header:
+
+[source,c++]
+----
+include::{example}/1/roles.hpp[tag=content]
+----
+
+`BOOST_OPENMETHOD` _defines_ an inline function, so it can be called only once
+in a translation unit. The include guards see to this.
+
+Let's write the override for "just" employees - they get a fixed salary.
+`BOOST_OPENMETHOD_OVERRIDE` _adds_ an overrider to the method. We don't want to
+add the same multiple times; that would create an ambiguity. Thus it should go
+in an implementation file:
+
+[source,c++]
+----
+include::{example}/1/employee.cpp[tag=content]
+----
+
+Salesmen get a salary like employees, and on top get a commission on their
+sales. The `next` function, available only in the body of an overrider, calls
+the next most specialized overrider. It is similar to `super` in other
+languages, except that it does not stand for an object, but for an overrider.
+
+[source,c++]
+----
+include::{example}/1/salesman.cpp[tag=content]
+----
+
+Paytime!
+
+[source,c++]
+----
+include::{example}/1/main.cpp[tag=content]
+----
+
+In the previous example, we used `next` to call the super-overrider. We can also
+call an overrider directly. To do this, we can declare the overrider in the
+header, and define it in an implementation file:
+
+[source,c++]
+----
+include::{example}/2/roles.hpp[tag=content]
+----
+
+Unlike function declarations,
+xref:BOOST_OPENMETHOD_DECLARE_OVERRIDER.adoc[BOOST_OPENMETHOD_DECLARE_OVERRIDER]
+cannot appear multiple times in a translation unit with the same arguments.
+Also, it requires the _method_ itself to be defined prior using this macro.
+
+Overriders are placed in _overrider_ _containers_. An overrider container is a
+class template named after the method, declared in the current namespace. It is
+specialized for each overrider signature. Macro
+xref:BOOST_OPENMETHOD_OVERRIDER.adoc[BOOST_OPENMETHOD_OVERRIDER] takes the same
+arguments `BOOST_OPENMETHOD_OVERRIDE`, and expands to the corresponding
+specialization of the overrider container. Containers have a static member
+function `fn` that contains the body the overrider, provided by the user. We can
+call the overrider for `Employee` like so:
+
+[source,c++]
+----
+include::{example}/2/salesman.cpp[tag=content]
+----
+
+This is similar to a virtual function calling a base overrider. Virtual
+functions don't have the equivalent of Smalltalk's or Python's `super`, but
+OpenMethod does, it's `next`. It is almost always the right choice.
+
+The exception is: when performance is critical, we may want to inline the call
+to the base overrider.
+xref:BOOST_OPENMETHOD_INLINE_OVERRIDE.adoc[BOOST_OPENMETHOD_INLINE_OVERRIDE]
+defines the overrider as an inline function, and it can go in a header file:
+
+[source,c++]
+----
+include::{example}/3/roles.hpp[tag=content]
+----
+
+With inlining the overrider for `Salesman` compiles to (clang-20, x64-linux):
+
+[source,asm]
+----
+movsd	xmm0, qword ptr [rsi + 8]
+mulsd	xmm0, qword ptr [rip + .LCPI1_0]
+addsd	xmm0, qword ptr [rip + .LCPI1_1]
+ret
+----

@@ -288,7 +288,9 @@ by `fd_resource_traits` and conveniently embedded in the `unique_fd` type. As be
 will only be called if `open` succeeded.
 
 [tip The `fd_deleter`, `fd_resource_traits` and `unique_fd` types presented in the examples above are provided by the library out of
-the box in [boost_scope_fd_deleter_hpp], [boost_scope_fd_resource_traits_hpp] and [boost_scope_unique_fd_hpp] headers.]
+the box in [boost_scope_fd_deleter_hpp], [boost_scope_fd_resource_traits_hpp] and [boost_scope_unique_fd_hpp] headers. Note that
+`fd_deleter` provided by the library has support for platforms where `close` can be interrupted and needs to be restarted. This support
+is omitted for brevity from the examples above.]
 
 [endsect]
 

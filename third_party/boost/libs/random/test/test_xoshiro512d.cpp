@@ -19,7 +19,7 @@
 
 // principal operation validated with CLHEP, values by experiment
 #define BOOST_RANDOM_VALIDATION_VALUE 0.85594919700533156
-#define BOOST_RANDOM_SEED_SEQ_VALIDATION_VALUE 0.25120475433393952
+#define BOOST_RANDOM_SEED_SEQ_VALIDATION_VALUE 0.77731098639989704
 
 // Since we are using splitmix64 we need to allow 64 bit seeds
 // The test harness only allows for 32 bit seeds

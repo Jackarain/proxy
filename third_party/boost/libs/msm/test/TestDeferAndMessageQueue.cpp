@@ -9,11 +9,14 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include "BackCommon.hpp"
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/front/functor_row.hpp>
 
+#ifndef BOOST_MSM_NONSTANDALONE_TEST
+#define BOOST_TEST_MODULE test_defer_and_message_queue
+#endif
 #include <boost/test/unit_test.hpp>
 
 namespace msm = boost::msm;
@@ -42,7 +45,7 @@ namespace
             template <class EVT,class FSM,class SourceState,class TargetState>
             void operator()(EVT const& ,FSM& fsm,SourceState& ,TargetState& )
             {
-                fsm.template process_event(eventResolve());
+                fsm.process_event(eventResolve());
             }
         };
         struct enqueue_action2
@@ -50,7 +53,7 @@ namespace
             template <class EVT,class FSM,class SourceState,class TargetState>
             void operator()(EVT const& ,FSM& fsm,SourceState& ,TargetState& )
             {
-                fsm.template process_event(eventConnect());
+                fsm.process_event(eventConnect());
             }
         };
         struct expected_action
@@ -65,7 +68,7 @@ namespace
         struct unexpected_action
         {
             template <class EVT,class FSM,class SourceState,class TargetState>
-            void operator()(EVT const& ,FSM& fsm,SourceState& ,TargetState& )
+            void operator()(EVT const& ,FSM& ,SourceState& ,TargetState& )
             {
                 std::cout << "unexpected action called" << std::endl;
             }
@@ -162,9 +165,9 @@ namespace
         int expected_action_counter;
     };
     // Pick a back-end
-    typedef msm::back::state_machine<player_> player;
+    typedef get_test_machines<player_> players;
 
-    BOOST_AUTO_TEST_CASE( TestDeferAndMessageQueue )
+    BOOST_AUTO_TEST_CASE_TEMPLATE( test_defer_and_message_queue, player, players )
     {
         player p;
         // needed to start the highest-level SM. This will call on_entry and mark the start of the SM
@@ -173,21 +176,19 @@ namespace
         p.process_event(eventConnect());
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 1,"Resolving should be active");
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 3,"State22 should be active");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Unresolved&>().exit_counter == 1,"Unresolved exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Unresolved&>().entry_counter == 1,"Unresolved entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Resolving&>().entry_counter == 1,"Resolving entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Unresolved&>().exit_counter == 1,"Unresolved exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Unresolved&>().entry_counter == 1,"Unresolved entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Resolving&>().entry_counter == 1,"Resolving entry not called correctly");
 
         p.process_event(eventResolved());
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Connecting should be active");
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 3,"State22 should be active");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Resolved&>().exit_counter == 1,"Resolved exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Resolved&>().entry_counter == 1,"Resolved entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Resolving&>().exit_counter == 1,"Resolving exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Connecting&>().entry_counter == 1,"Connecting entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Resolved&>().exit_counter == 1,"Resolved exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Resolved&>().entry_counter == 1,"Resolved entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Resolving&>().exit_counter == 1,"Resolving exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Connecting&>().entry_counter == 1,"Connecting entry not called correctly");
 
         BOOST_CHECK_MESSAGE(p.expected_action_counter == 1,"expected_action should have been called");
 
     }
 }
-
-

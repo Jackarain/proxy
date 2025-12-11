@@ -12,12 +12,12 @@ beta distribution to an absurdly high precision and compare the
 accuracy and times taken for various methods.  That is, we want
 to calculate the value of `x` for which ['I[sub x](a, b) = 0.5].
 
-Ultimately we'll use Newtons method and set the precision of
+Ultimately we'll use Newton's method and set the precision of
 mpfr_float to have just enough digits at each iteration.
 
-The full source of the this program is in [@../../example/mpfr_precision.cpp]
+The full source of this program is in [@../../example/mpfr_precision.cpp].
 
-We'll skip over the #includes and using declations, and go straight to
+We'll skip over the #includes and using declarations, and go straight to
 some support code, first off a simple stopwatch for performance measurement:
 
 */
@@ -106,11 +106,11 @@ We'll begin with a reference method that simply calls the Boost.Math function `i
 full working precision of the arguments throughout.  Our reference function takes 3 arguments:
 
 * The 2 parameters `a` and `b` of the beta distribution, and
-* The number of decimal digits precision to achieve in the result.
+* the number of decimal digits precision to achieve in the result.
 
 We begin by setting the default working precision to that requested, and then, since we don't know where
 our arguments `a` and `b` have been or what precision they have, we make a copy of them - note that since
-copying also copies the precision as well as the value, we have to set the precision expicitly with a
+copying also copies the precision as well as the value, we have to set the precision explicitly with a
 second argument to the copy.  Then we can simply return the result of `ibeta_inv`:
 */
 mpfr_float beta_distribution_median_method_1(mpfr_float const& a_, mpfr_float const& b_, unsigned digits10)
@@ -120,8 +120,8 @@ mpfr_float beta_distribution_median_method_1(mpfr_float const& a_, mpfr_float co
    return ibeta_inv(a, b, half);
 }
 /*`
-You be wondering why we needed to change the precision of our variables `a` and `b` as well as setting the default -
-there are in fact two ways in which this can go wrong if we don't do that:
+You may be wondering why we needed to change the precision of our variables `a` and `b` as well as setting the
+default - there are in fact two ways in which this can go wrong if we don't do that:
 
 * The variables have too much precision - this will cause all arithmetic operations involving those types to be
 promoted to the higher precision wasting precious calculation time.

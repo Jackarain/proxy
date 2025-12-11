@@ -38,7 +38,7 @@ test-suite program_options :
     [ run options_description_test.cpp : : : <rtti>off : options_description_no_rtti_test ]
     ;
         
-exe test_convert : test_convert.cpp ;   
+exe test_convert : test_convert.cpp /boost/timer//boost_timer ;
 
 # `quick` target (for CI)
 run quick.cpp : --path=initial ;

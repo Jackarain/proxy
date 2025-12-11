@@ -21,7 +21,7 @@
    }} // namespaces
 
 The `float128` number type is a very thin wrapper around GCC's `__float128` or Intel's `_Quad` data types
-and provides an real-number type that is a drop-in replacement for the native C++ floating-point types, but with
+and provides a real-number type that is a drop-in replacement for the native C++ floating-point types, but with
 a 113 bit mantissa, and compatible with FORTRAN's 128-bit QUAD real.
 
 All the usual standard library and `std::numeric_limits` support are available, performance should be equivalent
@@ -37,7 +37,7 @@ function of `float128_backend`.
 Things you should know when using this type:
 
 * Default constructed `float128`s have the value zero.
-* This backend supports rvalue-references and is move-aware, making instantiations of `number` on this backend move aware.
+* This backend supports rvalue-references and is move-aware, making instantiations of `number` on this backend move-aware.
 * This type is fully `constexpr` aware - basic constexpr arithmetic is supported from C++14 and onwards, comparisons,
 plus the functions `fabs`, `abs`, `fpclassify`, `isnormal`, `isfinite`, `isinf` and `isnan` are also supported if either
 the compiler implements C++20's `std::is_constant_evaluated()`, or if the compiler is GCC.

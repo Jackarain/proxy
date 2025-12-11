@@ -24,7 +24,7 @@ struct parse_test
     void
     testRef()
     {
-        BOOST_STATIC_ASSERT(is_rule<
+        BOOST_CORE_STATIC_ASSERT(is_rule<
             decltype(ref(dec_octet_rule))>::value);
         BOOST_TEST(parse("255",
             ref(dec_octet_rule)).has_value());

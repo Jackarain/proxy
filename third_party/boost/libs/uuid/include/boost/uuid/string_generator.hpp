@@ -9,15 +9,45 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/throw_exception.hpp>
 #include <boost/config.hpp>
+#include <boost/config/workaround.hpp>
 #include <string>
 #include <iterator>
-#include <algorithm> // for find
 #include <stdexcept>
-#include <cstring> // for strlen, wcslen
 #include <cstdio>
+#include <cstddef>
+
+#if BOOST_WORKAROUND(BOOST_GCC, < 60000)
+# define BOOST_UUID_CXX14_CONSTEXPR
+#else
+# define BOOST_UUID_CXX14_CONSTEXPR BOOST_CXX14_CONSTEXPR
+#endif
 
 namespace boost {
 namespace uuids {
+
+namespace detail
+{
+
+template<class Ch>
+BOOST_CXX14_CONSTEXPR std::size_t cx_strlen( Ch const* s )
+{
+    std::size_t r = 0;
+    while( *s ) ++s, ++r;
+    return r;
+}
+
+template<class Ch>
+BOOST_CXX14_CONSTEXPR Ch const* cx_find( Ch const* s, std::size_t n, Ch ch )
+{
+    for( std::size_t i = 0; i < n; ++i )
+    {
+        if( s[i] == ch ) return s + i;
+    }
+
+    return nullptr;
+}
+
+} // namespace detail
 
 // Generates a UUID from a string
 //
@@ -30,26 +60,27 @@ namespace uuids {
 
 struct string_generator
 {
+private:
+
+    template <typename CharIterator>
+    typename std::iterator_traits<CharIterator>::value_type
+    BOOST_UUID_CXX14_CONSTEXPR get_next_char( CharIterator& begin, CharIterator end, int& ipos ) const
+    {
+        if( begin == end )
+        {
+            throw_invalid( ipos, "unexpected end of input" );
+        }
+
+        ++ipos;
+        return *begin++;
+    }
+
+public:
+
     using result_type = uuid;
 
-    template<class Ch, class Traits, class Alloc>
-    uuid operator()( std::basic_string<Ch, Traits, Alloc> const& s ) const
-    {
-        return operator()(s.begin(), s.end());
-    }
-
-    uuid operator()( char const* s ) const
-    {
-        return operator()( s, s + std::strlen( s ) );
-    }
-
-    uuid operator()( wchar_t const* s ) const
-    {
-        return operator()( s, s + std::wcslen( s ) );
-    }
-
     template<class CharIterator>
-    uuid operator()( CharIterator begin, CharIterator end ) const
+    BOOST_UUID_CXX14_CONSTEXPR uuid operator()( CharIterator begin, CharIterator end ) const
     {
         using char_type = typename std::iterator_traits<CharIterator>::value_type;
 
@@ -59,8 +90,6 @@ struct string_generator
         char_type c = get_next_char( begin, end, ipos );
 
         bool has_open_brace = is_open_brace( c );
-
-        char_type open_brace_char = c;
 
         if( has_open_brace )
         {
@@ -117,7 +146,11 @@ struct string_generator
         if( has_open_brace )
         {
             c = get_next_char( begin, end, ipos );
-            check_close_brace( c, open_brace_char, ipos - 1 );
+
+            if( !is_close_brace( c ) )
+            {
+                throw_invalid( ipos - 1, "closing brace expected" );
+            }
         }
 
         // check end of string - any additional data is an invalid uuid
@@ -127,6 +160,22 @@ struct string_generator
         }
 
         return u;
+    }
+
+    template<class Ch, class Traits, class Alloc>
+    BOOST_UUID_CXX14_CONSTEXPR uuid operator()( std::basic_string<Ch, Traits, Alloc> const& s ) const
+    {
+        return operator()( s.begin(), s.end() );
+    }
+
+    BOOST_UUID_CXX14_CONSTEXPR uuid operator()( char const* s ) const
+    {
+        return operator()( s, s + detail::cx_strlen( s ) );
+    }
+
+    BOOST_UUID_CXX14_CONSTEXPR uuid operator()( wchar_t const* s ) const
+    {
+        return operator()( s, s + detail::cx_strlen( s ) );
     }
 
 private:
@@ -139,103 +188,75 @@ private:
         BOOST_THROW_EXCEPTION( std::runtime_error( std::string( "Invalid UUID string at position " ) + buffer + ": " + error ) );
     }
 
-    template <typename CharIterator>
-    typename std::iterator_traits<CharIterator>::value_type
-    get_next_char( CharIterator& begin, CharIterator end, int& ipos ) const
+    BOOST_UUID_CXX14_CONSTEXPR unsigned char get_value( char c, int ipos ) const
     {
-        if( begin == end )
-        {
-            throw_invalid( ipos, "unexpected end of input" );
-        }
+        constexpr char digits[] = "0123456789abcdefABCDEF";
+        constexpr std::size_t digits_len = sizeof(digits) / sizeof(char) - 1;
 
-        ++ipos;
-        return *begin++;
-    }
-
-    unsigned char get_value( char c, int ipos ) const
-    {
-        static char const digits_begin[] = "0123456789abcdefABCDEF";
-        static size_t digits_len = (sizeof(digits_begin) / sizeof(char)) - 1;
-        static char const* const digits_end = digits_begin + digits_len;
-
-        static unsigned char const values[] =
+        constexpr unsigned char values[] =
             { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,10,11,12,13,14,15 };
 
-        size_t pos = std::find( digits_begin, digits_end, c ) - digits_begin;
+        auto pos = detail::cx_find( digits, digits_len, c );
 
-        if( pos >= digits_len )
+        if( pos == 0 )
         {
             throw_invalid( ipos, "hex digit expected" );
         }
 
-        return values[ pos ];
+        return values[ pos - digits ];
     }
 
-    unsigned char get_value( wchar_t c, int ipos ) const
+    BOOST_UUID_CXX14_CONSTEXPR unsigned char get_value( wchar_t c, int ipos ) const
     {
-        static wchar_t const digits_begin[] = L"0123456789abcdefABCDEF";
-        static size_t digits_len = (sizeof(digits_begin) / sizeof(wchar_t)) - 1;
-        static wchar_t const* const digits_end = digits_begin + digits_len;
+        constexpr wchar_t digits[] = L"0123456789abcdefABCDEF";
+        constexpr std::size_t digits_len = sizeof(digits) / sizeof(wchar_t) - 1;
 
-        static unsigned char const values[] =
+        constexpr unsigned char values[] =
             { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,10,11,12,13,14,15 };
 
-        size_t pos = std::find( digits_begin, digits_end, c ) - digits_begin;
+        auto pos = detail::cx_find( digits, digits_len, c );
 
-        if( pos >= digits_len )
+        if( pos == 0 )
         {
             throw_invalid( ipos, "hex digit expected" );
         }
 
-        return values[ pos ];
+        return values[ pos - digits ];
     }
 
-    bool is_dash( char c ) const
+    static constexpr bool is_dash( char c )
     {
         return c == '-';
     }
 
-    bool is_dash( wchar_t c ) const
+    static constexpr bool is_dash( wchar_t c )
     {
         return c == L'-';
     }
 
-    // return closing brace
-    bool is_open_brace( char c ) const
+    static constexpr bool is_open_brace( char c )
     {
         return c == '{';
     }
 
-    bool is_open_brace( wchar_t c ) const
+    static constexpr bool is_open_brace( wchar_t c )
     {
         return c == L'{';
     }
 
-    void check_close_brace( char c, char open_brace, int ipos ) const
+    static constexpr bool is_close_brace( char c )
     {
-        if( open_brace == '{' && c == '}' )
-        {
-            //great
-        }
-        else
-        {
-            throw_invalid( ipos, "closing brace expected" );
-        }
+        return c == '}';
     }
 
-    void check_close_brace( wchar_t c, wchar_t open_brace, int ipos ) const
+    static constexpr bool is_close_brace( wchar_t c )
     {
-        if( open_brace == L'{' && c == L'}' )
-        {
-            // great
-        }
-        else
-        {
-            throw_invalid( ipos, "closing brace expected" );
-        }
+        return c == L'}';
     }
 };
 
 }} // namespace boost::uuids
+
+#undef BOOST_UUID_CXX14_CONSTEXPR
 
 #endif // BOOST_UUID_STRING_GENERATOR_HPP_INCLUDED

@@ -9,11 +9,11 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include "BackCommon.hpp"
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
-#define BOOST_TEST_MODULE MyTest
+#define BOOST_TEST_MODULE serialize_test
 #endif
 #include <boost/test/unit_test.hpp>
 // include headers that implement a archive in simple text format
@@ -213,22 +213,22 @@ namespace
 
     };
     // Pick a back-end
-    typedef msm::back::state_machine<player_> player;
+    typedef get_test_machines<player_> players;
 
 //    static char const* const state_names[] = { "Stopped", "Open", "Empty", "Playing", "Paused" };
 
 
-    BOOST_AUTO_TEST_CASE( my_test )
+    BOOST_AUTO_TEST_CASE_TEMPLATE( serialize_test, player, players )
     {     
         player p;
 
         p.start(); 
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Empty&>().entry_counter == 1,"Empty entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Empty&>().entry_counter == 1,"Empty entry not called correctly");
 
         p.process_event(open_close()); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 1,"Open should be active"); //Open
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Empty&>().exit_counter == 1,"Empty exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Open&>().entry_counter == 1,"Open entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Empty&>().exit_counter == 1,"Empty exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Open&>().entry_counter == 1,"Open entry not called correctly");
 
         // test the serialization
         std::ostringstream ofs;
@@ -249,62 +249,61 @@ namespace
         }
         // we now use p2 as it was loaded
         // check that we kept Empty's data value
-        BOOST_CHECK_MESSAGE(p2.get_state<player_::Empty&>().some_dummy_data == 3,"Empty not deserialized correctly");
+        BOOST_CHECK_MESSAGE(p2.template get_state<player_::Empty&>().some_dummy_data == 3,"Empty not deserialized correctly");
         BOOST_CHECK_MESSAGE(p2.front_end_data == 4,"Front-end not deserialized correctly");
 
         p.process_event(open_close()); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 2,"Empty should be active"); //Empty
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Open&>().exit_counter == 1,"Open exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Empty&>().entry_counter == 2,"Empty entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Open&>().exit_counter == 1,"Open exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Empty&>().entry_counter == 2,"Empty entry not called correctly");
         BOOST_CHECK_MESSAGE(p.can_close_drawer_counter == 1,"guard not called correctly");
 
         p.process_event(
             cd_detected("louie, louie",DISK_DVD));
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 2,"Empty should be active"); //Empty
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Open&>().exit_counter == 1,"Open exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Empty&>().entry_counter == 2,"Empty entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Open&>().exit_counter == 1,"Open exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Empty&>().entry_counter == 2,"Empty entry not called correctly");
 
         p.process_event(
             cd_detected("louie, louie",DISK_CD)); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"Stopped should be active"); //Stopped
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Empty&>().exit_counter == 2,"Empty exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Stopped&>().entry_counter == 1,"Stopped entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Empty&>().exit_counter == 2,"Empty exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Stopped&>().entry_counter == 1,"Stopped entry not called correctly");
 
         p.process_event(play());
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 3,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Stopped&>().exit_counter == 1,"Stopped exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Playing&>().entry_counter == 1,"Playing entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Stopped&>().exit_counter == 1,"Stopped exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Playing&>().entry_counter == 1,"Playing entry not called correctly");
         BOOST_CHECK_MESSAGE(p.start_playback_counter == 1,"action not called correctly");
 
         p.process_event(pause());
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Paused should be active"); //Paused
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Playing&>().exit_counter == 1,"Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Paused&>().entry_counter == 1,"Paused entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Playing&>().exit_counter == 1,"Playing exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Paused&>().entry_counter == 1,"Paused entry not called correctly");
 
         // go back to Playing
         p.process_event(end_pause());  
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 3,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Paused&>().exit_counter == 1,"Paused exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Playing&>().entry_counter == 2,"Playing entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Paused&>().exit_counter == 1,"Paused exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Playing&>().entry_counter == 2,"Playing entry not called correctly");
 
         p.process_event(pause()); 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Paused should be active"); //Paused
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Playing&>().exit_counter == 2,"Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Paused&>().entry_counter == 2,"Paused entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Playing&>().exit_counter == 2,"Playing exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Paused&>().entry_counter == 2,"Paused entry not called correctly");
 
         p.process_event(stop());  
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"Stopped should be active"); //Stopped
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Paused&>().exit_counter == 2,"Paused exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Stopped&>().entry_counter == 2,"Stopped entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Paused&>().exit_counter == 2,"Paused exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Stopped&>().entry_counter == 2,"Stopped entry not called correctly");
 
         p.process_event(stop());  
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"Stopped should be active"); //Stopped
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Stopped&>().exit_counter == 2,"Stopped exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Stopped&>().entry_counter == 3,"Stopped entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Stopped&>().exit_counter == 2,"Stopped exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Stopped&>().entry_counter == 3,"Stopped entry not called correctly");
     }
 }
 // eliminate object tracking (even if serialized through a pointer)
 // at the risk of a programming error creating duplicate objects.
 // this is to get rid of warning because p is not const
-BOOST_CLASS_TRACKING(player, boost::serialization::track_never)
-
+// BOOST_CLASS_TRACKING(player, boost::serialization::track_never)

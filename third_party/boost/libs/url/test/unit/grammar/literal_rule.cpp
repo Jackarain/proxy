@@ -11,7 +11,7 @@
 #include <boost/url/grammar/literal_rule.hpp>
 
 #include <boost/url/grammar/parse.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 
 #include "test_rule.hpp"
 
@@ -19,7 +19,7 @@ namespace boost {
 namespace urls {
 namespace grammar {
 
-BOOST_STATIC_ASSERT(is_rule<literal_rule>::value);
+BOOST_CORE_STATIC_ASSERT(is_rule<literal_rule>::value);
 
 struct literal_rule_test
 {

@@ -49,7 +49,7 @@ for the particular backend being observed.
 
 This type provides `numeric_limits` support whenever the template argument Backend does so.
 
-Template alias `logged_adaptor_t` can be used as a shortcut for converting some instantiation of `number<>` to it's logged euqivalent.
+Template alias `logged_adaptor_t` can be used as a shortcut for converting some instantiation of `number<>` to its logged equivalent.
 
 This type is particularly useful when combined with an interval number type - in this case we can use `log_postfix_event`
 to monitor the error accumulated after each operation.  We could either set some kind of trap whenever the accumulated error

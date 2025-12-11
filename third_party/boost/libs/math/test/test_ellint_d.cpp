@@ -6,7 +6,7 @@
 
 #define BOOST_MATH_OVERFLOW_ERROR_POLICY ignore_error
 
-#ifndef SYCL_LANGUAGE_VERSION
+#ifndef BOOST_MATH_ENABLE_SYCL
 #include <pch_light.hpp> // include /libs/math/src/
 #else
 #include "sycl/sycl.hpp"

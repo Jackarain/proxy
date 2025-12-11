@@ -44,7 +44,7 @@ namespace urls {
     @par Example 2
     Parsing functions like @ref parse_uri_reference
     return a `boost::system::result` containing either a valid
-    @ref url_view upon succcess, otherwise they
+    @ref url_view upon success, otherwise they
     contain an error. The error can be converted to
     an exception by the caller if desired:
     @code

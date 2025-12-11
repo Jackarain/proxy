@@ -55,7 +55,7 @@ calculate the n'th Bernoulli number via mixed rational/integer arithmetic to giv
 [[198][167.594528][0.8947434429][1.326461858]]
 ]
 
-In this use case, most the of the rational numbers are fairly small and so the times taken are dominated by
+In this use case, most of the rational numbers are fairly small and so the times taken are dominated by
 the number of allocations performed.  The following table illustrates how well each type performs on suppressing
 allocations:
 

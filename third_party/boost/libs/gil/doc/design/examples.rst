@@ -116,7 +116,7 @@ is how to simplify this code using the ``copy_pixels`` algorithm:
   }
 
 (Note also that ``image::recreate`` is more efficient than ``operator=``, as
-the latter will do an unnecessary copy construction). Not only does the above
+the latter will do an unnecessary copy construction.) Not only does the above
 example work for planar and interleaved images of any color space and pixel
 depth; it is also optimized. GIL overrides ``std::copy`` - when called on two
 identical interleaved images with no padding at the end of rows, it simply
@@ -124,7 +124,7 @@ does a ``memmove``. For planar images it does ``memmove`` for each channel.
 If one of the images has padding, (as in our case) it will try to do
 ``memmove`` for each row. When an image has no padding, it will use its
 lightweight horizontal iterator (as opposed to the more complex 1D image
-iterator that has to check for the end of rows). It choses the fastest method,
+iterator that has to check for the end of rows). It chooses the fastest method,
 taking into account both static and run-time parameters.
 
 Histogram

@@ -1,0 +1,245 @@
+[[internals]]
+
+= Internals
+
+This chapter describes the internal machinery of the back-end, which can
+be useful for UML experts but can be safely ignored for most users. For
+implementers, the interface between front- and back-end is also
+described in detail.
+
+[[run-to-completion]]
+
+== Backend: Run To Completion
+
+The back-end implements the following run-to-completion algorithm:
+
+* Check if one region of the concrete state machine is in a terminate or
+interrupt state. If yes, event processing is disabled while the
+condition lasts (forever for a terminate pseudo-state, while active for
+an interrupt pseudo-state).
+* If the message queue feature is enabled and if the state machine is
+already processing an event, push the currently processed event into the
+queue and end processing. Otherwise, remember that the state machine is
+now processing an event and continue.
+* If the state machine detected that no deferred event is used, skip
+this step. Otherwise, mark the first deferred event from the deferred
+queue as active.
+* Now start the core of event dispatching. If exception handling is
+activated, this will happen inside a try/catch block and the front-end
+`exception_caught` is called if an exception occurs.
+* The event is now dispatched in turn to every region, in the order
+defined by the initial state front-end definition. This will, for every
+region, call the corresponding front-end transition definition (the
+"row" or "Row" of the transition table).
+* Without transition conflict, if for a given region a transition is
+possible, the guard condition is checked. If it returns `true`, the
+transition processing continues and the current state's exit action is
+called, followed by the transition action behavior and the new active
+state's entry behavior.
+* With transition conflicts (several possible transitions, disambiguated
+by mutually exclusive guard conditions), the guard conditions are tried
+in reverse order of their transition definition in the transition table.
+The first one returning `true` selects its transition. Note that this is
+not defined by the UML standard, which simply specifies that if the
+guard conditions are not mutually exclusive, the state machine is
+ill-formed and the behaviour undefined. Relying on this
+implementation-specific behaviour will make it harder for the developer
+to support another state machine framework.
+* If at least one region processes the event, this event is seen as
+having been accepted. If not, the library calls `no_transition` on the
+state machine for every contained region.
+* If the currently active state is a submachine, the behaviour is
+slightly different. The UML standard specifies that internal transitions
+have to be tried first, so the event is first dispatched to the
+submachine. Only if the submachine does not accept the event are other
+(non internal) transitions tried.
+* This back-end supports simple states' and submachines' internal
+transitions. These are provided in the state's
+`internal_transition_table` type. Transitions defined in this table are
+added at the end of the main state machine's transition table, but with
+a lesser priority than the submachine's transitions (defined in
+`transition_table`). This means, for simple states, that these
+transitions have higher priority than non-internal transitions, conform
+to the UML standard which gives higher priority to deeper-level
+transitions. For submachines, this is a non-standard addition which can
+help make event processing faster by giving a chance to bypass subregion
+processing. With standard UML, one would need to add a subregion only to
+process these internal transitions, which would be slower.
+* After the dispatching itself, the deferred event marked in step 3 (if
+any) now gets a chance of processing.
+* Then, events queued in the message queue also get a dispatching
+chance.
+* Finally, completion / anonymous transitions, if to be found in the
+transition table, also get their dispatching chance.
+
+This algorithm illustrates how the back-end configures itself at
+compile-time as much as possible. Every feature not found in a given
+state machine definition is deactivated and has therefore no runtime
+cost. Completion events, deferred events, terminate states, dispatching
+to several regions, internal transitions are all deactivated if not
+used. User configuration is only for exception handling and message
+queue necessary.
+
+[[internals-front-back-interface]]
+
+== Frontend / Backend interface
+
+The design of MSM tries to make front-ends and back-ends (later) to be
+as interchangeable as possible. Of course, no back-end will ever
+implement every feature defined by any possible front-end and inversely,
+but the goal is to make it as easy as possible to extend the current
+state of the library.
+
+To achieve this, MSM divides the functionality between both sides: the
+front-end is a sort of user interface and is descriptive, the back-end
+implements the state machine engine.
+
+MSM being based on a transition table, a concrete state machine (or a
+given front-end) must provide a transition_table. This transition table
+must be made of rows. And each row must tell what kind of transition it
+is and implement the calls to the actions and guards. A state machine
+must also define its regions (marked by initial states). And that is
+about the only constraints for front-ends. How the rows are described is
+implementer's choice.
+
+Every row must provide:
+
+* A `Source` typedef indicating, well, the type of the source state.
+* A `Target` typedef indicating, well, the type of the target state.
+* An `Evt` typedef indicating the type of the event triggering the
+transition.
+* A `row_type_tag` typedef indicating the type of the transition.
+* Rows having a type requiring transition actions must provide a static
+function `action_call` with the following signature:
+`template <class Fsm,class SourceState,class TargetState,class AllStates>`
++
+`static void action_call (Fsm& fsm, Event const& evt, SourceState&, TargetState&, AllStates&)`
++
+The function gets as parameters the (back-end) state machine, the event,
+source and target states and a container (in the current back-end, a
+fusion::set) of all the states defined in the state machine. For
+example, as the back-end has the front-end as basic class, `action_call`
+is simply defined as `(fsm.*action)(evt)`.
+* Rows having a type requiring a guard must provide a static function
+`guard_call` with the following signature:``
++
+`template <class Fsm,class SourceState,class TargetState,class AllStates>`
++
+`static bool guard_call (Fsm&, Event const&, SourceState&, TargetState&, AllStates&)`
+* The possible transition (row) types are:
+** a_row_tag: a transition with actions and no guard
+** g_row_type: a transition with a guard and no actions
+** _row_tag: a transition without actions or guard
+** row_tag: a transition with guard and actions
+** a_irow_tag: an internal transition (defined inside the
+`transition_table`) with actions
+** g_irow_tag: an internal transition (defined inside the
+`transition_table`) with guard
+** irow_tag: an internal transition (defined inside the
+`transition_table`) with actions and guards
+** _irow_tag: an internal transition (defined inside the
+`transition_table`) without action or guard. Due to higher priority for
+internal transitions, this is equivalent to a "ignore event"
+** sm_a_i_row_tag: an internal transition (defined inside the
+`internal_transition_table`) with actions
+** sm_g_i_row_tag: an internal transition (defined inside the
+`internal_transition_table`) with guard
+** sm_i_row_tag: an internal transition (defined inside the
+`internal_transition_table`) with actions and guards
+** sm__i_row_tag: an internal transition (defined inside the
+`internal_transition_table`) without action or guard. Due to higher
+priority for internal transitions, this is equivalent to an "ignore
+event"
+
+Furthermore, a front-end must provide the definition of states and state
+machines. State machine definitions must provide (the implementer is
+free to provide it or let it be done by every concrete state machine;
+different MSM front-ends took one or the other approach):
+
+* `initial_state`: This typedef can be a single state or a mpl container
+and provides the initial states defining one or several orthogonal
+regions.
+* `transition_table`: This typedef is a MPL sequence of transition rows.
+* `configuration`: this typedef is a MPL sequence of known types
+triggering special behavior in the back-end, for example if a concrete
+fsm requires a message queue or exception catching.
+
+States and state machines must both provide a (possibly empty)
+definition of:
+
+* `flag_list`: the flags being active when this state or state machine
+becomes the current state of the fsm.
+* `deferred_events`: events being automatically deferred when the state
+is the current state of the fsm.
+* `internal_transition_table`: the internal transitions of this state.
+* `on_entry` and `on_exit` methods.
+
+[[internals-state-id]]
+
+== Generated state ids
+
+Normally, one does not need to know the ids are generated for all the
+states of a state machine, unless for debugging purposes, like the
+pstate function does in the tutorials in order to display the name of
+the current state. This section will show how to automatically display
+typeid-generated names, but these are not very readable on all
+platforms, so it can help to know how the ids are generated. The ids are
+generated using the transition table, from the ``Start'' column up to
+down, then from the ``Next'' column, up to down, as shown in the next
+image:
+
+image:AnnexA.jpg[image] Stopped will get id 0, Open id 1,
+ErrorMode id 6 and SleepMode (seen only in the ``Next'' column) id 7. If
+you have some implicitly created states, like transition-less initial
+states or states created using the explicit_creation typedef, these will
+be added as a source at the end of the transition table. If you have
+submachine states, a row will be added for them at the end of the table,
+after the automatically or explicitly created states, which can change
+their id. The next help you will need for debugging would be to call the
+current_state method of the state_machine class, then the display_type
+helper to generate a readable name from the id. If you do not want to go
+through the transition table to fill an array of names, the library
+provides another helper, fill_state_names, which, given an array of
+sufficient size (please see next section to know how many states are
+defined in the state machine), will fill it with typeid-generated names.
+
+[[metaprogramming-tools]]
+
+== Metaprogramming tools
+
+We can find for the transition table more uses than what we have seen so
+far. Let's suppose you need to write a coverage tool. A state machine
+would be perfect for such a job, if only it could provide some
+information about its structure. Thanks to the transition table and
+Boost.MPL, it does.
+
+What is needed for a coverage tool? You need to know how many states are
+defined in the state machine, and how many events can be fired. This way
+you can log the fired events and the states visited in the life of a
+concrete machine and be able to perform some coverage analysis, like
+``fired 65% of all possible events and visited 80% of the states defined
+in the state machine''. To achieve this, MSM provides a few useful
+tools:
+
+* generate_state_set<transition table>: returns a mpl::set of all the
+states defined in the table.
+* generate_event_set<transition table>: returns a mpl::set of all the
+events defined in the table.
+* using mpl::size<>::value you can get the number of elements in the
+set.
+* display_type defines an operator() sending typeid(Type).name() to
+cout.
+* fill_state_names fills an array of char const* with names of all
+states (found by typeid).
+* using mpl::for_each on the result of generate_state_set and
+generate_event_set passing display_type as argument will display all the
+states of the state machine.
+* let's suppose you need to recursively find the states and events
+defined in the composite states and thus also having a transition table.
+Calling recursive_get_transition_table<Composite> will return you the
+transition table of the composite state, recursively adding the
+transition tables of all sub-state machines and sub-sub...-sub-state
+machines. Then call generate_state_set or generate_event_set on the
+result to get the full list of states and events.
+
+An xref:attachment$BoostCon09Full.cpp[example] shows the tools in action.

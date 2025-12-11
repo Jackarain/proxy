@@ -14,7 +14,6 @@
 #ifndef __BOOST_SORT_PARALLEL_DETAIL_PARALLEL_SORT_HPP
 #define __BOOST_SORT_PARALLEL_DETAIL_PARALLEL_SORT_HPP
 
-#include <ciso646>
 #include <boost/sort/block_indirect_sort/blk_detail/backbone.hpp>
 #include <boost/sort/pdqsort/pdqsort.hpp>
 #include <boost/sort/common/pivot.hpp>
@@ -94,7 +93,7 @@ struct parallel_sort
         bscu::atomic_add(counter, 1);
         function_t f1 = [this, first, last, level, &counter, &error]( )
         {
-            if (not error)
+            if (! error)
             {
                 try
                 {
@@ -141,13 +140,13 @@ parallel_sort<Block_size, Iter_t, Compare>
     //------------------- check if sort --------------------------------------
     bool sorted = true;
     for (Iter_t it1 = first, it2 = first + 1;
-         it2 != last and (sorted = not bk.cmp(*it2, *it1)); it1 = it2++);
+         it2 != last && (sorted = ! bk.cmp(*it2, *it1)); it1 = it2++);
     if (sorted) return;
 
     //------------------- check if reverse sort ---------------------------
     sorted = true;
     for (Iter_t it1 = first, it2 = first + 1;
-         it2 != last and (sorted = not bk.cmp(*it1, *it2)); it1 = it2++);
+         it2 != last && (sorted = ! bk.cmp(*it1, *it2)); it1 = it2++);
 
     if (sorted)
     {
@@ -171,7 +170,7 @@ parallel_sort<Block_size, Iter_t, Compare>
         pdqsort(first, last, bk.cmp);
         return;
     }
-    if (not bk.error) divide_sort(first, last, level);
+    if (! bk.error) divide_sort(first, last, level);
 
     // wait until all the parts are finished
     bk.exec(counter);
@@ -193,12 +192,12 @@ void parallel_sort<Block_size, Iter_t, Compare>
     //------------------- check if sort -----------------------------------
     bool sorted = true;
     for (Iter_t it1 = first, it2 = first + 1;
-         it2 != last and (sorted = not bk.cmp(*it2, *it1)); it1 = it2++);
+         it2 != last && (sorted = ! bk.cmp(*it2, *it1)); it1 = it2++);
     if (sorted) return;
 
     //---------------- check if finish the subdivision -------------------
     size_t nelem = last - first;
-    if (level == 0 or nelem < (max_per_thread))
+    if (level == 0 || nelem < (max_per_thread))
     {
         return pdqsort(first, last, bk.cmp);
     }

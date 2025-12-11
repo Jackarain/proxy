@@ -736,7 +736,7 @@ public:
         encoding_opts opt;
         opt.space_as_plus = false;
         return encoded_userinfo().decode(
-            opt, std::move(token));
+            opt, std::forward<StringToken>(token));
     }
 
     /** Return the userinfo
@@ -836,7 +836,7 @@ public:
         encoding_opts opt;
         opt.space_as_plus = false;
         return encoded_user().decode(
-            opt, std::move(token));
+            opt, std::forward<StringToken>(token));
     }
 
     /** Return the user
@@ -935,7 +935,7 @@ public:
         encoding_opts opt;
         opt.space_as_plus = false;
         return encoded_password().decode(
-            opt, std::move(token));
+            opt, std::forward<StringToken>(token));
     }
 
     /** Return the password
@@ -1064,7 +1064,7 @@ public:
         encoding_opts opt;
         opt.space_as_plus = false;
         return encoded_host().decode(
-            opt, std::move(token));
+            opt, std::forward<StringToken>(token));
     }
 
     /** Return the host
@@ -1162,7 +1162,7 @@ public:
         encoding_opts opt;
         opt.space_as_plus = false;
         return encoded_host_address().decode(
-            opt, std::move(token));
+            opt, std::forward<StringToken>(token));
     }
 
     /** Return the host
@@ -1383,7 +1383,7 @@ public:
         encoding_opts opt;
         opt.space_as_plus = false;
         return encoded_host_name().decode(
-            opt, std::move(token));
+            opt, std::forward<StringToken>(token));
     }
 
     /** Return the host name
@@ -1468,7 +1468,7 @@ public:
         encoding_opts opt;
         opt.space_as_plus = false;
         return encoded_zone_id().decode(
-            opt, std::move(token));
+            opt, std::forward<StringToken>(token));
     }
 
     /** Return the IPv6 Zone ID
@@ -1732,7 +1732,7 @@ public:
         encoding_opts opt;
         opt.space_as_plus = false;
         return encoded_path().decode(
-            opt, std::move(token));
+            opt, std::forward<StringToken>(token));
     }
 
     /** Return the path
@@ -1977,7 +1977,7 @@ public:
         encoding_opts opt;
         opt.space_as_plus = false;
         return encoded_query().decode(
-            opt, std::move(token));
+            opt, std::forward<StringToken>(token));
     }
 
     /** Return the query
@@ -2220,7 +2220,7 @@ public:
         encoding_opts opt;
         opt.space_as_plus = false;
         return encoded_fragment().decode(
-            opt, std::move(token));
+            opt, std::forward<StringToken>(token));
     }
 
     /** Return the fragment

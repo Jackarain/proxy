@@ -31,6 +31,7 @@ using boost::redis::ignore;
 using boost::redis::operation;
 using boost::redis::request;
 using boost::redis::response;
+using boost::redis::any_adapter;
 using boost::system::error_code;
 using namespace std::chrono_literals;
 
@@ -121,68 +122,6 @@ BOOST_AUTO_TEST_CASE(wrong_response_data_type)
    BOOST_TEST(finished);
 }
 
-BOOST_AUTO_TEST_CASE(cancel_request_if_not_connected)
-{
-   request req;
-   req.get_config().cancel_if_not_connected = true;
-   req.push("PING");
-
-   net::io_context ioc;
-   auto conn = std::make_shared<connection>(ioc);
-   bool finished = false;
-   conn->async_exec(req, ignore, [conn, &finished](error_code ec, std::size_t) {
-      BOOST_TEST(ec, boost::redis::error::not_connected);
-      conn->cancel();
-      finished = true;
-   });
-
-   ioc.run_for(test_timeout);
-   BOOST_TEST(finished);
-}
-
-BOOST_AUTO_TEST_CASE(correct_database)
-{
-   auto cfg = make_test_config();
-   cfg.database_index = 2;
-
-   net::io_context ioc;
-
-   auto conn = std::make_shared<connection>(ioc);
-
-   request req;
-   req.push("CLIENT", "LIST");
-
-   generic_response resp;
-
-   bool exec_finished = false, run_finished = false;
-
-   conn->async_exec(req, resp, [&](error_code ec, std::size_t n) {
-      BOOST_TEST(ec == error_code());
-      std::clog << "async_exec has completed: " << n << std::endl;
-      conn->cancel();
-      exec_finished = true;
-   });
-
-   conn->async_run(cfg, {}, [&run_finished](error_code) {
-      std::clog << "async_run has exited." << std::endl;
-      run_finished = true;
-   });
-
-   ioc.run_for(test_timeout);
-   BOOST_TEST_REQUIRE(exec_finished);
-   BOOST_TEST_REQUIRE(run_finished);
-
-   BOOST_TEST_REQUIRE(!resp.value().empty());
-   auto const& value = resp.value().front().value;
-   auto const pos = value.find("db=");
-   auto const index_str = value.substr(pos + 3, 1);
-   auto const index = std::stoi(index_str);
-
-   // This check might fail if more than one client is connected to
-   // redis when the CLIENT LIST command is run.
-   BOOST_CHECK_EQUAL(cfg.database_index.value(), index);
-}
-
 BOOST_AUTO_TEST_CASE(large_number_of_concurrent_requests_issue_170)
 {
    // See https://github.com/boostorg/redis/issues/170
@@ -195,8 +134,7 @@ BOOST_AUTO_TEST_CASE(large_number_of_concurrent_requests_issue_170)
    auto conn = std::make_shared<connection>(ioc);
 
    auto cfg = make_test_config();
-   cfg.health_check_interval = std::chrono::seconds(0);
-   conn->async_run(cfg, {}, net::detached);
+   conn->async_run(cfg, net::detached);
 
    constexpr int repeat = 8000;
    int remaining = repeat;
@@ -229,7 +167,7 @@ BOOST_AUTO_TEST_CASE(exec_any_adapter)
 
    bool finished = false;
 
-   conn->async_exec(req, boost::redis::any_adapter(res), [&](error_code ec, std::size_t) {
+   conn->async_exec(req, res, [&](error_code ec, std::size_t) {
       BOOST_TEST(ec == error_code());
       conn->cancel();
       finished = true;

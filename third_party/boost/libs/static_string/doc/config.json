@@ -1,0 +1,12 @@
+{
+    "include_private": false,
+    "legacy_behavior": false,
+    "external_marker": "!EXTERNAL!",
+    "link_prefix": "static_string.ref.",
+    "default_namespace": "boost::static_strings",
+    "allowed_prefixes": ["boost::static_strings::", "std::"],
+    "convenience_header": "boost/static_string.hpp",
+    "replace_strings": {
+        "__see_below__": "``['see-below]``"
+    }
+}

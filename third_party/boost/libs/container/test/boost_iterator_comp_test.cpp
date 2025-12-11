@@ -1,3 +1,7 @@
+#include <boost/config.hpp>
+
+#if BOOST_CXX_VERSION >= 201103L
+
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/container/vector.hpp>
 #include <boost/container/list.hpp>
@@ -54,3 +58,11 @@ int main()
    return boost::report_errors();
 }
 
+#else
+
+int main()
+{
+    return 0;
+}
+
+#endif

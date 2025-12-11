@@ -59,7 +59,7 @@ namespace boost { namespace parser {
         std::declval<bool &>(),
         std::declval<int &>(),
         std::declval<ErrorHandler const &>(),
-        std::declval<detail::nope &>(),
+        std::declval<detail::nope const &>(),
         std::declval<detail::symbol_table_tries_t &>(),
         std::declval<detail::pending_symbol_table_operations_t &>()));
 

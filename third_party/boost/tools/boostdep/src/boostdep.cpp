@@ -2671,6 +2671,13 @@ static int module_cxxstd_requirement( std::string const& module )
 static void output_module_cmake_report( std::string module )
 {
     int cxxstd = module_cxxstd_requirement( module );
+    const char* min_cmake_version = "3.8";
+    if(cxxstd >= 126)
+        min_cmake_version = "3.30";
+    else if(cxxstd >= 123)
+        min_cmake_version = "3.20";
+    else if(cxxstd >= 120)
+        min_cmake_version = "3.12";
 
     std::cout <<
 
@@ -2679,7 +2686,7 @@ static void output_module_cmake_report( std::string module )
         "# Distributed under the Boost Software License, Version 1.0.\n"
         "# https://www.boost.org/LICENSE_1_0.txt\n"
         "\n"
-        "cmake_minimum_required(VERSION " << (cxxstd >= 111? "3.8": "3.5") << "...3.20)\n"
+        "cmake_minimum_required(VERSION " << min_cmake_version << "...3.31)\n"
         "\n"
     ;
 

@@ -7,3 +7,4 @@ cd "$SCRIPT_DIR"
 
 npm ci
 npx antora unordered-playbook.yml
+cp -f html/index.html html/unordered.html

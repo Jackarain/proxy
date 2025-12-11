@@ -178,7 +178,7 @@ plus the requirements for <code>std::list</code> specific list operations at
     have <code>data</code> member functions. 
   </li>
 
-  <li>The complexity of some operations, notably insertion and deletion, differ
+  <li>The complexities of some operations, notably insertion and deletion, differ
     from those of <code>std::vector</code>.
   </li>
   <li>Unlike as in <code>std::vector</code>, insertions into a random access index
@@ -439,7 +439,7 @@ of the complexity formulas:
 
 <p>
 (<code>shl</code> and <code>rel</code> stand for <i>shift left</i> and
-<i>relocate</i>, respectively.)
+<i>relocate</i>, respectively).
 </p>
 
 <h4><a name="instantiation_types">Instantiation types</a></h4>
@@ -550,7 +550,7 @@ const_iterator iterator_to(const value_type&amp; x)const;</code>
 <code>size()&lt;c</code>, back insertions happen in constant time (the
 general case as described by
 <a href="#complexity_signature"><code>i(n)</code></a> is <i>amortized</i>
-constant time.)<br>
+constant time).<br>
 <b>Note:</b> Validity of iterators and references to elements
 is preserved in all insertions, regardless of the capacity status.
 </blockquote>
@@ -590,7 +590,7 @@ into <code>multi_index_container</code>.<br>
 elements (first version) or copies of <code>x</code> (second version) at the end of
 the index. If <code>n&lt;size()</code>, erases the last <code>size()-n</code> elements.<br>
 <b>Note:</b> If an expansion is requested, the size of the index is not guaranteed
-to be <code>n</code> after this operation (other indices may ban insertions.)
+to be <code>n</code> after this operation (other indices may ban insertions).
 </blockquote>
 
 <h4><a name="modifiers">Modifiers</a></h4>
@@ -1223,7 +1223,7 @@ Operation: loading of an <code>iterator</code> or <code>const_iterator</code>
 then <code>*it'</code> is the restored copy of <code>*it</code>, otherwise
 <code>it'==end()</code>.<br>
 <b>Note:</b> It is allowed that <code>it</code> be a <code>const_iterator</code>
-and the restored <code>it'</code> an <code>iterator</code>, or viceversa.
+and the restored <code>it'</code> an <code>iterator</code>, or vice versa.
 </blockquote>
 
 <hr>

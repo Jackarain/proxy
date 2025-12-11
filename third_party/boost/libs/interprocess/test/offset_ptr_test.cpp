@@ -16,14 +16,46 @@
 using namespace boost::interprocess;
 
 class Base
-{};
+{
+   int padding;
+   public:
+   Base() : padding(0){}
+   int *get() { return &padding; }
+   virtual ~Base(){}
+};
+
+class Base2
+{
+   int padding;
+   public:
+   Base2() : padding(0){}
+   int *get() { return &padding; }
+   virtual ~Base2(){}
+};
+
+class Base3
+{
+   int padding;
+   public:
+   Base3() : padding(0){}
+   int *get() { return &padding; }
+   virtual ~Base3(){}
+};
 
 class Derived
    : public Base
 {};
 
+class Derived3
+   : public Base, public Base2, public Base3
+{};
+
 class VirtualDerived
    : public virtual Base
+{};
+
+class VirtualDerived3
+   : public virtual Base, public virtual Base2, public virtual Base3
 {};
 
 void test_types_and_conversions()
@@ -355,6 +387,128 @@ void test_pointer_plus_bits()
    BOOST_TEST(ptr_plus_bits::get_pointer(pnode) == 0);
 }
 
+void test_cast()
+{
+   typedef offset_ptr<int>                pint_t;
+   typedef offset_ptr<const int>          pcint_t;
+   typedef offset_ptr<volatile int>       pvint_t;
+   typedef offset_ptr<const volatile int> pcvint_t;
+   typedef offset_ptr<void>                pvoid_t;
+   typedef offset_ptr<const void>          pcvoid_t;
+   typedef offset_ptr<volatile void>       pvvoid_t;
+   typedef offset_ptr<const volatile void> pcvvoid_t;
+
+   int dummy_int = 9;
+
+   {  pint_t   pint(&dummy_int);
+      pcint_t  pcint(pint);
+      pvint_t  pvint = pint;
+      pcvint_t pcvint = pvint;
+
+      pvoid_t  pvoid = pint;
+      pcvoid_t pcvoid = pvoid;
+      pvvoid_t pvvoid = pvoid;
+      pcvvoid_t pcvvoid = pvoid;
+      pcvvoid = pvvoid;
+
+      //Test valid static_cast conversions
+      pint  = static_pointer_cast<int>(pvoid);
+      pcint = static_pointer_cast<const int>(pcvoid);
+      pvint = static_pointer_cast<volatile int>(pvoid);
+      pcvint = static_pointer_cast<const volatile int>(pvoid);
+
+      BOOST_TEST(pint == pvoid);
+      BOOST_TEST(pcint == pint);
+      BOOST_TEST(pvint == pint);
+      BOOST_TEST(pcvint == pint);
+
+      //Test valid static_cast conversions
+      {
+         pint   = static_pointer_cast<int>(pvoid);
+         pcint  = static_pointer_cast<const int>(pcvoid);
+         pvint  = static_pointer_cast<volatile int>(pvoid);
+         pcvint = static_pointer_cast<const volatile int>(pvoid);
+
+         Derived d;
+         offset_ptr<Derived> pd(&d);
+         offset_ptr<Base> pb;
+         //Downcast
+         pb = static_pointer_cast<Base>(pd);
+         //Upcast
+         pd = static_pointer_cast<Derived>(pb);
+
+         Derived3 d3;
+         offset_ptr<Derived3> pd3(&d3);
+         offset_ptr<Base3> pb3;
+
+         //Downcast
+         pb3 = static_pointer_cast<Base3>(pd3);
+         //Upcast
+         pd3 = static_pointer_cast<Derived3>(pb3);
+         //Test addresses don't match in multiple inheritance
+         BOOST_TEST((pvoid_t)pb3 != (pvoid_t)pd3);
+         BOOST_TEST(pb3.get() == static_cast<Base3*>(pd3.get()));
+      }
+
+      //Test valid const_cast conversions
+      {
+         pint = const_pointer_cast<int>(pcint);
+         pint = const_pointer_cast<int>(pvint);
+         pint = const_pointer_cast<int>(pcvint);
+
+         pvint = const_pointer_cast<volatile int>(pcint);
+         pvint = const_pointer_cast<volatile int>(pcvint);
+
+         pcint = const_pointer_cast<const int>(pvint);
+         pcint = const_pointer_cast<const int>(pcvint);
+
+         //Test valid reinterpret_cast conversions
+         pint   = reinterpret_pointer_cast<int>(pvoid);
+         pcint  = reinterpret_pointer_cast<const int>(pcvoid);
+         pvint  = reinterpret_pointer_cast<volatile int>(pvoid);
+         pcvint = reinterpret_pointer_cast<const volatile int>(pvoid);
+      }
+
+      //Test valid dynamic_cast conversions
+      {
+         {
+            Derived3 d3;
+            offset_ptr<Derived3> pd3(&d3);
+            offset_ptr<Base2> pb2;
+
+            //Downcast
+            pb2 = dynamic_pointer_cast<Base2>(pd3);
+            //Upcast
+            pd3 = dynamic_pointer_cast<Derived3>(pb2);
+            BOOST_TEST((pvoid_t)pb2 != (pvoid_t)pd3);
+            BOOST_TEST(pb2.get() == dynamic_cast<Base2*>(&d3));
+            BOOST_TEST(static_cast<void*>(pb2.get()) != static_cast<void*>(pd3.get()));
+         }
+         {
+            VirtualDerived3 vd3;
+            offset_ptr<VirtualDerived3> pdv3(&vd3);
+            offset_ptr<Base3> pb3;
+            offset_ptr<Base2> pb2;
+            offset_ptr<Base>  pb;
+
+            //Downcast
+            pb3 = dynamic_pointer_cast<Base3>(pdv3);
+            pb2 = dynamic_pointer_cast<Base2>(pdv3);
+            pb  = dynamic_pointer_cast<Base> (pdv3);
+            //Upcast
+            pdv3 = dynamic_pointer_cast<VirtualDerived3>(pb);
+            pdv3 = dynamic_pointer_cast<VirtualDerived3>(pb2);
+            pdv3 = dynamic_pointer_cast<VirtualDerived3>(pb3);
+            //Test addresses don't match in multiple inheritance
+            BOOST_TEST((pvoid_t)pb2 != (pvoid_t)pdv3);
+            BOOST_TEST(pb2.get() != static_cast<void*>(pdv3.get()));
+            BOOST_TEST((pvoid_t)pb3 != (pvoid_t)pdv3);
+            BOOST_TEST(pb3.get() != static_cast<void*>(pdv3.get()));
+         }
+      }
+   }
+}
+
 int main()
 {
    test_types_and_conversions();
@@ -363,5 +517,6 @@ int main()
    test_comparison();
    test_pointer_traits();
    test_pointer_plus_bits();
+   test_cast();
    return ::boost::report_errors();
 }

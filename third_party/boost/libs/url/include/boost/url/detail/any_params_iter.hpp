@@ -12,7 +12,7 @@
 
 #include <boost/url/param.hpp>
 #include <boost/url/pct_string_view.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
@@ -177,7 +177,7 @@ struct params_iter
     : any_params_iter
     , private params_iter_base
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::is_convertible<
             typename std::iterator_traits<
                 FwdIt>::reference,
@@ -288,7 +288,7 @@ struct params_encoded_iter
     : any_params_iter
     , private params_encoded_iter_base
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::is_convertible<
             typename std::iterator_traits<
                 FwdIt>::reference,

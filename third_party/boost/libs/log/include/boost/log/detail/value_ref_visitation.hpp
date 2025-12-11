@@ -67,7 +67,7 @@ struct apply_visitor_dispatch
     case i: return visitor(*static_cast< typename mpl::at_c< SequenceT, i >::type const* >(p));
 
 #define BOOST_PP_FILENAME_1 <boost/log/detail/value_ref_visitation.hpp>
-#define BOOST_PP_ITERATION_LIMITS (1, BOOST_PP_INC(BOOST_LOG_VALUE_REF_VISITATION_VTABLE_SIZE))
+#define BOOST_PP_ITERATION_LIMITS (1, BOOST_PP_INC(BOOST_LOG_VALUE_REF_VISITATION_UNROLL_COUNT))
 #include BOOST_PP_ITERATE()
 
 #undef BOOST_LOG_AUX_CASE_ENTRY

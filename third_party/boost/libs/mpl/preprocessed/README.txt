@@ -5,12 +5,12 @@ Pre-processing of MPL-containers can be accomplished using the script
 "boost_mpl_preprocess.py". In the simple case call it with a single
 argument which is the path to the source-directory of Boost.
 
-  python boost_mpl_preprocess.py <path-to-boost-sourcedir>
+  python3 boost_mpl_preprocess.py <path-to-boost-sourcedir>
 
 If the Boost source-directory is the one this script resides in, you
 can just call it without any arguments.
 
-  python boost_mpl_preprocess.py
+  python3 boost_mpl_preprocess.py
 
 Either way, this will pre-process all four MPL-container types (vector,
 list, set, map) and makes them able to hold up to 100 elements. They can
@@ -22,7 +22,7 @@ be different from the one of other MPL-container types and it can also
 differ between its 'numbered' and 'variadic' form.
 To see all options, call the script like this:
 
-  python boost_mpl_preprocess.py --help
+  python3 boost_mpl_preprocess.py --help
 
 
 Fixing pre-processing of MPL-containers
@@ -44,12 +44,12 @@ can also fix them explicitly by calling "fix_boost_mpl_preprocess.py"
 directly.
 If you just want to test if any fixing is needed call it like this:
 
-  python fix_boost_mpl_preprocess.py --check-only <path-to-boost-sourcedir>
+  python3 fix_boost_mpl_preprocess.py --check-only <path-to-boost-sourcedir>
 
 This will tell you if any fixing is needed. In such a case call the script
 "fix_boost_mpl_preprocess.py" like this:
 
-  python fix_boost_mpl_preprocess.py <path-to-boost-sourcedir>
+  python3 fix_boost_mpl_preprocess.py <path-to-boost-sourcedir>
 
 This will fix the header-comments of all the source-files needed during
 pre-processing. Calling "boost_mpl_preprocess.py" afterwards should then

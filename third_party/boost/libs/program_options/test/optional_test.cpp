@@ -7,6 +7,9 @@ namespace po = boost::program_options;
 
 #include <boost/optional.hpp>
 
+#ifndef BOOST_NO_CXX17_HDR_OPTIONAL
+#   include <optional>
+#endif
 #include <string>
 
 #include "minitest.hpp"
@@ -19,9 +22,10 @@ std::vector<std::string> sv(const char* array[], unsigned size)
     return r;
 }
 
+template<template<typename> class OptionalType>
 void test_optional()
 {
-    boost::optional<int> foo, bar, baz;
+    OptionalType<int> foo, bar, baz;
 
     po::options_description desc;
     desc.add_options()
@@ -48,6 +52,9 @@ void test_optional()
 
 int main(int, char*[])
 {
-    test_optional();
+    test_optional<boost::optional>();
+#ifndef BOOST_NO_CXX17_HDR_OPTIONAL
+    test_optional<std::optional>();
+#endif
     return 0;
 }

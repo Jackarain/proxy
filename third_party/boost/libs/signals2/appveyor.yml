@@ -47,6 +47,7 @@ environment:
     # B2_LINK: link=shared,static
     # B2_THREADING: threading=multi,single
     B2_VARIANT: variant=release,debug
+    B2_CI_VERSION: 0
 
   matrix:
     - FLAVOR: Visual Studio 2017 C++2a Strict

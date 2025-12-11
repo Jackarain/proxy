@@ -9,12 +9,6 @@
 
 project : requirements <library>/boost/dynamic_bitset//boost_dynamic_bitset ;
 
-exe timing_tests
-    : timing_tests.cpp
-      /boost/timer//boost_timer
-      /boost/detail//boost_detail
-    ;
-
 exe example1
     : example1.cpp
     ;

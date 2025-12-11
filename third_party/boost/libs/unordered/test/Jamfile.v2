@@ -362,6 +362,7 @@ local CFOA_TESTS =
   pmr_allocator_tests
   stats_tests
   node_handle_allocator_tests
+  incomplete_tests
 ;
 
 for local test in $(CFOA_TESTS)

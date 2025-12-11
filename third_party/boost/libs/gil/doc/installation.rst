@@ -24,7 +24,7 @@ compiler with complete C++14 support.
 
 .. note::
 
-    Boost.GIL requires C++14 compiler since ince Boost 1.80.
+    Boost.GIL requires C++14 compiler since Boost 1.80.
 
 For the actual list of currently tested compilers, check results of the library CI
 builds linked from the `README.md <https://github.com/boostorg/gil/blob/develop/README.md>`_

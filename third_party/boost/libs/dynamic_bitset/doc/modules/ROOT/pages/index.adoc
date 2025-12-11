@@ -1,0 +1,72 @@
+// ===========================================================================
+//                         Copyright 2001 Jeremy Siek
+//                Copyright 2003-2004, 2008, 2025 Gennaro Prota
+//                        Copyright 2014 Ahmed Charles
+//                     Copyright 2014 Riccardo Marcangelo
+//                        Copyright 2018 Evgeny Shulgin
+//
+//         Distributed under the Boost Software License, Version 1.0.
+//              (See accompanying file LICENSE_1_0.txt or copy at
+//                    http://www.boost.org/LICENSE_1_0.txt)
+// ===========================================================================
+
+= Boost.DynamicBitset
+
+Boost.DynamicBitset is a portable library that provides a set of bits.
+
+The set
+(xref:reference:boost/dynamic_bitset.adoc#boost-dynamic_bitset[dynamic_bitset])
+provides access to the value of individual bits via
+xref:reference:boost/dynamic_bitset/operator_subs-08.adoc[operator[\]] and
+provides all of the bitwise operators that one can apply to builtin integers,
+such as xref:reference:boost/operator_bitand.adoc[operator&] and
+xref:reference:boost/dynamic_bitset/operator_lshift.adoc[operator<<]. The number
+of bits can change at runtime.
+
+`dynamic_bitset` is nearly identical to `std::bitset`. The difference is that
+the size of a `dynamic_bitset` (the number of bits) can change at runtime,
+whereas the size of a `std::bitset` is specified at compile-time through an
+integer template parameter.
+
+The main problem that `dynamic_bitset` is designed to solve is that of
+representing a subset of a finite set. Each bit represents whether an element of
+the finite set is in the subset or not. As such the bitwise operations of
+`dynamic_bitset`, such as `operator&` and `operator|`, correspond to set
+operations, such as intersection and union.
+
+== Definitions
+Each bit represents either the Boolean value `true` or `false` (1 or 0). To set
+a bit is to assign it 1. To clear or reset a bit is to assign it 0. To flip a
+bit is to change the value to 1 if it was 0 and to 0 if it was 1. Each bit has a
+non-negative position. A bitset `x` contains `x.size()` bits, with each bit
+assigned a unique position in the range `[0, x.size())`. The bit at position 0
+is called the least significant bit and the bit at position `size() - 1` is the
+most significant bit. When converting an instance of `dynamic_bitset` to or from
+an unsigned long `n`, the bit at position `i` of the bitset has the same value
+as `(n >> i) & 1`.
+
+== Rationale
+Because of the proxy reference type, `dynamic_bitset` is not a
+https://en.cppreference.com/w/cpp/named_req/Container.html[Container] and its
+iterators do not satisfy the requirements for a LegacyForwardIterator. This
+means that its iterators are not usable with many standard algorithms. However,
+`dynamic_bitset` provides C++20 iterators which can be used with ranges.
+
+Some people prefer the name "toggle" to "flip". The name "flip" was chosen
+because that is the name used in `std::bitset`. In fact, most of the function
+names for `dynamic_bitset` were chosen for this reason.
+
+`dynamic_bitset` does not throw exceptions when a precondition is violated (as
+is done in `std::bitset`). Instead `BOOST_ASSERT()` is used. See the guidelines
+for Error and Exception Handling for the explanation. Note that, consistently
+with this, the documentation of the member functions doesn't use the term
+"precondition" for conditions that cause an exception to be emitted (the C++
+standard uses the term "requires" in such cases).
+
+== Acknowledgments
+
+We would like to thank the Boost community for putting in the time to review and
+accept this library. This library is much better than it ever would have been
+due to all the suggestions from Boost members. We especially thank Matt Marcus
+for taking on the task of review manager. Also, a special thanks goes to James
+Kanze for his invaluable help with the internationalization issues.

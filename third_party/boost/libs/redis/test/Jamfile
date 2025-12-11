@@ -42,6 +42,7 @@ lib redis_test_common
     :
         boost_redis.cpp
         common.cpp
+        sansio_utils.cpp
     : requirements $(requirements)
     : usage-requirements $(requirements)
 ;
@@ -56,7 +57,12 @@ local tests =
     test_exec_fsm
     test_log_to_file
     test_conn_logging
+    test_writer_fsm
     test_reader_fsm
+    test_run_fsm
+    test_connect_fsm
+    test_setup_request_utils
+    test_multiplexer
 ;
 
 # Build and run the tests

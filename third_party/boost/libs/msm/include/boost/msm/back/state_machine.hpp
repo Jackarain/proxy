@@ -45,9 +45,7 @@
 
 #include <boost/bind/bind.hpp>
 #include <boost/function.hpp>
-#ifndef BOOST_NO_RTTI
 #include <boost/any.hpp>
-#endif
 
 #include <boost/serialization/base_object.hpp>
 
@@ -56,6 +54,7 @@
 #include <boost/msm/active_state_switching_policies.hpp>
 #include <boost/msm/row_tags.hpp>
 #include <boost/msm/msm_grammar.hpp>
+#include <boost/msm/back/traits.hpp>
 #include <boost/msm/back/fold_to_list.hpp>
 #include <boost/msm/back/metafunctions.hpp>
 #include <boost/msm/back/history_policies.hpp>
@@ -65,20 +64,6 @@
 #include <boost/msm/back/dispatch_table.hpp>
 #include <boost/msm/back/no_fsm_check.hpp>
 #include <boost/msm/back/queue_container_deque.hpp>
-
-BOOST_MPL_HAS_XXX_TRAIT_DEF(accept_sig)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(no_automatic_create)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(non_forwarding_flag)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(direct_entry)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(initial_event)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(final_event)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(do_serialize)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(history_policy)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(fsm_check)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(compile_policy)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(queue_container_policy)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(using_declared_table)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(event_queue_before_deferred_queue)
 
 #ifndef BOOST_MSM_CONSTRUCTOR_ARG_SIZE
 #define BOOST_MSM_CONSTRUCTOR_ARG_SIZE 5 // default max number of arguments for constructors
@@ -434,7 +419,7 @@ private:
             return false;
         }
         // Take the transition action and return the next state.
-        static HandledEnum execute(library_sm& fsm, int region_index, int state, transition_event& evt)
+        static HandledEnum execute(library_sm& fsm, int region_index, int state, transition_event const& evt)
         {
 
             BOOST_STATIC_CONSTANT(int, current_state = (get_state_id<stt,current_state_type>::type::value));
@@ -579,7 +564,7 @@ private:
         >::type next_state_type;
 
         // Take the transition action and return the next state.
-        static HandledEnum execute(library_sm& fsm, int region_index, int state, transition_event& evt)
+        static HandledEnum execute(library_sm& fsm, int region_index, int state, transition_event const& evt)
         {
             BOOST_STATIC_CONSTANT(int, current_state = (get_state_id<stt,current_state_type>::type::value));
             BOOST_STATIC_CONSTANT(int, next_state = (get_state_id<stt,next_state_type>::type::value));
@@ -2245,9 +2230,7 @@ public:
     template <class Event>
     void no_action(Event const&){}
 
-#ifndef BOOST_NO_RTTI
     HandledEnum process_any_event( ::boost::any const& evt);
-#endif
 
 private:
     // composite accept implementation. First calls accept on the composite, then accept on all its active states.

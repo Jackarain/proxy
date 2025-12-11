@@ -1,0 +1,85 @@
+[[questions-answers-tips]]
+
+= Questions & Answers, tips
+
+_Where should I define a state machine?_: The tutorials are implemented
+in a simple cpp source file for simplicity. I want to model dynamic
+behavior of a class as a state machine, how should I define the state
+machine?
+
+_Answer_: Usually you'll want to implement the state machine as an
+attribute of the class. Unfortunately, a concrete state machine is a
+typedef, which cannot be forward-declared. This leaves you with two
+possibilities:
+
+* Provide the state machine definition inside the header class and
+contain an instance as attribute. Simple, but with several drawbacks:
+using namespace directives are not advised, and compile-time cost for
+all modules including the header.
+* Keep the state machine as (shared) pointer to void inside the
+xref:attachment$FsmAsPtr.hpp[class definition], and implement the state
+machine in the xref:attachment$FsmAsPtr.cpp[cpp file]. Minimum
+compile-time, using directives are okay, but the state machine is now
+located inside the heap.
+
+_Question_: on_entry gets as argument the sent event. What event do I
+get when the state becomes default-activated (because it is an initial
+state)?
+
+_Answer_: To allow you to know that the state was default-activated, MSM
+generates a boost::msm::InitEvent default event.
+
+_Question_: Why do I see no call to no_transition in my submachine?
+
+_Answer_: Because of the priority rule defined by UML. It says that in
+case of transition conflict, the most inner state has a higher priority.
+So after asking the inner state, the containing composite has to be also
+asked to handle the transition and could find a possible transition.
+
+_Question_: Why do I get a compile error saying the compiler cannot
+convert to a function ...Fsm::*(some_event)?
+
+_Answer_: You probably defined a transition triggered by the event
+some_event, but used a guard/action method taking another event.
+
+_Question_: Why do I get a compile error saying something like ``too
+few'' or ``too many'' template arguments?
+
+_Answer_: You probably defined a transition in form of an a_row or g_row
+where you wanted just a _row or the other way around. With Row, it could
+mean that you forgot a "none".
+
+_Question_: Why do I get a very long compile error when I define more
+than 20 rows in the transition table?
+
+_Answer_: MSM uses Boost.MPL under the hood and this is the default
+maximum size. Please define the following 3 macros before including any
+MSM headers:
+
+....
+#define BOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
+#define BOOST_MPL_LIMIT_VECTOR_SIZE 30 // or whatever you need               
+#define BOOST_MPL_LIMIT_MAP_SIZE 30 // or whatever you need 
+....
+
+_Question_: Why do I get this error: ``error C2977: 'boost::mpl::vector'
+: too many template arguments''?
+
+_Answer_: The first possibility is that you defined a transition table
+as, say, vector17 and have 18 entries. The second is that you have 17
+entries and have a composite state. Under the hood, MSM adds a row for
+every event in the composite transition table. The third one is that you
+used a mpl::vector without the number of entries but are close to the
+MPL default of 50 and have a composite, thus pushing you above 50. Then
+you need mpl/vector60/70….hpp and a mpl/map60/70….hpp.
+
+_Question_: Why do I get a very long compile error when I define more
+than 10 states in a state machine?
+
+_Answer_: MSM uses Boost.Fusion under the hood and this is the default
+maximum size. Please define the following macro before including any MSM
+headers:
+
+....
+#define FUSION_MAX_VECTOR_SIZE 20 // or whatever you need 
+....

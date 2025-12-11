@@ -244,7 +244,7 @@ struct dec
     T operator()(T x) const { return --x; }
 };
 
-/// \brief Returns the index corresponding to the first occurrance of a given given type in
+/// \brief Returns the index corresponding to the first occurrence of a given given type in
 //         a given Boost.MP11-compatible list (or size if the type is not present)
 template <typename Types, typename T>
 struct type_to_index : mp11::mp_find<Types, T>

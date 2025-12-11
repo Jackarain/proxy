@@ -1,0 +1,20 @@
+# BOOST_OPENMETHOD_CLASSES
+
+## Synopsis
+
+Defined in link:{{BASE_URL}}/include/boost/openmethod/macros.hpp[<boost/openmethod/macros.hpp>].
+
+```c++
+BOOST_OPENMETHOD_CLASSES(CLASSES...[, REGISTRY]);
+```
+
+## Description
+
+Registers `CLASSES` in REGISTRY.
+
+NOTE: The default value for `REGISTRY` is the value of
+`BOOST_OPENMETHOD_DEFAULT_REGISTRY` when `<boost/openmethod/core.hpp>` is
+included. Subsequently changing it has no retroactive effect.
+
+This macro is a wrapper around cpp:use_classes[]; see its documentation for more
+details.

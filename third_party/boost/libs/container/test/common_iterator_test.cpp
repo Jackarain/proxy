@@ -67,8 +67,6 @@ int main()
 
 #else
 
-#include <boost/container/vector.hpp>
-
 int main()
 {
     return 0;

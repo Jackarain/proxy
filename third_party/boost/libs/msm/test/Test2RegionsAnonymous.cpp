@@ -9,7 +9,7 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include "BackCommon.hpp"
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 // functors
@@ -18,6 +18,9 @@
 // for And_ operator
 #include <boost/msm/front/euml/operator.hpp>
 
+#ifndef BOOST_MSM_NONSTANDALONE_TEST
+#define BOOST_TEST_MODULE test_2_regions_anonymous
+#endif
 #include <boost/test/unit_test.hpp>
 
 using namespace std;
@@ -139,9 +142,9 @@ namespace
         }
     };
     // Pick a back-end
-    typedef msm::back::state_machine<my_machine_> my_machine;
+    typedef get_test_machines<my_machine_> my_machines;
 
-    BOOST_AUTO_TEST_CASE( my_test )
+    BOOST_AUTO_TEST_CASE_TEMPLATE( test_2_regions_anonymous, my_machine, my_machines )
     {
         my_machine p;
 
@@ -153,19 +156,17 @@ namespace
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 3,"State3 should be active");
         BOOST_CHECK_MESSAGE(p.current_state()[1] == 2,"State1b should be active");
 
-        BOOST_CHECK_MESSAGE(p.get_state<my_machine_::State1&>().exit_counter == 1,"State1 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<my_machine_::State1&>().entry_counter == 1,"State1 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<my_machine_::State2&>().exit_counter == 1,"State2 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<my_machine_::State2&>().entry_counter == 1,"State2 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<my_machine_::State3&>().exit_counter == 0,"State3 exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<my_machine_::State3&>().entry_counter == 1,"State3 entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<my_machine_::State1b&>().entry_counter == 1,"State1b entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<my_machine_::State1b&>().exit_counter == 0,"State1b exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<my_machine_::State2b&>().entry_counter == 0,"State2b entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<my_machine_::State2b&>().exit_counter == 0,"State2b exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<my_machine_::State1&>().exit_counter == 1,"State1 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<my_machine_::State1&>().entry_counter == 1,"State1 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<my_machine_::State2&>().exit_counter == 1,"State2 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<my_machine_::State2&>().entry_counter == 1,"State2 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<my_machine_::State3&>().exit_counter == 0,"State3 exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<my_machine_::State3&>().entry_counter == 1,"State3 entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<my_machine_::State1b&>().entry_counter == 1,"State1b entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<my_machine_::State1b&>().exit_counter == 0,"State1b exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<my_machine_::State2b&>().entry_counter == 0,"State2b entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<my_machine_::State2b&>().exit_counter == 0,"State2b exit not called correctly");
 
 
     }
 }
-
-

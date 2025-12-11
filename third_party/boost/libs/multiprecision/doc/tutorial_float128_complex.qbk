@@ -33,7 +33,7 @@ copy constructible and assignable from GCC's `__float128` and Intel's `_Quad` da
 Things you should know when using this type:
 
 * Default constructed `complex128`s have the value zero.
-* This backend supports rvalue-references and is move-aware, making instantiations of `number` on this backend move aware.
+* This backend supports rvalue-references and is move-aware, making instantiations of `number` on this backend move-aware.
 * It is not possible to round-trip objects of this type to and from a string and get back
 exactly the same value when compiled with Intel's C++ compiler and using `_Quad` as the underlying type: this is a current limitation of
 our code.  Round tripping when using `__float128` as the underlying type is possible (both for GCC and Intel).

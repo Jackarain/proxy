@@ -34,12 +34,9 @@ target_link_libraries(boost_type_index
   ${__scope}
     Boost::config
     Boost::container_hash
-    Boost::core
     Boost::throw_exception
 )
 
-if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
-
+if(BUILD_TESTING)
   add_subdirectory(test)
-
 endif()

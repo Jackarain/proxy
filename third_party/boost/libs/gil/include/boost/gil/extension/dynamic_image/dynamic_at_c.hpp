@@ -17,7 +17,7 @@
 
 namespace boost { namespace gil {
 
-// Constructs for static-to-dynamic integer convesion
+// Constructs for static-to-dynamic integer conversion
 
 #define BOOST_GIL_AT_C_VALUE(z, N, text) mp11::mp_at_c<IntTypes, S+N>::value,
 #define BOOST_GIL_DYNAMIC_AT_C_LIMIT 226 // size of the maximum vector to handle

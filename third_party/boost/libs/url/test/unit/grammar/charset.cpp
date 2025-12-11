@@ -64,18 +64,18 @@ public:
         }
     };
 
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         detail::has_find_if<
             test_chars>::value);
 
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         detail::has_find_if_not<
             test_chars>::value);
 
     void
     testRef()
     {
-        BOOST_STATIC_ASSERT(is_charset<
+        BOOST_CORE_STATIC_ASSERT(is_charset<
             decltype(ref(alpha_chars))>::value);
         BOOST_TEST(parse("abc", token_rule(
             ref(alpha_chars))).has_value());

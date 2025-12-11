@@ -16,22 +16,68 @@ namespace boost::redis {
  */
 enum class operation
 {
-   /// Resolve operation.
+   /**
+    * @brief (Deprecated) Resolve operation.
+    * 
+    * Cancelling a single resolve operation is probably not what you
+    * want, since there is no way to detect when a connection is performing name resolution.
+    * Use @ref operation::run to cancel the current @ref basic_connection::async_run operation,
+    * which includes name resolution.
+    */
    resolve,
-   /// Connect operation.
+
+   /**
+    * @brief (Deprecated) Connect operation.
+    * 
+    * Cancelling a single connect operation is probably not what you
+    * want, since there is no way to detect when a connection is performing a connect operation.
+    * Use @ref operation::run  to cancel the current @ref basic_connection::async_run operation,
+    * which includes connection establishment.
+    */
    connect,
-   /// SSL handshake operation.
+
+   /**
+    * @brief (Deprecated) SSL handshake operation.
+    * 
+    * Cancelling a single connect operation is probably not what you
+    * want, since there is no way to detect when a connection is performing an SSL handshake.
+    * Use @ref operation::run  to cancel the current @ref basic_connection::async_run operation,
+    * which includes the SSL handshake.
+    */
    ssl_handshake,
+
    /// Refers to `connection::async_exec` operations.
    exec,
+
    /// Refers to `connection::async_run` operations.
    run,
+
    /// Refers to `connection::async_receive` operations.
    receive,
-   /// Cancels reconnection.
+
+   /**
+    * @brief (Deprecated) Cancels reconnection.
+    * 
+    * Cancelling reconnection doesn't really cancel anything.
+    * It will only prevent further connections attempts from being
+    * made once the current connection encounters an error.
+    *
+    * Use @ref operation::run  to cancel the current @ref basic_connection::async_run operation,
+    * which includes reconnection. If you want to disable reconnection completely,
+    * set @ref config::reconnect_wait_interval to zero before calling `async_run`.
+    */
    reconnection,
-   /// Health check operation.
+
+   /**
+    * @brief (Deprecated) Health check operation.
+    * 
+    * Cancelling the health checker only is probably not what you want.
+    * Use @ref operation::run  to cancel the current @ref basic_connection::async_run operation,
+    * which includes the health checker. If you want to disable health checks completely,
+    * set @ref config::health_check_interval to zero before calling `async_run`.
+    */
    health_check,
+
    /// Refers to all operations.
    all,
 };

@@ -1238,7 +1238,7 @@ struct inner_product_k_t
         BinaryOperation2 binary_op2)
     {
         init = binary_op1(init, binary_op2(*first1, *first2));
-        return inner_product_k_t<Size - 1>::template apply(
+        return inner_product_k_t<Size - 1>::apply(
             first1 + 1, first2 + 1, init, binary_op1, binary_op2);
     }
 };
@@ -1285,7 +1285,7 @@ T inner_product_k(
     BinaryOperation1 binary_op1,
     BinaryOperation2 binary_op2)
 {
-    return detail::inner_product_k_t<Size>::template apply(
+    return detail::inner_product_k_t<Size>::apply(
         first1, first2, init, binary_op1, binary_op2);
 }
 

@@ -79,6 +79,6 @@ struct allow_multiple_reads;
 
 #endif
 
-}}     // namespace boost::lockfree
+}} // namespace boost::lockfree
 
 #endif /* BOOST_LOCKFREE_POLICIES_HPP_INCLUDED */

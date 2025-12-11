@@ -114,6 +114,6 @@ protected:
     tag_t tag;
 };
 
-}}}    // namespace boost::lockfree::detail
+}}} // namespace boost::lockfree::detail
 
 #endif /* BOOST_LOCKFREE_TAGGED_PTR_DCAS_HPP_INCLUDED */

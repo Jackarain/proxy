@@ -54,6 +54,9 @@ And lastly on SYCL:
         });
     }
 
+When using SYCL you must define BOOST_MATH_ENABLE_SYCL, since device support is opt-in on that platform.
+For NVCC and NVRTC device support is enabled automatically.
+
 Once your kernel function has been written then use the framework mechanism for launching the kernel.
 
 [endsect] [/section:gpu Support for GPU programming in Boost.Math]

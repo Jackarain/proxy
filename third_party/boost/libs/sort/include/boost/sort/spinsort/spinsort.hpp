@@ -13,8 +13,6 @@
 #ifndef __BOOST_SORT_PARALLEL_ALGORITHM_SPIN_SORT_HPP
 #define __BOOST_SORT_PARALLEL_ALGORITHM_SPIN_SORT_HPP
 
-
-#include <ciso646>
 #include <cstdlib>
 #include <functional>
 #include <iterator>
@@ -183,7 +181,7 @@ static bool check_stable_sort(const range<Iter1_t> &rng_data,
     bool sw = true;
     Iter1_t it2 = rng_data.first + 1;
     for (Iter1_t it1 = rng_data.first;
-                    it2 != rng_data.last and (sw = not comp(*it2, *it1)); it1 =
+                    it2 != rng_data.last && (sw = ! comp(*it2, *it1)); it1 =
                                     it2++)
         ;
     if (sw) return true;
@@ -200,7 +198,7 @@ static bool check_stable_sort(const range<Iter1_t> &rng_data,
     if ((it2 != (rng_data.first + 1))) return false;
     sw = true;
     for (Iter1_t it1 = rng_data.first;
-                    it2 != rng_data.last and (sw = comp(*it2, *it1)); it1 =
+                    it2 != rng_data.last && (sw = comp(*it2, *it1)); it1 =
                                     it2++)
         ;
     if (size_t(rng_data.last - it2) >= min_insert_partial_sort) return false;
@@ -257,7 +255,7 @@ static void range_sort(const range<Iter1_t> &range1,
     //-----------------------------------------------------------------------
     typedef range<Iter1_t> range_it1;
     typedef range<Iter2_t> range_it2;
-    assert(range1.size() == range2.size() and level != 0);
+    assert(range1.size() == range2.size() && level != 0);
 
     //------------------- check if sort --------------------------------------
     if (range1.size() > 1024)
@@ -420,7 +418,7 @@ public:
             destroy(range<value_t *>(ptr, ptr + nptr));
             construct = false;
         };
-        if (owner and ptr != nullptr) std::free (ptr);
+        if (owner  && ptr != nullptr) std::free (ptr);
     };
 };
 
@@ -464,13 +462,13 @@ spinsort <Iter_t, Compare>
     //------------------- check if sort ---------------------------------
     bool sw = true;
     for (Iter_t it1 = first, it2 = first + 1; it2 != last
-         and (sw = not comp(*it2, *it1)); it1 = it2++) ;
+         && (sw = ! comp(*it2, *it1)); it1 = it2++) ;
     if (sw) return;
 
     //------------------- check if reverse sort -------------------------
     sw = true;
     for (Iter_t it1 = first, it2 = first + 1;
-         it2 != last and (sw = comp(*it2, *it1)); it1 = it2++);
+         it2 != last && (sw = comp(*it2, *it1)); it1 = it2++);
     if (sw)
     {
 	using std::swap;

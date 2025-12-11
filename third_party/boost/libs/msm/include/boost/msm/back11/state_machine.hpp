@@ -48,9 +48,7 @@
 
 #include <boost/bind/bind.hpp>
 #include <boost/function.hpp>
-#ifndef BOOST_NO_RTTI
 #include <boost/any.hpp>
-#endif
 
 #include <boost/serialization/base_object.hpp>
 
@@ -59,6 +57,7 @@
 #include <boost/msm/active_state_switching_policies.hpp>
 #include <boost/msm/row_tags.hpp>
 #include <boost/msm/msm_grammar.hpp>
+#include <boost/msm/back/traits.hpp>
 #include <boost/msm/back/fold_to_list.hpp>
 #include <boost/msm/back11/metafunctions.hpp>
 #include <boost/msm/back/history_policies.hpp>
@@ -68,20 +67,6 @@
 #include <boost/msm/back/no_fsm_check.hpp>
 #include <boost/msm/back/queue_container_deque.hpp>
 #include <boost/msm/back11/dispatch_table.hpp>
-
-BOOST_MPL_HAS_XXX_TRAIT_DEF(accept_sig)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(no_automatic_create)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(non_forwarding_flag)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(direct_entry)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(initial_event)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(final_event)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(do_serialize)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(history_policy)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(fsm_check)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(compile_policy)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(queue_container_policy)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(using_declared_table)
-BOOST_MPL_HAS_XXX_TRAIT_DEF(event_queue_before_deferred_queue)
 
 #ifndef BOOST_MSM_CONSTRUCTOR_ARG_SIZE
 #define BOOST_MSM_CONSTRUCTOR_ARG_SIZE 5 // default max number of arguments for constructors
@@ -449,7 +434,7 @@ private:
             BOOST_ASSERT(state == (current_state));
             // if T1 is an exit pseudo state, then take the transition only if the pseudo exit state is active
             if (has_pseudo_exit<T1>::type::value &&
-                !is_exit_state_active<T1,get_owner<T1,library_sm> >(fsm))
+                !back11::is_exit_state_active<T1,get_owner<T1,library_sm> >(fsm))
             {
                 return ::boost::msm::back::HANDLED_FALSE;
             }
@@ -530,7 +515,7 @@ private:
 
             // if T1 is an exit pseudo state, then take the transition only if the pseudo exit state is active
             if (has_pseudo_exit<T1>::type::value &&
-                !is_exit_state_active<T1,get_owner<T1,library_sm> >(fsm))
+                !back11::is_exit_state_active<T1,get_owner<T1,library_sm> >(fsm))
             {
                 return ::boost::msm::back::HANDLED_FALSE;
             }
@@ -595,7 +580,7 @@ private:
 
             // if T1 is an exit pseudo state, then take the transition only if the pseudo exit state is active
             if (has_pseudo_exit<T1>::type::value &&
-                !is_exit_state_active<T1,get_owner<T1,library_sm> >(fsm))
+                !back11::is_exit_state_active<T1,get_owner<T1,library_sm> >(fsm))
             {
                 return ::boost::msm::back::HANDLED_FALSE;
             }
@@ -662,7 +647,7 @@ private:
 
             // if T1 is an exit pseudo state, then take the transition only if the pseudo exit state is active
             if (has_pseudo_exit<T1>::type::value &&
-                !is_exit_state_active<T1,get_owner<T1,library_sm> >(fsm))
+                !back11::is_exit_state_active<T1,get_owner<T1,library_sm> >(fsm))
             {
                 return ::boost::msm::back::HANDLED_FALSE;
             }
@@ -2049,10 +2034,11 @@ protected:    // interface for the derived class
                     }
                 );
                 // reset sequence number for all
+                auto seq = m_events_queue.m_cur_seq;
                 std::for_each(
                     m_events_queue.m_deferred_events_queue.begin(),
                     m_events_queue.m_deferred_events_queue.end(), 
-                    [seq = m_events_queue.m_cur_seq](typename deferred_events_queue_t::value_type& d)
+                    [seq](typename deferred_events_queue_t::value_type& d)
                     {
                         d.second = seq+1;
                     }
@@ -2278,9 +2264,7 @@ protected:    // interface for the derived class
     template <class Event>
     void no_action(Event const&){}
 
-#ifndef BOOST_NO_RTTI
     ::boost::msm::back::HandledEnum process_any_event( ::boost::any const& evt);
-#endif
 
 private:
     // composite accept implementation. First calls accept on the composite, then accept on all its active states.

@@ -243,7 +243,7 @@ public:
 
     /** Return true if the address is a multicast address
 
-        @return `true` if the address is a multicast address,
+        @return `true` if the address is a multicast address
     */
     BOOST_URL_DECL
     bool
@@ -313,28 +313,29 @@ public:
         return ipv4_address(0xFFFFFFFF);
     }
 
-    /** Format the address to an output stream.
+/** Format the address to an output stream.
 
-        IPv4 addresses written to output streams
-        are written in their dotted decimal format.
+    IPv4 addresses written to output streams
+    are written in their dotted decimal format.
 
-        @param os The output stream.
-
-        @param addr The address to format.
-    */
+    @param os The output stream.
+    @param addr The address to format.
+    @return The output stream.
+*/
     friend
     std::ostream&
     operator<<(
         std::ostream& os,
         ipv4_address const& addr)
     {
-        char buf[ipv4_address::max_str_len];
-        os << addr.to_buffer(buf, sizeof(buf));
+        addr.write_ostream(os);
         return os;
     }
 
 private:
     friend class ipv6_address;
+
+    BOOST_URL_DECL void write_ostream(std::ostream&) const;
 
     BOOST_URL_DECL
     std::size_t
@@ -348,20 +349,6 @@ private:
 
     uint_type addr_ = 0;
 };
-
-/** Format the address to an output stream.
-
-    IPv4 addresses written to output streams
-    are written in their dotted decimal format.
-
-    @param os The output stream.
-    @param addr The address to format.
-    @return The output stream.
-*/
-std::ostream&
-operator<<(
-    std::ostream& os,
-    ipv4_address const& addr);
 
 //------------------------------------------------
 

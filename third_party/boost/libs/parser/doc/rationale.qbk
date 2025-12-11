@@ -202,7 +202,7 @@ It has a different API, and other code that operates on text expects a string
 instead of some other container.  Arrays of characters are already considered
 special by the standard library and common practice in C++.
 
-Second, When you write a parser that parses multiple characters in a row, you
+Second, when you write a parser that parses multiple characters in a row, you
 are typically trying to produce a string attribute, rather than a few
 individual character values.  When you use multiple non-character parsers in a
 row, you are typically trying to produce multiple values.  For instance:
@@ -217,7 +217,7 @@ I've rarely written a parser like `parser_2` and wanted a
 `std::vector<std::string>`.
 
 _Parser_ therefore makes the common case the default behavior, and provides
-you with the _merge_ and _sep_ directives to let you opt-in to generating the
+you with the _merge_ and _sep_ directives to let you opt in to generating the
 less-common attributes.
 
 [heading Attribute compatibility rules are more strict than in Spirit]
@@ -261,13 +261,12 @@ Also, Spirit-style looseness is more complicated than `parser` above
 indicates.  Remember, `int_ | eps` and `-int_` are supposed to be semantically
 equivalent.  To do otherwise this would be a profound violation of the
 principle of least surprise.  So, if they're equivalent, we would need to
-apply the same rule to `int_ | eps`.  Also, we would probably need to apply it
-to `if_(cond)[int_]`, which is also a `std::optional<int>`.  This is a lot to
-remember, and this is complicated to implement and maintain.
+apply the same rule to `int_ | eps`.  This is a lot to remember, and this is
+complicated to implement and maintain.
 
 I've been using Spirit 1 and later Spirit 2 since they were released.  I did
 not know about the particular looseness discussed here; a user pointed it out
-on Github.  In many years of using these libraries, I never fully learned all
+on GitHub.  In many years of using these libraries, I never fully learned all
 the attribute-compatibility rules, and was often surprised by them.
 
 Having a small set of rules that the user can internalize is vital; if the
@@ -299,7 +298,7 @@ that it succeeds (if it had failed, it would have cleared its attribute).  It
 does not know that there is nothing after it that could continue the parse,
 nor that it is being used in to do a full parse.  So, the over-all parse
 fails, but the part of the parse that fills in the out-param attribute does
-not know do clear its attribute.
+not know to clear its attribute.
 
 This is why the explicit clearing behavior happens at the end of _p_.  This is
 not without its downsides, though.  Consider this.
@@ -315,7 +314,7 @@ not without its downsides, though.  Consider this.
 Here, the explicit clearing replaces the previous value of `3`, even though
 the parser never touched the value!  Destroying users' variables' state
 without need may seem like a bad idea, but consider the alternative _emdash_
-In the previous example, we had spurious values left in the out-param
+in the previous example, we had spurious values left in the out-param
 attribute.  Here, without clearing, we would have had a value left in the
 out-param attribute, not because it was a partial result of the parse, but
 because the parse never touched it.  This is certain to be confusing, or at
@@ -338,7 +337,7 @@ They do not even work correctly for ASCII values.  This is because they use
 the C standard library's locale mechanism, which can be set to anything the
 current platform supports, and can be set by any code anywhere in your
 program; the locale is mutable global state.  So, even if you use the default
-"C locale in your program, if you link against a library that sets the locale
+C locale in your program, if you link against a library that sets the locale
 to something that breaks ASCII character recognition (an EBCDIC locale, for
 instance), your program is now incorrect, regardless of the code you wrote.
 

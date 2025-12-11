@@ -1,6 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Copyright Christopher Kormanyos 2002 - 2025.
-// Copyright 2011 -2025 John Maddock. Distributed under the Boost
+// Copyright John Maddock 2011 -2025.
+// Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -8,27 +9,10 @@
 // "Algorithm 910: A Portable C++ Multiple-Precision System for Special-Function Calculations",
 // in ACM TOMS, {VOL 37, ISSUE 4, (February 2011)} (C) ACM, 2011. http://doi.acm.org/10.1145/1916461.1916469
 //
-// There are some "noexcept" specifications on the functions in this file.
-// Unlike in pre-C++11 versions, compilers can now detect noexcept misuse
-// at compile time, allowing for simple use of it here.
-//
 
 #ifndef BOOST_MP_CPP_DEC_FLOAT_HPP
 #define BOOST_MP_CPP_DEC_FLOAT_HPP
 
-#include <cmath>
-#include <cstdint>
-#include <cstdlib>
-#include <algorithm>
-#include <array>
-#include <initializer_list>
-#include <iomanip>
-#include <string>
-#include <limits>
-#include <stdexcept>
-#include <sstream>
-#include <locale>
-#include <ios>
 #include <boost/multiprecision/detail/standalone_config.hpp>
 #include <boost/multiprecision/number.hpp>
 #include <boost/multiprecision/detail/fpclassify.hpp>
@@ -57,6 +41,20 @@
 #include <boost/math/special_functions/gamma.hpp>
 #endif
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <initializer_list>
+#include <iomanip>
+#include <ios>
+#include <limits>
+#include <locale>
+#include <stdexcept>
+#include <sstream>
+#include <string>
+
 #ifdef BOOST_MSVC
 #pragma warning(push)
 #pragma warning(disable : 6326) // comparison of two constants
@@ -72,7 +70,7 @@ struct number_category<backends::cpp_dec_float<Digits10, ExponentType, Allocator
 namespace backends {
 
 template <unsigned Digits10, class ExponentType, class Allocator>
-class cpp_dec_float
+class cpp_dec_float // LCOV_EXCL_LINE This causes a false negative on lcov coverage test.
 {
  private:
    // Perform some static sanity checks.
@@ -135,18 +133,14 @@ class cpp_dec_float
       cpp_dec_float_NaN
    } fpclass_type;
 
-   array_type    data;
-   exponent_type exp;
-   bool          neg;
-   fpclass_type  fpclass;
-   std::int32_t  prec_elem;
+   array_type    data      { };
+   exponent_type exp       { };
+   bool          neg       { };
+   fpclass_type  fpclass   { cpp_dec_float_finite };
+   std::int32_t  prec_elem { cpp_dec_float_elem_number };
 
    // Private constructor from the floating-point class type.
-   explicit cpp_dec_float(fpclass_type c) : data(),
-                                            exp(static_cast<exponent_type>(0)),
-                                            neg(false),
-                                            fpclass(c),
-                                            prec_elem(cpp_dec_float_elem_number) {}
+   explicit cpp_dec_float(fpclass_type c) : fpclass(c) { }
 
    // Constructor from an initializer_list, an optional
    // (value-aligned) exponent and a Boolean sign.
@@ -163,33 +157,20 @@ class cpp_dec_float
       a.prec_elem = cpp_dec_float_elem_number;
 
       return a;
-   } // LCOV_EXCL_LINE
+   } // LCOV_EXCL_LINE This causes a false negative on lcov coverage test.
 
  public:
    // Public Constructors
-   cpp_dec_float() noexcept(noexcept(array_type())) : data(),
-                                                      exp(static_cast<exponent_type>(0)),
-                                                      neg(false),
-                                                      fpclass(cpp_dec_float_finite),
-                                                      prec_elem(cpp_dec_float_elem_number) {}
+   cpp_dec_float() noexcept(noexcept(array_type())) { }
 
-   cpp_dec_float(const char* s) : data(),
-                                  exp(static_cast<exponent_type>(0)),
-                                  neg(false),
-                                  fpclass(cpp_dec_float_finite),
-                                  prec_elem(cpp_dec_float_elem_number)
+   cpp_dec_float(const char* s)
    {
       *this = s;
    }
 
    template <class I>
-   cpp_dec_float(I i,
-                 typename std::enable_if<boost::multiprecision::detail::is_unsigned<I>::value && (sizeof(I) <= sizeof(long long))>::type* = nullptr)
-      : data(),
-        exp(static_cast<exponent_type>(0)),
-        neg(false),
-        fpclass(cpp_dec_float_finite),
-        prec_elem(cpp_dec_float_elem_number)
+   cpp_dec_float(I i, typename std::enable_if<(   boost::multiprecision::detail::is_unsigned<I>::value
+                                               && (sizeof(I) <= sizeof(long long)))>::type* = nullptr)
    {
       from_unsigned_long_long(i);
    }
@@ -199,11 +180,6 @@ class cpp_dec_float
                  typename std::enable_if<(   boost::multiprecision::detail::is_signed<I>::value
                                           && boost::multiprecision::detail::is_integral<I>::value
                                           && (sizeof(I) <= sizeof(long long)))>::type* = nullptr)
-      : data(),
-        exp(static_cast<exponent_type>(0)),
-        neg(false),
-        fpclass(cpp_dec_float_finite),
-        prec_elem(cpp_dec_float_elem_number)
    {
       if (i < 0)
       {
@@ -218,43 +194,35 @@ class cpp_dec_float
       : data(f.data),
         exp(f.exp),
         neg(f.neg),
-        fpclass(f.fpclass),
+        fpclass(static_cast<enum_fpclass_type>(static_cast<int>(f.fpclass))),
         prec_elem(f.prec_elem) {}
 
    template <unsigned D, class ET, class A>
    cpp_dec_float(const cpp_dec_float<D, ET, A>& f, typename std::enable_if<D <= Digits10>::type* = nullptr)
-      : data(),
-        exp(f.exp),
+      : exp(f.exp),
         neg(f.neg),
-        fpclass(static_cast<fpclass_type>(static_cast<int>(f.fpclass))),
-        prec_elem(cpp_dec_float_elem_number)
+        fpclass(static_cast<enum_fpclass_type>(static_cast<int>(f.fpclass)))
    {
       std::copy(f.data.begin(), f.data.begin() + f.prec_elem, data.begin());
    }
+
    template <unsigned D, class ET, class A>
    explicit cpp_dec_float(const cpp_dec_float<D, ET, A>& f, typename std::enable_if< !(D <= Digits10)>::type* = nullptr)
-      : data(),
-        exp(f.exp),
+      : exp(f.exp),
         neg(f.neg),
-        fpclass(static_cast<fpclass_type>(static_cast<int>(f.fpclass))),
-        prec_elem(cpp_dec_float_elem_number)
+        fpclass(static_cast<enum_fpclass_type>(static_cast<int>(f.fpclass)))
    {
       // TODO: this doesn't round!
       std::copy(f.data.begin(), f.data.begin() + prec_elem, data.begin());
    }
 
    template <class F>
-   cpp_dec_float(const F val, typename std::enable_if<std::is_floating_point<F>::value
-                                                   >::type* = nullptr) : data(),
-                                                                         exp(static_cast<exponent_type>(0)),
-                                                                         neg(false),
-                                                                         fpclass(cpp_dec_float_finite),
-                                                                         prec_elem(cpp_dec_float_elem_number)
+   cpp_dec_float(const F val, typename std::enable_if<std::is_floating_point<F>::value>::type* = nullptr)
    {
       *this = val;
    }
 
-   cpp_dec_float(const double mantissa, const exponent_type exponent);
+   cpp_dec_float(const double mantissa, const exponent_type exp10);
 
    std::size_t hash() const
    {
@@ -427,7 +395,6 @@ class cpp_dec_float
    cpp_dec_float& div_unsigned_long_long(const unsigned long long n);
 
    // Elementary primitives.
-   cpp_dec_float& calculate_inv();
    cpp_dec_float& calculate_sqrt();
 
    void negate()
@@ -446,7 +413,6 @@ class cpp_dec_float
       return ((fpclass == cpp_dec_float_finite) && (data[0u] == 0u));
    }
 
-   bool isone() const;
    bool isint() const;
    bool isneg() const { return neg; }
 
@@ -506,48 +472,14 @@ class cpp_dec_float
 
    exponent_type order() const
    {
-      const bool bo_order_is_zero = ((!(isfinite)()) || (data[0] == static_cast<std::uint32_t>(0u)));
-      //
-      // Binary search to find the order of the leading term:
-      //
-      exponent_type prefix = 0;
+      const bool
+         bo_order_is_zero
+         {
+            ((!(isfinite)()) || (data[0] == static_cast<std::uint32_t>(0u)))
+         };
 
-      if (data[0] >= 100000UL)
-      {
-         if (data[0] >= 10000000UL)
-         {
-            if (data[0] >= 100000000UL)
-               prefix = 8;
-            else
-               prefix = 7;
-         }
-         else
-         {
-            if (data[0] >= 1000000UL)
-               prefix = 6;
-            else
-               prefix = 5;
-         }
-      }
-      else
-      {
-         if (data[0] >= 1000UL)
-         {
-            if (data[0] >= 10000UL)
-               prefix = 4;
-            else
-               prefix = 3;
-         }
-         else
-         {
-            if (data[0] >= 100)
-               prefix = 2;
-            else if (data[0] >= 10)
-               prefix = 1;
-         }
-      }
-
-      return (bo_order_is_zero ? static_cast<exponent_type>(0) : static_cast<exponent_type>(exp + prefix));
+      return (bo_order_is_zero ? static_cast<exponent_type>(0)
+                               : static_cast<exponent_type>(exp + limb_order(data[static_cast<std::size_t>(UINT8_C(0))])));
    }
 
    #ifndef BOOST_MP_STANDALONE
@@ -555,11 +487,12 @@ class cpp_dec_float
    void serialize(Archive& ar, const unsigned int /*version*/)
    {
       for (unsigned i = 0; i < data.size(); ++i)
-         ar& boost::make_nvp("digit", data[i]);
-      ar& boost::make_nvp("exponent", exp);
-      ar& boost::make_nvp("sign", neg);
-      ar& boost::make_nvp("class-type", fpclass);
-      ar& boost::make_nvp("precision", prec_elem);
+         ar & boost::make_nvp("digit", data[i]);
+
+      ar & boost::make_nvp("exponent", exp);
+      ar & boost::make_nvp("sign", neg);
+      ar & boost::make_nvp("class-type", fpclass);
+      ar & boost::make_nvp("precision", prec_elem);
    }
    #endif
 
@@ -567,6 +500,65 @@ class cpp_dec_float
    static bool data_elem_is_non_zero_predicate(const std::uint32_t& d) { return (d != static_cast<std::uint32_t>(0u)); }
    static bool data_elem_is_non_nine_predicate(const std::uint32_t& d) { return (d != static_cast<std::uint32_t>(cpp_dec_float::cpp_dec_float_elem_mask - 1)); }
    static bool char_is_nonzero_predicate(const char& c) { return (c != static_cast<char>('0')); }
+
+   // Inversion.
+   cpp_dec_float& calculate_inv();
+
+   static exponent_type limb_order(const limb_type limb)
+   {
+      //
+      // Binary search to find the order of the leading term:
+      //
+      exponent_type prefix = 0;
+
+      if (limb >= 100000UL)
+      {
+         if (limb >= 10000000UL)
+         {
+            if (limb >= 100000000UL)
+               prefix = 8;
+            else
+               prefix = 7;
+         }
+         else
+         {
+            if (limb >= 1000000UL)
+               prefix = 6;
+            else
+               prefix = 5;
+         }
+      }
+      else
+      {
+         if (limb >= 1000UL)
+         {
+            if (limb >= 10000UL)
+               prefix = 4;
+            else
+               prefix = 3;
+         }
+         else
+         {
+            if (limb >= 100)
+               prefix = 2;
+            else if (limb >= 10)
+               prefix = 1;
+         }
+      }
+
+      return prefix;
+   }
+
+   bool isone() const
+   {
+      bool b_neg;
+
+      const bool result_one_is_ok = is_one_or_minus_one(&b_neg);
+
+      return (result_one_is_ok && (!b_neg));
+   }
+
+   bool is_one_or_minus_one(bool* p_sign) const;
 
    void from_unsigned_long_long(const unsigned long long u);
 
@@ -1178,7 +1170,7 @@ cpp_dec_float<Digits10, ExponentType, Allocator>& cpp_dec_float<Digits10, Expone
       cpp_dec_float t;
       t = n;
       return operator/=(t);
-   } // LCOV_EXCL_LINE
+   } // LCOV_EXCL_LINE This causes a false negative on lcov coverage test.
 
    const std::uint32_t nn = static_cast<std::uint32_t>(n);
 
@@ -1218,38 +1210,33 @@ cpp_dec_float<Digits10, ExponentType, Allocator>& cpp_dec_float<Digits10, Expone
 template <unsigned Digits10, class ExponentType, class Allocator>
 cpp_dec_float<Digits10, ExponentType, Allocator>& cpp_dec_float<Digits10, ExponentType, Allocator>::calculate_inv()
 {
-   // Compute the inverse of *this.
-   const bool b_neg = neg;
-
-   neg = false;
-
-   // Handle special cases like zero, inf and NaN.
+   // Handle the special case of zero.
    if (iszero())
    {
       *this = inf();
-      if (b_neg)
-         negate();
+
       return *this;
    }
 
-   if ((isnan)())
-   {
-      return *this;
-   }
+   // Handle the special cases of inf, NaN, and +1 or -1.
 
    if ((isinf)())
    {
       return *this = zero();
    }
 
-   if (isone())
+   bool b_neg;
+
+   if ((isnan)() || is_one_or_minus_one(&b_neg))
    {
-      if (b_neg)
-         negate();
       return *this;
    }
 
-   // Save the original *this.
+   // Compute the inverse of *this.
+
+   neg = false;
+
+   // Save the original (absolute value of) *this.
    cpp_dec_float<Digits10, ExponentType, Allocator> x(*this);
 
    // Generate the initial estimate using division.
@@ -1259,7 +1246,11 @@ cpp_dec_float<Digits10, ExponentType, Allocator>& cpp_dec_float<Digits10, Expone
    exponent_type ne;
    x.extract_parts(dd, ne);
 
-   // Do the inverse estimate using double precision estimates of mantissa and exponent.
+   // Setup the iteration.
+
+   // Calculate the initial estimate of the inverse using double
+   // precision approximations of mantissa and exponent.
+
    operator=(cpp_dec_float<Digits10, ExponentType, Allocator>(1.0 / dd, -ne));
 
    // Compute the inverse of *this. Quadratically convergent Newton-Raphson iteration
@@ -1294,7 +1285,7 @@ cpp_dec_float<Digits10, ExponentType, Allocator>& cpp_dec_float<Digits10, Expone
 {
    // Compute the square root of *this.
 
-   if ((isinf)() && !isneg())
+   if ((isinf)() && (!isneg()))
    {
       return *this;
    }
@@ -1329,7 +1320,10 @@ cpp_dec_float<Digits10, ExponentType, Allocator>& cpp_dec_float<Digits10, Expone
    }
 
    // Setup the iteration.
-   // Estimate the square root using simple manipulations.
+
+   // Calculate the initial estimate of the root using double
+   // precision approximations of mantissa and exponent.
+
    const double sqd = std::sqrt(dd);
 
    *this = cpp_dec_float<Digits10, ExponentType, Allocator>(sqd, static_cast<ExponentType>(ne / static_cast<ExponentType>(2)));
@@ -1423,8 +1417,7 @@ int cpp_dec_float<Digits10, ExponentType, Allocator>::compare(const cpp_dec_floa
    if (iszero())
    {
       // The value of *this is zero and v is either zero or non-zero.
-      return (v.iszero() ? 0
-                         : (v.neg ? 1 : -1));
+      return (v.iszero() ? 0 : (v.neg ? 1 : -1));
    }
    else if (v.iszero())
    {
@@ -1459,23 +1452,30 @@ int cpp_dec_float<Digits10, ExponentType, Allocator>::compare(const cpp_dec_floa
 }
 
 template <unsigned Digits10, class ExponentType, class Allocator>
-bool cpp_dec_float<Digits10, ExponentType, Allocator>::isone() const
+bool cpp_dec_float<Digits10, ExponentType, Allocator>::is_one_or_minus_one(bool* p_sign) const
 {
    // Check if the value of *this is identically 1 or very close to 1.
 
-   const bool not_negative_and_is_finite = ((!neg) && (isfinite)());
+   if(p_sign != nullptr)
+      *p_sign = neg;
 
-   if (not_negative_and_is_finite)
+   if ((isfinite)())
    {
       if ((data[0u] == static_cast<std::uint32_t>(1u)) && (exp == static_cast<exponent_type>(0)))
       {
          const typename array_type::const_iterator it_non_zero = std::find_if(data.begin(), data.end(), data_elem_is_non_zero_predicate);
-         return (it_non_zero == data.end());
+
+         const bool result_one_is_ok = (it_non_zero == data.end());
+
+         return result_one_is_ok;
       }
       else if ((data[0u] == static_cast<std::uint32_t>(cpp_dec_float_elem_mask - 1)) && (exp == static_cast<exponent_type>(-cpp_dec_float_elem_digits10)))
       {
          const typename array_type::const_iterator it_non_nine = std::find_if(data.begin(), data.end(), data_elem_is_non_nine_predicate);
-         return (it_non_nine == data.end());
+
+         const bool result_one_is_ok = (it_non_nine == data.end());
+
+         return result_one_is_ok;
       }
    }
 
@@ -1517,49 +1517,43 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::isint() const
 template <unsigned Digits10, class ExponentType, class Allocator>
 void cpp_dec_float<Digits10, ExponentType, Allocator>::extract_parts(double& mantissa, ExponentType& exponent) const
 {
-   // Extract the approximate parts mantissa and base-10 exponent from the input cpp_dec_float<Digits10, ExponentType, Allocator> value x.
+   // Extract the approximate parts mantissa and base-10 exponent from
+   // the input cpp_dec_float<Digits10, ExponentType, Allocator> value x.
+   // This subroutine is designed to be fast and does not round.
 
-   // Extracts the mantissa and exponent.
-   exponent = exp;
+   // Extract the mantissa and exponent.
 
-   std::uint32_t p10  = static_cast<std::uint32_t>(1u);
-   std::uint32_t test = data[0u];
+   using local_exponent_type = ExponentType;
 
-   for (;;)
-   {
-      test /= static_cast<std::uint32_t>(10u);
+   const local_exponent_type my_order_limb0 { limb_order(data.front()) };
 
-      if (test == static_cast<std::uint32_t>(0u))
-      {
-         break;
-      }
-
-      p10 *= static_cast<std::uint32_t>(10u);
-      ++exponent;
-   }
-
-   // Establish the upper bound of limbs for extracting the double.
-   const int max_elem_in_double_count = static_cast<int>(static_cast<std::int32_t>(std::numeric_limits<double>::digits10) / cpp_dec_float_elem_digits10) + (static_cast<int>(static_cast<std::int32_t>(std::numeric_limits<double>::digits10) % cpp_dec_float_elem_digits10) != 0 ? 1 : 0) + 1;
-
-   // And make sure this upper bound stays within bounds of the elems.
-   const std::size_t max_elem_extract_count = static_cast<std::size_t>((std::min)(static_cast<std::int32_t>(max_elem_in_double_count), cpp_dec_float_elem_number));
+   exponent = static_cast<local_exponent_type>(exp + my_order_limb0);
 
    // Extract into the mantissa the first limb, extracted as a double.
-   mantissa     = static_cast<double>(data[0]);
-   double scale = 1.0;
+
+   mantissa = ((!neg) ? static_cast<double>(data.front()) : -static_cast<double>(data.front()));
+
+   int digit_counter { static_cast<int>(my_order_limb0) };
+
+   // Keep a running power-of-ten scale in the variable p10.
+   double p10 { static_cast<double>(detail::pow10_maker(static_cast<std::uint32_t>(my_order_limb0))) };
+
+   // Scale the first limb with its order.
+   mantissa /= p10;
 
    // Extract the rest of the mantissa piecewise from the limbs.
-   for (std::size_t i = 1u; i < max_elem_extract_count; i++)
-   {
-      scale /= static_cast<double>(cpp_dec_float_elem_mask);
-      mantissa += (static_cast<double>(data[i]) * scale);
-   }
+   // This loop does not round. For finite values, the absolute
+   // value of the mantissa is scaled and between 1 and 10.
 
-   mantissa /= static_cast<double>(p10);
+   auto itr_data = data.cbegin() + static_cast<std::size_t>(UINT8_C(1));
 
-   if (neg)
+   while ((itr_data != data.cend()) && (digit_counter <= std::numeric_limits<double>::max_digits10))
    {
-      mantissa = -mantissa;
+      p10 *= static_cast<double>(cpp_dec_float_elem_mask);
+
+      mantissa += static_cast<double>(static_cast<double>(*itr_data++) / p10);
+
+      digit_counter += static_cast<int>(cpp_dec_float_elem_digits10);
    }
 }
 
@@ -1577,12 +1571,13 @@ double cpp_dec_float<Digits10, ExponentType, Allocator>::extract_double() const
       }
       else
       {
-         return ((!neg) ? std::numeric_limits<double>::infinity()
+         return ((!neg) ? +std::numeric_limits<double>::infinity()
                         : -std::numeric_limits<double>::infinity());
       }
    }
 
    cpp_dec_float<Digits10, ExponentType, Allocator> xx(*this);
+
    if (xx.isneg())
       xx.negate();
 
@@ -1595,17 +1590,18 @@ double cpp_dec_float<Digits10, ExponentType, Allocator>::extract_double() const
    // Check if *this cpp_dec_float<Digits10, ExponentType, Allocator> exceeds the maximum of double.
    if (xx.compare(double_max()) > 0)
    {
-      return ((!neg) ? std::numeric_limits<double>::infinity()
+      return ((!neg) ? +std::numeric_limits<double>::infinity()
                      : -std::numeric_limits<double>::infinity());
    }
 
-   std::stringstream ss;
-   ss.imbue(std::locale::classic());
+   std::stringstream strm { };
 
-   ss << str(std::numeric_limits<double>::digits10 + (2 + 1), std::ios_base::scientific);
+   strm.imbue(std::locale::classic());
+
+   strm << str(std::numeric_limits<double>::max_digits10, std::ios_base::scientific);
 
    double d;
-   ss >> d;
+   strm >> d;
 
    return d;
 }
@@ -1646,13 +1642,13 @@ long double cpp_dec_float<Digits10, ExponentType, Allocator>::extract_long_doubl
                      : -std::numeric_limits<long double>::infinity());
    }
 
-   std::stringstream ss;
-   ss.imbue(std::locale::classic());
+   std::stringstream strm;
+   strm.imbue(std::locale::classic());
 
-   ss << str(std::numeric_limits<long double>::digits10 + (2 + 1), std::ios_base::scientific);
+   strm << str(std::numeric_limits<long double>::max_digits10, std::ios_base::scientific);
 
    long double ld;
-   ss >> ld;
+   strm >> ld;
 
    return ld;
 }
@@ -1923,9 +1919,9 @@ std::string cpp_dec_float<Digits10, ExponentType, Allocator>::str(std::intmax_t 
       return "nan";
    }
 
-   std::string     str;
+   std::string   my_str;
    std::intmax_t org_digits(number_of_digits);
-   exponent_type    my_exp = order();
+   exponent_type my_exp = order();
 
    if (!(f & std::ios_base::fixed) && (number_of_digits == 0))
       number_of_digits = cpp_dec_float_max_digits10;
@@ -1936,22 +1932,31 @@ std::string cpp_dec_float<Digits10, ExponentType, Allocator>::str(std::intmax_t 
    }
    else if (f & std::ios_base::scientific)
       ++number_of_digits;
-   // Determine the number of elements needed to provide the requested digits from cpp_dec_float<Digits10, ExponentType, Allocator>.
-   const std::size_t number_of_elements = (std::min)(static_cast<std::size_t>(static_cast<std::size_t>(number_of_digits / static_cast<std::intmax_t>(cpp_dec_float_elem_digits10)) + 2u),
+
+   // Determine the number of elements needed to provide the requested
+   // digits from cpp_dec_float<Digits10, ExponentType, Allocator>.
+   const std::intmax_t
+      number_of_elements_signed
+      {
+         (std::max)(static_cast<std::intmax_t>(number_of_digits / static_cast<std::intmax_t>(cpp_dec_float_elem_digits10) + 2),
+                    std::intmax_t { INT8_C(0) })
+      };
+
+   const std::size_t number_of_elements = (std::min)(static_cast<std::size_t>(number_of_elements_signed),
                                                      static_cast<std::size_t>(cpp_dec_float_elem_number));
 
    // Extract the remaining digits from cpp_dec_float<Digits10, ExponentType, Allocator> after the decimal point.
-   std::stringstream ss;
-   ss.imbue(std::locale::classic());
-   ss << data[0];
+   std::stringstream strm;
+   strm.imbue(std::locale::classic());
+   strm << data[0];
    // Extract all of the digits from cpp_dec_float<Digits10, ExponentType, Allocator>, beginning with the first data element.
    for (std::size_t i = static_cast<std::size_t>(1u); i < number_of_elements; i++)
    {
-      ss << std::setw(static_cast<std::streamsize>(cpp_dec_float_elem_digits10))
-         << std::setfill(static_cast<char>('0'))
-         << data[i];
+      strm << std::setw(static_cast<std::streamsize>(cpp_dec_float_elem_digits10))
+           << std::setfill(static_cast<char>('0'))
+           << data[i];
    }
-   str += ss.str();
+   my_str += strm.str();
 
    bool have_leading_zeros = false;
 
@@ -1962,40 +1967,42 @@ std::string cpp_dec_float<Digits10, ExponentType, Allocator>::str(std::intmax_t 
       number_of_digits -= my_exp + 1; // reset to original value
       if (number_of_digits)
       {
-         str.insert(static_cast<std::string::size_type>(0), std::string::size_type(number_of_digits), '0');
-         have_leading_zeros = true;
+         my_str.insert(static_cast<std::string::size_type>(0), std::string::size_type(number_of_digits), '0');
+         have_leading_zeros = true; // LCOV_EXCL_LINE This causes a false negative on lcov coverage test.
       }
    }
 
    if (number_of_digits < 0)
    {
-      str = "0";
+      my_str = "0"; // LCOV_EXCL_LINE This causes a false negative on lcov coverage test.
       if (isneg())
-         str.insert(static_cast<std::string::size_type>(0), 1, '-');
-      boost::multiprecision::detail::format_float_string(str, 0, number_of_digits - my_exp - 1, f, this->iszero());
-      return str;
+         my_str.insert(static_cast<std::string::size_type>(0), 1, '-');
+      boost::multiprecision::detail::format_float_string(my_str, 0, number_of_digits - my_exp - 1, f, this->iszero());
+      return my_str;
    }
    else
    {
       // Cut the output to the size of the precision.
-      if (str.length() > static_cast<std::string::size_type>(number_of_digits))
+      if (my_str.length() > static_cast<std::string::size_type>(number_of_digits))
       {
          // Get the digit after the last needed digit for rounding
-         const std::uint32_t round = static_cast<std::uint32_t>(static_cast<std::uint32_t>(str[static_cast<std::string::size_type>(number_of_digits)]) - static_cast<std::uint32_t>('0'));
+         const std::uint32_t round = static_cast<std::uint32_t>(static_cast<std::uint32_t>(my_str[static_cast<std::string::size_type>(number_of_digits)]) - static_cast<std::uint32_t>('0'));
 
          bool need_round_up = round >= 5u;
 
          if (round == 5u)
          {
-            const std::uint32_t ix = number_of_digits == 0 ? 0 : static_cast<std::uint32_t>(static_cast<std::uint32_t>(str[static_cast<std::string::size_type>(number_of_digits - 1)]) - static_cast<std::uint32_t>('0'));
+            const std::uint32_t ix = number_of_digits == 0 ? 0 : static_cast<std::uint32_t>(static_cast<std::uint32_t>(my_str[static_cast<std::string::size_type>(number_of_digits - 1)]) - static_cast<std::uint32_t>('0'));
             if ((ix & 1u) == 0)
             {
-               // We have an even digit followed by a 5, so we might not actually need to round up
-               // if all the remaining digits are zero:
-               if (str.find_first_not_of('0', static_cast<std::string::size_type>(number_of_digits + 1)) == std::string::npos)
+               // We have an even digit followed by a 5, so we might not actually
+               // need to round up if all the remaining digits are zero:
+               if (my_str.find_first_not_of('0', static_cast<std::string::size_type>(number_of_digits + 1)) == std::string::npos)
                {
                   bool all_zeros = true;
-                  // No none-zero trailing digits in the string, now check whatever parts we didn't convert to the string:
+
+                  // There are no non-zero trailing digits in the string,
+                  // now check whatever parts we didn't convert to the string:
                   for (std::size_t i = number_of_elements; i < data.size(); i++)
                   {
                      if (data[i])
@@ -2011,45 +2018,45 @@ std::string cpp_dec_float<Digits10, ExponentType, Allocator>::str(std::intmax_t 
          }
 
          // Truncate the string
-         str.erase(static_cast<std::string::size_type>(number_of_digits));
+         my_str.erase(static_cast<std::string::size_type>(number_of_digits));
 
          if (need_round_up)
          {
-            if (str.size())
+            if (my_str.size())
             {
-               std::size_t ix = static_cast<std::size_t>(str.length() - 1u);
+               std::size_t ix = static_cast<std::size_t>(my_str.length() - 1u);
 
                // Every trailing 9 must be rounded up
-               while (ix && (static_cast<std::int32_t>(str.at(ix)) - static_cast<std::int32_t>('0') == static_cast<std::int32_t>(9)))
+               while (ix && (static_cast<std::int32_t>(my_str.at(ix)) - static_cast<std::int32_t>('0') == static_cast<std::int32_t>(9)))
                {
-                  str.at(ix) = static_cast<char>('0');
+                  my_str.at(ix) = static_cast<char>('0');
                   --ix;
                }
 
                if (!ix)
                {
                   // There were nothing but trailing nines.
-                  if (static_cast<std::int32_t>(static_cast<std::int32_t>(str.at(ix)) - static_cast<std::int32_t>(0x30)) == static_cast<std::int32_t>(9))
+                  if (static_cast<std::int32_t>(static_cast<std::int32_t>(my_str.at(ix)) - static_cast<std::int32_t>(0x30)) == static_cast<std::int32_t>(9))
                   {
                      // Increment up to the next order and adjust exponent.
-                     str.at(ix) = static_cast<char>('1');
+                     my_str.at(ix) = static_cast<char>('1');
                      ++my_exp;
                   }
                   else
                   {
                      // Round up this digit.
-                     ++str.at(ix);
+                     ++my_str.at(ix);
                   }
                }
                else
                {
                   // Round up the last digit.
-                  ++str[ix];
+                  ++my_str[ix];
                }
             }
             else
             {
-               str = "1";
+               my_str = "1"; // LCOV_EXCL_LINE This causes a false negative on lcov coverage test.
                ++my_exp;
             }
          }
@@ -2060,20 +2067,20 @@ std::string cpp_dec_float<Digits10, ExponentType, Allocator>::str(std::intmax_t 
    {
       // We need to take the zeros back out again, and correct the exponent
       // if we rounded up:
-      if (str[std::string::size_type(number_of_digits - 1)] != '0')
+      if (my_str[std::string::size_type(number_of_digits - 1)] != '0')
       {
          ++my_exp;
-         str.erase(0, std::string::size_type(number_of_digits - 1));
+         my_str.erase(0, std::string::size_type(number_of_digits - 1));
       }
       else
-         str.erase(0, std::string::size_type(number_of_digits));
+         my_str.erase(0, std::string::size_type(number_of_digits));
    }
 
    if (isneg())
-      str.insert(static_cast<std::string::size_type>(0), 1, '-');
+      my_str.insert(static_cast<std::string::size_type>(0), 1, '-');
 
-   boost::multiprecision::detail::format_float_string(str, my_exp, org_digits, f, this->iszero());
-   return str;
+   boost::multiprecision::detail::format_float_string(my_str, my_exp, org_digits, f, this->iszero());
+   return my_str;
 }
 
 template <unsigned Digits10, class ExponentType, class Allocator>
@@ -2084,7 +2091,7 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
    {
 #endif
 
-      std::string str(s);
+      std::string my_str(s);
       static const std::string valid_characters{"0123456789"};
 
       // TBD: Using several regular expressions may significantly reduce
@@ -2095,61 +2102,64 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
 
       std::size_t pos;
 
-      if (((pos = str.find('e')) != std::string::npos) || ((pos = str.find('E')) != std::string::npos))
+      if (((pos = my_str.find('e')) != std::string::npos) || ((pos = my_str.find('E')) != std::string::npos))
       {
          // Remove the exponent part from the string.
 #ifndef BOOST_MP_STANDALONE
-         exp = boost::lexical_cast<exponent_type>(static_cast<const char*>(str.c_str() + (pos + 1u)));
+         exp = boost::lexical_cast<exponent_type>(static_cast<const char*>(my_str.c_str() + (pos + 1u)));
 #else
-         if (str.find_first_not_of(valid_characters, ((str[pos + 1] == '+') || (str[pos + 1] == '-')) ? pos + 2 : pos + 1) != std::string::npos)
-            BOOST_MP_THROW_EXCEPTION(std::runtime_error("Can not construct a floating point with non-numeric content"));
-         exp = static_cast<exponent_type>(std::atoll(static_cast<const char*>(str.c_str() + (pos + 1u))));
+         if (my_str.find_first_not_of(valid_characters, ((my_str[pos + 1] == '+') || (my_str[pos + 1] == '-')) ? pos + 2 : pos + 1) != std::string::npos)
+            BOOST_MP_THROW_EXCEPTION(std::runtime_error("Can not construct a floating point with non-numeric content")); // LCOV_EXCL_LINE
+         exp = static_cast<exponent_type>(std::atoll(static_cast<const char*>(my_str.c_str() + (pos + 1u))));
 #endif
-         
-         str = str.substr(static_cast<std::size_t>(0u), pos);
+
+         my_str = my_str.substr(static_cast<std::size_t>(0u), pos);
       }
 
       // Get a possible +/- sign and remove it.
       neg = false;
 
-      if (str.size())
+      if (!my_str.empty())
       {
-         if (str[0] == '-')
+         if (my_str[0] == '-')
          {
             neg = true;
-            str.erase(0, 1);
+
+            my_str.erase(0, 1);
          }
-         else if (str[0] == '+')
+         else if (my_str[0] == '+')
          {
-            str.erase(0, 1);
+            my_str.erase(0, 1);
          }
       }
+
       //
       // Special cases for infinities and NaN's:
       //
-      if ((str == "inf") || (str == "INF") || (str == "infinity") || (str == "INFINITY"))
+      if ((my_str == "inf") || (my_str == "INF") || (my_str == "infinity") || (my_str == "INFINITY"))
       {
-         if (neg)
-         {
-            *this = this->inf();
-            this->negate();
-         }
-         else
-            *this = this->inf();
+         const bool tmp_neg { neg };
+
+         *this = this->inf();
+
+         neg = tmp_neg;
+
          return true;
       }
-      if ((str.size() >= 3) && ((str.substr(0, 3) == "nan") || (str.substr(0, 3) == "NAN") || (str.substr(0, 3) == "NaN")))
+
+      if ((my_str.size() >= 3) && ((my_str.substr(0, 3) == "nan") || (my_str.substr(0, 3) == "NAN") || (my_str.substr(0, 3) == "NaN")))
       {
          *this = this->nan();
+
          return true;
       }
 
       // Remove the leading zeros for all input types.
-      const std::string::iterator fwd_it_leading_zero = std::find_if(str.begin(), str.end(), char_is_nonzero_predicate);
+      const std::string::iterator fwd_it_leading_zero = std::find_if(my_str.begin(), my_str.end(), char_is_nonzero_predicate);
 
-      if (fwd_it_leading_zero != str.begin())
+      if (fwd_it_leading_zero != my_str.begin())
       {
-         if (fwd_it_leading_zero == str.end())
+         if (fwd_it_leading_zero == my_str.end())
          {
             // The string contains nothing but leading zeros.
             // This string represents zero.
@@ -2158,7 +2168,7 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
          }
          else
          {
-            str.erase(str.begin(), fwd_it_leading_zero);
+            my_str.erase(my_str.begin(), fwd_it_leading_zero);
          }
       }
 
@@ -2169,32 +2179,33 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
       // even multiple of cpp_dec_float_elem_digits10.
 
       // Find a possible decimal point.
-      pos = str.find(static_cast<char>('.'));
+      pos = my_str.find(static_cast<char>('.'));
 
       if (pos != std::string::npos)
       {
          // Check we have only digits either side of the point:
-         if (str.find_first_not_of(valid_characters) != pos)
-            BOOST_MP_THROW_EXCEPTION(std::runtime_error("Can not construct a floating point with non-numeric content"));
-         if (str.find_first_not_of(valid_characters, pos + 1) != std::string::npos)
-            BOOST_MP_THROW_EXCEPTION(std::runtime_error("Can not construct a floating point with non-numeric content"));
+         if (my_str.find_first_not_of(valid_characters) != pos)
+            BOOST_MP_THROW_EXCEPTION(std::runtime_error("Can not construct a floating point with non-numeric content")); // LCOV_EXCL_LINE
+         if (my_str.find_first_not_of(valid_characters, pos + 1) != std::string::npos)
+            BOOST_MP_THROW_EXCEPTION(std::runtime_error("Can not construct a floating point with non-numeric content")); // LCOV_EXCL_LINE
 
          // Remove all trailing insignificant zeros.
-         const std::string::const_reverse_iterator rit_non_zero = std::find_if(str.rbegin(), str.rend(), char_is_nonzero_predicate);
+         const std::string::const_reverse_iterator rit_non_zero = std::find_if(my_str.rbegin(), my_str.rend(), char_is_nonzero_predicate);
 
-         if (rit_non_zero != static_cast<std::string::const_reverse_iterator>(str.rbegin()))
+         if (rit_non_zero != static_cast<std::string::const_reverse_iterator>(my_str.rbegin()))
          {
             const std::string::size_type ofs =
                static_cast<std::string::size_type>
                (
-                    static_cast<std::ptrdiff_t>(str.length())
-                  - std::distance<std::string::const_reverse_iterator>(str.rbegin(), rit_non_zero)
+                    static_cast<std::ptrdiff_t>(my_str.length())
+                  - std::distance<std::string::const_reverse_iterator>(my_str.rbegin(), rit_non_zero)
                );
-            str.erase(str.begin() + static_cast<std::ptrdiff_t>(ofs), str.end());
+
+            my_str.erase(my_str.begin() + static_cast<std::ptrdiff_t>(ofs), my_str.end());
          }
 
          // Check if the input is identically zero.
-         if (str == std::string("."))
+         if (my_str == std::string("."))
          {
             operator=(zero());
             return true;
@@ -2204,31 +2215,31 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
          // and adjust the exponent accordingly.
          // Note that the while-loop operates only on strings of the form ".000abcd..."
          // and peels away the zeros just after the decimal point.
-         if (str.at(static_cast<std::size_t>(0u)) == static_cast<char>('.'))
+         if (my_str.at(static_cast<std::size_t>(0u)) == static_cast<char>('.'))
          {
-            const std::string::iterator it_non_zero = std::find_if(str.begin() + 1u, str.end(), char_is_nonzero_predicate);
+            const std::string::iterator it_non_zero = std::find_if(my_str.begin() + 1u, my_str.end(), char_is_nonzero_predicate);
 
             std::size_t delta_exp = static_cast<std::size_t>(0u);
 
-            if (str.at(static_cast<std::size_t>(1u)) == static_cast<char>('0'))
+            if (my_str.at(static_cast<std::size_t>(1u)) == static_cast<char>('0'))
             {
-               delta_exp = static_cast<std::size_t>(std::distance<std::string::const_iterator>(str.begin() + 1u, it_non_zero));
+               delta_exp = static_cast<std::size_t>(std::distance<std::string::const_iterator>(my_str.begin() + 1u, it_non_zero));
             }
 
             // Bring one single digit into the mantissa and adjust the exponent accordingly.
-            str.erase(str.begin(), it_non_zero);
-            str.insert(static_cast<std::string::size_type>(1u), ".");
+            my_str.erase(my_str.begin(), it_non_zero);
+            my_str.insert(static_cast<std::string::size_type>(1u), ".");
             exp -= static_cast<exponent_type>(delta_exp + 1u);
          }
       }
       else
       {
          // We should have only digits:
-         if (str.find_first_not_of(valid_characters) != std::string::npos)
-            BOOST_MP_THROW_EXCEPTION(std::runtime_error("Can not construct a floating point with non-numeric content"));
+         if (my_str.find_first_not_of(valid_characters) != std::string::npos)
+            BOOST_MP_THROW_EXCEPTION(std::runtime_error("Can not construct a floating point with non-numeric content")); // LCOV_EXCL_LINE
 
          // Input string has no decimal point: Append decimal point.
-         str.append(".");
+         my_str.append(".");
       }
 
       // Shift the decimal point such that the exponent is an even multiple of cpp_dec_float_elem_digits10.
@@ -2243,29 +2254,29 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
       }
 
       // Make sure that there are enough digits for the decimal point shift.
-      pos = str.find(static_cast<char>('.'));
+      pos = my_str.find(static_cast<char>('.'));
 
       std::ptrdiff_t pos_plus_one = static_cast<std::ptrdiff_t>(pos + 1);
 
-      if ((static_cast<std::ptrdiff_t>(str.length()) - pos_plus_one) < n_shift)
+      if ((static_cast<std::ptrdiff_t>(my_str.length()) - pos_plus_one) < n_shift)
       {
-         const std::ptrdiff_t sz = static_cast<std::ptrdiff_t>(n_shift - (static_cast<std::ptrdiff_t>(str.length()) - pos_plus_one));
+         const std::ptrdiff_t sz = static_cast<std::ptrdiff_t>(n_shift - (static_cast<std::ptrdiff_t>(my_str.length()) - pos_plus_one));
 
-         str.append(std::string(static_cast<std::string::size_type>(sz), static_cast<char>('0')));
+         my_str.append(std::string(static_cast<std::string::size_type>(sz), static_cast<char>('0')));
       }
 
       // Do the decimal point shift.
       if (n_shift != static_cast<std::ptrdiff_t>(0))
       {
-         str.insert(static_cast<std::string::size_type>(pos_plus_one + n_shift), ".");
+         my_str.insert(static_cast<std::string::size_type>(pos_plus_one + n_shift), ".");
 
-         str.erase(pos, static_cast<std::ptrdiff_t>(1));
+         my_str.erase(pos, static_cast<std::ptrdiff_t>(1));
 
          exp -= static_cast<exponent_type>(n_shift);
       }
 
       // Cut the size of the mantissa to <= cpp_dec_float_elem_digits10.
-      pos          = str.find(static_cast<char>('.'));
+      pos          = my_str.find(static_cast<char>('.'));
       pos_plus_one = static_cast<std::ptrdiff_t>(pos + 1u);
 
       if (pos > static_cast<std::size_t>(cpp_dec_float_elem_digits10))
@@ -2274,25 +2285,25 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
          const std::int32_t n_rem_is_zero = ((static_cast<std::int32_t>(n_pos % cpp_dec_float_elem_digits10) == static_cast<std::int32_t>(0)) ? static_cast<std::int32_t>(1) : static_cast<std::int32_t>(0));
          const std::int32_t n             = static_cast<std::int32_t>(static_cast<std::int32_t>(n_pos / cpp_dec_float_elem_digits10) - n_rem_is_zero);
 
-         str.insert(static_cast<std::size_t>(static_cast<std::int32_t>(n_pos - static_cast<std::int32_t>(n * cpp_dec_float_elem_digits10))), ".");
+         my_str.insert(static_cast<std::size_t>(static_cast<std::int32_t>(n_pos - static_cast<std::int32_t>(n * cpp_dec_float_elem_digits10))), ".");
 
-         str.erase(static_cast<std::size_t>(pos_plus_one), static_cast<std::size_t>(1u));
+         my_str.erase(static_cast<std::size_t>(pos_plus_one), static_cast<std::size_t>(1u));
 
          exp += static_cast<exponent_type>(static_cast<exponent_type>(n) * static_cast<exponent_type>(cpp_dec_float_elem_digits10));
       }
 
       // Pad the decimal part such that its value is an even
       // multiple of cpp_dec_float_elem_digits10.
-      pos          = str.find(static_cast<char>('.'));
+      pos          = my_str.find(static_cast<char>('.'));
       pos_plus_one = static_cast<std::ptrdiff_t>(pos + 1u);
 
       // Throws an error for a strange construction like 3.14L
-      if(pos != std::string::npos && (str.back() == 'L' || str.back() == 'l' || str.back() == 'u' || str.back() == 'U'))
+      if(pos != std::string::npos && (my_str.back() == 'L' || my_str.back() == 'l' || my_str.back() == 'u' || my_str.back() == 'U'))
       {
-         BOOST_MP_THROW_EXCEPTION(std::runtime_error("Can not construct a floating point with an integer literal"));
+         BOOST_MP_THROW_EXCEPTION(std::runtime_error("Can not construct a floating point with an integer literal")); // LCOV_EXCL_LINE
       }
 
-      const std::int32_t n_dec = static_cast<std::int32_t>(static_cast<std::int32_t>(str.length() - 1u) - static_cast<std::int32_t>(pos));
+      const std::int32_t n_dec = static_cast<std::int32_t>(static_cast<std::int32_t>(my_str.length() - 1u) - static_cast<std::int32_t>(pos));
       const std::int32_t n_rem = static_cast<std::int32_t>(n_dec % cpp_dec_float_elem_digits10);
 
       std::int32_t n_cnt = ((n_rem != static_cast<std::int32_t>(0))
@@ -2301,16 +2312,16 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
 
       if (n_cnt != static_cast<std::int32_t>(0))
       {
-         str.append(static_cast<std::size_t>(n_cnt), static_cast<char>('0'));
+         my_str.append(static_cast<std::size_t>(n_cnt), static_cast<char>('0'));
       }
 
       // Truncate decimal part if it is too long.
       const std::size_t max_dec = static_cast<std::size_t>((cpp_dec_float_elem_number - 1) * cpp_dec_float_elem_digits10);
 
-      if (static_cast<std::size_t>(str.length() - pos) > max_dec)
+      if (static_cast<std::size_t>(my_str.length() - pos) > max_dec)
       {
-         str = str.substr(static_cast<std::size_t>(0u),
-                          static_cast<std::size_t>(pos_plus_one + static_cast<std::ptrdiff_t>(max_dec)));
+         my_str = my_str.substr(static_cast<std::size_t>(0u),
+                                static_cast<std::size_t>(pos_plus_one + static_cast<std::ptrdiff_t>(max_dec)));
       }
 
       // Now the input string has the standard cpp_dec_float<Digits10, ExponentType, Allocator> input form.
@@ -2322,19 +2333,19 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
       // Extract the data.
 
       // First get the digits to the left of the decimal point...
-      data[0u] = static_cast<std::uint32_t>(std::stol(str.substr(static_cast<std::size_t>(0u), pos)));
+      data[0u] = static_cast<std::uint32_t>(std::stol(my_str.substr(static_cast<std::size_t>(0u), pos)));
 
       // ...then get the remaining digits to the right of the decimal point.
       const std::string::size_type i_end =
       (
-           static_cast<std::string::size_type>(str.length() - static_cast<std::string::size_type>(pos_plus_one))
+           static_cast<std::string::size_type>(my_str.length() - static_cast<std::string::size_type>(pos_plus_one))
          / static_cast<std::string::size_type>(cpp_dec_float_elem_digits10)
       );
 
       for (std::string::size_type i = static_cast<std::string::size_type>(0u); i < i_end; i++)
       {
          const std::string::const_iterator it =
-              str.begin()
+              my_str.begin()
             + static_cast<std::ptrdiff_t>
               (
                    static_cast<std::string::size_type>(pos_plus_one)
@@ -2345,35 +2356,41 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
       }
 
       // Check for overflow...
-      if (exp > cpp_dec_float_max_exp10)
+      if (exp >= cpp_dec_float_max_exp10)
       {
-         const bool b_result_is_neg = neg;
+         const bool neg_tmp { neg };
 
-         *this = inf();
-         if (b_result_is_neg)
-            negate();
+         neg = false;
+
+         const int compare_result { compare((cpp_dec_float::max)()) };
+
+         if(compare_result > 0)
+         {
+            *this = inf();
+         }
+
+         neg = neg_tmp;
       }
 
       // ...and check for underflow.
       if (exp <= cpp_dec_float_min_exp10)
       {
-         if (exp == cpp_dec_float_min_exp10)
-         {
-            // Check for identity with the minimum value.
-            cpp_dec_float<Digits10, ExponentType, Allocator> test = *this;
+         const bool neg_tmp { neg };
 
-            test.exp = static_cast<exponent_type>(0);
+         neg = false;
 
-            if (test.isone())
-            {
-               *this = zero();
-            }
-         }
-         else
+         const int compare_result { compare((cpp_dec_float::min)()) };
+
+         if(compare_result < 0)
          {
             *this = zero();
          }
+         else
+         {
+            neg = neg_tmp;
+         }
       }
+
 
 #ifndef BOOST_NO_EXCEPTIONS
    }
@@ -2394,72 +2411,82 @@ bool cpp_dec_float<Digits10, ExponentType, Allocator>::rd_string(const char* con
 }
 
 template <unsigned Digits10, class ExponentType, class Allocator>
-cpp_dec_float<Digits10, ExponentType, Allocator>::cpp_dec_float(const double mantissa, const ExponentType exponent)
-    : data(),
-      exp(static_cast<ExponentType>(0)),
-      neg(false),
-      fpclass(cpp_dec_float_finite),
-      prec_elem(cpp_dec_float_elem_number)
+cpp_dec_float<Digits10, ExponentType, Allocator>::cpp_dec_float(const double mantissa, const ExponentType exp10)
 {
-   // Create *this cpp_dec_float<Digits10, ExponentType, Allocator> from a given mantissa and exponent.
-   // Note: This constructor does not maintain the full precision of double.
-
-   const bool mantissa_is_iszero = (::fabs(mantissa) < ((std::numeric_limits<double>::min)() * (1.0 + std::numeric_limits<double>::epsilon())));
-
-   if (mantissa_is_iszero)
-   {
-      std::fill(data.begin(), data.end(), static_cast<std::uint32_t>(0u));
-      return;
-   }
-
-   const bool b_neg = (mantissa < 0.0);
-
-   double       d = ((!b_neg) ? mantissa : -mantissa);
-   exponent_type e = exponent;
-
-   while (d > 10.0)
-   {
-      d /= 10.0;
-      ++e;
-   }
-   while (d < 1.0)
-   {
-      d *= 10.0;
-      --e;
-   }
-
-   std::int32_t shift = static_cast<std::int32_t>(e % static_cast<std::int32_t>(cpp_dec_float_elem_digits10));
-
-   while (static_cast<std::int32_t>(shift-- % cpp_dec_float_elem_digits10) != static_cast<std::int32_t>(0))
-   {
-      d *= 10.0;
-      --e;
-   }
-
-   exp = e;
-   neg = b_neg;
+   // Create *this cpp_dec_float<Digits10, ExponentType, Allocator>
+   // from a given mantissa and base-10 exponent. It is important
+   // to note that this constructor does *not* maintain the full
+   // precision of double. It is used internally (privately), mostly
+   // as a first guess for Newton iteration in square root and inversion.
 
    std::fill(data.begin(), data.end(), static_cast<std::uint32_t>(0u));
 
-   constexpr std::int32_t digit_ratio = static_cast<std::int32_t>(static_cast<std::int32_t>(std::numeric_limits<double>::digits10) / static_cast<std::int32_t>(cpp_dec_float_elem_digits10));
-   constexpr std::int32_t digit_loops = static_cast<std::int32_t>(digit_ratio + static_cast<std::int32_t>(2));
+   constexpr double
+      dbl_min_check
+      {
+        static_cast<double>
+        (
+           (std::numeric_limits<double>::min)() * (1.0 + std::numeric_limits<double>::epsilon())
+        )
+      };
 
-   for (std::int32_t i = static_cast<std::int32_t>(0); i < digit_loops; i++)
+   const bool b_neg { (mantissa < 0.0) };
+
+   double d_mant { ((!b_neg) ? mantissa : -mantissa) };
+
+   const bool mantissa_is_non_zero { (d_mant > dbl_min_check) };
+
+   if (mantissa_is_non_zero)
    {
-      std::uint32_t n = static_cast<std::uint32_t>(static_cast<std::uint64_t>(d));
-      data[static_cast<std::size_t>(i)] = static_cast<std::uint32_t>(n);
-      d -= static_cast<double>(n);
-      d *= static_cast<double>(cpp_dec_float_elem_mask);
+      exponent_type exp10_val { exp10 };
+
+      // This subroutine is used after a call to extract_parts().
+      // The corresponding scaling loop for (d_mant > 10.0) is not
+      // needed here since extract_parts() returns a mantissa value
+      // between 1 and 10. The loop for (d_mant < 1.0) is needed
+      // since the initial guess of the square root in tghe subroutine
+      // calculate_root() might have been divided by 10 in order
+      // to obtain an exponent value that is a multiple of 2.
+
+      while (d_mant < 1.0)
+      {
+         d_mant *= 10.0;
+         --exp10_val;
+      }
+
+      std::int32_t shift = static_cast<std::int32_t>(exp10_val % static_cast<std::int32_t>(cpp_dec_float_elem_digits10));
+
+      while (static_cast<std::int32_t>(shift-- % cpp_dec_float_elem_digits10) != static_cast<std::int32_t>(0))
+      {
+         d_mant *= 10.0;
+         --exp10_val;
+      }
+
+      exp = exp10_val;
+      neg = b_neg;
+
+      constexpr std::int32_t digit_ratio = static_cast<std::int32_t>(static_cast<std::int32_t>(std::numeric_limits<double>::digits10) / static_cast<std::int32_t>(cpp_dec_float_elem_digits10));
+      constexpr std::int32_t digit_loops = static_cast<std::int32_t>(digit_ratio + static_cast<std::int32_t>(2));
+
+      for (std::int32_t i = static_cast<std::int32_t>(0); i < digit_loops; i++)
+      {
+         std::uint32_t n = static_cast<std::uint32_t>(static_cast<std::uint64_t>(d_mant));
+         data[static_cast<std::size_t>(i)] = static_cast<std::uint32_t>(n);
+         d_mant -= static_cast<double>(n);
+         d_mant *= static_cast<double>(cpp_dec_float_elem_mask);
+      }
    }
-}
+} // LCOV_EXCL_LINE This causes a false negative on lcov coverage test.
 
 template <unsigned Digits10, class ExponentType, class Allocator>
 template <class Float>
 typename std::enable_if<std::is_floating_point<Float>::value, cpp_dec_float<Digits10, ExponentType, Allocator>&>::type cpp_dec_float<Digits10, ExponentType, Allocator>::operator=(Float a)
 {
-   // Christopher Kormanyos's original code used a cast to long long here, but that fails
-   // when long double has more digits than a long long.
+   // Christopher Kormanyos's original code used a cast to long long here,
+   // but that fails when long double has more digits than a long long.
+
    BOOST_MP_FLOAT128_USING
+
    using std::floor;
    using std::frexp; 
    using std::ldexp;
@@ -2527,26 +2554,53 @@ void cpp_dec_float<Digits10, ExponentType, Allocator>::from_unsigned_long_long(c
       return;
    }
 
-   std::size_t i = static_cast<std::size_t>(0u);
+   std::size_t index { static_cast<std::size_t>(0u) };
 
-   unsigned long long uu = u;
+   unsigned long long uu { u };
 
-   std::uint32_t temp[(std::numeric_limits<unsigned long long>::digits10 / static_cast<int>(cpp_dec_float_elem_digits10)) + 3] = {static_cast<std::uint32_t>(0u)};
+   constexpr std::size_t
+      local_storage_size
+      {
+         static_cast<std::size_t>
+         (
+           (std::numeric_limits<unsigned long long>::digits10 / static_cast<int>(cpp_dec_float_elem_digits10)) + 3
+         )
+      };
+
+   using local_limb_type = std::uint32_t;
+
+   using local_tmp_array_type = std::array<local_limb_type, local_storage_size>;
+
+   local_tmp_array_type temp { };
 
    while (uu != static_cast<unsigned long long>(0u))
    {
-      temp[i] = static_cast<std::uint32_t>(uu % static_cast<unsigned long long>(cpp_dec_float_elem_mask));
-      uu      = static_cast<unsigned long long>(uu / static_cast<unsigned long long>(cpp_dec_float_elem_mask));
-      ++i;
+      temp[index] = static_cast<local_limb_type>(uu % static_cast<unsigned long long>(cpp_dec_float_elem_mask));
+
+      uu = static_cast<unsigned long long>(uu / static_cast<unsigned long long>(cpp_dec_float_elem_mask));
+
+      ++index;
    }
 
-   if (i > static_cast<std::size_t>(1u))
+   if (index > static_cast<std::size_t>(1u))
    {
-      exp += static_cast<exponent_type>((i - 1u) * static_cast<std::size_t>(cpp_dec_float_elem_digits10));
+      exp += static_cast<exponent_type>((index - 1u) * static_cast<std::size_t>(cpp_dec_float_elem_digits10));
    }
 
-   std::reverse(temp, temp + i);
-   std::copy(temp, temp + (std::min)(i, static_cast<std::size_t>(cpp_dec_float_elem_number)), data.begin());
+   const std::size_t
+      copy_size
+      {
+         (std::min)(index, static_cast<std::size_t>(cpp_dec_float_elem_number))
+      };
+
+   using local_const_reverse_iterator_type = std::reverse_iterator<const local_limb_type*>;
+
+   std::copy
+   (
+      local_const_reverse_iterator_type(temp.data() + copy_size),
+      local_const_reverse_iterator_type(temp.data()),
+      data.begin()
+   );
 }
 
 template <unsigned Digits10, class ExponentType, class Allocator>
@@ -3154,7 +3208,7 @@ cpp_dec_float<Digits10, ExponentType, Allocator> cpp_dec_float<Digits10, Exponen
       default_ops::detail::pow_imp(t, cpp_dec_float<Digits10, ExponentType, Allocator>::two(), static_cast<unsigned long long>(p), std::integral_constant<bool, false>());
 
    return t;
-} // LCOV_EXCL_LINE
+} // LCOV_EXCL_LINE This causes a false negative on lcov coverage test.
 
 template <unsigned Digits10, class ExponentType, class Allocator>
 inline void eval_add(cpp_dec_float<Digits10, ExponentType, Allocator>& result, const cpp_dec_float<Digits10, ExponentType, Allocator>& o)
@@ -3162,9 +3216,19 @@ inline void eval_add(cpp_dec_float<Digits10, ExponentType, Allocator>& result, c
    result += o;
 }
 template <unsigned Digits10, class ExponentType, class Allocator>
+inline void eval_add(cpp_dec_float<Digits10, ExponentType, Allocator>& result, const cpp_dec_float<Digits10, ExponentType, Allocator>& a, const cpp_dec_float<Digits10, ExponentType, Allocator>& b)
+{
+   result = cpp_dec_float<Digits10, ExponentType, Allocator>(a) += b;
+}
+template <unsigned Digits10, class ExponentType, class Allocator>
 inline void eval_subtract(cpp_dec_float<Digits10, ExponentType, Allocator>& result, const cpp_dec_float<Digits10, ExponentType, Allocator>& o)
 {
    result -= o;
+}
+template <unsigned Digits10, class ExponentType, class Allocator>
+inline void eval_subtract(cpp_dec_float<Digits10, ExponentType, Allocator>& result, const cpp_dec_float<Digits10, ExponentType, Allocator>& a, const cpp_dec_float<Digits10, ExponentType, Allocator>& b)
+{
+   result = cpp_dec_float<Digits10, ExponentType, Allocator>(a) -= b;
 }
 template <unsigned Digits10, class ExponentType, class Allocator>
 inline void eval_multiply(cpp_dec_float<Digits10, ExponentType, Allocator>& result, const cpp_dec_float<Digits10, ExponentType, Allocator>& o)
@@ -3172,9 +3236,19 @@ inline void eval_multiply(cpp_dec_float<Digits10, ExponentType, Allocator>& resu
    result *= o;
 }
 template <unsigned Digits10, class ExponentType, class Allocator>
+inline void eval_multiply(cpp_dec_float<Digits10, ExponentType, Allocator>& result, const cpp_dec_float<Digits10, ExponentType, Allocator>& a, const cpp_dec_float<Digits10, ExponentType, Allocator>& b)
+{
+   result = cpp_dec_float<Digits10, ExponentType, Allocator>(a) *= b;
+}
+template <unsigned Digits10, class ExponentType, class Allocator>
 inline void eval_divide(cpp_dec_float<Digits10, ExponentType, Allocator>& result, const cpp_dec_float<Digits10, ExponentType, Allocator>& o)
 {
    result /= o;
+}
+template <unsigned Digits10, class ExponentType, class Allocator>
+inline void eval_divide(cpp_dec_float<Digits10, ExponentType, Allocator>& result, const cpp_dec_float<Digits10, ExponentType, Allocator>& a, const cpp_dec_float<Digits10, ExponentType, Allocator>& b)
+{
+   result = cpp_dec_float<Digits10, ExponentType, Allocator>(a) /= b;
 }
 
 template <unsigned Digits10, class ExponentType, class Allocator>
@@ -3406,34 +3480,50 @@ inline void eval_ldexp(cpp_dec_float<Digits10, ExponentType, Allocator>& result,
 {
    const long long the_exp = static_cast<long long>(e);
 
-   if ((the_exp > (std::numeric_limits<typename cpp_dec_float<Digits10, ExponentType, Allocator>::exponent_type>::max)()) || (the_exp < (std::numeric_limits<typename cpp_dec_float<Digits10, ExponentType, Allocator>::exponent_type>::min)()))
-      BOOST_MP_THROW_EXCEPTION(std::runtime_error(std::string("Exponent value is out of range.")));
+   using local_cpp_dec_float_type = cpp_dec_float<Digits10, ExponentType, Allocator>;
+   using local_exponent_type = typename local_cpp_dec_float_type::exponent_type;
+
+   using local_common_type = typename std::common_type<local_exponent_type, long long>::type;
+
+   if (   (static_cast<local_common_type>(the_exp) > static_cast<local_common_type>((std::numeric_limits<local_exponent_type>::max)()))
+       || (static_cast<local_common_type>(the_exp) < static_cast<local_common_type>((std::numeric_limits<local_exponent_type>::min)())))
+   {
+      BOOST_MP_THROW_EXCEPTION(std::runtime_error(std::string("Exponent value is out of range."))); // LCOV_EXCL_LINE
+   }
 
    result = x;
 
-   if ((the_exp > static_cast<long long>(-std::numeric_limits<long long>::digits)) && (the_exp < static_cast<long long>(0)))
+   if (   (static_cast<local_common_type>(the_exp) > static_cast<local_common_type>(-std::numeric_limits<long long>::digits))
+       && (static_cast<local_common_type>(the_exp) < static_cast<local_common_type>(0)))
+   {
       result.div_unsigned_long_long(1ULL << static_cast<long long>(-the_exp));
-   else if ((the_exp < static_cast<long long>(std::numeric_limits<long long>::digits)) && (the_exp > static_cast<long long>(0)))
+   }
+   else if (   (static_cast<local_common_type>(the_exp) < static_cast<local_common_type>(std::numeric_limits<long long>::digits))
+            && (static_cast<local_common_type>(the_exp) > static_cast<local_common_type>(0)))
+   {
       result.mul_unsigned_long_long(1ULL << the_exp);
+   }
    else if (the_exp != static_cast<long long>(0))
    {
-      if ((the_exp < cpp_dec_float<Digits10, ExponentType, Allocator>::cpp_dec_float_min_exp / 2) && (x.order() > 0))
+      if ((the_exp < local_cpp_dec_float_type::cpp_dec_float_min_exp / 2) && (x.order() > 0))
       {
          long long half_exp = e / 2;
-         cpp_dec_float<Digits10, ExponentType, Allocator> t = cpp_dec_float<Digits10, ExponentType, Allocator>::pow2(half_exp);
+         local_cpp_dec_float_type t { local_cpp_dec_float_type::pow2(half_exp) };
          result *= t;
          if (2 * half_exp != e)
             t *= 2;
          result *= t;
-      }
+      } // LCOV_EXCL_LINE This causes a false negative on lcov coverage test.
       else
-         result *= cpp_dec_float<Digits10, ExponentType, Allocator>::pow2(e);
+         result *= local_cpp_dec_float_type::pow2(e);
    }
 }
 
 template <unsigned Digits10, class ExponentType, class Allocator>
 inline void eval_frexp(cpp_dec_float<Digits10, ExponentType, Allocator>& result, const cpp_dec_float<Digits10, ExponentType, Allocator>& x, ExponentType* e)
 {
+   const bool b_neg { x.isneg() };
+
    result = x;
 
    if (result.iszero() || (result.isinf)() || (result.isnan)())
@@ -3442,12 +3532,16 @@ inline void eval_frexp(cpp_dec_float<Digits10, ExponentType, Allocator>& result,
       return;
    }
 
-   if (result.isneg())
+   if (b_neg)
       result.negate();
 
-   typename cpp_dec_float<Digits10, ExponentType, Allocator>::exponent_type t = result.order();
+   using local_cpp_dec_float_type = cpp_dec_float<Digits10, ExponentType, Allocator>;
+   using local_exponent_type = typename local_cpp_dec_float_type::exponent_type;
+
+   local_exponent_type t { result.order() };
+
    BOOST_MP_USING_ABS
-   if (abs(t) < ((std::numeric_limits<typename cpp_dec_float<Digits10, ExponentType, Allocator>::exponent_type>::max)() / 1000))
+   if (abs(t) < ((std::numeric_limits<local_exponent_type>::max)() / 1000))
    {
       t *= 1000;
       t /= 301;
@@ -3458,55 +3552,65 @@ inline void eval_frexp(cpp_dec_float<Digits10, ExponentType, Allocator>& result,
       t *= 1000;
    }
 
-   result *= cpp_dec_float<Digits10, ExponentType, Allocator>::pow2(-t);
+   result *= local_cpp_dec_float_type::pow2(-t);
 
    if (result.iszero() || (result.isinf)() || (result.isnan)())
    {
       // pow2 overflowed, slip the calculation up:
       result = x;
-      if (result.isneg())
+      if (b_neg)
          result.negate();
       t /= 2;
-      result *= cpp_dec_float<Digits10, ExponentType, Allocator>::pow2(-t);
+      result *= local_cpp_dec_float_type::pow2(-t);
    }
    BOOST_MP_USING_ABS
    if (abs(result.order()) > 5)
    {
       // If our first estimate doesn't get close enough then try recursion until we do:
-      typename cpp_dec_float<Digits10, ExponentType, Allocator>::exponent_type e2;
-      cpp_dec_float<Digits10, ExponentType, Allocator>                         r2;
+      local_exponent_type e2;
+      cpp_dec_float<Digits10, ExponentType, Allocator> r2;
       eval_frexp(r2, result, &e2);
       // overflow protection:
-      if ((t > 0) && (e2 > 0) && (t > (std::numeric_limits<typename cpp_dec_float<Digits10, ExponentType, Allocator>::exponent_type>::max)() - e2))
-         BOOST_MP_THROW_EXCEPTION(std::runtime_error("Exponent is too large to be represented as a power of 2."));
-      if ((t < 0) && (e2 < 0) && (t < (std::numeric_limits<typename cpp_dec_float<Digits10, ExponentType, Allocator>::exponent_type>::min)() - e2))
-         BOOST_MP_THROW_EXCEPTION(std::runtime_error("Exponent is too large to be represented as a power of 2."));
+      if ((t > 0) && (e2 > 0) && (t > (std::numeric_limits<local_exponent_type>::max)() - e2))
+         BOOST_MP_THROW_EXCEPTION(std::runtime_error("Exponent is too large to be represented as a power of 2.")); // LCOV_EXCL_LINE
+      if ((t < 0) && (e2 < 0) && (t < (std::numeric_limits<local_exponent_type>::min)() - e2))
+         BOOST_MP_THROW_EXCEPTION(std::runtime_error("Exponent is too large to be represented as a power of 2.")); // LCOV_EXCL_LINE
       t += e2;
       result = r2;
    }
 
-   while (result.compare(cpp_dec_float<Digits10, ExponentType, Allocator>::one()) >= 0)
+   while (result.compare(local_cpp_dec_float_type::one()) >= 0)
    {
-      result /= cpp_dec_float<Digits10, ExponentType, Allocator>::two();
+      result.div_unsigned_long_long(2ULL);
       ++t;
    }
-   while (result.compare(cpp_dec_float<Digits10, ExponentType, Allocator>::half()) < 0)
+   while (result.compare(local_cpp_dec_float_type::half()) < 0)
    {
-      result *= cpp_dec_float<Digits10, ExponentType, Allocator>::two();
+      result.mul_unsigned_long_long(2ULL);
       --t;
    }
    *e = t;
-   if (x.isneg())
+   if (b_neg)
       result.negate();
 }
 
 template <unsigned Digits10, class ExponentType, class Allocator>
 inline typename std::enable_if< !std::is_same<ExponentType, int>::value>::type eval_frexp(cpp_dec_float<Digits10, ExponentType, Allocator>& result, const cpp_dec_float<Digits10, ExponentType, Allocator>& x, int* e)
 {
-   typename cpp_dec_float<Digits10, ExponentType, Allocator>::exponent_type t;
+   using local_exponent_type = typename cpp_dec_float<Digits10, ExponentType, Allocator>::exponent_type;
+
+   local_exponent_type t { };
+
    eval_frexp(result, x, &t);
-   if ((t > (std::numeric_limits<int>::max)()) || (t < (std::numeric_limits<int>::min)()))
-      BOOST_MP_THROW_EXCEPTION(std::runtime_error("Exponent is outside the range of an int"));
+
+   using local_common_type = typename std::common_type<local_exponent_type, int>::type;
+
+   if (   (static_cast<local_common_type>(t) > static_cast<local_common_type>((std::numeric_limits<int>::max)()))
+       || (static_cast<local_common_type>(t) < static_cast<local_common_type>((std::numeric_limits<int>::min)())))
+   {
+      BOOST_MP_THROW_EXCEPTION(std::runtime_error("Exponent is outside the range of an int")); // LCOV_EXCL_LINE
+   }
+
    *e = static_cast<int>(t);
 }
 
@@ -3518,7 +3622,13 @@ inline bool eval_is_zero(const cpp_dec_float<Digits10, ExponentType, Allocator>&
 template <unsigned Digits10, class ExponentType, class Allocator>
 inline int eval_get_sign(const cpp_dec_float<Digits10, ExponentType, Allocator>& val)
 {
-   return val.iszero() ? 0 : val.isneg() ? -1 : 1;
+   return (val.iszero() ? 0 : (val.isneg() ? -1 : 1));
+}
+
+template <unsigned Digits10, class ExponentType, class Allocator>
+inline int eval_signbit(const cpp_dec_float<Digits10, ExponentType, Allocator>& val)
+{
+   return ((eval_get_sign(val) == -1) ? 1 : 0);
 }
 
 template <unsigned Digits10, class ExponentType, class Allocator>

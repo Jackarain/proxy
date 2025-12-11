@@ -18,11 +18,14 @@
 
 namespace boost::redis::detail {
 
-inline bool is_cancellation(asio::cancellation_type_t type)
+inline bool is_partial_or_terminal_cancel(asio::cancellation_type_t type)
 {
-   return !!(
-      type & (asio::cancellation_type_t::total | asio::cancellation_type_t::partial |
-              asio::cancellation_type_t::terminal));
+   return !!(type & (asio::cancellation_type_t::partial | asio::cancellation_type_t::terminal));
+}
+
+inline bool is_total_cancel(asio::cancellation_type_t type)
+{
+   return !!(type & asio::cancellation_type_t::total);
 }
 
 exec_action exec_fsm::resume(bool connection_is_open, asio::cancellation_type_t cancel_state)
@@ -63,19 +66,12 @@ exec_action exec_fsm::resume(bool connection_is_open, asio::cancellation_type_t 
             return act;
          }
 
-         // If we're cancelled, try to remove the request from the queue. This will only
-         // succeed if the request is waiting (wasn't written yet)
-         if (is_cancellation(cancel_state) && mpx_->remove(elem_)) {
-            elem_.reset();  // Deallocate memory before finalizing
-            return exec_action{asio::error::operation_aborted};
-         }
-
-         // If we hit a terminal cancellation, tear down the connection.
-         // Otherwise, go back to waiting.
-         // TODO: we could likely do better here and mark the request as cancelled, removing
-         // the done callback and the adapter. But this requires further exploration
-         if (!!(cancel_state & asio::cancellation_type_t::terminal)) {
-            BOOST_REDIS_YIELD(resume_point_, 5, exec_action_type::cancel_run)
+         // Total cancellation can only be handled if the request hasn't been sent yet.
+         // Partial and terminal cancellation can always be served
+         if (
+            (is_total_cancel(cancel_state) && elem_->is_waiting()) ||
+            is_partial_or_terminal_cancel(cancel_state)) {
+            mpx_->cancel(elem_);
             elem_.reset();  // Deallocate memory before finalizing
             return exec_action{asio::error::operation_aborted};
          }

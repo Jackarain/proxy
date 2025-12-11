@@ -37,7 +37,7 @@ int main(void)
 
     my_obj a;
     a.m_uuid.data[0] = 1;
-    std::printf("There should be a another printf coming next.\n");
+    std::printf("There should be another printf coming next.\n");
 
     //*****************************************
     // The != statement in this function generates a movups and a movdqu statement.

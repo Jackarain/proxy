@@ -132,7 +132,7 @@
 [def __compiler_support [@https://en.cppreference.com/w/cpp/compiler_support compiler support]]
 [def __ULP [@http://en.wikipedia.org/wiki/Unit_in_the_last_place  Unit in the last place (ULP)]]
 [def __Mathematica [@http://www.wolfram.com/products/mathematica/index.html Wolfram Mathematica]]
-[def __WolframAlpha [@http://www.wolframalpha.com/ Wolfram Alpha]]
+[def __WolframAlphaGLCoefs [@https://www.wolframalpha.com/input?i=Fit%5B%7B%7B21.0%2C+3.5%7D%2C+%7B51.0%2C+11.1%7D%2C+%7B101.0%2C+22.5%7D%2C+%7B201.0%2C+46.8%7D%7D%2C+%7B1%2C+d%2C+d%5E2%7D%2C+d%5D+FullSimplify%5B%25%5D Wolfram Alpha Gauss-Laguerre coefficients]]
 [def __Boost_Serialization [@https://www.boost.org/doc/libs/release/libs/serialization/doc/index.html Boost.Serialization]]
 [def __Boost_Math [@https://www.boost.org/doc/libs/release/libs/math/doc/index.html Boost.Math]]
 [def __Boost_Multiprecision [@https://www.boost.org/doc/libs/release/libs/multiprecision/doc/index.html Boost.Multiprecision]]

@@ -12,7 +12,7 @@
 
 A URL, short for "Uniform Resource Locator," is a compact string
 of characters identifying an abstract or physical resource.
-It has these five parts, with may be optional or disallowed
+It has these five parts, which may be optional or disallowed
 depending on the context:
 
 image::PartsDiagram.svg[]
@@ -230,34 +230,34 @@ of something that is not a URL):
 |URL|Notes
 
 // Row 1, Column 1
-|cpp:pass:[https://www.boost.org/index.html][]
+|`pass:[https://www.boost.org/index.html]`
 // Row 1, Column 2
-|Hierarchical URL with cpp:https[] protocol. Resource in the HTTP protocol.
+|Hierarchical URL with `https` protocol. Resource in the HTTP protocol.
 
 // Row 2, Column 1
-|cpp:pass:[ftp://host.dom/etc/motd][]
+|`pass:[ftp://host.dom/etc/motd]`
 // Row 2, Column 2
-|Hierarchical URL with cpp:ftp[] scheme. Resource in the FTP protocol.
+|Hierarchical URL with `ftp` scheme. Resource in the FTP protocol.
 
 // Row 3, Column 1
-|cpp:urn:isbn:045145052[]
+|`urn:isbn:045145052`
 // Row 3, Column 2
-|Opaque URL with cpp:urn[] scheme. Identifies cpp:isbn[] resource.
+|Opaque URL with `urn` scheme. Identifies `isbn` resource.
 
 // Row 4, Column 1
-|cpp:mailto:person@example.com[]
+|`mailto:person@example.com`
 // Row 4, Column 2
-|Opaque URL with cpp:mailto[] scheme. Identifies e-mail address.
+|Opaque URL with `mailto` scheme. Identifies e-mail address.
 
 // Row 5, Column 1
-|cpp:index.html[]
+|`index.html`
 // Row 5, Column 2
 |URL reference. Missing scheme and authority.
 
 // Row 6, Column 1
-|cpp:www.boost.org[]
+|`www.boost.org`
 // Row 6, Column 2
-|A Protocol-Relative Link (PRL). **Not**.
+|A Protocol-Relative Link (PRL). **Not a URL**.
 
 |===
 
@@ -352,12 +352,12 @@ These containers maintain a useful invariant: they
 always contain a valid URL. In addition, the library
 provides the cpp:authority_view[] container which holds
 a non-modifiable reference to a valid __authority__.
-An authority by itself, is not a valid URL.
+An authority by itself is not a valid URL.
 
 In the sections that follow we describe the mechanisms use to
 parse strings using various specific grammars, followed by the
-interface for inspecting and modified each of the main parts of
-the URL. Finally we discuss important algorithms availble to
+interface for inspecting and modifying each of the main parts of
+the URL. Finally we discuss important algorithms available to
 use with URLs.
 
 // 

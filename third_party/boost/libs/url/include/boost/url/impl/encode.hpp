@@ -12,7 +12,7 @@
 
 #include "boost/url/grammar/token_rule.hpp"
 #include <boost/assert.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 #include <boost/url/detail/encode.hpp>
 #include <boost/url/detail/except.hpp>
 #include <boost/url/encoding_opts.hpp>
@@ -39,7 +39,7 @@ encoded_size(
         not meet the requirements stated in
         the documentation.
     */
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         grammar::is_charset<CS>::value);
 
     std::size_t n = 0;
@@ -111,7 +111,7 @@ encode(
     not meet the requirements stated in
     the documentation.
 */
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         grammar::is_charset<CS>::value);
 
     // '%' must be reserved
@@ -200,7 +200,7 @@ encode_unsafe(
     CS const& allowed,
     encoding_opts opt)
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         grammar::is_charset<CS>::value);
 
     // '%' must be reserved
@@ -281,7 +281,7 @@ encode(
     encoding_opts opt,
     StringToken&& token) noexcept
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         grammar::is_charset<CS>::value);
 
     auto const n = encoded_size(

@@ -13,9 +13,11 @@
 #define _SCL_SECURE_NO_WARNINGS
 #endif
 
+#include <test.hpp>
+
 #include <boost/detail/lightweight_test.hpp>
+
 #include <array>
-#include "test.hpp"
 
 #if !defined(TEST_MPF_50) && !defined(TEST_MPF) && !defined(TEST_BACKEND) && !defined(TEST_CPP_DEC_FLOAT) && !defined(TEST_MPFR) && !defined(TEST_MPFR_50) && !defined(TEST_MPFI_50) && !defined(TEST_FLOAT128) && !defined(TEST_CPP_BIN_FLOAT) && !defined(TEST_CPP_DOUBLE_FLOAT)
 #define TEST_MPF_50
@@ -73,11 +75,16 @@ T atan2_def(T y, T x)
    T t;
    t.backend() = boost::multiprecision::default_ops::get_constant_pi<typename T::backend_type>();
    T t2;
-   if (x)
+   if (x != 0)
+   {
       t2 = atan(y / x);
+      t2 += T((t / 2) * (1 - x.sign()) * T(y.sign() + 0.5).sign());
+   }
    else
+   {
       t2 = y.sign() * t / 2;
-   return t2 + (t / 2) * (1 - x.sign()) * T(y.sign() + 0.5).sign();
+   }
+   return t2;
 }
 
 template <class T>
@@ -158,13 +165,13 @@ void test()
       T        e   = relative_error(val, T(data[k]));
       unsigned err = e.template convert_to<unsigned>();
       if (err > max_err)
-         max_err = err;
+         max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
       val = atan(-arg);
       e   = relative_error(val, T(-T(data[k])));
       err = e.template convert_to<unsigned>();
       if (err > max_err)
       {
-         max_err = err;
+         max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
       }
       arg *= 10000;
    }
@@ -184,28 +191,28 @@ void test()
       err   = e.template convert_to<unsigned>();
       if (err > max_err)
       {
-         max_err = err;
+         max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
       }
       val = atan2(-arg, 1);
       e   = relative_error(val, atan2_def(T(-arg), T(1)));
       err = e.template convert_to<unsigned>();
       if (err > max_err)
       {
-         max_err = err;
+         max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
       }
       val = atan2(arg, -1);
       e   = relative_error(val, atan2_def(arg, T(-1)));
       err = e.template convert_to<unsigned>();
       if (err > max_err)
       {
-         max_err = err;
+         max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
       }
       val = atan2(-arg, -1);
       e   = relative_error(val, atan2_def(T(-arg), T(-1)));
       err = e.template convert_to<unsigned>();
       if (err > max_err)
       {
-         max_err = err;
+         max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
       }
       arg *= 10000;
    }
@@ -214,13 +221,13 @@ void test()
    //
    err = relative_error(T(atan2(T(0), T(1))), atan2_def(T(0), T(1))).template convert_to<unsigned>();
    if (err > max_err)
-      max_err = err;
+      max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
    if (!boost::multiprecision::is_interval_number<T>::value)
    {
       // We don't test this with intervals as [-0,0] leads to strange behaviour in atan2...
       err = relative_error(T(atan2(T(0), T(-1))), atan2_def(T(0), T(-1))).template convert_to<unsigned>();
       if (err > max_err)
-         max_err = err;
+         max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
    }
 
    T pi;
@@ -228,29 +235,31 @@ void test()
 
    err = relative_error(T(atan2(T(1), T(0))), T(pi / 2)).template convert_to<unsigned>();
    if (err > max_err)
-      max_err = err;
+      max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
 
    err = relative_error(T(atan2(T(-1), T(0))), T(pi / -2)).template convert_to<unsigned>();
    if (err > max_err)
-      max_err = err;
+      max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
 
    T mv = (std::numeric_limits<T>::max)();
-   err  = relative_error(T(atan2(mv, T(1))), T(pi / 2)).template convert_to<unsigned>();
+   err = relative_error(T(atan2(mv, T(1))), T(pi / 2)).template convert_to<unsigned>();
+   err = relative_error(T(atan2(mv, T(1))), atan2_def(T(mv), T(1))).template convert_to<unsigned>();
    if (err > max_err)
-      max_err = err;
+      max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
    err = relative_error(T(atan2(-mv, T(1))), T(pi / -2)).template convert_to<unsigned>();
+   err = relative_error(T(atan2(-mv, T(1))), atan2_def(T(-mv), T(0))).template convert_to<unsigned>();
    if (err > max_err)
-      max_err = err;
+      max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
 
    if (std::numeric_limits<T>::has_infinity)
    {
       mv  = (std::numeric_limits<T>::infinity)();
       err = relative_error(T(atan2(mv, T(1))), T(pi / 2)).template convert_to<unsigned>();
       if (err > max_err)
-         max_err = err;
+         max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
       err = relative_error(T(atan2(-mv, T(1))), T(pi / -2)).template convert_to<unsigned>();
       if (err > max_err)
-         max_err = err;
+         max_err = err; // LCOV_EXCL_LINE This line might not necessarily be expected to get hit in tests.
    }
 
    std::cout << "Max error was: " << max_err << std::endl;

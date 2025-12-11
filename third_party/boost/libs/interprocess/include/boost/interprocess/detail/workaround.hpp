@@ -375,4 +375,8 @@ namespace boost {
 
 #endif   //!defined(DISABLE_BOOST_INTERPROCESS_EINTR_RETRY) && defined(__GNUC__)
 
+#if !defined(BOOST_INTERPROCESS_ATEXIT)
+   #define BOOST_INTERPROCESS_ATEXIT(f) std::atexit((f))
+#endif   //!defined(BOOST_INTERPROCESS_ATEXIT)
+
 #endif   //#ifndef BOOST_INTERPROCESS_DETAIL_WORKAROUND_HPP

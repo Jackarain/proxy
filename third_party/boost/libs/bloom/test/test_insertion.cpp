@@ -6,8 +6,8 @@
  * See https://www.boost.org/libs/bloom for library home page.
  */
 
-#include <boost/core/lightweight_test.hpp>
 #include <array>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/mp11/algorithm.hpp>
 #include <utility>
 #include "test_types.hpp"
@@ -47,31 +47,42 @@ void test_insertion()
   >;
   using value_type=typename filter::value_type;
 
-  filter       f(10000);
   ValueFactory fac;
 
   {
+    filter     f(10000);
     value_type x{fac(),0};
     f.insert(const_cast<value_type&>(x));
     BOOST_TEST(f.may_contain(x));
   }
   {
+    filter     f(10000);
     value_type x{fac(),0};
     f.insert(std::move(x));
     BOOST_TEST(f.may_contain(x));
   }
   {
-    auto x=fac();
+    filter f(10000);
+    auto   x=fac();
     f.insert(x); /* transparent insert */
     BOOST_TEST(f.may_contain(x));
   }
   {
+    filter                    f(10000);
     std::array<value_type,10> input;
     for(auto& x:input)x={fac(),0};
     f.insert(input.begin(),input.end());
     BOOST_TEST(may_contain(f,input));
   }
   {
+    filter                         f(10000);
+    std::array<decltype(fac()),10> input;
+    for(auto& x:input)x=fac();
+    f.insert(input.begin(),input.end()); /* transparent insert */
+    BOOST_TEST(may_contain(f,input));
+  }
+  {
+    filter                            f(10000);
     std::initializer_list<value_type> il={{fac(),0},{fac(),0},{fac(),0}};
     f.insert(il);
     BOOST_TEST(may_contain(f,il));

@@ -244,7 +244,7 @@ class.
 For convenience of use, all public methods and types of the first index
 specified are inherited by <code>multi_index_container</code>. This also includes global
 operators and functions associated with the index (vg. comparison and
-<code>swap</code>.)
+<code>swap</code>).
 </p>
 
 <blockquote><pre>
@@ -532,7 +532,7 @@ scheme outlined in the
   <li><code>IndexSpecifierList</code> specifies the indices that the
     <code>multi_index_container</code> is composed of. It must be a non-empty
     <a href="../../../../libs/mpl/doc/refmanual/forward-sequence.html">
-    <code>MPL Forward Sequence</code></a> (and, preferrably,
+    <code>MPL Forward Sequence</code></a> (and, preferably,
     an <a href="../../../../libs/mpl/doc/refmanual/random-access-sequence.html">
     <code>MPL Random Access Sequence</code></a>) of index specifiers. For
     syntactic convenience, the
@@ -738,7 +738,7 @@ multi_index_container(<br>
 <code>EmplaceConstructible</code> into <code>multi_index_container</code>
 from <code>*first</code>.
 <code>last</code> is reachable from <code>first</code>.<br> 
-<b>Effects:</b> Constructs and empty <code>multi_index_container</code> using the
+<b>Effects:</b> Constructs an empty <code>multi_index_container</code> using the
 specified argument list and allocator and fills it with
 the elements in the range [<code>first</code>,<code>last</code>).
 Insertion of each element may or may not succeed depending
@@ -765,7 +765,7 @@ the number of elements in [<code>first</code>,<code>last</code>).<br>
 <code>multi_index_container</code>.<br>
 <b>Effects:</b> Constructs a copy of <code>x</code>, copying its
 elements as well as its internal objects (those specified
-in <code>ctor_args_list</code> and the allocator.)<br>
+in <code>ctor_args_list</code> and the allocator).<br>
 <b>Postconditions:</b> <code>*this==x</code>. The order on every index
 of the <code>multi_index_container</code> is preserved as well.<br>
 <b>Complexity:</b> <code>O(x.size()*log(x.size()) + C(x.size()))</code>.
@@ -777,7 +777,7 @@ of the <code>multi_index_container</code> is preserved as well.<br>
 <blockquote>
 <b>Effects:</b> Constructs a <code>multi_index_container</code> by transferring the
 elements of <code>x</code> and copying its internal objects (those specified
-in <code>ctor_args_list</code> and the allocator.)<br>
+in <code>ctor_args_list</code> and the allocator).<br>
 <b>Postconditions:</b> If <code>x==y</code> just
 before the movement, <code>*this==y</code>. The order on every index
 of the <code>multi_index_container</code> is preserved as well.<br>
@@ -883,7 +883,7 @@ of the types of <code>ctor_args_list</code> do not throw.
 <blockquote>
 <b>Requires:</b> <code>Value</code> is <code>CopyInsertable</code> into
 <code>multi_index_container</code>.<br>
-<b>Effects:</b> Replaces the elements the <code>multi_index_container</code>
+<b>Effects:</b> Replaces the elements of the <code>multi_index_container</code>
 with copies of the elements of <code>list</code>, inserted in the specified order.
 Insertion of each element may or may not succeed depending
 on the acceptance by all the indices of the <code>multi_index_container</code>.<br>
@@ -965,7 +965,7 @@ typename nth_index&lt;N>::type::iterator project(IteratorType it);</code>
 <b>Requires:</b> <code>0 &lt;= N &lt; I-1</code>. <code>IteratorType</code>
 belongs to <code>iterator_type_list</code>. <code>it</code> is a valid
 iterator of some index of <code>*this</code> (i.e. does not refer to some
-other <code>multi_index_container</code>.)<br>
+other <code>multi_index_container</code>).<br>
 <b>Effects:</b> Returns an <code>nth_index&lt;N>::type::iterator</code> 
 equivalent to <code>it</code>.<br>
 <b>Complexity:</b> Constant.<br>
@@ -995,7 +995,7 @@ typename index&lt;Tag>::type::iterator project(IteratorType it);</code>
 <code>index&lt;Tag>::type</code> is valid. <code>IteratorType</code>
 belongs to <code>iterator_type_list</code>. <code>it</code> is a valid
 iterator of some index of <code>*this</code> (i.e. does not refer to some
-other <code>multi_index_container</code>.)<br>
+other <code>multi_index_container</code>).<br>
 <b>Effects:</b> Returns an <code>index&lt;Tag>::type::iterator</code>
 equivalent to <code>it</code>.<br>
 <b>Complexity:</b> Constant.<br>
@@ -1011,7 +1011,7 @@ typename index&lt;Tag>::type::const_iterator project(IteratorType it)const;</cod
 belongs to <code>const_iterator_type_list</code> or
 <code>iterator_type_list</code>. <code>it</code> is a valid
 (constant or non-constant) iterator of some index of <code>*this</code>
-(i.e. does not refer to some other <code>multi_index_container</code>.)<br>
+(i.e. does not refer to some other <code>multi_index_container</code>).<br>
 <b>Effects:</b> Returns an <code>index&lt;Tag>::type::const_iterator</code>
 iterator equivalent to <code>it</code>.<br>
 <b>Complexity:</b> Constant.<br>
@@ -1053,7 +1053,7 @@ output archive (XML archive) <code>ar</code>.
 
 <blockquote>
 <b>Requires:</b> <code>Value</code> is serializable (XML-serializable). Additionally,
-each of the indices of <code>m</code> can impose another requirements.<br>
+each of the indices of <code>m</code> can impose other requirements.<br>
 <b>Exception safety:</b> Strong with respect to <code>m</code>. If an exception
 is thrown, <code>ar</code> may be left in an inconsistent state.
 </blockquote>
@@ -1063,7 +1063,7 @@ input archive (XML archive) <code>ar</code>.
 
 <blockquote>
 <b>Requires:</b> <code>Value</code> is serializable (XML-serializable). Additionally,
-each of the indices of <code>m'</code> can impose another requirements.<br>
+each of the indices of <code>m'</code> can impose other requirements.<br>
 <b>Exception safety:</b> Basic. If an exception is thrown, <code>ar</code> may be
 left in an inconsistent state.
 </blockquote>

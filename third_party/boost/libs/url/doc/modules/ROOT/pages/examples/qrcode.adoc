@@ -10,7 +10,7 @@
 = QR Code
 
 A QR code is a machine-readable two-dimensional barcode.
-They might contain data for a identifier or a URL to a website.
+It might contain data for an identifier or a URL to a website.
 
 This example shows how to construct and modify URLs to consume a third party API to generate QR Codes.
 

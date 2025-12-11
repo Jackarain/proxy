@@ -11,7 +11,7 @@
 #define BOOST_URL_IMPL_PCT_ENCODED_VIEW_HPP
 
 #include <boost/url/grammar/type_traits.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 
 namespace boost {
 namespace urls {

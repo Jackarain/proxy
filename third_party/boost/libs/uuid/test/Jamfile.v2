@@ -57,9 +57,9 @@ rule test_headers
 
 alias test_headers : [ test_headers ] ;
 
-# test inclucing all .hpp files in 2 translations units
+# test including all .hpp files in 2 translations units
 # to look for issues when using multiple translation units
-# eg. missing inline on a global functionstate is not missing
+# e.g. missing inline on a global functionstate is not missing
 
 run test_include1.cpp test_include2.cpp ;
 
@@ -203,9 +203,15 @@ run test_entropy_error.cpp ;
 run test_detail_random_provider.cpp
   : : : <library>/boost/array//boost_array ;
 
+# constants
+
+run test_constants.cpp ;
+
 # constexpr tests
 
 compile test_uuid_cx.cpp ;
+run test_string_generator_cx.cpp ;
+run test_constants_cx.cpp ;
 
 # 'quick' test for CI
 

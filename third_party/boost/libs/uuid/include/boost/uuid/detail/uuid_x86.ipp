@@ -65,7 +65,7 @@ BOOST_FORCEINLINE void compare(uuid const& lhs, uuid const& rhs, std::uint32_t& 
     // and depending on which way it is for, this will be the result of the operation. There are a few notes to consider:
     //
     // 1. Due to little endian byte order the first bytes go into the lower part of the xmm registers,
-    //    so the comparison results in the least significant bits will actually be the most signigicant for the final operation result.
+    //    so the comparison results in the least significant bits will actually be the most significant for the final operation result.
     //    This means we have to determine which of the comparison results have the least significant bit on, and this is achieved with
     //    the "(x - 1) ^ x" trick. With BMI, this will produce a single blsmsk instruction.
     // 2. Because there is only signed byte comparison until AVX-512, we have to invert byte comparison results whenever signs of the

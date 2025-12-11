@@ -10,9 +10,6 @@ constant boost_dependencies :
     /boost/config//boost_config
     /boost/container_hash//boost_container_hash
     /boost/core//boost_core
-    /boost/integer//boost_integer
-    /boost/move//boost_move
-    /boost/static_assert//boost_static_assert
     /boost/throw_exception//boost_throw_exception ;
 
 project /boost/dynamic_bitset

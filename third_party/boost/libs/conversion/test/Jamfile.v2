@@ -26,6 +26,6 @@ test-suite conversion
   : [ run implicit_cast.cpp ]
     [ compile-fail implicit_cast_fail.cpp ]
     [ run cast_test.cpp ]
-    [ run polymorphic_cast_test.cpp ]
+    [ run polymorphic_cast_test.cpp : : : <library>/boost/smart_ptr//boost_smart_ptr ]
     [ compile-fail implicit_cast_fail2.cpp ]
   ;

@@ -21,7 +21,7 @@ void
 router<T>::
 insert(core::string_view pattern, U&& v)
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::is_same<T, U>::value        ||
         std::is_convertible<U, T>::value ||
         std::is_base_of<T, U>::value);

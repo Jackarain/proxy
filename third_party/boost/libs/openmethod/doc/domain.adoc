@@ -1,0 +1,34 @@
+
+## domain
+
+### Synopsis
+
+Defined in <boost/openmethod/policies/basic_policy.hpp>.
+
+```c++
+namespace boost::openmethod::policies {
+
+template<class Policy>
+struct domain {
+    template<class Class> static vptr_type static_vptr;
+    // unspecified members
+};
+
+}
+```
+
+### Description
+
+`domain` is a registry of classes and methods registered in a _Policy_,
+and their dispatch tables.
+
+### Members
+
+#### static_vptr
+
+```c++
+template<class Class>
+static vptr_type static_vptr;
+```
+
+Contains the pointer to the v-table for _Class_. Set by `initialize`.

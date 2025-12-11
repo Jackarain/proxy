@@ -11,11 +11,11 @@ jobs:
         python-version: [3.7]
 
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
+    - uses: actions/checkout@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
-    - uses: microsoft/setup-msbuild@v1.1
+    - uses: microsoft/setup-msbuild@v2
     - name: setup boost prerequisites
       uses: lukka/run-vcpkg@v6
       with:
@@ -42,8 +42,8 @@ jobs:
     - name: build
       shell: cmd
       run: |
-        faber --builddir=build cxx.name=msvc --with-boost-include=${{ runner.workspace }}/vcpkg/installed/x64-windows/include -j4
+        faber --builddir=build cxx.name=msvc --log=commands --log=output --with-boost-include=${{ runner.workspace }}\vcpkg\installed\x64-windows\include -j4
     - name: test
       shell: cmd
       run: |
-        faber --builddir=build cxx.name=msvc --with-boost-include=${{ runner.workspace }}/vcpkg/installed/x64-windows/include -j4 test.report
+        faber --builddir=build cxx.name=msvc --with-boost-include=${{ runner.workspace }}\vcpkg\installed\x64-windows\include -j4 test.report

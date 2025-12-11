@@ -1460,7 +1460,7 @@ BOOST_LOG_API void text_file_backend::consume(record_view const& rec, string_typ
     (
         m_pImpl->m_File.is_open() &&
         (
-            m_pImpl->m_CharactersWritten + formatted_message.size() >= m_pImpl->m_FileRotationSize ||
+            (m_pImpl->m_CharactersWritten > m_pImpl->m_FileRotationSize || (m_pImpl->m_FileRotationSize - m_pImpl->m_CharactersWritten) < formatted_message.size()) ||
             (!m_pImpl->m_TimeBasedRotation.empty() && m_pImpl->m_TimeBasedRotation())
         )
     )
@@ -1468,8 +1468,7 @@ BOOST_LOG_API void text_file_backend::consume(record_view const& rec, string_typ
         rotate_file();
     }
 
-    const unsigned int last_file_counter = m_pImpl->m_FileCounter - 1u;
-    while (!m_pImpl->m_File.is_open())
+    for (const unsigned int last_file_counter = m_pImpl->m_FileCounter - 1u; !m_pImpl->m_File.is_open();)
     {
         filesystem::path new_file_name;
         if (!use_prev_file_name)
@@ -1528,10 +1527,11 @@ BOOST_LOG_API void text_file_backend::consume(record_view const& rec, string_typ
         m_pImpl->m_IsFirstFile = false;
 
         // Check the file size before invoking the open handler, as it may write more data to the file.
-        // Only do this check if we haven't exhausted the file counter to avoid looping indefinitely.
+        // Only do this check if the file counter is present in the file name and we haven't exhausted it to avoid looping indefinitely.
         m_pImpl->m_CharactersWritten = static_cast< std::streamoff >(m_pImpl->m_File.tellp());
-        if (m_pImpl->m_CharactersWritten > 0 && m_pImpl->m_CharactersWritten + formatted_message.size() >= m_pImpl->m_FileRotationSize &&
-            m_pImpl->m_FileCounter != last_file_counter)
+        if (m_pImpl->m_CharactersWritten > 0 &&
+            (m_pImpl->m_CharactersWritten > m_pImpl->m_FileRotationSize || (m_pImpl->m_FileRotationSize - m_pImpl->m_CharactersWritten) < formatted_message.size()) &&
+            m_pImpl->m_FileNamePatternHasCounter && m_pImpl->m_FileCounter != last_file_counter)
         {
             // Avoid running the close handler, as we haven't run the open handler yet
             struct close_handler_backup_guard

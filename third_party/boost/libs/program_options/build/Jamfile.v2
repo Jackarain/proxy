@@ -1,16 +1,25 @@
 
-project boost/program_options 
-    : source-location ../src 
+constant boost_dependencies_private :
+    /boost/bind//boost_bind
+    /boost/tokenizer//boost_tokenizer
+    ;
+
+project
+    : source-location ../src
+    : common-requirements <include>../include <library>$(boost_dependencies)
+    : requirements <library>$(boost_dependencies_private)
     ;
 
 SOURCES =
-    cmdline config_file options_description parsers variables_map 
+    cmdline config_file options_description parsers variables_map
     value_semantic positional_options utf8_codecvt_facet
     convert winmain split
     ;
 
-boost-lib program_options
+lib boost_program_options
     : $(SOURCES).cpp
     : # See https://svn.boost.org/trac/boost/ticket/5049
       <target-os>hpux,<toolset>gcc:<define>_INCLUDE_STDC__SOURCE_199901
+      <link>shared:<define>BOOST_PROGRAM_OPTIONS_DYN_LINK=1
+      <define>BOOST_PROGRAM_OPTIONS_NO_LIB=1
     ;

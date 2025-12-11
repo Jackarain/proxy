@@ -57,10 +57,10 @@ def process_all( root, boost_root, dst_dir, mode ):
 
 def main( all_modes, src_dir, dst_dir ):
     if len( sys.argv ) < 2:
-        print "\nUsage:\n\t %s <mode> <boost_root> [<source_file>]" % os.path.basename( sys.argv[0] )
-        print "\nPurpose:\n\t updates preprocessed version(s) of the header(s) in \"%s\" directory" % dst_dir
-        print "\nExample:\n\t the following command will re-generate and update all 'apply.hpp' headers:"
-        print "\n\t\t %s all f:\\cvs\\boost apply.cpp" % os.path.basename( sys.argv[0] )
+        print("\nUsage:\n\t %s <mode> <boost_root> [<source_file>]" % os.path.basename( sys.argv[0] ))
+        print("\nPurpose:\n\t updates preprocessed version(s) of the header(s) in \"%s\" directory" % dst_dir)
+        print("\nExample:\n\t the following command will re-generate and update all 'apply.hpp' headers:")
+        print("\n\t\t %s all f:\\cvs\\boost apply.cpp" % os.path.basename( sys.argv[0] ))
         sys.exit( -1 )
 
     if sys.argv[1] == "all":

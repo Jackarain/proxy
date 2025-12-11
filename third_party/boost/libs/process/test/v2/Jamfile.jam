@@ -33,7 +33,6 @@ project : requirements
   <os>NT,<toolset>cw:<library>ws2_32
   <os>NT,<toolset>gcc:<library>ws2_32
   <os>NT,<toolset>gcc:<library>Bcrypt
-  <define>BOOST_PROCESS_V2_SEPARATE_COMPILATION=1
   <library>/boost/test//included
 ;
 

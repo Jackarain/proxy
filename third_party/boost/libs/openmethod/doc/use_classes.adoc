@@ -1,0 +1,58 @@
+
+## use_classes
+
+### Synopsis
+
+Defined in <boost/openmethod/core.hpp>.
+
+```c++
+namespace boost::openmethod {
+
+template<class... Classes, class Policy = BOOST_OPENMETHOD_DEFAULT_REGISTRY>
+struct use_classes {
+    use_classes();
+    ~use_classes();
+};
+
+}
+```
+
+Usage:
+
+```c++
+use_classes<Classes...> some_unique_name; // at file scope
+```
+
+### Description
+
+`use_classes`, instantiated as a static object, registers `Classes` in `Policy`.
+
+Classes potentially involved in a method definition, an overrider, or a method
+call must be registered via `use_classes`. A class may be registered multiple
+times. A class and its direct bases must be listed together in one or more
+instantiations of `use_classes`.
+
+Virtual and multiple inheritance are supported, as long as they don't result in
+a class lattice that contains repeated inheritance.
+
+NOTE: The default value for `Policy` is the value of
+`BOOST_OPENMETHOD_DEFAULT_REGISTRY` when `<boost/openmethod/core.hpp>` is
+included. Subsequently changing it has no retroactive effect.
+
+### Members
+
+#### constructor
+
+```c++
+use_classes();
+```
+
+Registers `Classes` and their inheritance relationships in `Policy`.
+
+#### destructor
+
+```c++
+~use_classes();
+```
+
+Removes `Classes` and their inheritance relationships from `Policy`.

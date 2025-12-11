@@ -1689,14 +1689,14 @@ template <class UnorderedMap> void test_map_transparent_at(UnorderedMap*)
   map.at(0) = 7331;
   BOOST_TEST_EQ(key::count_, key_count);
 
-  BOOST_TEST_THROWS(map.at(4), std::out_of_range)
+  BOOST_TEST_THROWS(map.at(4), std::out_of_range);
   BOOST_TEST_EQ(key::count_, key_count);
 
   UnorderedMap const& m = map;
   BOOST_TEST_EQ(m.at(0), 7331);
   BOOST_TEST_EQ(key::count_, key_count);
 
-  BOOST_TEST_THROWS(m.at(4), std::out_of_range)
+  BOOST_TEST_THROWS(m.at(4), std::out_of_range);
   BOOST_TEST_EQ(key::count_, key_count);
 }
 
@@ -1719,7 +1719,7 @@ template <class UnorderedMap> void test_map_non_transparent_at(UnorderedMap*)
   BOOST_TEST_EQ(key::count_, key_count + 1);
 
   key_count = key::count_;
-  BOOST_TEST_THROWS(map.at(4), std::out_of_range)
+  BOOST_TEST_THROWS(map.at(4), std::out_of_range);
   BOOST_TEST_EQ(key::count_, key_count + 1);
 
   key_count = key::count_;
@@ -1728,7 +1728,7 @@ template <class UnorderedMap> void test_map_non_transparent_at(UnorderedMap*)
   BOOST_TEST_EQ(key::count_, key_count + 1);
 
   key_count = key::count_;
-  BOOST_TEST_THROWS(m.at(4), std::out_of_range)
+  BOOST_TEST_THROWS(m.at(4), std::out_of_range);
   BOOST_TEST_EQ(key::count_, key_count + 1);
 }
 

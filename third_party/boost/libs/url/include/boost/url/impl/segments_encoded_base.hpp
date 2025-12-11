@@ -16,6 +16,9 @@
 
 namespace boost {
 namespace urls {
+namespace detail {
+struct segments_iter_access;
+}
 
 class segments_encoded_base::iterator
 {
@@ -24,6 +27,7 @@ class segments_encoded_base::iterator
     friend class url_base;
     friend class segments_encoded_base;
     friend class segments_encoded_ref;
+    friend struct detail::segments_iter_access;
 
     iterator(detail::path_ref const&) noexcept;
     iterator(detail::path_ref const&, int) noexcept;

@@ -21,7 +21,7 @@ namespace uuids {
 
 //! \brief Given boost::system::system_error is in a module that
 //!        is not header-only, we define our own exception type
-//!        to handle entropy provider errors instead,
+//!        to handle entropy provider errors instead.
 class BOOST_SYMBOL_VISIBLE entropy_error : public std::runtime_error
 {
 public:

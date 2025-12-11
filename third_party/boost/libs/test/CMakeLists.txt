@@ -2,7 +2,7 @@
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
-cmake_minimum_required(VERSION 3.5...3.16)
+cmake_minimum_required(VERSION 3.8...3.16)
 
 project(boost_test VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
@@ -30,60 +30,74 @@ set(_boost_test_dependencies
   Boost::utility
 )
 
-# Compiled targets
+option(BOOST_TEST_HEADERS_ONLY "Boost.Test: Only install headers" OFF)
 
-function(boost_test_add_library name)
+set(_boost_test_libraries "")
 
-  add_library(boost_${name} ${ARGN})
-  add_library(Boost::${name} ALIAS boost_${name})
+if (NOT BOOST_TEST_HEADERS_ONLY)
 
-  target_include_directories(boost_${name} PUBLIC include)
-  target_link_libraries(boost_${name} PUBLIC ${_boost_test_dependencies})
+  # Compiled targets
 
-  target_compile_definitions(boost_${name}
-    PUBLIC BOOST_TEST_NO_LIB
-    # Source files already define BOOST_TEST_SOURCE
-    # PRIVATE BOOST_TEST_SOURCE
+  function(boost_test_add_library name)
+
+    add_library(boost_${name} ${ARGN})
+    add_library(Boost::${name} ALIAS boost_${name})
+
+    target_include_directories(boost_${name} PUBLIC include)
+    target_link_libraries(boost_${name} PUBLIC ${_boost_test_dependencies})
+
+    target_compile_definitions(boost_${name}
+      PUBLIC BOOST_TEST_NO_LIB
+      # Source files already define BOOST_TEST_SOURCE
+      # PRIVATE BOOST_TEST_SOURCE
+    )
+
+    if(WIN32)
+      target_compile_definitions(boost_${name} PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+
+    if(BUILD_SHARED_LIBS)
+      target_compile_definitions(boost_${name} PUBLIC BOOST_TEST_DYN_LINK)
+    else()
+      target_compile_definitions(boost_${name} PUBLIC BOOST_TEST_STATIC_LINK)
+    endif()
+
+  endfunction()
+
+  boost_test_add_library(prg_exec_monitor
+    src/cpp_main.cpp
+    src/debug.cpp
+    src/execution_monitor.cpp
   )
 
-  if(BUILD_SHARED_LIBS)
-    target_compile_definitions(boost_${name} PUBLIC BOOST_TEST_DYN_LINK)
-  else()
-    target_compile_definitions(boost_${name} PUBLIC BOOST_TEST_STATIC_LINK)
-  endif()
+  set(SOURCES
+    src/compiler_log_formatter.cpp
+    src/debug.cpp
+    src/decorator.cpp
+    src/execution_monitor.cpp
+    src/framework.cpp
+    src/junit_log_formatter.cpp
+    src/plain_report_formatter.cpp
+    src/progress_monitor.cpp
+    src/results_collector.cpp
+    src/results_reporter.cpp
+    src/test_framework_init_observer.cpp
+    src/test_tools.cpp
+    src/test_tree.cpp
+    src/unit_test_log.cpp
+    src/unit_test_main.cpp
+    src/unit_test_monitor.cpp
+    src/unit_test_parameters.cpp
+    src/xml_log_formatter.cpp
+    src/xml_report_formatter.cpp
+  )
 
-endfunction()
+  boost_test_add_library(test_exec_monitor STATIC ${SOURCES} src/test_main.cpp)
+  boost_test_add_library(unit_test_framework ${SOURCES})
 
-boost_test_add_library(prg_exec_monitor
-  src/cpp_main.cpp
-  src/debug.cpp
-  src/execution_monitor.cpp
-)
+  set(_boost_test_libraries boost_prg_exec_monitor boost_test_exec_monitor boost_unit_test_framework)
 
-set(SOURCES
-  src/compiler_log_formatter.cpp
-  src/debug.cpp
-  src/decorator.cpp
-  src/execution_monitor.cpp
-  src/framework.cpp
-  src/junit_log_formatter.cpp
-  src/plain_report_formatter.cpp
-  src/progress_monitor.cpp
-  src/results_collector.cpp
-  src/results_reporter.cpp
-  src/test_framework_init_observer.cpp
-  src/test_tools.cpp
-  src/test_tree.cpp
-  src/unit_test_log.cpp
-  src/unit_test_main.cpp
-  src/unit_test_monitor.cpp
-  src/unit_test_parameters.cpp
-  src/xml_log_formatter.cpp
-  src/xml_report_formatter.cpp
-)
-
-boost_test_add_library(test_exec_monitor STATIC ${SOURCES} src/test_main.cpp)
-boost_test_add_library(unit_test_framework ${SOURCES})
+endif()
 
 # Header-only targets
 
@@ -107,7 +121,7 @@ if(BOOST_SUPERPROJECT_VERSION AND NOT CMAKE_VERSION VERSION_LESS 3.13)
 
   boost_install(
     TARGETS
-      boost_prg_exec_monitor boost_test_exec_monitor boost_unit_test_framework
+      ${_boost_test_libraries}
       boost_included_prg_exec_monitor boost_included_test_exec_monitor boost_included_unit_test_framework
     VERSION ${BOOST_SUPERPROJECT_VERSION}
     HEADER_DIRECTORY include

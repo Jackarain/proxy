@@ -81,7 +81,7 @@ appropriate interface of some index of the <code>multi_index_container</code>;
 these operations, however, do have an impact on all other indices as
 well: for instance, insertion through a given index may fail because
 there exists another index which bans the operation in order to preserve
-its invariant (like uniqueness of elements.) This circumstance, rather
+its invariant (like uniqueness of elements). This circumstance, rather
 than being an obstacle, yields much of the power of Boost.MultiIndex:
 equivalent constructions based on manual composition of standard
 containers would have to add a fair amount of code in order to
@@ -103,7 +103,7 @@ six primitives:
 </ul>
 The last two primitives deserve some further explanation: in order to
 guarantee the invariants associated to each index (e.g. some definite
-ordering,) elements of a <code>multi_index_container</code> are not mutable.
+ordering), elements of a <code>multi_index_container</code> are not mutable.
 To overcome this restriction, indices expose member functions
 for replacement and modification which allow for the mutation of elements
 in a controlled fashion. Immutability of elements does not significantly
@@ -120,8 +120,8 @@ These global operations are not directly exposed to the user, but rather
 they are wrapped as appropriate by each index (for instance, ordered indices
 provide a set-like suite of insertion member functions, whereas sequenced
 and random access indices have <code>push_back</code> and <code>push_front</code>
-operations.) Boost.MultiIndex poses no particular conditions on
-the interface of indices, although each index provided satisfy the C++ requirements for
+operations). Boost.MultiIndex poses no particular conditions on
+the interface of indices, although each index provided satisfies the C++ requirements for
 standard containers to the maximum extent possible within the conceptual framework
 of the library.
 </p>
@@ -312,7 +312,7 @@ elements, as described in the <a href="key_extraction.html">key extraction
 reference</a>.
 <ul>
   <li><a href="ord_indices.html">Ordered indices</a> sort the elements
-    on the key and provide fast lookup capabilites.</li>
+    on the key and provide fast lookup capabilities.</li>
   <li><a href="rnk_indices.html">Ranked indices</a> are a variation of
     ordered indices providing extra operations based on 
     <i>rank</i>, the numerical position of an element
@@ -336,7 +336,7 @@ reference</a>.
 <h2><a name="views">Index views</a></h2>
 
 <p>
-The following concept is used by the rearrange facilities of non key-based
+The following concept is used by the rearrange facilities of non-key-based
 indices. Given an index <code>i</code> of type <code>Index</code>, a <i>view
 of <code>i</code></i> is any range [<code>first</code>,<code>last</code>)
 where <code>first</code> and <code>last</code> are input iterators such that

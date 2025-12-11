@@ -1,0 +1,19 @@
+[[msmcommonhpp]]
+
+= Common headers
+
+== msm/common.hpp
+
+This header provides one type, wrap, which is an empty type whose only
+reason to exist is to be cheap to construct, so that it can be used with
+mpl::for_each, as shown in the Metaprogramming book, chapter 9.
+
+template <class Dummy> wrap\{};
+
+[[msmrow_tagshpp]]
+
+== msm/row_tags.hpp
+
+This header contains the row type tags which front-ends can support
+partially or totally. Please see the `Internals` section for a
+description of the different types.

@@ -10,6 +10,7 @@
 
 
 #include <boost/url/detail/config.hpp>
+#include <boost/url/detail/segments_range.hpp>
 #include <boost/url/segments_view.hpp>
 #include <boost/url/parse_path.hpp>
 
@@ -29,6 +30,12 @@ segments_view(
     : segments_base(
         parse_path(s).value(
             BOOST_URL_POS))
+{
+}
+
+segments_view::
+segments_view(iterator first, iterator last) noexcept
+    : segments_base(detail::make_subref(first, last))
 {
 }
 

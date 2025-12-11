@@ -344,6 +344,163 @@ void github_issue_248()
     }
 }
 
+#if BOOST_PARSER_USE_CONCEPTS
+namespace github_issue_268_ {
+    namespace bp = boost::parser;
+    constexpr bp::rule<struct name, std::string_view> name = "name";
+    auto name_def = bp::string_view[bp::lexeme[+(
+        bp::lower | bp::upper | bp::digit | bp::char_("_"))]];
+    BOOST_PARSER_DEFINE_RULES(name)
+    constexpr bp::rule<struct qd_vec, std::vector<double>> qd_vec = "qd_vec";
+    auto qd_vec_def = bp::lit("\"") >>
+                      bp::double_ %
+                          (bp::lit(",") |
+                           (bp::lit("\"") >> bp::lit(",") >> bp::lit("\""))) >>
+                      bp::lit('\"');
+    BOOST_PARSER_DEFINE_RULES(qd_vec)
+    struct lu_table_template_1
+    {
+        std::vector<double> index_1;
+        std::string_view variable_1;
+    };
+    constexpr boost::parser::
+        rule<struct lu_table_template_1_tag, lu_table_template_1>
+            lu_table_template_1_rule = "lu_table_template_1";
+    auto lu_table_template_1_rule_def = (bp::lit("index_1") >> '(' >> qd_vec >>
+                                         ')' >> ';') >>
+                                        (bp::lit("variable_1") >> ':' >> name >>
+                                         ';');
+    BOOST_PARSER_DEFINE_RULES(lu_table_template_1_rule)
+
+    constexpr boost::parser::
+        rule<struct lu_table_template_1_permut_tag, lu_table_template_1>
+            lu_table_template_1_permut_rule = "lu_table_template_1";
+    auto lu_table_template_1_permut_rule_def =
+        (bp::lit("index_1") >> '(' >> qd_vec >> ')' >> ';') ||
+        (bp::lit("variable_1") >> ':' >> name >> ';');
+    BOOST_PARSER_DEFINE_RULES(lu_table_template_1_permut_rule)
+}
+#endif
+
+void github_issue_268()
+{
+#if BOOST_PARSER_USE_CONCEPTS
+    namespace bp = boost::parser;
+    using namespace github_issue_268_;
+    std::string inputstring = "index_1 ( \"1\" ) ; variable_1 : bier;";
+
+    auto const def_result = bp::parse(
+        inputstring, lu_table_template_1_rule_def, bp::blank, bp::trace::off);
+    std::cout << "seq_parser generates this type:\n"
+              << typeid(def_result.value()).name() << std::endl;
+    BOOST_TEST(def_result);
+
+    auto const permut_def_result = bp::parse(
+        inputstring,
+        lu_table_template_1_permut_rule_def,
+        bp::blank,
+        bp::trace::off);
+    std::cout << "permut_parser generates this type:\n"
+              << typeid(permut_def_result.value()).name() << std::endl;
+    BOOST_TEST(permut_def_result);
+
+    auto const result = bp::parse(
+        inputstring, lu_table_template_1_rule, bp::blank, bp::trace::off);
+    std::cout << "seq_parser in rule generates this type:\n"
+              << typeid(result.value()).name() << std::endl;
+    BOOST_TEST(result);
+
+    auto const permut_result = bp::parse(
+        inputstring,
+        lu_table_template_1_permut_rule,
+        bp::blank,
+        bp::trace::off);
+    std::cout << "permut_parser generates this type:\n"
+              << typeid(permut_result.value()).name() << std::endl;
+    BOOST_TEST(permut_result);
+#endif
+}
+
+void github_issue_279()
+{
+    namespace bp = boost::parser;
+
+    {
+        constexpr auto condition_clause =
+            bp::lit(U"while") > bp::lit(U"someexpression") >> bp::attr(true);
+
+        constexpr auto do_statement =
+            bp::lexeme[bp::lit(U"do") >> &bp::ws] > -condition_clause > bp::eol;
+
+        auto const result =
+            bp::parse(U"do\n", do_statement, bp::blank, bp::trace::off);
+        BOOST_TEST(result);
+        std::optional<bool> const & condition = result.value();
+        BOOST_TEST(!condition.has_value());
+    }
+
+    {
+        constexpr auto condition_clause =
+            bp::lit(U"while") > bp::lit(U"someexpression") >> bp::attr(true);
+
+        constexpr auto do_statement_reverse =
+            -condition_clause > bp::lexeme[bp::lit(U"do") >> &bp::ws] > bp::eol;
+
+        auto const result =
+            bp::parse(U"do\n", do_statement_reverse, bp::blank, bp::trace::off);
+        BOOST_TEST(result);
+        std::optional<bool> const & condition = result.value();
+        BOOST_TEST(!condition.has_value());
+    }
+}
+
+namespace github_issue_285_ {
+    namespace bp = boost::parser;
+
+    struct Content
+    {
+        ~Content()
+        {
+            int setbreakpointhere = 0;
+            (void)setbreakpointhere;
+        }
+    };
+    constexpr bp::rule<struct content_tag, std::shared_ptr<Content>> content =
+        "content";
+    constexpr auto content_action = [](auto & ctx) {
+        std::shared_ptr<Content> & result = _val(ctx);
+        result = std::make_shared<Content>();
+    };
+    constexpr auto content_def =
+        (bp::lit(U"content") >> bp::eol)[content_action];
+    BOOST_PARSER_DEFINE_RULES(content);
+}
+
+void github_issue_285()
+{
+    using namespace github_issue_285_;
+    namespace bp = boost::parser;
+
+    constexpr auto prolog = bp::lit(U"prolog") >> bp::eol;
+
+    constexpr auto epilog =
+        bp::no_case[bp::lexeme[bp::lit(U"epi") >> bp::lit(U"log")]] >> bp::eol;
+
+    constexpr auto full_parser = prolog >> content >> epilog;
+
+    std::string teststring =
+        "prolog\n"
+        "content\n"
+        "epilog\n";
+
+    // "content" produces a shared_ptr with the result.
+    // The "epilog" parser must not delete the result.
+
+    auto const result = bp::parse(teststring, full_parser, bp::blank);
+    BOOST_TEST(result);
+    BOOST_TEST(result.value().get() != nullptr);
+}
+
 
 int main()
 {
@@ -356,5 +513,8 @@ int main()
     github_issue_209();
     github_issue_223();
     github_issue_248();
+    github_issue_268();
+    github_issue_279();
+    github_issue_285();
     return boost::report_errors();
 }

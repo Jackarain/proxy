@@ -57,7 +57,7 @@ parse(
                     grammar::delim_rule(']'))));
         if(! rv)
         {
-            // IPv6addrz
+            // IPv6addrz: https://datatracker.ietf.org/doc/html/rfc6874
             it = it0;
             auto rv2 = grammar::parse(
                 it, end,

@@ -14,8 +14,6 @@
 #ifndef __BOOST_SORT_PARALLEL_DETAIL_UTIL_MERGE_VECTOR_HPP
 #define __BOOST_SORT_PARALLEL_DETAIL_UTIL_MERGE_VECTOR_HPP
 
-
-#include <ciso646>
 #include <functional>
 #include <iterator>
 #include <memory>

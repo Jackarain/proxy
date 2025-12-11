@@ -177,7 +177,7 @@ GIL provides two models of ``PixelLocatorConcept`` - a memory-based locator,
 The ``memory_based_2d_locator`` is a locator over planar or interleaved images
 that have their pixels in memory. It takes a model of ``StepIteratorConcept``
 over pixels as a template parameter. (When instantiated with a model of
-``MutableStepIteratorConcept``, it models ``MutablePixelLocatorConcept``).
+``MutableStepIteratorConcept``, it models ``MutablePixelLocatorConcept``.)
 
 .. code-block:: cpp
 
@@ -200,7 +200,7 @@ choices:
 - ``pixel<T,C>*`` - for interleaved images
 - ``planar_pixel_iterator<T*,C>`` - for planar images
 - ``memory_based_step_iterator<pixel<T,C>*>`` - for interleaved images with
-  non-standard step)
+  non-standard step
 - ``memory_based_step_iterator<planar_pixel_iterator<T*,C> >`` - for planar
   images with non-standard step
 
@@ -223,7 +223,7 @@ a 2D pixel locator, as the diagram indicates:
 The ``memory_based_2d_locator`` also offers `cached_location_t` as mechanism
 to store relative locations for optimized repeated access of neighborhood
 pixels. The 2D coordinates of relative locations are cached as 1-dimensional
-raw byte offsets. This provides efficient access if a neighboring locations
+raw byte offsets. This provides efficient access if neighboring locations
 relative to a given locator are read or written frequently (e.g. in filters).
 
 The ``virtual_2d_locator`` is a locator that is instantiated with a function
@@ -299,5 +299,5 @@ row. For fast operations, such as pixel copy, this second check adds about
 GIL overrides some STL algorithms, such as ``std::copy`` and ``std::fill``,
 when invoked with ``iterator_from_2d``-s, to go through each row using their
 base x-iterators, and, if the image has no padding (i.e.
-``iterator_from_2d::is_1d_traversable()`` returns true) to simply iterate
+``iterator_from_2d::is_1d_traversable()`` returns true), to simply iterate
 using the x-iterators directly.

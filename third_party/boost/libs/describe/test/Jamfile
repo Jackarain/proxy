@@ -92,7 +92,7 @@ explicit describe_cxx14 ;
 
 local CXX14 = [ check-target-builds describe_cxx14 describe_cxx14 : : <build>no ] "<toolset>msvc-14.0:<cxxflags>-wd4100" ;
 
-local JSON = <library>/boost/json//boost_json/<warnings>off "<toolset>msvc-14.2:<cxxflags>-wd5104" <undefined-sanitizer>norecover:<link>static ;
+local JSON = <library>/boost/json//boost_json/<warnings>off "<toolset>msvc-14.2:<cxxflags>-wd5104" "<toolset>msvc-14.0:<cxxflags>-wd4996" <undefined-sanitizer>norecover:<link>static ;
 local SERIALIZATION = <library>/boost/serialization//boost_serialization/<warnings>off -$(WERROR) <undefined-sanitizer>norecover:<link>static ;
 
 run ../example/printing_enums_ct.cpp : : : $(CXX14) ;

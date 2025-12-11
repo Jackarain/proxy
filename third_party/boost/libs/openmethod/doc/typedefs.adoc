@@ -1,0 +1,37 @@
+
+## type_id
+
+### Synopsis
+
+Defined in `<boost/openmethod/policies/basic_policy.hpp>`.
+
+```c++
+namespace boost::openmethod {
+
+using type_id = std::uintptr_t;
+
+}
+```
+
+### Description
+
+`type_id` is an unsigned integer type used to identify types. It is wide enough
+to contain a pointer.
+
+## vptr_type
+
+### Synopsis
+
+Defined in `<boost/openmethod/policies/basic_policy.hpp>`.
+
+```c++
+namespace boost::openmethod {
+
+using vptr_type = const /*unspecified*/ *;
+
+}
+```
+
+### Description
+
+`vptr_type` is the type of a pointer to a v-table.

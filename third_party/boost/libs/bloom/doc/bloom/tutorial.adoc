@@ -81,7 +81,7 @@ an array of 2^`N`^ unsigned integrals (e.g. `uint64_t[8]`). In general,
 the wider `Block` is, the better (lower) the resulting FPR, but
 cache locality worsens and performance may suffer as a result.
 
-Note that the total number of of bits set/checked for a
+Note that the total number of bits set/checked for a
 `boost::bloom::filter<T, K, _subfilter_<..., K'>>` is `K * K'`. The
 default configuration `boost::bloom::filter<T, K>` = 
 `boost::bloom::filter<T, K, block<unsigned char, 1>>`, which corresponds to a
@@ -91,7 +91,7 @@ subarray is accessed for each bit set/checked. Consult the
 xref:benchmarks[benchmarks section] to see different tradeoffs between FPR and
 performance.
 
-Once a subfilter have been selected, the parameter `K'` can be tuned
+Once a subfilter has been selected, the parameter `K'` can be tuned
 to its optimum value (minimum FPR) if the number of elements that will be inserted is
 known in advance, as explained in a xref:configuration[dedicated section];
 otherwise, low values of `K'` will generally be faster and preferred to
@@ -229,6 +229,49 @@ We can only clear up the filter entirely:
 f.clear(); // sets all the bits in the array to zero
 -----
 
+== Bulk Operations
+
+In general, the following code:
+
+[source]
+-----
+f.insert(data.begin(), data.end());
+-----
+
+is faster than:
+
+[source]
+-----
+for(const auto& x: data) f.insert(x);
+-----
+
+This is so because the former processes the range in
+chunks of size xref:filter_bulk_insert_size[`bulk_insert_size`]
+using some internal streamlining techniques in order to reduce execution
+time. Similarly, `may_contain` can be executed
+in bulk mode as follows:
+
+[source]
+-----
+f.may_contain(
+  input.begin(), input.end(), // range of elements to do lookup on
+  [](value_type& x, bool b) { // called for each of the elements with their lookup result
+    if(b) std::cout << x << "likely in the filter";
+	else  std::cout << x << "not in the filter";
+  });
+-----
+
+Bulk `may_contain` processes the range in chunks of
+xref:filter_bulk_may_contain_size[`bulk_may_contain_size`] elements. 
+
+Bulk mode can increase performance by a factor of 2x or more, but this is
+very dependent on the filter configuration, the compiler used and the
+environment, and in some cases it results in a net performance loss.
+In general, the speedup is higher for larger array sizes.
+For more information, consult the dedicated
+xref:benchmarks_bulk_operations[benchmark section] and
+https://github.com/boostorg/boost_bloom_benchmarks/tree/bulk-operations[associated repo^].
+
 == Filter Combination
 
 `boost::bloom::filter`+++s+++ can be combined by doing the OR logical operation
@@ -254,7 +297,7 @@ f &= f3; // f and f3 must have exactly the same capacity
 
 For AND combination, be aware that the resulting FPR will be in general
 worse (higher) than if the filter had been constructed from scratch
-by inserting only the commom elements -- don't trust `fpr_for` in this
+by inserting only the common elements -- don't trust `fpr_for` in this
 case.
 
 == Direct Access to the Array
@@ -339,7 +382,7 @@ file):
 (gdb) add-auto-load-safe-path _<path-to-executable>_
 -----
 
-Alternatively to the use of the embedded pretty-printer, you can explicitly
+As an alternative to using the embedded pretty-printer, you can explicitly
 load the link:../../extra/boost_bloom_printers.py[`boost_bloom_printers.py`^]
 script:
 

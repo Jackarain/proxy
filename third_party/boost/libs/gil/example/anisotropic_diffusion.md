@@ -11,7 +11,7 @@ Anisotropic diffusion capabilities in GIL are demonstrated by the program `aniso
 - The fourth parameter is the number of iterations, which *must* be a positive integer
 - The fifth and last parameter is the value of the kappa constant
 
-Note that both the input and the ouput images must be in the PNG format.
+Note that both the input and the output images must be in the PNG format.
 
 ## Specific requirements
 

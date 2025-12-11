@@ -79,6 +79,7 @@ jobs:
         run: |
             sudo apt-get install -y doxygen
             B2_TARGETS=libs/$SELF/doc ci/build.sh
+            find $BOOST_ROOT/libs/$SELF/doc/html
 
   posix:
     defaults:
@@ -109,8 +110,6 @@ jobs:
               compiler: gcc-8,     cxxstd: '11,2a',          os: ubuntu-latest, container: 'ubuntu:20.04', install: 'g++-8-multilib', address-model: '32,64' }
 
           # Linux, clang
-          - { compiler: clang-3.5, cxxstd: '11',             os: ubuntu-latest, container: 'ubuntu:16.04' }
-          - { compiler: clang-3.6, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:16.04' }
           - { compiler: clang-3.7, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:16.04' }
           - { compiler: clang-3.8, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:16.04' }
           - { compiler: clang-3.9, cxxstd: '11,14',          os: ubuntu-latest, container: 'ubuntu:18.04' }
@@ -141,7 +140,7 @@ jobs:
 
           # OSX, clang
           - { name: MacOS w/ clang and sanitizers,
-              compiler: clang,     cxxstd: '11,14,17,20,2b', os: macos-13, ubsan: yes }
+              compiler: clang,     cxxstd: '11,14,17,20,2b', os: macos-15, ubsan: yes }
           # TODO: Iconv issue
           #- { compiler: clang,     cxxstd: '11,14,17,20,2b', os: macos-14 }
 
@@ -440,7 +439,22 @@ jobs:
 
       - name: Setup ICU
         shell: pwsh
-        run: 'Add-Content $Env:BOOST_ROOT/project-config.jam "path-constant ICU_PATH : `"$($pwd.Path)\ICU`" ;"'
+        run: |
+          $icuPath = (Join-Path $pwd "ICU") -replace '\\', '/'
+
+          if (-not (Test-Path $icuPath)) {
+            Write-Error "ICU directory not found at $icuPath"
+            exit 1
+          }
+
+          Get-ChildItem $icuPath | ForEach-Object { Write-Host "  $_" }
+          Write-Host ""
+
+          $jamPath = Join-Path $env:BOOST_ROOT "project-config.jam"
+          Add-Content $jamPath "path-constant ICU_PATH : `"$icuPath`" ;"
+
+          Write-Host "Contents of project-config.jam:"
+          Get-Content $jamPath | ForEach-Object { Write-Host "  $_" }
 
       - name: Run tests (WinAPI, without coverage)
         if: '!matrix.coverage'
@@ -479,8 +493,12 @@ jobs:
       - name: Show config before collecting coverage
         if: matrix.coverage
         run: |
+          type %BOOST_ROOT%\project-config.jam
           set B2_TARGETS=libs/%SELF%/test//show_config --verbose-test
-          ci\build.bat
+          set B2_FLAGS=--debug-configuration
+          ci\build.bat || exit /b 1
+          echo Config log:
+          type %BOOST_ROOT%/bin.v2/config.log
         env:
           B2_TOOLSET: ${{matrix.toolset}}
           B2_CXXSTD: ${{matrix.cxxstd}}

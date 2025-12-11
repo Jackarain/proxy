@@ -19,7 +19,7 @@ target_link_libraries(boost_variant2
     Boost::mp11
 )
 
-if(CMAKE_VERSION VERSION_GREATER 3.18 AND CMAKE_GENERATOR MATCHES "Visual Studio")
+if(NOT CMAKE_VERSION VERSION_LESS 3.19 AND CMAKE_GENERATOR MATCHES "Visual Studio")
 
   file(GLOB_RECURSE boost_variant2_IDEFILES CONFIGURE_DEPENDS include/*.hpp)
   source_group(TREE ${PROJECT_SOURCE_DIR}/include FILES ${boost_variant2_IDEFILES} PREFIX "Header Files")

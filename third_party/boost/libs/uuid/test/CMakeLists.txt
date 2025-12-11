@@ -38,7 +38,7 @@ boost_test(TYPE run SOURCES test_uuid_clock.cpp)
 
 boost_test(TYPE run SOURCES test_nil_generator.cpp)
 boost_test(TYPE run SOURCES test_string_generator.cpp)
-boost_test(TYPE run SOURCES test_random_generator.cpp LINK_LIBRARIES Boost::random Boost::predef)
+boost_test(TYPE run SOURCES test_random_generator.cpp LINK_LIBRARIES Boost::random Boost::predef Boost::move)
 boost_test(TYPE run SOURCES test_random_generator_2.cpp)
 
 boost_test(TYPE run SOURCES test_name_generator.cpp LINK_LIBRARIES Boost::predef)
@@ -81,6 +81,10 @@ boost_test(TYPE run SOURCES test_detail_random_provider.cpp LINK_LIBRARIES Boost
 
 boost_test(TYPE run SOURCES test_serialization.cpp LINK_LIBRARIES Boost::serialization)
 
+boost_test(TYPE run SOURCES test_constants.cpp)
+
 boost_test(TYPE compile SOURCES test_uuid_cx.cpp)
+boost_test(TYPE run SOURCES test_string_generator_cx.cpp)
+boost_test(TYPE run SOURCES test_constants_cx.cpp)
 
 boost_test(TYPE run SOURCES quick.cpp)

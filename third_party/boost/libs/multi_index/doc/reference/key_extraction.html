@@ -776,7 +776,7 @@ lvalue reference to a non <code>const</code>-qualified type.
 <blockquote>
 <b>Requires:</b> <code>ChainedPtr</code> is a <a href="#chained_pointers">chained pointer</a>
 type to <code>Value</code>.<br>
-<b>Returns:</b> <code>PtrToFunction)(y)</code>, where <code>y</code> is the
+<b>Returns:</b> <code>PtrToFunction(y)</code>, where <code>y</code> is the
 object chained-pointed to by <code>x</code>.
 </blockquote>
 
@@ -1233,7 +1233,7 @@ bool operator <b><i>OP</i></b>(<br>
 
 <blockquote>
 <b>Requires:</b> The expressions given below are valid (for the particular
-<code><b><i>OP</i></b></code> considered.)<br>
+<code><b><i>OP</i></b></code> considered).<br>
 <b>Returns:</b> <code>true</code> if and only if
 <blockquote>
 <code>!(x==y)</code> (<code><b><i>OP</i></b></code> is <code>!=</code>),<br>
@@ -2078,7 +2078,7 @@ with respect to <code>composite_key_result&lt;CompositeKey></code>:
 <blockquote>
 <code>tuple&lt;Q0,...,Qj></code>,<br>
 <code>composite_key_result&lt;composite_key&lt;K0,...,Kj> ></code>, with
-<code>Ki::result_type = Qi</code> for all <code>i = 0,...,j</code>.
+<code>Ki::result_type = Qi</code> for all <code>i = 0,...,j</code>,
 </blockquote>
 provided that each <code>Qi</code> is either <code>Ti</code> or a
 <a href="hash_indices.html#lookup"><code>Compatible Key</code></a>
@@ -2097,9 +2097,9 @@ is lexicographical. Also, the following types are
 <code>composite_key_compare</code> with respect to
 <code>composite_key_result&lt;CompositeKey></code>:
 <blockquote>
-<code>tuple&lt;Q0,...,Qk></code>, <code>k &lt;= n</code><br>
+<code>tuple&lt;Q0,...,Qk></code>, <code>k &lt;= n</code>,<br>
 <code>composite_key_result&lt;composite_key&lt;K0,...,Kk> ></code>, with
-<code>Ki::result_type = Qi</code> for all <code>i = 0,...,k</code>.
+<code>Ki::result_type = Qi</code> for all <code>i = 0,...,k</code>,
 </blockquote>
 provided that 
 <ul>
@@ -2214,7 +2214,7 @@ and engenders undefined behavior otherwise. When passed two or more arguments,
 with:
 <ul>
   <li><code>KeyFromValuei</code> = <code>key&lt;Keyi&gt;</code>
-    for all <code>i = 0,...,n</code>
+    for all <code>i = 0,...,n</code>,
   </li>
   <li><code>Value</code> = <code>std::decay_t&lt;Value0&gt;</code> &#8855;
     <code>std::decay_t&lt;Value1&gt;</code>  &#8855; &middot;&middot;&middot;  &#8855;

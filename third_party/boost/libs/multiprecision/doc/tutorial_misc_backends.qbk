@@ -14,6 +14,5 @@ Backend types listed in this section are predominantly designed to aid debugging
 
 [include tutorial_logged_adaptor.qbk]
 [include tutorial_debug_adaptor.qbk]
-[include tutorial_visualizers.qbk]
 
 [endsect]  [/section:misc Miscellaneous Number Types.]

@@ -62,7 +62,7 @@ void expected_results()
        ".*",                    // platform
        ".*cpp_double_double.*", // test type(s)
        ".*(JN|j).*|.*Tricky.*", // test data group
-       ".*", 100000, 100000);   // test function
+       ".*", 100000, 50000);    // test function
    add_expected_result(
        ".*",                // compiler
        ".*",                // stdlib
@@ -84,13 +84,6 @@ void expected_results()
        ".*cpp_bin_float.*",     // test type(s)
        ".*(JN|j).*|.*Tricky.*", // test data group
        ".*", 500000, 200000);   // test function
-   add_expected_result(
-       ".*",                    // compiler
-       ".*",                    // stdlib
-       ".*",                    // platform
-       ".*cpp_double_double.*", // test type(s)
-       ".*(JN|j).*|.*Tricky.*", // test data group
-       ".*", 24000, 10000);     // test function
    add_expected_result(
        ".*",                    // compiler
        ".*",                    // stdlib

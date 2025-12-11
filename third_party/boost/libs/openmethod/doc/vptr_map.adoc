@@ -1,0 +1,56 @@
+
+## vptr_map
+
+### Synopsis
+
+```c++
+namespace boost::openmethod::policies {
+
+### Synopsis
+
+template<class Policy, class MapAdaptor = mp11::mp_quote<std::unordered_map>>
+class vptr_map : public extern_vptr {
+  public:
+    template<typename ForwardIterator>
+    static auto register_vptrs(ForwardIterator first, ForwardIterator last) -> void;
+
+    template<class Class>
+    static auto dynamic_vptr(const Class& arg) -> const vptr_type&;
+};
+
+}
+```
+
+### Description
+
+`vptr_map` is an implementation of `external_vptr that stores the pointers to
+the v-tables in a map. If `Policy` contains `indirect_vptr`, a level of
+indirection is added, making the policy usable in presence of dynamic loading.
+
+`Policy` is the policy containing the policy.
+
+`MapAdaptor` is a Boost.Mp11 quoted metafunction that returns a map type.
+
+### Members
+
+#### register_vptrs
+
+```c++
+template<typename ForwardIterator>
+auto register_vptrs(ForwardIterator first, ForwardIterator last) -> void;
+```
+
+Stores the pointers to v-tables in a _Map_.
+
+#### dynamic_vptr
+
+```c++
+template<class Class>
+auto dynamic_vptr(const Class& object) -> const vptr_type&;
+```
+
+Returns a pointer to the v-table for `object` (by reference).
+
+If _Policy_ contains the `runtime_checks` policy, checks if _Class_ is
+registered. If it is not, and _Policy_ contains a `error_handler` policy, calls
+its `error` function; then calls `abort`.

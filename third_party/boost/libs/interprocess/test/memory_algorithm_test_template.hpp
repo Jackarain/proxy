@@ -532,7 +532,9 @@ bool test_clear_free_memory(Allocator &a)
       for(std::size_t j = 0; j < memsize; ++j){
          if(static_cast<char*>((char*)ptr)[j]){
             std::cout << "Zero memory test failed. in buffer " << i
-                      << " byte " << j << " first address " << (void*) first_addr << " offset " << ((char*)ptr+j) - (char*)first_addr << " memsize: " << memsize << std::endl;
+                      << " byte " << j << " first address " << (const void*) first_addr
+                      << " offset " << ((const char*)ptr+j) - (const char*)first_addr
+                      << " memsize: " << memsize << std::endl;
             return false;
          }
       }

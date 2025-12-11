@@ -8,6 +8,7 @@
 #define BOOST_REDIS_LOGGER_HPP
 
 #include <functional>
+#include <string>
 #include <string_view>
 
 namespace boost::redis {
@@ -91,6 +92,15 @@ struct logger {
     */
    std::function<void(level, std::string_view)> fn;
 };
+
+namespace detail {
+
+struct buffered_logger {
+   logger lgr;
+   std::string buffer{};
+};
+
+}  // namespace detail
 
 }  // namespace boost::redis
 

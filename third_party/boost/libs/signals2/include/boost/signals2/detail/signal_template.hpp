@@ -775,7 +775,7 @@ namespace boost
     private:
       // explicit private copy constructor to avoid compiler trying to do implicit conversions to signal
       explicit BOOST_SIGNALS2_SIGNAL_CLASS_NAME(BOOST_SIGNALS2_NUM_ARGS)(
-        const BOOST_SIGNALS2_SIGNAL_CLASS_NAME(BOOST_SIGNALS2_NUM_ARGS) & other) BOOST_NOEXCEPT
+        const BOOST_SIGNALS2_SIGNAL_CLASS_NAME(BOOST_SIGNALS2_NUM_ARGS) &) BOOST_NOEXCEPT
       {
           // noncopyable
           BOOST_ASSERT(false);

@@ -19,7 +19,7 @@ to go beyond what the library offers:
 * Create new custom containers for other schemes
 * Incorporate the parsing of URLs in an enclosing grammar
 * Parse https://tools.ietf.org/html/rfc3986[rfc3986,window=blank_] elements in non-URL contexts
-  (cpp:authority_view[] is an example of this).
+  (cpp:authority_view[] is an example of this)
 * Define new ABNF rules used to parse non-URL strings
 
 To enable these use-cases, the library provides a suite of general

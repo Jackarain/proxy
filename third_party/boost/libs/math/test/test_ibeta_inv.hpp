@@ -307,7 +307,7 @@ void test_spots(T)
       BOOST_MATH_CHECK_THROW(::boost::math::ibeta_inv(static_cast<T>(2.125), -n, static_cast<T>(0.125)), std::domain_error);
       BOOST_MATH_CHECK_THROW(::boost::math::ibeta_inv(static_cast<T>(2.125), static_cast<T>(1.125), -n), std::domain_error);
    }
-   #ifndef SYCL_LANGUAGE_VERSION
+   #ifndef BOOST_MATH_ENABLE_SYCL
    if (boost::math::detail::has_denorm_now<T>())
    {
       T m = std::numeric_limits<T>::denorm_min();

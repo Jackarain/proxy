@@ -55,7 +55,7 @@ The tables and exposition which follow describe the available observers and modi
 
 == Scheme
 
-The scheme is represented as a case-insensitive string, along with an enumeration constant which acts as a numeric indentifier when the string matches one of the well-known schemes: http, https, ws, wss, file, and ftp.
+The scheme is represented as a case-insensitive string, along with an enumeration constant which acts as a numeric identifier when the string matches one of the well-known schemes: http, https, ws, wss, file, and ftp.
 Characters in the scheme are never escaped; only letters and numbers are allowed, and the first character must be a letter.
 
 These members are used to inspect and modify the scheme:
@@ -611,7 +611,7 @@ cpp:host_type::ipv6[], or
 cpp:host_type::ipvfuture[]
 respectively. Otherwise, the host type is
 cpp:host_type::name[], the
-string may contain percent escapes, and and
+string may contain percent escapes, and
 any reserved characters are percent-escaped automatically.
 
 // Row 9, Column 1

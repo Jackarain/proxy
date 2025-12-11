@@ -142,7 +142,7 @@ protected:
             return begin;
 
         size_t input_count = std::distance( begin, end );
-        input_count        = ( std::min )( input_count, avail );
+        input_count        = (std::min)( input_count, avail );
 
         size_t new_write_index = write_index + input_count;
 
@@ -229,7 +229,7 @@ protected:
         if ( avail == 0 )
             return 0;
 
-        output_count = ( std::min )( output_count, avail );
+        output_count = (std::min)( output_count, avail );
 
         size_t new_read_index = read_index + output_count;
 
@@ -823,7 +823,7 @@ public:
         return push( t.data(), t.size() );
     }
 
-    /** Pushes as many objects from the range [begin, end) as there is space .
+    /** Pushes as many objects from the range [begin, end) as there is space.
      *
      * \pre only one thread is allowed to push data to the spsc_queue
      * \return iterator to the first element, which has not been pushed

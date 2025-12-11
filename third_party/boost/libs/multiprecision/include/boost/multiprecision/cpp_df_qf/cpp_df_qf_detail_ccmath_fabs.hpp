@@ -14,7 +14,7 @@
 namespace boost { namespace multiprecision { namespace backends { namespace cpp_df_qf_detail { namespace ccmath {
 
 template <class Real>
-constexpr auto fabs(Real x) -> Real
+constexpr auto fabs(Real x) noexcept -> Real
 {
    return   (cpp_df_qf_detail::ccmath::isnan(x)) ? cpp_df_qf_detail::ccmath::numeric_limits<Real>::quiet_NaN()
           : (x == static_cast<Real>(-0))         ? static_cast<Real>(0)

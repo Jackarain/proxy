@@ -15,10 +15,11 @@
 #include "lexical_cast_old.hpp"
 #endif
 
+#include <type_traits>
+
 #include <boost/cstdint.hpp>
 #include <boost/core/lightweight_test.hpp>
-#include <boost/type_traits/is_same.hpp>
-#include <boost/type_traits/is_signed.hpp>
+#include <boost/lexical_cast/detail/type_traits.hpp>
 
 #ifndef BOOST_TEST_CLOSE_FRACTION
 // Naiive, but works for most tests in this file 
@@ -303,7 +304,7 @@ void test_float_typess_for_overflows()
     BOOST_TEST_THROWS(lexical_cast<test_t>("9"+s_max_value), bad_lexical_cast);
 #endif
 
-    if ( is_same<test_t,float>::value )
+    if ( std::is_same<test_t,float>::value )
     {
         BOOST_TEST_THROWS(lexical_cast<test_t>( (std::numeric_limits<double>::max)() ), bad_lexical_cast);
         BOOST_TEST(
@@ -549,7 +550,7 @@ void test_conversion_integral_float()
     BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(8.0)), 8);
     BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(16.0)), 16);
 
-    if (boost::is_signed<Integral>::value) {
+    if (boost::detail::lcast::is_signed<Integral>::value) {
         BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(-1.0)), -1);
         BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(-8.0)), -8);
         BOOST_TEST_EQ(lexical_cast<Integral>(static_cast<Float>(-16.0)), -16);
@@ -568,6 +569,11 @@ void test_conversion_integral_float()
     BOOST_TEST_THROWS(lexical_cast<Integral>((std::numeric_limits<Float>::max)()), bad_lexical_cast);
     BOOST_TEST_THROWS(lexical_cast<Integral>((std::numeric_limits<Float>::epsilon)()), bad_lexical_cast);
     BOOST_TEST_THROWS(lexical_cast<Integral>((std::numeric_limits<Float>::lowest)()), bad_lexical_cast);
+
+    BOOST_TEST_THROWS(lexical_cast<Integral>(std::numeric_limits<Float>::quiet_NaN()), bad_lexical_cast);
+    BOOST_TEST_THROWS(lexical_cast<Integral>(-std::numeric_limits<Float>::quiet_NaN()), bad_lexical_cast);
+    BOOST_TEST_THROWS(lexical_cast<Integral>(std::numeric_limits<Float>::infinity()), bad_lexical_cast);
+    BOOST_TEST_THROWS(lexical_cast<Integral>(-std::numeric_limits<Float>::infinity()), bad_lexical_cast);
 }
 
 

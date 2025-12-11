@@ -54,7 +54,7 @@ enum class log_level : uint8_t {
  * implicit strand, none of the functions will be invoked concurrently.
  * 
  * \par Thread safety
- * Distinct objects: usafe. \n
+ * Distinct objects: safe. \n
  * Shared objects: unsafe. \n
  * This class is <b>not thread-safe</b>.
 */
@@ -198,6 +198,22 @@ public:
         std::clog << std::endl;
     }
 
+    /**
+     * \brief Outputs the error message when it occurs at the transport layer
+     * read or write operations.
+     *
+     * \param ec The error code returned by the `async_read_some` or
+     * `async_write_some` operation on the underlying \__StreamType\__ stream.
+     */
+    void at_transport_error(error_code ec) {
+        if (_level < log_level::info)
+            return;
+
+        output_prefix();
+        std::clog
+            << "transport layer error: " << ec.message() << "." << std::endl;
+    }
+
 private:
     void output_prefix() {
         std::clog << prefix << " ";
@@ -251,6 +267,7 @@ static_assert(has_at_tls_handshake<logger>);
 static_assert(has_at_ws_handshake<logger>);
 static_assert(has_at_connack<logger>);
 static_assert(has_at_disconnect<logger>);
+static_assert(has_at_transport_error<logger>);
 
 } // end namespace boost::mqtt5
 

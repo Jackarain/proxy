@@ -93,7 +93,7 @@ lock-freedom:
 
 [variablelist
     [[Atomic Operations]
-     [Some architectures do not provide the necessary atomic operations in natively in hardware. If this is not
+     [Some architectures do not provide the necessary atomic operations natively in hardware. If this is not
       the case, they are emulated in software using spinlocks, which by itself is blocking.
      ]
     ]

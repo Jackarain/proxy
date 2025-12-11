@@ -61,8 +61,8 @@ void test_by_char(const std::locale& l, locale_t lreal)
 
         TEST(ss << 1045.45);
         double n;
-        TEST(ss >> n);
-        TEST_EQ(n, 1045.45);
+        if TEST(ss >> n)
+            TEST_EQ(n, 1045.45);
         TEST_EQ(ss.str(), ascii_to<CharType>("1045.45"));
     }
 
@@ -74,8 +74,8 @@ void test_by_char(const std::locale& l, locale_t lreal)
         ss << as::number;
         TEST(ss << 1045.45);
         double n;
-        TEST(ss >> n);
-        TEST_EQ(n, 1045.45);
+        if TEST(ss >> n)
+            TEST_EQ(n, 1045.45);
 
         if(std::use_facet<boost::locale::info>(l).country() == "US")
             TEST_EQ(ss.str(), from_narrow<CharType>("1,045.45", lreal));

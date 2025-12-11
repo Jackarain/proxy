@@ -161,6 +161,6 @@ from the source view:
 
 (The actual color convert view transformation is slightly more
 complicated, as it takes an optional color conversion object, which
-allows users to specify their own color conversion methods). See the
+allows users to specify their own color conversion methods.) See the
 GIL tutorial for an example of creating a virtual image view that
 defines the Mandelbrot set.

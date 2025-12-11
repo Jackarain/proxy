@@ -11,6 +11,7 @@
 #include <boost/url/param.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/core/detail/static_assert.hpp>
 #include <boost/optional.hpp>
 
 #include "test_suite.hpp"
@@ -20,32 +21,32 @@ namespace urls {
 
 struct param_test
 {
-    BOOST_STATIC_ASSERT(std::is_copy_constructible<param>::value);
-    BOOST_STATIC_ASSERT(std::is_copy_assignable<param>::value);
-    BOOST_STATIC_ASSERT(std::is_move_constructible<param>::value);
-    BOOST_STATIC_ASSERT(std::is_move_assignable<param>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_copy_constructible<param>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_copy_assignable<param>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_move_constructible<param>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_move_assignable<param>::value);
 
-    BOOST_STATIC_ASSERT(std::is_copy_constructible<param_view>::value);
-    BOOST_STATIC_ASSERT(std::is_copy_assignable<param_view>::value);
-    BOOST_STATIC_ASSERT(std::is_move_constructible<param_view>::value);
-    BOOST_STATIC_ASSERT(std::is_move_assignable<param_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_copy_constructible<param_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_copy_assignable<param_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_move_constructible<param_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_move_assignable<param_view>::value);
 
-    BOOST_STATIC_ASSERT(std::is_copy_constructible<param_pct_view>::value);
-    BOOST_STATIC_ASSERT(std::is_copy_assignable<param_pct_view>::value);
-    BOOST_STATIC_ASSERT(std::is_move_constructible<param_pct_view>::value);
-    BOOST_STATIC_ASSERT(std::is_move_assignable<param_pct_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_copy_constructible<param_pct_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_copy_assignable<param_pct_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_move_constructible<param_pct_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_move_assignable<param_pct_view>::value);
 
-    BOOST_STATIC_ASSERT(std::is_constructible<param_view, param>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_constructible<param_view, param>::value);
 
     // explicit, expensive
-    BOOST_STATIC_ASSERT(std::is_constructible<param, param_pct_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_constructible<param, param_pct_view>::value);
 
     // cheap, loses pct-validation
-    BOOST_STATIC_ASSERT(std::is_constructible<param_view, param_pct_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_constructible<param_view, param_pct_view>::value);
 
     // expensive constructions
-    BOOST_STATIC_ASSERT(std::is_constructible<param_pct_view, param>::value);
-    BOOST_STATIC_ASSERT(std::is_constructible<param_pct_view, param_view>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_constructible<param_pct_view, param>::value);
+    BOOST_CORE_STATIC_ASSERT(std::is_constructible<param_pct_view, param_view>::value);
 
     void
     testParam()

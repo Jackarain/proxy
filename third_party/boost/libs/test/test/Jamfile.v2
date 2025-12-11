@@ -12,13 +12,15 @@ import property-set ;
 import regex ;
 import "class" : new ;
 
-import ../../config/checks/config : requires ;
+import config : requires ;
 
-project boost/test-tests
+project
     : requirements
+        <library>/boost/test//boost_test
     ;
 
-import ../../predef/tools/check/predef
+import-search /boost/predef/tools/check ;
+import predef
     : check require
     : predef-check predef-require ;
 
@@ -102,6 +104,7 @@ rule docs-example-as-test ( test-file )
               :
               :
               : $(requirements_documentation) # requirements
+                <library>/boost/rational//boost_rational
             ] ;
 }
 
@@ -141,11 +144,11 @@ test-suite "usage-variants-ts"
 
 test-suite "framework-ts"
 :
-  # [ boost.test-self-test run : framework-ts : result-report-test : : baseline-outputs/result-report-test.pattern baseline-outputs/result_report_test.pattern.default_behaviour ]
-  [ boost.test-self-test run : framework-ts : log-formatter-test : : baseline-outputs/log-formatter-context-test.pattern baseline-outputs/log-formatter-test.pattern baseline-outputs/log-formatter-test.pattern.junit ] # should be ordered alphabetically
+  # [ boost.test-self-test run : framework-ts : result-report-test : : baseline-outputs/result-report-test.pattern baseline-outputs/result_report_test.pattern.default_behaviour : : : : <library>/boost/lexical_cast//boost_lexical_cast ]
+  [ boost.test-self-test run : framework-ts : log-formatter-test : : baseline-outputs/log-formatter-context-test.pattern baseline-outputs/log-formatter-test.pattern baseline-outputs/log-formatter-test.pattern.junit : : : : <library>/boost/lexical_cast//boost_lexical_cast ] # should be ordered alphabetically
   [ boost.test-self-test run : framework-ts : run-by-name-or-label-test ]
   [ boost.test-self-test run : framework-ts : version-uses-module-name : included ]
-  [ boost.test-self-test run : framework-ts : test-macro-global-fixture : : baseline-outputs/global-fixtures-test.pattern ]
+  [ boost.test-self-test run : framework-ts : test-macro-global-fixture : : baseline-outputs/global-fixtures-test.pattern : : : : <library>/boost/lexical_cast//boost_lexical_cast ]
   [ boost.test-self-test run : framework-ts : message-in-datatestcase-test : : baseline-outputs/messages-in-datasets-test.pattern : : : : $(requirements_datasets) ]
   [ boost.test-self-test run : framework-ts : decorators-datatestcase-test : : : : : : $(requirements_datasets) ]
   [ compile-fail framework-ts/master-test-suite-non-copyable-test.cpp ../build//included ]
@@ -167,7 +170,7 @@ test-suite "writing-test-ts"
   [ boost.test-self-test run : writing-test-ts : collection-comparison-test : : : : : : $(requirements_boost_test_full_support)  [ requires cxx11_unified_initialization_syntax ] ] # required by the test content
   [ boost.test-self-test run : writing-test-ts : dont_print_log_value-test : : : : : : $(requirements_datasets) ]
   [ boost.test-self-test run : writing-test-ts : fp-comparisons-test : : : : : : $(requirements_boost_test_full_support) ]
-  [ boost.test-self-test run : writing-test-ts : fp-multiprecision-comparison-test : : : : : : $(requirements_boost_test_full_support) [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ] ]
+  [ boost.test-self-test run : writing-test-ts : fp-multiprecision-comparison-test : : : : : : $(requirements_boost_test_full_support) [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ] <library>/boost/multiprecision//boost_multiprecision ]
   [ boost.test-self-test run : writing-test-ts : fp-no-comparison-for-incomplete-types-test ]
   [ boost.test-self-test run : writing-test-ts : fp-relational-operator ]
   [ boost.test-self-test run : writing-test-ts : output_test_stream-test ]
@@ -337,19 +340,19 @@ rule boost.test-smoke-ts-logger ( test-name-prefix : logger ? : log_or_report ? 
    return $(to-return) ;
 }
 
-exe smoke-ts-included : smoke-ts/basic-smoke-test.cpp
+alias smoke-ts-included : smoke-ts/basic-smoke-test.cpp
                       : $(requirements_datasets) ;
 
-exe smoke-ts-included-2 : smoke-ts/basic-smoke-test2.cpp ;
+alias smoke-ts-included-2 : smoke-ts/basic-smoke-test2.cpp ;
 
-exe smoke-ts-included-3 : smoke-ts/basic-smoke-test3.cpp ;
+alias smoke-ts-included-3 : smoke-ts/basic-smoke-test3.cpp ;
 
 # for template test case filtering from the command line
-exe smoke-ts-included-4 : smoke-ts/basic-smoke-test4.cpp ;
+alias smoke-ts-included-4 : smoke-ts/basic-smoke-test4.cpp ;
 
-exe check-streams-on-exit : framework-ts/check-streams-on-exit.cpp ;
+alias check-streams-on-exit : framework-ts/check-streams-on-exit.cpp ;
 
-exe dataset-master-test-suite-accessible-test : test-organization-ts/dataset-master-test-suite-accessible-test.cpp
+alias dataset-master-test-suite-accessible-test : test-organization-ts/dataset-master-test-suite-accessible-test.cpp
                                               : $(requirements_datasets) ;
 
 alias "smoke-ts"
@@ -435,12 +438,12 @@ alias "smoke-ts"
 [ run smoke-ts-included-4 : \"--run_test=some_suite/test<my_struct<float_ float>>,test<my_struct<char_ char>>\" \"--run_test=test<my_struct<int_ int>>\" : : : cla-template-test-case-sanity-15 ]
 ;
 
-exe custom-command-line-binary-1 : ../doc/examples/runtime-configuration_1.run-fail.cpp ;
-exe custom-command-line-binary-2 : ../doc/examples/runtime-configuration_2.run-fail.cpp
+alias custom-command-line-binary-1 : ../doc/examples/runtime-configuration_1.run-fail.cpp ;
+alias custom-command-line-binary-2 : ../doc/examples/runtime-configuration_2.run-fail.cpp
                                  : $(requirements_boost_test_full_support) ;
-exe custom-command-line-binary-3 : ../doc/examples/runtime-configuration_3.run-fail.cpp
+alias custom-command-line-binary-3 : ../doc/examples/runtime-configuration_3.run-fail.cpp
                                  : $(requirements_boost_test_full_support) ;
-exe custom-command-line-binary-4 : ../doc/examples/runtime-configuration_4.run-fail.cpp
+alias custom-command-line-binary-4 : ../doc/examples/runtime-configuration_4.run-fail.cpp
                                  : $(requirements_datasets) [ requires cxx11_trailing_result_types cxx11_auto_declarations ] $(l_gcc_c11_rvalue_full_support) ;
 
 alias "custom-command-line-ts"

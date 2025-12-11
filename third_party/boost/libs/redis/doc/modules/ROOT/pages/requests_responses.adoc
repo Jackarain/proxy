@@ -37,7 +37,7 @@ req.push_range("HSET", "key", map);
 
 Sending a request to Redis is performed by
 xref:reference:boost/redis/basic_connection/async_exec-02.adoc[`connection::async_exec`]
-as already stated. Requests accept a xref:reference:boost/redis/request/config[`boost::redis::request::config`]
+as already stated. Requests accept a xref:reference:boost/redis/request/config.adoc[`boost::redis::request::config`]
 object when constructed that dictates how requests are handled in situations like
 reconnection. The reader is advised to read it carefully.
 

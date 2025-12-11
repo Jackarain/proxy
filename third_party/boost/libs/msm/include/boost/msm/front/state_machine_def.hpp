@@ -21,6 +21,7 @@
 #include <boost/msm/front/states.hpp>
 #include <boost/msm/front/completion_event.hpp>
 #include <boost/msm/front/common_states.hpp>
+#include <boost/msm/front/history_policies.hpp>
 
 namespace boost { namespace msm { namespace front
 {
@@ -29,6 +30,10 @@ template<class Derived,class BaseState = default_base_state>
 struct state_machine_def :  public boost::msm::front::detail::state_base<BaseState>
 {
     // tags
+    struct internal
+    {
+        typedef detail::composite_state_tag          tag;
+    };
     // default: no flag
     typedef ::boost::fusion::vector0<>               flag_list;
     typedef ::boost::fusion::vector0<>               internal_flag_list;
@@ -36,8 +41,11 @@ struct state_machine_def :  public boost::msm::front::detail::state_base<BaseSta
     typedef ::boost::fusion::vector0<>               deferred_events;
     // customization (message queue, exceptions)
     typedef ::boost::fusion::vector0<>               configuration;
+    // history policy (required in the front-end for backmp11)
+    typedef no_history                               history;
 
-    typedef BaseState                             BaseAllStates;
+    typedef BaseState                                BaseAllStates;
+
     template<
         typename T1
         , class Event

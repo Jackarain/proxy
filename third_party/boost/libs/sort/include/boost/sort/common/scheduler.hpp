@@ -14,7 +14,6 @@
 #ifndef __BOOST_SORT_COMMON_SCHEDULER_HPP
 #define __BOOST_SORT_COMMON_SCHEDULER_HPP
 
-#include <ciso646>
 #include <scoped_allocator>
 #include <utility>
 #include <vector>
@@ -232,7 +231,7 @@ struct scheduler
         if (nelem == 0) return false;
         key_t th_id = std::this_thread::get_id();
         it_map itmp = mp.find(th_id);
-        if (itmp != mp.end() and not itmp->second.empty())
+        if (itmp != mp.end() && ! itmp->second.empty())
         {
             f = std::move(itmp->second.back());
             itmp->second.pop_back();

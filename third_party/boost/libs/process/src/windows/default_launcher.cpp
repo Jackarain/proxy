@@ -24,54 +24,72 @@ namespace windows
     if (ws.empty())
       return 2u; // just quotes
 
-    constexpr static auto space = L' ';
     constexpr static auto quote = L'"';
+    const auto needs_quotes = ws.find_first_of(L" \t") != basic_string_view<wchar_t>::npos;
 
-    const auto has_space = ws.find(space) != basic_string_view<wchar_t>::npos;
-    const auto quoted = (ws.front() == quote) && (ws.back() == quote);
-    const auto needs_escape = has_space && !quoted ;
-
-    if (!needs_escape)
-      return ws.size();
-    else
-      return ws.size() + std::count(ws.begin(), ws.end(), quote) + 2u;
+    std::size_t needed_escapes = 0u;
+    for (auto itr = ws.begin(); itr != ws.end(); itr ++)
+    {
+      if (*itr == quote)
+        needed_escapes++;
+      else if (*itr == L'\\')
+      {
+        auto nx = std::next(itr);
+        if (nx != ws.end() && *nx == L'"')
+          needed_escapes ++;
+        else if (nx == ws.end())
+          needed_escapes ++;      
+      }
+    }
+    
+    return ws.size() + needed_escapes + (needs_quotes ? 2u : 0u);
   }
 
 
   std::size_t default_launcher::escape_argv_string(wchar_t * itr, std::size_t max_size, 
                                         basic_string_view<wchar_t> ws)
   { 
-    const auto sz = escaped_argv_length(ws);
+    constexpr static auto quote = L'"';
+    const auto needs_quotes = ws.find_first_of(L" \t") != basic_string_view<wchar_t>::npos;
+    const auto needed_escapes = std::count(ws.begin(), ws.end(), quote);
+    
+    const auto sz = ws.size() + needed_escapes + (needs_quotes ? 2u : 0u);
+    
     if (sz > max_size)
       return 0u;
+
     if (ws.empty())      
     {
-      itr[0] = L'"';
-      itr[1] = L'"';
+      itr[0] = quote;
+      itr[1] = quote;
       return 2u;
     }
 
-    const auto has_space = ws.find(L' ') != basic_string_view<wchar_t>::npos;
-    const auto quoted = (ws.front() == L'"') && (ws.back() ==  L'"');
-    const auto needs_escape = has_space && !quoted;
-
-    if (!needs_escape)
-      return std::copy(ws.begin(), ws.end(), itr) - itr;
-
-    if (sz < (2u + ws.size()))
-      return 0u;
-      
     const auto end = itr + sz; 
     const auto begin = itr;
-    *(itr ++) = L'"';
-    for (auto wc : ws)
+    if (needs_quotes)
+      *(itr++) = quote;
+
+    for (auto it = ws.begin(); it != ws.end(); it ++)
     {
-      if (wc == L'"')
+      if (*it == quote) // makes it \"
         *(itr++) = L'\\';
-      *(itr++) = wc;
+        
+      if (*it == L'\\') // \" needs to become \\\"
+      {
+        auto nx = std::next(it);
+        if (nx != ws.end() && *nx == L'"')
+          *(itr++) = L'\\';
+        else if (nx == ws.end())
+          *(itr++) = L'\\';
+
+      }
+
+      *(itr++) = *it;
     }
 
-    *(itr ++) = L'"';
+    if (needs_quotes)
+      *(itr++) = quote;
     return itr - begin;
   }
 
@@ -108,9 +126,13 @@ namespace windows
     auto tl = get_thread_attribute_list(ec);
     if (ec)
       return;
+    
+    auto itr  = std::unique(inherited_handles.begin(), inherited_handles.end());
+    auto size = std::distance(inherited_handles.begin(), itr);
+      
     if (!::UpdateProcThreadAttribute(
         tl, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
-        inherited_handles.data(), inherited_handles.size() * sizeof(HANDLE), nullptr, nullptr))
+        inherited_handles.data(), size * sizeof(HANDLE), nullptr, nullptr))
       BOOST_PROCESS_V2_ASSIGN_LAST_ERROR(ec);
   }
 
@@ -118,3 +140,4 @@ namespace windows
 BOOST_PROCESS_V2_END_NAMESPACE
 
 #endif
+

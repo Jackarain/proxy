@@ -21,14 +21,14 @@ can be displayed in your debugger of choice:
 using mp_t = boost::multiprecision::debug_adaptor_t<boost::multiprecision::mpfr_float>;
 
 /*`
-Our first example will investigate calculating the Bessel J function via it's well known 
+Our first example will investigate calculating the Bessel J function via its well known 
 series representation:
 
 [$../bessel2.svg]
 
 This simple series suffers from catastrophic cancellation error
 near the roots of the function, so we'll investigate slowly increasing the precision of
-the calculation until we get the result to N-decimal places.  We'll begin by defining
+the calculation until we get the result to N decimal places.  We'll begin by defining
 a function to calculate the series for Bessel J, the details of which we'll leave in the
 source code:
 */
@@ -158,11 +158,11 @@ mp_t Bessel_J_to_precision(mp_t v, mp_t x, unsigned digits10)
    }
    //
    // We now have an accurate result, but it may have too many digits,
-   // so lets round the result to the requested precision now:
+   // so let's round the result to the requested precision now:
    //
    result.precision(saved_digits10);
    //
-   // To maintain uniform precision during function return, lets
+   // To maintain uniform precision during function return, let's
    // reset the default precision now:
    //
    scoped.reset(saved_digits10);
@@ -173,7 +173,7 @@ mp_t Bessel_J_to_precision(mp_t v, mp_t x, unsigned digits10)
 So far, this is all well and good, but there is still a potential trap for the unwary here,
 when the function returns the variable [/result] may be copied/moved either once or twice
 depending on whether the compiler implements the named-return-value optimisation.  And since this
-all happens outside the scope of this function, the precision of the returned value may get unexpected
+all happens outside the scope of this function, the precision of the returned value may get unexpectedly
 changed - and potentially with different behaviour once optimisations are turned on!
 
 To prevent these kinds of unintended consequences, a function returning a value with specified precision
@@ -328,7 +328,7 @@ mp_t reduce_n_pi(const mp_t& arg)
    scope_2.reset(boost::multiprecision::variable_precision_options::preserve_target_precision);
    mp_t result = reduced;
    //
-   // As with previous examples, returning the result may create temporaries, so lets
+   // As with previous examples, returning the result may create temporaries, so let's
    // make sure that we preserve the precision of result.  Note that this isn't strictly
    // required if the calling context is always of uniform precision, but we can't be sure 
    // of our calling context:

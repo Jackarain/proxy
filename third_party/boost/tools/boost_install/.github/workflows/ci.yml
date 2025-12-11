@@ -17,7 +17,7 @@ jobs:
 
           - lib: filesystem
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: install
@@ -28,7 +28,7 @@ jobs:
 
           - lib: filesystem
             bopts: --layout=versioned install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: --layout=versioned install
@@ -39,7 +39,7 @@ jobs:
 
           - lib: filesystem
             bopts: --layout=tagged install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: --layout=tagged install
@@ -50,119 +50,119 @@ jobs:
 
           - lib: filesystem
             bopts: toolset=clang install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           # same, with tagged layout
 
           - lib: filesystem
             bopts: toolset=clang --layout=tagged install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           # build with both gcc and clang, use with gcc
 
           - lib: filesystem
             bopts: toolset=gcc,clang --layout=versioned install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           # build with clang, use with gcc (w/ toolset override)
 
           - lib: filesystem
             bopts: toolset=clang --layout=versioned install
-            copts: -DBoost_COMPILER=clang11
-            os: ubuntu-20.04
+            copts: -DBoost_COMPILER=clang18
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: toolset=clang --layout=versioned install
-            copts: -DBoost_COMPILER=-clang11
-            os: ubuntu-20.04
+            copts: -DBoost_COMPILER=-clang18
+            os: ubuntu-latest
 
           # build with gcc/clang, use with clang/gcc (w/ toolset list)
 
           - lib: filesystem
             bopts: toolset=gcc --layout=versioned install
-            copts: -DCMAKE_CXX_COMPILER=clang++ -DBoost_COMPILER="gcc9;clang11"
-            os: ubuntu-20.04
+            copts: -DCMAKE_CXX_COMPILER=clang++ -DBoost_COMPILER="gcc13;clang18"
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: toolset=clang --layout=versioned install
-            copts: -DBoost_COMPILER="gcc9;clang11"
-            os: ubuntu-20.04
+            copts: -DBoost_COMPILER="gcc13;clang18"
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: toolset=gcc --layout=versioned install
-            copts: -DCMAKE_CXX_COMPILER=clang++ -DBoost_COMPILER="-gcc9;-clang11"
-            os: ubuntu-20.04
+            copts: -DCMAKE_CXX_COMPILER=clang++ -DBoost_COMPILER="-gcc13;-clang18"
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: toolset=clang --layout=versioned install
-            copts: -DBoost_COMPILER="-gcc9;-clang11"
-            os: ubuntu-20.04
+            copts: -DBoost_COMPILER="-gcc13;-clang18"
+            os: ubuntu-latest
 
           # shared
 
           - lib: filesystem
             bopts: install
             copts: -DBoost_USE_STATIC_LIBS=OFF
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: link=shared install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: link=shared install
             copts: -DBoost_USE_STATIC_LIBS=OFF
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           # static
 
           - lib: filesystem
             bopts: install
             copts: -DBoost_USE_STATIC_LIBS=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: link=static install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: link=static install
             copts: -DBoost_USE_STATIC_LIBS=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           # threading=multi,single
 
           - lib: filesystem
             bopts: --layout=tagged-1.66 threading=multi,single install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: --layout=tagged-1.66 threading=multi,single install
             copts: -DBoost_USE_MULTITHREADED=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: --layout=tagged-1.66 threading=multi,single install
             copts: -DBoost_USE_MULTITHREADED=OFF
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           # threading=single
 
           - lib: filesystem
             bopts: threading=single install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: threading=single install
             copts: -DBoost_USE_MULTITHREADED=OFF
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           # staged
 
           - lib: filesystem
             bopts: stage
             copts: -DUSE_STAGED_BOOST=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: stage
@@ -172,184 +172,170 @@ jobs:
           - lib: filesystem
             bopts: --stagedir=stage64-gcc5 stage
             copts: -DBoost_ROOT=$GITHUB_WORKSPACE/../boost-root/stage64-gcc5
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: --stagedir=. stage
             copts: -DBoost_ROOT=$GITHUB_WORKSPACE/../boost-root/.
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: filesystem
             bopts: --stage-libdir=lib64-gcc5 stage
             copts: -DBoost_ROOT=$GITHUB_WORKSPACE/../boost-root/lib64-gcc5/cmake
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           # ALL
 
           - lib: filesystem
             bopts: install
             copts: -DUSE_ALL_COMPONENTS=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           # Boost_INCLUDE_DIRS, old style
 
           - lib: headers
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: headers
             bopts: stage
             copts: -DUSE_STAGED_BOOST=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           # other libraries
 
           - lib: atomic
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: chrono
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: container
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: iostreams
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            install: libbz2-dev
 
           - lib: iostreams
             bopts: install
             copts: -DBoost_USE_STATIC_LIBS=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            install: libbz2-dev
 
           - lib: iostreams
             bopts: stage
             copts: -DUSE_STAGED_BOOST=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            install: libbz2-dev
 
           - lib: iostreams
             bopts: stage
             copts: -DUSE_STAGED_BOOST=ON -DBoost_USE_STATIC_LIBS=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            install: libbz2-dev
 
           - lib: log
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: log
             bopts: install
             copts: -DBoost_USE_STATIC_LIBS=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: log
             bopts: stage
             copts: -DUSE_STAGED_BOOST=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: log
             bopts: stage
             copts: -DUSE_STAGED_BOOST=ON -DBoost_USE_STATIC_LIBS=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: log
             bopts: install
             copts: -DUSE_ALL_COMPONENTS=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: log
             bopts: --layout=tagged-1.66 threading=multi,single install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: mpi
             bopts: install
-            os: ubuntu-20.04
-            install: libopenmpi-dev libpython2-dev
+            os: ubuntu-latest
+            install: libopenmpi-dev libpython3-dev
 
           - lib: program_options
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: python
-            bopts: python=2.7,3.8 install
-            os: ubuntu-20.04
-            install: libpython2-dev libpython3-dev
+            bopts: install
+            os: ubuntu-latest
+            install: libpython3-dev
 
           - lib: python
-            bopts: python=2.7,3.8 install
-            copts: -DUSE_PYTHON_VERSION=2.7
-            os: ubuntu-20.04
-            install: libpython2-dev libpython3-dev
+            bopts: install
+            copts: -DUSE_PYTHON_VERSION=3.12
+            os: ubuntu-latest
+            install: libpython3-dev
 
           - lib: python
-            bopts: python=2.7,3.8 install
-            copts: -DUSE_PYTHON_VERSION=3.8
-            os: ubuntu-20.04
-            install: libpython2-dev libpython3-dev
+            bopts: install
+            copts: -DUSE_PYTHON_VERSION=3.12 -DUSE_PYTHON_COMPONENT=python312
+            os: ubuntu-latest
+            install: libpython3-dev
 
           - lib: python
-            bopts: python=2.7,3.8 install
-            copts: -DUSE_PYTHON_VERSION=2.7 -DUSE_PYTHON_COMPONENT=python27
-            os: ubuntu-20.04
-            install: libpython2-dev libpython3-dev
-
-          - lib: python
-            bopts: python=2.7,3.8 install
-            copts: -DUSE_PYTHON_VERSION=3.8 -DUSE_PYTHON_COMPONENT=python38
-            os: ubuntu-20.04
-            install: libpython2-dev libpython3-dev
-
-          - lib: python
-            bopts: python=2.7,3.8 install
-            copts: -DUSE_PYTHON_VERSION=2.7 -DUSE_PYTHON_COMPONENT=python2
-            os: ubuntu-20.04
-            install: libpython2-dev libpython3-dev
-
-          - lib: python
-            bopts: python=2.7,3.8 install
-            copts: -DUSE_PYTHON_VERSION=3.8 -DUSE_PYTHON_COMPONENT=python3
-            os: ubuntu-20.04
-            install: libpython2-dev libpython3-dev
+            bopts: install
+            copts: -DUSE_PYTHON_VERSION=3.12 -DUSE_PYTHON_COMPONENT=python3
+            os: ubuntu-latest
+            install: libpython3-dev
 
           - lib: random
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: random
             bopts: install
             copts: -DBUILD_SHARED_LIBS=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: regex
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: regex
             bopts: install
             copts: -DBoost_USE_STATIC_LIBS=ON
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: serialization
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: system
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: test
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: thread
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
           - lib: wave
             bopts: install
-            os: ubuntu-20.04
+            os: ubuntu-latest
 
     runs-on: ${{matrix.os}}
 
@@ -358,7 +344,9 @@ jobs:
 
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install ${{matrix.install}}
 
       - name: Setup Boost
         run: |
@@ -382,8 +370,7 @@ jobs:
       - name: Run tests
         run: |
           cd ../boost-root
-          echo "using python : 2.7 ;" >> ~/user-config.jam
-          echo "using python : 3.8 ;" >> ~/user-config.jam
+          echo "using python ;" >> ~/user-config.jam
           echo "using mpi ;" >> ~/user-config.jam
           ./b2 -d0 -j3 --prefix=$HOME/.local --with-headers ${{matrix.bopts}}
           ./b2 -j3 --prefix=$HOME/.local --with-${{matrix.lib}} ${{matrix.bopts}}
@@ -404,147 +391,151 @@ jobs:
 
           - lib: filesystem
             bopts: install
-            os: windows-2019
+            os: windows-latest
 
           - lib: filesystem
             bopts: --layout=tagged install
-            os: windows-2019
+            os: windows-latest
 
           - lib: filesystem
             bopts: link=shared install
             copts: -DBoost_USE_STATIC_LIBS=OFF
-            os: windows-2019
+            os: windows-latest
 
           - lib: filesystem
             bopts: link=static,shared install
-            os: windows-2019
+            os: windows-latest
 
           - lib: filesystem
             bopts: link=static,shared install
             copts: -DBoost_USE_STATIC_LIBS=OFF
-            os: windows-2019
+            os: windows-latest
 
           - lib: filesystem
             bopts: link=static,shared install
             copts: -DBoost_USE_STATIC_LIBS=ON
-            os: windows-2019
+            os: windows-latest
 
           # stage
 
           - lib: filesystem
             bopts: stage
             copts: -DUSE_STAGED_BOOST=ON
-            os: windows-2019
+            os: windows-latest
 
           - lib: filesystem
             bopts: link=shared stage
             copts: -DUSE_STAGED_BOOST=ON -DBoost_USE_STATIC_LIBS=OFF
-            os: windows-2019
+            os: windows-latest
 
           - lib: filesystem
             bopts: link=static,shared stage
             copts: -DUSE_STAGED_BOOST=ON
-            os: windows-2019
+            os: windows-latest
 
           - lib: filesystem
             bopts: link=static,shared stage
             copts: -DUSE_STAGED_BOOST=ON -DBoost_USE_STATIC_LIBS=OFF
-            os: windows-2019
+            os: windows-latest
 
           - lib: filesystem
             bopts: link=static,shared stage
             copts: -DUSE_STAGED_BOOST=ON -DBoost_USE_STATIC_LIBS=ON
-            os: windows-2019
+            os: windows-latest
 
           # mingw
 
           - lib: filesystem
             bopts: toolset=gcc install
             copts: "-G \"MinGW Makefiles\" -DCMAKE_BUILD_TYPE=Debug"
-            os: windows-2019
+            os: windows-latest
 
           - lib: filesystem
             bopts: toolset=gcc install
             copts: "-G \"MinGW Makefiles\" -DCMAKE_BUILD_TYPE=RelWithDebInfo"
-            os: windows-2019
-
-          # msvc-14.3
-
-          - lib: filesystem
-            bopts: install
-            os: windows-2022
+            os: windows-latest
 
           # clang-cl
           #   b2 and CMake find and use a different clang-cl
 
           - lib: filesystem
             bopts: toolset=clang-win install
-            copts: "-G \"Visual Studio 17 2022\" -T clangcl -DBoost_COMPILER=\"clangw14;clangw15;clangw16;clangw17;clangw18\""
+            copts: "-G \"Visual Studio 17 2022\" -T clangcl -DBoost_COMPILER=\"clangw20\""
             os: windows-2022
 
           # other libraries
 
           - lib: headers
             bopts: install
-            os: windows-2019
+            os: windows-latest
 
           - lib: iostreams
             bopts: install
-            os: windows-2019
+            os: windows-latest
 
           - lib: iostreams
             bopts: stage
             copts: -DUSE_STAGED_BOOST=ON
-            os: windows-2019
+            os: windows-latest
 
           - lib: log
             bopts: install
-            os: windows-2019
+            os: windows-latest
 
           - lib: log
             bopts: link=shared install
             copts: -DBoost_USE_STATIC_LIBS=OFF
-            os: windows-2019
+            os: windows-latest
+
+          # b2 finds Python 3.9 (in PATH), but CMake finds Python 3.14
+
+          # python=3.14 isn't tested because the test executable doesn't run
+          # as the 3.14 DLL isn't in PATH
 
           - lib: python
-            bopts: python=3.7,3.9 install
-            copts: "-DUSE_PYTHON_VERSION=\"3.7;EXACT\""
-            os: windows-2019
+            bopts: install
+            copts: "-DUSE_PYTHON_VERSION=\"3.9;EXACT\""
+            os: windows-latest
+
+          - lib: python
+            bopts: python=3.9,3.14 install
+            copts: "-DUSE_PYTHON_VERSION=\"3.9;EXACT\""
+            os: windows-latest
 
           - lib: serialization
             bopts: install
-            os: windows-2019
+            os: windows-latest
 
           - lib: random
             bopts: install
-            os: windows-2019
+            os: windows-latest
 
           - lib: random
             bopts: link=shared install
             copts: -DBoost_USE_STATIC_LIBS=OFF
-            os: windows-2019
+            os: windows-latest
 
           - lib: random
             bopts: install
             copts: -DBUILD_SHARED_LIBS=ON
-            os: windows-2019
+            os: windows-latest
 
           - lib: random
             bopts: link=shared install
             copts: -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_LIBS=OFF
-            os: windows-2019
+            os: windows-latest
 
           - lib: regex
             bopts: install
-            os: windows-2019
+            os: windows-latest
 
           - lib: test
             bopts: install
-            os: windows-2019
+            os: windows-latest
 
           - lib: thread
             bopts: install
-            os: windows-2019
+            os: windows-latest
 
     runs-on: ${{matrix.os}}
 
@@ -569,8 +560,8 @@ jobs:
           xcopy /s /e /q %GITHUB_WORKSPACE% tools\boost_install\
           cmd /c bootstrap
           set USER_CONFIG=%HOMEDRIVE%%HOMEPATH%\user-config.jam
-          echo using python : 3.7 ; >> %USER_CONFIG%
           echo using python : 3.9 ; >> %USER_CONFIG%
+          echo using python : 3.14 ; >> %USER_CONFIG%
           b2 -d0 headers
 
       - name: Run tests
@@ -598,31 +589,31 @@ jobs:
         include:
 
           - lib: filesystem
-            os: windows-2022
+            os: windows-latest
 
           - lib: headers
-            os: windows-2019
+            os: windows-latest
 
           - lib: iostreams
-            os: windows-2019
+            os: windows-latest
 
           - lib: log
-            os: windows-2019
+            os: windows-latest
 
           - lib: serialization
-            os: windows-2019
+            os: windows-latest
 
           - lib: random
-            os: windows-2019
+            os: windows-latest
 
           - lib: regex
-            os: windows-2019
+            os: windows-latest
 
           - lib: test
-            os: windows-2019
+            os: windows-latest
 
           - lib: thread
-            os: windows-2019
+            os: windows-latest
 
     runs-on: ${{matrix.os}}
 

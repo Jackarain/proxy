@@ -76,19 +76,22 @@ jobs:
           - toolset: gcc-9
             cxxstd: "17,2a"
             address_model: 64
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - g++-9-multilib
           - toolset: gcc-9
             cxxstd: "17-gnu,2a-gnu"
             address_model: 64
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - g++-9-multilib
           - toolset: gcc-10
             cxxstd: "17,20"
             address_model: 64
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - g++-10-multilib
           - toolset: gcc-11
@@ -110,13 +113,13 @@ jobs:
             install:
               - g++-12-multilib
           - name: UBSAN
-            toolset: gcc-12
-            cxxstd: "17"
+            toolset: gcc-13
+            cxxstd: "11"
             address_model: 64
             ubsan: 1
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             install:
-              - g++-12-multilib
+              - g++-13-multilib
 
           # Linux, clang
           - toolset: clang
@@ -174,13 +177,15 @@ jobs:
           - toolset: clang
             compiler: clang++-9
             cxxstd: "17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - clang-9
           - toolset: clang
             compiler: clang++-10
             cxxstd: "17,20"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install:
               - clang-10
           - toolset: clang
@@ -252,10 +257,10 @@ jobs:
 
           - toolset: clang
             cxxstd: "20"
-            os: macos-13
+            os: macos-14
           - toolset: clang
             cxxstd: "20"
-            os: macos-14
+            os: macos-15
 
     runs-on: ${{matrix.os}}
     container:
@@ -468,14 +473,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: "11"
-            addrmd: 64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14"
-            addrmd: 64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "20"
             addrmd: 64
@@ -487,7 +484,7 @@ jobs:
           - toolset: gcc
             cxxstd: "17"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
 
     runs-on: ${{matrix.os}}
 
@@ -531,10 +528,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-20.04, build_shared: ON,  build_type: Debug, generator: 'Unix Makefiles' }
-          - { os: ubuntu-20.04, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles' }
-          - { os: windows-2019, build_shared: ON,  build_type: Debug, generator: 'Visual Studio 16 2019' }
-          - { os: windows-2019, build_shared: OFF, build_type: Debug, generator: 'Visual Studio 16 2019' }
+          - { os: ubuntu-22.04, build_shared: ON,  build_type: Debug, generator: 'Unix Makefiles' }
+          - { os: ubuntu-22.04, build_shared: OFF, build_type: Debug, generator: 'Unix Makefiles' }
+          - { os: windows-2025,  build_shared: ON,  build_type: Debug, generator: 'Visual Studio 17 2022' }
+          - { os: windows-2025,  build_shared: OFF, build_type: Debug, generator: 'Visual Studio 17 2022' }
 
     timeout-minutes: 120
     runs-on: ${{matrix.os}}

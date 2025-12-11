@@ -1,11 +1,24 @@
 [/
   Copyright 2021 Peter Dimov
-  Copyright 2022-2024 Andrey Semashev
+  Copyright 2022-2025 Andrey Semashev
   Distributed under the Boost Software License, Version 1.0.
   https://boost.org/LICENSE_1_0.txt)
 ]
 
 [section Revision History]
+
+[section Changes in 1.90.0]
+
+* The implementation of `BOOST_TEST_THROWS` and `BOOST_TEST_NO_THROW` macros defined in
+  [link core.lightweight_test `boost/core/lightweight_test.hpp`] has been changed to avoid
+  compiler warnings on some compilers, when the macros are used in `if`/`else` blocks. As
+  a side effect of this change, the semicolon after the macro is now necessary. ([github_pr 205])
+* [link core.data `boost::data`] and [link core.size `boost::size`] are now aliases for `std::data`
+  and `std::size`, respectively, when the latter are provided by compiler. This resolves potential
+  ambiguities when both `boost::` and `std::` alternatives are found by the compiler, e.g. as a result
+  of ADL. ([github_issue 206])
+
+[endsect]
 
 [section Changes in 1.89.0]
 

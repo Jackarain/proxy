@@ -13,8 +13,11 @@
 In order to use this library you need to make two choices:
 
 * What kind of number do I want ([link boost_multiprecision.tut.ints integer],
-[link boost_multiprecision.tut.floats floating-point], [link boost_multiprecision.tut.rational rational], or [link boost_multiprecision.tut.complex complex]).
-* Which back-end do I want to perform the actual arithmetic (Boost-supplied, GMP, MPFR, MPC, Tommath etc)?
+[link boost_multiprecision.tut.floats floating-point], [link boost_multiprecision.tut.rational rational], or [link boost_multiprecision.tut.complex complex])?
+* Which back-end do I want to perform the actual arithmetic (Boost-supplied, GMP, MPFR, MPC, Tommath etc.)?
+
+A practical, comprehensive, instructive, clear and very helpful video regarding the use of Multiprecision
+can be found [@https://www.youtube.com/watch?v=mK4WjpvLj4c here].
 
 [include tutorial_integer.qbk]
 [include tutorial_floats.qbk]

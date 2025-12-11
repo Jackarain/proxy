@@ -11,7 +11,7 @@
 #define BOOST_URL_DETAIL_ANY_SEGMENTS_ITER_HPP
 
 #include <boost/url/pct_string_view.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
@@ -120,7 +120,7 @@ struct segments_iter
     : any_segments_iter
     , segments_iter_base
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::is_convertible<
             typename std::iterator_traits<
                 FwdIt>::reference,
@@ -234,7 +234,7 @@ struct segments_encoded_iter
     : public any_segments_iter
     , public segments_encoded_iter_base
 {
-    BOOST_STATIC_ASSERT(
+    BOOST_CORE_STATIC_ASSERT(
         std::is_convertible<
             typename std::iterator_traits<
                 FwdIt>::reference,

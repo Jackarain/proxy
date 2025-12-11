@@ -25,7 +25,7 @@ communication.
 
 Using non-strict URLs directly is a security concern in
 machine-to-machine communication, is ambiguous, and also
-involve an extra cost for the transformations.
+involves an extra cost for the transformations.
 
 Different transformations are required by different applications to
 construct a valid URL appropriate for machine-to-machine communication.

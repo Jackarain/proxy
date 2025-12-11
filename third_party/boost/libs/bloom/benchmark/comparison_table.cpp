@@ -62,6 +62,7 @@ void resume_timing()
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -85,6 +86,7 @@ struct test_results
   double insertion_time;           /* ns per element */
   double successful_lookup_time;   /* ns per element */
   double unsuccessful_lookup_time; /* ns per element */
+  double mixed_lookup_time;        /* ns per element */
 };
 
 template<typename Filter>
@@ -92,7 +94,12 @@ test_results test(std::size_t c)
 {
   using value_type=typename Filter::value_type;
 
-  std::vector<value_type> data_in,data_out;
+  static constexpr double        lookup_mix=0.1; /* successful pr. */
+  static constexpr std::uint64_t mixed_lookup_cut=
+    (std::uint64_t)(
+      lookup_mix*(double)(std::numeric_limits<std::uint64_t>::max)());
+
+  std::vector<value_type> data_in,data_out,data_mixed;
   {
     boost::detail::splitmix64             rng;
     boost::unordered_flat_set<value_type> unique;
@@ -113,6 +120,9 @@ test_results test(std::size_t c)
           break;
         }
       }
+    }
+    for(std::size_t i=0;i<num_elements;++i){
+      data_mixed.push_back(rng()<mixed_lookup_cut?data_in[i]:data_out[i]);
     }
   }
 
@@ -143,6 +153,7 @@ test_results test(std::size_t c)
 
   double successful_lookup_time=0.0;
   double unsuccessful_lookup_time=0.0;
+  double mixed_lookup_time=0.0;
   {
     Filter f(c*num_elements);
     for(const auto& x:data_in)f.insert(x);
@@ -158,9 +169,17 @@ test_results test(std::size_t c)
       return res;
     });
     unsuccessful_lookup_time=t/num_elements*1E9;
+    t=measure([&]{
+      std::size_t res=0;
+      for(const auto& x:data_mixed)res+=f.may_contain(x);
+      return res;
+    });
+    mixed_lookup_time=t/num_elements*1E9;
   }
 
-  return {fpr,insertion_time,successful_lookup_time,unsuccessful_lookup_time};
+  return {
+    fpr,insertion_time,
+    successful_lookup_time,unsuccessful_lookup_time,mixed_lookup_time};
 }
 
 struct print_double
@@ -196,7 +215,8 @@ template<typename Filters> void row(std::size_t c)
       "    <td align=\"right\">"<<print_double(res.fpr,4)<<"</td>\n"
       "    <td align=\"right\">"<<print_double(res.insertion_time)<<"</td>\n"
       "    <td align=\"right\">"<<print_double(res.successful_lookup_time)<<"</td>\n"
-      "    <td align=\"right\">"<<print_double(res.unsuccessful_lookup_time)<<"</td>\n";
+      "    <td align=\"right\">"<<print_double(res.unsuccessful_lookup_time)<<"</td>\n"
+      "    <td align=\"right\">"<<print_double(res.mixed_lookup_time)<<"</td>\n";
   });
 
   std::cout<<
@@ -251,17 +271,19 @@ int main(int argc,char* argv[])
 
   auto res=test<unordered_flat_set_filter<int>>(0);
   std::cout<<
-    "<table>\n"
-    "  <tr><th colspan=\"3\"><code>boost::unordered_flat_set</code></tr>\n"
+    "<table class=\"bordered_table\" style=\"font-size: 85%;\">\n"
+    "  <tr><th colspan=\"4\"><code>boost::unordered_flat_set</code></tr>\n"
     "  <tr>\n"
     "    <th>insertion</th>\n"
     "    <th>successful<br/>lookup</th>\n"
     "    <th>unsuccessful<br/>lookup</th>\n"
+    "    <th>mixed<br/>lookup</th>\n"
     "  </tr>\n"
     "  <tr>\n"
     "    <td align=\"right\">"<<print_double(res.insertion_time)<<"</td>\n"
     "    <td align=\"right\">"<<print_double(res.successful_lookup_time)<<"</td>\n"
     "    <td align=\"right\">"<<print_double(res.unsuccessful_lookup_time)<<"</td>\n"
+    "    <td align=\"right\">"<<print_double(res.mixed_lookup_time)<<"</td>\n"
     "  </tr>\n"
     "</table>\n";
 
@@ -272,15 +294,16 @@ int main(int argc,char* argv[])
     "    <th>FPR<br/>[%]</th>\n"
     "    <th>ins.</th>\n"
     "    <th>succ.<br/>lkp.</th>\n"
-    "    <th>uns.<br/>lkp.</th>\n";
+    "    <th>uns.<br/>lkp.</th>\n"
+    "    <th>mixed<br/>lkp.</th>\n";
 
   std::cout<<
-    "<table>\n"
+    "<table class=\"bordered_table\" style=\"font-size: 85%;\">\n"
     "  <tr>\n"
     "    <th></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,K></code></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,block&lt;uint64_t,K>></code></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,block&lt;uint64_t,K>,1></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,K></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,block&lt;uint64_t,K>></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,block&lt;uint64_t,K>,1></code></th>\n"
     "  </tr>\n"
     "  <tr>\n"
     "    <th>c</th>\n"<<
@@ -297,9 +320,9 @@ int main(int argc,char* argv[])
   std::cout<<
     "  <tr>\n"
     "    <th></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,multiblock&lt;uint64_t,K>></code></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,multiblock&lt;uint64_t,K>,1></code></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,fast_multiblock32&lt;K>></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,multiblock&lt;uint64_t,K>></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,multiblock&lt;uint64_t,K>,1></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,fast_multiblock32&lt;K>></code></th>\n"
     "  </tr>\n"
     "  <tr>\n"
     "    <th>c</th>\n"<<
@@ -316,9 +339,9 @@ int main(int argc,char* argv[])
   std::cout<<
     "  <tr>\n"
     "    <th></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,fast_multiblock32&lt;K>,1></code></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,fast_multiblock64&lt;K>></code></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,fast_multiblock64&lt;K>,1></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,fast_multiblock32&lt;K>,1></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,fast_multiblock64&lt;K>></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,fast_multiblock64&lt;K>,1></code></th>\n"
     "  </tr>\n"
     "  <tr>\n"
     "    <th>c</th>\n"<<
@@ -335,9 +358,9 @@ int main(int argc,char* argv[])
   std::cout<<
     "  <tr>\n"
     "    <th></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,block&lt;uint64_t[8],K>></code></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,block&lt;uint64_t[8],K>,1></code></th>\n"
-    "    <th colspan=\"5\"><code>filter&lt;int,1,multiblock&lt;uint64_t[8],K>></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,block&lt;uint64_t[8],K>></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,block&lt;uint64_t[8],K>,1></code></th>\n"
+    "    <th colspan=\"6\"><code>filter&lt;int,1,multiblock&lt;uint64_t[8],K>></code></th>\n"
     "  </tr>\n"
     "  <tr>\n"
     "    <th>c</th>\n"<<

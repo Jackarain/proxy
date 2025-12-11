@@ -1,0 +1,7 @@
+
+## Multiple Inheritance
+
+Multiple inheritance is supported, with the exception of repeated inheritance.
+
+Virtual inheritance is supported, but it incurs calls to `dynamic_cast` to cast
+the method's arguments to the types required by the overrider.

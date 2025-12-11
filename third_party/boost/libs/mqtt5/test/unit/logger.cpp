@@ -14,6 +14,7 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/system_executor.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/test/tools/output_test_stream.hpp>
 #include <boost/test/unit_test.hpp>
@@ -40,6 +41,7 @@ void logger_test() {
     BOOST_STATIC_ASSERT(has_at_ws_handshake<logger>);
     BOOST_STATIC_ASSERT(has_at_connack<logger>);
     BOOST_STATIC_ASSERT(has_at_disconnect<logger>);
+    BOOST_STATIC_ASSERT(has_at_transport_error<logger>);
 }
 
 BOOST_AUTO_TEST_SUITE(logger_tests)
@@ -417,6 +419,19 @@ BOOST_FIXTURE_TEST_CASE(at_disconnect_debug, disconnect_test_data) {
     test_logger_output(std::move(test_fun), expected_output);
 }
 
+// at_transport_error
+
+BOOST_AUTO_TEST_CASE(at_transport_error_info) {
+    const auto expected_output = "[Boost.MQTT5] transport layer error: End of file.\n";
+
+    auto test_fun = [] {
+        logger l(log_level::info);
+        l.at_transport_error(asio::error::eof);
+    };
+
+    test_logger_output(std::move(test_fun), expected_output);
+}
+
 // Test that the mqtt_client calls logger functions as expected.
 
 BOOST_AUTO_TEST_CASE(client_disconnect) {
@@ -452,8 +467,67 @@ BOOST_AUTO_TEST_CASE(client_disconnect) {
             .expect(connect)
                 .complete_with(error_code {}, after(0ms))
                 .reply_with(connack, after(0ms))
-            .send(disconnect, after(50ms))
+            .send(disconnect, after(30ms))
             .expect(connect);
+
+        asio::io_context ioc;
+        auto executor = ioc.get_executor();
+        auto& broker = asio::make_service<test::test_broker>(
+            ioc, executor, std::move(broker_side)
+        );
+
+        mqtt_client<test::test_stream, std::monostate, logger> c(executor);
+        c.brokers("127.0.0.1,127.0.0.1") // to avoid reconnect backoff
+            .async_run(asio::detached);
+
+        asio::steady_timer timer(c.get_executor());
+        timer.expires_after(100ms);
+        timer.async_wait([&c](error_code) { c.cancel(); });
+
+        ioc.run();
+        BOOST_TEST(broker.received_all_expected());
+    }
+
+    std::string log = output.rdbuf()->str();
+    BOOST_TEST(log == expected_msg);
+}
+
+BOOST_AUTO_TEST_CASE(client_transport_error) {
+    using test::after;
+    using namespace std::chrono_literals;
+
+    const auto& success = success_msg();
+    const auto expected_msg =
+        "[Boost.MQTT5] resolve: 127.0.0.1:1883 - " + success + ".\n"
+        "[Boost.MQTT5] TCP connect: 127.0.0.1:1883 - " + success + ".\n"
+        "[Boost.MQTT5] transport layer error: End of file.\n"
+        "[Boost.MQTT5] resolve: 127.0.0.1:1883 - " + success + ".\n"
+        "[Boost.MQTT5] TCP connect: 127.0.0.1:1883 - " + success + ".\n"
+        "[Boost.MQTT5] connack: The operation completed successfully.\n"
+    ;
+
+    boost::test_tools::output_test_stream output;
+    {
+        clog_redirect guard(output.rdbuf());
+
+        // packets
+        auto connect = encoders::encode_connect(
+            "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
+        );
+        auto connack = encoders::encode_connack(false, uint8_t(0x00), {});
+
+        const std::string topic = "topic", payload = "payload0";
+        const std::string publish = encoders::encode_publish(
+            0, topic, payload, qos_e::at_most_once, retain_e::no, dup_e::no, {}
+        );
+
+        test::msg_exchange broker_side;
+        broker_side
+            .expect(connect)
+                .complete_with(asio::error::eof, after(0ms))
+            .expect(connect)
+                .complete_with(error_code{}, after(0ms))
+                .reply_with(connack, after(10ms));
 
         asio::io_context ioc;
         auto executor = ioc.get_executor();

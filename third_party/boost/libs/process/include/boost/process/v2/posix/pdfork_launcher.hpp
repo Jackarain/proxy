@@ -136,7 +136,7 @@ struct pdfork_launcher : default_launcher
                 default_launcher::ignore_unused(::write(pg.p[1], &errno, sizeof(int)));
                 BOOST_PROCESS_V2_ASSIGN_EC(ec, errno, system_category());
                 detail::on_exec_error(*this, executable, argv, ec, inits...);
-                ::exit(EXIT_FAILURE);
+                ::_exit(EXIT_FAILURE);
                 return basic_process<Executor>{exec};
             }
 #if !defined(BOOST_PROCESS_V2_DISABLE_NOTIFY_FORK)

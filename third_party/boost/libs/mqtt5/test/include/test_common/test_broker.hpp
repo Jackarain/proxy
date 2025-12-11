@@ -175,7 +175,7 @@ public:
                     BOOST_TEST(it->size() == expected[i].size());
                     size_t len = (std::min)(it->size(), expected[i].size());
                     if (memcmp(it->data(), expected[i].data(), len))
-                        BOOST_TEST_MESSAGE(
+                        BOOST_ERROR(
                             concat_strings(
                                 "Packet mismatch!\nExpected: ",
                                 to_readable_packet(expected[i]),
@@ -185,7 +185,7 @@ public:
                         );
                 }
             } else 
-                BOOST_TEST_MESSAGE(
+                BOOST_ERROR(
                     "Broker side did not expect: " <<
                     boost::algorithm::join(to_readable_packets(buffers), ",")
                 );

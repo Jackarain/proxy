@@ -1,0 +1,46 @@
+[#ref_macros]
+= xref:ref_macros.adoc[Macros]
+
+The following macros - in particular the first three- are sufficient for most
+uses of the library.
+
+[cols=2]
+|===
+| Name
+| Description.
+| xref:BOOST_OPENMETHOD_CLASSES.adoc[*BOOST_OPENMETHOD_CLASSES*]
+| Registers classes.
+| xref:BOOST_OPENMETHOD.adoc[*BOOST_OPENMETHOD*]
+| Declares a method.
+| xref:BOOST_OPENMETHOD_OVERRIDE.adoc[*BOOST_OPENMETHOD_OVERRIDE*]
+| Adds an overrider to a method.
+| xref:BOOST_OPENMETHOD_INLINE_OVERRIDE.adoc[BOOST_OPENMETHOD_INLINE_OVERRIDE]
+| Adds an overrider to a method as an inline function.
+| xref:BOOST_OPENMETHOD_DECLARE_OVERRIDER.adoc[BOOST_OPENMETHOD_DECLARE_OVERRIDER]
+| Declares a method overrider.
+| xref:BOOST_OPENMETHOD_DEFINE_OVERRIDER.adoc[BOOST_OPENMETHOD_DEFINE_OVERRIDER]
+| Defines the body of a method overrider.
+| xref:BOOST_OPENMETHOD_ENABLE_RUNTIME_CHECKS.adoc[BOOST_OPENMETHOD_ENABLE_RUNTIME_CHECKS]
+| Enables runtime checks in method calls.
+|===
+
+
+The following macros are for advanced uses of the library.
+
+[cols=2]
+|===
+| Name
+| Description.
+| xref:BOOST_OPENMETHOD_DEFAULT_REGISTRY.adoc[BOOST_OPENMETHOD_DEFAULT_REGISTRY]
+| Default registry.
+| xref:BOOST_OPENMETHOD_OVERRIDER.adoc[BOOST_OPENMETHOD_OVERRIDER]
+| Returns the class template specialization containing an overrider.
+| xref:BOOST_OPENMETHOD_OVERRIDERS.adoc[BOOST_OPENMETHOD_OVERRIDERS]
+| Returns the class template containing the overriders for all the methods with a given name.
+| xref:BOOST_OPENMETHOD_ID.adoc[BOOST_OPENMETHOD_ID]
+| Generates a method id.
+| xref:BOOST_OPENMETHOD_TYPE.adoc[BOOST_OPENMETHOD_TYPE]
+| Expands to core `method` specialization.
+| xref:BOOST_OPENMETHOD_REGISTER.adoc[BOOST_OPENMETHOD_REGISTER]
+| Creates a registrar object.
+|===

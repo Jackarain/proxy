@@ -203,7 +203,7 @@ Read a good C++ book, study `std::sentry` and [@boost:libs/io/doc/ios_state.html
 [pre
 ]
 
-* [*Question:]    Why `std::cout << boost::lexical_cast<unsigned int>("-1");` does not throw, but outputs 4294967295?
+* [*Question:]    Why does `std::cout << boost::lexical_cast<unsigned int>("-1");` not throw, but outputs 4294967295?
   * [*Answer:]      `boost::lexical_cast` has the behavior of `std::stringstream`, which uses `num_get` functions of
 `std::locale` to convert numbers. If we look at the Programming languages — C++, we'll see, that `num_get` uses
 the rules of `scanf` for conversions. And in the C99 standard for unsigned input value minus sign is optional, so
@@ -212,7 +212,7 @@ if a negative number is read, no errors will arise and the result will be the tw
 [pre
 ]
 
-* [*Question:]    Why `boost::lexical_cast<int>(L'A');` outputs 65 and `boost::lexical_cast<wchar_t>(L"65");` does not throw?
+* [*Question:]    Why does `boost::lexical_cast<int>(L'A');` output 65 and `boost::lexical_cast<wchar_t>(L"65");` not throw?
   * [*Answer:]      If you are using an old version of Visual Studio or compile code with /Zc:wchar_t- flag,
 `boost::lexical_cast` sees single `wchar_t` character as `unsigned short`. It is not a `boost::lexical_cast` mistake, but a
 limitation of compiler options that you use.
@@ -220,7 +220,7 @@ limitation of compiler options that you use.
 [pre
 ]
 
-* [*Question:]    Why `boost::lexical_cast<double>("-1.#IND");` throws `boost::bad_lexical_cast`?
+* [*Question:]    Why does `boost::lexical_cast<double>("-1.#IND");` throw `boost::bad_lexical_cast`?
   * [*Answer:]      `"-1.#IND"` is a compiler extension, that violates standard. You shall input `"-nan"`, `"nan"`, `"inf"`
 , `"-inf"` (case insensitive) strings to get NaN and Inf values. `boost::lexical_cast<string>` outputs `"-nan"`, `"nan"`,
 `"inf"`, `"-inf"` strings, when has NaN or Inf input values.
@@ -229,7 +229,7 @@ limitation of compiler options that you use.
 ]
 
 * [*Question:]    What is the fastest way to convert a non zero terminated string or a substring using `boost::lexical_cast`?
-  * [*Answer:]      Use `boost::iterator_range` for conversion or `lexical_cast` overload with two parameters. For example, if you whant to convert to `int` two characters from a string `str`, you shall write `lexical_cast<int>(make_iterator_range(str.data(), str.data() + 2));` or `lexical_cast<int>(str.data(), 2);`.
+  * [*Answer:]      Use `boost::iterator_range` for conversion or `lexical_cast` overload with two parameters. For example, if you want to convert to `int` two characters from a string `str`, you shall write `lexical_cast<int>(make_iterator_range(str.data(), str.data() + 2));` or `lexical_cast<int>(str.data(), 2);`.
 
 [endsect]
 

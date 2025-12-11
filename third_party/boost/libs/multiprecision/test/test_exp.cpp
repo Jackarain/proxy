@@ -14,16 +14,14 @@
 #pragma warning(disable : 4127)
 #endif
 
-#include <boost/detail/lightweight_test.hpp>
-#include "test.hpp"
+#include <test.hpp>
 
-#include <array>
-#include <ctime>
-#include <random>
+#include <boost/detail/lightweight_test.hpp>
+#include <boost/math/constants/constants.hpp>
 
 #if !defined(TEST_MPF_50) && !defined(TEST_MPF) && !defined(TEST_BACKEND) && !defined(TEST_CPP_DEC_FLOAT) && !defined(TEST_MPFR) && !defined(TEST_MPFR_50) && !defined(TEST_MPFI_50) && !defined(TEST_FLOAT128) && !defined(TEST_CPP_BIN_FLOAT) && !defined(TEST_CPP_DOUBLE_FLOAT)
 #define TEST_MPF_50
-//#  define TEST_MPF
+//#define TEST_MPF
 #define TEST_BACKEND
 #define TEST_CPP_DEC_FLOAT
 #define TEST_MPFI_50
@@ -67,6 +65,13 @@
 #include <boost/multiprecision/cpp_double_fp.hpp>
 #endif
 
+#include <array>
+#include <ctime>
+#include <random>
+
+template<typename FloatType> auto my_zero() -> FloatType&;
+template<typename FloatType> auto my_one() -> FloatType&;
+
 template <class T>
 void test()
 {
@@ -74,9 +79,11 @@ void test()
 
    unsigned max_err = 0;
 
-   BOOST_IF_CONSTEXPR (!::has_poor_exp_range_or_precision_support<T>::value)
+   BOOST_IF_CONSTEXPR (std::numeric_limits<T>::is_specialized && (std::numeric_limits<T>::max_exponent10 > 4000))
    {
-      static const std::array<const char*, 51u> data =
+      using table_data_array_type = std::array<const char*, 51u>;
+
+      static const table_data_array_type table_data =
       {{
            "1.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
            "9.47747587596218770242116751705184563668845029215054154915126374673142219159548534317576897266130328412495991561490384353e76",
@@ -131,26 +138,31 @@ void test()
            "6.83336127500041943234365059231968669406267422759442985746460610830503287734479988530512309065240678799786759250323660701e3848",
       }};
 
-      T pi = static_cast<T>("3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282306647093844609550582231725359408128481117450284102701938521105559644622948954930381964428810975665933446128475648233786783165271201909145648566923460348610454326648213393607260249141273724587006606315588174881520920962829254091715364367892590360011330530548820466521384146951941511609");
+      const T pi = static_cast<T>("3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282306647093844609550582231725359408128481117450284102701938521105559644622948954930381964428810975665933446128475648233786783165271201909145648566923460348610454326648213393607260249141273724587006606315588174881520920962829254091715364367892590360011330530548820466521384146951941511609");
 
-      for (unsigned k = 0; k < data.size(); k++)
+      for (unsigned k = 0u; k < static_cast<unsigned>(std::tuple_size<table_data_array_type>::value); ++k)
       {
-         T        val = exp(sqrt((pi * (100 * k)) * (100 * k)));
-         T        e   = relative_error(val, T(data[k]));
+         T val = exp(sqrt((pi * (100u * k)) * (100u * k)));
+         T e   = relative_error(val, T(table_data[k]));
+
          unsigned err = e.template convert_to<unsigned>();
+
          if (err > max_err)
          {
             max_err = err;
          }
-         val = exp(-sqrt((pi * (100 * k)) * (100 * k)));
-         e   = relative_error(val, T(1 / T(data[k])));
+
+         val = exp(-sqrt((pi * (100u * k)) * (100u * k)));
+         e   = relative_error(val, T(1 / T(table_data[k])));
+
          err = e.template convert_to<unsigned>();
+
          if (err > max_err)
          {
             max_err = err;
          }
       }
-      std::cout << "Max error was: " << max_err << std::endl;
+      std::cout << "Max error table_data was: " << max_err << std::endl;
 #if defined(BOOST_INTEL) && defined(TEST_FLOAT128)
       BOOST_TEST(max_err < 40000);
 #elif defined(TEST_CPP_BIN_FLOAT)
@@ -158,11 +170,14 @@ void test()
 #else
       BOOST_TEST(max_err < 5000);
 #endif
-   } // !::has_poor_exp_range_or_precision_support<T>::value
+   } // (std::numeric_limits<T>::max_exponent10 > 4000)
 
    using std::ldexp;
 
-   static const std::array<std::array<T, 2>, 12> exact_data =
+   using exact_data_pair_type = std::array<T, 2>;
+   using exact_data_array_type = std::array<exact_data_pair_type, 12>;
+
+   static const exact_data_array_type exact_data =
    {{
       {{ldexp(1.0, -50),      static_cast<T>("1.000000000000000888178419700125626769357944978675730736309709508287711059579809241499236575743374705946980126761002249532899810120773330275600867188192232364653350140592709328919189811425580736404494785")}},
       {{ldexp(1.0, -20),      static_cast<T>("1.00000095367477115374544678824955687428365188553281789775169686343569285229334215539516690752571791280462887427635269562079697496032436580742164524046357050365736415701568566320292733574692386949329504")}},
@@ -174,39 +189,83 @@ void test()
       {{10.5,                 static_cast<T>("36315.5026742466377389120269013166179689315579671275857607480190550842856628099187749764427758174866310742771977376827511779240563292392413797025035252944088473059613508585937585174897482367249804575829")}},
       {{25,                   static_cast<T>("7.20048993373858725241613514661261579152235338133952787362213864472320593107782569745000325654258093194727871848859163683530731259683905547347259346394203424381962487428148616548084393082148632398178103e10")}},
       {{31.25,                static_cast<T>("3.72994612957188849046766396046821396700589012875701157893019118883826370993674081486706667149871508642909416337810227575115729423667289322729813729072376711271966343652718317681492250090327804073781915e13")}},
+      // N[Log[39614081257132168796771975168], 201]
       {{static_cast<T>("65.8489821531948043946370515385267739671725127642242491414646009018723940871209979825570160646597753164901406969542151447001244223970224029181037214053322163834191192286952863430791686692697089797567183"), static_cast<T>("39614081257132168796771975168.0")}},
+      // N[Log[19807040628566084398385987584], 201]
       {{static_cast<T>("65.1558349726348590852198194170685973990970126298639938873439208923790004651513032669511527376633566289481392159336444589664389021612642723610710506536971404214883916578669149078888616306458173062855949"), static_cast<T>("19807040628566084398385987584.0")}},
    }};
 
    max_err = 0;
-   for (unsigned k = 0; k < exact_data.size(); k++)
+   for (unsigned k = 0u; k < static_cast<unsigned>(std::tuple_size<exact_data_array_type>::value); ++k)
    {
-      T        val = exp(exact_data[k][0]);
-      T        e   = relative_error(val, exact_data[k][1]);
+      T val = exp(exact_data[k][0]);
+      T e   = relative_error(val, exact_data[k][1]);
+
       unsigned err = e.template convert_to<unsigned>();
+
       if (err > max_err)
       {
          max_err = err;
       }
+
       val = exp(-exact_data[k][0]);
       e   = relative_error(val, T(1 / exact_data[k][1]));
+
       err = e.template convert_to<unsigned>();
+
       if (err > max_err)
       {
          max_err = err;
       }
    }
-   std::cout << "Max error was: " << max_err << std::endl;
+   std::cout << "Max error exact_data was: " << max_err << std::endl;
    BOOST_TEST(max_err < 60);
 
-   BOOST_TEST(exp(T(0)) == 1);
-
-   if (!boost::multiprecision::is_interval_number<T>::value)
+   BOOST_IF_CONSTEXPR (!boost::multiprecision::is_interval_number<T>::value)
    {
-      T bug_case = -1.05 * log((std::numeric_limits<T>::max)());
-      for (unsigned i = 0; bug_case > -20 / std::numeric_limits<T>::epsilon(); ++i, bug_case *= 1.05)
+      std::mt19937_64 gen { };
+
+      gen.seed(static_cast<typename std::mt19937_64::result_type>(std::clock()));
+
+      std::uniform_real_distribution<float>
+         dist
+         (
+           static_cast<float>(1.01L),
+           static_cast<float>(1.04L)
+         );
+
+      for (int index = 0; index < 8; ++index)
       {
-         if (std::numeric_limits<T>::has_infinity)
+         static_cast<void>(index);
+
+         const T val_zero { ::my_zero<T>() * dist(gen) };
+
+         const T exp_zero = exp(val_zero);
+
+         BOOST_CHECK(exp_zero == ::my_one<T>());
+      }
+
+      BOOST_IF_CONSTEXPR (std::numeric_limits<T>::is_specialized)
+      {
+         for (int index = 0; index < 8; ++index)
+         {
+            static_cast<void>(index);
+
+            const T val_one(static_cast<int>(::my_one<T>() * dist(gen)));
+
+            const T exp_one = exp(val_one);
+
+            BOOST_CHECK_CLOSE_FRACTION(exp_one, boost::math::constants::e<T>(), std::numeric_limits<T>::epsilon() * 4);
+         }
+      }
+
+      T bug_case = -1.05 * log((std::numeric_limits<T>::max)());
+
+      for (unsigned i = 0U; bug_case > -20 / std::numeric_limits<T>::epsilon(); ++i, bug_case *= 1.05)
+      {
+         static_cast<void>(i);
+
+         BOOST_IF_CONSTEXPR (std::numeric_limits<T>::has_infinity)
          {
             BOOST_CHECK_EQUAL(exp(bug_case), 0);
          }
@@ -216,20 +275,19 @@ void test()
          }
       }
 
-      // Handle uneven/asymmetric exponents on min/max of cpp_double_fp_backend
       BOOST_IF_CONSTEXPR (::has_poor_exp_range_or_precision_support<T>::value)
       {
-         bug_case = log(1 / (std::numeric_limits<T>::min)()) / -1.0005;
+         bug_case = log(T(1) / (std::numeric_limits<T>::min)()) / -1.0005;
       }
       else
       {
          bug_case = log((std::numeric_limits<T>::max)()) / -1.0005;
       }
 
-      unsigned i { 0U };
-
-      for ( ; i < 20U; ++i, bug_case /= static_cast<T>(1.05L))
+      for (unsigned i { 0U }; i < 20U; ++i, bug_case /= static_cast<T>(1.05L))
       {
+         static_cast<void>(i);
+
          BOOST_CHECK_GE(exp(bug_case), (std::numeric_limits<T>::min)());
       }
    }
@@ -286,4 +344,22 @@ int main()
    #endif
 #endif
    return boost::report_errors();
+}
+
+template<typename FloatType> auto my_zero() -> FloatType&
+{
+   using float_type = FloatType;
+
+   static float_type my_val_zero(0);
+
+   return my_val_zero;
+}
+
+template<typename FloatType> auto my_one() -> FloatType&
+{
+   using float_type = FloatType;
+
+   static float_type my_val_one(1);
+
+   return my_val_one;
 }

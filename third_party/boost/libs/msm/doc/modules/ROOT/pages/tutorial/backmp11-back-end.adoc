@@ -1,0 +1,492 @@
+= Backmp11 back-end (C{plus}{plus}17, experimental)
+
+Backmp11 is a new back-end that is mostly backwards-compatible with `back`.
+It is currently in **experimental** stage, thus some details about the compatibility might change (feedback welcome!).
+It is named after the metaprogramming library Boost Mp11, the main contributor to the optimizations.
+Usages of MPL are replaced with Mp11 to get rid of the costly C{plus}{plus}03 emulation of variadic templates.
+
+The new back-end has the following goals:
+
+- reduce compilation time and RAM usage
+- reduce state machine runtime
+- provide new features and customization options
+
+It offers a significant reduction in compilation time and RAM usage, as can be seen in these benchmarks:
+
+*Large state machine*
+
+[width=80%, cols="3,1,1,1", options="header"]
+|=======================================================================
+|                             | Compile / sec | RAM / MB | Runtime / sec
+| back                        | 18            | 953      | 7
+| back_favor_compile_time     | 21            | 1000     | 8
+| back11                      | 43            | 2794     | 7
+| backmp11                    | 3             | 239      | 3
+| backmp11_favor_compile_time | 3             | 220      | 13
+| sml                         | 12            | 363      | 3
+|=======================================================================
+
+
+*Large hierarchical state machine*
+
+[width=80%, cols="3,1,1,1", options="header"]
+|================================================================================
+|                                      | Compile / sec | RAM / MB | Runtime / sec
+| back                                 | 68            | 2849     | 23
+| back_favor_compile_time              | 80            | 2551     | 261
+| backmp11                             | 11            | 472      | 10
+| backmp11_favor_compile_time          | 7             | 288      | 40
+| backmp11_favor_compile_time_multi_cu | 5             | ~919     | 40
+| sml                                  | 48            | 1128     | 11
+|================================================================================
+
+
+The full code with the benchmarks and more information about them is available https://github.com/chandryan/fsm-benchmarks[in this repository].
+There are still a couple more optimizations to come, the tables in the repository frequently get updated with the latest results.
+
+
+== Deprecation timeline
+
+Deprecations of features with more context information are listed in below table.
+
+[width=95%, cols="16,5,40"]
+|===
+| Feature | Deprecation / Removal | Description
+
+| Support for event deferral as action and public access to the deferred event container
+| 1.90 / 1.91
+a| Deferring an event as an action triggered by the same event is not foreseen in UML and leads to ambiguities (the event is both consumed and deferred).
+
+*Change:* The public API to defer an event will be changed to `protected`. If needed, users can inherit from `state_machine` and make the API public again, but without guarantees about correct functionality and API consistency.
+
+*Recommendation:* Configure event deferral as a state property instead of using it as a transition action.
+
+| Public access to the event container
+| 1.90 / 1.91
+a| The event container can be accessed and manipulated via public APIs. Manipulation of the container outside of the library code can lead to undefined behavior.
+
+*Change:* The public API to access the event container will be changed to `protected`. If needed, users can inherit from `state_machine` to access the event container, but without guarantees about correct functionality and API consistency.
+
+|===
+
+
+== New features
+
+=== Universal visitor API
+
+The need to define a `BaseState`, `accept_sig` and `accept` method in the front-end is obsolete.
+
+Instead there is a universal visitor API that supports traversing through the state machine in multiple modes:
+
+- only the active states or all states
+- non-recursive or recursive
+
+```cpp
+// API:
+enum class visit_mode
+{
+    // State selection (mutually exclusive).
+    active_states = 0b001,
+    all_states    = 0b010,
+
+    // Traversal mode (not set = non-recursive).
+    recursive     = 0b100,
+
+    // All valid combinations.
+    active_non_recursive = active_states,
+    active_recursive     = active_states | recursive,
+    all_non_recursive    = all_states,
+    all_recursive        = all_states | recursive
+};
+template<typename Visitor>
+void state_machine::visit(Visitor&& visitor); // Same as active_states | recursive
+template<visit_mode Mode, typename Visitor>
+void state_machine::visit(Visitor&& visitor);
+
+// Assemble your mode...
+state_machine machine;
+machine.visit
+    <visit_mode::all_states | visit_mode::recursive>
+    ([](auto &state) {/*...*/});
+// ... or use the pre-defined constants
+machine.visit
+    <visit_mode::all_recursive>
+    ([](auto &state) {/*...*/});
+
+```
+
+The visitor needs to fulfill the following signature requirement for all sub-states present in the state machine:
+
+```cpp
+template<typename State>
+void operator()(State& state);
+```
+
+Also these bugs are fixed:
+
+- If the SM is not started yet, no active state is visited instead of the initial state(s)
+- If the SM is stopped, no active state is visited instead of the last active state(s)
+
+
+=== Method to check whether a state is active
+
+A new method `is_state_active` can be used to check whether a state is currently active:
+
+```cpp
+template <typename State>
+bool state_machine::is_state_active() const;
+```
+
+If the type of the state appears multiple times in a hierarchical state machine, the method returns true if any of the states are active.
+
+
+// A new method `reset()` can be used to reset the state machine back to its initial state after construction.
+
+// ```cpp
+// void state_machine::reset();
+// ```
+
+// The behaviors are start and stop are:
+// - if `start()` is called for a running state machine, the call is ignored
+// - if `stop()` is called on a stopped (not running) state machine, the call is ignored
+
+
+=== Simplified state machine signature
+
+The signature has been simplified to facilitate sharing configurations between state machines.
+The new signature looks as follows (pseudo-code, the implementation looks a little different):
+
+```cpp
+template <
+    class FrontEnd,
+    class Config = default_state_machine_config,
+    class Derived = state_machine
+>
+class state_machine;
+```
+
+You can define state machine back-ends with a `using MyStateMachine = state_machine<...>;` declaration or by inheriting from `state_machine`.
+
+**IMPORTANT:** The parameter `Derived` has to be set to the derived class, if the `state_machine` class gets extended.
+
+
+=== All settings are bundled in one Config parameter
+
+The configuration of the state machine can be defined with a config structure. The default config looks as follows:
+
+```cpp
+// Default config:
+struct default_state_machine_config
+{
+    using compile_policy = favor_runtime_speed;
+    using context = no_context;
+    using root_sm = no_root_sm;
+    using fsm_parameter = transition_owner;
+    template<typename T>
+    using queue_container = std::deque<T>;
+};
+
+using state_machine_config = default_state_machine_config;
+
+...
+
+// Custom config:
+struct CustomStateMachineConfig : public state_machine_config
+{
+    using compile_policy = favor_compile_time;
+};
+```
+
+=== New state machine setting for defining a context
+
+The setting `context` sets up a context member in the state machine for dependency injection.
+
+If `using context = Context;` is defined in the config, a reference to it has to be passed to the state machine constructor as first argument.
+The following API becomes available to access it from within the state machine:
+
+```cpp
+Context& state_machine::get_context();
+const Context& state_machine::get_context() const;
+```
+
+
+=== New state machine setting for defining a root sm
+
+The setting `root_sm` defines the type of the root state machine of hierarchical state machines. The root sm depicts the uppermost state machine.
+
+If `using root_sm = RootSm;` is defined in the config, the following API becomes available to access it from within any sub-state machine:
+
+```cpp
+RootSm& state_machine::get_root_sm();
+const RootSm& state_machine::get_root_sm() const;
+```
+
+It is highly recommended to always configure the `root_sm` in hierarchical state machines, even if access to it is not required.
+This reduces the compilation time, because it enables the back-end to instantiate the full set of construction-related methods
+only for the root and it can omit them for sub-state machines.
+
+**IMPORTANT:** If a `context` is used in a hierarchical state machine, then also the `root_sm` should be set.
+The `context` is then automatically accessed through the `root_sm`.
+
+
+=== New state machine setting for defining the `Fsm` parameter of actions and guards
+
+The setting `fsm_parameter` defines the instance of the `Fsm& fsm` parameter that is passed to actions and guards in hierarchical state machines.
+
+By default it is set to `transition_owner`, which reflects the same behavior as in `back`:
+
+- Actions and guards with transitions in the same transition table receive the SM instance processing the event, while
+- entry and exit actions receive the SM instance from which the transition originates.
+
+You can alternatively set it to `root_sm`, in which case always the root sm is passed as `Fsm` parameter.
+If `using fsm_parameter = root_sm;` is defined in the config, the setting takes effect.
+
+**IMPORTANT:** If the `fsm_parameter` is set to `root_sm`, then also the `root_sm` must be set.
+
+
+=== Generic support for serializers
+
+The `state_machine` allows access to its private members for serialization purposes with a friend:
+
+```cpp
+// Class boost::msm::backmp11::state_machine
+template<typename T, typename A0, typename A1, typename A2>
+friend void serialize(T&, state_machine<A0, A1, A2>&);
+```
+
+A similar friend declaration is available in the `history_impl` classes.
+
+**IMPORTANT:** This design allows you to provide any serializer implementation, but due to the need to access private members there is no guarantee that your implementation breaks in a new version of the back-end.
+
+
+== Resolved issues with respect to `back`
+
+=== Deferring events in orthogonal regions
+
+Event deferral in orthogonal regions behaves as described in the UML standard:
+
+- If one active region decides to defer an event, then it is deferred for all regions instead of being processed
+- The event gets processed once no more active region decides to defer it
+
+In `back` the event is evaluted by all regions independently. This leads to the same event being processed multiple times (and worst case to infinite recursion).
+
+
+== Other changes with respect to `back`
+
+=== The required minimum C{plus}{plus} version is C{plus}{plus}17
+
+C{plus}{plus}11 brings the strongly needed variadic template support for MSM, but later C{plus}{plus} versions provide other important features - for example C{plus}{plus}17's `if constexpr (...)`.
+
+
+=== The signature of the state machine is changed
+
+Please refer to the simplified state machine signature above for more information.
+
+
+=== The history policy of a state machine is defined in the front-end instead of the back-end
+
+The definition of the history policy is closer related to the front-end, and defining it there ensures that state machine configs can be shared between back-ends.
+The definition looks as follows:
+
+```cpp
+struct no_history {};
+
+template <typename... Events>
+struct shallow_history {};
+
+struct always_shallow_history {};
+
+...
+
+// User-defined state machine
+struct Playing_ : public msm::front::state_machine_def<Playing_>
+{
+    using history = msm::front::shallow_history<end_pause>;
+    ...
+};
+```
+
+
+=== The public API of `state_machine` is refactored
+
+All methods that should not be part of the public API are removed from it, redundant methods are removed as well. A few other methods have been renamed.
+The following adapter pseudo-code showcases the differences to the `back` API:
+
+```cpp
+class state_machine_adapter
+{
+    // The new API returns a const std::array<...>&.
+    const int* current_state() const
+    {
+        return &this->get_active_state_ids()[0];
+    }
+
+    // The history can be accessed like this,
+    // but it has to be configured in the front-end.
+    auto& get_history()
+    {
+        return this->m_history;
+    }
+
+    auto& get_message_queue()
+    {
+        return this->get_events_queue();
+    }
+
+    size_t get_message_queue_size() const
+    {
+        return this->get_events_queue().size();
+    }
+
+    void execute_queued_events()
+    {
+        this->process_queued_events();
+    }
+
+    void execute_single_queued_event()
+    {
+        this->process_single_queued_event();
+    }
+
+    auto& get_deferred_queue()
+    {
+        return this->get_deferred_events_queue();
+    }
+
+    void clear_deferred_queue()
+    {
+        this->get_deferred_events_queue().clear();
+    }
+
+    template <class Flag>
+    bool is_flag_active<Flag, Flag_AND>() const
+    {
+        return is_flag_active<Flag, std::logical_and<bool>>();
+    }
+
+    // No adapter.
+    // Superseded by the visitor API.
+    // void visit_current_states(...) {...}
+
+    // No adapter.
+    // States can be set with `get_state<...>()` or the visitor API.
+    // void set_states(...) {...}
+
+    // No adapter.
+    // Could be implemented with the visitor API.
+    // auto get_state_by_id(int id) {...}
+};
+```
+
+A working code example of such an adapter is available in https://github.com/boostorg/msm/blob/develop/test/Backmp11Adapter.hpp[the tests].
+It can be copied and adapted if needed, though this class is internal to the tests and not planned to be supported officially.
+
+Further details about the applied API changes:
+
+==== The dependency to `boost::serialization` is removed
+
+The back-end aims to support serialization in general, but without providing a concrete implementation for a specific serialization library.
+If you want to use `boost::serialization` for your state machine, you can look into the https://github.com/boostorg/msm/blob/develop/test/Backmp11Adapter.hpp[state machine adapter] from the tests for an example how to set it up.
+
+
+==== The back-end's constructor does not allow initialization of states and `set_states` is removed
+
+There were some caveats with one constructor that was used for different use cases: On the one hand some arguments were immediately forwarded to the front-end's constructor, on the other hand the stream operator was used to identify other arguments in the constructor as states, to copy them into the state machine. Besides the syntax of the later being rather unusual, when doing both at once the syntax becomes too difficult to understand; even more so if states within hierarchical sub state machines were initialized in this fashion.
+
+In order to keep the API of the constructor simpler and less ambiguous, it only supports forwarding arguments to the front-end and no more.
+Also the `set_states` API is removed. If setting a state is required, this can still be done (in a little more verbose, but also more direct & explicit fashion) by getting a reference to the desired state via `get_state` and then assigning the desired new state to it.
+
+
+==== The method `get_state_by_id` is removed
+
+If you really need to get a state by id, please use the universal visitor API to implement the function on your own.
+The backmp11 state_machine has a new method to support getting the id of a state in the visitor:
+
+```cpp
+template<typename State>
+static constexpr int state_machine::get_state_id(const State&);
+```
+
+
+==== The pointer overload of `get_state` is removed
+
+Similarly to the STL's `std::get` of a tuple, the only sensible template parameter for `get_state` is `T` returning a `T&`.
+The overload for a `T*` is removed and the `T&` is discouraged, although still supported.
+If you need to get a state by its address, use the address operator after you have received the state by reference.
+
+
+=== `boost::any` as Kleene event is replaced by `std::any`
+
+To reduce the amount of necessary header inclusions `backmp11` uses `std::any` for defining Kleene events instead of `boost::any`.
+You can still opt in to use `boost::any` by explicitly including `boost/msm/event_traits.h`.
+
+
+=== The eUML front-end support is removed
+
+The support of EUML induces longer compilation times by the need to include the Boost proto headers and applying C{plus}{plus}03 variadic template emulation. If you want to use a UML-like syntax, please try out the new PUML front-end.
+
+
+=== The fsm check and find region support is removed
+
+The implementation of these two features depends on mpl_graph, which induces high compilation times.
+
+
+=== `sm_ptr` support is removed
+
+Not needed with the functor front-end and was already deprecated, thus removed in `backmp11`.
+
+
+== How to use it
+
+The back-end with both its compile policies `favor_runtime_speed` and `favor_compile_time` should be mostly compatible with existing code.
+
+Required replacements to try it out:
+
+- for the state machine use `boost::msm::backmp11::state_machine` in place of `boost::msm::back::state_machine` and
+- for configuring the compile policy and more use `boost::msm::backmp11::state_machine_config`
+- if you encounter API-incompatibilities please check the <<_other_changes_with_respect_to_back,details above>> for reference
+
+
+Since the back-end should compile very fast for most machines, the manual generation of state machines with the `favor_compile_time` policy has become an opt-in feature.
+If you want to build your state machine across multiple compilation units, you need to do the following:
+
+- set up a preprocessor define `BOOST_MSM_BACKMP11_MANUAL_GENERATION` before including `msm/backmp11/favor_compile_time.hpp`
+- then generate your state machine(s) in the compilation units with the macro `BOOST_MSM_BACKMP11_GENERATE_STATE_MACHINE(<smname>)`
+
+You can find an example for this in the https://github.com/boostorg/msm/blob/develop/test/Backmp11Visitor.cpp[visitor test].
+
+
+== Applied optimizations
+
+Below you can find some insights how the compile-time and runtime optimizations were achieved.
+
+- Replacement of CPU-intensive calls (due to C{plus}{plus}03 recursion from MPL) with Mp11
+- Replaced O(N) algorithms with O(1) alternatives (using additional dispatch tables)
+- Added more type filters prior to template instantiations
+- Applied type punning where useful (to reduce template instantiations, e.g. `std::deque` & other things around the dispatch table)
+
+
+=== `favor_runtime_speed` policy
+
+Summary:
+
+- Unconditionally default-initialized everything first and afterwards only the row-related transition cells
+- Optimized cell initialization with initializer arrays (to reduce template instantiations)
+
+
+=== `favor_compile_time` policy
+
+Once an event is given to the FSM for processing, it is immediately wrapped with `std::any` and processing continues with this `any` event.
+The structure of the dispatch table has been reworked, one dispatch table is created per state as a hash map.
+The state dispatch tables are designed to directly work with the `any` event, they use the event's type index via its `type()` function as hash value.
+
+This mechanism enables SMs to forward events to sub-SMs without requiring additional template instantiations just for forwarding as was needed with the `process_any_event` mechanism.
+The new mechanism enables **forwarding of events to sub-SMs in O(1) order instead of O(N)**.
+
+Summary:
+
+- Use one dispatch table per state to reduce compiler processing time
+  - The algorithms for processing the STT and states are optimized to go through rows and states only once
+  - These dispatch tables are hash tables with type_id as key
+- Apply type erasure with `std::any` as early as possible and do further processing only with any events
+  - each dispatch table only has to cover the events it's handling, no template instantiations required for forwarding events to sub-SMs

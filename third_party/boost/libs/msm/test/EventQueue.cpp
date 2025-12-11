@@ -9,7 +9,7 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 // back-end
-#include <boost/msm/back/state_machine.hpp>
+#include "BackCommon.hpp"
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 // functors
@@ -19,7 +19,7 @@
 #include <boost/msm/front/euml/operator.hpp>
 
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
-#define BOOST_TEST_MODULE MyTest
+#define BOOST_TEST_MODULE event_queue_test
 #endif
 #include <boost/test/unit_test.hpp>
 
@@ -291,23 +291,23 @@ namespace
 
     };
     // Pick a back-end
-    typedef msm::back::state_machine<player_> player;
+    typedef get_test_machines<player_> players;
 
 //    static char const* const state_names[] = { "Stopped", "Open", "Empty", "Playing", "Paused" };
 
 
-    BOOST_AUTO_TEST_CASE( test_event_queue )
+    BOOST_AUTO_TEST_CASE_TEMPLATE( event_queue_test, player, players )
     {     
         player p;
 
         p.start(); 
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Empty&>().entry_counter == 1,"Empty entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Empty&>().entry_counter == 1,"Empty entry not called correctly");
 
         p.enqueue_event(open_close());
         p.execute_single_queued_event();
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 1,"Open should be active"); //Open
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Empty&>().exit_counter == 1,"Empty exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Open&>().entry_counter == 1,"Open entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Empty&>().exit_counter == 1,"Empty exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Open&>().entry_counter == 1,"Open entry not called correctly");
 
         p.enqueue_event(open_close());
         p.enqueue_event(
@@ -318,42 +318,41 @@ namespace
 
         BOOST_CHECK_MESSAGE(p.can_close_drawer_counter == 1,"guard not called correctly");
 
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Open&>().exit_counter == 1,"Open exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Empty&>().entry_counter == 2,"Empty entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Open&>().exit_counter == 1,"Open exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Empty&>().entry_counter == 2,"Empty entry not called correctly");
 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 3,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Empty&>().exit_counter == 2,"Empty exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Stopped&>().entry_counter == 1,"Stopped entry not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Stopped&>().exit_counter == 1,"Stopped exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Playing&>().entry_counter == 1,"Playing entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Empty&>().exit_counter == 2,"Empty exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Stopped&>().entry_counter == 1,"Stopped entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Stopped&>().exit_counter == 1,"Stopped exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Playing&>().entry_counter == 1,"Playing entry not called correctly");
         BOOST_CHECK_MESSAGE(p.start_playback_counter == 1,"action not called correctly");
         BOOST_CHECK_MESSAGE(p.test_fct_counter == 1,"action not called correctly");
 
         p.process_event(pause());
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 4,"Paused should be active"); //Paused
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Playing&>().exit_counter == 1,"Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Paused&>().entry_counter == 1,"Paused entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Playing&>().exit_counter == 1,"Playing exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Paused&>().entry_counter == 1,"Paused entry not called correctly");
 
         // go back to Playing 
         p.enqueue_event(end_pause());
         p.execute_queued_events();
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 3,"Playing should be active"); //Playing
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Paused&>().exit_counter == 1,"Paused exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Playing&>().entry_counter == 2,"Playing entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Paused&>().exit_counter == 1,"Paused exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Playing&>().entry_counter == 2,"Playing entry not called correctly");
 
         p.enqueue_event(pause());
         p.enqueue_event(stop());
         p.enqueue_event(stop());
         p.execute_queued_events();
 
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Playing&>().exit_counter == 2,"Playing exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Paused&>().entry_counter == 2,"Paused entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Playing&>().exit_counter == 2,"Playing exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Paused&>().entry_counter == 2,"Paused entry not called correctly");
 
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Paused&>().exit_counter == 2,"Paused exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Paused&>().exit_counter == 2,"Paused exit not called correctly");
 
         BOOST_CHECK_MESSAGE(p.current_state()[0] == 0,"Stopped should be active"); //Stopped
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Stopped&>().exit_counter == 2,"Stopped exit not called correctly");
-        BOOST_CHECK_MESSAGE(p.get_state<player_::Stopped&>().entry_counter == 3,"Stopped entry not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Stopped&>().exit_counter == 2,"Stopped exit not called correctly");
+        BOOST_CHECK_MESSAGE(p.template get_state<player_::Stopped&>().entry_counter == 3,"Stopped entry not called correctly");
     }
 }
-

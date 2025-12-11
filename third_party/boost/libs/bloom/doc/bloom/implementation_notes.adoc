@@ -127,7 +127,7 @@ with https://www.intel.com/content/www/us/en/docs/cpp-compiler/developer-guide-r
 
 === `fast_multiblock64`
 
-We only provide a SIMD implementation for AVX2 that relies in two
+We only provide a SIMD implementation for AVX2 that relies on two
 parallel `+++__+++m256i`+++s+++ for the generation of up
 to 8 64-bit values with shifted 1s. For Neon and SSE2, emulation
 through 4 128-bit registers proved slower than non-SIMD `multiblock<uint64_t, K>`.

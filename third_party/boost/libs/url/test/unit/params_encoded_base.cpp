@@ -12,7 +12,7 @@
 
 #include <boost/url/url_view.hpp>
 #include <boost/core/ignore_unused.hpp>
-#include <boost/static_assert.hpp>
+#include <boost/core/detail/static_assert.hpp>
 
 #include "test_suite.hpp"
 
@@ -24,19 +24,19 @@
 namespace boost {
 namespace urls {
 
-BOOST_STATIC_ASSERT(
+BOOST_CORE_STATIC_ASSERT(
     ! std::is_default_constructible<
         params_encoded_base>::value);
 
-BOOST_STATIC_ASSERT(
+BOOST_CORE_STATIC_ASSERT(
     ! std::is_copy_constructible<
         params_encoded_base>::value);
 
-BOOST_STATIC_ASSERT(
+BOOST_CORE_STATIC_ASSERT(
     ! std::is_copy_assignable<
         params_encoded_base>::value);
 
-BOOST_STATIC_ASSERT(
+BOOST_CORE_STATIC_ASSERT(
     std::is_default_constructible<
         params_encoded_base::iterator>::value);
 

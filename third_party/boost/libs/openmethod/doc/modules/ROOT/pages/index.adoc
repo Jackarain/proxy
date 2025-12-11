@@ -1,0 +1,108 @@
+:example: ../examples
+
+[#boost-openmethod]
+= Boost.OpenMethod
+
+Boost.OpenMethod implements open-(multi-)methods in C++17 and above.
+
+== Features
+
+* Single dispatch can be as fast as equivalent virtual function calls.
+
+* Multiple dispatch in constant time (for a given number of virtual parameters).
+
+* Redundancy-free multiple dispatch tables.
+
+* Inter-operation with standard smart pointers, extensible to other pointer-like
+  types.
+
+* Exception agnostic by default.
+
+* Macro-based interface for convenience.
+
+* Macro-free interface for inter-operation with templates.
+
+* Customization points for alternative RTTI systems, error handling, vptr
+  placement, etc.
+
+* Headers-only.
+
+== Requirements
+
+The library requires an optimizing compiler supporting C++17 or above.
+
+== Tested Compilers
+
+Boost.OpenMethod is tested with the following compilers:
+
+* clang: 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+
+* gcc: 8, 9, 10, 11, 12, 13, 14, 15
+
+* msvc: 14.3
+
+* icpx
+
+and on the following platforms:
+
+* Linux
+
+* macOS
+
+* Windows
+
+* s390x
+
+== Quality Assurance
+
+The development infrastructure for the library includes these per-commit
+analyses:
+
+* Coverage reports
+
+* Clang sanitizers
+
+* Compilation and tests on Drone.io and GitHub Actions
+
+== Acknowledgments
+
+I would like to thank the C++ Alliance for their support, in particular
+Joaquín M. López Muñoz for encouraging me to submit my library and being the
+first to endorse it; and Dmitryi Arkhipov for volunteering to be the review
+manager.
+
+Thanks to the members of the Boost community who posted a formal review:
+
+* Andrzej Krzemienski
+
+* Christian Mazakas
+
+* Joaquin M López Muñoz
+
+* Klemens Morgenstern
+
+* Ruben Perez
+
+* Yannick Le Goc
+
+Also thanks to Steven Watanabe for his cogent feedback and advice, and all
+the people who posted remarks and suggestions.
+
+This work was strongly influenced by the following papers:
+
+* https://www.stroustrup.com/multimethods.pdf[Open Multi-Methods for C++],
+Peter Pirkelbauer, Yuriy Solodkyy and Bjarne Stroustrup
+
+* https://core.ac.uk/download/pdf/18599789.pdf[Simplifying the Analysis of
+C++ Programs], Yuriy Solodkyy.
+
+* http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2216.pdf[Report
+on language support for Multi-Methods and Open-Methods for C++], Peter
+Pirkelbauer, Yuriy Solodkyy and Bjarne Stroustrup.
+
+* https://dl.acm.org/doi/abs/10.1145/191081.191117[Optimizing multi-method
+dispatch using compressed dispatch tables], Eric Amiel, Olivier Gruber and
+Eric Simon.
+
+Finally, thanks to Prof. J.D. Garcia, of the Universidad Carlos III in Madrid,
+for organizing the "using std::cpp" conference, and introducing me to Joaquín.

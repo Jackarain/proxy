@@ -114,7 +114,7 @@ construct easily becomes unmaintainable.
 <p>
 Boost.MultiIndex features <a href="#ord_indices"><i>ordered indices</i></a>, which
 sort the elements according to a particular key, and are designed to help programmers
-in need of sequences of elements for which <i>more than one</i> sorting criteria are
+in need of sequences of elements for which <i>more than one</i> sorting criterion is
 relevant. We do so by defining a <code>multi_index_container</code>
 instantiation composed of several ordered indices: each index, viewed in isolation,
 behaves much as an ordered <code>std::set</code> (or <code>std::multiset</code>), whilst
@@ -268,7 +268,7 @@ does not show any advantage. The code for inserting the text into the container
 does not change as sequenced indices provide an interface similar to that of
 <code>std::list</code> (no explicit access to this index through
 <code>get&lt;0>()</code> is needed as <code>multi_index_container</code> inherits the
-functionality of index #0.) But the specification of an additional ordered index
+functionality of index #0). But the specification of an additional ordered index
 allows us to implement <code>occurrences</code> and <code>delete_word</code>
 in a much more efficient manner:
 </p>
@@ -417,7 +417,7 @@ for instance,
   <li><code>employee_set::nth_index&lt;1>::type</code> is the type of
     index #1,</li>
   <li><code>employee_set::index&lt;name>::type</code> is the type of the index
-    tagged with <code>name</code> (the same index #1 in this case.)</li>
+    tagged with <code>name</code> (the same index #1 in this case).</li>
 </ul>
 <code>get()</code>, on the other hand, is overloaded to serve both styles of access:
 </p>
@@ -453,7 +453,7 @@ in the previous example can be rewritten to hold two different tags
 
 <p>
 Each index of a <code>multi_index_container</code> uses its own
-iterator types, which are different from those of another indices. As is
+iterator types, which are different from those of other indices. As is
 the rule with STL containers, these iterators are defined as nested
 types of the index:
 </p>
@@ -496,7 +496,7 @@ Currently, Boost.MultiIndex provides the following index types:
   <li>Ordered indices sort the elements like <code>std::set</code>s do and
     provide a similar interface. There are <i>unique</i> and <i>non-unique</i>
     variants: the former do not allow for duplicates, while the latter permit
-    them (like <code>std::multiset</code>.)</li>
+    them (like <code>std::multiset</code>).</li>
   <li>Ranked indices are a variation of ordered indices providing extra capabilities
     for querying and accessing elements based on their <i>rank</i> (the numerical position
     they occupy in the index).
@@ -766,7 +766,7 @@ Here we are not only passing IDs instead of <code>employee</code> objects:
 an alternative comparison predicate is passed as well. In general, lookup operations
 of ordered indices are overloaded to accept
 <a href="../reference/ord_indices.html#set_operations"><i>compatible sorting
-criteria</i></a>. The somewhat cumbersone definition of compatibility in this context
+criteria</i></a>. The somewhat cumbersome definition of compatibility in this context
 is given in the reference, but roughly speaking we say that a comparison predicate
 <code>C1</code> is compatible with <code>C2</code> if any sequence sorted by
 <code>C2</code> is also sorted with respect to <code>C1</code>.
@@ -801,7 +801,7 @@ The following shows a more interesting use of compatible predicates:
 Range searching, i.e. the lookup of all elements in a given interval, is a very
 frequent operation for which standard <code>lower_bound</code> and
 <code>upper_bound</code> can be resorted to, though in a cumbersome manner.
-For instance, the following code retrieves the elements of an
+For instance, the following code retrieves the elements of a
 <code>multi_index_container&lt;double></code> in the interval [100,200]:
 </p>
 
@@ -1229,7 +1229,7 @@ Appropriate instantiations of <code>multi_index_container</code> can in fact sim
 <code>std::set</code>, <code>std::multiset</code> and (with more limitations)
 <code>std::list</code>, as shown in the
 <a href="techniques.html#emulate_std_containers">techniques</a>
-section. These simulations are as nearly as efficient as the original STL
+section. These simulations are nearly as efficient as the original STL
 containers; consult the <a href="../reference/index.html">reference</a> for further
 information on complexity guarantees and the
 <a href="../performance.html">performance section</a> for practical measurements of

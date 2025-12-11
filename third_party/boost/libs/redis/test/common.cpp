@@ -50,7 +50,6 @@ boost::redis::config make_test_config()
 {
    boost::redis::config cfg;
    cfg.addr.host = get_server_hostname();
-   cfg.max_read_size = 1000000;
    return cfg;
 }
 
@@ -69,3 +68,19 @@ void run_coroutine_test(net::awaitable<void> op, std::chrono::steady_clock::dura
       throw std::runtime_error("Coroutine test did not finish");
 }
 #endif  // BOOST_ASIO_HAS_CO_AWAIT
+
+// Finds a value in the output of the CLIENT INFO command
+// format: key1=value1 key2=value2
+// TODO: duplicated
+std::string_view find_client_info(std::string_view client_info, std::string_view key)
+{
+   std::string prefix{key};
+   prefix += '=';
+
+   auto const pos = client_info.find(prefix);
+   if (pos == std::string_view::npos)
+      return {};
+   auto const pos_begin = pos + prefix.size();
+   auto const pos_end = client_info.find(' ', pos_begin);
+   return client_info.substr(pos_begin, pos_end - pos_begin);
+}

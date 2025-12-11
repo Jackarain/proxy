@@ -32,8 +32,8 @@
 #include <string>
 #include <cstring>
 #include <cstdio>
+#include <type_traits>
 #include <boost/limits.hpp>
-#include <boost/type_traits/is_pointer.hpp>
 #include <boost/detail/lcast_precision.hpp>
 #include <boost/config/workaround.hpp>
 
@@ -115,7 +115,7 @@ namespace boost {
             template<typename InputStreamable>
             bool operator>>(InputStreamable &output)
             {
-                return !is_pointer<InputStreamable>::value &&
+                return !std::is_pointer<InputStreamable>::value &&
                        stream >> output &&
                        stream.get() == traits_type::eof();
             }

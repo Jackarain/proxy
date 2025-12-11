@@ -410,7 +410,7 @@ struct png_info_base
     png_bitdepth::type           _bit_depth;
     /// The color space type.
     png_color_type::type         _color_type;
-    /// The interlace methos.
+    /// The interlace method.
     png_interlace_method::type   _interlace_method;
     /// The compression method.
     png_compression_method::type _compression_method;

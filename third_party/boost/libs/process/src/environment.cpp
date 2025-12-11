@@ -17,7 +17,7 @@ BOOST_PROCESS_V2_BEGIN_NAMESPACE
 
 #if defined(BOOST_PROCESS_V2_WINDOWS)
 
-error_code process_environment::on_setup(windows::default_launcher & launcher, const filesystem::path &, const std::wstring &)
+error_code process_environment::do_setup(windows::default_launcher & launcher)
 {
     if (!unicode_env.empty() && !ec)
     {
@@ -30,7 +30,7 @@ error_code process_environment::on_setup(windows::default_launcher & launcher, c
 
 #else
 
-error_code process_environment::on_setup(posix::default_launcher & launcher, const filesystem::path &, const char * const *)
+error_code process_environment::do_setup(posix::default_launcher & launcher)
 {
     launcher.env = env.data();
     return error_code{};

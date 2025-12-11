@@ -25,8 +25,8 @@
 
    }} // namespaces
 
-The `gmp_float` back-end is used in conjunction with `number` : it acts as a thin wrapper around the [gmp] `mpf_t`
-to provide an real-number type that is a drop-in replacement for the native C++ floating-point types, but with
+The `gmp_float` back-end is used in conjunction with `number`: it acts as a thin wrapper around the [gmp] `mpf_t`
+to provide a real-number type that is a drop-in replacement for the native C++ floating-point types, but with
 much greater precision.
 
 Type `gmp_float` can be used at fixed precision by specifying a non-zero `Digits10` template parameter, or
@@ -50,7 +50,7 @@ Things you should know when using this type:
 * Default constructed `gmp_float`s have the value zero (this is the [gmp] library's default behavior).
 * No changes are made to the [gmp] library's global settings, so this type can be safely mixed with
 existing [gmp] code.
-* This backend supports rvalue-references and is move-aware, making instantiations of `number` on this backend move aware.
+* This backend supports rvalue-references and is move-aware, making instantiations of `number` on this backend move-aware.
 * It is not possible to round-trip objects of this type to and from a string and get back
 exactly the same value.  This appears to be a limitation of [gmp].
 * Since the underlying [gmp] types have no notion of infinities or NaNs, care should be taken

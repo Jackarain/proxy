@@ -248,14 +248,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: "14,latest"
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
@@ -267,7 +259,7 @@ jobs:
           - toolset: gcc
             cxxstd: "11,14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
 
     runs-on: ${{matrix.os}}
 
@@ -375,3 +367,53 @@ jobs:
         run: |
           cd ../boost-root
           dist/bin/boostdep --list-exceptions | diff -u tools/boostdep/depinst/exceptions.txt -
+
+  posix-depinst:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        library:
+          - assert
+          - algorithm
+          - asio
+          - beast
+          - config
+          - container_hash
+          - core
+          - endian
+          - graph
+          - geometry
+          - mp11
+          - serialization
+          - static_assert
+          - thread
+          - throw_exception
+          - uuid
+
+        args: [ '', '-C' ]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          cp -r $GITHUB_WORKSPACE/* tools/boostdep
+
+      - name: Use depinst
+        run: |
+          cd ../boost-root
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" -u ${{matrix.args}} ${{matrix.library}}

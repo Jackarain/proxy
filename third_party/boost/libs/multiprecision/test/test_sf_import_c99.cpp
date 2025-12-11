@@ -638,50 +638,58 @@ void test_poison()
 }
 
 template <class T>
-bool type_sets_errno(const T&)
+static constexpr bool type_sets_errno(const T&)
 {
    return true;
 }
 #ifdef TEST_MPFR_50
 template <unsigned Digits10, boost::multiprecision::mpfr_allocation_type AllocateType, boost::multiprecision::expression_template_option ExpressionTemplates>
-bool type_sets_errno(const boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates>&)
+static constexpr bool type_sets_errno(const boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType>, ExpressionTemplates>&)
 {
    return false;
 }
 #endif
 #ifdef TEST_MPFR_DEBUG_ADAPTOR
 template <unsigned Digits10, boost::multiprecision::mpfr_allocation_type AllocateType, boost::multiprecision::expression_template_option ExpressionTemplates>
-bool type_sets_errno(const boost::multiprecision::number<boost::multiprecision::debug_adaptor<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType> >, ExpressionTemplates>&)
+static constexpr bool type_sets_errno(const boost::multiprecision::number<boost::multiprecision::debug_adaptor<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType> >, ExpressionTemplates>&)
 {
    return false;
 }
 #endif
 #ifdef TEST_MPFI_DEBUG_ADAPTOR
 template <unsigned Digits10, boost::multiprecision::expression_template_option ExpressionTemplates>
-bool type_sets_errno(const boost::multiprecision::number<boost::multiprecision::debug_adaptor<boost::multiprecision::mpfi_float_backend<Digits10> >, ExpressionTemplates>&)
+static constexpr bool type_sets_errno(const boost::multiprecision::number<boost::multiprecision::debug_adaptor<boost::multiprecision::mpfi_float_backend<Digits10> >, ExpressionTemplates>&)
 {
    return false;
 }
 #endif
 #ifdef TEST_MPFR_LOGGED_ADAPTOR
 template <unsigned Digits10, boost::multiprecision::mpfr_allocation_type AllocateType, boost::multiprecision::expression_template_option ExpressionTemplates>
-bool type_sets_errno(const boost::multiprecision::number<boost::multiprecision::logged_adaptor<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType> >, ExpressionTemplates>&)
+static constexpr bool type_sets_errno(const boost::multiprecision::number<boost::multiprecision::logged_adaptor<boost::multiprecision::mpfr_float_backend<Digits10, AllocateType> >, ExpressionTemplates>&)
 {
    return false;
 }
 #endif
 #ifdef TEST_MPFI_LOGGED_ADAPTOR
 template <unsigned Digits10, boost::multiprecision::expression_template_option ExpressionTemplates>
-bool type_sets_errno(const boost::multiprecision::number<boost::multiprecision::logged_adaptor<boost::multiprecision::mpfi_float_backend<Digits10> >, ExpressionTemplates>&)
+static constexpr bool type_sets_errno(const boost::multiprecision::number<boost::multiprecision::logged_adaptor<boost::multiprecision::mpfi_float_backend<Digits10> >, ExpressionTemplates>&)
 {
    return false;
 }
 #endif
 #ifdef TEST_FLOAT128
-bool type_sets_errno(const boost::multiprecision::float128&)
+static constexpr bool type_sets_errno(const boost::multiprecision::float128&)
 {
    return false;
 }
+#endif
+#ifdef TEST_CPP_DOUBLE_FLOAT
+static constexpr bool type_sets_errno(const boost::multiprecision::cpp_double_float&) { return false; }
+static constexpr bool type_sets_errno(const boost::multiprecision::cpp_double_double&) { return false; }
+static constexpr bool type_sets_errno(const boost::multiprecision::cpp_double_long_double&) { return false; }
+#if defined(BOOST_MP_CPP_DOUBLE_FP_HAS_FLOAT128)
+static constexpr bool type_sets_errno(const boost::multiprecision::cpp_double_float128&) { return false; }
+#endif
 #endif
 
 template <class T>
@@ -696,7 +704,9 @@ typename std::enable_if<std::numeric_limits<T>::is_specialized>::type check_inva
       BOOST_CHECK_EQUAL(val, 0);
    }
    if (type_sets_errno(val))
+   {
       BOOST_CHECK_EQUAL(errno, EDOM);
+   }
    errno = 0;
 }
 
@@ -792,10 +802,10 @@ void test_c99_appendix_F()
    {
       arg = std::numeric_limits<T>::infinity();
       val = atan(arg);
-      BOOST_CHECK_EQUAL(val, boost::math::constants::half_pi<T>());
+      BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, boost::math::constants::half_pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, boost::math::constants::half_pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
       arg = -std::numeric_limits<T>::infinity();
       val = atan(arg);
-      BOOST_CHECK_EQUAL(val, -boost::math::constants::half_pi<T>());
+      BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, -boost::math::constants::half_pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, -boost::math::constants::half_pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
    }
    if (std::numeric_limits<T>::has_quiet_NaN)
    {
@@ -832,7 +842,7 @@ void test_c99_appendix_F()
    arg  = 0;
    arg2 = -2;
    val  = atan2(arg, arg2);
-   BOOST_CHECK_EQUAL(val, boost::math::constants::pi<T>());
+   BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, boost::math::constants::pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, boost::math::constants::pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
    arg = -arg;
    if (signbit(arg))
    {
@@ -854,7 +864,7 @@ void test_c99_appendix_F()
    arg  = -2;
    arg2 = 0;
    val  = atan2(arg, arg2);
-   BOOST_CHECK_EQUAL(val, -boost::math::constants::half_pi<T>());
+   BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, -boost::math::constants::half_pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, -boost::math::constants::half_pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
    arg2 = -arg2;
    if (signbit(arg2))
    {
@@ -864,7 +874,7 @@ void test_c99_appendix_F()
    arg  = 2;
    arg2 = 0;
    val  = atan2(arg, arg2);
-   BOOST_CHECK_EQUAL(val, boost::math::constants::half_pi<T>());
+   BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, boost::math::constants::half_pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, boost::math::constants::half_pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
    arg2 = -arg2;
    if (signbit(arg2))
    {
@@ -876,10 +886,10 @@ void test_c99_appendix_F()
       arg  = 2;
       arg2 = -std::numeric_limits<T>::infinity();
       val  = atan2(arg, arg2);
-      BOOST_CHECK_EQUAL(val, boost::math::constants::pi<T>());
+      BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, boost::math::constants::pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, boost::math::constants::pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
       arg = -arg;
       val = atan2(arg, arg2);
-      BOOST_CHECK_EQUAL(val, -boost::math::constants::pi<T>());
+      BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, -boost::math::constants::pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, -boost::math::constants::pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
       arg  = 2;
       arg2 = std::numeric_limits<T>::infinity();
       val  = atan2(arg, arg2);
@@ -895,17 +905,17 @@ void test_c99_appendix_F()
       arg  = std::numeric_limits<T>::infinity();
       arg2 = 2;
       val  = atan2(arg, arg2);
-      BOOST_CHECK_EQUAL(val, boost::math::constants::half_pi<T>());
+      BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, boost::math::constants::half_pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, boost::math::constants::half_pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
       arg = -arg;
       val = atan2(arg, arg2);
-      BOOST_CHECK_EQUAL(val, -boost::math::constants::half_pi<T>());
+      BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, -boost::math::constants::half_pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, -boost::math::constants::half_pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
       arg  = std::numeric_limits<T>::infinity();
       arg2 = -2;
       val  = atan2(arg, arg2);
-      BOOST_CHECK_EQUAL(val, boost::math::constants::half_pi<T>());
+      BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, boost::math::constants::half_pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, boost::math::constants::half_pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
       arg = -arg;
       val = atan2(arg, arg2);
-      BOOST_CHECK_EQUAL(val, -boost::math::constants::half_pi<T>());
+      BOOST_IF_CONSTEXPR (!has_poor_exp_range_or_precision_support<T>::value) { BOOST_CHECK_EQUAL(val, -boost::math::constants::half_pi<T>()) } else { BOOST_CHECK_CLOSE_FRACTION(val, -boost::math::constants::half_pi<T>(), std::numeric_limits<T>::epsilon() * 8); }
       arg  = std::numeric_limits<T>::infinity();
       arg2 = -std::numeric_limits<T>::infinity();
       val  = atan2(arg, arg2);
@@ -1905,15 +1915,15 @@ void test_c99_appendix_F()
       arg = -1;
       check_invalid(tgamma(arg));
       arg = -std::numeric_limits<T>::infinity();
-      check_invalid(tgamma(arg));
+      BOOST_CHECK((boost::multiprecision::isnan)(tgamma(arg)));
       arg = std::numeric_limits<T>::infinity();
       val = tgamma(arg);
-      BOOST_CHECK_EQUAL(val, std::numeric_limits<T>::infinity());
+      BOOST_CHECK((boost::multiprecision::isinf)(val));
    }
    if (std::numeric_limits<T>::has_quiet_NaN)
    {
       arg = std::numeric_limits<T>::quiet_NaN();
-      check_invalid(tgamma(arg));
+      BOOST_CHECK((boost::multiprecision::isnan)(tgamma(arg)));
    }
    // F.9.6.1:
    arg = 0;
@@ -2263,6 +2273,7 @@ int main()
    #endif
 #endif
 #ifdef TEST_CPP_BIN_FLOAT
+   test_c99_appendix_F<boost::multiprecision::cpp_bin_float_50>();
    test<boost::multiprecision::cpp_bin_float_50>();
    test<boost::multiprecision::number<boost::multiprecision::cpp_bin_float<100>, boost::multiprecision::et_on> >();
 #endif
@@ -2295,10 +2306,17 @@ int main()
    test_c99_appendix_F<boost::multiprecision::number<boost::multiprecision::logged_adaptor<boost::multiprecision::mpfr_float_backend<50> > > >();
 #endif
 #ifdef TEST_CPP_DOUBLE_FLOAT
+   test<boost::multiprecision::cpp_double_float>();
    test<boost::multiprecision::cpp_double_double>();
    test<boost::multiprecision::cpp_double_long_double>();
+
+   test_c99_appendix_F<boost::multiprecision::cpp_double_double>();
+   test_c99_appendix_F<boost::multiprecision::cpp_double_long_double>();
+
    #if defined(BOOST_MP_CPP_DOUBLE_FP_HAS_FLOAT128)
    test<boost::multiprecision::cpp_double_float128>();
+
+   test_c99_appendix_F<boost::multiprecision::cpp_double_float128>();
    #endif
 #endif
 

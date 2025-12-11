@@ -1,0 +1,33 @@
+
+## throw_error_handler
+
+### Synopsis
+
+Defined in <boost/openmethod/policies/throw_error_handler.hpp>.
+
+```c++
+namespace boost::openmethod::policies {
+
+struct throw_error_handler : error_handler {
+    template<class Error>
+    [[noreturn]] static auto error(const Error& error) -> void;
+};
+
+} // boost::openmethod::policies
+```
+
+### Description
+
+throw_error_handler is an implementation of the `error_handler` policy that
+throws the error as an exception.
+
+### Members
+
+#### error
+
+```c++
+template<class Error>
+[[noreturn]] static auto error(const Error& error) -> void;
+```
+
+Throws `error`.

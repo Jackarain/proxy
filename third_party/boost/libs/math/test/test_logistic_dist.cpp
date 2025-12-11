@@ -11,7 +11,7 @@
 #  pragma warning (disable : 4512) // assignment operator could not be generated.
 #endif
 
-#ifdef SYCL_LANGUAGE_VERSION
+#ifdef BOOST_MATH_ENABLE_SYCL
 #include "sycl/sycl.hpp"
 #endif
 

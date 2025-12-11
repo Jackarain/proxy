@@ -103,7 +103,7 @@ BOOST_FIXTURE_TEST_CASE(receive_publish_qos0, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos0, after(10ms));
+        .send(publish_qos0, after(30ms));
 
     run_test(std::move(broker_side));
 }
@@ -114,7 +114,7 @@ BOOST_FIXTURE_TEST_CASE(receive_publish_qos1, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos1, after(10ms))
+        .send(publish_qos1, after(30ms))
         .expect(puback)
             .complete_with(success, after(1ms));
 
@@ -127,7 +127,7 @@ BOOST_FIXTURE_TEST_CASE(receive_publish_qos2, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos2, after(10ms))
+        .send(publish_qos2, after(30ms))
         .expect(pubrec)
             .complete_with(success, after(1ms))
         .reply_with(pubrel, after(2ms))
@@ -165,7 +165,7 @@ BOOST_FIXTURE_TEST_CASE(receive_publish_properties, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish, after(10ms));
+        .send(publish, after(30ms));
 
     asio::io_context ioc;
     auto executor = ioc.get_executor();
@@ -230,13 +230,13 @@ BOOST_FIXTURE_TEST_CASE(receive_malformed_publish, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(malformed_publish, after(10ms))
+        .send(malformed_publish, after(30ms))
         .expect(disconnect)
             .complete_with(success, after(1ms))
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos0, after(50ms));
+        .send(publish_qos0, after(60ms));
 
     run_test(std::move(broker_side));
 }
@@ -255,7 +255,7 @@ BOOST_FIXTURE_TEST_CASE(receive_malformed_pubrel, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos2, after(10ms))
+        .send(publish_qos2, after(30ms))
         .expect(pubrec)
             .complete_with(success, after(1ms))
             .reply_with(malformed_pubrel, after(2ms))
@@ -264,7 +264,7 @@ BOOST_FIXTURE_TEST_CASE(receive_malformed_pubrel, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(pubrel, after(100ms))
+        .send(pubrel, after(60ms))
         .expect(pubcomp)
             .complete_with(success, after(1ms));
 
@@ -285,7 +285,7 @@ BOOST_FIXTURE_TEST_CASE(receive_invalid_rc_pubrel, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos2, after(10ms))
+        .send(publish_qos2, after(30ms))
         .expect(pubrec)
             .complete_with(success, after(1ms))
             .reply_with(malformed_pubrel, after(2ms))
@@ -294,7 +294,7 @@ BOOST_FIXTURE_TEST_CASE(receive_invalid_rc_pubrel, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(pubrel, after(100ms))
+        .send(pubrel, after(60ms))
         .expect(pubcomp)
             .complete_with(success, after(1ms));
 
@@ -312,13 +312,13 @@ BOOST_FIXTURE_TEST_CASE(fail_to_send_puback, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos1, after(3ms))
+        .send(publish_qos1, after(30ms))
         .expect(puback)
             .complete_with(fail, after(1ms))
         .expect(connect)
             .complete_with(success, after(1ms))
             .reply_with(connack, after(2ms))
-        .send(publish_qos1_dup, after(100ms))
+        .send(publish_qos1_dup, after(60ms))
         .expect(puback)
             .complete_with(success, after(1ms));
 
@@ -336,13 +336,13 @@ BOOST_FIXTURE_TEST_CASE(fail_to_send_pubrec, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos2, after(3ms))
+        .send(publish_qos2, after(30ms))
         .expect(pubrec)
             .complete_with(fail, after(1ms))
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos2_dup, after(100ms))
+        .send(publish_qos2_dup, after(60ms))
         .expect(pubrec)
             .complete_with(success, after(1ms))
             .reply_with(pubrel, after(2ms))
@@ -363,7 +363,7 @@ BOOST_FIXTURE_TEST_CASE(broker_fails_to_receive_pubrec, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos2, after(3ms))
+        .send(publish_qos2, after(30ms))
         // write completed, but the broker did not actually
         // receive pubrec, it will resend publish again
         .expect(pubrec)
@@ -372,7 +372,7 @@ BOOST_FIXTURE_TEST_CASE(broker_fails_to_receive_pubrec, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_dup, after(100ms))
+        .send(publish_dup, after(60ms))
         .expect(pubrec)
             .complete_with(success, after(1ms))
             .reply_with(pubrel, after(2ms))
@@ -388,7 +388,7 @@ BOOST_FIXTURE_TEST_CASE(fail_to_send_pubcomp, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(publish_qos2, after(10ms))
+        .send(publish_qos2, after(30ms))
         .expect(pubrec)
             .complete_with(success, after(1ms))
             .reply_with(pubrel, after(2ms))
@@ -397,7 +397,7 @@ BOOST_FIXTURE_TEST_CASE(fail_to_send_pubcomp, shared_test_data) {
         .expect(connect)
             .complete_with(success, after(0ms))
             .reply_with(connack, after(0ms))
-        .send(pubrel, after(10ms))
+        .send(pubrel, after(60ms))
         .expect(pubcomp)
             .complete_with(success, after(1ms));
 
@@ -430,7 +430,7 @@ BOOST_FIXTURE_TEST_CASE(receive_big_publish, shared_test_data) {
         .expect(connect_big_packets)
             .complete_with(success, after(1ms))
             .reply_with(connack, after(2ms))
-        .send(big_publish, after(1s));
+        .send(big_publish, after(30ms));
 
     run_test(std::move(broker_side), cprops);
 }
@@ -457,7 +457,7 @@ BOOST_FIXTURE_TEST_CASE(receive_buffer_overflow, shared_test_data) {
             )
         );
 
-    broker_side.send(boost::algorithm::join(buffers, ""), after(20ms));
+    broker_side.send(boost::algorithm::join(buffers, ""), after(30ms));
 
     asio::io_context ioc;
     auto executor = ioc.get_executor();

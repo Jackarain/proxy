@@ -32,9 +32,15 @@ environment:
       CXXSTD: 14,17,20,latest
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     - TOOLSET: clang-win
-      ADDRMD: 32,64
+      ADDRMD: 32
       CXXSTD: 14,17,latest
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      ENV_SCRIPT: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars32.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    - TOOLSET: clang-win
+      ADDRMD: 64
+      CXXSTD: 14,17,latest
+      ENV_SCRIPT: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     - TOOLSET: gcc
       CXXSTD: 11,14,1z
       ADDPATH: C:\cygwin\bin;
@@ -76,6 +82,7 @@ build: off
 
 test_script:
   - PATH=%ADDPATH%%PATH%
+  - if not "%ENV_SCRIPT%" == "" call "%ENV_SCRIPT%"
   - if not "%CXXSTD%" == "" set CXXSTD=cxxstd=%CXXSTD%
   - if not "%ADDRMD%" == "" set ADDRMD=address-model=%ADDRMD%
   - b2 -j %NUMBER_OF_PROCESSORS% libs/iterator/test toolset=%TOOLSET% %CXXSTD% %ADDRMD%

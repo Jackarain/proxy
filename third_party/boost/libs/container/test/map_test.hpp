@@ -16,6 +16,7 @@
 #include "print_container.hpp"
 #include "movable_int.hpp"
 #include <boost/container/detail/pair.hpp>
+#include <boost/container/detail/compare_functors.hpp>
 #include <boost/move/iterator.hpp>
 #include <boost/move/utility_core.hpp>
 #include <boost/move/make_unique.hpp>
@@ -647,6 +648,68 @@ int map_test_erase(MyBoostMap &boostmap, MyStdMap &stdmap, MyBoostMultiMap &boos
       if(!CheckEqualPairContainers(boostmap, stdmap)) return 1;
       if(!CheckEqualPairContainers(boostmultimap, stdmultimap)) return 1;
    }
+
+   {  //erase_if
+      boostmap.clear();
+      boostmultimap.clear();
+      stdmap.clear();
+      stdmultimap.clear();
+
+      {
+         IntPairType aux_vect[(std::size_t)MaxElem];
+         IntPairType aux_vect2[(std::size_t)MaxElem];
+         IntPairType aux_vect3[(std::size_t)MaxElem];
+
+         for(int i = 0; i < MaxElem; ++i){
+            IntType i1(i);
+            IntType i2(i);
+            new(&aux_vect[i])IntPairType(boost::move(i1), boost::move(i2));
+         }
+
+         for(int i = 0; i < MaxElem; ++i){
+            IntType i1(i);
+            IntType i2(i);
+            new(&aux_vect2[i])IntPairType(boost::move(i1), boost::move(i2));
+         }
+
+         for(int i = 0; i < MaxElem; ++i){
+            IntType i1(i);
+            IntType i2(i);
+            new(&aux_vect3[i])IntPairType(boost::move(i1), boost::move(i2));
+         }
+
+         boostmap.     insert(boost::make_move_iterator(&aux_vect[0]),  boost::make_move_iterator(&aux_vect[0]  + MaxElem));
+         boostmultimap.insert(boost::make_move_iterator(&aux_vect2[0]), boost::make_move_iterator(&aux_vect2[0] + MaxElem));
+         boostmultimap.insert(boost::make_move_iterator(&aux_vect3[0]), boost::make_move_iterator(&aux_vect3[0] + MaxElem));
+      }
+
+      for(int i = 0; i < MaxElem; ++i){
+         stdmap.insert((StdPairType(i, i)));
+         stdmultimap.insert((StdPairType(i, i)));
+         stdmultimap.insert((StdPairType(i, i)));
+      }
+
+      for(int i = 0; i < MaxElem; ++i) {
+         //erase_if
+         const int key = (i + MaxElem/2) % MaxElem;
+
+         if (1 != erase_if(boostmap, equal_to_value_first<int>(key)))
+            return 1;
+         if (0 != erase_if(boostmap, equal_to_value_first<int>(key)))
+            return 1;
+         stdmap.erase(key);
+         if(!test::CheckEqualContainers(boostmap, stdmap)) return false;
+
+         //erase_if
+         if (2 != erase_if(boostmultimap, equal_to_value_first<int>(key)))
+            return 1;
+         if (0 != erase_if(boostmultimap, equal_to_value_first<int>(key)))
+            return 1;
+         stdmultimap.erase(key);
+         if(!test::CheckEqualContainers(boostmultimap, stdmultimap)) return false;
+      }
+   }
+
    return 0;
 }
 

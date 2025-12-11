@@ -34,7 +34,7 @@ for the [@../../performance/voronoi_performance.cpp voronoi-diagram builder test
 
 [table
 [[Type][Relative time]]
-[[`int64_t`][[*1.0](0.0128646s)]]
+[[`int64_t`][[*1.0] (0.0128646s)]]
 [[`number<arithmetic_backend<int64_t>, et_off>`][1.005 (0.0129255s)]]
 ]
 

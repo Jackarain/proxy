@@ -1,0 +1,127 @@
+#
+# Copyright 2020-2021 Peter Dimov
+# Copyright 2021 Andrey Semashev
+# Copyright 2021-2024 Alexander Grund
+# Copyright 2022-2025 James E. King III
+#
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
+#
+# This workflow uses the Boost.CI reusable workflow which builds a variety of
+# configurations of your project, runs tests, and generates code coverage reports.
+#
+# To use it, copy this file into your repository as `.github/workflows/ci.yml` and
+# customize it appropriately.
+#
+---
+name: Boost.CI
+
+permissions:
+  id-token: write
+  pages: write
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - develop
+      - bugfix/**
+      - feature/**
+      - fix/**
+      - github/**
+      - pr/**
+    paths-ignore:
+      - LICENSE
+      - meta/**
+      # - README.md
+
+jobs:
+  call-boost-ci:
+    name: Run Boost.CI
+    uses: boostorg/boost-ci/.github/workflows/reusable.yml@master
+    with:
+      exclude_cxxstd: '98,03,0x,11,14'
+      exclude_compiler: gcc-4.9,gcc-5,gcc-6,gcc-7,clang-3.9,clang-4.0,clang-5.0,clang-6.0,clang-7,clang-16
+      # exclude clang-16 because it seems to use the c++14 standard library on ubuntu-24.04:
+      # include/c++/14/bits/stl_pair.h:410:35: error: no matching function for call to 'get'
+      # maybe similar to this: https://github.com/actions/runner-images/issues/9679
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      COVERITY_SCAN_NOTIFICATION_EMAIL: ${{ secrets.COVERITY_SCAN_NOTIFICATION_EMAIL }}
+      COVERITY_SCAN_TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+
+  antora:
+    name: Antora docs
+    strategy:
+      matrix:
+        include:
+          - { name: Windows, os: windows-latest }
+          - { name: Ubuntu, os: ubuntu-latest }
+          - { name: macOS, os: macos-15 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install packages
+        uses: alandefreitas/cpp-actions/package-install@v1.8.8
+        with:
+          apt-get: git cmake
+
+      - name: Clone Boost.OpenMethod
+        uses: actions/checkout@v4
+
+      - name: Clone Boost
+        uses: alandefreitas/cpp-actions/boost-clone@v1.8.8
+        id: boost-clone
+        with:
+          branch: ${{ (github.ref_name == 'master' && github.ref_name) || 'develop' }}
+          boost-dir: ../boost-source
+          scan-modules-dir: .
+          scan-modules-ignore: openmethod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup Ninja
+        if: runner.os == 'Windows'
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Build Antora docs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+
+          cd ..
+          BOOST_SRC_DIR="$(pwd)/boost-source"
+          export BOOST_SRC_DIR
+
+          cd openmethod
+          cd doc
+          bash ./build_antora.sh
+
+          # Antora returns zero even if it fails, so we check if the site directory exists.
+          if [ ! -d "html" ]
+          then
+              echo "Antora build failed"
+              exit 1
+          fi
+
+      - name: Create Antora docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: antora-docs-${{ matrix.name }}
+          path: doc/html
+
+      - name: Upload static files as artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: doc/html
+
+      - name: Deploy to GitHub Pages (jll63)
+        if: matrix.os == 'ubuntu-latest' && github.repository_owner == 'jll63'
+        uses: actions/deploy-pages@v4

@@ -9,7 +9,7 @@
 
 = mailto URLs
 
-`mailto` is a URL scheme for email addresses. `mailto` URL are used on websites to allow users to email a specific address directly from an HTML document.
+`mailto` is a URL scheme for email addresses. `mailto` URLs are used on websites to allow users to email a specific address directly from an HTML document.
 
 This example parses a mailto URL into a new view type and prints its components to standard output.
 

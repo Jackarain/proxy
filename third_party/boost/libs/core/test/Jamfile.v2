@@ -14,6 +14,7 @@ import testing ;
 
 project : requirements
   <library>/boost/core//boost_core
+  <library>/boost/static_assert//boost_static_assert
   <library>/boost/type_traits//boost_type_traits
   <warnings>extra
   <toolset>msvc:<warnings-as-errors>on
@@ -416,6 +417,7 @@ run span_constexpr_test.cpp ;
 run as_bytes_test.cpp ;
 run as_writable_bytes_test.cpp ;
 compile span_boost_begin_test.cpp ;
+compile span_nonmem_data_size_test.cpp ;
 run make_span_test.cpp ;
 
 run splitmix64_test.cpp
@@ -468,3 +470,12 @@ run minstd_rand_test.cpp
 
 use-project /boost/core/swap : ./swap ;
 build-project ./swap ;
+
+compile static_assert_test.cpp ;
+compile static_assert_test2.cpp ;
+compile static_assert_test3.cpp ;
+
+compile-fail static_assert_fail.cpp ;
+compile-fail static_assert_fail2.cpp ;
+compile-fail static_assert_fail3.cpp ;
+compile-fail static_assert_fail4.cpp ;

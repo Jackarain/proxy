@@ -1,0 +1,26 @@
+# ============================================================================
+#                        Copyright 2025 Gennaro Prota.
+#
+#          Distributed under the Boost Software License, Version 1.0.
+#              (See accompanying file LICENSE_1_0.txt or copy at
+#                    http://www.boost.org/LICENSE_1_0.txt)
+# ============================================================================
+
+verbose: true
+source-root: ..
+cmake: '-DDYNAMIC_BITSET_MRDOCS_BUILD=ON'
+input:
+  - ../include
+exclude-symbols:
+  - 'boost::bit_iterator_base'
+  - 'boost::bit_iterator'
+  - 'boost::const_bit_iterator'
+  - 'boost::detail'
+  - 'boost::detail::**'
+  - 'boost::to_string_helper'
+  - 'boost::dynamic_bitset::bit_appender'
+  - 'boost::dynamic_bitset::buffer_type'
+file-patterns:
+  - '*.hpp'
+multipage: true
+generator: adoc

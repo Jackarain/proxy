@@ -39,8 +39,8 @@ void test_by_char(const std::locale& l, std::string name, int lcid)
 
         TEST(ss << 1045.45);
         double n;
-        TEST(ss >> n);
-        TEST_EQ(n, 1045.45);
+        if TEST(ss >> n)
+            TEST_EQ(n, 1045.45);
         TEST_EQ(to_utf8(ss.str()), "1045.45");
     }
 
@@ -52,8 +52,8 @@ void test_by_char(const std::locale& l, std::string name, int lcid)
         ss << as::number;
         TEST(ss << 1045.45);
         double n;
-        TEST(ss >> n);
-        TEST_EQ(n, 1045.45);
+        if TEST(ss >> n)
+            TEST_EQ(n, 1045.45);
 
         if(name == "ru_RU.UTF-8") {
             BOOST_LOCALE_START_CONST_CONDITION

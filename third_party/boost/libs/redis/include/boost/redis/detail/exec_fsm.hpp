@@ -29,7 +29,6 @@ enum class exec_action_type
    done,                // Call the final handler
    notify_writer,       // Notify the writer task
    wait_for_response,   // Wait to be notified
-   cancel_run,          // Cancel the connection's run operation
 };
 
 class exec_action {

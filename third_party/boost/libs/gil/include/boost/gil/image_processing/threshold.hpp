@@ -161,7 +161,7 @@ void threshold_binary(
 
 /// \ingroup ImageProcessing
 /// \brief Applies truncating threshold to each pixel of image view.
-/// Takes an image view and performs truncating threshold operation on each chennel.
+/// Takes an image view and performs truncating threshold operation on each channel.
 /// If mode is threshold and direction is regular:
 /// values greater than threshold_value will be set to threshold_value else no change
 /// If mode is threshold and direction is inverse:

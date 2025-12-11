@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<explicit-failures-markup>
+    <library name="dynamic_bitset">
+        <mark-unusable>
+            <toolset name="*c++98"/>
+            <toolset name="*gnu98"/>
+            <toolset name="*c++0x"/>
+            <toolset name="*gnu0x"/>
+            <toolset name="msvc-7.1"/>
+            <toolset name="msvc-8.*"/>
+            <toolset name="msvc-9.*"/>
+            <toolset name="msvc-10.*"/>
+            <toolset name="msvc-11.*"/>
+            <note author="Gennaro Prota">DynamicBitset requires at least C++11.</note>
+        </mark-unusable>
+    </library>
+</explicit-failures-markup>

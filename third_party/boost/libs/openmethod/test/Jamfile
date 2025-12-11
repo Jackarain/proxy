@@ -1,0 +1,51 @@
+#  Boost.OpenMethod Library Test Jamfile
+#
+#  Copyright 2015-2019 Peter Dimov
+#
+#  Distributed under the Boost Software License, Version 1.0.
+#  See accompanying file LICENSE_1_0.txt or copy at
+#  http://www.boost.org/LICENSE_1_0.txt
+
+import-search /boost/config/checks ;
+
+import testing ;
+import config : requires ;
+
+project
+  : requirements
+
+    [ requires cxx17_auto_nontype_template_params cxx17_deduction_guides
+      cxx17_fold_expressions cxx17_hdr_charconv cxx17_hdr_string_view
+      cxx17_hdr_variant cxx17_if_constexpr cxx17_inline_variables
+      cxx17_structured_bindings ]
+
+    <library>/boost/openmethod//boost_openmethod
+
+    <warnings>extra
+
+    <toolset>clang:<warnings-as-errors>on
+    <toolset>gcc:<warnings-as-errors>on
+    <toolset>msvc:<warnings-as-errors>on
+  ;
+
+alias unit_test_framework
+    : # sources
+        /boost/test//boost_unit_test_framework/<warnings>off
+    ;
+
+for local src in [ glob test_*.cpp ]
+{
+  run $(src) unit_test_framework ;
+}
+
+run mix_release_debug/main.cpp mix_release_debug/lib.cpp unit_test_framework ;
+
+
+for local src in [ glob compile_fail_*.cpp ]
+{
+  compile-fail $(src) ;
+}
+
+# quick (for CI)
+alias quick : test_dispatch ;
+explicit quick ;

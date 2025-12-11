@@ -12,12 +12,14 @@
 
 #include <boost/asio/cancellation_type.hpp>
 #include <boost/asio/error.hpp>
+#include <boost/assert.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/system/error_code.hpp>
 
+#include "sansio_utils.hpp"
+
 #include <cstddef>
 #include <memory>
-#include <optional>
 #include <ostream>
 #include <utility>
 
@@ -26,14 +28,28 @@ namespace asio = boost::asio;
 using detail::exec_fsm;
 using detail::multiplexer;
 using detail::exec_action_type;
+using detail::consume_result;
 using detail::exec_action;
 using boost::system::error_code;
 using boost::asio::cancellation_type_t;
 
+#define BOOST_REDIS_EXEC_SWITCH_CASE(elem) \
+   case exec_action_type::elem: return "exec_action_type::" #elem
+
+static auto to_string(exec_action_type t) noexcept -> char const*
+{
+   switch (t) {
+      BOOST_REDIS_EXEC_SWITCH_CASE(setup_cancellation);
+      BOOST_REDIS_EXEC_SWITCH_CASE(immediate);
+      BOOST_REDIS_EXEC_SWITCH_CASE(done);
+      BOOST_REDIS_EXEC_SWITCH_CASE(notify_writer);
+      BOOST_REDIS_EXEC_SWITCH_CASE(wait_for_response);
+      default: return "exec_action_type::<invalid type>";
+   }
+}
+
 // Operators
 namespace boost::redis::detail {
-
-extern auto to_string(exec_action_type t) noexcept -> char const*;
 
 std::ostream& operator<<(std::ostream& os, exec_action_type type)
 {
@@ -59,6 +75,16 @@ std::ostream& operator<<(std::ostream& os, exec_action act)
    return os << " }";
 }
 
+std::ostream& operator<<(std::ostream& os, consume_result v)
+{
+   switch (v) {
+      case consume_result::needs_more:   return os << "consume_result::needs_more";
+      case consume_result::got_response: return os << "consume_result::got_response";
+      case consume_result::got_push:     return os << "consume_result::got_push";
+      default:                           return os << "<unknown consume_result>";
+   }
+}
+
 }  // namespace boost::redis::detail
 
 // Prints a message on failure. Useful for parameterized tests
@@ -81,10 +107,8 @@ struct elem_and_request {
    {
       // Empty requests are not valid. The request needs to be populated before creating the element
       req.push("get", "mykey");
+      elm = std::make_shared<multiplexer::elem>(req, any_adapter{});
 
-      elm = std::make_shared<multiplexer::elem>(
-         req,
-         [](std::size_t, resp3::node_view const&, error_code&) { });
       elm->set_done_callback([this] {
          ++done_calls;
       });
@@ -114,14 +138,14 @@ void test_success()
 
    // Simulate a successful write
    BOOST_TEST_EQ(mpx.prepare_write(), 1u);  // one request was placed in the packet to write
-   BOOST_TEST_EQ(mpx.commit_write(), 0u);   // all requests expect a response
+   BOOST_TEST(mpx.commit_write(mpx.get_write_buffer().size()));
 
    // Simulate a successful read
-   mpx.get_read_buffer() = "$5\r\nhello\r\n";
-   auto req_status = mpx.consume_next(ec);
+   read(mpx, "$5\r\nhello\r\n");
+   auto req_status = mpx.consume(ec);
    BOOST_TEST_EQ(ec, error_code());
-   BOOST_TEST_EQ(req_status.first.value(), false);  // it wasn't a push
-   BOOST_TEST_EQ(req_status.second, 11u);           // the entire buffer was consumed
+   BOOST_TEST_EQ(req_status.first, consume_result::got_response);
+   BOOST_TEST_EQ(req_status.second, 11u);  // the entire buffer was consumed
    BOOST_TEST_EQ(input.done_calls, 1u);
 
    // This will awaken the exec operation, and should complete the operation
@@ -153,16 +177,16 @@ void test_parse_error()
 
    // Simulate a successful write
    BOOST_TEST_EQ(mpx.prepare_write(), 1u);  // one request was placed in the packet to write
-   BOOST_TEST_EQ(mpx.commit_write(), 0u);   // all requests expect a response
+   BOOST_TEST(mpx.commit_write(mpx.get_write_buffer().size()));
 
    // Simulate a read that will trigger an error.
    // The second field should be a number (rather than the empty string).
    // Note that although part of the buffer was consumed, the multiplexer
    // currently throws this information away.
-   mpx.get_read_buffer() = "*2\r\n$5\r\nhello\r\n:\r\n";
-   auto req_status = mpx.consume_next(ec);
+   read(mpx, "*2\r\n$5\r\nhello\r\n:\r\n");
+   auto req_status = mpx.consume(ec);
    BOOST_TEST_EQ(ec, error::empty_field);
-   BOOST_TEST_EQ(req_status.second, 0u);
+   BOOST_TEST_EQ(req_status.second, 15u);
    BOOST_TEST_EQ(input.done_calls, 1u);
 
    // This will awaken the exec operation, and should complete the operation
@@ -215,14 +239,14 @@ void test_not_connected()
 
    // Simulate a successful write
    BOOST_TEST_EQ(mpx.prepare_write(), 1u);  // one request was placed in the packet to write
-   BOOST_TEST_EQ(mpx.commit_write(), 0u);   // all requests expect a response
+   BOOST_TEST(mpx.commit_write(mpx.get_write_buffer().size()));
 
    // Simulate a successful read
-   mpx.get_read_buffer() = "$5\r\nhello\r\n";
-   auto req_status = mpx.consume_next(ec);
+   read(mpx, "$5\r\nhello\r\n");
+   auto req_status = mpx.consume(ec);
    BOOST_TEST_EQ(ec, error_code());
-   BOOST_TEST_EQ(req_status.first.value(), false);  // it wasn't a push
-   BOOST_TEST_EQ(req_status.second, 11u);           // the entire buffer was consumed
+   BOOST_TEST_EQ(req_status.first, consume_result::got_response);
+   BOOST_TEST_EQ(req_status.second, 11u);  // the entire buffer was consumed
    BOOST_TEST_EQ(input.done_calls, 1u);
 
    // This will awaken the exec operation, and should complete the operation
@@ -276,56 +300,26 @@ void test_cancel_waiting()
    }
 }
 
-// If the request is being processed and terminal cancellation got requested, we cancel the connection
-void test_cancel_notwaiting_terminal()
-{
-   // Setup
-   multiplexer mpx;
-   elem_and_request input;
-   exec_fsm fsm(mpx, std::move(input.elm));
-
-   // Initiate
-   auto act = fsm.resume(false, cancellation_type_t::none);
-   BOOST_TEST_EQ(act, exec_action_type::setup_cancellation);
-   act = fsm.resume(true, cancellation_type_t::none);
-   BOOST_TEST_EQ(act, exec_action_type::notify_writer);
-
-   act = fsm.resume(true, cancellation_type_t::none);
-   BOOST_TEST_EQ(act, exec_action_type::wait_for_response);
-
-   // The multiplexer starts writing the request
-   BOOST_TEST_EQ(mpx.prepare_write(), 1u);  // one request was placed in the packet to write
-
-   // A cancellation arrives
-   act = fsm.resume(true, cancellation_type_t::terminal);
-   BOOST_TEST_EQ(act, exec_action_type::cancel_run);
-   act = fsm.resume(true, cancellation_type_t::terminal);
-   BOOST_TEST_EQ(act, exec_action(asio::error::operation_aborted));
-
-   // The object needs to survive here, otherwise an inconsistent connection state is created
-}
-
-// If the request is being processed and other types of cancellation got requested, we ignore the cancellation
-void test_cancel_notwaiting_notterminal()
+// If the request is being processed and terminal or partial
+// cancellation is requested, we mark the request as abandoned
+void test_cancel_notwaiting_terminal_partial()
 {
    constexpr struct {
       const char* name;
       asio::cancellation_type_t type;
    } test_cases[] = {
-      {"partial", asio::cancellation_type_t::partial                                   },
-      {"total",   asio::cancellation_type_t::total                                     },
-      {"mixed",   asio::cancellation_type_t::partial | asio::cancellation_type_t::total},
+      {"terminal", asio::cancellation_type_t::terminal},
+      {"partial",  asio::cancellation_type_t::partial },
    };
 
    for (const auto& tc : test_cases) {
       // Setup
       multiplexer mpx;
-      elem_and_request input;
-      exec_fsm fsm(mpx, std::move(input.elm));
-      error_code ec;
+      auto input = std::make_unique<elem_and_request>();
+      exec_fsm fsm(mpx, std::move(input->elm));
 
       // Initiate
-      auto act = fsm.resume(true, cancellation_type_t::none);
+      auto act = fsm.resume(false, cancellation_type_t::none);
       BOOST_TEST_EQ_MSG(act, exec_action_type::setup_cancellation, tc.name);
       act = fsm.resume(true, cancellation_type_t::none);
       BOOST_TEST_EQ_MSG(act, exec_action_type::notify_writer, tc.name);
@@ -333,29 +327,67 @@ void test_cancel_notwaiting_notterminal()
       act = fsm.resume(true, cancellation_type_t::none);
       BOOST_TEST_EQ_MSG(act, exec_action_type::wait_for_response, tc.name);
 
-      // Simulate a successful write
+      // The multiplexer starts writing the request
       BOOST_TEST_EQ_MSG(mpx.prepare_write(), 1u, tc.name);
-      BOOST_TEST_EQ_MSG(mpx.commit_write(), 0u, tc.name);  // all requests expect a response
+      BOOST_TEST_EQ_MSG(mpx.commit_write(mpx.get_write_buffer().size()), true, tc.name);
 
-      // We got requested a cancellation here, but we can't honor it
+      // A cancellation arrives
       act = fsm.resume(true, tc.type);
-      BOOST_TEST_EQ_MSG(act, exec_action_type::wait_for_response, tc.name);
+      BOOST_TEST_EQ(act, exec_action(asio::error::operation_aborted));
+      input.reset();  // Verify we don't access the request or response after completion
 
-      // Simulate a successful read
-      mpx.get_read_buffer() = "$5\r\nhello\r\n";
-      auto req_status = mpx.consume_next(ec);
+      error_code ec;
+      // When the response to this request arrives, it gets ignored
+      read(mpx, "-ERR wrong command\r\n");
+      auto res = mpx.consume(ec);
       BOOST_TEST_EQ_MSG(ec, error_code(), tc.name);
-      BOOST_TEST_EQ_MSG(req_status.first.value(), false, tc.name);  // it wasn't a push
-      BOOST_TEST_EQ_MSG(req_status.second, 11u, tc.name);  // the entire buffer was consumed
-      BOOST_TEST_EQ_MSG(input.done_calls, 1u, tc.name);
+      BOOST_TEST_EQ_MSG(res.first, consume_result::got_response, tc.name);
 
-      // This will awaken the exec operation, and should complete the operation
-      act = fsm.resume(true, cancellation_type_t::none);
-      BOOST_TEST_EQ_MSG(act, exec_action(error_code(), 11u), tc.name);
-
-      // All memory should have been freed by now
-      BOOST_TEST_EQ_MSG(input.weak_elm.expired(), true, tc.name);
+      // The multiplexer::elem object needs to survive here to mark the
+      // request as abandoned
    }
+}
+
+// If the request is being processed and total cancellation is requested, we ignore the cancellation
+void test_cancel_notwaiting_total()
+{
+   // Setup
+   multiplexer mpx;
+   elem_and_request input;
+   exec_fsm fsm(mpx, std::move(input.elm));
+   error_code ec;
+
+   // Initiate
+   auto act = fsm.resume(true, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action_type::setup_cancellation);
+   act = fsm.resume(true, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action_type::notify_writer);
+
+   act = fsm.resume(true, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action_type::wait_for_response);
+
+   // Simulate a successful write
+   BOOST_TEST_EQ(mpx.prepare_write(), 1u);
+   BOOST_TEST(mpx.commit_write(mpx.get_write_buffer().size()));
+
+   // We got requested a cancellation here, but we can't honor it
+   act = fsm.resume(true, asio::cancellation_type_t::total);
+   BOOST_TEST_EQ(act, exec_action_type::wait_for_response);
+
+   // Simulate a successful read
+   read(mpx, "$5\r\nhello\r\n");
+   auto req_status = mpx.consume(ec);
+   BOOST_TEST_EQ(ec, error_code());
+   BOOST_TEST_EQ(req_status.first, consume_result::got_response);
+   BOOST_TEST_EQ(req_status.second, 11u);  // the entire buffer was consumed
+   BOOST_TEST_EQ(input.done_calls, 1u);
+
+   // This will awaken the exec operation, and should complete the operation
+   act = fsm.resume(true, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action(error_code(), 11u));
+
+   // All memory should have been freed by now
+   BOOST_TEST_EQ(input.weak_elm.expired(), true);
 }
 
 }  // namespace
@@ -367,8 +399,8 @@ int main()
    test_cancel_if_not_connected();
    test_not_connected();
    test_cancel_waiting();
-   test_cancel_notwaiting_terminal();
-   test_cancel_notwaiting_notterminal();
+   test_cancel_notwaiting_terminal_partial();
+   test_cancel_notwaiting_total();
 
    return boost::report_errors();
 }

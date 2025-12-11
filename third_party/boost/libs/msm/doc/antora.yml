@@ -1,0 +1,11 @@
+name: msm
+title: Boost.MetaStateMachine
+version: ~
+nav:
+  - modules/ROOT/nav.adoc
+asciidoc:
+  attributes:
+    # Enable pagination
+    page-pagination: ''
+    # Show an additional TOC on the right sidebar
+    page-toc: ''

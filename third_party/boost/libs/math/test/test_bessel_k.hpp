@@ -176,7 +176,7 @@ void test_bessel(T, const char* name)
     //
     // Extra test coverage:
     //
-    #ifndef SYCL_LANGUAGE_VERSION // SYCL doesn't throw 
+    #ifndef BOOST_MATH_ENABLE_SYCL // SYCL doesn't throw
     BOOST_CHECK_THROW(boost::math::cyl_bessel_k(T(2), T(-1)), std::domain_error);
     BOOST_CHECK_THROW(boost::math::cyl_bessel_k(T(2.2), T(-1)), std::domain_error);
     BOOST_IF_CONSTEXPR(std::numeric_limits<T>::has_infinity)

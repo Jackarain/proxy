@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////
-//      Copyright Christopher Kormanyos 2020 - 2021.
+//      Copyright Christopher Kormanyos 2020 - 2025.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -25,73 +25,80 @@
 // We find the following performance data here:
 // https://github.com/boostorg/multiprecision/pull/213
 //
+// New numbers 2025-07-20 at 301 decimal digits
+// --------------------------------------------
+//
 // cpp_dec_float:
-// result_is_ok_concurrent: true, calculation_time_concurrent: 18.1s
-// result_is_ok_sequential: true, calculation_time_sequential: 48.5s
+// result_is_ok_concurrent: true, calculation_time_concurrent: 2.1s
+// result_is_ok_sequential: true, calculation_time_sequential: 14.7s
 //
 // cpp_bin_float:
-// result_is_ok_concurrent: true, calculation_time_concurrent: 18.7s
-// result_is_ok_sequential: true, calculation_time_sequential: 50.4s
+// result_is_ok_concurrent: true, calculation_time_concurrent: 0.28s
+// result_is_ok_sequential: true, calculation_time_sequential: 1.88s
 //
 // gmp_float:
-// result_is_ok_concurrent: true, calculation_time_concurrent: 3.3s
-// result_is_ok_sequential: true, calculation_time_sequential: 12.4s
+// result_is_ok_concurrent: true, calculation_time_concurrent: 0.11s
+// result_is_ok_sequential: true, calculation_time_sequential: 0.73s
 //
 // mpfr_float:
-// result_is_ok_concurrent: true, calculation_time_concurrent: 0.6s
-// result_is_ok_sequential: true, calculation_time_sequential: 1.9s
+// result_is_ok_concurrent: true, calculation_time_concurrent: 0.05s
+// result_is_ok_sequential: true, calculation_time_sequential: 0.24s
 
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <sstream>
 #include <thread>
 #include <vector>
 
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/special_functions/prime.hpp>
 
-#define BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_CPP_DEC_FLOAT       101
-#define BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_GMP_FLOAT           102
-#define BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_CPP_BIN_FLOAT       103
-#define BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_MPFR_FLOAT          104
+#define BOOST_MP_EXERCISE_THREADING_BACKEND_CPP_DEC_FLOAT       101
+#define BOOST_MP_EXERCISE_THREADING_BACKEND_GMP_FLOAT           102
+#define BOOST_MP_EXERCISE_THREADING_BACKEND_CPP_BIN_FLOAT       103
+#define BOOST_MP_EXERCISE_THREADING_BACKEND_MPFR_FLOAT          104
 
-#if !defined(BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_TYPE)
-#define BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_TYPE BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_CPP_DEC_FLOAT
-//#define BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_TYPE BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_CPP_BIN_FLOAT
-//#define BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_TYPE BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_GMP_FLOAT
-//#define BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_TYPE BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_MPFR_FLOAT
+#if !defined(BOOST_MP_EXERCISE_THREADING_BACKEND_TYPE)
+#define BOOST_MP_EXERCISE_THREADING_BACKEND_TYPE BOOST_MP_EXERCISE_THREADING_BACKEND_CPP_DEC_FLOAT
+//#define BOOST_MP_EXERCISE_THREADING_BACKEND_TYPE BOOST_MP_EXERCISE_THREADING_BACKEND_CPP_BIN_FLOAT
+//#define BOOST_MP_EXERCISE_THREADING_BACKEND_TYPE BOOST_MP_EXERCISE_THREADING_BACKEND_GMP_FLOAT
+//#define BOOST_MP_EXERCISE_THREADING_BACKEND_TYPE BOOST_MP_EXERCISE_THREADING_BACKEND_MPFR_FLOAT
 #endif
 
-#if  (BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_TYPE == BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_CPP_DEC_FLOAT)
+constexpr unsigned local_mp_digits { 301U };
+
+#if  (BOOST_MP_EXERCISE_THREADING_BACKEND_TYPE == BOOST_MP_EXERCISE_THREADING_BACKEND_CPP_DEC_FLOAT)
 #include <boost/multiprecision/cpp_dec_float.hpp>
 
-using big_float_type = boost::multiprecision::number<boost::multiprecision::cpp_dec_float<501>,
+using big_float_type = boost::multiprecision::number<boost::multiprecision::cpp_dec_float<local_mp_digits>,
                                                      boost::multiprecision::et_off>;
 
-#elif (BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_TYPE == BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_CPP_BIN_FLOAT)
+#elif (BOOST_MP_EXERCISE_THREADING_BACKEND_TYPE == BOOST_MP_EXERCISE_THREADING_BACKEND_CPP_BIN_FLOAT)
 #include <boost/multiprecision/cpp_bin_float.hpp>
 
-using big_float_type = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<501>,
+using big_float_type = boost::multiprecision::number<boost::multiprecision::cpp_bin_float<local_mp_digits>,
                                                      boost::multiprecision::et_off>;
 
-#elif  (BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_TYPE == BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_GMP_FLOAT)
+#elif  (BOOST_MP_EXERCISE_THREADING_BACKEND_TYPE == BOOST_MP_EXERCISE_THREADING_BACKEND_GMP_FLOAT)
 #include <boost/multiprecision/gmp.hpp>
 
-using big_float_type = boost::multiprecision::number<boost::multiprecision::gmp_float<501>,
+using big_float_type = boost::multiprecision::number<boost::multiprecision::gmp_float<local_mp_digits>,
                                                      boost::multiprecision::et_off>;
 
-#elif  (BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_TYPE == BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_MPFR_FLOAT)
+#elif  (BOOST_MP_EXERCISE_THREADING_BACKEND_TYPE == BOOST_MP_EXERCISE_THREADING_BACKEND_MPFR_FLOAT)
 #include <boost/multiprecision/mpfr.hpp>
 
-using big_float_type = boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<501>,
+using big_float_type = boost::multiprecision::number<boost::multiprecision::mpfr_float_backend<local_mp_digits>,
                                                      boost::multiprecision::et_off>;
 
 #else
-#error BOOST_MULTIPRECISION_EXERCISE_THREADING_BACKEND_TYPE is undefined.
+#error BOOST_MP_EXERCISE_THREADING_BACKEND_TYPE is undefined.
 #endif
 
 namespace boost { namespace multiprecision { namespace exercise_threading {
@@ -112,8 +119,8 @@ void parallel_for(index_type             start,
   static const unsigned int number_of_threads_total =
     ((number_of_threads_hint == 0U) ? 4U : number_of_threads_hint);
 
-  // Use only 3/4 of the available cores.
-  static const unsigned int number_of_threads = number_of_threads_total - (number_of_threads_total / 8U);
+  // Use 7/8 of the available cores (leaving a core or two free on modern systems).
+  static const unsigned int number_of_threads = number_of_threads_total - ((number_of_threads_total + 4U) / 8U);
 
   std::cout << "Executing with " << number_of_threads << " threads" << std::endl;
 
@@ -310,7 +317,7 @@ bool log_agm_concurrent(float& calculation_time)
 
   std::size_t concurrent_log_agm_count = 0U;
 
-  const std::clock_t start = std::clock();
+  const auto start = std::chrono::high_resolution_clock::now();
 
   boost::multiprecision::exercise_threading::detail::my_concurrency::parallel_for
   (
@@ -342,7 +349,7 @@ bool log_agm_concurrent(float& calculation_time)
                   << log_results.size()
                   << ". Total processed so far: "
                   << std::fixed
-                  << std::setprecision(1)
+                  << std::setprecision(2)
                   << (100.0F * float(concurrent_log_agm_count)) / float(log_results.size())
                   << "%."
                   << "\r";
@@ -352,7 +359,9 @@ bool log_agm_concurrent(float& calculation_time)
     }
   );
 
-  calculation_time = static_cast<float>(std::clock() - start) / static_cast<float>(CLOCKS_PER_SEC);
+  const auto stop = std::chrono::high_resolution_clock::now();
+
+  calculation_time = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()) / 1000.0F;
 
   std::cout << std::endl;
 
@@ -371,7 +380,10 @@ bool log_agm_concurrent(float& calculation_time)
     result_is_ok &= (close_fraction < tol);
   }
 
-  std::cout << std::boolalpha << result_is_ok << std::endl;
+  std::stringstream strm { };
+  strm << std::boolalpha << result_is_ok;
+
+  std::cout << strm.str() << std::endl;
 
   return result_is_ok;
 }
@@ -384,7 +396,7 @@ bool log_agm_sequential(float& calculation_time)
   std::vector<FloatingPointType> log_results(count);
   std::vector<FloatingPointType> log_control(count);
 
-  const std::clock_t start = std::clock();
+  const auto start = std::chrono::high_resolution_clock::now();
 
   for(std::size_t i = 0U; i < log_results.size(); ++i)
   {
@@ -404,14 +416,16 @@ bool log_agm_sequential(float& calculation_time)
                 << log_results.size()
                 << ". Total processed so far: "
                 << std::fixed
-                << std::setprecision(1)
+                << std::setprecision(2)
                 << (100.0F * float(sequential_log_agm_count)) / float(log_results.size())
                 << "%."
                 << "\r";
     }
   }
 
-  calculation_time = static_cast<float>(std::clock() - start) / static_cast<float>(CLOCKS_PER_SEC);
+  const auto stop = std::chrono::high_resolution_clock::now();
+
+  calculation_time = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()) / 1000.0F;
 
   std::cout << std::endl;
 
@@ -430,7 +444,10 @@ bool log_agm_sequential(float& calculation_time)
     result_is_ok &= (close_fraction < tol);
   }
 
-  std::cout << std::boolalpha << result_is_ok << std::endl;
+  std::stringstream strm { };
+  strm << std::boolalpha << result_is_ok;
+
+  std::cout << strm.str() << std::endl;
 
   return result_is_ok;
 }
@@ -442,31 +459,41 @@ int main()
             << " primes"
             << std::endl;
 
-  float calculation_time_concurrent;
-  const bool result_is_ok_concurrent = log_agm_concurrent<big_float_type>(calculation_time_concurrent);
+  float calculation_time_concurrent { };
+  float calculation_time_sequential { };
 
-  float calculation_time_sequential;
+  const bool result_is_ok_concurrent = log_agm_concurrent<big_float_type>(calculation_time_concurrent);
   const bool result_is_ok_sequential = log_agm_sequential<big_float_type>(calculation_time_sequential);
 
   std::cout << std::endl;
 
-  std::cout << "result_is_ok_concurrent: "
-            << std::boolalpha
-            << result_is_ok_concurrent
-            << ", calculation_time_concurrent: "
-            << std::fixed
-            << std::setprecision(1)
-            << calculation_time_concurrent
-            << "s"
-            << std::endl;
+  {
+    std::stringstream strm { };
 
-  std::cout << "result_is_ok_sequential: "
-            << std::boolalpha
-            << result_is_ok_sequential
-            << ", calculation_time_sequential: "
-            << std::fixed
-            << std::setprecision(1)
-            << calculation_time_sequential
-            << "s"
-            << std::endl;
+    strm << "result_is_ok_concurrent: "
+         << std::boolalpha
+         << result_is_ok_concurrent
+         << ", calculation_time_concurrent: "
+         << std::fixed
+         << std::setprecision(2)
+         << calculation_time_concurrent
+         << "s";
+
+    std::cout << strm.str() << std::endl;
+  }
+
+  {
+    std::stringstream strm { };
+
+    strm << "result_is_ok_sequential: "
+         << std::boolalpha
+         << result_is_ok_sequential
+         << ", calculation_time_sequential: "
+         << std::fixed
+         << std::setprecision(2)
+         << calculation_time_sequential
+         << "s";
+
+    std::cout << strm.str() << std::endl;
+  }
 }

@@ -15,7 +15,7 @@
 // From MathWorld--A Wolfram Web Resource.
 // http://mathworld.wolfram.com/GammaDistribution.html
 
-#ifndef SYCL_LANGUAGE_VERSION
+#ifndef BOOST_MATH_ENABLE_SYCL
 #include <pch.hpp> // include directory libs/math/src/tr1/ is needed.
 #else
 #include "sycl/sycl.hpp"

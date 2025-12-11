@@ -37,6 +37,6 @@ using detail::memory_order_consume;
 using detail::memory_order_relaxed;
 using detail::memory_order_release;
 
-}}     // namespace boost::lockfree
+}} // namespace boost::lockfree
 
 #endif /* BOOST_LOCKFREE_DETAIL_ATOMIC_HPP */

@@ -3,7 +3,7 @@
 //  Boost Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef SYCL_LANGUAGE_VERSION
+#ifndef BOOST_MATH_ENABLE_SYCL
 #include <pch_light.hpp>
 #else
 #include "sycl/sycl.hpp"
@@ -103,7 +103,7 @@ void test_hankel(T, const char* name)
 //
 // Instantiate a few instances to check our error handling code can cope with std::complex:
 //
-#ifndef SYCL_LANGUAGE_VERSION
+#ifndef BOOST_MATH_ENABLE_SYCL
 typedef boost::math::policies::policy<
    boost::math::policies::overflow_error<boost::math::policies::throw_on_error>,
    boost::math::policies::denorm_error<boost::math::policies::throw_on_error>,

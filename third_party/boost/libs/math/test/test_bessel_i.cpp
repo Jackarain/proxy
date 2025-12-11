@@ -3,7 +3,7 @@
 //  Boost Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef SYCL_LANGUAGE_VERSION
+#ifndef BOOST_MATH_ENABLE_SYCL
 #include <pch_light.hpp>
 #else
 #define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
@@ -97,7 +97,7 @@ void expected_results()
       "linux",                       // platform
       largest_type,                  // test type(s)
       ".*Random.*",                    // test data group
-      #ifdef SYCL_LANGUAGE_VERSION
+      #ifdef BOOST_MATH_ENABLE_SYCL
       ".*", 600, 200);
       #else
       ".*", 400, 200);               // test function
@@ -130,7 +130,7 @@ void expected_results()
       ".*",                          // platform
       largest_type,                  // test type(s)
       ".*",                          // test data group
-      #ifdef SYCL_LANGUAGE_VERSION
+      #ifdef BOOST_MATH_ENABLE_SYCL
       ".*", 400, 200);
       #else
       ".*", 20, 10);                 // test function

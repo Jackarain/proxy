@@ -25,7 +25,7 @@ struct queue_stress_tester
 #ifndef BOOST_LOCKFREE_STRESS_TEST
     static const long node_count = 5000;
 #else
-    static const long node_count = 500000;
+    static const long node_count = 5000000;
 #endif
     const int reader_threads;
     const int writer_threads;

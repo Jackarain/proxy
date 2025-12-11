@@ -1,0 +1,144 @@
+
+## Overview
+
+### Requirements
+
+OpenMethod requires C++17 or above. It depends on the following Boost libraries:
+
+* Assert
+* Config
+* Core
+* DynamicBitset
+* Mp11
+* Preprocessor
+
+Boost.Test is also required to build and run the unit tests.
+
+### Installation
+
+The library is headers-only. You can install it system-wide, or add the path to
+the `include` directory to your project's include path.
+
+### Namespaces
+
+#### boost::openmethod
+
+The library's main namespace. Contains `method`, `virtual_ptr` and
+`virtual_ptr_traits`, `use_classes`, the `default_registry`, etc.
+
+#### boost::openmethod::policies
+
+Contains the policy framework.
+
+### Headers
+
+#### <boost/openmethod/core.hpp>
+
+The library's main header. Provides `method`, `virtual_ptr` and
+`virtual_ptr_traits`, `use_classes`, the default policy, etc.
+
+If `BOOST_OPENMETHOD_DEFAULT_REGISTRY` is defined before including this header,
+its value is used as the default value for the `Policy` template parameter
+throughout the code. Otherwise, `boost::openmethod::default_registry` is used.
+Setting `BOOST_OPENMETHOD_DEFAULT_REGISTRY` after including the core header has no
+effect.
+
+#### <boost/openmethod/macros.hpp>
+
+Provides `BOOST_REGISTER_CLASSES`, `BOOST_OPENMETHOD`,
+`BOOST_OPENMETHOD_OVERRIDE` and other macros.
+
+#### <boost/openmethod.hpp>
+
+Convenience header. Includes `<boost/openmethod/core.hpp>` and
+`<boost/openmethod/macros.hpp>`.
+
+Also imports `boost::openmethod::virtual_ptr` in the global namespace. This is
+usually regarded as bad practice. The rationale is that OpenMethod emulates a
+language feature, and `virtual_ptr` is equivalent to keyword, similar to
+`virtual`. Besides, the macros are global as well.
+
+There are two ways to avoid importing `virtual_ptr` while still using the
+macros:
+
+* Define `BOOST_OPENMETHOD_NO_GLOBAL_VIRTUAL_PTR` before including
+  `<boost/openmethod.hpp>`. This disables the import of `virtual_ptr` in the
+  global namespace.
+
+* Include `<boost/openmethod/core.hpp>`and `<boost/openmethod/macros.hpp>`.
+
+#### <boost/openmethod/initialize.hpp>
+
+Provides `intialize` and `finalize`. Typically included only by the translation
+unit that contains `main`, unless dynamic loading is used in other places in the
+program.
+
+#### <boost/openmethod/interop/std_shared_ptr.hpp>
+
+Provides support for using `std::shared_ptr` in place of plain pointers in
+virtual parameters.
+
+#### <boost/openmethod/unique_.hpp>
+
+Provides support for using `std::unique_ptr` in place of plain pointers in
+virtual parameters.
+
+#### <boost/openmethod/inplace_vptr.hpp>
+
+Provides support for storing v-table pointers directly in objects, in the same
+manner as native virtual functions.
+
+#### <boost/openmethod/policies.hpp>
+
+Provides the `debug` and `release` policies in the `boost::openmethod::policies`
+namespace, and `default_registry` in the `boost::openmethod` namespace, which is
+an alias to either `debug` or `release`, depending on the value of the
+preprocessor symbol `NDEBUG`.
+
+Usually not included directly. Can be used to create custom policies from stock
+policies, by forking them and adjusting a few policys.
+
+#### <boost/openmethod/policies/basic_policy.hpp>
+
+Provides the constructs used in the policy framework, essentially
+`basic_policy`, `policy`, and its abstract subclasses (`rtti`, `extern_vptr`,
+etc).
+
+#### <boost/openmethod/policies/std_rtti.hpp>
+
+Implements the `rtti` policy using standard RTTI.
+
+#### <boost/openmethod/policies/minimal_rtti.hpp>
+
+Implements the `rtti` policy using a minimal RTTI implementation. Can be used only with the "final" constructs, or with intrusive v-table pointers.
+
+#### <boost/openmethod/policies/vptr_vector.hpp>
+
+Implements the `extern_vptr` policy using a vector of pointers.
+
+#### <boost/openmethod/policies/vptr_map.hpp>
+
+Implements the `extern_vptr` policy using a map of pointers.
+
+#### <boost/openmethod/policies/fast_perfect_hash.hpp>
+
+Implements the `type_hash` policy using a perfect hash function.
+
+#### <boost/openmethod/policies/default_error_handler.hpp>
+
+Implements the `error_handler` policy by routing the error through a
+`std::function`.
+
+#### <boost/openmethod/policies/throw_error_handler.hpp>
+
+Implements the `error_handler` policy by throwing an exception.
+
+#### <boost/openmethod/policies/basic_error_output.hpp>
+
+Implements the `output` policy using a lightweight version of
+`std::ostream`.
+
+#### <boost/openmethod/policies/basic_trace_output.hpp>
+
+Implements the `trace` policy using a lightweight version of
+`std::ostream`.

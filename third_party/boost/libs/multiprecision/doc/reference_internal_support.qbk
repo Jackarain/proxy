@@ -30,7 +30,7 @@ Inherits from `std::integral_constant<bool,true>` if type `From` has an explicit
 Member `value` is true if the conversion from `From` to `To` would result in a loss of precision, and `false` otherwise.
 
 The default version of this trait simply checks whether the ['kind] of conversion (for example from a floating-point to an integer type)
-is inherently lossy.  Note that if either of the types `From` or `To` are of an unknown number category (because `number_category` is not
+is inherently lossy.  Note that if either of the types `From` and `To` is of an unknown number category (because `number_category` is not
 specialised for that type) then this trait will be `true`.
 
    template<typename From, typename To>

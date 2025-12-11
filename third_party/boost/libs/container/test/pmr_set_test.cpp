@@ -10,6 +10,7 @@
 
 #include <boost/container/pmr/set.hpp>
 #include <boost/container/detail/type_traits.hpp>
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 int main()
 {
@@ -21,5 +22,9 @@ int main()
    #if !defined(BOOST_NO_CXX11_TEMPLATE_ALIASES)
       BOOST_CONTAINER_STATIC_ASSERT(( is_same<intcontainer_t, pmr::set<int> >::value ));
    #endif
+
+   intcontainer_t cont(pmr::get_default_resource());
+   typedef typename intcontainer_t::value_type value_type;
+   cont.insert(value_type());
    return 0;
 }

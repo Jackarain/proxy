@@ -216,6 +216,9 @@ Intrusive containers have also downsides:
    containers, [*Boost.Intrusive] offers special cloning functions. See
    [link intrusive.clone_from Cloning Boost.Intrusive containers] section for more information.
 
+*  [*Boost.Intrusive] containers [*don't support incomplete types]. Some std containers and most Boost.Container
+   types support incomplete types.
+
 *  Analyzing the thread safety of a program that uses containers is harder with intrusive containers, because
    the container might be modified indirectly without an explicit call to a container member.
 
@@ -540,11 +543,11 @@ chapters:
    basic operations that can be applied to a group of `node`s. It's independent
    from the node definition and configured using a NodeTraits template
    parameter that describes the node.]]
-[[Node Traits][A class that stores basic information and operations to insert a node into a group of nodes.]]
+[[Node Traits][A class that defines the `node` type, associative information and basic operation to traverse and insert a node into a group of nodes.]]
 [[Hook][A class that a user must add as a base class or as a member to make the user class compatible with intrusive containers. A Hook encapsulates a `node`]]
-[[Intrusive Container][A class that stores user classes that have the needed hooks. It takes a ValueTraits template parameter as configuration information.]]
-[[Semi-Intrusive Container][Similar to an intrusive container but a semi-intrusive container needs additional memory (e.g. an auxiliary array) to work.]]
 [[Value Traits][A class containing typedefs and operations to obtain the node to be used by Node Algorithms from the user class and the inverse.]]
+[[Intrusive Container][A container type that stores user classes that have the needed hooks. It takes a ValueTraits template parameter as configuration information.]]
+[[Semi-Intrusive Container][Similar to an intrusive container but a semi-intrusive container needs additional memory (e.g. an auxiliary array) to work.]]
 ]
 
 [endsect]

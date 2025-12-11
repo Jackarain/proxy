@@ -35,12 +35,57 @@ Valid initializers for any stdio are:
 
   - `std::nullptr_t` assigning a null-device
   - `FILE*` any open file, including `stdin`, `stdout` and `stderr`
-  - a filesystem::path, which will open a readable or writable depending on the direction of the stream
   - `native_handle` any native file handle (`HANDLE` on windows) or file descriptor (`int` on posix)
-  - any io-object with a .native_handle() function that is compatible with the above. E.g. a asio::ip::tcp::socket
-  - an asio::basic_writeable_pipe for stdin or asio::basic_readable_pipe for stderr/stdout.
+  - any io-object with a `.native_handle()` function that is compatible with the above. E.g. a `asio::ip::tcp::socket`, or a pipe object.
+  - a filesystem::path, which will open a readable or writable depending on the direction of the stream
+  - an `asio::basic_writeable_pipe` for stdin or `asio::basic_readable_pipe` for stderr/stdout.
 
+When passing a `FILE*`, a `native_handle` or an io-object with a `native_handle`,
+the initializer will assign the handle as is to the child process.
+That is the file descriptor/handle gets cloned into the subprocess and used without modification.
 
+When passing a filesystem::path, the initializer will attempt to open the file and then pass the handle 
+to the subprocess.
+
+When passing a `readable_pipe` to stdout/stderr or a `writable_pipe` to stdin by reference,
+the initializer to create the other side of the pipe (`writable_pipe` for stdout/stderr, `readable_pipe` for `stdin`),
+connect the pair and pass the native_handle to the child process.
+
+That is, these two are equivalent:
+
+.Implicit construction of the readable pipe.
+[source,cpp]
+----
+asio::io_context ctx;
+asio::writable_pipe wp{ctx};
+// create a readable pipe internally and connect it to wp
+process proc{ctx, "/bin/bash", {}, process_stdio{.in=wp}};
+
+// create it explicitly
+{
+  // the pipe the child process reads from
+  asio::readable_pipe rp{ctx}; 
+  asio::connect_pipe(rp, wp);
+  // `rp.native_handle()`  will be assigned to the child processes stdin
+  process proc{ctx, "/bin/bash", {}, process_stdio{.in=rp}};
+  rp.close(); // close it so the pipe closes when the `proc exits.
+}
+----
+
+The explicit version allows you to assign the same `writable_pipe` to `stdout` and `stderr`:
+
+[source,cpp]
+----
+// the pipe the parent process reads from and both 
+// stderr & stdout of the child process write to
+asio::readable_pipe rp{ctx};
+asio::writable_pipe wp{ctx}; 
+asio::connect_pipe(rp, wp);
+process proc{ctx, "/bin/bash", {}, process_stdio{.out=wp, .err=wp}};
+wp.close(); // close it so the pipe closes when the `proc exits.
+----
+
+NOTE: If the child writes to a pipe, the parent reads from it et vice versa.
 
 
 [source,cpp]

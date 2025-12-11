@@ -1,0 +1,67 @@
+# Input
+source-root: ..
+# Directories that contain documented source files
+input:
+  - ../include
+# Patterns to filter out the source-files in the directories
+file-patterns:
+  - '*.hpp'
+# exclude:
+#   - '../boost/libs/test'
+#   - '../include/boost/test/impl'
+
+# Filters
+include-symbols:
+  - 'boost::openmethod::**'
+implementation-defined:
+  - 'boost::openmethod::detail'
+inaccessible-members: never
+inaccessible-bases: never
+exclude-symbols:
+  - 'boost::openmethod::registry::compiler'
+  - 'boost::openmethod::registry::initialize'
+  - 'boost::openmethod::registry::finalize'
+  - 'boost::openmethod::boost_openmethod_bases'
+  - 'boost::openmethod::boost_openmethod_registry'
+  - 'boost::openmethod::registry::compiler'
+
+sort-members: false
+# sort-namespace-members-by: location
+extract-friends: false
+inherit-base-members: never
+
+# Metadata Extraction
+private-bases: false
+auto-function-metadata: false
+
+# Generator
+generate: adoc
+base-url: https://www.github.com/boostorg/openmethod/blob/master/
+
+# Style
+verbose: true
+multipage: true
+
+# The target for MrDocs simply includes all symbols defined in all
+# headers with the appropriate compilation options.
+# Nothing else should be included in the MrDocs configuration or
+# would be useful to MrDocs.
+#
+# This single source file not only includes all symbols (the source
+# files do not collectively include all headers) but also makes MrDocs
+# run much faster than relying on the entire library.
+#
+# The time to extract the declarations went from ~8m6s to ~3s in our
+# experiments: a 162x speedup while including all symbols!
+#
+# In practice, this special target is simply emulating the
+# default behavior of the standardese tool with MrDocs, which
+# requires the user to clearly specify the targets via the
+# compilation database.
+#
+# The BOOST_OPENMETHOD_MRDOCS_BUILD=ON is the only option we usually need
+# here.
+# The other options are set just to ensure other targets are
+# ignored even if these options are set as ON in the cache.
+#
+cmake: '-DCMAKE_VERBOSE_MAKEFILE=ON -D BOOST_OPENMETHOD_MRDOCS_BUILD=ON -D CMAKE_CXX_STANDARD=20 -D BOOST_OPENMETHOD_BUILD_EXAMPLES=OFF -D BOOST_OPENMETHOD_BUILD_TESTS=OFF -D BUILD_TESTING=OFF'

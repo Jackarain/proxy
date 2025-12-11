@@ -77,14 +77,14 @@ typedef parameter::parameters< boost::parameter::optional< tag::allocator >, boo
  *
  *  \b Requirements:
  *   - T must have a copy constructor
- *   - T must have a trivial assignment operator
+ *   - T must have a trivial copy assignment operator
  *   - T must have a trivial destructor
  *
  * */
 template < typename T, typename... Options >
 #if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
     requires( std::is_copy_assignable_v< T >,
-              std::is_trivially_assignable_v< T&, T >,
+              std::is_trivially_copy_assignable_v< T >,
               std::is_trivially_destructible_v< T > )
 #endif
 class queue
@@ -93,7 +93,7 @@ private:
 #ifndef BOOST_DOXYGEN_INVOKED
 
     BOOST_STATIC_ASSERT( ( std::is_trivially_destructible< T >::value ) );
-    BOOST_STATIC_ASSERT( ( std::is_trivially_assignable< T&, T >::value ) );
+    BOOST_STATIC_ASSERT( ( std::is_trivially_copy_assignable< T >::value ) );
 
     typedef typename detail::queue_signature::bind< Options... >::type bound_args;
 

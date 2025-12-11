@@ -27,12 +27,12 @@
 
 namespace boost { namespace gil {
 
-// 2D spatial seperable convolutions and cross-correlations
+// 2D spatial separable convolutions and cross-correlations
 
 namespace detail {
 
 /// \brief Computes the cross-correlation of 1D kernel with rows of an image.
-/// \tparam PixelAccum - Specifies tha data type which will be used for creating buffer container
+/// \tparam PixelAccum - Specifies the data type which will be used for creating buffer container
 /// utilized for holding source image pixels after applying appropriate boundary manipulations.
 /// \tparam SrcView - Specifies the type of gil view of source image which is to be row correlated
 /// with the kernel.
@@ -196,7 +196,7 @@ struct correlator_k
 
 /// \ingroup ImageAlgorithms
 /// \brief Correlate 1D variable-size kernel along the rows of image.
-/// \tparam PixelAccum Specifies tha data type which will be used while creating buffer container
+/// \tparam PixelAccum Specifies the data type which will be used while creating buffer container
 /// which is utilized for holding source image pixels after applying appropriate boundary
 /// manipulations.
 /// \tparam SrcView Models ImageViewConcept
@@ -216,7 +216,7 @@ void correlate_rows(
 
 /// \ingroup ImageAlgorithms
 /// \brief Correlates 1D variable-size kernel along the columns of image.
-/// \tparam PixelAccum Specifies tha data type which will be used for creating buffer container
+/// \tparam PixelAccum Specifies the data type which will be used for creating buffer container
 /// utilized for holding source image pixels after applying appropriate boundary manipulations.
 /// \tparam SrcView Models ImageViewConcept
 /// \tparam Kernel Specifies the type of 1D kernel which will be column correlated with source
@@ -236,7 +236,7 @@ void correlate_cols(
 
 /// \ingroup ImageAlgorithms
 /// \brief Convolves 1D variable-size kernel along the rows of image.
-/// \tparam PixelAccum Specifies tha data type which will be used for creating buffer container
+/// \tparam PixelAccum Specifies the data type which will be used for creating buffer container
 /// utilized for holding source image pixels after applying appropriate boundary manipulations.
 /// \tparam SrcView Models ImageViewConcept
 /// \tparam Kernel Specifies the type of 1D kernel which will be row convoluted with source image.
@@ -254,7 +254,7 @@ void convolve_rows(
 
 /// \ingroup ImageAlgorithms
 /// \brief Convolves 1D variable-size kernel along the columns of image.
-/// \tparam PixelAccum Specifies tha data type which will be used for creating buffer container
+/// \tparam PixelAccum Specifies the data type which will be used for creating buffer container
 /// utilized for holding source image pixels after applying appropriate boundary manipulations.
 /// \tparam SrcView Models ImageViewConcept
 /// \tparam Kernel Specifies the type of 1D kernel which will be column convoluted with source
@@ -274,7 +274,7 @@ void convolve_cols(
 
 /// \ingroup ImageAlgorithms
 /// \brief Correlate 1D fixed-size kernel along the rows of image.
-/// \tparam PixelAccum Specifies tha data type which will be used for creating buffer container
+/// \tparam PixelAccum Specifies the data type which will be used for creating buffer container
 /// utilized for holding source image pixels after applying appropriate boundary manipulations.
 /// \tparam SrcView Models ImageViewConcept
 /// \tparam Kernel Specifies the type of 1D kernel which will be row correlated with source image.
@@ -293,7 +293,7 @@ void correlate_rows_fixed(
 
 /// \ingroup ImageAlgorithms
 /// \brief Correlate 1D fixed-size kernel along the columns of image
-/// \tparam PixelAccum Specifies tha data type which will be used for creating buffer container
+/// \tparam PixelAccum Specifies the data type which will be used for creating buffer container
 /// utilized for holding source image pixels after applying appropriate boundary manipulations.
 /// \tparam SrcView Models ImageViewConcept
 /// \tparam Kernel Specifies the type of 1D kernel which will be column correlated with source
@@ -313,7 +313,7 @@ void correlate_cols_fixed(
 
 /// \ingroup ImageAlgorithms
 /// \brief Convolve 1D fixed-size kernel along the rows of image
-/// \tparam PixelAccum Specifies tha data type which will be used for creating buffer container
+/// \tparam PixelAccum Specifies the data type which will be used for creating buffer container
 /// utilized for holding source image pixels after applying appropriate boundary manipulations.
 /// \tparam SrcView Models ImageViewConcept
 /// \tparam Kernel Specifies the type of 1D kernel which will be row convolved with source image.
@@ -331,7 +331,7 @@ void convolve_rows_fixed(
 
 /// \ingroup ImageAlgorithms
 /// \brief Convolve 1D fixed-size kernel along the columns of image
-/// \tparam PixelAccum Specifies tha data type which will be used for creating buffer container
+/// \tparam PixelAccum Specifies the data type which will be used for creating buffer container
 /// utilized for holding source image pixels after applying appropriate boundary manipulations.
 /// \tparam SrcView Models ImageViewConcept
 /// \tparam Kernel Specifies the type of 1D kernel which will be column convolved with source
@@ -354,7 +354,7 @@ namespace detail
 
 /// \ingroup ImageAlgorithms
 /// \brief Convolve 1D variable-size kernel along both rows and columns of image
-/// \tparam PixelAccum Specifies tha data type which will be used for creating buffer container
+/// \tparam PixelAccum Specifies the data type which will be used for creating buffer container
 /// utilized for holding source image pixels after applying appropriate boundary manipulations.
 /// \tparam SrcView Models ImageViewConcept
 /// \tparam Kernel Specifies the type of 1D kernel which will be used for 1D row and column

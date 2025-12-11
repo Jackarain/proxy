@@ -18,7 +18,23 @@ auto has_response(std::string_view cmd) -> bool
       return true;
    if (cmd == "UNSUBSCRIBE")
       return true;
+   if (cmd == "PUNSUBSCRIBE")
+      return true;
    return false;
 }
 
+request make_hello_request()
+{
+   request req;
+   req.push("HELLO", "3");
+   return req;
+}
+
 }  // namespace boost::redis::detail
+
+void boost::redis::request::append(const request& other)
+{
+   payload_ += other.payload_;
+   commands_ += other.commands_;
+   expected_responses_ += other.expected_responses_;
+}

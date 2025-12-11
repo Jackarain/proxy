@@ -28,9 +28,9 @@ Status]]
 |https://drone.cpp.al/boostorg/url[image:https://drone.cpp.al/api/badges/boostorg/url/status.svg?ref=refs/heads/develop[Build
 Status]]
 
-|https://www.boost.org/development/tests/master/developer/summary.html[Matrix]
-|http://www.boost.org/development/tests/master/developer/url.html[image:https://img.shields.io/badge/matrix-master-brightgreen.svg[Matrix]]
-|http://www.boost.org/development/tests/develop/developer/url.html[image:https://img.shields.io/badge/matrix-develop-brightgreen.svg[Matrix]]
+|https://regression.boost.io/master/developer/summary.html[Matrix]
+|https://regression.boost.io/master/developer/url.html[image:https://img.shields.io/badge/matrix-master-brightgreen.svg[Matrix]]
+|https://regression.boost.io/develop/developer/url.html[image:https://img.shields.io/badge/matrix-develop-brightgreen.svg[Matrix]]
 
 |https://codecov.io[Codecov]
 |https://codecov.io/gh/boostorg/url/branch/master[image:https://codecov.io/gh/boostorg/url/branch/master/graph/badge.svg[codecov]]

@@ -11,7 +11,6 @@
 #ifndef BOOST_MSM_FRONT_FUNCTOR_ROW_H
 #define BOOST_MSM_FRONT_FUNCTOR_ROW_H
 
-#include <boost/mpl/set.hpp>
 #include <boost/mpl/for_each.hpp>
 #include <boost/mpl/has_xxx.hpp>
 #include <boost/mpl/count_if.hpp>

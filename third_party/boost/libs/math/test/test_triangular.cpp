@@ -8,7 +8,7 @@
 
 // test_triangular.cpp
 
-#ifndef SYCL_LANGUAGE_VERSION
+#ifndef BOOST_MATH_ENABLE_SYCL
 #include <pch.hpp>
 #endif
 
@@ -17,7 +17,7 @@
 #  pragma warning(disable: 4305) // truncation from 'long double' to 'float'
 #endif
 
-#ifdef SYCL_LANGUAGE_VERSION
+#ifdef BOOST_MATH_ENABLE_SYCL
 #include "sycl/sycl.hpp"
 #endif
 

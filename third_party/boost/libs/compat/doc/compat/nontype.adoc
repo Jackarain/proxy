@@ -1,0 +1,58 @@
+////
+Copyright 2025 Peter Dimov
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#nontype]
+# <boost/compat/nontype.hpp>
+:idprefix: ref_nontype_
+
+## Description
+
+The header `<boost/compat/nontype.hpp>` provides the {cpp}26 variable
+template `std::nontype`.
+
+`nontype` is used for passing function pointers or member function
+pointers to `function_ref`.
+
+Since `nontype_t` and `nontype` have a template parameter of type
+`auto`, they require {cpp}17. When {cpp}17 isn't available, this
+header can still be included, but doesn't define them. (It would
+have caused an error if it did.)
+
+## Example
+
+```
+struct X
+{
+    void f(int a, int b) const noexcept;
+};
+
+int main()
+{
+    X x;
+    auto fnref = function_ref<void(int, int)>(nontype<&X::f>, &x);
+
+    fnref(1, 2); // calls x.f(1, 2)
+}
+```
+
+## Synopsis
+
+```
+namespace boost
+{
+namespace compat
+{
+
+template<auto V> struct nontype_t
+{
+    explicit nontype_t() = default;
+};
+
+template<auto V> inline constexpr nontype_t<V> nontype {};
+
+} // namespace compat
+} // namespace boost
+```

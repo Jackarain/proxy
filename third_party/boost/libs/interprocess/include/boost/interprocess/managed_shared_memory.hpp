@@ -372,7 +372,7 @@ typedef basic_managed_shared_memory
 fixed_managed_shared_memory;
 
 //!Typedef for a default basic_managed_shared_memory
-//!of narrow characters to be placed in a fixed address
+//!of wide characters to be placed in a fixed address
 typedef basic_managed_shared_memory
    <wchar_t
    ,rbtree_best_fit<mutex_family, void*>

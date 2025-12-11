@@ -72,6 +72,13 @@ A type satisfies the `LoggerType` concept if it defines [*any number (including 
         ]
         [Invoked when the __DISCONNECT__ packet is received, indicating that the Broker wants to close this connection. ]
     ]
+    [
+        [`void at_transport_error(error_code ec);`]
+        [
+            [*`ec`] is the `error_code` returned by the `async_read_some` or `async_write_some` operation on the underlying __StreamType__ stream.
+        ]
+        [Invoked when a read or write operation on the underlying __StreamType__ stream fails, triggering a reconnection to the broker.]
+    ]
 ]
 
 For example, a type `T` that defines `at_connack` and `at_disconnect` functions with their respective arguments is considered a valid `LoggerType`.

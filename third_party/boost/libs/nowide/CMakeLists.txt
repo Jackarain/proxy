@@ -13,9 +13,9 @@
 #
 # When not using CMake to link against the shared library on windows define -DBOOST_NOWIDE_DYN_LINK
 
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.9...3.20)
 # Version number starts at 10 to avoid conflicts with Boost version
-set(_version 11.3.0)
+set(_version 11.4.0)
 if(BOOST_SUPERPROJECT_SOURCE_DIR)
   set(_version ${BOOST_SUPERPROJECT_VERSION})
 endif()
@@ -91,7 +91,7 @@ else()
     if(WIN32 AND NOT DEFINED Boost_USE_STATIC_LIBS)
       set(Boost_USE_STATIC_LIBS ON)
     endif()
-    find_package(Boost 1.56 REQUIRED)
+    find_package(Boost 1.66 REQUIRED)
   endif()
   target_link_libraries(boost_nowide PUBLIC Boost::boost)
 endif()

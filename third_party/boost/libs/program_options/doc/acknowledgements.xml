@@ -8,7 +8,7 @@
 <section>
   <title>Acknowledgements</title>
 
-  <para>I'm very gratefull to all the people who helped with the development, 
+  <para>I'm very grateful to all the people who helped with the development, 
     by discussion, fixes, and as users. It was pleasant
     to see all that involvement, which made the library much better than it
     would be otherwise.
@@ -25,7 +25,7 @@
   <para>The formal review lead to numerous comments and enhancements. Pavol
   Droba helped with the option description semantic. Gennadiy Rozental has
   criticised many aspects of the library which caused various simplifications.
-  Pavel Vozenilek did carefull review of the implementation. A number of
+  Pavel Vozenilek did careful review of the implementation. A number of
   comments were made by:
     <itemizedlist>
       <listitem><para>David Abrahams</para></listitem>

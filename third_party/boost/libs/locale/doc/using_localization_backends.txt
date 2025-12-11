@@ -78,7 +78,6 @@ provides good localization support even on the MinGW and Cygwin platforms, which
 problems with this.
 
 \note
-
 - If you using GCC compiler under Windows you need GCC-4.x series to use it, GCC-3.4 is not supported
 - Only UTF-8 as narrow locale encoding and UTF-16 as wide encoding are supported.
 
@@ -87,7 +86,7 @@ problems with this.
 <table border="1" cellpadding="5" cellspacing="3">
 <tr>
   <th>Backend</th>
-  <th>icu</th><th>posix</th><th>winapi</th><th>std</th>
+  <th>ICU</th><th>posix</th><th>winapi</th><th>std</th>
 </tr>
 <tr>
   <th>Message Formatting</th>
@@ -95,7 +94,7 @@ problems with this.
 </tr>
 <tr>
   <th>Non UTF-8 encodings</th>
-  <td>Yes</td><td>Yes</td><td>No</td><td>Yes</td>
+  <td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td>
 </tr>
 <tr>
   <th>Date/Time Formatting/Parsing</th>
@@ -132,10 +131,6 @@ problems with this.
 <tr>
   <th>Unicode Normalization</th>
   <td>Yes</td><td>No</td><td>Vista and above</td><td>No</td>
-</tr>
-<tr>
-  <th>C++11 characters</th>
-  <td>Yes</td><td>No</td><td>No</td><td>Yes</td>
 </tr>
 <tr>
   <th>OS Support</th>

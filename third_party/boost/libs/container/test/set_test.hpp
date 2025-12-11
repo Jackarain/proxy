@@ -12,6 +12,7 @@
 #define BOOST_CONTAINER_TEST_SET_TEST_HEADER
 
 #include <boost/container/detail/config_begin.hpp>
+#include <boost/container/detail/compare_functors.hpp>
 #include "check_equal_containers.hpp"
 #include "print_container.hpp"
 #include "movable_int.hpp"
@@ -821,6 +822,54 @@ int set_test ()
 
       boostmultiset.merge(boost::move(boostset2));
       if(!CheckEqualContainers(boostmultiset, stdmultiset)) return 1;
+   }
+
+   {  //erase_if
+      boostset.clear();
+      boostmultiset.clear();
+      stdset.clear();
+      stdmultiset.clear();
+
+      {
+         IntType aux_vect[(std::size_t)MaxElem];
+         IntType aux_vect2[(std::size_t)MaxElem];
+         IntType aux_vect3[(std::size_t)MaxElem];
+
+         for(int i = 0; i < MaxElem; ++i){
+            aux_vect[i] = i;
+            aux_vect2[i] = i;
+            aux_vect3[i] = i;
+         }
+
+         boostset.     insert(boost::make_move_iterator(&aux_vect[0]),  boost::make_move_iterator(&aux_vect[0]  + MaxElem));
+         boostmultiset.insert(boost::make_move_iterator(&aux_vect2[0]), boost::make_move_iterator(&aux_vect2[0] + MaxElem));
+         boostmultiset.insert(boost::make_move_iterator(&aux_vect3[0]), boost::make_move_iterator(&aux_vect3[0] + MaxElem));
+      }
+
+      for(int i = 0; i < MaxElem; ++i){
+         stdset.insert(i);
+         stdmultiset.insert(i);
+         stdmultiset.insert(i);
+      }
+
+      for(int i = 0; i < MaxElem; ++i) {
+         //erase_if
+         const int setkey = (i + MaxElem/2) % MaxElem;
+         if (1 != erase_if(boostset, equal_to_value<int>(setkey)))
+            return 1;
+         if (0 != erase_if(boostset, equal_to_value<int>(setkey)))
+            return 1;
+         stdset.erase(setkey);
+         if(!test::CheckEqualContainers(boostset, stdset)) return false;
+
+         //erase_if
+         if (2 != erase_if(boostmultiset, equal_to_value<int>(setkey)))
+            return 1;
+         if (0 != erase_if(boostmultiset, equal_to_value<int>(setkey)))
+            return 1;
+         stdmultiset.erase(setkey);
+         if(!test::CheckEqualContainers(boostmultiset, stdmultiset)) return false;
+      }
    }
 
    if(set_test_copyable<MyBoostSet, MyStdSet, MyBoostMultiSet, MyStdMultiSet>

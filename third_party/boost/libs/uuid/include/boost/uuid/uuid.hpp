@@ -153,11 +153,11 @@ public:
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
 
-    iterator begin() noexcept { return data; }
-    const_iterator begin() const noexcept { return data; }
+    BOOST_CXX14_CONSTEXPR iterator begin() noexcept { return data; }
+    constexpr const_iterator begin() const noexcept { return data; }
 
-    iterator end() noexcept { return data() + size(); }
-    const_iterator end() const noexcept { return data() + size(); }
+    BOOST_CXX14_CONSTEXPR iterator end() noexcept { return data() + size(); }
+    constexpr const_iterator end() const noexcept { return data() + size(); }
 
     // size
 

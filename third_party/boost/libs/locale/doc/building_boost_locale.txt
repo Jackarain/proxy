@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2009-2011 Artyom Beilis (Tonkikh)
+// Copyright (c) 2024-2025 Alexander Grund
 //
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
@@ -19,34 +20,32 @@
 
 \subsection bb_building_deps Dependencies
 
-- ICU library 3.6 or above is strongly recommended
+- ICU library 4.8.1 or above is required for builds with ICU
 - If no ICU library is given, iconv support is required on POSIX platforms.
 
 \subsection bb_platform_opts Platform Notes
 
--   If you use Boost.Locale on Windows with MinGW/GCC < 4.5 you'll be
-    able to use the static version only. Mingw/GCC prior to 4.5 has no
-    support for dynamic runtime linking.\n
-    Using Boost.Locale DLL's with MinGW gcc also requires dynamic linking
+-   Using Boost.Locale DLL's with MinGW gcc requires dynamic linking
     with the runtime libraries libstdc++ and libgcc. Some gcc builds use
     static linking by default so make sure you use the correct link options.
 -   The AIX's iconv misses important character sets that Boost.Locale requires,
     so you need to either use GNU iconv or link with the ICU library.
 -   If the iconv library is not found on Darwin/Mac OS X builds make sure there
     are not multiple iconv installations and provide the -sICONV_PATH build option
-    to point to the correct location of the iconv library.
+    to point to the correct location of the iconv library.  
+    Using the HomeBrew installed GNU IConv is highly recommended!
 
 \subsection bb_building_proc Building Process
 
-Now all you need to do is to invoke bjam:
+Now all you need to do is to invoke b2:
 
 \verbatim
-./bjam --with-locale stage
+./b2 --with-locale stage
 \endverbatim
 
 Or on Windows
 \verbatim
-.\bjam --with-locale stage
+.\b2 --with-locale stage
 \endverbatim
 
 If you are using a custom ICU build or you are using Microsoft Windows,
@@ -54,30 +53,30 @@ you need to provide a path to the location of the ICU library using the \c -sICU
 
 For example:
 
--   If your icu build is placed at \c /opt/icu46 such that the files are placed like\n
-    \c /opt/icu46/include/unicode/uversion.h\n
-    \c /opt/icu46/include/unicode/calendar.h\n
+-   If your ICU build is placed at \c /opt/icu48 such that the files are placed like\n
+    \c /opt/icu48/include/unicode/uversion.h\n
+    \c /opt/icu48/include/unicode/calendar.h\n
     \c ... \n
-    \c /opt/icu46/lib/libicudata.so \n
-    \c /opt/icu46/lib/libicui18n.so \n
+    \c /opt/icu48/lib/libicudata.so \n
+    \c /opt/icu48/lib/libicui18n.so \n
     \c ... \n
-    then you need to provide an option \c -sICU_PATH=/opt/icu46
+    then you need to provide an option \c -sICU_PATH=/opt/icu48
     \verbatim
-    ./bjam --with-locale -sICU_PATH=/opt/icu46  stage
+    ./b2 --with-locale -sICU_PATH=/opt/icu48  stage
     \endverbatim
--   If your icu build is placed at <tt>c:\\icu46</tt> such that the files are placed like \n
-    <tt>c:\\icu46\\include\\unicode\\uversion.h</tt>  \n
-    <tt>c:\\icu46\\include\\unicode\\calendar.h</tt> \n
+-   If your ICU build is placed at <tt>C:\\icu48</tt> such that the files are placed like \n
+    <tt>C:\\icu48\\include\\unicode\\uversion.h</tt>  \n
+    <tt>C:\\icu48\\include\\unicode\\calendar.h</tt> \n
     <tt>...</tt> \n
-    <tt>c:\\icu46\\bin\\icudt.dll</tt> \n
-    <tt>c:\\icu46\\bin\\icuin.dll</tt> \n
+    <tt>C:\\icu48\\bin\\icudt.dll</tt> \n
+    <tt>C:\\icu48\\bin\\icuin.dll</tt> \n
     <tt>...</tt> \n
-    <tt>c:\\icu46\\lib\\icudt.lib</tt> \n
-    <tt>c:\\icu46\\lib\\icuin.lib</tt> \n
+    <tt>C:\\icu48\\lib\\icudt.lib</tt> \n
+    <tt>C:\\icu48\\lib\\icuin.lib</tt> \n
     <tt>...</tt> \n
-    then you need to provide an option \c -sICU_PATH=c:\\icu46
+    then you need to provide an option \c -sICU_PATH=C:\\icu48
     \verbatim
-    .\bjam --with-locale -sICU_PATH=c:\icu46  stage
+    .\b2 --with-locale -sICU_PATH=C:\icu48  stage
     \endverbatim
 
 \note Don't forget to put both debug and release versions of ICU libraries in this path
@@ -106,18 +105,18 @@ For example:
 
 -   Build the library on Windows with the ICU backend only:
     \verbatim
-    .\bjam boost.locale.winapi=off boost.locale.std=off -sICU_PATH=c:\icu46 --with-locale stage
+    .\b2 boost.locale.winapi=off boost.locale.std=off -sICU_PATH=C:\icu48 --with-locale stage
     \endverbatim
 -   Build the library on Linux with the std backend only
     \verbatim
-    .\bjam boost.locale.posix=off boost.locale.icu=off --with-locale stage
+    ./b2 boost.locale.posix=off boost.locale.icu=off --with-locale stage
     \endverbatim
 
 \section bb_build_test Running Unit Tests
 
-You can run unit tests by invoking \c bjam with the \c libs/locale/test project parameter
+You can run unit tests by invoking \c b2 with the \c libs/locale/test project parameter
 \verbatim
-./bjam libs/locale/test
+./b2 libs/locale/test
 \endverbatim
 
 \section binary_compatibility Binary Compatibility

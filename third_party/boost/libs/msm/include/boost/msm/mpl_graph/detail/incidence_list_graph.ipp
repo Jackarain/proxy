@@ -36,7 +36,6 @@
 #include <boost/mpl/filter_view.hpp>
 #include <boost/mpl/transform_view.hpp>
 #include <boost/mpl/equal.hpp>
-#include <boost/type_traits.hpp>
 
 
 namespace boost {

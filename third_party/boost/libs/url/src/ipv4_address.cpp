@@ -101,6 +101,14 @@ is_multicast() const noexcept
         0xE0000000;
 }
 
+void
+ipv4_address::
+write_ostream(std::ostream& os) const
+{
+    char buf[ipv4_address::max_str_len];
+    os << to_buffer(buf, sizeof(buf));
+}
+
 std::size_t
 ipv4_address::
 print_impl(

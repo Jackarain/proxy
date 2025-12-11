@@ -81,6 +81,9 @@ void test_reconnection()
    cfg.reconnect_wait_interval = 10ms;  // make the test run faster
 
    request ping_request;
+   ping_request.get_config().cancel_if_not_connected = false;
+   ping_request.get_config().cancel_if_unresponded = false;
+   ping_request.get_config().cancel_on_connection_lost = false;
    ping_request.push("PING", "some_value");
 
    request quit_request;
@@ -103,12 +106,6 @@ void test_reconnection()
 
    auto quit_callback = [&](error_code ec, std::size_t) {
       BOOST_TEST(ec == error_code());
-
-      // If a request is issued immediately after QUIT, the request sometimes
-      // fails, probably due to a race condition. This dispatches any pending
-      // handlers, triggering the reconnection process.
-      // TODO: this should not be required.
-      ioc.poll();
       conn.async_exec(ping_request, ignore, ping_callback);
    };
 

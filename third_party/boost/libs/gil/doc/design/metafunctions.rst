@@ -19,7 +19,7 @@ They follow this pattern::
 where *ColorSpace* also indicates the ordering of components.
 
 Examples are ``rgb``, ``bgr``, ``cmyk``, ``rgba``. *BitDepth* can be, for
-example, ``8``,``16``,``32``. By default the bits are unsigned integral type.
+example, ``8``, ``16``, ``32``. By default the bits are unsigned integral type.
 Append ``s`` to the bit depth to indicate signed integral, or ``f`` to
 indicate floating point. ``c`` indicates object whose associated pixel
 reference is immutable. ``_planar`` indicates planar organization (as opposed
@@ -33,9 +33,9 @@ Here are examples:
 .. code-block:: cpp
 
     bgr8_image_t               i;     // 8-bit unsigned (unsigned char) interleaved BGR image
-    cmyk16_pixel_t;            x;     // 16-bit unsigned (unsigned short) CMYK pixel value;
-    cmyk16sc_planar_ref_t      p(x);  // const reference to a 16-bit signed integral (signed short) planar CMYK pixel x.
-    rgb32f_planar_step_ptr_t   ii;    // step iterator to a floating point 32-bit (float) planar RGB pixel.
+    cmyk16_pixel_t;            x;     // 16-bit unsigned (unsigned short) CMYK pixel value
+    cmyk16sc_planar_ref_t      p(x);  // const reference to a 16-bit signed integral (signed short) planar CMYK pixel x
+    rgb32f_planar_step_ptr_t   ii;    // step iterator to a floating point 32-bit (float) planar RGB pixel
 
 Homogeneous memory-based images
 -------------------------------

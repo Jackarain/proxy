@@ -14,7 +14,7 @@ Random numbers are generated in conjunction with Boost.Random.
 
 There is a single generator that supports generating random integers with large bit counts:
 [@http://www.boost.org/doc/html/boost/random/independent_bits_engine.html `independent_bits_engine`].
-This type can be used with either ['unbounded] integer types, or with ['bounded] (ie fixed precision) unsigned integers:
+This type can be used with either ['unbounded] integer types, or with ['bounded] (i.e. fixed precision) unsigned integers:
 
 [random_eg1]
 
@@ -41,7 +41,7 @@ with a multiprecision generator such as [@http://www.boost.org/doc/html/boost/ra
 Or to use [@http://www.boost.org/doc/html/boost/random/uniform_smallint.html `uniform_smallint`] or
 [@http://www.boost.org/doc/html/boost/random/random_number_generator.html `random_number_generator`] with multiprecision types.
 
-floating-point values in \[0,1) are most easily generated using [@http://www.boost.org/doc/html/boost/random/generate_canonical.html `generate_canonical`],
+Floating-point values in \[0,1) are most easily generated using [@http://www.boost.org/doc/html/boost/random/generate_canonical.html `generate_canonical`],
 note that `generate_canonical` will call the generator multiple times to produce the requested number of bits, for example we can use
 it with a regular generator like so:
 
@@ -50,7 +50,7 @@ it with a regular generator like so:
 [random_eg3_out]
 
 Note however, the distributions do not invoke the generator multiple times to fill up the mantissa of a multiprecision floating-point type
-with random bits.  For these therefore, we should probably use a multiprecision generator (ie `independent_bits_engine`) in combination
+with random bits.  For these therefore, we should probably use a multiprecision generator (i.e. `independent_bits_engine`) in combination
 with the distribution:
 
 [random_eg4]
@@ -59,7 +59,7 @@ with the distribution:
 
 And finally, it is possible to use the floating-point generators [@http://www.boost.org/doc/html/boost/random/lagged_fibonacci_01_engine.html `lagged_fibonacci_01_engine`]
 and [@http://www.boost.org/doc/html/boost/random/subtract_with_idp144360752.html `subtract_with_carry_01_engine`] directly with multiprecision floating-point types.
-It's worth noting however, that there is a distinct lack of literature on generating high bit-count random numbers, and therefore a lack of "known good" parameters to
+It's worth noting, however, that there is a distinct lack of literature on generating high bit-count random numbers, and therefore a lack of "known good" parameters to
 use with these generators in this situation.  For this reason, these should probably be used for research purposes only:
 
 [random_eg5]

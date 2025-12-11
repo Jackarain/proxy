@@ -13,7 +13,6 @@
 #ifndef __BOOST_SORT_PARALLEL_DETAIL_BLOCK_INDIRECT_SORT_HPP
 #define __BOOST_SORT_PARALLEL_DETAIL_BLOCK_INDIRECT_SORT_HPP
 
-#include <ciso646>
 #include <atomic>
 #include <cstdlib>
 #include <future>
@@ -201,14 +200,14 @@ block_indirect_sort<Block_size, Group_size, Iter_t, Compare>
 
         //------------------- check if sort -----------------------------------
         bool sorted = true;
-        for (Iter_t it1 = first, it2 = first + 1; it2 != last and (sorted =
-                        not bk.cmp(*it2, *it1)); it1 = it2++);
+        for (Iter_t it1 = first, it2 = first + 1; it2 != last && (sorted =
+                        ! bk.cmp(*it2, *it1)); it1 = it2++);
         if (sorted) return;
 
         //------------------- check if reverse sort ---------------------------
         sorted = true;
-        for (Iter_t it1 = first, it2 = first + 1; it2 != last and (sorted =
-                        not bk.cmp(*it1, *it2)); it1 = it2++);
+        for (Iter_t it1 = first, it2 = first + 1; it2 != last && (sorted =
+                        ! bk.cmp(*it1, *it2)); it1 = it2++);
 
         if (sorted)
         {
@@ -230,7 +229,7 @@ block_indirect_sort<Block_size, Group_size, Iter_t, Compare>
         if (nbits_size > 5) nbits_size = 5;
         size_t max_per_thread = (size_t) 1 << (18 - nbits_size);
 
-        if (nelem < (max_per_thread) or nthread < 2)
+        if (nelem < (max_per_thread) || nthread < 2)
         {
             //intro_sort (first, last, bk.cmp);
             pdqsort(first, last, bk.cmp);
@@ -259,10 +258,10 @@ block_indirect_sort<Block_size, Group_size, Iter_t, Compare>
 
         // Insert the first work in the stack
         bscu::atomic_write(counter, 1);
-        function_t f1 = [&]( )
+        function_t f1 = [this]( )
         {
             start_function ( );
-            bscu::atomic_sub (counter, 1);
+            bscu::atomic_sub (this->counter, 1);
         };
         bk.works.emplace_back(f1);
 

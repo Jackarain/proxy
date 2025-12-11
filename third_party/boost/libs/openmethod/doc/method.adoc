@@ -1,0 +1,152 @@
+
+
+## method
+
+### Synopsis
+
+```c++
+namespace boost::openmethod {
+
+template<
+    typename Method, typename ReturnType,
+    class Policy = BOOST_OPENMETHOD_DEFAULT_REGISTRY>
+class method;
+
+template<typename Name, typename... Parameters, typename ReturnType, class Policy>
+class method<Name(Parameters...), ReturnType, Policy> {
+  public:
+    using function_type = ReturnType (*)(CallParameters...);
+
+    auto operator()(CallParameters... args) const -> ReturnType;
+
+    static method fn;
+
+    template<auto... Functions>
+    struct override;
+
+    template<auto Overrider>
+    static function_type next;
+
+  private:
+    method();
+    method(const method&) = delete;
+    method(method&&) = delete;
+    ~method();
+};
+
+}
+```
+
+### Description
+
+`method` implements an open-method that takes a parameter list - `Parameters` -
+and returns a `ReturnType`. `Name` can be any type. Its purpose is to make it
+possible to have multiple methods with the same signature. Typically, `Name` is
+a class whose name reflects the method's purpose.
+
+`Parameters` must contain at least one virtual parameter, i.e. a parameter that
+has a type in the form `virtual_ptr<T,{nbsp}Policy>` or `virtual_<T>`. The
+dynamic types of the virtual arguments (the arguments corresponding to virtual
+parameters in the method's signature) are taken into account to select the
+overrider to call.
+
+A `method` is attached to a `Policy`, which influences several parts of the
+dispatch mechanism - for example, how to obtain a v-table pointer for an object,
+how to report errors, whether to perform sanity checks, etc.
+
+### Members
+
+#### constructor
+
+```c++
+method();
+```
+
+Add the method to the list of methods registered in `Policy`.
+
+The constructor is private. The only instance is the static member variable
+`fn`.
+
+#### destructor
+
+```c++
+~method();
+```
+
+Remove the method from the list of methods registered in `Policy`.
+
+#### operator()
+
+```c++
+auto operator()(CallParameters... args) const -> ReturnType;
+```
+
+Call the method with the arguments `args`.
+
+`CallParameters` are the `Parameters` without the `virtual_` decorators. Note
+that `virtual_ptr`{empty}s are preserved.
+
+The overrider is selected in a process similar to overloaded function
+resolution, with extra rules to handle ambiguities. It proceeds as follows:
+
+1. Form the set of all applicable overriders. An overrider is applicable if it
+   can be called with the arguments passed to the method.
+
+2. If the set is empty, call the error handler (if present in the policy), then
+   terminate the program with `abort`
+
+3. Remove the overriders that are dominated by other overriders in the set.
+   Overrider A dominates overrider B if any of its virtual formal parameters is
+   more specialized than B's, and if none of B's virtual parameters is more
+   specialized than A's.
+
+4. If the resulting set contains only one overrider, call it.
+
+5. If the return type is a registered polymorphic type, remove all the
+   overriders that return a less specific type than the others.
+
+6. If the resulting set contains only one overrider, call it.
+
+7. Otherwise, call one of the remaining overriders. Which overrider is selected
+   is not specified, but it is the same across calls with the same arguments
+   types.
+
+For each virtual argument `arg`, the dispatch mechanism calls
+`virtual_traits::peek(arg)` and deduces the v-table pointer from the `result`,
+using the first of the following methods that applies:
+
+1. If `result` is a `virtual_ptr`, get the pointer to the v-table from it.
+
+2. If a function named `boost_openmethod_vptr` that takes `result` and returns a
+   `vptr_type` exists, call it.
+
+3. Call `Policy::dynamic_vptr(result)`.
+
+#### fn
+
+```c++
+static method fn;
+```
+
+The `method`{empty}'s unique instance. The method is called via the call
+operator on `fn`: `method::fn(args...)`.
+
+#### override
+
+```c++
+template<auto... Functions>
+struct override;
+```
+
+Add _Functions_ to the overriders of `method`.
+
+#### next
+
+```c++
+template<auto Overrider>
+static function_type next;
+```
+
+Pointer to the next most specialized overrider after _Overrider_, i.e. the
+overrider that would be called for the same tuple of virtual arguments if
+_Overrider_ was not present. Set to `nullptr` if no such overrider exists.

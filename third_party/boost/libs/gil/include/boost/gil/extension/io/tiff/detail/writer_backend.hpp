@@ -54,7 +54,7 @@ protected:
 
         if(! this->_info._photometric_interpretation_user_defined )
         {
-            // write photometric interpretion - Warning: This value is rather
+            // write photometric interpretation - Warning: This value is rather
             // subjective. The user should better set this value itself. There
             // is no way to decide if a image is PHOTOMETRIC_MINISWHITE or
             // PHOTOMETRIC_MINISBLACK. If the user has not manually set it, then
@@ -86,7 +86,7 @@ protected:
 
         // write bits per sample
         // @todo: Settings this value usually requires to write for each sample the bit
-        // value seperately in case they are different, like rgb556.
+        // value separately in case they are different, like rgb556.
         tiff_bits_per_sample::type bits_per_sample = detail::unsigned_integral_num_bits< channel_t >::value;
         this->_io_dev.template set_property<tiff_bits_per_sample>( bits_per_sample );
 

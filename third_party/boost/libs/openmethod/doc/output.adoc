@@ -1,0 +1,34 @@
+
+## basic_error_output
+
+### Synopsis
+
+Defined in <boost/openmethod/policies/basic_error_output.hpp>.
+
+```c++
+namespace boost::openmethod::policies {
+
+template<class Policy, typename Stream = /*unspecified*/>
+struct basic_error_output : output {
+    static Stream error_stream;
+};
+
+}
+```
+
+### Description
+
+`basic_error_output` is an implementation of `output` that writes error
+messages to a `LightweightOutputStream`.
+
+### Members
+
+#### error_stream
+
+```c++
+Stream  error_stream;
+```
+
+Initialized by the default constructor of `Stream`. It is the responsibility of
+the program to initializate it if needed, e.g., for a `std::ofstream`, to open
+it.

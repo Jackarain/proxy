@@ -5,7 +5,7 @@
 
   Distributed under the Boost Software License, Version 1.0.
   (See accompanying file LICENSE_1_0.txt or copy at
-  http://www.boost.org/LICENSE_1_0.txt).
+  http://www.boost.org/LICENSE_1_0.txt.)
 ]
 
 [section:perf Performance Comparison]
@@ -30,7 +30,7 @@ share similar relative performances.
 
 The backends which effectively wrap GMP/MPIR and MPFR
 retain the superior performance of the low-level big-number engines.
-When these are used (in association with at least some level of optmization)
+When these are used (in association with at least some level of optimization)
 they achieve and retain the expected low-level performances.
 
 At low digit counts, however, it is noted that the performances of __cpp_int,
@@ -47,7 +47,7 @@ the performances of the Boost-licensed, self-written backends.
 At around a few hundred to several thousands of digits,
 factors of about two through five are observed,
 whereby GMP/MPIR-based calculations are (performance-wise)
-supreior ones.
+superior ones.
 
 At a few thousand decimal digits, the upper end of
 the Boost backends is reached. At the moment,

@@ -13,12 +13,9 @@ constant boost_dependencies :
     /boost/container//boost_container
     /boost/core//boost_core
     /boost/endian//boost_endian
-    /boost/fusion//boost_fusion
-    /boost/optional//boost_optional
     /boost/random//boost_random
     /boost/range//boost_range
     /boost/smart_ptr//boost_smart_ptr
-    /boost/spirit//boost_spirit
     /boost/system//boost_system
     /boost/type_traits//boost_type_traits
     ;

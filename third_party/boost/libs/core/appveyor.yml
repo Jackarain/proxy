@@ -27,17 +27,10 @@ environment:
       ADDRMD: 32,64
       CXXSTD: 14,17
 
-    # clang-win 32 bit fails to link with "unable to load mspdbcore.dll (error code: 126)"
-
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      TOOLSET: clang-win
-      ADDRMD: 64
-      CXXSTD: 14,17,latest
-
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       TOOLSET: clang-win
       ADDRMD: 64
-      CXXSTD: 14,17,latest
+      CXXSTD: 14,17,20,latest
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       ADDPATH: C:\cygwin\bin;

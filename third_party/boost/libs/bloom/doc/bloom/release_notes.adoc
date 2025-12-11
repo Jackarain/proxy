@@ -3,6 +3,13 @@
 
 :idprefix: release_notes_
 
+== Boost 1.90
+
+* Added bulk-mode insertion and lookup for increased performance.
+* Made lookup implementation branchless for `block`, `fast_multiblock32`
+and `fast_multiblock64`, which results in some performance gains, particularly
+for mixed successful/unsuccessful queries.
+
 == Boost 1.89
 
 * Initial release.

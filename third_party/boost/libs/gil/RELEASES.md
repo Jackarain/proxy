@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Fixed convolution in `convolve_2d` ([PR #723](https://github.com/boostorg/gil/pull/723))
 - Normalize Gaussian 2D kernel to avoid darkening ([PR #725](https://github.com/boostorg/gil/pull/725))
-- Wrong buffer size in path string conversion functionss for `std::wstring` is fixed, avoiding buffer
+- Wrong buffer size in path string conversion functions for `std::wstring` is fixed, avoiding buffer
   overflows when using I/O-related functions with `std::wstring` paths ([PR #746](https://github.com/boostorg/gil/pull/764)).
 
 ### Acknowledgements

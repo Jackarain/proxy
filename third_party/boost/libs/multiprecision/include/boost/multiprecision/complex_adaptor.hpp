@@ -1,5 +1,7 @@
 ///////////////////////////////////////////////////////////////////////////////
-//  Copyright 2018 John Maddock. Distributed under the Boost
+//  Copyright 2018 - 2025 John Maddock.
+//  Copyright 2025 Christopher Kormanyos.
+//  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,13 +9,14 @@
 #define BOOST_MP_COMPLEX_ADAPTOR_HPP
 
 #include <boost/multiprecision/number.hpp>
-#include <cstdint>
 #include <boost/multiprecision/detail/digits.hpp>
 #include <boost/multiprecision/detail/hash.hpp>
 #include <boost/multiprecision/detail/no_exceptions_support.hpp>
-#include <cmath>
+
 #include <algorithm>
+#include <cmath>
 #include <complex>
+#include <cstdint>
 
 namespace boost {
 namespace multiprecision {
@@ -479,37 +482,37 @@ inline void eval_sqrt(complex_adaptor<Backend>& result, const complex_adaptor<Ba
       return;
    }
 
-   const bool __my_real_part_is_neg(eval_get_sign(val.real_data()) < 0);
+   const bool my_real_part_is_neg(eval_get_sign(val.real_data()) < 0);
 
-   Backend __my_real_part_fabs(val.real_data());
-   if (__my_real_part_is_neg)
-      __my_real_part_fabs.negate();
+   Backend my_real_part_fabs(val.real_data());
+   if (my_real_part_is_neg)
+      my_real_part_fabs.negate();
 
-   Backend t, __my_sqrt_part;
-   eval_abs(__my_sqrt_part, val);
-   eval_add(__my_sqrt_part, __my_real_part_fabs);
-   eval_ldexp(t, __my_sqrt_part, -1);
-   eval_sqrt(__my_sqrt_part, t);
+   Backend t, my_sqrt_part;
+   eval_abs(my_sqrt_part, val);
+   eval_add(my_sqrt_part, my_real_part_fabs);
+   eval_ldexp(t, my_sqrt_part, -1);
+   eval_sqrt(my_sqrt_part, t);
 
-   if (__my_real_part_is_neg == false)
+   if (my_real_part_is_neg == false)
    {
-      eval_ldexp(t, __my_sqrt_part, 1);
+      eval_ldexp(t, my_sqrt_part, 1);
       eval_divide(result.imag_data(), val.imag_data(), t);
-      result.real_data() = __my_sqrt_part;
+      result.real_data() = my_sqrt_part;
    }
    else
    {
-      const bool __my_imag_part_is_neg(eval_get_sign(val.imag_data()) < 0);
+      const bool my_imag_part_is_neg(eval_get_sign(val.imag_data()) < 0);
 
-      Backend __my_imag_part_fabs(val.imag_data());
-      if (__my_imag_part_is_neg)
-         __my_imag_part_fabs.negate();
+      Backend my_imag_part_fabs(val.imag_data());
+      if (my_imag_part_is_neg)
+         my_imag_part_fabs.negate();
 
-      eval_ldexp(t, __my_sqrt_part, 1);
-      eval_divide(result.real_data(), __my_imag_part_fabs, t);
-      if (__my_imag_part_is_neg)
-         __my_sqrt_part.negate();
-      result.imag_data() = __my_sqrt_part;
+      eval_ldexp(t, my_sqrt_part, 1);
+      eval_divide(result.real_data(), my_imag_part_fabs, t);
+      if (my_imag_part_is_neg)
+         my_sqrt_part.negate();
+      result.imag_data() = my_sqrt_part;
    }
 }
 
@@ -797,13 +800,13 @@ inline void eval_atan(complex_adaptor<Backend>& result, const complex_adaptor<Ba
    using default_ops::eval_log;
    using default_ops::eval_subtract;
 
-   complex_adaptor<Backend> __my_z_times_i, t1, t2, t3;
-   assign_components(__my_z_times_i, arg.imag_data(), arg.real_data());
-   __my_z_times_i.real_data().negate();
+   complex_adaptor<Backend> my_z_times_i, t1, t2, t3;
+   assign_components(my_z_times_i, arg.imag_data(), arg.real_data());
+   my_z_times_i.real_data().negate();
 
-   eval_add(t1, __my_z_times_i, one);
+   eval_add(t1, my_z_times_i, one);
    eval_log(t2, t1);
-   eval_subtract(t1, one, __my_z_times_i);
+   eval_subtract(t1, one, my_z_times_i);
    eval_log(t3, t1);
    eval_subtract(t1, t3, t2);
 
@@ -881,15 +884,15 @@ inline void eval_acosh(complex_adaptor<Backend>& result, const complex_adaptor<B
    using default_ops::eval_multiply;
    using default_ops::eval_subtract;
 
-   complex_adaptor<Backend> __my_zp(arg);
-   eval_add(__my_zp.real_data(), one);
-   complex_adaptor<Backend> __my_zm(arg);
-   eval_subtract(__my_zm.real_data(), one);
+   complex_adaptor<Backend> my_zp(arg);
+   eval_add(my_zp.real_data(), one);
+   complex_adaptor<Backend> my_zm(arg);
+   eval_subtract(my_zm.real_data(), one);
 
    complex_adaptor<Backend> t1, t2;
-   eval_divide(t1, __my_zm, __my_zp);
+   eval_divide(t1, my_zm, my_zp);
    eval_sqrt(t2, t1);
-   eval_multiply(t2, __my_zp);
+   eval_multiply(t2, my_zp);
    eval_add(t2, arg);
    eval_log(result, t2);
 }

@@ -33,7 +33,7 @@ to change.
 The class takes one template parameter:
 
 [variablelist
-[[FloatingPointType][The consituent IEEE floating-point value of the two limbs of the composite type.
+[[FloatingPointType][The constituent IEEE floating-point value of the two limbs of the composite type.
 This can be `float`, `double`, `long double` or when available `boost::float128_type`.]]
 ]
 

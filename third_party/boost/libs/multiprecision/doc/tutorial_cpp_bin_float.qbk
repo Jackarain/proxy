@@ -47,10 +47,10 @@ to declare a `cpp_bin_float` with exactly the same precision as `double` one wou
 `number<cpp_bin_float<53, digit_base_2> >`.  The typedefs `cpp_bin_float_single`, `cpp_bin_float_double`,
 `cpp_bin_float_quad`, `cpp_bin_float_oct` and `cpp_bin_float_double_extended` provide
 software analogues of the IEEE single, double, quad and octuple float data types, plus the Intel-extended-double type respectively.
-Note that while these types are functionally equivalent to the native IEEE types, but they do not have the same size
+Note that while these types are functionally equivalent to the native IEEE types, they do not have the same size
 or bit-layout as true IEEE compatible types.
 
-Normally `cpp_bin_float` allocates no memory: all of the space required for its digits are allocated
+Normally `cpp_bin_float` allocates no memory: all of the space required for its digits is allocated
 directly within the class.  As a result care should be taken not to use the class with too high a digit count
 as stack space requirements can grow out of control.  If that represents a problem then providing an allocator
 as a template parameter causes `cpp_bin_float` to dynamically allocate the memory it needs: this
@@ -77,13 +77,13 @@ Things you should know when using this type:
 * The type supports both infinities and NaNs.  An infinity is generated whenever the result would overflow,
 and a NaN is generated for any mathematically undefined operation.
 * There is a `std::numeric_limits` specialisation for this type.
-* Any `number` instantiated on this type, is convertible to any other `number` instantiated on this type -
+* Any `number` instantiated on this type is convertible to any other `number` instantiated on this type -
 for example you can convert from `number<cpp_bin_float<50> >` to `number<cpp_bin_float<SomeOtherValue> >`.
 Narrowing conversions round to nearest and are `explicit`.
 * Conversion from a string results in a `std::runtime_error` being thrown if the string can not be interpreted
 as a valid floating-point number.
 * All arithmetic operations are correctly rounded to nearest.  String conversions and the `sqrt` function
-are also correctly rounded, but transcendental functions (sin, cos, pow, exp etc) are not.
+are also correctly rounded, but transcendental functions (sin, cos, pow, exp etc.) are not.
 
 [h5 cpp_bin_float example:]
 

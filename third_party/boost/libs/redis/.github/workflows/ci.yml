@@ -137,6 +137,7 @@ jobs:
             cxxstd: '17'
             build-type: 'Debug'
             ldflags: ''
+            server: "redis:7.4.5-alpine"
 
           - toolset: gcc-11
             install: g++-11
@@ -144,6 +145,7 @@ jobs:
             cxxstd: '20'
             build-type: 'Release'
             ldflags: ''
+            server: "redis:7.4.5-alpine"
 
           - toolset: clang-11
             install: clang-11
@@ -151,6 +153,7 @@ jobs:
             cxxstd: '17'
             build-type: 'Debug'
             ldflags: ''
+            server: "redis:7.4.5-alpine"
 
           - toolset: clang-11
             install: clang-11
@@ -158,6 +161,7 @@ jobs:
             cxxstd: '20'
             build-type: 'Debug'
             ldflags: ''
+            server: "redis:7.4.5-alpine"
 
           - toolset: clang-13
             install: clang-13
@@ -165,6 +169,7 @@ jobs:
             cxxstd: '17'
             build-type: 'Release'
             ldflags: ''
+            server: "redis:8.2.1-alpine"
 
           - toolset: clang-13
             install: clang-13
@@ -172,6 +177,7 @@ jobs:
             cxxstd: '20'
             build-type: 'Release'
             ldflags: ''
+            server: "redis:8.2.1-alpine"
 
           - toolset: clang-14
             install: 'clang-14 libc++-14-dev libc++abi-14-dev'
@@ -180,6 +186,7 @@ jobs:
             build-type: 'Debug'
             cxxflags: '-stdlib=libc++'
             ldflags: '-lc++'
+            server: "redis:8.2.1-alpine"
 
           - toolset: clang-14
             install: 'clang-14 libc++-14-dev libc++abi-14-dev'
@@ -188,6 +195,7 @@ jobs:
             build-type: 'Release'
             cxxflags: '-stdlib=libc++'
             ldflags: '-lc++'
+            server: "redis:8.2.1-alpine"
           
           - toolset: clang-19
             install: 'clang-19'
@@ -196,6 +204,7 @@ jobs:
             build-type: 'Debug'
             cxxflags: '-fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all'
             ldflags: '-fsanitize=address -fsanitize=undefined'
+            server: "redis:8.2.1-alpine"
 
           - toolset: gcc-14
             install: 'g++-14'
@@ -203,6 +212,7 @@ jobs:
             cxxstd: '23'
             build-type: 'Debug'
             cxxflags: '-DBOOST_ASIO_DISABLE_LOCAL_SOCKETS=1' # If a system had no UNIX socket support, we build correctly
+            server: "valkey/valkey:8.1.3-alpine"
           
           - toolset: gcc-14
             install: 'g++-14'
@@ -211,6 +221,7 @@ jobs:
             build-type: 'Debug'
             cxxflags: '-fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all'
             ldflags: '-fsanitize=address -fsanitize=undefined'
+            server: "valkey/valkey:8.1.3-alpine"
 
     runs-on: ubuntu-latest
     env:
@@ -224,7 +235,7 @@ jobs:
     
     - name: Set up the required containers
       run: |
-        IMAGE=${{ matrix.container }} docker compose -f tools/docker-compose.yml up -d --wait || (docker compose logs; exit 1)
+        BUILDER_IMAGE=${{ matrix.container }} SERVER_IMAGE=${{ matrix.server }} docker compose -f tools/docker-compose.yml up -d --wait || (docker compose logs; exit 1)
       
     - name: Install dependencies
       run: |

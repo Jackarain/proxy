@@ -13,6 +13,7 @@
 #include <boost/core/lightweight_test.hpp>
 
 #include <iostream>
+#include <type_traits>
 
 
 ///////////////////////// char streamable classes ///////////////////////////////////////////
@@ -28,12 +29,12 @@ std::istream& operator >> (std::istream& istr, const streamable_easy&) {
 
 struct streamable_medium { enum ENU {value = 1}; };
 template <class CharT>
-typename boost::enable_if<boost::is_same<CharT, char>, std::basic_ostream<CharT>&>::type
+typename std::enable_if<std::is_same<CharT, char>::value, std::basic_ostream<CharT>&>::type
 operator << (std::basic_ostream<CharT>& ostr, const streamable_medium&) {
     return ostr << streamable_medium::value;
 }
 template <class CharT>
-typename boost::enable_if<boost::is_same<CharT, char>, std::basic_istream<CharT>&>::type
+typename std::enable_if<std::is_same<CharT, char>::value, std::basic_istream<CharT>&>::type
 operator >> (std::basic_istream<CharT>& istr, const streamable_medium&) {
     int i; istr >> i; BOOST_TEST_EQ(i, streamable_medium::value);
     return istr;
@@ -41,12 +42,12 @@ operator >> (std::basic_istream<CharT>& istr, const streamable_medium&) {
 
 struct streamable_hard { enum ENU {value = 2}; };
 template <class CharT, class TraitsT>
-typename boost::enable_if<boost::is_same<CharT, char>, std::basic_ostream<CharT, TraitsT>&>::type
+typename std::enable_if<std::is_same<CharT, char>::value, std::basic_ostream<CharT, TraitsT>&>::type
 operator << (std::basic_ostream<CharT, TraitsT>& ostr, const streamable_hard&) {
     return ostr << streamable_hard::value;
 }
 template <class CharT, class TraitsT>
-typename boost::enable_if<boost::is_same<CharT, char>, std::basic_istream<CharT, TraitsT>&>::type
+typename std::enable_if<std::is_same<CharT, char>::value, std::basic_istream<CharT, TraitsT>&>::type
 operator >> (std::basic_istream<CharT, TraitsT>& istr, const streamable_hard&) {
     int i; istr >> i; BOOST_TEST_EQ(i, streamable_hard::value);
     return istr;
@@ -77,12 +78,12 @@ std::wistream& operator >> (std::wistream& istr, const wstreamable_easy&) {
 
 struct wstreamable_medium { enum ENU {value = 5}; };
 template <class CharT>
-typename boost::enable_if<boost::is_same<CharT, wchar_t>, std::basic_ostream<CharT>& >::type
+typename std::enable_if<std::is_same<CharT, wchar_t>::value, std::basic_ostream<CharT>& >::type
 operator << (std::basic_ostream<CharT>& ostr, const wstreamable_medium&) {
     return ostr << wstreamable_medium::value;
 }
 template <class CharT>
-typename boost::enable_if<boost::is_same<CharT, wchar_t>, std::basic_istream<CharT>& >::type
+typename std::enable_if<std::is_same<CharT, wchar_t>::value, std::basic_istream<CharT>& >::type
 operator >> (std::basic_istream<CharT>& istr, const wstreamable_medium&) {
     int i; istr >> i; BOOST_TEST_EQ(i, wstreamable_medium::value);
     return istr;
@@ -90,12 +91,12 @@ operator >> (std::basic_istream<CharT>& istr, const wstreamable_medium&) {
 
 struct wstreamable_hard { enum ENU {value = 6}; };
 template <class CharT, class TraitsT>
-typename boost::enable_if<boost::is_same<CharT, wchar_t>, std::basic_ostream<CharT, TraitsT>&>::type
+typename std::enable_if<std::is_same<CharT, wchar_t>::value, std::basic_ostream<CharT, TraitsT>&>::type
 operator << (std::basic_ostream<CharT, TraitsT>& ostr, const wstreamable_hard&) {
     return ostr << wstreamable_hard::value;
 }
 template <class CharT, class TraitsT>
-typename boost::enable_if<boost::is_same<CharT, wchar_t>, std::basic_istream<CharT, TraitsT>&>::type
+typename std::enable_if<std::is_same<CharT, wchar_t>::value, std::basic_istream<CharT, TraitsT>&>::type
 operator >> (std::basic_istream<CharT, TraitsT>& istr, const wstreamable_hard&) {
     int i; istr >> i; BOOST_TEST_EQ(i, wstreamable_hard::value);
     return istr;

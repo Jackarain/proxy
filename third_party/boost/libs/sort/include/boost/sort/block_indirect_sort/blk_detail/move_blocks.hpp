@@ -15,7 +15,6 @@
 #define __BOOST_SORT_PARALLEL_DETAIL_MOVE_BLOCKS_HPP
 
 #include <atomic>
-#include <ciso646>
 #include <future>
 #include <iostream>
 #include <iterator>
@@ -86,7 +85,7 @@ struct move_blocks
         bscu::atomic_add(counter, 1);
         function_t f1 = [this, sequence, &counter, &error]( ) -> void
         {
-            if (not error)
+            if (! error)
             {
                 try
                 {
@@ -121,7 +120,7 @@ struct move_blocks
         bscu::atomic_add(counter, 1);
         function_t f1 = [this, sequence, &counter, &error]( ) -> void
         {
-            if (not error)
+            if (! error)
             {
                 try
                 {
@@ -169,7 +168,7 @@ move_blocks<Block_size, Group_size, Iter_t, Compare>
     while (pos_index_ini < bk.index.size())
     {
         while (pos_index_ini < bk.index.size()
-                        and bk.index[pos_index_ini].pos() == pos_index_ini)
+                        && bk.index[pos_index_ini].pos() == pos_index_ini)
         {
             ++pos_index_ini;
         }

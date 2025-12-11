@@ -1,4 +1,4 @@
-# Copyright 2019 - 2020 Alexander Grund
+# Copyright 2019 - 2025 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
@@ -14,9 +14,11 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       DEP_DIR: ${{github.workspace}}/dependencies
-      BOOST_VERSION: 1.56.0
+      BOOST_VERSION: 1.66.0
     steps:
       - uses: actions/checkout@v4
       - name: Extract tag name
@@ -80,46 +82,27 @@ jobs:
           ctest --output-on-failure -C Debug --verbose
           cmake --build . --config Debug --target install
 
+      - name: Prepare release assets
+        run: |
+          mv nowide.tar.gz nowide_${{steps.get_tag.outputs.tag}}.tar.gz
+          mv nowide_standalone.tar.gz nowide_standalone_${{steps.get_tag.outputs.tag}}.tar.gz
+          mv documentation.tar.gz nowide_docu.tar.gz
+
       - name: Create Release
         if: github.event_name == 'push'
-        id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
           body: |
             UTF8-aware functions for Windows to make cross-platform easier
           draft: false
           prerelease: false
-      - name: Upload standalone version
-        if: github.event_name == 'push'
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./nowide_standalone.tar.gz
-          asset_name: nowide_standalone_${{steps.get_tag.outputs.tag}}.tar.gz
-          asset_content_type: application/tar.gz
-      - name: Upload Boost version
-        if: github.event_name == 'push'
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./nowide.tar.gz
-          asset_name: nowide_${{steps.get_tag.outputs.tag}}.tar.gz
-          asset_content_type: application/tar.gz
-      - name: Upload Documentation
-        if: github.event_name == 'push'
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./documentation.tar.gz
-          asset_name: nowide_docu.tar.gz
-          asset_content_type: application/tar.gz
+          files: |
+            nowide_${{steps.get_tag.outputs.tag}}.tar.gz
+            nowide_standalone_${{steps.get_tag.outputs.tag}}.tar.gz
+            nowide_docu.tar.gz
+          name: Release ${{steps.get_tag.outputs.tag}}
+          tag_name: ${{steps.get_tag.outputs.tag}}
+          fail_on_unmatched_files: true
+          token: ${{ secrets.GITHUB_TOKEN }}

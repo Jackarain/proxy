@@ -16,7 +16,7 @@
 namespace gil = boost::gil;
 namespace fixture = boost::gil::test::fixture;
 
-// Test cases of memory leak potential for image created with empty dimesions,
+// Test cases of memory leak potential for image created with empty dimensions,
 // see https://github.com/boostorg/gil/pull/649
 // The main goal of these test cases is to trigger any memory leak detectors.
 

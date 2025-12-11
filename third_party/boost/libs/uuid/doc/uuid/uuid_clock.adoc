@@ -47,7 +47,7 @@ These values are specified in https://www.rfc-editor.org/rfc/rfc4122.html#sectio
 static time_point now() noexcept;
 ```
 
-Returns: :: The current system time (`std::chrono::system_clock::now()`, converted to `uuid_clock::time_point`.)
+Returns: :: The current system time (`std::chrono::system_clock::now()`, converted to `uuid_clock::time_point`).
 
 === from_sys
 

@@ -6,6 +6,7 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/uuid/uuid.hpp>
+#include <boost/uuid/detail/nil_uuid.hpp>
 
 namespace boost {
 namespace uuids {
@@ -20,11 +21,6 @@ struct nil_generator
         return {{}};
     }
 };
-
-inline uuid nil_uuid() noexcept
-{
-    return {{}};
-}
 
 }} // namespace boost::uuids
 

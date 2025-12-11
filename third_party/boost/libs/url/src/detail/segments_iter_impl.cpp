@@ -11,6 +11,7 @@
 
 #include <boost/url/detail/config.hpp>
 #include "path.hpp"
+#include "decode.hpp"
 #include <boost/url/detail/segments_iter_impl.hpp>
 #include "boost/url/rfc/detail/path_rules.hpp"
 #include <boost/assert.hpp>
@@ -26,6 +27,8 @@ segments_iter_impl(
     : ref(ref_)
 {
     pos = path_prefix(ref.buffer());
+    // begin() starts after any malleable prefix but remembers decoded chars skipped
+    decoded_prefix = pos;
     update();
 }
 
@@ -39,6 +42,8 @@ segments_iter_impl(
     , next(ref.size())
     , index(ref.nseg())
 {
+    // end() carries the total decoded length for O(1) range math
+    decoded_prefix = ref.decoded_size();
 }
 
 segments_iter_impl::
@@ -50,16 +55,40 @@ segments_iter_impl(
     , pos(pos_)
     , index(index_)
 {
+    auto const total = ref.nseg();
+    if(index >= total)
+    {
+        pos = ref.size();
+        next = ref.size();
+        decoded_prefix = ref.decoded_size();
+        // iterator equal to end: nothing to decode
+        dn = 0;
+        return;
+    }
+
     if(index == 0)
     {
         pos = path_prefix(ref.buffer());
+        // first segment inherits the prefix size (including leading '/')
+        decoded_prefix = pos;
+        update();
+        return;
     }
-    else if(pos != ref.size())
+
+    BOOST_ASSERT(pos <= ref.size());
+    // compute decoded prefix by scanning once up to the encoded offset
+    decoded_prefix = detail::decode_bytes_unsafe(
+        core::string_view(ref.data(), pos));
+    if(pos != ref.size())
     {
         BOOST_ASSERT(
             ref.data()[pos] == '/');
         ++pos; // skip '/'
+        update();
+        --pos;
+        return;
     }
+
     update();
 }
 
@@ -96,6 +125,13 @@ increment() noexcept
 {
     BOOST_ASSERT(
         index != ref.nseg());
+    auto const old_index = index;
+    auto const old_dn = dn;
+    // add decoded length of previous segment
+    decoded_prefix += old_dn;
+    if(old_index > 0)
+        // account for the '/' separator we just crossed
+        ++decoded_prefix;
     ++index;
     pos = next;
     if(index == ref.nseg())
@@ -131,11 +167,19 @@ segments_iter_impl::
 decrement() noexcept
 {
     BOOST_ASSERT(index != 0);
+    auto const current_dn = dn;
+    auto const current_index = index;
+    // remove the decoded length of the segment we're leaving
+    decoded_prefix -= current_dn;
+    if(current_index > 0 && decoded_prefix > 0)
+        // drop the '/' separator when stepping left of it
+        --decoded_prefix;
     --index;
     if(index == 0)
     {
         next = pos;
         pos = path_prefix(ref.buffer());
+        decoded_prefix = pos;
         s_ = core::string_view(
             ref.data() + pos,
             next - pos);
@@ -162,6 +206,8 @@ decrement() noexcept
     }
     dn = p1 - p - dn;
     pos = p - ref.data();
+    // keep decoded_prefix consistent with new pos
+    // (already adjusted above)
     s_ = make_pct_string_view_unsafe(
         p + 1, p1 - p - 1, dn);
 }
@@ -169,4 +215,3 @@ decrement() noexcept
 } // detail
 } // url
 } // boost
-

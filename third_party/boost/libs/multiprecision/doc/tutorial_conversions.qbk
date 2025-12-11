@@ -16,14 +16,14 @@ In particular:
 * Any number type can be constructed (or assigned) from any __fundamental arithmetic type, as long
   as the conversion isn't lossy (for example float to int conversion):
 
-   cpp_dec_float_50 df(0.5);   // OK construction from double
-   cpp_int          i(450);    // OK constructs from signed int
+   cpp_dec_float_50 df(0.5);   // OK, construction from double
+   cpp_int          i(450);    // OK, constructs from signed int
    cpp_int          j = 3.14;  // Error, lossy conversion.
 
 * A number can be explicitly constructed from an arithmetic type, even when the conversion is lossy:
 
-   cpp_int          i(3.14);       // OK explicit conversion
-   i = static_cast<cpp_int>(3.14)  // OK explicit conversion
+   cpp_int          i(3.14);       // OK, explicit conversion
+   i = static_cast<cpp_int>(3.14)  // OK, explicit conversion
    i.assign(3.14);                 // OK, explicit assign and avoid a temporary from the cast above
    i = 3.14;                       // Error, no implicit assignment operator for lossy conversion.
    cpp_int          j = 3.14;      // Error, no implicit constructor for lossy conversion.
@@ -50,7 +50,7 @@ this functionality is only available on compilers supporting C++11's explicit co
 
    mpz_int z(2);
    int i = z;                     // Error, implicit conversion not allowed.
-   int j = static_cast<int>(z);   // OK explicit conversion.
+   int j = static_cast<int>(z);   // OK, explicit conversion.
 
 * Any number type can be ['explicitly] constructed (or assigned) from a `const char*` or a `std::string`:
 
@@ -93,7 +93,7 @@ are not lossy:
 loss of precision is involved, and explicit if it is:
 
    int128_t     i128 = 0;
-   int266_t     i256 = i128;  // OK implicit widening conversion
+   int266_t     i256 = i128;  // OK, implicit widening conversion
    i128_t            = i256;  // Error, no assignment operator found, narrowing conversion is explicit.
    i128_t            = static_cast<int128_t>(i256); // OK, explicit narrowing conversion.
 
@@ -126,6 +126,6 @@ loss of precision is involved, and explicit if it is:
 
 More information on what additional types a backend supports conversions from are given in the tutorial for each backend.
 The converting constructor will be implicit if the backend's converting constructor is also implicit, and explicit if the
-backends converting constructor is also explicit.
+backend's converting constructor is also explicit.
 
 [endsect] [/section:conversions Constructing and Interconverting Between Number Types]

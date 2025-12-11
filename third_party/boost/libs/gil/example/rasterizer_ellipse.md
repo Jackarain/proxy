@@ -9,9 +9,9 @@ Ellipse rasterization capabilities in GIL are demonstrated by the program `raste
 The program doesn't take any argument on the command line.
 
 `rasterizer_ellipse` produces three images in the current directory:
-- `rasterized_ellipse_gray.jpg`, in the JPEG format, wich is a greyscale image of an ellipse
-- `rasterized_ellipse_rgb.jpg`, in the JPEG format, wich is an RGB image of an ellipse
-- `rasterized_ellipse_rgb_out_of_bound.jpg`, in the JPEG format, wich is an RGB image of an ellipse bigger than the containinig view.
+- `rasterized_ellipse_gray.jpg`, in the JPEG format, which is a greyscale image of an ellipse
+- `rasterized_ellipse_rgb.jpg`, in the JPEG format, which is an RGB image of an ellipse
+- `rasterized_ellipse_rgb_out_of_bound.jpg`, in the JPEG format, which is an RGB image of an ellipse bigger than the containinig view.
 
 ## Specific requirements
 

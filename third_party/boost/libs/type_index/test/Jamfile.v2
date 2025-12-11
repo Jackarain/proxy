@@ -68,7 +68,7 @@ test-suite type_index
     # Mixing RTTI on and off
 
     # MSVC sometimes overrides the /GR-, without `detect_missmatch` this test may link.
-    # TODO: Disabled on MSVC. Enable again when there'll be an understanding of how to write this test correctly wor MSVC.
+    # TODO: Disabled on MSVC. Enable again when there'll be an understanding of how to write this test correctly for MSVC.
     [ link-fail testing_crossmodule.cpp test_lib_rtti : $(nortti)  <toolset>msvc:<build>no : link_fail_nortti_rtti ]
     [ link-fail testing_crossmodule.cpp test_lib_nortti : <toolset>msvc:<build>no : link_fail_rtti_nortti ]
 

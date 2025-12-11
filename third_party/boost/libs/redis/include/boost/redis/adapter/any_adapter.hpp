@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2023 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -34,24 +34,41 @@ namespace boost::redis {
  */
 class any_adapter {
 public:
-   using fn_type = std::function<void(std::size_t, resp3::node_view const&, system::error_code&)>;
+   /** @brief Parse events that an adapter must support.
+    */
+   enum class parse_event
+   {
+      /// Called before the parser starts processing data
+      init,
+      /// Called for each and every node of RESP3 data
+      node,
+      /// Called when done processing a complete RESP3 message
+      done
+   };
 
-   struct impl_t {
-      fn_type adapt_fn;
-      std::size_t supported_response_size;
-   } impl_;
+   /// The type erased implementation type.
+   using impl_t = std::function<void(parse_event, resp3::node_view const&, system::error_code&)>;
 
    template <class T>
    static auto create_impl(T& resp) -> impl_t
    {
       using namespace boost::redis::adapter;
-      auto adapter = boost_redis_adapt(resp);
-      std::size_t size = adapter.get_supported_response_size();
-      return {std::move(adapter), size};
+      return [adapter2 = boost_redis_adapt(resp)](
+                  any_adapter::parse_event ev,
+                  resp3::node_view const& nd,
+                  system::error_code& ec) mutable {
+         switch (ev) {
+            case parse_event::init: adapter2.on_init(); break;
+            case parse_event::node: adapter2.on_node(nd, ec); break;
+            case parse_event::done: adapter2.on_done(); break;
+         }
+      };
    }
 
-   template <class Executor>
-   friend class basic_connection;
+   /// Contructs from a type erased adaper
+   any_adapter(impl_t fn = [](parse_event, resp3::node_view const&, system::error_code&) { })
+   : impl_{std::move(fn)}
+   { }
 
    /**
      * @brief Constructor.
@@ -67,6 +84,29 @@ public:
    explicit any_adapter(T& resp)
    : impl_(create_impl(resp))
    { }
+
+   /// Calls the implementation with the arguments `impl_(parse_event::init, ...);`
+   void on_init()
+   {
+      system::error_code ec;
+      impl_(parse_event::init, {}, ec);
+   };
+
+   /// Calls the implementation with the arguments `impl_(parse_event::done, ...);`
+   void on_done()
+   {
+      system::error_code ec;
+      impl_(parse_event::done, {}, ec);
+   };
+
+   /// Calls the implementation with the arguments `impl_(parse_event::node, ...);`
+   void on_node(resp3::node_view const& nd, system::error_code& ec)
+   {
+      impl_(parse_event::node, nd, ec);
+   };
+
+private:
+   impl_t impl_;
 };
 
 }  // namespace boost::redis

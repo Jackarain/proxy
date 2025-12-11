@@ -97,7 +97,7 @@ There are three backends that define this trait by default:
 * __mpfr_float_backend's provided they are of the same precision.
 
 In addition, while this feature can be used with expression templates turned off, this feature minimises temporaries
-and hence memory allocations when expression template are turned on.
+and hence memory allocations when expression templates are turned on.
 
 By way of an example, consider the dot product of two vectors of __cpp_int's, our first, fairly trivial
 implementation might look like this:
@@ -120,7 +120,7 @@ value vectors for random data with various bit counts:
 
 [table
 [[Bit Count][Allocations Count Version 1][Allocations Count Version 2][Allocations Count Version 3]]
-[[32][1[footnote Here everything fits within __cpp_int's default internal cache, so no allocation are required.]][0][0]]
+[[32][1[footnote Here everything fits within __cpp_int's default internal cache, so no allocation is required.]][0][0]]
 [[64][1001][1[footnote A single allocation for the return value.]][1]]
 [[128][1002][1][2]]
 [[256][1002][1][3[footnote Here the input data is such that more than one allocation is required for the temporary.]]]
@@ -141,13 +141,13 @@ Timings for the three methods are as follows (MSVC-16.8.0, x64):
 ]
 
 As you can see, there is a sweet spot for middling-sized integers where we gain: if the values are small, then
-__cpp_int's own internal cache is large enough anyway, and no allocation occur.  Conversely, if the values are
+__cpp_int's own internal cache is large enough anyway, and no allocation occurs.  Conversely, if the values are
 sufficiently large, then the cost of the actual arithmetic dwarfs the memory allocation time.  In this particular
 case, carefully writing the code (version 3) is clearly at least as good as using a separate type with a larger cache.
 However, there may be times when it's not practical to re-write existing code, purely to optimise it for the 
 multiprecision use case.
 
-A typical example where we can't rewrite our code to avoid unnecessary allocations, occurs when we're calling an
+A typical example where we can't rewrite our code to avoid unnecessary allocations occurs when we're calling an
 external routine.  For example the arc length of an ellipse with radii ['a] and ['b] is given by:
 
 [pre L(a, b) = 4aE(k)]
@@ -187,7 +187,7 @@ non-allocating types so much, it does depend very much on the special function b
 
 The following backends have at least some direct support for mixed-precision arithmetic,
 and therefore avoid creating unnecessary temporaries when using the interfaces above.
-Therefore when using these types it's more efficient to use mixed-precision arithmetic,
+Therefore when using these types it's more efficient to use mixed-precision arithmetic
 than it is to explicitly cast the operands to the result type:
 
 __mpfr_float_backend, __mpf_float, __cpp_int.

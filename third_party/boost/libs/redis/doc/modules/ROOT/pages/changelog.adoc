@@ -7,6 +7,146 @@
 
 = Changelog
 
+== Boost 1.90
+
+
+* (Pull request https://github.com/boostorg/redis/pull/310[310])
+  Improves the per-operation support in `async_exec()`. Requests can now
+  be cancelled at any point, and cancellations don't interfere with other
+  requests anyhow. In previous versions, a cancellation could cause
+  `async_run()` to be cancelled, making cancellations unpredictable.
+* (Issue https://github.com/boostorg/redis/issues/226[226])
+  Added support for the `asio::cancel_after` and `asio::cancel_at`
+  completion tokens in `async_exec()` and `async_run()`.
+* (Issue https://github.com/boostorg/redis/issues/319[319])
+  Added support for per-operation cancellation in `async_run()`.
+* (Pull request https://github.com/boostorg/redis/pull/329[329]
+  and https://github.com/boostorg/redis/pull/334[334])
+  The `cancel_on_connection_lost` and `cancel_if_not_connected`
+  flags in `request::config` have been deprecated, and will be removed
+  in subsequent releases. To limit the time span that `async_exec`
+  might take, use `asio::cancel_after`, instead.
+  `cancel_on_connection_lost` default has been changed to `false`.
+  This shouldn't cause much impact, since `cancel_on_connection_lost`
+  is not a reliable way to limit the time span that `async_exec` might take.
+* (Pull request https://github.com/boostorg/redis/pull/321[321])
+  Calling `cancel` with `operation::resolve`, `operation::connect`,
+  `operation::ssl_handshake`, `operation::reconnection` and
+  `operation::health_check` is now deprecated.
+  These enumerators will be removed in subsequent releases.
+  Users should employ `cancel(operation::run)`, instead.
+* (Issue github.com/boostorg/redis/issues/302[302] and
+  pull request https://github.com/boostorg/redis/pull/303[303])
+  Added support for custom setup requests using `config::setup`
+  and `config::use_setup`. When setting these fields, users can
+  replace the library-generated `HELLO` request by any other arbitrary request.
+  This request is executed every time a new physical connection with the server
+  is established. This feature can be used to interact with systems that don't
+  support `HELLO`, to handle authentication and to connect to replicas.
+* (Pull request https://github.com/boostorg/redis/pull/305[305])
+  `request::config::hello_with_priority` and `request::has_hello_priority()` have
+  been deprecated and will be removed in subsequent releases.
+  This flag is not well specified and should only be used by the library.
+  If you need to execute a request before any other, use `config::setup`, instead.
+* (Issue https://github.com/boostorg/redis/issues/296[296])
+  Valkey long-term support: we guarantee Valkey compatibility
+  starting with this release. Previous releases may also work,
+  but have not been tested with this database system.
+* (Issue https://github.com/boostorg/redis/issues/341[341])
+  Adds a `request::append()` function, to concatenate request objects.
+* (Issue https://github.com/boostorg/redis/issues/104[104])
+  The health checker algorithm has been redesigned to avoid
+  false positives under heavy loads. `PING` commands are now
+  only issued when the connection is idle, instead of periodically.
+* (Pull request https://github.com/boostorg/redis/pull/283[283])
+  Added `config::read_buffer_append_size`, which allows to control
+  the expansion of the connection's read buffer.
+* (Pull request https://github.com/boostorg/redis/pull/311[311])
+  Added `usage::bytes_rotated`, which measures data copying when
+  reading and parsing data from the server.
+* (Issue https://github.com/boostorg/redis/issues/298[298])
+  Added support for authenticating users with an empty password
+  but a non-default username.
+* (Issue https://github.com/boostorg/redis/issues/318[318])
+  Fixed a number of race conditions in the `cancel()` function
+  of `connection` and `basic_connection` that could cause
+  cancellations to be ignored.
+* (Issue https://github.com/boostorg/redis/issues/290[290])
+  Fixed a problem that could cause an error during `HELLO`
+  to make subsequent `HELLO` attempts during reconnection to fail.
+* (Issue https://github.com/boostorg/redis/issues/297[297])
+  Errors during `HELLO` are now correctly logged.
+* (Issue https://github.com/boostorg/redis/issues/287[287])
+  Fixed a bug causing an exception to be thrown when parsing
+  a response that contains an intermediate error into a `generic_response`.
+
+
+== Boost 1.89
+
+* (Pull request https://github.com/boostorg/redis/pull/256[256],
+   https://github.com/boostorg/redis/pull/266[266] and
+   https://github.com/boostorg/redis/pull/273[273])
+  The following members in `connection` and `basic_connection` are now deprecated
+  and will be removed in subsequent releases:
+  * `next_layer()` and `next_layer_type`: there is no reason to access the underlying stream object directly.
+    Connection member functions should be used, instead.
+  * `get_ssl_context()`: SSL contexts should never be modified after an `asio::ssl::stream`
+    object has been created from them. Properties should be set before passing the context
+    to the constructor. There is no reason to access the SSL context after that.
+  * `reset_stream()`: connection internals have been refactored to reset the SSL stream
+    automatically when required. This function is now a no-op.
+  * The `async_run()` overload taking no parameters: use the `async_run`
+    overload taking a `config` object explicitly, instead.
+* (Issue https://github.com/boostorg/redis/issues/213[213])
+  The logging interface has been re-written:
+  * Logging can now be customized by passing a function object
+    to the `logger` constructor. This allows integration with
+    third-party logging libraries, like spdlog.
+    This new logging interface is public and will be maintained long-term.
+  * The old, unstable interface consisting of `logger::on_xxx` functions has been removed.
+  * `connection` and `basic_connection` constructors now accept a `logger` object.
+    This is now the preferred way to configure logging.
+    The `async_run()` overload taking a `logger` object is now deprecated, and will
+    be removed in subsequent releases.
+  * `config::log_prefix` is now deprecated, and will
+    be removed in subsequent releases. Users can achieve the same effect
+    by passing a custom logging function to the `logger` constructor.
+  * The default logging function, which prints to `stderr`,
+    is now based on `printf` and is thus thread-safe.
+    The old function used `std::cerr` and could result to interleaved
+    output in multi-threaded programs.
+  * The default log level is now `logger::level::info`,
+    down from `logger::level::debug`. This results in less verbose output by default.
+* (Issue https://github.com/boostorg/redis/issues/272[272])
+  Added support for connecting to Redis using UNIX domain sockets.
+  This feature can be accessed using `config::unix_socket`.
+* (Issue https://github.com/boostorg/redis/issues/255[255])
+  Fixed an issue that caused `async_run` to complete when a connection
+  establishment error is encountered, even if `config::reconnect_wait_interval`
+  specified reconnection.
+* (Issue https://github.com/boostorg/redis/issues/265[265])
+  `connection::async_exec` now uses `ignore` as the default response,
+  rather than having no default response. This matches
+  `basic_connection::async_exec` behavior.
+* (Issue https://github.com/boostorg/redis/issues/260[260])
+  Fixed a memory corruption affecting the logger's prefix
+  configured in `config::log_prefix`.
+* (Pull request https://github.com/boostorg/redis/pull/254[254])
+  Fixed some warnings regarding unused variables, name shadowing
+  and narrowing conversions.
+* (Issue https://github.com/boostorg/redis/issues/252[252])
+  Fixed a bug that causes reconnection to ignore the reconnection
+  wait time configured in `config::reconnect_wait_interval`.
+* (Issue https://github.com/boostorg/redis/issues/238[238])
+  Fixed a bug introduced in Boost 1.88 that caused `response<T>` to
+  not compile for some integral types.
+* (Issue https://github.com/boostorg/redis/issues/247[247])
+  The documentation has been modernized, and a more complete
+  reference section has been added.
+* Part of the internals have been refactored to allow for better
+  testing and reduce compile times.
+
+
 == Boost 1.88
 
 * (Issue https://github.com/boostorg/redis/issues/233[233])

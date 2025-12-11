@@ -54,6 +54,13 @@ It is based on the operating system native API or on the standard
 C++ library support. Sacrificing some less important features,
 Boost.Locale becomes less powerful but lighter and easier to deploy.
 
+Charset conversion is also provided through the lightweight IConv library.
+When that is not available ICU or operating system native APIs are used.
+
+\warning The system IConv library on Apple macOS may not be GNU conformant
+and can lead to unexpected results during encoding conversions.
+Using the GNU IConv provided by HomeBrew is highly recommended.
+
 
 \section main_tutorial Tutorials
 

@@ -21,7 +21,8 @@ namespace boost::redis {
 
 namespace detail {
 auto has_response(std::string_view cmd) -> bool;
-}
+struct request_access;
+}  // namespace detail
 
 /** @brief Represents a Redis request.
  *  
@@ -46,31 +47,49 @@ class request {
 public:
    /// Request configuration options.
    struct config {
-      /** @brief If `true`, calls to @ref basic_connection::async_exec will
+      /** @brief (Deprecated) If `true`, calls to @ref basic_connection::async_exec will
        * complete with error if the connection is lost while the
        * request hasn't been sent yet.
+       *
+       * @par Deprecated
+       * This setting is deprecated and should be always left out as the default
+       * (waiting for a connection to be established again).
+       * If you need to limit how much time a @ref basic_connection::async_exec
+       * operation is allowed to take, use `asio::cancel_after`, instead.
        */
-      bool cancel_on_connection_lost = true;
+      bool cancel_on_connection_lost = false;
 
-      /** @brief If `true`, @ref basic_connection::async_exec will complete with
+      /** @brief (Deprecated) If `true`, @ref basic_connection::async_exec will complete with
        * @ref boost::redis::error::not_connected if the call happens
        * before the connection with Redis was established.
+       *
+       * @par Deprecated
+       * This setting is deprecated and should be always left out as the default
+       * (waiting for a connection to be established).
+       * If you need to limit how much time a @ref basic_connection::async_exec
+       * operation is allowed to take, use `asio::cancel_after`, instead.
        */
       bool cancel_if_not_connected = false;
 
       /** @brief If `false`, @ref basic_connection::async_exec will not
        * automatically cancel this request if the connection is lost.
-       * Affects only requests that have been written to the socket
+       * Affects only requests that have been written to the server
        * but have not been responded when
-       * @ref boost::redis::connection::async_run completes.
+       * the connection is lost.
        */
       bool cancel_if_unresponded = true;
 
-      /** @brief If this request has a `HELLO` command and this flag
+      /** @brief (Deprecated) If this request has a `HELLO` command and this flag
        * is `true`, it will be moved to the
        * front of the queue of awaiting requests. This makes it
        * possible to send `HELLO` commands and authenticate before other
        * commands are sent.
+       *
+       * @par Deprecated
+       * This field has been superseded by @ref config::setup.
+       * This setup request will always be run first on connection establishment.
+       * Please use it to run any required setup commands.
+       * This field will be removed in subsequent releases.
        */
       bool hello_with_priority = true;
    };
@@ -79,7 +98,7 @@ public:
     *  
     *  @param cfg Configuration options.
     */
-   explicit request(config cfg = config{true, false, true, true})
+   explicit request(config cfg = config{false, false, true, true})
    : cfg_{cfg}
    { }
 
@@ -94,7 +113,11 @@ public:
 
    [[nodiscard]] auto payload() const noexcept -> std::string_view { return payload_; }
 
-   [[nodiscard]] auto has_hello_priority() const noexcept -> auto const&
+   [[nodiscard]]
+   BOOST_DEPRECATED(
+      "The hello_with_priority attribute and related functions are deprecated. "
+      "Use config::setup to run setup commands, instead.") auto has_hello_priority() const noexcept
+      -> auto const&
    {
       return has_hello_priority_;
    }
@@ -315,6 +338,17 @@ public:
       push_range(cmd, cbegin(range), cend(range));
    }
 
+   /** @brief Appends the commands in another request to the end of the request.
+    *
+    *  Appends all the commands contained in `other` to the end of
+    *  this request. Configuration flags in `*this`,
+    *  like @ref config::cancel_if_unresponded, are *not* modified,
+    *  even if `other` has a different config than `*this`.
+    *  
+    *  @param other The request containing the commands to append.
+    */
+   void append(const request& other);
+
 private:
    void check_cmd(std::string_view cmd)
    {
@@ -332,7 +366,21 @@ private:
    std::size_t commands_ = 0;
    std::size_t expected_responses_ = 0;
    bool has_hello_priority_ = false;
+
+   friend struct detail::request_access;
 };
+
+namespace detail {
+
+struct request_access {
+   inline static void set_priority(request& r, bool value) { r.has_hello_priority_ = value; }
+   inline static bool has_priority(const request& r) { return r.has_hello_priority_; }
+};
+
+// Creates a HELLO 3 request
+request make_hello_request();
+
+}  // namespace detail
 
 }  // namespace boost::redis
 

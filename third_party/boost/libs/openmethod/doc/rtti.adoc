@@ -1,0 +1,77 @@
+
+## rtti
+
+### Synopsis
+
+Defined in <boost/openmethod/policies/basic_policy.hpp>.
+
+```c++
+namespace boost::openmethod::policies {
+
+struct rtti : policy {};
+
+} // boost::openmethod::policies
+```
+
+### Description
+
+The `rtti` policy provides type information for classes and objects, implements
+downcast in presence of virtual inheritance, and writes descriptions of types to
+an `ostream`-like object.
+
+### Requirements
+
+#### is_polymorphic
+
+```c++
+template<class Class> static constexpr bool is_polymorphic;
+```
+
+`true` if `Class` is polymorphic.
+
+#### static_type
+
+```c++
+template<class Class> static auto static_type() -> type_id;
+```
+
+Returns a `type_id` for `Class`.
+
+#### dynamic_type
+
+```c++
+template<class Class> static auto dynamic_type(const Class& obj) -> type_id;
+```
+
+Returns a `type_id` for an object's dynamic type.
+
+#### type_name
+
+```c++
+template<typename Stream>
+static auto type_name(type_id type, Stream& stream) -> void;
+```
+
+Writes a description of `type` to `stream`.
+
+This requirement is optional. `rtti` provides a default implementation that writes `typeid({type})` to `stream`.
+
+#### type_index
+
+```c++
+static auto type_index(type_id type) -> /* unspecified */;
+```
+
+Returns a unique key for `type`. Required only for RTTI systems that assign more
+than one type "identifiers" to a type. For example, standard RTTI allows
+implementations to have multiple instances of `std::type_info` for the same
+type.
+
+#### dynamic_cast_ref
+
+```c++
+template<typename D, typename B>
+static auto dynamic_cast_ref(B&& obj) -> D;
+```
+
+Casts `obj` to `D`. Required only if using virtual inheritance.

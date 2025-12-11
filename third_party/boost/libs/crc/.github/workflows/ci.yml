@@ -49,17 +49,20 @@ jobs:
             address-model: 32,64
           - toolset: gcc-7
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: g++-7-multilib
             address-model: 32,64
           - toolset: gcc-8
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: g++-8-multilib
             address-model: 32,64
           - toolset: gcc-9
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: g++-9-multilib
             address-model: 32,64
           - toolset: gcc-10
@@ -89,6 +92,12 @@ jobs:
             container: ubuntu:24.04
             install: g++-14-multilib
             address-model: 32,64
+          - toolset: gcc-15
+            cxxstd: "11,14,17,20,23,2c"
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install: g++-15-multilib
+            address-model: 32,64
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "11,14"
@@ -110,35 +119,45 @@ jobs:
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-6.0
           - toolset: clang
             compiler: clang++-7
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-7
           - toolset: clang
             compiler: clang++-8
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-8
           - toolset: clang
             compiler: clang++-9
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-9
           - toolset: clang
             compiler: clang++-10
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
+            install: clang-10
           - toolset: clang
             compiler: clang++-11
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
+            install: clang-11
           - toolset: clang
             compiler: clang++-12
             cxxstd: "11,14,17,20"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
+            install: clang-12
           - toolset: clang
             compiler: clang++-13
             cxxstd: "11,14,17,20,2b"
@@ -179,8 +198,14 @@ jobs:
             compiler: clang++-19
             cxxstd: "11,14,17,20,2b"
             os: ubuntu-latest
-            container: ubuntu:24.10
+            container: ubuntu:24.04
             install: clang-19
+          - toolset: clang
+            compiler: clang++-20
+            cxxstd: "11,14,17,20,23,2c"
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install: clang-20
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-13
@@ -263,14 +288,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: 14,latest
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
@@ -282,7 +299,7 @@ jobs:
           - toolset: gcc
             cxxstd: "11,14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
 
     runs-on: ${{matrix.os}}
 
@@ -322,7 +339,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -371,7 +387,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -430,7 +445,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
           - os: ubuntu-24.04
           - os: macos-13
@@ -487,8 +501,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
@@ -536,8 +549,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
@@ -603,8 +615,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 

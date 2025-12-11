@@ -1,17 +1,28 @@
 
 // Copyright 2009 Daniel James.
 // Copyright 2022-2023 Christian Mazakas.
+// Copyright 2025 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #include "../helpers/unordered.hpp"
+#ifdef BOOST_UNORDERED_CFOA_TESTS
+#include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_flat_map.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
+#endif
+
 
 #include <utility>
 
 namespace x {
   struct D
   {
-#ifdef BOOST_UNORDERED_FOA_TESTS
+#if defined(BOOST_UNORDERED_CFOA_TESTS)
+    boost::concurrent_flat_map<D, D> x;
+    boost::concurrent_node_map<D, D> y;
+#elif defined(BOOST_UNORDERED_FOA_TESTS)
     boost::unordered_flat_map<D, D> x;
     boost::unordered_node_map<D, D> y;
 #else
@@ -30,26 +41,36 @@ namespace incomplete_test {
 
   // Declare some instances
 
-#ifdef BOOST_UNORDERED_FOA_TESTS
+#if defined(BOOST_UNORDERED_CFOA_TESTS)
+  typedef boost::concurrent_flat_map<value, value, hash, equals,
+    allocator<std::pair<value const, value> > >
+    map1;
+  typedef boost::concurrent_flat_set<value, hash, equals, allocator<value> > set1;
+  typedef boost::concurrent_node_map<value, value, hash, equals,
+    allocator<std::pair<value const, value> > >
+    map2;
+  typedef boost::concurrent_node_set<value, hash, equals, allocator<value> >
+    set2;
+#elif defined(BOOST_UNORDERED_FOA_TESTS)
   typedef boost::unordered_flat_map<value, value, hash, equals,
     allocator<std::pair<value const, value> > >
-    map;
-  typedef boost::unordered_flat_set<value, hash, equals, allocator<value> > set;
+    map1;
+  typedef boost::unordered_flat_set<value, hash, equals, allocator<value> > set1;
   typedef boost::unordered_node_map<value, value, hash, equals,
     allocator<std::pair<value const, value> > >
-    multimap;
+    map2;
   typedef boost::unordered_node_set<value, hash, equals, allocator<value> >
-    multiset;
+    set2;
 #else
   typedef boost::unordered_map<value, value, hash, equals,
     allocator<std::pair<value const, value> > >
-    map;
+    map1;
   typedef boost::unordered_multimap<value, value, hash, equals,
     allocator<std::pair<value const, value> > >
-    multimap;
-  typedef boost::unordered_set<value, hash, equals, allocator<value> > set;
+    map2;
+  typedef boost::unordered_set<value, hash, equals, allocator<value> > set1;
   typedef boost::unordered_multiset<value, hash, equals, allocator<value> >
-    multiset;
+    set2;
 #endif
 
   // Now define the types which are stored as members, as they are needed for
@@ -132,23 +153,59 @@ namespace incomplete_test {
     boost::unordered_multiset<struct4, hash, equals, allocator<struct4> > x;
   };
 #endif
-  // Now define the value type.
-
-  struct value
-  {
-  };
 
   // Create some instances.
 
-  incomplete_test::map m1;
-  incomplete_test::multimap m2;
-  incomplete_test::set s1;
-  incomplete_test::multiset s2;
+  incomplete_test::map1 m1;
+#ifndef BOOST_UNORDERED_CFOA_TESTS
+  incomplete_test::map1::iterator itm1;
+  incomplete_test::map1::const_iterator citm1;
+#ifndef BOOST_UNORDERED_FOA_TESTS
+  incomplete_test::map1::local_iterator litm1;
+  incomplete_test::map1::const_local_iterator clitm1;
+#endif
+#endif
+
+  incomplete_test::map2 m2;
+#ifndef BOOST_UNORDERED_CFOA_TESTS
+  incomplete_test::map2::iterator itm2;
+  incomplete_test::map2::const_iterator citm2;
+#ifndef BOOST_UNORDERED_FOA_TESTS
+  incomplete_test::map2::local_iterator litm2;
+  incomplete_test::map2::const_local_iterator clitm2;
+#endif
+#endif
+
+  incomplete_test::set1 s1;
+#ifndef BOOST_UNORDERED_CFOA_TESTS
+  incomplete_test::set1::iterator its1;
+  incomplete_test::set1::const_iterator cits1;
+#ifndef BOOST_UNORDERED_FOA_TESTS
+  incomplete_test::set1::local_iterator lits1;
+  incomplete_test::set1::const_local_iterator clits1;
+#endif
+#endif
+
+  incomplete_test::set2 s2;
+#ifndef BOOST_UNORDERED_CFOA_TESTS
+  incomplete_test::set2::iterator its2;
+  incomplete_test::set2::const_iterator cits2;
+#ifndef BOOST_UNORDERED_FOA_TESTS
+  incomplete_test::set2::local_iterator lits2;
+  incomplete_test::set2::const_local_iterator clits2;
+#endif
+#endif
 
   incomplete_test::struct1 c1;
   incomplete_test::struct2 c2;
   incomplete_test::struct3 c3;
   incomplete_test::struct4 c4;
+
+  // Now define the value type.
+
+  struct value
+  {
+  };
 
   // Now declare, but don't define, the operators required for comparing
   // elements.
@@ -171,11 +228,45 @@ namespace incomplete_test {
   void use_types()
   {
     incomplete_test::value x;
-    m1[x] = x;
-    m2.insert(std::make_pair(x, x));
-    s1.insert(x);
-    s2.insert(x);
+    m1.insert(std::make_pair(x, x));
+#ifndef BOOST_UNORDERED_CFOA_TESTS
+    itm1 = m1.begin();
+    citm1 = m1.cbegin();
+#ifndef BOOST_UNORDERED_FOA_TESTS
+    litm1 = m1.begin(0);
+    clitm1 = m1.cbegin(0);
+#endif
+#endif
 
+    m2.insert(std::make_pair(x, x));
+#ifndef BOOST_UNORDERED_CFOA_TESTS
+    itm2 = m2.begin();
+    citm2 = m2.cbegin();
+#ifndef BOOST_UNORDERED_FOA_TESTS
+    litm2 = m2.begin(0);
+    clitm2 = m2.cbegin(0);
+#endif
+#endif
+
+    s1.insert(x);
+#ifndef BOOST_UNORDERED_CFOA_TESTS
+    its1 = s1.begin();
+    cits1 = s1.cbegin();
+#ifndef BOOST_UNORDERED_FOA_TESTS
+    lits1 = s1.begin(0);
+    clits1 = s1.cbegin(0);
+#endif
+#endif
+
+    s2.insert(x);
+#ifndef BOOST_UNORDERED_CFOA_TESTS
+    its2 = s2.begin();
+    cits2 = s2.cbegin();
+#ifndef BOOST_UNORDERED_FOA_TESTS
+    lits2 = s2.begin(0);
+    clits2 = s2.cbegin(0);
+#endif
+#endif
     c1.x.insert(std::make_pair(c1, c1));
     c2.x.insert(std::make_pair(c2, c2));
     c3.x.insert(c3);

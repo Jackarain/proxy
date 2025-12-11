@@ -1,0 +1,150 @@
+
+## basic_policy
+
+### Synopsis
+
+```c++
+namespace boost::openmethod {
+
+namespace policies {
+
+template<class Policy, class... Facets>
+struct basic_policy : abstract_policy, domain<Policy>, Facets... {
+    template<class Facet>
+    static constexpr bool has = /*unspecified*/;
+
+    template<class NewPolicy>
+    using fork = /*unspecified*/;
+
+    template<class... Facets>
+    using with = /*unspecified*/;
+
+    template<class... Facets>
+    using without = /*unspecified*/;
+};
+
+struct release : basic_policy<release, ...> {};
+
+struct debug : release::add<...> {};
+
+} // policies
+
+#ifdef NDEBUG
+using default_registry = policies::release;
+#else
+using default_registry = policies::debug;
+#endif
+
+} // boost::openmethod
+```
+
+### Headers
+
+Defined in <boost/openmethod/policies/basic_policy.hpp>. Also available via
+`<boost/openmethod/core.hpp>` and `<boost/openmethod.hpp>`.
+
+### Description
+
+`basic_policy` implements a policy, which consists of a a collection of methods,
+classes, dispatch data, and policys, which specify how to obtain a pointer to a
+v-table from an object, how to report errors, whether to perform runtime sanity
+checks, etc.
+
+`basic_policy` has state. It uses the Curiously Recurring Template Pattern to
+allow distinct policies to have distinct sets of static variables.
+
+### Members
+
+#### has
+
+```c++
+template<class Facet>
+static constexpr bool has;
+```
+
+Evaluates to `true` if _Policy_ contains _Facet_.
+
+#### fork
+
+```c++
+template<class NewPolicy>
+using fork;
+```
+
+Creates a new policy from an existing one. _NewPolicy_ does not share static
+variables with the original _Policy_. The new policy does not retain any
+knowledge of the classes and methods registered in the original.
+
+`fork` forks the policys in the policy as well: any policy instantiated from a
+class template is assumed to take a policy as its first template argument. The
+template is re-instantiated with the new policy as the first arguments, while
+the other arguments remain the same.
+
+#### with
+
+```c++
+template<class... Facets>
+using with;
+```
+
+Requires:: _Facets_ is a list of classes that derive from `policy`.
+
+Returns:: A new policy containing _Facets_, and the policys from the original
+that do not have the same category as _Facets_.
+
+Examples::
+* `struct dyn_load : default_registry::fork<dyn_load>::with<indirect_vptr> {};` +
+  Creates a policy just like `default_registry`, with an extra indirection added
+  to the v-table pointers. This policy is suitable for use with dynamic loading.
+* `struct release_with_diags : release::fork<release_with_diags>::with<basic_error_output<release_with_diags>> {};` +
+  Creates a policy just like `release`, except that it prints a diagnostic
+  message before terminating with `abort()`.
+* `struct default_throw : default_registry::fork<default_throw>::with<throw_error_handler> {};` +
+  Creates a policy just like `default_registry`, except that it reports errors by
+  throwing exceptions, instead of calling a `std::function` like the default
+  error handler does.
+
+#### without
+
+```c++
+template<class... Facets>
+using without;
+```
+
+Requires:: _Facets_ is a list of policy categories.
+
+Returns:: A new policy containing the policys from the original that do not have
+the same category as _Facets_.
+
+Examples::
+* `struct use_map : default_registry::fork<use_map>::with<vptr_map<use_map>>::without<type_hash> {};` +
+  Creates a policy just like `default_registry`, except that it stores pointers to
+  v-table in a `std::unordered_map`. Also removes the hash function, since it
+  will not be used.
+
+### Non-members
+
+#### release
+
+```c++
+struct release;
+```
+
+A policy that contains policys `std_rtti`, `fast_perfect_hash`, `vptr_vector` and
+`default_error_handler`.
+
+#### debug
+
+```c++
+struct debug;
+```
+
+The `release` policy with additional policy implementations `runtime_checks`,
+`basic_error_output` and basic_trace_output.
+
+NOTE: `debug` extends `release` but it does not a fork it. Both policies use the
+same `domain`.
+
+#### default_registry
+
+An alias for `release` if `NDEBUG` is defined, and for `debug` otherwise.

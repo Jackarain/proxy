@@ -117,3 +117,7 @@ run move_only_function_test.cpp ;
 
 run to_array_lvalue_test.cpp ;
 run to_array_rvalue_test.cpp ;
+
+run to_underlying_test.cpp ;
+
+run nontype_test.cpp ;

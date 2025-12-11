@@ -8,6 +8,7 @@
 #ifndef BOOST_REDIS_ADAPTER_RESULT_HPP
 #define BOOST_REDIS_ADAPTER_RESULT_HPP
 
+#include <boost/redis/detail/resp3_type_to_error.hpp>
 #include <boost/redis/error.hpp>
 #include <boost/redis/resp3/type.hpp>
 
@@ -56,15 +57,9 @@ using result = system::result<Value, error>;
  */
 BOOST_NORETURN inline void throw_exception_from_error(error const& e, boost::source_location const&)
 {
-   system::error_code ec;
-   switch (e.data_type) {
-      case resp3::type::simple_error: ec = redis::error::resp3_simple_error; break;
-      case resp3::type::blob_error:   ec = redis::error::resp3_blob_error; break;
-      case resp3::type::null:         ec = redis::error::resp3_null; break;
-      default:                        BOOST_ASSERT_MSG(false, "Unexpected data type.");
-   }
-
-   throw system::system_error(ec, e.diagnostic);
+   throw system::system_error(
+      system::error_code(detail::resp3_type_to_error(e.data_type)),
+      e.diagnostic);
 }
 
 }  // namespace boost::redis::adapter

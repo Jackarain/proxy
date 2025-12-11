@@ -18,13 +18,12 @@ The following back-ends provide rational number arithmetic:
 [[`gmp_rational`][boost/multiprecision/gmp.hpp][2][[gmp]][Very fast and efficient back-end.][Dependency on GNU licensed [gmp] library.]]
 [[`tommath_rational`][boost/multiprecision/tommath.hpp][2][[tommath]][All C/C++ implementation that's Boost Software Licence compatible.][Slower than [gmp].]]
 [[`rational_adaptor`][boost/multiprecision/rational_adaptor.hpp][N/A][none][All C++ adaptor that allows any integer back-end type to be used as a rational type.][Requires an underlying integer back-end type.]]
-[[`boost::rational`][boost/rational.hpp][N/A][None][A C++ rational number type that can used with any `number` integer type.][The expression templates used by `number` end up being "hidden" inside `boost::rational`: performance may well suffer as a result.]]
+[[`boost::rational`][boost/rational.hpp][N/A][None][A C++ rational number type that can be used with any `number` integer type.][The expression templates used by `number` end up being "hidden" inside `boost::rational`: performance may well suffer as a result.]]
 ]
 
 [include tutorial_cpp_rational.qbk]
 [include tutorial_gmp_rational.qbk]
 [include tutorial_tommath_rational.qbk]
-[include tutorial_boost_rational.qbk]
 [include tutorial_rational_adaptor.qbk]
 
 [endsect] [/section:rational Rational Number Types]

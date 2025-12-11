@@ -234,7 +234,7 @@ id=42&name=John Doe Jingleheimer-Schmidt
 --
 ====
 
-cpp:decode_view[] and its decoding functions are designed to perform no memory allocations unless the algorithm where its being used needs the result to be in another container.
+cpp:decode_view[] and its decoding functions are designed to perform no memory allocations unless the algorithm where it's being used needs the result to be in another container.
 The design also permits recycling objects to reuse their memory, and at least minimize the number of allocations by deferring them until the result is in fact needed by the application.
 
 In the example above, the memory owned by `str` can be reused to store other results.
@@ -370,7 +370,7 @@ key = name, value = John Doe
 
 == Modifying
 
-The library provides the containers cpp:url[] and cpp:static_url[] which supporting modification of the URL contents.
+The library provides the containers cpp:url[] and cpp:static_url[] supporting modification of the URL contents.
 A cpp:url[] or cpp:static_url[] must be constructed from an existing cpp:url_view[].
 
 Unlike the cpp:url_view[], which does not gain ownership of the underlying character buffer, the cpp:url[] container uses the default allocator to control a resizable character buffer which it owns.

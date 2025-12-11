@@ -255,6 +255,7 @@ class variant_ref
 public:
     //! Referenced value type
     typedef T value_type;
+    static_assert(mpl::size< value_type >::value > 0, "Boost.Log: List of types referenced by value_ref must not be empty");
     //! Tag type
     typedef TagT tag_type;
 

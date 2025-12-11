@@ -36,6 +36,21 @@ template class boost::container::deque
    < test::movable_and_copyable_int
    , allocator<test::movable_and_copyable_int> >;
 
+template class deque_iterator<int*, true, 0, 0, std::size_t>;
+template class deque_iterator<int*, false, 0, 0, std::size_t>;
+
+//Test stored_size option
+template class boost::container::deque < test::movable_and_copyable_int
+                                       , new_allocator<test::movable_and_copyable_int>
+                                       , deque_options< stored_size<unsigned short> >::type
+                                       >;
+
+
+//test custom allocator with small size_type
+template class boost::container::deque< test::movable_and_copyable_int
+                                      , test::small_size_type_allocator<test::movable_and_copyable_int>
+                                      >;
+
 }  //namespace boost {
 }  //namespace container {
 

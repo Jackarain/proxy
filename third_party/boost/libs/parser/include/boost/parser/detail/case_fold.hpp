@@ -47,7 +47,10 @@ namespace boost::parser::detail {
         // One-byte fast path.
         if (cp < 0x100) {
             // ASCII letter fast path.
-            if (0x41 <= cp && cp < 0x5a) {
+            if (0x61 <= cp && cp <= 0x7a) {
+                *out++ = cp;
+                return out;
+            } else if (0x41 <= cp && cp <= 0x5a) {
                 *out++ = cp + 0x20;
                 return out;
             } else if (cp == 0x00DF) {

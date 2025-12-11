@@ -34,7 +34,7 @@ The chosen backend often determines how completely `std::numeric_limits` is avai
 Compiler options, processor type, and definition of macros or assembler instructions to control denormal numbers will alter
 the values in the tables given below.
 
-[warning GMP's extendable floatin-point `mpf_t` does not have a concept of overflow:
+[warning GMP's extendable floating-point `mpf_t` does not have a concept of overflow:
 operations that lead to overflow eventually run of out of resources
 and terminate with stack overflow (often after several seconds).]
 
@@ -118,7 +118,7 @@ store a [*fixed precision], so half cents or pennies (or less) cannot be stored.
 The results of computations are rounded up or down,
 just like the result of integer division stored as an integer result.
 
-There are number of proposals to
+There are various proposals to
 [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3407.html
 add Decimal floating-point Support to C++].
 
@@ -158,7 +158,7 @@ Overflow of signed integers can be especially unexpected,
 possibly causing change of sign.
 
 Boost.Multiprecision integer type `cpp_int` is not modulo
-because as an __arbitrary_precision types,
+because as an __arbitrary_precision type,
 it expands to hold any value that the machine resources permit.
 
 However fixed precision __cpp_int's may be modulo if they are unchecked
@@ -177,14 +177,14 @@ or 10 (for decimal types).
 
 [h4 digits]
 
-The number of `radix` digits that be represented without change:
+The number of `radix` digits that can be represented without change:
 
 * for integer types, the number of [*non-sign bits] in the significand.
 * for floating types, the number of [*radix digits] in the significand.
 
-The values include any implicit bit, so for example, for the ubiquious
+The values include any implicit bit, so for example, for the ubiquitous
 `double` using 64 bits
-([@http://en.wikipedia.org/wiki/Double_precision_floating-point_format IEEE binary64 ]),
+([@http://en.wikipedia.org/wiki/Double_precision_floating-point_format IEEE binary64]),
 `digits` == 53, even though there are only 52 actual bits of the significand stored in the representation.
 The value of `digits` reflects the fact that there is one implicit bit which is always set to 1.
 
@@ -327,9 +327,9 @@ and references therein
 and
 [@https://arxiv.org/pdf/1310.8121.pdf  Easy Accurate Reading and Writing of Floating-Point Numbers, Aubrey Jaffer (August 2018)].
 
-Microsoft VS2017 and other recent compilers, now use the
+Microsoft VS2017 and other recent compilers now use the
 [@https://doi.org/10.1145/3192366.3192369 Ryu fast float-to-string conversion by Ulf Adams]
-algorithm, claimed to be both exact and fast for 32 and 64-bit floating-point numbers.
+algorithm, claimed to be both exact and fast for 32- and 64-bit floating-point numbers.
 ] [/note]
 
 [h4 round_style]
@@ -382,7 +382,7 @@ gradual underflow, so that, if type T is `double`.
 A type may have any of the following `enum float_denorm_style` values:
 
 * `std::denorm_absent`, if it does not allow denormalized values.
-(Always used for all integer and exact types).
+(Always used for all integer and exact types.)
 * `std::denorm_present`, if the floating-point type allows denormalized values.
 *`std::denorm_indeterminate`, if indeterminate at compile time.
 
@@ -391,9 +391,9 @@ A type may have any of the following `enum float_denorm_style` values:
 `bool std::numeric_limits<T>::tinyness_before`
 
 `true` if a type can determine that a value is too small
-to be represent as a normalized value before rounding it.
+to be represented as a normalized value before rounding it.
 
-Generally true for `is_iec559` floating-point __fundamantal types,
+Generally true for `is_iec559` floating-point __fundamental types,
 but false for integer types.
 
 Standard-compliant IEEE 754 floating-point implementations may detect the floating-point underflow at three predefined moments:
@@ -591,7 +591,7 @@ used thus:
   BOOST_CHECK_CLOSE_FRACTION(expected, calculated, tolerance);
 
 (There is also a version BOOST_CHECK_CLOSE using tolerance as a [*percentage] rather than a fraction;
-usually the fraction version is simpler to use).
+usually the fraction version is simpler to use.)
 
 [tolerance_2]
 
@@ -607,7 +607,7 @@ For IEEE754 system (for which `std::numeric_limits<T>::is_iec559 == true`)
 [@http://en.wikipedia.org/wiki/IEEE_754-1985#Positive_and_negative_infinity positive and negative infinity]
 are assigned bit patterns for all defined floating-point types.
 
-Confusingly, the string resulting from outputting this representation, is also
+Confusingly, the string resulting from outputting this representation is also
 implementation-defined. And the string that can be input to generate the representation is also implementation-defined.
 
 For example, the output is `1.#INF` on Microsoft systems, but `inf` on most *nix platforms.
@@ -615,7 +615,7 @@ For example, the output is `1.#INF` on Microsoft systems, but `inf` on most *nix
 This implementation-defined-ness has hampered use of infinity (and NaNs)
 but __Boost_Math and __Boost_Multiprecision work hard to provide a sensible representation
 for [*all] floating-point types, not just the __fundamental_types,
-which with the use of suitable facets to define the input and output strings, makes it possible
+which with the use of suitable facets to define the input and output strings makes it possible
 to use these useful features portably and including __Boost_Serialization.
 
 [h4 Not-A-Number NaN]
@@ -631,11 +631,11 @@ provides an implementation-defined representation for NaN.
 result of an assignment or computation is meaningless.
 A typical example is `0/0` but there are many others.
 
-NaNs may also be used, to represent missing values: for example,
+NaNs may also be used to represent missing values: for example,
 these could, by convention, be ignored in calculations of statistics like means.
 
 Many of the problems with a representation for
-[@http://en.wikipedia.org/wiki/NaN Not-A-Number] has hampered portable use,
+[@http://en.wikipedia.org/wiki/NaN Not-A-Number] have hampered portable use,
 similar to those with infinity.
 
 [nan_1]

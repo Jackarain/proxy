@@ -1,5 +1,7 @@
 ///////////////////////////////////////////////////////////////
-//  Copyright 2012 John Maddock. Distributed under the Boost
+//  Copyright 2012 - 2025 John Maddock.
+//  Copyright 2025 Christopher Kormanyos.
+//  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
 //
@@ -8,14 +10,15 @@
 #define _SCL_SECURE_NO_WARNINGS
 #endif
 
-#include <boost/detail/lightweight_test.hpp>
-#include <array>
-#include "test.hpp"
+#include <test.hpp>
 
-#include <boost/multiprecision/cpp_int.hpp>
+#include <boost/detail/lightweight_test.hpp>
+
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int.hpp>
+
+#include <array>
 #include <cstdint>
 
 template <class T>
@@ -48,6 +51,7 @@ void check_round(const T& val, bool check_extended = false)
    if (diff2 < diff1)
    {
       // Some debugging code here...
+      // LCOV_EXCL_START These lines are not expected to get hit in tests.
       std::cout << val.str() << std::endl;
       std::cout << std::setprecision(18);
       std::cout << d1 << std::endl;
@@ -55,14 +59,19 @@ void check_round(const T& val, bool check_extended = false)
       std::cout << diff1 << std::endl;
       std::cout << diff2 << std::endl;
       d1 = val.template convert_to<double>();
+      // LCOV_EXCL_STOP These lines are not expected to get hit in tests.
    }
+
+   using std::signbit;
+
    BOOST_CHECK(diff2 >= diff1);
-   BOOST_CHECK_EQUAL(boost::math::signbit(val), boost::math::signbit(d1));
+   // Note: Ask John if boost::multiprecision::signbit() should return bool?
+   BOOST_CHECK_EQUAL((boost::math::signbit(val) != 0), signbit(d1));
 
    float f1 = val.template convert_to<float>();
    float f2 = boost::math::nextafter(f1, f1 < val ? FLT_MAX : -FLT_MAX);
    BOOST_CHECK(((abs(f1 - val) <= abs(f2 - val))));
-   BOOST_CHECK_EQUAL(boost::math::signbit(val), boost::math::signbit(f1));
+   BOOST_CHECK_EQUAL((boost::math::signbit(val) != 0), signbit(f1));
 
 #if !defined(BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS)
 
@@ -78,6 +87,7 @@ void check_round(const T& val, bool check_extended = false)
       if (diff2 < diff1)
       {
          // Some debugging code here...
+         // LCOV_EXCL_START These lines are not expected to get hit in tests.
          std::cout << val.str() << std::endl;
          std::cout << std::setprecision(18);
          std::cout << l1 << std::endl;
@@ -85,9 +95,10 @@ void check_round(const T& val, bool check_extended = false)
          std::cout << diff1 << std::endl;
          std::cout << diff2 << std::endl;
          l1 = val.template convert_to<long double>();
+         // LCOV_EXCL_STOP These lines are not expected to get hit in tests.
       }
       BOOST_CHECK(diff2 >= diff1);
-      BOOST_CHECK_EQUAL(boost::math::signbit(val), boost::math::signbit(l1));
+      BOOST_CHECK_EQUAL((boost::math::signbit(val) != 0), signbit(l1));
    }
 
 #endif

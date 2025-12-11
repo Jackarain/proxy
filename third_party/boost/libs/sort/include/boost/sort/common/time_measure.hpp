@@ -14,7 +14,6 @@
 #ifndef __BOOST_SORT_PARALLEL_TOOLS_TIME_MEASURE_HPP
 #define __BOOST_SORT_PARALLEL_TOOLS_TIME_MEASURE_HPP
 
-#include <ciso646>
 #include <chrono>
 
 namespace boost

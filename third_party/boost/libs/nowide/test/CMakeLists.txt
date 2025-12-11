@@ -14,7 +14,7 @@ if(NOT TARGET tests)
 endif()
   
 if(NOT BOOST_SUPERPROJECT_SOURCE_DIR)
-  find_package(Boost 1.56 REQUIRED COMPONENTS filesystem system)
+  find_package(Boost 1.66 REQUIRED COMPONENTS filesystem)
 endif()
 
 # In some environments this test (part) may fail, so allow to disable it

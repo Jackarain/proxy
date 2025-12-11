@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -8,6 +8,7 @@
 #define BOOST_REDIS_ADAPTER_DETAIL_RESPONSE_TRAITS_HPP
 
 #include <boost/redis/adapter/detail/result_traits.hpp>
+#include <boost/redis/ignore.hpp>
 #include <boost/redis/resp3/node.hpp>
 #include <boost/redis/response.hpp>
 
@@ -21,26 +22,6 @@
 
 namespace boost::redis::adapter::detail {
 
-class ignore_adapter {
-public:
-   template <class String>
-   void operator()(std::size_t, resp3::basic_node<String> const& nd, system::error_code& ec)
-   {
-      switch (nd.data_type) {
-         case resp3::type::simple_error: ec = redis::error::resp3_simple_error; break;
-         case resp3::type::blob_error:   ec = redis::error::resp3_blob_error; break;
-         case resp3::type::null:         ec = redis::error::resp3_null; break;
-         default:                        ;
-      }
-   }
-
-   [[nodiscard]]
-   auto get_supported_response_size() const noexcept
-   {
-      return static_cast<std::size_t>(-1);
-   }
-};
-
 template <class Response>
 class static_adapter {
 private:
@@ -50,51 +31,44 @@ private:
    using adapters_array_type = std::array<variant_type, size>;
 
    adapters_array_type adapters_;
+   std::size_t i_ = 0;
 
 public:
    explicit static_adapter(Response& r) { assigner<size - 1>::assign(adapters_, r); }
 
-   [[nodiscard]]
-   auto get_supported_response_size() const noexcept
-   {
-      return size;
-   }
-
-   template <class String>
-   void operator()(std::size_t i, resp3::basic_node<String> const& nd, system::error_code& ec)
+   void on_init()
    {
       using std::visit;
-      // I am usure whether this should be an error or an assertion.
-      BOOST_ASSERT(i < adapters_.size());
       visit(
          [&](auto& arg) {
-            arg(nd, ec);
+            arg.on_init();
          },
-         adapters_.at(i));
+         adapters_.at(i_));
    }
-};
 
-template <class Vector>
-class vector_adapter {
-private:
-   using adapter_type = typename result_traits<Vector>::adapter_type;
-   adapter_type adapter_;
-
-public:
-   explicit vector_adapter(Vector& v)
-   : adapter_{internal_adapt(v)}
-   { }
-
-   [[nodiscard]]
-   auto get_supported_response_size() const noexcept
+   void on_done()
    {
-      return static_cast<std::size_t>(-1);
+      using std::visit;
+      visit(
+         [&](auto& arg) {
+            arg.on_done();
+         },
+         adapters_.at(i_));
+      i_ += 1;
    }
 
    template <class String>
-   void operator()(std::size_t, resp3::basic_node<String> const& nd, system::error_code& ec)
+   void on_node(resp3::basic_node<String> const& nd, system::error_code& ec)
    {
-      adapter_(nd, ec);
+      using std::visit;
+
+      // I am usure whether this should be an error or an assertion.
+      BOOST_ASSERT(i_ < adapters_.size());
+      visit(
+         [&](auto& arg) {
+            arg.on_node(nd, ec);
+         },
+         adapters_.at(i_));
    }
 };
 
@@ -104,25 +78,25 @@ struct response_traits;
 template <>
 struct response_traits<ignore_t> {
    using response_type = ignore_t;
-   using adapter_type = detail::ignore_adapter;
+   using adapter_type = ignore;
 
-   static auto adapt(response_type&) noexcept { return detail::ignore_adapter{}; }
+   static auto adapt(response_type&) noexcept { return ignore{}; }
 };
 
 template <>
 struct response_traits<result<ignore_t>> {
    using response_type = result<ignore_t>;
-   using adapter_type = detail::ignore_adapter;
+   using adapter_type = ignore;
 
-   static auto adapt(response_type&) noexcept { return detail::ignore_adapter{}; }
+   static auto adapt(response_type&) noexcept { return ignore{}; }
 };
 
 template <class String, class Allocator>
 struct response_traits<result<std::vector<resp3::basic_node<String>, Allocator>>> {
    using response_type = result<std::vector<resp3::basic_node<String>, Allocator>>;
-   using adapter_type = vector_adapter<response_type>;
+   using adapter_type = general_aggregate<response_type>;
 
-   static auto adapt(response_type& v) noexcept { return adapter_type{v}; }
+   static auto adapt(response_type& v) noexcept { return adapter_type{&v}; }
 };
 
 template <class... Ts>
@@ -132,35 +106,6 @@ struct response_traits<response<Ts...>> {
 
    static auto adapt(response_type& r) noexcept { return adapter_type{r}; }
 };
-
-template <class Adapter>
-class wrapper {
-public:
-   explicit wrapper(Adapter adapter)
-   : adapter_{adapter}
-   { }
-
-   template <class String>
-   void operator()(resp3::basic_node<String> const& nd, system::error_code& ec)
-   {
-      return adapter_(0, nd, ec);
-   }
-
-   [[nodiscard]]
-   auto get_supported_response_size() const noexcept
-   {
-      return adapter_.get_supported_response_size();
-   }
-
-private:
-   Adapter adapter_;
-};
-
-template <class Adapter>
-auto make_adapter_wrapper(Adapter adapter)
-{
-   return wrapper{adapter};
-}
 
 }  // namespace boost::redis::adapter::detail
 

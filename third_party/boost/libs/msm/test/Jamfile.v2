@@ -32,68 +32,76 @@ project
 test-suite msm-unit-tests
     :
     [ run Anonymous.cpp ]
+    [ run AnonymousAndGuard.cpp ]
     [ run AnonymousEuml.cpp ]
-    [ run CompositeEuml.cpp ]
+    [ run Back11CompositeMachine.cpp ]
+    [ run BigWithFunctors.cpp ]
+    # MSVC 32-bit runs out of memory when compiling this test
+    [ run CompositeEuml.cpp : : : <toolset>msvc-14.3,<address-model>32:<build>no ]
     [ run CompositeMachine.cpp ]
     [ run Constructor.cpp ]
     [ run Entries.cpp ]
+    [ run EventQueue.cpp ]
     [ run History.cpp ]
+    [ run KleeneDeferred.cpp ]
+    [ run ManyDeferTransitions.cpp ]
     [ run OrthogonalDeferred.cpp ]
     [ run OrthogonalDeferred2.cpp ]
     [ run OrthogonalDeferred3.cpp ]
-    [ run OrthogonalDeferredEuml.cpp ]
+    # MSVC 32-bit runs out of memory when compiling this test
+    [ run OrthogonalDeferredEuml.cpp : : : <toolset>msvc-14.3,<address-model>32:<build>no ]
+    # GCC has a bug in std::type_info::before() that leads to a segfault.
+    # Only observable on Windows, though (https://github.com/boostorg/msm/issues/114).
+    [ run Serialize.cpp : : : <toolset>gcc,<target-os>windows:<build>no ]
+    [ run SerializeSimpleEuml.cpp : : : <toolset>gcc,<target-os>windows:<build>no ]
+    [ run SerializeWithHistory.cpp : : : <toolset>gcc,<target-os>windows:<build>no ]
+    [ run SetStates.cpp ]
     [ run SimpleEuml.cpp ]
     [ run SimpleEuml2.cpp ]
     [ run SimpleInternal.cpp ]
     [ run SimpleInternalEuml.cpp ]
     [ run SimpleInternalFunctors.cpp ]
     [ run SimpleMachine.cpp ]
-    [ run KleeneDeferred.cpp ]
     [ run SimpleWithFunctors.cpp ]
-    [ run Serialize.cpp ]
-    [ run SerializeWithHistory.cpp ]
-    [ run SerializeSimpleEuml.cpp ]
+    [ run Test2RegionsAnonymous.cpp ]
     [ run TestConstructor.cpp ]
-    [ run ManyDeferTransitions.cpp ]
-    [ run Back11AnonymousAndGuard.cpp ]
-    [ run Back11Throwing.cpp ]
-    [ run Back11KleeneDeferred.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11Anonymous.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11BigWithFunctors.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11CompositeMachine.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11Entries.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11OrthogonalDeferred3.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11SimpleInternalEuml.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11SimpleInternalFunctors.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11SimpleMachine.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11SimpleWithFunctors.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11TestDeferIn2Regions.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11ManyDeferTransitions.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11TransitionSkipping.cpp  : :
-        : [ requires cxx11_variadic_templates ] ]
-    [ run Back11SimpleWithPuml.cpp  : :
-        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
-    [ run Back11OnlyStringPuml.cpp  : :
-        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
-    [ run Back11SimpleInternalWithPuml.cpp  : :
-        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
-    [ run Back11OrthogonalDeferred3WithPuml.cpp  : :
-        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
-    [ run puml_syntax.cpp  : :
-        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
-    [ run puml_syntax_2.cpp  : :
-        : [ requires cxx20_hdr_version cxx20_hdr_barrier cxx20_hdr_compare cxx20_hdr_format cxx20_hdr_ranges cxx20_hdr_numbers  ] ]
+    [ run TestConstructorMovableOnlyTypes.cpp ]
+    [ run TestDeferAndMessageQueue.cpp ]
+    [ run TestDeferAndMessageQueue2.cpp ]
+    [ run TestDeferAndMessageQueue3.cpp ]
+    [ run TestDeferIn2Regions.cpp ]
+    [ run Throwing.cpp ]
+    [ run TransitionSkipping.cpp ]
     ;
 
+test-suite msm-unit-tests-cxxstd17
+    :
+    [ run Backmp11Constructor.cpp ]
+    [ run Backmp11Context.cpp ]
+    [ run Backmp11Deferred.cpp ]
+    [ run Backmp11ManyDeferTransitions.cpp ]
+    [ run Backmp11Members.cpp ]
+    [ run Backmp11Visitor.cpp ]
+    [ run Backmp11RootSm.cpp ]
+    :
+    <cxxstd>17
+    ;
+
+test-suite msm-unit-tests-cxxstd20
+    :
+    # MSVC 32-bit runs out of memory when compiling this test
+    [ run Back11OrthogonalDeferred3WithPuml.cpp : : : <toolset>msvc-14.3,<address-model>32:<build>no ]
+    [ run OnlyStringPuml.cpp ]
+    [ run puml_syntax.cpp ]
+    [ run puml_syntax_2.cpp ]
+    [ run SimpleWithPuml.cpp ]
+    [ run SimpleInternalWithPuml.cpp ]
+    [ run StringTerminatePuml.cpp ]
+    :
+    <cxxstd>20
+    # Clang 11 and 12 don't support lambdas in unevaluated contexts
+    <toolset>clang-11:<build>no
+    <toolset>clang-12:<build>no
+    # gcc-9 doesn't support cxxstd=20
+    <toolset>gcc-9:<build>no
+    ;

@@ -19,22 +19,9 @@ target_include_directories(boost_charconv PUBLIC include)
 
 # find_library for quadmath does not always work so attempt
 # to compile the trivial test case we use with B2
-include(CheckCXXSourceRuns)
-set(BOOST_CHARCONV_QUADMATH_TEST_SOURCE
-"
-#include <quadmath.h>
-int main()
-{
-    __float128 f = -2.0Q;
-    f = fabsq(f);
-    __float128 big = HUGE_VALQ;
-
-    return f == big;
-}
-")
-
+include(CheckCXXSourceCompiles)
 set(CMAKE_REQUIRED_LIBRARIES "quadmath")
-check_cxx_source_runs("${BOOST_CHARCONV_QUADMATH_TEST_SOURCE}" BOOST_CHARCONV_QUADMATH_FOUND)
+check_cxx_source_compiles("#include <${CMAKE_CURRENT_SOURCE_DIR}/config/has_float128.cpp>" BOOST_CHARCONV_QUADMATH_FOUND)
 set(CMAKE_REQUIRED_LIBRARIES "")
 
 target_link_libraries(boost_charconv

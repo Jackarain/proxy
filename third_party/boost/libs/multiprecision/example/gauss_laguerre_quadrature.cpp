@@ -18,7 +18,7 @@
 // of this example) could be used for smaller arguments.
 
 // This example has been tested with decimal digits counts
-// ranging from 21...301, by adjusting the parameter
+// ranging from 21 to 301, by adjusting the parameter
 // local::my_digits10 at compile time.
 
 // References:

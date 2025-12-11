@@ -97,6 +97,6 @@ Effects: ::
 
 Remarks: :: `operator()` generates a monotonically increasing sequence of UUIDs, if the following requirements are met:
 +
-* The system clock never goes backwards;
-* The system clock has at least millisecond resolution;
-* No more than 64 UUIDs are generated per microsecond (no more than one every 16 nanoseconds.)
+* The system clock never goes backwards.
+* The system clock has at least millisecond resolution.
+* No more than 64 UUIDs are generated per microsecond (no more than one every 16 nanoseconds).

@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 {
     if (argc < 2) {
         std::cout << argv[0] << "\n";
-        std::cout << "Usage: qrcode <data> <width> <height> <output encoding> <error correction> <border>\n"
+        std::cout << "Usage: qrcode <data> <width> <height> <output encoding> <error correction> <margin>\n"
                      "options:\n"
                      "    <data>:             The data to encode (required)\n"
                      "    <width>:            Image width (default: 100)\n"
