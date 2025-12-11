@@ -694,6 +694,117 @@ namespace util {
 				}, token);
 	}
 
+	template <typename StreamType, typename Handler>
+	void lowest_layer_shutdown(StreamType& sock, Handler&& handler) noexcept
+	{
+		boost::system::error_code ec;
+
+		auto& lowest_layer = boost::beast::get_lowest_layer(sock);
+		lowest_layer.lowest_layer().shutdown(net::socket_base::shutdown_send, ec);
+
+		handler(ec);
+	}
+
+	template <typename StreamType, typename Handler>
+	void ssl_layer_shutdown(StreamType& sock, Handler&& handler) noexcept
+	{
+		boost::system::error_code ec;
+
+		auto native_handle = sock.native_handle();
+		BIO* wbio = ::SSL_get_wbio(native_handle);
+		if (!wbio)
+		{
+			handler(ec);
+			return;
+		}
+
+		void* data_ptr = ::BIO_get_data(wbio);
+		if (!data_ptr)
+		{
+			handler(ec);
+			return;
+		}
+
+		// Workaround: recover external BIO pointer from void* context
+		BIO* ext_bio = *(BIO**)data_ptr;
+		if (!ext_bio)
+		{
+			handler(ec);
+			return;
+		}
+
+		std::size_t pending_before = ::BIO_ctrl_pending(ext_bio);
+		::ERR_clear_error();
+
+		int result = ::SSL_shutdown(native_handle);
+		if (result == 0)
+			result = ::SSL_shutdown(native_handle);
+
+		int ssl_error = ::SSL_get_error(native_handle, result);
+		int sys_error = static_cast<int>(::ERR_get_error());
+		std::size_t pending_after = ::BIO_ctrl_pending(ext_bio);
+
+		bool want_read = false;
+
+		if (ssl_error == SSL_ERROR_SSL)
+		{
+			ec = boost::system::error_code(sys_error, net::error::get_ssl_category());
+		}
+		else if (ssl_error == SSL_ERROR_SYSCALL)
+		{
+			if (sys_error == 0)
+				ec = net::ssl::error::unspecified_system_error;
+			else
+				ec = boost::system::error_code(sys_error, net::error::get_ssl_category());
+
+			want_read = pending_after > pending_before;
+		}
+		else if (ssl_error == SSL_ERROR_WANT_WRITE || pending_after > pending_before)
+		{
+			want_read = true;
+		}
+		else if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_NONE)
+		{
+			ec = boost::system::error_code();
+		}
+		else if (ssl_error == SSL_ERROR_ZERO_RETURN)
+		{
+			ec = boost::asio::error::eof;
+		}
+		else
+		{
+			ec = boost::asio::ssl::error::unexpected_result;
+		}
+
+		if (want_read)
+		{
+			constexpr auto buf_size = 17 * 1024;
+			auto bufs = std::make_unique_for_overwrite<char[]>(buf_size);
+			int length = ::BIO_read(ext_bio, bufs.get(), buf_size);
+			if (length > 0)
+			{
+				auto bufptr = bufs.get();
+				net::async_write(sock.next_layer(), net::buffer(bufptr, length),
+					[&sock, handler = std::move(handler), bufs = std::move(bufs)]
+					(boost::system::error_code ec, auto) mutable
+					{
+						if (ec)
+						{
+							lowest_layer_shutdown(sock, std::move(handler));
+							return;
+						}
+
+						handler(ec);
+					});
+
+				return;
+			}
+		}
+
+		lowest_layer_shutdown(sock, std::move(handler));
+		return;
+	}
+
 	template <typename CompletionToken>
 	auto async_shutdown(variant_stream_type& socket, CompletionToken&& token)
 	{
@@ -708,112 +819,12 @@ namespace util {
 							if constexpr (std::same_as<StreamType, proxy_tcp_socket> ||
 								std::same_as<StreamType, proxy_uds_socket>)
 							{
-								boost::system::error_code ec;
-
-								auto& lowest_layer = boost::beast::get_lowest_layer(sock);
-								lowest_layer.lowest_layer().shutdown(net::socket_base::shutdown_send, ec);
-								handler(ec);
+								lowest_layer_shutdown(sock, std::move(handler));
 							}
 							else if constexpr (std::same_as<StreamType, ssl_tcp_stream> ||
 								std::same_as<StreamType, ssl_uds_stream>)
 							{
-								boost::system::error_code ec;
-
-								auto& lowest_layer = boost::beast::get_lowest_layer(sock);
-								auto native_handle = sock.native_handle();
-								BIO* wbio = ::SSL_get_wbio(native_handle);
-								if (!wbio)
-								{
-									handler(ec);
-									return;
-								}
-
-								void* data_ptr = ::BIO_get_data(wbio);
-								if (!data_ptr)
-								{
-									handler(ec);
-									return;
-								}
-
-								// Workaround: recover external BIO pointer from void* context
-								BIO* ext_bio = *(BIO**)data_ptr;
-								if (!ext_bio)
-								{
-									handler(ec);
-									return;
-								}
-
-								std::size_t pending_before = ::BIO_ctrl_pending(ext_bio);
-								::ERR_clear_error();
-
-								int result = ::SSL_shutdown(native_handle);
-								if (result == 0)
-									result = ::SSL_shutdown(native_handle);
-
-								int ssl_error = ::SSL_get_error(native_handle, result);
-								int sys_error = static_cast<int>(::ERR_get_error());
-								std::size_t pending_after = ::BIO_ctrl_pending(ext_bio);
-
-								bool want_read = false;
-
-								if (ssl_error == SSL_ERROR_SSL)
-								{
-									ec = boost::system::error_code(sys_error, net::error::get_ssl_category());
-								}
-								else if (ssl_error == SSL_ERROR_SYSCALL)
-								{
-									if (sys_error == 0)
-										ec = net::ssl::error::unspecified_system_error;
-									else
-										ec = boost::system::error_code(sys_error, net::error::get_ssl_category());
-
-									want_read = pending_after > pending_before;
-								}
-								else if (ssl_error == SSL_ERROR_WANT_WRITE || pending_after > pending_before)
-								{
-									want_read = true;
-								}
-								else if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_NONE)
-								{
-									ec = boost::system::error_code();
-								}
-								else if (ssl_error == SSL_ERROR_ZERO_RETURN)
-								{
-									ec = boost::asio::error::eof;
-								}
-								else
-								{
-									ec = boost::asio::ssl::error::unexpected_result;
-								}
-
-								if (want_read)
-								{
-									constexpr auto buf_size = 17 * 1024;
-									auto bufs = std::make_unique_for_overwrite<char[]>(buf_size);
-									int length = ::BIO_read(ext_bio, bufs.get(), buf_size);
-									if (length > 0)
-									{
-										auto bufptr = bufs.get();
-										net::async_write(sock.next_layer(), net::buffer(bufptr, length),
-											[&lowest_layer, handler = std::move(handler), bufs = std::move(bufs)]
-											(boost::system::error_code ec, auto) mutable
-											{
-												if (ec)
-												{
-													lowest_layer.lowest_layer().shutdown(net::socket_base::shutdown_send, ec);
-													handler(ec);
-													return;
-												}
-
-												handler(ec);
-											});
-									}
-								}
-								else
-								{
-									lowest_layer.lowest_layer().shutdown(net::socket_base::shutdown_send, ec);
-									handler(ec);
-								}
+								ssl_layer_shutdown(sock, std::move(handler));
 							}
 						}, socket);
 				}, token);
