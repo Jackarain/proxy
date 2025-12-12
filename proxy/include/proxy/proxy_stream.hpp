@@ -13,6 +13,7 @@
 #include "proxy/scramble.hpp"
 #include "proxy/tcp_socket.hpp"
 #include "proxy/uds_socket.hpp"
+#include "proxy/ssl_stream.hpp"
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/stream.hpp>
@@ -51,8 +52,8 @@ namespace util {
 	using proxy_uds_socket = proxy_stream<uds_socket>;
 
 	// TLS 加密的 tcp 和 unix domain socket （UDS）相关 socket 类型定义
-	using ssl_tcp_stream = net::ssl::stream<proxy_tcp_socket>;
-	using ssl_uds_stream = net::ssl::stream<proxy_uds_socket>;
+	using ssl_tcp_stream = ssl_stream<proxy_tcp_socket>;
+	using ssl_uds_stream = ssl_stream<proxy_uds_socket>;
 
 	// variant_stream_type 支持 proxy_tcp_socket, proxy_uds_socket, ssl_tcp_stream, ssl_uds_stream
 	using variant_stream_type = variant_stream<proxy_tcp_socket, proxy_uds_socket, ssl_tcp_stream, ssl_uds_stream>;
