@@ -1023,7 +1023,19 @@ R"x*x*x(<html>
 				if (ec)
 					co_return;
 
+#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 				net::posix::stream_descriptor stream_stdout(m_executor, ::dup(STDOUT_FILENO));
+#else
+				HANDLE stdout_handle = ::GetStdHandle(STD_OUTPUT_HANDLE);
+				if (stdout_handle == INVALID_HANDLE_VALUE)
+				{
+					XLOG_ERR << "stdio proxy invalid stdout handle";
+					co_return;
+				}
+
+				boost::asio::windows::stream_handle stream_stdout(m_executor);
+				stream_stdout.assign(stdout_handle);
+#endif
 				auto out = init_proxy_stream(stdio_stream(std::move(stream_stdout)));
 				auto& in = m_local_socket;
 
