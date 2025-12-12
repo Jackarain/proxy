@@ -37,7 +37,7 @@ namespace util {
 #endif
 
 		using executor_type = next_layer_type::executor_type;
-		using lowest_layer_type = typename next_layer_type;
+		using lowest_layer_type = typename next_layer_type::lowest_layer_type;
 
 		using endpoint_type = std::string;
 
@@ -109,19 +109,6 @@ namespace util {
 		{
 			ec = {};
 			impl_->close();
-		}
-
-		template <typename SettableSocketOption>
-		void set_option(const SettableSocketOption& option)
-		{
-			lowest_layer().set_option(option);
-		}
-
-		template <typename SettableSocketOption>
-		void set_option(const SettableSocketOption& option,
-			boost::system::error_code& ec)
-		{
-			lowest_layer().set_option(option, ec);
 		}
 
 		template <typename MutableBufferSequence, typename ReadHandler>

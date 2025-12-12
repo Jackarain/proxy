@@ -394,7 +394,7 @@ namespace util {
 					return {};
 				}, sock);
 		}
-		else
+		else if constexpr (!std::same_as<StreamType, stdio_stream>)
 		{
 			static_assert(!std::same_as<StreamType, StreamType>, "unknown socket type!");
 		}
@@ -440,7 +440,7 @@ namespace util {
 					return {};
 				}, sock);
 		}
-		else
+		else if constexpr (!std::same_as<StreamType, stdio_stream>)
 		{
 			static_assert(!std::same_as<StreamType, StreamType>, "unknown socket type!");
 		}

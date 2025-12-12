@@ -990,11 +990,17 @@ R"x*x*x(<html>
 			try
 			{
 				boost::system::result<url_info> expect_url;
+				std::string url = m_option.stdio_target_;
 
-				if (m_option.stdio_target_.find_first_of("://") != std::string::npos)
-					expect_url = parse_urlinfo(m_option.stdio_target_);
-				else
-					expect_url = parse_urlinfo("http://" + m_option.stdio_target_);
+				if (url.find("://") == std::string::npos)
+					url = "http://" + url;
+
+				expect_url = parse_urlinfo(url);
+				if (expect_url.has_error())
+				{
+					XLOG_ERR << "stdio proxy param stdio target is bad: " << url;
+					co_return;
+				}
 
 				auto [scheme, user, passwd, host, port, resource] = *expect_url;
 
@@ -1017,7 +1023,26 @@ R"x*x*x(<html>
 				if (ec)
 					co_return;
 
-				co_await concurrent_transfer();
+				net::posix::stream_descriptor stream_stdout(m_executor, ::dup(STDOUT_FILENO));
+				auto out = init_proxy_stream(stdio_stream(std::move(stream_stdout)));
+				auto& in = m_local_socket;
+
+				size_t l2r_transferred = 0;
+				size_t r2l_transferred = 0;
+
+				// 并发读写, 在 local 和 remote 之间互传数据.
+				co_await(
+					transfer(in, m_remote_socket, l2r_transferred)
+					&&
+					transfer(m_remote_socket, out, r2l_transferred)
+				);
+
+				log_conn_debug()
+					<< ", transfer completed"
+					<< ", local to remote: "
+					<< l2r_transferred
+					<< ", remote to local: "
+					<< r2l_transferred;
 			}
 			catch (const std::exception& e)
 			{
@@ -2919,9 +2944,9 @@ R"x*x*x(<html>
 		{
 			bytes_transferred = 0;
 
-			// 记录 from 和 to 的endpoint.
-			auto from_endpoint = tcp_remote_endpoint(from);
-			auto to_endpoint = tcp_remote_endpoint(to);
+			// 记录 from 和 to 的 endpoint 信息.
+			auto from_endpoint = remote_endpoint_string(from);
+			auto to_endpoint = remote_endpoint_string(to);
 
 			constexpr auto buf_size = 512 * 1024;
 
@@ -4439,16 +4464,16 @@ R"x*x*x(<html>
 			boost::variant2::visit([rate](auto& s) mutable
 				{
 					using ValueType = std::decay_t<decltype(s)>;
-					using NextLayerType = util::proxy_tcp_socket::next_layer_type;
+					using NextLayerType = proxy_tcp_socket::next_layer_type;
 
-					if constexpr (std::same_as<NextLayerType, util::tcp_socket>)
+					if constexpr (std::same_as<NextLayerType, tcp_socket>)
 					{
-						if constexpr (std::same_as<util::proxy_tcp_socket, ValueType>)
+						if constexpr (std::same_as<proxy_tcp_socket, ValueType>)
 						{
 							auto& next_layer = s.next_layer();
 							next_layer.rate_limit(rate);
 						}
-						else if constexpr (std::same_as<util::ssl_tcp_stream, ValueType>)
+						else if constexpr (std::same_as<ssl_tcp_stream, ValueType>)
 						{
 							auto& next_layer = s.next_layer().next_layer();
 							next_layer.rate_limit(rate);
