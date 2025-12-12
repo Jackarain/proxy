@@ -178,10 +178,22 @@ namespace util {
 			return core_.engine_.get_output(data);
 		}
 
+		// A buffer that may be used to prepare output intended for the transport.
+		boost::asio::mutable_buffer get_output_buffer() noexcept
+		{
+			return core_.output_buffer_;
+		}
+
   		// Put input data that was read from the transport.
 		boost::asio::const_buffer put_input(const boost::asio::const_buffer& data)
 		{
 			return core_.engine_.put_input(data);
+		}
+
+		// A buffer that may be used to read input intended for the engine.
+		boost::asio::mutable_buffer put_input_buffer() noexcept
+		{
+			return core_.input_buffer_;
 		}
 
 		/// Perform SSL handshaking.

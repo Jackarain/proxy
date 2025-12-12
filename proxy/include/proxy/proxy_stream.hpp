@@ -710,99 +710,45 @@ namespace util {
 	void ssl_layer_shutdown(StreamType& sock, Handler&& handler) noexcept
 	{
 		boost::system::error_code ec;
-
 		auto native_handle = sock.native_handle();
-		BIO* wbio = ::SSL_get_wbio(native_handle);
-		if (!wbio)
-		{
-			handler(ec);
-			return;
-		}
 
-		void* data_ptr = ::BIO_get_data(wbio);
-		if (!data_ptr)
-		{
-			handler(ec);
-			return;
-		}
-
-		// Workaround: recover external BIO pointer from void* context
-		BIO* ext_bio = *(BIO**)data_ptr;
-		if (!ext_bio)
-		{
-			handler(ec);
-			return;
-		}
-
-		std::size_t pending_before = ::BIO_ctrl_pending(ext_bio);
+		// 在这里直接调用 SSL_shutdown 而不通过 boost asio 的 async_shutdown，
+		// 是因为 boost asio 的 async_shutdown 内部实现会尝试读写数据，
+		// 如果底层 socket 没有数据可读的话，就会导致操作阻塞，影响性能.
+		// 而且在某些情况下，当前 SSL 连接可能正在等待读写 IO 的过程中，调用
+		// asio 的 async_shutdown，就会因为同时多次读写而造成未定义行为.
+		//
+		// 而 ssl_layer_shutdown 只会发送关闭通知，并不会等待对方的关闭响应,
+		// 所以不会出现读取操作, 也就是说 ssl_layer_shutdown 是一个写操作.
+		// 这样可以在确定没有写操作的情况下，安全地调用 ssl_layer_shutdown
+		// 发起 SSL_shutdown 操作, 而不会引发同时多读的未定义行为.
 		::ERR_clear_error();
 
 		int result = ::SSL_shutdown(native_handle);
 		if (result == 0)
 			result = ::SSL_shutdown(native_handle);
 
-		int ssl_error = ::SSL_get_error(native_handle, result);
-		int sys_error = static_cast<int>(::ERR_get_error());
-		std::size_t pending_after = ::BIO_ctrl_pending(ext_bio);
+		auto bufs = sock.get_output(sock.get_output_buffer());
 
-		bool want_read = false;
-
-		if (ssl_error == SSL_ERROR_SSL)
+		if (net::buffer_size(bufs) == 0)
 		{
-			ec = boost::system::error_code(sys_error, net::error::get_ssl_category());
-		}
-		else if (ssl_error == SSL_ERROR_SYSCALL)
-		{
-			if (sys_error == 0)
-				ec = net::ssl::error::unspecified_system_error;
-			else
-				ec = boost::system::error_code(sys_error, net::error::get_ssl_category());
-
-			want_read = pending_after > pending_before;
-		}
-		else if (ssl_error == SSL_ERROR_WANT_WRITE || pending_after > pending_before)
-		{
-			want_read = true;
-		}
-		else if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_NONE)
-		{
-			ec = boost::system::error_code();
-		}
-		else if (ssl_error == SSL_ERROR_ZERO_RETURN)
-		{
-			ec = boost::asio::error::eof;
-		}
-		else
-		{
-			ec = boost::asio::ssl::error::unexpected_result;
+			lowest_layer_shutdown(sock, std::move(handler));
+			return;
 		}
 
-		if (want_read)
-		{
-			constexpr auto buf_size = 17 * 1024;
-			auto bufs = std::make_unique_for_overwrite<char[]>(buf_size);
-			int length = ::BIO_read(ext_bio, bufs.get(), buf_size);
-			if (length > 0)
+		net::async_write(sock.next_layer(), bufs,
+			[&sock, handler = std::move(handler)]
+			(boost::system::error_code ec, auto) mutable
 			{
-				auto bufptr = bufs.get();
-				net::async_write(sock.next_layer(), net::buffer(bufptr, length),
-					[&sock, handler = std::move(handler), bufs = std::move(bufs)]
-					(boost::system::error_code ec, auto) mutable
-					{
-						if (ec)
-						{
-							lowest_layer_shutdown(sock, std::move(handler));
-							return;
-						}
+				if (ec)
+				{
+					lowest_layer_shutdown(sock, std::move(handler));
+					return;
+				}
 
-						handler(ec);
-					});
+				handler(ec);
+			});
 
-				return;
-			}
-		}
-
-		lowest_layer_shutdown(sock, std::move(handler));
 		return;
 	}
 
