@@ -130,6 +130,22 @@ docker build . -t proxy:v1
 | scramble | 数据是否启用噪声加扰(即通过随机噪声数据混淆数据传输)，此选项需要在2端同时开启 |
 | noise_length | 在启用 `scramble` 的时候，随机发送的噪声数据最大长度，默认最大长度为4k |
 
+
+## 代理隧道功能
+
+代理隧道功能主要实现了 [proxytunnel](https://github.com/proxytunnel/proxytunnel) 它的功能，具体使用方式示例如下，在 `.ssh` 目录中的 `config` 配置文件中添加如：
+
+```yml
+Host example
+	HostName 255.255.255.255
+	IdentityFile /root/.ssh/id_rsa
+	User root
+	ProxyCommand /path/to/proxy_server --stdio %h:%p --proxy_pass https://user:pass@proxy.server:8443
+```
+
+然后当使用 `ssh` 连接主机 `example` 时将会按上述配置文件中参数创建 `proxy_server` 代理隧道，通过 `proxy_pass` 指定的代理服务器连接目标 `HostName` 所指的服务器。
+
+
 ## 静态文件 http 服务器(可配置为云音乐播放器)
 
 `proxy server` 不仅是一个 `proxy` 服务器，同时还可以做为一个真实的静态文件 `http` 服务，且支持 `http range`，所以也可以作为 `http` 音视频文件服务器，播放器播放 `http` 音视频文件时通过 `http` 的 `bytes range` 协议进行 `seek`（快进快退），使用方法如下
