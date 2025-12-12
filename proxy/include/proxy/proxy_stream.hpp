@@ -14,6 +14,7 @@
 #include "proxy/tcp_socket.hpp"
 #include "proxy/uds_socket.hpp"
 #include "proxy/ssl_stream.hpp"
+#include "proxy/stdio_stream.hpp"
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/stream.hpp>
@@ -56,7 +57,14 @@ namespace util {
 	using ssl_uds_stream = ssl_stream<proxy_uds_socket>;
 
 	// variant_stream_type 支持 proxy_tcp_socket, proxy_uds_socket, ssl_tcp_stream, ssl_uds_stream
-	using variant_stream_type = variant_stream<proxy_tcp_socket, proxy_uds_socket, ssl_tcp_stream, ssl_uds_stream>;
+	using variant_stream_type = variant_stream
+		<
+			proxy_tcp_socket,
+			proxy_uds_socket,
+			stdio_stream,
+			ssl_tcp_stream,
+			ssl_uds_stream
+		>;
 
 	// tcp_acceptor 和 unix_acceptor 类型声明.
 	using tcp_acceptor = tcp::acceptor;
@@ -568,6 +576,10 @@ namespace util {
 						net::local::stream_protocol::endpoint endp = lowest_layer.remote_endpoint();
 						return endp.path();
 					}
+					else if constexpr (std::same_as<S, stdio_stream>)
+					{
+						return "stdio";
+					}
 					else
 					{
 						static_assert(!std::same_as<S, S>, "unknown socket type!");
@@ -616,6 +628,10 @@ namespace util {
 						auto& lowest_layer = beast::get_lowest_layer(sock);
 						net::local::stream_protocol::endpoint endp = lowest_layer.local_endpoint();
 						return endp.path();
+					}
+					else if constexpr (std::same_as<S, stdio_stream>)
+					{
+						return "stdio";
 					}
 					else
 					{
@@ -689,8 +705,18 @@ namespace util {
 					boost::variant2::visit(
 						[handler = std::move(handler)](auto& sock) mutable
 						{
-							auto& lowest_layer = boost::beast::get_lowest_layer(sock);
-							lowest_layer.async_wait(net::socket_base::wait_read, std::move(handler));
+							using StreamType = std::decay_t<decltype(sock)>;
+							if constexpr (std::same_as<StreamType, stdio_stream>)
+							{
+								handler(boost::system::errc::make_error_code(
+									boost::system::errc::not_supported));
+								return;
+							}
+							else
+							{
+								auto& lowest_layer = boost::beast::get_lowest_layer(sock);
+								lowest_layer.async_wait(net::socket_base::wait_read, std::move(handler));
+							}
 						}, socket);
 				}, token);
 	}
@@ -805,6 +831,8 @@ namespace util {
 		else if constexpr (std::same_as<StreamType, ssl_tcp_stream>)
 			return variant_stream_type(std::move(s));
 		else if constexpr (std::same_as<StreamType, ssl_uds_stream>)
+			return variant_stream_type(std::move(s));
+		else if constexpr (std::same_as<StreamType, stdio_stream>)
 			return variant_stream_type(std::move(s));
 		else {
 			static_assert(!std::same_as<StreamType, StreamType>, "unknown socket type!");

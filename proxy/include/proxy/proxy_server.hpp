@@ -408,6 +408,9 @@ R"x*x*x(<html>
 		// 可同时侦听在多个 endpoint 上
 		std::vector<net::local::stream_protocol::endpoint> uds_listens_;
 
+		// 通过 proxy_pass 转发 stdio 到指定目标服务器.
+		std::string stdio_target_;
+
 		// 授权信息.
 		// auth_users 的第1个元素为用户名, 第2个元素为密码, 第3个元素为
 		// 该用户绑定的网络出口 IP 接口, 第4个为该用户指定的 proxy_pass.
@@ -914,6 +917,19 @@ R"x*x*x(<html>
 				return;
 			}
 
+			// 如果是 stdio proxy, 则启动 stdio proxy 协程.
+			if (!m_option.stdio_target_.empty())
+			{
+				net::co_spawn(m_executor,
+					[this, self, server]() -> net::awaitable<void>
+					{
+						co_await stdio_proxy();
+						co_return;
+					}, net::detached);
+
+				return;
+			}
+
 			// 启动协议侦测协程.
 			net::co_spawn(m_executor,
 				[this, self, server]() -> net::awaitable<void>
@@ -959,6 +975,57 @@ R"x*x*x(<html>
 		}
 
 	private:
+
+		inline net::awaitable<void> stdio_proxy() noexcept
+		{
+			auto executor = co_await net::this_coro::executor;
+			boost::system::error_code ec;
+
+			if (m_option.stdio_target_.empty())
+			{
+				XLOG_ERR << "stdio proxy requires a stdio_target";
+				co_return;
+			}
+
+			try
+			{
+				boost::system::result<url_info> expect_url;
+
+				if (m_option.stdio_target_.find_first_of("://") != std::string::npos)
+					expect_url = parse_urlinfo(m_option.stdio_target_);
+				else
+					expect_url = parse_urlinfo("http://" + m_option.stdio_target_);
+
+				auto [scheme, user, passwd, host, port, resource] = *expect_url;
+
+				// 查询 stdio_target_ 目标服务器的域名信息.
+				auto targets = co_await resolve_proxy_pass_targets();
+
+				// 创建 tcp socket 用于连接到目标服务器.
+				tcp::socket& remote_socket = net_tcp_socket(m_remote_socket);
+
+				// 发起连接到 stdio_target_ 目标服务器.
+				ec = co_await connect_proxy_pass(remote_socket, targets);
+				if (ec)
+					co_return;
+
+				// 与网关中继服务器握手.
+				ec = co_await proxy_pass_handshake(remote_socket,
+					std::string(host),
+					port,
+					*m_proxy_pass);
+				if (ec)
+					co_return;
+
+				co_await concurrent_transfer();
+			}
+			catch (const std::exception& e)
+			{
+				log_conn_error()
+					<< ", stdio_proxy exception: " << e.what();
+			}
+			co_return;
+		}
 
 		inline net::awaitable<void> transparent_proxy() noexcept
 		{
@@ -4799,6 +4866,9 @@ R"x*x*x(<html>
 			, m_option(std::move(opt))
 			, m_timer(executor)
 		{
+			if (!m_option.stdio_target_.empty())
+				return;
+
 			m_certificates = &m_certificate_master;
 
 			init_ssl_context();
@@ -5340,6 +5410,54 @@ R"x*x*x(<html>
 					{
 						backend_thread_run();
 					});
+			}
+
+			// 如果是 stdio 模式, 则直接启动 stdio 监听协程.
+			if (!m_option.stdio_target_.empty())
+			{
+				auto self = shared_from_this();
+
+				net::co_spawn(m_executor, [this, self]() -> net::awaitable<void>
+					{
+						try
+						{
+							// 使用 stdio socket 初始化 proxy session.
+#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
+							net::posix::stream_descriptor stream(m_executor, ::dup(STDIN_FILENO));
+#else
+							HANDLE stdin_handle = ::GetStdHandle(STD_INPUT_HANDLE);
+							if (stdin_handle == INVALID_HANDLE_VALUE)
+							{
+								XLOG_ERR << "stdio proxy invalid stdin handle";
+								co_return;
+							}
+
+							boost::asio::windows::stream_handle stream(m_executor);
+							stream.assign(stdin_handle);
+#endif
+							// 创建 proxy session 对象.
+							auto new_session =
+								std::make_shared<proxy_session>(
+									m_executor,
+									m_backend_context,
+									m_scheduler_locking,
+									m_dns_cache,
+									init_proxy_stream(stdio_stream(std::move(stream))),
+									0,
+									self);
+
+							// 启动 proxy_session 对象.
+							new_session->start();
+						}
+						catch (const std::exception& e)
+						{
+							XLOG_ERR << "stdio proxy exception: " << e.what();
+						}
+
+						co_return;
+					}, net::detached);
+
+				return;
 			}
 
 			// 如果作为透明代理.

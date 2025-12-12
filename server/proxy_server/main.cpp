@@ -68,6 +68,7 @@ std::vector<std::string> allow_region;
 std::string ipip_db;
 std::string doc_dir;
 std::string log_dir;
+std::string stdio_target;
 std::string local_ip;
 std::string proxy_pass;
 std::string ssl_cert_dir;
@@ -221,6 +222,16 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		}
 	}
 
+	opt.stdio_target_ = stdio_target;
+	if (!stdio_target.empty())
+	{
+		if (!opt.proxy_pass_)
+		{
+			XLOG_ERR << "stdio proxy requires a proxy_pass";
+			co_return;
+		}
+	}
+
 	opt.proxy_pass_use_ssl_ = proxy_pass_ssl;
 
 	opt.ssl_cert_path_ = ssl_cert_dir;
@@ -285,8 +296,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.autoindex_ = autoindex;
 	opt.htpasswd_ = htpasswd;
 
-	server = proxy_server::make(
-		ioc.get_executor(), opt);
+	server = proxy_server::make(ioc.get_executor(), opt);
 	server->start();
 
 	co_return;
@@ -397,6 +407,7 @@ int main(int argc, char** argv)
 		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load configuration options from specified file.")
 
 		("server_listen", po::value<std::vector<std::string>>(&server_listens)->default_value({ "[::0]:1080" })->value_name("ip:port [ip:port ...]"), "Specify server listening address and port.")
+		("stdio", po::value<std::string>(&stdio_target), "Destination host:port combination.")
 
 		("reuse_port", po::value<bool>(&reuse_port)->default_value(false, "false"), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
 		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true, "true"), "Enable Happy Eyeballs algorithm for TCP connections.")
@@ -510,33 +521,39 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 
 	print_args(argc, argv, vm);
 
-	for (const auto& server_listen : server_listens)
-		XLOG_DBG << "Start server: " << server_listen;
+	if (stdio_target.empty())
+	{
+		for (const auto& server_listen : server_listens)
+			XLOG_DBG << "Start server: " << server_listen;
+	}
 
 	auto cfg = net::config_from_env(asio_config);
 	net::io_context ioc(cfg);
-	net::signal_set terminator_signal(ioc);
 	server_ptr server;
+	net::signal_set terminator_signal(ioc);
 
-	terminator_signal.add(SIGINT);
-	terminator_signal.add(SIGTERM);
 #ifdef __linux__
 	signal(SIGPIPE, SIG_IGN);
 #endif
+
+	if (stdio_target.empty())
+	{
+		terminator_signal.add(SIGINT);
+		terminator_signal.add(SIGTERM);
+
 #if defined(SIGQUIT)
-	terminator_signal.add(SIGQUIT);
+		terminator_signal.add(SIGQUIT);
 #endif // defined(SIGQUIT)
 
-	terminator_signal.async_wait(
-		[&](const boost::system::error_code&, int sig) mutable
+		terminator_signal.async_wait(
+			[&](const boost::system::error_code&, int sig) mutable
 			{
 				terminator_signal.remove(sig);
 				server->close();
 			});
+	}
 
-	net::co_spawn(ioc,
-		start_proxy_server(ioc, server),
-		net::detached);
+	net::co_spawn(ioc, start_proxy_server(ioc, server), net::detached);
 
 	ioc.run();
 
