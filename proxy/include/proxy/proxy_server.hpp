@@ -983,7 +983,7 @@ R"x*x*x(<html>
 
 			if (m_option.stdio_target_.empty())
 			{
-				XLOG_ERR << "stdio proxy requires a stdio_target";
+				log_conn_error() << ", stdio proxy requires a stdio_target";
 				co_return;
 			}
 
@@ -998,7 +998,7 @@ R"x*x*x(<html>
 				expect_url = parse_urlinfo(url);
 				if (expect_url.has_error())
 				{
-					XLOG_ERR << "stdio proxy param stdio target is bad: " << url;
+					log_conn_error() << ", stdio proxy param stdio target is bad: " << url;
 					co_return;
 				}
 
@@ -1029,7 +1029,7 @@ R"x*x*x(<html>
 				HANDLE stdout_handle = ::GetStdHandle(STD_OUTPUT_HANDLE);
 				if (stdout_handle == INVALID_HANDLE_VALUE)
 				{
-					XLOG_ERR << "stdio proxy invalid stdout handle";
+					log_conn_error() << ", stdio proxy invalid stdout handle";
 					co_return;
 				}
 
@@ -1058,8 +1058,7 @@ R"x*x*x(<html>
 			}
 			catch (const std::exception& e)
 			{
-				log_conn_error()
-					<< ", stdio_proxy exception: " << e.what();
+				log_conn_error() << ", stdio_proxy exception: " << e.what();
 			}
 			co_return;
 		}
