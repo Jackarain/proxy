@@ -135,7 +135,7 @@ docker build . -t proxy:v1
 
 代理隧道功能主要实现了 [proxytunnel](https://github.com/proxytunnel/proxytunnel) 它的功能，具体使用方式示例如下，在 `.ssh` 目录中的 `config` 配置文件中添加如：
 
-```yml
+```
 Host example
 	HostName 255.255.255.255
 	IdentityFile /root/.ssh/id_rsa
