@@ -1454,9 +1454,9 @@ public:
 	}
 	inline logger___& operator<<(const std::string& v)
 	{
-#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!global_logging___)
 			return *this;
+#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(v))
 		{
 			auto wres = logger_aux__::string_wide(v);
@@ -1472,9 +1472,9 @@ public:
 	}
 	inline logger___& operator<<(const std::pmr::string& v)
 	{
-#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!global_logging___)
 			return *this;
+#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(v))
 		{
 			auto wres = logger_aux__::string_wide(v);
@@ -1509,9 +1509,9 @@ public:
 #endif
 	inline logger___& operator<<(const std::string_view& v)
 	{
-#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!global_logging___)
 			return *this;
+#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(v))
 		{
 			auto wres = logger_aux__::string_wide(v);
@@ -1528,9 +1528,9 @@ public:
 	inline logger___& operator<<(const boost::string_view& v)
 	{
 		std::string_view sv{v.data(), v.length()};
-#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!global_logging___)
 			return *this;
+#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(sv))
 		{
 			auto wres = logger_aux__::string_wide(sv);
@@ -1547,9 +1547,9 @@ public:
 	inline logger___& operator<<(const char* v)
 	{
 		std::string_view sv(v);
-#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!global_logging___)
 			return *this;
+#ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(sv))
 		{
 			auto wres = logger_aux__::string_wide(sv);
