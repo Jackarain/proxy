@@ -130,6 +130,41 @@ docker build . -t proxy:v1
 | scramble | 数据是否启用噪声加扰(即通过随机噪声数据混淆数据传输)，此选项需要在2端同时开启 |
 | noise_length | 在启用 `scramble` 的时候，随机发送的噪声数据最大长度，默认最大长度为4k |
 
+## 代理服务器功能
+
+作为一个 `proxy` 服务器，它主要实现了 `socks5`/`socks4`/`http`/`https` 等协议的代理功能，示例如下：
+
+``` bash
+./proxy_server --server_listen 0.0.0.0:1080
+```
+
+上述示例中，`proxy_server` 监听在 `0.0.0.0:1080` 端口，客户端可以通过 `socks5`/`socks4`/`http`/`https` 等协议连接到 `proxy_server` 进行代理，请注意，默认情况下需要认证才能连接，认证信息为 `jack:1111`，若需要设置为无需要认证代理模式，必须置 `auth_users` 参数为 ""，如：
+
+``` bash
+./proxy_server --server_listen 0.0.0.0:1080 --auth_users ""
+```
+
+若是需要作为中间级联服务时，`proxy_pass` 指定上游代理服务地址，格式为 `url` 格式，如果有认证信息并必须包含认证信息，如: `https://jack:1111@example.com:1080/`，则必须在 `proxy_pass` 中包含认证信息，否则将连接失败，示例如下：
+
+``` bash
+./proxy_server --server_listen 0.0.0.0:1080 --proxy_pass https://jack:1111@example.com:1080/
+```
+
+上游代理服务若是 `socks5` 协议且需要使用 `ssl` 加密传输时，`url` 的 `scheme` 必须以 `s` 结尾，如: `socks5s://jack:1111@example.com:1080/`。
+
+当作为服务器启用 SSL 加密传输时，需要配置 `ssl_certificate_dir` 参数指定证书密钥等文件目录，这样客户端就可以通过 `https`/`socks5s` 加密协议连接到 `proxy_server` 进行代理，示例如下：
+
+``` bash
+./proxy_server --server_listen 0.0.0.0:1080 --ssl_certificate_dir /path/to/ssl/cert
+```
+
+若是运行在路由器作为全局代理，`proxy_server` 支持 `TPROXY` 透明代理功能，示例如下：
+
+``` bash
+./proxy_server --transparent true --server_listen 0.0.0.0:1080 --proxy_pass https://jack:1111@example.com:1080/
+```
+
+上面示例中，`proxy_server` 监听在 `0.0.0.0:1080` 端口， 通过在路由器上配置 TPROXY 到 `0.0.0.0:1080` 端口，将需要代理的 IP 通过 TPROXY 的方式连接到 `proxy_server`，`proxy_server` 会将客户端请求通过 `https://jack:1111@example.com:1080/` 进行代理，客户端无需做任何配置。
 
 ## 代理隧道功能
 
@@ -137,7 +172,7 @@ docker build . -t proxy:v1
 
 ```
 Host example
-	HostName 255.255.255.255
+	HostName xxx.xxx.xxx.xxx
 	IdentityFile /root/.ssh/id_rsa
 	User root
 	ProxyCommand /path/to/proxy_server --stdio %h:%p --proxy_pass https://user:pass@proxy.server:8443
