@@ -1025,18 +1025,13 @@ R"x*x*x(<html>
 
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 				net::posix::stream_descriptor stream_stdout(m_executor, ::dup(STDOUT_FILENO));
+				stdio_stream stream(std::move(stream_stdout));
 #else
-				HANDLE stdout_handle = ::GetStdHandle(STD_OUTPUT_HANDLE);
-				if (stdout_handle == INVALID_HANDLE_VALUE)
-				{
-					log_conn_error() << ", stdio proxy invalid stdout handle";
-					co_return;
-				}
-
-				boost::asio::windows::stream_handle stream_stdout(m_executor);
-				stream_stdout.assign(stdout_handle);
+				stdio_stream stream(
+					boost::variant2::get<stdio_stream>(m_local_socket).get_in_executor(),
+					boost::variant2::get<stdio_stream>(m_local_socket).get_out_executor());
 #endif
-				auto out = init_proxy_stream(stdio_stream(std::move(stream_stdout)));
+				auto out = init_proxy_stream(std::move(stream));
 				auto& in = m_local_socket;
 
 				size_t l2r_transferred = 0;
@@ -5459,17 +5454,42 @@ R"x*x*x(<html>
 						{
 							// 使用 stdio socket 初始化 proxy session.
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
-							net::posix::stream_descriptor stream(m_executor, ::dup(STDIN_FILENO));
+							net::posix::stream_descriptor stream_in(m_executor, ::dup(STDIN_FILENO));
+							stdio_stream stream(std::move(stream_in));
 #else
-							HANDLE stdin_handle = ::GetStdHandle(STD_INPUT_HANDLE);
-							if (stdin_handle == INVALID_HANDLE_VALUE)
-							{
-								XLOG_ERR << "stdio proxy invalid stdin handle";
-								co_return;
-							}
+							std::shared_ptr<net::io_context> in_ctx = std::make_shared<net::io_context>(1);
+							std::shared_ptr<net::io_context> out_ctx = std::make_shared<net::io_context>(1);
+							std::thread([in_ctx]() mutable
+								{
+									auto work_guard = net::make_work_guard(*in_ctx);
 
-							boost::asio::windows::stream_handle stream(m_executor);
-							stream.assign(stdin_handle);
+									try
+									{
+										in_ctx->run();
+									}
+									catch (const std::exception&)
+									{}
+
+									XLOG_DBG << "stdio input context thread exit";
+
+								}).detach();
+
+							std::thread([out_ctx]() mutable
+								{
+									auto work_guard = net::make_work_guard(*out_ctx);
+
+									try
+									{
+										out_ctx->run();
+									}
+									catch (const std::exception&)
+									{}
+
+									XLOG_DBG << "stdio output context thread exit";
+
+								}).detach();
+
+							stdio_stream stream(in_ctx->get_executor(), out_ctx->get_executor());
 #endif
 							// 创建 proxy session 对象.
 							auto new_session =
@@ -5478,7 +5498,7 @@ R"x*x*x(<html>
 									m_backend_context,
 									m_scheduler_locking,
 									m_dns_cache,
-									init_proxy_stream(stdio_stream(std::move(stream))),
+									init_proxy_stream(std::move(stream)),
 									0,
 									self);
 

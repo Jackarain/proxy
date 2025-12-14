@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (C) 2024 Jack.
 //
 // Author: jack
@@ -10,8 +10,6 @@
 
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 # include <boost/asio/posix/stream_descriptor.hpp>
-#else
-# include <boost/asio/windows/stream_handle.hpp>
 #endif // BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR
 
 #include <boost/asio/executor.hpp>
@@ -23,6 +21,179 @@ namespace util {
 
 	namespace net = boost::asio;
 
+#if !defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
+	class stdio_stream
+	{
+		stdio_stream(const stdio_stream&) = delete;
+		stdio_stream& operator=(stdio_stream const&) = delete;
+
+	public:
+		using executor_type = net::any_io_executor;
+		using lowest_layer_type = stdio_stream;
+		using native_handle_type = void*;
+
+		stdio_stream(executor_type in_executor, executor_type out_executor)
+			: in_executor_(in_executor)
+			, out_executor_(out_executor)
+		{
+			// std::cin.sync_with_stdio(false);
+			// std::cout.sync_with_stdio(false);
+		}
+
+		stdio_stream& operator=(stdio_stream&& other) noexcept
+		{
+			if (this != &other)
+			{
+				in_executor_ = other.in_executor_;
+				out_executor_ = other.out_executor_;
+			}
+			return *this;
+		}
+
+		stdio_stream(stdio_stream&& other) noexcept
+			: in_executor_(other.in_executor_)
+			, out_executor_(other.out_executor_)
+		{
+		}
+
+		executor_type get_executor() noexcept
+		{
+			return out_executor_;
+		}
+
+		executor_type get_in_executor() noexcept
+		{
+			return in_executor_;
+		}
+
+		executor_type get_out_executor() noexcept
+		{
+			return out_executor_;
+		}
+
+		lowest_layer_type& lowest_layer() noexcept
+		{
+			return *this;
+		}
+
+		lowest_layer_type const& lowest_layer() const noexcept
+		{
+			return *this;
+		}
+
+		bool is_open() const noexcept
+		{
+			return true;
+		}
+
+		void close()
+		{
+		}
+
+		void close(boost::system::error_code ec)
+		{
+			ec = {};
+		}
+
+		class initiate_async_read_some
+		{
+		public:
+			using executor_type = typename stdio_stream::executor_type;
+
+			explicit initiate_async_read_some(stdio_stream* self)
+				: self_(self)
+			{
+			}
+
+			template <typename ReadHandler, typename MutableBufferSequence>
+			void operator()(ReadHandler&& handler, const MutableBufferSequence& buffers) const
+			{
+				net::post(self_->in_executor_, [buffers, executor = self_->in_executor_, handler = std::move(handler)]() mutable
+					{
+						net::mutable_buffer buffer =
+							net::detail::buffer_sequence_adapter<
+							net::mutable_buffer, MutableBufferSequence>::first(buffers);
+
+						DWORD bytes_read = 0;
+						static HANDLE input_handle(::GetStdHandle(STD_INPUT_HANDLE));
+
+						::ReadFile(input_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_read, nullptr);
+
+						auto exec = net::get_associated_executor(handler, executor);
+
+						net::post(exec, [bytes_read, handler = std::move(handler)]() mutable
+							{
+								boost::system::error_code ec;
+								handler(ec, bytes_read);
+							});
+					});
+			}
+
+		private:
+			stdio_stream* self_;
+		};
+
+		class initiate_async_write_some
+		{
+		public:
+			using executor_type = typename stdio_stream::executor_type;
+
+			explicit initiate_async_write_some(stdio_stream* self)
+				: self_(self)
+			{
+			}
+
+			template <typename WriteHandler, typename ConstBufferSequence>
+			void operator()(WriteHandler&& handler, const ConstBufferSequence& buffers) const
+			{
+				net::post(self_->out_executor_, [buffers, executor = self_->in_executor_, handler = std::move(handler)]() mutable
+					{
+						net::const_buffer buffer =
+							net::detail::buffer_sequence_adapter<
+							net::const_buffer, ConstBufferSequence>::first(buffers);
+
+						DWORD bytes_written = 0;
+						static HANDLE output_handle(::GetStdHandle(STD_OUTPUT_HANDLE));
+
+						::WriteFile(output_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_written, nullptr);
+
+						auto exec = net::get_associated_executor(handler, executor);
+
+						net::post(exec, [bytes_written, handler = std::move(handler)]() mutable
+							{
+								boost::system::error_code ec;
+								handler(ec, bytes_written);
+							});
+					});
+			}
+
+		private:
+			stdio_stream* self_;
+		};
+
+
+		template <typename MutableBufferSequence, typename ReadHandler>
+		auto async_read_some(const MutableBufferSequence& buffers, ReadHandler&& handler)
+		{
+			return net::async_initiate<ReadHandler,
+				void(boost::system::error_code, std::size_t)>(
+					initiate_async_read_some(this), handler, buffers);
+		}
+
+		template <typename ConstBufferSequence, typename WriteHandler>
+		auto async_write_some(const ConstBufferSequence& buffers, WriteHandler&& handler)
+		{
+			return net::async_initiate<WriteHandler,
+				void(boost::system::error_code, std::size_t)>(
+					initiate_async_write_some(this), handler, buffers);
+		}
+
+	private:
+		executor_type out_executor_;
+		executor_type in_executor_;
+	};
+
+#else
 
 	class stdio_stream
 	{
@@ -30,11 +201,7 @@ namespace util {
 		stdio_stream& operator=(stdio_stream const&) = delete;
 
 	public:
-#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 		using next_layer_type = net::posix::stream_descriptor;
-#else
-		using next_layer_type = net::windows::stream_handle;
-#endif
 
 		using executor_type = next_layer_type::executor_type;
 		using lowest_layer_type = typename next_layer_type::lowest_layer_type;
@@ -69,8 +236,7 @@ namespace util {
 
 		~stdio_stream() = default;
 
-	public:
-		executor_type get_executor() const noexcept
+		executor_type get_executor() noexcept
 		{
 			return impl_->get_executor();
 		}
@@ -82,50 +248,57 @@ namespace util {
 
 		lowest_layer_type const& lowest_layer() const noexcept
 		{
+#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			return *impl_;
-		}
-
-		endpoint_type remote_endpoint() const
-		{
-			return {};
-		}
-
-		endpoint_type local_endpoint() const
-		{
-			return {};
+#endif
 		}
 
 		bool is_open() const noexcept
 		{
+#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			return impl_->is_open();
+#endif
 		}
 
 		void close()
 		{
+#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			impl_->close();
+#endif
 		}
 
 		void close(boost::system::error_code& ec)
 		{
 			ec = {};
+#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			impl_->close();
+#endif
 		}
 
 		template <typename MutableBufferSequence, typename ReadHandler>
 		auto async_read_some(const MutableBufferSequence& buffers, ReadHandler&& handler)
 		{
+#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			return impl_->async_read_some(buffers, std::forward<ReadHandler>(handler));
+#endif
 		}
 
 		template <typename ConstBufferSequence, typename WriteHandler>
 		auto async_write_some(const ConstBufferSequence& buffers, WriteHandler&& handler)
 		{
+#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			return impl_->async_write_some(buffers, std::forward<WriteHandler>(handler));
+#endif
 		}
 
 	private:
+#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 		std::unique_ptr<next_layer_type> impl_;
+#endif
 	};
+
+#endif
+
 }
 
 #endif // INCLUDE__2025_12_12__STDIO_STREAM_HPP
