@@ -248,53 +248,38 @@ namespace util {
 
 		lowest_layer_type const& lowest_layer() const noexcept
 		{
-#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			return *impl_;
-#endif
 		}
 
 		bool is_open() const noexcept
 		{
-#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			return impl_->is_open();
-#endif
 		}
 
 		void close()
 		{
-#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			impl_->close();
-#endif
 		}
 
 		void close(boost::system::error_code& ec)
 		{
-			ec = {};
-#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
-			impl_->close();
-#endif
+			impl_->close(ec);
 		}
 
 		template <typename MutableBufferSequence, typename ReadHandler>
 		auto async_read_some(const MutableBufferSequence& buffers, ReadHandler&& handler)
 		{
-#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			return impl_->async_read_some(buffers, std::forward<ReadHandler>(handler));
-#endif
 		}
 
 		template <typename ConstBufferSequence, typename WriteHandler>
 		auto async_write_some(const ConstBufferSequence& buffers, WriteHandler&& handler)
 		{
-#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 			return impl_->async_write_some(buffers, std::forward<WriteHandler>(handler));
-#endif
 		}
 
 	private:
-#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 		std::unique_ptr<next_layer_type> impl_;
-#endif
 	};
 
 #endif
