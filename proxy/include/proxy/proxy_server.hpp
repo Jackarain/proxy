@@ -1072,6 +1072,8 @@ R"x*x*x(<html>
 								net_awaitable[ec]);
 							if (ec)
 								break;
+
+							l2r_transferred += read_bytes;
 						}
 
 						co_return;
@@ -1097,6 +1099,8 @@ R"x*x*x(<html>
 								net_awaitable[ec]);
 							if (ec)
 								break;
+
+							r2l_transferred += read_bytes;
 						}
 
 						co_return;
