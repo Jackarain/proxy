@@ -5517,7 +5517,6 @@ R"x*x*x(<html>
 							stdio_stream stream(std::move(stream_in));
 #else
 							std::shared_ptr<net::io_context> in_ctx = std::make_shared<net::io_context>(1);
-							std::shared_ptr<net::io_context> out_ctx = std::make_shared<net::io_context>(1);
 							std::thread([in_ctx]() mutable
 								{
 									auto work_guard = net::make_work_guard(*in_ctx);
@@ -5533,22 +5532,8 @@ R"x*x*x(<html>
 
 								}).detach();
 
-							std::thread([out_ctx]() mutable
-								{
-									auto work_guard = net::make_work_guard(*out_ctx);
 
-									try
-									{
-										out_ctx->run();
-									}
-									catch (const std::exception&)
-									{}
-
-									XLOG_DBG << "stdio output context thread exit";
-
-								}).detach();
-
-							stdio_stream stream(in_ctx->get_executor(), out_ctx->get_executor());
+							stdio_stream stream(in_ctx->get_executor(), m_executor);
 #endif
 							// 创建 proxy session 对象.
 							auto new_session =
