@@ -1023,32 +1023,47 @@ R"x*x*x(<html>
 				if (ec)
 					co_return;
 
+				size_t l2r_transferred = 0;
+				size_t r2l_transferred = 0;
+
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
 				net::posix::stream_descriptor stream_stdout(m_executor, ::dup(STDOUT_FILENO));
 				stdio_stream stream(std::move(stream_stdout));
+
 				auto out = init_proxy_stream(std::move(stream));
+				auto& in = m_local_socket;
+
+				// 并发读写, 在 local 和 remote 之间互传数据.
+				co_await(
+					transfer(in, m_remote_socket, l2r_transferred)
+					&&
+					transfer(m_remote_socket, out, r2l_transferred)
+					);
+
 #else
 				auto in_executor = boost::variant2::get<stdio_stream>(m_local_socket).get_in_executor();
 				auto out_executor = boost::variant2::get<stdio_stream>(m_local_socket).get_out_executor();
 
 				stdio_stream stream(in_executor, out_executor);
+
 				auto out = init_proxy_stream(std::move(stream));
+				auto& in = m_local_socket;
 
 				auto self = shared_from_this();
 
-				net::co_spawn(in_executor, [this, self]() mutable -> net::awaitable<void>
+				net::co_spawn(in_executor,
+					[this, self, &in, &l2r_transferred]() mutable -> net::awaitable<void>
 					{
 						boost::system::error_code ec;
-						constexpr size_t BUF_SIZE = 4096;
-						char buf[BUF_SIZE]{ 0 };
-						auto src = ::GetStdHandle(STD_INPUT_HANDLE);
+						constexpr size_t buf_size = 4096;
+						char buf[buf_size]{ 0 };
 
 						while (!m_abort)
 						{
 							DWORD read_bytes = 0;
-							if (!::ReadFile(src, buf, BUF_SIZE, &read_bytes, NULL))
-								break;
-							if (read_bytes == 0)
+							read_bytes = (DWORD)co_await in.async_read_some(
+								net::buffer(buf, buf_size), net_awaitable[ec]);
+							if (ec)
 								break;
 
 							co_await net::async_write(
@@ -1059,46 +1074,34 @@ R"x*x*x(<html>
 								break;
 						}
 
-						std::cerr << "stdio input thread exited" << std::endl;
 						co_return;
 					}, net::detached);
 
-				co_await net::co_spawn(out_executor, [this, self]() mutable -> net::awaitable<void>
+				co_await net::co_spawn(out_executor,
+					[this, self, &out, &r2l_transferred]() mutable -> net::awaitable<void>
 					{
 						boost::system::error_code ec;
-						constexpr size_t BUF_SIZE = 4096;
-						char buf[BUF_SIZE]{ 0 };
-						auto dst = ::GetStdHandle(STD_OUTPUT_HANDLE);
+						constexpr size_t buf_size = 4096;
+						char buf[buf_size]{ 0 };
 
 						while (!m_abort)
 						{
 							DWORD read_bytes = (DWORD)co_await m_remote_socket.async_read_some(
-								net::buffer(buf, BUF_SIZE),
-								net_awaitable[ec]);
+								net::buffer(buf, buf_size), net_awaitable[ec]);
 							if (ec)
 								break;
 
-							DWORD written = 0;
-							::WriteFile(dst, buf, read_bytes, &written, NULL);
+							co_await net::async_write(
+								out,
+								net::buffer(buf, read_bytes),
+								net_awaitable[ec]);
+							if (ec)
+								break;
 						}
 
-						std::cerr << "stdio output thread exited" << std::endl;
 						co_return;
 					}, net::deferred);
-
-				co_return;
 #endif
-				auto& in = m_local_socket;
-
-				size_t l2r_transferred = 0;
-				size_t r2l_transferred = 0;
-
-				// 并发读写, 在 local 和 remote 之间互传数据.
-				co_await(
-					transfer(in, m_remote_socket, l2r_transferred)
-					&&
-					transfer(m_remote_socket, out, r2l_transferred)
-				);
 
 				log_conn_debug()
 					<< ", transfer completed"

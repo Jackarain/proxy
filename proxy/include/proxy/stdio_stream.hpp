@@ -108,25 +108,17 @@ namespace util {
 			template <typename ReadHandler, typename MutableBufferSequence>
 			void operator()(ReadHandler&& handler, const MutableBufferSequence& buffers) const
 			{
-				net::post(self_->in_executor_, [buffers, executor = self_->in_executor_, handler = std::move(handler)]() mutable
-					{
-						net::mutable_buffer buffer =
-							net::detail::buffer_sequence_adapter<
-							net::mutable_buffer, MutableBufferSequence>::first(buffers);
+				net::mutable_buffer buffer =
+					net::detail::buffer_sequence_adapter<
+					net::mutable_buffer, MutableBufferSequence>::first(buffers);
 
-						DWORD bytes_read = 0;
-						static HANDLE input_handle(::GetStdHandle(STD_INPUT_HANDLE));
+				DWORD bytes_read = 0;
+				static HANDLE input_handle(::GetStdHandle(STD_INPUT_HANDLE));
 
-						::ReadFile(input_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_read, nullptr);
+				::ReadFile(input_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_read, NULL);
 
-						auto exec = net::get_associated_executor(handler, executor);
-
-						net::post(exec, [bytes_read, handler = std::move(handler)]() mutable
-							{
-								boost::system::error_code ec;
-								handler(ec, bytes_read);
-							});
-					});
+				boost::system::error_code ec;
+				handler(ec, bytes_read);
 			}
 
 		private:
@@ -146,25 +138,17 @@ namespace util {
 			template <typename WriteHandler, typename ConstBufferSequence>
 			void operator()(WriteHandler&& handler, const ConstBufferSequence& buffers) const
 			{
-				net::post(self_->out_executor_, [buffers, executor = self_->in_executor_, handler = std::move(handler)]() mutable
-					{
-						net::const_buffer buffer =
-							net::detail::buffer_sequence_adapter<
-							net::const_buffer, ConstBufferSequence>::first(buffers);
+				net::const_buffer buffer =
+					net::detail::buffer_sequence_adapter<
+					net::const_buffer, ConstBufferSequence>::first(buffers);
 
-						DWORD bytes_written = 0;
-						static HANDLE output_handle(::GetStdHandle(STD_OUTPUT_HANDLE));
+				DWORD bytes_written = 0;
+				static HANDLE output_handle(::GetStdHandle(STD_OUTPUT_HANDLE));
 
-						::WriteFile(output_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_written, nullptr);
+				::WriteFile(output_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_written, NULL);
 
-						auto exec = net::get_associated_executor(handler, executor);
-
-						net::post(exec, [bytes_written, handler = std::move(handler)]() mutable
-							{
-								boost::system::error_code ec;
-								handler(ec, bytes_written);
-							});
-					});
+				boost::system::error_code ec;
+				handler(ec, bytes_written);
 			}
 
 		private:
