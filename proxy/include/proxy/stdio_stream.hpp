@@ -112,12 +112,25 @@ namespace util {
 					net::detail::buffer_sequence_adapter<
 					net::mutable_buffer, MutableBufferSequence>::first(buffers);
 
+				boost::system::error_code ec;
 				DWORD bytes_read = 0;
 				static HANDLE input_handle(::GetStdHandle(STD_INPUT_HANDLE));
 
-				::ReadFile(input_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_read, NULL);
+				BOOL ok = ::ReadFile(input_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_read, NULL);
+				if (!ok)
+				{
+					DWORD last_error = ::GetLastError();
+					if (last_error != ERROR_IO_PENDING && last_error != ERROR_MORE_DATA)
+					{
+						if (last_error == ERROR_HANDLE_EOF)
+							ec = net::error::eof;
+						else
+							ec = boost::system::error_code(last_error,
+								net::error::get_system_category());
+						BOOST_ASIO_ERROR_LOCATION(ec);
+					}
+				}
 
-				boost::system::error_code ec;
 				handler(ec, bytes_read);
 			}
 
@@ -142,12 +155,21 @@ namespace util {
 					net::detail::buffer_sequence_adapter<
 					net::const_buffer, ConstBufferSequence>::first(buffers);
 
+				boost::system::error_code ec;
 				DWORD bytes_written = 0;
 				static HANDLE output_handle(::GetStdHandle(STD_OUTPUT_HANDLE));
 
-				::WriteFile(output_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_written, NULL);
+				BOOL ok = ::WriteFile(output_handle, buffer.data(), static_cast<DWORD>(buffer.size()), &bytes_written, NULL);
+				if (!ok)
+				{
+					DWORD last_error = ::GetLastError();
+					if (last_error != ERROR_IO_PENDING)
+					{
+						ec = boost::system::error_code(last_error, net::error::get_system_category());
+						BOOST_ASIO_ERROR_LOCATION(ec);
+					}
+				}
 
-				boost::system::error_code ec;
 				handler(ec, bytes_written);
 			}
 
