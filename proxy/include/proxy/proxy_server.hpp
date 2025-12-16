@@ -5224,6 +5224,12 @@ R"x*x*x(<html>
 					&GENERAL_NAMES_free
 				};
 
+				if (!general_names)
+				{
+					XLOG_WARN << "X509_get_ext_d2i return nullptr!";
+					return;
+				}
+
 				for (int i = 0; i < sk_GENERAL_NAME_num(general_names.get()); i++)
 				{
 					GENERAL_NAME* gen = sk_GENERAL_NAME_value(general_names.get(), i);
@@ -5994,67 +6000,42 @@ R"x*x*x(<html>
 
 		inline bool region_filter(const std::vector<std::string>& local_info) const noexcept
 		{
-			auto& deny_region = m_option.deny_regions_;
-			auto& allow_region = m_option.allow_regions_;
+			const auto& deny_region = m_option.deny_regions_;
+			const auto& allow_region = m_option.allow_regions_;
 
-			std::optional<bool> allow;
-
-			if (!allow_region.empty() || !deny_region.empty())
-			{
-				for (auto& region : allow_region)
-				{
-					for (auto& l : local_info)
-					{
-						if (l == region)
-						{
-							allow.emplace(true);
-							break;
-						}
-
-						if (ip_filter(region, l))
-						{
-							allow.emplace(true);
-							break;
-						}
-
-						allow.emplace(false);
-					}
-
-					if (allow && *allow)
-						break;
-				}
-
-				if (!allow)
-				{
-					for (auto& region : deny_region)
-					{
-						for (auto& l : local_info)
-						{
-							if (l == region)
-							{
-								allow.emplace(false);
-								break;
-							}
-
-							if (ip_filter(region, l))
-							{
-								allow.emplace(false);
-								break;
-							}
-
-							allow.emplace(true);
-						}
-
-						if (allow && !*allow)
-							break;
-					}
-				}
-			}
-
-			if (!allow)
+			if (deny_region.empty() && allow_region.empty())
 				return true;
 
-			return *allow;
+			auto rule_hit = [&](const std::string& rule) -> bool
+				{
+					for (const auto& item : local_info)
+					{
+						if (item == rule)
+							return true;
+
+						if (ip_filter(rule, item))
+							return true;
+					}
+					return false;
+				};
+
+			for (const auto& rule : deny_region)
+			{
+				if (rule_hit(rule))
+					return false;
+			}
+
+			if (!allow_region.empty())
+			{
+				for (const auto& rule : allow_region)
+				{
+					if (rule_hit(rule))
+						return true;
+				}
+				return false;
+			}
+
+			return true;
 		}
 
 		inline void backend_thread_run() noexcept
