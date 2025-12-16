@@ -5392,51 +5392,56 @@ R"x*x*x(<html>
 
 		inline int sni_callback(SSL *ssl, [[maybe_unused]] int *ad) noexcept
 		{
-			const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
-			if (!servername)
-			{
-				// 返回默认证书.
-				auto& certificates = *m_certificates;
-				if (certificates.empty())
-					return SSL_TLSEXT_ERR_OK;
-
-				SSL_set_SSL_CTX(ssl, certificates[0].ssl_context_->native_handle());
+			if (!m_certificates)
 				return SSL_TLSEXT_ERR_OK;
-			}
+
+			auto& certificates = *m_certificates;
+			if (certificates.empty())
+				return SSL_TLSEXT_ERR_OK;
 
 			certificate_file* default_ctx = nullptr;
-			auto& certificates = *m_certificates;
-
-			for (auto& ctx : certificates)
+			for (auto& c : certificates)
 			{
-				if (ctx.ssl_context_.has_value())
+				if (c.ssl_context_.has_value())
 				{
-					if (rfc2818_verification_match_pattern(
-						ctx.domain_.c_str(), ctx.domain_.length(), servername))
-					{
-						SSL_set_SSL_CTX(ssl, ctx.ssl_context_->native_handle());
-						return SSL_TLSEXT_ERR_OK;
-					}
-
-					for (auto& alt_name : ctx.alt_names_)
-					{
-						if (rfc2818_verification_match_pattern(
-							alt_name.c_str(), alt_name.length(), servername))
-						{
-							SSL_set_SSL_CTX(ssl, ctx.ssl_context_->native_handle());
-							return SSL_TLSEXT_ERR_OK;
-						}
-					}
+					default_ctx = &c;
+					break;
 				}
-				if (!default_ctx)
-					default_ctx = &ctx;
 			}
 
-			if (default_ctx)
+			if (!default_ctx)
+				return SSL_TLSEXT_ERR_OK;
+
+			const char *servername = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+			if (!servername)
 			{
 				SSL_set_SSL_CTX(ssl, default_ctx->ssl_context_->native_handle());
 				return SSL_TLSEXT_ERR_OK;
 			}
+
+			for (auto& ctx : certificates)
+			{
+				if (!ctx.ssl_context_.has_value())
+					continue;
+
+				if (!ctx.domain_.empty() &&
+					rfc2818_verification_match_pattern(ctx.domain_.c_str(), ctx.domain_.size(), servername))
+				{
+					SSL_set_SSL_CTX(ssl, ctx.ssl_context_->native_handle());
+					return SSL_TLSEXT_ERR_OK;
+				}
+
+				for (auto& alt_name : ctx.alt_names_)
+				{
+					if (rfc2818_verification_match_pattern(alt_name.c_str(), alt_name.length(), servername))
+					{
+						SSL_set_SSL_CTX(ssl, ctx.ssl_context_->native_handle());
+						return SSL_TLSEXT_ERR_OK;
+					}
+				}
+			}
+
+			SSL_set_SSL_CTX(ssl, default_ctx->ssl_context_->native_handle());
 
 			return SSL_TLSEXT_ERR_OK;
 		}
