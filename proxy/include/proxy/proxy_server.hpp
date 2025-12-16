@@ -5686,13 +5686,13 @@ R"x*x*x(<html>
 
 			auto self = shared_from_this();
 
-			co_await acceptor.async_accept(
-				socket.lowest_layer(), net_awaitable[error]);
+			co_await acceptor.async_accept(socket.lowest_layer(), net_awaitable[error]);
 			if (error)
 			{
-				if (!m_abort)
-					XLOG_ERR << "start_proxy_listen"
-					", async_accept: " << error.message();
+				if (error == net::error::operation_aborted || m_abort)
+					co_return;
+
+				XLOG_WARN << "start_proxy_listen, async_accept: " << error.message();
 				co_return;
 			}
 
@@ -5706,7 +5706,6 @@ R"x*x*x(<html>
 			{
 				auto endp = tcp_remote_endpoint(socket);
 				client = endp.address().to_string();
-
 				local_info.push_back(client);
 				client += ":" + std::to_string(endp.port());
 
@@ -5731,17 +5730,13 @@ R"x*x*x(<html>
 				client = endp.path();
 			}
 
-			XLOG_DBG << "connection id: "
-				<< connection_id
-				<< ", start client incoming: "
-				<< client;
+			XLOG_DBG << "connection id: " << connection_id
+				<< ", start client incoming: " << client;
 
 			if (!region_filter(local_info))
 			{
-				XLOG_WARN << "connection id: "
-					<< connection_id
-					<< ", region filter: "
-					<< client;
+				XLOG_WARN << "connection id: " << connection_id
+					<< ", region filter: " << client;
 				co_return;
 			}
 
@@ -5783,9 +5778,7 @@ R"x*x*x(<html>
 			if constexpr (std::same_as<S, proxy_tcp_socket>)
 			{
 				if (tproxy_endpoint)
-				{
 					new_session->setup_tproxy(*tproxy_endpoint);
-				}
 			}
 #endif
 
