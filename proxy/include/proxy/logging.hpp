@@ -934,8 +934,18 @@ inline void logger_output_console__([[maybe_unused]] const logger_level__& level
 #if defined(WIN32)
 
 #if !defined(DISABLE_XLOGGER_TO_CONSOLE) || !defined(DISABLE_XLOGGER_TO_DBGVIEW)
-	std::wstring title = *logger_aux__::utf8_utf16(prefix);
-	std::wstring msg = *logger_aux__::utf8_utf16(message);
+	std::wstring title;
+	std::wstring msg;
+	auto title_opt = logger_aux__::utf8_utf16(prefix);
+	if (title_opt)
+		title = *title_opt;
+	else
+		BOOST_ASSERT(false && "Log prefix is not valid UTF-8");
+	auto msg_opt = logger_aux__::utf8_utf16(message);
+	if (msg_opt)
+		msg = *msg_opt;
+	else
+		BOOST_ASSERT(false && "Log message is not valid UTF-8");
 #endif
 
 #if !defined(DISABLE_XLOGGER_TO_CONSOLE)
@@ -1188,17 +1198,24 @@ namespace logger_aux__ {
 
 		inline void internal_work()
 		{
-			while (!m_abort || !m_messages.empty())
-			{
-				std::unique_lock lock(m_internal_mutex);
-
-				if (m_messages.empty())
-					m_internal_cv.wait_for(lock, 128ms);
-
-				while (!m_messages.empty())
+			auto pull_message = [this]() mutable -> std::optional<internal_message>
 				{
+					std::unique_lock lock(m_internal_mutex);
+					if (m_messages.empty())
+						m_internal_cv.wait_for(lock, 128ms);
+					if (m_messages.empty())
+						return std::nullopt;
 					auto message = std::move(m_messages.front());
 					m_messages.pop_front();
+					return std::optional<internal_message>(std::move(message));
+				};
+
+			while (!m_abort || !m_messages.empty())
+			{
+				auto msg = pull_message();
+				if (msg)
+				{
+					auto& message = *msg;
 
 					logger_writer__(message.time_,
 						message.level_,
@@ -1492,14 +1509,20 @@ public:
 	{
 		if (!global_logging___)
 			return *this;
-		return strcat_impl(*logger_aux__::utf16_utf8(v));
+		auto value = logger_aux__::utf16_utf8(v);
+		if (value)
+			return strcat_impl(*value);
+		return *this;
 	}
 	inline logger___& operator<<(const std::u16string& v)
 	{
 		if (!global_logging___)
 			return *this;
-		return strcat_impl(*logger_aux__::utf16_utf8(
-			{(const wchar_t*)v.data(), v.size()}));
+		auto value = logger_aux__::utf16_utf8(
+			{ (const wchar_t*)v.data(), v.size() });
+		if (value)
+			return strcat_impl(*value);
+		return *this;
 	}
 #if (__cplusplus >= 202002L)
 	inline logger___& operator<<(const std::u8string& v)
@@ -1567,7 +1590,10 @@ public:
 	{
 		if (!global_logging___)
 			return *this;
-		return strcat_impl(*logger_aux__::utf16_utf8(v));
+		auto value = logger_aux__::utf16_utf8(v);
+		if (value)
+			return strcat_impl(*value);
+		return *this;
 	}
 	inline logger___& operator<<(const void *v)
 	{
