@@ -1300,12 +1300,12 @@ inline void turnon_logging() noexcept
 	global_logging___ = true;
 }
 
-inline void toggle_write_logging(bool enable)
+inline void toggle_write_logging(bool enable) noexcept
 {
 	global_write_logging___ = enable;
 }
 
-inline void toggle_console_logging(bool enable)
+inline void toggle_console_logging(bool enable) noexcept
 {
 	global_console_logging___ = enable;
 }
@@ -1863,8 +1863,8 @@ namespace xlogger {
 	inline void shutdown_logging();
 	inline void turnoff_logging() noexcept;
 	inline void turnon_logging() noexcept;
-	inline void toggle_write_logging(bool enable);
-	inline void toggle_console_logging(bool enable);
+	inline void toggle_write_logging(bool enable) noexcept;
+	inline void toggle_console_logging(bool enable) noexcept;
 	inline void set_logfile_maxsize(int64_t size) noexcept;
 }
 
