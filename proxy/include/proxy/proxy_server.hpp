@@ -5833,10 +5833,7 @@ R"x*x*x(<html>
 			sockaddr_storage addr;
 			socklen_t addrlen = sizeof(addr);
 
-			int protocol = addr.ss_family ==
-				AF_INET6 ? IPPROTO_IPV6 : IPPROTO_IP;
-
-			if (::getsockopt(sockfd, protocol, SO_ORIGINAL_DST, (char*)&addr, &addrlen) < 0)
+			if (::getsockopt(sockfd, IPPROTO_IP, SO_ORIGINAL_DST, (char*)&addr, &addrlen) < 0)
 			{
 				XLOG_WARN << "connection id: " << connection_id
 					<< ", getsockopt: " << (int)sockfd
@@ -5844,7 +5841,17 @@ R"x*x*x(<html>
 				co_return remote_endp;
 			}
 
-			if (addr.ss_family == AF_INET6)
+			if (addr.ss_family == AF_INET)
+			{
+				remote_endp.emplace();
+
+				auto addr4 = reinterpret_cast<sockaddr_in*>(&addr);
+				auto port = ntohs(addr4->sin_port);
+
+				remote_endp->address(net::ip::address_v4(htonl(addr4->sin_addr.s_addr)));
+				remote_endp->port(port);
+			}
+			else if (addr.ss_family == AF_INET6)
 			{
 				remote_endp.emplace();
 
@@ -5861,40 +5868,23 @@ R"x*x*x(<html>
 			}
 			else
 			{
-				remote_endp.emplace();
-
-				auto addr4 = reinterpret_cast<sockaddr_in*>(&addr);
-				auto port = ntohs(addr4->sin_port);
-
-				remote_endp->address(net::ip::address_v4(htonl(addr4->sin_addr.s_addr)));
-				remote_endp->port(port);
+				XLOG_WARN << "connection id: " << connection_id
+					<< ", SO_ORIGINAL_DST unexpected family: " << addr.ss_family;
+				co_return remote_endp;
 			}
 
-			XLOG_DBG << "connection id: " << connection_id
-				<< ", tproxy, remote: " << *remote_endp;
+			XLOG_DBG << "connection id: " << connection_id << ", tproxy, remote: " << *remote_endp;
 
+			// 请求的是本机的回环连接, 而不是 TPROXY 代理.
 			if (remote_endp->address().is_loopback())
 			{
-				// 请求的是本机的回环连接, 而不是 TPROXY 代理.
 				remote_endp.reset();
-
 				co_return remote_endp;
 			}
 
-			// 创建透明代理, 开始连接通过代理服务器连接与当前客户端通信.
-			auto it = std::find_if(m_local_addrs.begin(),
-				m_local_addrs.end(), [&](const auto& addr)
-				{
-					if (addr == remote_endp->address())
-						return true;
-					return false;
-				});
-
-			if (it == m_local_addrs.end())
-				co_return remote_endp;
-
-			// 请求的是本机的 socket 连接, 而不是 TPROXY 代理.
-			remote_endp.reset();
+			// 如果 original dst 是本机地址 => 这不是 tproxy 转发目标
+			if (m_local_addrs.find(remote_endp->address()) != m_local_addrs.end())
+				remote_endp.reset();
 
 			co_return remote_endp;
 		}
