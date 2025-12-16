@@ -272,7 +272,7 @@ namespace xlogging_compress__ {
 		int len;
 
 		for (;;) {
-			len = (int)fread(buf, 1, sizeof(buf), in);
+			len = (int)fread(buf, 1, LOGGING_GZ_BUFLEN, in);
 			if (ferror(in))
 				return false;
 
