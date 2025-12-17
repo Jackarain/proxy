@@ -315,8 +315,8 @@ R"x*x*x(<html>
 	// tcp_session_expired_time 用于指定 tcp session 的默认过期时间, 单位为秒.
 	inline const int tcp_session_expired_time = 60;
 
-	// nosie_injection_max_len 用于指定噪声注入的最大长度, 单位为字节.
-	inline const uint16_t nosie_injection_max_len = 0x0fff;
+	// noise_injection_max_len 用于指定噪声注入的最大长度, 单位为字节.
+	inline const uint16_t noise_injection_max_len = 0x0fff;
 
 	// global_known_proto 用于指定全局已知的协议, 用于噪声注入时避免生成已知的协议头.
 	inline const std::set<uint8_t> global_known_proto =
@@ -399,175 +399,232 @@ R"x*x*x(<html>
 	// proxy server 参数选项, 用于指定 proxy server 的各种参数.
 	struct proxy_server_option
 	{
-		// proxy server 侦听端口.
-		// 可同时侦听在多个 endpoint 上
-		// 其中 bool 表示是在 endpoint 是 v6 地址的情况下否是 v6only.
+		// 代理服务端 TCP 监听端口列表。
+		//
+		// - 支持同时监听多个 endpoint（多地址/多端口）。
+		// - tuple 的第 1 个元素为 tcp::endpoint；第 2 个元素仅在 endpoint 为 IPv6 地址时生效：
+		//   * true  : 表示设置 IPV6_V6ONLY，仅接受 IPv6 连接；
+		//   * false : 表示允许 IPv4-mapped/双栈行为（具体由系统与 socket 选项决定）。
 		std::vector<std::tuple<tcp::endpoint, bool>> listens_;
 
-		// proxy server 侦听在 unix domain socket.
-		// 可同时侦听在多个 endpoint 上
+		// 代理服务端 Unix Domain Socket（UDS）监听端点列表。
+		//
+		// - 支持同时监听多个 UDS 路径。
+		// - 适用于同机进程间通信、在容/本机环境中提供更安全/更低开销的入口。
 		std::vector<net::local::stream_protocol::endpoint> uds_listens_;
 
-		// 通过 proxy_pass 转发 stdio 到指定目标服务器.
+		// 通过 proxy_pass 转发/桥接当前进程的 stdio 到指定目标服务器。
+		//
+		// - 典型用途：将 stdin/stdout 作为一条逻辑“连接”转发到远端（例如作为守护进程的 stdio 入口）。
+		// - 为空表示不启用该功能。
 		std::string stdio_target_;
 
-		// 授权信息.
-		// auth_users 的第1个元素为用户名, 第2个元素为密码, 第3个元素为
-		// 该用户绑定的网络出口 IP 接口, 第4个为该用户指定的 proxy_pass.
-		// auth_users_ 为空时, 表示不需要认证.
-		// auth_users_ 可以是多个用户, 例如:
-		// { {"user1", "passwd1"}, {"user2", "passwd2"} };
+		// 授权（认证）用户列表。
+		//
+		// auth_users 的含义：
+		// - 第 1 个元素：用户名
+		// - 第 2 个元素：密码
+		// - 第 3 个元素：该用户绑定的网络出口 IP / 本地接口（用于对外发起连接时的绑定，或作为策略匹配字段）
+		// - 第 4 个元素：该用户专属的 proxy_pass（可选），用于让不同用户走不同上游/链路
+		//
+		// 约定：
+		// - auth_users_ 为空：表示不需要认证（匿名访问）。
+		// - 支持多个用户，例如：
+		//   { {"user1", "passwd1", "", std::nullopt}, {"user2", "passwd2", "1.2.3.4", url} }。
 		using auth_users = std::tuple<std::string, std::string, std::string, std::optional<urls::url>>;
 		std::vector<auth_users> auth_users_;
 
-		// 指定用户限速设置.
-		// 其中表示：用户名对应的速率.
+		// 用户限速配置（按用户名粒度）。
+		//
+		// - key   ：用户名
+		// - value ：速率（单位建议与实现保持一致；若实现为 bytes/s，则此处即 bytes/second）
+		// - 未配置某用户时：表示不对该用户单独限速（由全局 tcp_rate_limit_ 或默认策略决定）。
 		std::unordered_map<std::string, int> users_rate_limit_;
 
-		// allow_regions/deny_regions 用于指定允许/拒绝的地区, 例如:
-		// allow_regions_ = { "中国", "香港", "台湾" };
-		// deny_regions_ = { "美国", "日本" };
-		// allow_regions/deny_regions 为空时, 表示不限制地区.
-		// 必须在设置了 ipip 数据库文件后才能生效.
+		// 允许访问的地区集合（白名单）。
+		//
+		// - 例如：{ "中国", "香港", "台湾" }
+		// - 为空：表示不启用地区限制（允许所有地区）。
+		// - 生效前提：必须正确配置 ipip_db_，并且地区解析能够命中。
 		std::unordered_set<std::string> allow_regions_;
+
+		// 拒绝访问的地区集合（黑名单）。
+		//
+		// - 例如：{ "美国", "日本" }
+		// - 为空：表示不启用地区限制（不拒绝任何地区）。
+		// - 若其中地址与 allow_regions_ 同时设置时，由 deny_regions_ 决定。
+		// - 生效前提：必须正确配置 ipip_db_。
 		std::unordered_set<std::string> deny_regions_;
 
-		// ipip 数据库文件, 用于指定 ipip 数据库文件, 用于地区限制.
-		// ipip 数据库文件可以从: https://www.ipip.net 下载.
+		// IPIP 数据库文件路径（用于根据客户端 IP 解析地区信息，进而做 allow/deny 判断）。
+		//
+		// - 数据库可从 https://www.ipip.net 下载或该项目 Release 页面下载。
+		// - 为空：表示不启用地区解析与地区限制功能（allow/deny 不生效）。
 		std::string ipip_db_;
 
-		// 多层代理, 当前服务器级连下一个服务器, 对于 client 而言是无感的,
-		// 这是当前服务器通过 proxy_pass_ 指定的下一个代理服务器, 为 client
-		// 实现多层代理.
+		// 上游代理（多层代理 / 级联）配置：当前代理把流量转发给下一个代理或直接目标。
 		//
-		// 例如 proxy_pass_ 可以是:
-		// socks5://user:passwd@proxy.server.com:1080
-		// 或:
-		// https://user:passwd@proxy.server.com:1080
+		// - 对客户端无感：客户端只连接当前服务端，当前服务端再决定如何转发到下一跳。
+		// - 典型示例：
+		//   socks5://user:passwd@proxy.server.com:1080
+		//   https://user:passwd@proxy.server.com:1080
 		//
-		// 当 proxy_pass_ 是 socks5 代理时, 默认使用 hostname 模式, 即 dns
-		// 解析在远程执行.
-		//
-		// 在配置了 proxy_protocol (haproxy)协议时, proxy_pass_ 通常为
-		// 下一个 proxy_protocol 或直接目标服务器(目标服务器需要支持
-		// proxy_protocol).
+		// DNS 行为说明：
+		// - 当 proxy_pass_ 为 socks5 时，使用 hostname 模式（即域名解析在远端/上游执行）。
 		std::optional<urls::url> proxy_pass_;
 
-		// 多层代理模式中, 与下一个代理服务器(next_proxy_)是否使用tls加密(ssl).
-		// 该参数只能当 next_proxy_ 是 socks 代理时才有作用, 如果 next_proxy_
-		// 是 http proxy，则由 url 指定的 protocol 决定是否使用 ssl.
+		// 在多层代理模式下，与“下一个代理服务器”之间是否使用 TLS/SSL 加密。
+		//
+		// - 通常用于 proxy_pass_ 指向 socks 代理时使用该选项（用于决定 socks 连接的外层是否包 TLS）。
+		// - 若 proxy_pass_ 为 HTTP/HTTPS proxy，是否加密同时也由 URL scheme 决定（http vs https）。
 		bool proxy_pass_use_ssl_{ false };
 
-		// 启用 proxy protocol (haproxy)协议.
-		// 当前服务将会在连接到 proxy_pass_ 成功后，首先传递 proxy protocol
-		// 以告之 proxy_pass_ 来源 IP/PORT 以及目标 IP/PORT.
-		// 注意：此选项当前未实现.
-		// bool haproxy_{ false };
-
-		// 指定当前proxy server向外发起连接时, 绑定到哪个本地地址, 在多网卡
-		// 的服务器上, 可以指定此参数, 默认为空, 表示不指定, 由系统自动选择.
+		// 指定本代理在向外（上游/目标）发起连接时绑定的本地源地址。
+		//
+		// - 适用于多网卡/多出口场景，通过绑定不同 local_ip_ 控制出站链路。
+		// - 为空：不显式绑定，由操作系统路由表/策略自动选择源地址。
 		std::string local_ip_;
 
-		// 启用 TCP 端口重用(仅Linux kernel version 3.9以上支持).
+		// 是否启用 TCP 端口重用（SO_REUSEPORT）。
+		//
+		// - 仅 Linux kernel 3.9+ 支持。
+		// - 典型用途：多进程/多线程同时 bind 同一端口以提升 accept 性能或做负载均衡。
 		bool reuse_port_{ false };
 
-		// 是否启用 Happy Eyeballs 连接算法, 默认为使用.
+		// 是否启用 Happy Eyeballs 连接算法（IPv6/IPv4 并行探测以降低连接延迟）。
+		//
+		// - true ：启用（默认），通常可改善双栈环境下的首包延迟与可用性。
+		// - false：禁用，按系统/解析顺序串行尝试。
 		bool happyeyeballs_{ true };
 
-		// 用于指定是否仅使用 ipv4 地址发起连接, 默认为 false, 即同时使用
-		// ipv4 和 ipv6 地址.
+		// 是否仅使用 IPv4 发起出站连接。
+		//
+		// - true  ：只使用 IPv4
+		// - false ：IPv4/IPv6 都可能使用（受解析结果、happyeyeballs_ 等影响）
 		bool connect_v4_only_{ false };
 
-		// 用于指定是否仅使用 ipv6 地址发起连接, 默认为 false, 即同时使用
-		// ipv4 和 ipv6 地址.
+		// 是否仅使用 IPv6 发起出站连接。
+		//
+		// - true  ：只使用 IPv6
+		// - false ：IPv4/IPv6 都可能使用（受解析结果、happyeyeballs_ 等影响）
 		bool connect_v6_only_{ false };
 
-		// 是否作为透明代理服务器(仅linux).
+		// 是否作为透明代理（Transparent Proxy）。
+		//
+		// - 仅 Linux 场景可用（通常依赖 TPROXY / iptables / nft 等路由策略配套配置）。
+		// - 启用后通常意味着需要特殊的 socket 选项与策略路由，才能“伪装”源地址或接管流量。
 		bool transparent_{ false };
 
-		// so_mark 用于指定发起连接时的 so_mark, 仅在 transparent_ 为 true.
+		// 向外连接发起时使用的 SO_MARK（Linux）标记。
+		//
+		// - 仅当 transparent_ == true 时生效（一般用于策略路由/防火墙匹配）。
+		// - 未设置表示不打 mark。
 		std::optional<uint32_t> so_mark_;
 
-		// tcp 超时时间, 用于指定 tcp 连接的超时时间, 单位为秒.
+		// TCP 会话/连接超时时间（秒）。
+		//
+		// - 用于控制连接建立/读写等阶段的超时。
+		// - 默认值为 tcp_session_expired_time。
 		int tcp_timeout_{ tcp_session_expired_time };
 
-		// tcp 连接速率控制, bytes/second.
+		// TCP 连接速率限制（全局），单位：bytes/second。
+		//
+		// - -1 表示不限制。
+		// - 若 users_rate_limit_ 中对某用户单独设置，通常应以“用户限速优先或覆盖全局”为准（由实现定义）。
 		int tcp_rate_limit_{ -1 };
 
-		// 作为服务器时, 指定ssl证书目录, 自动搜索子目录, 每一个目录保存一个域
-		// 名对应的所有证书文件, 如果证书是加密的, 则需要指定 password.txt 用
-		// 于存储加密的密码.
-		// 另外每个目录应该指定当前域名, 对应相应的证书文件, 域名存储在 domain.txt
-		// 文件当中, 如果目录下没有 domain.txt 文件, 则表示这将用于默认证书, 当
-		// 匹配不到证书时则使用默认证书.
+		// 作为服务端时：SSL 证书目录。
+		//
+		// - 会自动搜索子目录；每个子目录保存一个域名对应的一组证书文件。
+		// - 若证书为加密私钥，则需要 password.txt 存储解密密码（按实现约定读取）。
 		std::string ssl_cert_path_;
 
-		// 作为客户端时, 指定ssl证书目录(通常是保存 ca 证书的目录), 如果不指定则
-		// 默认使用 https://curl.se/docs/caextract.html 中的 ca 证书文件作
-		// 为默认的 ca 证书.
+		// 作为客户端时：CA 证书目录或 CA bundle 路径（用于校验上游 TLS 证书）。
+		//
+		// - 若不指定：默认使用 curl 官方提供的 CA bundle（见 https://curl.se/docs/caextract.html）。
+		// - 具体支持目录还是文件取决于 TLS 实现（OpenSSL 等）。
 		std::string ssl_cacert_path_;
 
-		// 用于上游代理服务器具有多域名证书下指定具体域名, 即通过此指定 SNI 参数.
+		// 指定上游代理/服务器的 SNI（Server Name Indication）名字。
+		//
+		// - 当上游使用“多域名证书”且需要指定匹配域名时，通过该字段明确 SNI。
+		// - 为空：通常使用 proxy_pass_ 中的 host 作为默认 SNI（若实现如此）。
 		std::string proxy_ssl_name_;
 
-		// 指定允许的加密算法.
+		// 指定允许使用的 TLS 加密套件（cipher suites）。
+		//
+		// - 格式取决于 TLS 库（例如 OpenSSL 的 cipher list 格式）。
+		// - 为空：使用库默认配置。
 		std::string ssl_ciphers_;
 
-		// 优先使用server端加密算法.
+		// 是否优先使用服务端指定的加密套件顺序（server cipher preference）。
+		//
+		// - true ：优先服务端顺序
+		// - false：可能由客户端偏好决定
 		bool ssl_prefer_server_ciphers_;
 
-		// http doc 目录, 用于伪装成web站点, 如果此字段为空, 则表示不启
-		// 用此功能, 遇到 http/https 文件请求时则返回错误信息.
+		// HTTP 文档根目录：用于将代理伪装为 Web 站点（静态文件服务）。
+		//
+		// - 为空：不启用静态站点功能；遇到 HTTP/HTTPS 文件请求时返回错误信息。
+		// - 非空：对该目录提供文件访问能力（需注意安全，可启用 htpasswd_ 确保访问需要认证）。
 		std::string doc_directory_;
 
-		// autoindex 功能, 类似 nginx 中的 autoindex.
-		// 打开将会显示目录下的文件列表, 此功能作用在启用 doc_directory_
-		// 的时候, 对 doc_directory_ 目录下的文件列表信息是否使用列表展
-		// 示.
+		// 是否启用目录列表（类似 nginx 的 autoindex）。
+		//
+		// - 仅在 doc_directory_ 非空、启用了静态站点功能时生效。
+		// - true ：访问目录时返回目录下文件列表。
+		// - false：访问目录时通常返回错误或默认首页。
 		bool autoindex_;
 
-		// 用于指定是否启用 http basic auth 认证, 默认为 false,
-		// 即不启用, 如果启用, 则需要设置 auth_users_ 参数.
+		// 是否启用 HTTP Basic Auth（类似 htpasswd 的认证方式）。
+		//
+		// - 默认 false：不启用。
+		// - 若启用：通常需要配置 auth_users_ 用于用户信息认证。
 		bool htpasswd_{ false };
 
-		// 禁用 http 服务, 客户端无法通过明文的 http 协议与之通信, 包括
-		// ssl 加密的 https 以及不加密的 http 服务, 同时也包括 http(s)
-		// proxy 也会被禁用.
-		// 在有些时候, 为了安全考虑, 可以禁用 http 服务避免服务器上的信息
-		// 意外访问, 或不想启用 http(s) 服务.
+		// 是否禁用 HTTP 相关服务入口。
+		//
+		// - true ：客户端无法使用 HTTP 与服务端通信，包含 HTTP 代理功能。
 		bool disable_http_{ false };
 
-		// 禁用 socks proxy 服务, 服务端不提供 socks4/5 代理服务, 包括
-		// 加密的 socks4/5 以及不加密的 socks4/5.
+		// 是否禁用 SOCKS 代理服务入口。
+		//
+		// - true ：不提供 SOCKS4/5 代理服务。
+		// - false：提供 SOCKS 服务。
 		bool disable_socks_{ false };
 
-		// 禁止非安全连接, 即禁止 http/socks 明文连接, 只允许 https/socks5
-		// 加密连接.
+		// 是否禁止不安全（明文）连接。
+		//
+		// - true ：禁止所有非加密连接。
+		// - false：允许明文与加密并存，由客户端与服务端协商确定是否加密。
 		bool disable_insecure_{ false };
 
-		// 禁止 udp 服务, 服务端不提供 udp 代理服务.
+		// 是否禁用 UDP 代理服务。
+		//
+		// - true ：不提供 UDP 转发/代理能力（如 UDP ASSOCIATE 等）。
+		// - false：提供 UDP 相关服务。
 		bool disable_udp_{ false };
 
-		// 启用噪声注入以干扰流量分析, 从而达到数据安全的目的.
-		// 此功能必须在 server/client 两端同时启用才有效, 此功能表示在启
-		// 用 ssl 协议时, 在 ssl 握手后双方互相发送一段随机长度的随机数据
-		// 以干扰流量分析.
-		// 在双方接收到对方的随机数据后, 将对整个随机数据进行 hash 计算, 得
-		// 到的结果将会作为后续数据的加密密钥, 从而达到加密通信的目的.
-		// 加密算法仅仅是简单的异或运算, 但是由于密钥是随机的, 因此即使是
-		// 同样的明文, 也会得到不同的密文, 从而达到加密通信的目的.
-		// 密钥在一轮(密钥长度)使用完后, 将会通过 hash(hash) 重新计算得到
-		// 新的密钥, 用于下一轮的加密通信.
-		// hash 算法采用快速的 xxhash, 但是由于 xxhash 本身的特性. 因此
-		// 密钥长度不能太长, 否则会影响性能, 所在固定密钥长度为 16 字节.
-		// 此功能可以有效的防止流量分析, 但是会增加一定的流量消耗以及延迟,
-		// 此选项默认不启用, 除非有确定证据证明代理流量被分析或干扰, 此时可
-		// 以启用此选项.
+		// 是否启用“噪声注入 / 混淆”（scramble）以干扰流量分析。
+		//
+		// 生效条件：
+		// - 必须 server/client 两端同时启用才有效。
+		//
+		// 工作机制：
+		// - TLS 握手完成后，双方互相发送一段随机长度的随机数据作为“噪声”；
+		// - 双方收到对方噪声后对整段噪声做 hash，得到后续数据的加密密钥；
+		// - 后续数据使用简单异或加密；密钥用完后通过 hash(hash) 派生新密钥；
+		// - hash 算法采用 xxhash；密钥长度固定为 16 字节以兼顾性能。
+		//
+		// 取舍：
+		// - 可降低被动流量分析的有效性，但会增加额外流量与时延；
+		// - 默认不启用，建议仅在明确存在分析/干扰风险时开启。
 		bool scramble_{ false };
 
-		// 设置发送噪声的最大长度.
-		// 最大设置为 64k, 最小设置为 16, 默认为 4096.
-		uint16_t noise_length_{ nosie_injection_max_len };
+		// 噪声注入的最大长度（单位：字节）。
+		//
+		// - 允许范围：[16, 64K]。
+		uint16_t noise_length_{ noise_injection_max_len };
 	};
 
 
@@ -1182,7 +1239,7 @@ R"x*x*x(<html>
 
 			if (noise_length < 16 ||
 				(noise_length > std::numeric_limits<uint16_t>::max() / 2))
-				noise_length = nosie_injection_max_len;
+				noise_length = noise_injection_max_len;
 
 			std::vector<uint8_t> noise =
 				generate_noise(static_cast<uint16_t>(noise_length), global_known_proto);
