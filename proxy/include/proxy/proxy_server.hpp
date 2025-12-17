@@ -756,15 +756,25 @@ R"x*x*x(<html>
 				// range 只有一个数值.
 				if (r.size() == 1)
 				{
-					if (str.front() == '-') {
+					if (str.empty())
+					{
+						results.emplace_back(0, -1);
+					}
+					else if (str.front() == '-')
+					{
 						auto pos = std::atoll(r.front().data());
 						results.emplace_back(-1, pos);
-					} else {
+					}
+					else
+					{
 						auto pos = std::atoll(r.front().data());
 						results.emplace_back(pos, -1);
 					}
+
+					continue;
 				}
-				else if (r.size() == 2)
+
+				if (r.size() == 2)
 				{
 					// range 有 start 和 end 的情况, 解析成整数到容器.
 					auto& start_str = r[0];
@@ -784,12 +794,12 @@ R"x*x*x(<html>
 
 						results.emplace_back(start, end);
 					}
+
+					continue;
 				}
-				else
-				{
-					// 在一个 range 项中不应该存在3个'-', 否则则是无效项.
-					return {};
-				}
+
+				// 在一个 range 项中不应该存在3个或以上的'-', 这属于无效的范围请求.
+				return {};
 			}
 
 			return results;
