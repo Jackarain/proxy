@@ -155,7 +155,11 @@ namespace std {
 #include <chrono>
 #include <mutex>
 #include <memory>
-#include <memory_resource>
+
+#if defined (__cpp_lib_polymorphic_allocator)
+# include <memory_resource>
+#endif
+
 #include <string>
 #include <tuple>
 #include <thread>
@@ -1487,6 +1491,7 @@ public:
 #endif
 		return strcat_impl(v);
 	}
+#if defined (__cpp_lib_polymorphic_allocator)
 	inline logger___& operator<<(const std::pmr::string& v)
 	{
 		if (!global_logging___)
@@ -1505,6 +1510,7 @@ public:
 #endif
 		return strcat_impl(v);
 	}
+#endif
 	inline logger___& operator<<(const std::wstring& v)
 	{
 		if (!global_logging___)
