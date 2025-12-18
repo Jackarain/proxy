@@ -1842,6 +1842,7 @@ R"x*x*x(<html>
 			tcp::endpoint dst_endpoint;
 			std::string domain;
 			uint16_t port = 0;
+			bool resolved = true;
 
 			auto executor = co_await net::this_coro::executor;
 
@@ -1873,6 +1874,9 @@ R"x*x*x(<html>
 					dst_endpoint.address() == net::ip::make_address_v4("0.0.0.0") ||
 					dst_endpoint.address() == net::ip::make_address_v6("::0"))
 				{
+					if (ec)
+						resolved = false;
+
 					auto address = tcp_remote_endpoint(m_local_socket).address();
 					dst_endpoint.address(address);
 				}
@@ -1910,7 +1914,7 @@ R"x*x*x(<html>
 			if (command == SOCKS_CMD_CONNECT)
 			{
 				// 连接目标主机.
-				ec = co_await start_connect_host(domain, port, atyp == SOCKS5_ATYP_DOMAINNAME);
+				ec = co_await start_connect_host(domain, port, resolved);
 				if (ec)
 				{
 					log_conn_warning()
@@ -2513,11 +2517,12 @@ R"x*x*x(<html>
 					ec = co_await start_connect_host(
 						hostname,
 						port,
-						true);
+						false);
 				else
 					ec = co_await start_connect_host(
 						dst_endpoint.address().to_string(),
-						port);
+						port,
+						true);
 				if (ec)
 				{
 					log_conn_warning()
@@ -2743,7 +2748,7 @@ R"x*x*x(<html>
 				if (!m_remote_socket.is_open())
 				{
 					// 连接到目标主机.
-					ec = co_await start_connect_host(std::string(host), port, true);
+					ec = co_await start_connect_host(std::string(host), port, false);
 					if (ec)
 					{
 						log_conn_warning()
@@ -2890,7 +2895,7 @@ R"x*x*x(<html>
 			std::string host(target_view.substr(0, pos));
 			std::string port(target_view.substr(pos + 1));
 
-			ec = co_await start_connect_host(host, static_cast<uint16_t>(std::atol(port.c_str())), true);
+			ec = co_await start_connect_host(host, static_cast<uint16_t>(std::atol(port.c_str())), false);
 			if (ec)
 			{
 				log_conn_warning()
@@ -3335,7 +3340,7 @@ R"x*x*x(<html>
 		inline net::awaitable<boost::system::error_code> start_connect_host(
 			std::string target_host,
 			uint16_t target_port,
-			bool resolve = false,
+			bool resolved = false,
 			int command = SOCKS_CMD_CONNECT) noexcept
 		{
 			tcp::socket& remote_socket = net_tcp_socket(m_remote_socket);
@@ -3361,20 +3366,27 @@ R"x*x*x(<html>
 			}
 			else
 			{
-				if (resolve)
+				switch (static_cast<int>(resolved))
 				{
-					targets = co_await resolve_targets(target_host, target_port);
-				}
-				else
+				case 1: // true
 				{
 					tcp::endpoint dst_endpoint;
 
-					dst_endpoint.address(
-						net::ip::make_address(target_host));
-					dst_endpoint.port(target_port);
+					auto addr = net::ip::make_address(target_host, ec);
+					if (!ec)
+					{
+						dst_endpoint.address(addr);
+						dst_endpoint.port(target_port);
 
-					targets = net::ip::basic_resolver_results<tcp>::create(
-						dst_endpoint, "", "");
+						targets = net::ip::basic_resolver_results<tcp>::create(dst_endpoint, "", "");
+						break;
+					}
+				}
+				[[fallthrough]];
+				case 0:  // false
+				default:
+					targets = co_await resolve_targets(target_host, target_port);
+					break;
 				}
 			}
 
