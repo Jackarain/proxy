@@ -3747,65 +3747,6 @@ R"x*x*x(<html>
 			return path_list;
 		}
 
-		inline std::string file_hash(const fs::path& p, boost::system::error_code& ec) const noexcept
-		{
-			ec = {};
-
-			boost::nowide::fstream file(p, std::ios::in | std::ios::binary);
-			if (!file)
-			{
-				ec = boost::system::error_code(errno,
-					boost::system::generic_category());
-				return {};
-			}
-
-			boost::uuids::detail::sha1 sha1;
-			const auto buf_size = 1024 * 1024 * 4;
-			auto bufs = std::make_unique_for_overwrite<char[]>(buf_size);
-
-			while (file.read(bufs.get(), buf_size) || file.gcount())
-				sha1.process_bytes(bufs.get(), file.gcount());
-
-			boost::uuids::detail::sha1::digest_type hash;
-			sha1.get_digest(hash);
-
-			std::stringstream ss;
-			for (auto const& c : hash)
-				ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(c);
-
-			return ss.str();
-		}
-
-		template <typename CompletionToken>
-		inline auto async_hash_file(const fs::path& path, CompletionToken&& token) const noexcept
-		{
-			auto self = shared_from_this();
-
-			return net::async_initiate<CompletionToken,
-				void (boost::system::error_code, std::string)>(
-					[this, self, path]
-					(auto&& handler) mutable
-					{
-						std::thread(
-							[this, self, path, handler = std::move(handler)]() mutable
-							{
-								boost::system::error_code ec;
-
-								auto hash = file_hash(path, ec);
-
-								auto executor = net::get_associated_executor(handler);
-								net::post(executor, [this, self,
-									ec = std::move(ec),
-									hash = std::move(hash),
-									handler = std::move(handler)]() mutable
-									{
-										handler(ec, hash);
-									});
-							}
-						).detach();
-					}, token);
-		}
-
 		inline net::awaitable<void> on_http_all_json(const http_context& hctx) noexcept
 		{
 			boost::system::error_code ec;
@@ -3875,7 +3816,7 @@ R"x*x*x(<html>
 					if (hash)
 					{
 						auto ret = co_await
-							async_hash_file(unc_path, net_awaitable[ec]);
+							fileop::async_hash_file(unc_path, net_awaitable[ec]);
 						if (ec)
 							ret = "";
 						obj["hash"] = ret;
@@ -3979,7 +3920,7 @@ R"x*x*x(<html>
 					if (hash)
 					{
 						auto ret = co_await
-							async_hash_file(unc_path, net_awaitable[ec]);
+							fileop::async_hash_file(unc_path, net_awaitable[ec]);
 						if (ec)
 							ret = "";
 						obj["hash"] = ret;
