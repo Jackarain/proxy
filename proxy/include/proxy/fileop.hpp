@@ -10,7 +10,6 @@
 
 
 #include <boost/filesystem.hpp>
-#include <boost/uuid/detail/sha1.hpp>
 #include <boost/nowide/fstream.hpp>
 #include <boost/asio/async_result.hpp>
 #include <boost/system.hpp>
@@ -23,6 +22,7 @@
 #include <sstream>
 #include <type_traits>
 
+#include <openssl/evp.h>
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -93,6 +93,85 @@ namespace fileop {
 			{}
 
 			return -1;
+		}
+
+		//////////////////////////////////////////////////////////////////////////
+
+		template <typename P>
+		inline std::string
+		file_hash_impl(const fs::path& p, boost::system::error_code& ec, P cancel_op) noexcept
+		{
+			ec = {};
+
+			boost::nowide::fstream file(p, std::ios::in | std::ios::binary);
+			if (!file)
+			{
+				ec = boost::system::error_code(errno, boost::system::generic_category());
+				return {};
+			}
+
+			EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+			if (!ctx)
+			{
+				ec = boost::system::errc::make_error_code(boost::system::errc::invalid_argument);
+				return {};
+			}
+
+			struct ctx_guard
+			{
+				EVP_MD_CTX* ctx;
+				~ctx_guard() { EVP_MD_CTX_free(ctx); }
+			} guard { ctx };
+
+			const EVP_MD* md = EVP_sha1();
+			if (!md)
+			{
+				ec = boost::system::errc::make_error_code(boost::system::errc::invalid_argument);
+				return {};
+			}
+
+			if (EVP_DigestInit_ex(ctx, md, nullptr) != 1)
+			{
+				ec = boost::system::errc::make_error_code(boost::system::errc::io_error);
+				return {};
+			}
+
+			const auto buf_size = 1024 * 1024 * 4;
+			auto bufs = std::make_unique_for_overwrite<char[]>(buf_size);
+
+			while (file.read(bufs.get(),buf_size) || file.gcount() > 0)
+			{
+				if (cancel_op())
+				{
+					ec = net::error::operation_aborted;
+					return {};
+				}
+
+				const auto n = static_cast<std::size_t>(file.gcount());
+
+				if (EVP_DigestUpdate(ctx, bufs.get(), n) != 1)
+				{
+					ec = boost::system::errc::make_error_code(boost::system::errc::io_error);
+					return {};
+				}
+			}
+
+			unsigned char digest[EVP_MAX_MD_SIZE];
+			unsigned int digest_len = 0;
+
+			if (EVP_DigestFinal_ex(ctx, digest, &digest_len) != 1)
+			{
+				ec = boost::system::errc::make_error_code(boost::system::errc::io_error);
+				return {};
+			}
+
+			std::stringstream ss;
+
+			ss << std::hex << std::setfill('0');
+			for (unsigned int i = 0; i < digest_len; ++i)
+				ss << std::setw(2) << static_cast<unsigned int>(digest[i]);
+
+			return ss.str();
 		}
 	}
 
@@ -201,33 +280,11 @@ namespace fileop {
 
 	//////////////////////////////////////////////////////////////////////////
 
+
 	inline std::string
 	file_hash(const fs::path& p, boost::system::error_code& ec) noexcept
 	{
-		ec = {};
-
-		boost::nowide::fstream file(p, std::ios::in | std::ios::binary);
-		if (!file)
-		{
-			ec = boost::system::error_code(errno, boost::system::generic_category());
-			return {};
-		}
-
-		boost::uuids::detail::sha1 sha1;
-		const auto buf_size = 1024 * 1024 * 4;
-		auto bufs = std::make_unique_for_overwrite<char[]>(buf_size);
-
-		while (file.read(bufs.get(), buf_size) || file.gcount())
-			sha1.process_bytes(bufs.get(), file.gcount());
-
-		boost::uuids::detail::sha1::digest_type hash;
-		sha1.get_digest(hash);
-
-		std::stringstream ss;
-		for (auto const& c : hash)
-			ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(c);
-
-		return ss.str();
+		return details::file_hash_impl(p, ec, []() { return false; });
 	}
 
 	template <typename CompletionToken>
@@ -239,10 +296,20 @@ namespace fileop {
 				{
 					std::thread([path = std::move(path), handler = std::move(handler)]() mutable
 						{
+							auto slot = net::get_associated_cancellation_slot(handler);
 							auto executor = net::get_associated_executor(handler);
+							std::atomic_bool cancelled = false;
+
+							if (slot.is_connected())
+							{
+								slot.assign([&cancelled](net::cancellation_type_t) mutable
+									{
+										cancelled = true;
+									});
+							}
 
 							boost::system::error_code ec;
-							auto hash = file_hash(path, ec);
+							auto hash = details::file_hash_impl(path, ec, [&cancelled]() -> bool { return cancelled; });
 
 							net::post(executor,
 								[ec = std::move(ec), hash = std::move(hash), handler = std::move(handler)]() mutable
