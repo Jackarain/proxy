@@ -10,7 +10,7 @@
 
 #ifdef _MSC_VER
 # pragma warning(push)
-# pragma warning(disable: 4005)
+# pragma warning(disable: 4005 4267 4244)
 #endif // _MSC_VER
 
 #ifdef USE_SNMALLOC
@@ -20,10 +20,6 @@
 #  include "src/snmalloc/override/new.cc"
 # endif
 #endif // USE_SNMALLOC
-
-#ifdef _MSC_VER
-# pragma warning(pop)
-#endif
 
 #include "proxy/proxy_server.hpp"
 #include "proxy/socks_client.hpp"
@@ -47,14 +43,14 @@ namespace po = boost::program_options;
 
 #include <limits>
 
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
+
 namespace net = boost::asio;
 using namespace proxy;
 
 using server_ptr = std::shared_ptr<proxy_server>;
-
-#ifdef _MSC_VER
-# pragma warning(disable: 4244)
-#endif
 
 
 //////////////////////////////////////////////////////////////////////////
