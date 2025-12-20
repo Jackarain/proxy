@@ -475,40 +475,6 @@ namespace logger_aux__ {
 		return true;
 	}
 
-	inline std::optional<std::string> utf16_convert(std::wstring_view wstr)
-	{
-		std::string result;
-
-		auto end = wstr.cend();
-		for (auto start = wstr.cbegin(); start != end;)
-		{
-			uint32_t cp = static_cast<uint16_t>(0xffff & *start++);
-
-			if (cp >= 0xdc00u && cp <= 0xdfffu) [[unlikely]]
-				return {};
-
-			if (cp >= 0xd800u && cp <= 0xdbffu)
-			{
-				if (start == end) [[unlikely]]
-					return {};
-
-				uint32_t trail = static_cast<uint16_t>(0xffff & *start++);
-				if (!(trail >= 0xdc00u && trail <= 0xdfffu)) [[unlikely]]
-					return {};
-
-				cp = (cp << 10) + trail + 0xFCA02400;
-			}
-
-			if (!append(cp, result))
-				return {};
-		}
-
-		if (result.empty())
-			return {};
-
-		return result;
-	}
-
 #ifdef WIN32
 	inline std::optional<std::wstring> string_wide(const std::string_view& src)
 	{
