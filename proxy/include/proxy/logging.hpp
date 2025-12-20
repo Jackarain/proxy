@@ -257,25 +257,24 @@ namespace xlogging_compress__ {
 
 	inline bool do_compress_gz(const std::string& infile)
 	{
-		std::string outfile = infile + LOGGING_GZ_SUFFIX;
-
-		gzFile out = gzopen(outfile.c_str(), "wb6f");
-		if (!out)
-			return false;
-
-		using gzFileType = typename std::remove_pointer<gzFile>::type;
-		std::unique_ptr<gzFileType, closegz_deleter> gz_closer(out);
-
 		FILE* in = fopen(infile.c_str(), "rb");
 		if (!in)
 			return false;
-
 		std::unique_ptr<FILE, closefile_deleter> FILE_closer(in);
-		std::unique_ptr<char[]> bufs(new char[LOGGING_GZ_BUFLEN]);
+
+		std::string outfile = infile + LOGGING_GZ_SUFFIX;
+		gzFile out = gzopen(outfile.c_str(), "wb6f");
+		if (!out)
+			return false;
+		using gzFileType = typename std::remove_pointer<gzFile>::type;
+		std::unique_ptr<gzFileType, closegz_deleter> gz_closer(out);
+
+		auto bufs = std::make_unique_for_overwrite<char[]>(LOGGING_GZ_BUFLEN);
 		char* buf = bufs.get();
 		int len;
 
-		for (;;) {
+		for (;;)
+		{
 			len = (int)fread(buf, 1, LOGGING_GZ_BUFLEN, in);
 			if (ferror(in))
 				return false;
@@ -285,12 +284,11 @@ namespace xlogging_compress__ {
 
 			int total = 0;
 			int ret;
-			while (total < len) {
+			while (total < len)
+			{
 				ret = gzwrite(out, buf + total, (unsigned)len - total);
-				if (ret <= 0) {
-					// detail error information see gzerror(out, &ret);
+				if (ret <= 0)
 					return false;
-				}
 				total += ret;
 			}
 		}
