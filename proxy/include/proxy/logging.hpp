@@ -771,7 +771,7 @@ public:
 
 #ifdef LOGGING_ENABLE_COMPRESS_LOGS
 			auto fn = filename.string();
-			std::thread th([fn]()
+			std::thread([fn]()
 				{
 					error_code ignore_ec;
 					std::mutex& m = xlogging_compress__::compress_lock();
@@ -789,8 +789,7 @@ public:
 					}
 
 					fs::remove(fn, ignore_ec);
-				});
-			th.detach();
+				}).detach();
 #endif
 			break;
 		}
