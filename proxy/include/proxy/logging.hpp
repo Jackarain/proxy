@@ -445,41 +445,6 @@ namespace logger_aux__ {
 		return state == 0;
 	}
 
-	inline std::optional<std::wstring> utf8_convert(std::string_view str)
-	{
-		uint8_t* start = (uint8_t*)str.data();
-		uint8_t* end = start + str.size();
-
-		std::wstring wstr;
-		uint32_t codepoint;
-		uint32_t state = 0;
-
-		for (; start != end; ++start)
-		{
-			switch (decode(&state, &codepoint, *start))
-			{
-			case 0:
-				if (codepoint <= 0xFFFF) [[likely]]
-				{
-					wstr.push_back(static_cast<wchar_t>(codepoint));
-					continue;
-				}
-				wstr.push_back(static_cast<wchar_t>(0xD7C0 + (codepoint >> 10)));
-				wstr.push_back(static_cast<wchar_t>(0xDC00 + (codepoint & 0x3FF)));
-				continue;
-			case 1:
-				return {};
-			default:
-				;
-			}
-		}
-
-		if (state != 0)
-			return {};
-
-		return wstr;
-	}
-
 	inline bool append(uint32_t cp, std::string& result)
 	{
 		if (!(cp <= 0x0010ffffu && !(cp >= 0xd800u && cp <= 0xdfffu)))
