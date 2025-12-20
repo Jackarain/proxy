@@ -171,7 +171,7 @@ namespace std {
 #include <csignal>
 #include <condition_variable>
 #include <optional>
-
+#include <string_view>
 
 //////////////////////////////////////////////////////////////////////////
 //
