@@ -137,7 +137,7 @@ namespace fileop {
 			}
 
 			const auto buf_size = 1024 * 1024 * 4;
-			auto bufs = std::make_unique_for_overwrite<char[]>(buf_size);
+			std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(buf_size), &std::free);
 
 			while (file.read(bufs.get(),buf_size) || file.gcount() > 0)
 			{

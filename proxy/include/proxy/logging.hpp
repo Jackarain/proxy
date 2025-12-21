@@ -269,7 +269,7 @@ namespace xlogging_compress__ {
 		using gzFileType = typename std::remove_pointer<gzFile>::type;
 		std::unique_ptr<gzFileType, closegz_deleter> gz_closer(out);
 
-		auto bufs = std::make_unique_for_overwrite<char[]>(LOGGING_GZ_BUFLEN);
+		std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(LOGGING_GZ_BUFLEN), &std::free);
 		char* buf = bufs.get();
 		int len;
 
