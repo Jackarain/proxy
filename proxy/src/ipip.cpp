@@ -228,16 +228,13 @@ namespace proxy {
         }
 
         // 4. 整理返回格式
-        std::string isp = (ispIdx_ >= 0 && ispIdx_ < (int)fields.size()) ? fields[ispIdx_] : "";
         std::vector<std::string> region;
 
         for (int i = 0; i < (int)fields.size(); ++i) {
             if (i != ispIdx_ && !fields[i].empty()) region.push_back(fields[i]);
         }
 
-        if (!isp.empty()) region.push_back(isp);
-
-        return {region, isp};
+        return {region, ""};
 	}
 
   void ipip_db::parse_meta(const std::string& json)
