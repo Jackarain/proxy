@@ -61,7 +61,7 @@ std::vector<std::string> users_rate_limit;
 std::vector<std::string> deny_region;
 std::vector<std::string> allow_region;
 
-std::string ipip_db;
+std::string ipip_db_name;
 std::string doc_dir;
 std::string log_dir;
 std::string stdio_target;
@@ -246,7 +246,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.tcp_timeout_ = tcp_timeout;
 	opt.tcp_rate_limit_ = rate_limit;
 
-	opt.ipip_db_ = ipip_db;
+	opt.ipip_db_ = ipip_db_name;
 	if (!deny_region.empty())
 	{
 		std::vector<std::string> regions;
@@ -437,7 +437,7 @@ int main(int argc, char** argv)
 		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specify enabled SSL ciphers")
 		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Prefer server ciphers over client ciphers for SSLv3 and TLS protocols.")
 
-		("ipip_db", po::value<std::string>(&ipip_db)->value_name("")->default_value("17monipdb.datx"), "Specify ipip database filename.")
+		("ipip_db", po::value<std::string>(&ipip_db_name)->value_name("")->default_value("17monipdb.datx"), "Specify ipip database filename.")
 		("http_doc", po::value<std::string>(&doc_dir)->value_name("doc"), "Specify document root directory for HTTP server.")
 		("htpasswd", po::value<bool>(&htpasswd)->value_name("")->default_value(false, "false"), "Enable WWW-Authenticate for HTTP server.")
 

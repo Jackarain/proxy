@@ -5,13 +5,14 @@
 // Email:  jack.wgm at gmail dot com
 //
 
-#ifndef INCLUDE__2019_10_18__FILEOP_HPP
-#define INCLUDE__2019_10_18__FILEOP_HPP
+#ifndef INCLUDE__2019_10_18__IPIP_HPP
+#define INCLUDE__2019_10_18__IPIP_HPP
 
 #include <boost/filesystem.hpp>
 #include <boost/asio/ip/address.hpp>
 
 #include <vector>
+#include <map>
 #include <string>
 #include <exception>
 
@@ -34,6 +35,7 @@ namespace proxy {
 		lookup(net::ip::address ip) = 0;
 	};
 
+	// IPIP数据文件格式: datx.
 	class ipip_datx : public ipip
 	{
 		// c++11 noncopyable.
@@ -58,6 +60,47 @@ namespace proxy {
 		unsigned m_offset;
 	};
 
+	// IPDB 数据文件格式: db.
+	class ipip_db : public ipip
+	{
+		// c++11 noncopyable.
+		ipip_db(const ipip_db&) = delete;
+		ipip_db& operator=(const ipip_db&) = delete;
+
+	public:
+		ipip_db() = default;
+		virtual ~ipip_db() = default;
+
+		// 打开ipip数据文件.
+		virtual bool load(const std::string& filename) override;
+
+		// 根据一个IP查询对应地址信息.
+		virtual std::tuple<std::vector<std::string>, std::string>
+		lookup(net::ip::address ip) override;
+
+	private:
+		void parse_meta(const std::string& json);
+		int read_node(int node, int bit) const;
+		int search_tree(const uint8_t* ip, int bits, int startNode) const;
+		std::string resolve_content(int node) const;
+		int guess_isp_index();
+
+	private:
+		bool loaded_ = false;
+		std::vector<uint8_t> data_;
+
+		// 元数据信息
+		int nodeCount_ = 0;
+		int totalSize_ = 0;
+		uint16_t ipVersion_ = 0;
+		std::vector<std::string> fieldNames_;
+		std::map<std::string, int> languages_;
+
+		// 运行时属性
+		int v4offset_ = 0;
+		int ispIdx_ = -1;
+		std::string currentLang_;
+	};
 }
 
-#endif // INCLUDE__2019_10_18__FILEOP_HPP
+#endif // INCLUDE__2019_10_18__IPIP_HPP

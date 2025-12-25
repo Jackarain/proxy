@@ -4991,9 +4991,17 @@ R"x*x*x(<html>
 
 			if (fs::exists(m_option.ipip_db_, ec))
 			{
-				m_ipip = std::make_unique<ipip_datx>();
-				if (!m_ipip->load(m_option.ipip_db_))
-					m_ipip.reset();
+				try {
+					m_ipip = std::make_unique<ipip_db>();
+					if (!m_ipip->load(m_option.ipip_db_))
+					{
+						m_ipip = std::make_unique<ipip_datx>();
+						if (!m_ipip->load(m_option.ipip_db_))
+							m_ipip.reset();
+					}
+				} catch (const std::exception& e) {
+					XLOG_WARN << "ipip database " << m_option.ipip_db_ << ", load error: " << e.what();
+				}
 			}
 
 			init_acceptor();
@@ -5736,17 +5744,18 @@ R"x*x*x(<html>
 
 				if (m_ipip)
 				{
-					auto [ret, isp] = m_ipip->lookup(endp.address());
-					if (!ret.empty())
-					{
-						for (auto& c : ret)
-							client += " " + c;
+					try {
+						auto [ret, isp] = m_ipip->lookup(endp.address());
+						if (!ret.empty())
+						{
+							for (auto& c : ret)
+								client += " " + c;
 
-						local_info.insert(local_info.end(), ret.begin(), ret.end());
+							local_info.insert(local_info.end(), ret.begin(), ret.end());
+						}
 					}
-
-					if (!isp.empty())
-						client += " " + isp;
+					catch (const std::exception&)
+					{}
 				}
 			}
 			else if constexpr (std::same_as<S, proxy_uds_socket>)
