@@ -5,8 +5,8 @@
 // Email:  jack.wgm at gmail dot com
 //
 
-#ifndef INCLUDE__2019_10_18__IPIP_HPP
-#define INCLUDE__2019_10_18__IPIP_HPP
+#ifndef INCLUDE__2019_10_18__IP_DATABASE_HPP
+#define INCLUDE__2019_10_18__IP_DATABASE_HPP
 
 #include <boost/filesystem.hpp>
 #include <boost/asio/ip/address.hpp>
@@ -14,11 +14,16 @@
 #include <vector>
 #include <map>
 #include <string>
-#include <exception>
 
 
 namespace proxy {
 	namespace net = boost::asio;
+
+	struct ip_result
+	{
+		std::vector<std::string> regions;
+		std::string isp;
+	};
 
 	class ip_database
 	{
@@ -31,8 +36,7 @@ namespace proxy {
 		// 返回值: <地址信息, 运营商>, 其中 std::vector<std::string> 为地址
 		// 信息, 按地区从大到小排列.
 		// 如: ["中国", "北京", "北京", "联通"], "联通" 为运营商.
-		virtual std::tuple<std::vector<std::string>, std::string>
-		lookup(net::ip::address ip) = 0;
+		virtual ip_result lookup(net::ip::address ip) = 0;
 	};
 
 	// IPIP数据文件格式: datx.
@@ -47,11 +51,10 @@ namespace proxy {
 		virtual ~ip_datx() = default;
 
 		// 打开ipip数据文件.
-		virtual bool load(const std::string& filename) override;
+		bool load(const std::string& filename) override;
 
 		// 根据一个IP查询对应地址信息.
-		virtual std::tuple<std::vector<std::string>, std::string>
-		lookup(net::ip::address ip) override;
+		ip_result lookup(net::ip::address ip) override;
 
 	private:
 		std::vector<unsigned char> m_data;
@@ -72,11 +75,10 @@ namespace proxy {
 		virtual ~ip_ipdb() = default;
 
 		// 打开ipip数据文件.
-		virtual bool load(const std::string& filename) override;
+		bool load(const std::string& filename) override;
 
 		// 根据一个IP查询对应地址信息.
-		virtual std::tuple<std::vector<std::string>, std::string>
-		lookup(net::ip::address ip) override;
+		ip_result lookup(net::ip::address ip) override;
 
 	private:
 		void parse_meta(const std::string& json);
@@ -86,21 +88,21 @@ namespace proxy {
 		int guess_isp_index();
 
 	private:
-		bool loaded_ = false;
-		std::vector<uint8_t> data_;
+		bool m_loaded = false;
+		std::vector<uint8_t> m_data;
 
 		// 元数据信息
-		int nodeCount_ = 0;
-		int totalSize_ = 0;
-		uint16_t ipVersion_ = 0;
-		std::vector<std::string> fieldNames_;
-		std::map<std::string, int> languages_;
+		int m_node_count = 0;
+		int m_total_size = 0;
+		uint16_t m_ip_version = 0;
+		std::vector<std::string> m_field_names;
+		std::map<std::string, int> m_languages;
 
 		// 运行时属性
-		int v4offset_ = 0;
-		int ispIdx_ = -1;
-		std::string currentLang_;
+		int m_v4offset = 0;
+		int m_isp_idx = -1;
+		std::string m_current_lang;
 	};
 }
 
-#endif // INCLUDE__2019_10_18__IPIP_HPP
+#endif // INCLUDE__2019_10_18__IP_DATABASE_HPP

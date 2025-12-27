@@ -75,13 +75,12 @@ namespace proxy {
 		return true;
 	}
 
-	std::tuple<std::vector<std::string>, std::string>
-	ip_datx::lookup(boost::asio::ip::address ip)
+	ip_result ip_datx::lookup(boost::asio::ip::address ip)
 	{
-		std::vector<std::string> ret;
+		ip_result ret;
 
 		if (m_data.empty() || ip.is_v6())
-			return {};
+			return ret;
 
 		std::string result;
 
@@ -114,20 +113,18 @@ namespace proxy {
 			index_length);
 
 		// segment result into peaces.
-		boost::split(ret, result, boost::is_space());
+		boost::split(ret.regions, result, boost::is_space());
 
-		std::string isp;
-
-		if (ret.size() == 5)
+		if (ret.regions.size() == 5)
 		{
-			isp = *ret.rbegin();
-			ret.pop_back();
+			ret.isp = *ret.regions.rbegin();
+			ret.regions.pop_back();
 		}
 
-		if (ret.back().empty())
-			ret.pop_back();
+		if (ret.regions.back().empty())
+			ret.regions.pop_back();
 
-		return std::make_tuple(ret, isp);
+		return ret;
 	}
 
 
@@ -157,81 +154,80 @@ namespace proxy {
             if (!fs) throw ErrFileOpen;
 
             // 1. 读取 4 字节元数据长度
-            uint32_t metaLenBE = 0;
-            fs.read(reinterpret_cast<char*>(&metaLenBE), 4);
-            uint32_t metaLen = be32_to_host(metaLenBE);
+            uint32_t meta_len_be = 0;
+            fs.read(reinterpret_cast<char*>(&meta_len_be), 4);
+            uint32_t meta_len = be32_to_host(meta_len_be);
 
             // 2. 读取并解析 JSON 元数据
-            std::string metaJson(metaLen, '\0');
-            fs.read(&metaJson[0], metaLen);
+            std::string meta_json(meta_len, '\0');
+            fs.read(&meta_json[0], meta_len);
             if (!fs) throw ErrFileSize;
-            parse_meta(metaJson);
+            parse_meta(meta_json);
 
             // 3. 校验并读取数据库主体
             fs.seekg(0, std::ios::end);
-            if ((int64_t)fs.tellg() != (int64_t)4 + metaLen + totalSize_) throw ErrFileSize;
+            if ((int64_t)fs.tellg() != (int64_t)4 + meta_len + m_total_size) throw ErrFileSize;
 
-            data_.resize((size_t)totalSize_);
-            fs.seekg(4 + metaLen, std::ios::beg);
-            fs.read(reinterpret_cast<char*>(data_.data()), totalSize_);
+            m_data.resize((size_t)m_total_size);
+            fs.seekg(4 + meta_len, std::ios::beg);
+            fs.read(reinterpret_cast<char*>(m_data.data()), m_total_size);
 
             // 4. 预计算 IPv4 偏移 (Trie 树 96 位深度处)
-            v4offset_ = 0;
-            for (int i = 0; i < 96 && v4offset_ < nodeCount_; ++i) {
-                v4offset_ = read_node(v4offset_, (i >= 80) ? 1 : 0);
+            m_v4offset = 0;
+            for (int i = 0; i < 96 && m_v4offset < m_node_count; ++i) {
+                m_v4offset = read_node(m_v4offset, (i >= 80) ? 1 : 0);
             }
 
             // 5. 自动配置默认语言和 ISP 字段索引
-            currentLang_ = "CN";
-            if (languages_.find(currentLang_) == languages_.end() && !languages_.empty()) {
-                currentLang_ = languages_.begin()->first;
+            m_current_lang = "CN";
+            if (m_languages.find(m_current_lang) == m_languages.end() && !m_languages.empty()) {
+                m_current_lang = m_languages.begin()->first;
             }
-            ispIdx_ = guess_isp_index();
+            m_isp_idx = guess_isp_index();
 
-            loaded_ = true;
+            m_loaded = true;
 
         } catch (...) {
-            loaded_ = false;
+            m_loaded = false;
             return false;
         }
 
 		return true;
 	}
 
-	std::tuple<std::vector<std::string>, std::string>
-	ip_ipdb::lookup(net::ip::address ip)
+	ip_result ip_ipdb::lookup(net::ip::address ip)
 	{
-        if (!loaded_) throw Error("ipdb: not loaded");
+        if (!m_loaded) throw Error("ipdb: not loaded");
 
         // 1. 根据 IP 类型执行树搜索
         int node = 0;
         if (ip.is_v4()) {
-            if (!(ipVersion_ & 0x01)) throw Error("ipdb: no ipv4 support");
+            if (!(m_ip_version & 0x01)) throw Error("ipdb: no ipv4 support");
             auto bytes = ip.to_v4().to_bytes();
-            node = search_tree(bytes.data(), 32, v4offset_);
+            node = search_tree(bytes.data(), 32, m_v4offset);
         } else {
-            if (!(ipVersion_ & 0x02)) throw Error("ipdb: no ipv6 support");
+            if (!(m_ip_version & 0x02)) throw Error("ipdb: no ipv6 support");
             auto bytes = ip.to_v6().to_bytes();
             node = search_tree(bytes.data(), 128, 0);
         }
 
         // 2. 解析数据区内容
-        std::string rawStr = resolve_content(node);
-        std::vector<std::string> parts = split_tab(rawStr);
+        std::string raw_str = resolve_content(node);
+        std::vector<std::string> parts = split_tab(raw_str);
 
         // 3. 根据语言提取字段
-        int langBase = languages_[currentLang_];
+        int lang_base = m_languages[m_current_lang];
         std::vector<std::string> fields;
-        for (size_t i = 0; i < fieldNames_.size(); ++i) {
-            size_t pIdx = (size_t)langBase + i;
-            fields.push_back(pIdx < parts.size() ? parts[pIdx] : "");
+        for (size_t i = 0; i < m_field_names.size(); ++i) {
+            size_t p_idx = (size_t)lang_base + i;
+            fields.push_back(p_idx < parts.size() ? parts[p_idx] : "");
         }
 
         // 4. 整理返回格式
         std::vector<std::string> region;
 
         for (int i = 0; i < (int)fields.size(); ++i) {
-            if (i != ispIdx_ && !fields[i].empty()) region.push_back(fields[i]);
+            if (i != m_isp_idx && !fields[i].empty()) region.push_back(fields[i]);
         }
 
         return {region, ""};
@@ -241,25 +237,25 @@ namespace proxy {
   {
         auto v = boost::json::parse(json);
         auto const& obj = v.as_object();
-        nodeCount_ = (int)obj.at("node_count").as_int64();
-        totalSize_ = (int)obj.at("total_size").as_int64();
-        ipVersion_ = (uint16_t)obj.at("ip_version").as_int64();
+        m_node_count = (int)obj.at("node_count").as_int64();
+        m_total_size = (int)obj.at("total_size").as_int64();
+        m_ip_version = (uint16_t)obj.at("ip_version").as_int64();
 
-        fieldNames_.clear();
+        m_field_names.clear();
         for (auto const& f : obj.at("fields").as_array())
-            fieldNames_.emplace_back(f.as_string().c_str());
+            m_field_names.emplace_back(f.as_string().c_str());
 
-        languages_.clear();
+        m_languages.clear();
         for (auto const& kv : obj.at("languages").as_object())
-            languages_[std::string(kv.key())] = (int)kv.value().as_int64();
+            m_languages[std::string(kv.key())] = (int)kv.value().as_int64();
     }
 
     int ip_ipdb::read_node(int node, int bit) const
 	{
         size_t offset = (size_t)node * 8 + (size_t)bit * 4;
-        if (offset + 4 > data_.size()) throw ErrDatabase;
+        if (offset + 4 > m_data.size()) throw ErrDatabase;
         uint32_t val;
-        std::memcpy(&val, &data_[offset], 4);
+        std::memcpy(&val, &m_data[offset], 4);
         return (int)be32_to_host(val);
     }
 
@@ -267,30 +263,30 @@ namespace proxy {
 	{
         int node = startNode;
         for (int i = 0; i < bits; ++i) {
-            if (node >= nodeCount_) break;
+            if (node >= m_node_count) break;
             int bit = (ip[i >> 3] >> (7 - (i & 7))) & 1;
             node = read_node(node, bit);
         }
-        if (node >= nodeCount_) return node;
+        if (node >= m_node_count) return node;
         throw ErrDataEmpty;
     }
 
     std::string ip_ipdb::resolve_content(int node) const
 	{
         // 数据区偏移 = 节点位置 - 节点总数 + (节点总数 * 8字节)
-        size_t pos = (size_t)node - nodeCount_ + (size_t)nodeCount_ * 8;
-        if (pos + 2 > data_.size()) throw ErrDatabase;
+        size_t pos = (size_t)node - m_node_count + (size_t)m_node_count * 8;
+        if (pos + 2 > m_data.size()) throw ErrDatabase;
 
-        size_t len = ((size_t)data_[pos] << 8) | (size_t)data_[pos + 1];
-        if (pos + 2 + len > data_.size()) throw ErrDatabase;
+        size_t len = ((size_t)m_data[pos] << 8) | (size_t)m_data[pos + 1];
+        if (pos + 2 + len > m_data.size()) throw ErrDatabase;
 
-        return std::string((const char*)data_.data() + pos + 2, len);
+        return std::string((const char*)m_data.data() + pos + 2, len);
     }
 
     int ip_ipdb::guess_isp_index()
 	{
-        for (size_t i = 0; i < fieldNames_.size(); ++i) {
-            std::string n = fieldNames_[i];
+        for (size_t i = 0; i < m_field_names.size(); ++i) {
+            std::string n = m_field_names[i];
             std::transform(n.begin(), n.end(), n.begin(), ::tolower);
             if (n.find("isp") != std::string::npos || n.find("operator") != std::string::npos)
                 return (int)i;
