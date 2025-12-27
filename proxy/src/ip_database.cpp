@@ -5,7 +5,7 @@
 // Email:  jack.wgm at gmail dot com
 //
 
-#include "proxy/ipip.hpp"
+#include "proxy/ip_database.hpp"
 #include "proxy/logging.hpp"
 
 #include <boost/algorithm/string.hpp>
@@ -41,7 +41,7 @@ namespace proxy {
 
 	//////////////////////////////////////////////////////////////////////////
 
-	bool ipip_datx::load(const std::string& filename)
+	bool ip_datx::load(const std::string& filename)
 	{
 		XLOG_INFO << "ipip load " << filename;
 
@@ -76,7 +76,7 @@ namespace proxy {
 	}
 
 	std::tuple<std::vector<std::string>, std::string>
-	ipip_datx::lookup(boost::asio::ip::address ip)
+	ip_datx::lookup(boost::asio::ip::address ip)
 	{
 		std::vector<std::string> ret;
 
@@ -150,7 +150,7 @@ namespace proxy {
         return res;
     }
 
-	bool ipip_db::load(const std::string& filename)
+	bool ip_ipdb::load(const std::string& filename)
 	{
        try {
             std::ifstream fs(filename, std::ios::binary);
@@ -199,7 +199,7 @@ namespace proxy {
 	}
 
 	std::tuple<std::vector<std::string>, std::string>
-	ipip_db::lookup(net::ip::address ip)
+	ip_ipdb::lookup(net::ip::address ip)
 	{
         if (!loaded_) throw Error("ipdb: not loaded");
 
@@ -237,7 +237,7 @@ namespace proxy {
         return {region, ""};
 	}
 
-  void ipip_db::parse_meta(const std::string& json)
+  void ip_ipdb::parse_meta(const std::string& json)
   {
         auto v = boost::json::parse(json);
         auto const& obj = v.as_object();
@@ -254,7 +254,7 @@ namespace proxy {
             languages_[std::string(kv.key())] = (int)kv.value().as_int64();
     }
 
-    int ipip_db::read_node(int node, int bit) const
+    int ip_ipdb::read_node(int node, int bit) const
 	{
         size_t offset = (size_t)node * 8 + (size_t)bit * 4;
         if (offset + 4 > data_.size()) throw ErrDatabase;
@@ -263,7 +263,7 @@ namespace proxy {
         return (int)be32_to_host(val);
     }
 
-    int ipip_db::search_tree(const uint8_t* ip, int bits, int startNode) const
+    int ip_ipdb::search_tree(const uint8_t* ip, int bits, int startNode) const
 	{
         int node = startNode;
         for (int i = 0; i < bits; ++i) {
@@ -275,7 +275,7 @@ namespace proxy {
         throw ErrDataEmpty;
     }
 
-    std::string ipip_db::resolve_content(int node) const
+    std::string ip_ipdb::resolve_content(int node) const
 	{
         // 数据区偏移 = 节点位置 - 节点总数 + (节点总数 * 8字节)
         size_t pos = (size_t)node - nodeCount_ + (size_t)nodeCount_ * 8;
@@ -287,7 +287,7 @@ namespace proxy {
         return std::string((const char*)data_.data() + pos + 2, len);
     }
 
-    int ipip_db::guess_isp_index()
+    int ip_ipdb::guess_isp_index()
 	{
         for (size_t i = 0; i < fieldNames_.size(); ++i) {
             std::string n = fieldNames_[i];

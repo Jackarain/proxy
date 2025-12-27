@@ -19,7 +19,7 @@
 #include "proxy/default_cert.hpp"
 #include "proxy/fileop.hpp"
 #include "proxy/strutil.hpp"
-#include "proxy/ipip.hpp"
+#include "proxy/ip_database.hpp"
 
 #include "proxy/socks_enums.hpp"
 #include "proxy/socks_client.hpp"
@@ -4992,12 +4992,12 @@ R"x*x*x(<html>
 			if (fs::exists(m_option.ipip_db_, ec))
 			{
 				try {
-					m_ipip = std::make_unique<ipip_db>();
-					if (!m_ipip->load(m_option.ipip_db_))
+					m_ipdb = std::make_unique<ip_ipdb>();
+					if (!m_ipdb->load(m_option.ipip_db_))
 					{
-						m_ipip = std::make_unique<ipip_datx>();
-						if (!m_ipip->load(m_option.ipip_db_))
-							m_ipip.reset();
+						m_ipdb = std::make_unique<ip_datx>();
+						if (!m_ipdb->load(m_option.ipip_db_))
+							m_ipdb.reset();
 					}
 				} catch (const std::exception& e) {
 					XLOG_WARN << "ipip database " << m_option.ipip_db_ << ", load error: " << e.what();
@@ -5742,10 +5742,10 @@ R"x*x*x(<html>
 				local_info.push_back(client);
 				client += ":" + std::to_string(endp.port());
 
-				if (m_ipip)
+				if (m_ipdb)
 				{
 					try {
-						auto [ret, isp] = m_ipip->lookup(endp.address());
+						auto [ret, isp] = m_ipdb->lookup(endp.address());
 						if (!ret.empty())
 						{
 							for (auto& c : ret)
@@ -6097,7 +6097,7 @@ R"x*x*x(<html>
 		std::set<net::ip::address> m_local_addrs;
 
 		// ipip 用于获取 ip 地址的地理位置信息.
-		std::unique_ptr<ipip> m_ipip;
+		std::unique_ptr<ip_database> m_ipdb;
 
 		using proxy_session_weak_ptr =
 			std::weak_ptr<proxy_session>;

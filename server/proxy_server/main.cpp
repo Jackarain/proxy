@@ -26,7 +26,6 @@
 #include "proxy/logging.hpp"
 
 #include "proxy/use_awaitable.hpp"
-#include "proxy/ipip.hpp"
 
 #include "main.hpp"
 

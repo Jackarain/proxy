@@ -20,10 +20,10 @@
 namespace proxy {
 	namespace net = boost::asio;
 
-	class ipip
+	class ip_database
 	{
 	public:
-		virtual ~ipip() = default;
+		virtual ~ip_database() = default;
 
 		virtual bool load(const std::string& filename) = 0;
 
@@ -36,15 +36,15 @@ namespace proxy {
 	};
 
 	// IPIP数据文件格式: datx.
-	class ipip_datx : public ipip
+	class ip_datx : public ip_database
 	{
 		// c++11 noncopyable.
-		ipip_datx(const ipip_datx&) = delete;
-		ipip_datx& operator=(const ipip_datx&) = delete;
+		ip_datx(const ip_datx&) = delete;
+		ip_datx& operator=(const ip_datx&) = delete;
 
 	public:
-		ipip_datx() = default;
-		virtual ~ipip_datx() = default;
+		ip_datx() = default;
+		virtual ~ip_datx() = default;
 
 		// 打开ipip数据文件.
 		virtual bool load(const std::string& filename) override;
@@ -61,15 +61,15 @@ namespace proxy {
 	};
 
 	// IPDB 数据文件格式: db.
-	class ipip_db : public ipip
+	class ip_ipdb : public ip_database
 	{
 		// c++11 noncopyable.
-		ipip_db(const ipip_db&) = delete;
-		ipip_db& operator=(const ipip_db&) = delete;
+		ip_ipdb(const ip_ipdb&) = delete;
+		ip_ipdb& operator=(const ip_ipdb&) = delete;
 
 	public:
-		ipip_db() = default;
-		virtual ~ipip_db() = default;
+		ip_ipdb() = default;
+		virtual ~ip_ipdb() = default;
 
 		// 打开ipip数据文件.
 		virtual bool load(const std::string& filename) override;
