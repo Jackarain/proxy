@@ -494,9 +494,16 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 			return EXIT_FAILURE;
 		}
 
-		auto cfg = po::parse_config_file(config.c_str(), desc, false);
-		po::store(cfg, vm);
-		po::notify(vm);
+		try {
+			auto cfg = po::parse_config_file(config.c_str(), desc, false);
+			po::store(cfg, vm);
+			po::notify(vm);
+		}
+		catch (const po::error& e)
+		{
+			std::cerr << "Error parsing config file: " << e.what() << "\n";
+			return EXIT_FAILURE;
+		}
 	}
 
 	if (disable_logs && log_dir.empty())
