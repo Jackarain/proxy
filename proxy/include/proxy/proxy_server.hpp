@@ -4825,6 +4825,10 @@ R"x*x*x(<html>
 
 			m_ssl_cli_context.use_tmp_dh(net::buffer(default_dh_param()), ec);
 
+			// 设置 alpn 协议.
+			SSL_CTX_set_alpn_protos(m_ssl_cli_context.native_handle(),
+				(const unsigned char *)"\x08http/1.1", 9);
+
 			// 获取 proxy_pass 的主机名称.
 			auto proxy_host = std::string(m_proxy_pass->host());
 
@@ -5180,6 +5184,9 @@ R"x*x*x(<html>
 				// 设置 ssl ciphers.
 				SSL_CTX_set_cipher_list(ssl_ctx.native_handle(),
 					m_option.ssl_ciphers_.c_str());
+				// 设置 alpn 协议.
+				SSL_CTX_set_alpn_select_cb(ssl_ctx.native_handle(),
+					alpn_select_proto_cb, (void*)this);
 
 				// 设置证书文件.
 				boost::system::error_code ec;
@@ -5410,6 +5417,35 @@ R"x*x*x(<html>
     		SSL_CTX_set_tlsext_servername_callback(
 				m_ssl_srv_context.native_handle(), proxy_server::ssl_sni_callback);
     		SSL_CTX_set_tlsext_servername_arg(m_ssl_srv_context.native_handle(), this);
+
+			// 设置 ALPN 回调函数.
+			SSL_CTX_set_alpn_select_cb(m_ssl_srv_context.native_handle(),
+				alpn_select_proto_cb, (void*)this);
+		}
+
+		static int alpn_select_proto_cb(SSL *ssl, const unsigned char **out,
+                                unsigned char *outlen, const unsigned char *in,
+                                unsigned int inlen, void *arg)
+		{
+			proxy_server* self = (proxy_server*)arg;
+			return self->alpn_select_proto(ssl, out, outlen, in, inlen);
+		}
+
+		inline int alpn_select_proto(SSL *ssl, const unsigned char **out,
+			unsigned char *outlen, const unsigned char *in,
+			unsigned int inlen) noexcept
+		{
+			(void)ssl;
+			int ret = SSL_select_next_proto((unsigned char **)out, outlen,
+											in, inlen,
+											(const unsigned char *)"\x8http/1.1", 9);
+			if (ret == OPENSSL_NPN_NEGOTIATED)
+				return SSL_TLSEXT_ERR_OK;
+
+			XLOG_DBG << "ALPN negotiation failed: "
+				<< inlen << " " << std::string((const char*)in, inlen);
+
+			return SSL_TLSEXT_ERR_ALERT_FATAL;
 		}
 
 		static int ssl_sni_callback(SSL *ssl, int *ad, void *arg)
