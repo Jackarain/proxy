@@ -57,7 +57,7 @@ jobs:
 
       - name: Build proxy
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -G Ninja
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -DENABLE_USE_PAM_AUTH=ON -G Ninja
           cmake --build build --config Release
 
       - name: Archive artifacts
@@ -78,7 +78,7 @@ jobs:
 
       - name: Build proxy
         run: |
-          CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" -G Ninja
+          CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" -DENABLE_USE_PAM_AUTH=ON -G Ninja
           cmake --build build --config Release
 
       - name: Archive artifacts
@@ -108,7 +108,7 @@ jobs:
 
       - name: Build proxy
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -DENABLE_MIMALLOC_STATIC=ON -G Ninja
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -DENABLE_MIMALLOC_STATIC=ON -DENABLE_USE_PAM_AUTH=ON -G Ninja
           cmake --build build --config Release
 
       - name: Archive artifacts
