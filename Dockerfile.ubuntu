@@ -3,10 +3,10 @@ FROM ubuntu:22.04 AS builder
 RUN apt-get update && apt-get install --fix-missing -y ca-certificates
 RUN sed -i "s@http://.*archive.ubuntu.com@https://mirrors.pku.edu.cn@g" /etc/apt/sources.list && sed -i "s@http://.*security.ubuntu.com@https://mirrors.pku.edu.cn@g" /etc/apt/sources.list
 RUN apt-get update && apt-get upgrade -y
-RUN apt-get install -y cmake gcc g++ ninja-build
+RUN apt-get install -y cmake gcc g++ ninja-build linux-pam-dev
 ADD . /proxy
-RUN cd /proxy && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=ON -G Ninja && ninja
-RUN cd /proxy && mkdir -p wolfssl && cd wolfssl && cmake .. -DENABLE_USE_OPENSSL=OFF -DENABLE_USE_WOLFSSL=ON -DENABLE_SNMALLOC_STATIC=ON -DCMAKE_BUILD_TYPE=Release -G Ninja && ninja
+RUN cd /proxy && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=ON -DENABLE_USE_PAM_AUTH=ON -G Ninja && ninja
+RUN cd /proxy && mkdir -p wolfssl && cd wolfssl && cmake .. -DENABLE_USE_OPENSSL=OFF -DENABLE_USE_WOLFSSL=ON -DENABLE_SNMALLOC_STATIC=ON -DENABLE_USE_PAM_AUTH=ON -DCMAKE_BUILD_TYPE=Release -G Ninja && ninja
 
 FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y ca-certificates

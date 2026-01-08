@@ -53,7 +53,7 @@ jobs:
 
       - name: Update OS and Compilers
         run: |
-          sudo apt install -y cmake ninja-build
+          sudo apt install -y cmake ninja-build libpam0g-dev
 
       - name: Build proxy
         run: |
@@ -72,7 +72,7 @@ jobs:
       image: alpine:3.20.1
     steps:
       - name: Install packages
-        run: apk add bash git nasm yasm pkgconfig build-base clang cmake ninja linux-headers
+        run: apk add bash git nasm yasm pkgconfig build-base clang cmake ninja linux-headers linux-pam-dev
 
       - uses: actions/checkout@v4
 
@@ -94,7 +94,7 @@ jobs:
 
       - name: Update OS and Compilers
         run: |
-          sudo apt install -y cmake ninja-build
+          sudo apt install -y cmake ninja-build libpam0g-dev
 
       - name: Build mimalloc
         run: |
@@ -124,7 +124,7 @@ jobs:
 
       - name: Update OS and Compilers
         run: |
-          sudo apt install -y cmake ninja-build
+          sudo apt install -y cmake ninja-build libpam0g-dev
 
       - name: Build proxy
         run: |
