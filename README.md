@@ -104,6 +104,7 @@ docker build . -t proxy:v1
 | transparent | 启用透明代理，默认禁用，此选项仅 linux 平台有效 |
 | so_mark | 用于发起向 `proxy_pass` 连接时设置 so_mark 以方便实现代理流量的策略路由，仅在 transparent 启动时有效 |
 | local_ip | 用于向上游服务或目标服务发起连接时使用指定的本地网口 `ip` 地址，通常用于机器上有多个 `ip` 时使用特定 `ip` 向外发起连接 |
+| pam_auth | 用于指定使用 `PAM` 认证模块进行认证，参数值为 `PAM` 服务名称，`PAM` 能和使用 `auth_users` 参数同时用于认证，优先使用 `auth_users` 参数进行认证，需要在编译时添加 `-DENABLE_USE_PAM_AUTH=ON` 选项以启用 `PAM` 模块认证功能 |
 | auth_users | 认证信息列表，客户端必须满足其中一对用户/密码才能握手通过，默认用户密码是 `jack:1111`（默认需要认证是为了避免不小心被当成别人免费的跳板），若需要设置为无需要认证代理模式，必须置 `auth_users` 参数为 "" |
 | proxy_pass | 当前服务作为中间级联服务时，`proxy_pass` 指定上游代理服务地址，格式为 `url` 格式，如果有认证信息并必须包含认证信息，如: `https://jack:1111@example.com:1080/` |
 | proxy_pass_ssl | 向 `proxy_pass` 指定的上游代理服务连接时，是否通过 `ssl` 安全传输，注意必须在上游代理服务启用 `ssl` 相关证书域名密钥等信息. |
@@ -180,6 +181,16 @@ Host example
 
 然后当使用 `ssh` 连接主机 `example` 时将会按上述配置文件中参数创建 `proxy_server` 代理隧道，通过 `proxy_pass` 指定的代理服务器连接目标 `HostName` 所指的服务器。
 
+## 使用 PAM 模块认证介绍
+
+`proxy_server` 支持使用 `PAM` 模块进行认证（仅支持 `pam` 的 `linux` 平台，编译 `proxy_server` 时需要在 `cmake` 中添加 `-DENABLE_USE_PAM_AUTH=ON` 选项以启用 `PAM` 模块认证功能），具体使用方法如下：
+
+1. 配置 `PAM` 服务，如将 `doc` 目录下 `pam.example` 下的文件 `proxy-service` 复制到 `/etc/pam.d/` 目录中，文件名即为 `PAM` 服务名称。
+2. 在 `proxy_server` 中指定 `PAM` 服务名称，如 `--pam_auth proxy-service`。
+3. 使用 `linux` 命令添加用户到 `PAM` 服务中，如 `useradd jack`，其中 `jack` 为用户名，使用 `passwd jack` 设置密码如 `1111`。
+4. 测试认证是否生效，如 `curl -x http://jack:1111@localhost:1080/ https://google.com`，如果返回 `200 OK` 则说明认证生效。
+
+`PAM` 模块认证可以使用 `linux` 命令添加或管理用户，可以极大的方便 `proxy_server` 的用户管理，而不必依赖复杂的数据库系统。
 
 ## 静态文件 http 服务器(可配置为云音乐播放器)
 
