@@ -990,7 +990,13 @@ R"x*x*x(<html>
 		// 检查是否需要认证.
 		inline bool auth_required() const noexcept
 		{
-			return !m_option.auth_users_.empty() && m_option.pam_auth_.empty();
+			if (!m_option.auth_users_.empty())
+				return true;
+
+			if (!m_option.pam_auth_.empty())
+				return true;
+
+			return false;
 		}
 
 		// 检查用户密码等相关配置信息, 包括更新绑定的本地网络地址和限速等信息.
@@ -2999,7 +3005,7 @@ R"x*x*x(<html>
 			if (auth != PROXY_AUTH_SUCCESS)
 			{
 				log_conn_warning()
-					<< ", proxy err: "
+					<< ", proxy auth error: "
 					<< pauth_error_message(auth);
 
 				auto date_string = server_date_string();
