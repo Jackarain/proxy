@@ -104,7 +104,12 @@
 # include <boost/filesystem.hpp>
 #endif // USE_BOOST_FILESYSTEM
 
+#ifdef USE_PAM_AUTH
+# include <security/pam_appl.h>
+# include <security/pam_misc.h>
+#endif // USE_PAM_AUTH
 
+#include <cstdlib>
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
@@ -418,6 +423,12 @@ R"x*x*x(<html>
 		// - 典型用途：将 stdin/stdout 作为一条逻辑“连接”转发到远端（例如作为守护进程的 stdio 入口）。
 		// - 为空表示不启用该功能。
 		std::string stdio_target_;
+
+		// PAM 认证服务配置名称。
+		//
+		// - 为空表示不启用 PAM 认证。
+		// - 否则，将使用指定的 PAM 服务配置进行认证。
+		std::string pam_auth_;
 
 		// 授权（认证）用户列表。
 		//
@@ -871,21 +882,127 @@ R"x*x*x(<html>
 			}
 		}
 
+#ifdef USE_PAM_AUTH
+		static int pam_conv_func(int num_msg, const struct pam_message **msg,
+                         struct pam_response **resp, void *appdata_ptr)
+		{
+			if (num_msg <= 0 || num_msg > PAM_MAX_NUM_MSG)
+				return PAM_CONV_ERR;
+
+			*resp = (struct pam_response *)std::calloc(num_msg, sizeof(struct pam_response));
+			if (*resp == nullptr)
+				return PAM_BUF_ERR;
+
+			const char *password = (const char *)appdata_ptr;
+
+			for (int i = 0; i < num_msg; i++)
+			{
+				if (msg[i]->msg_style == PAM_PROMPT_ECHO_OFF)
+				{
+					(*resp)[i].resp = strdup(password);
+					(*resp)[i].resp_retcode = 0;
+				}
+				else
+				{
+					(*resp)[i].resp = nullptr;
+				}
+			}
+
+			return PAM_SUCCESS;
+		}
+
+		bool pam_authenticate_user(const char *service, const char *username, const char *password) noexcept
+		{
+			pam_handle_t *pamh = nullptr;
+			struct pam_conv conv = {
+				.conv = pam_conv_func,
+				.appdata_ptr = (void *)password  // 传入密码
+			};
+
+			int retval = pam_start(service, username, &conv, &pamh);
+			if (retval != PAM_SUCCESS)
+			{
+				log_conn_warning() << ", pam_start failed: " << pam_strerror(pamh, retval);
+				return false;
+			}
+
+			retval = pam_authenticate(pamh, 0);  // 核心认证
+			if (retval != PAM_SUCCESS) {
+				log_conn_warning() << ", authentication failed: " << pam_strerror(pamh, retval);
+				pam_end(pamh, retval);
+				return false;
+			}
+
+			retval = pam_acct_mgmt(pamh, 0);	// 检查账户（如锁定、过期）
+			if (retval != PAM_SUCCESS) {
+				log_conn_warning() << ", account management failed: " << pam_strerror(pamh, retval);
+				pam_end(pamh, retval);
+				return false;
+			}
+
+			pam_end(pamh, PAM_SUCCESS);
+
+			log_conn_debug() << ", pam_authenticate_user success";
+
+			return true;
+		}
+
+		template <typename CompletionToken>
+		auto async_pam_auth(const std::string& username, const std::string& passwd,
+			const std::string& service_name, CompletionToken&& token) noexcept
+		{
+			return net::async_initiate<CompletionToken,
+				void(boost::system::error_code, bool)>
+				([this, username, passwd, service_name](auto&& handler) mutable
+				{
+					std::thread([this, username = std::move(username), passwd = std::move(passwd),
+						service_name = std::move(service_name), handler = std::move(handler)]() mutable
+						{
+							auto slot = net::get_associated_cancellation_slot(handler);
+							auto executor = net::get_associated_executor(handler);
+							std::atomic_bool cancelled = false;
+
+							if (slot.is_connected())
+							{
+								slot.assign([&cancelled](net::cancellation_type_t) mutable
+									{
+										cancelled = true;
+									});
+							}
+
+							boost::system::error_code ec;
+							bool result = pam_authenticate_user(
+								service_name.c_str(),
+								username.c_str(),
+								passwd.c_str());
+
+							net::post(executor,
+								[ec = std::move(ec), result, handler = std::move(handler)]() mutable
+								{
+									handler(ec, result);
+								});
+						}
+					).detach();
+				}, token);
+		}
+#endif // USE_PAM_AUTH
+
 		// 检查是否需要认证.
 		inline bool auth_required() const noexcept
 		{
-			return !m_option.auth_users_.empty();
+			return !m_option.auth_users_.empty() && m_option.pam_auth_.empty();
 		}
 
 		// 检查用户密码等相关配置信息, 包括更新绑定的本地网络地址和限速等信息.
-		inline bool check_userpasswd(
+		inline net::awaitable<bool> check_userpasswd(
 			const std::string& username,
 			const std::string& passwd, bool skip_passwd = false) noexcept
 		{
 			// 若不需要认证, 直接返回 true.
 			if (!auth_required())
-				return true;
+				co_return true;
 
+			// 检查用户名和密码是否匹配.
 			for (const auto& [user, pwd, addr, proxy_pass] : m_option.auth_users_)
 			{
 				if (username == user)
@@ -899,11 +1016,26 @@ R"x*x*x(<html>
 					if (proxy_pass)
 						m_proxy_pass = proxy_pass;
 
-					return true;
+					co_return true;
 				}
 			}
 
-			return false;
+			// 如果启用了 PAM 认证, 则尝试使用 PAM 认证.
+			if (!skip_passwd && !m_option.pam_auth_.empty())
+			{
+#ifdef USE_PAM_AUTH
+				boost::system::error_code ec;
+				auto result = co_await async_pam_auth(username, passwd,
+					m_option.pam_auth_, net_awaitable[ec]);
+				if (result)
+				{
+					user_rate_limit_config(username);
+					co_return true;
+				}
+#endif
+			}
+
+			co_return false;
 		}
 
 	public:
@@ -2462,7 +2594,7 @@ R"x*x*x(<html>
 				<< (socks4a ? hostname : dst_endpoint.address().to_string());
 
 			// 用户认证逻辑, 如果用户认证列表为空, 则表示不需要用户认证.
-			bool verify_passed = check_userpasswd(userid, "", true);
+			bool verify_passed = co_await check_userpasswd(userid, "", true);
 
 			if (auth_required())
 			{
@@ -2581,23 +2713,23 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline int http_authorization(std::string_view pa) noexcept
+		inline net::awaitable<int> http_authorization(std::string_view pa) noexcept
 		{
 			if (!auth_required())
-				return PROXY_AUTH_SUCCESS;
+				co_return PROXY_AUTH_SUCCESS;
 
 			if (pa.empty())
-				return PROXY_AUTH_NONE;
+				co_return PROXY_AUTH_NONE;
 
 			auto pos = pa.find(' ');
 			if (pos == std::string::npos)
-				return PROXY_AUTH_ILLEGAL;
+				co_return PROXY_AUTH_ILLEGAL;
 
 			auto type = pa.substr(0, pos);
 			auto auth = pa.substr(pos + 1);
 
 			if (type != "Basic")
-				return PROXY_AUTH_ILLEGAL;
+				co_return PROXY_AUTH_ILLEGAL;
 
 			std::string userinfo(
 				beast::detail::base64::decoded_size(auth.size()), 0);
@@ -2612,11 +2744,11 @@ R"x*x*x(<html>
 			std::string uname = userinfo.substr(0, pos);
 			std::string passwd = userinfo.substr(pos + 1);
 
-			bool verify_passed = check_userpasswd(uname, passwd);
+			bool verify_passed = co_await check_userpasswd(uname, passwd);
 			if (!verify_passed)
-				return PROXY_AUTH_FAILED;
+				co_return PROXY_AUTH_FAILED;
 
-			return PROXY_AUTH_SUCCESS;
+			co_return PROXY_AUTH_SUCCESS;
 		}
 
 		inline net::awaitable<bool> http_proxy_get() noexcept
@@ -2675,7 +2807,7 @@ R"x*x*x(<html>
 
 				// http 代理认证, 如果请求的 rarget 不是 http url 或认证
 				// 失败, 则按正常 web 请求处理.
-				auto auth_result = http_authorization(pa);
+				auto auth_result = co_await http_authorization(pa);
 				if (auth_result != PROXY_AUTH_SUCCESS || !get_url_proxy)
 				{
 					// 如果 doc 目录为空, 则不允许访问目录
@@ -2863,7 +2995,7 @@ R"x*x*x(<html>
 					: ", proxy_authorization: " + pa);
 
 			// http 代理认证.
-			auto auth = http_authorization(pa);
+			auto auth = co_await http_authorization(pa);
 			if (auth != PROXY_AUTH_SUCCESS)
 			{
 				log_conn_warning()
@@ -3034,7 +3166,7 @@ R"x*x*x(<html>
 				passwd.push_back(read<int8_t>(p));
 
 			// SOCKS5验证用户和密码, 用户认证逻辑.
-			bool verify_passed = check_userpasswd(uname, passwd);
+			bool verify_passed = co_await check_userpasswd(uname, passwd);
 
 			if (auth_required())
 			{

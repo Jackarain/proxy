@@ -59,7 +59,9 @@ option(ENABLE_REUSEPORT				"Build with REUSEPORT support" OFF)
 
 option(ENABLE_SYSTEM_ZLIB			"Build with system zlib support" OFF)
 option(ENABLE_SYSTEM_OPENSSL		"Build with system openssl support" OFF)
+
 option(ENABLE_USE_SYSTEMD_LOG		"Build with systemd log support" OFF)
+option(ENABLE_USE_PAM_AUTH 			"Build with PAM authentication support" OFF)
 
 option(ENABLE_USE_OPENSSL			"Build with openssl support" ON)
 option(ENABLE_USE_BORINGSSL			"Build with boringssl support" OFF)
@@ -132,6 +134,15 @@ endif()
 if (ENABLE_USE_SYSTEMD_LOG)
 	add_definitions(-DUSE_SYSTEMD_LOGGING)
 	link_libraries(systemd)
+endif()
+
+################################################################################
+
+if (UNIX AND NOT APPLE)
+	if (ENABLE_USE_PAM_AUTH)
+		add_definitions(-DUSE_PAM_AUTH)
+		link_libraries(pam)
+	endif()
 endif()
 
 ################################################################################

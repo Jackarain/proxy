@@ -72,6 +72,10 @@ std::string ssl_ciphers;
 std::string ssl_dhparam;
 std::string proxy_ssl_name;
 
+#ifdef USE_PAM_AUTH
+std::string pam_auth;
+#endif // USE_PAM_AUTH
+
 bool transparent = false;
 bool autoindex = false;
 bool htpasswd = false;
@@ -227,6 +231,9 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		}
 	}
 
+#ifdef USE_PAM_AUTH
+	opt.pam_auth_ = pam_auth;
+#endif
 	opt.proxy_pass_use_ssl_ = proxy_pass_ssl;
 
 	opt.ssl_cert_path_ = ssl_cert_dir;
@@ -418,6 +425,9 @@ int main(int argc, char** argv)
 		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(-1), "Set TCP timeout for TCP connections.")
 		("rate_limit", po::value<int>(&rate_limit)->default_value(-1), "Set TCP rate limit for connection.")
 
+#ifdef USE_PAM_AUTH
+		("pam_auth", po::value<std::string>(&pam_auth)->value_name("pam service"), "Enable PAM authentication, specify PAM service name.")
+#endif
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users(default user: jack:1111) (e.g: user1:passwd1 user2:passwd2).")
 		("users_rate_limit", po::value<std::vector<std::string>>(&users_rate_limit)->multitoken(), "List of users rate limit (e.g: user1:1000000 user2:800000).")
 
