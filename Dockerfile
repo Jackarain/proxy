@@ -7,7 +7,8 @@ RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" > /etc/apk/repositori
 RUN apk add -u alpine-keys --allow-untrusted
 RUN apk update
 RUN apk upgrade
-RUN apk add --no-cache bash git nasm yasm pkgconfig build-base clang cmake ninja linux-headers linux-pam-dev
+RUN apk add --no-cache bash git nasm yasm pkgconfig build-base clang cmake ninja linux-headers linux-pam-dev linux-pam
+RUN ln -s /lib/libpam.* /usr/lib/
 
 ADD . /proxy
 
