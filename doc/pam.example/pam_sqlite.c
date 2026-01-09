@@ -4,6 +4,16 @@
 // gcc -shared -o pam_sqlite.so pam_sqlite.o -lpam -lsqlite3
 // cp pam_sqlite.so /usr/lib/security/
 //
+// pam_sqlite.so 模块用到的数据库的表结构如下:
+//
+// 表名：users
+// 字段：username（用户名，主键）、password（密码，非空）
+//
+// CREATE TABLE users (
+//     username TEXT PRIMARY KEY,
+//     password TEXT NOT NULL
+// );
+//
 
 #include <stdio.h>
 #include <stdlib.h>
