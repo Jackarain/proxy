@@ -1,6 +1,12 @@
 # 这是一个 PAM 示例，将此配置文件 proxy-service 复制到 /etc/pam.d/ 目录中，然后
 # 就可以使用 proxy_server 的 --pam_auth 参数指定为 "proxy-service" 即可.
 
+# 以下为使用 pam_sqlite.c 编译的 pam_sqlite.so 通过 sqlite 数据库中的用户密码认证配置
+#auth    required   pam_sqlite.so /var/users.db
+#account required   pam_permit.so
+
+# 以下为使用 linux 用户密码认证的配置
 auth    required   pam_unix.so
 account required   pam_unix.so
 session required   pam_unix.so
+
