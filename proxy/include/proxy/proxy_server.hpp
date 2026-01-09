@@ -958,27 +958,16 @@ R"x*x*x(<html>
 					std::thread([this, username = std::move(username), passwd = std::move(passwd),
 						service_name = std::move(service_name), handler = std::move(handler)]() mutable
 						{
-							auto slot = net::get_associated_cancellation_slot(handler);
-							auto executor = net::get_associated_executor(handler);
-							std::atomic_bool cancelled = false;
-
-							if (slot.is_connected())
-							{
-								slot.assign([&cancelled](net::cancellation_type_t) mutable
-									{
-										cancelled = true;
-									});
-							}
-
-							boost::system::error_code ec;
 							bool result = pam_authenticate_user(
 								service_name.c_str(),
 								username.c_str(),
 								passwd.c_str());
 
+							auto executor = net::get_associated_executor(handler);
 							net::post(executor,
-								[ec = std::move(ec), result, handler = std::move(handler)]() mutable
+								[result, handler = std::move(handler)]() mutable
 								{
+									boost::system::error_code ec;
 									handler(ec, result);
 								});
 						}
