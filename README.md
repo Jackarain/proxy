@@ -190,7 +190,7 @@ Host example
 3. 使用 `linux` 命令添加用户到 `PAM` 服务中，如 `useradd jack`，其中 `jack` 为用户名，使用 `passwd jack` 设置密码如 `1111`。
 4. 测试认证是否生效，如 `curl -x http://jack:1111@localhost:1080/ https://google.com`，如果返回 `200 OK` 则说明认证生效。
 
-`PAM` 模块认证可以使用 `linux` 命令添加或管理用户，可以极大的方便 `proxy_server` 的用户管理，而不必依赖复杂的数据库系统，当然如果你是开发人员，也可以开发一个支持数据库认证的 `PAM` 的 `so` 模块，或者使用 `PAM` 模块认证来实现 `LDAP` 认证等等各种方式。
+`PAM` 模块认证可以使用 `linux` 命令添加或管理用户，可以极大的方便 `proxy_server` 的用户管理，而不必依赖复杂的数据库系统，当然如果你是开发人员，也可以开发一个支持数据库认证的 `PAM` 的 `so` 模块（可参考 `doc` 下 `pam.example` 的 `pam_sqlite.c` 如何实现 `PAM` 认证模块），或者使用 `PAM` 模块认证来实现 `LDAP` 认证等等各种方式。
 
 ## 静态文件 http 服务器(可配置为云音乐播放器)
 
