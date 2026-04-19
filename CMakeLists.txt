@@ -496,6 +496,10 @@ endif()
 # 使用 zlib
 
 if (WIN32 OR NOT ENABLE_SYSTEM_ZLIB)
+
+	set(ZLIB_BUILD_TESTING OFF)
+	set(ZLIB_BUILD_SHARED OFF)
+	set(ZLIB_INSTALL OFF)
 	add_subdirectory(third_party/zlib EXCLUDE_FROM_ALL)
 
 	set(ZLIB_LIBRARIES zlibstatic)
