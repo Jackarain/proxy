@@ -507,6 +507,9 @@ if (WIN32 OR NOT ENABLE_SYSTEM_ZLIB)
 		${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib
 		${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib/contrib/minizip
 	)
+
+	set_property(TARGET zlibstatic PROPERTY FOLDER "third_party")
+
 else()
 	find_package(ZLIB REQUIRED)
 endif()
