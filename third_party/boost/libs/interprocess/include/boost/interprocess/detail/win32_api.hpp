@@ -31,10 +31,6 @@
 #include <string>
 #include <vector>
 
-#ifdef BOOST_USE_WINDOWS_H
-#include <windows.h>
-#endif
-
 #if defined(_MSC_VER)
 #  pragma once
 #  pragma comment( lib, "Advapi32.lib" )
@@ -43,6 +39,9 @@
 #endif
 
 #if defined (BOOST_INTERPROCESS_WINDOWS)
+#  ifdef BOOST_USE_WINDOWS_H
+#     include <windows.h>
+#  endif
 #  include <cstdarg>
 #  include <boost/detail/interlocked.hpp>
 #else

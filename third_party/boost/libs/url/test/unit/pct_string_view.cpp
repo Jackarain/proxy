@@ -10,6 +10,7 @@
 // Test that header file is self-contained.
 #include <boost/url/pct_string_view.hpp>
 
+#include <boost/core/detail/static_assert.hpp>
 #include "test_suite.hpp"
 
 namespace boost {
@@ -134,10 +135,56 @@ struct pct_string_view_test
     }
 
     void
+    testOperatorStar()
+    {
+        // Basic usage
+        {
+            pct_string_view psv("Program%20Files");
+            decode_view dv = *psv;
+            BOOST_TEST(dv == "Program Files");
+        }
+
+        // Empty string
+        {
+            pct_string_view psv("");
+            decode_view dv = *psv;
+            BOOST_TEST(dv.empty());
+        }
+
+        // No encoding
+        {
+            pct_string_view psv("simple");
+            decode_view dv = *psv;
+            BOOST_TEST(dv == "simple");
+        }
+    }
+
+    void
+    testBorrowedRange()
+    {
+#ifdef BOOST_URL_HAS_CONCEPTS
+        // pct_string_view is a borrowed range
+        BOOST_CORE_STATIC_ASSERT(
+            std::ranges::borrowed_range<pct_string_view>);
+
+        // iterators remain valid after the view is destroyed
+        pct_string_view::iterator it;
+        {
+            pct_string_view psv("hello%20world");
+            it = psv.begin();
+        }
+        // iterator is still valid (points to external buffer)
+        BOOST_TEST_EQ(*it, 'h');
+#endif
+    }
+
+    void
     run()
     {
         testSpecial();
         testRelation();
+        testOperatorStar();
+        testBorrowedRange();
     }
 };
 

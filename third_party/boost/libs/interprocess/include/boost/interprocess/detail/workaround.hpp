@@ -25,7 +25,7 @@
 
 //#define BOOST_INTERPROCESS_FORCE_NATIVE_EMULATION
 
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#if !defined(__CYGWIN__) && (defined(_WIN32) || defined(__WIN32__) || defined(WIN32))
    #define BOOST_INTERPROCESS_WINDOWS
    #if !defined(BOOST_INTERPROCESS_FORCE_NATIVE_EMULATION) && !defined(BOOST_INTERPROCESS_FORCE_GENERIC_EMULATION)
       #define BOOST_INTERPROCESS_FORCE_GENERIC_EMULATION
@@ -34,14 +34,14 @@
 #else
    #include <unistd.h>
 
-   #if defined (__CYGWIN__) && (!defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE < 200112L))
+   #if defined (__CYGWIN__) && (!defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE < 200112L))
    #error "Error: Compiling on Cygwin without POSIX is not supported. Please define _XOPEN_SOURCE >= 600 or _POSIX_C_SOURCE >= 200112 when compiling"
    #endif
 
    //////////////////////////////////////////////////////
    //Check for XSI shared memory objects. They are available in nearly all UNIX platforms
    //////////////////////////////////////////////////////
-   #if !defined(__QNXNTO__) && !defined(__ANDROID__) && !defined(__HAIKU__) && !(__VXWORKS__) && !(__EMSCRIPTEN__)
+   #if !defined(__QNXNTO__) && !defined(__ANDROID__) && !defined(__HAIKU__) && !defined(__VXWORKS__) && !defined(__EMSCRIPTEN__)
       #define BOOST_INTERPROCESS_XSI_SHARED_MEMORY_OBJECTS
    #endif
 
@@ -65,6 +65,14 @@
          //https://opensource.apple.com/source/libpthread/libpthread-301.30.1/src/pthread_cond.c.auto.html
          //in method pthread_cond_wait
          #define BOOST_INTERPROCESS_BUGGY_POSIX_PROCESS_SHARED
+      #elif defined(__FreeBSD__)
+         //The FreeBSD implementation is not workable for Interprocess as data structures
+         //hold raw pointers and even "kern.ipc.umtx_vnode_persistent" does not solve this issue
+         //because de vnode will be recycled anyway since it is only useful when:
+         // - Multiple processes have the file mapped **simultaneously**
+         // - The kernel needs to coordinate their wait queues
+         //See (https://man.freebsd.org/cgi/man.cgi?query=libthr) for details
+         #define BOOST_INTERPROCESS_BUGGY_POSIX_PROCESS_SHARED
       #endif
 
       //If buggy _POSIX_THREAD_PROCESS_SHARED is detected avoid using it
@@ -78,7 +86,7 @@
    //////////////////////////////////////////////////////
    //    BOOST_INTERPROCESS_POSIX_ROBUST_MUTEXES
    //////////////////////////////////////////////////////
-   #if (_XOPEN_SOURCE >= 700 || _POSIX_C_SOURCE >= 200809L)
+   #if ( defined(_XOPEN_SOURCE) && (_XOPEN_SOURCE >= 700) ) || ( defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200809L) )
       #define BOOST_INTERPROCESS_POSIX_ROBUST_MUTEXES
    #endif
 
@@ -170,7 +178,7 @@
    //////////////////////////////////////////////////////
    //posix_fallocate
    //////////////////////////////////////////////////////
-   #if (_XOPEN_SOURCE >= 600 || _POSIX_C_SOURCE >= 200112L)
+   #if ( defined(_XOPEN_SOURCE) && (_XOPEN_SOURCE >= 600) ) || ( defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L) )
    #define BOOST_INTERPROCESS_POSIX_FALLOCATE
    #endif
 
@@ -206,13 +214,6 @@
 #ifndef BOOST_INTERPROCESS_MANAGED_OPEN_OR_CREATE_INITIALIZE_TIMEOUT_SEC
    #define BOOST_INTERPROCESS_MANAGED_OPEN_OR_CREATE_INITIALIZE_TIMEOUT_SEC 300u
 #endif
-
-//Other switches
-//BOOST_INTERPROCESS_MSG_QUEUE_USES_CIRC_INDEX
-//message queue uses a circular queue as index instead of an array (better performance)
-//Boost version < 1.52 uses an array, so undef this if you want to communicate
-//with processes compiled with those versions.
-#define BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
 
 //Macros for documentation purposes. For code, expands to the argument
 #define BOOST_INTERPROCESS_IMPDEF(TYPE) TYPE
@@ -378,5 +379,19 @@ namespace boost {
 #if !defined(BOOST_INTERPROCESS_ATEXIT)
    #define BOOST_INTERPROCESS_ATEXIT(f) std::atexit((f))
 #endif   //!defined(BOOST_INTERPROCESS_ATEXIT)
+
+#if defined(BOOST_INTERPROCESS_DISABLE_ATTRIBUTE_NODISCARD)
+   #define BOOST_INTERPROCESS_ATTRIBUTE_NODISCARD
+#else
+   #if   defined(BOOST_GCC) && ((BOOST_GCC < 100000) || (__cplusplus < 201703L))
+      //Avoid using it in C++ < 17 and GCC < 10 because it warns in SFINAE contexts
+      //(see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89070)
+      #define BOOST_INTERPROCESS_NODISCARD
+   #else
+      #define BOOST_INTERPROCESS_NODISCARD BOOST_ATTRIBUTE_NODISCARD
+   #endif
+#endif
+
+
 
 #endif   //#ifndef BOOST_INTERPROCESS_DETAIL_WORKAROUND_HPP

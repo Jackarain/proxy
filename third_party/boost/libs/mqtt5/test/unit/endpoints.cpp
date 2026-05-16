@@ -5,6 +5,8 @@
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "test_common/test_broker.hpp"
+
 #include <boost/mqtt5/impl/endpoints.hpp>
 
 #include <boost/test/unit_test.hpp>
@@ -27,7 +29,7 @@ struct shared_test_data {
     error_code success {};
 
     asio::io_context ioc;
-    asio::steady_timer timer;
+    test::test_timer timer;
     detail::log_invoke<noop_logger> logger;
     detail::endpoints<noop_logger> ep;
 
@@ -47,7 +49,7 @@ BOOST_FIXTURE_TEST_CASE(empty_path, shared_test_data) {
         BOOST_TEST(ec == asio::error::host_not_found);
     }, [&finished](auto eptr) { finished = !eptr; });
 
-    ioc.run_for(1s);
+    test::test_broker::run(ioc);
     BOOST_TEST(finished);
 }
 
@@ -67,7 +69,7 @@ BOOST_FIXTURE_TEST_CASE(single_host, shared_test_data) {
         BOOST_TEST(ec == asio::error::try_again);
     }, [&finished](auto eptr) { finished = !eptr; });
 
-    ioc.run_for(1s);
+    test::test_broker::run(ioc);
     BOOST_TEST(finished);
 }
 
@@ -104,7 +106,7 @@ BOOST_FIXTURE_TEST_CASE(multiple_hosts, shared_test_data) {
         }
     }, [&finished](auto eptr) { finished = !eptr; });
 
-    ioc.run_for(1s);
+    test::test_broker::run(ioc);
     BOOST_TEST(finished);
 }
 
@@ -124,7 +126,7 @@ BOOST_FIXTURE_TEST_CASE(parse_failure, shared_test_data) {
         BOOST_TEST(ec == asio::error::try_again);
     }, [&finished](auto eptr) { finished = !eptr; });
 
-    ioc.run_for(1s);
+    test::test_broker::run(ioc);
     BOOST_TEST(finished);
 }
 

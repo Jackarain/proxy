@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -8,6 +8,10 @@
 #define BOOST_REDIS_RESP3_NODE_HPP
 
 #include <boost/redis/resp3/type.hpp>
+
+#include <cstddef>
+#include <string>
+#include <string_view>
 
 namespace boost::redis::resp3 {
 
@@ -43,7 +47,7 @@ struct basic_node {
  *  @param b Right hand side node object.
  */
 template <class String>
-auto operator==(basic_node<String> const& a, basic_node<String> const& b)
+bool operator==(basic_node<String> const& a, basic_node<String> const& b)
 {
    // clang-format off
    return a.aggregate_size == b.aggregate_size
@@ -51,6 +55,18 @@ auto operator==(basic_node<String> const& a, basic_node<String> const& b)
        && a.data_type == b.data_type
        && a.value == b.value;
    // clang-format on
+};
+
+/** @brief Inequality operator for RESP3 nodes.
+ *  @relates basic_node
+ *
+ *  @param a Left hand side node object.
+ *  @param b Right hand side node object.
+ */
+template <class String>
+bool operator!=(basic_node<String> const& a, basic_node<String> const& b)
+{
+   return !(a == b);
 };
 
 /// A node in the response tree that owns its data.

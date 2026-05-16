@@ -19,7 +19,7 @@ namespace boost {
 namespace urls {
 namespace detail {
 
-struct BOOST_URL_DECL params_iter_impl
+struct BOOST_SYMBOL_VISIBLE params_iter_impl
     : parts_base
 {
     query_ref ref;
@@ -80,5 +80,7 @@ struct BOOST_URL_DECL params_iter_impl
 } // detail
 } // urls
 } // boost
+
+#include <boost/url/detail/impl/params_iter_impl.hpp>
 
 #endif

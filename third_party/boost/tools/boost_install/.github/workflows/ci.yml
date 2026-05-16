@@ -321,10 +321,6 @@ jobs:
             bopts: install
             os: ubuntu-latest
 
-          - lib: system
-            bopts: install
-            os: ubuntu-latest
-
           - lib: test
             bopts: install
             os: ubuntu-latest
@@ -487,20 +483,20 @@ jobs:
             copts: -DBoost_USE_STATIC_LIBS=OFF
             os: windows-latest
 
-          # b2 finds Python 3.9 (in PATH), but CMake finds Python 3.14
+          # b2 finds Python 3.12 (in PATH), but CMake finds Python 3.14
 
           # python=3.14 isn't tested because the test executable doesn't run
           # as the 3.14 DLL isn't in PATH
 
           - lib: python
             bopts: install
-            copts: "-DUSE_PYTHON_VERSION=\"3.9;EXACT\""
-            os: windows-latest
+            copts: "-DUSE_PYTHON_VERSION=\"3.12;EXACT\""
+            os: windows-2025
 
           - lib: python
-            bopts: python=3.9,3.14 install
-            copts: "-DUSE_PYTHON_VERSION=\"3.9;EXACT\""
-            os: windows-latest
+            bopts: python=3.12,3.14 install
+            copts: "-DUSE_PYTHON_VERSION=\"3.12;EXACT\""
+            os: windows-2025
 
           - lib: serialization
             bopts: install
@@ -560,7 +556,7 @@ jobs:
           xcopy /s /e /q %GITHUB_WORKSPACE% tools\boost_install\
           cmd /c bootstrap
           set USER_CONFIG=%HOMEDRIVE%%HOMEPATH%\user-config.jam
-          echo using python : 3.9 ; >> %USER_CONFIG%
+          echo using python : 3.12 ; >> %USER_CONFIG%
           echo using python : 3.14 ; >> %USER_CONFIG%
           b2 -d0 headers
 
@@ -638,8 +634,8 @@ jobs:
           xcopy /s /e /q %GITHUB_WORKSPACE% tools\boost_install\
           cmd /c bootstrap
           set USER_CONFIG=%HOMEDRIVE%%HOMEPATH%\user-config.jam
-          echo using python : 3.7 ; >> %USER_CONFIG%
-          echo using python : 3.9 ; >> %USER_CONFIG%
+          echo using python : 3.12 ; >> %USER_CONFIG%
+          echo using python : 3.14 ; >> %USER_CONFIG%
           b2 -d0 headers
 
       - name: Run tests

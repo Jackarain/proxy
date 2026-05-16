@@ -162,7 +162,7 @@ public:
         params const &m_p;
         size_t m_ncellx , m_ncelly;
         
-        interaction_functor( hash_vector const& cells_begin , hash_vector const& cells_end , hash_vector pos_order ,
+        interaction_functor( hash_vector const& cells_begin , hash_vector const& cells_end , hash_vector const& pos_order ,
                             point_vector const&x , point_vector const& v , params const &p )
         : m_cells_begin( cells_begin ) , m_cells_end( cells_end ) , m_order( pos_order ) , m_x( x ) , m_v( v ) ,
         m_p( p ) { }

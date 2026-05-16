@@ -41,6 +41,7 @@ rule thread-run ( sources )
   [ run deletion_test.cpp ]
   [ thread-run mutex_test.cpp ]
   [ run ordering_test.cpp ]
+  [ run move_construct_only_test.cpp ]
   [ run regression_test.cpp ]
   [ run shared_connection_block_test.cpp ]
   [ run signal_n_test.cpp ]

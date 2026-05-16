@@ -85,6 +85,10 @@ run pedantic_members_test.cpp
 
 run enum_from_string_test2.cpp ;
 
+compile nested_enum_test2.cpp ;
+
+compile enum_to_string_test_cx.cpp ;
+
 # examples
 
 obj describe_cxx14 : describe_cxx14.cpp ;

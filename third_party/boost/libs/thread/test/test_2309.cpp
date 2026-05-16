@@ -11,7 +11,7 @@
 #include <iostream>
 
 #include <boost/thread.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
   using namespace std;
 

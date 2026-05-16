@@ -1,0 +1,109 @@
+== Boost.OpenMethod
+
+This page gives a 10,000-foot view of the library. For the motivation,
+tutorials and reference, please follow the documentation link.
+
+=== Features
+
+* Free-standing virtual functions, similar to CLOS, Clojure, Julia, Dylan, etc.
+
+* Single dispatch can be as fast as equivalent virtual function calls.
+
+* Multiple dispatch in constant time (for a given number of virtual parameters).
+
+* Redundancy-free multiple dispatch tables.
+
+* Inter-operation with standard smart pointers, extensible to other pointer-like
+  types.
+
+* Exception agnostic by default.
+
+* Macro-based interface for convenience.
+
+* Macro-free interface for inter-operation with templates.
+
+* Customization points for alternative RTTI systems, error handling, vptr
+  placement, etc.
+
+* Header-only.
+
+=== Requirements
+
+The library requires an optimizing compiler supporting C++17 or above.
+
+=== Tested Compilers
+
+Boost.OpenMethod is tested with the following compilers:
+
+* clang: 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+
+* gcc: 8, 9, 10, 11, 12, 13, 14, 15
+
+* msvc: 14.3
+
+* icpx
+
+...on the following platforms:
+
+* Linux
+
+* macOS
+
+* Windows
+
+* s390x
+
+=== Quality Assurance
+
+The development infrastructure for the library includes these per-commit
+analyses:
+
+* Coverage reports
+
+* Clang sanitizers
+
+* Compilation and tests on Drone.io and GitHub Actions
+
+=== Build Status
+
+[cols="^1,1,1,1,1,1", options="header"]
+|===
+| Branch | GH Actions | Coverity Scan | codecov.io | Deps | Docs
+
+| https://github.com/boostorg/openmethod/tree/master[`master`]
+| image:https://github.com/boostorg/openmethod/actions/workflows/ci.yml/badge.svg?branch=master[CI,link=https://github.com/boostorg/openmethod/actions/workflows/ci.yml]
+| image:https://scan.coverity.com/projects/32486/badge.svg[Coverity Scan Build Status,link=https://scan.coverity.com/projects/boostorg-openmethod]
+| image:https://codecov.io/gh/boostorg/openmethod/branch/master/graph/badge.svg[codecov,link=https://codecov.io/gh/boostorg/openmethod/branch/master]
+| image:https://img.shields.io/badge/deps-master-brightgreen.svg[Deps,link=https://pdimov.github.io/boostdep-report/master/openmethod.html]
+| image:https://img.shields.io/badge/docs-master-brightgreen.svg[Documentation,link=https://www.boost.org/library/latest/openmethod/]
+
+| https://github.com/boostorg/openmethod/tree/develop[`develop`]
+| image:https://github.com/boostorg/openmethod/actions/workflows/ci.yml/badge.svg?branch=develop[CI,link=https://github.com/boostorg/openmethod/actions/workflows/ci.yml]
+| image:https://scan.coverity.com/projects/32486/badge.svg[Coverity Scan Build Status,link=https://scan.coverity.com/projects/boostorg-openmethod]
+| image:https://codecov.io/gh/boostorg/openmethod/branch/develop/graph/badge.svg[codecov,link=https://codecov.io/gh/boostorg/openmethod/branch/develop]
+| image:https://img.shields.io/badge/deps-develop-brightgreen.svg[Deps,link=https://pdimov.github.io/boostdep-report/develop/openmethod.html]
+| image:https://img.shields.io/badge/docs-develop-brightgreen.svg[Documentation,link=https://www.boost.org/doc/libs/develop/libs/openmethod/doc/html/openmethod]
+|===
+
+=== Community
+
+Questions, suggestions, defect reports, etc can be submitted via the following
+channels:
+
+* https://cpplang.slack.com/archives/C0A16HR702G[Slack]. Best for quick
+questions, especially for those getting started with the library.
+
+* http://www.boost.org/community/groups.html#main[The Boost developers mailing
+list]. Best for in-depth discussion of the features, future, and implementation
+of the library. Be sure to read the
+http://www.boost.org/community/policy.html[discussion policy] before posting.
+Please add the `[openmethod]` tag at the beginning of the subject line.
+
+* https://github.com/boostorg/openmethod/issues[Issues page on GitHub]. Best for
+bug reports. Please mention the Boost version, platform and compiler you are
+using, and provide a small compilable code sample to reproduce the problem. Also
+a good place for feature requests and suggestions.
+
+=== License
+
+Distributed under the http://www.boost.org/LICENSE_1_0.txt[Boost Software License, Version 1.0].

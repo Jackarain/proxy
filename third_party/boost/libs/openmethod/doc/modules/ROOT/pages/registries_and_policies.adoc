@@ -9,7 +9,7 @@ Class templates cpp:use_classes[], cpp:method[], cpp:virtual_ptr[], and macros
 xref:BOOST_OPENMETHOD.adoc[BOOST_OPENMETHOD] and
 xref:BOOST_OPENMETHOD_CLASSES.adoc[BOOST_OPENMETHOD_CLASSES], take an additional
 argument, a cpp:registry[] class, which defaults to cpp:default_registry[]. The
-default registry can be overriden by defining the macroprocessor symbol
+default registry can be overridden by defining the macroprocessor symbol
 xref:BOOST_OPENMETHOD_DEFAULT_REGISTRY.adoc[BOOST_OPENMETHOD_DEFAULT_REGISTRY]
 _before_ including `<boost/openmethod/core.hpp>`. The value of the symbol is
 used as a default template parameter for `use_classes`, `method`, `virtual_ptr`,
@@ -87,7 +87,7 @@ When defining a new registry, it is recommended to define a new class, derived
 from `registry<...>`, rather than via a typedef, which would create excessively
 long symbol names and make debugging harder.
 
-A registry can calso be created by copying an existing registry's policies,
+A registry can also be created by copying an existing registry's policies,
 using the cpp:with[] and cpp:without[] nested templates. For example,
 `indirect_registry` is a tweak of `default_registry`:
 

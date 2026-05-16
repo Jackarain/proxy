@@ -1,0 +1,38 @@
+////
+Copyright 2024 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#functional]
+= `<functional>` Support
+:idprefix: functional_
+
+The following functions from https://en.cppreference.com/w/cpp/utility/hash.html[`<functional>`] are overloaded:
+
+[source, c++]
+----
+#include <boost/decimal/hash.hpp>
+
+namespace std {
+
+template <>
+struct hash<boost::decimal::decimal32_t>;
+
+template <>
+struct hash<boost::decimal::decimal_fast32_t>;
+
+template <>
+struct hash<boost::decimal::decimal64_t>;
+
+template <>
+struct hash<boost::decimal::decimal_fast64_t>;
+
+template <>
+struct hash<boost::decimal::decimal128_t>;
+
+template <>
+struct hash<boost::decimal::decimal_fast128_t>;
+
+} //namespace std
+----

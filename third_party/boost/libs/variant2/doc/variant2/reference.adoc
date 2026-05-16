@@ -719,10 +719,8 @@ template<class U, class... T>
 [none]
 * {blank}
 +
-Requires: :: The type `U` occurs exactly once in `T...`. Otherwise, the
-  program is ill-formed.
-Returns:  :: `true` if `index()` is equal to the zero-based index of `U`
-  in `T...`.
+Requires: :: The type `U` must be present in `T...`. Otherwise, the program is ill-formed.
+Returns:  :: `true` if `v` holds a value of type `U`, otherwise `false`.
 
 ### get
 
@@ -773,10 +771,8 @@ template<class U, class... T>
 [none]
 * {blank}
 +
-Requires: :: The type `U` occurs exactly once in `T...`. Otherwise, the
-  program is ill-formed.
-Effects:  :: If `v` holds a value of type `U`, returns a reference to that value.
-  Otherwise, throws `bad_variant_access`.
+Requires: :: The type `U` must be present in `T...`. Otherwise, the program is ill-formed.
+Effects:  :: If `v` holds a value of type `U`, returns a reference to that value. Otherwise, throws `bad_variant_access`.
 
 ### get_if
 
@@ -793,10 +789,8 @@ template<size_t I, class... T>
 [none]
 * {blank}
 +
-Effects:  :: A pointer to the value stored in the variant, if
-  `v != nullptr && v\->index() == I`. Otherwise, `nullptr`.
-Remarks: :: These functions do not participate in overload resolution
-  unless `I` < `sizeof...(T)`.
+Returns:  :: A pointer to the value stored in `*v`, if `v != nullptr && v\->index() == I`. Otherwise, `nullptr`.
+Remarks: :: These functions do not participate in overload resolution unless `I` < `sizeof...(T)`.
 
 ```
 template<class U, class... T>
@@ -811,10 +805,8 @@ template<class U, class... T>
 [none]
 * {blank}
 +
-Requires: :: The type `U` occurs exactly once in `T...`. Otherwise, the
-  program is ill-formed.
-Effects:  :: Equivalent to: `return get_if<I>(v);` with `I` being
-  the zero-based index of `U` in `T...`.
+Requires: :: The type `U` must be present in `T...`. Otherwise, the program is ill-formed.
+Returns:  :: If `v != nullptr` and `*v` holds a value of type `U`, a pointer to that value. Otherwise, `nullptr`.
 
 ### unsafe_get (extension)
 

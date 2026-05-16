@@ -61,6 +61,7 @@ criteria for inclusion is that the utility component be:
 [include functor.qbk]
 [include identity.qbk]
 [include ignore_unused.qbk]
+[include is_placeholder.qbk]
 [include is_same.qbk]
 [include launder.qbk]
 [include lightweight_test.qbk]

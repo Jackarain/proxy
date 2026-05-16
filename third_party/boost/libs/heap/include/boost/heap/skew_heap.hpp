@@ -15,9 +15,11 @@
 #include <utility>
 
 #include <boost/assert.hpp>
+#include <boost/config.hpp>
 
 #include <boost/heap/detail/heap_comparison.hpp>
 #include <boost/heap/detail/heap_node.hpp>
+#include <boost/heap/detail/heap_utils.hpp>
 #include <boost/heap/detail/stable_heap.hpp>
 #include <boost/heap/detail/tree_iterator.hpp>
 
@@ -86,7 +88,7 @@ struct skew_heap_node : parent_holder< skew_heap_node< value_type, store_parent_
     }
 
     skew_heap_node( value_type&& v ) :
-        value( v )
+        value( std::move( v ) )
     {
         children.fill( 0 );
     }
@@ -305,9 +307,15 @@ class skew_heap :
 
         typedef iterator const_iterator;
 
-        typedef detail::
-            tree_iterator< node, const value_type, allocator_type, value_extractor, detail::dereferencer< node >, true, true, value_compare >
-                ordered_iterator;
+        typedef detail::tree_iterator< node,
+                                       const value_type,
+                                       allocator_type,
+                                       value_extractor,
+                                       detail::dereferencer< node >,
+                                       true,
+                                       true,
+                                       typename super_t::internal_compare >
+            ordered_iterator;
 
         typedef typename detail::extract_allocator_types< typename base_maker::allocator_argument >::reference reference;
         typedef detail::node_handle< node_pointer, super_t, reference > handle_type;
@@ -371,11 +379,8 @@ public:
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue const & rhs)
     skew_heap& operator=( skew_heap const& rhs )
     {
-        clear();
-        size_holder::set_size( rhs.get_size() );
-        static_cast< super_t& >( *this ) = rhs;
-
-        clone_tree( rhs );
+        skew_heap tmp( rhs );
+        do_swap( tmp );
         return *this;
     }
 
@@ -388,8 +393,9 @@ public:
     }
 
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue &&)
-    skew_heap& operator=( skew_heap&& rhs )
+    skew_heap& operator=( skew_heap&& rhs ) noexcept( std::is_nothrow_move_assignable< super_t >::value )
     {
+        clear();
         super_t::operator=( std::move( rhs ) );
         root     = rhs.root;
         rhs.root = nullptr;
@@ -472,10 +478,11 @@ public:
     }
 
     /// \copydoc boost::heap::priority_queue::swap
-    void swap( skew_heap& rhs )
+    BOOST_DEPRECATED( "Use std::swap instead" )
+    void swap( skew_heap& rhs ) noexcept( std::is_nothrow_move_constructible< skew_heap >::value
+                                          && std::is_nothrow_move_assignable< skew_heap >::value )
     {
-        super_t::swap( rhs );
-        std::swap( root, rhs.root );
+        do_swap( rhs );
     }
 
     /// \copydoc boost::heap::priority_queue::top
@@ -527,13 +534,13 @@ public:
     /// \copydoc boost::heap::fibonacci_heap::ordered_begin
     ordered_iterator ordered_begin( void ) const
     {
-        return ordered_iterator( root, super_t::value_comp() );
+        return ordered_iterator( root, super_t::get_internal_cmp() );
     }
 
     /// \copydoc boost::heap::fibonacci_heap::ordered_begin
     ordered_iterator ordered_end( void ) const
     {
-        return ordered_iterator( 0, super_t::value_comp() );
+        return ordered_iterator( 0, super_t::get_internal_cmp() );
     }
 
     /**
@@ -554,7 +561,7 @@ public:
         rhs.root = nullptr;
         sanity_check();
 
-        super_t::set_stability_count( ( std::max )( super_t::get_stability_count(), rhs.get_stability_count() ) );
+        super_t::set_stability_count( (std::max)( super_t::get_stability_count(), rhs.get_stability_count() ) );
         rhs.set_stability_count( 0 );
     }
 
@@ -745,6 +752,12 @@ public:
 
 private:
 #if !defined( BOOST_DOXYGEN_INVOKED )
+    void do_swap( skew_heap& rhs ) noexcept( std::is_nothrow_move_constructible< skew_heap >::value
+                                             && std::is_nothrow_move_assignable< skew_heap >::value )
+    {
+        detail::swap_via_move( *this, rhs );
+    }
+
     struct push_void
     {
         static void push( skew_heap* self, const_reference v )

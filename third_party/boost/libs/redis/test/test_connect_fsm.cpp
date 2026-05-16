@@ -6,7 +6,6 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include <boost/redis/config.hpp>
 #include <boost/redis/detail/connect_fsm.hpp>
 #include <boost/redis/error.hpp>
 #include <boost/redis/logger.hpp>
@@ -103,29 +102,14 @@ auto resolver_data = [] {
 
 // Reduce duplication
 struct fixture : detail::log_fixture {
-   config cfg;
    buffered_logger lgr{make_logger()};
-   connect_fsm fsm{cfg, lgr};
-   redis_stream_state st{};
+   connect_fsm fsm{lgr};
+   redis_stream_state st;
 
-   fixture(config&& cfg = {})
-   : cfg{std::move(cfg)}
+   fixture(transport_type type = transport_type::tcp)
+   : st{type, false}
    { }
 };
-
-config make_ssl_config()
-{
-   config cfg;
-   cfg.use_ssl = true;
-   return cfg;
-}
-
-config make_unix_config()
-{
-   config cfg;
-   cfg.unix_socket = "/run/redis.sock";
-   return cfg;
-}
 
 void test_tcp_success()
 {
@@ -141,20 +125,21 @@ void test_tcp_success()
    BOOST_TEST_EQ(act, connect_action_type::done);
 
    // The transport type was appropriately set
-   BOOST_TEST_EQ(fix.st.type, transport_type::tcp);
    BOOST_TEST_NOT(fix.st.ssl_stream_used);
 
    // Check logging
    fix.check_log({
-      {logger::level::info, "Resolve results: 192.168.10.1:1234, 192.168.10.2:1235"},
-      {logger::level::info, "Connected to 192.168.10.1:1234"                       },
+      // clang-format off
+      {logger::level::debug, "Connect: hostname resolution results: 192.168.10.1:1234, 192.168.10.2:1235"},
+      {logger::level::debug, "Connect: TCP connect succeeded. Selected endpoint: 192.168.10.1:1234"      },
+      // clang-format on
    });
 }
 
 void test_tcp_tls_success()
 {
    // Setup
-   fixture fix{make_ssl_config()};
+   fixture fix{transport_type::tcp_tls};
 
    // Run the algorithm. No SSL stream reset is performed here
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);
@@ -167,21 +152,22 @@ void test_tcp_tls_success()
    BOOST_TEST_EQ(act, connect_action_type::done);
 
    // The transport type was appropriately set
-   BOOST_TEST_EQ(fix.st.type, transport_type::tcp_tls);
    BOOST_TEST(fix.st.ssl_stream_used);
 
    // Check logging
    fix.check_log({
-      {logger::level::info, "Resolve results: 192.168.10.1:1234, 192.168.10.2:1235"},
-      {logger::level::info, "Connected to 192.168.10.1:1234"                       },
-      {logger::level::info, "Successfully performed SSL handshake"                 },
+      // clang-format off
+      {logger::level::debug, "Connect: hostname resolution results: 192.168.10.1:1234, 192.168.10.2:1235"},
+      {logger::level::debug, "Connect: TCP connect succeeded. Selected endpoint: 192.168.10.1:1234"      },
+      {logger::level::debug, "Connect: SSL handshake succeeded"                                          },
+      // clang-format on
    });
 }
 
 void test_tcp_tls_success_reconnect()
 {
    // Setup
-   fixture fix{make_ssl_config()};
+   fixture fix{transport_type::tcp_tls};
    fix.st.ssl_stream_used = true;
 
    // Run the algorithm. The stream is used, so it needs to be reset
@@ -197,21 +183,22 @@ void test_tcp_tls_success_reconnect()
    BOOST_TEST_EQ(act, connect_action_type::done);
 
    // The transport type was appropriately set
-   BOOST_TEST_EQ(fix.st.type, transport_type::tcp_tls);
    BOOST_TEST(fix.st.ssl_stream_used);
 
    // Check logging
    fix.check_log({
-      {logger::level::info, "Resolve results: 192.168.10.1:1234, 192.168.10.2:1235"},
-      {logger::level::info, "Connected to 192.168.10.1:1234"                       },
-      {logger::level::info, "Successfully performed SSL handshake"                 },
+      // clang-format off
+      {logger::level::debug, "Connect: hostname resolution results: 192.168.10.1:1234, 192.168.10.2:1235"},
+      {logger::level::debug, "Connect: TCP connect succeeded. Selected endpoint: 192.168.10.1:1234"      },
+      {logger::level::debug, "Connect: SSL handshake succeeded"                    },
+      // clang-format on
    });
 }
 
 void test_unix_success()
 {
    // Setup
-   fixture fix{make_unix_config()};
+   fixture fix{transport_type::unix_socket};
 
    // Run the algorithm
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);
@@ -222,12 +209,11 @@ void test_unix_success()
    BOOST_TEST_EQ(act, connect_action_type::done);
 
    // The transport type was appropriately set
-   BOOST_TEST_EQ(fix.st.type, transport_type::unix_socket);
    BOOST_TEST_NOT(fix.st.ssl_stream_used);
 
    // Check logging
    fix.check_log({
-      {logger::level::info, "Connected to /run/redis.sock"},
+      {logger::level::debug, "Connect: UNIX socket connect succeeded"},
    });
 }
 
@@ -235,7 +221,7 @@ void test_unix_success()
 void test_unix_success_close_error()
 {
    // Setup
-   fixture fix{make_unix_config()};
+   fixture fix{transport_type::unix_socket};
 
    // Run the algorithm
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);
@@ -246,12 +232,11 @@ void test_unix_success_close_error()
    BOOST_TEST_EQ(act, connect_action_type::done);
 
    // The transport type was appropriately set
-   BOOST_TEST_EQ(fix.st.type, transport_type::unix_socket);
    BOOST_TEST_NOT(fix.st.ssl_stream_used);
 
    // Check logging
    fix.check_log({
-      {logger::level::info, "Connected to /run/redis.sock"},
+      {logger::level::debug, "Connect: UNIX socket connect succeeded"},
    });
 }
 
@@ -270,7 +255,7 @@ void test_tcp_resolve_error()
    // Check logging
    fix.check_log({
       // clang-format off
-      {logger::level::info, "Error resolving the server hostname: Expected field value is empty. [boost.redis:5]"},
+      {logger::level::info, "Connect: hostname resolution failed: Expected field value is empty. [boost.redis:5]"},
       // clang-format on
    });
 }
@@ -293,7 +278,7 @@ void test_tcp_resolve_timeout()
    // Check logging
    fix.check_log({
       // clang-format off
-      {logger::level::info, "Error resolving the server hostname: Resolve timeout. [boost.redis:17]"},
+      {logger::level::info, "Connect: hostname resolution failed: Resolve timeout. [boost.redis:17]"},
       // clang-format on
    });
 }
@@ -349,8 +334,8 @@ void test_tcp_connect_error()
    // Check logging
    fix.check_log({
       // clang-format off
-      {logger::level::info, "Resolve results: 192.168.10.1:1234, 192.168.10.2:1235"},
-      {logger::level::info, "Failed to connect to the server: Expected field value is empty. [boost.redis:5]"},
+      {logger::level::debug, "Connect: hostname resolution results: 192.168.10.1:1234, 192.168.10.2:1235"},
+      {logger::level::info, "Connect: TCP connect failed: Expected field value is empty. [boost.redis:5]"},
       // clang-format on
    });
 }
@@ -375,8 +360,8 @@ void test_tcp_connect_timeout()
    // Check logging
    fix.check_log({
       // clang-format off
-      {logger::level::info, "Resolve results: 192.168.10.1:1234, 192.168.10.2:1235"},
-      {logger::level::info, "Failed to connect to the server: Connect timeout. [boost.redis:18]"},
+      {logger::level::debug, "Connect: hostname resolution results: 192.168.10.1:1234, 192.168.10.2:1235"},
+      {logger::level::info, "Connect: TCP connect failed: Connect timeout. [boost.redis:18]"},
       // clang-format on
    });
 }
@@ -423,7 +408,7 @@ void test_tcp_connect_cancel_edge()
 void test_ssl_handshake_error()
 {
    // Setup
-   fixture fix{make_ssl_config()};
+   fixture fix{transport_type::tcp_tls};
 
    // Run the algorithm. No SSL stream reset is performed here
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);
@@ -441,9 +426,9 @@ void test_ssl_handshake_error()
    // Check logging
    fix.check_log({
       // clang-format off
-      {logger::level::info, "Resolve results: 192.168.10.1:1234, 192.168.10.2:1235"},
-      {logger::level::info, "Connected to 192.168.10.1:1234"                       },
-      {logger::level::info, "Failed to perform SSL handshake: Expected field value is empty. [boost.redis:5]"},
+      {logger::level::debug, "Connect: hostname resolution results: 192.168.10.1:1234, 192.168.10.2:1235"},
+      {logger::level::debug, "Connect: TCP connect succeeded. Selected endpoint: 192.168.10.1:1234"},
+      {logger::level::info,  "Connect: SSL handshake failed: Expected field value is empty. [boost.redis:5]"},
       // clang-format on
    });
 }
@@ -451,7 +436,7 @@ void test_ssl_handshake_error()
 void test_ssl_handshake_timeout()
 {
    // Setup
-   fixture fix{make_ssl_config()};
+   fixture fix{transport_type::tcp_tls};
 
    // Run the algorithm. Timeout = operation_aborted without the cancel type set
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);
@@ -469,9 +454,9 @@ void test_ssl_handshake_timeout()
    // Check logging
    fix.check_log({
       // clang-format off
-      {logger::level::info, "Resolve results: 192.168.10.1:1234, 192.168.10.2:1235"},
-      {logger::level::info, "Connected to 192.168.10.1:1234"                       },
-      {logger::level::info, "Failed to perform SSL handshake: SSL handshake timeout. [boost.redis:20]"},
+      {logger::level::debug, "Connect: hostname resolution results: 192.168.10.1:1234, 192.168.10.2:1235"},
+      {logger::level::debug, "Connect: TCP connect succeeded. Selected endpoint: 192.168.10.1:1234"},
+      {logger::level::info,  "Connect: SSL handshake failed: SSL handshake timeout. [boost.redis:20]"},
       // clang-format on
    });
 }
@@ -479,7 +464,7 @@ void test_ssl_handshake_timeout()
 void test_ssl_handshake_cancel()
 {
    // Setup
-   fixture fix{make_ssl_config()};
+   fixture fix{transport_type::tcp_tls};
 
    // Run the algorithm. Cancel = operation_aborted with the cancel type set
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);
@@ -501,7 +486,7 @@ void test_ssl_handshake_cancel()
 void test_ssl_handshake_cancel_edge()
 {
    // Setup
-   fixture fix{make_ssl_config()};
+   fixture fix{transport_type::tcp_tls};
 
    // Run the algorithm. No error, but the cancel state is set
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);
@@ -524,7 +509,7 @@ void test_ssl_handshake_cancel_edge()
 void test_unix_connect_error()
 {
    // Setup
-   fixture fix{make_unix_config()};
+   fixture fix{transport_type::unix_socket};
 
    // Run the algorithm
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);
@@ -537,7 +522,7 @@ void test_unix_connect_error()
    // Check logging
    fix.check_log({
       // clang-format off
-      {logger::level::info, "Failed to connect to the server: Expected field value is empty. [boost.redis:5]"},
+      {logger::level::info, "Connect: UNIX socket connect failed: Expected field value is empty. [boost.redis:5]"},
       // clang-format on
    });
 }
@@ -545,7 +530,7 @@ void test_unix_connect_error()
 void test_unix_connect_timeout()
 {
    // Setup
-   fixture fix{make_unix_config()};
+   fixture fix{transport_type::unix_socket};
 
    // Run the algorithm. Timeout = operation_aborted without a cancel state
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);
@@ -558,7 +543,7 @@ void test_unix_connect_timeout()
    // Check logging
    fix.check_log({
       // clang-format off
-      {logger::level::info, "Failed to connect to the server: Connect timeout. [boost.redis:18]"},
+      {logger::level::info, "Connect: UNIX socket connect failed: Connect timeout. [boost.redis:18]"},
       // clang-format on
    });
 }
@@ -566,7 +551,7 @@ void test_unix_connect_timeout()
 void test_unix_connect_cancel()
 {
    // Setup
-   fixture fix{make_unix_config()};
+   fixture fix{transport_type::unix_socket};
 
    // Run the algorithm. Cancel = operation_aborted with a cancel state
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);
@@ -583,7 +568,7 @@ void test_unix_connect_cancel()
 void test_unix_connect_cancel_edge()
 {
    // Setup
-   fixture fix{make_unix_config()};
+   fixture fix{transport_type::unix_socket};
 
    // Run the algorithm. No error, but cancel state is set
    auto act = fix.fsm.resume(error_code(), fix.st, cancellation_type_t::none);

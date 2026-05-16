@@ -1,5 +1,5 @@
 /* Try operation macros
-(C) 2017-2025 Niall Douglas <http://www.nedproductions.biz/> (20 commits)
+(C) 2017-2026 Niall Douglas <http://www.nedproductions.biz/> (20 commits)
 File Created: July 2017
 
 
@@ -234,7 +234,7 @@ SIGNATURE NOT RECOGNISED
 /*! AWAITING HUGO JSON CONVERSION TOOL
 SIGNATURE NOT RECOGNISED
 */
-#define BOOST_OUTCOME_CO_TRYV2_FAILURE_LIKELY(s, ...) BOOST_OUTCOME_TRYV3_FAILURE_LIKELY(BOOST_OUTCOME_TRY_UNIQUE_NAME, co_return, s(, ), __VA_ARGS__)
+#define BOOST_OUTCOME_CO_TRYV2_FAILURE_LIKELY(s, ...) BOOST_OUTCOME_TRYV3_FAILURE_LIKELY(BOOST_OUTCOME_TRY_UNIQUE_NAME, co_return, (s, ), __VA_ARGS__)
 
 
 #if defined(__GNUC__) || defined(__clang__)

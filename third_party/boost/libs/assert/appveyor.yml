@@ -71,7 +71,6 @@ install:
   - git submodule update --init libs/headers
   - git submodule update --init libs/config
   - git submodule update --init libs/core
-  - git submodule update --init libs/static_assert
   - git submodule update --init libs/throw_exception
   - xcopy /s /e /q %APPVEYOR_BUILD_FOLDER% libs\assert\
   - cmd /c bootstrap

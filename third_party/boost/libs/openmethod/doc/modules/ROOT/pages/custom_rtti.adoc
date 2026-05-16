@@ -152,7 +152,7 @@ include::{example}/2/custom_rtti.cpp[tag=type_ids]
 ----
 
 This is a problem, because `static_type` is called by
-`BOOST_OPENMETHOD_CLASSES`, also during static construction. There no guarantee
+`BOOST_OPENMETHOD_CLASSES`, also during static construction. There is no guarantee
 regarding the order of execution of static constructors across several
 translation units. `BOOST_OPENMETHOD_CLASSES` risks reading the type ids
 _before_ they have been assigned.

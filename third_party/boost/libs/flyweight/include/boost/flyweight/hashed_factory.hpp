@@ -1,4 +1,4 @@
-/* Copyright 2006-2014 Joaquin M Lopez Munoz.
+/* Copyright 2006-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -40,23 +40,21 @@ template<
 >
 class hashed_factory_class:public factory_marker
 {
-  struct index_list:
-    boost::mpl::vector1<
-      multi_index::hashed_unique<
-        multi_index::identity<Entry>,
-        typename boost::mpl::if_<
-          mpl::is_na<Hash>,
-          hash<Key>,
-          Hash
-        >::type,
-        typename boost::mpl::if_<
-          mpl::is_na<Pred>,
-          std::equal_to<Key>,
-          Pred
-        >::type
-      >
+  typedef multi_index::indexed_by<
+    multi_index::hashed_unique<
+      multi_index::identity<Entry>,
+      typename boost::mpl::if_<
+        mpl::is_na<Hash>,
+        hash<Key>,
+        Hash
+      >::type,
+      typename boost::mpl::if_<
+        mpl::is_na<Pred>,
+        std::equal_to<Key>,
+        Pred
+      >::type
     >
-  {};
+  > index_list;
 
   typedef multi_index::multi_index_container<
     Entry,

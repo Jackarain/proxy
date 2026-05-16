@@ -66,30 +66,30 @@ BOOST_AUTO_TEST_CASE(topic_filter_validation) {
     BOOST_CHECK(validate_topic_filter("topic") == validation_result::valid);
     BOOST_CHECK(validate_topic_filter("topic/subtopic") == validation_result::valid);
 
-    BOOST_CHECK(validate_topic_filter("#") == validation_result::valid);
+    BOOST_CHECK(validate_topic_filter("#") == validation_result::has_wildcard_character);
     BOOST_CHECK(validate_topic_filter("#sport") == validation_result::invalid);
     BOOST_CHECK(validate_topic_filter("sport#") == validation_result::invalid);
     BOOST_CHECK(validate_topic_filter("sport/#/tennis") == validation_result::invalid);
     BOOST_CHECK(validate_topic_filter("#/sport") == validation_result::invalid);
     BOOST_CHECK(validate_topic_filter("spo#rt/#") == validation_result::invalid);
-    BOOST_CHECK(validate_topic_filter("sport/#") == validation_result::valid);
-    BOOST_CHECK(validate_topic_filter("sport/tennis/#") == validation_result::valid);
+    BOOST_CHECK(validate_topic_filter("sport/#") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_topic_filter("sport/tennis/#") == validation_result::has_wildcard_character);
     BOOST_CHECK(validate_topic_filter("sport/tennis#") == validation_result::invalid);
 
-    BOOST_CHECK(validate_topic_filter("+") == validation_result::valid);
-    BOOST_CHECK(validate_topic_filter("+/") == validation_result::valid);
-    BOOST_CHECK(validate_topic_filter("/+") == validation_result::valid);
-    BOOST_CHECK(validate_topic_filter("+/+") == validation_result::valid);
-    BOOST_CHECK(validate_topic_filter("+/+/+") == validation_result::valid);
+    BOOST_CHECK(validate_topic_filter("+") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_topic_filter("+/") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_topic_filter("/+") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_topic_filter("+/+") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_topic_filter("+/+/+") == validation_result::has_wildcard_character);
     BOOST_CHECK(validate_topic_filter("+sport") == validation_result::invalid);
     BOOST_CHECK(validate_topic_filter("sport+") == validation_result::invalid);
     BOOST_CHECK(validate_topic_filter("sport+/player1") == validation_result::invalid);
     BOOST_CHECK(validate_topic_filter("sport/+player1") == validation_result::invalid);
-    BOOST_CHECK(validate_topic_filter("sport/+") == validation_result::valid);
-    BOOST_CHECK(validate_topic_filter("sport/+/player1") == validation_result::valid);
-    BOOST_CHECK(validate_topic_filter("+/sport/+/player1/+") == validation_result::valid);
+    BOOST_CHECK(validate_topic_filter("sport/+") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_topic_filter("sport/+/player1") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_topic_filter("+/sport/+/player1/+") == validation_result::has_wildcard_character);
 
-    BOOST_CHECK(validate_topic_filter("+/tennis/#") == validation_result::valid);
+    BOOST_CHECK(validate_topic_filter("+/tennis/#") == validation_result::has_wildcard_character);
 }
 
 BOOST_AUTO_TEST_CASE(topic_name_validation) {
@@ -140,13 +140,13 @@ BOOST_AUTO_TEST_CASE(shared_topic_filter_validation) {
     BOOST_CHECK(validate_shared_topic_filter("$share/#grp/topic") == validation_result::invalid);
 
     BOOST_CHECK(validate_shared_topic_filter("$share/grp/topic") == validation_result::valid);
-    BOOST_CHECK(validate_shared_topic_filter("$share/grp/topic/#") == validation_result::valid);
-    BOOST_CHECK(validate_shared_topic_filter("$share/grp/+/topic/#") == validation_result::valid);
-    BOOST_CHECK(validate_shared_topic_filter("$share/grp/topic/+") == validation_result::valid);
+    BOOST_CHECK(validate_shared_topic_filter("$share/grp/topic/#") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_shared_topic_filter("$share/grp/+/topic/#") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_shared_topic_filter("$share/grp/topic/+") == validation_result::has_wildcard_character);
 
-    BOOST_CHECK(validate_shared_topic_filter("$share/grp/topic/#", false) == validation_result::has_wildcard_character);
-    BOOST_CHECK(validate_shared_topic_filter("$share/grp/+/topic/#", false) == validation_result::has_wildcard_character);
-    BOOST_CHECK(validate_shared_topic_filter("$share/grp/topic/+", false) == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_shared_topic_filter("$share/grp/topic/#") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_shared_topic_filter("$share/grp/+/topic/#") == validation_result::has_wildcard_character);
+    BOOST_CHECK(validate_shared_topic_filter("$share/grp/topic/+") == validation_result::has_wildcard_character);
 }
 
 BOOST_AUTO_TEST_SUITE_END();

@@ -18,10 +18,12 @@
 // template <class Clousure> thread(Clousure f);
 
 #include <new>
+#include <cstddef>
 #include <cstdlib>
 #include <cassert>
 #include <boost/thread/thread_only.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
 
 #if ! defined BOOST_NO_CXX11_LAMBDAS
 
@@ -50,6 +52,22 @@ void operator delete(void* p) BOOST_NOEXCEPT_OR_NOTHROW
 {
   std::free(p);
 }
+
+#if (defined(__cpp_sized_deallocation) && (__cpp_sized_deallocation >= 201309l)) || \
+    (BOOST_CXX_VERSION > 201103l && \
+        (defined(__GNUC__) && (__GNUC__ >= 5)) || \
+        (defined(__clang__) && (__clang_major__ > 3 || (__clang_major__ == 3 && __clang_minor__ >= 4))) || \
+        (defined(BOOST_MSVC) && (_MSC_VER >= 1900)) \
+    )
+#if defined BOOST_MSVC
+void operator delete(void* p, std::size_t)
+#else
+void operator delete(void* p, std::size_t) BOOST_NOEXCEPT_OR_NOTHROW
+#endif
+{
+  operator delete(p);
+}
+#endif
 
 bool f_run = false;
 

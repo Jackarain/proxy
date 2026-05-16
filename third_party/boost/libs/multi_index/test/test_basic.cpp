@@ -1,6 +1,6 @@
 /* Boost.MultiIndex basic test.
  *
- * Copyright 2003-2017 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -46,30 +46,18 @@ bool operator<(const no_addressof_type& x,const no_addressof_type& y)
   return x.n<y.n;
 }
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-namespace boost{
-#endif
-
 inline std::size_t hash_value(const no_addressof_type& x)
 {
   boost::hash<int> h;
   return h(x.n);
 }
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-} /* namespace boost */
-#endif
-
 void test_basic()
 {
   employee_set          es;
   std::vector<employee> v;
 
-#if defined(BOOST_NO_MEMBER_TEMPLATES)
-  employee_set_by_name& i1=get<by_name>(es);
-#else
   employee_set_by_name& i1=es.get<by_name>();
-#endif
 
   const employee_set_by_age& i2=get<2>(es);
   employee_set_as_inserted&  i3=get<3>(es);

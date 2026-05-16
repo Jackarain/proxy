@@ -60,7 +60,7 @@ namespace urls {
         @ref parse_uri_reference,
         @ref resolve.
 */
-class BOOST_URL_DECL url
+class BOOST_SYMBOL_VISIBLE url
     : public url_base
 {
     friend std::hash<url>;
@@ -551,5 +551,8 @@ private:
 };
 } // std
 #endif
+
+#include <boost/url/parse.hpp>
+#include <boost/url/impl/url.hpp>
 
 #endif

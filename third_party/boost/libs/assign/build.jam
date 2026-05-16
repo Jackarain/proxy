@@ -13,7 +13,6 @@ constant boost_dependencies :
     /boost/preprocessor//boost_preprocessor
     /boost/ptr_container//boost_ptr_container
     /boost/range//boost_range
-    /boost/static_assert//boost_static_assert
     /boost/throw_exception//boost_throw_exception
     /boost/tuple//boost_tuple
     /boost/type_traits//boost_type_traits ;

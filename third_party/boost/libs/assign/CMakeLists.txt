@@ -22,7 +22,6 @@ target_link_libraries(boost_assign
     Boost::preprocessor
     Boost::ptr_container
     Boost::range
-    Boost::static_assert
     Boost::throw_exception
     Boost::tuple
     Boost::type_traits

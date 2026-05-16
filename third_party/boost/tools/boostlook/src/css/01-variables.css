@@ -1,0 +1,345 @@
+
+/*----------------- Root Variables - Start -----------------*/
+
+/* Root CSS Variables
+ * Defines core design tokens used throughout the framework.
+ * Organized into:
+ * 1. General Variables - Global settings used across themes
+ * 2. Color System - Comprehensive color palette including brand, state, and UI colors
+ * 3. Typography - Font sizes, line heights, and text styling variables
+ * 4. Spacing System - Padding, margins, and layout spacing tokens
+ * 5. Icons - SVG icon definitions for light and dark themes
+ * 6. Responsive Design - Mobile-first breakpoint variables
+ */
+
+:root {
+  /* General Variables - Core design tokens for all themes */
+  --bl-primary-color: rgb(255, 159, 0); /* Boost's signature orange color */
+
+  /*----------------- New Look Variables Start -----------------*/
+  /* New Look Primitives */
+  /* Colors Shades of Grey */
+  --colors-neutral-0: #ffffff;
+  --colors-neutral-50: #f5f6f8;
+  --colors-neutral-100: #e4e7ea;
+  --colors-neutral-200: #c7cccf;
+  --colors-neutral-250: #f9f9f9;
+  --colors-neutral-300: #afb3b6;
+  --colors-neutral-400: #949a9e;
+  --colors-neutral-500: #798086;
+  --colors-neutral-600: #62676b;
+  --colors-neutral-700: #494d50;
+  --colors-neutral-800: #393b3f;
+  --colors-neutral-900: #18191b;
+  --colors-neutral-950: #0d0e0f;
+
+  /* Colors Brand Shades */
+  --colors-brand-orange-50: #fbf2e6;
+  --colors-brand-orange-100: #ffeaca;
+  --colors-brand-orange-200: #ffd897;
+  --colors-brand-orange-300: #ffc364;
+  --colors-brand-orange-400: #ffb030;
+  --colors-brand-orange-500: #ff9f00;
+  --colors-brand-orange-600: #cd7e00;
+  --colors-brand-orange-700: #9b5f00;
+  --colors-brand-orange-800: #694000;
+  --colors-brand-orange-900: #352000;
+  --colors-brand-orange-950: #1e1200;
+
+  /* Colors Negative Shades */
+  --colors-negative-50: #fdf1f3ff;
+  --colors-negative-100: #ffe6ea;
+  --colors-negative-200: #ffcad2;
+  --colors-negative-300: #fe9aab;
+  --colors-negative-400: #f9677f;
+  --colors-negative-500: #eb3856;
+  --colors-negative-600: #bc233c;
+  --colors-negative-700: #8d1529;
+  --colors-negative-800: #600d1b;
+  --colors-negative-900: #39070f;
+  --colors-negative-950: #1d0408;
+
+  /* Colors Positive Shades */
+  --colors-positive-0: #f8fefb;
+  --colors-positive-50: #f0fef7ff;
+  --colors-positive-100: #def7eb;
+  --colors-positive-200: #bdeed6;
+  --colors-positive-300: #9ce6c2;
+  --colors-positive-400: #7bddad;
+  --colors-positive-500: #5ad599;
+  --colors-positive-600: #48ac7b;
+  --colors-positive-700: #36825d;
+  --colors-positive-800: #255940;
+  --colors-positive-850: #1c4431;
+  --colors-positive-900: #132f22;
+  --colors-positive-950: #0a1b13;
+
+  /* Colors Warning Shades */
+  --colors-warning-0: rgba(255, 248, 243, 0.5);
+  --colors-warning-50: #fff8f3ff;
+  --colors-warning-100: #ffefe2;
+  --colors-warning-200: #ffd4b3;
+  --colors-warning-300: #feb780;
+  --colors-warning-400: #ff9442;
+  --colors-warning-500: #fd760f;
+  --colors-warning-600: #c25909;
+  --colors-warning-700: #914104;
+  --colors-warning-800: #5d2a02;
+  --colors-warning-900: #341700;
+  --colors-warning-950: #1f0e01;
+
+  /* Colors Blue Shades */
+  --colors-blue-0: #f6fafd;
+  --colors-blue-25: #ebf4f9;
+  --colors-blue-50: #daeef9;
+  --colors-blue-100: #c2e2f4;
+  --colors-blue-200: #92cbe9;
+  --colors-blue-300: #62b3dd;
+  --colors-blue-400: #329cd2;
+  --colors-blue-500: #0284c7;
+  --colors-blue-600: #026a9f;
+  --colors-blue-700: #014f77;
+  --colors-blue-800: #013550;
+  --colors-blue-850: #01283c;
+  --colors-blue-900: #001a28;
+  --colors-blue-950: #000d14;
+
+  /* Colors Code Syntax Pallette */
+  --colors-code-colors-red: var(--colors-negative-400);
+  --colors-code-colors-green: var(--colors-positive-500);
+  --colors-code-colors-blue: var(--colors-blue-300);
+  --colors-code-colors-black: var(--colors-neutral-950);
+  --colors-code-colors-yellow: #ebc419;
+  --colors-code-colors-purple: #b350ed;
+  --colors-code-colors-turquoise: #67eaf9;
+  --colors-code-colors-white: var(--colors-neutral-0);
+  --colors-code-colors-red-contrast: var(--colors-negative-500);
+  --colors-code-colors-green-contrast: var(--colors-positive-600);
+  --colors-code-colors-blue-contrast: var(--colors-blue-400);
+  --colors-code-colors-yellow-contrast: #d7a200;
+  --colors-code-colors-purple-contrast: #9f26e5;
+  --colors-code-colors-turquoise-contrast: #0dc4d5;
+  --colors-code-colors-navy: #5469f7;
+  --colors-code-colors-navy-contrast: #162ec6;
+
+  /* Atom One Dark Theme Colors */
+  --atom-one-dark-bg: #282c34;
+  --atom-one-dark-text: #abb2bf;
+  --atom-one-dark-comment: #5c6370;
+  --atom-one-dark-keyword: #c678dd;
+  --atom-one-dark-operator: #e06c75;
+  --atom-one-dark-function: #61aeee;
+  --atom-one-dark-string: #98c379;
+  --atom-one-dark-variable: #d19a66;
+  --atom-one-dark-constant: #56b6c2;
+  --atom-one-dark-class: #e6c07b;
+
+  /* Atom One Light Theme Colors */
+  --atom-one-light-bg: #fafafa;
+  --atom-one-light-text: #383a42;
+  --atom-one-light-comment: #a0a1a7;
+  --atom-one-light-keyword: #a626a4;
+  --atom-one-light-operator: #e45649;
+  --atom-one-light-function: #4078f2;
+  --atom-one-light-string: #50a14f;
+  --atom-one-light-variable: #986801;
+  --atom-one-light-constant: #0184bb;
+  --atom-one-light-class: #c18401;
+
+  /* Colors Other */
+  --colors-neutral-150: #d5d7d9;
+  --colors-neutral-850: #2a2c30;
+  --colors-neutral-750: #1c1c1c;
+  --colors-overlay-overlay-white-40: rgba(255 255 255 / 0.4);
+  --colors-overlay-overlay-black-40: rgba(13 14 15 / 0.4);
+  --colors-overlay-overlay-white-64: rgba(255 255 255 / 0.64);
+  --colors-overlay-overlay-black-64: rgba(13 14 15 / 0.64);
+  --colors-overlay-overlay-white-88: rgba(255 255 255 / 0.88);
+  --colors-overlay-overlay-black-88: rgba(13 14 15 / 0.88);
+
+  /* Spacings And Sizes */
+  --spacing-size-size-0: 0rem;
+  --spacing-size-4xs: 0.125rem;
+  --spacing-size-3xs: 0.25rem;
+  --spacing-size-2xs: 0.5rem;
+  --spacing-size-xs: 0.75rem;
+  --spacing-size-sm: 1rem;
+  --spacing-size-md: 1.125rem;
+  --spacing-size-2md: 1.3rem;
+  --spacing-size-lg: 1.5rem;
+  --spacing-size-xl: 2rem;
+  --spacing-size-2xl: 2.5rem;
+  --spacing-size-3xl: 3rem;
+  --main-container: 90rem;
+
+  /* New Look Typography */
+  --font-family-body: "Noto Sans", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --font-family-code: "Monaspace Neon", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-size-3xs: 0.625rem;
+  --font-size-2xs: 0.75rem;
+  --font-size-xs: 0.875rem;
+  --font-size-sm: 1rem;
+  --font-size-2sm: 1.2rem;
+  --font-size-md: 1.125rem;
+  --font-size-lg: 1.25rem;
+  --font-size-2md: 1.3rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 1.75rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.5rem;
+  --font-line-height-xs: 0.75rem;
+  --font-line-height-sm: 1rem;
+  --font-line-height-md: 1.25rem;
+  --font-line-height-lg: 1.5rem;
+  --font-line-height-xl: 1.75rem;
+  --font-line-height-2xl: 2rem;
+  --font-line-height-3xl: 2.5rem;
+  --font-line-height-4xl: 3rem;
+
+  /* New Look Icons */
+  /* Themed Headings Anchor Icon */
+  --icon-anchor-light: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%3E%3Cg%20clip-path%3D%22url(%23clip0_618_10452)%22%3E%3Cpath%20d%3D%22M13.2084%202.77855C11.8904%201.46053%209.75343%201.46053%208.43541%202.77855L6.31409%204.89987L5.4302%204.01599L7.55152%201.89467C9.3577%200.0884953%2012.2861%200.0884955%2014.0923%201.89467C15.8984%203.70085%2015.8984%206.62923%2014.0923%208.43541L11.9709%2010.5567L11.0871%209.67284L13.2084%207.55152C14.5264%206.2335%2014.5264%204.09657%2013.2084%202.77855Z%22%20fill%3D%22%2318191B%22%2F%3E%3Cpath%20d%3D%22M2.77855%2013.2084C4.09657%2014.5264%206.23351%2014.5264%207.55153%2013.2084L9.67285%2011.0871L10.5567%2011.9709L8.43541%2014.0923C6.62923%2015.8984%203.70085%2015.8984%201.89467%2014.0923C0.0884953%2012.2861%200.0884953%209.3577%201.89467%207.55152L4.01599%205.4302L4.89987%206.31409L2.77855%208.43541C1.46053%209.75343%201.46053%2011.8904%202.77855%2013.2084Z%22%20fill%3D%22%2318191B%22%2F%3E%3Cpath%20d%3D%22M10.5567%206.31409C10.8008%206.07001%2010.8008%205.67428%2010.5567%205.4302C10.3126%205.18613%209.91692%205.18613%209.67284%205.4302L5.4302%209.67284C5.18613%209.91692%205.18613%2010.3127%205.4302%2010.5567C5.67428%2010.8008%206.07001%2010.8008%206.31409%2010.5567L10.5567%206.31409Z%22%20fill%3D%22%2318191B%22%2F%3E%3C%2Fg%3E%3Cdefs%3E%3CclipPath%20id%3D%22clip0_618_10452%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22white%22%2F%3E%3C%2FclipPath%3E%3C%2Fdefs%3E%3C%2Fsvg%3E");
+  --icon-anchor-dark: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%3E%3Cg%20clip-path%3D%22url(%23clip0_618_7189)%22%3E%3Cpath%20d%3D%22M13.2084%202.77855C11.8904%201.46053%209.75343%201.46053%208.43541%202.77855L6.31409%204.89987L5.4302%204.01599L7.55152%201.89467C9.3577%200.0884953%2012.2861%200.0884955%2014.0923%201.89467C15.8984%203.70085%2015.8984%206.62923%2014.0923%208.43541L11.9709%2010.5567L11.0871%209.67284L13.2084%207.55152C14.5264%206.2335%2014.5264%204.09657%2013.2084%202.77855Z%22%20fill%3D%22white%22%2F%3E%3Cpath%20d%3D%22M2.77855%2013.2084C4.09657%2014.5264%206.23351%2014.5264%207.55153%2013.2084L9.67285%2011.0871L10.5567%2011.9709L8.43541%2014.0923C6.62923%2015.8984%203.70085%2015.8984%201.89467%2014.0923C0.0884953%2012.2861%200.0884953%209.3577%201.89467%207.55152L4.01599%205.4302L4.89987%206.31409L2.77855%208.43541C1.46053%209.75343%201.46053%2011.8904%202.77855%2013.2084Z%22%20fill%3D%22white%22%2F%3E%3Cpath%20d%3D%22M10.5567%206.31409C10.8008%206.07001%2010.8008%205.67428%2010.5567%205.4302C10.3126%205.18613%209.91692%205.18613%209.67284%205.4302L5.4302%209.67284C5.18613%209.91692%205.18613%2010.3127%205.4302%2010.5567C5.67428%2010.8008%206.07001%2010.8008%206.31409%2010.5567L10.5567%206.31409Z%22%20fill%3D%22white%22%2F%3E%3C%2Fg%3E%3Cdefs%3E%3CclipPath%20id%3D%22clip0_618_7189%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22white%22%2F%3E%3C%2FclipPath%3E%3C%2Fdefs%3E%3C%2Fsvg%3E");
+
+  /* Themed Left Arrow Icon */
+  --icon-arrow-left-light: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M12.5303%204.46967C12.8232%204.76256%2012.8232%205.23744%2012.5303%205.53033L6.81066%2011.25H19C19.4142%2011.25%2019.75%2011.5858%2019.75%2012C19.75%2012.4142%2019.4142%2012.75%2019%2012.75H6.81066L12.5303%2018.4697C12.8232%2018.7626%2012.8232%2019.2374%2012.5303%2019.5303C12.2374%2019.8232%2011.7626%2019.8232%2011.4697%2019.5303L4.46967%2012.5303C4.17678%2012.2374%204.17678%2011.7626%204.46967%2011.4697L11.4697%204.46967C11.7626%204.17678%2012.2374%204.17678%2012.5303%204.46967Z%22%20fill%3D%22%2318191B%22%2F%3E%3C%2Fsvg%3E");
+  --icon-arrow-left-dark: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M12.5303%204.46967C12.8232%204.76256%2012.8232%205.23744%2012.5303%205.53033L6.81066%2011.25H19C19.4142%2011.25%2019.75%2011.5858%2019.75%2012C19.75%2012.4142%2019.4142%2012.75%2019%2012.75H6.81066L12.5303%2018.4697C12.8232%2018.7626%2012.8232%2019.2374%2012.5303%2019.5303C12.2374%2019.8232%2011.7626%2019.8232%2011.4697%2019.5303L4.46967%2012.5303C4.17678%2012.2374%204.17678%2011.7626%204.46967%2011.4697L11.4697%204.46967C11.7626%204.17678%2012.2374%204.17678%2012.5303%204.46967Z%22%20fill%3D%22white%22%2F%3E%3C%2Fsvg%3E");
+
+  /* Themed Right Arrow Icon */
+  --icon-arrow-right-light: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M11.4697%204.46967C11.7626%204.17678%2012.2374%204.17678%2012.5303%204.46967L19.5303%2011.4697C19.8232%2011.7626%2019.8232%2012.2374%2019.5303%2012.5303L12.5303%2019.5303C12.2374%2019.8232%2011.7626%2019.8232%2011.4697%2019.5303C11.1768%2019.2374%2011.1768%2018.7626%2011.4697%2018.4697L17.1893%2012.75H5C4.58579%2012.75%204.25%2012.4142%204.25%2012C4.25%2011.5858%204.58579%2011.25%205%2011.25H17.1893L11.4697%205.53033C11.1768%205.23744%2011.1768%204.76256%2011.4697%204.46967Z%22%20fill%3D%22%2318191B%22%2F%3E%3C%2Fsvg%3E");
+  --icon-arrow-right-dark: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M11.4697%204.46967C11.7626%204.17678%2012.2374%204.17678%2012.5303%204.46967L19.5303%2011.4697C19.8232%2011.7626%2019.8232%2012.2374%2019.5303%2012.5303L12.5303%2019.5303C12.2374%2019.8232%2011.7626%2019.8232%2011.4697%2019.5303C11.1768%2019.2374%2011.1768%2018.7626%2011.4697%2018.4697L17.1893%2012.75H5C4.58579%2012.75%204.25%2012.4142%204.25%2012C4.25%2011.5858%204.58579%2011.25%205%2011.25H17.1893L11.4697%205.53033C11.1768%205.23744%2011.1768%204.76256%2011.4697%204.46967Z%22%20fill%3D%22white%22%2F%3E%3C%2Fsvg%3E");
+
+  /* Themed Up Arrow Icon */
+  --icon-arrow-up-light: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M19.5303%2012.5303C19.2374%2012.8232%2018.7626%2012.8232%2018.4697%2012.5303L12.75%206.81066L12.75%2019C12.75%2019.4142%2012.4142%2019.75%2012%2019.75C11.5858%2019.75%2011.25%2019.4142%2011.25%2019L11.25%206.81066L5.53033%2012.5303C5.23744%2012.8232%204.76256%2012.8232%204.46967%2012.5303C4.17678%2012.2374%204.17678%2011.7626%204.46967%2011.4697L11.4697%204.46967C11.7626%204.17678%2012.2374%204.17678%2012.5303%204.46967L19.5303%2011.4697C19.8232%2011.7626%2019.8232%2012.2374%2019.5303%2012.5303Z%22%20fill%3D%22%2318191B%22%2F%3E%3C%2Fsvg%3E");
+  --icon-arrow-up-dark: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M19.5303%2012.5303C19.2374%2012.8232%2018.7626%2012.8232%2018.4697%2012.5303L12.75%206.81066L12.75%2019C12.75%2019.4142%2012.4142%2019.75%2012%2019.75C11.5858%2019.75%2011.25%2019.4142%2011.25%2019L11.25%206.81066L5.53033%2012.5303C5.23744%2012.8232%204.76256%2012.8232%204.46967%2012.5303C4.17678%2012.2374%204.17678%2011.7626%204.46967%2011.4697L11.4697%204.46967C11.7626%204.17678%2012.2374%204.17678%2012.5303%204.46967L19.5303%2011.4697C19.8232%2011.7626%2019.8232%2012.2374%2019.5303%2012.5303Z%22%20fill%3D%22%23FFFFFF%22%2F%3E%3C%2Fsvg%3E");
+
+  /* Themed Clipboard Icon */
+  --icon-clipboard-light: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M4.8%203.75C4.52152%203.75%204.25445%203.86062%204.05754%204.05754C3.86062%204.25445%203.75%204.52152%203.75%204.8V12.9C3.75%2013.1785%203.86062%2013.4455%204.05754%2013.6425C4.25445%2013.8394%204.52152%2013.95%204.8%2013.95H5.7C6.11421%2013.95%206.45%2014.2858%206.45%2014.7C6.45%2015.1142%206.11421%2015.45%205.7%2015.45H4.8C4.1237%2015.45%203.4751%2015.1813%202.99688%2014.7031C2.51866%2014.2249%202.25%2013.5763%202.25%2012.9V4.8C2.25%204.1237%202.51866%203.4751%202.99688%202.99688C3.4751%202.51866%204.1237%202.25%204.8%202.25H12.9C13.5763%202.25%2014.2249%202.51866%2014.7031%202.99688C15.1813%203.4751%2015.45%204.1237%2015.45%204.8V5.7C15.45%206.11421%2015.1142%206.45%2014.7%206.45C14.2858%206.45%2013.95%206.11421%2013.95%205.7V4.8C13.95%204.52152%2013.8394%204.25445%2013.6425%204.05754C13.4455%203.86062%2013.1785%203.75%2012.9%203.75H4.8ZM11.1%2010.05C10.5201%2010.05%2010.05%2010.5201%2010.05%2011.1V19.2C10.05%2019.7799%2010.5201%2020.25%2011.1%2020.25H19.2C19.7799%2020.25%2020.25%2019.7799%2020.25%2019.2V11.1C20.25%2010.5201%2019.7799%2010.05%2019.2%2010.05H11.1ZM8.55%2011.1C8.55%209.69167%209.69167%208.55%2011.1%208.55H19.2C20.6083%208.55%2021.75%209.69167%2021.75%2011.1V19.2C21.75%2020.6083%2020.6083%2021.75%2019.2%2021.75H11.1C9.69167%2021.75%208.55%2020.6083%208.55%2019.2V11.1Z%22%20fill%3D%22%2318191B%22%2F%3E%3C%2Fsvg%3E");
+  --icon-clipboard-dark: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M4.8%203.75C4.52152%203.75%204.25445%203.86062%204.05754%204.05754C3.86062%204.25445%203.75%204.52152%203.75%204.8V12.9C3.75%2013.1785%203.86062%2013.4455%204.05754%2013.6425C4.25445%2013.8394%204.52152%2013.95%204.8%2013.95H5.7C6.11421%2013.95%206.45%2014.2858%206.45%2014.7C6.45%2015.1142%206.11421%2015.45%205.7%2015.45H4.8C4.1237%2015.45%203.4751%2015.1813%202.99688%2014.7031C2.51866%2014.2249%202.25%2013.5763%202.25%2012.9V4.8C2.25%204.1237%202.51866%203.4751%202.99688%202.99688C3.4751%202.51866%204.1237%202.25%204.8%202.25H12.9C13.5763%202.25%2014.2249%202.51866%2014.7031%202.99688C15.1813%203.4751%2015.45%204.1237%2015.45%204.8V5.7C15.45%206.11421%2015.1142%206.45%2014.7%206.45C14.2858%206.45%2013.95%206.11421%2013.95%205.7V4.8C13.95%204.52152%2013.8394%204.25445%2013.6425%204.05754C13.4455%203.86062%2013.1785%203.75%2012.9%203.75H4.8ZM11.1%2010.05C10.5201%2010.05%2010.05%2010.5201%2010.05%2011.1V19.2C10.05%2019.7799%2010.5201%2020.25%2011.1%2020.25H19.2C19.7799%2020.25%2020.25%2019.7799%2020.25%2019.2V11.1C20.25%2010.5201%2019.7799%2010.05%2019.2%2010.05H11.1ZM8.55%2011.1C8.55%209.69167%209.69167%208.55%2011.1%208.55H19.2C20.6083%208.55%2021.75%209.69167%2021.75%2011.1V19.2C21.75%2020.6083%2020.6083%2021.75%2019.2%2021.75H11.1C9.69167%2021.75%208.55%2020.6083%208.55%2019.2V11.1Z%22%20fill%3D%22%23FFFFFF%22%2F%3E%3C%2Fsvg%3E");
+
+  /* Themed Home Icon */
+  --icon-home-light: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M10.1192%203.23498C11.177%202.24329%2012.823%202.24329%2013.8808%203.23498L19.8808%208.85998C20.4354%209.37986%2020.75%2010.1061%2020.75%2010.8662V18.9997C20.75%2019.9662%2019.9665%2020.7497%2019%2020.7497H15C14.5858%2020.7497%2014.25%2020.414%2014.25%2019.9997V15.9998C14.25%2015.8617%2014.1381%2015.7498%2014%2015.7498H10C9.86193%2015.7498%209.75%2015.8617%209.75%2015.9998V19.9997C9.75%2020.414%209.41421%2020.7497%209%2020.7497H5C4.0335%2020.7497%203.25%2019.9662%203.25%2018.9997V10.8662C3.25%2010.1061%203.56462%209.37986%204.11916%208.85998L10.1192%203.23498ZM12.8549%204.32929C12.3741%203.87852%2011.6259%203.87852%2011.1451%204.32929L5.14507%209.95429C4.89301%2010.1906%204.75%2010.5207%204.75%2010.8662V18.9997C4.75%2019.1378%204.86193%2019.2497%205%2019.2497H8.25V15.9998C8.25%2015.0333%209.0335%2014.2498%2010%2014.2498H14C14.9665%2014.2498%2015.75%2015.0333%2015.75%2015.9998V19.2497H19C19.1381%2019.2497%2019.25%2019.1378%2019.25%2018.9997V10.8662C19.25%2010.5207%2019.107%2010.1906%2018.8549%209.95429L12.8549%204.32929Z%22%20fill%3D%22%2318191B%22%2F%3E%3C%2Fsvg%3E");
+  --icon-home-dark: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M10.1192%203.23523C11.177%202.24353%2012.823%202.24353%2013.8808%203.23523L19.8808%208.86023C20.4354%209.38011%2020.75%2010.1063%2020.75%2010.8665V19C20.75%2019.9665%2019.9665%2020.75%2019%2020.75H15C14.5858%2020.75%2014.25%2020.4142%2014.25%2020V16C14.25%2015.8619%2014.1381%2015.75%2014%2015.75H10C9.86193%2015.75%209.75%2015.8619%209.75%2016V20C9.75%2020.4142%209.41421%2020.75%209%2020.75H5C4.0335%2020.75%203.25%2019.9665%203.25%2019V10.8665C3.25%2010.1063%203.56462%209.38011%204.11916%208.86023L10.1192%203.23523ZM12.8549%204.32953C12.3741%203.87876%2011.6259%203.87876%2011.1451%204.32953L5.14507%209.95453C4.89301%2010.1908%204.75%2010.5209%204.75%2010.8665V19C4.75%2019.1381%204.86193%2019.25%205%2019.25H8.25V16C8.25%2015.0335%209.0335%2014.25%2010%2014.25H14C14.9665%2014.25%2015.75%2015.0335%2015.75%2016V19.25H19C19.1381%2019.25%2019.25%2019.1381%2019.25%2019V10.8665C19.25%2010.5209%2019.107%2010.1908%2018.8549%209.95453L12.8549%204.32953Z%22%20fill%3D%22white%22%2F%3E%3C%2Fsvg%3E");
+
+  /* Themed File Icon */
+  --icon-file-light: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M5%2011.5H10V10.5H5V11.5Z%22%20fill%3D%22%2362676B%22%2F%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M4%201.5C3.17157%201.5%202.5%202.17157%202.5%203V13C2.5%2013.8284%203.17157%2014.5%204%2014.5H12C12.8284%2014.5%2013.5%2013.8284%2013.5%2013V6.41421C13.5%206.01639%2013.342%205.63486%2013.0607%205.35355L9.64645%201.93934C9.36514%201.65803%208.98361%201.5%208.58579%201.5H4ZM3.5%203C3.5%202.72386%203.72386%202.5%204%202.5H8.58579C8.71839%202.5%208.84557%202.55268%208.93934%202.64645L12.3536%206.06066C12.4473%206.15443%2012.5%206.28161%2012.5%206.41421V13C12.5%2013.2761%2012.2761%2013.5%2012%2013.5H4C3.72386%2013.5%203.5%2013.2761%203.5%2013V3Z%22%20fill%3D%22%2362676B%22%2F%3E%3C%2Fsvg%3E");
+  --icon-file-dark: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M5%2011.5H10V10.5H5V11.5Z%22%20fill%3D%22%23949A9E%22%2F%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M4%201.5C3.17157%201.5%202.5%202.17157%202.5%203V13C2.5%2013.8284%203.17157%2014.5%204%2014.5H12C12.8284%2014.5%2013.5%2013.8284%2013.5%2013V6.41421C13.5%206.01639%2013.342%205.63486%2013.0607%205.35355L9.64645%201.93934C9.36514%201.65803%208.98361%201.5%208.58579%201.5H4ZM3.5%203C3.5%202.72386%203.72386%202.5%204%202.5H8.58579C8.71839%202.5%208.84557%202.55268%208.93934%202.64645L12.3536%206.06066C12.4473%206.15443%2012.5%206.28161%2012.5%206.41421V13C12.5%2013.2761%2012.2761%2013.5%2012%2013.5H4C3.72386%2013.5%203.5%2013.2761%203.5%2013V3Z%22%20fill%3D%22%23949A9E%22%2F%3E%3C%2Fsvg%3E");
+
+  /* Themed Menu Icon */
+  --icon-menu-light: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M3%206C3.55228%206%204%205.55228%204%205C4%204.44772%203.55228%204%203%204C2.44772%204%202%204.44772%202%205C2%205.55228%202.44772%206%203%206Z%22%20fill%3D%22%2318191B%22%2F%3E%3Cpath%20d%3D%22M22%205.75H6V4.25H22V5.75Z%22%20fill%3D%22%2318191B%22%2F%3E%3Cpath%20d%3D%22M22%2012.75H6V11.25H22V12.75Z%22%20fill%3D%22%2318191B%22%2F%3E%3Cpath%20d%3D%22M16%2019.75H6V18.25H16V19.75Z%22%20fill%3D%22%2318191B%22%2F%3E%3Cpath%20d%3D%22M4%2012C4%2012.5523%203.55228%2013%203%2013C2.44772%2013%202%2012.5523%202%2012C2%2011.4477%202.44772%2011%203%2011C3.55228%2011%204%2011.4477%204%2012Z%22%20fill%3D%22%2318191B%22%2F%3E%3Cpath%20d%3D%22M3%2020C3.55228%2020%204%2019.5523%204%2019C4%2018.4477%203.55228%2018%203%2018C2.44772%2018%202%2018.4477%202%2019C2%2019.5523%202.44772%2020%203%2020Z%22%20fill%3D%22%2318191B%22%2F%3E%3C%2Fsvg%3E");
+  --icon-menu-dark: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M3%206C3.55228%206%204%205.55228%204%205C4%204.44772%203.55228%204%203%204C2.44772%204%202%204.44772%202%205C2%205.55228%202.44772%206%203%206Z%22%20fill%3D%22white%22%2F%3E%3Cpath%20d%3D%22M22%205.75H6V4.25H22V5.75Z%22%20fill%3D%22white%22%2F%3E%3Cpath%20d%3D%22M22%2012.75H6V11.25H22V12.75Z%22%20fill%3D%22white%22%2F%3E%3Cpath%20d%3D%22M16%2019.75H6V18.25H16V19.75Z%22%20fill%3D%22white%22%2F%3E%3Cpath%20d%3D%22M4%2012C4%2012.5523%203.55228%2013%203%2013C2.44772%2013%202%2012.5523%202%2012C2%2011.4477%202.44772%2011%203%2011C3.55228%2011%204%2011.4477%204%2012Z%22%20fill%3D%22white%22%2F%3E%3Cpath%20d%3D%22M3%2020C3.55228%2020%204%2019.5523%204%2019C4%2018.4477%203.55228%2018%203%2018C2.44772%2018%202%2018.4477%202%2019C2%2019.5523%202.44772%2020%203%2020Z%22%20fill%3D%22white%22%2F%3E%3C%2Fsvg%3E");
+
+  /* New Look Responsive Mobile First */
+  /* Spacing */
+  --leftbar-paddings-leftbar-padding-sm: var(--spacing-size-sm);
+  --leftbar-paddings-leftbar-padding-md: var(--spacing-size-md);
+  --leftbar-paddings-leftbar-padding-0: var(--spacing-size-size-0);
+  --leftbar-paddings-leftbar-padding-lg: var(--spacing-size-lg);
+  --padding-padding-lg: var(--spacing-size-md);
+  --padding-padding-sm: var(--spacing-size-xs);
+  --padding-padding-2sm: var(--spacing-size-2md);
+  --padding-padding-xs: var(--spacing-size-xs);
+  --padding-padding-2xs: var(--spacing-size-2xs);
+  --padding-padding-3xs: var(--spacing-size-3xs);
+  --padding-padding-xl: var(--spacing-size-xl);
+  --leftbar-paddings-leftbar-padding-4xs: var(--spacing-size-4xs);
+  --leftbar-paddings-leftbar-padding-2xs: var(--spacing-size-2xs);
+  --leftbar-paddings-leftbar-padding-3xs: var(--spacing-size-3xs);
+  --padding-padding-md: var(--spacing-size-sm);
+  --main-margin: var(--spacing-size-sm);
+  --main-max-width-leftbar: 0rem;
+  --main-content-width: 54rem;
+  --icons-24: 1.5rem;
+  --icons-20: 1.25rem;
+  --icons-16: 1rem;
+  --icons-12: 0.75rem;
+
+  /* Typography */
+  --typography-font-size-3xs: var(--font-size-3xs);
+  --typography-font-size-2xs: var(--font-size-2xs);
+  --typography-font-size-xs: var(--font-size-xs);
+  --typography-font-size-sm: var(--font-size-xs);
+  --typography-font-size-md: var(--font-size-sm);
+  --typography-font-size-2md: var(--font-size-2sm);
+  --typography-font-size-lg: var(--font-size-md);
+  --typography-font-size-xl: var(--font-size-lg);
+  --typography-font-size-2xl: var(--font-size-xl);
+  --typography-font-size-3xl: var(--font-size-2xl);
+  --typography-font-size-4xl: var(--font-size-3xl);
+  --typography-line-height-xs: var(--font-line-height-xs);
+  --typography-line-height-sm: var(--font-line-height-sm);
+  --typography-line-height-md: var(--font-line-height-md);
+  --typography-line-height-lg: var(--font-line-height-md);
+  --typography-line-height-xl: var(--font-line-height-lg);
+  --typography-line-height-2xl: var(--font-line-height-lg);
+  --typography-line-height-3xl: var(--font-line-height-2xl);
+  --typography-line-height-4xl: var(--font-line-height-3xl);
+  /*----------------- New Look Variables End -----------------*/
+}
+
+/*----------------- New Look Responsive Desktop Start -----------------*/
+@media (min-width: 768px) {
+  :root {
+    /* Spacing */
+    --leftbar-paddings-leftbar-padding-sm: var(--spacing-size-sm);
+    --leftbar-paddings-leftbar-padding-md: var(--spacing-size-md);
+    --leftbar-paddings-leftbar-padding-0: var(--spacing-size-size-0);
+    --leftbar-paddings-leftbar-padding-lg: var(--spacing-size-lg);
+    --padding-padding-lg: var(--spacing-size-lg);
+    --padding-padding-sm: var(--spacing-size-sm);
+    --padding-padding-xs: var(--spacing-size-xs);
+    --padding-padding-2xs: var(--spacing-size-2xs);
+    --padding-padding-3xs: var(--spacing-size-3xs);
+    --leftbar-paddings-leftbar-padding-4xs: var(--spacing-size-4xs);
+    --leftbar-paddings-leftbar-padding-2xs: var(--spacing-size-2xs);
+    --leftbar-paddings-leftbar-padding-3xs: var(--spacing-size-3xs);
+    --padding-padding-md: var(--spacing-size-md);
+    --main-margin: var(--spacing-size-xl);
+    --main-max-width-leftbar: 18.25rem;
+    --icons-24: 1.5rem;
+    --icons-20: 1.25rem;
+    --icons-16: 1rem;
+    --icons-12: 0.75rem;
+
+    /* Typography */
+    --typography-font-size-3xs: var(--font-size-3xs);
+    --typography-font-size-2xs: var(--font-size-2xs);
+    --typography-font-size-xs: var(--font-size-xs);
+    --typography-font-size-sm: var(--font-size-sm);
+    --typography-font-size-md: var(--font-size-md);
+    --typography-font-size-2md: var(--font-size-2md);
+    --typography-font-size-lg: var(--font-size-lg);
+    --typography-font-size-xl: var(--font-size-xl);
+    --typography-font-size-2xl: var(--font-size-2xl);
+    --typography-font-size-3xl: var(--font-size-3xl);
+    --typography-font-size-4xl: var(--font-size-4xl);
+    --typography-line-height-xs: var(--font-line-height-xs);
+    --typography-line-height-sm: var(--font-line-height-sm);
+    --typography-line-height-md: var(--font-line-height-md);
+    --typography-line-height-lg: var(--font-line-height-lg);
+    --typography-line-height-xl: var(--font-line-height-xl);
+    --typography-line-height-2xl: var(--font-line-height-2xl);
+    --typography-line-height-3xl: var(--font-line-height-3xl);
+    --typography-line-height-4xl: var(--font-line-height-4xl);
+
+    /* Heading */
+    --typography-font-size-h1: var(--font-size-2xl);
+    --typography-font-size-h2: var(--font-size-xl);
+    --typography-font-size-h3: var(--font-size-2md);
+    --typography-font-size-h4: var(--font-size-md);
+
+    /*
+*/
+  }
+}
+
+@media (min-width: 990px) {
+  :root {
+    --main-max-width-leftbar: 21.25rem;
+    --main-margin: var(--spacing-size-3xl);
+  }
+}
+
+/*----------------- New Look Responsive Desktop End -----------------*/
+
+/*----------------- Root Variables - End -----------------*/

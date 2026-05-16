@@ -73,14 +73,14 @@ struct rotated90ccw_view_fn
 };
 
 template <typename ResultView>
-struct tranposed_view_fn
+struct transposed_view_fn
 {
     using result_type = ResultView;
 
     template <typename View>
     auto operator()(View const& src) const -> result_type
     {
-        return result_type{tranposed_view(src)};
+        return result_type{transposed_view(src)};
     }
 };
 
@@ -196,7 +196,7 @@ auto transposed_view(any_image_view<Views...> const& src)
     -> typename dynamic_xy_step_transposed_type<any_image_view<Views...>>::type
 {
     using result_view_t = typename dynamic_xy_step_transposed_type<any_image_view<Views...>>::type;
-    return variant2::visit(detail::tranposed_view_fn<result_view_t>(), src);
+    return variant2::visit(detail::transposed_view_fn<result_view_t>(), src);
 }
 
 /// \ingroup ImageViewTransformations90CW

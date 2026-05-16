@@ -39,6 +39,11 @@ protected:
 
     virtual ~router_base();
 
+    router_base(router_base const&) = delete;
+    router_base& operator=(router_base const&) = delete;
+    router_base(router_base&&) noexcept = default;
+    router_base& operator=(router_base&&) noexcept = default;
+
     void
     insert_impl(
         core::string_view s,

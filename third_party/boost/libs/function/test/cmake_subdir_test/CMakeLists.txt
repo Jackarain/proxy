@@ -20,7 +20,6 @@ throw_exception
 
 # Secondary dependencies
 
-static_assert
 )
 
 foreach(dep IN LISTS deps)

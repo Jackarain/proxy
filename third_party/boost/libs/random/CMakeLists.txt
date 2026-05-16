@@ -31,7 +31,6 @@ target_link_libraries(boost_random
     Boost::dynamic_bitset
     Boost::integer
     Boost::io
-    Boost::static_assert
     Boost::system
     Boost::throw_exception
     Boost::type_traits

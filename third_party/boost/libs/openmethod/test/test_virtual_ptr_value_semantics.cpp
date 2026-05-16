@@ -168,6 +168,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(
         Dog snoopy;
         virtual_ptr<Dog, Registry> p(snoopy);
         virtual_ptr<Dog, Registry> q(std::move(p));
+        // coverity[use_after_move]
         BOOST_TEST(q.get() == &snoopy);
         BOOST_TEST(q.vptr() == Registry::template static_vptr<Dog>);
         BOOST_TEST(p.get() == &snoopy);

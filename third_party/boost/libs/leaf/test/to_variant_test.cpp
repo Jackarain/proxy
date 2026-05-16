@@ -48,7 +48,7 @@ int main()
             {
                 return leaf::new_error(E1::e12, E3::e31);
             } );
-        BOOST_TEST(v.index() == 1);
+        BOOST_TEST_EQ(v.index(), 1);
         auto t = std::get<1>(v);
 
         BOOST_TEST(std::get<0>(t).has_value());
@@ -58,9 +58,9 @@ int main()
         BOOST_TEST(std::get<0>(t).value() == E1::e12);
         BOOST_TEST(std::get<2>(t).value() == E3::e31);
     }
-#endif
+#endif // #if !defined(__clang__) || __clang_major__ < 5 || __clang_major__ > 7
 
     return boost::report_errors();
 }
 
-#endif
+#endif // #if __cplusplus < 201703L

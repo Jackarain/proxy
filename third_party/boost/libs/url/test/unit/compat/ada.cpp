@@ -7892,7 +7892,9 @@ struct ada_test
             u.normalize_path();
             // href: "non-spec:/.//"
             BOOST_TEST_CSTR_EQ(u.scheme(), "non-spec");
-            BOOST_TEST_CSTR_EQ(u.encoded_path(), "//");
+            // issue 985: Boost.URL will not let "//" path become the authority separator
+            // BOOST_TEST_CSTR_EQ(u.encoded_path(), "//");
+            BOOST_TEST_CSTR_EQ(u.encoded_path(), "/.//");
         }();
         []{
             system::result<url> base = parse_uri("about:blank");
@@ -7910,6 +7912,7 @@ struct ada_test
             BOOST_TEST_CSTR_EQ(u.scheme(), "non-spec");
             // Boost.URL will not let "//" path become the authority separator
             // BOOST_TEST_CSTR_EQ(u.encoded_path(), "//path");
+            BOOST_TEST_CSTR_EQ(u.encoded_path(), "/.//path");
         }();
         []{
             system::result<url> base = parse_uri("about:blank");
@@ -7945,7 +7948,9 @@ struct ada_test
             u.normalize_path();
             // href: "non-spec:/.//path"
             BOOST_TEST_CSTR_EQ(u.scheme(), "non-spec");
-            BOOST_TEST_CSTR_EQ(u.encoded_path(), "//path");
+            // issue 985: Boost.URL will not let "//" path become the authority separator
+            // BOOST_TEST_CSTR_EQ(u.encoded_path(), "//path");
+            BOOST_TEST_CSTR_EQ(u.encoded_path(), "/.//path");
         }();
         []{
             system::result<url> base = parse_uri("non-spec:/p");
@@ -8018,7 +8023,9 @@ struct ada_test
             u.normalize_path();
             // href: "non-spec:/.//path"
             BOOST_TEST_CSTR_EQ(u.scheme(), "non-spec");
-            BOOST_TEST_CSTR_EQ(u.encoded_path(), "//path");
+            // issue 985: Boost.URL will not let "//" path become the authority separator
+            // BOOST_TEST_CSTR_EQ(u.encoded_path(), "//path");
+            BOOST_TEST_CSTR_EQ(u.encoded_path(), "/.//path");
         }();
         []{
             system::result<url> base = parse_uri("non-spec:/..//p");

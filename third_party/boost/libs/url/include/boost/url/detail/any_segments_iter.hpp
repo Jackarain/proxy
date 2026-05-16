@@ -105,10 +105,10 @@ private:
 struct segments_iter_base
 {
 protected:
-    BOOST_URL_DECL static void
+    static void
     measure_impl(std::size_t&,
         core::string_view, bool) noexcept;
-    BOOST_URL_DECL static void
+    static void
     copy_impl(char*&, char const*,
         core::string_view, bool) noexcept;
 };
@@ -219,10 +219,10 @@ private:
 struct segments_encoded_iter_base
 {
 protected:
-    BOOST_URL_DECL static void
+    static void
     measure_impl(std::size_t&,
         core::string_view, bool) noexcept;
-    BOOST_URL_DECL static void
+    static void
     copy_impl(char*&, char const*,
         core::string_view, bool) noexcept;
 };
@@ -323,5 +323,7 @@ make_segments_encoded_iter(
 } // detail
 } // urls
 } // boost
+
+#include <boost/url/detail/impl/any_segments_iter.hpp>
 
 #endif

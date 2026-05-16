@@ -45,6 +45,8 @@ void test_optional_of_superconverting_T() // compile-time test
   superconv<optional<int> > s;
    superconv<optional<int> > & rs = s;
   optional<superconv<optional<int> > > os = rs;
+  (void)s;
+  (void)os;
 #endif
 }
 

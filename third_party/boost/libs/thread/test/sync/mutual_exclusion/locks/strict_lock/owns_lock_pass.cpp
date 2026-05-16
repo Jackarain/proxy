@@ -12,7 +12,7 @@
 #include <boost/thread/strict_lock.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #ifdef BOOST_THREAD_USES_CHRONO
 typedef boost::chrono::high_resolution_clock Clock;

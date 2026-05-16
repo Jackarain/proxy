@@ -20,7 +20,8 @@
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
 #include <cassert>
 #include <iostream>
 #include "../../../timming.hpp"
@@ -64,9 +65,9 @@ void f()
     assert(test2 == 0);
     test1 = 1;
     cv.notify_one();
-    Clock::time_point t0 = Clock::now();
+    BOOST_ATTRIBUTE_UNUSED Clock::time_point t0 = Clock::now();
     cv.wait_for(lk, milliseconds(250), Pred(test2));
-    Clock::time_point t1 = Clock::now();
+    BOOST_ATTRIBUTE_UNUSED Clock::time_point t1 = Clock::now();
     if (runs == 0)
     {
       assert(t1 - t0 < max_diff);

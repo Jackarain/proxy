@@ -13,6 +13,7 @@
 
 #include <boost/url/detail/segments_iter_impl.hpp>
 #include <boost/assert.hpp>
+#include <ostream>
 
 namespace boost {
 namespace urls {
@@ -113,6 +114,77 @@ public:
 //------------------------------------------------
 
 inline
+segments_encoded_base::
+iterator::
+iterator(
+    detail::path_ref const& ref) noexcept
+    : it_(ref)
+{
+}
+
+inline
+segments_encoded_base::
+iterator::
+iterator(
+    detail::path_ref const& ref,
+    int) noexcept
+    : it_(ref, 0)
+{
+}
+
+//------------------------------------------------
+//
+// segments_encoded_base
+//
+//------------------------------------------------
+
+inline
+segments_encoded_base::
+segments_encoded_base(
+    detail::path_ref const& ref) noexcept
+    : ref_(ref)
+{
+}
+
+//------------------------------------------------
+//
+// Observers
+//
+//------------------------------------------------
+
+inline
+pct_string_view
+segments_encoded_base::
+buffer() const noexcept
+{
+    return ref_.buffer();
+}
+
+inline
+bool
+segments_encoded_base::
+is_absolute() const noexcept
+{
+    return ref_.buffer().starts_with('/');
+}
+
+inline
+bool
+segments_encoded_base::
+empty() const noexcept
+{
+    return ref_.nseg() == 0;
+}
+
+inline
+std::size_t
+segments_encoded_base::
+size() const noexcept
+{
+    return ref_.nseg();
+}
+
+inline
 pct_string_view
 segments_encoded_base::
 front() const noexcept
@@ -128,6 +200,36 @@ back() const noexcept
 {
     BOOST_ASSERT(! empty());
     return *--end();
+}
+
+inline
+auto
+segments_encoded_base::
+begin() const noexcept ->
+    iterator
+{
+    return iterator(ref_);
+}
+
+inline
+auto
+segments_encoded_base::
+end() const noexcept ->
+    iterator
+{
+    return iterator(ref_, 0);
+}
+
+//------------------------------------------------
+
+inline
+std::ostream&
+operator<<(
+    std::ostream& os,
+    segments_encoded_base const& ps)
+{
+    os << ps.buffer();
+    return os;
 }
 
 } // urls

@@ -22,7 +22,7 @@
 #include <boost/exception/exception.hpp>
 
 #include <boost/thread/future.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #if defined BOOST_THREAD_PROVIDES_FUTURE_CTOR_ALLOCATORS
 #include "../test_allocator.hpp"
 #endif

@@ -1205,7 +1205,7 @@ template <class UnorderedMap> void test_map_non_transparent_erase(UnorderedMap*)
   BOOST_TEST_EQ(key::count_, key_count);
 }
 
-#if BOOST_UNORDERED_FOA_TESTS
+#ifdef BOOST_UNORDERED_FOA_TESTS
 typedef boost::unordered_flat_set<int, transparent_hasher,
   transparent_key_equal>
   transparent_unordered_set;

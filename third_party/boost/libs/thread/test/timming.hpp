@@ -7,7 +7,7 @@
 #define BOOST_THREAD_TEST_TIMMING_HPP
 
 #include <boost/thread/detail/config.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #if ! defined BOOST_THREAD_TEST_TIME_MS
 #ifdef __linux__

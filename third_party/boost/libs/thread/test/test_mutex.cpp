@@ -16,6 +16,8 @@
 #include <boost/thread/thread_time.hpp>
 #include <boost/thread/condition.hpp>
 
+#include <boost/bind/bind.hpp>
+
 #define BOOST_TEST_MODULE Boost.Threads: mutex test suite
 
 #include <boost/test/unit_test.hpp>

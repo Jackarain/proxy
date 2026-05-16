@@ -22,7 +22,7 @@ int main()
       BOOST_CONTAINER_STATIC_ASSERT(( is_same<intcontainer_t, pmr::deque<int> >::value ));
    #endif
    intcontainer_t cont(pmr::get_default_resource());
-   typedef typename intcontainer_t::value_type value_type;
+   typedef intcontainer_t::value_type value_type;
    cont.push_back(value_type());
    return 0;
 }

@@ -40,32 +40,27 @@ set(deps
   # logic # Beast dependency
   mp11
   optional
-  preprocessor
-  static_assert
   # static_string # Beast dependency
   # type_index # Beast dependency
   winapi
   move
-  function_types
-  functional
-  mpl
-  tuple
-  typeof
-  utility
-  array
   dynamic_bitset
   integer
   io
+  utility
+  array
   concept_check
   conversion
   detail
   iterator
+  mpl
+  preprocessor
   regex
-  "function"
-  pool
-  unordered
+  tuple
+  compat
   variant2
   describe
+  pool
   predef
   algorithm
   lexical_cast
@@ -73,6 +68,11 @@ set(deps
   tokenizer
   fusion
   exception
+  "function"
+  unordered
+  function_types
+  functional
+  typeof
 )
 
 foreach(dep IN LISTS deps)

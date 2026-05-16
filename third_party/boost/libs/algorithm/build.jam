@@ -1,0 +1,41 @@
+# Copyright René Ferdinand Rivera Morell 2023-2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/array//boost_array
+    /boost/assert//boost_assert
+    /boost/bind//boost_bind
+    /boost/concept_check//boost_concept_check
+    /boost/config//boost_config
+    /boost/core//boost_core
+    /boost/exception//boost_exception
+    /boost/function//boost_function
+    /boost/iterator//boost_iterator
+    /boost/mpl//boost_mpl
+    /boost/range//boost_range
+    /boost/regex//boost_regex
+    /boost/throw_exception//boost_throw_exception
+    /boost/tuple//boost_tuple
+    /boost/type_traits//boost_type_traits
+    /boost/unordered//boost_unordered ;
+
+project /boost/algorithm
+    : common-requirements
+        <include>include
+    ;
+
+explicit
+    [ alias boost_algorithm : : : : <library>$(boost_dependencies) ]
+    [ alias all : boost_algorithm test
+        example
+        minmax/example minmax/test
+        string/example string/test
+        ]
+    ;
+
+call-if : boost-library algorithm
+    ;

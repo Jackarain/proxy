@@ -4,6 +4,8 @@
 
 #include <boost/system/result.hpp>
 #include <boost/core/lightweight_test.hpp>
+#include <boost/core/lightweight_test_trait.hpp>
+#include <type_traits>
 
 using namespace boost::system;
 
@@ -106,6 +108,71 @@ int main()
         Y y = result<Y, E>( in_place_error ) | g;
 
         BOOST_TEST_EQ( y.v_, 2 );
+    }
+
+    {
+        int x1 = 1;
+
+        result<int&> r( x1 );
+
+        auto&& x2 = r | f;
+
+        BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x2)> ));
+
+        BOOST_TEST_EQ( x2, x1 );
+        BOOST_TEST_NE( &x2, &x1 );
+    }
+
+    {
+        int x1 = 1;
+
+        result<int&> const r( x1 );
+
+        auto&& x2 = r | f;
+
+        BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x2)> ));
+
+        BOOST_TEST_EQ( x2, x1 );
+        BOOST_TEST_NE( &x2, &x1 );
+    }
+
+    {
+        int x1 = 1;
+
+        auto&& x2 = result<int&>( x1 ) | f;
+
+        BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x2)> ));
+
+        BOOST_TEST_EQ( x2, x1 );
+        BOOST_TEST_NE( &x2, &x1 );
+    }
+
+    {
+        result<int&, E> r( in_place_error );
+
+        auto&& x2 = r | f;
+
+        BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x2)> ));
+
+        BOOST_TEST_EQ( x2, f() );
+    }
+
+    {
+        result<int&, E> const r( in_place_error );
+
+        auto&& x2 = r | f;
+
+        BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x2)> ));
+
+        BOOST_TEST_EQ( x2, f() );
+    }
+
+    {
+        auto&& x2 = result<int&, E>( in_place_error ) | f;
+
+        BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x2)> ));
+
+        BOOST_TEST_EQ( x2, f() );
     }
 
     {

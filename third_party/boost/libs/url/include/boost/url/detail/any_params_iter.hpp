@@ -54,7 +54,6 @@ public:
     // True if the sequence is empty
     bool empty = false;
 
-    BOOST_URL_DECL
     virtual
     ~any_params_iter() noexcept = 0;
 
@@ -93,7 +92,6 @@ struct BOOST_SYMBOL_VISIBLE
     : any_params_iter
 {
     // ne = never empty
-    BOOST_URL_DECL
     explicit
     query_string_iter(
         core::string_view s,
@@ -154,14 +152,12 @@ protected:
         {}
 
     // return encoded size
-    BOOST_URL_DECL
     void
     measure_impl(
         std::size_t& n,
         param_view const& p) noexcept;
 
     // encode to dest
-    BOOST_URL_DECL
     void
     copy_impl(
         char*& dest,
@@ -264,14 +260,12 @@ private:
 struct params_encoded_iter_base
 {
 protected:
-    BOOST_URL_DECL
     static
     void
     measure_impl(
         std::size_t& n,
         param_view const& v) noexcept;
 
-    BOOST_URL_DECL
     static
     void
     copy_impl(
@@ -429,5 +423,7 @@ make_params_encoded_iter(
 } // detail
 } // urls
 } // boost
+
+#include <boost/url/detail/impl/any_params_iter.hpp>
 
 #endif

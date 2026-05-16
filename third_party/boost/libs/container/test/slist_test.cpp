@@ -173,6 +173,9 @@ struct alloc_propagate_base<boost_container_slist>
 
 }}}
 
+//Test the expected sizeof()
+BOOST_CONTAINER_STATIC_ASSERT_MSG(2*sizeof(void*) == sizeof(slist<int>), "sizeof has an unexpected value");
+
 int main ()
 {
    recursive_slist_test();

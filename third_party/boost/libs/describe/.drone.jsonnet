@@ -370,10 +370,17 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
-        "Linux 25.04 Clang 20",
-        "cppalliance/droneubuntu2504:1",
+        "Linux 24.04 Clang 20",
+        "cppalliance/droneubuntu2404:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-20', CXXSTD: '03,11,14,17,20,23,2c' },
         "clang-20",
+    ),
+
+    linux_pipeline(
+        "Linux 25.10 Clang 21",
+        "cppalliance/droneubuntu2510:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-21', CXXSTD: '03,11,14,17,20,23,2c' },
+        "clang-21",
     ),
 
     macos_pipeline(
@@ -387,6 +394,18 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     macos_pipeline(
+        "MacOS 12.4 Xcode 13.2.1 UBSAN",
+        { TOOLSET: 'clang', COMPILER: 'clang++', CXXSTD: '03,11,14,17,20,2b' } + ubsan,
+        xcode_version = "13.2.1", osx_version = "monterey", arch = "arm64",
+    ),
+
+    macos_pipeline(
+        "MacOS 12.4 Xcode 13.2.1 ASAN",
+        { TOOLSET: 'clang', COMPILER: 'clang++', CXXSTD: '03,11,14,17,20,2b' } + asan,
+        xcode_version = "13.2.1", osx_version = "monterey", arch = "arm64",
+    ),
+
+    macos_pipeline(
         "MacOS 12.4 Xcode 13.4.1 UBSAN",
         { TOOLSET: 'clang', COMPILER: 'clang++', CXXSTD: '03,11,14,17,20,2b' } + ubsan,
         xcode_version = "13.4.1", osx_version = "monterey", arch = "arm64",
@@ -396,6 +415,18 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
         "MacOS 12.4 Xcode 13.4.1 ASAN",
         { TOOLSET: 'clang', COMPILER: 'clang++', CXXSTD: '03,11,14,17,20,2b' } + asan,
         xcode_version = "13.4.1", osx_version = "monterey", arch = "arm64",
+    ),
+
+    macos_pipeline(
+        "MacOS 14 Xcode 16.2.0 UBSAN",
+        { TOOLSET: 'clang', COMPILER: 'clang++', CXXSTD: '03,11,14,17,20,2b' } + ubsan,
+        xcode_version = "16.2.0", osx_version = "sonoma", arch = "arm64",
+    ),
+
+    macos_pipeline(
+        "MacOS 14 Xcode 16.2.0 ASAN",
+        { TOOLSET: 'clang', COMPILER: 'clang++', CXXSTD: '03,11,14,17,20,2b' } + asan,
+        xcode_version = "16.2.0", osx_version = "sonoma", arch = "arm64",
     ),
 
     windows_pipeline(

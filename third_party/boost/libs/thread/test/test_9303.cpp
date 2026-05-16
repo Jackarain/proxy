@@ -4,6 +4,7 @@
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 #define BOOST_THREAD_VERSION 4
+    #include <string>
     #include <iostream>
     #include <fstream>
     #include <stdio.h>
@@ -11,6 +12,7 @@
     #include <boost/make_shared.hpp>
     #include <boost/shared_ptr.hpp>
     #include <boost/bind/bind.hpp>
+    #include <boost/core/ref.hpp>
     #include <boost/asio.hpp>
     #include <boost/thread.hpp>
     #include <boost/thread/future.hpp>
@@ -86,7 +88,7 @@
 
     #if defined EXAMPLE_3
         //! Doesn't compile in C++03.
-        //! error: variable âboost::packaged_task<std::basic_string<char>(std::basic_string<char>&)> exampleâ has initializer but incomplete type
+        //! error: variable "boost::packaged_task<std::basic_string<char>(std::basic_string<char>&)> example" has initializer but incomplete type
 
         {
             boost::packaged_task<std::string(std::string&)> example(string_with_params);

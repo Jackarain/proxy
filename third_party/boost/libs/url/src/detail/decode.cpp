@@ -9,7 +9,7 @@
 
 
 #include <boost/url/detail/config.hpp>
-#include "decode.hpp"
+#include <boost/url/detail/decode.hpp>
 #include <boost/url/grammar/charset.hpp>
 #include <boost/url/grammar/hexdig_chars.hpp>
 #include <memory>
@@ -150,4 +150,3 @@ decode_unsafe(
 } // detail
 } // urls
 } // boost
-

@@ -15,6 +15,8 @@
 
 #include "test_suite.hpp"
 
+#include <climits>
+
 #ifdef BOOST_TEST_CSTR_EQ
 #undef BOOST_TEST_CSTR_EQ
 #define BOOST_TEST_CSTR_EQ(expr1,expr2) \
@@ -864,6 +866,105 @@ struct format_test
                 "https://joe.gigantic-server.com:80/v2/index.html");
         }
 
+        // Documentation examples (format.hpp @par Example)
+        {
+            // format() variadic — full URL with scheme, host, port, path
+            BOOST_TEST_CSTR_EQ(
+                urls::format("{}://{}:{}/rfc/{}",
+                    "https", "www.ietf.org", 80, "rfc2396.txt"
+                    ).buffer(),
+                "https://www.ietf.org:80/rfc/rfc2396.txt");
+            // format() variadic — automatic percent-encoding
+            BOOST_TEST_CSTR_EQ(
+                urls::format("https://example.com/~{}",
+                    "John Doe"
+                    ).buffer(),
+                "https://example.com/~John%20Doe");
+            // arg() — named argument
+            BOOST_TEST_CSTR_EQ(
+                urls::format("https://example.com/~{username}",
+                    arg("username", "mark")
+                    ).buffer(),
+                "https://example.com/~mark");
+        }
+        {
+            // format_to() variadic
+            static_url<50> u;
+            urls::format_to(u, "{}://{}:{}/rfc/{}",
+                "https", "www.ietf.org", 80, "rfc2396.txt");
+            BOOST_TEST_CSTR_EQ(u.buffer(),
+                "https://www.ietf.org:80/rfc/rfc2396.txt");
+        }
+        {
+            // format() initializer_list — named arguments
+            BOOST_TEST_CSTR_EQ(
+                urls::format(
+                    "{scheme}://{host}:{port}/{dir}/{file}",
+                    {{"scheme", "https"}, {"port", 80},
+                     {"host", "example.com"},
+                     {"dir", "path/to"},
+                     {"file", "file.txt"}}
+                    ).buffer(),
+                "https://example.com:80/path/to/file.txt");
+        }
+        {
+            // format_to() initializer_list — named arguments
+            url u;
+            urls::format_to(u,
+                "{scheme}://{host}:{port}/{dir}/{file}",
+                {{"scheme", "https"}, {"port", 80},
+                 {"host", "example.com"},
+                 {"dir", "path/to"},
+                 {"file", "file.txt"}});
+            BOOST_TEST_CSTR_EQ(u.buffer(),
+                "https://example.com:80/path/to/file.txt");
+        }
+
+    }
+
+    void
+    testLLONGMIN()
+    {
+        // LLONG_MIN negation must not trigger UB
+        {
+            url u = urls::format("/{}/", LLONG_MIN);
+            BOOST_TEST(u.encoded_path().size() > 0);
+        }
+    }
+
+    void
+    testCenterAlignPad()
+    {
+        // center-alignment: lpad must not exceed
+        // total padding (heap overflow regression)
+        {
+            url u = urls::format("{:.^6s}", "abcd");
+            BOOST_TEST_CSTR_EQ(u.buffer(), ".abcd.");
+        }
+    }
+
+    void
+    testColonInFirstSegment()
+    {
+        // first segment with colon triggers encoding;
+        // n.path must be updated after colon-encoding
+        {
+            url u = urls::format("{}", "a:b");
+            BOOST_TEST_CSTR_EQ(u.encoded_path(), "a%3Ab");
+        }
+    }
+
+    void
+    testHighByteEncode()
+    {
+        // signed char shift UB regression: encoding
+        // a byte with the high bit set (e.g. 0x80)
+        {
+            url u = urls::format("/{}/",
+                std::string(1, '\x80'));
+            auto p = u.encoded_path();
+            BOOST_TEST(p.find("%80") != core::string_view::npos);
+        }
     }
 
     void
@@ -874,6 +975,10 @@ struct format_test
         // without help from the pros.
 #if !BOOST_WORKAROUND( BOOST_GCC_VERSION, < 60000 )
         testFormat();
+        testLLONGMIN();
+        testCenterAlignPad();
+        testColonInFirstSegment();
+        testHighByteEncode();
 #endif
     }
 };

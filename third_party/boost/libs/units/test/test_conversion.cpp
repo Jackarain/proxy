@@ -88,12 +88,12 @@ void test_dimensionless_conversions() {
     typedef bu::divide_typeof_helper<bu::cgs::force, bu::si::force>::type mixed_dimensionless;
 
     BOOST_CONSTEXPR_OR_CONST bu::quantity<bu::si::dimensionless> dimensionless_test1(1.0*bu::cgs::dyne/bu::si::newton);
-    BOOST_TEST(dimensionless_test1 == 1e-5);
+    BOOST_UNITS_CHECK_CLOSE(dimensionless_test1, 1e-5);
 
     typedef bu::multiply_typeof_helper<bu::si::length, bu::cgs::length>::type m_cm;
     typedef bu::divide_typeof_helper<m_cm, m_cm>::type heterogeneous_dimensionless;
     BOOST_CONSTEXPR_OR_CONST bu::quantity<heterogeneous_dimensionless> dimensionless_test2(1.0*bu::cgs::dyne/bu::si::newton);
-    BOOST_TEST(dimensionless_test2.value() == 1e-5);
+    BOOST_UNITS_CHECK_CLOSE(dimensionless_test2.value(), 1e-5);
     BOOST_CONSTEXPR_OR_CONST bu::quantity<bu::divide_typeof_helper<bu::cgs::force, bu::si::force>::type> dimensionless_test3(dimensionless_test2);
     BOOST_UNITS_CHECK_CLOSE(dimensionless_test3.value(), 1.0);
 

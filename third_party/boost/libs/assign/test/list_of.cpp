@@ -35,7 +35,7 @@ struct nothing
     template< class T >
     void operator()( T )
     { }
-    
+
 };
 
 template< class Range >
@@ -45,14 +45,14 @@ void for_each( const Range& r )
 }
 
 namespace ba = boost::assign;
-    
+
 template< class C >
 void test_sequence_list_of_string()
 {
 #if BOOST_WORKAROUND(BOOST_MSVC, <=1300)
-    const C c = ba::list_of( "foo" )( "bar" ).to_container( c );   
+    const C c = ba::list_of( "foo" )( "bar" ).to_container( c );
 #else
-    const C c = ba::list_of( "foo" )( "bar" );   
+    const C c = ba::list_of( "foo" )( "bar" );
 #endif
     BOOST_CHECK_EQUAL( c.size(), 2u );
 }
@@ -60,12 +60,12 @@ void test_sequence_list_of_string()
 struct parameter_list
 {
     int val;
-    
+
     template< class T >
     parameter_list( T )
     : val(0)
     { }
-    
+
     template< class T >
     parameter_list( const T&, int )
     : val(1)
@@ -84,7 +84,7 @@ void test_sequence_list_of_int()
     BOOST_CHECK_EQUAL( c2.size(), 4u );
     C c3 = ba::list_of(1).repeat( 1, 2 )(3).to_container( c3 );
     BOOST_CHECK_EQUAL( c3.size(), 3u );
-        
+
     c3 = ba::list_of(1).repeat_fun( 10, &rand )(2)(3).to_container( c3 );
     BOOST_CHECK_EQUAL( c3.size(), 13u );
 
@@ -96,9 +96,9 @@ void test_sequence_list_of_int()
     BOOST_CHECK_EQUAL( c2.size(), 4u );
     C c3 = ba::list_of(1).repeat( 1, 2 )(3);
     BOOST_CHECK_EQUAL( c3.size(), 3u );
-        
+
 #if BOOST_WORKAROUND(BOOST_BORLANDC, BOOST_TESTED_AT(0x564))
-    // BCB fails to use operator=() directly, 
+    // BCB fails to use operator=() directly,
     // it must be worked around using e.g. auxiliary variable
     C aux = ba::list_of(1).repeat_fun( 10, &rand )(2)(3);
     BOOST_CHECK_EQUAL( aux.size(), 13u );
@@ -141,12 +141,12 @@ void test_vector_matrix()
     using boost::array;
 
 #if BOOST_WORKAROUND(BOOST_DINKUMWARE_STDLIB, == 1)  || BOOST_WORKAROUND(BOOST_MSVC, <=1300)
-#else    
-      
+#else
+
     const int              sz = 3;
     typedef array<int,sz>   row3;
     typedef array<row3,sz>  matrix3x3;
-    
+
 
     matrix3x3 m = list_of( list_of(1)(2)(3) )
                          ( list_of(4)(5)(6) )
@@ -158,34 +158,34 @@ void test_vector_matrix()
 
     typedef vector<int>  row;
     typedef vector<row>  matrix;
-    
+
     //
     // note: some libraries need a little help
-    //       with the conversion, hence the 'row' template parameter. 
+    //       with the conversion, hence the 'row' template parameter.
     //
     matrix m2 = list_of< row >( list_of(1)(2)(3) )
                               ( list_of(4)(5) )
                               ( list_of(6) );
-    
+
     for( int i = 0; i != sz; ++i )
         for( int j = 0; j != sz - i; ++j )
             BOOST_CHECK_EQUAL( m[i][j], i*sz + j + 1 );
 
-#endif  
-  
+#endif
+
 }
 
 void test_map_list_of()
 {
 /*
     maybe in the future...
-   
+
     using namespace std;
     using namespace boost::assign;
-     
+
     typedef vector<int>                   score_type;
     typedef map<string,score_type>        team_score_map;
- 
+
     team_score_map team_score = map_list_of
                         ( "Team Foo",    list_of(1)(1)(0) )
                         ( "Team Bar",    list_of(0)(0)(0) )
@@ -203,7 +203,7 @@ void test_complex_list_of()
     typedef std::complex<float> complex_t;
     std::vector<complex_t> v;
     v = ba::list_of<complex_t>(1,2)(2,3)(4,5)(0).
-          repeat_from_to( complex_t(0,0), complex_t(10,10), complex_t(1,1) ); 
+          repeat_from_to( complex_t(0,0), complex_t(10,10), complex_t(1,1) );
 }
 */
 
@@ -217,12 +217,12 @@ struct five
 void test_list_of()
 {
     ba::list_of< five >(1,2,3,4,5)(6,7,8,9,10);
-    
+
 /* Maybe this could be useful in a later version?
 
     // an anonymous lists, fulfills Range concept
     for_each( ba::list_of( T() )( T() )( T() ) );
-    
+
     // non-anonymous lists
     ba::generic_list<T> list_1 = ba::list_of( T() );
     BOOST_CHECK_EQUAL( list_1.size(), 1 );
@@ -236,12 +236,12 @@ void test_list_of()
 //
 // @remark: ADL is required here, but it is a bit weird to
 //          open up namespace std. Perhaps Boost.Test needs a
-//          better configuration option. 
+//          better configuration option.
 //
 namespace std
 {
     template< class T, class Elem, class Traits >
-    inline std::basic_ostream<Elem,Traits>& 
+    inline std::basic_ostream<Elem,Traits>&
     operator<<( std::basic_ostream<Elem, Traits>& Os,
                 const std::vector<T>& r )
     {
@@ -285,7 +285,7 @@ void check_list_of()
 
     test_map_list_of< std::map<std::string,int> >();
     test_map_list_of< std::multimap<std::string,int> >();
-    
+
     std::stack<std::string> s = ba::list_of( "Foo" )( "Bar" )( "FooBar" ).to_adapter( s );
     test_list_of();
     test_vector_matrix();

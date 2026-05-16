@@ -14,8 +14,8 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
-#include <boost/mpl/if.hpp>
-#include <boost/mpl/size.hpp>
+#include <boost/mp11/list.hpp>
+#include <boost/mp11/utility.hpp>
 #include <boost/multi_index_container_fwd.hpp>
 
 namespace boost{
@@ -53,20 +53,17 @@ struct index_access_sequence_normal
 };
 
 template<typename MultiIndexContainer,int N>
-struct index_access_sequence_base:
-  mpl::if_c<
-    N<mpl::size<typename MultiIndexContainer::index_type_list>::type::value,
-    index_access_sequence_normal<MultiIndexContainer,N>,
-    index_access_sequence_terminal
-  >
-{};
+using index_access_sequence_base=mp11::mp_if_c<
+  N<mp11::mp_size<typename MultiIndexContainer::index_type_list>::value,
+  index_access_sequence_normal<MultiIndexContainer,N>,
+  index_access_sequence_terminal
+>;
 
 template<typename MultiIndexContainer,int N>
-struct index_access_sequence:
-  index_access_sequence_base<MultiIndexContainer,N>::type
+struct index_access_sequence:index_access_sequence_base<MultiIndexContainer,N>
 {
-  typedef typename index_access_sequence_base<
-    MultiIndexContainer,N>::type               super;
+  typedef index_access_sequence_base<
+    MultiIndexContainer,N>                     super;
  
   index_access_sequence(MultiIndexContainer* p):super(p){}
 };

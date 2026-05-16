@@ -71,6 +71,9 @@ struct variable
 	inline variable(const std::string & m, const std::string & v)
 		: variable(m.c_str(), v.c_str())
 	{}
+	inline variable(struct module_t * m, const std::string & v)
+		: variable(m, v.c_str())
+	{}
 
 	// Refer to variable in global/root module.
 	inline explicit variable(const char * v)

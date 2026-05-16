@@ -1,6 +1,6 @@
 /* Boost.MultiIndex test for serialization, part 3.
  *
- * Copyright 2003-2018 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -11,7 +11,6 @@
 #include "test_serialization3.hpp"
 #include "test_serialization_template.hpp"
 
-#include <boost/move/core.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index/ordered_index.hpp>
@@ -26,11 +25,6 @@ struct non_default_ctble
 
   int n;
 };
-
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-namespace boost{
-namespace serialization{
-#endif
 
 template<class Archive>
 void save_construct_data(
@@ -57,11 +51,6 @@ void serialize(Archive&,non_default_ctble&,const unsigned int)
 {
 }
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-} /* namespace serialization */
-} /* namespace boost*/
-#endif
-
 namespace boost{
 namespace serialization{
 template<> struct version<non_default_ctble>
@@ -74,32 +63,19 @@ template<> struct version<non_default_ctble>
 struct non_copyable
 {
   non_copyable(int n_=0):n(n_){}
-  non_copyable(BOOST_RV_REF(non_copyable) x):n(x.n){}
+  non_copyable(non_copyable&& x):n(x.n){}
 
   bool operator==(const non_copyable& x)const{return n==x.n;}
   bool operator<(const non_copyable& x)const{return n<x.n;}
 
   int n;
-
-private:
-  BOOST_MOVABLE_BUT_NOT_COPYABLE(non_copyable)
 };
-
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-namespace boost{
-namespace serialization{
-#endif
 
 template<class Archive>
 void serialize(Archive& ar,non_copyable& x,const unsigned int)
 {
   ar&boost::serialization::make_nvp("n",x.n);
 }
-
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-} /* namespace serialization */
-} /* namespace boost*/
-#endif
 
 using namespace boost::multi_index;
 

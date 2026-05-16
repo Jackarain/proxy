@@ -10,9 +10,12 @@
 #include <boost/redis/resp3/serialization.hpp>
 #include <boost/redis/resp3/type.hpp>
 
-#include <algorithm>
+#include <iterator>
 #include <string>
+#include <string_view>
 #include <tuple>
+#include <type_traits>
+#include <vector>
 
 // NOTE: For some commands like hset it would be a good idea to assert
 // the value type is a pair.
@@ -22,23 +25,36 @@ namespace boost::redis {
 namespace detail {
 auto has_response(std::string_view cmd) -> bool;
 struct request_access;
+
+enum class pubsub_change_type
+{
+   subscribe,
+   unsubscribe,
+   psubscribe,
+   punsubscribe,
+};
+
+struct pubsub_change {
+   pubsub_change_type type;
+   std::size_t channel_offset;
+   std::size_t channel_size;
+};
+
 }  // namespace detail
 
 /** @brief Represents a Redis request.
  *  
  *  A request is composed of one or more Redis commands and is
  *  referred to in the redis documentation as a pipeline. See
- *  <a href="https://redis.io/topics/pipelining"></a> for more info.
+ *  <a href="https://redis.io/docs/latest/develop/using-commands/pipelining/"></a> for more info.
  *
  *  For example:
  *
  *  @code
  *  request r;
- *  r.push("HELLO", 3);
- *  r.push("FLUSHALL");
- *  r.push("PING");
- *  r.push("PING", "key");
- *  r.push("QUIT");
+ *  r.push("SET", "k1", "some_value");
+ *  r.push("SET", "k2", "other_value");
+ *  r.push("GET", "k3");
  *  @endcode
  *
  *  Uses a `std::string` for internal storage.
@@ -126,6 +142,7 @@ public:
    void clear()
    {
       payload_.clear();
+      pubsub_changes_.clear();
       commands_ = 0;
       expected_responses_ = 0;
       has_hello_priority_ = false;
@@ -146,14 +163,14 @@ public:
     *
     *  @code
     *  request req;
-    *  req.push("SET", "key", "some string", "EX", "2");
+    *  req.push("SET", "key", "some string", "EX", 2);
     *  @endcode
     *
     *  This will add a `SET` command with value `"some string"` and an
     *  expiration of 2 seconds.
     *
-    *  Command arguments should either be convertible to `std::string_view`
-    *  or support the `boost_redis_to_bulk` function.
+    *  Command arguments should either be convertible to `std::string_view`,
+    *  integral types, or support the `boost_redis_to_bulk` function.
     *  This function is a customization point that must be made available
     *  using ADL and must have the following signature:
     *
@@ -165,7 +182,7 @@ public:
     *  See cpp20_serialization.cpp
     *
     *  @param cmd The command to execute. It should be a redis or sentinel command, like `"SET"`.
-    *  @param args Command arguments. Non-string types will be converted to string by calling `boost_redis_to_bulk` on each argument.
+    *  @param args Command arguments. `args` is allowed to be empty.
     *  @tparam Ts Types of the command arguments.
     *
     */
@@ -196,21 +213,36 @@ public:
     *  req.push_range("HSET", "key", map.cbegin(), map.cend());
     *  @endcode
     *
-    *  Command arguments should either be convertible to `std::string_view`
-    *  or support the `boost_redis_to_bulk` function.
-    *  This function is a customization point that must be made available
-    *  using ADL and must have the following signature:
+    *  This will generate the following command:
     *
     *  @code
-    *  void boost_redis_to_bulk(std::string& to, T const& t);
+    *  HSET key key1 value1 key2 value2 key3 value3
     *  @endcode
-    *  
+    *
+    *  *If the passed range is empty, no command is added* and this
+    *  function becomes a no-op.
+    *
+    *  The value type of the passed range should satisfy one of the following:
+    *
+    *    @li The type is convertible to `std::string_view`. One argument is added
+    *        per element in the range.
+    *    @li The type is an integral type. One argument is added
+    *        per element in the range.
+    *    @li The type supports the `boost_redis_to_bulk` function. One argument is added
+    *        per element in the range. This function is a customization point that must be made available
+    *        using ADL and must have the signature `void boost_redis_to_bulk(std::string& to, T const& t);`.
+    *    @li The type is a `std::pair` instantiation, with both arguments supporting one of
+    *        the points above. Two arguments are added per element in the range.
+    *        Nested pairs are not allowed.
+    *    @li The type is a `std::tuple` instantiation, with every argument supporting
+    *        one of the points above. N arguments are added per element in the range,
+    *        with N being the tuple size. Nested tuples are not allowed. 
+    *        
     *  @param cmd The command to execute. It should be a redis or sentinel command, like `"SET"`.
     *  @param key The command key. It will be added as the first argument to the command.
     *  @param begin Iterator to the begin of the range.
     *  @param end Iterator to the end of the range.
-    *  @tparam ForwardIterator A forward iterator with an element type that is convertible to `std::string_view`
-    *          or supports `boost_redis_to_bulk`.
+    *  @tparam ForwardIterator A forward iterator with an element type that supports one of the points above.
     *
     *  See cpp20_serialization.cpp
     */
@@ -245,27 +277,42 @@ public:
     *  of arguments and don't have a key. For example:
     *
     *  @code
-    *  std::set<std::string> channels
-    *     { "channel1" , "channel2" , "channel3" };
+    *  std::set<std::string> keys
+    *     { "key1" , "key2" , "key3" };
     *
     *  request req;
-    *  req.push("SUBSCRIBE", std::cbegin(channels), std::cend(channels));
+    *  req.push("MGET", keys.begin(), keys.end());
     *  @endcode
     *
-    *  Command arguments should either be convertible to `std::string_view`
-    *  or support the `boost_redis_to_bulk` function.
-    *  This function is a customization point that must be made available
-    *  using ADL and must have the following signature:
+    *  This will generate the following command:
     *
     *  @code
-    *  void boost_redis_to_bulk(std::string& to, T const& t);
+    *  MGET key1 key2 key3
     *  @endcode
+    *
+    *  *If the passed range is empty, no command is added* and this
+    *  function becomes a no-op.
+    *
+    *  The value type of the passed range should satisfy one of the following:
+    *
+    *    @li The type is convertible to `std::string_view`. One argument is added
+    *        per element in the range.
+    *    @li The type is an integral type. One argument is added
+    *        per element in the range.
+    *    @li The type supports the `boost_redis_to_bulk` function. One argument is added
+    *        per element in the range. This function is a customization point that must be made available
+    *        using ADL and must have the signature `void boost_redis_to_bulk(std::string& to, T const& t);`.
+    *    @li The type is a `std::pair` instantiation, with both arguments supporting one of
+    *        the points above. Two arguments are added per element in the range.
+    *        Nested pairs are not allowed.
+    *    @li The type is a `std::tuple` instantiation, with every argument supporting
+    *        one of the points above. N arguments are added per element in the range,
+    *        with N being the tuple size. Nested tuples are not allowed.
     *  
     *  @param cmd The command to execute. It should be a redis or sentinel command, like `"SET"`.
     *  @param begin Iterator to the begin of the range.
     *  @param end Iterator to the end of the range.
-    *  @tparam ForwardIterator A forward iterator with an element type that is convertible to `std::string_view`
-    *          or supports `boost_redis_to_bulk`.
+    *  @tparam ForwardIterator A forward iterator with an element type that supports one of the points above.
     *
     *  See cpp20_serialization.cpp
     */
@@ -296,13 +343,31 @@ public:
     *  
     *  Equivalent to the overload taking a range of begin and end
     *  iterators.
+    *
+    *  *If the passed range is empty, no command is added* and this
+    *  function becomes a no-op.
+    *
+    *  The value type of the passed range should satisfy one of the following:
+    *
+    *    @li The type is convertible to `std::string_view`. One argument is added
+    *        per element in the range.
+    *    @li The type is an integral type. One argument is added
+    *        per element in the range.
+    *    @li The type supports the `boost_redis_to_bulk` function. One argument is added
+    *        per element in the range. This function is a customization point that must be made available
+    *        using ADL and must have the signature `void boost_redis_to_bulk(std::string& to, T const& t);`.
+    *    @li The type is a `std::pair` instantiation, with both arguments supporting one of
+    *        the points above. Two arguments are added per element in the range.
+    *        Nested pairs are not allowed.
+    *    @li The type is a `std::tuple` instantiation, with every argument supporting
+    *        one of the points above. N arguments are added per element in the range,
+    *        with N being the tuple size. Nested tuples are not allowed.
     *  
     *  @param cmd The command to execute. It should be a redis or sentinel command, like `"SET"`.
     *  @param key The command key. It will be added as the first argument to the command.
     *  @param range Range containing the command arguments.
     *  @tparam Range A type that can be passed to `std::begin()` and `std::end()` to obtain
-    *          iterators. The range elements should be convertible to `std::string_view`
-    *          or support `boost_redis_to_bulk`.
+    *          iterators.
     */
    template <class Range>
    void push_range(
@@ -320,12 +385,30 @@ public:
     *
     *  Equivalent to the overload taking a range of begin and end
     *  iterators.
+    *
+    *  *If the passed range is empty, no command is added* and this
+    *  function becomes a no-op.
+    *
+    *  The value type of the passed range should satisfy one of the following:
+    *
+    *    @li The type is convertible to `std::string_view`. One argument is added
+    *        per element in the range.
+    *    @li The type is an integral type. One argument is added
+    *        per element in the range.
+    *    @li The type supports the `boost_redis_to_bulk` function. One argument is added
+    *        per element in the range. This function is a customization point that must be made available
+    *        using ADL and must have the signature `void boost_redis_to_bulk(std::string& to, T const& t);`.
+    *    @li The type is a `std::pair` instantiation, with both arguments supporting one of
+    *        the points above. Two arguments are added per element in the range.
+    *        Nested pairs are not allowed.
+    *    @li The type is a `std::tuple` instantiation, with every argument supporting
+    *        one of the points above. N arguments are added per element in the range,
+    *        with N being the tuple size. Nested tuples are not allowed.
     *  
     *  @param cmd The command to execute. It should be a redis or sentinel command, like `"SET"`.
     *  @param range Range containing the command arguments.
     *  @tparam Range A type that can be passed to `std::begin()` and `std::end()` to obtain
-    *          iterators. The range elements should be convertible to `std::string_view`
-    *          or support `boost_redis_to_bulk`.
+    *          iterators.
     */
    template <class Range>
    void push_range(
@@ -349,6 +432,343 @@ public:
     */
    void append(const request& other);
 
+   /**
+    * @brief Appends a SUBSCRIBE command to the end of the request.
+    *
+    * If `channels` contains `{"ch1", "ch2"}`, the resulting command
+    * is `SUBSCRIBE ch1 ch2`.
+    *
+    * Subscriptions created using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   void subscribe(std::initializer_list<std::string_view> channels)
+   {
+      subscribe(channels.begin(), channels.end());
+   }
+
+   /**
+    * @brief Appends a SUBSCRIBE command to the end of the request.
+    *
+    * If `channels` contains `["ch1", "ch2"]`, the resulting command
+    * is `SUBSCRIBE ch1 ch2`.
+    *
+    * Subscriptions created using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   template <class Range>
+   void subscribe(Range&& channels, decltype(std::cbegin(channels))* = nullptr)
+   {
+      subscribe(std::cbegin(channels), std::cend(channels));
+   }
+
+   /**
+    * @brief Appends a SUBSCRIBE command to the end of the request.
+    *
+    * [`channels_begin`, `channels_end`) should point to a valid
+    * range of elements convertible to `std::string_view`.
+    * If the range contains `["ch1", "ch2"]`, the resulting command
+    * is `SUBSCRIBE ch1 ch2`.
+    *
+    * Subscriptions created using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   template <class ForwardIt>
+   void subscribe(ForwardIt channels_begin, ForwardIt channels_end)
+   {
+      push_pubsub("SUBSCRIBE", detail::pubsub_change_type::subscribe, channels_begin, channels_end);
+   }
+
+   /**
+    * @brief Appends an UNSUBSCRIBE command to the end of the request.
+    *
+    * If `channels` contains `{"ch1", "ch2"}`, the resulting command
+    * is `UNSUBSCRIBE ch1 ch2`.
+    *
+    * Subscriptions removed using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   void unsubscribe(std::initializer_list<std::string_view> channels)
+   {
+      unsubscribe(channels.begin(), channels.end());
+   }
+
+   /**
+    * @brief Appends an UNSUBSCRIBE command to the end of the request.
+    *
+    * If `channels` contains `["ch1", "ch2"]`, the resulting command
+    * is `UNSUBSCRIBE ch1 ch2`.
+    *
+    * Subscriptions removed using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   template <class Range>
+   void unsubscribe(Range&& channels, decltype(std::cbegin(channels))* = nullptr)
+   {
+      unsubscribe(std::cbegin(channels), std::cend(channels));
+   }
+
+   /**
+    * @brief Appends an UNSUBSCRIBE command to the end of the request.
+    *
+    * [`channels_begin`, `channels_end`) should point to a valid
+    * range of elements convertible to `std::string_view`.
+    * If the range contains `["ch1", "ch2"]`, the resulting command
+    * is `UNSUBSCRIBE ch1 ch2`.
+    *
+    * Subscriptions removed using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   template <class ForwardIt>
+   void unsubscribe(ForwardIt channels_begin, ForwardIt channels_end)
+   {
+      push_pubsub(
+         "UNSUBSCRIBE",
+         detail::pubsub_change_type::unsubscribe,
+         channels_begin,
+         channels_end);
+   }
+
+   /**
+    * @brief Appends a PSUBSCRIBE command to the end of the request.
+    *
+    * If `patterns` contains `{"news.*", "events.*"}`, the resulting command
+    * is `PSUBSCRIBE news.* events.*`.
+    *
+    * Subscriptions created using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   void psubscribe(std::initializer_list<std::string_view> patterns)
+   {
+      psubscribe(patterns.begin(), patterns.end());
+   }
+
+   /**
+    * @brief Appends a PSUBSCRIBE command to the end of the request.
+    *
+    * If `patterns` contains `["news.*", "events.*"]`, the resulting command
+    * is `PSUBSCRIBE news.* events.*`.
+    *
+    * Subscriptions created using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   template <class Range>
+   void psubscribe(Range&& patterns, decltype(std::cbegin(patterns))* = nullptr)
+   {
+      psubscribe(std::cbegin(patterns), std::cend(patterns));
+   }
+
+   /**
+    * @brief Appends a PSUBSCRIBE command to the end of the request.
+    *
+    * [`patterns_begin`, `patterns_end`) should point to a valid
+    * range of elements convertible to `std::string_view`.
+    * If the range contains `["news.*", "events.*"]`, the resulting command
+    * is `PSUBSCRIBE news.* events.*`.
+    *
+    * Subscriptions created using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   template <class ForwardIt>
+   void psubscribe(ForwardIt patterns_begin, ForwardIt patterns_end)
+   {
+      push_pubsub(
+         "PSUBSCRIBE",
+         detail::pubsub_change_type::psubscribe,
+         patterns_begin,
+         patterns_end);
+   }
+
+   /**
+    * @brief Appends a PUNSUBSCRIBE command to the end of the request.
+    *
+    * If `patterns` contains `{"news.*", "events.*"}`, the resulting command
+    * is `PUNSUBSCRIBE news.* events.*`.
+    *
+    * Subscriptions removed using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   void punsubscribe(std::initializer_list<std::string_view> patterns)
+   {
+      punsubscribe(patterns.begin(), patterns.end());
+   }
+
+   /**
+    * @brief Appends a PUNSUBSCRIBE command to the end of the request.
+    *
+    * If `patterns` contains `["news.*", "events.*"]`, the resulting command
+    * is `PUNSUBSCRIBE news.* events.*`.
+    *
+    * Subscriptions removed using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   template <class Range>
+   void punsubscribe(Range&& patterns, decltype(std::cbegin(patterns))* = nullptr)
+   {
+      punsubscribe(std::cbegin(patterns), std::cend(patterns));
+   }
+
+   /**
+    * @brief Appends a PUNSUBSCRIBE command to the end of the request.
+    *
+    * [`patterns_begin`, `patterns_end`) should point to a valid
+    * range of elements convertible to `std::string_view`.
+    * If the range contains `["news.*", "events.*"]`, the resulting command
+    * is `PUNSUBSCRIBE news.* events.*`.
+    *
+    * Subscriptions removed using this function are tracked
+    * to enable PubSub state restoration. After successfully executing
+    * the request, the connection will store any newly subscribed channels and patterns.
+    * Every time a reconnection happens,
+    * a suitable `SUBSCRIBE`/`PSUBSCRIBE` command is issued automatically,
+    * to restore the subscriptions that were active before the reconnection.
+    * 
+    * PubSub store restoration only happens when using @ref subscribe,
+    * @ref unsubscribe, @ref psubscribe or @ref punsubscribe.
+    * Subscription commands added by @ref push or @ref push_range are not tracked.
+    */
+   template <class ForwardIt>
+   void punsubscribe(ForwardIt patterns_begin, ForwardIt patterns_end)
+   {
+      push_pubsub(
+         "PUNSUBSCRIBE",
+         detail::pubsub_change_type::punsubscribe,
+         patterns_begin,
+         patterns_end);
+   }
+
+   /** @brief Appends a HELLO 3 command to the end of the request.
+    *
+    * Equivalent to adding the Redis command `HELLO 3`.
+    */
+   void hello();
+
+   /** @brief Appends a HELLO 3 command with AUTH to the end of the request.
+    *
+    * Equivalent to the adding the following Redis command:
+    * @code
+    * HELLO 3 AUTH <username> <password>
+    * @endcode
+    *
+    * @param username The ACL username.
+    * @param password The password for the user.
+    */
+   void hello(std::string_view username, std::string_view password);
+
+   /** @brief Appends a HELLO 3 command with SETNAME to the end of the request.
+    *
+    * Equivalent to adding the following Redis command:
+    * @code
+    * HELLO 3 SETNAME <client_name>
+    * @endcode
+    *
+    * @param client_name The client name (visible in CLIENT LIST).
+    */
+   void hello_setname(std::string_view client_name);
+
+   /** @brief Appends a HELLO 3 command with AUTH and SETNAME to the end of the request.
+    *
+    * Equivalent to adding the following Redis command:
+    * @code
+    * HELLO 3 AUTH <username> <password> SETNAME <client_name>
+    * @endcode
+    *
+    * @param username The ACL username.
+    * @param password The password for the user.
+    * @param client_name The client name (visible in CLIENT LIST).
+    */
+   void hello_setname(
+      std::string_view username,
+      std::string_view password,
+      std::string_view client_name);
+
 private:
    void check_cmd(std::string_view cmd)
    {
@@ -366,6 +786,35 @@ private:
    std::size_t commands_ = 0;
    std::size_t expected_responses_ = 0;
    bool has_hello_priority_ = false;
+   std::vector<detail::pubsub_change> pubsub_changes_{};
+
+   void add_pubsub_arg(detail::pubsub_change_type type, std::string_view value);
+
+   template <class ForwardIt>
+   void push_pubsub(
+      std::string_view cmd,
+      detail::pubsub_change_type type,
+      ForwardIt channels_begin,
+      ForwardIt channels_end)
+   {
+      static_assert(
+         std::is_convertible_v<
+            typename std::iterator_traits<ForwardIt>::value_type,
+            std::string_view>,
+         "subscribe, psubscribe, unsubscribe and punsubscribe should be passed ranges of elements "
+         "convertible to std::string_view");
+      if (channels_begin == channels_end)
+         return;
+
+      auto const distance = std::distance(channels_begin, channels_end);
+      resp3::add_header(payload_, resp3::type::array, 1 + distance);
+      resp3::add_bulk(payload_, cmd);
+
+      for (; channels_begin != channels_end; ++channels_begin)
+         add_pubsub_arg(type, *channels_begin);
+
+      ++commands_;  // these commands don't have a response
+   }
 
    friend struct detail::request_access;
 };
@@ -375,6 +824,10 @@ namespace detail {
 struct request_access {
    inline static void set_priority(request& r, bool value) { r.has_hello_priority_ = value; }
    inline static bool has_priority(const request& r) { return r.has_hello_priority_; }
+   inline static const std::vector<detail::pubsub_change>& pubsub_changes(const request& r)
+   {
+      return r.pubsub_changes_;
+   }
 };
 
 // Creates a HELLO 3 request

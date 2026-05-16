@@ -30,7 +30,6 @@ target_link_libraries(boost_xpressive
     Boost::proto
     Boost::range
     Boost::smart_ptr
-    Boost::static_assert
     Boost::throw_exception
     Boost::type_traits
     Boost::typeof

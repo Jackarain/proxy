@@ -13,6 +13,7 @@
 # include <boost/lexical_cast.hpp>
 # include <boost/foreach.hpp>
 # include <boost/filesystem/path.hpp>
+# include <boost/filesystem/directory.hpp>
 # include <boost/filesystem/operations.hpp>
 # include <cctype>
 # include <fstream>
@@ -91,7 +92,7 @@ namespace detail { namespace parallel
 
           for (filesystem::directory_iterator i(filename), end; i != end; ++i)
           {
-              if (!filesystem::is_regular(*i))
+              if (!filesystem::is_regular_file(*i))
                   boost::throw_exception(std::runtime_error("directory contains non-regular entries"));
 
               std::string process_name = i->path().filename().string();

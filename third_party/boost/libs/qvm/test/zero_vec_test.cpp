@@ -36,11 +36,11 @@ namespace
         using namespace boost::qvm;
         test_qvm::vector<V1,Dim> v1=zero_vec<float,Dim>();
         for( int i=0; i!=Dim; ++i )
-                BOOST_TEST(!v1.a[i]);
+                BOOST_TEST_EQ(v1.a[i], 0);
         test_qvm::vector<V2,Dim> v2(42,1);
         set_zero(v2);
         for( int i=0; i!=Dim; ++i )
-                BOOST_TEST(!v2.a[i]);
+                BOOST_TEST_EQ(v2.a[i], 0);
         check_deduction(vec<float,Dim>(),zero_vec<float,Dim>());
         check_deduction(vec<int,Dim>(),zero_vec<int,Dim>());
         }

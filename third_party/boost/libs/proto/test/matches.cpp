@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <string>
 #include <iostream>
 #include <boost/config.hpp>
@@ -116,7 +118,7 @@ struct my_expr
     BOOST_PROTO_BASIC_EXTENDS(Expr, my_expr, my_domain)
 };
 
-void test_matches()
+BOOST_AUTO_TEST_CASE(test_matches)
 {
     proto::assert_matches< proto::_ >( proto::lit(1) );
     proto::assert_matches< proto::_ >( proto::as_child(1) );
@@ -303,17 +305,3 @@ void test_matches()
         proto::assert_matches< proto::if_<boost::is_same<proto::domain_of<proto::_>, my_domain>()> >( e );
     }
 }
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test proto::matches<>");
-
-    test->add(BOOST_TEST_CASE(&test_matches));
-
-    return test;
-}
-

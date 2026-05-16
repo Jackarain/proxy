@@ -58,7 +58,7 @@ vertices or edges of the graph.
 
   using namespace boost;
   typedef adjacency_list<vecS, 
-                         distributedS<parallel::mpi::bsp_process_group, vecS>,
+                         distributedS<graph::distributed::mpi_process_group, vecS>,
                          directedS> 
     Graph;
 
@@ -120,7 +120,7 @@ respectively:
 ::
 
   typedef adjacency_list<vecS, 
-                         distributedS<parallel::mpi::bsp_process_group, vecS>,
+                         distributedS<graph::distributed::mpi_process_group, vecS>,
                          directedS,
                          City, Highway> 
     RoadMap;

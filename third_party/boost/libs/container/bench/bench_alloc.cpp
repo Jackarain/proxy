@@ -14,6 +14,7 @@
 
 #include <boost/container/detail/dlmalloc.hpp>
 #include <boost/container/throw_exception.hpp>
+#include <boost/container/detail/type_traits.hpp>
 
 #define BOOST_INTERPROCESS_VECTOR_ALLOC_STATS
 
@@ -71,7 +72,7 @@ void allocation_timing_test(std::size_t num_iterations, std::size_t num_elements
                if(min > max)
                   max = min;
                ret = dlmalloc_allocation_command
-                  ( m_mode, sizeof(POD)
+               (m_mode, sizeof(POD), dtl::alignment_of<POD>::value
                   , min, max, &received_size, addr);
                if(!ret.first){
                   throw_runtime_error("!ret.first)");

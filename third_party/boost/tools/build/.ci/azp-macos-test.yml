@@ -4,25 +4,11 @@ parameters:
   default: ''
 
 steps:
-- bash: |
-    set -e
-    uname -a
-    ls -laF /Applications
-    sudo xcode-select -switch ${XCODE_APP}
-    which clang++
+- bash: ./.ci/macos-install.sh
   displayName: Install
-- bash: |
-    set -e
-    cd src/engine
-    ./build.sh ${TOOLSET}
-    ./b2 -v
-    cd ../..
+- bash: ./.ci/macos-build.sh
   displayName: Build
-- bash: |
-    set -e
-    cd test
-    ./test_all.py ${TOOLSET}
-    cd ..
+- bash: ./.ci/macos-test.sh
   displayName: Test
 - bash: |
     set -e

@@ -1,0 +1,48 @@
+# Copyright 2025 René Ferdinand Rivera Morel
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE.txt or copy at
+# https://www.bfgroup.xyz/b2/LICENSE.txt)
+
+import feature ;
+
+#| tag::doc[]
+
+[[b2.builtin.features.contracts]]`contracts`::
+*Allowed values:* `on`.
++
+Enables use of experimental use of {CPP}-26 Contracts (P2900). Enabling
+contracts has additional requirements when using them with at least clang. See
+https://contracts.efcs.ca/ for details. For B2 the requirements amount to
+needing to use `<toolset>clang:<stdlib>libc++` and `<cxxstd>23`.
+
+|# # end::doc[]
+
+feature.feature contracts
+    : on
+    : optional propagated link-incompatible ;
+
+#| tag::doc[]
+
+[[b2.builtin.features.contracts-sematic]]`contracts-semantic`::
+*Subfeature of* `contracts`
++
+*Allowed values:* `enforce', 'quick_enforce', 'observe', 'ignore`.
++
+Specifies the contract checking semantic for the translation unit. The default
+is `enforce` for which contract checks are evaluated with violations resulting
+in error termination.
++
+`enforce`::: Contract assertions are not evaluated (contracts are disabled).
+`quick_enforce`::: Contract assertions are evaluated but violations do not
+  terminate the program.
+`observe`::: Contract assertions are evaluated and violations terminate the
+  program.
+`ignore`::: Like enforce, but uses optimized evaluation that may skip some
+  checks.
+
+|# # end::doc[]
+
+feature.subfeature contracts
+    : semantic
+    : enforce quick_enforce observe ignore
+    : ;

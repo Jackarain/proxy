@@ -124,7 +124,6 @@ Suppose we want to implement a ['lazy load] optimization. This is because we do 
 
 `optional`'s default constructor creates an uninitialized optional. No call to `Resource`'s default constructor is attempted. `Resource` doesn't have to be __STD_DEFAULT_CONSTRUCTIBLE__. In function `getResource` we first check if `resource_` is initialized. This time we do not use the contextual conversion to `bool`, but a comparison with `boost::none`. These two ways are equivalent. Function `emplace` initializes the optional in-place by perfect-forwarding the arguments to the constructor of `Resource`. No copy- or move-construction is involved here. `Resource` doesn't even have to be `MoveConstructible`.
 
-[note Function `emplace` is only available on compilers that support rvalue references and variadic templates. If your compiler does not support these features and you still need to avoid any move-constructions, use [link boost_optional.design.in_place_factories In-Place Factories].]
 
 [endsect]
 

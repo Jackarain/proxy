@@ -8,6 +8,9 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 //[doc_managed_allocation_command
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <cassert>

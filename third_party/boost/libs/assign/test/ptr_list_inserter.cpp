@@ -25,7 +25,7 @@
 struct Foo
 {
     int i;
-    
+
     Foo() : i(0)
     { }
     Foo( int i ) : i(i)
@@ -43,7 +43,7 @@ struct FooBar : Foo
 {
     FooBar( int i ) : Foo(i)
     { }
-    
+
     FooBar( int i, const char* )
     { }
 };
@@ -62,7 +62,7 @@ void check_ptr_list_inserter()
     ptr_deque<Foo> deq;
     ptr_push_back( deq )()();
     BOOST_CHECK( deq.size() == 2u );
-    
+
     ptr_push_front( deq )( 3 )( 42, 42 )( "foo", 42, 42 );
     BOOST_CHECK( deq.size() == 5u );
 

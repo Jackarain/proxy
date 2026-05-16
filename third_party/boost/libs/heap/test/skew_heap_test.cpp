@@ -133,3 +133,24 @@ BOOST_AUTO_TEST_CASE( skew_heap_leak_test )
     typedef boost::heap::skew_heap< boost::shared_ptr< int > > pri_queue;
     run_leak_check_test< pri_queue >();
 }
+
+BOOST_AUTO_TEST_CASE( skew_heap_edge_cases )
+{
+    // Immutable skew heap (no handles)
+    typedef boost::heap::skew_heap< int > pri_queue;
+    run_common_edge_case_tests< pri_queue >();
+    run_ordered_iterator_edge_case_tests< pri_queue >();
+    run_merge_edge_case_tests< pri_queue >();
+}
+
+BOOST_AUTO_TEST_CASE( skew_heap_mutable_edge_cases )
+{
+    typedef boost::heap::skew_heap< int, boost::heap::mutable_< true > > mutable_queue;
+    run_mutable_heap_edge_case_tests< mutable_queue >();
+}
+
+BOOST_AUTO_TEST_CASE( skew_heap_stable_edge_cases )
+{
+    typedef boost::heap::skew_heap< q_tester, boost::heap::stable< true > > stable_queue;
+    run_stable_heap_edge_case_tests< stable_queue >();
+}

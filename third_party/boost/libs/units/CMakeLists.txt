@@ -23,7 +23,6 @@ target_link_libraries(boost_units
     Boost::math
     Boost::mpl
     Boost::preprocessor
-    Boost::static_assert
     Boost::type_traits
     Boost::typeof
 )

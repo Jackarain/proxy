@@ -205,9 +205,17 @@ class ac-library : basic-target
         else
         {
             local use-environment ;
+            local vcpkg-ps ;
             if ! $(self.library-name) && ! $(self.include-path) && ! $(self.library-path)
             {
                 use-environment = true ;
+                local vcpkg-proj = [ project.target vcpkg : allow-missing ] ;
+                if $(vcpkg-proj)
+                {
+                    vcpkg-ps = [ targets.generate-from-reference
+                        /vcpkg//prefix : $(vcpkg-proj) : $(property-set) ] ;
+                }
+
             }
             local libnames = $(self.library-name) ;
             if ! $(libnames) && $(use-environment)
@@ -219,12 +227,20 @@ class ac-library : basic-target
             libnames ?= $(self.default-names) ;
 
             local include-path = $(self.include-path) ;
+            if ! $(include-path) && $(vcpkg-ps)
+            {
+                include-path = [ $(vcpkg-ps).get <include> ] ;
+            }
             if ! $(include-path) && $(use-environment)
             {
                 include-path = [ os.environ $(name:U)_INCLUDE ] ;
             }
 
             local library-path = $(self.library-path) ;
+            if ! $(library-path) && $(vcpkg-ps)
+            {
+                library-path = [ $(vcpkg-ps).get <search> ] ;
+            }
             if ! $(library-path) && $(use-environment)
             {
                 library-path = [ os.environ $(name:U)_LIBRARY_PATH ] ;

@@ -1,0 +1,272 @@
+
+/* Tables */
+/* Reset Antora Table Styles */
+.boostlook #content table.tableblock tr,
+.boostlook #content table.tableblock td,
+.boostlook #content table.tableblock th,
+.boostlook #content table.tableblock thead,
+.boostlook #content table.tableblock tbody,
+.boostlook #content table.tableblock tfoot,
+.boostlook #content table.tableblock caption,
+.boostlook #content table.tableblock colgroup,
+.boostlook #content table.tableblock col,
+.boostlook #content table.tableblock,
+.boostlook:not(:has(.doc)) table.table tr,
+.boostlook:not(:has(.doc)) table.table td,
+.boostlook:not(:has(.doc)) table.table th,
+.boostlook:not(:has(.doc)) table.table thead,
+.boostlook:not(:has(.doc)) table.table tbody,
+.boostlook:not(:has(.doc)) table.table tfoot,
+.boostlook:not(:has(.doc)) table.table caption,
+.boostlook:not(:has(.doc)) table.table colgroup,
+.boostlook:not(:has(.doc)) table.table col,
+.boostlook:not(:has(.doc)) table.table,
+.boostlook#libraryReadMe > table,
+.boostlook#libraryReadMe > table tr,
+.boostlook#libraryReadMe > table td,
+.boostlook#libraryReadMe > table th,
+.boostlook#libraryReadMe > table thead,
+.boostlook#libraryReadMe > table tbody,
+.boostlook#libraryReadMe > table tfoot,
+.boostlook#libraryReadMe > table caption,
+.boostlook#libraryReadMe > table colgroup,
+.boostlook#libraryReadMe > table col {
+  all: unset;
+  display: revert;
+}
+
+/* Add intendation */
+.boostlook #content .sectionbody > table.tableblock,
+.boostlook #content .section > table.tableblock,
+.boostlook .sectionbody > div.informaltable:not(:is(.informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))))),
+.boostlook .section > div.informaltable:not(:is(.informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))))),
+.boostlook:not(:has(.doc)) .sectionbody > div.table .table-contents,
+.boostlook:not(:has(.doc)) .section > div.table .table-contents,
+.boostlook#libraryReadMe > table {
+  margin-left: var(--spacing-size-xl, 2rem);
+}
+
+.boostlook #content table.tableblock:not(:first-child),
+.boostlook:not(:has(.doc)) .table:not(:first-child),
+.boostlook#libraryReadMe > table:not(:first-child) {
+  margin-top: var(--padding-padding-xs, 0.75rem);
+}
+
+.boostlook #content table.tableblock.stretch,
+.boostlook:not(:has(.doc)) table.table,
+.boostlook#libraryReadMe > table.stretch {
+  min-width: 100%;
+  margin-left: var(--spacing-size-xl, 2rem);
+}
+
+.boostlook #content table.tableblock caption,
+.boostlook:not(:has(.doc)) div.table .title {
+  color: var(--text-main-text-body-primary, #2a2c30);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-style: normal;
+  font-variation-settings: "wght" 600, "wdth" 80;
+  line-height: var(--typography-line-height-md, 1.25rem); /* 142.857% */
+  padding: 0;
+  padding-bottom: var(--padding-padding-2xs, 0.5rem);
+}
+
+.boostlook #content table.tableblock caption > *,
+.boostlook:not(:has(.doc)) div.table .title > * {
+  font: inherit;
+  font-variation-settings: "wght" 500, "wdth" 80;
+  text-decoration: none;
+}
+
+.boostlook:not(:has(.doc)) div.table .title {
+  padding-bottom: var(--padding-padding-2xs, 0.5rem) !important;
+}
+
+.boostlook #content table.tableblock th,
+.boostlook #content table.tableblock td,
+.boostlook:not(:has(.doc)) table.table th,
+.boostlook:not(:has(.doc)) table.table td,
+.boostlook#libraryReadMe > table th,
+.boostlook#libraryReadMe > table td {
+  padding: var(--padding-padding-3xs, 0.25rem) var(--padding-padding-2xs, 0.5rem);
+  text-align: left;
+  border-top: 1px solid var(--border-border-primary, #e4e7ea);
+  border-left: 1px solid var(--border-border-primary, #e4e7ea);
+}
+
+.boostlook #content table.tableblock th:last-child,
+.boostlook #content table.tableblock td:last-child,
+.boostlook:not(:has(.doc)) table.table th:last-child,
+.boostlook:not(:has(.doc)) table.table td:last-child,
+.boostlook#libraryReadMe > table th:last-child,
+.boostlook#libraryReadMe > table td:last-child {
+  border-right: 1px solid var(--border-border-primary, #e4e7ea);
+}
+
+.boostlook #content table.tableblock tr:last-child td,
+.boostlook:not(:has(.doc)) table.table tr:last-child td,
+.boostlook#libraryReadMe > table tr:last-child td {
+  border-bottom: 1px solid var(--border-border-primary, #e4e7ea);
+}
+
+.boostlook #content table.tableblock:has(thead) th:first-child,
+.boostlook #content table.tableblock:not(:has(thead)) tr:first-child td:first-child,
+.boostlook:not(:has(.doc)) table.table:has(thead) th:first-child,
+.boostlook:not(:has(.doc)) table.table:not(:has(thead)) tr:first-child td:first-child,
+.boostlook#libraryReadMe > table:has(thead) th:first-child,
+.boostlook#libraryReadMe > table:not(:has(thead)) tr:first-child td:first-child {
+  /*border-top-left-radius: var(--spacing-size-2xs, 0.5rem);*/
+}
+
+.boostlook #content table.tableblock:has(thead) th:last-child,
+.boostlook #content table.tableblock:not(:has(thead)) tr:first-child td:last-child,
+.boostlook:not(:has(.doc)) table.table:has(thead) th:last-child,
+.boostlook:not(:has(.doc)) table.table:not(:has(thead)) tr:first-child td:last-child,
+.boostlook#libraryReadMe > table:has(thead) th:last-child,
+.boostlook#libraryReadMe > table:not(:has(thead)) tr:first-child td:last-child {
+  /*border-top-right-radius: var(--spacing-size-2xs, 0.5rem);*/
+}
+
+.boostlook #content table.tableblock tr:last-child td:first-child,
+.boostlook:not(:has(.doc)) table.table tr:last-child td:first-child,
+.boostlook#libraryReadMe > table tr:last-child td:first-child {
+  /*border-bottom-left-radius: var(--spacing-size-2xs, 0.5rem);*/
+}
+
+.boostlook #content table.tableblock tr:last-child td:last-child,
+.boostlook:not(:has(.doc)) table.table tr:last-child td:last-child,
+.boostlook#libraryReadMe > table tr:last-child td:last-child {
+  /*border-bottom-right-radius: var(--spacing-size-2xs, 0.5rem);*/
+}
+
+.boostlook #content table.tableblock th,
+.boostlook #content table.tableblock th strong,
+.boostlook:not(:has(.doc)) table.table th,
+.boostlook:not(:has(.doc)) table.table th strong,
+.boostlook#libraryReadMe > table th,
+.boostlook#libraryReadMe > table th strong {
+  background: var(--surface-background-main-surface-primary, #f5f6f8);
+  color: var(--text-main-text-primary, #000000);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-lg, 1.5rem); /* 171.429% */
+}
+
+.boostlook #content table.tableblock td,
+.boostlook:not(:has(.doc)) table.table td,
+.boostlook#libraryReadMe > table td {
+  color: var(--text-main-text-body-primary, #2a2c30);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-style: normal;
+  line-height: var(--typography-line-height-lg, 1.5rem); /* 171.429% */
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+}
+
+.boostlook#libraryReadMe > table td {
+  vertical-align: middle;
+}
+
+.boostlook #content table.tableblock td.valign-top,
+.boostlook:not(:has(.doc)) table.table td.valign-top,
+.boostlook#libraryReadMe > table td.valign-top {
+  vertical-align: top;
+}
+
+.boostlook #content table.tableblock td.valign-bottom,
+.boostlook:not(:has(.doc)) table.table td.valign-bottom,
+.boostlook#libraryReadMe > table td.valign-bottom {
+  vertical-align: bottom;
+}
+
+.boostlook #content table.tableblock td.valign-center,
+.boostlook:not(:has(.doc)) table.table td.valign-center,
+.boostlook#libraryReadMe > table td.valign-center {
+  vertical-align: middle;
+}
+
+.boostlook #content table.tableblock td.halign-left,
+.boostlook:not(:has(.doc)) table.table td.halign-left,
+.boostlook#libraryReadMe > table td.halign-left {
+  text-align: left;
+}
+
+.boostlook #content table.tableblock td.halign-center,
+.boostlook:not(:has(.doc)) table.table td.halign-center,
+.boostlook#libraryReadMe > table td.halign-center {
+  text-align: center;
+}
+
+.boostlook #content table.tableblock th p,
+.boostlook #content table.tableblock td p,
+.boostlook:not(:has(.doc)) table.table th p,
+.boostlook:not(:has(.doc)) table.table td p,
+.boostlook#libraryReadMe > table th p,
+.boostlook#libraryReadMe > table td p {
+  font: inherit;
+  color: inherit;
+}
+
+.boostlook #content table.tableblock td strong,
+.boostlook:not(:has(.doc)) table.table td strong,
+.boostlook#libraryReadMe > table td strong {
+  font-variation-settings: "wght" 600, "wdth" 80;
+}
+
+.boostlook #content table.tableblock td code,
+.boostlook:not(:has(.doc)) table.table td code,
+.boostlook#libraryReadMe > table td code {
+  background: transparent !important;
+  padding: 0;
+  border: none;
+}
+
+.boostlook #content table.tableblock .footnotes tr td,
+.boostlook:not(:has(.doc)) table.table .footnotes tr td {
+  border: none;
+  border-radius: 0;
+  padding: var(--padding-padding-xs) 0;
+}
+
+/* Image Styles */
+.boostlook .doc .imageblock,
+.boostlook .doc .videoblock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.boostlook:not(#libraryReadMe) .image:has(> img),
+.boostlook .content:has(> img),
+.boostlook .mediaobject:has(> embed) {
+  display: flex;
+  padding: var(--padding-padding-md, 1.125rem);
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--spacing-size-xs, 0.75rem);
+  background: var(--surface-background-main-surface-primary, #f5f6f8);
+  width: 100%;
+  margin-top: var(--padding-padding-xs, 0.75rem);
+}
+
+.boostlook:not(#libraryReadMe) .image:has(> img),
+.boostlook .content:has(> img) {
+  background-color: transparent;
+}
+
+.boostlook:not(:has(.doc)) .inlinemediaobject:has(> img, > object) {
+  display: inline-block;
+  vertical-align: text-bottom;
+  line-height: 0;
+}
+
+.doc ul.checklist p>i.fa-check-square-o:first-child, .doc ul.checklist p>i.fa-square-o:first-child {
+  display: none;
+}
+
+.boostlook .doc .imageblock .content:has(img) {
+  background-color: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/*----------------- Global Styles for .boostlook end -----------------*/

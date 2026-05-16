@@ -8,6 +8,11 @@ https://www.boost.org/LICENSE_1_0.txt
 # Revision History
 :idprefix:
 
+## Changes in Boost 1.91.0
+
+* Under {cpp}20, described nested enums now work when the enclosing class is still incomplete. (Thanks to Julien Blanc.)
+* Made `enum_to_string` constexpr. (Thanks to Julien Blanc.)
+
 ## Changes in Boost 1.84.0
 
 * Added an overload of `enum_from_string` that takes a string view, to avoid

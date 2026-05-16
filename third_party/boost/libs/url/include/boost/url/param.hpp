@@ -598,23 +598,44 @@ struct param_view
         return this;
     }
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4458) // declaration hides class member
+#endif
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshadow"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+#endif
+
     /** Aggregate construction
 
-        @param key_ The key to set.
-        @param value_ The value to set.
-        @param has_value_ True if a value is present.
+        @param key The key to set.
+        @param value The value to set.
+        @param has_value True if a value is present.
      */
     param_view(
-        core::string_view key_,
-        core::string_view value_,
-        bool has_value_) noexcept
-        : key(key_)
-        , value(has_value_
-            ? value_
+        core::string_view key,
+        core::string_view value,
+        bool has_value) noexcept
+        : key(key)
+        , value(has_value
+            ? value
             : core::string_view())
-        , has_value(has_value_)
+        , has_value(has_value)
     {
     }
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 private:
     param_view(

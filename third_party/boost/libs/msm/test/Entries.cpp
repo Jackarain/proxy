@@ -8,135 +8,161 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-// back-end
-#include "BackCommon.hpp"
-//front-end
-#include <boost/msm/front/state_machine_def.hpp>
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
 #define BOOST_TEST_MODULE entries_test
 #endif
 #include <boost/test/unit_test.hpp>
+
+// back-end
+#include "BackCommon.hpp"
+//front-end
+#include "FrontCommon.hpp"
 
 namespace msm = boost::msm;
 namespace mpl = boost::mpl;
 
 namespace
 {
-    // events
-    struct event1 {};
-    struct event2 {};
-    struct event3 {};
-    struct event4 {};
-    struct event5 {};
-    struct event6 
+
+// events
+struct event1 {};
+struct event2 {};
+struct event3 {};
+struct event4 {};
+struct event5 {};
+struct event6 
+{
+    event6(){}
+    template <class Event>
+    event6(Event const&){}
+};
+
+// states
+template <typename ExpectedFsm>
+struct StateBase : msm::front::test::StateBase
+{
+    using base = msm::front::test::StateBase;
+
+    template <class Event, class Fsm>
+    void on_entry(const Event& event, Fsm& fsm)
     {
-        event6(){}
-        template <class Event>
-        event6(Event const&){}
+        static_assert(std::is_same<Fsm, ExpectedFsm>::value, "");
+        base::on_entry(event, fsm);
+    }
+
+    template <class Event, class Fsm>
+    void on_exit(const Event& event, Fsm& fsm)
+    {
+        static_assert(std::is_same<Fsm, ExpectedFsm>::value, "");
+        base::on_exit(event, fsm);
+    }
+};
+
+template<template <typename...> class Back, typename Policy = void>
+struct hierarchical_state_machine
+{
+    // Forward declarations required for static assertions on FSM parameters.
+    struct Fsm_;
+    typedef Back<Fsm_, Policy> Fsm;
+
+    template <typename FrontEnd>
+    struct StateMachineBase_ : msm::front::test::StateMachineBase_<FrontEnd>
+    {
+        using base = msm::front::test::StateMachineBase_<FrontEnd>;
+
+        template <class Event, class FsmParam>
+        void on_entry(const Event& event, FsmParam& fsm)
+        {
+            // Both machines should receive the parent SM as Fsm argument.
+            static_assert(std::is_same<FsmParam, Fsm>::value, "");
+            base::on_entry(event, fsm);
+        }
+
+        template <class Event, class FsmParam>
+        void on_exit(const Event& event, FsmParam& fsm)
+        {
+            // Both machines should receive the parent SM as Fsm argument.
+            static_assert(std::is_same<FsmParam, Fsm>::value, "");
+            base::on_exit(event, fsm);
+        }
     };
-    template<template <typename...> class Back, typename Policy = void>
-    struct hierarchical_state_machine
-    {
-    // front-end: define the FSM structure 
-    struct Fsm_ : public msm::front::state_machine_def<Fsm_>
+
+    // front-end: define the FSM structure
+    struct Fsm_ : StateMachineBase_<Fsm_>
     {
         BOOST_MSM_TEST_DEFINE_DEPENDENT_TEMPLATES(Fsm_)
 
+        using StateBase = ::StateBase<Fsm>;
+
         // The list of FSM states
-        struct State1 : public msm::front::state<> 
+        struct State1 : StateBase
         {
-            template <class Event,class FSM>
-            void on_entry(Event const&,FSM& ) {++entry_counter;}
-            template <class Event,class FSM>
-            void on_exit(Event const&,FSM& ) {++exit_counter;}
-            int entry_counter;
-            int exit_counter;
         };
-        struct State2 : public msm::front::state<> 
+        struct State2 : StateBase
         {
-            template <class Event,class FSM>
-            void on_entry(Event const&,FSM& ) {++entry_counter;}
-            template <class Event,class FSM>
-            void on_exit(Event const&,FSM& ) {++exit_counter;}
-            int entry_counter;
-            int exit_counter;
         };
-        struct SubFsm2_ : public msm::front::state_machine_def<SubFsm2_>
+
+        // Forward declarations required for static assertions on FSM parameters.
+        struct SubFsm2_;
+        typedef Back<SubFsm2_, Policy> SubFsm2;
+
+        struct SubFsm2_ : public StateMachineBase_<SubFsm2_>
         {
             BOOST_MSM_TEST_DEFINE_DEPENDENT_TEMPLATES(SubFsm2_)
 
-            unsigned int entry_action_counter;
+            unsigned int entry_action_counter{};
 
-            template <class Event,class FSM>
-            void on_entry(Event const&,FSM& ) {++entry_counter;}
-            template <class Event,class FSM>
-            void on_exit(Event const&,FSM& ) {++exit_counter;}
-            int entry_counter;
-            int exit_counter;
+            using StateBase = ::StateBase<SubFsm2>;
 
-            struct SubState1 : public msm::front::state<>
+            struct SubState1 : StateBase
             {
-                template <class Event,class FSM>
-                void on_entry(Event const&,FSM& ) {++entry_counter;}
-                template <class Event,class FSM>
-                void on_exit(Event const&,FSM& ) {++exit_counter;}
-                int entry_counter;
-                int exit_counter;
             };
-            struct SubState1b : public msm::front::state<>
+            struct SubState1b : StateBase
             {
-                template <class Event,class FSM>
-                void on_entry(Event const&,FSM& ) {++entry_counter;}
-                template <class Event,class FSM>
-                void on_exit(Event const&,FSM& ) {++exit_counter;}
-                int entry_counter;
-                int exit_counter;
             };
-            struct SubState2 : public msm::front::state<> , public msm::front::explicit_entry<0>
+            struct SubState2 : StateBase , public msm::front::explicit_entry<0>
             {
-                template <class Event,class FSM>
-                void on_entry(Event const&,FSM& ) {++entry_counter;}
-                template <class Event,class FSM>
-                void on_exit(Event const&,FSM& ) {++exit_counter;}
-                int entry_counter;
-                int exit_counter;
             };
-            struct SubState2b : public msm::front::state<> , public msm::front::explicit_entry<1>
+            struct SubState2b : StateBase , public msm::front::explicit_entry<1>
             {
-                template <class Event,class FSM>
-                void on_entry(Event const&,FSM& ) {++entry_counter;}
-                template <class Event,class FSM>
-                void on_exit(Event const&,FSM& ) {++exit_counter;}
-                int entry_counter;
-                int exit_counter;
             };
             // test with a pseudo entry
             struct PseudoEntry1 : public msm::front::entry_pseudo_state<0>
             {
                 template <class Event,class FSM>
-                void on_entry(Event const&,FSM& ) {++entry_counter;}
+                void on_entry(Event const&,FSM& )
+                {
+                    static_assert(std::is_same<FSM, SubFsm2>::value, "");
+                    ++entry_counter;
+                }
                 template <class Event,class FSM>
-                void on_exit(Event const&,FSM& ) {++exit_counter;}
-                int entry_counter;
-                int exit_counter;
+                void on_exit(Event const&,FSM& )
+                {
+                    static_assert(std::is_same<FSM, SubFsm2>::value, "");
+                    ++exit_counter;
+                }
+                int entry_counter{};
+                int exit_counter{};
             };
-            struct SubState3 : public msm::front::state<>
+            struct SubState3 : msm::front::test::StateBase
             {
-                template <class Event,class FSM>
-                void on_entry(Event const&,FSM& ) {++entry_counter;}
-                template <class Event,class FSM>
-                void on_exit(Event const&,FSM& ) {++exit_counter;}
-                int entry_counter;
-                int exit_counter;
             };
             struct PseudoExit1 : public msm::front::exit_pseudo_state<event6> 
             {
                 template <class Event,class FSM>
-                void on_entry(Event const&,FSM& ) {++entry_counter;}
+                void on_entry(Event const&,FSM& )
+                {
+                    static_assert(std::is_same<FSM, SubFsm2>::value, "");
+                    ++entry_counter;
+                }
                 template <class Event,class FSM>
-                void on_exit(Event const&,FSM& ) {++exit_counter;}
-                int entry_counter;
-                int exit_counter;
+                void on_exit(Event const&,FSM& )
+                {
+                    static_assert(std::is_same<FSM, SubFsm2>::value, "");
+                    ++exit_counter;
+                }
+                int entry_counter{};
+                int exit_counter{};
             };
             // action methods
             void entry_action(event4 const&)
@@ -157,14 +183,7 @@ namespace
                 _row  < SubState3    , event5      , PseudoExit1                                                >
                 //    +--------------+-------------+------------+------------------------+----------------------+
             > {};
-            // Replaces the default no-transition response.
-            template <class FSM,class Event>
-            void no_transition(Event const& , FSM&,int)
-            {
-                BOOST_FAIL("no_transition called!");
-            }
         };
-        typedef Back<SubFsm2_, Policy> SubFsm2;
 
         // the initial state of the player SM. Must be defined
         typedef State1 initial_state;
@@ -188,43 +207,8 @@ namespace
                 <typename SubFsm2_::PseudoExit1>, event6 , State2                                                                >
             //   +---------------------+--------+-----------------------------------------------------+-------+--------+
         > {};
-
-        // Replaces the default no-transition response.
-        template <class FSM,class Event>
-        void no_transition(Event const& , FSM&,int )
-        {
-            BOOST_FAIL("no_transition called!");
-        }
-        // init counters
-        template <class Event,class FSM>
-        void on_entry(Event const&,FSM& fsm) 
-        {
-            fsm.template get_state<Fsm_::State1&>().entry_counter=0;
-            fsm.template get_state<Fsm_::State1&>().exit_counter=0;
-            fsm.template get_state<Fsm_::State2&>().entry_counter=0;
-            fsm.template get_state<Fsm_::State2&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().entry_action_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState1&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState1&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState1b&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState1b&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState2&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState2&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState2b&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState2b&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState3&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::SubState3&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::PseudoEntry1&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::PseudoEntry1&>().exit_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::template exit_pt<typename SubFsm2_::PseudoExit1>&>().entry_counter=0;
-            fsm.template get_state<Fsm_::SubFsm2&>().template get_state<typename Fsm_::SubFsm2::template exit_pt<typename SubFsm2_::PseudoExit1>&>().exit_counter=0;
-
-        }
     };
-    typedef Back<Fsm_, Policy> Fsm;
-    };
+};
 
     typedef get_hierarchical_test_machines<hierarchical_state_machine> test_machines;
 //    static char const* const state_names[] = { "State1", "SubFsm2","State2"  };

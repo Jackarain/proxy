@@ -50,7 +50,8 @@ rule init ( version ? :  command * : options * )
         : version $(version) ] ;
 
     common.handle-options clang-darwin : $(condition) : $(command) : $(options) ;
-    clang.init-flags clang-darwin : $(condition) : $(version) ;
+    clang.init-flags clang-darwin : $(condition) : $(version) :
+        [ feature.get-values <triplet> : $(options) ] ;
 
     # - Archive builder.
     local archiver = [ feature.get-values <archiver> : $(options) ] ;

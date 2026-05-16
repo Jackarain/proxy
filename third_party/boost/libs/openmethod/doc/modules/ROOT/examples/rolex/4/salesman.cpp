@@ -17,7 +17,7 @@ BOOST_OPENMETHOD_OVERRIDE(
         emp->sales * 0.05; // base + commission
 }
 
-BOOST_OPENMETHOD_CLASSES(employees::Employee, Salesman)
+BOOST_OPENMETHOD_CLASSES(employees::Employee, Salesman);
 
 } // namespace sales
 // end::content[]

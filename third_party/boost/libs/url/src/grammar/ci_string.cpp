@@ -40,14 +40,14 @@ ci_is_equal(
             goto slow;
     }
     return true;
-slow:
     do
     {
+        a = *p1++;
+        b = *p2++;
+    slow:
         if( to_lower(a) !=
             to_lower(b))
             return false;
-        a = *p1++;
-        b = *p2++;
     }
     while(n--);
     return true;
@@ -62,15 +62,16 @@ ci_is_less(
 {
     auto p1 = s0.data();
     auto p2 = s1.data();
-    for(auto n = s0.size();n--;)
+    auto n = s0.size() < s1.size()
+        ? s0.size() : s1.size();
+    while(n--)
     {
         auto c1 = to_lower(*p1++);
         auto c2 = to_lower(*p2++);
         if(c1 != c2)
             return c1 < c2;
     }
-    // equal
-    return false;
+    return s0.size() < s1.size();
 }
 
 } // detail

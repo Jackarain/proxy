@@ -6,6 +6,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include <boost/redis/detail/connection_state.hpp>
 #include <boost/redis/detail/exec_fsm.hpp>
 #include <boost/redis/detail/multiplexer.hpp>
 #include <boost/redis/request.hpp>
@@ -30,6 +31,7 @@ using detail::multiplexer;
 using detail::exec_action_type;
 using detail::consume_result;
 using detail::exec_action;
+using detail::connection_state;
 using boost::system::error_code;
 using boost::asio::cancellation_type_t;
 
@@ -102,11 +104,23 @@ struct elem_and_request {
    std::shared_ptr<multiplexer::elem> elm;
    std::weak_ptr<multiplexer::elem> weak_elm;  // check that we free memory
 
-   elem_and_request(request::config cfg = {})
-   : req(cfg)
+   static request make_request(request::config cfg)
    {
+      request req{cfg};
+
       // Empty requests are not valid. The request needs to be populated before creating the element
       req.push("get", "mykey");
+
+      return req;
+   }
+
+   elem_and_request(request::config cfg = {})
+   : elem_and_request(make_request(cfg))
+   { }
+
+   elem_and_request(request input_req)
+   : req(std::move(input_req))
+   {
       elm = std::make_shared<multiplexer::elem>(req, any_adapter{});
 
       elm->set_done_callback([this] {
@@ -121,35 +135,35 @@ struct elem_and_request {
 void test_success()
 {
    // Setup
-   multiplexer mpx;
+   connection_state st;
    elem_and_request input;
-   exec_fsm fsm(mpx, std::move(input.elm));
+   exec_fsm fsm(std::move(input.elm));
    error_code ec;
 
    // Initiate
-   auto act = fsm.resume(true, cancellation_type_t::none);
+   auto act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::setup_cancellation);
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::notify_writer);
 
    // We should now wait for a response
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::wait_for_response);
 
    // Simulate a successful write
-   BOOST_TEST_EQ(mpx.prepare_write(), 1u);  // one request was placed in the packet to write
-   BOOST_TEST(mpx.commit_write(mpx.get_write_buffer().size()));
+   BOOST_TEST_EQ(st.mpx.prepare_write(), 1u);  // one request was placed in the packet to write
+   BOOST_TEST(st.mpx.commit_write(st.mpx.get_write_buffer().size()));
 
    // Simulate a successful read
-   read(mpx, "$5\r\nhello\r\n");
-   auto req_status = mpx.consume(ec);
+   read(st.mpx, "$5\r\nhello\r\n");
+   auto req_status = st.mpx.consume(ec);
    BOOST_TEST_EQ(ec, error_code());
    BOOST_TEST_EQ(req_status.first, consume_result::got_response);
    BOOST_TEST_EQ(req_status.second, 11u);  // the entire buffer was consumed
    BOOST_TEST_EQ(input.done_calls, 1u);
 
    // This will awaken the exec operation, and should complete the operation
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action(error_code(), 11u));
 
    // All memory should have been freed by now
@@ -160,37 +174,37 @@ void test_success()
 void test_parse_error()
 {
    // Setup
-   multiplexer mpx;
+   connection_state st;
    elem_and_request input;
-   exec_fsm fsm(mpx, std::move(input.elm));
+   exec_fsm fsm(std::move(input.elm));
    error_code ec;
 
    // Initiate
-   auto act = fsm.resume(true, cancellation_type_t::none);
+   auto act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::setup_cancellation);
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::notify_writer);
 
    // We should now wait for a response
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::wait_for_response);
 
    // Simulate a successful write
-   BOOST_TEST_EQ(mpx.prepare_write(), 1u);  // one request was placed in the packet to write
-   BOOST_TEST(mpx.commit_write(mpx.get_write_buffer().size()));
+   BOOST_TEST_EQ(st.mpx.prepare_write(), 1u);  // one request was placed in the packet to write
+   BOOST_TEST(st.mpx.commit_write(st.mpx.get_write_buffer().size()));
 
    // Simulate a read that will trigger an error.
    // The second field should be a number (rather than the empty string).
    // Note that although part of the buffer was consumed, the multiplexer
    // currently throws this information away.
-   read(mpx, "*2\r\n$5\r\nhello\r\n:\r\n");
-   auto req_status = mpx.consume(ec);
+   read(st.mpx, "*2\r\n$5\r\nhello\r\n:\r\n");
+   auto req_status = st.mpx.consume(ec);
    BOOST_TEST_EQ(ec, error::empty_field);
    BOOST_TEST_EQ(req_status.second, 15u);
    BOOST_TEST_EQ(input.done_calls, 1u);
 
    // This will awaken the exec operation, and should complete the operation
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action(error::empty_field, 0u));
 
    // All memory should have been freed by now
@@ -201,17 +215,17 @@ void test_parse_error()
 void test_cancel_if_not_connected()
 {
    // Setup
-   multiplexer mpx;
+   connection_state st;
    request::config cfg;
    cfg.cancel_if_not_connected = true;
    elem_and_request input(cfg);
-   exec_fsm fsm(mpx, std::move(input.elm));
+   exec_fsm fsm(std::move(input.elm));
 
    // Initiate. We're not connected, so the request gets cancelled
-   auto act = fsm.resume(false, cancellation_type_t::none);
+   auto act = fsm.resume(false, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::immediate);
 
-   act = fsm.resume(false, cancellation_type_t::none);
+   act = fsm.resume(false, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action(error::not_connected));
 
    // We didn't leave memory behind
@@ -222,35 +236,35 @@ void test_cancel_if_not_connected()
 void test_not_connected()
 {
    // Setup
-   multiplexer mpx;
+   connection_state st;
    elem_and_request input;
-   exec_fsm fsm(mpx, std::move(input.elm));
+   exec_fsm fsm(std::move(input.elm));
    error_code ec;
 
    // Initiate
-   auto act = fsm.resume(false, cancellation_type_t::none);
+   auto act = fsm.resume(false, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::setup_cancellation);
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::notify_writer);
 
    // We should now wait for a response
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::wait_for_response);
 
    // Simulate a successful write
-   BOOST_TEST_EQ(mpx.prepare_write(), 1u);  // one request was placed in the packet to write
-   BOOST_TEST(mpx.commit_write(mpx.get_write_buffer().size()));
+   BOOST_TEST_EQ(st.mpx.prepare_write(), 1u);  // one request was placed in the packet to write
+   BOOST_TEST(st.mpx.commit_write(st.mpx.get_write_buffer().size()));
 
    // Simulate a successful read
-   read(mpx, "$5\r\nhello\r\n");
-   auto req_status = mpx.consume(ec);
+   read(st.mpx, "$5\r\nhello\r\n");
+   auto req_status = st.mpx.consume(ec);
    BOOST_TEST_EQ(ec, error_code());
    BOOST_TEST_EQ(req_status.first, consume_result::got_response);
    BOOST_TEST_EQ(req_status.second, 11u);  // the entire buffer was consumed
    BOOST_TEST_EQ(input.done_calls, 1u);
 
    // This will awaken the exec operation, and should complete the operation
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action(error_code(), 11u));
 
    // All memory should have been freed by now
@@ -277,24 +291,24 @@ void test_cancel_waiting()
 
    for (const auto& tc : test_cases) {
       // Setup
-      multiplexer mpx;
+      connection_state st;
       elem_and_request input, input2;
-      exec_fsm fsm(mpx, std::move(input.elm));
+      exec_fsm fsm(std::move(input.elm));
 
       // Another request enters the multiplexer, so it's busy when we start
-      mpx.add(input2.elm);
-      BOOST_TEST_EQ_MSG(mpx.prepare_write(), 1u, tc.name);
+      st.mpx.add(input2.elm);
+      BOOST_TEST_EQ_MSG(st.mpx.prepare_write(), 1u, tc.name);
 
       // Initiate and wait
-      auto act = fsm.resume(true, cancellation_type_t::none);
+      auto act = fsm.resume(true, st, cancellation_type_t::none);
       BOOST_TEST_EQ_MSG(act, exec_action_type::setup_cancellation, tc.name);
-      act = fsm.resume(true, cancellation_type_t::none);
+      act = fsm.resume(true, st, cancellation_type_t::none);
       BOOST_TEST_EQ_MSG(act, exec_action_type::notify_writer, tc.name);
-      act = fsm.resume(true, cancellation_type_t::none);
+      act = fsm.resume(true, st, cancellation_type_t::none);
       BOOST_TEST_EQ_MSG(act, exec_action_type::wait_for_response, tc.name);
 
       // We get notified because the request got cancelled
-      act = fsm.resume(true, tc.type);
+      act = fsm.resume(true, st, tc.type);
       BOOST_TEST_EQ_MSG(act, exec_action(asio::error::operation_aborted), tc.name);
       BOOST_TEST_EQ_MSG(input.weak_elm.expired(), true, tc.name);  // we didn't leave memory behind
    }
@@ -314,32 +328,32 @@ void test_cancel_notwaiting_terminal_partial()
 
    for (const auto& tc : test_cases) {
       // Setup
-      multiplexer mpx;
+      connection_state st;
       auto input = std::make_unique<elem_and_request>();
-      exec_fsm fsm(mpx, std::move(input->elm));
+      exec_fsm fsm(std::move(input->elm));
 
       // Initiate
-      auto act = fsm.resume(false, cancellation_type_t::none);
+      auto act = fsm.resume(false, st, cancellation_type_t::none);
       BOOST_TEST_EQ_MSG(act, exec_action_type::setup_cancellation, tc.name);
-      act = fsm.resume(true, cancellation_type_t::none);
+      act = fsm.resume(true, st, cancellation_type_t::none);
       BOOST_TEST_EQ_MSG(act, exec_action_type::notify_writer, tc.name);
 
-      act = fsm.resume(true, cancellation_type_t::none);
+      act = fsm.resume(true, st, cancellation_type_t::none);
       BOOST_TEST_EQ_MSG(act, exec_action_type::wait_for_response, tc.name);
 
       // The multiplexer starts writing the request
-      BOOST_TEST_EQ_MSG(mpx.prepare_write(), 1u, tc.name);
-      BOOST_TEST_EQ_MSG(mpx.commit_write(mpx.get_write_buffer().size()), true, tc.name);
+      BOOST_TEST_EQ_MSG(st.mpx.prepare_write(), 1u, tc.name);
+      BOOST_TEST_EQ_MSG(st.mpx.commit_write(st.mpx.get_write_buffer().size()), true, tc.name);
 
       // A cancellation arrives
-      act = fsm.resume(true, tc.type);
+      act = fsm.resume(true, st, tc.type);
       BOOST_TEST_EQ(act, exec_action(asio::error::operation_aborted));
       input.reset();  // Verify we don't access the request or response after completion
 
       error_code ec;
       // When the response to this request arrives, it gets ignored
-      read(mpx, "-ERR wrong command\r\n");
-      auto res = mpx.consume(ec);
+      read(st.mpx, "-ERR wrong command\r\n");
+      auto res = st.mpx.consume(ec);
       BOOST_TEST_EQ_MSG(ec, error_code(), tc.name);
       BOOST_TEST_EQ_MSG(res.first, consume_result::got_response, tc.name);
 
@@ -352,42 +366,120 @@ void test_cancel_notwaiting_terminal_partial()
 void test_cancel_notwaiting_total()
 {
    // Setup
-   multiplexer mpx;
+   connection_state st;
    elem_and_request input;
-   exec_fsm fsm(mpx, std::move(input.elm));
+   exec_fsm fsm(std::move(input.elm));
    error_code ec;
 
    // Initiate
-   auto act = fsm.resume(true, cancellation_type_t::none);
+   auto act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::setup_cancellation);
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::notify_writer);
 
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action_type::wait_for_response);
 
    // Simulate a successful write
-   BOOST_TEST_EQ(mpx.prepare_write(), 1u);
-   BOOST_TEST(mpx.commit_write(mpx.get_write_buffer().size()));
+   BOOST_TEST_EQ(st.mpx.prepare_write(), 1u);
+   BOOST_TEST(st.mpx.commit_write(st.mpx.get_write_buffer().size()));
 
    // We got requested a cancellation here, but we can't honor it
-   act = fsm.resume(true, asio::cancellation_type_t::total);
+   act = fsm.resume(true, st, asio::cancellation_type_t::total);
    BOOST_TEST_EQ(act, exec_action_type::wait_for_response);
 
    // Simulate a successful read
-   read(mpx, "$5\r\nhello\r\n");
-   auto req_status = mpx.consume(ec);
+   read(st.mpx, "$5\r\nhello\r\n");
+   auto req_status = st.mpx.consume(ec);
    BOOST_TEST_EQ(ec, error_code());
    BOOST_TEST_EQ(req_status.first, consume_result::got_response);
    BOOST_TEST_EQ(req_status.second, 11u);  // the entire buffer was consumed
    BOOST_TEST_EQ(input.done_calls, 1u);
 
    // This will awaken the exec operation, and should complete the operation
-   act = fsm.resume(true, cancellation_type_t::none);
+   act = fsm.resume(true, st, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_action(error_code(), 11u));
 
    // All memory should have been freed by now
    BOOST_TEST_EQ(input.weak_elm.expired(), true);
+}
+
+// If a request completes successfully and contained pubsub changes, these are committed
+void test_subscription_tracking_success()
+{
+   // Setup
+   request req;
+   req.subscribe({"ch1", "ch2"});
+   connection_state st;
+   elem_and_request input{std::move(req)};
+   exec_fsm fsm(std::move(input.elm));
+
+   // Initiate
+   auto act = fsm.resume(true, st, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action_type::setup_cancellation);
+   act = fsm.resume(true, st, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action_type::notify_writer);
+
+   // We should now wait for a response
+   act = fsm.resume(true, st, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action_type::wait_for_response);
+
+   // Simulate a successful write
+   BOOST_TEST_EQ(st.mpx.prepare_write(), 1u);  // one request was placed in the packet to write
+   BOOST_TEST(st.mpx.commit_write(st.mpx.get_write_buffer().size()));
+
+   // The request doesn't have a response, so this will
+   // awaken the exec operation, and should complete the operation
+   act = fsm.resume(true, st, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action(error_code(), 0u));
+
+   // All memory should have been freed by now
+   BOOST_TEST(input.weak_elm.expired());
+
+   // The subscription has been added to the tracker
+   request tracker_req;
+   st.tracker.compose_subscribe_request(tracker_req);
+
+   request expected_req;
+   expected_req.push("SUBSCRIBE", "ch1", "ch2");
+   BOOST_TEST_EQ(tracker_req.payload(), expected_req.payload());
+}
+
+// If the request errors, tracked subscriptions are not committed
+void test_subscription_tracking_error()
+{
+   // Setup
+   request req;
+   req.subscribe({"ch1", "ch2"});
+   connection_state st;
+   elem_and_request input{std::move(req)};
+   exec_fsm fsm(std::move(input.elm));
+
+   // Initiate
+   auto act = fsm.resume(true, st, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action_type::setup_cancellation);
+   act = fsm.resume(true, st, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action_type::notify_writer);
+
+   // We should now wait for a response
+   act = fsm.resume(true, st, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action_type::wait_for_response);
+
+   // Simulate a write error, which would trigger a reconnection
+   BOOST_TEST_EQ(st.mpx.prepare_write(), 1u);  // one request was placed in the packet to write
+   st.mpx.cancel_on_conn_lost();
+
+   // This awakens the request
+   act = fsm.resume(true, st, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, exec_action(asio::error::operation_aborted, 0u));
+
+   // All memory should have been freed by now
+   BOOST_TEST(input.weak_elm.expired());
+
+   // The subscription has not been added to the tracker
+   request tracker_req;
+   st.tracker.compose_subscribe_request(tracker_req);
+   BOOST_TEST_EQ(tracker_req.payload(), "");
 }
 
 }  // namespace
@@ -401,6 +493,8 @@ int main()
    test_cancel_waiting();
    test_cancel_notwaiting_terminal_partial();
    test_cancel_notwaiting_total();
+   test_subscription_tracking_success();
+   test_subscription_tracking_error();
 
    return boost::report_errors();
 }

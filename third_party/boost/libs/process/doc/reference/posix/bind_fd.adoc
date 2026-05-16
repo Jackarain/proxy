@@ -41,7 +41,7 @@ struct bind_fd
        process p{"test", {},  posix::bind_fd(42, 24)};
 
    */
-  bind_fd(int target, int fd):
+  bind_fd(int target, int fd);
 
   // Inherit a null device as a set descriptor.
   /* This will a null device as 42 to the child process:

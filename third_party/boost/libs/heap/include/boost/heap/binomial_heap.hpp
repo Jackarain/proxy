@@ -14,9 +14,11 @@
 #include <utility>
 
 #include <boost/assert.hpp>
+#include <boost/config.hpp>
 
 #include <boost/heap/detail/heap_comparison.hpp>
 #include <boost/heap/detail/heap_node.hpp>
+#include <boost/heap/detail/heap_utils.hpp>
 #include <boost/heap/detail/stable_heap.hpp>
 #include <boost/heap/detail/tree_iterator.hpp>
 #include <boost/type_traits/integral_constant.hpp>
@@ -66,29 +68,10 @@ struct make_binomial_heap_base
             allocator_type( alloc )
         {}
 
-        type( type const& rhs ) :
-            base_type( rhs ),
-            allocator_type( rhs )
-        {}
-
-        type( type&& rhs ) :
-            base_type( std::move( static_cast< base_type& >( rhs ) ) ),
-            allocator_type( std::move( static_cast< allocator_type& >( rhs ) ) )
-        {}
-
-        type& operator=( type&& rhs )
-        {
-            base_type::operator=( std::move( static_cast< base_type& >( rhs ) ) );
-            allocator_type::operator=( std::move( static_cast< allocator_type& >( rhs ) ) );
-            return *this;
-        }
-
-        type& operator=( type const& rhs )
-        {
-            base_type::operator=( static_cast< base_type const& >( rhs ) );
-            allocator_type::operator=( static_cast< allocator_type const& >( rhs ) );
-            return *this;
-        }
+        type( type const& rhs )            = default;
+        type( type&& rhs )                 = default;
+        type& operator=( type&& rhs )      = default;
+        type& operator=( type const& rhs ) = default;
     };
 };
 
@@ -181,7 +164,7 @@ private:
                                        detail::list_iterator_converter< node_type, node_list_type >,
                                        true,
                                        true,
-                                       value_compare >
+                                       typename super_t::internal_compare >
             ordered_iterator;
     };
 #endif
@@ -242,14 +225,8 @@ public:
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue const &)
     binomial_heap& operator=( binomial_heap const& rhs )
     {
-        clear();
-        size_holder::set_size( rhs.get_size() );
-        static_cast< super_t& >( *this ) = rhs;
-
-        if ( rhs.empty() )
-            top_element = nullptr;
-        else
-            clone_forest( rhs );
+        binomial_heap tmp( rhs );
+        do_swap( tmp );
         return *this;
     }
 
@@ -263,7 +240,7 @@ public:
     }
 
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue &&)
-    binomial_heap& operator=( binomial_heap&& rhs )
+    binomial_heap& operator=( binomial_heap&& rhs ) noexcept( std::is_nothrow_move_assignable< super_t >::value )
     {
         clear();
         super_t::operator=( std::move( rhs ) );
@@ -325,11 +302,11 @@ public:
     }
 
     /// \copydoc boost::heap::priority_queue::swap
-    void swap( binomial_heap& rhs )
+    BOOST_DEPRECATED( "Use std::swap instead" )
+    void swap( binomial_heap& rhs ) noexcept( std::is_nothrow_move_constructible< binomial_heap >::value
+                                              && std::is_nothrow_move_assignable< binomial_heap >::value )
     {
-        super_t::swap( rhs );
-        std::swap( top_element, rhs.top_element );
-        trees.swap( rhs.trees );
+        do_swap( rhs );
     }
 
     /// \copydoc boost::heap::priority_queue::top
@@ -400,13 +377,13 @@ public:
         size_holder::decrement();
 
         if ( element->child_count() ) {
-            size_type sz = ( 1 << element->child_count() ) - 1;
+            size_type sz = ( size_type( 1 ) << element->child_count() ) - 1;
 
             binomial_heap children( value_comp(), element->children, sz );
             if ( trees.empty() ) {
                 stability_counter_type stability_count = super_t::get_stability_count();
                 size_t                 size            = constant_time_size ? size_holder::get_size() : 0;
-                swap( children );
+                do_swap( children );
                 super_t::set_stability_count( stability_count );
 
                 if ( constant_time_size )
@@ -457,8 +434,13 @@ public:
                 increase( handle );
             else
                 decrease( handle );
-        } else
-            decrease( handle );
+        } else {
+            // Node is a root: it has no parent to compare with.  The heap order below
+            // it may have changed in either direction, so sift it down to restore order,
+            // then re-scan for the new top element.
+            siftdown( this_node );
+            update_top_element();
+        }
     }
 
     /**
@@ -532,7 +514,7 @@ public:
             return;
 
         if ( empty() ) {
-            swap( rhs );
+            do_swap( rhs );
             return;
         }
 
@@ -543,7 +525,7 @@ public:
         rhs.set_size( 0 );
         rhs.top_element = nullptr;
 
-        super_t::set_stability_count( ( std::max )( super_t::get_stability_count(), rhs.get_stability_count() ) );
+        super_t::set_stability_count( (std::max)( super_t::get_stability_count(), rhs.get_stability_count() ) );
         rhs.set_stability_count( 0 );
     }
 
@@ -563,13 +545,13 @@ public:
     /// \copydoc boost::heap::fibonacci_heap::ordered_begin
     ordered_iterator ordered_begin( void ) const
     {
-        return ordered_iterator( trees.begin(), trees.end(), top_element, super_t::value_comp() );
+        return ordered_iterator( trees.begin(), trees.end(), top_element, super_t::get_internal_cmp() );
     }
 
     /// \copydoc boost::heap::fibonacci_heap::ordered_end
     ordered_iterator ordered_end( void ) const
     {
-        return ordered_iterator( nullptr, super_t::value_comp() );
+        return ordered_iterator( nullptr, super_t::get_internal_cmp() );
     }
 
     /**
@@ -642,6 +624,12 @@ public:
 
 private:
 #if !defined( BOOST_DOXYGEN_INVOKED )
+    void do_swap( binomial_heap& rhs ) noexcept( std::is_nothrow_move_constructible< binomial_heap >::value
+                                                 && std::is_nothrow_move_assignable< binomial_heap >::value )
+    {
+        detail::swap_via_move( *this, rhs );
+    }
+
     void merge_and_clear_nodes( binomial_heap& rhs )
     {
         BOOST_HEAP_ASSERT( !empty() );

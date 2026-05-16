@@ -163,4 +163,13 @@ cfoa_tests(SOURCES cfoa/rw_spinlock_test6.cpp)
 cfoa_tests(SOURCES cfoa/rw_spinlock_test7.cpp)
 cfoa_tests(SOURCES cfoa/rw_spinlock_test8.cpp)
 
+# Compile tests
+
+fca_tests(TYPE compile NAME explicit_instantiation_tests SOURCES unordered/explicit_instantiation_tests.cpp)
+foa_tests(TYPE compile NAME explicit_instantiation_tests SOURCES unordered/explicit_instantiation_tests.cpp)
+cfoa_tests(TYPE compile NAME explicit_instantiation_tests SOURCES cfoa/explicit_instantiation_tests.cpp)
+
+foa_tests(TYPE compile NAME conversion_operator_tests SOURCES unordered/conversion_operator_tests.cpp)
+cfoa_tests(TYPE compile NAME conversion_operator_tests SOURCES cfoa/conversion_operator_tests.cpp)
+
 endif()

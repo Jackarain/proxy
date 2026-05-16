@@ -15,9 +15,10 @@
         "Iterators"
     ],
     "maintainers": [
-        "Stefan Seefeld <stefan -at- seefeld.name>",
+        "Samuel Debionne",
+        "Pranam Lashkari <plashkari628 -at- gmail.com>",
         "Mateusz Loskot <mateusz -at- loskot.net>",
-        "Pranam Lashkari <plashkari628 -at- gmail.com>"
+        "Stefan Seefeld <stefan -at- seefeld.name>"
     ],
     "cxxstd": "14"
 }

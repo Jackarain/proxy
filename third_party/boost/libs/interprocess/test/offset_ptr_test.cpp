@@ -411,23 +411,27 @@ void test_cast()
       pcvvoid_t pcvvoid = pvoid;
       pcvvoid = pvvoid;
 
-      //Test valid static_cast conversions
-      pint  = static_pointer_cast<int>(pvoid);
-      pcint = static_pointer_cast<const int>(pcvoid);
-      pvint = static_pointer_cast<volatile int>(pvoid);
-      pcvint = static_pointer_cast<const volatile int>(pvoid);
+      //Test valid static_cast conversions required by Allocator::pointer 
+      //requirements (void_pointer -> pointer, const_void_pointer -> const_pointer)
+      pint  = static_cast<pint_t>(pvoid);
+      pcint = static_cast<pcint_t>(pcvoid);
 
       BOOST_TEST(pint == pvoid);
+      BOOST_TEST(pcint == pcvoid);
       BOOST_TEST(pcint == pint);
-      BOOST_TEST(pvint == pint);
-      BOOST_TEST(pcvint == pint);
 
-      //Test valid static_cast conversions
+      //Test valid static_pointer_cast conversions
       {
          pint   = static_pointer_cast<int>(pvoid);
          pcint  = static_pointer_cast<const int>(pcvoid);
          pvint  = static_pointer_cast<volatile int>(pvoid);
          pcvint = static_pointer_cast<const volatile int>(pvoid);
+
+         BOOST_TEST(pint == pvoid);
+         BOOST_TEST(pcint == pcvoid);
+         BOOST_TEST(pcint == pint);
+         BOOST_TEST(pvint == pint);
+         BOOST_TEST(pcvint == pint);
 
          Derived d;
          offset_ptr<Derived> pd(&d);
@@ -450,7 +454,7 @@ void test_cast()
          BOOST_TEST(pb3.get() == static_cast<Base3*>(pd3.get()));
       }
 
-      //Test valid const_cast conversions
+      //Test valid const_pointer_cast conversions
       {
          pint = const_pointer_cast<int>(pcint);
          pint = const_pointer_cast<int>(pvint);
@@ -462,14 +466,14 @@ void test_cast()
          pcint = const_pointer_cast<const int>(pvint);
          pcint = const_pointer_cast<const int>(pcvint);
 
-         //Test valid reinterpret_cast conversions
+         //Test valid reinterpret_pointer_cast conversions
          pint   = reinterpret_pointer_cast<int>(pvoid);
          pcint  = reinterpret_pointer_cast<const int>(pcvoid);
          pvint  = reinterpret_pointer_cast<volatile int>(pvoid);
          pcvint = reinterpret_pointer_cast<const volatile int>(pvoid);
       }
 
-      //Test valid dynamic_cast conversions
+      //Test valid dynamic_pointer_cast conversions
       {
          {
             Derived3 d3;

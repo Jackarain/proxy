@@ -1,0 +1,151 @@
+////
+Copyright 2024 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#limits]
+= `<limits>` Support
+:idprefix: limits_
+
+The following from `<limits>` are overloaded for each type with associated values for reference:
+
+[source, c++]
+----
+#include <boost/decimal/decimal32_t.hpp>
+#include <boost/decimal/decimal64_t.hpp>
+#include <boost/decimal/decimal128_t.hpp>
+
+namespace std {
+
+template <>
+struct numeric_limits<boost::decimal::decimal32_t>
+{
+    static constexpr bool is_specialized = true;
+    static constexpr bool is_signed = true;
+    static constexpr bool is_integer = false;
+    static constexpr bool is_exact = false;
+    static constexpr bool has_infinity = true;
+    static constexpr bool has_quiet_NaN = true;
+    static constexpr bool has_signaling_NaN = true;
+
+    // These members were deprecated in C++23
+    static constexpr std::float_denorm_style has_denorm = std::denorm_present;
+    static constexpr bool has_denorm_loss = true;
+
+    static constexpr std::float_round_style round_style = std::round_indeterminate;
+    static constexpr bool is_iec559 = true;
+    static constexpr bool is_bounded = true;
+    static constexpr bool is_modulo = false;
+    static constexpr int digits = 7;
+    static constexpr int digits10 = digits;
+    static constexpr int max_digits10 = digits;
+    static constexpr int radix = 10;
+    static constexpr int min_exponent = -95;
+    static constexpr int min_exponent10 = min_exponent;
+    static constexpr int max_exponent = 96;
+    static constexpr int max_exponent10 = max_exponent;
+    static constexpr bool traps = numeric_limits<std::uint32_t>::traps;
+    static constexpr bool tinyness_before = true;
+
+    // Member functions
+    static constexpr boost::decimal::decimal32_t min()
+    static constexpr boost::decimal::decimal32_t max();
+    static constexpr boost::decimal::decimal32_t lowest();
+    static constexpr boost::decimal::decimal32_t epsilon();
+    static constexpr boost::decimal::decimal32_t round_error();
+    static constexpr boost::decimal::decimal32_t infinity();
+    static constexpr boost::decimal::decimal32_t quiet_NaN();
+    static constexpr boost::decimal::decimal32_t signaling_NaN();
+    static constexpr boost::decimal::decimal32_t denorm_min();
+};
+
+template <>
+struct numeric_limits<boost::decimal::decimal64_t>
+{
+    static constexpr bool is_specialized = true;
+    static constexpr bool is_signed = true;
+    static constexpr bool is_integer = false;
+    static constexpr bool is_exact = false;
+    static constexpr bool has_infinity = true;
+    static constexpr bool has_quiet_NaN = true;
+    static constexpr bool has_signaling_NaN = true;
+
+    // These members were deprecated in C++23
+    static constexpr std::float_denorm_style has_denorm = std::denorm_present;
+    static constexpr bool has_denorm_loss = true;
+
+    static constexpr std::float_round_style round_style = std::round_indeterminate;
+    static constexpr bool is_iec559 = true;
+    static constexpr bool is_bounded = true;
+    static constexpr bool is_modulo = false;
+    static constexpr int  digits = 16;
+    static constexpr int  digits10 = digits;
+    static constexpr int  max_digits10 = digits;
+    static constexpr int  radix = 10;
+    static constexpr int  min_exponent = -382;
+    static constexpr int  min_exponent10 = min_exponent;
+    static constexpr int  max_exponent = 385;
+    static constexpr int  max_exponent10 = max_exponent;
+    static constexpr bool traps = numeric_limits<std::uint64_t>::traps;
+    static constexpr bool tinyness_before = true;
+
+    // Member functions
+    static constexpr boost::decimal::decimal64_t min()
+    static constexpr boost::decimal::decimal64_t max();
+    static constexpr boost::decimal::decimal64_t lowest();
+    static constexpr boost::decimal::decimal64_t epsilon();
+    static constexpr boost::decimal::decimal64_t round_error();
+    static constexpr boost::decimal::decimal64_t infinity();
+    static constexpr boost::decimal::decimal64_t quiet_NaN();
+    static constexpr boost::decimal::decimal64_t signaling_NaN();
+    static constexpr boost::decimal::decimal64_t denorm_min();
+};
+
+template<>
+struct numeric_limits<boost::decimal::decimal128_t>
+{
+    static constexpr bool is_specialized = true;
+    static constexpr bool is_signed = true;
+    static constexpr bool is_integer = false;
+    static constexpr bool is_exact = false;
+    static constexpr bool has_infinity = true;
+    static constexpr bool has_quiet_NaN = true;
+    static constexpr bool has_signaling_NaN = true;
+
+    // These members were deprecated in C++23
+    static constexpr std::float_denorm_style has_denorm = std::denorm_present;
+    static constexpr bool has_denorm_loss = true;
+
+    static constexpr std::float_round_style round_style = std::round_indeterminate;
+    static constexpr bool is_iec559 = true;
+    static constexpr bool is_bounded = true;
+    static constexpr bool is_modulo = false;
+    static constexpr int  digits = 34;
+    static constexpr int  digits10 = digits;
+    static constexpr int  max_digits10 = digits;
+    static constexpr int  radix = 10;
+    static constexpr int  min_exponent = -6142;
+    static constexpr int  min_exponent10 = min_exponent;
+    static constexpr int  max_exponent = 6145;
+    static constexpr int  max_exponent10 = max_exponent;
+    static constexpr bool traps = numeric_limits<std::uint64_t>::traps;
+    static constexpr bool tinyness_before = true;
+
+    // Member functions
+    static constexpr boost::decimal::decimal128_t min()
+    static constexpr boost::decimal::decimal128_t max();
+    static constexpr boost::decimal::decimal128_t lowest();
+    static constexpr boost::decimal::decimal128_t epsilon();
+    static constexpr boost::decimal::decimal128_t round_error();
+    static constexpr boost::decimal::decimal128_t infinity();
+    static constexpr boost::decimal::decimal128_t quiet_NaN();
+    static constexpr boost::decimal::decimal128_t signaling_NaN();
+    static constexpr boost::decimal::decimal128_t denorm_min();
+};
+
+} // Namespace std
+
+----
+
+The fast types each have the same member values as their corresponding non-fast type above, and are also contained in the same file as the class implementation.

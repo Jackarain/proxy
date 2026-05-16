@@ -227,7 +227,7 @@ BOOST_FORCEINLINE void dump_data_avx2(const void* data, std::size_t size, std::b
 
         store_characters_x3(mm_output1, mm_output2, mm_output3, buf);
 
-        _mm256_zeroall(); // need to zero all ymm registers to avoid register spills/restores the compler generates around the function call
+        _mm256_zeroall(); // need to zero all ymm registers to avoid register spills/restores the compiler generates around the function call
         strm.write(buf_begin, prealign_size * 3u - 1u);
 
         buf_begin = buf;
@@ -251,7 +251,7 @@ BOOST_FORCEINLINE void dump_data_avx2(const void* data, std::size_t size, std::b
             store_characters_x3(mm_output1, mm_output2, mm_output3, b);
         }
 
-        _mm256_zeroall(); // need to zero all ymm registers to avoid register spills/restores the compler generates around the function call
+        _mm256_zeroall(); // need to zero all ymm registers to avoid register spills/restores the compiler generates around the function call
         strm.write(buf_begin, buf_end - buf_begin);
         buf_begin = buf;
     }
@@ -276,7 +276,7 @@ BOOST_FORCEINLINE void dump_data_avx2(const void* data, std::size_t size, std::b
             tail_size -= 16u;
         }
 
-        _mm256_zeroall(); // need to zero all ymm registers to avoid register spills/restores the compler generates around the function call
+        _mm256_zeroall(); // need to zero all ymm registers to avoid register spills/restores the compiler generates around the function call
         for (unsigned int i = 0; i < tail_size; ++i, ++p, b += 3u)
         {
             uint32_t n = *p;

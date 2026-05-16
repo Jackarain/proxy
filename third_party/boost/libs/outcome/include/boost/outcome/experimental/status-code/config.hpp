@@ -1,5 +1,5 @@
 /* Proposed SG14 status_code
-(C) 2018 - 2021 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2018 - 2026 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Feb 2018
 
 
@@ -131,16 +131,16 @@ http://www.boost.org/LICENSE_1_0.txt)
 #define BOOST_OUTCOME_SYSTEM_ERROR2_NODISCARD __attribute__((warn_unused_result))
 #elif defined(_MSC_VER)
 // _Must_inspect_result_ expands into this
-#define BOOST_OUTCOME_SYSTEM_ERROR2_NODISCARD                                                                                                                                \
-  __declspec(                                                                                                                                                  \
-  "SAL_name"                                                                                                                                                   \
-  "("                                                                                                                                                          \
-  "\"_Must_inspect_result_\""                                                                                                                                  \
-  ","                                                                                                                                                          \
-  "\"\""                                                                                                                                                       \
-  ","                                                                                                                                                          \
-  "\"2\""                                                                                                                                                      \
-  ")") __declspec("SAL_begin") __declspec("SAL_post") __declspec("SAL_mustInspect") __declspec("SAL_post") __declspec("SAL_checkReturn") __declspec("SAL_end")
+#define BOOST_OUTCOME_SYSTEM_ERROR2_NODISCARD                                                                                        \
+  __declspec("SAL_name"                                                                                                \
+             "("                                                                                                       \
+             "\"_Must_inspect_result_\""                                                                               \
+             ","                                                                                                       \
+             "\"\""                                                                                                    \
+             ","                                                                                                       \
+             "\"2\""                                                                                                   \
+             ")") __declspec("SAL_begin") __declspec("SAL_post") __declspec("SAL_mustInspect") __declspec("SAL_post")  \
+  __declspec("SAL_checkReturn") __declspec("SAL_end")
 #endif
 #endif
 #ifndef BOOST_OUTCOME_SYSTEM_ERROR2_NODISCARD
@@ -167,7 +167,8 @@ http://www.boost.org/LICENSE_1_0.txt)
 #define BOOST_OUTCOME_SYSTEM_ERROR2_OVERLOAD_MACRO1(name, count) BOOST_OUTCOME_SYSTEM_ERROR2_OVERLOAD_MACRO2(name, count)
 #define BOOST_OUTCOME_SYSTEM_ERROR2_OVERLOAD_MACRO(name, count) BOOST_OUTCOME_SYSTEM_ERROR2_OVERLOAD_MACRO1(name, count)
 
-#define BOOST_OUTCOME_SYSTEM_ERROR2_CALL_OVERLOAD(name, ...) BOOST_OUTCOME_SYSTEM_ERROR2_GLUE(BOOST_OUTCOME_SYSTEM_ERROR2_OVERLOAD_MACRO(name, BOOST_OUTCOME_SYSTEM_ERROR2_COUNT_ARGS_MAX8(__VA_ARGS__)), (__VA_ARGS__))
+#define BOOST_OUTCOME_SYSTEM_ERROR2_CALL_OVERLOAD(name, ...)                                                                         \
+  BOOST_OUTCOME_SYSTEM_ERROR2_GLUE(BOOST_OUTCOME_SYSTEM_ERROR2_OVERLOAD_MACRO(name, BOOST_OUTCOME_SYSTEM_ERROR2_COUNT_ARGS_MAX8(__VA_ARGS__)), (__VA_ARGS__))
 
 #define BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES_EXPAND8(a, b, c, d, e, f, g, h) a &&BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES_EXPAND7(b, c, d, e, f, g, h)
 #define BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES_EXPAND7(a, b, c, d, e, f, g) a &&BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES_EXPAND6(b, c, d, e, f, g)
@@ -182,8 +183,7 @@ http://www.boost.org/LICENSE_1_0.txt)
 #define BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(...) requires BOOST_OUTCOME_SYSTEM_ERROR2_CALL_OVERLOAD(BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES_EXPAND, __VA_ARGS__)
 
 #define BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(...) template <__VA_ARGS__>
-#define BOOST_OUTCOME_SYSTEM_ERROR2_TEXPR(...)                                                                                                                               \
-  requires { (__VA_ARGS__); }
+#define BOOST_OUTCOME_SYSTEM_ERROR2_TEXPR(...) requires { (__VA_ARGS__); }
 #define BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(...) (__VA_ARGS__)
 #if !defined(_MSC_VER) || _MSC_FULL_VER >= 192400000  // VS 2019 16.3 is broken here
 #define BOOST_OUTCOME_SYSTEM_ERROR2_REQUIRES(...) requires(__VA_ARGS__)
@@ -208,8 +208,8 @@ http://www.boost.org/LICENSE_1_0.txt)
 //! The system_error2 namespace name.
 #define BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE system_error2
 //! Begins the system_error2 namespace.
-#define BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_BEGIN                                                                                                                          \
-  namespace system_error2                                                                                                                                      \
+#define BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_BEGIN                                                                                  \
+  namespace system_error2                                                                                              \
   {
 //! Ends the system_error2 namespace.
 #define BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_END }
@@ -244,8 +244,14 @@ namespace detail
     return end - str;
   }
 #else
-  inline constexpr size_t cstrlen_(const char *str, size_t acc) { return (str[0] == 0) ? acc : cstrlen_(str + 1, acc + 1); }
-  inline constexpr size_t cstrlen(const char *str) { return cstrlen_(str, 0); }
+  inline constexpr size_t cstrlen_(const char *str, size_t acc)
+  {
+    return (str[0] == 0) ? acc : cstrlen_(str + 1, acc + 1);
+  }
+  inline constexpr size_t cstrlen(const char *str)
+  {
+    return cstrlen_(str, 0);
+  }
 #endif
 
 #if(__cplusplus >= 202002L || _MSVC_LANG >= 202002L) && __cpp_lib_remove_cvref >= 201711L
@@ -272,16 +278,21 @@ namespace detail
   non-constexpr memmove.
   */
 
-  template <class T> using is_integral_or_enum = std::integral_constant<bool, std::is_integral<T>::value || std::is_enum<T>::value>;
-
-  template <class To, class From> using is_static_castable = std::integral_constant<bool, is_integral_or_enum<To>::value && is_integral_or_enum<From>::value>;
+  template <class T>
+  using is_integral_or_enum = std::integral_constant<bool, std::is_integral<T>::value || std::is_enum<T>::value>;
 
   template <class To, class From>
-  using is_union_castable = std::integral_constant<bool, !is_static_castable<To, From>::value && !std::is_array<To>::value && !std::is_array<From>::value>;
+  using is_static_castable =
+  std::integral_constant<bool, is_integral_or_enum<To>::value && is_integral_or_enum<From>::value>;
+
+  template <class To, class From>
+  using is_union_castable = std::integral_constant<bool, !is_static_castable<To, From>::value &&
+                                                         !std::is_array<To>::value && !std::is_array<From>::value>;
 
   template <class To, class From>
   using is_bit_castable =
-  std::integral_constant<bool, sizeof(To) == sizeof(From) && traits::is_move_bitcopying<To>::value && traits::is_move_bitcopying<From>::value>;
+  std::integral_constant<bool, sizeof(To) == sizeof(From) && traits::is_move_bitcopying<To>::value &&
+                               traits::is_move_bitcopying<From>::value>;
 
   template <class To, class From> union bit_cast_union
   {
@@ -294,21 +305,20 @@ namespace detail
 
   // For move bit copying types
   template <class To, class From>
-  requires(is_bit_castable<To, From>::value             //
-           &&is_union_castable<To, From>::value         //
-           && (!std::is_trivially_copyable_v<From>      //
-               || !std::is_trivially_copyable_v<To>) )  //
+    requires(is_bit_castable<To, From>::value             //
+             && is_union_castable<To, From>::value        //
+             && (!std::is_trivially_copyable_v<From>      //
+                 || !std::is_trivially_copyable_v<To>) )  //
   constexpr To bit_cast(const From &from) noexcept
   {
     return bit_cast_union<To, From>{from}.target;
   }
   template <class To, class From>
-  requires(is_bit_castable<To, From>::value             //
-           && !is_union_castable<To, From>::value       //
-           && (!std::is_trivially_copyable_v<From>      //
-               || !std::is_trivially_copyable_v<To>) )  //
-  To bit_cast(const From &from)
-  noexcept
+    requires(is_bit_castable<To, From>::value             //
+             && !is_union_castable<To, From>::value       //
+             && (!std::is_trivially_copyable_v<From>      //
+                 || !std::is_trivially_copyable_v<To>) )  //
+  To bit_cast(const From &from) noexcept
   {
     bit_cast_union<To, From> ret;
     memmove(&ret.source, &from, sizeof(ret.source));
@@ -319,7 +329,10 @@ namespace detail
   BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_bit_castable<To, From>::value       //
                                               &&is_static_castable<To, From>::value  //
                                               && !is_union_castable<To, From>::value))
-  constexpr To bit_cast(const From &from) noexcept { return static_cast<To>(from); }
+  constexpr To bit_cast(const From &from) noexcept
+  {
+    return static_cast<To>(from);
+  }
 
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
@@ -329,7 +342,10 @@ namespace detail
   BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_bit_castable<To, From>::value         //
                                               && !is_static_castable<To, From>::value  //
                                               && is_union_castable<To, From>::value))
-  constexpr To bit_cast(const From &from) noexcept { return bit_cast_union<To, From>{from}.target; }
+  constexpr To bit_cast(const From &from) noexcept
+  {
+    return bit_cast_union<To, From>{from}.target;
+  }
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
@@ -354,7 +370,8 @@ namespace detail
   to satisfy bit_cast's preconditions that both types have the same size. */
 
   template <class To, class From>
-  using is_erasure_castable = std::integral_constant<bool, traits::is_move_bitcopying<To>::value && traits::is_move_bitcopying<From>::value>;
+  using is_erasure_castable =
+  std::integral_constant<bool, traits::is_move_bitcopying<To>::value && traits::is_move_bitcopying<From>::value>;
 
   template <class T, bool = std::is_enum<T>::value> struct identity_or_underlying_type
   {
@@ -366,13 +383,15 @@ namespace detail
   };
 
   template <class OfSize, class OfSign>
-  using erasure_integer_type = typename std::conditional<std::is_signed<typename identity_or_underlying_type<OfSign>::type>::value,
-                                                         typename std::make_signed<typename identity_or_underlying_type<OfSize>::type>::type,
-                                                         typename std::make_unsigned<typename identity_or_underlying_type<OfSize>::type>::type>::type;
+  using erasure_integer_type = typename std::conditional<
+  std::is_signed<typename identity_or_underlying_type<OfSign>::type>::value,
+  typename std::make_signed<typename identity_or_underlying_type<OfSize>::type>::type,
+  typename std::make_unsigned<typename identity_or_underlying_type<OfSize>::type>::type>::type;
 
   template <class ErasedType, std::size_t N> struct padded_erasure_object
   {
-    static_assert(traits::is_move_bitcopying<ErasedType>::value, "ErasedType must be TriviallyCopyable or MoveBitcopying");
+    static_assert(traits::is_move_bitcopying<ErasedType>::value,
+                  "ErasedType must be TriviallyCopyable or MoveBitcopying");
     static_assert(alignof(ErasedType) <= sizeof(ErasedType), "ErasedType must not be over-aligned");
     ErasedType value;
     char padding[N];
@@ -385,41 +404,71 @@ namespace detail
 
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class To, class From)
   BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_erasure_castable<To, From>::value && (sizeof(To) == sizeof(From))))
-  constexpr To erasure_cast(const From &from) noexcept { return bit_cast<To>(from); }
+  constexpr To erasure_cast(const From &from) noexcept
+  {
+    return bit_cast<To>(from);
+  }
 
-#if defined(_WIN32) || defined(__APPLE__) || __LITTLE_ENDIAN__ || (defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && __BYTE_ORDER == __LITTLE_ENDIAN)
+#if defined(_WIN32) || defined(__APPLE__) || __LITTLE_ENDIAN__ ||                                                      \
+(defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && __BYTE_ORDER == __LITTLE_ENDIAN)
   // We can avoid the type pun on little endian architectures which can aid optimisation
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class To, class From, long = 5)
-  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_erasure_castable<To, From>::value &&is_static_castable<To, From>::value && (sizeof(To) < sizeof(From))))
-  constexpr To erasure_cast(const From &from) noexcept { return static_cast<To>(bit_cast<erasure_integer_type<From, To>>(from)); }
+  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(
+  is_erasure_castable<To, From>::value &&is_static_castable<To, From>::value && (sizeof(To) < sizeof(From))))
+  constexpr To erasure_cast(const From &from) noexcept
+  {
+    return static_cast<To>(bit_cast<erasure_integer_type<From, To>>(from));
+  }
 
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class To, class From, int = 5)
-  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_erasure_castable<To, From>::value &&is_static_castable<To, From>::value && (sizeof(To) > sizeof(From))))
-  constexpr To erasure_cast(const From &from) noexcept { return bit_cast<To>(static_cast<erasure_integer_type<To, From>>(from)); }
+  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(
+  is_erasure_castable<To, From>::value &&is_static_castable<To, From>::value && (sizeof(To) > sizeof(From))))
+  constexpr To erasure_cast(const From &from) noexcept
+  {
+    return bit_cast<To>(static_cast<erasure_integer_type<To, From>>(from));
+  }
 
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class To, class From, short = 5)
-  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_erasure_castable<To, From>::value && !is_static_castable<To, From>::value && (sizeof(To) < sizeof(From))))
-  constexpr To erasure_cast(const From &from) noexcept { return bit_cast<padded_erasure_object<To, sizeof(From) - sizeof(To)>>(from).value; }
+  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_erasure_castable<To, From>::value &&
+                                              !is_static_castable<To, From>::value && (sizeof(To) < sizeof(From))))
+  constexpr To erasure_cast(const From &from) noexcept
+  {
+    return bit_cast<padded_erasure_object<To, sizeof(From) - sizeof(To)>>(from).value;
+  }
 
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class To, class From, char = 5)
-  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_erasure_castable<To, From>::value && !is_static_castable<To, From>::value && (sizeof(To) > sizeof(From))))
-  constexpr To erasure_cast(const From &from) noexcept { return bit_cast<To>(padded_erasure_object<From, sizeof(To) - sizeof(From)>{from}); }
+  BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_erasure_castable<To, From>::value &&
+                                              !is_static_castable<To, From>::value && (sizeof(To) > sizeof(From))))
+  constexpr To erasure_cast(const From &from) noexcept
+  {
+    return bit_cast<To>(padded_erasure_object<From, sizeof(To) - sizeof(From)>{from});
+  }
 #else
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class To, class From, short = 5)
   BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_erasure_castable<To, From>::value && (sizeof(To) < sizeof(From))))
-  constexpr To erasure_cast(const From &from) noexcept { return bit_cast<padded_erasure_object<To, sizeof(From) - sizeof(To)>>(from).value; }
+  constexpr To erasure_cast(const From &from) noexcept
+  {
+    return bit_cast<padded_erasure_object<To, sizeof(From) - sizeof(To)>>(from).value;
+  }
 
   BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class To, class From, char = 5)
   BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_erasure_castable<To, From>::value && (sizeof(To) > sizeof(From))))
-  constexpr To erasure_cast(const From &from) noexcept { return bit_cast<To>(padded_erasure_object<From, sizeof(To) - sizeof(From)>{from}); }
+  constexpr To erasure_cast(const From &from) noexcept
+  {
+    return bit_cast<To>(padded_erasure_object<From, sizeof(To) - sizeof(From)>{from});
+  }
 #endif
 }  // namespace detail
 BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_END
 
 #ifndef BOOST_OUTCOME_SYSTEM_ERROR2_FATAL
 #ifdef BOOST_OUTCOME_SYSTEM_ERROR2_NOT_POSIX
-#error If BOOST_OUTCOME_SYSTEM_ERROR2_NOT_POSIX is defined, you must define your own BOOST_OUTCOME_SYSTEM_ERROR2_FATAL implementation!
+#if !defined(_MSC_VER) || defined(__clang__)
+#warning "If BOOST_OUTCOME_SYSTEM_ERROR2_NOT_POSIX is defined, you should define your own BOOST_OUTCOME_SYSTEM_ERROR2_FATAL implementation!"
 #endif
+#include <cstdlib>  // for abort
+#define BOOST_OUTCOME_SYSTEM_ERROR2_FATAL(msg) abort()
+#else
 #include <cstdlib>  // for abort
 #ifdef __APPLE__
 #include <unistd.h>  // for write
@@ -434,7 +483,8 @@ namespace detail
     extern "C" ptrdiff_t write(int, const void *, size_t);
 #elif defined(_MSC_VER)
     extern ptrdiff_t write(int, const void *, size_t);
-#if(defined(__x86_64__) || defined(_M_X64)) || (defined(__aarch64__) || defined(_M_ARM64)) || (defined(__arm__) || defined(_M_ARM))
+#if(defined(__x86_64__) || defined(_M_X64)) || (defined(__aarch64__) || defined(_M_ARM64)) ||                          \
+(defined(__arm__) || defined(_M_ARM))
 #pragma comment(linker, "/alternatename:?write@avoid_stdio_include@detail@system_error2@@YA_JHPEBX_K@Z=write")
 #elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
 #pragma comment(linker, "/alternatename:?write@avoid_stdio_include@detail@system_error2@@YAHHPBXI@Z=_write")
@@ -454,6 +504,7 @@ namespace detail
 BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_END
 //! Prints msg to stderr, and calls `std::terminate()`. Can be overriden via predefinition.
 #define BOOST_OUTCOME_SYSTEM_ERROR2_FATAL(msg) ::BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE::detail::do_fatal_exit(msg)
+#endif
 #endif
 
 #endif

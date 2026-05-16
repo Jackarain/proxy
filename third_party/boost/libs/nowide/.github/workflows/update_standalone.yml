@@ -1,6 +1,9 @@
-# Copyright 2019 - 2021 Alexander Grund
+# Copyright 2019 - 2026 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
+
+permissions:
+  contents: write
 
 on:
   push:
@@ -16,7 +19,7 @@ jobs:
     name: Update standalone branch
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup git
         run: |
             git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
@@ -25,21 +28,22 @@ jobs:
       - name: Create standalone version
         id: standalone
         run: |
-          bash tools/create_standalone.sh /tmp/nowide_standalone
+          tools/create_standalone.sh /tmp/nowide_standalone
           git checkout "$STANDALONE_BRANCH_NAME" -- || git checkout -b "$STANDALONE_BRANCH_NAME"
           rm -r *
           mv /tmp/nowide_standalone/* .
           # Check if anything changed to avoid later failure.
           # E.g. nothing changes if only CI files are modified which are removed by the above
           if git diff --exit-code; then
-            echo "::set-output name=changed::false"
+            echo "changed=false" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=changed::true"
+            echo "changed=true" >> $GITHUB_OUTPUT
           fi
       - name: Commit and push
         if: steps.standalone.outputs.changed == 'true'
         run: |
+          source_commit=$(git rev-parse --short ${{ github.sha }})
           git add .
-          git commit -m "Include '${{github.event.head_commit.message}}'"
+          git commit -m "Include '${{github.event.head_commit.message}}'" -m "Source commit: ${source_commit}"
           remote_repo="https://${GITHUB_ACTOR}:${{secrets.GITHUB_TOKEN}}@github.com/${GITHUB_REPOSITORY}.git"
           git push "$remote_repo" HEAD:$STANDALONE_BRANCH_NAME

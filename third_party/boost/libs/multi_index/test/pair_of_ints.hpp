@@ -1,6 +1,6 @@
 /* Used in Boost.MultiIndex tests.
  *
- * Copyright 2003-2023 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -58,21 +58,11 @@ inline int decrement_int(int& x)
   return --x;
 }
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-namespace boost{
-namespace serialization{
-#endif
-
 template<class Archive>
 void serialize(Archive& ar,pair_of_ints& p,const unsigned int)
 {
   ar&boost::core::make_nvp("first",p.first);
   ar&boost::core::make_nvp("second",p.second);
 }
-
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-} /* namespace serialization */
-} /* namespace boost*/
-#endif
 
 #endif

@@ -9,17 +9,19 @@
 
 import testing ;
 
+project : requirements <library>/boost/algorithm//boost_algorithm ;
+
 alias unit_test_framework
     : # sources
-        /boost//unit_test_framework
-    ;        
+        /boost/test//boost_unit_test_framework
+    ;
 
 {
   test-suite algorithm/minmax
    : [ run minmax_element_test.cpp unit_test_framework
        : : : : minmax_element ]
      [ run minmax_test.cpp unit_test_framework
-       : : : : minmax ]      
+       : : : : minmax ]
    ;
 }
 

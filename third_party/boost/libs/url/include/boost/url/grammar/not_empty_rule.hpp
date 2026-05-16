@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -25,6 +26,7 @@ struct not_empty_rule_t
     using value_type =
         typename R::value_type;
 
+    BOOST_URL_CXX20_CONSTEXPR
     auto
     parse(
         char const*& it,

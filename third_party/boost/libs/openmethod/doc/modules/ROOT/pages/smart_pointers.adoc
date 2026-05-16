@@ -32,18 +32,24 @@ plain reference or pointer.
 
 The library provides aliases for standard smart pointers:
 
-- `unique_virtual_ptr<Class>` is an alias for `virtual_ptr<std::unique_ptr<Class>>`
+- cpp:unique_virtual_ptr<Class>[] is an alias for `virtual_ptr<std::unique_ptr<Class>>`
 
-- `shared_virtual_ptr<Class>` is an alias for `virtual_ptr<std::shared_ptr<Class>>`
+- cpp:shared_virtual_ptr<Class>[] is an alias for `virtual_ptr<std::shared_ptr<Class>>`
+
+Support for `boost::intrusive_ptr` is also available:
+
+- cpp:boost_intrusive_virtual_ptr<Class>[] is an alias for `virtual_ptr<boost::intrusive_ptr<Class>>`
 
 The standard library provides `std::make_unique` and `std::make_shared` to
 create smart pointers. They are convenient, robust in presence of exceptions,
 and, in the case of `std::shared_ptr`, more efficient. OpenMethod provides
 these counterparts:
 
-- `make_unique_virtual_ptr<Class>(...)`
+- cpp:make_unique_virtual[]
 
-- `make_shared_virtual_ptr<Class>(...)`
+- cpp:make_shared_virtual[]
+
+- cpp:make_boost_intrusive_virtual[]
 
 Since these functions create the object, they know its exact type with
 certainty. Thus they don't need to perform a hash table lookup to find the
@@ -56,7 +62,9 @@ likely to be used together.
 
 Smart `virtual_ptr`{empty}s are implemented in their own headers, found in the
 `interop` subdirectory. For example, support for `std::unique_ptr` is provided
-in `<boost/openmethod/interop/std_unique_ptr.hpp>`. `<boost/openmethod.hpp>`
+in `<boost/openmethod/interop/std_unique_ptr.hpp>`, and support for
+`boost::intrusive_ptr` is provided in
+`<boost/openmethod/interop/boost_intrusive_ptr.hpp>`. `<boost/openmethod.hpp>`
 does not include smart pointer headers, so they must be included explicitly.
 
 Here is a variation of the AST example that uses dynamic allocation and unique

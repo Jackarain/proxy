@@ -419,13 +419,13 @@ void test_generic_assoc<ContainerDefiner>::test_clone(value_cont_type& values)
       testset2.clone_from(testset1, test::new_cloner<value_type>(), test::delete_disposer<value_type>());
       BOOST_TEST (testset1.size() == testset1_oldsize);
       BOOST_TEST (testset2 == testset1);
-      testset2.clear_and_dispose(test::delete_disposer<value_type>());
+      testset2.clear_and_dispose(test::delete_noexcept_disposer<value_type>());
       BOOST_TEST (testset2.empty());
 
       //Now test move clone
       testset2.clone_from(boost::move(testset1), test::new_nonconst_cloner<value_type>(), test::delete_disposer<value_type>());
       BOOST_TEST (testset2 == testset1);
-      testset2.clear_and_dispose(test::delete_disposer<value_type>());
+      testset2.clear_and_dispose(test::delete_noexcept_disposer<value_type>());
       BOOST_TEST (testset2.empty());
    }
 }

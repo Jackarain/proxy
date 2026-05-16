@@ -188,6 +188,7 @@ test-suite "writing-test-ts"
   # [ boost.test-self-test run-fail : writing-test-ts : test-timeout-fail : : : : : : [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
   # [ boost.test-self-test run : writing-test-ts : test-timeout-suite : : : : : : $(requirements_datasets) [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
   # [ boost.test-self-test run-fail : writing-test-ts : test-timeout-suite-fail : : : : : : $(requirements_datasets) [ requires cxx11_hdr_thread cxx11_hdr_chrono ] ]
+  [ boost.test-self-test run : writing-test-ts : github_issue_475 : : : : : : [ requires cxx17_hdr_optional ] ]
 ;
 
 #_________________________________________________________________________________________________#

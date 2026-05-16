@@ -7,6 +7,10 @@
 
 [section:changelog Changelog]
 
+[heading Boost 1.91]
+
+* Fixed compilation of `thread_pause` on PowerPC with Apple compilers. ([github_issue 79])
+
 [heading Boost 1.89]
 
 * Added TSAN instrumentation in asm-based x86, AArch32, AArch64 and PPC backends. This silences TSAN false errors for code using Boost.Atomic for thread synchronization.

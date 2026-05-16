@@ -9,6 +9,8 @@
 #ifndef BOOST_REDIS_RUN_FSM_HPP
 #define BOOST_REDIS_RUN_FSM_HPP
 
+#include <boost/redis/detail/connect_params.hpp>
+
 #include <boost/asio/cancellation_type.hpp>
 #include <boost/system/error_code.hpp>
 
@@ -25,6 +27,7 @@ enum class run_action_type
    done,                   // Call the final handler
    immediate,              // Call asio::async_immediate
    connect,                // Transport connection establishment
+   sentinel_resolve,       // Contact Sentinels to resolve the master's address
    parallel_group,         // Run the reader, writer and friends
    cancel_receive,         // Cancel the receiver channel
    wait_for_reconnection,  // Sleep for the reconnection period
@@ -56,6 +59,8 @@ public:
       system::error_code ec,
       asio::cancellation_type_t cancel_state);
 };
+
+connect_params make_run_connect_params(const connection_state& st);
 
 }  // namespace boost::redis::detail
 

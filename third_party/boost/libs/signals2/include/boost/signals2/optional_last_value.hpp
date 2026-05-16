@@ -33,7 +33,7 @@ namespace boost {
         {
           BOOST_TRY
           {
-            value = boost::move_if_not_lvalue_reference<T>(*first);
+            value.emplace(boost::move_if_not_lvalue_reference<T>(*first));
           }
           BOOST_CATCH(const expired_slot &) {}
           BOOST_CATCH_END

@@ -25,9 +25,10 @@ MSM being divided between front and back-end, one needs to first define
 a front-end. Then, to create a real state machine, the back-end must be
 declared:
 
-....
+[source,cpp]
+----
 typedef msm::back11::state_machine<my_front_end> my_fsm;
-....
+----
 
 We now have a fully functional state machine type. The next sections
 will describe what can be done with it.
@@ -68,10 +69,11 @@ obvious side-effect reasons. To dispatch an event of type some_event,
 you can simply create one on the fly or instantiate if before
 processing:
 
-....
+[source,cpp]
+----
 my_fsm fsm; fsm.process_event(some_event());
 some_event e1; fsm.process_event(e1)
-....
+----
 
 Creating an event on the fly will be optimized by the compiler so the
 performance will not degrade.
@@ -111,7 +113,8 @@ MSM state machine is serializable almost like any other type. Without
 any special work, you can make a state machine remember its state, for
 example:
 
-....
+[source,cpp]
+----
 MyFsm fsm;
 // write to archive
 std::ofstream ofs("fsm.txt");
@@ -121,11 +124,12 @@ std::ofstream ofs("fsm.txt");
     // write class instance to archive
     oa << fsm;
 }                                                  
-....
+----
 
 Loading back is very similar:
 
-....
+[source,cpp]
+----
 MyFsm fsm;
 {
     // create and open an archive for input
@@ -134,14 +138,15 @@ MyFsm fsm;
     // read class state from archive
     ia >> fsm;
 }                                          
-....
+----
 
 This will (de)serialize the state machine itself but not the concrete
 states' data. This can be done on a per-state basis to reduce the amount
 of typing necessary. To allow serialization of a concrete state, provide
 a do_serialize typedef and implement the serialize function:
 
-....
+[source,cpp]
+----
 struct Empty : public msm::front::state<> 
 {
     // we want Empty to be serialized. First provide the typedef
@@ -155,12 +160,13 @@ struct Empty : public msm::front::state<>
     Empty():some_dummy_data(0){}           
     int some_dummy_data;
 };                        
-....
+----
 
 You can also serialize data contained in the front-end class. Again, you
 need to provide the typedef and implement serialize:
 
-....
+[source,cpp]
+----
 struct player_ : public msm::front::state_machine_def<player_>
 {
     //we might want to serialize some data contained by the front-end
@@ -176,7 +182,7 @@ struct player_ : public msm::front::state_machine_def<player_>
     }  
 ...
 };                                               
-....
+----
 
 The saving of the back-end data (the current state(s)) is valid for all
 front-ends, so a front-end written using eUML can be serialized.
@@ -212,9 +218,10 @@ the second argument, the first one being the event ending the
 interrupt), for example, my_base_state being your new base state for all
 states in a given state machine:
 +
-....
+[source,cpp]
+----
 struct Empty : public msm::front::state<my_base_state>
-....
+----
 +
 Now, my_base_state is your new base state. If it has a virtual function,
 your states become polymorphic. MSM also provides a default polymorphic
@@ -222,9 +229,10 @@ base type, `msm::front::polymorphic_state`
 * Add the user-defined base state in the state machine frontend
 definition, as a second template argument, for example:
 +
-....
+[source,cpp]
+----
 struct player_ : public msm::front::state_machine<player_,my_base_state>             
-....
+----
 
 You can also ask for a state with a given id (which you might have
 gotten from current_state()) using
@@ -250,7 +258,8 @@ will also want to provide an empty default accept in your base state in
 order not to force all your states to implement accept. For example your
 base state could be:
 
-....
+[source,cpp]
+----
 struct my_visitable_state
 {
    // signature of the accept function
@@ -260,12 +269,13 @@ struct my_visitable_state
    // default implementation for states who do not need to be visited
    void accept() const {}
 };
-....
+----
 
 This makes your states polymorphic and visitable. In this case, accept
 is made const and takes no argument. It could also be:
 
-....
+[source,cpp]
+----
 struct SomeVisitor {…};
 struct my_visitable_state
 {
@@ -276,17 +286,18 @@ struct my_visitable_state
     // default implementation for states who do not need to be visited
     void accept(SomeVisitor&) const {}
 };
-....
+----
 
 And now, `accept` will take one argument (it could also be non-const).
 By default, `accept` takes up to 2 arguments. To get more, set #define
 BOOST_MSM_VISITOR_ARG_SIZE to another value before including
 state_machine.hpp. For example:
 
-....
+[source,cpp]
+----
 #define BOOST_MSM_VISITOR_ARG_SIZE 3
 #include <boost/msm/back/state_machine.hpp>
-....
+----
 
 Note that accept will be called on ALL active states _and also
 automatically on sub-states of a submachine_.
@@ -297,9 +308,10 @@ parameter passed by reference, pass this parameter with a boost:ref/cref
 to avoid undesired copies or slicing. So, for example, in the above
 case, call:
 
-....
+[source,cpp]
+----
 SomeVisitor vis; sm.visit_current_states(boost::ref(vis));
-....
+----
 
 This xref:attachment$SM-2Arg.cpp[example] uses a visiting function with 2
 arguments.
@@ -311,19 +323,21 @@ arguments.
 Flags is a MSM-only concept, supported by all front-ends, which base
 themselves on the functions:
 
-....
+[source,cpp]
+----
 template <class Flag> bool is_flag_active()
 template <class Flag,class BinaryOp> bool is_flag_active()
-....
+----
 
 These functions return true if the currently active state(s) support the
 Flag property. The first variant ORs the result if there are several
 orthogonal regions, the second one expects OR or AND, for example:
 
-....
+[source,cpp]
+----
 my_fsm.is_flag_active<MyFlag>()
 my_fsm.is_flag_active<MyFlag,my_fsm_type::Flag_OR>()
-....
+----
 
 Please refer to the front-ends sections for usage examples.
 
@@ -339,15 +353,17 @@ ones. An example is if you want to write a coverage tool and know how
 many times a state was visited. To get a state, use the get_state method
 giving the state name, for example:
 
-....
+[source,cpp]
+----
 player::Stopped* tempstate = p.get_state<player::Stopped*>();
-....
+----
 
 or
 
-....
+[source,cpp]
+----
 player::Stopped& tempstate2 = p.get_state<player::Stopped&>();
-....
+----
 
 depending on your personal taste.
 
@@ -358,18 +374,20 @@ depending on your personal taste.
 You might want to define a state machine with a non-default constructor.
 For example, you might want to write:
 
-....
+[source,cpp]
+----
 struct player_ : public msm::front::state_machine_def<player_> 
 { 
     player_(int some_value){…} 
 }; 
-....
+----
 
 This is possible, using the back-end as forwarding object:
 
-....
+[source,cpp]
+----
 typedef msm::back11::state_machine<player_ > player; player p(3);
-....
+----
 
 The back-end will call the corresponding front-end constructor upon
 creation.
@@ -382,7 +400,8 @@ default.
 You can also pass arguments by reference (or const-reference) using
 boost::ref (or boost::cref):
 
-....
+[source,cpp]
+----
 struct player_ : public msm::front::state_machine_def<player_>  
 {
    player_(SomeType& t, int some_value){…}  
@@ -392,7 +411,7 @@ typedef msm::back11::state_machine<player_ > player;
 SomeType data;
 player p(boost::ref(data),3);
                     
-....
+----
 
 Normally, MSM default-constructs all its states or submachines. There
 are however cases where you might not want this. An example is when you
@@ -400,26 +419,29 @@ use a state machine as submachine, and this submachine used the above
 defined constructors. You can add as first argument of the state machine
 constructor an expression where existing states are passed and copied:
 
-....
+[source,cpp]
+----
 player p( back::states_ << state_1 << ... << state_n , boost::ref(data),3);
-....
+----
 
 Where state_1..n are instances of some or all of the states of the state
 machine. Submachines being state machines, this can recurse, for
 example, if Playing is a submachine containing a state Song1 having
 itself a constructor where some data is passed:
 
-....
+[source,cpp]
+----
 player p( back::states_ << Playing(back::states_ << Song1(some_Song1_data)) , 
           boost::ref(data),3);
-....
+----
 
 It is also possible to replace a given state by a new instance at any
 time using `set_states()` and the same syntax, for example:
 
-....
+[source,cpp]
+----
 p.set_states( back::states_ << state_1 << ... << state_n );
-....
+----
 
 An xref:attachment$Constructor.cpp[example] making intensive use of this
 capability is provided.
@@ -454,10 +476,11 @@ declared in `<msm/back/favor_compile_time.hpp>`, you need to:
 * add for each submachine a cpp file including your header and calling a
 macro, which generates helper code, for example:
 +
-....
+[source,cpp]
+----
 #include "mysubmachine.hpp"
 BOOST_MSM_BACK_GENERATE_PROCESS_EVENT(mysubmachine)
-....
+----
 * configure your compiler for multi-core compilation
 
 You will now compile your state machine on as many cores as you have
@@ -501,9 +524,10 @@ are explicit entries / pseudo-entry states.
 To make use of this feature, the back-end provides a policy (default is
 no analysis), `msm::back::mpl_graph_fsm_check`. For example:
 
-....
+[source,cpp]
+----
  typedef msm::back11::state_machine< player_,msm::back::mpl_graph_fsm_check> player;           
-....
+----
 
 As MSM is now using Boost.Parameter to declare policies, the policy
 choice can be made at any position after the front-end type (in this
@@ -552,9 +576,10 @@ problem, MSM offers an alternative based on boost::circular_buffer. The
 policy is msm::back::queue_container_circular. To use it, you need to
 provide it to the back-end definition:
 
-....
+[source,cpp]
+----
  typedef msm::back11::state_machine< player_,msm::back::queue_container_circular> player;           
-....
+----
 
 You can access the queues with get_message_queue and get_deferred_queue,
 both returning a reference or a const reference to the queues
@@ -563,9 +588,10 @@ documentation. What you will however need to define is the queue
 capacity (initially is 0) to what you think your queue will at most
 grow, for example (size 1 is common):
 
-....
+[source,cpp]
+----
  fsm.get_message_queue().set_capacity(1);           
-....
+----
 
 [[backend-boost-parameter]]
 
@@ -577,12 +603,13 @@ This allows you to define policy arguments (history, compile-time /
 run-time, state machine analysis, container for the queues) at any
 position, in any number. For example:
 
-....
+[source,cpp]
+----
  typedef msm::back11::state_machine< player_,msm::back::mpl_graph_fsm_check> player;  
  typedef msm::back11::state_machine< player_,msm::back::AlwaysHistory> player;  
  typedef msm::back11::state_machine< player_,msm::back::mpl_graph_fsm_check,msm::back::AlwaysHistory> player; 
  typedef msm::back11::state_machine< player_,msm::back::AlwaysHistory,msm::back::mpl_graph_fsm_check> player;      
-....
+----
 
 [[backend-state-switch]]
 

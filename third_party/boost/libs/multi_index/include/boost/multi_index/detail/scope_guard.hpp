@@ -1,4 +1,4 @@
-/* Copyright 2003-2020 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14,7 +14,7 @@
 #endif
 
 #include <boost/core/no_exceptions_support.hpp>
-#include <boost/mpl/if.hpp>
+#include <boost/mp11/utility.hpp>
 
 namespace boost{
 
@@ -120,7 +120,7 @@ struct null_guard : public scope_guard_impl_base
 template< bool cond, class T >
 struct null_guard_return
 {
-    typedef typename boost::mpl::if_c<cond,T,null_guard>::type type;
+    typedef mp11::mp_if_c<cond,T,null_guard> type;
 };
 
 template<typename F>

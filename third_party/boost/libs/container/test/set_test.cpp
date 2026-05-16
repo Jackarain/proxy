@@ -189,6 +189,33 @@ bool node_type_test()
       if(dst.size() != 5)
          return false;
    }
+   {
+      typedef set<test::movable_int, test::less_transparent> set_t;
+      typedef multiset<test::movable_int, test::less_transparent> mset_t;
+
+      set_t set1;
+      mset_t mset1;
+      //extract
+      const test::non_copymovable_int extract_me(1);
+
+      set1.insert(1);
+      mset1.emplace(1);
+      mset1.emplace(1);
+
+      //extract
+      if (!set1.extract(1))
+         return false;
+      if (set1.extract(1))
+         return false;
+
+      if (!mset1.extract(1))
+         return false;
+      if (!mset1.extract(1))
+         return false;
+      if (mset1.extract(1))
+         return false;
+
+   }
    return true;
 }
 
@@ -352,96 +379,13 @@ void test_merge_from_different_comparison()
    set1.merge(set2);
 }
 
-bool test_heterogeneous_lookups()
-{
-   typedef set<int, test::less_transparent> set_t;
-   typedef multiset<int, test::less_transparent> mset_t;
-
-   set_t set1;
-   mset_t mset1;
-
-   const set_t &cset1 = set1;
-   const mset_t &cmset1 = mset1;
-
-   set1.insert(1);
-   set1.insert(1);
-   set1.insert(2);
-   set1.insert(2);
-   set1.insert(3);
-
-   mset1.insert(1);
-   mset1.insert(1);
-   mset1.insert(2);
-   mset1.insert(2);
-   mset1.insert(3);
-
-   const test::non_copymovable_int find_me(2);
-
-   //find
-   if(*set1.find(find_me) != 2)
-      return false;
-   if(*cset1.find(find_me) != 2)
-      return false;
-   if(*mset1.find(find_me) != 2)
-      return false;
-   if(*cmset1.find(find_me) != 2)
-      return false;
-
-   //count
-   if(set1.count(find_me) != 1)
-      return false;
-   if(cset1.count(find_me) != 1)
-      return false;
-   if(mset1.count(find_me) != 2)
-      return false;
-   if(cmset1.count(find_me) != 2)
-      return false;
-
-   //contains
-   if(!set1.contains(find_me))
-      return false;
-   if(!cset1.contains(find_me))
-      return false;
-   if(!mset1.contains(find_me))
-      return false;
-   if(!cmset1.contains(find_me))
-      return false;
-
-   //lower_bound
-   if(*set1.lower_bound(find_me) != 2)
-      return false;
-   if(*cset1.lower_bound(find_me) != 2)
-      return false;
-   if(*mset1.lower_bound(find_me) != 2)
-      return false;
-   if(*cmset1.lower_bound(find_me) != 2)
-      return false;
-
-   //upper_bound
-   if(*set1.upper_bound(find_me) != 3)
-      return false;
-   if(*cset1.upper_bound(find_me) != 3)
-      return false;
-   if(*mset1.upper_bound(find_me) != 3)
-      return false;
-   if(*cmset1.upper_bound(find_me) != 3)
-      return false;
-
-   //equal_range
-   if(*set1.equal_range(find_me).first != 2)
-      return false;
-   if(*cset1.equal_range(find_me).second != 3)
-      return false;
-   if(*mset1.equal_range(find_me).first != 2)
-      return false;
-   if(*cmset1.equal_range(find_me).second != 3)
-      return false;
-
-   return true;
-}
+//Test the expected sizeof()
+BOOST_CONTAINER_STATIC_ASSERT_MSG(4*sizeof(void*) == sizeof(set<int>), "sizeof has an unexpected value");
+BOOST_CONTAINER_STATIC_ASSERT_MSG(4*sizeof(void*) == sizeof(multiset<int>), "sizeof has an unexpected value");
 
 int main ()
 {
+   using namespace boost::container::test;
    //Recursive container instantiation
    {
       set<recursive_set> set_;
@@ -478,7 +422,15 @@ int main ()
       return 1;
    }
 
-   if(!test_heterogeneous_lookups())
+   if (!test::test_heterogeneous_lookup
+         < set<int, less_transparent>
+         , multiset<int, less_transparent>
+         >())
+      return 1;
+
+   if (!test::test_heterogeneous_insert
+         < set<test::movable_int, less_transparent>
+         >())
       return 1;
 
    ////////////////////////////////////

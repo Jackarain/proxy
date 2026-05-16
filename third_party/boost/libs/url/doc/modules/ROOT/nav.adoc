@@ -1,9 +1,10 @@
 * xref:quicklook.adoc[]
-* xref:urls/index.adoc[]
+* URLs
 ** xref:urls/parsing.adoc[]
-** xref:urls/containers.adoc[]
+** xref:urls/components.adoc[]
 ** xref:urls/segments.adoc[]
 ** xref:urls/params.adoc[]
+* Operations
 ** xref:urls/normalization.adoc[]
 ** xref:urls/stringtoken.adoc[]
 ** xref:urls/percent-encoding.adoc[]
@@ -22,5 +23,6 @@
 ** xref:examples/file-router.adoc[]
 ** xref:examples/router.adoc[]
 ** xref:examples/sanitize.adoc[]
+* xref:design.adoc[]
 * xref:reference.adoc[Reference]
 * xref:HelpCard.adoc[]

@@ -18,17 +18,13 @@
 namespace boost {
 namespace urls {
 
-/** A view representing path segments in a URL
+/** Non-owning decoded path segment view
 
-    Objects of this type are used to interpret
-    the path as a bidirectional view of segment
-    strings.
-
-    The view does not retain ownership of the
-    elements and instead references the original
-    character buffer. The caller is responsible
-    for ensuring that the lifetime of the buffer
-    extends until it is no longer referenced.
+    Presents the path of a URL as a read-only
+    bidirectional range of percent-decoded
+    segments. The range references the original
+    buffer, so callers must keep that storage
+    alive for as long as the view is accessed.
 
     @par Example
     @code
@@ -39,9 +35,8 @@ namespace urls {
     assert( ps.buffer().data() == u.buffer().data() );
     @endcode
 
-    Percent escapes in strings returned when
-    dereferencing iterators are automatically
-    decoded.
+    Any percent-escapes are decoded on demand
+    when iterators are dereferenced.
 
     @par Iterator Invalidation
     Changes to the underlying character buffer
@@ -52,7 +47,7 @@ namespace urls {
         @ref segments_encoded_ref,
         @ref segments_ref.
 */
-class segments_view
+class BOOST_SYMBOL_VISIBLE segments_view
     : public segments_base
 {
     friend class url_view_base;
@@ -84,7 +79,7 @@ public:
         @par Exception Safety
         Throws nothing.
     */
-    segments_view() = default;
+    segments_view() noexcept;
 
     /** Constructor
 
@@ -161,7 +156,6 @@ public:
         @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.3"
             >3.3.  Path</a>
     */
-    BOOST_URL_DECL
     segments_view(
         core::string_view s);
 
@@ -227,7 +221,6 @@ public:
         @param first The beginning iterator.
         @param last The ending iterator.
     */
-    BOOST_URL_DECL
     segments_view(
         iterator first,
         iterator last) noexcept;
@@ -263,5 +256,21 @@ public:
 
 } // urls
 } // boost
+
+//------------------------------------------------
+//
+// std::ranges::enable_borrowed_range
+//
+//------------------------------------------------
+
+#ifdef BOOST_URL_HAS_CONCEPTS
+#include <ranges>
+namespace std::ranges {
+    template<>
+    inline constexpr bool
+        enable_borrowed_range<
+            boost::urls::segments_view> = true;
+} // std::ranges
+#endif
 
 #endif

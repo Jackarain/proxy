@@ -114,7 +114,7 @@ using system_error
 
     @warning This alias is no longer supported and
     should not be used in new code. Please use
-    `core::string_view` instead.
+    `system::generic_category` instead.
 
     This alias is included for backwards
     compatibility with earlier versions of the
@@ -134,7 +134,7 @@ using boost::system::generic_category;
 
     @warning This alias is no longer supported and
     should not be used in new code. Please use
-    `core::string_view` instead.
+    `system::system_category` instead.
 
     This alias is included for backwards
     compatibility with earlier versions of the
@@ -154,7 +154,7 @@ using boost::system::system_category;
 
     @warning This alias is no longer supported and
     should not be used in new code. Please use
-    `core::string_view` instead.
+    `system::errc` instead.
 
     This alias is included for backwards
     compatibility with earlier versions of the

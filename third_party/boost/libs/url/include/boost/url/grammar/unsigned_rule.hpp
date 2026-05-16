@@ -60,6 +60,7 @@ struct unsigned_rule
 
     using value_type = Unsigned;
 
+    BOOST_URL_CXX20_CONSTEXPR
     auto
     parse(
         char const*& it,

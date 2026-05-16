@@ -271,8 +271,8 @@ if test_true ${B2_HELP_OPT} ; then
     error_exit
 fi
 
-# If we have a CXX but no B2_TOOLSET specified by the user we assume they meant
-# "cxx" as the toolset.
+# If user gave a --cxx option but no B2_TOOLSET specified by the user we assume
+# they meant "cxx" as the toolset.
 if test "${B2_CXX_OPT}" != "" -a "${B2_TOOLSET}" = "" ; then
     B2_TOOLSET=cxx
 fi

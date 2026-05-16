@@ -1,6 +1,6 @@
 [/
     Copyright 2016 Mikhail Maximov.
-    Copyright Antony Polukhin, 2020-2025.
+    Copyright Antony Polukhin, 2020-2026.
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
@@ -12,7 +12,7 @@
     [id conversion]
     [version 1.7]
     [authors [Stroustrup, Bjarne], [Abrahams, Dave], [Rasin, Boris], [Polukhin, Antony]]
-    [copyright 2001 Beman Dawes, 2014-2025 Antony Polukhin]
+    [copyright 2001 Beman Dawes, 2014-2026 Antony Polukhin]
     [license
         Distributed under the Boost Software License, Version 1.0.
         (See accompanying file LICENSE_1_0.txt or copy at

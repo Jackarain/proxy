@@ -101,6 +101,8 @@ BOOST_AUTO_TEST_CASE(test_list) {
 }
 
 struct static_value : static_list<static_value>::static_link {
+    // coverity[uninit_in_ctor]
+    // coverity[uninit_use_in_call]
     explicit static_value(static_list<static_value>& reg) {
         reg.push_back(*this);
     }

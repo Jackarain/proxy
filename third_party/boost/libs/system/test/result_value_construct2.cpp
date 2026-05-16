@@ -74,6 +74,15 @@ result<void> fw0()
     return {};
 }
 
+struct E2
+{
+};
+
+BOOST_NORETURN void throw_exception_from_error( E const &, boost::source_location const& )
+{
+    throw E2();
+}
+
 int main()
 {
     {

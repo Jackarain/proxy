@@ -21,7 +21,7 @@
 
 #include <boost/thread/lock_types.hpp>
 #include <boost/thread/shared_mutex.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 bool try_lock_until_called = false;
 

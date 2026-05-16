@@ -1,0 +1,49 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#examples_finance]
+= Financial Examples
+:idprefix: financial_examples_
+
+Below are a few additional examples as to how the Decimal library can be used in the context of financial applications.
+All of these examples can be found in the library `examples/` folder as well.
+
+== Parsing Pricing Data from File
+[#examples_money_parsing]
+.This https://github.com/boostorg/decimal/blob/develop/examples/numerical_parsing.cpp[example] demonstrates the numerical differences between parsing of monetary values between using `decimal32_t` and `float`
+====
+[source, c++]
+----
+include::example$numerical_parsing.cpp[]
+----
+
+.Expected Output
+....
+Number of data points: 252
+    Sum from MS Excel: 52151.99
+Sum using decimal32_t: 52151.99
+      Sum using float: 52151.96
+....
+====
+
+[#examples_boost_math]
+== Boost.Math to Calculate Bollinger Bands
+.This https://github.com/boostorg/decimal/blob/develop/examples/statistics.cpp[example] demonstrates how we can use the decimal library with existing Boost.Math facilities to perform statistical analysis
+====
+[source, c++]
+----
+include::example$statistics.cpp[]
+----
+
+.Expected Output
+....
+  Mean Closing Price: $207.20
+Median Closing Price: $214.26
+  Standard Deviation: $25.45
+Upper Bollinger Band: $258.11
+Lower Bollinger Band: $156.30
+....
+====

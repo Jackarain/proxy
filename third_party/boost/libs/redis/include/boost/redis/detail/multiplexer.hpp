@@ -182,6 +182,12 @@ public:
    }
 
    [[nodiscard]]
+   auto get_read_buffer() noexcept -> read_buffer&
+   {
+      return read_buffer_;
+   }
+
+   [[nodiscard]]
    auto get_prepared_read_buffer() noexcept -> read_buffer::span_type;
 
    [[nodiscard]]

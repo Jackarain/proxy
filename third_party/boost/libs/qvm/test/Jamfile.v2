@@ -5,7 +5,9 @@
 
 project
     : requirements
-		<include>../include
+        <library>/boost/core//boost_core
+        <library>/boost/exception//boost_exception
+        <library>/boost/test//included
     ;
 
 variant debug_qvm_hpp : debug : <define>BOOST_QVM_TEST_SINGLE_HEADER="\\\"qvm.hpp\\\"" ;

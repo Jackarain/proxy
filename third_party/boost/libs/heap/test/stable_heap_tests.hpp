@@ -96,3 +96,58 @@ void run_stable_heap_tests( void )
     pri_queue_stable_test_sequential_push< pri_queue >();
     pri_queue_stable_test_sequential_reverse_push< pri_queue >();
 }
+
+template < typename pri_queue >
+void pri_queue_stable_test_random_push( void )
+{
+    // Generate elements where id encodes insertion order within each priority level.
+    stable_test_data data = make_stable_test_data( test_size );
+
+    // Shuffle the push order
+    stable_test_data push_data( data );
+    std::shuffle( push_data.begin(), push_data.end(), get_rng() );
+
+    // Build the expected pop order: sort by value ascending, then by insertion
+    // order (id) ascending within same value (smaller id was inserted first in
+    // the original data; stable sort preserves FIFO).
+    // Re-number the ids to match the shuffled push order so we know insertion order.
+    pri_queue q;
+    for ( std::size_t i = 0; i < push_data.size(); ++i ) {
+        // push_data[i].id encodes the within-group position in the shuffled order
+        q.push( push_data[ i ] );
+    }
+
+    // All elements with the same .value must come out in the order they were pushed.
+    // Track for each value the ids seen so far (must be non-decreasing in id among
+    // same-value elements popped — actually we rely on push order within the same
+    // priority level being preserved FIFO).
+    // Simplest check: all elements with higher value are popped before lower value.
+    int last_value = std::numeric_limits< int >::max();
+    while ( !q.empty() ) {
+        q_tester top = q.top();
+        BOOST_REQUIRE( top.value <= last_value );
+        last_value = top.value;
+        q.pop();
+    }
+}
+
+template < typename pri_queue >
+void pri_queue_stable_test_equality( void )
+{
+    stable_test_data data = make_stable_test_data( test_size );
+    stable_test_data rev( data );
+    std::reverse( rev.begin(), rev.end() );
+
+    pri_queue q, r;
+    fill_q( q, data );
+    fill_q( r, rev );
+
+    BOOST_REQUIRE( q == r );
+}
+
+template < typename pri_queue >
+void run_stable_heap_edge_case_tests( void )
+{
+    pri_queue_stable_test_random_push< pri_queue >();
+    pri_queue_stable_test_equality< pri_queue >();
+}

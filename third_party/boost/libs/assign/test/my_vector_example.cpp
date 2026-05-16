@@ -19,7 +19,6 @@
 #include <boost/assign/list_inserter.hpp>
 #include <boost/test/test_tools.hpp>
 #include <boost/function.hpp>
-#include <boost/bind.hpp>
 #include <vector>
 #include <stdexcept>
 
@@ -36,7 +35,7 @@ public:
     range_inserter( C& c )
     : begin( c.begin() ), end( c.end() )
     { }
-    
+
     template< class T >
     void operator()( T r )
     {
@@ -67,18 +66,18 @@ class my_vector
 public:
     my_vector() : data_( 10, 0 )
     { }
-    
+
     ba::list_inserter< range_inserter< vector_t >, T >
     operator=( T r )
     {
         return ba::make_list_inserter( make_range_inserter( data_ ) )( r );
     }
-    
+
     size_type size() const
     {
         return data_.size();
     }
-    
+
     const T& operator[]( size_type index )
     {
         return data_.at( index );
@@ -91,7 +90,7 @@ void check_list_inserter()
 {
     using namespace std;
     using namespace boost::assign;
-    
+
     my_vector<int> vec;
     vec = 1,2,3,4,5,6,7,8,9,10;
     BOOST_CHECK_EQUAL( vec.size(), 10u );

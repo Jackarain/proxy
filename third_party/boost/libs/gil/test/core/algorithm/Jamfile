@@ -10,6 +10,6 @@
 import testing ;
 
 run for_each_pixel.cpp ;
-run std_fill.cpp ;
+run std_fill.cpp : : : <library>/boost/array//boost_array ;
 run std_uninitialized_fill.cpp ;
 run extend_boundary.cpp ;

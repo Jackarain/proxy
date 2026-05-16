@@ -112,12 +112,12 @@ bool test_allocation_shrink()
       ; ++i){
       std::size_t try_received_size = 0;
       void* try_result = dlmalloc_allocation_command
-               ( BOOST_CONTAINER_TRY_SHRINK_IN_PLACE, 1, i*2
+               ( BOOST_CONTAINER_TRY_SHRINK_IN_PLACE, 1, 1, i*2
                , i, &try_received_size, (char*)buffers[i]).first;
 
       std::size_t received_size = 0;
       void* result = dlmalloc_allocation_command
-         ( BOOST_CONTAINER_SHRINK_IN_PLACE, 1, i*2
+         ( BOOST_CONTAINER_SHRINK_IN_PLACE, 1, 1, i*2
          , i, &received_size, (char*)buffers[i]).first;
 
       if(result != try_result)
@@ -174,7 +174,7 @@ bool test_allocation_expand()
       std::size_t preferred_size = i*2;
       preferred_size = min_size > preferred_size ? min_size : preferred_size;
       while(dlmalloc_allocation_command
-         ( BOOST_CONTAINER_EXPAND_FWD, 1, min_size
+         ( BOOST_CONTAINER_EXPAND_FWD, 1, 1, min_size
          , preferred_size, &received_size, (char*)buffers[i]).first){
          //Check received size is bigger than minimum
          if(received_size < min_size){
@@ -211,10 +211,10 @@ bool test_allocation_shrink_and_expand()
    for(std::size_t i = 0; i != NumIt; ++i){
       std::size_t received_size = 0;
       void *ptr = dlmalloc_allocation_command
-         (BOOST_CONTAINER_ALLOCATE_NEW, 1u, i, i*2u, &received_size, 0).first;
+         (BOOST_CONTAINER_ALLOCATE_NEW, 1u, 1u, i, i*2u, &received_size, 0).first;
       if(!ptr){
          ptr = dlmalloc_allocation_command
-            ( BOOST_CONTAINER_ALLOCATE_NEW, 1u, 1u, i*2, &received_size, 0).first;
+            ( BOOST_CONTAINER_ALLOCATE_NEW, 1u, 1u, 1u, i*2, &received_size, 0).first;
          if(!ptr)
             break;
       }
@@ -230,7 +230,7 @@ bool test_allocation_shrink_and_expand()
       bool size_reduced_flag;
       if(true == (size_reduced_flag = !!
          dlmalloc_allocation_command
-         ( BOOST_CONTAINER_SHRINK_IN_PLACE, 1, received_sizes[i]
+         ( BOOST_CONTAINER_SHRINK_IN_PLACE, 1, 1, received_sizes[i]
          , i, &received_size, (char*)buffers[i]).first)){
          if(received_size > std::size_t(received_sizes[i])){
             return false;
@@ -250,7 +250,7 @@ bool test_allocation_shrink_and_expand()
       std::size_t received_size = 0;
       std::size_t request_size =  received_sizes[i];
       if(dlmalloc_allocation_command
-         ( BOOST_CONTAINER_EXPAND_FWD, 1, request_size
+         ( BOOST_CONTAINER_EXPAND_FWD, 1, 1, request_size
          , request_size, &received_size, (char*)buffers[i]).first){
          if(received_size != request_size){
             return false;
@@ -314,7 +314,7 @@ bool test_allocation_deallocation_expand()
          preferred_size = min_size > preferred_size ? min_size : preferred_size;
 
          while(dlmalloc_allocation_command
-            ( BOOST_CONTAINER_EXPAND_FWD, 1, min_size
+            ( BOOST_CONTAINER_EXPAND_FWD, 1, 1, min_size
             , preferred_size, &received_size, (char*)buffers[i]).first){
             //Check received size is bigger than minimum
             if(received_size < min_size){
@@ -383,7 +383,7 @@ bool test_allocation_with_reuse()
          std::size_t min_size = (received_size/sizeof_object + 1u)*sizeof_object;
          std::size_t prf_size = (received_size/sizeof_object + (i+1u)*2u)*sizeof_object;
          dlmalloc_command_ret_t ret = dlmalloc_allocation_command
-            ( BOOST_CONTAINER_EXPAND_BWD, sizeof_object, min_size
+            ( BOOST_CONTAINER_EXPAND_BWD, sizeof_object, 1u, min_size
             , prf_size, &received_size, (char*)ptr);
          //If we have memory, this must be a buffer reuse
          if(!ret.first)

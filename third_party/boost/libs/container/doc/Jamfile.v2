@@ -35,6 +35,8 @@ doxygen autodoc
                                    \"BOOST_NOEXCEPT_OR_NOTHROW=noexcept\" \\
                                    \"BOOST_NOEXCEPT_IF(T)=noexcept(T)\" \\
                                    \"BOOST_NOEXCEPT=noexcept\" \\
+                                   \"BOOST_CONSTEXPR=constexpr\" \\
+                                   \"BOOST_CXX14_CONSTEXPR=constexpr\" \\
                                    \"BOOST_RV_REF(T)=T&&\" \\
                                    \"BOOST_RV_REF_BEG=\" \\
                                    \"BOOST_RV_REF_END=&&\" \\
@@ -42,16 +44,18 @@ doxygen autodoc
                                    \"BOOST_RV_REF_END_IF_CXX11=&&\" \\
                                    \"BOOST_COPY_ASSIGN_REF(T)=const T &\" \\
                                    \"BOOST_FWD_REF(a)=a &&\" \\
-                                   \"BOOST_CONTAINER_ATTRIBUTE_NODISCARD=[[nodiscard]] \" \\
+                                   \"BOOST_CONTAINER_NODISCARD=[[nodiscard]] \" \\
                                    \"BOOST_NORETURN=[[noreturn]] \" \\
                                    \"BOOST_INTRUSIVE_OPTION_CONSTANT(OPTION_NAME, TYPE, VALUE, CONSTANT_NAME)   = template<TYPE VALUE> struct OPTION_NAME{};\" \\
                                    \"BOOST_INTRUSIVE_OPTION_TYPE(OPTION_NAME, TYPE, TYPEDEF_EXPR, TYPEDEF_NAME) = template<class TYPE> struct OPTION_NAME{};\" \\
                                    \"BOOST_CONTAINER_DOC1ST(T1, T2)=T1\" \\
-                                   \"BOOST_CONTAINER_DOCIGN(T) \"\\
+                                   \"BOOST_CONTAINER_DOCIGN(T)=\"\\
                                    \"BOOST_CONTAINER_DOCONLY(T)=T\"\\
                                    \"BOOST_CONTAINER_SCOPEDALLOC_DUMMYTRUE=\"\\
                                    \"BOOST_CONTAINER_SCOPEDALLOC_ALLINNER=InnerAllocs...\"\\
+                                   \"BOOST_CONTAINER_SCOPEDALLOC_ALLINNERCLASS=typename... InnerAllocs\"\\
                                    \"BOOST_CONTAINER_DECL=\"\\
+                                   \"BOOST_CONTAINER_CONSTANT_VAR=static constexpr \"\\
                                    \"BOOST_CONTAINER_FORCEINLINE=inline\" \\
                                    "
         <xsl:param>"boost.doxygen.reftitle=Boost.Container Header Reference"

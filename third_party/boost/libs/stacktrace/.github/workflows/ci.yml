@@ -27,6 +27,7 @@ jobs:
           - toolset: gcc-9
             cxxstd: "03,11,14,17,2a"
             os: ubuntu-22.04
+            install: g++-9
           - toolset: clang-15
             cxxstd: "03,11,14,17,2a"
             os: ubuntu-22.04
@@ -40,7 +41,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -126,7 +127,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -176,7 +177,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -220,7 +221,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -265,10 +266,21 @@ jobs:
       - name: Use the installed library
         run: |
           cd ../boost-root/libs/$LIBRARY/test/cmake_install_test && mkdir __build__ && cd __build__
-          cmake -DCMAKE_INSTALL_PREFIX=~/.local ..
-          cmake --build .
+
           export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
-          ctest --output-on-failure --no-tests=error
+
+          set -e
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+              BACKENDS_ARRAY=(stacktrace stacktrace_noop stacktrace_basic)
+          else
+              BACKENDS_ARRAY=(stacktrace stacktrace_noop stacktrace_basic stacktrace_backtrace)
+          fi
+          for BACKEND in ${BACKENDS_ARRAY[@]}; do
+              rm -rf *
+              cmake -DCMAKE_INSTALL_PREFIX=~/.local -DBOOST_STACKTRACE_IMPL_BACKEND=${BACKEND} ..
+              cmake --build .
+              ctest --output-on-failure --no-tests=error -V
+          done
 
   posix-cmake-test:
     strategy:
@@ -280,7 +292,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -332,7 +344,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -380,7 +392,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -425,10 +437,20 @@ jobs:
         shell: cmd
         run: |
           cd ../boost-root/libs/%LIBRARY%/test/cmake_install_test && mkdir __build__ && cd __build__
-          cmake -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix ..
+          cmake -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix -DBOOST_STACKTRACE_IMPL_BACKEND=stacktrace ..
           cmake --build . --config Debug
           PATH C:\cmake-prefix\bin;%PATH%
-          ctest --output-on-failure --no-tests=error -C Debug
+          ctest --output-on-failure --no-tests=error -C Debug -V
+
+          cmake -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix -DBOOST_STACKTRACE_IMPL_BACKEND=stacktrace_windbg ..
+          cmake --build . --config Debug
+          PATH C:\cmake-prefix\bin;%PATH%
+          ctest --output-on-failure --no-tests=error -C Debug -V
+
+          cmake -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix -DBOOST_STACKTRACE_IMPL_BACKEND=stacktrace_windbg_cached  ..
+          cmake --build . --config Debug
+          PATH C:\cmake-prefix\bin;%PATH%
+          ctest --output-on-failure --no-tests=error -C Debug -V
 
       - name: Use the installed library (RelWithDebInfo)
         shell: cmd
@@ -448,7 +470,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd

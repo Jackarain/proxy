@@ -313,8 +313,8 @@ int guarded_main(int argc, char * argv[])
 				   "after which they are stopped.");
 
 	cli |= lyra::opt(
-		[](const std::string & x) {
-			globs.max_buf = std::stoi(x) * 1024; /* convert to kb */
+		[](int x) {
+			globs.max_buf = x * 1024; /* convert to kb */
 		},
 		"x")
 			   .name("-m")

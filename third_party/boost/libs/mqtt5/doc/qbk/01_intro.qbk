@@ -161,6 +161,7 @@ __Self__ has been tested with the following compilers:
 
 * clang 12.0 - 18.0 (Linux)
 * GCC 9 - 14 (Linux)
+* Apple clang 17.0.0 (macOS 15, arm64)
 * MSVC 14.37 - Visual Studio 2022 (Windows)
 
 [heading Using the Library]

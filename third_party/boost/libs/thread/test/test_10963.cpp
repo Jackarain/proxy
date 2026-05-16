@@ -15,6 +15,7 @@
 #include <cassert>
 #include <boost/thread/executors/basic_thread_pool.hpp>
 
+#include <boost/type_traits/is_same.hpp>
 
 struct TestCallback
 {
@@ -42,18 +43,18 @@ int main()
     boost::promise<void> test_promise;
     boost::future<void> test_future(test_promise.get_future());
     auto f1 = test_future.then(TestCallback());
-    BOOST_STATIC_ASSERT(std::is_same<decltype(f1), boost::future<boost::future<void> > >::value);
+    BOOST_STATIC_ASSERT(boost::is_same<decltype(f1), boost::future<boost::future<void> > >::value);
     auto f2 = f1.then(TestCallback());
-    BOOST_STATIC_ASSERT(std::is_same<decltype(f2), boost::future<boost::future<void> > >::value);
+    BOOST_STATIC_ASSERT(boost::is_same<decltype(f2), boost::future<boost::future<void> > >::value);
   }
   {
     boost::basic_thread_pool executor;
     boost::promise<void> test_promise;
     boost::future<void> test_future(test_promise.get_future());
     auto f1 = test_future.then(executor, TestCallback());
-    BOOST_STATIC_ASSERT(std::is_same<decltype(f1), boost::future<boost::future<void> > >::value);
+    BOOST_STATIC_ASSERT(boost::is_same<decltype(f1), boost::future<boost::future<void> > >::value);
     auto f2 = f1.then(executor, TestCallback());
-    BOOST_STATIC_ASSERT(std::is_same<decltype(f2), boost::future<boost::future<void> > >::value);
+    BOOST_STATIC_ASSERT(boost::is_same<decltype(f2), boost::future<boost::future<void> > >::value);
 
   }
 #endif

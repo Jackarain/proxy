@@ -12,10 +12,7 @@ import config : requires ;
 
 path-constant TOP : . ;
 
-# Adding -Wundef is blocked on (at least)
-# https://github.com/boostorg/type_traits/issues/165
-
-local gcc-flags = -Wsign-promo -Wconversion -Wsign-conversion -Wfloat-equal -Wshadow -Wno-variadic-macros ;
+local gcc-flags = -Wsign-promo -Wconversion -Wsign-conversion -Wfloat-equal -Wshadow -Wundef -Wno-variadic-macros ;
 local clang-flags = $(gcc-flags) -Wno-c99-extensions ;
 local msvc-flags = /wd4494 ;
 
@@ -168,6 +165,9 @@ compile-fail unordered/insert_node_type_fail.cpp : <define>UNORDERED_TEST_MULTIS
 compile unordered/explicit_instantiation_tests.cpp :                                   : fca_explicit_instantiation_tests ;
 compile unordered/explicit_instantiation_tests.cpp : <define>BOOST_UNORDERED_FOA_TESTS : foa_explicit_instantiation_tests ;
 compile cfoa/explicit_instantiation_tests.cpp      :                                   : cfoa_explicit_instantiation_tests ;
+
+compile unordered/conversion_operator_tests.cpp : <define>BOOST_UNORDERED_FOA_TESTS : foa_conversion_operator_tests ;
+compile cfoa/conversion_operator_tests.cpp      :                                   : cfoa_conversion_operator_tests ;
 
 local FCA_EXCEPTION_TESTS =
   constructor_exception_tests

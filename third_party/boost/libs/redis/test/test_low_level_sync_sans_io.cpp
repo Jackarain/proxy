@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -22,14 +22,18 @@
 using boost::redis::request;
 using boost::redis::adapter::adapt2;
 using boost::redis::adapter::result;
-using boost::redis::generic_response;
+using boost::redis::resp3::tree;
+using boost::redis::generic_flat_response;
 using boost::redis::ignore_t;
 using boost::redis::resp3::detail::deserialize;
 using boost::redis::resp3::node;
+using boost::redis::resp3::node_view;
 using boost::redis::resp3::to_string;
 using boost::redis::response;
 using boost::redis::any_adapter;
 using boost::system::error_code;
+
+namespace resp3 = boost::redis::resp3;
 
 #define RESP3_SET_PART1 "~6\r\n+orange\r"
 #define RESP3_SET_PART2 "\n+apple\r\n+one"
@@ -42,7 +46,9 @@ BOOST_AUTO_TEST_CASE(low_level_sync_sans_io)
    try {
       result<std::set<std::string>> resp;
 
-      deserialize(resp3_set, adapt2(resp));
+      error_code ec;
+      deserialize(resp3_set, adapt2(resp), ec);
+      BOOST_CHECK_EQUAL(ec, error_code{});
 
       for (auto const& e : resp.value())
          std::cout << e << std::endl;
@@ -65,7 +71,9 @@ BOOST_AUTO_TEST_CASE(issue_210_empty_set)
 
       char const* wire = "*4\r\n:1\r\n~0\r\n$25\r\nthis_should_not_be_in_set\r\n:2\r\n";
 
-      deserialize(wire, adapt2(resp));
+      error_code ec;
+      deserialize(wire, adapt2(resp), ec);
+      BOOST_CHECK_EQUAL(ec, error_code{});
 
       BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
       BOOST_CHECK(std::get<1>(resp.value()).value().empty());
@@ -91,7 +99,9 @@ BOOST_AUTO_TEST_CASE(issue_210_non_empty_set_size_one)
       char const*
          wire = "*4\r\n:1\r\n~1\r\n$3\r\nfoo\r\n$25\r\nthis_should_not_be_in_set\r\n:2\r\n";
 
-      deserialize(wire, adapt2(resp));
+      error_code ec;
+      deserialize(wire, adapt2(resp), ec);
+      BOOST_CHECK_EQUAL(ec, error_code{});
 
       BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
       BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value().size(), 1u);
@@ -118,7 +128,9 @@ BOOST_AUTO_TEST_CASE(issue_210_non_empty_set_size_two)
       char const* wire =
          "*4\r\n:1\r\n~2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$25\r\nthis_should_not_be_in_set\r\n:2\r\n";
 
-      deserialize(wire, adapt2(resp));
+      error_code ec;
+      deserialize(wire, adapt2(resp), ec);
+      BOOST_CHECK_EQUAL(ec, error_code{});
 
       BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
       BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value().at(0), std::string{"foo"});
@@ -140,7 +152,9 @@ BOOST_AUTO_TEST_CASE(issue_210_no_nested)
       char const*
          wire = "*4\r\n:1\r\n$3\r\nfoo\r\n$3\r\nbar\r\n$25\r\nthis_should_not_be_in_set\r\n";
 
-      deserialize(wire, adapt2(resp));
+      error_code ec;
+      deserialize(wire, adapt2(resp), ec);
+      BOOST_CHECK_EQUAL(ec, error_code{});
 
       BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
       BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value(), std::string{"foo"});
@@ -159,7 +173,10 @@ BOOST_AUTO_TEST_CASE(issue_233_array_with_null)
       result<std::vector<std::optional<std::string>>> resp;
 
       char const* wire = "*3\r\n+one\r\n_\r\n+two\r\n";
-      deserialize(wire, adapt2(resp));
+
+      error_code ec;
+      deserialize(wire, adapt2(resp), ec);
+      BOOST_CHECK_EQUAL(ec, error_code{});
 
       BOOST_CHECK_EQUAL(resp.value().at(0).value(), "one");
       BOOST_TEST(!resp.value().at(1).has_value());
@@ -177,7 +194,10 @@ BOOST_AUTO_TEST_CASE(issue_233_optional_array_with_null)
       result<std::optional<std::vector<std::optional<std::string>>>> resp;
 
       char const* wire = "*3\r\n+one\r\n_\r\n+two\r\n";
-      deserialize(wire, adapt2(resp));
+
+      error_code ec;
+      deserialize(wire, adapt2(resp), ec);
+      BOOST_CHECK_EQUAL(ec, error_code{});
 
       BOOST_CHECK_EQUAL(resp.value().value().at(0).value(), "one");
       BOOST_TEST(!resp.value().value().at(1).has_value());
@@ -187,87 +207,6 @@ BOOST_AUTO_TEST_CASE(issue_233_optional_array_with_null)
       std::cerr << e.what() << std::endl;
       exit(EXIT_FAILURE);
    }
-}
-
-BOOST_AUTO_TEST_CASE(read_buffer_prepare_error)
-{
-   using boost::redis::detail::read_buffer;
-
-   read_buffer buf;
-
-   // Usual case, max size is bigger then requested size.
-   buf.set_config({10, 10});
-   auto ec = buf.prepare();
-   BOOST_TEST(!ec);
-   buf.commit(10);
-
-   // Corner case, max size is equal to the requested size.
-   buf.set_config({10, 20});
-   ec = buf.prepare();
-   BOOST_TEST(!ec);
-   buf.commit(10);
-   buf.consume(20);
-
-   auto const tmp = buf;
-
-   // Error case, max size is smaller to the requested size.
-   buf.set_config({10, 9});
-   ec = buf.prepare();
-   BOOST_TEST(ec == error_code{boost::redis::error::exceeds_maximum_read_buffer_size});
-
-   // Check that an error call has no side effects.
-   auto const res = buf == tmp;
-   BOOST_TEST(res);
-}
-
-BOOST_AUTO_TEST_CASE(read_buffer_prepare_consume_only_committed_data)
-{
-   using boost::redis::detail::read_buffer;
-
-   read_buffer buf;
-
-   buf.set_config({10, 10});
-   auto ec = buf.prepare();
-   BOOST_TEST(!ec);
-
-   auto res = buf.consume(5);
-
-   // No data has been committed yet so nothing can be consummed.
-   BOOST_CHECK_EQUAL(res.consumed, 0u);
-
-   // If nothing was consumed, nothing got rotated.
-   BOOST_CHECK_EQUAL(res.rotated, 0u);
-
-   buf.commit(10);
-   res = buf.consume(5);
-
-   // All five bytes should have been consumed.
-   BOOST_CHECK_EQUAL(res.consumed, 5u);
-
-   // We added a total of 10 bytes and consumed 5, that means, 5 were
-   // rotated.
-   BOOST_CHECK_EQUAL(res.rotated, 5u);
-
-   res = buf.consume(7);
-
-   // Only the remaining five bytes can be consumed
-   BOOST_CHECK_EQUAL(res.consumed, 5u);
-
-   // No bytes to rotated.
-   BOOST_CHECK_EQUAL(res.rotated, 0u);
-}
-
-BOOST_AUTO_TEST_CASE(read_buffer_check_buffer_size)
-{
-   using boost::redis::detail::read_buffer;
-
-   read_buffer buf;
-
-   buf.set_config({10, 10});
-   auto ec = buf.prepare();
-   BOOST_TEST(!ec);
-
-   BOOST_CHECK_EQUAL(buf.get_prepared().size(), 10u);
 }
 
 BOOST_AUTO_TEST_CASE(check_counter_adapter)

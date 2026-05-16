@@ -32,7 +32,9 @@
 #include <boost/container/detail/multiallocation_chain.hpp>
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/interprocess/detail/utilities.hpp>
-#include <boost/interprocess/detail/workaround.hpp>
+
+#include <boost/container/uses_allocator_construction.hpp>
+
 #include <boost/move/adl_move_swap.hpp>
 #include <cstddef>
 
@@ -59,19 +61,22 @@ class private_node_allocator_base
    , SegmentManager
    >
 {
+   BOOST_COPYABLE_AND_MOVABLE_ALT(private_node_allocator_base)
    public:
    //Segment manager
    typedef SegmentManager                                segment_manager;
    typedef typename SegmentManager::void_pointer         void_pointer;
+   typedef uses_segment_manager<SegmentManager>          uses_segment_manager_t;
 
    #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    private:
    typedef private_node_allocator_base
       < Version, T, SegmentManager, NodesPerBlock>       self_t;
    typedef ipcdetail::private_node_pool
-      <SegmentManager
-      , sizeof_value<T>::value
-      , NodesPerBlock
+         < SegmentManager
+         , sizeof_value<T>::value
+         , NodesPerBlock
+         , alignof_value<T>::value
       > node_pool_t;
 
    BOOST_INTERPROCESS_STATIC_ASSERT((Version <=2));
@@ -111,9 +116,10 @@ class private_node_allocator_base
    struct node_pool
    {
       typedef ipcdetail::private_node_pool
-      <SegmentManager
-      , sizeof_value<T>::value
-      , NodesPerBlock
+         < SegmentManager
+         , sizeof_value<T>::value
+         , NodesPerBlock
+         , alignof_value<T>::value
       > type;
 
       static type *get(void *p)
@@ -141,6 +147,13 @@ class private_node_allocator_base
       : m_node_pool(other.get_segment_manager())
    {}
 
+   //!Move constructor from other private_node_allocator_base. Never throws
+   private_node_allocator_base(BOOST_RV_REF(private_node_allocator_base) other)
+      : m_node_pool(other.get_segment_manager())
+   {
+      m_node_pool.swap(BOOST_MOVE_TO_LV(other).m_node_pool);
+   }
+
    //!Copy constructor from related private_node_allocator_base. Never throws.
    template<class T2>
    private_node_allocator_base
@@ -156,6 +169,39 @@ class private_node_allocator_base
    //!Returns the segment manager. Never throws
    segment_manager* get_segment_manager()const
    {  return m_node_pool.get_segment_manager(); }
+
+   #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+   //! <b>Requires</b>: Uses-allocator construction of T with allocator argument
+   //!   `uses_segment_manager_t` and additional constructor arguments `std::forward<Args>(args)...`
+   //!   is well-formed. [Note: uses-allocator construction is always well formed for
+   //!   types that do not use allocators. - end note]
+   //!
+   //! <b>Effects</b>: Construct a T object at p by uses-allocator construction with allocator
+   //!   argument constructible from `segment_manager*`
+   //!  and constructor arguments `std::forward<Args>(args)...`.
+   //!
+   //! <b>Throws</b>: Nothing unless the constructor for T throws.
+   template < typename U, class ...Args>
+   inline void construct(U* p, Args&& ...args)
+   {
+      boost::container::uninitialized_construct_using_allocator
+         (p, uses_segment_manager_t(this->get_segment_manager()), ::boost::forward<Args>(args)...);
+   }
+
+   #else // #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+   #define BOOST_CONTAINER_ALLOCATORS_PRIVATE_NODE_ALLOCATOR_CONSTRUCT_CODE(N) \
+   template < typename U BOOST_MOVE_I##N BOOST_MOVE_CLASSQ##N >\
+   void construct(U* p BOOST_MOVE_I##N BOOST_MOVE_UREFQ##N)\
+   {\
+      boost::container::uninitialized_construct_using_allocator\
+         (p, uses_segment_manager_t(this->get_segment_manager()) BOOST_MOVE_I##N BOOST_MOVE_FWDQ##N);\
+   }\
+   //
+   BOOST_MOVE_ITERATE_0TO9(BOOST_CONTAINER_ALLOCATORS_PRIVATE_NODE_ALLOCATOR_CONSTRUCT_CODE)
+   #undef BOOST_CONTAINER_ALLOCATORS_PRIVATE_NODE_ALLOCATOR_CONSTRUCT_CODE
+
+   #endif   //#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 
    //!Returns the internal node pool. Never throws
    node_pool_t* get_node_pool() const
@@ -196,9 +242,11 @@ class private_node_allocator_v1
          , NodesPerBlock
          >
 {
+   BOOST_COPYABLE_AND_MOVABLE_ALT(private_node_allocator_v1)
    public:
    typedef ipcdetail::private_node_allocator_base
          < 1, T, SegmentManager, NodesPerBlock> base_t;
+   typedef uses_segment_manager<SegmentManager> uses_segment_manager_t;
 
    template<class T2>
    struct rebind
@@ -210,10 +258,22 @@ class private_node_allocator_v1
       : base_t(segment_mngr)
    {}
 
+   private_node_allocator_v1(uses_segment_manager_t usm)
+      : base_t(usm.get_segment_manager())
+   {}
+
    template<class T2>
    private_node_allocator_v1
       (const private_node_allocator_v1<T2, SegmentManager, NodesPerBlock> &other)
       : base_t(other)
+   {}
+
+   private_node_allocator_v1(const private_node_allocator_v1 &other)
+      : base_t(other)
+   {}
+
+   private_node_allocator_v1(BOOST_RV_REF(private_node_allocator_v1) other)
+      : base_t(BOOST_MOVE_BASE(base_t, other))
    {}
 };
 
@@ -245,8 +305,12 @@ class private_node_allocator
    #ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
    typedef ipcdetail::private_node_allocator_base
          < 2, T, SegmentManager, NodesPerBlock> base_t;
+
+   BOOST_COPYABLE_AND_MOVABLE_ALT(private_node_allocator)
    public:
-   typedef boost::interprocess::version_type<private_node_allocator, 2>   version;
+   typedef boost::interprocess::version_type<private_node_allocator, 2> version;
+   typedef uses_segment_manager<SegmentManager>                         uses_segment_manager_t;
+
 
    template<class T2>
    struct rebind
@@ -259,10 +323,22 @@ class private_node_allocator
       : base_t(segment_mngr)
    {}
 
+   private_node_allocator(uses_segment_manager_t usm)
+      : base_t(usm.get_segment_manager())
+   {}
+
    template<class T2>
    private_node_allocator
       (const private_node_allocator<T2, SegmentManager, NodesPerBlock> &other)
       : base_t(other)
+   {}
+
+   private_node_allocator(const private_node_allocator &other)
+      : base_t(other)
+   {}
+
+   private_node_allocator(BOOST_RV_REF(private_node_allocator) other)
+      : base_t(BOOST_MOVE_BASE(base_t, other))
    {}
 
    #else
@@ -309,6 +385,10 @@ class private_node_allocator
    //!count of the associated node pool. Never throws
    private_node_allocator(const private_node_allocator &other);
 
+   //!Move constructor from other. Increments the reference
+   //!count of the associated node pool and captures the cache. Never throws
+   private_node_allocator(private_node_allocator &&other);
+
    //!Copy constructor from related private_node_allocator. If not present, constructs
    //!a node pool. Increments the reference count of the associated node pool.
    //!Can throw boost::interprocess::bad_alloc
@@ -350,27 +430,32 @@ class private_node_allocator
 
    //!Returns address of mutable object.
    //!Never throws
+   //!This function is deprecated and will be removed in the future
    pointer address(reference value) const;
 
    //!Returns address of non mutable object.
    //!Never throws
+   //!This function is deprecated and will be removed in the future
    const_pointer address(const_reference value) const;
 
-   //!Copy construct an object.
-   //!Throws if T's copy constructor throws
-   void construct(const pointer &ptr, const_reference v);
-
-   //!Destroys object. Throws if object's
-   //!destructor throws
-   void destroy(const pointer &ptr);
+   //! <b>Requires</b>: Uses-allocator construction of T with allocator argument
+   //!   `uses_segment_manager_t` and additional constructor arguments `std::forward<Args>(args)...`
+   //!   is well-formed. [Note: uses-allocator construction is always well formed for
+   //!   types that do not use allocators. - end note]
+   //!
+   //! <b>Effects</b>: Construct a T object at p by uses-allocator construction with allocator
+   //!   argument constructible from `segment_manager*`
+   //!  and constructor arguments `std::forward<Args>(args)...`.
+   //!
+   //! <b>Throws</b>: Nothing unless the constructor for T throws.
+   template <typename U, class ...Args>
+   void construct(U* p, Args&& ...args);
 
    //!Returns maximum the number of objects the previously allocated memory
    //!pointed by p can hold. This size only works for memory allocated with
    //!allocate, allocation_command and allocate_many.
+   //!This function is deprecated and will be removed in the future
    size_type size(const pointer &p) const;
-
-   pointer allocation_command(boost::interprocess::allocation_type command,
-                         size_type limit_size, size_type &prefer_in_recvd_out_size, pointer &reuse);
 
    //!Allocates many elements of size elem_size in a contiguous block
    //!of memory. The minimum number to be allocated is min_elements,
@@ -378,11 +463,13 @@ class private_node_allocator
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
+   //!This function is deprecated and will be removed in the future
    void allocate_many(size_type elem_size, size_type num_elements, multiallocation_chain &chain);
 
    //!Allocates n_elements elements, each one of size elem_sizes[i]in a
    //!contiguous block
    //!of memory. The elements must be deallocated
+   //!This function is deprecated and will be removed in the future
    void allocate_many(const size_type *elem_sizes, size_type n_elements, multiallocation_chain &chain);
 
    //!Allocates many elements of size elem_size in a contiguous block
@@ -391,6 +478,7 @@ class private_node_allocator
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
+   //!This function is deprecated and will be removed in the future
    void deallocate_many(multiallocation_chain &chain);
 
    //!Allocates just one object. Memory allocated with this function

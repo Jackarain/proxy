@@ -9,7 +9,7 @@
 
 #include <boost/thread/thread_only.hpp>
 #include <boost/thread/shared_mutex.hpp>
-#include <boost/detail/no_exceptions_support.hpp>
+#include <boost/core/no_exceptions_support.hpp>
 //#include <boost/thread/detail/log.hpp>
 
 boost::shared_mutex mutex;

@@ -121,9 +121,12 @@ public:
 
         @param bytes The value to construct from.
     */
-    BOOST_URL_DECL
+    BOOST_URL_CXX20_CONSTEXPR
     ipv6_address(
-        bytes_type const& bytes) noexcept;
+        bytes_type const& bytes) noexcept
+        : addr_(bytes)
+    {
+    }
 
     /** Construct from an IPv4 address.
 

@@ -230,39 +230,4 @@ struct allocator_argument_tester
    int                  value;
 };
 
-namespace boost {
-namespace container {
-
-template<unsigned int AllocatorTag>
-struct constructible_with_allocator_prefix
-   < ::allocator_argument_tester<ConstructiblePrefix, AllocatorTag> >
-{
-   static const bool value = true;
-};
-
-template<unsigned int AllocatorTag>
-struct constructible_with_allocator_prefix
-   < ::allocator_argument_tester<ErasedTypePrefix, AllocatorTag> >
-{
-   static const bool value = true;
-};
-
-
-template<unsigned int AllocatorTag>
-struct constructible_with_allocator_suffix
-   < ::allocator_argument_tester<ConstructibleSuffix, AllocatorTag> >
-{
-   static const bool value = true;
-};
-
-template<unsigned int AllocatorTag>
-struct constructible_with_allocator_suffix
-   < ::allocator_argument_tester<ErasedTypeSuffix, AllocatorTag> >
-{
-   static const bool value = true;
-};
-
-}  //namespace container {
-}  //namespace boost {
-
 #endif   //BOOST_CONTAINER_TEST_ALLOCATOR_ARGUMENT_TESTER_HPP

@@ -52,6 +52,7 @@ jobs:
           - 3.31.9
           - 4.0.4
           - 4.1.2
+          - 4.2.3
 
     runs-on: ubuntu-latest
 
@@ -82,7 +83,9 @@ jobs:
           key: ${{ runner.os }}-cmake-${{matrix.cmake_version}}
 
       - name: Install CMake dependencies
-        run: sudo apt-get -o Acquire::Retries=3 -y -q --no-install-suggests --no-install-recommends install curl libcurl4-openssl-dev libarchive-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get -o Acquire::Retries=3 -y -q --no-install-suggests --no-install-recommends install curl libcurl4-openssl-dev libarchive-dev
 
       - name: Build CMake
         if: steps.cache-cmake.outputs.cache-hit != 'true'

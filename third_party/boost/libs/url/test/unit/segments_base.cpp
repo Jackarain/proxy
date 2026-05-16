@@ -274,10 +274,29 @@ struct segments_base_test
     }
 
     void
+    testFrontBackNonEmpty()
+    {
+        // front()/back() on single-element segments
+        // (noexcept removal regression)
+        {
+            auto rv = parse_uri_reference("/only");
+            BOOST_TEST(rv.has_value());
+            if(rv.has_value())
+            {
+                segments_base const& ps(
+                    segments_view(rv->encoded_segments()));
+                BOOST_TEST_EQ(ps.front(), "only");
+                BOOST_TEST_EQ(ps.back(), "only");
+            }
+        }
+    }
+
+    void
     run()
     {
         testObservers();
         testRange();
+        testFrontBackNonEmpty();
         testJavadoc();
     }
 };

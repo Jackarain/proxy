@@ -71,7 +71,7 @@ BOOST_OPENMETHOD_OVERRIDE(
 }
 
 // ...and let's not forget to register the classes
-BOOST_OPENMETHOD_CLASSES(Employee, Salesman)
+BOOST_OPENMETHOD_CLASSES(Employee, Salesman);
 // end::overriders[]
 
 // tag::main[]

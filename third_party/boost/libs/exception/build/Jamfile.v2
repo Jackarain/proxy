@@ -5,10 +5,11 @@
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-project boost/exception
+project
     : source-location ../src
+    : common-requirements <include>../include <library>$(boost_dependencies)
     : requirements <link>static
+    : usage-requirements <define>BOOST_EXCEPTION_NO_LIB=1
     ;
 
-lib boost_exception : clone_current_exception_non_intrusive.cpp ;
-boost-install boost_exception ;
+lib boost_exception : clone_current_exception_non_intrusive.cpp :  <exception-handling>on ;

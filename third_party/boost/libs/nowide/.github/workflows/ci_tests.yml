@@ -1,8 +1,11 @@
-# Copyright 2019 - 2025 Alexander Grund
+# Copyright 2019 - 2026 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
 name: CI Tests
+
+permissions:
+  contents: write
 
 on:
   pull_request:
@@ -55,10 +58,10 @@ jobs:
       # Boost.Iostreams doesn't support VS 2022 until 1.69
       BOOST_VERSION: ${{ startsWith(matrix.generator, 'Visual Studio') && '1.69.0' || '1.66.0' }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Sanity check version
       run: grep -E 'set\(_version [0-9]' CMakeLists.txt
-    - uses: actions/cache@v4
+    - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
       id: cache-boost
       with:
         path: ${{env.DEP_DIR}}
@@ -72,7 +75,7 @@ jobs:
       run: echo "BOOST_ROOT=${DEP_DIR//\\/\/}/boost_${BOOST_VERSION//./_}" >> $GITHUB_ENV
 
     # Install Boost
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       if: matrix.standalone == 'Boost' && steps.cache-boost.outputs.cache-hit != 'true'
       with:
         repository: boostorg/boost
@@ -135,7 +138,7 @@ jobs:
     - name: Create standalone
       if: matrix.standalone == 'Standalone'
       run: |
-        bash tools/create_standalone.sh "$PWD/../nowide_standalone"
+        tools/create_standalone.sh "$PWD/../nowide_standalone"
         rm -rf *
         cp -r ../nowide_standalone/* .
         mkdir build
@@ -178,7 +181,7 @@ jobs:
   CreateDocuTest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Create documentation
         run: |
             sudo apt-get install -y doxygen
@@ -187,9 +190,9 @@ jobs:
   CreateBoostDocuTest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Fetch Boost.CI
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -206,8 +209,8 @@ jobs:
   CheckFormatting:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: DoozyX/clang-format-lint-action@v0.18
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: DoozyX/clang-format-lint-action@bcb4eb2cb0d707ee4f3e5cc3b456eb075f12cf73 # v0.20
         with:
           exclude: './doc'
           clangFormatVersion: 10

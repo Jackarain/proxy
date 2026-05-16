@@ -370,7 +370,8 @@ char const** names_to_fill
 fill_state_names is made for use in a mpl::for_each iterating on a state
 list and writing inside a pre-allocated array the state names. Example:
 
-....
+[source,cpp]
+----
 typedef some_fsm::stt Stt;
 typedef msm::back::generate_state_set<Stt>::type all_states; //states
 static char const* state_names[mpl::size<all_states>::value];
@@ -385,7 +386,7 @@ for (unsigned int i=0;i<some_fsm::nr_regions::value;++i)
               << state_names[my_fsm_instance.current_state()[i]] 
               << std::endl;
 }
-....
+----
 
 [[get_state_name]]
 
@@ -411,7 +412,8 @@ This type is made for the same search as in the previous example, using
 a mpl::for_each to iterate on states. After the iteration, the state
 name reference has been set.
 
-....
+[source,cpp]
+----
 // we need a fsm's table
 typedef player::stt Stt;
 typedef msm::back::generate_state_set<Stt>::type all_states; //all states
@@ -420,7 +422,7 @@ std::string name_of_open; // id of Open is 1
 boost::mpl::for_each<all_states,boost::msm::wrap<mpl::placeholders::_1> > 
           (msm::back::get_state_name<Stt>(name_of_open,1));
 std::cout << "typeid-generated name Open is: " <<  name_of_open << std::endl;
-....
+----
 
 [[display_type]]
 

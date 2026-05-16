@@ -1,4 +1,4 @@
-/* Copyright 2003-2014 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -41,8 +41,9 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
-#include <boost/mpl/and.hpp>
+#include <boost/mp11/function.hpp>
 #include <boost/multi_index/detail/promotes_arg.hpp>
+#include <type_traits>
 #include <utility>
 
 namespace boost{
@@ -70,7 +71,7 @@ inline Node* ordered_index_find(
 
   return ordered_index_find(
     top,y,key,x,comp,
-    mpl::and_<
+    mp11::mp_and<
       promotes_1st_arg<CompatibleCompare,CompatibleKey,key_type>,
       promotes_2nd_arg<CompatibleCompare,key_type,CompatibleKey> >());
 }
@@ -81,10 +82,10 @@ template<
 >
 inline Node* ordered_index_find(
   Node* top,Node* y,const KeyFromValue& key,
-  const BOOST_DEDUCED_TYPENAME KeyFromValue::result_type& x,
-  const CompatibleCompare& comp,mpl::true_)
+  const typename KeyFromValue::result_type& x,
+  const CompatibleCompare& comp,std::true_type)
 {
-  return ordered_index_find(top,y,key,x,comp,mpl::false_());
+  return ordered_index_find(top,y,key,x,comp,std::false_type());
 }
 
 template<
@@ -93,7 +94,7 @@ template<
 >
 inline Node* ordered_index_find(
   Node* top,Node* y,const KeyFromValue& key,const CompatibleKey& x,
-  const CompatibleCompare& comp,mpl::false_)
+  const CompatibleCompare& comp,std::false_type)
 {
   Node* y0=y;
 
@@ -129,10 +130,10 @@ template<
 >
 inline Node* ordered_index_lower_bound(
   Node* top,Node* y,const KeyFromValue& key,
-  const BOOST_DEDUCED_TYPENAME KeyFromValue::result_type& x,
-  const CompatibleCompare& comp,mpl::true_)
+  const typename KeyFromValue::result_type& x,
+  const CompatibleCompare& comp,std::true_type)
 {
-  return ordered_index_lower_bound(top,y,key,x,comp,mpl::false_());
+  return ordered_index_lower_bound(top,y,key,x,comp,std::false_type());
 }
 
 template<
@@ -141,7 +142,7 @@ template<
 >
 inline Node* ordered_index_lower_bound(
   Node* top,Node* y,const KeyFromValue& key,const CompatibleKey& x,
-  const CompatibleCompare& comp,mpl::false_)
+  const CompatibleCompare& comp,std::false_type)
 {
   while(top){
     if(!comp(key(top->value()),x)){
@@ -175,10 +176,10 @@ template<
 >
 inline Node* ordered_index_upper_bound(
   Node* top,Node* y,const KeyFromValue& key,
-  const BOOST_DEDUCED_TYPENAME KeyFromValue::result_type& x,
-  const CompatibleCompare& comp,mpl::true_)
+  const typename KeyFromValue::result_type& x,
+  const CompatibleCompare& comp,std::true_type)
 {
-  return ordered_index_upper_bound(top,y,key,x,comp,mpl::false_());
+  return ordered_index_upper_bound(top,y,key,x,comp,std::false_type());
 }
 
 template<
@@ -187,7 +188,7 @@ template<
 >
 inline Node* ordered_index_upper_bound(
   Node* top,Node* y,const KeyFromValue& key,const CompatibleKey& x,
-  const CompatibleCompare& comp,mpl::false_)
+  const CompatibleCompare& comp,std::false_type)
 {
   while(top){
     if(comp(x,key(top->value()))){
@@ -212,7 +213,7 @@ inline std::pair<Node*,Node*> ordered_index_equal_range(
 
   return ordered_index_equal_range(
     top,y,key,x,comp,
-    mpl::and_<
+    mp11::mp_and<
       promotes_1st_arg<CompatibleCompare,CompatibleKey,key_type>,
       promotes_2nd_arg<CompatibleCompare,key_type,CompatibleKey> >());
 }
@@ -223,10 +224,10 @@ template<
 >
 inline std::pair<Node*,Node*> ordered_index_equal_range(
   Node* top,Node* y,const KeyFromValue& key,
-  const BOOST_DEDUCED_TYPENAME KeyFromValue::result_type& x,
-  const CompatibleCompare& comp,mpl::true_)
+  const typename KeyFromValue::result_type& x,
+  const CompatibleCompare& comp,std::true_type)
 {
-  return ordered_index_equal_range(top,y,key,x,comp,mpl::false_());
+  return ordered_index_equal_range(top,y,key,x,comp,std::false_type());
 }
 
 template<
@@ -235,7 +236,7 @@ template<
 >
 inline std::pair<Node*,Node*> ordered_index_equal_range(
   Node* top,Node* y,const KeyFromValue& key,const CompatibleKey& x,
-  const CompatibleCompare& comp,mpl::false_)
+  const CompatibleCompare& comp,std::false_type)
 {
   while(top){
     if(comp(key(top->value()),x)){
@@ -248,9 +249,9 @@ inline std::pair<Node*,Node*> ordered_index_equal_range(
     else{
       return std::pair<Node*,Node*>(
         ordered_index_lower_bound(
-          Node::from_impl(top->left()),top,key,x,comp,mpl::false_()),
+          Node::from_impl(top->left()),top,key,x,comp,std::false_type()),
         ordered_index_upper_bound(
-          Node::from_impl(top->right()),y,key,x,comp,mpl::false_()));
+          Node::from_impl(top->right()),y,key,x,comp,std::false_type()));
     }
   }
 

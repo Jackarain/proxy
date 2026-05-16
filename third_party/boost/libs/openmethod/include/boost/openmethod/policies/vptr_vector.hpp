@@ -183,7 +183,7 @@ struct vptr_vector : vptr {
             } else {
                 detail::vptr_vector_vptrs<Registry>.clear();
             }
-        };
+        }
     };
 };
 

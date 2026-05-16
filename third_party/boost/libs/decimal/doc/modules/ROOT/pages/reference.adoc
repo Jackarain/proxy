@@ -1,0 +1,25 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#reference]
+= References
+:idprefix: ref_
+
+The following books, papers and blog posts serve as the basis for the algorithms used in the library:
+
+:linkattrs:
+
+- Michael F. Cowlishaw https://www.cs.tufts.edu/~nr/cs257/archive/mike-cowlishaw/decimal-arith.pdf[_Decimal Floating-Point: Algorism(sic) for Computers_], Proceedings of the 16th IEEE Symposium on Computer Arithmetic, 2003
+
+- Donald E. Knuth, _The Art of Computer Programming Volume 2 Seminumerical Algorithms_, 3rd edition, 1998
+
+- Jean-Michel Muller, _Elementary Functions_, 3rd edition, 2010
+
+- Jean-Michel Muller, et. al., _Handbook of Floating-Point Arithmetic_, 2000
+
+- John F. Hart, et. al.,  _Computer Approximations_, 1968
+
+- IEEE, _IEEE Standard for Floating-Point Arithmetic_, 2019

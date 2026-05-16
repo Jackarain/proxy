@@ -74,13 +74,13 @@ struct Bug : public bmf::state_machine_def<Bug> {
 
     // Transition table for traceroute
     struct transition_table : boost::mpl::vector<
-        //    Start      Event           Next      Action                     Guard
-        //  +----------+---------------+-----------+------------------------+--------------------+
-        bmf::Row< Running, success, bmf::none, log_action, validate           >,
+        //    Start      Event           Next      Action    Guard
+        //  +----------+---------------+-----------+----------------------+----------------------+
+        bmf::Row< Running, success  , bmf::none, log_action, validate           >,
         //  +---------+-------------+---------+---------------------------+----------------------+
-        bmf::Row< Init, success, Idle, log_action, bmf::none          >,
-        bmf::Row< Init, failure, Idle, log_action, bmf::none          >,
-        bmf::Row< Idle, bmf::none, Completed, log_action, bmf::none          >
+        bmf::Row< Init   , success  , Idle     , log_action, bmf::none          >,
+        bmf::Row< Init   , failure  , Idle     , log_action, bmf::none          >,
+        bmf::Row< Idle   , bmf::none, Completed, log_action, bmf::none          >
         //  +---------+-------------+---------+---------------------------+----------------------+
     > {};
 };

@@ -1,0 +1,122 @@
+
+/* ----------- Scrollbars Styles Start ------------- */
+
+/**
+ *
+ * Scrollbar Styling
+ *
+ * This stylesheet provides comprehensive scrollbar customization for different contexts.
+ *
+ * Features:
+ * 1. Global Scrollbar Styles:
+ *    - Applies thin scrollbar width and custom colors to the HTML element.
+ *    - Customizes scrollbar appearance for elements within the `.boostlook` class.
+ *
+ * 2. Media Query Adjustments:
+ *    - For screens with a minimum width of 768px, further customizes scrollbar colors for specific elements.
+ *    - Changes scrollbar thumb color on hover for better visibility.
+ *
+ * 3. Webkit Scrollbar Customization:
+ *    - Sets the width and height of the scrollbar.
+ *    - Customizes the scrollbar track and thumb with specific colors and border-radius.
+ *    - Adjusts scrollbar appearance for elements within the `.boostlook` class and its descendants.
+ *
+ * 4. Hover Effects:
+ *    - Changes the scrollbar thumb color on hover for better user interaction.
+ *
+ */
+
+@supports (scrollbar-width: thin) {
+  /* HTML Matches its scroll background to content background */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-border-tetriary, #afb3b6) var(--surface-background-main-base-primary, #fff);
+  }
+
+  .boostlook,
+  .boostlook *,
+  .boostlook pre,
+  .boostlook code,
+  .boostlook:has(:not(.doc)) div.table .table-contents {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-border-tetriary, #afb3b6) transparent;
+  }
+
+  @media screen and (min-width: 768px) {
+    .boostlook pre,
+    .boostlook code,
+    .boostlook:has(:not(.doc)) div.table .table-contents {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+
+    .boostlook pre:hover,
+    .boostlook code:hover,
+    .boostlook:has(:not(.doc)) div.table .table-contents:hover {
+      scrollbar-color: var(--border-border-tetriary, #afb3b6) transparent;
+    }
+  }
+}
+
+html::-webkit-scrollbar,
+.boostlook::-webkit-scrollbar,
+.boostlook *::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+html::-webkit-scrollbar-track {
+  background: var(--surface-background-main-base-primary, #fff);
+  border-radius: var(--spacing-size-2xs, 0.5rem);
+}
+
+.boostlook::-webkit-scrollbar-track,
+.boostlook *::-webkit-scrollbar-track,
+.boostlook pre::-webkit-scrollbar-track,
+.boostlook code::-webkit-scrollbar-track,
+.boostlook:has(:not(.doc)) div.table .table-contents::-webkit-scrollbar-track {
+  width: 6px;
+  background: transparent;
+  border-radius: var(--spacing-size-2xs, 0.5rem);
+}
+
+html::-webkit-scrollbar-thumb,
+.boostlook::-webkit-scrollbar-thumb,
+.boostlook *::-webkit-scrollbar-thumb,
+.boostlook pre::-webkit-scrollbar-thumb,
+.boostlook code::-webkit-scrollbar-thumb,
+.boostlook:has(:not(.doc)) div.table .table-contents::-webkit-scrollbar-thumb {
+  width: 6px;
+  background: var(--border-border-tetriary, #afb3b6);
+}
+
+@media screen and (min-width: 768px) {
+  .boostlook pre::-webkit-scrollbar-thumb,
+  .boostlook code::-webkit-scrollbar-thumb,
+  .boostlook:has(:not(.doc)) div.table .table-contents::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+
+  .boostlook pre:hover::-webkit-scrollbar-thumb,
+  .boostlook code:hover::-webkit-scrollbar-thumb,
+  .boostlook:has(:not(.doc)) div.table .table-contents:hover:-webkit-scrollbar-thumb {
+    background-color: var(--border-border-tetriary, #afb3b6);
+  }
+}
+
+.boostlook .doc pre,
+.boostlook p code,
+.boostlook table code,
+.boostlook p tt,
+.boostlook p kbd,
+.boostlook p samp,
+.boostlook p pre,
+.boostlook:not(:has(.doc)) pre,
+.boostlook code,
+.boostlook pre code,
+.boostlook .doc .content pre code,
+.boostlook#libraryReadMe pre code {
+  overflow-x: auto;
+}
+
+/* ----------- Scrollbars Styles End ------------- */

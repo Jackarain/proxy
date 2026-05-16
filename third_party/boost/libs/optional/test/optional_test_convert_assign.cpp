@@ -13,6 +13,7 @@
 
 #include "boost/core/lightweight_test.hpp"
 #include "boost/none.hpp"
+#include "boost/type_traits/is_assignable.hpp"
 
 //#ifndef BOOST_OPTIONAL_NO_CONVERTING_COPY_CTOR
 

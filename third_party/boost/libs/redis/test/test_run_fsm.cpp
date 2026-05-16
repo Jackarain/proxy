@@ -39,6 +39,7 @@ static const char* to_string(run_action_type value)
    switch (value) {
       case run_action_type::done:                  return "run_action_type::done";
       case run_action_type::immediate:             return "run_action_type::immediate";
+      case run_action_type::sentinel_resolve:      return "run_action_type::sentinel_resolve";
       case run_action_type::connect:               return "run_action_type::connect";
       case run_action_type::parallel_group:        return "run_action_type::parallel_group";
       case run_action_type::cancel_receive:        return "run_action_type::cancel_receive";
@@ -142,6 +143,30 @@ void test_config_error_unix_ssl()
    });
 }
 
+void test_config_error_unix_sentinel()
+{
+   // Setup
+   config cfg;
+   cfg.sentinel.addresses = {
+      {"localhost", "26379"}
+   };
+   cfg.unix_socket = "/var/sock";
+   fixture fix{std::move(cfg)};
+
+   // Launching the operation fails immediately
+   auto act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::immediate);
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, error_code(error::sentinel_unix_sockets_unsupported));
+
+   // Log
+   fix.check_log({
+      {logger::level::err,
+       "Invalid configuration: The configuration specified UNIX sockets with Sentinel, which is "
+       "not supported. [boost.redis:28]"},
+   });
+}
+
 // An error in connect with reconnection enabled triggers a reconnection
 void test_connect_error()
 {
@@ -162,9 +187,82 @@ void test_connect_error()
    act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
    BOOST_TEST_EQ(act, run_action_type::parallel_group);
 
-   // Run doesn't log, it's the subordinate tasks that do
-   fix.check_log({});
+   // Log
+   fix.check_log({
+      // clang-format off
+      {logger::level::info, "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"  },
+      {logger::level::err,  "Failed to connect to Redis server at 127.0.0.1:6379 (TLS disabled): Connect timeout. [boost.redis:18]"},
+      {logger::level::info, "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"  },
+      {logger::level::info, "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"          },
+      // clang-format on
+   });
 }
+
+// Check logs for other transport types
+void test_connect_error_ssl()
+{
+   // Setup
+   fixture fix;
+   fix.st.cfg.addr = {"my_hostname", "10000"};
+   fix.st.cfg.use_ssl = true;
+
+   // Launch the operation
+   auto act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::connect);
+
+   // Connect errors. We sleep and try to connect again
+   act = fix.fsm.resume(fix.st, error::connect_timeout, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::wait_for_reconnection);
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::connect);
+
+   // This time we succeed and we launch the parallel group
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::parallel_group);
+
+   // Log
+   fix.check_log({
+      // clang-format off
+      {logger::level::info, "Trying to connect to Redis server at my_hostname:10000 (TLS enabled)"  },
+      {logger::level::err,  "Failed to connect to Redis server at my_hostname:10000 (TLS enabled): Connect timeout. [boost.redis:18]"},
+      {logger::level::info, "Trying to connect to Redis server at my_hostname:10000 (TLS enabled)"  },
+      {logger::level::info, "Connected to Redis server at my_hostname:10000 (TLS enabled)"          },
+      // clang-format on
+   });
+}
+
+#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
+void test_connect_error_unix()
+{
+   // Setup
+   fixture fix;
+   fix.st.cfg.unix_socket = "/tmp/sock";
+
+   // Launch the operation
+   auto act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::connect);
+
+   // Connect errors. We sleep and try to connect again
+   act = fix.fsm.resume(fix.st, error::connect_timeout, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::wait_for_reconnection);
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::connect);
+
+   // This time we succeed and we launch the parallel group
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::parallel_group);
+
+   // Log
+   fix.check_log({
+      // clang-format off
+      {logger::level::info, "Trying to connect to Redis server at '/tmp/sock'"  },
+      {logger::level::err,  "Failed to connect to Redis server at '/tmp/sock': Connect timeout. [boost.redis:18]"},
+      {logger::level::info, "Trying to connect to Redis server at '/tmp/sock'"  },
+      {logger::level::info, "Connected to Redis server at '/tmp/sock'"          },
+      // clang-format on
+   });
+}
+#endif
 
 // An error in connect without reconnection enabled makes the operation finish
 void test_connect_error_no_reconnect()
@@ -180,8 +278,13 @@ void test_connect_error_no_reconnect()
    act = fix.fsm.resume(fix.st, error::connect_timeout, cancellation_type_t::none);
    BOOST_TEST_EQ(act, error_code(error::connect_timeout));
 
-   // Run doesn't log, it's the subordinate tasks that do
-   fix.check_log({});
+   // Log
+   fix.check_log({
+      // clang-format off
+      {logger::level::info, "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"  },
+      {logger::level::err,  "Failed to connect to Redis server at 127.0.0.1:6379 (TLS disabled): Connect timeout. [boost.redis:18]"},
+      // clang-format on
+   });
 }
 
 // A cancellation in connect makes the operation finish even with reconnection enabled
@@ -198,9 +301,10 @@ void test_connect_cancel()
    act = fix.fsm.resume(fix.st, asio::error::operation_aborted, cancellation_type_t::terminal);
    BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
 
-   // We log on cancellation only
+   // Log
    fix.check_log({
-      {logger::level::debug, "Run: cancelled (1)"}
+      {logger::level::info,  "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::debug, "Run: cancelled (1)"                                                }
    });
 }
 
@@ -218,9 +322,10 @@ void test_connect_cancel_edge()
    act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::terminal);
    BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
 
-   // We log on cancellation only
+   // Log
    fix.check_log({
-      {logger::level::debug, "Run: cancelled (1)"}
+      {logger::level::info,  "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::debug, "Run: cancelled (1)"                                                }
    });
 }
 
@@ -247,8 +352,13 @@ void test_parallel_group_error()
    act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
    BOOST_TEST_EQ(act, run_action_type::parallel_group);
 
-   // Run doesn't log, it's the subordinate tasks that do
-   fix.check_log({});
+   // Log
+   fix.check_log({
+      {logger::level::info, "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::info, "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"        },
+      {logger::level::info, "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::info, "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"        },
+   });
 }
 
 // An error in the parallel group makes the operation exit if reconnection is disabled
@@ -269,8 +379,11 @@ void test_parallel_group_error_no_reconnect()
    act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
    BOOST_TEST_EQ(act, error_code(error::empty_field));
 
-   // Run doesn't log, it's the subordinate tasks that do
-   fix.check_log({});
+   // Log
+   fix.check_log({
+      {logger::level::info, "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::info, "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"        },
+   });
 }
 
 // A cancellation in the parallel group makes it exit, even if reconnection is enabled.
@@ -292,9 +405,11 @@ void test_parallel_group_cancel()
    act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::terminal);
    BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
 
-   // We log on cancellation only
+   // Log
    fix.check_log({
-      {logger::level::debug, "Run: cancelled (2)"}
+      {logger::level::info,  "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::info,  "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"        },
+      {logger::level::debug, "Run: cancelled (2)"                                                }
    });
 }
 
@@ -315,9 +430,11 @@ void test_parallel_group_cancel_no_reconnect()
    act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::terminal);
    BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
 
-   // We log on cancellation only
+   // Log
    fix.check_log({
-      {logger::level::debug, "Run: cancelled (2)"}
+      {logger::level::info,  "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::info,  "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"        },
+      {logger::level::debug, "Run: cancelled (2)"                                                }
    });
 }
 
@@ -343,9 +460,11 @@ void test_wait_cancel()
    act = fix.fsm.resume(fix.st, asio::error::operation_aborted, cancellation_type_t::terminal);
    BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
 
-   // We log on cancellation only
+   // Log
    fix.check_log({
-      {logger::level::debug, "Run: cancelled (3)"}
+      {logger::level::info,  "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::info,  "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"        },
+      {logger::level::debug, "Run: cancelled (3)"                                                }
    });
 }
 
@@ -370,9 +489,11 @@ void test_wait_cancel_edge()
    act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::terminal);
    BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
 
-   // We log on cancellation only
+   // Log
    fix.check_log({
-      {logger::level::debug, "Run: cancelled (3)"}
+      {logger::level::info,  "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::info,  "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"        },
+      {logger::level::debug, "Run: cancelled (3)"                                                }
    });
 }
 
@@ -409,9 +530,16 @@ void test_several_reconnections()
    act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::terminal);
    BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
 
-   // The cancellation was logged
+   // Log
    fix.check_log({
-      {logger::level::debug, "Run: cancelled (2)"}
+      // clang-format off
+      {logger::level::info,  "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"  },
+      {logger::level::err,   "Failed to connect to Redis server at 127.0.0.1:6379 (TLS disabled): Connect timeout. [boost.redis:18]"},
+      {logger::level::info,  "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"  },
+      {logger::level::info,  "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"          },
+      {logger::level::info,  "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::info,  "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"        },
+      {logger::level::debug, "Run: cancelled (2)"                                                }  // clang-format on
    });
 }
 
@@ -437,7 +565,7 @@ void test_setup_ping_requests()
    const std::string_view
       expected_setup = "*5\r\n$5\r\nHELLO\r\n$1\r\n3\r\n$4\r\nAUTH\r\n$3\r\nfoo\r\n$3\r\nbar\r\n";
    BOOST_TEST_EQ(fix.st.ping_req.payload(), expected_ping);
-   BOOST_TEST_EQ(fix.st.cfg.setup.payload(), expected_setup);
+   BOOST_TEST_EQ(fix.st.setup_req.payload(), expected_setup);
 
    // Reconnect
    act = fix.fsm.resume(fix.st, error::empty_field, cancellation_type_t::none);
@@ -451,7 +579,7 @@ void test_setup_ping_requests()
 
    // The requests haven't been modified
    BOOST_TEST_EQ(fix.st.ping_req.payload(), expected_ping);
-   BOOST_TEST_EQ(fix.st.cfg.setup.payload(), expected_setup);
+   BOOST_TEST_EQ(fix.st.setup_req.payload(), expected_setup);
 }
 
 // We correctly send and log the setup request
@@ -481,7 +609,11 @@ void test_setup_request_success()
 
    // Check log
    fix.check_log({
-      {logger::level::info, "Setup request execution: success"}
+      // clang-format off
+      {logger::level::info, "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"  },
+      {logger::level::info, "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"          },
+      {logger::level::info, "Setup request execution: success"},
+      // clang-format on
    });
 }
 
@@ -501,8 +633,13 @@ void test_setup_request_empty()
    // Nothing was added to the multiplexer
    BOOST_TEST_EQ(fix.st.mpx.prepare_write(), 0u);
 
-   // Check log
-   fix.check_log({});
+   // Log
+   fix.check_log({
+      // clang-format off
+      {logger::level::info, "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"  },
+      {logger::level::info, "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"          },
+      // clang-format on
+   });
 }
 
 // A server error would cause the reader to exit
@@ -510,7 +647,7 @@ void test_setup_request_server_error()
 {
    // Setup
    fixture fix;
-   fix.st.setup_diagnostic = "leftover";  // simulate a leftover from previous runs
+   fix.st.diagnostic = "leftover";  // simulate a leftover from previous runs
    fix.st.cfg.setup.clear();
    fix.st.cfg.setup.push("HELLO", 3);
 
@@ -533,9 +670,189 @@ void test_setup_request_server_error()
 
    // Check log
    fix.check_log({
-      {logger::level::info,
-       "Setup request execution: The server response to the setup request sent during connection "
-       "establishment contains an error. [boost.redis:23] (ERR: wrong command)"}
+      {logger::level::info, "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::info, "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"        },
+      {logger::level::err,  "Setup request execution failed: ERR: wrong command"                }
+   });
+}
+
+// If the setup request finishes with another error (e.g. network error), we log it
+void test_setup_request_other_error()
+{
+   // Setup
+   fixture fix;
+   fix.st.diagnostic = "leftover";  // simulate a leftover from previous runs
+   fix.st.cfg.setup.clear();
+   fix.st.cfg.setup.push("HELLO", 3);
+   fix.st.cfg.reconnect_wait_interval = 0s;
+
+   // Run the operation. We connect and launch the tasks
+   auto act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::connect);
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::parallel_group);
+
+   // At this point, the setup request should be already queued.
+   // Simulate the writer
+   BOOST_TEST_EQ(fix.st.mpx.prepare_write(), 1u);
+   BOOST_TEST(fix.st.mpx.commit_write(fix.st.mpx.get_write_buffer().size()));
+
+   // Simulate a read error
+   read(fix.st.mpx, "*malformed\r\n");
+   error_code ec;
+   auto res = fix.st.mpx.consume(ec);
+   BOOST_TEST_EQ(ec, error::not_a_number);
+   BOOST_TEST(res.first == detail::consume_result::got_response);
+
+   // This will cause the writer to exit
+   act = fix.fsm.resume(fix.st, error::not_a_number, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::cancel_receive);
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, error_code(error::not_a_number));
+
+   // Check log
+   fix.check_log({
+      // clang-format off
+      {logger::level::info, "Trying to connect to Redis server at 127.0.0.1:6379 (TLS disabled)"},
+      {logger::level::info, "Connected to Redis server at 127.0.0.1:6379 (TLS disabled)"        },
+      {logger::level::err,  "Setup request execution failed: Can't convert string to number (maybe forgot to upgrade to RESP3?). [boost.redis:2]" },
+      // clang-format on
+   });
+}
+
+// When using Sentinel, reconnection works normally
+void test_sentinel_reconnection()
+{
+   // Setup
+   fixture fix;
+   fix.st.cfg.sentinel.addresses = {
+      {"localhost", "26379"}
+   };
+
+   // Resolve succeeds, and a connection is attempted
+   auto act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::sentinel_resolve);
+   fix.st.cfg.addr = {"host1", "1000"};
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::connect);
+
+   // This errors, so we sleep and resolve again
+   act = fix.fsm.resume(fix.st, error::connect_timeout, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::wait_for_reconnection);
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::sentinel_resolve);
+   fix.st.cfg.addr = {"host2", "2000"};
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::connect);
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::parallel_group);
+
+   // Sentinel involves always a setup request containing the role check. Run it.
+   BOOST_TEST_EQ(fix.st.mpx.prepare_write(), 1u);
+   BOOST_TEST(fix.st.mpx.commit_write(fix.st.mpx.get_write_buffer().size()));
+   read(fix.st.mpx, "*1\r\n$6\r\nmaster\r\n");
+   error_code ec;
+   auto res = fix.st.mpx.consume(ec);
+   BOOST_TEST_EQ(ec, error_code());
+   BOOST_TEST(res.first == detail::consume_result::got_response);
+
+   // The parallel group errors, so we sleep and resolve again
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::cancel_receive);
+   act = fix.fsm.resume(fix.st, error::write_timeout, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::wait_for_reconnection);
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::sentinel_resolve);
+   fix.st.cfg.addr = {"host3", "3000"};
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::connect);
+
+   // Cancel
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::terminal);
+   BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
+
+   // Log
+   fix.check_log({
+      // clang-format off
+      {logger::level::info,  "Trying to connect to Redis server at host1:1000 (TLS disabled)"},
+      {logger::level::err,   "Failed to connect to Redis server at host1:1000 (TLS disabled): Connect timeout. [boost.redis:18]"},
+      {logger::level::info,  "Trying to connect to Redis server at host2:2000 (TLS disabled)"},
+      {logger::level::info,  "Connected to Redis server at host2:2000 (TLS disabled)"},
+      {logger::level::info,  "Setup request execution: success"},
+      {logger::level::info,  "Trying to connect to Redis server at host3:3000 (TLS disabled)"},
+      {logger::level::debug, "Run: cancelled (1)"},
+      // clang-format on
+   });
+}
+
+// If the Sentinel resolve operation errors, we try again
+void test_sentinel_resolve_error()
+{
+   // Setup
+   fixture fix;
+   fix.st.cfg.sentinel.addresses = {
+      {"localhost", "26379"}
+   };
+
+   // Start the Sentinel resolve operation
+   auto act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::sentinel_resolve);
+
+   // It fails with an error, so we go to sleep
+   act = fix.fsm.resume(fix.st, error::sentinel_resolve_failed, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::wait_for_reconnection);
+
+   // Retrying it succeeds
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::sentinel_resolve);
+   fix.st.cfg.addr = {"myhost", "10000"};
+   act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::connect);
+
+   // Log
+   fix.check_log({
+      {logger::level::info, "Trying to connect to Redis server at myhost:10000 (TLS disabled)"},
+   });
+}
+
+// The reconnection setting affects Sentinel reconnection, too
+void test_sentinel_resolve_error_no_reconnect()
+{
+   // Setup
+   fixture fix{config_no_reconnect()};
+   fix.st.cfg.sentinel.addresses = {
+      {"localhost", "26379"}
+   };
+
+   // Start the Sentinel resolve operation
+   auto act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::sentinel_resolve);
+
+   // It fails with an error, so we exit
+   act = fix.fsm.resume(fix.st, error::sentinel_resolve_failed, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, error_code(error::sentinel_resolve_failed));
+
+   // Log
+   fix.check_log({});
+}
+
+void test_sentinel_resolve_cancel()
+{
+   // Setup
+   fixture fix;
+   fix.st.cfg.sentinel.addresses = {
+      {"localhost", "26379"}
+   };
+
+   // Start the Sentinel resolve operation
+   auto act = fix.fsm.resume(fix.st, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, run_action_type::sentinel_resolve);
+   act = fix.fsm.resume(fix.st, asio::error::operation_aborted, cancellation_type_t::terminal);
+   BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
+
+   // Log
+   fix.check_log({
+      {logger::level::debug, "Run: cancelled (4)"},
    });
 }
 
@@ -547,8 +864,13 @@ int main()
    test_config_error_unix();
 #endif
    test_config_error_unix_ssl();
+   test_config_error_unix_sentinel();
 
    test_connect_error();
+   test_connect_error_ssl();
+#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
+   test_connect_error_unix();
+#endif
    test_connect_error_no_reconnect();
    test_connect_cancel();
    test_connect_cancel_edge();
@@ -567,6 +889,12 @@ int main()
    test_setup_request_success();
    test_setup_request_empty();
    test_setup_request_server_error();
+   test_setup_request_other_error();
+
+   test_sentinel_reconnection();
+   test_sentinel_resolve_error();
+   test_sentinel_resolve_error_no_reconnect();
+   test_sentinel_resolve_cancel();
 
    return boost::report_errors();
 }

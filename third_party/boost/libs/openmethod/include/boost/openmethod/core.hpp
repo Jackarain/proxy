@@ -359,6 +359,7 @@ struct use_class_aux<Registry, mp11::mp_list<Class, Bases...>>
             resolve_type_ids();
         }
 
+        // coverity[uninit] - zero-initialized static storage
         Registry::classes.push_back(*this);
     }
 
@@ -2403,6 +2404,8 @@ method<Id, ReturnType(Parameters...), Registry>::method() {
     this->not_implemented = reinterpret_cast<void (*)()>(fn_not_implemented);
     this->ambiguous = reinterpret_cast<void (*)()>(fn_ambiguous);
 
+    // zero-initalized static variable
+    // coverity[uninit_use]
     Registry::methods.push_back(*this);
 }
 
@@ -2746,7 +2749,7 @@ method<Id, ReturnType(Parameters...), Registry>::override_impl<
 #endif
 
     // zero-initalized static variable
-    // coverity[uninit_use:FALSE]
+    // coverity[uninit_use]
     if (overrider_info::method) {
         BOOST_ASSERT(overrider_info::method == &fn);
         return;
@@ -2844,14 +2847,21 @@ struct VirtualTraits {
 
     //! Casts a virtual argument.
     //!
-    //! Casts a virtual argument to the type expected by the overrider.
+    //! `cast` is responsible for passing virtual arguments from method to
+    //! overrider. In general, this requires some form of adjustment, because a
+    //! virtual parameter in the overrider usually has a different type than the
+    //! corresponding parameter in the method. Typically, the adjustment
+    //! consists of a cast, performed via `static_cast`, `dynamic_cast`, or
+    //! other means, depending on the type of the argument and the rtti policy
+    //! of the method. `cast` may return the adjusted argument by reference or
+    //! as a temporary value.
     //!
-    //! @tparam T The type of a virtual parameter of a method.
-    //! @tparam U The type of a virtual parameter of an overrider.
-    //! @param arg The argument passed to a method call.
-    //! @return A reference to the argument, cast to `U`.
+    //! @tparam T The type of the virtual parameter in the method.
+    //! @tparam U The type of the virtual parameter in the overrider.
+    //! @param arg The argument passed to the method call.
+    //! @return A value that can be passed as a U.
     template<typename U>
-    static auto cast(T arg) -> U;
+    static auto cast(T arg) -> detail::unspecified;
 
     //! Rebind to a another class (smart pointers only).
     //!

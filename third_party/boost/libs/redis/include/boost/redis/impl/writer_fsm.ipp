@@ -14,6 +14,7 @@
 #include <boost/redis/detail/coroutine.hpp>
 #include <boost/redis/detail/multiplexer.hpp>
 #include <boost/redis/detail/writer_fsm.hpp>
+#include <boost/redis/error.hpp>
 #include <boost/redis/impl/is_terminal_cancel.hpp>
 #include <boost/redis/impl/log_utils.hpp>
 #include <boost/redis/logger.hpp>
@@ -39,7 +40,7 @@ inline void process_ping_node(
    }
 
    if (ec) {
-      log_info(lgr, "Health checker: server answered ping with an error: ", nd.value);
+      log_err(lgr, "Health checker: server answered ping with an error: ", nd.value);
    }
 }
 
@@ -89,7 +90,7 @@ writer_action writer_fsm::resume(
                   if (ec == asio::error::operation_aborted) {
                      log_debug(st.logger, "Writer task: cancelled (1).");
                   } else {
-                     log_debug(st.logger, "Writer task error: ", ec);
+                     log_err(st.logger, "Error writing data to the server: ", ec);
                   }
                   return ec;
                }

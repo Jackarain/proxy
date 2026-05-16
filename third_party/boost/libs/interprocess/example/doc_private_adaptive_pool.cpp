@@ -7,7 +7,9 @@
 // See http://www.boost.org/libs/interprocess for documentation.
 //
 //////////////////////////////////////////////////////////////////////////////
-
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <boost/interprocess/detail/workaround.hpp>
 //[doc_private_adaptive_pool
 #include <boost/interprocess/managed_shared_memory.hpp>

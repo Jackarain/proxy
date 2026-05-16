@@ -501,6 +501,282 @@ void github_issue_285()
     BOOST_TEST(result.value().get() != nullptr);
 }
 
+void github_pr_290()
+{
+    namespace bp = boost::parser;
+
+    auto const pTest = bp::lit("TEST:") > -bp::quoted_string;
+
+    auto result = bp::parse("TEST: \"foo\"", pTest, bp::blank);
+    BOOST_TEST(result);
+    BOOST_TEST(*result == "foo");
+}
+
+namespace github_issue_294_ {
+    namespace bp = boost::parser;
+    struct Foo
+    {};
+    constexpr bp::rule<struct foo_parser_tag, std::shared_ptr<Foo>> foo_parser =
+        "foo_parser";
+    constexpr auto foo_parser_action = [](auto & ctx) {
+        std::shared_ptr<Foo> & val = _val(ctx);
+        val = std::shared_ptr<Foo>(new Foo{});
+    };
+    constexpr auto foo_parser_def = bp::eps[foo_parser_action];
+    struct Bar
+    {
+        std::shared_ptr<Foo> foo;
+    };
+    constexpr bp::rule<struct bar_parser_tag, std::shared_ptr<Bar>> bar_parser =
+        "bar_parser";
+    constexpr auto bar_parser_action = [](auto & ctx) {
+        std::shared_ptr<Bar> & val = _val(ctx);
+        val = std::shared_ptr<Bar>(new Bar{});
+        std::optional<std::shared_ptr<Foo>> & attr = _attr(ctx);
+        if (attr) {
+            val->foo = attr.value();
+        }
+    };
+    constexpr auto bar_parser_def =
+        (bp::lit("(") > -foo_parser > bp::lit(")"))[bar_parser_action];
+
+    BOOST_PARSER_DEFINE_RULES(bar_parser, foo_parser);
+}
+
+void github_issue_294()
+{
+    namespace bp = boost::parser;
+    using namespace github_issue_294_;
+
+    bp::parse("()", bar_parser, bp::blank);
+}
+
+namespace github_pr_297_ {
+    namespace bp = boost::parser;
+    constexpr auto bar_required_f = [](auto& ctx) -> bool {
+        const bool& argument = bp::_p<0>(ctx);
+        return argument;
+    };
+    constexpr bp::rule<struct foobar_parser_tag> foobar_parser = "foobar_parser";
+    constexpr auto foobar_parser_def =
+        bp::lit("foo")
+        >> bp::switch_(bar_required_f)
+            (true, bp::lit("bar"))
+            (false, -bp::lit("bar"));
+    BOOST_PARSER_DEFINE_RULES(foobar_parser);
+}
+
+void github_pr_297()
+{
+    namespace bp = boost::parser;
+    using namespace github_pr_297_;
+
+    {
+        const bool bar_required = true;
+        const bool result =
+            bp::parse("foo bar", foobar_parser.with(bar_required), bp::blank);
+        BOOST_TEST(result);
+    }
+    {
+        const bool bar_required = true;
+        const bool result =
+            bp::parse("foo", foobar_parser.with(bar_required), bp::blank);
+        BOOST_TEST(!result);
+    }
+    {
+        const bool bar_required = false;
+        const bool result =
+            bp::parse("foo bar", foobar_parser.with(bar_required), bp::blank);
+        BOOST_TEST(result);
+    }
+    {
+        const bool bar_required = false;
+        const bool result =
+            bp::parse("foo", foobar_parser.with(bar_required), bp::blank);
+        BOOST_TEST(result);
+    }
+}
+
+namespace github_issue_312_ {
+    /*
+     * Recursive descent parser for expressions.
+     * Supports addition (+), multiplication (*) and
+     * parethesized expressions, nothing else.
+     *
+     * Creates a tree of "evaluatable" objects which
+     * own their downstream objects in a unique_ptr
+     */
+
+    // base class for all tree nodes
+    struct evaluatable
+    {
+        virtual double evaluate() = 0;
+        virtual ~evaluatable() = default;
+    };
+
+    namespace bp = boost::parser;
+
+    // top level parser
+    constexpr bp::rule<struct expression_tag, std::unique_ptr<evaluatable>> expression_parser = "expression_parser";
+
+    /*
+     *      LITERAL EXPRESSION
+     */
+    struct literal_evaluatable : evaluatable
+    {
+        explicit literal_evaluatable(double v) : value_(v) {}
+        double evaluate() override
+        {
+            return value_;
+        }
+        double value_;
+    };
+    constexpr bp::rule<struct literal_tag, std::unique_ptr<evaluatable>> literal_parser = "literal_parser";
+    constexpr auto literal_parser_action = [](auto& ctx) {
+        std::unique_ptr<evaluatable>& val = _val(ctx);
+        double& parsed_value = _attr(ctx);
+        val = std::make_unique<literal_evaluatable>(parsed_value);
+    };
+    constexpr auto literal_parser_def =
+        bp::double_[literal_parser_action];
+
+    /*
+     *      PARENTHESIZED EXPRESSION
+     */
+    struct parenthesized_evaluatable : evaluatable
+    {
+        explicit parenthesized_evaluatable(std::unique_ptr<evaluatable>&& e) : evaluatable_(std::move(e)) {}
+        double evaluate() override
+        {
+            return evaluatable_->evaluate();
+        }
+        std::unique_ptr<evaluatable> evaluatable_;
+    };
+    constexpr bp::rule<struct parenthesized_tag, std::unique_ptr<evaluatable>> parenthesized_parser = "parenthesized_parser";
+    constexpr auto parenthesized_action = [](auto& ctx) {
+        std::unique_ptr<evaluatable>& val = _val(ctx);
+        std::unique_ptr<evaluatable>& attr = _attr(ctx);
+        val = std::make_unique<parenthesized_evaluatable>(std::move(attr));
+    };
+    constexpr auto parenthesized_parser_def =
+        (
+        bp::lit('(') > expression_parser > bp::lit(')')
+        )[parenthesized_action];
+
+    /*
+     *      ATOM EXPRESSION
+     */
+    struct atom_evaluatable : evaluatable
+    {
+        explicit atom_evaluatable(std::unique_ptr<evaluatable>&& e) : evaluatable_(std::move(e)) {}
+        double evaluate() override
+        {
+            return evaluatable_->evaluate();
+        }
+        std::unique_ptr<evaluatable> evaluatable_;
+    };
+    constexpr bp::rule<struct atom_tag, std::unique_ptr<evaluatable>> atom_parser = "atom_parser";
+    constexpr auto atom_action = [](auto& ctx) {
+        std::unique_ptr<evaluatable>& val = _val(ctx);
+        std::unique_ptr<evaluatable>& attr = _attr(ctx);
+        val = std::make_unique<atom_evaluatable>(std::move(attr));
+    };
+    constexpr auto atom_parser_def =
+        (
+            parenthesized_parser
+            |
+            literal_parser
+        )[atom_action];
+
+    /*
+     *      MULTIPLICATION EXPRESSION
+     */
+    struct multiplication_evaluatable : evaluatable
+    {
+        multiplication_evaluatable(std::vector<std::unique_ptr<evaluatable>>&& e)
+            : evaluatables_(std::move(e))
+        {}
+        double evaluate() override
+        {
+            double result = 1;
+            for (const auto& e : evaluatables_) {
+                result *= e->evaluate();
+            }
+            return result;
+        }
+        std::vector<std::unique_ptr<evaluatable>> evaluatables_;
+    };
+    constexpr bp::rule<struct mult_tag, std::unique_ptr<evaluatable>> mult_parser = "mult_parser";
+    constexpr auto mult_parser_action = [](auto& ctx) {
+        std::unique_ptr<evaluatable>& val = _val(ctx);
+        std::vector<std::unique_ptr<evaluatable>>& operands = _attr(ctx);
+        val = std::make_unique<multiplication_evaluatable>(std::move(operands));
+    };
+    constexpr auto mult_parser_def =
+        (atom_parser % bp::lit('*'))[mult_parser_action];
+
+    /*
+     *      ADDITION EXPRESSION
+     */
+    struct addition_evaluatable : evaluatable
+    {
+        addition_evaluatable(std::vector<std::unique_ptr<evaluatable>>&& e)
+            : evaluatables_(std::move(e))
+        {}
+        double evaluate() override
+        {
+            double result = 0;
+            for (const auto& e : evaluatables_) {
+                result += e->evaluate();
+            }
+            return result;
+        }
+        std::vector<std::unique_ptr<evaluatable>> evaluatables_;
+    };
+    constexpr bp::rule<struct add_tag, std::unique_ptr<evaluatable>> add_parser = "add_parser";
+    constexpr auto add_parser_action = [](auto& ctx) {
+        std::unique_ptr<evaluatable>& val = _val(ctx);
+        std::vector<std::unique_ptr<evaluatable>>& operands = _attr(ctx);
+        val = std::make_unique<addition_evaluatable>(std::move(operands));
+    };
+    constexpr auto add_parser_def =
+        (mult_parser % bp::lit('+'))[add_parser_action];
+
+    constexpr auto expression_parser_action = [](auto& ctx) {
+        std::unique_ptr<evaluatable>& val = _val(ctx);
+        std::unique_ptr<evaluatable>& attr = _attr(ctx);
+        val = std::move(attr);
+    };
+
+    /*
+     *      EXPRESSION
+     */
+    constexpr auto expression_parser_def =
+        add_parser[expression_parser_action];
+
+    BOOST_PARSER_DEFINE_RULES(
+        literal_parser,
+        mult_parser,
+        add_parser,
+        expression_parser,
+        parenthesized_parser,
+        atom_parser);
+}
+
+void github_issue_312()
+{
+    namespace bp = boost::parser;
+    using namespace github_issue_312_;
+
+    auto result = bp::parse("(2 + 3) + 3.1415 * 2", expression_parser, bp::blank);
+    BOOST_TEST(result);
+    BOOST_TEST(result.value()->evaluate() == (2 + 3) + 3.1415 * 2);
+
+    result = bp::parse("((2*0.1) + 33.) * (2 + 3) + 3.1415 * 2", expression_parser, bp::blank);
+    BOOST_TEST(result);
+    BOOST_TEST(result.value()->evaluate() == ((2*0.1) + 33.) * (2 + 3) + 3.1415 * 2);
+}
+
 
 int main()
 {
@@ -516,5 +792,9 @@ int main()
     github_issue_268();
     github_issue_279();
     github_issue_285();
+    github_pr_290();
+    github_issue_294();
+    github_pr_297();
+    github_issue_312();
     return boost::report_errors();
 }

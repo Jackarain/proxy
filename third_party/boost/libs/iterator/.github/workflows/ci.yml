@@ -297,7 +297,7 @@ jobs:
             cxxstd: "11,14,17,20,2b"
             os: macos-14
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
+            cxxstd: "11,14,17,20,23"
             os: macos-15
 
           - name: CMake tests

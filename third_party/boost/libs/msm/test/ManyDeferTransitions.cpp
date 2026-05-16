@@ -8,8 +8,6 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-// Event deferral behaves differently in backmp11
-#define BOOST_MSM_TEST_SKIP_BACKMP11
 // back-end
 #include "BackCommon.hpp"
 //front-end

@@ -6,7 +6,8 @@
 #include <boost/config.hpp>
 #ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/bind/bind.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/utility/result_of.hpp>
 #include <functional>

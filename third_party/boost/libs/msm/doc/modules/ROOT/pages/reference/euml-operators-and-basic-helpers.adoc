@@ -2,379 +2,196 @@
 
 = eUML operators and basic helpers
 
-Table 10.1 — eUML operators and basic helpers
-
-eUML function / operator
-
-Description
-
-Functor
-
-&&
-
-Calls lazily Action1&& Action2
-
-And_
-
-||
-
-Calls lazily Action1|| Action2
-
-Or_
-
-!
-
-Calls lazily !Action1
-
-Not_
-
-!=
-
-Calls lazily Action1 != Action2
-
-NotEqualTo_
-
-==
-
-Calls lazily Action1 == Action2
-
-EqualTo_
-
-____
---
-Calls lazily Action1 > Action2
-
-Greater_
-
-____
-=
-
-Calls lazily Action1 >= Action2
-
-Greater_Equal_
-
-<
-
-Calls lazily Action1 < Action2
-
-Less_
-
-<=
-
-Calls lazily Action1 <= Action2
-
-Less_Equal_
-
-&
-
-Calls lazily Action1 & Action2
-
-Bitwise_And_
-
-|
-
-Calls lazily Action1 | Action2
-
-Bitwise_Or_
-
-^
-
-Calls lazily Action1 ^ Action2
-
-Bitwise_Xor_
-
-–
-
-Calls lazily –Action1 / Action1–
-
-Pre_Dec_ / Post_Dec_
-
-++
-
-Calls lazily ++Action1 / Action1++
-
-Pre_Inc_ / Post_Inc_
-
-/
-
-Calls lazily Action1 / Action2
-
-Divides_
-
-/=
-
-Calls lazily Action1 /= Action2
-
-Divides_Assign_
-
-*
-
-Calls lazily Action1 * Action2
-
-Multiplies_
-
-*=
-
-Calls lazily Action1 *= Action2
-
-Multiplies_Assign_
-
-* (binary)
-+
-+
-+
-Calls lazily Action1 + Action2
-+
-+
-+
-Plus_
-+
-+
-+
-+
-** (unary)
-+
-+
-+
-Calls lazily +Action1
-+
-+
-+
-Unary_Plus_
-+
-+
-+
-+
-+
-+=
-+
-+
-+
-Calls lazily Action1 += Action2
-+
-+
-+
-Plus_Assign_
-+
-+
-+
-+
-*** (binary)
-+
-+
-+
-Calls lazily Action1 - Action2
-+
-+
-+
-Minus_
-+
-+
-+
-+
-**** (unary)
-+
-+
-+
-Calls lazily -Action1
-+
-+
-+
-Unary_Minus_
-+
-+
-+
-+
-+
--=
-+
-+
-+
-Calls lazily Action1 -= Action2
-+
-+
-+
-Minus_Assign_
-+
-+
-+
-+
-+
-%
-+
-+
-+
-Calls lazily Action1 % Action2
-+
-+
-+
-Modulus_
-+
-+
-+
-+
-+
-%=
-+
-+
-+
-Calls lazily Action1 %= Action2
-+
-+
-+
-Modulus_Assign_
-+
-+
-+
-+
-+
-____
---
-____
---
-Calls lazily Action1 >> Action2
-
-ShiftRight_
-
-____
---
-____
-=
-
-Calls lazily Action1 >>= Action2
-
-ShiftRight_Assign_
-
-<<
-
-Calls lazily Action1 << Action2
-
-ShiftLeft_
-
-<<=
-
-Calls lazily Action1 <<= Action2
-
-ShiftLeft_Assign_
-
-[] (works on vector, map, arrays)
-
-Calls lazily Action1 [Action2]
-
-Subscript_
-
-if_then_else_(Condition,Action1,Action2)
-
-Returns either the result of calling Action1 or the result of calling
-Action2
-
-If_Else_
-
-if_then_(Condition,Action)
-
-Returns the result of calling Action if Condition
-
-If_Then_
-
-while_(Condition, Body)
-
-While Condition(), calls Body(). Returns nothing
-
-While_Do_
-
-do_while_(Condition, Body)
-
-Calls Body() while Condition(). Returns nothing
-
-Do_While_
-
-for_(Begin,Stop,EndLoop,Body)
-
-Calls for(Begin;Stop;EndLoop)\{Body;}
-
-For_Loop_
-
-process_(Event [,fsm1] [,fsm2] [,fsm3] [,fsm4])
-
-Processes Event on the current state machine (if no fsm specified) or on
-up to 4 state machines returned by an appropriate functor.
-
-Process_
-
-process2_(Event, Data [,fsm1] [,fsm2] [,fsm3])
-
-Processes Event on the current state machine (if no fsm specified) or on
-up to 2 state machines returned by an appropriate functor. The event is
-copy-constructed from what Data() returns.
-
-Process2_
-
-is_flag_(Flag [,fsm])
-
-Calls is_flag_active() on the current state machine or the one returned
-by calling fsm.
-
-Get_Flag_
-
-event_ [(attribute name)]
-
-Returns the current event (as const reference)
-
-GetEvent_
-
-source_ [(attribute name)]
-
-Returns the source state of the currently triggered transition (as
-reference). If an attribute name is provided, returns the attribute by
-reference.
-
-GetSource_
-
-target_ [(attribute name)]
-
-Returns the target state of the currently triggered transition (as
-reference). If an attribute name is provided, returns the attribute by
-reference.
-
-GetTarget_
-
-state_ [(attribute name)]
-
-Returns the source state of the currently active state (as reference).
-Valid inside a state entry/exit action. If an attribute name is
-provided, returns the attribute by reference.
-
-GetState_
-
-fsm_ [(attribute name)]
-
-Returns the current state machine (as reference). Valid inside a state
-entry/exit action or a transition. If an attribute name is provided,
-returns the attribute by reference.
-
-GetFsm_
-
-substate_(state_name [,fsm])
-
-Returns (as reference) the state state_name referenced in the current
-state machine or the one given as argument.
-
-SubState_
-____
-
---
-____
-
---
-____
-
---
-____
-____
-
---
-____
+.eUML operators and basic helpers
+[cols="1,2,1",options="header"]
+|===
+|eUML function / operator
+|Description
+|Functor
+
+|`&&`
+|Calls lazily Action1 && Action2
+|`And_`
+
+|`\|\|`
+|Calls lazily Action1 \|\| Action2
+|`Or_`
+
+|`!`
+|Calls lazily !Action1
+|`Not_`
+
+|`!=`
+|Calls lazily Action1 != Action2
+|`NotEqualTo_`
+
+|`==`
+|Calls lazily Action1 == Action2
+|`EqualTo_`
+
+|`>`
+|Calls lazily Action1 > Action2
+|`Greater_`
+
+|`>=`
+|Calls lazily Action1 >= Action2
+|`Greater_Equal_`
+
+|`<`
+|Calls lazily Action1 < Action2
+|`Less_`
+
+|`\<=`
+|Calls lazily Action1 \<= Action2
+|`Less_Equal_`
+
+|`&`
+|Calls lazily Action1 & Action2
+|`Bitwise_And_`
+
+|`\|`
+|Calls lazily Action1 \| Action2
+|`Bitwise_Or_`
+
+|`^`
+|Calls lazily Action1 ^ Action2
+|`Bitwise_Xor_`
+
+|`--`
+|Calls lazily --Action1 / Action1--
+|`Pre_Dec_` / `Post_Dec_`
+
+|`++`
+|Calls lazily ++Action1 / Action1++
+|`Pre_Inc_` / `Post_Inc_`
+
+|`/`
+|Calls lazily Action1 / Action2
+|`Divides_`
+
+|`/=`
+|Calls lazily Action1 /= Action2
+|`Divides_Assign_`
+
+|`*`
+|Calls lazily Action1 * Action2
+|`Multiplies_`
+
+|`*=`
+|Calls lazily Action1 *= Action2
+|`Multiplies_Assign_`
+
+|`+` (binary)
+|Calls lazily Action1 + Action2
+|`Plus_`
+
+|`+` (unary)
+|Calls lazily +Action1
+|`Unary_Plus_`
+
+|`+=`
+|Calls lazily Action1 += Action2
+|`Plus_Assign_`
+
+|`-` (binary)
+|Calls lazily Action1 - Action2
+|`Minus_`
+
+|`-` (unary)
+|Calls lazily -Action1
+|`Unary_Minus_`
+
+|`-=`
+|Calls lazily Action1 -= Action2
+|`Minus_Assign_`
+
+|`%`
+|Calls lazily Action1 % Action2
+|`Modulus_`
+
+|`%=`
+|Calls lazily Action1 %= Action2
+|`Modulus_Assign_`
+
+|`>>`
+|Calls lazily Action1 >> Action2
+|`ShiftRight_`
+
+|`>>=`
+|Calls lazily Action1 >>= Action2
+|`ShiftRight_Assign_`
+
+|`<<`
+|Calls lazily Action1 << Action2
+|`ShiftLeft_`
+|`<\<=`
+|Calls lazily Action1 <<= Action2
+|`ShiftLeft_Assign_`
+
+|`[]` (works on vector, map, arrays)
+|Calls lazily Action1 [Action2]
+|`Subscript_`
+
+|`if_then_else_(Condition, Action1, Action2)`
+|Returns either the result of calling Action1 or the result of calling Action2
+|`If_Else_`
+
+|`if_then_(Condition, Action)`
+|Returns the result of calling Action if Condition
+|`If_Then_`
+
+|`while_(Condition, Body)`
+|While Condition(), calls Body(). Returns nothing
+|`While_Do_`
+
+|`do_while_(Condition, Body)`
+|Calls Body() while Condition(). Returns nothing
+|`Do_While_`
+
+|`for_(Begin, Stop, EndLoop, Body)`
+|Calls for(Begin; Stop; EndLoop)\{Body;}
+|`For_Loop_`
+
+|`process_(Event [,fsm1] [,fsm2] [,fsm3] [,fsm4])`
+|Processes Event on the current state machine (if no fsm specified) or on up to 4 state machines returned by an appropriate functor.
+|`Process_`
+
+|`process2_(Event, Data [,fsm1] [,fsm2] [,fsm3])`
+|Processes Event on the current state machine (if no fsm specified) or on up to 2 state machines returned by an appropriate functor. The event is copy-constructed from what Data() returns.
+|`Process2_`
+
+|`is_flag_(Flag [,fsm])`
+|Calls is_flag_active() on the current state machine or the one returned by calling fsm.
+|`Get_Flag_`
+
+|`event_[(attribute name)]`
+|Returns the current event (as const reference)
+|`GetEvent_`
+
+|`source_[(attribute name)]`
+|Returns the source state of the currently triggered transition (as reference). If an attribute name is provided, returns the attribute by reference.
+|`GetSource_`
+
+|`target_[(attribute name)]`
+|Returns the target state of the currently triggered transition (as reference). If an attribute name is provided, returns the attribute by reference.
+|`GetTarget_`
+
+|`state_[(attribute name)]`
+|Returns the source state of the currently active state (as reference). Valid inside a state entry/exit action. If an attribute name is provided, returns the attribute by reference.
+|`GetState_`
+
+|`fsm_[(attribute name)]`
+|Returns the current state machine (as reference). Valid inside a state entry/exit action or a transition. If an attribute name is provided, returns the attribute by reference.
+|`GetFsm_`
+
+|`substate_(state_name [,fsm])`
+|Returns (as reference) the state state_name referenced in the current state machine or the one given as argument.
+|`SubState_`
+|===
 
 To use these functions, you need to include:
 
-`#include <msm/front/euml/euml.hpp>`
+[source,cpp]
+----
+#include <msm/front/euml/euml.hpp>
+----

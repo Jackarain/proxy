@@ -18,7 +18,6 @@ target_link_libraries(boost_sort
     Boost::config
     Boost::core
     Boost::range
-    Boost::static_assert
     Boost::type_traits
 )
 

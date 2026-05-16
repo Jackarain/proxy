@@ -12,7 +12,6 @@ constant boost_dependencies :
     /boost/dynamic_bitset//boost_dynamic_bitset
     /boost/integer//boost_integer
     /boost/io//boost_io
-    /boost/static_assert//boost_static_assert
     /boost/system//boost_system
     /boost/throw_exception//boost_throw_exception
     /boost/type_traits//boost_type_traits

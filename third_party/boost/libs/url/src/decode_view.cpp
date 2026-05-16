@@ -52,6 +52,7 @@ void
 decode_view::
 remove_prefix( size_type n )
 {
+    BOOST_ASSERT(n <= dn_);
     auto it = begin();
     auto n0 = n;
     while (n)
@@ -68,6 +69,7 @@ void
 decode_view::
 remove_suffix( size_type n )
 {
+    BOOST_ASSERT(n <= dn_);
     auto it = end();
     auto n0 = n;
     while (n)
@@ -103,6 +105,8 @@ bool
 decode_view::
 ends_with( core::string_view s ) const noexcept
 {
+    if (s.empty())
+        return true;
     if (s.size() > size())
         return false;
     auto it0 = end();

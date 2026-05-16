@@ -1,0 +1,74 @@
+﻿# ------------------------------------------------------------------------------
+#  Copyright Matt Borland 2023.
+#  Copyright Christopher Kormanyos 2023.
+#  Distributed under the Boost Software License,
+#  Version 1.0. (See accompanying file LICENSE_1_0.txt
+#  or copy at http://www.boost.org/LICENSE_1_0.txt)
+# ------------------------------------------------------------------------------
+
+name: tidy
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - feature/**
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  clang-tidy-native:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        standard: [ c++14 ]
+        compiler: [ g++ ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: update-tools
+        run: sudo apt install clang-tidy
+      - name: clone-submods-bootstrap-headers-boost-develop
+        run: |
+          git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+          cd ../boost-root
+          git submodule update --init tools
+          git submodule update --init libs/assert
+          git submodule update --init libs/config
+          git submodule update --init libs/core
+          git submodule update --init libs/math
+          git submodule update --init libs/multiprecision
+          git submodule update --init libs/predef
+          git submodule update --init libs/static_assert
+          git submodule update --init libs/test
+          ./bootstrap.sh
+          ./b2 headers
+      - name: clang-tidy-native
+        run: |
+          cd test/tidy
+          echo
+          echo "exercise clang-tidy"
+          echo "make prepare -f make_tidy_01_generic.gmk MY_BOOST_ROOT=../../../boost-root MY_CC=${{ matrix.compiler }} MY_STD=${{ matrix.standard }}"
+          echo
+          make prepare -f make_tidy_01_generic.gmk MY_BOOST_ROOT=../../../boost-root MY_CC=${{ matrix.compiler }} MY_STD=${{ matrix.standard }}
+          echo
+          echo "make tidy -f make_tidy_01_generic.gmk --jobs=8 MY_BOOST_ROOT=../../../boost-root MY_CC=${{ matrix.compiler }} MY_STD=${{ matrix.standard }}"
+          echo
+          make tidy -f make_tidy_01_generic.gmk --jobs=8 MY_ALL_COV=0 MY_BOOST_ROOT=../../../boost-root MY_CC=${{ matrix.compiler }} MY_STD=${{ matrix.standard }}
+          echo
+          echo "print tidy result for quick.cpp only"
+          cat tmp/quick.tidy_txt
+      - name: quality-gate-clang-tidy
+        run: |
+          cd test/tidy
+          echo
+          echo "quality-gate-clang-tidy not yet implemented"
+          ls -la tmp/all.tidy_txt
+          ls -la tmp/quick.tidy_txt
+          echo
+          echo "word-count on tmp/quick.tidy_txt"
+          cat tmp/quick.tidy_txt | grep warning | wc

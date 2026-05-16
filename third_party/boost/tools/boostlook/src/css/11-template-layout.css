@@ -1,0 +1,323 @@
+
+/* Template-specific Adjustments */
+
+/* Hide root scrollbars for Antora template */
+html:has(.article > .boostlook) {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Iframe container scrollbar handling */
+html:has(#docsiframe) {
+  overflow-y: hidden;
+}
+
+/* Chrome/Edge scrollbar for iframe container */
+html:has(#docsiframe)::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Antora template - Scrollable content area */
+.boostlook #content:has(> .doc) {
+  overflow-y: auto;
+}
+
+/* Asciidoc template - Content overflow handling */
+.boostlook:has(#content > .sect1) {
+  overflow-y: auto;
+  height: 100vh;
+}
+
+/* Table Container */
+.boostlook .content div:has(> table),
+.boostlook .doc table.tableblock,
+.boostlook #content .sect3:has(.tableblock) {
+  overflow-x: auto !important;
+}
+
+/* Article Layout */
+.article.toc2.toc-left {
+  min-height: 100vh;
+  /* Simplified: always use offset behavior, never center */
+  margin-left: var(--main-max-width-leftbar);
+  background: var(--surface-background-main-base-primary, #fff);
+  position: relative;
+  overflow-y: auto;
+}
+
+/* TOC Common start */
+/* Background Colors */
+.boostlook #toc.toc2,
+.boostlook #header:not(:has(.nav-container)),
+.boostlook #content,
+.boostlook #footer {
+  background: var(--surface-background-main-base-primary, #fff);
+}
+/* TOC Scrolling */
+.boostlook #toc.toc2 {
+  overflow-y: auto;
+  scrollbar-color: inherit;
+}
+/* TOC Positioning */
+.boostlook #toc.toc2,
+#boost-legacy-docs-wrapper:not(:has(article.doc)) #toc.toc2.is-active,
+#antora-template-wrapper:not(:has(article.doc)) #toc.toc2.is-active,
+div.source-docs-antora.boostlook:not(:has(article.doc)):not(:has(> .boostlook)) #toc.toc2.is-active {
+  position: static;
+}
+
+/* TOC Toggle Button */
+.boostlook #toggle-toc {
+  visibility: hidden;
+  height: 0;
+  width: 0;
+}
+
+/* TOC Navigation Menu */
+.boostlook #toc ul,
+.boostlook:not(:has(.doc)) div.toc dd {
+  margin: 0;
+  padding: 0 0 0 var(--leftbar-paddings-leftbar-padding-2xs, 0.5rem);
+  color: var(--text-main-text-body-secondary, #494d50);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-style: normal;
+  line-height: var(--typography-line-height-md, 1.25rem);
+  list-style: none;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 0;
+}
+
+.boostlook #toc .nav-menu > .nav-list,
+.boostlook #toc .nav-menu > .nav-list > .nav-list,
+.boostlook #toc > ul.sectlevel1 {
+  padding-left: 0;
+}
+
+.boostlook .nav-menu .nav-list li,
+.boostlook #toc > ul.sectlevel1 li:not(:has(> ul)),
+.boostlook #toc > ul.sectlevel1 li:has(> ul) a,
+.boostlook:not(:has(.doc)) div.toc dt {
+  position: relative;
+  padding: var(--leftbar-paddings-leftbar-padding-4xs, 0.125rem) var(--leftbar-paddings-leftbar-padding-3xs, 0.25rem);
+}
+
+.boostlook .nav-menu .nav-list li:has(.nav-text),
+.boostlook #toc > ul.sectlevel1 li:has(> ul):not(:first-of-type) {
+  margin-top: var(--leftbar-paddings-leftbar-padding-4xs, 0.125rem);
+}
+
+.boostlook .nav-text,
+.boostlook #toc > ul.sectlevel1 li:has(> ul) > a {
+  color: var(--text-main-text-body-quaternary, #949a9e);
+  font-size: var(--typography-font-size-2xs, 0.75rem);
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-sm, 1rem);
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+}
+
+/* Table of Contents Links */
+.boostlook #toc a,
+.boostlook:not(:has(.doc)) div.toc a {
+  color: var(--text-main-text-body-secondary, #494d50);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-style: normal;
+  line-height: var(--typography-line-height-sm, 1rem); /* 142.857% */
+  text-decoration: none;
+}
+
+.boostlook #toc a:hover,
+.boostlook #toc a:focus,
+.boostlook #toc > ul.sectlevel1 li:has(> ul) > a:hover,
+.boostlook #toc > ul.sectlevel1 li:has(> ul) > a:focus,
+.boostlook:not(:has(.doc)) div.toc a:hover,
+.boostlook:not(:has(.doc)) div.toc a:focus {
+  color: var(--text-main-text-link-blue-secondary, #0284c7);
+  text-decoration: none;
+}
+/*
+.boostlook #toc .nav-link:visited:not(:hover),
+.boostlook #toc .sectlevel1 li:not(:has(> ul)) a:visited:not(:hover),
+.boostlook:not(:has(.doc)) div.toc a:visited:not(:hover) {
+  color: var(--text-main-text-link-viewed, #62b3dd);
+}
+*/
+
+.boostlook .nav-list li[data-depth]:not([data-depth="1"]),
+.boostlook #toc > ul.sectlevel1 ul[class*="sectlevel"] > li,
+.boostlook:not(:has(.doc)) div.toc dd dt {
+  margin-left: calc(var(--leftbar-paddings-leftbar-padding-2xs) * -1);
+  padding-left: calc(var(--padding-padding-sm, 1rem) + var(--leftbar-paddings-leftbar-padding-2xs));
+}
+
+.boostlook .nav-list li[data-depth]:not([data-depth="1"])::before,
+.boostlook #toc > ul.sectlevel1 ul[class*="sectlevel"] > li::before,
+.boostlook:not(:has(.doc)) div.toc dd dt:before {
+  content: "";
+  position: absolute;
+  left: var(--leftbar-paddings-leftbar-padding-2xs);
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: var(--border-border-secondary, #d5d7d9);
+}
+
+.boostlook .nav-list li[data-depth]:not([data-depth="1"]):hover::before,
+.boostlook #toc > ul.sectlevel1 li:not(:has(> ul)):hover::before,
+.boostlook:not(:has(.doc)) div.toc dd dt:hover:before {
+  background-color: var(--border-border-blue-hover, #329cd2);
+  isolation: isolate;
+  z-index: 1;
+}
+
+/* Navigation Menu Title */
+.boostlook #toc #toctitle,
+.boostlook .nav-menu h3.title {
+  padding: var(--leftbar-paddings-leftbar-padding-3xs, 0.25rem);
+  color: var(--text-main-text-primary, #18191b);
+  font-size: var(--typography-font-size-2xs, 0.75rem);
+  line-height: var(--typography-line-height-sm, 1rem);
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+  font-variation-settings: "wght" 600, "wdth" 80;
+}
+
+/* TOC code in links */
+.boostlook #toc a code,
+.boostlook:not(:has(.doc)) div.toc a code {
+  /* slightly reduce code elements font size in side menu */
+  font-size: 0.96em;
+  display: inline;
+  background: none !important;
+  padding: 0;
+  border: none;
+  color: inherit;
+  transition: none;
+}
+
+/* Content */
+.boostlook #content .doc,
+.boostlook #content > .sect1,
+.boostlook #header > *,
+.boostlook #footer > * {
+  max-width: var(--main-content-width);
+  margin-left: 0;
+}
+
+.boostlook #preamble + .sect1,
+.boostlook .doc .sect1 + .sect1 {
+  margin-top: revert;
+}
+
+html:not(.is-clipped--nav):has(.boostlook) div#content {
+  display: block;
+  visibility: visible;
+}
+
+html.is-clipped--nav:has(.boostlook) div#content {
+  display: none;
+  visibility: hidden;
+}
+
+/* Responsive Design */
+@media screen and (min-width: 768px) {
+  .article.toc2.toc-left {
+    padding: 0 1rem 0 1rem;
+  }
+
+  .boostlook #toggle-toc {
+    visibility: visible;
+    height: auto;
+    width: auto;
+  }
+
+  .boostlook #toc.toc2 {
+    position: fixed;
+    width: var(--main-max-width-leftbar);
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-right: 1px solid var(--border-border-primary, #e4e7ea);
+    visibility: visible;
+  }
+
+  .boostlook #toc.toc2:not(.nav-container) {
+    padding: 1rem 1.5rem;
+  }
+
+  .boostlook #toc.toc2:not(.nav-container):has(#toggle-toc) {
+    /* Extra left padding if toc toggle exists */
+    padding: 1rem 1.5rem 1rem 2.2rem;
+  }
+
+
+  /* TOC Toggle Button */
+  .boostlook #toggle-toc {
+    position: fixed;
+    top: 2rem;
+    left: 1rem;
+    background-color: var(--surface-background-main-base-primary);
+    box-shadow: 0 0px 3px var(--surface-background-main-surface-transparent-inverse);
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20height%3D%2224px%22%20viewBox%3D%220%20-960%20960%20960%22%20width%3D%2224px%22%20fill%3D%22%235f6368%22%3E%3Cpath%20d%3D%22M400-240l240-240-240-240-56%2056%20184%20184-184%20184%2056%2056Z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    border-radius: 1rem;
+    height: 2rem;
+    width: 2rem;
+    text-indent: -9999px;
+    z-index: 1001;
+  }
+
+  /* Hidden TOC */
+  html.toc-hidden .boostlook {
+    margin-left: 0;
+  }
+
+  html.toc-hidden .boostlook #toggle-toc {
+    left: 2px;
+  }
+
+  /* Visible TOC */
+  html.toc-visible .boostlook #toggle-toc {
+    left: 2px;
+    background-color: var(--surface-background-main-base-primary);
+  }
+
+  html.toc-visible .boostlook {
+    margin-left: 0;
+  }
+
+  html.toc-hidden .boostlook #toc.toc2 {
+    visibility: hidden;
+  }
+
+  html.toc-visible #toc.toc2 {
+    opacity: 1;
+    visibility: visible;
+    /* width: 250px;
+    padding-left: 1.5rem; */
+  }
+
+  /* TOC Shadow States */
+  html.toc-visible:not(.toc-pinned) #toc.toc2 {
+    box-shadow: 4px 0 12px 0px rgba(0, 0, 0, 0.1);
+  }
+
+  /* TOC Pin States */
+  html.toc-visible.toc-pinned #toggle-toc {
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20height%3D%2224px%22%20viewBox%3D%220%20-960%20960%20960%22%20width%3D%2224px%22%20fill%3D%22%235f6368%22%3E%3Cpath%20d%3D%22M560-240%20320-480l240-240%2056%2056-184%20184%20184%20184-56%2056Z%22%2F%3E%3C%2Fsvg%3E");
+  }
+
+  /* html.toc-visible.toc-pinned .boostlook {
+    margin-left: var(--main-max-width-leftbar);
+  } */
+}
+/* TOC Common End */
+

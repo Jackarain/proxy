@@ -5,7 +5,12 @@
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "test_common/test_autoconnect_stream.hpp"
+#include "test_common/test_broker.hpp"
+#include "test_common/test_stream.hpp"
+
 #include <boost/mqtt5/logger_traits.hpp>
+#include <boost/mqtt5/logger.hpp>
 
 #include <boost/mqtt5/detail/log_invoke.hpp>
 
@@ -19,10 +24,6 @@
 
 #include <chrono>
 #include <memory>
-
-#include "test_common/test_autoconnect_stream.hpp"
-#include "test_common/test_broker.hpp"
-#include "test_common/test_stream.hpp"
 
 using namespace boost::mqtt5;
 using namespace std::chrono_literals;
@@ -132,7 +133,7 @@ void run_connect_to_localhost_test(int succeed_after) {
     detail::reconnect_op(auto_stream, std::move(handler))
         .perform(auto_stream.stream_pointer());
 
-    ioc.run();
+    broker.run(ioc);
     BOOST_TEST(expected_handlers_called == handlers_called);
     BOOST_TEST(broker.received_all_expected());
 }
@@ -165,7 +166,7 @@ BOOST_AUTO_TEST_CASE(no_servers) {
     detail::reconnect_op(auto_stream, std::move(handler))
         .perform(auto_stream.stream_pointer());
 
-    ioc.run();
+    ioc.poll();
     BOOST_TEST(expected_handlers_called == handlers_called);
 }
 

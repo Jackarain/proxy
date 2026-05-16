@@ -12,8 +12,10 @@
 #define BOOST_URL_IMPL_SEGMENTS_BASE_HPP
 
 #include <boost/url/detail/segments_iter_impl.hpp>
+#include <boost/url/encoding_opts.hpp>
 #include <boost/assert.hpp>
 #include <iterator>
+#include <ostream>
 
 namespace boost {
 namespace urls {
@@ -52,9 +54,13 @@ public:
     iterator& operator=(
         iterator const&) noexcept = default;
 
-    BOOST_URL_DECL
     reference
-    operator*() const;
+    operator*() const
+    {
+        encoding_opts opt;
+        opt.space_as_plus = false;
+        return it_.dereference().decode(opt);
+    }
 
     // the return value is too expensive
     pointer operator->() const = delete;
@@ -107,9 +113,74 @@ public:
 //------------------------------------------------
 
 inline
+segments_base::
+iterator::
+iterator(
+    detail::path_ref const& ref) noexcept
+    : it_(ref)
+{
+}
+
+inline
+segments_base::
+iterator::
+iterator(
+    detail::path_ref const& ref,
+    int) noexcept
+    : it_(ref, 0)
+{
+}
+
+//------------------------------------------------
+//
+// segments_base
+//
+//------------------------------------------------
+
+inline
+segments_base::
+segments_base(
+    detail::path_ref const& ref) noexcept
+    : ref_(ref)
+{
+}
+
+inline
+pct_string_view
+segments_base::
+buffer() const noexcept
+{
+    return ref_.buffer();
+}
+
+inline
+bool
+segments_base::
+is_absolute() const noexcept
+{
+    return ref_.buffer().starts_with('/');
+}
+
+inline
+bool
+segments_base::
+empty() const noexcept
+{
+    return ref_.nseg() == 0;
+}
+
+inline
+std::size_t
+segments_base::
+size() const noexcept
+{
+    return ref_.nseg();
+}
+
+inline
 std::string
 segments_base::
-front() const noexcept
+front() const
 {
     BOOST_ASSERT(! empty());
     return *begin();
@@ -118,10 +189,40 @@ front() const noexcept
 inline
 std::string
 segments_base::
-back() const noexcept
+back() const
 {
     BOOST_ASSERT(! empty());
     return *--end();
+}
+
+inline
+auto
+segments_base::
+begin() const noexcept ->
+    iterator
+{
+    return iterator(ref_);
+}
+
+inline
+auto
+segments_base::
+end() const noexcept ->
+    iterator
+{
+    return iterator(ref_, 0);
+}
+
+//------------------------------------------------
+
+inline
+std::ostream&
+operator<<(
+    std::ostream& os,
+    segments_base const& ps)
+{
+    os << ps.buffer();
+    return os;
 }
 
 } // urls

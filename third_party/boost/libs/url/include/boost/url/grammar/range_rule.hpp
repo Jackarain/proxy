@@ -15,10 +15,12 @@
 #include <boost/core/detail/string_view.hpp>
 #include <boost/url/grammar/parse.hpp>
 #include <boost/url/grammar/type_traits.hpp>
+#include <boost/url/grammar/detail/range_rule.hpp>
 #include <boost/core/detail/static_assert.hpp>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
+#include <utility>
 #include <stddef.h> // ::max_align_t
 
 namespace boost {
@@ -29,40 +31,106 @@ template<class R0, class R1>
 struct range_rule_t;
 } // implementation_defined
 
-/** A forward range of parsed elements
-
-    Objects of this type are forward ranges
-    returned when parsing using the
-    @ref range_rule.
-    Iteration is performed by re-parsing the
-    underlying character buffer. Ownership
-    of the buffer is not transferred; the
-    caller is responsible for ensuring that
-    the lifetime of the buffer extends until
-    it is no longer referenced by the range.
-
-    @note
-
-    The implementation may use temporary,
-    recycled storage for type-erasure. Objects
-    of type `range` are intended to be used
-    ephemerally. That is, for short durations
-    such as within a function scope. If it is
-    necessary to store the range for a long
-    period of time or with static storage
-    duration, it is necessary to copy the
-    contents to an object of a different type.
-
-    @tparam T The value type of the range
-
-    @see
-        @ref parse,
-        @ref range_rule.
-*/
-template<class T>
-class range
+namespace implementation_defined
 {
-    // buffer size for type-erased rule
+template<class RangeRule, class = void>
+struct range_value_type
+{
+    using type = void;
+};
+
+template<class RangeRule>
+struct range_value_type<
+    RangeRule,
+    urls::void_t<typename RangeRule::value_type>>
+{
+    using type = typename RangeRule::value_type;
+};
+
+template<class RangeRule, class ValueType, class = void>
+struct is_range_rule : std::false_type
+{
+};
+
+template<class RangeRule, class ValueType>
+struct is_range_rule<
+    RangeRule,
+    ValueType,
+    urls::void_t<
+        decltype(std::declval<RangeRule const&>().first(
+            std::declval<char const*&>(),
+            std::declval<char const*>())),
+        decltype(std::declval<RangeRule const&>().next(
+            std::declval<char const*&>(),
+            std::declval<char const*>()))>>
+    : std::integral_constant<bool,
+        std::is_same<
+            decltype(std::declval<RangeRule const&>().first(
+                std::declval<char const*&>(),
+                std::declval<char const*>())),
+            system::result<ValueType>>::value &&
+        std::is_same<
+            decltype(std::declval<RangeRule const&>().next(
+                std::declval<char const*&>(),
+                std::declval<char const*>())),
+            system::result<ValueType>>::value>
+{
+};
+}
+
+template<class RangeRule>
+using is_range_rule = implementation_defined::is_range_rule<
+    RangeRule,
+    typename implementation_defined::range_value_type<
+        RangeRule>::type>;
+
+#ifdef BOOST_URL_HAS_CONCEPTS
+template <class T>
+concept RangeRule =
+    requires (T r, char const*& it, char const* end)
+    {
+        typename T::value_type;
+        { r.first(it, end) } -> std::same_as<system::result<typename T::value_type>>;
+        { r.next(it, end) } -> std::same_as<system::result<typename T::value_type>>;
+    };
+#endif
+
+template<class T>
+class any_rule;
+
+template<class T>
+class any_rule
+{
+public:
+    using value_type = T;
+
+    any_rule() noexcept;
+    any_rule(any_rule const&) noexcept;
+    any_rule(any_rule&&) noexcept;
+    any_rule& operator=(any_rule const&) noexcept;
+    any_rule& operator=(any_rule&&) noexcept;
+    ~any_rule();
+
+    template<class R>
+    explicit
+    any_rule(R const& next);
+
+    template<class R0, class R1>
+    any_rule(
+        R0 const& first,
+        R1 const& next);
+
+    system::result<T>
+    first(
+        char const*& it,
+        char const* end) const noexcept;
+
+    system::result<T>
+    next(
+        char const*& it,
+        char const* end) const noexcept;
+
+private:
     static constexpr
         std::size_t BufferSize = 128;
 
@@ -82,13 +150,7 @@ class range
         }
     };
 
-    small_buffer sb_;
-    core::string_view s_;
-    std::size_t n_ = 0;
-
-    //--------------------------------------------
-
-    struct any_rule;
+    struct impl_base;
 
     template<class R, bool>
     struct impl1;
@@ -97,38 +159,95 @@ class range
         class R0, class R1, bool>
     struct impl2;
 
+    impl_base&
+    get() noexcept;
+
+    impl_base const&
+    get() const noexcept;
+
+    small_buffer sb_;
+};
+
+/** A forward range of parsed elements
+
+    Objects of this type are forward ranges
+    returned when parsing using the
+    @ref range_rule.
+    Iteration is performed by re-parsing the
+    underlying character buffer. Ownership
+    of the buffer is not transferred; the
+    caller is responsible for ensuring that
+    the lifetime of the buffer extends until
+    it is no longer referenced by the range.
+
+    @note
+
+    The implementation may type-erase the
+    rule responsible for iterating the
+    underlying character buffer. Objects
+    of type `range` are intended to be used
+    ephemerally. That is, for short durations
+    such as within a function scope. If it is
+    necessary to store the range for a long
+    period of time or with static storage
+    duration, it is necessary to copy the
+    contents to an object of a different type.
+
+    @tparam T The value type of the range
+    @tparam RangeRule The implementation used to
+        iterate the range. The default is a
+        type-erased rule.
+
+    @see
+        @ref parse,
+        @ref range_rule.
+*/
+template<
+    class T,
+    class RangeRule = any_rule<T>>
+class range
+    : private detail::range_base_storage<
+        RangeRule>
+{
+private:
+#ifdef BOOST_URL_HAS_CONCEPTS
+    static_assert(
+        ::boost::urls::grammar::RangeRule<RangeRule>,
+        "RangeRule requirements not met");
+#else
+    static_assert(
+        ::boost::urls::grammar::is_range_rule<RangeRule>::value,
+        "RangeRule requirements not met");
+#endif
+
+    static_assert(
+        std::is_class<
+            detail::range_base_storage<
+                RangeRule>>::value,
+        "range_base_storage requirements not met");
+
+    using storage_type =
+        detail::range_base_storage<
+            RangeRule>;
+
+    using storage_type::rule;
+
+    core::string_view s_;
+    std::size_t n_ = 0;
+
     template<
         class R0, class R1>
     friend struct implementation_defined::range_rule_t;
 
-    any_rule&
-    get() noexcept
-    {
-        return *reinterpret_cast<
-            any_rule*>(sb_.addr());
-    }
-
-    any_rule const&
-    get() const noexcept
-    {
-        return *reinterpret_cast<
-            any_rule const*>(
-                sb_.addr());
-    }
-
-    template<class R>
     range(
         core::string_view s,
         std::size_t n,
-        R const& r);
+        RangeRule const& rule) noexcept;
 
-    template<
-        class R0, class R1>
     range(
         core::string_view s,
         std::size_t n,
-        R0 const& first,
-        R1 const& next);
+        RangeRule&& rule) noexcept;
 
 public:
     /** The type of each element of the range
@@ -305,6 +424,7 @@ struct range_rule_t<R>
     using value_type =
         range<typename R::value_type>;
 
+    BOOST_URL_CXX20_CONSTEXPR
     system::result<value_type>
     parse(
         char const*& it,
@@ -424,6 +544,7 @@ struct range_rule_t
     using value_type =
         range<typename R0::value_type>;
 
+    BOOST_URL_CXX20_CONSTEXPR
     system::result<value_type>
     parse(
         char const*& it,

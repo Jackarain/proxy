@@ -165,7 +165,7 @@ struct basic_process
   template <typename ExecutionContext>
   explicit basic_process(ExecutionContext & context,
                          typename std::enable_if<
-                             is_convertible<ExecutionContext&, 
+                             std::is_convertible<ExecutionContext&, 
                                 net::execution_context&>::value, void *>::type = nullptr)
      : process_handle_(context.get_executor()) {}
 

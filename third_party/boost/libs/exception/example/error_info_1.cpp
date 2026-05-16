@@ -18,7 +18,7 @@ f()
     {
     throw my_error() << my_info(42); //(3)
     }
-                 
+
 void
 g()
     {

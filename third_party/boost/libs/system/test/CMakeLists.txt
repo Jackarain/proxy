@@ -27,7 +27,7 @@ macro(lib name macro)
 
 endmacro()
 
-set(BOOST_TEST_LINK_LIBRARIES Boost::system Boost::core Boost::static_assert)
+set(BOOST_TEST_LINK_LIBRARIES Boost::system Boost::config Boost::core)
 
 boost_test(SOURCES quick.cpp)
 
@@ -135,6 +135,8 @@ boost_test(TYPE run SOURCES ec_hash_value_test.cpp)
 
 boost_test(TYPE run SOURCES std_interop_test16.cpp)
 
+boost_test(TYPE run SOURCES failed_constexpr_test2.cpp)
+
 # result
 
 boost_test(TYPE run SOURCES result_default_construct.cpp)
@@ -165,8 +167,6 @@ boost_test(TYPE run SOURCES result_value_construct6.cpp)
 boost_test(TYPE run SOURCES result_value_construct7.cpp)
 boost_test(TYPE run SOURCES result_error_construct5.cpp)
 boost_test(TYPE run SOURCES result_or_value.cpp)
-boost_test(TYPE compile-fail SOURCES result_or_value_fail.cpp)
-boost_test(TYPE compile-fail SOURCES result_or_value_fail2.cpp)
 boost_test(TYPE run SOURCES result_or_fn0v.cpp)
 boost_test(TYPE run SOURCES result_or_fn0r.cpp)
 boost_test(TYPE run SOURCES result_and_fn1v.cpp)
@@ -177,3 +177,21 @@ boost_test(TYPE run SOURCES result_in_place_use.cpp)
 boost_test(TYPE run SOURCES result_or_eq_value.cpp)
 boost_test(TYPE run SOURCES result_or_eq_fn0v.cpp)
 boost_test(TYPE run SOURCES result_or_eq_fn0r.cpp)
+
+boost_test(TYPE run SOURCES result_and_mfn1v.cpp)
+boost_test(TYPE run SOURCES result_and_mfn1r.cpp)
+
+boost_test(TYPE compile SOURCES result_value_construct_cx.cpp)
+boost_test(TYPE compile SOURCES result_error_construct_cx.cpp)
+boost_test(TYPE compile SOURCES result_error_construct_cx2.cpp)
+
+boost_test(TYPE run SOURCES result_unsafe_value_access.cpp)
+boost_test(TYPE run SOURCES result_unsafe_value_access2.cpp)
+
+boost_test(TYPE run SOURCES unwrap_and_invoke.cpp)
+boost_test(TYPE run SOURCES unwrap_and_invoke2.cpp)
+
+boost_test(TYPE run SOURCES unwrap_and_construct.cpp)
+boost_test(TYPE run SOURCES unwrap_and_construct2.cpp)
+
+boost_test(TYPE run SOURCES detail_is_aggregate_test.cpp)

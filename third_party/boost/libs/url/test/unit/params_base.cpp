@@ -283,6 +283,32 @@ struct params_base_test
             BOOST_TEST(p.contains("F", ignore_case));
             BOOST_TEST(! p.contains("G", ignore_case));
         }
+
+        // get_or()
+        {
+            url_view u(
+                "?first=John&empty=&novalue&encoded=John%20Doe");
+            params_view p = u.params();
+
+            BOOST_TEST_EQ(p.get_or("first", "n/a"), "John");
+            BOOST_TEST_EQ(p.get_or("encoded", "n/a"), "John Doe");
+            BOOST_TEST_EQ(p.get_or("missing", "n/a"), "n/a");
+            BOOST_TEST_EQ(p.get_or("novalue", "fallback"), "");
+            BOOST_TEST_EQ(p.get_or("empty", "fallback"), "");
+            BOOST_TEST_EQ(
+                p.get_or("FIRST", "n/a", ignore_case), "John");
+        }
+
+        // javadoc
+        {
+            url_view u("/path?first=John&last=Doe");
+            BOOST_TEST_EQ(
+                u.params().get_or("first", "n/a"),
+                "John");
+            BOOST_TEST_EQ(
+                u.params().get_or("missing", "n/a"),
+                "n/a");
+        }
     }
 
     void
@@ -340,6 +366,13 @@ struct params_base_test
         check( "?first=John&last=Doe", { { "first", "John" }, { "last", "Doe" } } );
         check( "?key=value&", { { "key", "value" }, {} } );
         check( "?&key=value", { {}, { "key", "value" } } );
+        check( "?a=b=c",         { { "a", "b=c" } } );
+        check( "?k=v=w&x=y",     { { "k", "v=w" }, { "x", "y" } } );
+        check( "?x=y&k=v=w",     { { "x", "y" }, { "k", "v=w" } } );
+        check( "?a=b=c=d",       { { "a", "b=c=d" } } );
+        check( "?===",           { { "", "==" } } );
+        check( "?a==b",          { { "a", "=b" } } );
+        check( "?a=1&b=2=3&c=4", { { "a", "1" }, { "b", "2=3" }, { "c", "4" } } );
     }
 
     void

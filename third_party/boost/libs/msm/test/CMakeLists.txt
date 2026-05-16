@@ -12,7 +12,11 @@ if(BOOST_MSM_TEST_ONLY_BACKMP11)
     add_compile_definitions("BOOST_MSM_TEST_ONLY_BACKMP11")
 endif()
 if(BOOST_MSM_TEST_STRICT)
-    add_compile_options(-Wall -Wextra -Werror -Wno-language-extension-token)
+    add_compile_options(-Wall -Wpedantic -Wextra -Werror -Wno-language-extension-token)
+endif()
+if(BOOST_MSM_TEST_ENABLE_SANITIZERS)
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address -fno-omit-frame-pointer)
 endif()
 
 
@@ -72,12 +76,17 @@ add_dependencies(tests boost_msm_euml_tests)
 
 add_executable(boost_msm_cxx17_tests
     EXCLUDE_FROM_ALL
+    Backmp11BasicPolymorphic.cpp
+    Backmp11Completion.cpp
     Backmp11Constructor.cpp
     Backmp11Context.cpp
+    Backmp11CopyMove.cpp
     Backmp11Deferred.cpp
+    Backmp11EntryExit.cpp
+    Backmp11FunctorApi.cpp
     Backmp11ManyDeferTransitions.cpp
-    Backmp11Members.cpp
     Backmp11RootSm.cpp
+    Backmp11Transitions.cpp
     Backmp11Visitor.cpp
     main.cpp
 )

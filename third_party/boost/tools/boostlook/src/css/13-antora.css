@@ -1,0 +1,616 @@
+
+/*----------------- Styles specific to Antora Templates start -----------------*/
+
+/**
+ * Antora Template Styles
+ * Specific styles for Antora-generated documentation.
+ * These styles handle:
+ * 1. Header and navigation layout
+ * 2. Typography customization
+ * 3. Navigation menu structure
+ * 4. Content layout and formatting
+ * 5. Responsive design adaptations
+ */
+
+/* Table of Contents */
+.boostlook .nav {
+  height: 100%;
+  padding: var(--spacing-size-sm, 1rem) var(--spacing-size-lg, 1.5rem);
+  position: static;
+  background-color: unset;
+  box-shadow: none;
+  height: auto;
+  overflow-y: auto;
+}
+
+/* Toc Navigation */
+.boostlook #toc .nav-menu h3.title a {
+  color: inherit;
+  font: inherit;
+}
+
+.boostlook #toc .nav-menu h3.title a:focus,
+.boostlook #toc .nav-menu h3.title a:hover {
+  color: var(--text-main-text-link-blue-secondary, #0284c7);
+}
+
+/* Navigation Menu */
+.boostlook .nav-panel-menu {
+  overflow: visible;
+}
+
+.boostlook .nav-close {
+  display: none;
+}
+
+.boostlook .nav-menu > .nav-list > .nav-list {
+  margin-left: 0;
+}
+
+.boostlook .nav-list li[data-depth]:not([data-depth="1"]).is-current-page.is-active::before {
+  background-color: var(--text-main-text-primary, #18191b);
+}
+
+/* Active Page Indicator */
+.boostlook .nav-list .is-current-page.is-active {
+  position: relative;
+  border-radius: var(--padding-padding-3xs, 0.25rem);
+  background: var(--surface-background-main-surface-blue-secondary, #daeef9);
+}
+
+.boostlook #toc .nav-list .is-current-page.is-active > .nav-link {
+  color: var(--text-main-text-primary, #18191b);
+}
+
+/* Header Layout */
+.boostlook #header:has(.nav-container) {
+  padding: 0;
+}
+
+/* Typography */
+.boostlook .doc,
+.boostlook .doc i {
+  font: inherit;
+}
+.boostlook .doc i {
+  color: inherit;
+}
+
+/* TOC Container */
+.boostlook #toc.toc2.nav-container {
+  position: fixed;
+}
+
+.boostlook #toc.toc2.nav-container.is-active {
+  position: static;
+  height: 100vh;
+  padding: 0;
+  overflow-y: auto;
+}
+
+/* Nav Toggle */
+.boostlook #content .nav-toggle {
+  display: flex;
+  padding: var(--spacing-size-3xs, 0.25rem);
+  align-items: center;
+  border: none;
+  border-radius: var(--spacing-size-2xs, 0.5rem);
+  outline: none;
+  line-height: inherit;
+  height: unset;
+  width: unset;
+  margin-right: var(--padding-padding-xs, 0.5rem);
+
+  background: var(--surface-background-main-base-primary, #fff);
+  background-size: auto;
+  background-position-x: auto;
+}
+
+.boostlook #content .nav-toggle:before {
+  content: var(--icon-menu);
+  line-height: 0;
+}
+
+@media screen and (min-width: 768px) {
+  .boostlook #content .nav-toggle {
+    display: none;
+    visibility: hidden;
+  }
+}
+
+/* Layout */
+.boostlook .article .content {
+  gap: 1rem;
+}
+
+.boostlook #content:has(.toc.sidebar) {
+  display: flex;
+}
+
+.boostlook #footer:has(> script):not(:has(> div)) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Toolbar */
+.boostlook .toolbar {
+  position: static;
+  height: auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--padding-padding-md, 1.125rem) 0;
+  color: var(--text-main-text-body-tetriary, #62676b);
+  background-color: transparent;
+  box-shadow: unset;
+}
+
+.boostlook .toolbar + h1 {
+  margin-top: 0;
+}
+
+/* Breadcrumbs */
+.boostlook .breadcrumbs {
+  display: block;
+  flex: 1 1;
+  padding: 0;
+  font-size: inherit;
+  line-height: revert;
+  overflow: auto;
+  scrollbar-width: none;
+  margin-right: var(--spacing-size-3xs);
+}
+
+.boostlook .breadcrumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.boostlook .breadcrumbs ul {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-main-text-body-tetriary, #62676b);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-lg, 1.5rem); /* 171.429% */
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+}
+
+.boostlook .breadcrumbs ul li {
+  font: inherit;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+@media screen and (max-width: 767px) {
+  .boostlook .breadcrumbs ul li:not(:first-child):not(:last-child) {
+    display: none;
+  }
+}
+
+.boostlook .breadcrumbs ul li a {
+  font: inherit;
+  color: var(--text-main-text-link-blue-secondary, #0284c7);
+  text-decoration: none;
+  position: relative;
+}
+
+.boostlook .breadcrumbs ul li a:hover {
+  text-decoration: underline;
+}
+
+.boostlook .breadcrumbs ul li:first-of-type {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-size-3xs, 0.25rem);
+  margin-right: var(--padding-padding-xs, 0.75rem);
+  gap: var(--spacing-size-2xs, 0.5rem);
+  border-radius: var(--spacing-size-2xs, 0.5rem);
+  border: 1px solid var(--border-border-primary, #e4e7ea);
+  background: var(--surface-background-main-surface-primary, #f5f6f8);
+}
+
+.boostlook .breadcrumbs ul li:first-of-type::after {
+  content: none;
+}
+
+.boostlook .breadcrumbs ul li:first-of-type a {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-size-3xs, 0.25rem);
+  line-height: 0;
+  color: var(--text-main-text-primary, #18191b);
+  text-decoration: none;
+}
+
+.boostlook .breadcrumbs ul li::after {
+  content: "";
+  display: inline-block;
+  flex-shrink: 0;
+  flex-grow: 0;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--surface-icons-icon-tetriary, #949a9e);
+  padding: 0;
+  margin: 0 var(--spacing-size-2xs, 0.5rem);
+}
+
+.boostlook .breadcrumbs ul li:first-of-type::after,
+.boostlook .breadcrumbs ul li:last-of-type::after {
+  content: none;
+}
+
+.boostlook .breadcrumbs ul li:first-of-type a svg {
+  display: none;
+}
+
+.boostlook .breadcrumbs ul li:first-of-type a::before {
+  content: var(--icon-home);
+}
+
+/* Spirit Navigation */
+.boostlook .toolbar .spirit-nav,
+.boostlook:not(:has(.doc)) .spirit-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.boostlook .toolbar .spirit-nav .disabled,
+.boostlook:not(:has(.doc)) .spirit-nav .disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.boostlook:not(:has(.doc)) .spirit-nav {
+  padding-top: var(--padding-padding-md, 1.125rem);
+  justify-content: flex-end;
+}
+
+.boostlook .toolbar .spirit-nav a,
+.boostlook:not(:has(.doc)) .spirit-nav a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-size-2xs, 0.5rem);
+  border-radius: var(--spacing-size-2xs, 0.5rem);
+  /* border: 1px solid var(--border-border-primary, #e4e7ea); */
+  /* background: var(--surface-background-main-base-primary, #fff); */
+  width: 32px;
+  height: 32px;
+  text-decoration: none;
+  padding: 0;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.boostlook .toolbar .spirit-nav a:hover,
+.boostlook:not(:has(.doc)) .spirit-nav a:hover {
+  border: 1px solid var(--border-border-blue, #92cbe9);
+  background: var(--surface-background-main-surface-blue-secondary, #daeef9);
+}
+
+.boostlook .toolbar .spirit-nav a span {
+  overflow: hidden;
+  position: relative;
+}
+
+.boostlook:not(:has(.doc)) .spirit-nav a img {
+  display: none;
+  border-width: 0px;
+}
+
+/* hide default icons if elemnts exists */
+.boostlook .toolbar .spirit-nav a span[title*="Previous"],
+.boostlook .toolbar .spirit-nav a span[title*="Next"],
+.boostlook .toolbar .spirit-nav a span[title*="Up"] {
+  color: transparent;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.boostlook .toolbar .spirit-nav a span[title*="Previous"]::after,
+.boostlook .toolbar .spirit-nav a span[title*="Next"]::after,
+.boostlook .toolbar .spirit-nav a span[title*="Up"]::after,
+.boostlook:not(:has(.doc)) .spirit-nav a[accesskey]::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 0;
+}
+
+.boostlook .toolbar .spirit-nav a span[title*="Previous"]::after,
+.boostlook:not(:has(.doc)) .spirit-nav a[accesskey="p"]::after {
+  content: var(--icon-arrow-left);
+}
+.boostlook .toolbar .spirit-nav a span[title*="Next"]::after,
+.boostlook:not(:has(.doc)) .spirit-nav a[accesskey="n"]::after {
+  content: var(--icon-arrow-right);
+}
+.boostlook .toolbar .spirit-nav a span[title*="Up"]::after,
+.boostlook:not(:has(.doc)) .spirit-nav a[accesskey="u"]::after {
+  content: var(--icon-arrow-up);
+}
+.boostlook .toolbar .spirit-nav a span[title*="Up"]::after,
+.boostlook:not(:has(.doc)) .spirit-nav a[accesskey="u"]::after {
+  content: var(--icon-arrow-up);
+}
+
+.boostlook:not(:has(.doc)) .spirit-nav a[accesskey="h"]::after {
+  content: var(--icon-home);
+}
+
+/* Tabs Elements */
+.boostlook .tabs .tabpanel {
+  border: revert;
+  padding: var(--padding-padding-xs, 0.75rem) 0;
+  background: transparent;
+}
+
+.boostlook .tablist,
+.boostlook .tabs .tabpanel {
+  border-bottom: 1px solid var(--border-border-primary, #e4e7ea);
+}
+
+.boostlook .tablist > ul[role="tablist"] {
+  background-color: var(--colors-neutral-250, #f9f9f9);
+}
+.dark .boostlook .tablist > ul[role="tablist"] {
+  background-color: var(--colors-neutral-750, #1c1c1c);
+}
+.boostlook .tablist > ul .tab {
+  position: relative;
+  display: flex;
+  padding: var(--padding-padding-2xs, 0.5rem) var(--padding-padding-md, 1.125rem);
+  justify-content: center;
+  align-items: center;
+  color: var(--text-main-text-body-tetriary, #62676b);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  line-height: var(--typography-line-height-md, 1.25rem); /* 142.857% */
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.boostlook .tabs.is-loading .tablist li:first-child::after,
+.boostlook .tabs:not(.is-loading) .tablist li.is-selected::after {
+  content: "";
+  display: block;
+  height: 1px;
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  border-bottom: 1px solid var(--text-main-text-primary, #18191b);
+}
+
+.boostlook .tablist > ul .tab * {
+  color: inherit;
+}
+
+.boostlook .tablist > ul .tab.is-selected,
+.boostlook .tablist > ul .tab:hover {
+  color: var(--text-main-text-primary, #18191b);
+}
+
+.boostlook .tablist.ulist > ul li + li {
+  margin-left: unset;
+}
+
+.boostlook .tabs:not(.is-loading) .tablist .tab:not(.is-selected) {
+  background-color: transparent;
+}
+
+/* Search Field Container */
+#search-field {
+  display: flex;
+  position: relative;
+}
+
+/* Search Input */
+#search-input {
+  padding: 0.15rem 0.75rem 0.15rem 1.75rem !important;
+  border: 1px solid var(--border-border-secondary);
+  border-radius: 6px;
+  background-color: var(--surface-background-main-surface-primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0.35rem center;
+  background-size: 16px 16px;
+  color: var(--text-main-text-body-primary);
+  font-family: inherit;
+  font-size: 1rem !important; /* 16px minimum prevents iOS zoom on focus */
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#search-input::placeholder {
+  color: var(--text-main-text-body-tetriary);
+}
+
+#search-input:focus {
+  outline: none;
+  border-color: var(--border-border-blue-primary);
+  box-shadow: 0 0 0 3px var(--colors-blue-50);
+}
+
+#search-input:disabled {
+  background: var(--colors-neutral-100);
+  color: var(--text-main-text-body-tetriary);
+  cursor: not-allowed;
+}
+
+/* Results Dropdown */
+.search-result-dropdown-menu {
+  position: absolute;
+  z-index: 100;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  min-width: 400px;
+  border-radius: 8px;
+  background: var(--surface-background-main-base-primary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.search-result-dataset {
+  padding: 0.5rem;
+  border: 1px solid var(--border-border-secondary);
+  border-radius: 8px;
+  min-width: 580px;
+  max-height: calc(100vh - 6rem);
+  overflow: auto;
+}
+
+/* Result Component Header */
+.search-result-component-header {
+  padding: 0.5rem 0.75rem;
+  margin: 0.25rem 0;
+  border-bottom: 1px solid var(--border-border-secondary);
+  color: var(--text-main-text-body-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+/* Result Item */
+.search-result-item {
+  display: flex;
+  margin: 0.25rem 0;
+  border-radius: 6px;
+}
+
+.search-result-item:hover {
+  background: var(--colors-neutral-50);
+}
+
+.search-result-item .no-result {
+  padding: 1rem;
+  color: var(--text-main-text-body-tetriary);
+  text-align: center;
+}
+
+/* Result Document Title (Left Column) */
+.search-result-document-title {
+  width: 25%;
+  padding: 0.625rem 0.75rem;
+  border-right: 1px solid var(--border-border-secondary);
+  color: var(--text-main-text-body-tetriary);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+/* Result Document Hit (Right Column) */
+.search-result-document-hit {
+  flex: 1;
+  color: var(--text-main-text-body-secondary);
+  font-size: 0.8125rem;
+}
+
+.search-result-document-hit > a {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.search-result-document-hit > a:hover {
+  background: transparent;
+}
+
+.search-result-document-hit .search-result-section-title {
+  margin-bottom: 0.25rem;
+  color: var(--text-main-text-body-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.search-result-document-hit .search-result-highlight {
+  padding: 0.1em 0.2em;
+  border-radius: 2px;
+  background: var(--colors-blue-50);
+  color: var(--text-main-text-link-blue);
+  font-weight: 500;
+}
+
+/* Search Responsive: Mobile (< 768px) */
+@media screen and (max-width: 767px) {
+  .boostlook .toolbar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .search-container {
+    order: 99;
+    flex: 1 0 100%;
+  }
+
+  #search-input {
+    width: 100% !important;
+    min-width: unset;
+    font-size: 1rem !important; /* Prevents iOS zoom on focus */
+  }
+
+  .search-result-dropdown-menu {
+    position: fixed;
+    top: 6rem;
+    left: 1rem;
+    right: 1rem;
+    min-width: unset;
+    max-width: unset;
+    width: auto;
+  }
+
+  .search-result-dataset {
+    min-width: unset;
+  }
+}
+
+/* Search Responsive: Tablet (768px - 1023px) */
+@media screen and (min-width: 768px) {
+  #search-input {
+    width: unset !important;
+    min-width: unset !important;
+  }
+
+  .search-result-dropdown-menu {
+    position: fixed;
+    top: 4rem;
+    left: calc(var(--main-max-width-leftbar) + 1rem);
+    right: 1rem;
+    min-width: unset;
+    max-width: unset;
+    width: auto;
+  }
+
+  .search-result-dataset {
+    min-width: unset;
+  }
+}
+
+/* Search Responsive: Desktop (1024px+) */
+@media screen and (min-width: 1024px) {
+  #search-input {
+    min-width: 200px !important;
+    z-index: 1001;
+  }
+
+  .search-result-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: auto;
+    right: 0;
+    width: clamp(530px, 45vw, 600px);
+  }
+}
+
+/*----------------- Styles specific to Antora Templates end -----------------*/

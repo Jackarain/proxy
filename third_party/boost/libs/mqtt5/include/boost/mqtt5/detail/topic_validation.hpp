@@ -51,6 +51,8 @@ inline validation_result validate_topic_filter(std::string_view str) {
     constexpr int multi_lvl_wildcard = '#';
     constexpr int single_lvl_wildcard = '+';
 
+    auto res = validation_result::valid;
+
     // must be the last character preceded by '/' or stand alone
     // #, .../#
     if (str.back() == multi_lvl_wildcard) {
@@ -58,10 +60,11 @@ inline validation_result validate_topic_filter(std::string_view str) {
 
         if (!str.empty() && str.back() != '/')
             return validation_result::invalid;
+
+        res = validation_result::has_wildcard_character;
     }
 
     int last_c = -1;
-    validation_result result;
     while (!str.empty()) {
         int c = pop_front_unichar(str);
 
@@ -71,24 +74,24 @@ inline validation_result validate_topic_filter(std::string_view str) {
             (str.empty() || str.front() == '/') &&
             (last_c == -1 || last_c == '/');
 
-        result = validate_mqtt_utf8_char(c);
-        if (
-            result == validation_result::valid ||
-            is_valid_single_lvl
-        ) {
-            last_c = c;
-            continue;
+        switch (validate_mqtt_utf8_char(c)) {
+        case validation_result::has_wildcard_character:
+            if (!is_valid_single_lvl)
+                return validation_result::invalid;
+            res = validation_result::has_wildcard_character;
+        case validation_result::valid:
+            break;
+        case validation_result::invalid:
+            return validation_result::invalid;
         }
 
-        return validation_result::invalid;
+        last_c = c;
     }
 
-    return validation_result::valid;
+    return res;
 }
 
-inline validation_result validate_shared_topic_filter(
-    std::string_view str, bool wildcard_allowed = true
-) {
+inline validation_result validate_shared_topic_filter(std::string_view str) {
     if (!is_valid_topic_size(str.size()))
         return validation_result::invalid;
 
@@ -108,10 +111,7 @@ inline validation_result validate_shared_topic_filter(
         return validation_result::invalid;
 
     auto topic_filter = str.substr(share_name_end + 1);
-    return wildcard_allowed ?
-        validate_topic_filter(topic_filter) :
-        validate_topic_name(topic_filter)
-    ;
+    return validate_topic_filter(topic_filter);
 }
 
 } // end namespace boost::mqtt5::detail

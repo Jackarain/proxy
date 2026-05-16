@@ -130,7 +130,7 @@ public:
 
         @return A string view with the same contents
      */
-    operator
+    constexpr operator
     core::string_view() const noexcept
     {
         return s_;

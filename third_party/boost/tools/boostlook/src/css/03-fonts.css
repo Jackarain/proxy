@@ -1,0 +1,93 @@
+
+/* Override for Antora default styles */
+html:has(.boostlook) {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  font-size: 1rem;
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
+/*----------------- Font-Face Declarations start -----------------*/
+
+/**
+ * Typography Configuration
+ * The framework uses Noto Sans family as its primary font system:
+ * 1. Noto Sans Display: Main text font with variable weight support
+ * 2. Monaspace Neon: Monospace font for code blocks
+ *
+ * Font Loading Strategy:
+ * - Multiple source paths for resilient loading
+ * - Variable fonts for optimal performance
+ * - Font-display: block to prevent FOIT (Flash of Invisible Text)
+ */
+
+/* Noto Sans Display - Regular */
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;
+  font-variation-settings: "wght" 400, "wdth" 62.5;
+  font-display: block;
+  src: url("../font/NotoSansDisplay.ttf") format("truetype"),
+    url("/static/font/notosans.woff2") format("woff2"),
+    url("../../../../tools/boostlook/notosans.woff2") format("woff2"),
+    url("https://cppalliance.org/fonts/NotoSansDisplay.ttf") format("truetype");
+  size-adjust: 100%;
+  ascent-override: 92%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+/* Noto Sans Display - Italic */
+@font-face {
+  font-family: "Noto Sans";
+  font-style: italic;
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;
+  font-variation-settings: "wght" 400, "wdth" 62.5;
+  font-display: block;
+  src: url("../font/NotoSansDisplay-Italic.ttf") format("truetype"),
+    url("/static/font/notosans_ext.woff2") format("woff2"),
+    url("../../../../tools/boostlook/notosans_ext.woff2") format("woff2"),
+    url("https://cppalliance.org/fonts/NotoSansDisplay-Italic.ttf") format("truetype");
+  size-adjust: 100%;
+  ascent-override: 92%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+/* Monaspace Neon - Regular */
+@font-face {
+  font-family: "Monaspace Neon";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../font/MonaspaceNeonFrozen-Regular.ttf") format("truetype"),
+    url("/static/font/MonaspaceNeon-Var.woff2") format("woff2"),
+    url("../../../../tools/boostlook/MonaspaceNeon-Var.woff2") format("woff2"),
+    url("https://cppalliance.org/fonts/MonaspaceNeon-Var.woff2") format("woff2");
+  size-adjust: 100%;
+  ascent-override: 92%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+/* Monaspace Xenon - Italic */
+@font-face {
+  font-family: "Monaspace Xenon";
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+  src: url("../font/MonaspaceXenonFrozen-Italic.ttf") format("truetype"),
+    url("/static/font/MonaspaceXenon-Var.woff2") format("woff2"),
+    url("../../../../tools/boostlook/MonaspaceXenon-Var.woff2") format("woff2"),
+    url("https://cppalliance.org/fonts/MonaspaceXenon-Var.woff2") format("woff2");
+  size-adjust: 100%;
+  ascent-override: 92%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+/*----------------- Font-Face Declarations end -----------------*/

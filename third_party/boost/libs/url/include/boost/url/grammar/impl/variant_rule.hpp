@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -27,6 +28,7 @@ template<
     class R0,
     class... Rn,
     std::size_t I>
+BOOST_URL_CXX20_CONSTEXPR
 auto
 parse_variant(
     char const*&,
@@ -41,7 +43,7 @@ parse_variant(
             typename Rn::value_type...>>
 {
     // no match
-    BOOST_URL_RETURN_EC(
+    BOOST_URL_CONSTEXPR_RETURN_EC(
         error::mismatch);
 }
 
@@ -49,6 +51,7 @@ template<
     class R0,
     class... Rn,
     std::size_t I>
+BOOST_URL_CXX20_CONSTEXPR
 auto
 parse_variant(
     char const*& it,
@@ -83,6 +86,7 @@ parse_variant(
 } // detail
 
 template<class R0, class... Rn>
+BOOST_URL_CXX20_CONSTEXPR
 auto
 implementation_defined::variant_rule_t<R0, Rn...>::
 parse(

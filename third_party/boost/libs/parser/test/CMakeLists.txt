@@ -82,6 +82,7 @@ add_test_executable(parser_seq_permutations_1)
 add_test_executable(parser_seq_permutations_2)
 add_test_executable(parser_or_permutations_1)
 add_test_executable(parser_or_permutations_2)
+add_test_executable(disable_trace)
 
 if (MSVC)
     add_executable(vs_output_tracing tracing.cpp)

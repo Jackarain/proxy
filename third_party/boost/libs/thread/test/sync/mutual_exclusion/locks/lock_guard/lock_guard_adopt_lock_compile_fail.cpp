@@ -11,7 +11,7 @@
 
 #include <boost/thread/lock_guard.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 boost::mutex m;
 

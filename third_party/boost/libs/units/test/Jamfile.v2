@@ -9,20 +9,13 @@
 
 import testing ;
 
-warning-options = <warnings>all <warnings-as-errors>on ;
-warning-compilers =
-    <toolset>msvc
-;
-
-project boost/units/test :
+project :
     requirements
-        <implicit-dependency>/boost//headers
-        <toolset>msvc:<asynch-exceptions>on
-        $(warning-compilers)\:$(warning-options)
-        # This warning comes from the test library.
-        <toolset>msvc:<cxxflags>"/wd4701"
-        # The comes from the exception library
-        <toolset>msvc,<toolset-msvc:version>7.1:<cxxflags>"/wd4800"
+        <library>/boost/units//boost_units
+        <warnings>all
+        # boost_math_tr1 emits 4714, and because it's a dependency of boost_units,
+        # those are impossible to squelch
+        #<toolset>msvc:<warnings-as-errors>on
 ;
 
 compile test_predicates.cpp ;
@@ -43,16 +36,16 @@ run test_conversion.cpp ;
 run test_base_dimension.cpp ;
 run test_absolute.cpp ;
 run test_default_conversion.cpp ;
-run test_cmath.cpp ;
-run test_limits.cpp ;
+run test_cmath.cpp /boost/math//boost_math_tr1 ;
+run test_limits.cpp /boost/math//boost_math_tr1 ;
 run test_custom_unit.cpp ;
 run test_scaled_conversion.cpp ;
-run test_lambda.cpp ;
-run test_sqrt_scaled_unit.cpp ;
+run test_lambda.cpp /boost/lambda//boost_lambda ;
+run test_sqrt_scaled_unit.cpp /boost/math//boost_math_tr1 ;
 run test_scaled_unit.cpp ;
-run test_output.cpp /boost//regex/<warnings-as-errors>off : : : <test-info>always_show_run_output ;
-run test_trig.cpp ;
-run test_information_units.cpp ;
+run test_output.cpp /boost/regex//boost_regex/<warnings-as-errors>off : : : <test-info>always_show_run_output ;
+run test_trig.cpp /boost/math//boost_math_tr1 ;
+run test_information_units.cpp /boost/multiprecision//boost_multiprecision ;
 
 compile-fail fail_implicit_conversion.cpp ;
 compile-fail fail_quantity_construct.cpp ;

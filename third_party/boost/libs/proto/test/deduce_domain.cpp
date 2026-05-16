@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 // Avoid a compile-time check inside the deduce_domain code.
 #define BOOST_PROTO_ASSERT_VALID_DOMAIN(DOM) typedef DOM DOM ## _
 
@@ -52,7 +54,7 @@ struct DD4 : proto::domain<proto::default_generator, _, DD2>
 {
 };
 
-void test1()
+BOOST_AUTO_TEST_CASE(test1)
 {
     using boost::is_same;
 
@@ -126,17 +128,4 @@ void test1()
     BOOST_MPL_ASSERT((is_same<proto::detail::common_domain3<DD4, DD3, DD4>::type, DD2>));
     BOOST_MPL_ASSERT((is_same<proto::detail::common_domain3<DD4, DD4, DD3>::type, DD2>));
     //*/
-}
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test deducing domains from sub-domains");
-
-    test->add(BOOST_TEST_CASE(&test1));
-
-    return test;
 }

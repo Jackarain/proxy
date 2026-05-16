@@ -25,7 +25,6 @@ target_link_libraries(boost_property_tree
     Boost::optional
     Boost::range
     Boost::serialization
-    Boost::static_assert
     Boost::throw_exception
     Boost::type_traits
 )

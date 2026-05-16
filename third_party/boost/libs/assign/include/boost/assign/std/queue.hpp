@@ -33,7 +33,7 @@ namespace assign
     {
         return push( c )( v );
     }
-    
+
     template< class V, class C, class V2 >
     inline list_inserter< assign_detail::call_push< std::priority_queue<V,C> >, V >
     operator+=( std::priority_queue<V,C>& c, V2 v )

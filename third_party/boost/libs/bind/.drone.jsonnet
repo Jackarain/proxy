@@ -34,7 +34,6 @@ local linux_pipeline(name, image, environment, packages = "", sources = [], arch
                 'set -e',
                 'uname -a',
                 'echo $DRONE_STAGE_MACHINE',
-                'wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -',
             ] +
             (if sources != [] then [ ('apt-add-repository "' + source + '"') for source in sources ] else []) +
             (if packages != "" then [ 'apt-get update', 'apt-get -y install ' + packages ] else []) +
@@ -319,10 +318,17 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
-        "Linux 24.10 Clang 19",
-        "cppalliance/droneubuntu2410:1",
+        "Linux 24.04 Clang 19",
+        "cppalliance/droneubuntu2404:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-19', CXXSTD: '11,14,17,20,2b' },
         "clang-19",
+    ),
+
+    linux_pipeline(
+        "Linux 24.04 Clang 20",
+        "cppalliance/droneubuntu2404:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-20', CXXSTD: '11,14,17,20,23,2c' },
+        "clang-20",
     ),
 
     macos_pipeline(
@@ -369,5 +375,11 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
         "Windows VS2022 msvc-14.3",
         "cppalliance/dronevs2022:1",
         { TOOLSET: 'msvc-14.3', CXXSTD: '14,17,20,latest' },
+    ),
+
+    windows_pipeline(
+        "Windows VS2026 msvc-14.5",
+        "cppalliance/dronevs2026:1",
+        { TOOLSET: 'msvc-14.5', CXXSTD: '14,17,20,latest' },
     ),
 ]

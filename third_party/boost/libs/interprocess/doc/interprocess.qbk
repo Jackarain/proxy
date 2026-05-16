@@ -3419,81 +3419,69 @@ For more information about managed mapped file capabilities, see
 
 [endsect]
 
-[section:managed_memory_segment_features Managed Memory Segment Features]
+[endsect]
 
-The following features are common to all managed memory segment classes, but
+[section:managed_memory_segment_object_construction Managed Memory Segments: Object construction]
+
+['Note: The following features are common to all managed memory segment classes, but
 we will use managed shared memory in our examples. We can do the same with
-memory mapped files or other managed memory segment classes.
+memory mapped files or other managed memory segment classes.]
 
-[section:allocate_deallocate Allocating fragments of a managed memory segment]
+[section:object_construction_api Object construction API for managed memory segments]
 
-If a basic raw-byte allocation is needed from a managed memory
-segment, (for example, a managed shared memory), to implement
-top-level interprocess communications, this class offers
-[*allocate] and [*deallocate] functions. The allocation function
-comes with throwing and no throwing versions. Throwing version throws
-boost::interprocess::bad_alloc (which derives from `std::bad_alloc`)
-if there is no more memory and the non-throwing version returns 0 pointer.
+[*Boost.Interprocess]' managed memory segments allows a varied object
+construction styles:
 
-[import ../example/doc_managed_raw_allocation.cpp]
-[doc_managed_raw_allocation]
+* Associated with a name (['named construction]). Objects can be later found using the name as a key.
+* Not associated with any name (['anonymous construction]).
+* Singleton-like allocation (['unique construction]). A single object of this type can live in the managed segment.
+  Objects can be found using their type as a key.
 
-[endsect]
+The object construction API allows constructing a type `T` in a managed memory segment  instance `ms` as:
 
-[section:segment_offset Obtaining handles to identify data]
-
-The class also offers conversions between absolute addresses that belong to
-a managed memory segment and a handle that can be passed using any
-interprocess mechanism. That handle can be transformed again to an absolute
-address using a managed memory segment that also contains that object.
-Handles can be used as keys between processes to identify allocated portions
-of a managed memory segment or objects constructed in the managed segment.
-
-[c++]
-
-   //Process A obtains the offset of the address
-   managed_shared_memory::handle handle =
-      segment.get_handle_from_address(processA_address);
-
-   //Process A sends this address using any mechanism to process B
-
-   //Process B obtains the handle and transforms it again to an address
-   managed_shared_memory::handle handle = ...
-   void * processB_address = segment.get_address_from_handle(handle);
+* An individual object:
+   * Invoked as `ms.construct<T>("Name"/unique_instance/anonymous_instance)(args...)`)
+   * `T` is constructed as `T(args...)`
+* An arrays of `N` objects. Elements of an array can be constructed:
+   * with the same parameters for all elements:
+      * Invoked as `ms.construct<T>("Name"/unique_instance/anonymous_instance)[N])(args...)`
+      * All array elements are constructed as `T(args...)`
+   * with a different parameter for each element coming from a derefenced iterator `it`
+      * Invoked as `ms.construct_it<T>("Name"/unique_instance/anonymous_instance)[N])(it)`
+      * Elements are constructed as `T(*(it++))`
 
 [endsect]
 
-[section:allocation_types Object construction function family]
+[section:named Named Object construction function family]
 
 When constructing objects in a managed memory segment (managed shared memory,
 managed mapped files...) associated with a name, the user has a varied object
 construction family to "construct" or to "construct if not found". [*Boost.Interprocess]
-can construct a single object or an array of objects. The array can be constructed with
-the same parameters for all objects or we can define each parameter from a list of iterators:
+can construct a single object or an array of objects. 
 
 [c++]
 
-   //!Allocates and constructs an object of type MyType (throwing version)
+   //!Allocates and uses-allocator constructs an object of type MyType (throwing version).
    MyType *ptr = managed_memory_segment.construct<MyType>("Name") (par1, par2...);
 
-   //!Allocates and constructs an array of objects of type MyType (throwing version)
-   //!Each object receives the same parameters (par1, par2, ...)
+   //!Allocates and uses-allocator constructs an array of objects of type MyType (throwing version).
+   //!Each object receives the same parameters.
    MyType *ptr = managed_memory_segment.construct<MyType>("Name")[count](par1, par2...);
 
    //!Tries to find a previously created object. If not present, allocates
-   //!and constructs an object of type MyType (throwing version)
+   //!and uses-allocator constructs an object of type MyType (throwing version)
    MyType *ptr = managed_memory_segment.find_or_construct<MyType>("Name") (par1, par2...);
 
    //!Tries to find a previously created object. If not present, allocates and
-   //!constructs an array of objects of type MyType (throwing version). Each object
+   //!uses-allocator constructs an array of objects of type MyType (throwing version). Each object
    //!receives the same parameters (par1, par2, ...)
    MyType *ptr = managed_memory_segment.find_or_construct<MyType>("Name")[count](par1, par2...);
 
-   //!Allocates and constructs an array of objects of type MyType (throwing version)
+   //!Allocates and uses-allocator constructs an array of objects of type MyType (throwing version)
    //!Each object receives parameters returned with the expression (*it1++, *it2++,... )
    MyType *ptr = managed_memory_segment.construct_it<MyType>("Name")[count](it1, it2...);
 
-   //!Tries to find a previously created object. If not present, allocates and constructs
+   //!Tries to find a previously created object. If not present, allocates and uses-allocator constructs
    //!an array of objects of type MyType (throwing version).  Each object receives
    //!parameters returned with the expression (*it1++, *it2++,... )
    MyType *ptr = managed_memory_segment.find_or_construct_it<MyType>("Name")[count](it1, it2...);
@@ -3514,7 +3502,7 @@ For example, for simple object construction:
 
 [c++]
 
-   //!Allocates and constructs an object of type MyType (no throwing version)
+   //!Allocates and uses-allocator constructs an object of type MyType (no throwing version)
    MyType *ptr = managed_memory_segment.construct<MyType>("Name", std::nothrow) (par1, par2...);
 
 [endsect]
@@ -3523,8 +3511,8 @@ For example, for simple object construction:
 
 Sometimes, the user doesn't want to create class objects associated with a name.
 For this purpose, [*Boost.Interprocess] can create anonymous objects in a managed
-memory segment. All named object construction functions are available to construct
-anonymous objects. To allocate an anonymous objects, the user must use
+memory segment. All named object construction functions are available to uses-allocator
+construct anonymous objects. To allocate an anonymous objects, the user must use
 "boost::interprocess::anonymous_instance" name instead of a normal name:
 
 [c++]
@@ -3545,8 +3533,8 @@ We can only destroy the anonymous object via pointer.
 [section:unique Unique instance construction]
 
 Sometimes, the user wants to emulate a singleton in a managed memory segment. Obviously,
-as the managed memory segment is constructed at run-time, the user must construct and
-destroy this object explicitly. But how can the user be sure that the object is the only
+as the managed memory segment is constructed at run-time, a user must construct and
+destroy this object explicitly. But how can a user be sure that the object is the only
 object of its type in the managed memory segment? This can be emulated using
 a named object and checking if it is present before trying to create one, but
 all processes must agree in the object's name, that can also conflict with
@@ -3561,7 +3549,7 @@ of the class as a key.
 
 [c++]
 
-   // Construct
+   // Uses-allocator constructs a unique (segment-wide) instance of MyType
    MyType *ptr = managed_memory_segment.construct<MyType>(unique_instance) (par1, par2...);
 
    // Find it
@@ -3617,6 +3605,202 @@ process if that process is inserting elements in a shared memory vector.
 
 [endsect]
 
+[section:managed_memory_segment_object_information Obtaining information about a constructed object]
+
+Once an object is constructed using `construct<>` function family, the
+programmer can obtain information about the object using a pointer to the
+object. The programmer can obtain the following information:
+
+*  Name of the object: If it's a named instance, the name used in the construction
+   function is returned, otherwise 0 is returned.
+
+*  Length of the object: Returns the number of elements of the object (1 if it's
+   a single value, >=1 if it's an array).
+
+*  The type of construction: Whether the object was constructed using a named,
+   unique or anonymous construction.
+
+Here is an example showing this functionality:
+
+[import ../example/doc_managed_construction_info.cpp]
+[doc_managed_construction_info]
+
+[endsect]
+
+[section:uses_allocator Uses-allocator protocol for object construction]
+
+Since Boost 1.91, [*Boost.Interprocess] uses [*Boost.Container]'s
+extended [*uses-allocator construction] utilities
+(see [@https://www.boost.org/doc/libs/latest/doc/html/container/cpp_conformance.html Boost.Container])
+so that constructing objects that use [*Boost.Interprocess] allocators is simplified. As a result a user:
+
+* Does not longer need to explicitly pass allocator arguments (or `segment_manager*` arguments that are convertible
+  to allocators) when constructing an object and its subobjects.
+* [*Boost.Inteprocess] allocators' `construct` methods, in cooperation with [*Boost.Container] containers
+  and uses-allocator utilities, take advantage of the protocol to automatically propagate the state
+  of the allocator to the uses_allocator compatible types stored in those containers.
+* Containers of containers, all using [*Boost.Interprocess] allocators, automatically propagate the allocator
+  state recursively without the user explicitly needing to do so.
+
+More formally, a type `T` is compatible with the [*Boost.Interprocess] implicit allocator
+propagation protocol for a managed segment instance `ms` if the following conditions are fulfilled
+when a user tries a `ms.construct<T>` or `ms.construct_it<T>` operation with argument list `args...`:
+
+* `T::allocator_type` is one of [*Boost.Interprocess] allocator types (a void allocator fulfills this requirement)
+* `T` can be constructed with one of the following conventions:
+   * The leading-allocator convention: `T` is constructible as `T(allocator_arg, allocator_type, args...)` -->
+   * The trailing-allocator convention `T` is constructible as `T(args..., allocator_type)`.
+
+See the following example to see the difference between a type that does follow the uses-allocator
+protocol (`UAType`) and another that does not (`Type`). Note how when constructing `UAType` using
+the managed memory construction functions, the allocator is implicitly passed in constructors:
+
+[import ../example/doc_uses_allocator_construction.cpp]
+[doc_uses_allocator_construction]
+
+[endsect]
+
+[endsect]
+
+[section:managed_memory_segment_advanced_features Managed Memory Segment Advanced Features]
+
+[section:allocate_deallocate Allocating fragments of a managed memory segment]
+
+If a basic raw-byte allocation is needed from a managed memory
+segment, (for example, a managed shared memory), to implement
+top-level interprocess communications, this class offers
+[*allocate] and [*deallocate] functions. The allocation function
+comes with throwing and no throwing versions. Throwing version throws
+boost::interprocess::bad_alloc (which derives from `std::bad_alloc`)
+if there is no more memory and the non-throwing version returns 0 pointer.
+
+[import ../example/doc_managed_raw_allocation.cpp]
+[doc_managed_raw_allocation]
+
+[endsect]
+
+[section:managed_memory_segment_segment_manager Segment Manager]
+
+All [*Boost.Interprocess] managed memory segment classes construct in their
+respective memory segments (shared memory, memory mapped files, heap memory...)
+some structures to implement the memory management algorithm, named allocations,
+synchronization objects... All these objects are encapsulated in a single object
+called [*segment manager]. A managed memory mapped file and a managed shared
+memory use the same [*segment manager] to implement all managed memory segment
+features, due to the fact that a [*segment manager] is a class that manages
+a fixed size memory buffer. Since both shared memory and memory mapped files
+are accessed though a mapped region, and a mapped region is a fixed size
+memory buffer, a single [*segment manager] class can manage several managed
+memory segment types.
+
+Some [*Boost.Interprocess] classes require a pointer to the segment manager in
+their constructors, and the segment manager can be obtained from any managed
+memory segment using `get_segment_manager` member:
+
+[c++]
+
+   managed_shared_memory::segment_manager *seg_manager =
+      managed_shm.get_segment_manager();
+
+[endsect]
+
+[section:segment_offset Obtaining handles to identify data]
+
+The class also offers conversions between absolute addresses that belong to
+a managed memory segment and a handle that can be passed using any
+interprocess mechanism. That handle can be transformed again to an absolute
+address using a managed memory segment that also contains that object.
+Handles can be used as keys between processes to identify allocated portions
+of a managed memory segment or objects constructed in the managed segment.
+
+[c++]
+
+   //Process A obtains the offset of the address
+   managed_shared_memory::handle handle =
+      segment.get_handle_from_address(processA_address);
+
+   //Process A sends this address using any mechanism to process B
+
+   //Process B obtains the handle and transforms it again to an address
+   managed_shared_memory::handle handle = ...
+   void * processB_address = segment.get_address_from_handle(handle);
+
+[endsect]
+
+[section:managed_memory_segment_atomic_func Executing an object function atomically]
+
+Sometimes the programmer must execute some code, and needs to execute it with the
+guarantee that no other process or thread will create or destroy any named, unique
+or anonymous object while executing the functor. A user might want to create several
+named objects and initialize them, but those objects should be available for the rest of processes
+at once.
+
+To achieve this, the programmer can use the `atomic_func()` function offered by
+managed classes:
+
+[c++]
+
+   //This object function will create several named objects
+   create_several_objects_func func(/**/);
+
+   //While executing the function, no other process will be
+   //able to create or destroy objects
+   managed_memory.atomic_func(func);
+
+
+Note that `atomic_func` does not prevent other processes from allocating raw memory
+or executing member functions for already constructed objects (e.g.: another process
+might be pushing elements into a vector placed in the segment). The atomic function
+only blocks named, unique and anonymous creation, search and destruction
+(concurrent calls to `construct<>`, `find<>`, `find_or_construct<>`, `destroy<>`...)
+from other processes.
+
+[endsect]
+
+[section:managed_memory_segment_information Obtaining information about the managed segment]
+
+These functions are available to obtain information about the managed memory segments:
+
+Obtain the size of the memory segment:
+
+[c++]
+
+   managed_shm.get_size();
+
+Obtain the number of free bytes of the segment:
+
+[c++]
+
+   managed_shm.get_free_memory();
+
+Clear to zero the free memory:
+
+[c++]
+
+   managed_shm.zero_free_memory();
+
+Know if all memory has been deallocated, false otherwise:
+
+[c++]
+
+   managed_shm.all_memory_deallocated();
+
+Test internal structures of the managed segment. Returns true
+if no errors are detected:
+
+[c++]
+
+   managed_shm.check_sanity();
+
+Obtain the number of named and unique objects allocated in the segment:
+
+[c++]
+
+   managed_shm.get_num_named_objects();
+   managed_shm.get_num_unique_objects();
+
+[endsect]
+
 [section:index_types Index types for name/object mappings]
 
 As seen, managed memory segments, when creating named objects, store the name/object
@@ -3668,131 +3852,6 @@ just must specify [boost::interprocess::map_index map_index] as a template param
 If these indexes are not enough for you, you can define
 your own index type. To know how to do this, go to
 [link interprocess.customizing_interprocess.custom_indexes Building custom indexes] section.
-
-[endsect]
-
-[section:managed_memory_segment_segment_manager Segment Manager]
-
-All [*Boost.Interprocess] managed memory segment classes construct in their
-respective memory segments (shared memory, memory mapped files, heap memory...)
-some structures to implement the memory management algorithm, named allocations,
-synchronization objects... All these objects are encapsulated in a single object
-called [*segment manager]. A managed memory mapped file and a managed shared
-memory use the same [*segment manager] to implement all managed memory segment
-features, due to the fact that a [*segment manager] is a class that manages
-a fixed size memory buffer. Since both shared memory or memory mapped files
-are accessed though a mapped region, and a mapped region is a fixed size
-memory buffer, a single [*segment manager] class can manage several managed
-memory segment types.
-
-Some [*Boost.Interprocess] classes require a pointer to the segment manager in
-their constructors, and the segment manager can be obtained from any managed
-memory segment using `get_segment_manager` member:
-
-[c++]
-
-   managed_shared_memory::segment_manager *seg_manager =
-      managed_shm.get_segment_manager();
-
-[endsect]
-
-[section:managed_memory_segment_information Obtaining information about a constructed object]
-
-Once an object is constructed using `construct<>` function family, the
-programmer can obtain information about the object using a pointer to the
-object. The programmer can obtain the following information:
-
-*  Name of the object: If it's a named instance, the name used in the construction
-   function is returned, otherwise 0 is returned.
-
-*  Length of the object: Returns the number of elements of the object (1 if it's
-   a single value, >=1 if it's an array).
-
-*  The type of construction: Whether the object was constructed using a named,
-   unique or anonymous construction.
-
-Here is an example showing this functionality:
-
-[import ../example/doc_managed_construction_info.cpp]
-[doc_managed_construction_info]
-
-[endsect]
-
-[section:managed_memory_segment_atomic_func Executing an object function atomically]
-
-Sometimes the programmer must execute some code, and needs to execute it with the
-guarantee that no other process or thread will create or destroy any named, unique
-or anonymous object while executing the functor. A user might want to create several
-named objects and initialize them, but those objects should be available for the rest of processes
-at once.
-
-To achieve this, the programmer can use the `atomic_func()` function offered by
-managed classes:
-
-[c++]
-
-   //This object function will create several named objects
-   create_several_objects_func func(/**/);
-
-   //While executing the function, no other process will be
-   //able to create or destroy objects
-   managed_memory.atomic_func(func);
-
-
-Note that `atomic_func` does not prevent other processes from allocating raw memory
-or executing member functions for already constructed objects (e.g.: another process
-might be pushing elements into a vector placed in the segment). The atomic function
-only blocks named, unique and anonymous creation, search and destruction
-(concurrent calls to `construct<>`, `find<>`, `find_or_construct<>`, `destroy<>`...)
-from other processes.
-
-[endsect]
-
-[endsect]
-
-[section:managed_memory_segment_advanced_features Managed Memory Segment Advanced Features]
-
-[section:managed_memory_segment_information Obtaining information about the managed segment]
-
-These functions are available to obtain information about the managed memory segments:
-
-Obtain the size of the memory segment:
-
-[c++]
-
-   managed_shm.get_size();
-
-Obtain the number of free bytes of the segment:
-
-[c++]
-
-   managed_shm.get_free_memory();
-
-Clear to zero the free memory:
-
-[c++]
-
-   managed_shm.zero_free_memory();
-
-Know if all memory has been deallocated, false otherwise:
-
-[c++]
-
-   managed_shm.all_memory_deallocated();
-
-Test internal structures of the managed segment. Returns true
-if no errors are detected:
-
-[c++]
-
-   managed_shm.check_sanity();
-
-Obtain the number of named and unique objects allocated in the segment:
-
-[c++]
-
-   managed_shm.get_num_named_objects();
-   managed_shm.get_num_unique_objects();
 
 [endsect]
 
@@ -3927,7 +3986,7 @@ Here is a small example showing how aligned allocation is used:
 
 [section:managed_memory_segment_multiple_allocations Multiple allocation functions]
 
-[caution This feature is experimental, interface and ABI are unstable]
+[caution This feature is experimental, API and ABI are unstable]
 
 If an application needs to allocate a lot of memory buffers but it needs
 to deallocate them independently, the application is normally forced to loop
@@ -4428,8 +4487,6 @@ through a message queue and duplicated in another buffer:
 
 [endsect]
 
-[endsect]
-
 [section:allocators_containers Allocators and memory allocation algorithms]
 
 [section:allocator_introduction Introduction to Interprocess allocators]
@@ -4631,7 +4688,7 @@ pool is used for each node size. This is not possible if you try to share
 a node allocator between processes. To achieve this sharing
 [classref boost::interprocess::node_allocator node_allocator]
 uses the segment manager's unique type allocation service
-(see [link interprocess.managed_memory_segments.managed_memory_segment_features.unique Unique instance construction] section).
+(see [link interprocess.managed_memory_segment_object_construction.unique Unique instance construction] section).
 
 In the initialization, a
 [classref boost::interprocess::node_allocator node_allocator]
@@ -5110,7 +5167,9 @@ To place any of these containers in managed memory segments, we must
 define the allocator template parameter with a [*Boost.Interprocess] allocator
 so that the container allocates the values in the managed memory segment.
 To place the container itself in shared memory, we construct it
-in the managed memory segment just like any other object with [*Boost.Interprocess]:
+in the managed memory segment just like any other object with [*Boost.Interprocess].
+Note how these containers also support the uses-allocator protocol that simplifies
+usage due to the implicit allocator passing protocol:
 
 [import ../example/doc_cont.cpp]
 [doc_cont]
@@ -5168,6 +5227,14 @@ and the mapped type is a class that stores several containers:
 [import ../example/doc_complex_map.cpp]
 [doc_complex_map]
 
+This example can be simplified if the user designs a type compatible with the
+[link interprocess.managed_memory_segment_object_construction.uses_allocator uses-allocator construction].
+This simplifies code and allows more efficient
+operations like the use of transparent functions for lookups and insertions:
+
+[import ../example/doc_complex_map_uses_allocator.cpp]
+[doc_complex_map_uses_allocator]
+
 [endsect]
 
 [endsect]
@@ -5198,7 +5265,9 @@ and those strings need to be placed in shared memory. Shared memory strings requ
 an allocator in their constructors so this usually makes object insertion a bit more
 complicated.
 
-Here is an example that shows how to put a multi index container in shared memory:
+Here is an example that shows how to put a multi index container in shared memory. Note
+also how MultiIndex supports the [link interprocess.managed_memory_segment_object_construction.uses_allocator uses-allocator construction]
+so that allocator arguments can be automatically propagated into internal allocator-aware components:
 
 [import ../example/doc_multi_index.cpp]
 [doc_multi_index]
@@ -6654,9 +6723,20 @@ those heavy headers.
 
 [endsect]
 
-[section:notes_linux Notes for Linux users]
+[section:notes_cygwin Notes for Cygwin users]
 
-[section:notes_linux_shm_folder Shared memory emulation folder]
+This library treats Cygwin as a Unix-like operating system and uses Unix-like system calls for the Cygwin platform instead
+of using the Windows API. You might need to define `_XOPEN_SOURCE=600` / `_POSIX_C_SOURCE=200112L` or higher so that the minimal Unix API
+is visible for the library.
+
+Please take in care that, for XSI synchronization primitives (e.g. `xsi_shared_memory`, `managed_xsi_shared_memory`), Cygwin requires launching the 
+[@https://cygwin.com/cygwin-ug-net/using-cygserver.html Cygserver program].
+
+[endsect]
+
+[section:notes_unix Notes for Unix users]
+
+[section:notes_unix_shm_folder Shared memory emulation folder]
 
 On systems without POSIX shared memory support, shared memory objects are implemented as memory mapped files, using a directory
 placed in "/tmp" that can include (if `BOOST_INTERPROCESS_HAS_KERNEL_BOOTTIME` is defined) the last bootup time (if the OS supports it).
@@ -6676,6 +6756,10 @@ to determine the shared directory at runtime, define `BOOST_INTERPROCESS_SHARED_
 
 
 [endsect]
+
+[endsect]
+
+[section:notes_linux Notes for Linux users]
 
 [section:notes_linux_overcommit Overcommit]
 
@@ -6698,25 +6782,15 @@ change this overcommit behaviour.
 
 [endsect]
 
-[section:notes_freebsd Notes for FreeBSD users]
+[section:notes_macos_bsd Notes for MacOS and BSD users]
 
-[section:notes_freebsd_umtx_vnode_persistent Process-shared synchronization primitives and ['kern.ipc.umtx_vnode_persistent]]
-
-Starting from FreeBSD 11, declares the macro _POSIX_THREAD_PROCESS_SHARED. However, the default behavior is different from the one on Linux.
-If you want to use this feature, according to the man page of libthr(3), you should check sysctl's ['kern.ipc.umtx_vnode_persistent]:
-
-* ['kern.ipc.umtx_vnode_persistent]: By default, a shared lock backed by a mapped file in memory is automatically destroyed on the last
-   unmap of the corresponding file's page, which is allowed by POSIX. Setting the sysctl to 1 makes such a shared lock object persist until
-   the vnode is recycled by the Virtual File System. Note that in case file is not opened and not mapped, the kernel might recycle it at
-   any moment, making this sysctl less useful than it sounds.
-
-If you want mapped files to remain useful after the last handle is closed, set this variable to 1.
+Support for _POSIX_THREAD_PROCESS_SHARED is inexistent (OpenBSD/NetBSD, old FreeBSD) or incomplete/buggy (FreeBSD>=11, MacOS).
+Process-shared synchronization primitives are emulated with atomics, which have suboptimal performance and are unrecoverable
+under process crashes while holding the lock.
 
 [endsect]
 
-[endsect]
-
-[section:notes_freebsd Notes for MacOs users]
+[section:notes_macos Notes for MacOs users]
 
 [section:notes_macos_sandboxed Limitations for sandboxed applications]
 
@@ -6729,6 +6803,12 @@ an app can use these technologies to communicate with other members of that appl
 Please see Apple documentation
 [@https://developer.apple.com/library/archive/documentation/Security/Conceptual/AppSandboxDesignGuide/AppSandboxInDepth/AppSandboxInDepth.html#//apple_ref/doc/uid/TP40011183-CH3-SW24
  for limitations and guide on how to use interprocess communications on sandboxed applications].
+
+[endsect]
+
+[section:notes_other_xsi Notes for QNX, Android, Haiku, VxWorks and Emscriptem users]
+
+Those operating system don't offer support XSI IPC mechanisms, so associated utilities are not available.
 
 [endsect]
 
@@ -6774,6 +6854,43 @@ thank them:
 [endsect]
 
 [section:release_notes Release Notes]
+
+[section:release_notes_boost_1_91_00 Boost 1.91 Release]
+
+* Adds [link interprocess.managed_memory_segment_object_construction.uses_allocator uses-allocator construction]
+   (for types where `boost::container::uses_allocator<T>::value == true`), in the following utilities:
+   * Segment managers in their `construct` methods
+   * Allocators
+
+* [*Unlikely ABI breaking in practice]: Undefining `BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX` (which was the default since Boost 1.52 fom 2012)
+  is no longer available. `message_queue` has now a single implementation using the circular queue estrategy.
+
+* [*ABI breaking]: Some utilities like spin-based recursive mutexes needed to use a systemwide thread identifier. The method used for Unix systems
+  was based on pid_t+pthread_t identifiers, something incorrect (as pthread_t was not suppossed to identify a thread, even inside a process).
+  In this version, several Unix-like systems use a particular and correct global thread identifier (`gettid()` on Linux, 
+  `pthread_getthreadid_np` on FreeBSD, `pthread_threadid_np` on MacOS, `_lwp_self` on NetBSD, `getthrid` on OpenBSD, `thr_self` on Solaris,
+  `GetCurrentThreadId` on Cygwin, `gettid` on QNX, etc...). The programmer can define `BOOST_INTERPROCESS_USE_PTHREAD_AS_SYSTEMWIDE_THREAD_ID`
+  to go back to the old `pthread_t` based behaviour, but this option is deprecated and will be removed in a few releases.
+
+* Added `BOOST_HEADER_DEPRECATED` to `<boost/interprocess/containers/*.hpp> headers. They were deprecated several releases ago, but this
+  message will annoy existing users to switch to Boost.Container headers.
+
+* Changed the interface of [link managed_memory_segment_advanced_features.managed_memory_segment_multiple_allocations Multiple allocation functions]
+  (still experimental and API/ABI unstable) to support alignment.
+
+* Added `BOOST_HEADER_DEPRECATED` to `<boost/interprocess/containers/*.hpp> headers. They were deprecated several releases ago, but this
+  message will annoy existing users to switch to Boost.Container headers.
+
+* Deprecated `size()`, `allocate_many` and `deallocate_many`, `address` and `size` functions for allocators. They were not used in
+  Boost.Container and will be removed in the future.
+
+* Fixed bugs:
+   * [@https://github.com/boostorg/interprocess/issues/242 GitHub #242 (['"Cygwin compatibility issues"])].
+   * [@https://github.com/boostorg/interprocess/issues/247 GitHub #247 (['"destruction of move-constructed map using private_adaptive_pool triggers Assertion"])].
+   * [@https://github.com/boostorg/interprocess/issues/252 GitHub #252 (['"[regression] no viable constructor for offset_ptr with clang from 1.87.0"])].
+   * [@https://github.com/boostorg/interprocess/issues/276 GitHub #276 (['"-Wundef warning in boost/interprocess/allocators/allocator.hpp])].
+
+[endsect]
 
 [section:release_notes_boost_1_90_00 Boost 1.90 Release]
 

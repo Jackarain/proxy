@@ -74,7 +74,7 @@ int main()
 
         r |= f;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( *r, 2 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r.unsafe_value(), 2 );
     }
 
     {
@@ -90,7 +90,7 @@ int main()
 
         r |= g;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r->v_, 2 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r.unsafe_value().v_, 2 );
     }
 
     {
@@ -108,7 +108,7 @@ int main()
 
         r |= h;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( &*r, &h() );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( &r.unsafe_value(), &h() );
     }
 
     return boost::report_errors();

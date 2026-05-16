@@ -7,7 +7,8 @@
 #include <boost/thread.hpp>
 #include <boost/thread/thread_only.hpp>
 #include <boost/optional.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/bind/bind.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 using namespace boost;
 using namespace boost::chrono;

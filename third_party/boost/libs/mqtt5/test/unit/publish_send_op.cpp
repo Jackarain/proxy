@@ -5,6 +5,8 @@
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "test_common/test_service.hpp"
+
 #include <boost/mqtt5/types.hpp>
 
 #include <boost/mqtt5/impl/client_service.hpp>
@@ -14,7 +16,6 @@
 #include <boost/asio/cancellation_signal.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/steady_timer.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <chrono>
@@ -22,8 +23,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "test_common/test_service.hpp"
 
 using namespace boost::mqtt5;
 
@@ -50,7 +49,7 @@ BOOST_AUTO_TEST_CASE(pid_overrun) {
             "test", "payload", retain_e::no, {}
         );
 
-    ioc.run_for(std::chrono::milliseconds(500));
+    ioc.poll();
     BOOST_TEST(handlers_called == expected_handlers_called);
 }
 
@@ -78,7 +77,7 @@ void run_test(
     > { svc_ptr, std::move(handler) }
         .perform(topic_name, payload, retain_e::yes, pprops);
 
-    ioc.run_for(std::chrono::milliseconds(500));
+    ioc.poll();
     BOOST_TEST(handlers_called == expected_handlers_called);
 }
 

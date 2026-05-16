@@ -4,21 +4,19 @@
 
 project
     : requirements
+        <library>/boost/xpressive//boost_xpressive
         <toolset>msvc-8.0:<define>_SCL_SECURE_NO_DEPRECATE
         <toolset>msvc-9.0:<define>_SCL_SECURE_NO_DEPRECATE
         <toolset>msvc,<stdlib>stlport:<define>_STLP_EXPOSE_GLOBALS_IMPLEMENTATION
+        <library>/boost/assign//boost_assign
     ;
 
-exe examples 
+exe examples
     :
         main.cpp
-    :
-        <include>$(BOOST_ROOT)
     ;
 
 exe numbers
     :
         numbers.cpp
-    :
-        <include>$(BOOST_ROOT)
     ;

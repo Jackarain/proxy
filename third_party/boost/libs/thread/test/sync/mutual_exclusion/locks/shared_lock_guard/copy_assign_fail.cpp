@@ -20,7 +20,7 @@
 
 #include <boost/thread/shared_lock_guard.hpp>
 #include <boost/thread/shared_mutex.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 boost::shared_mutex m0;
 boost::shared_mutex m1;

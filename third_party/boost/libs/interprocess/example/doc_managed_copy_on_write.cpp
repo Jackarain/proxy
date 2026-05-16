@@ -58,14 +58,14 @@ int main()
       //Erase the int and create a new one
       if(!managed_file_cow.destroy<int>("MyInt"))
          throw int(0);
-      managed_file_cow.construct<int>("MyInt2");
+      managed_file_cow.construct<int>("MyInt2")();
 
       //Check changes
-      if(managed_file_cow.find<int>("MyInt").first && !managed_file_cow.find<int>("MyInt2").first)
+      if(managed_file_cow.find<int>("MyInt").first || !managed_file_cow.find<int>("MyInt2").first)
          throw int(0);
 
       //Check the original is intact
-      if(!managed_file.find<int>("MyInt").first && managed_file.find<int>("MyInt2").first)
+      if(!managed_file.find<int>("MyInt").first || managed_file.find<int>("MyInt2").first)
          throw int(0);
 
       {  //Dump the modified copy on write segment to a file

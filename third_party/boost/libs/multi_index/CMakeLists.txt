@@ -3,12 +3,13 @@
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
-cmake_minimum_required(VERSION 3.5...3.16)
+cmake_minimum_required(VERSION 3.8...3.16)
 
 project(boost_multi_index VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
 add_library(boost_multi_index INTERFACE)
 add_library(Boost::multi_index ALIAS boost_multi_index)
+target_compile_features(boost_multi_index INTERFACE cxx_std_11)
 
 target_include_directories(boost_multi_index INTERFACE include)
 
@@ -20,12 +21,9 @@ target_link_libraries(boost_multi_index
     Boost::container_hash
     Boost::core
     Boost::integer
-    Boost::iterator
-    Boost::move
-    Boost::mpl
+    Boost::mp11
     Boost::preprocessor
     Boost::smart_ptr
-    Boost::static_assert
     Boost::throw_exception
     Boost::tuple
     Boost::type_traits

@@ -1,4 +1,4 @@
-/* Copyright 2003-2013 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14,7 +14,7 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
-#include <boost/mpl/bool.hpp>
+#include <boost/mp11/integral.hpp>
 
 namespace boost{
 
@@ -64,8 +64,8 @@ struct uintptr_aux
   typedef uintptr_candidates<index>::type type;
 };
 
-typedef mpl::bool_<uintptr_aux::has_uintptr_type> has_uintptr_type;
-typedef uintptr_aux::type                         uintptr_type;
+typedef mp11::mp_bool<uintptr_aux::has_uintptr_type> has_uintptr_type;
+typedef uintptr_aux::type                            uintptr_type;
 
 } /* namespace multi_index::detail */
 

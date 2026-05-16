@@ -122,10 +122,10 @@ inline void sha1::process_block()
 {
     unsigned int w[80];
     for (std::size_t i=0; i<16; ++i) {
-        w[i]  = (block_[i*4 + 0] << 24);
-        w[i] |= (block_[i*4 + 1] << 16);
-        w[i] |= (block_[i*4 + 2] << 8);
-        w[i] |= (block_[i*4 + 3]);
+        w[i]  = static_cast<unsigned>(block_[i*4 + 0]) << 24;
+        w[i] |= static_cast<unsigned>(block_[i*4 + 1]) << 16;
+        w[i] |= static_cast<unsigned>(block_[i*4 + 2]) << 8;
+        w[i] |= static_cast<unsigned>(block_[i*4 + 3]);
     }
     for (std::size_t i=16; i<80; ++i) {
         w[i] = left_rotate((w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16]), 1);

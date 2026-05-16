@@ -21,7 +21,7 @@
 #define BOOST_THREAD_VERSION 3
 
 #include <boost/thread/future.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #if defined BOOST_THREAD_PROVIDES_FUTURE_CTOR_ALLOCATORS
 #include "../test_allocator.hpp"
 

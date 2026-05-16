@@ -95,14 +95,6 @@ public:
   static inline constexpr const _quick_status_code_from_enum_domain &get();
 #endif
 
-  virtual string_ref name() const noexcept override { return string_ref(_src::domain_name); }
-
-  virtual payload_info_t payload_info() const noexcept override
-  {
-    return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
-            (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
-  }
-
 protected:
   // Not sure if a hash table is worth it here, most enumerations won't be long enough to be worth it
   // Also, until C++ 20's consteval, the hash table would get emitted into the binary, bloating it
@@ -118,11 +110,24 @@ protected:
     return nullptr;
   }
 
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual int _do_name(_vtable_name_args &args) const noexcept override
+  {
+    args.ret = string_ref(_src::domain_name);
+    return 0;
+  }
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void _do_payload_info(_vtable_payload_info_args &args) const noexcept override
+  {
+    args.ret = {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+                (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) :
+                                                                        alignof(status_code_domain *)};
+  }
+
   virtual bool _do_failure(const status_code<void> &code) const noexcept override
   {
     assert(code.domain() == *this);  // NOLINT
     // If `errc::success` is in the generic code mapping, it is not a failure
-    const auto *mapping = _find_mapping(static_cast<const quick_status_code_from_enum_code<value_type> &>(code).value());
+    const auto *mapping =
+    _find_mapping(static_cast<const quick_status_code_from_enum_code<value_type> &>(code).value());
 #if BOOST_OUTCOME_SYSTEM_ERROR2_QUICK_STATUS_CODE_FROM_ENUM_ASSERT_ON_MISSING_MAPPING_TABLE_ENTRIES
     assert(mapping != nullptr);  // if this fires, you forgot to add the enum to the mapping table
 #endif
@@ -167,10 +172,11 @@ protected:
     }
     return false;
   }
-  virtual generic_code _generic_code(const status_code<void> &code) const noexcept override
+  virtual void _do_generic_code(_vtable_generic_code_args &args) const noexcept override
   {
-    assert(code.domain() == *this);  // NOLINT
-    const auto *mapping = _find_mapping(static_cast<const quick_status_code_from_enum_code<value_type> &>(code).value());
+    assert(args.code.domain() == *this);  // NOLINT
+    const auto *mapping =
+    _find_mapping(static_cast<const quick_status_code_from_enum_code<value_type> &>(args.code).value());
 #if BOOST_OUTCOME_SYSTEM_ERROR2_QUICK_STATUS_CODE_FROM_ENUM_ASSERT_ON_MISSING_MAPPING_TABLE_ENTRIES
     assert(mapping != nullptr);  // if this fires, you forgot to add the enum to the mapping table
 #endif
@@ -178,23 +184,27 @@ protected:
     {
       if(mapping->code_mappings.size() > 0)
       {
-        return *mapping->code_mappings.begin();
+        args.ret = *mapping->code_mappings.begin();
+        return;
       }
     }
-    return errc::unknown;
+    args.ret = errc::unknown;
   }
-  virtual string_ref _do_message(const status_code<void> &code) const noexcept override
+  virtual int _do_message(_vtable_message_args &args) const noexcept override
   {
-    assert(code.domain() == *this);  // NOLINT
-    const auto *mapping = _find_mapping(static_cast<const quick_status_code_from_enum_code<value_type> &>(code).value());
+    assert(args.code.domain() == *this);  // NOLINT
+    const auto *mapping =
+    _find_mapping(static_cast<const quick_status_code_from_enum_code<value_type> &>(args.code).value());
 #if BOOST_OUTCOME_SYSTEM_ERROR2_QUICK_STATUS_CODE_FROM_ENUM_ASSERT_ON_MISSING_MAPPING_TABLE_ENTRIES
     assert(mapping != nullptr);  // if this fires, you forgot to add the enum to the mapping table
 #endif
     if(mapping != nullptr)
     {
-      return string_ref(mapping->message);
+      args.ret = string_ref(mapping->message);
+      return 0;
     }
-    return string_ref("unknown");
+    args.ret = string_ref("unknown");
+    return 0;
   }
 #if defined(_CPPUNWIND) || defined(__EXCEPTIONS) || defined(BOOST_OUTCOME_STANDARDESE_IS_IN_THE_HOUSE)
   BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN virtual void _do_throw_exception(const status_code<void> &code) const override
@@ -208,7 +218,8 @@ protected:
 
 #if __cplusplus >= 201402L || defined(_MSC_VER)
 template <class Enum> constexpr _quick_status_code_from_enum_domain<Enum> quick_status_code_from_enum_domain = {};
-template <class Enum> inline constexpr const _quick_status_code_from_enum_domain<Enum> &_quick_status_code_from_enum_domain<Enum>::get()
+template <class Enum>
+inline constexpr const _quick_status_code_from_enum_domain<Enum> &_quick_status_code_from_enum_domain<Enum>::get()
 {
   return quick_status_code_from_enum_domain<Enum>;
 }
@@ -217,7 +228,8 @@ template <class Enum> inline constexpr const _quick_status_code_from_enum_domain
 namespace mixins
 {
   template <class Base, class Enum>
-  struct mixin<Base, _quick_status_code_from_enum_domain<Enum>> : public quick_status_code_from_enum<Enum>::template mixin<Base>
+  struct mixin<Base, _quick_status_code_from_enum_domain<Enum>>
+      : public quick_status_code_from_enum<Enum>::template mixin<Base>
   {
     using quick_status_code_from_enum<Enum>::template mixin<Base>::mixin;
   };

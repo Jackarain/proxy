@@ -1016,8 +1016,8 @@ void assign_test() {
     BOOST_TEST(cb1[5] == 7);
 
     CB_CONTAINER<float> cb2(4);
-    cb2.assign(3, 1.1f);
-    BOOST_TEST(cb2[0] == 1.1f);
+    cb2.assign(3, 1.25f);
+    BOOST_TEST(cb2[0] == 1.25f);
 
     CB_CONTAINER<MyInteger> cb3(5);
     cb3.push_back(1);

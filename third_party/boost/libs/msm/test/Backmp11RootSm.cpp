@@ -81,7 +81,7 @@ struct hierarchical_machine
         using root_sm = RootSm;
         using fsm_parameter = mp11::mp_if_c<TestRootFsmParameter,
             root_sm,
-            transition_owner
+            local_transition_owner
             >;
     };
 
@@ -96,7 +96,7 @@ struct hierarchical_machine
                 static_assert(std::is_same_v<Fsm,RootSm>);
             }
             fsm.get_root_sm().machine_entries++;
-        };
+        }
 
         template <typename Event, typename Fsm>
         void on_exit(const Event& /*event*/, Fsm& fsm)
@@ -106,7 +106,7 @@ struct hierarchical_machine
                 static_assert(std::is_same_v<Fsm,RootSm>);
             }
             fsm.get_root_sm().machine_exits++;
-        };
+        }
 
         using initial_state = Default;
     };
@@ -128,7 +128,7 @@ struct hierarchical_machine
                 // static_assert(std::is_same_v<Fsm,MiddleMachine>);
             }
             fsm.get_root_sm().machine_entries++;
-        };
+        }
 
         template <typename Event, typename Fsm>
         void on_exit(const Event& /*event*/, Fsm& fsm)
@@ -142,7 +142,7 @@ struct hierarchical_machine
                 // static_assert(std::is_same_v<Fsm,MiddleMachine>);
             }
             fsm.get_root_sm().machine_exits++;
-        };
+        }
     };
     using LowerMachine = state_machine<LowerMachine_, SmConfig>;
 

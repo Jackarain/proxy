@@ -10,9 +10,9 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/csbl/list.hpp>
 //#include <boost/interprocess/smart_ptr/shared_ptr.hpp>
-#include <boost/smart_ptr.hpp>
+#include <boost/smart_ptr/shared_ptr.hpp>
 #include <iostream>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 
 int count = 0;

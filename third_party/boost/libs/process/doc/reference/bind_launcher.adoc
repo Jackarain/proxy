@@ -1,6 +1,6 @@
 == `bind_launcher.hpp`
 
-The `bind_launcher` utlitities allow on the fly construction of a launcher with bound initializers.
+The `bind_launcher` utilities allow on the fly construction of a launcher with bound initializers.
 
 [source,cpp]
 ----

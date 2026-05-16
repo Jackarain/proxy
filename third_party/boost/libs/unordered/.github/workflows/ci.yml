@@ -101,6 +101,10 @@ jobs:
           - { compiler: 'clang-17', cxxstd: '17,20,2b',    os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-17 libc++-17-dev libc++abi-17-dev' }
           - { compiler: 'clang-18', cxxstd: '11,14',       os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-18 libc++-18-dev libc++abi-18-dev' }
           - { compiler: 'clang-18', cxxstd: '17,20,2b',    os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-18 libc++-18-dev libc++abi-18-dev' }
+          - { compiler: 'clang-19', cxxstd: '11,14',       os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-19 libc++-19-dev libc++abi-19-dev' }
+          - { compiler: 'clang-19', cxxstd: '17,20,2b',    os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-19 libc++-19-dev libc++abi-19-dev' }
+          - { compiler: 'clang-20', cxxstd: '11,14,17',    os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-20 libc++-20-dev libc++abi-20-dev' }
+          - { compiler: 'clang-20', cxxstd: '20,23,2c',    os: 'ubuntu-24.04', stdlib: libc++, install: 'clang-20 libc++-20-dev libc++abi-20-dev' }
 
           # not using libc++ because of https://github.com/llvm/llvm-project/issues/52771
           - { name: "clang-18 w/ sanitizers (11,14)", sanitize: yes,
@@ -117,10 +121,12 @@ jobs:
               stdlib: libc++, install: 'clang-18 libc++-18-dev libc++abi-18-dev', ccache_key: "tsan" }
 
           # OSX, clang
-          - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-13', sanitize: yes, ccache: no, ccache_key: "san1" }
-          - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-13', thread-sanitize: yes, targets: 'libs/unordered/test//cfoa_tests', ccache: no, ccache_key: "tsan" }
+          - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-latest', sanitize: yes, ccache: no, ccache_key: "san1" }
+          - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-latest', thread-sanitize: yes, targets: 'libs/unordered/test//cfoa_tests', ccache: no, ccache_key: "tsan" }
+
           - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-14' }
-          - { compiler: clang, cxxstd: '11,14,17,20,2b', os: 'macos-15' }
+          - { compiler: clang, cxxstd: '11,14,17,20,23,2c', os: 'macos-15' }
+          - { compiler: clang, cxxstd: '11,14,17,20,23,2c', os: 'macos-26' }
 
     timeout-minutes: 360
     # posix (gcc-12 w/ sanitizers is taking longer than 210 minutes

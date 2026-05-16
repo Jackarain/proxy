@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -19,6 +20,8 @@
 #include <exception>
 #include <iterator>
 #include <new>
+#include <utility>
+#include <type_traits>
 
 #include <stddef.h> // ::max_align_t
 
@@ -26,28 +29,23 @@ namespace boost {
 namespace urls {
 namespace grammar {
 
-// VFALCO This could be reused for
-// other things that need to type-erase
-
 //------------------------------------------------
 //
 // any_rule
 //
 //------------------------------------------------
 
-// base class for the type-erased rule pair
 template<class T>
-struct range<T>::
-    any_rule
+struct any_rule<T>::impl_base
 {
     virtual
-    ~any_rule() = default;
+    ~impl_base() = default;
 
     virtual
     void
     move(void* dest) noexcept
     {
-        ::new(dest) any_rule(
+        ::new(dest) impl_base(
             std::move(*this));
     }
 
@@ -55,7 +53,7 @@ struct range<T>::
     void
     copy(void* dest) const noexcept
     {
-        ::new(dest) any_rule(*this);
+        ::new(dest) impl_base(*this);
     }
 
     virtual
@@ -82,8 +80,8 @@ struct range<T>::
 // small
 template<class T>
 template<class R, bool Small>
-struct range<T>::impl1
-    : any_rule
+struct any_rule<T>::impl1
+    : impl_base
     , private empty_value<R>
 {
     explicit
@@ -139,8 +137,8 @@ private:
 // big
 template<class T>
 template<class R>
-struct range<T>::impl1<R, false>
-    : any_rule
+struct any_rule<T>::impl1<R, false>
+    : impl_base
 {
     explicit
     impl1(R const& next) noexcept
@@ -215,8 +213,8 @@ private:
 template<class T>
 template<
     class R0, class R1, bool Small>
-struct range<T>::impl2
-    : any_rule
+struct any_rule<T>::impl2
+    : impl_base
     , private empty_value<R0, 0>
     , private empty_value<R1, 1>
 {
@@ -278,8 +276,8 @@ private:
 template<class T>
 template<
     class R0, class R1>
-struct range<T>::impl2<R0, R1, false>
-    : any_rule
+struct any_rule<T>::impl2<R0, R1, false>
+    : impl_base
 {
     impl2(
         R0 const& first,
@@ -352,13 +350,252 @@ private:
 };
 
 //------------------------------------------------
+
+template<class T>
+typename any_rule<T>::impl_base&
+any_rule<T>::
+get() noexcept
+{
+    return *reinterpret_cast<
+        impl_base*>(sb_.addr());
+}
+
+template<class T>
+typename any_rule<T>::impl_base const&
+any_rule<T>::
+get() const noexcept
+{
+    return *reinterpret_cast<
+        impl_base const*>(sb_.addr());
+}
+
+
+template<class T>
+any_rule<T>::
+any_rule() noexcept
+{
+    ::new(sb_.addr()) impl_base{};
+    char const* it = nullptr;
+    get().first(it, nullptr);
+    get().next(it, nullptr);
+}
+
+
+template<class T>
+any_rule<T>::
+any_rule(any_rule&& other) noexcept
+{
+    other.get().move(sb_.addr());
+}
+
+
+template<class T>
+any_rule<T>::
+any_rule(any_rule const& other) noexcept
+{
+    other.get().copy(sb_.addr());
+}
+
+
+template<class T>
+any_rule<T>&
+any_rule<T>::
+operator=(any_rule&& other) noexcept
+{
+    if(this == &other)
+        return *this;
+    get().~impl_base();
+    other.get().move(sb_.addr());
+    return *this;
+}
+
+
+template<class T>
+any_rule<T>&
+any_rule<T>::
+operator=(any_rule const& other) noexcept
+{
+    if(this == &other)
+        return *this;
+    get().~impl_base();
+    other.get().copy(sb_.addr());
+    return *this;
+}
+
+
+template<class T>
+any_rule<T>::
+~any_rule()
+{
+    get().~impl_base();
+}
+
+
+template<class T>
+template<class R>
+any_rule<T>::
+any_rule(
+    R const& next)
+{
+    static_assert(
+        ::boost::urls::grammar::is_rule<R>::value,
+        "Rule requirements not met");
+    static_assert(
+        std::is_same<typename R::value_type, T>::value,
+        "Rule value_type mismatch");
+
+    BOOST_CORE_STATIC_ASSERT(
+        sizeof(impl1<R, false>) <=
+            BufferSize);
+
+    ::new(sb_.addr()) impl1<R,
+        sizeof(impl1<R, true>) <=
+            BufferSize>(next);
+}
+
+//------------------------------------------------
+
+template<class T>
+template<
+    class R0, class R1>
+any_rule<T>::
+any_rule(
+    R0 const& first,
+    R1 const& next)
+{
+    static_assert(
+        ::boost::urls::grammar::is_rule<R0>::value,
+        "Rule requirements not met");
+    static_assert(
+        ::boost::urls::grammar::is_rule<R1>::value,
+        "Rule requirements not met");
+    static_assert(
+        std::is_same<typename R0::value_type, T>::value,
+        "First rule value_type mismatch");
+    static_assert(
+        std::is_same<typename R1::value_type, T>::value,
+        "Next rule value_type mismatch");
+
+    BOOST_CORE_STATIC_ASSERT(
+        sizeof(impl2<R0, R1, false>) <=
+            BufferSize);
+
+    ::new(sb_.addr()) impl2<R0, R1,
+        sizeof(impl2<R0, R1, true>
+            ) <= BufferSize>(
+                first, next);
+}
+
+//------------------------------------------------
+
+template<class T>
+system::result<T>
+any_rule<T>::
+first(
+    char const*& it,
+    char const* end) const noexcept
+{
+    return get().first(it, end);
+}
+
+//------------------------------------------------
+
+template<class T>
+system::result<T>
+any_rule<T>::
+next(
+    char const*& it,
+    char const* end) const noexcept
+{
+    return get().next(it, end);
+}
+
+//------------------------------------------------
+//
+// range
+//
+//------------------------------------------------
+
+template<class T, class RangeRule>
+range<T, RangeRule>::
+~range() = default;
+
+template<class T, class RangeRule>
+range<T, RangeRule>::
+range() noexcept = default;
+
+template<class T, class RangeRule>
+range<T, RangeRule>::
+range(
+    range&& other) noexcept
+    : detail::range_base_storage<
+        RangeRule>(std::move(other.rule()))
+    , s_(other.s_)
+    , n_(other.n_)
+{
+    other.s_ = {};
+    other.n_ = 0;
+}
+
+template<class T, class RangeRule>
+range<T, RangeRule>::
+range(
+    range const& other) noexcept
+    : detail::range_base_storage<
+        RangeRule>(other.rule())
+    , s_(other.s_)
+    , n_(other.n_)
+{
+}
+
+template<class T, class RangeRule>
+auto
+range<T, RangeRule>::
+operator=(range&& other) noexcept
+    -> range&
+{
+    if(this == &other)
+        return *this;
+    static_cast<
+        detail::range_base_storage<
+            RangeRule>&>(*this) =
+        std::move(static_cast<
+            detail::range_base_storage<
+                RangeRule>&>(other));
+    s_ = other.s_;
+    n_ = other.n_;
+    other.s_ = {};
+    other.n_ = 0;
+    return *this;
+}
+
+template<class T, class RangeRule>
+auto
+range<T, RangeRule>::
+operator=(range const& other) noexcept
+    -> range&
+{
+    if(this == &other)
+        return *this;
+    static_cast<
+        detail::range_base_storage<
+            RangeRule>&>(*this) =
+        static_cast<
+            detail::range_base_storage<
+                RangeRule> const&>(other);
+    s_ = other.s_;
+    n_ = other.n_;
+    return *this;
+}
+
+//------------------------------------------------
 //
 // iterator
 //
 //------------------------------------------------
 
-template<class T>
-class range<T>::
+template<class T, class RangeRule>
+class range<T, RangeRule>::
     iterator
 {
 public:
@@ -408,7 +645,7 @@ public:
         auto const end =
             r_->s_.data() +
             r_->s_.size();
-        rv_ = r_->get().next(p_, end);
+        rv_ = r_->rule().next(p_, end);
         if( !rv_ )
             p_ = nullptr;
         return *this;
@@ -423,28 +660,28 @@ public:
     }
 
 private:
-    friend class range<T>;
+    friend class range<T, RangeRule>;
 
-    range<T> const* r_ = nullptr;
+    range<T, RangeRule> const* r_ = nullptr;
     char const* p_ = nullptr;
     system::result<T> rv_;
 
     iterator(
-        range<T> const& r) noexcept
+        range<T, RangeRule> const& r) noexcept
         : r_(&r)
         , p_(r.s_.data())
     {
         auto const end =
             r_->s_.data() +
             r_->s_.size();
-        rv_ = r_->get().first(p_, end);
+        rv_ = r_->rule().first(p_, end);
         if( !rv_ )
             p_ = nullptr;
     }
 
     constexpr
     iterator(
-        range<T> const& r,
+        range<T, RangeRule> const& r,
         int) noexcept
         : r_(&r)
         , p_(nullptr)
@@ -454,151 +691,58 @@ private:
 
 //------------------------------------------------
 
-template<class T>
-template<class R>
-range<T>::
-range(
-    core::string_view s,
-    std::size_t n,
-    R const& next)
-    : s_(s)
-    , n_(n)
+template<class T, class RangeRule>
+typename range<T, RangeRule>::iterator
+range<T, RangeRule>::
+begin() const noexcept
 {
-    BOOST_CORE_STATIC_ASSERT(
-        sizeof(impl1<R, false>) <=
-            BufferSize);
-
-    ::new(&get()) impl1<R,
-        sizeof(impl1<R, true>) <=
-            BufferSize>(next);
+    return iterator(*this);
 }
 
 //------------------------------------------------
 
-template<class T>
-template<
-    class R0, class R1>
-range<T>::
-range(
-    core::string_view s,
-    std::size_t n,
-    R0 const& first,
-    R1 const& next)
-    : s_(s)
-    , n_(n)
+template<class T, class RangeRule>
+typename range<T, RangeRule>::iterator
+range<T, RangeRule>::
+end() const noexcept
 {
-    BOOST_CORE_STATIC_ASSERT(
-        sizeof(impl2<R0, R1, false>) <=
-            BufferSize);
-
-    ::new(&get()) impl2<R0, R1,
-        sizeof(impl2<R0, R1, true>
-            ) <= BufferSize>(
-                first, next);
+    return iterator(*this, 0);
 }
 
 //------------------------------------------------
 
-template<class T>
-range<T>::
-~range()
-{
-    get().~any_rule();
-}
-
-template<class T>
-range<T>::
-range() noexcept
-{
-    ::new(&get()) any_rule{};
-    char const* it = nullptr;
-    get().first(it, nullptr);
-    get().next(it, nullptr);
-}
-
-template<class T>
-range<T>::
+template<class T, class RangeRule>
+range<T, RangeRule>::
 range(
-    range&& other) noexcept
-    : s_(other.s_)
-    , n_(other.n_)
+    core::string_view s,
+    std::size_t n,
+    RangeRule const& rule) noexcept
+    : detail::range_base_storage<
+        RangeRule>(rule)
+    , s_(s)
+    , n_(n)
 {
-    other.s_ = {};
-    other.n_ = {};
-    other.get().move(&get());
-    other.get().~any_rule();
-    ::new(&other.get()) any_rule{};
 }
 
-template<class T>
-range<T>::
+//------------------------------------------------
+
+template<class T, class RangeRule>
+range<T, RangeRule>::
 range(
-    range const& other) noexcept
-    : s_(other.s_)
-    , n_(other.n_)
+    core::string_view s,
+    std::size_t n,
+    RangeRule&& rule) noexcept
+    : detail::range_base_storage<
+        RangeRule>(std::move(rule))
+    , s_(s)
+    , n_(n)
 {
-    other.get().copy(&get());
-}
-
-template<class T>
-auto
-range<T>::
-operator=(
-    range&& other) noexcept ->
-        range&
-{
-    s_ = other.s_;
-    n_ = other.n_;
-    other.s_ = {};
-    other.n_ = 0;
-    // VFALCO we rely on nothrow move
-    // construction here, but if necessary we
-    // could move to a local buffer first.
-    get().~any_rule();
-    other.get().move(&get());
-    other.get().~any_rule();
-    ::new(&other.get()) any_rule{};
-    return *this;
-}
-
-template<class T>
-auto
-range<T>::
-operator=(
-    range const& other) noexcept ->
-        range&
-{
-    s_ = other.s_;
-    n_ = other.n_;
-    // VFALCO we rely on nothrow copy
-    // construction here, but if necessary we
-    // could construct to a local buffer first.
-    get().~any_rule();
-    other.get().copy(&get());
-    return *this;
-}
-
-template<class T>
-auto
-range<T>::
-begin() const noexcept ->
-    iterator
-{
-    return { *this };
-}
-
-template<class T>
-auto
-range<T>::
-end() const noexcept ->
-    iterator
-{
-    return { *this, 0 };
 }
 
 //------------------------------------------------
 
 template<class R>
+BOOST_URL_CXX20_CONSTEXPR
 auto
 implementation_defined::range_rule_t<R>::
 parse(
@@ -623,13 +767,13 @@ parse(
         if(n < N_)
         {
             // too few
-            BOOST_URL_RETURN_EC(
+            BOOST_URL_CONSTEXPR_RETURN_EC(
                 error::mismatch);
         }
         // good
         return range<T>(
             core::string_view(it0, it - it0),
-                n, next_);
+                n, any_rule<T>(next_));
     }
     for(;;)
     {
@@ -649,25 +793,26 @@ parse(
         if(n >= M_)
         {
             // too many
-            BOOST_URL_RETURN_EC(
+            BOOST_URL_CONSTEXPR_RETURN_EC(
                 error::mismatch);
         }
     }
     if(n < N_)
     {
         // too few
-        BOOST_URL_RETURN_EC(
+        BOOST_URL_CONSTEXPR_RETURN_EC(
             error::mismatch);
     }
     // good
     return range<T>(
         core::string_view(it0, it - it0),
-            n, next_);
+            n, any_rule<T>(next_));
 }
 
 //------------------------------------------------
 
 template<class R0, class R1>
+BOOST_URL_CXX20_CONSTEXPR
 auto
 implementation_defined::range_rule_t<R0, R1>::
 parse(
@@ -687,19 +832,16 @@ parse(
     {
         if(rv.error() != error::end_of_range)
         {
-            // rewind unless error::end_of_range
             it = it1;
         }
         if(n < N_)
         {
-            // too few
-            BOOST_URL_RETURN_EC(
+            BOOST_URL_CONSTEXPR_RETURN_EC(
                 error::mismatch);
         }
-        // good
         return range<T>(
             core::string_view(it0, it - it0),
-                n, first_, next_);
+                n, any_rule<T>(first_, next_));
     }
     for(;;)
     {
@@ -719,20 +861,20 @@ parse(
         if(n >= M_)
         {
             // too many
-            BOOST_URL_RETURN_EC(
+            BOOST_URL_CONSTEXPR_RETURN_EC(
                 error::mismatch);
         }
     }
     if(n < N_)
     {
         // too few
-        BOOST_URL_RETURN_EC(
+        BOOST_URL_CONSTEXPR_RETURN_EC(
             error::mismatch);
     }
     // good
     return range<T>(
         core::string_view(it0, it - it0),
-            n, first_, next_);
+            n, any_rule<T>(first_, next_));
 }
 
 } // grammar

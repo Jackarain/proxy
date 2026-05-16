@@ -118,7 +118,7 @@ struct custom_initializer
 };
 ----
 
-NTOE: All the additional launchers for windows inherit `default_launcher`.
+NOTE: All the additional launchers for windows inherit `default_launcher`.
 
 The call sequence is as follows:
 

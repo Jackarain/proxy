@@ -22,7 +22,6 @@ target_link_libraries(boost_multi_array
     Boost::functional
     Boost::iterator
     Boost::mpl
-    Boost::static_assert
     Boost::type_traits
 )
 

@@ -4,10 +4,15 @@
 # ing file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 ##############################################################################
 
-project libs/statechart/test ;
+project libs/statechart/test
+    : requirements
+        <library>/boost/statechart//boost_statechart
+        <include>.
+        <library>/boost/optional//boost_optional
+    ;
 
 local test_monitor =
-  ../../../libs/test/build//boost_test_exec_monitor/<link>static ;
+  /boost/test//boost_test_exec_monitor/<link>static ;
 # Some platforms have either problems with the automatic detection of the
 # threading mode (e.g. vc-7_1 & gcc >= 3.4.0) or don't support single-
 # threaded mode (e.g. vc-8_0). We therefore manually turn MT off here

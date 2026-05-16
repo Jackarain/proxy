@@ -1823,6 +1823,58 @@ struct url_base_test
 
         // remove_origin
         assert( url( "http://www.example.com/index.htm" ).remove_origin().buffer() == "/index.htm" );
+
+        //----------------------------------------
+        //
+        // Normalization
+        //
+        //----------------------------------------
+
+        // normalize
+        assert( url( "HTTP://www.example.com" ).normalize().buffer() == "http://www.example.com" );
+        assert( url( "http://www.Example.com" ).normalize().buffer() == "http://www.example.com" );
+        assert( url( "http://www.%65xample.com" ).normalize().buffer() == "http://www.example.com" );
+        assert( url( "http://www.example.com/a/b/../c" ).normalize().buffer() == "http://www.example.com/a/c" );
+        assert( url( "http://www.example.com/a/./b" ).normalize().buffer() == "http://www.example.com/a/b" );
+        assert( url( "http://www.example.com/%63ss" ).normalize().buffer() == "http://www.example.com/css" );
+        assert( url( "http://www.example.com?a=%62" ).normalize().buffer() == "http://www.example.com?a=b" );
+        assert( url( "http://www.example.com#%61bc" ).normalize().buffer() == "http://www.example.com#abc" );
+        assert( url( "HTTP://www.Example.com/%70ath?%71uery#%66rag" ).normalize().buffer() == "http://www.example.com/path?query#frag" );
+
+        // normalize_scheme
+        assert( url( "HTTP://www.example.com" ).normalize_scheme().buffer() == "http://www.example.com" );
+
+        // normalize_authority
+        assert( url( "http://www.Example.com" ).normalize_authority().buffer() == "http://www.example.com" );
+        assert( url( "http://www.%65xample.com" ).normalize_authority().buffer() == "http://www.example.com" );
+
+        // normalize_path
+        assert( url( "http://www.example.com/a/b/../c" ).normalize_path().buffer() == "http://www.example.com/a/c" );
+        assert( url( "http://www.example.com/a/./b" ).normalize_path().buffer() == "http://www.example.com/a/b" );
+        assert( url( "http://www.example.com/%63ss" ).normalize_path().buffer() == "http://www.example.com/css" );
+
+        // normalize_query
+        assert( url( "http://www.example.com?a=%62" ).normalize_query().buffer() == "http://www.example.com?a=b" );
+
+        // normalize_fragment
+        assert( url( "http://www.example.com#%61bc" ).normalize_fragment().buffer() == "http://www.example.com#abc" );
+    }
+
+    void
+    testSetEncodedPathBoundary()
+    {
+        // exercise paths that end exactly at
+        // iterator boundary (OOB read regression)
+        {
+            url u;
+            u.set_encoded_path("x");
+            BOOST_TEST_EQ(u.encoded_path(), "x");
+        }
+        {
+            url u;
+            u.set_encoded_path("");
+            BOOST_TEST(u.encoded_path().empty());
+        }
     }
 
     void
@@ -1836,6 +1888,7 @@ struct url_base_test
         testSetHost();
         testSetPort();
         testQuery();
+        testSetEncodedPathBoundary();
         testJavadocs();
     }
 };

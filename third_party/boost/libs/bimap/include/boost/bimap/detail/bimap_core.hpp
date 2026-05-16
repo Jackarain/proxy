@@ -1,6 +1,7 @@
 // Boost.Bimap
 //
 // Copyright (c) 2006-2007 Matias Capeletto
+// Copyright (c) 2025 Joaquin M Lopez Munoz
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -44,6 +45,10 @@
 #include <boost/bimap/detail/manage_additional_parameters.hpp>
 #include <boost/bimap/detail/map_view_iterator.hpp>
 #include <boost/bimap/detail/set_view_iterator.hpp>
+
+#ifndef BOOST_MULTI_INDEX_ENABLE_MPL_SUPPORT
+#include <boost/bimap/detail/mpl_to_mp11_list.hpp>
+#endif
 
 #include <boost/bimap/set_of.hpp>
 #include <boost/bimap/unconstrained_set_of.hpp>
@@ -394,7 +399,15 @@ class bimap_core
 
     >::type complete_core_indices;
 
+#ifndef BOOST_MULTI_INDEX_ENABLE_MPL_SUPPORT
+
+    using core_indices = mpl_to_mp11_list< complete_core_indices >;
+
+#else
+
     struct core_indices : public complete_core_indices {};
+
+#endif
 
     // Define the core using compute_index_type to translate the
     // set type to an multi-index specification

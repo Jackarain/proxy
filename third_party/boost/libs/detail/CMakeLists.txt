@@ -17,6 +17,5 @@ target_link_libraries(boost_detail
         Boost::config
         Boost::core
         Boost::preprocessor
-        Boost::static_assert
         Boost::type_traits
 )

@@ -147,7 +147,16 @@ rule init ( command * )
     {
         local t = [ common.find-tool $(c) ] ;
         t ?= $(c) ;
-        ASCIIDOCTOR += $(t) ;
+        if [ MATCH "(\ )" : $(t) ]
+        {
+            # Ruby handles quotes weirdly. So we only add them if absolutely
+            # needed.
+            ASCIIDOCTOR += \"$(t)\" ;
+        }
+        else
+        {
+            ASCIIDOCTOR += $(t) ;
+        }
     }
 }
 
@@ -217,5 +226,5 @@ feature.compose <asciidoctor-backend>pdf : <flags>"-r asciidoctor-pdf" ;
 
 actions convert
 {
-    "$(ASCIIDOCTOR)" -o$(_)"$(<:D=)" -D$(_)"$(<:D)" -b$(_)"$(BACKEND)" -a$(_)"$(ATTRIBUTE)" -d$(_)"$(DOCTYPE)" $(FLAGS) "$(>)"
+    $(ASCIIDOCTOR) -o$(_)"$(<:D=)" -D$(_)"$(<:D)" -b$(_)"$(BACKEND)" -a$(_)"$(ATTRIBUTE)" -d$(_)"$(DOCTYPE)" $(FLAGS) "$(>)"
 }

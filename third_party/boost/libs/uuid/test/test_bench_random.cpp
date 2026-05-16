@@ -8,6 +8,12 @@
 // benchmark for random_generators in different forms
 //
 
+// Boost.Timer isn't -Wshadow clean under GCC 4.x
+
+#if defined(__GNUC__) && __GNUC__ < 5
+# pragma GCC diagnostic ignored "-Wshadow"
+#endif
+
 #include <boost/core/ignore_unused.hpp>
 #include <boost/timer/timer.hpp>
 #include <boost/predef/os.h>

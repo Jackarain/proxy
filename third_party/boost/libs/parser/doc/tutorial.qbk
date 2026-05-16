@@ -1514,9 +1514,10 @@ attribute, simply returns `bool`; this indicates the success or failure of the
 parse.]
 
 [warning _Parser_ assumes that all attributes are semi-regular (see
-`std::semiregular`).  Within the _Parser_ code, attributes are assigned,
-moved, copy, and default constructed.  There is no support for move-only or
-non-default-constructible types.]
+`std::semiregular`).  Move-only types that are nearly `std::semiregular`,
+other than their copy operations, are also supported.  Within the _Parser_
+code, attributes are move assigned, moved, and default constructed.  There is
+no support for non-default-constructible types.]
 
 [heading The attribute type trait, _attr_]
 
@@ -3766,6 +3767,22 @@ Some things to be aware of when looking at _Parser_ trace output:
   produces that value.  In these cases, you'll see the resolved value of the
   parse argument.
 
+[heading Compile-time trace disabling]
+
+While trace mode is very useful for debugging, it does have some overhead.
+Most parser templates are instantiated twice: Once with tracing enabled,
+once with tracing disabled.
+If you want to completely disable trace functionality at compile time, you can define
+`BOOST_PARSER_DISABLE_TRACE` before including any Boost.Parser headers:
+
+[teletype]``
+#define BOOST_PARSER_DISABLE_TRACE
+#include <boost/parser/parser.hpp>
+``
+
+When this define is set, all trace-related code is compiled out,
+reducing the compile time.
+
 [endsect]
 
 [section Memory Allocation]
@@ -3983,7 +4000,8 @@ This defines a RAII trace object that will produce the verbose trace requested
 by the user if they passed `_trace_::on` to the top-level parse.  It only has
 effect if `detail::enable_trace(flags)` is `true`.  If trace is enabled, it
 will show the state of the parse at the point at which it is defined, and then
-again when it goes out of scope.
+again when it goes out of scope. By defining `BOOST_PARSER_DISABLE_TRACE`,
+the trace feature can be disabled globally at compile time.
 
 [important For the tracing code to work, you must define an overload of
 `detail::print_parser` for your new parser type/template.  See

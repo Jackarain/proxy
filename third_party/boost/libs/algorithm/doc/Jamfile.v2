@@ -18,11 +18,11 @@ using boostbook ;
 
 doxygen autodoc
     :
-        [ glob ../../../boost/algorithm/*.hpp
-               ../../../boost/algorithm/searching/*.hpp
-               ../../../boost/algorithm/cxx11/*.hpp
-               ../../../boost/algorithm/cxx14/*.hpp
-               ../../../boost/algorithm/cxx17/*.hpp
+        [ glob ../include/boost/algorithm/*.hpp
+               ../include/boost/algorithm/searching/*.hpp
+               ../include/boost/algorithm/cxx11/*.hpp
+               ../include/boost/algorithm/cxx14/*.hpp
+               ../include/boost/algorithm/cxx17/*.hpp
         ]
     :
        <doxygen:param>"PREDEFINED=\"BOOST_ALGORITHM_DOXYGEN=1\""

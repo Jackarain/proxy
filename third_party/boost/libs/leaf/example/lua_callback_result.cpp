@@ -1,4 +1,4 @@
-// Copyright 2018-2024 Emil Dotchevski and Reverge Studios, Inc.
+// Copyright 2018-2025 Emil Dotchevski and Reverge Studios, Inc.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -57,7 +57,8 @@ int do_work( lua_State * L )
     }
     else
     {
-        return leaf::new_error(ec1), luaL_error(L,"do_work_error"); // luaL_error does not return (longjmp).
+        (void) leaf::new_error(ec1);
+        return luaL_error(L,"do_work_error"); // luaL_error does not return (longjmp).
     }
 }
 

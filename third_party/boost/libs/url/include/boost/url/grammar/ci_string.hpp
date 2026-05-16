@@ -295,8 +295,8 @@ struct ci_equal
         class String0, class String1>
     bool
     operator()(
-        String0 s0,
-        String1 s1) const noexcept
+        String0 const& s0,
+        String1 const& s1) const noexcept
     {
         return ci_is_equal(s0, s1);
     }
@@ -330,7 +330,7 @@ struct ci_less
 {
     using is_transparent = void;
 
-    std::size_t
+    bool
     operator()(
         core::string_view s0,
         core::string_view s1) const noexcept

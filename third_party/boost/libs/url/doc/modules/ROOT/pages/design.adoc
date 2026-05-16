@@ -1,0 +1,76 @@
+//
+// Copyright (c) 2023 Alan de Freitas (alandefreitas@gmail.com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
+//
+// Official repository: https://github.com/boostorg/url
+//
+
+= Design Rationale
+:navtitle: Design Rationale
+
+This section documents the rationale behind design decisions in Boost.URL that are not obvious from the API alone.
+For a general overview of the library's goals and features, see the xref:index.adoc[introduction].
+
+== Character Type
+
+Boost.URL uses `char` as its character type.
+The library does not provide class templates parameterized on character type (e.g. `basic_url_view<CharT>`).
+
+URLs are sequences of ASCII octets as defined by https://tools.ietf.org/html/rfc3986[RFC 3986,window=blank_].
+In practice, URLs are always handled as `char` strings: in HTTP headers, in JSON, in configuration files, and in every major programming language's URL library.
+Wide character types (`wchar_t`, `char16_t`, `char32_t`) are not used for URLs in any real-world context, so supporting them would add complexity with no practical benefit.
+
+This also means the library does not provide a `char8_t` (C++20) instantiation.
+While `char8_t` is portably correct for ASCII/UTF-8 text, its adoption in the C++ ecosystem remains limited: the standard library does not fully support it for I/O or formatting, and no major framework has adopted it in public APIs.
+Using `char` means Boost.URL interoperates directly with `std::string`, `std::string_view`, string literals, and the rest of the ecosystem without conversion.
+
+=== EBCDIC
+
+The C++ standard does not require that `char` use an ASCII-compatible encoding.
+On EBCDIC platforms (primarily IBM z/OS), the character literal `'/'` does not have the value `0x2F`, so a URL parser that compares `char` values against ASCII constants would malfunction.
+
+In practice, this is not a concern for Boost.URL:
+
+* z/OS is the only remaining platform where EBCDIC is relevant for C++ compilation.
+* The z/OS C++ compilers support an ASCII compilation mode (`-qascii` or `-fzos-le-char-mode=ascii`) that makes `char` literals use ASCII values. This mode exists specifically for open-source software that assumes ASCII.
+* Real-world C++ libraries that handle URLs and HTTP on z/OS (such as cpp-httplib and DuckDB) use this ASCII mode rather than adding EBCDIC transcoding.
+* The z/OS REST and web services ecosystem is almost entirely Java-based. No evidence exists of C++ code parsing RFC 3986 URIs in EBCDIC `char` encoding.
+* WG21 is moving in this direction as well: P3688 (ASCII character utilities) proposes `char`-based functions that treat input as ASCII regardless of literal encoding.
+
+On EBCDIC platforms where ASCII mode is not used, `char8_t` provides a portably correct alternative since it is guaranteed to use UTF-8 (an ASCII superset).
+A future extension to support `char8_t` constructor overloads on the concrete `char`-based types could address this without requiring templates, since both `char` and `char8_t` are single-byte types and the conversion between them is trivial for ASCII content.
+
+== No Dynamic Allocation by Default
+
+The library is designed so that most operations do not require dynamic memory allocation.
+
+cpp:url_view[] does not retain ownership of the underlying string buffer and does not allocate memory.
+Like a cpp:string_view[], it references the original string directly.
+As long as the contents of the original string are unmodified, constructed URL views always contain a valid URL in its correctly serialized form.
+
+Accessor functions return views referring to substrings and sub-ranges of the underlying URL.
+By referencing the relevant portion of the URL string internally, components can represent percent-decoded strings and be converted to other types without allocation.
+cpp:decode_view[] and its decoding functions perform no memory allocations unless the result needs to be stored in another container.
+Objects can be recycled to reuse their memory, deferring allocations until the application actually needs them.
+
+This makes the library suitable for performance-sensitive network programs and embedded devices.
+
+== Error Handling
+
+The library uses error codes rather than exceptions as its primary error reporting mechanism.
+If input does not match the URL grammar, an error code is reported through cpp:result[] rather than throwing.
+This allows the library to be used in environments that disable exceptions (`-fno-exceptions`), which is detected automatically.
+
+== URL Validity Invariant
+
+All modifications to a cpp:url[] leave it in a valid state.
+It is not possible for a cpp:url[] to hold syntactically illegal text.
+All modifying functions perform validation on their input: attempting to set the scheme or port to an invalid string results in an exception, while other components are automatically percent-encoded as needed.
+All non-const operations offer the strong exception safety guarantee.
+
+== No IRIs
+
+The library does not handle https://www.rfc-editor.org/rfc/rfc3987.html[Internationalized Resource Identifiers,window=blank_] (IRIs).
+IRIs are different from URLs: they come from Unicode strings instead of low-ASCII strings and are covered by a separate specification.

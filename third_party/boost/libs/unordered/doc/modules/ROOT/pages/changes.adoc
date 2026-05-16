@@ -6,6 +6,11 @@
 :github-pr-url: https://github.com/boostorg/unordered/pull
 :cpp: C++
 
+== Release 1.91.0
+
+* Fixed the returned value of range insertion in concurrent containers
+({github-pr-url}/344[PR#344^]).
+
 == Release 1.89.0
 
 * Deprecated `boost::unordered::hash_is_avalanching` is now a using-declaration of

@@ -227,7 +227,7 @@ multi_array(const array_view<NumDims>::type& x,
     const Allocator& alloc = Allocator());]]>
 </programlisting></term>
 <listitem>
-<para>These constructors all constructs a <literal>multi_array</literal> and 
+<para>These constructors all construct a <literal>multi_array</literal> and 
 perform a deep copy of <literal>x</literal>. 
 </para>
 

@@ -20,7 +20,6 @@
 
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/steady_timer.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <cstdint>
@@ -40,7 +39,7 @@ template <
 >
 class autoconnect_stream {
 public:
-    using self_type = autoconnect_stream<StreamType, StreamContext, LoggerType>;
+    using self_type = autoconnect_stream;
     using stream_type = StreamType;
     using stream_context_type = StreamContext;
     using logger_type = LoggerType;
@@ -50,7 +49,7 @@ private:
 
     executor_type _stream_executor;
     async_mutex _conn_mtx;
-    asio::steady_timer _read_timer, _connect_timer;
+    timer_type _read_timer, _connect_timer;
     endpoints<logger_type> _endpoints;
 
     stream_ptr _stream_ptr;

@@ -4,7 +4,7 @@
 
 cmake_minimum_required(VERSION 3.5...3.16)
 
-project(boost_mp11 VERSION 1.90.0 LANGUAGES CXX)
+project(boost_mp11 VERSION 1.91.0 LANGUAGES CXX)
 
 add_library(boost_mp11 INTERFACE)
 add_library(Boost::mp11 ALIAS boost_mp11)
@@ -43,7 +43,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     boost_fetch(boostorg/assert TAG develop EXCLUDE_FROM_ALL)
     boost_fetch(boostorg/config TAG develop EXCLUDE_FROM_ALL)
     boost_fetch(boostorg/core TAG develop EXCLUDE_FROM_ALL)
-    boost_fetch(boostorg/static_assert TAG develop EXCLUDE_FROM_ALL)
     boost_fetch(boostorg/throw_exception TAG develop EXCLUDE_FROM_ALL)
 
     unset(BUILD_TESTING)

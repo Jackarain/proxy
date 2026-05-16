@@ -9,7 +9,8 @@
 # Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 import os ;
 import path ;
 import regex ;
@@ -26,6 +27,7 @@ local msvc-cxxs-with-experimental-fs = 14 ;
 project
   :
   requirements
+    <library>/boost/gil//boost_gil
     [ requires
         cxx11_constexpr
         cxx11_defaulted_functions
@@ -83,21 +85,14 @@ rule generate_self_contained_headers ( headers_subpath * : exclude_subpaths * )
     # NOTE: All '/' in test names are replaced with '-' because apparently
     #       test scripts have a problem with test names containing slashes.
 
-    local top_headers_path = [ path.make $(BOOST_ROOT)/libs/gil/include/boost/gil ] ;
-    local headers_path = $(top_headers_path) ;
-    if $(headers_subpath)
-    {
-        headers_path = $(top_headers_path)/$(headers_subpath) ;
-    }
-
-    for local file in [ path.glob-tree $(headers_path) : *.hpp : $(exclude_subpaths) ]
+    for local file in [ glob-tree-ex ../include/boost/gil : *.hpp : $(exclude_subpaths) ]
     {
         local target_no = [ sequence.length $(targets) ] ;
-        local rel_file = [ path.relative-to $(top_headers_path) $(file) ] ;
+        local rel_file = [ path.relative-to ../include/boost/gil $(file) ] ;
         local target_name = [ regex.replace h/$(target_no)/$(rel_file) "/" "-" ] ;
         local target_name = [ regex.replace $(target_name) "\.hpp" "" ] ;
         targets += [
-            compile $(BOOST_ROOT)/libs/gil/test/header/main.cpp
+            compile header/main.cpp
             : <define>"BOOST_GIL_TEST_HEADER=$(rel_file)" <dependency>$(file)
             : $(target_name)
         ] ;

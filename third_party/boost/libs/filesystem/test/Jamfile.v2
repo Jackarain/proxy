@@ -49,11 +49,16 @@ rule check-mklink ( properties * )
 project
     : requirements
       <include>.
+      <include>../src
       <target-os>windows:<define>_SCL_SECURE_NO_WARNINGS
       <target-os>windows:<define>_SCL_SECURE_NO_DEPRECATE
       <target-os>windows:<define>_CRT_SECURE_NO_WARNINGS
       <target-os>windows:<define>_CRT_SECURE_NO_DEPRECATE
       <library>/boost/filesystem//boost_filesystem
+      <library>/boost/system//boost_system
+      <library>/boost/config//boost_config
+      <library>/boost/core//boost_core
+      <library>/boost/detail//boost_detail
       <conditional>@check-mklink
     ;
 
@@ -71,9 +76,9 @@ if [ os.environ UBSAN ]
         <library>/boost/filesystem//boost_filesystem/<visibility>global ;
 }
 
-run config_info.cpp : : : <link>shared <test-info>always_show_run_output ;
-run config_info.cpp : : : <link>static <test-info>always_show_run_output : config_info_static ;
-run convenience_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;
+run config_info.cpp : : : <link>shared <test-info>always_show_run_output <library>/boost/assert//boost_assert ;
+run config_info.cpp : : : <link>static <test-info>always_show_run_output <library>/boost/assert//boost_assert : config_info_static ;
+run convenience_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 <library>/boost/bind//boost_bind ;
 compile macro_default_test.cpp ;
 run odr1_test.cpp odr2_test.cpp ;
 run deprecated_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=3 ;
@@ -85,16 +90,43 @@ run operations_test.cpp : : : <link>shared <define>BOOST_FILESYSTEM_VERSION=4 <t
 run operations_test.cpp : : : <link>static <define>BOOST_FILESYSTEM_VERSION=4 : operations_test_static ;
 run operations_test.cpp : : : <link>shared <define>BOOST_FILESYSTEM_VERSION=3 : operations_test_v3 ;
 run operations_unit_test.cpp : $(HERE) : : <link>shared <define>BOOST_FILESYSTEM_VERSION=4 <test-info>always_show_run_output ;
-run copy_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 <library>/boost/exception//boost_exception ;
+run copy_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 <library>/boost/throw_exception//boost_throw_exception <library>/boost/exception//boost_exception ;
 compile-fail cf_path_nullptr_test.cpp ;
 compile path_iter_ctor_overload_test.cpp ;
 compile path_operator_ambiguity.cpp : <toolset>gcc:<warnings-as-errors>on ;
-run path_test.cpp : : : <link>shared <define>BOOST_FILESYSTEM_VERSION=4 ;
-run path_test.cpp : : : <link>static <define>BOOST_FILESYSTEM_VERSION=4 : path_test_static ;
-run path_test.cpp : : : <link>shared <define>BOOST_FILESYSTEM_VERSION=3 : path_test_v3 ;
-run path_unit_test.cpp : : : <link>shared $(VIS) <define>BOOST_FILESYSTEM_VERSION=4 ;
-run path_unit_test.cpp : : : <link>static $(VIS) <define>BOOST_FILESYSTEM_VERSION=4 : path_unit_test_static ;
-run path_unit_test.cpp : : : <link>shared $(VIS) <define>BOOST_FILESYSTEM_VERSION=3 : path_unit_test_v3 ;
+run path_test.cpp : : :
+    <link>shared
+    <define>BOOST_FILESYSTEM_VERSION=4
+    <library>/boost/container//boost_container <library>/boost/iterator//boost_iterator <library>/boost/utility//boost_utility
+    ;
+run path_test.cpp : : :
+    <link>static
+    <define>BOOST_FILESYSTEM_VERSION=4
+    <library>/boost/container//boost_container <library>/boost/iterator//boost_iterator <library>/boost/utility//boost_utility
+    : path_test_static ;
+run path_test.cpp : : :
+    <link>shared
+    <define>BOOST_FILESYSTEM_VERSION=3
+    <library>/boost/container//boost_container <library>/boost/iterator//boost_iterator <library>/boost/utility//boost_utility
+    : path_test_v3 ;
+run path_unit_test.cpp : : :
+    <link>shared
+    $(VIS)
+    <define>BOOST_FILESYSTEM_VERSION=4
+    <library>/boost/container_hash//boost_container_hash <library>/boost/smart_ptr//boost_smart_ptr
+    ;
+run path_unit_test.cpp : : :
+    <link>static
+    $(VIS)
+    <define>BOOST_FILESYSTEM_VERSION=4
+    <library>/boost/container_hash//boost_container_hash <library>/boost/smart_ptr//boost_smart_ptr
+    : path_unit_test_static ;
+run path_unit_test.cpp : : :
+    <link>shared
+    $(VIS)
+    <define>BOOST_FILESYSTEM_VERSION=3
+    <library>/boost/container_hash//boost_container_hash <library>/boost/smart_ptr//boost_smart_ptr
+    : path_unit_test_v3 ;
 run relative_test.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;
 run ../example/simple_ls.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;
 run ../example/file_status.cpp : : : <define>BOOST_FILESYSTEM_VERSION=4 ;

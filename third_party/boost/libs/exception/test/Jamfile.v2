@@ -7,12 +7,15 @@
 
 import testing ;
 
+project : requirements <library>/boost/exception//boost_exception ;
+
 #to_string
 
-run is_output_streamable_test.cpp ;
 run has_to_string_test.cpp ;
-run to_string_test.cpp ;
+run is_output_streamable_test.cpp ;
 run to_string_stub_test.cpp ;
+run to_string_test.cpp ;
+
 compile-fail to_string_fail.cpp ;
 
 #exception
@@ -21,47 +24,42 @@ run 1-throw_exception_test.cpp : : : <exception-handling>on ;
 run 2-throw_exception_no_exceptions_test.cpp : : : <exception-handling>off ;
 run 3-throw_exception_no_integration_test.cpp : : : <exception-handling>on ;
 run 4-throw_exception_no_both_test.cpp : : : <exception-handling>off ;
+run boost_json_test.cpp /boost/json//boost_json : : : <exception-handling>on ;
 run cloning_test.cpp : : : <exception-handling>on ;
-run copy_exception_test.cpp ../../thread/src/tss_null.cpp /boost//thread : : : <threading>multi <exception-handling>on ;
 run copy_exception_no_exceptions_test.cpp : : : <exception-handling>off <rtti>on ;
-run unknown_exception_test.cpp : : : <exception-handling>on ;
-run exception_test.cpp : : : <exception-handling>on ;
+run copy_exception_test.cpp ../../thread/src/tss_null.cpp /boost/thread//boost_thread : : : <threading>multi <exception-handling>on ;
+run current_exception_cast_test.cpp : : : <exception-handling>on ;
+run diagnostic_information_test.cpp : : : <exception-handling>on ;
 run enable_error_info_test.cpp helper1.cpp : : : <exception-handling>on ;
-run throw_exception_test.cpp helper2.cpp : : : <exception-handling>on ;
 run errno_test.cpp : : : <exception-handling>on ;
 run error_info_basic_test.cpp : : : <exception-handling>on ;
-run error_info_lv_test.cpp : : : <exception-handling>on ;
 run error_info_lv_const_test.cpp : : : <exception-handling>on ;
-run error_info_rv_test.cpp : : : <exception-handling>on ;
+run error_info_lv_test.cpp : : : <exception-handling>on ;
 run error_info_rv_const_test.cpp : : : <exception-handling>on ;
-run diagnostic_information_test.cpp : : : <exception-handling>on ;
-run refcount_ptr_test.cpp ;
-run current_exception_cast_test.cpp : : : <exception-handling>on ;
-run no_exceptions_test.cpp : : : <exception-handling>off ;
+run error_info_rv_test.cpp : : : <exception-handling>on ;
 run errinfos_test.cpp : : : <exception-handling>on ;
-run exception_ptr_test.cpp/<define>BOOST_ENABLE_NON_INTRUSIVE_EXCEPTION_PTR ../../thread/src/tss_null.cpp /boost/exception /boost//thread : : : <threading>multi <exception-handling>on : non_intrusive_exception_ptr_test ;
-run exception_ptr_test.cpp ../../thread/src/tss_null.cpp /boost//thread : : : <threading>multi <exception-handling>on ;
+run exception_ptr_test.cpp ../../thread/src/tss_null.cpp /boost/thread//boost_thread : : : <threading>multi <exception-handling>on ;
+run exception_ptr_test.cpp/<define>BOOST_ENABLE_NON_INTRUSIVE_EXCEPTION_PTR ../../thread/src/tss_null.cpp /boost/exception//boost_exception /boost/thread//boost_thread : : : <threading>multi <exception-handling>on : non_intrusive_exception_ptr_test ;
 run exception_ptr_test2.cpp ;
+run exception_test.cpp : : : <exception-handling>on ;
+run nlohmann_json_test.cpp : : : <exception-handling>on <toolset>clang,<target-os>linux,<cxxstd>2b:<build>no <toolset>clang,<target-os>linux,<cxxstd>23:<build>no ;
+run no_exceptions_test.cpp : : : <exception-handling>off ;
+run refcount_ptr_test.cpp ;
+run throw_exception_test.cpp helper2.cpp : : : <exception-handling>on ;
+run unknown_exception_test.cpp : : : <exception-handling>on ;
 
 lib visibility_test_lib : visibility_test_lib.cpp : <visibility>hidden <exception-handling>on ;
 run visibility_test.cpp visibility_test_lib/<link>shared : : : <visibility>hidden <exception-handling>on ;
 
+compile-fail error_info_const_fail.cpp ;
 compile-fail exception_fail.cpp ;
 compile-fail throw_exception_fail.cpp ;
-compile-fail error_info_const_fail.cpp ;
 
 #headers
 
-compile exception_ptr_hpp_test.cpp ;
-compile diagnostic_information_hpp_test.cpp ;
-compile error_info_hpp_test.cpp ;
-compile get_error_info_hpp_test.cpp ;
-compile info_hpp_test.cpp ;
-compile info_tuple_hpp_test.cpp ;
-compile to_string_hpp_test.cpp ;
-compile to_string_stub_hpp_test.cpp ;
 compile all_hpp_test.cpp ;
 compile current_exception_cast_hpp_test.cpp ;
+compile diagnostic_information_hpp_test.cpp ;
 compile errinfo_api_function_hpp_test.cpp ;
 compile errinfo_at_line_hpp_test.cpp ;
 compile errinfo_errno_hpp_test.cpp ;
@@ -70,3 +68,10 @@ compile errinfo_file_name_hpp_test.cpp ;
 compile errinfo_file_open_mode_hpp_test.cpp ;
 compile errinfo_nested_exception_hpp_test.cpp ;
 compile errinfo_type_info_name_hpp_test.cpp ;
+compile error_info_hpp_test.cpp ;
+compile exception_ptr_hpp_test.cpp ;
+compile get_error_info_hpp_test.cpp ;
+compile info_hpp_test.cpp ;
+compile info_tuple_hpp_test.cpp ;
+compile to_string_hpp_test.cpp ;
+compile to_string_stub_hpp_test.cpp ;

@@ -18,7 +18,7 @@ RapidXML does not fully support the XML standard; it is not capable of parsing
 DTDs and therefore cannot do full entity substitution.
 
 By default, the parser will preserve most whitespace, but remove element content
-that consists only of whitespace. Encoded whitespaces (e.g. &#32;) does not
+that consists only of whitespace. Encoded whitespaces (e.g. &#32;) do not
 count as whitespace in this regard. You can pass the trim_whitespace flag if you
 want all leading and trailing whitespace trimmed and all continuous whitespace
 collapsed into a single space.

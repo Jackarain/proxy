@@ -6,7 +6,7 @@ An _open-method_ is a free-standing function that has one or more _virtual_
 _parameters_. When it is called, it forwards to an _overrider_ selected from a
 set by examining the dynamic types of the virtual parameters.
 
-If this sounds like a virtual function, that's because because an open-method
+If this sounds like a virtual function, that's because an open-method
 with one virtual parameter is equivalent to a virtual function - with one big
 difference: it exists outside of classes.
 

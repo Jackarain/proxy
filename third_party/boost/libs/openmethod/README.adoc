@@ -1,0 +1,51 @@
+= Boost.OpenMethod
+
+== Build Status
+
+[cols="^1,1,1,1,1,1", options="header"]
+|===
+| Branch | GH Actions | Coverity Scan | codecov.io | Deps | Docs
+
+| https://github.com/boostorg/openmethod/tree/master[`master`]
+| image:https://github.com/boostorg/openmethod/actions/workflows/ci.yml/badge.svg?branch=master[CI,link=https://github.com/boostorg/openmethod/actions/workflows/ci.yml]
+| image:https://scan.coverity.com/projects/32486/badge.svg[Coverity Scan Build Status,link=https://scan.coverity.com/projects/boostorg-openmethod]
+| image:https://codecov.io/gh/boostorg/openmethod/branch/master/graph/badge.svg[codecov,link=https://codecov.io/gh/boostorg/openmethod/branch/master]
+| image:https://img.shields.io/badge/deps-master-brightgreen.svg[Deps,link=https://pdimov.github.io/boostdep-report/master/openmethod.html]
+| image:https://img.shields.io/badge/docs-master-brightgreen.svg[Documentation,link=https://www.boost.org/library/latest/openmethod/]
+
+| https://github.com/boostorg/openmethod/tree/develop[`develop`]
+| image:https://github.com/boostorg/openmethod/actions/workflows/ci.yml/badge.svg?branch=develop[CI,link=https://github.com/boostorg/openmethod/actions/workflows/ci.yml]
+| image:https://scan.coverity.com/projects/32486/badge.svg[Coverity Scan Build Status,link=https://scan.coverity.com/projects/boostorg-openmethod]
+| image:https://codecov.io/gh/boostorg/openmethod/branch/develop/graph/badge.svg[codecov,link=https://codecov.io/gh/boostorg/openmethod/branch/develop]
+| image:https://img.shields.io/badge/deps-develop-brightgreen.svg[Deps,link=https://pdimov.github.io/boostdep-report/develop/openmethod.html]
+| image:https://img.shields.io/badge/docs-develop-brightgreen.svg[Documentation,link=https://www.boost.org/doc/libs/develop/libs/openmethod/doc/html/openmethod]
+|===
+
+This page is intended for people who want to learn about the internals of the library,
+and, perhaps, contribute to it. If you are a (potential) user, please head to the
+https://www.boost.org/doc/libs/latest/libs/openmethod/doc/html/openmethod/index.html[documentation].
+
+== Contributing
+
+Submit your contributions as pull requests against *develop* branch. Please note: by
+submitting PRs you implicitly agree to license your modifications under the
+http://www.boost.org/LICENSE_1_0.txt[Boost Software License, Version 1.0].
+
+== Community
+
+Questions, suggestions, defect reports, etc can be submitted via the following
+channels:
+
+* https://cpplang.slack.com/archives/C0A16HR702G[Slack]. Best for quick
+questions, especially for those getting started with the library.
+
+* http://www.boost.org/community/groups.html#main[The Boost developers mailing
+list]. Best for in-depth discussion of the features, future, and implementation
+of the library. Be sure to read the
+http://www.boost.org/community/policy.html[discussion policy] before posting.
+Please add the `[openmethod]` tag at the beginning of the subject line.
+
+* https://github.com/boostorg/openmethod/issues[Issues page on GitHub]. Best for
+bug reports. Please mention the Boost version, platform and compiler you are
+using, and provide a small compilable code sample to reproduce the problem. Also
+a good place for feature requests and suggestions.

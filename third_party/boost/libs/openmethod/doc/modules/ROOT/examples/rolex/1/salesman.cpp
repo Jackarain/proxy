@@ -14,6 +14,6 @@ BOOST_OPENMETHOD_OVERRIDE(
     return next(emp) + emp->sales * 0.05; // base + commission
 }
 
-BOOST_OPENMETHOD_CLASSES(Employee, Salesman)
+BOOST_OPENMETHOD_CLASSES(Employee, Salesman);
 
 // end::content[]

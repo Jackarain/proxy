@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2024 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -9,9 +9,11 @@
 
 #include <boost/redis/adapter/result.hpp>
 #include <boost/redis/error.hpp>
+#include <boost/redis/resp3/flat_tree.hpp>
 #include <boost/redis/resp3/node.hpp>
 #include <boost/redis/resp3/serialization.hpp>
 #include <boost/redis/resp3/type.hpp>
+#include <boost/redis/response.hpp>
 
 #include <boost/assert.hpp>
 
@@ -173,6 +175,99 @@ public:
                });
             }
       }
+   }
+};
+
+template <>
+class general_aggregate<resp3::tree> {
+private:
+   resp3::tree* tree_ = nullptr;
+
+public:
+   explicit general_aggregate(resp3::tree* c = nullptr)
+   : tree_(c)
+   { }
+
+   void on_init() { }
+   void on_done() { }
+
+   template <class String>
+   void on_node(resp3::basic_node<String> const& nd, system::error_code&)
+   {
+      BOOST_ASSERT_MSG(!!tree_, "Unexpected null pointer");
+
+      resp3::node tmp;
+      tmp.data_type = nd.data_type;
+      tmp.aggregate_size = nd.aggregate_size;
+      tmp.depth = nd.depth;
+      tmp.value = std::string{std::cbegin(nd.value), std::cend(nd.value)};
+
+      tree_->push_back(std::move(tmp));
+   }
+};
+
+template <>
+class general_aggregate<generic_flat_response> {
+private:
+   generic_flat_response* tree_ = nullptr;
+
+public:
+   explicit general_aggregate(generic_flat_response* c = nullptr)
+   : tree_(c)
+   { }
+
+   void on_init()
+   {
+      if (tree_->has_value()) {
+         tree_->value().notify_init();
+      }
+   }
+   void on_done()
+   {
+      BOOST_ASSERT_MSG(!!tree_, "Unexpected null pointer");
+      if (tree_->has_value()) {
+         tree_->value().notify_done();
+      }
+   }
+
+   template <class String>
+   void on_node(resp3::basic_node<String> const& nd, system::error_code&)
+   {
+      BOOST_ASSERT_MSG(!!tree_, "Unexpected null pointer");
+      switch (nd.data_type) {
+         case resp3::type::blob_error:
+         case resp3::type::simple_error:
+            *tree_ = error{
+               nd.data_type,
+               std::string{std::cbegin(nd.value), std::cend(nd.value)}
+            };
+            break;
+         default:
+            if (tree_->has_value()) {
+               (**tree_).push(nd);
+            }
+      }
+   }
+};
+
+template <>
+class general_aggregate<resp3::flat_tree> {
+private:
+   resp3::flat_tree* tree_ = nullptr;
+
+public:
+   explicit general_aggregate(resp3::flat_tree* c = nullptr)
+   : tree_(c)
+   { }
+
+   void on_init() { tree_->notify_init(); }
+   void on_done() { tree_->notify_done(); }
+
+   template <class String>
+   void on_node(resp3::basic_node<String> const& nd, system::error_code&)
+   {
+      BOOST_ASSERT_MSG(!!tree_, "Unexpected null pointer");
+      tree_->push(nd);
    }
 };
 

@@ -24,7 +24,7 @@
 
 //
 // abstract base class definition
-// 
+//
 struct abstract_base
 {
     virtual ~abstract_base() {}
@@ -45,7 +45,7 @@ struct implementation : abstract_base
 
     implementation( int, int )
     { }
- 
+
     implementation( int, std::string, int, std::string )
     { }
 
@@ -59,7 +59,7 @@ struct implementation : abstract_base
 
 void check_ptr_map_inserter()
 {
-    
+
 #ifndef BOOST_NO_FUNCTION_TEMPLATE_ORDERING
 
     boost::ptr_map<std::string, abstract_base> m;
@@ -76,11 +76,11 @@ void check_ptr_map_inserter()
                      ( "foobar", 1, "two", 3, "four" )
                      ( "key1" )( "key2" )( "key3" )( "key4" )
                      ( "key5", 42 )( "key6", 42, 42 );
-    
+
     BOOST_CHECK_EQUAL( m2.size(), 7u );
-    boost::assign::ptr_map_insert( m2 )( "key1" ); 
-    BOOST_CHECK_EQUAL( m2.size(), 7u ); // duplicates not inserted   
-    
+    boost::assign::ptr_map_insert( m2 )( "key1" );
+    BOOST_CHECK_EQUAL( m2.size(), 7u ); // duplicates not inserted
+
 }
 
 

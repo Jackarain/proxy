@@ -11,6 +11,7 @@
 #ifndef BOOST_NO_CXX17_HDR_MEMORY_RESOURCE
 
 #include <memory_resource>
+#include <new>
 
 namespace test {
   class counted_new_delete_resource : public std::pmr::memory_resource
@@ -25,17 +26,45 @@ namespace test {
     void* do_allocate(std::size_t bytes, std::size_t alignment) override
     {
       _count += bytes;
+
+#if defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606L
+
       return ::operator new(bytes, std::align_val_t(alignment));
+
+#else
+
+      return ::operator new(bytes);
+      (void)alignment;
+
+#endif
     }
 
     void do_deallocate(
       void* p, std::size_t bytes, std::size_t alignment) override
     {
       _count -= bytes;
-#if __cpp_sized_deallocation
+
+#if defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606L
+# if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
+
       ::operator delete(p, bytes, std::align_val_t(alignment));
-#else
+
+# else
+
       ::operator delete(p, std::align_val_t(alignment));
+
+# endif
+#else
+# if defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309L
+
+      ::operator delete(p, bytes);
+
+# else
+
+      ::operator delete(p);
+      (void)alignment;
+
+# endif
 #endif
     }
 

@@ -55,12 +55,13 @@ void test_allocate()
    polymorphic_allocator<int> p(&d);
    d.reset();
    d.do_allocate_return = &dummy;
-   p.allocate(2);
+   int *const ptr = p.allocate(2);
    BOOST_TEST(d.do_allocate_called == true);
    BOOST_TEST(d.do_allocate_return == &dummy);
    //It shall allocate 2*sizeof(int), alignment_of<int>
    BOOST_TEST(d.do_allocate_bytes == 2*sizeof(int));
    BOOST_TEST(d.do_allocate_alignment == dtl::alignment_of<int>::value);
+   p.deallocate(ptr, 2);   //To make [[nodiscard]] happy
 }
 
 void test_deallocate()

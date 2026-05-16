@@ -1034,6 +1034,28 @@ struct params_ref_test
 
     static
     void
+    testBorrowedRange()
+    {
+#ifdef BOOST_URL_HAS_CONCEPTS
+        // params_ref is a borrowed range
+        BOOST_CORE_STATIC_ASSERT(
+            std::ranges::borrowed_range<params_ref>);
+
+        // iterators remain valid after the ref is destroyed
+        // (as long as the underlying url stays alive)
+        url u("?first=John&last=Doe");
+        params_ref::iterator it;
+        {
+            params_ref p = u.params();
+            it = p.begin();
+        }
+        // ref is destroyed, but iterator is still valid
+        BOOST_TEST_EQ((*it).key, "first");
+#endif
+    }
+
+    static
+    void
     testAll()
     {
         testSpecial();
@@ -1041,6 +1063,7 @@ struct params_ref_test
         testModifiers();
         testJavadocs();
         testSpaceAsPlus();
+        testBorrowedRange();
     }
 
     void

@@ -1,6 +1,6 @@
 /* Boost.MultiIndex serialization tests template.
  *
- * Copyright 2003-2013 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -12,12 +12,17 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/detail/lightweight_test.hpp>
-#include <boost/mpl/size.hpp>
 #include "pre_multi_index.hpp"
 #include <boost/multi_index_container.hpp>
 #include <string>
 #include <sstream>
 #include <vector>
+
+#if defined(BOOST_MULTI_INDEX_ENABLE_MPL_SUPPORT)
+#include <boost/mpl/size.hpp>
+#else
+#include <boost/mp11/list.hpp>
+#endif
 
 template<int N>
 struct all_indices_equal_helper
@@ -48,9 +53,15 @@ template<class MultiIndexContainer>
 bool all_indices_equal(
   const MultiIndexContainer& m1,const MultiIndexContainer& m2)
 {
+#if defined(BOOST_MULTI_INDEX_ENABLE_MPL_SUPPORT)
   BOOST_STATIC_CONSTANT(int,
     N=boost::mpl::size<
-    BOOST_DEDUCED_TYPENAME MultiIndexContainer::index_type_list>::type::value);
+    typename MultiIndexContainer::index_type_list>::value);
+#else
+  BOOST_STATIC_CONSTANT(int,
+    N=boost::mp11::mp_size<
+    typename MultiIndexContainer::index_type_list>::value);
+#endif
 
   return all_indices_equal_helper<N-1>::compare(m1,m2);
 }

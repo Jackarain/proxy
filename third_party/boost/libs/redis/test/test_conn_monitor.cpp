@@ -41,7 +41,7 @@ class test_monitor {
 
    void start_receive()
    {
-      conn.async_receive([this](error_code ec, std::size_t) {
+      conn.async_receive2([this](error_code ec) {
          // We should expect one push entry, at least
          BOOST_TEST_EQ(ec, error_code());
          BOOST_TEST(monitor_resp.has_value());

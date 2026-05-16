@@ -11,6 +11,7 @@
 #include <boost/mqtt5/types.hpp>
 
 #include <boost/mqtt5/detail/async_traits.hpp>
+#include <boost/mqtt5/detail/internal_types.hpp>
 
 #include <boost/mqtt5/impl/connect_op.hpp>
 

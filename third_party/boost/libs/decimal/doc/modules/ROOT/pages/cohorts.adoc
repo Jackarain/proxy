@@ -1,0 +1,106 @@
+////
+Copyright 2025 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#cohorts]
+= Cohorts
+:idprefix: cohorts_
+
+As stated in the library overview, one of the major differences between binary floating point and decimal floating point is the existence of cohorts.
+From IEEE 754-2008: "The set of representations a floating-point number maps to is called the floating-point
+number’s cohort; the members of a cohort are distinct representations of the same floating-point number."
+
+For example `decimal32_t` has a precision of 7.
+That means all the following are valid ways to represent the number 300 using that type:
+
+. 3e+2
+. 30e+1
+. 300e+0
+. 3000e-1
+. 30000e-2
+. 300000e-3
+. 3000000e-4
+
+These values can be useful in certain applications, like preserving the precision of results.
+A value is said to be *normalized* when the effects of these cohorts is removed.
+This is done by appending zeros to the significand and reducing the exponent until the significand has the same number of significant digits as the type can represent.
+For example 1 - 6 above would all be represented the same as value 7.
+By default, most methods *DO NOT* observe cohorts.
+Below is an example of how cohorts can be preserved if one so wishes.
+
+== Cohort Preserving `<charconv>` Example
+
+This example can be found in the `examples/` folder as https://github.com/boostorg/decimal/blob/develop/examples/charconv_cohort_preservation.cpp[charconv_cohort_preservation.cpp].
+
+[source, c++]
+----
+include::example$charconv_cohort_preservation.cpp[]
+----
+
+Expected Output:
+----
+Values are equal and bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Successful Roundtrip of value: 3e+02
+
+Values are equal and NOT bitwise equal.
+Values are equal and bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Successful Roundtrip of value: 3.0e+02
+
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Successful Roundtrip of value: 3.00e+02
+
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Successful Roundtrip of value: 3.000e+02
+
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Successful Roundtrip of value: 3.0000e+02
+
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and bitwise equal.
+Values are equal and NOT bitwise equal.
+Successful Roundtrip of value: 3.00000e+02
+
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and NOT bitwise equal.
+Values are equal and bitwise equal.
+Successful Roundtrip of value: 3.000000e+02
+----

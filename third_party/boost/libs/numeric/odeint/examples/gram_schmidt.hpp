@@ -55,11 +55,11 @@ void gram_schmidt( StateType &x , LyapType &lyap , size_t n )
     norm[0] = sqrt( std::inner_product( beg1 , end1 , beg1 , 0.0 ) );
     normalize( beg1 , end1 , norm[0] );
 
-    beg1 += n;
-    end1 += n;
-
-    for( size_t j=1 ; j<num_of_lyap ; ++j , beg1+=n , end1+=n )
+    for( size_t j=1 ; j<num_of_lyap ; ++j )
     {
+        beg1 += n;
+        end1 += n;
+
         for( size_t k=0 ; k<j ; ++k )
         {
             tmp[k] = std::inner_product( beg1 , end1 , first + k*n , 0.0 );

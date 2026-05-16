@@ -145,6 +145,7 @@ include::example$unit/snippets.cpp[tag=snippet_encoding_13,indent=0]
 The member function
 cpp:pct_string_view::decode[]
 can be used to decode the data into a buffer.
+
 Like the free-function
 cpp:encode[], decoding options and the string token can be customized.
 
@@ -154,6 +155,26 @@ cpp:encode[], decoding options and the string token can be customized.
 include::example$unit/snippets.cpp[tag=snippet_encoding_14,indent=0]
 ----
 
+When you need to decode an ad-hoc string, the cpp:decode[] free functions mirror the
+cpp:encode[] API so you do not need to construct a cpp:pct_string_view[] or a
+cpp:decode_view[]. The cpp:decoded_size[] function reports the exact number of bytes required to store the decoded text,
+and cpp:decode[] writes into caller-provided buffers.
 
+// snippet_decoding_helpers_1
+[source,cpp]
+----
+include::example$unit/snippets.cpp[tag=snippet_decoding_helpers_1,indent=0]
+----
 
+All overloads take a `core::string_view` parameter and return a
+`system::result`, so the functions always validate the input and surface any
+percent-encoding errors without throwing.
 
+Just like their encoding counterparts, the string-token overloads let you
+reuse storage or append to an existing container without intermediate allocations.
+
+// snippet_decoding_helpers_2
+[source,cpp]
+----
+include::example$unit/snippets.cpp[tag=snippet_decoding_helpers_2,indent=0]
+----

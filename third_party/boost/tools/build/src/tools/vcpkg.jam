@@ -1,0 +1,393 @@
+#|
+Copyright 2023 Dmitry Arkhipov (grisumbras@yandex.ru)
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE.txt or copy at
+https://www.bfgroup.xyz/b2/LICENSE.txt)
+|#
+
+import errors ;
+import feature ;
+import msvc ;
+import os ;
+import path ;
+import project ;
+import property ;
+import property-set ;
+import targets ;
+
+import "class" : new ;
+
+#| tag::doc[]
+
+[[b2.tasks.packagemanagers.vcpkg]]
+= vcpkg support
+https://learn.microsoft.com/vcpkg[vcpkg] is a cross-platform package manager
+for C and {CPP} developed by Microsoft. vcpkg provides first-class support
+for CMake and MSBuild build systems, but you can still use packages installed
+by vcpkg in b2 either as link:#b2.tutorial.prebuilt[prebuilt libraries],
+with the help of link:#_pkg_config[pkg-config] tool, or if the package provides
+a link:#b2.extending.toolset_modules[toolset module]. In-built toolset modules
+(e.g. `openssl` are already integrated with this module).
+
+The module declares the project `/vcpkg` with a main target `/vcpkg//prefix`.
+The target can be used as a dependency to add its `<include>` and `<search>`
+usage requirements.
+
+[source, jam]
+----
+lib sqlite3 : /vcpkg//prefix ;
+----
+
+|# # end::doc[]
+
+if --debug-configuration in [ modules.peek : ARGV ]
+{
+    .debug =  true ;
+}
+
+#| tag::doc[]
+
+
+== Initialization
+To enable vcpkg integration you need to declare it in a configuration file
+with the help of `using` rule:
+
+[source, jam]
+----
+using vcpkg : [root] : [options] ... : [ condition ] ... ;
+----
+
+* `root`: vcpkg installation root.
+
+* `options`: options that specify the location of vcpkg package installation
+    tree. Allowed options are:
+
+    ** `<include>`: directory with header files;
+    ** `<search>`: directory with library binaries;
+    ** `<prefix>`: installation prefix for the triplet;
+    ** `<triplet>`: the triplet to use.
+
+* `condition`: properties that distinguish this configuration.
+
+If options contain neither `<include>` nor `<search>`, they are set to
+`include` and `lib` subdirectories of `<prefix>`.
+
+If options do not contain `<prefix>`, it is set to `root/<triplet>`.
+
+If `root` is empty,  it is set to `installed` subdirectory of the directory
+pointed to by `VCPKG_ROOT` environment variable if it is not empty. Otherwise,
+https://learn.microsoft.com/vcpkg/concepts/manifest-mode[Manisfest mode] is
+assumed, and `vcpkg.json` file is searched for in the current directory and its
+parents. If the file is found, then `root` is set to `vcpkg_installed`
+subdirectory of its parent directory.
+
+If options do not contain `<triplet>`, it is set to the value of
+`VCPKG_DEFAULT_TRIPLET` environment variable if it is not empty. Otherwise,
+if there is exactly one triplet subdirectory of `root` directory, then its
+name is used.
+
+If `condition` does not contain a property of `<variant>`, and `options` do not
+contain `<search>`, then two versions are configured: one for
+`<variant>release` that sets `<search>` to `<prefix>/lib`, and another for
+`<variant>debug` that sets `<search>` to `<prefix>/debug/lib`.
+
+Finally, if `options` contain none of `<include>`, `<search>`, `<prefix>`, and
+`<triplet>` and `requirements` are empty, appropriate configurations for
+several default triplets provided by vcpkg are made.
+
+|# # end::doc[]
+
+rule init ( root ? : options * : condition * )
+{
+    local incdir = [ feature.get-values <include> : $(options) ] ;
+    local libdir = [ feature.get-values <search> : $(options) ] ;
+    local prefix = [ feature.get-values <prefix> : $(options) ] ;
+    local triplet = [ feature.get-values <triplet> : $(options) ] ;
+
+    if ( ( $(root) || $(triplet) ) && ( $(prefix) || $(incdir) || $(libdir) ) )
+        || ( $(prefix) && ( $(incdir) || $(libdir) ) )
+        || ( $(incdir) && ! $(libdir) )
+        || ( $(libdir) && ! $(incdir) )
+    {
+        errors.user-error "incompatible options for vcpkg:" $(options) ;
+    }
+
+    local kind = predefined-triplets ;
+    if $(prefix) || $(incdir) || $(libdir) || $(triplet) || $(condition)
+    {
+        kind = specific-triplet ;
+    }
+
+    if ! $(.initialized)
+    {
+        .initialized = true ;
+
+        project.initialize $(__name__) ;
+        project $(__name__) ;
+    }
+    else
+    {
+        if ! $(options) && ! $(condition)
+        {
+            kind = ;
+        }
+    }
+
+    local project = [ project.target $(__name__) ] ;
+
+    switch $(kind)
+    {
+        case predefined-triplets :
+            configure-predefined $(project) : $(root) ;
+        case specific-triplet :
+            configure-specific $(project) : $(root) : $(triplet) : $(prefix)
+                : $(incdir) : $(libdir) : $(condition) ;
+    }
+}
+
+local rule configure-predefined ( project : root ? )
+{
+    if ! $(root)
+    {
+        root = [ deduce-root ] ;
+    }
+
+    # arm-neon-android, arm6-android, arm64ec-windows, wasm32-emscripten,
+    # all xbox, mingw, and -release triplets are skipped
+
+    # Linux
+    configure-specific $(project) : $(root) : x64-linux : : :
+        : <target-os>linux <address-model>64 <architecture>x86 <link>static <runtime-link>shared ;
+    configure-specific $(project) : $(root) : x64-linux-dynamic : : :
+        : <target-os>linux <address-model>64 <architecture>x86 <link>shared <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : x86-linux : : :
+        : <target-os>linux <address-model>32 <architecture>x86 <link>static <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : arm-linux : : :
+        : <target-os>linux <address-model>32 <architecture>arm <link>static <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : arm64-linux : : :
+        : <target-os>linux <address-model>64 <architecture>arm <link>static <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : ppc64le-linux : : :
+        : <target-os>linux <address-model>64 <architecture>power <link>static <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : riscv32-linux : : :
+        : <target-os>linux <address-model>32 <architecture>riscv <link>static <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : riscv64-linux : : :
+        : <target-os>linux <address-model>64 <architecture>riscv <link>static <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : s390x-linux : : :
+        : <target-os>linux <address-model>64 <architecture>s390x <link>static <runtime-link>shared ;
+
+    # Windows
+    configure-specific $(project) : $(root) : x64-windows : : :
+        : <target-os>windows <address-model>64 <architecture>x86 <link>shared <runtime-link>shared <windows-api>desktop ;
+    configure-specific $(project) : $(root) : x64-windows-static : : :
+        : <target-os>windows <address-model>64 <architecture>x86 <link>static <runtime-link>static <windows-api>desktop ;
+    configure-specific $(project) : $(root) : x64-windows-static-md : : :
+        : <target-os>windows <address-model>64 <architecture>x86 <link>static <runtime-link>shared <windows-api>desktop ;
+
+    configure-specific $(project) : $(root) : x86-windows : : :
+        : <target-os>windows <address-model>32 <architecture>x86 <link>shared <runtime-link>shared <windows-api>desktop ;
+    configure-specific $(project) : $(root) : x86-windows-static-md : : :
+        : <target-os>windows <address-model>32 <architecture>x86 <link>static <runtime-link>shared <windows-api>desktop ;
+    configure-specific $(project) : $(root) : x86-windows-static : : :
+        : <target-os>windows <address-model>32 <architecture>x86 <link>static <runtime-link>static <windows-api>desktop ;
+
+    configure-specific $(project) : $(root) : arm64-windows : : :
+        : <target-os>windows <address-model>64 <architecture>arm <link>shared <runtime-link>shared <windows-api>desktop ;
+    configure-specific $(project) : $(root) : arm64-windows-static-md : : :
+        : <target-os>windows <address-model>64 <architecture>arm <link>static <runtime-link>shared <windows-api>desktop ;
+    configure-specific $(project) : $(root) : arm64-windows-static : : :
+        : <target-os>windows <address-model>64 <architecture>arm <link>static <runtime-link>static <windows-api>desktop ;
+
+    configure-specific $(project) : $(root) : arm-windows : : :
+        : <target-os>windows <address-model>32 <architecture>arm <link>shared <runtime-link>shared <windows-api>desktop ;
+    configure-specific $(project) : $(root) : arm-windows-static : : :
+        : <target-os>windows <address-model>32 <architecture>arm <link>static <runtime-link>static <windows-api>desktop ;
+
+    # WindowsStore
+    configure-specific $(project) : $(root) : x64-uwp : : :
+        : <target-os>windows <address-model>64 <architecture>x86 <link>shared <runtime-link>shared <windows-api>store ;
+    configure-specific $(project) : $(root) : x64-uwp-static-md : : :
+        : <target-os>windows <address-model>64 <architecture>x86 <link>static <runtime-link>shared <windows-api>store ;
+
+    configure-specific $(project) : $(root) : x86-uwp : : :
+        : <target-os>windows <address-model>32 <architecture>x86 <link>shared <runtime-link>shared <windows-api>store ;
+    configure-specific $(project) : $(root) : x86-uwp-static-md : : :
+        : <target-os>windows <address-model>32 <architecture>x86 <link>static <runtime-link>shared <windows-api>store ;
+
+    configure-specific $(project) : $(root) : arm64-uwp : : :
+        : <target-os>windows <address-model>64 <architecture>arm <link>shared <runtime-link>shared <windows-api>store ;
+    configure-specific $(project) : $(root) : arm64-uwp-static-md : : :
+        : <target-os>windows <address-model>64 <architecture>arm <link>static <runtime-link>shared <windows-api>store ;
+
+    configure-specific $(project) : $(root) : arm-uwp : : :
+        : <target-os>windows <address-model>32 <architecture>arm <link>shared <runtime-link>shared <windows-api>store ;
+    configure-specific $(project) : $(root) : arm-uwp-static-md : : :
+        : <target-os>windows <address-model>32 <architecture>arm <link>static <runtime-link>shared <windows-api>store ;
+
+    # OSX
+    configure-specific $(project) : $(root) : x64-osx : : :
+        : <target-os>darwin <address-model>64 <architecture>x86 <link>static <runtime-link>shared ;
+    configure-specific $(project) : $(root) : x64-osx-dynamic : : :
+        : <target-os>darwin <address-model>64 <architecture>x86 <link>shared <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : arm64-osx-dynamic : : :
+        : <target-os>darwin <address-model>64 <architecture>arm <link>shared <runtime-link>shared ;
+    configure-specific $(project) : $(root) : arm64-osx : : :
+        : <target-os>darwin <address-model>64 <architecture>arm <link>static <runtime-link>shared ;
+
+    # Android
+    configure-specific $(project) : $(root) : x64-android : : :
+        : <target-os>android <address-model>64 <architecture>x86 <link>static <runtime-link>static ;
+
+    configure-specific $(project) : $(root) : x86-android : : :
+        : <target-os>android <address-model>32 <architecture>x86 <link>static <runtime-link>static ;
+
+    configure-specific $(project) : $(root) : arm64-android : : :
+        : <target-os>android <address-model>64 <architecture>arm <link>static <runtime-link>static ;
+
+    configure-specific $(project) : $(root) : arm-android : : :
+        : <target-os>android <address-model>32 <architecture>arm <link>static <runtime-link>static ;
+
+    # iPhone
+    configure-specific $(project) : $(root) : arm-ios : : :
+        : <target-os>iphone <address-model>32 <architecture>arm <link>static <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : arm64-ios : : :
+        : <target-os>iphone <address-model>64 <architecture>arm <link>static <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : x64-ios : : :
+        : <target-os>iphone <address-model>64 <architecture>x86 <link>static <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : x86-ios : : :
+        : <target-os>iphone <address-model>32 <architecture>x86 <link>static <runtime-link>shared ;
+
+    # FreeBSD
+    configure-specific $(project) : $(root) : x64-freebsd : : :
+        : <target-os>freebsd <address-model>64 <architecture>x86 <link>static <runtime-link>shared ;
+
+    configure-specific $(project) : $(root) : x86-freebsd : : :
+        : <target-os>freebsd <address-model>32 <architecture>x86 <link>static <runtime-link>shared ;
+
+    # OpenBSD
+    configure-specific $(project) : $(root) : x64-openbsd : : :
+        : <target-os>openbsd <address-model>64 <architecture>x86 <link>static <runtime-link>shared ;
+
+}
+
+local rule configure-specific ( project : root ? : triplet ? : prefix ?
+    : incdir ? : libdir ? : condition + )
+{
+    local with-debug ;
+    if ! $(incdir) || ! $(libdir)
+    {
+        if ! $(prefix)
+        {
+            prefix = [ deduce-prefix $(root) : $(triplet) ] ;
+        }
+        incdir ?= [ path.join $(prefix) include ] ;
+        libdir ?= [ path.join $(prefix) lib ] ;
+        if ! [ property.select <variant> : $(condition) ]
+        {
+            with-debug = true ;
+        }
+    }
+
+    if $(with-debug)
+    {
+        declare-target $(project) : $(incdir) : $(libdir)
+            : $(condition) <variant>release ;
+        declare-target $(project) : $(incdir)
+            : [ path.join $(prefix) debug/lib ]
+            : $(condition) <variant>debug ;
+    }
+    else
+    {
+        declare-target $(project) : $(incdir) : $(libdir) : $(condition) ;
+    }
+}
+
+local rule declare-target ( project : incdir : libdir : condition * )
+{
+    if $(.debug)
+    {
+        echo "notice: [vcpkg] configuring with" <include>$(incdir)
+            <search>$(libdir) ;
+    }
+
+    targets.main-target-alternative
+        [ new alias-target-class prefix
+        : $(project)
+        :
+        : [ property-set.create $(condition) ]
+        :
+        : [ property-set.create <include>$(incdir) <search>$(libdir) ]
+        ] ;
+
+    local pkg-config-libdir = [ path.join $(libdir) pkgconfig ] ;
+    using pkg-config : [ property-set.create $(condition) ] :
+        : <libdir>$(pkg-config-libdir) : $(condition) ;
+}
+
+local rule deduce-prefix ( root ? : triplet ? )
+{
+    if ! $(root)
+    {
+        root = [ deduce-root ] ;
+    }
+
+    triplet ?= [ os.environ VCPKG_DEFAULT_TRIPLET ] ;
+    if ! $(triplet) && $(root)
+    {
+        local ignored = [ path.join $(root) vcpkg ] ;
+        for local p in [ path.glob $(root) : * ]
+        {
+            if $(p) != $(ignored)
+            {
+                triplet += $(p:B) ;
+            }
+        }
+        if $(triplet[2])
+        {
+            triplet = ;
+        }
+    }
+
+    if ! $(root) || ! $(triplet)
+    {
+        errors.user-error "could not initialize vcpkg module:"
+            "vcpkg installation could not be deduced" ;
+    }
+
+    return [ path.join $(root) $(triplet) ] ;
+}
+
+local rule deduce-root ( )
+{
+    # attempt to locate vcpkg installation using environment variable
+    local root = [ os.environ VCPKG_ROOT ] ;
+    if $(root)
+    {
+        root = [ path.join [ path.make $(root) ] installed ] ;
+    }
+    else
+    {
+        # check if Manifest mode is used
+        local roots = . [ path.all-parents . ] ;
+        while $(roots) && ! $(root)
+        {
+            if [ path.glob $(roots[1]) : vcpkg.json ]
+            {
+                root = $(roots[1])/vcpkg_installed ;
+            }
+            roots = $(roots[2-]) ;
+        }
+    }
+
+    return $(root) ;
+}

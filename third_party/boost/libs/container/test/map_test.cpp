@@ -192,6 +192,31 @@ bool node_type_test()
       if(dst.size() != 5)
          return false;
    }
+   {
+      typedef map<test::movable_int, char, test::less_transparent> map_t;
+      typedef multimap<test::movable_int, char, test::less_transparent> mmap_t;
+
+      map_t map1;
+      mmap_t mmap1;
+
+      //extract
+      map1.try_emplace(1, 'a');
+      mmap1.emplace(1, 'a');
+      mmap1.emplace(1, 'b');
+
+      if (!map1.extract(1))
+         return false;
+      if (map1.extract(1))
+         return false;
+
+      if (!mmap1.extract(1))
+         return false;
+      if (!mmap1.extract(1))
+         return false;
+      if (mmap1.extract(1))
+         return false;
+   }
+
    return true;
 }
 
@@ -257,140 +282,6 @@ void test_merge_from_different_comparison()
    map<int, int> map1;
    map<int, int, std::greater<int> > map2;
    map1.merge(map2);
-}
-
-bool test_heterogeneous_lookups()
-{
-   {
-      typedef map<int, char, less_transparent> map_t;
-      typedef multimap<int, char, less_transparent> mmap_t;
-      typedef map_t::value_type value_type;
-
-      map_t map1;
-      mmap_t mmap1;
-
-      const map_t &cmap1 = map1;
-      const mmap_t &cmmap1 = mmap1;
-
-      if(!map1.insert_or_assign(1, 'a').second)
-         return false;
-      if( map1.insert_or_assign(1, 'b').second)
-         return false;
-      if(!map1.insert_or_assign(2, 'c').second)
-         return false;
-      if( map1.insert_or_assign(2, 'd').second)
-         return false;
-      if(!map1.insert_or_assign(3, 'e').second)
-         return false;
-
-      if(map1.insert_or_assign(1, 'a').second)
-         return false;
-      if(map1.insert_or_assign(1, 'b').second)
-         return false;
-      if(map1.insert_or_assign(2, 'c').second)
-         return false;
-      if(map1.insert_or_assign(2, 'd').second)
-         return false;
-      if(map1.insert_or_assign(3, 'e').second)
-         return false;
-
-      mmap1.insert(value_type(1, 'a'));
-      mmap1.insert(value_type(1, 'b'));
-      mmap1.insert(value_type(2, 'c'));
-      mmap1.insert(value_type(2, 'd'));
-      mmap1.insert(value_type(3, 'e'));
-
-      const test::non_copymovable_int find_me(2);
-
-      //find
-      if(map1.find(find_me)->second != 'd')
-         return false;
-      if(cmap1.find(find_me)->second != 'd')
-         return false;
-      if(mmap1.find(find_me)->second != 'c')
-         return false;
-      if(cmmap1.find(find_me)->second != 'c')
-         return false;
-
-      //count
-      if(map1.count(find_me) != 1)
-         return false;
-      if(cmap1.count(find_me) != 1)
-         return false;
-      if(mmap1.count(find_me) != 2)
-         return false;
-      if(cmmap1.count(find_me) != 2)
-         return false;
-
-      //contains
-      if(!map1.contains(find_me))
-         return false;
-      if(!cmap1.contains(find_me))
-         return false;
-      if(!mmap1.contains(find_me))
-         return false;
-      if(!cmmap1.contains(find_me))
-         return false;
-
-      //lower_bound
-      if(map1.lower_bound(find_me)->second != 'd')
-         return false;
-      if(cmap1.lower_bound(find_me)->second != 'd')
-         return false;
-      if(mmap1.lower_bound(find_me)->second != 'c')
-         return false;
-      if(cmmap1.lower_bound(find_me)->second != 'c')
-         return false;
-
-      //upper_bound
-      if(map1.upper_bound(find_me)->second != 'e')
-         return false;
-      if(cmap1.upper_bound(find_me)->second != 'e')
-         return false;
-      if(mmap1.upper_bound(find_me)->second != 'e')
-         return false;
-      if(cmmap1.upper_bound(find_me)->second != 'e')
-         return false;
-
-      //equal_range
-      if(map1.equal_range(find_me).first->second != 'd')
-         return false;
-      if(cmap1.equal_range(find_me).second->second != 'e')
-         return false;
-      if(mmap1.equal_range(find_me).first->second != 'c')
-         return false;
-      if(cmmap1.equal_range(find_me).second->second != 'e')
-         return false;
-
-      //erase
-      if (map1.erase(find_me) != 1)
-         return false;
-      if (map1.erase(find_me) != 0)
-         return false;
-      if (mmap1.erase(find_me) != 2)
-         return false;
-      if (mmap1.erase(find_me) != 0)
-         return false;
-   }
-   {
-      typedef map<test::movable_int, char, less_transparent> map_t;
-
-      map_t map1;
-
-      //insert_or_assign
-      if(!map1.insert_or_assign(1, 'e').second)
-         return false;
-      if(map1.insert_or_assign(1, 'b').second)
-         return false;
-
-      //insert_or_assign with hint
-      if(map1.find(2) != map1.end())
-         return false;
-      map_t::iterator i = map1.insert_or_assign(map1.begin(), 2, 'e');
-      if(i != map1.insert_or_assign(map1.end(), 2, 'b'))
-         return false;
-   }
-   return true;
 }
 
 bool constructor_template_auto_deduction_test()
@@ -495,8 +386,13 @@ bool constructor_template_auto_deduction_test()
 
 }}}   //namespace boost::container::test
 
+//Test the expected sizeof()
+BOOST_CONTAINER_STATIC_ASSERT_MSG(4*sizeof(void*) == sizeof(map<int, int>), "sizeof has an unexpected value");
+BOOST_CONTAINER_STATIC_ASSERT_MSG(4*sizeof(void*) == sizeof(multimap<int, int>), "sizeof has an unexpected value");
+
 int main ()
 {
+   using namespace boost::container::test;
    //Recursive container instantiation
    {
       map<recursive_map, recursive_map> map_;
@@ -657,7 +553,15 @@ int main ()
 
    test::test_merge_from_different_comparison();
 
-   if(!test::test_heterogeneous_lookups())
+   if (!test::test_heterogeneous_lookup
+         < map<int, char, less_transparent>
+         , multimap<int, char, less_transparent>
+         >())
+      return 1;
+
+   if (!test::test_heterogeneous_insert
+         < map<test::movable_int, char, less_transparent>
+         >())
       return 1;
 
    ////////////////////////////////////

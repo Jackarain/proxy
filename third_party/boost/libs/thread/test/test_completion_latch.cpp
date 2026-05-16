@@ -10,7 +10,7 @@
 #include <boost/thread/thread.hpp>
 #include <boost/thread/completion_latch.hpp>
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <vector>
 
 namespace

@@ -50,6 +50,18 @@ In the general case, the internal representation is something equivalent to:
     alignas(T) char _value [sizeof(T)];
   };
 
+or:
+
+  template <typename T>
+  class Optional
+  {
+    bool _has_value = false;
+    union {
+      T         _value;
+      DummyType _non_value;
+    };
+  };
+
 Next, because we need to pass around these "optional" `int`s as normal `int`s,
 like returning them from functions, when copying, we need to copy `_has_value`,
 which indicates whether we have the value or not, and, if we do have value, and

@@ -23,7 +23,6 @@ target_link_libraries(boost_statechart
     Boost::function
     Boost::mpl
     Boost::smart_ptr
-    Boost::static_assert
     Boost::thread
     Boost::type_traits
 )

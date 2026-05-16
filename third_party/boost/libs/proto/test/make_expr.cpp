@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <sstream>
 #include <boost/proto/core.hpp>
 #include <boost/proto/transform.hpp>
@@ -29,7 +31,7 @@ template<typename E> struct ewrap
     {}
 };
 
-void test_make_expr()
+BOOST_AUTO_TEST_CASE(test_make_expr)
 {
     int i = 42;
     proto::terminal<int>::type t1 = proto::make_expr<proto::tag::terminal>(1);
@@ -66,7 +68,7 @@ void test_make_expr()
     BOOST_CHECK_EQUAL(proto::value(proto::child(proto::left(p4))), 42);
 }
 
-void test_make_expr_ref()
+BOOST_AUTO_TEST_CASE(test_make_expr_ref)
 {
     int i = 42;
     int const ci = 84;
@@ -105,7 +107,7 @@ void test_make_expr_ref()
     BOOST_CHECK_EQUAL(proto::value(proto::child(proto::left(p4))), 42);
 }
 
-void test_make_expr_functional()
+BOOST_AUTO_TEST_CASE(test_make_expr_functional)
 {
     int i = 42;
     proto::terminal<int>::type t1 = proto::functional::make_expr<proto::tag::terminal>()(1);
@@ -141,7 +143,7 @@ void test_make_expr_functional()
     p4_type p4 = proto::functional::make_expr<proto::tag::plus>()(p3, 0);
 }
 
-void test_make_expr_functional_ref()
+BOOST_AUTO_TEST_CASE(test_make_expr_functional_ref)
 {
     int i = 42;
     int const ci = 84;
@@ -180,7 +182,7 @@ void test_make_expr_functional_ref()
     BOOST_CHECK_EQUAL(proto::value(proto::child(proto::left(p4))), 42);
 }
 
-void test_unpack_expr()
+BOOST_AUTO_TEST_CASE(test_unpack_expr)
 {
     int i = 42;
     proto::terminal<int>::type t1 = proto::unpack_expr<proto::tag::terminal>(fusion::make_tuple(1));
@@ -217,7 +219,7 @@ void test_unpack_expr()
     BOOST_CHECK_EQUAL(proto::value(proto::child(proto::left(p4))), 42);
 }
 
-void test_unpack_expr_functional()
+BOOST_AUTO_TEST_CASE(test_unpack_expr_functional)
 {
     int i = 42;
     proto::terminal<int>::type t1 = proto::functional::unpack_expr<proto::tag::terminal>()(fusion::make_tuple(1));
@@ -299,7 +301,7 @@ struct Square
 #undef Minus
 #endif
 
-void test_make_expr_transform()
+BOOST_AUTO_TEST_CASE(test_make_expr_transform)
 {
     proto::plus<
         proto::terminal<int>::type
@@ -372,7 +374,7 @@ void test_make_expr_transform2_test(Expr const &expr)
     BOOST_CHECK_EQUAL(1, proto::value(proto::child_c<1>(proto::child_c<0>(Convert()(expr)))));
 }
 
-void test_make_expr_transform2()
+BOOST_AUTO_TEST_CASE(test_make_expr_transform2)
 {
     test_make_expr_transform2_test(length(1) < length(2));
 }
@@ -385,23 +387,3 @@ void test_make_expr_transform2()
 #undef _make_function
 #undef dot_impl
 #endif
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test proto::make_expr, proto::unpack_expr and friends");
-
-    test->add(BOOST_TEST_CASE(&test_make_expr));
-    test->add(BOOST_TEST_CASE(&test_make_expr_ref));
-    test->add(BOOST_TEST_CASE(&test_make_expr_functional));
-    test->add(BOOST_TEST_CASE(&test_make_expr_functional_ref));
-    test->add(BOOST_TEST_CASE(&test_unpack_expr));
-    test->add(BOOST_TEST_CASE(&test_unpack_expr_functional));
-    test->add(BOOST_TEST_CASE(&test_make_expr_transform));
-    test->add(BOOST_TEST_CASE(&test_make_expr_transform2));
-
-    return test;
-}

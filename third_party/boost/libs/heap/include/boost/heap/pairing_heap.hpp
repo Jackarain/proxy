@@ -14,9 +14,11 @@
 #include <utility>
 
 #include <boost/assert.hpp>
+#include <boost/config.hpp>
 
 #include <boost/heap/detail/heap_comparison.hpp>
 #include <boost/heap/detail/heap_node.hpp>
+#include <boost/heap/detail/heap_utils.hpp>
 #include <boost/heap/detail/stable_heap.hpp>
 #include <boost/heap/detail/tree_iterator.hpp>
 #include <boost/heap/policies.hpp>
@@ -184,7 +186,7 @@ private:
                                        detail::pointer_to_reference< node >,
                                        false,
                                        true,
-                                       value_compare >
+                                       typename super_t::internal_compare >
             ordered_iterator;
     };
 
@@ -256,8 +258,9 @@ public:
     }
 
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue &&)
-    pairing_heap& operator=( pairing_heap&& rhs )
+    pairing_heap& operator=( pairing_heap&& rhs ) noexcept( std::is_nothrow_move_assignable< super_t >::value )
     {
+        clear();
         super_t::operator=( std::move( rhs ) );
         root     = rhs.root;
         rhs.root = nullptr;
@@ -267,18 +270,14 @@ public:
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue const & rhs)
     pairing_heap& operator=( pairing_heap const& rhs )
     {
-        clear();
-        size_holder::set_size( rhs.get_size() );
-        static_cast< super_t& >( *this ) = rhs;
-
-        clone_tree( rhs );
+        pairing_heap tmp( rhs );
+        do_swap( tmp );
         return *this;
     }
 
     ~pairing_heap( void )
     {
-        while ( !empty() )
-            pop();
+        clear();
     }
 
     /// \copydoc boost::heap::priority_queue::empty
@@ -327,10 +326,11 @@ public:
     }
 
     /// \copydoc boost::heap::priority_queue::swap
-    void swap( pairing_heap& rhs )
+    BOOST_DEPRECATED( "Use std::swap instead" )
+    void swap( pairing_heap& rhs ) noexcept( std::is_nothrow_move_constructible< pairing_heap >::value
+                                             && std::is_nothrow_move_assignable< pairing_heap >::value )
     {
-        super_t::swap( rhs );
-        std::swap( root, rhs.root );
+        do_swap( rhs );
     }
 
 
@@ -428,14 +428,28 @@ public:
      * */
     void update( handle_type handle )
     {
-        node_pointer n = handle.node_;
+        node_pointer n       = handle.node_;
+        bool         is_root = ( n == root );
 
         n->unlink();
-        if ( !n->children.empty() )
-            n = merge_nodes( n, merge_node_list( n->children ) );
 
-        if ( n != root )
-            merge_node( n );
+        if ( !n->children.empty() ) {
+            node_pointer merged_children = merge_node_list( n->children );
+            if ( is_root ) {
+                // Root was removed; its merged children become the new tentative root.
+                // Re-insert n by merging it with the children subtree.
+                root    = merged_children;
+                is_root = false; // n is no longer the root after re-inserting below
+            } else {
+                merge_node( merged_children );
+            }
+        } else if ( is_root ) {
+            // Root had no children; heap is now empty until n is re-inserted.
+            root    = nullptr;
+            is_root = false;
+        }
+
+        merge_node( n );
     }
 
     /**
@@ -547,13 +561,13 @@ public:
     /// \copydoc boost::heap::fibonacci_heap::ordered_begin
     ordered_iterator ordered_begin( void ) const
     {
-        return ordered_iterator( root, super_t::value_comp() );
+        return ordered_iterator( root, super_t::get_internal_cmp() );
     }
 
     /// \copydoc boost::heap::fibonacci_heap::ordered_begin
     ordered_iterator ordered_end( void ) const
     {
-        return ordered_iterator( nullptr, super_t::value_comp() );
+        return ordered_iterator( nullptr, super_t::get_internal_cmp() );
     }
 
 
@@ -585,7 +599,7 @@ public:
         rhs.set_size( 0 );
         rhs.root = nullptr;
 
-        super_t::set_stability_count( ( std::max )( super_t::get_stability_count(), rhs.get_stability_count() ) );
+        super_t::set_stability_count( (std::max)( super_t::get_stability_count(), rhs.get_stability_count() ) );
         rhs.set_stability_count( 0 );
     }
 
@@ -639,6 +653,12 @@ public:
 
 private:
 #if !defined( BOOST_DOXYGEN_INVOKED )
+    void do_swap( pairing_heap& rhs ) noexcept( std::is_nothrow_move_constructible< pairing_heap >::value
+                                                && std::is_nothrow_move_assignable< pairing_heap >::value )
+    {
+        detail::swap_via_move( *this, rhs );
+    }
+
     void clone_tree( pairing_heap const& rhs )
     {
         BOOST_HEAP_ASSERT( root == nullptr );

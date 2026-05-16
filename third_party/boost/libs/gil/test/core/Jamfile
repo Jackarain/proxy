@@ -33,3 +33,4 @@ build-project image_view ;
 build-project algorithm ;
 build-project image_processing ;
 build-project histogram ;
+build-project io ;

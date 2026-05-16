@@ -27,7 +27,6 @@ target_link_libraries(boost_range
     Boost::optional
     Boost::preprocessor
     Boost::regex
-    Boost::static_assert
     Boost::tuple
     Boost::type_traits
     Boost::utility

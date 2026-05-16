@@ -19,6 +19,7 @@
 #include <boost/thread/barrier.hpp>
 #include <boost/thread/concurrent_queues/sync_priority_queue.hpp>
 
+#include <boost/bind/bind.hpp>
 #include <boost/core/lightweight_test.hpp>
 
 #ifdef BOOST_MSVC

@@ -1,5 +1,5 @@
 /* Proposed SG14 status_code
-(C) 2018 - 2024 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2018 - 2026 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Feb 2018
 
 
@@ -320,21 +320,28 @@ public:
   //! Constexpr singleton getter. Returns the constexpr generic_code_domain variable.
   static inline constexpr const _generic_code_domain &get();
 
-  virtual _base::string_ref name() const noexcept override { return string_ref("generic domain"); }  // NOLINT
-
-  virtual payload_info_t payload_info() const noexcept override
+protected:
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual int _do_name(_vtable_name_args &args) const noexcept override
   {
-    return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
-            (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
+    args.ret = string_ref("generic domain");
+    return 0;
+  }  // NOLINT
+
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void _do_payload_info(_vtable_payload_info_args &args) const noexcept override
+  {
+    args.ret = {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+                (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) :
+                                                                        alignof(status_code_domain *)};
   }
 
-protected:
-  virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
   {
     assert(code.domain() == *this);                                           // NOLINT
     return static_cast<const generic_code &>(code).value() != errc::success;  // NOLINT
   }
-  virtual bool _do_equivalent(const status_code<void> &code1, const status_code<void> &code2) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual bool
+  _do_equivalent(const status_code<void> &code1,
+                 const status_code<void> &code2) const noexcept override  // NOLINT
   {
     assert(code1.domain() == *this);                            // NOLINT
     const auto &c1 = static_cast<const generic_code &>(code1);  // NOLINT
@@ -345,16 +352,14 @@ protected:
     }
     return false;
   }
-  virtual generic_code _generic_code(const status_code<void> &code) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual inline void
+  _do_generic_code(_vtable_generic_code_args &args) const noexcept override;
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual int _do_message(_vtable_message_args &args) const noexcept override
   {
-    assert(code.domain() == *this);                  // NOLINT
-    return static_cast<const generic_code &>(code);  // NOLINT
-  }
-  virtual _base::string_ref _do_message(const status_code<void> &code) const noexcept override  // NOLINT
-  {
-    assert(code.domain() == *this);                           // NOLINT
-    const auto &c = static_cast<const generic_code &>(code);  // NOLINT
-    return string_ref(detail::generic_code_message(c.value()));
+    assert(args.code.domain() == *this);                           // NOLINT
+    const auto &c = static_cast<const generic_code &>(args.code);  // NOLINT
+    args.ret = string_ref(detail::generic_code_message(c.value()));
+    return 0;
   }
 #if defined(_CPPUNWIND) || defined(__EXCEPTIONS) || defined(BOOST_OUTCOME_STANDARDESE_IS_IN_THE_HOUSE)
   BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN virtual void _do_throw_exception(const status_code<void> &code) const override  // NOLINT
@@ -367,7 +372,8 @@ protected:
 };
 //! A specialisation of `status_error` for the generic code domain.
 using generic_error = status_error<_generic_code_domain>;
-//! A constexpr source variable for the generic code domain, which is that of `errc` (POSIX). Returned by `_generic_code_domain::get()`.
+//! A constexpr source variable for the generic code domain, which is that of `errc` (POSIX). Returned by
+//! `_generic_code_domain::get()`.
 constexpr _generic_code_domain generic_code_domain;
 inline constexpr const _generic_code_domain &_generic_code_domain::get()
 {
@@ -379,11 +385,56 @@ BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline generic_code make_status_code(err
   return generic_code(in_place, c);
 }
 
+namespace detail
+{
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 inline void generic_code_check_throw(int errcode)
+  {
+    if(errcode != 0)
+    {
+      const generic_code c(in_place, (errc) errcode);
+#if defined(_CPPUNWIND) || defined(__EXCEPTIONS) || defined(BOOST_OUTCOME_STANDARDESE_IS_IN_THE_HOUSE)
+      c.throw_exception();
+#else
+      const auto msg = c.message();
+      BOOST_OUTCOME_SYSTEM_ERROR2_FATAL(msg.c_str());
+#endif
+    }
+  }
+}  // namespace detail
+
+struct status_code_domain::_vtable_generic_code_args
+{
+  generic_code ret;
+  const status_code<void> &code;
+
+  constexpr _vtable_generic_code_args(generic_code _ret, const status_code<void> &_code)
+      : ret(_ret)
+      , code(_code)
+  {
+  }
+};
+
+BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 inline void
+_generic_code_domain::_do_generic_code(_vtable_generic_code_args &args) const noexcept
+{
+  assert(args.code.domain() == *this);                      // NOLINT
+  args.ret = static_cast<const generic_code &>(args.code);  // NOLINT
+}
+
+BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 inline generic_code
+status_code_domain::_generic_code(const status_code<void> &code) const noexcept
+{
+  _vtable_generic_code_args args{{}, code};
+  _do_generic_code(args);
+  return args.ret;
+}
+
 
 /*************************************************************************************************************/
 
 
-template <class T> inline BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 bool status_code<void>::equivalent(const status_code<T> &o) const noexcept
+template <class T>
+inline BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 bool status_code<void>::equivalent(const status_code<T> &o) const noexcept
 {
   if(_domain && o._domain)
   {
@@ -411,79 +462,89 @@ template <class T> inline BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 bool status_co
 }
 //! True if the status code's are semantically equal via `equivalent()`.
 template <class DomainType1, class DomainType2>
-BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator==(const status_code<DomainType1> &a, const status_code<DomainType2> &b) noexcept
+BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator==(const status_code<DomainType1> &a,
+                                                 const status_code<DomainType2> &b) noexcept
 {
   return a.equivalent(b);
 }
 //! True if the status code's are not semantically equal via `equivalent()`.
 template <class DomainType1, class DomainType2>
-BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const status_code<DomainType1> &a, const status_code<DomainType2> &b) noexcept
+BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const status_code<DomainType1> &a,
+                                                 const status_code<DomainType2> &b) noexcept
 {
   return !a.equivalent(b);
 }
 //! True if the status code's are semantically equal via `equivalent()` to `make_status_code(T)`.
 BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class DomainType1, class T,  //
-                       class MakeStatusCodeResult =
-                       typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
-BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))   // ADL makes a status code
+                       class MakeStatusCodeResult = typename detail::safe_get_make_status_code_result<
+                       const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
+BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))  // ADL makes a status code
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator==(const status_code<DomainType1> &a, const T &b)
 {
   return a.equivalent(make_status_code(b));
 }
 //! True if the status code's are semantically equal via `equivalent()` to `make_status_code(T)`.
 BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class T, class DomainType1,  //
-                       class MakeStatusCodeResult =
-                       typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
-BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))   // ADL makes a status code
+                       class MakeStatusCodeResult = typename detail::safe_get_make_status_code_result<
+                       const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
+BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))  // ADL makes a status code
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator==(const T &a, const status_code<DomainType1> &b)
 {
   return b.equivalent(make_status_code(a));
 }
 //! True if the status code's are not semantically equal via `equivalent()` to `make_status_code(T)`.
 BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class DomainType1, class T,  //
-                       class MakeStatusCodeResult =
-                       typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
-BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))   // ADL makes a status code
+                       class MakeStatusCodeResult = typename detail::safe_get_make_status_code_result<
+                       const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
+BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))  // ADL makes a status code
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const status_code<DomainType1> &a, const T &b)
 {
   return !a.equivalent(make_status_code(b));
 }
 //! True if the status code's are semantically equal via `equivalent()` to `make_status_code(T)`.
 BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class T, class DomainType1,  //
-                       class MakeStatusCodeResult =
-                       typename detail::safe_get_make_status_code_result<const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
-BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))   // ADL makes a status code
+                       class MakeStatusCodeResult = typename detail::safe_get_make_status_code_result<
+                       const T &>::type)  // Safe ADL lookup of make_status_code(), returns void if not found
+BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<MakeStatusCodeResult>::value))  // ADL makes a status code
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const T &a, const status_code<DomainType1> &b)
 {
   return !b.equivalent(make_status_code(a));
 }
-//! True if the status code's are semantically equal via `equivalent()` to `quick_status_code_from_enum<T>::code_type(b)`.
+//! True if the status code's are semantically equal via `equivalent()` to
+//! `quick_status_code_from_enum<T>::code_type(b)`.
 template <class DomainType1, class T,                                                     //
-          class QuickStatusCodeType = typename quick_status_code_from_enum<T>::code_type  // Enumeration has been activated
+          class QuickStatusCodeType = typename quick_status_code_from_enum<T>::code_type  // Enumeration has been
+                                                                                          // activated
           >
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator==(const status_code<DomainType1> &a, const T &b)
 {
   return a.equivalent(QuickStatusCodeType(b));
 }
-//! True if the status code's are semantically equal via `equivalent()` to `quick_status_code_from_enum<T>::code_type(a)`.
+//! True if the status code's are semantically equal via `equivalent()` to
+//! `quick_status_code_from_enum<T>::code_type(a)`.
 template <class T, class DomainType1,                                                     //
-          class QuickStatusCodeType = typename quick_status_code_from_enum<T>::code_type  // Enumeration has been activated
+          class QuickStatusCodeType = typename quick_status_code_from_enum<T>::code_type  // Enumeration has been
+                                                                                          // activated
           >
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator==(const T &a, const status_code<DomainType1> &b)
 {
   return b.equivalent(QuickStatusCodeType(a));
 }
-//! True if the status code's are not semantically equal via `equivalent()` to `quick_status_code_from_enum<T>::code_type(b)`.
+//! True if the status code's are not semantically equal via `equivalent()` to
+//! `quick_status_code_from_enum<T>::code_type(b)`.
 template <class DomainType1, class T,                                                     //
-          class QuickStatusCodeType = typename quick_status_code_from_enum<T>::code_type  // Enumeration has been activated
+          class QuickStatusCodeType = typename quick_status_code_from_enum<T>::code_type  // Enumeration has been
+                                                                                          // activated
           >
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const status_code<DomainType1> &a, const T &b)
 {
   return !a.equivalent(QuickStatusCodeType(b));
 }
-//! True if the status code's are not semantically equal via `equivalent()` to `quick_status_code_from_enum<T>::code_type(a)`.
+//! True if the status code's are not semantically equal via `equivalent()` to
+//! `quick_status_code_from_enum<T>::code_type(a)`.
 template <class T, class DomainType1,                                                     //
-          class QuickStatusCodeType = typename quick_status_code_from_enum<T>::code_type  // Enumeration has been activated
+          class QuickStatusCodeType = typename quick_status_code_from_enum<T>::code_type  // Enumeration has been
+                                                                                          // activated
           >
 BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR14 inline bool operator!=(const T &a, const status_code<DomainType1> &b)
 {

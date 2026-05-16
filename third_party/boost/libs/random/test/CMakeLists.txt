@@ -22,7 +22,6 @@ if(HAVE_BOOST_TEST)
             Boost::multiprecision
             Boost::numeric_conversion
             Boost::range
-            Boost::static_assert
             Boost::system
             Boost::throw_exception
             Boost::type_traits

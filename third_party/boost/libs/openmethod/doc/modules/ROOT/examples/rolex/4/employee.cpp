@@ -7,5 +7,5 @@
 #include "roles.hpp"
 #include <boost/openmethod.hpp>
 
-BOOST_OPENMETHOD_CLASSES(employees::Employee)
+BOOST_OPENMETHOD_CLASSES(employees::Employee);
 // end::content[]

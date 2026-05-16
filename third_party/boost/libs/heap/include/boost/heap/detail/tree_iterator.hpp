@@ -14,6 +14,7 @@
 
 #include <boost/core/allocator_access.hpp>
 #include <boost/iterator/iterator_adaptor.hpp>
+#include <boost/static_assert.hpp>
 #include <boost/type_traits/conditional.hpp>
 #include <queue>
 
@@ -87,17 +88,15 @@ struct unordered_tree_iterator_storage
 template < typename ValueType, typename HandleType, typename Alloc, typename ValueCompare, typename ValueExtractor >
 struct ordered_tree_iterator_storage : ValueExtractor
 {
-    struct compare_values_by_handle : ValueExtractor, ValueCompare
+    struct compare_values_by_handle : ValueCompare
     {
-        compare_values_by_handle( ValueCompare const& cmp ) :
+        explicit compare_values_by_handle( ValueCompare const& cmp ) :
             ValueCompare( cmp )
         {}
 
         bool operator()( HandleType const& lhs, HandleType const& rhs ) const
         {
-            ValueType const& lhs_value = ValueExtractor::operator()( lhs->value );
-            ValueType const& rhs_value = ValueExtractor::operator()( rhs->value );
-            return ValueCompare::operator()( lhs_value, rhs_value );
+            return ValueCompare::operator()( lhs->value, rhs->value );
         }
     };
 
@@ -343,6 +342,6 @@ public:
 };
 
 
-}}}    // namespace boost::heap::detail
+}}} // namespace boost::heap::detail
 
 #endif /* BOOST_HEAP_DETAIL_TREE_ITERATOR_HPP */

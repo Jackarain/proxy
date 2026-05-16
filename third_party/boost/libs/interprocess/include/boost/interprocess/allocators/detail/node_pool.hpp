@@ -42,7 +42,10 @@ namespace ipcdetail {
 //!a reference count but the class does not delete itself, this is
 //!responsibility of user classes. Node size (NodeSize) and the number of
 //!nodes allocated per block (NodesPerBlock) are known at compile time
-template< class SegmentManager, std::size_t NodeSize, std::size_t NodesPerBlock >
+template< class SegmentManager
+        , std::size_t NodeSize
+        , std::size_t NodesPerBlock
+        , std::size_t NodeAlign = 0>
 class private_node_pool
    //Inherit from the implementation to avoid template bloat
    :  public boost::container::dtl::
@@ -63,9 +66,11 @@ class private_node_pool
    //Deprecated, use nodes_per_block
    static const size_type nodes_per_chunk = NodesPerBlock;
 
+   static const size_type node_alignment = NodeAlign ? NodeAlign : 1u;
+
    //!Constructor from a segment manager. Never throws
    private_node_pool(segment_manager *segment_mngr)
-      :  base_t(segment_mngr, NodeSize, NodesPerBlock)
+      :  base_t(segment_mngr, NodeSize, NodesPerBlock, NodeAlign)
    {}
 
    //!Returns the segment manager. Never throws
@@ -85,16 +90,17 @@ class private_node_pool
 template< class SegmentManager
         , std::size_t NodeSize
         , std::size_t NodesPerBlock
+        , std::size_t NodeAlign
         >
 class shared_node_pool
    :  public ipcdetail::shared_pool_impl
       < private_node_pool
-         <SegmentManager, NodeSize, NodesPerBlock>
+         <SegmentManager, NodeSize, NodesPerBlock, NodeAlign>
       >
 {
    typedef ipcdetail::shared_pool_impl
       < private_node_pool
-         <SegmentManager, NodeSize, NodesPerBlock>
+         <SegmentManager, NodeSize, NodesPerBlock, NodeAlign>
       > base_t;
    public:
    shared_node_pool(SegmentManager *segment_mgnr)

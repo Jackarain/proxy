@@ -802,6 +802,13 @@ Special thanks to:
 
 [section:release_notes Release Notes]
 
+[section:release_notes_boost_1_91 Boost 1.91 Release]
+
+*  Fixed bugs:
+   *  [@https://github.com/boostorg/move/pull/64  Git Issue #64: ['"Add std::pair specializations for trivial type traits"]].
+
+[endsect]
+
 [section:release_notes_boost_1_90 Boost 1.90 Release]
 
 *  Fixed bugs:

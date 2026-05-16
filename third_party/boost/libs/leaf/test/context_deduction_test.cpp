@@ -52,6 +52,24 @@ enum class my_error_code
     error3
 };
 
+class my_error_code_category: public std::error_category
+{
+public:
+    char const * name() const noexcept override { return "my_error_code"; }
+    std::string message(int) const override { return "my_error_code"; }
+};
+
+my_error_code_category const & get_my_error_code_category()
+{
+    static my_error_code_category cat;
+    return cat;
+}
+
+std::error_code make_error_code(my_error_code e)
+{
+    return std::error_code(static_cast<int>(e), get_my_error_code_category());
+}
+
 namespace std
 {
     template <> struct is_error_code_enum<my_error_code>: std::true_type { };
@@ -137,7 +155,7 @@ void not_called_on_purpose()
     test<info<1>, info<2>, info<3>>( expd([]( info<1> const, info<2> ){ }, []( info<1> const *, info<3> ){ }) );
 
     test<info<1>, info<2>, leaf::e_source_location>( expd([]( info<1>, info<2>, leaf::diagnostic_info const & ){ }, []( info<1>, info<2> ){ }) );
-#if BOOST_LEAF_CFG_DIAGNOSTICS && BOOST_LEAF_CFG_CAPTURE
+#if BOOST_LEAF_CFG_CAPTURE
     test<info<1>, info<2>, leaf::e_source_location, leaf::detail::dynamic_allocator>( expd([]( info<1>, info<2>, leaf::diagnostic_details const & ){ }, []( info<1>, info<2> ){ }) );
 #else
     test<info<1>, info<2>, leaf::e_source_location>( expd([]( info<1>, info<2>, leaf::diagnostic_details const & ){ }, []( info<1>, info<2> ){ }) );

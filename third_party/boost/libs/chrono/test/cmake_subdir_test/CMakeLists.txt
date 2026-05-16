@@ -19,7 +19,6 @@ move
 mpl
 predef
 ratio
-static_assert
 system
 throw_exception
 type_traits
@@ -29,6 +28,7 @@ winapi
 
 # Secondary dependencies
 
+compat
 preprocessor
 variant2
 io

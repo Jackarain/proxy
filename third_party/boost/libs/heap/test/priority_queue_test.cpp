@@ -52,3 +52,16 @@ BOOST_AUTO_TEST_CASE( std_pri_queue_leak_test )
     typedef boost::heap::priority_queue< boost::shared_ptr< int > > pri_queue;
     run_leak_check_test< pri_queue >();
 }
+
+BOOST_AUTO_TEST_CASE( std_pri_queue_edge_cases )
+{
+    typedef boost::heap::priority_queue< int > pri_queue;
+    run_common_edge_case_tests< pri_queue >();
+    run_merge_edge_case_tests< pri_queue >();
+}
+
+BOOST_AUTO_TEST_CASE( std_pri_queue_stable_edge_cases )
+{
+    typedef boost::heap::priority_queue< q_tester, boost::heap::stable< true > > stable_queue;
+    run_stable_heap_edge_case_tests< stable_queue >();
+}

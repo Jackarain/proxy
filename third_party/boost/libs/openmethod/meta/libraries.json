@@ -7,9 +7,10 @@
     "maintainers": [
         "Jean-Louis Leroy"
     ],
-    "description": "Open-methods for C++17 and above.",
+    "description": "Open-methods are virtual functions that exist outside of classes, as free-standing functions. They make it possible to add polymorphic behavior to existing classes, without modifying them. This implementation supports single and multiple dispatch.",
     "category": [
-        "Emulation", "Programming"
+        "Emulation",
+        "Programming"
     ],
     "cxxstd": "17"
 }

@@ -27,7 +27,7 @@ rather than the reference itself.
 On compilers that do not conform to Standard C++ rules of reference binding,
 some operations on optional references are disabled in order to prevent subtle
 bugs. For more details see
-[link boost_optional.dependencies_and_portability.optional_reference_binding Dependencies and Portability section].
+[link optional_reference_binding Dependencies and Portability section].
 ]
 
 [heading Rvalue references]
@@ -39,6 +39,8 @@ Rvalue references and lvalue references to const have the ability in C++ to exte
 
 [endsect]
 
+
+[#optional_ref_rebinding_semantics]
 [section Rebinding semantics for assignment of optional references]
 
 If you assign to an ['uninitialized ] `optional<T&>` the effect is to bind (for

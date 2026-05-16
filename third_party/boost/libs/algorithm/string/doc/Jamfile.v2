@@ -10,40 +10,40 @@
 import toolset ;
 toolset.using doxygen ;
 
-boostbook string_algo : string_algo.xml autodoc 
+boostbook string_algo : string_algo.xml autodoc
 	:
         <xsl:param>boost.root=../../../../..
         <format>pdf:<xsl:param>boost.url.prefix=http://www.boost.org/doc/libs/release/doc/html
 	;
 
 doxygen autodoc
-    :   
-    [ glob ../../../../boost/algorithm/string.hpp ]
-    [ glob ../../../../boost/algorithm/string_regex.hpp ]
+    :
+    [ glob ../../include/boost/algorithm/string.hpp ]
+    [ glob ../../include/boost/algorithm/string_regex.hpp ]
 
-    [ glob ../../../../boost/algorithm/string/classification.hpp ]
-    [ glob ../../../../boost/algorithm/string/iterator_range.hpp ]       
-    [ glob ../../../../boost/algorithm/string/sequence_traits.hpp ]
-    [ glob ../../../../boost/algorithm/string/std_containers_traits.hpp ]
-    [ glob ../../../../boost/algorithm/string/concept.hpp ]
-    [ glob ../../../../boost/algorithm/string/compare.hpp ]
-    [ glob ../../../../boost/algorithm/string/constants.hpp ]
-    [ glob ../../../../boost/algorithm/string/case_conv.hpp ]
-    [ glob ../../../../boost/algorithm/string/find.hpp ]
-    [ glob ../../../../boost/algorithm/string/finder.hpp ]
-    [ glob ../../../../boost/algorithm/string/find_iterator.hpp ]
-    [ glob ../../../../boost/algorithm/string/trim.hpp ]
-    [ glob ../../../../boost/algorithm/string/predicate.hpp ]
-    [ glob ../../../../boost/algorithm/string/split.hpp ]
-    [ glob ../../../../boost/algorithm/string/iter_find.hpp ]
-    [ glob ../../../../boost/algorithm/string/erase.hpp ]
-    [ glob ../../../../boost/algorithm/string/join.hpp ]
-    [ glob ../../../../boost/algorithm/string/replace.hpp ]
-    [ glob ../../../../boost/algorithm/string/find_format.hpp ]
-    [ glob ../../../../boost/algorithm/string/formatter.hpp ]
-    [ glob ../../../../boost/algorithm/string/regex.hpp ]
-    [ glob ../../../../boost/algorithm/string/regex_find_format.hpp ]
-    [ glob ../../../../boost/algorithm/string/trim_all.hpp ]
+    [ glob ../../include/boost/algorithm/string/classification.hpp ]
+    [ glob ../../include/boost/algorithm/string/iterator_range.hpp ]
+    [ glob ../../include/boost/algorithm/string/sequence_traits.hpp ]
+    [ glob ../../include/boost/algorithm/string/std_containers_traits.hpp ]
+    [ glob ../../include/boost/algorithm/string/concept.hpp ]
+    [ glob ../../include/boost/algorithm/string/compare.hpp ]
+    [ glob ../../include/boost/algorithm/string/constants.hpp ]
+    [ glob ../../include/boost/algorithm/string/case_conv.hpp ]
+    [ glob ../../include/boost/algorithm/string/find.hpp ]
+    [ glob ../../include/boost/algorithm/string/finder.hpp ]
+    [ glob ../../include/boost/algorithm/string/find_iterator.hpp ]
+    [ glob ../../include/boost/algorithm/string/trim.hpp ]
+    [ glob ../../include/boost/algorithm/string/predicate.hpp ]
+    [ glob ../../include/boost/algorithm/string/split.hpp ]
+    [ glob ../../include/boost/algorithm/string/iter_find.hpp ]
+    [ glob ../../include/boost/algorithm/string/erase.hpp ]
+    [ glob ../../include/boost/algorithm/string/join.hpp ]
+    [ glob ../../include/boost/algorithm/string/replace.hpp ]
+    [ glob ../../include/boost/algorithm/string/find_format.hpp ]
+    [ glob ../../include/boost/algorithm/string/formatter.hpp ]
+    [ glob ../../include/boost/algorithm/string/regex.hpp ]
+    [ glob ../../include/boost/algorithm/string/regex_find_format.hpp ]
+    [ glob ../../include/boost/algorithm/string/trim_all.hpp ]
     :
     <doxygen:param>HIDE_UNDOC_MEMBERS=YES
     <doxygen:param>EXTRACT_PRIVATE=NO
@@ -53,7 +53,7 @@ doxygen autodoc
     <doxygen:param>SEARCH_INCLUDES=YES
     <doxygen:param>PREDEFINED="BOOST_STRING_TYPENAME=typename \"BOOST_STATIC_CONSTANT(type,var)=static const type var;\""
     ;
-        
+
 
 
 

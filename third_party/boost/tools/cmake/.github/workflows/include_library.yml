@@ -48,6 +48,7 @@ jobs:
           - coroutine2
           - crc
           - date_time
+          - decimal
           - describe
           - detail
           - dll

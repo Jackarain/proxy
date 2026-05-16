@@ -78,7 +78,7 @@ BOOST_LOG_ANONYMOUS_NAMESPACE {
     //! A possible Boost.Filesystem extension - renames or moves the file to the target storage
     inline void move_file(filesystem::path const& from, filesystem::path const& to)
     {
-#if defined(BOOST_WINDOWS_API)
+#if defined(BOOST_FILESYSTEM_WINDOWS_API)
         // On Windows MoveFile already does what we need
         filesystem::rename(from, to);
 #else

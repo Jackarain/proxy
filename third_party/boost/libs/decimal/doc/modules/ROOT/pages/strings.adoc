@@ -1,0 +1,90 @@
+////
+Copyright 2025 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#strings]
+= `<string>` Support
+:idprefix: string_
+
+== Construction from `std::string` and `std::string_view`
+
+Each of the decimal types have constructors that look like the following
+
+[source, c++]
+----
+namespace boost {
+namespace decimal {
+
+class decimal32_t
+{
+
+    constexpr decimal32_t(const char* str)
+
+    #ifndef BOOST_DECIMAL_HAS_STD_STRING_VIEW
+    inline decimal32_t::decimal32_t(const std::string& str);
+    #else
+    constexpr decimal32_t::decimal32_t(std::string_view str);
+    #endif
+};
+
+} // namespace decimal
+} // namespace boost
+----
+
+These constructors allow for construction from C-strings, `std::string`, and from `std::string_view` when available.
+They construct the value as though calling `from_chars` without a specified format.
+If the input string is invalid these constructors will `throw std::runtime_error`.
+If you are using a no exceptions environment instead of throwing the constructor will return a Quiet NAN.
+
+== Conversions from `std::string`
+
+[source,c++]
+----
+#include <boost/decimal/string.hpp>
+
+namespace boost {
+namespace decimal {
+
+inline auto stod32(const std::string& str, std::size_t* idx = nullptr) -> decimal32_t;
+
+inline auto stod32f(const std::string& str, std::size_t* idx = nullptr) -> decimal_fast32_t;
+
+inline auto stod64(const std::string& str, std::size_t* idx = nullptr) -> decimal64_t;
+
+inline auto stod64f(const std::string& str, std::size_t* idx = nullptr) -> decimal_fast64_t;
+
+inline auto stod128(const std::string& str, std::size_t* idx = nullptr) -> decimal128_t;
+
+inline auto stod128f(const std::string& str, std::size_t* idx = nullptr) -> decimal_fast128_t
+
+} // namespace decimal
+} // namespace boost
+----
+
+Attempts conversion of `str` to the decimal type specified as if with `from_chars(str, idx)` subject to:
+
+. Overflow throws `std::out_of_range` or in a no exceptions environment returns `std::numeric_limits<DecimalType>::signaling_NaN()` with unset value of `idx`.
+
+. If the string can not be converted into a decimal value throws `std::out_of_range` or in a no exceptions environment returns `std::numeric_limits<DecimalType>::signaling_NaN()` with unset value of `idx`.
+
+The returned value `idx` is the number of characters.
+
+== `to_string`
+
+[source, c++]
+----
+#include <boost/decimal/string.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+std::string to_string(const DecimalType value)
+
+} // namespace decimal
+} // namespace boost
+----
+
+The `to_string` format returns a `std::string` of the decimal value formated as though using `to_chars` with general formatting, and no specified precision.

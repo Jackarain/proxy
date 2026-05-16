@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,7 +23,6 @@ struct query_rule_t
 {
     using value_type = params_encoded_view;
 
-    BOOST_URL_DECL
     system::result<value_type>
     parse(
         char const*& it,
@@ -71,5 +71,7 @@ constexpr implementation_defined::query_rule_t query_rule{};
 
 } // urls
 } // boost
+
+#include <boost/url/rfc/impl/query_rule.hpp>
 
 #endif

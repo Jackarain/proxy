@@ -8,18 +8,20 @@
 # http://www.boost.org/LICENSE_1_0.txt
 
 import testing ;
-import path ;
 
-project boost/units/example :
-  : requirements <include>$(BOOST_ROOT) <include>../../.. <warnings>all
+project :
+  : requirements <warnings>all
+    <library>/boost/units//boost_units
 ;
 
-files = [ path.glob . : *.cpp : performance.* runtime_unit.* ] ;
+files = [ glob *.cpp : performance.* runtime_unit.* ] ;
 
 for local file in $(files)
 {
     run $(file) ;
 }
 
-compile performance.cpp ;
-run runtime_unit.cpp : <runtime_unit_input.txt ;
+path-constant HERE : . ;
+
+compile performance.cpp /boost/timer//boost_timer /boost/ublas//boost_ublas : <define>BOOST_TIMER_ENABLE_DEPRECATED ;
+run runtime_unit.cpp : <$(HERE)/runtime_unit_input.txt ;

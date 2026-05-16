@@ -7,8 +7,8 @@
 #define BOOST_TEST_MODULE Boost.Threads: lock_concept test suite
 
 #include <boost/test/unit_test.hpp>
-#include <boost/test/test_case_template.hpp>
 #include <boost/mpl/vector.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/lock_types.hpp>
 #include <boost/thread/shared_mutex.hpp>

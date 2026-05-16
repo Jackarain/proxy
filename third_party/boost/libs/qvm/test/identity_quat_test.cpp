@@ -17,16 +17,16 @@ namespace
         {
         using namespace boost::qvm;
         test_qvm::quaternion<Q1> q=identity_quat<float>();
-        BOOST_TEST(q.a[0]==1);
-        BOOST_TEST(q.a[1]==0);
-        BOOST_TEST(q.a[2]==0);
-        BOOST_TEST(q.a[3]==0);
+        BOOST_TEST_EQ(q.a[0], 1);
+        BOOST_TEST_EQ(q.a[1], 0);
+        BOOST_TEST_EQ(q.a[2], 0);
+        BOOST_TEST_EQ(q.a[3], 0);
         test_qvm::quaternion<Q2> p(42,1);
         set_identity(p);
-        BOOST_TEST(p.a[0]==1);
-        BOOST_TEST(p.a[1]==0);
-        BOOST_TEST(p.a[2]==0);
-        BOOST_TEST(p.a[3]==0);
+        BOOST_TEST_EQ(p.a[0], 1);
+        BOOST_TEST_EQ(p.a[1], 0);
+        BOOST_TEST_EQ(p.a[2], 0);
+        BOOST_TEST_EQ(p.a[3], 0);
         }
     }
 

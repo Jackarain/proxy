@@ -6,6 +6,8 @@
 
 import testing ;
 
+project : requirements <library>/boost/align//boost_align ;
+
 run align_test.cpp ;
 run align_overflow_test.cpp ;
 run align_down_test.cpp ;

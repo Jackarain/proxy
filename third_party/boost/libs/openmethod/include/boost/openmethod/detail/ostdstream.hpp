@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <charconv>
 #include <random>
+#include <string_view>
 
 namespace boost::openmethod {
 

@@ -1000,9 +1000,9 @@ int main(int argc, char* argv[])
     cout &lt;&lt; &quot;Usage: path_info path-element [path-element...]\n&quot;
             &quot;Composes a path via operator/= from one or more path-element arguments\n&quot;
             &quot;Example: path_info foo/bar baz\n&quot;
-#            ifdef BOOST_POSIX_API
+#            ifdef BOOST_FILESYSTEM_POSIX_API
             &quot;         would report info about the composed path foo/bar/baz\n&quot;;
-#            else  // BOOST_WINDOWS_API
+#            else  // BOOST_FILESYSTEM_WINDOWS_API
             &quot;         would report info about the composed path foo/bar\\baz\n&quot;;
 #            endif
     return 1;
@@ -1021,10 +1021,10 @@ int main(int argc, char* argv[])
     cout &lt;&lt; &quot;  &quot; &lt;&lt; element &lt;&lt; '\n';
 
   cout  &lt;&lt;  &quot;\nobservers, native format:&quot; &lt;&lt; endl;
-# ifdef BOOST_POSIX_API
+# ifdef BOOST_FILESYSTEM_POSIX_API
   cout  &lt;&lt;  &quot;  native()-------------: &quot; &lt;&lt; p.native() &lt;&lt; endl;
   cout  &lt;&lt;  &quot;  c_str()--------------: &quot; &lt;&lt; p.c_str() &lt;&lt; endl;
-# else  // BOOST_WINDOWS_API
+# else  // BOOST_FILESYSTEM_WINDOWS_API
   wcout &lt;&lt; L&quot;  native()-------------: &quot; &lt;&lt; p.native() &lt;&lt; endl;
   wcout &lt;&lt; L&quot;  c_str()--------------: &quot; &lt;&lt; p.c_str() &lt;&lt; endl;
 # endif
@@ -1229,10 +1229,10 @@ for (auto element : p)
   <tr>
     <td>
       <pre><!-- include file "../example/path_info.cpp" -->  cout  &lt;&lt;  &quot;\nobservers, native format:&quot; &lt;&lt; endl;
-# ifdef BOOST_POSIX_API
+# ifdef BOOST_FILESYSTEM_POSIX_API
   cout  &lt;&lt;  &quot;  native()-------------: &quot; &lt;&lt; p.native() &lt;&lt; endl;
   cout  &lt;&lt;  &quot;  c_str()--------------: &quot; &lt;&lt; p.c_str() &lt;&lt; endl;
-# else  // BOOST_WINDOWS_API
+# else  // BOOST_FILESYSTEM_WINDOWS_API
   wcout &lt;&lt; L&quot;  native()-------------: &quot; &lt;&lt; p.native() &lt;&lt; endl;
   wcout &lt;&lt; L&quot;  c_str()--------------: &quot; &lt;&lt; p.c_str() &lt;&lt; endl;
 # endif

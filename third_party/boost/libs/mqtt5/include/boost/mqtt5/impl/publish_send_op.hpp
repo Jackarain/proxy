@@ -80,6 +80,11 @@ class publish_send_op {
 
     serial_num_t _serial_num;
 
+    struct validation_context {
+        retain_e retain;
+        uint16_t topic_alias;
+    } _validation_ctx;
+
 public:
     publish_send_op(
         std::shared_ptr<client_service> svc_ptr,
@@ -122,11 +127,10 @@ public:
                 return complete_immediate(client::error::pid_overrun, packet_id);
         }
 
-        auto ec = validate_publish(topic, payload, retain, props);
-        if (ec)
-            return complete_immediate(ec, packet_id);
+        _validation_ctx = { retain, props[prop::topic_alias].value_or(0) };
 
-        _serial_num = _svc_ptr->next_serial_num();
+        if (auto ec = validate_publish(topic, payload, props))
+            return complete_immediate(ec, packet_id);
 
         auto publish = control_packet<allocator_type>::of(
             with_pid, get_allocator(),
@@ -135,11 +139,11 @@ public:
             qos_type, retain, dup_e::no, props
         );
 
-        auto max_packet_size = _svc_ptr->connack_property(prop::maximum_packet_size)
-                .value_or(default_max_send_size);
-        if (publish.size() > max_packet_size)
-            return complete_immediate(client::error::packet_too_large, packet_id);
+        if (_svc_ptr->was_connected())
+            if (auto ec = validate_with_connack_props(publish.size()))
+                return complete_immediate(ec, publish.packet_id());
 
+        _serial_num = _svc_ptr->next_serial_num();
         send_publish(std::move(publish));
     }
 
@@ -158,6 +162,10 @@ public:
             return complete(
                 asio::error::operation_aborted, publish.packet_id()
             );
+
+        if (auto ec = validate_with_connack_props(publish.size()))
+            return complete(ec, publish.packet_id());
+
         send_publish(std::move(publish));
     }
 
@@ -343,12 +351,10 @@ public:
 
 private:
 
-    error_code validate_publish(
+    static error_code validate_publish(
         const std::string& topic, const std::string& payload,
-        retain_e retain, const publish_props& props
-    ) const {
-        constexpr uint8_t default_retain_available = 1;
-        constexpr uint8_t default_maximum_qos = 2;
+        const publish_props& props
+    ) {
         constexpr uint8_t default_payload_format_ind = 0;
 
         auto topic_name_valid = props[prop::topic_alias].has_value() ?
@@ -358,17 +364,6 @@ private:
 
         if (!topic_name_valid)
             return client::error::invalid_topic;
-
-        auto max_qos = _svc_ptr->connack_property(prop::maximum_qos)
-            .value_or(default_maximum_qos);
-        auto retain_available = _svc_ptr->connack_property(prop::retain_available)
-            .value_or(default_retain_available);
-
-        if (uint8_t(qos_type) > max_qos)
-            return client::error::qos_not_supported;
-
-        if (retain_available == 0 && retain == retain_e::yes)
-            return client::error::retain_not_available;
 
         auto payload_format_ind = props[prop::payload_format_indicator]
             .value_or(default_payload_format_ind);
@@ -381,19 +376,9 @@ private:
         return validate_props(props);
     }
 
-    error_code validate_props(const publish_props& props) const {
-        constexpr uint16_t default_topic_alias_max = 0;
-
-        const auto& topic_alias = props[prop::topic_alias];
-        if (topic_alias) {
-            auto topic_alias_max = _svc_ptr->connack_property(prop::topic_alias_maximum)
-                .value_or(default_topic_alias_max);
-
-            if (topic_alias_max == 0 || *topic_alias > topic_alias_max)
-                return client::error::topic_alias_maximum_reached;
-            if (*topic_alias == 0 )
-                return client::error::malformed_packet;
-        }
+    static error_code validate_props(const publish_props& props) {
+        if (props[prop::topic_alias] && *props[prop::topic_alias] == 0)
+            return client::error::malformed_packet;
 
         const auto& response_topic = props[prop::response_topic];
         if (
@@ -417,7 +402,36 @@ private:
         )
             return client::error::malformed_packet;
 
-        return error_code {};
+        return {};
+    }
+
+    error_code validate_with_connack_props(size_t packet_size) const {
+        constexpr uint16_t default_topic_alias_max = 0;
+        constexpr uint8_t default_maximum_qos = 2;
+        constexpr uint8_t default_retain_available = 1;
+
+        auto topic_alias_max =
+            _svc_ptr->connack_property(prop::topic_alias_maximum)
+                .value_or(default_topic_alias_max);
+        if (_validation_ctx.topic_alias > topic_alias_max)
+            return client::error::topic_alias_maximum_reached;
+
+        auto max_qos = _svc_ptr->connack_property(prop::maximum_qos)
+            .value_or(default_maximum_qos);
+        auto retain_available =
+            _svc_ptr->connack_property(prop::retain_available)
+                .value_or(default_retain_available);
+
+        if (uint8_t(qos_type) > max_qos)
+            return client::error::qos_not_supported;
+
+        if (retain_available == 0 && _validation_ctx.retain == retain_e::yes)
+            return client::error::retain_not_available;
+
+        if (packet_size > _svc_ptr->max_packet_size())
+            return client::error::packet_too_large;
+
+        return {};
     }
 
     void on_malformed_packet(const std::string& reason) {

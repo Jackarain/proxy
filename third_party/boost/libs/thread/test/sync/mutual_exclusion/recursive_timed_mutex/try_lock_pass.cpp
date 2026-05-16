@@ -20,7 +20,7 @@
 
 #include <boost/thread/recursive_mutex.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include "../../../timming.hpp"
 
 boost::recursive_timed_mutex m;

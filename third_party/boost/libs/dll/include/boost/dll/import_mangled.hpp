@@ -1,5 +1,5 @@
 // Copyright 2015-2018 Klemens D. Morgenstern
-// Copyright Antony Polukhin, 2019-2025
+// Copyright Antony Polukhin, 2019-2026
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt

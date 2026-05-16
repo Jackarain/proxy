@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2021 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -142,6 +143,7 @@ concept CharSet =
         @ref find_if_not.
 */
 template<BOOST_URL_CONSTRAINT(CharSet) CS>
+BOOST_URL_CXX14_CONSTEXPR
 char const*
 find_if(
     char const* const first,
@@ -180,6 +182,7 @@ find_if(
         @ref find_if_not.
 */
 template<BOOST_URL_CONSTRAINT(CharSet) CS>
+BOOST_URL_CXX14_CONSTEXPR
 char const*
 find_if_not(
     char const* const first,
@@ -213,6 +216,7 @@ struct charset_ref
         return cs_(ch);
     }
 
+    BOOST_URL_CXX14_CONSTEXPR
     char const*
     find_if(
         char const* first,
@@ -222,6 +226,7 @@ struct charset_ref
             first, last, cs_);
     }
 
+    BOOST_URL_CXX14_CONSTEXPR
     char const*
     find_if_not(
         char const* first,

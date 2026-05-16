@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2022 Vinnie Falco (vinnie.falco@gmail.com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -31,6 +32,7 @@ namespace urls {
 class decode_view;
 class pct_string_view;
 
+BOOST_CXX14_CONSTEXPR
 pct_string_view
 make_pct_string_view_unsafe(
     char const*, std::size_t,
@@ -63,6 +65,7 @@ class pct_string_view final
 
 #ifndef BOOST_URL_DOCS
     friend
+    BOOST_CXX14_CONSTEXPR
     pct_string_view
     make_pct_string_view_unsafe(
         char const*, std::size_t,
@@ -433,6 +436,7 @@ make_pct_string_view(
 #ifndef BOOST_URL_DOCS
 // VFALCO semi-private for now
 inline
+BOOST_CXX14_CONSTEXPR
 pct_string_view
 make_pct_string_view_unsafe(
     char const* data,
@@ -463,5 +467,18 @@ to_sv(pct_string_view const& s) noexcept
 
 } // urls
 } // boost
+
+// Ensure decode_view is complete for operator*()
+#include <boost/url/decode_view.hpp>
+
+#ifdef BOOST_URL_HAS_CONCEPTS
+#include <ranges>
+namespace std::ranges {
+    template<>
+    inline constexpr bool
+        enable_borrowed_range<
+            boost::urls::pct_string_view> = true;
+} // std::ranges
+#endif
 
 #endif

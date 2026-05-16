@@ -389,7 +389,6 @@ matrix:
         - git clone -b $BOOST_BRANCH https://github.com/boostorg/assert.git ../assert
         - git clone -b $BOOST_BRANCH https://github.com/boostorg/config.git ../config
         - git clone -b $BOOST_BRANCH https://github.com/boostorg/core.git ../core
-        - git clone -b $BOOST_BRANCH https://github.com/boostorg/static_assert.git ../static_assert
         - git clone -b $BOOST_BRANCH https://github.com/boostorg/type_traits.git ../type_traits
       script:
       - cd test/cmake_subdir_test && mkdir __build__ && cd __build__

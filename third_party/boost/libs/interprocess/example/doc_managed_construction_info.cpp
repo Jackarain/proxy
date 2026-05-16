@@ -7,7 +7,9 @@
 // See http://www.boost.org/libs/interprocess for documentation.
 //
 //////////////////////////////////////////////////////////////////////////////
-
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 //[doc_managed_construction_info
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <cassert>

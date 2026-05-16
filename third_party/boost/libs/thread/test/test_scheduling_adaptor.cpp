@@ -14,6 +14,7 @@
 #define BOOST_THREAD_PROVIDES_EXECUTORS
 
 #include <boost/function.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/thread/executors/executor.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
 #include <boost/thread/executors/scheduling_adaptor.hpp>

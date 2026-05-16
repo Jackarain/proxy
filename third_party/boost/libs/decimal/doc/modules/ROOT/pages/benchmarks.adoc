@@ -1,0 +1,1417 @@
+////
+Copyright 2024 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#Benchmarks]
+= Benchmarks
+:idprefix: benchmarks_
+
+This section describes a range of performance benchmarks that have been run comparing this library with the standard library, and how to run your own benchmarks if required.
+
+The values in the ratio column are how many times longer running a specific operation takes in comparison to the same operation with a `double`.
+
+IMPORTANT: On nearly all platforms, there is hardware support for binary floating point math, so we are comparing hardware to software runtimes; *Decimal will be slower*
+
+NOTE: Both the results from Intel and GCC types are from very close, but not identical benchmark routines since they are written in C instead of pass:[C++].
+We assume they are close enough, and the differences between the C and pass:[C++] compilers are small enough, for fair comparison
+
+== How to run the Benchmarks
+[#run_benchmarks_]
+
+To run the benchmarks yourself, navigate to the test folder and define `BOOST_DECIMAL_RUN_BENCHMARKS` when running the tests.
+An example on Linux with b2: `../../../b2 cxxstd=20 toolset=gcc-13 define=BOOST_DECIMAL_RUN_BENCHMARKS benchmarks -a release`, or
+`../../../b2 cxxstd=20 toolset=gcc-13 define=BOOST_DECIMAL_RUN_BENCHMARKS=1,BOOST_DECIMAL_BENCHMARK_CHARCONV=1 benchmarks -a release` to also run the `<charconv>` benchmarks
+
+To run the GCC benchmarks you can use the following command: `gcc benchmark_libdfp.c -O3 -std=c17` followed by: `./a.out`
+
+To run the Intel benchmarks you will need both the https://www.intel.com/content/www/us/en/developer/tools/oneapi/overview.html[Intel Compiler], and the https://www.intel.com/content/www/us/en/developer/articles/tool/intel-decimal-floating-point-math-library.html[library].
+You can the use the following command: `icx benchmark_libbid.c -O3 $PATH_TO_LIBBID/libbid.a -std=c17` followed by: `./a.out`
+You can also use `gcc` instead of `icx`.
+On windows the command is similarly: `cl benchmark_libbid.c /O2 /std:c17 ..\PATH_TO_LIBBID\cl000libbid.lib`, followed by: `.\benchmark_libbid.exe`.
+
+NOTE: The Intel benchmarks can only be run on one of their supported architectures: IA-32, IA-64, and Intel x64
+
+== Methodology
+
+=== Comparisons
+
+The benchmark for comparisons generates a random vector containing 20,000,000 elements and does operations `>`, `>=`, `<`, `\<=`, `==`, and `!=` between `vec[i] and vec[i + 1]`.
+This is repeated 5 times to generate stable results.
+
+=== Basic Mathematical Operations
+
+The benchmark for these operations generates a random vector containing 20 million elements and does operations `+`, `-`, `*`, `/` between `vec[i] and vec[i + 1]`.
+This is repeated five times to generate stable results.
+
+=== `<charconv>`
+
+Parsing and serializing number exactly is one of the key features of decimal floating point types, so we must compare the performance of `<charconv>`.
+For all the following the results compare we compare against STL provided `<charconv>` for 20 million conversions.
+Since `<charconv>` is fully implemented in software for each type the performance gap between built-in `float` and `double` vs `decimal32_t` and `decimal64_t` is significantly smaller (or the decimal performance is better) than the hardware vs. software performance gap seen above for basic operations.
+
+To run these benchmarks yourself, you will need a compiler with complete implementation of `<charconv>` and to run the benchmarks under pass:[C++]17 or higher.
+At the time of writing, this is limited to:
+
+- GCC 11 or newer
+- MSVC 19.24 or newer
+
+These benchmarks are automatically disabled if your compiler does not provide feature complete `<charconv>` or if the language standard is set to pass:[C++]14.
+
+[#x64_linux_benchmarks]
+== x64 Linux
+
+Run using an Intel i9-11900k chipset running Ubuntu 24.04 and Intel oneAPI compiler 2025.2.0 or GCC 13.3.0.
+
+=== Comparisons
+
+Intel Compiler:
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 72,696
+| 0.505
+| `double`
+| 143,924
+| 1.000
+| `decimal32_t`
+| 1,485,786
+| 10.323
+| `decimal64_t`
+| 1,653,991
+| 11.492
+| `decimal128_t`
+| 4,662,704
+| 32.397
+| `decimal_fast32_t`
+| 619,662
+| 4.305
+| `decimal_fast64_t`
+| 606,382
+| 4.213
+| `decimal_fast128_t`
+| 698,945
+| 4.856
+| Intel `BID_UINT32`
+| 2,411,294
+| 16.754
+| Intel `BID_UINT64`
+| 3,158,422
+| 21.945
+| Intel `BID_UINT128`
+| 3,389,883
+| 23.553
+|===
+
+GCC:
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 56,457
+| 0.916
+| `double`
+| 61,615
+| 1.000
+| `decimal32_t`
+| 1,404,638
+| 22.797
+| `decimal64_t`
+| 1,408,074
+| 22.853
+| `decimal128_t`
+| 4,974,170
+| 80.730
+| `decimal_fast32_t`
+| 546,836
+| 8.875
+| `decimal_fast64_t`
+| 472,387
+| 7.667
+| `decimal_fast128_t`
+| 480,853
+| 7.804
+| GCC `_Decimal32`
+| 816,703
+| 13.255
+| GCC `_Decimal64`
+| 501,479
+| 8.139
+| GCC `_Decimal128`
+| 914,600
+| 14.844
+| Intel `BID_UINT32`
+| 3,718,385
+| 60.348
+| Intel `BID_UINT64`
+| 5,721,887
+| 92.865
+| Intel `BID_UINT128`
+| 7,090,648
+| 115.080
+|===
+
+=== Addition
+
+Intel Compiler:
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 118,040
+| 1.303
+| `double`
+| 90,579
+| 1.000
+| `decimal32_t`
+| 1,712,396
+| 18.905
+| `decimal64_t`
+| 1,575,893
+| 17.398
+| `decimal128_t`
+| 3,181,562
+| 35.125
+| `decimal_fast32_t`
+| 729,257
+| 8.051
+| `decimal_fast64_t`
+| 1,083,923
+| 11.967
+| `decimal_fast128_t`
+| 1,367,004
+| 15.092
+| Intel `BID_UINT32`
+| 1,242,797
+| 13.721
+| Intel `BID_UINT64`
+| 1,689,585
+| 18.653
+| Intel `BID_UINT128`
+| 1,958,345
+| 21.620
+|===
+
+GCC:
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 79,256
+| 1.085
+| `double`
+| 73,017
+| 1.000
+| `decimal32_t`
+| 1,501,645
+| 20.566
+| `decimal64_t`
+| 1,567,250
+| 21.464
+| `decimal128_t`
+| 4,609,413
+| 63.128
+| `decimal_fast32_t`
+| 735,864
+| 10.078
+| `decimal_fast64_t`
+| 1,002,119
+| 13.724
+| `decimal_fast128_t`
+| 1,329,644
+| 18.210
+| GCC `_Decimal32`
+| 2,975,146
+| 40.746
+| GCC `_Decimal64`
+| 2,186,565
+| 29.946
+| GCC `_Decimal128`
+| 3,368,864
+| 46.138
+| Intel `BID_UINT32`
+| 2,838,194
+| 38.879
+| Intel `BID_UINT64`
+| 3,297,652
+| 45.163
+| Intel `BID_UINT128`
+| 2,796,283
+| 38.296
+|===
+
+=== Subtraction
+
+Intel Compiler:
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 78,250
+| 1.069
+| `double`
+| 73,193
+| 1.000
+| `decimal32_t`
+| 1,480,678
+| 20.229
+| `decimal64_t`
+| 1,371,677
+| 18.741
+| `decimal128_t`
+| 2,768,955
+| 37.831
+| `decimal_fast32_t`
+| 1,040,587
+| 14.217
+| `decimal_fast64_t`
+| 1,055,980
+| 14.427
+| `decimal_fast128_t`
+| 1,212,405
+| 16.564
+| Intel `BID_UINT32`
+| 1,922,108
+| 26.261
+| Intel `BID_UINT64`
+| 1,793,879
+| 24.509
+| Intel `BID_UINT128`
+| 2,397,372
+| 32.754
+|===
+
+GCC:
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 275,230
+| 0.936
+| `double`
+| 293,907
+| 1.000
+| `decimal32_t`
+| 1,451,610
+| 4.939
+| `decimal64_t`
+| 1,456,587
+| 4.956
+| `decimal128_t`
+| 4,332,644
+| 14.742
+| `decimal_fast32_t`
+| 842,910
+| 2.868
+| `decimal_fast64_t`
+| 968,939
+| 3.297
+| `decimal_fast128_t`
+| 1,327,411
+| 4.516
+| GCC `_Decimal32`
+| 2,045,306
+| 6.959
+| GCC `_Decimal64`
+| 1,355,777
+| 4.613
+| GCC `_Decimal128`
+| 3,178,891
+| 10.816
+| Intel `BID_UINT32`
+| 3,762,566
+| 12.802
+| Intel `BID_UINT64`
+| 3,432,814
+| 11.680
+| Intel `BID_UINT128`
+| 3,725,534
+| 12.676
+|===
+
+=== Multiplication
+
+Intel Compiler:
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 78,445
+| 1.078
+| `double`
+| 72,798
+| 1.000
+| `decimal32_t`
+| 1,735,239
+| 23.836
+| `decimal64_t`
+| 2,272,739
+| 31.220
+| `decimal128_t`
+| 6,396,750
+| 87.870
+| `decimal_fast32_t`
+| 993,256
+| 13.644
+| `decimal_fast64_t`
+| 1,670,141
+| 22.942
+| `decimal_fast128_t`
+| 5,959,977
+| 81.870
+| Intel `BID_UINT32`
+| 1,375,434
+| 18.894
+| Intel `BID_UINT64`
+| 2,052,278
+| 28.191
+| Intel `BID_UINT128`
+| 5,964,489
+| 81.932
+|===
+
+GCC:
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 76,238
+| 1.161
+| `double`
+| 65,652
+| 1.000
+| `decimal32_t`
+| 1,703,365
+| 25.945
+| `decimal64_t`
+| 2,564,605
+| 39.063
+| `decimal128_t`
+| 7,115,514
+| 108.382
+| `decimal_fast32_t`
+| 1,225,047
+| 18.660
+| `decimal_fast64_t`
+| 1,904,509
+| 29.009
+| `decimal_fast128_t`
+| 6,056,348
+| 92.249
+| GCC `_Decimal32`
+| 2,635,531
+| 40.144
+| GCC `_Decimal64`
+| 2,545,441
+| 38.772
+| GCC `_Decimal128`
+| 7,050,299
+| 107.289
+| Intel `BID_UINT32`
+| 2,638,999
+| 40.197
+| Intel `BID_UINT64`
+| 4,605,497
+| 70.150
+| Intel `BID_UINT128`
+| 13,075,436
+| 199.163
+|===
+
+=== Division
+
+Intel Compiler:
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 100,799
+| 0.971
+| `double`
+| 103,796
+| 1.000
+| `decimal32_t`
+| 2,134,312
+| 20.563
+| `decimal64_t`
+| 5,399,276
+| 52.018
+| `decimal128_t`
+| 10,012,578
+| 96.464
+| `decimal_fast32_t`
+| 1,558,774
+| 15.018
+| `decimal_fast64_t`
+| 1,597,873
+| 15.394
+| `decimal_fast128_t`
+| 8,105,004
+| 78.086
+| Intel `BID_UINT32`
+| 1,561,213
+| 15.041
+| Intel `BID_UINT64`
+| 3,115,862
+| 30.019
+| Intel `BID_UINT128`
+| 7,474,712
+| 72.013
+|===
+
+GCC:
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 60,277
+| 0.747
+| `double`
+| 80,676
+| 1.000
+| `decimal32_t`
+| 2,396,732
+| 29.708
+| `decimal64_t`
+| 4,021,720
+| 49.850
+| `decimal128_t`
+| 10,677,625
+| 132.352
+| `decimal_fast32_t`
+| 1,083,011
+| 13.424
+| `decimal_fast64_t`
+| 1,851,520
+| 22.950
+| `decimal_fast128_t`
+| 8,121,160
+| 100.664
+| GCC `_Decimal32`
+| 5,082,812
+| 63.002
+| GCC `_Decimal64`
+| 3,005,153
+| 37.250
+| GCC `_Decimal128`
+| 10,257,437
+| 130.490
+| Intel `BID_UINT32`
+| 3,242,695
+| 40.194
+| Intel `BID_UINT64`
+| 6,143,554
+| 76.151
+| Intel `BID_UINT128`
+| 13,499,022
+| 167.324
+|===
+
+=== `from_chars`
+
+==== General Format
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 2,437,788
+| 0.917
+| `double`
+| 2,657,378
+| 1.000
+| `decimal32_t`
+| 3,131,251
+| 1.178
+| `decimal64_t`
+| 4,291,891
+| 1.615
+| `decimal128_t`
+| 9,911,474
+| 3.730
+| `decimal_fast32_t`
+| 4,737,095
+| 1.783
+| `decimal_fast64_t`
+| 4,404,334
+| 1.657
+| `decimal_fast128_t`
+| 10,414,943
+| 3.919
+|===
+
+==== Scientific Format
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 2,506,008
+| 0.954
+| `double`
+| 2,625,702
+| 1.000
+| `decimal32_t`
+| 3,008,653
+| 1.146
+| `decimal64_t`
+| 4,180,192
+| 1.592
+| `decimal128_t`
+| 9,712,229
+| 3.699
+| `decimal_fast32_t`
+| 4,142,588
+| 1.578
+| `decimal_fast64_t`
+| 4,118,461
+| 1.569
+| `decimal_fast128_t`
+| 8,772,097
+| 3.341
+|===
+
+=== `to_chars`
+
+==== General Format Shortest Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 2,920,036
+| 0.850
+| `double`
+| 3,436,919
+| 1.000
+| `decimal32_t`
+| 4,136,631
+| 1.204
+| `decimal64_t`
+| 4,318,996
+| 1.257
+| `decimal128_t`
+| 14,624,180
+| 4.255
+| `decimal_fast32_t`
+| 4,752,219
+| 1.383
+| `decimal_fast64_t`
+| 4,382,014
+| 1.275
+| `decimal_fast128_t`
+| 17,350,588
+| 5.048
+|===
+
+==== General Format 6 digits Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 5,541,073
+| 0.969
+| `double`
+| 5,716,626
+| 1.000
+| `decimal32_t`
+| 3,527,433
+| 0.617
+| `decimal64_t`
+| 4,125,772
+| 0.722
+| `decimal128_t`
+| 6,967,211
+| 1.219
+| `decimal_fast32_t`
+| 3,654,219
+| 0.639
+| `decimal_fast64_t`
+| 3,386,125
+| 0.592
+| `decimal_fast128_t`
+| 6,018,439
+| 1.053
+|===
+
+==== Scientific Format Shortest Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 2,841,569
+| 0.827
+| `double`
+| 3,437,387
+| 1.000
+| `decimal32_t`
+| 2,564,053
+| 0.750
+| `decimal64_t`
+| 2,856,944
+| 0.831
+| `decimal128_t`
+| 12,147,039
+| 3.534
+| `decimal_fast32_t`
+| 2,878,507
+| 0.837
+| `decimal_fast64_t`
+| 2,933,273
+| 0.853
+| `decimal_fast128_t`
+| 15,010,374
+| 4.367
+|===
+
+==== Scientific Format 6 digits Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 4,896,523
+| 0.958
+| `double`
+| 5,112,924
+| 1.000
+| `decimal32_t`
+| 2,542,237
+| 0.497
+| `decimal64_t`
+| 3,119,552
+| 0.610
+| `decimal128_t`
+| 4,811,741
+| 0.941
+| `decimal_fast32_t`
+| 2,890,023
+| 0.565
+| `decimal_fast64_t`
+| 2,956,466
+| 0.578
+| `decimal_fast128_t`
+| 5,476,431
+| 1.071
+|===
+
+[#x64_windows_benchmarks]
+== x64 Windows
+
+Run using an Intel i9-11900k chipset running Windows 11 and Visual Studio 17.14.10
+
+=== Comparisons
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 191,653
+| 1.028
+| `double`
+| 186,424
+| 1.000
+| `decimal32_t`
+| 2,391,863
+| 12.830
+| `decimal64_t`
+| 2,491,239
+| 13.363
+| `decimal128_t`
+| 16,643,031
+| 89.275
+| `decimal_fast32_t`
+| 872,997
+| 4.682
+| `decimal_fast64_t`
+| 793,997
+| 4.259
+| `decimal_fast128_t`
+| 801,708
+| 4.300
+| Intel `BID_UINT32`
+| 4,372,973
+| 23.457
+| Intel `BID_UINT64`
+| 9,345,300
+| 50.129
+| Intel `BID_UINT128`
+| 11,504,914
+| 61.714
+|===
+
+=== Addition
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 76,777
+| 0.961
+| `double`
+| 79,897
+| 1.000
+| `decimal32_t`
+| 2,902,356
+| 36.326
+| `decimal64_t`
+| 3,569,820
+| 44.680
+| `decimal128_t`
+| 12,075,529
+| 151.139
+| `decimal_fast32_t`
+| 1,940,333
+| 24.285
+| `decimal_fast64_t`
+| 3,064,073
+| 38.350
+| `decimal_fast128_t`
+| 3,109,101
+| 38.914
+| Intel `BID_UINT32`
+| 4,967,728
+| 62.177
+| Intel `BID_UINT64`
+| 6,268,077
+| 78.452
+| Intel `BID_UINT128`
+| 4,847,330
+| 60.670
+|===
+
+=== Subtraction
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 336,960
+| 1.042
+| `double`
+| 323,282
+| 1.000
+| `decimal32_t`
+| 3,040,167
+| 9.404
+| `decimal64_t`
+| 3,617,843
+| 11.191
+| `decimal128_t`
+| 12,325,962
+| 38.128
+| `decimal_fast32_t`
+| 2,313,234
+| 7.155
+| `decimal_fast64_t`
+| 2,935,476
+| 9.080
+| `decimal_fast128_t`
+| 2,963,570
+| 9.167
+| Intel `BID_UINT32`
+| 4,603,462
+| 14.240
+| Intel `BID_UINT64`
+| 5,627,305
+| 17.407
+| Intel `BID_UINT128`
+| 5,824,263
+| 18.016
+|===
+
+=== Multiplication
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 78,634
+| 1.000
+| `double`
+| 78,649
+| 1.000
+| `decimal32_t`
+| 2,636,784
+| 33.526
+| `decimal64_t`
+| 3,861,139
+| 49.093
+| `decimal128_t`
+| 11,349,378
+| 144.304
+| `decimal_fast32_t`
+| 2,688,661
+| 34.186
+| `decimal_fast64_t`
+| 3,504,172
+| 44.554
+| `decimal_fast128_t`
+| 9,236,110
+| 117.434
+| Intel `BID_UINT32`
+| 3,833,363
+| 48.740
+| Intel `BID_UINT64`
+| 11,671,369
+| 148.398
+| Intel `BID_UINT128`
+| 62,036,577
+| 788.778
+|===
+
+=== Division
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 83,566
+| 0.936
+| `double`
+| 89,317
+| 1.000
+| `decimal32_t`
+| 3,048,254
+| 34.128
+| `decimal64_t`
+| 3,282,819
+| 36.755
+| `decimal128_t`
+| 16,648,799
+| 186.401
+| `decimal_fast32_t`
+| 2,059,743
+| 23.061
+| `decimal_fast64_t`
+| 5,105,018
+| 57.156
+| `decimal_fast128_t`
+| 11,587,763
+| 129,737
+| Intel `BID_UINT32`
+| 5,037,576
+| 46.401
+| Intel `BID_UINT64`
+| 8,768,259
+| 98.170
+| Intel `BID_UINT128`
+| 38,519,644
+| 431.269
+|===
+
+=== `from_chars`
+
+==== General Format
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 7,892,780
+| 0.457
+| `double`
+| 17,282,516
+| 1.000
+| `decimal32_t`
+| 3,544,166
+| 0.205
+| `decimal64_t`
+| 5,095,337
+| 0.295
+| `decimal128_t`
+| 18,972,286
+| 1.098
+| `decimal_fast32_t`
+| 5,182,044
+| 0.300
+| `decimal_fast64_t`
+| 6,344,823
+| 0.367
+| `decimal_fast128_t`
+| 34,476,545
+| 1.995
+|===
+
+==== Scientific Format
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 7,839,980
+| 0.454
+| `double`
+| 17,282,516
+| 1.000
+| `decimal32_t`
+| 3,393,317
+| 0.196
+| `decimal64_t`
+| 4,924,720
+| 0.285
+| `decimal128_t`
+| 29,240,187
+| 1.692
+| `decimal_fast32_t`
+| 5,092,334
+| 0.295
+| `decimal_fast64_t`
+| 6,341,230
+| 0.367
+| `decimal_fast128_t`
+| 34,519,610
+| 1.997
+|===
+
+=== `to_chars`
+
+==== General Format Shortest Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 3,181,029
+| 0.826
+| `double`
+| 3,852,857
+| 1.000
+| `decimal32_t`
+| 5,242,934
+| 1.361
+| `decimal64_t`
+| 5,586,541
+| 1.450
+| `decimal128_t`
+| 13,955,214
+| 3.622
+| `decimal_fast32_t`
+| 6,053,804
+| 1.571
+| `decimal_fast64_t`
+| 7,957,278
+| 2.065
+| `decimal_fast128_t`
+| 20,202,107
+| 5.243
+|===
+
+==== General Format 6 digits Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 6,111,231
+| 0.949
+| `double`
+| 6,433,885
+| 1.000
+| `decimal32_t`
+| 4,605,311
+| 0.716
+| `decimal64_t`
+| 4,742,497
+| 0.737
+| `decimal128_t`
+| 12,372,901
+| 1.923
+| `decimal_fast32_t`
+| 4,716,827
+| 0.733
+| `decimal_fast64_t`
+| 4,861,975
+| 0.756
+| `decimal_fast128_t`
+| 10,779,778
+| 1.675
+|===
+
+==== Scientific Format Shortest Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 3,107,509
+| 0.773
+| `double`
+| 4,020,767
+| 1.000
+| `decimal32_t`
+| 3,428,517
+| 0.853
+| `decimal64_t`
+| 4,095,802
+| 1.019
+| `decimal128_t`
+| 11,577,791
+| 2.879
+| `decimal_fast32_t`
+| 3,375,975
+| 0.840
+| `decimal_fast64_t`
+| 4,427,563
+| 1.101
+| `decimal_fast128_t`
+| 13,581,654
+| 3.378
+|===
+
+==== Scientific Format 6 digits Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 4,938,623
+| 0.930
+| `double`
+| 5,309,818
+| 1.000
+| `decimal32_t`
+| 3,435,843
+| 0.647
+| `decimal64_t`
+| 3,682,980
+| 0.694
+| `decimal128_t`
+| 9,223,227
+| 1.737
+| `decimal_fast32_t`
+| 3,379,702
+| 0.637
+| `decimal_fast64_t`
+| 3,892,990
+| 0.733
+| `decimal_fast128_t`
+| 10,158,657
+| 1.913
+|===
+
+[#m4_mac_benchmarks]
+== ARM64 macOS
+
+Run using a Macbook pro with M4 Max chipset running macOS Sequoia 15.5 and homebrew Clang 20.1.8
+
+=== Comparisons
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 64,639
+| 1.606
+| `double`
+| 40,255
+| 1.000
+| `decimal32_t`
+| 957,179
+| 23.778
+| `decimal64_t`
+| 897,409
+| 22.293
+| `decimal128_t`
+| 2,131,391
+| 52.947
+| `decimal_fast32_t`
+| 380,892
+| 9.462
+| `decimal_fast64_t`
+| 481,455
+| 11.960
+| `decimal_fast128_t`
+| 465,461
+| 11.563
+|===
+
+=== Addition
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 11,853
+| 0.964
+| `double`
+| 12,295
+| 1.000
+| `decimal32_t`
+| 1,338,796
+| 108.889
+| `decimal64_t`
+| 1,231,462
+| 100.160
+| `decimal128_t`
+| 2,262,808
+| 184.043
+| `decimal_fast32_t`
+| 608,660
+| 49.505
+| `decimal_fast64_t`
+| 847,512
+| 68.931
+| `decimal_fast128_t`
+| 1,030,662
+| 83.827
+|===
+
+=== Subtraction
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 11,939
+| 0.951
+| `double`
+| 12,551
+| 1.000
+| `decimal32_t`
+| 1,296,430
+| 103.293
+| `decimal64_t`
+| 1,180,456
+| 94.053
+| `decimal128_t`
+| 2,078,008
+| 165.565
+| `decimal_fast32_t`
+| 817,989
+| 65.173
+| `decimal_fast64_t`
+| 823,569
+| 65.618
+| `decimal_fast128_t`
+| 993,447
+| 79.153
+|===
+
+=== Multiplication
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 12,186
+| 0.944
+| `double`
+| 12,914
+| 1.000
+| `decimal32_t`
+| 1,441,141
+| 111.595
+| `decimal64_t`
+| 2,117,061
+| 163.935
+| `decimal128_t`
+| 5,376,470
+| 416.329
+| `decimal_fast32_t`
+| 923,346
+| 71.500
+| `decimal_fast64_t`
+| 1,766,419
+| 136.783
+| `decimal_fast128_t`
+| 5,463,675
+| 423.082
+|===
+
+=== Division
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 12,576
+| 0.722
+| `double`
+| 17,145
+| 1.000
+| `decimal32_t`
+| 1,732,611
+| 101.056
+| `decimal64_t`
+| 3,558,094
+| 207.529
+| `decimal128_t`
+| 8,985,521
+| 524.090
+| `decimal_fast32_t`
+| 1,075,184
+| 62.711
+| `decimal_fast64_t`
+| 2,027,533
+| 118.258
+| `decimal_fast128_t`
+| 7,583,016
+| 442.287
+|===
+
+=== `from_chars`
+
+==== General Format
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 1,882,825
+| 0.990
+| `double`
+| 1,901,380
+| 1.000
+| `decimal32_t`
+| 3,427,654
+| 1.803
+| `decimal64_t`
+| 5,364,564
+| 2.821
+| `decimal128_t`
+| 11,752,375
+| 6.181
+| `decimal_fast32_t`
+| 4,339,550
+| 2.282
+| `decimal_fast64_t`
+| 6,647,959
+| 3.496
+| `decimal_fast128_t`
+| 14,010,588
+| 7.369
+|===
+
+==== Scientific Format
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 1,939,033
+| 1.010
+| `double`
+| 1,919,671
+| 1.000
+| `decimal32_t`
+| 3,411,016
+| 1.777
+| `decimal64_t`
+| 5,278,214
+| 2.750
+| `decimal128_t`
+| 11,479,704
+| 5.980
+| `decimal_fast32_t`
+| 4,299,497
+| 2.240
+| `decimal_fast64_t`
+| 6,287,638
+| 3.275
+| `decimal_fast128_t`
+| 9,856,122
+| 5.134
+|===
+
+=== `to_chars`
+
+==== General Format Shortest Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 2,223,891
+| 0.882
+| `double`
+| 2,520,203
+| 1.000
+| `decimal32_t`
+| 2,983,523
+| 1.184
+| `decimal64_t`
+| 3,348,702
+| 1.329
+| `decimal128_t`
+| 8,899,289
+| 3.531
+| `decimal_fast32_t`
+| 3,383,567
+| 1.343
+| `decimal_fast64_t`
+| 3,436,470
+| 1.364
+| `decimal_fast128_t`
+| 12,509,443
+| 4.964
+|===
+
+==== General Format 6 digits Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 4,664,538
+| 0.948
+| `double`
+| 4,915,699
+| 1.000
+| `decimal32_t`
+| 2,570,339
+| 0.523
+| `decimal64_t`
+| 3,309,343
+| 0.673
+| `decimal128_t`
+| 5,962,030
+| 1.212
+| `decimal_fast32_t`
+| 2,213,792
+| 0.450
+| `decimal_fast64_t`
+| 3,067,584
+| 0.624
+| `decimal_fast128_t`
+| 6,006,157
+| 1.222
+|===
+
+==== Scientific Format Shortest Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 2,119,538
+| 0.848
+| `double`
+| 2,500,900
+| 1.000
+| `decimal32_t`
+| 1,757,416
+| 0.703
+| `decimal64_t`
+| 2,187,911
+| 0.875
+| `decimal128_t`
+| 6,976,380
+| 2.790
+| `decimal_fast32_t`
+| 1,739,069
+| 0.695
+| `decimal_fast64_t`
+| 2,060,848
+| 0.824
+| `decimal_fast128_t`
+| 12,509,443
+| 5.002
+|===
+
+==== Scientific Format 6 digits Precision
+
+|===
+| Type | Runtime (us) | Ratio to `double`
+| `float`
+| 4,157,977
+| 0.933
+| `double`
+| 4,457,878
+| 1.000
+| `decimal32_t`
+| 1,764,018
+| 0.395
+| `decimal64_t`
+| 2,625,621
+| 0.589
+| `decimal128_t`
+| 4,060,487
+| 0.911
+| `decimal_fast32_t`
+| 1,728,473
+| 0.388
+| `decimal_fast64_t`
+| 2,734,955
+| 0.614
+| `decimal_fast128_t`
+| 5,300,774
+| 1.189
+|===

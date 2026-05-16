@@ -87,60 +87,14 @@ The roles played by the `async_run` and `async_exec` functions are:
   be called from multiple places in your code concurrently.
 * xref:reference:boost/redis/basic_connection/async_run-04.adoc[`connection::async_run`]: keeps the connection healthy. It takes care of hostname resolution, session establishment, health-checks, reconnection and coordination of low-level read and write operations. It should be called only once per connection, regardless of the number of requests to execute.
 
-== Server pushes
-
-Redis servers can also send a variety of pushes to the client. Some of
-them are:
-
-* https://redis.io/docs/manual/pubsub/[Pubsub messages].
-* https://redis.io/docs/manual/keyspace-notifications/[Keyspace notifications].
-* https://redis.io/docs/manual/client-side-caching/[Client-side caching].
-
-The connection class supports server pushes by means of the
-xref:reference:boost/redis/basic_connection/async_receive.adoc[`connection::async_receive`] function, which can be
-called in the same connection that is being used to execute commands.
-The coroutine below shows how to use it:
-
-
-[source,cpp]
-----
-auto
-receiver(std::shared_ptr<connection> conn) -> net::awaitable<void>
-{
-   request req;
-   req.push("SUBSCRIBE", "channel");
-
-   generic_response resp;
-   conn->set_receive_response(resp);
-
-   // Loop while reconnection is enabled
-   while (conn->will_reconnect()) {
-
-      // Reconnect to channels.
-      co_await conn->async_exec(req, ignore);
-
-      // Loop reading Redis pushes.
-      for (;;) {
-         error_code ec;
-         co_await conn->async_receive(resp, net::redirect_error(net::use_awaitable, ec));
-         if (ec)
-            break; // Connection lost, break so we can reconnect to channels.
-
-         // Use the response resp in some way and then clear it.
-         ...
-
-         consume_one(resp);
-      }
-   }
-}
-----
 
 == Further reading
 
 Here is a list of topics that you might be interested in:
 
-* xref:cancellation.adoc[Setting timeouts to requests and managing cancellation].
 * xref:requests_responses.adoc[More on requests and responses].
+* xref:pushes.adoc[Reading server pushes].
+* xref:cancellation.adoc[Setting timeouts to requests and managing cancellation].
 * xref:serialization.adoc[Serializing and parsing into custom types].
 * xref:logging.adoc[Configuring logging].
 * xref:examples.adoc[Examples].

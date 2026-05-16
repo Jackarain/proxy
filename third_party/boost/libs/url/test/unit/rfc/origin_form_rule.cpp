@@ -25,6 +25,16 @@ struct origin_form_rule_test
             system::result< url_view > rv = grammar::parse( "/index.htm?layout=mobile", origin_form_rule );
             (void)rv;
         }
+
+        ok(origin_form_rule, "/");
+        ok(origin_form_rule, "/path/to/resource");
+        ok(origin_form_rule, "/path?query");
+        ok(origin_form_rule, "/path?a=1&b=2");
+
+        bad(origin_form_rule, "");
+        bad(origin_form_rule, "relative");
+        bad(origin_form_rule, "/foo%");
+        bad(origin_form_rule, "/foo%G0");
     }
 };
 

@@ -1,0 +1,17 @@
+site:
+  title: Boost.Decimal
+  start_page: ROOT::overview.adoc
+content:
+  sources:
+    - url: ..
+      start_path: doc
+      branches: HEAD
+output:
+  dir: html
+ui:
+  bundle:
+    url: https://github.com/boostorg/website-v2-docs/releases/download/ui-develop/ui-bundle.zip
+  output_dir: _
+antora:
+  extensions:
+    - require: '@cppalliance/antora-downloads-extension'

@@ -1,0 +1,115 @@
+/**
+ * Boost Look v3 — Development Build
+ * New design and development for the Boost C++ Libraries website (boost.io),
+ * in collaboration with MetaLab.
+ * Built from modular sources in src/css/ via build-css.sh
+ * Note: boostlook.css remains the current production stylesheet.
+ * License: BSL-1.0
+ */
+
+/**
+ * File Structure Overview (src/css/):
+ * 00-header.css          - License, file overview
+ * 01-variables.css       - Root CSS custom properties, spacing, typography, icons
+ * 02-themes.css          - Light/dark theme variable mappings
+ * 03-fonts.css           - @font-face declarations (Noto Sans, Monaspace)
+ * 04-reset.css           - CSS reset (box-sizing, margins, defaults)
+ * 05-global-typography.css - Base container, headings h1-h6, heading anchors
+ * 06-global-links.css    - Paragraph styling, links, footnotes
+ * 07-global-code.css     - Code blocks, inline code, syntax highlighting (hljs)
+ * 08-global-components.css - Quotes, pagination, admonitions, lists, edit-page link
+ * 09-global-tables-images.css - Tables, image styles
+ * 10-scrollbars.css      - Scrollbar styling (Firefox + WebKit)
+ * 11-template-layout.css - Template-specific scrolling, iframe, TOC common styles
+ * 12-asciidoctor.css     - AsciiDoctor-specific styles, Rouge syntax highlighting
+ * 13-antora.css          - Antora navigation, toolbar, breadcrumbs, tabs, search
+ * 14-quickbook.css       - Quickbook legacy wrapper, titles, TOC, tables, footer
+ * 15-readme.css          - Library README styles
+ * 16-responsive-toc.css  - AsciiDoctor responsive TOC layout (768px → 1920px)
+ */
+
+/**
+ * Template Structure:
+ * The framework supports these main documentation templates:
+ *
+ * 1. AsciiDoctor Template:
+ * example: https://www.boost.io/doc/libs/1_87_0/libs/charconv/doc/html/charconv.html
+ * <div class="boostlook">
+ *   <div class="header">
+ *     <h1>Title</h1>
+ *     <div id="toc" class="toc2">
+ *         <button id="toggle-toc">Show Table of Contents</button>
+ *         <ul class="sectlevel1">TOC Links</ul>
+ *     </div>
+ *   </div>
+ *   <div id="content">
+ *     <div class="sect1">Content Sections</div>
+ *   </div>
+ *   <div id="footer">Footer Content</div>
+ * </div>
+ *
+ * 2. Antora Template:
+ * example: https://www.boost.io/doc/libs/1_87_0/doc/antora/url/index.html
+ * <div class="boostlook">
+ *   <div id="header">
+ *     <div id="toc" class="nav-container toc2">Navigation</div>
+ *   </div>
+ *   <div id="content">
+ *     <article class="doc max-width-reset">
+ *       <div class="toolbar">Breadcrumbs and Spirit Nav</div>
+ *       <h1>Title</h1>
+ *       <div class="sect1">Content Sections</div>
+ *     </article>
+ *   </div>
+ *   <div id="footer">Footer Content</div>
+ * </div>
+ *
+ * 3. Quickbook Template:
+ * example: https://www.boost.io/doc/libs/1_87_0/doc/html/accumulators.html
+ * <div class="boostlook">
+ *    <div class="spirit-nav">Navigation</div>
+ *    <div class="chapter">  <!-- might also be .section, .refentry, .document, or .book -->
+ *        <div class="titlepage">Title and information</div>
+ *        <div class="toc">Table of Contents</div>
+ *        <div class="section>Content</div>
+ *        <div class="copyright-footer">Footer</div>
+ *    </div>
+ * </div>
+ *
+ * 4. README Template:
+ * example: https://www.boost.io/library/1.87.0/beast/
+ * <section id="libraryReadMe" class="boostlook">ReadMe Content</section>
+ */
+
+/**
+ * Design Philosophy:
+ * - Consistent styling across different documentation templates
+ * - Responsive design with mobile-first approach
+ * - Dark/Light theme support
+ * - Accessible typography and color schemes
+ * - Modern scrolling and navigation experience
+ */
+
+/**
+ * Framework Selector Conventions
+ *
+ * The framework uses the following selector prefixes:
+ *
+ * 1. .boostlook
+ *    - Primary selector for cross-template styles
+ *    - Applies to all documentation formats
+ *    - Used for common components and layouts
+ *
+ * 2. .boostlook:not(:has(.doc)),
+ *    .boostlook#boost-legacy-docs-wrapper - (DEPRECATED),
+ *    .boostlook#antora-template-wrapper,
+ *    div.source-docs-antora.boostlook:not(:has(>.boostlook)) - (Fallback)
+ *    - Specific to legacy Quickbook templates
+ *    - Maintains backward compatibility
+ *    - Handles specialized Quickbook formatting
+ *
+ * 3. .boostlook#libraryReadMe
+ *    - Dedicated to README template styling
+ *    - Optimized for library documentation
+ *    - Ensures consistent README presentation
+ */

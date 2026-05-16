@@ -1,0 +1,33 @@
+# Copyright René Ferdinand Rivera Morell 2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/config//boost_config
+    /boost/core//boost_core
+    /boost/function_types//boost_function_types
+    /boost/lexical_cast//boost_lexical_cast
+    /boost/math//boost_math_tr1
+    /boost/mpl//boost_mpl
+    /boost/optional//boost_optional
+    /boost/parameter//boost_parameter
+    /boost/range//boost_range
+    /boost/spirit//boost_spirit
+    /boost/type_traits//boost_type_traits ;
+
+project /boost/convert
+    : common-requirements
+        <include>include
+    ;
+
+explicit
+    [ alias boost_convert : : : : <library>$(boost_dependencies) ]
+    [ alias all : boost_convert example test ]
+    ;
+
+call-if : boost-library convert
+    ;
+

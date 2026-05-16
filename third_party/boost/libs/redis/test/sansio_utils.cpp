@@ -4,8 +4,11 @@
  * accompanying file LICENSE.txt)
  */
 
+#include <boost/redis/adapter/any_adapter.hpp>
 #include <boost/redis/detail/multiplexer.hpp>
+#include <boost/redis/resp3/flat_tree.hpp>
 
+#include <boost/assert/source_location.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/core/lightweight_test.hpp>
 
@@ -70,6 +73,24 @@ logger log_fixture::make_logger()
    return logger(logger::level::debug, [&](logger::level lvl, std::string_view msg) {
       msgs.push_back({lvl, std::string(msg)});
    });
+}
+
+resp3::flat_tree tree_from_resp3(const std::vector<std::string_view>& msgs, source_location loc)
+{
+   resp3::flat_tree res;
+   any_adapter adapter{res};
+
+   for (std::string_view resp : msgs) {
+      resp3::parser p;
+      system::error_code ec;
+      bool done = resp3::parse(p, resp, adapter, ec);
+      if (!BOOST_TEST(done))
+         std::cerr << "Called from " << loc << std::endl;
+      if (!BOOST_TEST_EQ(ec, system::error_code()))
+         std::cerr << "Called from " << loc << std::endl;
+   }
+
+   return res;
 }
 
 }  // namespace boost::redis::detail

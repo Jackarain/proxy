@@ -10,6 +10,7 @@
 import stlport ;
 import modules ;
 import ac ;
+import testing ;
 
 project : requirements <library>/boost/iostreams//boost_iostreams ;
 

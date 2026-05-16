@@ -1,6 +1,6 @@
 /* Boost.MultiIndex example of a bidirectional map.
  *
- * Copyright 2003-2009 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -44,30 +44,6 @@ struct bidirectional_map
     ToType   second;
   };
 
-#if defined(BOOST_NO_POINTER_TO_MEMBER_TEMPLATE_PARAMETERS) ||\
-    defined(BOOST_MSVC)&&(BOOST_MSVC<1300) ||\
-    defined(BOOST_INTEL_CXX_VERSION)&&defined(_MSC_VER)&&\
-           (BOOST_INTEL_CXX_VERSION<=700)
-
-/* see Compiler specifics: Use of member_offset for info on member<> and
- * member_offset<>
- */
-
-  BOOST_STATIC_CONSTANT(unsigned,from_offset=offsetof(value_type,first));
-  BOOST_STATIC_CONSTANT(unsigned,to_offset  =offsetof(value_type,second));
-
-  typedef multi_index_container<
-    value_type,
-    indexed_by<
-      ordered_unique<
-        tag<from>,member_offset<value_type,FromType,from_offset> >,
-      ordered_unique<
-        tag<to>,  member_offset<value_type,ToType,to_offset> >
-    >
-  > type;
-
-#else
-
   /* A bidirectional map can be simulated as a multi_index_container
    * of pairs of (FromType,ToType) with two unique indices, one
    * for each member of the pair.
@@ -82,8 +58,6 @@ struct bidirectional_map
         tag<to>,  member<value_type,ToType,&value_type::second> >
     >
   > type;
-
-#endif
 };
 
 /* a dictionary is a bidirectional map from strings to strings */
@@ -108,22 +82,6 @@ int main()
   std::string word;
   std::getline(std::cin,word);
 
-#if defined(BOOST_NO_MEMBER_TEMPLATES) /* use global get<> and family instead */
-
-  dictionary::iterator it=get<from>(d).find(word);
-  if(it!=d.end()){
-    std::cout<<word<<" is said "<<it->second<<" in English"<<std::endl;
-  }
-  else{
-    nth_index<dictionary,1>::type::iterator it2=get<1>(d).find(word);
-    if(it2!=get<1>(d).end()){
-      std::cout<<word<<" is said "<<it2->first<<" in Spanish"<<std::endl;
-    }
-    else std::cout<<"No such word in the dictionary"<<std::endl;
-  }
-
-#else
-
   /* search the queried word on the from index (Spanish) */
 
   dictionary::iterator it=d.get<from>().find(word);
@@ -142,8 +100,6 @@ int main()
     }
     else std::cout<<"No such word in the dictionary"<<std::endl;
   }
-
-#endif
 
   return 0;
 }

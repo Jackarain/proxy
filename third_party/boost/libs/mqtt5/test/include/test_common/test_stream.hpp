@@ -18,21 +18,18 @@
 #include <boost/asio/post.hpp>
 #include <boost/asio/prepend.hpp>
 #include <boost/asio/recycling_allocator.hpp>
-#include <boost/asio/steady_timer.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <chrono>
 #include <memory>
 
-#include "test_common/test_broker.hpp"
+#include "test_broker.hpp"
 
 namespace boost::mqtt5::test {
 
 namespace asio = boost::asio;
 
 using error_code = boost::system::error_code;
-using time_stamp = std::chrono::time_point<std::chrono::steady_clock>;
-using duration = time_stamp::duration;
 
 namespace detail {
 

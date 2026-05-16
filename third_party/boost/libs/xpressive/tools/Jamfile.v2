@@ -4,6 +4,7 @@
 
 project
     : requirements
+        <library>/boost/xpressive//boost_xpressive
         <toolset>intel:<debug-symbols>off
         <toolset>msvc-7.1:<debug-symbols>off
         <toolset>msvc-8.0:<define>_SCL_SECURE_NO_DEPRECATE
@@ -16,6 +17,4 @@ project
 exe perl2xpr
     :
         perl2xpr.cpp
-    :
-        <include>$(BOOST_ROOT)
     ;

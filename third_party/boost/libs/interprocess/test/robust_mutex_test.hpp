@@ -35,7 +35,7 @@ int robust_mutex_test(int argc, char *argv[])
        //  test_all_lock<RobustMutex>();
 //         test_all_mutex<true, RobustMutex>();
       }
-      std::cout << "robust mutex recovery test" << std::endl;
+      std::cout << "PARENT: robust mutex recovery test" << std::endl;
 
       //Remove shared memory on construction and destruction
       class shm_remove
@@ -62,9 +62,14 @@ int robust_mutex_test(int argc, char *argv[])
       //Launch child process
       std::string s(argv[0]); s += " child ";
       s += get_process_id_name();
-      std::cout << "... launching child" << std::endl;
-      if(0 != std::system(s.c_str()))
+      std::cout << "PARENT: ... launching child: " << s << std::endl;
+      int r = std::system(s.c_str());
+      if(0 != r){
+         std::cout << "PARENT: std::system" << s.c_str() << " FAILED with " << r << std::endl;
          return 1;
+      }
+
+      std::cout << "PARENT: ... launched child: " << s << std::endl;
 
       //Wait until child locks the mutexes and dies
       spin_wait swait;
@@ -72,15 +77,17 @@ int robust_mutex_test(int argc, char *argv[])
          swait.yield();
       }
 
-      std::cout << "... recovering mutex[0]" << std::endl;
+      std::cout << "PARENT: ... recovering mutex[0]" << std::endl;
       //First try to recover lock[0], put into consistent
       //state and relock it again
       {
          //Done, now try to lock it to see if robust
          //mutex recovery works
          instance[0].lock();
-         if(!instance[0].previous_owner_dead())
+         if(!instance[0].previous_owner_dead()){
+            std::cout << "PARENT: instance[0].previous_owner_dead() FAILED!" << std::endl;
             return 1;
+         }
          instance[0].consistent();
          instance[0].unlock();
          //Since it's consistent, locking is possible again
@@ -89,13 +96,15 @@ int robust_mutex_test(int argc, char *argv[])
       }
       //Now with lock[1], but dont' put it in consistent state
       //so the mutex is no longer usable
-      std::cout << "... recovering mutex[1]" << std::endl;
+      std::cout << "PARENT: ... recovering mutex[1]" << std::endl;
       {
          //Done, now try to lock it to see if robust
          //mutex recovery works
          instance[1].lock();
-         if(!instance[1].previous_owner_dead())
+         if(!instance[1].previous_owner_dead()){
+            std::cout << "PARENT: instance[1].previous_owner_dead() FAILED!" << std::endl;
             return 1;
+         }
          //Unlock a recovered mutex without putting it into
          //into consistent state marks mutex as unusable.
          instance[1].unlock();
@@ -108,18 +117,21 @@ int robust_mutex_test(int argc, char *argv[])
             exception_thrown = true;
          } BOOST_INTERPROCESS_CATCH_END
          if(!exception_thrown){
+            std::cout << "PARENT: instance[1].lock() did NOT throw an exception!" << std::endl;
             return 1;
          }
       }
       //Now with lock[2], this was locked by child but not
       //unlocked
-      std::cout << "... recovering mutex[2]" << std::endl;
+      std::cout << "PARENT: ... recovering mutex[2]" << std::endl;
       {
          //Done, now try to lock it to see if robust
          //mutex recovery works
          instance[2].lock();
-         if(!instance[2].previous_owner_dead())
+         if(!instance[2].previous_owner_dead()){
+            std::cout << "PARENT: instance[2].previous_owner_dead() FAILED" << std::endl;
             return 1;
+         }
          //Unlock a recovered mutex without putting it into
          //into consistent state marks mutex as unusable.
          instance[2].unlock();
@@ -132,6 +144,7 @@ int robust_mutex_test(int argc, char *argv[])
             exception_thrown = true;
          } BOOST_INTERPROCESS_CATCH_END
          if(!exception_thrown){
+            std::cout << "PARENT: instance[2].lock() did not throw an Exception!" << std::endl;
             return 1;
          }
       }
@@ -143,26 +156,30 @@ int robust_mutex_test(int argc, char *argv[])
       RobustMutex *instance = segment.find<RobustMutex>("robust mutex").first;
       assert(instance);
       if(std::string(argv[1]) == std::string("child")){
-         std::cout << "launched child" << std::endl;
+         std::cout << "CHILD: starting" << std::endl;
          //Find flag
          bool *go_ahead = segment.find<bool>("go ahead").first;
          assert(go_ahead);
          //Lock, flag and die
          bool try_lock_res = instance[0].try_lock() && instance[1].try_lock();
          assert(try_lock_res);
-         if(!try_lock_res)
+         if(!try_lock_res){
+            std::cout << "CHILD: 'instance[0].try_lock() && instance[1].try_lock()' FAILED!" << std::endl;
             return 1;
+         }
 
          bool *go_ahead2 = segment.construct<bool>("go ahead2")(false);
          assert(go_ahead2);
          //Launch grandchild
          std::string s(argv[0]); s += " grandchild ";
          s += argv[2];
-         std::cout << "... launching grandchild" << std::endl;
-         if(0 != std::system(s.c_str())){
-            std::cout << "launched terminated with error" << std::endl;
+         std::cout << "CHILD: launching grandchild: " << s << std::endl;
+         int r = std::system(s.c_str());
+         if(0 != r){
+            std::cout << "CHILD: --> std::system" << s.c_str() << " FAILED with " << r << std::endl;
             return 1;
          }
+         std::cout << "CHILD: Launched grandchild: " << s << std::endl;
 
          //Wait until child locks the 2nd mutex and dies
          spin_wait swait;
@@ -170,26 +187,37 @@ int robust_mutex_test(int argc, char *argv[])
             swait.yield();
          }
 
+         std::cout << "CHILD: go ahead2 received" << std::endl;
+
          //Done, now try to lock number 3 to see if robust
          //mutex recovery works
          instance[2].lock();
+
+         std::cout << "CHILD: instance[2].lock() OK" << std::endl;
+
          if(!instance[2].previous_owner_dead()){
+            std::cout << "CHILD: instance[2].previous_owner_dead() FAILED!" << std::endl;
             return 1;
          }
+         std::cout << "CHILD: instance[2].previous_owner_dead() OK" << std::endl;
          *go_ahead = true;
+         std::cout << "CHILD: Exiting" << std::endl;
       }
       else{
-         std::cout << "launched grandchild" << std::endl;
+         std::cout << "GRANDCHILD: Starting" << std::endl;
          //grandchild locks the lock and dies
          bool *go_ahead2 = segment.find<bool>("go ahead2").first;
          assert(go_ahead2);
          //Lock, flag and die
          bool try_lock_res = instance[2].try_lock();
          assert(try_lock_res);
+         std::cout << "GRANDCHILD: instance[2].try_lock() OK" << std::endl;
          if(!try_lock_res){
+            std::cout << "GRANDCHILD: instance[2].try_lock() FAILED!" << std::endl;
             return 1;
          }
          *go_ahead2 = true;
+         std::cout << "GRANDCHILD: Exiting" << std::endl;
       }
    }
    }BOOST_INTERPROCESS_CATCH(...){

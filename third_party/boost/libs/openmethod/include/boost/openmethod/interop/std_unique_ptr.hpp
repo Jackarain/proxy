@@ -43,10 +43,12 @@ struct virtual_traits<std::unique_ptr<Class>, Registry> {
         if constexpr (detail::requires_dynamic_cast<Class&, Derived&>) {
             auto p = &Registry::rtti::template dynamic_cast_ref<
                 typename Derived::element_type&>(*ptr);
+            // coverity[alloc_fn]
             ptr.release();
             return Derived(p);
         } else {
             auto p = &static_cast<typename Derived::element_type&>(*ptr);
+            // coverity[alloc_fn]
             ptr.release();
             return Derived(p);
         }

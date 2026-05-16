@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2026 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -148,12 +148,18 @@ namespace {
         values2.push_back(raii_convertible(v));
       }
 
-      thread_runner(values2, [&x](boost::span<raii_convertible> s) {
-        BOOST_TEST_EQ(x.insert(s.begin(), s.end()), s.size());
+      auto sz = x.size();
+      std::atomic<std::uint64_t> num_inserts{0};
+      std::atomic<std::uint64_t> num_attempted_inserts{0};
+      thread_runner(values2, [&x, &num_inserts, &num_attempted_inserts](boost::span<raii_convertible> s) {
+        num_inserts += x.insert(s.begin(), s.begin() + s.size() / 2);
+        num_inserts += x.insert(s.begin(), s.end());
+        num_attempted_inserts += s.size() + s.size() / 2;
       });
+      BOOST_TEST_EQ(x.size(), sz + num_inserts);
 
       BOOST_TEST_EQ(
-        raii::default_constructor, value_type_cardinality * values2.size());
+        raii::default_constructor, value_type_cardinality * num_attempted_inserts);
 #if BOOST_WORKAROUND(BOOST_GCC_VERSION, >= 50300) && \
     BOOST_WORKAROUND(BOOST_GCC_VERSION, <  50500)
       // some versions of old gcc have trouble eliding copies here
@@ -1010,9 +1016,11 @@ namespace {
       {
         X x;
 
-        thread_runner(dummy, [&x, &init_list](boost::span<raii>) {
-          BOOST_TEST_EQ(x.insert(init_list), init_list.size());
+        std::atomic<std::uint64_t> num_inserts{0};
+        thread_runner(dummy, [&x, &init_list, &num_inserts](boost::span<raii>) {
+          num_inserts += x.insert(init_list);
         });
+        BOOST_TEST_EQ(num_inserts, x.size());
 
         BOOST_TEST_EQ(x.size(), reference_cont.size());
 

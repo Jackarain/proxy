@@ -29,4 +29,3 @@ void test_implicit_conversion_to_bool()
   boost::optional<T> opt;
   opt.value_or(U());
 }
-

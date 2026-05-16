@@ -9,6 +9,8 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 
 // back-end
+// Backmp11 does not support custom Defer actions.
+#define BOOST_MSM_TEST_SKIP_BACKMP11
 #include "BackCommon.hpp"
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>

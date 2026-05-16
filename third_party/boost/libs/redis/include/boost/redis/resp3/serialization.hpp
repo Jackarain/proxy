@@ -16,9 +16,6 @@
 #include <string>
 #include <tuple>
 
-// NOTE: Consider detecting tuples in the type in the parameter pack
-// to calculate the header size correctly.
-
 namespace boost::redis::resp3 {
 
 /** @brief Adds a bulk to the request.
@@ -34,6 +31,10 @@ namespace boost::redis::resp3 {
  *     boost_redis_to_bulk(payload, str);
  *  }
  *  @endcode
+ *
+ *  The function must add exactly one bulk string RESP3 node.
+ *  If you're using `boost_redis_to_bulk` with a string argument,
+ *  you're safe.
  *
  *  @param payload Storage on which data will be copied into.
  *  @param data Data that will be serialized and stored in `payload`.
@@ -98,6 +99,11 @@ struct bulk_counter {
 template <class T, class U>
 struct bulk_counter<std::pair<T, U>> {
    static constexpr auto size = 2U;
+};
+
+template <class... T>
+struct bulk_counter<std::tuple<T...>> {
+   static constexpr auto size = sizeof...(T);
 };
 
 void add_blob(std::string& payload, std::string_view blob);

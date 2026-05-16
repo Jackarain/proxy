@@ -13,7 +13,9 @@
 
 #include <boost/mqtt5/detail/any_authenticator.hpp>
 
-#include <chrono>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/ip/tcp.hpp>
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -21,9 +23,6 @@
 namespace boost::mqtt5::detail {
 
 using byte_citer = std::string::const_iterator;
-
-using time_stamp = std::chrono::time_point<std::chrono::steady_clock>;
-using duration = time_stamp::duration;
 
 struct credentials {
     std::string client_id;
@@ -111,6 +110,16 @@ constexpr unsigned prioritized = 0b010;
 constexpr unsigned terminal = 0b100;
 
 };
+
+#ifdef BOOST_MQTT5_UNIT_TESTS
+using timer_type = asio::basic_waitable_timer<BOOST_MQTT5_DETAIL_CLOCK_TYPE>;
+using resolver_type = BOOST_MQTT5_DETAIL_RESOLVER_TYPE;
+#else
+using timer_type = asio::steady_timer;
+using resolver_type = asio::ip::tcp::resolver;
+#endif
+
+using duration = timer_type::duration;
 
 } // end namespace boost::mqtt5::detail
 

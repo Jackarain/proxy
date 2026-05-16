@@ -1,0 +1,152 @@
+
+/* Paragraph Styling */
+.boostlook p {
+  padding-top: initial !important;
+  padding-bottom: initial !important;
+  color: var(--text-main-text-body-primary, #2a2c30);
+  font-size: var(--typography-font-size-sm, 1rem);
+  line-height: var(--typography-line-height-lg, 1.5rem); /* 150% */
+}
+
+/* Components margins */
+.boostlook .paragraph + .paragraph {
+  margin-top: var(--padding-padding-md, 1rem);
+}
+
+.boostlook:not(:has(.doc)) .section > p + p,
+.boostlook:not(:has(.doc)) .chapter > p + p,
+.boostlook div.blockquote blockquote p + p,
+.boostlook#libraryReadMe > p:not(:first-child) + p,
+  /* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content > p + p,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content > p + p,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #content > p + p {
+  margin-top: var(--padding-padding-3xs, 0.25rem);
+}
+.boostlook #content .admonitionblock + .tabs,
+.boostlook .paragraph + .tabs {
+  margin-top: var(--spacing-size-2md, 1.3rem);
+}
+
+.boostlook #content .paragraph + .admonitionblock,
+.boostlook #content .tabs + .paragraph,
+.boostlook #content .colist + .paragraph,
+.boostlook #content .admonitionblock + .admonitionblock,
+.boostlook #content .olist + .admonitionblock,
+.boostlook #content .olist + .paragraph,
+.boostlook:not(:has(.doc)) div.orderedlist + p,
+.boostlook:not(:has(.doc)) p + div.orderedlist,
+.boostlook:not(:has(.doc)) .itemizedlist + p,
+.boostlook:not(:has(.doc)) div.itemizedlist:has(+ a[id^="bind"]) + a + *,
+.boostlook:not(:has(.doc)) div.table:has(+ .table-break) + .table-break + *,
+.boostlook #content .paragraph + .olist,
+.boostlook #content .ulist + .admonitionblock,
+.boostlook #content .ulist + .paragraph,
+.boostlook #content .colist + .admonitionblock,
+.boostlook #content .admonitionblock + .paragraph,
+.boostlook #content .paragraph + table.tableblock,
+.boostlook.boostlook:not(:has(.doc)) p + table.table,
+.boostlook.boostlook:not(:has(.doc)) p + .informaltable,
+.boostlook #content table.tableblock + .paragraph,
+.boostlook #content table.tableblock + .admonitionblock,
+.boostlook:not(:has(.doc)) .informaltable + p,
+.boostlook #content .imageblock + .paragraph,
+.boostlook:not(:has(.doc)) .inlinemediaobject + p,
+.boostlook:not(:has(.doc)) p:has(> .inlinemediaobject:only-child) + p,
+.boostlook#libraryReadMe > p + table,
+.boostlook#libraryReadMe > table + p,
+.boostlook#libraryReadMe > ul + p,
+.boostlook#libraryReadMe .literalblock + .paragraph,
+  /* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content > ul:not([class]) + p,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content > ul:not([class]) + p,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #content > ul:not([class]) + p {
+  margin-top: var(--padding-padding-xs, 0.75rem);
+}
+
+.boostlook #content .dlist + .paragraph,
+.boostlook #content .dlist + .listingblock,
+.boostlook:not(:has(.doc)) div.blockquote + p,
+.boostlook:not(:has(.doc)) .variablelist + p {
+  margin-top: var(--padding-padding-2xs, 0.5rem);
+}
+
+.boostlook h2 + .tabs,
+.boostlook .doc h2 + .tabs,
+.boostlook h3 + .tabs,
+.boostlook .doc h3 + .tabs,
+.boostlook h4 + .tabs,
+.boostlook .doc h4 + .tabs,
+.boostlook h5 + .tabs,
+.boostlook .doc h5 + .tabs,
+.boostlook h5 + .tabs,
+.boostlook .doc h6 + .tabs {
+  margin-top: var(--padding-padding-sm, 0.75rem);
+}
+
+.boostlook #content .sectionbody .olist:first-child,
+.boostlook:not(:has(.doc)) .section div.orderedlist:first-child {
+  margin-top: var(--padding-padding-3xs, 0.25rem);
+}
+
+.boostlook .olist .imageblock .content,
+.boostlook .ulist .imageblock .content {
+  margin-bottom: var(--padding-padding-xs, 0.75rem);
+}
+
+/* Special paragraph cases */
+.boostlook table p,
+.boostlook ul p {
+  margin: 0;
+}
+
+/* Link Styling */
+.boostlook a,
+.boostlook .doc a {
+  color: var(--text-main-text-link-blue, #026a9f);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+/* Link Hover States */
+.boostlook a:hover,
+.boostlook .doc a:hover {
+  color: var(--text-states-text-warning, #FF9442);
+  cursor: pointer;
+}
+
+/* Emphasis within code */
+.boostlook code em,
+.boostlook code i,
+.boostlook pre em,
+.boostlook pre i {
+  font-family: "Monaspace Xenon", monospace;
+  font-size: inherit;
+  font-style: italic;
+}
+
+.boostlook em {
+  font-family: inherit;
+  font-size: inherit;
+  font-style: italic;
+}
+
+/* Text Emphasis */
+.boostlook b,
+.boostlook strong {
+  font-variation-settings: "wght" 600, "wdth" 80;
+  text-shadow: none;
+}
+
+/* Comments within code (inline and blocks) */
+.boostlook code span.c,
+.boostlook code span.ch,
+.boostlook code span.cm,
+.boostlook code span.cp,
+.boostlook code span.cpf,
+.boostlook code span.c1,
+.boostlook code span.cs,
+.boostlook code span.comment {
+  font-family: "Monaspace Xenon", monospace;
+  font-style: italic;
+}

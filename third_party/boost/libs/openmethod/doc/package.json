@@ -10,6 +10,7 @@
     "@asciidoctor/tabs": "^1.0.0-beta.6",
     "@cppalliance/antora-cpp-reference-extension": "^0.1.0",
     "@cppalliance/antora-cpp-tagfiles-extension": "^0.1.0",
+    "@cppalliance/antora-downloads-extension": "^0.0.2",
     "@cppalliance/asciidoctor-boost-links": "^0.0.2"
   }
 }

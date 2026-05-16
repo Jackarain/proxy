@@ -14,7 +14,6 @@ set(deps
 
 config
 core
-static_assert
 type_traits
 
 # Secondary dependencies

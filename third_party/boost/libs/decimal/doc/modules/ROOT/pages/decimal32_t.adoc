@@ -1,0 +1,246 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#decimal32_t]
+= `decimal32_t`
+:idprefix: decimal32_t_
+
+== Description
+
+`decimal32_t` is the 32-bit version of the decimal interchange format, and has the following properties as defined in IEEE 754-2019 table 3.6
+
+|===
+| Attribute | values
+| Storage Width | 32 bits
+| Precision | 7 decimal digits
+| Max exponent | 96
+| Max Value | 9.999999e+96
+| Smallest Normalized Value | 1.000000e-95
+| Smallest Subnormal Value | 1e-101
+|===
+
+IMPORTANT: Prior to v5.0.0 this type was known as `decimal32`.
+This name has been removed in v6.0.0.
+
+The encoding of decimal32_t is in the `xref:conversions.adoc[BID format]`.
+
+[source, c++]
+----
+#include <boost/decimal/decimal32_t.hpp>
+
+namespace boost {
+namespace decimal {
+
+class decimal32_t {
+
+public:
+    using significand_type = std::uint32_t;
+    using exponent_type = std::uint32_t;
+    using biased_exponent_type = std::int32_t;
+
+// Paragraph numbers are from ISO/IEC DTR 24733
+
+// 3.2.2.1 construct/copy/destroy
+constexpr decimal32_t() noexcept = default;
+
+// 3.2.2.2 Conversion from floating-point type
+template <typename Float>
+explicit BOOST_DECIMAL_CXX20_CONSTEXPR decimal32_t(Float val) noexcept;
+
+// 3.2.2.3 Conversion from integral type
+template <typename Integer>
+explicit constexpr decimal32_t(Integer val) noexcept;
+
+// Extension: Construction from (c)string
+explicit constexpr decimal32_t(const char* str);
+
+#ifndef BOOST_DECIMAL_HAS_STD_STRING_VIEW
+explicit inline decimal32_t(const std::string& str);
+#else
+explicit constexpr decimal32_t(std::string_view str);
+#endif
+
+template <typename UnsignedIntegral, typename Integral>
+constexpr decimal32_t(UnsignedIntegral coeff, Integral exp, bool is_negative = false) noexcept;
+
+template <typename SignedIntegral, typename Integral>
+constexpr decimal32_t(SignedIntegral coeff, Integral exp) noexcept;
+
+template <typename Integral>
+constexpr decimal32_t& operator=(const Integeral& RHS) noexcept;
+
+// 3.2.2.4 Conversion to integral type
+// If the value exceeds the range of the integral,
+// or is non-finite std::numeric_limits::max() is returned
+explicit constexpr operator int() const noexcept;
+explicit constexpr operator unsigned() const noexcept;
+explicit constexpr operator long() const noexcept;
+explicit constexpr operator unsigned long() const noexcept;
+explicit constexpr operator long long() const noexcept;
+explicit constexpr operator unsigned long long() const noexcept;
+
+// 3.2.2.5 increment and decrement operators:
+constexpr decimal32_t& operator++();
+constexpr decimal32_t  operator++(int);
+constexpr decimal32_t& operator--();
+constexpr decimal32_t  operator--(int);
+
+// 3.2.2.6 compound assignment:
+constexpr decimal32_t& operator+=(RHS rhs);
+constexpr decimal32_t& operator-=(RHS rhs);
+constexpr decimal32_t& operator*=(RHS rhs);
+constexpr decimal32_t& operator/=(RHS rhs);
+
+// 3.2.6 Conversion to floating-point type
+explicit BOOST_DECIMAL_CXX20_CONSTEXPR operator float() const noexcept;
+explicit BOOST_DECIMAL_CXX20_CONSTEXPR operator double() const noexcept;
+explicit BOOST_DECIMAL_CXX20_CONSTEXPR operator long double() const noexcept;
+
+// The following are available assuming a C++23 compiler that provides the header <stdfloat>
+explicit constexpr operator std::float16_t() const noexcept;
+explicit constexpr operator std::float32_t() const noexcept;
+explicit constexpr operator std::float64_t() const noexcept;
+explicit constexpr operator std::bfloat16_t() const noexcept;
+
+explicit constexpr operator decimal_fast32_t() const noexcept;
+explicit constexpr operator decimal64_t() const noexcept;
+explicit constexpr operator decimal_fast64_t() const noexcept;
+explicit constexpr operator decimal128_t() const noexcept;
+explicit constexpr operator decimal_fast128_t() const noexcept;
+
+}; // class decimal32_t
+
+} //namespace decimal
+} //namespace boost
+
+----
+
+== Operator Behavior
+
+=== Construction to and from binary floating-point type
+
+[source, c++]
+----
+// 3.2.2.2 Conversion from floating-point type
+template <typename Float>
+explicit BOOST_DECIMAL_CXX20_CONSTEXPR decimal32_t(Float val) noexcept;
+
+// 3.2.6 Conversion to floating-point type
+explicit BOOST_DECIMAL_CXX20_CONSTEXPR operator float() const noexcept;
+explicit BOOST_DECIMAL_CXX20_CONSTEXPR operator double() const noexcept;
+explicit BOOST_DECIMAL_CXX20_CONSTEXPR operator long double() const noexcept;
+
+// If C++23 and <stdfloat> are available
+explicit constexpr operator std::float16_t() const noexcept;
+explicit constexpr operator std::float32_t() const noexcept;
+explicit constexpr operator std::float64_t() const noexcept;
+explicit constexpr operator std::bfloat16_t() const noexcept;
+----
+
+See: xref:binary_floating_conversions.adoc[]
+
+=== Construction From Integral Type
+
+[source,c++]
+----
+// 3.2.2.3 Conversion from integral type
+template <typename Integer>
+explicit constexpr decimal32_t(Integer val) noexcept;
+----
+
+Constructs a decimal value subject to the current rounding mode (if necessary).
+
+=== Construction From String
+
+[source,c++]
+----
+// Extension: Construction from (c)string
+explicit constexpr decimal32_t(const char* str);
+
+#ifndef BOOST_DECIMAL_HAS_STD_STRING_VIEW
+explicit inline decimal32_t(const std::string& str);
+#else
+explicit constexpr decimal32_t(std::string_view str);
+#endif
+----
+
+Constructs a decimal value that matches `str` subject to:
+
+. If `str` is a `nullptr` or of length 0 either:
+.. `throw std::runtime_error`
+.. Constructs a `QNAN` in a no exception environment
+. If `str` is an invalid string either:
+.. `throw std::runtime_error`
+.. Constructs a `QNAN` in a no exception environment
+. On overflow constructs `INF`
+. On underflow constructs `0`
+. Rounds value represented by `str` according to current rounding mode
+
+=== Conversion to Integral Type
+
+[source,c++]
+----
+// 3.2.2.4 Conversion to integral type
+
+explicit constexpr operator int() const noexcept;
+explicit constexpr operator unsigned() const noexcept;
+explicit constexpr operator long() const noexcept;
+explicit constexpr operator unsigned long() const noexcept;
+explicit constexpr operator long long() const noexcept;
+explicit constexpr operator unsigned long long() const noexcept;
+----
+
+Constructs an integer representation of the decimal value subject to:
+
+. If the decimal value is `INF` returns `std::numeric_limits<IntegerType>::max()`
+. If the decimal value is `NAN` returns `std::numeric_limits<IntegerType>::max()`
+. If the decimal value exceeds the range of the `IntegerType` returns `std::numeric_limits<IntegerType>::max()`
+
+=== Increment and Decrement Operators
+
+[source,c++]
+----
+// 3.2.2.5 increment and decrement operators:
+constexpr decimal32_t& operator++();
+constexpr decimal32_t  operator++(int);
+constexpr decimal32_t& operator--();
+constexpr decimal32_t  operator--(int);
+----
+
+Increments/Decrements the decimal value subject to:
+
+. If the decimal value is `NAN` returns `QNAN`
+. If the decimal value is `INF` returns `INF`
+
+=== Compound Operators
+
+[source, c++]
+----
+// 3.2.2.6 compound assignment:
+constexpr decimal32_t& operator+=(RHS rhs);
+constexpr decimal32_t& operator-=(RHS rhs);
+constexpr decimal32_t& operator*=(RHS rhs);
+constexpr decimal32_t& operator/=(RHS rhs);
+----
+
+Matches the behavior of xref:generic_decimal.adoc#operator_behavior[addition, subtraction, multiplication, and division].
+
+=== Conversion to Other Decimal Types
+
+[source,c++]
+----
+explicit constexpr operator decimal_fast32_t() const noexcept;
+explicit constexpr operator decimal64_t() const noexcept;
+explicit constexpr operator decimal_fast64_t() const noexcept;
+explicit constexpr operator decimal128_t() const noexcept;
+explicit constexpr operator decimal_fast128_t() const noexcept;
+----
+
+Losslessly converts the current decimal value to all other decimal types.
+
+== Non-Member Operator Behavior
+
+See xref:generic_decimal.adoc#operator_behavior[here] for behavior of non-member operators.

@@ -78,7 +78,6 @@ void test_reconnection()
    connection conn{ioc};
    auto cfg = make_test_config();
    cfg.unix_socket = unix_socket_path;
-   cfg.reconnect_wait_interval = 10ms;  // make the test run faster
 
    request ping_request;
    ping_request.get_config().cancel_if_not_connected = false;
@@ -131,7 +130,7 @@ void test_switch_between_transports()
    // Create configurations for TLS and UNIX connections
    auto tcp_tls_cfg = make_test_config();
    tcp_tls_cfg.use_ssl = true;
-   tcp_tls_cfg.addr.port = "6380";
+   tcp_tls_cfg.addr.port = "16380";
    auto unix_cfg = make_test_config();
    unix_cfg.unix_socket = unix_socket_path;
 
@@ -194,7 +193,7 @@ void test_error_unix_tls()
    connection conn{ioc};
    auto cfg = make_test_config();
    cfg.use_ssl = true;
-   cfg.addr.port = "6380";
+   cfg.addr.port = "16380";
    cfg.unix_socket = unix_socket_path;
    bool finished = false;
 

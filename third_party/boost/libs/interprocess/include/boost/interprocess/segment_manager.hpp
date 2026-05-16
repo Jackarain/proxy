@@ -105,7 +105,7 @@ class segment_manager_base
    segment_manager_base(size_type sz, size_type reserved_bytes)
       :  MemoryAlgorithm(sz, reserved_bytes)
    {
-      BOOST_ASSERT((sizeof(segment_manager_base<MemoryAlgorithm>) == sizeof(MemoryAlgorithm)));
+      BOOST_INTERPROCESS_STATIC_ASSERT((sizeof(segment_manager_base<MemoryAlgorithm>) == sizeof(MemoryAlgorithm)));
    }
 
    //!Returns the size of the memory
@@ -127,63 +127,6 @@ class segment_manager_base
    //!single-segment management. Never throws
    void * allocate (size_type nbytes, const std::nothrow_t &)
    {  return MemoryAlgorithm::allocate(nbytes);   }
-
-   //!Returns a reference to the internal memory algorithm.
-   //!This function is useful for custom memory algorithms that
-   //!need additional configuration options after construction. Never throws.
-   //!This function should be only used by advanced users.
-   MemoryAlgorithm &get_memory_algorithm()
-   {  return static_cast<MemoryAlgorithm&>(*this);   }
-
-   //!Returns a const reference to the internal memory algorithm.
-   //!This function is useful for custom memory algorithms that
-   //!need additional configuration options after construction. Never throws.
-   //!This function should be only used by advanced users.
-   const MemoryAlgorithm &get_memory_algorithm() const
-   {  return static_cast<const MemoryAlgorithm&>(*this);   }
-
-   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
-
-   //Experimental. Dont' use.
-   //!Allocates n_elements of elem_bytes bytes.
-   //!Throws bad_alloc on failure. chain.size() is not increased on failure.
-   void allocate_many(size_type elem_bytes, size_type n_elements, multiallocation_chain &chain)
-   {
-      size_type prev_size = chain.size();
-      MemoryAlgorithm::allocate_many(elem_bytes, n_elements, chain);
-      if(!elem_bytes || chain.size() == prev_size){
-         throw bad_alloc();
-      }
-   }
-
-   //!Allocates n_elements, each one of element_lengths[i]*sizeof_element bytes.
-   //!Throws bad_alloc on failure. chain.size() is not increased on failure.
-   void allocate_many(const size_type *element_lengths, size_type n_elements, size_type sizeof_element, multiallocation_chain &chain)
-   {
-      size_type prev_size = chain.size();
-      MemoryAlgorithm::allocate_many(element_lengths, n_elements, sizeof_element, chain);
-      if(!sizeof_element || chain.size() == prev_size){
-         throw bad_alloc();
-      }
-   }
-
-   //!Allocates n_elements of elem_bytes bytes.
-   //!Non-throwing version. chain.size() is not increased on failure.
-   void allocate_many(const std::nothrow_t &, size_type elem_bytes, size_type n_elements, multiallocation_chain &chain)
-   {  MemoryAlgorithm::allocate_many(elem_bytes, n_elements, chain); }
-
-   //!Allocates n_elements, each one of
-   //!element_lengths[i]*sizeof_element bytes.
-   //!Non-throwing version. chain.size() is not increased on failure.
-   void allocate_many(const std::nothrow_t &, const size_type *elem_sizes, size_type n_elements, size_type sizeof_element, multiallocation_chain &chain)
-   {  MemoryAlgorithm::allocate_many(elem_sizes, n_elements, sizeof_element, chain); }
-
-   //!Deallocates all elements contained in chain.
-   //!Never throws.
-   void deallocate_many(multiallocation_chain &chain)
-   {  MemoryAlgorithm::deallocate_many(chain); }
-
-   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    //!Allocates nbytes bytes. Throws boost::interprocess::bad_alloc
    //!on failure
@@ -210,33 +153,7 @@ class segment_manager_base
       return ret;
    }
 
-   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
-
-   template<class T>
-   T *allocation_command  (boost::interprocess::allocation_type command, size_type limit_size,
-                           size_type &prefer_in_recvd_out_size, T *&reuse)
-   {
-      T *ret = MemoryAlgorithm::allocation_command
-         (command | boost::interprocess::nothrow_allocation, limit_size, prefer_in_recvd_out_size, reuse);
-      if(!(command & boost::interprocess::nothrow_allocation) && !ret)
-         throw bad_alloc();
-      return ret;
-   }
-
-   void *raw_allocation_command  (boost::interprocess::allocation_type command,   size_type limit_objects,
-                           size_type &prefer_in_recvd_out_size, void *&reuse, size_type sizeof_object = 1)
-   {
-      void *ret = MemoryAlgorithm::raw_allocation_command
-         ( command | boost::interprocess::nothrow_allocation, limit_objects,
-           prefer_in_recvd_out_size, reuse, sizeof_object);
-      if(!(command & boost::interprocess::nothrow_allocation) && !ret)
-         throw bad_alloc();
-      return ret;
-   }
-
-   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
-
-   //!Deallocates the bytes allocated with allocate/allocate_many()
+   //!Deallocates the bytes allocated with allocate/allocate_aligned()
    //!pointed by addr
    void   deallocate          (void *addr)
    {  MemoryAlgorithm::deallocate(addr);   }
@@ -273,6 +190,91 @@ class segment_manager_base
    //!Returns the size of the buffer previously allocated pointed by ptr
    size_type size(const void *ptr) const
    {   return MemoryAlgorithm::size(ptr); }
+
+   //!Returns a reference to the internal memory algorithm.
+   //!This function is useful for custom memory algorithms that
+   //!need additional configuration options after construction. Never throws.
+   //!This function should be only used by advanced users.
+   MemoryAlgorithm &get_memory_algorithm()
+   {  return static_cast<MemoryAlgorithm&>(*this);   }
+
+   //!Returns a const reference to the internal memory algorithm.
+   //!This function is useful for custom memory algorithms that
+   //!need additional configuration options after construction. Never throws.
+   //!This function should be only used by advanced users.
+   const MemoryAlgorithm &get_memory_algorithm() const
+   {  return static_cast<const MemoryAlgorithm&>(*this);   }
+
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
+
+   //Experimental. Don't use.
+   //!Allocates n_elements of elem_bytes bytes.
+   //!Throws bad_alloc on failure. chain.size() is not increased on failure.
+   void allocate_many(size_type elem_bytes, size_type n_elements, size_type alignment, multiallocation_chain &chain)
+   {
+      size_type prev_size = chain.size();
+      MemoryAlgorithm::allocate_many(elem_bytes, n_elements, alignment, chain);
+      if(!elem_bytes || chain.size() == prev_size){
+         throw bad_alloc();
+      }
+   }
+
+   //Experimental. Don't use.
+   //!Allocates n_elements, each one of element_lengths[i]*sizeof_element bytes.
+   //!Throws bad_alloc on failure. chain.size() is not increased on failure.
+   void allocate_many(const size_type *element_lengths, size_type n_elements, size_type sizeof_element, size_type alignment, multiallocation_chain &chain)
+   {
+      size_type prev_size = chain.size();
+      MemoryAlgorithm::allocate_many(element_lengths, n_elements, sizeof_element, alignment, chain);
+      if(!sizeof_element || chain.size() == prev_size){
+         throw bad_alloc();
+      }
+   }
+
+   //Experimental. Don't use.
+   //!Allocates n_elements of elem_bytes bytes.
+   //!Non-throwing version. chain.size() is not increased on failure.
+   void allocate_many(const std::nothrow_t &, size_type elem_bytes, size_type n_elements, size_type alignment, multiallocation_chain &chain)
+   {  MemoryAlgorithm::allocate_many(elem_bytes, n_elements, alignment, chain); }
+
+   //Experimental. Don't use.
+   //!Allocates n_elements, each one of
+   //!element_lengths[i]*sizeof_element bytes.
+   //!Non-throwing version. chain.size() is not increased on failure.
+   void allocate_many(const std::nothrow_t &, const size_type *elem_sizes, size_type n_elements, size_type sizeof_element, size_type alignment, multiallocation_chain &chain)
+   {  MemoryAlgorithm::allocate_many(elem_sizes, n_elements, sizeof_element, alignment, chain); }
+
+   //Experimental. Don't use.
+   //!Deallocates all elements contained in chain.
+   //!Never throws.
+   void deallocate_many(multiallocation_chain &chain)
+   {  MemoryAlgorithm::deallocate_many(chain); }
+
+   //Experimental. Don't use.
+   template<class T>
+   T *allocation_command  (boost::interprocess::allocation_type command, size_type limit_size,
+                           size_type &prefer_in_recvd_out_size, T *&reuse)
+   {
+      void* raw_reuse = reuse;
+      const size_type al = ::boost::container::dtl::alignment_of<T>::value;
+      void* const ret = this->allocation_command(command, limit_size, prefer_in_recvd_out_size, raw_reuse, sizeof(T), al);
+      reuse = static_cast<T*>(raw_reuse);
+      BOOST_ASSERT(0 == ((std::size_t)ret % al));
+      return static_cast<T*>(ret);
+   }
+
+   //Experimental. Don't use.
+   void *allocation_command ( boost::interprocess::allocation_type command, size_type limit_size
+                            , size_type &prefer_in_recvd_out_size, void *&reuse, size_type sizeof_object, size_type alignof_object )
+   {
+      void *ret = MemoryAlgorithm::allocation_command
+         (command | boost::interprocess::nothrow_allocation, limit_size, prefer_in_recvd_out_size, reuse, sizeof_object, alignof_object);
+      if(!(command & boost::interprocess::nothrow_allocation) && !ret)
+         throw bad_alloc();
+      return ret;
+   }
+
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 };
 
 //!This object is placed in the beginning of memory segment and
@@ -734,7 +736,7 @@ class segment_manager
       ptr = hdr->value();
 
       //Now call constructors
-      pr.construct_n(ptr, num);
+      pr.construct_n(ptr, this, num);
 
       //All constructors successful, disable rollback
       mem.release();
@@ -1109,7 +1111,7 @@ class segment_manager
       value_eraser<index_t> v_eraser(index, it);
 
       //Construct array, this can throw
-      pr.construct_n(ptr, num);
+      pr.construct_n(ptr, this, num);
 
       //Release rollbacks since construction was successful
       v_eraser.release();

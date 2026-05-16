@@ -47,9 +47,7 @@ net::awaitable<void> test_reconnect_impl()
    regular_req.get_config().cancel_if_unresponded = false;
 
    auto conn = std::make_shared<connection>(ex);
-   auto cfg = make_test_config();
-   cfg.reconnect_wait_interval = 100ms;  // make the test run faster
-   run(conn, std::move(cfg));
+   run(conn, make_test_config());
 
    for (int i = 0; i < 3; ++i) {
       BOOST_TEST_CONTEXT("i=" << i)

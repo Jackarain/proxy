@@ -142,35 +142,37 @@ class simple_seq_fit_impl
    //Functions for single segment management
 
    //!Allocates bytes, returns 0 if there is not more memory
+   BOOST_INTERPROCESS_NODISCARD
    void* allocate             (size_type nbytes);
 
    #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
-   template<class T>
-   T *allocation_command  (boost::interprocess::allocation_type command,   size_type limit_size,
-                           size_type &prefer_in_recvd_out_size, T *&reuse);
-
-   void * raw_allocation_command  (boost::interprocess::allocation_type command,   size_type limit_size,
-                               size_type &prefer_in_recvd_out_size, void *&reuse_ptr, size_type sizeof_object = 1);
+   void * allocation_command(boost::interprocess::allocation_type command
+                            ,size_type min_size
+                            ,size_type &prefer_in_recvd_out_size
+                            ,void *&reuse_ptr
+                            ,size_type sizeof_object
+                            ,size_type alignof_object
+                            );
 
    //!Multiple element allocation, same size
    //!Experimental. Dont' use
-   void allocate_many(size_type elem_bytes, size_type num_elements, multiallocation_chain &chain)
+   void allocate_many(size_type elem_bytes, size_type num_elements, size_type alignment, multiallocation_chain &chain)
    {
       //-----------------------
       boost::interprocess::scoped_lock<interprocess_mutex> guard(m_header);
       //-----------------------
-      algo_impl_t::allocate_many(this, elem_bytes, num_elements, chain);
+      algo_impl_t::allocate_many(this, elem_bytes, num_elements, alignment, chain);
    }
 
    //!Multiple element allocation, different size
    //!Experimental. Dont' use
-   void allocate_many(const size_type *elem_sizes, size_type n_elements, size_type sizeof_element, multiallocation_chain &chain)
+   void allocate_many(const size_type *elem_sizes, size_type n_elements, size_type sizeof_element, size_type alignment, multiallocation_chain &chain)
    {
       //-----------------------
       boost::interprocess::scoped_lock<interprocess_mutex> guard(m_header);
       //-----------------------
-      algo_impl_t::allocate_many(this, elem_sizes, n_elements, sizeof_element, chain);
+      algo_impl_t::allocate_many(this, elem_sizes, n_elements, sizeof_element, alignment, chain);
    }
 
    //!Multiple element deallocation
@@ -183,9 +185,11 @@ class simple_seq_fit_impl
    void   deallocate          (void *addr);
 
    //!Returns the size of the memory segment
+   BOOST_INTERPROCESS_NODISCARD
    size_type get_size()  const;
 
    //!Returns the number of free bytes of the memory segment
+   BOOST_INTERPROCESS_NODISCARD
    size_type get_free_memory()  const;
 
    //!Increases managed memory in extra_size bytes more
@@ -195,6 +199,7 @@ class simple_seq_fit_impl
    void shrink_to_fit();
 
    //!Returns true if all allocated memory has been deallocated
+   BOOST_INTERPROCESS_NODISCARD
    bool all_memory_deallocated();
 
    //!Makes an internal sanity check and returns true if success
@@ -205,10 +210,12 @@ class simple_seq_fit_impl
    void zero_free_memory();
 
    //!Returns the size of the buffer previously allocated pointed by ptr
+   BOOST_INTERPROCESS_NODISCARD
    size_type size(const void *ptr) const;
 
    //!Allocates aligned bytes, returns 0 if there is not more memory.
    //!Alignment must be power of 2
+   BOOST_INTERPROCESS_NODISCARD
    void* allocate_aligned     (size_type nbytes, size_type alignment);
 
    private:
@@ -222,13 +229,7 @@ class simple_seq_fit_impl
    //!Real allocation algorithm with min allocation option
    void * priv_allocate(boost::interprocess::allocation_type command
                         ,size_type min_size
-                        ,size_type &prefer_in_recvd_out_size, void *&reuse_ptr);
-
-   void * priv_allocation_command(boost::interprocess::allocation_type command
-                                 ,size_type min_size
-                                 ,size_type &prefer_in_recvd_out_size
-                                 ,void *&reuse_ptr
-                                 ,size_type sizeof_object);
+                        ,size_type &prefer_in_recvd_out_size, void *&reuse_ptr, size_type sizeof_object = 1, size_type alignof_object = Alignment);
 
    //!Returns the number of total units that a user buffer
    //!of "userbytes" bytes really occupies (including header)
@@ -250,15 +251,6 @@ class simple_seq_fit_impl
 
    //!Real expand function implementation
    bool priv_expand(void *ptr, size_type min_size, size_type &prefer_in_recvd_out_size);
-
-   //!Real expand to both sides implementation
-   void* priv_expand_both_sides(boost::interprocess::allocation_type command
-                               ,size_type min_size, size_type &prefer_in_recvd_out_size
-                               ,void *reuse_ptr
-                               ,bool only_preferred_backwards);
-
-   //!Real private aligned allocation function
-   //void* priv_allocate_aligned     (size_type nbytes, size_type alignment);
 
    //!Checks if block has enough memory and splits/unlinks the block
    //!returning the address to the users
@@ -585,53 +577,11 @@ inline void* simple_seq_fit_impl<MutexFamily, VoidPointer>::
 }
 
 template<class MutexFamily, class VoidPointer>
-template<class T>
-inline T* simple_seq_fit_impl<MutexFamily, VoidPointer>::
-   allocation_command  (boost::interprocess::allocation_type command,   size_type limit_size,
-                        size_type &prefer_in_recvd_out_size, T *&reuse_ptr)
-{
-   void *raw_reuse = reuse_ptr;
-   void * const ret = priv_allocation_command
-      (command, limit_size, prefer_in_recvd_out_size, raw_reuse, sizeof(T));
-   BOOST_ASSERT(0 == ((std::size_t)ret % ::boost::container::dtl::alignment_of<T>::value));
-   reuse_ptr = static_cast<T*>(raw_reuse);
-   return static_cast<T*>(ret);
-}
-
-template<class MutexFamily, class VoidPointer>
 inline void* simple_seq_fit_impl<MutexFamily, VoidPointer>::
-   raw_allocation_command  (boost::interprocess::allocation_type command, size_type limit_objects,
-                        size_type &prefer_in_recvd_out_size, void *&reuse_ptr, size_type sizeof_object)
-{
-   size_type const preferred_objects = prefer_in_recvd_out_size;
-   if(!sizeof_object){
-      return reuse_ptr = 0, static_cast<void*>(0);
-  }
-   if(command & boost::interprocess::try_shrink_in_place){
-      if(!reuse_ptr) return static_cast<void*>(0);
-      prefer_in_recvd_out_size = preferred_objects*sizeof_object;
-      bool success = algo_impl_t::try_shrink
-         ( this, reuse_ptr, limit_objects*sizeof_object, prefer_in_recvd_out_size);
-      prefer_in_recvd_out_size /= sizeof_object;
-      return success ? reuse_ptr : 0;
-   }
-   else{
-      return priv_allocation_command
-         (command, limit_objects, prefer_in_recvd_out_size, reuse_ptr, sizeof_object);
-   }
-}
-
-template<class MutexFamily, class VoidPointer>
-inline void* simple_seq_fit_impl<MutexFamily, VoidPointer>::
-   priv_allocation_command (boost::interprocess::allocation_type command,   size_type limit_size,
-                       size_type &prefer_in_recvd_out_size, void *&reuse_ptr, size_type sizeof_object)
+   allocation_command (boost::interprocess::allocation_type command,   size_type limit_size,
+                       size_type &prefer_in_recvd_out_size, void *&reuse_ptr, size_type sizeof_object, size_type /*alignof_object*/)
 {
    size_type const preferred_size = prefer_in_recvd_out_size;
-   command &= ~boost::interprocess::expand_bwd;
-   if(!command){
-      return reuse_ptr = 0, static_cast<void*>(0);
-   }
-
    size_type max_count = m_header.m_size/sizeof_object;
    if(limit_size > max_count || preferred_size > max_count){
       return reuse_ptr = 0, static_cast<void*>(0);
@@ -661,85 +611,6 @@ simple_seq_fit_impl<MutexFamily, VoidPointer>::size(const void *ptr) const
 }
 
 template<class MutexFamily, class VoidPointer>
-void* simple_seq_fit_impl<MutexFamily, VoidPointer>::
-   priv_expand_both_sides(boost::interprocess::allocation_type command
-                         ,size_type min_size
-                         ,size_type &prefer_in_recvd_out_size
-                         ,void *reuse_ptr
-                         ,bool only_preferred_backwards)
-{
-   size_type const preferred_size = prefer_in_recvd_out_size;
-   typedef std::pair<block_ctrl *, block_ctrl *> prev_block_t;
-   block_ctrl *reuse = priv_get_block(reuse_ptr);
-   prefer_in_recvd_out_size = 0;
-
-   if(this->size(reuse_ptr) > min_size){
-      prefer_in_recvd_out_size = this->size(reuse_ptr);
-      return reuse_ptr;
-   }
-
-   if(command & boost::interprocess::expand_fwd){
-      if(priv_expand(reuse_ptr, min_size, prefer_in_recvd_out_size = preferred_size))
-         return reuse_ptr;
-   }
-   else{
-      prefer_in_recvd_out_size = this->size(reuse_ptr);
-   }
-   if(command & boost::interprocess::expand_bwd){
-      size_type extra_forward = !prefer_in_recvd_out_size ? 0 : prefer_in_recvd_out_size + BlockCtrlBytes;
-      prev_block_t prev_pair = priv_prev_block_if_free(reuse);
-      block_ctrl *prev = prev_pair.second;
-      if(!prev){
-         return 0;
-      }
-
-      size_type needs_backwards =
-         ipcdetail::get_rounded_size(preferred_size - extra_forward, Alignment);
-
-      if(!only_preferred_backwards){
-            max_value(ipcdetail::get_rounded_size(min_size - extra_forward, Alignment)
-                     ,min_value(prev->get_user_bytes(), needs_backwards));
-      }
-
-      //Check if previous block has enough size
-      if((prev->get_user_bytes()) >=  needs_backwards){
-         //Now take all next space. This will succeed
-         if(!priv_expand(reuse_ptr, prefer_in_recvd_out_size, prefer_in_recvd_out_size)){
-            BOOST_ASSERT(0);
-         }
-
-         //We need a minimum size to split the previous one
-         if((prev->get_user_bytes() - needs_backwards) > 2*BlockCtrlBytes){
-             block_ctrl *new_block = move_detail::force_ptr<block_ctrl*>
-                  (reinterpret_cast<char*>(reuse) - needs_backwards - BlockCtrlBytes);
-
-            new_block->m_next = 0;
-            new_block->m_size =
-               BlockCtrlUnits + (needs_backwards + extra_forward)/Alignment;
-            prev->m_size =
-               (prev->get_total_bytes() - needs_backwards)/Alignment - BlockCtrlUnits;
-            prefer_in_recvd_out_size = needs_backwards + extra_forward;
-            m_header.m_allocated += needs_backwards + BlockCtrlBytes;
-            return priv_get_user_buffer(new_block);
-         }
-         else{
-            //Just merge the whole previous block
-            block_ctrl *prev_2_block = prev_pair.first;
-            //Update received size and allocation
-            prefer_in_recvd_out_size = extra_forward + prev->get_user_bytes();
-            m_header.m_allocated += prev->get_total_bytes();
-            //Now unlink it from previous block
-            prev_2_block->m_next = prev->m_next;
-            prev->m_size = reuse->m_size + prev->m_size;
-            prev->m_next = 0;
-            priv_get_user_buffer(prev);
-         }
-      }
-   }
-   return 0;
-}
-
-template<class MutexFamily, class VoidPointer>
 inline void simple_seq_fit_impl<MutexFamily, VoidPointer>::
    deallocate_many(typename simple_seq_fit_impl<MutexFamily, VoidPointer>::multiallocation_chain &chain)
 {
@@ -764,8 +635,17 @@ simple_seq_fit_impl<MutexFamily, VoidPointer>::
 template<class MutexFamily, class VoidPointer>
 void * simple_seq_fit_impl<MutexFamily, VoidPointer>::
    priv_allocate(boost::interprocess::allocation_type command
-                ,size_type limit_size, size_type &prefer_in_recvd_out_size, void *&reuse_ptr)
+                ,size_type limit_size, size_type &prefer_in_recvd_out_size, void *&reuse_ptr, size_type /*sizeof_object*/, size_type alignof_object)
 {
+   //Backwards expansion not supported
+   command &= ~boost::interprocess::expand_bwd;
+   if(!command){
+      return reuse_ptr = 0, static_cast<void*>(0);
+   }
+
+   if(alignof_object < Alignment)
+      alignof_object = Alignment;
+
    size_type const preferred_size = prefer_in_recvd_out_size;
    if(command & boost::interprocess::shrink_in_place){
       if(!reuse_ptr)  return static_cast<void*>(0);
@@ -790,32 +670,35 @@ void * simple_seq_fit_impl<MutexFamily, VoidPointer>::
    size_type biggest_size         = 0;
 
    //Expand in place
-   if(reuse_ptr && (command & (boost::interprocess::expand_fwd | boost::interprocess::expand_bwd))){
-      void *ret = priv_expand_both_sides(command, limit_size, prefer_in_recvd_out_size = preferred_size, reuse_ptr, true);
-      if(ret){
-         algo_impl_t::assert_alignment(ret);
-         return ret;
-      }
+   if( reuse_ptr && (command & boost::interprocess::expand_fwd) &&
+       priv_expand(reuse_ptr, limit_size, prefer_in_recvd_out_size = preferred_size) ){
+      return reuse_ptr;
    }
 
    if(command & boost::interprocess::allocate_new){
-      prefer_in_recvd_out_size = 0;
-      while(block != root){
-         //Update biggest block pointers
-         if(block->m_size > biggest_size){
-            prev_biggest_block = prev;
-            biggest_size  = block->m_size;
-            biggest_block = block;
+
+      if (alignof_object > Alignment) {
+         return algo_impl_t::allocate_aligned(this, limit_size, alignof_object);
+      }
+      else {
+         prefer_in_recvd_out_size = 0;
+         while(block != root){
+            //Update biggest block pointers
+            if(block->m_size > biggest_size){
+               prev_biggest_block = prev;
+               biggest_size  = block->m_size;
+               biggest_block = block;
+            }
+            algo_impl_t::assert_alignment(block);
+            void *addr = this->priv_check_and_allocate(nunits, prev, block, prefer_in_recvd_out_size);
+            if(addr){
+               algo_impl_t::assert_alignment(addr);
+               return reuse_ptr = 0, addr;
+            }
+            //Bad luck, let's check next block
+            prev  = block;
+            block = ipcdetail::to_raw_pointer(block->m_next);
          }
-         algo_impl_t::assert_alignment(block);
-         void *addr = this->priv_check_and_allocate(nunits, prev, block, prefer_in_recvd_out_size);
-         if(addr){
-            algo_impl_t::assert_alignment(addr);
-            return reuse_ptr = 0, addr;
-         }
-         //Bad luck, let's check next block
-         prev  = block;
-         block = ipcdetail::to_raw_pointer(block->m_next);
       }
 
       //Bad luck finding preferred_size, now if we have any biggest_block
@@ -831,12 +714,6 @@ void * simple_seq_fit_impl<MutexFamily, VoidPointer>::
          algo_impl_t::assert_alignment(ret);
          return reuse_ptr = 0, ret;
       }
-   }
-   //Now try to expand both sides with min size
-   if(reuse_ptr && (command & (boost::interprocess::expand_fwd | boost::interprocess::expand_bwd))){
-      void *ret = priv_expand_both_sides (command, limit_size, prefer_in_recvd_out_size = preferred_size, reuse_ptr, false);
-      algo_impl_t::assert_alignment(ret);
-      return ret;
    }
    return reuse_ptr = 0, static_cast<void*>(0);
 }
@@ -913,6 +790,11 @@ template<class MutexFamily, class VoidPointer>
 inline bool simple_seq_fit_impl<MutexFamily, VoidPointer>::
    priv_expand (void *ptr, size_type min_size, size_type &received_size)
 {
+   if(this->size(ptr) > min_size){
+      received_size = this->size(ptr);
+      return ptr;
+   }
+
    size_type preferred_size = received_size;
    //Obtain the real size of the block
    block_ctrl *block = move_detail::force_ptr<block_ctrl*>(priv_get_block(ptr));

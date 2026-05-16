@@ -410,16 +410,18 @@ int vector_move_assignable_only(boost::container::dtl::true_type)
 
          boostvector.erase(boostvector.begin(), boostvector.begin() + 5);
          stdvector.erase(stdvector.begin(), stdvector.begin()+5);
+         if(!test::CheckEqualContainers(boostvector, stdvector)) return 1;
 
          boostvector.erase(boostvector.end() - 5, boostvector.end());
          stdvector.erase(stdvector.end() - 5, stdvector.end());
+         if(!test::CheckEqualContainers(boostvector, stdvector)) return 1;
 
          boostvector.erase(boostvector.begin()+5, boostvector.begin() + 10);
          stdvector.erase(stdvector.begin()+5, stdvector.begin()+10);
+         if(!test::CheckEqualContainers(boostvector, stdvector)) return 1;
 
          boostvector.erase(boostvector.end() - 10, boostvector.end()-5);
          stdvector.erase(stdvector.end() - 10, stdvector.end()-5);
-
          if(!test::CheckEqualContainers(boostvector, stdvector)) return 1;
       }
       {

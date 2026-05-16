@@ -293,6 +293,14 @@ are given below.
   When ON, enables the Windows API backend. Defaults to ON under Windows, OFF
   otherwise.
 
+### Math
+
+* `BOOST_MATH_BUILD_WITH_LEGACY_FUNCTIONS`
+
+  When ON, builds the C99/TR1 targets as: `boost_math_c99f` `boost_math_c99`, `boost_math_c99l` (if your platform has long double support),
+   `boost_math_tr1f`, `boost_math_tr1`, and `boost_math_tr1l` (if your platform has long double support).
+  With CMake Version >= 3.13 these 4-6 targets can be linked with the single target `boost_math_legacy_targets`. Defaults to OFF.
+
 ### Stacktrace
 
 * `BOOST_STACKTRACE_ENABLE_NOOP`

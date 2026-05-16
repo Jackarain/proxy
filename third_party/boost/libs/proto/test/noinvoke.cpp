@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <boost/proto/core.hpp>
 #include <boost/proto/transform/make.hpp>
 #include <boost/type_traits/add_pointer.hpp>
@@ -69,7 +71,7 @@ struct Test3
 {};
 
 
-void test_noinvoke()
+BOOST_AUTO_TEST_CASE(test_noinvoke)
 {
     typedef proto::terminal<int>::type Int;
     Int i = {42};
@@ -100,17 +102,4 @@ void test_noinvoke()
     ));
     
     select2nd<void, Int *> t3 = Test3()(i);
-}
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test proto::noinvoke");
-
-    test->add(BOOST_TEST_CASE(&test_noinvoke));
-
-    return test;
 }

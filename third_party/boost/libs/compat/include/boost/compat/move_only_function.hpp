@@ -247,7 +247,7 @@ bool is_nullary_arg( F f )
 template<bool NoEx, class R, class ...Args>
 struct mo_invoke_function_holder
 {
-    static R invoke_function( storage s, Args&&... args) noexcept( NoEx )
+    static R invoke_function( storage const& s, Args&&... args) noexcept( NoEx )
     {
         auto f = reinterpret_cast<R(*)( Args... )>( s.pfn_ );
         return compat::invoke_r<R>( f, std::forward<Args>( args )... );
@@ -257,7 +257,7 @@ struct mo_invoke_function_holder
 template<ref_quals RQ, bool Const, bool NoEx, class F, class R, class ...Args>
 struct mo_invoke_object_holder
 {
-    static R invoke_object( storage s, Args&&... args ) noexcept( NoEx )
+    static R invoke_object( storage const& s, Args&&... args ) noexcept( NoEx )
     {
         using T = remove_reference_t<F>;
         using cv_T = conditional_t<Const, add_const_t<T>, T>;
@@ -274,7 +274,7 @@ struct mo_invoke_object_holder
 template<ref_quals RQ, bool Const, bool NoEx, class F, class R, class ...Args>
 struct mo_invoke_local_holder
 {
-    static R invoke_local( storage s, Args&&... args ) noexcept( NoEx )
+    static R invoke_local( storage const& s, Args&&... args ) noexcept( NoEx )
     {
         using T = remove_reference_t<F>;
         using cv_T = conditional_t<Const, add_const_t<T>, T>;
@@ -285,7 +285,7 @@ struct mo_invoke_local_holder
             >
         >;
 
-        return compat::invoke_r<R>( static_cast<cv_ref_T>( *static_cast<cv_T*>( s.addr() ) ), std::forward<Args>( args )... );
+        return compat::invoke_r<R>( static_cast<cv_ref_T>( *static_cast<cv_T*>( const_cast<storage&>( s ).addr() ) ), std::forward<Args>( args )... );
     }
 };
 
@@ -397,7 +397,7 @@ struct move_only_function_base
             case op_type::move:
             {
                 VT* p = static_cast<VT*>( src->addr() );
-                new(s.addr()) VT( std::move( *p ) );
+                ::new( s.addr() ) VT( std::move( *p ) );
                 // destruct the element here because move construction will leave the container empty
                 // outside of this function
                 p->~VT();
@@ -436,6 +436,22 @@ struct move_only_function_base
     }
 
     template<class VT, class ...CArgs>
+    void init_object( std::false_type /* use_sbo */, CArgs&& ...args )
+    {
+        s_.pobj_ = new VT( std::forward<CArgs>( args )... );
+        invoke_ = &mo_invoke_object_holder<RQ, Const, NoEx, VT, R, Args...>::invoke_object;
+        manager_ = &manage_object<VT>;
+    }
+
+    template<class VT, class ...CArgs>
+    void init_object( std::true_type /* use_sbo */, CArgs&& ...args )
+    {
+        ::new( s_.addr() ) VT( std::forward<CArgs>( args )... );
+        invoke_ = &mo_invoke_local_holder<RQ, Const, NoEx, VT, R, Args...>::invoke_local;
+        manager_ = &manage_local<VT>;
+    }
+
+    template<class VT, class ...CArgs>
     void init( std::false_type /* is_function */, CArgs&& ...args )
     {
         if( is_polymorphic_function<VT>::value )
@@ -444,18 +460,7 @@ struct move_only_function_base
             return;
         }
 
-        if( !storage::use_sbo<VT>() )
-        {
-            s_.pobj_ = new VT( std::forward<CArgs>( args )... );
-            invoke_ = &mo_invoke_object_holder<RQ, Const, NoEx, VT, R, Args...>::invoke_object;
-            manager_ = &manage_object<VT>;
-        }
-        else
-        {
-            new( s_.addr() ) VT( std::forward<CArgs>( args )... );
-            invoke_ = &mo_invoke_local_holder<RQ, Const, NoEx, VT, R, Args...>::invoke_local;
-            manager_ = &manage_local<VT>;
-        }
+        init_object<VT>( std::integral_constant<bool, storage::use_sbo<VT>()>{}, std::forward<CArgs>( args )... );
     }
 
     template<class VT, class ...CArgs>
@@ -485,9 +490,9 @@ struct move_only_function_base
 
     detail::storage s_;
 #if defined(__cpp_noexcept_function_type)
-    R ( *invoke_ )( detail::storage, Args&&... ) noexcept( NoEx ) = nullptr;
+    R ( *invoke_ )( detail::storage const&, Args&&... ) noexcept( NoEx ) = nullptr;
 #else
-    R ( *invoke_ )( detail::storage, Args&&... ) = nullptr;
+    R ( *invoke_ )( detail::storage const&, Args&&... ) = nullptr;
 #endif
     void ( *manager_ )( op_type, detail::storage&, detail::storage* ) = &manage_empty;
 };

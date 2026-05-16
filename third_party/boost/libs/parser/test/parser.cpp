@@ -1093,6 +1093,72 @@ int main()
     // repeat
     {
         {
+            constexpr auto parser = repeat(2)[string("zs")];
+
+            {
+                std::string str = "";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "z";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "zs";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "zszs";
+                std::vector<std::string> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>({"zs", "zs"}));
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(chars);
+                    BOOST_TEST(
+                        *chars == std::vector<std::string>({"zs", "zs"}));
+                }
+            }
+            {
+                std::string str = "zszszs";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+        }
+        {
             constexpr auto parser = repeat(2, 3)[string("zs")];
 
             {
@@ -1143,6 +1209,228 @@ int main()
                     BOOST_TEST(chars);
                     BOOST_TEST(
                         *chars == std::vector<std::string>({"zs", "zs"}));
+                }
+            }
+            {
+                std::string str = "zszszs";
+                std::vector<std::string> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(
+                    chars == std::vector<std::string>({"zs", "zs", "zs"}));
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(chars);
+                    BOOST_TEST(
+                        *chars == std::vector<std::string>({"zs", "zs", "zs"}));
+                }
+            }
+            {
+                std::string str = "zszszszs";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+        }
+        {
+            auto parser = repeat(2, char_(','))[string("zs")];
+
+            {
+                std::string str = "";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "z";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "zs";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "zszs";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>());
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "zs,zs";
+                std::vector<std::string> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>({"zs", "zs"}));
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(chars);
+                    BOOST_TEST(
+                        *chars == std::vector<std::string>({"zs", "zs"}));
+                }
+            }
+            {
+                std::string str = "zs,zs,";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>());
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "zs,zs,zs";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>());
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+        }
+        {
+            auto parser = repeat(2, 3, char_(','))[string("zs")];
+
+            {
+                std::string str = "";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "z";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "zs";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "zs,";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "zs,zs,";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
+                }
+            }
+            {
+                std::string str = "zs,zs";
+                std::vector<std::string> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>({"zs", "zs"}));
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(chars);
+                    BOOST_TEST(
+                        *chars == std::vector<std::string>({"zs", "zs"}));
+                }
+            }
+            {
+                std::string str = "zs,zs,zs";
+                std::vector<std::string> chars;
+                BOOST_TEST(parse(str, parser, chars));
+                BOOST_TEST(
+                    chars == std::vector<std::string>({"zs", "zs", "zs"}));
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(chars);
+                    BOOST_TEST(
+                        *chars == std::vector<std::string>({"zs", "zs", "zs"}));
+                }
+            }
+            {
+                std::string str = "zs,zs,zs,zs";
+                std::vector<std::string> chars;
+                BOOST_TEST(!parse(str, parser, chars));
+                BOOST_TEST(chars == std::vector<std::string>{});
+
+                {
+                    std::optional<std::vector<std::string>> const chars =
+                        parse(str, parser);
+                    BOOST_TEST(!chars);
                 }
             }
         }

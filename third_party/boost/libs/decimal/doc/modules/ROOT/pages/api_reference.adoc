@@ -1,0 +1,59 @@
+////
+Copyright 2024 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#api_reference]
+= API Reference
+:idprefix: api_ref_
+
+This section is a complete cross-reference to all the types, structures,
+enums, constants and macros that are provided in this library.
+
+[#api_ref_types]
+== Types
+
+|===
+| IEEE 754 Compliant | Non-IEEE 754 Compliant
+| xref:decimal32_t.adoc[`decimal32_t`] | xref:decimal_fast32_t.adoc[`decimal_fast32_t`]
+| xref:decimal64_t.adoc[`decimal64_t`] | xref:decimal_fast64_t.adoc[`decimal_fast64_t`]
+| xref:decimal128_t.adoc[`decima128_t`] | xref:decimal_fast128_t.adoc[`decimal_fast128_t`]
+|===
+
+[#api_ref_structs]
+== Structures
+
+|===
+| xref:charconv.adoc#to_chars_result[to_chars_result] | xref:charconv.adoc#from_chars_result[from_chars_result]
+|===
+
+[#api_ref_enums]
+== Enums
+
+|===
+| xref:charconv.adoc#chars_format[chars_format] | xref:cfenv.adoc[rounding_mode]
+|===
+
+[#api_ref_constants]
+== Constants
+
+|===
+| xref:charconv.adoc#charconv_limits[limits] | xref:numbers.adoc[numbers]
+|===
+
+[#api_ref_macros]
+== Macros
+
+|===
+| User Configuration | Automatic Configuration
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_DISABLE_CASSERT`] | xref:config.adoc#configuration_automatic[`BOOST_DECIMAL_CXX20_CONSTEXPR`]
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_DISABLE_IOSTREAM`] | xref:config.adoc#configuration_automatic[`BOOST_DECIMAL_NO_CONSTEVAL_DETECTION`]
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_DISABLE_CLIB`] | xref:config.adoc#configuration_automatic[`BOOST_DECIMAL_HAS_STD_CHARCONV`]
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_DISABLE_EXCEPTIONS`] | xref:config.adoc#configuration_automatic[`BOOST_DECIMAL_HAS_STD_STRING_VIEW`]
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_ALLOW_IMPLICIT_INTEGER_CONVERSIONS`] |
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_ALLOW_IMPLICIT_FLOAT_CONVERSIONS`] |
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_ALLOW_IMPLICIT_CONVERSIONS`] |
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_FAST_MATH`] |
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_DEC_EVAL_METHOD`] |
+|===

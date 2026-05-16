@@ -55,5 +55,6 @@ int main()
 {
     // Invokes boost::optional copy constructor. Should not invoke wrapper constructor from U.
     boost::optional< wrapper< int > > res = foo();
+    (void)res;
     return 0;
 }

@@ -12,6 +12,7 @@ set(BOOST_TEST_LINK_LIBRARIES Boost::rational)
 
 boost_test(TYPE run SOURCES rational_example.cpp)
 boost_test(TYPE run SOURCES rational_test.cpp LINK_LIBRARIES Boost::unit_test_framework)
+boost_test(TYPE run SOURCES multiprecision_test.cpp LINK_LIBRARIES Boost::unit_test_framework Boost::multiprecision COMPILE_FEATURES cxx_std_14)
 boost_test(TYPE run SOURCES constexpr_test.cpp COMPILE_FEATURES cxx_constexpr)
 
 boost_test(TYPE compile-fail SOURCES expected_fail_01.cpp)

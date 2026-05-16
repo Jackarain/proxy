@@ -19,7 +19,6 @@
 #include <boost/assign/list_inserter.hpp>
 #include <boost/test/test_tools.hpp>
 #include <boost/function.hpp>
-#include <boost/bind.hpp>
 #include <vector>
 #include <map>
 
@@ -33,30 +32,30 @@ public:
         check_addr_book,
         dont_check_addr_book
     };
-    
+
     typedef std::pair<std::string,address_option> bcc_type;
     typedef std::vector< bcc_type >               bcc_map;
     typedef std::map<std::string,address_option>  address_map;
-    
-    
+
+
 private:
 
     mutable address_map      cc_list;
     mutable address_map      to_list;
     bcc_map                  bcc_list;
-            
+
     struct add_to_map
     {
         address_map& m;
-    
-        add_to_map( address_map& m ) : m(m)        
+
+        add_to_map( address_map& m ) : m(m)
         {}
-    
+
         void operator()( const std::string& name, address_option ao )
         {
-            m[ name ] = ao; 
+            m[ name ] = ao;
         }
-        
+
         void operator()( const std::string& name )
         {
             m[ name ] = check_addr_book;
@@ -66,10 +65,10 @@ private:
     struct add_to_vector
     {
         bcc_map& m;
-        
+
         add_to_vector( bcc_map& m ) : m(m)
         {}
-        
+
         void operator()( const bcc_type& r )
         {
             m.push_back( r );
@@ -77,7 +76,7 @@ private:
     };
 
 public:
-    
+
     ba::list_inserter< add_to_map >
     add_cc( std::string name, address_option ao )
     {
@@ -89,25 +88,25 @@ public:
     {
         return ba::make_list_inserter( add_to_map( to_list ) )( name );
     }
-    
+
     ba::list_inserter< add_to_vector, bcc_type >
     add_bcc( const bcc_type& bcc )
     {
         return ba::make_list_inserter( add_to_vector( bcc_list ) )( bcc );
     }
-    
+
     address_option
     cc_at( const std::string& name ) const
     {
         return cc_list[ name ];
     }
-    
-    address_option 
+
+    address_option
     to_at( const std::string& name ) const
     {
         return to_list[ name ];
     }
-    
+
     address_option
     bcc_at( unsigned index ) const
     {
@@ -132,12 +131,12 @@ void check_list_inserter()
     e.add_to( "betsy" )( "peter" );
     BOOST_CHECK_EQUAL( e.cc_at( "betsy" ), email::check_addr_book );
     BOOST_CHECK_EQUAL( e.cc_at( "peter" ), email::check_addr_book );
-    
+
     e.add_bcc( email::bcc_type( "Mr. Foo", email::check_addr_book ) )
              ( "Mr. Bar", email::dont_check_addr_book );
     BOOST_CHECK_EQUAL( e.bcc_at( 0 ), email::check_addr_book );
     BOOST_CHECK_EQUAL( e.bcc_at( 1 ), email::dont_check_addr_book );
-    
+
 }
 
 

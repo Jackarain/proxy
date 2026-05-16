@@ -72,7 +72,7 @@ class windows_semaphore_based_map
       //those values can't be negative, so we have 31 bits to store something
       //in max_count and initial count parameters.
       //Also, max count must be bigger than 0 and bigger or equal than initial count.
-      if(sizeof(void*) == sizeof(boost::uint32_t)){
+      BOOST_IF_CONSTEXPR(sizeof(void*) == sizeof(boost::uint32_t)){
          //This means that for 32 bit processes, a semaphore count (31 usable bits) is
          //enough to store 4 byte aligned memory (4GB -> 32 bits - 2 bits = 30 bits).
          //The max count will hold the pointer value and current semaphore count
@@ -90,7 +90,7 @@ class windows_semaphore_based_map
          BOOST_ASSERT((caster.addr_uint32 & boost::uint32_t(3)) == 0);
          max_count = caster.addr_uint32 >> 2;
       }
-      else if(sizeof(void*) == sizeof(boost::uint64_t)){
+      else BOOST_IF_CONSTEXPR(sizeof(void*) == sizeof(boost::uint64_t)){
          //Relying in UB with a cast through union, but all known windows compilers
          //accept this (C11 accepts this).
          union caster_union
@@ -156,7 +156,7 @@ class windows_semaphore_based_map
 
    map_type &get_map_unlocked()
    {
-      if(sizeof(void*) == sizeof(boost::uint32_t)){
+      BOOST_IF_CONSTEXPR(sizeof(void*) == sizeof(boost::uint32_t)){
          union caster_union
          {
             void *addr;

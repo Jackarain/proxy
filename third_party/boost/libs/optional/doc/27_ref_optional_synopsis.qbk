@@ -95,10 +95,10 @@
     namespace boost {
 
     class in_place_init_t { /* see below */ } ;
-    const in_place_init_t in_place_init ( /* see below */ ) ;
+    inline constexpr in_place_init_t in_place_init ( /* see below */ ) ;
 
     class in_place_init_if_t { /*see below*/ } ;
-    const in_place_init_if_t in_place_init_if ( /*see below*/ ) ;
+    inline constexpr  in_place_init_if_t in_place_init_if ( /*see below*/ ) ;
 
     }
 
@@ -123,33 +123,33 @@ They are empty, trivially copyable classes with disabled default constructor.
         typedef T *       pointer_type ;
         typedef T const*  pointer_const_type ;
 
-        optional () noexcept ; ``[link reference_optional_constructor __GO_TO__]``
+        constexpr optional () noexcept ; ``[link reference_optional_constructor __GO_TO__]``
 
-        optional ( none_t ) noexcept ; ``[link reference_optional_constructor_none_t __GO_TO__]``
+        constexpr optional ( none_t ) noexcept ; ``[link reference_optional_constructor_none_t __GO_TO__]``
 
-        optional ( T const& v ) ; ``[link reference_optional_constructor_value __GO_TO__]``
+        constexpr optional ( T const& v ) ; ``[link reference_optional_constructor_value __GO_TO__]``
 
-        optional ( T&& v ) ; ``[link reference_optional_constructor_move_value __GO_TO__]``
+        constexpr optional ( T&& v ) ; ``[link reference_optional_constructor_move_value __GO_TO__]``
 
-        optional ( bool condition, T const& v ) ; ``[link reference_optional_constructor_bool_value __GO_TO__]``
+        constexpr optional ( bool condition, T const& v ) ; ``[link reference_optional_constructor_bool_value __GO_TO__]``
 
-        optional ( optional const& rhs ) ; ``[link reference_optional_constructor_optional __GO_TO__]``
+        constexpr optional ( optional const& rhs ) ; ``[link reference_optional_constructor_optional __GO_TO__]``
 
-        optional ( optional&& rhs ) noexcept(``['see below]``) ; ``[link reference_optional_move_constructor_optional __GO_TO__]``
+        constexpr optional ( optional&& rhs ) noexcept(``['see below]``) ; ``[link reference_optional_move_constructor_optional __GO_TO__]``
 
-        template<class U> explicit optional ( optional<U> const& rhs ) ; ``[link reference_optional_constructor_other_optional __GO_TO__]``
+        template<class U> constexpr explicit optional ( optional<U> const& rhs ) ; ``[link reference_optional_constructor_other_optional __GO_TO__]``
 
-        template<class U> explicit optional ( optional<U>&& rhs ) ; ``[link reference_optional_move_constructor_other_optional __GO_TO__]``
+        template<class U> constexpr explicit optional ( optional<U>&& rhs ) ; ``[link reference_optional_move_constructor_other_optional __GO_TO__]``
 
-        template<class... Args> explicit optional ( in_place_init_t, Args&&... args ) ; ``[link reference_optional_in_place_init __GO_TO__]``
+        template<class... Args> constexpr explicit optional ( in_place_init_t, Args&&... args ) ; ``[link reference_optional_in_place_init __GO_TO__]``
 
-        template<class... Args> explicit optional ( in_place_init_if_t, bool condition, Args&&... args ) ; ``[link reference_optional_in_place_init_if __GO_TO__]``
+        template<class... Args> constexpr explicit optional ( in_place_init_if_t, bool condition, Args&&... args ) ; ``[link reference_optional_in_place_init_if __GO_TO__]``
 
         template<class InPlaceFactory> explicit optional ( InPlaceFactory const& f ) ; ``[link reference_optional_constructor_factory __GO_TO__]``
 
         template<class TypedInPlaceFactory> explicit optional ( TypedInPlaceFactory const& f ) ; ``[link reference_optional_constructor_factory __GO_TO__]``
 
-        optional& operator = ( none_t ) noexcept ; ``[link reference_optional_operator_equal_none_t __GO_TO__]``
+        constexpr optional& operator = ( none_t ) noexcept ; ``[link reference_optional_operator_equal_none_t __GO_TO__]``
 
         optional& operator = ( T const& v ) ; ``[link reference_optional_operator_equal_value __GO_TO__]``
 
@@ -169,44 +169,45 @@ They are empty, trivially copyable classes with disabled default constructor.
 
         template<class TypedInPlaceFactory> optional& operator = ( TypedInPlaceFactory const& f ) ; ``[link reference_optional_operator_equal_factory __GO_TO__]``
 
-        T const& get() const ; ``[link reference_optional_get __GO_TO__]``
-        T&       get() ; ``[link reference_optional_get __GO_TO__]``
+        constexpr T const& get() const ; ``[link reference_optional_get __GO_TO__]``
+        constexpr T&       get() ; ``[link reference_optional_get __GO_TO__]``
 
-        T const* operator ->() const ; ``[link reference_optional_operator_arrow __GO_TO__]``
-        T*       operator ->() ; ``[link reference_optional_operator_arrow __GO_TO__]``
+        constexpr T const* operator ->() const ; ``[link reference_optional_operator_arrow __GO_TO__]``
+        constexpr T*       operator ->() ; ``[link reference_optional_operator_arrow __GO_TO__]``
 
-        T const& operator *() const& ; ``[link reference_optional_operator_asterisk __GO_TO__]``
-        T&       operator *() & ; ``[link reference_optional_operator_asterisk __GO_TO__]``
-        T&&      operator *() && ; ``[link reference_optional_operator_asterisk_move __GO_TO__]``
+        constexpr T const& operator *() const& ; ``[link reference_optional_operator_asterisk __GO_TO__]``
+        constexpr T&       operator *() & ; ``[link reference_optional_operator_asterisk __GO_TO__]``
+        constexpr T&&      operator *() && ; ``[link reference_optional_operator_asterisk_move __GO_TO__]``
 
-        T const& value() const& ; ``[link reference_optional_value __GO_TO__]``
-        T&       value() & ; ``[link reference_optional_value __GO_TO__]``
-        T&&      value() && ; ``[link reference_optional_value_move __GO_TO__]``
+        constexpr T const& value() const& ; ``[link reference_optional_value __GO_TO__]``
+        constexpr T&       value() & ; ``[link reference_optional_value __GO_TO__]``
+        constexpr T&&      value() && ; ``[link reference_optional_value_move __GO_TO__]``
 
-        template<class U> T value_or( U && v ) const& ; ``[link reference_optional_value_or __GO_TO__]``
-        template<class U> T value_or( U && v ) && ; ``[link reference_optional_value_or_move __GO_TO__]``
+        template<class U> constexpr T value_or( U && v ) const& ; ``[link reference_optional_value_or __GO_TO__]``
+        template<class U> constexpr T value_or( U && v ) && ; ``[link reference_optional_value_or_move __GO_TO__]``
 
-        template<class F> T value_or_eval( F f ) const& ; ``[link reference_optional_value_or_call __GO_TO__]``
-        template<class F> T value_or_eval( F f ) && ; ``[link reference_optional_value_or_call_move __GO_TO__]``
+        template<class F> constexpr T value_or_eval( F f ) const& ; ``[link reference_optional_value_or_call __GO_TO__]``
+        template<class F> constexpr T value_or_eval( F f ) && ; ``[link reference_optional_value_or_call_move __GO_TO__]``
 
-        template<class F> auto map( F f ) const& -> ``['see below]``; ``[link reference_optional_map __GO_TO__]``
-        template<class F> auto map( F f ) & -> ``['see below]``; ``[link reference_optional_map __GO_TO__]``
-        template<class F> auto map( F f ) && -> ``['see below]``; ``[link reference_optional_map_move __GO_TO__]``
+        template<class F> constexpr auto map( F f ) const& -> ``['see below]``; ``[link reference_optional_map __GO_TO__]``
+        template<class F> constexpr auto map( F f ) & -> ``['see below]``; ``[link reference_optional_map __GO_TO__]``
+        template<class F> constexpr auto map( F f ) && -> ``['see below]``; ``[link reference_optional_map_move __GO_TO__]``
 
-        template<class F> auto flat_map( F f ) const& -> ``['see below]``; ``[link reference_optional_flat_map __GO_TO__]``
-        template<class F> auto flat_map( F f ) & -> ``['see below]``; ``[link reference_optional_flat_map __GO_TO__]``
-        template<class F> auto flat_map( F f ) && -> ``['see below]``; ``[link reference_optional_flat_map_move __GO_TO__]``
+        template<class F> constexpr auto flat_map( F f ) const& -> ``['see below]``; ``[link reference_optional_flat_map __GO_TO__]``
+        template<class F> constexpr auto flat_map( F f ) & -> ``['see below]``; ``[link reference_optional_flat_map __GO_TO__]``
+        template<class F> constexpr auto flat_map( F f ) && -> ``['see below]``; ``[link reference_optional_flat_map_move __GO_TO__]``
+
+        constexpr operator optional<T&>() & noexcept; ``[link reference_optional_conversion_to_ref __GO_TO__]``
+        constexpr operator optional<T const&>() const& noexcept; ``[link reference_optional_conversion_to_ref __GO_TO__]``
 
         T const* get_ptr() const ; ``[link reference_optional_get_ptr __GO_TO__]``
         T*       get_ptr() ; ``[link reference_optional_get_ptr __GO_TO__]``
 
-        bool has_value() const noexcept ; ``[link reference_optional_operator_bool __GO_TO__]``
+        constexpr bool has_value() const noexcept ; ``[link reference_optional_operator_bool __GO_TO__]``
 
-        explicit operator bool() const noexcept ; ``[link reference_optional_operator_bool __GO_TO__]``
+        constexpr explicit operator bool() const noexcept ; ``[link reference_optional_operator_bool __GO_TO__]``
 
-        bool operator!() const noexcept ; ``[link reference_optional_operator_not __GO_TO__]``
-
-        void reset() noexcept ; ``[link reference_optional_reset __GO_TO__]``
+        constexpr void reset() noexcept ; ``[link reference_optional_reset __GO_TO__]``
 
         // deprecated methods
 
@@ -214,7 +215,7 @@ They are empty, trivially copyable classes with disabled default constructor.
         void reset ( T const& ) ; ``[link reference_optional_reset_value __GO_TO__]``
 
         // (deprecated)
-        bool is_initialized() const ; ``[link reference_optional_is_initialized __GO_TO__]``
+        constexpr bool is_initialized() const ; ``[link reference_optional_is_initialized __GO_TO__]``
 
         // (deprecated)
         T const& get_value_or( T const& default ) const ; ``[link reference_optional_get_value_or_value __GO_TO__]``
@@ -239,9 +240,9 @@ They are empty, trivially copyable classes with disabled default constructor.
         typedef T* pointer_type;
         typedef T* pointer_const_type;   // no const propagation
 
-        optional () noexcept ; ``[link reference_optional_ref_default_ctor __GO_TO__]``
+        constexpr optional () noexcept ; ``[link reference_optional_ref_default_ctor __GO_TO__]``
 
-        optional ( none_t ) noexcept ; ``[link reference_optional_ref_default_ctor __GO_TO__]``
+        constexpr optional ( none_t ) noexcept ; ``[link reference_optional_ref_default_ctor __GO_TO__]``
 
         template<class R> optional(R&& r) noexcept ;  ``[link reference_optional_ref_value_ctor __GO_TO__]``
 

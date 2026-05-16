@@ -1,6 +1,6 @@
 //  See http://www.boost.org for most recent version, including documentation.
 //
-//  Copyright Antony Polukhin, 2020.
+//  Copyright Antony Polukhin, 2020-2026.
 //
 //  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file

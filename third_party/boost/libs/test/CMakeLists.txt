@@ -25,7 +25,6 @@ set(_boost_test_dependencies
   Boost::optional
   Boost::preprocessor
   Boost::smart_ptr
-  Boost::static_assert
   Boost::type_traits
   Boost::utility
 )

@@ -69,7 +69,6 @@ target_link_libraries(boost_thread
     Boost::predef
     Boost::preprocessor
     Boost::smart_ptr
-    Boost::static_assert
     Boost::system
     Boost::throw_exception
     Boost::tuple

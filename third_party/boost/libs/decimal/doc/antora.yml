@@ -1,0 +1,9 @@
+name: ROOT
+version: ~
+title: Boost.Decimal
+asciidoc:
+  attributes:
+    page-pagination: ''
+nav:
+  - modules/ROOT/nav.adoc
+start_page: overview.adoc

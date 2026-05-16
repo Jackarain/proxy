@@ -9,9 +9,11 @@
 
 import testing ;
 
+project : requirements <library>/boost/algorithm//boost_algorithm ;
+
 alias unit_test_framework
     : # sources
-        /boost//unit_test_framework
+        /boost/test//boost_unit_test_framework
     ;
 
 
@@ -85,7 +87,7 @@ alias unit_test_framework
 
 # Is_partitioned_until tests
      [ run is_partitioned_until_test.cpp unit_test_framework    : : : : is_partitioned_until_test ]
-   
+
 # Apply_permutation tests
      [ run apply_permutation_test.cpp unit_test_framework    : : : : apply_permutation_test ]
 # Find tests

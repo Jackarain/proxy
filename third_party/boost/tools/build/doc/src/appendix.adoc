@@ -3,7 +3,8 @@
 = Licenses
 
 In addition to B2 being licensed under the Boost Software License - Version 1.0,
-B2 makes use of additional libraries that are differently licensed as follows.
+B2 makes use of additional libraries and sources that are differently licensed
+as follows.
 
 == MIT License
 
@@ -31,3 +32,7 @@ SOFTWARE.
 
 https://github.com/nlohmann/json[JSON for Modern C++]::
 Copyright (c) 2013-2022 Niels Lohmann
+
+https://github.com/edwardtufte/tufte-css[Tufte CSS]::
+Copyright (c) Dave Liepmann, Edward Tufte, et al. The documentation style is
+based on this CSS.

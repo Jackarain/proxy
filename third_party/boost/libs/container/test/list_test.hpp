@@ -119,6 +119,24 @@ bool list_copyable_only(V1 &boostlist, V2 &stdlist, boost::container::dtl::true_
          return 1;
       stdlist.erase(boost::container::find(stdlist.begin(), stdlist.end(), 24));
       if(!test::CheckEqualContainers(boostlist, stdlist)) return false;
+
+      //remove
+      if (1 != boostlist.remove(IntType(23)))
+         return 1;
+      if (0 != boostlist.remove(IntType(23)))
+         return 1;
+
+      stdlist.erase(boost::container::find(stdlist.begin(), stdlist.end(), 23));
+      if(!test::CheckEqualContainers(boostlist, stdlist)) return false;
+
+      //remove_if
+      if (1 != boostlist.remove_if(equal_to_value<int>(22)))
+         return 1;
+      if (0 != boostlist.remove_if(equal_to_value<int>(22)))
+         return 1;
+      stdlist.erase(boost::container::find(stdlist.begin(), stdlist.end(), 22));
+      if(!test::CheckEqualContainers(boostlist, stdlist)) return false;
+
    }
    {  //List(const List &, alloc)
       ::boost::movelib::unique_ptr<V1> const pv1 = ::boost::movelib::make_unique<V1>(boostlist, typename V1::allocator_type());
@@ -377,8 +395,13 @@ int list_test (bool copied_allocators_equal = true)
          return 1;
    }
 
-   boostlist.unique();
-   stdlist.unique();
+   {
+      std::size_t old_sz = boostlist.size();
+      std::size_t bremoved = boostlist.unique();
+      if (bremoved != (old_sz - boostlist.size()))
+         return 1;
+      stdlist.unique();
+   }
    if(!CheckEqualContainers(boostlist, stdlist))
       return 1;
 

@@ -32,6 +32,7 @@ void test()
   //BOOST_TEST(v);
   boost::optional<boost::optional<int>> vv;
   bool xx = vv?true : false;
+  (void)xx;
   BOOST_TEST_EQ(*v, 7);
 #endif
 }

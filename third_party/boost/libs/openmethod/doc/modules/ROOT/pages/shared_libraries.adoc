@@ -5,14 +5,14 @@
 This section discusses how OpenMethod interoperates with shared libraries on
 Linux, other POSIX-like platforms, and Windows.
 
-### Static Linking
+## Static Linking
 
 Statically linking to a shared library behaves the same way as linking to a
 static library on all platforms. Objects from the program and the shared
 libraries can contribute classes, methods and overriders to the default
 registry, or any registries.
 
-### Dynamic Linking
+## Dynamic Linking
 
 By "dynamic linking", we mean a program loading a shared library after it has
 started, and accessing its content. A common application of dynamic linking is
@@ -77,7 +77,7 @@ overriders provided by the shared library are removed from the method.
 include::{shared}/dynamic_main.cpp[tag=unload]
 ----
 
-### Windows
+## Windows
 
 If we try the example on Windows, the result is disappointing:
 
@@ -110,7 +110,7 @@ matter. Research is being done on this subject. However, as of now, dynamic
 loading is supported on Windows only if it does not attempt to share a registry
 across modules.
 
-### Indirect Vptrs
+## Indirect Vptrs
 
 `initialize` rebuilds the v-tables in the registry. This invalidates all the
 `virtual_ptr`{empty}s, and also the v-table pointers stored in objects by

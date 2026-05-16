@@ -9,9 +9,8 @@
 
 #include <boost/assert.hpp>
 
-#include <ostream>
-#include <string>
-#include <vector>
+#include <cstddef>
+#include <iosfwd>
 
 namespace boost::redis::resp3 {
 

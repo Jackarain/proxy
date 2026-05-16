@@ -292,4 +292,10 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
         "cppalliance/dronevs2022:1",
         { TOOLSET: 'msvc-14.3', CXXSTD: '14,17,20,latest' },
     ),
+
+    windows_pipeline(
+        "Windows VS2026 msvc-14.5",
+        "cppalliance/dronevs2026:1",
+        { TOOLSET: 'msvc-14.5', CXXSTD: '14,17,20,latest' },
+    ),
 ]

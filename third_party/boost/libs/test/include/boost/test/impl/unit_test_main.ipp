@@ -212,7 +212,9 @@ unit_test_main( init_unit_test_func init_func, int argc, char* argv[] )
 
             // getchar is defined as a macro in uClibc. Use parenthesis to fix
             // gcc bug 58952 for gcc <= 4.8.2.
-            (std::getchar)();
+            int ch = (std::getchar)();
+            boost::ignore_unused(ch);
+
             results_reporter::get_stream() << "Continuing..." << std::endl;
         }
 

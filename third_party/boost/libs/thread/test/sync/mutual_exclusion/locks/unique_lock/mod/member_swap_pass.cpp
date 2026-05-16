@@ -19,7 +19,7 @@
 // void swap(unique_lock& u);
 
 #include <boost/thread/lock_types.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 struct mutex
 {

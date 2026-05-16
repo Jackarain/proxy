@@ -366,7 +366,7 @@ void test_ping_error()
    // Logs
    fix.check_log({
       {logger::level::debug, "Writer task: 28 bytes written."                                      },
-      {logger::level::info,  "Health checker: server answered ping with an error: ERR: bad command"},
+      {logger::level::err,   "Health checker: server answered ping with an error: ERR: bad command"},
    });
 }
 
@@ -394,8 +394,9 @@ void test_write_error()
 
    // Logs
    fix.check_log({
-      {logger::level::debug, "Writer task: 2 bytes written."                                    },
-      {logger::level::debug, "Writer task error: Expected field value is empty. [boost.redis:5]"},
+      {logger::level::debug, "Writer task: 2 bytes written."                             },
+      {logger::level::err,
+       "Error writing data to the server: Expected field value is empty. [boost.redis:5]"},
    });
 }
 
@@ -420,9 +421,10 @@ void test_write_timeout()
 
    // Logs
    fix.check_log({
-      {logger::level::debug, "Writer task: 0 bytes written."                          },
-      {logger::level::debug,
-       "Writer task error: Timeout while writing data to the server. [boost.redis:27]"},
+      // clang-format off
+      {logger::level::debug, "Writer task: 0 bytes written."},
+      {logger::level::err,   "Error writing data to the server: Timeout while writing data to the server. [boost.redis:27]" },
+      // clang-format on
    });
 }
 

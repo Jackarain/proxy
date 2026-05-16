@@ -38,12 +38,14 @@ set(Tests
     priority_queue_test
     skew_heap_test
     mutable_heap_test
+    move_only_types_test
 )
 
 foreach(Test ${Tests})
     set (Libs Boost::heap
               Boost::unit_test_framework
               Boost::container
+              Boost::mpl
               boost_heap_test_common)
 
     source_group( TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${Test}.cpp)

@@ -1,0 +1,62 @@
+////
+Copyright 2024 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#cfloat]
+= `<cfloat>` Support
+:idprefix: cfloat_
+
+Macros analogous to those from https://en.cppreference.com/w/cpp/header/cfloat.html[`<cfloat>`] are provided by the library.
+These macros are not available when consuming the library as a module.
+In all cases `std::numeric_limits` should be preferred.
+
+[source, c++]
+----
+#include <boost/decimal/cfloat.hpp>
+
+
+// Number of digits in the coefficient
+#define BOOST_DECIMAL_DEC32_MANT_DIG  std::numeric_limits<boost::decimal::decimal32_t>:digits10
+#define BOOST_DECIMAL_DEC64_MANT_DIG  std::numeric_limits<boost::decimal::decimal64_t>:digits10
+#define BOOST_DECIMAL_DEC128_MANT_DIG std::numeric_limits<boost::decimal::decimal128_t>:digits10
+
+// Minimum exponent
+#define BOOST_DECIMAL_DEC32_MIN_EXP  std::numeric_limits<boost::decimal::decimal32_t>:min_exponent
+#define BOOST_DECIMAL_DEC64_MIN_EXP  std::numeric_limits<boost::decimal::decimal64_t>:min_exponent
+#define BOOST_DECIMAL_DEC128_MIN_EXP std::numeric_limits<boost::decimal::decimal128_t>:min_exponent
+
+// Maximum exponent
+#define BOOST_DECIMAL_DEC32_MAX_EXP  std::numeric_limits<boost::decimal::decimal32_t>:max_exponent
+#define BOOST_DECIMAL_DEC64_MAX_EXP  std::numeric_limits<boost::decimal::decimal64_t>:max_exponent
+#define BOOST_DECIMAL_DEC128_MAX_EXP std::numeric_limits<boost::decimal::decimal128_t>:max_exponent
+
+// Maximum Finite Value
+#define BOOST_DECIMAL_DEC32_MAX  std::numeric_limits<boost::decimal::decimal32_t>::max()
+#define BOOST_DECIMAL_DEC64_MAX  std::numeric_limits<boost::decimal::decimal64_t>::max()
+#define BOOST_DECIMAL_DEC128_MAX std::numeric_limits<boost::decimal::decimal128_t>::max()
+
+// Minimum positive normal vlaue
+#define BOOST_DECIMAL_DEC32_MIN std::numeric_limits<boost::decimal::decimal32_t>::min()
+#define BOOST_DECIMAL_DEC64_MIN   std::numeric_limits<boost::decimal::decimal64_t>::min()
+#define BOOST_DECIMAL_DEC128_MIN std::numeric_limits<boost::decimal::decimal128_t>::min()
+
+// Minimum positive sub-normal value
+#define BOOST_DECIMAL_DEC32_MAX  std::numeric_limits<boost::decimal::decimal32_t>::denorm_min()
+#define BOOST_DECIMAL_DEC64_MAX  std::numeric_limits<boost::decimal::decimal64_t>::denorm_min()
+#define BOOST_DECIMAL_DEC128_MAX std::numeric_limits<boost::decimal::decimal128_t>::denorm_min()
+----
+
+Additionally `BOOST_DECIMAL_DEC_EVAL_METHOD` is similar to https://en.cppreference.com/w/cpp/types/climits/FLT_EVAL_METHOD[`FLT_EVAL_METHOD`]:
+
+The valid values are:
+
+|===
+| Value | Description
+| 0 | All operations evaluated in the range and precision of the native type
+| 1 | All `decimal32_t` (or `decimal_fast32_t`) operations are evaluated with the precision and range of `decimal64_t` internally, and returned as `decimal64_t`
+| 2 | All `decimal32_t` and `decimal64_t` (or fast equivalents) operations are evaluated with the precision and range of `decimal128_t` internally, and returned as the original type.
+|===
+
+To use the functionality you must `#define BOOST_DECIMAL_DEC_EVAL_METHOD` to the value you want before you `#include <boost/decimal.hpp>`, or any Boost.Decimal header if you are not using the convenience header.

@@ -45,7 +45,7 @@ run test_fstream.cpp file_test_helpers ;
 run test_fstream.cpp file_test_helpers : : : <define>BOOST_NOWIDE_USE_FILEBUF_REPLACEMENT=1 <target-os>windows:<build>no : test_fstream_internal ;
 run test_fstream_special.cpp file_test_helpers ;
 run test_fstream_special.cpp file_test_helpers : : : <define>BOOST_NOWIDE_USE_FILEBUF_REPLACEMENT=1 <target-os>windows:<build>no : test_fstream_special_internal ;
-run test_iostream.cpp file_test_helpers : : : <target-os>windows:<find-static-library>user32 ;
+run test_iostream.cpp file_test_helpers : : : <target-os>windows:<find-static-library>user32 <test-info>always_show_run_output ;
 if [ MATCH (--nowide-enable-cmake) : [ modules.peek : ARGV ] ]
 {
   # Use CMake as a cross-platform scripting language for this test

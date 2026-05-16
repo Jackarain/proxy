@@ -8,6 +8,8 @@
 // that computes the result of an expression with either checked
 // or non-checked division.
 
+#define BOOST_TEST_MAIN
+
 #include <iostream>
 #include <boost/mpl/int.hpp>
 #include <boost/mpl/next.hpp>
@@ -171,15 +173,7 @@ void test_external_transforms()
     }
 }
 
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
+BOOST_AUTO_TEST_CASE(test_external_transforms_)
 {
-    test_suite *test = BOOST_TEST_SUITE("test for external transforms");
-
-    test->add(BOOST_TEST_CASE(&test_external_transforms));
-
-    return test;
+    test_external_transforms();
 }

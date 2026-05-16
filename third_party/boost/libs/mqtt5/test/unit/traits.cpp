@@ -5,6 +5,9 @@
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "test_common/test_broker.hpp"
+#include "test_common/extra_deps.hpp"
+
 #include <boost/mqtt5/mqtt_client.hpp>
 
 #include <boost/mqtt5/detail/any_authenticator.hpp>
@@ -19,8 +22,6 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
-
-#include "test_common/extra_deps.hpp"
 
 using namespace boost::mqtt5;
 

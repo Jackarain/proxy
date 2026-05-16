@@ -451,7 +451,7 @@ public:
     */
     T* get() const noexcept
     {
-        return &p_->t;
+        return p_ ? &p_->t : nullptr;
     }
 
     /** Return the referenced object

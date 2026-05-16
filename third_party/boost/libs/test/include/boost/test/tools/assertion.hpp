@@ -30,6 +30,12 @@
 #include <utility>
 #endif
 
+// GCC < 10 workaround for std::optional comparison ambiguity (see below)
+#if ((defined(__GNUC__) && !defined(__clang__) && (__GNUC__ < 10)) || (defined(__clang__) && __clang_major__ < 11)) && \
+    (__cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L))
+#include <optional>
+#endif
+
 #include <boost/test/detail/suppress_warnings.hpp>
 
 //____________________________________________________________________________//
@@ -37,6 +43,28 @@
 namespace boost {
 namespace test_tools {
 namespace assertion {
+
+// ************************************************************************** //
+// **************         assertion::is_std_optional            ************** //
+// ************************************************************************** //
+// Trait to detect std::optional. Used for GCC < 10 workaround.
+
+template<typename T>
+struct is_std_optional : std::false_type {};
+
+#if ((defined(__GNUC__) && !defined(__clang__) && (__GNUC__ < 10)) || (defined(__clang__) && __clang_major__ < 11)) && \
+    (__cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L))
+
+template<typename T>
+struct is_std_optional<std::optional<T>> : std::true_type {};
+template<typename T>
+struct is_std_optional<std::optional<T>&> : std::true_type {};
+template<typename T>
+struct is_std_optional<std::optional<T> const&> : std::true_type {};
+template<typename T>
+struct is_std_optional<std::optional<T>&&> : std::true_type {};
+
+#endif
 
 // ************************************************************************** //
 // **************             assertion::operators             ************** //
@@ -77,7 +105,8 @@ namespace op {
 
 #ifndef BOOST_NO_CXX11_DECLTYPE
 
-#define BOOST_TEST_FOR_EACH_CONST_OP(action)\
+// Non-comparison operators (never need SFINAE workaround)
+#define BOOST_TEST_FOR_EACH_NONCOMP_OP(action)\
     action(->*, MEMP, ->*, MEMP )           \
                                             \
     action( * , MUL , *  , MUL  )           \
@@ -90,14 +119,19 @@ namespace op {
     action( <<, LSH , << , LSH  )           \
     action( >>, RSH , >> , RSH  )           \
                                             \
-    BOOST_TEST_FOR_EACH_COMP_OP(action)     \
-                                            \
     action( & , BAND, &  , BAND )           \
     action( ^ , XOR , ^  , XOR  )           \
     action( | , BOR , |  , BOR  )           \
 /**/
 
+#define BOOST_TEST_FOR_EACH_CONST_OP(action)\
+    BOOST_TEST_FOR_EACH_NONCOMP_OP(action)  \
+    BOOST_TEST_FOR_EACH_COMP_OP(action)     \
+/**/
+
 #else
+
+#define BOOST_TEST_FOR_EACH_NONCOMP_OP(action)
 
 #define BOOST_TEST_FOR_EACH_CONST_OP(action)\
     BOOST_TEST_FOR_EACH_COMP_OP(action)     \
@@ -181,20 +215,87 @@ BOOST_TEST_FOR_EACH_CONST_OP( DEFINE_CONST_OPER )
 } // namespace op
 
 // ************************************************************************** //
+// **************    assertion::optional_friends_base          ************** //
+// ************************************************************************** //
+// GCC < 10 workaround: Base class that conditionally provides hidden friend
+// comparison operators only when ValType is std::optional. Hidden friends are
+// found via ADL and as non-templates beat std::optional's template operators.
+// See: https://github.com/boostorg/test/issues/475
+
+template<typename Lhs, typename Rhs, typename OP> class binary_expr;
+
+#if ((defined(__GNUC__) && !defined(__clang__) && (__GNUC__ < 10)) || (defined(__clang__) && __clang_major__ < 11)) && \
+    (__cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L))
+
+// Primary template - empty (for non-optional types)
+template<typename ExprType, typename ValType, bool IsOptional = is_std_optional<ValType>::value>
+struct optional_friends_base {};
+
+// Specialization for std::optional types - provides hidden friend operators
+template<typename ExprType, typename ValType>
+struct optional_friends_base<ExprType, ValType, true> {
+    friend binary_expr<ExprType, ValType, op::EQ<ValType, ValType>>
+    operator==( ExprType lhs, ValType rhs )
+    {
+        return binary_expr<ExprType, ValType, op::EQ<ValType, ValType>>(
+            std::move(lhs), std::move(rhs));
+    }
+
+    friend binary_expr<ExprType, ValType, op::NE<ValType, ValType>>
+    operator!=( ExprType lhs, ValType rhs )
+    {
+        return binary_expr<ExprType, ValType, op::NE<ValType, ValType>>(
+            std::move(lhs), std::move(rhs));
+    }
+
+    friend binary_expr<ExprType, ValType, op::LT<ValType, ValType>>
+    operator<( ExprType lhs, ValType rhs )
+    {
+        return binary_expr<ExprType, ValType, op::LT<ValType, ValType>>(
+            std::move(lhs), std::move(rhs));
+    }
+
+    friend binary_expr<ExprType, ValType, op::LE<ValType, ValType>>
+    operator<=( ExprType lhs, ValType rhs )
+    {
+        return binary_expr<ExprType, ValType, op::LE<ValType, ValType>>(
+            std::move(lhs), std::move(rhs));
+    }
+
+    friend binary_expr<ExprType, ValType, op::GT<ValType, ValType>>
+    operator>( ExprType lhs, ValType rhs )
+    {
+        return binary_expr<ExprType, ValType, op::GT<ValType, ValType>>(
+            std::move(lhs), std::move(rhs));
+    }
+
+    friend binary_expr<ExprType, ValType, op::GE<ValType, ValType>>
+    operator>=( ExprType lhs, ValType rhs )
+    {
+        return binary_expr<ExprType, ValType, op::GE<ValType, ValType>>(
+            std::move(lhs), std::move(rhs));
+    }
+};
+
+#else // Not GCC < 10
+template<typename ExprType, typename ValType, bool IsOptional = false>
+struct optional_friends_base {};
+#endif // GCC < 10 && C++17
+
+// ************************************************************************** //
 // **************          assertion::expression_base          ************** //
 // ************************************************************************** //
 // Defines expression operators
 
-template<typename Lhs, typename Rhs, typename OP> class binary_expr;
-
 template<typename ExprType,typename ValType>
-class expression_base {
+class expression_base : public optional_friends_base<ExprType, ValType> {
 public:
 
 #ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
     template<typename T>
     struct RhsT : remove_const<typename remove_reference<T>::type> {};
-    
+
+// Regular operator support (non-comparison operators)
 #define ADD_OP_SUPPORT( oper, name, _, _i )                     \
     template<typename T>                                        \
     binary_expr<ExprType,T,                                     \
@@ -208,7 +309,33 @@ public:
               std::forward<T>(rhs) );                           \
     }                                                           \
 /**/
+
+// GCC < 10 workaround: comparison operators with SFINAE to exclude std::optional
+// when ValType is also std::optional. The hidden friend operators in the base class
+// optional_friends_base will handle the optional==optional case instead.
+#if ((defined(__GNUC__) && !defined(__clang__) && (__GNUC__ < 10)) || (defined(__clang__) && __clang_major__ < 11)) && \
+    (__cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L))
+#define ADD_OP_SUPPORT_COMP( oper, name, _, _i )                              \
+    template<typename T,                                                      \
+             typename std::enable_if<                                         \
+                 !is_std_optional<ValType>::value ||                          \
+                 !is_std_optional<typename RhsT<T>::type>::value, int>::type = 0> \
+    binary_expr<ExprType,T,                                                   \
+        op::name<ValType,typename RhsT<T>::type> >                            \
+    operator oper( T&& rhs )                                                  \
+    {                                                                         \
+        return binary_expr<ExprType,T,                                        \
+         op::name<ValType,typename RhsT<T>::type> >                           \
+            ( std::forward<ExprType>(                                         \
+                *static_cast<ExprType*>(this) ),                              \
+              std::forward<T>(rhs) );                                         \
+    }                                                                         \
+/**/
 #else
+#define ADD_OP_SUPPORT_COMP ADD_OP_SUPPORT
+#endif
+
+#else // BOOST_NO_CXX11_RVALUE_REFERENCES
 
 #define ADD_OP_SUPPORT( oper, name, _, _i )                     \
     template<typename T>                                        \
@@ -222,10 +349,14 @@ public:
               rhs );                                            \
     }                                                           \
 /**/
-#endif
+#define ADD_OP_SUPPORT_COMP ADD_OP_SUPPORT
 
-    BOOST_TEST_FOR_EACH_CONST_OP( ADD_OP_SUPPORT )
+#endif // BOOST_NO_CXX11_RVALUE_REFERENCES
+
+    BOOST_TEST_FOR_EACH_NONCOMP_OP( ADD_OP_SUPPORT )
+    BOOST_TEST_FOR_EACH_COMP_OP( ADD_OP_SUPPORT_COMP )
     #undef ADD_OP_SUPPORT
+    #undef ADD_OP_SUPPORT_COMP
 
 #ifndef BOOST_NO_CXX11_AUTO_DECLARATIONS
     // Disabled operators

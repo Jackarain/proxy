@@ -6,7 +6,7 @@
 
 
 
-#include <libs/statechart/test/ThrowingBoostAssert.hpp>
+#include "ThrowingBoostAssert.hpp"
 #include <boost/statechart/state_machine.hpp>
 #include <boost/statechart/event.hpp>
 #include <boost/statechart/simple_state.hpp>

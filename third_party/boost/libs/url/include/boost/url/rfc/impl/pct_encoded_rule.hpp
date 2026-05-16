@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -20,6 +21,7 @@ namespace urls {
 namespace detail {
 
 template<class CharSet>
+BOOST_URL_CXX20_CONSTEXPR
 auto
 parse_encoded(
     char const*& it,
@@ -29,54 +31,58 @@ parse_encoded(
 {
     auto const start = it;
     std::size_t n = 0;
-    char const* it0;
-skip:
-    it0 = it;
-    it = grammar::find_if_not(
-        it0, end, cs);
-    n += it - it0;
-    if(it == end)
-        goto finish;
-    if(*it != '%')
-        goto finish;
     for(;;)
     {
-        ++it;
-        if(it == end)
-        {
-            // expected HEXDIG
-            BOOST_URL_RETURN_EC(
-                grammar::error::invalid);
-        }
-        auto r = grammar::hexdig_value(*it);
-        if(r < 0)
-        {
-            // expected HEXDIG
-            BOOST_URL_RETURN_EC(
-                grammar::error::invalid);
-        }
-        ++it;
-        if(it == end)
-        {
-            // expected HEXDIG
-            BOOST_URL_RETURN_EC(
-                grammar::error::invalid);
-        }
-        r = grammar::hexdig_value(*it);
-        if(r < 0)
-        {
-            // expected HEXDIG
-            BOOST_URL_RETURN_EC(
-                grammar::error::invalid);
-        }
-        ++n;
-        ++it;
-        if(it == end)
+        auto it0 = it;
+        it = grammar::find_if_not(
+            it0, end, cs);
+        n += it - it0;
+        if(it == end || *it != '%')
             break;
-        if(*it != '%')
-            goto skip;
+        bool at_end = false;
+        for(;;)
+        {
+            ++it;
+            if(it == end)
+            {
+                // expected HEXDIG
+                BOOST_URL_CONSTEXPR_RETURN_EC(
+                    grammar::error::invalid);
+            }
+            auto r = grammar::hexdig_value(*it);
+            if(r < 0)
+            {
+                // expected HEXDIG
+                BOOST_URL_CONSTEXPR_RETURN_EC(
+                    grammar::error::invalid);
+            }
+            ++it;
+            if(it == end)
+            {
+                // expected HEXDIG
+                BOOST_URL_CONSTEXPR_RETURN_EC(
+                    grammar::error::invalid);
+            }
+            r = grammar::hexdig_value(*it);
+            if(r < 0)
+            {
+                // expected HEXDIG
+                BOOST_URL_CONSTEXPR_RETURN_EC(
+                    grammar::error::invalid);
+            }
+            ++n;
+            ++it;
+            if(it == end)
+            {
+                at_end = true;
+                break;
+            }
+            if(*it != '%')
+                break;
+        }
+        if(at_end)
+            break;
     }
-finish:
     return make_pct_string_view_unsafe(
         start, it - start, n);
 }
@@ -86,6 +92,7 @@ finish:
 //------------------------------------------------
 
 template<class CharSet>
+BOOST_URL_CXX20_CONSTEXPR
 auto
 implementation_defined::pct_encoded_rule_t<CharSet>::
 parse(

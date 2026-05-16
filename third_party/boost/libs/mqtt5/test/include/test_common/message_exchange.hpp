@@ -20,13 +20,13 @@
 #include <type_traits>
 #include <vector>
 
-#include "test_common/delayed_op.hpp"
+#include "delayed_op.hpp"
 
 namespace boost::mqtt5::test {
 
 using error_code = boost::system::error_code;
-using time_stamp = std::chrono::time_point<std::chrono::steady_clock>;
-using duration = time_stamp::duration;
+using time_point = clock::time_point;
+using duration = clock::duration;
 
 class msg_exchange;
 class broker_message;
@@ -57,10 +57,9 @@ public:
     stream_message& operator=(stream_message&&) = default;
     stream_message& operator=(const stream_message&) = delete;
 
-    template <typename Executor>
-    auto to_operation(const Executor& ex) {
+    auto to_operation() {
         return delayed_op<error_code, std::vector<uint8_t>> {
-            ex, _after, _ec, std::move(_content)
+            _after, _ec, std::move(_content)
         };
     }
 };
@@ -107,17 +106,15 @@ public:
     template <typename ...Args>
     broker_message& send(Args&& ...args);
 
-    template <typename Executor>
-    decltype(auto) write_completion(const Executor& ex) const {
-        return delayed_op<error_code>(ex, _complete_after, _write_ec);
+    decltype(auto) write_completion() const {
+        return delayed_op<error_code>(_complete_after, _write_ec);
     }
 
-    template <typename Executor>
-    decltype(auto) pop_reply_ops(const Executor& ex) {
+    decltype(auto) pop_reply_ops() {
         std::vector<delayed_op<error_code, std::vector<uint8_t>>> ret;
         std::transform(
             _replies.begin(), _replies.end(), std::back_inserter(ret),
-            [&ex](auto& r) { return r.to_operation(ex); }
+            [](auto& r) { return r.to_operation(); }
         );
         _replies.clear();
         return ret;
@@ -187,9 +184,8 @@ public:
     template <typename ...Args>
     broker_message& send(Args&& ...args);
 
-    template <typename Executor>
-    decltype(auto) pop_send_op(const Executor& ex) {
-        return _message.to_operation(ex);
+    decltype(auto) pop_send_op() {
+        return _message.to_operation();
     }
 };
 
@@ -233,12 +229,11 @@ public:
         return rv;
     }
 
-    template <typename Executor>
-    auto pop_broker_ops(const Executor& ex) {
+    auto pop_broker_ops() {
         std::vector<delayed_op<error_code, std::vector<uint8_t>>> ret;
         std::transform(
             _from_broker.begin(), _from_broker.end(), std::back_inserter(ret),
-            [&ex](auto& s) { return s.pop_send_op(ex); }
+            [](auto& s) { return s.pop_send_op(); }
         );
         _from_broker.clear();
         return ret;

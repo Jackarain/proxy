@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <sstream>
 #include <boost/mpl/int.hpp>
 #include <boost/mpl/min_max.hpp>
@@ -152,7 +154,7 @@ lambda<typename proto::terminal<T &>::type> const var(T &t)
     return that;
 }
 
-void test_lambda()
+BOOST_AUTO_TEST_CASE(test_lambda)
 {
     BOOST_CHECK_EQUAL(11, ( (_1 + 2) / 4 )(42));
     BOOST_CHECK_EQUAL(-11, ( (-(_1 + 2)) / 4 )(42));
@@ -172,17 +174,4 @@ void test_lambda()
     (var(integers)[_1] = _1)(3);
     BOOST_CHECK_EQUAL(2, integers[2]);
     BOOST_CHECK_EQUAL(3, integers[3]);
-}
-
-using namespace unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test expression template domains");
-
-    test->add(BOOST_TEST_CASE(&test_lambda));
-
-    return test;
 }

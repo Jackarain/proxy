@@ -20,7 +20,7 @@ namespace boost {
 namespace urls {
 namespace detail {
 
-struct segments_iter_impl
+struct BOOST_SYMBOL_VISIBLE segments_iter_impl
     : private parts_base
 {
     path_ref ref; // parent path data the iterator aliases
@@ -56,11 +56,9 @@ public:
 
     void update() noexcept;
 
-    BOOST_URL_DECL
     void
     increment() noexcept;
 
-    BOOST_URL_DECL
     void
     decrement() noexcept;
 
@@ -88,5 +86,7 @@ public:
 } // detail
 } // urls
 } // boost
+
+#include <boost/url/detail/impl/segments_iter_impl.hpp>
 
 #endif

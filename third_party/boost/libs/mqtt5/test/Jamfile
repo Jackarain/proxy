@@ -15,6 +15,7 @@ local requirements =
         <define>BOOST_ALL_NO_LIB=1
         <define>BOOST_ASIO_NO_DEPRECATED=1
         <define>BOOST_TEST_NO_MAIN=1
+        <define>BOOST_MQTT5_UNIT_TESTS=1
         <toolset>msvc:<cxxflags>"/bigobj"
         <target-os>windows:<define>_WIN32_WINNT=0x0601
         <library>/boost/test//included
@@ -25,5 +26,5 @@ run
     [ glob "unit/*.cpp" ]
 : requirements $(requirements)
     <include>include
-: target-name boost_mqtt5_tests
+: target-name boost_mqtt5_unittests
 ;

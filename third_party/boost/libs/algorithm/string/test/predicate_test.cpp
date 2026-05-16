@@ -138,7 +138,12 @@ void classification_test()
     TEST_CLASS( is_any_of( string("abc") ), "aaabbcc", "aaxb" );
     TEST_CLASS( is_any_of( "abc" ), "aaabbcc", "aaxb" );
     TEST_CLASS( is_from_range( 'a', 'c' ), "aaabbcc", "aaxb" );
-
+    
+#ifndef BOOST_NO_CXX11
+    TEST_CLASS( is_blank(), " \t", "\t \n\r" );
+    TEST_CLASS( !is_blank(), "abc\n\v\f\r", "a x\t" );
+#endif
+    
     TEST_CLASS( !is_classified(std::ctype_base::space), "...", "..\n\r\t " );
     TEST_CLASS( ( !is_any_of("abc") && is_from_range('a','e') ) || is_space(), "d e", "abcde" );
 

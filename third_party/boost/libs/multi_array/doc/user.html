@@ -198,7 +198,7 @@ provides a specialized set of constructors.  For further information,
 consult their reference pages.
 
 <p>All of the non-const array types in this library provide assignment 
-operators<tt>operator=()</tt>. Each of the array types <tt>multi_array</tt>,
+operators <tt>operator=()</tt>. Each of the array types <tt>multi_array</tt>,
       <tt>multi_array_ref</tt>, <tt>subarray</tt>, and
       <tt>array_view</tt> can be assigned from any 
 of the others, so long as their shapes match. The 
@@ -476,7 +476,7 @@ stored in ascending or descending order.
   // Store last dimension, then first, then middle
   array_type::size_type ordering[] = {2,0,1};
 
-  // Store the first dimension(dimension 0) in descending order 
+  // Store the first dimension (dimension 0) in descending order 
   bool ascending[] = {false,true,true};
 
   array_type A(extents[3][4][2],storage(ordering,ascending)); 
@@ -488,7 +488,7 @@ stored in ascending or descending order.
 <h2>Setting The Array Base</h2>
 In some situations, it may be inconvenient or awkward to use an 
 array that is zero-based.
-the Boost.MultiArray components provide two facilities for changing the
+The Boost.MultiArray components provide two facilities for changing the
 bases of an array.  One may specify a pair of range values, with
 the <tt>extent_range</tt> type, to
 the <tt>extent_gen</tt> constructor in order to set the base value. 

@@ -58,8 +58,7 @@ struct pattern;
         @li @ref parse_uri
         @li @ref parse_uri_reference
 */
-class BOOST_URL_DECL
-    url_base
+class BOOST_SYMBOL_VISIBLE url_base
     : public url_view_base
 {
     char* s_ = nullptr;
@@ -128,7 +127,7 @@ public:
     char const*
     c_str() const noexcept
     {
-        return pi_->cs_;
+        return impl().cs_;
     }
 
     /** Return the number of characters that can be stored without reallocating
@@ -2656,6 +2655,61 @@ public:
         Applies Syntax-based normalization to
         all components of the URL.
 
+        The scheme is normalized to lowercase.
+
+        @code
+        assert( url( "HTTP://www.example.com" ).normalize().buffer() == "http://www.example.com" );
+        @endcode
+
+        The host is normalized to lowercase.
+        Percent-encoding triplets are normalized
+        to uppercase letters. Percent-encoded
+        octets that correspond to unreserved
+        characters are decoded.
+
+        @code
+        assert( url( "http://www.Example.com" ).normalize().buffer() == "http://www.example.com" );
+        assert( url( "http://www.%65xample.com" ).normalize().buffer() == "http://www.example.com" );
+        @endcode
+
+        Percent-encoding triplets in the path
+        are normalized to uppercase letters.
+        Percent-encoded octets that correspond
+        to unreserved characters are decoded.
+        Redundant path-segments "." and ".."
+        are removed.
+
+        @code
+        assert( url( "http://www.example.com/a/b/../c" ).normalize().buffer() == "http://www.example.com/a/c" );
+        assert( url( "http://www.example.com/a/./b" ).normalize().buffer() == "http://www.example.com/a/b" );
+        assert( url( "http://www.example.com/%63ss" ).normalize().buffer() == "http://www.example.com/css" );
+        @endcode
+
+        Percent-encoding triplets in the query
+        are normalized to uppercase letters.
+        Percent-encoded octets that correspond
+        to unreserved characters are decoded.
+
+        @code
+        assert( url( "http://www.example.com?a=%62" ).normalize().buffer() == "http://www.example.com?a=b" );
+        @endcode
+
+        Percent-encoding triplets in the fragment
+        are normalized to uppercase letters.
+        Percent-encoded octets that correspond
+        to unreserved characters are decoded.
+
+        @code
+        assert( url( "http://www.example.com#%61bc" ).normalize().buffer() == "http://www.example.com#abc" );
+        @endcode
+
+        Applying normalization to a URL with all
+        components percent-encoded:
+
+        @code
+        assert( url( "HTTP://www.Example.com/%70ath?%71uery#%66rag" ).normalize().buffer() == "http://www.example.com/path?query#frag" );
+        @endcode
+
         @return `*this`
 
         @par Exception Safety
@@ -2665,6 +2719,13 @@ public:
         @par Specification
         @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-6.2.2"
             >6.2.2 Syntax-Based Normalization (rfc3986)</a>
+
+        @see
+            @ref normalize_scheme,
+            @ref normalize_authority,
+            @ref normalize_path,
+            @ref normalize_query,
+            @ref normalize_fragment
 
     */
     url_base&
@@ -2676,6 +2737,10 @@ public:
         URL scheme.
 
         The scheme is normalized to lowercase.
+
+        @code
+        assert( url( "HTTP://www.example.com" ).normalize_scheme().buffer() == "http://www.example.com" );
+        @endcode
 
         @return `*this`
 
@@ -2696,10 +2761,16 @@ public:
         Applies Syntax-based normalization to the
         URL authority.
 
+        The host is normalized to lowercase.
         Percent-encoding triplets are normalized
         to uppercase letters. Percent-encoded
         octets that correspond to unreserved
         characters are decoded.
+
+        @code
+        assert( url( "http://www.Example.com" ).normalize_authority().buffer() == "http://www.example.com" );
+        assert( url( "http://www.%65xample.com" ).normalize_authority().buffer() == "http://www.example.com" );
+        @endcode
 
         @return `*this`
 
@@ -2724,7 +2795,13 @@ public:
         to uppercase letters. Percent-encoded
         octets that correspond to unreserved
         characters are decoded. Redundant
-        path-segments are removed.
+        path-segments "." and ".." are removed.
+
+        @code
+        assert( url( "http://www.example.com/a/b/../c" ).normalize_path().buffer() == "http://www.example.com/a/c" );
+        assert( url( "http://www.example.com/a/./b" ).normalize_path().buffer() == "http://www.example.com/a/b" );
+        assert( url( "http://www.example.com/%63ss" ).normalize_path().buffer() == "http://www.example.com/css" );
+        @endcode
 
         @return `*this`
 
@@ -2750,6 +2827,10 @@ public:
         octets that correspond to unreserved
         characters are decoded.
 
+        @code
+        assert( url( "http://www.example.com?a=%62" ).normalize_query().buffer() == "http://www.example.com?a=b" );
+        @endcode
+
         @return `*this`
 
         @par Exception Safety
@@ -2773,6 +2854,10 @@ public:
         to uppercase letters. Percent-encoded
         octets that correspond to unreserved
         characters are decoded.
+
+        @code
+        assert( url( "http://www.example.com#%61bc" ).normalize_fragment().buffer() == "http://www.example.com#abc" );
+        @endcode
 
         @return `*this`
 
@@ -3079,6 +3164,7 @@ resolve(
 } // boost
 
 // These are here because of circular references
+#include <boost/url/impl/url_base.hpp>
 #include <boost/url/impl/params_ref.hpp>
 #include <boost/url/impl/params_encoded_ref.hpp>
 #include <boost/url/impl/segments_ref.hpp>

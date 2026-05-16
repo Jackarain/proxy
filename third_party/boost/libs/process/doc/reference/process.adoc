@@ -78,7 +78,7 @@ struct basic_process
   template<typename ExecutionContext, typename Args, typename ... Inits>
   explicit basic_process(
           ExecutionContext & context,
-          const filesystem::path&>::type exe,
+          const filesystem::path& exe,
           Args&& args, Inits&&... inits);
 
   // Attach to an existing process
@@ -142,7 +142,7 @@ struct basic_process
   native_handle_type native_handle() {return process_handle_.native_handle(); }
 
   // Return the evaluated exit_code.
-  int exit_code() cons;
+  int exit_code() const;
 
   // Get the id of the process;
   pid_type id() const;

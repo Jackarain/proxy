@@ -21,13 +21,15 @@
 namespace boost {
 namespace urls {
 
-/** Common functionality for containers
+/** Percent-encoded query helper base
 
-    This base class is used by the library
-    to provide common member functions for
-    containers. This cannot be instantiated
-    directly; Instead, use one of the
-    containers or functions:
+    This base implements the shared
+    percent-encoded query parameter view
+    functionality used by @ref params_encoded_view
+    and @ref params_encoded_ref. It cannot be
+    instantiated directly; instead, use one of
+    those containers or the corresponding ref
+    adaptors.
 
     @par Containers
     @li @ref params_ref
@@ -35,7 +37,7 @@ namespace urls {
     @li @ref params_encoded_ref
     @li @ref params_encoded_view
 */
-class BOOST_URL_DECL params_encoded_base
+class BOOST_SYMBOL_VISIBLE params_encoded_base
 {
     friend class url_view_base;
     friend class params_encoded_ref;
@@ -319,6 +321,46 @@ public:
         pct_string_view key,
         ignore_case_param ic = {}) const noexcept;
 
+    /** Return the value for a key or a fallback
+
+        This convenience function searches for the
+        first parameter matching `key` and returns
+        its percent-encoded value. If no parameter
+        with the specified key exists, the provided
+        fallback `value` is returned instead. When
+        the key is found but the corresponding
+        parameter has no value, an empty string is
+        returned.
+
+        @par Example
+        @code
+        url_view u( "/path?first=John&last=Doe" );
+        assert( u.encoded_params().get_or(
+            "missing", "n%2Fa" ) == "n%2Fa" );
+        @endcode
+
+        @par Complexity
+        Linear in `this->buffer().size()`.
+
+        @par Exception Safety
+        Throws nothing.
+
+        @param key The key to match.
+        @param value The fallback string returned
+        when no matching key exists. If this
+        parameter is omitted, an empty string is
+        used.
+        @param ic Optional case-insensitive compare
+        indicator.
+
+        @return The encoded value or the fallback.
+    */
+    pct_string_view
+    get_or(
+        pct_string_view key,
+        pct_string_view value = {},
+        ignore_case_param ic = {}) const noexcept;
+
     /** Find a matching key
 
         This function examines the parameters
@@ -552,7 +594,6 @@ private:
     @param qp The params to write
     @return A reference to the output stream, for chaining
 */
-BOOST_URL_DECL
 std::ostream&
 operator<<(
     std::ostream& os,

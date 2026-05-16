@@ -43,37 +43,43 @@ jobs:
             address-model: 32,64
           - toolset: gcc-7
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-7-multilib
             address-model: 32,64
           - toolset: gcc-8
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-8-multilib
             address-model: 32,64
           - toolset: gcc-9
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-9-multilib
             address-model: 32,64
           - toolset: gcc-10
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-10-multilib
             address-model: 32,64
           - toolset: gcc-11
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: g++-11-multilib
             address-model: 32,64
           - toolset: gcc-12
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: g++-12-multilib
             address-model: 32,64
           - toolset: gcc-13
             cxxstd: "11,14,17,20,2b"
-            container: ubuntu:23.04
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: g++-13-multilib
             address-model: 32,64
@@ -82,6 +88,12 @@ jobs:
             container: ubuntu:24.04
             os: ubuntu-latest
             install: g++-14-multilib
+            address-model: 32,64
+          - toolset: gcc-15
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:25.10
+            os: ubuntu-latest
+            install: g++-15-multilib
             address-model: 32,64
           - toolset: clang
             compiler: clang++-3.9
@@ -104,35 +116,45 @@ jobs:
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-6.0
           - toolset: clang
             compiler: clang++-7
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-7
           - toolset: clang
             compiler: clang++-8
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-8
           - toolset: clang
             compiler: clang++-9
             cxxstd: "11,14,17"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-9
           - toolset: clang
             compiler: clang++-10
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
+            install: clang-10
           - toolset: clang
             compiler: clang++-11
             cxxstd: "11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
+            install: clang-11
           - toolset: clang
             compiler: clang++-12
             cxxstd: "11,14,17,20"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
+            install: clang-12
           - toolset: clang
             compiler: clang++-13
             cxxstd: "11,14,17,20"
@@ -154,13 +176,13 @@ jobs:
           - toolset: clang
             compiler: clang++-16
             cxxstd: "11,14,17,20,2b"
-            container: ubuntu:23.04
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-16
           - toolset: clang
             compiler: clang++-17
             cxxstd: "11,14,17,20,2b"
-            container: ubuntu:23.10
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-17
           - toolset: clang
@@ -170,34 +192,60 @@ jobs:
             os: ubuntu-latest
             install: clang-18
           - toolset: clang
+            compiler: clang++-19
             cxxstd: "11,14,17,20,2b"
-            os: macos-12
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-19
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
-            os: macos-13
+            compiler: clang++-20
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-20
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
+            compiler: clang++-21
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:25.10
+            os: ubuntu-latest
+            install: clang-21
+          - toolset: clang
             os: macos-14
+            cxxstd: "11,14,17,20,2b"
+          - toolset: clang
+            os: macos-15
+            cxxstd: "11,14,17,20,23,2c"
+          - toolset: clang
+            os: macos-26
+            cxxstd: "11,14,17,20,23,2c"
 
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
+
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     defaults:
       run:
         shell: bash
 
     steps:
-      - name: Enable Node 16
-        run: |
-          echo "ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true" >> $GITHUB_ENV
-
-      - uses: actions/checkout@v3
-
       - name: Setup container environment
         if: matrix.container
         run: |
           apt-get update
-          apt-get -y install sudo python3 git g++
+          apt-get -y install sudo python3 git g++ curl xz-utils
+
+      - name: Install nodejs20glibc2.17
+        if: ${{ startsWith( matrix.container, 'ubuntu:1' ) }}
+        run: |
+          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+          ldd /__e/node20/bin/node
+
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -243,26 +291,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: 14,latest
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
           - toolset: clang-win
-            cxxstd: "14,17,latest"
+            cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
           - toolset: gcc
             cxxstd: "11,14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
 
     runs-on: ${{matrix.os}}
 
@@ -302,11 +342,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-          - os: ubuntu-22.04
-          - os: macos-12
-          - os: macos-13
-          - os: macos-14
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
@@ -350,11 +387,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-          - os: ubuntu-22.04
-          - os: macos-12
-          - os: macos-13
-          - os: macos-14
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
@@ -408,11 +442,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-          - os: ubuntu-22.04
-          - os: macos-12
-          - os: macos-13
-          - os: macos-14
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
@@ -464,8 +495,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
@@ -513,8 +543,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
@@ -580,8 +609,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 

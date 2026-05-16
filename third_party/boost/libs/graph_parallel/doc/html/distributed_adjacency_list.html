@@ -79,7 +79,7 @@ vertices or edges of the graph.</p>
 <pre class="literal-block">
 using namespace boost;
 typedef adjacency_list&lt;vecS,
-                       distributedS&lt;parallel::mpi::bsp_process_group, vecS&gt;,
+                       distributedS&lt;graph::distributed::mpi_process_group, vecS&gt;,
                        directedS&gt;
   Graph;
 </pre>
@@ -135,7 +135,7 @@ struct Highway {
 respectively:</p>
 <pre class="literal-block">
 typedef adjacency_list&lt;vecS,
-                       distributedS&lt;parallel::mpi::bsp_process_group, vecS&gt;,
+                       distributedS&lt;graph::distributed::mpi_process_group, vecS&gt;,
                        directedS,
                        City, Highway&gt;
   RoadMap;

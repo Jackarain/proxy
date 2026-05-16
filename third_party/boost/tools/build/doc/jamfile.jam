@@ -54,6 +54,7 @@ html index : src/standalone.adoc :
         # <flags>"-a stylesheet=amber.css"
         # <flags>"-a stylesdir=$(STYLES_DIR)"
         # <asciidoctor-attribute>linkcss
+        <dependency>src/tufte.css
     ;
 explicit index ;
 

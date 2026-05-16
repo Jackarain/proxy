@@ -278,7 +278,6 @@ install:
   - git submodule init libs/assert
   - git submodule init libs/config
   - git submodule init libs/core
-  - git submodule init libs/static_assert
   - git submodule init libs/headers
   - git submodule init tools/build
   - git submodule init tools/boost_install

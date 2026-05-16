@@ -15,7 +15,6 @@ constant boost_dependencies :
     /boost/mpl//boost_mpl
     /boost/multi_index//boost_multi_index
     /boost/preprocessor//boost_preprocessor
-    /boost/static_assert//boost_static_assert
     /boost/throw_exception//boost_throw_exception
     /boost/type_traits//boost_type_traits
     /boost/utility//boost_utility ;

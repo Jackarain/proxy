@@ -21,7 +21,7 @@
 #include <boost/test/test_tools.hpp>
 #include <boost/array.hpp>
 #include <boost/function.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/functional.hpp>
 #include <iostream>
 #include <vector>
@@ -43,7 +43,7 @@ struct functor
 {
     template< class T >
     void operator()( T ) const
-    { 
+    {
         // do nothing
     }
 };
@@ -54,9 +54,10 @@ void check_list_inserter()
 {
     using namespace std;
     using namespace boost;
+    using namespace boost::placeholders;
     using namespace boost::assign;
     vector<int> v;
-    
+
     //
     // @note: cast only necessary on CodeWarrior
     //
@@ -70,16 +71,16 @@ void check_list_inserter()
     BOOST_CHECK_EQUAL( v.size(), 2u );
     BOOST_CHECK_EQUAL( v[0], 6 );
     BOOST_CHECK_EQUAL( v[1], 4 );
-    
+
     push_back( v ) = 1,2,3,4,5;
     BOOST_CHECK_EQUAL( v.size(), 7u );
     BOOST_CHECK_EQUAL( v[6], 5 );
-    
+
     push_back( v )(6).repeat( 10, 7 )(8);
     BOOST_CHECK_EQUAL( v.size(), 19u );
     BOOST_CHECK_EQUAL( v[18], 8 );
-    BOOST_CHECK_EQUAL( v[8], 7 ); 
-    BOOST_CHECK_EQUAL( v[16], 7 ); 
+    BOOST_CHECK_EQUAL( v[8], 7 );
+    BOOST_CHECK_EQUAL( v[16], 7 );
 
 #if !BOOST_WORKAROUND(BOOST_MSVC, <= 1200)
     push_back( v ) = repeat_fun( 10, &rand );
@@ -97,13 +98,13 @@ void check_list_inserter()
     BOOST_CHECK_EQUAL( v.size(), 41u );
 
 #if BOOST_WORKAROUND(BOOST_MSVC, <= 1200) || BOOST_WORKAROUND(__SUNPRO_CC, <= 0x580 )
-    push_back( v )(1).repeat_fun( 10, &rand )(2);  
+    push_back( v )(1).repeat_fun( 10, &rand )(2);
 #else
     push_back( v ) = 1,repeat_fun( 10, &rand ),2;
 #endif
 
     BOOST_CHECK_EQUAL( v.size(), 53u );
-    
+
     typedef map<string,int> map_t;
     typedef map_t::value_type V;
     map_t m;
@@ -126,7 +127,7 @@ void check_list_inserter()
     team_score_map team_score;
     insert( team_score )( "Team Foo",    list_of(1)(1)(0) )
                         ( "Team Bar",    list_of(0)(0)(0) )
-                        ( "Team FooBar", list_of(0)(0)(1) ); 
+                        ( "Team FooBar", list_of(0)(0)(1) );
     BOOST_CHECK_EQUAL( team_score.size(), 3u );
     BOOST_CHECK_EQUAL( team_score[ "Team Foo" ][1], 1 );
     BOOST_CHECK_EQUAL( team_score[ "Team Bar" ][0], 0 );
@@ -139,7 +140,7 @@ void check_list_inserter()
     BOOST_CHECK_EQUAL( team_score[ "Team Foo" ][1], 1 );
     BOOST_CHECK_EQUAL( team_score[ "Team Bar" ][0], 0 );
 #endif
-                        
+
 }
 
 

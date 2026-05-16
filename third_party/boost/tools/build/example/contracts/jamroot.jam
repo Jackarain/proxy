@@ -1,0 +1,14 @@
+# Copyright 2008 Jurko Gospodnetic
+# Copyright 2025 René Ferdinand Rivera Morell
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
+
+project
+    : requirements
+        <contracts>on
+        <contracts-semantic>enforce
+        <toolset>clang:<stdlib>libc++
+        <cxxstd>23
+    ;
+
+exe hello : hello.cpp ;

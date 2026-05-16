@@ -23,7 +23,6 @@ target_link_libraries(boost_ptr_container
     Boost::mpl
     Boost::range
     Boost::smart_ptr
-    Boost::static_assert
     Boost::type_traits
     Boost::unordered
     Boost::utility

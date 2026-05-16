@@ -61,8 +61,8 @@ void lorenz_with_lyap( const state_type &x , state_type &dxdt , double t )
 
     for( size_t l=0 ; l<num_of_lyap ; ++l )
     {
-        const double *pert = x.begin() + 3 + l * 3;
-        double *dpert = dxdt.begin() + 3 + l * 3;
+        const double *pert = x.data() + 3 + l * 3;
+        double *dpert = dxdt.data() + 3 + l * 3;
         dpert[0] = - sigma * pert[0] + 10.0 * pert[1];
         dpert[1] = ( R - x[2] ) * pert[0] - pert[1] - x[0] * pert[2];
         dpert[2] = x[1] * pert[0] + x[0] * pert[1] - b * pert[2];

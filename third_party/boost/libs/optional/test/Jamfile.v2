@@ -28,7 +28,6 @@ project
             cxx11_explicit_conversion_operators
 #            cxx11_noexcept
             cxx11_rvalue_references
-            cxx11_static_assert
             cxx11_variadic_templates
         ]
     ;
@@ -37,7 +36,9 @@ project
 run optional_test.cpp : : : <library>/boost/bind//boost_bind ;
 run optional_test_assign.cpp ;
 run optional_test_swap.cpp ;
+compile optional_test_constexpr.cpp ;
 compile optional_test_wuninitialized.cpp ;
+compile optional_test_fwd_header.cpp ;
 run optional_test_conversions_from_U.cpp ;
 run optional_test_convert_from_T.cpp ;
 run optional_test_convert_assign.cpp ;
@@ -47,6 +48,7 @@ run optional_test_flat_map.cpp ;
 run optional_test_hash.cpp ;
 run optional_test_map.cpp ;
 run optional_test_tie.cpp : : : <library>/boost/tuple//boost_tuple ;
+run optional_test_ranges_find.cpp ;
 run optional_test_ref_assign_portable_minimum.cpp ;
 run optional_test_ref_assign_mutable_int.cpp ;
 run optional_test_ref_assign_const_int.cpp ;
@@ -78,6 +80,7 @@ compile-fail optional_test_fail3b.cpp ;
 compile-fail optional_test_ref_fail1.cpp ;
 compile-fail optional_test_ref_fail3.cpp ;
 compile-fail optional_test_ref_fail4.cpp ;
+compile-fail optional_test_ref_fail_convert_from_temporary_optional_T.cpp ;
 compile-fail optional_test_inplace_fail.cpp ;
 compile-fail optional_test_inplace_fail2.cpp ;
 compile-fail optional_test_fail_implicit_bool_convert.cpp ;

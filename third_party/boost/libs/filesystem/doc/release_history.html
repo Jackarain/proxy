@@ -40,6 +40,23 @@
   </tr>
 </table>
 
+<h2>1.91.0</h2>
+<ul>
+  <li>Boost.Filesystem now defines and uses its own platform macros <code>BOOST_FILESYSTEM_POSIX_API</code> and <code>BOOST_FILESYSTEM_WINDOWS_API</code>. The old <code>BOOST_POSIX_API</code> and <code>BOOST_WINDOWS_API</code> macros are still defined by Boost.System. Boost.Filesystem will check that the two sets of macros are in sync and by default will fail to compile if not. The compilation error can be reduced to a warning by defininig <code>BOOST_FILESYSTEM_ALLOW_SYSTEM_API_MISMATCH</code> to 1 or disabled entirely by defining it to 2. Note that in this case the error code values reported by Boost.Filesystem will not match the error category.</li>
+  <li>On POSIX platforms not supporting <code>openat</code> and related APIs, fixed an error reported by <code>recursive_directory_iterator</code> increment when the iterator encounters a dangling symlink and following symlinks is disabled.</li>
+  <li><b>Breaking change for Cygwin users.</b> The library now treats Cygwin as a POSIX platform. This has several user-facing consequences, in particular:
+    <ul>
+      <li>The <code>path::value_type</code> type has changed from <code>wchar_t</code> to <code>char</code>. As on other POSIX platforms, wide character paths will be converted to the narrow character encoding using the locale set by <code>path::imbue</code>. Note that since Cygwin is running on top of Windows, it will also perform character code conversion internally. It is important that locale in the Cygwin environment is configured correctly.</li>
+      <li>Path syntax now follows POSIX conventions, Windows-specific paths (e.g. UNC paths, drive names and path prefixes) are not supported.</li>
+      <li>Certain Windows-specific parts of the API will become inaccessible. Since reparse points are a Windows-only feature, <code>file_type::reparse_file</code> will not be reported for files. Reparse point handling is dependent on Cygwin runtime behavior.</li>
+      <li>Cygwin has its own implementation of symlinks that is incompatible with native Windows symlinks. Boost.Filesystem will now create and operate on Cygwin symlinks.</li>
+      <li>Error codes reported by Boost.Filesystem will now use POSIX <code>errno</code> values.</li>
+    </ul>
+  </li>
+  <li>On DragonFly BSD, NetBSD and Solaris, Boost.Filesystem default path locale now uses UTF-8 for path character encoding.</li>
+  <li>On Linux, use <code>read</code>/<code>write</code> loop implementation of <code>copy_file</code> and <code>copy</code> for configfs, securityfs, cgroup and cgroup2 filesystems, in addition to the previously blacklisted filesystems.</li>
+</ul>
+
 <h2>1.90.0</h2>
 <ul>
   <li>Clear passed <code>error_code</code> argument on successful completion of the <code>permissions</code> operation. (<a href="https://github.com/boostorg/filesystem/pull/338">PR#338</a>)</li>

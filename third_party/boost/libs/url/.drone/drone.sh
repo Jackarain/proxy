@@ -205,21 +205,6 @@ elif [ "$DRONE_JOB_BUILDTYPE" == "codecov" ]; then
   cd "$BOOST_ROOT/libs/$SELF"
   ci/travis/codecov.sh
 
-  # coveralls
-  # uses multiple lcov steps from boost-ci codecov.sh script
-  if [ -n "${COVERALLS_REPO_TOKEN}" ]; then
-    echo "processing coveralls"
-    pip3 install --user cpp-coveralls
-    cd "$BOOST_CI_SRC_FOLDER"
-
-    export PATH=/tmp/lcov/bin:$PATH
-    command -v lcov
-    lcov --version
-
-    lcov --remove coverage.info -o coverage_filtered.info '*/test/*' '*/extra/*'
-    cpp-coveralls --verbose -l coverage_filtered.info
-  fi
-
 elif [ "$DRONE_JOB_BUILDTYPE" == "valgrind" ]; then
 
   echo '==================================> INSTALL'

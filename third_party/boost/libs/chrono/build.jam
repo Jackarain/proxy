@@ -14,7 +14,6 @@ constant boost_dependencies :
     /boost/mpl//boost_mpl
     /boost/predef//boost_predef
     /boost/ratio//boost_ratio
-    /boost/static_assert//boost_static_assert
     /boost/system//boost_system
     /boost/throw_exception//boost_throw_exception
     /boost/type_traits//boost_type_traits

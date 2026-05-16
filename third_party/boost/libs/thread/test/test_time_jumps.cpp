@@ -4,18 +4,19 @@
 	#include <sys/time.h>
 #endif
 
-#include "boost/bind/bind.hpp"
-#include "boost/chrono.hpp"
-#include "boost/chrono/ceil.hpp"
-#include "boost/date_time.hpp"
-#include "boost/thread/concurrent_queues/sync_priority_queue.hpp"
-#include "boost/thread/concurrent_queues/sync_timed_queue.hpp"
-#include "boost/thread/future.hpp"
-#include "boost/thread/mutex.hpp"
-#include "boost/thread/recursive_mutex.hpp"
-#include "boost/thread/shared_lock_guard.hpp"
-#include "boost/thread/shared_mutex.hpp"
-#include "boost/thread/thread.hpp"
+#include <boost/bind/bind.hpp>
+#include <boost/core/ref.hpp>
+#include <boost/chrono.hpp>
+#include <boost/chrono/ceil.hpp>
+#include <boost/date_time.hpp>
+#include <boost/thread/concurrent_queues/sync_priority_queue.hpp>
+#include <boost/thread/concurrent_queues/sync_timed_queue.hpp>
+#include <boost/thread/future.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/recursive_mutex.hpp>
+#include <boost/thread/shared_lock_guard.hpp>
+#include <boost/thread/shared_mutex.hpp>
+#include <boost/thread/thread.hpp>
 
 #include <iomanip>
 #ifdef TEST_CPP14_FEATURES

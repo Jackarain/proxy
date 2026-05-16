@@ -27,7 +27,7 @@ n2
         {
         s << "c2";
         return s;
-        }           
+        }
     }
 
 template <bool Test>

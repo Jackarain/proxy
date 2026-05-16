@@ -95,8 +95,25 @@ using format_arg = detail::format_arg;
 
     @par Example
     @code
-    assert(format("{}", "Hello world!").buffer() == "Hello%20world%21");
+    assert(format("{}://{}:{}/rfc/{}",
+        "https", "www.ietf.org", 80, "rfc2396.txt"
+        ).buffer() == "https://www.ietf.org:80/rfc/rfc2396.txt");
     @endcode
+
+    Arguments that contain special characters are
+    automatically percent-encoded for the URL
+    component where they appear:
+
+    @code
+    assert(format("https://example.com/~{}",
+        "John Doe"
+        ).buffer() == "https://example.com/~John%20Doe");
+    @endcode
+
+    @note
+    The formatting machinery relies on language and library
+    features that are broken on GCC 4.8 and GCC 5.x, so this
+    function is not supported on those compilers.
 
     @par Preconditions
     All replacement fields must be valid and the
@@ -174,9 +191,10 @@ format(
 
     @par Example
     @code
-    static_url<30> u;
-    format(u, "{}", "Hello world!");
-    assert(u.buffer() == "Hello%20world%21");
+    static_url<50> u;
+    format_to(u, "{}://{}:{}/rfc/{}",
+        "https", "www.ietf.org", 80, "rfc2396.txt");
+    assert(u.buffer() == "https://www.ietf.org:80/rfc/rfc2396.txt");
     @endcode
 
     @par Preconditions
@@ -267,7 +285,13 @@ format_to(
 
     @par Example
     @code
-    assert(format("user/{id}", {{"id", 1}}).buffer() == "user/1");
+    assert(format(
+        "{scheme}://{host}:{port}/{dir}/{file}",
+        {{"scheme", "https"}, {"port", 80},
+         {"host", "example.com"},
+         {"dir", "path/to"},
+         {"file", "file.txt"}}
+        ).buffer() == "https://example.com:80/path/to/file.txt");
     @endcode
 
     @par Preconditions
@@ -355,9 +379,14 @@ format(
 
     @par Example
     @code
-    static_url<30> u;
-    format_to(u, "user/{id}", {{"id", 1}})
-    assert(u.buffer() == "user/1");
+    url u;
+    format_to(u,
+        "{scheme}://{host}:{port}/{dir}/{file}",
+        {{"scheme", "https"}, {"port", 80},
+         {"host", "example.com"},
+         {"dir", "path/to"},
+         {"file", "file.txt"}});
+    assert(u.buffer() == "https://example.com:80/path/to/file.txt");
     @endcode
 
     @par Preconditions
@@ -426,11 +455,11 @@ format_to(
     potentially used as a format argument.
 
     @par Example
-    The function should be used to designate a named
-    argument for a replacement field in a format
-    URL string.
     @code
-    assert(format("user/{id}", arg("id", 1)).buffer() == "user/1");
+    assert(format(
+        "https://example.com/~{username}",
+        arg("username", "mark")
+        ).buffer() == "https://example.com/~mark");
     @endcode
 
     @return A temporary object with reference

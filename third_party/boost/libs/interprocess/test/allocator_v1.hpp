@@ -118,7 +118,9 @@ class allocator_v1
       if(size_overflows<sizeof(T)>(count)){
          throw bad_alloc();
       }
-      (void)hint; return pointer(static_cast<T*>(mp_mngr->allocate(count*sizeof(T))));
+      (void)hint;
+      return pointer(static_cast<T*>
+         (mp_mngr->allocate_aligned(count*sizeof(T), boost::container::dtl::alignment_of<T>::value)));
    }
 
    //!Deallocates memory previously allocated. Never throws

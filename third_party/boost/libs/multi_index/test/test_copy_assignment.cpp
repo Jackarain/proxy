@@ -1,6 +1,6 @@
 /* Boost.MultiIndex test for copying and assignment.
  *
- * Copyright 2003-2018 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -12,9 +12,9 @@
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
 #include <algorithm>
-#include <boost/move/utility_core.hpp>
 #include <list>
 #include <numeric>
+#include <utility>
 #include <vector>
 #include "pre_multi_index.hpp"
 #include "employee.hpp"
@@ -22,15 +22,6 @@
 #include <boost/detail/lightweight_test.hpp>
 
 using namespace boost::multi_index;
-
-#if BOOST_WORKAROUND(__MWERKS__,<=0x3003)
-/* The "ISO C++ Template Parser" option makes CW8.3 incorrectly fail at
- * expressions of the form sizeof(x) where x is an array local to a
- * template function.
- */
-
-#pragma parse_func_templ off
-#endif
 
 typedef multi_index_container<int> copyable_and_movable;
 
@@ -53,11 +44,7 @@ static void test_assign()
   s.assign((const int*)(&a[0]),(const int*)(&a[sa]));
   BOOST_TEST(s.size()==sa&&std::equal(s.begin(),s.end(),&a[0]));
 
-#if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
   s.assign({0,1,2,3,4,5});
-#else
-  s.assign(&a[0],&a[sa]);
-#endif
 
   BOOST_TEST(s.size()==sa&&std::equal(s.begin(),s.end(),&a[0]));
 
@@ -67,10 +54,6 @@ static void test_assign()
   s.assign((std::size_t)12,167);
   BOOST_TEST(s.size()==12&&std::accumulate(s.begin(),s.end(),0)==2004);
 }
-
-#if BOOST_WORKAROUND(__MWERKS__,<=0x3003)
-#pragma parse_func_templ reset
-#endif
 
 template<typename Sequence>
 static void test_integral_assign()
@@ -156,8 +139,6 @@ void test_copy_assignment()
 
   BOOST_TEST(i5==get<5>(es2));
 
-#if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)&&\
-    !BOOST_WORKAROUND(BOOST_MSVC,==1800) /* MSVC 12.0 chokes on what follows */
   employee_set es8({{0,"Rose",40,4512},{1,"Mary",38,3345},{2,"Jo",25,7102}});
   employee_set es9;
   es9={{0,"Rose",40,4512},{1,"Mary",38,3345},{2,"Jo",25,7102},
@@ -197,16 +178,15 @@ void test_copy_assignment()
   get<5>(es9)={{1,"Mary",38,3345},{2,"Jo",25,7102},{0,"Rose",40,4512},
                {2,"Jo",25,7102}};
   BOOST_TEST(es9==es8);
-#endif
 
   employee_set es10(produce_employee_set()),es11(produce_employee_set());
   BOOST_TEST(es10==es11);
 
-  employee_set es12(boost::move(es10));
+  employee_set es12(std::move(es10));
   BOOST_TEST(es10.empty());
   BOOST_TEST(es11==es12);
 
-  es10=boost::move(es12);
+  es10=std::move(es12);
   BOOST_TEST(es12.empty());
   BOOST_TEST(es11==es10);
 

@@ -167,15 +167,20 @@ struct virtual_traits<const std::shared_ptr<Class>&, Registry> {
     //! @return A `std::shared_ptr` to the same object, cast to
     //! `Derived::element_type`.
     template<class Other>
-    static auto cast(const std::shared_ptr<Class>& obj) {
-        using namespace boost::openmethod::detail;
-
-        if constexpr (requires_dynamic_cast<Class*, Other>) {
-            return std::dynamic_pointer_cast<
-                typename shared_ptr_cast_traits<Other>::virtual_type>(obj);
+    static decltype(auto) cast(const std::shared_ptr<Class>& obj) {
+        if constexpr (std::is_same_v<Other, const std::shared_ptr<Class>&>) {
+            // avoid unnecessary copy
+            return obj;
         } else {
-            return std::static_pointer_cast<
-                typename shared_ptr_cast_traits<Other>::virtual_type>(obj);
+            using namespace boost::openmethod::detail;
+
+            if constexpr (requires_dynamic_cast<Class*, Other>) {
+                return std::dynamic_pointer_cast<
+                    typename shared_ptr_cast_traits<Other>::virtual_type>(obj);
+            } else {
+                return std::static_pointer_cast<
+                    typename shared_ptr_cast_traits<Other>::virtual_type>(obj);
+            }
         }
     }
 };

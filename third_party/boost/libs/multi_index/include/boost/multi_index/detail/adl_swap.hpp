@@ -1,4 +1,4 @@
-/* Copyright 2003-2013 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -25,14 +25,8 @@ namespace detail{
 template<typename T>
 void adl_swap(T& x,T& y)
 {
-
-#if !defined(BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL)
   using std::swap;
   swap(x,y);
-#else
-  std::swap(x,y);
-#endif
-
 }
 
 } /* namespace multi_index::detail */

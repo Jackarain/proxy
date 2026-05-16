@@ -179,35 +179,35 @@ void test5()
     factor      = (+_d)[ push(stack, as<int>(_)) ] | group;
     term        = factor >> *(
                                 ('*' >> factor)
-                                    [ right = top(stack)
-                                    , pop(stack)
-                                    , left = top(stack)
-                                    , pop(stack)
-                                    , push(stack, left * right)
-                                    ]
+                                    [( right = top(stack)
+                                    ,  pop(stack)
+                                    ,  left = top(stack)
+                                    ,  pop(stack)
+                                    ,  push(stack, left * right)
+                                    )]
                               | ('/' >> factor)
-                                    [ right = top(stack)
-                                    , pop(stack)
-                                    , left = top(stack)
-                                    , pop(stack)
-                                    , push(stack, left / right)
-                                    ]
+                                    [( right = top(stack)
+                                    ,  pop(stack)
+                                    ,  left = top(stack)
+                                    ,  pop(stack)
+                                    ,  push(stack, left / right)
+                                    )]
                              );
     expression  = term >> *(
                                 ('+' >> term)
-                                    [ right = top(stack)
-                                    , pop(stack)
-                                    , left = top(stack)
-                                    , pop(stack)
-                                    , push(stack, left + right)
-                                    ]
+                                    [( right = top(stack)
+                                    ,  pop(stack)
+                                    ,  left = top(stack)
+                                    ,  pop(stack)
+                                    ,  push(stack, left + right)
+                                    )]
                               | ('-' >> term)
-                                    [ right = top(stack)
-                                    , pop(stack)
-                                    , left = top(stack)
-                                    , pop(stack)
-                                    , push(stack, left - right)
-                                    ]
+                                    [( right = top(stack)
+                                    ,  pop(stack)
+                                    ,  left = top(stack)
+                                    ,  pop(stack)
+                                    ,  push(stack, left - right)
+                                    )]
                              );
 
     if(!regex_match(str, expression))

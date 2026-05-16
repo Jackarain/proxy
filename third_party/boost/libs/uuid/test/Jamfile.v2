@@ -11,9 +11,17 @@ local WERROR =
     <toolset>clang:<warnings-as-errors>on
 ;
 
+local gcc-flags = -Wconversion -Wsign-conversion -Wshadow -Wundef ;
+local clang-flags = $(gcc-flags) ;
+
 project
     : requirements
+
       $(WERROR)
+
+      <toolset>gcc:<cxxflags>$(gcc-flags)
+      <toolset>clang:<cxxflags>$(clang-flags)
+
       <library>/boost/uuid//boost_uuid
       <library>/boost/core//boost_core
 
@@ -25,6 +33,20 @@ import os ;
 import path ;
 import regex ;
 import testing ;
+
+# The rule allows for suppressing running tests and instead only compile them.
+# This is useful e.g. if the tests are compiled for a target ISA that is not supported by the CPU.
+local rule run ( sources + : args * : input-files * : requirements * : target-name ? : default-build * )
+{
+    if [ os.environ BOOST_UUID_SKIP_RUNNING_TESTS ]
+    {
+        return [ testing.compile $(sources) : $(requirements) : $(target-name) ] ;
+    }
+    else
+    {
+        return [ testing.run $(sources) : $(args) : $(input-files) : $(requirements) : $(target-name) : $(default-build) ] ;
+    }
+}
 
 # this rule enumerates through all the headers and ensures
 # that inclusion of the header by itself is sufficient to
@@ -57,17 +79,17 @@ rule test_headers
 
 alias test_headers : [ test_headers ] ;
 
-# test including all .hpp files in 2 translations units
+# test including all .hpp files in 2 translation units
 # to look for issues when using multiple translation units
-# e.g. missing inline on a global functionstate is not missing
+# e.g. missing inline on a global function
 
 run test_include1.cpp test_include2.cpp ;
 
 # main tests
 
 run test_uuid.cpp
-  : : : <library>/boost/container_hash//boost_container_hash <define>BOOST_UUID_REPORT_IMPLEMENTATION ;
-run test_uuid.cpp : : : <library>/boost/container_hash//boost_container_hash <define>BOOST_UUID_NO_SIMD <define>BOOST_UUID_REPORT_IMPLEMENTATION : test_uuid_no_simd ;
+  : : : <library>/boost/container_hash//boost_container_hash ;
+run test_uuid.cpp : : : <library>/boost/container_hash//boost_container_hash <define>BOOST_UUID_NO_SIMD : test_uuid_no_simd ;
 run test_uuid_2.cpp ;
 run test_uuid_3.cpp ;
 
@@ -82,17 +104,32 @@ run test_data.cpp ;
 
 # test comparison
 
-run test_comparison.cpp
-  : : : <define>BOOST_UUID_REPORT_IMPLEMENTATION ;
-run test_comparison.cpp : : : <define>BOOST_UUID_NO_SIMD <define>BOOST_UUID_REPORT_IMPLEMENTATION : test_comparison_no_simd ;
+run test_comparison.cpp ;
+run test_comparison.cpp : : : <define>BOOST_UUID_NO_SIMD : test_comparison_no_simd ;
 
 # test uuid_io.hpp
 
 run test_io.cpp
   : : : <library>/boost/lexical_cast//boost_lexical_cast <library>/boost/predef//boost_predef -$(WERROR) ;
+run test_io.cpp : : : <library>/boost/lexical_cast//boost_lexical_cast <library>/boost/predef//boost_predef <define>BOOST_UUID_NO_SIMD -$(WERROR) : test_io_no_simd ;
 run test_io_2.cpp ;
+run test_io_2.cpp : : : <define>BOOST_UUID_NO_SIMD : test_io_2_no_simd ;
+
 run test_to_chars.cpp ;
+run test_to_chars.cpp : : : <define>BOOST_UUID_NO_SIMD : test_to_chars_no_simd ;
 run test_to_chars_2.cpp ;
+run test_to_chars_2.cpp : : : <define>BOOST_UUID_NO_SIMD : test_to_chars_2_no_simd ;
+
+run test_to_chars_3.cpp ;
+
+run test_from_chars.cpp ;
+run test_from_chars.cpp : : : <define>BOOST_UUID_NO_SIMD : test_from_chars_no_simd ;
+run test_from_chars_2.cpp ;
+run test_from_chars_2.cpp : : : <define>BOOST_UUID_NO_SIMD : test_from_chars_2_no_simd ;
+
+run test_uuid_from_string.cpp ;
+run test_uuid_from_string_2.cpp ;
+run test_uuid_from_string_3.cpp ;
 
 # test uuid_clock
 
@@ -101,10 +138,11 @@ run test_uuid_clock.cpp ;
 # test generators
 
 run test_nil_generator.cpp ;
-run test_string_generator.cpp ;
 
-run test_random_generator.cpp
-  : : : <library>/boost/random//boost_random <library>/boost/predef//boost_predef ;
+run test_string_generator.cpp ;
+run test_string_generator_2.cpp ;
+
+run test_random_generator.cpp : : : <library>/boost/random//boost_random <library>/boost/predef//boost_predef ;
 run test_random_generator_2.cpp ;
 
 run test_name_generator.cpp
@@ -127,8 +165,7 @@ run test_time_generator_v1_2.cpp
   : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
         <toolset>gcc-4.8,<address-model>32:<build>no ;
 
-run test_time_generator_v1_3.cpp
-  : : : <threading>multi
+run test_time_generator_v1_3.cpp : : : <threading>multi
         <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
         <toolset>gcc-4.8,<address-model>32:<build>no ;
 
@@ -140,8 +177,7 @@ run test_time_generator_v6_2.cpp
   : : : <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
         <toolset>gcc-4.8,<address-model>32:<build>no ;
 
-run test_time_generator_v6_3.cpp
-  : : : <threading>multi
+run test_time_generator_v6_3.cpp : : : <threading>multi
         <toolset>gcc:<library>atomic <toolset>clang-linux:<library>atomic
         <toolset>gcc-4.8,<address-model>32:<build>no ;
 
@@ -151,9 +187,7 @@ run test_time_generator_v7_3.cpp ;
 
 # test serializing uuids
 
-run test_serialization.cpp
-  : : : <library>/boost/serialization//boost_serialization <undefined-sanitizer>norecover:<link>static -$(WERROR) ;
-
+run test_serialization.cpp : : : <library>/boost/serialization//boost_serialization <undefined-sanitizer>norecover:<link>static -$(WERROR) ;
 # run test_wserialization.cpp /boost/serialization//boost_serialization /boost/serialization//boost_wserialization ;
 
 # test tagging an object
@@ -172,8 +206,7 @@ run test_hash.cpp
 run test_hash_value.cpp ;
 
 run test_std_unordered.cpp ;
-run test_boost_unordered.cpp
-  : : : <toolset>gcc-4.7:<build>no <library>/boost/unordered//boost_unordered ;
+run test_boost_unordered.cpp : : : <toolset>gcc-4.7:<build>no <library>/boost/unordered//boost_unordered ;
 
 # test detail components
 
@@ -210,8 +243,23 @@ run test_constants.cpp ;
 # constexpr tests
 
 compile test_uuid_cx.cpp ;
+run test_uuid_cx2.cpp ;
+run test_uuid_cx3.cpp ;
+run test_uuid_cx3.cpp : : : <define>BOOST_UUID_NO_SIMD : test_uuid_cx3_no_simd ;
+
+run test_hash_value_cx.cpp ;
+
 run test_string_generator_cx.cpp ;
+run test_string_generator_cx2.cpp ;
+
 run test_constants_cx.cpp ;
+
+run test_from_chars_cx.cpp ;
+run test_from_chars_cx2.cpp ;
+
+run test_to_chars_cx.cpp ;
+
+run test_uuid_from_string_cx.cpp ;
 
 # 'quick' test for CI
 

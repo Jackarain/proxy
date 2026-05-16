@@ -1,54 +1,58 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
         {
             "label": "Setup Meson build directories",
             "type": "shell",
-            "command": "cd ${workspaceRoot} && meson setup -D leaf_boost_examples=true -D leaf_lua_examples=true _bld/debug && meson setup -D leaf_boost_examples=false -D single_header=true _bld/debug_single_header && meson setup -D leaf_boost_examples=true -D leaf_lua_examples=true _bld/release --buildtype release && meson setup -D single_header=true _bld/release_single_header --buildtype release",
+            "command": "cd ${workspaceRoot} && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true _bld/debug && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_single_header=true _bld/debug_single_header && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true _bld/release --buildtype release && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_single_header=true _bld/release_single_header --buildtype release",
             "problemMatcher": []
         },
         {
             "label": "Setup Meson build directories (no exceptions)",
             "type": "shell",
-            "command": "cd ${workspaceRoot} && meson setup -D cpp_eh=none -D leaf_boost_examples=true -D leaf_lua_examples=true _bld/debug && meson setup -D cpp_eh=none -D leaf_boost_examples=true -D single_header=true _bld/debug_single_header && meson setup -D cpp_eh=none -D leaf_boost_examples=true -D leaf_lua_examples=true _bld/release --buildtype release && meson setup -D cpp_eh=none -D leaf_boost_examples=true -D single_header=true _bld/release_single_header --buildtype release",
+            "command": "cd ${workspaceRoot} && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D cpp_eh=none _bld/debug && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_single_header=true -D cpp_eh=none _bld/debug_single_header && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D cpp_eh=none _bld/release --buildtype release && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_single_header=true -D cpp_eh=none _bld/release_single_header --buildtype release",
             "problemMatcher": []
         },
         {
             "label": "Setup Meson build directories (no diagnostics)",
             "type": "shell",
-            "command": "cd ${workspaceRoot} && meson setup -D leaf_diagnostics=0 -D leaf_boost_examples=true -D leaf_lua_examples=true _bld/debug && meson setup -D leaf_diagnostics=0 -D leaf_boost_examples=true -D single_header=true _bld/debug_single_header && meson setup -D leaf_diagnostics=0 -D leaf_boost_examples=true -D leaf_lua_examples=true _bld/release --buildtype release && meson setup -D leaf_diagnostics=0 -D leaf_boost_examples=true -D single_header=true _bld/release_single_header --buildtype release",
+            "command": "cd ${workspaceRoot} && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_diagnostics=0 _bld/debug && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_single_header=true -D leaf_diagnostics=0 _bld/debug_single_header && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_diagnostics=0 _bld/release --buildtype release && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_single_header=true -D leaf_diagnostics=0 _bld/release_single_header --buildtype release",
             "problemMatcher": []
         },
         {
             "label": "Setup Meson build directories (no capture)",
             "type": "shell",
-            "command": "cd ${workspaceRoot} && meson setup -D leaf_capture=0 -D leaf_boost_examples=true -D leaf_lua_examples=true _bld/debug && meson setup -D leaf_capture=0 -D leaf_boost_examples=true -D single_header=true _bld/debug_single_header && meson setup -D leaf_capture=0 -D leaf_boost_examples=true -D leaf_lua_examples=true _bld/release --buildtype release && meson setup -D leaf_capture=0 -D leaf_boost_examples=true -D single_header=true _bld/release_single_header --buildtype release",
+            "command": "cd ${workspaceRoot} && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_capture=0 _bld/debug && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_single_header=true -D leaf_capture=0 _bld/debug_single_header && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_capture=0 _bld/release --buildtype release && meson setup -D leaf_boost_available=true -D leaf_enable_examples=true -D leaf_single_header=true -D leaf_capture=0 _bld/release_single_header --buildtype release",
             "problemMatcher": []
         },
         {
             "label": "Setup Meson build directories (no Boost)",
             "type": "shell",
-            "command": "cd ${workspaceRoot} && meson setup -D leaf_lua_examples=true _bld/debug && meson setup -D single_header=true _bld/debug_single_header && meson setup -D leaf_lua_examples=true _bld/release --buildtype release && meson setup -D single_header=true _bld/release_single_header --buildtype release",
+            "command": "cd ${workspaceRoot} && meson setup -D leaf_boost_available=false -D leaf_enable_examples=true _bld/debug && meson setup -D leaf_boost_available=false -D leaf_enable_examples=true -D leaf_single_header=true _bld/debug_single_header && meson setup -D leaf_boost_available=false -D leaf_enable_examples=true _bld/release --buildtype release && meson setup -D leaf_boost_available=false -D leaf_enable_examples=true -D leaf_single_header=true _bld/release_single_header --buildtype release",
             "problemMatcher": []
         },
         {
             "label": "Setup Meson build directories (test embedded)",
             "type": "shell",
-            "command": "cd ${workspaceRoot} && meson setup -D leaf_embedded=true -D leaf_diagnostics=0 _bld/debug && meson setup -D leaf_embedded=true -D leaf_diagnostics=0 -D single_header=true _bld/debug_single_header && meson setup -D leaf_embedded=true -D leaf_diagnostics=0 _bld/release --buildtype release && meson setup -D leaf_embedded=true -D leaf_diagnostics=0 -D single_header=true _bld/release_single_header --buildtype release",
+            "command": "cd ${workspaceRoot} && meson setup -D leaf_embedded=true -D leaf_diagnostics=0 _bld/debug && meson setup -D leaf_embedded=true -D leaf_diagnostics=0 -D leaf_single_header=true _bld/debug_single_header && meson setup -D leaf_embedded=true -D leaf_diagnostics=0 _bld/release --buildtype release && meson setup -D leaf_embedded=true -D leaf_diagnostics=0 -D leaf_single_header=true _bld/release_single_header --buildtype release",
             "problemMatcher": []
         },
         {
             "label": "Setup Meson build directories (test embedded, no exceptions)",
             "type": "shell",
-            "command": "cd ${workspaceRoot} && meson setup -D cpp_eh=none -D leaf_embedded=true -D leaf_diagnostics=0 _bld/debug && meson setup -D cpp_eh=none -D leaf_embedded=true -D leaf_diagnostics=0 -D single_header=true _bld/debug_single_header && meson setup -D cpp_eh=none -D leaf_embedded=true -D leaf_diagnostics=0 _bld/release --buildtype release && meson setup -D cpp_eh=none -D leaf_embedded=true -D leaf_diagnostics=0 -D single_header=true _bld/release_single_header --buildtype release",
+            "command": "cd ${workspaceRoot} && meson setup -D cpp_eh=none -D leaf_embedded=true -D leaf_diagnostics=0 _bld/debug && meson setup -D cpp_eh=none -D leaf_embedded=true -D leaf_diagnostics=0 -D leaf_single_header=true _bld/debug_single_header && meson setup -D cpp_eh=none -D leaf_embedded=true -D leaf_diagnostics=0 _bld/release --buildtype release && meson setup -D cpp_eh=none -D leaf_embedded=true -D leaf_diagnostics=0 -D leaf_single_header=true _bld/release_single_header --buildtype release",
             "problemMatcher": []
         },
         {
             "label": "Generate leaf.hpp",
             "type": "shell",
-            "command": "cd ${workspaceRoot} && python gen/generate_single_header.py -i include/boost/leaf/detail/all.hpp -p ${workspaceRoot}/include -o ${workspaceRoot}/test/leaf.hpp boost/leaf",
+            "command": "cd ${workspaceRoot} && python scripts/generate_single_header.py -i include/boost/leaf/detail/all.hpp -p ${workspaceRoot}/include -o ${workspaceRoot}/test/leaf.hpp boost/leaf",
+            "problemMatcher": []
+        },
+        {
+            "label": "Download nlohmann/json.hpp",
+            "type": "shell",
+            "command": "cd ${workspaceRoot} && python scripts/download_nlohmann_json.py",
             "problemMatcher": []
         },
         {
@@ -65,6 +69,15 @@
                     "relative",
                     "${workspaceRoot}/_bld/debug"
                 ]
+            },
+            "windows": {
+                "problemMatcher": {
+                    "base": "$msCompile",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceRoot}/_bld/debug"
+                    ]
+                }
             }
         },
         {
@@ -72,15 +85,26 @@
             "label": "Run all unit tests (debug)",
             "type": "shell",
             "dependsOn": [
-                "Generate leaf.hpp"
+                "Generate leaf.hpp",
+                "Download nlohmann/json.hpp"
             ],
-            "command": "cd ${workspaceRoot}/_bld/debug && ninja && meson test && cd ${workspaceRoot}/_bld/debug && ninja && meson test",
+            "dependsOrder": "sequence",
+            "command": "cd ${workspaceRoot}/_bld/debug && ninja && meson test && cd ${workspaceRoot}/_bld/debug_single_header && ninja && meson test",
             "problemMatcher": {
                 "base": "$gcc",
                 "fileLocation": [
                     "relative",
                     "${workspaceRoot}/_bld/debug"
                 ]
+            },
+            "windows": {
+                "problemMatcher": {
+                    "base": "$msCompile",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceRoot}/_bld/debug"
+                    ]
+                }
             }
         },
         {
@@ -88,8 +112,10 @@
             "label": "Run all unit tests (release)",
             "type": "shell",
             "dependsOn": [
-                "Generate leaf.hpp"
+                "Generate leaf.hpp",
+                "Download nlohmann/json.hpp"
             ],
+            "dependsOrder": "sequence",
             "command": "cd ${workspaceRoot}/_bld/release && ninja && meson test && cd ${workspaceRoot}/_bld/release_single_header && ninja && meson test",
             "problemMatcher": {
                 "base": "$gcc",
@@ -97,6 +123,15 @@
                     "relative",
                     "${workspaceRoot}/_bld/release"
                 ]
+            },
+            "windows": {
+                "problemMatcher": {
+                    "base": "$msCompile",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceRoot}/_bld/release"
+                    ]
+                }
             }
         },
         {
@@ -104,18 +139,27 @@
             "label": "Run all unit tests (b2, all configurations)",
             "type": "shell",
             "dependsOn": [
-                "Generate leaf.hpp"
+                "Generate leaf.hpp",
+                "Download nlohmann/json.hpp"
             ],
-            "command": "../../b2 test link=shared,static variant=debug,release,leaf_debug_diag0,leaf_release_diag0,leaf_debug_single_header,leaf_release_single_header,leaf_debug_embedded,leaf_release_embedded exception-handling=off rtti=off cxxstd=11,14,1z,17 && ../../b2 test link=shared,static variant=debug,release,leaf_debug_diag0,leaf_release_diag0,leaf_debug_single_header,leaf_release_single_header exception-handling=on,off cxxstd=11,14,1z,17",
-            "windows": {
-                "command": "..\\..\\b2 test link=shared,static variant=debug,release,leaf_debug_diag0,leaf_release_diag0,leaf_debug_single_header,leaf_release_single_header,leaf_debug_embedded,leaf_release_embedded exception-handling=off rtti=off cxxstd=14,17,latest && ..\\..\\b2 test link=shared,static variant=debug,release,leaf_debug_diag0,leaf_release_diag0,leaf_debug_single_header,leaf_release_single_header exception-handling=on,off cxxstd=14,17,latest",
-            },
+            "dependsOrder": "sequence",
+            "command": "../../b2 --abbreviate-paths test link=shared,static variant=debug,release,leaf_debug_diag0,leaf_release_diag0,leaf_debug_single_header,leaf_release_single_header,leaf_debug_embedded,leaf_release_embedded exception-handling=off rtti=off cxxstd=11,14,1z,17 && ../../b2 --abbreviate-paths test link=shared,static variant=debug,release,leaf_debug_diag0,leaf_release_diag0,leaf_debug_single_header,leaf_release_single_header exception-handling=on,off cxxstd=11,14,1z,17",
             "problemMatcher": {
                 "base": "$gcc",
                 "fileLocation": [
                     "relative",
                     "${workspaceRoot}/_bld/release"
                 ]
+            },
+            "windows": {
+                "command": "..\\..\\b2 --abbreviate-paths test link=shared,static variant=debug,release,leaf_debug_diag0,leaf_release_diag0,leaf_debug_single_header,leaf_release_single_header,leaf_debug_embedded,leaf_release_embedded exception-handling=off rtti=off cxxstd=14,17,latest && ..\\..\\b2 --abbreviate-paths test link=shared,static variant=debug,release,leaf_debug_diag0,leaf_release_diag0,leaf_debug_single_header,leaf_release_single_header exception-handling=on,off cxxstd=14,17,latest",
+                "problemMatcher": {
+                    "base": "$msCompile",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceRoot}/_bld/release"
+                    ]
+                }
             }
         },
         {
@@ -125,16 +169,23 @@
             },
             "label": "Test current editor file",
             "type": "shell",
-            "command": "cd ${workspaceRoot}/_bld/debug && ninja && {meson test ${fileBasenameNoExtension} || cat ./meson-logs/testlog.txt}",
-            "windows": {
-                "command": "cd ${workspaceRoot}/_bld/debug && ninja && (meson test ${fileBasenameNoExtension} || cat ./meson-logs/testlog.txt)",
-            },
+            "command": "cd ${workspaceRoot}/_bld/debug && ninja && { meson test ${fileBasenameNoExtension} || cat ./meson-logs/testlog.txt; }",
             "problemMatcher": {
                 "base": "$gcc",
                 "fileLocation": [
                     "relative",
                     "${workspaceRoot}/_bld/debug"
                 ]
+            },
+            "windows": {
+                "command": "cd ${workspaceRoot}/_bld/debug && ninja && (meson test ${fileBasenameNoExtension} || type .\\meson-logs\\testlog.txt)",
+                "problemMatcher": {
+                    "base": "$msCompile",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceRoot}/_bld/debug"
+                    ]
+                }
             }
         }
     ]

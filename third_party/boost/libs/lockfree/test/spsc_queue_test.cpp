@@ -395,4 +395,117 @@ BOOST_AUTO_TEST_CASE( queue_uses_optional )
     BOOST_TEST_REQUIRE( pop_to_optional );
 }
 
+BOOST_AUTO_TEST_CASE( spsc_queue_uses_optional_capacity )
+{
+    boost::lockfree::spsc_queue< int, boost::lockfree::capacity< 64 > > stk;
+
+    bool pop_to_nullopt = stk.pop( boost::lockfree::uses_optional ) == std::nullopt;
+    BOOST_TEST_REQUIRE( pop_to_nullopt );
+
+    stk.push( 53 );
+    bool pop_to_optional = stk.pop( boost::lockfree::uses_optional ) == 53;
+    BOOST_TEST_REQUIRE( pop_to_optional );
+}
+
 #endif
+
+BOOST_AUTO_TEST_CASE( spsc_queue_empty_operations_test )
+{
+    spsc_queue< int > f( 64 );
+
+    int out = 0xDEAD;
+    BOOST_TEST_REQUIRE( !f.pop( out ) );
+    BOOST_TEST_REQUIRE( !f.pop() );
+    BOOST_TEST_REQUIRE( !f.consume_one( []( int ) {} ) );
+    BOOST_TEST_REQUIRE( f.consume_all( []( int ) {} ) == 0u );
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( spsc_queue_push_pop_many_runtime_sized )
+{
+    spsc_queue< int > f( 128 );
+
+    for ( int i = 0; i < 100; ++i )
+        BOOST_TEST_REQUIRE( f.push( i ) );
+
+    for ( int i = 0; i < 100; ++i ) {
+        int out;
+        BOOST_TEST_REQUIRE( f.pop( out ) );
+        BOOST_TEST_REQUIRE( out == i );
+    }
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( spsc_queue_push_pop_many_compile_time_sized )
+{
+    spsc_queue< int, capacity< 128 > > f;
+
+    for ( int i = 0; i < 100; ++i )
+        BOOST_TEST_REQUIRE( f.push( i ) );
+
+    for ( int i = 0; i < 100; ++i ) {
+        int out;
+        BOOST_TEST_REQUIRE( f.pop( out ) );
+        BOOST_TEST_REQUIRE( out == i );
+    }
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( spsc_queue_wraparound_test )
+{
+    // Use a small queue to force wraparound
+    spsc_queue< int, capacity< 4 > > f;
+
+    // Fill and drain multiple times to test wraparound
+    for ( int round = 0; round < 10; ++round ) {
+        BOOST_TEST_REQUIRE( f.push( round * 3 + 0 ) );
+        BOOST_TEST_REQUIRE( f.push( round * 3 + 1 ) );
+        BOOST_TEST_REQUIRE( f.push( round * 3 + 2 ) );
+
+        int out;
+        BOOST_TEST_REQUIRE( f.pop( out ) );
+        BOOST_TEST_REQUIRE( out == round * 3 + 0 );
+        BOOST_TEST_REQUIRE( f.pop( out ) );
+        BOOST_TEST_REQUIRE( out == round * 3 + 1 );
+        BOOST_TEST_REQUIRE( f.pop( out ) );
+        BOOST_TEST_REQUIRE( out == round * 3 + 2 );
+        BOOST_TEST_REQUIRE( f.empty() );
+    }
+}
+
+BOOST_AUTO_TEST_CASE( spsc_queue_span_pop_test )
+{
+    spsc_queue< int, capacity< 64 > > f;
+
+    int data[ 4 ] = { 10, 20, 30, 40 };
+    BOOST_TEST_REQUIRE( f.push( boost::span< const int >( data ) ) == size_t( 4 ) );
+
+    int out[ 4 ];
+    BOOST_TEST_REQUIRE( f.pop( out, 4 ) == size_t( 4 ) );
+    BOOST_TEST_REQUIRE( out[ 0 ] == 10 );
+    BOOST_TEST_REQUIRE( out[ 1 ] == 20 );
+    BOOST_TEST_REQUIRE( out[ 2 ] == 30 );
+    BOOST_TEST_REQUIRE( out[ 3 ] == 40 );
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( spsc_queue_consume_all_test_compile_time )
+{
+    spsc_queue< int, capacity< 64 > > f;
+
+    f.push( 1 );
+    f.push( 2 );
+    f.push( 3 );
+
+    std::vector< int > consumed;
+    size_t count = f.consume_all( [&]( int i ) {
+        consumed.push_back( i );
+    } );
+
+    BOOST_TEST_REQUIRE( count == 3u );
+    BOOST_TEST_REQUIRE( consumed.size() == 3u );
+    BOOST_TEST_REQUIRE( consumed[ 0 ] == 1 );
+    BOOST_TEST_REQUIRE( consumed[ 1 ] == 2 );
+    BOOST_TEST_REQUIRE( consumed[ 2 ] == 3 );
+    BOOST_TEST_REQUIRE( f.empty() );
+}

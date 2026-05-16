@@ -1,0 +1,456 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#examples]
+= Examples
+:idprefix: examples_
+
+The following examples will help you get up and running with many of the major parts of the library.
+All of these examples can be found in the library `examples/` folder as well.
+
+[#examples_construction]
+== Basic Construction
+.This https://github.com/boostorg/decimal/blob/develop/examples/basic_construction.cpp[example] demonstrates the basic use of the various constructors offered by the decimal types
+====
+[source, c++]
+----
+include::example$basic_construction.cpp[]
+----
+
+.Expected Output
+....
+Val_1: 100
+Val_2: 100
+Val_3: -100
+Overflow constructs infinity
+Underflow constructs zero
+NaN constructs NaN
+Values constructed from const char* and std::string are the same
+Can not construct from invalid string
+....
+====
+
+[#examples_basic_math]
+== Basic Arithmetic
+
+.This https://github.com/boostorg/decimal/blob/develop/examples/basic_arithmetic.cpp[example] demonstrates the behavior and functionality of arithmetic using a single type
+====
+[source, c++]
+----
+include::example$basic_arithmetic.cpp[]
+----
+
+.Expected Output:
+....
+A: -5.123456891234567
+B: 3.123456891234567
+A + B: -2
+abs(A + B): 2
+sqrt(abs(A + B)): 1.414213562373095
+Wolfram Alpha sqrt(2): 1.414213562373095
+....
+====
+
+[#examples_math_results]
+.This https://github.com/boostorg/decimal/blob/develop/examples/addition.cpp[example] shows the differences in arithmetic results between decimal floating point and binary floating point
+====
+[source,c++]
+----
+include::example$addition.cpp[]
+----
+
+.Expected Output:
+....
+Decimal Result: 100
+  Float Result: 99.999
+....
+====
+
+[#examples_conversions]
+== Conversions
+
+[#examples_integer_conversions]
+=== Integral Conversions
+
+.This https://github.com/boostorg/decimal/blob/develop/examples/integral_conversions.cpp[example] shows how to construct an integral value from decimal type and vice versa, as well as the behavior
+
+====
+[source, c++]
+----
+include::example$integral_conversions.cpp[]
+----
+
+.Expected Output
+....
+Decimal QNAN converts to Integer Max
+Decimal INF converts to Integer Max
+  decimal64_t pi: 3.141592653589793
+std::uint32_t pi: 3
+
+Conversions will be lossless
+  decimal64_t digits10: 16
+std::uint32_t digits10: 9
+   std::uint32_t max: 4294967295
+decimal64_t from max: 4294967295
+
+Conversions will be lossy
+  decimal32_t digits10: 7
+std::uint64_t digits10: 19
+   std::uint64_t max: 18446744073709551615
+decimal32_t from max: 1.844674e+19
+....
+====
+
+[#examples_binary_floating_conversions]
+=== Binary Floating Point Conversions
+
+.This https://github.com/boostorg/decimal/blob/develop/examples/binary_float_conversions.cpp[example] shows how to construct a binary floating point value from decimal type and vice versa, as well as the behavior
+====
+[source,c++]
+----
+include::example$binary_float_conversions.cpp[]
+----
+
+.Expected Output:
+....
+Decimal QNAN converts to double QNAN
+Decimal INFINITY converts to double INFINITY
+decimal64_t pi: 3.141592653589793
+     double pi: 3.141592653589793
+  Converted pi: 3.141592653589793
+decimal32_t pi: 3.141593
+....
+====
+
+[#examples_promotion]
+== Promotion and Mixed Decimal Arithmetic
+
+.This https://github.com/boostorg/decimal/blob/develop/examples/promotion.cpp[example] demonstrates the behaviors of promotion between types, and mixed decimal type arithmetic
+====
+[source, c++]
+----
+include::example$promotion.cpp[]
+----
+
+.Expected Output:
+....
+decimal32_t value (a): 5.2
+decimal64_t value (b): 3.9
+a is greater than b
+5.2 is less than 1e+385
+1e+385 is less than inf
+The result of a + b is a decimal64_t: 9.1
+The result of 2*c is a decimal64_t: 18.2
+18.2 is greater than 5
+....
+====
+
+[#examples_charconv]
+== `<charconv>`
+
+.This https://github.com/boostorg/decimal/blob/develop/examples/charconv.cpp[example] demonstrates the fundamentals of the `<charconv>` like functions provided by the library
+====
+[source, c++]
+----
+include::example$charconv.cpp[]
+----
+
+.Expected Output:
+....
+Initial decimal: -7123450
+Value from string: 3.1415
+Value in scientific format: -7.12345e+06
+Value in scientific format with precision 20: -7.12345000000000000000e+06
+....
+====
+
+[#examples_generic_programming]
+== Generic Programming
+.This https://github.com/boostorg/decimal/blob/develop/examples/adl.cpp[example] demonstrates how to write generic code that accepts both built-in floating point types, and decimal floating point values from this library
+====
+[source, c++]
+----
+include::example$adl.cpp[]
+----
+
+Expected Output:
+....
+Float:
+sin(-0.5) = -0.479426
+-sin(0.5) = -0.479426
+
+Double:
+sin(-0.5) = -0.479426
+-sin(0.5) = -0.479426
+
+Long Double:
+sin(-0.5) = -0.479426
+-sin(0.5) = -0.479426
+
+decimal32_t:
+sin(-0.5) = -0.479426
+-sin(0.5) = -0.479426
+
+decimal64_t:
+sin(-0.5) = -0.479426
+-sin(0.5) = -0.479426
+
+decimal128_t:
+sin(-0.5) = -0.479426
+-sin(0.5) = -0.479426
+....
+====
+
+[#examples_literals_constants]
+== Literals and Constants
+.This https://github.com/boostorg/decimal/blob/develop/examples/literals.cpp[example] demonstrates how to construct values using literals, and the usage of numerical constants that are provided by the library
+====
+[source, c++]
+----
+include::example$literals.cpp[]
+----
+
+Expected Output:
+....
+32-bit Pi: 3.141593
+64-bit Pi: 3.141592653589793
+32-bit UDL Pi: 3.141593
+Rounded UDL has the same value as the 32-bit constant
+64-bit UDL Pi: 3.141592653589793
+Rounded UDL has the same value as the 64-bit constant
+....
+====
+
+[#examples_format]
+== Formatting
+
+Boost.Decimal allows you to format your output with both `<format>` and `<fmt/format.h>` depending on your compiler support.
+pass:[{fmt}] support is available starting with pass:[C++14] so long as you have the library available, but `<format>` requires pass:[C++20] and compiler support
+
+[#examples_fmt_format]
+=== `<fmt/format.hpp>`
+
+.This https://github.com/boostorg/decimal/blob/develop/examples/fmt_format.cpp[example] demonstrates the various formatting options provided by the library to support usage of pass:[{fmt}]
+====
+[source, c++]
+----
+// Copyright 2025 Matt Borland
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt
+//
+// This example demonstrates usage and formatting of decimal types with fmt
+
+#include <boost/decimal/decimal32_t.hpp>    // For type decimal32_t
+#include <boost/decimal/decimal64_t.hpp>    // For type decimal64_t
+#include <boost/decimal/fmt_format.hpp>     // For {fmt} support
+#include <iostream>
+
+int main()
+{
+    constexpr boost::decimal::decimal64_t val1 {"3.14"};
+    constexpr boost::decimal::decimal32_t val2 {"3.141"};
+
+    // The easiest is no specification which is general format
+    // Given these values they will print in fixed format
+    std::cout << "Default Format:\n";
+    std::cout << fmt::format("{}", val1) << '\n';
+    std::cout << fmt::format("{}", val2) << "\n\n";
+
+    // Next we can add a type modifier to get scientific formatting
+    std::cout << "Scientific Format:\n";
+    std::cout << fmt::format("{:e}", val1) << '\n';
+    std::cout << fmt::format("{:e}", val2) << "\n\n";
+
+    // Next we can add a type modifier to get scientific formatting
+    // Here this gives one digit of precision rounded according to current rounding mode
+    std::cout << "Scientific Format with Specified Precision:\n";
+    std::cout << fmt::format("{:.1e}", val1) << '\n';
+    std::cout << fmt::format("{:.1e}", val2) << "\n\n";
+
+    // Width specifies the minimum field width
+    // By default, values are right-aligned with space fill
+    std::cout << "Width with Default Alignment (right-align, space fill):\n";
+    std::cout << fmt::format("[{:12}]", val1) << '\n';
+    std::cout << fmt::format("[{:12.3e}]", val2) << "\n\n";
+
+    // Alignment specifiers: < (left), > (right), ^ (center)
+    std::cout << "Alignment Specifiers:\n";
+    std::cout << fmt::format("[{:<12}]", val1) << " (left)\n";
+    std::cout << fmt::format("[{:>12}]", val1) << " (right)\n";
+    std::cout << fmt::format("[{:^12}]", val1) << " (center)\n\n";
+
+    // Fill character can be any character placed before the alignment specifier
+    std::cout << "Custom Fill Characters:\n";
+    std::cout << fmt::format("[{:*<12}]", val1) << " (left, * fill)\n";
+    std::cout << fmt::format("[{:->12}]", val1) << " (right, - fill)\n";
+    std::cout << fmt::format("[{:=^12}]", val1) << " (center, = fill)\n\n";
+
+    // Combining fill, alignment, sign, width, precision, and type
+    std::cout << "Combined Format Specifiers:\n";
+    std::cout << fmt::format("[{:*>+12.2e}]", val1) << " (right, * fill, + sign, precision 2, scientific)\n";
+    std::cout << fmt::format("[{:-<+12.2f}]", val2) << " (left, - fill, + sign, precision 2, fixed)\n";
+
+    return 0;
+}
+----
+
+Expected Output:
+....
+Default Format:
+3.14
+3.141
+
+Scientific Format:
+3.14e+00
+3.141e+00
+
+Scientific Format with Specified Precision:
+3.1e+00
+3.1e+00
+
+Width with Default Alignment (right-align, space fill):
+[        3.14]
+[   3.141e+00]
+
+Alignment Specifiers:
+[3.14        ] (left)
+[        3.14] (right)
+[    3.14    ] (center)
+
+Custom Fill Characters:
+[3.14********] (left, * fill)
+[--------3.14] (right, - fill)
+[====3.14====] (center, = fill)
+
+Combined Format Specifiers:
+[***+3.14e+00] (right, * fill, + sign, precision 2, scientific)
+[+3.14-------] (left, - fill, + sign, precision 2, fixed)
+....
+====
+
+IMPORTANT: If you are using the convenience header `<boost/decimal.hpp>` the header `<boost/decimal/fmt_format.hpp>` is *NOT* automatically included since it requires an external library.
+You must include it yourself.
+
+[#examples_std_format]
+=== `<format>`
+
+Taking the above example of pass:[{fmt}] and replacing all instances of `namespace fmt` with `namespace std` gives us another working example.
+
+.This https://github.com/boostorg/decimal/blob/develop/examples/format.cpp[example] demonstrates how to use `<format>` with the library in-place or in addition to pass:[{fmt}]
+====
+[source, c++]
+----
+include::example$format.cpp[]
+----
+
+.Expected Output:
+....
+Default Format:
+3.14
+3.141
+
+Scientific Format:
+3.14e+00
+3.141e+00
+
+Scientific Format with Specified Precision:
+3.1e+00
+3.1e+00
+
+Width with Default Alignment (right-align, space fill):
+[        3.14]
+[   3.141e+00]
+
+Alignment Specifiers:
+[3.14        ] (left)
+[        3.14] (right)
+[    3.14    ] (center)
+
+Custom Fill Characters:
+[3.14********] (left, * fill)
+[--------3.14] (right, - fill)
+[====3.14====] (center, = fill)
+
+Combined Format Specifiers:
+[***+3.14e+00] (right, * fill, + sign, precision 2, scientific)
+[+3.14-------] (left, - fill, + sign, precision 2, fixed)
+....
+====
+
+
+[#examples_print]
+=== `<print>`
+.This https://github.com/boostorg/decimal/blob/develop/examples/print.cpp[example] demonstrates how to use `<print>` with the library
+====
+[source, c++]
+----
+#include <boost/decimal.hpp>
+#include <print>
+
+int main()
+{
+    constexpr boost::decimal::decimal64_t val1 {314, -2};
+    constexpr boost::decimal::decimal32_t val2 {3141, -3};
+
+    std::print("[{:>10.3e}]\n", val1);
+    std::print("[{:*<10.3e}]\n", val2);
+
+    return 0;
+}
+----
+
+.Expected Output:
+....
+[ 3.140e+00]
+[3.141e+00*]
+....
+====
+
+[#examples_file]
+== Reading From and Writing To File
+
+.This example shows how to read and write decimal values efficiently to and from file, rather than using `to_chars` and `from_chars`
+====
+[source,c++]
+----
+include::example$to_from_file.cpp[]
+----
+
+.Expected Output:
+....
+ Current value: 0.000506
+Value as bytes: 2dcd4c57
+
+ Current value: -3.808117e+34
+Value as bytes: c0ba1b75
+
+ Current value: -1.656579e-12
+Value as bytes: a9994703
+
+ Current value: 2.040449e+10
+Value as bytes: 349f2281
+
+ Current value: -5.16665e+43
+Value as bytes: c587e239
+
+ Current value: -9.25265e+32
+Value as bytes: c00e1e51
+
+ Current value: -5.766669e-11
+Value as bytes: aa57fe0d
+
+ Current value: -7.641908e+38
+Value as bytes: c2f49b34
+
+ Current value: 6.31977e+29
+Value as bytes: 3e606e9a
+
+ Current value: 9.210438e-24
+Value as bytes: 68ec8a46
+
+Successfully recovered all values from file
+....
+====

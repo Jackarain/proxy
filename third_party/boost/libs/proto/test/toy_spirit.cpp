@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <cctype>
 #include <string>
 #include <cstring>
@@ -609,7 +611,7 @@ namespace boost { namespace spirit2
 using namespace boost;
 using namespace spirit2;
 
-void test_toy_spirit()
+BOOST_AUTO_TEST_CASE(test_toy_spirit)
 {
     std::string str("abcd");
 
@@ -649,17 +651,4 @@ void test_toy_spirit()
     BOOST_CHECK(spirit2::parse(str.begin(), str.end()
                    , char_('a') >> 'b' >> 'c' >> 'd', space >> space));
 
-}
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test proto and and toy spirit-2");
-
-    test->add(BOOST_TEST_CASE(&test_toy_spirit));
-
-    return test;
 }

@@ -7,9 +7,13 @@
 #
 
 # Generates the ca and certificates used for CI testing.
-# Run this in the directory where you want the certificates to be generated.
+# Usage: gen-certificates.sh [output-dir]
 
 set -e
+
+OUTPUT_DIR="${1:-/opt/ci-tls}"
+mkdir -p "$OUTPUT_DIR"
+cd "$OUTPUT_DIR"
 
 # CA private key
 openssl genpkey -algorithm RSA -out ca.key -pkeyopt rsa_keygen_bits:2048
@@ -28,3 +32,7 @@ openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
   -out server.crt -days 20000 -sha256
 rm server.csr
 rm ca.srl
+
+# Required when running with Docker because of mismatched user IDs
+chmod 444 *
+

@@ -8,36 +8,75 @@
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/detail/to_chars.hpp>
+#include <boost/uuid/detail/from_chars.hpp>
 #include <boost/uuid/detail/static_assert.hpp>
+#include <boost/uuid/detail/uuid_from_string.hpp>
 #include <boost/config.hpp>
 #include <iosfwd>
-#include <istream>
-#include <locale>
-#include <algorithm>
+#include <ios>
+#include <iterator>
 #include <string>
 #include <cstddef>
-
-#if defined(_MSC_VER)
-#pragma warning(push) // Save warning settings.
-#pragma warning(disable : 4996) // Disable deprecated std::ctype<char>::widen, std::copy
-#endif
 
 namespace boost {
 namespace uuids {
 
 // to_chars
 
-template<class OutputIterator>
-OutputIterator to_chars( uuid const& u, OutputIterator out )
+namespace detail
 {
-    char tmp[ 36 ];
+
+template<class Vt> struct output_value_type
+{
+    using type = char;
+};
+
+template<> struct output_value_type<wchar_t>
+{
+    using type = wchar_t;
+};
+
+template<> struct output_value_type<char16_t>
+{
+    using type = char16_t;
+};
+
+template<> struct output_value_type<char32_t>
+{
+    using type = char32_t;
+};
+
+#if defined(__cpp_char8_t) && __cpp_char8_t >= 201811L
+
+template<> struct output_value_type<char8_t>
+{
+    using type = char8_t;
+};
+
+#endif
+
+} // namespace detail
+
+template<class OutputIterator,
+    class Vt = typename std::iterator_traits<OutputIterator>::value_type
+>
+BOOST_CXX14_CONSTEXPR OutputIterator to_chars( uuid const& u, OutputIterator out )
+{
+    using Ch = typename detail::output_value_type<Vt>::type;
+
+    alignas( 16 ) Ch tmp[ 36 ] = {};
     detail::to_chars( u, tmp );
 
-    return std::copy_n( tmp, 36, out );
+    for( std::size_t i = 0; i < 36; ++i )
+    {
+        *out++ = tmp[ i ];
+    }
+
+    return out;
 }
 
 template<class Ch>
-inline bool to_chars( uuid const& u, Ch* first, Ch* last ) noexcept
+BOOST_CXX14_CONSTEXPR inline bool to_chars( uuid const& u, Ch* first, Ch* last ) noexcept
 {
     if( last - first < 36 )
     {
@@ -49,7 +88,7 @@ inline bool to_chars( uuid const& u, Ch* first, Ch* last ) noexcept
 }
 
 template<class Ch, std::size_t N>
-inline Ch* to_chars( uuid const& u, Ch (&buffer)[ N ] ) noexcept
+BOOST_CXX14_CONSTEXPR inline Ch* to_chars( uuid const& u, Ch (&buffer)[ N ] ) noexcept
 {
     BOOST_UUID_STATIC_ASSERT( N >= 37 );
 
@@ -62,7 +101,7 @@ inline Ch* to_chars( uuid const& u, Ch (&buffer)[ N ] ) noexcept
 // only provided for compatibility; deprecated
 template<class Ch>
 BOOST_DEPRECATED( "Use Ch[37] instead of Ch[36] to allow for the null terminator" )
-inline Ch* to_chars( uuid const& u, Ch (&buffer)[ 36 ] ) noexcept
+BOOST_CXX14_CONSTEXPR inline Ch* to_chars( uuid const& u, Ch (&buffer)[ 36 ] ) noexcept
 {
     detail::to_chars( u, buffer + 0 );
     return buffer + 36;
@@ -73,7 +112,7 @@ inline Ch* to_chars( uuid const& u, Ch (&buffer)[ 36 ] ) noexcept
 template<class Ch, class Traits>
 std::basic_ostream<Ch, Traits>& operator<<( std::basic_ostream<Ch, Traits>& os, uuid const& u )
 {
-    char tmp[ 37 ];
+    alignas( 16 ) Ch tmp[ 37 ];
     to_chars( u, tmp );
 
     os << tmp;
@@ -85,63 +124,15 @@ std::basic_ostream<Ch, Traits>& operator<<( std::basic_ostream<Ch, Traits>& os, 
 template<class Ch, class Traits>
 std::basic_istream<Ch, Traits>& operator>>( std::basic_istream<Ch, Traits>& is, uuid& u )
 {
-    Ch tmp[ 37 ] = {};
+    alignas( 16 ) Ch tmp[ 37 ] = {};
 
     is.width( 37 ); // required for pre-C++20
 
     if( is >> tmp )
     {
-        u = {};
-
-        using ctype_t = std::ctype<Ch>;
-        ctype_t const& ctype = std::use_facet<ctype_t>( is.getloc() );
-
-        Ch xdigits[ 17 ];
-
+        if( !from_chars( tmp, tmp + 36, u ) )
         {
-            char szdigits[] = "0123456789ABCDEF-";
-            ctype.widen( szdigits, szdigits + 17, xdigits );
-        }
-
-        Ch* const xdigits_end = xdigits + 16;
-
-        ctype.toupper( tmp, tmp + 36 );
-
-        int j = 0;
-
-        for( std::size_t i = 0; i < 16; ++i )
-        {
-            Ch* f = std::find( xdigits, xdigits_end, tmp[ j++ ] );
-
-            if( f == xdigits_end )
-            {
-                is.setstate( std::ios_base::failbit );
-                return is;
-            }
-
-            unsigned char byte = static_cast<unsigned char>( f - xdigits );
-
-            f = std::find( xdigits, xdigits_end, tmp[ j++ ] );
-
-            if( f == xdigits_end )
-            {
-                is.setstate( std::ios_base::failbit );
-                return is;
-            }
-
-            byte <<= 4;
-            byte |= static_cast<unsigned char>( f - xdigits );
-
-            u.data()[ i ] = byte;
-
-            if( i == 3 || i == 5 || i == 7 || i == 9 )
-            {
-                if( tmp[ j++ ] != xdigits[ 16 ] )
-                {
-                    is.setstate( std::ios_base::failbit );
-                    return is;
-                }
-            }
+            is.setstate( std::ios_base::failbit );
         }
     }
 
@@ -168,9 +159,5 @@ inline std::wstring to_wstring( uuid const& u )
 }
 
 }} //namespace boost::uuids
-
-#if defined(_MSC_VER)
-#pragma warning(pop) // Restore warnings to previous state.
-#endif
 
 #endif // BOOST_UUID_UUID_IO_HPP_INCLUDED

@@ -102,7 +102,8 @@ fun for readers’ entertainment.
 
 _VC8_:
 
-....
+[source,cpp]
+----
 template <class StateType>
 typename ::boost::enable_if<
        typename ::boost::mpl::and_<
@@ -114,7 +115,7 @@ typename ::boost::enable_if<
                 >::type 
        >::type,
        BaseState*>::type                   
-....
+----
 
 I get the following error:
 

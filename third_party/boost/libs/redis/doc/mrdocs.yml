@@ -23,6 +23,7 @@ exclude-symbols:
   - "boost::redis::request::has_hello_priority"
 see-below:
   - "boost::redis::adapter::ignore"
+  - "boost::redis::push_parser::iterator"
 sort-members: false
 base-url: https://github.com/boostorg/redis/blob/master/include/
 use-system-libc: true

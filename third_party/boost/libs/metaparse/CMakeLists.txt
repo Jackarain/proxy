@@ -18,7 +18,6 @@ target_link_libraries(boost_metaparse
     Boost::mpl
     Boost::predef
     Boost::preprocessor
-    Boost::static_assert
     Boost::type_traits
 )
 

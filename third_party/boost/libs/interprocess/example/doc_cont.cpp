@@ -62,6 +62,15 @@ int main ()
    // . . .
    //When done, destroy and delete vector from the segment
    segment.destroy<MyVector>("MyVector");
+
+   //Note that you can take advantage of the uses-allocator protocol and avoid
+   //explicitly passing the allocator parameter ("construct" will detect the container
+   //is compatible with the protocol and initialize the allocator accordingly:
+   myvector = segment.construct<MyVector>("MyVector") (begVal,endVal);
+
+   //Alternative destroy function that takes the pointer instead of the name
+   segment.destroy_ptr(myvector);
+
    return 0;
 }
 //]

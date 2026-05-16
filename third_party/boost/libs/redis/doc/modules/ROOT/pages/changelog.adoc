@@ -7,6 +7,65 @@
 
 = Changelog
 
+== Boost 1.91
+
+* (Pull request https://github.com/boostorg/redis/pull/345[345],
+  https://github.com/boostorg/redis/pull/391[391] and
+  issue https://github.com/boostorg/redis/issues/237[237])
+  Added built-in support for Sentinel deployments, which can be configured
+  using `config::sentinel`. The library handles master/replica discovery,
+  error detection, and reconnection automatically.
+* (Pull request https://github.com/boostorg/redis/pull/340[340],
+  https://github.com/boostorg/redis/pull/356[356],
+  https://github.com/boostorg/redis/pull/358[358],
+  https://github.com/boostorg/redis/pull/378[378],
+  https://github.com/boostorg/redis/pull/383[383] and
+  issue https://github.com/boostorg/redis/issues/263[263])
+  Added `generic_flat_response`, a high-performance replacement for
+  `flat_response` that uses contiguous memory and performs zero allocations
+  in steady state. Many thanks to Nikolai Vladimirov for the PR.
+* General improvements to server push handling:
+** (Pull request https://github.com/boostorg/redis/pull/375[375] and
+   issue https://github.com/boostorg/redis/issues/367[367])
+   Added support for subscription tracking, which restores
+   active subscriptions after each reconnection. Can be accessed using
+   `request::subscribe`, `request::psubscribe`, `request::unsubscribe`
+   and `request::punsubscribe`.
+** (Pull request https://github.com/boostorg/redis/pull/390[390] and
+   issue https://github.com/boostorg/redis/issues/349[349])
+   Added `push_parser`, a view that facilitates parsing
+   PubSub-related messages.
+** (Pull request https://github.com/boostorg/redis/pull/381[381],
+   https://github.com/boostorg/redis/pull/340[340] and
+   issue https://github.com/boostorg/redis/issues/331[331])
+   `connection::async_receive` and `connection::receive` are now deprecated.
+   Users should prefer `async_receive2`, which allows for faster batch processing.
+** `consume_one` is now deprecated. Users should prefer
+   `generic_flat_response::clear`, instead. See the PubSub examples for more details.
+** Improved the documentation and examples.
+* (Pull request https://github.com/boostorg/redis/pull/392[392])
+  `config::username`, `config::password`, `config::client_name` and
+  `config::database_index` are now deprecated. Users should prefer `config::setup`, instead.
+  Added `request::hello` and `request::hello_setname` to simplify composing
+  setup requests.
+* (Pull request https://github.com/boostorg/redis/pull/389[389] and
+  issue https://github.com/boostorg/redis/issues/395[395])
+  Log message levels have been adjusted to be more relevant:
+  `level::error` for configuration and network errors,
+  `level::info` for successful connection attempts,
+  and `level::debug` for verbose output.
+* (Pull request https://github.com/boostorg/redis/pull/342[342] and
+  issue https://github.com/boostorg/redis/issues/341[341])
+  Added `request::append()` to concatenate request objects.
+* (Pull request https://github.com/boostorg/redis/pull/363[363] and
+  issue https://github.com/boostorg/redis/issues/360[360])
+  Fixed a problem causing `request::push_range` to generate invalid commands
+  when passed a range with `std::tuple` elements.
+* (Pull request https://github.com/boostorg/redis/pull/364[364] and
+  issue https://github.com/boostorg/redis/issues/361[361])
+  Removed `<ostream>` from public headers to make them more lightweight.
+
+
 == Boost 1.90
 
 

@@ -1,4 +1,4 @@
-/* Copyright 2003-2022 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14,6 +14,7 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
+#include <boost/mp11/utility.hpp>
 #include <boost/multi_index/detail/ord_index_impl.hpp>
 #include <boost/multi_index/detail/rnk_index_ops.hpp>
 #include <boost/multi_index/ranked_index_fwd.hpp>
@@ -146,19 +147,19 @@ public:
   std::pair<size_type,size_type>
   range_rank(LowerBounder lower,UpperBounder upper)const
   {
-    typedef typename mpl::if_<
+    typedef mp11::mp_if<
       is_same<LowerBounder,unbounded_type>,
-      BOOST_DEDUCED_TYPENAME mpl::if_<
+      mp11::mp_if<
         is_same<UpperBounder,unbounded_type>,
         both_unbounded_tag,
         lower_unbounded_tag
-      >::type,
-      BOOST_DEDUCED_TYPENAME mpl::if_<
+      >,
+      mp11::mp_if<
         is_same<UpperBounder,unbounded_type>,
         upper_unbounded_tag,
         none_unbounded_tag
-      >::type
-    >::type dispatch;
+      >
+    > dispatch;
 
     return range_rank(lower,upper,dispatch());
   }
@@ -181,7 +182,7 @@ private:
     index_node_type* y=this->header();
     index_node_type* z=this->root();
 
-    if(!z)return std::pair<size_type,size_type>(0,0);
+    if(!z)return std::pair<size_type,size_type>((size_type)0,(size_type)0);
 
     size_type s=z->impl()->size;
 
@@ -211,7 +212,7 @@ private:
   range_rank(LowerBounder,UpperBounder upper,lower_unbounded_tag)const
   {
     return std::pair<size_type,size_type>(
-      0,
+      (size_type)0,
       upper_range_rank(this->root(),this->header(),upper));
   }
 
@@ -228,7 +229,7 @@ private:
   std::pair<size_type,size_type>
   range_rank(LowerBounder,UpperBounder,both_unbounded_tag)const
   {
-    return std::pair<size_type,size_type>(0,this->size());
+    return std::pair<size_type,size_type>((size_type)0,this->size());
   }
 
   template<typename LowerBounder>
@@ -350,7 +351,7 @@ struct ranked_unique
 {
   typedef typename detail::ordered_index_args<
     Arg1,Arg2,Arg3>                                index_args;
-  typedef typename index_args::tag_list_type::type tag_list_type;
+  typedef typename index_args::tag_list_type       tag_list_type;
   typedef typename index_args::key_from_value_type key_from_value_type;
   typedef typename index_args::compare_type        compare_type;
 
@@ -375,7 +376,7 @@ struct ranked_non_unique
 {
   typedef detail::ordered_index_args<
     Arg1,Arg2,Arg3>                                index_args;
-  typedef typename index_args::tag_list_type::type tag_list_type;
+  typedef typename index_args::tag_list_type       tag_list_type;
   typedef typename index_args::key_from_value_type key_from_value_type;
   typedef typename index_args::compare_type        compare_type;
 

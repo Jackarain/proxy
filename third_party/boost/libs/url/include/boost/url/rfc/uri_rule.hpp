@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -12,16 +13,18 @@
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/error_types.hpp>
-#include <boost/url/url_view.hpp>
 
 namespace boost {
 namespace urls {
+
+class url_view;
+
 namespace implementation_defined {
 struct uri_rule_t
 {
     using value_type = url_view;
 
-    BOOST_URL_DECL
+    BOOST_URL_CXX20_CONSTEXPR
     auto
     parse(
         char const*& it,
@@ -62,5 +65,7 @@ constexpr implementation_defined::uri_rule_t uri_rule{};
 
 } // urls
 } // boost
+
+#include <boost/url/rfc/impl/uri_rule.hpp>
 
 #endif

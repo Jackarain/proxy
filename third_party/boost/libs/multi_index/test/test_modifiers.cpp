@@ -1,6 +1,6 @@
 /* Boost.MultiIndex test for modifier memfuns.
  *
- * Copyright 2003-2018 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14,11 +14,10 @@
 #include <boost/detail/lightweight_test.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <boost/move/core.hpp>
-#include <boost/move/utility_core.hpp>
 #include <boost/next_prior.hpp>
 #include <boost/shared_ptr.hpp>
 #include <iterator>
+#include <utility>
 #include <vector>
 #include "pre_multi_index.hpp"
 #include "employee.hpp"
@@ -28,8 +27,8 @@ using namespace boost::multi_index;
 struct non_copyable_int
 {
   explicit non_copyable_int(int n_):n(n_){}
-  non_copyable_int(BOOST_RV_REF(non_copyable_int) x):n(x.n){x.n=0;} 
-  non_copyable_int& operator=(BOOST_RV_REF(non_copyable_int) x)
+  non_copyable_int(non_copyable_int&& x):n(x.n){x.n=0;} 
+  non_copyable_int& operator=(non_copyable_int&& x)
   {
     n=x.n;
     x.n=0;
@@ -37,8 +36,6 @@ struct non_copyable_int
   } 
 
   int n;
-private:
-  BOOST_MOVABLE_BUT_NOT_COPYABLE(non_copyable_int)
 };
 
 class always_one
@@ -58,18 +55,10 @@ inline bool operator==(const always_one& x,const always_one& y)
   return x.get()==y.get();
 }
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-namespace boost{
-#endif
-
 inline std::size_t hash_value(const always_one& x)
 {
   return static_cast<std::size_t>(x.get());
 }
-
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-} /* namespace boost */
-#endif
 
 class linked_object
 {
@@ -86,15 +75,8 @@ class linked_object
   typedef multi_index_container<
     impl,
     indexed_by<
-
-#if BOOST_WORKAROUND(__IBMCPP__,BOOST_TESTED_AT(1010))
-      ordered_unique<member<impl,int,&linked_object::impl::n> >,
-      hashed_non_unique<member<impl,int,&linked_object::impl::n> >,
-#else
       ordered_unique<member<impl,int,&impl::n> >,
       hashed_non_unique<member<impl,int,&impl::n> >,
-#endif
-
       sequenced<>,
       random_access<>
     >
@@ -261,10 +243,8 @@ void test_modifiers()
   i1.insert(ve.begin(),ve.end());
   BOOST_TEST(i2.size()==3);
 
-#if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
   i1.insert({{4,"Vanessa",20,9236},{5,"Penelope",55,2358}});
   BOOST_TEST(i2.size()==5);
-#endif
 
   BOOST_TEST(i2.erase(i2.begin(),i2.end())==i2.end());
   BOOST_TEST(es.size()==0);
@@ -272,10 +252,8 @@ void test_modifiers()
   i2.insert(ve.begin(),ve.end());
   BOOST_TEST(i3.size()==3);
 
-#if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
   i2.insert({{4,"Vanessa",20,9236},{5,"Penelope",55,2358}});
   BOOST_TEST(i3.size()==5);
-#endif
 
   BOOST_TEST(*(i3.erase(i3.begin()))==employee(1,"Rachel",27,9012));
   BOOST_TEST(i3.erase(i3.begin(),i3.end())==i3.end());
@@ -284,11 +262,9 @@ void test_modifiers()
   i3.insert(i3.end(),ve.begin(),ve.end());
   BOOST_TEST(es.size()==3);
 
-#if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
   i3.insert(i3.begin(),{{4,"Vanessa",20,9236},{5,"Penelope",55,2358}});
   BOOST_TEST(i3.front().name=="Vanessa");
   BOOST_TEST(i4.size()==5);
-#endif
 
   BOOST_TEST(i4.erase(9012)==1);
   i4.erase(i4.begin());
@@ -303,11 +279,9 @@ void test_modifiers()
   i5.insert(i5.begin(),ve.begin(),ve.end());
   BOOST_TEST(i1.size()==3);
 
-#if !defined(BOOST_NO_CXX11_HDR_INITIALIZER_LIST)
   i5.insert(i5.end(),{{4,"Vanessa",20,9236},{5,"Penelope",55,2358}});
   BOOST_TEST(i5.back().name=="Penelope");
   BOOST_TEST(i1.size()==5);
-#endif
 
   BOOST_TEST(es.erase(es.begin(),es.end())==es.end());
   BOOST_TEST(i2.size()==0);
@@ -342,49 +316,20 @@ void test_modifiers()
   i5.swap(get<5>(es2));
   BOOST_TEST(es==es2_backup&&es2==es_backup);
 
-#if defined(BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL)
-  ::boost::multi_index::detail::swap(i1,get<1>(es2));
-#else
   using std::swap;
   swap(i1,get<1>(es2));
-#endif
-
   BOOST_TEST(es==es_backup&&es2==es2_backup);
 
-#if defined(BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL)
-  ::boost::multi_index::detail::swap(i2,get<2>(es2));
-#else
-  using std::swap;
   swap(i2,get<2>(es2));
-#endif
-
   BOOST_TEST(es==es2_backup&&es2==es_backup);
 
-#if defined(BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL)
-  ::boost::multi_index::detail::swap(i3,get<3>(es2));
-#else
-  using std::swap;
   swap(i3,get<3>(es2));
-#endif
-
   BOOST_TEST(es==es_backup&&es2==es2_backup);
 
-#if defined(BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL)
-  ::boost::multi_index::detail::swap(i4,get<4>(es2));
-#else
-  using std::swap;
   swap(i4,get<4>(es2));
-#endif
-
   BOOST_TEST(es==es2_backup&&es2==es_backup);
 
-#if defined(BOOST_FUNCTION_SCOPE_USING_DECLARATION_BREAKS_ADL)
-  ::boost::multi_index::detail::swap(i5,get<5>(es2));
-#else
-  using std::swap;
   swap(i5,get<5>(es2));
-#endif
-
   BOOST_TEST(es==es_backup&&es2==es2_backup);
 
   i3.clear();
@@ -419,19 +364,19 @@ void test_modifiers()
   get<3>(ncic).emplace_back(1);
 
   non_copyable_int nci(1);
-  ncic.insert(boost::move(nci));
+  ncic.insert(std::move(nci));
   BOOST_TEST(nci.n==0);
 
   nci.n=1;
-  get<1>(ncic).insert(boost::move(nci));
+  get<1>(ncic).insert(std::move(nci));
   BOOST_TEST(nci.n==0);
 
   nci.n=1;
-  get<2>(ncic).push_back(boost::move(nci));
+  get<2>(ncic).push_back(std::move(nci));
   BOOST_TEST(nci.n==0);
 
   nci.n=1;
-  get<3>(ncic).push_back(boost::move(nci));
+  get<3>(ncic).push_back(std::move(nci));
   BOOST_TEST(nci.n==0);
 
   std::vector<int> vi(4,1);

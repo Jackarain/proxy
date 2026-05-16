@@ -282,16 +282,23 @@ jobs:
             install:
               - clang-20
           - toolset: clang
-            compiler: clang++-20
+            compiler: clang++-21
+            cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
+            os: ubuntu-latest
+            container: ubuntu:25.10
+            install:
+              - clang-21
+          - toolset: clang
+            compiler: clang++-21
             cxxstd: "11-gnu,14-gnu,17-gnu,20-gnu,23-gnu,26-gnu"
             cxxflags: -stdlib=libc++
             linkflags: -stdlib=libc++
             os: ubuntu-latest
-            container: ubuntu:25.04
+            container: ubuntu:25.10
             install:
-              - clang-20
-              - libc++-20-dev
-              - libc++abi-20-dev
+              - clang-21
+              - libc++-21-dev
+              - libc++abi-21-dev
           - name: UBSAN
             toolset: clang
             compiler: clang++-18
@@ -307,11 +314,45 @@ jobs:
               - libc++abi-18-dev
 
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
-            os: macos-13
+            vm: freebsd
+            version: "14.3"
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-latest
+
           - toolset: clang
+            vm: openbsd
+            version: "7.7"
             cxxstd: "11,14,17,20,2b"
+            os: ubuntu-latest
+
+          - toolset: gcc
+            vm: netbsd
+            version: "10.1"
+            cxxstd: "11,14,17,20"
+            os: ubuntu-latest
+
+          - toolset: gcc
+            vm: dragonflybsd
+            version: "6.4.0"
+            cxxstd: "11,14,17,2a"
+            os: ubuntu-latest
+            lang: en_US.UTF-8
+
+          - toolset: gcc
+            vm: solaris
+            version: "11.4-gcc"
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-latest
+
+          - toolset: clang
             os: macos-14
+            cxxstd: "11,14,17,20,2b"
+          - toolset: clang
+            os: macos-15
+            cxxstd: "11,14,17,20,23,26"
+          - toolset: clang
+            os: macos-26
+            cxxstd: "11,14,17,20,23,26"
 
           - name: CMake tests
             cmake_tests: 1
@@ -324,6 +365,11 @@ jobs:
     steps:
       - name: Setup environment
         run: |
+            if [ -n "${{matrix.lang}}" ]
+            then
+                echo "LANG=${{matrix.lang}}" >> $GITHUB_ENV
+                export LANG=${{matrix.lang}}
+            fi
             if [ -f "/etc/debian_version" ]
             then
                 echo "DEBIAN_FRONTEND=noninteractive" >> $GITHUB_ENV
@@ -502,25 +548,23 @@ jobs:
             fi
             DEPINST_ARGS+=("$LIBRARY")
             python tools/boostdep/depinst/depinst.py "${DEPINST_ARGS[@]}"
-            if [ -z "${{matrix.cmake_tests}}" ]
-            then
-                ./bootstrap.sh
-                ./b2 headers
-                if [ -n "${{matrix.compiler}}" -o -n "$GCC_TOOLCHAIN_ROOT" ]
-                then
-                    echo -n "using ${{matrix.toolset}} : : ${{matrix.compiler}}" > ~/user-config.jam
-                    if [ -n "$GCC_TOOLCHAIN_ROOT" ]
-                    then
-                        echo -n " : <compileflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\" <linkflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\"" >> ~/user-config.jam
-                    fi
-                    echo " ;" >> ~/user-config.jam
-                fi
-            fi
-
-      - name: Run tests
-        if: matrix.cmake_tests == ''
-        run: |
+            rm -rf ".git"
+            cd ..
+            cat > b2-run-tests.sh << "EOF"
+            #!/usr/bin/env bash
+            set -e
             cd boost-root
+            ./bootstrap.sh
+            ./b2 headers
+            if [ -n "${{matrix.compiler}}" -o -n "$GCC_TOOLCHAIN_ROOT" ]
+            then
+                echo -n "using ${{matrix.toolset}} : : ${{matrix.compiler}}" > ~/user-config.jam
+                if [ -n "$GCC_TOOLCHAIN_ROOT" ]
+                then
+                    echo -n " : <compileflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\" <linkflags>\"--gcc-toolchain=$GCC_TOOLCHAIN_ROOT\"" >> ~/user-config.jam
+                fi
+                echo " ;" >> ~/user-config.jam
+            fi
             if [ -n "${{matrix.extra_tests}}" ]
             then
                 export BOOST_FILESYSTEM_TEST_WITH_EXAMPLES=1
@@ -551,6 +595,146 @@ jobs:
             fi
             B2_ARGS+=("libs/$LIBRARY/test")
             ./b2 "${B2_ARGS[@]}"
+            EOF
+            chmod +x b2-run-tests.sh
+
+      # Note: The VMs must be created after the workspace is fully prepared, as it will be copied to the VM only once
+      - name: Setup FreeBSD VM
+        if: matrix.vm == 'freebsd'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LANG LIBRARY DEFAULT_BUILD_VARIANT BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          prepare: |
+              pkg install -y bash
+          run: |
+              uname -mrs
+              sysctl hw.model
+              sysctl hw.ncpu
+              sysctl hw.physmem
+              sysctl hw.usermem
+              locale
+              pwd
+              ls -la
+
+      - name: Setup OpenBSD VM
+        if: matrix.vm == 'openbsd'
+        uses: vmactions/openbsd-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LANG LIBRARY DEFAULT_BUILD_VARIANT BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          prepare: |
+              pkg_add bash
+          run: |
+              uname -mrs
+              sysctl hw.model
+              sysctl hw.ncpu
+              sysctl hw.physmem
+              sysctl hw.usermem
+              locale
+              pwd
+              ls -la
+
+      - name: Setup NetBSD VM
+        if: matrix.vm == 'netbsd'
+        uses: vmactions/netbsd-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LANG LIBRARY DEFAULT_BUILD_VARIANT BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          run: |
+              uname -mrs
+              /sbin/sysctl hw.model
+              /sbin/sysctl hw.ncpu
+              /sbin/sysctl hw.physmem64
+              /sbin/sysctl hw.usermem64
+              locale
+              pwd
+              ls -la
+
+      - name: Setup DragonFlyBSD VM
+        if: matrix.vm == 'dragonflybsd'
+        uses: vmactions/dragonflybsd-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LANG LIBRARY DEFAULT_BUILD_VARIANT BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          prepare: |
+              pkg install -y bash
+          run: |
+              uname -mrs
+              sysctl hw.model
+              sysctl hw.ncpu
+              sysctl hw.physmem
+              sysctl hw.usermem
+              locale
+              pwd
+              ls -la
+
+      - name: Setup Solaris VM
+        if: matrix.vm == 'solaris'
+        uses: vmactions/solaris-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LANG LIBRARY DEFAULT_BUILD_VARIANT BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          run: |
+              uname -mrs
+              locale
+              pwd
+              ls -la
+
+      - name: Run tests
+        if: matrix.cmake_tests == '' && matrix.vm == ''
+        run: |
+            bash ./b2-run-tests.sh
+
+      - name: Run tests (FreeBSD VM)
+        if: matrix.cmake_tests == '' && matrix.vm == 'freebsd'
+        shell: freebsd {0}
+        run: |
+            cd "$GITHUB_WORKSPACE"
+            bash ./b2-run-tests.sh
+
+      - name: Run tests (OpenBSD VM)
+        if: matrix.cmake_tests == '' && matrix.vm == 'openbsd'
+        shell: openbsd {0}
+        run: |
+            cd "$GITHUB_WORKSPACE"
+            bash ./b2-run-tests.sh
+
+      - name: Run tests (NetBSD VM)
+        if: matrix.cmake_tests == '' && matrix.vm == 'netbsd'
+        shell: netbsd {0}
+        run: |
+            cd "$GITHUB_WORKSPACE"
+            bash ./b2-run-tests.sh
+
+      - name: Run tests (DragonFlyBSD VM)
+        if: matrix.cmake_tests == '' && matrix.vm == 'dragonflybsd'
+        shell: dragonflybsd {0}
+        run: |
+            cd "$GITHUB_WORKSPACE"
+            bash ./b2-run-tests.sh
+
+      - name: Run tests (Solaris VM)
+        if: matrix.cmake_tests == '' && matrix.vm == 'solaris'
+        shell: solaris {0}
+        run: |
+            cd "$GITHUB_WORKSPACE"
+            bash ./b2-run-tests.sh
 
       - name: Run CMake tests
         if: matrix.cmake_tests
@@ -669,9 +853,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { sys: MINGW32, toolset: gcc, cxxstd: '11,17,20,23' }
-          - { sys: MINGW64, toolset: gcc, cxxstd: '11,17,20,23' }
+          - sys: MINGW32
+            toolset: gcc
+            cxxstd: '11,17,20,23'
+            cmake_generator: "Ninja"
+          - sys: MINGW64
+            toolset: gcc
+            cxxstd: '11,17,20,23'
+            cmake_generator: "Ninja"
 
+    timeout-minutes: 30
     runs-on: windows-latest
 
     steps:
@@ -757,6 +948,133 @@ jobs:
       # Run also the CMake tests to avoid having to setup another matrix for CMake on MSYS
       - name: Run CMake tests
         run: |
+            if [ -n "${{matrix.cmake_generator}}" ]
+            then
+                export "CMAKE_GENERATOR=${{matrix.cmake_generator}}"
+            fi
+            [ ! -d boost-root ] || cd boost-root
+            mkdir __build_static__ && cd __build_static__
+            cmake -DBUILD_SHARED_LIBS=OFF ../libs/$LIBRARY/test/test_cmake
+            cmake --build . --target boost_${LIBRARY}_cmake_self_test -j $BUILD_JOBS
+            cd ..
+            mkdir __build_shared__ && cd __build_shared__
+            cmake -DBUILD_SHARED_LIBS=ON ../libs/$LIBRARY/test/test_cmake
+            cmake --build . --target boost_${LIBRARY}_cmake_self_test -j $BUILD_JOBS
+
+  cygwin:
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      SHELLOPTS: igncr
+      CYGWIN: winsymlinks:native
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - toolset: gcc
+            cxxstd: "14-gnu,17-gnu,20-gnu,23-gnu"
+            build_variant: debug
+            cmake_generator: "Ninja"
+
+    timeout-minutes: 30
+    runs-on: windows-latest
+
+    steps:
+      - name: Configure git
+        run: |
+          git config --global core.autocrlf input
+
+      - name: Install Cygwin
+        uses: cygwin/cygwin-install-action@v6
+        with:
+          packages:
+            gcc-g++
+            cmake
+            ninja
+
+      - name: Setup Boost
+        run: |
+            echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+            LIBRARY=${GITHUB_REPOSITORY#*/}
+            echo LIBRARY: $LIBRARY
+            echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+            echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+            echo GITHUB_REF: $GITHUB_REF
+            REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+            REF=${REF#refs/heads/}
+            echo REF: $REF
+            BOOST_BRANCH=develop && [ "$REF" = "master" ] && BOOST_BRANCH=master || true
+            echo BOOST_BRANCH: $BOOST_BRANCH
+            BUILD_JOBS=$((nproc) 2> /dev/null)
+            echo "BUILD_JOBS=$BUILD_JOBS" >> $GITHUB_ENV
+            echo "CMAKE_BUILD_PARALLEL_LEVEL=$BUILD_JOBS" >> $GITHUB_ENV
+            DEPINST_ARGS=("--git_args" "--jobs $GIT_FETCH_JOBS")
+            mkdir -p snapshot
+            cd snapshot
+            echo "Downloading library snapshot: https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            curl -L --retry "$NET_RETRY_COUNT" -o "${LIBRARY}-${GITHUB_SHA}.tar.gz" "https://github.com/${GITHUB_REPOSITORY}/archive/${GITHUB_SHA}.tar.gz"
+            tar -xf "${LIBRARY}-${GITHUB_SHA}.tar.gz"
+            if [ ! -d "${LIBRARY}-${GITHUB_SHA}" ]
+            then
+                echo "Library snapshot does not contain the library directory ${LIBRARY}-${GITHUB_SHA}:"
+                ls -la
+                exit 1
+            fi
+            rm -f "${LIBRARY}-${GITHUB_SHA}.tar.gz"
+            cd ..
+            git clone -b "$BOOST_BRANCH" --depth 1 "https://github.com/boostorg/boost.git" "boost-root"
+            cd boost-root
+            mkdir -p libs
+            rm -rf "libs/$LIBRARY"
+            mv -f "../snapshot/${LIBRARY}-${GITHUB_SHA}" "libs/$LIBRARY"
+            rm -rf "../snapshot"
+            git submodule update --init tools/boostdep
+            DEPINST_ARGS+=("$LIBRARY")
+            python tools/boostdep/depinst/depinst.py "${DEPINST_ARGS[@]}"
+            ./bootstrap.sh
+            ./b2 -d0 headers
+
+      - name: Run tests
+        run: |
+            cd boost-root
+            export BOOST_FILESYSTEM_TEST_WITH_EXAMPLES=1
+            B2_ARGS=("-j" "$BUILD_JOBS" "toolset=${{matrix.toolset}}" "cxxstd=${{matrix.cxxstd}}")
+            if [ -n "${{matrix.build_variant}}" ]
+            then
+                B2_ARGS+=("variant=${{matrix.build_variant}}")
+            else
+                B2_ARGS+=("variant=$DEFAULT_BUILD_VARIANT")
+            fi
+            if [ -n "${{matrix.threading}}" ]
+            then
+                B2_ARGS+=("threading=${{matrix.threading}}")
+            fi
+            if [ -n "${{matrix.ubsan}}" ]
+            then
+                export UBSAN_OPTIONS="print_stacktrace=1"
+                B2_ARGS+=("cxxflags=-fsanitize=undefined -fno-sanitize-recover=undefined" "linkflags=-fsanitize=undefined -fuse-ld=gold" "define=UBSAN=1" "debug-symbols=on" "visibility=global")
+            fi
+            if [ -n "${{matrix.cxxflags}}" ]
+            then
+                B2_ARGS+=("cxxflags=${{matrix.cxxflags}}")
+            fi
+            if [ -n "${{matrix.linkflags}}" ]
+            then
+                B2_ARGS+=("linkflags=${{matrix.linkflags}}")
+            fi
+            B2_ARGS+=("libs/$LIBRARY/test")
+            ./b2 "${B2_ARGS[@]}"
+
+      # Run also the CMake tests to avoid having to setup another matrix for CMake on Cygwin
+      - name: Run CMake tests
+        run: |
+            if [ -n "${{matrix.cmake_generator}}" ]
+            then
+                export "CMAKE_GENERATOR=${{matrix.cmake_generator}}"
+            fi
             [ ! -d boost-root ] || cd boost-root
             mkdir __build_static__ && cd __build_static__
             cmake -DBUILD_SHARED_LIBS=OFF ../libs/$LIBRARY/test/test_cmake

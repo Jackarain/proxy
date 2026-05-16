@@ -118,6 +118,20 @@ test-suite config
     [ compile header_deprecated_test.cpp ]
     [ compile symbol_deprecated_test.cpp ]
     [ compile boost_override_test.cpp ]
+
+    [ run static_assert_test.cpp ]
+    [ compile-fail static_assert_test_fail_1.cpp ]
+    [ compile-fail static_assert_test_fail_2.cpp ]
+    [ compile-fail static_assert_test_fail_3.cpp ]
+    [ compile-fail static_assert_test_fail_4.cpp ]
+    [ compile-fail static_assert_test_fail_5.cpp ]
+    [ compile-fail static_assert_test_fail_6.cpp ]
+    [ compile-fail static_assert_test_fail_7.cpp ]
+    [ compile-fail static_assert_test_fail_8.cpp ]
+    [ compile-fail static_assert_test_fail_9.cpp ]
+    [ compile-fail static_assert_test_fail_10.cpp ]
+
+    [ build-project ../example ]
   ;
 
 obj has_clang_implicit_fallthrough : cmd_line_check.cpp :

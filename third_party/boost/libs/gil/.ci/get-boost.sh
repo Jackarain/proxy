@@ -72,7 +72,6 @@ git submodule --quiet update --init $GIT_SUBMODULE_OPTS \
     libs/ratio \
     libs/rational \
     libs/regex \
-    libs/static_assert \
     libs/smart_ptr \
     libs/system \
     libs/throw_exception \

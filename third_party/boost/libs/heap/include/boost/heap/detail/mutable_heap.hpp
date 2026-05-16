@@ -16,6 +16,7 @@
 #include <list>
 #include <utility>
 
+#include <boost/heap/detail/heap_utils.hpp>
 #include <boost/heap/detail/ordered_adaptor_iterator.hpp>
 #include <boost/iterator/iterator_adaptor.hpp>
 
@@ -77,23 +78,13 @@ private:
 public:
     struct handle_type
     {
+        handle_type() noexcept = default;
+
         value_type& operator*() const
         {
             return iterator->first;
         }
 
-        handle_type( void )
-        {}
-
-        handle_type( handle_type const& rhs ) :
-            iterator( rhs.iterator )
-        {}
-
-        handle_type& operator=( handle_type const& rhs )
-        {
-            iterator = rhs.iterator;
-            return *this;
-        }
 
         bool operator==( handle_type const& rhs ) const
         {
@@ -145,17 +136,18 @@ protected:
         q_( rhs.q_ ),
         objects( rhs.objects )
     {
+        // q_ was copy-constructed from rhs.q_, which holds iterators into rhs.objects (now
+        // dangling after we copied objects into our own list).  Clear q_ and rebuild it from
+        // our own objects list so that every iterator points into this->objects.
+        q_.clear();
         for ( typename object_list::iterator it = objects.begin(); it != objects.end(); ++it )
             q_.push( it );
     }
 
     priority_queue_mutable_wrapper& operator=( priority_queue_mutable_wrapper const& rhs )
     {
-        q_      = rhs.q_;
-        objects = rhs.objects;
-        q_.clear();
-        for ( typename object_list::iterator it = objects.begin(); it != objects.end(); ++it )
-            q_.push( it );
+        priority_queue_mutable_wrapper tmp( rhs );
+        do_swap( tmp );
         return *this;
     }
 
@@ -225,25 +217,55 @@ public:
 
         typedef const_list_iterator                          iterator;
         typedef typename q_type::ordered_iterator_dispatcher ordered_iterator_dispatcher;
+        typedef typename q_type::internal_compare            internal_compare_type;
+
+        // Comparator for unvisited_nodes that respects stability by comparing internal values
+        // (which includes stability counters for stable heaps)
+        struct compare_by_internal_value : public internal_compare_type
+        {
+            const q_type* q;
+
+            compare_by_internal_value( const q_type*                q_ptr = nullptr,
+                                       internal_compare_type const& cmp   = internal_compare_type() ) :
+                internal_compare_type( cmp ),
+                q( q_ptr )
+            {}
+
+            bool operator()( const_list_iterator const& lhs, const_list_iterator const& rhs ) const
+            {
+                if ( q == nullptr )
+                    return false; // arbitrary for null case
+
+                size_type lhs_index = lhs->second;
+                size_type rhs_index = rhs->second;
+
+                typename q_type::internal_type const& lhs_internal
+                    = ordered_iterator_dispatcher::get_internal_value( q, lhs_index );
+                typename q_type::internal_type const& rhs_internal
+                    = ordered_iterator_dispatcher::get_internal_value( q, rhs_index );
+
+                return internal_compare_type::operator()( lhs_internal, rhs_internal );
+            }
+        };
 
         friend class boost::iterator_core_access;
 
     public:
         ordered_iterator( void ) :
             adaptor_type( 0 ),
-            unvisited_nodes( indirect_cmp() ),
+            unvisited_nodes( compare_by_internal_value() ),
             q_( nullptr )
         {}
 
         ordered_iterator( const priority_queue_mutable_wrapper* q, indirect_cmp const& cmp ) :
             adaptor_type( 0 ),
-            unvisited_nodes( cmp ),
+            unvisited_nodes( compare_by_internal_value( &( q->q_ ), q->q_.get_internal_cmp() ) ),
             q_( q )
         {}
 
         ordered_iterator( const_list_iterator it, const priority_queue_mutable_wrapper* q, indirect_cmp const& cmp ) :
             adaptor_type( it ),
-            unvisited_nodes( cmp ),
+            unvisited_nodes( compare_by_internal_value( &( q->q_ ), q->q_.get_internal_cmp() ) ),
             q_( q )
         {
             if ( it != q->objects.end() )
@@ -300,7 +322,7 @@ public:
 
         std::priority_queue< iterator,
                              std::vector< iterator, typename boost::allocator_rebind< allocator_type, iterator >::type >,
-                             indirect_cmp >
+                             compare_by_internal_value >
                                               unvisited_nodes;
         const priority_queue_mutable_wrapper* q_;
     };
@@ -331,10 +353,10 @@ public:
         return q_.get_allocator();
     }
 
-    void swap( priority_queue_mutable_wrapper& rhs )
+    void do_swap( priority_queue_mutable_wrapper& rhs )
     {
-        objects.swap( rhs.objects );
-        q_.swap( rhs.q_ );
+        swap_via_move( objects, rhs.objects );
+        q_.do_swap( rhs.q_ );
     }
 
     const_reference top( void ) const
@@ -354,7 +376,9 @@ public:
     template < class... Args >
     handle_type emplace( Args&&... args )
     {
-        objects.push_front( std::make_pair( std::forward< Args >( args )..., 0 ) );
+        objects.emplace_front( std::piecewise_construct,
+                               std::forward_as_tuple( std::forward< Args >( args )... ),
+                               std::forward_as_tuple( 0 ) );
         list_iterator ret = objects.begin();
         q_.push( ret );
         return handle_type( ret );
@@ -520,6 +544,6 @@ public:
 };
 
 
-}}}    // namespace boost::heap::detail
+}}} // namespace boost::heap::detail
 
 #endif /* BOOST_HEAP_DETAIL_MUTABLE_HEAP_HPP */

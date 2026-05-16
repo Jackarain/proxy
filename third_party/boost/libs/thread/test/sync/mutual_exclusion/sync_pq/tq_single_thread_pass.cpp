@@ -16,6 +16,7 @@
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
 #include <boost/function.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/thread/concurrent_queues/sync_timed_queue.hpp>
 #include <boost/thread/executors/work.hpp>
 

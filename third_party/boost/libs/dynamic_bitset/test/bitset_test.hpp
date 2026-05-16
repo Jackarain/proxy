@@ -248,6 +248,8 @@ struct bitset_test
             BOOST_TEST( *( 1 + b.begin() ) == b[ 1 ] );
             BOOST_TEST( *( b.end() - 1 ) == b[ b.size() - 1 ] );
         }
+
+        BOOST_TEST( b.end() - b.begin() == static_cast< std::ptrdiff_t >( b.size() ) );
     }
 
     static void
@@ -295,13 +297,12 @@ struct bitset_test
         }
         { // test boost::from_block_range
             const typename Bitset::size_type n = blocks.size();
-            Bitset                           bset( n * bits_per_block );
+            Bitset                           bset( n == 0 ? 0 : n * bits_per_block - 1 );
             boost::from_block_range( blocks.begin(), blocks.end(), bset );
-            for ( std::size_t b = 0; b < n; ++b ) {
-                for ( int i = 0; i < bits_per_block; ++i ) {
-                    std::size_t bit = b * bits_per_block + i;
-                    BOOST_TEST( bset[ bit ] == nth_bit( blocks[ b ], i ) );
-                }
+            for ( std::size_t i = 0; i < bset.size(); ++i ) {
+                std::size_t b = i / bits_per_block;
+                int         j = i % bits_per_block;
+                BOOST_TEST( bset[ i ] == nth_bit( blocks[ b ], j ) );
             }
             BOOST_TEST( n <= bset.num_blocks() );
         }

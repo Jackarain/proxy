@@ -10,7 +10,7 @@ namespace. xref:BOOST_OPENMETHOD_OVERRIDE.adoc[BOOST_OPENMETHOD_OVERRIDE] works
 _across_ namespaces. Overriders are not required to be in the same namespace as
 the method they override. The macro adds the overrider to a method that can be
 called with the same arguments as the overrider, possibly located via argument
-dependant lookup.
+dependent lookup.
 
 Overrider containers are added to the current namespace. It follows that the
 same method can have overriders in multiple containers, in different namespaces.

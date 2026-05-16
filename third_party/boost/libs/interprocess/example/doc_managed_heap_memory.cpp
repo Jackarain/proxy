@@ -7,13 +7,16 @@
 // See http://www.boost.org/libs/interprocess for documentation.
 //
 //////////////////////////////////////////////////////////////////////////////
-
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <boost/interprocess/detail/workaround.hpp>
 //[doc_managed_heap_memory
 #include <boost/container/list.hpp>
 #include <boost/interprocess/managed_heap_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <cstddef>
+#include <cassert>
 
 using namespace boost::interprocess;
 typedef boost::container::list<int, allocator<int, managed_heap_memory::segment_manager> >

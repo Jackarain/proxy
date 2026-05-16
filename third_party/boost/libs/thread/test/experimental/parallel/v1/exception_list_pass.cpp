@@ -14,7 +14,7 @@
 
 #include <boost/thread/experimental/parallel/v1/exception_list.hpp>
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 
 int main()

@@ -317,6 +317,16 @@ the input they match unless otherwise stated in the table below.]
      [ `std::string` if `_ATTR_np_(p)` is `char` or `char32_t`, otherwise `std::vector<_ATTR_np_(p)>` ]
      [ The special value _inf_ may be used for the upper bound; it indicates unlimited repetition.  `decltype(_RES_np_(arg0))` and `decltype(_RES_np_(arg1))` each must be implicitly convertible to `int64_t`.  Matching _e_ an unlimited number of times creates an infinite loop, which is undefined behavior in C++.  _Parser_ will assert in debug mode when it encounters `_rpt_np_(n, _inf_)[_e_]` (this applies to unconditional _e_ only). ]]
 
+    [[ `_rpt_np_(arg0, p1)[p2]` ]
+     [ Matches iff `p2` matches exactly `_RES_np_(arg0)` times, matching `p1` in between each pair of consecutive matches of `p2`.  Equivalent to: _e_ for `_RES_np_(arg0) <= 0`, and `_rpt_np_(_RES_np_(arg0) - 1)[p2 >> p1] >> p2` otherwise. ]
+     [ `std::string` if `_ATTR_np_(p2)` is `char` or `char32_t`, otherwise `std::vector<_ATTR_np_(p2)>` ]
+     [ The special value _inf_ may be used; it indicates unlimited repetition.  `decltype(_RES_np_(arg0))` must be implicitly convertible to `int64_t`.  Matching _e_ an unlimited number of times creates an infinite loop, which is undefined behavior in C++.  _Parser_ will assert in debug mode when it encounters `_rpt_np_(_inf_)[_e_]` (this applies to unconditional _e_ only). ]]
+
+    [[ `_rpt_np_(arg0, arg1, p1)[p2]` ]
+     [ Matches iff `p2` matches between `_RES_np_(arg0)` and `_RES_np_(arg1)` times, inclusively, matching `p1` in between each pair of consecutive matches of `p2`.  Equivalent to: _e_ for `_RES_np_(arg1) <= 0`, and `_rpt_np_(_RES_np_(arg0) - 1, _RES_np_(arg1) - 1)[p2 >> p1] >> p2` otherwise. ]
+     [ `std::string` if `_ATTR_np_(p2)` is `char` or `char32_t`, otherwise `std::vector<_ATTR_np_(p2)>` ]
+     [ The special value _inf_ may be used for the upper bound; it indicates unlimited repetition.  `decltype(_RES_np_(arg0))` and `decltype(_RES_np_(arg1))` each must be implicitly convertible to `int64_t`.  Matching _e_ an unlimited number of times creates an infinite loop, which is undefined behavior in C++.  _Parser_ will assert in debug mode when it encounters `_rpt_np_(n, _inf_)[_e_]` (this applies to unconditional _e_ only). ]]
+
     [[ `_if_np_(pred)[p]` ]
      [ Equivalent to `_e_(pred) >> p`. ]
      [ `_ATTR_np_(p)` ]

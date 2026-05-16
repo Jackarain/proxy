@@ -104,6 +104,9 @@ struct alloc_propagate_base<boost_container_stable_vector>
 }}}   //namespace boost::container::test
 
 
+//Test the expected sizeof()
+BOOST_CONTAINER_STATIC_ASSERT_MSG(5*sizeof(void*) == sizeof(stable_vector<int>), "sizeof has an unexpected value");
+
 int main()
 {
    recursive_vector_test();

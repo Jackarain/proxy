@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <cctype>
 #include <string>
 #include <cstring>
@@ -399,7 +401,7 @@ namespace boost { namespace spirit2
 
 }}
 
-void test_toy_spirit3()
+BOOST_AUTO_TEST_CASE(test_toy_spirit3)
 {
     using boost::spirit2::no_case;
     using boost::char_;
@@ -450,17 +452,4 @@ void test_toy_spirit3()
           , nest_alt_input.end()
         )
     );
-}
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test proto, grammars and tree transforms");
-
-    test->add(BOOST_TEST_CASE(&test_toy_spirit3));
-
-    return test;
 }

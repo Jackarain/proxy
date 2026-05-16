@@ -741,7 +741,7 @@ void test_unordered<ContainerDefiner>::test_clone(value_cont_type& values)
       std_multiset_t src(testset1.begin(), testset1.end());
       std_multiset_t dst(testset2.begin(), testset2.end());
       BOOST_TEST (src.size() == dst.size() && std::equal(src.begin(), src.end(), dst.begin()));
-      testset2.clear_and_dispose(test::delete_disposer<value_type>());
+      testset2.clear_and_dispose(test::delete_noexcept_disposer<value_type>());
       BOOST_TEST (testset2.empty());
 
       testset2.clone_from(boost::move(testset1), test::new_nonconst_cloner<value_type>(), test::delete_disposer<value_type>());
@@ -750,7 +750,7 @@ void test_unordered<ContainerDefiner>::test_clone(value_cont_type& values)
       std_multiset_t(testset1.begin(), testset1.end()).swap(src);
       std_multiset_t(testset2.begin(), testset2.end()).swap(dst);
       BOOST_TEST(src.size() == dst.size() && std::equal(src.begin(), src.end(), dst.begin()));
-      testset2.clear_and_dispose(test::delete_disposer<value_type>());
+      testset2.clear_and_dispose(test::delete_noexcept_disposer<value_type>());
       BOOST_TEST (testset2.empty());
    }
    {

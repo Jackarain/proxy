@@ -41,13 +41,6 @@ jobs:
             linkflags: "linkflags=--coverage -lasan -lubsan"
             gcov_tool: "gcov-10"
             launcher: "testing.launcher=LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.6"
-          - toolset: gcc-9
-            cxxstd: "03,11,14,17,2a"
-            os: ubuntu-22.04
-            cxxflags: "cxxflags=--coverage -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined"
-            linkflags: "linkflags=--coverage -lasan -lubsan"
-            gcov_tool: "gcov-9"
-            launcher: "testing.launcher=LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5"
           - toolset: clang
             compiler: clang++-14
             cxxstd: "03,11,14,17,2a"
@@ -60,7 +53,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -186,7 +179,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd

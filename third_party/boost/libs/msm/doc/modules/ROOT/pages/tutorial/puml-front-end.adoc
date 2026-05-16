@@ -12,7 +12,8 @@ example VSCode has add-ons for previewing the result.
 
 Our usual player example could look like this in PlantUML syntax:
 
-....
+[source,cpp]
+----
 @startuml Player
             skinparam linetype polyline
             state Player{
@@ -38,7 +39,7 @@ Our usual player example could look like this in PlantUML syntax:
                 Stopped : flag CDLoaded                
             }
  @enduml
-....
+----
 
 A few key points of the syntax:
 
@@ -63,14 +64,16 @@ comma-separated-actions-sequence [guard conditions]
 * an internal transition is implemented using an equal source and target
 state and a "-" before the event name
 +
-....
+[source,cpp]
+----
 Open        -> Open         : -play         / defer
-....
+----
 * An internal Kleene would then be:
 +
-....
+[source,cpp]
+----
 Empty       -> Empty        : -*            / defer               [is_play_event]
-....
+----
 
 Before PUML one had to convert this syntax in the classical MSM
 transition table, states with entry/exit/flags, events, etc. which takes
@@ -79,7 +82,8 @@ long and is error-prone.
 Good news: This is no more necessary. Now we can copy-paste our PlantUML
 and directly use it in the code, which gives us:
 
-....
+[source,cpp]
+----
     // front-end: define the FSM structure 
     struct player_ : public msm::front::state_machine_def<player_>
     {
@@ -129,7 +133,7 @@ and directly use it in the code, which gives us:
     };
     // Pick a back-end
     typedef msm::back11::state_machine<player_> player;
-....
+----
 
 The PlantUML string is parsed at compile-time and generates a classical
 Functor front-end.
@@ -138,7 +142,8 @@ States and event do not need to be defined any more, unless one needs to
 provide them with attributes, or if the states are submachines. Actions
 and Guards do need to be implemented to reduce bugs because of typos:
 
-....
+[source,cpp]
+----
 namespace boost::msm::front::puml {
     template<>
     struct Action<by_name("close_drawer")>
@@ -158,14 +163,14 @@ namespace boost::msm::front::puml {
         }
     };    
     }
-....
+----
 
 The events are also referenced by name:
 
-....
+[source,cpp]
+----
 p.process_event(Event<by_name("open_close")>{});                        
-                    
-....
+----
 
 Please note that C++20 is required. xref:attachment$SimplePuml.cpp[A
 complete implementation] of the player is provided.
@@ -177,7 +182,8 @@ complete implementation] of the player is provided.
 At the moment, the PUML front-end does not support submachines in a
 single text string, so we need to split. First we define the submachine:
 
-....
+[source,cpp]
+----
 struct playing_ : public msm::front::state_machine_def<playing_>
 {
         typedef boost::fusion::vector<PlayingPaused, CDLoaded>        flag_list;
@@ -216,13 +222,14 @@ namespace boost::msm::front::puml {
     };
 }
                 
-....
+----
 
 We can reference the submachine within the upper state machine:
 
-....
+[source,cpp]
+----
 PlayingFsm  --> Stopped       : stop          / stop_playback
-....
+----
 
 Again, xref:attachment$OrthogonalDeferredPuml.cpp[a complete
 implementation] of the player is provided. Interesting are the

@@ -9,7 +9,6 @@ constant boost_dependencies :
     /boost/assert//boost_assert
     /boost/config//boost_config
     /boost/core//boost_core
-    /boost/static_assert//boost_static_assert
     /boost/throw_exception//boost_throw_exception
     /boost/type_traits//boost_type_traits ;
 

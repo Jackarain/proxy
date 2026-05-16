@@ -6,10 +6,16 @@
 #ifndef TEST_VIRTUAL_PTR_VALUE_SEMANTICS_HPP
 #define TEST_VIRTUAL_PTR_VALUE_SEMANTICS_HPP
 
+#include <type_traits>
+#include <boost/mp11.hpp>
 #include <boost/openmethod.hpp>
-#include <boost/openmethod/policies/vptr_map.hpp>
 #include <boost/openmethod/initialize.hpp>
+#include <boost/openmethod/policies/vptr_map.hpp>
+#include <boost/openmethod/interop/std_shared_ptr.hpp>
+#include <boost/openmethod/interop/boost_intrusive_ptr.hpp>
 #include <boost/openmethod/interop/std_unique_ptr.hpp>
+#include <boost/smart_ptr/intrusive_ptr.hpp>
+#include <boost/smart_ptr/intrusive_ref_counter.hpp>
 
 #include "test_util.hpp"
 
@@ -19,7 +25,7 @@ using namespace boost::openmethod;
 using namespace policies;
 using namespace detail;
 
-struct Animal {
+struct Animal : boost::intrusive_ref_counter<Animal> {
     virtual ~Animal() {
     }
 
@@ -30,6 +36,12 @@ struct Animal {
 struct Cat : virtual Animal {};
 
 struct Dog : Animal {};
+
+BOOST_OPENMETHOD_CLASSES(Animal, Cat, Dog);
+
+struct id;
+// without following line, no methods, no v-tables
+auto instantiate_a_method = &method<id, auto(virtual_ptr<Animal>)->void>::fn;
 
 template<class Left, class Right>
 constexpr bool construct_assign_ok =

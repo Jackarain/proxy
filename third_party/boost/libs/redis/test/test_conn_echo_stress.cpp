@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2022 Marcelo Zimbres Silva (mzimbres@gmail.com)
+/* Copyright (c) 2018-2025 Marcelo Zimbres Silva (mzimbres@gmail.com)
  *
  * Distributed under the Boost Software License, Version 1.0. (See
  * accompanying file LICENSE.txt)
@@ -27,6 +27,7 @@ using error_code = boost::system::error_code;
 using boost::redis::operation;
 using boost::redis::request;
 using boost::redis::response;
+using boost::redis::resp3::flat_tree;
 using boost::redis::ignore;
 using boost::redis::ignore_t;
 using boost::redis::logger;
@@ -54,39 +55,40 @@ std::ostream& operator<<(std::ostream& os, usage const& u)
 
 namespace {
 
-auto push_consumer(connection& conn, int expected) -> net::awaitable<void>
+auto receiver(connection& conn, flat_tree& resp, std::size_t expected) -> net::awaitable<void>
 {
-   int c = 0;
-   for (error_code ec;;) {
-      conn.receive(ec);
-      if (ec == error::sync_receive_push_failed) {
-         ec = {};
-         co_await conn.async_receive(net::redirect_error(ec));
-      } else if (!ec) {
-         //std::cout << "Skipping suspension." << std::endl;
-      }
-
-      if (ec) {
-         BOOST_TEST(false, "push_consumer error: " << ec.message());
-         co_return;
-      }
-      if (++c == expected)
-         break;
+   std::size_t push_counter = 0;
+   while (push_counter != expected) {
+      co_await conn.async_receive2();
+      push_counter += resp.get_total_msgs();
+      resp.clear();
    }
 
    conn.cancel();
 }
 
-auto echo_session(connection& conn, const request& pubs, int n) -> net::awaitable<void>
+auto echo_session(connection& conn, const request& req, std::size_t n) -> net::awaitable<void>
 {
-   for (auto i = 0; i < n; ++i)
-      co_await conn.async_exec(pubs);
+   for (auto i = 0u; i < n; ++i)
+      co_await conn.async_exec(req);
 }
 
 void rethrow_on_error(std::exception_ptr exc)
 {
-   if (exc)
+   if (exc) {
+      BOOST_TEST(false);
       std::rethrow_exception(exc);
+   }
+}
+
+request make_pub_req(std::size_t n_pubs)
+{
+   request req;
+   req.push("PING");
+   for (std::size_t i = 0u; i < n_pubs; ++i)
+      req.push("PUBLISH", "channel", "payload");
+
+   return req;
 }
 
 BOOST_AUTO_TEST_CASE(echo_stress)
@@ -98,22 +100,22 @@ BOOST_AUTO_TEST_CASE(echo_stress)
 
    // Number of coroutines that will send pings sharing the same
    // connection to redis.
-   constexpr int sessions = 150;
+   constexpr std::size_t sessions = 150u;
 
    // The number of pings that will be sent by each session.
-   constexpr int msgs = 200;
+   constexpr std::size_t msgs = 200u;
 
    // The number of publishes that will be sent by each session with
    // each message.
-   constexpr int n_pubs = 25;
+   constexpr std::size_t n_pubs = 25u;
 
    // This is the total number of pushes we will receive.
-   constexpr int total_pushes = sessions * msgs * n_pubs + 1;
+   constexpr std::size_t total_pushes = sessions * msgs * n_pubs + 1;
 
-   request pubs;
-   pubs.push("PING");
-   for (int i = 0; i < n_pubs; ++i)
-      pubs.push("PUBLISH", "channel", "payload");
+   flat_tree resp;
+   conn.set_receive_response(resp);
+
+   request const pub_req = make_pub_req(n_pubs);
 
    // Run the connection
    bool run_finished = false, subscribe_finished = false;
@@ -123,19 +125,19 @@ BOOST_AUTO_TEST_CASE(echo_stress)
       std::clog << "async_run finished" << std::endl;
    });
 
+   // Op that will consume the pushes counting down until all expected
+   // pushes have been received.
+   net::co_spawn(ctx, receiver(conn, resp, total_pushes), rethrow_on_error);
+
    // Subscribe, then launch the coroutines
    request req;
-   req.push("SUBSCRIBE", "channel");
+   req.subscribe({"channel"});
    conn.async_exec(req, ignore, [&](error_code ec, std::size_t) {
       subscribe_finished = true;
       BOOST_TEST(ec == error_code());
 
-      // Op that will consume the pushes counting down until all expected
-      // pushes have been received.
-      net::co_spawn(ctx, push_consumer(conn, total_pushes), rethrow_on_error);
-
-      for (int i = 0; i < sessions; ++i)
-         net::co_spawn(ctx, echo_session(conn, pubs, msgs), rethrow_on_error);
+      for (std::size_t i = 0; i < sessions; ++i)
+         net::co_spawn(ctx, echo_session(conn, pub_req, msgs), rethrow_on_error);
    });
 
    // Run the test
@@ -144,7 +146,11 @@ BOOST_AUTO_TEST_CASE(echo_stress)
    BOOST_TEST(subscribe_finished);
 
    // Print statistics
-   std::cout << "-------------------\n" << conn.get_usage() << std::endl;
+   std::cout << "-------------------\n"
+             << "Usage data: \n"
+             << conn.get_usage() << "\n"
+             << "-------------------\n"
+             << "Reallocations: " << resp.get_reallocs() << std::endl;
 }
 
 }  // namespace

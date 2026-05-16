@@ -42,16 +42,15 @@ namespace {
 // Push consumer
 auto receiver(std::shared_ptr<connection> conn) -> net::awaitable<void>
 {
-   std::cout << "uuu" << std::endl;
+   std::cout << "Entering receiver" << std::endl;
    while (conn->will_reconnect()) {
-      std::cout << "dddd" << std::endl;
-      // Loop reading Redis pushs messages.
-      for (;;) {
-         std::cout << "aaaa" << std::endl;
-         error_code ec;
-         co_await conn->async_receive(net::redirect_error(ec));
+      std::cout << "Reconnect loop" << std::endl;
+      // Loop reading Redis pushes.
+      for (error_code ec;;) {
+         std::cout << "Receive loop" << std::endl;
+         co_await conn->async_receive2(net::redirect_error(ec));
          if (ec) {
-            std::cout << "Error in async_receive" << std::endl;
+            std::cout << "Error in async_receive2" << std::endl;
             break;
          }
       }

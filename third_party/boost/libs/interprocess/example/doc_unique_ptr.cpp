@@ -8,7 +8,9 @@
 // See http://www.boost.org/libs/interprocess for documentation.
 //
 //////////////////////////////////////////////////////////////////////////////
-
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <boost/interprocess/detail/workaround.hpp>
 
 //[doc_unique_ptr

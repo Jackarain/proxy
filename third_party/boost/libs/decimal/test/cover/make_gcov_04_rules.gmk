@@ -1,0 +1,22 @@
+# -----------------------------------------------------------------------------
+#  Copyright Matt Borland 2023.
+#  Copyright Christopher Kormanyos 2023.
+#  Distributed under the Boost Software License,
+#  Version 1.0. (See accompanying file LICENSE_1_0.txt
+#  or copy at http://www.boost.org/LICENSE_1_0.txt)
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# special flags (on pattern rule) for compilation of files needing threads
+# Note: Each file with threads must be specifically, manually listed here.
+# Note: TBD: We can/will use a similar method for libquadmath needs.
+# -----------------------------------------------------------------------------
+$(PATH_BIN)/test_frexp_ldexp.exe : $(CXXFLAGS) += -pthread -lpthread
+
+
+# -----------------------------------------------------------------------------
+# pattern rule for compilation of cpp-files
+# -----------------------------------------------------------------------------
+$(PATH_BIN)/%.exe : %.cpp
+	@-$(GNUECHO) +++ compile and link and execute: $(notdir $<) to $(notdir $(PATH_BIN)/$(basename $(@F)).exe)
+	@-$(CC) $(CXXFLAGS) -x c++ -c $(C_INCLUDES) $(C_DEFINES) $< -o $(PATH_OBJ)/$(basename $(@F)).o && $(CC) $(CXXFLAGS) $(PATH_OBJ)/$(basename $(@F)).o -o $(PATH_BIN)/$(basename $(@F)).exe && $(PATH_BIN)/$(basename $(@F)).exe

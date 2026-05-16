@@ -18,3 +18,4 @@
 ** xref:ref_headers.adoc[Headers]
 ** xref:ref_macros.adoc[Macros]
 ** xref:reference:boost/openmethod.adoc[Namespace boost::openmethod]
+* xref:acknowledgements.adoc[Acknowledgements]

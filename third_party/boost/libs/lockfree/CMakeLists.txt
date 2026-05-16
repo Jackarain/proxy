@@ -50,7 +50,6 @@ target_link_libraries(boost_lockfree
     Boost::core
     Boost::parameter
     Boost::predef
-    Boost::static_assert
     Boost::utility
 )
 

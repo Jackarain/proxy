@@ -212,7 +212,7 @@ index specifiers
 
 <span class=keyword>namespace</span> <span class=identifier>multi_index</span><span class=special>{</span>
 
-<span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>T0</span><span class=special>,...,</span><span class=keyword>typename</span> <span class=identifier>Tn</span><span class=special>&gt;</span>
+<span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>T</span><span class=special>,</span><span class=keyword>typename</span><span class=special>...</span> <span class=identifier>Ts</span><span class=special>&gt;</span>
 <span class=keyword>struct</span> <span class=identifier>indexed_by</span><span class=special>;</span>
 
 <span class=special>}</span> <span class=comment>// namespace boost::multi_index</span> 
@@ -223,24 +223,19 @@ index specifiers
 <h3><a name="indexed_by">Class template <code>indexed_by</code></a></h3>
 
 <p>
-<code>indexed_by</code> is a model of
-<a href="../../../../libs/mpl/doc/refmanual/random-access-sequence.html">
-<code>MPL Random Access Sequence</code></a> and
-<a href="../../../../libs/mpl/doc/refmanual/extensible-sequence.html">
-<code>MPL Extensible Sequence</code></a> meant to be used to specify a
+<code>indexed_by</code> is meant to be used to specify a
 compile-time list of indices as the <code>IndexSpecifierList</code> of
 <code>multi_index_container</code>.
 </p>
 
 <blockquote><pre>
-<span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>T0</span><span class=special>,...,</span><span class=keyword>typename</span> <span class=identifier>Tn</span><span class=special>&gt;</span>
+<span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>T</span><span class=special>,</span><span class=keyword>typename</span><span class=special>...</span> <span class=identifier>Ts</span><span class=special>&gt;</span>
 <span class=keyword>struct</span> <span class=identifier>indexed_by</span><span class=special>;</span>
 </pre></blockquote>
 
 <p>
 Each user-provided element of <code>indexed_list</code> must be an index
-specifier. At least an element must be provided. The maximum number of elements
-of an <code>indexed_by</code> sequence is implementation defined.
+specifier. At least an element must be provided.
 </p>
 
 <h2><a name="tags">Tags</a></h2>
@@ -264,7 +259,7 @@ class template <a href="#tag"><code>tag</code></a>.
 
 <span class=keyword>namespace</span> <span class=identifier>multi_index</span><span class=special>{</span>
 
-<span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>T0</span><span class=special>,...,</span><span class=keyword>typename</span> <span class=identifier>Tn</span><span class=special>&gt;</span>
+<span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span><span class=special>...</span> <span class=identifier>Ts</span><span class=special>&gt;</span>
 <span class=keyword>struct</span> <span class=identifier>tag</span><span class=special>;</span>
 
 <span class=special>}</span> <span class=comment>// namespace boost::multi_index</span> 
@@ -280,25 +275,13 @@ sequence of tags to be assigned to an index in instantiation time.
 </p>
 
 <blockquote><pre>
-<span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span> <span class=identifier>T0</span><span class=special>,...,</span><span class=keyword>typename</span> <span class=identifier>Tn</span><span class=special>&gt;</span>
-<span class=keyword>struct</span> <span class=identifier>tag</span>
-<span class=special>{</span>
-  <span class=keyword>typedef</span> <b>implementation defined</b> <span class=identifier>type</span><span class=special>;</span>
-<span class=special>};</span>
+<span class=keyword>template</span><span class=special>&lt;</span><span class=keyword>typename</span><span class=special>...</span> <span class=identifier>Ts</span><span class=special>&gt;</span>
+<span class=keyword>struct</span> <span class=identifier>tag</span><span class=special>;</span>
 </pre></blockquote>
 
 <p>
 Elements of <code>tag</code> can be any type, though the user is expected
 to provide classes with mnemonic names. Duplicate elements are not allowed.
-The maximum number of elements of a <code>tag</code> instantiation is
-implementation defined.
-The nested
-<code>type</code> is a model of
-<a href="../../../../libs/mpl/doc/refmanual/random-access-sequence.html">
-<code>MPL Random Access Sequence</code></a> and
-<a href="../../../../libs/mpl/doc/refmanual/extensible-sequence.html">
-<code>MPL Extensible Sequence</code></a> containing the types <code>T0</code>, ... ,
-<code>Tn</code> in the same order as specified.
 </p>
 
 <h2><a name="index_catalog">Indices provided by Boost.MultiIndex</a></h2>
@@ -386,9 +369,9 @@ Ordered indices
 
 <br>
 
-<p>Revised January 9th 2020</p>
+<p>Revised October 25th 2025</p>
 
-<p>&copy; Copyright 2003-2020 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2003-2025 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

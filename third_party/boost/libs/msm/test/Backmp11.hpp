@@ -20,5 +20,18 @@ struct favor_compile_time_config : state_machine_config
     using compile_policy = favor_compile_time;
 };
 
+// Test class for state machines,
+// which exposes additional APIs for test assertions.
+template <typename FrontEnd, typename Config = default_state_machine_config>
+class StateMachine
+    : public state_machine<FrontEnd, Config, StateMachine<FrontEnd, Config>>
+{
+    using base = state_machine<FrontEnd, Config, StateMachine<FrontEnd, Config>>;
+  public:
+    const typename base::event_container_t& get_pending_events() const
+    {
+        return this->get_event_pool().events;
+    }
+};
 
 } // boost::serialization

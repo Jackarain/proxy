@@ -171,11 +171,41 @@ struct decode_view_test
             BOOST_TEST_EQ(s, "uri test");
         }
 
+        // remove_prefix() with n == size() (issue #973)
+        {
+            decode_view s(str, no_plus_opt);
+            s.remove_prefix(s.size());
+            BOOST_TEST(s.empty());
+            BOOST_TEST_EQ(s.size(), 0u);
+        }
+
+        // remove_prefix() with n == 0
+        {
+            decode_view s(str, no_plus_opt);
+            s.remove_prefix(0);
+            BOOST_TEST_EQ(s, "a uri test");
+        }
+
         // remove_suffix()
         {
             decode_view s(str);
             s.remove_suffix(5);
             BOOST_TEST_EQ(s, "a uri");
+        }
+
+        // remove_suffix() with n == size() (issue #973)
+        {
+            decode_view s(str, no_plus_opt);
+            s.remove_suffix(s.size());
+            BOOST_TEST(s.empty());
+            BOOST_TEST_EQ(s.size(), 0u);
+        }
+
+        // remove_suffix() with n == 0
+        {
+            decode_view s(str, no_plus_opt);
+            s.remove_suffix(0);
+            BOOST_TEST_EQ(s, "a uri test");
         }
     }
 
@@ -198,6 +228,12 @@ struct decode_view_test
             BOOST_TEST_NOT(s.ends_with("b a uri test"));
             BOOST_TEST(s.ends_with('t'));
             BOOST_TEST_NOT(s.ends_with("url test"));
+        }
+
+        // ends_with() empty string regression
+        {
+            BOOST_TEST(decode_view("anything").ends_with(""));
+            BOOST_TEST(decode_view("").ends_with(""));
         }
 
         // find()
@@ -354,6 +390,97 @@ struct decode_view_test
     }
 
     void
+    testBorrowedRange()
+    {
+#ifdef BOOST_URL_HAS_CONCEPTS
+        // decode_view is a borrowed range
+        BOOST_CORE_STATIC_ASSERT(
+            std::ranges::borrowed_range<decode_view>);
+
+        // iterators remain valid after the view is destroyed
+        decode_view::iterator it;
+        {
+            decode_view dv("hello%20world");
+            it = dv.begin();
+        }
+        // iterator is still valid (points to external buffer)
+        BOOST_TEST_EQ(*it, 'h');
+#endif
+    }
+
+    void
+    testJavadocs()
+    {
+        // decode_view()
+        {
+            decode_view ds;
+
+            boost::ignore_unused(ds);
+        }
+
+        // decode_view(pct_string_view, encoding_opts)
+        {
+            decode_view ds( "Program%20Files" );
+
+            boost::ignore_unused(ds);
+        }
+
+        // empty()
+        {
+            BOOST_TEST( decode_view( "" ).empty() );
+        }
+
+        // size()
+        {
+            BOOST_TEST_EQ( decode_view( "Program%20Files" ).size(), 13u );
+        }
+
+        // front()
+        {
+            BOOST_TEST_EQ( decode_view( "Program%20Files" ).front(), 'P' );
+        }
+
+        // back()
+        {
+            BOOST_TEST_EQ( decode_view( "Program%20Files" ).back(), 's' );
+        }
+
+        // starts_with(core::string_view)
+        {
+            BOOST_TEST( decode_view( "Program%20Files" ).starts_with("Program") );
+        }
+
+        // ends_with(core::string_view)
+        {
+            BOOST_TEST( decode_view( "Program%20Files" ).ends_with("Files") );
+        }
+
+        // starts_with(char)
+        {
+            BOOST_TEST( decode_view( "Program%20Files" ).starts_with('P') );
+        }
+
+        // ends_with(char)
+        {
+            BOOST_TEST( decode_view( "Program%20Files" ).ends_with('s') );
+        }
+
+        // remove_prefix(size_type)
+        {
+            decode_view d( "Program%20Files" );
+            d.remove_prefix( 8 );
+            BOOST_TEST_EQ( d, "Files" );
+        }
+
+        // remove_suffix(size_type)
+        {
+            decode_view d( "Program%20Files" );
+            d.remove_suffix( 6 );
+            BOOST_TEST_EQ( d, "Program" );
+        }
+    }
+
+    void
     run()
     {
         testDecodeView();
@@ -365,6 +492,8 @@ struct decode_view_test
         testCompare();
         testStream();
         testPR127Cases();
+        testBorrowedRange();
+        testJavadocs();
     }
 };
 

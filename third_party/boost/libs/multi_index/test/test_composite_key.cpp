@@ -1,6 +1,6 @@
 /* Boost.MultiIndex test for composite_key.
  *
- * Copyright 2003-2021 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -13,102 +13,25 @@
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
 #include <boost/detail/lightweight_test.hpp>
 #include "pre_multi_index.hpp"
+#include <boost/mp11/utility.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/composite_key.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/ordered_index.hpp>
-#include <boost/preprocessor/repetition/enum_binary_params.hpp>
-#include <boost/preprocessor/repetition/enum_params.hpp>
-#include <boost/preprocessor/repetition/repeat_from_to.hpp>
 
 using namespace boost::multi_index;
-using namespace boost::tuples;
-
-struct is_composite_key_result_helper
-{
-  typedef char yes;
-  struct no{char m[2];};
-
-  static no test(void*);
-
-  template<typename CompositeKey>
-  static yes test(composite_key_result<CompositeKey>*);
-};
 
 template<typename T>
-struct is_composite_key_result
-{
-  typedef is_composite_key_result_helper helper;
+struct composite_object_length:std::tuple_size<T>{};
 
-  BOOST_STATIC_CONSTANT(bool,
-    value=(
-      sizeof(helper::test((T*)0))==
-      sizeof(typename helper::yes)));
-};
-
-template<typename CompositeKeyResult>
-struct composite_key_result_length
-{
-  BOOST_STATIC_CONSTANT(int,
-    value=boost::tuples::length<
-      BOOST_DEDUCED_TYPENAME 
-      CompositeKeyResult::composite_key_type::key_extractor_tuple
-    >::value);
-};
-
-#if !defined(BOOST_NO_CXX11_HDR_TUPLE)&&\
-    !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
-struct is_boost_tuple_helper
-{
-  typedef char yes;
-  struct no{char m[2];};
-
-  static no test(void*);
-
-  template<BOOST_PP_ENUM_PARAMS(10,typename T)>
-  static yes test(boost::tuple<BOOST_PP_ENUM_PARAMS(10,T)>*);
-};
-
-template<typename T>
-struct is_boost_tuple
-{
-  typedef is_boost_tuple_helper helper;
-
-  BOOST_STATIC_CONSTANT(bool,
-    value=(
-      sizeof(helper::test((T*)0))==
-      sizeof(typename helper::yes)));
-};
-
-template<typename T>
-struct composite_object_length
-{
-  typedef typename boost::mpl::if_c<
-    is_composite_key_result<T>::value,
-    composite_key_result_length<T>,
-    typename boost::mpl::if_c<
-      is_boost_tuple<T>::value,
-      boost::tuples::length<T>,
-      std::tuple_size<T>
-    >::type
-  >::type type;
-
-  BOOST_STATIC_CONSTANT(int,value=type::value);
-};
-#else
-template<typename T>
-struct composite_object_length
-{
-  typedef typename boost::mpl::if_c<
-    is_composite_key_result<T>::value,
-    composite_key_result_length<T>,
-    boost::tuples::length<T>
-  >::type type;
-
-  BOOST_STATIC_CONSTANT(int,value=type::value);
-};
-#endif
+template<typename CompositeKey>
+struct composite_object_length<composite_key_result<CompositeKey>>:
+  std::tuple_size<
+    typename composite_key_result<CompositeKey>::
+      composite_key_type::key_extractor_tuple
+  >
+{};
 
 template<typename CompositeKeyResult,typename T2>
 struct comparison_equal_length
@@ -240,12 +163,12 @@ struct comparison_different_length
 
 template<typename CompositeKeyResult,typename T2>
 struct comparison_helper:
-  boost::mpl::if_c<
-    composite_key_result_length<CompositeKeyResult>::value==
+  boost::mp11::mp_if_c<
+    composite_object_length<CompositeKeyResult>::value==
       composite_object_length<T2>::value,
     comparison_equal_length<CompositeKeyResult,T2>,
     comparison_different_length<CompositeKeyResult,T2>
-  >::type
+  >
 {
 };
 
@@ -333,30 +256,15 @@ struct xystr
   std::string str;
 };
 
-#define TUPLE_MAKER_CREATE(z,n,tuple)                   \
-template<BOOST_PP_ENUM_PARAMS(n,typename T)>            \
-static tuple<BOOST_PP_ENUM_PARAMS(n,T)>                 \
-create(BOOST_PP_ENUM_BINARY_PARAMS(n,const T,& t)){     \
-  return tuple<BOOST_PP_ENUM_PARAMS(n,T)>(              \
-   BOOST_PP_ENUM_PARAMS(n,t));                          \
-}
-
-#define DEFINE_TUPLE_MAKER(name,tuple)                  \
-struct name                                             \
-{                                                       \
-  static tuple<> create(){return tuple<>();}            \
-  BOOST_PP_REPEAT_FROM_TO(1,5,TUPLE_MAKER_CREATE,tuple) \
+template<template<typename...>class Tuple>
+struct tuple_maker
+{
+  template<typename... Ts>
+  static Tuple<Ts...> create(const Ts&... args){return Tuple<Ts...>{args...};}
 };
 
-DEFINE_TUPLE_MAKER(boost_tuple_maker,boost::tuple)
-
-#if !defined(BOOST_NO_CXX11_HDR_TUPLE)&&\
-    !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
-DEFINE_TUPLE_MAKER(std_tuple_maker,std::tuple)
-#endif
-
-#undef DEFINE_TUPLE_MAKER
-#undef TUPLE_MAKER_CREATE
+using boost_tuple_maker=tuple_maker<boost::tuple>;
+using std_tuple_maker=tuple_maker<std::tuple>;
 
 template<typename TupleMaker>
 void test_composite_key_template()
@@ -398,13 +306,10 @@ void test_composite_key_template()
     std::distance(
       mc1.lower_bound(TupleMaker::create(0,0)),
       mc1.upper_bound(TupleMaker::create(1,0)))==6);
-
-#if !defined(BOOST_NO_FUNCTION_TEMPLATE_ORDERING)
   BOOST_TEST(
     std::distance(
       mc1.lower_bound(1),
       mc1.upper_bound(1))==4);
-#endif
 
   ckey_t1 ck1;
   ckey_t1 ck2(ck1);
@@ -414,8 +319,13 @@ void test_composite_key_template()
       BOOST_MULTI_INDEX_MEMBER(xyz,int,y)(),
       BOOST_MULTI_INDEX_MEMBER(xyz,int,z)()));
   ckey_t1 ck4(get<0>(ck1.key_extractors()));
+  ckey_t1 ck5(
+    std::make_tuple(
+      BOOST_MULTI_INDEX_MEMBER(xyz,int,x)(),
+      BOOST_MULTI_INDEX_MEMBER(xyz,int,y)(),
+      BOOST_MULTI_INDEX_MEMBER(xyz,int,z)()));
 
-  (void)ck3; /* prevent unused var */
+  ck3=ck5; /* prevent unused var */
 
   get<2>(ck4.key_extractors())=
     get<2>(ck2.key_extractors());
@@ -449,11 +359,9 @@ void test_composite_key_template()
   BOOST_TEST(is_less   (ck1(xyz(0,0,0)),TupleMaker::create(1),cp1));
   BOOST_TEST(is_greater(ck1(xyz(0,0,0)),TupleMaker::create(-1),cp1));
 
-#if !defined(BOOST_NO_FUNCTION_TEMPLATE_ORDERING)
   BOOST_TEST(is_equiv  (ck1(xyz(0,0,0)),0,cp1));
   BOOST_TEST(is_less   (ck1(xyz(0,0,0)),1,cp1));
   BOOST_TEST(is_greater(ck1(xyz(0,0,0)),-1,cp1));
-#endif
 
   BOOST_TEST(is_equiv  (ck1(xyz(0,0,0)),TupleMaker::create(0,0),cp1));
   BOOST_TEST(is_less   (ck1(xyz(0,0,0)),TupleMaker::create(0,1),cp1));
@@ -497,9 +405,16 @@ void test_composite_key_template()
   ckey_eq_t2 eq4(
     get<0>(eq3.key_eqs()),
     get<1>(eq3.key_eqs()));
+  ckey_eq_t2 eq5(
+    std::make_tuple(
+      modulo_equal(2),
+      modulo_equal(3),
+      std::equal_to<int>(),
+      std::equal_to<int>()));
 
   eq3=eq4; /* prevent unused var */
   eq4=eq3; /* prevent unused var */
+  eq5=eq4; /* prevent unused var */
 
   BOOST_TEST( eq2(ck1(xyz(0,0,0)),ck1(xyz(0,0,0))));
   BOOST_TEST(!eq2(ck1(xyz(0,1,0)),ck1(xyz(0,0,0))));
@@ -541,10 +456,16 @@ void test_composite_key_template()
       std::greater<int>(),
       std::less<int>()));
   ckey_comp_t3 cp6(get<0>(cp3.key_comps()));
+  ckey_comp_t3 cp7(
+    std::make_tuple(
+      std::less<int>(),
+      std::greater<int>(),
+      std::less<int>()));
 
   cp4=cp5; /* prevent unused var */
   cp5=cp6; /* prevent unused var */
   cp6=cp4; /* prevent unused var */
+  cp7=cp4; /* prevent unused var */
 
   BOOST_TEST(is_equiv  (ck1(xyz(0,0,0)),ck2(xyz(0,0,0)),cp3));
   BOOST_TEST(is_greater(ck1(xyz(0,0,1)),ck2(xyz(0,1,0)),cp3));
@@ -566,23 +487,23 @@ void test_composite_key_template()
     BOOST_MULTI_INDEX_MEMBER(xyz,int,x)
   > ckey_t2;
 
-  ckey_t2 ck5;
+  ckey_t2 ck6;
 
-  BOOST_TEST(is_equiv  (ck1(xyz(0,0,1)),ck5(xyz(0,0,0))));
-  BOOST_TEST(is_less   (ck1(xyz(0,0,0)),ck5(xyz(-1,1,0))));
-  BOOST_TEST(is_greater(ck1(xyz(0,0,0)),ck5(xyz(1,-1,0))));
+  BOOST_TEST(is_equiv  (ck1(xyz(0,0,1)),ck6(xyz(0,0,0))));
+  BOOST_TEST(is_less   (ck1(xyz(0,0,0)),ck6(xyz(-1,1,0))));
+  BOOST_TEST(is_greater(ck1(xyz(0,0,0)),ck6(xyz(1,-1,0))));
 
-  BOOST_TEST(is_equiv  (ck1(xyz(0,0,1)),ck5(xyz(0,0,0)),cp1));
-  BOOST_TEST(is_less   (ck1(xyz(0,0,0)),ck5(xyz(-1,1,0)),cp1));
-  BOOST_TEST(is_greater(ck1(xyz(0,0,0)),ck5(xyz(1,-1,0)),cp1));
+  BOOST_TEST(is_equiv  (ck1(xyz(0,0,1)),ck6(xyz(0,0,0)),cp1));
+  BOOST_TEST(is_less   (ck1(xyz(0,0,0)),ck6(xyz(-1,1,0)),cp1));
+  BOOST_TEST(is_greater(ck1(xyz(0,0,0)),ck6(xyz(1,-1,0)),cp1));
 
-  BOOST_TEST(is_equiv  (ck1(xyz(0,0,1)),ck5(xyz(0,0,0)),cp2));
-  BOOST_TEST(is_greater(ck1(xyz(0,0,0)),ck5(xyz(-1,1,0)),cp2));
-  BOOST_TEST(is_less   (ck1(xyz(0,0,0)),ck5(xyz(1,-1,0)),cp2));
+  BOOST_TEST(is_equiv  (ck1(xyz(0,0,1)),ck6(xyz(0,0,0)),cp2));
+  BOOST_TEST(is_greater(ck1(xyz(0,0,0)),ck6(xyz(-1,1,0)),cp2));
+  BOOST_TEST(is_less   (ck1(xyz(0,0,0)),ck6(xyz(1,-1,0)),cp2));
 
-  BOOST_TEST(is_equiv  (ck1(xyz(0,0,1)),ck5(xyz(0,0,0)),cp3));
-  BOOST_TEST(is_less   (ck1(xyz(0,0,0)),ck5(xyz(-1,1,0)),cp3));
-  BOOST_TEST(is_greater(ck1(xyz(0,0,0)),ck5(xyz(1,-1,0)),cp3));
+  BOOST_TEST(is_equiv  (ck1(xyz(0,0,1)),ck6(xyz(0,0,0)),cp3));
+  BOOST_TEST(is_less   (ck1(xyz(0,0,0)),ck6(xyz(-1,1,0)),cp3));
+  BOOST_TEST(is_greater(ck1(xyz(0,0,0)),ck6(xyz(1,-1,0)),cp3));
 
   typedef multi_index_container<
     xyz,
@@ -621,7 +542,7 @@ void test_composite_key_template()
     BOOST_MULTI_INDEX_MEMBER(xystr,int,y)
   > ckey_t3;
 
-  ckey_t3 ck6;
+  ckey_t3 ck7;
 
   typedef composite_key_hash<
     boost::hash<std::string>,
@@ -637,16 +558,22 @@ void test_composite_key_template()
       boost::hash<int>(),
       boost::hash<int>()));
   ckey_hash_t ch4(get<0>(ch1.key_hash_functions()));
+  ckey_hash_t ch5(
+    std::make_tuple(
+      boost::hash<std::string>(),
+      boost::hash<int>(),
+      boost::hash<int>()));
 
   ch2=ch3; /* prevent unused var */
   ch3=ch4; /* prevent unused var */
   ch4=ch2; /* prevent unused var */
+  ch5=ch2; /* prevent unused var */
 
   BOOST_TEST(
-    ch1(ck6(xystr(0,0,"hello")))==
+    ch1(ck7(xystr(0,0,"hello")))==
     ch1(TupleMaker::create(std::string("hello"),0,0)));
   BOOST_TEST(
-    ch1(ck6(xystr(4,5,"world")))==
+    ch1(ck7(xystr(4,5,"world")))==
     ch1(TupleMaker::create(std::string("world"),4,5)));
 
   typedef boost::hash<composite_key_result<ckey_t3> > ckeyres_hash_t;
@@ -654,17 +581,98 @@ void test_composite_key_template()
   ckeyres_hash_t crh;
 
   BOOST_TEST(
-    ch1(ck6(xystr(0,0,"hello")))==crh(ck6(xystr(0,0,"hello"))));
+    ch1(ck7(xystr(0,0,"hello")))==crh(ck7(xystr(0,0,"hello"))));
   BOOST_TEST(
-    ch1(ck6(xystr(4,5,"world")))==crh(ck6(xystr(4,5,"world"))));
+    ch1(ck7(xystr(4,5,"world")))==crh(ck7(xystr(4,5,"world"))));
+}
+
+void test_composite_key_with_long_tuple()
+{
+  /* length greater than what boost::tuple allows */
+
+  typedef composite_key<
+    xystr,
+    BOOST_MULTI_INDEX_MEMBER(xystr,std::string,str),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,x),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,y),
+    BOOST_MULTI_INDEX_MEMBER(xystr,std::string,str),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,x),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,y),
+    BOOST_MULTI_INDEX_MEMBER(xystr,std::string,str),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,x),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,y),
+    BOOST_MULTI_INDEX_MEMBER(xystr,std::string,str),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,x),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,y)
+  > ckey_t;
+
+  ckey_t ck{
+    BOOST_MULTI_INDEX_MEMBER(xystr,std::string,str)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,x)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,y)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,std::string,str)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,x)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,y)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,std::string,str)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,x)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,y)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,std::string,str)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,x)(),
+    BOOST_MULTI_INDEX_MEMBER(xystr,int,y)()
+  };
+
+  typedef composite_key_equal_to<
+    std::equal_to<std::string>,std::equal_to<int>,std::equal_to<int>,
+    std::equal_to<std::string>,std::equal_to<int>,std::equal_to<int>,
+    std::equal_to<std::string>,std::equal_to<int>,std::equal_to<int>,
+    std::equal_to<std::string>,std::equal_to<int>,std::equal_to<int>
+  > ceq_t;
+
+  ceq_t eq{
+    std::equal_to<std::string>(),std::equal_to<int>(),std::equal_to<int>(),
+    std::equal_to<std::string>(),std::equal_to<int>(),std::equal_to<int>(),
+    std::equal_to<std::string>(),std::equal_to<int>(),std::equal_to<int>(),
+    std::equal_to<std::string>(),std::equal_to<int>(),std::equal_to<int>()
+  };
+
+  typedef composite_key_compare<
+    std::less<std::string>,std::less<int>,std::less<int>,
+    std::less<std::string>,std::less<int>,std::less<int>,
+    std::less<std::string>,std::less<int>,std::less<int>,
+    std::less<std::string>,std::less<int>,std::less<int>
+  > clt_t;
+
+  clt_t lt{
+    std::less<std::string>(),std::less<int>(),std::less<int>(),
+    std::less<std::string>(),std::less<int>(),std::less<int>(),
+    std::less<std::string>(),std::less<int>(),std::less<int>(),
+    std::less<std::string>(),std::less<int>(),std::less<int>()
+  };
+
+  typedef composite_key_hash<
+    boost::hash<std::string>,boost::hash<int>,boost::hash<int>,
+    boost::hash<std::string>,boost::hash<int>,boost::hash<int>,
+    boost::hash<std::string>,boost::hash<int>,boost::hash<int>,
+    boost::hash<std::string>,boost::hash<int>,boost::hash<int>
+  > ch_t;
+
+  ch_t ch{
+    boost::hash<std::string>(),boost::hash<int>(),boost::hash<int>(),
+    boost::hash<std::string>(),boost::hash<int>(),boost::hash<int>(),
+    boost::hash<std::string>(),boost::hash<int>(),boost::hash<int>(),
+    boost::hash<std::string>(),boost::hash<int>(),boost::hash<int>()
+  };
+
+  xystr v{0,1,""};
+
+  BOOST_TEST(eq(ck(v),std::make_tuple("",0,1,"",0,1,"",0,1,"",0,1)));
+  BOOST_TEST(!lt(std::make_tuple("",0,1,"",0,1,"",0,1,"",0,1),ck(v)));
+  BOOST_TEST((ch(ck(v))==ch(std::make_tuple("",0,1,"",0,1,"",0,1,"",0,1))));
 }
 
 void test_composite_key()
 {
   test_composite_key_template<boost_tuple_maker>();
-
-#if !defined(BOOST_NO_CXX11_HDR_TUPLE)&&\
-    !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES)
   test_composite_key_template<std_tuple_maker>();
-#endif
+  test_composite_key_with_long_tuple();
 }

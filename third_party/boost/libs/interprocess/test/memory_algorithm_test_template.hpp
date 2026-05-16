@@ -21,26 +21,35 @@
 #include <cstring>   //std::memset
 #include <typeinfo>
 
+namespace {
+
+bool is_aligned(void *ptr, std::size_t alignment)
+{
+   return ((std::size_t)ptr & (alignment - 1)) == 0;
+}
+
+}  //namespace {
+
 namespace boost { namespace interprocess { namespace test {
 
 enum deallocation_type { DirectDeallocation, InverseDeallocation, MixedDeallocation, EndDeallocationType };
 
 //This test allocates until there is no more memory
 //and after that deallocates all in the inverse order
-template<class Allocator>
-bool test_allocation(Allocator &a)
+template<class SegMngr>
+bool test_allocation(SegMngr &sm)
 {
    for( deallocation_type t = DirectDeallocation
       ; t != EndDeallocationType
       ; t = (deallocation_type)((int)t + 1)){
       std::vector<void*> buffers;
-      typename Allocator::size_type free_memory = a.get_free_memory();
+      typename SegMngr::size_type free_memory = sm.get_free_memory();
 
       for(std::size_t i = 0; true; ++i){
-         void *ptr = a.allocate(i, std::nothrow);
+         void *ptr = sm.allocate(i, std::nothrow);
          if(!ptr)
             break;
-       std::size_t size = a.size(ptr);
+         std::size_t size = sm.size(ptr);
          std::memset(ptr, 0, size);
          buffers.push_back(ptr);
       }
@@ -51,7 +60,7 @@ bool test_allocation(Allocator &a)
             for(std::size_t j = 0, max = buffers.size()
                ;j < max
                ;++j){
-               a.deallocate(buffers[j]);
+               sm.deallocate(buffers[j]);
             }
          }
          break;
@@ -60,7 +69,7 @@ bool test_allocation(Allocator &a)
             for(std::size_t j = buffers.size()
                ;j--
                ;){
-               a.deallocate(buffers[j]);
+               sm.deallocate(buffers[j]);
             }
          }
          break;
@@ -70,7 +79,7 @@ bool test_allocation(Allocator &a)
                ;j < max
                ;++j){
                std::size_t pos = (j%4)*(buffers.size())/4;
-               a.deallocate(buffers[pos]);
+               sm.deallocate(buffers[pos]);
                buffers.erase(buffers.begin()+std::ptrdiff_t(pos));
             }
          }
@@ -78,8 +87,8 @@ bool test_allocation(Allocator &a)
          default:
          break;
       }
-      bool ok = free_memory == a.get_free_memory() &&
-               a.all_memory_deallocated() && a.check_sanity();
+      bool ok = free_memory == sm.get_free_memory() &&
+               sm.all_memory_deallocated() && sm.check_sanity();
       if(!ok)  return ok;
    }
    return true;
@@ -88,18 +97,18 @@ bool test_allocation(Allocator &a)
 //This test allocates until there is no more memory
 //and after that tries to shrink all the buffers to the
 //half of the original size
-template<class Allocator>
-bool test_allocation_shrink(Allocator &a)
+template<class SegMngr>
+bool test_allocation_shrink(SegMngr &sm)
 {
    std::vector<void*> buffers;
    std::vector<std::size_t> sizes;
 
    //Allocate buffers with extra memory
    for(std::size_t i = 0; true; ++i){
-      void *ptr = a.allocate(i*2, std::nothrow);
+      void *ptr = sm.allocate(i*2, std::nothrow);
       if(!ptr)
          break;
-      std::size_t size = a.size(ptr);
+      std::size_t size = sm.size(ptr);
       std::memset(ptr, 0, size);
       buffers.push_back(ptr);
       sizes.push_back(size);
@@ -109,9 +118,9 @@ bool test_allocation_shrink(Allocator &a)
    for(std::size_t i = 0, max = buffers.size()
       ;i < max
       ; ++i){
-      typename Allocator::size_type received_size;
+      typename SegMngr::size_type received_size;
       char *reuse = static_cast<char*>(buffers[i]);
-      if(a.template allocation_command<char>
+      if(sm.template allocation_command<char>
          ( boost::interprocess::shrink_in_place | boost::interprocess::nothrow_allocation, sizes[i]
          , received_size = i, reuse)){
          if(received_size > sizes[i]){
@@ -120,7 +129,7 @@ bool test_allocation_shrink(Allocator &a)
          if(received_size < std::size_t(i)){
             return false;
          }
-         const std::size_t sz = a.size(buffers[i]);
+         const std::size_t sz = sm.size(buffers[i]);
          if (received_size != sz) {
             return false;
          }
@@ -134,84 +143,89 @@ bool test_allocation_shrink(Allocator &a)
       ;j < max
       ;++j){
       std::size_t pos = (j%4)*(buffers.size())/4;
-      a.deallocate(buffers[pos]);
+      sm.deallocate(buffers[pos]);
       buffers.erase(buffers.begin()+std::ptrdiff_t(pos));
    }
 
-   return a.all_memory_deallocated() && a.check_sanity();
+   return sm.all_memory_deallocated() && sm.check_sanity();
 }
 
 //This test allocates until there is no more memory
 //and after that tries to expand all the buffers to
 //avoid the wasted internal fragmentation
-template<class Allocator>
-bool test_allocation_expand(Allocator &a)
+template<class SegMngr>
+bool test_allocation_expand(SegMngr &sm)
 {
    std::vector<void*> buffers;
 
-   //Allocate buffers with extra memory
-   for(std::size_t i = 0; true; ++i){
-      void *ptr = a.allocate(i, std::nothrow);
-      if(!ptr)
-         break;
-     std::size_t size = a.size(ptr);
-      std::memset(ptr, 0, size);
-      buffers.push_back(ptr);
-   }
+   //We will repeat this test for different sized elements and alignments
+   for(std::size_t al = 1; al <= SegMngr::MemAlignment*32u; al *= 2u) {
+      //Allocate buffers with extra memory
+      for(std::size_t i = 0; true; ++i){
+         void *ptr = al > SegMngr::MemAlignment
+                   ? sm.allocate_aligned(i, al, std::nothrow)
+                   : sm.allocate(i, std::nothrow);
+         if(!ptr)
+            break;
+         std::size_t size = sm.size(ptr);
+         std::memset(ptr, 0, size);
+         buffers.push_back(ptr);
+      }
 
-   //Now try to expand to the double of the size
-   for(std::size_t i = 0, max = buffers.size()
-      ;i < max
-      ;++i){
-      typename Allocator::size_type received_size;
-      std::size_t min_size = i+1;
-      std::size_t preferred_size = i*2;
-      preferred_size = min_size > preferred_size ? min_size : preferred_size;
+      //Now try to expand to the double of the size
+      for(std::size_t i = 0, max = buffers.size()
+         ;i < max
+         ;++i){
+         typename SegMngr::size_type received_size;
+         std::size_t min_size = i+1;
+         std::size_t preferred_size = i*2;
+         preferred_size = min_size > preferred_size ? min_size : preferred_size;
 
-      char *reuse = static_cast<char*>(buffers[i]);
-      while(a.template allocation_command<char>
-         ( boost::interprocess::expand_fwd | boost::interprocess::nothrow_allocation, min_size
-         , received_size = preferred_size, reuse)){
-         //Check received size is bigger than minimum
-         if(received_size < min_size){
-            return false;
+         char *reuse = static_cast<char*>(buffers[i]);
+         while(sm.template allocation_command<char>
+            ( boost::interprocess::expand_fwd | boost::interprocess::nothrow_allocation, min_size
+            , received_size = preferred_size, reuse)){
+            //Check received size is bigger than minimum
+            if(received_size < min_size){
+               return false;
+            }
+            //Now, try to expand further
+            min_size       = received_size+1;
+            preferred_size = min_size*2;
          }
-         //Now, try to expand further
-       min_size       = received_size+1;
-         preferred_size = min_size*2;
+      }
+
+      //Deallocate it in non sequential order
+      for(std::size_t j = 0, max = buffers.size()
+         ;j < max
+         ;++j){
+         std::size_t pos = (j%4)*(buffers.size())/4;
+         sm.deallocate(buffers[pos]);
+         buffers.erase(buffers.begin()+std::ptrdiff_t(pos));
       }
    }
 
-   //Deallocate it in non sequential order
-   for(std::size_t j = 0, max = buffers.size()
-      ;j < max
-      ;++j){
-      std::size_t pos = (j%4)*(buffers.size())/4;
-      a.deallocate(buffers[pos]);
-      buffers.erase(buffers.begin()+std::ptrdiff_t(pos));
-   }
-
-   return a.all_memory_deallocated() && a.check_sanity();
+   return sm.all_memory_deallocated() && sm.check_sanity();
 }
 
 //This test allocates until there is no more memory
 //and after that tries to expand all the buffers to
 //avoid the wasted internal fragmentation
-template<class Allocator>
-bool test_allocation_shrink_and_expand(Allocator &a)
+template<class SegMngr>
+bool test_allocation_shrink_and_expand(SegMngr &sm)
 {
    std::vector<void*> buffers;
-   std::vector<typename Allocator::size_type> received_sizes;
+   std::vector<typename SegMngr::size_type> received_sizes;
    std::vector<bool>        size_reduced;
 
    //Allocate buffers wand store received sizes
    for(std::size_t i = 0; true; ++i){
-      typename Allocator::size_type received_size;
+      typename SegMngr::size_type received_size;
       char *reuse = 0;
-      void *ptr = a.template allocation_command<char>
+      void *ptr = sm.template allocation_command<char>
          ( boost::interprocess::allocate_new | boost::interprocess::nothrow_allocation, i, received_size = i*2, reuse);
       if(!ptr){
-         ptr = a.template allocation_command<char>
+         ptr = sm.template allocation_command<char>
             ( boost::interprocess::allocate_new | boost::interprocess::nothrow_allocation, 1, received_size = i*2, reuse);
          if(!ptr)
             break;
@@ -224,9 +238,9 @@ bool test_allocation_shrink_and_expand(Allocator &a)
    for(std::size_t i = 0, max = buffers.size()
       ; i < max
       ; ++i){
-      typename Allocator::size_type received_size;
+      typename SegMngr::size_type received_size;
       char *reuse = static_cast<char*>(buffers[i]);
-      if(a.template allocation_command<char>
+      if(sm.template allocation_command<char>
          ( boost::interprocess::shrink_in_place | boost::interprocess::nothrow_allocation, received_sizes[i]
          , received_size = i, reuse)){
          if(received_size > std::size_t(received_sizes[i])){
@@ -243,10 +257,10 @@ bool test_allocation_shrink_and_expand(Allocator &a)
    for(std::size_t i = 0, max = buffers.size()
       ;i < max
       ;++i){
-      typename Allocator::size_type received_size;
+      typename SegMngr::size_type received_size;
       std::size_t request_size = received_sizes[i];
       char *reuse = static_cast<char*>(buffers[i]);
-      if(a.template allocation_command<char>
+      if(sm.template allocation_command<char>
          ( boost::interprocess::expand_fwd | boost::interprocess::nothrow_allocation, request_size
          , received_size = request_size, reuse)){
          if(received_size != received_sizes[i]){
@@ -263,28 +277,28 @@ bool test_allocation_shrink_and_expand(Allocator &a)
       ;j < max
       ;++j){
       std::size_t pos = (j%4)*(buffers.size())/4;
-      a.deallocate(buffers[pos]);
+      sm.deallocate(buffers[pos]);
       buffers.erase(buffers.begin()+std::ptrdiff_t(pos));
    }
 
-   return a.all_memory_deallocated() && a.check_sanity();
+   return sm.all_memory_deallocated() && sm.check_sanity();
 }
 
 //This test allocates until there is no more memory
 //and after that deallocates the odd buffers to
 //make room for expansions. The expansion will probably
 //success since the deallocation left room for that.
-template<class Allocator>
-bool test_allocation_deallocation_expand(Allocator &a)
+template<class SegMngr>
+bool test_allocation_deallocation_expand(SegMngr &sm)
 {
    std::vector<void*> buffers;
 
    //Allocate buffers with extra memory
    for(std::size_t i = 0; true; ++i){
-      void *ptr = a.allocate(i, std::nothrow);
+      void *ptr = sm.allocate(i, std::nothrow);
       if(!ptr)
          break;
-      std::size_t size = a.size(ptr);
+      std::size_t size = sm.size(ptr);
       std::memset(ptr, 0, size);
       buffers.push_back(ptr);
    }
@@ -295,7 +309,7 @@ bool test_allocation_deallocation_expand(Allocator &a)
       ;i < max
       ;++i){
       if(i%2){
-         a.deallocate(buffers[i]);
+         sm.deallocate(buffers[i]);
          buffers[i] = 0;
       }
    }
@@ -306,13 +320,13 @@ bool test_allocation_deallocation_expand(Allocator &a)
       ;++i){
       //
       if(buffers[i]){
-         typename Allocator::size_type received_size;
+         typename SegMngr::size_type received_size;
          std::size_t min_size = i+1;
          std::size_t preferred_size = i*2;
          preferred_size = min_size > preferred_size ? min_size : preferred_size;
 
          char *reuse = static_cast<char*>(buffers[i]);
-         while(a.template allocation_command<char>
+         while(sm.template allocation_command<char>
             ( boost::interprocess::expand_fwd | boost::interprocess::nothrow_allocation, min_size
             , received_size = preferred_size, reuse)){
             //Check received size is bigger than minimum
@@ -335,11 +349,11 @@ bool test_allocation_deallocation_expand(Allocator &a)
       ;j < max
       ;++j){
       std::size_t pos = (j%4)*(buffers.size())/4;
-      a.deallocate(buffers[pos]);
+      sm.deallocate(buffers[pos]);
       buffers.erase(buffers.begin()+std::ptrdiff_t(pos));
    }
 
-   return a.all_memory_deallocated() && a.check_sanity();
+   return sm.all_memory_deallocated() && sm.check_sanity();
 }
 
 //This test allocates until there is no more memory
@@ -348,19 +362,22 @@ bool test_allocation_deallocation_expand(Allocator &a)
 //the last buffer will be in the end of the segment.
 //Then the test will start expanding backwards, until
 //the buffer fills all the memory
-template<class Allocator>
-bool test_allocation_with_reuse(Allocator &a)
+template<class SegMngr>
+bool test_allocation_with_reuse(SegMngr &sm)
 {
-   //We will repeat this test for different sized elements
+   //We will repeat this test for different sized elements and alignments
+   for(std::size_t al = 1; al <= SegMngr::MemAlignment*32u; al *= 2u)
    for(std::size_t sizeof_object = 1; sizeof_object < 20u; ++sizeof_object){
       std::vector<void*> buffers;
 
       //Allocate buffers with extra memory
       for(std::size_t i = 0; true; ++i){
-         void *ptr = a.allocate(i*sizeof_object, std::nothrow);
+         void *ptr = al > SegMngr::MemAlignment
+                   ? sm.allocate_aligned(i*sizeof_object, al, std::nothrow)
+                   : sm.allocate(i*sizeof_object, std::nothrow);
          if(!ptr)
             break;
-         std::size_t size = a.size(ptr);
+         std::size_t size = sm.size(ptr);
          std::memset(ptr, 0, size);
          buffers.push_back(ptr);
       }
@@ -370,7 +387,7 @@ bool test_allocation_with_reuse(Allocator &a)
       for(std::size_t i = 0, max = buffers.size() - 1
          ;i < max
          ;++i){
-         a.deallocate(buffers[i]);
+         sm.deallocate(buffers[i]);
       }
 
       //Save the unique buffer and clear vector
@@ -378,16 +395,18 @@ bool test_allocation_with_reuse(Allocator &a)
       buffers.clear();
 
       //Now allocate with reuse
-      typename Allocator::size_type received_size = 0;
+      typename SegMngr::size_type received_size = 0;
       for(std::size_t i = 0; true; ++i){
          std::size_t min_size = (received_size + 1);
          std::size_t prf_size = (received_size + (i+1)*2);
          void *reuse = ptr;
-         void *ret = a.raw_allocation_command
+         void *ret = sm.allocation_command
             ( boost::interprocess::expand_bwd | boost::interprocess::nothrow_allocation, min_size
-            , received_size = prf_size, reuse, sizeof_object);
+            , received_size = prf_size, reuse, sizeof_object, al);
          if(!ret)
             break;
+         if(!is_aligned(ret, al))
+            return false;
          //If we have memory, this must be a buffer reuse
          if(!reuse)
             return 1;
@@ -396,9 +415,9 @@ bool test_allocation_with_reuse(Allocator &a)
          ptr = ret;
       }
       //There is only a single block so deallocate it
-      a.deallocate(ptr);
+      sm.deallocate(ptr);
 
-      if(!a.all_memory_deallocated() || !a.check_sanity())
+      if(!sm.all_memory_deallocated() || !sm.check_sanity())
          return false;
    }
    return true;
@@ -407,38 +426,38 @@ bool test_allocation_with_reuse(Allocator &a)
 
 //This test allocates memory with different alignments
 //and checks returned memory is aligned.
-template<class Allocator>
-bool test_aligned_allocation(Allocator &a)
+template<class SegMngr>
+bool test_aligned_allocation(SegMngr &sm)
 {
    //Allocate aligned buffers in a loop
    //and then deallocate it
    bool continue_loop = true;
    for(std::size_t i = 1; continue_loop; i <<= 1){
       for(std::size_t j = 1; true; j <<= 1){
-         void *ptr = a.allocate_aligned(i-1, j, std::nothrow);
+         void *ptr = sm.allocate_aligned(i-1, j, std::nothrow);
          if(!ptr){
             if(j == 1)
                continue_loop = false;
             break;
          }
 
-         if(((std::size_t)ptr & (j - 1)) != 0)
+         if(!is_aligned(ptr, j))
             return false;
          std::memset(ptr, 0xFF, i - 1);
-         a.deallocate(ptr);
-         if(!a.all_memory_deallocated() || !a.check_sanity()){
+         sm.deallocate(ptr);
+         if(!sm.all_memory_deallocated() || !sm.check_sanity()){
             return false;
          }
       }
    }
 
-   return a.all_memory_deallocated() && a.check_sanity();
+   return sm.all_memory_deallocated() && sm.check_sanity();
 }
 
 //This test allocates memory with different alignments
 //and checks returned memory is aligned.
-template<class Allocator>
-bool test_continuous_aligned_allocation(Allocator &a)
+template<class SegMngr>
+bool test_continuous_aligned_allocation(SegMngr &sm)
 {
    std::vector<void*> buffers;
    //Allocate aligned buffers in a loop
@@ -447,7 +466,7 @@ bool test_continuous_aligned_allocation(Allocator &a)
    for(unsigned i = 1; continue_loop && i; i <<= 1){
       for(std::size_t j = 1; j; j <<= 1){
          for(bool any_allocated = false; 1;){
-            void *ptr = a.allocate_aligned(i-1, j, std::nothrow);
+            void *ptr = sm.allocate_aligned(i-1, j, std::nothrow);
             buffers.push_back(ptr);
             if(!ptr){
                if(j == 1 && !any_allocated){
@@ -459,37 +478,37 @@ bool test_continuous_aligned_allocation(Allocator &a)
                any_allocated = true;
             }
 
-            if(((std::size_t)ptr & (j - 1)) != 0)
+            if(!is_aligned(ptr, j))
                return false;
          }
          //Deallocate all
          for(std::size_t k = buffers.size(); k--;){
-            a.deallocate(buffers[k]);
+            sm.deallocate(buffers[k]);
          }
          buffers.clear();
-         if(!a.all_memory_deallocated() && a.check_sanity())
+         if(!sm.all_memory_deallocated() && sm.check_sanity())
             return false;
          if(!continue_loop)
             break;
       }
    }
 
-   return a.all_memory_deallocated() && a.check_sanity();
+   return sm.all_memory_deallocated() && sm.check_sanity();
 }
 
 //This test allocates memory, writes it with a non-zero value and
 //tests zero_free_memory initializes to zero for the next allocation
-template<class Allocator>
-bool test_clear_free_memory(Allocator &a)
+template<class SegMngr>
+bool test_clear_free_memory(SegMngr &sm)
 {
    std::vector<void*> buffers;
 
    //Allocate memory
    for(std::size_t i = 0; true; ++i){
-      void *ptr = a.allocate(i, std::nothrow);
+      void *ptr = sm.allocate(i, std::nothrow);
       if(!ptr)
          break;
-      std::size_t size = a.size(ptr);
+      std::size_t size = sm.size(ptr);
       std::memset(ptr, 1, size);
       buffers.push_back(ptr);
    }
@@ -503,30 +522,30 @@ bool test_clear_free_memory(Allocator &a)
    for(std::size_t j = buffers.size()
       ;j--
       ;){
-      a.deallocate(buffers[j]);
+      sm.deallocate(buffers[j]);
    }
    buffers.clear();
 
-   if(!a.all_memory_deallocated() && a.check_sanity())
+   if(!sm.all_memory_deallocated() && sm.check_sanity())
       return false;
 
    //Now clear all free memory
-   a.zero_free_memory();
+   sm.zero_free_memory();
 
-   if(!a.all_memory_deallocated() && a.check_sanity())
+   if(!sm.all_memory_deallocated() && sm.check_sanity())
       return false;
 
    //Now test all allocated memory is zero
    //Allocate memory
    const char *first_addr = 0;
    for(std::size_t i = 0; true; ++i){
-      void *ptr = a.allocate(i, std::nothrow);
+      void *ptr = sm.allocate(i, std::nothrow);
       if(!ptr)
          break;
       if(i == 0){
          first_addr = (char*)ptr;
       }
-      std::size_t memsize = a.size(ptr);
+      std::size_t memsize = sm.size(ptr);
       buffers.push_back(ptr);
 
       for(std::size_t j = 0; j < memsize; ++j){
@@ -544,9 +563,9 @@ bool test_clear_free_memory(Allocator &a)
    for(std::size_t j = buffers.size()
       ;j--
       ;){
-      a.deallocate(buffers[j]);
+      sm.deallocate(buffers[j]);
    }
-   if(!a.all_memory_deallocated() && a.check_sanity())
+   if(!sm.all_memory_deallocated() && sm.check_sanity())
       return false;
 
    return true;
@@ -554,40 +573,40 @@ bool test_clear_free_memory(Allocator &a)
 
 
 //This test uses tests grow and shrink_to_fit functions
-template<class Allocator>
-bool test_grow_shrink_to_fit(Allocator &a)
+template<class SegMngr>
+bool test_grow_shrink_to_fit(SegMngr &sm)
 {
    std::vector<void*> buffers;
 
-   typename Allocator::size_type original_size = a.get_size();
-   typename Allocator::size_type original_free = a.get_free_memory();
+   typename SegMngr::size_type original_size = sm.get_size();
+   typename SegMngr::size_type original_free = sm.get_free_memory();
 
-   a.shrink_to_fit();
+   sm.shrink_to_fit();
 
-   if(!a.all_memory_deallocated() && a.check_sanity())
+   if(!sm.all_memory_deallocated() && sm.check_sanity())
       return false;
 
-   typename Allocator::size_type shrunk_size          = a.get_size();
-   typename Allocator::size_type shrunk_free_memory   = a.get_free_memory();
-   if(shrunk_size != a.get_min_size())
+   typename SegMngr::size_type shrunk_size          = sm.get_size();
+   typename SegMngr::size_type shrunk_free_memory   = sm.get_free_memory();
+   if(shrunk_size != sm.get_min_size())
       return 1;
 
-   a.grow(original_size - shrunk_size);
+   sm.grow(original_size - shrunk_size);
 
-   if(!a.all_memory_deallocated() && a.check_sanity())
+   if(!sm.all_memory_deallocated() && sm.check_sanity())
       return false;
 
-   if(original_size != a.get_size())
+   if(original_size != sm.get_size())
       return false;
-   if(original_free != a.get_free_memory())
+   if(original_free != sm.get_free_memory())
       return false;
 
    //Allocate memory
    for(std::size_t i = 0; true; ++i){
-      void *ptr = a.allocate(i, std::nothrow);
+      void *ptr = sm.allocate(i, std::nothrow);
       if(!ptr)
          break;
-      std::size_t size = a.size(ptr);
+      std::size_t size = sm.size(ptr);
       std::memset(ptr, 0, size);
       buffers.push_back(ptr);
    }
@@ -598,7 +617,7 @@ bool test_grow_shrink_to_fit(Allocator &a)
       ;i < max
       ;++i){
       if(i%2){
-         a.deallocate(buffers[i]);
+         sm.deallocate(buffers[i]);
          buffers[i] = 0;
       }
    }
@@ -612,65 +631,65 @@ bool test_grow_shrink_to_fit(Allocator &a)
       std::size_t pos = (j%5)*(buffers.size())/4;
       if(pos == buffers.size())
          --pos;
-      a.deallocate(buffers[pos]);
+      sm.deallocate(buffers[pos]);
       buffers.erase(buffers.begin()+std::ptrdiff_t(pos));
-      typename Allocator::size_type old_free = a.get_free_memory();
-      a.shrink_to_fit();
-      if(!a.check_sanity())   return false;
-      if(original_size < a.get_size())    return false;
-      if(old_free < a.get_free_memory())  return false;
+      typename SegMngr::size_type old_free = sm.get_free_memory();
+      sm.shrink_to_fit();
+      if(!sm.check_sanity())   return false;
+      if(original_size < sm.get_size())    return false;
+      if(old_free < sm.get_free_memory())  return false;
 
-      a.grow(original_size - a.get_size());
+      sm.grow(original_size - sm.get_size());
 
-      if(!a.check_sanity())   return false;
-      if(original_size != a.get_size())         return false;
-      if(old_free      != a.get_free_memory())  return false;
+      if(!sm.check_sanity())   return false;
+      if(original_size != sm.get_size())         return false;
+      if(old_free      != sm.get_free_memory())  return false;
    }
 
    //Now shrink it to the maximum
-   a.shrink_to_fit();
+   sm.shrink_to_fit();
 
-   if(a.get_size() != a.get_min_size())
+   if(sm.get_size() != sm.get_min_size())
       return 1;
 
-   if(shrunk_free_memory != a.get_free_memory())
+   if(shrunk_free_memory != sm.get_free_memory())
       return 1;
 
-   if(!a.all_memory_deallocated() && a.check_sanity())
+   if(!sm.all_memory_deallocated() && sm.check_sanity())
       return false;
 
-   a.grow(original_size - shrunk_size);
+   sm.grow(original_size - shrunk_size);
 
-   if(original_size != a.get_size())
+   if(original_size != sm.get_size())
       return false;
-   if(original_free != a.get_free_memory())
+   if(original_free != sm.get_free_memory())
       return false;
 
-   if(!a.all_memory_deallocated() && a.check_sanity())
+   if(!sm.all_memory_deallocated() && sm.check_sanity())
       return false;
    return true;
 }
 
 //This test allocates multiple values until there is no more memory
 //and after that deallocates all in the inverse order
-template<class Allocator>
-bool test_many_equal_allocation(Allocator &a)
+template<class SegMngr>
+bool test_many_equal_allocation(SegMngr &sm)
 {
    for( deallocation_type t = DirectDeallocation
       ; t != EndDeallocationType
       ; t = (deallocation_type)((int)t + 1)){
-      typename Allocator::size_type free_memory = a.get_free_memory();
+      typename SegMngr::size_type free_memory = sm.get_free_memory();
 
       std::vector<void*> buffers2;
 
       //Allocate buffers with extra memory
       for(std::size_t i = 0; true; ++i){
-         void *ptr = a.allocate(i, std::nothrow);
+         void *ptr = sm.allocate(i, std::nothrow);
          if(!ptr)
             break;
-       std::size_t size = a.size(ptr);
+       std::size_t size = sm.size(ptr);
          std::memset(ptr, 0, size);
-         if(!a.check_sanity())
+         if(!sm.check_sanity())
             return false;
          buffers2.push_back(ptr);
       }
@@ -681,110 +700,118 @@ bool test_many_equal_allocation(Allocator &a)
          ;i < max
          ;++i){
          if(i%2){
-            a.deallocate(buffers2[i]);
+            sm.deallocate(buffers2[i]);
             buffers2[i] = 0;
          }
       }
 
-      if(!a.check_sanity())
+      if(!sm.check_sanity())
          return false;
 
-      typedef typename Allocator::multiallocation_chain multiallocation_chain;
-      std::vector<void*> buffers;
-      for(std::size_t i = 0; true; ++i){
-         multiallocation_chain chain;
-         a.allocate_many(std::nothrow, i+1, (i+1)*2, chain);
-         if(chain.empty())
-            break;
+      typedef typename SegMngr::multiallocation_chain multiallocation_chain;
+      for(std::size_t al = 1; al <= SegMngr::MemAlignment*32u; al *= 2u) {
+         std::vector<void*> buffers;
+         for(std::size_t i = 0; true; ++i){
+            multiallocation_chain chain;
+            sm.allocate_many(std::nothrow, i+1, (i+1)*2, al, chain);
+            if(chain.empty())
+               break;
 
-         typename multiallocation_chain::size_type n = chain.size();
-         while(!chain.empty()){
-            buffers.push_back(ipcdetail::to_raw_pointer(chain.pop_front()));
+            typename multiallocation_chain::size_type n = chain.size();
+            while(!chain.empty()){
+               void *ptr = ipcdetail::to_raw_pointer(chain.pop_front());
+               if(!is_aligned(ptr, al))
+                  return false;
+               buffers.push_back(ptr);
+            }
+            if(n != std::size_t((i+1)*2))
+               return false;
          }
-         if(n != std::size_t((i+1)*2))
+
+         if(!sm.check_sanity())
             return false;
-      }
 
-      if(!a.check_sanity())
-         return false;
-
-      switch(t){
-         case DirectDeallocation:
-         {
-            for(std::size_t j = 0, max = buffers.size()
-               ;j < max
-               ;++j){
-               a.deallocate(buffers[j]);
+         switch(t){
+            case DirectDeallocation:
+            {
+               for(std::size_t j = 0, max = buffers.size()
+                  ;j < max
+                  ;++j){
+                  sm.deallocate(buffers[j]);
+               }
             }
-         }
-         break;
-         case InverseDeallocation:
-         {
-            for(std::size_t j = buffers.size()
-               ;j--
-               ;){
-               a.deallocate(buffers[j]);
+            break;
+            case InverseDeallocation:
+            {
+               for(std::size_t j = buffers.size()
+                  ;j--
+                  ;){
+                  sm.deallocate(buffers[j]);
+               }
             }
-         }
-         break;
-         case MixedDeallocation:
-         {
-            for(std::size_t j = 0, max = buffers.size()
-               ;j < max
-               ;++j){
-               std::size_t pos = (j%4)*(buffers.size())/4;
-               a.deallocate(buffers[pos]);
-               buffers.erase(buffers.begin()+std::ptrdiff_t(pos));
+            break;
+            case MixedDeallocation:
+            {
+               for(std::size_t j = 0, max = buffers.size()
+                  ;j < max
+                  ;++j){
+                  std::size_t pos = (j%4)*(buffers.size())/4;
+                  sm.deallocate(buffers[pos]);
+                  buffers.erase(buffers.begin()+std::ptrdiff_t(pos));
+               }
             }
+            break;
+            default:
+            break;
          }
-         break;
-         default:
-         break;
+
+         //Deallocate the rest of the blocks
+
+         //Deallocate it in non sequential order
+         for(std::size_t j = 0, max = buffers2.size()
+            ;j < max
+            ;++j){
+            std::size_t pos = (j%4)*(buffers2.size())/4;
+            sm.deallocate(buffers2[pos]);
+            buffers2.erase(buffers2.begin()+std::ptrdiff_t(pos));
+         }
+
+         bool ok = free_memory == sm.get_free_memory() &&
+                  sm.all_memory_deallocated() && sm.check_sanity();
+         if(!ok)  return ok;
       }
-
-      //Deallocate the rest of the blocks
-
-      //Deallocate it in non sequential order
-      for(std::size_t j = 0, max = buffers2.size()
-         ;j < max
-         ;++j){
-         std::size_t pos = (j%4)*(buffers2.size())/4;
-         a.deallocate(buffers2[pos]);
-         buffers2.erase(buffers2.begin()+std::ptrdiff_t(pos));
-      }
-
-      bool ok = free_memory == a.get_free_memory() &&
-               a.all_memory_deallocated() && a.check_sanity();
-      if(!ok)  return ok;
    }
    return true;
 }
 
 //This test allocates multiple values until there is no more memory
 //and after that deallocates all in the inverse order
-template<class Allocator>
-bool test_many_different_allocation(Allocator &a)
+template<class SegMngr>
+bool test_many_different_allocation(SegMngr &sm)
 {
-   typedef typename Allocator::multiallocation_chain multiallocation_chain;
-   const std::size_t ArraySize = 11;
-   typename Allocator::size_type requested_sizes[ArraySize];
+   typedef typename SegMngr::multiallocation_chain multiallocation_chain;
+   const std::size_t ArraySize = 22;
+   typename SegMngr::size_type requested_sizes[ArraySize];
    for(std::size_t i = 0; i < ArraySize; ++i){
       requested_sizes[i] = 4*i;
    }
 
+   for(std::size_t al = 1; al <= SegMngr::MemAlignment*32u; al *= 2u)
    for( deallocation_type t = DirectDeallocation
       ; t != EndDeallocationType
       ; t = (deallocation_type)((int)t + 1)){
-      typename Allocator::size_type free_memory = a.get_free_memory();
+      typename SegMngr::size_type free_memory = sm.get_free_memory();
 
       std::vector<void*> buffers2;
 
       //Allocate buffers with extra memory
       for(std::size_t i = 0; true; ++i){
-         void *ptr = a.allocate(i, std::nothrow);
+         void *ptr = al > SegMngr::MemAlignment
+                   ? sm.allocate_aligned(i, al, std::nothrow)
+                   : sm.allocate(i, std::nothrow);
          if(!ptr)
             break;
-       std::size_t size = a.size(ptr);
+       std::size_t size = sm.size(ptr);
          std::memset(ptr, 0, size);
          buffers2.push_back(ptr);
       }
@@ -795,7 +822,7 @@ bool test_many_different_allocation(Allocator &a)
          ;i < max
          ;++i){
          if(i%2){
-            a.deallocate(buffers2[i]);
+            sm.deallocate(buffers2[i]);
             buffers2[i] = 0;
          }
       }
@@ -803,12 +830,15 @@ bool test_many_different_allocation(Allocator &a)
       std::vector<void*> buffers;
       while(true){
          multiallocation_chain chain;
-         a.allocate_many(std::nothrow, requested_sizes, ArraySize, 1, chain);
+         sm.allocate_many(std::nothrow, requested_sizes, ArraySize, 1, al, chain);
          if(chain.empty())
             break;
          typename multiallocation_chain::size_type n = chain.size();
          while(!chain.empty()){
-            buffers.push_back(ipcdetail::to_raw_pointer(chain.pop_front()));
+            void *ptr = ipcdetail::to_raw_pointer(chain.pop_front());
+            if(!is_aligned(ptr, al))
+               return false;
+            buffers.push_back(ptr);
          }
          if(n != ArraySize)
             return false;
@@ -820,7 +850,7 @@ bool test_many_different_allocation(Allocator &a)
             for(std::size_t j = 0, max = buffers.size()
                ;j < max
                ;++j){
-               a.deallocate(buffers[j]);
+               sm.deallocate(buffers[j]);
             }
          }
          break;
@@ -829,7 +859,7 @@ bool test_many_different_allocation(Allocator &a)
             for(std::size_t j = buffers.size()
                ;j--
                ;){
-               a.deallocate(buffers[j]);
+               sm.deallocate(buffers[j]);
             }
          }
          break;
@@ -839,7 +869,7 @@ bool test_many_different_allocation(Allocator &a)
                ;j < max
                ;++j){
                std::size_t pos = (j%4)*(buffers.size())/4;
-               a.deallocate(buffers[pos]);
+               sm.deallocate(buffers[pos]);
                buffers.erase(buffers.begin()+std::ptrdiff_t(pos));
             }
          }
@@ -855,12 +885,12 @@ bool test_many_different_allocation(Allocator &a)
          ;j < max
          ;++j){
          std::size_t pos = (j%4)*(buffers2.size())/4;
-         a.deallocate(buffers2[pos]);
+         sm.deallocate(buffers2[pos]);
          buffers2.erase(buffers2.begin()+std::ptrdiff_t(pos));
       }
 
-      bool ok = free_memory == a.get_free_memory() &&
-               a.all_memory_deallocated() && a.check_sanity();
+      bool ok = free_memory == sm.get_free_memory() &&
+               sm.all_memory_deallocated() && sm.check_sanity();
       if(!ok)  return ok;
    }
    return true;
@@ -868,52 +898,52 @@ bool test_many_different_allocation(Allocator &a)
 
 //This test allocates multiple values until there is no more memory
 //and after that deallocates all in the inverse order
-template<class Allocator>
-bool test_many_deallocation(Allocator &a)
+template<class SegMngr>
+bool test_many_deallocation(SegMngr &sm)
 {
-   typedef typename Allocator::multiallocation_chain multiallocation_chain;
-
-   typedef typename Allocator::multiallocation_chain multiallocation_chain;
+   typedef typename SegMngr::multiallocation_chain multiallocation_chain;
    const std::size_t ArraySize = 11;
    boost::container::vector<multiallocation_chain> buffers;
-   typename Allocator::size_type requested_sizes[ArraySize];
+   typename SegMngr::size_type requested_sizes[ArraySize];
    for(std::size_t i = 0; i < ArraySize; ++i){
       requested_sizes[i] = 4*i;
    }
-   typename Allocator::size_type free_memory = a.get_free_memory();
+   typename SegMngr::size_type free_memory = sm.get_free_memory();
 
+   for(std::size_t al = 1; al <= SegMngr::MemAlignment*32u; al *= 2u)
    {
       while(true){
          multiallocation_chain chain;
-         a.allocate_many(std::nothrow, requested_sizes, ArraySize, 1, chain);
+         sm.allocate_many(std::nothrow, requested_sizes, ArraySize, 1, al, chain);
          if(chain.empty())
             break;
          buffers.push_back(boost::move(chain));
       }
       for(std::size_t i = 0, max = buffers.size(); i != max; ++i){
-         a.deallocate_many(buffers[i]);
+         sm.deallocate_many(buffers[i]);
       }
       buffers.clear();
-      bool ok = free_memory == a.get_free_memory() &&
-               a.all_memory_deallocated() && a.check_sanity();
+      bool ok = free_memory == sm.get_free_memory() &&
+               sm.all_memory_deallocated() && sm.check_sanity();
       if(!ok)  return ok;
    }
 
+   for(std::size_t al = 1; al <= SegMngr::MemAlignment*32u; al *= 2u)
    {
       for(std::size_t i = 0; true; ++i){
          multiallocation_chain chain;
-         a.allocate_many(std::nothrow, i*4, ArraySize, chain);
+         sm.allocate_many(std::nothrow, i*4, ArraySize, al, chain);
          if(chain.empty())
             break;
          buffers.push_back(boost::move(chain));
       }
       for(std::size_t i = 0, max = buffers.size(); i != max; ++i){
-         a.deallocate_many(buffers[i]);
+         sm.deallocate_many(buffers[i]);
       }
       buffers.clear();
 
-      bool ok = free_memory == a.get_free_memory() &&
-               a.all_memory_deallocated() && a.check_sanity();
+      bool ok = free_memory == sm.get_free_memory() &&
+               sm.all_memory_deallocated() && sm.check_sanity();
       if(!ok)  return ok;
    }
 
@@ -922,117 +952,117 @@ bool test_many_deallocation(Allocator &a)
 
 
 //This function calls all tests
-template<class Allocator>
-bool test_all_allocation(Allocator &a)
+template<class SegMngr>
+bool test_all_allocation(SegMngr &sm)
 {
    std::cout << "Starting test_allocation. Class: "
-             << typeid(a).name() << std::endl;
+             << typeid(sm).name() << std::endl;
 
-   if(!test_allocation(a)){
+   if(!test_allocation(sm)){
       std::cout << "test_allocation_direct_deallocation failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
    std::cout << "Starting test_many_equal_allocation. Class: "
-             << typeid(a).name() << std::endl;
+             << typeid(sm).name() << std::endl;
 
-   if(!test_many_equal_allocation(a)){
+   if(!test_many_equal_allocation(sm)){
       std::cout << "test_many_equal_allocation failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
    std::cout << "Starting test_many_different_allocation. Class: "
-             << typeid(a).name() << std::endl;
+             << typeid(sm).name() << std::endl;
 
-   if(!test_many_different_allocation(a)){
+   if(!test_many_different_allocation(sm)){
       std::cout << "test_many_different_allocation failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
-   if(!test_many_deallocation(a)){
+   if(!test_many_deallocation(sm)){
       std::cout << "test_many_deallocation failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
    std::cout << "Starting test_allocation_shrink. Class: "
-             << typeid(a).name() << std::endl;
+             << typeid(sm).name() << std::endl;
 
-   if(!test_allocation_shrink(a)){
+   if(!test_allocation_shrink(sm)){
       std::cout << "test_allocation_shrink failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
-   if(!test_allocation_shrink_and_expand(a)){
+   if(!test_allocation_shrink_and_expand(sm)){
       std::cout << "test_allocation_shrink_and_expand failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
    std::cout << "Starting test_allocation_expand. Class: "
-             << typeid(a).name() << std::endl;
+             << typeid(sm).name() << std::endl;
 
-   if(!test_allocation_expand(a)){
+   if(!test_allocation_expand(sm)){
       std::cout << "test_allocation_expand failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
    std::cout << "Starting test_allocation_deallocation_expand. Class: "
-             << typeid(a).name() << std::endl;
+             << typeid(sm).name() << std::endl;
 
-   if(!test_allocation_deallocation_expand(a)){
+   if(!test_allocation_deallocation_expand(sm)){
       std::cout << "test_allocation_deallocation_expand failed. Class: "
-                << typeid(a).name() << std::endl;
-      return false;
-   }
-
-   std::cout << "Starting test_allocation_with_reuse. Class: "
-             << typeid(a).name() << std::endl;
-
-   if(!test_allocation_with_reuse(a)){
-      std::cout << "test_allocation_with_reuse failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
    std::cout << "Starting test_aligned_allocation. Class: "
-             << typeid(a).name() << std::endl;
+             << typeid(sm).name() << std::endl;
 
-   if(!test_aligned_allocation(a)){
+   if(!test_aligned_allocation(sm)){
       std::cout << "test_aligned_allocation failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
    std::cout << "Starting test_continuous_aligned_allocation. Class: "
-             << typeid(a).name() << std::endl;
+             << typeid(sm).name() << std::endl;
 
-   if(!test_continuous_aligned_allocation(a)){
+   if(!test_continuous_aligned_allocation(sm)){
       std::cout << "test_continuous_aligned_allocation failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
+      return false;
+   }
+
+   std::cout << "Starting test_allocation_with_reuse. Class: "
+             << typeid(sm).name() << std::endl;
+
+   if(!test_allocation_with_reuse(sm)){
+      std::cout << "test_allocation_with_reuse failed. Class: "
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
    std::cout << "Starting test_clear_free_memory. Class: "
-             << typeid(a).name() << std::endl;
+             << typeid(sm).name() << std::endl;
 
-   if(!test_clear_free_memory(a)){
+   if(!test_clear_free_memory(sm)){
       std::cout << "test_clear_free_memory failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 
    std::cout << "Starting test_grow_shrink_to_fit. Class: "
-             << typeid(a).name() << std::endl;
+             << typeid(sm).name() << std::endl;
 
-   if(!test_grow_shrink_to_fit(a)){
+   if(!test_grow_shrink_to_fit(sm)){
       std::cout << "test_grow_shrink_to_fit failed. Class: "
-                << typeid(a).name() << std::endl;
+                << typeid(sm).name() << std::endl;
       return false;
    }
 

@@ -87,11 +87,11 @@ int main()
 
         r |= fi;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( *r, 1 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r.unsafe_value(), 1 );
 
         r |= fi2;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( *r, 1 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r.unsafe_value(), 1 );
     }
 
     {
@@ -103,7 +103,7 @@ int main()
 
         r |= fi;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( *r, 2 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r.unsafe_value(), 2 );
     }
 
     {
@@ -111,11 +111,11 @@ int main()
 
         r |= fy;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r->v_, 1 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r.unsafe_value().v_, 1 );
 
         r |= fy2;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r->v_, 1 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r.unsafe_value().v_, 1 );
     }
 
     {
@@ -127,7 +127,7 @@ int main()
 
         r |= fy;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r->v_, 2 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r.unsafe_value().v_, 2 );
     }
 
     {
@@ -137,11 +137,11 @@ int main()
 
         r |= fri;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( &*r, &x1 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( &r.unsafe_value(), &x1 );
 
         r |= fri2;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( &*r, &x1 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( &r.unsafe_value(), &x1 );
     }
 
     {
@@ -153,7 +153,7 @@ int main()
 
         r |= fri;
 
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( &*r, &*fri() );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( &r.unsafe_value(), &fri().unsafe_value() );
     }
 
     return boost::report_errors();

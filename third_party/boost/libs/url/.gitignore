@@ -6,3 +6,15 @@ temp
 # Because of CMake and VS2017
 Win32
 x64
+
+cmake-build-*/
+cmake-build/
+build/*
+!build/Jamfile
+local/
+tmp/
+AGENTS.md
+CLAUDE.md
+.roadmap/
+.idea/
+doc/modules/reference/

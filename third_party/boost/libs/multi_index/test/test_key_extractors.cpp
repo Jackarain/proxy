@@ -1,6 +1,6 @@
 /* Boost.MultiIndex test for key extractors.
  *
- * Copyright 2003-2022 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -124,7 +124,6 @@ typedef composite_key<
           key_mf
         >                                                          ccompw_key;
 
-#if !defined(BOOST_NO_SFINAE)
 /* testcases for problems with non-copyable classes reported at
  * http://lists.boost.org/Archives/boost/2006/04/103065.php
  */
@@ -183,7 +182,6 @@ typedef composite_key<
           nc_ckey_m,
           nc_key_cmf
         >                                                      nc_compkey;
-#endif
 
 void test_key_extractors()
 {
@@ -244,7 +242,6 @@ void test_key_extractors()
   BOOST_TEST(cmpk(ctr)==make_tuple(test_class(0,0),0,0,true));
   BOOST_TEST(ccmpk(ctr)==make_tuple(test_class(0,0),0));
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(id(td).int_member==0);
   BOOST_TEST(cid(td).int_member==0);
   BOOST_TEST(k_m(td)==0);
@@ -257,7 +254,6 @@ void test_key_extractors()
   BOOST_TEST(ck_m(ctdr)==0);
   BOOST_TEST(cmpk(ctdr)==make_tuple(test_class(0,0),0,0,true));
   BOOST_TEST(ccmpk(ctdr)==make_tuple(test_class(0,0),0));
-#endif
 
   k_m(tr)=1;
   BOOST_TEST(id(tp).int_member==1);
@@ -271,7 +267,6 @@ void test_key_extractors()
   BOOST_TEST(cmpk(ctp)==make_tuple(test_class(1,0),1,0,true));
   BOOST_TEST(ccmpk(ctp)==make_tuple(test_class(1,0),1));
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(id(tdp).int_member==1);
   BOOST_TEST(cid(tdp).int_member==1);
   BOOST_TEST(k_m(tdp)==1);
@@ -282,7 +277,6 @@ void test_key_extractors()
   BOOST_TEST(ck_m(ctdp)==1);
   BOOST_TEST(cmpk(ctdp)==make_tuple(test_class(1,0),1,0,true));
   BOOST_TEST(ccmpk(ctdp)==make_tuple(test_class(1,0),1));
-#endif
 
   k_m(tp)=2;
   BOOST_TEST(id(tpp).int_member==2);
@@ -327,18 +321,14 @@ void test_key_extractors()
   BOOST_TEST(k_cm(tr)==0);
   BOOST_TEST(k_cm(ctr)==0);
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(k_cm(td)==0);
   BOOST_TEST(k_cm(ctdr)==0);
-#endif
 
   BOOST_TEST(k_cm(tp)==0);
   BOOST_TEST(k_cm(ctp)==0);
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(k_cm(tdp)==0);
   BOOST_TEST(k_cm(ctdp)==0);
-#endif
   
   BOOST_TEST(k_cm(tpp)==0);
   BOOST_TEST(k_cm(ctpp)==0);
@@ -360,7 +350,6 @@ void test_key_extractors()
   BOOST_TEST(k_cvrmf(ctr));
 #endif
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(k_cmf(td));
   BOOST_TEST(k_cmf(ctdr));
   BOOST_TEST(k_cvmf(td));
@@ -371,7 +360,6 @@ void test_key_extractors()
   BOOST_TEST(k_crmf(ctdr));
   BOOST_TEST(k_cvrmf(td));
   BOOST_TEST(k_cvrmf(ctdr));
-#endif
 #endif
 
   BOOST_TEST(k_cmf(tp));
@@ -386,7 +374,6 @@ void test_key_extractors()
   BOOST_TEST(k_cvrmf(ctp));
 #endif
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(k_cmf(tdp));
   BOOST_TEST(k_cmf(ctdp));
   BOOST_TEST(k_cvmf(tdp));
@@ -397,7 +384,6 @@ void test_key_extractors()
   BOOST_TEST(k_crmf(ctdp));
   BOOST_TEST(k_cvrmf(tdp));
   BOOST_TEST(k_cvrmf(ctdp));
-#endif
 #endif
 
   BOOST_TEST(k_cmf(tpp));
@@ -440,14 +426,12 @@ void test_key_extractors()
   BOOST_TEST(!k_vrmf(tr));
 #endif
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(!k_mf(td));
   BOOST_TEST(!k_vmf(td));
 
 #if !defined(BOOST_NO_CXX11_REF_QUALIFIERS)
   BOOST_TEST(!k_rmf(td));
   BOOST_TEST(!k_vrmf(td));
-#endif
 #endif
 
   BOOST_TEST(!k_mf(tp));
@@ -458,14 +442,12 @@ void test_key_extractors()
   BOOST_TEST(!k_vrmf(tp));
 #endif
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(!k_mf(tdp));
   BOOST_TEST(!k_vmf(tdp));
 
 #if !defined(BOOST_NO_CXX11_REF_QUALIFIERS)
   BOOST_TEST(!k_rmf(tdp));
   BOOST_TEST(!k_vrmf(tdp));
-#endif
 #endif
 
   BOOST_TEST(!k_mf(tpp));
@@ -487,18 +469,14 @@ void test_key_extractors()
   BOOST_TEST(k_gf(tr));
   BOOST_TEST(k_gf(ctr));
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(k_gf(td));
   BOOST_TEST(k_gf(ctdr));
-#endif
 
   BOOST_TEST(k_gf(tp));
   BOOST_TEST(k_gf(ctp));
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(k_gf(tdp));
   BOOST_TEST(k_gf(ctdp));
-#endif
 
   BOOST_TEST(k_gf(tpp));
   BOOST_TEST(k_gf(ctpp));
@@ -511,46 +489,31 @@ void test_key_extractors()
   BOOST_TEST(!k_gcrf(tr));
   BOOST_TEST(!k_gcrf(ctr));
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(!k_gcrf(td));
   BOOST_TEST(!k_gcrf(ctdr));
-#endif
 
   BOOST_TEST(!k_gcrf(tp));
   BOOST_TEST(!k_gcrf(ctp));
 
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(!k_gcrf(tdp));
   BOOST_TEST(!k_gcrf(ctdp));
-#endif
-
   BOOST_TEST(!k_gcrf(tpp));
   BOOST_TEST(!k_gcrf(ctpp));
   BOOST_TEST(!k_gcrf(tap));
   BOOST_TEST(!k_gcrf(ctap));
-
   BOOST_TEST(!k_gcrf(tw));
   BOOST_TEST(!k_gcrf(ctw));
 
   BOOST_TEST(k_grf(tr));
-
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(k_grf(td));
-#endif
-
   BOOST_TEST(k_grf(tp));
-
-#if !defined(BOOST_NO_SFINAE)
   BOOST_TEST(k_grf(tdp));
-#endif
-
   BOOST_TEST(k_grf(tpp));
   BOOST_TEST(k_grf(tap));
   BOOST_TEST(k_grf(tw));
 
   BOOST_TEST(ccmpk_w(tw)==make_tuple(false));
 
-#if !defined(BOOST_NO_SFINAE)
 /* testcases for problems with non-copyable classes reported at
  * http://lists.boost.org/Archives/boost/2006/04/103065.php
  */
@@ -583,7 +546,6 @@ void test_key_extractors()
 
   test_nc_class nc_t(1,0);
   BOOST_TEST(nc_cmpk(nc_td)==make_tuple(boost::cref(nc_t),1,1,true));
-#endif
   
   std::list<test_class> tl;
   for(int i=0;i<20;++i)tl.push_back(test_class(i));

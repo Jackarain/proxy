@@ -19,8 +19,8 @@ up to the released standard version. Those are included following the GNU
 nomenclature as `0x`, `1y`, `1z`, `2a`, `2b` and `2c`. Depending on the compiler
 `latest` would map to one of those.
 
-NOTE: This is an `optional` feature. Hence when not specified the compiler
-default behaviour is used.
+TIP: This is an `optional` feature. Hence when not specified the compiler
+default behavior is used.
 
 NOTE: Please consult the toolset specific documentation for which `cxxstd`
 is supported.

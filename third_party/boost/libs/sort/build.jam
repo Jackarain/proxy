@@ -9,7 +9,6 @@ constant boost_dependencies :
     /boost/config//boost_config
     /boost/core//boost_core
     /boost/range//boost_range
-    /boost/static_assert//boost_static_assert
     /boost/type_traits//boost_type_traits ;
 
 project /boost/sort

@@ -15,7 +15,8 @@
 #include <set>
 #include <algorithm>
 #include <limits>
-#include <assert.h>
+#include <cstdio>
+#include <cassert>
 
 #define NL "\n"
 #define TAB "    "
@@ -1751,7 +1752,9 @@ namespace
             output_file f(opt);
                 {
                 char buf[1024];
-                sprintf(buf,INCLUDE_MAT_ASSIGN,d);
+                int n = snprintf(buf, sizeof(buf), INCLUDE_MAT_ASSIGN, d);
+                assert(n >= 0);
+                assert(static_cast<size_t>(n) < sizeof(buf));
                 f.require_include(buf);
                 }
             mr_op_ma_mb_same_size(f,d,d,"operator+","+","mm");
@@ -1818,7 +1821,9 @@ namespace
             output_file f(opt);
                 {
                 char buf[1024];
-                sprintf(buf,INCLUDE_VEC_ASSIGN,d);
+                int n = snprintf(buf, sizeof(buf), INCLUDE_VEC_ASSIGN, d);
+                assert(n >= 0);
+                assert(static_cast<size_t>(n) < sizeof(buf));
                 f.require_include(buf);
                 }
             vr_op_va_vb_same_size(f,d,"operator+","+","vv");

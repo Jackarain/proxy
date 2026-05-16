@@ -7,6 +7,12 @@
 
 [section Revision History]
 
+[section Changes in 1.91.0]
+
+* The header [link core.is_placeholder `boost/is_placeholder.hpp`] has been moved from Bind to Core. ([github_issue 90])
+
+[endsect]
+
 [section Changes in 1.90.0]
 
 * The implementation of `BOOST_TEST_THROWS` and `BOOST_TEST_NO_THROW` macros defined in

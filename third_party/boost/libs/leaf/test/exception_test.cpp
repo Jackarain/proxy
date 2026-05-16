@@ -19,7 +19,6 @@ int main()
 #ifdef BOOST_LEAF_TEST_SINGLE_HEADER
 #   include "leaf.hpp"
 #else
-#   include <boost/leaf/diagnostics.hpp>
 #   include <boost/leaf/pred.hpp>
 #   include <boost/leaf/exception.hpp>
 #   include <boost/leaf/on_error.hpp>
@@ -291,4 +290,4 @@ int main()
     return boost::report_errors();
 }
 
-#endif
+#endif // #ifdef BOOST_LEAF_NO_EXCEPTIONS

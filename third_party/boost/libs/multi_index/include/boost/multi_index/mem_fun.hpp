@@ -1,4 +1,4 @@
-/* Copyright 2003-2022 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -15,12 +15,8 @@
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
 #include <boost/core/enable_if.hpp>
-#include <boost/mpl/if.hpp>
-#include <boost/type_traits/remove_reference.hpp>
-
-#if !defined(BOOST_NO_SFINAE)
 #include <boost/type_traits/is_convertible.hpp>
-#endif
+#include <boost/type_traits/remove_reference.hpp>
 
 namespace boost{
 
@@ -59,13 +55,8 @@ struct const_mem_fun_impl
 
   template<typename ChainedPtr>
 
-#if !defined(BOOST_NO_SFINAE)
   typename disable_if<
     is_convertible<const ChainedPtr&,const Class&>,Type>::type
-#else
-  Type
-#endif
-
   operator()(const ChainedPtr& x)const
   {
     return operator()(*x);
@@ -97,13 +88,8 @@ struct mem_fun_impl
 
   template<typename ChainedPtr>
 
-#if !defined(BOOST_NO_SFINAE)
   typename disable_if<
     is_convertible<ChainedPtr&,Class&>,Type>::type
-#else
-  Type
-#endif
-
   operator()(const ChainedPtr& x)const
   {
     return operator()(*x);
@@ -199,13 +185,8 @@ struct const_mem_fun_explicit
 
   template<typename ChainedPtr>
 
-#if !defined(BOOST_NO_SFINAE)
   typename disable_if<
     is_convertible<const ChainedPtr&,const Class&>,Type>::type
-#else
-  Type
-#endif
-
   operator()(const ChainedPtr& x)const
   {
     return operator()(*x);
@@ -237,13 +218,8 @@ struct mem_fun_explicit
 
   template<typename ChainedPtr>
 
-#if !defined(BOOST_NO_SFINAE)
   typename disable_if<
     is_convertible<ChainedPtr&,Class&>,Type>::type
-#else
-  Type
-#endif
-
   operator()(const ChainedPtr& x)const
   {
     return operator()(*x);

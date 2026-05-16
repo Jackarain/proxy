@@ -26,7 +26,6 @@ target_link_libraries(boost_algorithm
     Boost::mpl
     Boost::range
     Boost::regex
-    Boost::static_assert
     Boost::throw_exception
     Boost::tuple
     Boost::type_traits

@@ -56,6 +56,6 @@ IntType log2( IntType value )
     return fn( value );
 }
 
-}}     // namespace boost::heap
+}} // namespace boost::heap
 
 #endif /* BOOST_HEAP_DETAIL_ILOG2_HPP */

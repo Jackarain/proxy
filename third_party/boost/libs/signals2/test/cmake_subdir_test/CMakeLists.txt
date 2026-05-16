@@ -33,7 +33,6 @@ variant
 
 # Secondary dependencies
 
-static_assert
 concept_check
 detail
 function_types

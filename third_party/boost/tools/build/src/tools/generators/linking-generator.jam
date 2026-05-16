@@ -65,8 +65,12 @@ class linking-generator : generator
         # Pros: do not need to relink libraries when installing.
         # Cons: "standalone" libraries (plugins, python extensions) can not
         # hardcode paths to dependent libraries.
+        local target-type = $(self.target-types[1]) ;
         if [ $(property-set).get <hardcode-dll-paths> ] = true
-            && [ type.is-derived $(self.target-types[1]) EXE ]
+            && (
+                [ type.is-derived $(target-type) EXE ]
+                || [ type.is-derived $(target-type) SHARED_LIB ]
+            )
         {
             local xdll-path = [ $(property-set).get <xdll-path> ] ;
             extra += <dll-path>$(xdll-path) <dll-path>$(extra-xdll-paths) ;

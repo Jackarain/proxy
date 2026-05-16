@@ -17,7 +17,7 @@ macro(typeof_test s1)
 
 endmacro()
 
-set(BOOST_TEST_LINK_LIBRARIES Boost::typeof Boost::core Boost::type_traits Boost::static_assert)
+set(BOOST_TEST_LINK_LIBRARIES Boost::typeof Boost::config Boost::core Boost::type_traits)
 
 set(tests
 

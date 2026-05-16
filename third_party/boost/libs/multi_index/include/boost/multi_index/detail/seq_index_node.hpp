@@ -1,4 +1,4 @@
-/* Copyright 2003-2019 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14,8 +14,8 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
+#include <boost/core/allocator_access.hpp>
 #include <algorithm>
-#include <boost/multi_index/detail/allocator_traits.hpp>
 #include <boost/multi_index/detail/raw_ptr.hpp>
 
 namespace boost{
@@ -29,13 +29,14 @@ namespace detail{
 template<typename Allocator>
 struct sequenced_index_node_impl
 {
-  typedef typename rebind_alloc_for<
+  typedef allocator_rebind_t<
     Allocator,sequenced_index_node_impl
-  >::type                                        node_allocator;
-  typedef allocator_traits<node_allocator>       alloc_traits;
-  typedef typename alloc_traits::pointer         pointer;
-  typedef typename alloc_traits::const_pointer   const_pointer;
-  typedef typename alloc_traits::difference_type difference_type;
+  >                                              node_allocator;
+  typedef allocator_pointer_t<node_allocator>    pointer;
+  typedef allocator_const_pointer_t<
+    node_allocator>                              const_pointer;
+  typedef allocator_difference_type_t<
+    node_allocator>                              difference_type;
 
   pointer& prior(){return prior_;}
   pointer  prior()const{return prior_;}
@@ -132,17 +133,17 @@ private:
 template<typename Super>
 struct sequenced_index_node_trampoline:
   sequenced_index_node_impl<
-    typename rebind_alloc_for<
+    allocator_rebind_t<
       typename Super::allocator_type,
       char
-    >::type
+    >
   >
 {
   typedef sequenced_index_node_impl<
-    typename rebind_alloc_for<
+    allocator_rebind_t<
       typename Super::allocator_type,
       char
-    >::type
+    >
   > impl_type;
 };
 

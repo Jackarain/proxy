@@ -25,7 +25,42 @@
 #    define BOOST_URL_BUILD_DLL
 #endif
 
-// Set visibility flags
+// Visibility flags
+//
+// BOOST_URL_DECL — class-level export/import for compiled classes
+//
+//   Static lib:       (nothing)
+//   Shared, source:   BOOST_SYMBOL_EXPORT
+//     Win: __declspec(dllexport)  ELF: visibility("default")
+//   Shared, consumer: BOOST_SYMBOL_IMPORT
+//     Win: __declspec(dllimport)  ELF: (nothing)
+//
+//   Always applied to the class, never to individual functions.
+//
+// BOOST_SYMBOL_VISIBLE — typeinfo identity across shared libs
+//
+//   On ELF with -fvisibility=hidden, each shared library gets
+//   its own typeinfo copy at a different address. Operations
+//   comparing typeinfo across boundaries silently fail:
+//   dynamic_cast returns null, catch clauses don't match.
+//   BOOST_SYMBOL_VISIBLE ensures a single typeinfo (and vtable,
+//   if any). Use on any type whose identity is compared across
+//   boundaries — e.g. error categories, API-facing base classes.
+//     Win: (no-op)  ELF: visibility("default") on the class
+//
+// MSVC limitation with mixed classes
+//
+//   Unlike GCC and Clang, MSVC exports ALL members of a
+//   __declspec(dllexport) class — including inline ones.
+//   This causes LNK2005 (duplicate symbol) for any class
+//   that mixes compiled and inline members, and there is no
+//   portable workaround. Each class must therefore follow
+//   exactly one of two policies:
+//   (a) Fully compiled with `class BOOST_URL_DECL C`.
+//       All members in .cpp files. No inline/constexpr members.
+//   (b) Fully header-only with `class BOOST_SYMBOL_VISIBLE C`.
+//       All inline/constexpr/template. No .cpp file.
+//
 #if !defined(BOOST_URL_BUILD_DLL)
 #    define BOOST_URL_DECL /* static library */
 #elif defined(BOOST_URL_SOURCE)
@@ -60,19 +95,86 @@
 # define BOOST_URL_CONSTEXPR constexpr
 #endif
 
-// Add source location to error codes
-#ifdef BOOST_URL_NO_SOURCE_LOCATION
-# define BOOST_URL_ERR(ev) (::boost::system::error_code(ev))
-# define BOOST_URL_RETURN_EC(ev) return (ev)
-# define BOOST_URL_POS ::boost::source_location()
+// C++14 constexpr (relaxed constexpr)
+#define BOOST_URL_CXX14_CONSTEXPR BOOST_CXX14_CONSTEXPR
+
+#if defined(BOOST_NO_CXX14_CONSTEXPR)
+# define BOOST_URL_CXX14_CONSTEXPR_OR_INLINE inline
+# define BOOST_URL_CXX14_CONSTEXPR_OR_FORCEINLINE BOOST_FORCEINLINE
 #else
-# define BOOST_URL_ERR(ev) (::boost::system::error_code( (ev), [] { \
+# define BOOST_URL_CXX14_CONSTEXPR_OR_INLINE constexpr
+# define BOOST_URL_CXX14_CONSTEXPR_OR_FORCEINLINE constexpr
+#endif
+
+// C++20 constexpr (constexpr virtual, constexpr destructors)
+// Detection aligned with Boost.System's BOOST_SYSTEM_HAS_CXX20_CONSTEXPR:
+// uses the feature-test macro for P1064R0 (constexpr virtual functions).
+#if defined(__cpp_constexpr) && __cpp_constexpr >= 201907L
+# define BOOST_URL_HAS_CXX20_CONSTEXPR
+#endif
+
+#if BOOST_WORKAROUND(BOOST_CLANG_VERSION, < 110000)
+# undef BOOST_URL_HAS_CXX20_CONSTEXPR
+#endif
+
+// MSVC ICEs on constexpr URL parsing (error C1001 in p1_init.c)
+#if defined(BOOST_MSVC)
+# undef BOOST_URL_HAS_CXX20_CONSTEXPR
+#endif
+
+#if defined(BOOST_URL_HAS_CXX20_CONSTEXPR)
+# define BOOST_URL_CXX20_CONSTEXPR constexpr
+# define BOOST_URL_CXX20_CONSTEXPR_OR_INLINE constexpr
+#else
+# define BOOST_URL_CXX20_CONSTEXPR
+# define BOOST_URL_CXX20_CONSTEXPR_OR_INLINE inline
+#endif
+
+// __builtin_is_constant_evaluated detection
+// Following the pattern from Boost.Hash2 and Boost.UUID.
+#if defined(__has_builtin)
+# if __has_builtin(__builtin_is_constant_evaluated)
+#  define BOOST_URL_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+# endif
+#endif
+
+#if !defined(BOOST_URL_HAS_BUILTIN_IS_CONSTANT_EVALUATED) \
+    && defined(BOOST_MSVC) && BOOST_MSVC >= 1925
+# define BOOST_URL_HAS_BUILTIN_IS_CONSTANT_EVALUATED
+#endif
+
+// Add source location to error codes
+#define BOOST_URL_ERR(ev) \
+     (::boost::system::error_code( (ev), [] { \
          static constexpr auto loc((BOOST_CURRENT_LOCATION)); \
          return &loc; }()))
-# define BOOST_URL_RETURN_EC(ev) \
+#define BOOST_URL_RETURN_EC(ev) \
     static constexpr auto loc ## __LINE__((BOOST_CURRENT_LOCATION)); \
     return ::boost::system::error_code((ev), &loc ## __LINE__)
-# define BOOST_URL_POS (BOOST_CURRENT_LOCATION)
+#define BOOST_URL_POS (BOOST_CURRENT_LOCATION)
+
+// Error return for BOOST_URL_CXX20_CONSTEXPR functions.
+//
+// C++20: the function is constexpr, so we branch on
+// is_constant_evaluated(). At compile time: returns the
+// error enum directly. At runtime: attaches source location.
+//
+// Pre-C++20: the function is not constexpr
+// (BOOST_URL_CXX20_CONSTEXPR is empty), so we always
+// attach source location.
+#if defined(BOOST_URL_HAS_CXX20_CONSTEXPR)
+# define BOOST_URL_CONSTEXPR_RETURN_EC(ev) \
+    do { \
+        if (__builtin_is_constant_evaluated()) { \
+            return (ev); \
+        } \
+        return [](auto e) { \
+            BOOST_URL_RETURN_EC(e); \
+        }(ev); \
+    } while(0)
+#else
+# define BOOST_URL_CONSTEXPR_RETURN_EC(ev) \
+    BOOST_URL_RETURN_EC(ev)
 #endif
 
 #if !defined(BOOST_NO_CXX20_HDR_CONCEPTS) && defined(__cpp_lib_concepts)
@@ -106,16 +208,9 @@
 
 // Limit tests
 #ifndef BOOST_URL_MAX_SIZE
-// we leave room for a null,
-// and still fit in size_t
-#define BOOST_URL_MAX_SIZE ((std::size_t(-1))-1)
-#endif
-
-// noinline attribute
-#ifdef BOOST_GCC
-#define BOOST_URL_NO_INLINE [[gnu::noinline]]
-#else
-#define BOOST_URL_NO_INLINE
+// leave room for a null terminator and
+// fit within url_impl's 32-bit offsets
+#define BOOST_URL_MAX_SIZE ((std::size_t)UINT32_MAX - 1)
 #endif
 
 // libstdcxx copy-on-write strings

@@ -3,7 +3,7 @@
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-project('QVM', 'cpp', default_options : ['cpp_std=c++03', 'b_pch=false'], license : 'boost')
+project('QVM', 'cpp', default_options : ['cpp_std=c++11', 'b_pch=false'], license : 'boost')
 
 option_qvm_header_mode = get_option('qvm_header_mode')
 option_enable_unit_tests = get_option('qvm_enable_unit_tests')
@@ -15,6 +15,15 @@ if not meson.is_subproject()
 		add_global_arguments(
 			'-fdiagnostics-absolute-paths',
 			'-Wno-dangling-else',
+			'-Wno-conversion',
+			language:'cpp' )
+	elif compiler_id=='gcc'
+		add_global_arguments(
+			'-Wno-conversion',
+			language:'cpp' )
+	elif compiler_id=='msvc'
+		add_global_arguments(
+			'/wd4244',
 			language:'cpp' )
 	endif
 endif

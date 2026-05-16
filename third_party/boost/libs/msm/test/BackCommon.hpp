@@ -60,7 +60,7 @@ using get_hierarchical_test_machines = boost::mpl::vector<
 >;
 
 #define BOOST_MSM_TEST_DEFINE_DEPENDENT_TEMPLATES(frontname)                          \
-    using base = msm::front::state_machine_def<frontname>;                            \
+    using base = boost::msm::front::state_machine_def<frontname>;                     \
     template<typename T1, class Event, typename T2>                                   \
     using _row = typename base::template _row<T1, Event, T2>;                         \
     template<                                                                         \

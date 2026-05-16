@@ -81,7 +81,7 @@ int vector_test()
    std::string process_name;
    test::get_process_id_name(process_name);
 
-   const int Memsize = 128u*1024u;
+   const int Memsize = 256u*1024u;
    const char *const shMemName = process_name.c_str();
    const int max = 100;
 

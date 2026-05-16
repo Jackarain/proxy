@@ -1,5 +1,5 @@
 // Copyright Klemens Morgenstern, 2012-2015.
-// Copyright 2019-2025 Antony Polukhin.
+// Copyright 2019-2026 Antony Polukhin.
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -31,8 +31,8 @@ struct my_template {};
 template<typename T>
 void compare()
 {
-    typedef boost::typeindex::ctti_type_index ctti;
-    typedef boost::typeindex::stl_type_index stl;
+    using ctti = boost::typeindex::ctti_type_index;
+    using stl = boost::typeindex::stl_type_index;
     BOOST_TEST_EQ(
         ctti::type_id<T>().pretty_name(),
         stl::type_id<T>().pretty_name()

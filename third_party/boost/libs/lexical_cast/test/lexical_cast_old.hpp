@@ -1,6 +1,6 @@
 // Copyright Kevlin Henney, 2000-2005.
 // Copyright Alexander Nasonov, 2006-2010.
-// Copyright Antony Polukhin, 2011-2025.
+// Copyright Antony Polukhin, 2011-2026.
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -34,7 +34,6 @@
 #include <cstdio>
 #include <type_traits>
 #include <boost/limits.hpp>
-#include <boost/detail/lcast_precision.hpp>
 #include <boost/config/workaround.hpp>
 
 #ifdef BOOST_NO_STRINGSTREAM
@@ -43,6 +42,7 @@
 #include <sstream>
 #endif
 
+#include <boost/lexical_cast/detail/lcast_precision.hpp>
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 #include <boost/lexical_cast/detail/widest_char.hpp>
 

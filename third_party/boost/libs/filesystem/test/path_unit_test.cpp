@@ -34,7 +34,7 @@
 #include <boost/filesystem/detail/utf8_codecvt_facet.hpp> // for imbue tests
 #include "test_codecvt.hpp"                               // for codecvt arg tests
 #include <boost/detail/lightweight_test_report.hpp>
-#include <boost/smart_ptr.hpp> // used constructor tests
+#include <boost/smart_ptr/shared_ptr.hpp> // used constructor tests
 #include <boost/functional/hash.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
@@ -85,7 +85,7 @@ void check_path(const path& source, const wstring& expected, const char* file, i
                << L"\"\n";
 }
 
-#ifdef BOOST_WINDOWS_API
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
 void check_native(const path& p, const string&, const wstring& expected, const char* file, int line)
 #else
 void check_native(const path& p, const string& expected, const wstring&, const char* file, int line)
@@ -301,7 +301,7 @@ void test_appends()
 {
     std::cout << "testing appends..." << std::endl;
 
-#ifdef BOOST_WINDOWS_API
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
 #define BOOST_FS_FOO L"/foo\\"
 #else // POSIX paths
 #define BOOST_FS_FOO L"/foo/"
@@ -468,7 +468,7 @@ void test_observers()
     CHECK(p0.native().size() == 0);
     CHECK(p0.size() == 0);
 
-#ifdef BOOST_WINDOWS_API
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
 
     path p("abc\\def/ghi");
 
@@ -485,7 +485,7 @@ void test_observers()
     CHECK(p.generic_string< wstring >() == L"abc/def/ghi");
     CHECK(p.generic_string< path::string_type >() == L"abc/def/ghi");
 
-#else // BOOST_POSIX_API
+#else // BOOST_FILESYSTEM_POSIX_API
 
     path p("abc\\def/ghi");
 
@@ -513,7 +513,7 @@ void test_relationals()
 
     boost::hash< path > hash;
 
-#ifdef BOOST_WINDOWS_API
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
     // this is a critical use case to meet user expectations
     CHECK(path("c:\\abc") == path("c:/abc"));
     CHECK(hash(path("c:\\abc")) == hash(path("c:/abc")));
@@ -645,7 +645,7 @@ void test_other_non_members()
     CHECK(path("/").filename() == path(""));
 #endif
     CHECK(!path("/").filename_is_dot());
-#ifdef BOOST_WINDOWS_API
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
     CHECK(path("c:.").filename() == path("."));
     CHECK(path("c:.").filename_is_dot());
 #if BOOST_FILESYSTEM_VERSION == 3
@@ -654,7 +654,7 @@ void test_other_non_members()
     CHECK(path("c:/").filename() == path(""));
 #endif
     CHECK(!path("c:\\").filename_is_dot());
-#else // BOOST_WINDOWS_API
+#else // BOOST_FILESYSTEM_WINDOWS_API
     CHECK(path("c:.").filename() == path("c:."));
     CHECK(!path("c:.").filename_is_dot());
 #if BOOST_FILESYSTEM_VERSION == 3
@@ -664,7 +664,7 @@ void test_other_non_members()
     CHECK(path("c:/").filename() == path(""));
     CHECK(!path("c:/").filename_is_dot());
 #endif
-#endif // BOOST_WINDOWS_API
+#endif // BOOST_FILESYSTEM_WINDOWS_API
 
     // check that the implementation code to make the edge cases above work right
     // doesn't cause some non-edge cases to fail
@@ -813,7 +813,7 @@ void test_decompositions()
     CHECK(path("//netname").root_path().string() == "//netname");
     CHECK(path("//netname/foo").root_path().string() == "//netname/");
 
-#ifdef BOOST_WINDOWS_API
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
     CHECK(path("c:/foo").root_path().string() == "c:/");
 #endif
 
@@ -1060,7 +1060,7 @@ void test_error_handling()
     //  These tests rely on a path constructor that fails in the locale conversion.
     //  Thus construction has to call codecvt. Force that by using a narrow string
     //  for Windows, and a wide string for POSIX.
-#ifdef BOOST_WINDOWS_API
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
 #define STRING_FOO_ "foo"
 #else
 #define STRING_FOO_ L"foo"
@@ -1159,12 +1159,12 @@ inline const char* macro_value(const char* name, const char* value)
 int test_main(int, char*[])
 {
 // document state of critical macros
-#ifdef BOOST_POSIX_API
-    cout << "BOOST_POSIX_API" << endl;
+#ifdef BOOST_FILESYSTEM_POSIX_API
+    cout << "BOOST_FILESYSTEM_POSIX_API" << endl;
     BOOST_TEST(path::preferred_separator == '/');
 #endif
-#ifdef BOOST_WINDOWS_API
-    cout << "BOOST_WINDOWS_API" << endl;
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
+    cout << "BOOST_FILESYSTEM_WINDOWS_API" << endl;
     BOOST_TEST(path::preferred_separator == '\\');
 #endif
 

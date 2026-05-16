@@ -121,6 +121,9 @@ struct value_ref
 	inline value_ref(const std::string & s)
 		: val(value::make(s.c_str()))
 	{}
+	inline value_ref(const string_view & sv)
+		: val(value::make(sv))
+	{}
 
 	inline ~value_ref()
 	{

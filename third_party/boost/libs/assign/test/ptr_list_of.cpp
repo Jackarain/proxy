@@ -23,7 +23,7 @@
 struct Foo
 {
     int i;
-    
+
     Foo() : i(0)
     { }
     Foo( int i ) : i(i)
@@ -49,7 +49,7 @@ void check_ptr_list_of_impl()
     PtrCont deq;
     deq = ptr_list_of<Foo>( 42 )()()( 3, 3 )( "foo", 2, 1 );
     BOOST_CHECK( deq.size() == 5 );
-    
+
 }
 
 void check_ptr_list_of()

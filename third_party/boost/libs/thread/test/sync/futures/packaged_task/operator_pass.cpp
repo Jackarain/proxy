@@ -22,7 +22,7 @@
 #define BOOST_THREAD_VERSION 4
 
 #include <boost/thread/future.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #if defined BOOST_THREAD_USES_CHRONO
 

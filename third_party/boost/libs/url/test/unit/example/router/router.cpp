@@ -16,8 +16,19 @@
 
 #include "test_suite.hpp"
 
+#include <type_traits>
+
 namespace boost {
 namespace urls {
+
+static_assert(!std::is_copy_constructible<router<int>>::value,
+    "router should be move-only");
+static_assert(!std::is_copy_assignable<router<int>>::value,
+    "router should be move-only");
+static_assert(std::is_move_constructible<router<int>>::value,
+    "router should support moves");
+static_assert(std::is_move_assignable<router<int>>::value,
+    "router should support moves");
 
 struct router_test
 {

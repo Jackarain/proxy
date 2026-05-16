@@ -20,7 +20,6 @@ set(deps
     mpl
     parameter
     predef
-    static_assert
     tuple
     type_traits
     utility

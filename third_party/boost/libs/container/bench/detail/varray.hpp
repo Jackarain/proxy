@@ -1852,7 +1852,7 @@ private:
 
     const_pointer ptr() const
     {
-        return pointer(static_cast<const Value*>(static_cast<const void*>(&m_storage)));
+        return const_pointer(static_cast<const Value*>(static_cast<const void*>(&m_storage)));
     }
 
     size_type m_size;

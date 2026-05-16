@@ -51,7 +51,6 @@ void test_reconnection()
    // Make the test run faster
    auto cfg = make_test_config();
    cfg.health_check_interval = 500ms;
-   cfg.reconnect_wait_interval = 100ms;
 
    bool run_finished = false, exec1_finished = false, exec2_finished = false;
 

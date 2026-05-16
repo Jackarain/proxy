@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -17,6 +18,7 @@ namespace urls {
 namespace grammar {
 
 template<class CharSet>
+BOOST_URL_CXX20_CONSTEXPR
 auto
 implementation_defined::token_rule_t<CharSet>::
 parse(
@@ -28,13 +30,14 @@ parse(
     auto const it0 = it;
     if(it == end)
     {
-        BOOST_URL_RETURN_EC(
+        BOOST_URL_CONSTEXPR_RETURN_EC(
             error::need_more);
     }
-    it = (find_if_not)(it, end, cs_);
+    auto const& cs = this->get();
+    it = grammar::find_if_not(it, end, cs);
     if(it != it0)
         return core::string_view(it0, it - it0);
-    BOOST_URL_RETURN_EC(
+    BOOST_URL_CONSTEXPR_RETURN_EC(
         error::mismatch);
 }
 

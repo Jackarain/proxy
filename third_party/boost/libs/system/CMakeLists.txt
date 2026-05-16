@@ -2,7 +2,7 @@
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
-cmake_minimum_required(VERSION 3.8...3.20)
+cmake_minimum_required(VERSION 3.8...3.31)
 
 project(boost_system VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
@@ -14,6 +14,7 @@ target_include_directories(boost_system INTERFACE include)
 target_link_libraries(boost_system
   INTERFACE
     Boost::assert
+    Boost::compat
     Boost::config
     Boost::throw_exception
     Boost::variant2

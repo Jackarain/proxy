@@ -3905,6 +3905,21 @@ to be inserted in intrusive containers are allocated using `std::vector` or `std
 
 [section:release_notes Release Notes]
 
+[section:release_notes_boost_1_91_00 Boost 1.91 Release]
+
+* Hooks and containers using `normal_link`s now have defaulted destructors if C++20 concepts are available. This allows
+  trivially destructible hooks and containers if internally used nodes and comparison objects are trivially destructible.
+* Hooks using `normal_link`s now have defaulted constructors if C++20 concepts are available. This allows
+  trivially default constructible hooks if internally used nodes are trivially destructible.
+* Updated `list` and `slist` member `remove_xx` and `unique_xxx` methods to return the number of removed elements, following
+  C++20 changes to `std::list`.
+* Fixed bugs:
+   * [@https://github.com/boostorg/intrusive/issues/99   GitHub #92: ['some intrusive containers are not trivially destructible when possible]]
+   * [@https://github.com/boostorg/intrusive/issues/103  GitHub #103: ['C++17: compilation errors if dispose function has noexcept specifier]]
+   * [@https://github.com/boostorg/intrusive/pull/105    GitHub #105: ['Simplify ebo_function_holder]]
+
+[endsect]
+
 [section:release_notes_boost_1_89_00 Boost 1.89 Release]
 
 * Fixed bugs:

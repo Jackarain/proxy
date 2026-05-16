@@ -24,7 +24,7 @@ int main()
    #endif
 
    intcontainer_t cont(pmr::get_default_resource());
-   typedef typename intcontainer_t::value_type value_type;
+   typedef intcontainer_t::value_type value_type;
    cont.insert(value_type());
    return 0;
 }

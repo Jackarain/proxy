@@ -233,6 +233,10 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
+    - name: Generate TLS certificates
+      run: |
+        ./tools/gen-certificates.sh
+    
     - name: Set up the required containers
       run: |
         BUILDER_IMAGE=${{ matrix.container }} SERVER_IMAGE=${{ matrix.server }} docker compose -f tools/docker-compose.yml up -d --wait || (docker compose logs; exit 1)

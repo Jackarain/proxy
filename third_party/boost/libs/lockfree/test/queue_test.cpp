@@ -241,4 +241,150 @@ BOOST_AUTO_TEST_CASE( queue_uses_optional )
     BOOST_TEST_REQUIRE( pop_to_optional );
 }
 
+BOOST_AUTO_TEST_CASE( queue_uses_optional_capacity )
+{
+    boost::lockfree::queue< int, boost::lockfree::capacity< 64 > > stk;
+
+    bool pop_to_nullopt = stk.pop( boost::lockfree::uses_optional ) == std::nullopt;
+    BOOST_TEST_REQUIRE( pop_to_nullopt );
+
+    stk.push( 53 );
+    bool pop_to_optional = stk.pop( boost::lockfree::uses_optional ) == 53;
+    BOOST_TEST_REQUIRE( pop_to_optional );
+}
+
 #endif
+
+BOOST_AUTO_TEST_CASE( fixed_size_queue_test_exhausted )
+{
+    queue< int, capacity< 2 > > f;
+
+    BOOST_TEST_REQUIRE( f.push( 1 ) );
+    BOOST_TEST_REQUIRE( f.push( 2 ) );
+    BOOST_TEST_REQUIRE( !f.push( 3 ) );
+
+    int out;
+    BOOST_TEST_REQUIRE( f.pop( out ) );
+    BOOST_TEST_REQUIRE( out == 1 );
+    BOOST_TEST_REQUIRE( f.pop( out ) );
+    BOOST_TEST_REQUIRE( out == 2 );
+    BOOST_TEST_REQUIRE( !f.pop( out ) );
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( bounded_queue_test_exhausted )
+{
+    queue< int > f( 2 );
+
+    BOOST_TEST_REQUIRE( f.bounded_push( 1 ) );
+    BOOST_TEST_REQUIRE( f.bounded_push( 2 ) );
+    BOOST_TEST_REQUIRE( !f.bounded_push( 3 ) );
+
+    int out;
+    BOOST_TEST_REQUIRE( f.pop( out ) );
+    BOOST_TEST_REQUIRE( out == 1 );
+    BOOST_TEST_REQUIRE( f.pop( out ) );
+    BOOST_TEST_REQUIRE( out == 2 );
+    BOOST_TEST_REQUIRE( !f.pop( out ) );
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( queue_unsynchronized_push_const_ref )
+{
+    queue< int > f( 64 );
+
+    BOOST_TEST_REQUIRE( f.empty() );
+
+    const int a = 42;
+    const int b = 43;
+
+    f.unsynchronized_push( a );
+    f.unsynchronized_push( b );
+
+    int i1( 0 ), i2( 0 );
+    BOOST_TEST_REQUIRE( f.unsynchronized_pop( i1 ) );
+    BOOST_TEST_REQUIRE( i1 == 42 );
+    BOOST_TEST_REQUIRE( f.unsynchronized_pop( i2 ) );
+    BOOST_TEST_REQUIRE( i2 == 43 );
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( queue_consume_one_capacity_test )
+{
+    queue< int, capacity< 64 > > f;
+
+    BOOST_TEST_REQUIRE( f.empty() );
+
+    f.push( 10 );
+    f.push( 20 );
+
+    bool success1 = f.consume_one( []( int i ) {
+        BOOST_TEST_REQUIRE( i == 10 );
+    } );
+
+    bool success2 = f.consume_one( []( int i ) {
+        BOOST_TEST_REQUIRE( i == 20 );
+    } );
+
+    BOOST_TEST_REQUIRE( success1 );
+    BOOST_TEST_REQUIRE( success2 );
+    BOOST_TEST_REQUIRE( !f.consume_one( []( int ) {} ) );
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( queue_consume_all_capacity_test )
+{
+    queue< int, capacity< 64 > > f;
+
+    BOOST_TEST_REQUIRE( f.empty() );
+
+    f.push( 1 );
+    f.push( 2 );
+    f.push( 3 );
+
+    size_t consumed = f.consume_all( []( int ) {} );
+
+    BOOST_TEST_REQUIRE( consumed == 3u );
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( queue_empty_pop_test )
+{
+    queue< int > f( 64 );
+
+    int out = 0xDEAD;
+    BOOST_TEST_REQUIRE( !f.pop( out ) );
+    BOOST_TEST_REQUIRE( !f.unsynchronized_pop( out ) );
+    BOOST_TEST_REQUIRE( !f.consume_one( []( int ) {} ) );
+    BOOST_TEST_REQUIRE( f.consume_all( []( int ) {} ) == 0u );
+}
+
+BOOST_AUTO_TEST_CASE( queue_push_pop_many )
+{
+    queue< int > f( 64 );
+
+    for ( int i = 0; i < 100; ++i )
+        BOOST_TEST_REQUIRE( f.push( i ) );
+
+    for ( int i = 0; i < 100; ++i ) {
+        int out;
+        BOOST_TEST_REQUIRE( f.pop( out ) );
+        BOOST_TEST_REQUIRE( out == i );
+    }
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( queue_push_pop_many_capacity )
+{
+    queue< int, capacity< 128 > > f;
+
+    for ( int i = 0; i < 100; ++i )
+        BOOST_TEST_REQUIRE( f.push( i ) );
+
+    for ( int i = 0; i < 100; ++i ) {
+        int out;
+        BOOST_TEST_REQUIRE( f.pop( out ) );
+        BOOST_TEST_REQUIRE( out == i );
+    }
+    BOOST_TEST_REQUIRE( f.empty() );
+}

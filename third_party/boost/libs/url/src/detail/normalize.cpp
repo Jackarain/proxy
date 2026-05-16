@@ -11,14 +11,14 @@
 
 #include <boost/url/detail/config.hpp>
 #include <boost/url/decode_view.hpp>
-#include "decode.hpp"
+#include <boost/url/detail/decode.hpp>
 #include <boost/url/segments_encoded_view.hpp>
 #include <boost/url/grammar/ci_string.hpp>
 #include <boost/url/grammar/lut_chars.hpp>
 #include <boost/assert.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <cstring>
-#include "normalize.hpp"
+#include <boost/url/detail/normalize.hpp>
 
 namespace boost {
 namespace urls {
@@ -960,5 +960,4 @@ segments_compare(
 } // detail
 } // urls
 } // boost
-
 

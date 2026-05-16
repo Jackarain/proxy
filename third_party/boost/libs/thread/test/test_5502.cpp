@@ -12,12 +12,13 @@
 int XXX = 20;
 int YYY = 10;
 
+#include <boost/bind/bind.hpp>
 #include <boost/thread/thread_only.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
 //#include <unistd.h>
 #include <iostream>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 using namespace std;
 

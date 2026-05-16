@@ -1,0 +1,117 @@
+////
+Copyright 2025 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#basics]
+= Basic Usage
+:idprefix: basics_
+
+== Construction of Decimal Types
+
+Every decimal type can be constructed in a few ways:
+
+=== Construction from Coefficient and Exponent
+
+[source, c++]
+----
+namespace boost {
+namespace decimal {
+
+enum class construction_sign
+{
+    negative,
+    positive
+};
+
+template <typename UnsignedInteger, typename Integer>
+constexpr decimal32_t(UnsignedInteger coefficient, Integer exponent, construction_sign resultant_sign = construction_sign::positive) noexcept;
+
+template <typename SignedInteger, typename Integer>
+constexpr decimal32_t(SignedInteger coefficient, Integer exponent) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+As you can see you are either allowed to pass a signed integer, or specify the signedness of the resulting number, but not both.
+This is designed to reduce confusion (e.g. what would be the resulting sign of `{-3, 0, construction_sign::negative}`?)
+
+[souce, c++]
+----
+boost::decimal::decimal32_t a {1, 1};           // constructs 1e1 = 10
+boost::decimal::decimal32_t b {-2, -1};         // constructs -2e-2 or -0.2
+boost::decimal::decimal32_t c {2U, -1, construction_sign::negative};   // also constructs -2e-1 or -0.2 (Note: The coefficient must be an unsigned type)
+boost::decimal::decimal32_t d {5, 5};           // constructs 5x10^5
+boost::decimal::decimal32_t e {1234, -3}        // constructs 1.234 or 1234x10^-3
+----
+
+Overflow and underflow are handled the same way that they are with binary floating point numbers i.e. they will construct an infinity or a zero.
+
+[source, c++]
+----
+boost::decimal::decimal64_t overflow_value {100, 10000}; // Constructs +infinity
+boost::decimal::decimal64_t underflow_value {100, -10000}; // Constructs 0
+----
+
+=== Construction from Integer
+
+A decimal number can be explicitly constructed from an integer.
+For example:
+
+[source, c++]
+----
+boost::decimal::decimal32_t f {-4};
+----
+
+=== Construction from Binary Floating Point
+
+A decimal number can only be *explicitly* constructed from a floating point type.
+For example:
+
+[source, c++]
+----
+boost::decimal::decimal128_t pi {3.14};
+----
+
+Construction from non-finite values (e.g. `std::numeric_limits<double>::quiet_NaN()`) will yield the same non-finite value in the resulting decimal value.
+Overflow or underflow will construct infinity or 0.
+
+IMPORTANT: Due to the differences in decimal and binary floating point numbers there may be a difference in the resulting representation in decimal format, and thus it is not recommended to construct from binary floating point numbers
+
+For more information see: xref:examples.adoc#examples_construction[Basic Construction]
+
+== Fundamental Operations
+
+The fundamental operations of numerical types (e.g. `>`, `==`, `+`, etc.) are provided for each type, to include mixed type arithmetic (e.g. `decimal32_t` + `decimal64_t`), and between integers and decimal types.
+For more information see: xref:examples.adoc#examples_promotion[Promotion and Mixed Decimal Arithmetic].
+
+== Rounding
+
+The default rounding mode for all operations is so-called "banker's rounding", which is to nearest (with ties to even).
+Similar to the standard library, the active rounding mode can be changed through floating point environment variables.
+For more information see: xref:cfenv.adoc[]
+
+== Using the Library
+
+The entire library can be accessed using the convenience header `<boost/decimal.hpp>`.
+A short example of the basic usage:
+
+[#first_example]
+.This https://github.com/boostorg/decimal/blob/develop/examples/first_example.cpp[example] shows the very basics on how to make a complete and working program using the decimal library
+====
+[source, c++]
+----
+include::example$first_example.cpp[]
+----
+
+.Expected Output
+....
+Using doubles:
+0.1 + 0.2 = 0.30000000000000004
+
+Using decimal64_t:
+0.1_DD + 0.2_DD = 0.3000000000000000
+....
+====

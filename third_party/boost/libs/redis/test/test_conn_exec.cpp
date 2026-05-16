@@ -6,6 +6,7 @@
 
 #include <boost/redis/adapter/any_adapter.hpp>
 #include <boost/redis/connection.hpp>
+#include <boost/redis/response.hpp>
 
 #include <boost/asio/detached.hpp>
 
@@ -178,6 +179,33 @@ BOOST_AUTO_TEST_CASE(exec_any_adapter)
    BOOST_TEST_REQUIRE(finished);
 
    BOOST_TEST(std::get<0>(res).value() == "PONG");
+}
+
+BOOST_AUTO_TEST_CASE(exec_generic_flat_response)
+{
+   // Executing with a generic_flat_response works
+   request req;
+   req.push("PING", "PONG");
+   boost::redis::generic_flat_response resp;
+
+   net::io_context ioc;
+
+   auto conn = std::make_shared<connection>(ioc);
+
+   bool finished = false;
+
+   conn->async_exec(req, resp, [&](error_code ec, std::size_t) {
+      BOOST_TEST(ec == error_code());
+      conn->cancel();
+      finished = true;
+   });
+
+   run(conn);
+   ioc.run_for(test_timeout);
+   BOOST_TEST_REQUIRE(finished);
+
+   BOOST_TEST(resp.has_value());
+   BOOST_TEST(resp.value().front().value == "PONG");
 }
 
 }  // namespace

@@ -23,3 +23,21 @@ BOOST_AUTO_TEST_CASE( queue_test_unbounded )
     boost::lockfree::queue< long > q( 128 );
     tester->run( q );
 }
+
+BOOST_AUTO_TEST_CASE( queue_test_unbounded_asymmetric_many_writers )
+{
+    typedef queue_stress_tester< false > tester_type;
+    std::unique_ptr< tester_type >       tester( new tester_type( 1, 4 ) );
+
+    boost::lockfree::queue< long > q( 128 );
+    tester->run( q );
+}
+
+BOOST_AUTO_TEST_CASE( queue_test_unbounded_asymmetric_many_readers )
+{
+    typedef queue_stress_tester< false > tester_type;
+    std::unique_ptr< tester_type >       tester( new tester_type( 4, 1 ) );
+
+    boost::lockfree::queue< long > q( 128 );
+    tester->run( q );
+}

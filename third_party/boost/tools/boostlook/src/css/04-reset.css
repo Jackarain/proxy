@@ -1,0 +1,105 @@
+
+/*----------------- CSS Reset start -----------------*/
+
+/**
+ * Modern CSS Reset
+ * A minimal CSS reset that:
+ * 1. Uses the modern box-sizing model
+ * 2. Removes default margins
+ * 3. Improves text rendering
+ * 4. Ensures responsive media elements
+ * 5. Normalizes form elements
+ * 6. Prevents text overflow issues
+ * 7. Provides a proper stacking context
+ * 8. Resets legacy table and adjacent element styles
+ */
+
+/* Box sizing rules */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Remove default margin */
+* {
+  margin: 0;
+}
+
+html body {
+  margin: 0;
+}
+
+/* Body defaults */
+body {
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  /* Improves text rendering on WebKit */
+}
+
+/* Media elements */
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+  /* Responsive media elements */
+}
+
+/* Form elements */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  /* Inherit typography */
+}
+
+/* Text elements */
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+  /* Prevent text overflow */
+}
+
+body :not(pre):not([class^="L"]) > code {
+  /* overrides builtin colors */
+  color: var(--text-code-neutral, #0d0e0f);
+  border: 0;
+  background-color: unset;
+}
+
+/* Stacking context */
+#root,
+#__next {
+  isolation: isolate;
+  /* Create new stacking context */
+}
+
+/* Reset Legacy Table and Next to Table Element Styles */
+.boostlook .tablecontainer,
+.boostlook .tablecontainer + *,
+.boostlook :not(.tablecontainer) > table.tableblock,
+.boostlook :not(.tablecontainer) > table.tableblock + *,
+.boostlook .doc .tablecontainer,
+.boostlook .doc .tablecontainer + *,
+.boostlook .doc :not(.tablecontainer) > table.tableblock,
+.boostlook .doc :not(.tablecontainer) > table.tableblock + *,
+.boostlook.boostlook:not(:has(.doc)) table.table,
+.boostlook.boostlook:not(:has(.doc)) table.table + * {
+  margin: revert;
+}
+
+.boostlook .underline:has(> code:only-child) {
+  text-decoration-line: none;
+}
+
+/*----------------- CSS Reset end -----------------*/

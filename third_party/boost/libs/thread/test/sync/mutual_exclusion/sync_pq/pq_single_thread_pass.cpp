@@ -19,7 +19,7 @@
 #include <boost/chrono.hpp>
 #include <boost/thread/concurrent_queues/sync_priority_queue.hpp>
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include "../../../timming.hpp"
 
 using namespace boost::chrono;

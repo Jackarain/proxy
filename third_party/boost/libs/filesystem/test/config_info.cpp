@@ -34,8 +34,8 @@ int main()
     cout << "  BOOST_ALL_NO_LIB: " << BOOST_MACRO_VALUE(BOOST_ALL_NO_LIB) << endl;
     cout << "  BOOST_FILESYSTEM_NO_LIB: " << BOOST_MACRO_VALUE(BOOST_FILESYSTEM_NO_LIB) << endl;
     cout << "  BOOST_LIB_NAME: " << BOOST_MACRO_VALUE(BOOST_LIB_NAME) << endl;
-    cout << "  BOOST_POSIX_API: " << BOOST_MACRO_VALUE(BOOST_POSIX_API) << endl;
-    cout << "  BOOST_WINDOWS_API: " << BOOST_MACRO_VALUE(BOOST_WINDOWS_API) << endl;
+    cout << "  BOOST_FILESYSTEM_POSIX_API: " << BOOST_MACRO_VALUE(BOOST_FILESYSTEM_POSIX_API) << endl;
+    cout << "  BOOST_FILESYSTEM_WINDOWS_API: " << BOOST_MACRO_VALUE(BOOST_FILESYSTEM_WINDOWS_API) << endl;
     cout << "  _MSC_VER: " << BOOST_MACRO_VALUE(_MSC_VER) << endl;
     cout << "  __MINGW32__: " << BOOST_MACRO_VALUE(__MINGW32__) << endl;
     //cout << "  : " << BOOST_MACRO_VALUE() << endl;

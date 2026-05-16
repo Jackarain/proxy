@@ -18,6 +18,13 @@ jobs:
         compiler_version: [g++-10, g++-11]
         cxx_std: [17, 20]
         os: [ubuntu-22.04]
+        disable_trace: [false]
+        include:
+          # Test with trace disabled
+          - compiler_version: g++-11
+            cxx_std: 20
+            os: ubuntu-22.04
+            disable_trace: true
 
     runs-on: ${{ matrix.os }}
 
@@ -30,7 +37,11 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_COMPILER=${{ matrix.compiler_version }} -DCXX_STD=${{ matrix.cxx_std }}
+          if [ "${{ matrix.disable_trace }}" = "true" ]; then
+            cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_COMPILER=${{ matrix.compiler_version }} -DCXX_STD=${{ matrix.cxx_std }} -DDISABLE_TRACE=true
+          else
+            cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_COMPILER=${{ matrix.compiler_version }} -DCXX_STD=${{ matrix.cxx_std }}
+          fi
 
       - name: Build
         run: cd build ; make -j4

@@ -1,0 +1,35 @@
+////
+Copyright 2025 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#bin_float]
+= Conversion from Binary Floating Point
+:idprefix: bin_float_
+
+The library deliberately does not contain any operations between a binary floating point type and the decimal floating point types.
+The rationale is similar to that of the library in the first place in that you may end up with surprising results.
+As shown in our xref:basics.adoc#first_example[first example] `0.1 + 0.2 != 0.3` when using `double`, so you could end up with a decimal value that does not represent exactly what you expect.
+To offer minimal and explicit interoperability with types `float`, `double`, and `long double` each decimal type has an explicit constructor and conversion operator as discussed on the type specific documentation pages like xref:decimal32_t.adoc[`decimal32_t`]:
+
+[source, c++]
+----
+namespace boost {
+namespace decimal {
+
+class decimal32_t
+{
+    template <typename Float>
+    explicit decimal32_t(Float x) noexcept;
+
+    template <typename Float>
+    explicit operator Float() const noexcept;
+};
+
+} // namespace decimal
+} // namespace boost
+----
+
+*No additional support is planned* to deter use of these conversions.
+If you have existing floating point values that need to be converted into decimals it is recommended to write them to string, validate the string, and then utilize the string constructors provided by this library.

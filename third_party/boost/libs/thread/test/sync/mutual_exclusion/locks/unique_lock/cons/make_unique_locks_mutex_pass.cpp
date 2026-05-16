@@ -13,7 +13,7 @@
 #include <boost/thread/lock_factories.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include "../../../../../timming.hpp"
 
 #if ! defined(BOOST_NO_CXX11_AUTO_DECLARATIONS) && ! defined BOOST_THREAD_NO_MAKE_UNIQUE_LOCKS && ! defined BOOST_NO_CXX11_RVALUE_REFERENCES

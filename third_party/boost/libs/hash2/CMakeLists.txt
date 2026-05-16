@@ -69,7 +69,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   # secondaries
 
-  static_assert
   throw_exception
   io
   preprocessor

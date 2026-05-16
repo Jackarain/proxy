@@ -184,7 +184,7 @@ must **NOT** be included in the response tuple. For example, the following reque
 ----
 request req;
 req.push("PING");
-req.push("SUBSCRIBE", "channel");
+req.subscribe({"channel"});
 req.push("QUIT");
 ----
 
@@ -278,7 +278,8 @@ struct basic_node {
 ----
 
 Any response to a Redis command can be parsed into a
-xref:reference:boost/redis/generic_response.adoc[boost::redis::generic_response].
+xref:reference:boost/redis/generic_response.adoc[boost::redis::generic_response]
+and its counterpart xref:reference:boost/redis/generic_flat_response.adoc[boost::redis::generic_flat_response].
 The vector can be seen as a pre-order view of the response tree.
 Using it is not different than using other types:
 
@@ -292,7 +293,7 @@ co_await conn->async_exec(req, resp);
 For example, suppose we want to retrieve a hash data structure
 from Redis with `HGETALL`, some of the options are
 
-* `boost::redis::generic_response`: always works.
+* `boost::redis::generic_response` and `boost::redis::generic_flat_response`: always works.
 * `std::vector<std::string>`: efficient and flat, all elements as string.
 * `std::map<std::string, std::string>`: efficient if you need the data as a `std::map`.
 * `std::map<U, V>`: efficient if you are storing serialized data. Avoids temporaries and requires `boost_redis_from_bulk` for `U` and `V`.

@@ -29,7 +29,20 @@ class delete_disposer
    template <class Pointer>
       void operator()(Pointer p)
    {
-      typedef typename boost::intrusive::iterator_traits<Pointer>::value_type value_type;
+      typedef typename boost::intrusive::pointer_traits<Pointer>::element_type value_type;
+      BOOST_INTRUSIVE_STATIC_ASSERT(( detail::is_same<T, value_type>::value ));
+      delete boost::movelib::to_raw_pointer(p);
+   }
+};
+
+template<class T>
+class delete_noexcept_disposer
+{
+   public:
+   template <class Pointer>
+      void operator()(Pointer p) BOOST_NOEXCEPT
+   {
+      typedef typename boost::intrusive::pointer_traits<Pointer>::element_type value_type;
       BOOST_INTRUSIVE_STATIC_ASSERT(( detail::is_same<T, value_type>::value ));
       delete boost::movelib::to_raw_pointer(p);
    }
@@ -64,6 +77,14 @@ class empty_disposer
    public:
    template<class T>
    void operator()(const T &)
+   {}
+};
+
+class empty_noexcept_disposer
+{
+   public:
+   template<class T>
+   void operator()(const T &) BOOST_NOEXCEPT
    {}
 };
 

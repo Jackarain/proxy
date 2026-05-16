@@ -22,18 +22,12 @@
 namespace boost {
 namespace urls {
 
-#ifdef BOOST_MSVC
-#   pragma warning(push)
-    // "struct 'boost::urls::encoding_opts' needs to have dll-interface to be used by clients of class 'boost::urls::params_base'"
-    // but encoding_opts should not be BOOST_URL_DECL and params_base should be BOOST_URL_DECL.
-#   pragma warning(disable: 4251)
-#endif
+/** Decoded query parameter helper base
 
-/** Common functionality for query parameter containers
-
-    The library uses this base class
-    to provide common member functions for
-    containers of query parameters.
+    This base centralizes the read-only,
+    percent-decoded query parameter algorithms
+    (iteration, lookup, counting) that are
+    shared by @ref params_view and @ref params_ref.
 
     This class should not be instantiated
     directly; Instead, use one of the
@@ -45,7 +39,7 @@ namespace urls {
     @li @ref params_encoded_ref
     @li @ref params_encoded_view
 */
-class BOOST_URL_DECL params_base
+class BOOST_SYMBOL_VISIBLE params_base
 {
     friend class url_view_base;
     friend class params_ref;
@@ -319,6 +313,45 @@ public:
         core::string_view key,
         ignore_case_param ic = {}) const noexcept;
 
+    /** Return the value for a key or a fallback
+
+        This convenience function searches for the
+        first parameter matching `key` and returns
+        its decoded value. If no parameter with the
+        specified key exists, the provided fallback
+        `value` is returned instead. When the key is
+        found but the parameter has no value, an
+        empty string is returned.
+
+        @par Example
+        @code
+        url_view u( "/path?first=John&last=Doe" );
+        assert( u.params().get_or( "first", "n/a" ) == "John" );
+        assert( u.params().get_or( "missing", "n/a" ) == "n/a" );
+        @endcode
+
+        @par Complexity
+        Linear in `this->buffer().size()`.
+
+        @par Exception Safety
+        Calls to allocate may throw.
+
+        @param key The key to match.
+        @param value The fallback string returned
+        when no matching key exists. If this
+        parameter is omitted, an empty string is
+        used.
+        @param ic Optional case-insensitive compare
+        indicator.
+
+        @return The decoded value or the fallback.
+    */
+    std::string
+    get_or(
+        core::string_view key,
+        core::string_view value = {},
+        ignore_case_param ic = {}) const;
+
     /** Find a matching key
 
         This function examines the parameters
@@ -530,7 +563,6 @@ private:
     @param qp The parameters to write
     @return A reference to the output stream, for chaining
 */
-BOOST_URL_DECL
 std::ostream&
 operator<<(
     std::ostream& os,
@@ -540,9 +572,5 @@ operator<<(
 } // boost
 
 #include <boost/url/impl/params_base.hpp>
-
-#ifdef BOOST_MSVC
-#   pragma warning(pop)
-#endif
 
 #endif

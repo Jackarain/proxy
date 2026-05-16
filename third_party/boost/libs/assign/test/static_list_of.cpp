@@ -25,7 +25,7 @@
 template< class Range >
 void print( const Range& r )
 {
-    std::cout << "\n printing " << typeid(r).name() << " \n"; 
+    std::cout << "\n printing " << typeid(r).name() << " \n";
     std::cout << "\n";
     for( typename Range::iterator i = r.begin(), e = r.end();
          i !=e; ++i )
@@ -35,7 +35,7 @@ void print( const Range& r )
 template< class Range >
 void sort( const Range& r )
 {
-    std::cout << "\n sorting " << typeid(r).name() << " \n"; 
+    std::cout << "\n sorting " << typeid(r).name() << " \n";
     std::sort( r.begin(), r.end() );
     print( r );
 }
@@ -43,7 +43,7 @@ void sort( const Range& r )
 template< class Range, class Pred >
 void sort( const Range& r, Pred pred )
 {
-    std::cout << "\n sorting " << typeid(r).name() << " \n"; 
+    std::cout << "\n sorting " << typeid(r).name() << " \n";
     std::sort( r.begin(), r.end(), pred );
     print( r );
 }
@@ -59,9 +59,9 @@ typename Range::const_iterator max_element( const Range& r )
 void check_static_list_of()
 {
     using namespace boost::assign;
-    
+
     BOOST_CHECK( cref_list_of<5>( 1 )( 2 )( 3 )( 4 ).size() == 4 );
-    
+
     int a=1,b=5,c=3,d=4,e=2,f=9,g=0,h=7;
 
     int& max = *max_element( ref_list_of<8>(a)(b)(c)(d)(e)(f)(g)(h) );

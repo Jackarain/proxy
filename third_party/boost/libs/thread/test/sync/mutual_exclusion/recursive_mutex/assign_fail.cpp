@@ -19,7 +19,7 @@
 // recursive_mutex& operator=(const recursive_mutex&) = delete;
 
 #include <boost/thread/recursive_mutex.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 int main()
 {

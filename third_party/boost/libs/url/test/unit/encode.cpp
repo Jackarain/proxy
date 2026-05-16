@@ -197,10 +197,39 @@ public:
     }
 
     void
+    testEncodeZeroDest()
+    {
+        // encode() with zero-size dest buffer
+        // must not perform UB pointer arithmetic
+        {
+            char buf[1] = {};
+            std::size_t n = encode(
+                buf, 0, "test", pchars);
+            BOOST_TEST_EQ(n, 0u);
+        }
+    }
+
+    void
+    testEncodeNoexcept()
+    {
+        // encode() buffer overload must not
+        // be noexcept (noexcept removal regression)
+        {
+            char buf[4];
+            static_assert(
+                !noexcept(encode(
+                    buf, sizeof(buf), "x", pchars)),
+                "");
+        }
+    }
+
+    void
     run()
     {
         testEncode();
         testEncodeExtras();
+        testEncodeZeroDest();
+        testEncodeNoexcept();
         testJavadocs();
     }
 };

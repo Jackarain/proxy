@@ -9,31 +9,33 @@
 
 import testing ;
 
+project : requirements <library>/boost/algorithm//boost_algorithm ;
+
 alias unit_test_framework
     : # sources
-        /boost//unit_test_framework
-    ;        
+        /boost/test//boost_unit_test_framework
+    ;
 
 test-suite algorithm/string
-    : [ run 
+    : [ run
             trim_test.cpp unit_test_framework
           : :
             :
             : trim
         ]
-      [ run 
+      [ run
             conv_test.cpp unit_test_framework
           : :
             :
             : conv
         ]
-      [ run 
+      [ run
             predicate_test.cpp unit_test_framework
           : :
             :
             : predicate
         ]
-      [ run 
+      [ run
             find_test.cpp unit_test_framework
           : :
             :
@@ -51,23 +53,23 @@ test-suite algorithm/string
             :
             : join
         ]
-      [ run 
+      [ run
             replace_test.cpp unit_test_framework
           : :
             :
             : replace
         ]
-      [ run 
+      [ run
             regex_test.cpp unit_test_framework
             ../../../regex/build//boost_regex
           : :
-            :   
+            :
             : regex
         ]
-      [ run 
+      [ run
             find_format_test.cpp unit_test_framework
           : :
-            :   
+            :
             : find_format
         ]
     ;

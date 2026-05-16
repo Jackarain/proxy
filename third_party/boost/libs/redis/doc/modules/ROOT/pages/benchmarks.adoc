@@ -74,7 +74,7 @@ in the graph, the reasons are
      with the other benchmarks without making them look insignificant.
      I don't know for sure why it is so slow, I suppose it has
      something to do with its lack of automatic
-     https://redis.io/docs/manual/pipelining/[pipelining] support.
+     https://redis.io/docs/latest/develop/using-commands/pipelining/[pipelining] support.
      In fact, the more TCP connections I launch the worse its
      performance gets.
 

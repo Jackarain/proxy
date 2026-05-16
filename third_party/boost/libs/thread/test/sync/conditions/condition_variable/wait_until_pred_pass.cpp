@@ -20,7 +20,8 @@
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
+#include <boost/config.hpp>
 #include <cassert>
 #include <iostream>
 #include "../../../timming.hpp"
@@ -79,7 +80,7 @@ void f()
     cv.notify_one();
     Clock::time_point t0 = Clock::now();
     Clock::time_point t = t0 + Clock::duration(250);
-    bool r = cv.wait_until(lk, t, Pred(test2));
+    BOOST_ATTRIBUTE_UNUSED bool r = cv.wait_until(lk, t, Pred(test2));
     Clock::time_point t1 = Clock::now();
     if (runs == 0)
     {

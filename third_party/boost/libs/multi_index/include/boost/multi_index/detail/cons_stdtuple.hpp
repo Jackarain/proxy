@@ -1,4 +1,4 @@
-/* Copyright 2003-2014 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14,7 +14,7 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
-#include <boost/mpl/if.hpp>
+#include <boost/mp11/utility.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <tuple>
 
@@ -55,11 +55,11 @@ struct cons_stdtuple_ctor_normal
 
 template<typename StdTuple,std::size_t N=0>
 struct cons_stdtuple_ctor:
-  boost::mpl::if_c<
+  mp11::mp_if_c<
     N<std::tuple_size<StdTuple>::value,
     cons_stdtuple_ctor_normal<StdTuple,N>,
     cons_stdtuple_ctor_terminal
-  >::type
+  >
 {};
 
 template<typename StdTuple,std::size_t N>

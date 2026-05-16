@@ -8,11 +8,14 @@
 #ifndef BOOST_MQTT5_TEST_AUTOCONNECT_STREAM_HPP
 #define BOOST_MQTT5_TEST_AUTOCONNECT_STREAM_HPP
 
+#include "test_broker.hpp"
+
 #include <boost/mqtt5/detail/async_mutex.hpp>
 #include <boost/mqtt5/detail/async_traits.hpp>
 #include <boost/mqtt5/detail/log_invoke.hpp>
 
 #include <boost/mqtt5/impl/endpoints.hpp>
+#include <boost/mqtt5/impl/reconnect_op.hpp>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/steady_timer.hpp>
@@ -22,6 +25,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 
 namespace boost::mqtt5::test {
 
@@ -47,7 +51,7 @@ private:
 
     executor_type _stream_executor;
     async_mutex _conn_mtx;
-    asio::steady_timer _connect_timer;
+    test_timer _connect_timer;
     endpoints _endpoints;
 
     stream_ptr _stream_ptr;

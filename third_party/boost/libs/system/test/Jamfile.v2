@@ -168,6 +168,8 @@ run ec_hash_value_test.cpp ;
 
 run std_interop_test16.cpp ;
 
+run failed_constexpr_test2.cpp ;
+
 # result
 
 run result_default_construct.cpp ;
@@ -198,8 +200,6 @@ run result_value_construct6.cpp ;
 run result_value_construct7.cpp ;
 run result_error_construct5.cpp ;
 run result_or_value.cpp ;
-compile-fail result_or_value_fail.cpp ;
-compile-fail result_or_value_fail2.cpp ;
 run result_or_fn0v.cpp ;
 run result_or_fn0r.cpp ;
 run result_and_fn1v.cpp ;
@@ -210,3 +210,21 @@ run result_in_place_use.cpp ;
 run result_or_eq_value.cpp ;
 run result_or_eq_fn0v.cpp ;
 run result_or_eq_fn0r.cpp ;
+
+run result_and_mfn1v.cpp ;
+run result_and_mfn1r.cpp ;
+
+compile result_value_construct_cx.cpp ;
+compile result_error_construct_cx.cpp ;
+compile result_error_construct_cx2.cpp ;
+
+run result_unsafe_value_access.cpp ;
+run result_unsafe_value_access2.cpp ;
+
+run unwrap_and_invoke.cpp ;
+run unwrap_and_invoke2.cpp ;
+
+run unwrap_and_construct.cpp ;
+run unwrap_and_construct2.cpp ;
+
+run detail_is_aggregate_test.cpp ;

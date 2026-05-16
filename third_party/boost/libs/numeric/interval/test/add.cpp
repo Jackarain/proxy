@@ -23,7 +23,7 @@ typedef enum { EXPR_VAR, EXPR_NEG, EXPR_UP, EXPR_DOWN, EXPR_ADD, EXPR_SUB } e_ty
 struct expr;
 struct pexpr {
   expr *ptr;
-  expr* operator->() { return ptr; }
+  expr* operator->() const { return ptr; }
   pexpr(expr *p = NULL): ptr(p) { }
 };
 
@@ -91,7 +91,7 @@ pexpr operator-(pexpr a) {
   return e;
 }
 
-bool operator==(pexpr a, pexpr b) {
+bool operator==(const pexpr& a, const pexpr& b) {
   if (a->type != b->type) return false;
   if (a->type == EXPR_VAR) return a->var == b->var;
   if (a->type == EXPR_DOWN || a->type == EXPR_UP || a->type == EXPR_NEG)
@@ -99,7 +99,7 @@ bool operator==(pexpr a, pexpr b) {
   return a->e1 == b->e1 && a->e2 == b->e2;
 }
 
-bool operator<=(pexpr, pexpr) { return true; }
+bool operator<=(const pexpr&, const pexpr&) { return true; }
 
 namespace boost {
 namespace numeric {

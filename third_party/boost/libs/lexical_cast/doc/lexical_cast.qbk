@@ -3,7 +3,7 @@
     [version 1.0]
     [copyright 2000-2005 Kevlin Henney]
     [copyright 2006-2010 Alexander Nasonov]
-    [copyright 2011-2025 Antony Polukhin]
+    [copyright 2011-2026 Antony Polukhin]
     [category String and text processing]
     [category Miscellaneous]
     [license
@@ -233,7 +233,44 @@ limitation of compiler options that you use.
 
 [endsect]
 
+[section C++20 module]
+
+[caution C++20 module support is on early stage, targets, flags and behavior may change in the future]
+
+If using modern CMake define CMake option `-DBOOST_USE_MODULES=1` to build a C++20 module and
+make the `Boost::lexical_cast` CMake target provide it. After that an explicit usage of C++20 module `boost.lexical_cast` is allowed:
+
+[import ../modules/usage_sample.cpp]
+[lexical_cast_module_example]
+
+The `Boost::lexical_cast` CMake target gives an ability to mix includes and imports of the library in different translation units. Moreover,
+if `BOOST_USE_MODULES` macro is defined then all the `boost/lexical_cast...` includes implicitly do `import boost.lexical_cast;` to give all the
+benefits of modules without changing the existing code.
+
+[note For better compile times make sure that `import std;` is available when building the `boost.lexical_cast` module (in CMake logs there should be
+      a 'Using `import std;`' message). ]
+
+If not using CMake, then the module could be build manually from the `modules/boost_lexical_cast.cppm` file.
+
+For manual module build the following commands could be used for clang compiler:
+
+```
+cd lexical_cast/modules
+clang++ -I ../include -std=c++20 --precompile -x c++-module boost_lexical_cast.cppm
+```
+
+After that, the module could be used in the following way:
+
+```
+clang++ -std=c++20 -fmodule-file=boost_lexical_cast.pcm boost_lexical_cast.pcm usage_sample.cpp
+```
+
+[endsect]
+
 [section Changes]
+
+* [*boost 1.91.0 :]
+    * Added C++20 modules support.
 
 * [*boost 1.86.0 :]
 

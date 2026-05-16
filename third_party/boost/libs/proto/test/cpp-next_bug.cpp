@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <vector>
 #include <boost/proto/proto.hpp>
 #include <boost/test/unit_test.hpp>
@@ -59,22 +61,9 @@ static const int celems = 4;
 static int const value[celems] = {1,2,3,4};
 std::vector<int> A(value, value+celems), B(A);
 
-void test1()
+BOOST_AUTO_TEST_CASE(test1)
 {
     using namespace linear_algebra;
     proto::_default<> eval;
     BOOST_CHECK_EQUAL(8, eval(Optimize()((A + B)[3])));
-}
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test for a problem reported on the cpp-next.com blog");
-
-    test->add(BOOST_TEST_CASE(&test1));
-
-    return test;
 }

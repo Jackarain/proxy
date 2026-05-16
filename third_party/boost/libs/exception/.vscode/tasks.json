@@ -1,0 +1,101 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Download nlohmann/json.hpp",
+            "type": "shell",
+            "command": "python scripts/download_nlohmann_json.py",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "b2: Run all tests (default)",
+            "type": "shell",
+            "dependsOn": ["Download nlohmann/json.hpp"],
+            "command": "../../b2 test",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": ["relative", "${workspaceFolder}"]
+            },
+            "windows": {
+                "command": "..\\..\\b2 test",
+                "problemMatcher": {
+                    "base": "$msCompile",
+                    "fileLocation": ["relative", "${workspaceFolder}"]
+                }
+            }
+        },
+        {
+            "label": "b2: Run all tests (release)",
+            "type": "shell",
+            "dependsOn": ["Download nlohmann/json.hpp"],
+            "command": "../../b2 test variant=release",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": ["relative", "${workspaceFolder}"]
+            },
+            "windows": {
+                "command": "..\\..\\b2 test variant=release",
+                "problemMatcher": {
+                    "base": "$msCompile",
+                    "fileLocation": ["relative", "${workspaceFolder}"]
+                }
+            }
+        },
+        {
+            "label": "b2: Run all tests (all configs)",
+            "type": "shell",
+            "dependsOn": ["Download nlohmann/json.hpp"],
+            "command": "../../b2 test exception-handling=on,off rtti=on,off variant=debug,release link=static,shared",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": ["relative", "${workspaceFolder}"]
+            },
+            "windows": {
+                "command": "..\\..\\b2 test exception-handling=on,off rtti=on,off variant=debug,release link=static,shared",
+                "problemMatcher": {
+                    "base": "$msCompile",
+                    "fileLocation": ["relative", "${workspaceFolder}"]
+                }
+            }
+        },
+        {
+            "label": "b2: Run test for current editor file",
+            "type": "shell",
+            "dependsOn": ["Download nlohmann/json.hpp"],
+            "command": "../../b2 test ${fileBasenameNoExtension}.test",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": ["relative", "${workspaceFolder}"]
+            },
+            "windows": {
+                "command": "..\\..\\b2 test ${fileBasenameNoExtension}.test",
+                "problemMatcher": {
+                    "base": "$msCompile",
+                    "fileLocation": ["relative", "${workspaceFolder}"]
+                }
+            }
+        }
+    ]
+}

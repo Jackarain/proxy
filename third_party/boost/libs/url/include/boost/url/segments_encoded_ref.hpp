@@ -24,22 +24,13 @@ class url_base;
 class segments_encoded_view;
 #endif
 
-/** A view representing path segments in a URL
+/** Mutable encoded path segment proxy
 
-    Objects of this type are used to interpret
-    the path as a bidirectional view of segments,
-    where each segment is a string which may
-    contain percent-escapes.
-
-    The view does not retain ownership of the
-    elements and instead references the original
-    character buffer. The caller is responsible
-    for ensuring that the lifetime of the buffer
-    extends until it is no longer referenced.
-
-    The view is modifiable; calling non-const
-    members causes changes to the referenced
-    url.
+    Exposes the percent-encoded segments of a
+    @ref url_base as a bidirectional range that
+    can modify the underlying URL. The proxy uses
+    the URL’s storage directly, so the url must
+    outlive any references.
 
     @par Example
     @code
@@ -85,7 +76,7 @@ class segments_encoded_view;
         @ref segments_view,
         @ref segments_ref.
 */
-class segments_encoded_ref
+class BOOST_SYMBOL_VISIBLE segments_encoded_ref
     : public segments_encoded_base
 {
     friend class url_base;
@@ -156,12 +147,10 @@ public:
         @param other The segments to assign.
         @return A reference to this object.
     */
-    BOOST_URL_DECL
     segments_encoded_ref&
     operator=(segments_encoded_ref const& other);
 
     /// @copydoc operator=(segments_encoded_ref const&)
-    BOOST_URL_DECL
     segments_encoded_ref&
     operator=(segments_encoded_view const& other);
 
@@ -209,7 +198,6 @@ public:
         @param init The list of segments to assign.
         @return A reference to this.
     */
-    BOOST_URL_DECL
     segments_encoded_ref&
     operator=(std::initializer_list<
         pct_string_view> init);
@@ -221,7 +209,6 @@ public:
 
         @return A view of the segments.
     */
-    BOOST_URL_DECL
     operator
     segments_encoded_view() const noexcept;
 
@@ -322,7 +309,6 @@ public:
 
         @param init The list of segments to assign.
     */
-    BOOST_URL_DECL
     void
     assign(std::initializer_list<
         pct_string_view> init);
@@ -401,7 +387,6 @@ public:
 
         @param s The segment to insert.
     */
-    BOOST_URL_DECL
     iterator
     insert(
         iterator before,
@@ -454,7 +439,6 @@ public:
 
         @param init The list of segments to insert.
     */
-    BOOST_URL_DECL
     iterator
     insert(
         iterator before,
@@ -557,7 +541,6 @@ public:
         @param last One past the last element in the range to erase.
         @return An iterator to one past the removed range.
     */
-    BOOST_URL_DECL
     iterator
     erase(
         iterator first,
@@ -590,7 +573,6 @@ public:
 
         @param s The string to assign.
     */
-    BOOST_URL_DECL
     iterator
     replace(
         iterator pos,
@@ -626,7 +608,6 @@ public:
 
         @param s The string to assign.
     */
-    BOOST_URL_DECL
     iterator
     replace(
         iterator from,
@@ -672,7 +653,6 @@ public:
 
         @param init The list of segments to assign.
     */
-    BOOST_URL_DECL
     iterator
     replace(
         iterator from,
@@ -802,5 +782,21 @@ private:
 // This is in <boost/url/url_base.hpp>
 //
 // #include <boost/url/impl/segments_encoded_ref.hpp>
+
+//------------------------------------------------
+//
+// std::ranges::enable_borrowed_range
+//
+//------------------------------------------------
+
+#ifdef BOOST_URL_HAS_CONCEPTS
+#include <ranges>
+namespace std::ranges {
+    template<>
+    inline constexpr bool
+        enable_borrowed_range<
+            boost::urls::segments_encoded_ref> = true;
+} // std::ranges
+#endif
 
 #endif

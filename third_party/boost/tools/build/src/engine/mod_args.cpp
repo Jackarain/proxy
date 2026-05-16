@@ -127,12 +127,25 @@ lyra::cli & lyra_cli() { return args_reg::ref().cli; }
 void process_args(bool silent)
 {
 	args_reg::ref().reparse();
-	if (!silent && globs.display_help)
+	if (silent)
+		return;
+
+	std::ostringstream out;
+	int return_code = EXITOK;
+	bool stop = false;
+
+	if (!args_reg::ref().result->is_ok())
 	{
-		std::ostringstream out;
+		stop = true;
+		return_code = EXITBAD;
+		out << "Error: " << args_reg::ref().result->message() << '\n';
+	}
+
+	if (stop || globs.display_help)
+	{
 		out << args_reg::ref().cli;
 		err_puts(out.str().c_str());
-		b2::clean_exit(EXITOK);
+		b2::clean_exit(return_code);
 	}
 }
 

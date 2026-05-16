@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <boost/proto/proto.hpp>
 #include <boost/fusion/mpl.hpp>
 #include <boost/mpl/pop_back.hpp>
@@ -47,21 +49,8 @@ void test_impl(T const &)
 }
 
 // Test that we can call mpl algorithms on proto expression types, and get proto expression types back
-void test_mpl()
+BOOST_AUTO_TEST_CASE(test_mpl)
 {
     my_expr<proto::terminal<int>::type> i;
     test_impl(i + i);
-}
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test proto mpl integration via fusion");
-
-    test->add(BOOST_TEST_CASE(&test_mpl));
-
-    return test;
 }

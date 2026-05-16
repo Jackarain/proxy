@@ -25,5 +25,6 @@ add_library(boost_url_test_suite_with_main STATIC test_main.cpp)
 target_link_libraries(boost_url_test_suite_with_main PUBLIC boost_url_test_suite)
 target_include_directories(boost_url_test_suite_with_main PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(boost_url_test_suite_with_main PUBLIC cxx_constexpr)
+set_property(TARGET boost_url_test_suite boost_url_test_suite_with_main PROPERTY FOLDER "Dependencies")
 
 include(DiscoverTests.cmake)

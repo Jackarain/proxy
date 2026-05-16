@@ -1,6 +1,6 @@
 /* Boost.MultiIndex basic example.
  *
- * Copyright 2003-2022 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -47,10 +47,6 @@ struct id{};
 struct name{};
 struct age{};
 
-/* see Compiler specifics: Use of member_offset for info on
- * BOOST_MULTI_INDEX_MEMBER
- */
-
 /* Define a multi_index_container of employees with following indices:
  *   - a unique index sorted by employee::id,
  *   - a non-unique index sorted by employee::name,
@@ -61,11 +57,11 @@ typedef multi_index_container<
   employee,
   indexed_by<
     ordered_unique<
-      tag<id>,  BOOST_MULTI_INDEX_MEMBER(employee,int,id)>,
+      tag<id>,  member<employee,int,&employee::id> >,
     ordered_non_unique<
-      tag<name>,BOOST_MULTI_INDEX_MEMBER(employee,std::string,name)>,
+      tag<name>,member<employee,std::string,&employee::name> >,
     ordered_non_unique<
-      tag<age>, BOOST_MULTI_INDEX_MEMBER(employee,int,age)> >
+      tag<age>, member<employee,int,&employee::age> > >
 > employee_set;
 
 template<typename Tag,typename MultiIndexContainer>

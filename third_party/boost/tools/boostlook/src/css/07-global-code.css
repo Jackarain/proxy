@@ -1,0 +1,592 @@
+
+/* Code Block Styling */
+.boostlook .doc .listingblock,
+.boostlook .listingblock {
+  position: relative;
+}
+
+.boostlook .doc .listingblock code,
+.boostlook .listingblock code {
+  display: initial;
+}
+
+.boostlook .hljs {
+  background: transparent;
+}
+
+.boostlook code {
+  font-family: var(--font-family-code, "Monaspace Neon"), monospace;
+}
+
+.boostlook table thead code {
+  background: inherit;
+}
+
+.boostlook pre code,
+.boostlook pre code.hljs,
+.boostlook .doc .content pre code,
+.boostlook .doc pre.highlight code {
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-feature-settings: "calt" 1, "liga" 0;
+  line-height: var(--typography-line-height-lg, 1.5rem); /* 171.429% */
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+  color: var(--text-main-text-primary, #18191b);
+  padding: revert;
+  border: none;
+}
+
+.boostlook pre code .conum[data-value]::after,
+.boostlook pre code.hljs .conum[data-value]::after,
+.boostlook .doc .content pre code .conum[data-value]::after,
+.boostlook .doc pre.highlight code .conum[data-value]::after {
+  content: "("attr(data-value)")";
+}
+
+.boostlook pre:not(:has(> code)),
+.boostlook pre:not(:has(> code)):has(p, span) {
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  line-height: var(--typography-line-height-lg, 1.5rem); /* 171.429% */
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+}
+
+.boostlook pre,
+.boostlook pre.rouge,
+.boostlook .doc .content pre,
+.boostlook .doc pre.highlight,
+.boostlook .doc .listingblock pre:not(.highlight),
+.boostlook .doc .literalblock pre
+.boostlook .literalblock pre,
+.boostlook .listingblock > .content > pre,
+.boostlook .listingblock > .content > pre:not(.highlight),
+.boostlook .literalblock > .content > pre:not(.highlight),
+.boostlook .exampleblock > .content,
+.boostlook .sidebarblock {
+  padding: var(--spacing-size-xs, 0.75rem) var(--spacing-size-sm, 1rem);
+  background: var(--atom-one-light-bg, #fafafa) !important;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.boostlook .sidebarblock {
+  margin-top: 20px;
+  border: 1px solid var(--border-border-secondary, #d5d7d9);
+}
+
+/* Dark theme code block background */
+html.dark .boostlook pre,
+html.dark .boostlook pre.rouge,
+html.dark .boostlook .doc .content pre,
+html.dark .boostlook .doc pre.highlight,
+html.dark .boostlook .doc .listingblock pre:not(.highlight),
+html.dark .boostlook .doc .literalblock pre,
+html.dark .boostlook#libraryReadMe > pre:not(:last-child),
+html.dark .boostlook#libraryReadMe div.highlight:has(> pre):not(:is(dd pre, td pre)),
+html.dark .boostlook .doc .literalblock pre,
+html.dark .boostlook .literalblock pre,
+html.dark .boostlook .literalblock > .content > pre:not(.highlight),
+html.dark .boostlook .listingblock > .content > pre,
+html.dark .boostlook .sidebarblock,
+html.dark .boostlook .exampleblock > .content,
+html.dark .boostlook .listingblock > .content > pre {
+  background: var(--atom-one-dark-bg, #282c34) !important;
+}
+
+.boostlook .doc pre {
+  padding: initial;
+}
+
+.boostlook .content:has(> pre),
+.boostlook .content:has(> pre.highlight) {
+  border-radius: 0;
+  /*border: 1px solid var(--border-border-secondary, #d5d7d9);*/
+  background: var(--surface-background-main-surface-secondary, #e4e7ea);
+}
+
+.boostlook pre.programlisting,
+.boostlook pre.synopsis,
+.boostlook pre.literallayout,
+.boostlook#libraryReadMe > pre {
+  border: 1px solid var(--border-border-secondary, #d5d7d9);
+}
+
+/* Code Block Regular Title */
+.boostlook .doc .listingblock .title,
+.boostlook .listingblock .title {
+  color: var(--text-main-text-body-primary, #2a2c30);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-style: normal;
+  font-variation-settings: "wght" 600, "wdth" 80;
+  line-height: var(--typography-line-height-md, 1.25rem);
+  letter-spacing: unset;
+  padding-bottom: var(--padding-padding-2xs, 0.5rem);
+}
+
+.boostlook .doc .listingblock .title a,
+.boostlook .listingblock .title a {
+  font: inherit;
+  text-decoration: none;
+}
+
+/* Code Block Title With File Name.
+ * Applies only if codeblock has child with class .toolbox
+ * and it`s title doesn`t includes any other elems as children
+*/
+.boostlook .doc .listingblock:has(.source-toolbox) .title:not(:has(a, span, p, code, pre)),
+.boostlook .listingblock:has(.source-toolbox) .title:not(:has(a, span, p, code, pre)) {
+  position: absolute;
+  top: 1px;
+  height: 2rem;
+  max-width: calc(100% - 5rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0;
+  padding-left: var(--spacing-size-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-size-2xs, 0.5rem);
+  color: var(--text-main-text-body-tetriary, #62676b);
+  font-family: "Noto Sans";
+  font-size: var(--typography-font-size-2xs, 0.75rem);
+  font-style: normal;
+  line-height: var(--typography-line-height-sm, 1rem);
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+  z-index: 1;
+  display: none;
+}
+
+.boostlook .doc .listingblock:has(.source-toolbox) .title:not(:has(a, span, p, code, pre))::before,
+.boostlook .listingblock:has(.source-toolbox) .title:not(:has(a, span, p, code, pre))::before {
+  content: var(--icon-file);
+  line-height: 0;
+}
+
+/* Code Block Margins */
+.boostlook .listingblock:has(> .content > pre),
+.boostlook .listingblock:has(> .content > pre.highlight),
+.boostlook:not(:has(.doc)) pre.programlisting,
+.boostlook:not(:has(.doc)) pre.synopsis,
+.boostlook#libraryReadMe > pre,
+.boostlook#libraryReadMe .literalblock:has(pre),
+.boostlook#libraryReadMe div.highlight:has(> pre) {
+  margin: 0;
+  border: none;
+  background-color: transparent;
+  padding:0;
+}
+
+/* Apply left margin only if code block not in definition block or in table */
+.boostlook .listingblock:has(> .content > pre):not(:is(dd pre, td pre)),
+.boostlook .listingblock:has(> .content > pre.highlight):not(:is(dd pre, td pre)),
+.boostlook:not(:has(.doc)) pre.programlisting:not(:is(dd pre, td pre)),
+.boostlook:not(:has(.doc)) pre.synopsis:not(:is(dd pre, td pre)),
+.boostlook#libraryReadMe > pre:not(:is(dd pre, td pre)),
+.boostlook#libraryReadMe .literalblock:has(pre):not(:is(dd pre, td pre)),
+.boostlook#libraryReadMe div.highlight:has(> pre):not(:is(dd pre, td pre)) {
+  /*margin-left: var(--spacing-size-xl);*/
+  /*border: 1px solid var(--border-border-secondary, #d5d7d9);*/
+  background: var(--atom-one-light-bg, #fafafa);
+  margin-top: var(--padding-padding-xs, 0.75rem);
+}
+
+.boostlook#libraryReadMe .literalblock:has(pre):not(:is(dd pre, td pre)) {
+  margin-left: var(--spacing-size-xl);
+  border: 1px solid var(--border-border-secondary, #d5d7d9);
+}
+.boostlook .olist.arabic > ol > li .listingblock:has(> .content > pre):not(:is(dd pre, td pre)),
+.boostlook:not(:has(.doc)) .orderedlist > ol > li .listingblock:has(> .content > pre.highlight):not(:is(dd pre, td pre)) {
+  margin-left: 0;
+}
+.boostlook .listingblock:has(> .content > pre):not(:is(dd pre, td pre)), .boostlook .listingblock:has(> .content > pre.highlight):not(:is(dd pre, td pre)) {
+  margin-left: var(--spacing-size-xl);
+}
+
+.boostlook .listingblock:has(> .content > pre):not(:is(dd pre, td pre)):has(.title) {
+  border: none;
+  background: none;
+}
+
+.boostlook .listingblock:has(> .content > pre):not(:last-child),
+.boostlook .listingblock:has(> .content > pre.highlight):not(:last-child),
+.boostlook:not(:has(.doc)) pre.programlisting:not(:last-child),
+.boostlook:not(:has(.doc)) pre.synopsis:not(:last-child),
+.boostlook#libraryReadMe > pre:not(:last-child) {
+  margin-bottom: var(--padding-padding-xs, 0.75rem);
+}
+
+.boostlook .content:has(> pre):has(> .source-toolbox) {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.boostlook .highlight pre,
+.boostlook .content:has(> pre) pre.highlight,
+.boostlook .literalblock > .content > pre:not(.highlight) {
+  border: 1px solid var(--border-border-secondary, #d5d7d9);
+  border-radius: 0;
+}
+.boostlook .content:has(> pre):has(> .source-toolbox) pre {
+  /*border: 1px solid var(--border-border-secondary, #d5d7d9);*/
+  /*border-radius: var(--spacing-size-2xs, 0.5rem);*/
+}
+
+.boostlook .content:has(> pre):has(> .source-toolbox) .source-toolbox {
+  position: static;
+  order: 0;
+  display: flex;
+  visibility: visible;
+  top: unset;
+  right: unset;
+  color: var(--text-main-text-body-tetriary, #62676b);
+  font-family: inherit;
+  z-index: 1;
+  padding: var(--article-article-compressing-from-12-8--, 0.5rem) var(--spacing-size-sm, 1rem);
+  /*min-height: 2rem;*/
+  height: 0;
+  max-height: 0;
+  min-height: 0;
+  padding: 0;
+  /*margin-top: -1px;*/
+}
+
+.boostlook .content:has(> pre):has(> .source-toolbox):not(:has(.source-lang)) .source-toolbox  {
+  min-height: 0;
+  height: 0;
+  padding: 0 !important;
+  margin-bottom: -1px;
+}
+.boostlook .content:has(> pre):has(> .source-toolbox):not(:has(.source-lang)) .source-toolbox .copy-button {
+  top: 0.25rem;
+}
+.boostlook .content:has(> pre):has(> .source-toolbox) .source-lang {
+  color: var(--text-main-text-body-quaternary, #949a9e);
+  text-align: right;
+  font-family: "Noto Sans";
+  font-size: var(--typography-font-size-2xs, 0.75rem);
+  font-style: normal;
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-sm, 1rem); /* 133.333% */
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+  text-transform: uppercase;
+  margin-left: auto;
+  display: none;
+}
+.boostlook .content:has(> pre):has(> .source-toolbox) .source-lang::after {
+  content: none;
+}
+
+/* Code Block Copy to Clipboard Icon */
+.boostlook .content:has(> pre):has(> .source-toolbox) .copy-button {
+  position: absolute;
+  top: 2.25rem;
+  right: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: inherit;
+  outline: none;
+  font-size: inherit;
+  line-height: inherit;
+  width: 2rem;
+  height: 2rem;
+  padding: var(--spacing-size-3xs, 0.25rem);
+  border-radius: var(--spacing-size-2xs, 0.5rem);
+  border: 1px solid var(--border-border-primary, #e4e7ea);
+  background: var(--surface-background-main-surface-primary, #f5f6f8);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+}
+
+.boostlook .content:has(> pre):has(> .source-toolbox) .copy-button:hover {
+  border: 1px solid var(--border-border-blue, #92cbe9);
+}
+
+.boostlook .content:has(> pre):has(> .source-toolbox):hover .copy-button {
+  opacity: 1;
+  visibility: visible;
+}
+
+.boostlook .content:has(> pre):has(> .source-toolbox) .copy-button img {
+  display: none;
+}
+
+.boostlook .content:has(> pre):has(> .source-toolbox) .copy-button::before {
+  content: var(--icon-clipboard);
+  width: var(--icons-24, 1.5rem);
+  height: var(--icons-24, 1.5rem);
+  aspect-ratio: 1/1;
+}
+
+/* Code Block Copied Toast */
+.boostlook .content:has(> pre):has(> .source-toolbox) .copy-toast {
+  flex: none;
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  padding: var(--padding-padding-3xs, 0.25rem) var(--padding-padding-xs, 0.75rem);
+  flex-direction: column;
+  align-items: center;
+  margin-top: 1em;
+  background: var(--surface-background-main-surface-primary, #f5f6f8);
+  border-radius: var(--spacing-size-2xs, 0.5rem);
+  border: 1px solid var(--border-border-secondary, #d5d7d9);
+  color: var(--text-main-text-primary, #18191b);
+  cursor: auto;
+  opacity: 0;
+  transition: opacity 0.5s ease 0.5s;
+}
+
+.boostlook .content:has(> pre):has(> .source-toolbox) .copy-toast::after {
+  content: url("data:image/svg+xml,%3Csvg%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M6%2011.95L11.6569%206.2931L6%200.636243L0.343146%206.2931L6%2011.95Z%22%20fill%3D%22%23F5F6F8%22%2F%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M0.343146%206.2931L6%200.636243L11.6569%206.2931L10.9497%207.0002L6%202.05046L1.05025%207.0002L0.343146%206.2931Z%22%20fill%3D%22%23E4E7EA%22%2F%3E%3C%2Fsvg%3E");
+  position: absolute;
+  top: -62%;
+  width: 1em;
+  height: 1em;
+  border: unset;
+  border-left-color: unset;
+  transform: unset;
+  transform-origin: unset;
+  color: var(--text-main-text-primary, #18191b);
+  text-align: center;
+  font-size: var(--typography-font-size-sm, 1rem);
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-lg, 1.5rem); /* 150% */
+}
+
+/* Code Styling */
+.boostlook p code:not(:has(> code)),
+.boostlook li code:not(:has(> code)),
+.boostlook .doc p code:not(:has(> code)),
+.boostlook .doc .colist > table code:not(:has(> code)) {
+  display: inline;
+  color: var(--text-code-neutral, #0d0e0f);
+  font-size: 0.96em;
+  font-style: normal;
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-md);
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+}
+
+.boostlook p:not(:is(table p)) code:not(:has(> code)),
+.boostlook li code:not(:has(> code)),
+.boostlook .doc p:not(:is(table p)) code:not(:has(> code)),
+.boostlook .doc .colist > table code:not(:has(> code)) {
+  border-radius: unset;
+  padding: unset;
+  /* border: 1px solid var(--border-border-secondary, #d5d7d9); */
+  background: transparent !important;
+}
+
+/* Code Links */
+.boostlook p:not(:is(table p)) a code,
+.boostlook li:not(:is(table li)) a code,
+.boostlook .doc p:not(:is(table p)) a code,
+.boostlook .doc table a code,
+.boostlook .doc .colist > table a code,
+.boostlook code:has(> a:first-child:last-child),
+.boostlook code:has(> a:only-child),
+.boostlook p:not(:is(table p)) code:has(> a:first-child:last-child),
+.boostlook p:not(:is(table p)) code:has(> a:only-child),
+.boostlook li:not(:is(table li)) code:has(> a:first-child:last-child),
+.boostlook li:not(:is(table li)) code:has(> a:only-child),
+.boostlook .doc p:not(:is(table p)) code:has(> a:first-child:last-child),
+.boostlook .doc p:not(:is(table p)) code:has(> a:only-child),
+.boostlook .doc .colist > table code:has(> a:first-child:last-child),
+.boostlook .doc .colist > table code:has(> a:only-child) {
+  /* transition: all 0.2s ease; */
+  border-radius: unset;
+  border: none;
+  background: transparent !important;
+  color: inherit;
+}
+
+/* Applies to links in code in case where only one link tag inside code */
+/* .boostlook code:not(.tableblock code, .table code):has(> a:first-child:last-child) a,
+.boostlook code:not(.tableblock code, .table code):has(> a:only-child) a,
+.boostlook p code:not(.tableblock code, .table code):has(> a:first-child:last-child) a,
+.boostlook p code:not(.tableblock code, .table code):has(> a:only-child) a,
+.boostlook li code:not(.tableblock code, .table code):has(> a:first-child:last-child) a,
+.boostlook li code:not(.tableblock code, .table code):has(> a:only-child) a,
+.boostlook .doc p code:not(.tableblock code, .table code):has(> a:first-child:last-child) a,
+.boostlook .doc p code:not(.tableblock code, .table code):has(> a:only-child) a,
+.boostlook .doc .colist > table code:has(> a:first-child:last-child) a,
+.boostlook .doc .colist > table code:has(> a:only-child) a {
+  text-decoration: none;
+  font: inherit;
+  color: inherit;
+} */
+
+/* .boostlook .doc table.tableblock code a,
+.boostlook:not(:has(.doc)) table.table code a { */
+/* text-decoration-color: transparent; */
+/* color: var(--text-code-blue, #329cd2); */
+/* line-height: var(--typography-line-height-lg, 1.5rem); */
+/* } */
+
+/* Code Link Hover States */
+/* .boostlook p:not(:is(table p)) a:hover code,
+.boostlook li a:hover code,
+.boostlook .doc p:not(:is(table p)) a:hover code,
+.boostlook .doc table a:hover code,
+.boostlook .doc .colist > table a:hover code,
+.boostlook p:not(:is(table p)) code:has(> a:first-child:last-child):hover,
+.boostlook p:not(:is(table p)) code:has(> a:only-child):hover,
+.boostlook li code:has(> a:first-child:last-child):hover,
+.boostlook li code:has(> a:only-child):hover,
+.boostlook .doc p:not(:is(table p)) code:has(> a:first-child:last-child):hover,
+.boostlook .doc p:not(:is(table p)) code:has(> a:only-child):hover,
+.boostlook .doc .colist > table code:has(> a:first-child:last-child):hover,
+.boostlook .doc .colist > table code:has(> a:only-child):hover {
+  border-color: var(--border-border-blue-hover, #329cd2);
+  background: var(--surface-background-main-surface-blue-tetriary, #c2e2f4) !important;
+} */
+
+.boostlook a:hover code {
+  color: inherit;
+}
+
+.boostlook .doc table.tableblock code:hover a,
+.boostlook:not(:has(.doc)) table.table code:hover a,
+.boostlook .doc table.tableblock code a:focus-visible,
+.boostlook:not(:has(.doc)) table.table code a:focus-visible {
+  text-decoration-color: var(--border-border-blue, #92cbe9);
+}
+
+/* Syntax Highlighting */
+.boostlook .hljs-keyword,
+.boostlook .hljs-selector-tag,
+.boostlook .hljs-subst,
+.boostlook pre span.k,
+.boostlook pre span.kc,
+.boostlook pre span.kd,
+.boostlook pre span.kn,
+.boostlook pre span.kp,
+.boostlook pre span.kr,
+.boostlook pre span.kt,
+.boostlook pre span.keyword,
+.boostlook pre span.property {
+  color: var(--text-code-purple, #9f26e5);
+}
+
+.boostlook pre span.n,
+.boostlook pre span.na,
+.boostlook pre span.nb,
+.boostlook pre span.bp,
+.boostlook pre span.nc,
+.boostlook pre span.no,
+.boostlook pre span.nd,
+.boostlook pre span.ni,
+.boostlook pre span.ne,
+.boostlook pre span.nf,
+.boostlook pre span.py,
+.boostlook pre span.nl,
+.boostlook pre span.nn,
+.boostlook pre span.nx,
+.boostlook pre span.nt,
+.boostlook pre span.nv,
+.boostlook pre span.vc,
+.boostlook pre span.vg,
+.boostlook pre span.vi,
+.boostlook pre span.identifier {
+  color: var(--text-main-text-body-primary, #2a2c30);
+}
+
+.boostlook pre span.c,
+.boostlook pre span.ch,
+.boostlook pre span.cm,
+.boostlook pre span.cp,
+.boostlook pre span.cpf,
+.boostlook pre span.c1,
+.boostlook pre span.cs,
+.boostlook pre span.sd,
+.boostlook pre span.sh,
+.boostlook pre span.comment,
+.boostlook .hljs-comment,
+.boostlook .cpp-comment,
+.boostlook .hljs-quote,
+.boostlook .hljs-addition,
+.boostlook .hljs-built_in,
+.boostlook .hljs-bullet,
+.boostlook .hljs-code {
+  color: var(--atom-one-light-comment, #a0a1a7);
+  font-family: "Monaspace Xenon", monospace;
+  font-style: italic;
+}
+
+/* Dark theme comment color */
+html.dark .boostlook pre span.c,
+html.dark .boostlook pre span.ch,
+html.dark .boostlook pre span.cm,
+html.dark .boostlook pre span.cp,
+html.dark .boostlook pre span.cpf,
+html.dark .boostlook pre span.c1,
+html.dark .boostlook pre span.cs,
+html.dark .boostlook pre span.sd,
+html.dark .boostlook pre span.sh,
+html.dark .boostlook pre span.comment,
+html.dark .boostlook .hljs-comment,
+html.dark .boostlook .cpp-comment,
+html.dark .boostlook .hljs-quote,
+html.dark .boostlook .hljs-addition,
+html.dark .boostlook .hljs-built_in,
+html.dark .boostlook .hljs-bullet,
+html.dark .boostlook .hljs-code {
+  color: var(--atom-one-dark-comment, #5c6370);
+  font-family: "Monaspace Xenon", monospace;
+  font-style: italic;
+}
+
+.boostlook pre span.s,
+.boostlook pre span.sa,
+.boostlook pre span.sb,
+.boostlook pre span.dl,
+.boostlook pre span.s2,
+.boostlook pre span.se,
+.boostlook pre span.si,
+.boostlook pre span.sx,
+.boostlook pre span.sr,
+.boostlook pre span.s1,
+.boostlook pre span.ss,
+.boostlook pre span.string,
+.boostlook .hljs-doctag,
+.boostlook .hljs-string,
+.boostlook .hljs-deletion,
+.boostlook .hljs-number,
+.boostlook .hljs-quote,
+.boostlook .hljs-selector-class,
+.boostlook .hljs-selector-id,
+.boostlook .hljs-template-tag,
+.boostlook .hljs-type {
+  color: var(--text-code-red, #f9677f);
+}
+
+.boostlook .hljs-section,
+.boostlook .hljs-selector-id,
+.boostlook .hljs-title {
+  color: var(--text-code-blue, #329cd2);
+}
+
+.boostlook .hljs-attribute,
+.boostlook .hljs-name,
+.boostlook .hljs-tag {
+  color: var(--text-main-text-primary, #18191b);
+}
+
+/* Syntax Defaults */
+.boostlook .hljs-attribute,
+.boostlook .hljs-doctag,
+.boostlook .hljs-keyword,
+.boostlook .hljs-meta .hljs-keyword,
+.boostlook .hljs-name,
+.boostlook .hljs-selector-tag,
+.boostlook .hljs-section,
+.boostlook .hljs-title {
+  font-weight: inherit;
+}
+
+.boostlook .hljs-meta {
+  color: inherit;
+}

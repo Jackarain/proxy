@@ -1,0 +1,28 @@
+# Dependabot configuration
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+version: 2
+updates:
+  # Disable all Dependabot activity for the doc/ npm manifest.
+  #
+  # These are documentation build tools only (Antora, AsciiDoc extensions)
+  # and are never deployed or exposed to untrusted input, so security
+  # alerts for transitive dependencies here are not actionable.
+  #
+  # NOTE: This config prevents Dependabot from opening PRs (both version
+  # updates and security fixes). However, GitHub's dependency graph may
+  # still create security *alerts* for vulnerabilities it detects in
+  # doc/package-lock.json. Those alerts should be dismissed as
+  # "tolerable risk" since this manifest is doc-tooling only.
+  - package-ecosystem: "npm"
+    # Path to the directory containing package.json / package-lock.json.
+    directory: "/doc"
+    schedule:
+      # The schema requires a schedule interval even when all
+      # updates are effectively disabled via the settings below.
+      interval: "weekly"
+    # Do not open any version-update PRs for this manifest.
+    open-pull-requests-limit: 0
+    # Ignore all npm dependencies so Dependabot does not open
+    # security-fix PRs for transitive vulnerabilities either.
+    ignore:
+      - dependency-name: "*"

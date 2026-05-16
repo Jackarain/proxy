@@ -7,7 +7,7 @@ containers.  It specifies operations for accessing elements,
 traversing containers, and creating views
 of array data.
 MultiArray defines
-a flexible memory model that accomodates
+a flexible memory model that accommodates
 a variety of data layouts.
 </para>
 
@@ -103,7 +103,7 @@ base.  Note that since positive index bases are
 possible, the origin need not exist in order to determine the location
 in memory of the MultiArray's elements.
   The strides determine how index values are mapped to memory offsets. 
-They accomodate a
+They accommodate a
 number of possible element layouts.  For example, the elements of a 2
 dimensional array can be stored by row (i.e., the elements of each row
 are stored contiguously) or by column (i.e., the elements of each
@@ -477,7 +477,7 @@ This returns the number of values contained in
             </entry>
 	    <entry>
 This expression accesses a specific element of
-<literal>a</literal>.<literal>index_list</literal> is the unique set
+<literal>a</literal>. <literal>index_list</literal> is the unique set
 of indices that address the element returned.  It is 
 equivalent to the following code (disregarding intermediate temporaries):
 <programlisting>
@@ -818,8 +818,8 @@ returns <literal>idx</literal>.</entry>
 	  <row>
 	    <entry><literal>i.size(idx)</literal></entry>
 	    <entry><literal>size_type</literal></entry>
-	    <entry>If <literal>i</literal> specifies a both finish and
-start values, this is equivalent to
+	    <entry>If <literal>i</literal> specifies both a finish and a
+start value, this is equivalent to
 <literal>(i.finish()-i.start())/i.stride()</literal>. Otherwise it
 returns <literal>idx</literal>.</entry>
 	  </row>
@@ -829,7 +829,7 @@ returns <literal>idx</literal>.</entry>
 	    <entry>This is another syntax for specifying the finish
 value. This notation does not include 
 <literal>idx</literal> in the range of valid indices. It is equivalent to 
-<literal>index_range(r.start(), idx, r.stride())</literal></entry>
+<literal>index_range(r.start(), idx, r.stride())</literal>.</entry>
 	  </row>
 	  <row>
 	    <entry><literal>i &lt;= idx</literal></entry>
@@ -837,7 +837,7 @@ value. This notation does not include
 	    <entry>This is another syntax for specifying the finish
 value. This notation includes 
 <literal>idx</literal> in the range of valid indices. It is equivalent to 
-<literal>index_range(r.start(), idx + 1, r.stride())</literal></entry>
+<literal>index_range(r.start(), idx + 1, r.stride())</literal>.</entry>
 	  </row>
 	  <row>
 	    <entry><literal>idx &lt; i</literal></entry>
@@ -860,14 +860,14 @@ value. This notation includes
 	    <entry><literal>index</literal></entry>
 	    <entry>This expression shifts the start and finish values
 of <literal>i</literal> up by <literal>idx</literal>. It is equivalent to 
-<literal>index_range(r.start()+idx1, r.finish()+idx, r.stride())</literal></entry>
+<literal>index_range(r.start()+idx1, r.finish()+idx, r.stride())</literal>.</entry>
 	  </row>
 	  <row>
 	    <entry><literal>i - idx</literal></entry>
 	    <entry><literal>index</literal></entry>
 	    <entry>This expression shifts the start and finish values
 of <literal>i</literal> up by <literal>idx</literal>. It is equivalent to 
-<literal>index_range(r.start()-idx1, r.finish()-idx, r.stride())</literal></entry>
+<literal>index_range(r.start()-idx1, r.finish()-idx, r.stride())</literal>.</entry>
 	  </row>
 	</tbody>
       </tgroup>

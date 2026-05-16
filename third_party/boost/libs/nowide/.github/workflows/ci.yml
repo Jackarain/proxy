@@ -1,6 +1,6 @@
 # Copyright 2020-2021 Peter Dimov
 # Copyright 2021 Andrey Semashev
-# Copyright 2021-2025 Alexander Grund
+# Copyright 2021-2026 Alexander Grund
 # Copyright 2022 James E. King III
 #
 # Distributed under the Boost Software License, Version 1.0.
@@ -8,6 +8,9 @@
 
 ---
 name: CI
+
+permissions:
+  contents: write
 
 on:
   pull_request:

@@ -8,9 +8,9 @@
 #  See http://www.boost.org for updates, documentation, and revision history.
 
 
-project /boost/algorithm/example
+project
     : requirements
-      <include>../../../
+      <library>/boost/algorithm//boost_algorithm
       <optimization>speed
       <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
       <toolset>msvc:<define>NOMINMAX

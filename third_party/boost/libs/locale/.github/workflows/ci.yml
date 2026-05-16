@@ -43,8 +43,8 @@ jobs:
   CheckFormatting:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: DoozyX/clang-format-lint-action@v0.14
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: DoozyX/clang-format-lint-action@bcb4eb2cb0d707ee4f3e5cc3b456eb075f12cf73 # v0.20
         with:
           exclude: './doc'
           clangFormatVersion: 14
@@ -64,9 +64,9 @@ jobs:
   Create_Boost_Documentation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Fetch Boost.CI
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -150,7 +150,7 @@ jobs:
       image: ${{matrix.container}}
       volumes:
         - /node20217:/node20217:rw,rshared
-        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
+        - ${{startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' '}}
     env: {B2_USE_CCACHE: 1}
 
     steps:
@@ -178,10 +178,10 @@ jobs:
                 apt-get -o Acquire::Retries=$NET_RETRY_COUNT -y -q --no-install-suggests --no-install-recommends install $pkgs
             fi
             # For jobs not compatible with ccache, use "ccache: no" in the matrix
-            if [[ "${{ matrix.ccache }}" == "no" ]]; then
+            if [[ "${{matrix.ccache}}" == "no" ]]; then
                 echo "B2_USE_CCACHE=0" >> $GITHUB_ENV
             fi
-            if [[ "${{ matrix.sanitize }}" == "yes" ]]; then
+            if [[ "${{matrix.sanitize}}" == "yes" ]]; then
                 echo "LSAN_OPTIONS=suppressions=${GITHUB_WORKSPACE}/test/suppressions.txt" >> $GITHUB_ENV
             fi
             git config --global pack.threads 0
@@ -190,13 +190,13 @@ jobs:
               curl -sL https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217
             fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           # For coverage builds fetch the whole history, else only 1 commit using a 'fake ternary'
-          fetch-depth: ${{ matrix.coverage && '0' || '1' }}
+          fetch-depth: ${{matrix.coverage && '0' || '1'}}
 
       - name: Cache ccache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: env.B2_USE_CCACHE
         with:
           path: ~/.ccache
@@ -204,7 +204,7 @@ jobs:
           restore-keys: ${{matrix.os}}-${{matrix.container}}-${{matrix.compiler}}-
 
       - name: Fetch Boost.CI
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -370,7 +370,7 @@ jobs:
 
       - name: Upload coverage
         if: matrix.coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           fail_ci_if_error: true
           disable_search: true
@@ -408,10 +408,10 @@ jobs:
     env: {ICU_VERSION: '71.1'}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Fetch Boost.CI
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -426,7 +426,7 @@ jobs:
         run: ci\github\install.bat
 
       - name: Get cached ICU
-        uses: actions/cache@v4
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         id: cache-icu
         with:
           path: ICU
@@ -515,7 +515,7 @@ jobs:
 
       - name: Upload coverage
         if: matrix.coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           disable_search: true
           files: __out/cobertura.xml
@@ -537,10 +537,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup MSYS2 environment
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda # v2.30.0
         with:
           msystem: ${{matrix.sys}}
           update: true
@@ -548,7 +548,7 @@ jobs:
           pacboy: gcc:p cmake:p ninja:p
 
       - name: Fetch Boost.CI
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -601,9 +601,9 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Fetch Boost.CI
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: boostorg/boost-ci
           ref: master
@@ -634,7 +634,7 @@ jobs:
             echo "LD_LIBRARY_PATH=$ICU_ROOT/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
       - name: Get cached ICU
         if: matrix.icu
-        uses: actions/cache@v4
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         id: cache-icu
         with:
           path: ICU

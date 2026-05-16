@@ -20,7 +20,7 @@
 
 #define BOOST_THREAD_VERSION 3
 #include <boost/thread/future.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 int main()
 {

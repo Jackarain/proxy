@@ -142,6 +142,7 @@ jobs:
       CXXFLAGS: ${{ matrix.cxxflags }} -Wall -Wextra
       LDFLAGS:  ${{ matrix.ldflags }}
       CMAKE_BUILD_PARALLEL_LEVEL: 4
+      DEBIAN_FRONTEND: noninteractive
 
     steps:
       - name: Checkout
@@ -257,6 +258,7 @@ jobs:
     env:
       CXXFLAGS: ${{ matrix.cxxflags }} -Wall -Wextra
       LDFLAGS:  ${{ matrix.ldflags }}
+      DEBIAN_FRONTEND: noninteractive
 
     steps:
       - name: Checkout

@@ -1,4 +1,4 @@
-/* Copyright 2003-2019 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -16,8 +16,7 @@
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
 #include <boost/detail/workaround.hpp>
 
-#if !defined(BOOST_NO_CXX11_HDR_TYPE_TRAITS)||\
-    BOOST_WORKAROUND(_LIBCPP_VERSION,<30700)||\
+#if BOOST_WORKAROUND(_LIBCPP_VERSION,<30700)||\
     BOOST_WORKAROUND(BOOST_LIBSTDCXX_VERSION,<40802)
 /* libc++: std::is_function<void() const> fails,
  * https://bugs.llvm.org/show_bug.cgi?id=20084

@@ -10,8 +10,12 @@
 #include <boost/asio/ssl/host_name_verification.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/system/error_code.hpp>
+#include <boost/system/system_error.hpp>
 
+#include <cerrno>
 #include <cstddef>
+#include <fstream>
+#include <string>
 #include <string_view>
 #define BOOST_TEST_MODULE conn_tls
 #include <boost/test/included/unit_test.hpp>
@@ -25,37 +29,28 @@ using boost::system::error_code;
 
 namespace {
 
-// CA certificate that signed the test server's certificate.
-// This is a self-signed CA created for testing purposes.
-// This must match tools/tls/ca.crt contents
-static constexpr const char* ca_certificate = R"%(-----BEGIN CERTIFICATE-----
-MIIDhzCCAm+gAwIBAgIUZGttu4o/Exs08EHCneeD3gHw7KkwDQYJKoZIhvcNAQEL
-BQAwUjELMAkGA1UEBhMCRVMxGjAYBgNVBAoMEUJvb3N0LlJlZGlzIENJIENBMQsw
-CQYDVQQLDAJJVDEaMBgGA1UEAwwRYm9vc3QtcmVkaXMtY2ktY2EwIBcNMjUwNjA3
-MTI0NzUwWhgPMjA4MDAzMTAxMjQ3NTBaMFIxCzAJBgNVBAYTAkVTMRowGAYDVQQK
-DBFCb29zdC5SZWRpcyBDSSBDQTELMAkGA1UECwwCSVQxGjAYBgNVBAMMEWJvb3N0
-LXJlZGlzLWNpLWNhMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu7XV
-sOoHB2J/5VtyJmMOzxhBbHKyQgW1YnMvYIb1JqIm7VuICA831SUw76n3j8mIK3zz
-FfK2eYyUWf4Uo2j3uxmXDyjujqzIaUJNLcB53CQXkmIbqDigNhzUTPZ5A2MQ7xT+
-t1eDbjsZ7XIM+aTShgtrpyxiccsgPJ3/XXme2RrqKeNvYsTYY6pquWZdyLOg/LOH
-IeSJyL1/eQDRu/GsZjnR8UOE6uHfbjrLWls7Tifj/1IueVYCEhQZpJSWS8aUMLBZ
-fi+t9YMCCK4DGy+6QlznGgVqdFFbTUt2C7tzqz+iF5dxJ8ogKMUPEeFrWiZpozoS
-t60jV8fKwdXz854jLQIDAQABo1MwUTAdBgNVHQ4EFgQU2SoWvvZUW8JiDXtyuXZK
-deaYYBswHwYDVR0jBBgwFoAU2SoWvvZUW8JiDXtyuXZKdeaYYBswDwYDVR0TAQH/
-BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAqY4hGcdCFFPL4zveSDhR9H/akjae
-uXbpo/9sHZd8e3Y4BtD8K05xa3417H9u5+S2XtyLQg5MON6J2LZueQEtE3wiR3ja
-QIWbizqp8W54O5hTLQs6U/mWggfuL2R/HUw7ab4M8JobwHNEMK/WKZW71z0So/kk
-W3wC0+1RH2PjMOZrCIflsD7EXYKIIr9afypAbhCQmCfu/GELuNx+LmaPi5JP4TTE
-tDdhzWL04JLcZnA0uXb2Mren1AR9yKYH2I5tg5kQ3Bn/6v9+JiUhiejP3Vcbw84D
-yFwRzN54bLanrJNILJhHPwnNIABXOtGUV05SZbYazJpiMst1a6eqDZhv/Q==
------END CERTIFICATE-----)%";
+// Loads the CA certificate that signed the certificate used by the server.
+// Should be in /tmp/
+std::string load_ca_certificate()
+{
+   auto ca_path = safe_getenv("BOOST_REDIS_CA_PATH", "/opt/ci-tls/ca.crt");
+   std::ifstream f(ca_path);
+   if (!f) {
+      throw boost::system::system_error(
+         errno,
+         boost::system::system_category(),
+         "Failed to open CA certificate file '" + ca_path + "'");
+   }
 
-static config make_tls_config()
+   return std::string(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+}
+
+config make_tls_config()
 {
    config cfg;
    cfg.use_ssl = true;
    cfg.addr.host = get_server_hostname();
-   cfg.addr.port = "6380";
+   cfg.addr.port = "16379";
    return cfg;
 }
 
@@ -100,6 +95,7 @@ BOOST_AUTO_TEST_CASE(exec_default_ssl_context)
 // Users can pass a custom context with TLS config
 BOOST_AUTO_TEST_CASE(exec_custom_ssl_context)
 {
+   std::string ca_pem = load_ca_certificate();
    auto const cfg = make_tls_config();
    constexpr std::string_view ping_value = "Kabuf";
 
@@ -113,7 +109,7 @@ BOOST_AUTO_TEST_CASE(exec_custom_ssl_context)
 
    // Configure the SSL context to trust the CA that signed the server's certificate.
    // The test certificate uses "redis" as its common name, regardless of the actual server's hostname
-   ctx.add_certificate_authority(net::const_buffer(ca_certificate, std::strlen(ca_certificate)));
+   ctx.add_certificate_authority(net::buffer(ca_pem));
    ctx.set_verify_mode(net::ssl::verify_peer);
    ctx.set_verify_callback(net::ssl::host_name_verification("redis"));
 
@@ -147,8 +143,6 @@ BOOST_AUTO_TEST_CASE(reconnection)
    net::io_context ioc;
    net::steady_timer timer{ioc};
    connection conn{ioc};
-   auto cfg = make_tls_config();
-   cfg.reconnect_wait_interval = 10ms;  // make the test run faster
 
    request ping_request;
    ping_request.push("PING", "some_value");
@@ -161,7 +155,7 @@ BOOST_AUTO_TEST_CASE(reconnection)
    bool exec_finished = false, run_finished = false;
 
    // Run the connection
-   conn.async_run(cfg, {}, [&](error_code ec) {
+   conn.async_run(make_test_config(), [&](error_code ec) {
       run_finished = true;
       BOOST_TEST(ec == net::error::operation_aborted);
    });

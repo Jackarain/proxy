@@ -41,7 +41,7 @@ inline time_generator_v6::result_type time_generator_v6::operator()() noexcept
 
     detail::store_big_u16( result.data + 4, time_mid );
 
-    std::uint16_t time_low_and_version = static_cast< std::uint16_t >( timestamp & 0xFFF ) | 0x6000;
+    std::uint16_t time_low_and_version = static_cast< std::uint16_t >( ( timestamp & 0xFFF ) | 0x6000 );
 
     detail::store_big_u16( result.data + 6, time_low_and_version );
 

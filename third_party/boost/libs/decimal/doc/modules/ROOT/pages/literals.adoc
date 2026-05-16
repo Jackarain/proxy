@@ -1,0 +1,63 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#literals]
+= Literals Support
+:idprefix: literals_
+
+The following literals are offered to construct each of the types:
+
+[source, c++]
+----
+#include <boost/decimal/literals.hpp>
+
+namespace boost {
+namespace decimal {
+
+constexpr auto operator  "" _DF(const char* str) -> decimal32_t
+constexpr auto operator  "" _df(const char* str) -> decimal32_t
+
+constexpr auto operator  "" _DF(const char* str, std::size_t len) -> decimal32_t
+constexpr auto operator  "" _df(const char* str, std::size_t len) -> decimal32_t
+
+constexpr auto operator  "" _DD(const char* str) -> decimal64_t
+constexpr auto operator  "" _dd(const char* str) -> decimal64_t
+
+constexpr auto operator  "" _DD(const char* str, std::size_t len) -> decimal64_t
+constexpr auto operator  "" _dd(const char* str, std::size_t len) -> decimal64_t
+
+constexpr auto operator  "" _DL(const char* str) -> decimal128_t
+constexpr auto operator  "" _dl(const char* str) -> decimal128_t
+
+constexpr auto operator  "" _DL(const char* str, std::size_t len) -> decimal128_t
+constexpr auto operator  "" _dl(const char* str, std::size_t len) -> decimal128_t
+
+// ----- Fast Type Literals -----
+
+constexpr auto operator  "" _DFF(const char* str) -> decimal_fast32_t
+constexpr auto operator  "" _dff(const char* str) -> decimal_fast32_t
+
+constexpr auto operator  "" _DFF(const char* str, std::size_t len) -> decimal_fast32_t
+constexpr auto operator  "" _dff(const char* str, std::size_t len) -> decimal_fast32_t
+
+constexpr auto operator  "" _DDF(const char* str) -> decimal_fast64_t
+constexpr auto operator  "" _ddf(const char* str) -> decimal_fast64_t
+
+constexpr auto operator  "" _DDF(const char* str, std::size_t len) -> decimal_fast64_t
+constexpr auto operator  "" _ddf(const char* str, std::size_t len) -> decimal_fast64_t
+
+constexpr auto operator  "" _DLF(const char* str) -> decimal_fast128_t
+constexpr auto operator  "" _dlf(const char* str) -> decimal_fast128_t
+
+constexpr auto operator  "" _DLF(const char* str, std::size_t len) -> decimal_fast128_t
+constexpr auto operator  "" _dlf(const char* str, std::size_t len) -> decimal_fast128_t
+
+} //namespace decimal
+} //namespace boost
+----
+
+IMPORTANT: `0.2_DF` is equivalent to calling `decimal32_t{2, -1}`.
+These are different from calling `decimal32_t{0.2}` which converts from a floating-point value which may or may not be exactly represented.

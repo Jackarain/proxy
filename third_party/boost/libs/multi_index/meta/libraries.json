@@ -12,5 +12,5 @@
     "maintainers": [
         "Joaquin M Lopez Munoz <joaquin.lopezmunoz -at- gmail.com>"
     ],
-    "cxxstd": "03"
+    "cxxstd": "11"
 }

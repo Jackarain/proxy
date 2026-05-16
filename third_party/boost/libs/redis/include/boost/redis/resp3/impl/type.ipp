@@ -8,6 +8,8 @@
 
 #include <boost/assert.hpp>
 
+#include <ostream>
+
 namespace boost::redis::resp3 {
 
 auto to_string(type t) noexcept -> char const*

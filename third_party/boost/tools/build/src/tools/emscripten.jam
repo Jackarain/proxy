@@ -186,3 +186,7 @@ toolset.flags emscripten.link OPTIONS <closure>full : --closure 2 ;
 # things for old fastcomp backend which was removed in 2.0.0 (08/10/2020)
 toolset.flags emscripten.link OPTIONS <link-optimization>on : --llvm-lto 1 ;
 toolset.flags emscripten.link OPTIONS <link-optimization>full : --llvm-lto 3 ;
+
+# Memory64/wasm64 support
+toolset.flags emscripten.compile OPTIONS <address-model>64 : -sMEMORY64=1 ;
+toolset.flags emscripten.link    OPTIONS <address-model>64 : -sMEMORY64=1 ;

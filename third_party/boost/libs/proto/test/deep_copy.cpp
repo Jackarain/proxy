@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <iostream>
 #include <boost/utility/addressof.hpp>
 #include <boost/proto/core.hpp>
@@ -14,7 +16,7 @@ using namespace boost;
 
 void foo() {}
 
-void test1()
+BOOST_AUTO_TEST_CASE(test1)
 {
     using namespace proto;
 
@@ -40,17 +42,4 @@ void test1()
     shift_left<terminal<std::ostream &>::type, terminal<int>::type>::type r5 = deep_copy(cout_ << t1);
     BOOST_CHECK_EQUAL(42, value(right(r5)));
     BOOST_CHECK_EQUAL(boost::addressof(std::cout), boost::addressof(value(left(r5))));
-}
-
-using namespace unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test deep_copy of proto parse trees");
-
-    test->add(BOOST_TEST_CASE(&test1));
-
-    return test;
 }

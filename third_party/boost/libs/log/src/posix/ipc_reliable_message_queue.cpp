@@ -325,7 +325,7 @@ public:
             }
 
             std::time_t now = std::time(NULL);
-            if (BOOST_UNLIKELY((now - start_time) >= region_open_or_create_timeout))
+            if (BOOST_UNLIKELY((now - start_time) >= static_cast< std::time_t >(region_open_or_create_timeout)))
                 BOOST_LOG_THROW_DESCR(setup_error, "Boost.Log interprocess message queue cannot be created or opened: shared memory segment failed to be created or opened until timeout (possible livelock)");
 
             if (i < region_open_or_create_short_yield_loops)

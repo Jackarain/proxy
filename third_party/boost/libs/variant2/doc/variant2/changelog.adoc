@@ -8,6 +8,10 @@ https://www.boost.org/LICENSE_1_0.txt
 # Revision History
 :idprefix: changelog_
 
+## Changes in 1.91.0
+
+* `holds_alternative<T>` and `get<T>` have been relaxed to no longer require `T` to occur exactly once in the list of alternatives. It now must occur at least once.
+
 ## Changes in 1.90.0
 
 * More functions have been marked as `constexpr`, including `~variant`.

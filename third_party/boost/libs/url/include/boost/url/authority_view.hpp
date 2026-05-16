@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -24,6 +25,15 @@
 
 namespace boost {
 namespace urls {
+
+class url_base;
+
+namespace implementation_defined {
+struct authority_rule_t;
+struct uri_rule_t;
+struct relative_ref_rule_t;
+struct absolute_uri_rule_t;
+} // implementation_defined
 
 /** A non-owning reference to a valid authority
 
@@ -79,17 +89,27 @@ namespace urls {
     @see
         @ref parse_authority.
 */
-class BOOST_URL_DECL
+class BOOST_SYMBOL_VISIBLE
     authority_view
     : private detail::parts_base
 {
     detail::url_impl u_;
 
     friend struct detail::url_impl;
+    friend struct implementation_defined::authority_rule_t;
+    friend struct implementation_defined::uri_rule_t;
+    friend struct implementation_defined::relative_ref_rule_t;
+    friend struct implementation_defined::absolute_uri_rule_t;
+    friend class url_view_base;
+    friend class url_base;
 
+    BOOST_URL_CXX14_CONSTEXPR
     explicit
     authority_view(
-        detail::url_impl const& u) noexcept;
+        detail::url_impl const& u) noexcept
+        : u_(u)
+    {
+    }
 
 public:
     //--------------------------------------------
@@ -100,8 +120,15 @@ public:
 
     /** Destructor
     */
+    BOOST_URL_CXX20_CONSTEXPR
     virtual
-    ~authority_view();
+    ~authority_view()
+    {
+        // Empty body instead of = default because
+        // some GCC versions reject a defaulted
+        // virtual constexpr destructor in constexpr
+        // evaluation ("used before its definition").
+    }
 
     /** Constructor
 
@@ -115,7 +142,11 @@ public:
 
         @par Specification
     */
-    authority_view() noexcept;
+    BOOST_URL_CXX14_CONSTEXPR
+    authority_view() noexcept
+        : u_(from::authority)
+    {
+    }
 
     /** Construct from a string.
 
@@ -154,13 +185,15 @@ public:
         @see
             @ref parse_authority.
     */
+    BOOST_URL_CXX20_CONSTEXPR
     explicit
     authority_view(core::string_view s);
 
     /** Constructor
     */
+    BOOST_URL_CXX14_CONSTEXPR
     authority_view(
-        authority_view const&) noexcept;
+        authority_view const&) noexcept = default;
 
     /** Assignment
 
@@ -173,9 +206,10 @@ public:
         @par Exception Safety
         Throws nothing.
     */
+    BOOST_URL_CXX20_CONSTEXPR
     authority_view&
     operator=(
-        authority_view const& other) noexcept;
+        authority_view const& other) noexcept = default;
 
     //--------------------------------------------
     //
@@ -317,6 +351,7 @@ public:
             @ref userinfo.
 
     */
+    BOOST_URL_CXX20_CONSTEXPR
     bool
     has_userinfo() const noexcept;
 
@@ -416,6 +451,7 @@ public:
             @ref user,
             @ref userinfo.
     */
+    BOOST_URL_CXX20_CONSTEXPR
     pct_string_view
     encoded_userinfo() const noexcept;
 
@@ -519,6 +555,7 @@ public:
             @ref user,
             @ref userinfo.
     */
+    BOOST_URL_CXX20_CONSTEXPR
     pct_string_view
     encoded_user() const noexcept;
 
@@ -562,6 +599,7 @@ public:
             @ref user,
             @ref userinfo.
     */
+    BOOST_URL_CXX20_CONSTEXPR
     bool
     has_password() const noexcept;
 
@@ -659,6 +697,7 @@ public:
             @ref user,
             @ref userinfo.
     */
+    BOOST_URL_CXX20_CONSTEXPR
     pct_string_view
     encoded_password() const noexcept;
 
@@ -782,6 +821,7 @@ public:
         @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2"
             >3.2.2. Host (rfc3986)</a>
     */
+    BOOST_URL_CXX20_CONSTEXPR
     pct_string_view
     encoded_host() const noexcept;
 
@@ -901,6 +941,7 @@ public:
         @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2"
             >3.2.2. Host (rfc3986)</a>
     */
+    BOOST_URL_CXX20_CONSTEXPR
     pct_string_view
     encoded_host_address() const noexcept;
 
@@ -942,6 +983,7 @@ public:
         @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2"
             >3.2.2. Host (rfc3986)</a>
     */
+    BOOST_URL_CXX20_CONSTEXPR
     ipv4_address
     host_ipv4_address() const noexcept;
 
@@ -991,6 +1033,7 @@ public:
         @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2"
             >3.2.2. Host (rfc3986)</a>
     */
+    BOOST_URL_CXX20_CONSTEXPR
     ipv6_address
     host_ipv6_address() const noexcept;
 
@@ -1025,6 +1068,7 @@ public:
         @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2"
             >3.2.2. Host (rfc3986)</a>
     */
+    BOOST_URL_CXX20_CONSTEXPR
     core::string_view
     host_ipvfuture() const noexcept;
 
@@ -1112,6 +1156,7 @@ public:
         @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.2"
             >3.2.2. Host (rfc3986)</a>
     */
+    BOOST_URL_CXX20_CONSTEXPR
     pct_string_view
     encoded_host_name() const noexcept;
 
@@ -1155,6 +1200,7 @@ public:
             @ref port,
             @ref port_number.
     */
+    BOOST_URL_CXX20_CONSTEXPR
     bool
     has_port() const noexcept;
 
@@ -1192,6 +1238,7 @@ public:
             @ref has_port,
             @ref port_number.
     */
+    BOOST_URL_CXX20_CONSTEXPR
     core::string_view
     port() const noexcept;
 
@@ -1229,6 +1276,7 @@ public:
             @ref has_port,
             @ref port.
     */
+    BOOST_URL_CXX20_CONSTEXPR
     std::uint16_t
     port_number() const noexcept;
 
@@ -1270,6 +1318,7 @@ public:
 
         @return The host and port
     */
+    BOOST_URL_CXX20_CONSTEXPR
     pct_string_view
     encoded_host_and_port() const noexcept;
 
@@ -1537,14 +1586,19 @@ operator<<(
     @see
         @ref authority_view.
 */
-BOOST_URL_DECL
+BOOST_URL_CXX20_CONSTEXPR
 system::result<authority_view>
 parse_authority(
     core::string_view s) noexcept;
 
-//------------------------------------------------
-
 } // urls
 } // boost
+
+// When rfc/authority_rule.hpp is being processed,
+// it will include impl/authority_view.hpp itself
+// after declaring authority_rule.
+#if !defined(BOOST_URL_RFC_AUTHORITY_RULE_HPP)
+#include <boost/url/impl/authority_view.hpp>
+#endif
 
 #endif

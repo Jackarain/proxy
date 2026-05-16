@@ -7,8 +7,8 @@ import quickbook ;
 
 doxygen autodoc
     :
-        [ glob ../../../boost/xpressive/*.hpp ]
-        [ glob ../../../boost/xpressive/traits/*.hpp ]
+        [ glob ../include/boost/xpressive/*.hpp ]
+        [ glob ../include/boost/xpressive/traits/*.hpp ]
     :
         <doxygen:param>EXTRACT_ALL=YES
         <doxygen:param>"PREDEFINED=\"BOOST_XPRESSIVE_DOXYGEN_INVOKED\" \\

@@ -2363,6 +2363,20 @@ static int32_t try_parse_variable( char const * * s_, char const * * string,
     VAR_PARSE_GROUP * out )
 {
     char const * s = *s_;
+    // escaping '$' with "$$" sequence when it needed (sequence of multiple "$$" before "$(" or '(')
+    if ( s[ 0 ] == '$' && s[ 1 ] == '$' )
+    {
+        // count repeats of "$$" and checks that sequence used before '(' or "$(" (when escaping needed)
+        for(s += 2; s[ 0 ] == '$' && s[ 1 ] == '$'; s += 2);
+        if(s[ 0 ] == '(' || (s[ 0 ] == '$' && s[ 1 ] == '(')) {
+            // save escaped '$'s as half of found "$$" sequence
+            size_t repeats = (s - *s_) / 2;
+            var_parse_group_maybe_add_constant( out, *string, s - repeats );
+            *string = s;
+        }
+        *s_ = s;
+        return 1;
+    }
     if ( s[ 0 ] == '$' && s[ 1 ] == '(' )
     {
         var_parse_group_maybe_add_constant( out, *string, s );

@@ -205,7 +205,7 @@ static void stat_module( void * xmodule, void * data )
     if ( is_debug_mem() || is_debug_profile() )
     {
         struct hash * class_info = (struct hash *)data;
-        if ( m->class_module )
+        if ( m->class_module && m->class_module->name )
         {
             int found;
             struct module_stats * ms = (struct module_stats *)hash_insert( class_info, m->class_module->name, &found );

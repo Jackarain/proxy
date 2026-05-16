@@ -39,23 +39,41 @@ struct BOOST_SYMBOL_VISIBLE
     error_cat_type
     : system::error_category
 {
-    BOOST_URL_DECL
+    BOOST_URL_CXX20_CONSTEXPR
     const char* name(
-        ) const noexcept override;
+        ) const noexcept override
+    {
+        return "boost.url.grammar";
+    }
 
-    BOOST_URL_DECL
     std::string message(
-        int) const override;
+        int code) const override
+    {
+        return message(code, nullptr, 0);
+    }
 
-    BOOST_URL_DECL
+    BOOST_URL_CXX20_CONSTEXPR
     char const* message(
-        int, char*, std::size_t
-            ) const noexcept override;
+        int code,
+        char*,
+        std::size_t) const noexcept override
+    {
+        switch(static_cast<error>(code))
+        {
+        default:
+        case error::need_more: return "need more";
+        case error::mismatch: return "mismatch";
+        case error::invalid: return "invalid";
+        case error::end_of_range: return "end of range";
+        case error::leftover: return "leftover";
+        case error::out_of_range: return "out of range";
+        }
+    }
 
-    BOOST_URL_DECL
+    BOOST_URL_CXX20_CONSTEXPR
     system::error_condition
         default_error_condition(
-            int code) const noexcept override;
+            int ev) const noexcept override;
 
     BOOST_SYSTEM_CONSTEXPR error_cat_type() noexcept
         : error_category(0x0536e50a30f9e9f2)
@@ -67,18 +85,32 @@ struct BOOST_SYMBOL_VISIBLE
     condition_cat_type
     : system::error_category
 {
-    BOOST_URL_DECL
+    BOOST_URL_CXX20_CONSTEXPR
     const char* name(
-        ) const noexcept override;
+        ) const noexcept override
+    {
+        return "boost.url.grammar";
+    }
 
-    BOOST_URL_DECL
     std::string message(
-        int) const override;
+        int code) const override
+    {
+        return message(code, nullptr, 0);
+    }
 
-    BOOST_URL_DECL
+    BOOST_URL_CXX20_CONSTEXPR
     char const* message(
-        int, char*, std::size_t
-            ) const noexcept override;
+        int code,
+        char*,
+        std::size_t) const noexcept override
+    {
+        switch(static_cast<condition>(code))
+        {
+        default:
+        case condition::fatal:
+            return "fatal condition";
+        }
+    }
 
     BOOST_SYSTEM_CONSTEXPR condition_cat_type()
         : error_category(0x0536e50a30f9e9f2)
@@ -86,15 +118,18 @@ struct BOOST_SYMBOL_VISIBLE
     }
 };
 
-BOOST_URL_DECL extern
-    error_cat_type error_cat;
-
-BOOST_URL_DECL extern
-    condition_cat_type condition_cat;
+#if defined(BOOST_URL_HAS_CXX20_CONSTEXPR)
+inline constexpr error_cat_type error_cat{};
+inline constexpr condition_cat_type condition_cat{};
+#else
+BOOST_URL_DECL extern error_cat_type error_cat;
+BOOST_URL_DECL extern condition_cat_type condition_cat;
+#endif
 
 } // detail
 
 inline
+BOOST_SYSTEM_CONSTEXPR
 system::error_code
 make_error_code(
     error ev) noexcept
@@ -106,6 +141,7 @@ make_error_code(
 }
 
 inline
+BOOST_SYSTEM_CONSTEXPR
 system::error_condition
 make_error_condition(
     condition c) noexcept
@@ -114,6 +150,22 @@ make_error_condition(
         static_cast<std::underlying_type<
             condition>::type>(c),
                 detail::condition_cat};
+}
+
+BOOST_URL_CXX20_CONSTEXPR_OR_INLINE
+system::error_condition
+detail::error_cat_type::
+    default_error_condition(
+        int ev) const noexcept
+{
+    switch(static_cast<error>(ev))
+    {
+    case error::invalid:
+    case error::out_of_range:
+        return condition::fatal;
+    default:
+        return {ev, *this};
+    }
 }
 
 } // grammar

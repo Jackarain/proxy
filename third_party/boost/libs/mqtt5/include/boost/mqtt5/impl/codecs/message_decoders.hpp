@@ -10,8 +10,6 @@
 
 #include <boost/mqtt5/types.hpp>
 
-#include <boost/mqtt5/detail/internal_types.hpp>
-
 #include <boost/mqtt5/impl/codecs/base_decoders.hpp>
 
 #include <cstdint>
@@ -22,7 +20,7 @@
 
 namespace boost::mqtt5::decoders {
 
-using byte_citer = detail::byte_citer;
+using byte_citer = std::string::const_iterator;
 
 using fixed_header = std::tuple<
     uint8_t, // control byte

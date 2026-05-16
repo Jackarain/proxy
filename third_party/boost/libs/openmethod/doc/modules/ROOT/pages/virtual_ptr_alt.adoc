@@ -5,7 +5,7 @@
 
 Virtual arguments can also be passed as plain references, plain pointers, or
 smart pointers, i.e. without using `virtual_ptr`. In a method declaration,
-parameters with a type wrappted in class template `virtual_` are considered in
+parameters with a type wrapped in class template `virtual_` are considered in
 overrider selection (along with `virtual_ptr` parameters).
 
 For example, the `Node` example can be rewritten as follows:
@@ -31,7 +31,7 @@ inline auto postfix(const Node& node, std::ostream& os) -> void {
 
 By itself, `virtual_` does not provide any benefits. Passing the virtual
 argument by reference almost compiles to the same code as creating a
-`virtual_ptr`, using it for one call, then throwing it way. The only difference
+`virtual_ptr`, using it for one call, then throwing it away. The only difference
 is that the virtual argument is passed as one pointer instead of two.
 
 However, we can now customize how the vptr is obtained. When the method sees a

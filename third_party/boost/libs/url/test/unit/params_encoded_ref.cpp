@@ -771,12 +771,34 @@ struct params_encoded_ref_test
     }
 
     void
+    testBorrowedRange()
+    {
+#ifdef BOOST_URL_HAS_CONCEPTS
+        // params_encoded_ref is a borrowed range
+        BOOST_CORE_STATIC_ASSERT(
+            std::ranges::borrowed_range<params_encoded_ref>);
+
+        // iterators remain valid after the ref is destroyed
+        // (as long as the underlying url stays alive)
+        url u("?first=John&last=Doe");
+        params_encoded_ref::iterator it;
+        {
+            params_encoded_ref p = u.encoded_params();
+            it = p.begin();
+        }
+        // ref is destroyed, but iterator is still valid
+        BOOST_TEST_EQ((*it).key, "first");
+#endif
+    }
+
+    void
     run()
     {
         testSpecial();
         testObservers();
         testModifiers();
         testJavadocs();
+        testBorrowedRange();
     }
 };
 

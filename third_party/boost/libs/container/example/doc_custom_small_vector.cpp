@@ -20,6 +20,10 @@ int main ()
 {
    using namespace boost::container;
 
+//--------------------------------------------
+//          'inplace_alignment' option
+//--------------------------------------------
+
    //This option specifies the desired alignment for the internal value_type
    typedef small_vector_options< inplace_alignment<16u> >::type alignment_16_option_t;
 
@@ -27,6 +31,9 @@ int main ()
    small_vector<int, 10, void, alignment_16_option_t > sv;
    assert(((std::size_t)sv.data() % 16u) == 0);
 
+//--------------------------------------------
+//          'growth_factor' option
+//--------------------------------------------
 
    //This option specifies that a vector will increase its capacity 50%
    //each time the previous capacity was exhausted.
@@ -40,6 +47,10 @@ int main ()
    //Now insert an additional item and check the new buffer is 50% bigger
    growth_50_vector.push_back(1);
    assert(growth_50_vector.capacity() == old_cap*3/2);
+
+//--------------------------------------------
+//          'stored_size' option
+//--------------------------------------------
 
    //This option specifies that a vector that will use "unsigned char" as
    //the type to store capacity or size internally.

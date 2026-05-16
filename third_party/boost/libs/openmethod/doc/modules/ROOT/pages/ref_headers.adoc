@@ -65,6 +65,12 @@ Provides a `virtual_traits` specialization that makes it possible to use a
 Provides a `virtual_traits` specialization that makes it possible to use a
 `std::unique_ptr` in place of a raw pointer or reference in virtual parameters.
 
+[#boost_intrusive_ptr]
+### link:{{BASE_URL}}/include/boost/openmethod/interop/boost_intrusive_ptr.hpp[<boost/openmethod/interop/boost_intrusive_ptr.hpp>]
+
+Provides a `virtual_traits` specialization that makes it possible to use a
+`boost::intrusive_ptr` in place of a raw pointer or reference in virtual parameters.
+
 *The headers below are for advanced use*.
 
 ## Pre-Core Headers

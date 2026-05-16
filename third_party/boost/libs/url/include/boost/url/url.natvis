@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com) -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
 <!--
@@ -74,9 +75,11 @@
   </Type>
 
   <Type Name="boost::urls::url_view_base" Inheritable="true">
-      <DisplayString>{*pi_}</DisplayString>
+      <DisplayString Condition="external_impl_ != 0">{*external_impl_}</DisplayString>
+      <DisplayString>{impl_}</DisplayString>
       <Expand>
-        <ExpandedItem>*pi_</ExpandedItem>    
+        <ExpandedItem Condition="external_impl_ != 0">*external_impl_</ExpandedItem>
+        <ExpandedItem Condition="external_impl_ == 0">impl_</ExpandedItem>
       </Expand>
   </Type>
 
@@ -91,6 +94,77 @@
       <Synthetic Name="[refs]" Condition="p_ != nullptr">
         <DisplayString>{p_->refs}</DisplayString>
       </Synthetic>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::urls::segments_base" Inheritable="true">
+    <DisplayString>{ref_.data_,[ref_.size_]s}</DisplayString>
+    <Expand>
+      <Item Name="[buffer]">ref_.data_,[ref_.size_]s</Item>
+      <Item Name="[size]">ref_.nseg_</Item>
+      <Item Name="[absolute]">ref_.data_[0] == '/'</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::urls::segments_encoded_base" Inheritable="true">
+    <DisplayString>{ref_.data_,[ref_.size_]s}</DisplayString>
+    <Expand>
+      <Item Name="[buffer]">ref_.data_,[ref_.size_]s</Item>
+      <Item Name="[size]">ref_.nseg_</Item>
+      <Item Name="[absolute]">ref_.data_[0] == '/'</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::urls::segments_view">
+    <DisplayString>{ref_.data_,[ref_.size_]s}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(boost::urls::segments_base*)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::urls::segments_encoded_view">
+    <DisplayString>{ref_.data_,[ref_.size_]s}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(boost::urls::segments_encoded_base*)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::urls::segments_ref">
+    <DisplayString>{ref_.data_,[ref_.size_]s}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(boost::urls::segments_base*)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::urls::segments_encoded_ref">
+    <DisplayString>{ref_.data_,[ref_.size_]s}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(boost::urls::segments_encoded_base*)this</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::urls::detail::segments_iter_impl">
+    <DisplayString>[{index}] = {s_}</DisplayString>
+    <Expand>
+      <Item Name="[segment]">s_</Item>
+      <Item Name="[index]">index</Item>
+      <Item Name="[pos]">pos</Item>
+      <Item Name="[next]">next</Item>
+      <Item Name="[decoded_length]">dn</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::urls::segments_base::iterator">
+    <DisplayString>{it_}</DisplayString>
+    <Expand>
+      <ExpandedItem>it_</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::urls::segments_encoded_base::iterator">
+    <DisplayString>{it_}</DisplayString>
+    <Expand>
+      <ExpandedItem>it_</ExpandedItem>
     </Expand>
   </Type>
 

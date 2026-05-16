@@ -87,7 +87,7 @@ public:
         // was compiled with a compatible version of the library.  REQUIRED
         get()->_struct = png_create_read_struct( PNG_LIBPNG_VER_STRING
                                              , nullptr  // user_error_ptr
-                                             , nullptr  // user_error_fn
+                                             , this_t::error_fn  // user_error_fn
                                              , nullptr  // user_warning_fn
                                              );
 
@@ -116,20 +116,6 @@ public:
                                    );
 
             io_error( "png_reader: fail to call png_create_info_struct()" );
-        }
-
-        // Set error handling if you are using the setjmp/longjmp method (this is
-        // the normal method of doing things with libpng).  REQUIRED unless you
-        // set up your own error handlers in the png_create_read_struct() earlier.
-        if( setjmp( png_jmpbuf( get_struct() )))
-        {
-            //free all of the memory associated with the png_ptr and info_ptr
-            png_destroy_read_struct( &get()->_struct
-                                   , &get()->_info
-                                   , nullptr
-                                   );
-
-            io_error( "png is invalid" );
         }
 
         png_set_read_fn( get_struct()
@@ -625,13 +611,30 @@ public:
 
 protected:
 
+    static void error_fn( png_structrp _
+                        , png_const_charp error_message
+                        )
+    {
+        io_error(error_message);
+    }
+
     static void read_data( png_structp png_ptr
                          , png_bytep   data
                          , png_size_t length
                          )
     {
-        static_cast<Device*>(png_get_io_ptr(png_ptr) )->read( data
-                                                            , length );
+        auto check = static_cast<Device*>(png_get_io_ptr(png_ptr) )->read( data
+                                                                         , length );
+        if (check != length)
+        {
+            if (!check) {
+                png_error( png_ptr, "read error" );
+            } else {
+                png_warning(png_ptr, "read less than required");
+                /* prevent infinite looping in libpng */
+                memset(data + check, 0, length - check);
+            }
+        }
     }
 
     static void flush( png_structp png_ptr )

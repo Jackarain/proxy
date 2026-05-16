@@ -15,6 +15,7 @@
 #include <boost/container/devector.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/container/stable_vector.hpp>
+#include <boost/container/segtor.hpp>
 #include <iomanip>
 
 #include <memory>    //std::allocator
@@ -149,7 +150,7 @@ class MyFatInt
    }
 };
 
-template<class C, bool Capacity = false, bool BackCapacity = false>
+template<class C, bool Capacity, bool BackCapacity>
 struct capacity_wrapper_impl
 {
    inline static typename C::size_type get_capacity(const C &)
@@ -199,7 +200,7 @@ struct insert_end_range
    {  return RangeSize;  }
 
    template<class C>
-   inline void operator()(C &c, int)
+   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int)
    {  c.insert(c.end(), &a[0], &a[0]+RangeSize); }
 
    const char *name() const
@@ -215,7 +216,7 @@ struct insert_end_repeated
    {  return RangeSize;  }
 
    template<class C>
-   inline void operator()(C &c, int i)
+   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
    {  c.insert(c.end(), RangeSize, IntType(i)); }
 
    inline const char *name() const
@@ -231,7 +232,7 @@ struct push_back
    {  return 1;  }
 
    template<class C>
-   inline void operator()(C &c, int i)
+   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
    {  c.push_back(IntType(i)); }
 
    inline const char *name() const
@@ -245,7 +246,7 @@ struct emplace_back
    {  return 1;  }
 
    template<class C>
-   inline void operator()(C &c, int i)
+   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
    {  c.emplace_back(IntType(i)); }
 
    inline const char *name() const
@@ -259,8 +260,8 @@ struct insert_near_end_repeated
    {  return RangeSize;  }
 
    template<class C>
-   inline void operator()(C &c, int i)
-   {  c.insert(c.size() >= 2*RangeSize ? c.end()-2*RangeSize : c.begin(), RangeSize, IntType(i)); }
+   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
+   {  c.insert(c.size() >= 4*RangeSize ? c.end()-2*RangeSize : c.end(), RangeSize, IntType(i)); }
 
    inline const char *name() const
    {  return "insert_near_end_repeated(8)"; }
@@ -273,9 +274,9 @@ struct insert_near_end_range
    {  return RangeSize;  }
 
    template<class C>
-   inline void operator()(C &c, int)
+   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int)
    {
-      c.insert(c.size() >= 2*RangeSize ? c.end()-2*RangeSize : c.begin(), &a[0], &a[0]+RangeSize);
+      c.insert(c.size() >= 4*RangeSize ? c.end()-2*RangeSize : c.end(), &a[0], &a[0]+RangeSize);
    }
 
    inline const char *name() const
@@ -291,11 +292,11 @@ struct insert_near_end
    {  return 1;  }
 
    template<class C>
-   inline void operator()(C &c, int i)
+   BOOST_CONTAINER_FORCEINLINE void operator()(C &c, int i)
    {
       typedef typename C::iterator it_t;
       it_t it (c.end());
-      it -= static_cast<typename C::difference_type>(c.size() >= 2)*2;
+      it -= static_cast<typename C::difference_type>(c.size() >= 4)*2;
       c.insert(it, IntType(i));
    }
 
@@ -312,11 +313,11 @@ struct emplace_near_end
    }
 
    template<class C>
-   inline void operator()(C& c, int i)
+   BOOST_CONTAINER_FORCEINLINE void operator()(C& c, int i)
    {
       typedef typename C::iterator it_t;
       it_t it(c.end());
-      it -= static_cast<typename C::difference_type>(c.size() >= 2) * 2;
+      it -= static_cast<typename C::difference_type>(c.size() >= 4) * 2;
       c.emplace(it, IntType(i));
    }
 
@@ -333,21 +334,25 @@ void vector_test_template(std::size_t num_iterations, std::size_t num_elements, 
 
    Operation op;
    const typename Container::size_type multiplier = op.capacity_multiplier();
-   Container c;
-   if (prereserve) {
-      cpw_t::set_reserve(c, num_elements);
-   }
-
    cpu_timer timer;
 
    const std::size_t max = num_elements/multiplier;
-   std::size_t capacity = 0u;
+   std::size_t initial_capacity = 0;
+   std::size_t final_capacity = 0u;
+   std::size_t size = 0u;
 
    for(std::size_t r = 0; r != num_iterations; ++r){
       //Unroll the loop to avoid noise from loop code
       int i = 0;
-      if (r > num_iterations/10)  //Exclude first iterations to avoid noise
-         timer.resume();
+      Container c;
+      if (prereserve) {
+         cpw_t::set_reserve(c, num_elements);
+         if (r == (num_iterations - 1u)) {
+            initial_capacity = cpw_t::get_capacity(c);
+         }
+      }
+
+      timer.resume();
       for(std::size_t e = 0; e < max/16; ++e){
          op(c, static_cast<int>(i++));
          op(c, static_cast<int>(i++));
@@ -367,11 +372,63 @@ void vector_test_template(std::size_t num_iterations, std::size_t num_elements, 
          op(c, static_cast<int>(i++));
       }
 
-      if (r > num_iterations/10)
-         timer.stop();
-      if(r == (num_iterations-1u))
-         capacity = cpw_t::get_capacity(c);
-      c.clear();
+      switch (max % 16) {
+      case 15:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 14:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 13:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 12:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 11:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 10:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 9:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 8:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 7:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 6:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 5:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 4:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 3:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 2:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      case 1:
+         op(c, static_cast<int>(i++));
+         BOOST_FALLTHROUGH;
+      default:
+         ;
+      }
+
+      timer.stop();
+
+      if (r == (num_iterations - 1u)) {
+         final_capacity = cpw_t::get_capacity(c);
+         size = c.size();
+      }
+      //c destroyed here
    }
 
    nanosecond_type nseconds = timer.elapsed().wall;
@@ -380,29 +437,33 @@ void vector_test_template(std::size_t num_iterations, std::size_t num_elements, 
                << std::setw(8)
                << float(nseconds)/float((num_iterations-1)*num_elements)
                << '\t'
-               << "Capacity: " << capacity
+               << "Size: " << size
+               << '\t'
+               << "InitCap: " << initial_capacity
+               << '\t'
+               << "FiniCap: " << final_capacity
                << std::endl;
 }
 
 template<class IntType, class Operation>
 void test_vectors_impl()
 {
-   //#define SINGLE_TEST
-   #define SIMPLE_IT
+   #define SINGLE_TEST
+   //#define SIMPLE_IT
    #ifdef SINGLE_TEST
       #ifdef NDEBUG
       std::size_t numit [] = { 1000 };
       #else
       std::size_t numit [] = { 20 };
       #endif
-      std::size_t numele [] = { 100000 };
+      std::size_t numele [] = { 10000 };
    #elif defined SIMPLE_IT
       #ifdef NDEBUG
       std::size_t numit [] = { 150 };
       #else
       std::size_t numit [] = { 10 };
       #endif
-      std::size_t numele [] = { 500000 };
+      std::size_t numele [] = { 10000 };
    #else
       #ifdef NDEBUG
       unsigned int numit []  = { 1000, 10000, 100000, 1000000 };
@@ -446,6 +507,9 @@ void test_vectors_impl()
          vector_test_template< bc::deque<IntType, std::allocator<IntType> >, Operation >(numit[i], numele[i],                                "deque          ", bp);
          vector_test_template< bc::deque<IntType, std::allocator<IntType>,
             typename bc::deque_options<bc::reservable<true> >::type       >, Operation >(numit[i], numele[i],                                "deque(reserv)  ", bp);
+         vector_test_template< bc::segtor<IntType, std::allocator<IntType> >, Operation >(numit[i], numele[i],                               "segtor         ", bp);
+         vector_test_template< bc::segtor<IntType, std::allocator<IntType>,
+            typename bc::segtor_options<bc::reservable<true> >::type       >, Operation >(numit[i], numele[i],                               "segtor(reserv) ", bp);
       }
       std::cout << "---------------------------------\n---------------------------------\n";
    }
@@ -477,6 +541,5 @@ int main()
    test_vectors<int>();
    test_vectors<MyInt>();
    test_vectors<MyFatInt>();
-
    return 0;
 }

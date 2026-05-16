@@ -1,7 +1,7 @@
 Boost.MQTT5: A C++17 MQTT client based on Boost.Asio
 ===============================
 
-Branch | Linux Build | Windows Build | Coverage | Documentation |
+Branch | Linux/macOS Build | Windows Build | Coverage | Documentation |
 -------|-------------|---------------|----------|---------------|
 [`master`](https://github.com/boostorg/mqtt5/tree/master) | [![build status](https://github.com/boostorg/mqtt5/actions/workflows/ci-posix.yml/badge.svg?branch=master)](https://github.com/boostorg/mqtt5/actions/workflows/ci-posix.yml) | [![build status](https://github.com/boostorg/mqtt5/actions/workflows/ci-windows.yml/badge.svg?branch=master)](https://github.com/boostorg/mqtt5/actions/workflows/ci-windows.yml) | [![codecov](https://codecov.io/gh/boostorg/mqtt5/branch/master/graph/badge.svg)](https://codecov.io/gh/boostorg/mqtt5/tree/master) | [documentation](https://www.boost.org/doc/libs/master/libs/mqtt5/doc/html/index.html)
 [`develop`](https://github.com/boostorg/mqtt5/tree/develop) | [![build status](https://github.com/boostorg/mqtt5/actions/workflows/ci-posix.yml/badge.svg?branch=develop)](https://github.com/boostorg/mqtt5/actions/workflows/ci-posix.yml) | [![build status](https://github.com/boostorg/mqtt5/actions/workflows/ci-windows.yml/badge.svg?branch=develop)](https://github.com/boostorg/mqtt5/actions/workflows/ci-windows.yml) | [![codecov](https://codecov.io/gh/boostorg/mqtt5/branch/develop/graph/badge.svg)](https://codecov.io/gh/boostorg/mqtt5/tree/develop) | [documentation](https://www.boost.org/doc/libs/develop/libs/mqtt5/doc/html/index.html)
@@ -61,6 +61,7 @@ Boost.MQTT5 is a header-only library. To use Boost.MQTT5 it requires the followi
 Boost.MQTT5 has been tested with the following compilers: 
 - clang 12.0 - 18.0 (Linux)
 - GCC 9 - 14 (Linux)
+- Apple clang 17.0.0 (macOS 15, arm64)
 - MSVC 14.37 - Visual Studio 2022 (Windows)
 
 Using the Library

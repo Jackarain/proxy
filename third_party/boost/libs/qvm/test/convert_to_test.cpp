@@ -53,13 +53,13 @@ namespace
             }
             {
             test_qvm::matrix<M1,4,4> const my=convert_to< test_qvm::matrix<M1,4,4> >(x);
-            BOOST_TEST(my.a[0][3]==0);
-            BOOST_TEST(my.a[1][3]==0);
-            BOOST_TEST(my.a[2][3]==0);
-            BOOST_TEST(my.a[3][0]==0);
-            BOOST_TEST(my.a[3][1]==0);
-            BOOST_TEST(my.a[3][2]==0);
-            BOOST_TEST(my.a[3][3]==1);
+            BOOST_TEST_EQ(my.a[0][3], 0);
+            BOOST_TEST_EQ(my.a[1][3], 0);
+            BOOST_TEST_EQ(my.a[2][3], 0);
+            BOOST_TEST_EQ(my.a[3][0], 0);
+            BOOST_TEST_EQ(my.a[3][1], 0);
+            BOOST_TEST_EQ(my.a[3][2], 0);
+            BOOST_TEST_EQ(my.a[3][3], 1);
             test_qvm::quaternion<Q1> const qy=convert_to< test_qvm::quaternion<Q1> >(del_row_col<3,3>(my));
             BOOST_QVM_TEST_CLOSE(x.a,qy.a,0.00001f);
             }

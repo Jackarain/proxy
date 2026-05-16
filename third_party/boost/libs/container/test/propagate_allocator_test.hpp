@@ -138,7 +138,6 @@ bool test_propagate_allocator()
          PropagateCont c2(c); //should propagate 223
          BOOST_TEST (c2.get_stored_allocator().id_ == 223);
          BOOST_TEST (c2.get_stored_allocator().ctr_copies_ >= 1);
-         BOOST_TEST (c2.get_stored_allocator().ctr_moves_ >= 0);
          BOOST_TEST (c2.get_stored_allocator().assign_copies_ == 0);
          BOOST_TEST (c2.get_stored_allocator().assign_moves_ == 0);
          BOOST_TEST (c2.get_stored_allocator().swaps_ == 0);
@@ -237,8 +236,6 @@ bool test_propagate_allocator()
          BOOST_TEST (c.get_stored_allocator().id_ == 223);
          NoPropagateCont c2(c); //should NOT propagate 223
          BOOST_TEST (c2.get_stored_allocator().id_ == 224);
-         BOOST_TEST (c2.get_stored_allocator().ctr_copies_ >= 0);
-         BOOST_TEST (c2.get_stored_allocator().ctr_moves_ >= 0);
          BOOST_TEST (c2.get_stored_allocator().assign_copies_ == 0);
          BOOST_TEST (c2.get_stored_allocator().assign_moves_ == 0);
          BOOST_TEST (c2.get_stored_allocator().swaps_ == 0);
@@ -249,8 +246,6 @@ bool test_propagate_allocator()
          NoPropagateCont c; //stored 334
          BOOST_TEST (c.get_stored_allocator().id_ == 334);
          NoPropagateCont c2(boost::move(c)); // should NOT propagate 334
-         BOOST_TEST (c2.get_stored_allocator().ctr_copies_ >= 0);
-         BOOST_TEST (c2.get_stored_allocator().ctr_moves_ >= 0);
          BOOST_TEST (c2.get_stored_allocator().assign_copies_ == 0);
          BOOST_TEST (c2.get_stored_allocator().assign_moves_ == 0);
          BOOST_TEST (c2.get_stored_allocator().swaps_ == 0);

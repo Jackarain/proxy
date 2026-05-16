@@ -19,7 +19,7 @@ struct fork_and_forget_launcher : default_launcher
 
     template<typename ExecutionContext, typename Args, typename ... Inits>
     auto operator()(ExecutionContext & context,
-                    const typename std::enable_if<is_convertible<
+                    const typename std::enable_if<std::is_convertible<
                             ExecutionContext&, net::execution_context&>::value,
                             filesystem::path >::type & executable,
                     Args && args,
@@ -38,7 +38,7 @@ struct fork_and_forget_launcher : default_launcher
     template<typename ExecutionContext, typename Args, typename ... Inits>
     auto operator()(ExecutionContext & context,
                     error_code & ec,
-                    const typename std::enable_if<is_convertible<
+                    const typename std::enable_if<std::is_convertible<
                             ExecutionContext&, net::execution_context&>::value,
                             filesystem::path >::type & executable,
                     Args && args,

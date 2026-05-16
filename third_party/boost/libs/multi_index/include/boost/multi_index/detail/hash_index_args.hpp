@@ -1,4 +1,4 @@
-/* Copyright 2003-2022 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -15,14 +15,12 @@
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
 #include <boost/container_hash/hash.hpp>
-#include <boost/mpl/aux_/na.hpp>
-#include <boost/mpl/eval_if.hpp>
-#include <boost/mpl/identity.hpp>
-#include <boost/mpl/if.hpp>
+#include <boost/mp11/utility.hpp>
 #include <boost/multi_index/tag.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/type_traits/is_same.hpp>
 #include <functional>
+#include <type_traits>
 
 namespace boost{
 
@@ -46,54 +44,44 @@ namespace detail{
  * argument-dependent polymorphism.
  */
 
-template<typename KeyFromValue>
-struct index_args_default_hash
-{
-  typedef ::boost::hash<typename KeyFromValue::result_type> type;
-};
-
-template<typename KeyFromValue>
-struct index_args_default_pred
-{
-  typedef std::equal_to<typename KeyFromValue::result_type> type;
-};
-
 template<typename Arg1,typename Arg2,typename Arg3,typename Arg4>
 struct hashed_index_args
 {
   typedef is_tag<Arg1> full_form;
 
-  typedef typename mpl::if_<
+  typedef mp11::mp_if<
     full_form,
     Arg1,
-    tag< > >::type                                   tag_list_type;
-  typedef typename mpl::if_<
+    tag< > >                                  tag_list_type;
+  typedef mp11::mp_if<
     full_form,
     Arg2,
-    Arg1>::type                                      key_from_value_type;
-  typedef typename mpl::if_<
+    Arg1>                                     key_from_value_type;
+  typedef mp11::mp_if<
     full_form,
     Arg3,
-    Arg2>::type                                      supplied_hash_type;
-  typedef typename mpl::eval_if<
-    mpl::is_na<supplied_hash_type>,
-    index_args_default_hash<key_from_value_type>,
-    mpl::identity<supplied_hash_type>
-  >::type                                            hash_type;
-  typedef typename mpl::if_<
+    Arg2>                                     supplied_hash_type;
+  typedef mp11::mp_eval_if_c<
+    !std::is_void<supplied_hash_type>::value,
+    supplied_hash_type,
+    boost::hash,
+    typename key_from_value_type::result_type
+  >                                           hash_type;
+  typedef mp11::mp_if<
     full_form,
     Arg4,
-    Arg3>::type                                      supplied_pred_type;
-  typedef typename mpl::eval_if<
-    mpl::is_na<supplied_pred_type>,
-    index_args_default_pred<key_from_value_type>,
-    mpl::identity<supplied_pred_type>
-  >::type                                            pred_type;
+    Arg3>                                     supplied_pred_type;
+  typedef mp11::mp_eval_if_c<
+    !std::is_void<supplied_pred_type>::value,
+    supplied_pred_type,
+    std::equal_to,
+    typename key_from_value_type::result_type
+  >                                           pred_type;
 
   BOOST_STATIC_ASSERT(is_tag<tag_list_type>::value);
-  BOOST_STATIC_ASSERT(!mpl::is_na<key_from_value_type>::value);
-  BOOST_STATIC_ASSERT(!mpl::is_na<hash_type>::value);
-  BOOST_STATIC_ASSERT(!mpl::is_na<pred_type>::value);
+  BOOST_STATIC_ASSERT(!std::is_void<key_from_value_type>::value);
+  BOOST_STATIC_ASSERT(!std::is_void<hash_type>::value);
+  BOOST_STATIC_ASSERT(!std::is_void<pred_type>::value);
 };
 
 } /* namespace multi_index::detail */

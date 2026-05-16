@@ -7,6 +7,7 @@
 #ifndef BOOST_REDIS_LOG_UTILS_HPP
 #define BOOST_REDIS_LOG_UTILS_HPP
 
+#include <boost/redis/config.hpp>
 #include <boost/redis/logger.hpp>
 
 #include <boost/core/ignore_unused.hpp>
@@ -45,6 +46,16 @@ struct log_traits<system::error_code> {
       to += " [";
       to += value.to_string();
       to += ']';
+   }
+};
+
+template <>
+struct log_traits<address> {
+   static inline void log(std::string& to, const address& value)
+   {
+      to += value.host;
+      to += ':';
+      to += value.port;
    }
 };
 

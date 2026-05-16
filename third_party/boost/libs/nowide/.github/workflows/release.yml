@@ -1,6 +1,9 @@
-# Copyright 2019 - 2025 Alexander Grund
+# Copyright 2019 - 2026 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
+
+permissions:
+  contents: write
 
 on:
   push:
@@ -14,23 +17,44 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     env:
       DEP_DIR: ${{github.workspace}}/dependencies
-      BOOST_VERSION: 1.66.0
     steps:
-      - uses: actions/checkout@v4
-      - name: Extract tag name
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Extract tag name and matching commit on standalone branch
         id: get_tag
         run: |
           echo "Running for $GITHUB_EVENT_NAME event"
+          git fetch origin master develop standalone
           if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            SOURCE_SHA=$(git merge-base "${{github.sha}}" origin/develop)
           else
             version=$(grep "set(_version " CMakeLists.txt | head -n1 | sed 's/^.* \([0-9]*\.[0-9]*\.[0-9]*\).*$/\1/')
-            echo "::set-output name=tag::v$version"
+            echo "tag=v$version" >> $GITHUB_OUTPUT
+            SOURCE_SHA=$(git rev-parse origin/develop)
           fi
+          standalone_commit=0
+          # Search standalone branch for last 10 more commits if the current one isn't found
+          for i in {0..10}; do
+            curSha=$(git rev-parse --short "${SOURCE_SHA}~${i}")
+            # Find matching standalone commit hash
+            standalone_commit_matches=$(git log origin/standalone --format="%H" --grep="^Source commit: $curSha\$")
+            if ! count=$(grep -c . <<<"$standalone_commit_matches"); then
+              echo "WARN: Did not found source commit for $curSha ($i)"
+            elif [[ $count -ne 1 ]]; then
+              echo "ERROR: Found more than 1 related commit for $curSha ($i): $standalone_commit_matches"
+              exit
+            else
+              standalone_commit=$curSha
+            fi
+          done;
+          if [[ $standalone_commit == "0" ]]; then
+            echo "ERROR: Did not found source commit for $SOURCE_SHA"
+            exit 1
+          fi
+          echo "source_commit=$SOURCE_SHA" >> $GITHUB_OUTPUT
+          echo "standalone_commit=$standalone_commit" >> $GITHUB_OUTPUT
       - name: Sanity check version
         run: |
           version=${{steps.get_tag.outputs.tag}}
@@ -42,13 +66,14 @@ jobs:
           fi
       - name: Create documentation
         run: |
-          sudo apt-get install doxygen
+          sudo apt-get -o Acquire::Retries=3 -y -q --no-install-suggests --no-install-recommends update
+          sudo apt-get -o Acquire::Retries=3 -y -q --no-install-suggests --no-install-recommends install doxygen
           doc/gendoc.sh
           tar -czf documentation.tar.gz doc index.html
 
       - name: Create standalone version
         run: |
-          bash tools/create_standalone.sh nowide_standalone_${{steps.get_tag.outputs.tag}}
+          tools/create_standalone.sh nowide_standalone_${{steps.get_tag.outputs.tag}}
           tar -czf  nowide_standalone.tar.gz nowide_standalone_${{steps.get_tag.outputs.tag}}
       - name: Test standalone release tarball
         run: |
@@ -69,7 +94,7 @@ jobs:
             cp -r build cmake config include src test CMakeLists.txt Config.cmake.in "$FOLDER"
             tar -czf nowide.tar.gz "$FOLDER"
       - name: Install boost
-        run: sudo apt-get install -y libboost-all-dev
+        run: sudo apt-get -o Acquire::Retries=3 -y -q --no-install-suggests --no-install-recommends install -y libboost-all-dev
       - name: Test Boost release tarball
         run: |
           tmp_dir=$(mktemp -d -p "$RUNNER_TEMP")
@@ -88,9 +113,23 @@ jobs:
           mv nowide_standalone.tar.gz nowide_standalone_${{steps.get_tag.outputs.tag}}.tar.gz
           mv documentation.tar.gz nowide_docu.tar.gz
 
+      - name: Tag standalone branch
+        run: |
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --global user.name "$GITHUB_ACTOR"
+          version=${{steps.get_tag.outputs.tag}}
+          tag_name=standalone-$version
+          git tag -a "$tag_name" "${{steps.get_tag.outputs.standalone_commit}}" \
+            -m "Standalone version for $version" \
+            -m "Source-Commit: ${{steps.get_tag.outputs.source_commit}}"
+          git show "$tag_name"
+          if [[ "{{github.event_name}}" == "push" ]]; then
+            git push origin "$tag_name"
+          fi
+
       - name: Create Release
         if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

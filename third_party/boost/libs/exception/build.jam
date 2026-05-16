@@ -1,0 +1,27 @@
+# Copyright René Ferdinand Rivera Morell 2023-2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/assert//boost_assert
+    /boost/config//boost_config
+    /boost/core//boost_core
+    /boost/smart_ptr//boost_smart_ptr
+    /boost/throw_exception//boost_throw_exception
+    /boost/tuple//boost_tuple
+    /boost/type_traits//boost_type_traits ;
+
+project /boost/exception
+    ;
+
+explicit
+    [ alias boost_exception : build//boost_exception ]
+    [ alias all : boost_exception example test ]
+    ;
+
+call-if : boost-library exception
+    : install boost_exception
+    ;

@@ -7,9 +7,12 @@
 
 #include <boost/redis/adapter/any_adapter.hpp>
 #include <boost/redis/detail/connection_state.hpp>
+#include <boost/redis/detail/multiplexer.hpp>
 #include <boost/redis/detail/reader_fsm.hpp>
 #include <boost/redis/error.hpp>
 #include <boost/redis/logger.hpp>
+#include <boost/redis/request.hpp>
+#include <boost/redis/resp3/node.hpp>
 
 #include <boost/asio/cancellation_type.hpp>
 #include <boost/asio/error.hpp>
@@ -19,20 +22,17 @@
 #include "sansio_utils.hpp"
 
 #include <chrono>
+#include <memory>
 #include <string_view>
 
+using namespace boost::redis;
 namespace net = boost::asio;
-namespace redis = boost::redis;
 using boost::system::error_code;
 using net::cancellation_type_t;
-using redis::detail::reader_fsm;
-using redis::detail::multiplexer;
-using redis::generic_response;
-using redis::any_adapter;
-using redis::config;
-using redis::detail::connection_state;
-using action = redis::detail::reader_fsm::action;
-using redis::logger;
+using detail::reader_fsm;
+using detail::multiplexer;
+using detail::connection_state;
+using action = detail::reader_fsm::action;
 using namespace std::chrono_literals;
 
 // Operators
@@ -95,7 +95,7 @@ void copy_to(multiplexer& mpx, std::string_view data)
    std::copy(data.cbegin(), data.cend(), buffer.begin());
 }
 
-struct fixture : redis::detail::log_fixture {
+struct fixture : detail::log_fixture {
    connection_state st{{make_logger()}};
    generic_response resp;
 
@@ -246,14 +246,15 @@ void test_read_error()
    copy_to(fix.st.mpx, payload);
 
    // Deliver the data
-   act = fsm.resume(fix.st, payload.size(), {redis::error::empty_field}, cancellation_type_t::none);
-   BOOST_TEST_EQ(act, error_code{redis::error::empty_field});
+   act = fsm.resume(fix.st, payload.size(), {error::empty_field}, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, error_code{error::empty_field});
 
    // Check logging
    fix.check_log({
       // clang-format off
-      {logger::level::debug, "Reader task: issuing read"        },
-      {logger::level::debug, "Reader task: 11 bytes read, error: Expected field value is empty. [boost.redis:5]"},
+      {logger::level::debug, "Reader task: issuing read"  },
+      {logger::level::debug, "Reader task: 11 bytes read" },
+      {logger::level::err,   "Error reading data from the server: Expected field value is empty. [boost.redis:5]"},
       // clang-format on
    });
 }
@@ -270,13 +271,14 @@ void test_read_timeout()
 
    // Timeout
    act = fsm.resume(fix.st, 0, {net::error::operation_aborted}, cancellation_type_t::none);
-   BOOST_TEST_EQ(act, error_code{redis::error::pong_timeout});
+   BOOST_TEST_EQ(act, error_code{error::pong_timeout});
 
    // Check logging
    fix.check_log({
       // clang-format off
-      {logger::level::debug, "Reader task: issuing read"        },
-      {logger::level::debug, "Reader task: 0 bytes read, error: Pong timeout. [boost.redis:19]"},
+      {logger::level::debug, "Reader task: issuing read" },
+      {logger::level::debug, "Reader task: 0 bytes read" },
+      {logger::level::err,   "Error reading data from the server: Pong timeout. [boost.redis:19]"},
       // clang-format on
    });
 }
@@ -296,15 +298,57 @@ void test_parse_error()
 
    // Deliver the data
    act = fsm.resume(fix.st, payload.size(), {}, cancellation_type_t::none);
-   BOOST_TEST_EQ(act, error_code{redis::error::not_a_number});
+   BOOST_TEST_EQ(act, error_code{error::not_a_number});
 
    // Check logging
    fix.check_log({
       {logger::level::debug, "Reader task: issuing read"},
       {logger::level::debug, "Reader task: 4 bytes read"},
-      {logger::level::debug,
-       "Reader task: error processing message: Can't convert string to number (maybe forgot to "
+      {logger::level::err,
+       "Error processing message: Can't convert string to number (maybe forgot to "
        "upgrade to RESP3?). [boost.redis:2]"            },
+   });
+}
+
+// A setup request error is similar to a parse error.
+// The adapter would return error::resp3_hello.
+// We log this somewhere else, so it shouldn't be logged here by default.
+void test_setup_request_error()
+{
+   // Setup
+   fixture fix;
+   reader_fsm fsm;
+   request req;
+   req.push("PING");  // should have 1 command
+   auto elem = std::make_shared<multiplexer::elem>(
+      req,
+      any_adapter{[](any_adapter::parse_event, const resp3::node_view&, error_code& ec) {
+         ec = error::resp3_hello;
+      }});
+   elem->set_done_callback([] { });
+
+   // Add the request to the multiplexer and simulate a successful write
+   fix.st.mpx.add(elem);
+   BOOST_TEST_EQ(fix.st.mpx.prepare_write(), 1u);
+   BOOST_TEST(fix.st.mpx.commit_write(fix.st.mpx.get_write_buffer().size()));
+
+   // Initiate
+   auto act = fsm.resume(fix.st, 0, error_code(), cancellation_type_t::none);
+   BOOST_TEST_EQ(act, action::read_some(6s));
+
+   // The fsm is asking for data.
+   std::string const payload = "-ERR: bad\r\n";
+   copy_to(fix.st.mpx, payload);
+
+   // Deliver the data
+   act = fsm.resume(fix.st, payload.size(), {}, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, error_code{error::resp3_hello});
+
+   // Check logging
+   fix.check_log({
+      {logger::level::debug, "Reader task: issuing read"                    },
+      {logger::level::debug, "Reader task: 11 bytes read"                   },
+      {logger::level::debug, "Error processing message: setup request error"},
    });
 }
 
@@ -326,15 +370,15 @@ void test_push_deliver_error()
    BOOST_TEST_EQ(act, action::notify_push_receiver(11u));
 
    // Resumes from notifying a push with an error.
-   act = fsm.resume(fix.st, 0, redis::error::empty_field, cancellation_type_t::none);
-   BOOST_TEST_EQ(act, error_code{redis::error::empty_field});
+   act = fsm.resume(fix.st, 0, error::empty_field, cancellation_type_t::none);
+   BOOST_TEST_EQ(act, error_code{error::empty_field});
 
    // Check logging
    fix.check_log({
       // clang-format off
       {logger::level::debug, "Reader task: issuing read"               },
       {logger::level::debug, "Reader task: 11 bytes read"               },
-      {logger::level::debug, "Reader task: error notifying push receiver: Expected field value is empty. [boost.redis:5]"},
+      {logger::level::err,   "Error notifying push receiver: Expected field value is empty. [boost.redis:5]"},
       // clang-format on
    });
 }
@@ -355,15 +399,15 @@ void test_max_read_buffer_size()
    std::string const part1 = ">3\r\n";
    copy_to(fix.st.mpx, part1);
    act = fsm.resume(fix.st, part1.size(), error_code(), cancellation_type_t::none);
-   BOOST_TEST_EQ(act, error_code(redis::error::exceeds_maximum_read_buffer_size));
+   BOOST_TEST_EQ(act, error_code(error::exceeds_maximum_read_buffer_size));
 
    // Check logging
    fix.check_log({
       {logger::level::debug, "Reader task: issuing read"               },
       {logger::level::debug, "Reader task: 4 bytes read"               },
       {logger::level::debug, "Reader task: incomplete message received"},
-      {logger::level::debug,
-       "Reader task: error in prepare_read: Reading data from the socket would exceed the maximum "
+      {logger::level::err,
+       "Error preparing the read buffer: Reading data from the socket would exceed the maximum "
        "size allowed of the read buffer. [boost.redis:26]"             },
    });
 }
@@ -494,6 +538,7 @@ int main()
    test_read_error();
    test_read_timeout();
    test_parse_error();
+   test_setup_request_error();
    test_push_deliver_error();
    test_max_read_buffer_size();
 

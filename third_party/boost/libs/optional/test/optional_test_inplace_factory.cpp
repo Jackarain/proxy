@@ -105,9 +105,42 @@ void test_assign()
 #endif
 }
 
+// begin Boost.Log case
+
+template <typename CharT>
+struct basic_formatter
+{
+  template< typename FunT >
+  basic_formatter(FunT&&) {}
+
+  template< typename FunT >
+  basic_formatter& operator= (FunT&&)
+  {
+      return *this;
+  }
+};
+
+template< typename CharT>
+struct chained_formatter
+{
+};
+
+void test_boost_log_case()
+{
+#ifndef BOOST_OPTIONAL_NO_INPLACE_FACTORY_SUPPORT
+
+  boost::optional<basic_formatter<char>> of( boost::in_place(chained_formatter<char>()) );
+  of = boost::in_place(chained_formatter<char>());
+
+#endif //BOOST_OPTIONAL_NO_INPLACE_FACTORY_SUPPORT
+}
+
+// end Boost.Log case
+
 int main()
 {
   test_ctor();
   test_assign();
+  test_boost_log_case();
   return boost::report_errors();
 }

@@ -1,0 +1,259 @@
+# Copyright 2022 Peter Dimov
+# Copyright 2023 - 2024 Matt Borland
+# Copyright 2023 - 2024 Christopher Kormanyos
+# Distributed under the Boost Software License, Version 1.0.
+# https://www.boost.org/LICENSE_1_0.txt
+
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
+import config : requires ;
+import modules ;
+import testing ;
+
+project : requirements
+
+  <toolset>gcc:<cxxflags>-Wall
+  <toolset>gcc:<cxxflags>-Wextra
+
+  # Clang-Cl gives errors that are incorrect or irrelevant (e.g. C++98 compat)
+  #<toolset>clang:<cxxflags>-Wall
+  #<toolset>clang:<cxxflags>-Wextra
+
+  <toolset>msvc:<warnings>all
+
+  # Additional flags by request
+  <toolset>gcc:<cxxflags>-Wsign-conversion
+  <toolset>gcc:<cxxflags>-Wconversion
+  <toolset>gcc:<cxxflags>-Wundef
+  <toolset>gcc:<cxxflags>-Wold-style-cast
+  #<toolset>gcc:<cxxflags>-Wduplicated-branches
+  <toolset>gcc:<cxxflags>-Wfloat-equal
+  <toolset>gcc:<cxxflags>-Wshadow
+  <toolset>gcc:<cxxflags>-Wno-psabi
+  # https://github.com/boostorg/decimal/issues/1291
+  # GCC-7 does not support extra-semi, just pick one to try
+  <toolset>gcc-13:<cxxflags>-Wextra-semi
+  <toolset>gcc:<cxxflags>-Wuseless-cast
+  # <toolset>gcc:<cxxflags>-Wpadded
+
+  <toolset>clang:<cxxflags>-Wsign-conversion
+  <toolset>clang:<cxxflags>-Wconversion
+  <toolset>clang:<cxxflags>-Wundef
+  <toolset>clang:<cxxflags>-Wold-style-cast
+  <toolset>clang:<cxxflags>-Wfloat-equal
+
+  <toolset>msvc:<warnings-as-errors>on
+  <toolset>clang:<warnings-as-errors>on
+  <toolset>gcc:<warnings-as-errors>on
+
+  [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ]
+  ;
+
+run-fail benchmarks.cpp ;
+run-fail benchmark_uint256.cpp ;
+
+run compare_dec128_and_fast.cpp ;
+compile-fail concepts_test.cpp ;
+
+run crash_report_1.cpp ;
+run github_issue_426.cpp ;
+run github_issue_448.cpp ;
+run-fail github_issue_519.cpp ;
+run github_issue_798.cpp ;
+run github_issue_799.cpp ;
+run github_issue_802.cpp ;
+run github_issue_805.cpp ;
+run github_issue_808.cpp ;
+run github_issue_890.cpp ;
+run github_issue_900.cpp ;
+run github_issue_911.cpp ;
+run github_issue_988.cpp ;
+run github_issue_1026.cpp ;
+run github_issue_1035.cpp ;
+run github_issue_1054.cpp ;
+run github_issue_1055.cpp ;
+run github_issue_1057.cpp ;
+compile-fail github_issue_1087.cpp ;
+run github_issue_1091.cpp ;
+run github_issue_1094.cpp ;
+run github_issue_1105.cpp ;
+run github_issue_1106.cpp ;
+run github_issue_1107.cpp ;
+run github_issue_1110.cpp ;
+run github_issue_1112.cpp ;
+run github_issue_1174.cpp ;
+run github_issue_1260.cpp ;
+run github_issue_1294.cpp ;
+run github_issue_1299.cpp ;
+run github_issue_1302.cpp ;
+run github_issue_1304.cpp ;
+run github_issue_1306.cpp ;
+run github_issue_1312.cpp ;
+run github_issue_1319.cpp ;
+run github_issue_1329.cpp ;
+run github_issue_1361.cpp ;
+
+run link_1.cpp link_2.cpp link_3.cpp ;
+run quick.cpp ;
+run random_decimal32_comp.cpp ;
+run random_decimal32_fast_comp.cpp ;
+run random_decimal32_fast_math.cpp ;
+run random_decimal32_math.cpp ;
+run random_decimal64_comp.cpp ;
+run random_decimal64_fast_comp.cpp ;
+run random_decimal64_fast_math.cpp ;
+run random_decimal64_math.cpp ;
+run random_decimal128_comp.cpp ;
+run random_decimal128_fast_comp.cpp ;
+run random_decimal128_fast_math.cpp ;
+run random_decimal128_math.cpp ;
+run random_mixed_decimal_comp.cpp ;
+run random_mixed_decimal_math.cpp ;
+run roundtrip_decimal32.cpp ;
+run roundtrip_decimal32_fast.cpp ;
+run roundtrip_decimal64.cpp ;
+run roundtrip_decimal128.cpp ;
+run roundtrip_decimal128_fast.cpp ;
+run test_acos.cpp ;
+run test_acosh.cpp ;
+run test_asin.cpp ;
+run test_asinh.cpp ;
+run test_assoc_laguerre.cpp ;
+run test_assoc_legendre.cpp ;
+run test_atan.cpp ;
+run test_atan2.cpp ;
+run test_atanh.cpp ;
+compile-fail test_bad_evaluation_method.cpp ;
+run test_beta.cpp ;
+run test_bid_conversions.cpp ;
+run test_big_uints.cpp ;
+run test_boost_math_univariate_stats.cpp ;
+run test_cbrt.cpp ;
+run test_charconv_preservation.cpp ;
+run test_cmath.cpp ;
+run test_constants.cpp ;
+run test_constexpr_rounding_mode.cpp ;
+run test_cosh.cpp ;
+#run test_decimal32.cpp ;
+run test_decimal32_fast_basis.cpp ;
+run test_decimal32_fast_stream.cpp ;
+run test_decimal32_stream.cpp ;
+#run test_decimal64_basis.cpp ;
+run test_decimal64_fast_basis.cpp ;
+run test_decimal64_fast_stream.cpp ;
+run test_decimal64_stream.cpp ;
+#run test_decimal128_basis.cpp ;
+run test_decimal_quantum.cpp ;
+run test_downward_rounding.cpp ;
+run test_dpd_conversions.cpp ;
+run test_edges_and_behave.cpp ;
+run test_edit_members.cpp ;
+run test_ellint_1.cpp ;
+run test_ellint_2.cpp ;
+run test_erf.cpp ;
+run test_exp.cpp ;
+compile-fail test_explicit_floats.cpp ;
+run test_expm1.cpp ;
+run test_fast_float.cpp ;
+run test_fast_math.cpp ;
+run test_fenv.cpp ;
+run test_fixed_width_trunc.cpp ;
+run test_float_conversion.cpp ;
+run test_format.cpp ;
+run test_format_fmtlib.cpp ;
+run-fail test_fprintf.cpp ;
+run test_frexp_ldexp.cpp ;
+run test_from_chars.cpp /boost/charconv//boost_charconv ;
+run test_from_chars_nan_payloads.cpp ;
+run test_from_string.cpp ;
+run test_git_issue_266.cpp ;
+run test_git_issue_271.cpp ;
+run test_hash.cpp ;
+run test_hermite.cpp ;
+compile-fail test_illegal_decimal32_fast_implicit_conversions.cpp ;
+compile-fail test_illegal_decimal32_implicit_conversions.cpp ;
+compile-fail test_illegal_decimal64_fast_implicit_conversions.cpp ;
+compile-fail test_illegal_decimal64_implicit_conversions.cpp ;
+compile-fail test_illegal_decimal128_implicit_conversions.cpp ;
+run test_implicit_integral_conversion.cpp ;
+run test_laguerre.cpp ;
+run test_legal_implicit_conversions.cpp ;
+run test_legendre.cpp ;
+run test_literals.cpp ;
+run test_limits.cpp ;
+run test_lgamma.cpp ;
+run test_log.cpp ;
+run test_log1p.cpp ;
+run test_log10.cpp ;
+run test_nan_conversions.cpp ;
+run test_normalize.cpp ;
+run test_parser.cpp ;
+run test_pow.cpp ;
+run test_promotion.cpp ;
+run test_remainder_remquo.cpp ;
+run test_remove_trailing_zeros.cpp ;
+run test_sin_cos.cpp ;
+run test_sinh.cpp ;
+run test_snprintf.cpp ;
+run test_sqrt.cpp ;
+run test_string_construction.cpp ;
+run test_string_locale_conversion.cpp ;
+run test_strtod.cpp ;
+run test_tan.cpp ;
+run test_tanh.cpp ;
+run test_tgamma.cpp ;
+run test_to_chars.cpp ;
+run test_to_string.cpp ;
+run test_total_ordering.cpp ;
+run test_upward_rounding.cpp ;
+run test_zeta.cpp ;
+
+run limits_link_1.cpp limits_link_2.cpp limits_link_3.cpp ;
+
+# Run the examples too
+run ../examples/adl.cpp ;
+run ../examples/basic_construction.cpp ;
+run ../examples/bit_conversions.cpp ;
+run ../examples/charconv.cpp ;
+run ../examples/charconv_cohort_preservation.cpp ;
+run ../examples/literals.cpp ;
+run ../examples/rounding_mode.cpp ;
+run ../examples/rounding_mode_compile_time.cpp ;
+run ../examples/statistics.cpp ;
+run ../examples/format.cpp ;
+run ../examples/fmt_format.cpp ;
+run ../examples/print.cpp ;
+run ../examples/promotion.cpp ;
+run ../examples/numerical_parsing.cpp ;
+run ../examples/first_example.cpp ;
+run ../examples/basic_arithmetic.cpp ;
+run ../examples/to_from_file.cpp ;
+run ../examples/addition.cpp ;
+run ../examples/debugger.cpp ;
+run ../examples/binary_float_conversions.cpp ;
+run ../examples/integral_conversions.cpp ;
+
+# Test compilation of separate headers
+compile compile_tests/bid_conversion.cpp ;
+compile compile_tests/dpd_conversion.cpp ;
+compile compile_tests/cfloat.cpp ;
+compile compile_tests/charconv_compile.cpp ;
+compile compile_tests/charconv_before_types_compile.cpp ;
+compile compile_tests/cmath_compile.cpp ;
+compile compile_tests/cstdio_compile.cpp ;
+compile compile_tests/cstdlib_compile.cpp ;
+compile compile_tests/decimal32_compile.cpp ;
+compile compile_tests/decimal32_fast_compile.cpp ;
+compile compile_tests/decimal64_compile.cpp ;
+compile compile_tests/decimal64_fast_compile.cpp ;
+compile compile_tests/decimal128_compile.cpp ;
+compile compile_tests/decimal128_fast_compile.cpp ;
+compile compile_tests/main_header.cpp ;
+compile compile_tests/fenv_compile.cpp ;
+compile compile_tests/format_compile.cpp ;
+compile compile_tests/fwd_compile.cpp ;
+compile compile_tests/iostream_compile.cpp ;
+compile compile_tests/literals_compile.cpp ;
+compile compile_tests/numbers_compile.cpp ;
+compile compile_tests/string_compile.cpp ;
+compile compile_tests/uint128.cpp ;

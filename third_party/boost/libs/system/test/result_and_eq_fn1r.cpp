@@ -96,7 +96,7 @@ int main()
         result<int, E2> r( 1 );
 
         r &= fi;
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( *r, 3 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r.unsafe_value(), 3 );
 
         r &= fi2;
         BOOST_TEST( r.has_error() );
@@ -109,7 +109,7 @@ int main()
         result<Y, E2> r( in_place_value, 1 );
 
         r &= fy;
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r->v_, 3 );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( r.unsafe_value().v_, 3 );
 
         r &= fy2;
         BOOST_TEST( r.has_error() );
@@ -123,7 +123,7 @@ int main()
         result<int&, E2> r( x1 );
 
         r &= fri;
-        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( &*r, &*fri( x1 ) );
+        BOOST_TEST( r.has_value() ) && BOOST_TEST_EQ( &r.unsafe_value(), &fri( x1 ).unsafe_value() );
 
         r &= fri2;
         BOOST_TEST( r.has_error() );

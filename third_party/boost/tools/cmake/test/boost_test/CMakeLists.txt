@@ -13,7 +13,6 @@ set(BUILD_TESTING OFF) # hide cache variable
 add_subdirectory(../../../../libs/assert EXCLUDE_FROM_ALL boostorg/assert)
 add_subdirectory(../../../../libs/config EXCLUDE_FROM_ALL boostorg/config)
 add_subdirectory(../../../../libs/core EXCLUDE_FROM_ALL boostorg/core)
-add_subdirectory(../../../../libs/static_assert EXCLUDE_FROM_ALL boostorg/static_assert)
 add_subdirectory(../../../../libs/throw_exception EXCLUDE_FROM_ALL boostorg/throw_exception)
 
 unset(BUILD_TESTING)

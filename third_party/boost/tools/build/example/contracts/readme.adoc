@@ -1,0 +1,47 @@
+////
+Copyright 2008 Jurko Gospodnetic
+Copyright 2025 René Ferdinand Rivera Morell
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
+////
+
+= Hello
+
+This example shows a very basic Boost Build project set up so it compiles a
+single executable which makes use of contracts from a single source file:
+
+.`hello.cpp`
+[source,cpp]
+----
+include::../../example/contracts/hello.cpp[tag=source]
+----
+
+Our `jamroot.jam` is minimal and only specifies one `exe` target for the
+program:
+
+.`jamroot.jam`
+[source,jam]
+----
+include::jamroot.jam[]
+----
+
+Building the example yields:
+
+[source,bash]
+----
+> cd /example/hello
+> b2
+...found 12 targets...
+...updating 8 targets...
+clang-linux.compile.c++ bin/clang-linux-22.0~contracts/debug/contracts-on-enforce/cxxstd-23-iso/stdlib-libc++/hello.o
+clang-linux.link bin/clang-linux-22.0~contracts/debug/contracts-on-enforce/cxxstd-23-iso/stdlib-libc++/hello
+
+...updated 8 targets...
+> LD_LIBRARY_PATH=/opt/clang-ericwf-contracts-trunk/lib/x86_64-unknown-linux-gnu/ bin/clang-linux-22.0~contracts/debug/contracts-on-enforce/cxxstd-23-iso/stdlib-libc++/hello
+Hello!
+hello.cpp:11: pre(x != 0) failed
+libc++abi: terminating
+Aborted                    (core dumped) LD_LIBRARY_PATH=/opt/clang-ericwf-contracts-trunk/lib/x86_64-unknown-linux-gnu/ bin/clang-linux-22.0~contracts/debug/contracts-on-enforce/cxxstd-23-iso/stdlib-libc++/hello
+----
+
+NOTE: The actual paths will depend on your configuration.

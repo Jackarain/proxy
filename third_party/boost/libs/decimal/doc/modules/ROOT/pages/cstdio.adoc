@@ -1,0 +1,58 @@
+////
+Copyright 2024 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#cstdio]
+= `<cstdio>` Support
+:idprefix: cstdio_
+
+The following functions analogous to those from `<cstdio>` are provided:
+
+[source, c++]
+----
+#include <boost/decimal/cstdio.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename... Dec>
+int snprintf(char* buffer, std::size_t buf_size, const char* format, Dec... value) noexcept;
+
+template <typename... Dec>
+int fprintf(std::FILE* buffer, const char* format, Dec... values) noexcept;
+
+template <typename... Dec>
+int printf(const char* format, Dec... values) noexcept;
+
+} //namespace decimal
+} //namespace boost
+----
+
+These functions are limited in their support to only decimal floating point types, and are not a complete replacement for their `std::` equivalents.
+
+== Type Modifiers
+
+The type modifiers to be used are:
+
+- "H" for `decimal32_t`
+- "D" for `decimal64_t`
+- "DD" for `decimal128_t`
+
+The remaining specifications of cstdio are the same as usual:
+
+- "g" or "G" for general format
+- "e" or "E" for scientific format
+- "f" for fixed format
+- "a" or "A" for hex format
+
+NOTE: The uppercase format will return with all applicable values in uppercase (e.g. 3.14E+02 vs 3.14e+02)
+
+== Examples
+
+Here are some example formats:
+
+- "%Hg" will print a `decimal32_t` in general format
+- "%.3De" will print a `decimal64_t` in scientific format with 3 digits of precision (e.g. 1.234e+05)
+- "%.5DDA" will print a `decimal128_t` in hex format with 5 digits of precision and all letters will be capitalized (e.g. 1.F2C34P+02 vs 1.f2c34p+02)

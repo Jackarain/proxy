@@ -4,6 +4,8 @@
 
 #include <boost/system/result.hpp>
 #include <boost/core/lightweight_test.hpp>
+#include <boost/core/lightweight_test_trait.hpp>
+#include <type_traits>
 
 using namespace boost::system;
 
@@ -110,9 +112,22 @@ int main()
 
         result<int&> r( x1 );
 
-        int& x = r | x2;
+        {
+            auto&& x3 = r | x2;
 
-        BOOST_TEST_EQ( &x, &x1 );
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x3)> ));
+
+            BOOST_TEST_EQ( x3, x1 );
+            BOOST_TEST_NE( &x3, &x1 );
+        }
+
+        {
+            auto&& x4 = r | 3;
+
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype( x4 )> ));
+
+            BOOST_TEST_EQ( x4, x1 );
+        }
     }
 
     {
@@ -121,18 +136,44 @@ int main()
 
         result<int&> const r( x1 );
 
-        int& x = r | x2;
+        {
+            auto&& x3 = r | x2;
 
-        BOOST_TEST_EQ( &x, &x1 );
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x3)> ));
+
+            BOOST_TEST_EQ( x3, x1 );
+            BOOST_TEST_NE( &x3, &x1 );
+        }
+
+        {
+            auto&& x4 = r | 3;
+
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype( x4 )> ));
+
+            BOOST_TEST_EQ( x4, x1 );
+        }
     }
 
     {
         int x1 = 1;
         int x2 = 2;
 
-        int& x = result<int&>( x1 ) | x2;
+        {
+            auto&& x3 = result<int&>( x1 ) | x2;
 
-        BOOST_TEST_EQ( &x, &x1 );
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x3)> ));
+
+            BOOST_TEST_EQ( x3, x1 );
+            BOOST_TEST_NE( &x3, &x1 );
+        }
+
+        {
+            auto&& x4 = result<int&>( x1 ) | 3;
+
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype( x4 )> ));
+
+            BOOST_TEST_EQ( x4, x1 );
+        }
     }
 
     {
@@ -140,9 +181,22 @@ int main()
 
         result<int&, E> r( in_place_error );
 
-        int& x = r | x2;
+        {
+            auto&& x3 = r | x2;
 
-        BOOST_TEST_EQ( &x, &x2 );
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x3)> ));
+
+            BOOST_TEST_EQ( x3, x2 );
+            BOOST_TEST_NE( &x3, &x2 );
+        }
+
+        {
+            auto&& x4 = r | 3;
+
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype( x4 )> ));
+
+            BOOST_TEST_EQ( x4, 3 );
+        }
     }
 
     {
@@ -150,17 +204,43 @@ int main()
 
         result<int&, E> const r( in_place_error );
 
-        int& x = r | x2;
+        {
+            auto&& x3 = r | x2;
 
-        BOOST_TEST_EQ( &x, &x2 );
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x3)> ));
+
+            BOOST_TEST_EQ( x3, x2 );
+            BOOST_TEST_NE( &x3, &x2 );
+        }
+
+        {
+            auto&& x4 = r | 3;
+
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype( x4 )> ));
+
+            BOOST_TEST_EQ( x4, 3 );
+        }
     }
 
     {
         int x2 = 2;
 
-        int& x = result<int&, E>( in_place_error ) | x2;
+        {
+            auto&& x3 = result<int&, E>( in_place_error ) | x2;
 
-        BOOST_TEST_EQ( &x, &x2 );
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype(x3)> ));
+
+            BOOST_TEST_EQ( x3, x2 );
+            BOOST_TEST_NE( &x3, &x2 );
+        }
+
+        {
+            auto&& x4 = result<int&, E>( in_place_error ) | 3;
+
+            BOOST_TEST_TRAIT_FALSE(( std::is_lvalue_reference<decltype( x4 )> ));
+
+            BOOST_TEST_EQ( x4, 3 );
+        }
     }
 
     return boost::report_errors();

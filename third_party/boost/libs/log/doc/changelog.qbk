@@ -9,6 +9,10 @@
 
 [section:changelog Changelog]
 
+[heading 2.34, Boost 1.91]
+
+* Enabled building interprocess communication support on Cygwin by default.
+
 [heading 2.33, Boost 1.90]
 
 * Fixed a missed optimization in `value_ref` visitation.

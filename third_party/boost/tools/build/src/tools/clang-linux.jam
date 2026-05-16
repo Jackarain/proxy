@@ -13,7 +13,13 @@
 = Clang (GCC frontend)
 
 The `clang-linux` module supports Clang with GCC frontend and has the same
-options as link:#b2.reference.tools.compiler.gcc[`gcc`] toolset.
+options as link:#b2.reference.tools.compiler.gcc[`gcc`] toolset, with the
+addition of `<triple>` option.
+
+The value of that option is passed as the value of `--target=` flag, unless
+provided as `<triple>none`. In that case the flag is not passed to the build
+tools. If the option is not provided the build system may try to guess the
+correct target triple.
 
 |# # end::doc[]
 
@@ -68,7 +74,8 @@ rule init ( version ? :  command * : options * ) {
     : version $(version) ] ;
 
   common.handle-options clang-linux : $(condition) : $(command) : $(options) ;
-  clang.init-flags clang-linux : $(condition) : $(version) ;
+  clang.init-flags clang-linux : $(condition) : $(version) :
+      [ feature.get-values <triple> : $(options) ] ;
 
   # Support for gcc root as the backend, this is mainly useful for clang/gcc on Windows
   # since on Linux gcc will be the default compiler already located on the PATH.
@@ -167,8 +174,8 @@ toolset.flags clang-linux.compile OPTIONS <lto>on/<lto-mode>full : -flto=full ;
 toolset.flags clang-linux.link OPTIONS <lto>on/<lto-mode>full : -flto=full ;
 
 # stdlib selection
-toolset.flags clang-linux.compile OPTIONS <stdlib>gnu <stdlib>gnu11 : -stdlib=libstdc++ ;
-toolset.flags clang-linux.link OPTIONS <stdlib>gnu <stdlib>gnu11 : -stdlib=libstdc++ ;
+toolset.flags clang-linux.compile.c++ OPTIONS <stdlib>gnu <stdlib>gnu11 <stdlib>libstdc++ : -stdlib=libstdc++ ;
+toolset.flags clang-linux.link OPTIONS <stdlib>gnu <stdlib>gnu11 <stdlib>libstdc++ : -stdlib=libstdc++ ;
 
-toolset.flags clang-linux.compile OPTIONS <stdlib>libc++ : -stdlib=libc++ ;
+toolset.flags clang-linux.compile.c++ OPTIONS <stdlib>libc++ : -stdlib=libc++ ;
 toolset.flags clang-linux.link OPTIONS <stdlib>libc++ : -stdlib=libc++ ;

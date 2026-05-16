@@ -19,7 +19,7 @@ n1
     to_string( c1 const & )
         {
         return "c1";
-        }           
+        }
     }
 
 namespace
@@ -35,7 +35,7 @@ n2
         {
         s << "c2";
         return s;
-        }           
+        }
     }
 
 namespace
@@ -51,13 +51,13 @@ n3
         {
         s << "bad";
         return s;
-        }           
+        }
 
     std::string
     to_string( c3 const & )
         {
         return "c3";
-        }           
+        }
     }
 
 namespace

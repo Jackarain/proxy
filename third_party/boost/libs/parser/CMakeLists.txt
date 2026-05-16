@@ -64,6 +64,12 @@ if (BUILD_WITH_HANA)
   add_definitions(-DBOOST_PARSER_USE_HANA_TUPLE)
 endif()
 
+set(DISABLE_TRACE false CACHE BOOL
+    "Disable parser trace functionality (defines BOOST_PARSER_DISABLE_TRACE).")
+if (DISABLE_TRACE)
+  add_definitions(-DBOOST_PARSER_DISABLE_TRACE)
+endif()
+
 
 ##################################################
 # Dependencies

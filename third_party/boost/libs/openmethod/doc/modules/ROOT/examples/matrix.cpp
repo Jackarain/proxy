@@ -3,146 +3,153 @@
 // See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+// https://godbolt.org/z/r6o4f171r
+
 #include <iostream>
 #include <memory>
 #include <string>
 #include <typeinfo>
 
 #include <boost/openmethod.hpp>
+#include <boost/openmethod/policies/static_rtti.hpp>
 #include <boost/openmethod/initialize.hpp>
-#include <boost/openmethod/interop/std_shared_ptr.hpp>
 
-using std::make_shared;
-using std::shared_ptr;
 using std::string;
 
-using boost::openmethod::make_shared_virtual;
-using boost::openmethod::shared_virtual_ptr;
-using boost::openmethod::virtual_ptr;
+using namespace boost::openmethod::aliases;
 
-struct matrix {
-    virtual ~matrix() {
-    }
-    virtual auto at(int row, int col) const -> double = 0;
-    // ...
+struct abstract {
+    int ref_count = 0;
 };
 
-struct dense_matrix : matrix {
-    virtual auto at(int /*row*/, int /*col*/) const -> double {
-        return 0;
+struct registry
+    : boost::openmethod::registry<boost::openmethod::policies::static_rtti> {};
+
+template<class Rep>
+using matrix_ptr = boost::openmethod::virtual_ptr<Rep, registry>;
+
+BOOST_OPENMETHOD(destroy, (matrix_ptr<abstract>), void, registry);
+
+class matrix {
+    matrix_ptr<abstract> rep_;
+
+    explicit matrix(matrix_ptr<abstract> rep) : rep_(rep) {
+        ++rep_->ref_count;
+
+        if (--rep->ref_count == 0) {
+            destroy(rep);
+        }
+    }
+
+  public:
+    matrix(const matrix&) = default;
+    matrix& operator=(const matrix&) = default;
+
+    auto rep() const -> matrix_ptr<abstract> {
+        return rep_;
+    }
+
+    template<class Rep, class... Args>
+    static matrix make(Args&&... args) {
+        return matrix(
+            boost::openmethod::final_virtual_ptr<registry>(
+                *new Rep(std::forward<Args>(args)...)));
     }
 };
 
-struct diagonal_matrix : matrix {
-    virtual auto at(int /*row*/, int /*col*/) const -> double {
-        return 0;
-    }
+struct dense : abstract {
+    static constexpr const char* type = "dense";
 };
 
-BOOST_OPENMETHOD_CLASSES(matrix, dense_matrix, diagonal_matrix);
-
-BOOST_OPENMETHOD(to_json, (virtual_ptr<const matrix>), string);
-
-BOOST_OPENMETHOD_OVERRIDE(to_json, (virtual_ptr<const dense_matrix>), string) {
-    return "json for dense matrix...";
+BOOST_OPENMETHOD_OVERRIDE(destroy, (matrix_ptr<dense> rep), void) {
+    delete rep.get();
 }
 
-BOOST_OPENMETHOD_OVERRIDE(
-    to_json, (virtual_ptr<const diagonal_matrix>), string) {
-    return "json for diagonal matrix...";
+struct diagonal : abstract {
+    static constexpr const char* type = "diagonal";
+};
+
+BOOST_OPENMETHOD_OVERRIDE(destroy, (matrix_ptr<diagonal> rep), void) {
+    delete rep.get();
 }
+
+BOOST_OPENMETHOD_CLASSES(abstract, dense, diagonal, registry);
 
 // -----------------------------------------------------------------------------
 // matrix * matrix
 
 BOOST_OPENMETHOD(
-    times, (shared_virtual_ptr<const matrix>, shared_virtual_ptr<const matrix>),
-    shared_virtual_ptr<const matrix>);
+    times, (matrix_ptr<abstract>, matrix_ptr<abstract>), matrix, registry);
 
-// catch-all matrix * matrix -> dense_matrix
+// catch-all matrix * matrix -> dense
 BOOST_OPENMETHOD_OVERRIDE(
-    times,
-    (shared_virtual_ptr<const matrix> /*a*/,
-     shared_virtual_ptr<const matrix> /*b*/),
-    shared_virtual_ptr<const dense_matrix>) {
-    return make_shared<const dense_matrix>();
+    times, (matrix_ptr<abstract> /*a*/, matrix_ptr<abstract> /*b*/), matrix) {
+    return matrix::make<dense>();
 }
 
-// diagonal_matrix * diagonal_matrix -> diagonal_matrix
+// diagonal * diagonal -> diagonal
 BOOST_OPENMETHOD_OVERRIDE(
-    times,
-    (shared_virtual_ptr<const diagonal_matrix> /*a*/,
-     shared_virtual_ptr<const diagonal_matrix> /*b*/),
-    shared_virtual_ptr<const diagonal_matrix>) {
-    return make_shared_virtual<diagonal_matrix>();
+    times, (matrix_ptr<diagonal> /*a*/, matrix_ptr<diagonal> /*b*/), matrix) {
+    return matrix::make<diagonal>();
 }
 
-inline auto operator*(shared_ptr<const matrix> a, shared_ptr<const matrix> b)
-    -> shared_virtual_ptr<const matrix> {
-    return times(a, b);
+inline auto operator*(matrix a, matrix b) -> matrix {
+    return times(a.rep(), b.rep());
 }
 
 // -----------------------------------------------------------------------------
 // scalar * matrix
 
-BOOST_OPENMETHOD(
-    times, (double, shared_virtual_ptr<const matrix>),
-    shared_virtual_ptr<const matrix>);
+BOOST_OPENMETHOD(times, (double, matrix_ptr<abstract>), matrix, registry);
 
-// catch-all matrix * scalar -> dense_matrix
+// catch-all matrix * scalar -> dense
 BOOST_OPENMETHOD_OVERRIDE(
-    times, (double /*a*/, shared_virtual_ptr<const matrix> /*b*/),
-    shared_virtual_ptr<const dense_matrix>) {
-    return make_shared_virtual<dense_matrix>();
+    times, (double /*a*/, matrix_ptr<abstract> /*b*/), matrix) {
+    return matrix::make<dense>();
 }
 
 BOOST_OPENMETHOD_OVERRIDE(
-    times, (double /*a*/, shared_virtual_ptr<const diagonal_matrix> /*b*/),
-    shared_virtual_ptr<const diagonal_matrix>) {
-    return make_shared_virtual<diagonal_matrix>();
+    times, (double /*a*/, matrix_ptr<diagonal> /*b*/), matrix) {
+    return matrix::make<diagonal>();
 }
 
 // -----------------------------------------------------------------------------
 // matrix * scalar
 
 // just swap
-inline auto times(shared_virtual_ptr<const matrix> a, double b)
-    -> shared_virtual_ptr<const matrix> {
+inline auto times(matrix_ptr<abstract> a, double b) -> matrix {
     return times(b, a);
 }
 
 // -----------------------------------------------------------------------------
 // main
 
-#define check(expr)                                                            \
-    {                                                                          \
-        if (!(expr)) {                                                         \
-            cerr << #expr << " failed\n";                                      \
-        }                                                                      \
-    }
+BOOST_OPENMETHOD(write, (matrix_ptr<abstract>), string, registry);
+
+inline auto operator<<(std::ostream& os, matrix a) -> std::ostream& {
+    return os << write(a.rep());
+}
+
+BOOST_OPENMETHOD_OVERRIDE(write, (matrix_ptr<dense>), string) {
+    return "a dense matrix";
+}
+
+BOOST_OPENMETHOD_OVERRIDE(write, (matrix_ptr<diagonal>), string) {
+    return "a diagonal matrix";
+}
 
 auto main() -> int {
     using std::cerr;
     using std::cout;
 
-    boost::openmethod::initialize();
+    boost::openmethod::initialize<registry>();
 
-    shared_ptr<const matrix> a = make_shared<dense_matrix>();
-    shared_ptr<const matrix> b = make_shared<diagonal_matrix>();
+    matrix a = matrix::make<dense>();
+    matrix b = matrix::make<diagonal>();
     double s = 1;
 
-#ifdef BOOST_CLANG
-#pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
-#endif
-
-    check(typeid(*times(a, a)) == typeid(dense_matrix));
-    check(typeid(*times(a, b)) == typeid(dense_matrix));
-    check(typeid(*times(b, b)) == typeid(diagonal_matrix));
-    check(typeid(*times(s, a)) == typeid(dense_matrix));
-    check(typeid(*times(s, b)) == typeid(diagonal_matrix));
-
-    cout << to_json(*a) << "\n"; // json for dense matrix
-    cout << to_json(*b) << "\n"; // json for diagonal matrix
+    cout << a << "\n";
+    cout << b << "\n";
 
     return 0;
 }

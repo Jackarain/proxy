@@ -27,9 +27,15 @@ parse_query(core::string_view s) noexcept
     // present query in URL (e.g. "http:?")
     // which produces {{"", none}}.
     if(s.empty())
+    {
+        // default-constructed string_view can return a null data pointer;
+        // query_ref expects a valid pointer even when the buffer is empty.
+        auto const* data = s.data();
+        core::string_view empty(data ? data : "", 0);
         return params_encoded_view(
             detail::query_ref(
-                s.data(), 0, 0));
+                empty, 0, 0));
+    }
     auto rv = grammar::parse(s, query_rule);
     if(! rv)
         return rv.error();
@@ -40,4 +46,3 @@ parse_query(core::string_view s) noexcept
 
 } // urls
 } // boost
-

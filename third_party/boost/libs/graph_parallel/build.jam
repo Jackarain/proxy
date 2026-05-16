@@ -1,0 +1,46 @@
+# Copyright René Ferdinand Rivera Morell 2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/algorithm//boost_algorithm
+    /boost/assert//boost_assert
+    /boost/concept_check//boost_concept_check
+    /boost/config//boost_config
+    /boost/container_hash//boost_container_hash
+    /boost/core//boost_core
+    /boost/detail//boost_detail
+    /boost/dynamic_bitset//boost_dynamic_bitset
+    /boost/filesystem//boost_filesystem
+    /boost/foreach//boost_foreach
+    /boost/function//boost_function
+    /boost/graph//boost_graph
+    /boost/iterator//boost_iterator
+    /boost/lexical_cast//boost_lexical_cast
+    /boost/mpi//boost_mpi
+    /boost/mpl//boost_mpl
+    /boost/optional//boost_optional
+    /boost/property_map//boost_property_map
+    /boost/property_map_parallel//boost_property_map_parallel
+    /boost/random//boost_random
+    /boost/serialization//boost_serialization
+    /boost/smart_ptr//boost_smart_ptr
+    /boost/tuple//boost_tuple
+    /boost/type_traits//boost_type_traits
+    /boost/variant//boost_variant ;
+
+project /boost/graph_parallel
+    ;
+
+explicit
+    [ alias boost_graph_parallel : build//boost_graph_parallel ]
+    [ alias all : boost_graph_parallel example test ]
+    ;
+
+call-if : boost-library graph_parallel
+    : install boost_graph_parallel
+    ;
+

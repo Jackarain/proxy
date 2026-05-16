@@ -9,8 +9,8 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_MSM_BACKMP11_EVENT_TRAITS_H
-#define BOOST_MSM_BACKMP11_EVENT_TRAITS_H
+#ifndef BOOST_MSM_BACKMP11_EVENT_TRAITS_HPP
+#define BOOST_MSM_BACKMP11_EVENT_TRAITS_HPP
 
 #include <boost/msm/kleene_event.hpp>
 #include <any>
@@ -35,4 +35,4 @@ using std::any_cast;
 
 } // boost::msm::backmp11
 
-#endif //BOOST_MSM_EVENT_TRAITS_H
+#endif //BOOST_MSM_EVENT_TRAITS_HPP

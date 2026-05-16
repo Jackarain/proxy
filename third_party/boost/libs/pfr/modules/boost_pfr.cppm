@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2025 Antony Polukhin
+// Copyright (c) 2016-2026 Antony Polukhin
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -28,6 +28,11 @@ import std;
 #include <type_traits>
 #include <utility>
 #include <variant>
+
+#ifdef __cpp_lib_reflection
+#include <meta>
+#endif
+
 #endif
 
 #define BOOST_PFR_INTERFACE_UNIT

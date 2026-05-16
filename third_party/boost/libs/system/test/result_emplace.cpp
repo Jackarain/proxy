@@ -42,6 +42,15 @@ struct Y
 
 int Y::instances = 0;
 
+struct E
+{
+};
+
+BOOST_NORETURN void throw_exception_from_error( Y const &, boost::source_location const& )
+{
+    throw E();
+}
+
 int main()
 {
     {

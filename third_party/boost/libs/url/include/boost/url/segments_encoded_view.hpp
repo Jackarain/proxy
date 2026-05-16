@@ -22,17 +22,13 @@
 namespace boost {
 namespace urls {
 
-/** A view representing path segments in a URL
+/** Non-owning encoded path segment view
 
-    Objects of this type are used to interpret
-    the path as a bidirectional view of segment
-    strings.
-
-    The view does not retain ownership of the
-    elements and instead references the original
-    character buffer. The caller is responsible
-    for ensuring that the lifetime of the buffer
-    extends until it is no longer referenced.
+    Exposes the raw percent-encoded segments of
+    a URL path as a read-only bidirectional range.
+    The view references the original buffer, so
+    callers must keep that storage alive while
+    iterating.
 
     @par Example
     @code
@@ -43,11 +39,9 @@ namespace urls {
     assert( ps.buffer().data() == u.buffer().data() );
     @endcode
 
-    Strings produced when elements are returned
-    have type @ref param_pct_view and represent
-    encoded strings. Strings passed to member
-    functions may contain percent escapes, and
-    throw exceptions on invalid inputs.
+    Elements are returned as encoded strings,
+    preserving escape sequences for callers that
+    need the exact byte representation.
 
     @par Iterator Invalidation
     Changes to the underlying character buffer
@@ -58,7 +52,7 @@ namespace urls {
         @ref segments_encoded_ref,
         @ref segments_ref.
 */
-class segments_encoded_view
+class BOOST_SYMBOL_VISIBLE segments_encoded_view
     : public segments_encoded_base
 {
     friend class url_view_base;
@@ -89,7 +83,7 @@ public:
         @par Exception Safety
         Throws nothing.
     */
-    segments_encoded_view() = default;
+    segments_encoded_view() noexcept;
 
     /** Constructor
 
@@ -163,7 +157,6 @@ public:
         @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.3"
             >3.3.  Path</a>
     */
-    BOOST_URL_DECL
     segments_encoded_view(
         core::string_view s);
 
@@ -233,7 +226,6 @@ public:
         @param first The beginning iterator.
         @param last The ending iterator.
     */
-    BOOST_URL_DECL
     segments_encoded_view(
         iterator first,
         iterator last) noexcept;
@@ -298,7 +290,6 @@ public:
 
         @return A view of the segments.
     */
-    BOOST_URL_DECL
     operator
     segments_view() const noexcept;
 
@@ -310,7 +301,33 @@ public:
     parse_path(core::string_view s) noexcept;
 };
 
+// Forward-declare for inline constructors below.
+// Full declaration in parse_path.hpp; definition in
+// src/parse_path.cpp.
+BOOST_URL_DECL
+system::result<segments_encoded_view>
+parse_path(core::string_view s) noexcept;
+
 } // urls
 } // boost
+
+#include <boost/url/impl/segments_view.hpp>
+#include <boost/url/impl/segments_encoded_view.hpp>
+
+//------------------------------------------------
+//
+// std::ranges::enable_borrowed_range
+//
+//------------------------------------------------
+
+#ifdef BOOST_URL_HAS_CONCEPTS
+#include <ranges>
+namespace std::ranges {
+    template<>
+    inline constexpr bool
+        enable_borrowed_range<
+            boost::urls::segments_encoded_view> = true;
+} // std::ranges
+#endif
 
 #endif

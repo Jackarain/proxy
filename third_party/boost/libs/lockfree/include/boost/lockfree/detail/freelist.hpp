@@ -86,15 +86,6 @@ public:
     }
 
     template < bool ThreadSafe, bool Bounded, typename ArgumentType >
-    T* construct( const ArgumentType& arg )
-    {
-        T* node = allocate< ThreadSafe, Bounded >();
-        if ( node )
-            new ( node ) T( arg );
-        return node;
-    }
-
-    template < bool ThreadSafe, bool Bounded, typename ArgumentType >
     T* construct( ArgumentType&& arg )
     {
         T* node = allocate< ThreadSafe, Bounded >();
@@ -108,7 +99,7 @@ public:
     {
         T* node = allocate< ThreadSafe, Bounded >();
         if ( node )
-            new ( node ) T( arg1, arg2 );
+            new ( node ) T( std::forward< ArgumentType1 >( arg1 ), std::forward< ArgumentType2 >( arg2 ) );
         return node;
     }
 
@@ -183,7 +174,7 @@ private:
     template < bool Bounded >
     T* allocate_impl( void )
     {
-        tagged_node_ptr old_pool = pool_.load( memory_order_consume );
+        tagged_node_ptr old_pool = pool_.load( memory_order_acquire );
 
         for ( ;; ) {
             if ( !old_pool.get_ptr() ) {
@@ -241,7 +232,7 @@ private:
     void deallocate_impl( T* n )
     {
         void*           node         = n;
-        tagged_node_ptr old_pool     = pool_.load( memory_order_consume );
+        tagged_node_ptr old_pool     = pool_.load( memory_order_acquire );
         freelist_node*  new_pool_ptr = reinterpret_cast< freelist_node* >( node );
 
         for ( ;; ) {
@@ -455,18 +446,6 @@ public:
     }
 
     template < bool ThreadSafe, bool Bounded, typename ArgumentType >
-    T* construct( const ArgumentType& arg )
-    {
-        index_t node_index = allocate< ThreadSafe >();
-        if ( node_index == null_handle() )
-            return NULL;
-
-        T* node = NodeStorage::nodes() + node_index;
-        new ( node ) T( arg );
-        return node;
-    }
-
-    template < bool ThreadSafe, bool Bounded, typename ArgumentType >
     T* construct( ArgumentType&& arg )
     {
         index_t node_index = allocate< ThreadSafe >();
@@ -479,14 +458,14 @@ public:
     }
 
     template < bool ThreadSafe, bool Bounded, typename ArgumentType1, typename ArgumentType2 >
-    T* construct( const ArgumentType1& arg1, const ArgumentType2& arg2 )
+    T* construct( ArgumentType1&& arg1, ArgumentType2&& arg2 )
     {
         index_t node_index = allocate< ThreadSafe >();
         if ( node_index == null_handle() )
             return NULL;
 
         T* node = NodeStorage::nodes() + node_index;
-        new ( node ) T( arg1, arg2 );
+        new ( node ) T( std::forward< ArgumentType1 >( arg1 ), std::forward< ArgumentType2 >( arg2 ) );
         return node;
     }
 
@@ -561,7 +540,7 @@ protected: // allow use from subclasses
 private:
     index_t allocate_impl( void )
     {
-        tagged_index old_pool = pool_.load( memory_order_consume );
+        tagged_index old_pool = pool_.load( memory_order_acquire );
 
         for ( ;; ) {
             index_t index = old_pool.get_index();
@@ -580,7 +559,7 @@ private:
 
     index_t allocate_impl_unsafe( void )
     {
-        tagged_index old_pool = pool_.load( memory_order_consume );
+        tagged_index old_pool = pool_.load( memory_order_acquire );
 
         index_t index = old_pool.get_index();
         if ( index == null_handle() )
@@ -607,7 +586,7 @@ private:
     void deallocate_impl( index_t index )
     {
         freelist_node* new_pool_node = reinterpret_cast< freelist_node* >( NodeStorage::nodes() + index );
-        tagged_index   old_pool      = pool_.load( memory_order_consume );
+        tagged_index   old_pool      = pool_.load( memory_order_acquire );
 
         for ( ;; ) {
             tagged_index new_pool( index, old_pool.get_tag() );
@@ -621,7 +600,7 @@ private:
     void deallocate_impl_unsafe( index_t index )
     {
         freelist_node* new_pool_node = reinterpret_cast< freelist_node* >( NodeStorage::nodes() + index );
-        tagged_index   old_pool      = pool_.load( memory_order_consume );
+        tagged_index   old_pool      = pool_.load( memory_order_acquire );
 
         tagged_index new_pool( index, old_pool.get_tag() );
         new_pool_node->next.set_index( old_pool.get_index() );

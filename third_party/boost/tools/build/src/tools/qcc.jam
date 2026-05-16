@@ -13,6 +13,7 @@ import errors ;
 import feature ;
 import generators ;
 import os ;
+import pch ;
 import property ;
 import regex ;
 import set ;
@@ -123,7 +124,7 @@ toolset.flags qcc.compile OPTIONS <link>shared : -shared ;
 toolset.flags qcc.compile.c++ TEMPLATE_DEPTH <c++-template-depth> ;
 
 
-rule compile.c++
+rule compile.c++ ( targets * : sources * : properties * )
 {
     # Here we want to raise the template-depth parameter value to something
     # higher than the default value of 17. Note that we could do this using the
@@ -137,7 +138,7 @@ rule compile.c++
     local template-depth = [ on $(1) return $(TEMPLATE_DEPTH) ] ;
     if ! $(template-depth)
     {
-        TEMPLATE_DEPTH on $(1) = 128 ;
+        TEMPLATE_DEPTH on $(1) = 256 ;
     }
 
     check-target-platform $(1) ;
@@ -153,7 +154,7 @@ actions compile.c++
     "$(CONFIG_COMMAND)" $(QCC-TARGET-PLATFORM) -Wc,-ftemplate-depth-$(TEMPLATE_DEPTH) $(OPTIONS) -D$(DEFINES) -I"$(INCLUDES)" -c -o "$(<)" "$(>)"
 }
 
-rule compile.c
+rule compile.c ( targets * : sources * : properties * )
 {
     check-target-platform $(1) ;
 

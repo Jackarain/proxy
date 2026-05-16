@@ -46,6 +46,7 @@ template< class SegmentManager
         , std::size_t NodesPerBlock
         , std::size_t MaxFreeBlocks
         , unsigned char OverheadPercent
+        , std::size_t NodeAlign
         >
 class private_adaptive_node_pool
    :  public boost::container::dtl::private_adaptive_node_pool_impl_rt
@@ -68,11 +69,12 @@ class private_adaptive_node_pool
    typedef SegmentManager              segment_manager;
    typedef typename base_t::size_type  size_type;
 
-   static const size_type nodes_per_block = NodesPerBlock;
+   BOOST_STATIC_CONSTEXPR size_type nodes_per_block = NodesPerBlock;
+   BOOST_STATIC_CONSTEXPR std::size_t node_alignment = NodeAlign != 0 ? NodeAlign : 1u;
 
    //!Constructor from a segment manager. Never throws
    private_adaptive_node_pool(segment_manager *segment_mngr)
-      :  base_t(segment_mngr, NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent)
+      :  base_t(segment_mngr, NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent, NodeAlign)
    {}
 
    //!Returns the segment manager. Never throws
@@ -89,16 +91,17 @@ template< class SegmentManager
         , std::size_t NodesPerBlock
         , std::size_t MaxFreeBlocks
         , unsigned char OverheadPercent
+        , std::size_t NodeAlign
         >
 class shared_adaptive_node_pool
    :  public ipcdetail::shared_pool_impl
       < private_adaptive_node_pool
-         <SegmentManager, NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent>
+         <SegmentManager, NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent, NodeAlign>
       >
 {
    typedef ipcdetail::shared_pool_impl
       < private_adaptive_node_pool
-         <SegmentManager, NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent>
+         <SegmentManager, NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent, NodeAlign>
       > base_t;
    public:
    shared_adaptive_node_pool(SegmentManager *segment_mgnr)

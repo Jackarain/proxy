@@ -369,7 +369,7 @@ searched.
 Any of these files may also be overridden
 link:#b2.reference.init.options.config[on the command line].
 
-TIP: You can use the `--debug-configuration` option to find which
+NOTE: You can use the `--debug-configuration` option to find which
 configuration files are actually loaded.
 
 Usually, `user-config.jam` just defines the available compilers and
@@ -392,7 +392,7 @@ using gcc ;
 
 will make the http://gcc.gnu.org[GCC] compiler available.
 
-TIP: You can put `using <tool> ;` with no other argument in a Jamfile
+NOTE: You can put `using <tool> ;` with no other argument in a Jamfile
 that needs the `tool`, provided that the `tool` supports this usage.
 In all other cases, the `using` rule should be in a configuration file.
 The general principle is that descriptions in Jamfile should be

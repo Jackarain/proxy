@@ -7,6 +7,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <boost/proto/core.hpp>
 #include <boost/proto/transform.hpp>
 #include <boost/detail/workaround.hpp>
@@ -63,7 +65,7 @@ struct ArityOf
     >
 {};
 
-void test_switch()
+BOOST_AUTO_TEST_CASE(test_switch)
 {
     // Tests for backward compatibility
     proto::assert_matches<proto::switch_<MyCases> >(proto::lit(1) >> 'a');
@@ -79,17 +81,3 @@ void test_switch()
     BOOST_CHECK_EQUAL(ar(!proto::lit(1)), false);
     BOOST_CHECK_EQUAL(ar(proto::lit(1) + 2), true);
 }
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite(int argc, char* argv[])
-{
-    test_suite *test = BOOST_TEST_SUITE("test proto::switch_<>");
-
-    test->add(BOOST_TEST_CASE(&test_switch));
-
-    return test;
-}
-

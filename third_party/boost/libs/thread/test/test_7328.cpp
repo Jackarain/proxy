@@ -7,7 +7,7 @@
 
 #include <iostream>
 #include <boost/thread/thread_only.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #if defined BOOST_THREAD_USES_CHRONO
 

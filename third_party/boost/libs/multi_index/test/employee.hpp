@@ -1,6 +1,6 @@
 /* Used in Boost.MultiIndex tests.
  *
- * Copyright 2003-2018 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -12,9 +12,6 @@
 #define BOOST_MULTI_INDEX_TEST_EMPLOYEE_HPP
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
-#include <boost/move/core.hpp>
-#include <boost/move/utility_core.hpp>
-#include <boost/mpl/vector.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/identity.hpp>
@@ -25,6 +22,7 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <ostream>
 #include <string>
+#include <utility>
 #include "non_std_allocator.hpp"
 
 struct employee
@@ -42,11 +40,11 @@ struct employee
     id(x.id),name(x.name),age(x.age),ssn(x.ssn)
   {}
 
-  employee(BOOST_RV_REF(employee) x):
-    id(x.id),name(boost::move(x.name)),age(x.age),ssn(x.ssn)
+  employee(employee&& x):
+    id(x.id),name(std::move(x.name)),age(x.age),ssn(x.ssn)
   {}
 
-  employee& operator=(BOOST_COPY_ASSIGN_REF(employee) x)
+  employee& operator=(const employee& x)
   {
     id=x.id;
     name=x.name;
@@ -55,10 +53,10 @@ struct employee
     return *this;
   };
 
-  employee& operator=(BOOST_RV_REF(employee) x)
+  employee& operator=(employee&& x)
   {
     id=x.id;
-    name=boost::move(x.name);
+    name=std::move(x.name);
     age=x.age;
     ssn=x.ssn;
     return *this;
@@ -90,9 +88,6 @@ struct employee
     os<<e.id<<" "<<e.name<<" "<<e.age<<std::endl;
     return os;
   }
-
-private:
-  BOOST_COPYABLE_AND_MOVABLE(employee)
 };
 
 struct name{};
@@ -102,8 +97,8 @@ struct as_inserted{};
 struct ssn{};
 struct randomly{};
 
-struct employee_set_indices:
-  boost::mpl::vector<
+using employee_set_indices=
+  boost::multi_index::indexed_by<
     boost::multi_index::ordered_unique<
       boost::multi_index::identity<employee> >,
     boost::multi_index::hashed_non_unique<
@@ -118,8 +113,7 @@ struct employee_set_indices:
       boost::multi_index::tag<ssn>,
       BOOST_MULTI_INDEX_MEMBER(employee,int,ssn)>,
     boost::multi_index::random_access<
-      boost::multi_index::tag<randomly> > >
-{};
+      boost::multi_index::tag<randomly> > >;
 
 typedef
   boost::multi_index::multi_index_container<
@@ -127,12 +121,7 @@ typedef
     employee_set_indices,
     non_std_allocator<employee> >        employee_set;
 
-#if defined(BOOST_NO_MEMBER_TEMPLATES)
-typedef boost::multi_index::nth_index<
-  employee_set,1>::type                  employee_set_by_name;
-#else
 typedef employee_set::nth_index<1>::type employee_set_by_name;
-#endif
 
 typedef boost::multi_index::index<
          employee_set,age>::type         employee_set_by_age;
@@ -141,12 +130,7 @@ typedef boost::multi_index::index<
 typedef boost::multi_index::index<
          employee_set,ssn>::type         employee_set_by_ssn;
 
-#if defined(BOOST_NO_MEMBER_TEMPLATES)
-typedef boost::multi_index::index<
-         employee_set,randomly>::type    employee_set_randomly;
-#else
 typedef employee_set::index<
           randomly>::type                employee_set_randomly;
-#endif
 
 #endif

@@ -1,6 +1,6 @@
 # Boost.MultiIndex tests Jamfile
 #
-# Copyright 2003-2020 Joaqu�n M L�pez Mu�oz.
+# Copyright 2003-2025 Joaquín M López Muñoz.
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
@@ -30,6 +30,9 @@ rule change-test_update-exe-name ( name : type ? : property-set )
 project
     : requirements
       <library>/boost/multi_index//boost_multi_index
+      <library>/boost/foreach//boost_foreach
+      <library>/boost/iterator//boost_iterator
+      <library>/boost/mpl//boost_mpl
       <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
       <toolset>msvc:<define>_CRT_SECURE_NO_WARNINGS
       <toolset>msvc:<define>_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
@@ -69,7 +72,10 @@ test-suite "multi_index" :
     [ run test_serialization.cpp    test_serialization1.cpp
           test_serialization2.cpp   test_serialization3.cpp
           test_serialization_main.cpp
-          /boost/serialization//boost_serialization                ]
+          /boost/serialization//boost_serialization
+        : : :
+        <toolset>clang-3.5:<build>no
+        <toolset>clang-3.6:<build>no                               ]
     [ run test_set_ops.cpp          test_set_ops_main.cpp          ]
     [ run test_special_set_ops.cpp  test_special_set_ops_main.cpp  ]
     [ run test_update.cpp           test_update_main.cpp

@@ -6,7 +6,7 @@
     http://www.boost.org/LICENSE_1_0.txt).
 ==============================================================================*/
 
-#if !defined(BOOST_FUSION_COMPILE_TIME_DRIVER)
+#ifndef BOOST_FUSION_COMPILE_TIME_DRIVER
 #define BOOST_FUSION_COMPILE_TIME_DRIVER
 
 int main()

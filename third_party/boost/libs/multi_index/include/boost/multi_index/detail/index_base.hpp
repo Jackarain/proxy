@@ -1,4 +1,4 @@
-/* Copyright 2003-2021 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -15,17 +15,14 @@
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
 #include <boost/core/addressof.hpp>
+#include <boost/core/allocator_access.hpp>
 #include <boost/core/no_exceptions_support.hpp>
-#include <boost/detail/workaround.hpp>
-#include <boost/move/utility_core.hpp>
-#include <boost/mpl/vector.hpp>
-#include <boost/multi_index/detail/allocator_traits.hpp>
 #include <boost/multi_index/detail/copy_map.hpp>
 #include <boost/multi_index/detail/do_not_copy_elements_tag.hpp>
 #include <boost/multi_index/detail/index_access_sequence.hpp>
 #include <boost/multi_index/detail/node_handle.hpp>
 #include <boost/multi_index/detail/node_type.hpp>
-#include <boost/multi_index/detail/vartempl_support.hpp>
+#include <boost/multi_index/detail/type_list.hpp>
 #include <boost/multi_index_container_fwd.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <utility>
@@ -63,14 +60,12 @@ protected:
   typedef multi_index_container<
     Value,IndexSpecifierList,Allocator>       final_type;
   typedef tuples::null_type                   ctor_args_list;
-  typedef typename rebind_alloc_for<
-    Allocator,typename Allocator::value_type
-  >::type                                     final_allocator_type;
+  typedef Allocator                           final_allocator_type;
   typedef node_handle<
     final_node_type,final_allocator_type>     final_node_handle_type;
-  typedef mpl::vector0<>                      index_type_list;
-  typedef mpl::vector0<>                      iterator_type_list;
-  typedef mpl::vector0<>                      const_iterator_type_list;
+  typedef empty_type_list                     index_type_list;
+  typedef empty_type_list                     iterator_type_list;
+  typedef empty_type_list                     const_iterator_type_list;
   typedef copy_map<
     final_node_type,
     final_allocator_type>                     copy_map_type;
@@ -87,8 +82,7 @@ protected:
 
 private:
   typedef Value                               value_type;
-  typedef allocator_traits<Allocator>         alloc_traits;
-  typedef typename alloc_traits::size_type    size_type;
+  typedef allocator_size_type_t<Allocator>    size_type;
 
 protected:
   explicit index_base(const ctor_args_list&,const Allocator&){}
@@ -120,7 +114,7 @@ protected:
   {
     x=final().allocate_node();
     BOOST_TRY{
-      final().construct_value(x,boost::move(const_cast<value_type&>(v)));
+      final().construct_value(x,std::move(const_cast<value_type&>(v)));
     }
     BOOST_CATCH(...){
       final().deallocate_node(x);
@@ -183,7 +177,7 @@ protected:
 
   bool replace_(const value_type& v,index_node_type* x,rvalue_tag)
   {
-    x->value()=boost::move(const_cast<value_type&>(v));
+    x->value()=std::move(const_cast<value_type&>(v));
     return true;
   }
 
@@ -241,11 +235,10 @@ protected:
   std::pair<final_node_type*,bool> final_transfer_(Index& x,final_node_type* n)
     {return final().transfer_(x,n);}
 
-  template<BOOST_MULTI_INDEX_TEMPLATE_PARAM_PACK>
-  std::pair<final_node_type*,bool> final_emplace_(
-    BOOST_MULTI_INDEX_FUNCTION_PARAM_PACK)
+  template<typename... Args>
+  std::pair<final_node_type*,bool> final_emplace_(Args&&... args)
   {
-    return final().emplace_(BOOST_MULTI_INDEX_FORWARD_PARAM_PACK);
+    return final().emplace_(std::forward<Args>(args)...);
   }
 
   std::pair<final_node_type*,bool> final_insert_(
@@ -266,12 +259,11 @@ protected:
     final_node_handle_type& nh,final_node_type* position)
     {return final().insert_nh_(nh,position);}
 
-  template<BOOST_MULTI_INDEX_TEMPLATE_PARAM_PACK>
+  template<typename... Args>
   std::pair<final_node_type*,bool> final_emplace_hint_(
-    final_node_type* position,BOOST_MULTI_INDEX_FUNCTION_PARAM_PACK)
+    final_node_type* position,Args&&... args)
   {
-    return final().emplace_hint_(
-      position,BOOST_MULTI_INDEX_FORWARD_PARAM_PACK);
+    return final().emplace_hint_(position,std::forward<Args>(args)...);
   }
 
   final_node_handle_type final_extract_(final_node_type* x)
@@ -294,8 +286,8 @@ protected:
   template<typename Index>
   void final_transfer_range_(
     Index& x,
-    BOOST_DEDUCED_TYPENAME Index::iterator first,
-    BOOST_DEDUCED_TYPENAME Index::iterator last)
+    typename Index::iterator first,
+    typename Index::iterator last)
     {final().transfer_range_(x,first,last);}
 
   void final_swap_(final_type& x){final().swap_(x);}

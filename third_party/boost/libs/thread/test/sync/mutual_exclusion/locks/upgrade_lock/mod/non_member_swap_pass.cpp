@@ -18,7 +18,7 @@
 //   void swap(upgrade_lock<Mutex>& x, upgrade_lock<Mutex>& y);
 
 #include <boost/thread/lock_types.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 struct shared_mutex
 {

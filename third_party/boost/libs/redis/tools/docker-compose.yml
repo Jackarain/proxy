@@ -1,19 +1,141 @@
 services:
-  redis:
+  redis-master:
+    container_name: redis-master
     image: ${SERVER_IMAGE}
-    entrypoint: "/docker/entrypoint.sh"
+    network_mode: host
+    command: >
+      sh -c 'chmod 777 /tmp/redis-socks &&
+             redis-server \
+              --replica-announce-ip localhost \
+              --port 6379 \
+              --tls-port 16379 \
+              --tls-cert-file /tls/server.crt \
+              --tls-key-file /tls/server.key \
+              --tls-ca-cert-file /tls/ca.crt \
+              --tls-auth-clients no \
+              --unixsocket /tmp/redis-socks/redis.sock \
+              --unixsocketperm 777'
     volumes:
-      - ./docker:/docker
+      - /opt/ci-tls:/tls
       - /tmp/redis-socks:/tmp/redis-socks
-    ports:
-      - 6379:6379
-      - 6380:6380
+
+  redis-replica-1:
+    container_name: redis-replica-1
+    image: ${SERVER_IMAGE}
+    network_mode: host
+    command:
+      [
+        "redis-server",
+        "--replica-announce-ip", "localhost",
+        "--replicaof", "localhost", "6379",
+        "--port", "6380",
+        "--tls-port", "16380",
+        "--tls-cert-file", "/tls/server.crt",
+        "--tls-key-file", "/tls/server.key",
+        "--tls-ca-cert-file", "/tls/ca.crt",
+        "--tls-auth-clients", "no",
+      ]
+    volumes:
+      - /opt/ci-tls:/tls
+
+
+  redis-replica-2:
+    container_name: redis-replica-2
+    image: ${SERVER_IMAGE}
+    network_mode: host
+    command:
+      [
+        "redis-server",
+        "--replica-announce-ip", "localhost",
+        "--replicaof", "localhost", "6379",
+        "--port", "6381",
+        "--tls-port", "16381",
+        "--tls-cert-file", "/tls/server.crt",
+        "--tls-key-file", "/tls/server.key",
+        "--tls-ca-cert-file", "/tls/ca.crt",
+        "--tls-auth-clients", "no",
+      ]
+    volumes:
+      - /opt/ci-tls:/tls
+
+
+  sentinel-1:
+    container_name: sentinel-1
+    image: ${SERVER_IMAGE}
+    network_mode: host
+    command: >
+      sh -c 'cat << EOF > /etc/sentinel.conf && redis-sentinel /etc/sentinel.conf
+        port 26379
+        tls-port 36379
+        tls-cert-file /tls/server.crt
+        tls-key-file /tls/server.key
+        tls-ca-cert-file /tls/ca.crt
+        tls-auth-clients no
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+        sentinel announce-ip localhost
+        sentinel monitor mymaster localhost 6379 2
+        sentinel down-after-milliseconds mymaster 10000
+        sentinel failover-timeout mymaster 10000
+        sentinel parallel-syncs mymaster 1
+      EOF'
+    volumes:
+      - /opt/ci-tls:/tls
+
+
+  sentinel-2:
+    container_name: sentinel-2
+    image: ${SERVER_IMAGE}
+    network_mode: host
+    command: >
+      sh -c 'cat << EOF > /etc/sentinel.conf && redis-sentinel /etc/sentinel.conf
+        port 26380
+        tls-port 36380
+        tls-cert-file /tls/server.crt
+        tls-key-file /tls/server.key
+        tls-ca-cert-file /tls/ca.crt
+        tls-auth-clients no
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+        sentinel announce-ip localhost
+        sentinel monitor mymaster localhost 6379 2
+        sentinel down-after-milliseconds mymaster 10000
+        sentinel failover-timeout mymaster 10000
+        sentinel parallel-syncs mymaster 1
+      EOF'
+    volumes:
+      - /opt/ci-tls:/tls
+
+  sentinel-3:
+    container_name: sentinel-3
+    image: ${SERVER_IMAGE}
+    network_mode: host
+    command: >
+      sh -c 'cat << EOF > /etc/sentinel.conf && redis-sentinel /etc/sentinel.conf
+        port 26381
+        tls-port 36381
+        tls-cert-file /tls/server.crt
+        tls-key-file /tls/server.key
+        tls-ca-cert-file /tls/ca.crt
+        tls-auth-clients no
+        sentinel resolve-hostnames yes
+        sentinel announce-hostnames yes
+        sentinel announce-ip localhost
+        sentinel monitor mymaster localhost 6379 2
+        sentinel down-after-milliseconds mymaster 10000
+        sentinel failover-timeout mymaster 10000
+        sentinel parallel-syncs mymaster 1
+      EOF'
+    volumes:
+      - /opt/ci-tls:/tls
+
+
   builder:
-    image: ${BUILDER_IMAGE}
     container_name: builder
+    image: ${BUILDER_IMAGE}
+    network_mode: host
     tty: true
-    environment:
-      - BOOST_REDIS_TEST_SERVER=redis
     volumes:
       - ../:/boost-redis
+      - /opt/ci-tls:/opt/ci-tls
       - /tmp/redis-socks:/tmp/redis-socks

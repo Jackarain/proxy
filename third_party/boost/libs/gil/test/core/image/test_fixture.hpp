@@ -35,7 +35,12 @@ using image_types = std::tuple
     gil::rgba32_image_t
 >;
 
-#if defined(BOOST_NO_CXX17_HDR_MEMORY_RESOURCE)
+// Workaround until we have the proper defect test in Boost.Config
+#if defined(__APPLE__) && (__clang_major__ ==  15)
+#define BOOST_NO_CXX17_DEFAULT_RESOURCE
+#endif
+
+#if defined(BOOST_NO_CXX17_HDR_MEMORY_RESOURCE) || defined(BOOST_NO_CXX17_DEFAULT_RESOURCE)
     using pmr_image_types = std::tuple<>;
 #else
     using pmr_image_types = std::tuple

@@ -5,6 +5,8 @@
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "test_common/test_service.hpp"
+
 #include <boost/mqtt5/types.hpp>
 
 #include <boost/mqtt5/impl/disconnect_op.hpp>
@@ -17,8 +19,6 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-
-#include "test_common/test_service.hpp"
 
 using namespace boost::mqtt5;
 
@@ -45,7 +45,7 @@ void run_malformed_props_test(const disconnect_props& dprops) {
     > { svc_ptr, std::move(ctx), std::move(handler) }
     .perform();
 
-    ioc.run_for(std::chrono::milliseconds(500));
+    ioc.poll();
     BOOST_TEST(handlers_called == expected_handlers_called);
 }
 

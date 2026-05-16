@@ -12,7 +12,6 @@
 #include <boost/system/error_code.hpp>
 
 #include <array>
-#include <cstdint>
 #include <optional>
 #include <string_view>
 

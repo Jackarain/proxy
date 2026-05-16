@@ -15,11 +15,11 @@
 #include <boost/url/grammar/alpha_chars.hpp>
 #include <boost/url/grammar/optional_rule.hpp>
 #include <boost/url/grammar/token_rule.hpp>
-#include "../rfc/detail/charsets.hpp"
-#include "../rfc/detail/host_rule.hpp"
-#include "boost/url/rfc/detail/path_rules.hpp"
-#include "../rfc/detail/port_rule.hpp"
-#include "../rfc/detail/scheme_rule.hpp"
+#include <boost/url/rfc/detail/charsets.hpp>
+#include <boost/url/rfc/detail/host_rule.hpp>
+#include <boost/url/rfc/detail/path_rules.hpp>
+#include <boost/url/rfc/detail/port_rule.hpp>
+#include <boost/url/rfc/detail/scheme_rule.hpp>
 
 namespace boost {
 namespace urls {
@@ -166,8 +166,9 @@ apply(
             char const* dest1 = pct_vformat(
                 user_chars, pctx, fctx);
             u.impl_.decoded_[parts::id_user] =
-                pct_string_view(dest, dest1 - dest)
-                    ->decoded_size();
+                detail::to_size_type(
+                    pct_string_view(dest, dest1 - dest)
+                        ->decoded_size());
             if (has_pass)
             {
                 char* destp = u.set_password_impl(
@@ -177,8 +178,9 @@ apply(
                 dest1 = pct_vformat(
                     password_chars, pctx, fctx);
                 u.impl_.decoded_[parts::id_pass] =
-                    pct_string_view({destp, dest1})
-                        ->decoded_size() + 1;
+                    detail::to_size_type(
+                        pct_string_view({destp, dest1})
+                            ->decoded_size() + 1);
             }
         }
         auto dest = u.set_host_impl(
@@ -193,8 +195,9 @@ apply(
                 pct_vformat(lhost_chars, pctx, fctx);
             *dest1++ = ']';
             u.impl_.decoded_[parts::id_host] =
-                pct_string_view(dest - 1, dest1 - dest)
-                    ->decoded_size();
+                detail::to_size_type(
+                    pct_string_view(dest - 1, dest1 - dest)
+                        ->decoded_size());
         }
         else
         {
@@ -203,8 +206,9 @@ apply(
             char const* dest1 =
                 pct_vformat(host_chars, pctx, fctx);
             u.impl_.decoded_[parts::id_host] =
-                pct_string_view(dest, dest1 - dest)
-                    ->decoded_size();
+                detail::to_size_type(
+                    pct_string_view(dest, dest1 - dest)
+                        ->decoded_size());
         }
         auto uh = u.encoded_host();
         auto h = grammar::parse(uh, host_rule).value();
@@ -221,8 +225,9 @@ apply(
             char const* dest1 = pct_vformat(
                 grammar::digit_chars, pctx, fctx);
             u.impl_.decoded_[parts::id_port] =
-                pct_string_view(dest, dest1 - dest)
-                    ->decoded_size() + 1;
+                detail::to_size_type(
+                    pct_string_view(dest, dest1 - dest)
+                        ->decoded_size() + 1);
             core::string_view up = {dest - 1, dest1};
             auto p = grammar::parse(up, detail::port_part_rule).value();
             if (p.has_port)
@@ -240,12 +245,14 @@ apply(
             path_chars, pctx, fctx);
         pct_string_view npath(dest, dest1 - dest);
         u.impl_.decoded_[parts::id_path] +=
-            npath.decoded_size();
+            detail::to_size_type(
+                npath.decoded_size());
         if (!npath.empty())
         {
-            u.impl_.nseg_ = std::count(
-                npath.begin() + 1,
-                npath.end(), '/') + 1;
+            u.impl_.nseg_ = detail::to_size_type(
+                std::count(
+                    npath.begin() + 1,
+                    npath.end(), '/') + 1);
         }
         // handle edge cases
         // 1) path is first component and the
@@ -281,6 +288,7 @@ apply(
                         dest0++;
                     }
                 }
+                n.path += diff;
             }
         }
         // 2) url has no authority and path
@@ -309,12 +317,14 @@ apply(
             query_chars, pctx, fctx);
         pct_string_view nquery(dest, dest1 - dest);
         u.impl_.decoded_[parts::id_query] +=
-            nquery.decoded_size() + 1;
+            detail::to_size_type(
+                nquery.decoded_size() + 1);
         if (!nquery.empty())
         {
-            u.impl_.nparam_ = std::count(
-                nquery.begin(),
-                nquery.end(), '&') + 1;
+            u.impl_.nparam_ = detail::to_size_type(
+                std::count(
+                    nquery.begin(),
+                    nquery.end(), '&') + 1);
         }
     }
     if (has_frag)
@@ -328,9 +338,10 @@ apply(
         auto dest1 = pct_vformat(
             fragment_chars, pctx, fctx);
         u.impl_.decoded_[parts::id_frag] +=
-            make_pct_string_view(
-                core::string_view(dest, dest1 - dest))
-                ->decoded_size() + 1;
+            detail::to_size_type(
+                make_pct_string_view(
+                    core::string_view(dest, dest1 - dest))
+                    ->decoded_size() + 1);
     }
 }
 
@@ -620,6 +631,7 @@ struct host_template_rule_t
         // the rule might fail to match the
         // closing "]"
         BOOST_ASSERT(rv);
+        (void)rv;
         return core::string_view{it0, it};
     }
 };
@@ -944,4 +956,3 @@ parse_pattern(
 } // detail
 } // urls
 } // boost
-

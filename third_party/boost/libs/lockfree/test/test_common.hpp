@@ -155,3 +155,185 @@ struct queue_stress_tester
 } // namespace impl
 
 using impl::queue_stress_tester;
+
+namespace impl {
+
+template < bool Bounded = false >
+struct stack_consume_all_atomic_stress_tester
+{
+    static const unsigned int buckets = 1 << 13;
+#ifndef BOOST_LOCKFREE_STRESS_TEST
+    static const long node_count = 5000;
+#else
+    static const long node_count = 5000000;
+#endif
+    const int reader_threads;
+    const int writer_threads;
+
+    std::atomic< int > writers_finished;
+
+    static_hashed_set< long, buckets > data;
+    static_hashed_set< long, buckets > dequeued;
+
+    std::atomic< int > push_count, pop_count;
+
+    stack_consume_all_atomic_stress_tester( int reader, int writer ) :
+        reader_threads( reader ),
+        writer_threads( writer ),
+        push_count( 0 ),
+        pop_count( 0 )
+    {}
+
+    template < typename stack_type >
+    void add_items( stack_type& stk )
+    {
+        for ( long i = 0; i != node_count; ++i ) {
+            long id = generate_id< long >();
+
+            bool inserted = data.insert( id );
+            assert( inserted );
+            (void)inserted;
+
+            if ( Bounded )
+                while ( stk.bounded_push( id ) == false ) {
+#ifdef __VXWORKS__
+                    std::this_thread::yield();
+#endif
+                }
+            else
+                while ( stk.push( id ) == false ) {
+#ifdef __VXWORKS__
+                    std::this_thread::yield();
+#endif
+                }
+            ++push_count;
+        }
+        writers_finished += 1;
+    }
+
+    template < typename stack_type >
+    void get_items_atomic( stack_type& stk )
+    {
+        for ( ;; ) {
+            size_t consumed = stk.consume_all_atomic( [ & ]( long id ) {
+                bool erased   = data.erase( id );
+                bool inserted = dequeued.insert( id );
+                (void)erased;
+                (void)inserted;
+                assert( erased );
+                assert( inserted );
+                ++pop_count;
+            } );
+
+            if ( consumed == 0 && writers_finished.load() == writer_threads )
+                break;
+
+#ifdef __VXWORKS__
+            std::this_thread::yield();
+#endif
+        }
+
+        // drain remaining
+        stk.consume_all_atomic( [ & ]( long id ) {
+            bool erased   = data.erase( id );
+            bool inserted = dequeued.insert( id );
+            (void)erased;
+            (void)inserted;
+            assert( erased );
+            assert( inserted );
+            ++pop_count;
+        } );
+    }
+
+    template < typename stack_type >
+    void get_items_atomic_reversed( stack_type& stk )
+    {
+        for ( ;; ) {
+            size_t consumed = stk.consume_all_atomic_reversed( [ & ]( long id ) {
+                bool erased   = data.erase( id );
+                bool inserted = dequeued.insert( id );
+                (void)erased;
+                (void)inserted;
+                assert( erased );
+                assert( inserted );
+                ++pop_count;
+            } );
+
+            if ( consumed == 0 && writers_finished.load() == writer_threads )
+                break;
+
+#ifdef __VXWORKS__
+            std::this_thread::yield();
+#endif
+        }
+
+        // drain remaining
+        stk.consume_all_atomic_reversed( [ & ]( long id ) {
+            bool erased   = data.erase( id );
+            bool inserted = dequeued.insert( id );
+            (void)erased;
+            (void)inserted;
+            assert( erased );
+            assert( inserted );
+            ++pop_count;
+        } );
+    }
+
+    template < typename stack_type, typename ReaderFunc >
+    void run_impl( stack_type& stk, ReaderFunc reader_func )
+    {
+        BOOST_WARN( stk.is_lock_free() );
+        writers_finished.store( 0 );
+
+        boost::thread_group writer;
+        boost::thread_group reader;
+
+        BOOST_TEST_REQUIRE( stk.empty() );
+
+        for ( int i = 0; i != reader_threads; ++i )
+            reader.create_thread( [ &, reader_func ] {
+                reader_func( stk );
+            } );
+
+        for ( int i = 0; i != writer_threads; ++i )
+            writer.create_thread( [ & ] {
+                add_items( stk );
+            } );
+
+        std::cout << "threads created" << std::endl;
+
+        writer.join_all();
+
+        std::cout << "writer threads joined, waiting for readers" << std::endl;
+
+        reader.join_all();
+
+        std::cout << "reader threads joined" << std::endl;
+
+        BOOST_TEST_REQUIRE( data.count_nodes() == (size_t)0 );
+        BOOST_TEST_REQUIRE( stk.empty() );
+
+        BOOST_TEST_REQUIRE( push_count == pop_count );
+        BOOST_TEST_REQUIRE( push_count == writer_threads * node_count );
+    }
+
+    template < typename stack_type >
+    void run_atomic( stack_type& stk )
+    {
+        run_impl( stk, [ this ]( stack_type& s ) {
+            get_items_atomic( s );
+        } );
+    }
+
+    template < typename stack_type >
+    void run_atomic_reversed( stack_type& stk )
+    {
+        run_impl( stk, [ this ]( stack_type& s ) {
+            get_items_atomic_reversed( s );
+        } );
+    }
+};
+
+} // namespace impl
+
+using impl::stack_consume_all_atomic_stress_tester;

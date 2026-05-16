@@ -8,7 +8,7 @@ The `default_launcher` is the standard way of creating a process.
 asio::io_context ctx;
 process proc(ctx.get_executor(), "test", {});
 // equivalent to
-process prod = default_launcher()(ctx.get_executor(), "test", {});
+process proc = default_launcher()(ctx.get_executor(), "test", {});
 ----
 
 It has four overloads:

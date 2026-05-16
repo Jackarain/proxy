@@ -1,5 +1,5 @@
 /* Unit testing for outcomes
-(C) 2013-2025 Niall Douglas <http://www.nedproductions.biz/> (4 commits)
+(C) 2013-2026 Niall Douglas <http://www.nedproductions.biz/> (4 commits)
 
 
 Boost Software License - Version 1.0 - August 17th, 2003
@@ -27,10 +27,14 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
+#define BOOST_OUTCOME_SYSTEM_ERROR2_FATAL(msg) abort()
+
 #include <boost/outcome/experimental/status_outcome.hpp>
 
 #define BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND std
-template <class T, class S = BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE::system_code, class P = BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::exception_ptr> using outcome = BOOST_OUTCOME_V2_NAMESPACE::experimental::status_outcome<T, S, P>;
+template <class T, class S = BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE::system_code,
+          class P = BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::exception_ptr>
+using outcome = BOOST_OUTCOME_V2_NAMESPACE::experimental::status_outcome<T, S, P>;
 using BOOST_OUTCOME_V2_NAMESPACE::in_place_type;
 
 #include <boost/test/unit_test.hpp>
@@ -124,7 +128,8 @@ BOOST_OUTCOME_AUTO_TEST_CASE(works_status_code_outcome, "Tests that the outcome 
 #if !defined(__APPLE__) || defined(__cpp_exceptions)
   {  // excepted
     BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::error_code ec(5, BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::system_category());
-    auto e = BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::make_exception_ptr(BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::system_error(ec));  // NOLINT
+    auto e = BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::make_exception_ptr(
+    BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::system_error(ec));  // NOLINT
     outcome<int> m(e);
     BOOST_CHECK(!m);
     BOOST_CHECK(!m.has_value());
@@ -160,7 +165,8 @@ BOOST_OUTCOME_AUTO_TEST_CASE(works_status_code_outcome, "Tests that the outcome 
   }
   {  // outcome<void, void> should work
     BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::error_code ec(5, BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::system_category());
-    auto e = BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::make_exception_ptr(BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::system_error(ec));
+    auto e =
+    BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::make_exception_ptr(BOOST_OUTCOME_PREVENT_CONVERSION_WORKAROUND::system_error(ec));
     outcome<void, void> m(e);
     BOOST_CHECK(!m);
     BOOST_CHECK(!m.has_value());

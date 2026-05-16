@@ -13,7 +13,7 @@
 
 #include <boost/thread/concurrent_queues/sync_deque.hpp>
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 class non_copyable
 {
@@ -68,7 +68,7 @@ int main()
   {
     // empty queue push lvalue/copyable succeeds
       boost::sync_deque<int> q;
-      int i;
+      int i = 42;
       q.push_back(i);
       BOOST_TEST(! q.empty());
       BOOST_TEST(! q.full());
@@ -111,7 +111,7 @@ int main()
   {
     // empty queue push lvalue succeeds
       boost::sync_deque<int> q;
-      int i;
+      int i = 42;
       q.push_back(i);
       BOOST_TEST(! q.empty());
       BOOST_TEST(! q.full());

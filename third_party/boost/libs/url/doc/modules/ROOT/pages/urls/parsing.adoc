@@ -10,6 +10,93 @@
 
 = Parsing
 
+A URL, short for "Uniform Resource Locator," is a compact string
+of characters identifying an abstract or physical resource.
+It has these five parts, which may be optional or disallowed
+depending on the context:
+
+image::PartsDiagram.svg[]
+
+Each part's syntax is defined by a set of production rules in
+https://tools.ietf.org/html/rfc3986[rfc3986,window=blank_]. All valid URLs conform to this grammar, also called
+the "generic syntax." Here is an example URL which describes a
+file and its location on a network host:
+
+
+[source]
+----
+https://www.example.com/path/to/file.txt?userid=1001&pages=3&results=full#page1
+----
+
+
+The parts and their corresponding text is as follows:
+
+[cols="a,a"]
+|===
+// Headers
+|Part|Text
+
+// Row 1, Column 1
+|__scheme__
+// Row 1, Column 2
+|"https"
+
+// Row 2, Column 1
+|__authority__
+// Row 2, Column 2
+|"www.example.com"
+
+// Row 3, Column 1
+|__path__
+// Row 3, Column 2
+|"/path/to/file.txt"
+
+// Row 4, Column 1
+|__query__
+// Row 4, Column 2
+|"userid=1001&pages=3&results=full"
+
+// Row 5, Column 1
+|__fragment__
+// Row 5, Column 2
+|"page1"
+
+|===
+
+
+The production rule for the example above is called a __URI__,
+which can contain all five parts. The specification using
+https://datatracker.ietf.org/doc/html/rfc2234[__ABNF notation__,window=blank_]
+is:
+
+
+[source]
+----
+URI           = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
+
+hier-part     = "//" authority path-abempty
+              / path-absolute
+              / path-rootless
+              / path-empty
+----
+
+
+In this notation, the square brackets ("\// [" and "\]") denote optional
+elements, quoted text represents character literals, and slashes are
+used to indicate a choice between one of several elements. For the
+complete specification of ABNF notation please consult
+https://datatracker.ietf.org/doc/html/rfc2234[rfc2234,window=blank_],
+"Augmented BNF for Syntax Specifications."
+When using this library to process or create URLs, it is necessary
+to choose which of these top-level production rules are applicable
+for a given use-case:
+__absolute-URI__, __origin-form__, __relative-ref__, __URI__, or
+__URI-reference__. These are discussed in greater depth later.
+
+
+
+== Parsing URLs
+
 Algorithms which parse URLs return a view which references the underlying character buffer without taking ownership, avoiding memory allocations and copies.
 The following example parses a string literal containing a
 https://datatracker.ietf.org/doc/html/rfc3986#section-3[__URI__,window=blank_]:
@@ -158,4 +245,27 @@ include::example$unit/snippets.cpp[tag=snippet_parsing_url_1b,indent=0]
 
 Check the reference for cpp:result[] for a synopsis of the type.
 
+
+== Constexpr Parsing
+
+In {cpp}20 and later, all parse functions are `constexpr`.
+This means URLs can be parsed and validated at compile time, which is useful when one side of a comparison is a fixed string that should be pre-parsed and checked for correctness.
+
+For instance, a `constexpr` cpp:url_view[] parsed from a valid string literal is fully resolved at compile time.
+If the literal is malformed, `value()` attempts to throw, which is not permitted during constant evaluation, so the program fails to compile:
+
+[source,cpp]
+----
+include::example$unit/snippets.cpp[tag=snippet_constexpr_parsing_1,indent=0]
+----
+
+Pre-parsed `constexpr` URL views can also serve as zero-cost constants.
+All parsing is done at compile time; at runtime the components are accessed with no parsing overhead:
+
+[source,cpp]
+----
+include::example$unit/snippets.cpp[tag=snippet_constexpr_parsing_2,indent=0]
+----
+
+Because cpp:url_view[] does not own its character buffer, `constexpr` URL views always reference string literals.
 

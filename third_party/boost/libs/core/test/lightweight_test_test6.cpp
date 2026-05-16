@@ -1,6 +1,6 @@
 // Test BOOST_TEST_EQ with character types
 //
-// Copyright 2020 Peter Dimov
+// Copyright 2020, 2025 Peter Dimov
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
@@ -19,13 +19,22 @@ int main()
 
 #if !defined(BOOST_NO_CXX11_CHAR16_T)
 
+    BOOST_TEST_EQ( u'A', u'A' );
     BOOST_TEST_EQ( (char16_t)1, (char16_t)1 );
 
 #endif
 
 #if !defined(BOOST_NO_CXX11_CHAR32_T)
 
+    BOOST_TEST_EQ( U'A', U'A' );
     BOOST_TEST_EQ( (char32_t)1, (char32_t)1 );
+
+#endif
+
+#if defined(__cpp_char8_t) && __cpp_char8_t >= 201811L
+
+    BOOST_TEST_EQ( u8'A', u8'A' );
+    BOOST_TEST_EQ( (char8_t)1, (char8_t)1 );
 
 #endif
 

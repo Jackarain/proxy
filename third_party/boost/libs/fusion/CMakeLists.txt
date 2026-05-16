@@ -18,7 +18,6 @@ target_link_libraries(boost_fusion
         Boost::function_types
         Boost::mpl
         Boost::preprocessor
-        Boost::static_assert
         Boost::tuple
         Boost::type_traits
         Boost::typeof

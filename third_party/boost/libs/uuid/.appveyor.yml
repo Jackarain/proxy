@@ -36,7 +36,15 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ADDPATH: C:\cygwin64\bin;
       TOOLSET: gcc
-      CXXSTD: 11,14,17
+      CXXSTD: 11
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      ADDPATH: C:\cygwin64\bin;
+      TOOLSET: gcc
+      CXXSTD: 14
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      ADDPATH: C:\cygwin64\bin;
+      TOOLSET: gcc
+      CXXSTD: 17
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ADDPATH: C:\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin;
       TOOLSET: gcc

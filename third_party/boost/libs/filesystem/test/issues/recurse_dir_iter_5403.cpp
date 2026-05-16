@@ -50,11 +50,11 @@ bool skip_long_windows_tests = false;
 int cpp_main(int argc, char* argv[])
 {
     // document state of critical macros
-#ifdef BOOST_POSIX_API
-    cout << "BOOST_POSIX_API is defined\n";
+#ifdef BOOST_FILESYSTEM_POSIX_API
+    cout << "BOOST_FILESYSTEM_POSIX_API is defined\n";
 #endif
-#ifdef BOOST_WINDOWS_API
-    cout << "BOOST_WINDOWS_API is defined\n";
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
+    cout << "BOOST_FILESYSTEM_WINDOWS_API is defined\n";
 #endif
 
     for (; argc > 1; --argc, ++argv)
@@ -70,12 +70,12 @@ int cpp_main(int argc, char* argv[])
     // The choice of platform to test is made at runtime rather than compile-time
     // so that compile errors for all platforms will be detected even though
     // only the current platform is runtime tested.
-#if defined(BOOST_POSIX_API)
+#if defined(BOOST_FILESYSTEM_POSIX_API)
     platform = "POSIX";
-#elif defined(BOOST_WINDOWS_API)
+#elif defined(BOOST_FILESYSTEM_WINDOWS_API)
     platform = "Windows";
 #else
-#error neither BOOST_POSIX_API nor BOOST_WINDOWS_API is defined. See boost/system/api_config.hpp
+#error neither BOOST_FILESYSTEM_POSIX_API nor BOOST_FILESYSTEM_WINDOWS_API is defined. See boost/system/api_config.hpp
 #endif
     cout << "API is " << platform << endl;
     cout << "initial_path() is " << fs::initial_path() << endl;

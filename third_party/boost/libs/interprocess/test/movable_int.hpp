@@ -14,6 +14,7 @@
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
 #include <boost/move/utility_core.hpp>
+#include <boost/container/detail/type_traits.hpp>  //alignment_of, aligned_storage
 
 namespace boost {
 namespace interprocess {
@@ -286,6 +287,84 @@ class non_copymovable_int
    private:
    int m_int;
 };
+
+
+class overaligned_copyable_int
+{
+   public:
+   overaligned_copyable_int()
+   {
+      m_d.m_int = 0;
+   }
+
+   explicit overaligned_copyable_int(int a)
+   {
+      m_d.m_int = a;
+   }
+
+   overaligned_copyable_int(const overaligned_copyable_int& mmi)
+   {
+      m_d.m_int = mmi.m_d.m_int;
+   }
+
+   overaligned_copyable_int & operator= (int i)
+   {  this->m_d.m_int = i;  return *this;  }
+
+   overaligned_copyable_int & operator=(const overaligned_copyable_int& mmi)
+   {  m_d.m_int = mmi.m_d.m_int;   return *this;  }
+
+   bool operator ==(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int == mi.m_d.m_int;   }
+
+   bool operator !=(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int != mi.m_d.m_int;   }
+
+   bool operator <(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int < mi.m_d.m_int;   }
+
+   bool operator <=(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int <= mi.m_d.m_int;   }
+
+   bool operator >=(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int >= mi.m_d.m_int;   }
+
+   bool operator >(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int > mi.m_d.m_int;   }
+
+   int get_int() const
+   {  return m_d.m_int;  }
+
+   friend bool operator==(const overaligned_copyable_int &l, int r)
+   {  return l.get_int() == r;   }
+
+   friend bool operator==(int l, const overaligned_copyable_int &r)
+   {  return l == r.get_int();   }
+
+   private:
+   
+   union data
+   {
+      boost::container::dtl::aligned_storage<sizeof(int), 64>::type aligner;
+      int m_int;
+   } m_d;
+};
+
+template<class E, class T>
+std::basic_ostream<E, T> & operator<<
+   (std::basic_ostream<E, T> & os, overaligned_copyable_int const & p)
+
+{
+    os << p.get_int();
+    return os;
+}
+
+template<>
+struct is_copyable<overaligned_copyable_int>
+{
+   static const bool value = true;
+};
+
+
 
 }  //namespace test {
 }  //namespace interprocess {

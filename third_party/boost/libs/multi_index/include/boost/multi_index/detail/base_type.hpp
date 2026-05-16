@@ -1,4 +1,4 @@
-/* Copyright 2003-2013 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14,10 +14,9 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
-#include <boost/detail/workaround.hpp>
-#include <boost/mpl/at.hpp>
-#include <boost/mpl/apply.hpp>
-#include <boost/mpl/size.hpp>
+#include <boost/mp11/integral.hpp>
+#include <boost/mp11/list.hpp>
+#include <boost/mp11/utility.hpp>
 #include <boost/multi_index/detail/index_base.hpp>
 #include <boost/multi_index/detail/is_index_list.hpp>
 #include <boost/static_assert.hpp>
@@ -28,39 +27,31 @@ namespace multi_index{
 
 namespace detail{
 
-/* MPL machinery to construct a linear hierarchy of indices out of
- * a index list.
+/* Mp11 machinery to construct a linear hierarchy of indices out of
+ * an index list.
  */
 
-struct index_applier
-{
-  template<typename IndexSpecifierMeta,typename SuperMeta>
-  struct apply
-  {
-    typedef typename IndexSpecifierMeta::type            index_specifier;
-    typedef typename index_specifier::
-      BOOST_NESTED_TEMPLATE index_class<SuperMeta>::type type;
-  }; 
-};
+template<typename N,typename Mp11IndexSpecifierList,typename SuperMeta>
+using nth_layer_index=typename mp11::mp_at<Mp11IndexSpecifierList,N>::
+  template index_class<SuperMeta>::type;
 
 template<int N,typename Value,typename IndexSpecifierList,typename Allocator>
 struct nth_layer
 {
-  BOOST_STATIC_CONSTANT(int,length=mpl::size<IndexSpecifierList>::value);
-
-  typedef typename  mpl::eval_if_c<
-    N==length,
-    mpl::identity<index_base<Value,IndexSpecifierList,Allocator> >,
-    mpl::apply2<
-      index_applier,
-      mpl::at_c<IndexSpecifierList,N>,
-      nth_layer<N+1,Value,IndexSpecifierList,Allocator>
-    >
-  >::type type;
+  using Mp11IndexSpecifierList=detail::mp11_index_list<IndexSpecifierList>;
+  using type=mp11::mp_eval_if_c<
+    N==mp11::mp_size<Mp11IndexSpecifierList>::value,
+    index_base<Value,IndexSpecifierList,Allocator>,
+    nth_layer_index,
+    mp11::mp_int<N>,
+    Mp11IndexSpecifierList,
+    nth_layer<N+1,Value,IndexSpecifierList,Allocator>
+  >;
 };
 
 template<typename Value,typename IndexSpecifierList,typename Allocator>
-struct multi_index_base_type:nth_layer<0,Value,IndexSpecifierList,Allocator>
+struct multi_index_base_type:
+  nth_layer<0,Value,IndexSpecifierList,Allocator>
 {
   BOOST_STATIC_ASSERT(detail::is_index_list<IndexSpecifierList>::value);
 };

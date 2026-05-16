@@ -112,7 +112,7 @@ int main()
 
         {
             result<int, E2> r2 = r & fi;
-            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 3 );
+            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2.unsafe_value(), 3 );
         }
 
         {
@@ -131,7 +131,7 @@ int main()
 
         {
             result<int, E2> r2 = r & fi;
-            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 3 );
+            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2.unsafe_value(), 3 );
         }
 
         {
@@ -147,7 +147,7 @@ int main()
 
     {
         result<int, E2> r2 = result<int, E>( 1 ) & fi;
-        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 3 );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2.unsafe_value(), 3 );
     }
 
     {
@@ -216,7 +216,7 @@ int main()
     {
         result<X, E2> r2 = result<Y, E>( in_place_value, 1 ) & fy;
 
-        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2->v_, 3 );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2.unsafe_value().v_, 3 );
     }
 
     {
@@ -255,7 +255,7 @@ int main()
 
         {
             result<int, E2> r2 = r & fri;
-            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 3 );
+            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2.unsafe_value(), 3 );
         }
 
         {
@@ -275,7 +275,7 @@ int main()
 
         {
             result<int, E2> r2 = r & fri;
-            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 3 );
+            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2.unsafe_value(), 3 );
         }
 
         {
@@ -293,7 +293,7 @@ int main()
         int x1 = 1;
 
         result<int, E2> r2 = result<int&, E>( x1 ) & fri;
-        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 3 );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2.unsafe_value(), 3 );
     }
 
     {
@@ -368,7 +368,7 @@ int main()
 
         {
             result<int, E2> r2 = r & fk;
-            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 7 );
+            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2.unsafe_value(), 7 );
         }
 
         {
@@ -392,7 +392,7 @@ int main()
 
         {
             result<int, E2> r2 = r & fk;
-            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 7 );
+            BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2.unsafe_value(), 7 );
         }
 
         {
@@ -413,7 +413,7 @@ int main()
 
     {
         result<int, E2> r2 = result<void, E>() & fk;
-        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( *r2, 7 );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( r2.unsafe_value(), 7 );
     }
 
     {

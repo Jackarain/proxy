@@ -14,7 +14,7 @@
 #include <boost/thread/lock_factories.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include "../../../../../timming.hpp"
 
 boost::mutex m;

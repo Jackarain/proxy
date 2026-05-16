@@ -16,4 +16,4 @@ BOOST_OPENMETHOD_OVERRIDE(
 }
 // end::content[]
 
-BOOST_OPENMETHOD_CLASSES(Employee, Salesman)
+BOOST_OPENMETHOD_CLASSES(Employee, Salesman);

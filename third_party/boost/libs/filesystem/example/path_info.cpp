@@ -25,9 +25,9 @@ int main(int argc, char* argv[])
         cout << "Usage: path_info path-element [path-element...]\n"
                 "Composes a path via operator/= from one or more path-element arguments\n"
                 "Example: path_info foo/bar baz\n"
-#ifdef BOOST_POSIX_API
+#ifdef BOOST_FILESYSTEM_POSIX_API
                 "         would report info about the composed path foo/bar/baz\n";
-#else // BOOST_WINDOWS_API
+#else // BOOST_FILESYSTEM_WINDOWS_API
                 "         would report info about the composed path foo/bar\\baz\n";
 #endif
         return 1;
@@ -46,10 +46,10 @@ int main(int argc, char* argv[])
         cout << "  " << element << '\n';
 
     cout << "\nobservers, native format:" << endl;
-#ifdef BOOST_POSIX_API
+#ifdef BOOST_FILESYSTEM_POSIX_API
     cout << "  native()-------------: " << p.native() << endl;
     cout << "  c_str()--------------: " << p.c_str() << endl;
-#else // BOOST_WINDOWS_API
+#else // BOOST_FILESYSTEM_WINDOWS_API
     wcout << L"  native()-------------: " << p.native() << endl;
     wcout << L"  c_str()--------------: " << p.c_str() << endl;
 #endif

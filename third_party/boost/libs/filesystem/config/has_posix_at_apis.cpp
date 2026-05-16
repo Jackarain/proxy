@@ -22,7 +22,7 @@ int main()
     res |= renameat(AT_FDCWD, "x", fd1, "y");
 
     struct stat st;
-    res |= fstatat(fd1, "y", &st, AT_NO_AUTOMOUNT | AT_SYMLINK_NOFOLLOW);
+    res |= fstatat(fd1, "y", &st, AT_SYMLINK_NOFOLLOW);
 
     res |= linkat(fd1, "y", fd1, "z", 0);
     res |= symlinkat("foo/z", fd1, "sz");

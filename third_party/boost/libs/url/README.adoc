@@ -7,7 +7,7 @@
 // Official repository: https://github.com/boostorg/url
 //
 
-https://www.boost.org/doc/libs/master/libs/url/doc/html/[image:https://raw.githubusercontent.com/vinniefalco/url/master/doc/images/repo-logo.png[Boost.URL]]
+https://www.boost.org/doc/libs/master/libs/url/doc/html/[image:https://raw.githubusercontent.com/boostorg/url/master/doc/modules/ROOT/images/repo-logo.png[Boost.URL]]
 
 [width="100%",cols="7%,66%,27%",options="header",]
 |===
@@ -242,9 +242,13 @@ assert(u.password() == "pass");
 assert(u.host() == "example.com");
 assert(u.port() == "443");
 assert(u.path() == "/path/to/my-file.txt");
-assert(u.query() == "id=42&name=John Doe Jingleheimer-Schmidt");
+assert(u.query() == "id=42&name=John Doe+Jingleheimer-Schmidt");
 assert(u.fragment() == "page anchor");
 ----
+
+`url_view::query` percent-decodes escapes but preserves literal plus signs, matching RFC 3986 rules.
+Use `url_view::params` (or pass decoding options with `space_as_plus = true`) when the query represents
+form data where `'+'` should be treated as a space.
 
 URL paths can be further divided into path segments with the function `url_view::segments`.
 
@@ -438,10 +442,10 @@ This code calls `encoded_segments` to obtain the path segments as a container th
 
 [source,c++]
 ----
-segments_view segs = u.encoded_segments();
+segments_encoded_view segs = u.encoded_segments();
 for( auto v : segs )
 {
-std::cout << v << "\n";
+    std::cout << v << "\n";
 }
 ----
 
@@ -459,11 +463,11 @@ As with other library functions, `decode_view` permits accessing elements of com
 
 [source,c++]
 ----
-segments_view segs = u.encoded_segments();
+segments_encoded_view segs = u.encoded_segments();
 for( pct_string_view v : segs )
 {
-decode_view dv = *v;
-std::cout << dv << "\n";
+    decode_view dv = *v;
+    std::cout << dv << "\n";
 }
 ----
 
@@ -671,4 +675,3 @@ https://github.com/pdimov[Peter Dimov], for design advice and general assistance
 
 Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 https://www.boost.org/LICENSE_1_0.txt)
-

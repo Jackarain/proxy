@@ -561,6 +561,11 @@ local rule compute-default-paths ( target-os : version ? : prefix ? :
     else
     {
         local default-include-path = $(prefix)/include/python$(version) ;
+        if ! [ path.exists $(default-include-path) ] && [ path.exists $(default-include-path)t ]
+        {
+            default-include-path = $(default-include-path)t ;
+        }
+
         if ! [ path.exists $(default-include-path) ] && [ path.exists $(default-include-path)m ]
         {
             default-include-path = $(default-include-path)m ;

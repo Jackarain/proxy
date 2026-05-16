@@ -1,0 +1,75 @@
+# ------------------------------------------------------------------------------
+#  Copyright Matt Borland 2023 - 2024.
+#  Copyright Christopher Kormanyos 2023 - 2024.
+#  Distributed under the Boost Software License,
+#  Version 1.0. (See accompanying file LICENSE_1_0.txt
+#  or copy at http://www.boost.org/LICENSE_1_0.txt)
+# ------------------------------------------------------------------------------
+
+name: codecov
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - feature/**
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  gcc-gcov-native:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        standard: [ c++2a ]
+        compiler: [ g++ ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: update-tools
+        run: |
+          sudo apt install lcov locales
+          sudo locale-gen de_DE.UTF-8
+          sudo update-locale
+
+      - name: clone-submods-bootstrap-headers-boost-develop
+        run: |
+          git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
+          cd ../boost-root
+          git submodule update --init tools
+          git submodule update --init libs/assert
+          git submodule update --init libs/config
+          git submodule update --init libs/core
+          git submodule update --init libs/math
+          git submodule update --init libs/multiprecision
+          git submodule update --init libs/predef
+          git submodule update --init libs/static_assert
+          git submodule update --init libs/test
+          git submodule update --init libs/random
+          git submodule update --init libs/charconv
+          ./bootstrap.sh
+          ./b2 headers
+      - name: gcc-gcov-native
+        run: |
+          cd test/cover
+          echo "build and run gcov/lcov/genhtml"
+          echo "make prepare -f make_gcov_01_generic.gmk MY_ALL_COV=0 MY_BOOST_ROOT=../../../boost-root MY_CC=${{ matrix.compiler }} MY_STD=${{ matrix.standard }}"
+          echo
+          make prepare -f make_gcov_01_generic.gmk MY_ALL_COV=0 MY_BOOST_ROOT=../../../boost-root MY_CC=${{ matrix.compiler }} MY_STD=${{ matrix.standard }}
+          echo
+          echo "make gcov -f make_gcov_01_generic.gmk --jobs=8 MY_ALL_COV=0 MY_BOOST_ROOT=../../../boost-root MY_CC=${{ matrix.compiler }} MY_STD=${{ matrix.standard }}"
+          echo
+          make gcov -f make_gcov_01_generic.gmk --jobs=8 MY_ALL_COV=0 MY_BOOST_ROOT=../../../boost-root MY_CC=${{ matrix.compiler }} MY_STD=${{ matrix.standard }}
+          echo
+      - name: upload-codecov
+        uses: codecov/codecov-action@v4
+        with:
+          plugin: gcov
+          file: ${{ runner.workspace }}/decimal/test/cover/coverage.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          verbose: false

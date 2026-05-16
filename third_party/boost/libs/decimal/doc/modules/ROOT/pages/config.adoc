@@ -1,0 +1,64 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#configuration]
+= Configuration Macros
+:idprefix: config_
+
+[#configuration_user]
+== User Configurable Macros
+
+The following configuration macros are available:
+
+- `BOOST_DECIMAL_DISABLE_CASSERT`: Disables the use of `<cassert>` and all run-time assertions.
+
+- `BOOST_DECIMAL_DISABLE_IOSTREAM`: Disables the use of I/O streaming and removes all associated headers (e.g. `<iostream>`, `<iosfwd>`, `<cwchar>`, etc.)
+
+- `BOOST_DECIMAL_DISABLE_CLIB`: Defines both of the above macros. In testing this reduces ROM usage by ~50% and can be useful if running on embedded platforms.
+
+- `BOOST_DECIMAL_DISABLE_EXCEPTIONS`: This allows the user to disable any calls to `throw`.
+This macro will also be set automatically in the presence of `-fno-exceptions` or various `/EH` flags on MSVC.
+
+- `BOOST_DECIMAL_ALLOW_IMPLICIT_INTEGER_CONVERSIONS`: Allows any integer type to be implicitly converted to any decimal type.
+
+- `BOOST_DECIMAL_ALLOW_IMPLICIT_FLOAT_CONVERSIONS`: Allows a binary floating-point type (e.g. `double`) to be implicitly converted to a decimal floating point type.
+This option is not recommended, but can be useful if you want to use specific functionality from the standard library with internal conversions such as:
+
+[source, c++]
+----
+#define BOOST_DECIMAL_ALLOW_IMPLICIT_CONVERSIONS
+#include <boost/decimal.hpp>
+#include <complex>
+
+constexpr decimal64_t half {5, -1};
+std::complex<decimal64_t> test_val {half, half};
+const auto res = std::acos(test_val);
+----
+
+- `BOOST_DECIMAL_ALLOW_IMPLICIT_CONVERSIONS`: Defines both `BOOST_DECIMAL_ALLOW_IMPLICIT_INTEGER_CONVERSIONS` and `BOOST_DECIMAL_ALLOW_IMPLICIT_FLOAT_CONVERSIONS`
+
+- `BOOST_DECIMAL_FAST_MATH` performs optimizations similar to that of the `-ffast-math` compiler flag such as removing all checks for non-finite values.
+This flag increases the performance of the basis operations (e.g. add, sub, mul, div, and comparisons) by up to 20%.
+Again, it must be defined before inclusion of decimal headers like so:
+
+[source, c++]
+----
+#define BOOST_DECIMAL_FAST_MATH
+#include <boost/decimal.hpp>
+----
+
+- `BOOST_DECIMAL_DEC_EVAL_METHOD`: See xref:cfloat.adoc[`<cfloat>`] section for explanation
+
+[#configuration_automatic]
+== Automatic Configuration Macros
+
+- `BOOST_DECIMAL_CXX20_CONSTEXPR`: This is defined to `constexpr` when compiling with C++20 or greater, otherwise it expands to nothing.
+
+- `BOOST_DECIMAL_HAS_STD_CHARCONV`: This macro is defined if header `<charconv>` exists and the language standard used is >= C++17
+  * We only need the structs and enums out of the header so we are not concerned with being overly restrictive about the feature test macros.
+    ** Known compilers that support this lighter  requirement are: GCC >= 10, Clang >= 13, and MSVC >= 14.2
+
+- `BOOST_DECIMAL_HAS_STD_STRING_VIEW`: This macro is defined if header `<string_view>` exists and the langauge standard used is >= C++17

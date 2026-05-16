@@ -60,7 +60,7 @@ namespace urls {
     @param s The string to parse
     @return A view to the parsed URL
 */
-BOOST_URL_DECL
+BOOST_URL_CXX20_CONSTEXPR
 system::result<url_view>
 parse_absolute_uri(
     core::string_view s);
@@ -106,7 +106,7 @@ parse_absolute_uri(
     @param s The string to parse
     @return A view to the parsed URL
 */
-BOOST_URL_DECL
+BOOST_URL_CXX20_CONSTEXPR
 system::result<url_view>
 parse_origin_form(
     core::string_view s);
@@ -158,7 +158,7 @@ parse_origin_form(
     @param s The string to parse
     @return A view to the parsed URL
 */
-BOOST_URL_DECL
+BOOST_URL_CXX20_CONSTEXPR
 system::result<url_view>
 parse_relative_ref(
     core::string_view s);
@@ -207,7 +207,7 @@ parse_relative_ref(
     @param s The string to parse
     @return A `boost::system::result` containing a value or an error
 */
-BOOST_URL_DECL
+BOOST_URL_CXX20_CONSTEXPR
 system::result<url_view>
 parse_uri(
     core::string_view s);
@@ -268,12 +268,15 @@ parse_uri(
     @param s The string to parse
     @return A view to the parsed URL
 */
-BOOST_URL_DECL
+BOOST_URL_CXX20_CONSTEXPR
 system::result<url_view>
 parse_uri_reference(
     core::string_view s);
 
 } // url
 } // boost
+
+#include <boost/url/impl/url_view.hpp>
+#include <boost/url/impl/parse.hpp>
 
 #endif

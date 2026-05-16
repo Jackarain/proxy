@@ -51,8 +51,8 @@ else()
   date_time
   move
   describe
-  static_assert
   utility
+  compat
   variant2
   predef
   pool

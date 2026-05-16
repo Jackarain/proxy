@@ -21,7 +21,6 @@ type_traits
 
 # Secondary dependencies
 
-static_assert
 )
 
 foreach(dep IN LISTS deps)

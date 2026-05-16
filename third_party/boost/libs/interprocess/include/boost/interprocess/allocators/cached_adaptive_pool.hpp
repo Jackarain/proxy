@@ -56,9 +56,11 @@ class cached_adaptive_pool_v1
             , NodesPerBlock
             , MaxFreeBlocks
             , OverheadPercent
+            , alignof_value<T>::value
             >
          , 1>
 {
+   BOOST_COPYABLE_AND_MOVABLE_ALT(cached_adaptive_pool_v1)
    public:
    typedef ipcdetail::cached_allocator_impl
          < T
@@ -68,8 +70,11 @@ class cached_adaptive_pool_v1
             , NodesPerBlock
             , MaxFreeBlocks
             , OverheadPercent
+            , alignof_value<T>::value
             >
          , 1> base_t;
+
+   typedef uses_segment_manager<SegmentManager> uses_segment_manager_t;
 
    template<class T2>
    struct rebind
@@ -85,11 +90,24 @@ class cached_adaptive_pool_v1
       : base_t(segment_mngr, max_cached_nodes)
    {}
 
+   cached_adaptive_pool_v1(uses_segment_manager_t usm,
+                           size_type max_cached_nodes = base_t::DEFAULT_MAX_CACHED_NODES)
+      : base_t(usm.get_segment_manager(), max_cached_nodes)
+   {}
+
    template<class T2>
    cached_adaptive_pool_v1
       (const cached_adaptive_pool_v1
          <T2, SegmentManager, NodesPerBlock, MaxFreeBlocks, OverheadPercent> &other)
       : base_t(other)
+   {}
+
+   cached_adaptive_pool_v1(const cached_adaptive_pool_v1 &other)
+      : base_t(other)
+   {}
+
+   cached_adaptive_pool_v1(BOOST_RV_REF(cached_adaptive_pool_v1) other)
+      : base_t(BOOST_MOVE_BASE(base_t, other))
    {}
 };
 
@@ -130,6 +148,7 @@ class cached_adaptive_pool
             , NodesPerBlock
             , MaxFreeBlocks
             , OverheadPercent
+            , alignof_value<T>::value
             >
          , 2>
    #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
@@ -145,11 +164,14 @@ class cached_adaptive_pool
             , NodesPerBlock
             , MaxFreeBlocks
             , OverheadPercent
+            , alignof_value<T>::value
             >
          , 2> base_t;
 
+   BOOST_COPYABLE_AND_MOVABLE_ALT(cached_adaptive_pool)
    public:
    typedef boost::interprocess::version_type<cached_adaptive_pool, 2>   version;
+   typedef uses_segment_manager<SegmentManager>                         uses_segment_manager_t;
 
    template<class T2>
    struct rebind
@@ -163,10 +185,23 @@ class cached_adaptive_pool
       : base_t(segment_mngr, max_cached_nodes)
    {}
 
+   cached_adaptive_pool(uses_segment_manager_t usm,
+                        std::size_t max_cached_nodes = base_t::DEFAULT_MAX_CACHED_NODES)
+      : base_t(usm.get_segment_manager(), max_cached_nodes)
+   {}
+
    template<class T2>
    cached_adaptive_pool
       (const cached_adaptive_pool<T2, SegmentManager, NodesPerBlock, MaxFreeBlocks, OverheadPercent> &other)
       : base_t(other)
+   {}
+
+   cached_adaptive_pool(const cached_adaptive_pool &other)
+      : base_t(other)
+   {}
+
+   cached_adaptive_pool(BOOST_RV_REF(cached_adaptive_pool) other)
+      : base_t(BOOST_MOVE_BASE(base_t, other))
    {}
 
    #else
@@ -212,6 +247,10 @@ class cached_adaptive_pool
    //!count of the associated node pool. Never throws
    cached_adaptive_pool(const cached_adaptive_pool &other);
 
+   //!Move constructor from other. Increments the reference
+   //!count of the associated node pool and captures the cache. Never throws
+   cached_adaptive_pool(cached_adaptive_pool &&other);
+
    //!Copy constructor from related cached_adaptive_pool. If not present, constructs
    //!a node pool. Increments the reference count of the associated node pool.
    //!Can throw boost::interprocess::bad_alloc
@@ -253,23 +292,31 @@ class cached_adaptive_pool
 
    //!Returns address of mutable object.
    //!Never throws
+   //!This function is deprecated and will be removed in the future
    pointer address(reference value) const;
 
    //!Returns address of non mutable object.
    //!Never throws
+   //!This function is deprecated and will be removed in the future
    const_pointer address(const_reference value) const;
 
-   //!Copy construct an object.
-   //!Throws if T's copy constructor throws
-   void construct(const pointer &ptr, const_reference v);
-
-   //!Destroys object. Throws if object's
-   //!destructor throws
-   void destroy(const pointer &ptr);
+   //! <b>Requires</b>: Uses-allocator construction of T with allocator argument
+   //!   `uses_segment_manager_t` and additional constructor arguments `std::forward<Args>(args)...`
+   //!   is well-formed. [Note: uses-allocator construction is always well formed for
+   //!   types that do not use allocators. - end note]
+   //!
+   //! <b>Effects</b>: Construct a T object at p by uses-allocator construction with allocator
+   //!   argument constructible from `segment_manager*`
+   //!  and constructor arguments `std::forward<Args>(args)...`.
+   //!
+   //! <b>Throws</b>: Nothing unless the constructor for T throws.
+   template <typename U, class ...Args>
+   void construct(U* p, Args&& ...args);
 
    //!Returns maximum the number of objects the previously allocated memory
    //!pointed by p can hold. This size only works for memory allocated with
    //!allocate, allocation_command and allocate_many.
+   //!This function is deprecated and will be removed in the future
    size_type size(const pointer &p) const;
 
    pointer allocation_command(boost::interprocess::allocation_type command,
@@ -281,11 +328,13 @@ class cached_adaptive_pool
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
+   //!This function is deprecated and will be removed in the future
    void allocate_many(size_type elem_size, size_type num_elements, multiallocation_chain &chain);
 
    //!Allocates n_elements elements, each one of size elem_sizes[i]in a
    //!contiguous block
    //!of memory. The elements must be deallocated
+   //!This function is deprecated and will be removed in the future
    void allocate_many(const size_type *elem_sizes, size_type n_elements, multiallocation_chain &chain);
 
    //!Allocates many elements of size elem_size in a contiguous block
@@ -294,6 +343,7 @@ class cached_adaptive_pool
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
+   //!This function is deprecated and will be removed in the future
    void deallocate_many(multiallocation_chain &chain);
 
    //!Allocates just one object. Memory allocated with this function

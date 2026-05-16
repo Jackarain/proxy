@@ -335,24 +335,24 @@ rule init ( mpicxx ? : options * : mpirun-with-options * )
   if ! $(options)
   {
     # Try to auto-detect options based on the wrapper compiler
-    local command = [ common.get-invocation-command mpi : mpic++ : $(mpicxx) ] ;
+    local command = [ common.get-invocation-command-nodefault mpi : mpic++ : $(mpicxx) ] ;
 
     if ! $(mpicxx) && ! $(command)
     {
       # Try "mpiCC", which is used by MPICH
-      command = [ common.get-invocation-command mpi : mpiCC ] ;
+      command = [ common.get-invocation-command-nodefault mpi : mpiCC ] ;
     }
 
     if ! $(mpicxx) && ! $(command)
     {
-      # Try "mpicxx", which is used by OpenMPI and MPICH2
-      command = [ common.get-invocation-command mpi : mpicxx ] ;
+      # Try "mpicxx", which is used by OpenMPI, MPICH2 and Intel MPI
+      command = [ common.get-invocation-command-nodefault mpi : mpicxx ] ;
     }
 
     if ! $(mpicxx) && ! $(command)
     {
       # Try "CC", which is used by Cray
-      command = [ common.get-invocation-command mpi : CC ] ;
+      command = [ common.get-invocation-command-nodefault mpi : CC ] ;
     }
 
     local result ;
@@ -391,12 +391,13 @@ rule init ( mpicxx ? : options * : mpirun-with-options * )
 
       result = [ SHELL "$(command) -showme" ] ;
     }
-    # Look for MPICH
-    else if [ safe-shell-command "$(command) -show" ]
+    # Look for MPICH or Intel MPI
+    else if [ safe-shell-command "$(command) -compile_info" ] &&
+         [ safe-shell-command "$(command) -link_info" ]
     {
       if $(.debug-configuration)
       {
-        ECHO "Found MPICH wrapper compiler: $(command)" ;
+        ECHO "Found MPICH or Intel MPI wrapper compiler: $(command)" ;
       }
       compile_flags = [ SHELL "$(command) -compile_info" ] ;
       link_flags = [ SHELL "$(command) -link_info" ] ;

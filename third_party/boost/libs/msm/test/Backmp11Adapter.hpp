@@ -95,32 +95,32 @@ class state_machine_adapter
 
     auto& get_message_queue()
     {
-        return this->get_events_queue();
+        return this->get_event_pool().events;
     }
 
     size_t get_message_queue_size() const
     {
-        return this->get_events_queue().size();
+        return this->get_event_pool().events.size();
     }
 
     void execute_queued_events()
     {
-        this->process_queued_events();
+        this->process_event_pool();
     }
 
     void execute_single_queued_event()
     {
-        this->process_single_queued_event();
+        this->process_event_pool(1);
     }
 
     auto& get_deferred_queue()
     {
-        return this->get_deferred_events_queue();
+        return this->get_event_pool().events;
     }
 
     void clear_deferred_queue()
     {
-        this->get_deferred_events_queue().clear();
+        this->get_event_pool().events.clear();
     }
 
     // No adapter.
@@ -128,7 +128,7 @@ class state_machine_adapter
     // void visit_current_states(...) {...}
 
     // No adapter.
-    // States can be set with `get_state<...>()` or the visitor API.
+    // States can be set with `get_state<...>() = ...` or the visitor API.
     // void set_states(...) {...}
 
     // No adapter.
@@ -145,7 +145,7 @@ struct serialize_state
     typename ::boost::enable_if<
         typename ::boost::mpl::or_<
             typename has_do_serialize<T>::type,
-            typename detail::has_back_end_tag<typename T::internal>::type
+            typename detail::has_state_machine_tag<typename T::internal>::type
         >::type
         ,void
     >::type
@@ -157,7 +157,7 @@ struct serialize_state
     typename ::boost::disable_if<
         typename ::boost::mpl::or_<
             typename has_do_serialize<T>::type,
-            typename detail::has_back_end_tag<typename T::internal>::type
+            typename detail::has_state_machine_tag<typename T::internal>::type
         >::type
         ,void
     >::type

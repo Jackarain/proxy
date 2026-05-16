@@ -27,7 +27,7 @@ n2
     to_string( c2 const & )
         {
         return "c2";
-        }           
+        }
     }
 
 namespace
@@ -42,7 +42,7 @@ n3
     operator<<( std::ostream & s, c3 const & )
         {
         return s << "c3";
-        }           
+        }
     }
 
 int

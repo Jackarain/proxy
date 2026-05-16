@@ -12,9 +12,7 @@
 
 #include <boost/system/error_code.hpp>
 
-#include <cstddef>
 #include <functional>
-#include <string_view>
 #include <type_traits>
 
 namespace boost::redis {
@@ -50,20 +48,7 @@ public:
    using impl_t = std::function<void(parse_event, resp3::node_view const&, system::error_code&)>;
 
    template <class T>
-   static auto create_impl(T& resp) -> impl_t
-   {
-      using namespace boost::redis::adapter;
-      return [adapter2 = boost_redis_adapt(resp)](
-                  any_adapter::parse_event ev,
-                  resp3::node_view const& nd,
-                  system::error_code& ec) mutable {
-         switch (ev) {
-            case parse_event::init: adapter2.on_init(); break;
-            case parse_event::node: adapter2.on_node(nd, ec); break;
-            case parse_event::done: adapter2.on_done(); break;
-         }
-      };
-   }
+   static auto create_impl(T& resp) -> impl_t;
 
    /// Contructs from a type erased adaper
    any_adapter(impl_t fn = [](parse_event, resp3::node_view const&, system::error_code&) { })
@@ -109,6 +94,32 @@ private:
    impl_t impl_;
 };
 
+namespace detail {
+
+template <class Adapter>
+any_adapter::impl_t make_any_adapter_impl(Adapter&& value)
+{
+   return [adapter = std::move(value)](
+             any_adapter::parse_event ev,
+             resp3::node_view const& nd,
+             system::error_code& ec) mutable {
+      switch (ev) {
+         case any_adapter::parse_event::init: adapter.on_init(); break;
+         case any_adapter::parse_event::node: adapter.on_node(nd, ec); break;
+         case any_adapter::parse_event::done: adapter.on_done(); break;
+      }
+   };
+}
+
+}  // namespace detail
+
 }  // namespace boost::redis
+
+template <class T>
+auto boost::redis::any_adapter::create_impl(T& resp) -> impl_t
+{
+   using adapter::boost_redis_adapt;
+   return detail::make_any_adapter_impl(boost_redis_adapt(resp));
+}
 
 #endif

@@ -24,6 +24,15 @@ struct X
 
 int X::instances = 0;
 
+struct E
+{
+};
+
+BOOST_NORETURN void throw_exception_from_error( X const &, boost::source_location const& )
+{
+    throw E();
+}
+
 int main()
 {
     {
@@ -53,7 +62,7 @@ int main()
         BOOST_TEST( r.has_value() );
         BOOST_TEST( !r.has_error() );
 
-        BOOST_TEST_EQ( *r, 1 );
+        BOOST_TEST_EQ( r.unsafe_value(), 1 );
     }
 
     BOOST_TEST_EQ( X::instances, 0 );

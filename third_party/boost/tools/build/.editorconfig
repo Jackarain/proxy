@@ -28,3 +28,6 @@ indent_style = space
 [.clangd]
 indent_size = 2
 indent_style = space
+
+[*.py]
+indent_style = space

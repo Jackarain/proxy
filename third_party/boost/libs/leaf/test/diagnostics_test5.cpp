@@ -93,20 +93,23 @@ int main()
             st << di;
             std::string s = st.str();
             std::cout << s << std::endl;
-            if( BOOST_LEAF_CFG_DIAGNOSTICS && BOOST_LEAF_CFG_CAPTURE )
+            if( BOOST_LEAF_CFG_CAPTURE )
             {
-                auto const n1 = s.find("info<1>: acc=0");
-                auto const n2 = s.find("info<2>: acc=0");
-                auto const n3 = s.find("info<3>: acc=0");
-                auto const n4 = s.find("info<4>: acc=2");
-                BOOST_TEST_NE(n1, s.npos);
-                BOOST_TEST_NE(n2, s.npos);
-                BOOST_TEST_NE(n3, s.npos);
-                BOOST_TEST_NE(n4, s.npos);
+                if( BOOST_LEAF_CFG_DIAGNOSTICS )
+                {
+                    auto const n1 = s.find("info<1>: acc=0");
+                    auto const n2 = s.find("info<2>: acc=0");
+                    auto const n3 = s.find("info<3>: acc=0");
+                    auto const n4 = s.find("info<4>: acc=2");
+                    BOOST_TEST_NE(n1, s.npos);
+                    BOOST_TEST_NE(n2, s.npos);
+                    BOOST_TEST_NE(n3, s.npos);
+                    BOOST_TEST_NE(n4, s.npos);
+                }
                 BOOST_TEST_EQ(counter, 4);
             }
             else
-            BOOST_TEST_EQ(counter, 1);
+                BOOST_TEST_EQ(counter, 1);
 #endif
         },
         []
@@ -124,6 +127,44 @@ int main()
         {
             BOOST_TEST_EQ(counter, 0);
         } );
+
+    BOOST_TEST_EQ(counter, 0);
+    {
+        int r = leaf::try_handle_all(
+            []() -> leaf::result<int>
+            {
+                return leaf::try_handle_some(
+                    []() -> leaf::result<int>
+                    {
+                        return leaf::new_error(info<1>{});
+                    },
+                    []( leaf::diagnostic_details const & di ) -> leaf::result<int>
+                    {
+#if BOOST_LEAF_CFG_STD_STRING
+                        std::ostringstream st;
+                        st << di;
+                        std::string s = st.str();
+                        std::cout << s << std::endl;
+                        if( BOOST_LEAF_CFG_DIAGNOSTICS )
+                            if( BOOST_LEAF_CFG_CAPTURE )
+                                BOOST_TEST_NE(s.find("info<1>"), s.npos);
+                            else
+                                BOOST_TEST_EQ(s.find("info<1>"), s.npos);
+#endif
+                        return di.error();
+                    } );
+            },
+            []( info<1> const & )
+            {
+                return 1;
+            },
+            []
+            {
+                return 2;
+            } );
+        BOOST_TEST_EQ(r, 1);
+    }
+    BOOST_TEST_EQ(counter, 0);
 
     return boost::report_errors();
 }

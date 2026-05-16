@@ -23,12 +23,15 @@
 #include <boost/interprocess/detail/workaround.hpp>
 
 #include <boost/interprocess/interprocess_fwd.hpp>
+
 #include <boost/interprocess/allocators/detail/node_pool.hpp>
 #include <boost/interprocess/allocators/detail/allocator_common.hpp>
-#include <boost/interprocess/detail/workaround.hpp>
+#include <boost/interprocess/allocators/detail/node_tools.hpp>
 #include <boost/interprocess/detail/utilities.hpp>
 #include <boost/interprocess/containers/version_type.hpp>
-#include <boost/interprocess/allocators/detail/node_tools.hpp>
+
+#include <boost/container/uses_allocator_construction.hpp>
+
 #include <cstddef>
 
 //!\file
@@ -53,9 +56,11 @@ class cached_node_allocator_v1
             < SegmentManager
             , sizeof_value<T>::value
             , NodesPerBlock
+            , alignof_value<T>::value
             >
          , 1>
 {
+   BOOST_COPYABLE_AND_MOVABLE_ALT(cached_node_allocator_v1)
    public:
    typedef ipcdetail::cached_allocator_impl
          < T
@@ -63,8 +68,10 @@ class cached_node_allocator_v1
             < SegmentManager
             , sizeof_value<T>::value
             , NodesPerBlock
+            , alignof_value<T>::value
             >
          , 1> base_t;
+   typedef uses_segment_manager<SegmentManager> uses_segment_manager_t;
 
    template<class T2>
    struct rebind
@@ -72,7 +79,7 @@ class cached_node_allocator_v1
       typedef cached_node_allocator_v1
          <T2, SegmentManager, NodesPerBlock>  other;
    };
-
+               
    typedef typename base_t::size_type size_type;
 
    cached_node_allocator_v1(SegmentManager *segment_mngr,
@@ -80,11 +87,24 @@ class cached_node_allocator_v1
       : base_t(segment_mngr, max_cached_nodes)
    {}
 
+   cached_node_allocator_v1(uses_segment_manager_t usm,
+                            size_type max_cached_nodes = base_t::DEFAULT_MAX_CACHED_NODES)
+      : base_t(usm.get_segment_manager(), max_cached_nodes)
+   {}
+
    template<class T2>
    cached_node_allocator_v1
       (const cached_node_allocator_v1
          <T2, SegmentManager, NodesPerBlock> &other)
       : base_t(other)
+   {}
+
+   cached_node_allocator_v1(const cached_node_allocator_v1 &other)
+      : base_t(other)
+   {}
+
+   cached_node_allocator_v1(BOOST_RV_REF(cached_node_allocator_v1) other)
+      : base_t(BOOST_MOVE_BASE(base_t, other))
    {}
 };
 
@@ -104,6 +124,7 @@ class cached_node_allocator
             < SegmentManager
             , sizeof_value<T>::value
             , NodesPerBlock
+            , alignof_value<T>::value
             >
          , 2>
    #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
@@ -117,12 +138,16 @@ class cached_node_allocator
             < SegmentManager
             , sizeof_value<T>::value
             , NodesPerBlock
+            , alignof_value<T>::value
             >
          , 2> base_t;
 
+   BOOST_COPYABLE_AND_MOVABLE_ALT(cached_node_allocator)
+
    public:
-   typedef boost::interprocess::version_type<cached_node_allocator, 2>   version;
-   typedef typename base_t::size_type size_type;
+   typedef boost::interprocess::version_type<cached_node_allocator, 2>  version;
+   typedef typename base_t::size_type                                   size_type;
+   typedef uses_segment_manager<SegmentManager>                         uses_segment_manager_t;
 
    template<class T2>
    struct rebind
@@ -135,10 +160,23 @@ class cached_node_allocator
       : base_t(segment_mngr, max_cached_nodes)
    {}
 
+   cached_node_allocator(uses_segment_manager_t usm,
+                         size_type max_cached_nodes = base_t::DEFAULT_MAX_CACHED_NODES)
+      : base_t(usm.get_segment_manager(), max_cached_nodes)
+   {}
+
    template<class T2>
    cached_node_allocator
       (const cached_node_allocator<T2, SegmentManager, NodesPerBlock> &other)
       : base_t(other)
+   {}
+
+   cached_node_allocator(const cached_node_allocator & other)
+      : base_t(other)
+   {}
+
+   cached_node_allocator(BOOST_RV_REF(cached_node_allocator) other)
+      : base_t(BOOST_MOVE_BASE(base_t, other))
    {}
 
    #else
@@ -184,6 +222,10 @@ class cached_node_allocator
    //!count of the associated node pool. Never throws
    cached_node_allocator(const cached_node_allocator &other);
 
+   //!Move constructor from other. Increments the reference
+   //!count of the associated node pool and captures the cache. Never throws
+   cached_node_allocator(cached_node_allocator &&other);
+
    //!Copy constructor from related cached_node_allocator. If not present, constructs
    //!a node pool. Increments the reference count of the associated node pool.
    //!Can throw boost::interprocess::bad_alloc
@@ -227,13 +269,18 @@ class cached_node_allocator
    //!Never throws
    pointer address(reference value) const;
 
-   //!Returns address of non mutable object.
-   //!Never throws
-   const_pointer address(const_reference value) const;
-
-   //!Default construct an object.
-   //!Throws if T's default constructor throws
-   void construct(const pointer &ptr, const_reference v);
+   //! <b>Requires</b>: Uses-allocator construction of T with allocator argument
+   //!   `uses_segment_manager_t` and additional constructor arguments `std::forward<Args>(args)...`
+   //!   is well-formed. [Note: uses-allocator construction is always well formed for
+   //!   types that do not use allocators. - end note]
+   //!
+   //! <b>Effects</b>: Construct a T object at p by uses-allocator construction with allocator
+   //!   argument constructible from `segment_manager*`
+   //!  and constructor arguments `std::forward<Args>(args)...`.
+   //!
+   //! <b>Throws</b>: Nothing unless the constructor for T throws.
+   template <typename U, class ...Args>
+   void construct(U* p, Args&& ...args);
 
    //!Destroys object. Throws if object's
    //!destructor throws
@@ -242,10 +289,8 @@ class cached_node_allocator
    //!Returns maximum the number of objects the previously allocated memory
    //!pointed by p can hold. This size only works for memory allocated with
    //!allocate, allocation_command and allocate_many.
+   //!This function is deprecated and will be removed in the future
    size_type size(const pointer &p) const;
-
-   pointer allocation_command(boost::interprocess::allocation_type command,
-                           size_type limit_size, size_type &prefer_in_recvd_out_size, pointer &reuse);
 
    //!Allocates many elements of size elem_size in a contiguous block
    //!of memory. The minimum number to be allocated is min_elements,
@@ -253,11 +298,13 @@ class cached_node_allocator
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
+   //!This function is deprecated and will be removed in the future
    void allocate_many(size_type elem_size, size_type num_elements, multiallocation_chain &chain);
 
    //!Allocates n_elements elements, each one of size elem_sizes[i]in a
    //!contiguous block
    //!of memory. The elements must be deallocated
+   //!This function is deprecated and will be removed in the future
    void allocate_many(const size_type *elem_sizes, size_type n_elements, multiallocation_chain &chain);
 
    //!Allocates many elements of size elem_size in a contiguous block
@@ -266,6 +313,7 @@ class cached_node_allocator
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
+   //!This function is deprecated and will be removed in the future
    void deallocate_many(multiallocation_chain &chain);
 
    //!Allocates just one object. Memory allocated with this function

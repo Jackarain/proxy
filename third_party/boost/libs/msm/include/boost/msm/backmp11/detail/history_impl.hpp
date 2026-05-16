@@ -9,18 +9,14 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_MSM_BACKMP11_HISTORY_IMPL_H
-#define BOOST_MSM_BACKMP11_HISTORY_IMPL_H
+#ifndef BOOST_MSM_BACKMP11_DETAIL_HISTORY_IMPL_HPP
+#define BOOST_MSM_BACKMP11_DETAIL_HISTORY_IMPL_HPP
 
 #include <boost/msm/front/history_policies.hpp>
 #include <boost/mp11.hpp>
 
-namespace boost::msm::backmp11
+namespace boost::msm::backmp11::detail
 {
-namespace detail
-{
-
-// Implementations for history policies.
 
 template<typename History, int NumberOfRegions>
 class history_impl;
@@ -47,9 +43,9 @@ class history_impl<front::no_history, NumberOfRegions>
 
     // this policy deletes all waiting deferred events
     template <class Event>
-    bool process_deferred_events(Event const&) const
+    bool clear_event_pool(Event const&) const
     {
-        return false;
+        return true;
     }
 
   private:
@@ -82,9 +78,9 @@ public:
 
     // the history policy keeps all deferred events until next reentry
     template <class Event>
-    bool process_deferred_events(Event const&)const
+    bool clear_event_pool(Event const&)const
     {
-        return true;
+        return false;
     }
 
 private:
@@ -124,9 +120,9 @@ public:
 
     // the history policy keeps deferred events until next reentry if coming from our history event
     template <class Event>
-    bool process_deferred_events(Event const&) const
+    bool clear_event_pool(Event const&) const
     {
-        return mp11::mp_contains<events_mp11,Event>::value;
+        return !mp11::mp_contains<events_mp11,Event>::value;
     }
 
   private:
@@ -138,8 +134,6 @@ public:
     std::array<int, NumberOfRegions> m_last_active_state_ids;
 };
 
-} // detail
-
 } // boost::msm::backmp11
 
-#endif // BOOST_MSM_BACKMP11_HISTORY_IMPL_H
+#endif // BOOST_MSM_BACKMP11_DETAIL_HISTORY_IMPL_HPP

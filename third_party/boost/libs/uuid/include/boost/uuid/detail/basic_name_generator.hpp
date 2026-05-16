@@ -15,8 +15,9 @@
 #include <boost/uuid/detail/static_assert.hpp>
 #include <boost/config.hpp>
 #include <string>
+#include <cstddef>
 #include <cstdint>
-#include <cstring> // for strlen, wcslen
+#include <cstring> // for memcpy
 
 namespace boost {
 namespace uuids {
@@ -86,9 +87,9 @@ private:
     {
         BOOST_UUID_STATIC_ASSERT( sizeof( std::uint32_t ) >= sizeof( wchar_t ) );
 
-        for( std::size_t i = 0; i < n; ++i)
+        for( std::size_t i = 0; i < n; ++i )
         {
-            std::uint32_t ch = p[ i ];
+            std::uint32_t ch = static_cast<std::uint32_t>( p[ i ] );
 
             unsigned char bytes[ 4 ] =
             {
@@ -120,8 +121,8 @@ private:
             {
                 char16_t ch2 = p[ ++i ];
 
-                std::uint32_t high = ch - 0xD800;
-                std::uint32_t low = ch2 - 0xDC00;
+                std::uint32_t high = static_cast<std::uint32_t>( ch - 0xD800 );
+                std::uint32_t low = static_cast<std::uint32_t>( ch2 - 0xDC00 );
 
                 process_utf32_codepoint( hash, ( high << 10 ) + low + 0x10000 );
             }
@@ -203,8 +204,8 @@ private:
 
         // set version
         unsigned char hashver = hash.get_version();
-        *(u.begin()+6) &= 0x0F;             // clear out the relevant bits
-        *(u.begin()+6) |= (hashver << 4);   // and apply them
+        *(u.begin()+6) &= 0x0F; // clear out the relevant bits
+        *(u.begin()+6) |= static_cast<unsigned char>(hashver << 4); // and apply them
 
         return u;
     }

@@ -7,6 +7,9 @@
 
 #include <boost/lockfree/stack.hpp>
 
+#include <memory>
+#include <vector>
+
 #define BOOST_TEST_MAIN
 #ifdef BOOST_LOCKFREE_INCLUDE_TESTS
 #    include <boost/test/included/unit_test.hpp>
@@ -308,4 +311,160 @@ BOOST_AUTO_TEST_CASE( queue_uses_optional )
     BOOST_TEST_REQUIRE( pop_to_optional );
 }
 
+BOOST_AUTO_TEST_CASE( stack_uses_optional_capacity )
+{
+    boost::lockfree::stack< int, boost::lockfree::capacity< 64 > > stk;
+
+    bool pop_to_nullopt = stk.pop( boost::lockfree::uses_optional ) == std::nullopt;
+    BOOST_TEST_REQUIRE( pop_to_nullopt );
+
+    stk.push( 53 );
+    bool pop_to_optional = stk.pop( boost::lockfree::uses_optional ) == 53;
+    BOOST_TEST_REQUIRE( pop_to_optional );
+}
+
 #endif
+
+BOOST_AUTO_TEST_CASE( stack_consume_all_atomic_order_test )
+{
+    boost::lockfree::stack< int > f( 64 );
+
+    BOOST_TEST_REQUIRE( f.empty() );
+
+    f.push( 1 );
+    f.push( 2 );
+    f.push( 3 );
+
+    // consume_all_atomic pops all atomically and then processes in stack order (LIFO: 3, 2, 1)
+    std::vector< int > consumed_order;
+    size_t consumed = f.consume_all_atomic( [&]( int i ) {
+        consumed_order.push_back( i );
+    } );
+
+    BOOST_TEST_REQUIRE( consumed == 3u );
+    BOOST_TEST_REQUIRE( consumed_order.size() == 3u );
+    BOOST_TEST_REQUIRE( consumed_order[ 0 ] == 3 );
+    BOOST_TEST_REQUIRE( consumed_order[ 1 ] == 2 );
+    BOOST_TEST_REQUIRE( consumed_order[ 2 ] == 1 );
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( stack_consume_all_atomic_reversed_order_test )
+{
+    boost::lockfree::stack< int > f( 64 );
+
+    BOOST_TEST_REQUIRE( f.empty() );
+
+    f.push( 1 );
+    f.push( 2 );
+    f.push( 3 );
+
+    // consume_all_atomic_reversed processes in FIFO order (1, 2, 3)
+    std::vector< int > consumed_order;
+    size_t consumed = f.consume_all_atomic_reversed( [&]( int i ) {
+        consumed_order.push_back( i );
+    } );
+
+    BOOST_TEST_REQUIRE( consumed == 3u );
+    BOOST_TEST_REQUIRE( consumed_order.size() == 3u );
+    BOOST_TEST_REQUIRE( consumed_order[ 0 ] == 1 );
+    BOOST_TEST_REQUIRE( consumed_order[ 1 ] == 2 );
+    BOOST_TEST_REQUIRE( consumed_order[ 2 ] == 3 );
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( stack_consume_all_atomic_empty_test )
+{
+    boost::lockfree::stack< int > f( 64 );
+
+    BOOST_TEST_REQUIRE( f.consume_all_atomic( []( int ) {} ) == 0u );
+    BOOST_TEST_REQUIRE( f.consume_all_atomic_reversed( []( int ) {} ) == 0u );
+}
+
+BOOST_AUTO_TEST_CASE( stack_empty_operations_test )
+{
+    boost::lockfree::stack< int > f( 64 );
+
+    int out = 0xDEAD;
+    BOOST_TEST_REQUIRE( !f.pop( out ) );
+    BOOST_TEST_REQUIRE( !f.unsynchronized_pop( out ) );
+    BOOST_TEST_REQUIRE( !f.consume_one( []( int ) {} ) );
+    BOOST_TEST_REQUIRE( f.consume_all( []( int ) {} ) == 0u );
+    BOOST_TEST_REQUIRE( f.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( stack_push_pop_many )
+{
+    boost::lockfree::stack< long > stk( 128 );
+
+    for ( long i = 0; i < 100; ++i )
+        BOOST_TEST_REQUIRE( stk.push( i ) );
+
+    for ( long i = 99; i >= 0; --i ) {
+        long out;
+        BOOST_TEST_REQUIRE( stk.pop( out ) );
+        BOOST_TEST_REQUIRE( out == i );
+    }
+    BOOST_TEST_REQUIRE( stk.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( stack_push_pop_many_capacity )
+{
+    boost::lockfree::stack< long, boost::lockfree::capacity< 128 > > stk;
+
+    for ( long i = 0; i < 100; ++i )
+        BOOST_TEST_REQUIRE( stk.push( i ) );
+
+    for ( long i = 99; i >= 0; --i ) {
+        long out;
+        BOOST_TEST_REQUIRE( stk.pop( out ) );
+        BOOST_TEST_REQUIRE( out == i );
+    }
+    BOOST_TEST_REQUIRE( stk.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( stack_move_unsynchronized )
+{
+    boost::lockfree::stack< std::unique_ptr< int > > stk( 128 );
+
+    stk.unsynchronized_push( std::make_unique< int >( 42 ) );
+
+    std::unique_ptr< int > out;
+    BOOST_TEST_REQUIRE( stk.unsynchronized_pop( out ) );
+    BOOST_TEST_REQUIRE( *out == 42 );
+    BOOST_TEST_REQUIRE( stk.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( stack_bounded_push_range )
+{
+    boost::lockfree::stack< long > stk( 128 );
+
+    long data[ 3 ] = { 10, 20, 30 };
+    BOOST_TEST_REQUIRE( stk.bounded_push( data, data + 3 ) == data + 3 );
+
+    long out;
+    BOOST_TEST_REQUIRE( stk.pop( out ) );
+    BOOST_TEST_REQUIRE( out == 30 );
+    BOOST_TEST_REQUIRE( stk.pop( out ) );
+    BOOST_TEST_REQUIRE( out == 20 );
+    BOOST_TEST_REQUIRE( stk.pop( out ) );
+    BOOST_TEST_REQUIRE( out == 10 );
+    BOOST_TEST_REQUIRE( stk.empty() );
+}
+
+BOOST_AUTO_TEST_CASE( stack_bounded_push_span )
+{
+    boost::lockfree::stack< long > stk( 128 );
+
+    long data[ 3 ] = { 10, 20, 30 };
+    BOOST_TEST_REQUIRE( stk.bounded_push( boost::span< const long >( data ) ) == size_t( 3 ) );
+
+    long out;
+    BOOST_TEST_REQUIRE( stk.pop( out ) );
+    BOOST_TEST_REQUIRE( out == 30 );
+    BOOST_TEST_REQUIRE( stk.pop( out ) );
+    BOOST_TEST_REQUIRE( out == 20 );
+    BOOST_TEST_REQUIRE( stk.pop( out ) );
+    BOOST_TEST_REQUIRE( out == 10 );
+    BOOST_TEST_REQUIRE( stk.empty() );
+}

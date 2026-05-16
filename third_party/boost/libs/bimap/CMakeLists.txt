@@ -23,7 +23,6 @@ target_link_libraries(boost_bimap
     Boost::mpl
     Boost::multi_index
     Boost::preprocessor
-    Boost::static_assert
     Boost::throw_exception
     Boost::type_traits
     Boost::utility

@@ -1,0 +1,63 @@
+////
+Copyright 2025 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#debug]
+= Debugger Support
+:idprefix: debug_
+
+Currently, Boost.Decimal supports pretty printing with LLDB and GDB.
+
+== LLDB
+
+To load the pretty printer, add the following line to your `.lldbinit`:
+
+[source]
+----
+command script import /path/to/decimal/extra/decimal_printer_lldb.py
+----
+
+== GDB
+
+To load the pretty printer, add the following line to your `.gdbinit`:
+
+[source]
+----
+source /path/to/decimal/extra/decimal_printer_gdb.py
+----
+
+or you can source it manually in GDB:
+
+[source]
+----
+(gdb) source /path/to/decimal/extra/decimal_printer_gdb.py
+----
+
+== Example
+
+Once you have loaded a pretty printer, you can run the below example to see how different values are represented with the pretty printer.
+This expected output of the example below was taken from LLDB, but the results should be quite similar when using GDB.
+
+.The following example can be run with the debugger to show a variety of values
+====
+
+[source,c++]
+----
+include::example$debugger.cpp[]
+----
+
+*_Expected Output for T = decimal32_t:_*
+
+image::dec32_debug.png[]
+
+*_Expected Output for T = decimal_fast32_t:_*
+
+image::dec32_fast_debug.png[]
+====
+
+The reason for the difference in how `decimal32_t` and `decimal_fast32_t` is displayed is due to xref:cohorts.adoc[Cohorts and Normalization]
+
+. `decimal32_t`, `decimal64_t` and `decimal128_t` debuggers are cohort preserving
+. `decimal_fast32_t`, `decimal_fast64_t` and `decimal_fast128_t` debuggers are always normalized

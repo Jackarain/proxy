@@ -20,6 +20,7 @@
 #include "boost/type_traits/is_base_of.hpp"
 #include "boost/optional/detail/experimental_traits.hpp"
 
+#ifndef BOOST_OPTIONAL_USES_UNION_IMPLEMENTATION
 #ifndef BOOST_OPTIONAL_DETAIL_NO_DEFAULTED_MOVE_FUNCTIONS
 
 struct PrivDefault
@@ -135,12 +136,15 @@ void test_trivial_copyability()
 }
 
 #endif
+#endif // BOOST_OPTIONAL_USES_UNION_IMPLEMENTATION
 
 int main()
 {
+#ifndef BOOST_OPTIONAL_USES_UNION_IMPLEMENTATION
 #ifndef BOOST_OPTIONAL_DETAIL_NO_DEFAULTED_MOVE_FUNCTIONS
   test_type_traits();
   test_trivial_copyability();
+#endif
 #endif
   return boost::report_errors();
 }

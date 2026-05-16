@@ -1,4 +1,4 @@
-/* Copyright 2003-2013 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14,16 +14,22 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
-#include <boost/mpl/vector.hpp>
+
+/* An Mp11 list containing the index specifiers for instantiation
+ * of a multi_index_container.
+ * If BOOST_MULTI_INDEX_ENABLE_MPL_SUPPORT is defined, the old
+ * MPL-based definition of indexed_by is kept.
+ */
+
+#if defined(BOOST_MULTI_INDEX_ENABLE_MPL_SUPPORT)
+#define BOOST_MULTI_INDEX_BLOCK_BOOSTDEP_HEADER \
+  <boost/mpl/vector.hpp>
+#include BOOST_MULTI_INDEX_BLOCK_BOOSTDEP_HEADER
+#undef BOOST_MULTI_INDEX_BLOCK_BOOSTDEP_HEADER
 #include <boost/preprocessor/cat.hpp>
 #include <boost/preprocessor/control/expr_if.hpp>
 #include <boost/preprocessor/repetition/enum.hpp>
 #include <boost/preprocessor/repetition/enum_params.hpp> 
-
-/* An alias to mpl::vector used to hide MPL from the user.
- * indexed_by contains the index specifiers for instantiation
- * of a multi_index_container.
- */
 
 /* This user_definable macro limits the number of elements of an index list;
  * useful for shortening resulting symbol names (MSVC++ 6.0, for instance,
@@ -64,5 +70,16 @@ struct indexed_by:
 
 #undef BOOST_MULTI_INDEX_INDEXED_BY_TEMPLATE_PARM
 #undef BOOST_MULTI_INDEX_INDEXED_BY_SIZE
+#else
+namespace boost{
 
+namespace multi_index{
+
+template<typename T,typename... Ts>
+struct indexed_by;
+
+} /* namespace multi_index */
+
+} /* namespace boost */
+#endif
 #endif

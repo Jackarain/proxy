@@ -91,7 +91,7 @@ private:
             if (*_ihandler) {
                 auto h = std::move(*_ihandler);
                 auto ex = asio::get_associated_executor(h);
-                asio::require(ex, asio::execution::blocking.possibly)
+                (asio::require)(ex, asio::execution::blocking.possibly)
                     .execute([h = std::move(h)]() mutable {
                         std::move(h)(asio::error::operation_aborted);
                     });
@@ -160,7 +160,7 @@ public:
             _waiting.pop_front();
             if (!op) continue;
             op.get_cancellation_slot().clear();
-            asio::require(_ex, asio::execution::blocking.never)
+            (asio::require)(_ex, asio::execution::blocking.never)
                 .execute([ex = _ex, op = std::move(op)]() mutable {
                     auto opex = asio::get_associated_executor(op, ex);
                     opex.execute(
@@ -178,7 +178,7 @@ private:
     // The operation is equivalent to asio::post(_ex, op) but
     // for some reason this form of execution is much faster.
     void execute_op(queued_op_t op) {
-        asio::require(_ex, asio::execution::blocking.never)
+        (asio::require)(_ex, asio::execution::blocking.never)
             .execute([ex = _ex, op = std::move(op)]() mutable {
                 auto opex = asio::get_associated_executor(op, ex);
                 opex.execute(

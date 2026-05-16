@@ -30,6 +30,7 @@ Acknowledgements
 <h2>Contents</h2>
 
 <ul>
+  <li><a href="#boost_1_91">Boost 1.91 release</a></li>
   <li><a href="#boost_1_85">Boost 1.85 release</a></li>
   <li><a href="#boost_1_84">Boost 1.84 release</a></li>
   <li><a href="#boost_1_83">Boost 1.83 release</a></li>
@@ -71,6 +72,37 @@ Acknowledgements
   <li><a href="#boost_1_33_1">Boost 1.33.1 release</a></li>
   <li><a href="#boost_1_33">Boost 1.33 release</a></li>
 </ul>
+
+<h2><a name="boost_1_91">Boost 1.91 release</a></h2>
+
+<p>
+<ul>
+  <li><b>Breaking change:</b> All type lists accepted or provided by the library (<code>indexed_by</code>,
+    <code>tag</code>, nested typedefs <code>index_specifier_type_list</code>,
+    <code>index_type_list</code>, <code>iterator_type_list</code> and
+    <code>const_iterator_type_list</code>) are no longer based on
+    <a href="../../mpl">Boost.MPL</a> but instead they are now
+    <a href="../../mp11/doc/html/mp11.html#definitions">Boost.Mp11 lists</a>.
+    As a result, Boost.MultiIndex doesn't depend anymore on Boost.MPL.
+    It is expected that most user code won't be impacted by this
+    change, but the previous behavior may be restored, however, by
+    globally defining the macro
+    <code>BOOST_MULTI_INDEX_ENABLE_MPL_SUPPORT</code>.
+    Legacy support for Boost.MPL may be eventually deprecated and removed in the future.
+  </li>
+  <li><b>Breaking change:</b> <code>composite_key</code> and associated
+    class templates (<code>composite_key_equal_to</code>, <code>composite_key_compare</code>,
+    <code>composite_key_hash</code>) have been made variadic (previously the maximum
+    number of template arguments was limited by <code>BOOST_MULTI_INDEX_LIMIT_COMPOSITE_KEY_SIZE</code>).
+    This change should be transparent to users, with the exception that
+    <code>composite_key::key_extractors</code> returns a <code>std::tuple</code>
+    instead of a <code>boost::tuple</code> (and similarly for the rest of affected
+    class templates).
+  </li>
+  <li>Removed internal workarounds and fallbacks to support pre-C++11 compilers.
+  </li>
+</ul>
+</p>
 
 <h2><a name="boost_1_85">Boost 1.85 release</a></h2>
 
@@ -474,7 +506,7 @@ Acknowledgements
       </li>
       <li>Random access indices provide <code>shrink_to_fit()</code>.</li>
   </ul>
-  Refer to the <a href="compiler_specifics.html">compiler specifics</a> section for limitations
+  Refer to the compiler specifics section for limitations
   on pre-C++11 compilers.
   </li>
   <li>The following classes are deprecated:
@@ -793,8 +825,7 @@ Acknowledgements
     Boost 1.32 release. This results in much shorter and more readable error
     messages and has also a beneficial impact on compilers with strict limits on
     symbol name lengths. Additionally, a section on further
-    <a href="compiler_specifics.html#symbol_reduction">reduction of symbol name
-    lengths</a> has been added.
+    reduction of symbol name lengths has been added.
   </li>
   <li>Restructured some parts of the documentation, new examples.</li>
   <li>Maintenance fixes.</li>
@@ -815,9 +846,9 @@ Acknowledgements
 
 <br>
 
-<p>Revised March 15th 2024</p>
+<p>Revised November 7th 2025</p>
 
-<p>&copy; Copyright 2003-2024 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2003-2025 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

@@ -1,6 +1,6 @@
 /* Boost.MultiIndex test for node handling operations.
  *
- * Copyright 2003-2021 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -13,7 +13,6 @@
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
 #include <boost/core/enable_if.hpp>
 #include <boost/detail/lightweight_test.hpp>
-#include <boost/move/utility_core.hpp>
 #include "pre_multi_index.hpp"
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/hashed_index.hpp>
@@ -70,17 +69,17 @@ void test_node_handle()
   BOOST_TEST(&n2.value()==addr0);
   BOOST_TEST(allocator_count==1);
 
-  node_type n3(boost::move(n2));
+  node_type n3(std::move(n2));
   BOOST_TEST(n2.empty());
   BOOST_TEST(!n3.empty());
   BOOST_TEST(&n3.value()==addr0);
   BOOST_TEST(allocator_count==1);
 
-  node_type n4(boost::move(n2));
+  node_type n4(std::move(n2));
   BOOST_TEST(n4.empty());
   BOOST_TEST(allocator_count==1);
 
-  n1=boost::move(n3);
+  n1=std::move(n3);
   BOOST_TEST(!n1.empty());
   BOOST_TEST(&n1.value()==addr0);
   BOOST_TEST(n3.empty());
@@ -115,19 +114,19 @@ void test_node_handle()
   BOOST_TEST(n2.empty());
   BOOST_TEST(allocator_count==2);
 
-  n2=boost::move(n3);
+  n2=std::move(n3);
   BOOST_TEST(n2.empty());
   BOOST_TEST(n3.empty());
   BOOST_TEST(allocator_count==2);
 
   BOOST_TEST(element_count==3);
-  n1=boost::move(n5);
+  n1=std::move(n5);
   BOOST_TEST(&n1.value()==addr0);
   BOOST_TEST(n5.empty());
   BOOST_TEST(element_count==2);
   BOOST_TEST(allocator_count==1);
 
-  n1=boost::move(n5);
+  n1=std::move(n5);
   BOOST_TEST(n1.empty());
   BOOST_TEST(element_count==1);
   BOOST_TEST(allocator_count==0);
@@ -212,7 +211,7 @@ void test_transfer_result(
     (!is_key_based<Dst>::value||*pos==x)){
     BOOST_TEST(boost::next(res.position)==pos);
   }
-  test_transfer_result(dst,Ret(boost::move(res)),n,x);
+  test_transfer_result(dst,Ret(std::move(res)),n,x);
 }
 
 template<typename Dst,typename NodeHandle,typename Value>
@@ -232,7 +231,7 @@ void test_transfer_result_empty(
   Dst& dst,typename Dst::iterator,Ret res,
   typename enable_if_not_iterator<Ret>::type=0)
 {
-  test_transfer_result_empty(dst,Ret(boost::move(res)));
+  test_transfer_result_empty(dst,Ret(std::move(res)));
 }
 
 template<typename Dst>
@@ -249,7 +248,7 @@ typename Src::node_type checked_extract(
 {
   typename Src::node_type n=src.extract(k);
   if(n)BOOST_TEST(src.key_extractor()(n.value())==k);
-  return boost::move(n);
+  return n;
 }
 
 template<typename Src>
@@ -258,7 +257,7 @@ typename Src::node_type checked_extract(Src& src,typename Src::iterator pos)
   typename Src::value_type x=*pos;
   typename Src::node_type  n=src.extract(pos);
   if(n)BOOST_TEST(n.value()==x);
-  return boost::move(n);
+  return n;
 }
 
 template<typename Src,typename Locator,typename Dst>
@@ -267,10 +266,10 @@ void test_transfer(Src& src,Locator loc,Dst& dst)
   typename Dst::node_type n=checked_extract(src,loc);
   if(n){
     typename Dst::value_type x=n.value();
-    test_transfer_result(dst,dst.insert(boost::move(n)),n,x);
+    test_transfer_result(dst,dst.insert(std::move(n)),n,x);
   }
   else{
-    test_transfer_result_empty(dst,dst.insert(boost::move(n)));
+    test_transfer_result_empty(dst,dst.insert(std::move(n)));
   }
 }
 
@@ -280,10 +279,10 @@ void test_transfer(Src& src,Locator loc,Dst& dst,Iterator pos)
   typename Dst::node_type n=checked_extract(src,loc);
   if(n){
     typename Dst::value_type x=n.value();
-    test_transfer_result(dst,pos,dst.insert(pos,boost::move(n)),n,x);
+    test_transfer_result(dst,pos,dst.insert(pos,std::move(n)),n,x);
   }
   else{
-    test_transfer_result_empty(dst,pos,dst.insert(pos,boost::move(n)));
+    test_transfer_result_empty(dst,pos,dst.insert(pos,std::move(n)));
   }
 }
 
@@ -420,84 +419,65 @@ struct enable_if_not_key_based:boost::enable_if_c<
   void*
 >{};
 
-/* Boost.Move C++03 perfect forwarding emulation converts non-const lvalue
- * refs to const lvalue refs. final_forward undoes that.
- */
-
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
-
-template<typename T>
-T&& final_forward(typename boost::remove_reference<T>::type& x)
-{
-  return static_cast<T&&>(x);
-}
-
-#else
-
-template<typename T>
-T& final_forward(const T& x){return const_cast<T&>(x);}
-
-#endif
-
 template<typename Dst,typename Src>
 void merge(
-  Dst& dst,BOOST_FWD_REF(Src) src,
+  Dst& dst,Src&& src,
   typename enable_if_key_based<Dst>::type=0)
 {
-  dst.merge(final_forward<Src>(src));
+  dst.merge(std::forward<Src>(src));
 }
 
 template<typename Dst,typename Src>
 void merge(
-  Dst& dst,BOOST_FWD_REF(Src) src,
+  Dst& dst,Src&& src,
   typename enable_if_not_key_based<Dst>::type=0)
 {
-  dst.splice(dst.end(),final_forward<Src>(src));
+  dst.splice(dst.end(),std::forward<Src>(src));
 }
 
 template<typename Dst,typename Src>
 std::pair<typename Dst::iterator,bool> merge(
-  Dst& dst,BOOST_FWD_REF(Src) src,
+  Dst& dst,Src&& src,
   typename boost::remove_reference<Src>::type::iterator i,
   typename enable_if_key_based<Dst>::type=0)
 {
-  return dst.merge(final_forward<Src>(src),i);
+  return dst.merge(std::forward<Src>(src),i);
 }
 
 template<typename Dst,typename Src>
 std::pair<typename Dst::iterator,bool> merge(
-  Dst& dst,BOOST_FWD_REF(Src) src,
+  Dst& dst,Src&& src,
   typename boost::remove_reference<Src>::type::iterator i,
   typename enable_if_not_key_based<Dst>::type=0)
 {
-  return dst.splice(dst.end(),final_forward<Src>(src),i);
+  return dst.splice(dst.end(),std::forward<Src>(src),i);
 }
 
 template<typename Dst,typename Src>
 void merge(
-  Dst& dst,BOOST_FWD_REF(Src) src,
+  Dst& dst,Src&& src,
   typename boost::remove_reference<Src>::type::iterator first,
   typename boost::remove_reference<Src>::type::iterator last,
   typename enable_if_key_based<Dst>::type=0)
 {
-  dst.merge(final_forward<Src>(src),first,last);
+  dst.merge(std::forward<Src>(src),first,last);
 }
 
 template<typename Dst,typename Src>
 void merge(
-  Dst& dst,BOOST_FWD_REF(Src) src,
+  Dst& dst,Src&& src,
   typename boost::remove_reference<Src>::type::iterator first,
   typename boost::remove_reference<Src>::type::iterator last,
   typename enable_if_not_key_based<Dst>::type=0)
 {
-  dst.splice(dst.end(),final_forward<Src>(src),first,last);
+  dst.splice(dst.end(),std::forward<Src>(src),first,last);
 }
 
 template<typename Dst,typename Src>
-void test_merge_same(Dst& dst,BOOST_FWD_REF(Src) src)
+void test_merge_same(Dst& dst,Src&& src)
 {
   std::size_t n=dst.size();
-  merge(dst,boost::forward<Src>(src));
+  merge(dst,std::forward<Src>(src));
   BOOST_TEST(dst.size()==n);
   BOOST_TEST(src.size()==n);
 }
@@ -511,7 +491,7 @@ bool find_address(Iterator first,Iterator last,const Value* x)
 
 template<typename Dst,typename Src>
 void test_merge_different(
-  Dst& dst,BOOST_FWD_REF(Src) src,bool transferred_iters)
+  Dst& dst,Src&& src,bool transferred_iters)
 {
   typedef typename boost::remove_reference<Src>::
     type::iterator                                src_iterator;
@@ -526,7 +506,7 @@ void test_merge_different(
     v.push_back(std::make_pair(first,&*first));
   }
 
-  merge(dst,boost::forward<Src>(src));
+  merge(dst,std::forward<Src>(src));
   BOOST_TEST(dst.size()>=n && m>=src.size() && dst.size()-n==m-src.size());
   for(std::size_t i=0;i<v.size();++i){
     BOOST_TEST(
@@ -542,7 +522,7 @@ void test_merge_different(
 
 template<typename Dst,typename Src>
 void test_merge_same(
-  Dst& dst,BOOST_FWD_REF(Src) src,
+  Dst& dst,Src&& src,
   typename boost::remove_reference<Src>::type::iterator i,
   bool key_based=is_key_based<Dst>::value)
 {
@@ -550,7 +530,7 @@ void test_merge_same(
 
   std::size_t n=dst.size();
 
-  std::pair<dst_iterator,bool> p=merge(dst,boost::forward<Src>(src),i);
+  std::pair<dst_iterator,bool> p=merge(dst,std::forward<Src>(src),i);
   BOOST_TEST(dst.size()==n);
   BOOST_TEST(src.size()==n);
   BOOST_TEST(&*(p.first)==&*i && p.second);
@@ -559,7 +539,7 @@ void test_merge_same(
 
 template<typename Dst,typename Src>
 void test_merge_different(
-  Dst& dst,BOOST_FWD_REF(Src) src,
+  Dst& dst,Src&& src,
   typename boost::remove_reference<Src>::type::iterator i,
   bool key_based=is_key_based<Dst>::value)
 {
@@ -568,7 +548,7 @@ void test_merge_different(
   std::size_t                     n=dst.size(),m=src.size();
   const typename Dst::value_type* pi=&*i;
 
-  std::pair<dst_iterator,bool> p=merge(dst,boost::forward<Src>(src),i);
+  std::pair<dst_iterator,bool> p=merge(dst,std::forward<Src>(src),i);
   BOOST_TEST(dst.size()+src.size()==n+m);
   BOOST_TEST(p.second?
     &*(p.first)==pi:
@@ -578,7 +558,7 @@ void test_merge_different(
 
 template<typename Dst,typename Src>
 void test_merge_same(
-  Dst& dst,BOOST_FWD_REF(Src) src,
+  Dst& dst,Src&& src,
   typename boost::remove_reference<Src>::type::iterator first,
   typename boost::remove_reference<Src>::type::iterator last,
   bool key_based=is_key_based<Dst>::value)
@@ -593,7 +573,7 @@ void test_merge_same(
   std::vector<const src_value_type*> v;
   for(src_iterator it=first;it!=last;++it)v.push_back(&*it);
 
-  merge(dst,boost::forward<Src>(src),first,last);
+  merge(dst,std::forward<Src>(src),first,last);
   BOOST_TEST(dst.size()==n);
   BOOST_TEST(src.size()==n);
   if(!key_based){
@@ -612,7 +592,7 @@ void test_merge_same(
 
 template<typename Dst,typename Src>
 void test_merge_different(
-  Dst& dst,BOOST_FWD_REF(Src) src,
+  Dst& dst,Src&& src,
   typename boost::remove_reference<Src>::type::iterator first,
   typename boost::remove_reference<Src>::type::iterator last,
   bool key_based=is_key_based<Dst>::value)
@@ -628,7 +608,7 @@ void test_merge_different(
   std::vector<const src_value_type*> v;
   for(src_iterator it=first;it!=last;++it)v.push_back(&*it);
 
-  merge(dst,boost::forward<Src>(src),first,last);
+  merge(dst,std::forward<Src>(src),first,last);
   BOOST_TEST(dst.size()>=n && m>=src.size() && dst.size()-n==m-src.size());
   if(!key_based){
     for(dst_iterator it=boost::next(dst.begin(),(std::ptrdiff_t)n);
@@ -652,7 +632,7 @@ void test_merge_same(Dst& dst)
     test_merge_same(
       dst2.template get<N>(),dst2.template get<M>());
     test_merge_same(
-      dst2.template get<N>(),boost::move(dst2.template get<M>()));
+      dst2.template get<N>(),std::move(dst2.template get<M>()));
   }
   {
     Dst dst2=dst1;
@@ -661,7 +641,7 @@ void test_merge_same(Dst& dst)
       boost::next(
         dst2.template get<M>().begin(),(std::ptrdiff_t)(dst2.size()/2)));
     test_merge_same(
-      dst2.template get<N>(),boost::move(dst2.template get<M>()),
+      dst2.template get<N>(),std::move(dst2.template get<M>()),
       boost::next(
         dst2.template get<M>().begin(),(std::ptrdiff_t)(dst2.size()/2)));
   }
@@ -673,7 +653,7 @@ void test_merge_same(Dst& dst)
       boost::next(
         dst2.template get<M>().begin(),(std::ptrdiff_t)(dst2.size()/2)));
     test_merge_same(
-      dst2.template get<N>(),boost::move(dst2.template get<M>()),
+      dst2.template get<N>(),std::move(dst2.template get<M>()),
       dst2.template get<M>().begin(),
       boost::next(
         dst2.template get<M>().begin(),(std::ptrdiff_t)(dst2.size()/2)));
@@ -699,7 +679,7 @@ void test_merge_different(Dst& dst,Src& src)
     Dst dst2=dst1;
     Src src2=src1;
     test_merge_different(
-      dst2.template get<N>(),boost::move(src2.template get<M>()),
+      dst2.template get<N>(),std::move(src2.template get<M>()),
       transferred_iters);
   }
   {
@@ -714,7 +694,7 @@ void test_merge_different(Dst& dst,Src& src)
     Dst dst2=dst1;
     Src src2=src1;
     test_merge_different(
-      dst2.template get<N>(),boost::move(src2.template get<M>()),
+      dst2.template get<N>(),std::move(src2.template get<M>()),
       boost::next(
         src2.template get<M>().begin(),(std::ptrdiff_t)(src2.size()/2)));
   }
@@ -731,7 +711,7 @@ void test_merge_different(Dst& dst,Src& src)
     Dst dst2=dst1;
     Src src2=src1;
     test_merge_different(
-      dst2.template get<N>(),boost::move(src2.template get<M>()),
+      dst2.template get<N>(),std::move(src2.template get<M>()),
       src2.template get<M>().begin(),
       boost::next(
         src2.template get<M>().begin(),(std::ptrdiff_t)(src2.size()/2)));

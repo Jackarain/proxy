@@ -354,10 +354,10 @@ private:
 
     bool do_push_node( node* n )
     {
-        handle_type node_handle = pool.get_handle( n );
-
         if ( n == NULL )
             return false;
+
+        handle_type node_handle = pool.get_handle( n );
 
         for ( ;; ) {
             tagged_node_handle tail      = tail_.load( memory_order_acquire );
@@ -393,26 +393,47 @@ public:
      * \note Not Thread-safe. If internal memory pool is exhausted and the memory pool is not fixed-sized, a new node
      * will be allocated from the OS. This may not be lock-free. \throws if memory allocator throws
      * */
+    bool unsynchronized_push( const T& t )
+    {
+        return unsynchronized_push_impl( t );
+    }
+
+    /// \copydoc boost::lockfree::queue::unsynchronized_push(const T& t)
     bool unsynchronized_push( T&& t )
     {
-        node* n = pool.template construct< false, false >( std::forward< T >( t ), pool.null_handle() );
+        return unsynchronized_push_impl( std::forward< T >( t ) );
+    }
+
+private:
+#ifndef BOOST_DOXYGEN_INVOKED
+    template < typename U >
+    bool unsynchronized_push_impl( U&& t )
+    {
+        node* n = pool.template construct< false, false >( std::forward< U >( t ), pool.null_handle() );
 
         if ( n == NULL )
             return false;
 
+        handle_type node_handle = pool.get_handle( n );
+
         for ( ;; ) {
-            tagged_node_handle tail     = tail_.load( memory_order_relaxed );
-            tagged_node_handle next     = tail->next.load( memory_order_relaxed );
-            node*              next_ptr = next.get_ptr();
+            tagged_node_handle tail      = tail_.load( memory_order_relaxed );
+            node*              tail_node = pool.get_pointer( tail );
+            tagged_node_handle next      = tail_node->next.load( memory_order_relaxed );
+            node*              next_ptr  = pool.get_pointer( next );
 
             if ( next_ptr == 0 ) {
-                tail->next.store( tagged_node_handle( n, next.get_next_tag() ), memory_order_relaxed );
-                tail_.store( tagged_node_handle( n, tail.get_next_tag() ), memory_order_relaxed );
+                tail_node->next.store( tagged_node_handle( node_handle, next.get_next_tag() ), memory_order_relaxed );
+                tail_.store( tagged_node_handle( node_handle, tail.get_next_tag() ), memory_order_relaxed );
                 return true;
             } else
-                tail_.store( tagged_node_handle( next_ptr, tail.get_next_tag() ), memory_order_relaxed );
+                tail_.store( tagged_node_handle( pool.get_handle( next_ptr ), tail.get_next_tag() ),
+                             memory_order_relaxed );
         }
     }
+
+#endif
+public:
 
     /** Pops object from queue.
      *

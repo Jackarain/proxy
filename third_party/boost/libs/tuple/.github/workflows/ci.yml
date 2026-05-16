@@ -172,14 +172,26 @@ jobs:
             os: ubuntu-latest
             install: clang-18
           - toolset: clang
+            compiler: clang++-19
             cxxstd: "03,11,14,17,20,2b"
-            os: macos-13
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-19
+          - toolset: clang
+            compiler: clang++-20
+            cxxstd: "03,11,14,17,20,23,2c"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-20
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-14
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-15
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,23,2c"
+            os: macos-26
 
     runs-on: ${{matrix.os}}
     container:
@@ -249,20 +261,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: 14,latest
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
           - toolset: clang-win
-            cxxstd: "14,17,latest"
+            cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
           - toolset: gcc
@@ -308,11 +312,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-24.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
@@ -356,11 +357,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-24.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
@@ -414,11 +412,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-24.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
@@ -470,8 +465,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2022
-          - os: windows-2025
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
@@ -519,8 +513,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2022
-          - os: windows-2025
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
@@ -586,8 +579,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2022
-          - os: windows-2025
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 

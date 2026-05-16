@@ -23,6 +23,14 @@ rule get ( name : default-value ? : implied-value ? )
     if ! $(m) && ! [ args.has-arg $(name) ]
     {
         m = [ MATCH --$(name)=(.*) : [ modules.peek : ARGV ] ] ;
+        if ! $(m)
+        {
+            m = [ MATCH (--$(name)) : [ modules.peek : ARGV ] ] ;
+            if $(m)
+            {
+                m = true ;
+            }
+        }
     }
     if $(m) && $(m) != true
     {

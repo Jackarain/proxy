@@ -5,6 +5,8 @@
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "test_common/test_service.hpp"
+
 #include <boost/mqtt5/types.hpp>
 
 #include <boost/mqtt5/impl/unsubscribe_op.hpp>
@@ -18,8 +20,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "test_common/test_service.hpp"
 
 using namespace boost::mqtt5;
 
@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(pid_overrun) {
     > { svc_ptr, std::move(handler) }
     .perform({ "topic" }, unsubscribe_props {});
 
-    ioc.run_for(std::chrono::milliseconds(500));
+    ioc.poll();
     BOOST_TEST(handlers_called == expected_handlers_called);
 }
 
@@ -76,7 +76,7 @@ void run_test(
     > { svc_ptr, std::move(handler) }
     .perform(topics, uprops);
 
-    ioc.run_for(std::chrono::milliseconds(500));
+    ioc.poll();
     BOOST_TEST(handlers_called == expected_handlers_called);
 }
 

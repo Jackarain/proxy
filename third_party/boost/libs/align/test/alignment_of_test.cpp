@@ -181,7 +181,11 @@ void test_pointer()
 
 void test_member_pointer()
 {
+#if defined(__clang__) && defined(_MSC_VER) && defined(_M_IX86)
+// clang-cl 32 bit: error: size of array element of type 'int X::*' (12 bytes) isn't a multiple of its alignment (8 bytes)
+#else
     test<int X::*>();
+#endif
     test<int(X::*)()>();
 }
 

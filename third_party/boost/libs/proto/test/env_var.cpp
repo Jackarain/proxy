@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <cstring>
 #include <sstream>
 #include <boost/config.hpp>
@@ -40,7 +42,7 @@ void assert_has_env_var_not(Env const &)
     BOOST_MPL_ASSERT_NOT((proto::result_of::has_env_var<Env, Tag>));
 }
 
-void test_is_env()
+BOOST_AUTO_TEST_CASE(test_is_env)
 {
     BOOST_MPL_ASSERT_NOT((proto::is_env<int>));
     BOOST_MPL_ASSERT_NOT((proto::is_env<int &>));
@@ -91,7 +93,12 @@ void test_as_env()
     BOOST_CHECK_EQUAL(&e8[proto::data], &test_as_env);
 }
 
-void test_comma()
+BOOST_AUTO_TEST_CASE(test_as_env_)
+{
+    test_as_env();
+}
+
+BOOST_AUTO_TEST_CASE(test_comma)
 {
     proto::env<proto::data_type, int> e0 = (proto::data = 1);
     BOOST_CHECK_EQUAL(e0[proto::data], 1);
@@ -186,7 +193,7 @@ void test_comma()
     BOOST_CHECK_EQUAL(0, std::strcmp(e16[proto::data], "hello"));
 }
 
-void test_result_of_env_var()
+BOOST_AUTO_TEST_CASE(test_result_of_env_var)
 {
     typedef proto::empty_env env0_type;
     BOOST_MPL_ASSERT((boost::is_same<proto::result_of::env_var<env0_type, proto::data_type>::type, proto::key_not_found>));
@@ -217,7 +224,7 @@ void test_result_of_env_var()
     BOOST_MPL_ASSERT((boost::is_same<proto::result_of::env_var<env4_type const &, tag0_type>::type, double>));
 }
 
-void test_env_var()
+BOOST_AUTO_TEST_CASE(test_env_var)
 {
     proto::key_not_found x0 = proto::env_var<proto::data_type>(proto::empty_env());
     proto::key_not_found x1 = proto::env_var<proto::data_type>(tag0 = 42);
@@ -245,7 +252,7 @@ void test_env_var()
     BOOST_CHECK_EQUAL(&x9, &a);
 }
 
-void test_env_var_tfx()
+BOOST_AUTO_TEST_CASE(test_env_var_tfx)
 {
     typedef proto::terminal<int>::type int_;
     int_ i = {42};
@@ -279,19 +286,4 @@ void test_env_var_tfx()
 
     proto::env<proto::data_type, int, proto::env<proto::data_type, int> > e3 = proto::_env()(i, 0, (42, proto::data = 43));
     BOOST_CHECK_EQUAL(e3[proto::data], 43);
-}
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test for environment variables");
-    test->add(BOOST_TEST_CASE(&test_as_env));
-    test->add(BOOST_TEST_CASE(&test_comma));
-    test->add(BOOST_TEST_CASE(&test_result_of_env_var));
-    test->add(BOOST_TEST_CASE(&test_env_var));
-    test->add(BOOST_TEST_CASE(&test_env_var_tfx));
-    return test;
 }

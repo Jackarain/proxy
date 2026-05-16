@@ -1,0 +1,152 @@
+//
+// Copyright (c) 2025 Marcelo Zimbres Silva (mzimbres@gmail.com),
+// Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+= Sentinel
+
+Boost.Redis supports Redis Sentinel deployments. Sentinel handling
+in `connection` is built-in: xref:reference:boost/redis/basic_connection/async_run-04.adoc[`async_run`]
+automatically connects to Sentinels, resolves the master's address, and connects to the master.
+
+Configuration is done using xref:reference:boost/redis/sentinel_config.adoc[`config::sentinel`]:
+
+[source,cpp]
+----
+config cfg;
+
+// To enable Sentinel, set this field to a non-empty list
+// of (hostname, port) pairs where Sentinels are listening
+cfg.sentinel.addresses = {
+    {"sentinel1.example.com", "26379"},
+    {"sentinel2.example.com", "26379"},
+    {"sentinel3.example.com", "26379"},
+};
+
+// Set master_name to the identifier that you configured
+// in the "sentinel monitor" statement of your sentinel.conf file
+cfg.sentinel.master_name = "mymaster";
+----
+
+Once set, the connection object can be used normally. See our
+our {site-url}/example/cpp20_sentinel.cpp[Sentinel example]
+for a full program.
+
+== Connecting to replicas
+
+By default, the library connects to the Redis master.
+You can connect to one of its replicas by using
+xref:reference:boost/redis/sentinel_config/server_role.adoc[`config::sentinel::server_role`].
+This can be used to balance load, if all your commands read data from
+the server and never write to it. The particular replica will be chosen randomly.
+
+[source,cpp]
+----
+config cfg;
+
+// Set up Sentinel
+cfg.sentinel.addresses = {
+    {"sentinel1.example.com", "26379"},
+    {"sentinel2.example.com", "26379"},
+    {"sentinel3.example.com", "26379"},
+};
+cfg.sentinel.master_name = "mymaster";
+
+// Ask the library to connect to a random replica of 'mymaster', rather than the master node
+cfg.sentinel.server_role = role::replica;
+----
+
+
+== Sentinel authentication
+
+If your Sentinels require authentication, 
+you can use xref:reference:boost/redis/sentinel_config/setup.adoc[`config::sentinel::setup`]
+to provide credentials.
+This request is executed immediately after connecting to Sentinels, and
+before any other command:
+
+[source,cpp]
+----
+// Set up Sentinel
+config cfg;
+cfg.sentinel.addresses = {
+    {"sentinel1.example.com", "26379"},
+    {"sentinel2.example.com", "26379"},
+    {"sentinel3.example.com", "26379"},
+};
+cfg.sentinel.master_name = "mymaster";
+
+// By default, setup contains a 'HELLO 3' command.
+// Override it to add an AUTH clause to it with out credentials.
+cfg.sentinel.setup.clear();
+cfg.sentinel.setup.push("HELLO", 3, "AUTH", "sentinel_user", "sentinel_password");
+
+// cfg.sentinel.setup applies to Sentinels, only.
+// Use cfg.setup to authenticate to masters/replicas.
+cfg.use_setup = true; // Required for cfg.setup to be used, for historic reasons
+cfg.setup.clear();
+cfg.setup.push("HELLO", 3, "AUTH", "master_user", "master_password");
+----
+
+== Using TLS with Sentinels
+
+You might use TLS with Sentinels only, masters/replicas only, or both by adjusting
+xref:reference:boost/redis/sentinel_config/use_ssl.adoc[`config::sentinel::use_ssl`]
+and xref:reference:boost/redis/config/use_ssl.adoc[`config::use_ssl`]:
+
+[source,cpp]
+----
+// Set up Sentinel
+config cfg;
+cfg.sentinel.addresses = {
+    {"sentinel1.example.com", "26379"},
+    {"sentinel2.example.com", "26379"},
+    {"sentinel3.example.com", "26379"},
+};
+cfg.sentinel.master_name = "mymaster";
+
+// Adjust these switches to enable/disable TLS
+cfg.use_ssl = true;          // Applies to masters and replicas
+cfg.sentinel.use_ssl = true; // Applies to Sentinels
+----
+
+== Sentinel algorithm
+
+This section details how `async_run` interacts with Sentinel.
+Most of the algorithm follows
+https://redis.io/docs/latest/develop/reference/sentinel-clients/[the official Sentinel client guidelines].
+Some of these details may vary between library versions.
+
+* Connections maintain an internal list of Sentinels, bootstrapped from
+  xref:reference:boost/redis/sentinel_config/addresses.adoc[`config::sentinel::addresses`].
+* The first Sentinel in the list is contacted by performing the following:
+** A physical connection is established.
+** The setup request is executed.
+** The master's address is resolved using
+   https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/#sentinel-api[`SENTINEL GET-MASTER-NAME-BY-ADDR`].
+** If `config::sentinel::server_role` is `role::replica`, replica addresses are obtained using
+   https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/#sentinel-api[`SENTINEL REPLICAS`].
+   One replica is chosen randomly.
+** The address of other Sentinels also monitoring this master are retrieved using
+   https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/#sentinel-api[`SENTINEL SENTINELS`].
+* If a Sentinel is unreachable, doesn't know about the configured master,
+  or returns an error while executing the above requests, the next Sentinel in the list is tried.
+* If all Sentinels have been tried without success, `config::reconnect_wait_interval`
+  is waited, and the process starts again.
+* After a successful Sentinel response, the internal Sentinel list is updated
+  with any newly discovered Sentinels.
+  Sentinels in `config::sentinel::addresses` are always kept in the list,
+  even if they weren't present in the output of `SENTINEL SENTINELS`.
+* The retrieved address is used
+  to establish a connection with the master or replica.
+  A `ROLE` command is added at the end of the setup request.
+  This is used to detect situations where a Sentinel returns outdated
+  information due to a failover in process. If `ROLE` doesn't output
+  the expected role (`"master"` or `"slave"`, depending on `config::sentinel::server_role`)
+  `config::reconnect_wait_interval` is waited and Sentinel is contacted again.
+* The connection to the master/replica is run like any other connection.
+  If network errors or timeouts happen, `config::reconnect_wait_interval`
+  is waited and Sentinel is contacted again.

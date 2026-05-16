@@ -94,11 +94,9 @@ struct default_error_handler : error_handler {
         //!
         //! @param new_handler the new function.
         //! @return The previous function.
+        // coverity[auto_causes_copy]
         static auto set(function_type new_handler) -> function_type {
-            auto prev = handler;
-            handler = std::move(new_handler);
-
-            return prev;
+            return std::exchange(handler, std::move(new_handler));
         }
 
         //! The default error handler function.

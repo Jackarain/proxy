@@ -23,7 +23,7 @@
 #include <new>
 #include <cstdlib>
 #include <cassert>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/static_assert.hpp>
 
 class MoveOnly

@@ -58,7 +58,7 @@ containers.  It specifies operations for accessing elements,
 traversing containers, and creating views
 of array data.
 MultiArray defines
-a flexible memory model that accomodates
+a flexible memory model that accommodates
 a variety of data layouts.
 </p><p>
 At each level (or dimension) of a MultiArray's
@@ -145,7 +145,7 @@ base.  Note that since positive index bases are
 possible, the origin need not exist in order to determine the location
 in memory of the MultiArray's elements.
   The strides determine how index values are mapped to memory offsets. 
-They accomodate a
+They accommodate a
 number of possible element layouts.  For example, the elements of a 2
 dimensional array can be stored by row (i.e., the elements of each row
 are stored contiguously) or by column (i.e., the elements of each
@@ -303,7 +303,7 @@ This returns the number of values contained in
 <code class="literal">const element&amp;</code> otherwise.
             </td><td>
 This expression accesses a specific element of
-<code class="literal">a</code>.<code class="literal">index_list</code> is the unique set
+<code class="literal">a</code>. <code class="literal">index_list</code> is the unique set
 of indices that address the element returned.  It is 
 equivalent to the following code (disregarding intermediate temporaries):
 <pre class="programlisting">
@@ -427,16 +427,16 @@ with unspecified start and finish values.</td></tr><tr><td><code class="literal"
 value, this is equivalent to <code class="literal">i.start()</code>. Otherwise it
 returns <code class="literal">idx</code>.</td></tr><tr><td><code class="literal">i.get_finish(idx)</code></td><td><code class="literal">index</code></td><td>If <code class="literal">i</code> specifies a finish
 value, this is equivalent to <code class="literal">i.finish()</code>. Otherwise it
-returns <code class="literal">idx</code>.</td></tr><tr><td><code class="literal">i.size(idx)</code></td><td><code class="literal">size_type</code></td><td>If <code class="literal">i</code> specifies a both finish and
-start values, this is equivalent to
+returns <code class="literal">idx</code>.</td></tr><tr><td><code class="literal">i.size(idx)</code></td><td><code class="literal">size_type</code></td><td>If <code class="literal">i</code> specifies both a finish and a
+start value, this is equivalent to
 <code class="literal">(i.finish()-i.start())/i.stride()</code>. Otherwise it
 returns <code class="literal">idx</code>.</td></tr><tr><td><code class="literal">i &lt; idx</code></td><td><code class="literal">index</code></td><td>This is another syntax for specifying the finish
 value. This notation does not include 
 <code class="literal">idx</code> in the range of valid indices. It is equivalent to 
-<code class="literal">index_range(r.start(), idx, r.stride())</code></td></tr><tr><td><code class="literal">i &lt;= idx</code></td><td><code class="literal">index</code></td><td>This is another syntax for specifying the finish
+<code class="literal">index_range(r.start(), idx, r.stride())</code>.</td></tr><tr><td><code class="literal">i &lt;= idx</code></td><td><code class="literal">index</code></td><td>This is another syntax for specifying the finish
 value. This notation includes 
 <code class="literal">idx</code> in the range of valid indices. It is equivalent to 
-<code class="literal">index_range(r.start(), idx + 1, r.stride())</code></td></tr><tr><td><code class="literal">idx &lt; i</code></td><td><code class="literal">index</code></td><td>This is another syntax for specifying the start
+<code class="literal">index_range(r.start(), idx + 1, r.stride())</code>.</td></tr><tr><td><code class="literal">idx &lt; i</code></td><td><code class="literal">index</code></td><td>This is another syntax for specifying the start
 value. This notation does not include 
 <code class="literal">idx</code> in the range of valid indices. It is equivalent to 
 <code class="literal">index_range(idx + 1, i.finish(), i.stride())</code>.</td></tr><tr><td><code class="literal">idx &lt;= i</code></td><td><code class="literal">index</code></td><td>This is another syntax for specifying the start
@@ -444,9 +444,9 @@ value. This notation includes
 <code class="literal">idx1</code> in the range of valid indices. It is equivalent to 
 <code class="literal">index_range(idx, i.finish(), i.stride())</code>.</td></tr><tr><td><code class="literal">i + idx</code></td><td><code class="literal">index</code></td><td>This expression shifts the start and finish values
 of <code class="literal">i</code> up by <code class="literal">idx</code>. It is equivalent to 
-<code class="literal">index_range(r.start()+idx1, r.finish()+idx, r.stride())</code></td></tr><tr><td><code class="literal">i - idx</code></td><td><code class="literal">index</code></td><td>This expression shifts the start and finish values
+<code class="literal">index_range(r.start()+idx1, r.finish()+idx, r.stride())</code>.</td></tr><tr><td><code class="literal">i - idx</code></td><td><code class="literal">index</code></td><td>This expression shifts the start and finish values
 of <code class="literal">i</code> up by <code class="literal">idx</code>. It is equivalent to 
-<code class="literal">index_range(r.start()-idx1, r.finish()-idx, r.stride())</code></td></tr></tbody></table></div></div><br class="table-break"></div><div class="sect3" title="index_gen"><div class="titlepage"><div><div><h4 class="title"><a name="index_gen"></a><code class="literal">index_gen</code></h4></div></div></div><p> <code class="literal">index_gen</code> aggregates 
+<code class="literal">index_range(r.start()-idx1, r.finish()-idx, r.stride())</code>.</td></tr></tbody></table></div></div><br class="table-break"></div><div class="sect3" title="index_gen"><div class="titlepage"><div><div><h4 class="title"><a name="index_gen"></a><code class="literal">index_gen</code></h4></div></div></div><p> <code class="literal">index_gen</code> aggregates 
 <code class="literal">index_range</code> objects in order to specify view
 parameters.  Chained calls to <code class="literal">operator[]</code> store
 range and dimension information used to 
@@ -560,7 +560,7 @@ void reindex(const BaseList&amp; values);
 
 </pre>
 </span></dt><dd><p>This changes the index bases of the <code class="literal">multi_array</code> to
-correspond to the the values in <code class="literal">values</code>.</p><p title="BaseList Requirements"><b><code class="literal">BaseList</code> Requirements. </b><code class="literal">BaseList</code> must model
+correspond to the values in <code class="literal">values</code>.</p><p title="BaseList Requirements"><b><code class="literal">BaseList</code> Requirements. </b><code class="literal">BaseList</code> must model
 <a class="ulink" href="../../utility/Collection.html" target="_top">Collection</a>.</p><p title="Preconditions"><b>Preconditions. </b><code class="literal">values.size() == NumDims;</code></p><p title="Postconditions"><b>Postconditions. </b><code class="literal">std::equal(values.begin(),values.end(),this-&gt;index_bases());
 </code></p></dd><dt><span class="term">
 <pre class="programlisting">
@@ -745,7 +745,7 @@ multi_array(const const_array_view&lt;NumDims&gt;::type&amp; x);
 multi_array(const multi_array_ref&lt;ValueType,NumDims&gt;&amp; x);
 multi_array(const subarray&lt;NumDims&gt;::type&amp; x);
 multi_array(const array_view&lt;NumDims&gt;::type&amp; x);
-</pre></span></dt><dd><p>These constructors all constructs a <code class="literal">multi_array</code> and 
+</pre></span></dt><dd><p>These constructors all construct a <code class="literal">multi_array</code> and 
 perform a deep copy of <code class="literal">x</code>. 
 </p><p title="Complexity"><b>Complexity. </b> This performs O(<code class="literal">x.num_elements()</code>) calls to
 <code class="literal">element</code>'s copy 
@@ -816,7 +816,7 @@ of the constructors.
 </p><p title="Model Of."><b>Model Of. </b>
 <code class="literal">multi_array_ref</code> models 
 <a class="link" href="#MultiArray" title="MultiArray Concept">MultiArray</a>,
-<a class="ulink" href="../../../libs/utility/CopyConstructible.html" target="_top">CopyConstructible</a>.
+<a class="ulink" href="../../../libs/utility/CopyConstructible.html" target="_top">CopyConstructible</a>
 and depending on the element type, it may also model
 <a class="ulink" href="https://www.boost.org/sgi/stl/EqualityComparable.html" target="_top">EqualityComparable</a> and <a class="ulink" href="https://www.boost.org/sgi/stl/LessThanComparable.html" target="_top">LessThanComparable</a>. 
 Detailed descriptions are provided here only for operations that are
@@ -954,7 +954,7 @@ dimensions.
 multi_array_ref(const multi_array_ref&amp; x);
 </pre></span></dt><dd><p>This constructs a shallow copy of <code class="literal">x</code>.
 </p><p title="Complexity"><b>Complexity. </b> Constant time (for contrast, compare this to
-the <code class="literal">multi_array</code> class copy constructor.
+the <code class="literal">multi_array</code> class copy constructor).
 </p></dd></dl></div><p title="Modifiers"><b>Modifiers. </b></p><div class="variablelist"><dl><dt><span class="term"><pre class="programlisting">
 multi_array_ref&amp; operator=(const multi_array_ref&amp; x);
 template &lt;class Array&gt; multi_array_ref&amp; operator=(const Array&amp; x);
@@ -976,7 +976,7 @@ of the constructors.
 </p><p title="Model Of."><b>Model Of. </b>
 <code class="literal">const_multi_array_ref</code> models
 <a class="link" href="#MultiArray" title="MultiArray Concept">MultiArray</a>,
-<a class="ulink" href="../../../libs/utility/CopyConstructible.html" target="_top">CopyConstructible</a>.
+<a class="ulink" href="../../../libs/utility/CopyConstructible.html" target="_top">CopyConstructible</a>
 and depending on the element type, it may also model
 <a class="ulink" href="https://www.boost.org/sgi/stl/EqualityComparable.html" target="_top">EqualityComparable</a> and <a class="ulink" href="https://www.boost.org/sgi/stl/LessThanComparable.html" target="_top">LessThanComparable</a>. 
 
@@ -1110,7 +1110,7 @@ associated with <code class="literal">multi_array</code>,
 <code class="literal">multi_array_ref</code>, and
 <code class="literal">const_multi_array_ref</code> that are not
 dependent upon template parameters.  These types find common use with
-all Boost.Multiarray components.  They are defined
+all Boost.MultiArray components.  They are defined
 in a namespace from which they can be accessed conveniently.
 With the exception of <code class="literal">extent_gen</code> and 
 <code class="literal">extent_range</code>, these types fulfill the roles of the
@@ -1144,7 +1144,7 @@ public:
 <code class="literal">finish</code> must be greater than <code class="literal">start</code>.
 </p></dd><dt><span class="term"><code class="function">extent_range(index finish)</code></span></dt><dd><p>This constructor defines the half open interval
 <code class="literal">[0,finish)</code>. The value of <code class="literal">finish</code>
-must be positive.</p></dd><dt><span class="term"><code class="function">index start()</code></span></dt><dd><p>This function returns the first index represented by the range</p></dd><dt><span class="term"><code class="function">index finish()</code></span></dt><dd><p>This function returns the upper boundary value of the half-open
+must be positive.</p></dd><dt><span class="term"><code class="function">index start()</code></span></dt><dd><p>This function returns the first index represented by the range.</p></dd><dt><span class="term"><code class="function">index finish()</code></span></dt><dd><p>This function returns the upper boundary value of the half-open
 interval.  Note that the range does not include this value.</p></dd><dt><span class="term"><code class="function">size_type size()</code></span></dt><dd><p>This function returns the size of the specified range. It is
 equivalent to <code class="literal">finish()-start()</code>.</p></dd></dl></div></div><div class="sect2" title="extent_gen"><div class="titlepage"><div><div><h3 class="title"><a name="extent_gen"></a><code class="classname">extent_gen</code></h3></div></div></div><p>The <code class="classname">extent_gen</code> class defines an
 interface for aggregating array shape and indexing information to be
@@ -1205,7 +1205,7 @@ For example,
 a 3 by 3 by 3 <code class="classname">multi_array</code> is constructed as follows:
 </p><pre class="programlisting">multi_array&lt;int,3&gt; A(extents[3][3][3]);</pre><p>
 The same array could also be created by explicitly declaring an <code class="literal">extent_gen</code> 
-object locally,, but the global object makes this declaration unnecessary.  
+object locally, but the global object makes this declaration unnecessary.  
 </p></div><div class="sect3" title="indices"><div class="titlepage"><div><div><h4 class="title"><a name="indices"></a><code class="literal">indices</code></h4></div></div></div><pre class="programlisting">
 namespace boost {
   multi_array_base::index_gen  indices;
@@ -1284,7 +1284,7 @@ int a[] = { 0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11 };
 int s[] = { 3, 1 };
 </pre><p>
 Notice that the strides here are different. As a result,
-The expression given above to access values will work with this pair
+the expression given above to access values will work with this pair
 of data and strides as well.
 </p><p>In addition to dimension order, it is also possible to
 store any dimension in descending order. For example, returning to the 

@@ -6,19 +6,21 @@
 
 import mpi ;
 
-project boost/graph_parallel
+project
+    : common-requirements <include>../include <library>$(boost_dependencies)
     : requirements <include>../src
     : source-location ../src
+    : usage-requirements <define>BOOST_GRAPH_PARALLEL_NO_LIB=1
     ;
 
 local optional_sources ;
 local optional_reqs ;
 
 if [ mpi.configured ]
-{    
+{
   lib boost_graph_parallel
     : mpi_process_group.cpp tag_allocator.cpp
-    : <library>../../mpi/build//boost_mpi
+    : <library>/boost/mpi//boost_mpi
       <library>/mpi//mpi [ mpi.extra-requirements ]
       <define>BOOST_GRAPH_NO_LIB=1
       <link>shared:<define>BOOST_GRAPH_DYN_LINK=1
@@ -33,11 +35,13 @@ if [ mpi.configured ]
 }
 else
 {
-  message boost_graph_parallel
+  alias boost_graph_parallel ;
+  if ! ( --without-graph_parallel in  [ modules.peek : ARGV ] )
+  {
+    message boost_graph_parallel
       : "warning: Graph library does not contain MPI-based parallel components."
       : "note: to enable them, add \"using mpi ;\" to your user-config.jam."
       : "note: to suppress this message, pass \"--without-graph_parallel\" to bjam."
       ;
+  }
 }
-
-boost-install boost_graph_parallel ;

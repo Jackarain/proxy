@@ -286,6 +286,7 @@ include::../../src/tools/features/warnings-feature.jam[tag=doc]
 include::../../src/tools/features/translate-path-feature.jam[tag=doc]
 include::../../src/tools/features/lto-feature.jam[tag=doc]
 include::../../src/tools/features/response-file-feature.jam[tag=doc]
+include::../../src/tools/features/contracts-feature.jam[tag=doc]
 
 [[b2.reference.tools]]
 == Builtin tools

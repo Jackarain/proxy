@@ -1,4 +1,4 @@
-/* Copyright 2003-2022 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -16,15 +16,12 @@
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
 #include <boost/core/enable_if.hpp>
 #include <boost/detail/workaround.hpp>
-#include <boost/mpl/if.hpp>
+#include <boost/mp11/utility.hpp>
 #include <boost/type_traits/is_const.hpp>
+#include <boost/type_traits/is_convertible.hpp>
 #include <boost/type_traits/is_reference.hpp>
 #include <boost/type_traits/remove_const.hpp>
 #include <boost/type_traits/remove_reference.hpp>
-
-#if !defined(BOOST_NO_SFINAE)
-#include <boost/type_traits/is_convertible.hpp>
-#endif
 
 namespace boost{
 
@@ -54,13 +51,8 @@ struct const_ref_global_fun_base
 
   template<typename ChainedPtr>
 
-#if !defined(BOOST_NO_SFINAE)
   typename disable_if<
     is_convertible<const ChainedPtr&,Value>,Type>::type
-#else
-  Type
-#endif
-
   operator()(const ChainedPtr& x)const
   {
     return operator()(*x);
@@ -101,13 +93,8 @@ struct non_const_ref_global_fun_base
 
   template<typename ChainedPtr>
 
-#if !defined(BOOST_NO_SFINAE)
   typename disable_if<
     is_convertible<ChainedPtr&,Value>,Type>::type
-#else
-  Type
-#endif
-
   operator()(const ChainedPtr& x)const
   {
     return operator()(*x);
@@ -133,13 +120,8 @@ struct non_ref_global_fun_base
 
   template<typename ChainedPtr>
 
-#if !defined(BOOST_NO_SFINAE)
   typename disable_if<
     is_convertible<const ChainedPtr&,const Value&>,Type>::type
-#else
-  Type
-#endif
-
   operator()(const ChainedPtr& x)const
   {
     return operator()(*x);
@@ -166,15 +148,15 @@ struct non_ref_global_fun_base
 
 template<class Value,typename Type,Type (*PtrToFunction)(Value)>
 struct global_fun:
-  mpl::if_c<
-    is_reference<Value>::value,
-    typename mpl::if_c<
-      is_const<typename remove_reference<Value>::type>::value,
+  mp11::mp_if<
+    is_reference<Value>,
+    typename mp11::mp_if<
+      is_const<typename remove_reference<Value>::type>,
       detail::const_ref_global_fun_base<Value,Type,PtrToFunction>,
       detail::non_const_ref_global_fun_base<Value,Type,PtrToFunction>
-    >::type,
+    >,
     detail::non_ref_global_fun_base<Value,Type,PtrToFunction>
-  >::type
+  >
 {
 };
 

@@ -315,7 +315,7 @@ void process_ipp_file(const fs::path& file, bool positive_test)
    static const boost::regex feature_regex("boost_(?:no|has)_(.*)");
    std::string feature_name = boost::regex_replace(namespace_name, feature_regex, "\\1");
    if(feature_list.find(feature_name) == feature_list.end())
-      build_config_jamfile << "obj " << feature_name << " : test_case.cpp : <define>TEST_" << macro_name << " ;\n";
+      build_config_jamfile << "obj " << feature_name << " : test_case.cpp /boost/config//boost_config : <define>TEST_" << macro_name << " ;\n";
    feature_list.insert(feature_name);
 }
 

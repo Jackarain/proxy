@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <boost/mpl/print.hpp>
 #include <iostream>
 #include <boost/shared_ptr.hpp>
@@ -76,7 +78,7 @@ struct my_terminal
 my_terminal<int S::*> test1 = {{ &S::x }};
 
 // Some tests with the default transform
-void test_refs_transform()
+BOOST_AUTO_TEST_CASE(test_refs_transform)
 {
     S s;
     BOOST_REQUIRE_EQUAL(s.x, -42);
@@ -103,7 +105,7 @@ void test_refs_transform()
 }
 
 // Some tests with the default context
-void test_refs_context()
+BOOST_AUTO_TEST_CASE(test_refs_context)
 {
     proto::default_context ctx;
     S s;
@@ -130,7 +132,7 @@ void test_refs_context()
     BOOST_CHECK_EQUAL(&s.x, &s_x);
 }
 
-void test_ptrs_transform()
+BOOST_AUTO_TEST_CASE(test_ptrs_transform)
 {
     S s;
     BOOST_REQUIRE_EQUAL(s.x, -42);
@@ -177,7 +179,7 @@ void test_ptrs_transform()
     BOOST_CHECK_EQUAL(&spc->x, &s_x2);
 }
 
-void test_ptrs_context()
+BOOST_AUTO_TEST_CASE(test_ptrs_context)
 {
     proto::default_context ctx;
     S s;
@@ -238,7 +240,7 @@ int const *get_pointer(T const &t)
     return &t.x;
 }
 
-void with_get_pointer_transform()
+BOOST_AUTO_TEST_CASE(with_get_pointer_transform)
 {
     T t;
     evaluator()(test2(t));
@@ -267,7 +269,7 @@ struct U : dumb_ptr<U>
 my_terminal<U *dumb_ptr<U>::*> U_p = {{&U::p}};
 my_terminal<int U::*> U_x = {{&U::x}};
 
-void potentially_ambiguous_transform()
+BOOST_AUTO_TEST_CASE(potentially_ambiguous_transform)
 {
     U u;
 
@@ -278,26 +280,4 @@ void potentially_ambiguous_transform()
     // This should yield a non-const reference to a pointer-to-const
     int &ux = evaluator()(U_x(u));
     BOOST_CHECK_EQUAL(&ux, &u.x);
-}
-
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test handling of member pointers by the default transform and default contexts");
-
-    test->add(BOOST_TEST_CASE(&test_refs_transform));
-    test->add(BOOST_TEST_CASE(&test_refs_context));
-
-    test->add(BOOST_TEST_CASE(&test_ptrs_transform));
-    test->add(BOOST_TEST_CASE(&test_ptrs_context));
-
-    test->add(BOOST_TEST_CASE(&with_get_pointer_transform));
-
-    test->add(BOOST_TEST_CASE(&potentially_ambiguous_transform));
-
-    return test;
 }

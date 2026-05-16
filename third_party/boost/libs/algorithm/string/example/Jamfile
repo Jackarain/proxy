@@ -7,6 +7,7 @@
 #
 #  See http://www.boost.org for updates, documentation, and revision history.
 
+project : requirements <library>/boost/algorithm//boost_algorithm ;
 
 exe conv_example : conv_example.cpp ;
 exe predicate_example : predicate_example.cpp ;

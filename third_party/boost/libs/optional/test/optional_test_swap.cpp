@@ -210,6 +210,7 @@ namespace boost {
 // Compile time tweaking on whether or not swap should use the default constructor:
 //
 
+#ifndef BOOST_OPTIONAL_USES_UNION_IMPLEMENTATION
 template <> struct optional_swap_should_use_default_constructor<
   optional_swap_test::class_whose_default_ctor_should_be_used> : true_type {} ;
 
@@ -218,7 +219,7 @@ template <> struct optional_swap_should_use_default_constructor<
 
 template <class T> struct optional_swap_should_use_default_constructor<
   optional_swap_test::template_whose_default_ctor_should_be_used<T> > : true_type {} ;
-
+#endif // BOOST_OPTIONAL_USES_UNION_IMPLEMENTATION
 
 //
 // Specialization of boost::swap:
@@ -352,15 +353,19 @@ void test_swap_member_function( T const* )
 void test_swap_tweaking()
 {
   ( test_swap_function( ARG(optional_swap_test::class_without_default_ctor) ) );
+#ifndef BOOST_OPTIONAL_USES_UNION_IMPLEMENTATION
+  ( test_swap_function( ARG(optional_swap_test::class_whose_explicit_ctor_should_be_used) ) );
   ( test_swap_function( ARG(optional_swap_test::class_whose_default_ctor_should_be_used) ) );
   ( test_swap_function( ARG(optional_swap_test::class_whose_default_ctor_should_not_be_used) ) );
-  ( test_swap_function( ARG(optional_swap_test::class_whose_explicit_ctor_should_be_used) ) );
   ( test_swap_function( ARG(optional_swap_test::template_whose_default_ctor_should_be_used<char>) ) );
+#endif
   ( test_swap_member_function( ARG(optional_swap_test::class_without_default_ctor) ) );
+#ifndef BOOST_OPTIONAL_USES_UNION_IMPLEMENTATION
+  ( test_swap_member_function( ARG(optional_swap_test::class_whose_explicit_ctor_should_be_used) ) );
   ( test_swap_member_function( ARG(optional_swap_test::class_whose_default_ctor_should_be_used) ) );
   ( test_swap_member_function( ARG(optional_swap_test::class_whose_default_ctor_should_not_be_used) ) );
-  ( test_swap_member_function( ARG(optional_swap_test::class_whose_explicit_ctor_should_be_used) ) );
   ( test_swap_member_function( ARG(optional_swap_test::template_whose_default_ctor_should_be_used<char>) ) );
+#endif
 }
 
 int main()

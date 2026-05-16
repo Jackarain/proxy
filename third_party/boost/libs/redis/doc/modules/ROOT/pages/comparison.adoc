@@ -14,7 +14,7 @@ compatible with the Asio asynchronous model. As I made progresses I could
 also address what I considered weaknesses in other libraries.  Due to
 time constraints I won't be able to give a detailed comparison with
 each client listed in the
-https://redis.io/docs/clients/#cpp[official list].
+https://redis.io/docs/latest/develop/clients/[official list].
 Instead, I will focus on the most popular pass:[C++] client on github in number of stars, namely:
 
 https://github.com/sewenew/redis-plus-plus[]

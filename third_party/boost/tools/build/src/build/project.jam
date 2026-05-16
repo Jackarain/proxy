@@ -163,6 +163,7 @@ rule find ( name : current-location )
 {
     name = [ NORMALIZE_PATH $(name) ] ;
     local project-module ;
+    local location ;
 
     # Try interpreting name as project id.
     if [ path.is-rooted $(name) ]
@@ -195,14 +196,37 @@ rule find ( name : current-location )
                     load-used-projects $(caller-module) ;
                 }
             }
+            else
+            {
+                local sub = [ path.basename $(name) ] ;
+                local root = [ path.parent $(name) ] ;
+                while $(root) != /
+                {
+                    local m = $($(root).jamfile-module) ;
+                    if $(m)
+                    {
+                        location = [ path.root $(sub)
+                            [ attribute $(m) location ] ] ;
+                        root = / ;
+                    }
+                    else
+                    {
+                        sub = [ path.join [ path.basename $(root) ] $(sub) ] ;
+                        root = [ path.parent $(root) ] ;
+                    }
+                }
+            }
             project-module = $($(name).jamfile-module) ;
         }
     }
 
     if ! $(project-module)
     {
-        local location = [ path.root [ path.make $(name) ] $(current-location) ]
-            ;
+        if ! $(location)
+        {
+            location = [ path.root [ path.make $(name) ] $(current-location) ]
+                ;
+        }
 
         # If no project is registered for the given location, try to load it.
         # First see if we have a Jamfile. If not, then see if we might have a

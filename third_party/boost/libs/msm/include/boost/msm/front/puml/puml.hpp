@@ -101,6 +101,12 @@ namespace detail {
                     }
                 });
         }
+        // functions added for front::state compatibility
+        template <class Event, class FSM>
+        bool is_event_deferred(Event const&, FSM&) const
+        {
+            return true;
+        }
         // typedefs added for front::state compatibility
         typedef ::boost::mpl::vector<>  internal_transition_table;
         typedef ::boost::fusion::vector<>  internal_transition_table11;

@@ -28,9 +28,6 @@ namespace urls {
     @tparam T type of resource associated with
     each path template
 
-    @tparam N maximum number of replacement fields
-    in a path template
-
     @par Exception Safety
 
     @li Functions marked `noexcept` provide the
@@ -53,6 +50,11 @@ class router
 public:
     /// Constructor
     router() = default;
+
+    router(router const&) = delete;
+    router& operator=(router const&) = delete;
+    router(router&&) noexcept = default;
+    router& operator=(router&&) noexcept = default;
 
     /** Route the specified URL path to a resource
 
@@ -88,4 +90,3 @@ private:
 #include "impl/router.hpp"
 
 #endif
-

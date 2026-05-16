@@ -24,7 +24,7 @@
 
 #include <boost/thread/future.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #if BOOST_THREAD_VERSION == 4
 #define BOOST_THREAD_DETAIL_SIGNATURE double()

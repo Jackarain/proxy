@@ -49,6 +49,6 @@ jobs:
           lcov --list coverage.info
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v1.2.1
+        uses: codecov/codecov-action@v4
         with:
           files: ../boost-root/coverage.info

@@ -1,0 +1,65 @@
+﻿# -----------------------------------------------------------------------------
+#  Copyright Matt Borland 2023.
+#  Copyright Christopher Kormanyos 2023.
+#  Distributed under the Boost Software License,
+#  Version 1.0. (See accompanying file LICENSE_1_0.txt
+#  or copy at http://www.boost.org/LICENSE_1_0.txt)
+# -----------------------------------------------------------------------------
+
+BOOST_ROOT_FOR_TIDY = /mnt/c/boost/boost_1_78_0
+CC                  = clang++
+STD                 = c++14
+
+ifneq ($(MY_BOOST_ROOT),)
+BOOST_ROOT_FOR_TIDY := $(MY_BOOST_ROOT)
+endif
+
+ifneq ($(MY_CC),)
+CC                  := $(MY_CC)
+endif
+
+ifneq ($(MY_STD),)
+STD                 := $(MY_STD)
+endif
+
+CXX_FLAGS    = $(CC)                                                          \
+               -march=native                                                  \
+               -mtune=native                                                  \
+               -O3                                                            \
+               -Wall                                                          \
+               -Wextra                                                        \
+               -Wconversion                                                   \
+               -Wsign-conversion                                              \
+               -std=$(STD)
+
+C_DEFINES    =
+
+C_INCLUDES   = $(PATH_SRC)                                                     \
+               $(PATH_SRC)/../include                                          \
+               $(BOOST_ROOT_FOR_TIDY)
+
+C_DEFINES   :=$(addprefix -D,$(C_DEFINES))
+C_INCLUDES  :=$(addprefix -I,$(C_INCLUDES))
+
+
+TIDY_CHECKS  = "*,                                                            \
+                -readability-identifier-length,                               \
+                -misc-definitions-in-headers,                                 \
+                -cppcoreguidelines-pro-bounds-pointer-arithmetic,             \
+                -cppcoreguidelines-pro-bounds-constant-array-index,           \
+                -llvm-else-after-return,                                      \
+                -readability-else-after-return,                               \
+                -cppcoreguidelines-pro-bounds-array-to-pointer-decay,         \
+                -hicpp-no-array-decay,                                        \
+                -*magic-numbers*,                                             \
+                -cert*,                                                       \
+                -altera-*,                                                    \
+                -google-*,                                                    \
+                -fuchsia-*,                                                   \
+                -llvmlibc-*"
+
+HEADER_FILT := '!boost-root|!decimal/test|include/boost/decimal'
+
+TIDY_FLAGS   = --extra-arg-before=--driver-mode=g++                           \
+               --header-filter=$(HEADER_FILT)                                 \
+               -checks=$(TIDY_CHECKS)

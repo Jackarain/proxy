@@ -34,7 +34,6 @@ set(deps
     predef
     preprocessor
     smart_ptr
-    static_assert
     throw_exception
     tuple
     type_traits

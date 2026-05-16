@@ -21,6 +21,8 @@
 
 namespace boost::redis::detail {
 
+struct connection_state;
+
 // What should we do next?
 enum class exec_action_type
 {
@@ -54,16 +56,17 @@ public:
 
 class exec_fsm {
    int resume_point_{0};
-   multiplexer* mpx_{nullptr};
    std::shared_ptr<multiplexer::elem> elem_;
 
 public:
-   exec_fsm(multiplexer& mpx, std::shared_ptr<multiplexer::elem> elem) noexcept
-   : mpx_(&mpx)
-   , elem_(std::move(elem))
+   exec_fsm(std::shared_ptr<multiplexer::elem> elem) noexcept
+   : elem_(std::move(elem))
    { }
 
-   exec_action resume(bool connection_is_open, asio::cancellation_type_t cancel_state);
+   exec_action resume(
+      bool connection_is_open,
+      connection_state& st,
+      asio::cancellation_type_t cancel_state);
 };
 
 }  // namespace boost::redis::detail

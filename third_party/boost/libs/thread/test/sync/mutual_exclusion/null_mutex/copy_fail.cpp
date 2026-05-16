@@ -19,7 +19,7 @@
 // null_mutex(const null_mutex&) = delete;
 
 #include <boost/thread/null_mutex.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 int main()
 {

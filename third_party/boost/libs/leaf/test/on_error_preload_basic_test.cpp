@@ -6,6 +6,7 @@
 #   include "leaf.hpp"
 #else
 #   include <boost/leaf/on_error.hpp>
+#   include <boost/leaf/handle_errors.hpp>
 #   include <boost/leaf/diagnostics.hpp>
 #   include <boost/leaf/result.hpp>
 #endif
@@ -69,5 +70,7 @@ int main()
             auto load = leaf::on_error( inf1, info<-42>{-42} );
             return leaf::new_error();
         });
+
+
     return boost::report_errors();
 }

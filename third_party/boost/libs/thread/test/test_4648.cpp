@@ -6,6 +6,7 @@
 #include <iostream>
 #include <boost/thread.hpp>
 #include <boost/current_function.hpp>
+#include <boost/bind/bind.hpp>
 
 class boostThreadLocksTest
 {

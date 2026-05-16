@@ -23,6 +23,9 @@
 #include <boost/container/detail/pair.hpp>
 #include <boost/interprocess/containers/containers_fwd.hpp>
 
+#include <boost/config/header_deprecated.hpp>
+BOOST_HEADER_DEPRECATED("[[no replacement]]")
+
 namespace boost {
 namespace interprocess {
 

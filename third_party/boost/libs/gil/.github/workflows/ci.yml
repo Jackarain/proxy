@@ -11,10 +11,12 @@ on:
 env:
   LIBRARY: gil
   UBSAN_OPTIONS: print_stacktrace=1
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   posix:
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -27,19 +29,47 @@ jobs:
           - toolset: gcc-7
             cxxstd: "14,17"
             install: g++-7
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
           - toolset: gcc-8
             cxxstd: "14"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: g++-8
           - toolset: gcc-9
             cxxstd: "14,17"
-            os: ubuntu-20.04
+            os: ubuntu-24.04
             install: g++-9
           - toolset: gcc-10
             cxxstd: "14,17"
-            os: ubuntu-20.04
+            os: ubuntu-24.04
             install: g++-10
+          - toolset: gcc
+            compiler: g++-11
+            cxxstd: "14,17"
+            os: ubuntu-24.04
+            install: g++-11
+          - toolset: gcc
+            compiler: g++-12
+            cxxstd: "14,17,20"
+            os: ubuntu-24.04
+            install: g++-12
+          - toolset: gcc
+            compiler: g++-13
+            cxxstd: "14,17,20"
+            os: ubuntu-24.04
+            install: g++-13
+          - toolset: gcc
+            compiler: g++-14
+            cxxstd: "14,17,20"
+            os: ubuntu-24.04
+            install: g++-14
+          - toolset: gcc
+            compiler: g++-15
+            cxxstd: "14,17,20"
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install: g++-15
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "14"
@@ -54,49 +84,118 @@ jobs:
             install: clang-4.0
           - toolset: clang
             compiler: clang++-5.0
-            cxxstd: "14,1z"
+            cxxstd: "14"
             os: ubuntu-latest
             container: ubuntu:18.04
             install: clang-5.0
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-6.0
           - toolset: clang
             compiler: clang++-7
             cxxstd: "14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-7
           - toolset: clang
             compiler: clang++-8
             cxxstd: "14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-8
           - toolset: clang
             compiler: clang++-9
             cxxstd: "14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
             install: clang-9
           - toolset: clang
             compiler: clang++-10
             cxxstd: "14,17"
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            container: ubuntu:20.04
+            install: clang-10
           - toolset: clang
-            cxxstd: "14,17"
-            os: macos-12
+            compiler: clang++-11
+            cxxstd: "14,17,20"
+            os: ubuntu-22.04
+            install: clang-11
+          - toolset: clang
+            compiler: clang++-12
+            cxxstd: "14,17,20"
+            os: ubuntu-22.04
+            install: clang-12
+          - toolset: clang
+            compiler: clang++-13
+            cxxstd: "14,17,20"
+            os: ubuntu-22.04
+            install: clang-13
+          - toolset: clang
+            compiler: clang++-14
+            cxxstd: "14,17,20"
+            os: ubuntu-24.04
+            install: clang-14
+          - toolset: clang
+            compiler: clang++-15
+            cxxstd: "14,17,20"
+            os: ubuntu-24.04
+            install: clang-15
+          - toolset: clang
+            compiler: clang++-16
+            cxxstd: "14,17,20"
+            os: ubuntu-24.04
+            install: clang-16
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd: "14,17,20"
+            os: ubuntu-latest
+            container: ubuntu:24.04
+            install: clang-17
+          - toolset: clang
+            compiler: clang++-18
+            cxxstd: "14,17,20,23"
+            os: ubuntu-24.04
+            install: clang-18
+          - toolset: clang
+            compiler: clang++-19
+            cxxstd: "14,17,20,23"
+            os: ubuntu-24.04
+            install: clang-19
+          - toolset: clang
+            compiler: clang++-20
+            cxxstd: "14,17,20,23"
+            os: ubuntu-latest
+            container: ubuntu:25.04
+            install: clang-20
+          - toolset: clang
+            cxxstd: "14,17,20"
+            os: macos-14
+          - toolset: clang
+            cxxstd: "14,17,20"
+            os: macos-15
 
     runs-on: ${{matrix.os}}
-    container: ${{matrix.container}}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup container environment
         if: matrix.container
         run: |
           apt-get -y update
-          apt-get -y install sudo python3 git g++
+          apt-get -y install sudo python3 git g++ curl
+          if [[ "${{matrix.container}}" == "ubuntu:1"* ]]; then
+            # Node 20 doesn't work with Ubuntu 16/18  glibc: https://github.com/actions/checkout/issues/1590
+            curl -sL https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217
+          fi
+
+      - uses: actions/checkout@v4
 
       - name: Install packages
         if: matrix.install
@@ -138,14 +237,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.2
-            cxxstd: "14,17"
-            addrmd: 32,64
-            os: windows-2019
           - toolset: gcc
             cxxstd: "14,17"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
           - toolset: msvc-14.3
             cxxstd: "14,17"
             addrmd: 32,64

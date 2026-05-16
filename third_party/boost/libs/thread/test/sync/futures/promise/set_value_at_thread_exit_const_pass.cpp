@@ -21,7 +21,7 @@
 #define BOOST_THREAD_VERSION 4
 
 #include <boost/thread/future.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #if defined BOOST_THREAD_PROVIDES_SIGNATURE_PACKAGED_TASK && defined(BOOST_THREAD_PROVIDES_VARIADIC_THREAD)
 void func(boost::promise<int> p)

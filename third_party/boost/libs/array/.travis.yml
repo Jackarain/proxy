@@ -34,7 +34,6 @@ matrix:
         - git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/assert.git ../assert
         - git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/config.git ../config
         - git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/core.git ../core
-        - git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/static_assert.git ../static_assert
         - git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/throw_exception.git ../throw_exception
 
       script:

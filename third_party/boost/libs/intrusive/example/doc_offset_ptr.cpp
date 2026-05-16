@@ -42,6 +42,7 @@ const char *get_shared_memory_name()
 
 using namespace boost::intrusive;
 namespace ip = boost::interprocess;
+namespace ct = boost::container;
 
 class shared_memory_data
    //Declare the hook with an offset_ptr from Boost.Interprocess
@@ -58,7 +59,7 @@ class shared_memory_data
 
 //[doc_offset_ptr_1
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 
 //Definition of the shared memory friendly intrusive list
@@ -81,7 +82,7 @@ int main()
       typedef ip::allocator
          < shared_memory_data, ip::managed_shared_memory::segment_manager>
             shm_allocator_t;
-      typedef ip::vector<shared_memory_data, shm_allocator_t> shm_vector_t;
+      typedef ct::vector<shared_memory_data, shm_allocator_t> shm_vector_t;
       shm_allocator_t shm_alloc(shm.get_segment_manager());
       shm_vector_t *pshm_vect =
          shm.construct<shm_vector_t>(ip::anonymous_instance)(shm_alloc);

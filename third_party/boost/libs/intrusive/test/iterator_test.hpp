@@ -102,8 +102,10 @@ void test_iterator_operations(I b, I e)
    (void)p;
    I &ri= ++b;
    (void)ri;
-   const I &cri= b++;
-   (void)cri;
+   if (b != e){
+      const I &cri= b++;
+      (void)cri;
+   }
 }
 
 template<class C>
@@ -122,16 +124,18 @@ void test_iterator_compatible(C &c)
    BOOST_INTRUSIVE_STATIC_ASSERT((!boost::intrusive::detail::is_convertible<const_iterator, iterator>::value));
    BOOST_INTRUSIVE_STATIC_ASSERT((!boost::intrusive::detail::is_convertible<const_reverse_iterator, reverse_iterator>::value));
    //Test iterator conversions
-   {  
+   {
       const_iterator ci;
       iterator i(c.begin());
       ci = i;
       (void)ci;
       BOOST_ASSERT(ci == i);
-      BOOST_ASSERT(*ci == *i);
       const_iterator ci2(i);
       BOOST_ASSERT(ci2 == i);
-      BOOST_ASSERT(*ci2 == *i);
+      if (ci2 != c.cend()) {
+         BOOST_ASSERT(*ci2 == *i);
+         BOOST_ASSERT(*ci == *i);
+      }
       (void)ci2;
    }
    //Test reverse_iterator conversions

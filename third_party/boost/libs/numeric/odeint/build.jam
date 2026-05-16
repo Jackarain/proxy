@@ -19,7 +19,6 @@ constant boost_dependencies :
     /boost/ublas//boost_ublas
     /boost/preprocessor//boost_preprocessor
     /boost/range//boost_range
-    /boost/static_assert//boost_static_assert
     /boost/throw_exception//boost_throw_exception
     /boost/type_traits//boost_type_traits
     /boost/units//boost_units

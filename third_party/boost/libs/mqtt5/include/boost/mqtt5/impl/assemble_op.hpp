@@ -204,8 +204,8 @@ private:
     duration compute_read_timeout() const {
         auto negotiated_ka = _svc.negotiated_keep_alive();
         return negotiated_ka ?
-            std::chrono::milliseconds(3 * negotiated_ka * 1000 / 2) :
-            duration((std::numeric_limits<duration::rep>::max)());
+            duration(std::chrono::milliseconds(3 * negotiated_ka * 1000 / 2)) :
+            (duration::max)();
     }
 
     static bool valid_header(uint8_t control_byte) {

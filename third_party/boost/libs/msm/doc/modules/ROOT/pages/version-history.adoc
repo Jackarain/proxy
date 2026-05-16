@@ -2,10 +2,28 @@
 
 = Version history
 
+== Boost 1.91
+
+* New features (`backmp11`):
+** Improve support for the `deferred_events` property in hierarchical state machines (https://github.com/boostorg/msm/issues/173[#173])
+** Support conditional deferral with the `deferred_events` property (https://github.com/boostorg/msm/issues/155[#155])
+** Simplified functor signatures (https://github.com/boostorg/msm/issues/175[#175])
+** Merge queued and deferred events into a single event pool (https://github.com/boostorg/msm/issues/168[#168])
+** Small object optimization for events in the event pool (https://github.com/boostorg/msm/issues/172[#172])
+** Improve runtime performance with a `flat_fold` dispatch strategy (https://github.com/boostorg/msm/issues/180[#180])
+** Further optimize compilation, with up to 25% faster compile times and lower RAM consumption compared to version 1.90
+* Bug fixes (`backmp11`):
+** Incorrect `FSM` type in calls to `on_entry(...)` and `on_exit(...)` (https://github.com/boostorg/msm/issues/167[#167])
+** Completion events fire too often (https://github.com/boostorg/msm/issues/166[#166])
+** Transitions in hierarchical state machines are not selected correctly (favor_compile_time) (https://github.com/boostorg/msm/issues/200[#200])
+** `state_machine` cannot be moved (https://github.com/boostorg/msm/issues/205[#205])
+* **Breaking change (`backmp11`)**: Direct access to the event pool is changed from `public` to `protected`,
+because manipulating it outside of the library code can lead to undefined behavior.
+
 == Boost 1.90
 
-* feat/backmp11: New back-end backmp11, requires C++ 17
-* fix/back: boost::any stopped working as Kleene event
+* feat(backmp11): New back-end backmp11, requires C++ 17
+* fix(back): boost::any stopped working as Kleene event (https://github.com/boostorg/msm/issues/87[#87])
 * feat: The documentation has been refurbished, it is now built with Antora
 
 [[boost-185]]

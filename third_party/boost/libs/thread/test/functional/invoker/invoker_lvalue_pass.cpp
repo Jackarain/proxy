@@ -15,7 +15,7 @@
 // <boost/thread/detail/invoker.hpp>
 
 #include <boost/thread/detail/invoker.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 int count = 0;
 

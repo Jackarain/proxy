@@ -109,9 +109,7 @@ public:
             topics, props
         );
 
-        auto max_packet_size = _svc_ptr->connack_property(prop::maximum_packet_size)
-                .value_or(default_max_send_size);
-        if (unsubscribe.size() > max_packet_size)
+        if (unsubscribe.size() > _svc_ptr->max_packet_size())
             return complete_immediate(client::error::packet_too_large, packet_id);
 
         send_unsubscribe(std::move(unsubscribe));
@@ -128,12 +126,18 @@ public:
         );
     }
 
-    void resend_unsubscribe(control_packet<allocator_type> subscribe) {
+    void resend_unsubscribe(control_packet<allocator_type> unsubscribe) {
         if (_handler.cancelled() != asio::cancellation_type_t::none)
             return complete(
-                asio::error::operation_aborted, subscribe.packet_id()
+                asio::error::operation_aborted, unsubscribe.packet_id()
             );
-        send_unsubscribe(std::move(subscribe));
+
+        if (unsubscribe.size() > _svc_ptr->max_packet_size())
+            return complete(
+                client::error::packet_too_large, unsubscribe.packet_id()
+            );
+
+        send_unsubscribe(std::move(unsubscribe));
     }
 
     void operator()(

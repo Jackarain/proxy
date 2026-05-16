@@ -495,94 +495,6 @@ bool flat_tree_extract_adopt_test()
    return true;
 }
 
-bool test_heterogeneous_lookups()
-{
-   typedef flat_set<int, test::less_transparent> set_t;
-   typedef flat_multiset<int, test::less_transparent> mset_t;
-
-   set_t set1;
-   mset_t mset1;
-
-   const set_t &cset1 = set1;
-   const mset_t &cmset1 = mset1;
-
-   set1.insert(1);
-   set1.insert(1);
-   set1.insert(2);
-   set1.insert(2);
-   set1.insert(3);
-
-   mset1.insert(1);
-   mset1.insert(1);
-   mset1.insert(2);
-   mset1.insert(2);
-   mset1.insert(3);
-
-   const test::non_copymovable_int find_me(2);
-
-   //find
-   if(*set1.find(find_me) != 2)
-      return false;
-   if(*cset1.find(find_me) != 2)
-      return false;
-   if(*mset1.find(find_me) != 2)
-      return false;
-   if(*cmset1.find(find_me) != 2)
-      return false;
-
-   //count
-   if(set1.count(find_me) != 1)
-      return false;
-   if(cset1.count(find_me) != 1)
-      return false;
-   if(mset1.count(find_me) != 2)
-      return false;
-   if(cmset1.count(find_me) != 2)
-      return false;
-
-   //contains
-   if(!set1.contains(find_me))
-      return false;
-   if(!cset1.contains(find_me))
-      return false;
-   if(!mset1.contains(find_me))
-      return false;
-   if(!cmset1.contains(find_me))
-      return false;
-
-   //lower_bound
-   if(*set1.lower_bound(find_me) != 2)
-      return false;
-   if(*cset1.lower_bound(find_me) != 2)
-      return false;
-   if(*mset1.lower_bound(find_me) != 2)
-      return false;
-   if(*cmset1.lower_bound(find_me) != 2)
-      return false;
-
-   //upper_bound
-   if(*set1.upper_bound(find_me) != 3)
-      return false;
-   if(*cset1.upper_bound(find_me) != 3)
-      return false;
-   if(*mset1.upper_bound(find_me) != 3)
-      return false;
-   if(*cmset1.upper_bound(find_me) != 3)
-      return false;
-
-   //equal_range
-   if(*set1.equal_range(find_me).first != 2)
-      return false;
-   if(*cset1.equal_range(find_me).second != 3)
-      return false;
-   if(*mset1.equal_range(find_me).first != 2)
-      return false;
-   if(*cmset1.equal_range(find_me).second != 3)
-      return false;
-
-   return true;
-}
-
 // An ordered sequence of std:pair is also ordered by std::pair::first.
 struct with_lookup_by_first
 {
@@ -755,9 +667,16 @@ int main()
    if (!boost::container::test::instantiate_constructors<flat_set<int>, flat_multiset<int> >())
       return 1;
 
-   if(!test_heterogeneous_lookups()){
+   if (!test::test_heterogeneous_lookup
+         < flat_set<int, less_transparent>
+         , flat_multiset<int, less_transparent>
+         >())
       return 1;
-   }
+
+   if (!test::test_heterogeneous_insert
+         < flat_set<test::movable_int, less_transparent>
+         >())
+      return 1;
 
    if(!test_heterogeneous_lookup_by_partial_key()){
       return 1;

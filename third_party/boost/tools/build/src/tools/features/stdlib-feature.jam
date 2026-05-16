@@ -8,14 +8,16 @@ import feature ;
 #| tag::doc[]
 
 [[b2.builtin.features.stdlib]]`stdlib`::
-*Allowed values*: `native`, `gnu`, `gnu11`, `libc++`, `sun-stlport`, `apache`.
+*Allowed values*: `native`, `libstdc++`, `gnu`, `gnu11`, `libc++`,
+`sun-stlport`, `apache`.
 +
 Specifies C++ standard library to link to and in some cases the library ABI to
 use:
 +
 `native`::: Use compiler's default.
-`gnu`::: Use GNU Standard Library (a.k.a. pass:[libstdc++]) with the old ABI.
-`gnu11`::: Use GNU Standard Library with the new ABI.
+`libstdc++`::: Use GNU Standard Library (a.k.a. pass:[libstdc++]).
+`gnu`::: Use GNU Standard Library and explicitly enable the old ABI.
+`gnu11`::: Use GNU Standard Library and explicitly enable the new ABI.
 `libc++`::: Use LLVM pass:[libc++].
 `sun-stlport`::: Use the STLport implementation of the standard library
   provided with the Solaris Studio compiler.
@@ -25,5 +27,5 @@ use:
 |# # end::doc[]
 
 feature.feature stdlib
-    : native gnu gnu11 libc++ sun-stlport apache
+    : native libstdc++ gnu gnu11 libc++ sun-stlport apache
     : propagated composite ;

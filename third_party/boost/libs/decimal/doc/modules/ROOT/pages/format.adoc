@@ -1,0 +1,148 @@
+////
+Copyright 2025 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#format]
+= Formatting Support
+:idprefix: format_
+
+Boost.Decimal supports formatting with both `<format>` (when C++20 and header are both available), and `<fmt/format.h>` with all language standards.
+
+Format is supported when using C++20 and a compiler with appropriate support: GCC >= 13, Clang >= 18, MSVC >= 19.40
+
+== Locale Modifier
+
+If a format string begins with "L" the current global locale will be applied.
+This can be set as so:
+
+[source, c++]
+----
+// Locale can be any valid locale that is installed on your system
+const char* locale = "de_DE.UTF-8";
+const std::locale a(locale);
+std::locale::global(a);
+----
+
+== Sign Modifier
+
+|===
+| Modifier | Format
+| "+" | All values will have a sign
+| "-" | Only negative values have a sign
+| " " | Positive values have a leading space,
+Negative have a minus sign
+|===
+
+== Type Modifiers
+
+The following type modifiers are the same as those used by built-in floating point values:
+
+|===
+| Modifier | Format
+| "g" or "G" | General
+| "e" or "E" | Scientific
+| "f" | Fixed
+| "x" or "X" | Hex
+| "a" or "A" | Cohort Preserving Scientific
+|===
+
+Example usage for scientific format would be: `{:e}`
+
+NOTE: The uppercase format will return with all applicable values in uppercase (e.g. 3.14E+02 vs 3.14e+02)
+
+== Precision Modifiers
+
+Precision can be specified in the same way as built-in floating point values.
+For example a scientific format with 3 digits or precision would be: `{:.3e}`
+
+== Padding Modifiers
+
+If you want all values to be printed with a fixed width padding is allowed before the precision modifier.
+For example with `{:10.3e}`:
+
+-  3.14 -> " 3.140e+00"
+- 3.141 -> " 3.141e+00"
+
+Note the space at the front of these string to keep with width at 10 characters
+
+== String Literal Support
+
+If you want the result to be a different string width than `char` you can specify this with the format string.
+For example if you want the result to be `wchar_t` you can use `L"{}"`.
+`wchar_t`, `char16_t`, `char32_t` are supported from pass:[C++17].
+`char8_t` is supported from pass:[C++23].
+
+IMPORTANT: `std::format` only supports `char` and `wchar_t` types per the pass:[C++] specification.
+
+== Putting it All Together
+
+The appropriate order for the full format specifier is:
+
+String literal pass:["{Sign, Padding, Precision, Type, Locale}"]
+
+== Examples
+
+This example can be found in the examples/ folder as https://github.com/boostorg/decimal/blob/develop/examples/fmt_format.cpp[fmt_format.cpp]
+
+The header `<boost/decimal/fmt_format.hpp>` is *NOT* part of the convenience header, because it is an optional dependency on a potentially compiled library.
+
+[source, c++]
+----
+#include <fmt/format.h>
+#include <boost/decimal.hpp>
+#include <boost/decimal/fmt_format.hpp>
+#include <iostream>
+
+int main()
+{
+    constexpr boost::decimal::decimal64_t val1 {"3.14"};
+    constexpr boost::decimal::decimal32_t val2 {"3.141"};
+
+    // The easiest is no specification which is general format
+    // Given these values they will print in fixed format
+    std::cout << "Default Format:\n";
+    std::cout << fmt::format("{}", val1) << '\n';
+    std::cout << fmt::format("{}", val2) << "\n\n";
+
+    // Next we can add a type modifier to get scientific formatting
+    std::cout << "Scientific Format:\n";
+    std::cout << fmt::format("{:e}", val1) << '\n';
+    std::cout << fmt::format("{:e}", val2) << "\n\n";
+
+    // Next we can add a type modifier to get scientific formatting
+    // Here this gives one digit of precision rounded according to current rounding mode
+    std::cout << "Scientific Format with Specified Precision:\n";
+    std::cout << fmt::format("{:.1e}", val1) << '\n';
+    std::cout << fmt::format("{:.1e}", val2) << "\n\n";
+
+    // This combines the padding modifier (10), precision (3 digits), and a type modifier (e)
+    std::cout << "Scientific Format with Specified Precision and Padding:\n";
+    std::cout << fmt::format("{:10.3e}", val1) << '\n';
+    std::cout << fmt::format("{:10.3e}", val2) << '\n';
+
+    return 0;
+}
+----
+
+Output:
+----
+Default Format:
+3.14
+3.141
+
+Scientific Format:
+3.14e+00
+3.141e+00
+
+Scientific Format with Specified Precision:
+3.1e+00
+3.1e+00
+
+Scientific Format with Specified Precision and Padding:
+03.140e+00
+03.141e+00
+----
+
+This same example can be run with `<format>` by replacing namespaces `fmt::` with `std::`.

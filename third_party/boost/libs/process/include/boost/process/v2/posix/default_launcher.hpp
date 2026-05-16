@@ -11,6 +11,8 @@
 #include <boost/process/v2/detail/throw_error.hpp>
 #include <boost/process/v2/detail/utf8.hpp>
 
+#include <type_traits>
+
 #if defined(BOOST_PROCESS_V2_STANDALONE)
 #include <asio/execution/executor.hpp>
 #include <asio/is_executor.hpp>
@@ -482,7 +484,7 @@ struct default_launcher
         argv_buffer_.reserve(arg_cnt);
         argv_.push_back(pt.native().data());
 
-        using char_type = typename decay<decltype((*std::begin(std::declval<Args>()))[0])>::type;
+        using char_type = typename std::decay<decltype((*std::begin(std::declval<Args>()))[0])>::type;
 
         for (basic_string_view<char_type>  arg : args)
             argv_buffer_.push_back(v2::detail::conv_string<char>(arg.data(), arg.size()));

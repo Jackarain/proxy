@@ -23,60 +23,80 @@ skip_commits:
 
 environment:
   matrix:
+  - job_name: 'Xcode 14.3.0'
+    job_build: 'XcodeBuild'
+    job_test: 'XcodeTest'
+    XCODE_APP: /Applications/Xcode-14.3.0.app
+    APPVEYOR_BUILD_WORKER_IMAGE: macos-sonoma
+  - job_name: 'Xcode 13.4.1'
+    job_build: 'XcodeBuild'
+    job_test: 'XcodeTest'
+    XCODE_APP: /Applications/Xcode-13.4.1.app
+    APPVEYOR_BUILD_WORKER_IMAGE: macos-sonoma
   - job_name: 'Visual Studio 2022, Test'
-    job_group: 'Test'
+    job_build: 'WindowsBuild'
+    job_test: 'WindowsTest'
     TOOLSET: vc143
     TEST_TOOLSET: msvc-14.3
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
   - job_name: 'Visual Studio 2019, Test'
-    job_group: 'Test'
+    job_build: 'WindowsBuild'
+    job_test: 'WindowsTest'
     TOOLSET: vc142
     TEST_TOOLSET: msvc-14.2
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
   - job_name: 'Visual Studio 2017, Test'
-    job_group: 'Test'
+    job_build: 'WindowsBuild'
+    job_test: 'WindowsTest'
     TOOLSET: vc141
     TEST_TOOLSET: msvc-14.1
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
   - job_name: 'Visual Studio 2015, Test'
-    job_group: 'Test'
+    job_build: 'WindowsBuild'
+    job_test: 'WindowsTest'
     TOOLSET: vc14
     TEST_TOOLSET: msvc-14.0
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
   - job_name: 'Clang 18 (VS2022), Test'
-    job_group: 'Test'
+    job_build: 'WindowsBuild'
+    job_test: 'WindowsTest'
     TOOLSET: clang-win
     TEST_TOOLSET: clang-win
     B2_DONT_EMBED_MANIFEST: true  # lld-link: error: unable to find mt.exe in PATH: no such file or directory
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
   - job_name: 'Clang 9 (VS2015), Test'
-    job_group: 'Test'
+    job_build: 'WindowsBuild'
+    job_test: 'WindowsTest'
     TOOLSET: clang-win
     TEST_TOOLSET: clang-win
     B2_DONT_EMBED_MANIFEST: true  # lld-link: error: unable to find mt.exe in PATH: no such file or directory
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
   - job_name: 'Cygwin 3.4.6 x64, Test'
-    job_group: 'TestCygwin'
+    job_build: 'WindowsBuild'
+    job_test: 'CygwinTest'
     TOOLSET: gcc
     TEST_TOOLSET: gcc
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     B2_CXX_PATH: C:/cygwin64/bin
 
-build_script:
-  - cmd: |
-      cd src/engine
-      set PATH=%B2_CXX_PATH%;%PATH%
-  - cmd: |
-      ./build.bat %TOOLSET%
-  - cmd: |
-      cd ../..
-      src\engine\b2.exe -v
-
 for:
+
   - matrix:
       only:
-        - job_group: 'Test'
+        - job_build: 'WindowsBuild'
+    build_script:
+      - cmd: |
+          cd src/engine
+          set PATH=%B2_CXX_PATH%;%PATH%
+      - cmd: |
+          ./build.bat %TOOLSET%
+      - cmd: |
+          cd ../..
+          src\engine\b2.exe -v
 
+  - matrix:
+      only:
+        - job_test: 'WindowsTest'
     test_script:
       - cmd: |
           echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
@@ -96,3 +116,13 @@ for:
           echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
           bootstrap.bat %TOOLSET%
           b2.exe --debug-configuration --prefix=./.b2 install toolset=%TEST_TOOLSET%
+
+  - matrix:
+      only:
+        - job_build: 'XcodeBuild'
+    install:
+      - ./.ci/macos-install.sh
+    build_script:
+      - ./.ci/macos-build.sh
+    test_script:
+      - ./.ci/macos-test.sh

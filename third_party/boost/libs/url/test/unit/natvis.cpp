@@ -10,6 +10,19 @@
 
 #include <boost/url/error.hpp>
 #include <boost/url/string_view.hpp>
+#include <boost/url/url.hpp>
+#include <boost/url/url_view.hpp>
+#include <boost/url/authority_view.hpp>
+#include <boost/url/segments_view.hpp>
+#include <boost/url/segments_encoded_view.hpp>
+#include <boost/url/segments_ref.hpp>
+#include <boost/url/segments_encoded_ref.hpp>
+#include <boost/url/ipv4_address.hpp>
+#include <boost/url/decode_view.hpp>
+#include <boost/url/param.hpp>
+#include <boost/url/params_view.hpp>
+#include <boost/url/pct_string_view.hpp>
+#include <boost/url/grammar/recycled.hpp>
 #include <boost/assert/source_location.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <system_error>
@@ -112,12 +125,109 @@ struct natvis_test
             ignore_unused(rv1, rv2, rv3, rv4, rv5, rv6);
         }
 
-        // boost::core::core::string_view
+        // boost::core::string_view
         {
             core::string_view s1;
             core::string_view s2 = "This is how we do it";
             core::string_view s3 = s2.substr(8, 3);
             ignore_unused(s1, s2, s3);
+        }
+
+        // boost::urls::url_view_base (url_view, url)
+        {
+            url_view uv1;
+            url_view uv2("http://example.com/path/to/file.txt?key=value#frag");
+            url_view uv3("https://user:pass@www.example.com:8080/");
+            url u1;
+            url u2("ftp://ftp.example.com/resource");
+            url u3("mailto:user@example.com");
+            ignore_unused(uv1, uv2, uv3, u1, u2, u3);
+        }
+
+        // boost::urls::authority_view
+        {
+            authority_view av1;
+            authority_view av2 = parse_authority("example.com").value();
+            authority_view av3 = parse_authority("user:pass@example.com:8080").value();
+            authority_view av4 = parse_authority("[::1]:443").value();
+            ignore_unused(av1, av2, av3, av4);
+        }
+
+        // boost::urls::ipv4_address
+        {
+            ipv4_address ip1;
+            ipv4_address ip2("127.0.0.1");
+            ipv4_address ip3("192.168.1.100");
+            ipv4_address ip4 = parse_ipv4_address("10.0.0.1").value();
+            ignore_unused(ip1, ip2, ip3, ip4);
+        }
+
+        // boost::urls::decode_view
+        {
+            decode_view dv1;
+            decode_view dv2("hello%20world");
+            decode_view dv3("100%25%20complete");
+            ignore_unused(dv1, dv2, dv3);
+        }
+
+        // boost::urls::pct_string_view
+        {
+            pct_string_view psv1;
+            pct_string_view psv2("plain");
+            pct_string_view psv3("encoded%20text", 12);
+            ignore_unused(psv1, psv2, psv3);
+        }
+
+        // boost::urls::param types
+        {
+            param p1{"key", "value"};
+            param p2{"flag", no_value};
+            param_view pv1{"key", "value"};
+            param_view pv2{"flag", no_value};
+            param_pct_view ppv1{"key%20name", "value%20data"};
+            param_pct_view ppv2{"flag", no_value};
+            ignore_unused(p1, p2, pv1, pv2, ppv1, ppv2);
+        }
+
+        // boost::urls::segments_view and segments_encoded_view
+        {
+            url_view u("/path/to/file.txt");
+            segments_view sv1;
+            segments_view sv2 = u.segments();
+            segments_encoded_view sev1;
+            segments_encoded_view sev2 = u.encoded_segments();
+
+            // Test iterators
+            auto sit1 = sv2.begin();
+            auto sit2 = sv2.end();
+            auto seit1 = sev2.begin();
+            auto seit2 = sev2.end();
+
+            ignore_unused(sv1, sv2, sev1, sev2, sit1, sit2, seit1, seit2);
+        }
+
+        // boost::urls::segments_ref and segments_encoded_ref
+        {
+            url u("/path/to/file.txt");
+            segments_ref sr = u.segments();
+            segments_encoded_ref ser = u.encoded_segments();
+
+            // Test iterators
+            auto srit1 = sr.begin();
+            auto srit2 = sr.end();
+            auto serit1 = ser.begin();
+            auto serit2 = ser.end();
+
+            ignore_unused(sr, ser, srit1, srit2, serit1, serit2);
+        }
+
+        // boost::urls::grammar::recycled_ptr
+        {
+            static grammar::recycled<url> bin;
+            grammar::recycled_ptr<url> rp1;
+            grammar::recycled_ptr<url> rp2(bin);
+            *rp2 = url("http://example.com");
+            ignore_unused(rp1, rp2);
         }
     }
 };

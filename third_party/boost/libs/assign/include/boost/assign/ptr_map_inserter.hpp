@@ -33,22 +33,22 @@ namespace boost
 
 namespace assign
 {
-    template< class PtrMap, class Obj > 
+    template< class PtrMap, class Obj >
     class ptr_map_inserter
     {
         typedef BOOST_DEDUCED_TYPENAME
-                remove_pointer< BOOST_DEDUCED_TYPENAME 
+                remove_pointer< BOOST_DEDUCED_TYPENAME
                        remove_reference<Obj>::type >::type
            obj_type;
         typedef BOOST_DEDUCED_TYPENAME PtrMap::key_type
            key_type;
-        
+
     public:
-        
+
         ptr_map_inserter( PtrMap& m ) : m_( m )
         {}
 
-#if defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_NO_CXX11_RVALUE_REFERENCES)       
+#if defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 
         template< class Key >
         ptr_map_inserter& operator()( const Key& t )
@@ -59,13 +59,13 @@ namespace assign
         }
 
 #ifndef BOOST_ASSIGN_MAX_PARAMS // use user's value
-#define BOOST_ASSIGN_MAX_PARAMS 6        
+#define BOOST_ASSIGN_MAX_PARAMS 6
 #endif
 #define BOOST_ASSIGN_MAX_PARAMETERS (BOOST_ASSIGN_MAX_PARAMS - 1)
 #define BOOST_ASSIGN_PARAMS1(n) BOOST_PP_ENUM_PARAMS(n, class T)
 #define BOOST_ASSIGN_PARAMS2(n) BOOST_PP_ENUM_BINARY_PARAMS(n, T, const& t)
 #define BOOST_ASSIGN_PARAMS3(n) BOOST_PP_ENUM_PARAMS(n, t)
-        
+
 #define BOOST_PP_LOCAL_LIMITS (1, BOOST_ASSIGN_MAX_PARAMETERS)
 #define BOOST_PP_LOCAL_MACRO(n) \
     template< class T, BOOST_ASSIGN_PARAMS1(n) > \
@@ -76,7 +76,7 @@ namespace assign
         return *this; \
     } \
     /**/
-        
+
 #include BOOST_PP_LOCAL_ITERATE()
 
 #else
@@ -94,7 +94,7 @@ namespace assign
         ptr_map_inserter& operator=( const ptr_map_inserter& );
         PtrMap& m_;
     };
-    
+
     template< class PtrMap >
     inline ptr_map_inserter< PtrMap, typename PtrMap::mapped_reference >
     ptr_map_insert( PtrMap& m )
@@ -112,7 +112,7 @@ namespace assign
     }
 
 #endif
-     
+
 } // namespace 'assign'
 } // namespace 'boost'
 

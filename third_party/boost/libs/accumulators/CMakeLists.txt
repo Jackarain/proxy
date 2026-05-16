@@ -29,7 +29,6 @@ target_link_libraries(boost_accumulators
     Boost::preprocessor
     Boost::range
     Boost::serialization
-    Boost::static_assert
     Boost::throw_exception
     Boost::tuple
     Boost::type_traits

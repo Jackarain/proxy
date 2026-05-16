@@ -9,9 +9,13 @@
 
 #include <boost/assert.hpp>
 
+#include <algorithm>
+
 namespace boost::redis {
 
-void consume_one(generic_response& r, system::error_code& ec)
+namespace detail {
+
+inline void consume_one_impl(generic_response& r, system::error_code& ec)
 {
    if (r.has_error())
       return;  // Nothing to consume.
@@ -38,10 +42,14 @@ void consume_one(generic_response& r, system::error_code& ec)
    r.value().erase(std::cbegin(r.value()), match);
 }
 
+}  // namespace detail
+
+void consume_one(generic_response& r, system::error_code& ec) { detail::consume_one_impl(r, ec); }
+
 void consume_one(generic_response& r)
 {
    system::error_code ec;
-   consume_one(r, ec);
+   detail::consume_one_impl(r, ec);
    if (ec)
       throw system::system_error(ec);
 }

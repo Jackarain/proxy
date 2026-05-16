@@ -50,6 +50,15 @@ struct parse_query_test
             ++it;
             BOOST_TEST( it == params.end() );
         }
+
+        // issue #946: default-constructed string_view has null data
+        {
+            core::string_view view;
+            auto rv = parse_query(view);
+            BOOST_TEST(rv);
+            BOOST_TEST(rv->empty());
+            BOOST_TEST(rv->begin() == rv->end());
+        }
     }
 
     void

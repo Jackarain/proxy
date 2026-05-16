@@ -73,6 +73,9 @@ int main()
    typedef allocator<test::copyable_int, managed_shared_memory::segment_manager> ShmemCopyAllocator;
    typedef boost::container::vector<test::copyable_int, ShmemCopyAllocator> MyCopyVector;
 
+   typedef allocator<test::overaligned_copyable_int, managed_shared_memory::segment_manager> ShmemOveralignedAllocator;
+   typedef boost::container::vector<test::overaligned_copyable_int, ShmemOveralignedAllocator> MyOveralignedVector;
+
    if(test::vector_test<managed_shared_memory, MyVector>())
       return 1;
 
@@ -86,6 +89,9 @@ int main()
       return 1;
 
    if(test::vector_test<managed_shared_memory, MyCopyVector>())
+      return 1;
+
+   if(test::vector_test<managed_shared_memory, MyOveralignedVector>())
       return 1;
 
    if(test_expand_bwd())

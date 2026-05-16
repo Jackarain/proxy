@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -57,9 +58,19 @@ public:
         }
 
 #if defined(__clang__) && defined(__has_warning)
-# if __has_warning("-Wself-assign-overloaded")
+# if __has_warning("-Wself-assign-overloaded") || __has_warning("-Wself-move")
 #  pragma clang diagnostic push
-#  pragma clang diagnostic ignored "-Wself-assign-overloaded"
+#  if __has_warning("-Wself-assign-overloaded")
+#   pragma clang diagnostic ignored "-Wself-assign-overloaded"
+#  endif
+#  if __has_warning("-Wself-move")
+#   pragma clang diagnostic ignored "-Wself-move"
+#  endif
+# endif
+#elif defined(__GNUC__) && !defined(__clang__)
+# if __GNUC__ >= 13
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wself-move"
 # endif
 #endif
         // operator=(url_view const&)
@@ -70,8 +81,12 @@ public:
         }
 
 #if defined(__clang__) && defined(__has_warning)
-# if __has_warning("-Wself-assign-overloaded")
+# if __has_warning("-Wself-assign-overloaded") || __has_warning("-Wself-move")
 #  pragma clang diagnostic pop
+# endif
+#elif defined(__GNUC__) && !defined(__clang__)
+# if __GNUC__ >= 13
+#  pragma GCC diagnostic pop
 # endif
 #endif
 
@@ -910,6 +925,35 @@ public:
     {
         BOOST_TEST_NO_THROW(url_view(
             "javascript:alert(1)"));
+
+        // issue #926
+        {
+            url_view u(
+                "rtmp://push-rtmp-hs-f5.douyincdn.com"
+                "/thirdgame"
+                "?stream-117965406598857482"
+                "?arch_hrchy=w1"
+                "&exp_hrchy=w1"
+                "&expire=1758426355"
+                "&sign=7dbc2a8011a0faf01a5a22420b981d0c");
+            BOOST_TEST(u.has_scheme());
+            BOOST_TEST_EQ(u.scheme(), "rtmp");
+            BOOST_TEST(u.has_authority());
+            BOOST_TEST_EQ(u.host(), "push-rtmp-hs-f5.douyincdn.com");
+            BOOST_TEST_EQ(u.path(), "/thirdgame");
+            BOOST_TEST_EQ(u.encoded_path(), "/thirdgame");
+            auto segs = u.encoded_segments();
+            BOOST_TEST_EQ(segs.size(), 1u);
+            BOOST_TEST_EQ(*segs.begin(), "thirdgame");
+            BOOST_TEST(u.has_query());
+            BOOST_TEST_EQ(u.encoded_query(),
+                "stream-117965406598857482"
+                "?arch_hrchy=w1"
+                "&exp_hrchy=w1"
+                "&expire=1758426355"
+                "&sign=7dbc2a8011a0faf01a5a22420b981d0c");
+            BOOST_TEST(! u.has_fragment());
+        }
     }
 
     void
@@ -1066,6 +1110,136 @@ public:
     }
 
     void
+    testConstexpr()
+    {
+        // system::result<int> is constexpr
+        {
+            // Success
+            BOOST_URL_CXX20_CONSTEXPR system::result<int> r_success(42);
+            BOOST_TEST(r_success.has_value());
+            BOOST_TEST(r_success.value() == 42);
+
+            // Failure with default error_code
+            BOOST_URL_CXX20_CONSTEXPR system::error_code ec_default{};
+            BOOST_TEST(!ec_default);
+
+            // Failure: make_error_code with a constexpr built-in category
+            BOOST_URL_CXX20_CONSTEXPR auto ec_errc = make_error_code(system::errc::invalid_argument);
+            BOOST_URL_CXX20_CONSTEXPR system::result<int> r_fail(ec_errc);
+            BOOST_TEST(!r_fail.has_value());
+            BOOST_TEST(r_fail.error() == ec_errc);
+
+            // BOOST_URL_CXX20_CONSTEXPR auto ec_custom = make_error_code(boost::urls::error::bad_pct_hexdig);
+            BOOST_URL_CXX20_CONSTEXPR system::result<int, boost::urls::error> r_fail_custom(boost::urls::error::bad_pct_hexdig);
+            BOOST_TEST(!r_fail_custom.has_value());
+            BOOST_TEST(r_fail_custom.error() == boost::urls::error::bad_pct_hexdig);
+        }
+
+        // core::string_view is constexpr
+        {
+            // From literal + size
+            BOOST_URL_CXX20_CONSTEXPR core::string_view sv1("hello", 5);
+            BOOST_TEST(sv1.size() == 5);
+            BOOST_TEST(sv1[0] == 'h');
+
+            // Empty
+            BOOST_URL_CXX20_CONSTEXPR core::string_view sv2;
+            BOOST_TEST(sv2.empty());
+
+            // From literal pointer only
+#if !defined(BOOST_NO_CXX17)
+            BOOST_URL_CXX20_CONSTEXPR core::string_view sv3("http://example.com");
+            BOOST_TEST(sv3.size() == 18);
+#endif
+        }
+
+        // url_view is a literal type
+        {
+            BOOST_URL_CXX20_CONSTEXPR url_view u{};
+            BOOST_TEST(u.empty());
+        }
+
+        // system::result<url_view> is constexpr
+        {
+            // success
+            BOOST_URL_CXX20_CONSTEXPR url_view u{};
+            BOOST_URL_CXX20_CONSTEXPR system::result<url_view> r_success(u);
+            BOOST_TEST(r_success.has_value());
+            BOOST_TEST(r_success.value().empty());
+
+            // failure
+            BOOST_URL_CXX20_CONSTEXPR auto ec = make_error_code(system::errc::invalid_argument);
+            BOOST_URL_CXX20_CONSTEXPR system::result<url_view> r_fail(ec);
+            BOOST_TEST(!r_fail.has_value());
+            BOOST_TEST(r_fail.error() == ec);
+        }
+
+        // Parsing is constexpr
+        {
+            BOOST_URL_CXX20_CONSTEXPR auto r = parse_uri_reference("http://example.com/path?query#frag");
+            BOOST_TEST(r.has_value());
+            if (r.has_value())
+            {
+                auto u = r.value();
+                BOOST_TEST(u.has_scheme());
+                BOOST_TEST(u.has_query());
+                BOOST_TEST(u.has_fragment());
+            }
+        }
+        {
+            BOOST_URL_CXX20_CONSTEXPR auto r = parse_uri("https://www.example.com:8080/index.html");
+            BOOST_TEST(r.has_value());
+            if (r.has_value())
+            {
+                BOOST_TEST(r.value().has_scheme());
+            }
+        }
+        {
+            BOOST_URL_CXX20_CONSTEXPR auto r = parse_absolute_uri("http://example.com/path?query");
+            BOOST_TEST(r.has_value());
+            if (r.has_value())
+            {
+                BOOST_TEST(r.value().has_scheme());
+                BOOST_TEST(!r.value().has_fragment());
+            }
+        }
+        {
+            BOOST_URL_CXX20_CONSTEXPR auto r = parse_relative_ref("../path/to/file?query#section");
+            BOOST_TEST(r.has_value());
+            if (r.has_value())
+            {
+                BOOST_TEST(!r.value().has_scheme());
+            }
+        }
+        {
+            BOOST_URL_CXX20_CONSTEXPR auto r = parse_origin_form("/index.htm?layout=mobile");
+            BOOST_TEST(r.has_value());
+            if (r.has_value())
+            {
+                BOOST_TEST(!r.value().has_scheme());
+                BOOST_TEST(r.value().has_query());
+            }
+        }
+
+        // Detailed test
+        {
+            BOOST_URL_CXX20_CONSTEXPR auto r = parse_uri_reference("http://example.com:8080/path?query=1#frag");
+            BOOST_TEST(r.has_value());
+            if (r.has_value())
+            {
+                auto u = r.value();
+                BOOST_TEST(u.has_scheme());
+                BOOST_TEST_EQ(u.scheme(), "http");
+                BOOST_TEST(u.has_authority());
+                BOOST_TEST(u.has_port());
+                BOOST_TEST_EQ(u.port_number(), 8080);
+                BOOST_TEST(u.has_query());
+                BOOST_TEST(u.has_fragment());
+            }
+        }
+    }
+
+    void
     run()
     {
         testSpecialMembers();
@@ -1087,6 +1261,7 @@ public:
         testParseOriginForm();
 
         testJavadocs();
+        testConstexpr();
 
         {
             auto r = parse_uri("https://us%65rnam%65:password@%65xampl%65.com:8080/path/to/r%65sourc%65?qu%65ry_param=valu%65#s%65ction");

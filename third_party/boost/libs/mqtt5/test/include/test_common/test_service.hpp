@@ -8,6 +8,8 @@
 #ifndef BOOST_MQTT5_TEST_TEST_SERVICE_HPP
 #define BOOST_MQTT5_TEST_TEST_SERVICE_HPP
 
+#include "test_broker.hpp"
+
 #include <boost/mqtt5/types.hpp>
 
 #include <boost/mqtt5/impl/client_service.hpp>
@@ -65,10 +67,16 @@ public:
         return _test_props[p];
     }
 
+    size_t max_packet_size() const {
+        return connack_property(prop::maximum_packet_size)
+            .value_or(::boost::mqtt5::detail::default_max_send_size);
+    }
+
     const auto& connack_properties() {
         return _test_props;
     }
 
+    bool was_connected() const { return true; }
 };
 
 

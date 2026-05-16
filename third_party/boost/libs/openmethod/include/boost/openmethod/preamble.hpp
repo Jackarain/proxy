@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <cstdint>
+#include <string_view>
 
 #ifdef _MSC_VER
 #pragma warning(push)

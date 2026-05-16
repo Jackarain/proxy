@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -137,7 +138,7 @@ enum class scheme : unsigned short
     @li <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.1"
         >3.1. Scheme (rfc3986)</a>
 */
-BOOST_URL_DECL
+BOOST_URL_CXX20_CONSTEXPR
 scheme
 string_to_scheme(core::string_view s) noexcept;
 
@@ -147,7 +148,6 @@ string_to_scheme(core::string_view s) noexcept;
 
     @param s The known scheme constant
 */
-BOOST_URL_DECL
 core::string_view
 to_string(scheme s) noexcept;
 
@@ -170,11 +170,12 @@ to_string(scheme s) noexcept;
 
     @param s The known scheme constant
 */
-BOOST_URL_DECL
 std::uint16_t
 default_port(scheme s) noexcept;
 
 } // urls
 } // boost
+
+#include <boost/url/impl/scheme.hpp>
 
 #endif

@@ -51,6 +51,6 @@ main()
     using namespace boost::qvm;
     XXX(my_vec<1>());
     XXY(my_vec<1>());
-    BOOST_TEST(called==1);
+    BOOST_TEST_EQ(called, 1);
     return boost::report_errors();
     }

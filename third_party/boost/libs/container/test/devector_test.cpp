@@ -3888,6 +3888,9 @@ int test_cont_variants()
    return 0;
 }
 
+//Test the expected sizeof()
+BOOST_CONTAINER_STATIC_ASSERT_MSG(5*sizeof(void*) == sizeof(devector<int>), "sizeof has an unexpected value");
+
 int main()
 {
 //   boost::container::devector<boost::container::test::movable_int>a(get());

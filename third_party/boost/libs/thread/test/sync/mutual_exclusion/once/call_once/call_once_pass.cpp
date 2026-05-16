@@ -25,7 +25,7 @@
 
 #include <boost/thread/once.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #ifdef BOOST_THREAD_PROVIDES_ONCE_CXX11
 #define BOOST_INIT_ONCE_INIT

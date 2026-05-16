@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <boost/proto/proto.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/typeof/typeof.hpp>
@@ -74,7 +76,7 @@ struct eval2
     >
 {};
 
-void test_call_pack()
+BOOST_AUTO_TEST_CASE(test_call_pack)
 {
     proto::terminal<int>::type i = {42};
     int res = eval1()(i);
@@ -101,24 +103,10 @@ struct make_pair
     >
 {};
 
-void test_make_pack()
+BOOST_AUTO_TEST_CASE(test_make_pack)
 {
     proto::terminal<int>::type i = {42};
     std::pair<int, int> p = make_pair()(i + 43);
     BOOST_CHECK_EQUAL(p.first, 42);
     BOOST_CHECK_EQUAL(p.second, 43);
-}
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test immediate evaluation of proto parse trees");
-
-    test->add(BOOST_TEST_CASE(&test_call_pack));
-    test->add(BOOST_TEST_CASE(&test_make_pack));
-
-    return test;
 }

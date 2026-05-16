@@ -3,22 +3,42 @@
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
-cmake_minimum_required(VERSION 3.5...3.16)
+cmake_minimum_required(VERSION 3.5...4.0)
 
 project(boost_lexical_cast VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
-add_library(boost_lexical_cast INTERFACE)
-add_library(Boost::lexical_cast ALIAS boost_lexical_cast)
 
-target_include_directories(boost_lexical_cast INTERFACE include)
+if (BOOST_USE_MODULES)
+    add_library(boost_lexical_cast)
+    target_sources(boost_lexical_cast PUBLIC
+        FILE_SET modules_public TYPE CXX_MODULES FILES
+            ${CMAKE_CURRENT_LIST_DIR}/modules/boost_lexical_cast.cppm
+    )
 
+    target_compile_features(boost_lexical_cast PUBLIC cxx_std_20)
+    target_compile_definitions(boost_lexical_cast PUBLIC BOOST_USE_MODULES)
+    if (CMAKE_CXX_COMPILER_IMPORT_STD)
+        target_compile_definitions(boost_lexical_cast PRIVATE BOOST_LEXICAL_CAST_USE_STD_MODULE)
+        message(STATUS "Using `import std;`")
+    else()
+        message(STATUS "`import std;` is not awailable")
+    endif()
+    set(__scope PUBLIC)
+else()
+    add_library(boost_lexical_cast INTERFACE)
+    set(__scope INTERFACE)
+endif()
+
+target_include_directories(boost_lexical_cast ${__scope} include)
 target_link_libraries(boost_lexical_cast
-  INTERFACE
+  ${__scope}
     Boost::config
     Boost::container
     Boost::core
     Boost::throw_exception
 )
+
+add_library(Boost::lexical_cast ALIAS boost_lexical_cast)
 
 if(BUILD_TESTING)
   add_subdirectory(test)

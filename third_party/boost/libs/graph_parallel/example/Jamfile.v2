@@ -5,9 +5,12 @@
 #          http://www.boost.org/LICENSE_1_0.txt)
 
 
-project : requirements <library>../build//boost_graph_parallel 
-    <library>../../system/build//boost_system
-    <library>../../mpi/build//boost_mpi
+using python ;
+
+project : requirements <library>/boost/graph_parallel//boost_graph_parallel
+    <library>/boost/system//boost_system
+    <library>/boost/mpi//boost_mpi
+    <library>/python//python
     ;
 
 exe breadth_first_search : breadth_first_search.cpp ;

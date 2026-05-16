@@ -11,6 +11,9 @@
 
 #include "boost/optional/optional.hpp"
 
+#include "boost/core/enable_if.hpp"
+#include "boost/type_traits/is_constructible.hpp"
+
 #ifdef BOOST_BORLANDC
 #pragma hdrstop
 #endif

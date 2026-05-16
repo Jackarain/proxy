@@ -20,7 +20,7 @@
 #include <boost/thread/future.hpp>
 #include <boost/thread/barrier.hpp>
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 template <typename ValueType>
 struct call_push_back

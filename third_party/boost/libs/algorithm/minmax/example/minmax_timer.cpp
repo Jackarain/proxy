@@ -15,8 +15,10 @@
 // What's the proper BOOST_ flag for <iomanip.h> vs <ios>
 #include <iomanip>
 
-#include <boost/timer.hpp>
 #include <boost/algorithm/minmax.hpp>
+#include <boost/algorithm/minmax_element.hpp>
+#include <boost/iterator/filter_iterator.hpp>
+#include <boost/timer/timer.hpp>
 
 template <class T1, class T2>
 void tie(std::pair<T1, T2> p, T1& min, T2& max)
@@ -56,17 +58,19 @@ inline int opt_boost_minmax_count(int n) {
 int repeats = 10;
 
 #define TIMER( n, cmd , cmdname ) \
-  t.restart(); \
-  for (int i=0; i<repeats; ++i) { cmd ; } \
+  t.start(); \
+  for (int i=0; i<n*repeats; ++i) { cmd ; } \
+  t.stop(); \
   std::cout << "    " << std::setprecision(4) \
-            << (double)n*repeats/t.elapsed()/1.0E6 \
+            << 1e3 * (double)(n*repeats) / (double)t.elapsed().wall \
             << "M items/sec  " << cmdname << "\n"
 
 #define CTIMER( n, cmd , cmdname, count, opt ) \
-  t.restart(); lc.reset(); \
-  for (int i=0; i<repeats; ++i) { cmd ; } \
+  t.start(); lc.reset(); \
+  for (int i=0; i<n*repeats; ++i) { cmd ; } \
+  t.stop(); \
   std::cout << "    " << std::setprecision(4) \
-            << (double)n*repeats/t.elapsed()/1.0E6 \
+            << 1e3 * (double)(n*repeats) / (double)t.elapsed().wall \
             << "M items/sec  " << cmdname \
             << " ("<< (count)/repeats << " vs " << opt << ")\n"
 
@@ -74,7 +78,7 @@ template <class CIterator>
 void test_minmax_element(CIterator first, CIterator last, int n, char* name)
 {
   typedef typename std::iterator_traits<CIterator>::value_type vtype;
-  boost::timer t;
+  boost::timer::cpu_timer t;
 
   std::cout << "  ON " << name << " WITH OPERATOR<()\n";
   TIMER( n, std::min_element(first, last),
@@ -99,15 +103,11 @@ void test_minmax_element(CIterator first, CIterator last, int n, char* name)
     "boost::last_min_last_max_element" << name << " ");
 
   #define pred std::bind2nd( std::greater<vtype>(), vtype(10) )
-  TIMER( n, boost::min_element_if(first, last, pred),
-    "boost::min_element_if" << name << "");
-  TIMER( n, boost::max_element_if(first, last, pred),
-    "boost::max_element_if" << name << "");
-  TIMER( n, std::min_element(boost::make_filter_iterator(first, last, pred),
-                             boost::make_filter_iterator(last, last, pred)),
+  TIMER( n, std::min_element(boost::make_filter_iterator(pred, first, last),
+                             boost::make_filter_iterator(pred, last, last)),
     "std::min_element_with_filter_iterator" << name << "");
-  TIMER( n, std::max_element(boost::make_filter_iterator(first, last, pred),
-                             boost::make_filter_iterator(last, last, pred)),
+  TIMER( n, std::max_element(boost::make_filter_iterator(pred, first, last),
+                             boost::make_filter_iterator(pred, last, last)),
     "std::max_element_if_with_filter_iterator" << name << "");
   #undef pred
 
@@ -199,10 +199,9 @@ void test(int n)
   test_range(first, last, n);
 }
 
-int
-main(char argc, char** argv)
+int main(int argc, char** argv)
 {
-  int n = 100;
+  int n = 1000;
   if (argc > 1) n = atoi(argv[1]);
   if (argc > 2) repeats = atoi(argv[2]);
 

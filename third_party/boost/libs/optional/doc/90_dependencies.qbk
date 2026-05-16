@@ -9,7 +9,62 @@
 ]
 
 
-[section Dependencies and Portability]
+[section Dependencies and Portability][#minimum_system_requirements]
+
+
+[section Minimum System Requirements]
+This library requires C++11 as minimum. However, in C++11 some features are disabled.
+
+[section:constexpr Support for `constexpr`]
+
+[section C++11]
+For compilers fully supporting C++11 (including unconstrained unions and ref-qualifiers),
+for trivially-destructible `T`s, `optional<T>` is a ['literal type] and its constructors
+with `this->has_value() == false` as postcondition:
+
+* `optional()`,
+* `optional(none_t)`,
+
+are ['core constant expressions]. Even for other `T`s, these constructors are guaranteed to
+perform ['constant initialization]: they are never subject to "initialization order fiasco".
+
+Other constructors with `this->has_value() == true`
+as postcondition are core constant expressions if the expression required to initialize
+the contained value is a core constant expression. This includes constructors:
+
+* `template <typename... Args> optional(in_place_init, Args&&...)`,
+* `template <typename U> optional(U&&)`,
+* `optional(const T&)`,
+* `optional(T&&)`.
+
+Other constructors, including the copy and move constructos, are ['not] core constant expressions.
+
+Member functions `.has_value`, `operator bool` and (non)equality comparisons with `none` are core-constant expressions for trivially-destructible `T`s.
+
+Also all `const`-qualified non-static member functions and comparison operators are core constant expressions, if the corresponding operations on `T`
+are core constant expressions.
+[endsect]
+
+[section C++14]
+For C++14 and higher this library, for trivially-destructible `T`s provides the `constexpr` interface for all mutable and non-mutable
+member functions, as long as:
+
+* the corresponding operations on `T` are core constant expressions and
+* the member never attempts to change the `optional`'s state from not containing a value to containing a value.
+
+[note For types that overload unary `operator&` (address) some member functions in `optional`, like `operator->`,
+cannot be implemented as `constexpr` on some compilers.]
+[endsect]
+
+[section C++17]
+In C++17 all non-deprecated constructors are core constant expressions as long as
+`T` is a literal type and its constructor used is a core constant expression.
+[endsect]
+
+[endsect:constexpr]
+
+[endsect]
+
 
 [section Dependencies]
 The implementation uses the following other Boost modules:
@@ -17,7 +72,6 @@ The implementation uses the following other Boost modules:
 # assert
 # config
 # core
-# static_assert
 # throw_exception
 # type_traits
 

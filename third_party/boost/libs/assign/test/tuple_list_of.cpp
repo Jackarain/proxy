@@ -36,7 +36,7 @@ void check_tuple_list_of()
 
     std::map<std::string,int> m = pair_list_of( "foo", 3 )( "bar", 5 );
     BOOST_CHECK( m.size() == 2 );
-    BOOST_CHECK( m["foo"] == 3 ); 
+    BOOST_CHECK( m["foo"] == 3 );
 }
 
 #include <boost/test/unit_test.hpp>

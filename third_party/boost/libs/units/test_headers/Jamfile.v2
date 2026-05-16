@@ -14,11 +14,10 @@ import print ;
 import sequence ;
 import feature ;
 
-project boost/units/test_headers :
-    requirements <include>$(BOOST_ROOT) <include>../../..
-;
+project : requirements <library>/boost/units//boost_units ;
 
-headers = [ path.glob-tree ../../../boost/units : *.hpp : detail ] ;
+path-constant INCLUDE_DIR : ../include ;
+headers = [ path.glob-tree $(INCLUDE_DIR)/boost/units : *.hpp : detail ] ;
 
 for local file in $(headers)
 {
@@ -27,7 +26,7 @@ for local file in $(headers)
         <define>BOOST_UNITS_HEADER_NAME=$(file)
         <dependency>$(file)
       : # test name
-        [ regex.replace [ path.relative-to ../../.. $(file) ] "/" "_" ] ;
+        [ regex.replace [ path.relative-to $(INCLUDE_DIR) $(file) ] "/" "_" ] ;
 }
 
 feature.feature <generate-include-all-order> : forward reverse : incidental ;
@@ -43,8 +42,12 @@ rule generate-include-all ( target : sources * : properties * )
 
     for local file in $(sources)
     {
-        print.text "#include <$(file:G=)>
+        if $(file:S) = ".hpp"
+        {
+            local f = [ path.relative-to $(INCLUDE_DIR) $(file:G=) ] ;
+            print.text "#include <$(f)>
 " : overwrite ;
+        }
     }
 
 }

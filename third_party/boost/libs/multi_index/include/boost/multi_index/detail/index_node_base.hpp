@@ -1,4 +1,4 @@
-/* Copyright 2003-2023 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -105,12 +105,8 @@ Node* node_from_value(const Value* p)
  * somehow invalid archive.
  */
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-namespace serialization{
-#else
 namespace multi_index{
 namespace detail{
-#endif
 
 template<class Archive,typename Value,typename Allocator>
 inline void load_construct_data(
@@ -120,12 +116,8 @@ inline void load_construct_data(
   throw_exception(boost::multi_index::detail::bad_archive_exception());
 }
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-} /* namespace serialization */
-#else
 } /* namespace multi_index::detail */
 } /* namespace multi_index */
-#endif
 
 #endif
 

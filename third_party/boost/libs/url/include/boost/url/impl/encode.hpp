@@ -10,7 +10,7 @@
 #ifndef BOOST_URL_IMPL_ENCODE_HPP
 #define BOOST_URL_IMPL_ENCODE_HPP
 
-#include "boost/url/grammar/token_rule.hpp"
+#include <boost/url/grammar/token_rule.hpp>
 #include <boost/assert.hpp>
 #include <boost/core/detail/static_assert.hpp>
 #include <boost/url/detail/encode.hpp>
@@ -132,7 +132,6 @@ encode(
     auto const end = dest + size;
     auto const last = it + s.size();
     auto const dest0 = dest;
-    auto const end3 = end - 3;
 
     if (!opt.space_as_plus)
     {
@@ -147,7 +146,7 @@ encode(
                 ++it;
                 continue;
             }
-            if (dest > end3)
+            if (end - dest < 3)
                 return dest - dest0;
             encode(dest, c);
             ++it;
@@ -177,7 +176,7 @@ encode(
                 ++it;
                 continue;
             }
-            if(dest > end3)
+            if(end - dest < 3)
                 return dest - dest0;
             encode(dest, c);
             ++it;
@@ -279,7 +278,7 @@ encode(
     core::string_view s,
     CS const& allowed,
     encoding_opts opt,
-    StringToken&& token) noexcept
+    StringToken&& token)
 {
     BOOST_CORE_STATIC_ASSERT(
         grammar::is_charset<CS>::value);

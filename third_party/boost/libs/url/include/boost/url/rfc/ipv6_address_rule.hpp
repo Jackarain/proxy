@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2022 Vinnie Falco (vinnie.falco@gmail.com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,7 +23,7 @@ struct ipv6_address_rule_t
     using value_type =
         ipv6_address;
 
-    BOOST_URL_DECL
+    BOOST_URL_CXX20_CONSTEXPR
     auto
     parse(
         char const*& it,
@@ -79,5 +80,7 @@ constexpr implementation_defined::ipv6_address_rule_t ipv6_address_rule{};
 
 } // urls
 } // boost
+
+#include <boost/url/rfc/impl/ipv6_address_rule.hpp>
 
 #endif

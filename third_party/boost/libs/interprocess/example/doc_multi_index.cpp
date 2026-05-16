@@ -38,6 +38,8 @@ typedef boost::container::basic_string<char, std::char_traits<char>, char_alloca
 //Data to insert in shared memory
 struct employee
 {
+   typedef char_allocator allocator_type; //enables uses-allocator protocol
+
    int         id;
    int         age;
    shm_string  name;
@@ -85,7 +87,7 @@ int main ()
    //Create shared memory
    managed_shared_memory segment(create_only,test::get_process_id_name(), 65536);
 
-   //Construct the multi_index in shared memory
+   //Construct the multi_index in shared memory (classic construction)
    employee_set *es = segment.construct<employee_set>
       ("My MultiIndex Container")            //Container's name in shared memory
       ( employee_set::ctor_args_list()
@@ -96,6 +98,19 @@ int main ()
    es->insert(employee(0,31, "Joe", ca));
    es->insert(employee(1,27, "Robert", ca));
    es->insert(employee(2,40, "John", ca));
+   segment.destroy_ptr(es);
+
+   //Now re-construct it using the uses-allocator protocol
+   es = segment.construct<employee_set>
+      ("My MultiIndex Container")       //Container's name in shared memory
+      ( employee_set::ctor_args_list() );    //Allocator parameters is implicit
+
+   //Now emplace elements (more natural, the allocator is implicitly propagated)
+   es->emplace(0,31, "Joe");
+   es->emplace(1,27, "Robert");
+   es->emplace(2,40, "John");
+   segment.destroy_ptr(es);
+
    return 0;
 }
 //]

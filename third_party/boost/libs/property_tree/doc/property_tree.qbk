@@ -102,7 +102,7 @@ these three basic patterns of usage:
    assignments. Or when tomorrow is final deadline for your project.
  * ['Get the data and revert to default value if it cannot be done.]  Used when
    you want to allow omitting the key in question. Implemented by some similar
-   tools (windows INI file access functions).
+   tools (Windows INI file access functions).
  * ['Get the data, but I care more whether you succeeded than I do for the data
    itself.] Used when you want to vary control flow depending on get
    success/failure. Or to check for presence of a key.

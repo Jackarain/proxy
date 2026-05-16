@@ -8,11 +8,12 @@
 
 #define BOOST_THREAD_VERSION 4
 
-#include <boost/detail/lightweight_test.hpp> // BOOST_TEST
+#include <boost/core/lightweight_test.hpp> // BOOST_TEST
 
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/with_lock_guard.hpp>
 #include <boost/bind/bind.hpp>
+#include <boost/core/ref.hpp>
 
 class Foo {
  public:

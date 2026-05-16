@@ -105,7 +105,7 @@ int cpp_main(int, char*[])
 
     fs::remove(unique_dir / "uu");
 
-#ifdef BOOST_WINDOWS_API
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
     // These tests depends on ordering of directory entries, and that's guaranteed
     // on Windows but not necessarily on other operating systems
     {

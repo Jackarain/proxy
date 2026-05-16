@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: boost_decimal
+Description: A C++14 Implementation of IEEE 754 Decimal Floating Point Numbers
+Version: @PROJECT_VERSION@
+Cflags: -I${includedir}
+Libs:

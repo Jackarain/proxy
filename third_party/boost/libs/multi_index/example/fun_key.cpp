@@ -1,6 +1,6 @@
 /* Boost.MultiIndex example of functions used as key extractors.
  *
- * Copyright 2003-2008 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -54,15 +54,13 @@ std::string::size_type name_record_length(const name_record& r)
 
 /* multi_index_container with indices based on name_record::name()
  * and name_record_length().
- * See Compiler specifics: Use of const_mem_fun_explicit and
- * mem_fun_explicit for info on BOOST_MULTI_INDEX_CONST_MEM_FUN.
  */
 
 typedef multi_index_container<
   name_record,
   indexed_by<
     ordered_unique<
-      BOOST_MULTI_INDEX_CONST_MEM_FUN(name_record,std::string,name)
+      const_mem_fun<name_record,std::string,&name_record::name>
     >,
     ordered_non_unique<
       global_fun<const name_record&,std::string::size_type,name_record_length>

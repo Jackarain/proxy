@@ -19,7 +19,7 @@
 #include <boost/thread/future.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
 #include <boost/thread/executor.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #if defined BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
 

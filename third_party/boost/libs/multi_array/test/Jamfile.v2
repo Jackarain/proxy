@@ -6,6 +6,8 @@
 
 import testing ;
 
+project : requirements <library>/boost/multi_array//boost_multi_array ;
+
 compile-fail fail_cbracket.cpp ;
 compile-fail fail_cdata.cpp ;
 compile-fail fail_citerator.cpp ;
@@ -15,7 +17,7 @@ compile-fail fail_csubarray.cpp ;
 compile-fail fail_csubarray2.cpp ;
 compile-fail fail_csubarray3.cpp ;
 compile-fail fail_cview.cpp ;
-compile-fail fail_cview2.cpp ;
+compile-fail fail_cview2.cpp : <library>/boost/test//included ;
 compile-fail fail_cview3.cpp ;
 compile-fail fail_ref_cbracket.cpp ;
 compile-fail fail_ref_cdata.cpp ;
@@ -28,7 +30,7 @@ compile-fail fail_ref_csubarray3.cpp ;
 compile-fail fail_ref_cview.cpp ;
 compile-fail fail_ref_cview2.cpp ;
 compile-fail fail_ref_cview3.cpp ;
-  
+
 run constructors.cpp ;
 run access.cpp ;
 run compare.cpp ;

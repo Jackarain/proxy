@@ -1,0 +1,45 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#overview]
+
+= Boost.Decimal: IEEE 754 Decimal Floating Point Numbers
+
+Matt Borland and Chris Kormanyos
+
+== Description
+
+Boost.Decimal is an implementation of https://standards.ieee.org/ieee/754/6210/[IEEE 754] and https://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2849.pdf[ISO/IEC DTR 24733] Decimal Floating Point numbers.
+The library is header-only, has no dependencies, and requires C++14.
+
+== Motivation
+
+Current C++ floating point types store the significand (often incorrectly referred to as the mantissa) as binary digits.
+Famously this leads to representation errors: https://0.30000000000000004.com.
+Decimal floating point numbers avoid this issue by storing the significand in base-10 (decimal).
+The other major difference between binary and decimal floating point types is that the latter allows for multiple representations of the same number.
+For example 1e5 could also be stored as 0.1e6, 0.01e7, so on and so forth.
+These are referred to as cohorts which binary does not have as there is only one way to represent each number in binary floating point.
+For more information on cohorts please see the xref:cohorts.adoc[cohort section] of the documentation.
+
+== Use Cases
+
+The use case for Decimal Floating Point numbers is where rounding errors are significantly impactful such as finance.
+In applications where integer or fixed-point arithmetic are used to combat this issue, Decimal Floating Point numbers can provide a significantly greater range of values.
+For example, while a fixed-point representation that allocates eight decimal digits and two decimal places can represent the numbers 123456.78, 8765.43, 123.00, and so on, a floating-point representation with eight decimal digits could also represent 1.2345678, 1234567.8, 0.000012345678, 12345678000000000, and so on.
+
+== Supported Compilers
+
+Boost.Decimal is tested natively on Ubuntu (x86_64, s390x, and aarch64), macOS (x86_64, and Apple Silicon),
+and Windows (x32 and x64); as well as emulated PPC64LE and ARM Cortex-M using QEMU with the following compilers:
+
+* GCC 8 and later
+* Clang 6 and later
+* Visual Studio 2019 and later
+* Intel OneAPI DPC++
+
+Tested on https://github.com/boostorg/decimal/actions[Github Actions] and https://drone.cpp.al/boostorg/decimal[Drone].
+Coverage can be found on https://app.codecov.io/gh/boostorg/decimal[Codecov].

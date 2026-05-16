@@ -264,7 +264,7 @@ While `app.cpp` refers to a regular source file, `../util/foo//bar` is a
 reference to another target: a library `bar` declared in the Jamfile at
 `../util/foo`.
 
-TIP: Some other build system have special syntax for listing dependent
+NOTE: Some other build system have special syntax for listing dependent
 libraries, for example `LIBS` variable. In B2, you just add the
 library to the list of sources.
 

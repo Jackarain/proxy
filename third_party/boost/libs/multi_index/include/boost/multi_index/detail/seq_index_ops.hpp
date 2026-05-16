@@ -1,4 +1,4 @@
-/* Copyright 2003-2020 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -77,8 +77,8 @@ void sequenced_index_merge(SequencedIndex& x,SequencedIndex& y,Compare comp)
 
 template<typename Node,typename Compare>
 void sequenced_index_collate(
-  BOOST_DEDUCED_TYPENAME Node::impl_type* x,
-  BOOST_DEDUCED_TYPENAME Node::impl_type* y,
+  typename Node::impl_type* x,
+  typename Node::impl_type* y,
   Compare comp)
 {
   typedef typename Node::impl_type    impl_type;

@@ -1,6 +1,6 @@
 /* Boost.MultiIndex example of composite keys.
  *
- * Copyright 2003-2008 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -57,25 +57,21 @@ struct file_entry
  * file and size. These indices are firstly ordered by directory, as commands
  * work on a current directory basis. Composite keys are just fine to model
  * this.
- * NB: The use of derivation here instead of simple typedef is explained in
- * Compiler specifics: type hiding.
+ * NB: The use of derivation here instead of simple typedef helps produce
+ * shorter symbol names in compilation
  */
 
 struct name_key:composite_key<
   file_entry,
-  BOOST_MULTI_INDEX_MEMBER(file_entry,const file_entry*,dir),
-  BOOST_MULTI_INDEX_MEMBER(file_entry,std::string,name)
+  member<file_entry,const file_entry*,&file_entry::dir>,
+  member<file_entry,std::string,&file_entry::name>
 >{};
 
 struct size_key:composite_key<
   file_entry,
-  BOOST_MULTI_INDEX_MEMBER(file_entry,const file_entry* const,dir),
-  BOOST_MULTI_INDEX_MEMBER(file_entry,unsigned,size)
+  member<file_entry,const file_entry* const,&file_entry::dir>,
+  member<file_entry,unsigned,&file_entry::size>
 >{};
-
-/* see Compiler specifics: composite_key in compilers without partial
- * template specialization, for info on composite_key_result_less
- */
 
 typedef multi_index_container<
   file_entry,

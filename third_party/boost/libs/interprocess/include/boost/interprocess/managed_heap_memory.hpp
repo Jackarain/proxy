@@ -23,13 +23,14 @@
 #include <boost/interprocess/detail/workaround.hpp>
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/move/utility_core.hpp>
-#include <vector>
 #include <boost/interprocess/detail/managed_memory_impl.hpp>
 //These includes needed to fulfill default template parameters of
 //predeclarations in interprocess_fwd.hpp
 #include <boost/interprocess/mem_algo/rbtree_best_fit.hpp>
 #include <boost/interprocess/sync/mutex_family.hpp>
 #include <boost/interprocess/indexes/iset_index.hpp>
+#include <boost/container/detail/operator_new_helpers.hpp>
+#include <cstring>
 
 //!\file
 //!Describes a named heap memory allocation user class.
@@ -73,10 +74,13 @@ class basic_managed_heap_memory
    //!Creates heap memory and initializes the segment manager.
    //!This can throw.
    basic_managed_heap_memory(size_type size)
-      :  m_heapmem(size, char(0))
    {
-      if(!base_t::create_impl(&m_heapmem[0], size)){
+      void *const paddr =
+         boost::container::dtl::operator_new_raw_allocate(size, base_t::segment_manager::MemAlignment);
+
+      if(!base_t::create_impl(paddr, size)){
          this->priv_close();
+         boost::container::dtl::operator_delete_raw_deallocate(paddr, size, base_t::segment_manager::MemAlignment);
          throw interprocess_exception("Could not initialize heap in basic_managed_heap_memory constructor");
       }
    }
@@ -107,17 +111,27 @@ class basic_managed_heap_memory
       //If memory is reallocated, data will
       //be automatically copied
       BOOST_INTERPROCESS_TRY{
-        m_heapmem.resize(m_heapmem.size()+extra_bytes);
+         const std::size_t  old_sz  = this->base_t::get_size();
+         void * const old_ptr = this->base_t::get_address();
+         const std::size_t new_sz = old_sz + extra_bytes;
+         //This can throw
+         void * const new_ptr =
+            boost::container::dtl::operator_new_raw_allocate
+               (new_sz, base_t::segment_manager::MemAlignment);
+
+         //No-throw steps
+         std::memcpy(new_ptr, old_ptr, old_sz);
+         base_t::close_impl();
+         base_t::open_impl(new_ptr, old_sz);
+         base_t::grow(extra_bytes);
+         boost::container::dtl::operator_delete_raw_deallocate
+               (old_ptr, old_sz, base_t::segment_manager::MemAlignment);
       }
       BOOST_INTERPROCESS_CATCH(...){
          return false;
       }
       BOOST_INTERPROCESS_CATCH_END
 
-      //Grow always works
-      base_t::close_impl();
-      base_t::open_impl(&m_heapmem[0], m_heapmem.size());
-      base_t::grow(extra_bytes);
       return true;
    }
 
@@ -126,7 +140,6 @@ class basic_managed_heap_memory
    void swap(basic_managed_heap_memory &other) BOOST_NOEXCEPT
    {
       base_t::swap(other);
-      m_heapmem.swap(other.m_heapmem);
    }
 
    #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
@@ -134,11 +147,14 @@ class basic_managed_heap_memory
    //!Frees resources. Never throws.
    void priv_close()
    {
+      void * const paddr   = this->base_t::get_address();
+      const std::size_t sz = this->base_t::get_size();
       base_t::destroy_impl();
-      std::vector<char>().swap(m_heapmem);
+      if(paddr)
+         boost::container::dtl::operator_delete_raw_deallocate
+            (paddr, sz, base_t::segment_manager::MemAlignment);
    }
 
-   std::vector<char>  m_heapmem;
    #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 };
 

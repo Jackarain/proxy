@@ -15,7 +15,7 @@ The examples below show how to use the features discussed throughout this docume
 * {site-url}/example/cpp20_containers.cpp[cpp20_containers.cpp]: Shows how to send and receive STL containers and how to use transactions.
 * {site-url}/example/cpp20_json.cpp[cpp20_json.cpp]: Shows how to serialize types using Boost.Json.
 * {site-url}/example/cpp20_protobuf.cpp[cpp20_protobuf.cpp]: Shows how to serialize types using protobuf.
-* {site-url}/example/cpp20_resolve_with_sentinel.cpp[cpp20_resolve_with_sentinel.cpp]: Shows how to resolve a master address using sentinels.
+* {site-url}/example/cpp20_sentinel.cpp[cpp20_sentinel.cpp]: Shows how to use the library with a Sentinel deployment.
 * {site-url}/example/cpp20_subscriber.cpp[cpp20_subscriber.cpp]: Shows how to implement pubsub with reconnection re-subscription.
 * {site-url}/example/cpp20_echo_server.cpp[cpp20_echo_server.cpp]: A simple TCP echo server.
 * {site-url}/example/cpp20_chat_room.cpp[cpp20_chat_room.cpp]: A command line chat built on Redis pubsub.

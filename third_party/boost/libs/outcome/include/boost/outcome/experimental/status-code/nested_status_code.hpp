@@ -63,11 +63,12 @@ namespace detail
     using _base::string_ref;
 
     constexpr indirecting_domain() noexcept
-        : _base(0xc44f7bdeb2cc50e9 ^ typename StatusCode::domain_type().id() /* unique-ish based on domain's unique id */)
+        : _base(0xc44f7bdeb2cc50e9 ^
+                typename StatusCode::domain_type().id() /* unique-ish based on domain's unique id */)
     {
     }
     indirecting_domain(const indirecting_domain &) = default;
-    indirecting_domain(indirecting_domain &&) = default;             // NOLINT
+    indirecting_domain(indirecting_domain &&) = default;  // NOLINT
     indirecting_domain &operator=(const indirecting_domain &) = default;
     indirecting_domain &operator=(indirecting_domain &&) = default;  // NOLINT
     ~indirecting_domain() = default;
@@ -82,39 +83,49 @@ namespace detail
     static inline constexpr const indirecting_domain &get();
 #endif
 
-    virtual string_ref name() const noexcept override { return typename StatusCode::domain_type().name(); }  // NOLINT
-
-    virtual payload_info_t payload_info() const noexcept override
-    {
-      return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
-              (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
-    }
-
   protected:
     using _mycode = status_code<indirecting_domain>;
+
+    virtual int _do_name(_vtable_name_args &args) const noexcept override
+    {
+      return static_cast<status_code_domain &&>(typename StatusCode::domain_type())._do_name(args);
+    }  // NOLINT
+    virtual void _do_payload_info(_vtable_payload_info_args &args) const noexcept override
+    {
+      args.ret = {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+                  (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) :
+                                                                          alignof(status_code_domain *)};
+    }
     virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
     {
       assert(code.domain() == *this);
       const auto &c = static_cast<const _mycode &>(code);  // NOLINT
       return static_cast<status_code_domain &&>(typename StatusCode::domain_type())._do_failure(c.value()->sc);
     }
-    virtual bool _do_equivalent(const status_code<void> &code1, const status_code<void> &code2) const noexcept override  // NOLINT
+    virtual bool _do_equivalent(const status_code<void> &code1,
+                                const status_code<void> &code2) const noexcept override  // NOLINT
     {
       assert(code1.domain() == *this);
       const auto &c1 = static_cast<const _mycode &>(code1);  // NOLINT
-      return static_cast<status_code_domain &&>(typename StatusCode::domain_type())._do_equivalent(c1.value()->sc, code2);
+      return static_cast<status_code_domain &&>(typename StatusCode::domain_type())
+      ._do_equivalent(c1.value()->sc, code2);
     }
-    virtual generic_code _generic_code(const status_code<void> &code) const noexcept override  // NOLINT
+    virtual void _do_generic_code(_vtable_generic_code_args &args) const noexcept override
     {
-      assert(code.domain() == *this);
-      const auto &c = static_cast<const _mycode &>(code);  // NOLINT
-      return static_cast<status_code_domain &&>(typename StatusCode::domain_type())._generic_code(c.value()->sc);
+      assert(args.code.domain() == *this);
+      const auto &c = static_cast<const _mycode &>(args.code);  // NOLINT
+      _vtable_generic_code_args args2{{}, c.value()->sc};
+      static_cast<status_code_domain &&>(typename StatusCode::domain_type())._do_generic_code(args2);
+      args.ret = static_cast<generic_code &&>(args2.ret);
     }
-    virtual string_ref _do_message(const status_code<void> &code) const noexcept override  // NOLINT
+    virtual int _do_message(_vtable_message_args &args) const noexcept override
     {
-      assert(code.domain() == *this);
-      const auto &c = static_cast<const _mycode &>(code);  // NOLINT
-      return static_cast<status_code_domain &&>(typename StatusCode::domain_type())._do_message(c.value()->sc);
+      assert(args.code.domain() == *this);
+      const auto &c = static_cast<const _mycode &>(args.code);  // NOLINT
+      _vtable_message_args args2{{}, c.value()->sc};
+      const int ret = static_cast<status_code_domain &&>(typename StatusCode::domain_type())._do_message(args2);
+      args.ret = static_cast<string_ref &&>(args2.ret);
+      return ret;
     }
 #if defined(_CPPUNWIND) || defined(__EXCEPTIONS) || defined(BOOST_OUTCOME_STANDARDESE_IS_IN_THE_HOUSE)
     BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN virtual void _do_throw_exception(const status_code<void> &code) const override  // NOLINT
@@ -122,17 +133,18 @@ namespace detail
       assert(code.domain() == *this);
       const auto &c = static_cast<const _mycode &>(code);  // NOLINT
       static_cast<status_code_domain &&>(typename StatusCode::domain_type())._do_throw_exception(c.value()->sc);
-      abort();                                             // suppress buggy GCC warning
+      abort();  // suppress buggy GCC warning
     }
 #endif
-    virtual bool _do_erased_copy(status_code<void> &dst, const status_code<void> &src, payload_info_t dstinfo) const override  // NOLINT
+    virtual int _do_erased_copy(status_code<void> &dst, const status_code<void> &src,
+                                payload_info_t dstinfo) const noexcept override
     {
       // Note that dst may not have its domain set
       const auto srcinfo = payload_info();
       assert(src.domain() == *this);
       if(dstinfo.total_size < srcinfo.total_size)
       {
-        return false;
+        return ENOBUFS;
       }
       auto &d = static_cast<_mycode &>(dst);               // NOLINT
       const auto &_s = static_cast<const _mycode &>(src);  // NOLINT
@@ -150,12 +162,13 @@ namespace detail
       catch(...)
       {
         payload_allocator_traits::deallocate(payload_alloc, dp, 1);
-        throw;
+        return ENOMEM;
       }
 #endif
-      return true;
+      return 0;
     }
-    virtual void _do_erased_destroy(status_code<void> &code, payload_info_t /*unused*/) const noexcept override  // NOLINT
+    virtual void _do_erased_destroy(status_code<void> &code,
+                                    payload_info_t /*unused*/) const noexcept override  // NOLINT
     {
       assert(code.domain() == *this);
       auto &c = static_cast<_mycode &>(code);  // NOLINT
@@ -166,7 +179,8 @@ namespace detail
     }
   };
 #if __cplusplus >= 201402L || defined(_MSC_VER)
-  template <class StatusCode, class Allocator> constexpr indirecting_domain<StatusCode, Allocator> _indirecting_domain{};
+  template <class StatusCode, class Allocator>
+  constexpr indirecting_domain<StatusCode, Allocator> _indirecting_domain{};
   template <class StatusCode, class Allocator>
   inline constexpr const indirecting_domain<StatusCode, Allocator> &indirecting_domain<StatusCode, Allocator>::get()
   {
@@ -184,7 +198,8 @@ function is compatible. Note that this function can throw if the allocator throw
 */
 BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class T, class Alloc = std::allocator<typename std::decay<T>::type>)
 BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<T>::value))  //
-inline status_code<detail::erased<typename std::add_pointer<typename std::decay<T>::type>::type>> make_nested_status_code(T &&v, Alloc alloc = {})
+inline status_code<detail::erased<typename std::add_pointer<typename std::decay<T>::type>::type>>
+make_nested_status_code(T &&v, Alloc alloc = {})
 {
   using status_code_type = typename std::decay<T>::type;
   using domain_type = detail::indirecting_domain<status_code_type, typename std::decay<Alloc>::type>;
@@ -211,7 +226,8 @@ inline status_code<detail::erased<typename std::add_pointer<typename std::decay<
 code of type `StatusCode`, return a pointer to that `StatusCode`. Otherwise return null.
 */
 BOOST_OUTCOME_SYSTEM_ERROR2_TEMPLATE(class StatusCode, class U)
-BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<StatusCode>::value)) inline StatusCode *get_if(status_code<detail::erased<U>> *v) noexcept
+BOOST_OUTCOME_SYSTEM_ERROR2_TREQUIRES(BOOST_OUTCOME_SYSTEM_ERROR2_TPRED(is_status_code<StatusCode>::value))
+inline StatusCode *get_if(status_code<detail::erased<U>> *v) noexcept
 {
   if((0xc44f7bdeb2cc50e9 ^ typename StatusCode::domain_type().id()) != v->domain().id())
   {
@@ -246,7 +262,8 @@ inline const StatusCode *get_if(const status_code<detail::erased<U>> *v) noexcep
 /*! If a status code refers to a `nested_status_code`, return the id of the erased
 status code's domain. Otherwise return a meaningless number.
 */
-template <class U> inline typename status_code_domain::unique_id_type get_id(const status_code<detail::erased<U>> &v) noexcept
+template <class U>
+inline typename status_code_domain::unique_id_type get_id(const status_code<detail::erased<U>> &v) noexcept
 {
   return 0xc44f7bdeb2cc50e9 ^ v.domain().id();
 }

@@ -1,0 +1,17 @@
+{
+  "key": "decimal",
+  "name": "Decimal",
+  "authors": [
+    "Matt Borland",
+    "Christopher Kormanyos"
+  ],
+  "maintainers": [
+    "Matt Borland <matt -at- mattborland.com>",
+    "Christopher Kormanyos <e_float -at- yahoo.com>"
+  ],
+  "description": "An implementation of IEEE754 Decimal Floating Point Numbers.",
+  "category": [
+    "Math and numerics"
+  ],
+  "cxxstd": "14"
+}

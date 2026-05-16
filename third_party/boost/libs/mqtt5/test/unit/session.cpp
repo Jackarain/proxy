@@ -5,17 +5,16 @@
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "test_common/test_service.hpp"
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/steady_timer.hpp>
 #include <boost/mqtt5.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <chrono>
 #include <cstdint>
 #include <string>
-
-#include "test_common/test_service.hpp"
 
 using namespace boost::mqtt5;
 
@@ -50,8 +49,8 @@ BOOST_AUTO_TEST_CASE(clear_waiting_on_pubrel) {
     detail::publish_rec_op<client_service_type> { svc_ptr }.perform(pub_msg);
 
     // let publish_rec_op reach wait_on_pubrel stage
-    asio::steady_timer timer(ioc.get_executor());
-    timer.expires_after(std::chrono::milliseconds(50));
+    test::test_timer timer(ioc.get_executor());
+    timer.expires_after(std::chrono::milliseconds(1));
     timer.async_wait([&svc_ptr](error_code) {
         BOOST_TEST(svc_ptr.use_count() == 2);
         svc_ptr->update_session_state(); // session_present = false
@@ -59,7 +58,7 @@ BOOST_AUTO_TEST_CASE(clear_waiting_on_pubrel) {
         BOOST_TEST(svc_ptr.use_count() == 1);
     });
 
-    ioc.run();
+    test::test_broker::run(ioc);
 }
 
 

@@ -1,6 +1,6 @@
 /* Boost.MultiIndex test for projection capabilities.
  *
- * Copyright 2003-2013 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -39,15 +39,9 @@ void test_projection()
   BOOST_STATIC_ASSERT((boost::is_same<
     employee_set_by_name::iterator,
     nth_index_iterator<employee_set,1>::type >::value));
-#if defined(BOOST_NO_MEMBER_TEMPLATES)
-  BOOST_STATIC_ASSERT((boost::is_same<
-    employee_set_by_age::iterator,
-    index_iterator<employee_set,age>::type >::value));
-#else
   BOOST_STATIC_ASSERT((boost::is_same<
     employee_set_by_age::iterator,
     employee_set::index_iterator<age>::type >::value));
-#endif
   BOOST_STATIC_ASSERT((boost::is_same<
     employee_set_as_inserted::iterator,
     nth_index_iterator<employee_set,3>::type >::value));
@@ -64,11 +58,7 @@ void test_projection()
   it3=  project<as_inserted>(es,it2);
   it4=  project<ssn>(es,it3);
   it5=  project<randomly>(es,it4);
-#if defined(BOOST_NO_MEMBER_TEMPLATES)
-  itbis=project<0>(es,it5);
-#else
   itbis=es.project<0>(it5);
-#endif
 
   BOOST_TEST(
     *it==*it1&&*it1==*it2&&*it2==*it3&&*it3==*it4&&*it4==*it5&&itbis==it);
@@ -94,15 +84,9 @@ void test_projection()
   BOOST_STATIC_ASSERT((boost::is_same<
     employee_set_by_name::const_iterator,
     nth_index_const_iterator<employee_set,1>::type >::value));
-#if defined(BOOST_NO_MEMBER_TEMPLATES)
-  BOOST_STATIC_ASSERT((boost::is_same<
-    employee_set_by_age::const_iterator,
-    index_const_iterator<employee_set,age>::type >::value));
-#else
   BOOST_STATIC_ASSERT((boost::is_same<
     employee_set_by_age::const_iterator,
     employee_set::index_const_iterator<age>::type >::value));
-#endif
   BOOST_STATIC_ASSERT((boost::is_same<
     employee_set_as_inserted::const_iterator,
     nth_index_const_iterator<employee_set,3>::type >::value));
@@ -114,17 +98,9 @@ void test_projection()
     nth_index_const_iterator<employee_set,5>::type >::value));
 
   cit=   ces.find(employee(4,"John",57,1002));
-#if defined(BOOST_NO_MEMBER_TEMPLATES)
-  cit1=  project<by_name>(ces,cit);
-#else
   cit1=  ces.project<by_name>(cit);
-#endif
   cit2=  project<age>(ces,cit1);
-#if defined(BOOST_NO_MEMBER_TEMPLATES)
-  cit3=  project<as_inserted>(ces,cit2);
-#else
   cit3=  ces.project<as_inserted>(cit2);
-#endif
   cit4=  project<ssn>(ces,cit3);
   cit5=  project<randomly>(ces,cit4);
   citbis=project<0>(ces,cit5);

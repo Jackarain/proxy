@@ -2555,7 +2555,19 @@ BOOST_MP_DF_QF_NUM_LIMITS_CLASS_TYPE numeric_limits<boost::multiprecision::numbe
    #pragma warning(disable:4996)
    #endif
 
+#ifdef _MSC_VER
+#  pragma warning(push)
+#  pragma warning(disable : 4996)
+#elif (defined(__clang__) && (__clang_major__ >= 17))
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
    static constexpr float_denorm_style      has_denorm                    = denorm_absent;
+#ifdef _MSC_VER
+#pragma warning(pop)
+#elif (defined(__clang__) && (__clang_major__ >= 17))
+#  pragma clang diagnostic pop
+#endif
    static constexpr bool                    has_denorm_loss               = true;
 
    #ifdef BOOST_MSVC

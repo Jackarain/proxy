@@ -13,7 +13,7 @@
 site:
   title: Boost.OpenMethod
   url: https://antora.cppalliance.org/develop/lib/doc
-  start_page: openmethod::index.adoc
+  start_page: openmethod::motivation.adoc
   robots: allow
   keys:
     repo_url: 'https://github.com/boostorg/openmethod'
@@ -31,7 +31,7 @@ ui:
 
 output:
   dir: html
-  
+
 antora:
   extensions:
     - require: '@antora/lunr-extension' # https://gitlab.com/antora/antora-lunr-extension
@@ -47,6 +47,7 @@ antora:
           tag: 'develop'
           variable: 'BOOST_SRC_DIR'
           system-env: 'BOOST_SRC_DIR'
+    - require: '@cppalliance/antora-downloads-extension'
 
 asciidoc:
   attributes:

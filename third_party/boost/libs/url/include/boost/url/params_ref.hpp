@@ -25,19 +25,15 @@ class url_base;
 class params_view;
 #endif
 
-/** A view representing query parameters in a URL
+/** Mutable decoded query parameter proxy
 
-    Objects of this type are used to interpret
-    the query parameters as a bidirectional view
-    of key/value pairs.
-    The view does not retain ownership of the
-    elements and instead references the original
-    url. The caller is responsible for ensuring
-    that the lifetime of the referenced url
-    extends until it is no longer referenced.
-    The view is modifiable; calling non-const
-    members causes changes to the referenced
-    url.
+    This container presents the decoded query
+    parameters of a @ref url_base as a bidirectional
+    range whose modifying operations update the
+    underlying URL in-place. It references (but
+    does not own) the character buffer, so the
+    referenced URL must stay alive while the proxy
+    is used.
 
     <br>
 
@@ -76,8 +72,18 @@ class params_view;
     @li @ref replace, @ref set : Modified
         elements and all elements
         after (including `end()`).
+
+    @par Reads vs. writes
+    Although this is a mutable proxy, all
+    observer helpers inherited from
+    @ref params_base (such as @ref contains,
+    @ref find, and @ref get_or) operate in the
+    same way as they do on @ref params_view:
+    they perform their lookup against the
+    current contents of the referenced URL
+    without modifying it.
 */
-class BOOST_URL_DECL params_ref
+class BOOST_SYMBOL_VISIBLE params_ref
     : public params_base
 {
     friend class url_base;
@@ -954,5 +960,21 @@ private:
 // This is in <boost/url/url_base.hpp>
 //
 // #include <boost/url/impl/params_ref.hpp>
+
+//------------------------------------------------
+//
+// std::ranges::enable_borrowed_range
+//
+//------------------------------------------------
+
+#ifdef BOOST_URL_HAS_CONCEPTS
+#include <ranges>
+namespace std::ranges {
+    template<>
+    inline constexpr bool
+        enable_borrowed_range<
+            boost::urls::params_ref> = true;
+} // std::ranges
+#endif
 
 #endif

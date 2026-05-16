@@ -32,9 +32,11 @@
 #include <boost/interprocess/containers/version_type.hpp>
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/assert.hpp>
-#include <boost/container/detail/addressof.hpp>
 #include <boost/interprocess/detail/type_traits.hpp>
+
 #include <boost/container/detail/placement_new.hpp>
+#include <boost/container/detail/addressof.hpp>
+#include <boost/container/uses_allocator_construction.hpp>
 
 #include <cstddef>
 #include <stdexcept>
@@ -103,6 +105,7 @@ class allocator
                      <const value_type>::type   const_reference;
    typedef typename segment_manager::size_type               size_type;
    typedef typename segment_manager::difference_type         difference_type;
+   typedef uses_segment_manager<SegmentManager> uses_segment_manager_t;
 
    typedef boost::interprocess::version_type<allocator, 2>   version;
 
@@ -111,6 +114,7 @@ class allocator
    //Experimental. Don't use.
    typedef boost::container::dtl::transform_multiallocation_chain
       <typename SegmentManager::multiallocation_chain, T>multiallocation_chain;
+
    #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    //!Obtains an allocator that allocates
@@ -131,6 +135,12 @@ class allocator
    allocator(segment_manager *segment_mngr)
       : mp_mngr(segment_mngr) { }
 
+   //!Constructor that enables uses-allocator
+   //!Never throws
+   allocator(uses_segment_manager_t usm)
+      : mp_mngr(usm.get_segment_manager())
+   {}
+
    //!Constructor from other allocator.
    //!Never throws
    allocator(const allocator &other)
@@ -144,19 +154,53 @@ class allocator
 
    //!Allocates memory for an array of count elements.
    //!Throws boost::interprocess::bad_alloc if there is no enough memory
+   BOOST_INTERPROCESS_NODISCARD
    pointer allocate(size_type count, cvoid_ptr hint = 0)
    {
       (void)hint;
       if(size_overflows<sizeof(T)>(count)){
          throw bad_alloc();
       }
-      return pointer(static_cast<value_type*>(mp_mngr->allocate(count*sizeof(T))));
+      return pointer(static_cast<value_type*>(mp_mngr->allocate_aligned(count*sizeof(T), boost::container::dtl::alignment_of<T>::value)));
    }
 
    //!Deallocates memory previously allocated.
    //!Never throws
    void deallocate(const pointer &ptr, size_type)
    {  mp_mngr->deallocate((void*)ipcdetail::to_raw_pointer(ptr));  }
+
+   #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+   //! <b>Requires</b>: Uses-allocator construction of T with allocator argument
+   //!   `uses_segment_manager` and constructor arguments `std::forward<Args>(args)...`
+   //!   is well-formed. [Note: uses-allocator construction is always well formed for
+   //!   types that do not use allocators. - end note]
+   //!
+   //! <b>Effects</b>: Construct a T object at p by uses-allocator construction with allocator
+   //!   argument constructible from `segment_manager*`
+   //!  and constructor arguments `std::forward<Args>(args)...`.
+   //!
+   //! <b>Throws</b>: Nothing unless the constructor for T throws.
+   template < typename U, class ...Args>
+   inline void construct(U* p, Args&& ...args)
+   {
+      boost::container::uninitialized_construct_using_allocator
+         (p, uses_segment_manager_t(this->get_segment_manager()), ::boost::forward<Args>(args)...);
+   }
+
+   #else // #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+   #define BOOST_CONTAINER_ALLOCATORS_ALLOCATOR_CONSTRUCT_CODE(N) \
+   template < typename U BOOST_MOVE_I##N BOOST_MOVE_CLASSQ##N >\
+   void construct(U* p BOOST_MOVE_I##N BOOST_MOVE_UREFQ##N)\
+   {\
+      boost::container::uninitialized_construct_using_allocator\
+         (p, uses_segment_manager_t(this->get_segment_manager()) BOOST_MOVE_I##N BOOST_MOVE_FWDQ##N);\
+   }\
+   //
+   BOOST_MOVE_ITERATE_0TO9(BOOST_CONTAINER_ALLOCATORS_ALLOCATOR_CONSTRUCT_CODE)
+   #undef BOOST_CONTAINER_ALLOCATORS_ALLOCATOR_CONSTRUCT_CODE
+
+   #endif   //#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
 
    //!Returns the number of elements that could be allocated.
    //!Never throws
@@ -171,11 +215,15 @@ class allocator
    //!Returns maximum the number of objects the previously allocated memory
    //!pointed by p can hold. This size only works for memory allocated with
    //!allocate, allocation_command and allocate_many.
+   //!This function is deprecated and will be removed in the future
+   BOOST_INTERPROCESS_NODISCARD
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    size_type size(const pointer &p) const
    {
       return (size_type)mp_mngr->size(ipcdetail::to_raw_pointer(p))/sizeof(T);
    }
 
+   BOOST_INTERPROCESS_NODISCARD
    pointer allocation_command(boost::interprocess::allocation_type command,
                            size_type limit_size, size_type &prefer_in_recvd_out_size, pointer &reuse)
    {
@@ -191,20 +239,24 @@ class allocator
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
+   //!This function is deprecated and will be removed in the future
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    void allocate_many(size_type elem_size, size_type num_elements, multiallocation_chain &chain)
    {
       if(size_overflows<sizeof(T)>(elem_size)){
          throw bad_alloc();
       }
-      mp_mngr->allocate_many(elem_size*sizeof(T), num_elements, chain);
+      mp_mngr->allocate_many(elem_size*sizeof(T), num_elements, boost::container::dtl::alignment_of<T>::value, chain);
    }
 
    //!Allocates n_elements elements, each one of size elem_sizes[i]in a
    //!contiguous block
    //!of memory. The elements must be deallocated
+   //!This function is deprecated and will be removed in the future
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    void allocate_many(const size_type *elem_sizes, size_type n_elements, multiallocation_chain &chain)
    {
-      mp_mngr->allocate_many(elem_sizes, n_elements, sizeof(T), chain);
+      mp_mngr->allocate_many(elem_sizes, n_elements, sizeof(T), boost::container::dtl::alignment_of<T>::value, chain);
    }
 
    //!Allocates many elements of size elem_size in a contiguous block
@@ -213,12 +265,15 @@ class allocator
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
+   //!This function is deprecated and will be removed in the future
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    void deallocate_many(multiallocation_chain &chain)
    {  mp_mngr->deallocate_many(chain); }
 
    //!Allocates just one object. Memory allocated with this function
    //!must be deallocated only with deallocate_one().
    //!Throws boost::interprocess::bad_alloc if there is no enough memory
+   BOOST_INTERPROCESS_NODISCARD
    pointer allocate_one()
    {  return this->allocate(1);  }
 
@@ -229,7 +284,7 @@ class allocator
    //!will be assigned to received_size. Memory allocated with this function
    //!must be deallocated only with deallocate_one().
    void allocate_individual(size_type num_elements, multiallocation_chain &chain)
-   {  this->allocate_many(1, num_elements, chain); }
+   {  mp_mngr->allocate_many(sizeof(T), num_elements, boost::container::dtl::alignment_of<T>::value, chain);  }
 
    //!Deallocates memory previously allocated with allocate_one().
    //!You should never use deallocate_one to deallocate memory allocated
@@ -244,15 +299,21 @@ class allocator
    //!will be assigned to received_size. Memory allocated with this function
    //!must be deallocated only with deallocate_one().
    void deallocate_individual(multiallocation_chain &chain)
-   {  this->deallocate_many(chain); }
+   {  mp_mngr->deallocate_many(chain); }
 
    //!Returns address of mutable object.
    //!Never throws
+   //!This function is deprecated and will be removed in the future
+   BOOST_INTERPROCESS_NODISCARD
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    pointer address(reference value) const
    {  return pointer(boost::container::dtl::addressof(value));  }
 
    //!Returns address of non mutable object.
    //!Never throws
+   //!This function is deprecated and will be removed in the future
+   BOOST_INTERPROCESS_NODISCARD
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    const_pointer address(const_reference value) const
    {  return const_pointer(boost::container::dtl::addressof(value));  }
 };

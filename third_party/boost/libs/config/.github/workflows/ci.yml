@@ -10,6 +10,7 @@ on:
     branches:
       - master
       - develop
+      - feature/**
   pull_request:
   release:
     types: [published, created, edited]
@@ -33,7 +34,7 @@ jobs:
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update Dependencies
-        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
+        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/throw_exception libs/preprocessor
         working-directory: ../boost-root
       - name: Copy files
         run: cp -r $GITHUB_WORKSPACE/* libs/config
@@ -72,7 +73,7 @@ jobs:
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update Dependencies
-        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
+        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/throw_exception libs/preprocessor
         working-directory: ../boost-root
       - name: Copy files
         run: cp -r $GITHUB_WORKSPACE/* libs/config
@@ -111,7 +112,7 @@ jobs:
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update Dependencies
-        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
+        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/throw_exception libs/preprocessor
         working-directory: ../boost-root
       - name: Copy files
         run: cp -r $GITHUB_WORKSPACE/* libs/config
@@ -144,7 +145,7 @@ jobs:
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update Dependencies
-        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
+        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/throw_exception libs/preprocessor
         working-directory: ../boost-root
       - name: Copy files
         run: cp -r $GITHUB_WORKSPACE/* libs/config
@@ -177,7 +178,7 @@ jobs:
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update Dependencies
-        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
+        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/throw_exception libs/preprocessor
         working-directory: ../boost-root
       - name: Copy files
         run: xcopy /s /e /q %GITHUB_WORKSPACE% libs\config
@@ -210,7 +211,7 @@ jobs:
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update Dependencies
-        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
+        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/throw_exception libs/preprocessor
         working-directory: ../boost-root
       - name: Copy files
         run: xcopy /s /e /q %GITHUB_WORKSPACE% libs\config
@@ -258,7 +259,7 @@ jobs:
             cd boost-root
             rm -rf libs/config/*
             cp -r $config/* libs/config
-            git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
+            git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/throw_exception libs/preprocessor
             ./bootstrap.sh
             ./b2 headers
             ./b2 toolset=gcc libs/config/test//print_config_info libs/config/test//print_math_info
@@ -294,7 +295,7 @@ jobs:
             cd boost-root
             rm -rf libs/config/*
             cp -r $config/* libs/config
-            git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
+            git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/throw_exception libs/preprocessor
             ./bootstrap.sh
             ./b2 headers
             ./b2 toolset=clang libs/config/test//print_config_info libs/config/test//print_math_info
@@ -325,7 +326,7 @@ jobs:
       - name: Checkout main boost
         run: git clone -b develop --depth 1 https://github.com/boostorg/boost.git ../boost-root
       - name: Update Dependencies
-        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/static_assert libs/throw_exception libs/preprocessor
+        run: git submodule update --init tools/build tools/boost_install libs/headers libs/detail libs/core libs/assert libs/type_traits libs/throw_exception libs/preprocessor
         working-directory: ../boost-root
       - name: Copy files
         run: cp -r $GITHUB_WORKSPACE/* libs/config

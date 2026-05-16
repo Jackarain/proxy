@@ -36,6 +36,10 @@
     disable the use of concepts, define this macro. */
 #    define BOOST_PARSER_DISABLE_CONCEPTS
 
+/** Boost.Parser will generate code to trace the execution of each and every
+    parser by default.  To disable all trace code, define this macro. */
+#    define BOOST_PARSER_DISABLE_TRACE
+
 /** Define this macro to use `boost::hana::tuple` instead of `std::tuple`
     throughout Boost.Parser. */
 #    define BOOST_PARSER_USE_HANA_TUPLE
@@ -90,6 +94,12 @@
 #    define BOOST_PARSER_USE_CONCEPTS 1
 #else
 #    define BOOST_PARSER_USE_CONCEPTS 0
+#endif
+
+#if defined(BOOST_PARSER_DISABLE_TRACE)
+#    define BOOST_PARSER_DO_TRACE 0
+#else
+#    define BOOST_PARSER_DO_TRACE 1
 #endif
 
 #if defined(__cpp_lib_ranges) && BOOST_PARSER_USE_CONCEPTS

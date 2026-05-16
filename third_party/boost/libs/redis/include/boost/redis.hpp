@@ -12,17 +12,8 @@
 #include <boost/redis/error.hpp>
 #include <boost/redis/ignore.hpp>
 #include <boost/redis/logger.hpp>
+#include <boost/redis/push_parser.hpp>
 #include <boost/redis/request.hpp>
 #include <boost/redis/response.hpp>
-
-/** @defgroup high-level-api Reference
- *
- *  This page contains the documentation of the Aedis high-level API.
- */
-
-/** @defgroup low-level-api Reference
- *
- *  This page contains the documentation of the Aedis low-level API.
- */
 
 #endif  // BOOST_REDIS_HPP

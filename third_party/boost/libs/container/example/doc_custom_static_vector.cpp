@@ -20,6 +20,10 @@ int main ()
 {
    using namespace boost::container;
 
+//--------------------------------------------
+//          'inplace_alignment' option
+//--------------------------------------------
+
    //This option specifies the desired alignment for value_type
    typedef static_vector_options< inplace_alignment<16u> >::type alignment_16_option_t;
 
@@ -27,11 +31,19 @@ int main ()
    static_vector<int, 10, alignment_16_option_t > sv;
    assert(((std::size_t)sv.data() % 16u) == 0);
 
+//--------------------------------------------
+//          'throw_on_overflow' option
+//--------------------------------------------
+
    //This static_vector won't throw on overflow, for maximum performance
    typedef static_vector_options< throw_on_overflow<false> >::type no_throw_options_t;
 
    //Create static_vector with no throw on overflow
    static_vector<int, 10, no_throw_options_t > sv2;
+
+//--------------------------------------------
+//          'stored_size' option
+//--------------------------------------------
 
    //This options specifies that internal `size()` can be represented by an unsigned char
    //instead of the default `std::size_t`.

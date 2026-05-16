@@ -1,5 +1,5 @@
 /* Proposed SG14 status_code
-(C) 2018-2025 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2018-2026 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Feb 2018
 
 
@@ -49,10 +49,11 @@ BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_BEGIN
 class _com_code_domain;
 /*! (Windows only) A COM error code. Note semantic equivalence testing is only implemented for `FACILITY_WIN32`
 and `FACILITY_NT_BIT`. As you can see at
-[https://blogs.msdn.microsoft.com/eldar/2007/04/03/a-lot-of-hresult-codes/](https://blogs.msdn.microsoft.com/eldar/2007/04/03/a-lot-of-hresult-codes/), there
-are an awful lot of COM error codes, and keeping mapping tables for all of them would be impractical (for the Win32 and NT facilities, we actually reuse the
-mapping tables in `win32_code` and `nt_code`). You can, of course, inherit your own COM code domain from this one and override the `_do_equivalent()` function
-to add semantic equivalence testing for whichever extra COM codes that your application specifically needs.
+[https://blogs.msdn.microsoft.com/eldar/2007/04/03/a-lot-of-hresult-codes/](https://blogs.msdn.microsoft.com/eldar/2007/04/03/a-lot-of-hresult-codes/),
+there are an awful lot of COM error codes, and keeping mapping tables for all of them would be impractical (for the
+Win32 and NT facilities, we actually reuse the mapping tables in `win32_code` and `nt_code`). You can, of course,
+inherit your own COM code domain from this one and override the `_do_equivalent()` function to add semantic equivalence
+testing for whichever extra COM codes that your application specifically needs.
 */
 using com_code = status_code<_com_code_domain>;
 //! (Windows only) A specialisation of `status_error` for the COM error code domain.
@@ -67,9 +68,9 @@ class _com_code_domain : public status_code_domain
 
   //! Construct from a `HRESULT` error code
 #ifdef _COMDEF_NOT_WINAPI_FAMILY_DESKTOP_APP
-  static _base::string_ref _make_string_ref(HRESULT c, wchar_t *perrinfo = nullptr) noexcept
+  static _base::string_ref _make_string_ref(int &errcode, HRESULT c, wchar_t *perrinfo = nullptr) noexcept
 #else
-  static _base::string_ref _make_string_ref(HRESULT c, IErrorInfo *perrinfo = nullptr) noexcept
+  static _base::string_ref _make_string_ref(int &errcode, HRESULT c, IErrorInfo *perrinfo = nullptr) noexcept
 #endif
   {
     _com_error ce(c, perrinfo);
@@ -79,6 +80,7 @@ class _com_code_domain : public status_code_domain
     win32::DWORD bytes;
     if(wlen == 0)
     {
+      errcode = ENOENT;
       return _base::string_ref("failed to get message from system");
     }
     for(;;)
@@ -86,9 +88,11 @@ class _com_code_domain : public status_code_domain
       auto *p = static_cast<char *>(malloc(allocation));  // NOLINT
       if(p == nullptr)
       {
+        errcode = ENOMEM;
         return _base::string_ref("failed to get message from system");
       }
-      bytes = win32::WideCharToMultiByte(65001 /*CP_UTF8*/, 0, ce.ErrorMessage(), (int) (wlen + 1), p, (int) allocation, nullptr, nullptr);
+      bytes = win32::WideCharToMultiByte(65001 /*CP_UTF8*/, 0, ce.ErrorMessage(), (int) (wlen + 1), p, (int) allocation,
+                                         nullptr, nullptr);
       if(bytes != 0)
       {
         char *end = strchr(p, 0);
@@ -97,7 +101,9 @@ class _com_code_domain : public status_code_domain
           --end;
         }
         *end = 0;  // NOLINT
-        return _base::atomic_refcounted_string_ref(p, end - p);
+        _base::atomic_refcounted_string_ref ret(p, end - p);
+        free(p);
+        return ret;
       }
       free(p);  // NOLINT
       if(win32::GetLastError() == 0x7a /*ERROR_INSUFFICIENT_BUFFER*/)
@@ -105,6 +111,7 @@ class _com_code_domain : public status_code_domain
         allocation += allocation >> 2;
         continue;
       }
+      errcode = EILSEQ;
       return _base::string_ref("failed to get message from system");
     }
 #else
@@ -112,6 +119,7 @@ class _com_code_domain : public status_code_domain
     auto *p = static_cast<char *>(malloc(wlen + 1));  // NOLINT
     if(p == nullptr)
     {
+      errcode = ENOMEM;
       return _base::string_ref("failed to get message from system");
     }
     memcpy(p, ce.ErrorMessage(), wlen + 1);
@@ -121,7 +129,9 @@ class _com_code_domain : public status_code_domain
       --end;
     }
     *end = 0;  // NOLINT
-    return _base::atomic_refcounted_string_ref(p, end - p);
+    _base::atomic_refcounted_string_ref ret(p, end - p);
+    free(p);
+    return ret;
 #endif
   }
 
@@ -145,23 +155,28 @@ public:
   //! Constexpr singleton getter. Returns the constexpr com_code_domain variable.
   static inline constexpr const _com_code_domain &get();
 
-  virtual string_ref name() const noexcept override { return string_ref("COM domain"); }  // NOLINT
-
-  virtual payload_info_t payload_info() const noexcept override
-  {
-    return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
-            (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
-  }
-
 protected:
-  virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual int _do_name(_vtable_name_args &args) const noexcept override
+  {
+    args.ret = string_ref("COM domain");
+    return 0;
+  }  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void _do_payload_info(_vtable_payload_info_args &args) const noexcept override
+  {
+    args.ret = {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+                (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) :
+                                                                        alignof(status_code_domain *)};
+  }
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
   {
     assert(code.domain() == *this);
     return static_cast<const com_code &>(code).value() < 0;  // NOLINT
   }
   /*! Note semantic equivalence testing is only implemented for `FACILITY_WIN32` and `FACILITY_NT_BIT`.
    */
-  virtual bool _do_equivalent(const status_code<void> &code1, const status_code<void> &code2) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual bool
+  _do_equivalent(const status_code<void> &code1,
+                 const status_code<void> &code2) const noexcept override  // NOLINT
   {
     assert(code1.domain() == *this);
     const auto &c1 = static_cast<const com_code &>(code1);  // NOLINT
@@ -210,29 +225,34 @@ protected:
     }
     return false;
   }
-  virtual generic_code _generic_code(const status_code<void> &code) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void _do_generic_code(_vtable_generic_code_args &args) const noexcept override
   {
-    assert(code.domain() == *this);
-    const auto &c1 = static_cast<const com_code &>(code);  // NOLINT
+    assert(args.code.domain() == *this);
+    const auto &c1 = static_cast<const com_code &>(args.code);  // NOLINT
     if(c1.value() == S_OK)
     {
-      return generic_code(errc::success);
+      args.ret = generic_code(errc::success);
+      return;
     }
     if((c1.value() & FACILITY_NT_BIT) != 0)
     {
-      return generic_code(static_cast<errc>(_nt_code_domain::_nt_code_to_errno(c1.value() & ~FACILITY_NT_BIT)));
+      args.ret = generic_code(static_cast<errc>(_nt_code_domain::_nt_code_to_errno(c1.value() & ~FACILITY_NT_BIT)));
+      return;
     }
     if(HRESULT_FACILITY(c1.value()) == FACILITY_WIN32)
     {
-      return generic_code(static_cast<errc>(_win32_code_domain::_win32_code_to_errno(HRESULT_CODE(c1.value()))));
+      args.ret = generic_code(static_cast<errc>(_win32_code_domain::_win32_code_to_errno(HRESULT_CODE(c1.value()))));
+      return;
     }
-    return generic_code(errc::unknown);
+    args.ret = generic_code(errc::unknown);
   }
-  virtual string_ref _do_message(const status_code<void> &code) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual int _do_message(_vtable_message_args &args) const noexcept override
   {
-    assert(code.domain() == *this);
-    const auto &c = static_cast<const com_code &>(code);  // NOLINT
-    return _make_string_ref(c.value());
+    assert(args.code.domain() == *this);
+    const auto &c = static_cast<const com_code &>(args.code);  // NOLINT
+    int ret = 0;
+    args.ret = _make_string_ref(ret, c.value());
+    return ret;
   }
 #if defined(_CPPUNWIND) || defined(__EXCEPTIONS) || defined(BOOST_OUTCOME_STANDARDESE_IS_IN_THE_HOUSE)
   BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN virtual void _do_throw_exception(const status_code<void> &code) const override  // NOLINT

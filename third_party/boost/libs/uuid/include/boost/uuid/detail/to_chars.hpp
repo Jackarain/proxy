@@ -7,61 +7,39 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/uuid/uuid.hpp>
+#include <boost/uuid/detail/config.hpp>
+#include <boost/uuid/detail/is_constant_evaluated.hpp>
+#include <boost/uuid/detail/to_chars_generic.hpp>
+
+#if defined(BOOST_UUID_USE_SSE2)
+# include <boost/uuid/detail/to_chars_x86.hpp>
+
+#elif defined(BOOST_UUID_REPORT_IMPLEMENTATION)
+# include <boost/config/pragma_message.hpp>
+  BOOST_PRAGMA_MESSAGE( "Using to_chars_generic.hpp" )
+
+#endif
 
 namespace boost {
 namespace uuids {
 namespace detail {
 
-constexpr char const* digits( char const* ) noexcept
+template<class Ch> BOOST_UUID_CXX14_CONSTEXPR_RT inline Ch* to_chars( uuid const& u, Ch* out ) noexcept
 {
-    return "0123456789abcdef-";
-}
-
-constexpr wchar_t const* digits( wchar_t const* ) noexcept
-{
-    return L"0123456789abcdef-";
-}
-
-constexpr char16_t const* digits( char16_t const* ) noexcept
-{
-    return u"0123456789abcdef-";
-}
-
-constexpr char32_t const* digits( char32_t const* ) noexcept
-{
-    return U"0123456789abcdef-";
-}
-
-#if defined(__cpp_char8_t) && __cpp_char8_t >= 201811L
-
-constexpr char8_t const* digits( char8_t const* ) noexcept
-{
-    return u8"0123456789abcdef-";
-}
-
-#endif
-
-template<class Ch> inline Ch* to_chars( uuid const& u, Ch* out ) noexcept
-{
-    constexpr Ch const* p = digits( static_cast<Ch const*>( nullptr ) );
-
-    for( std::size_t i = 0; i < 16; ++i )
+#if defined(BOOST_UUID_USE_SSE2)
+    if( detail::is_constant_evaluated_rt() )
     {
-        std::uint8_t ch = u.data()[ i ];
-
-        *out++ = p[ (ch >> 4) & 0x0F ];
-        *out++ = p[ ch & 0x0F ];
-
-        if( i == 3 || i == 5 || i == 7 || i == 9 )
-        {
-            *out++ = p[ 16 ];
-        }
+        return detail::to_chars_generic( u, out );
     }
-
-    return out;
+    else
+    {
+        return detail::to_chars_simd( u, out );
+    }
+#else
+    return detail::to_chars_generic( u, out );
+#endif
 }
 
-} // namespace detail
-}} //namespace boost::uuids
+}}} // namespace boost::uuids::detail
 
 #endif // BOOST_UUID_DETAIL_TO_CHARS_HPP_INCLUDED

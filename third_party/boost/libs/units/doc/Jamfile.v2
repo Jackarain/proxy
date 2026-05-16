@@ -55,24 +55,24 @@ rule run_doxygen ( target : files * : name )
 
 run_doxygen units_reference
   :
-    [ glob $(here)/../../../boost/units/*.hpp :
-           $(here)/../../../boost/units/physical_dimensions.hpp ]
+    [ glob $(here)/../include/boost/units/*.hpp :
+           $(here)/../include/boost/units/physical_dimensions.hpp ]
   :
     "Units Reference"
   ;
 
 run_doxygen si_reference
   :
-    $(here)/../../../boost/units/systems/si.hpp
-    [ path.glob-tree $(here)/../../../boost/units/systems/si : *.hpp : detail ]
+    $(here)/../include/boost/units/systems/si.hpp
+    [ path.glob-tree $(here)/../include/boost/units/systems/si : *.hpp : detail ]
   :
     "SI System Reference"
   ;
 
 run_doxygen cgs_reference
   :
-    $(here)/../../../boost/units/systems/cgs.hpp
-    [ path.glob-tree $(here)/../../../boost/units/systems/cgs : *.hpp : detail ]
+    $(here)/../include/boost/units/systems/cgs.hpp
+    [ path.glob-tree $(here)/../include/boost/units/systems/cgs : *.hpp : detail ]
   :
     "CGS System Reference"
   ;
@@ -81,7 +81,7 @@ rule make_base_units_doc ( directory : name )
 {
     run_doxygen $(directory)_base_units_reference
       :
-        [ path.glob-tree $(here)/../../../boost/units/base_units/$(directory) : *.hpp : detail conversions.hpp ]
+        [ path.glob-tree $(here)/../include/boost/units/base_units/$(directory) : *.hpp : detail conversions.hpp ]
       :
         "$(name) Base Units Reference"
       ;
@@ -102,8 +102,8 @@ all_base_units_doc = $(all_base_units_doc)_base_units_reference ;
 
 run_doxygen dimensions_reference
   :
-    $(here)/../../../boost/units/physical_dimensions.hpp
-    [ path.glob-tree $(here)/../../../boost/units/physical_dimensions : *.hpp : detail ]
+    $(here)/../include/boost/units/physical_dimensions.hpp
+    [ path.glob-tree $(here)/../include/boost/units/physical_dimensions : *.hpp : detail ]
   :
     "Dimensions Reference"
   ;
@@ -111,36 +111,36 @@ run_doxygen dimensions_reference
 run_doxygen trig_reference
   :
     #../../../boost/units/systems/trig.hpp
-    [ path.glob-tree $(here)/../../../boost/units/systems/angle : *.hpp : detail ]
+    [ path.glob-tree $(here)/../include/boost/units/systems/angle : *.hpp : detail ]
   :
     "Trigonometry and Angle System Reference"
   ;
 
 run_doxygen temperature_reference
   :
-    [ path.glob-tree $(here)/../../../boost/units/systems/temperature : *.hpp : detail ]
+    [ path.glob-tree $(here)/../include/boost/units/systems/temperature : *.hpp : detail ]
   :
     "Temperature System Reference"
   ;
 
 run_doxygen information_reference
   :
-    $(here)/../../../boost/units/systems/information.hpp
-    [ path.glob-tree $(here)/../../../boost/units/systems/information : *.hpp : detail prefixes.hpp ]
+    $(here)/../include/boost/units/systems/information.hpp
+    [ path.glob-tree $(here)/../include/boost/units/systems/information : *.hpp : detail prefixes.hpp ]
   :
     "Information System Reference"
   ;
 
 run_doxygen abstract_reference
   :
-    $(here)/../../../boost/units/systems/abstract.hpp
+    $(here)/../include/boost/units/systems/abstract.hpp
   :
     "Abstract System Reference"
   ;
 
 rule less ( a b )
 {
-    if [ path.basename $(a) ]  < [ path.basename $(b) ] 
+    if [ path.basename $(a) ]  < [ path.basename $(b) ]
     {
         return true ;
     }
@@ -181,7 +181,7 @@ rule generate-qbk ( target : sources * : properties * )
     }
 }
 
-make base_units.qbk : [ path.glob-tree $(here)/../../../boost/units/base_units : *.hpp : detail conversions.hpp ] : @generate-qbk ;
+make base_units.qbk : [ path.glob-tree $(here)/../include/boost/units/base_units : *.hpp : detail conversions.hpp ] : @generate-qbk ;
 explicit base_units ;
 
 install base_units_install : base_units.qbk : <location>. ;

@@ -1,8 +1,8 @@
 [library Boost.Optional
-    [quickbook 1.4]
+    [quickbook 1.7]
     [authors [Cacciola Carballal, Fernando Luis]]
     [copyright 2003-2007 Fernando Luis Cacciola Carballal]
-    [copyright 2014-2024 Andrzej Krzemie&#324;ski]
+    [copyright 2014-2026 Andrzej Krzemieński]
     [category miscellaneous]
     [id optional]
     [dirname optional]

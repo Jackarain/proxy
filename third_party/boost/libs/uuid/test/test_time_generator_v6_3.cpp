@@ -11,6 +11,7 @@
 #include <thread>
 #include <set>
 #include <vector>
+#include <functional> // std::ref
 
 #if defined(BOOST_LIBSTDCXX_VERSION) && BOOST_LIBSTDCXX_VERSION >= 130000
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114865

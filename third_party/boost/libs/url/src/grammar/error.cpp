@@ -11,90 +11,13 @@
 #include <boost/url/detail/config.hpp>
 #include <boost/url/grammar/error.hpp>
 
+// In C++20+, instances are inline constexpr in the header.
+#if !defined(BOOST_URL_HAS_CXX20_CONSTEXPR)
+
 namespace boost {
 namespace urls {
 namespace grammar {
-
 namespace detail {
-
-const char*
-error_cat_type::
-name() const noexcept
-{
-    return "boost.url.grammar";
-}
-
-std::string
-error_cat_type::
-message(int code) const
-{
-    return message(code, nullptr, 0);
-}
-
-char const*
-error_cat_type::
-message(
-    int code,
-    char*,
-    std::size_t) const noexcept
-{
-    switch(static_cast<error>(code))
-    {
-    default:
-case error::need_more: return "need more";
-case error::mismatch: return "mismatch";
-case error::invalid: return "invalid";
-case error::end_of_range: return "end of range";
-case error::leftover: return "leftover";
-case error::out_of_range: return "out of range";
-    }
-}
-
-system::error_condition
-error_cat_type::
-default_error_condition(
-    int ev) const noexcept
-{
-    switch(static_cast<error>(ev))
-    {
-case error::invalid:
-case error::out_of_range:
-        return condition::fatal;
-    default:
-        return {ev, *this};
-    }
-}
-
-//------------------------------------------------
-
-const char*
-condition_cat_type::
-name() const noexcept
-{
-    return "boost.url.grammar";
-}
-
-std::string
-condition_cat_type::
-message(int code) const
-{
-    return message(code, nullptr, 0);
-}
-
-char const*
-condition_cat_type::
-message(
-    int code, char*, std::size_t) const noexcept
-{
-    switch(static_cast<condition>(code))
-    {
-    default:
-    case condition::fatal:
-        return "fatal condition";
-    }
-}
-
-//-----------------------------------------------
 
 // msvc 14.0 has a bug that warns about inability
 // to use constexpr construction here, even though
@@ -112,8 +35,8 @@ condition_cat_type condition_cat;
 #endif
 
 } // detail
-
 } // grammar
 } // urls
 } // boost
 
+#endif

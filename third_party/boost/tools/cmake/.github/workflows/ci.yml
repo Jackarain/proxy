@@ -45,7 +45,9 @@ jobs:
             python: ON
             mpi: OFF
           - os: ubuntu-latest
-            shared: ON
+            shared: OFF
+            # shared: ON doesn't work for Range and Xpressive tests
+            # <link>static is forced in test/Jamfile there
             testing: ON
             layout: system
             python: OFF
@@ -507,7 +509,7 @@ jobs:
           cd ..
           git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
           cd boost-root
-          git submodule update --init libs/core libs/assert libs/config libs/static_assert libs/throw_exception
+          git submodule update --init libs/core libs/assert libs/config libs/throw_exception
           rm -rf tools/cmake/*
           cp -r $GITHUB_WORKSPACE/* tools/cmake
 
@@ -540,7 +542,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, ubuntu-24.04, macos-13, macos-14, macos-15 ]
+        os: [ ubuntu-22.04, ubuntu-24.04, macos-14, macos-15, macos-26 ]
         shared: [ ON, OFF ]
 
     runs-on: ${{matrix.os}}
@@ -623,13 +625,13 @@ jobs:
           - os: ubuntu-24.04
             include: timer
             shared: ON
-          - os: macos-13
-            include: timer
-            shared: ON
           - os: macos-14
             include: timer
             shared: ON
           - os: macos-15
+            include: timer
+            shared: ON
+          - os: macos-26
             include: timer
             shared: ON
 
@@ -669,7 +671,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-22.04, ubuntu-24.04, macos-13, macos-14, macos-15 ]
+        os: [ ubuntu-22.04, ubuntu-24.04, macos-14, macos-15, macos-26 ]
         shared: [ ON, OFF ]
 
     runs-on: ${{matrix.os}}

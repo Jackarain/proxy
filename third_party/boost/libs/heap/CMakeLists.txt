@@ -30,7 +30,6 @@ target_link_libraries(boost_heap
     Boost::intrusive
     Boost::iterator
     Boost::parameter
-    Boost::static_assert
     Boost::throw_exception
 )
 
@@ -38,6 +37,7 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.23 AND BOOST_HEAP_USE_FILE_SET)
     set(Headers
         include/boost/heap/detail/ilog2.hpp
         include/boost/heap/detail/heap_comparison.hpp
+        include/boost/heap/detail/heap_utils.hpp
         include/boost/heap/detail/mutable_heap.hpp
         include/boost/heap/detail/ordered_adaptor_iterator.hpp
         include/boost/heap/detail/stable_heap.hpp

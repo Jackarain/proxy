@@ -28,7 +28,7 @@
 
 #include <boost/uuid/detail/numeric_cast.hpp>
 #include <boost/uuid/uuid.hpp> // for version
-#include <string.h>
+#include <cstring>
 
 namespace boost {
 namespace uuids {
@@ -116,7 +116,7 @@ private:
      */
     #if defined(__i386__) || defined(__x86_64__) || defined(__vax__)
     #define BOOST_UUID_DETAIL_MD5_SET(n) \
-        (memcpy(&ctx->block[(n)], &ptr[(n) * 4], sizeof(MD5_u32plus)), (ctx->block[(n)]))
+        (std::memcpy(&ctx->block[(n)], &ptr[(n) * 4], sizeof(MD5_u32plus)), (ctx->block[(n)]))
     #define BOOST_UUID_DETAIL_MD5_GET(n) \
         (ctx->block[(n)])
     #else
@@ -260,7 +260,7 @@ private:
         saved_lo = ctx->lo;
         if ((ctx->lo = (saved_lo + size) & 0x1fffffff) < saved_lo)
             ctx->hi++;
-        ctx->hi += size >> 29;
+        ctx->hi += static_cast<std::uint32_t>( size >> 29 );
 
         used = saved_lo & 0x3f;
 
@@ -268,11 +268,11 @@ private:
             available = 64 - used;
 
             if (size < available) {
-                memcpy(&ctx->buffer[used], data, size);
+                std::memcpy(&ctx->buffer[used], data, size);
                 return;
             }
 
-            memcpy(&ctx->buffer[used], data, available);
+            std::memcpy(&ctx->buffer[used], data, available);
             data = (const unsigned char *)data + available;
             size -= available;
             body(ctx, ctx->buffer, 64);
@@ -283,7 +283,7 @@ private:
             size &= 0x3f;
         }
 
-        memcpy(ctx->buffer, data, size);
+        std::memcpy(ctx->buffer, data, size);
     }
 
     #define BOOST_UUID_DETAIL_MD5_OUT(dst, src) \

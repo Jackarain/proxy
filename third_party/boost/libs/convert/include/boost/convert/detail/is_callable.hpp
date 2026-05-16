@@ -5,6 +5,7 @@
 #ifndef BOOST_CONVERT_IS_CALLABLE_HPP
 #define BOOST_CONVERT_IS_CALLABLE_HPP
 
+#include <boost/type_traits/decay.hpp>
 #include <boost/convert/detail/has_member.hpp>
 
 namespace boost { namespace cnv { namespace detail

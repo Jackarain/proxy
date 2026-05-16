@@ -12,8 +12,9 @@
 #define BOOST_MSM_FRONT_STATES_H
 
 #include <boost/mpl/bool.hpp>
-#include <boost/mpl/vector.hpp>
+#include <boost/mpl/is_sequence.hpp>
 #include <boost/mpl/transform.hpp>
+#include <boost/mpl/vector.hpp>
 
 #include <boost/fusion/include/vector.hpp>
 #include <boost/fusion/include/make_vector.hpp>
@@ -21,7 +22,6 @@
 
 #include <boost/msm/front/common_states.hpp>
 #include <boost/msm/row_tags.hpp>
-//#include <boost/msm/back/metafunctions.hpp>
 
 namespace boost { namespace msm { namespace front
 {
@@ -145,6 +145,11 @@ struct entry_pseudo_state
 {
     // tags
     typedef int                          pseudo_entry;
+    struct internal
+    {
+        typedef detail::entry_pseudostate_tag tag;
+    };
+
     enum {zone_index=ZoneIndex};
     typedef int explicit_entry_state;
     // default: no flag
@@ -163,7 +168,12 @@ struct exit_pseudo_state : public boost::msm::front::detail::state_base<BASE> , 
     typedef Event       event;
     typedef BASE        Base;
     typedef SMPtrPolicy PtrPolicy;
+    // tags
     typedef int         pseudo_exit;
+    struct internal
+    {
+        typedef detail::exit_pseudostate_tag tag;
+    };
 
     // default: no flag
     typedef ::boost::fusion::vector0<>  flag_list;

@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <boost/proto/core.hpp>
 #include <boost/proto/fusion.hpp>
 #include <boost/fusion/include/for_each.hpp>
@@ -76,7 +78,7 @@ private:
     std::ostream &sout_;
 };
 
-void test1()
+BOOST_AUTO_TEST_CASE(test1)
 {
     using boost::proto::flatten;
 
@@ -144,7 +146,7 @@ struct My
     BOOST_PROTO_EXTENDS(Expr, My<Expr>, MyDomain)
 };
 
-void test2()
+BOOST_AUTO_TEST_CASE(test2)
 {
     using boost::proto::flatten;
 
@@ -194,18 +196,4 @@ void test2()
     sout.str("");
     boost::fusion::for_each(flatten(a_(b_(c_ >> d_, e_ | f_), g_ >> h_)(i_)), to_string(sout));
     BOOST_CHECK_EQUAL("(a)(b)(c>>d)(e|f)(g>>h)(i)", sout.str());
-}
-
-using namespace boost::unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test proto and segmented fusion integration");
-
-    test->add(BOOST_TEST_CASE(&test1));
-    test->add(BOOST_TEST_CASE(&test2));
-
-    return test;
 }

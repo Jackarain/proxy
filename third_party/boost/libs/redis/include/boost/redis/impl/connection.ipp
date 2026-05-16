@@ -51,6 +51,12 @@ void connection::async_exec_impl(
    impl_.async_exec(req, std::move(adapter), std::move(token));
 }
 
+void connection::async_receive2_impl(
+   asio::any_completion_handler<void(boost::system::error_code)> token)
+{
+   impl_.async_receive2(std::move(token));
+}
+
 void connection::cancel(operation op) { impl_.cancel(op); }
 
 }  // namespace boost::redis

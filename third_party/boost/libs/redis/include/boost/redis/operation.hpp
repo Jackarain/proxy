@@ -52,7 +52,12 @@ enum class operation
    /// Refers to `connection::async_run` operations.
    run,
 
-   /// Refers to `connection::async_receive` operations.
+   /**
+    * @brief (Deprecated) Refers to `async_receive` and `async_receive2` operations.
+    * 
+    * To cancel `async_receive2`, use either @ref basic_connection::cancel with no arguments
+    * or per-operation cancellation.
+    */
    receive,
 
    /**

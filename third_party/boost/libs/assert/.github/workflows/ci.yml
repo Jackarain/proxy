@@ -69,6 +69,11 @@ jobs:
             os: ubuntu-latest
             container: ubuntu:24.04
             install: g++-14
+          - toolset: gcc-15
+            cxxstd: "03,11,14,17,20,23,2c"
+            os: ubuntu-latest
+            container: ubuntu:25.10
+            install: g++-15
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "03,11,14"
@@ -178,14 +183,20 @@ jobs:
             os: ubuntu-latest
             install: clang-20
           - toolset: clang
-            cxxstd: "03,11,14,17,20,2b"
-            os: macos-13
+            compiler: clang++-21
+            cxxstd: "03,11,14,17,20,23,2c"
+            container: ubuntu:25.10
+            os: ubuntu-latest
+            install: clang-21
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-14
           - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             os: macos-15
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,23,2c"
+            os: macos-26
 
     runs-on: ${{matrix.os}}
 
@@ -263,9 +274,9 @@ jobs:
             addrmd: 32,64
             os: windows-2022
           - toolset: clang-win
-            cxxstd: "14,17,latest"
+            cxxstd: "14,17,20,latest"
             addrmd: 32,64
-            os: windows-2022
+            os: windows-2025
           - toolset: gcc
             cxxstd: "03,11,14,17,2a"
             addrmd: 64
@@ -309,11 +320,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-24.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
@@ -357,11 +365,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-24.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
@@ -415,11 +420,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-24.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 

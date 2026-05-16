@@ -64,6 +64,27 @@ public:
                         a.encoded_password(), "y");
             }
         }
+
+        // port zero at end of input
+        // (has_number regression)
+        {
+            auto rv = grammar::parse(
+                "host:0", authority_rule);
+            if(BOOST_TEST(rv.has_value()))
+            {
+                BOOST_TEST(rv->has_port());
+                BOOST_TEST_EQ(rv->port_number(), 0);
+            }
+        }
+        {
+            auto rv = grammar::parse(
+                "host:000", authority_rule);
+            if(BOOST_TEST(rv.has_value()))
+            {
+                BOOST_TEST(rv->has_port());
+                BOOST_TEST_EQ(rv->port_number(), 0);
+            }
+        }
     }
 };
 

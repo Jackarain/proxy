@@ -42,7 +42,13 @@ bool test_node_pool<NodePool>::allocate_then_deallocate(NodePool &pool)
 
    //First allocate nodes
    for(std::size_t i = 0; i < num_alloc; ++i){
-      nodes.push_back(pool.allocate_node());
+      void* ptr = pool.allocate_node();
+      const std::size_t al = NodePool::node_alignment;
+      const bool aligned = 0 == ((std::size_t)ptr & (al - 1u));
+      BOOST_ASSERT(aligned);
+      if (!aligned)
+         return false;
+      nodes.push_back(ptr);
    }
 
    //Check that the free count is correct
@@ -136,7 +142,7 @@ bool test_all_node_pool()
    typedef boost::interprocess::test::test_node_pool<node_pool_t> test_node_pool_t;
    shared_memory_object::remove(test::get_process_id_name());
    {
-     managed_shared_memory shm(create_only, test::get_process_id_name(), 4*1024*sizeof(segment_manager::void_pointer));
+      managed_shared_memory shm(create_only, test::get_process_id_name(), 16*1024*sizeof(segment_manager::void_pointer));
 
       typedef deleter<node_pool_t, segment_manager> deleter_t;
       typedef unique_ptr<node_pool_t, deleter_t> unique_ptr_t;

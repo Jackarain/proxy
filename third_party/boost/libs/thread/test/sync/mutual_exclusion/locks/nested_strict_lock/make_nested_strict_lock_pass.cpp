@@ -15,7 +15,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include "../../../../timming.hpp"
 
 #ifdef BOOST_THREAD_USES_CHRONO

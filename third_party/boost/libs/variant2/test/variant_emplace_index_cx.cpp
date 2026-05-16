@@ -1,12 +1,17 @@
-
-// Copyright 2017 Peter Dimov.
-//
+// Copyright 2017, 2026 Peter Dimov.
 // Distributed under the Boost Software License, Version 1.0.
-//
-// See accompanying file LICENSE_1_0.txt or copy at
-// http://www.boost.org/LICENSE_1_0.txt
+// https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/variant2/variant.hpp>
+#include <boost/config.hpp>
+#include <boost/config/pragma_message.hpp>
+
+#if defined(BOOST_NO_CXX14_CONSTEXPR)
+
+BOOST_PRAGMA_MESSAGE( "Test skipped because BOOST_NO_CXX14_CONSTEXPR is defined" )
+int main() {}
+
+#else
 
 using namespace boost::variant2;
 
@@ -134,3 +139,5 @@ int main()
 
 #endif
 }
+
+#endif

@@ -31,15 +31,15 @@ main()
     -XXX(42.0f);
         {
         test_qvm::vector<V2,3> v0=X00(42.0f);
-        BOOST_TEST(v0.a[0]==42);
-        BOOST_TEST(v0.a[1]==0);
-        BOOST_TEST(v0.a[2]==0);
+        BOOST_TEST_EQ(v0.a[0], 42);
+        BOOST_TEST_EQ(v0.a[1], 0);
+        BOOST_TEST_EQ(v0.a[2], 0);
         test_qvm::vector<V2,3> v2=_10X(42.0f);
-        BOOST_TEST(v2.a[0]==1);
-        BOOST_TEST(v2.a[1]==0);
-        BOOST_TEST(v2.a[2]==42);
+        BOOST_TEST_EQ(v2.a[0], 1);
+        BOOST_TEST_EQ(v2.a[1], 0);
+        BOOST_TEST_EQ(v2.a[2], 42);
         float s=42.0f;
-        BOOST_TEST(X(X01(s))==s);
+        BOOST_TEST_EQ(X(X01(s)), s);
         }
         {
         test_qvm::vector<V2,3> r;
@@ -104,51 +104,51 @@ main()
         }
         {
         test_qvm::vector<V1,3> v=_000();
-        BOOST_TEST(v.a[0]==0);
-        BOOST_TEST(v.a[1]==0);
-        BOOST_TEST(v.a[2]==0);
+        BOOST_TEST_EQ(v.a[0], 0);
+        BOOST_TEST_EQ(v.a[1], 0);
+        BOOST_TEST_EQ(v.a[2], 0);
         }
         {
         test_qvm::vector<V1,3> v=_001();
-        BOOST_TEST(v.a[0]==0);
-        BOOST_TEST(v.a[1]==0);
-        BOOST_TEST(v.a[2]==1);
+        BOOST_TEST_EQ(v.a[0], 0);
+        BOOST_TEST_EQ(v.a[1], 0);
+        BOOST_TEST_EQ(v.a[2], 1);
         }
         {
         test_qvm::vector<V1,3> v=_010();
-        BOOST_TEST(v.a[0]==0);
-        BOOST_TEST(v.a[1]==1);
-        BOOST_TEST(v.a[2]==0);
+        BOOST_TEST_EQ(v.a[0], 0);
+        BOOST_TEST_EQ(v.a[1], 1);
+        BOOST_TEST_EQ(v.a[2], 0);
         }
         {
         test_qvm::vector<V1,3> v=_011();
-        BOOST_TEST(v.a[0]==0);
-        BOOST_TEST(v.a[1]==1);
-        BOOST_TEST(v.a[2]==1);
+        BOOST_TEST_EQ(v.a[0], 0);
+        BOOST_TEST_EQ(v.a[1], 1);
+        BOOST_TEST_EQ(v.a[2], 1);
         }
         {
         test_qvm::vector<V1,3> v=_100();
-        BOOST_TEST(v.a[0]==1);
-        BOOST_TEST(v.a[1]==0);
-        BOOST_TEST(v.a[2]==0);
+        BOOST_TEST_EQ(v.a[0], 1);
+        BOOST_TEST_EQ(v.a[1], 0);
+        BOOST_TEST_EQ(v.a[2], 0);
         }
         {
         test_qvm::vector<V1,3> v=_101();
-        BOOST_TEST(v.a[0]==1);
-        BOOST_TEST(v.a[1]==0);
-        BOOST_TEST(v.a[2]==1);
+        BOOST_TEST_EQ(v.a[0], 1);
+        BOOST_TEST_EQ(v.a[1], 0);
+        BOOST_TEST_EQ(v.a[2], 1);
         }
         {
         test_qvm::vector<V1,3> v=_110();
-        BOOST_TEST(v.a[0]==1);
-        BOOST_TEST(v.a[1]==1);
-        BOOST_TEST(v.a[2]==0);
+        BOOST_TEST_EQ(v.a[0], 1);
+        BOOST_TEST_EQ(v.a[1], 1);
+        BOOST_TEST_EQ(v.a[2], 0);
         }
         {
         test_qvm::vector<V1,3> v=_111();
-        BOOST_TEST(v.a[0]==1);
-        BOOST_TEST(v.a[1]==1);
-        BOOST_TEST(v.a[2]==1);
+        BOOST_TEST_EQ(v.a[0], 1);
+        BOOST_TEST_EQ(v.a[1], 1);
+        BOOST_TEST_EQ(v.a[2], 1);
         }
     return boost::report_errors();
     }

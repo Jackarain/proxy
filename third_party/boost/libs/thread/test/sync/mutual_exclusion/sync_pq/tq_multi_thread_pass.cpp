@@ -17,6 +17,7 @@
 #include <boost/chrono.hpp>
 #include <boost/thread/concurrent_queues/sync_timed_queue.hpp>
 
+#include <boost/bind/bind.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include "../../../timming.hpp"
 

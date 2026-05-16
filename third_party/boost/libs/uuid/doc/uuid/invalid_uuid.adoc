@@ -1,0 +1,47 @@
+[#invalid_uuid]
+== <boost/uuid/invalid_uuid.hpp>
+
+:idprefix: invalid_uuid_
+
+=== Synopsis
+
+[source,c++]
+----
+namespace boost {
+namespace uuids {
+
+class invalid_uuid: public std::runtime_error
+{
+public:
+
+    invalid_uuid( std::ptrdiff_t pos, from_chars_error err );
+
+    std::ptrdiff_t position() const noexcept;
+    from_chars_error error() const noexcept;
+};
+
+}} // namespace boost::uuids
+----
+
+=== invalid_uuid
+
+Functions that parse a string UUID representation throw an exception of type `invalid_uuid` to indicate failure.
+
+```
+invalid_uuid( std::ptrdiff_t pos, from_chars_error err );
+```
+
+Effects: :: Constructs an `invalid_uuid` object, initializing its internal members to `pos` and `err` and the `runtime_error` base class with an appropriate error message.
+Postconditions: :: `this\->position() == pos && this\->error() == err`.
+
+```
+std::ptrdiff_t position() const noexcept;
+```
+
+Returns: :: The zero-based position in the input string at which parsing failed.
+
+```
+from_chars_error error() const noexcept;
+```
+
+Returns: :: The error code describing the reason parsing failed.

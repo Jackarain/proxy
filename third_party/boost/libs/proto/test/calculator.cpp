@@ -5,6 +5,8 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#define BOOST_TEST_MAIN
+
 #include <boost/proto/core.hpp>
 #include <boost/proto/context.hpp>
 #include <boost/test/unit_test.hpp>
@@ -86,24 +88,11 @@ functional<Fun, Expr> as(Expr const &expr)
     return functional<Fun, Expr>(expr);
 }
 
-void test_calculator()
+BOOST_AUTO_TEST_CASE(test_calculator)
 {
     BOOST_CHECK_EQUAL(10, proto::eval(((_1 + 42)-3)/4, calculator(1)));
     BOOST_CHECK_EQUAL(11, proto::eval(((_1 + 42)-3)/4, calculator(5)));
 
     BOOST_CHECK_EQUAL(10, as<calculator>(((_1 + 42)-3)/4)(1));
     BOOST_CHECK_EQUAL(11, as<calculator>(((_1 + 42)-3)/4)(5));
-}
-
-using namespace unit_test;
-///////////////////////////////////////////////////////////////////////////////
-// init_unit_test_suite
-//
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
-    test_suite *test = BOOST_TEST_SUITE("test immediate evaluation of proto parse trees");
-
-    test->add(BOOST_TEST_CASE(&test_calculator));
-
-    return test;
 }

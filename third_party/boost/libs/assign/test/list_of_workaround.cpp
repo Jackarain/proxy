@@ -31,12 +31,12 @@ void check_list_of()
     using namespace boost;
     using namespace boost::assign;
     using boost::array;
-    
+
     vector<int>         v = list_of(1)(2)(3)(4).to_container( v );
-    set<int>            s = list_of(1)(2)(3)(4).to_container( s );  
+    set<int>            s = list_of(1)(2)(3)(4).to_container( s );
     map<int,int>        m = map_list_of(1,2)(2,3).to_container( m );
     stack<int>         st = list_of(1)(2)(3)(4).to_adapter( st );
-    queue<int>         q  = list_of(1)(2)(3)(4).to_adapter( q ); 
+    queue<int>         q  = list_of(1)(2)(3)(4).to_adapter( q );
     array<int,4>       a  = list_of(1)(2)(3)(4).to_array( a );
     const vector<int>  v2 = list_of(1).to_container( v2 );
     const array<int,1> a2 = list_of(1).to_array( a2 );

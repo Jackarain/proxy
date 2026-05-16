@@ -14,7 +14,7 @@
 
 #include <boost/thread/sync_bounded_queue.hpp>
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 class non_copyable
 {
@@ -103,7 +103,7 @@ int main()
   {
     // empty queue push value succeeds
       boost::sync_bounded_queue<int> q(2);
-      int i;
+      int i = 42;
       q.push(i);
       BOOST_TEST(! q.empty());
       BOOST_TEST(! q.full());
@@ -334,7 +334,7 @@ int main()
   {
     // empty queue push value succeeds
       boost::sync_bounded_queue<int> q(2);
-      int i;
+      int i = 42;
       q.push_back(i);
       BOOST_TEST(! q.empty());
       BOOST_TEST(! q.full());

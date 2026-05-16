@@ -1,4 +1,4 @@
-/* Copyright 2003-2015 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -83,7 +83,7 @@ template<typename Node,typename Allocator,typename Compare>
 void random_access_index_inplace_merge(
   const Allocator& al,
   random_access_index_ptr_array<Allocator>& ptrs,
-  BOOST_DEDUCED_TYPENAME Node::impl_ptr_pointer first1,Compare comp)
+  typename Node::impl_ptr_pointer first1,Compare comp)
 {
   typedef typename Node::value_type       value_type;
   typedef typename Node::impl_pointer     impl_pointer;

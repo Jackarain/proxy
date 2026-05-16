@@ -1,5 +1,5 @@
 ////
-Copyright 2018-2022 Peter Dimov
+Copyright 2018-2025 Peter Dimov
 Distributed under the Boost Software License, Version 1.0.
 https://www.boost.org/LICENSE_1_0.txt
 ////
@@ -7,6 +7,19 @@ https://www.boost.org/LICENSE_1_0.txt
 [#changes]
 # Revision History
 :idprefix:
+
+## Changes in Boost 1.91
+
+* The return type of `operator|(result<T&>, U)` has been changed to non-reference.
+* Pointers to members in `r & f` are now supported (by using `boost::compat::invoke`).
+* A CMake config file is now installed, even though the library is header-only. This
+  avoids breaking third-party `CMakeLists.txt` files that contain
+  `find_package(Boost COMPONENTS system ...)`.
+* `error_code` is now even more `constexpr` under {cpp}20 and later.
+* Added `unsafe_value` to `result`.
+* Changed `result<>::operator*` and `result<>::operator\->` to throw when `!has_value()`,
+  instead of having that as a precondition. The old behavior is now spelled `unsafe_value()`.
+* Added `boost/system/unwrap_and_invoke.hpp`.
 
 ## Changes in Boost 1.89
 

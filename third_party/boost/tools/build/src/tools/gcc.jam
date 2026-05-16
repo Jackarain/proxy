@@ -1,6 +1,6 @@
 # Copyright 2021 Nikita Kniazev
 # Copyright 2001 David Abrahams
-# Copyright 2002-2017 Rene Rivera
+# Copyright 2002-2025 René Ferdinand Rivera Morell
 # Copyright 2002-2003 Vladimir Prus
 # Copyright 2005 Reece H. Dunn
 # Copyright 2006 Ilya Sokolov
@@ -716,6 +716,13 @@ toolset.flags gcc.link OPTIONS <lto>on/<lto-mode>fat : -flto ;
 toolset.flags gcc.compile.c++ DEFINES <stdlib>gnu : _GLIBCXX_USE_CXX11_ABI=0 ;
 toolset.flags gcc.compile.c++ DEFINES <stdlib>gnu11 : _GLIBCXX_USE_CXX11_ABI=1 ;
 
+# Contracts
+toolset.flags gcc.compile.c++ OPTIONS <contracts>on : -fcontracts ;
+toolset.flags gcc.compile.c++ OPTIONS <contracts>on/<contracts-semantic>ignore : -fcontract-evaluation-semantic=ignore ;
+toolset.flags gcc.compile.c++ OPTIONS <contracts>on/<contracts-semantic>observe : -fcontract-evaluation-semantic=observe ;
+toolset.flags gcc.compile.c++ OPTIONS <contracts>on/<contracts-semantic>enforce : -fcontract-evaluation-semantic=enforce ;
+toolset.flags gcc.compile.c++ OPTIONS <contracts>on/<contracts-semantic>quick_enforce : -fcontract-evaluation-semantic=quick_enforce ;
+
 ###
 ### User free feature options.
 ###
@@ -1070,7 +1077,7 @@ actions link bind LIBRARIES
 
 actions link.dll bind LIBRARIES
 {
-    "$(CONFIG_COMMAND)" @($(<[1]:T).rsp:O=FC:<=@":>=":E=-L"$(LINKPATH)" -Wl,$(RPATH_OPTION)$(SPACE)-Wl,$(RPATH) -Wl,$(IMPLIB_OPTION:E=--out-implib),"$(<[2]:T)" -o "$(<[1]:T)" $(HAVE_SONAME)-Wl,$(SONAME_OPTION)$(SPACE)-Wl,"$(SONAME_PREFIX:E=)$(<[1]:D=)" $(SHARED_OPTION:E=-shared) $(START-GROUP) "$(>:T)" "$(LIBRARIES)" $(FINDLIBS-ST-PFX) -l$(FINDLIBS-ST) $(FINDLIBS-SA-PFX) -l$(FINDLIBS-SA) $(END-GROUP) $(OPTIONS) $(USER_OPTIONS))
+    "$(CONFIG_COMMAND)" @($(<[1]:T).rsp:O=FC:<=@":>=":E=-L"$(LINKPATH)" -Wl,$(RPATH_OPTION)$(SPACE)-Wl,$(RPATH) -Wl,-rpath-link$(SPACE)-Wl,"$(RPATH_LINK)" -Wl,-rpath-link$(SPACE)-Wl,"$(RPATH_LINK)" -Wl,$(IMPLIB_OPTION:E=--out-implib),"$(<[2]:T)" -o "$(<[1]:T)" $(HAVE_SONAME)-Wl,$(SONAME_OPTION)$(SPACE)-Wl,"$(SONAME_PREFIX:E=)$(<[1]:D=)" $(SHARED_OPTION:E=-shared) $(START-GROUP) "$(>:T)" "$(LIBRARIES)" $(FINDLIBS-ST-PFX) -l$(FINDLIBS-ST) $(FINDLIBS-SA-PFX) -l$(FINDLIBS-SA) $(END-GROUP) $(OPTIONS) $(USER_OPTIONS))
 }
 
 ###
@@ -1285,10 +1292,10 @@ cpu-flags gcc OPTIONS : s390x : z13 : -march=z13 ;
 cpu-flags gcc OPTIONS : s390x : z14 : -march=z14 ;
 cpu-flags gcc OPTIONS : s390x : z15 : -march=z15 ;
 # ARM
-cpu-flags gcc OPTIONS : arm : cortex-a9+vfpv3 : -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard ;
+cpu-flags gcc OPTIONS : arm : cortex-a9+vfpv3 : -mcpu=cortex-a9 -mfpu=vfpv3 ;
 cpu-flags gcc OPTIONS : arm : cortex-a53 : -mcpu=cortex-a53 ;
 cpu-flags gcc OPTIONS : arm : cortex-r5 : -mcpu=cortex-r5 ;
-cpu-flags gcc OPTIONS : arm : cortex-r5+vfpv3-d16 : -mcpu=cortex-r5 -mfpu=vfpv3-d16 -mfloat-abi=hard ;
+cpu-flags gcc OPTIONS : arm : cortex-r5+vfpv3-d16 : -mcpu=cortex-r5 -mfpu=vfpv3-d16 ;
 # AIX variant of RS/6000 & PowerPC
 toolset.flags gcc AROPTIONS <address-model>64/<target-os>aix : "-X64" ;
 

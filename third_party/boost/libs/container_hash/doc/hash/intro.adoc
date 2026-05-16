@@ -44,7 +44,7 @@ Out of the box, `boost::hash` supports
 * `std::variant`, `std::monostate`.
 
 `boost::hash` is extensible; it's possible for a user-defined type `X` to make
-iself hashable via `boost::hash<X>` by defining an appropriate overload of the
+itself hashable via `boost::hash<X>` by defining an appropriate overload of the
 function `hash_value`. Many, if not most, Boost types already contain the
 necessary support.
 

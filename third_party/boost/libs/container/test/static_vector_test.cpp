@@ -92,6 +92,7 @@ void test_support_for_initializer_list()
       BOOST_TEST_THROWS(sv.assign({1, 2, 3}), bad_alloc_t);
 
       static_vector<int, 3> greaterThanSv = {1, 2, 3};
+      BOOST_TEST(greaterThanSv.size() == 3u);
       BOOST_TEST_THROWS(sv = greaterThanSv, bad_alloc_t);
    }
 
@@ -671,6 +672,39 @@ bool default_init_test()//Test for default initialization
    return true;
 }
 
+#if defined(BOOST_INTRUSIVE_CONCEPTS_BASED_OVERLOADING)
+
+#include <type_traits>
+
+template<class T, bool Result>
+void static_vector_destructor_triviality_impl()
+{
+   typedef static_vector<T, 10> vector_t;
+   BOOST_CONTAINER_STATIC_ASSERT(( Result == std::is_trivially_destructible_v<vector_t> ));
+}
+
+struct non_trivial
+{
+   non_trivial(){}
+   ~non_trivial(){}
+};
+
+void static_vector_triviality()
+{
+   static_vector_destructor_triviality_impl<int, true>();
+   static_vector_destructor_triviality_impl<float, true>();
+   static_vector_destructor_triviality_impl<non_trivial, false>();
+}
+
+#else
+
+void static_vector_triviality(){}
+
+#endif   //BOOST_INTRUSIVE_CONCEPTS_BASED_OVERLOADING
+
+//Test the expected sizeof()
+BOOST_CONTAINER_STATIC_ASSERT_MSG(5*sizeof(void*) == sizeof(static_vector<void*, 4>), "sizeof has an unexpected value");
+
 
 int main(int, char* [])
 {
@@ -786,6 +820,8 @@ int main(int, char* [])
       cont_int a; a.push_back(0); a.push_back(1); a.push_back(2);
       boost::intrusive::test::test_iterator_random< cont_int >(a);
    }
+
+   static_vector_triviality();
 
    return boost::report_errors();
 }

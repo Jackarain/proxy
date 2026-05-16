@@ -690,6 +690,19 @@ void test_gamma()
     // G25N3P04 - paletted, file-gamma = 2.50
     test_file<gil::rgb8_image_t>("G25N3P04.PNG");
 }
+
+void test_invalid_png_read()
+{
+    auto test_read_and_convert = [](const std::string &path) {
+        gil::rgb8_image_t image;
+        gil::read_and_convert_image(path, image, gil::png_tag{});
+    };
+
+    // if any other edge cases found by fuzzing or by accident,
+    // you may add them here
+    const std::string edge_cases_path = png_base_in + "EdgeCases/";
+    BOOST_TEST_THROWS (test_read_and_convert(edge_cases_path + "invalid-last-tEXt-length.png"), std::ios_base::failure);
+}
 #endif // BOOST_GIL_IO_USE_PNG_TEST_SUITE_IMAGES
 
 void test_corrupted_png_read()
@@ -755,6 +768,7 @@ int main()
     test_background();
     test_transparency();
     test_gamma();
+    test_invalid_png_read();
 #endif
 
     return boost::report_errors();

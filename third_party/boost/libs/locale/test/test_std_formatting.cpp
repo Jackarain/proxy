@@ -66,7 +66,7 @@ void test_by_char(const std::locale& l, const std::locale& lreal)
     const bool bad_parsing = [&]() {
         ss_ref_type ss_ref;
         ss_ref.imbue(lreal);
-        ss_ref << std::showbase << std::put_money(104334, false);
+        ss_ref << std::showbase << std::put_money(104334.L, false);
         std::ios_base::iostate err = std::ios_base::iostate();
         typename std::money_get<RefCharType>::iter_type end;
         long double tmp;
@@ -95,7 +95,7 @@ void test_by_char(const std::locale& l, const std::locale& lreal)
                     TEST_EQ(v1, 1043.34);
             }
 
-            empty_stream(ss_ref) << std::put_money(104334, false);
+            empty_stream(ss_ref) << std::put_money(104334.L, false);
             TEST_EQ(to_utf8(ss.str()), to_utf8(ss_ref.str()));
         }
         {
@@ -111,7 +111,7 @@ void test_by_char(const std::locale& l, const std::locale& lreal)
                     TEST_EQ(v1, 1043.34);
             }
 
-            empty_stream(ss_ref) << std::put_money(104334, true);
+            empty_stream(ss_ref) << std::put_money(104334.L, true);
             TEST_EQ(to_utf8(ss.str()), to_utf8(ss_ref.str()));
         }
     }

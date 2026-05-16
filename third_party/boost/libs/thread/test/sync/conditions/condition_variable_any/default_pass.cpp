@@ -18,7 +18,7 @@
 // condition_variable_any(const condition_variable_any&) = delete;
 
 #include <boost/thread/condition_variable.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 int main()
 {

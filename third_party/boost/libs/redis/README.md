@@ -82,44 +82,59 @@ The roles played by the `async_run` and `async_exec` functions are:
 Redis servers can also send a variety of pushes to the client. Some of
 them are:
 
-* [Pubsub messages](https://redis.io/docs/manual/pubsub/).
-* [Keyspace notifications](https://redis.io/docs/manual/keyspace-notifications/).
-* [Client-side caching](https://redis.io/docs/manual/client-side-caching/).
+* [Pubsub messages](https://redis.io/docs/latest/develop/pubsub/).
+* [Keyspace notifications](https://redis.io/docs/latest/develop/pubsub/keyspace-notifications/).
+* [Client-side caching](https://redis.io/docs/latest/develop/clients/client-side-caching/).
 
 The connection class supports server pushes by means of the
-`connection::async_receive` function, which can be
+`connection::async_receive2` function, which can be
 called in the same connection that is being used to execute commands.
-The coroutine below shows how to use it:
+The coroutine below shows how to use it
 
 
 ```cpp
-auto
-receiver(std::shared_ptr<connection> conn) -> net::awaitable<void>
+auto receiver(std::shared_ptr<connection> conn) -> asio::awaitable<void>
 {
-   request req;
-   req.push("SUBSCRIBE", "channel");
-
-   generic_response resp;
+   generic_flat_response resp;
    conn->set_receive_response(resp);
 
-   // Loop while reconnection is enabled
+   // Subscribe to the channel 'mychannel'. You can add any number of channels here.
+   request req;
+   req.subscribe({"mychannel"});
+   co_await conn->async_exec(req);
+
+   // You're now subscribed to 'mychannel'. Pushes sent over this channel will be stored
+   // in resp. If the connection encounters a network error and reconnects to the server,
+   // it will automatically subscribe to 'mychannel' again. This is transparent to the user.
+   // You need to use specialized request::subscribe() function (instead of request::push)
+   // to enable this behavior.
+
+   // Loop to read Redis push messages.
    while (conn->will_reconnect()) {
+      // Wait for pushes
+      auto [ec] = co_await conn->async_receive2(asio::as_tuple);
 
-      // Reconnect to channels.
-      co_await conn->async_exec(req, ignore);
-
-      // Loop reading Redis pushes.
-      for (;;) {
-         error_code ec;
-         co_await conn->async_receive(resp, net::redirect_error(net::use_awaitable, ec));
-         if (ec)
-            break; // Connection lost, break so we can reconnect to channels.
-
-         // Use the response resp in some way and then clear it.
-         ...
-
-         consume_one(resp);
+      // Check for errors and cancellations
+      if (ec) {
+         std::cerr << "Error during receive: " << ec << std::endl;
+         break;
       }
+
+      // This can happen if a SUBSCRIBE command errored (e.g. insufficient permissions)
+      if (resp.has_error()) {
+         std::cerr << "The receive response contains an error: " << resp.error().diagnostic
+                   << std::endl;
+         break;
+      }
+
+      // The response must be consumed without suspending the
+      // coroutine i.e. without the use of async operations.
+      for (push_view elem : push_parser(resp.value())) {
+         std::cout << "Received message from channel " << elem.channel << ": " << elem.payload
+                   << "\n";
+      }
+
+      resp.value().clear();
    }
 }
 ```

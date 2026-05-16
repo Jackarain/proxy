@@ -14,5 +14,5 @@ BOOST_OPENMETHOD_OVERRIDE(
     return 5000.0;
 }
 
-BOOST_OPENMETHOD_CLASSES(Employee)
+BOOST_OPENMETHOD_CLASSES(Employee);
 // end::content[]

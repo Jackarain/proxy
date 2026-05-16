@@ -357,6 +357,13 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
         "clang-20",
     ),
 
+    linux_pipeline(
+        "Linux 25.10 Clang 21",
+        "cppalliance/droneubuntu2510:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-21', CXXSTD: '11,14,17,20,23,2c' },
+        "clang-21",
+    ),
+
     macos_pipeline(
         "MacOS 10.15 Xcode 12.2 UBSAN",
         { TOOLSET: 'clang', COMPILER: 'clang++', CXXSTD: '11,14,1z' } + ubsan,
@@ -401,5 +408,11 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
         "Windows VS2022 msvc-14.3",
         "cppalliance/dronevs2022:1",
         { TOOLSET: 'msvc-14.3', CXXSTD: '14,17,20,latest' },
+    ),
+
+    windows_pipeline(
+        "Windows VS2026 msvc-14.5",
+        "cppalliance/dronevs2026:1",
+        { TOOLSET: 'msvc-14.5', CXXSTD: '14,17,20,latest' },
     ),
 ]

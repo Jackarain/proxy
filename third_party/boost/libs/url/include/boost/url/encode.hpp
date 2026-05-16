@@ -185,7 +185,7 @@ encode(
     core::string_view s,
     CS const& allowed,
     encoding_opts opt = {},
-    StringToken&& token = {}) noexcept;
+    StringToken&& token = {});
 
 } // urls
 } // boost

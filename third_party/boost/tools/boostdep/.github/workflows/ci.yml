@@ -171,14 +171,20 @@ jobs:
             os: ubuntu-latest
             install: clang-19
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
-            os: macos-13
+            compiler: clang++-20
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-20
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
             os: macos-14
-          - toolset: clang
             cxxstd: "11,14,17,20,2b"
+          - toolset: clang
             os: macos-15
+            cxxstd: "11,14,17,20,23,2c"
+          - toolset: clang
+            os: macos-26
+            cxxstd: "11,14,17,20,23,2c"
 
     runs-on: ${{matrix.os}}
 
@@ -253,7 +259,7 @@ jobs:
             addrmd: 32,64
             os: windows-2022
           - toolset: clang-win
-            cxxstd: "14,17,latest"
+            cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
           - toolset: gcc

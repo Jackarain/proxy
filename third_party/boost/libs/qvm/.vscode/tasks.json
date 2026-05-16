@@ -6,7 +6,7 @@
 		{
 			"label": "Setup Meson build directories",
 			"type": "shell",
-			"command": "cd ${workspaceRoot} && meson setup bld/debug && meson setup -D qvm_header_mode='single' -D cpp_std=c++11 bld/debug_qvm_hpp && meson setup -D qvm_header_mode='single_lite' bld/debug_qvm_lite_hpp && meson setup bld/release --buildtype release && meson setup -D qvm_header_mode='single' -D cpp_std=c++11 bld/release_qvm_hpp --buildtype release && meson setup -D qvm_header_mode='single_lite' bld/release_qvm_lite_hpp --buildtype release",
+			"command": "cd ${workspaceRoot} && meson setup bld/debug && meson setup -D qvm_header_mode=single -D cpp_std=c++11 bld/debug_qvm_hpp && meson setup -D qvm_header_mode=single_lite bld/debug_qvm_lite_hpp && meson setup bld/release --buildtype release && meson setup -D qvm_header_mode=single -D cpp_std=c++11 bld/release_qvm_hpp --buildtype release && meson setup -D qvm_header_mode=single_lite bld/release_qvm_lite_hpp --buildtype release",
 			"problemMatcher": []
 		},
 		{
@@ -35,6 +35,15 @@
 					"relative",
 					"${workspaceRoot}/bld/debug"
 				]
+			},
+			"windows": {
+				"problemMatcher": {
+					"base": "$msCompile",
+					"fileLocation": [
+						"relative",
+						"${workspaceRoot}/bld/debug"
+					]
+				}
 			}
 		},
 		{
@@ -51,6 +60,15 @@
 					"relative",
 					"${workspaceRoot}/bld/debug"
 				]
+			},
+			"windows": {
+				"problemMatcher": {
+					"base": "$msCompile",
+					"fileLocation": [
+						"relative",
+						"${workspaceRoot}/bld/debug"
+					]
+				}
 			}
 		},
 		{
@@ -67,6 +85,15 @@
 					"relative",
 					"${workspaceRoot}/bld/release"
 				]
+			},
+			"windows": {
+				"problemMatcher": {
+					"base": "$msCompile",
+					"fileLocation": [
+						"relative",
+						"${workspaceRoot}/bld/release"
+					]
+				}
 			}
 		},
 		{
@@ -83,6 +110,15 @@
 					"relative",
 					"${workspaceRoot}/bld/release"
 				]
+			},
+			"windows": {
+				"problemMatcher": {
+					"base": "$msCompile",
+					"fileLocation": [
+						"relative",
+						"${workspaceRoot}/bld/release"
+					]
+				}
 			}
 		},
 		{
@@ -99,6 +135,15 @@
 					"relative",
 					"${workspaceRoot}/bld/debug"
 				]
+			},
+			"windows": {
+				"problemMatcher": {
+					"base": "$msCompile",
+					"fileLocation": [
+						"relative",
+						"${workspaceRoot}/bld/debug"
+					]
+				}
 			}
 		}
 	]

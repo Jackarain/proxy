@@ -269,9 +269,9 @@ BOOST_AUTO_TEST_CASE(subscriber_wrong_syntax)
    generic_response gresp;
    conn->set_receive_response(gresp);
 
-   auto c3 = [&](error_code ec, std::size_t) {
+   auto c3 = [&](error_code ec) {
       c3_called = true;
-      std::cout << "async_receive" << std::endl;
+      std::cout << "async_receive2" << std::endl;
       BOOST_TEST(!ec);
       BOOST_TEST(gresp.has_error());
       BOOST_CHECK_EQUAL(gresp.error().data_type, resp3::type::simple_error);
@@ -281,7 +281,7 @@ BOOST_AUTO_TEST_CASE(subscriber_wrong_syntax)
       conn->cancel(operation::reconnection);
    };
 
-   conn->async_receive(c3);
+   conn->async_receive2(c3);
 
    run(conn);
 

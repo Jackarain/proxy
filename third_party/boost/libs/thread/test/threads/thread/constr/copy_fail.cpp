@@ -21,7 +21,7 @@
 #include <boost/thread/thread_only.hpp>
 #include <new>
 #include <cstdlib>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 class G
 {

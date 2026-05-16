@@ -1,4 +1,4 @@
-/* Copyright 2003-2019 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -159,29 +159,10 @@ struct key_impl<Key0,Keys...>
   >;
 };
 
-template<typename=composite_key<void,void>>
-struct composite_key_size;
-
-template<typename... Args>
-struct composite_key_size<composite_key<Args...>>
-{
-  static constexpr auto value=sizeof...(Args)-1;
-};
-
-template<auto... Keys>
-struct limited_size_key_impl
-{
-  static_assert(
-    sizeof...(Keys)<=composite_key_size<>::value,
-    "specified number of keys must meet the limits of "
-    "boost::multi_index::composite_key");
-  using type=typename key_impl<Keys...>::type;
-};
-
 } /* namespace multi_index::detail */
 
 template<auto... Keys>
-using key=typename detail::limited_size_key_impl<Keys...>::type;
+using key=typename detail::key_impl<Keys...>::type;
 
 } /* namespace multi_index */
 

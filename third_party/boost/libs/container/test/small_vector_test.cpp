@@ -468,10 +468,13 @@ int test_cont_variants()
    return 0;
 }
 
+using namespace boost::container;
+
+//Test the expected sizeof()
+BOOST_CONTAINER_STATIC_ASSERT_MSG(7*sizeof(void*) == sizeof(small_vector<void*, 4>), "sizeof has an unexpected value");
+
 int main()
 {
-   using namespace boost::container;
-
    if(!test_swap())
       return 1;
 

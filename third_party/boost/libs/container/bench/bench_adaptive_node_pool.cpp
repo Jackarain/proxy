@@ -228,7 +228,7 @@ void list_test_template(std::size_t num_iterations, std::size_t num_elements, bo
    //Release node_allocator cache
    typedef boost::container::dtl::shared_node_pool
       < (2*sizeof(void*)+sizeof(int))
-      , AdPoolAlignOnlyV2::nodes_per_block> shared_node_pool_t;
+      , AdPoolAlignOnlyV2::nodes_per_block, 0> shared_node_pool_t;
    boost::container::dtl::singleton_default
       <shared_node_pool_t>::instance().purge_blocks();
 

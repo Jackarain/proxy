@@ -1,7 +1,7 @@
 [/
     Boost.Optional
 
-    Copyright (c) 2015 - 2023 Andrzej Krzemienski
+    Copyright (c) 2015 - 2026 Andrzej Krzemienski
 
     Distributed under the Boost Software License, Version 1.0.
     (See accompanying file LICENSE_1_0.txt or copy at
@@ -10,6 +10,57 @@
 
 
 [section:relnotes Release Notes]
+
+[heading Boost Release 1.91]
+
+* For compilers with full C++11 support (including "unrestricted  unions" and ref-qualifiers)
+  changed the implementation from aligned storage to union storage. This enables the gradual
+  `constexpr` support:
+
+    * In C++11, some constructors and `const`-qualified accessors become usable
+      in compile-time contexts (are ['core constant expressions]) for types
+      satisfying certain constraints.
+    * In C++14 even some mutating operations become core constant expressions (those
+      that do not require changing the state of `optional` from not having a value to
+      having a value), for co-operating types.
+    * In C++17 all constructors (including copy and move) become core constant expressions
+      for co-operating types.
+
+  This addresses issues [@https://github.com/boostorg/optional/issues/132 #132] and [@https://github.com/boostorg/optional/issues/143 #143].
+
+* *Breaking change.* In the said implementation, abandoned the mechanism for customizing
+  `swap`. Hardly anyone knows about this mechanism and it was never documented.
+
+* In the said implementation, applied a couple of small changes to get closer to the interface of `std::optional`:
+  * Enabled syntax `o = {}` for putting optional objects to no-value state.
+  * Enabled syntax `o.value_or({})`, which uses a default-constructed `T`.
+  * Construct `o = u`, where `o` is of type `optional<T>` and `u` is of type `U` convertible to `T`,
+    does not create a temporary `T`.
+
+* In the said implementation, added a conversion from `optional<T>&` to `optional<T&>`. This addresses [@https://github.com/boostorg/optional/issues/142 issue #142].
+
+* `none_t` is now `std::equality_comparable`, which means that `none_t` and `optional<T>`
+  model concept `std::equality_comparable_with` (for `std::equality_comparable` `T`s),
+  which means that you can `std::ranges::find(rng, boost::none)` for a range of optional objects.
+
+* *Warning.* In the future releases we intend to introduce the range interface
+  in `optional`, so that `std::ranges::range<optional<T>>` will be `true`.
+  This may affect the overload resolution in programs that make decisions based
+  on predicates such as `std::ranges::range`. For instance, the following code
+  will start behaving differently:
+
+  ```
+  template <typename T>
+  void serialize(T const& v)
+  {
+    if constexpr (std::ranges::range<T>)
+      serialize_as_range(v);
+    else if constexpr (custom::is_optional_like<T>)
+      serialize_as_optional(v);
+    else
+      serialize_as_value(v);
+  }
+  ```
 
 [heading Boost Release 1.87]
 
@@ -22,7 +73,7 @@
 * *Warning.* In the future releases we intend to introduce the range interface
   into `optional`, so that `std::ranges::range<optional<T>>` will be `true`.
   This may affect the overload resolution in programs that make decisions based
-  on predicates such as `std::ranges::range`. 
+  on predicates such as `std::ranges::range`.
 * Tags `in_place_init` and `in_place_init_if` become `inline constexpr` and therewith leave smaller footprint in the executable. This addresses [@https://github.com/boostorg/optional/issues/103 issue #103].
 
 

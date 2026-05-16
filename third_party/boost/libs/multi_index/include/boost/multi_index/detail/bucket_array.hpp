@@ -1,4 +1,4 @@
-/* Copyright 2003-2023 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -15,8 +15,8 @@
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
 #include <algorithm>
+#include <boost/core/allocator_access.hpp>
 #include <boost/core/noncopyable.hpp>
-#include <boost/multi_index/detail/allocator_traits.hpp>
 #include <boost/multi_index/detail/auto_space.hpp>
 #include <boost/multi_index/detail/hash_index_node.hpp>
 #include <boost/preprocessor/repetition/repeat.hpp>
@@ -129,10 +129,10 @@ class bucket_array:bucket_array_base<>
 {
   typedef bucket_array_base<>                        super;
   typedef hashed_index_base_node_impl<
-    typename rebind_alloc_for<
+    allocator_rebind_t<
       Allocator,
       char
-    >::type
+    >
   >                                                  base_node_impl_type;
 
 public:
@@ -224,12 +224,8 @@ void swap(bucket_array<Allocator>& x,bucket_array<Allocator>& y)
  * somehow invalid archive.
  */
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-namespace serialization{
-#else
 namespace multi_index{
 namespace detail{
-#endif
 
 template<class Archive,typename Allocator>
 inline void load_construct_data(
@@ -239,12 +235,8 @@ inline void load_construct_data(
   throw_exception(boost::multi_index::detail::bad_archive_exception());
 }
 
-#if defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)
-} /* namespace serialization */
-#else
 } /* namespace multi_index::detail */
 } /* namespace multi_index */
-#endif
 
 #endif
 

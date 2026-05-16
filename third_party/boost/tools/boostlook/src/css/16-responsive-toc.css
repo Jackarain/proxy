@@ -1,0 +1,67 @@
+
+/*----------------- AsciiDoctor-Specific Responsive TOC Layout start -----------------*/
+
+/* Prevent header/content/footer padding from jumping at 990px breakpoint */
+@media (min-width: 990px) {
+  :root {
+    --main-max-width-leftbar: 18.25rem;
+    --main-margin: var(--spacing-size-xl);
+  }
+}
+
+/* === Tablet/Desktop: TOC Sidebar Layout (768px+) === */
+@media screen and (min-width: 768px) {
+  .boostlook #toc.toc2 {
+    position: fixed !important;
+    left: 0 !important;
+    width: var(--main-max-width-leftbar) !important;
+    top: 0 !important;
+    height: 100vh !important;
+  }
+
+  .boostlook #toggle-toc {
+    position: fixed !important;
+    left: 1rem !important;
+    top: 2rem !important;
+  }
+
+  .toc2 .boostlook:has(> #content .doc) {
+    margin-left: 0;
+  }
+
+  html.toc-visible .boostlook {
+    margin-left: 0 !important;
+  }
+
+  .article.toc2.toc-left {
+    max-width: none !important;
+  }
+  html:not(.toc-hidden, .toc-visible) .article.toc2.toc-left,
+  .toc-visible.toc-pinned .article.toc2.toc-left {
+    margin-left: var(--main-max-width-leftbar) !important;
+  }
+}
+
+/* === Wide Screens: Expanded Content Width (1536px+) === */
+@media screen and (min-width: 1536px) {
+  :root {
+    --main-content-width: 1100px;
+    --main-content-left-spacing: 2rem;
+  }
+}
+
+/* === Ultra-Wide Screens: Maximum content width (1920px+) === */
+@media screen and (min-width: 1920px) {
+  :root {
+    --main-content-width: 1300px;
+    --main-content-left-spacing: 4rem;
+  }
+
+  .boostlook #content,
+  .boostlook #header > h1,
+  .boostlook #header .author {
+    margin-left: var(--main-content-left-spacing);
+  }
+}
+
+/*----------------- AsciiDoctor-Specific Responsive TOC Layout end -----------------*/

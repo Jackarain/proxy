@@ -431,8 +431,10 @@ void test_release()
       memory_resource &mr = monr;
       BOOST_TEST(monr.remaining_storage(1u) == sizeof(buf));
       //Allocate all remaining storage
-      mr.allocate(monr.remaining_storage(1u), 1u);
+      const std::size_t sz = monr.remaining_storage(1u);
+      void *const p = mr.allocate(sz, 1u);
       BOOST_TEST(monr.current_buffer() == ((char*)&buf + sizeof(buf)));
+      mr.deallocate(p, sz, 1u);
       //No new allocation should have occurred
       BOOST_TEST(monr.remaining_storage(1u) == 0u);
       //Release and check memory was released and the original buffer is back

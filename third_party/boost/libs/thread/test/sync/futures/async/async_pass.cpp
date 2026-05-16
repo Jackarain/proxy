@@ -34,7 +34,7 @@
 #include <boost/thread/detail/memory.hpp>
 #include <boost/thread/csbl/memory/unique_ptr.hpp>
 #include <memory>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 typedef boost::chrono::high_resolution_clock Clock;
 typedef boost::chrono::milliseconds ms;

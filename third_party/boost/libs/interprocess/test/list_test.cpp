@@ -34,13 +34,13 @@ typedef boost::container::list<test::movable_and_copyable_int, ShmemCopyMoveAllo
 typedef allocator<test::copyable_int, managed_shared_memory::segment_manager> ShmemCopyAllocator;
 typedef boost::container::list<test::copyable_int, ShmemCopyAllocator> MyCopyList;
 
+typedef allocator<test::overaligned_copyable_int, managed_shared_memory::segment_manager> ShmemOveralignedAllocator;
+typedef boost::container::list<test::overaligned_copyable_int, ShmemOveralignedAllocator> MyOveralignedList;
+
 int main ()
 {
    if(test::list_test<managed_shared_memory, MyList, true>())
       return 1;
-
-//   if(test::list_test<managed_shared_memory, MyVolatileList, true>())
-//      return 1;
 
    if(test::list_test<managed_shared_memory, MyMoveList, true>())
       return 1;
@@ -49,6 +49,9 @@ int main ()
       return 1;
 
    if(test::list_test<managed_shared_memory, MyCopyList, true>())
+      return 1;
+
+   if(test::list_test<managed_shared_memory, MyOveralignedList, true>())
       return 1;
 
    const test::EmplaceOptions Options = (test::EmplaceOptions)(test::EMPLACE_BACK | test::EMPLACE_FRONT | test::EMPLACE_BEFORE);

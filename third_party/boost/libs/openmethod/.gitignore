@@ -28,3 +28,7 @@ tmpinst/
 
 CMakeFiles/
 build/
+
+doc/html/*
+doc/_/*
+cov-int/**

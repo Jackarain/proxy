@@ -9,6 +9,8 @@
 
 //  libs/uuid/test/test_io.cpp  -------------------------------//
 
+#define BOOST_UUID_REPORT_IMPLEMENTATION
+
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/core/lightweight_test.hpp>

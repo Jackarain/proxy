@@ -159,7 +159,7 @@ class moveconstruct_int
 
    moveconstruct_int& operator= (BOOST_RV_REF(moveconstruct_int) mmi);
 
-public:
+   public:
 
    static unsigned int count;
 
@@ -565,6 +565,100 @@ class non_copymovable_int
 
 unsigned int non_copymovable_int::count = 0;
 
+
+class overaligned_copyable_int
+{
+   public:
+
+   static unsigned int count;
+
+   overaligned_copyable_int()
+   {
+      ++count;
+      m_d.m_int = 0;
+   }
+
+   explicit overaligned_copyable_int(int a)
+   {
+      BOOST_ASSERT(a != INT_MIN);
+      ++count;
+      m_d.m_int = a;
+   }
+
+   overaligned_copyable_int(const overaligned_copyable_int& mmi)
+   {
+      BOOST_ASSERT(mmi.m_d.m_int != INT_MIN);
+      ++count;
+      m_d.m_int = mmi.m_d.m_int;
+   }
+
+   overaligned_copyable_int & operator= (int i)
+   {  this->m_d.m_int = i;  BOOST_ASSERT(i != INT_MIN);    return *this;  }
+
+   overaligned_copyable_int & operator=(const overaligned_copyable_int& mmi)
+   {  m_d.m_int = mmi.m_d.m_int;  BOOST_ASSERT(mmi.m_d.m_int != INT_MIN);    return *this;  }
+
+   bool operator ==(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int == mi.m_d.m_int;   }
+
+   bool operator !=(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int != mi.m_d.m_int;   }
+
+   bool operator <(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int < mi.m_d.m_int;   }
+
+   bool operator <=(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int <= mi.m_d.m_int;   }
+
+   bool operator >=(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int >= mi.m_d.m_int;   }
+
+   bool operator >(const overaligned_copyable_int &mi) const
+   {  return this->m_d.m_int > mi.m_d.m_int;   }
+
+   int get_int() const
+   {  return m_d.m_int;  }
+
+   friend bool operator==(const overaligned_copyable_int &l, int r)
+   {  return l.get_int() == r;   }
+
+   friend bool operator==(int l, const overaligned_copyable_int &r)
+   {  return l == r.get_int();   }
+
+   ~overaligned_copyable_int()
+   {
+      //Double destructor called
+      BOOST_ASSERT(m_d.m_int != INT_MIN);
+      m_d.m_int = INT_MIN;
+      --count;
+   }
+
+   private:
+   
+   union data
+   {
+      boost::container::dtl::aligned_storage<sizeof(int), 64>::type aligner;
+      int m_int;
+   } m_d;
+};
+
+unsigned int overaligned_copyable_int::count = 0;
+
+template<class E, class T>
+std::basic_ostream<E, T> & operator<<
+   (std::basic_ostream<E, T> & os, overaligned_copyable_int const & p)
+
+{
+    os << p.get_int();
+    return os;
+}
+
+template<>
+struct is_copyable<overaligned_copyable_int>
+{
+   static const bool value = true;
+};
+
 template<class T>
 struct life_count
 {
@@ -597,6 +691,13 @@ struct life_count< non_copymovable_int >
 {
    static bool check(unsigned c)
    {  return c == non_copymovable_int::count;   }
+};
+
+template<>
+struct life_count< overaligned_copyable_int >
+{
+   static bool check(unsigned c)
+   {  return c == overaligned_copyable_int::count;   }
 };
 
 template<>

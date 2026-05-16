@@ -1,6 +1,6 @@
 /* Boost.MultiIndex example of use of hashed indices.
  *
- * Copyright 2003-2008 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -37,19 +37,15 @@ struct word_counter_entry
   word_counter_entry(std::string word_):word(word_),occurrences(0){}
 };
 
-/* see Compiler specifics: Use of member_offset for info on
- * BOOST_MULTI_INDEX_MEMBER
- */
-
 typedef multi_index_container<
   word_counter_entry,
   indexed_by<
     ordered_non_unique<
-      BOOST_MULTI_INDEX_MEMBER(word_counter_entry,unsigned int,occurrences),
+      member<word_counter_entry,unsigned int,&word_counter_entry::occurrences>,
       std::greater<unsigned int> /* sorted beginning with most frequent */
     >,
     hashed_unique<
-      BOOST_MULTI_INDEX_MEMBER(word_counter_entry,std::string,word)
+      member<word_counter_entry,std::string,&word_counter_entry::word>
     >
   >
 > word_counter;

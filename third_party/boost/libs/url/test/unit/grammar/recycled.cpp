@@ -48,6 +48,51 @@ struct recycled_test
             BOOST_TEST(sp2->capacity() >= 1000);
         }
 
+        // get() returns nullptr after release
+        {
+            recycled_ptr<std::string> sp;
+            sp->reserve(100);
+            sp.release();
+            BOOST_TEST(sp.get() == nullptr);
+        }
+
+#if defined(__clang__) && defined(__has_warning)
+# if __has_warning("-Wself-assign-overloaded") || __has_warning("-Wself-move")
+#  pragma clang diagnostic push
+#  if __has_warning("-Wself-assign-overloaded")
+#   pragma clang diagnostic ignored "-Wself-assign-overloaded"
+#  endif
+#  if __has_warning("-Wself-move")
+#   pragma clang diagnostic ignored "-Wself-move"
+#  endif
+# endif
+#elif defined(__GNUC__) && !defined(__clang__)
+# if __GNUC__ >= 13
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wself-move"
+# endif
+#endif
+
+        // self-assignment preserves state
+        {
+            recycled_ptr<std::string> sp;
+            sp->reserve(100);
+            auto cap = sp->capacity();
+            sp = sp;
+            BOOST_TEST(sp.get() != nullptr);
+            BOOST_TEST_EQ(sp->capacity(), cap);
+        }
+
+#if defined(__clang__) && defined(__has_warning)
+# if __has_warning("-Wself-assign-overloaded") || __has_warning("-Wself-move")
+#  pragma clang diagnostic pop
+# endif
+#elif defined(__GNUC__) && !defined(__clang__)
+# if __GNUC__ >= 13
+#  pragma GCC diagnostic pop
+# endif
+#endif
+
         // coverage
         {
             implementation_defined::recycled_add_impl(1);

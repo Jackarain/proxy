@@ -1,0 +1,34 @@
+# Copyright René Ferdinand Rivera Morell 2023-2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/assert//boost_assert
+    /boost/concept_check//boost_concept_check
+    /boost/config//boost_config
+    /boost/container_hash//boost_container_hash
+    /boost/core//boost_core
+    /boost/filesystem//boost_filesystem
+    /boost/integer//boost_integer
+    /boost/iterator//boost_iterator
+    /boost/mp11//boost_mp11
+    /boost/preprocessor//boost_preprocessor
+    /boost/type_traits//boost_type_traits
+    /boost/variant2//boost_variant2 ;
+
+project /boost/gil
+    : common-requirements
+        <include>include
+    ;
+
+explicit
+    [ alias boost_gil : : : : <library>$(boost_dependencies) ]
+    [ alias all : boost_gil example test ]
+    ;
+
+call-if : boost-library gil
+    ;
+

@@ -1,0 +1,52 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+test/cover/*.gcov
+test/cover/bin/
+test/cover/obj/
+test/cover/coverage.info
+test/cover/coverage_unfiltered.info
+test/tidy/err/
+test/tidy/tmp/
+cmake-build-debug/
+test/metal/bin/
+test/decimal-dectest/
+
+# Modules
+*.gcm
+gcm.cache/
+
+# Mac option
+*.DS_Store
+
+# Pretty Printers
+*.pyc

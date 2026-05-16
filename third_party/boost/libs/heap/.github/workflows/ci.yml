@@ -95,11 +95,6 @@ jobs:
 
 
           # macos
-          - description: macos-13
-            toolset: clang
-            cxxstd: "14,17,20"
-            os: macos-13
-            supported: true
           - description: macos-14
             toolset: clang
             cxxstd: "14,17,20"
@@ -109,6 +104,11 @@ jobs:
             toolset: clang
             cxxstd: "14,17,20"
             os: macos-15
+            supported: true
+          - description: macos-26
+            toolset: clang
+            cxxstd: "17,20,23"
+            os: macos-26
             supported: true
 
     needs: [runner-selection]
@@ -136,10 +136,10 @@ jobs:
             sudo wget https://bootstrap.pypa.io/pip/$python_version/get-pip.py
             sudo python3 get-pip.py
             sudo /usr/local/bin/pip install cmake
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Cache ccache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         if: env.B2_USE_CCACHE
         with:
           path: ~/.ccache
@@ -217,16 +217,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: "14,latest"
-            addrmd: 32,64
-            os: windows-2019
-            supported: true
-          - toolset: msvc-14.2
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2019
-            supported: true
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
@@ -240,7 +230,7 @@ jobs:
           - toolset: gcc
             cxxstd: "14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-2022
             supported: true
 
 
@@ -249,7 +239,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -307,14 +297,14 @@ jobs:
         include:
           - os: ubuntu-22.04
           - os: ubuntu-24.04
-          - os: macos-13
           - os: macos-14
           - os: macos-15
+          - os: macos-26
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -355,14 +345,14 @@ jobs:
         include:
           - os: ubuntu-22.04
           - os: ubuntu-24.04
-          - os: macos-13
           - os: macos-14
           - os: macos-15
+          - os: macos-26
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -413,14 +403,14 @@ jobs:
         include:
           - os: ubuntu-22.04
           - os: ubuntu-24.04
-          - os: macos-13
           - os: macos-14
           - os: macos-15
+          - os: macos-26
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -467,13 +457,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
           - os: windows-2022
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -516,13 +505,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
           - os: windows-2022
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -583,13 +571,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
           - os: windows-2022
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd

@@ -28,7 +28,7 @@ namespace assign
 #if defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 
     template< class V, class A, class V2 >
-    inline list_inserter< assign_detail::call_push_back< std::deque<V,A> >, V > 
+    inline list_inserter< assign_detail::call_push_back< std::deque<V,A> >, V >
     operator+=( std::deque<V,A>& c, V2 v )
     {
         return push_back( c )( v );

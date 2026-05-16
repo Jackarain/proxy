@@ -23,6 +23,7 @@ https://docs.microsoft.com/en-us/cpp/[Microsoft Visual C++] command-line
 tools on Microsoft Windows. The supported products and versions of
 command line tools are listed below:
 
+* Visual Studio 2026-14.5
 * Visual Studio 2022-14.3
 * Visual Studio 2019-14.2
 * Visual Studio 2017—14.1
@@ -1154,7 +1155,15 @@ local rule generate-setup-cmd ( version : command : parent : options * : cpu : g
         }
         else
         {
-            if [ MATCH "(14.[34])" : $(version) ]
+            if [ MATCH "(14.5)" : $(version) ]
+            {
+                if $(.debug-configuration)
+                {
+                    ECHO "notice: [generate-setup-cmd] $(version) is 14.5" ;
+                }
+                parent = [ path.native [ path.join  $(parent) "..\\..\\..\\..\\..\\Auxiliary\\Build" ] ] ;
+            }
+            else if [ MATCH "(14.[34])" : $(version) ]
             {
                 if $(.debug-configuration)
                 {
@@ -1340,15 +1349,19 @@ local rule configure-really ( version ? : options * )
             # version from the path.
             # FIXME: We currently detect both Microsoft Visual Studio 9.0 and
             # 9.0express as 9.0 here.
-            if [ MATCH "(MSVC\\\\14.[34])" : $(command) ]
+            if [ MATCH "(MSVC(\\/|\\\\)14.5)" : $(command) ]
+            {
+                version = 14.5 ;
+            }
+            else if [ MATCH "(MSVC(\\/|\\\\)14.[34])" : $(command) ]
             {
                 version = 14.3 ;
             }
-            else if [ MATCH "(MSVC\\\\14.2)" : $(command) ]
+            else if [ MATCH "(MSVC(\\/|\\\\)14.2)" : $(command) ]
             {
                 version = 14.2 ;
             }
-            else if [ MATCH "(MSVC\\\\14.1)" : $(command) ]
+            else if [ MATCH "(MSVC(\\/|\\\\)14.1)" : $(command) ]
             {
                 version = 14.1 ;
             }
@@ -1767,17 +1780,21 @@ local rule default-path ( version )
         # And fortunately, forward slashes do also work in native Windows.
         local vswhere = "$(root)/Microsoft Visual Studio/Installer/vswhere.exe" ;
         # The check for $(root) is to avoid a segmentation fault if not found.
-        if $(version) in 14.1 14.2 14.3 default && $(root) && [ path.exists $(vswhere) ]
+        if $(version) in 14.1 14.2 14.3 14.5 default && $(root) && [ path.exists $(vswhere) ]
         {
             local req = "-requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64" ;
             local prop = "-property installationPath" ;
             local limit ;
 
-            if $(version) = 14.3
+            if $(version) = 14.5
+            {
+                limit = "-version \"[18.0,19.0)\" -prerelease" ;
+            }
+            else if $(version) = 14.3 || $(version) = "default"
             {
                 limit = "-version \"[17.0,18.0)\" -prerelease" ;
             }
-            else if $(version) = 14.2 || $(version) = "default"
+            else if $(version) = 14.2
             {
                 limit = "-version \"[16.0,17.0)\"" ;
             }
@@ -2147,11 +2164,25 @@ for local cpu in [ MATCH "^\\.cpu-arch-info-(.*)" : [ VARNAMES $(__name__) ] ]
 .default-cpu-arch = [ os.environ PROCESSOR_ARCHITEW6432 ] ;
 .default-cpu-arch ?= [ os.environ PROCESSOR_ARCHITECTURE ] ;
 .default-cpu-arch = $(.default-cpu-arch:L) ;
+.host-arch = x86 ;
 switch $(.default-cpu-arch)
 {
-    case x86   : .default-cpu-arch = i386 ;
-    case em64t : .default-cpu-arch = amd64 ;
-    case arm64 : .default-cpu-arch = arm64 ;
+    case x86 :
+    .default-cpu-arch = i386 ;
+    
+    case em64t :
+    .default-cpu-arch = amd64 ;
+    .host-arch = x64 ;
+    
+    case arm64 :
+    .default-cpu-arch = arm64 ;
+    .host-arch = arm64 ;
+
+    case amd64 :
+    .host-arch = x64 ;
+
+    case ia64 :
+    .host-arch = x64 ;
 }
 
 for local cpu in $(.cpus-on-$(.cpu-arch-info-$(.default-cpu-arch)[1]))
@@ -2197,7 +2228,7 @@ for local arch in [ MATCH "^\\.cpus-on-(.*)" : [ VARNAMES $(__name__) ] ]
                      armv7 armv7s ;
 
 # Known toolset versions, in order of preference.
-.known-versions = 14.3 14.2 14.1 14.0 12.0 11.0 10.0 10.0express 9.0 9.0express 8.0 8.0express 7.1
+.known-versions = 14.5 14.3 14.2 14.1 14.0 12.0 11.0 10.0 10.0express 9.0 9.0express 8.0 8.0express 7.1
     7.1toolkit 7.0 6.0 ;
 
 # Version aliases.
@@ -2231,24 +2262,29 @@ for local arch in [ MATCH "^\\.cpus-on-(.*)" : [ VARNAMES $(__name__) ] ]
 # path will be checked instead.
 .version-7.1toolkit-path    = "Microsoft Visual C++ Toolkit 2003/bin" ;
 .version-7.1toolkit-env     = VCToolkitInstallDir ;
+
 # Visual Studio 2017 doesn't use a registry at all. And the suggested methods
 # of discovery involve having a compiled program. So as a fallback we search
 # paths for VS2017 (aka msvc >= 14.1).
 .version-14.1-path =
-    "../../VC/Tools/MSVC/*/bin/Host*/*"
-    "Microsoft Visual Studio/2017/*/VC/Tools/MSVC/*/bin/Host*/*"
-    ;
+    "../../VC/Tools/MSVC/*/bin/Host$(.host-arch)/$(.host-arch)"
+    "Microsoft Visual Studio/2017/*/VC/Tools/MSVC/*/bin/Host$(.host-arch)/$(.host-arch)" ;
 .version-14.1-env = VS150COMNTOOLS ProgramFiles ProgramFiles(x86) ;
+
 .version-14.2-path =
-    "../../VC/Tools/MSVC/*/bin/Host*/*"
-    "Microsoft Visual Studio/2019/*/VC/Tools/MSVC/*/bin/Host*/*"
-    ;
+    "../../VC/Tools/MSVC/*/bin/Host$(.host-arch)/$(.host-arch)"
+    "Microsoft Visual Studio/2019/*/VC/Tools/MSVC/*/bin/Host$(.host-arch)/$(.host-arch)" ;
 .version-14.2-env = VS160COMNTOOLS ProgramFiles ProgramFiles(x86) ;
+
 .version-14.3-path =
-    "../../VC/Tools/MSVC/*/bin/Host*/*"
-    "Microsoft Visual Studio/2022/*/VC/Tools/MSVC/*/bin/Host*/*"
-    ;
+    "../../VC/Tools/MSVC/*/bin/Host$(.host-arch)/$(.host-arch)"
+    "Microsoft Visual Studio/2022/*/VC/Tools/MSVC/*/bin/Host$(.host-arch)/$(.host-arch)" ;
 .version-14.3-env = VS170COMNTOOLS ProgramFiles ProgramFiles(x86) ;
+
+.version-14.5-path =
+    "../../VC/Tools/MSVC/14.5*/bin/Host$(.host-arch)/$(.host-arch)"
+    "Microsoft Visual Studio/18/*/VC/Tools/MSVC/14.5*/bin/Host$(.host-arch)/$(.host-arch)" ;
+.version-14.5-env = VS180COMNTOOLS ProgramFiles ProgramFiles(x86) ;
 
 
 # And finally trigger the actual Boost Build toolset registration.

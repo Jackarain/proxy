@@ -320,27 +320,36 @@ int main()
    CAlloc c_alloc;
    SAlloc s_alloc;
 
-   //allocate
-   CAllocTraits::allocate(c_alloc, 1);
-   BOOST_TEST(c_alloc.allocate_called());
+   //allocate/deallocate
+   {
+      CAllocTraits::pointer p = CAllocTraits::allocate(c_alloc, 1);
+      BOOST_TEST(c_alloc.allocate_called());
 
-   SAllocTraits::allocate(s_alloc, 1);
-   BOOST_TEST(s_alloc.allocate_called());
+      CAllocTraits::deallocate(c_alloc, p, 1);
+      BOOST_TEST(c_alloc.deallocate_called());
+   }
+   {
+      SAllocTraits::pointer p = SAllocTraits::allocate(s_alloc, 1);
+      BOOST_TEST(s_alloc.allocate_called());
 
-   //deallocate
-   CAllocTraits::deallocate(c_alloc, CAllocTraits::pointer(), 1);
-   BOOST_TEST(c_alloc.deallocate_called());
-
-   SAllocTraits::deallocate(s_alloc, SAllocTraits::pointer(), 1);
-   BOOST_TEST(s_alloc.deallocate_called());
+      SAllocTraits::deallocate(s_alloc, p, 1);
+      BOOST_TEST(s_alloc.deallocate_called());
+   }
 
    //allocate with hint
-   CAllocTraits::allocate(c_alloc, 1, CAllocTraits::const_void_pointer());
-   BOOST_TEST(c_alloc.allocate_hint_called());
-
-   s_alloc.allocate_called_ = false;
-   SAllocTraits::allocate(s_alloc, 1, SAllocTraits::const_void_pointer());
-   BOOST_TEST(s_alloc.allocate_called());
+   {
+      CAllocTraits::pointer p = CAllocTraits::allocate(c_alloc, 1, CAllocTraits::const_void_pointer());
+      BOOST_TEST(c_alloc.allocate_hint_called());
+      CAllocTraits::deallocate(c_alloc, p, 1);
+      BOOST_TEST(c_alloc.deallocate_called());
+   }
+   {      
+      s_alloc.allocate_called_ = false;
+      SAllocTraits::pointer p = SAllocTraits::allocate(s_alloc, 1, SAllocTraits::const_void_pointer());
+      BOOST_TEST(s_alloc.allocate_called());
+      SAllocTraits::deallocate(s_alloc, p, 1);
+      BOOST_TEST(s_alloc.deallocate_called());
+   }
 
    //destroy
    float dummy;
@@ -350,7 +359,7 @@ int main()
    SAllocTraits::destroy(s_alloc, &dummy);
 
    //max_size
-   CAllocTraits::max_size(c_alloc);
+   BOOST_TEST(0 != CAllocTraits::max_size(c_alloc));
    BOOST_TEST(c_alloc.max_size_called());
 
    BOOST_TEST(SAllocTraits::size_type(-1)/sizeof(SAllocTraits::value_type) == SAllocTraits::max_size(s_alloc));

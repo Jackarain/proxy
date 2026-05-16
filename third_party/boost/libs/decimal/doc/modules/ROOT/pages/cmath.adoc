@@ -1,0 +1,758 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#cmath]
+= `<cmath>` Support
+:idprefix: cmath_
+
+Decimal contains overloads for all functions from `<cmath>`, and they have the same handling as built-in floating point types.
+They are also all constexpr with pass:[C++14] unlike the built-in floating point types which require either pass:[C++23] or 26.
+Additionally, all functions are marked `noexcept`.
+
+All of these functions are impacted by the global rounding mode as described in xref:cfenv.adoc[rounding modes] as well as the `DEC_FLT_EVAL_METHOD` from xref:cfloat.adoc[evaluation methods].
+
+== Basic Operations
+[#basic_cmath_ops]
+|===
+| Function | Description
+| https://en.cppreference.com/w/cpp/numeric/math/fabs[abs] | Absolute Value
+| https://en.cppreference.com/w/cpp/numeric/math/fabs[fabs] | Floating Point Absolute Value (Identical to `abs`)
+| https://en.cppreference.com/w/cpp/numeric/math/fmod[fmod] | Floating Point Modulo Operation
+| https://en.cppreference.com/w/cpp/numeric/math/remainder[remainder] | Signed Floating Point Modulo
+| https://en.cppreference.com/w/cpp/numeric/math/remquo[remquo] | Signed remainder and at least three bits of division result (quotient)
+| https://en.cppreference.com/w/cpp/numeric/math/fma[fma] | Fused Multiply - Add
+| https://en.cppreference.com/w/cpp/numeric/math/fmax[fmax] | Returns maximum value
+| https://en.cppreference.com/w/cpp/numeric/math/fmin[fmin] | Returns minimum value
+| https://en.cppreference.com/w/cpp/numeric/math/fdim[fdim] | Returns unsigned difference of two values
+| https://en.cppreference.com/w/cpp/numeric/math/nan[nan] | Generates Quiet NANs with Payload
+| https://en.cppreference.com/w/cpp/numeric/math/nan[snan] | Generates Signaling NANs with Payload (Non-Standard)
+|===
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr DecimalType abs(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType fabs(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType abs(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType fmod(DecimalType x, DecimalType y) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType remainder(DecimalType x, DecimalType y) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType remquo(DecimalType x, DecimalType y, int* quo) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType fma(DecimalType x, DecimalType y, DecimalType z) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType fmax(DecimalType x, DecimalType y, int* quo) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType fmin(DecimalType x, DecimalType y, int* quo) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType fdim(DecimalType x, DecimalType y, int* quo) noexcept;
+
+constexpr decimal32_t nand32(const char* arg) noexcept;
+constexpr decimal64_t nand64(const char* arg) noexcept;
+constexpr decimal128_t nand128(const char* arg) noexcept;
+
+constexpr decimal_fast32_t nand32f(const char* arg) noexcept;
+constexpr decimal_fast64_t nand64f(const char* arg) noexcept;
+constexpr decimal_fast128_t nand128f(const char* arg) noexcept;
+
+constexpr decimal32_t snand32(const char* arg) noexcept;
+constexpr decimal64_t snand64(const char* arg) noexcept;
+constexpr decimal128_t snand128(const char* arg) noexcept;
+
+constexpr decimal_fast32_t snand32f(const char* arg) noexcept;
+constexpr decimal_fast64_t snand64f(const char* arg) noexcept;
+constexpr decimal_fast128_t snand128f(const char* arg) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+[#cmath_exp]
+== Exponential Functions
+
+|===
+| Function | Description
+| https://en.cppreference.com/w/cpp/numeric/math/exp[exp] | Returns `e` to the given power
+| https://en.cppreference.com/w/cpp/numeric/math/exp2[exp2] | Returns `2` to the given power
+| https://en.cppreference.com/w/cpp/numeric/math/expm1[expm1] | Returns (`e^x` - 1)
+| https://en.cppreference.com/w/cpp/numeric/math/log[log] | Returns the natural logarithm of the value (base `e`)
+| https://en.cppreference.com/w/cpp/numeric/math/log10[log10] | Returns the log base 10 of the value
+| https://en.cppreference.com/w/cpp/numeric/math/log2[log2] | Returns the log base 2 of the value
+| https://en.cppreference.com/w/cpp/numeric/math/log1p[log1p] | Returns ln(1 + x)
+|===
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr DecimalType exp(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType exp2(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType expm1(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType log(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType log10(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType log2(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType log1p(DecimalType x) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+[#cmath_power_funcs]
+== Power Functions
+
+|===
+| Function | Description
+| https://en.cppreference.com/w/cpp/numeric/math/pow[pow] | Returns x^y
+| https://en.cppreference.com/w/cpp/numeric/math/sqrt[sqrt] | Returns the square root of the value
+| https://en.cppreference.com/w/cpp/numeric/math/cbrt[cbrt] | Returns the cube root of the value
+| https://en.cppreference.com/w/cpp/numeric/math/hypot[hypot] | Returns sqrt(x^2 + y^2) or sqrt(x^2 + y^2 + z^2) depending on number of arguments
+|===
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr DecimalType pow(DecimalType x, DecimalType y) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType sqrt(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType cbrt(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType hypot(DecimalType x, DecimalType y) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType hypot(DecimalType x, DecimalType y, DecimalType z) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+[#cmath_trig_funcs]
+== Trigonometric Functions
+
+|===
+| Function | Description
+| https://en.cppreference.com/w/cpp/numeric/math/sin[sin] | Computes sin(x)
+| https://en.cppreference.com/w/cpp/numeric/math/cos[cos] | Computes cos(x)
+| https://en.cppreference.com/w/cpp/numeric/math/tan[tan] | Computes tan(x)
+| https://en.cppreference.com/w/cpp/numeric/math/asin[asin] | Computes arcsin(x)
+| https://en.cppreference.com/w/cpp/numeric/math/acos[acos] | Computes arccos(x)
+| https://en.cppreference.com/w/cpp/numeric/math/atan[atan] | Computes arctan(x)
+| https://en.cppreference.com/w/cpp/numeric/math/atan2[atan2] | Computes arctan(x) using signs as quadrants
+|===
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr DecimalType sin(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType cos(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType tan(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType asin(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType acos(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType atan(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType atan2(DecimalType x, DecimalType y) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+[#cmath_hyperbolic_funcs]
+== Hyperbolic Functions
+
+|===
+| Function | Description
+| https://en.cppreference.com/w/cpp/numeric/math/sinh[sinh] | Computes hyperbolic sin sinh(x)
+| https://en.cppreference.com/w/cpp/numeric/math/cosh[cosh] | Computes hyperbolic cos cosh(x)
+| https://en.cppreference.com/w/cpp/numeric/math/tanh[tanh] | Computes hyperbolic tan tanh(x)
+| https://en.cppreference.com/w/cpp/numeric/math/asinh[asinh] | Computes hyperbolic arcsin asinh(x)
+| https://en.cppreference.com/w/cpp/numeric/math/acosh[acosh] | Computes hyperbolic arccos acosh(x)
+| https://en.cppreference.com/w/cpp/numeric/math/atanh[atanh] | Computes hyperbolic arctan atanh(x)
+|===
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr DecimalType sinh(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType cosh(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType tanh(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType asinh(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType acosh(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType atanh(DecimalType x) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+[#cmath_error_funcs]
+== Error and Gamma Functions
+
+|===
+| Function | Description
+| https://en.cppreference.com/w/cpp/numeric/math/erf[erf] | Computes the error function erf(x)
+| https://en.cppreference.com/w/cpp/numeric/math/erfc[erfc] | Computes the complementary error function erfc(x)
+| https://en.cppreference.com/w/cpp/numeric/math/tgamma[tgamma] | Computes the gamma function gamma(x)
+| https://en.cppreference.com/w/cpp/numeric/math/lgamma[lgamma] | Computes the natural log of the gamma function ln(gamma(x))
+|===
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr DecimalType erf(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType erfc(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType tgamma(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType lgamma(DecimalType x) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+[#cmath_nearest_int]
+== Nearest integer floating point operations
+
+|===
+| Function | Description
+| https://en.cppreference.com/w/cpp/numeric/math/ceil[ceil] | Computes the nearest integer not less than the given value
+| https://en.cppreference.com/w/cpp/numeric/math/floor[floor] | Computes the nearest integer not greater than the given value
+| https://en.cppreference.com/w/cpp/numeric/math/trunc[trunc] | Computes the nearest integer not greater in magnitude than the given value
+| https://en.cppreference.com/w/cpp/numeric/math/round[round] | Computes the nearest integer represented in same decimal format rounding away from zero
+| https://en.cppreference.com/w/cpp/numeric/math/round[lround] | Computes the nearest `long` rounding away from zero
+| https://en.cppreference.com/w/cpp/numeric/math/round[llround] | Computes the nearest `long long` rounding away from zero
+| https://en.cppreference.com/w/cpp/numeric/math/nearbyint[nearbyint] | Computest the nearest integer represented in same decimal format subject to xref:cfenv.adoc[current fenv rounding mode]
+| https://en.cppreference.com/w/cpp/numeric/math/lrint[lrint] | Computest the nearest `long` subject to xref:cfenv.adoc[current fenv rounding mode]
+| https://en.cppreference.com/w/cpp/numeric/math/llrint[llrint] | Computest the nearest `long long` subject to xref:cfenv.adoc[current fenv rounding mode]
+|===
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr DecimalType ceil(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType floor(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType trunc(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType round(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr long lround(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr long long llround(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType nearbyint(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType rint(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr long lrint(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr long long llrint(DecimalType x) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+[#cmath_manipulation_funcs]
+== Floating Point Manipulation Functions
+
+|===
+| Function | Description
+| https://en.cppreference.com/w/cpp/numeric/math/frexp[frexp] | Returns significand and base 2 exponent
+| https://en.cppreference.com/w/cpp/numeric/math/ldexp[ldexp] | Multiplies a number by 2^x
+| https://en.cppreference.com/w/cpp/numeric/math/modf[modf] | Decomposes a number into integer and fractional parts
+| https://en.cppreference.com/w/cpp/numeric/math/scalbn[scalbn] | Multiplies a decimal number by `FLT_RADIX` (10) raised to an `int` power
+| https://en.cppreference.com/w/cpp/numeric/math/scalbn[scalbln] | Multiplies a decimal number by `FLT_RADIX` (10) raised to an `long` power
+| https://en.cppreference.com/w/cpp/numeric/math/ilogb[ilogb] | Extracts `int` exponent of a number
+| https://en.cppreference.com/w/cpp/numeric/math/logb[logb] | Extracts Decimal Type exponent of a number
+| https://en.cppreference.com/w/cpp/numeric/math/nextafter[nextafter] | Next representable decimal type value
+| https://en.cppreference.com/w/cpp/numeric/math/nextafter[nexttowards] | Next representable decimal type value towards a `long double`
+| https://en.cppreference.com/w/cpp/numeric/math/copysign[copysign] | Copies the sign of a decimal value
+|===
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr DecimalType frexp(DecimalType x, int* exp) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType ldexp(DecimalType x, int exp) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType modf(DecimalType x, DecimalType* iptr) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType scalbn(DecimalType x, int exp) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType scalbln(DecimalType x, long exp) noexcept;
+
+template <typename DecimalType>
+constexpr int ilogb(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType logb(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType nextafter(DecimalType from, DecimalType to) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType nexttoward(DecimalType from, long double to) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType copysign(DecimalType mag, DecimalType sgn) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+[#cmath_classification]
+== Classification and Comparison
+
+|===
+| Function | Description
+| https://en.cppreference.com/w/cpp/numeric/math/fpclassify[fpclassify] | Categorizes a value
+| https://en.cppreference.com/w/cpp/numeric/math/isfinite[isfinite] | Checks if a given value is finite
+| https://en.cppreference.com/w/cpp/numeric/math/isinf[isinf] | Checks if a given value is infinite
+| https://en.cppreference.com/w/cpp/numeric/math/isnan[isnan] | Checks if a given value is a NAN
+| https://en.cppreference.com/w/cpp/numeric/math/isnormal[isnormal] | Checks if a given value is normal
+| https://en.cppreference.com/w/cpp/numeric/math/signbit[signbit] | Checks the sign of a value
+| https://en.cppreference.com/w/cpp/numeric/math/isgreater[isgreater] | Checks if the LHS (Left-hand side or first parameter) is greater than the RHS (Right-hand side or second parameter)
+| https://en.cppreference.com/w/cpp/numeric/math/isgreaterequal[isgreaterequal] | Checks if the LHS is greater than or equal to the RHS
+| https://en.cppreference.com/w/cpp/numeric/math/isless[isless] | Checks if the LHS is less than the RHS
+| https://en.cppreference.com/w/cpp/numeric/math/islesequal[islessequal] | Checks if the LHS is less than or equal to the RHS
+| https://en.cppreference.com/w/cpp/numeric/math/isunordered[isunordered] | Checks if the LHS and RHS are unordered (i.e. if one or both are NAN)
+|===
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr int fpclassify(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr bool isfinite(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr bool isinf(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr bool isnan(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr bool isnormal(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr bool signbit(DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr bool isgreater(DecimalType x, DecimalType y) noexcept;
+
+template <typename DecimalType>
+constexpr bool isgreaterequal(DecimalType x, DecimalType y) noexcept;
+
+template <typename DecimalType>
+constexpr bool isless(DecimalType x, DecimalType y) noexcept;
+
+template <typename DecimalType>
+constexpr bool islessgreater(DecimalType x, DecimalType y) noexcept;
+
+template <typename DecimalType>
+constexpr bool isunordered(DecimalType x, DecimalType y) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+[#cmath_spec_fun]
+== Special Functions
+
+These are the special functions that were added in pass:[C++17].
+
+NOTE: This section does not currently contain all functions specified by C++17, but it does contain the ones that are more commonly useful like the Beta Function.
+
+The following functions have been implemented for decimal types:
+
+|===
+| Function | Description
+| https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_laguerre[assoc_laguerre] | Associated Laguerre Polynomials
+| https://en.cppreference.com/w/cpp/numeric/special_functions/assoc_legendre[assoc_legendre] | Associated Legendre Polynomials
+| https://en.cppreference.com/w/cpp/numeric/special_functions/beta[beta] | Calculates the beta function
+| https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_1[comp_ellint_1] | Calculates the complete elliptic integrals of the first kind
+| https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_2[comp_ellint_2] | Calculates the complete elliptic integrals of the second kind
+| https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_1[ellint_1] | Calculates the incomplete elliptic integrals of the first kind
+| https://en.cppreference.com/w/cpp/numeric/special_functions/comp_ellint_2[ellint_2] | Calculates the incomplete elliptic integrals of the second kind
+| https://en.cppreference.com/w/cpp/numeric/special_functions/hermite[hermite] | Hermite Polynomials
+| https://en.cppreference.com/w/cpp/numeric/special_functions/laguerre[laguerre] | Laguerre Polynomials
+| https://en.cppreference.com/w/cpp/numeric/special_functions/legendre[legendre] | Legendre Polynomials
+| https://en.cppreference.com/w/cpp/numeric/special_functions/riemann_zeta[riemann_zeta] | Computes the Riemann Zeta function
+|===
+
+[source, c++]
+----
+
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr DecimalType assoc_laguerre(unsigned int n, unsigned int m, DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType assoc_legendre(unsigned int n, unsigned int m, DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType beta(DecimalType x, DecimalType y) noexcept;
+
+template <typename DecimalType>
+constexpr auto comp_ellint_1(DecimalType k) noexcept;
+
+template <typename DecimalType>
+constexpr auto comp_ellint_2(DecimalType k) noexcept;
+
+template <typename DecimalType>
+constexpr auto ellint_1(DecimalType k, DecimalType phi) noexcept;
+
+template <typename DecimalType>
+constexpr auto ellint_2(DecimalType k, DecimalType phi) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType hermite(unsigned int n, DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType laguerre(unsigned int n, DecimalType x) noexcept;
+
+template <typename DecimalType>
+constexpr DecimalType legendre(unsigned int n, DecimalType x) noexcept;
+
+template <typename DecimalType, typename IntegralType>
+constexpr DecimalType riemann_zeta(IntegralType n) noexcept;
+
+} //namespace decimal
+} //namespace boost
+----
+
+[#non_standard_cmath]
+== Non-standard Functions
+
+The following are convenience functions, or are prescribed in IEEE 754-2019 as required for decimal floating point types.
+
+=== `issignaling`
+
+[source, c++]
+----
+template <typename Decimal>
+constexpr bool issignaling(Decimal x) noexcept;
+----
+
+Effects: If x is an sNaN returns true, otherwise returns false.
+This function does not signal even if x is an sNaN per IEEE 754 section 5.7.2.
+
+=== `read_payload`
+
+[source, c++]
+----
+template <typename Decimal>
+constexpr auto read_payload(Decimal x) noexcept
+    -> typename T::significand_type;
+----
+
+Effects: if x is either a qNaN or an sNaN, returns the payload of the NaN, otherwise returns 0.
+
+This function allows the payloads of nans that are set by the functions xref:basic_cmath_ops[`nan`] or xref:basic_cmath_ops[`snan`] to be returned.
+
+=== `samequantum`
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename Decimal>
+constexpr bool samequantum(Decimal x, Decimal y) noexcept;
+
+constexpr bool samequantumd32(decimal32_t x, decimal32_t y) noexcept;
+constexpr bool samequantumd64(decimal64_t x, decimal64_t y) noexcept;
+constexpr bool samequantumd128(decimal128_t x, decimal128_t y) noexcept;
+
+} // namespace decimal
+} // namepsace boost
+----
+
+Effects: Determines if the quantum (unbiased) exponents of x and y are the same.
+
+If both x and y are NaN, or infinity, they have the same quantum exponents.
+
+If exactly one operand is infinity or exactly one operand is NaN, they do not have the same quantum exponents.
+
+=== `quantexp`
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename Decimal>
+constexpr int quantexp(Decimal x) noexcept;
+
+constexpr int quantexp32(decimal32_t x) noexcept;
+constexpr int quantexp64(decimal64_t x) noexcept;
+constexpr int quantexp128(decimal128_t x) noexcept;
+
+} // namespace decimal
+} // namepsace boost
+----
+
+Effects: if x is finite, returns its quantum exponent.
+
+Otherwise, `INT_MIN` is returned.
+
+=== `quantized`
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename Decimal>
+constexpr Decimal quantized(Decimal x, Decimal y) noexcept;
+
+constexpr decimal32_t quantized32(decimal32_t x, decimal32_t y) noexcept;
+constexpr decimal64_t quantized64(decimal64_t x, decimal64_t y) noexcept;
+constexpr decimal128_t quantized128(decimal128_t x, decimal128_t y) noexcept;
+
+} // namespace decimal
+} // namepsace boost
+----
+
+Returns: a number that is equal in value (except for any rounding) and sign to x, and which has an exponent set to be equal to the exponent of y.
+
+If the exponent is being increased, the value is correctly rounded according to the current rounding mode;
+
+If the result does not have the same value as x, the "inexact" floating-point exception is raised.
+
+If the exponent is being decreased and the significand of the result has more digits than the type would allow, the "invalid" floating-point exception is raised and the result is sNaN.
+
+If one or both operands are NaN the result is sNaN.
+
+Otherwise, if only one operand is infinity, the "invalid" floating-point exception is raised and the result is sNaN.
+
+If both operands are infinity, the result is infinity, with the same sign as x.
+
+The quantize functions do not signal underflow.
+
+=== `frexp10`
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename Decimal>
+constexpr auto frexp10(Decimal num, int* expptr) noexcept;
+
+} // namespace decimal
+} // namepsace boost
+----
+
+This function is very similar to https://en.cppreference.com/w/cpp/numeric/math/frexp[frexp], but returns the significand and an integral power of 10 since the `FLT_RADIX` of this type is 10.
+The significand is normalized to the number of digits of precision the type has (e.g. for decimal32_t it is [1'000'000, 9'999'999]).
+For further discussion on normalized form see the page on xref:cohorts.adoc[cohorts].
+
+=== `normalize`
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename Decimal>
+constexpr Decimal normalize(Decimal val) noexcept;
+
+} // namespace decimal
+} // namepsace boost
+----
+
+Similar to the `frexp10` function above, but rather than returning the normalized significand, and exponent of the Decimal number, it returns a normalized number.
+This removes the effects of xref:cohorts.adoc[cohorts] on the IEEE 754 compliant types which for the example of `decimal32_t` means the significand will be in the range [1'000'000, 9'999'999].
+This function has *NO* effect on fast types since they are always normalized internally.
+
+=== `rescale`
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename Decimal>
+constexpr Decimal rescale(Decimal val, int precision = 0);
+
+} // namespace decimal
+} // namespace boost
+----
+
+The function returns the decimal type with number of fractional digits equal to the value of precision.
+`rescale` is similar to https://en.cppreference.com/w/cpp/numeric/math/trunc[trunc], and with the default precision argument of 0 it is identical.
+
+NOTE: This function was previously known as `trunc_to` which was deprecated in v5.0.0 and removed in v6.0.0
+
+=== `comparetotal`
+
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr bool comparetotal(DecimalType x, DecimalType y) noexcept;
+
+} // namespace decimal
+} // namespace boost
+----
+
+This function is an extended version of normal ordering to take into account payloads of NANs, and canonical forms.
+
+Effects:
+
+. If x < y returns `true`
+
+. If x > y returns `false`
+
+. If x == y:
+.. -0 < +0 is `true`
+.. +0 < -0 is `false`
+.. If x and y have the same sign:
+... If x and y are both negative, `comparetotal(x, y)` is `true` IFF the exponent of x pass:[>=] exponent of y
+... Otherwise, `comparetotal(x, y)` is `true` IFF the exponent of x pass:[<=] y
+
+. If x and y are unordered because x or y is a NAN:
+.. `comparetotal(-NAN, y)` is `true`
+.. `comparetotal(x, +NAN)` is `true`
+.. If x and y are both NAN:
+... `comparetotal(-NAN, +NAN)` returns `true`
+... `comparetotal(+SNAN, +QNAN)` returns `true`
+... `comparetotal(-QNAN, -SNAN)` returns `true`
+... `comparetotal(NAN, NAN)`
+.... If both `NAN` are positive returns `true` if the payload of `x` is less than the payload of `y`
+.... If both `NAN` are negative returns `true` if the payload of `x` is greater than the payload of `y`

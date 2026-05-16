@@ -39,7 +39,7 @@ int main()
         BOOST_TEST_EQ( boost::compat::bind_back( &X::m, &x )(), -1 );
     }
 
-#if !BOOST_WORKAROUND(BOOST_MSVC, >= 1920 && BOOST_MSVC < 1950)
+#if !BOOST_WORKAROUND(BOOST_MSVC, >= 1920 && BOOST_MSVC < 1960)
 
     {
         BOOST_TEST_EQ( boost::compat::bind_back( &X::m, Y() )(), -1 );

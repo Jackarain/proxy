@@ -248,10 +248,10 @@ jobs:
 
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
-            os: macos-13
+            os: macos-14
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
-            os: macos-14
+            os: macos-15
 
     timeout-minutes: 360
     runs-on: ${{matrix.os}}
@@ -517,7 +517,6 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-          - os: macos-13
           - os: macos-14
           - os: macos-15
 

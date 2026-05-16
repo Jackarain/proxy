@@ -80,6 +80,12 @@ jobs:
             os: ubuntu-latest
             install: g++-14-multilib
             address-model: 32,64
+          - toolset: gcc-15
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:25.10
+            os: ubuntu-latest
+            install: g++-15-multilib
+            address-model: 32,64
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "11,14"
@@ -183,14 +189,26 @@ jobs:
             os: ubuntu-latest
             install: clang-19
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
-            os: macos-13
+            compiler: clang++-20
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-20
+          - toolset: clang
+            compiler: clang++-21
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:25.10
+            os: ubuntu-latest
+            install: clang-21
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-14
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
+            cxxstd: "11,14,17,20,23,2c"
             os: macos-15
+          - toolset: clang
+            cxxstd: "11,14,17,20,23,2c"
+            os: macos-26
 
     runs-on: ${{matrix.os}}
 
@@ -270,7 +288,7 @@ jobs:
             addrmd: 32,64
             os: windows-2022
           - toolset: clang-win
-            cxxstd: "14,17,latest"
+            cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2025
           - toolset: gcc

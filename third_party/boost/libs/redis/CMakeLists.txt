@@ -77,6 +77,7 @@ if (BOOST_REDIS_MAIN_PROJECT)
     test
     json
     endian
+    compat
   )
 
   foreach(dep IN LISTS deps)

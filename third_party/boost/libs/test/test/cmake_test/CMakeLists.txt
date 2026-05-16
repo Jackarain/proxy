@@ -32,7 +32,6 @@ else()
       optional
       preprocessor
       smart_ptr
-      static_assert
       type_traits
       utility
 

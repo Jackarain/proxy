@@ -41,6 +41,8 @@ implementation-defined:
   - 'boost::urls::string_token::*_t'
 exclude-symbols:
   - 'boost::urls::void_t'
+  # any_rule was previously excluded by the detail path rule
+  - 'boost::urls::any_rule'
 
 # Metadata Extraction
 private-bases: false

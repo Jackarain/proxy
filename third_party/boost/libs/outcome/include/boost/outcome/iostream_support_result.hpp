@@ -1,5 +1,5 @@
 /* iostream specialisations for result
-(C) 2017-2025 Niall Douglas <http://www.nedproductions.biz/> (21 commits)
+(C) 2017-2026 Niall Douglas <http://www.nedproductions.biz/> (21 commits)
 File Created: May 2025
 
 

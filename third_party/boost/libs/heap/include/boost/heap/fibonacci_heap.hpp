@@ -15,9 +15,11 @@
 #include <utility>
 
 #include <boost/assert.hpp>
+#include <boost/config.hpp>
 
 #include <boost/heap/detail/heap_comparison.hpp>
 #include <boost/heap/detail/heap_node.hpp>
+#include <boost/heap/detail/heap_utils.hpp>
 #include <boost/heap/detail/stable_heap.hpp>
 #include <boost/heap/detail/tree_iterator.hpp>
 #include <boost/type_traits/integral_constant.hpp>
@@ -176,7 +178,7 @@ private:
                                        detail::list_iterator_converter< node, node_list_type >,
                                        true,
                                        true,
-                                       value_compare >
+                                       internal_compare >
             ordered_iterator;
     };
 
@@ -246,7 +248,7 @@ public:
     }
 
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue &&)
-    fibonacci_heap& operator=( fibonacci_heap&& rhs )
+    fibonacci_heap& operator=( fibonacci_heap&& rhs ) noexcept( std::is_nothrow_move_assignable< super_t >::value )
     {
         clear();
 
@@ -260,14 +262,8 @@ public:
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue const &)
     fibonacci_heap& operator=( fibonacci_heap const& rhs )
     {
-        clear();
-        size_holder::set_size( rhs.size() );
-        static_cast< super_t& >( *this ) = rhs;
-
-        if ( rhs.empty() )
-            top_element = nullptr;
-        else
-            clone_forest( rhs );
+        fibonacci_heap tmp( rhs );
+        do_swap( tmp );
         return *this;
     }
 
@@ -321,11 +317,11 @@ public:
     }
 
     /// \copydoc boost::heap::priority_queue::swap
-    void swap( fibonacci_heap& rhs )
+    BOOST_DEPRECATED( "Use std::swap instead" )
+    void swap( fibonacci_heap& rhs ) noexcept( std::is_nothrow_move_constructible< fibonacci_heap >::value
+                                               && std::is_nothrow_move_assignable< fibonacci_heap >::value )
     {
-        super_t::swap( rhs );
-        std::swap( top_element, rhs.top_element );
-        roots.swap( rhs.roots );
+        do_swap( rhs );
     }
 
 
@@ -560,7 +556,7 @@ public:
      * */
     ordered_iterator ordered_begin( void ) const
     {
-        return ordered_iterator( roots.begin(), roots.end(), top_element, super_t::value_comp() );
+        return ordered_iterator( roots.begin(), roots.end(), top_element, super_t::get_internal_cmp() );
     }
 
     /**
@@ -570,7 +566,7 @@ public:
      * */
     ordered_iterator ordered_end( void ) const
     {
-        return ordered_iterator( nullptr, super_t::value_comp() );
+        return ordered_iterator( nullptr, super_t::get_internal_cmp() );
     }
 
     /**
@@ -591,7 +587,7 @@ public:
         rhs.top_element = nullptr;
         rhs.set_size( 0 );
 
-        super_t::set_stability_count( ( std::max )( super_t::get_stability_count(), rhs.get_stability_count() ) );
+        super_t::set_stability_count( (std::max)( super_t::get_stability_count(), rhs.get_stability_count() ) );
         rhs.set_stability_count( 0 );
     }
 
@@ -652,6 +648,12 @@ public:
 
 private:
 #if !defined( BOOST_DOXYGEN_INVOKED )
+    void do_swap( fibonacci_heap& rhs ) noexcept( std::is_nothrow_move_constructible< fibonacci_heap >::value
+                                                  && std::is_nothrow_move_assignable< fibonacci_heap >::value )
+    {
+        detail::swap_via_move( *this, rhs );
+    }
+
     void clone_forest( fibonacci_heap const& rhs )
     {
         BOOST_HEAP_ASSERT( roots.empty() );
@@ -699,8 +701,13 @@ private:
         if ( roots.empty() )
             return;
 
-        static const size_type               max_log2 = sizeof( size_type ) * 8;
-        std::array< node_pointer, max_log2 > aux {};
+        // The maximum degree of any node in a Fibonacci heap with N elements is
+        // floor(log_phi(N)) where phi = (1+sqrt(5))/2 ~ 1.618.  Since
+        // log_phi(N) < 1.4405 * log2(N), a safe upper bound on the degree for a
+        // size_type of B bits is ceil(1.4405 * B) + 2.  We compute a conservative
+        // compile-time constant that is always large enough.
+        constexpr size_type                    max_degree = sizeof( size_type ) * 12 + 4;
+        std::array< node_pointer, max_degree > aux {};
 
         node_list_iterator it = roots.begin();
         top_element           = static_cast< node_pointer >( &*it );
@@ -709,6 +716,7 @@ private:
             node_pointer n = static_cast< node_pointer >( &*it );
             ++it;
             size_type node_rank = n->child_count();
+            BOOST_ASSERT( node_rank < max_degree );
 
             if ( aux[ node_rank ] == nullptr )
                 aux[ node_rank ] = n;
@@ -729,6 +737,7 @@ private:
 
                     aux[ node_rank ] = nullptr;
                     node_rank        = n->child_count();
+                    BOOST_ASSERT( node_rank < max_degree );
                 } while ( aux[ node_rank ] != nullptr );
                 aux[ node_rank ] = n;
             }

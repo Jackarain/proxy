@@ -866,7 +866,8 @@ Expr const& expr
 
 The transition table accepts the following grammar:
 
-....
+[source,cpp]
+----
 Stt := Row | (Stt ',' Stt)
 Row := (Target '==' (SourcePlusEvent)) /* first syntax*/
        | ( (SourcePlusEvent) '==' Target ) /* second syntax*/
@@ -877,14 +878,15 @@ BuildSource := state_tag | (state_tag '/' Action) | (state_tag '[' Guard ']')
             | (state_tag '[' Guard ']' '/' Action)
 BuildEvent := event_tag | (event_tag '/' Action) | (event_tag '[' Guard ']') 
             | (event_tag '[' Guard ']' '/' Action)
-....
+----
 
 The grammars Action and Guard are defined in state_grammar.hpp and
 guard_grammar.hpp respectively. state_tag and event_tag are inherited
 from euml_state (or other state variants) and euml_event respectively.
 For example, following declarations are possible:
 
-....
+[source,cpp]
+----
 target == source + event [guard] / action,
 source + event [guard] / action == target,
 source + event [guard] / (action1,action2) == target,
@@ -898,7 +900,7 @@ source + event /action == target,
 source / action == target, /*anonymous transition*/
 target == source / action, /*anonymous transition*/
 source + event /action, /* internal transition*/
-....
+----
 
 [[internal-transition-table]]
 
@@ -906,9 +908,10 @@ source + event /action, /* internal transition*/
 
 The internal transition table accepts the following grammar:
 
-....
+[source,cpp]
+----
 IStt := BuildEvent | (IStt ',' IStt)
-....
+----
 
 BuildEvent being defined for both internal and standard transition
 tables.
@@ -920,11 +923,12 @@ tables.
 This header contains the `Guard` grammar used in the previous section.
 This grammar is long but pretty simple:
 
-....
+[source,cpp]
+----
 Guard := action_tag | (Guard '&&' Guard) 
         | (Guard '||' Guard) | ... /* operators*/
         | (if_then_else_(Guard,Guard,Guard)) | (function (Action,...Action))
-....
+----
 
 Most C++ operators are supported (address-of is not). With `function` is
 meant any eUML predefined function or any self-made (using
@@ -945,7 +949,8 @@ and functions to build states using eUML.
 Like the guard grammar, this grammar supports relevant C++ operators and
 eUML functions:
 
-....
+[source,cpp]
+----
 Action := action_tag | (Action '+' Action) 
           | ('--' Action) | ... /* operators*/
           | if_then_else_(Guard,Action,Action) | if_then_(Action) 
@@ -953,7 +958,7 @@ Action := action_tag | (Action '+' Action)
           | do_while_(Guard,Action) | for_(Action,Guard,Action,Action) 
           | (function(Action,...Action))
 ActionSequence := Action | (Action ',' Action)
-....
+----
 
 Relevant operators are: ++ (post/pre), -- (post/pre), dereferencing, +
 (unary/binary), - (unary/binary), *, /, %, &(bitwise), | (bitwise),
@@ -1318,9 +1323,10 @@ The basic type for events with eUML.
 
 template <class EventName> euml_event;
 
-....
-struct play : euml_event<play>{};
-....
+[source,cpp]
+----
+struct play : euml_event<play> {};
+----
 
 [[euml_state]]
 
@@ -1338,14 +1344,15 @@ You can however use this type directly if you want to provide your state
 with extra functions or provide entry or exit behaviors without
 functors, for example:
 
-....
+[source,cpp]
+----
 struct Empty : public msm::front::state<> , public euml_state<Empty> 
 {
     void foo() {...}
     template <class Event,class Fsm>
     void on_entry(Event const& evt,Fsm& fsm){...}
 };
-....
+----
 
 [[euml_flag]]
 
@@ -1355,9 +1362,10 @@ The basic type for flags with eUML.
 
 template <class FlagName> euml_flag;
 
-....
-struct PlayingPaused: euml_flag<PlayingPaused>{};
-....
+[source,cpp]
+----
+struct PlayingPaused: euml_flag<PlayingPaused> {};
+----
 
 [[euml_action]]
 
@@ -1367,23 +1375,25 @@ The basic type for state or transition behaviors and guards with eUML.
 
 template <class AcionName> euml_action;
 
-....
+[source,cpp]
+----
 struct close_drawer : euml_action<close_drawer>
 {
     template <class Fsm,class Evt,class SourceState,class TargetState>
     void operator()(Evt const& , Fsm&, SourceState& ,TargetState& ) {...}
 };
-....
+----
 
 Or, as state entry or exit behavior:
 
-....
+[source,cpp]
+----
 struct Playing_Entry : euml_action<Playing_Entry>
 {
     template <class Event,class Fsm,class State>
     void operator()(Event const&,Fsm& fsm,State& ){...}
 };
-....
+----
 
 [[euml_config]]
 
@@ -1427,16 +1437,18 @@ MSM_EUML_METHOD or MSM_EUML_FUNCTION).
 +
 Example:
 +
-....
+[source,cpp]
+----
 some_user_function_(source_)
-....
+----
 * as function: returns by reference the attribute passed as parameter.
 +
 Example:
 +
-....
+[source,cpp]
+----
 source_(m_counter)++
-....
+----
 
 [[target_]]
 
@@ -1450,16 +1462,18 @@ MSM_EUML_METHOD or MSM_EUML_FUNCTION).
 +
 Example:
 +
-....
+[source,cpp]
+----
 some_user_function_(target_)
-....
+----
 * as function: returns by reference the attribute passed as parameter.
 +
 Example:
 +
-....
+[source,cpp]
+----
 target_(m_counter)++
-....
+----
 
 [[state_]]
 
@@ -1475,16 +1489,18 @@ MSM_EUML_FUNCTION).
 +
 Example:
 +
-....
+[source,cpp]
+----
 some_user_function_(state_) // calls some_user_function on the current state
-....
+----
 * as function: returns by reference the attribute passed as parameter.
 +
 Example:
 +
-....
+[source,cpp]
+----
 state_(m_counter)++
-....
+----
 
 [[event_]]
 
@@ -1500,16 +1516,18 @@ MSM_EUML_FUNCTION).
 +
 Example:
 +
-....
+[source,cpp]
+----
 some_user_function_(event_)
-....
+----
 * as function: returns by reference the attribute passed as parameter.
 +
 Example:
 +
-....
+[source,cpp]
+----
 event_(m_counter)++
-....
+----
 
 [[fsm_]]
 
@@ -1524,16 +1542,18 @@ MSM_EUML_FUNCTION).
 +
 Example:
 +
-....
+[source,cpp]
+----
 some_user_function_(fsm_)
-....
+----
 * as function: returns by reference the attribute passed as parameter.
 +
 Example:
 +
-....
+[source,cpp]
+----
 fsm_(m_counter)++
-....
+----
 
 [[substate_]]
 
@@ -1547,9 +1567,10 @@ MSM_EUML_METHOD or MSM_EUML_FUNCTION).
 +
 Example:
 +
-....
+[source,cpp]
+----
 some_user_function_(substate_(my_state))
-....
+----
 * with 2 parameters: returns by reference the state passed as first
 parameter from the state machine passed as second parameter, usually to
 be used by another function (usually one created by MSM_EUML_METHOD or
@@ -1558,9 +1579,10 @@ attribute_.
 +
 Example (equivalent to the previous example):
 +
-....
+[source,cpp]
+----
 some_user_function_(substate_(my_state,fsm_))
-....
+----
 
 [[attribute_]]
 
@@ -1570,9 +1592,10 @@ Generic object or function returning the attribute passed (by name) as
 second parameter of the thing passed as first (a state, event or state
 machine). Example:
 
-....
+[source,cpp]
+----
 attribute_(substate_(my_state),cd_name_attribute)++
-....
+----
 
 [[true_]]
 
@@ -1582,9 +1605,10 @@ Functor returning true for transition or state behaviors. Like all
 constants, only the functor form exists, so parentheses are necessary.
 Example:
 
-....
+[source,cpp]
+----
 if_then_(True_(),/* some action always called*/)
-....
+----
 
 [[false_]]
 
@@ -1594,9 +1618,10 @@ Functor returning false for transition or state behaviors. Like all
 constants, only the functor form exists, so parentheses are necessary.
 Example:
 
-....
+[source,cpp]
+----
 if_then_(False_(),/* some action never called */)
-....
+----
 
 [[int_int-value]]
 
@@ -1606,9 +1631,10 @@ Functor returning an integer value for transition or state behaviors.
 Like all constants, only the functor form exists, so parentheses are
 necessary. Example:
 
-....
+[source,cpp]
+----
 target_(m_ringing_cpt) = Int_<RINGING_TIME>() // RINGING_TIME is a constant
-....
+----
 
 [[char_char-value]]
 
@@ -1618,10 +1644,11 @@ Functor returning a char value for transition or state behaviors. Like
 all constants, only the functor form exists, so parentheses are
 necessary. Example:
 
-....
+[source,cpp]
+----
 // look for 'S' in event.m_song
 [string_find_(event_(m_song),Char_<'S'>(),Size_t_<0>()) != Npos_<string>()]
-....
+----
 
 [[size_t_size_t-value]]
 
@@ -1631,9 +1658,10 @@ Functor returning a size_t value for transition or state behaviors. Like
 all constants, only the functor form exists, so parentheses are
 necessary. Example:
 
-....
+[source,cpp]
+----
 substr_(event_(m_song),Size_t_<1>()) // returns a substring of event.m_song
-....
+----
 
 [[string_-mplstring]]
 
@@ -1645,10 +1673,11 @@ Requires boost >= 1.40 for mpl::string.
 
 Example:
 
-....
+[source,cpp]
+----
 // adds "Let it be" to fsm.m_src_container
 push_back_(fsm_(m_src_container), String_<mpl::string<'Let','it ','be'> >())
-....
+----
 
 [[predicate_-some_stl_compatible_functor]]
 
@@ -1660,12 +1689,13 @@ terminal.
 
 Example:
 
-....
+[source,cpp]
+----
 //equivalent to: 
 //std::accumulate(fsm.m_vec.begin(),fsm.m_vec.end(),1,std::plus<int>())== 1
 accumulate_(begin_(fsm_(m_vec)),end_(fsm_(m_vec)),Int_<1>(),
             Predicate_<std::plus<int> >()) == Int_<1>())
-....
+----
 
 [[process_]]
 
@@ -1694,18 +1724,20 @@ same event in the 1-3 state machines passed as argument.
 
 Example:
 
-....
+[source,cpp]
+----
 // processes NotFound on current state machine, 
 // copy-constructed with event.m_song
 process2_(NotFound,event_(m_song))
-....
+----
 
 With the following definitions:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_DECLARE_ATTRIBUTE(std::string,m_song)//declaration of m_song
 NotFound (const string& data) // copy-constructor of NotFound
-....
+----
 
 [[is_flag_]]
 
@@ -1726,9 +1758,10 @@ machine passed as argument.
 This object defers the current event by calling `defer_event` on the
 current state machine. Example:
 
-....
+[source,cpp]
+----
 Empty() + play() / defer_
-....
+----
 
 [[explicit_submachine-namestate-name]]
 
@@ -1774,15 +1807,17 @@ Note that the function itself can take up to 5 arguments.
 
 Example:
 
-....
+[source,cpp]
+----
 MSM_EUML_FUNCTION(BinarySearch_,std::binary_search,binary_search_,bool,bool)
-....
+----
 
 Can be used like:
 
-....
+[source,cpp]
+----
 binary_search_(begin_(fsm_(m_var)),end_(fsm_(m_var)),Int_<9>())
-....
+----
 
 [[msm_euml_method]]
 
@@ -1803,20 +1838,22 @@ free function - 1 for the object on which the method is called).
 
 Example:
 
-....
+[source,cpp]
+----
 struct Empty : public msm::front::state<> , public euml_state<Empty> 
 {
      void activate_empty() {std::cout << "switching to Empty " << std::endl;}
 ... 
 };
 MSM_EUML_METHOD(ActivateEmpty_,activate_empty,activate_empty_,void,void)
-....
+----
 
 Can be used like:
 
-....
+[source,cpp]
+----
 Empty == Open + open_close / (close_drawer , activate_empty_(target_))
-....
+----
 
 [[boost_msm_euml_actionaction-instance-name]]
 
@@ -1826,13 +1863,14 @@ This macro declares a behavior type and a const instance for use in
 state or transition behaviors. The action implementation itself follows
 the macro declaration, for example:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_ACTION(good_disk_format)
 {
      template <class Fsm,class Evt,class SourceState,class TargetState>
      void/bool operator()(Evt const& evt,Fsm&,SourceState& ,TargetState& ){...}
 };
-....
+----
 
 [[boost_msm_euml_flagflag-instance-name]]
 
@@ -1849,9 +1887,10 @@ This macro returns the name of the flag type generated by
 BOOST_MSM_EUML_FLAG. You need this where the type is required (usually
 with the back-end method is_flag_active). For example:
 
-....
+[source,cpp]
+----
 fsm.is_flag_active<BOOST_MSM_EUML_FLAG_NAME(CDLoaded)>()
-....
+----
 
 [[boost_msm_euml_declare_attributeevent-typeevent-name]]
 
@@ -1873,12 +1912,13 @@ parameter of BOOST_MSM_EUML_DECLARE_STATE_MACHINE.
 
 Attributes are added using left-shift, for example:
 
-....
+[source,cpp]
+----
 // m_song is of type std::string
 BOOST_MSM_EUML_DECLARE_ATTRIBUTE(std::string,m_song)
 // contains one attribute, m_song
 BOOST_MSM_EUML_ATTRIBUTES((attributes_ << m_song ), FoundDef)
-....
+----
 
 [[boost_msm_euml_eventevent-instance-name]]
 
@@ -1901,9 +1941,10 @@ attributes the ones passed by the second argument:
 
 The created event instance supports operator()(attributes) so that
 
-....
+[source,cpp]
+----
 my_back_end.process_event(Found(some_string))
-....
+----
 
 is possible.
 
@@ -1916,11 +1957,12 @@ BOOST_MSM_EUML_EVENT or BOOST_MSM_EUML_EVENT_WITH_ATTRIBUTES. You need
 this where the type is required (usually inside a back-end definition).
 For example:
 
-....
+[source,cpp]
+----
 typedef msm::back::state_machine<Playing_,
 msm::back::ShallowHistory<mpl::vector<BOOST_MSM_EUML_EVENT_NAME(end_pause)
 > > > Playing_type;
-....
+----
 
 [[boost_msm_euml_statebuild-expressionstate-instance-name]]
 
@@ -2081,9 +2123,10 @@ This macro returns the name of the state type generated by
 BOOST_MSM_EUML_STATE or other state macros. You need this where the type
 is required (usually using a backend function). For example:
 
-....
+[source,cpp]
+----
 fsm.get_state<BOOST_MSM_EUML_STATE_NAME(StringFind)&>().some_state_function();
-....
+----
 
 [[boost_msm_euml_declare_statebuild-expressionstate-instance-name]]
 
@@ -2159,7 +2202,8 @@ Like BOOST_MSM_EUML_TRANSITION_TABLE but does not provide an instance,
 simply a type declaration. This is currently the only way to declare an
 internal transition table with eUML. For example:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_DECLARE_STATE((Open_Entry,Open_Exit),Open_def)
 struct Open_impl : public Open_def
 {
@@ -2168,4 +2212,4 @@ struct Open_impl : public Open_def
           open_close [internal_guard2] / internal_action2
     ))
 };                    
-....
+----

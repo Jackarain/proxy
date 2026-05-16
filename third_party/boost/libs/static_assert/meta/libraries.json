@@ -4,7 +4,7 @@
     "authors": [
         "John Maddock"
     ],
-    "description": "Static assertions (compile time assertions).",
+    "description": "Static assertions (compile time assertions). Merged into Boost.Config.",
     "category": [
         "Correctness",
         "Generic",

@@ -14,7 +14,7 @@
 
 #define BOOST_THREAD_VERSION 4
 
-#include <boost/detail/lightweight_test.hpp> // BOOST_TEST
+#include <boost/core/lightweight_test.hpp> // BOOST_TEST
 
 #include <iostream> // std::cout
 #include <boost/thread/mutex.hpp>

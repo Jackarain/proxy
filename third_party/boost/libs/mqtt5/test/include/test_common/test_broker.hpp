@@ -17,7 +17,6 @@
 #include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/async_result.hpp>
 #include <boost/asio/buffer.hpp>
-#include <boost/asio/cancellation_signal.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/execution_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -35,8 +34,13 @@
 #include <string>
 #include <vector>
 
-#include "test_common/message_exchange.hpp"
-#include "test_common/packet_util.hpp"
+#include "message_exchange.hpp"
+#include "packet_util.hpp"
+#include "test_timer.hpp"
+#include "test_resolver.hpp"
+
+#define BOOST_MQTT5_DETAIL_RESOLVER_TYPE boost::mqtt5::test::test_resolver
+#define BOOST_MQTT5_DETAIL_CLOCK_TYPE boost::mqtt5::test::clock
 
 namespace boost::mqtt5::test {
 
@@ -109,7 +113,6 @@ private:
     pending_read _pending_read;
 
     msg_exchange _broker_side;
-    std::vector<std::unique_ptr<asio::cancellation_signal>> _cancel_signals;
 
 public:
     explicit test_broker(
@@ -132,9 +135,6 @@ public:
         _pending_read.complete(
             get_executor(), asio::error::operation_aborted, 0
         );
-
-        for (auto& cs : _cancel_signals)
-            cs->emit(asio::cancellation_type::terminal);
 
         _broker_data.clear();
     }
@@ -161,53 +161,48 @@ public:
 
             executor_type ex = get_executor();
 
-            if (reply_action) {
-                const auto& expected = reply_action->expected_packets();
-
-                size_t buffers_size = std::distance(
-                    asio::buffer_sequence_begin(buffers), asio::buffer_sequence_end(buffers)
-                );
-                BOOST_TEST(buffers_size == expected.size());
-
-                size_t num_packets = (std::min)(buffers_size, expected.size());
-                auto it = asio::buffer_sequence_begin(buffers);
-                for (size_t i = 0; i < num_packets; ++i, ++it) {
-                    BOOST_TEST(it->size() == expected[i].size());
-                    size_t len = (std::min)(it->size(), expected[i].size());
-                    if (memcmp(it->data(), expected[i].data(), len))
-                        BOOST_ERROR(
-                            concat_strings(
-                                "Packet mismatch!\nExpected: ",
-                                to_readable_packet(expected[i]),
-                                "\nReceived: ",
-                                to_readable_packet(std::string((const char*)it->data(), it->size()))
-                            )
-                        );
-                }
-            } else 
+            if (!reply_action.has_value()) {
                 BOOST_ERROR(
                     "Broker side did not expect: " <<
                     boost::algorithm::join(to_readable_packets(buffers), ",")
                 );
+                return asio::post(asio::prepend(std::move(handler), error_code{}, 0));
+            }
 
-            auto complete_op = reply_action ?
-                reply_action->write_completion(ex) :
-                delayed_op<error_code>(ex, 0ms, error_code {});
+            const auto& expected = reply_action->expected_packets();
+
+            size_t buffers_size = std::distance(
+                asio::buffer_sequence_begin(buffers), asio::buffer_sequence_end(buffers)
+            );
+            BOOST_TEST(buffers_size == expected.size());
+
+            size_t num_packets = (std::min)(buffers_size, expected.size());
+            auto it = asio::buffer_sequence_begin(buffers);
+            for (size_t i = 0; i < num_packets; ++i, ++it) {
+                BOOST_TEST(it->size() == expected[i].size());
+                size_t len = (std::min)(it->size(), expected[i].size());
+                if (memcmp(it->data(), expected[i].data(), len))
+                    BOOST_ERROR(
+                        concat_strings(
+                            "Packet mismatch!\nExpected: ",
+                            to_readable_packet(expected[i]),
+                            "\nReceived: ",
+                            to_readable_packet(std::string((const char*)it->data(), it->size()))
+                        )
+                    );
+            }
 
             async_delay(
-                make_cancel_slot(), std::move(complete_op),
+                _ex, reply_action->write_completion(),
                 asio::prepend(
                     std::ref(*this), on_delayed_complete {},
                     std::move(handler), bytes_written
                 )
             );
 
-            if (!reply_action.has_value())
-                return;
-
-            for (auto& op : reply_action->pop_reply_ops(ex))
+            for (auto& op : reply_action->pop_reply_ops())
                 async_delay(
-                    make_cancel_slot(), std::move(op),
+                    _ex, std::move(op),
                     asio::prepend(std::ref(*this), on_receive {})
                 );
         };
@@ -239,8 +234,6 @@ public:
         on_receive, error_code delay_ec,
         error_code ec, std::vector<uint8_t> bytes
     ) {
-        remove_cancel_signal();
-
         if (delay_ec) // asio::operation_aborted
             return;
 
@@ -253,8 +246,6 @@ public:
         on_delayed_complete, Handler handler, size_t bytes,
         error_code delay_ec, error_code ec
     ) {
-        remove_cancel_signal();
-
         if (delay_ec) { // asio::operation_aborted
             ec = delay_ec;
             bytes = 0;
@@ -267,6 +258,13 @@ public:
         _pending_read.complete(get_executor(), asio::error::operation_aborted, 0);
     }
 
+    static void run(asio::io_context& ioc) {
+        while (!ioc.stopped()) {
+            ioc.poll();
+            asio::use_service<timer_service<clock>>(ioc).advance();
+        }
+    }
+
 private:
 
     void shutdown() override {
@@ -274,9 +272,9 @@ private:
     }
 
     void launch_broker_ops() {
-        for (auto& op: _broker_side.pop_broker_ops(get_executor())) {
+        for (auto& op: _broker_side.pop_broker_ops()) {
             async_delay(
-                asio::cancellation_slot {},
+                _ex,
                 std::move(op),
                 asio::prepend(std::ref(*this), on_receive {})
             );
@@ -304,22 +302,6 @@ private:
         _pending_read.complete(get_executor(), ec, bytes_read);
     }
 
-    asio::cancellation_slot make_cancel_slot() {
-        _cancel_signals.push_back(
-            std::make_unique<asio::cancellation_signal>()
-        );
-        return _cancel_signals.back()->slot();
-    }
-
-    void remove_cancel_signal() {
-        _cancel_signals.erase(
-            std::remove_if(
-                _cancel_signals.begin(), _cancel_signals.end(),
-                [](auto& sig_ptr) { return !sig_ptr->slot().has_handler(); }
-            ),
-            _cancel_signals.end()
-        );
-    }
 };
 
 } // end namespace boost::mqtt5::test

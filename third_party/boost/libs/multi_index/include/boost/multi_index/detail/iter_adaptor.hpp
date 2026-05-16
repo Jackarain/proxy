@@ -1,4 +1,4 @@
-/* Copyright 2003-2013 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -14,7 +14,7 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
-#include <boost/mpl/apply.hpp>
+#include <boost/mp11/utility.hpp>
 #include <boost/operators.hpp>
 
 namespace boost{
@@ -125,10 +125,7 @@ template<>
 struct iter_adaptor_selector<std::forward_iterator_tag>
 {
   template<class Derived,class Base>
-  struct apply
-  {
-    typedef forward_iter_adaptor_base<Derived,Base> type;
-  };
+  using fn=forward_iter_adaptor_base<Derived,Base>;
 };
 
 template<class Derived,class Base>
@@ -183,10 +180,7 @@ template<>
 struct iter_adaptor_selector<std::bidirectional_iterator_tag>
 {
   template<class Derived,class Base>
-  struct apply
-  {
-    typedef bidirectional_iter_adaptor_base<Derived,Base> type;
-  };
+  using fn=bidirectional_iter_adaptor_base<Derived,Base>;
 };
 
 template<class Derived,class Base>
@@ -283,23 +277,17 @@ template<>
 struct iter_adaptor_selector<std::random_access_iterator_tag>
 {
   template<class Derived,class Base>
-  struct apply
-  {
-    typedef random_access_iter_adaptor_base<Derived,Base> type;
-  };
+  using fn=random_access_iter_adaptor_base<Derived,Base>;
 };
 
 template<class Derived,class Base>
-struct iter_adaptor_base
-{
-  typedef iter_adaptor_selector<
-    typename Base::iterator_category> selector;
-  typedef typename mpl::apply2<
-    selector,Derived,Base>::type      type;
-};
+using iter_adaptor_base=mp11::mp_invoke_q<
+  iter_adaptor_selector<typename Base::iterator_category>,
+  Derived,Base
+>;
 
 template<class Derived,class Base>
-class iter_adaptor:public iter_adaptor_base<Derived,Base>::type
+class iter_adaptor:public iter_adaptor_base<Derived,Base>
 {
 protected:
   iter_adaptor(){}

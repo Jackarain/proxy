@@ -1,5 +1,5 @@
 //
-// Copyright 2012-2025 Antony Polukhin.
+// Copyright 2012-2026 Antony Polukhin.
 //
 // Distributed under the Boost Software License, Version 1.0. (See
 // accompanying file LICENSE_1_0.txt or copy at
@@ -36,7 +36,7 @@ int main()
         << ctti_type_index::type_id<user_defined_namespace::user_defined_class>() << '\n';
 
 
-    std::cout << "empty:"
+    std::cout << "empty: "
         << ctti_type_index::type_id<empty>() << '\n';
 
     return 0;

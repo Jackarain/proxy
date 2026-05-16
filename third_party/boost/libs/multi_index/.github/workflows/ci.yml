@@ -93,7 +93,7 @@ jobs:
             install: clang-4.0
           - toolset: clang
             compiler: clang++-5.0
-            cxxstd: "11,14,1z"
+            cxxstd: "11,14"
             os: ubuntu-latest
             container: ubuntu:18.04
             install: clang-5.0
@@ -176,11 +176,26 @@ jobs:
             os: ubuntu-latest
             install: clang-18
           - toolset: clang
+            compiler: clang++-19
             cxxstd: "11,14,17,20,2b"
-            os: macos-13
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-19
+          - toolset: clang
+            compiler: clang++-20
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-20
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-14
+          - toolset: clang
+            cxxstd: "11,14,17,20,23,2c"          
+            os: macos-15
+          - toolset: clang
+            cxxstd: "11,14,17,20,23,2c"          
+            os: macos-26
 
     runs-on: ${{matrix.os}}
     container:

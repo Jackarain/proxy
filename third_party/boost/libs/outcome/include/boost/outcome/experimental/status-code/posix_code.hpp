@@ -1,5 +1,5 @@
 /* Proposed SG14 status_code
-(C) 2018-2025 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2018-2026 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Feb 2018
 
 
@@ -88,9 +88,10 @@ class _posix_code_domain : public status_code_domain
   template <class DomainType> friend class status_code;
   using _base = status_code_domain;
 
-  static _base::string_ref _make_string_ref(int c) noexcept
+  static _base::string_ref _make_string_ref(int &errcode, int c) noexcept
   {
     char buffer[1024] = "";
+    errno = 0;
 #ifdef _WIN32
     strerror_s(buffer, sizeof(buffer), c);
 #elif defined(__GLIBC__) && !defined(__UCLIBC__)  // handle glibc's weird strerror_r()
@@ -105,14 +106,8 @@ class _posix_code_domain : public status_code_domain
 #else
     strerror_r(c, buffer, sizeof(buffer));
 #endif
-    size_t length = strlen(buffer);                     // NOLINT
-    auto *p = static_cast<char *>(malloc(length + 1));  // NOLINT
-    if(p == nullptr)
-    {
-      return _base::string_ref("failed to get message from system");
-    }
-    memcpy(p, buffer, length + 1);  // NOLINT
-    return _base::atomic_refcounted_string_ref(p, length);
+    errcode = errno;
+    return _base::atomic_refcounted_string_ref(buffer);
   }
 
 public:
@@ -134,21 +129,28 @@ public:
   //! Constexpr singleton getter. Returns constexpr posix_code_domain variable.
   static inline constexpr const _posix_code_domain &get();
 
-  virtual string_ref name() const noexcept override { return string_ref("posix domain"); }  // NOLINT
-
-  virtual payload_info_t payload_info() const noexcept override
+protected:
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual int _do_name(_vtable_name_args &args) const noexcept override
   {
-    return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
-            (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
+    args.ret = string_ref("posix domain");
+    return 0;
   }
 
-protected:
-  virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void _do_payload_info(_vtable_payload_info_args &args) const noexcept override
+  {
+    args.ret = {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+                (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) :
+                                                                        alignof(status_code_domain *)};
+  }
+
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
   {
     assert(code.domain() == *this);                             // NOLINT
     return static_cast<const posix_code &>(code).value() != 0;  // NOLINT
   }
-  virtual bool _do_equivalent(const status_code<void> &code1, const status_code<void> &code2) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual bool
+  _do_equivalent(const status_code<void> &code1,
+                 const status_code<void> &code2) const noexcept override  // NOLINT
   {
     assert(code1.domain() == *this);                          // NOLINT
     const auto &c1 = static_cast<const posix_code &>(code1);  // NOLINT
@@ -167,17 +169,19 @@ protected:
     }
     return false;
   }
-  virtual generic_code _generic_code(const status_code<void> &code) const noexcept override  // NOLINT
+  virtual void _do_generic_code(_vtable_generic_code_args &args) const noexcept override
   {
-    assert(code.domain() == *this);                         // NOLINT
-    const auto &c = static_cast<const posix_code &>(code);  // NOLINT
-    return generic_code(static_cast<errc>(c.value()));
+    assert(args.code.domain() == *this);                         // NOLINT
+    const auto &c = static_cast<const posix_code &>(args.code);  // NOLINT
+    args.ret = generic_code(static_cast<errc>(c.value()));
   }
-  virtual string_ref _do_message(const status_code<void> &code) const noexcept override  // NOLINT
+  virtual int _do_message(_vtable_message_args &args) const noexcept override
   {
-    assert(code.domain() == *this);                         // NOLINT
-    const auto &c = static_cast<const posix_code &>(code);  // NOLINT
-    return _make_string_ref(c.value());
+    assert(args.code.domain() == *this);                         // NOLINT
+    const auto &c = static_cast<const posix_code &>(args.code);  // NOLINT
+    int errcode = 0;
+    args.ret = _make_string_ref(errcode, c.value());
+    return errcode;
   }
 #if defined(_CPPUNWIND) || defined(__EXCEPTIONS) || defined(BOOST_OUTCOME_STANDARDESE_IS_IN_THE_HOUSE)
   BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN virtual void _do_throw_exception(const status_code<void> &code) const override  // NOLINT
@@ -188,7 +192,8 @@ protected:
   }
 #endif
 };
-//! A constexpr source variable for the POSIX code domain, which is that of `errno`. Returned by `_posix_code_domain::get()`.
+//! A constexpr source variable for the POSIX code domain, which is that of `errno`. Returned by
+//! `_posix_code_domain::get()`.
 constexpr _posix_code_domain posix_code_domain;
 inline constexpr const _posix_code_domain &_posix_code_domain::get()
 {

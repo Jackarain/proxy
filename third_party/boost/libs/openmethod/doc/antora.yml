@@ -8,9 +8,9 @@
 #
 
 name: openmethod
-version: ~
 title: Boost.OpenMethod
-start_page: index.adoc
+version: ~
+start_page: motivation.adoc
 asciidoc:
   attributes:
     source-language: asciidoc@

@@ -17,6 +17,5 @@ target_include_directories(boost_concept_check INTERFACE include)
 target_link_libraries(boost_concept_check INTERFACE
     Boost::config
     Boost::preprocessor
-    Boost::static_assert
     Boost::type_traits
 )

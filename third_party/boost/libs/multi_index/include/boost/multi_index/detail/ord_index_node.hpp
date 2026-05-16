@@ -1,4 +1,4 @@
-/* Copyright 2003-2020 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -41,13 +41,12 @@
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
+#include <boost/core/allocator_access.hpp>
 #include <cstddef>
-#include <boost/multi_index/detail/allocator_traits.hpp>
 #include <boost/multi_index/detail/raw_ptr.hpp>
 
 #if !defined(BOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES)
-#include <boost/mpl/and.hpp>
-#include <boost/mpl/if.hpp>
+#include <boost/mp11/utility.hpp>
 #include <boost/multi_index/detail/uintptr_type.hpp>
 #include <boost/type_traits/alignment_of.hpp>
 #include <boost/type_traits/is_same.hpp>
@@ -70,15 +69,14 @@ struct ordered_index_node_impl; /* fwd decl. */
 template<typename AugmentPolicy,typename Allocator>
 struct ordered_index_node_traits
 {
-  typedef typename rebind_alloc_for<
+  typedef allocator_rebind_t<
     Allocator,
     ordered_index_node_impl<AugmentPolicy,Allocator>
-  >::type                                            allocator;
-  typedef allocator_traits<allocator>                alloc_traits;
-  typedef typename alloc_traits::pointer             pointer;
-  typedef typename alloc_traits::const_pointer       const_pointer;
-  typedef typename alloc_traits::difference_type     difference_type;
-  typedef typename alloc_traits::size_type           size_type;
+  >                                                  allocator;
+  typedef allocator_pointer_t<allocator>             pointer;
+  typedef allocator_const_pointer_t<allocator>       const_pointer;
+  typedef allocator_difference_type_t<allocator>     difference_type;
+  typedef allocator_size_type_t<allocator>           size_type;
 };
 
 template<typename AugmentPolicy,typename Allocator>
@@ -228,7 +226,7 @@ struct ordered_index_node_impl_base:
 
 #if !defined(BOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES)
   AugmentPolicy::template augmented_node<
-    typename mpl::if_c<
+    mp11::mp_if_c<
       !(has_uintptr_type::value)||
       (alignment_of<
         ordered_index_node_compressed_base<AugmentPolicy,Allocator>
@@ -238,7 +236,7 @@ struct ordered_index_node_impl_base:
         ordered_index_node_impl<AugmentPolicy,Allocator>*>::value),
       ordered_index_node_std_base<AugmentPolicy,Allocator>,
       ordered_index_node_compressed_base<AugmentPolicy,Allocator>
-    >::type
+    >
   >::type
 #else
   AugmentPolicy::template augmented_node<
@@ -580,18 +578,18 @@ template<typename AugmentPolicy,typename Super>
 struct ordered_index_node_trampoline:
   ordered_index_node_impl<
     AugmentPolicy,
-    typename rebind_alloc_for<
+    allocator_rebind_t<
       typename Super::allocator_type,
       char
-    >::type
+    >
   >
 {
   typedef ordered_index_node_impl<
     AugmentPolicy,
-    typename rebind_alloc_for<
+    allocator_rebind_t<
       typename Super::allocator_type,
       char
-    >::type
+    >
   > impl_type;
 };
 

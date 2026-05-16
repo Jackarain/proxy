@@ -21,7 +21,7 @@
 #define BOOST_THREAD_VERSION 3
 
 #include <boost/thread/future.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/thread/detail/memory.hpp>
 #include <boost/thread/csbl/memory/unique_ptr.hpp>
 

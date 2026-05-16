@@ -10,39 +10,38 @@ branches:
   only:
     - master
     - develop
+    - /feature\/.*/
 
 environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      TOOLSET: msvc-10.0,msvc-11.0
-      ADDRMD: 32
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      TOOLSET: msvc-12.0,msvc-14.0
-      ADDRESS_MODEL: 32,64
+      TOOLSET: msvc-14.0
+      CXXSTD: 14,latest
+      ADDRMD: 32,64
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       TOOLSET: msvc-14.1
-      CXXSTD: 14,17
-      ADDRESS_MODEL: 32,64
+      CXXSTD: 14,17,latest
+      ADDRMD: 32,64
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       TOOLSET: msvc-14.2
-      CXXSTD: 14,17
-      ADDRESS_MODEL: 32,64
+      CXXSTD: 14,17,20,latest
+      ADDRMD: 32,64
 
 install:
+  - set BOOST_BRANCH=develop
+  - if "%APPVEYOR_REPO_BRANCH%" == "master" set BOOST_BRANCH=master
   - cd ..
-  - git clone -b %APPVEYOR_REPO_BRANCH% https://github.com/boostorg/boost.git boost-root
+  - git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
   - cd boost-root
-  - git submodule update --init tools/build
-  - git submodule update --init libs/config
   - git submodule update --init tools/boostdep
-  - git submodule update --init tools/boost_install
-  - git submodule update --init libs/headers
   - xcopy /s /e /q %APPVEYOR_BUILD_FOLDER% libs\function_types
   - python tools/boostdep/depinst/depinst.py -I example function_types
-  - bootstrap
-  - b2 headers
+  - cmd /c bootstrap
+  - b2 -d0 headers
 
 build: off
 
 test_script:
-  - b2 libs/function_types/test toolset=%TOOLSET%
+  - if not "%CXXSTD%" == "" set CXXSTD=cxxstd=%CXXSTD%
+  - if not "%ADDRMD%" == "" set ADDRMD=address-model=%ADDRMD%
+  - b2 -j3 libs/function_types/test toolset=%TOOLSET% %CXXSTD% %ADDRMD% variant=debug,release embed-manifest-via=linker

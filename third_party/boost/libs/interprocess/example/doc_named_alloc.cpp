@@ -13,7 +13,6 @@
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <cstdlib> //std::system
 #include <cstddef>
-#include <cassert>
 #include <utility>
 //<-
 #include "../test/get_process_id_name.hpp"

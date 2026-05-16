@@ -24,3 +24,30 @@ BOOST_AUTO_TEST_CASE( stack_test_unbounded )
     boost::lockfree::stack< long > q( 128 );
     tester->run( q );
 }
+
+BOOST_AUTO_TEST_CASE( stack_test_unbounded_asymmetric )
+{
+    typedef queue_stress_tester< false > tester_type;
+    std::unique_ptr< tester_type >       tester( new tester_type( 1, 4 ) );
+
+    boost::lockfree::stack< long > q( 128 );
+    tester->run( q );
+}
+
+BOOST_AUTO_TEST_CASE( stack_test_consume_all_atomic )
+{
+    typedef stack_consume_all_atomic_stress_tester< false > tester_type;
+    std::unique_ptr< tester_type >                          tester( new tester_type( 2, 4 ) );
+
+    boost::lockfree::stack< long > q( 128 );
+    tester->run_atomic( q );
+}
+
+BOOST_AUTO_TEST_CASE( stack_test_consume_all_atomic_reversed )
+{
+    typedef stack_consume_all_atomic_stress_tester< false > tester_type;
+    std::unique_ptr< tester_type >                          tester( new tester_type( 2, 4 ) );
+
+    boost::lockfree::stack< long > q( 128 );
+    tester->run_atomic_reversed( q );
+}

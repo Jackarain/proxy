@@ -62,12 +62,11 @@ struct pattern;
         @li @ref parse_uri
         @li @ref parse_uri_reference
 */
-class BOOST_URL_DECL
-    url_view_base
+class BOOST_SYMBOL_VISIBLE url_view_base
     : private detail::parts_base
 {
     detail::url_impl impl_;
-    detail::url_impl const* pi_;
+    detail::url_impl const* external_impl_;
 
     friend class url;
     friend class url_base;
@@ -89,21 +88,39 @@ class BOOST_URL_DECL
 
     struct shared_impl;
 
-    url_view_base() noexcept;
+    // Returns reference to the active implementation.
+    // Uses external_impl_ if set, otherwise local impl_.
+    BOOST_URL_CXX14_CONSTEXPR
+    detail::url_impl const&
+    impl() const noexcept
+    {
+        return external_impl_ ? *external_impl_ : impl_;
+    }
 
+    BOOST_URL_CXX14_CONSTEXPR
+    url_view_base() noexcept
+        : impl_(detail::url_impl::from::url)
+        , external_impl_(nullptr)
+    {
+    }
+
+    BOOST_URL_CXX14_CONSTEXPR
     explicit url_view_base(
-        detail::url_impl const&) noexcept;
+        detail::url_impl const& impl) noexcept
+        : impl_(impl)
+        , external_impl_(nullptr)
+    {
+    }
 
     ~url_view_base() = default;
 
+    BOOST_URL_CXX14_CONSTEXPR
     url_view_base(
-        url_view_base const& o) noexcept
-        : impl_(o.impl_)
-        , pi_(o.pi_)
-    {
-        if (pi_ == &o.impl_)
-            pi_ = &impl_;
-    }
+        url_view_base const& o) noexcept = default;
+
+    BOOST_URL_CXX14_CONSTEXPR
+    url_view_base(
+        url_view_base&& o) noexcept = default;
 
     url_view_base& operator=(
         url_view_base const&) = delete;
@@ -184,7 +201,7 @@ public:
     std::size_t
     size() const noexcept
     {
-        return pi_->offset(id_end);
+        return impl().offset(id_end);
     }
 
     /** Return true if the url is empty
@@ -221,7 +238,7 @@ public:
     bool
     empty() const noexcept
     {
-        return pi_->offset(id_end) == 0;
+        return impl().offset(id_end) == 0;
     }
 
     /** Return a pointer to the url's character buffer
@@ -241,7 +258,7 @@ public:
     char const*
     data() const noexcept
     {
-        return pi_->cs_;
+        return impl().cs_;
     }
 
     /** Return the url string
@@ -511,7 +528,7 @@ public:
     bool
     has_authority() const noexcept
     {
-        return pi_->len(id_user) > 0;
+        return impl().len(id_user) > 0;
     }
 
     /** Return the authority
@@ -1019,7 +1036,7 @@ public:
     urls::host_type
     host_type() const noexcept
     {
-        return pi_->host_type_;
+        return impl().host_type_;
     }
 
     /** Return the host
@@ -1675,8 +1692,8 @@ public:
     is_path_absolute() const noexcept
     {
         return
-            pi_->len(id_path) > 0 &&
-            pi_->cs_[pi_->offset(id_path)] == '/';
+            impl().len(id_path) > 0 &&
+            impl().cs_[impl().offset(id_path)] == '/';
     }
 
     /** Return the path
@@ -1928,11 +1945,12 @@ public:
         Any percent-escapes in the string are
         decoded first.
         <br>
-        When plus signs appear in the query
-        portion of the url, they are converted
-        to spaces automatically upon decoding.
-        This behavior can be changed by setting
-        decode options.
+
+        Literal plus signs remain unchanged by
+        default to match RFC 3986. To treat '+'
+        as a space, supply decoding options with
+        `space_as_plus = true` when calling this
+        function.
 
         @par Example
         @code
@@ -2787,5 +2805,7 @@ operator<<(
 
 } // urls
 } // boost
+
+#include <boost/url/impl/url_view_base.hpp>
 
 #endif

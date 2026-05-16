@@ -13,6 +13,7 @@
 #include <boost/exception/info.hpp>
 #include <boost/detail/lightweight_test.hpp>
 #include <boost/detail/workaround.hpp>
+#include <iostream>
 
 #if BOOST_WORKAROUND(BOOST_CODEGEARC, BOOST_TESTED_AT(0x610))
 struct test_tag1 {};
@@ -141,9 +142,11 @@ main()
     catch(
     error1 & x )
         {
-        std::string di1=boost::diagnostic_information(x);
+        std::string di1 = diagnostic_information(x);
+        std::cout << __LINE__ << " ------------------\n" << di1;
         x << tagged_int1(2) << tagged_int2(2);
         std::string di2 = diagnostic_information(x);
+        std::cout << "\n" << di2 << std::endl;
         test1(di1,di2);
         }
     try
@@ -155,9 +158,11 @@ main()
     catch(
     error1 & x )
         {
-        std::string di1=boost::current_exception_diagnostic_information();
+        std::string di1 = current_exception_diagnostic_information();
+        std::cout << __LINE__ << " ------------------\n" << di1;
         x << tagged_int1(2) << tagged_int2(2);
         std::string di2 = current_exception_diagnostic_information();
+        std::cout << "\n" << di2 << std::endl;
         test1(di1,di2);
         }
     try
@@ -170,8 +175,10 @@ main()
     error2 & x )
         {
         std::string di1 = diagnostic_information(x);
+        std::cout << __LINE__ << " ------------------\n" << di1;
         x << tagged_int1(2) << tagged_int2(2);
         std::string di2 = diagnostic_information(x);
+        std::cout << "\n" << di2 << std::endl;
         test2(di1,di2);
         }
     try
@@ -184,23 +191,27 @@ main()
     error2 & x )
         {
         std::string di1 = current_exception_diagnostic_information();
-        BOOST_TEST(di1==boost::diagnostic_information_what(x));
+        std::cout << __LINE__ << " ------------------\n" << di1;
+        BOOST_TEST(di1 == diagnostic_information_what(x));
         x << tagged_int1(2) << tagged_int2(2);
         std::string di2 = current_exception_diagnostic_information();
-        BOOST_TEST(di2==boost::diagnostic_information_what(x));
+        std::cout << "\n" << di2 << std::endl;
+        BOOST_TEST(di2 == diagnostic_information_what(x));
         test2(di1,di2);
         }
     try
         {
         error3 x;
-        std::string di=diagnostic_information(x);
+        std::string di = diagnostic_information(x);
+        std::cout << __LINE__ << " ------------------\n" << di << std::endl;
         test3(di);
         throw x;
         }
     catch(
     ... )
         {
-        std::string di=current_exception_diagnostic_information();
+        std::string di = current_exception_diagnostic_information();
+        std::cout << __LINE__ << " ------------------\n" << di << std::endl;
         test3(di);
         }
     try
@@ -210,9 +221,10 @@ main()
     catch(
     error4 & x )
         {
-        std::string di1=boost::diagnostic_information(x);
-        std::string wh1=x.what();
-        BOOST_TEST(wh1==di1);
+        std::string di1 = diagnostic_information(x);
+        std::cout << __LINE__ << " ------------------\n" << di1 << std::endl;
+        std::string wh1 = x.what();
+        BOOST_TEST(wh1 == di1);
         }
     try
         {
@@ -222,13 +234,15 @@ main()
     catch(
     error4 & x )
         {
-        std::string di1=boost::diagnostic_information(x);
-        std::string wh1=x.what();
-        BOOST_TEST(wh1==di1);
+        std::string di1 = diagnostic_information(x);
+        std::cout << __LINE__ << " ------------------\n" << di1;
+        std::string wh1 = x.what();
+        BOOST_TEST(wh1 == di1);
         x << tagged_int1(2) << tagged_int2(2);
         std::string di2 = diagnostic_information(x);
-        std::string wh2=x.what();
-        BOOST_TEST(wh2==di2);
+        std::cout << "\n" << di2 << std::endl;
+        std::string wh2 = x.what();
+        BOOST_TEST(wh2 == di2);
         test4(di1,di2);
         }
     try
@@ -239,13 +253,15 @@ main()
     catch(
     error4 & x )
         {
-        std::string di1=boost::current_exception_diagnostic_information();
-        std::string wh1=x.what();
-        BOOST_TEST(wh1==di1);
+        std::string di1 = current_exception_diagnostic_information();
+        std::cout << __LINE__ << " ------------------\n" << di1;
+        std::string wh1 = x.what();
+        BOOST_TEST(wh1 == di1);
         x << tagged_int1(2) << tagged_int2(2);
         std::string di2 = current_exception_diagnostic_information();
-        std::string wh2=x.what();
-        BOOST_TEST(wh2==di2);
+        std::cout << "\n" << di2 << std::endl;
+        std::string wh2 = x.what();
+        BOOST_TEST(wh2 == di2);
         test4(di1,di2);
         }
     return boost::report_errors();

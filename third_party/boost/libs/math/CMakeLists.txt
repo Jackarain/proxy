@@ -5,7 +5,7 @@
 
 cmake_minimum_required(VERSION 3.8...3.16)
 
-project(boost_math VERSION 1.90.0 LANGUAGES CXX)
+project(boost_math VERSION 1.91.0 LANGUAGES CXX)
 
 add_library(boost_math INTERFACE)
 
@@ -39,7 +39,6 @@ else()
       Boost::lexical_cast
       Boost::predef
       Boost::random
-      Boost::static_assert
       Boost::throw_exception
   )
 

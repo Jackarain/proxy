@@ -21,9 +21,9 @@ public:
         , state(0)
     {}
 
-    explicit object(int state)
+    explicit object(int st)
         : tag(boost::uuids::random_generator()())
-        , state(state)
+        , state(st)
     {}
     
     object(object const& rhs)

@@ -1,4 +1,4 @@
-/* Copyright 2003-2023 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -120,7 +120,6 @@
 #include <algorithm>
 #include <boost/core/addressof.hpp>
 #include <boost/core/noncopyable.hpp>
-#include <boost/multi_index/detail/access_specifier.hpp>
 #include <boost/multi_index/detail/any_container_view.hpp>
 #include <boost/multi_index/detail/iter_adaptor.hpp>
 #include <boost/multi_index/safe_mode_errors.hpp>
@@ -349,9 +348,7 @@ protected:
 
   const safe_container_base* owner()const{return cont;}
 
-BOOST_MULTI_INDEX_PRIVATE_IF_MEMBER_TEMPLATE_FRIENDS:
-
-#if !defined(BOOST_NO_MEMBER_TEMPLATE_FRIENDS)
+private:
   friend class safe_container_base;
   template<typename>
   friend class safe_mode::safe_container;
@@ -360,7 +357,6 @@ BOOST_MULTI_INDEX_PRIVATE_IF_MEMBER_TEMPLATE_FRIENDS:
   template<typename Dst,typename Iterator>
   friend void safe_mode_detail::transfer_equivalent_iterators(
     Dst&,Iterator,boost::true_type);
-#endif
 
   inline void attach(safe_container_base* cont_);
 
@@ -374,16 +370,13 @@ class safe_container_base:private noncopyable
 public:
   safe_container_base(){}
 
-BOOST_MULTI_INDEX_PROTECTED_IF_MEMBER_TEMPLATE_FRIENDS:
-
-#if !defined(BOOST_NO_MEMBER_TEMPLATE_FRIENDS)
+protected:
   friend class safe_iterator_base;
   template<typename Iterator>
   friend void safe_mode::detach_equivalent_iterators(Iterator&);
   template<typename Dst,typename Iterator>
   friend void safe_mode_detail::transfer_equivalent_iterators(
     Dst&,Iterator,boost::true_type);
-#endif
 
   ~safe_container_base()
   {

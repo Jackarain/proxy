@@ -460,7 +460,7 @@ public:
 
         @par Preconditions
         @code
-        not this->empty()
+        n <= this->size()
         @endcode
 
         @par Complexity
@@ -477,13 +477,13 @@ public:
         @par Example
         @code
         decode_view d( "Program%20Files" );
-        d.remove_prefix( 6 );
+        d.remove_suffix( 6 );
         assert( d == "Program" );
         @endcode
 
         @par Preconditions
         @code
-        not this->empty()
+        n <= this->size()
         @endcode
 
         @par Complexity
@@ -1073,5 +1073,21 @@ make_decode_view(
 } // boost
 
 #include <boost/url/impl/decode_view.hpp>
+
+//------------------------------------------------
+//
+// std::ranges::enable_borrowed_range
+//
+//------------------------------------------------
+
+#ifdef BOOST_URL_HAS_CONCEPTS
+#include <ranges>
+namespace std::ranges {
+    template<>
+    inline constexpr bool
+        enable_borrowed_range<
+            boost::urls::decode_view> = true;
+} // std::ranges
+#endif
 
 #endif

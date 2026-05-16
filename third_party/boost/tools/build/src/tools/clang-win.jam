@@ -78,7 +78,8 @@ rule init ( version ? : command * : options * )
 
     if ! $(command)
     {
-        errors.error "Cannot configure toolset clang-win: no 'clang-cl.exe' command found or given" ;
+        errors.error "Cannot configure toolset clang-win: no 'clang-cl.exe' command found or given."
+            "Searched in:" "$(ProgramFiles)\\LLVM\\bin" ;
     }
 
     local compiler = "\"$(command)\"" ;

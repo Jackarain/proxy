@@ -16,7 +16,7 @@
 #include <boost/log/detail/config.hpp>
 #include <boost/log/detail/timestamp.hpp>
 
-#if defined(BOOST_WINDOWS) && !defined(__CYGWIN__)
+#if defined(BOOST_WINDOWS)
 #include <cstddef>
 #include <cstdlib>
 #include <boost/memory_order.hpp>
@@ -47,7 +47,7 @@ BOOST_LOG_OPEN_NAMESPACE
 
 namespace aux {
 
-#if defined(BOOST_WINDOWS) && !defined(__CYGWIN__)
+#if defined(BOOST_WINDOWS)
 
 #if BOOST_USE_WINAPI_VERSION >= BOOST_WINAPI_VERSION_WIN6
 

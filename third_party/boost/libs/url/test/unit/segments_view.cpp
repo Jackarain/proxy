@@ -387,11 +387,31 @@ struct segments_view_test
     }
 
     void
+    testBorrowedRange()
+    {
+#ifdef BOOST_URL_HAS_CONCEPTS
+        // segments_view is a borrowed range
+        BOOST_CORE_STATIC_ASSERT(
+            std::ranges::borrowed_range<segments_view>);
+
+        // iterators remain valid after the view is destroyed
+        segments_view::iterator it;
+        {
+            segments_view ps("/path/to/file.txt");
+            it = ps.begin();
+        }
+        // iterator is still valid (points to external buffer)
+        BOOST_TEST_EQ(*it, "path");
+#endif
+    }
+
+    void
     run()
     {
         testSpecialMembers();
         testRangeCtor();
         testJavadocs();
+        testBorrowedRange();
     }
 };
 

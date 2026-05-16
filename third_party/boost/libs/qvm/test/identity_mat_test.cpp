@@ -20,12 +20,12 @@ namespace
         test_qvm::matrix<M1,Dim,Dim> m=identity_mat<float,Dim>();
         for( int i=0; i!=Dim; ++i )
             for( int j=0; j!=Dim; ++j )
-                BOOST_TEST(m.a[i][j]==float(i==j));
+                BOOST_TEST_EQ(m.a[i][j], float(i==j));
         test_qvm::matrix<M2,Dim,Dim> n(42,1);
         set_identity(n);
         for( int i=0; i!=Dim; ++i )
             for( int j=0; j!=Dim; ++j )
-                BOOST_TEST(n.a[i][j]==float(i==j));
+                BOOST_TEST_EQ(n.a[i][j], float(i==j));
         }
     }
 

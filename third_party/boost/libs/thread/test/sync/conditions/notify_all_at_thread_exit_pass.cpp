@@ -23,7 +23,7 @@
 #include <boost/thread/locks.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/chrono/chrono.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 boost::condition_variable cv;
 boost::mutex mut;

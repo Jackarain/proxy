@@ -9,7 +9,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/csbl/vector.hpp>
 #include <iostream>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/static_assert.hpp>
 
 int count = 0;

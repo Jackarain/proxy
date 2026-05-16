@@ -13,6 +13,8 @@
 #include <boost/redis/error.hpp>
 #include <boost/redis/ignore.hpp>
 #include <boost/redis/resp3/type.hpp>
+#include <boost/redis/resp3/tree.hpp>
+#include <boost/redis/resp3/flat_tree.hpp>
 
 #include <boost/mp11.hpp>
 
@@ -56,9 +58,30 @@ struct result_traits<result<resp3::basic_node<T>>> {
 };
 
 template <class String, class Allocator>
-struct result_traits<result<std::vector<resp3::basic_node<String>, Allocator>>> {
+struct result_traits<result<resp3::basic_tree<String, Allocator>>> {
    using response_type = result<std::vector<resp3::basic_node<String>, Allocator>>;
    using adapter_type = adapter::detail::general_aggregate<response_type>;
+   static auto adapt(response_type& v) noexcept { return adapter_type{&v}; }
+};
+
+template <class String>
+struct result_traits<resp3::basic_tree<String>> {
+   using response_type = resp3::basic_tree<String>;
+   using adapter_type = adapter::detail::general_aggregate<response_type>;
+   static auto adapt(response_type& v) noexcept { return adapter_type{&v}; }
+};
+
+template <>
+struct result_traits<generic_flat_response> {
+   using response_type = generic_flat_response;
+   using adapter_type = general_aggregate<response_type>;
+   static auto adapt(response_type& v) noexcept { return adapter_type{&v}; }
+};
+
+template <>
+struct result_traits<resp3::flat_tree> {
+   using response_type = resp3::flat_tree;
+   using adapter_type = general_aggregate<response_type>;
    static auto adapt(response_type& v) noexcept { return adapter_type{&v}; }
 };
 

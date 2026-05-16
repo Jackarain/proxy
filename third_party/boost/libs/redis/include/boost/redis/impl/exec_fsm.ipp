@@ -9,6 +9,7 @@
 #ifndef BOOST_REDIS_EXEC_FSM_IPP
 #define BOOST_REDIS_EXEC_FSM_IPP
 
+#include <boost/redis/detail/connection_state.hpp>
 #include <boost/redis/detail/coroutine.hpp>
 #include <boost/redis/detail/exec_fsm.hpp>
 #include <boost/redis/request.hpp>
@@ -28,7 +29,10 @@ inline bool is_total_cancel(asio::cancellation_type_t type)
    return !!(type & asio::cancellation_type_t::total);
 }
 
-exec_action exec_fsm::resume(bool connection_is_open, asio::cancellation_type_t cancel_state)
+exec_action exec_fsm::resume(
+   bool connection_is_open,
+   connection_state& st,
+   asio::cancellation_type_t cancel_state)
 {
    switch (resume_point_) {
       BOOST_REDIS_CORO_INITIAL
@@ -47,7 +51,7 @@ exec_action exec_fsm::resume(bool connection_is_open, asio::cancellation_type_t 
       BOOST_REDIS_YIELD(resume_point_, 2, exec_action_type::setup_cancellation)
 
       // Add the request to the multiplexer
-      mpx_->add(elem_);
+      st.mpx.add(elem_);
 
       // Notify the writer task that there is work to do. If the task is not
       // listening (e.g. it's already writing or the connection is not healthy),
@@ -61,8 +65,14 @@ exec_action exec_fsm::resume(bool connection_is_open, asio::cancellation_type_t 
 
          // If the request has completed (with error or not), we're done
          if (elem_->is_done()) {
+            // If the request completed successfully and we were configured to do so,
+            // record the changes applied to the pubsub state
+            if (!elem_->get_error())
+               st.tracker.commit_changes(elem_->get_request());
+
+            // Deallocate memory before finalizing
             exec_action act{elem_->get_error(), elem_->get_read_size()};
-            elem_.reset();  // Deallocate memory before finalizing
+            elem_.reset();
             return act;
          }
 
@@ -71,7 +81,7 @@ exec_action exec_fsm::resume(bool connection_is_open, asio::cancellation_type_t 
          if (
             (is_total_cancel(cancel_state) && elem_->is_waiting()) ||
             is_partial_or_terminal_cancel(cancel_state)) {
-            mpx_->cancel(elem_);
+            st.mpx.cancel(elem_);
             elem_.reset();  // Deallocate memory before finalizing
             return exec_action{asio::error::operation_aborted};
          }

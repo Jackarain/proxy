@@ -1,0 +1,49 @@
+//
+// Copyright (c) 2026 Marcelo Zimbres Silva (mzimbres@gmail.com),
+// Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+
+= Authentication
+
+Boost.Redis supports connecting to servers that require authentication.
+To achieve it, you must send a
+https://redis.io/commands/hello/[HELLO] command with the appropriate
+`AUTH` parameters during connection establishment. Boost.Redis allows you
+to customize this handshake by using a _setup request_: a request that
+is run automatically before any other request,
+every time a physical connection to the server is established.
+
+Configuration is done on xref:reference:boost/redis/config.adoc[`config`].
+Set `use_setup` to `true` (required for backwards compatibility)
+and build the desired setup request in
+`config::setup`. By default, the library sends a plain `HELLO 3` (RESP3
+without auth). To authenticate, clear the default setup and push a
+`HELLO` command that includes your credentials:
+
+[source,cpp]
+----
+config cfg;
+cfg.use_setup = true;
+cfg.setup.clear();   // Remove the default HELLO 3
+cfg.setup.hello("my_username", "my_password");
+
+co_await conn.async_run(cfg);
+----
+
+Authentication is just one use of this mechanism.
+For example, to select a particular logical database (see the Redis
+https://redis.io/commands/select/[SELECT] command), add a `SELECT`
+command after the `HELLO`:
+
+[source,cpp]
+----
+config cfg;
+cfg.use_setup = true;
+cfg.setup.push("SELECT", 42); // select the logical database 42 after the default HELLO 3
+
+co_await conn.async_run(cfg);
+----
+

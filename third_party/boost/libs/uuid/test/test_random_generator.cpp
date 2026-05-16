@@ -9,6 +9,16 @@
 
 //  libs/uuid/test/test_random_generator.cpp  -------------------------------//
 
+// Boost.Random isn't -Wsign-conversion clean
+
+#if defined(__clang__)
+# pragma clang diagnostic ignored "-Wsign-conversion"
+#elif defined(__GNUC__)
+# pragma GCC diagnostic ignored "-Wsign-conversion"
+#endif
+
+//
+
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/entropy_error.hpp>
 #include <boost/uuid/uuid_io.hpp>

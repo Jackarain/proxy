@@ -17,7 +17,7 @@
 
 import testing ;
 
-run image.cpp sample_image.cpp error_if.cpp : : gil_reference_checksums.txt ;
+run image.cpp sample_image.cpp error_if.cpp : : gil_reference_checksums.txt : <library>/boost/crc//boost_crc ;
 run channel.cpp error_if.cpp ;
 run pixel.cpp error_if.cpp ;
 run pixel_iterator.cpp error_if.cpp ;

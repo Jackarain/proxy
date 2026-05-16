@@ -32,16 +32,18 @@ is supported (like VC9-10, g++ >= 4.3).
 Examples will be provided in the next paragraphs. You need to include
 eUML basic features:
 
-....
+[source,cpp]
+----
 #include <msm/front/euml/euml.hpp>
-....
+----
 
 To add STL support (at possible cost of longer compilation times),
 include:
 
-....
+[source,cpp]
+----
 #include <msm/front/euml/stl.hpp>
-....
+----
 
 eUML is defined in the namespace `msm::front::euml`.
 
@@ -51,15 +53,17 @@ eUML is defined in the namespace `msm::front::euml`.
 
 A transition can be defined using eUML as:
 
-....
+[source,cpp]
+----
 source + event [guard] / action == target
-....
+----
 
 or as
 
-....
+[source,cpp]
+----
 target == source + event [guard] / action
-....
+----
 
 The first version looks like a drawn transition in a diagram, the second
 one seems natural to a C++ developer.
@@ -67,7 +71,8 @@ one seems natural to a C++ developer.
 The simple transition table written with the `functor front-end` can now
 be written as:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_TRANSITION_TABLE(( 
 Stopped + play [some_guard] / (some_action , start_playback)  == Playing ,
 Stopped + open_close/ open_drawer                             == Open    ,
@@ -76,11 +81,12 @@ Open    + open_close / close_drawer                           == Empty   ,
 Empty   + open_close / open_drawer                            == Open    ,
 Empty   + cd_detected [good_disk_format] / store_cd_info      == Stopped
 ),transition_table)                       
-....
+----
 
 Or, using the alternative notation, it can be:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_TRANSITION_TABLE(( 
 Playing  == Stopped + play [some_guard] / (some_action , start_playback) ,
 Open     == Stopped + open_close/ open_drawer                            ,
@@ -89,7 +95,7 @@ Empty    == Open    + open_close / close_drawer                          ,
 Open     == Empty   + open_close / open_drawer                           ,
 Stopped  == Empty   + cd_detected [good_disk_format] / store_cd_info
 ),transition_table)           
-....
+----
 
 The transition table now looks like a list of (readable) rules with
 little noise.
@@ -138,7 +144,8 @@ The
 xref:attachment$CompositeTutorialWithEumlTable.cpp[`composite[[eUML-composite-table]]]
 implementation is also natural:
 
-....
+[source,cpp]
+----
 // front-end like always
 struct sub_front_end : public boost::msm::front::state_machine_def<sub_front_end>
 {
@@ -148,7 +155,7 @@ struct sub_front_end : public boost::msm::front::state_machine_def<sub_front_end
 typedef boost::msm::back11::state_machine<sub_front_end> sub_back_end;
 
 sub_back_end const sub; // sub can be used in a transition table.
-....
+----
 
 Unfortunately, there is a bug with VC, which appears from time to time
 and causes a stack overflow. If you get a warning that the program is
@@ -170,9 +177,10 @@ Events must be proto-enabled. To achieve this, they must inherit from a
 proto terminal (euml_event<event-name>). eUML also provides a macro to
 make this easier:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_EVENT(play)
-....
+----
 
 This declares an event type and an instance of this type called `play`,
 which is now ready to use in state or transition behaviors.
@@ -199,14 +207,15 @@ previous functors, with the difference that they also must be
 proto-enabled. This can be done by inheriting from euml_action<
 functor-name >. eUML also provides a macro:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_ACTION(some_condition)
 {
     template <class Fsm,class Evt,class SourceState,class TargetState>
     bool operator()(Evt const& ,Fsm& ,SourceState&,TargetState& ) 
     { return true; }
 }; 
-....
+----
 
 Like for events, this macro declares a functor type and an instance for
 use in transition or state behaviors.
@@ -219,19 +228,21 @@ The state functors have a slightly different signature as there is no
 source and target state but only a current state (entry/exit actions are
 transition-independent), for example:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_ACTION(Empty_Entry)
 {
     template <class Evt,class Fsm,class State>
     void operator()(Evt const& ,Fsm& ,State& ) { ... }                           
     }; 
-....
+----
 
 [[eUML-reuse-functor]] It is also possible to reuse the functors from
 the functor front-end. The syntax is however slightly less comfortable
 as we need to pretend creating one on the fly for typeof. For example:
 
-....
+[source,cpp]
+----
 struct start_playback 
 {
         template <class Fsm,class Evt,class SourceState,class TargetState>
@@ -244,7 +255,7 @@ BOOST_MSM_EUML_TRANSITION_TABLE((
 Playing   == Stopped  + play        / start_playback() ,
 ...
 ),transition_table)
-....
+----
 
 [[states]]
 
@@ -253,19 +264,21 @@ Playing   == Stopped  + play        / start_playback() ,
 There is also a macro for states. This macro has 2 arguments, first the
 expression defining the state, then the state (instance) name:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_STATE((),Paused)
-....
+----
 
 This defines a simple state without entry or exit action. You can
 provide in the expression parameter the state behaviors (entry and exit)
 using the action grammar, like in the transition table:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_STATE(((Empty_Entry,Dummy_Entry)/*2 entryactions*/,
                        Empty_Exit/*1 exit action*/ ),
                      Empty)
-....
+----
 
 This means that Empty is defined as a state with an entry action made of
 two sub-actions, Empty_Entry and Dummy_Entry (enclosed inside
@@ -300,7 +313,8 @@ to inherit from `msm::front::state<>`, like any state, and from
 `euml_state<state-name>` to be proto-enabled. You will then need to
 declare an instance for use in the transition table. For example:
 
-....
+[source,cpp]
+----
 struct Empty_impl : public msm::front::state<> , public euml_state<Empty_impl> 
 {
    void activate_empty() {std::cout << "switching to Empty " << std::endl;}
@@ -311,15 +325,16 @@ struct Empty_impl : public msm::front::state<> , public euml_state<Empty_impl>
 };
 //instance for use in the transition table
 Empty_impl const Empty;
-....
+----
 
 Notice also that we defined a method named activate_empty. We would like
 to call it inside a behavior. This can be done using the
 BOOST_MSM_EUML_METHOD macro.
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_METHOD(ActivateEmpty_,activate_empty,activate_empty_,void,void)
-....
+----
 
 The first parameter is the name of the underlying functor, which you
 could use with the functor front-end, the second is the state method
@@ -327,9 +342,10 @@ name, the third is the eUML-generated function, the fourth and fifth the
 return value when used inside a transition or a state behavior. You can
 now use this inside a transition:
 
-....
+[source,cpp]
+----
 Empty == Open + open_close / (close_drawer,activate_empty_(target_))
-....
+----
 
 [[wrapping-up-a-simple-state-machine-and-first-complete-examples]]
 
@@ -367,13 +383,14 @@ link:#backend-base-state[back-end description]) is defined.
 
 For example, a minimum state machine could be defined as:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_TRANSITION_TABLE(( 
 ),transition_table)                       
 
 BOOST_MSM_EUML_DECLARE_STATE_MACHINE((transition_table,init_ << Empty ),
                                      player_)
-....
+----
 
 Please have a look at the player tutorial written using eUML's
 xref:attachment$SimpleTutorialEuml2.cpp[first syntax] and
@@ -399,18 +416,20 @@ because a type is what the back-end requires. This means that you will
 need to declare yourself an instance to reference your submachine into
 another state machine, for example:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_DECLARE_STATE_MACHINE(...,Playing_)
 typedef msm::back11::state_machine<Playing_> Playing_type;
 Playing_type const Playing;
-....
+----
 
 We can now use this instance inside the transition table of the
 containing state machine:
 
-....
+[source,cpp]
+----
 Paused == Playing + pause / pause_playback
-....
+----
 
 [[eUML-attributes]]
 
@@ -430,38 +449,42 @@ xref:attachment$SimpleTutorialEuml.cpp[second] syntaxes, you will find a
 BOOST_MSM_EUML_DECLARE_ATTRIBUTE and a BOOST_MSM_EUML_ATTRIBUTES macro.
 The first one declares possible attributes:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_DECLARE_ATTRIBUTE(std::string,cd_name)
 BOOST_MSM_EUML_DECLARE_ATTRIBUTE(DiskTypeEnum,cd_type)
-....
+----
 
 This declares two attributes: cd_name of type std::string and cd_type of
 type DiskTypeEnum. These attributes are not part of any event or state
 in particular, we just declared a name and a type. Now, we can add
 attributes to our cd_detected event using the second one:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_ATTRIBUTES((attributes_ << cd_name << cd_type ), 
                           cd_detected_attributes)
-....
+----
 
 This declares an attribute list which is not linked to anything in
 particular yet. It can be attached to a state or an event. For example,
 if we want the event cd_detected to have these defined attributes we
 write:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_EVENT_WITH_ATTRIBUTES(cd_detected,cd_detected_attributes)
-....
+----
 
 For states, we use the BOOST_MSM_EUML_STATE macro, which has an
 expression form where one can provide attributes. For example:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_STATE((no_action /*entry*/,no_action/*exit*/,
                       attributes_ << cd_detected_attributes),
                      some_state)
-....
+----
 
 OK, great, we now have a way to add attributes to a class, which we
 could have done more easily, so what is the point? The point is that we
@@ -469,9 +492,10 @@ can now reference these attributes directly, at compile-time, in the
 transition table. For example, in the example, you will find this
 transition:
 
-....
+[source,cpp]
+----
 Stopped==Empty+cd_detected[good_disk_format&&(event_(cd_type)==Int_<DISK_CD>())] 
-....
+----
 
 Read event_(cd_type) as event_->cd_type with event_ a type generic for
 events, whatever the concrete event is (in this particular case, it
@@ -508,9 +532,10 @@ the MSM_EUML_METHOD / MSM_EUML_FUNCTION macros. The first creates a
 functor to a method, the second to a free function. In the tutorial, we
 write:
 
-....
+[source,cpp]
+----
 MSM_EUML_METHOD(ActivateEmpty_,activate_empty,activate_empty_,void,void)
-....
+----
 
 The first parameter is the functor name, for use with the functor
 front-end. The second is the name of the method to call. The third is
@@ -522,9 +547,10 @@ calling a method of "something", and this "something" is one of the five
 previously shown generic helpers. We can now use this in a transition,
 for example:
 
-....
+[source,cpp]
+----
 Empty == Open + open_close / (close_drawer,activate_empty_(target_))
-....
+----
 
 The action is now defined as a sequence of two actions: close_drawer and
 activate_empty, which is called on the target itself. The target being
@@ -547,38 +573,42 @@ Defining orthogonal regions really means providing more initial states.
 To add more initial states, ``shift left'' some, for example, if we had
 another initial state named AllOk:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_DECLARE_STATE_MACHINE((transition_table,
                                      init_ << Empty << AllOk ),
                                     player_)
-....
+----
 
 You remember from the `BOOST_MSM_EUML_STATE` and
 `BOOST_MSM_EUML_DECLARE_STATE_MACHINE` signatures that just after
 attributes, we can define flags, like in the basic MSM front-end. To do
 this, we have another "shift-left" grammar, for example:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_STATE((no_action,no_action, attributes_ <<no_attributes_, 
                       /* flags */ configure_<< PlayingPaused << CDLoaded), 
                     Paused)
-....
+----
 
 We now defined that Paused will get two flags, PlayingPaused and
 CDLoaded, defined, with another macro:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_FLAG(CDLoaded)
-....
+----
 
 This corresponds to the following basic front-end definition of Paused:
 
-....
+[source,cpp]
+----
 struct Paused : public msm::front::state<>
 { 
    typedef mpl::vector2<PlayingPaused,CDLoaded> flag_list; 
 };
-....
+----
 
 Under the hood, what you get really is a mpl::vector2.
 
@@ -592,9 +622,10 @@ bool) for state and transition behaviors. For example, in the
 xref:attachment$iPodEuml.cpp[iPod implementation with eUML], you find the
 following transition:
 
-....
+[source,cpp]
+----
 ForwardPressed == NoForward + EastPressed[!is_flag_(NoFastFwd)]
-....
+----
 
 The function also has an optional second parameter which is the state
 machine on which the function is called. By default, fsm_ is used (the
@@ -604,19 +635,21 @@ reference to another state machine.
 eUML also supports defining deferred events in the state (state machine)
 definition. To this aim, we can reuse the flag grammar. For example:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_STATE((Empty_Entry,Empty_Exit, attributes_ << no_attributes_,
                       /* deferred */ configure_<< play ),Empty) 
-....
+----
 
 The configure_ left shift is also responsible for deferring events.
 Shift inside configure_ a flag and the state will get a flag, shift an
 event and it will get a deferred event. This replaces the basic
 front-end definition:
 
-....
+[source,cpp]
+----
 typedef mpl::vector<play> deferred_events;
-....
+----
 
 In xref:attachment$OrthogonalDeferredEuml.cpp[this tutorial], player is
 defining a second orthogonal region with AllOk as initial state. The
@@ -630,18 +663,20 @@ also possible with eUML through the use of the defer_ order, as shown in
 xref:attachment$OrthogonalDeferredEuml.cpp[this tutorial]. You will find
 the following transition:
 
-....
+[source,cpp]
+----
 Open + play / defer_
-....
+----
 
 This is an `internal transition`. Ignore it for the moment. Interesting
 is, that when the event `play` is fired and `Open` is active, the event
 will be deferred. Now add a guard and you can conditionally defer the
 event, for example:
 
-....
+[source,cpp]
+----
 Open + play [ some_condition ] / defer_
-....
+----
 
 This is similar to what we did with the functor front-end. This means
 that we have the same constraints. Using defer_ instead of a state
@@ -650,7 +685,8 @@ state machine. We do this (again) using a configure_ declaration in the
 state machine definition in which we shift the deferred_events
 configuration flag:
 
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_DECLARE_STATE_MACHINE((transition_table,
                                       init_ << Empty << AllOk,
                                       Entry_Action, 
@@ -658,7 +694,7 @@ BOOST_MSM_EUML_DECLARE_STATE_MACHINE((transition_table,
                                       attributes_ << no_attributes_,
                                       configure_<< deferred_events ),
                                     player_)
-....
+----
 
 A xref:attachment$OrthogonalDeferredEuml2.cpp[tutorial] illustrates this
 possibility.
@@ -694,10 +730,11 @@ state becomes active, provided a guard allows it. As there is no event,
 to define such a transition, simply omit the ``+'' part of the
 transition (the event), for example:
 
-....
+[source,cpp]
+----
 State3 == State4 [always_true] / State3ToState4
 State4 [always_true] / State3ToState4 == State3
-....
+----
 
 Please have a look at xref:attachment$AnonymousTutorialEuml.cpp[this
 example], which implements the `previously defined` state machine with
@@ -715,14 +752,16 @@ specify a source state, event, actions and guards but no target state,
 which eUML will interpret as an internal transition, for example this
 defines a transition internal to Open, on the event open_close:
 +
-....
+[source,cpp]
+----
 Open + open_close [internal_guard1] / internal_action1
-....
+----
 +
 xref:attachment$EumlInternal.cpp[A full example] is also provided.
 * in a state's `internal_transition_table`. For example:
 +
-....
+[source,cpp]
+----
 BOOST_MSM_EUML_DECLARE_STATE((Open_Entry,Open_Exit),Open_def)
 struct Open_impl : public Open_def
 {
@@ -730,7 +769,7 @@ struct Open_impl : public Open_def
         open_close [internal_guard1] / internal_action1
    ))
 };
-....
+----
 +
 Notice how we do not need to repeat that the transition originates from
 Open as we already are in Open's context.
@@ -753,9 +792,10 @@ event, but boost::any is not an acceptable eUML terminal. If you need an
 _any_ event, use msm::front::euml::kleene, which inherits boost::any.
 The same transition as with boost:any would be:
 
-....
+[source,cpp]
+----
 State1 + kleene == State2
-....
+----
 
 [[other-state-types]]
 
@@ -794,31 +834,35 @@ To use these states in the transition table, eUML offers the functions
 `explicit_`, `exit_pt_` and `entry_pt_`. For example, a direct entry
 into the substate SubState2 from SubFsm2 could be:
 
-....
+[source,cpp]
+----
 explicit_(SubFsm2,SubState2) == State1 + event2
-....
+----
 
 Forks being a list on direct entries, eUML supports a logical syntax
 (state1, state2, ...), for example:
 
-....
+[source,cpp]
+----
 (explicit_(SubFsm2,SubState2), 
  explicit_(SubFsm2,SubState2b),
  explicit_(SubFsm2,SubState2c)) == State1 + event3 
-....
+----
 
 An entry point is entered using the same syntax as explicit entries:
 
-....
+[source,cpp]
+----
 entry_pt_(SubFsm2,PseudoEntry1) == State1 + event4
-....
+----
 
 For exit points, it is again the same syntax except that exit points are
 used as source of the transition:
 
-....
+[source,cpp]
+----
 State2 == exit_pt_(SubFsm2,PseudoExit1) + event6 
-....
+----
 
 The xref:attachment$DirectEntryEuml.cpp[entry tutorial] is also available
 with eUML.
@@ -869,13 +913,14 @@ algorithms
 
 This can be quite fun. For example,
 
-....
+[source,cpp]
+----
 /( if_then_else_(--fsm_(m_SongIndex) > Int_<0>(),/*if clause*/
                  show_playing_song, /*then clause*/
                  (fsm_(m_SongIndex)=Int_<1>(),process_(EndPlay))/*else clause*/
                  ) 
   )
-....
+----
 
 means: if (fsm.SongIndex > 0), call show_playing_song, else
 \{fsm.SongIndex=1; process EndPlay on fsm;}
@@ -924,31 +969,35 @@ reserved to eUML but also to the functor-based front-end). The file
 structure of this Phoenix-like library matches the one of Boost.Phoenix.
 All functors for STL algorithms are to be found in:
 
-....
+[source,cpp]
+----
 #include <msm/front/euml/algorithm.hpp>
-....
+----
 
 The algorithms are also divided into sub-headers, matching the phoenix
 structure for simplicity:
 
-....
+[source,cpp]
+----
 #include < msm/front/euml/iteration.hpp> 
 #include < msm/front/euml/transformation.hpp>
 #include < msm/front/euml/querying.hpp> 
-....
+----
 
 Container methods can be found in:
 
-....
+[source,cpp]
+----
 #include < msm/front/euml/container.hpp>
-....
+----
 
 Or one can simply include the whole STL support (you will also need to
 include euml.hpp):
 
-....
+[source,cpp]
+----
 #include < msm/front/euml/stl.hpp>
-....
+----
 
 A few examples (to be found in xref:attachment$iPodSearchEuml.cpp[this
 tutorial]):

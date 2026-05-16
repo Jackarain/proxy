@@ -94,7 +94,7 @@ inline time_generator_v7& time_generator_v7::operator=( time_generator_v7&& rhs 
 inline time_generator_v7::state_type time_generator_v7::get_new_state( state_type const& oldst ) noexcept
 {
     // `now()` in microseconds
-    std::uint64_t now_in_us = std::chrono::time_point_cast< std::chrono::microseconds >( std::chrono::system_clock::now() ).time_since_epoch().count();
+    std::uint64_t now_in_us = static_cast<std::uint64_t>( std::chrono::time_point_cast< std::chrono::microseconds >( std::chrono::system_clock::now() ).time_since_epoch().count() );
 
     std::uint64_t time_ms = now_in_us / 1000; // timestamp, ms part
     std::uint64_t time_us = now_in_us % 1000; // timestamp, us part

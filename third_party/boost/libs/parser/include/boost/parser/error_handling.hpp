@@ -90,6 +90,9 @@ namespace boost { namespace parser {
         os << ":\n";
 
         std::string underlining(std::distance(position.line_start, it), ' ');
+        std::transform(position.line_start, it,
+            underlining.begin(),
+            [](auto c) { return c == '\t' ? '\t' : ' ';});
         detail::trace_input(os, position.line_start, it, false, 1u << 31);
         if (it == last) {
             os << '\n' << underlining << "^\n";

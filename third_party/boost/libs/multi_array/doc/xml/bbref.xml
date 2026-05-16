@@ -282,7 +282,7 @@ void reindex(const BaseList& values);
 </term>
 <listitem>
 <para>This changes the index bases of the <literal>multi_array</literal> to
-correspond to the the values in <literal>values</literal>.</para>
+correspond to the values in <literal>values</literal>.</para>
 
 <formalpara>
 <title><literal>BaseList</literal> Requirements</title>
@@ -364,7 +364,7 @@ associated with <literal>multi_array</literal>,
 <literal>multi_array_ref</literal>, and
 <literal>const_multi_array_ref</literal> that are not
 dependent upon template parameters.  These types find common use with
-all Boost.Multiarray components.  They are defined
+all Boost.MultiArray components.  They are defined
 in a namespace from which they can be accessed conveniently.
 With the exception of <literal>extent_gen</literal> and 
 <literal>extent_range</literal>, these types fulfill the roles of the
@@ -434,7 +434,7 @@ must be positive.</para>
 
 <varlistentry><term><function>index start()</function></term>
 <listitem>
-<para>This function returns the first index represented by the range</para>
+<para>This function returns the first index represented by the range.</para>
 </listitem>
 </varlistentry>
 
@@ -562,7 +562,7 @@ For example,
 a 3 by 3 by 3 <classname>multi_array</classname> is constructed as follows:
 <programlisting>multi_array&lt;int,3&gt; A(extents[3][3][3]);</programlisting>
 The same array could also be created by explicitly declaring an <literal>extent_gen</literal> 
-object locally,, but the global object makes this declaration unnecessary.  
+object locally, but the global object makes this declaration unnecessary.  
 </para>
 </sect3>
 
@@ -666,7 +666,7 @@ int a[] = { 0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11 };
 int s[] = { 3, 1 };
 </programlisting>
 Notice that the strides here are different. As a result,
-The expression given above to access values will work with this pair
+the expression given above to access values will work with this pair
 of data and strides as well.
 </para>
 

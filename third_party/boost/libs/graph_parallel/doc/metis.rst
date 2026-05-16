@@ -118,8 +118,9 @@ Member Functions
   metis_reader(std::istream& in);
 
 Constructs a new METIS reader that will retrieve edges from the input
-stream ``in``. If any errors are encountered while initially parsing
-``in``, ``metis_input_exception`` will be thrown.
+stream ``in``. The reader will read from the very beginning of the stream,
+and to this end, ``in`` must support seeking. If any errors are encountered
+while initially parsing ``in``, ``metis_input_exception`` will be thrown.
 
 -----------------------------------------------------------------------------
 

@@ -59,13 +59,13 @@ struct MachineBase_ : public state_machine_def<MachineBase_<T>>
     {
         Context& context = get_context(fsm);
         context.machine_entries++;
-    };
+    }
 
     template <typename Event, typename Fsm>
     void on_exit(const Event& /*event*/, Fsm& fsm)
     {
         get_context(fsm).machine_exits++;
-    };
+    }
 
     using initial_state = Default;
 };

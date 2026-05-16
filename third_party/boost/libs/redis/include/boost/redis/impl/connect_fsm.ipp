@@ -61,20 +61,6 @@ struct log_traits<asio::ip::tcp::resolver::results_type> {
    }
 };
 
-inline transport_type transport_from_config(const config& cfg)
-{
-   if (cfg.unix_socket.empty()) {
-      if (cfg.use_ssl) {
-         return transport_type::tcp_tls;
-      } else {
-         return transport_type::tcp;
-      }
-   } else {
-      BOOST_ASSERT(!cfg.use_ssl);
-      return transport_type::unix_socket;
-   }
-}
-
 inline system::error_code translate_timeout_error(
    system::error_code io_ec,
    asio::cancellation_type_t cancel_state,
@@ -105,9 +91,9 @@ connect_action connect_fsm::resume(
 
    // Log it
    if (ec) {
-      log_info(*lgr_, "Error resolving the server hostname: ", ec);
+      log_info(*lgr_, "Connect: hostname resolution failed: ", ec);
    } else {
-      log_info(*lgr_, "Resolve results: ", resolver_results);
+      log_debug(*lgr_, "Connect: hostname resolution results: ", resolver_results);
    }
 
    // Delegate to the regular resume function
@@ -125,9 +111,9 @@ connect_action connect_fsm::resume(
 
    // Log it
    if (ec) {
-      log_info(*lgr_, "Failed to connect to the server: ", ec);
+      log_info(*lgr_, "Connect: TCP connect failed: ", ec);
    } else {
-      log_info(*lgr_, "Connected to ", selected_endpoint);
+      log_debug(*lgr_, "Connect: TCP connect succeeded. Selected endpoint: ", selected_endpoint);
    }
 
    // Delegate to the regular resume function
@@ -141,9 +127,6 @@ connect_action connect_fsm::resume(
 {
    switch (resume_point_) {
       BOOST_REDIS_CORO_INITIAL
-
-      // Record the transport that we will be using
-      st.type = transport_from_config(*cfg_);
 
       if (st.type == transport_type::unix_socket) {
          // Reset the socket, to discard any previous state. Ignore any errors
@@ -160,9 +143,9 @@ connect_action connect_fsm::resume(
 
          // Log it
          if (ec) {
-            log_info(*lgr_, "Failed to connect to the server: ", ec);
+            log_info(*lgr_, "Connect: UNIX socket connect failed: ", ec);
          } else {
-            log_info(*lgr_, "Connected to ", cfg_->unix_socket);
+            log_debug(*lgr_, "Connect: UNIX socket connect succeeded");
          }
 
          // If this failed, we can't continue
@@ -178,7 +161,7 @@ connect_action connect_fsm::resume(
          // Must be done before anything else is done on the stream.
          // We don't need to close the TCP socket if using plaintext TCP
          // because range-connect closes open sockets, while individual connect doesn't
-         if (cfg_->use_ssl && st.ssl_stream_used) {
+         if (st.type == transport_type::tcp_tls && st.ssl_stream_used) {
             BOOST_REDIS_YIELD(resume_point_, 3, connect_action_type::ssl_stream_reset)
          }
 
@@ -200,7 +183,7 @@ connect_action connect_fsm::resume(
             return ec;
          }
 
-         if (cfg_->use_ssl) {
+         if (st.type == transport_type::tcp_tls) {
             // Mark the SSL stream as used
             st.ssl_stream_used = true;
 
@@ -212,9 +195,9 @@ connect_action connect_fsm::resume(
 
             // Log it
             if (ec) {
-               log_info(*lgr_, "Failed to perform SSL handshake: ", ec);
+               log_info(*lgr_, "Connect: SSL handshake failed: ", ec);
             } else {
-               log_info(*lgr_, "Successfully performed SSL handshake");
+               log_debug(*lgr_, "Connect: SSL handshake succeeded");
             }
 
             // If this failed, we can't continue

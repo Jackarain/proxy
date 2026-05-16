@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2019 Vinnie Falco (vinnie.falco@gmail.com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -11,6 +12,11 @@
 #include <boost/url/parse.hpp>
 
 #include "test_suite.hpp"
+
+#ifdef assert
+#undef assert
+#endif
+#define assert BOOST_TEST
 
 namespace boost {
 namespace urls {
@@ -40,6 +46,10 @@ struct parse_test
         // reg-name might have ipv4 prefix
         {
             BOOST_TEST_NOT(parse_relative_ref("//0.1.0.1%"));
+        }
+        // ip_literal with truncated bracket
+        {
+            BOOST_TEST_NOT(parse_uri("http://["));
         }
         // parse docs
         {

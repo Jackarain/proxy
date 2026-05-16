@@ -47,6 +47,7 @@ template<typename... Ts>
 auto sstr(Ts... args) {
     std::vector<class_*> vec{args...};
     std::sort(vec.begin(), vec.end());
+
     return str(vec);
 }
 

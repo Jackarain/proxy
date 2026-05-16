@@ -1,0 +1,69 @@
+[/
+  Copyright 2014, 2025 Peter Dimov
+
+  Distributed under the Boost Software License, Version 1.0.
+
+  See accompanying file LICENSE_1_0.txt
+  or copy at http://boost.org/LICENSE_1_0.txt
+]
+
+[section:is_placeholder is_placeholder]
+
+[simplesect Authors]
+
+* Peter Dimov
+
+[endsimplesect]
+
+[section Header <boost/is_placeholder.hpp>]
+
+The header `<boost/is_placeholder.hpp>` defines the class template
+`boost::is_placeholder<T>`. It defines a nested integral constant
+`value` which is `0` when `T` is not a `boost::bind` placeholder
+type, and a positive value corresponding to the placeholder index
+otherwise.
+
+That is, `is_placeholder<_1>::value` is `1`,
+`is_placeholder<_2>::value` is `2`, and so on.
+
+`is_placeholder` can be specialized for user types. If it is,
+`boost::bind` will recognize these types as placeholders.
+
+[section Synopsis]
+
+``
+namespace boost
+{
+    template<class T> struct is_placeholder;
+}
+``
+
+[endsect]
+
+[section Example]
+
+``
+#include <boost/is_placeholder.hpp>
+#include <boost/bind.hpp>
+
+struct arg1_type {};
+constexpr arg1_type arg1{};
+
+template<> struct boost::is_placeholder<arg1_type>
+{
+    static constexpr int value = 1;
+};
+
+int f( int x ) { return x + 1; }
+
+int main()
+{
+    return boost::bind( f, arg1 )( -1 );
+}
+``
+
+[endsect]
+
+[endsect]
+
+[endsect]

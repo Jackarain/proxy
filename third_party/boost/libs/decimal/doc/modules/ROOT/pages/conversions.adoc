@@ -1,0 +1,168 @@
+////
+Copyright 2024 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#conversions]
+= Bit Conversions
+:idprefix: conversions_
+
+IEEE 754 specifies two different encodings for decimal floating point types: Binary Integer Significand Field (BID), and Densely Packed Decimal Significand Field (DPD).
+The former is designed for software implementations and the latter for hardware implementations.
+Internally this library is implemented in the BID format for the IEEE-754 compliant types.
+Should the user want to capture the bit format in BID or convert to DPD we offer a family of conversion functions: `to_bid`, `from_bid`, `to_dpd`, and `from_dpd` that allow conversion to or from the bit strings regardless of encoding.
+
+[source, c++]
+----
+#include <boost/decimal/bid_conversions.hpp>
+#include <boost/decimal/dpd_conversions.hpp>
+#include <boost/decimal/uint128_t.hpp>
+
+namespace boost {
+namespace decimal {
+
+struct uint128_t
+{
+    std::uint64_t high;
+    std::uint64_t low;
+};
+
+// ----- BID Conversions -----
+
+constexpr std::uint32_t to_bid_d32(decimal32_t val) noexcept;
+
+constexpr decimal32_t from_bid_d32(std::uint32_t bits) noexcept;
+
+constexpr std::uint32_t to_bid_d32f(decimal_fast32_t val) noexcept;
+
+constexpr decimal_fast32_t from_bid_d32f(std::uint32_t bits) noexcept;
+
+constexpr std::uint64_t to_bid_d64(decimal64_t val) noexcept;
+
+constexpr decimal64_t from_bid_d64(std::uint64_t bits) noexcept;
+
+constexpr std::uint64_t to_bid_d64f(decimal_fast64_t val) noexcept;
+
+constexpr decimal_fast64_t from_bid_d64f(std::uint64_t bits) noexcept;
+
+constexpr uint128_t to_bid_d128(decimal128_t val) noexcept;
+
+constexpr decimal128_t from_bid_d128(uint128_t bits) noexcept;
+
+// Automatic detection if your platform has built-in unsigned __int128 or not to enable/disable the overload
+#ifdef BOOST_DECIMAL_HAS_INT128
+
+constexpr decimal128_t from_bid_d128(unsigned __int128 bits) noexcept;
+
+#endif // BOOST_DECIMAL_HAS_INT128
+
+constexpr uint128_t to_bid_d128f(decimal_fast128_t val) noexcept;
+
+constexpr decimal128_t from_bid_d128f(uint128_t bits) noexcept;
+
+#ifdef BOOST_DECIMAL_HAS_INT128
+
+constexpr decimal128_t from_bid_d128f(unsigned __int128 bits) noexcept;
+
+#endif // BOOST_DECIMAL_HAS_INT128
+
+template <typename T>
+constexpr auto to_bid(T val) noexcept;
+
+template <typename T = decimal32_t>
+constexpr T from_bid(std::uint32_t bits) noexcept;
+
+template <typename T = decimal64_t>
+constexpr T from_bid(std::uint64_t bits) noexcept;
+
+template <typename T = decimal128_t>
+constexpr T from_bid(uint128_t bits) noexcept;
+
+// ----- DPD Conversions -----
+
+constexpr std::uint32_t to_dpd_d32(decimal32_t val) noexcept;
+
+constexpr std::uint32_t to_dpd_d32f(decimal_fast32_t val) noexcept;
+
+constexpr std::uint64_t to_dpd_d64(decimal64_t val) noexcept;
+
+constexpr std::uint64_t to_dpd_d64f(decimal_fast64_t val) noexcept;
+
+constexpr uint128_t to_dpd_d128(decimal128_t val) noexcept;
+
+constexpr uint128_t to_dpd_d128f(decimal_fast128_t val) noexcept;
+
+template <typename T>
+constexpr auto to_dpd(T val) noexcept;
+
+template <typename T = decimal32_t>
+constexpr T from_dpd(std::uint32_t bits) noexcept;
+
+template <typename T = decimal64_t>
+constexpr T from_dpd(std::uint64_t bits) noexcept;
+
+template <typename T = decimal128_t>
+constexpr T from_dpd(uint128_t bits) noexcept;
+
+#ifdef BOOST_DECIMAL_HAS_INT128
+
+template <typename T = decimal128_t>
+constexpr T from_dpd(unsigned __int128 bits) noexcept;
+
+#endif
+
+} // namespace decimal
+} // namespace boost
+----
+
+== Bit Conversions Example
+
+The following example is copied and pasted from the examples/ folder of the library and is called https://github.com/boostorg/decimal/blob/develop/examples/bit_conversions.cpp[bit_conversions.cpp].
+
+[source, c++]
+----
+#include <boost/decimal/decimal32_t.hpp>
+#include <boost/decimal/dpd_conversion.hpp>
+#include <boost/decimal/bid_conversion.hpp>
+#include <iostream>
+
+int main()
+{
+    using boost::decimal::decimal32_t;
+    using boost::decimal::from_bid;
+    using boost::decimal::from_dpd;
+    using boost::decimal::to_bid;
+    using boost::decimal::to_dpd;
+
+    // First we construct a decimal value and then convert it into both BID and DPD encoded bits
+    const decimal32_t decimal_value {5};
+    const std::uint32_t BID_bits {to_bid(decimal_value)};
+    const std::uint32_t DPD_bits {to_dpd(decimal_value)};
+
+    // Display the difference between the hex values of both bit encodings
+    std::cout << std::hex
+              << "BID format: " << BID_bits << '\n'
+              << "DPD format: " << DPD_bits << std::endl;
+
+    // Recover the original value by encoding two new decimals using the from_bid and from_dpd functions
+    const decimal32_t bid_decimal {from_bid<decimal32_t>(BID_bits)};
+    const decimal32_t dpd_decimal {from_dpd<decimal32_t>(DPD_bits)};
+
+    if (bid_decimal == dpd_decimal)
+    {
+        // These should both have recovered the original value of 5
+        return 0;
+    }
+    else
+    {
+        // Something has gone wrong recovering the decimal values
+        return 1;
+    }
+}
+----
+Output:
+----
+BID format: 32800005
+DPD format: 22500005
+----

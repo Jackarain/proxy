@@ -20,75 +20,66 @@
 //->
 
 using namespace boost::interprocess;
+namespace bc = boost::container;
 
 //Typedefs of allocators and containers
-typedef managed_shared_memory::segment_manager                       segment_manager_t;
-typedef allocator<void, segment_manager_t>                           void_allocator;
-typedef allocator<int, segment_manager_t>                            int_allocator;
-typedef boost::container::vector<int, int_allocator>                 int_vector;
-typedef allocator<int_vector, segment_manager_t>                     int_vector_allocator;
-typedef boost::container::vector<int_vector, int_vector_allocator>   int_vector_vector;
-typedef allocator<char, segment_manager_t>                           char_allocator;
-typedef boost::container::basic_string<char, std::char_traits<char>, char_allocator>   char_string;
+typedef managed_shared_memory::segment_manager                    seg_mngr_t;
+typedef allocator<void, seg_mngr_t>                               void_alloc_t;
+typedef bc::vector<int, allocator<int, seg_mngr_t> >              int_vec_t;
+typedef bc::vector<int_vec_t, allocator<int_vec_t, seg_mngr_t> >  int_vec_vec_t;
+typedef bc::basic_string
+   <char, std::char_traits<char>, allocator<char, seg_mngr_t> >   string_t;
 
 class complex_data
 {
-   int               id_;
-   char_string       char_string_;
-   int_vector_vector int_vector_vector_;
+   string_t      string_;
+   int_vec_vec_t int_vec_vec_;
 
    public:
-   //Since void_allocator is convertible to any other allocator<T>, we can simplify
-   //the initialization taking just one allocator for all inner containers.
-   complex_data(int id, const char *name, const void_allocator &void_alloc)
-      : id_(id), char_string_(name, void_alloc), int_vector_vector_(void_alloc)
+
+   complex_data(const char *name, const void_alloc_t &valloc) //void_alloc_t is convertible to allocator<T>
+      : string_(name, valloc), int_vec_vec_(valloc)
    {}
-   //Other members...
    //<-
-   int get_id() { return id_; };
-   char_string get_char_string() { return char_string_; };
-   int_vector_vector get_int_vector_vector() { return int_vector_vector_; };
+   string_t get_char_string() { return string_; };
+   int_vec_vec_t get_int_vector_vector() { return int_vec_vec_; };
    //->
 };
 
-//Definition of the map holding a string as key and complex_data as mapped type
-typedef std::pair<const char_string, complex_data>                      map_value_type;
-typedef std::pair<char_string, complex_data>                            movable_to_map_value_type;
-typedef allocator<map_value_type, segment_manager_t>                    map_value_type_allocator;
-typedef boost::container::map< char_string, complex_data
-           , std::less<char_string>, map_value_type_allocator>          complex_map_type;
+//Definition of a shared memory map<string_t,complex_data...>
+typedef std::pair<const string_t, complex_data>                map_value_type;
+typedef allocator<map_value_type, seg_mngr_t>                  map_value_type_allocator;
+typedef bc::map< string_t, complex_data, std::less<string_t>
+               , map_value_type_allocator>                     complex_map_type;
 
 int main ()
 {
+   //<-
    //Remove shared memory on construction and destruction
    struct shm_remove
    {
       shm_remove() { shared_memory_object::remove(test::get_process_id_name()); }
       ~shm_remove(){ shared_memory_object::remove(test::get_process_id_name()); }
    } remover;
-   //<-
+
    (void)remover;
    //->
+   managed_shared_memory segment(create_only,test::get_process_id_name(), 65536); //Create shared memory
 
-   //Create shared memory
-   managed_shared_memory segment(create_only,test::get_process_id_name(), 65536);
+   //An allocator convertible to any allocator<T, seg_mngr_t> type
+   void_alloc_t alloc_inst (segment.get_segment_manager());
 
-   //An allocator convertible to any allocator<T, segment_manager_t> type
-   void_allocator alloc_inst (segment.get_segment_manager());
-
-   //Construct the shared memory map and fill it
+   //Construct the map calling map(key_compare, allocator_type), the allocator argument is explicit
    complex_map_type *mymap = segment.construct<complex_map_type>
-      //(object name), (first ctor parameter, second ctor parameter)
-         ("MyMap")(std::less<char_string>(), alloc_inst);
+         ("MyMap")(std::less<string_t>(), alloc_inst);
 
-   for(int i = 0; i < 100; ++i){
-      //Both key(string) and value(complex_data) need an allocator in their constructors
-      char_string  key_object(alloc_inst);
-      complex_data mapped_object(i, "default_name", alloc_inst);
-      map_value_type value(key_object, mapped_object);
-      //Modify values and insert them in the map
-      mymap->insert(value);
-   }
+   //Both key(string) and value(complex_data) need an allocator in their constructors
+   string_t  key_object(alloc_inst);
+   complex_data mapped_object("default_name", alloc_inst);
+   map_value_type value(key_object, mapped_object);
+   //Modify values and insert them in the map
+   mymap->insert(value);
+
    return 0;
 }
 //]

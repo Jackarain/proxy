@@ -44,52 +44,52 @@ bool deque_copyable_only(V1 &, V2 &, dtl::false_type)
 
 //Function to check if both sets are equal
 template<class V1, class V2>
-bool deque_copyable_only(V1 &cntdeque, V2 &stddeque, dtl::true_type)
+bool deque_copyable_only(V1 &cntc, V2 &stdc, dtl::true_type)
 {
    typedef typename V1::value_type IntType;
-   std::size_t size = cntdeque.size();
-   stddeque.insert(stddeque.end(), 50u, 1);
-   cntdeque.insert(cntdeque.end(), 50u, IntType(1));
-   if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+   std::size_t size = cntc.size();
+   stdc.insert(stdc.end(), 50u, 1);
+   cntc.insert(cntc.end(), 50u, IntType(1));
+   if(!test::CheckEqualContainers(cntc, stdc)) return false;
    {
       IntType move_me(1);
-      stddeque.insert(stddeque.begin()+std::ptrdiff_t(size)/2, 50u, 1);
-      cntdeque.insert(cntdeque.begin()+std::ptrdiff_t(size/2), 50u, boost::move(move_me));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      stdc.insert(stdc.begin()+std::ptrdiff_t(size)/2, 50u, 1);
+      cntc.insert(cntc.begin()+std::ptrdiff_t(size/2), 50u, boost::move(move_me));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
    }
    {
       IntType move_me(2);
-      cntdeque.assign(cntdeque.size()/2, boost::move(move_me));
-      stddeque.assign(stddeque.size()/2, 2);
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      cntc.assign(cntc.size()/2, boost::move(move_me));
+      stdc.assign(stdc.size()/2, 2);
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
    }
    {
       IntType move_me(1);
-      stddeque.clear();
-      cntdeque.clear();
-      stddeque.insert(stddeque.begin(), 50u, 1);
-      cntdeque.insert(cntdeque.begin(), 50u, boost::move(move_me));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
-      stddeque.insert(stddeque.begin()+20, 50u, 1);
-      cntdeque.insert(cntdeque.begin()+20, 50u, boost::move(move_me));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
-      stddeque.insert(stddeque.begin()+20, 20u, 1);
-      cntdeque.insert(cntdeque.begin()+20, 20u, boost::move(move_me));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      stdc.clear();
+      cntc.clear();
+      stdc.insert(stdc.begin(), 50u, 1);
+      cntc.insert(cntc.begin(), 50u, boost::move(move_me));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
+      stdc.insert(stdc.begin()+20, 50u, 1);
+      cntc.insert(cntc.begin()+20, 50u, boost::move(move_me));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
+      stdc.insert(stdc.begin()+20, 20u, 1);
+      cntc.insert(cntc.begin()+20, 20u, boost::move(move_me));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
    }
    {
       IntType move_me(1);
-      stddeque.clear();
-      cntdeque.clear();
-      stddeque.insert(stddeque.end(), 50u, 1);
-      cntdeque.insert(cntdeque.end(), 50u, boost::move(move_me));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
-      stddeque.insert(stddeque.end()-20, 50u, 1);
-      cntdeque.insert(cntdeque.end()-20, 50u, boost::move(move_me));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
-      stddeque.insert(stddeque.end()-20, 20u, 1);
-      cntdeque.insert(cntdeque.end()-20, 20u, boost::move(move_me));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      stdc.clear();
+      cntc.clear();
+      stdc.insert(stdc.end(), 50u, 1);
+      cntc.insert(cntc.end(), 50u, boost::move(move_me));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
+      stdc.insert(stdc.end()-20, 50u, 1);
+      cntc.insert(cntc.end()-20, 50u, boost::move(move_me));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
+      stdc.insert(stdc.end()-20, 20u, 1);
+      cntc.insert(cntc.end()-20, 20u, boost::move(move_me));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
    }
 
    return true;
@@ -135,85 +135,85 @@ bool do_recursive_deque_test()
 template<class IntType, bool Reservable>
 bool do_test()
 {
-   typedef typename deque_options<reservable<Reservable> >::type DequeOptions;
+   typedef typename deque_options<reservable<Reservable> >::type Options;
    {
-   typedef deque<IntType, void, DequeOptions>  MyCntDeque;
-      ::boost::movelib::unique_ptr<MyCntDeque> const pcntdeque = ::boost::movelib::make_unique<MyCntDeque>();
-      pcntdeque->erase(pcntdeque->cbegin(), pcntdeque->cend());
+      typedef deque<IntType, void, Options>  MyCnt;
+      ::boost::movelib::unique_ptr<MyCnt> const pcntc = ::boost::movelib::make_unique<MyCnt>();
+      pcntc->erase(pcntc->cbegin(), pcntc->cend());
    }
 
    //Alias deque types
-   typedef deque<IntType, void, DequeOptions>  MyCntDeque;
-   typedef std::deque<int> MyStdDeque;
+   typedef deque<IntType, void, Options>  MyCnt;
+   typedef std::deque<int> MyStd;
    const int max = 100;
    {
-      ::boost::movelib::unique_ptr<MyCntDeque> const pcntdeque = ::boost::movelib::make_unique<MyCntDeque>();
-      ::boost::movelib::unique_ptr<MyStdDeque> const pstddeque = ::boost::movelib::make_unique<MyStdDeque>();
-      MyCntDeque &cntdeque = *pcntdeque;
-      MyStdDeque &stddeque = *pstddeque;
+      ::boost::movelib::unique_ptr<MyCnt> const pcntc = ::boost::movelib::make_unique<MyCnt>();
+      ::boost::movelib::unique_ptr<MyStd> const pstdc = ::boost::movelib::make_unique<MyStd>();
+      MyCnt &cntc = *pcntc;
+      MyStd &stdc = *pstdc;
       for(int i = 0; i < max*100; ++i){
          IntType move_me(i);
-         cntdeque.insert(cntdeque.end(), boost::move(move_me));
-         stddeque.insert(stddeque.end(), i);
-         if(!test::CheckEqualContainers(cntdeque, stddeque))
+         cntc.insert(cntc.end(), boost::move(move_me));
+         stdc.insert(stdc.end(), i);
+         if(!test::CheckEqualContainers(cntc, stdc))
             return false;
       }
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
-      cntdeque.clear();
-      stddeque.clear();
+      cntc.clear();
+      stdc.clear();
 
       for(int i = 0; i < max*100; ++i){
          IntType move_me(i);
-         cntdeque.push_back(boost::move(move_me));
-         stddeque.push_back(i);
-         if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+         cntc.push_back(boost::move(move_me));
+         stdc.push_back(i);
+         if(!test::CheckEqualContainers(cntc, stdc)) return false;
       }
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
-      cntdeque.clear();
-      stddeque.clear();
+      cntc.clear();
+      stdc.clear();
 
       for(int i = 0; i < max*100; ++i){
          IntType move_me(i);
-         cntdeque.push_front(boost::move(move_me));
-         stddeque.push_front(i);
-         if(!test::CheckEqualContainers(cntdeque, stddeque))
+         cntc.push_front(boost::move(move_me));
+         stdc.push_front(i);
+         if(!test::CheckEqualContainers(cntc, stdc))
             return false;
       }
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
-      typename MyCntDeque::iterator it;
-      typename MyCntDeque::const_iterator cit = it;
+      typename MyCnt::iterator it;
+      typename MyCnt::const_iterator cit = it;
       (void)cit;
 
-      cntdeque.erase(cntdeque.begin()++);
-      stddeque.erase(stddeque.begin()++);
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      cntc.erase(cntc.begin()++);
+      stdc.erase(stdc.begin()++);
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
-      cntdeque.erase(cntdeque.erase(cntdeque.begin()++));
-      stddeque.erase(stddeque.erase(stddeque.begin()++));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      cntc.erase(cntc.erase(cntc.begin()++));
+      stdc.erase(stdc.erase(stdc.begin()++));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
-      cntdeque.erase(cntdeque.erase(cntdeque.begin()+3));
-      stddeque.erase(stddeque.erase(stddeque.begin()+3));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      cntc.erase(cntc.erase(cntc.begin()+3));
+      stdc.erase(stdc.erase(stdc.begin()+3));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
-      cntdeque.erase(cntdeque.erase(cntdeque.end()-2));
-      stddeque.erase(stddeque.erase(stddeque.end()-2));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      cntc.erase(cntc.erase(cntc.end()-2));
+      stdc.erase(stdc.erase(stdc.end()-2));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
-      cntdeque.erase(cntdeque.erase(cntdeque.end()-4));
-      stddeque.erase(stddeque.erase(stddeque.end()-4));
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      cntc.erase(cntc.erase(cntc.end()-4));
+      stdc.erase(stdc.erase(stdc.end()-4));
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
-      cntdeque.erase(cntdeque.begin());
-      stddeque.erase(stddeque.begin());
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      cntc.erase(cntc.begin());
+      stdc.erase(stdc.begin());
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
-      cntdeque.erase(cntdeque.end()-1);
-      stddeque.erase(stddeque.end()-1);
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      cntc.erase(cntc.end()-1);
+      stdc.erase(stdc.end()-1);
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
       {
          //Initialize values
@@ -227,11 +227,11 @@ bool do_test()
             aux_vect2[i] = -1;
          }
 
-         cntdeque.insert(cntdeque.end()
+         cntc.insert(cntc.end()
                            ,boost::make_move_iterator(&aux_vect[0])
                            ,boost::make_move_iterator(aux_vect + 50));
-         stddeque.insert(stddeque.end(), aux_vect2, aux_vect2 + 50);
-         if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+         stdc.insert(stdc.end(), aux_vect2, aux_vect2 + 50);
+         if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
          for(int i = 0; i < 50; ++i){
             IntType move_me (i);
@@ -241,17 +241,17 @@ bool do_test()
             aux_vect2[i] = i;
          }
 
-         cntdeque.insert(cntdeque.begin()+std::ptrdiff_t(cntdeque.size())
+         cntc.insert(cntc.begin()+std::ptrdiff_t(cntc.size())
                            ,boost::make_move_iterator(&aux_vect[0])
                            ,boost::make_move_iterator(aux_vect + 50));
-         stddeque.insert(stddeque.begin()+std::ptrdiff_t(stddeque.size()), aux_vect2, aux_vect2 + 50);
-         if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+         stdc.insert(stdc.begin()+std::ptrdiff_t(stdc.size()), aux_vect2, aux_vect2 + 50);
+         if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
-         for(int i = 0, j = static_cast<int>(cntdeque.size()); i < j; ++i){
-            cntdeque.erase(cntdeque.begin());
-            stddeque.erase(stddeque.begin());
+         for(int i = 0, j = static_cast<int>(cntc.size()); i < j; ++i){
+            cntc.erase(cntc.begin());
+            stdc.erase(stdc.begin());
          }
-         if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+         if(!test::CheckEqualContainers(cntc, stdc)) return false;
       }
       {
          IntType aux_vect[50];
@@ -263,67 +263,74 @@ bool do_test()
          for(int i = 0; i < 50; ++i){
             aux_vect2[i] = -1;
          }
-         cntdeque.insert(cntdeque.begin()
+         cntc.insert(cntc.begin()
                            ,boost::make_move_iterator(&aux_vect[0])
                            ,boost::make_move_iterator(aux_vect + 50));
-         stddeque.insert(stddeque.begin(), aux_vect2, aux_vect2 + 50);
-         if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+         stdc.insert(stdc.begin(), aux_vect2, aux_vect2 + 50);
+         if(!test::CheckEqualContainers(cntc, stdc)) return false;
       }
 
-      if(!deque_copyable_only(cntdeque, stddeque
+      if(!deque_copyable_only(cntc, stdc
                      ,dtl::bool_<boost::container::test::is_copyable<IntType>::value>())){
          return false;
       }
 
-      cntdeque.erase(cntdeque.begin());
-      stddeque.erase(stddeque.begin());
+      cntc.erase(cntc.begin());
+      stdc.erase(stdc.begin());
 
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
       for(int i = 0; i < max; ++i){
          IntType move_me(i);
-         cntdeque.insert(cntdeque.begin(), boost::move(move_me));
-         stddeque.insert(stddeque.begin(), i);
+         cntc.insert(cntc.begin(), boost::move(move_me));
+         stdc.insert(stdc.begin(), i);
       }
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return false;
+      if(!test::CheckEqualContainers(cntc, stdc)) return false;
 
       //Test insertion from list
       {
          std::list<int> l(50, int(1));
-         cntdeque.insert(cntdeque.begin(), l.begin(), l.end());
-         stddeque.insert(stddeque.begin(), l.begin(), l.end());
-         if(!test::CheckEqualContainers(cntdeque, stddeque)) return 1;
-         cntdeque.assign(l.begin(), l.end());
-         stddeque.assign(l.begin(), l.end());
-         if(!test::CheckEqualContainers(cntdeque, stddeque)) return 1;
+         cntc.insert(cntc.begin(), l.begin(), l.end());
+         stdc.insert(stdc.begin(), l.begin(), l.end());
+         if(!test::CheckEqualContainers(cntc, stdc)) return 1;
+         cntc.assign(l.begin(), l.end());
+         stdc.assign(l.begin(), l.end());
+         if(!test::CheckEqualContainers(cntc, stdc)) return 1;
       }
 
-      cntdeque.resize(100);
-      stddeque.resize(100);
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return 1;
+      cntc.resize(100);
+      stdc.resize(100);
+      if(!test::CheckEqualContainers(cntc, stdc)) return 1;
 
-      cntdeque.resize(200);
-      stddeque.resize(200);
-      if(!test::CheckEqualContainers(cntdeque, stddeque)) return 1;
+      cntc.resize(200);
+      stdc.resize(200);
+      if(!test::CheckEqualContainers(cntc, stdc)) return 1;
    }
-
-#ifndef BOOST_CONTAINER_NO_CXX17_CTAD
-   //Check Constructor Template Auto Deduction
-   {
-      auto gold = MyStdDeque{ 1, 2, 3 };
-      auto test = deque(gold.begin(), gold.end());
-      if(!test::CheckEqualContainers(gold, test)) return false;
-   }
-   {
-      auto gold = MyStdDeque{ 1, 2, 3 };
-      auto test = deque(gold.begin(), gold.end(), new_allocator<int>());
-      if(!test::CheckEqualContainers(gold, test)) return false;
-   }
-#endif
 
    std::cout << std::endl << "Test OK!" << std::endl;
    return true;
 }
+
+bool test_ctad()  //Older clang versions suffer from ICE here
+#if !defined(BOOST_CONTAINER_NO_CXX17_CTAD) && (!defined(BOOST_CLANG) || (BOOST_CLANG_VERSION >= 80000))
+{
+   typedef std::vector<int> MyStd;
+   //Check Constructor Template Auto Deduction
+   {
+      MyStd gold = MyStd{ 1, 2, 3 };
+      deque<int> test = deque(gold.begin(), gold.end());
+      if (!test::CheckEqualContainers(gold, test)) return false;
+   }
+   {
+      MyStd gold = MyStd{ 1, 2, 3 };
+      deque<int>  test = deque<int>(gold.begin(), gold.end(), new_allocator<int>());
+      if (!test::CheckEqualContainers(gold, test)) return false;
+   }
+   return true;
+}
+#else
+{ return true;  }
+#endif
 
 template<class VoidAllocator, bool Reservable>
 struct GetAllocatorCont
@@ -413,6 +420,9 @@ struct alloc_propagate_base<boost_container_deque>
 
 }}}   //namespace boost::container::test
 
+//Test the expected sizeof()
+BOOST_CONTAINER_STATIC_ASSERT_MSG(4*sizeof(void*) == sizeof(deque<int>), "sizeof has an unexpected value");
+
 int main ()
 {
    if(!do_recursive_deque_test())
@@ -429,6 +439,9 @@ int main ()
       return 1;
 
    if(!do_test<test::copyable_int, true>())
+      return 1;
+
+   if (!test_ctad())
       return 1;
 
    //Default block size

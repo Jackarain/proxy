@@ -668,6 +668,13 @@
                         </entry>
                     </row>
                     <row>
+                        <entry>is_blank</entry>
+                        <entry>Recognize blanks</entry>
+                        <entry>
+                            <functionname>is_blank()</functionname>
+                        </entry>
+                    </row>
+                    <row>
                         <entry>is_alnum</entry>
                         <entry>Recognize alphanumeric characters</entry>
                         <entry>

@@ -9,7 +9,8 @@
         "State"
     ],
     "maintainers": [
-        "Christophe Henry <christophe.j.henry -at-  googlemail.com>"
+        "Christophe Henry <christophe.j.henry -at-  googlemail.com>",
+        "Christian Granzin"
     ],
     "cxxstd": "03"
 }

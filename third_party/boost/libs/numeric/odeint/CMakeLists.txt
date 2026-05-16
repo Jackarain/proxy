@@ -27,7 +27,6 @@ if(BOOST_NUMERIC_ODEINT_NO_ADAPTORS)
       Boost::numeric_ublas
       Boost::preprocessor
       Boost::range
-      Boost::static_assert
       Boost::throw_exception
       Boost::type_traits
       Boost::units
@@ -50,7 +49,6 @@ else()
       Boost::numeric_ublas
       Boost::preprocessor
       Boost::range
-      Boost::static_assert
       Boost::throw_exception
       Boost::type_traits
       Boost::units

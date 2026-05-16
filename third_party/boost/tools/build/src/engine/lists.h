@@ -657,6 +657,7 @@ inline list_ref & list_ref::operator+(T value) // <2>
 
 Adds a single value to the end of the list. The list is returned to allow for
 chaining.
+
 end::reference[] */
 inline list_ref & list_ref::push_back(OBJECT * value)
 {

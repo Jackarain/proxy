@@ -16,7 +16,7 @@
 #include <boost/thread/concurrent_queues/deque_adaptor.hpp>
 #include <boost/thread/concurrent_queues/deque_views.hpp>
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/static_assert.hpp>
 
 class non_copyable
@@ -90,7 +90,7 @@ int main()
     // empty queue push lvalue/copyable succeeds
     boost::deque_adaptor<boost::sync_deque<int> > sq;
     boost::deque_back<int> q(sq);
-      int i;
+      int i = 42;
       q.push(i);
       BOOST_TEST(! q.empty());
       BOOST_TEST(! q.full());
@@ -140,7 +140,7 @@ int main()
     // empty queue push lvalue succeeds
     boost::deque_adaptor<boost::sync_deque<int> > sq;
     boost::deque_back<int> q(sq);
-      int i;
+      int i = 42;
       q.push(i);
       BOOST_TEST(! q.empty());
       BOOST_TEST(! q.full());

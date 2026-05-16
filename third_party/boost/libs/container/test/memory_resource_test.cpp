@@ -26,10 +26,11 @@ void test_allocate()
    BOOST_TEST(d.do_allocate_bytes == 0);
    BOOST_TEST(d.do_allocate_alignment == 0);
 
-   mr.allocate(2, 4);
+   void *const p = mr.allocate(2, 4);
    BOOST_TEST(d.do_allocate_called == true);
    BOOST_TEST(d.do_allocate_bytes == 2);
    BOOST_TEST(d.do_allocate_alignment == 4);
+   mr.deallocate(p, 2, 4);
 }
 
 void test_deallocate()

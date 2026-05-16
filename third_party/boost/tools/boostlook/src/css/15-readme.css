@@ -1,0 +1,38 @@
+
+/*----------------- Library README Styles start -----------------*/
+
+.boostlook#libraryReadMe {
+  margin-left: 0;
+}
+
+.boostlook#libraryReadMe > * {
+  max-width: unset;
+  margin-left: inherit;
+  margin-right: inherit;
+}
+
+.boostlook#libraryReadMe > h1:first-child {
+  margin-top: 0;
+}
+
+.boostlook#libraryReadMe div.highlight:has(> pre) {
+  background: transparent !important;
+}
+
+.boostlook#libraryReadMe p:has(> a img ) {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.boostlook#libraryReadMe p a:has(> img ) {
+  margin-left:.5rem;
+}
+
+.boostlook#libraryReadMe > pre:not(:is(dd pre, td pre)) {
+  padding: var(--spacing-size-xs, 0.75rem) var(--spacing-size-sm, 1rem);
+  border: 1px solid var(--border-border-secondary, #d5d7d9);
+}
+
+/*----------------- Library README Styles end -----------------*/

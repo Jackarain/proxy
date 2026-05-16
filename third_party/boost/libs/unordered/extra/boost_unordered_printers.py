@@ -1,4 +1,4 @@
-# Copyright 2024-2025 Braden Ganetsky
+# Copyright 2024-2026 Braden Ganetsky
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
@@ -16,8 +16,14 @@ class BoostUnorderedHelpers:
             return n
 
     def maybe_unwrap_foa_element(e):
-        if f"{e.type.strip_typedefs()}".startswith("boost::unordered::detail::foa::element_type<"):
-            return e["p"]
+        # Sometimes the complex typedefs can't be resolved through a pointer
+        if e.type.strip_typedefs().code == gdb.TYPE_CODE_PTR:
+            foa_element = e.dereference()
+        else:
+            foa_element = e
+
+        if f"{foa_element.type.strip_typedefs()}".startswith("boost::unordered::detail::foa::element_type<"):
+            return foa_element["p"]
         else:
             return e
 

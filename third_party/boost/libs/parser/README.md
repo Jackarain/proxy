@@ -67,6 +67,6 @@ Develop status:
 
 [![Windows MSVC](https://github.com/tzlaine/parser/actions/workflows/windows.yml/badge.svg?branch=develop)](https://github.com/tzlaine/parser/actions/workflows/windows.yml)
 
-[![macos-13 - Clang 14](https://github.com/tzlaine/parser/actions/workflows/macos-13.yml/badge.svg?branch=develop)](https://github.com/tzlaine/parser/actions/workflows/macos-13.yml)
+[![macos-15 - Clang](https://github.com/tzlaine/parser/actions/workflows/macos-15.yml/badge.svg?branch=develop)](https://github.com/tzlaine/parser/actions/workflows/macos-15.yml)
 
 [![License](https://img.shields.io/badge/license-boost-brightgreen.svg)](LICENSE_1_0.txt)

@@ -50,7 +50,7 @@ example - matrix addition:
 include::{example}/ambiguities/1/main.cpp[tag=content]
 ----
 
-The programs terminates with the following error message:
+The program terminates with the following error message:
 
 ```
 ambiguous

@@ -1,4 +1,4 @@
-// Copyright 2013-2025 Antony Polukhin
+// Copyright 2013-2026 Antony Polukhin
 
 // Distributed under the Boost Software License, Version 1.0.
 // (See the accompanying file LICENSE_1_0.txt
@@ -23,8 +23,8 @@ namespace my_namespace {
 class my_class;
 struct my_struct;
 
-typedef std::vector<my_class> my_classes;
-typedef std::string my_string;
+using my_classes = std::vector<my_class>;
+using my_string = std::string;
 
 } // namespace my_namespace
 
@@ -96,21 +96,21 @@ class my_type_index: public boost::typeindex::type_index_facade<my_type_index, d
     const detail::my_typeinfo* data_;
 
 public:
-    typedef detail::my_typeinfo type_info_t;
+    using type_info_t = detail::my_typeinfo;
 
-    inline my_type_index() BOOST_NOEXCEPT
+    inline my_type_index() noexcept
         : data_(&detail::my_typeinfo_construct<void>())
     {}
 
-    inline my_type_index(const type_info_t& data) BOOST_NOEXCEPT
+    inline my_type_index(const type_info_t& data) noexcept
         : data_(&data)
     {}
 
-    inline const type_info_t&  type_info() const BOOST_NOEXCEPT {
+    inline const type_info_t&  type_info() const noexcept {
         return *data_;
     }
 
-    inline const char*  raw_name() const BOOST_NOEXCEPT {
+    inline const char*  raw_name() const noexcept {
         return data_->type_;
     }
 
@@ -119,17 +119,17 @@ public:
     }
 
     template <class T>
-    inline static my_type_index type_id() BOOST_NOEXCEPT {
+    inline static my_type_index type_id() noexcept {
         return detail::my_typeinfo_construct<T>();
     }
 
     template <class T>
-    inline static my_type_index type_id_with_cvr() BOOST_NOEXCEPT {
+    inline static my_type_index type_id_with_cvr() noexcept {
         return detail::my_typeinfo_construct<T>();
     }
 
     template <class T>
-    inline static my_type_index type_id_runtime(const T& variable) BOOST_NOEXCEPT;
+    inline static my_type_index type_id_runtime(const T& variable) noexcept;
 };
 
 } // namespace my_namespace
@@ -168,7 +168,7 @@ namespace my_namespace { namespace detail {
 */
 namespace my_namespace {
     template <class T>
-    my_type_index my_type_index::type_id_runtime(const T& variable) BOOST_NOEXCEPT {
+    my_type_index my_type_index::type_id_runtime(const T& variable) noexcept {
         // Classes that were marked with `MY_TYPEINDEX_REGISTER_CLASS` will have a
         // `type_id_runtime()` method.
         return variable.type_id_runtime();
@@ -204,7 +204,7 @@ struct my_struct: public my_class {
 */
 #define BOOST_TYPE_INDEX_REGISTER_CLASS MY_TYPEINDEX_REGISTER_CLASS
 namespace boost { namespace typeindex {
-    typedef my_namespace::my_type_index type_index;
+    using type_index = my_namespace::my_type_index;
 }}
 //] [/type_index_my_type_index_worldwide_typedefs]
 

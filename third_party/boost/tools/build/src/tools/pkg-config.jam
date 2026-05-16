@@ -13,7 +13,9 @@ import feature ;
 import os ;
 import param ;
 import project ;
+import property-set ;
 import regex ;
+import set ;
 import sequence ;
 import string ;
 import targets ;
@@ -41,7 +43,7 @@ section <<pkg-config-init>>.
 
 |# # end::doc[]
 
-feature.feature pkg-config : : propagated ;
+feature.feature pkg-config : : optional propagated ;
 
 
 #| tag::doc[]
@@ -74,10 +76,9 @@ feature.feature pkg-config-define : : free ;
 
 Main target rule that imports a *pkg-config* package. When its consumer targets
 are built, *pkg-config* command will be invoked with arguments that depend on
-current property set. The features that have an effect are:
+the current property set. The features that have an effect are:
 
 * `<pkg-config-define>`: adds a `--define-variable` argument;
-* `<link>`: adds `--static` argument when `<link>static`;
 * `<link>`: adds `--static` argument when `<link>static`;
 * `<name>`: specifies package name (target name is used instead if the property
     is not present);
@@ -96,7 +97,8 @@ pkg-config.import my-package
 |# # end::doc[]
 
 
-rule import
+# will be re-exported as 'import'
+local rule do-import
     ( target-name
     : sources *
     : requirements *
@@ -127,7 +129,7 @@ with the `using` rule:
 
 [source, jam]
 ----
-using pkg-config : [config] : [command] ... : [ options ] ... ;
+using pkg-config : [config] : [command] ... : [ options ] ... : [condition] ... ;
 ----
 
 
@@ -137,31 +139,48 @@ using pkg-config : [config] : [command] ... : [ options ] ... ;
     is given, first `PKG_CONFIG` environment variable is checked, and if its
     empty the string `pkg-config` is used.
 * `options`: options that modify `pkg-config` behavior. Allowed options are:
-    * `<path>`: sets `PKG_CONFIG_PATH` environment variable;
+    ** `<path>`: sets `PKG_CONFIG_PATH` environment variable;
         multiple occurences are allowed.
-    * `<libdir>`: sets `PKG_CONFIG_LIBDIR` environment variable;
+    ** `<libdir>`: sets `PKG_CONFIG_LIBDIR` environment variable;
         multiple occurences are allowed.
-    * `<allow-system-cflags>`: sets `PKG_CONFIG_ALLOW_SYSTEM_CFLAGS`
+    ** `<allow-system-cflags>`: sets `PKG_CONFIG_ALLOW_SYSTEM_CFLAGS`
         environment variable; multiple occurences are allowed.
-    * `<allow-system-libs>`: sets `PKG_CONFIG_ALLOW_SYSTEM_LIBS`
+    ** `<allow-system-libs>`: sets `PKG_CONFIG_ALLOW_SYSTEM_LIBS`
         environment variable; multiple occurences are allowed.
-    * `<sysroot>`: sets `PKG_CONFIG_SYSROOT_DIR` environment variable;
+    ** `<sysroot>`: sets `PKG_CONFIG_SYSROOT_DIR` environment variable;
         multiple occurences are allowed.
-    * `<variable>`: adds a variable definition argument to command invocation;
+    ** `<variable>`: adds a variable definition argument to command invocation;
         multiple occurences are allowed.
+* `condition`: properties that distinguish this configuration.
 
 |# # end::doc[]
 
-rule init ( config ? : command * : options * )
+rule init ( config ? : command * : options * : condition * )
 {
+    if ! $(.initialized)
+    {
+        .initialized = true ;
+
+        project.initialize $(__name__) ;
+        project $(__name__) ;
+
+        # project.initialize would have replaced import rule in this module, so
+        # we have to resort to this
+        IMPORT $(__name__) : do-import : $(__name__) : import ;
+        EXPORT $(__name__) : import ;
+    }
+
     if ! $(config)
     {
         config = [ default-config ] ;
-        if ( $(config) in [ $(.configs).all ] )
-           && ! ( $(command) || $(options) )
+        if $(config) in [ $(.configs).used ]
         {
-            return ;
+            config = ;
         }
+    }
+    if ! $(config) && ! $(condition)
+    {
+        return ;
     }
 
     local tool = [ os.environ PKG_CONFIG ] ;
@@ -169,7 +188,13 @@ rule init ( config ? : command * : options * )
     command =
         [ common.get-invocation-command pkg-config : $(tool) : $(command) ] ;
 
-    configure $(config) : $(command) : $(options) ;
+    local condition = [ property-set.create $(condition) ] ;
+    local base = [ $(condition).base ] ;
+    local conditional = [ $(condition).conditional ] ;
+    condition = [ property-set.create
+        [ set.difference $(base) : $(conditional) ] ] ;
+
+    configure $(config) : $(command) : $(options) : $(condition) ;
     $(.configs).use $(config) ;
 }
 
@@ -231,7 +256,7 @@ class pkg-config-target : alias-target-class
 
     rule construct ( name : sources * : property-set )
     {
-        local config = [ $(property-set).get <pkg-config> ] ;
+        local config = [ get-config $(property-set) ] ;
         local args = [ common-arguments $(name) : $(property-set) ] ;
         return
             [ property-set.create
@@ -242,7 +267,7 @@ class pkg-config-target : alias-target-class
 
     rule version ( property-set )
     {
-        local config = [ $(property-set).get <pkg-config> ] ;
+        local config = [ get-config $(property-set) ] ;
         local args = [ common-arguments [ name ] : $(property-set) ] ;
         local version = [ pkg-config.run $(config) : --modversion $(args) ] ;
         return [ regex.split $(version) "\\." ] ;
@@ -308,16 +333,103 @@ class pkg-config-target : alias-target-class
         local flags = [ pkg-config.run $(config) : --cflags $(args) ] ;
         return <cflags>$(flags) ;
     }
+
+    local rule get-config ( property-set )
+    {
+        local result = [ $(property-set).get <pkg-config> ] ;
+        if $(result)
+        {
+            return $(result) ;
+        }
+
+        result = [ select-configuration $(property-set) ] ;
+        if ! $(result)
+        {
+            echo "error: No best pkg-config configuration for"
+                [ $(property-set).raw ] ;
+            select-configuration $(property-set) : trace ;
+            return [ pkg-config.default-config ] ;
+        }
+        else
+        {
+            return $(result) ;
+        }
+    }
+
+    local rule select-configuration ( property-set : trace ? )
+    {
+        local best-config ;
+        local best-condition ;
+        local ambiguous ;
+        local request = [ $(property-set).raw ] ;
+        local configs = [ pkg-config.get-configs ] ;
+        local used-configs = [ $(configs).used ] ;
+        while $(used-configs) && ! $(ambiguous)
+        {
+            local config = $(used-configs[1]) ;
+            local condition = [ $(configs).get $(config) : condition ] ;
+            local condition = [ feature.expand-subfeatures
+                [ $(condition).raw ] : unchecked ] ;
+            if $(condition) in $(request)
+            {
+                if $(trace)
+                {
+                    echo "    matched:" $(condition:E=(empty)) ;
+                }
+                if ! $(best-config)
+                {
+                    best-config = $(config) ;
+                    best-condition = $(condition) ;
+                }
+                else
+                {
+                    if $(condition) = $(best-condition)
+                    {
+                        ambiguous = true ;
+                    }
+                    else if $(condition) in $(best-condition)
+                    {
+                        # Do nothing, this alternative is worse
+                    }
+                    else if $(best-condition) in $(condition)
+                    {
+                        best-config = $(config) ;
+                        best-condition = $(condition) ;
+                    }
+                    else
+                    {
+                        ambiguous = true ;
+                    }
+                }
+            }
+            else
+            {
+                if $(trace)
+                {
+                    echo "    no match:" $(condition:E=(empty)) ;
+                }
+            }
+            used-configs = $(used-configs[2-]) ;
+        }
+
+        if $(ambiguous)
+        {
+            return ;
+        }
+        else
+        {
+            return $(best-config) ;
+        }
+    }
 }
 
-
-local rule default-config ( )
+rule default-config ( )
 {
     return default ;
 }
 
 
-local rule configure ( config : command + : options * )
+local rule configure ( config : command + : options * : condition )
 {
     $(.configs).register $(config) ;
 
@@ -380,6 +492,7 @@ local rule configure ( config : command + : options * )
         : command
         : "$(path)$(libdir)$(sysroot)$(allow-cflags)$(allow-libs)$(command:J= )"
         ;
+    $(.configs).set $(config) : condition : $(condition) ;
 
     feature.extend pkg-config : $(config) ;
 }
@@ -410,6 +523,10 @@ local rule non-empty ( string )
 
 .configs = [ new configurations ] ;
 
+rule get-configs ( )
+{
+    return $(.configs) ;
+}
 
 #| tag::doc[]
 
@@ -441,8 +558,16 @@ project
 ----
 
 Thanks to the fact, that `project-config`, `user-config` and `site-config`
-modules are parents of jamroot module, you can put it in any of those files.o
+modules are parents of jamroot module, you can put it in any of those files.
 
+Alternatively, you can use the condition argument during initialization, and
+achieve the same thing without project requirements:
+
+[source, jam]
+----
+using pkg-config : A : : <libdir>path/to/collection/A : <target-os>A-os <architecture>A-arch ;
+using pkg-config : B : : <libdir>path/to/collection/B : <target-os>B-os <architecture>B-arch ;
+----
 
 === Choosing the package name based on the property set
 
@@ -468,7 +593,7 @@ rule infer-name ( properties * )
 }
 ----
 
-The `common.format-name` rule can be very useful in this situation.
+The rule `common.format-name` can be very useful in such situations.
 
 
 === Modify usage requirements based on package version or variable

@@ -17,30 +17,30 @@ void
 check_write_ref()
     {
     V v;
-    BOOST_TEST((&A<0>(v)==&v.a[0]));
-    BOOST_TEST((&A<1>(v)==&v.a[1]));
-    BOOST_TEST((&A<2>(v)==&v.a[2]));
-    BOOST_TEST((&A<3>(v)==&v.a[3]));
-    BOOST_TEST((&A<4>(v)==&v.a[4]));
-    BOOST_TEST((&A<5>(v)==&v.a[5]));
-    BOOST_TEST((&A<6>(v)==&v.a[6]));
-    BOOST_TEST((&A<7>(v)==&v.a[7]));
-    BOOST_TEST((&A<8>(v)==&v.a[8]));
-    BOOST_TEST((&A<9>(v)==&v.a[9]));
-    BOOST_TEST(&A0(v)==&v.a[0]);
-    BOOST_TEST(&A1(v)==&v.a[1]);
-    BOOST_TEST(&A2(v)==&v.a[2]);
-    BOOST_TEST(&A3(v)==&v.a[3]);
-    BOOST_TEST(&A4(v)==&v.a[4]);
-    BOOST_TEST(&A5(v)==&v.a[5]);
-    BOOST_TEST(&A6(v)==&v.a[6]);
-    BOOST_TEST(&A7(v)==&v.a[7]);
-    BOOST_TEST(&A8(v)==&v.a[8]);
-    BOOST_TEST(&A9(v)==&v.a[9]);
-    BOOST_TEST(&X(v)==&v.a[0]);
-    BOOST_TEST(&Y(v)==&v.a[1]);
-    BOOST_TEST(&Z(v)==&v.a[2]);
-    BOOST_TEST(&W(v)==&v.a[3]);
+    BOOST_TEST_EQ((&A<0>(v)), &v.a[0]);
+    BOOST_TEST_EQ((&A<1>(v)), &v.a[1]);
+    BOOST_TEST_EQ((&A<2>(v)), &v.a[2]);
+    BOOST_TEST_EQ((&A<3>(v)), &v.a[3]);
+    BOOST_TEST_EQ((&A<4>(v)), &v.a[4]);
+    BOOST_TEST_EQ((&A<5>(v)), &v.a[5]);
+    BOOST_TEST_EQ((&A<6>(v)), &v.a[6]);
+    BOOST_TEST_EQ((&A<7>(v)), &v.a[7]);
+    BOOST_TEST_EQ((&A<8>(v)), &v.a[8]);
+    BOOST_TEST_EQ((&A<9>(v)), &v.a[9]);
+    BOOST_TEST_EQ(&A0(v), &v.a[0]);
+    BOOST_TEST_EQ(&A1(v), &v.a[1]);
+    BOOST_TEST_EQ(&A2(v), &v.a[2]);
+    BOOST_TEST_EQ(&A3(v), &v.a[3]);
+    BOOST_TEST_EQ(&A4(v), &v.a[4]);
+    BOOST_TEST_EQ(&A5(v), &v.a[5]);
+    BOOST_TEST_EQ(&A6(v), &v.a[6]);
+    BOOST_TEST_EQ(&A7(v), &v.a[7]);
+    BOOST_TEST_EQ(&A8(v), &v.a[8]);
+    BOOST_TEST_EQ(&A9(v), &v.a[9]);
+    BOOST_TEST_EQ(&X(v), &v.a[0]);
+    BOOST_TEST_EQ(&Y(v), &v.a[1]);
+    BOOST_TEST_EQ(&Z(v), &v.a[2]);
+    BOOST_TEST_EQ(&W(v), &v.a[3]);
     }
 
 template <class V>

@@ -49,8 +49,7 @@ class static_url;
         @li @ref parse_uri
         @li @ref parse_uri_reference
 */
-class BOOST_URL_DECL
-    static_url_base
+class BOOST_SYMBOL_VISIBLE static_url_base
     : public url_base
 {
     template<std::size_t>
@@ -475,5 +474,8 @@ private:
 };
 } // std
 #endif
+
+#include <boost/url/parse.hpp>
+#include <boost/url/impl/static_url.hpp>
 
 #endif

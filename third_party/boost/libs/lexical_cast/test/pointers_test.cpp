@@ -2,7 +2,7 @@
 //
 //  See http://www.boost.org for most recent version, including documentation.
 //
-//  Copyright Antony Polukhin, 2012-2025.
+//  Copyright Antony Polukhin, 2012-2026.
 //
 //  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
@@ -11,6 +11,8 @@
 #include <boost/lexical_cast.hpp>
 
 #include <boost/core/lightweight_test.hpp>
+
+#include <sstream>
 
 #if defined(BOOST_NO_STRINGSTREAM)
             typedef std::strstream ss_t;

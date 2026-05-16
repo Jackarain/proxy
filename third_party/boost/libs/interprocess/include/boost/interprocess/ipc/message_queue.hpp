@@ -314,8 +314,6 @@ class priority_functor
 //!   points to a preallocated message. Elements of this array are
 //!   reordered in runtime in the following way:
 //!
-//!   IF BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX is defined:
-//!
 //!   When the current number of messages is "cur_num_msg", the array
 //!   is treated like a circular buffer. Starting from position "cur_first_msg"
 //!   "cur_num_msg" in a circular way, pointers point to inserted messages and the rest
@@ -328,19 +326,6 @@ class priority_functor
 //!   [(cur_first_msg + cur_num_msg)%max_num_msg] otherwise.
 //!
 //!   This transforms the index in a circular buffer with an embedded free
-//!   message queue.
-//!
-//!   ELSE (BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX is NOT defined):
-//!
-//!   When the current number of messages is "cur_num_msg", the first
-//!   "cur_num_msg" pointers point to inserted messages and the rest
-//!   point to free messages. The first "cur_num_msg" pointers are
-//!   ordered by the priority of the pointed message and by insertion order
-//!   if two messages have the same priority. So the next message to be
-//!   used in a "receive" is pointed by index [cur_num_msg-1] and the first free
-//!   message ready to be used in a "send" operation is index [cur_num_msg].
-//!
-//!   This transforms the index in a fixed size priority queue with an embedded free
 //!   message queue.
 //!
 //!-> struct message_t
@@ -376,14 +361,12 @@ class mq_hdr_t
    //!This constructor initializes the needed resources and creates
    //!the internal structures like the priority index. This can throw.
    mq_hdr_t(size_type max_num_msg, size_type max_msg_size)
-      : m_max_num_msg(max_num_msg),
-         m_max_msg_size(max_msg_size),
-         m_cur_num_msg(0)
-         #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
-         ,m_cur_first_msg(0u)
-         ,m_blocked_senders(0u)
-         ,m_blocked_receivers(0u)
-         #endif
+      : m_max_num_msg(max_num_msg)
+      , m_max_msg_size(max_msg_size)
+      , m_cur_num_msg(0)
+      , m_cur_first_msg(0u)
+      , m_blocked_senders(0u)
+      , m_blocked_receivers(0u)
       {  this->initialize_memory();  }
 
    //!Returns true if the message queue is full
@@ -397,8 +380,6 @@ class mq_hdr_t
    //!Frees the top priority message and saves it in the free message list
    void free_top_msg()
       {  --m_cur_num_msg;  }
-
-   #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
 
    typedef msg_hdr_ptr_t *iterator;
 
@@ -529,38 +510,6 @@ class mq_hdr_t
       }
    }
 
-   #else //BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
-
-   typedef msg_hdr_ptr_t *iterator;
-
-   //!Returns the inserted message with top priority
-   msg_header &top_msg()
-      {  return *mp_index[difference_type(m_cur_num_msg-1u)];   }
-
-   //!Returns the inserted message with bottom priority
-   msg_header &bottom_msg()
-      {  return *mp_index[0];   }
-
-   iterator inserted_ptr_begin() const
-   {  return &mp_index[0]; }
-
-   iterator inserted_ptr_end() const
-   {  return &mp_index[difference_type(m_cur_num_msg)]; }
-
-   iterator lower_bound(const msg_hdr_ptr_t & value, priority_functor<VoidPointer> func)
-   {  return std::lower_bound(this->inserted_ptr_begin(), this->inserted_ptr_end(), value, func);  }
-
-   msg_header & insert_at(iterator pos)
-   {
-      const msg_hdr_ptr_t backup = *inserted_ptr_end();
-      std::copy_backward(pos, inserted_ptr_end(), inserted_ptr_end()+1);
-      *pos = backup;
-      ++m_cur_num_msg;
-      return **pos;
-   }
-
-   #endif   //BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
-
    //!Inserts the first free message in the priority queue
    msg_header & queue_free_msg(unsigned int priority)
    {
@@ -650,12 +599,10 @@ class mq_hdr_t
    interprocess_condition     m_cond_recv;
    //Condition block senders when the queue is full
    interprocess_condition     m_cond_send;
-   #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
    //Current start offset in the circular index
    size_type                  m_cur_first_msg;
    size_type                  m_blocked_senders;
    size_type                  m_blocked_receivers;
-   #endif
 };
 
 
@@ -853,9 +800,7 @@ inline bool message_queue_t<VoidPointer>::do_send(
       throw interprocess_exception(size_error);
    }
 
-   #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
    bool notify_blocked_receivers = false;
-   #endif
    //---------------------------------------------
    scoped_lock<interprocess_mutex> lock(p_hdr->m_mutex);
    //---------------------------------------------
@@ -863,14 +808,10 @@ inline bool message_queue_t<VoidPointer>::do_send(
       //If the queue is full execute blocking logic
       if (p_hdr->is_full()) {
          BOOST_INTERPROCESS_TRY{
-            #ifdef BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
             ++p_hdr->m_blocked_senders;
-            #endif
             switch(Block){
                case non_blocking :
-                  #ifdef BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
                   --p_hdr->m_blocked_senders;
-                  #endif
                   return false;
                break;
 
@@ -885,9 +826,7 @@ inline bool message_queue_t<VoidPointer>::do_send(
                   do{
                      if(!do_cond_wait(ipcdetail::bool_<Block == timed>(), p_hdr->m_cond_send, lock, abs_time)) {
                         if(p_hdr->is_full()){
-                           #ifdef BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
                            --p_hdr->m_blocked_senders;
-                           #endif
                            return false;
                         }
                         break;
@@ -898,21 +837,15 @@ inline bool message_queue_t<VoidPointer>::do_send(
                default:
                break;
             }
-            #ifdef BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
             --p_hdr->m_blocked_senders;
-            #endif
          }
          BOOST_INTERPROCESS_CATCH(...){
-            #ifdef BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
             --p_hdr->m_blocked_senders;
-            #endif
             BOOST_INTERPROCESS_RETHROW;
          } BOOST_INTERPROCESS_CATCH_END
       }
 
-      #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
       notify_blocked_receivers = 0 != p_hdr->m_blocked_receivers;
-      #endif
       //Insert the first free message in the priority queue
       ipcdetail::msg_hdr_t<VoidPointer> &free_msg_hdr = p_hdr->queue_free_msg(priority);
 
@@ -931,13 +864,9 @@ inline bool message_queue_t<VoidPointer>::do_send(
    //Notify outside lock to avoid contention. This might produce some
    //spurious wakeups, but it's usually far better than notifying inside.
    //If this message changes the queue empty state, notify it to receivers
-   #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
    if (notify_blocked_receivers){
       p_hdr->m_cond_recv.notify_one();
    }
-   #else
-   p_hdr->m_cond_recv.notify_one();
-   #endif
 
    return true;
 }
@@ -981,9 +910,7 @@ inline bool
       throw interprocess_exception(size_error);
    }
 
-   #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
    bool notify_blocked_senders = false;
-   #endif
    //---------------------------------------------
    scoped_lock<interprocess_mutex> lock(p_hdr->m_mutex);
    //---------------------------------------------
@@ -991,14 +918,10 @@ inline bool
       //If there are no messages execute blocking logic
       if (p_hdr->is_empty()) {
          BOOST_INTERPROCESS_TRY{
-            #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
             ++p_hdr->m_blocked_receivers;
-            #endif
             switch(Block){
                case non_blocking :
-                  #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
                   --p_hdr->m_blocked_receivers;
-                  #endif
                   return false;
                break;
 
@@ -1013,9 +936,7 @@ inline bool
                   do{
                      if(!do_cond_wait(ipcdetail::bool_<Block == timed>(), p_hdr->m_cond_recv, lock, abs_time)) {
                         if(p_hdr->is_empty()){
-                           #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
                            --p_hdr->m_blocked_receivers;
-                           #endif
                            return false;
                         }
                         break;
@@ -1028,21 +949,15 @@ inline bool
                default:
                break;
             }
-            #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
             --p_hdr->m_blocked_receivers;
-            #endif
          }
          BOOST_INTERPROCESS_CATCH(...){
-            #if defined(BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX)
             --p_hdr->m_blocked_receivers;
-            #endif
             BOOST_INTERPROCESS_RETHROW;
          } BOOST_INTERPROCESS_CATCH_END
       }
 
-      #ifdef BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
       notify_blocked_senders = 0 != p_hdr->m_blocked_senders;
-      #endif
 
       //There is at least one message ready to pick, get the top one
       ipcdetail::msg_hdr_t<VoidPointer> &top_msg = p_hdr->top_msg();
@@ -1065,13 +980,9 @@ inline bool
    //Notify outside lock to avoid contention. This might produce some
    //spurious wakeups, but it's usually far better than notifying inside.
    //If this reception changes the queue full state, notify senders
-   #ifdef BOOST_INTERPROCESS_MSG_QUEUE_CIRCULAR_INDEX
    if (notify_blocked_senders){
       p_hdr->m_cond_send.notify_one();
    }
-   #else
-   p_hdr->m_cond_send.notify_one();
-   #endif
 
    return true;
 }

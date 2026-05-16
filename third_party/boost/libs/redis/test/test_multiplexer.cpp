@@ -15,6 +15,7 @@
 #include <boost/assert/source_location.hpp>
 #include <boost/core/lightweight_test.hpp>
 
+#include "print_node.hpp"
 #include "sansio_utils.hpp"
 
 #include <iostream>
@@ -32,17 +33,6 @@ using boost::redis::resp3::type;
 using boost::redis::response;
 using boost::redis::any_adapter;
 using boost::system::error_code;
-
-namespace boost::redis::resp3 {
-
-std::ostream& operator<<(std::ostream& os, node const& nd)
-{
-   return os << "node{ .data_type=" << to_string(nd.data_type)
-             << ", .aggregate_size=" << nd.aggregate_size << ", .depth=" << nd.depth
-             << ", .value=" << nd.value << "}";
-}
-
-}  // namespace boost::redis::resp3
 
 namespace boost::redis::detail {
 

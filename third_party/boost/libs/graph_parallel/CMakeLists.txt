@@ -39,7 +39,6 @@ target_link_libraries(boost_graph_parallel
     Boost::random
     Boost::serialization
     Boost::smart_ptr
-    Boost::static_assert
     Boost::tuple
     Boost::type_traits
     Boost::variant

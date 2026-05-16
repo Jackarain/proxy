@@ -96,7 +96,7 @@ private:
         auto negotiated_ka = _svc_ptr->negotiated_keep_alive();
         return negotiated_ka ?
             std::chrono::seconds(negotiated_ka) :
-            duration((std::numeric_limits<duration::rep>::max)());
+            (duration::max)();
     }
 
     void complete() {

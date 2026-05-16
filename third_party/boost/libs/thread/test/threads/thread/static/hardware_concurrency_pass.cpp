@@ -18,7 +18,7 @@
 // static unsigned hardware_concurrency();
 
 #include <boost/thread/thread_only.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 int main()
 {

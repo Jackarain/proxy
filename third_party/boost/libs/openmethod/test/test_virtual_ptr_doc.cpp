@@ -117,6 +117,7 @@ BOOST_AUTO_TEST_CASE(smart_virtual_ptr_examples) {
 
         virtual_ptr<std::shared_ptr<Animal>> p = std::move(snoopy);
 
+        // coverity[use_after_move]
         BOOST_TEST(p.get() == moving);
         BOOST_TEST(p.vptr() == default_registry::static_vptr<Dog>);
         BOOST_TEST(snoopy.get() == nullptr);
@@ -126,6 +127,7 @@ BOOST_AUTO_TEST_CASE(smart_virtual_ptr_examples) {
             make_shared_virtual<Dog>();
         virtual_ptr<std::shared_ptr<Animal>> p = std::move(snoopy);
 
+        // coverity[use_after_move]
         BOOST_TEST(snoopy.get() != nullptr);
         BOOST_TEST(p.get() == snoopy.get());
         BOOST_TEST(p.vptr() == default_registry::static_vptr<Dog>);

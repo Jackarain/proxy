@@ -1,0 +1,11 @@
+//  Copyright 2026 Peter Dimov
+//  Distributed under the Boost Software License, Version 1.0.
+//  http://www.boost.org/LICENSE_1_0.txt
+
+#include <boost/circular_buffer.hpp>
+
+int main()
+{
+    boost::circular_buffer<int> cb;
+    return cb.empty()? 0: 1;
+}

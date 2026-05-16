@@ -24,7 +24,6 @@ target_link_libraries(boost_property_map
     Boost::lexical_cast
     Boost::mpl
     Boost::smart_ptr
-    Boost::static_assert
     Boost::throw_exception
     Boost::type_traits
     Boost::utility

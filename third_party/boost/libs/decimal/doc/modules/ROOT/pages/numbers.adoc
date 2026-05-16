@@ -1,0 +1,119 @@
+////
+Copyright 2023 - 2024 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#numbers]
+= Numeric Constants
+:idprefix: numbers_
+
+== Overview
+
+Contains all constants provided by C+\+20's `<numbers>` specialized for the decimal types. These do not require C++20.
+
+|===
+| Symbol | Value
+| e_v | https://en.wikipedia.org/wiki/E_(mathematical_constant)[Euler's Number]
+| log2e_v | log2(e)
+| log10e_v | log10(e)
+| pi_v | https://en.wikipedia.org/wiki/Pi[pi]
+| inv_pi_v | 1/pi
+| inv_sqrtpi_v | 1 / sqrt(pi)
+| ln2_v | ln(2) where ln is the https://en.wikipedia.org/wiki/Natural_logarithm[natural log]
+| ln10_v | ln(10)
+| sqrt2_v | sqrt(2)
+| sqrt3_v | sqrt(3)
+| sqrt10_v | sqrt(10)
+| inv_sqrt3_v | 1 / sqrt(3)
+| cbrt2_v | cbrt(2)
+| cbrt10_v | cbrt(10)
+| egamma_v | https://en.wikipedia.org/wiki/Euler%27s_constant[Euler–Mascheroni constant]
+| phi_v | https://en.wikipedia.org/wiki/Golden_ratio[The Golden Ratio]
+|===
+
+There are also non-template variables that provide the constant as a decimal64_t type.
+
+== Reference
+
+[source, c++]
+----
+
+#include <boost/decimal/numbers.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename Decimal>
+static constexpr Decimal e_v;
+
+template <typename Decimal>
+static constexpr Decimal log2e_v;
+
+template <typename Decimal>
+static constexpr Decimal log10e_v;
+
+template <typename Decimal>
+static constexpr Decimal pi_v;
+
+template <typename Decimal>
+static constexpr Decimal inv_pi_v;
+
+template <typename Decimal>
+static constexpr Decimal inv_sqrtpi_v;
+
+template <typename Decimal>
+static constexpr Decimal ln2_v;
+
+template <typename Decimal>
+static constexpr Decimal ln10_v;
+
+template <typename Decimal>
+static constexpr Decimal sqrt2_v;
+
+template <typename Decimal>
+static constexpr Decimal sqrt3_v;
+
+template <typename Decimal>
+static constexpr Decimal sqrt10_v;
+
+template <typename Decimal>
+static constexpr Decimal inv_sqrt2_v;
+
+template <typename Decimal>
+static constexpr Decimal inv_sqrt3_v;
+
+template <typename Decimal>
+static constexpr Decimal cbrt2_v;
+
+template <typename Decimal>
+static constexpr Decimal cbrt10_v;
+
+template <typename Decimal>
+static constexpr Decimal egamma_v;
+
+template <typename Decimal>
+static constexpr Decimal phi_v;
+
+static constexpr decimal64_t e {e_v<decimal64_t>};
+static constexpr decimal64_t log2e {log2e_v<decimal64_t>};
+static constexpr decimal64_t log10e {log10e_v<decimal64_t>};
+static constexpr decimal64_t pi {pi_v<decimal64_t>};
+static constexpr decimal64_t inv_pi {inv_pi_v<decimal64_t>};
+static constexpr decimal64_t inv_sqrtpi {inv_sqrtpi_v<decimal64_t>};
+static constexpr decimal64_t ln2 {ln2_v<decimal64_t>};
+static constexpr decimal64_t ln10 {ln10_v<decimal64_t>};
+static constexpr decimal64_t sqrt2 {sqrt2_v<decimal64_t>};
+static constexpr decimal64_t sqrt3 {sqrt3_v<decimal64_t>};
+static constexpr decimal64_t sqrt10 {sqrt10_v<decimal64_t>};
+static constexpr decimal64_t inv_sqrt2 {inv_sqrt2_v<decimal64_t>};
+static constexpr decimal64_t inv_sqrt3 {inv_sqrt3_v<decimal64_t>};
+static constexpr decimal64_t cbrt2 {cbrt2_v<decimal64_t>};
+static constexpr decimal64_t cbrt10 {cbrt10_v<decimal64_t>};
+static constexpr decimal64_t egamma {egamma_v<decimal64_t>};
+static constexpr decimal64_t phi {phi_v<decimal64_t>};
+
+} //namespace decimal
+} //namespace boost
+
+----

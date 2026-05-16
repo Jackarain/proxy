@@ -1,0 +1,119 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#cfenv]
+= `<cfenv>` Support
+:idprefix: cfenv_
+
+WARNING: This is an expert feature.
+If you have never used `std::fegetround` nor `std::fesetround` before, it is unlikely you will need anything described on this page
+
+== <cfenv>
+
+IEEE 754 defines 5 rounding modes for Decimal Floating Point Types.
+
+1. Downward
+2. To nearest (with ties to even)
+3. To nearest from zero
+4. Toward zero
+5. Upward
+
+NOTE: The default rounding mode is to nearest with ties to even (#2) as specified in IEEE 754 Section 4.3.3. This is also colloquially known as "Banker's Rounding"
+
+Using the following `enum class` and functions you can change the rounding mode from the default at *RUNTIME* only if xref:config.adoc#configuration_automatic[`BOOST_DECIMAL_NO_CONSTEVAL_DETECTION`] is not defined.
+
+[source, c++]
+----
+#include <boost/decimal/cfenv.hpp>
+
+namespace boost {
+namespace decimal {
+
+enum class rounding_mode : unsigned
+{
+    fe_dec_downward,
+    fe_dec_to_nearest,
+    fe_dec_to_nearest_from_zero,
+    fe_dec_toward_zero,
+    fe_dec_upward,
+    fe_dec_default = fe_dec_to_nearest
+};
+
+rounding_mode fegetround() noexcept;
+
+// Returns the rounding mode that has been set
+//
+// If your compiler defines BOOST_DECIMAL_NO_CONSTEVAL_DETECTION,
+// this function will return the default rounding mode
+// to alert you that the rounding mode has NOT changed
+rounding_mode fesetround(rounding_mode round) noexcept;
+
+} //namespace decimal
+} //namespace boost
+----
+
+IMPORTANT: Much like `std::fesetround`, `boost::decimal::fesetround` is not thread safe.
+
+[#examples_rounding_mode]
+
+.This https://github.com/boostorg/decimal/blob/develop/examples/rounding_mode.cpp[example] demonstrates how to set, get, and effects of the global rounding mode.
+====
+[source, c++]
+----
+include::example$rounding_mode.cpp[]
+----
+
+.Expected Output:
+....
+The default rounding mode is: fe_dec_to_nearest
+The current rounding mode is: fe_dec_upward
+lhs equals: 5e+50
+rhs equals: 4e+40
+  Sum with upward rounding: 5.000001e+50
+The current rounding mode is: fe_dec_downward
+Sum with downward rounding: 4.999999e+50
+....
+====
+
+As shown, changing the rounding mode *WILL* change your numerical results.
+If you are coming from the Intel library (or other C-style libs) where every mathematical function takes a rounding mode, that is not the case in this library; the only way to change the rounding mode for individual operations is via the global rounding mode.
+Before attempting to change the rounding mode ensure this is actually what you want to happen.
+
+You can similarly change the default rounding mode at compile time with *ANY* compiler (unlike at runtime) using similarly named macros:
+
+1. `BOOST_DECIMAL_FE_DEC_DOWNWARD`
+2. `BOOST_DECIMAL_FE_DEC_TO_NEAREST`
+3. `BOOST_DECIMAL_FE_DEC_TO_NEAREST_FROM_ZERO`
+4. `BOOST_DECIMAL_FE_DEC_TOWARD_ZERO`
+5. `BOOST_DECIMAL_FE_DEC_UPWARD`
+
+If none of the above macros are defined, the default rounding mode for compile time is the same as the default runtime (i.e. as if `BOOST_DECIMAL_FE_DEC_TO_NEAREST` were defined).
+At most *ONE* of these macros are allowed to be user defined.
+A `#error` will be emitted if more than one is detected.
+The macro must be defined before the inclusion of any decimal library header.
+The rounding mode set at compile time is thread-safe as it is read only.
+
+This same example can be reduced for the cases where:
+
+1. Compiler does not support runtime rounding mode changes
+
+2. You want to change the compile time rounding mode
+
+.This https://github.com/boostorg/decimal/blob/develop/examples/rounding_mode.cpp[example] demonstrates how the compile time rounding mode can be set, and it's effects on compile time and run time evaluation.
+====
+[source, c++]
+----
+include::example$rounding_mode_compile_time.cpp[]
+----
+
+.Expected Output
+....
+The default rounding mode is: fe_dec_to_nearest
+The current rounding mode is: fe_dec_downward
+....
+====
+
+IMPORTANT: Prior to v5.2.0 this header was `<boost/decimal/fenv.hpp>`, but has been changed to `<boost/decimal/cfenv.hpp>` for consistency with the STL naming convention.

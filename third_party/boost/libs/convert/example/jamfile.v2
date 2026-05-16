@@ -8,6 +8,7 @@ import testing ;
 
 project convert_examples
     : requirements
+        <library>/boost/convert//boost_convert
         <warnings>on
         <toolset>gcc:<warnings>all
         <toolset>msvc:<warnings>all

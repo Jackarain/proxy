@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -21,7 +22,7 @@ struct dec_octet_rule_t
 {
     using value_type = unsigned char;
 
-    BOOST_URL_DECL
+    BOOST_URL_CXX20_CONSTEXPR
     auto
     parse(
         char const*& it,
@@ -69,5 +70,7 @@ constexpr implementation_defined::dec_octet_rule_t dec_octet_rule{};
 } // grammar
 } // urls
 } // boost
+
+#include <boost/url/grammar/impl/dec_octet_rule.hpp>
 
 #endif

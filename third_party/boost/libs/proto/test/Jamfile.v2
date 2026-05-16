@@ -7,6 +7,7 @@ import testing ;
 
 project
     : requirements
+        <library>/boost/proto//boost_proto
         <toolset>intel:<debug-symbols>off
         <toolset>msvc-7.1:<debug-symbols>off
         <toolset>msvc-8.0:<define>_SCL_SECURE_NO_DEPRECATE
@@ -17,34 +18,33 @@ project
         <toolset>msvc-11.0:<define>_SCL_SECURE_NO_WARNINGS
         <toolset>gcc:<cxxflags>-ftemplate-depth-1024
         <library>/boost/test//boost_unit_test_framework
-        <link>static
-#        <define>BOOST_PROTO_DONT_USE_PREPROCESSED_FILES
+        #<link>static
+        #<define>BOOST_PROTO_DONT_USE_PREPROCESSED_FILES
     ;
 
-test-suite "proto"
-    :
-        [ run calculator.cpp ]
-        [ run constrained_ops.cpp ]
-        [ run cpp-next_bug.cpp ]
-        [ run deep_copy.cpp ]
-        [ run display_expr.cpp ]
-        [ run deduce_domain.cpp ]
-        [ run env_var.cpp ]
-        [ run examples.cpp ]
-        [ run external_transforms.cpp ]
-        [ run lambda.cpp ]
-        [ run make_expr.cpp ]
-        [ run matches.cpp ]
-        [ run flatten.cpp ]
-        [ run switch.cpp ]
-        [ run toy_spirit.cpp ]
-        [ run toy_spirit2.cpp ]
-        [ run make.cpp ]
-        [ run mem_ptr.cpp : : : <toolset>msvc:<cxxflags>/wd4355 ]
-        [ run mpl.cpp ]
-        [ run noinvoke.cpp ]
-        [ run pack_expansion.cpp ]
-        [ run protect.cpp ]
-        [ compile bug2407.cpp ]
-    ;
-
+run calculator.cpp ;
+run constrained_ops.cpp ;
+run cpp-next_bug.cpp ;
+run deep_copy.cpp ;
+run display_expr.cpp ;
+run deduce_domain.cpp ;
+run env_var.cpp ;
+run examples.cpp ;
+run external_transforms.cpp ;
+run lambda.cpp ;
+run make_expr.cpp ;
+run matches.cpp
+  # doesn't work on clang-cl for some reason
+  : : : <toolset>clang,<target-os>windows:<build>no ;
+run flatten.cpp ;
+run switch.cpp ;
+run toy_spirit.cpp ;
+run toy_spirit2.cpp ;
+run make.cpp ;
+run mem_ptr.cpp
+  : : : <toolset>msvc:<cxxflags>/wd4355 ;
+run mpl.cpp ;
+run noinvoke.cpp ;
+run pack_expansion.cpp ;
+run protect.cpp ;
+compile bug2407.cpp ;

@@ -2,6 +2,7 @@
     Boost.Optional
 
     Copyright (c) 2003-2007 Fernando Luis Cacciola Carballal
+    Copyright (C) 2014 - 2026 Andrzej Krzemieński.
 
     Distributed under the Boost Software License, Version 1.0.
     (See accompanying file LICENSE_1_0.txt or copy at
@@ -23,40 +24,40 @@ __SPACE__
 
 [#reference_optional_constructor]
 
-[: `optional<T>::optional() noexcept;`]
+[: `constexpr optional<T>::optional() noexcept;`]
 
-* [*Effect:] Default-Constructs an `optional`.
-* [*Postconditions:] `*this` is [_uninitialized].
-* [*Notes:] T's default constructor [_is not] called.
+* [*Postconditions:] `*this` does ['not] contain a value (is "uninitialized").
+* [*Remarks:] No contained value is initialized. For every object type `T` these constructors are core constant expressions.
 * [*Example:]
 ``
-optional<T> def ;
-assert ( !def ) ;
+optional<T> oN ;
+assert ( !oN ) ;
 ``
 
 __SPACE__
 
+
 [#reference_optional_constructor_none_t]
+[: `constexpr optional<T>::optional( none_t ) noexcept;`]
 
-[: `optional<T>::optional( none_t ) noexcept;`]
-
-* [*Effect:] Constructs an `optional` uninitialized.
-* [*Postconditions:] `*this` is [_uninitialized].
-* [*Notes:] `T`'s default constructor [_is not] called. The expression
+* [*Postconditions:] `*this` does ['not] contain a value (is "uninitialized").
+* [*Remarks:] No contained value is initialized. For every object type `T` these constructors are core constant expressions. The expression
 `boost::none` denotes an instance of `boost::none_t` that can be used as
 the parameter.
 * [*Example:]
 ``
 #include <boost/none.hpp>
+
 optional<T> n(none) ;
 assert ( !n ) ;
+assert ( n == none ) ;
 ``
 
 __SPACE__
 
 [#reference_optional_constructor_value]
 
-[: `optional<T>::optional( T const& v )`]
+[: `constexpr optional<T>::optional( T const& v )`]
 
 * [*Requires:] `is_copy_constructible<T>::value` is `true`.
 * [*Effect:] Directly-Constructs an `optional`.
@@ -78,7 +79,7 @@ __SPACE__
 
 [#reference_optional_constructor_move_value]
 
-[: `optional<T>::optional( T&& v )`]
+[: `constexpr optional<T>::optional( T&& v )`]
 
 * [*Requires:] `is_move_constructible<T>::value` is `true`.
 * [*Effect:] Directly-Move-Constructs an `optional`.
@@ -99,7 +100,7 @@ __SPACE__
 
 [#reference_optional_constructor_bool_value]
 
-[: `optional<T>::optional( bool condition, T const& v ) ;` ]
+[: `constexpr optional<T>::optional( bool condition, T const& v ) ;` ]
 
 * If condition is true, same as:
 
@@ -114,7 +115,7 @@ __SPACE__
 
 [#reference_optional_constructor_optional]
 
-[: `optional<T>::optional( optional const& rhs );`]
+[: `constexpr optional<T>::optional( optional const& rhs );`]
 
 * [*Requires:] `is_copy_constructible<T>::value` is `true`.
 * [*Effect:] Copy-Constructs an `optional`.
@@ -144,7 +145,7 @@ __SPACE__
 
 [#reference_optional_move_constructor_optional]
 
-[: `optional<T>::optional( optional&& rhs ) noexcept(`['see below]`);`]
+[: `constexpr optional<T>::optional( optional&& rhs ) noexcept(`['see below]`);`]
 
 * [*Requires:] `is_move_constructible<T>::value` is `true`.
 * [*Effect:] Move-constructs an `optional`.
@@ -178,7 +179,7 @@ __SPACE__
 
 [#reference_optional_constructor_other_optional]
 
-[: `template<U> explicit optional<T>::optional( optional<U> const& rhs );`]
+[: `template<U> constexpr explicit optional<T>::optional( optional<U> const& rhs );`]
 
 * [*Effect:] Copy-Constructs an `optional`.
 * [*Postconditions:] If `rhs` is initialized, `*this` is initialized and its
@@ -202,7 +203,7 @@ __SPACE__
 
 [#reference_optional_move_constructor_other_optional]
 
-[: `template<U> explicit optional<T>::optional( optional<U>&& rhs );`]
+[: `template<U> constexpr explicit optional<T>::optional( optional<U>&& rhs );`]
 
 * [*Effect:] Move-constructs an `optional`.
 * [*Postconditions:] If `rhs` is initialized, `*this` is initialized and its
@@ -226,7 +227,7 @@ __SPACE__
 
 [#reference_optional_in_place_init]
 
-[: `template<class... Args> explicit optional<T>::optional( in_place_init_t, Args&&... ars );`]
+[: `template<class... Args> constexpr explicit optional<T>::optional( in_place_init_t, Args&&... ars );`]
 
 * [*Requires:] `is_constructible_v<T, Args&&...>` is `true`.
 * [*Effect:] Initializes the contained value as if direct-non-list-initializing an object of type `T` with the
@@ -251,7 +252,7 @@ __SPACE__
 
 [#reference_optional_in_place_init_if]
 
-[: `template<class... Args> explicit optional<T>::optional( in_place_init_if_t, bool condition, Args&&... ars );`]
+[: `template<class... Args> constexpr explicit optional<T>::optional( in_place_init_if_t, bool condition, Args&&... ars );`]
 
 * [*Requires:] `is_constructible_v<T, Args&&...>` is `true`.
 * [*Effect:] If `condition` is `true`, initializes the contained value as if direct-non-list-initializing an object of type `T` with the arguments `std::forward<Args>(args)...`.
@@ -281,7 +282,7 @@ factory.
 * [*Postconditions: ] `*this` is [_initialized] and its value is ['directly given]
 from the factory `f` (i.e., the value [_is not copied]).
 * [*Throws:] Whatever the `T` constructor called by the factory throws.
-* [*Notes:] See [link boost_optional.design.in_place_factories In-Place Factories]
+* [*Notes:] See [link boost_optional_factories In-Place Factories]
 * [*Exception Safety:] Exceptions can only be thrown during the call to
 the `T` constructor used by the factory; in that case, this constructor has
 no effect.
@@ -302,7 +303,7 @@ __SPACE__
 
 [#reference_optional_operator_equal_none_t]
 
-[: `optional& optional<T>::operator= ( none_t ) noexcept;`]
+[: `constexpr optional& optional<T>::operator= ( none_t ) noexcept;`]
 
 * [*Effect:] If `*this` is initialized destroys its contained value.
 * [*Postconditions: ] `*this` is uninitialized.
@@ -502,7 +503,7 @@ __SPACE__
 * [*Postconditions: ] `*this` is [_initialized].
 * [*Throws:] Whatever the selected `T`'s  constructor throws.
 * [*Exception Safety:] If an exception is thrown during the initialization of `T`, `*this` is ['uninitialized].
-* [*Notes:] `T` need not be __MOVE_CONSTRUCTIBLE__ or `MoveAssignable`. 
+* [*Notes:] `T` need not be __MOVE_CONSTRUCTIBLE__ or `MoveAssignable`.
 * [*Example:]
 ``
 T v;
@@ -524,7 +525,7 @@ factory.
 * [*Postconditions: ] `*this` is [_initialized] and its value is ['directly given]
 from the factory `f` (i.e., the value [_is not copied]).
 * [*Throws:] Whatever the `T` constructor called by the factory throws.
-* [*Notes:] See [link boost_optional.design.in_place_factories In-Place Factories]
+* [*Notes:] See [link boost_optional_factories In-Place Factories]
 * [*Exception Safety:] Exceptions can only be thrown during the call to
 the `T` constructor used by the factory; in that case, the `optional` object
 will be reset to be ['uninitialized].
@@ -540,15 +541,15 @@ __SPACE__
 
 [#reference_optional_reset]
 
-[: `void optional<T>::reset() noexcept ;`]
+[: `constexpr void optional<T>::reset() noexcept ;`]
 * [*Effects:] Same as `operator=( none_t );`
 
 __SPACE__
 
 [#reference_optional_get]
 
-[: `T const& optional<T>::get() const ;`]
-[: `T&       optional<T>::get() ;`]
+[: `constexpr T const& optional<T>::get() const ;`]
+[: `constexpr T&       optional<T>::get() ;`]
 
 [: `inline T const& get ( optional<T> const& ) ;`]
 [: `inline T&       get ( optional<T> &) ;`]
@@ -563,8 +564,8 @@ __SPACE__
 
 [#reference_optional_operator_asterisk]
 
-[: `T const& optional<T>::operator*() const& ;`]
-[: `T&       optional<T>::operator*() &;`]
+[: `constexpr T const& optional<T>::operator*() const& ;`]
+[: `constexpr T&       optional<T>::operator*() &;`]
 
 * [*Requires:] `*this` is initialized
 * [*Returns:] A reference to the contained value
@@ -585,7 +586,7 @@ __SPACE__
 
 [#reference_optional_operator_asterisk_move]
 
-[: `T&& optional<T>::operator*() &&;`]
+[: `constexpr T&& optional<T>::operator*() &&;`]
 
 * [*Requires:] `*this` contains a value.
 * [*Effects:] Equivalent to `return std::move(*val);`.
@@ -596,8 +597,8 @@ __SPACE__
 
 [#reference_optional_value]
 
-[: `T const& optional<T>::value() const& ;`]
-[: `T&       optional<T>::value() & ;`]
+[: `constexpr T const& optional<T>::value() const& ;`]
+[: `constexpr T&       optional<T>::value() & ;`]
 
 * [*Effects:] Equivalent to `return bool(*this) ? *val : throw bad_optional_access();`.
 * [*Notes:] On compilers that do not support ref-qualifiers on member functions these two overloads are replaced with the classical two: a `const` and non-`const` member functions.
@@ -620,7 +621,7 @@ __SPACE__
 
 [#reference_optional_value_move]
 
-[: `T&& optional<T>::value() && ;`]
+[: `constexpr T&& optional<T>::value() && ;`]
 
 * [*Effects:] Equivalent to `return bool(*this) ? std::move(*val) : throw bad_optional_access();`.
 * [*Notes:] On compilers that do not support ref-qualifiers on member functions this overload is not present.
@@ -630,17 +631,25 @@ __SPACE__
 
 [#reference_optional_value_or]
 
-[: `template<class U> T optional<T>::value_or(U && v) const& ;`]
+[: `template<class U = T> constexpr T optional<T>::value_or(U && v) const& ;`]
 
 * [*Effects:] Equivalent to `if (*this) return **this; else return std::forward<U>(v);`.
 * [*Remarks:] If `T` is not __COPY_CONSTRUCTIBLE__ or `U &&` is not convertible to `T`, the program is ill-formed.
 * [*Notes:] On compilers that do not support ref-qualifiers on member functions this overload is replaced with the `const`-qualified member function. On compilers without rvalue reference support the type of `v` becomes `U const&`.
+* [*Example:]
+``
+optional<int> oN, o1(1);
+
+assert (o1.value_or(9) == 1);
+assert (oN.value_or(9) == 9);
+assert (oN.value_or({}) == 0);
+``
 
 __SPACE__
 
 [#reference_optional_value_or_move]
 
-[: `template<class U> T optional<T>::value_or(U && v) && ;`]
+[: `template<class U> constexpr T optional<T>::value_or(U && v) && ;`]
 
 * [*Effects:] Equivalent to `if (*this) return std::move(**this); else return std::forward<U>(v);`.
 * [*Remarks:] If `T` is not __MOVE_CONSTRUCTIBLE__ or `U &&` is not convertible to `T`, the program is ill-formed.
@@ -650,7 +659,7 @@ __SPACE__
 
 [#reference_optional_value_or_call]
 
-[: `template<class F> T optional<T>::value_or_eval(F f) const& ;`]
+[: `template<class F> constexpr T optional<T>::value_or_eval(F f) const& ;`]
 
 * [*Requires:] `T` is __COPY_CONSTRUCTIBLE__ and `F` models a __SGI_GENERATOR__ whose result type is convertible to `T`.
 * [*Effects:] `if (*this) return **this; else return f();`.
@@ -677,7 +686,7 @@ __SPACE__
 
 [#reference_optional_value_or_call_move]
 
-[: `template<class F> T optional<T>::value_or_eval(F f) && ;`]
+[: `template<class F> constexpr T optional<T>::value_or_eval(F f) && ;`]
 
 * [*Requires:] `T` is __MOVE_CONSTRUCTIBLE__ and `F` models a __SGI_GENERATOR__ whose result type is convertible to `T`.
 * [*Effects:] `if (*this) return std::move(**this); else return f();`.
@@ -687,8 +696,8 @@ __SPACE__
 
 [#reference_optional_map]
 
-[: `template<class F> auto optional<T>::map(F f) const& -> `['see below]` ;`]
-[: `template<class F> auto optional<T>::map(F f) & -> `['see below]` ;`]
+[: `template<class F> constexpr auto optional<T>::map(F f) const& -> `['see below]` ;`]
+[: `template<class F> constexpr auto optional<T>::map(F f) & -> `['see below]` ;`]
 
 * [*Effects:] `if (*this) return f(**this); else return none;`
 * [*Notes:] The return type of these overloads is `optional<decltype(f(**this))>`. On compilers that do not support ref-qualifiers on member functions, these two (as well as the next one) overloads are replaced with good old const and non-const overloads.
@@ -706,7 +715,7 @@ __SPACE__
 
 [#reference_optional_map_move]
 
-[: `template<class F> auto optional<T>::map(F f) && -> `['see below]` ;`]
+[: `template<class F> constexpr auto optional<T>::map(F f) && -> `['see below]` ;`]
 
 * [*Effects:] `if (*this) return f(std::move(**this)); else return none;`
 * [*Notes:] The return type of this overload is `optional<decltype(f(istd::move(**this)))>`.
@@ -715,8 +724,8 @@ __SPACE__
 
 [#reference_optional_flat_map]
 
-[: `template<class F> auto optional<T>::flat_map(F f) const& -> `['see below]` ;`]
-[: `template<class F> auto optional<T>::flat_map(F f) & -> `['see below]` ;`]
+[: `template<class F> constexpr auto optional<T>::flat_map(F f) const& -> `['see below]` ;`]
+[: `template<class F> constexpr auto optional<T>::flat_map(F f) & -> `['see below]` ;`]
 
 * [*Requires:] The return type of expression `f(**this)` is `optional<U>` for some object or reference type `U`.
 * [*Effects:] `if (*this) return f(**this); else return none;`
@@ -736,13 +745,33 @@ __SPACE__
 
 [#reference_optional_flat_map_move]
 
-[: `template<class F> auto optional<T>::flat_map(F f) && -> `['see below]` ;`]
+[: `template<class F> constexpr auto optional<T>::flat_map(F f) && -> `['see below]` ;`]
 
 * [*Requires:] The return type of expression `f(std::move(**this))` is `optional<U>` for some object or reference type `U`.
 * [*Effects:] `if (*this) return f(std::move(**this)); else return none;`
 * [*Notes:] The return type of this overload is `optional<U>`.
 
 __SPACE__
+
+
+[#reference_optional_conversion_to_ref]
+
+[: `constexpr optional<T>::operator optional<T&>() & noexcept ;`]
+
+* [*Returns:] If `*this` contains a value `optional<T&>(**this)`, otherwise `optional<T&>()`.
+
+[: `constexpr optional<T>::operator optional<T const&>() const& noexcept ;`]
+
+* [*Returns:] If `*this` contains a value `optional<T const&>(**this)`, otherwise `optional<T&>()`.
+
+* [*Example:]
+``
+const optional<int> oi = 1;
+optional<const int&> ri = oi;
+``
+
+__SPACE__
+
 
 [#reference_optional_get_value_or_value]
 
@@ -793,8 +822,8 @@ __SPACE__
 
 [#reference_optional_operator_arrow]
 
-[: `T const* optional<T>::operator ->() const ;`]
-[: `T*       optional<T>::operator ->()       ;`]
+[: `constexpr T const* optional<T>::operator ->() const ;`]
+[: `constexpr T*       optional<T>::operator ->()       ;`]
 
 * [*Requires: ] `*this` is initialized.
 * [*Returns:] A pointer to the contained value.
@@ -812,44 +841,29 @@ __SPACE__
 
 [#reference_optional_operator_bool]
 
-[: `explicit optional<T>::operator bool() const noexcept ;`]
-[: `bool optional<T>::has_value() const noexcept ;`]
+[: `constexpr explicit optional<T>::operator bool() const noexcept ;`]
+[: `constexpr bool optional<T>::has_value() const noexcept ;`]
 
 * [*Returns:] `get_ptr() != 0`.
 * [*Notes:] On compilers that do not support explicit conversion operators this falls back to safe-bool idiom.
 * [*Example:]
 ``
-optional<T> def ;
-assert ( def == 0 );
-optional<T> opt ( v ) ;
-assert ( opt );
-assert ( opt != 0 );
+optional<int> oN;
+assert (!oN);
+assert (!oN.has_value());
+
+optional<int> o1(1);
+assert (o1);
+assert (o1.has_value());
+assert (!!o1);  // the "double-bang" idiom
 ``
 
 __SPACE__
 
-[#reference_optional_operator_not]
-
-[: `bool optional<T>::operator!() noexcept ;`]
-
-* [*Returns:] If `*this` is uninitialized, `true`; else `false`.
-* [*Notes:] This operator is provided for those compilers which can't
-use the ['unspecified-bool-type operator] in certain boolean contexts.
-* [*Example:]
-``
-optional<T> opt ;
-assert ( !opt );
-*opt = some_T ;
-
-// Notice the "double-bang" idiom here.
-assert ( !!opt ) ;
-``
-
-__SPACE__
 
 [#reference_optional_is_initialized]
 
-[: `bool optional<T>::is_initialized() const ;`]
+[: `constexpr bool optional<T>::is_initialized() const ;`]
 
 * [*Deprecated:] Same as `explicit operator bool () ;`
 
@@ -862,8 +876,8 @@ __SPACE__
 
 [#reference_optional_ref_default_ctor]
 
-[: `optional<T&>::optional() noexcept;`]
-[: `optional<T&>::optional(none_t) noexcept;`]
+[: `constexpr optional<T&>::optional() noexcept;`]
+[: `constexpr optional<T&>::optional(none_t) noexcept;`]
 
 * [*Postconditions:] `bool(*this) == false`; `*this` refers to nothing.
 
@@ -963,7 +977,7 @@ __SPACE__
 
 * [*Postconditions:] `bool(*this) == bool(rhs)`.
 
-* [*Notes:] This behaviour is called ['rebinding semantics]. See [link boost_optional.design.optional_references.rebinding_semantics_for_assignment_of_optional_references here] for details.
+* [*Notes:] This behaviour is called ['rebinding semantics]. See [link optional_ref_rebinding_semantics here] for details.
 
 * [*Example:]
 ``

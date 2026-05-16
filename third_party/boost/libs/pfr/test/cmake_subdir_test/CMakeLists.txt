@@ -1,4 +1,4 @@
-# Copyright  (c) 2016-2025 Antony Polukhin
+# Copyright  (c) 2016-2026 Antony Polukhin
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
 
@@ -14,7 +14,6 @@ add_subdirectory(../../../detail boostorg/detail)
 add_subdirectory(../../../describe boostorg/describe)
 add_subdirectory(../../../integer boostorg/integer)
 add_subdirectory(../../../mp11 boostorg/mp11)
-add_subdirectory(../../../static_assert boostorg/static_assert)
 add_subdirectory(../../../throw_exception boostorg/throw_exception)
 add_subdirectory(../../../type_traits boostorg/type_traits)
 

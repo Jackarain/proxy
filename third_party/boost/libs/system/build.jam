@@ -7,6 +7,7 @@ require-b2 5.2 ;
 
 constant boost_dependencies :
     /boost/assert//boost_assert
+    /boost/compat//boost_compat
     /boost/config//boost_config
     /boost/throw_exception//boost_throw_exception
     /boost/variant2//boost_variant2
@@ -21,4 +22,5 @@ explicit
     ;
 
 call-if : boost-library system
+    : install boost_system
     ;

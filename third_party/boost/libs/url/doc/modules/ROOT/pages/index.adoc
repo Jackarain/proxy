@@ -28,6 +28,7 @@ While the library is general purpose, special care has been taken to ensure that
 Interfaces are provided for using error codes instead of exceptions as needed, and most algorithms have the means to opt out of dynamic memory allocation.
 Another feature of the library is that all modifications leave the URL in a valid state.
 Code which uses this library is easy to read, flexible, and performant.
+See the xref:design.adoc[design rationale] for more on these design principles.
 
 Boost.URL offers these features:
 
@@ -42,7 +43,7 @@ Boost.URL offers these features:
 
 [NOTE]
 ====
-Currently the library does not handle
+The library does not handle
 https://www.rfc-editor.org/rfc/rfc3987.html[Internationalized Resource Identifiers,window=blank_] (IRIs).
 These are different from URLs, come from Unicode strings instead of low-ASCII strings, and are covered by a separate specification.
 ====

@@ -24,7 +24,7 @@ using namespace boost::container::pmr;
 #pragma warning (disable : 4290)
 #endif
 
-#if __cplusplus >= 201103L
+#if BOOST_CXX_VERSION >= 201103L
 #define BOOST_CONTAINER_NEW_EXCEPTION_SPECIFIER
 #define BOOST_CONTAINER_DELETE_EXCEPTION_SPECIFIER noexcept
 #else
@@ -44,7 +44,13 @@ std::size_t allocation_count = 0;
 void* operator new[](std::size_t count) BOOST_CONTAINER_NEW_EXCEPTION_SPECIFIER
 {
    ++allocation_count;
-   return std::malloc(count);
+   return std::malloc(count ? count : 1u);
+}
+
+void* operator new(std::size_t count) BOOST_CONTAINER_NEW_EXCEPTION_SPECIFIER
+{
+   ++allocation_count;
+   return std::malloc(count ? count : 1u);
 }
 
 void operator delete[](void *p) BOOST_CONTAINER_DELETE_EXCEPTION_SPECIFIER
@@ -53,6 +59,39 @@ void operator delete[](void *p) BOOST_CONTAINER_DELETE_EXCEPTION_SPECIFIER
    return std::free(p);
 }
 
+void operator delete(void *p) BOOST_CONTAINER_DELETE_EXCEPTION_SPECIFIER
+{
+   --allocation_count;
+   return std::free(p);
+}
+
+#if defined __cpp_aligned_new
+
+void* operator new[](std::size_t count, std::align_val_t) BOOST_CONTAINER_NEW_EXCEPTION_SPECIFIER
+{
+   ++allocation_count;
+   return std::malloc(count ? count : 1u);
+}
+
+void* operator new(std::size_t count, std::align_val_t) BOOST_CONTAINER_NEW_EXCEPTION_SPECIFIER
+{
+   ++allocation_count;
+   return std::malloc(count ? count : 1u);
+}
+
+void operator delete[](void *p, std::align_val_t) BOOST_CONTAINER_DELETE_EXCEPTION_SPECIFIER
+{
+   --allocation_count;
+   return std::free(p);
+}
+
+void operator delete(void *p, std::align_val_t) BOOST_CONTAINER_DELETE_EXCEPTION_SPECIFIER
+{
+   --allocation_count;
+   return std::free(p);
+}
+
+#endif
 #endif   //BOOST_CONTAINER_ASAN
 
 #ifdef BOOST_MSVC
@@ -71,7 +110,7 @@ void test_new_delete_resource()
    #if !defined(BOOST_CONTAINER_DYNAMIC_LINKING)  //No new delete replacement possible new_delete is a DLL
    BOOST_TEST(memcount == allocation_count);
    #endif
-   void *addr = mr->allocate(16, 1);
+   void *const addr = mr->allocate(16, 1);
    #if !defined(BOOST_CONTAINER_DYNAMIC_LINKING)  //No new delete replacement possible new_delete is a DLL
    BOOST_TEST((allocation_count - memcount) == 1);
    #endif
@@ -90,8 +129,9 @@ void test_null_memory_resource()
    #if !defined(BOOST_NO_EXCEPTIONS)
    bool bad_allocexception_thrown = false;
 
+   void *p = 0;
    BOOST_CONTAINER_TRY{
-      mr->allocate(1, 1);
+      p = mr->allocate(1, 1);
    }
    BOOST_CONTAINER_CATCH(std::bad_alloc&) {
       bad_allocexception_thrown = true;
@@ -101,6 +141,8 @@ void test_null_memory_resource()
    BOOST_CONTAINER_CATCH_END
 
    BOOST_TEST(bad_allocexception_thrown == true);
+   if(p)
+      mr->deallocate(p, 1, 1);
    #endif   //BOOST_NO_EXCEPTIONS
 }
 

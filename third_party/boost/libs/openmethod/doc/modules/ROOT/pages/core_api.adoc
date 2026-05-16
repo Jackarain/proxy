@@ -58,10 +58,9 @@ functions passed as template arguments to the method.
 include::{example}/core_api.cpp[tag=variable_overrider]
 ----
 
-Once again we find ourselves inventing a name for a single use. In C++26, we
-will probably have the Python-like `_` for this.
-
-We can also use a small macro:
+Once again we find ourselves inventing a name for a single use. Maybe some day
+C++ will get a Python-like `_` special variable. In the meantime, we can use
+another convenience macro:
 xref:BOOST_OPENMETHOD_REGISTER.adoc[BOOST_OPENMETHOD_REGISTER]. It takes a
 class, and instantiates a static object with an obfuscated name:
 

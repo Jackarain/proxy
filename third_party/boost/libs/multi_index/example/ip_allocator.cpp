@@ -1,6 +1,6 @@
 /* Boost.MultiIndex example of use of Boost.Interprocess allocators.
  *
- * Copyright 2003-2008 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -104,22 +104,18 @@ struct partial_str_less
  *   * We are using a Boost.Interprocess specific allocator.
  */
 
-/* see Compiler specifics: Use of member_offset for info on
- * BOOST_MULTI_INDEX_MEMBER
- */
-
 typedef multi_index_container<
   book,
   indexed_by<
     ordered_non_unique<
-      BOOST_MULTI_INDEX_MEMBER(book,shared_string,author)
+      member<book,shared_string,&book::author>
     >,
     ordered_non_unique<
-      BOOST_MULTI_INDEX_MEMBER(book,shared_string,name),
+      member<book,shared_string,&book::name>,
       partial_str_less
     >,
     ordered_non_unique<
-      BOOST_MULTI_INDEX_MEMBER(book,unsigned,prize)
+      member<book,unsigned,&book::prize>
     >
   >,
   bip::allocator<book,bip::managed_mapped_file::segment_manager>

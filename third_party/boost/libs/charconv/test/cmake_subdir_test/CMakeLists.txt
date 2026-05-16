@@ -18,7 +18,6 @@ core
 
 # Secondary dependencies
 
-static_assert
 throw_exception
 )
 

@@ -150,6 +150,7 @@ toolset.inherit-flags embarcadero
       <link>shared
       <threading>multi
       <threading>multi/<target-os>windows
+      <stdlib>libstdc++
       <stdlib>gnu
       <stdlib>gnu11
       <stdlib>libc++

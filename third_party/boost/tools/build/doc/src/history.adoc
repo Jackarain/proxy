@@ -1,6 +1,69 @@
 [[b2.history]]
 = History
 
+== Version 5.4.2
+
+Fix detection of Visual Studio 2026 to account for non-native tools being
+installed by default and hence conflicting with the native tools.
+
+== Version 5.4.1
+
+Fix error in path environment variables not being properly processed to split
+on path separator.
+
+== Version 5.4.0
+
+This is the end of year release. Biggest new items are the detection of
+Visual Studio 2026 (aka msvc145).
+
+* *New*: Add initial support for {CPP}-26 Contracts for GCC based toolsets
+  (like clang).
+  -- _René Ferdinand Rivera Morell_
+* *New*: Allow explicit target `triple` for `clang-linux` and `clang-darwin`.
+  -- _Dmitry Arkhipov_
+* *New*: Change documentation style to support light/dark user preference.
+  -- _René Ferdinand Rivera Morell_
+* *New*: Added the ability to escape the '$' character before '(' as "$$" which
+  will allow using the "$()" and "$(())" expressions of bash, sh, and other
+  shells.
+  -- _Ivan Kotov_
+* *New*: Added integration for vcpkg with distinct roots.
+  -- _Dmitry Arkhipov_
+* *New*: Add support for detecting and building with VS-2026 (AKA vs-18.0,
+  aka msvc 14.5).
+  -- _Miuna_, _Zangetsu_, _René Ferdinand Rivera Morell_
+* Fix invoking asciidoctor on Windows.
+  -- _René Ferdinand Rivera Morell_
+* Fix, propagate `dll-path` to shared libraries.
+  -- _Dmitry Arkhipov_
+* Fix mpi compiler detection to detect not just the first one (`mpi++`).
+  -- _Samuel Debionne_
+* Fix flag options, that are not registered as args, not being recognized.
+  Fixes `--show-libraries` in Boost build files.
+  -- _Dmitry Arkhipov_
+* Fix discovery and building with Python free-threaded variant.
+  -- _Zhang Wen_
+* Fix build issues with QNX compiolers.
+  -- _"fragarian"_
+* Add `libstdc++` to `stdlib` feature as the current naming for that std
+  library.
+  -- _Dmitry Arkhipov_
+* Fix building when targetting WASM64 with emscripten.
+  -- _Uilian Ries_
+* Fix resolution of subprojects of rooted projects.
+  -- _Dmitry Arkhipov_
+* Fix crash when using `-d9` to output module debug stats.
+  -- _René Ferdinand Rivera Morell_
+
+== Version 5.3.3
+
+* Fix `stdlib=libc++` feature being applied to compiles other than {CPP}.
+  -- _Dmitry Arkhipov_
+* Fix silently ignored argument parsing errors.
+  -- _Dmitry Arkhipov_
+* Fix not allowing "/" in paths for msvc version detection.
+  -- _chausner_
+
 == Version 5.3.2
 
 Fix regression for handling of the `--command-database` option. The new command

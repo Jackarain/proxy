@@ -21,7 +21,7 @@
 
 #include <boost/thread/null_mutex.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include "../../../timming.hpp"
 
 #if defined BOOST_THREAD_USES_CHRONO

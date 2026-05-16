@@ -182,6 +182,8 @@ operator=(
     recycled_ptr const& other) noexcept ->
         recycled_ptr&
 {
+    if(this == &other)
+        return *this;
     BOOST_ASSERT(
         bin_ == other.bin_);
     if(p_)

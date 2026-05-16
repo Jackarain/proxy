@@ -1,0 +1,513 @@
+
+/*---------- Quickbook docs styling fixes -----------*/
+
+/**
+ * Quickbook Documentation Styles
+ * Comprehensive styling for Quickbook-generated documentation, including:
+ * 1. Typography and heading hierarchy
+ * 2. Content blocks and spacing
+ * 3. Navigation and spirit-nav elements
+ * 4. Special elements (notes, tips, etc.)
+ * 5. Code and syntax highlighting
+ */
+
+#boost-legacy-docs-wrapper:has(> .boostlook),
+#antora-template-wrapper:has(> .boostlook),
+div.source-docs-antora.boostlook:has(> .boostlook) {
+  /* CharConv template fix */
+  margin: auto;
+}
+
+/* Legacy boostlook container */
+.boostlook#boost-legacy-docs-wrapper,
+.boostlook#antora-template-wrapper,
+div.source-docs-antora.boostlook {
+  margin-top: 0;
+  max-width: unset;
+  overflow: hidden;
+  position: relative;
+  min-height: 100vh;
+}
+
+.boostlook#boost-legacy-docs-wrapper > #header,
+.boostlook#boost-legacy-docs-wrapper > #content,
+.boostlook#boost-legacy-docs-wrapper > #footer,
+.boostlook#boost-legacy-docs-wrapper > #footnotes,
+.boostlook#antora-template-wrapper > #header,
+.boostlook#antora-template-wrapper > #content,
+.boostlook#antora-template-wrapper > #footer,
+.boostlook#antora-template-wrapper > #footnotes,
+div.source-docs-antora.boostlook > #header,
+div.source-docs-antora.boostlook > #content,
+div.source-docs-antora.boostlook > #footer,
+div.source-docs-antora.boostlook > #footnotes {
+  /* width: auto;
+  max-width: unset;
+  margin-left: auto; */
+  padding-left: unset;
+  padding-right: unset;
+}
+
+/* Add Side margin for legacy boostlook container */
+#boost-legacy-docs-wrapper:not(:has(.doc)):not(:has(> .boostlook)),
+#antora-template-wrapper:not(:has(.doc)):not(:has(> .boostlook)),
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) {
+  padding: 0 var(--main-margin, 3rem);
+}
+
+/* Title Block Common */
+.boostlook:not(:has(.doc)) > .section > .titlepage:first-of-type,
+.boostlook:not(:has(.doc)) > .document > .titlepage:first-of-type,
+.boostlook:not(:has(.doc)) > .refentry > .titlepage:first-of-type,
+.boostlook:not(:has(.doc)) > .chapter > .titlepage:first-of-type,
+.boostlook:not(:has(.doc)) > .book > .titlepage:first-of-type,
+.boostlook:not(:has(.doc)) > .article > .titlepage:first-of-type {
+  margin-bottom: var(--padding-padding-md, 1.125rem);
+}
+
+/* Title Styles */
+.boostlook:not(:has(.doc)) > .section > .titlepage:first-of-type .title,
+.boostlook:not(:has(.doc)) > .document > .titlepage:first-of-type .title,
+.boostlook:not(:has(.doc)) > .refentry > .titlepage:first-of-type .title,
+.boostlook:not(:has(.doc)) > .chapter > .titlepage:first-of-type .title,
+.boostlook:not(:has(.doc)) > .book > .titlepage:first-of-type .title,
+.boostlook:not(:has(.doc)) > .article > .titlepage:first-of-type .title {
+  color: var(--text-main-text-primary, #18191b);
+  font-size: var(--typography-font-size-2xl, 1.75rem);
+  font-style: normal;
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-3xl, 2.5rem);
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+  margin: 0;
+}
+
+/* Title Author */
+.boostlook:not(:has(.doc)) > .section > .titlepage:first-of-type .author,
+.boostlook:not(:has(.doc)) > .document > .titlepage:first-of-type .author,
+.boostlook:not(:has(.doc)) > .refentry > .titlepage:first-of-type .author,
+.boostlook:not(:has(.doc)) > .chapter > .titlepage:first-of-type .author,
+.boostlook:not(:has(.doc)) > .book > .titlepage:first-of-type .author,
+.boostlook:not(:has(.doc)) > .article > .titlepage:first-of-type .author,
+  /* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content .author,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content .author,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #content .author {
+  margin: 0;
+  color: var(--text-main-text-primary, #18191b);
+  font-size: var(--typography-font-size-lg, 1.25rem);
+  font-style: normal;
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-xl, 1.75rem);
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+}
+
+/* Top margin for first Author in title */
+.boostlook:not(:has(.doc)) > .section > .titlepage:first-of-type div.author,
+.boostlook:not(:has(.doc)) > .document > .titlepage:first-of-type div.author,
+.boostlook:not(:has(.doc)) > .refentry > .titlepage:first-of-type div.author,
+.boostlook:not(:has(.doc)) > .chapter > .titlepage:first-of-type div.author,
+.boostlook:not(:has(.doc)) > .book > .titlepage:first-of-type div.author,
+.boostlook:not(:has(.doc)) > .article > .titlepage:first-of-type div.author,
+  /* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content div.author,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content div.author,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #content div.author {
+  margin-top: var(--padding-padding-md, 1.125rem);
+}
+
+/* Reduce top margin for next authors in authors group */
+.boostlook:not(:has(.doc)) > .section > .titlepage:first-of-type .authorgroup div.author:not(:first-child),
+.boostlook:not(:has(.doc)) > .document > .titlepage:first-of-type .authorgroup div.author:not(:first-child),
+.boostlook:not(:has(.doc)) > .refentry > .titlepage:first-of-type .authorgroup div.author:not(:first-child),
+.boostlook:not(:has(.doc)) > .chapter > .titlepage:first-of-type .authorgroup div.author:not(:first-child),
+.boostlook:not(:has(.doc)) > .book > .titlepage:first-of-type .authorgroup div.author:not(:first-child),
+.boostlook:not(:has(.doc)) > .article > .titlepage:first-of-type .authorgroup div.author:not(:first-child) {
+  margin-top: var(--padding-padding-2xs);
+}
+
+/* Remove Top Margin for next .copyright  */
+.boostlook:not(:has(.doc)) > .section > .titlepage:first-of-type div:has(div.author) + div:has(div.author) .author,
+.boostlook:not(:has(.doc)) > .document > .titlepage:first-of-type div:has(div.author) + div:has(div.author) .author,
+.boostlook:not(:has(.doc)) > .refentry > .titlepage:first-of-type div:has(div.author) + div:has(div.author) .author,
+.boostlook:not(:has(.doc)) > .chapter > .titlepage:first-of-type div:has(div.author) + div:has(div.author) .author,
+.boostlook:not(:has(.doc)) > .book > .titlepage:first-of-type div:has(div.author) + div:has(div.author) .author,
+.boostlook:not(:has(.doc)) > .article > .titlepage:first-of-type div:has(div.author) + div:has(div.author) .author {
+  margin-top: var(--padding-padding-3xs);
+}
+
+/* Title Copyright */
+.boostlook:not(:has(.doc)) > .section > .titlepage:first-of-type .copyright,
+.boostlook:not(:has(.doc)) > .document > .titlepage:first-of-type .copyright,
+.boostlook:not(:has(.doc)) > .refentry > .titlepage:first-of-type .copyright,
+.boostlook:not(:has(.doc)) > .chapter > .titlepage:first-of-type .copyright,
+.boostlook:not(:has(.doc)) > .book > .titlepage:first-of-type .copyright,
+.boostlook:not(:has(.doc)) > .article > .titlepage:first-of-type .copyright,
+  /* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content .copyright,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content .copyright,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #content .copyright {
+  color: var(--text-main-text-body-secondary, #494d50);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-style: normal;
+  line-height: var(--typography-line-height-lg, 1.5rem);
+  margin-top: var(--padding-padding-2xs, 0.5rem);
+}
+
+/* Remove Top Margin for next .copyright  */
+.boostlook:not(:has(.doc)) > .section > .titlepage:first-of-type div:has(.copyright) + div:has(.copyright) .copyright,
+.boostlook:not(:has(.doc)) > .document > .titlepage:first-of-type div:has(.copyright) + div:has(.copyright) .copyright,
+.boostlook:not(:has(.doc)) > .refentry > .titlepage:first-of-type div:has(.copyright) + div:has(.copyright) .copyright,
+.boostlook:not(:has(.doc)) > .chapter > .titlepage:first-of-type div:has(.copyright) + div:has(.copyright) .copyright,
+.boostlook:not(:has(.doc)) > .book > .titlepage:first-of-type div:has(.copyright) + div:has(.copyright) .copyright,
+.boostlook:not(:has(.doc)) > .article > .titlepage:first-of-type div:has(.copyright) + div:has(.copyright) .copyright {
+  margin-top: 0;
+}
+
+/* Title Legalnotice */
+.boostlook:not(:has(.doc)) > .section > .titlepage:first-of-type .legalnotice,
+.boostlook:not(:has(.doc)) > .document > .titlepage:first-of-type .legalnotice,
+.boostlook:not(:has(.doc)) > .refentry > .titlepage:first-of-type .legalnotice,
+.boostlook:not(:has(.doc)) > .chapter > .titlepage:first-of-type .legalnotice,
+.boostlook:not(:has(.doc)) > .book > .titlepage:first-of-type .legalnotice,
+.boostlook:not(:has(.doc)) > .article > .titlepage:first-of-type .legalnotice,
+  /* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content .legalnotice,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content .legalnotice,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #content .legalnotice {
+  color: var(--text-main-text-body-primary, #2a2c30);
+  font-size: var(--typography-font-size-sm, 1rem);
+  font-style: normal;
+  line-height: var(--typography-line-height-lg, 1.5rem);
+  margin-top: var(--padding-padding-2xs, 0.5rem);
+}
+
+/* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content .legalnotice,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content .legalnotice,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content .legalnotice {
+  margin-bottom: var(--padding-padding-md, 1.125rem);
+}
+
+/* Remove <hr/>s  */
+.boostlook:not(:has(.doc)) .titlepage hr {
+  display: none;
+}
+
+/* Table of Contents */
+.boostlook:not(:has(.doc)) div.toc {
+  color: var(--text-main-text-body-secondary, #494d50);
+  font-family: var(--font-family-body, "Noto Sans");
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-style: normal;
+  line-height: var(--typography-line-height-md, 1.25rem);
+  margin: 0;
+  margin-bottom: var(--padding-padding-md, 1.125rem);
+  padding: 0;
+  border: none;
+}
+
+.boostlook:not(:has(.doc)) div.toc > p {
+  display: flex;
+  padding: var(--spacing-size-3xs, 0.25rem);
+  color: var(--text-main-text-primary, #18191b);
+  font-size: var(--typography-font-size-2xs, 0.75rem);
+  font-variation-settings: "wght" 600, "wdth" 80;
+  line-height: var(--typography-line-height-sm, 1rem); /* 133.333% */
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+}
+
+.boostlook:not(:has(.doc)) div.toc > p > * {
+  font: inherit;
+  color: inherit;
+}
+
+.boostlook:not(:has(.doc)) div.toc .toc dt {
+  color: var(--text-main-text-body-secondary, #494d50);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-style: normal;
+  line-height: var(--typography-line-height-md, 1.25rem);
+}
+
+.boostlook:not(:has(.doc)) div.toc dd dd {
+  padding-left: var(--leftbar-paddings-leftbar-padding-sm);
+}
+
+/* Section Layout */
+.boostlook#boost-legacy-docs-wrapper:not(:has(.doc)):not(:has(> .boostlook)) > *,
+.boostlook#antora-template-wrapper:not(:has(.doc)):not(:has(> .boostlook)) > *,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > * {
+  /* max-width: var(--main-content-width);
+  margin-left: inherit;
+  margin-right: inherit; */
+  margin: 0 auto;
+}
+
+/* hide footer spirit nav since it wasn't visible before */
+.boostlook:not(:has(.doc)) div:nth-of-type(4).spirit-nav,
+.boostlook#boost-legacy-docs-wrapper div.spirit-nav:last-child,
+.boostlook#antora-template-wrapper div.spirit-nav:last-child,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) div.spirit-nav:last-child {
+  display: none !important;
+}
+
+/* hidden elems */
+.boostlook:not(:has(.doc)) > hr,
+.boostlook:not(:has(.doc)) .table-break {
+  display: none;
+}
+
+/* Content Blocks */
+.boostlook:not(:has(.doc)) .inlinemediaobject:has(> img):first-child:last-child {
+  margin: var(--padding-padding-xs, 0.75rem) 0;
+}
+
+.boostlook:not(:has(.doc)) a:is(h1 a, h2 a, h3 a, h4 a, h5 a) code {
+  background: transparent !important;
+  border: none;
+  font-size: inherit;
+  color: inherit;
+  padding: 0;
+  display: initial;
+  transition: none;
+}
+
+/* Special Blocks */
+/* hide legacy icon */
+.boostlook:not(:has(.doc)) div:not(.admonitionblock).note > table tr:first-child td,
+.boostlook:not(:has(.doc)) div:not(.admonitionblock).tip > table tr:first-child td,
+.boostlook:not(:has(.doc)) div:not(.admonitionblock).important > table tr:first-child td,
+.boostlook:not(:has(.doc)) div:not(.admonitionblock).caution > table tr:first-child td,
+.boostlook:not(:has(.doc)) div:not(.admonitionblock).warning > table tr:first-child td,
+.boostlook:not(:has(.doc)) div:not(.admonitionblock).blurb > table tr:first-child td,
+.boostlook:not(:has(.doc)) p.blurb > table tr:first-child td {
+  display: none;
+}
+
+/* Special Blocks Margins */
+.boostlook:not(:has(.doc)) div.note,
+.boostlook:not(:has(.doc)) div.tip,
+.boostlook:not(:has(.doc)) div.important,
+.boostlook:not(:has(.doc)) div.caution,
+.boostlook:not(:has(.doc)) div.warning,
+.boostlook:not(:has(.doc)) div.blurb,
+.boostlook:not(:has(.doc)) p.blurb {
+  margin-top: var(--padding-padding-xs, 0.75rem);
+  margin-bottom: var(--padding-padding-2xs);
+}
+
+.boostlook:not(:has(.doc)) .titlepage + div.note,
+.boostlook:not(:has(.doc)) .titlepage + div.tip,
+.boostlook:not(:has(.doc)) .titlepage + div.important,
+.boostlook:not(:has(.doc)) .titlepage + div.caution,
+.boostlook:not(:has(.doc)) .titlepage + div.warning,
+.boostlook:not(:has(.doc)) .titlepage + div.blurb,
+.boostlook:not(:has(.doc)) .titlepage + p.blurb {
+  margin-top: var(--padding-padding-2xs);
+}
+
+/* Tables */
+/* Make div with Table display block */
+.boostlook:has(:not(.doc)) div.table {
+  display: block;
+}
+
+/* Enable Horizontal Scroll */
+.boostlook:has(:not(.doc)) div.table .table-contents,
+.boostlook:has(:not(.doc)) .informaltable:has(> .table) {
+  overflow: auto;
+}
+
+/* References Table */
+/* This is specific selector for refences tables which containes many tables and only tables as direct children */
+.boostlook:has(:not(.doc)) .informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--padding-padding-md, 1.125rem);
+  /* border: 2px solid red; */
+}
+
+/* Disable margins for all Headings inside table */
+.boostlook:has(:not(.doc)) .informaltable:has(> .table) :is(h1, h2, h3, h4, h5, h6) {
+  margin: 0;
+}
+
+/* Table has inner table th  */
+.boostlook:has(:not(.doc)) .informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))) .table:has(.simplelist) th {
+  border: none;
+  padding: 0 0 var(--padding-padding-xs, 0.75rem) 0;
+  background: none;
+  color: var(--text-main-text-primary, #18191b);
+  font-size: var(--typography-font-size-md, 1.125rem);
+  font-style: normal;
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-xl, 1.75rem); /* 155.556% */
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+}
+
+/* Disable global cell paddings */
+.boostlook:has(:not(.doc)) .informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))) .table:has(.simplelist) > tbody > tr > td {
+  padding: 0;
+}
+
+/* Add border radius to tbody first row */
+.boostlook:has(:not(.doc)) .informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))) .table:has(.simplelist) tr:last-child td:first-child {
+  border-top-left-radius: var(--spacing-size-2xs, 0.5rem);
+  overflow: hidden;
+}
+
+/* Add border radius to tbody first row */
+.boostlook:has(:not(.doc)) .informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))) .table:has(.simplelist) tr:last-child td:last-child {
+  border-top-right-radius: var(--spacing-size-2xs, 0.5rem);
+  overflow: hidden;
+}
+
+/* Select Inner Headings and make it look as table head */
+.boostlook:has(:not(.doc)) .informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))) .table:has(.simplelist) tbody :is(h1, h2, h3, h4, h5, h6) {
+  padding: var(--padding-padding-3xs, 0.25rem) var(--padding-padding-2xs, 0.5rem);
+  gap: var(--spacing-size-xs, 0.75rem);
+  background: var(--surface-background-main-surface-primary, #f5f6f8);
+  color: var(--text-main-text-body-tetriary, #62676b);
+  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-style: normal;
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-lg, 1.5rem); /* 171.429% */
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+}
+
+/* Inner table styles */
+.boostlook:has(:not(.doc)) .informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))) table.simplelist {
+  width: 100%;
+}
+
+.boostlook:has(:not(.doc)) .informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))) table.simplelist td {
+  border: none;
+  padding: var(--padding-padding-3xs, 0.25rem) var(--padding-padding-2xs, 0.5rem);
+}
+
+/* Footnotes */
+.boostlook:has(:not(.doc)) .footnotes {
+  margin-top: var(--padding-padding-lg);
+  border-top: 1px solid var(--border-border-primary);
+}
+
+.boostlook:has(:not(.doc)) .footnotes hr {
+  display: none;
+}
+
+/* Copyright Footer */
+/* If Footer has no content than use it as bottom spacer */
+.boostlook .copyright-footer:empty {
+  padding-top: var(--main-margin);
+}
+
+/* If Footer has content */
+.boostlook .copyright-footer:not(:empty) {
+  padding: var(--padding-padding-lg) 0;
+}
+
+/* Footer Content */
+.boostlook:not(:has(.doc)) .copyright-footer {
+  color: var(--text-main-text-body-quaternary, #949a9e);
+  font-size: var(--typography-font-size-xs);
+  font-variation-settings: "wght" 500, "wdth" 80;
+  line-height: var(--typography-line-height-sm, 1rem);
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+  text-align: left;
+}
+
+/* Footer Content  */
+.boostlook:not(:has(.doc)) .copyright-footer p {
+  text-align: inherit;
+  font-size: var(--typography-font-size-2xs);
+  color: var(--text-main-text-body-primary, #2a2c30);
+}
+
+/* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content hr,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content hr,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content hr {
+  display: none;
+}
+
+/* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content div.code-snippet,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content div.code-snippet,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content div.code-snippet {
+  position: relative;
+}
+
+/* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content div.highlight:has(> pre),
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content div.highlight:has(> pre),
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content div.highlight:has(> pre) {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+/* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content div.highlight:has(> pre) pre,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content div.highlight:has(> pre) pre,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content div.highlight:has(> pre) pre {
+  padding: var(--spacing-size-xs, 0.75rem) var(--spacing-size-sm, 1rem);
+  margin-top: var(--padding-padding-3xs, 0.25rem);
+}
+
+/* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content > pre:not([class]),
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content > pre:not([class]),
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content > pre:not([class]) {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content div.code-snippet:has(pre):not(:last-child) pre:not([class]),
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content div.code-snippet:has(pre):not(:last-child) pre:not([class]),
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content div.code-snippet:has(pre):not(:last-child) pre:not([class]),
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content > pre:not([class]):not(:last-child),
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content > pre:not([class]):not(:last-child),
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content > pre:not([class]):not(:last-child),
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content div.code-snippet:not(:last-child) pre,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content div.code-snippet:not(:last-child) pre,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content div.code-snippet:not(:last-child) pre {
+  margin-bottom: var(--padding-padding-xs, 0.75rem);
+}
+
+/* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content + p:has(> small),
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content + p:has(> small),
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content + p:has(> small) {
+  padding: var(--padding-padding-lg) 0 !important;
+}
+
+/* Outcome 2.2 Weird Template fix */
+.boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content .footnotes,
+.boostlook:not(:has(.doc))#antora-template-wrapper > #content .footnotes,
+div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #content .footnotes {
+  padding-top: var(--padding-padding-xs, 0.75rem);
+}
+
+@media screen and (min-width: 768px) {
+  body.article:has(.boostlook#boost-legacy-docs-wrapper),
+  body.article:has(.boostlook#antora-template-wrapper),
+  body.article:has(div.source-docs-antora.boostlook) {
+    /* !important ovverides website own styles !important
+    * Adjust this to "padding: 0 1rem 0 1rem"
+    * when website container width will be used as in new look design
+    */
+    padding: 0 !important;
+  }
+
+  #boost-legacy-docs-wrapper .boostlook #toc.toc2,
+  #antora-template-wrapper .boostlook #toc.toc2,
+  div.source-docs-antora.boostlook:has(> .boostlook) .boostlook #toc.toc2 {
+    /* Adjust this to "max(1rem, 50% - 45rem)"
+    * when website container width will be used as in new look design
+    */
+    left: max(0rem, 50% - 45rem);
+  }
+}
+/* TOC Common End */
+
+/*----------------- Quickbook Documentation Styles end -----------------*/

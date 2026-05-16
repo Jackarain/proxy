@@ -18,7 +18,6 @@ target_link_libraries(boost_rational
     Boost::config
     Boost::core
     Boost::integer
-    Boost::static_assert
     Boost::throw_exception
     Boost::type_traits
     Boost::utility

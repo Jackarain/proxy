@@ -1,6 +1,6 @@
 /* Boost.MultiIndex example: complex searches and foreign keys.
  *
- * Copyright 2003-2008 Joaquin M Lopez Munoz.
+ * Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -88,10 +88,6 @@ struct car_model
   }
 };
 
-/* see Compiler specifics: Use of member_offset for info on
- * BOOST_MULTI_INDEX_MEMBER
- */
-
 /* Car manufacturers are stored in a multi_index_container with one single
  * index on  the name member. This is functionally equivalent to an std::set,
  * though in this latter case we woud have to define a non-default comparison
@@ -102,7 +98,7 @@ typedef multi_index_container<
   car_manufacturer,
   indexed_by<
     ordered_unique<
-      BOOST_MULTI_INDEX_MEMBER(car_manufacturer,std::string,name)
+      member<car_manufacturer,std::string,&car_manufacturer::name>
     >
   >
 > car_manufacturer_table;
@@ -118,18 +114,18 @@ typedef multi_index_container<
   car_model,
   indexed_by<
     ordered_unique<
-      tag<model>,BOOST_MULTI_INDEX_MEMBER(car_model,std::string,model)
+      tag<model>,member<car_model,std::string,&car_model::model>
     >,
     ordered_non_unique<
       tag<manufacturer>,
       key_from_key<
-        BOOST_MULTI_INDEX_MEMBER(car_manufacturer,const std::string,name),
-        BOOST_MULTI_INDEX_MEMBER(
-          car_model,const car_manufacturer *,manufacturer)
+        member<car_manufacturer,const std::string,&car_manufacturer::name>,
+        member<
+          car_model,const car_manufacturer *,&car_model::manufacturer>
       >
     >,
     ordered_non_unique<
-      tag<price>,BOOST_MULTI_INDEX_MEMBER(car_model,int,price)
+      tag<price>,member<car_model,int,&car_model::price>
     >
   >
 > car_table;
@@ -138,7 +134,7 @@ typedef multi_index_container<
  * actual objects. These views are used in the complex search performed
  * in the program. Resorting to multi_index of pointers eliminates
  * unnecessary copying of objects, and provides us with an opportunity
- * to show how BOOST_MULTI_INDEX_MEMBER can be used with pointer
+ * to show how boost::multi_index::member can be used with pointer
  * type elements.
  * car_table_price_view indexes (pointers to) car_models by price.
  */
@@ -146,7 +142,7 @@ typedef multi_index_container<
 typedef multi_index_container<
   const car_model*,
   indexed_by<
-    ordered_non_unique<BOOST_MULTI_INDEX_MEMBER(car_model,const int,price)>
+    ordered_non_unique<member<car_model,const int,&car_model::price> >
   >
 > car_table_price_view;
 
@@ -159,9 +155,9 @@ typedef multi_index_container<
   indexed_by<
     ordered_non_unique<
       key_from_key<
-        BOOST_MULTI_INDEX_MEMBER(car_manufacturer,const std::string,name),
-        BOOST_MULTI_INDEX_MEMBER(
-          car_model,const car_manufacturer * const,manufacturer)
+        member<car_manufacturer,const std::string,&car_manufacturer::name>,
+        member<
+          car_model,const car_manufacturer * const,&car_model::manufacturer>
       >
     >
   >

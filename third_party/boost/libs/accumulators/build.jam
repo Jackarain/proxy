@@ -21,7 +21,6 @@ constant boost_dependencies :
     /boost/preprocessor//boost_preprocessor
     /boost/range//boost_range
     /boost/serialization//boost_serialization
-    /boost/static_assert//boost_static_assert
     /boost/throw_exception//boost_throw_exception
     /boost/tuple//boost_tuple
     /boost/type_traits//boost_type_traits

@@ -1,5 +1,6 @@
 //
 // Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2022 Alan de Freitas (alandefreitas@gmail.com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -10,6 +11,7 @@
 #ifndef BOOST_URL_GRAMMAR_DETAIL_CHARSET_HPP
 #define BOOST_URL_GRAMMAR_DETAIL_CHARSET_HPP
 
+#include <boost/url/detail/config.hpp>
 #include <boost/core/bit.hpp>
 #include <type_traits>
 
@@ -60,6 +62,7 @@ struct has_find_if_not<T, void_t<
 };
 
 template<class Pred>
+BOOST_URL_CXX14_CONSTEXPR
 char const*
 find_if(
     char const* first,
@@ -77,6 +80,7 @@ find_if(
 }
 
 template<class Pred>
+BOOST_URL_CXX14_CONSTEXPR
 char const*
 find_if(
     char const* first,
@@ -84,11 +88,17 @@ find_if(
     Pred const& pred,
     std::true_type) noexcept
 {
+#if defined(BOOST_URL_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+    if (__builtin_is_constant_evaluated())
+        return find_if(first, last, pred,
+            std::false_type{});
+#endif
     return pred.find_if(
         first, last);
 }
 
 template<class Pred>
+BOOST_URL_CXX14_CONSTEXPR
 char const*
 find_if_not(
     char const* first,
@@ -106,6 +116,7 @@ find_if_not(
 }
 
 template<class Pred>
+BOOST_URL_CXX14_CONSTEXPR
 char const*
 find_if_not(
     char const* first,
@@ -113,6 +124,11 @@ find_if_not(
     Pred const& pred,
     std::true_type) noexcept
 {
+#if defined(BOOST_URL_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+    if (__builtin_is_constant_evaluated())
+        return find_if_not(first, last, pred,
+            std::false_type{});
+#endif
     return pred.find_if_not(
         first, last);
 }

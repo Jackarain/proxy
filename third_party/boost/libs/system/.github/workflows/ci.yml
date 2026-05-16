@@ -59,36 +59,36 @@ jobs:
             install: g++-12
           - toolset: gcc-13
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:24.04
+            os: ubuntu-latest
             install: g++-13
           - toolset: gcc-14
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-latest
             container: ubuntu:24.04
+            os: ubuntu-latest
             install: g++-14
           - toolset: gcc-15
             cxxstd: "11,14,17,20,23,2c"
-            os: ubuntu-latest
             container: ubuntu:25.04
+            os: ubuntu-latest
             install: g++-15
           - toolset: clang
             compiler: clang++-3.9
             cxxstd: "11,14"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-3.9
           - toolset: clang
             compiler: clang++-4.0
             cxxstd: "11,14"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-4.0
           - toolset: clang
             compiler: clang++-5.0
             cxxstd: "11,14,1z"
-            os: ubuntu-latest
             container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-5.0
           - toolset: clang
             compiler: clang++-6.0
@@ -99,96 +99,117 @@ jobs:
           - toolset: clang
             compiler: clang++-7
             cxxstd: "11,14,17"
+            stdlib: "native,libc++"
             container: ubuntu:20.04
             os: ubuntu-latest
-            install: clang-7
+            install: clang-7 libc++-7-dev libc++abi-7-dev
           - toolset: clang
             compiler: clang++-8
             cxxstd: "11,14,17"
+            stdlib: "native,libc++"
             container: ubuntu:20.04
             os: ubuntu-latest
-            install: clang-8
+            install: clang-8 libc++-8-dev libc++abi-8-dev
           - toolset: clang
             compiler: clang++-9
             cxxstd: "11,14,17"
+            stdlib: "native,libc++"
             container: ubuntu:20.04
             os: ubuntu-latest
-            install: clang-9
+            install: clang-9 libc++-9-dev libc++abi-9-dev
           - toolset: clang
             compiler: clang++-10
             cxxstd: "11,14,17,2a"
+            stdlib: "native,libc++"
             container: ubuntu:20.04
             os: ubuntu-latest
-            install: clang-10
+            install: clang-10 libc++-10-dev libc++abi-10-dev
           - toolset: clang
             compiler: clang++-11
             cxxstd: "11,14,17,2a"
+            stdlib: "native,libc++"
             container: ubuntu:20.04
             os: ubuntu-latest
-            install: clang-11
+            install: clang-11 libc++-11-dev libc++abi-11-dev
           - toolset: clang
             compiler: clang++-12
             cxxstd: "11,14,17,20"
+            stdlib: "native,libc++"
             container: ubuntu:20.04
             os: ubuntu-latest
-            install: clang-12
+            install: clang-12 libc++-12-dev libc++abi-12-dev
           - toolset: clang
             compiler: clang++-13
             cxxstd: "11,14,17,20,2b"
+            stdlib: "native,libc++"
             container: ubuntu:22.04
             os: ubuntu-latest
-            install: clang-13
+            install: clang-13 libc++-13-dev libc++abi-13-dev
           - toolset: clang
             compiler: clang++-14
             cxxstd: "11,14,17,20,2b"
+            stdlib: "native,libc++"
             container: ubuntu:22.04
             os: ubuntu-latest
-            install: clang-14
+            install: clang-14 libc++-14-dev libc++abi-14-dev
           - toolset: clang
             compiler: clang++-15
             cxxstd: "11,14,17,20,2b"
             container: ubuntu:22.04
+            stdlib: "native,libc++"
             os: ubuntu-latest
-            install: clang-15
+            install: clang-15 libc++-15-dev libc++abi-15-dev
           - toolset: clang
             compiler: clang++-16
             cxxstd: "11,14,17,20,2b"
+            stdlib: "native,libc++"
             container: ubuntu:24.04
             os: ubuntu-latest
-            install: clang-16
+            install: clang-16 libc++-16-dev libc++abi-16-dev
           - toolset: clang
             compiler: clang++-17
             cxxstd: "11,14,17,20,2b"
+            stdlib: "native,libc++"
             container: ubuntu:24.04
             os: ubuntu-latest
-            install: clang-17
+            install: clang-17 libc++-17-dev libc++abi-17-dev
           - toolset: clang
             compiler: clang++-18
             cxxstd: "11,14,17,20,2b"
+            stdlib: "native,libc++"
             container: ubuntu:24.04
             os: ubuntu-latest
-            install: clang-18
+            install: clang-18 libc++-18-dev libc++abi-18-dev
           - toolset: clang
             compiler: clang++-19
             cxxstd: "11,14,17,20,2b"
+            stdlib: "native,libc++"
             container: ubuntu:24.04
             os: ubuntu-latest
-            install: clang-19
+            install: clang-19 libc++-19-dev libc++abi-19-dev
           - toolset: clang
             compiler: clang++-20
             cxxstd: "11,14,17,20,23,2c"
-            container: ubuntu:25.04
+            stdlib: "native,libc++"
+            container: ubuntu:24.04
             os: ubuntu-latest
-            install: clang-20
+            install: clang-20 libc++-20-dev libc++abi-20-dev
           - toolset: clang
-            cxxstd: "11,14,17,20,2b"
-            os: macos-13
+            compiler: clang++-21
+            cxxstd: "11,14,17,20,23,2c"
+            stdlib: "native,libc++"
+            container: ubuntu:25.10
+            os: ubuntu-latest
+            install: clang-21 libc++-21-dev libc++abi-21-dev
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-14
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-15
+          - toolset: clang
+            cxxstd: "11,14,17,20,23,2c"
+            os: macos-26
 
     runs-on: ${{matrix.os}}
 
@@ -254,7 +275,7 @@ jobs:
       - name: Run tests
         run: |
           cd ../boost-root
-          ./b2 -j3 libs/$LIBRARY/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} variant=debug,release
+          ./b2 -j3 libs/$LIBRARY/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} variant=debug,release ${{ matrix.stdlib && format('stdlib={0}', matrix.stdlib) }}
 
   windows:
     strategy:
@@ -312,11 +333,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-24.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
@@ -360,11 +378,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-24.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
@@ -418,11 +433,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-24.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 

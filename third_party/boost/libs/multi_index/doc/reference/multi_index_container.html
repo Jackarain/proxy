@@ -235,9 +235,8 @@ and for access to the indices held.
 <p>
 A <code>multi_index_container</code> type is instantiated with the type of the
 elements contained and a non-empty
-<a href="../../../../libs/mpl/doc/refmanual/forward-sequence.html">
-<code>MPL Forward Sequence</code></a> specifying which indices conform the
-class.
+<a href="../../../../libs/mp11/doc/html/mp11.html#definitions">Mp11 list</a>
+specifying which indices conform the class.
 </p>
 
 <p>
@@ -531,13 +530,10 @@ scheme outlined in the
   </li>
   <li><code>IndexSpecifierList</code> specifies the indices that the
     <code>multi_index_container</code> is composed of. It must be a non-empty
-    <a href="../../../../libs/mpl/doc/refmanual/forward-sequence.html">
-    <code>MPL Forward Sequence</code></a> (and, preferably,
-    an <a href="../../../../libs/mpl/doc/refmanual/random-access-sequence.html">
-    <code>MPL Random Access Sequence</code></a>) of index specifiers. For
-    syntactic convenience, the
+    <a href="../../../../libs/mp11/doc/html/mp11.html#definitions">Mp11 list</a>
+    of index specifiers. For syntactic convenience, the
     <a href="indices.html#indexed_by"><code>indexed_by</code></a>
-    MPL sequence can be used.
+    construct can be used.
   </li>
   <li><code>Allocator</code> must be an allocator of <code>Value</code> objects
     satisfying the associated C++ requirements at <b>[allocator.requirements]</b>.
@@ -598,22 +594,16 @@ Same type as <code>IndexSpecifierList</code>.
 <code>index_type_list</code>
 
 <blockquote>
-Model of
-<a href="../../../../libs/mpl/doc/refmanual/random-access-sequence.html">
-<code>MPL Random Access Sequence</code></a> and
-<a href="../../../../libs/mpl/doc/refmanual/extensible-sequence.html">
-<code>MPL Extensible Sequence</code></a> containing the types of the indices held by
+<a href="../../../../libs/mp11/doc/html/mp11.html#definitions">Mp11 list</a>
+containing the types of the indices held by
 the <code>multi_index_container</code>, in the same order as they were specified.
 </blockquote>
 
 <code>iterator_type_list</code>
 
 <blockquote>
-Model of
-<a href="../../../../libs/mpl/doc/refmanual/random-access-sequence.html">
-<code>MPL Random Access Sequence</code></a> and
-<a href="../../../../libs/mpl/doc/refmanual/extensible-sequence.html">
-<code>MPL Extensible Sequence</code></a> containing the types of the iterators of
+<a href="../../../../libs/mp11/doc/html/mp11.html#definitions">Mp11 list</a>
+containing the types of the iterators of
 the indices held by the <code>multi_index_container</code>, in the same order as they were
 specified.
 </blockquote>
@@ -621,11 +611,8 @@ specified.
 <code>const_iterator_type_list</code>
 
 <blockquote>
-Model of
-<a href="../../../../libs/mpl/doc/refmanual/random-access-sequence.html">
-<code>MPL Random Access Sequence</code></a> and
-<a href="../../../../libs/mpl/doc/refmanual/extensible-sequence.html">
-<code>MPL Extensible Sequence</code></a> containing the types of the constant
+<a href="../../../../libs/mp11/doc/html/mp11.html#definitions">Mp11 list</a>
+containing the types of the constant
 iterators of the indices held by the <code>multi_index_container</code>, in the same order
 as they were specified.
 </blockquote>
@@ -1082,9 +1069,9 @@ Index reference
 
 <br>
 
-<p>Revised August 15th 2022</p>
+<p>Revised October 25th 2025</p>
 
-<p>&copy; Copyright 2003-2022 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2003-2025 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

@@ -343,11 +343,11 @@ void error_handling_test()
 int cpp_main(int argc, char* argv[])
 {
 // document state of critical macros
-#ifdef BOOST_POSIX_API
-    cout << "BOOST_POSIX_API is defined\n";
+#ifdef BOOST_FILESYSTEM_POSIX_API
+    cout << "BOOST_FILESYSTEM_POSIX_API is defined\n";
 #endif
-#ifdef BOOST_WINDOWS_API
-    cout << "BOOST_WINDOWS_API is defined\n";
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
+    cout << "BOOST_FILESYSTEM_WINDOWS_API is defined\n";
 #endif
     cout << "BOOST_FILESYSTEM_DECL" << BOOST_STRINGIZE(=BOOST_FILESYSTEM_DECL) << "\n";
     cout << "BOOST_SYMBOL_VISIBLE" << BOOST_STRINGIZE(=BOOST_SYMBOL_VISIBLE) << "\n";

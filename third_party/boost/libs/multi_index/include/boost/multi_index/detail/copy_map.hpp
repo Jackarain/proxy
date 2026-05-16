@@ -1,4 +1,4 @@
-/* Copyright 2003-2022 Joaquin M Lopez Munoz.
+/* Copyright 2003-2025 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -16,14 +16,13 @@
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */
 #include <algorithm>
 #include <boost/core/addressof.hpp>
+#include <boost/core/allocator_access.hpp>
 #include <boost/core/no_exceptions_support.hpp>
 #include <boost/core/noncopyable.hpp>
-#include <boost/move/core.hpp>
-#include <boost/move/utility_core.hpp>
-#include <boost/multi_index/detail/allocator_traits.hpp>
 #include <boost/multi_index/detail/auto_space.hpp>
 #include <boost/multi_index/detail/raw_ptr.hpp>
 #include <functional>
+#include <utility>
 
 namespace boost{
 
@@ -66,21 +65,18 @@ struct copy_map_value_copier
 struct copy_map_value_mover
 {
   template<typename Value>
-  BOOST_RV_REF(Value) operator()(Value& x)const{return boost::move(x);}
+  Value&& operator()(Value& x)const{return std::move(x);}
 };
 
 template <typename Node,typename Allocator>
 class copy_map:private noncopyable
 {
-  typedef typename rebind_alloc_for<
-    Allocator,Node
-  >::type                                  allocator_type;
-  typedef allocator_traits<allocator_type> alloc_traits;
-  typedef typename alloc_traits::pointer   pointer;
+  typedef allocator_rebind_t<Allocator,Node>  allocator_type;
+  typedef allocator_pointer_t<allocator_type> pointer;
 
 public:
-  typedef const copy_map_entry<Node>*      const_iterator;
-  typedef typename alloc_traits::size_type size_type;
+  typedef const copy_map_entry<Node>*           const_iterator;
+  typedef allocator_size_type_t<allocator_type> size_type;
 
   copy_map(
     const Allocator& al,size_type size,Node* header_org,Node* header_cpy):
@@ -92,7 +88,7 @@ public:
   {
     if(!released){
       for(size_type i=0;i<n;++i){
-        alloc_traits::destroy(
+        allocator_destroy(
           al_,boost::addressof((spc.data()+i)->second->value()));
         deallocate((spc.data()+i)->second);
       }
@@ -128,12 +124,12 @@ private:
 
   pointer allocate()
   {
-    return alloc_traits::allocate(al_,1);
+    return allocator_allocate(al_,1);
   }
 
   void deallocate(Node* node)
   {
-    alloc_traits::deallocate(al_,static_cast<pointer>(node),1);
+    allocator_deallocate(al_,static_cast<pointer>(node),1);
   }
 
   template<typename ValueAccess>
@@ -142,7 +138,7 @@ private:
     (spc.data()+n)->first=node;
     (spc.data()+n)->second=raw_ptr<Node*>(allocate());
     BOOST_TRY{
-      alloc_traits::construct(
+      allocator_construct(
         al_,boost::addressof((spc.data()+n)->second->value()),
         access(node->value()));
     }

@@ -28,7 +28,7 @@
 #include <boost/thread/future.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/chrono/chrono_io.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #if defined BOOST_THREAD_USES_CHRONO
 

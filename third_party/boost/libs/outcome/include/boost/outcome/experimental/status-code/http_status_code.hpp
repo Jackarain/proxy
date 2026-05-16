@@ -1,5 +1,5 @@
 /* Proposed SG14 status_code
-(C) 2022-2025 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
+(C) 2022-2026 Niall Douglas <http://www.nedproductions.biz/> (5 commits)
 File Created: Jun 2022
 
 
@@ -31,6 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef BOOST_OUTCOME_SYSTEM_ERROR2_HTTP_STATUS_CODE_HPP
 #define BOOST_OUTCOME_SYSTEM_ERROR2_HTTP_STATUS_CODE_HPP
 
+#include "generic_code.hpp"
 #include "status_code.hpp"
 
 BOOST_OUTCOME_SYSTEM_ERROR2_NAMESPACE_BEGIN
@@ -84,21 +85,28 @@ public:
   //! Constexpr singleton getter. Returns constexpr http_status_code_domain variable.
   static inline constexpr const _http_status_code_domain &get();
 
-  virtual string_ref name() const noexcept override { return string_ref("HTTP status domain"); }  // NOLINT
-
-  virtual payload_info_t payload_info() const noexcept override
+protected:
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual int _do_name(_vtable_name_args &args) const noexcept override
   {
-    return {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
-            (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) : alignof(status_code_domain *)};
+    args.ret = string_ref("HTTP status domain");
+    return 0;
+  }  // NOLINT
+
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void _do_payload_info(_vtable_payload_info_args &args) const noexcept override
+  {
+    args.ret = {sizeof(value_type), sizeof(status_code_domain *) + sizeof(value_type),
+                (alignof(value_type) > alignof(status_code_domain *)) ? alignof(value_type) :
+                                                                        alignof(status_code_domain *)};
   }
 
-protected:
-  virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual bool _do_failure(const status_code<void> &code) const noexcept override  // NOLINT
   {
     assert(code.domain() == *this);                                     // NOLINT
     return static_cast<const http_status_code &>(code).value() >= 400;  // NOLINT
   }
-  virtual bool _do_equivalent(const status_code<void> &code1, const status_code<void> &code2) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual bool
+  _do_equivalent(const status_code<void> &code1,
+                 const status_code<void> &code2) const noexcept override  // NOLINT
   {
     assert(code1.domain() == *this);                                // NOLINT
     const auto &c1 = static_cast<const http_status_code &>(code1);  // NOLINT
@@ -109,50 +117,65 @@ protected:
     }
     return false;
   }
-  virtual generic_code _generic_code(const status_code<void> &code) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual void
+  _do_generic_code(_vtable_generic_code_args &args) const noexcept override  // NOLINT
   {
-    assert(code.domain() == *this);                               // NOLINT
-    const auto &c = static_cast<const http_status_code &>(code);  // NOLINT
+    assert(args.code.domain() == *this);                               // NOLINT
+    const auto &c = static_cast<const http_status_code &>(args.code);  // NOLINT
     switch(c.value())
     {
     case 102:
     case 202:
-      return errc::operation_in_progress;
+      args.ret = errc::operation_in_progress;
+      break;
     case 400:
-      return errc::invalid_argument;
+      args.ret = errc::invalid_argument;
+      break;
     case 401:
-      return errc::operation_not_permitted;
+      args.ret = errc::operation_not_permitted;
+      break;
     case 403:
-      return errc::permission_denied;
+      args.ret = errc::permission_denied;
+      break;
     case 404:
     case 410:
-      return errc::no_such_file_or_directory;
+      args.ret = errc::no_such_file_or_directory;
+      break;
     case 405:
     case 418:
-      return errc::operation_not_supported;
+      args.ret = errc::operation_not_supported;
+      break;
     case 406:
-      return errc::protocol_not_supported;
+      args.ret = errc::protocol_not_supported;
+      break;
     case 408:
-      return errc::timed_out;
+      args.ret = errc::timed_out;
+      break;
     case 413:
-      return errc::result_out_of_range;
+      args.ret = errc::result_out_of_range;
+      break;
     case 501:
-      return errc::not_supported;
+      args.ret = errc::not_supported;
+      break;
     case 503:
-      return errc::resource_unavailable_try_again;
+      args.ret = errc::resource_unavailable_try_again;
+      break;
     case 504:
-      return errc::timed_out;
+      args.ret = errc::timed_out;
+      break;
     case 507:
-      return errc::no_space_on_device;
+      args.ret = errc::no_space_on_device;
+      break;
     default:
-      return errc::unknown;
+      args.ret = errc::unknown;
+      break;
     }
   }
-  virtual string_ref _do_message(const status_code<void> &code) const noexcept override  // NOLINT
+  BOOST_OUTCOME_SYSTEM_ERROR2_CONSTEXPR20 virtual int _do_message(_vtable_message_args &args) const noexcept override  // NOLINT
   {
-    assert(code.domain() == *this);                               // NOLINT
-    const auto &c = static_cast<const http_status_code &>(code);  // NOLINT
-    return string_ref(
+    assert(args.code.domain() == *this);                               // NOLINT
+    const auto &c = static_cast<const http_status_code &>(args.code);  // NOLINT
+    args.ret = string_ref(
     [&]() -> const char *
     {
       switch(c.value())
@@ -287,6 +310,7 @@ protected:
         return "Unknown";
       }
     }());
+    return 0;
   }
 #if defined(_CPPUNWIND) || defined(__EXCEPTIONS) || defined(BOOST_OUTCOME_STANDARDESE_IS_IN_THE_HOUSE)
   BOOST_OUTCOME_SYSTEM_ERROR2_NORETURN virtual void _do_throw_exception(const status_code<void> &code) const override  // NOLINT
@@ -297,7 +321,8 @@ protected:
   }
 #endif
 };
-//! A constexpr source variable for the `getaddrinfo()` code domain, which is that of `getaddrinfo()`. Returned by `_http_status_code_domain::get()`.
+//! A constexpr source variable for the `getaddrinfo()` code domain, which is that of `getaddrinfo()`. Returned by
+//! `_http_status_code_domain::get()`.
 constexpr _http_status_code_domain http_status_code_domain;
 inline constexpr const _http_status_code_domain &_http_status_code_domain::get()
 {

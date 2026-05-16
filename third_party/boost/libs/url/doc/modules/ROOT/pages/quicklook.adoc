@@ -234,8 +234,8 @@ id=42&name=John Doe Jingleheimer-Schmidt
 --
 ====
 
-cpp:decode_view[] and its decoding functions are designed to perform no memory allocations unless the algorithm where it's being used needs the result to be in another container.
-The design also permits recycling objects to reuse their memory, and at least minimize the number of allocations by deferring them until the result is in fact needed by the application.
+cpp:decode_view[] and its decoding functions perform no memory allocations unless the result needs to be stored in another container.
+Objects can be recycled to reuse their memory, deferring allocations until the application actually needs them.
 
 In the example above, the memory owned by `str` can be reused to store other results.
 This is also useful when manipulating URLs:

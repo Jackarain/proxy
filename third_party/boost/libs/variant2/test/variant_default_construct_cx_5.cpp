@@ -10,9 +10,9 @@
 BOOST_PRAGMA_MESSAGE("Skipping constexpr destructor test because __cpp_constexpr_dynamic_alloc < 201907L")
 int main() {}
 
-#elif defined(BOOST_MSVC) && BOOST_MSVC < 1950
+#elif defined(BOOST_MSVC) && BOOST_MSVC < 1960
 
-BOOST_PRAGMA_MESSAGE("Skipping constexpr destructor test because BOOST_MSVC < 1950")
+BOOST_PRAGMA_MESSAGE("Skipping constexpr destructor test because BOOST_MSVC < 1960")
 int main() {}
 
 #elif defined(BOOST_CLANG) && BOOST_CLANG_VERSION < 180000

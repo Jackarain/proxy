@@ -32,8 +32,6 @@ project
       $(c11-requires)
       <define>BOOST_URL_SOURCE
       <toolset>msvc-14.0:<build>no
-      # Warnings in dependencies
-      <toolset>gcc:<cxxflags>"-Wno-maybe-uninitialized"
       <toolset>gcc,<target-os>windows:<cxxflags>"-Wno-error=array-bounds"
     : common-requirements
       <link>shared:<define>BOOST_URL_DYN_LINK=1

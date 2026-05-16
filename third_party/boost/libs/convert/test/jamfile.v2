@@ -3,12 +3,17 @@
 # Distributed under the Boost Software License, Version 1.0.
 # See copy at http://www.boost.org/LICENSE_1_0.txt.
 
+require-b2 5.0.1 ;
+
+import-search /boost/config/checks ;
+
 # bring in the rules for testing
 import testing ;
-import ../../config/checks/config : requires ;
+import config : requires ;
 
-project convert_test 
+project convert_test
     : requirements
+        <library>/boost/convert//boost_convert
         <warnings>on
         <toolset>icpc:<cxxflags>"-std=c++11"
         <toolset>clang:<cxxflags>"-std=c++11"
@@ -22,9 +27,9 @@ project convert_test
         <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
         <toolset>msvc:<define>_CRT_SECURE_NO_WARNINGS
         <include>../include
-    ;  
+    ;
 
-exe convert_test_performance : performance.cpp /boost/timer//boost_timer /boost/chrono//boost_chrono 
+exe convert_test_performance : performance.cpp /boost/timer//boost_timer /boost/chrono//boost_chrono
     : [ requires cxx17_hdr_charconv cxx17_structured_bindings cxx17_if_constexpr ] ;
 exe convert_test_performance_spirit : performance_spirit.cpp ;
 
@@ -38,15 +43,15 @@ run user_type.cpp        :  :  :  : convert_test_user_type ;
 run str_to_int.cpp       :  :  :  : convert_test_str_to_int ;
 run sfinae.cpp           :  :  :  : convert_test_sfinae ;
 run has_member.cpp       :  :  :  : convert_test_has_member ;
-run printf_converter.cpp : 
+run printf_converter.cpp :
       /boost/test/included_unit_test_framework  :  :  : convert_test_printf_converter ;
 run stream_converter.cpp :
       /boost/test/included_unit_test_framework  :  :  : convert_test_stream_converter ;
 
 # these tests require C++17
-run charconv_converter.cpp 
+run charconv_converter.cpp
     : /boost/test//included_unit_test_framework
-    :  
+    :
     : [ requires cxx17_hdr_charconv cxx17_structured_bindings cxx17_if_constexpr ]
       <toolset>gcc:<cxxflags>"-O3 -std=c++17 -Wno-unused-variable -Wno-long-long"
     : convert_test_charconv_converter ;

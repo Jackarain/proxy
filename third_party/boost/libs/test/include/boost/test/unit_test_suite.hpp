@@ -348,6 +348,11 @@ typedef ::boost::unit_test::ut_detail::nil_t BOOST_AUTO_TEST_CASE_FIXTURE;
 // **************   Auto registration facility helper macros   ************** //
 // ************************************************************************** //
 
+#if defined(__clang__) && __clang_major__ >= 22
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wc2y-extensions"
+#endif
+
 // Facility for having a unique name based on __LINE__ and __COUNTER__ (later if available)
 #if defined(__COUNTER__)
   #define BOOST_TEST_INTERNAL_HAS_COUNTER
@@ -363,6 +368,10 @@ typedef ::boost::unit_test::ut_detail::nil_t BOOST_AUTO_TEST_CASE_FIXTURE;
   /**/
 #endif
 /**/
+
+#if defined(__clang__) && __clang_major__ >= 22
+#  pragma clang diagnostic pop
+#endif
 
 #define BOOST_AUTO_TU_REGISTRAR( test_name )                       \
 static boost::unit_test::ut_detail::auto_test_unit_registrar       \

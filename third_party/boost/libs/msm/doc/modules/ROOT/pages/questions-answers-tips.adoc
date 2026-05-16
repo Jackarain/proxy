@@ -56,11 +56,12 @@ _Answer_: MSM uses Boost.MPL under the hood and this is the default
 maximum size. Please define the following 3 macros before including any
 MSM headers:
 
-....
+[source,cpp]
+----
 #define BOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
 #define BOOST_MPL_LIMIT_VECTOR_SIZE 30 // or whatever you need               
 #define BOOST_MPL_LIMIT_MAP_SIZE 30 // or whatever you need 
-....
+----
 
 _Question_: Why do I get this error: ``error C2977: 'boost::mpl::vector'
 : too many template arguments''?
@@ -80,6 +81,7 @@ _Answer_: MSM uses Boost.Fusion under the hood and this is the default
 maximum size. Please define the following macro before including any MSM
 headers:
 
-....
+[source,cpp]
+----
 #define FUSION_MAX_VECTOR_SIZE 20 // or whatever you need 
-....
+----

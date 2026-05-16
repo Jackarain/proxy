@@ -11,8 +11,7 @@
 
 [section:std_comp Comparison with `std::optional`]
 
-[table
-  []
+[table Comparison with `std::optional`
   [ [[*`boost::optional`]] [[*`std::optional`]] [] ]
   [ [`optional<int> o = none;`] [`optional<int> o = nullopt;`] [Different name for no-value tag.] ]
   [ [`optional<X> o {in_place_init, a, b};`] [`optional<int> o {in_place, a, b};`] [Different name for in-place initialization tag.] ]
@@ -42,7 +41,23 @@
   [ [`make_optional(cond, v);`] [] [No `make_optional` with condition in `std`.] ]
   [ [] [`make_optional<T>(a, b);`] [No `make_optional` with specified `T` in `boost`.] ]
   [ [`std::cout << optional<int>{};`] [] [No printing to IOStreams in `std`.]]
-]
 
+  [ [`std::vector<optional<int>> rng;`
+
+  `std::ranges::find(rng, boost::none)`] [`std::vector<optional<int>> rng;`
+
+  `std::ranges::find(rng, boost::optional<int>{})`] [optional<T> is never [@https://en.cppreference.com/w/cpp/concepts/equality_comparable `std::equality_comparable_with`] `nullopt_t` in `std`. ] ]
+
+  [ [```
+  void test(vector<optional<T>> rng, T val) {
+    std::ranges::find(rng, val);
+  }
+  ```] [```
+  void test(vector<optional<T>> rng, T val) {
+    std::ranges::find(rng, make_optional(val));
+  }
+  ```] [For `std::optional`, code without `make_optional()` compiles but is ['undefined behavior] when `T` is itself an `optional`. ] ]
+
+]
 
 [endsect][/ std_comp]

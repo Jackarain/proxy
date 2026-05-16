@@ -1,7 +1,7 @@
 == `popen.hpp`
 [#popen]
 
-`popen` is a class that launches a process and connect stdin & stderr to pipes.
+`popen` is a class that launches a process and connect stdin & stdout to pipes.
 
 [source,cpp]
 ----

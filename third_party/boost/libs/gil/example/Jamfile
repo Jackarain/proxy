@@ -6,7 +6,8 @@
 # Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
 
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
 import regex ;
 
 using libjpeg : : : : true ; # work around bug on master
@@ -22,6 +23,7 @@ local msvc-cxxs-with-experimental-fs = 14 ;
 project
   :
   requirements
+    <library>/boost/gil//boost_gil
     [ requires
         cxx14_constexpr
         cxx14_return_type_deduction

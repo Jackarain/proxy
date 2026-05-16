@@ -23,6 +23,9 @@
 #include <boost/container/flat_set.hpp>
 #include <boost/interprocess/containers/containers_fwd.hpp>
 
+#include <boost/config/header_deprecated.hpp>
+BOOST_HEADER_DEPRECATED("<boost/container/flat_set.hpp>")
+
 namespace boost {
 namespace interprocess {
 

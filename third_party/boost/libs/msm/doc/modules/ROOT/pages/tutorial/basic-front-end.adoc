@@ -27,7 +27,8 @@ xref:attachment$SimpleTutorial.cpp[implementation] is also provided.
 As previously stated, MSM is based on the transition table, so let us
 define one:
 
-....
+[source,cpp]
+----
 struct transition_table : mpl::vector<
 //    Start     Event        Target      Action                      Guard 
 //   +---------+------------+-----------+---------------------------+----------------------------+ 
@@ -50,8 +51,7 @@ a_row< Paused  , stop       ,  Stopped  , &player_::stop_playback               
 a_row< Paused  , open_close ,  Open     , &player_::stop_and_open                                >
 //   +---------+------------+-----------+---------------------------+----------------------------+ 
 > {};
-                        
-....
+----
 
 You will notice that this is almost exactly our founding example. The
 only change in the transition table is the different types of
@@ -69,23 +69,26 @@ defining only the guard.
 The signature for an action method is void method_name (event const&),
 for example:
 
-....
-void stop_playback(stop const&)
-....
+[source,cpp]
+----
+void stop_playback(stop const&) {...}
+----
 
 Action methods return nothing and take the argument as const reference.
 Of course nothing forbids you from using the same action for several
 events:
 
-....
-template <class Event> void stop_playback(Event const&)
-....
+[source,cpp]
+----
+template <class Event> void stop_playback(Event const&) {...}
+----
 
 Guards have as only difference the return value, which is a boolean:
 
-....
-bool good_disk_format(cd_detected const& evt)
-....
+[source,cpp]
+----
+bool good_disk_format(cd_detected const& evt) {...}
+----
 
 [[defining-states-with-entryexit-actions]]
 
@@ -131,36 +134,40 @@ Centauri, you can have a transition to a state
 "SendRocketToAlphaCentauri" but no code actually sending the rocket.
 This is where you need actions. So a simple action could be:
 
-....
+[source,cpp]
+----
 template <class Fire> void send_rocket(Fire const&)
 {
   fire_rocket();
 }
-....
+----
 
 Ok, this was simple. Now, we might want to give a direction. Let us
 suppose this information is externally given when needed, it makes sense
 to use the event for this:
 
-....
+[source,cpp]
+----
 // Event
 struct Fire {Direction direction;};
 template <class Fire> void send_rocket(Fire const& evt)
 {
   fire_rocket(evt.direction);
 }
-....
+----
 
 We might want to calculate the direction based not only on external data
 but also on data accumulated during previous work. In this case, you
 might want to have this data in the state machine itself. As transition
 actions are members of the front-end, you can directly access the data:
 
-....
+[source,cpp]
+----
 // Event
 struct Fire {Direction direction;};
 //front-end definition, see down
-struct launcher_ : public msm::front::state_machine_def<launcher_>{
+struct launcher_ : public msm::front::state_machine_def<launcher_>
+{
 Data current_calculation; 
 template <class Fire> void send_rocket(Fire const& evt)
 {
@@ -168,7 +175,7 @@ template <class Fire> void send_rocket(Fire const& evt)
 }
 ...
 };
-....
+----
 
 Entry and exit actions represent a behavior common to a state, no matter
 through which transition it is entered or left. States being reusable,
@@ -178,7 +185,8 @@ actions have access to the state data (being state members) but also to
 the event and state machine, like transition actions. This happens
 through the Event and Fsm template parameters:
 
-....
+[source,cpp]
+----
 struct Launching : public msm::front::state<> 
 {
     template <class Event, class Fsm> 
@@ -187,15 +195,17 @@ struct Launching : public msm::front::state<>
        fire_rocket(evt.direction, fsm.current_calculation);
     } 
 };
-....
+----
 
 Exit actions are also ideal for cleanup when the state becomes inactive.
 
 Another possible use of the entry action is to pass data to substates /
 submachines. Launching is a substate containing a `data` attribute:
 
-....
-struct launcher_ : public msm::front::state_machine_def<launcher_>{
+[source,cpp]
+----
+struct launcher_ : public msm::front::state_machine_def<launcher_>
+{
 Data current_calculation;
 // state machines also have entry/exit actions 
 template <class Event, class Fsm> 
@@ -206,7 +216,7 @@ void on_entry(Event const& evt, Fsm& fsm)
 } 
 ...
 };
-....
+----
 
 The `set_states` back-end method allows you to replace a complete state.
 
@@ -224,8 +234,10 @@ inside actions. Since the process_event method belongs to the back end,
 you first need to gain a reference to it. The back end derives from the
 front end, so one way of doing this is to use a cast:
 
-....
-struct launcher_ : public msm::front::state_machine_def<launcher_>{
+[source,cpp]
+----
+struct launcher_ : public msm::front::state_machine_def<launcher_>
+{
 template <class Fire> void send_rocket(Fire const& evt)
 {
   fire_rocket();
@@ -234,7 +246,7 @@ template <class Fire> void send_rocket(Fire const& evt)
 }
 ...
 };
-....
+----
 
 The same can be implemented inside entry/exit actions. Admittedly, this
 is a bit awkward. A more natural mechanism is available using the
@@ -248,17 +260,21 @@ Declaring a state machine is straightforward and is done with a high
 signal / noise ratio. In our player example, we declare the state
 machine as:
 
-....
-struct player_ : public msm::front::state_machine_def<player_>{
-                            /* see below */}
-....
+[source,cpp]
+----
+struct player_ : public msm::front::state_machine_def<player_>
+{
+    /* see below */
+}
+----
 
 This declares a state machine using the basic front-end. We now declare
 inside the state machine structure the initial state:
 
-....
+[source,cpp]
+----
 typedef Empty initial_state;
-....
+----
 
 And that is about all of what is absolutely needed. In the example, the
 states are declared inside the state machine for readability but this is
@@ -267,9 +283,10 @@ not a requirement, states can be declared wherever you like.
 All what is left to do is to pick a back-end (which is quite simple as
 there is only one at the moment):
 
-....
+[source,cpp]
+----
 typedef msm::back11::state_machine<player_> player;
-....
+----
 
 You now have a ready-to-use state machine with entry/exit actions,
 guards, transition actions, a message queue so that processing an event
@@ -289,10 +306,11 @@ machine is called. By default, this method simply asserts when called.
 It is possible to overwrite the `no_transition` method to define a
 different handling:
 
-....
+[source,cpp]
+----
 template <class Fsm,class Event> 
-void no_transition(Event const& e, Fsm& ,int state){...}
-....
+void no_transition(Event const& e, Fsm& ,int state) {...}
+----
 
 _Note_: you might have noticed that the tutorial calls `start()` on the
 state machine just after creation. The start method will initiate the
@@ -316,15 +334,17 @@ xref:attachment$CompositeTutorial.cpp[example] is also provided.
 A submachine really is a state machine itself, so we declare Playing as
 such, choosing a front-end and a back-end:
 
-....
-struct Playing_ : public msm::front::state_machine_def<Playing_>{...} 
+[source,cpp]
+----
+struct Playing_ : public msm::front::state_machine_def<Playing_> {...} 
 typedef msm::back11::state_machine<Playing_> Playing;
-....
+----
 
 Like for any state machine, one also needs a transition table and an
 initial state:
 
-....
+[source,cpp]
+----
 struct transition_table : mpl::vector<
 //    Start    Event    Target    Action                      Guard 
 //   +--------+-------------+--------+---------------------------+------+ 
@@ -334,10 +354,9 @@ a_row< Song2  , NextSong    , Song3  , &Playing_::start_next_song        >,
 a_row< Song3  , PreviousSong, Song2  , &Playing_::start_prev_song        >
 //   +--------+-------------+--------+---------------------------+------+ 
 > {};
-                        
 
 typedef Song1 initial_state; 
-....
+----
 
 This is about all you need to do. MSM will now automatically recognize
 Playing as a submachine and all events handled by Playing (NextSong and
@@ -353,7 +372,8 @@ will require all events entering this submachine to support this
 property. As this is not practicable, we will need to use
 `boost::enable_if` / `boost::disable_if` to help, for example consider:
 
-....
+[source,cpp]
+----
 // define a property for use with enable_if 
 BOOST_MPL_HAS_XXX_TRAIT_DEF(some_event_property)
 
@@ -384,7 +404,7 @@ struct some_state : public msm::front::state<>
    on_entry(Event const& ,Fsm& )
    {    }
 };                        
-....
+----
 
 Now this state can be used in your submachine.
 
@@ -419,9 +439,10 @@ Adding an orthogonal region is easy, one only needs to declare more
 states in the `initial_state` typedef. So, adding a new region with
 AllOk as the region's initial state is:
 
-....
+[source,cpp]
+----
 typedef mpl::vector<Empty,AllOk> initial_state;
-....
+----
 
 image:Orthogonal-deferred.jpg[image] Furthermore, when you detect
 an error, you usually do not want events to be further processed. To
@@ -451,7 +472,8 @@ UML defines event deferring as a state property. To accommodate this,
 MSM lets you specify this in states by providing a `deferred_events`
 type:
 
-....
+[source,cpp]
+----
 struct Empty : public msm::front::state<> 
 {
    // if the play event is fired while in this state, defer it until a state
@@ -459,7 +481,7 @@ struct Empty : public msm::front::state<>
    typedef mpl::vector<play> deferred_events;
 ...
 };                 
-....
+----
 
 Please have a look at the xref:attachment$Orthogonal-deferred.cpp[complete
 example].
@@ -478,20 +500,22 @@ First, as there is no state where MSM can automatically find out the
 usage of this feature, we need to require deferred events capability
 explicitly, by adding a type in the state machine definition:
 
-....
+[source,cpp]
+----
 struct player_ : public msm::front::state_machine_def<player_>
 { 
     typedef int activate_deferred_events;
 ...
 };                   
-....
+----
 
 We can now defer an event in any transition of the transition table by
 using as action the predefined `msm::front::Defer` functor, for example:
 
-....
+[source,cpp]
+----
 Row < Empty , play , none , Defer , none >
-....
+----
 
 This is an internal transition row (see `internal transitions`) but you
 can ignore this for the moment. It just means that we are not leaving
@@ -505,10 +529,11 @@ transition can play in the resolution of `transition conflicts`. For
 example, we could model an "if (condition2) move to Playing else if
 (condition1) defer play event":
 
-....
+[source,cpp]
+----
 Row   < Empty , play , none    , Defer , condition1   >,
 g_row < Empty , play , Playing , &player_::condition2 >
-....
+----
 
 Please have a look at xref:attachment$Orthogonal-deferred2.cpp[this
 possible implementation].
@@ -528,12 +553,13 @@ restart from the first song. How can it be done? Of course, you could
 add a bit of programming logic and generate extra events to make the
 second song start if coming from Pause. Something like:
 
-....
+[source,cpp]
+----
 if (Event == end_pause) 
 { 
    for (int i=0;i< song number;++i) {player.process_event(NextSong()); } 
 } 
-....
+----
 
 Not much to like in this example, isn't it? To solve this problem, you
 define what is called a shallow or a deep history. A shallow history
@@ -558,16 +584,18 @@ different history policies in different contexts.
 
 Concretely, your frontend stays unchanged:
 
-....
+[source,cpp]
+----
 struct Playing_ : public msm::front::state_machine_def<Playing_>
-....
+----
 
 You then add the policy to the backend as second parameter:
 
-....
+[source,cpp]
+----
 typedef msm::back11::state_machine<Playing_,msm::back11::state_machine<player_>,
     msm::back::ShallowHistory<mpl::vector<end_pause> > > Playing;
-....
+----
 
 This states that a shallow history must be activated if the Playing
 state machine gets activated by the end_pause event and only this one
@@ -624,9 +652,10 @@ is not as bad as it sounds as MSM’s execution speed is very high anyway.
 To define such a transition, use ``none'' as event in the transition
 table, for example:
 
-....
+[source,cpp]
+----
 row < State3 , none , State4 , &p::State3ToState4 , &p::always_true >
-....
+----
 
 xref:attachment$AnonymousTutorial.cpp[An implementation] of the state
 machine diagram is also provided.
@@ -652,9 +681,10 @@ now add a_irow, g_irow, _irow and irow which are like normal transitions
 but define no target state. For example, an internal transition with a
 guard condition could be:
 
-....
+[source,cpp]
+----
 g_irow < Empty /*state*/,cd_detected/*event*/,&p::internal_guard/* guard */>
-....
+----
 
 These new row types can be placed anywhere in the transition table so
 that you can still have your state machine structure grouped together.
@@ -666,14 +696,15 @@ It is also possible to do it the UML-conform way by declaring a
 transition table called `internal transition_table` inside the state
 itself and using internal row types. For example:
 
-....
+[source,cpp]
+----
 struct Empty : public msm::front::state<> 
 {
     struct internal_transition_table : mpl::vector<
            a_internal < cd_detected , Empty, &Empty::internal_action >
     > {};
 };
-....
+----
 
 This declares an internal transition table called
 internal_transition_table and reacting on the event cd_detected by
@@ -747,10 +778,11 @@ which to call it. This transition row is called, not very originally,
 `a_row2, g_row2, _row2 and row2`. For example, a transition calling an
 action from the state Empty could be:
 
-....
+[source,cpp]
+----
 a_row2<Stopped,open_close,Open,Empty
       /*action source*/,&Empty::open_drawer/*action*/>
-....
+----
 
 The same capabilities are also available for internal transitions so
 that we have: `a_irow2, g_irow2, _irow2 and row2`. For transitions
@@ -814,7 +846,8 @@ a state and mark it as explicit, giving as template parameters the
 region id (the region id starts with 0 and corresponds to the first
 initial state of the initial_state type sequence).
 
-....
+[source,cpp]
+----
 struct SubFsm2_ : public msm::front::state_machine_def<SubFsm2_> 
 {
    struct SubState2 : public msm::front::state<> , 
@@ -822,19 +855,21 @@ struct SubFsm2_ : public msm::front::state_machine_def<SubFsm2_>
    {...};
 ...
 };
-....
+----
 
 And define the submachine as:
 
-....
+[source,cpp]
+----
 typedef msm::back11::state_machine<SubFsm2_> SubFsm2;
-....
+----
 
 You can then use it as target in a transition with State1 as source:
 
-....
+[source,cpp]
+----
 _row < State1, Event2, SubFsm2::direct< SubFsm2_::SubState2> > //SubFsm2_::SubState2: complete name of SubState2 (defined within SubFsm2_)
-....
+----
 
 The syntax deserves some explanation. SubFsm2_ is a front end. SubState2
 is a nested state, therefore the SubFsm2_::SubState2 syntax. The
@@ -859,9 +894,10 @@ created. To explicitly create such states, you need to add in the state
 machine containing the explicit states a simple typedef giving a
 sequence of states to be explicitly created like:
 
-....
+[source,cpp]
+----
 typedef mpl::vector<SubState2,SubState2b> explicit_creation;
-....
+----
 
 _Note (also valid for forks)_: At the moment, it is not possible to use
 a submachine as the target of an explicit entry. Please use entry pseudo
@@ -876,20 +912,22 @@ into states of different regions, we do not change the state definition
 compared to the explicit entry and specify as target a list of explicit
 entry states:
 
-....
+[source,cpp]
+----
 _row < State1, Event3, 
         mpl::vector<SubFsm2::direct<SubFsm2_::SubState2>, 
         SubFsm2::direct <SubFsm2_::SubState2b>
      >
-....
+----
 
 With SubState2 defined as before and SubState2b defined as being in the
 second region (caution: MSM does not check that the region is correct):
 
-....
+[source,cpp]
+----
 struct SubState2b : public msm::front::state<> , 
                     public msm::front::explicit_entry<1>
-....
+----
 
 [[entry-pseudo-states]]
 
@@ -898,24 +936,27 @@ struct SubState2b : public msm::front::state<> ,
 To define an entry pseudo state, you need to derive from the
 corresponding class and give the region id:
 
-....
+[source,cpp]
+----
 struct PseudoEntry1 : public msm::front::entry_pseudo_state<0>
-....
+----
 
 And add the corresponding transition in the top-level state machine's
 transition table:
 
-....
+[source,cpp]
+----
 _row < State1, Event4, SubFsm2::entry_pt<SubFsm2_::PseudoEntry1> >
-....
+----
 
 And another in the SubFsm2_ submachine definition (remember that UML
 defines an entry point as a connection between two transitions), for
 example this time with an action method:
 
-....
+[source,cpp]
+----
 _row < PseudoEntry1, Event4, SubState3,&SubFsm2_::entry_action >
-....
+----
 
 [[exit-pseudo-states]]
 
@@ -925,22 +966,25 @@ And finally, exit pseudo states are to be used almost the same way, but
 defined differently: it takes as template argument the event to be
 forwarded (no region id is necessary):
 
-....
+[source,cpp]
+----
 struct PseudoExit1 : public exit_pseudo_state<event6>
-....
+----
 
 And you need, like for entry pseudo states, two transitions, one in the
 submachine:
 
-....
+[source,cpp]
+----
 _row < SubState3, Event5, PseudoExit1 >
-....
+----
 
 And one in the containing state machine:
 
-....
+[source,cpp]
+----
 _row < SubFsm2::exit_pt<SubFsm2_::PseudoExit1>, Event6,State2 >
-....
+----
 
 _Important note 1:_ UML defines transiting to an entry pseudo state and
 having either no second transition or one with a guard as an error but
@@ -960,19 +1004,21 @@ outside transition. In our case, event6 is convertible from event5.
 Notice that the forwarded event must be named in the exit point
 definition. For example, we could define event6 as simply as:
 
-....
+[source,cpp]
+----
 struct event 
 { 
     event(){} 
     template <class Event> 
     event(Event const&){} 
 }; //convertible from any event
-....
+----
 
 _Note_: There is a current limitation if you need not only convert but
 also get some data from the original event. Consider:
 
-....
+[source,cpp]
+----
 struct event1 
 { 
     event1(int val_):val(val_) {}
@@ -984,11 +1030,12 @@ struct event2
     event2(Event const& e):val(e.val){} // compiler will complain about another event not having any val
     int val;
 }; // what the higher-level fsm wants to get
-....
+----
 
 The solution is to provide two constructors:
 
-....
+[source,cpp]
+----
 struct event2 
 { 
     template <class Event> 
@@ -996,7 +1043,7 @@ struct event2
     event2(event1 const& e)):val(e.val){} // the conversion constructor
     int val;
 }; // what the higher-level fsm wants to get
-....
+----
 
 [[flags]]
 
@@ -1011,12 +1058,13 @@ Booleans.
 If you look into the Boost.Statechart documentation you'll find this
 code:
 
-....
+[source,cpp]
+----
 if ( ( state_downcast< const NumLockOff * >() != 0 ) &&
      ( state_downcast< const CapsLockOff * >() != 0 ) &&
      ( state_downcast< const ScrollLockOff * >() != 0 ) )
                         
-....
+----
 
 While correct and found in many UML books, this can be error-prone and a
 potential time-bomb when your state machine grows and you add new states
@@ -1031,33 +1079,37 @@ abstraction higher.
 In our player example, let's say we need to know if the player has a
 loaded CD. We could do the same:
 
-....
+[source,cpp]
+----
 if ( ( state_downcast< const Stopped * >() != 0 ) &&
      ( state_downcast< const Open * >() != 0 ) &&
      ( state_downcast< const Paused * >() != 0 ) &&
      ( state_downcast< const Playing * >() != 0 )) 
-....
+----
 
 Or flag these 4 states as CDLoaded-able. You add a flag_list type into
 each flagged state:
 
-....
+[source,cpp]
+----
 typedef mpl::vector1<CDLoaded> flag_list;
-....
+----
 
 You can even define a list of flags, for example in Playing:
 
-....
+[source,cpp]
+----
 typedef mpl::vector2<PlayingPaused,CDLoaded> flag_list;
-....
+----
 
 This means that Playing supports both properties. To check if your
 player has a loaded CD, check if your flag is active in the current
 state:
 
-....
+[source,cpp]
+----
 player p; if (p.is_flag_active<CDLoaded>()) ... 
-....
+----
 
 And what if you have orthogonal regions? How to decide if a state
 machine is in a flagged state? By default, you keep the same code and
@@ -1066,16 +1118,18 @@ has the flag, then is_flag_active returns true. Of course, in some
 cases, you might want that all of the active states are flagged for the
 state to be active. You can also AND the active states:
 
-....
+[source,cpp]
+----
 if (p.is_flag_active<CDLoaded,player::Flag_AND>()) ...
-....
+----
 
 Note. Due to arcane C++ rules, when called inside an action, the correct
 call is:
 
-....
+[source,cpp]
+----
 if (p.template is_flag_active<CDLoaded>()) ...
-....
+----
 
 The following diagram displays the flag situation in the tutorial.
 
@@ -1095,10 +1149,11 @@ the compile-time would suffer. To solve this problem, MSM supports the
 triggering of a transition on a subclass event. For example, if we
 define digits as:
 
-....
+[source,cpp]
+----
 struct digit {};
 struct char_0 : public digit {}; 
-....
+----
 
 And to the same for other digits, we can now fire char_0, char_1 events
 and this will cause a transition with "digit" as trigger to be taken.
@@ -1142,7 +1197,8 @@ is to manually activate deferred events, using
 `activate_deferred_events`. For example, the following state machine
 sets all three configuration types:
 
-....
+[source,cpp]
+----
 struct player_ : public msm::front::state_machine_def<player_>
 {
    // no need for exception handling or message queue
@@ -1152,7 +1208,7 @@ struct player_ : public msm::front::state_machine_def<player_>
    typedef int activate_deferred_events
    ...// rest of implementation
    };
-....
+----
 
 _Important note_: As exit pseudo states are using the message queue to
 forward events out of a submachine, the `no_message_queue` option cannot
@@ -1164,7 +1220,7 @@ be used with state machines containing an exit pseudo state.
 
 A state machine is started using the `start` method. This causes the
 initial state's entry behavior to be executed. Like every entry
-behavior, it becomes as parameter the event causing the state to be
+behavior, it gets as parameter the event causing the state to be
 entered. But when the machine starts, there was no event triggered. In
 this case, MSM sends `msm::back11::state_machine<...>::InitEvent`, which
 might not be the default you'd want. For this special case, MSM provides
@@ -1172,13 +1228,15 @@ a configuration mechanism in the form of a typedef. If the state
 machine's front-end definition provides an initial_event typedef set to
 another event, this event will be used. For example:
 
-....
+[source,cpp]
+----
 struct my_initial_event{};
-struct player_ : public msm::front::state_machine_def<player_>{
+struct player_ : public msm::front::state_machine_def<player_>
+{
 ...
 typedef my_initial_event initial_event; 
 };
-....
+----
 
 [[containing-state-machine-deprecated]]
 
@@ -1196,9 +1254,10 @@ creation and access. But sometimes you needed a way for a state to get
 access to its containing state machine. Basically, a state needs to
 change its declaration to:
 
-....
+[source,cpp]
+----
 struct Stopped : public msm::front::state<sm_ptr>
-....
+----
 
 And to provide a set_sm_ptr function: `void set_sm_ptr(player* pl)`
 

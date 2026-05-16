@@ -76,7 +76,7 @@ void lexically_relative_test()
     //  Some tests from Jamie Allsop's paper
     BOOST_TEST(path("/a/d").lexically_relative("/a/b/c") == "../../d");
     BOOST_TEST(path("/a/b/c").lexically_relative("/a/d") == "../b/c");
-#ifdef BOOST_WINDOWS_API
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
     BOOST_TEST(path("c:\\y").lexically_relative("c:\\x") == "../y");
 #else
     BOOST_TEST(path("c:\\y").lexically_relative("c:\\x") == "");
@@ -105,11 +105,11 @@ void lexically_proximate_test()
 int test_main(int, char*[])
 {
 // document state of critical macros
-#ifdef BOOST_POSIX_API
-    cout << "BOOST_POSIX_API" << endl;
+#ifdef BOOST_FILESYSTEM_POSIX_API
+    cout << "BOOST_FILESYSTEM_POSIX_API" << endl;
 #endif
-#ifdef BOOST_WINDOWS_API
-    cout << "BOOST_WINDOWS_API" << endl;
+#ifdef BOOST_FILESYSTEM_WINDOWS_API
+    cout << "BOOST_FILESYSTEM_WINDOWS_API" << endl;
 #endif
 
     lexically_relative_test();

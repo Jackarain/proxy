@@ -212,8 +212,9 @@ encode_one(
         return;
     }
     *out++ = '%';
-    *out++ = urls::detail::hexdigs[0][c>>4];
-    *out++ = urls::detail::hexdigs[0][c&0xf];
+    auto uc = static_cast<unsigned char>(c);
+    *out++ = urls::detail::hexdigs[0][uc>>4];
+    *out++ = urls::detail::hexdigs[0][uc&0xf];
 }
 
 // get an unsigned value from format_args

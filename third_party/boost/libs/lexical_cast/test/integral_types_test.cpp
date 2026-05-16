@@ -4,7 +4,7 @@
 //
 //  Copyright Terje Sletteb and Kevlin Henney, 2005.
 //  Copyright Alexander Nasonov, 2006.
-//  Copyright Antony Polukhin, 2011-2025.
+//  Copyright Antony Polukhin, 2011-2026.
 //
 //  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
@@ -29,6 +29,7 @@
 
 #include <boost/type_traits/integral_promotion.hpp>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <memory>
 #include <type_traits>

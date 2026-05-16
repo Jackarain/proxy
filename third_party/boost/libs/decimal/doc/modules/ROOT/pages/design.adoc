@@ -1,0 +1,91 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#design]
+= Design Decisions and Standards Deviations
+:idprefix: design_
+
+== C++14 Requirement
+
+=== Constexpr Support
+
+Using C++14's relaxed definition of `constexpr` nearly all functionality of the library can be constexpr.
+This allows Boost.Decimal to better emulate the functionality a built-in type would have.
+
+=== Boost.Math Integration
+
+Boost.Math requires C++14 as the minimum language standard for the library.
+By meeting this requirement, and Boost.Math's conceptual requirements for a user-defined type we are able to provide the statistics, interpolation, quadrature, etc. out of the box.
+
+== IEEE Deviations
+
+=== `<cmath>` Functions Do Not Meet the Definition of Correctly Rounded
+
+IEEE 754 specifies for correct rounding: "This standard’s method of converting an infinitely precise result to a floating-point number, as determined by the applicable rounding direction. A floating-point number so obtained is said to be correctly rounded."
+None of these functions meet the definition of correctly rounded (which would imply precision of https://en.wikipedia.org/wiki/Unit_in_the_last_place[0.5 ULP]).
+From the https://www.netlib.org/misc/intel/README.txt[Intel libdfp README]: "binary floating-point mathematical functions
+implemented for example in C or other compiler math libraries are in general
+not correctly rounded either".
+Technically IEEE 754 differentiates the specification for mandatory operations (e.g. `fma`, `sqrt`, etc.) in Clause 5, and recommended operations (e.g. `exp`, `log`, etc.) in Clause 9, but our statement about half ULP precision applies to all non-boolean result `<cmath>` functions.
+This does not apply to Clause 5 functions like `isnan` which has a boolean result because ULP precision does not apply.
+
+=== Floating Point Exception Flags are not Supported
+
+The normal method in pass:[C++] to set and get the current floating point exception flags is via http://en.cppreference.com/w/cpp/numeric/fenv/feexceptflag.html[`std::fegetexceptflag` and `std::fesetexceptflag`].
+The decision then becomes do we support `constexpr` or floating point exceptions?
+We find that the former is far more useful than the latter.
+The alternative to would be to use C style functions such as:
+
+[source, C++]
+----
+decimal64_t dec64_add(decimal64_t a, decimal64_t b, rounding_mode round, int* floating_point_flags);
+----
+
+This style of function is used in Intel libdfp because it is a C library.
+We find this to be unidiomatic and unergonomic for a modern pass:[C++] library.
+
+== C++ Standards Deviations
+
+=== `from_chars` Distinguishes Overflow from Underflow
+
+`std::from_chars` has an open issue with LWG here: https://cplusplus.github.io/LWG/lwg-active.html#3081.
+The standard for <charconv> does not distinguish between underflow and overflow like strtod does.
+`boost::decimal::from_chars` modifies `value` in order to communicate this to the user in a divergence from the standard.
+This behavior is the same as that of https://www.boost.org/doc/libs/master/libs/charconv/doc/html/charconv.html#from_chars_usage_notes_for_from_chars_for_floating_point_types[`boost::charconv::from_chars_erange`].
+
+=== `from_chars` Supports Rounding Mode
+
+The pass:[C++] specification states that `from_chars` resulting value is to be rounded to nearest.
+Since the types in this library are more sensitive to rounding mode differences, `from_chars` rounds using the current global rounding mode as reported by `fegetround()`.
+
+=== `from_chars` and `to_chars` both have an additional `chars_format` option
+
+In order to support an IEEE 754 requirement to print a value to include its cohort information we introduced an additional `chars_format` option, `cohort_preserving_scientific`.
+Cohort preservation only makes sense in scientific format because it is the actual representation of the layout of the type, and thus no other cohort preserving formats are supported.
+
+[#non-finite-deviation]
+=== `istream` of Non-finite Values is Allowed
+
+Unlike built-in binary floating point types the library allows input of non-finite values such as the below:
+
+[source, c++]
+----
+std::istringstream is("INF");
+decimal32_t x;
+is >> x;
+const auto endpos {is.tellg()};
+
+assert(isinf(x));
+assert(endpos == 3);
+----
+
+The result of `tellg()` will only parse until a complete non-finite value is found and then terminate.
+For example `nanfinity` will construct a `NAN` and set `endpos = 3`, or `nan(snan)JUNK` will construct `SNAN` and set `endpos = 9` since `nan(snan)` contains a valid payload.
+This is designed to match the value of `r.ptr` in xref:charconv.adoc[`<charconv>`].
+
+=== Locale Facets are Unsupported
+
+Facets as discussed in https://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2849.pdf[N2849] section 3.10 are unimplemented.

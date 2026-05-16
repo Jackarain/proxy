@@ -191,120 +191,102 @@ int main()
 
     {
         int x1 = 1;
-        int x3 = 3;
 
         result<int&> r( x1 );
 
-        int& x = r | fri | x3;
+        auto r2 = r | fri;
 
-        BOOST_TEST_EQ( &x, &x1 );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( &r2.unsafe_value(), &x1 );
     }
 
     {
         int x1 = 1;
-        int x3 = 3;
 
         result<int&> const r( x1 );
 
-        int& x = r | fri | x3;
+        auto r2 = r | fri;
 
-        BOOST_TEST_EQ( &x, &x1 );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( &r2.unsafe_value(), &x1 );
     }
 
     {
         int x1 = 1;
-        int x3 = 3;
 
-        int& x = result<int&>( x1 ) | fri | x3;
+        auto r2 = result<int&>( x1 ) | fri;
 
-        BOOST_TEST_EQ( &x, &x1 );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( &r2.unsafe_value(), &x1 );
     }
 
     {
         int x1 = 1;
-        int x3 = 3;
 
         result<int&> r( x1 );
 
-        int& x = r | fri2 | x3;
+        auto r2 = r | fri2;
 
-        BOOST_TEST_EQ( &x, &x1 );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( &r2.unsafe_value(), &x1 );
     }
 
     {
         int x1 = 1;
-        int x3 = 3;
 
         result<int&> const r( x1 );
 
-        int& x = r | fri2 | x3;
+        auto r2 = r | fri2;
 
-        BOOST_TEST_EQ( &x, &x1 );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( &r2.unsafe_value(), &x1 );
     }
 
     {
         int x1 = 1;
-        int x3 = 3;
 
-        int& x = result<int&>( x1 ) | fri2 | x3;
+        auto r2 = result<int&>( x1 ) | fri2;
 
-        BOOST_TEST_EQ( &x, &x1 );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( &r2.unsafe_value(), &x1 );
     }
 
     {
-        int x3 = 3;
-
         result<int&, E> r( in_place_error );
 
-        int& x = r | fri | x3;
+        auto r2 = r | fri;
 
-        BOOST_TEST_EQ( &x, &*fri() );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( &r2.unsafe_value(), &fri().unsafe_value() );
     }
 
     {
-        int x3 = 3;
-
         result<int&, E> const r( in_place_error );
 
-        int& x = r | fri | x3;
+        auto r2 = r | fri;
 
-        BOOST_TEST_EQ( &x, &*fri() );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( &r2.unsafe_value(), &fri().unsafe_value() );
     }
 
     {
-        int x3 = 3;
+        auto r2 = result<int&, E>( in_place_error ) | fri;
 
-        int& x = result<int&, E>( in_place_error ) | fri | x3;
-
-        BOOST_TEST_EQ( &x, &*fri() );
+        BOOST_TEST( r2.has_value() ) && BOOST_TEST_EQ( &r2.unsafe_value(), &fri().unsafe_value() );
     }
 
     {
-        int x3 = 3;
-
         result<int&, E> r( in_place_error );
 
-        int& x = r | fri2 | x3;
+        auto r2 = r | fri2;
 
-        BOOST_TEST_EQ( &x, &x3 );
+        BOOST_TEST( r2.has_error() );
     }
 
     {
-        int x3 = 3;
-
         result<int&, E> const r( in_place_error );
 
-        int& x = r | fri2 | x3;
+        auto r2 = r | fri2;
 
-        BOOST_TEST_EQ( &x, &x3 );
+        BOOST_TEST( r2.has_error() );
     }
 
     {
-        int x3 = 3;
+        auto r2 = result<int&, E>( in_place_error ) | fri2;
 
-        int& x = result<int&, E>( in_place_error ) | fri2 | x3;
-
-        BOOST_TEST_EQ( &x, &x3 );
+        BOOST_TEST( r2.has_error() );
     }
 
     {

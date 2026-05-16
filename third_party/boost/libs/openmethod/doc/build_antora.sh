@@ -9,7 +9,7 @@
 # Official REPOSITORY: https://github.com/boostorg/openmethod
 #
 
-set -e
+set -ex
 
 if [ $# -eq 0 ]
   then
@@ -39,11 +39,14 @@ if [ -z "${BOOST_SRC_DIR:-}" ]; then
   fi
 fi
 
+BRANCH=master
+
 if [ -n "${BOOST_SRC_DIR:-}" ]; then
   if [ -n "${CIRCLE_REPOSITORY_URL:-}" ]; then
     if [[ "$CIRCLE_REPOSITORY_URL" =~ boostorg/boost(\.git)?$ ]]; then
       LIB="$(basename "$(dirname "$SCRIPT_DIR")")"
       REPOSITORY="boostorg/${LIB}"
+      BRANCH=$(git -C "$BOOST_SRC_DIR" rev-parse --abbrev-ref HEAD)
     else
       ACCOUNT="${CIRCLE_REPOSITORY_URL#*:}"
       ACCOUNT="${ACCOUNT%%/*}"
@@ -60,10 +63,10 @@ fi
 cd "$SCRIPT_DIR"
 
 if [ -n "${REPOSITORY}" ] && [ -n "${SHA}" ]; then
-  base_url="https://github.com/${REPOSITORY}/blob/${SHA}"
-  echo "Setting base-url to $base_url"
+  BASE_URL="https://github.com/${REPOSITORY}/blob/${SHA}"
+  echo "Setting base-url to $BASE_URL"
   cp mrdocs.yml mrdocs.yml.bak
-  perl -i -pe 's{^\s*base-url:.*$}{base-url: '"$base_url/"'}' mrdocs.yml
+  perl -i -pe 's{^\s*base-url:.*$}{base-url: '"$BASE_URL/"'}' mrdocs.yml
 else
   echo "REPOSITORY or SHA not set; skipping base-url modification"
 fi
@@ -78,19 +81,22 @@ export PATH
 npx antora --clean --fetch "$PLAYBOOK" --stacktrace # --log-level all
 
 echo "Fixing links to non-mrdocs URIs..."
+echo "BRANCH='${BRANCH:-}'"
+echo "BASE_URL='${BASE_URL:-}'"
 
 for f in $(find html -name '*.html'); do
-  perl -i -pe 's{&lcub;&lcub;(.*?)&rcub;&rcub;}{<a href="../../../$1.html">$1</a>}g' "$f"
+  perl -i -pe "s{&lcub;&lcub;(.*?)&rcub;&rcub;}{<a href=\"../../../\$1.html\">\$1</a>}g" "$f"
+  perl -i -pe "s{<a href=\"motivation.html\">Boost.OpenMethod</a>}{<a href=\"https://www.boost.org/library/${BRANCH}/openmethod/\">Boost.OpenMethod</a>}g" "$f"
 done
 
-if [ -n "${base_url:-}" ]; then
+if [ -n "${BASE_URL:-}" ]; then
   if [ -f mrdocs.yml.bak ]; then
     mv -f mrdocs.yml.bak mrdocs.yml
     echo "Restored original mrdocs.yml"
   else
     echo "mrdocs.yml.bak not found; skipping restore"
   fi
-  perl -i -pe "s[{{BASE_URL}}][$base_url]g" \
+  perl -i -pe "s[{{BASE_URL}}][$BASE_URL]g" \
     html/openmethod/ref_headers.html html/openmethod/BOOST_OPENMETHOD*.html
 fi
 

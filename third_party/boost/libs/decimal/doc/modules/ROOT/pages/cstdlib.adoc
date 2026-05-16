@@ -1,0 +1,43 @@
+////
+Copyright 2023 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#cstdlib]
+= `<cstdlib>` Support
+:idprefix: cstdlib_
+
+The following functions analogous to those from https://en.cppreference.com/w/cpp/string/byte/strtof.html[`<cstdlib>`] are provided:
+
+[source, c++]
+----
+#include <boost/decimal/cstdlib.hpp>
+
+namespace boost {
+namespace decimal {
+
+inline decimal64_t strtod(const char* str, char** endptr) noexcept;
+inline decimal64_t wcstod(const wchar_t* str, wchar_t** endptr) noexcept;
+
+inline decimal32_t strtod32(const char* str, char** endptr) noexcept;
+inline decimal32_t wcstod32(const wchar_t* str, wchar_t** endptr) noexcept;
+
+inline decimal_fast32_t strtod32f(const char* str, char** endptr) noexcept;
+inline decimal_fast32_t wcstod32f(const wchar_t* str, wchar_t** endptr) noexcept;
+
+inline decimal64_t strtod64(const char* str, char** endptr) noexcept;
+inline decimal64_t wcstod64(const wchar_t* str, wchar_t** endptr) noexcept;
+
+inline decimal_fast64_t strtod64f(const char* str, char** endptr) noexcept;
+inline decimal_fast64_t wcstod64f(const wchar_t* str, wchar_t** endptr) noexcept;
+
+inline decimal128_t strtod128(const char* str, char** endptr) noexcept;
+inline decimal128_t wcstod128(const wchar_t* str, wchar_t** endptr) noexcept;
+
+inline decimal_fast128_t strtod128f(const char* str, char** endptr) noexcept;
+inline decimal_fast128_t wcstod128f(const wchar_t* str, wchar_t** endptr) noexcept;
+
+} //namespace decimal
+} //namespace boost
+----

@@ -14,19 +14,19 @@ using namespace boost::uuids;
 
 int main()
 {
-    int const N = 1024;
+    std::size_t const N = 1024;
 
     {
         std::vector<uuid> v( N );
 
         time_generator_v7 gen;
 
-        for( int i = 0; i < N; ++i )
+        for( std::size_t i = 0; i < N; ++i )
         {
             v[ i ] = gen();
         }
 
-        for( int i = 0; i < N - 1; ++i )
+        for( std::size_t i = 0; i < N - 1; ++i )
         {
             BOOST_TEST_LT( v[ i ], v[ i+1 ] );
         }

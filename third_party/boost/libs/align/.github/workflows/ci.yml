@@ -6,6 +6,10 @@ on:
     branches:
       - master
       - develop
+      - feature/**
+
+env:
+  UBSAN_OPTIONS: print_stacktrace=1
 
 jobs:
   posix:
@@ -14,97 +18,203 @@ jobs:
       matrix:
         include:
           - toolset: gcc-4.8
-            standard: "03,11"
-            os: ubuntu-18.04
+            cxxstd: "03,11"
+            container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-4.8
           - toolset: gcc-5
-            standard: "03,11,14,1z"
-            os: ubuntu-18.04
+            cxxstd: "03,11,14,1z"
+            container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-5
           - toolset: gcc-6
-            standard: "03,11,14,1z"
-            os: ubuntu-18.04
+            cxxstd: "03,11,14,1z"
+            container: ubuntu:18.04
+            os: ubuntu-latest
             install: g++-6
           - toolset: gcc-7
-            standard: "03,11,14,17"
-            os: ubuntu-18.04
+            cxxstd: "03,11,14,17"
+            container: ubuntu:20.04
+            os: ubuntu-latest
+            install: g++-7
           - toolset: gcc-8
-            standard: "03,11,14,17,2a"
-            os: ubuntu-18.04
+            cxxstd: "03,11,14,17,2a"
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-8
           - toolset: gcc-9
-            standard: "03,11,14,17,2a"
-            os: ubuntu-18.04
+            cxxstd: "03,11,14,17,2a"
+            container: ubuntu:20.04
+            os: ubuntu-latest
           - toolset: gcc-10
-            standard: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            cxxstd: "03,11,14,17,2a"
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: g++-10
           - toolset: gcc-11
-            standard: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: g++-11
+          - toolset: gcc-12
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
+            install: g++-12
+          - toolset: gcc-13
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: g++-13
+          - toolset: gcc-14
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: g++-14
           - toolset: clang
             compiler: clang++-3.9
-            standard: "03,11,14"
-            os: ubuntu-18.04
+            cxxstd: "03,11,14"
+            container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-3.9
           - toolset: clang
             compiler: clang++-4.0
-            standard: "03,11,14"
-            os: ubuntu-18.04
+            cxxstd: "03,11,14"
+            container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-4.0
           - toolset: clang
             compiler: clang++-5.0
-            standard: "03,11,14,1z"
-            os: ubuntu-18.04
+            cxxstd: "03,11,14,1z"
+            container: ubuntu:18.04
+            os: ubuntu-latest
             install: clang-5.0
           - toolset: clang
             compiler: clang++-6.0
-            standard: "03,11,14,17"
-            os: ubuntu-18.04
+            cxxstd: "03,11,14,17"
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-6.0
           - toolset: clang
             compiler: clang++-7
-            standard: "03,11,14,17"
-            os: ubuntu-18.04
+            cxxstd: "03,11,14,17"
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-7
           - toolset: clang
             compiler: clang++-8
-            standard: "03,11,14,17"
-            os: ubuntu-20.04
+            cxxstd: "03,11,14,17"
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-8
           - toolset: clang
             compiler: clang++-9
-            standard: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            cxxstd: "03,11,14,17"
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-9
           - toolset: clang
             compiler: clang++-10
-            standard: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            cxxstd: "03,11,14,17,2a"
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-10
           - toolset: clang
             compiler: clang++-11
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-11
           - toolset: clang
             compiler: clang++-12
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-20.04
+            container: ubuntu:20.04
+            os: ubuntu-latest
             install: clang-12
           - toolset: clang
-            standard: "03,11,14,17,2a"
-            os: macos-10.15
+            compiler: clang++-13
+            cxxstd: "03,11,14,17,20"
+            container: ubuntu:22.04
+            os: ubuntu-latest
+            install: clang-13
+          - toolset: clang
+            compiler: clang++-14
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
+            install: clang-14
+          - toolset: clang
+            compiler: clang++-15
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:22.04
+            os: ubuntu-latest
+            install: clang-15
+          - toolset: clang
+            compiler: clang++-16
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-16
+          - toolset: clang
+            compiler: clang++-17
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-17
+          - toolset: clang
+            compiler: clang++-18
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-18
+          - toolset: clang
+            compiler: clang++-19
+            cxxstd: "03,11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-19
+          - toolset: clang
+            compiler: clang++-20
+            cxxstd: "03,11,14,17,20,23,2c"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-20
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,2b"
+            os: macos-14
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,2b"
+            os: macos-15
+          - toolset: clang
+            cxxstd: "03,11,14,17,20,23,2c"
+            os: macos-26
 
     runs-on: ${{matrix.os}}
+    container:
+      image: ${{matrix.container}}
+      volumes:
+        - /node20217:/node20217:rw,rshared
+        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Setup container environment
+        if: matrix.container
+        run: |
+          apt-get update
+          apt-get -y install sudo python3 git g++ curl xz-utils
+
+      - name: Install nodejs20glibc2.17
+        if: ${{ startsWith( matrix.container, 'ubuntu:1' ) }}
+        run: |
+          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
+          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
+          ldd /__e/node20/bin/node
 
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: sudo apt-get -y install ${{matrix.install}}
+
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         run: |
@@ -115,7 +225,7 @@ jobs:
           git submodule init libs/assert
           git submodule init libs/config
           git submodule init libs/core
-          git submodule init libs/static_assert
+          git submodule init libs/throw_exception
           git submodule init libs/headers
           git submodule init tools/build
           git submodule init tools/boost_install
@@ -131,34 +241,30 @@ jobs:
       - name: Run tests
         run: |
           cd ../boost
-          ./b2 -j3 libs/align/test toolset=${{matrix.toolset}} cxxstd=${{matrix.standard}} variant=debug,release
+          ./b2 -j3 libs/align/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} variant=debug,release
 
   windows:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.1
-            standard: "14,17,latest"
-            target: 32,64
-            os: windows-2016
-          - toolset: msvc-14.2
-            standard: "14,17,latest"
-            target: 32,64
-            os: windows-2019
           - toolset: msvc-14.3
-            cxxstd: "14,17,latest"
+            cxxstd: "14,17,20,latest"
+            addrmd: 32,64
+            os: windows-2022
+          - toolset: clang-win
+            cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
           - toolset: gcc
-            standard: "03,11,14,17,2a"
-            target: 64
-            os: windows-2019
+            cxxstd: "03,11,14,17,2a"
+            addrmd: 64
+            os: windows-2022
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Setup Boost
         shell: cmd
@@ -170,7 +276,7 @@ jobs:
           git submodule init libs/assert
           git submodule init libs/config
           git submodule init libs/core
-          git submodule init libs/static_assert
+          git submodule init libs/throw_exception
           git submodule init libs/headers
           git submodule init tools/build
           git submodule init tools/boost_install
@@ -182,4 +288,334 @@ jobs:
         shell: cmd
         run: |
           cd ../boost
-          b2 -j3 libs/align/test toolset=${{matrix.toolset}} cxxstd=${{matrix.standard}} address-model=${{matrix.target}} variant=debug,release
+          b2 -j3 libs/align/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} variant=debug,release
+
+  posix-cmake-subdir:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: macos-latest
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install packages
+        if: matrix.install
+        run: sudo apt-get -y install ${{matrix.install}}
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+
+      - name: Use library with add_subdirectory
+        run: |
+          cd ../boost-root/libs/$LIBRARY/test/cmake_subdir_test
+          mkdir __build__ && cd __build__
+          cmake ..
+          cmake --build .
+          ctest --output-on-failure --no-tests=error
+
+  posix-cmake-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: macos-latest
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install packages
+        if: matrix.install
+        run: sudo apt-get -y install ${{matrix.install}}
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+
+      - name: Configure
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DCMAKE_INSTALL_PREFIX=~/.local ..
+
+      - name: Install
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target install
+
+      - name: Use the installed library
+        run: |
+          cd ../boost-root/libs/$LIBRARY/test/cmake_install_test && mkdir __build__ && cd __build__
+          cmake -DCMAKE_INSTALL_PREFIX=~/.local ..
+          cmake --build .
+          ctest --output-on-failure --no-tests=error
+
+  posix-cmake-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: macos-latest
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install packages
+        if: matrix.install
+        run: sudo apt-get -y install ${{matrix.install}}
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+
+      - name: Configure
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON ..
+
+      - name: Build tests
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target tests
+
+      - name: Run tests
+        run: |
+          cd ../boost-root/__build__
+          ctest --output-on-failure --no-tests=error
+
+  windows-cmake-subdir:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          for /f %%i in ("%GITHUB_REPOSITORY%") do set LIBRARY=%%~nxi
+          echo LIBRARY: %LIBRARY%
+          echo LIBRARY=%LIBRARY%>>%GITHUB_ENV%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+
+      - name: Use library with add_subdirectory (Debug)
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%/test/cmake_subdir_test
+          mkdir __build__ && cd __build__
+          cmake ..
+          cmake --build . --config Debug
+          ctest --output-on-failure --no-tests=error -C Debug
+
+      - name: Use library with add_subdirectory (Release)
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%/test/cmake_subdir_test/__build__
+          cmake --build . --config Release
+          ctest --output-on-failure --no-tests=error -C Release
+
+  windows-cmake-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          for /f %%i in ("%GITHUB_REPOSITORY%") do set LIBRARY=%%~nxi
+          echo LIBRARY: %LIBRARY%
+          echo LIBRARY=%LIBRARY%>>%GITHUB_ENV%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+
+      - name: Configure
+        shell: cmd
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix ..
+
+      - name: Install (Debug)
+        shell: cmd
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target install --config Debug
+
+      - name: Install (Release)
+        shell: cmd
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target install --config Release
+
+      - name: Use the installed library (Debug)
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%/test/cmake_install_test && mkdir __build__ && cd __build__
+          cmake -DCMAKE_INSTALL_PREFIX=C:/cmake-prefix ..
+          cmake --build . --config Debug
+          ctest --output-on-failure --no-tests=error -C Debug
+
+      - name: Use the installed library (Release)
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%/test/cmake_install_test/__build__
+          cmake --build . --config Release
+          ctest --output-on-failure --no-tests=error -C Release
+
+  windows-cmake-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          for /f %%i in ("%GITHUB_REPOSITORY%") do set LIBRARY=%%~nxi
+          echo LIBRARY: %LIBRARY%
+          echo LIBRARY=%LIBRARY%>>%GITHUB_ENV%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+
+      - name: Configure
+        shell: cmd
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=%LIBRARY% -DBUILD_TESTING=ON ..
+
+      - name: Build tests (Debug)
+        shell: cmd
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target tests --config Debug
+
+      - name: Run tests (Debug)
+        shell: cmd
+        run: |
+          cd ../boost-root/__build__
+          ctest --output-on-failure --no-tests=error -C Debug
+
+      - name: Build tests (Release)
+        shell: cmd
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target tests --config Release
+
+      - name: Run tests (Release)
+        shell: cmd
+        run: |
+          cd ../boost-root/__build__
+          ctest --output-on-failure --no-tests=error -C Release

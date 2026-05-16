@@ -1,5 +1,5 @@
 /* Unit testing for outcomes
-(C) 2013-2025 Niall Douglas <http://www.nedproductions.biz/> (1 commit)
+(C) 2013-2026 Niall Douglas <http://www.nedproductions.biz/> (1 commit)
 
 
 Boost Software License - Version 1.0 - August 17th, 2003
@@ -27,6 +27,8 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
+#define BOOST_OUTCOME_SYSTEM_ERROR2_FATAL(msg) abort()
+
 #include <boost/outcome/experimental/status_result.hpp>
 #include <boost/outcome/try.hpp>
 #include <boost/test/unit_test.hpp>
@@ -41,7 +43,10 @@ namespace issues220
 
   template <class T> using PosixResult = outcome_e::status_result<T, outcome_e::posix_code>;
 
-  Result<int> convert(const PosixResult<int> &posix_result) { return Result<int>(posix_result); }
+  Result<int> convert(const PosixResult<int> &posix_result)
+  {
+    return Result<int>(posix_result);
+  }
 }  // namespace issues220
 #endif
 

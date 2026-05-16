@@ -22,22 +22,27 @@
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
 
-#include <boost/intrusive/pointer_traits.hpp>
+#include <boost/assert.hpp>   //BOOST_ASSERT
 
 #include <boost/interprocess/interprocess_fwd.hpp>
-#include <boost/interprocess/detail/utilities.hpp> //to_raw_pointer
-#include <boost/container/detail/addressof.hpp> //boost::container::dtl:addressof
-#include <boost/assert.hpp>   //BOOST_ASSERT
+
 #include <boost/interprocess/exceptions.hpp> //bad_alloc
 #include <boost/interprocess/sync/scoped_lock.hpp> //scoped_lock
 #include <boost/interprocess/containers/allocation_type.hpp> //boost::interprocess::allocation_type
-#include <boost/container/detail/multiallocation_chain.hpp>
 #include <boost/interprocess/mem_algo/detail/mem_algo_common.hpp>
+
 #include <boost/interprocess/detail/segment_manager_helper.hpp>
-#include <boost/move/utility_core.hpp>
 #include <boost/interprocess/detail/type_traits.hpp>
-#include <boost/interprocess/detail/utilities.hpp>
+#include <boost/interprocess/detail/utilities.hpp> //to_raw_pointer
+
+#include <boost/intrusive/pointer_traits.hpp>
+
 #include <boost/container/detail/placement_new.hpp>
+#include <boost/container/uses_allocator_construction.hpp>
+#include <boost/container/detail/multiallocation_chain.hpp>
+#include <boost/container/detail/addressof.hpp> //boost::container::dtl:addressof
+
+#include <boost/move/utility_core.hpp>
 #include <boost/move/adl_move_swap.hpp>
 
 namespace boost {
@@ -57,20 +62,59 @@ struct sizeof_value<void>
 
 template <>
 struct sizeof_value<const void>
-{
-   static const std::size_t value = sizeof(void*);
-};
+   : sizeof_value<void>
+{};
 
 template <>
 struct sizeof_value<volatile void>
-{
-   static const std::size_t value = sizeof(void*);
-};
+   : sizeof_value<void>
+{};
 
 template <>
 struct sizeof_value<const volatile void>
+   : sizeof_value<void>
+{};
+
+template <class T>
+struct alignof_value
 {
-   static const std::size_t value = sizeof(void*);
+   static const std::size_t value = boost::container::dtl::alignment_of<T>::value;
+};
+
+template <>
+struct alignof_value<void>
+{
+   static const std::size_t value = boost::container::dtl::alignment_of<void*>::value;
+};
+
+template <>
+struct alignof_value<const void>
+   : alignof_value<void>
+{};
+
+template <>
+struct alignof_value<volatile void>
+   : alignof_value<void>
+{};
+
+template <>
+struct alignof_value<const volatile void>
+   : alignof_value<void>
+{};
+
+template<class SegmentManager>
+class uses_segment_manager
+{
+   private:
+   SegmentManager *const m_mngr;
+
+   public:
+   explicit uses_segment_manager(SegmentManager *mngr)
+      : m_mngr(mngr)
+   {}
+
+   SegmentManager *get_segment_manager()
+   {  return m_mngr;  }
 };
 
 namespace ipcdetail {
@@ -162,19 +206,32 @@ class cache_impl
    multiallocation_chain         m_cached_nodes;
    size_type                     m_max_cached_nodes;
 
+   BOOST_COPYABLE_AND_MOVABLE_ALT(cache_impl)
+
    public:
    typedef typename NodePool::segment_manager            segment_manager;
 
    cache_impl(segment_manager *segment_mngr, size_type max_cached_nodes)
       : mp_node_pool(get_or_create_node_pool<NodePool>(segment_mngr))
+      , m_cached_nodes()
       , m_max_cached_nodes(max_cached_nodes)
    {}
 
    cache_impl(const cache_impl &other)
       : mp_node_pool(other.get_node_pool())
+      , m_cached_nodes()
       , m_max_cached_nodes(other.get_max_cached_nodes())
    {
       mp_node_pool->inc_ref_count();
+   }
+
+   cache_impl(BOOST_RV_REF(cache_impl) other)
+      : mp_node_pool(BOOST_MOVE_TO_LV(other).get_node_pool())
+      , m_cached_nodes()
+      , m_max_cached_nodes(BOOST_MOVE_TO_LV(other).get_max_cached_nodes())
+   {
+      mp_node_pool->inc_ref_count();
+      m_cached_nodes.swap(BOOST_MOVE_TO_LV(other).m_cached_nodes);
    }
 
    ~cache_impl()
@@ -198,8 +255,7 @@ class cache_impl
       if(m_cached_nodes.empty()){
          mp_node_pool->allocate_nodes(m_max_cached_nodes/2, m_cached_nodes);
       }
-      void *ret = ipcdetail::to_raw_pointer(m_cached_nodes.pop_front());
-      return ret;
+      return ipcdetail::to_raw_pointer(m_cached_nodes.pop_front());
    }
 
    void cached_allocation(size_type n, multiallocation_chain &chain)
@@ -335,11 +391,15 @@ class array_allocation_impl
    //!Returns maximum the number of objects the previously allocated memory
    //!pointed by p can hold. This size only works for memory allocated with
    //!allocate, allocation_command and allocate_many.
+   //!This function is deprecated and will be removed in the future
+   BOOST_INTERPROCESS_NODISCARD
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    size_type size(const pointer &p) const
    {
       return (size_type)this->derived()->get_segment_manager()->size(ipcdetail::to_raw_pointer(p))/sizeof(T);
    }
 
+   BOOST_INTERPROCESS_NODISCARD
    pointer allocation_command(boost::interprocess::allocation_type command,
                          size_type limit_size, size_type &prefer_in_recvd_out_size, pointer &reuse)
    {
@@ -356,20 +416,24 @@ class array_allocation_impl
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
-   void allocate_many(size_type elem_size, size_type num_elements, multiallocation_chain &chain)
+   //!This function is deprecated and will be removed in the future
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
+   void allocate_many(size_type elem_size, size_type num_elements, size_type alignment, multiallocation_chain &chain)
    {
       if(size_overflows<sizeof(T)>(elem_size)){
          throw bad_alloc();
       }
-      this->derived()->get_segment_manager()->allocate_many(elem_size*sizeof(T), num_elements, chain);
+      this->derived()->get_segment_manager()->allocate_many(elem_size*sizeof(T), num_elements, alignment, chain);
    }
 
    //!Allocates n_elements elements, each one of size elem_sizes[i]in a
    //!contiguous block
    //!of memory. The elements must be deallocated
-   void allocate_many(const size_type *elem_sizes, size_type n_elements, multiallocation_chain &chain)
+   //!This function is deprecated and will be removed in the future
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
+   void allocate_many(const size_type *elem_sizes, size_type n_elements, size_type alignment, multiallocation_chain &chain)
    {
-      this->derived()->get_segment_manager()->allocate_many(elem_sizes, n_elements, sizeof(T), chain);
+      this->derived()->get_segment_manager()->allocate_many(elem_sizes, n_elements, sizeof(T), alignment, chain);
    }
 
    //!Allocates many elements of size elem_size in a contiguous block
@@ -378,21 +442,30 @@ class array_allocation_impl
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
+   //!This function is deprecated and will be removed in the future
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    void deallocate_many(multiallocation_chain &chain)
    {  this->derived()->get_segment_manager()->deallocate_many(chain); }
 
    //!Returns the number of elements that could be
    //!allocated. Never throws
+   BOOST_INTERPROCESS_NODISCARD
    size_type max_size() const
    {  return this->derived()->get_segment_manager()->get_size()/sizeof(T);  }
 
    //!Returns address of mutable object.
    //!Never throws
+   //!This function is deprecated and will be removed in the future
+   BOOST_INTERPROCESS_NODISCARD
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    pointer address(reference value) const
    {  return pointer(boost::container::dtl::addressof(value));  }
 
    //!Returns address of non mutable object.
    //!Never throws
+   //!This function is deprecated and will be removed in the future
+   BOOST_INTERPROCESS_NODISCARD
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    const_pointer address(const_reference value) const
    {  return const_pointer(boost::container::dtl::addressof(value));  }
 
@@ -400,11 +473,13 @@ class array_allocation_impl
    //!Throws if T's constructor throws
    //!For backwards compatibility with libraries using C++03 allocators
    template<class P>
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    void construct(const pointer &ptr, BOOST_FWD_REF(P) p)
    {  ::new((void*)ipcdetail::to_raw_pointer(ptr), boost_container_new_t()) value_type(::boost::forward<P>(p));  }
 
    //!Destroys object. Throws if object's
    //!destructor throws
+   BOOST_DEPRECATED("This function is deprecated and will be removed in the future")
    void destroy(const pointer &ptr)
    {  BOOST_ASSERT(ptr != 0); (*ptr).~value_type();  }
 };
@@ -456,22 +531,22 @@ class node_pool_allocation_impl
    public:
    //!Allocate memory for an array of count elements.
    //!Throws boost::interprocess::bad_alloc if there is no enough memory
-   pointer allocate(size_type count, cvoid_pointer hint = 0)
+   BOOST_INTERPROCESS_NODISCARD
+   pointer allocate(size_type count)
    {
-      (void)hint;
       typedef typename node_pool<0>::type node_pool_t;
       node_pool_t *pool = node_pool<0>::get(this->derived()->get_node_pool());
       if(size_overflows<sizeof(T)>(count)){
          throw bad_alloc();
       }
-      else if(Version == 1 && count == 1){
-         return pointer(static_cast<value_type*>
-         (pool->allocate_node()));
+      
+      BOOST_IF_CONSTEXPR(Version == 1)
+      if(count == 1){
+         return pointer(static_cast<value_type*>(pool->allocate_node()));
       }
-      else{
-         return pointer(static_cast<value_type*>
-            (pool->get_segment_manager()->allocate(count*sizeof(T))));
-      }
+
+      return pointer(static_cast<value_type*>
+         (pool->get_segment_manager()->allocate_aligned(count*sizeof(T), boost::container::dtl::alignment_of<T>::value)));
    }
 
    //!Deallocate allocated memory. Never throws
@@ -480,15 +555,20 @@ class node_pool_allocation_impl
       (void)count;
       typedef typename node_pool<0>::type node_pool_t;
       node_pool_t *pool = node_pool<0>::get(this->derived()->get_node_pool());
-      if(Version == 1 && count == 1)
+      
+      BOOST_IF_CONSTEXPR(Version == 1)
+      if(count == 1){
          pool->deallocate_node(ipcdetail::to_raw_pointer(ptr));
-      else
-         pool->get_segment_manager()->deallocate((void*)ipcdetail::to_raw_pointer(ptr));
+         return;
+      }
+
+      pool->get_segment_manager()->deallocate((void*)ipcdetail::to_raw_pointer(ptr));
    }
 
    //!Allocates just one object. Memory allocated with this function
    //!must be deallocated only with deallocate_one().
    //!Throws boost::interprocess::bad_alloc if there is no enough memory
+   BOOST_INTERPROCESS_NODISCARD
    pointer allocate_one()
    {
       typedef typename node_pool<0>::type node_pool_t;
@@ -564,6 +644,9 @@ class cached_allocator_impl
    typedef typename base_t::size_type                    size_type;
    typedef typename base_t::multiallocation_chain        multiallocation_chain;
    typedef typename base_t::value_type                   value_type;
+   typedef uses_segment_manager<segment_manager>         uses_segment_manager_t;
+
+   BOOST_COPYABLE_AND_MOVABLE_ALT(cached_allocator_impl)
 
    public:
    static const std::size_t DEFAULT_MAX_CACHED_NODES = 64;
@@ -574,6 +657,10 @@ class cached_allocator_impl
 
    cached_allocator_impl(const cached_allocator_impl &other)
       : m_cache(other.m_cache)
+   {}
+
+   cached_allocator_impl(BOOST_RV_REF(cached_allocator_impl) other)
+      : m_cache(boost::move(BOOST_MOVE_TO_LV(other).m_cache))
    {}
 
    //!Copy constructor from related cached_adaptive_pool_base. If not present, constructs
@@ -596,6 +683,39 @@ class cached_allocator_impl
    segment_manager* get_segment_manager()const
    {  return m_cache.get_segment_manager();   }
 
+   #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+   //! <b>Requires</b>: Uses-allocator construction of T with allocator argument
+   //!   `uses_segment_manager_t` and additional constructor arguments `std::forward<Args>(args)...`
+   //!   is well-formed. [Note: uses-allocator construction is always well formed for
+   //!   types that do not use allocators. - end note]
+   //!
+   //! <b>Effects</b>: Construct a T object at p by uses-allocator construction with allocator
+   //!   argument constructible from `segment_manager*`
+   //!  and constructor arguments `std::forward<Args>(args)...`.
+   //!
+   //! <b>Throws</b>: Nothing unless the constructor for T throws.
+   template < typename U, class ...Args>
+   inline void construct(U* p, Args&& ...args)
+   {
+      boost::container::uninitialized_construct_using_allocator
+         (p, uses_segment_manager_t(this->get_segment_manager()), ::boost::forward<Args>(args)...);
+   }
+
+   #else // #if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
+   #define BOOST_CONTAINER_ALLOCATORS_ALLOCATOR_COMMON_CONSTRUCT_CODE(N) \
+   template < typename U BOOST_MOVE_I##N BOOST_MOVE_CLASSQ##N >\
+   void construct(U* p BOOST_MOVE_I##N BOOST_MOVE_UREFQ##N)\
+   {\
+      boost::container::uninitialized_construct_using_allocator\
+         (p, uses_segment_manager_t(this->get_segment_manager()) BOOST_MOVE_I##N BOOST_MOVE_FWDQ##N);\
+   }\
+   //
+   BOOST_MOVE_ITERATE_0TO9(BOOST_CONTAINER_ALLOCATORS_ALLOCATOR_COMMON_CONSTRUCT_CODE)
+   #undef BOOST_CONTAINER_ALLOCATORS_ALLOCATOR_COMMON_CONSTRUCT_CODE
+
+   #endif   //#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) || defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+
    //!Sets the new max cached nodes value. This can provoke deallocations
    //!if "newmax" is less than current cached nodes. Never throws
    void set_max_cached_nodes(size_type newmax)
@@ -603,42 +723,44 @@ class cached_allocator_impl
 
    //!Returns the max cached nodes parameter.
    //!Never throws
+   BOOST_INTERPROCESS_NODISCARD
    size_type get_max_cached_nodes() const
    {  return m_cache.get_max_cached_nodes();   }
 
    //!Allocate memory for an array of count elements.
    //!Throws boost::interprocess::bad_alloc if there is no enough memory
-   pointer allocate(size_type count, cvoid_pointer hint = 0)
+   BOOST_INTERPROCESS_NODISCARD
+   pointer allocate(size_type count)
    {
-      (void)hint;
-      void * ret;
       if(size_overflows<sizeof(T)>(count)){
          throw bad_alloc();
       }
-      else if(Version == 1 && count == 1){
-         ret = m_cache.cached_allocation();
+
+      BOOST_IF_CONSTEXPR(Version == 1)
+      if(count == 1){
+         return pointer(static_cast<T*>(m_cache.cached_allocation()));
       }
-      else{
-         ret = this->get_segment_manager()->allocate(count*sizeof(T));
-      }
-      return pointer(static_cast<T*>(ret));
+
+      return pointer(static_cast<value_type*>
+         (this->get_segment_manager()->allocate_aligned(count*sizeof(T), boost::container::dtl::alignment_of<T>::value)));
    }
 
    //!Deallocate allocated memory. Never throws
    void deallocate(const pointer &ptr, size_type count)
    {
       (void)count;
-      if(Version == 1 && count == 1){
+      BOOST_IF_CONSTEXPR(Version == 1)
+      if (count == 1) {
          m_cache.cached_deallocation(ipcdetail::to_raw_pointer(ptr));
+         return;
       }
-      else{
-         this->get_segment_manager()->deallocate((void*)ipcdetail::to_raw_pointer(ptr));
-      }
+      this->get_segment_manager()->deallocate((void*)ipcdetail::to_raw_pointer(ptr));
    }
 
    //!Allocates just one object. Memory allocated with this function
    //!must be deallocated only with deallocate_one().
    //!Throws boost::interprocess::bad_alloc if there is no enough memory
+   BOOST_INTERPROCESS_NODISCARD
    pointer allocate_one()
    {  return pointer(static_cast<value_type*>(this->m_cache.cached_allocation()));   }
 
@@ -734,6 +856,7 @@ class shared_pool_impl
    {}
 
    //!Allocates array of count elements. Can throw boost::interprocess::bad_alloc
+   BOOST_INTERPROCESS_NODISCARD
    void *allocate_node()
    {
       //-----------------------

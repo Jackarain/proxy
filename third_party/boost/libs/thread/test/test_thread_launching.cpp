@@ -8,8 +8,8 @@
 
 #include <boost/thread/thread_only.hpp>
 #include <boost/test/unit_test.hpp>
-#include <boost/ref.hpp>
-#include <boost/utility.hpp>
+#include <boost/core/ref.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <string>
 #include <vector>
 

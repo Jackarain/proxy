@@ -26,7 +26,6 @@ target_link_libraries(boost_property_map_parallel
     Boost::property_map
     Boost::serialization
     Boost::smart_ptr
-    Boost::static_assert
     Boost::type_traits
 )
 

@@ -8,7 +8,7 @@
 #define BOOST_THREAD_VERSION 3
 
 #include <boost/thread/thread_only.hpp>
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 struct X
 {

@@ -15,6 +15,7 @@
 
 #include <iostream>
 #include <array>
+#include <functional>
 #include <boost/numeric/odeint.hpp>
 
 using namespace std;
@@ -119,6 +120,9 @@ int main( int argc , char **argv )
 
     // Symplectic harmonic oscillator example
     {
+        using std::placeholders::_1;
+        using std::placeholders::_2;
+
         double t( 0.0 ) , dt( 0.1 );
         //[ symplectic_stepper_detail_example
         pair< vector_type , vector_type > x;

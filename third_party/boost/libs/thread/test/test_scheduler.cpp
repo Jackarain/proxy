@@ -16,6 +16,7 @@
 #include <boost/thread/executors/scheduler.hpp>
 #include <boost/thread/executors/basic_thread_pool.hpp>
 #include <boost/chrono/chrono_io.hpp>
+#include <boost/bind/bind.hpp>
 #include <iostream>
 
 #include <boost/core/lightweight_test.hpp>

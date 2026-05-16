@@ -27,7 +27,6 @@ target_link_libraries(boost_chrono
     Boost::mpl
     Boost::predef
     Boost::ratio
-    Boost::static_assert
     Boost::system
     Boost::throw_exception
     Boost::type_traits

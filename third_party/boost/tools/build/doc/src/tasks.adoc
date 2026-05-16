@@ -26,7 +26,7 @@ another library that is created by B2. Generally, sources can
 include C and {CPP} files, object files and libraries. B2 will
 automatically try to convert targets of other types.
 
-TIP: On Windows, if an application uses shared libraries, and both the
+WARNING: On Windows, if an application uses shared libraries, and both the
 application and the libraries are built using B2, it is not
 possible to immediately run the application, because the `PATH` environment
 variable should include the path to the libraries. It means you have to either
@@ -77,7 +77,7 @@ location.
 The difference between using the `file` feature and using a combination
 of the `name` and `search` features is that `file` is more precise.
 
-[WARNING]
+[TIP]
 ====
 The value of the `search` feature is just added to the linker search
 path. When linking to multiple libraries, the paths specified by
@@ -127,7 +127,7 @@ lib z ;
 lib png : z : <name>png ;
 ----
 
-[NOTE]
+[TIP]
 ====
 When a library has a shared library as a source, or a static library has
 another static library as a source then any target linking to the first
@@ -727,6 +727,10 @@ managers. Currently the supported ones are:
 * Conan (`conan`): currently supports the
   link:https://docs.conan.io/en/latest/reference/generators/b2.html[`b2 generator`].
 
+:leveloffset: +1
+include::../../src/tools/vcpkg.jam[tag=doc]
+:leveloffset: -1
+
 [[b2.tasks.projectsearch]]
 == Searching For Projects
 
@@ -866,5 +870,5 @@ The following fields are populated in the generated database:
   multiple variants at once this is required to differentiate between multiple
   compilations of the same source file.
 
-NOTE: Only one command database file is generated per `b2` invocation. And each
+WARNING: Only one command database file is generated per `b2` invocation. And each
 time it is generated it overwrites any previous such file.

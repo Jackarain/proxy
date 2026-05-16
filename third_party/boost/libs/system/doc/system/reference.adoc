@@ -1670,15 +1670,20 @@ public:
     constexpr T const&& value( boost::source_location const & loc =
       BOOST_CURRENT_LOCATION ) const&& ;
 
+    constexpr T* operator->();
+    constexpr T const* operator->() const;
+
+    constexpr T& operator*() &;
+    constexpr T const& operator*() const &;
+    constexpr T&& operator*() &&;
+    constexpr T const&& operator*() const &&;
+
     // unchecked value access
 
-    constexpr T* operator->() noexcept;
-    constexpr T const* operator->() const noexcept;
-
-    constexpr T& operator*() & noexcept;
-    constexpr T const& operator*() const & noexcept;
-    constexpr T&& operator*() && noexcept;
-    constexpr T const&& operator*() const && noexcept;
+    constexpr T& unsafe_value() & ;
+    constexpr T const& unsafe_value() const& ;
+    constexpr T&& unsafe_value() && ;
+    constexpr T const&& unsafe_value() const&& ;
 
     // error access
 
@@ -1840,39 +1845,50 @@ Effects: ::
   calls `throw_exception_from_error`, passing it a reference to
   the held error, and `loc`.
 
+```
+constexpr T* operator->();
+constexpr T const* operator->() const;
+```
+[none]
+* {blank}
++
+Returns: ::
+  `&value()`.
+
+```
+constexpr T& operator*() &;
+constexpr T const& operator*() const &;
+```
+[none]
+* {blank}
++
+Returns: ::
+  `value()`.
+
+```
+constexpr T&& operator*() &&;
+constexpr T const&& operator*() const &&;
+```
+[none]
+* {blank}
++
+Returns: ::
+  `std::move( value() )`.
+
 #### Unchecked Value Access
 
 ```
-constexpr T* operator->() noexcept;
-constexpr T const* operator->() const noexcept;
-```
-[none]
-* {blank}
-+
-Returns: ::
-  If `*this` holds a value, a pointer to it. Otherwise, `nullptr`.
-
-```
-constexpr T& operator*() & noexcept;
-constexpr T const& operator*() const & noexcept;
+constexpr T& unsafe_value() &;
+constexpr T const& unsafe_value() const &;
+constexpr T&& unsafe_value() &&;
+constexpr T const&& unsafe_value() const &&;
 ```
 [none]
 * {blank}
 +
 Requires: :: `*this` holds a value.
 Returns: ::
-  `*operator\->()`.
-
-```
-constexpr T&& operator*() && noexcept;
-constexpr T const&& operator*() const && noexcept;
-```
-[none]
-* {blank}
-+
-Requires: :: `*this` holds a value.
-Returns: ::
-  `std::move( *operator\->() )`.
+  A reference to the held value.
 
 #### Error Access
 
@@ -2000,12 +2016,14 @@ public:
     constexpr void value( boost::source_location const & loc =
       BOOST_CURRENT_LOCATION ) const;
 
+    constexpr void* operator->();
+    constexpr void const* operator->() const;
+
+    constexpr void operator*() const;
+
     // unchecked value access
 
-    constexpr void* operator->() noexcept;
-    constexpr void const* operator->() const noexcept;
-
-    constexpr void operator*() const noexcept;
+    constexpr void unsafe_value() const;
 
     // error access
 
@@ -2138,8 +2156,6 @@ Effects: ::
   If `*this` doesn't hold a value, calls `throw_exception_from_error`,
   passing it a reference to the held error, and `loc`.
 
-#### Unchecked Value Access
-
 ```
 constexpr void* operator->() noexcept;
 constexpr void const* operator->() const noexcept;
@@ -2147,11 +2163,22 @@ constexpr void const* operator->() const noexcept;
 [none]
 * {blank}
 +
-Returns: ::
-  If `*this` holds a value, a pointer to it. Otherwise, `nullptr`.
+Effects: ::
+  If `*this` holds a value, returns a pointer to it. Otherwise, calls `value()`.
 
 ```
 constexpr void operator*() const noexcept;
+```
+[none]
+* {blank}
++
+Returns: ::
+  `value()`.
+
+#### Unchecked Value Access
+
+```
+constexpr void unsafe_value() const;
 ```
 [none]
 * {blank}
@@ -2285,10 +2312,12 @@ public:
     constexpr U& value( boost::source_location const & loc =
       BOOST_CURRENT_LOCATION ) const;
 
+    constexpr U* operator->() const;
+    constexpr U& operator*() const;
+
     // unchecked value access
 
-    constexpr U* operator->() const noexcept;
-    constexpr U& operator*() const noexcept;
+    constexpr U& unsafe_value() const;
 
     // error access
 
@@ -2422,26 +2451,35 @@ Effects: ::
   calls `throw_exception_from_error`, passing it a reference to
   the held error, and `loc`.
 
-#### Unchecked Value Access
-
 ```
-constexpr U* operator->() const noexcept;
+constexpr U* operator->() const;
 ```
 [none]
 * {blank}
 +
 Returns: ::
-  If `*this` holds a reference, a pointer to its referent. Otherwise, `nullptr`.
+  `&value()`.
 
 ```
-constexpr U& operator*() const noexcept;
+constexpr U& operator*() const;
+```
+[none]
+* {blank}
++
+Returns: ::
+  `value()`.
+
+#### Unchecked Value Access
+
+```
+constexpr U& unsafe_value() const;
 ```
 [none]
 * {blank}
 +
 Requires: :: `*this` holds a reference.
 Returns: ::
-  `*operator\->()`.
+  The held reference.
 
 #### Error Access
 
@@ -2518,8 +2556,8 @@ Returns: ::
 #### operator|
 
 ```
-template<class T, class E, class U> T operator|( result<T, E> const& r, U&& u );
-template<class T, class E, class U> T operator|( result<T, E>&& r, U&& u );
+template<class T, class E, class U> std::decay_t<T> operator|( result<T, E> const& r, U&& u );
+template<class T, class E, class U> std::decay_t<T> operator|( result<T, E>&& r, U&& u );
 ```
 [none]
 * {blank}
@@ -2530,7 +2568,7 @@ Effects: ::
   - If `r.has_value()` is `true`, returns `*r`.
   - Otherwise, returns `u`.
 Remarks: ::
-  Only enabled when `U` is convertible to `T`.
+  Only enabled when `U` is convertible to `std::decay_t<T>`.
 Example: ::
 +
 ```
@@ -2545,6 +2583,7 @@ int get_port()
 ```
 template<class T, class E, class F> T operator|( result<T, E> const& r, F&& f );
 template<class T, class E, class F> T operator|( result<T, E>&& r, F&& f );
+template<class T, class E, class F> std::decay_t<T> operator|( result<T&, E> const& r, F&& f );
 ```
 [none]
 * {blank}
@@ -2556,7 +2595,7 @@ Effects: ::
   - If `r.has_value()` is `true`, returns `*r`.
   - Otherwise, returns `f()`.
 Remarks: ::
-  Only enabled when `f()` is convertible to `T`.
+  Only enabled when `f()` is convertible to `T`, or, when `T` is a reference, to `std::decay_t<T>`.
 Example: ::
 +
 ```
@@ -2871,6 +2910,82 @@ Effects: :: If `r.has_value()` is `true`, assigns `f()` to `r`.
 Returns: :: `r`.
 Remarks: ::
   Only enabled when `R` is an instance of `result<void, E2>` and `E2` is convertible to `E`.
+
+## <boost/system/{zwsp}unwrap_and_invoke.hpp>
+
+```
+namespace boost {
+namespace system {
+
+template<class F, class... A>
+auto unwrap_and_invoke( F&& f, A&&... a ) -> result</*...*/>;
+
+template<class T, class... A>
+auto unwrap_and_construct( A&&... a ) -> /*...*/;
+
+} // namespace system
+} // namespace boost
+```
+
+### unwrap_and_invoke
+
+```
+template<class F, class... A>
+auto unwrap_and_invoke( F&& f, A&&... a ) -> result</*...*/>;
+```
+[none]
+* {blank}
++
+Mandates: ::
+At least one of the arguments in `a...` must be an instance of `result`.
++
+All arguments in `a...` that are instances of `result` must have the same error type.
++
+Effects: ::
+If `ai`, one of the arguments in `a...`, is an instance of `result` for which `has_error()` is `true`, returns `ai.error()`.
++
+Otherwise, returns `f(b...)`, where `bi` is `*ai` if `ai` is an instance of `result`, `ai` otherwise.
++
+Remarks: ::
+The return type is `result<R, E>`, where `R` is the type of the application of `f`, and `E` is the common error type of the arguments in `a...` that are instances of `result`.
+
+
+### unwrap_and_construct
+
+```
+template<class T, class... A>
+auto unwrap_and_construct( A&&... a ) -> /*...*/;
+```
+[none]
+* {blank}
++
+Like `unwrap_and_invoke`, but instead of a function object, invokes a constructor of the passed type `T`.
++
+Returns: :: `unwrap_and_invoke(cf, a...)`, where `cf` is a function object such that `cf(args...)` returns `T{args...}` when `T` is an aggregate, `T(args...)` otherwise.
++
+Example: ::
++
+```
+struct JsonValue
+{
+    result<JsonValue const&> at( std::string_view key ) const noexcept;
+};
+
+result<int> int_from_json( JsonValue const& jv ) noexcept;
+
+struct X
+{
+    int a;
+    int b;
+};
+
+result<X> X_from_json( JsonValue const& jv ) noexcept
+{
+    return unwrap_and_construct<X>(
+        jv.at( "a" ) & int_from_json,
+        jv.at( "b" ) & int_from_json );
+}
+```
 
 ## <boost/system.hpp>
 

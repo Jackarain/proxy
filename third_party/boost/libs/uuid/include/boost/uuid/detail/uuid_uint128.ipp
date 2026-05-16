@@ -6,6 +6,9 @@
 // https://www.boost.org/LICENSE_1_0.txt
 
 #include <boost/uuid/detail/endian.hpp>
+#include <boost/uuid/detail/cstring.hpp>
+#include <boost/uuid/detail/is_constant_evaluated.hpp>
+#include <boost/config.hpp>
 
 #if defined(BOOST_UUID_REPORT_IMPLEMENTATION)
 
@@ -17,45 +20,51 @@ BOOST_PRAGMA_MESSAGE( "Using uuid_uint128.ipp" )
 namespace boost {
 namespace uuids {
 
-inline bool uuid::is_nil() const noexcept
+BOOST_UUID_CXX14_CONSTEXPR_RT inline bool operator==( uuid const& lhs, uuid const& rhs ) noexcept
 {
-    __uint128_t v = detail::load_native_u128( this->data );
-    return v == 0;
+    if( detail::is_constant_evaluated_rt() )
+    {
+        return detail::memcmp_rt( lhs.data(), rhs.data(), 16 ) == 0;
+    }
+    else
+    {
+        __uint128_t v1 = detail::load_native_u128( lhs.data() );
+        __uint128_t v2 = detail::load_native_u128( rhs.data() );
+
+        return v1 == v2;
+    }
 }
 
-inline void uuid::swap( uuid& rhs ) noexcept
+BOOST_UUID_CXX14_CONSTEXPR_RT inline bool operator<( uuid const& lhs, uuid const& rhs ) noexcept
 {
-    __uint128_t v1 = detail::load_native_u128( this->data );
-    __uint128_t v2 = detail::load_native_u128( rhs.data );
+    if( detail::is_constant_evaluated_rt() )
+    {
+        return detail::memcmp_rt( lhs.data(), rhs.data(), 16 ) < 0;
+    }
+    else
+    {
+        __uint128_t v1 = detail::load_big_u128( lhs.data() );
+        __uint128_t v2 = detail::load_big_u128( rhs.data() );
 
-    detail::store_native_u128( this->data, v2 );
-    detail::store_native_u128( rhs.data, v1 );
-}
-
-inline bool operator==( uuid const& lhs, uuid const& rhs ) noexcept
-{
-    __uint128_t v1 = detail::load_native_u128( lhs.data );
-    __uint128_t v2 = detail::load_native_u128( rhs.data );
-
-    return v1 == v2;
-}
-
-inline bool operator<( uuid const& lhs, uuid const& rhs ) noexcept
-{
-    __uint128_t v1 = detail::load_big_u128( lhs.data );
-    __uint128_t v2 = detail::load_big_u128( rhs.data );
-
-    return v1 < v2;
+        return v1 < v2;
+    }
 }
 
 #if defined(BOOST_UUID_HAS_THREE_WAY_COMPARISON)
 
-inline std::strong_ordering operator<=> (uuid const& lhs, uuid const& rhs) noexcept
+BOOST_UUID_CXX14_CONSTEXPR_RT inline std::strong_ordering operator<=> (uuid const& lhs, uuid const& rhs) noexcept
 {
-    __uint128_t v1 = detail::load_big_u128( lhs.data );
-    __uint128_t v2 = detail::load_big_u128( rhs.data );
+    if( detail::is_constant_evaluated_rt() )
+    {
+        return detail::memcmp_rt( lhs.data(), rhs.data(), 16 ) <=> 0;
+    }
+    else
+    {
+        __uint128_t v1 = detail::load_big_u128( lhs.data() );
+        __uint128_t v2 = detail::load_big_u128( rhs.data() );
 
-    return v1 <=> v2;
+        return v1 <=> v2;
+    }
 }
 
 #endif

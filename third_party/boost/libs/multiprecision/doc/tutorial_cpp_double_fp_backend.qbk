@@ -9,7 +9,7 @@
 
 [section:cpp_double_fp_backend cpp_double_fp_backend]
 
-`#include <boost/multiprecision/cpp_double_fp_backend.hpp>`
+`#include <boost/multiprecision/cpp_double_fp.hpp>`
 
    namespace boost { namespace multiprecision {
 
@@ -67,12 +67,12 @@ the `cpp_double_fp_backend` types.
 Things you should know when using the `cpp_double_fp_backend` types:
 
 * Although the types are created from two individual IEEE floating-point components, they specifically and clearly are not IEEE types in their composite forms.
-* As a result these types can behave subtly differently from IEEE floating-point types.
+* As a result, these types can behave subtly differently from IEEE floating-point types.
 * The types can not be used with certain compiler variations of _fast_-_math_. On GCC/clang, for instance, `-ffast-math` can not be used (use either the default or explicitly set `-fno-fast-math`). On MSVC `/fp:fast` can not be used and `/fp:precise` (the default) is mandatory on MSVC compilers. This is because the algorithms, in particular those for addition, subtraction, multiplication, division and square root, rely on precise floating-point rounding.
 * The composite types are not as precise as their constituents. For information on error-bounds, see Joldes et al. in the references below.
 * There are `std::numeric_limits` specializations for these types.
 * Almost all of the methods of the `cpp_double_fp_backend` implementation are `constexpr`. The sole exception is read-from-string, which is not yet `constexpr`, but may become so in future evolution.
-* Conversions to and from string internally use an intermediate `cpp_bin_float` value. This is a bit awkward may be eliminated in future refinements.
+* Conversions to and from string internally use an intermediate `cpp_bin_float` value. This is a bit awkward and may be eliminated in future refinements.
 
 The `cpp_double_fp_backend` back-end has been inspired by original works and types.
 These include the historical `doubledouble` and more, as listed below.

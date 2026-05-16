@@ -53,7 +53,7 @@ jobs:
       matrix: ${{ steps.cpp-matrix.outputs.matrix }}
     steps:
       - name: Generate Test Matrix
-        uses: alandefreitas/cpp-actions/cpp-matrix@v1.8.10
+        uses: alandefreitas/cpp-actions/cpp-matrix@v1.9.3
         id: cpp-matrix
         with:
           compilers: |
@@ -111,7 +111,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup C++
-        uses: alandefreitas/cpp-actions/setup-cpp@v1.8.10
+        uses: alandefreitas/cpp-actions/setup-cpp@v1.9.3
         id: setup-cpp
         with:
           compiler: ${{ matrix.compiler }}
@@ -119,13 +119,13 @@ jobs:
 
       - name: Install packages
         if: matrix.install != ''
-        uses: alandefreitas/cpp-actions/package-install@v1.8.10
+        uses: alandefreitas/cpp-actions/package-install@v1.9.3
         id: package-install
         with:
           apt-get: ${{ matrix.install }}
 
       - name: Clone Boost
-        uses: alandefreitas/cpp-actions/boost-clone@v1.8.10
+        uses: alandefreitas/cpp-actions/boost-clone@v1.9.3
         id: boost-clone
         with:
           branch: ${{ (github.ref_name == 'master' && github.ref_name) || 'develop' }}
@@ -203,7 +203,7 @@ jobs:
             corpus-
 
       - name: CMake Workflow
-        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.10
+        uses: alandefreitas/cpp-actions/cmake-workflow@v1.9.3
         if: matrix.is-no-factor-intermediary != 'true'
         with:
           source-dir: ../boost-root
@@ -226,7 +226,7 @@ jobs:
           trace-commands: true
 
       - name: CMake Integration Workflow
-        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.10
+        uses: alandefreitas/cpp-actions/cmake-workflow@v1.9.3
         if: matrix.is-no-factor-intermediary != 'true'
         with:
           source-dir: ../boost-root/libs/${{ steps.patch.outputs.module }}/test/cmake_test
@@ -244,7 +244,7 @@ jobs:
           trace-commands: true
 
       - name: CMake Root Workflow
-        uses: alandefreitas/cpp-actions/cmake-workflow@v1.8.10
+        uses: alandefreitas/cpp-actions/cmake-workflow@v1.9.3
         if: matrix.is-no-factor-intermediary != 'true'
         with:
           source-dir: .
@@ -263,7 +263,7 @@ jobs:
           trace-commands: true
 
       - name: B2 Workflow
-        uses: alandefreitas/cpp-actions/b2-workflow@v1.8.10
+        uses: alandefreitas/cpp-actions/b2-workflow@v1.9.3
         env:
           # Set flags via B2 options exclusively
           CFLAGS: ''
@@ -291,7 +291,7 @@ jobs:
           warnings-as-errors: true
 
       - name: FlameGraph
-        uses: alandefreitas/cpp-actions/flamegraph@v1.8.10
+        uses: alandefreitas/cpp-actions/flamegraph@v1.9.3
         if: matrix.time-trace
         with:
           source-dir: ../boost-root/libs/url
@@ -362,7 +362,7 @@ jobs:
           fetch-depth: 100
 
       - name: Changelog
-        uses: alandefreitas/cpp-actions/create-changelog@v1.8.10
+        uses: alandefreitas/cpp-actions/create-changelog@v1.9.3
         with:
           thank-non-regular: ${{ startsWith(github.ref, 'refs/tags/') }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -385,7 +385,7 @@ jobs:
         shell: bash
     steps:
       - name: Install packages
-        uses: alandefreitas/cpp-actions/package-install@v1.8.10
+        uses: alandefreitas/cpp-actions/package-install@v1.9.3
         with:
           apt-get: git cmake
 
@@ -393,7 +393,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Clone Boost
-        uses: alandefreitas/cpp-actions/boost-clone@v1.8.10
+        uses: alandefreitas/cpp-actions/boost-clone@v1.9.3
         id: boost-clone
         with:
           branch: ${{ (github.ref_name == 'master' && github.ref_name) || 'develop' }}

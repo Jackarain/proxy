@@ -13,7 +13,7 @@
 
 #include <boost/thread/synchronized_value.hpp>
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 int main()
 {

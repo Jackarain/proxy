@@ -16,7 +16,7 @@
 #include <boost/thread/experimental/parallel/v2/task_region.hpp>
 #include <string>
 
-#include <boost/detail/lightweight_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #if ! defined BOOST_NO_CXX11_LAMBDAS  && defined(BOOST_THREAD_PROVIDES_INVOKE)
 using boost::experimental::parallel::v2::task_region;

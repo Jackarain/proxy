@@ -84,12 +84,6 @@ public:
     template< typename View >
     void apply( const View& view )
     {
-        // guard from errors in the following functions
-        if (setjmp( png_jmpbuf( this->get_struct() )))
-        {
-            io_error("png is invalid");
-        }
-
         // The info structures are filled at this point.
 
         // Now it's time for some transformations.
@@ -237,12 +231,6 @@ private:
             >
     void read_rows( const View& view )
     {
-        // guard from errors in the following functions
-        if (setjmp( png_jmpbuf( this->get_struct() )))
-        {
-            io_error("png is invalid");
-        }
-
         using row_buffer_helper_t = detail::row_buffer_helper_view<ImagePixel>;
 
         using it_t = typename row_buffer_helper_t::iterator_t;

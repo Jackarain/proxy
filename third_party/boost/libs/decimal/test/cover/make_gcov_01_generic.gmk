@@ -1,0 +1,103 @@
+# -----------------------------------------------------------------------------
+#  Copyright Matt Borland 2023 - 2026.
+#  Copyright Christopher Kormanyos 2023 - 2026.
+#  Distributed under the Boost Software License,
+#  Version 1.0. (See accompanying file LICENSE_1_0.txt
+#  or copy at http://www.boost.org/LICENSE_1_0.txt)
+# -----------------------------------------------------------------------------
+
+# cd /mnt/c/ChrisGitRepos/modular_boost/decimal/test/cover
+# make prepare -f make_gcov_01_generic.gmk MY_ALL_COV=0 MY_BOOST_ROOT=/mnt/c/boost/boost_1_90_0 MY_CC=g++
+# make gcov -f make_gcov_01_generic.gmk --jobs=8 MY_ALL_COV=0 MY_BOOST_ROOT=/mnt/c/boost/boost_1_90_0 MY_CC=g++
+
+all: gcov
+
+PATH_MAKE        = $(CURDIR)
+PATH_SRC         = $(PATH_MAKE)/../../test
+PATH_BIN         = $(PATH_MAKE)/bin
+PATH_OBJ         = $(PATH_MAKE)/obj
+
+CAT              = cat
+GNUECHO          = echo
+LS               = ls
+MKDIR            = mkdir
+GCOV             = gcov
+LCOV             = lcov
+GENHTML          = genhtml
+RM               = rm
+
+include make_gcov_02_files.gmk
+include make_gcov_03_flags.gmk
+
+FILES_ALL        = $(FILES_PRJ)
+FILES_EXE        = $(addprefix $(PATH_BIN)/, $(notdir $(addsuffix .exe, $(FILES_ALL))))
+
+# -----------------------------------------------------------------------------
+# VPATH definition: VPATH is required for make to find the source files.
+# -----------------------------------------------------------------------------
+VPATH    := $(sort $(dir $(FILES_ALL)))
+
+
+# -----------------------------------------------------------------------------
+# Executable file:
+# -----------------------------------------------------------------------------
+
+.PHONY: objects
+objects: $(FILES_EXE)
+	@$(GNUECHO)
+	@$(GNUECHO) +++ compile source to object then link and execute
+
+
+# -----------------------------------------------------------------------------
+# Main dependency:
+#   Compile all files and link them.
+#   Run gcov and get results.
+#   (See also https://github.com/codecov/example-cpp11-cmake)
+# -----------------------------------------------------------------------------
+
+.PHONY: gcov
+gcov: objects
+	@$(GNUECHO)
+	@$(GNUECHO) +++ running gcov
+	@$(GCOV) $(GCOV_FLAGS) $(addsuffix .cpp,$(FILES_PRJ))
+	@$(GNUECHO)
+	@$(GNUECHO) +++ running lcov
+	@$(LCOV) $(LCOV_BRANCH) -c --directory obj --output-file coverage_unfiltered.info
+	@$(LCOV) $(LCOV_BRANCH) --remove coverage_unfiltered.info $(LCOV_REMOVES) --ignore-errors unused --output-file coverage.info
+	@$(GNUECHO)
+	@$(GNUECHO) +++ running genhtml
+	@$(GENHTML) coverage.info $(LCOV_BRANCH) --demangle-cpp --output-directory $(PATH_BIN)/report
+
+# -----------------------------------------------------------------------------
+# Clean temporary files.
+# -----------------------------------------------------------------------------
+
+.PHONY: clean
+clean:
+	@$(GNUECHO)
+	@$(GNUECHO) +++ cleaning output directories
+	@-$(RM) -rf $(PATH_BIN)* || uname -r
+	@-$(RM) -rf $(PATH_OBJ)* || uname -r
+	@-$(RM) -f *.gcov || uname -r
+	@-$(RM) -f coverage* || uname -r
+	@$(GNUECHO)
+
+
+# -----------------------------------------------------------------------------
+# Prepare the gcov build.
+# -----------------------------------------------------------------------------
+
+.PHONY: prepare
+prepare: clean
+	@$(GNUECHO)
+	@$(GNUECHO) +++ creating output directories
+	@-$(MKDIR) -p $(PATH_BIN)
+	@-$(MKDIR) -p $(PATH_OBJ)
+	@$(GNUECHO)
+	@$(GNUECHO) +++ print gcov version
+	@$(GCOV) --version
+	@$(GNUECHO)
+	@$(GNUECHO) +++ print include paths
+	@$(GNUECHO) $(C_INCLUDES)
+
+include make_gcov_04_rules.gmk

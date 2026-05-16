@@ -22,19 +22,161 @@
 
 #include <algorithm>
 #include <iostream>
+#include <sstream>
+#include <vector>
 #include <cctype>
+#include <tuple>
+#include <initializer_list>
+#include <string>
+#include <cstddef>
+#include <type_traits>
+#include <iterator>
+#include <utility>
 
 // tag::snippet_headers_3[]
 #include <boost/url.hpp>
 using namespace boost::urls;
 // end::snippet_headers_3[]
 
-#include <iostream>
-
 #ifdef assert
 #undef assert
 #endif
 #define assert BOOST_TEST
+
+namespace {
+
+namespace detail {
+
+template<class It1, class It2, class Pred1, class Pred2>
+bool
+equal_range_impl(
+    It1 first1,
+    It1 last1,
+    It2 first2,
+    It2 last2,
+    Pred1 const& pred1,
+    Pred2 const& pred2)
+{
+    for (; first1 != last1 && first2 != last2; ++first1, ++first2)
+    {
+        if (pred1(*first1) != pred2(*first2))
+            return false;
+    }
+
+    return first1 == last1 && first2 == last2;
+}
+
+} // detail
+
+template<class R1, class R2, class Pred1, class Pred2>
+bool
+equal_range(R1&& r1, R2&& r2, Pred1 pred1, Pred2 pred2)
+{
+    using std::begin;
+    using std::end;
+
+    return detail::equal_range_impl(
+        begin(r1),
+        end(r1),
+        begin(r2),
+        end(r2),
+        pred1,
+        pred2);
+}
+
+template<class R1, class T, class Pred1, class Pred2>
+bool
+equal_range(
+    R1&& r1,
+    std::initializer_list<T> r2,
+    Pred1 pred1,
+    Pred2 pred2)
+{
+    using std::begin;
+    using std::end;
+
+    return detail::equal_range_impl(
+        begin(r1),
+        end(r1),
+        r2.begin(),
+        r2.end(),
+        pred1,
+        pred2);
+}
+
+template<class Range>
+bool
+equal_range(
+    Range const& rng,
+    std::initializer_list<const char*> expected)
+{
+    typedef typename std::decay<
+        decltype(*std::declval<Range const&>().begin())>::type value_type;
+
+    auto project_range = [](value_type const& value)
+    {
+        return std::string(value.begin(), value.end());
+    };
+
+    auto project_expected = [](const char* value)
+    {
+        return std::string(value);
+    };
+
+    return equal_range(
+        rng,
+        expected,
+        project_range,
+        project_expected);
+}
+
+template<class Range>
+bool
+equal_range(
+    Range const& rng,
+    std::initializer_list<param_view> expected)
+{
+    typedef typename std::decay<
+        decltype(*std::declval<Range const&>().begin())>::type param_type;
+    typedef std::tuple<std::string, bool, std::string> param_tuple;
+
+    auto project_range = [](param_type const& param)
+    {
+        param_tuple result(
+            std::string(param.key.begin(), param.key.end()),
+            param.has_value,
+            std::string());
+        if (param.has_value)
+        {
+            std::get<2>(result) =
+                std::string(param.value.begin(), param.value.end());
+        }
+        return result;
+    };
+
+    auto project_expected = [](param_view const& param)
+    {
+        param_tuple result(
+            std::string(param.key.begin(), param.key.end()),
+            param.has_value,
+            std::string());
+        if (param.has_value)
+        {
+            std::get<2>(result) =
+                std::string(param.value.begin(), param.value.end());
+        }
+        return result;
+    };
+
+    return equal_range(
+        rng,
+        expected,
+        project_range,
+        project_expected);
+}
+
+} // namespace
+
 
 void
 using_url_views()
@@ -50,7 +192,7 @@ using_url_views()
         assert(u.host() == "example.com");
         assert(u.port() == "443");
         assert(u.path() == "/path/to/my-file.txt");
-        assert(u.query() == "id=42&name=John Doe Jingleheimer-Schmidt");
+        assert(u.query() == "id=42&name=John Doe+Jingleheimer-Schmidt");
         assert(u.fragment() == "page anchor");
         // end::snippet_accessing_1[]
     }
@@ -87,6 +229,14 @@ using_url_views()
         std::cout << param.key << ": " << param.value << "\n";
     std::cout << "\n";
     // end::snippet_accessing_1b[]
+    BOOST_TEST(equal_range(u.segments(), {"path", "to", "my-file.txt"}));
+    auto params = u.params();
+    BOOST_TEST(equal_range(
+        params,
+        {
+            param_view{"id", "42", true},
+            param_view{"name", "John Doe Jingleheimer-Schmidt", true}
+        }));
 
     {
         // tag::snippet_token_1[]
@@ -128,12 +278,16 @@ using_url_views()
         std::cout << "has fragment 1 : " << u1.has_fragment() << "\n";
         std::cout << "fragment 1 : " << u1.fragment() << "\n\n";
         // end::snippet_accessing_3a[]
+        BOOST_TEST_NOT(u1.has_fragment());
+        BOOST_TEST(u1.fragment().empty());
 
         // tag::snippet_accessing_3b[]
         url_view u2 = parse_uri( "http://www.example.com/#" ).value();
         std::cout << "has fragment 2 : " << u2.has_fragment() << "\n";
         std::cout << "fragment 2 : " << u2.fragment() << "\n\n";
         // end::snippet_accessing_3b[]
+        BOOST_TEST(u2.has_fragment());
+        BOOST_TEST(u2.fragment().empty());
     }
 
     {
@@ -151,6 +305,16 @@ using_url_views()
             "query     : " << u.encoded_query()     << "\n"
             "fragment  : " << u.encoded_fragment()  << "\n";
         // end::snippet_accessing_4[]
+        BOOST_TEST(u.scheme() == "https");
+        BOOST_TEST(u.encoded_authority() == "user:pass@example.com:443");
+        BOOST_TEST(u.encoded_userinfo() == "user:pass");
+        BOOST_TEST(u.encoded_user() == "user");
+        BOOST_TEST(u.encoded_password() == "pass");
+        BOOST_TEST(u.encoded_host() == "example.com");
+        BOOST_TEST(u.port() == "443");
+        BOOST_TEST(u.encoded_path() == "/path/to/my%2dfile.txt");
+        BOOST_TEST(u.encoded_query() == "id=42&name=John%20Doe+Jingleheimer%2DSchmidt");
+        BOOST_TEST(u.encoded_fragment() == "page%20anchor");
     }
 
     {
@@ -158,6 +322,7 @@ using_url_views()
         decode_view dv("id=42&name=John%20Doe%20Jingleheimer%2DSchmidt");
         std::cout << dv << "\n";
         // end::snippet_decoding_1[]
+        BOOST_TEST(dv == "id=42&name=John Doe Jingleheimer-Schmidt");
     }
     {
         url u1 = u;
@@ -166,6 +331,7 @@ using_url_views()
         u1.set_host(u2.host());
         // end::snippet_decoding_2[]
         std::cout << u1 << "\n";
+        BOOST_TEST(u1.buffer() == u.buffer());
     }
     {
         // tag::snippet_decoding_3[]
@@ -174,6 +340,7 @@ using_url_views()
             p.append(seg.begin(), seg.end());
         std::cout << "path: " << p << "\n";
         // end::snippet_decoding_3[]
+        BOOST_TEST(p.generic_string() == "path/to/my-file.txt");
     }
 // transparent std::equal_to<> required
 #if BOOST_CXX_VERSION >= 201402L && !defined(BOOST_CLANG)
@@ -208,32 +375,89 @@ using_url_views()
     }
 #endif
     {
+        // tag::snippet_compound_elements_0[]
+        segments_encoded_view segs_encoded = u.encoded_segments();
+
+        for( auto v : segs_encoded )
+        {
+            std::cout << v << "\n";
+        }
+        // end::snippet_compound_elements_0[]
+        BOOST_TEST(equal_range(
+            segs_encoded,
+            {"path", "to", "my%2dfile.txt"}));
+    }
+
+    {
+        // tag::snippet_compound_elements_0b[]
+        segments_encoded_view segs_encoded = u.encoded_segments();
+
+        for( pct_string_view v : segs_encoded )
+        {
+            decode_view dv = *v;
+            std::cout << dv << "\n";
+        }
+        // end::snippet_compound_elements_0b[]
+        auto decode_segment = [](pct_string_view const& value)
+        {
+            decode_view dv = *value;
+            return std::string(dv.begin(), dv.end());
+        };
+        auto literal = [](const char* value)
+        {
+            return std::string(value);
+        };
+        BOOST_TEST(equal_range(
+            segs_encoded,
+            {"path", "to", "my-file.txt"},
+            decode_segment,
+            literal));
+    }
+
+    {
         // tag::snippet_compound_elements_1[]
-        segments_encoded_view segs = u.encoded_segments();
-        for( auto v : segs )
+        segments_encoded_view segs_encoded = u.encoded_segments();
+        for( auto v : segs_encoded )
         {
             std::cout << v << "\n";
         }
         // end::snippet_compound_elements_1[]
+        BOOST_TEST(equal_range(
+            segs_encoded,
+            {"path", "to", "my%2dfile.txt"}));
     }
 
     {
         // tag::snippet_encoded_compound_elements_1[]
-        segments_encoded_view segs = u.encoded_segments();
+        segments_encoded_view segs_encoded = u.encoded_segments();
 
-        for( pct_string_view v : segs )
+        for( pct_string_view v : segs_encoded )
         {
             decode_view dv = *v;
             std::cout << dv << "\n";
         }
         // end::snippet_encoded_compound_elements_1[]
+        auto decode_segment = [](pct_string_view const& value)
+        {
+            decode_view dv = *value;
+            return std::string(dv.begin(), dv.end());
+        };
+        auto literal = [](const char* value)
+        {
+            return std::string(value);
+        };
+        BOOST_TEST(equal_range(
+            segs_encoded,
+            {"path", "to", "my-file.txt"},
+            decode_segment,
+            literal));
     }
 
     {
         // tag::snippet_encoded_compound_elements_2[]
-        params_encoded_view params_ref = u.encoded_params();
+        params_encoded_view params_ref_view = u.encoded_params();
 
-        for( auto v : params_ref )
+        for( auto v : params_ref_view )
         {
             decode_view dk(v.key);
             decode_view dv(v.value);
@@ -243,6 +467,42 @@ using_url_views()
                 ", value = " << dv << "\n";
         }
         // end::snippet_encoded_compound_elements_2[]
+        auto decode_param = [](param_pct_view const& param)
+        {
+            decode_view dk(param.key);
+            std::tuple<std::string, bool, std::string> result(
+                std::string(dk.begin(), dk.end()),
+                param.has_value,
+                std::string());
+            if (param.has_value)
+            {
+                decode_view dv(param.value);
+                std::get<2>(result) =
+                    std::string(dv.begin(), dv.end());
+            }
+            return result;
+        };
+        auto expect_param_tuple = [](param_view const& param)
+        {
+            std::tuple<std::string, bool, std::string> result(
+                std::string(param.key.begin(), param.key.end()),
+                param.has_value,
+                std::string());
+            if (param.has_value)
+            {
+                std::get<2>(result) =
+                    std::string(param.value.begin(), param.value.end());
+            }
+            return result;
+        };
+        BOOST_TEST(equal_range(
+            params_ref_view,
+            {
+                param_view{"id", "42", true},
+                param_view{"name", "John Doe+Jingleheimer-Schmidt", true}
+            },
+            decode_param,
+            expect_param_tuple));
     }
 }
 
@@ -274,12 +534,14 @@ using_urls()
         .remove_userinfo();
     std::cout << u << "\n";
     // end::snippet_quicklook_modifying_4[]
+    BOOST_TEST(u.buffer() == "https://192.168.0.1:8080/path/to/my%2dfile.txt?id=42&name=John%20Doe#page%20anchor");
 
     // tag::snippet_quicklook_modifying_5[]
     params_ref p = u.params();
     p.replace(p.find("name"), {"name", "John Doe"});
     std::cout << u << "\n";
     // end::snippet_quicklook_modifying_5[]
+    BOOST_TEST(u.buffer() == "https://192.168.0.1:8080/path/to/my%2dfile.txt?id=42&name=John+Doe#page%20anchor");
 }
 
 void
@@ -395,6 +657,8 @@ parsing_urls()
     // but `*sp` remains valid since it has its own copy
     std::cout << *sp << "\n";
     // end::snippet_parsing_url_2[]
+    BOOST_TEST(sp);
+    BOOST_TEST(sp->buffer() == "/path/to/file.txt");
 
     {
         // tag::snippet_parsing_url_3[]
@@ -418,7 +682,40 @@ parsing_urls()
         // path/to/file.txt#anchor
         std::cout << v << "\n";
         // end::snippet_parsing_url_3[]
+        BOOST_TEST(v.buffer() == "/path/to/file.txt#anchor");
     }
+
+#if defined(BOOST_URL_HAS_CXX20_CONSTEXPR)
+    {
+        // tag::snippet_constexpr_parsing_1[]
+        // Parse and validate a URL at compile time (C++20).
+        // value() on an error produces a compile error,
+        // so invalid URLs are caught at build time.
+        constexpr url_view api_base =
+            parse_uri("https://api.example.com/v2").value();
+
+        // A malformed literal would fail to compile:
+        // constexpr url_view bad =
+        //     parse_uri("ht tp://bad url").value();
+        // end::snippet_constexpr_parsing_1[]
+        BOOST_TEST(api_base.scheme() == "https");
+    }
+    {
+        // tag::snippet_constexpr_parsing_2[]
+        // Pre-parsed URL constants have zero runtime cost.
+        // Parsing happens entirely at compile time.
+        constexpr url_view default_endpoint =
+            parse_uri("https://api.example.com:8443/v1").value();
+        constexpr url_view fallback_endpoint =
+            parse_uri("http://localhost:9090/debug").value();
+
+        // Components are available at runtime with no parsing overhead
+        assert(default_endpoint.port_number() == 8443);
+        assert(fallback_endpoint.scheme() == "http");
+        // end::snippet_constexpr_parsing_2[]
+        BOOST_TEST(default_endpoint.port_number() == 8443);
+    }
+#endif
 }
 
 void
@@ -554,6 +851,52 @@ parsing_scheme()
     }
 }
 
+// tag::code_compound_scheme_1[]
+// Helper function to extract transport scheme from compound schemes
+boost::core::string_view
+scheme_ex(boost::core::string_view s)
+{
+    // Find the last '+' in the scheme
+    // Examples: "git+https" -> "https", "svn+ssh" -> "ssh"
+    auto pos = s.rfind('+');
+    if (pos != boost::core::string_view::npos)
+        return s.substr(pos + 1);
+    return {};
+}
+// end::code_compound_scheme_1[]
+
+void
+parsing_compound_scheme()
+{
+
+    // Parse a URL with a compound scheme
+    url_view u("git+https://github.com/user/repo.git");
+
+    // The library treats the entire string as a single scheme per RFC 3986
+    assert(u.scheme() == "git+https");
+
+    // Extract just the transport protocol suffix
+    boost::core::string_view transport = scheme_ex(u.scheme());
+    assert(transport == "https");
+
+    // Test with other compound schemes
+    url_view u2("svn+ssh://example.com/repo");
+    assert(u2.scheme() == "svn+ssh");
+    assert(scheme_ex(u2.scheme()) == "ssh");
+
+    // Regular schemes without '+' return empty
+    url_view u3("https://example.com");
+    assert(u3.scheme() == "https");
+    assert(scheme_ex(u3.scheme()).empty());
+
+    // Multiple '+' characters: rfind returns the last one
+    url_view u4("npm+http+custom://example.com");
+    assert(u4.scheme() == "npm+http+custom");
+    assert(scheme_ex(u4.scheme()) == "custom");
+
+    boost::ignore_unused(u, u2, u3, u4, transport);
+}
+
 void
 parsing_authority()
 {
@@ -573,6 +916,10 @@ parsing_authority()
                      "authority:     " << u.authority()         << "\n"
                      "path:          " << u.path()              << "\n";
         // end::snippet_parsing_authority_2[]
+        BOOST_TEST(u.scheme() == "https");
+        BOOST_TEST(u.has_authority());
+        BOOST_TEST(u.authority().buffer() == "www.boost.org");
+        BOOST_TEST(u.path().empty());
     }
     {
         // tag::snippet_parsing_authority_3a[]
@@ -592,6 +939,10 @@ parsing_authority()
                      "authority:     " << u.authority()         << "\n"
                      "path:          " << u.path()              << "\n";
         // end::snippet_parsing_authority_4[]
+        BOOST_TEST(u.scheme() == "https");
+        BOOST_TEST(u.has_authority());
+        BOOST_TEST(u.authority().buffer() == "www.boost.org");
+        BOOST_TEST(u.path() == "/");
     }
     {
         // tag::snippet_parsing_authority_5[]
@@ -601,6 +952,10 @@ parsing_authority()
                      "authority:     " << u.authority()         << "\n"
                      "path:          " << u.path()              << "\n";
         // end::snippet_parsing_authority_5[]
+        BOOST_TEST(u.scheme() == "mailto");
+        BOOST_TEST_NOT(u.has_authority());
+        BOOST_TEST(u.authority().buffer().empty());
+        BOOST_TEST(u.path() == "John.Doe@example.com");
     }
     {
         // tag::snippet_parsing_authority_6[]
@@ -611,6 +966,10 @@ parsing_authority()
             "authority:     " << u.authority()         << "\n"
             "path:          " << u.path()              << "\n";
         // end::snippet_parsing_authority_6[]
+        BOOST_TEST(u.scheme() == "mailto");
+        BOOST_TEST(u.has_authority());
+        BOOST_TEST(u.authority().buffer() == "John.Doe@example.com");
+        BOOST_TEST(u.path().empty());
     }
     {
         // tag::snippet_parsing_authority_7[]
@@ -623,6 +982,13 @@ parsing_authority()
             "port:          " << u.port()              << "\n"
             "path:          " << u.path()              << "\n";
         // end::snippet_parsing_authority_7[]
+        BOOST_TEST(u.scheme() == "https");
+        BOOST_TEST(u.has_authority());
+        BOOST_TEST(u.authority().buffer() == "john.doe@www.example.com:123");
+        BOOST_TEST(u.host() == "www.example.com");
+        BOOST_TEST(u.userinfo() == "john.doe");
+        BOOST_TEST(u.port() == "123");
+        BOOST_TEST(u.path() == "/forum/questions/");
     }
     {
         // tag::snippet_parsing_authority_8[]
@@ -729,7 +1095,7 @@ parsing_authority()
     }
     {
         // tag::snippet_parsing_authority_11b[]
-        url_view u( "https://john.doe:123456@www.somehost.com/forum/questions/" );
+        url_view u( "https://john:doe@www.somehost.com/forum/questions/" );
         assert(u.userinfo() == "john:doe");
         assert(u.user() == "john");
         assert(u.password() == "doe");
@@ -782,6 +1148,9 @@ parsing_path()
         for (auto seg: u.encoded_segments())
             std::cout << "segment: " << seg << "\n";
         // end::snippet_parsing_path_1_b[]
+        BOOST_TEST(equal_range(
+            u.encoded_segments(),
+            {"doc", "the%20libs", ""}));
     }
     {
         // tag::snippet_parsing_path_2[]
@@ -790,6 +1159,8 @@ parsing_path()
         for (auto seg: u.segments())
             std::cout << "segment: " << seg << "\n";
         // end::snippet_parsing_path_2[]
+        auto segs = u.segments();
+        BOOST_TEST(equal_range(segs, {"doc", "libs"}));
     }
     {
         // tag::snippet_parsing_path_3[]
@@ -828,6 +1199,11 @@ parsing_path()
                       << "path:     " << u.encoded_path()            << "\n"
                       << "segments: " << u.encoded_segments().size() << "\n";
             // end::snippet_parsing_path_5_a[]
+            BOOST_TEST(u.encoded_host() == "www.boost.org");
+            BOOST_TEST(u.encoded_path().empty());
+            BOOST_TEST(equal_range(
+                u.encoded_segments(),
+                std::initializer_list<const char*>{}));
         }
         {
             // tag::snippet_parsing_path_5_b[]
@@ -838,6 +1214,11 @@ parsing_path()
                       << "path:     " << u.encoded_path()            << "\n"
                       << "segments: " << u.encoded_segments().size() << "\n";
             // end::snippet_parsing_path_5_b[]
+            BOOST_TEST(u.encoded_host() == "www.boost.org");
+            BOOST_TEST(u.encoded_path() == "/");
+            BOOST_TEST(equal_range(
+                u.encoded_segments(),
+                std::initializer_list<const char*>{}));
         }
         {
             // tag::snippet_parsing_path_5_c[]
@@ -848,6 +1229,10 @@ parsing_path()
                       << "path:     " << u.encoded_path()            << "\n"
                       << "segments: " << u.encoded_segments().size() << "\n";
             // end::snippet_parsing_path_5_c[]
+            BOOST_TEST(u.encoded_host() == "www.boost.org");
+            BOOST_TEST(u.encoded_path() == "//");
+            auto segs = u.encoded_segments();
+            BOOST_TEST(equal_range(segs, {"", ""}));
         }
     }
 
@@ -861,6 +1246,10 @@ parsing_path()
         for (auto seg: u.encoded_segments())
             std::cout << "segment: " << seg << "\n";
         // end::snippet_parsing_path_6[]
+        BOOST_TEST(u.encoded_authority() == "www.boost.org");
+        BOOST_TEST(u.encoded_path() == "//doc/libs/");
+        auto segs = u.encoded_segments();
+        BOOST_TEST(equal_range(segs, {"", "doc", "libs", ""}));
     }
 
     {
@@ -873,6 +1262,10 @@ parsing_path()
         for (auto seg: u.encoded_segments())
             std::cout << "segment: " << seg << "\n";
         // end::snippet_parsing_path_7[]
+        BOOST_TEST(u.encoded_authority() == "doc");
+        BOOST_TEST(u.encoded_path() == "/libs/");
+        auto segs = u.encoded_segments();
+        BOOST_TEST(equal_range(segs, {"libs", ""}));
     }
 
     {
@@ -885,6 +1278,10 @@ parsing_path()
         for (auto seg: u.encoded_segments())
             std::cout << "segment: " << seg << "\n";
         // end::snippet_parsing_path_8[]
+        BOOST_TEST(u.encoded_authority() == "www.boost.org");
+        BOOST_TEST(u.encoded_path() == "/doc@folder/libs:boost");
+        auto segs = u.encoded_segments();
+        BOOST_TEST(equal_range(segs, {"doc@folder", "libs:boost"}));
     }
 
     {
@@ -1021,6 +1418,18 @@ parsing_query()
             }
         }
         // end::snippet_parsing_query_2[]
+        BOOST_TEST(u.has_query());
+        BOOST_TEST(u.encoded_query() == "key-1=value-1&key-2=&key-3&&=value-2");
+        BOOST_TEST(u.query() == "key-1=value-1&key-2=&key-3&&=value-2");
+        BOOST_TEST(equal_range(
+            u.encoded_params(),
+            {
+                param_view{"key-1", "value-1", true},
+                param_view{"key-2", "", true},
+                param_view{"key-3", boost::core::string_view(), false},
+                param_view{"", boost::core::string_view(), false},
+                param_view{"", "value-2", true}
+            }));
     }
     {
         // tag::snippet_parsing_query_3[]
@@ -1042,6 +1451,15 @@ parsing_query()
             }
         }
         // end::snippet_parsing_query_3[]
+        BOOST_TEST(u.has_query());
+        BOOST_TEST(u.encoded_query() == "email=joe@email.com&code=a:2@/!");
+        BOOST_TEST(u.query() == "email=joe@email.com&code=a:2@/!");
+        BOOST_TEST(equal_range(
+            u.encoded_params(),
+            {
+                param_view{"email", "joe@email.com", true},
+                param_view{"code", "a:2@/!", true}
+            }));
     }
     {
         // tag::snippet_parsing_query_4[]
@@ -1049,6 +1467,7 @@ parsing_query()
         std::cout << u << "\n"
                   "query: " << u.query() << "\n";
         // end::snippet_parsing_query_4[]
+        BOOST_TEST(u.query() == "name=joe");
     }
     {
         // tag::snippet_parsing_query_5[]
@@ -1064,6 +1483,9 @@ parsing_query()
                   "encoded query: " << u.encoded_query() << "\n"
                   "query:         " << u.query()         << "\n";
         // end::snippet_parsing_query_6[]
+        BOOST_TEST(u.has_query());
+        BOOST_TEST(u.encoded_query() == "name=John%20Doe");
+        BOOST_TEST(u.query() == "name=John Doe");
     }
     {
         // tag::snippet_parsing_query_7[]
@@ -1096,8 +1518,13 @@ parsing_query()
         // tag::snippet_parsing_query_8d[]
         ++it;
         assert((*it).key == "");
-        assert((*it).value == "value-4");
+        assert(!(*it).has_value);
         // end::snippet_parsing_query_8d[]
+        // tag::snippet_parsing_query_8e[]
+        ++it;
+        assert((*it).key == "");
+        assert((*it).value == "value-4");
+        // end::snippet_parsing_query_8e[]
     }
     {
         // tag::snippet_parsing_query_9[]
@@ -1118,6 +1545,9 @@ parsing_fragment()
                   "fragment:         " << u.fragment()         << "\n"
                   "encoded fragment: " << u.encoded_fragment() << "\n";
         // end::snippet_parsing_fragment_1[]
+        BOOST_TEST(u.has_fragment());
+        BOOST_TEST(u.fragment() == "section 2");
+        BOOST_TEST(u.encoded_fragment() == "section%202");
     }
     {
         // tag::snippet_parsing_fragment_2_a[]
@@ -1126,6 +1556,8 @@ parsing_fragment()
                   "has fragment:     " << u.has_fragment()     << "\n"
                   "fragment:         " << u.fragment()         << "\n";
         // end::snippet_parsing_fragment_2_a[]
+        BOOST_TEST(u.has_fragment());
+        BOOST_TEST(u.fragment().empty());
     }
     {
         // tag::snippet_parsing_fragment_2_b[]
@@ -1134,6 +1566,8 @@ parsing_fragment()
                   "has fragment:     " << u.has_fragment()     << "\n"
                   "fragment:         " << u.fragment()         << "\n";
         // end::snippet_parsing_fragment_2_b[]
+        BOOST_TEST_NOT(u.has_fragment());
+        BOOST_TEST(u.fragment().empty());
     }
     {
         // tag::snippet_parsing_fragment_3[]
@@ -1142,6 +1576,8 @@ parsing_fragment()
                   "has fragment:     " << u.has_fragment()     << "\n"
                   "fragment:         " << u.fragment()         << "\n";
         // end::snippet_parsing_fragment_3[]
+        BOOST_TEST(u.has_fragment());
+        BOOST_TEST(u.fragment() == "code :a@b?c/d");
     }
     {
         // tag::snippet_parsing_fragment_4[]
@@ -1190,7 +1626,7 @@ using_modifying()
         v.set_scheme("http");
         assert(v.buffer() == "http://my%20website.com/my%20file.txt?id=42&name=John%20Doe");
         v.set_encoded_host("www.my%20example.com");
-        assert(v.buffer() == "http://my%20example.com/my%20file.txt?id=42&name=John%20Doe");
+        assert(v.buffer() == "http://www.my%20example.com/my%20file.txt?id=42&name=John%20Doe");
         // end::snippet_modifying_4[]
 
 
@@ -1783,41 +2219,395 @@ encoding()
 }
 
 void
-readme_snippets()
+decoding_helpers()
 {
-    // Parse a URL. This allocates no memory. The view
-    // references the character buffer without taking ownership.
-    //
-    url_view uv( "https://www.example.com/path/to/file.txt?id=1001&name=John%20Doe&results=full" );
-
-    // Print the query parameters with percent-decoding applied
-    //
-    for( auto v : uv.params() )
     {
-        std::cout << v.key << "=" << v.value << " ";
+        // tag::snippet_decoding_helpers_1[]
+        boost::core::string_view encoded = "name%3Dboost+url";
+        encoding_opts opt;
+        opt.space_as_plus = true;
+
+        auto const needed = decoded_size(encoded).value();
+        std::string buffer;
+        buffer.resize(needed);
+        auto const written = decode(&buffer[0], buffer.size(), encoded, opt).value();
+        buffer.resize(written);
+
+        assert(buffer == "name=boost url");
+        // end::snippet_decoding_helpers_1[]
     }
 
-    // Prints: id=1001 name=John Doe results=full
+    {
+        // tag::snippet_decoding_helpers_2[]
+        encoding_opts opt;
+        opt.space_as_plus = true;
 
-    // Create a modifiable copy of `uv`, with ownership of the buffer
-    //
-    url u = uv;
+        auto plain = decode(boost::core::string_view("city%3DSan+Jose"), opt).value();
+        assert(plain == "city=San Jose");
 
-    // Change some elements in the URL
-    //
-    u.set_scheme( "http" )
-        .set_encoded_host( "boost.org" )
-        .set_encoded_path( "/index.htm" )
-        .remove_query()
-        .remove_fragment()
-        .params().append( {"key", "value"} );
+        std::string scratch = "prefix:";
+        decode(boost::core::string_view("value%2F42"), {}, string_token::append_to(scratch)).value();
+        assert(scratch == "prefix:value/42");
+        // end::snippet_decoding_helpers_2[]
+    }
+}
 
-    std::cout << u;
+void
+readme_snippets()
+{
+    {
+        // Parse a URL. This allocates no memory. The view
+        // references the character buffer without taking ownership.
+        //
+        url_view uv( "https://www.example.com/path/to/file.txt?id=1001&name=John%20Doe&results=full" );
+
+        // Print the query parameters with percent-decoding applied
+        //
+        for( auto v : uv.params() )
+        {
+            std::cout << v.key << "=" << v.value << " ";
+        }
+
+        BOOST_TEST(equal_range(
+            uv.params(),
+            {
+                param_view{"id", "1001", true},
+                param_view{"name", "John Doe", true},
+                param_view{"results", "full", true}
+            }));
+
+        // Prints: id=1001 name=John Doe results=full
+
+        // Create a modifiable copy of `uv`, with ownership of the buffer
+        //
+        url u = uv;
+
+        // Change some elements in the URL
+        //
+        u.set_scheme( "http" )
+            .set_encoded_host( "boost.org" )
+            .set_encoded_path( "/index.htm" )
+            .remove_query()
+            .remove_fragment()
+            .params().append( {"key", "value"} );
+
+        std::cout << u;
+        BOOST_TEST(u.buffer() == "http://boost.org/index.htm?key=value");
+    }
+
+    {
+        boost::core::string_view s =
+            "https://user:pass@example.com:443/path/to/my%2dfile.txt?id=42&name=John%20Doe+Jingleheimer%2DSchmidt#page%20anchor";
+        {
+            boost::system::result<url_view> r = parse_uri( s );
+            BOOST_TEST(r.has_value());
+        }
+
+        {
+            boost::system::result<url_view> r = parse_uri( s );
+            url_view u = r.value();
+            BOOST_TEST(!u.buffer().empty());
+        }
+
+        {
+            boost::system::result<url_view> r = parse_uri( s );
+            url_view u = *r;
+            BOOST_TEST(!u.buffer().empty());
+        }
+    }
+
+    {
+        url_view u( "https://user:pass@example.com:443/path/to/my%2dfile.txt?id=42&name=John%20Doe+Jingleheimer%2DSchmidt#page%20anchor" );
+        assert(u.scheme() == "https");
+        assert(u.authority().buffer() == "user:pass@example.com:443");
+        assert(u.userinfo() == "user:pass");
+        assert(u.user() == "user");
+        assert(u.password() == "pass");
+        assert(u.host() == "example.com");
+        assert(u.port() == "443");
+        assert(u.path() == "/path/to/my-file.txt");
+        assert(u.query() == "id=42&name=John Doe+Jingleheimer-Schmidt");
+        assert(u.fragment() == "page anchor");
+    }
+
+    {
+        url_view u( "https://user:pass@example.com:443/path/to/my%2dfile.txt?id=42&name=John%20Doe+Jingleheimer%2DSchmidt#page%20anchor" );
+        for (auto seg: u.segments())
+            std::cout << seg << "\n";
+        std::cout << "\n";
+
+        for (auto param: u.params())
+            std::cout << param.key << ": " << param.value << "\n";
+        std::cout << "\n";
+    }
+
+    {
+        url_view u( "https://user:pass@example.com:443/path/to/my%2dfile.txt?id=42&name=John%20Doe+Jingleheimer%2DSchmidt#page%20anchor" );
+        std::string h = u.host();
+        assert(h == "example.com");
+    }
+
+    {
+        url_view u( "https://user:pass@example.com:443/path/to/my%2dfile.txt?id=42&name=John%20Doe+Jingleheimer%2DSchmidt#page%20anchor" );
+        std::string h2 = "host: ";
+        u.host(string_token::append_to(h2));
+        assert(h2 == "host: example.com");
+    }
+
+    {
+        url_view u = parse_uri( "http://www.example.com" ).value();
+        assert(u.fragment().empty());
+        assert(!u.has_fragment());
+    }
+
+    {
+        url_view u = parse_uri( "http://www.example.com/#" ).value();
+        assert(u.fragment().empty());
+        assert(u.has_fragment());
+    }
+
+    {
+        url_view u( "https://user:pass@example.com:443/path/to/my%2dfile.txt?id=42&name=John%20Doe+Jingleheimer%2DSchmidt#page%20anchor" );
+        std::cout <<
+            "url       : " << u                     << "\n"
+            "scheme    : " << u.scheme()            << "\n"
+            "authority : " << u.encoded_authority() << "\n"
+            "userinfo  : " << u.encoded_userinfo()  << "\n"
+            "user      : " << u.encoded_user()      << "\n"
+            "password  : " << u.encoded_password()  << "\n"
+            "host      : " << u.encoded_host()      << "\n"
+            "port      : " << u.port()              << "\n"
+            "path      : " << u.encoded_path()      << "\n"
+            "query     : " << u.encoded_query()     << "\n"
+            "fragment  : " << u.encoded_fragment()  << "\n";
+    }
+
+    {
+        decode_view dv("id=42&name=John%20Doe%20Jingleheimer%2DSchmidt");
+        std::cout << dv << "\n";
+    }
+
+    {
+        url u1 = parse_uri( "https://www.example.com" ).value();
+        url u2 = parse_uri( "https://boost.org" ).value();
+        u1.set_host(u2.host());
+        BOOST_TEST(u1.host() == u2.host());
+    }
+
+    {
+        url_view u( "https://user:pass@example.com:443/path/to/my%2dfile.txt?id=42&name=John%20Doe+Jingleheimer%2DSchmidt#page%20anchor" );
+        boost::filesystem::path p;
+        for (auto seg: u.segments())
+            p.append(seg.begin(), seg.end());
+        std::cout << "path: " << p << "\n";
+    }
+
+    {
+        auto match = [](
+            std::vector<std::string> const& route,
+            url_view u)
+        {
+            auto segs = u.segments();
+            if (route.size() != segs.size())
+                return false;
+            return std::equal(
+                route.begin(),
+                route.end(),
+                segs.begin());
+        };
+        boost::ignore_unused(match);
+    }
+
+    {
+        url_view u( "https://www.example.com/community/reviews.html" );
+        auto handle_route = [](
+            std::vector<std::string> const&,
+            url_view)
+        {
+        };
+
+        auto match = [](
+            std::vector<std::string> const& route,
+            url_view u)
+        {
+            auto segs = u.segments();
+            if (route.size() != segs.size())
+                return false;
+            return std::equal(
+                route.begin(),
+                route.end(),
+                segs.begin());
+        };
+
+        std::vector<std::string> route =
+            {"community", "reviews.html"};
+        if (match(route, u))
+        {
+            handle_route(route, u);
+        }
+    }
+
+    {
+        url_view u( "https://www.example.com/path/to/file.txt" );
+        segments_encoded_view segs = u.encoded_segments();
+        for( auto v : segs )
+        {
+            std::cout << v << "\n";
+        }
+    }
+
+    {
+        url_view u( "https://www.example.com/path/to/my%2dfile.txt" );
+        segments_encoded_view segs2 = u.encoded_segments();
+        for( pct_string_view v : segs2 )
+        {
+            decode_view dv2 = *v;
+            std::cout << dv2 << "\n";
+        }
+    }
+
+    {
+        url_view u( "https://www.example.com/path/to/file.txt?id=42&name=John%20Doe" );
+        params_encoded_view params_ref = u.encoded_params();
+
+        for( auto v : params_ref )
+        {
+            decode_view dk(v.key);
+            decode_view dv3(v.value);
+            std::cout <<
+                "key = " << dk <<
+                ", value = " << dv3 << "\n";
+        }
+    }
+
+    {
+        boost::core::string_view s = "https://www.example.com";
+        url u = parse_uri( s ).value();
+        BOOST_TEST(!u.buffer().empty());
+    }
+
+    {
+        boost::core::string_view s = "https://www.example.com";
+        static_url<1024> u = parse_uri( s ).value();
+        BOOST_TEST(!u.buffer().empty());
+    }
+
+    {
+        url u = parse_uri( "https://www.example.com" ).value();
+        u.set_scheme( "https" );
+        BOOST_TEST(u.scheme() == "https");
+    }
+
+    {
+        url u = parse_uri( "https://www.example.com" ).value();
+        u.set_scheme_id( scheme::https ); // equivalent to u.set_scheme( "https" );
+        BOOST_TEST(u.scheme() == "https");
+    }
+
+    {
+        url u = parse_uri( "https://user:pass@example.com:443" ).value();
+        u.set_host_ipv4( ipv4_address( "192.168.0.1" ) )
+            .set_port_number( 8080 )
+            .remove_userinfo();
+        std::cout << u << "\n";
+    }
+
+    {
+        url u = parse_uri( "http://www.example.com/?name=John" ).value();
+        params_ref p = u.params();
+        p.replace(p.find("name"), {"name", "John Doe"});
+        std::cout << u << "\n";
+    }
+
+    // I have spent a lot of time on this and have no
+    // idea how to fix this bug in GCC 4.8 and GCC 5.0
+    // without help from the pros.
+#if !BOOST_WORKAROUND( BOOST_GCC_VERSION, < 60000 )
+    {
+        url u = format("{}://{}:{}/rfc/{}", "https", "www.ietf.org", 80, "rfc2396.txt");
+        assert(u.buffer() == "https://www.ietf.org:80/rfc/rfc2396.txt");
+    }
+
+    {
+        url u = format("https://{}/{}", "www.boost.org", "Hello world!");
+        assert(u.buffer() == "https://www.boost.org/Hello%20world!");
+    }
+
+    {
+        url u = format("{}:{}", "mailto", "someone@example.com");
+        assert(u.buffer() == "mailto:someone@example.com");
+        assert(u.scheme() == "mailto");
+        assert(u.path() == "someone@example.com");
+    }
+
+    {
+        url u = format("{}{}", "mailto:", "someone@example.com");
+        assert(u.buffer() == "mailto%3Asomeone@example.com");
+        assert(!u.has_scheme());
+        assert(u.path() == "mailto:someone@example.com");
+        assert(u.encoded_path() == "mailto%3Asomeone@example.com");
+    }
+
+    {
+        static_url<50> u;
+        format_to(u, "{}://{}:{}/rfc/{}", "https", "www.ietf.org", 80, "rfc2396.txt");
+        assert(u.buffer() == "https://www.ietf.org:80/rfc/rfc2396.txt");
+    }
+
+    {
+        url u = format("{0}://{2}:{1}/{3}{4}{3}", "https", 80, "www.ietf.org", "abra", "cad");
+        assert(u.buffer() == "https://www.ietf.org:80/abracadabra");
+    }
+
+    {
+        url u = format("https://example.com/~{username}", arg("username", "mark"));
+        assert(u.buffer() == "https://example.com/~mark");
+    }
+
+    {
+        boost::core::string_view fmt = "{scheme}://{host}:{port}/{dir}/{file}";
+        url u = format(fmt, {{"scheme", "https"}, {"port", 80}, {"host", "example.com"}, {"dir", "path/to"}, {"file", "file.txt"}});
+        assert(u.buffer() == "https://example.com:80/path/to/file.txt");
+    }
+#endif
 }
 
 // tag::snippet_using_static_pool_1[]
 // VFALCO NOPE
 // end::snippet_using_static_pool_1[]
+
+namespace {
+
+class cout_redirect
+{
+    std::ostream& os_;
+    std::streambuf* old_;
+
+public:
+    cout_redirect(
+        std::ostream& os,
+        std::streambuf* newbuf) noexcept
+        : os_(os)
+        , old_(os.rdbuf(newbuf))
+    {
+    }
+
+    ~cout_redirect()
+    {
+        os_.rdbuf(old_);
+    }
+};
+
+void
+run_silent(void (*fn)())
+{
+    std::ostringstream oss;
+    cout_redirect guard(std::cout, oss.rdbuf());
+    boost::ignore_unused(guard);
+    fn();
+}
+
+} // namespace
 
 namespace boost {
 namespace urls {
@@ -1828,24 +2618,26 @@ public:
     void
     run()
     {
-        ignore_unused(&using_url_views);
-        ignore_unused(&using_urls);
-        // parsing_urls();
+        run_silent(&using_url_views);
+        run_silent(&using_urls);
+        run_silent(&parsing_urls);
         parsing_components();
         formatting_components();
-        ignore_unused(&parsing_scheme);
-        ignore_unused(&parsing_authority);
-        ignore_unused(&parsing_path);
-        ignore_unused(&parsing_query);
-        ignore_unused(&parsing_fragment);
-        ignore_unused(&using_modifying);
-        ignore_unused(&grammar_parse);
-        ignore_unused(&grammar_customization);
-        ignore_unused(&modifying_path);
+        run_silent(&parsing_scheme);
+        parsing_compound_scheme();
+        run_silent(&parsing_authority);
+        run_silent(&parsing_path);
+        run_silent(&parsing_query);
+        run_silent(&parsing_fragment);
+        run_silent(&using_modifying);
+        run_silent(&grammar_parse);
+        run_silent(&grammar_customization);
+        run_silent(&modifying_path);
         normalizing();
         decode_with_token();
         encoding();
-        ignore_unused(&readme_snippets);
+        decoding_helpers();
+        run_silent(&readme_snippets);
 
         BOOST_TEST_PASS();
     }

@@ -126,7 +126,7 @@ int main()
         result<char const*, int> r( "test" );
         result<std::string, X> r2 = r;
 
-        BOOST_TEST( r2 ) && BOOST_TEST_EQ( *r2, std::string( "test" ) );
+        BOOST_TEST( r2 ) && BOOST_TEST_EQ( r2.unsafe_value(), std::string( "test" ) );
         BOOST_TEST_EQ( X::instances, 0 );
     }
 
@@ -136,7 +136,7 @@ int main()
         result<char const*, int> const r( "test" );
         result<std::string, X> r2 = r;
 
-        BOOST_TEST( r2 ) && BOOST_TEST_EQ( *r2, std::string( "test" ) );
+        BOOST_TEST( r2 ) && BOOST_TEST_EQ( r2.unsafe_value(), std::string( "test" ) );
         BOOST_TEST_EQ( X::instances, 0 );
     }
 
@@ -145,7 +145,7 @@ int main()
     {
         result<std::string, X> r2 = result<char const*, int>( "test" );
 
-        BOOST_TEST( r2 ) && BOOST_TEST_EQ( *r2, std::string( "test" ) );
+        BOOST_TEST( r2 ) && BOOST_TEST_EQ( r2.unsafe_value(), std::string( "test" ) );
         BOOST_TEST_EQ( X::instances, 0 );
     }
 

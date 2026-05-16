@@ -67,16 +67,5 @@ int main()
                            < allocator_argument_tester<ErasedTypePrefix, 0>
                            , propagation_test_allocator<float, 0>
                            >::value ));
-   BOOST_CONTAINER_STATIC_ASSERT((  true == constructible_with_allocator_prefix
-                           < allocator_argument_tester<ConstructiblePrefix, 0> >::value ));
-
-   BOOST_CONTAINER_STATIC_ASSERT((  true == constructible_with_allocator_suffix
-                           < allocator_argument_tester<ConstructibleSuffix, 0> >::value ));
-
-   BOOST_CONTAINER_STATIC_ASSERT((  true == constructible_with_allocator_prefix
-                           < allocator_argument_tester<ErasedTypePrefix, 0> >::value ));
-
-   BOOST_CONTAINER_STATIC_ASSERT((  true == constructible_with_allocator_suffix
-                           < allocator_argument_tester<ErasedTypeSuffix, 0> >::value ));
    return 0;
 }

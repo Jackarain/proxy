@@ -5,7 +5,8 @@
 Let's start with an example taken from the C++ Template Metaprogramming
 book:
 
-....
+[source,cpp]
+----
 class player : public state_machine<player>
 { 
   // The list of FSM states enum states { Empty, Open, Stopped, Playing, Paused , initial_state = Empty }; 
@@ -44,7 +45,7 @@ class player : public state_machine<player>
     return state; 
   }
 };                        
-....
+----
 
 This example is the foundation for the idea driving MSM: a descriptive
 and expressive language based on a transition table with as little

@@ -43,7 +43,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -85,7 +85,7 @@ jobs:
           cd ..
           rm -rf __build
 
-      - name: Run modules tests wihtout 'import std;'
+      - name: Run modules tests without 'import std;'
         if: ${{matrix.toolset == 'clang-19'}}
         run: |
           cd ../boost-root/libs/any
@@ -165,7 +165,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -218,7 +218,7 @@ jobs:
           cd ..
           rm -rf build_module
 
-      - name: Run modules tests wihtout 'import std;'
+      - name: Run modules tests without 'import std;'
         if: ${{matrix.toolset == 'msvc-14.3'}}
         shell: cmd
         run: |

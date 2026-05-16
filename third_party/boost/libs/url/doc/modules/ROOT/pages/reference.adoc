@@ -118,6 +118,10 @@ cpp:boost::urls::encode[encode]
 
 cpp:boost::urls::encoded_size[encoded_size]
 
+cpp:boost::urls::decode[decode]
+
+cpp:boost::urls::decoded_size[decoded_size]
+
 cpp:boost::urls::make_pct_string_view[make_pct_string_view]
 
 **Types**

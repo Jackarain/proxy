@@ -20,7 +20,7 @@
 #include <vector>
 
 using namespace boost::mqtt5;
-using byte_citer = detail::byte_citer;
+using byte_citer = decoders::byte_citer;
 
 BOOST_AUTO_TEST_SUITE(serialization/*, *boost::unit_test::disabled()*/)
 

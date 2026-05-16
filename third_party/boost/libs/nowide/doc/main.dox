@@ -164,7 +164,7 @@ If that happens unexpectatly watch the configuration check output for anything l
 This means your compiler doesn't use C++11 (or higher), e.g. because it defaults to C++03.
 You can pass `cxxstd=11` to `b2` to build in C++11 mode.
 
-Experimental support for building with the Boost CMake build system is also available.   
+Support for building with the Boost CMake build system is also available.   
 For that run e.g. `cmake -DBOOST_INCLUDE_LIBRARIES=nowide <path-to-boost-root> <other options>`.
 
 \subsection using_standard Standard Features
@@ -429,7 +429,10 @@ The meaning of a locale under POSIX and Windows platforms is different and has v
 
 \subsection standalone_version Standalone Version
 
-It is possible to use Nowide library without having the huge Boost project as a dependency. There is a standalone version that has all the functionality in the \c nowide namespace instead of \c boost::nowide. The example above would look like
+It is possible to use the Nowide library without having the huge Boost project as a dependency.
+There is a standalone version that has all the functionality in the \c nowide namespace instead of \c boost::nowide.
+
+The example above would look like this:
 
 \code
 #include <nowide/args.hpp>
@@ -462,6 +465,9 @@ int main(int argc,char **argv)
 }
 \endcode
 
+The standalone version only supports building with CMake.
+The CMake options are prefixed with `NOWIDE_`, i.e. `-DNOWIDE_INSTALL=ON/OFF` and `-DNOWIDE_WERROR=ON/OFF`.
+
 \subsection sources Sources and Downloads
 
 The upstream sources can be found at GitHub: <a href="https://github.com/boostorg/nowide">https://github.com/boostorg/nowide</a>
@@ -469,5 +475,10 @@ The upstream sources can be found at GitHub: <a href="https://github.com/boostor
 You can download the latest sources there:
 
 - Standard Version: <a href="https://github.com/boostorg/nowide/archive/master.zip">nowide-master.zip</a>
+- Standalone Version: <a href="https://github.com/boostorg/nowide/archive/standalone.zip">nowide-standalone.zip</a> (automatically populated from the develop branch)
+
+See the <a href="https://github.com/boostorg/nowide/releases">Releases section on GitHub</a> for Downloads of tagged releases.
+Both the standard (Boost) and standalone sources can be downloaded there along with the HTML documentation in a separate archive.
+Tags for the standalone version are prefixed with "standalone-" so they can be fetched too.
 
 */

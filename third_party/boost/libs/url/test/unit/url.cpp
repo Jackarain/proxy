@@ -144,6 +144,14 @@ struct url_test
             BOOST_TEST_EQ(u2.buffer(), "x://y/z?q#f");
         }
 
+        // self-move assignment preserves state
+        {
+            url u("http://example.com");
+            auto& ref = u;
+            u = std::move(ref);
+            BOOST_TEST_EQ(u.buffer(), "http://example.com");
+        }
+
         // url(core::string_view)
         {
             url u("http://example.com/path/to/file.txt?#");
@@ -1210,6 +1218,80 @@ struct url_test
             check("HtTp://cppalliance.org/%2F",
                   "http://cppalliance.org/%2F");
 
+        }
+
+        // issue 985
+        // Authority ambiguity: ".." segments
+        // canceling regular segments can expose
+        // "//" without any dot prefix, producing
+        // a path that round-trips as an authority.
+        {
+            auto check_roundtrip = [](
+                core::string_view input)
+            {
+                url original = parse_uri_reference(
+                    input).value();
+                url normalized(original);
+                normalized.normalize();
+                auto r = parse_uri_reference(
+                    normalized.buffer());
+                BOOST_TEST(r.has_value());
+                if (!r.has_value())
+                {
+                    return;
+                }
+                url_view reparsed = r.value();
+                BOOST_TEST_EQ(
+                    original.has_authority(),
+                    reparsed.has_authority());
+                BOOST_TEST_EQ(
+                    normalized.encoded_path(),
+                    reparsed.encoded_path());
+                BOOST_TEST_EQ(
+                    original.is_path_absolute(),
+                    normalized.is_path_absolute());
+            };
+            // ".." cancels segments, exposing "//"
+            check_roundtrip("scheme:/a/..//evil");
+            check_roundtrip("scheme:/a/b/../..//evil");
+            check_roundtrip("scheme:/a/..//");
+            check_roundtrip("scheme:/a/..//path");
+            // ".." partially cancels
+            check_roundtrip("scheme:/a/./b/..//evil");
+            // relative path with ".."
+            check_roundtrip("a/..//evil");
+            check_roundtrip("a/b/../..//evil");
+            // dot prefix hiding "//"
+            check_roundtrip("scheme:/.//evil");
+            check_roundtrip(".//evil");
+            check_roundtrip("././/evil");
+            // issue 985 (scheme ambiguity variant):
+            // ".." cancels segments, exposing ":" in
+            // the first segment of a schemeless URL.
+            // All colons must be encoded, not just the
+            // first, because segment-nz-nc does not
+            // allow ":" at all.
+            check_roundtrip("a/../b:c");
+            check_roundtrip("a/b/../../c:d");
+            check_roundtrip("./a/../b:c");
+            // multiple colons in the exposed segment
+            check_roundtrip("a/../b:c:d");
+            check_roundtrip("a/../b:c:d:e");
+            // issue 931: normalization can produce a
+            // LONGER string. "a/../::::" is 10 bytes,
+            // but dot removal exposes "::::" as the
+            // first segment, and encoding all colons
+            // produces "%3A%3A%3A%3A" (12 bytes).
+            check_roundtrip("a/../::::");
+            check_roundtrip("a/../:b:c:d:e:f");
+            // ".." cancels colon segment AND exposes
+            // "//": colon encoding is wasted (segment
+            // disappears), but path shield is created
+            check_roundtrip("./b:c/..//x");
+            // ".." cancels non-colon segment, colon
+            // segment survives as first segment with
+            // "//" deeper in path
+            check_roundtrip("./b:c/d/..//x");
         }
 
         // normalize path

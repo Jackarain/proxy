@@ -1,5 +1,5 @@
 /* Unit testing for outcomes
-(C) 2013-2025 Niall Douglas <http://www.nedproductions.biz/> (1 commit)
+(C) 2013-2026 Niall Douglas <http://www.nedproductions.biz/> (1 commit)
 
 
 Boost Software License - Version 1.0 - August 17th, 2003
@@ -27,6 +27,8 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
+#define BOOST_OUTCOME_SYSTEM_ERROR2_FATAL(msg) abort()
+
 #include <boost/outcome/experimental/status_result.hpp>
 
 #include <boost/test/unit_test.hpp>
@@ -38,10 +40,14 @@ namespace issues255
 {
   namespace outcome_e = BOOST_OUTCOME_V2_NAMESPACE::experimental;
 
-  static_assert(outcome_e::traits::is_move_bitcopying<outcome_e::error>::value, "outcome_e::error is not move bitcopying!");
+  static_assert(outcome_e::traits::is_move_bitcopying<outcome_e::error>::value,
+                "outcome_e::error is not move bitcopying!");
 
-  constexpr outcome_e::status_result<int> test() { return outcome_e::success(42); }
-}
+  constexpr outcome_e::status_result<int> test()
+  {
+    return outcome_e::success(42);
+  }
+}  // namespace issues255
 
 BOOST_OUTCOME_AUTO_TEST_CASE(issues_0255_test, "status_result<int> not usable from constexpr in C++ 20")
 {

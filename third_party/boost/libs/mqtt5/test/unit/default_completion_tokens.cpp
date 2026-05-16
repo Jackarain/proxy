@@ -9,6 +9,9 @@
 
 #ifdef BOOST_ASIO_HAS_CO_AWAIT
 
+#include "test_common/test_broker.hpp"
+#include "test_common/extra_deps.hpp"
+
 #include <boost/mqtt5.hpp>
 
 #include <boost/asio/io_context.hpp>
@@ -18,8 +21,6 @@
 #include <string>
 #include <variant> // std::monostate
 #include <vector>
-
-#include "test_common/extra_deps.hpp"
 
 namespace boost::mqtt5::test {
 

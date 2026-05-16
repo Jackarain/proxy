@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 
 namespace boost {
@@ -88,6 +89,9 @@ public:
 
         BOOST_TEST(ci_equal{}("abc", "ABC"));
         BOOST_TEST(! ci_equal{}("xz", "abc"));
+
+        // slow case
+        BOOST_TEST(ci_is_equal("/x", "/X"));
     }
 
     void
@@ -100,6 +104,18 @@ public:
 
         BOOST_TEST(ci_less{}("a", "aa"));
         BOOST_TEST(! ci_less{}("xy", "z"));
+
+        // ci_less::operator() must return bool,
+        // not std::size_t
+        static_assert(std::is_same<
+            decltype(ci_less{}("a", "b")),
+            bool>::value, "");
+
+        // ci_is_less with mismatched lengths
+        // (OOB read regression)
+        BOOST_TEST(ci_is_less("ab", "abc"));
+        BOOST_TEST(! ci_is_less("abc", "ab"));
+        BOOST_TEST(! ci_is_less("ABC", "ab"));
     }
 
     void

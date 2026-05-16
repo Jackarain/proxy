@@ -55,7 +55,7 @@ namespace assign_detail
         typedef std::unique_ptr<impl_type> release_type;
 #else
         typedef std::auto_ptr<impl_type>   release_type;
-#endif	
+#endif
         mutable impl_type                  values_;
 
     public:
@@ -104,14 +104,14 @@ namespace assign_detail
         std::unique_ptr<PtrContainer>
 #else
         std::auto_ptr<PtrContainer>
-#endif	
-		convert( const PtrContainer* c ) const
+#endif
+        convert( const PtrContainer* c ) const
         {
 #if defined(BOOST_NO_AUTO_PTR)
             std::unique_ptr<PtrContainer> res( new PtrContainer() );
 #else
             std::auto_ptr<PtrContainer> res( new PtrContainer() );
-#endif	
+#endif
             while( !empty() )
                 res->insert( res->end(),
                              values_.pop_back().release() );
@@ -123,7 +123,7 @@ namespace assign_detail
         std::unique_ptr<PtrContainer>
 #else
         std::auto_ptr<PtrContainer>
-#endif	
+#endif
         to_container( const PtrContainer& c ) const
         {
             return convert( &c );

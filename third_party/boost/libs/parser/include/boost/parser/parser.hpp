@@ -1020,7 +1020,7 @@ namespace boost { namespace parser {
             bool Callable = is_detected_v<callable, T const &, Context const &>>
         struct resolve_impl
         {
-            static auto call(Context const &, T const & x) { return x; }
+            static auto& call(Context const &, T const & x) { return x; }
         };
 
         template<typename Context, typename T>
@@ -1033,7 +1033,7 @@ namespace boost { namespace parser {
         };
 
         template<typename Context, typename T>
-        auto resolve(Context const & context, T const & x)
+        decltype(auto) resolve(Context const & context, T const & x)
         {
             return resolve_impl<Context, T>::call(context, x);
         }
@@ -2168,7 +2168,10 @@ namespace boost { namespace parser {
         {
             if (!gen_attrs || !x)
                 return;
-            c.insert(c.end(), x->begin(), x->end());
+            c.insert(c.end(),
+                std::make_move_iterator(x->begin()),
+                std::make_move_iterator(x->end())
+                );
         }
 
         template<typename Container, typename T>
@@ -2851,7 +2854,7 @@ namespace boost { namespace parser {
                                   last,
                                   parse_error<I>(first, "end of input")) ==
                                   error_handler_result::rethrow) {
-                    throw;
+                    throw parse_error<I>(first, "end of input");
                 }
                 if constexpr (std::is_same_v<T, bool>)
                     retval = false;
@@ -3177,6 +3180,7 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this,
                 first,
@@ -3185,6 +3189,7 @@ namespace boost { namespace parser {
                 detail::in_apply_parser(flags) ? detail::disable_trace(flags)
                                                : flags,
                 retval);
+#endif
 
             if constexpr (detail::is_optional_v<Attribute>) {
                 detail::optional_type<Attribute> attr;
@@ -3207,18 +3212,44 @@ namespace boost { namespace parser {
 
                 int64_t count = 0;
 
-                for (int64_t end = detail::resolve(context, min_); count != end;
-                     ++count) {
+                auto const iteration = [&](auto prev_first, auto on_fail) {
+                    if constexpr (!detail::is_nope_v<DelimiterParser>) {
+                        if (count) {
+                            detail::skip(first, last, skip, flags);
+                            delimiter_parser_.call(
+                                first,
+                                last,
+                                context,
+                                skip,
+                                detail::disable_attrs(flags),
+                                success);
+                            if (!success) {
+                                on_fail(prev_first);
+                                return false;
+                            }
+                        }
+                    }
+
                     detail::skip(first, last, skip, flags);
                     attr_t attr{};
                     parser_.call(
                         first, last, context, skip, flags, success, attr);
                     if (!success) {
-                        detail::assign(retval, Attribute());
-                        return;
+                        on_fail(prev_first);
+                        return false;
                     }
                     detail::move_back(
                         retval, std::move(attr), detail::gen_attrs(flags));
+                    return true;
+                };
+
+                for (int64_t end = detail::resolve(context, min_); count != end;
+                     ++count) {
+                    if (!iteration(first, [&](auto prev_first) {
+                            detail::assign(retval, Attribute());
+                        })) {
+                        return;
+                    }
                 }
 
                 int64_t const end = detail::resolve(context, max_);
@@ -3229,37 +3260,12 @@ namespace boost { namespace parser {
                     !detail::is_unconditional_eps<Parser>{} || end < Inf);
 
                 for (; count != end; ++count) {
-                    auto const prev_first = first;
-                    // This is only ever used in delimited_parser, which
-                    // always has a min=1; we therefore know we're after a
-                    // previous element when this executes.
-                    if constexpr (!detail::is_nope_v<DelimiterParser>) {
-                        detail::skip(first, last, skip, flags);
-                        delimiter_parser_.call(
-                            first,
-                            last,
-                            context,
-                            skip,
-                            detail::disable_attrs(flags),
-                            success);
-                        if (!success) {
+                    if (!iteration(first, [&](auto prev_first) {
                             success = true;
                             first = prev_first;
-                            break;
-                        }
+                        })) {
+                        return;
                     }
-
-                    detail::skip(first, last, skip, flags);
-                    attr_t attr{};
-                    parser_.call(
-                        first, last, context, skip, flags, success, attr);
-                    if (!success) {
-                        success = true;
-                        first = prev_first;
-                        break;
-                    }
-                    detail::move_back(
-                        retval, std::move(attr), detail::gen_attrs(flags));
                 }
             }
         }
@@ -3341,8 +3347,10 @@ namespace boost { namespace parser {
             Attribute & retval) const
         {
             //[ opt_parser_trace
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
             //]
 
             //[ opt_parser_skip
@@ -3505,8 +3513,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             use_parser_t<Iter, Sentinel, Context, SkipParser> const use_parser{
                 first, last, context, skip, flags, success};
@@ -3529,7 +3539,9 @@ namespace boost { namespace parser {
                 else
                     use_parser.first_ = prev_first;
             };
-            detail::hl::for_each(parsers_, try_parser); // TODO: -> fold-expr
+            std::apply([&try_parser](auto&&... args) {
+                ((try_parser(args)), ...);
+            }, parsers_);
 
             if (!done)
                 success = false;
@@ -3627,8 +3639,10 @@ namespace boost { namespace parser {
                 decltype(detail::hl::transform(parsers_, use_parser));
             result_t retval{};
 
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first_, last, context, flags, retval);
+#endif
 
             call_impl(
                 first,
@@ -3663,8 +3677,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first_, last, context, flags, retval);
+#endif
 
             Iter first = first_;
             use_parser_t<Iter, Sentinel, Context, SkipParser> const use_parser{
@@ -3711,7 +3727,7 @@ namespace boost { namespace parser {
                     if constexpr (detail::is_struct_compatible_v<
                                       Attribute,
                                       result_t>) {
-                        detail::assign(retval, temp_retval);
+                        detail::assign(retval, std::move(temp_retval));
                     } else {
                         detail::assign(
                             retval,
@@ -4290,12 +4306,13 @@ namespace boost { namespace parser {
         {
             Iter first = first_;
 
-            auto temp_result =
-                make_temp_result(first, last, context, skip, flags, success);
+            using temp_result_t =
+                decltype(make_temp_result(first, last, context, skip, flags, success));
 
-            std::decay_t<decltype(parser::get(temp_result, llong<0>{}))>
+            std::decay_t<decltype(parser::get(std::declval<temp_result_t>(), llong<0>{}))>
                 retval{};
 
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this,
                 first_,
@@ -4304,10 +4321,11 @@ namespace boost { namespace parser {
                 detail::in_apply_parser(flags) ? detail::disable_trace(flags)
                                                : flags,
                 retval);
+#endif
 
-            std::decay_t<decltype(parser::get(temp_result, llong<1>{}))>
+            std::decay_t<decltype(parser::get(std::declval<temp_result_t>(), llong<1>{}))>
                 indices;
-            std::decay_t<decltype(parser::get(temp_result, llong<2>{}))>
+            std::decay_t<decltype(parser::get(std::declval<temp_result_t>(), llong<2>{}))>
                 merged;
             call_impl(
                 first,
@@ -4326,7 +4344,7 @@ namespace boost { namespace parser {
             // A 1-tuple is converted to a scalar.
             if constexpr (detail::hl::size(retval) == llong<1>{}) {
                 using namespace literals;
-                return parser::get(retval, 0_c);
+                return parser::get(std::move(retval), 0_c);
             } else {
                 return retval;
             }
@@ -4347,6 +4365,7 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this,
                 first_,
@@ -4355,16 +4374,17 @@ namespace boost { namespace parser {
                 detail::in_apply_parser(flags) ? detail::disable_trace(flags)
                                                : flags,
                 retval);
+#endif
 
             Iter first = first_;
 
-            auto temp_result =
-                make_temp_result(first, last, context, skip, flags, success);
+            using temp_result_t =
+                decltype(make_temp_result(first, last, context, skip, flags, success));
             using temp_result_attr_t =
-                std::decay_t<decltype(parser::get(temp_result, llong<0>{}))>;
-            std::decay_t<decltype(parser::get(temp_result, llong<1>{}))>
+                std::decay_t<decltype(parser::get(std::declval<temp_result_t>(), llong<0>{}))>;
+            std::decay_t<decltype(parser::get(std::declval<temp_result_t>(), llong<1>{}))>
                 indices;
-            std::decay_t<decltype(parser::get(temp_result, llong<2>{}))> merged;
+            std::decay_t<decltype(parser::get(std::declval<temp_result_t>(), llong<2>{}))> merged;
 
             auto max_ = [](auto result, auto x) {
                 if constexpr (decltype(result)::value < decltype(x)::value) {
@@ -4562,7 +4582,7 @@ namespace boost { namespace parser {
                     using just_out = detail::remove_cv_ref_t<decltype(out)>;
                     if constexpr (detail::is_nope_v<attr_t>) {
                         // nothing to do
-                    } if constexpr (
+                    } else if constexpr (
                         (!out_container ||
                          !std::is_same_v<just_x, just_out>) &&
                         std::is_assignable_v<just_out &, just_x &&> &&
@@ -4578,7 +4598,9 @@ namespace boost { namespace parser {
 
             auto const parsers_and_indices =
                 detail::hl::zip(parsers_, indices, merged, backtracking{});
-            detail::hl::for_each(parsers_and_indices, use_parser);
+            std::apply([&use_parser](auto&&... args) {
+                ((use_parser(args)), ...);
+            }, parsers_and_indices);
         }
 
         template<bool AllowBacktracking, typename Parser>
@@ -4699,8 +4721,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             auto const initial_first = first;
             auto attr = parser_.call(
@@ -4765,8 +4789,10 @@ namespace boost { namespace parser {
             detail::flags flags,
             bool & success) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, detail::global_nope);
+#endif
             auto attr =
                 parser_.call(first, last, context, skip, flags, success);
             if (success && detail::gen_attrs(flags))
@@ -4790,8 +4816,11 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
+
             auto attr =
                 parser_.call(first, last, context, skip, flags, success);
             if (success && detail::gen_attrs(flags))
@@ -4818,8 +4847,10 @@ namespace boost { namespace parser {
             detail::flags flags,
             bool & success) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, detail::global_nope);
+#endif
 
             parser_.call(
                 first,
@@ -4846,8 +4877,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             parser_.call(
                 first,
@@ -4897,8 +4930,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             auto const initial_first = first;
             parser_.call(
@@ -4962,8 +4997,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             auto const initial_first = first;
             parser_.call(
@@ -5038,8 +5075,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             parser_.call(
                 first,
@@ -5098,8 +5137,10 @@ namespace boost { namespace parser {
             auto context = context_;
             ++context.no_case_depth_;
 
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             parser_.call(first, last, context, skip, flags, success, retval);
         }
@@ -5145,8 +5186,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             if constexpr (detail::is_nope_v<SkipParser>) {
                 parser_.call(
@@ -5209,8 +5252,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             auto first_copy = first;
             parser_.call(
@@ -5376,8 +5421,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             auto [trie, _0] = detail::get_trie(context, ref());
             auto const lookup = context.no_case_depth_
@@ -5451,8 +5498,10 @@ namespace boost { namespace parser {
             tag_type * const tag_ptr = nullptr;
             auto const rule_context = detail::make_rule_context(
                 context, tag_ptr, retval, locals, params);
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, rule_context, flags, retval);
+#endif
 
             bool dont_assign = false;
             if constexpr (in_recursion) {
@@ -5481,7 +5530,7 @@ namespace boost { namespace parser {
                     dont_assign);
                 if (success && !dont_assign) {
                     if constexpr (!detail::is_nope_v<decltype(attr)>)
-                        detail::assign(retval, attr);
+                        detail::assign(retval, std::move(attr));
                 }
             }
 
@@ -5545,11 +5594,14 @@ namespace boost { namespace parser {
                 locals_type locals = detail::make_locals<locals_type>(context);
                 auto params = detail::resolve_rule_params(context, params_);
                 tag_type * const tag_ptr = nullptr;
+                attr_type attr{};
                 auto const rule_context = detail::make_rule_context(
-                    context, tag_ptr, retval, locals, params);
+                    context, tag_ptr, attr, locals, params);
 
+#if BOOST_PARSER_DO_TRACE
                 [[maybe_unused]] auto _ = detail::scoped_trace(
                     *this, first, last, rule_context, flags, retval);
+#endif
 
                 bool dont_assign = false;
                 parse_rule(
@@ -5561,9 +5613,22 @@ namespace boost { namespace parser {
                     flags,
                     success,
                     dont_assign,
-                    retval);
-                if (!success || dont_assign)
-                    retval = Attribute_();
+                    attr);
+
+                if (dont_assign)
+                    return;
+
+                if (!success)
+                    attr = attr_type{};
+
+                if constexpr (detail::is_nope_v<decltype(attr)>) {
+                    return;
+                } else if constexpr (
+                    container<Attribute_> && container<attr_type>) {
+                    detail::move_back(retval, attr, detail::gen_attrs(flags));
+                } else {
+                    detail::assign(retval, std::move(attr));
+                }
             }
         }
 
@@ -6524,20 +6589,24 @@ namespace boost { namespace parser {
 
     /** Represents a `repeat_parser` as a directive
         (e.g. `repeat[other_parser]`). */
-    template<typename MinType, typename MaxType>
+    template<
+        typename MinType,
+        typename MaxType,
+        typename DelimiterParser = detail::nope>
     struct repeat_directive
     {
         template<typename Parser2>
         constexpr auto operator[](parser_interface<Parser2> rhs) const noexcept
         {
             using repeat_parser_type =
-                repeat_parser<Parser2, detail::nope, MinType, MaxType>;
+                repeat_parser<Parser2, DelimiterParser, MinType, MaxType>;
             return parser_interface{
-                repeat_parser_type{rhs.parser_, min_, max_}};
+                repeat_parser_type{rhs.parser_, min_, max_, delimiter_}};
         }
 
         MinType min_;
         MaxType max_;
+        DelimiterParser delimiter_;
     };
 
     /** Returns a `repeat_directive` that repeats exactly `n` times, and whose
@@ -6549,6 +6618,18 @@ namespace boost { namespace parser {
         return repeat_directive<T, T>{n, n};
     }
 
+    /** Returns a `repeat_directive` that repeats exactly `n` times, where the
+        items parsed are delimited by `DelimiterParser`.  The value returned
+        has an `operator[]` that returns a
+        `parser_interface<repeat_parser<P>>` from a given parser of type
+        `parser_interface<P>`. */
+    template<typename T, typename DelimiterParser>
+    inline repeat_directive<T, T, DelimiterParser>
+    repeat(T n, parser_interface<DelimiterParser> sep) noexcept
+    {
+        return repeat_directive<T, T, DelimiterParser>{n, n, sep.parser_};
+    }
+
     /** Returns a `repeat_directive` that repeats between `min_` and `max_`
         times, inclusive, and whose `operator[]` returns a
         `parser_interface<repeat_parser<P>>` from a given parser of type
@@ -6558,6 +6639,21 @@ namespace boost { namespace parser {
     repeat(MinType min_, MaxType max_) noexcept
     {
         return repeat_directive<MinType, MaxType>{min_, max_};
+    }
+
+    /** Returns a `repeat_directive` that repeats between `min_` and `max_`
+        times, inclusive, where the items parsed are delimited by
+        `DelimiterParser`.  The value returned has an `operator[]` that
+        returns a `parser_interface<repeat_parser<P>>` from a given parser of
+        type `parser_interface<P>`. */
+    template<typename MinType, typename MaxType, typename DelimiterParser>
+    inline repeat_directive<MinType, MaxType, DelimiterParser> repeat(
+        MinType min_,
+        MaxType max_,
+        parser_interface<DelimiterParser> sep) noexcept
+    {
+        return repeat_directive<MinType, MaxType, DelimiterParser>{
+            min_, max_, sep.parser_};
     }
 
     /** A directive that represents a `perm_parser`, where the items parsed
@@ -6726,8 +6822,10 @@ namespace boost { namespace parser {
             detail::flags flags,
             bool & success) const noexcept
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, detail::global_nope);
+#endif
             BOOST_PARSER_SUBRANGE const where(first, first);
             auto const predicate_context = detail::make_action_context(
                 context, detail::global_nope, where);
@@ -6754,8 +6852,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
             BOOST_PARSER_SUBRANGE const where(first, first);
             auto const predicate_context = detail::make_action_context(
                 context, detail::global_nope, where);
@@ -6805,8 +6905,10 @@ namespace boost { namespace parser {
             detail::flags flags,
             bool & success) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, detail::global_nope);
+#endif
             if (first != last)
                 success = false;
             return {};
@@ -6827,8 +6929,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
             if (first != last)
                 success = false;
         }
@@ -6857,8 +6961,10 @@ namespace boost { namespace parser {
             detail::flags flags,
             bool &) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, detail::global_nope);
+#endif
             return detail::resolve(context, attr_);
         }
 
@@ -6877,8 +6983,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute_ & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
             if (detail::gen_attrs(flags))
                 detail::assign_copy(retval, detail::resolve(context, attr_));
         }
@@ -6943,8 +7051,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             if (first == last) {
                 success = false;
@@ -7108,8 +7218,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             if (first == last) {
                 success = false;
@@ -7259,8 +7371,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             if (first == last) {
                 success = false;
@@ -7339,8 +7453,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             if (first == last) {
                 success = false;
@@ -7461,8 +7577,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             if (first == last) {
                 success = false;
@@ -7625,8 +7743,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             if (first == last) {
                 success = false;
@@ -7635,9 +7755,10 @@ namespace boost { namespace parser {
 
             auto const prev_first = first;
 
-            auto append = [&retval,
+            std::string temp;
+            auto append = [&temp,
                            gen_attrs = detail::gen_attrs(flags)](auto & ctx) {
-                detail::move_back(retval, _attr(ctx), gen_attrs);
+                detail::move_back(temp, _attr(ctx), gen_attrs);
             };
 
             auto quote_ch = [&]() {
@@ -7695,7 +7816,10 @@ namespace boost { namespace parser {
                 detail::disable_skip(flags),
                 success);
 
-            if (!success) {
+            if (success) {
+                if (detail::gen_attrs(flags))
+                    detail::assign(retval, std::move(temp));
+            } else {
                 retval = Attribute();
                 first = prev_first;
             }
@@ -7942,8 +8066,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             if (first == last) {
                 success = false;
@@ -8109,8 +8235,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
 
             auto compare =
                 [no_case = context.no_case_depth_](char32_t a, char32_t b) {
@@ -8198,8 +8326,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
             T attr = 0;
             auto const initial = first;
             success =
@@ -8339,8 +8469,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
             T attr = 0;
             auto const initial = first;
             success =
@@ -8454,8 +8586,10 @@ namespace boost { namespace parser {
             bool & success,
             Attribute & retval) const
         {
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
             T attr = 0;
             auto const initial = first;
             success = detail::numeric::parse_real(first, last, attr);
@@ -8521,9 +8655,9 @@ namespace boost { namespace parser {
     template<typename SwitchValue, typename OrParser>
     struct switch_parser
     {
-        switch_parser() {}
-        switch_parser(SwitchValue switch_value) : switch_value_(switch_value) {}
-        switch_parser(SwitchValue switch_value, OrParser or_parser) :
+        constexpr switch_parser() {}
+        constexpr switch_parser(SwitchValue switch_value) : switch_value_(switch_value) {}
+        constexpr switch_parser(SwitchValue switch_value, OrParser or_parser) :
             switch_value_(switch_value), or_parser_(or_parser)
         {}
 
@@ -8548,8 +8682,10 @@ namespace boost { namespace parser {
             using attr_t = decltype(or_parser_.call(
                 first, last, context, skip, flags, success));
             attr_t attr{};
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ =
                 detail::scoped_trace(*this, first, last, context, flags, attr);
+#endif
             attr = or_parser_.call(first, last, context, skip, flags, success);
             return attr;
         }
@@ -8574,8 +8710,10 @@ namespace boost { namespace parser {
                  "It looks like you tried to write switch_(val).  You need at "
                  "least one alternative, like: switch_(val)(value_1, "
                  "parser_1)(value_2, parser_2)..."));
+#if BOOST_PARSER_DO_TRACE
             [[maybe_unused]] auto _ = detail::scoped_trace(
                 *this, first, last, context, flags, retval);
+#endif
             or_parser_.call(first, last, context, skip, flags, success, retval);
         }
 
@@ -9034,8 +9172,13 @@ namespace boost { namespace parser {
                 "fill in attr above, using the attribute generated by parser. "
                 "However, parser does not generate an attribute.");
             if (trace_mode == trace::on) {
-                return reset = detail::parse_impl<true>(
-                           first, last, parser, parser.error_handler_, attr);
+                return reset =
+                           detail::parse_impl<(true && BOOST_PARSER_DO_TRACE)>(
+                               first,
+                               last,
+                               parser,
+                               parser.error_handler_,
+                               attr);
             } else {
                 return reset = detail::parse_impl<false>(
                            first, last, parser, parser.error_handler_, attr);
@@ -9052,8 +9195,9 @@ namespace boost { namespace parser {
                 "fill in attr above, using the attribute generated by parser. "
                 "However, parser does not generate an attribute.");
             if (trace_mode == trace::on) {
-                return reset = detail::parse_impl<true>(
-                           f, l, parser, parser.error_handler_, attr);
+                return reset =
+                           detail::parse_impl<(true && BOOST_PARSER_DO_TRACE)>(
+                               f, l, parser, parser.error_handler_, attr);
             } else {
                 return reset = detail::parse_impl<false>(
                            f, l, parser, parser.error_handler_, attr);
@@ -9156,7 +9300,7 @@ namespace boost { namespace parser {
     {
         if constexpr (!detail::is_char8_iter_v<I>) {
             if (trace_mode == trace::on) {
-                return detail::parse_impl<true>(
+                return detail::parse_impl<(true && BOOST_PARSER_DO_TRACE)>(
                     first, last, parser, parser.error_handler_);
             } else {
                 return detail::parse_impl<false>(
@@ -9169,7 +9313,7 @@ namespace boost { namespace parser {
             auto const l = r.end();
             auto _ = detail::scoped_base_assign(first, f);
             if (trace_mode == trace::on) {
-                return detail::parse_impl<true>(
+                return detail::parse_impl<(true && BOOST_PARSER_DO_TRACE)>(
                     f, l, parser, parser.error_handler_);
             } else {
                 return detail::parse_impl<false>(
@@ -9275,7 +9419,8 @@ namespace boost { namespace parser {
                 "fill in attr above, using the attribute generated by parser. "
                 "However, parser does not generate an attribute.");
             if (trace_mode == trace::on) {
-                return reset = detail::skip_parse_impl<true>(
+                return reset = detail::skip_parse_impl<(
+                           true && BOOST_PARSER_DO_TRACE)>(
                            first,
                            last,
                            parser,
@@ -9303,7 +9448,8 @@ namespace boost { namespace parser {
                 "fill in attr above, using the attribute generated by parser. "
                 "However, parser does not generate an attribute.");
             if (trace_mode == trace::on) {
-                return reset = detail::skip_parse_impl<true>(
+                return reset = detail::skip_parse_impl<(
+                           true && BOOST_PARSER_DO_TRACE)>(
                            f, l, parser, skip, parser.error_handler_, attr);
             } else {
                 return reset = detail::skip_parse_impl<false>(
@@ -9408,7 +9554,7 @@ namespace boost { namespace parser {
     {
         if constexpr (!detail::is_char8_iter_v<I>) {
             if (trace_mode == trace::on) {
-                return detail::skip_parse_impl<true>(
+                return detail::skip_parse_impl<(true && BOOST_PARSER_DO_TRACE)>(
                     first, last, parser, skip, parser.error_handler_);
             } else {
                 return detail::skip_parse_impl<false>(
@@ -9421,7 +9567,7 @@ namespace boost { namespace parser {
             auto const l = r.end();
             auto _ = detail::scoped_base_assign(first, f);
             if (trace_mode == trace::on) {
-                return detail::skip_parse_impl<true>(
+                return detail::skip_parse_impl<(true && BOOST_PARSER_DO_TRACE)>(
                     f, l, parser, skip, parser.error_handler_);
             } else {
                 return detail::skip_parse_impl<false>(
@@ -9525,7 +9671,8 @@ namespace boost { namespace parser {
     {
         if constexpr (!detail::is_char8_iter_v<I>) {
             if (trace_mode == trace::on) {
-                return detail::callback_parse_impl<true>(
+                return detail::callback_parse_impl<(
+                    true && BOOST_PARSER_DO_TRACE)>(
                     first, last, parser, parser.error_handler_, callbacks);
             } else {
                 return detail::callback_parse_impl<false>(
@@ -9538,7 +9685,8 @@ namespace boost { namespace parser {
             auto const l = r.end();
             auto _ = detail::scoped_base_assign(first, f);
             if (trace_mode == trace::on) {
-                return detail::callback_parse_impl<true>(
+                return detail::callback_parse_impl<(
+                    true && BOOST_PARSER_DO_TRACE)>(
                     f, l, parser, parser.error_handler_, callbacks);
             } else {
                 return detail::callback_parse_impl<false>(
@@ -9650,7 +9798,8 @@ namespace boost { namespace parser {
     {
         if constexpr (!detail::is_char8_iter_v<I>) {
             if (trace_mode == trace::on) {
-                return detail::callback_skip_parse_impl<true>(
+                return detail::callback_skip_parse_impl<(
+                    true && BOOST_PARSER_DO_TRACE)>(
                     first,
                     last,
                     parser,
@@ -9673,7 +9822,8 @@ namespace boost { namespace parser {
             auto const l = r.end();
             auto _ = detail::scoped_base_assign(first, f);
             if (trace_mode == trace::on) {
-                return detail::callback_skip_parse_impl<true>(
+                return detail::callback_skip_parse_impl<(
+                    true && BOOST_PARSER_DO_TRACE)>(
                     f, l, parser, skip, parser.error_handler_, callbacks);
             } else {
                 return detail::callback_skip_parse_impl<false>(

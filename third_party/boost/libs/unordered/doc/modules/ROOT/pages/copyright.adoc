@@ -11,7 +11,7 @@ Copyright (C) 2005-2008 Daniel James
 
 Copyright (C) 2022-2025 Christian Mazakas
 
-Copyright (C) 2022-2025 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz
+Copyright (C) 2022-2026 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz
 
 Copyright (C) 2022-2023 Peter Dimov
 

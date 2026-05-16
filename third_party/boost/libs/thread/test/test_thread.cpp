@@ -13,8 +13,8 @@
 #include <boost/thread/thread_only.hpp>
 #include <boost/thread/xtime.hpp>
 #include <boost/bind/bind.hpp>
-#include <boost/ref.hpp>
-#include <boost/utility.hpp>
+#include <boost/core/ref.hpp>
+#include <boost/core/noncopyable.hpp>
 
 #define BOOST_TEST_MODULE Boost.Threads: thread test suite
 

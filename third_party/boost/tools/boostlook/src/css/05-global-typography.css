@@ -1,0 +1,261 @@
+
+/*----------------- Global Styles for .boostlook start -----------------*/
+
+/**
+ * Global Styles for .boostlook
+ * Core styles that apply to all .boostlook containers regardless of template.
+ * These styles establish:
+ * 1. Base container styling
+ * 2. Typography hierarchy and spacing
+ * 3. Link appearances and interactions
+ * 4. Code block formatting and syntax highlighting
+ * 5. List and table styles
+ * 6. Special block elements (quotes, admonitions, etc.)
+ * 7. Pagination and navigation elements
+ * 8. Layout structure and spacing
+ */
+
+/* Base Container */
+.boostlook {
+  font-family: var(--font-family-body, "Noto Sans") !important;
+  font-variation-settings: "wght" 350, "wdth" 80;
+  background: var(--surface-background-main-base-primary, #fff);
+}
+
+/* Typography Hierarchy
+ * Establishes consistent heading sizes and spacing
+ * while maintaining proper visual hierarchy
+ */
+.boostlook h1,
+.boostlook .doc h1,
+.boostlook h2,
+.boostlook .doc h2,
+.boostlook h3,
+.boostlook .doc h3,
+.boostlook h4,
+.boostlook .doc h4,
+.boostlook h5,
+.boostlook .doc h5,
+.boostlook h6,
+.boostlook .doc h6 {
+  color: var(--text-main-text-primary, #18191b);
+  display: block;
+  line-height: var(--typography-line-height-xl, 1.75rem);
+  margin-top: var(--padding-padding-xl, 2rem);
+  letter-spacing: var(--spacing-size-size-0, 0rem);
+  margin-bottom: 0.5rem;
+  font-variation-settings: "wght" 500, "wdth" 80;
+  position: relative;
+}
+
+/* Heading Sizes */
+.boostlook h1,
+.boostlook .doc h1 {
+  font-size: var(--typography-font-size-h1, 1.75rem);
+  line-height: var(--typography-line-height-3xl, 2.5rem); /* 142.857% */
+}
+
+/* Primary headings */
+.boostlook h2,
+.boostlook .doc h2 {
+  font-size: var(--typography-font-size-h2, 1.5rem);
+}
+
+/* Section headings */
+.boostlook h3,
+.boostlook .doc h3 {
+  font-size: var(--typography-font-size-h3, 1.3rem);
+  line-height: var(--typography-line-height-xl, 1.85rem); /* 155.556% */
+}
+
+/* Subsection headings */
+.boostlook h4,
+.boostlook .doc h4 {
+  font-size: var(--typography-font-size-h4, 1.125rem);
+  line-height: var(--typography-line-height-xl, 1.75rem); /* 155.556% */
+}
+
+/* Topic headings */
+.boostlook h5,
+.boostlook .doc h5 {
+  font-size: var(--font-size-sm, 1rem);
+  line-height: var(--font-line-height-lg, 1.5rem);
+}
+
+/* Subtopic headings */
+.boostlook h6,
+.boostlook .doc h6 {
+  font-size: var(--font-size-xs, 0.875rem);
+  line-height: var(--font-line-height-md, 1.25rem);
+}
+
+/* Document-specific headings adjustments */
+.boostlook .doc h2:not(.discrete) {
+  /* website-v2-doc styles overrides */
+  margin-left: 0;
+  padding-left: 0;
+  border-bottom: revert;
+  margin-right: revert;
+  padding: revert;
+}
+
+.boostlook h2:has(+ .sectionbody > .sect2:first-child > h3),
+.boostlook .doc h2:has(+ .sectionbody > .sect2:first-child > h3) {
+  margin-bottom: 0;
+}
+
+.boostlook h3:has(+ .sect3 > h4:first-child),
+.boostlook .doc h2:has(+ .sect3 > h4:first-child) {
+  margin-bottom: 0;
+}
+
+/* Override default docs site css */
+.boostlook .doc .dlist,
+.boostlook .doc .exampleblock,
+.boostlook .doc .hdlist,
+.boostlook .doc .imageblock,
+.boostlook .doc .listingblock,
+.boostlook .doc .literalblock,
+.boostlook .doc .olist,
+.boostlook .doc .paragraph,
+.boostlook .doc .partintro,
+.boostlook .doc .quoteblock,
+.boostlook .doc .sidebarblock,
+.boostlook .doc .tabs,
+.boostlook .doc .ulist,
+.boostlook .doc .verseblock,
+.boostlook .doc .videoblock,
+.boostlook .doc details,
+.boostlook .doc hr {
+  margin: revert;
+}
+
+/* Anchor positioning within headings */
+.boostlook .doc h1:has(.anchor),
+.boostlook .doc h2:has(.anchor),
+.boostlook .doc h3:has(.anchor),
+.boostlook .doc h4:has(.anchor),
+.boostlook .doc h5:has(.anchor),
+.boostlook .doc h6:has(.anchor),
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]) {
+  display: inline-block;
+  /* Anchor width and spacing compensation */
+  padding-right: 3rem;
+}
+
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]) a[href] {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Heading Anchors */
+.boostlook .doc h1 .anchor,
+.boostlook .doc h2 .anchor,
+.boostlook .doc h3 .anchor,
+.boostlook .doc h4 .anchor,
+.boostlook .doc h5 .anchor,
+.boostlook .doc h6 .anchor,
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]) a[id],
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]) a[href]:before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: revert;
+  width: 2rem;
+  height: 2rem;
+  border: 1px;
+  visibility: hidden;
+  opacity: 0;
+  text-decoration: none;
+  border-radius: var(--spacing-size-lg, 1.5rem);
+  border: 1px solid var(--border-border-primary, #e4e7ea);
+  background: var(--surface-background-main-base-primary, #fff);
+  transform: translateY(-50%);
+  transition: all 0.2s ease;
+}
+
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]) a[id] {
+  visibility: visible;
+}
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]) a[href]:before {
+  content: "";
+}
+
+.boostlook .doc h1 .anchor::before,
+.boostlook .doc h2 .anchor::before,
+.boostlook .doc h3 .anchor::before,
+.boostlook .doc h4 .anchor::before,
+.boostlook .doc h5 .anchor::before,
+.boostlook .doc h6 .anchor::before,
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]) a[href]:after {
+  content: var(--icon-anchor);
+  display: block;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]) a[href]:after {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  line-height: 0;
+  transform: translateY(-50%);
+  transition: all 0.2s ease;
+}
+
+.doc h1:hover .anchor,
+.doc h2:hover .anchor,
+.doc h3:hover .anchor,
+.doc h4:hover .anchor,
+.doc h5:hover .anchor,
+.doc h6:hover .anchor,
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]):hover a[href]:before {
+  opacity: 1;
+  visibility: visible;
+}
+
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]):hover a[href]:after {
+  opacity: 0.6;
+  visibility: visible;
+}
+
+.boostlook .doc h1 .anchor:hover,
+.boostlook .doc h2 .anchor:hover,
+.boostlook .doc h3 .anchor:hover,
+.boostlook .doc h4 .anchor:hover,
+.boostlook .doc h5 .anchor:hover,
+.boostlook .doc h6 .anchor:hover,
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]:hover) a[href]:before {
+  border-color: var(--border-border-blue, #92cbe9);
+}
+
+.boostlook .doc h1 .anchor:active,
+.boostlook .doc h2 .anchor:active,
+.boostlook .doc h3 .anchor:active,
+.boostlook .doc h4 .anchor:active,
+.boostlook .doc h5 .anchor:active,
+.boostlook .doc h6 .anchor:active,
+.boostlook :where(h1, h2, h3, h4, h5, h6):has(> a[id]):has(> a[href]) a[href]:active:before {
+  border-color: var(--border-border-blue, #92cbe9);
+  background: var(--surface-background-main-surface-blue-secondary, #daeef9);
+}
+
+.boostlook .doc h1 .anchor:hover::before,
+.boostlook .doc h2 .anchor:hover::before,
+.boostlook .doc h3 .anchor:hover::before,
+.boostlook .doc h4 .anchor:hover::before,
+.boostlook .doc h5 .anchor:hover::before,
+.boostlook .doc h6 .anchor:hover::before {
+  opacity: 1;
+}

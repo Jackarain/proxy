@@ -68,7 +68,7 @@ struct basic_popen : basic_process<Executor>
     template <typename ExecutionContext>
     explicit basic_popen(ExecutionContext & context,
         typename std::enable_if<
-            is_convertible<ExecutionContext&,
+            std::is_convertible<ExecutionContext&,
                     net::execution_context&>::value, void *>::type = nullptr)
         : basic_process<Executor>{context}
     {

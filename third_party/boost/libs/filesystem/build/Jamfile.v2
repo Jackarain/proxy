@@ -39,7 +39,7 @@ rule select-windows-crypto-api ( properties * )
 {
     local result ;
 
-    if <target-os>windows in $(properties) || <target-os>cygwin in $(properties)
+    if <target-os>windows in $(properties)
     {
         if ! [ has-config-flag BOOST_FILESYSTEM_DISABLE_BCRYPT : $(properties) ] &&
             [ configure.builds ../config//has_bcrypt : $(properties) : "has BCrypt API" ]
@@ -175,10 +175,6 @@ project
       <target-os>windows:<define>_WIN32_WINNT=0x0A00
       <target-os>windows:<define>WIN32_LEAN_AND_MEAN
       <target-os>windows:<define>NOMINMAX
-      <target-os>cygwin:<define>BOOST_USE_WINDOWS_H
-      <target-os>cygwin:<define>_WIN32_WINNT=0x0A00
-      <target-os>cygwin:<define>WIN32_LEAN_AND_MEAN
-      <target-os>cygwin:<define>NOMINMAX
 
       # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
       # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105651
@@ -207,7 +203,7 @@ rule select-platform-specific-sources ( properties * )
 {
     local result ;
 
-    if <target-os>windows in $(properties) || <target-os>cygwin in $(properties)
+    if <target-os>windows in $(properties)
     {
         result += <source>windows_file_codecvt.cpp ;
     }

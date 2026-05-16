@@ -55,6 +55,10 @@ class subscribe_op {
 
     size_t _num_topics { 0 };
 
+    struct validation_context {
+        bool has_wildcard { false }, is_shared { false }, has_subid { false };
+    } _validation_ctx;
+
 public:
     subscribe_op(
         std::shared_ptr<client_service> svc_ptr,
@@ -99,8 +103,7 @@ public:
         if (_num_topics == 0)
             return complete_immediate(client::error::invalid_topic, packet_id);
 
-        auto ec = validate_subscribe(topics, props);
-        if (ec)
+        if (auto ec = validate_subscribe(topics, props, _validation_ctx))
             return complete_immediate(ec, packet_id);
 
         auto subscribe = control_packet<allocator_type>::of(
@@ -109,10 +112,9 @@ public:
             topics, props
         );
 
-        auto max_packet_size = _svc_ptr->connack_property(prop::maximum_packet_size)
-                .value_or(default_max_send_size);
-        if (subscribe.size() > max_packet_size)
-            return complete_immediate(client::error::packet_too_large, packet_id);
+        if (_svc_ptr->was_connected())
+            if (auto ec = validate_with_connack_props(subscribe.size()))
+                return complete_immediate(ec, packet_id);
 
         send_subscribe(std::move(subscribe));
     }
@@ -133,6 +135,10 @@ public:
             return complete(
                 asio::error::operation_aborted, subscribe.packet_id()
             );
+
+        if (auto ec = validate_with_connack_props(subscribe.size()))
+            return complete(ec, subscribe.packet_id());
+
         send_subscribe(std::move(subscribe));
     }
 
@@ -191,51 +197,72 @@ public:
 
 private:
 
-    error_code validate_subscribe(
-        const std::vector<subscribe_topic>& topics, const subscribe_props& props
-    ) const {
+    error_code validate_with_connack_props(size_t packet_size) const {
+        if (packet_size > _svc_ptr->max_packet_size())
+            return client::error::packet_too_large;
+
+        auto wildcard_available = _svc_ptr->connack_property(
+            prop::wildcard_subscription_available
+        ).value_or(1);
+        if (!wildcard_available && _validation_ctx.has_wildcard)
+            return client::error::wildcard_subscription_not_available;
+
+        auto shared_available = _svc_ptr->connack_property(
+            prop::shared_subscription_available
+        ).value_or(1);
+        if (!shared_available && _validation_ctx.is_shared)
+            return client::error::shared_subscription_not_available;
+
+        auto sub_id_available = _svc_ptr->connack_property(
+            prop::subscription_identifier_available
+        ).value_or(1);
+        if (!sub_id_available && _validation_ctx.has_subid)
+            return client::error::subscription_identifier_not_available;
+
+        return {};
+    }
+
+    static error_code validate_subscribe(
+        const std::vector<subscribe_topic>& topics,
+        const subscribe_props& props, validation_context& ctx
+    ) {
         error_code ec;
         for (const auto& topic: topics) {
-            ec = validate_topic(topic);
+            ec = validate_topic(topic, ctx);
             if (ec)
                 return ec;
         }
 
-        ec = validate_props(props);
+        ec = validate_props(props, ctx);
         return ec;
     }
 
-    error_code validate_topic(const subscribe_topic& topic) const {
-        auto wildcard_available = _svc_ptr->connack_property(
-            prop::wildcard_subscription_available
-        ).value_or(1);
-        auto shared_available = _svc_ptr->connack_property(
-            prop::shared_subscription_available
-        ).value_or(1);
-
+    static error_code validate_topic(
+        const subscribe_topic& topic, validation_context& ctx
+    ) {
         std::string_view topic_filter = topic.topic_filter;
 
         validation_result result = validation_result::valid;
         if (
             topic_filter.compare(0, shared_sub_prefix.size(), shared_sub_prefix) == 0
         ) {
-            if (!shared_available)
-                return client::error::shared_subscription_not_available;
-
-            result = validate_shared_topic_filter(topic_filter, wildcard_available);
+            ctx.is_shared = true;
+            result = validate_shared_topic_filter(topic_filter);
         } else
-            result = wildcard_available ?
-                validate_topic_filter(topic_filter) :
-                validate_topic_name(topic_filter);
+            result = validate_topic_filter(topic_filter);
 
         if (result == validation_result::invalid)
             return client::error::invalid_topic;
-        if (!wildcard_available && result != validation_result::valid)
-            return client::error::wildcard_subscription_not_available;
+
+        if (result == validation_result::has_wildcard_character)
+            ctx.has_wildcard = true;
+
         return error_code {};
     }
 
-    error_code validate_props(const subscribe_props& props) const {
+    static error_code validate_props(
+        const subscribe_props& props, validation_context& ctx
+    ) {
         const auto& user_properties = props[prop::user_property];
         for (const auto& user_property: user_properties)
             if (!is_valid_string_pair(user_property))
@@ -245,12 +272,7 @@ private:
         if (!sub_id.has_value())
             return error_code {};
 
-        auto sub_id_available = _svc_ptr->connack_property(
-            prop::subscription_identifier_available
-        ).value_or(1);
-
-        if (!sub_id_available)
-            return client::error::subscription_identifier_not_available;
+        ctx.has_subid = true;
 
         return (min_subscription_identifier <= *sub_id &&
             *sub_id <= max_subscription_identifier) ?

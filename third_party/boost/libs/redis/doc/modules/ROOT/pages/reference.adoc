@@ -25,7 +25,11 @@ xref:reference:boost/redis/basic_connection.adoc[`basic_connection`]
 
 xref:reference:boost/redis/address.adoc[`address`]
 
+xref:reference:boost/redis/role.adoc[`role`]
+
 xref:reference:boost/redis/config.adoc[`config`]
+
+xref:reference:boost/redis/sentinel_config.adoc[`sentinel_config`]
 
 xref:reference:boost/redis/error.adoc[`error`]
 
@@ -51,7 +55,13 @@ xref:reference:boost/redis/response.adoc[`response`]
 
 xref:reference:boost/redis/generic_response.adoc[`generic_response`]
 
+xref:reference:boost/redis/generic_flat_response.adoc[`generic_flat_response`]
+
 xref:reference:boost/redis/consume_one-08.adoc[`consume_one`]
+
+xref:reference:boost/redis/push_view.adoc[`push_view`]
+
+xref:reference:boost/redis/push_parser.adoc[`push_parser`]
 
 
 |
@@ -66,25 +76,33 @@ xref:reference:boost/redis/adapter/result.adoc[`adapter::result`]
 xref:reference:boost/redis/any_adapter.adoc[`any_adapter`]
 
 |
-xref:reference:boost/redis/resp3/basic_node.adoc[`basic_node`]
+xref:reference:boost/redis/resp3/basic_node.adoc[`resp3::basic_node`]
 
-xref:reference:boost/redis/resp3/node.adoc[`node`]
+xref:reference:boost/redis/resp3/node.adoc[`resp3::node`]
 
-xref:reference:boost/redis/resp3/node_view.adoc[`node_view`]
+xref:reference:boost/redis/resp3/node_view.adoc[`resp3::node_view`]
+
+xref:reference:boost/redis/resp3/basic_tree.adoc[`resp3::basic_tree`]
+
+xref:reference:boost/redis/resp3/tree.adoc[`resp3::tree`]
+
+xref:reference:boost/redis/resp3/view_tree.adoc[`resp3::view_tree`]
+
+xref:reference:boost/redis/resp3/flat_tree.adoc[`resp3::flat_tree`]
 
 xref:reference:boost/redis/resp3/boost_redis_to_bulk-08.adoc[`boost_redis_to_bulk`]
 
-xref:reference:boost/redis/resp3/type.adoc[`type`]
+xref:reference:boost/redis/resp3/type.adoc[`resp3::type`]
 
-xref:reference:boost/redis/resp3/is_aggregate.adoc[`is_aggregate`]
+xref:reference:boost/redis/resp3/is_aggregate.adoc[`resp3::is_aggregate`]
 
 
 |
 
 xref:reference:boost/redis/adapter/adapt2.adoc[`adapter::adapt2`]
 
-xref:reference:boost/redis/resp3/parser.adoc[`parser`]
+xref:reference:boost/redis/resp3/parser.adoc[`resp3::parser`]
 
-xref:reference:boost/redis/resp3/parse.adoc[`parse`]
+xref:reference:boost/redis/resp3/parse.adoc[`resp3::parse`]
 
 |===

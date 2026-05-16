@@ -1,4 +1,4 @@
-# Copyright  (c) 2016-2025 Antony Polukhin
+# Copyright Antony Polukhin, 2016-2026
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
 
@@ -15,7 +15,6 @@ add_subdirectory(../../../detail boostorg/detail)
 add_subdirectory(../../../integer boostorg/integer)
 add_subdirectory(../../../mp11 boostorg/mp11)
 add_subdirectory(../../../preprocessor boostorg/preprocessor)
-add_subdirectory(../../../static_assert boostorg/static_assert)
 add_subdirectory(../../../throw_exception boostorg/throw_exception)
 add_subdirectory(../../../type_index boostorg/type_index)
 add_subdirectory(../../../type_traits boostorg/type_traits)
@@ -25,7 +24,7 @@ add_subdirectory(../../ boostorg/any)
 enable_testing()
 
 if (BOOST_USE_MODULES)
-    add_executable(boost_any_module_usage ../modules/usage_sample.cpp)
+    add_executable(boost_any_module_usage ../../modules/usage_sample.cpp)
     target_link_libraries(boost_any_module_usage PRIVATE Boost::any)
     add_test(NAME boost_any_module_usage COMMAND boost_any_module_usage)
 endif()
@@ -50,7 +49,7 @@ list(APPEND RUN_TESTS_SOURCES
 foreach (testsourcefile ${RUN_TESTS_SOURCES})
     get_filename_component(testname ${testsourcefile} NAME_WLE)
     add_executable(${PROJECT_NAME}_${testname} ../${testsourcefile})
-    target_link_libraries(${PROJECT_NAME}_${testname} Boost::any)
+    target_link_libraries(${PROJECT_NAME}_${testname} Boost::any Boost::core)
     add_test(NAME ${PROJECT_NAME}_${testname} COMMAND ${PROJECT_NAME}_${testname})
 endforeach()
 

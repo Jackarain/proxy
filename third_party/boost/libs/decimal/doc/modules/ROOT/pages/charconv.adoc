@@ -1,0 +1,196 @@
+////
+Copyright 2024 - 2025 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+[#charconv]
+= `<charconv>` Support
+:idprefix: charconv_
+
+== <charconv>
+
+The following functions analogous to those from https://en.cppreference.com/w/cpp/header/charconv[<charconv>] are provided:
+
+[#chars_format]
+== chars_format
+[source, c++]
+----
+namespace boost {
+namespace decimal {
+
+enum class chars_format : unsigned
+{
+    scientific,
+    fixed,
+    hex,
+    cohort_preserving_scientific,
+    general = fixed | scientific
+};
+
+} //namespace decimal
+} //namespace boost
+----
+
+The one difference here between `<charconv>` and what we provide is the option `cohort_preserving_scientific`.
+This format is allowed in both `from_chars` and `to_chars` in specially defined ways to allow for cohorts to be preserved during the conversion process.
+
+IMPORTANT: When using `from_chars` or `to_chars` with fast types it is invalid to specify the format `cohort_preserving_scientific` as these types have no support for cohorts.
+
+[#from_chars_result]
+== from_chars_result
+[source, c++]
+----
+namespace boost {
+namespace decimal {
+
+struct from_chars_result
+{
+    const char* ptr;
+    std::errc ec;
+
+    friend constexpr bool operator==(const from_chars_result& lhs, const from_chars_result& rhs) noexcept = default;
+
+    constexpr explicit operator bool() const noexcept { return ec == std::errc{}; }
+}
+
+} //namespace decimal
+} //namespace boost
+----
+
+[#to_chars_result]
+== to_chars_result
+[source, c++]
+----
+namespace boost {
+namespace decimal {
+
+struct to_chars_result
+{
+    char* ptr;
+    std::errc ec;
+
+    friend constexpr bool operator==(const to_chars_result& lhs, const to_chars_result& rhs) noexcept = default;
+
+    constexpr explicit operator bool() const noexcept { return ec == std::errc{}; }
+}
+
+} //namespace decimal
+} //namespace boost
+----
+
+[#from_chars]
+== from_chars
+[source, c++]
+----
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr boost::decimal::from_chars_result from_chars(const char* first, const char* last, DecimalType& value, boost::decimal::chars_format fmt = boost::decimal::chars_format::general) noexcept
+
+#ifdef BOOST_DECIMAL_HAS_STD_STRING_VIEW
+
+template <typename DecimalType>
+constexpr boost::decimal::from_chars_result from_chars(std::string_view str, DecimalType& value, boost::decimal::chars_format fmt = boost::decimal::chars_format::general) noexcept
+
+#else
+
+template <typename DecimalType>
+constexpr boost::decimal::from_chars_result from_chars(const std::string& str, DecimalType& value, boost::decimal::chars_format fmt = boost::decimal::chars_format::general) noexcept
+
+#endif
+
+#ifdef BOOST_DECIMAL_HAS_STD_CHARCONV
+
+template <typename DecimalType>
+constexpr std::from_chars_result from_chars(const char* first, const char* last, DecimalType& value, std::chars_format fmt) noexcept
+
+#endif // BOOST_DECIMAL_HAS_STD_CHARCONV
+
+} //namespace decimal
+} //namespace boost
+----
+
+When using the format `cohort_preserving_scientific` the number of digits in the string to be converted must not exceed the precision of the type that it is being converted to.
+For example: `4.99999999999e+03` is invalid if being converted to `decimal32_t` because it is not exactly representable in the type.
+
+IMPORTANT: If `std::chars_format` is used the function will return a `std::from_chars_result` and if `boost::decimal::chars_format` is used *OR* no format is specified then a `boost::decimal::from_chars_result` will be returned.
+
+[#to_chars]
+== to_chars
+[source, c++]
+----
+#include <boost/decimal/charconv.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType>
+constexpr to_chars_result to_chars(char* first, char* last, DecimalType value) noexcept;
+
+template <typename DecimalType>
+constexpr to_chars_result to_chars(char* first, char* last, DecimalType value, chars_format fmt) noexcept;
+
+template <typename DecimalType>
+constexpr to_chars_result to_chars(char* first, char* last, DecimalType value, chars_format fmt, int precision) noexcept;
+
+#ifdef BOOST_DECIMAL_HAS_STD_CHARCONV
+
+template <typename DecimalType>
+constexpr std::to_chars_result to_chars(char* first, char* last, DecimalType value, std::chars_format fmt) noexcept;
+
+template <typename DecimalType>
+constexpr std::to_chars_result to_chars(char* first, char* last, DecimalType value, std::chars_format fmt, int precision) noexcept;
+
+#endif // BOOST_DECIMAL_HAS_STD_CHARCONV
+
+} //namespace decimal
+} //namespace boost
+----
+
+All `to_chars` functions, except for when using the format `cohort_preserving_scientific`, ignore the effects of cohorts, and instead output normalized values.
+Additionally, when using the format `cohort_preserving_scientific` if a precision is specified the function will return `{first, std::errc::invalid_argument}`.
+Per IEEE 754 specifying both a precision and cohort preservation is an invalid operation.
+This follows because you are potentially rounding the number, or adding trailing zeros to the fraction which both destroy the cohort information.
+
+IMPORTANT: Same as `from_chars`, `boost::decimal::to_chars` will return a `std::to_chars_result` if `std::chars_format` is used to specify the format; otherwise it returns a `boost::decimal::to_chars_result`.
+
+The library offers an additional feature for sizing buffers without specified precision and in general format
+
+[#charconv_limits]
+== Formatting Limits
+[source, c++]
+----
+#include <boost/decimal/charconv.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename DecimalType, int Precision = std::numeric_limits<DecimalType>::max_digits10>
+class formatting_limits
+{
+public:
+
+    static constexpr std::size_t scientific_format_max_chars;
+
+    static constexpr std::size_t fixed_format_max_chars;
+
+    static constexpr std::size_t hex_format_max_chars;
+
+    static constexpr std::size_t cohort_preserving_scientific_max_chars;
+
+    static constexpr std::size_t general_format_max_chars;
+
+    static constexpr std::size_t max_chars;
+};
+
+} //namespace decimal
+} //namespace boost
+----
+
+This class allows you to size buffers for `to_chars` without have to arbitrarily guess what size you need it to be.
+The `Precision` is defaulted to the maximum precision of the type, which is the same assumption that is made when you use `to_chars` with an unspecified precision.
+The `max_chars` variable is the largest of the 5 specified `chars_format` options.
+
+The members can then be used to size buffers such as in our `<charconv>` example from the main examples page xref:examples.adoc#examples_charconv[here].

@@ -845,12 +845,35 @@ struct segments_ref_test
 
     static
     void
+    testBorrowedRange()
+    {
+#ifdef BOOST_URL_HAS_CONCEPTS
+        // segments_ref is a borrowed range
+        BOOST_CORE_STATIC_ASSERT(
+            std::ranges::borrowed_range<segments_ref>);
+
+        // iterators remain valid after the ref is destroyed
+        // (as long as the underlying url stays alive)
+        url u("/path/to/file.txt");
+        segments_ref::iterator it;
+        {
+            segments_ref s = u.segments();
+            it = s.begin();
+        }
+        // ref is destroyed, but iterator is still valid
+        BOOST_TEST_EQ(*it, "path");
+#endif
+    }
+
+    static
+    void
     testAll()
     {
         testSpecial();
         testObservers();
         testModifiers();
         testJavadocs();
+        testBorrowedRange();
     }
 
     void

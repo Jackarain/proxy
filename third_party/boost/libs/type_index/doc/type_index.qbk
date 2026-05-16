@@ -1,7 +1,7 @@
 [library Boost.TypeIndex
     [quickbook 1.6]
-    [version 4.2]
-    [copyright 2012-2025 Antony Polukhin]
+    [version 4.3]
+    [copyright 2012-2026 Antony Polukhin]
     [category Language Features Emulation]
     [license
         Distributed under the Boost Software License, Version 1.0.
@@ -14,12 +14,12 @@
 Sometimes getting and storing information about a type at runtime is required. For such cases a construction like `&typeid(T)` or C++11 class `std::type_index` is usually used, which is where problems start:
 
 * `typeid(T)` and `std::type_index` require Run Time Type Info (RTTI)
-* some implementations of `typeid(T)` erroneously do not strip const, volatile and references from type
-* some compilers have bugs and do not correctly compare `std::type_info` objects across shared libraries
-* only a few implementations of Standard Library currently provide `std::type_index`
-* no easy way to store type info without stripping const, volatile and references
+* no easy way to work with type info at compile time, no way to get the type name at compile time
 * no nice and portable way to get human readable type names
 * no way to easily make your own type info class
+* some implementations have bugs and do not correctly compare `std::type_info` objects across shared libraries
+* no easy way to store type info without stripping `const`, `volatile` and references
+* some implementations of `typeid(T)` erroneously do not strip `const`, `volatile` and references from type
 
 Boost.TypeIndex library was designed to work around all those issues.
 
@@ -287,7 +287,9 @@ Issues with cross module type comparison on a bugged compilers are bypassed by d
 
 [section Making a custom type_index]
 
-Sometimes there may be a need to create your own type info system. This may be useful if you wish to store some more info about types (PODness, size of a type, pointers to common functions...) or if you have an idea of a more compact types representations.
+Sometimes there may be a need to create your own type info system. This may be useful if you wish to store some
+more info about types (trivial copiability, size of a type, pointers to common functions...) or if you have an
+idea of a more compact types representations.
 
 [import ../examples/user_defined_typeinfo.hpp]
 [import ../examples/user_defined_typeinfo.cpp]
@@ -324,9 +326,10 @@ make the `Boost::type_index` CMake target provide it. After that an explicit usa
 [import ../modules/usage_sample.cpp]
 [type_index_module_example]
 
-The `Boost::type_index` CMake target gives an ability to mix includes and imports of the library in different translation units. Moreover,
-if `BOOST_USE_MODULES` macro is defined then all the `boost/type_index/...` includes implicilty do `import boost.type_index;` to give all the
-benifits of modules without changing the existing code.
+The `Boost::type_index` CMake target gives an ability to mix includes and imports of the library in different
+translation units. Moreover, if `BOOST_USE_MODULES` macro is defined then all the `boost/type_index/...`
+includes implicitly do `import boost.type_index;` to give all the benefits of modules without changing the
+existing code.
 
 [note For better compile times make sure that `import std;` is available when building the `boost.type_index` module (in CMake logs there should be
       a 'Using `import std;`' message). ]
@@ -351,28 +354,37 @@ clang++ -std=c++20 -fmodule-file=boost_type_index.pcm boost_type_index.pcm usage
 
 [section Space and Performance]
 
-* `ctti_type_index` uses macro for getting full text representation of function name which could lead to code bloat,
-so prefer using `stl_type_index` type when possible.
+* `ctti_type_index` uses macro for getting full text representation of function name which could lead to code bloat
+  in C++11, so prefer using `stl_type_index` type when possible.
 * All the type_index classes hold a single pointer and are fast to copy.
-* Calls to `const char* raw_name()` do not require dynamic memory allocation and usually just return a pointer to an array of chars in a read-only section of the binary image.
+* Calls to `const char* raw_name()` do not require dynamic memory allocation and usually just return a pointer
+  to an array of chars in a read-only section of the binary image.
 * Comparison operators are optimized as much as possible and execute a single `std::strcmp` in worst case.
-* Calls to `std::string pretty_name()` usually require dynamic memory allocation and some computations, so they are not recommended for usage in performance critical sections.
+* Calls to `std::string pretty_name()` usually require dynamic memory allocation and some computations,
+  so they are not recommended for usage in performance critical sections.
 
 [endsect]
 
-[section Code bloat]
+[section:code_bloat Code bloat]
 
 Without RTTI TypeIndex library will switch from using `boost::typeindex::stl_type_index` class to
 `boost::typeindex::ctti_type_index`. `boost::typeindex::ctti_type_index` uses macro for getting full
 text representation of function name for each type that is passed to `type_id()` and
 `type_id_with_cvr()` functions.
 
-This leads to big strings in binary file:
+This leads to big strings in binary file in C++11 mode:
 ```
 static const char* boost::detail::ctti<T>::n() [with T = int]
 static const char* boost::detail::ctti<T>::n() [with T = user_defined_type]
 ```
-While using RTTI, you'll get the following (more compact) string in binary file:
+
+Starting from C++14 the strings are much shorter and contain only the actual type name:
+```
+int
+user_defined_type
+```
+
+With RTTI, you'll always get the short strings in binary files:
 
 ```
 i
@@ -422,17 +434,19 @@ function signature including template parameters.
 
 [endsect]
 
-[section Fixing pretty_name() output]
+[section Fixing pretty_name() and name() output]
 
-If the output of `boost::typeindex::ctti_type_index::type_id<int>().name()` 
+If the output of `boost::typeindex::ctti_type_index::type_id<int>().pretty_name()`
+
 * returns not just `int` but also a lot of text around the `int` 
 * or does not return type at all
+
 then you are using a compiler that was not tested with this library and you need to setup the
 [macroref BOOST_TYPE_INDEX_CTTI_USER_DEFINED_PARSING] macro.
 
 Here is a short instruction:
 
-# get the output of `boost::typeindex::ctti_type_index::type_id<int>().name()`
+# get the output of `boost::typeindex::ctti_type_index::type_id<int>().pretty_name()`
 # define [macroref BOOST_TYPE_INDEX_CTTI_USER_DEFINED_PARSING] to 
 `(skip_at_begin, skip_at_end, false, "")`, where
     * `skip_at_begin` is equal to characters count before the first occurrence of `int` in output 
@@ -451,7 +465,7 @@ parameters provided to `BOOST_TYPE_INDEX_CTTI_USER_DEFINED_PARSING` macro.
 Consider the following example:
 
 `boost::typeindex::ctti_type_index::type_id<int>().raw_name()` returns
-"const char *__cdecl boost::detail::ctti<int>::n(void)". Then you shall set
+`"const char *__cdecl boost::detail::ctti<int>::n(void)"`. Then you shall set
 `skip_at_begin` to `sizeof("const char *__cdecl boost::detail::ctti<") - 1`
 and `skip_at_end` to `sizeof(">::n(void)") - 1`.
 
@@ -505,7 +519,7 @@ Such differences are usually not detected by linker and lead to errors at runtim
 
 [endsect]
 
-[section Acknowledgements]
+[section Acknowledgments]
 
 In order of helping and advising:
 
