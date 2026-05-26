@@ -76,13 +76,6 @@ namespace fileop {
 		}
 
 		inline std::streamsize
-		read(std::streambuf& buf, std::string_view val)
-		{
-			std::streamsize bytes = val.size();
-			return buf.sgetn((char*)(val.data()), bytes);
-		}
-
-		inline std::streamsize
 		filesize(const fs::path& path)
 		{
 			try
@@ -200,7 +193,7 @@ namespace fileop {
 	inline std::streamsize
 	read(const boost::nowide::fstream& file, std::string& val)
 	{
-		return details::read(*file.rdbuf(), val);
+		return details::read(*file.rdbuf(), std::span<char>(val));
 	}
 
 	template<ByteType T>
