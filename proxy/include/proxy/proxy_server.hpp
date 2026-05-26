@@ -390,7 +390,7 @@ R"x*x*x(<html>
 	//////////////////////////////////////////////////////////////////////////
 
 	// 检测 host 是否是域名或主机名, 如果是域名则返回 true, 否则返回 false.
-	inline bool detect_hostname(std::string_view host) noexcept
+	inline bool is_hostname(std::string_view host) noexcept
 	{
 		boost::system::error_code ec;
 		net::ip::make_address(host, ec);
@@ -4787,7 +4787,7 @@ R"x*x*x(<html>
 				proxy_port_number = m_proxy_pass->port_number();
 
 			// 如果是 IP 地址, 则直接构造而不需要 DNS 查询.
-			if (!detect_hostname(proxy_host))
+			if (!is_hostname(proxy_host))
 			{
 				net::ip::tcp::endpoint endp(
 					net::ip::make_address(proxy_host), proxy_port_number);
@@ -6094,7 +6094,7 @@ R"x*x*x(<html>
 				co_return;
 			}
 
-			if (!detect_hostname(hostname))
+			if (!is_hostname(hostname))
 			{
 				m_local_addrs.insert(net::ip::make_address(hostname, ec));
 				co_return;
