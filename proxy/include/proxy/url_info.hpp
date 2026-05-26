@@ -142,7 +142,7 @@ namespace proxy {
 	boost::system::result<url_info> parse_urlinfo(std::string_view s) noexcept
 	{
 		return boost::urls::grammar::parse(s, urlinfo_rule);
-	};
+	}
 
 }
 
