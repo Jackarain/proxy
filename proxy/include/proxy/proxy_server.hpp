@@ -195,7 +195,7 @@ namespace proxy {
 		pem_file dhparam_;
 
 		std::string domain_;
-		std::vector<std::string> alt_names_;
+		std::vector<std::string> subject_alt_name_;
 		boost::posix_time::ptime expire_date_;
 
 		std::optional<net::ssl::context> ssl_context_;
@@ -5386,23 +5386,24 @@ R"x*x*x(<html>
 					&GENERAL_NAMES_free
 				};
 
-				if (!general_names)
+				if (general_names)
 				{
-					XLOG_WARN << "X509_get_ext_d2i return nullptr!";
-					return;
-				}
-
-				for (int i = 0; i < sk_GENERAL_NAME_num(general_names.get()); i++)
-				{
-					GENERAL_NAME* gen = sk_GENERAL_NAME_value(general_names.get(), i);
-					if (gen->type == GEN_DNS)
+					for (int i = 0; i < sk_GENERAL_NAME_num(general_names.get()); i++)
 					{
-						const ASN1_IA5STRING* domain = gen->d.dNSName;
-						if (domain->type == V_ASN1_IA5STRING && domain->data && domain->length)
+						GENERAL_NAME* gen = sk_GENERAL_NAME_value(general_names.get(), i);
+						if (gen->type == GEN_DNS)
 						{
-							file.alt_names_.emplace_back((const char*)(domain->data), domain->length);
+							const ASN1_IA5STRING* domain = gen->d.dNSName;
+							if (domain->type == V_ASN1_IA5STRING && domain->data && domain->length)
+							{
+								file.subject_alt_name_.emplace_back((const char*)(domain->data), domain->length);
+							}
 						}
 					}
+				}
+				else
+				{
+					XLOG_DBG << "No subject alternative name, will use Common Name as fallback.";
 				}
 
 				char cert_cname[256] = { 0 };
@@ -5622,7 +5623,7 @@ R"x*x*x(<html>
 					return SSL_TLSEXT_ERR_OK;
 				}
 
-				for (auto& alt_name : ctx.alt_names_)
+				for (auto& alt_name : ctx.subject_alt_name_)
 				{
 					if (rfc2818_verification_match_pattern(alt_name.c_str(), alt_name.length(), servername))
 					{
