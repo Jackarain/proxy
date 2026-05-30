@@ -122,7 +122,6 @@
 #include <optional>
 #include <cstdint>
 #include <span>
-#include <cstdint>
 #include <sstream>
 #include <string>
 #include <array>
@@ -6361,7 +6360,6 @@ R"x*x*x(<html>
 			~udp_tproxy_flow() { do_close(); }
 			void close() { do_close(); }
 
-			// 启动 UDP TPROXY 流会话.
 			net::awaitable<void> run(udp::socket& transparent_sock)
 			{
 				auto self = shared_from_this();
@@ -6374,7 +6372,6 @@ R"x*x*x(<html>
 				if (!targets || targets->empty())
 					co_return;
 
-				// 连接到 proxy_pass.
 				ec = co_await connect_to_proxy(*targets);
 				if (ec)
 				{
@@ -6383,7 +6380,6 @@ R"x*x*x(<html>
 					co_return;
 				}
 
-				// SOCKS5 UDP ASSOCIATE 握手.
 				ec = co_await do_socks5_associate();
 				if (ec)
 				{
@@ -6395,13 +6391,20 @@ R"x*x*x(<html>
 				XLOG_DBG << "udp tproxy socks5 udp associate success, relay: "
 					<< m_relay_ep;
 
-				// 打开并绑定本地 relay UDP socket.
 				auto protocol = m_relay_ep.address().is_v4()
 					? net::ip::udp::v4() : net::ip::udp::v6();
 				m_relay_sock.open(protocol, ec);
-				if (ec) co_return;
+				if (ec)
+				{
+					XLOG_WARN << "udp tproxy relay socket open failed: " << ec.message();
+					co_return;
+				}
 				m_relay_sock.bind(net::ip::udp::endpoint(protocol, 0), ec);
-				if (ec) co_return;
+				if (ec)
+				{
+					XLOG_WARN << "udp tproxy relay socket bind failed: " << ec.message();
+					co_return;
+				}
 
 				// 转发建立连接期间缓冲的首个数据包.
 				{
@@ -6415,14 +6418,13 @@ R"x*x*x(<html>
 					m_pending_ready = true;
 				}
 
-				// 启动响应接收协程.
 				net::co_spawn(m_executor,
 					[self, this]() -> net::awaitable<void>
 					{
 						co_await response_loop();
 					}, net::detached);
 
-				// 保活循环：维持 TCP 连接以保持 UDP ASSOCIATE.
+				// 保活 TCP 连接以保持 UDP ASSOCIATE.
 				auto timer = net::steady_timer(m_executor);
 				while (!m_closed)
 				{
@@ -6488,14 +6490,12 @@ R"x*x*x(<html>
 					co_return std::optional<tcp::resolver::results_type>{};
 				}
 
-				// 缓存结果.
 				m_dns.put(proxy_host, std::make_tuple(targets,
 					std::chrono::steady_clock::now()));
 
 				co_return targets;
 			}
 
-			// 连接到 proxy_pass.
 			net::awaitable<boost::system::error_code>
 			connect_to_proxy(const tcp::resolver::results_type& targets)
 			{
@@ -6504,12 +6504,12 @@ R"x*x*x(<html>
 					boost::system::error_code ec, ignore_ec;
 					m_control_sock.close(ignore_ec);
 					co_await m_control_sock.async_connect(endp, net_awaitable[ec]);
-					if (!ec) co_return ec;
+					if (!ec)
+						co_return ec;
 				}
 				co_return boost::asio::error::host_not_found;
 			}
 
-			// 执行 SOCKS5 UDP ASSOCIATE 握手.
 			net::awaitable<boost::system::error_code> do_socks5_associate()
 			{
 				boost::system::error_code ec;
@@ -6517,7 +6517,6 @@ R"x*x*x(<html>
 				auto scheme = boost::to_lower_copy(
 					std::string(m_proxy_pass->scheme()));
 
-				// 仅支持 socks 协议.
 				if (!scheme.starts_with("socks"))
 				{
 					XLOG_WARN << "udp tproxy only supports socks protocol, got: " << scheme;
@@ -6584,7 +6583,6 @@ R"x*x*x(<html>
 					co_return ec ? ec : net::error::operation_aborted;
 
 				m_relay_ep = *endpoint;
-				// 修正 relay 地址：若返回 0.0.0.0/::0，使用实际连接的远端地址.
 				if (m_relay_ep.address().is_unspecified())
 				{
 					net::ip::address remote_addr;
@@ -6608,7 +6606,9 @@ R"x*x*x(<html>
 
 			void do_close()
 			{
-				if (m_closed) return;
+				if (m_closed)
+					return;
+
 				m_closed = true;
 				boost::system::error_code ec;
 				m_control_sock.close(ec);
@@ -6616,7 +6616,6 @@ R"x*x*x(<html>
 				m_remote_ssl_stream.reset();
 			}
 
-			// 从 upstream relay 接收响应并转发回客户端.
 			net::awaitable<void> response_loop()
 			{
 				while (!m_closed)
@@ -6637,13 +6636,12 @@ R"x*x*x(<html>
 			// 去掉 SOCKS5 UDP 头, 然后使用 sendmsg + IP_PKTINFO 将原始数据送回客户端.
 			void send_response_to_client(const char* data, std::size_t len)
 			{
-				if (len < 4) return;
+				if (len < 4 || !m_transparent) return;
 
-				// 解析 SOCKS5 UDP 响应头: RSV(2) + FRAG(1) + ATYP(1) + DST.ADDR(var) + DST.PORT(2)
 				const char* p = data;
-				io_util::read<uint16_t>(p); // RSV
-				auto frag = io_util::read<uint8_t>(p); // FRAG
-				if (frag != 0) return; // 不支持分片
+				io_util::read<uint16_t>(p);
+				auto frag = io_util::read<uint8_t>(p);
+				if (frag != 0) return;
 
 				auto atyp = io_util::read<uint8_t>(p);
 
@@ -6681,7 +6679,13 @@ R"x*x*x(<html>
 					.iov_len = payload_len
 				};
 
-				char ctrl[CMSG_SPACE(sizeof(struct in_pktinfo))];
+				// 使用 IPv4/IPv6 所需的最大 control buffer 大小, 防止缓冲区溢出.
+				constexpr size_t ctrl_size_v4 = CMSG_SPACE(sizeof(struct in_pktinfo));
+				constexpr size_t ctrl_size_v6 = CMSG_SPACE(sizeof(struct in6_pktinfo));
+				constexpr size_t ctrl_max = ctrl_size_v4 > ctrl_size_v6
+					? ctrl_size_v4 : ctrl_size_v6;
+				alignas(struct cmsghdr) char ctrl[ctrl_max];
+
 				struct msghdr msg = {};
 				msg.msg_name = &ss;
 				msg.msg_namelen = m_client_ep.size();
@@ -6691,6 +6695,8 @@ R"x*x*x(<html>
 				msg.msg_controllen = sizeof(ctrl);
 
 				auto* cmsg = CMSG_FIRSTHDR(&msg);
+				if (!cmsg)
+					return;
 				if (m_original_dest.address().is_v4())
 				{
 					cmsg->cmsg_level = IPPROTO_IP;
@@ -6722,7 +6728,6 @@ R"x*x*x(<html>
 			}
 
 		public:
-			// 对外接口: 若 relay 尚未就绪则缓冲数据, 否则直接转发.
 			void forward_packet(const char* data, std::size_t len)
 			{
 				if (m_closed) return;
@@ -6733,32 +6738,41 @@ R"x*x*x(<html>
 					std::lock_guard<std::mutex> lk(m_pending_mutex);
 					if (!m_pending_ready)
 					{
-						m_pending_data.insert(
-							m_pending_data.end(), data, data + len);
+						// 限制缓冲大小, 防止内存耗尽.
+						constexpr size_t max_pending = 65536;
+						if (m_pending_data.size() + len <= max_pending)
+						{
+							m_pending_data.insert(
+								m_pending_data.end(), data, data + len);
+						}
+						else
+						{
+							XLOG_WARN << "udp tproxy pending buffer full, drop packet";
+						}
 						return;
 					}
 				}
 				forward_packet_impl(data, len);
 			}
 
-			// 实际转发: 加上 SOCKS5 UDP 请求头后发送给 upstream relay.
 			void forward_packet_impl(const char* data, std::size_t len)
 			{
 				if (m_closed || !m_relay_sock.is_open()) return;
 
-				// 构建 SOCKS5 UDP 请求头: RSV(2) + FRAG(1) + ATYP(1) + DST.ADDR(var) + DST.PORT(2)
-				// 按最大 IPv6 地址长度计算: 2+1+1+16+2 = 22
+				// SOCKS5 UDP: RSV(2) + FRAG(1) + ATYP(1) + addr + port
+				// 最大 IPv6 地址长度: 2+1+1+16+2 = 22
 				char header[22];
 				char* hp = header;
 
-				io_util::write<uint16_t>(0x0, hp); // RSV
-				io_util::write<uint8_t>(0x0, hp);  // FRAG
+				io_util::write<uint16_t>(0x0, hp);
+				io_util::write<uint8_t>(0x0, hp);
 
 				if (m_original_dest.address().is_v4())
 				{
 					io_util::write<uint8_t>(proxy::SOCKS5_ATYP_IPV4, hp);
+					// write 已按大端序输出, 不需要 htonl.
 					io_util::write<uint32_t>(
-						htonl(m_original_dest.address().to_v4().to_uint()), hp);
+						m_original_dest.address().to_v4().to_uint(), hp);
 					io_util::write<uint16_t>(m_original_dest.port(), hp);
 				}
 				else // IPv6
@@ -6772,7 +6786,6 @@ R"x*x*x(<html>
 
 				size_t header_len = hp - header;
 
-				// 拼接 header + data 后发送.
 				std::vector<char> buf(header_len + len);
 				std::memcpy(buf.data(), header, header_len);
 				std::memcpy(buf.data() + header_len, data, len);
@@ -6781,10 +6794,17 @@ R"x*x*x(<html>
 				m_relay_sock.send_to(
 					net::buffer(buf.data(), buf.size()), m_relay_ep, 0, ec);
 				if (ec)
-					XLOG_WARN << "udp tproxy forward error: " << ec.message();
+				{
+					XLOG_WARN << "udp tproxy forward error: " << ec.message()
+						<< ", closing flow";
+					do_close();
+				}
 			}
 
-			// ---- 成员变量 ----
+			bool is_closed() const noexcept { return m_closed; }
+			bool relay_ready() const noexcept { return m_relay_sock.is_open(); }
+
+		private:
 			net::any_io_executor m_executor;
 			net::io_context& m_backend_context;
 			bool m_scheduler_locking;
@@ -6795,23 +6815,20 @@ R"x*x*x(<html>
 			udp::socket* m_transparent = nullptr;
 
 			tcp::socket m_control_sock;
-			udp::socket m_relay_sock;
 			udp::endpoint m_relay_ep;
 
 			std::optional<variant_stream_type> m_remote_ssl_stream;
 			std::optional<urls::url> m_proxy_pass;
 			proxy_server_option m_option;
 
-			// 首个数据包缓冲: 在 relay 连接建立完成前缓冲第一个包.
 			std::mutex m_pending_mutex;
 			std::vector<char> m_pending_data;
 			bool m_pending_ready = false;
-
+			udp::socket m_relay_sock;
 			bool m_closed = false;
 		};
 
-		// 解析收到的 UDP 数据包，提取客户端端点与原始目标地址.
-		// msg 参数不能为 const，因为 CMSG_NXTHDR 需要非 const msghdr*.
+		// msg 不能为 const，CMSG_NXTHDR 需要非 const msghdr*.
 		static bool parse_udp_tproxy_packet(
 			struct msghdr& msg, ssize_t ret,
 			udp::endpoint& client_ep, udp::endpoint& original_dest)
@@ -6906,7 +6923,6 @@ R"x*x*x(<html>
 			return h;
 		}
 
-		// UDP TPROXY 主协程：接收透明重定向的 UDP 数据包并进行处理.
 		inline net::awaitable<void> start_udp_tproxy(udp::socket& udp_sock) noexcept
 		{
 			auto self = shared_from_this();
@@ -6957,7 +6973,10 @@ R"x*x*x(<html>
 				// 跳过回环和本机地址.
 				if (original_dest.address().is_loopback()) continue;
 				if (m_local_addrs.find(original_dest.address()) !=
-					m_local_addrs.end()) continue;
+					m_local_addrs.end())
+				{
+					continue;
+				}
 
 				size_t flow_key = make_udp_flow_key(client_ep, original_dest);
 
@@ -6969,7 +6988,7 @@ R"x*x*x(<html>
 					if (it != m_udp_tproxy_flows_.end())
 					{
 						flow = it->second;
-						if (flow && flow->m_closed)
+						if (flow && flow->is_closed())
 						{
 							m_udp_tproxy_flows_.erase(it);
 							flow.reset();
@@ -7007,7 +7026,7 @@ R"x*x*x(<html>
 						}, net::detached);
 				}
 
-				if (flow && flow->m_relay_sock.is_open())
+				if (flow && flow->relay_ready())
 					flow->forward_packet(data, static_cast<size_t>(ret));
 			}
 
