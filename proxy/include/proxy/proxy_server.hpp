@@ -6406,18 +6406,7 @@ R"x*x*x(<html>
 					co_return;
 				}
 
-				// 转发建立连接期间缓冲的首个数据包.
-				{
-					std::lock_guard<std::mutex> lk(m_pending_mutex);
-					if (!m_pending_data.empty())
-					{
-						forward_packet_impl(
-							m_pending_data.data(), m_pending_data.size());
-						m_pending_data.clear();
-					}
-					m_pending_ready = true;
-				}
-
+				// m_relay_sock 已就绪，后续数据包直接转发.
 				net::co_spawn(m_executor,
 					[self, this]() -> net::awaitable<void>
 					{
@@ -6730,33 +6719,6 @@ R"x*x*x(<html>
 		public:
 			void forward_packet(const char* data, std::size_t len)
 			{
-				if (m_closed) return;
-
-				if (!m_relay_sock.is_open())
-				{
-					// 连接尚未建立, 缓冲数据包待连接就绪后发送.
-					std::lock_guard<std::mutex> lk(m_pending_mutex);
-					if (!m_pending_ready)
-					{
-						// 限制缓冲大小, 防止内存耗尽.
-						constexpr size_t max_pending = 65536;
-						if (m_pending_data.size() + len <= max_pending)
-						{
-							m_pending_data.insert(
-								m_pending_data.end(), data, data + len);
-						}
-						else
-						{
-							XLOG_WARN << "udp tproxy pending buffer full, drop packet";
-						}
-						return;
-					}
-				}
-				forward_packet_impl(data, len);
-			}
-
-			void forward_packet_impl(const char* data, std::size_t len)
-			{
 				if (m_closed || !m_relay_sock.is_open()) return;
 
 				// SOCKS5 UDP: RSV(2) + FRAG(1) + ATYP(1) + addr + port
@@ -6821,9 +6783,6 @@ R"x*x*x(<html>
 			std::optional<urls::url> m_proxy_pass;
 			proxy_server_option m_option;
 
-			std::mutex m_pending_mutex;
-			std::vector<char> m_pending_data;
-			bool m_pending_ready = false;
 			udp::socket m_relay_sock;
 			bool m_closed = false;
 		};
