@@ -1989,7 +1989,9 @@ R"x*x*x(<html>
 					<< ", "
 					<< remote_endpoint_string(m_local_socket)
 					<< " to ipv4: "
-					<< dst_endpoint;
+					<< dst_endpoint
+					<< ", command: "
+					<< command;
 			}
 			else if (atyp == SOCKS5_ATYP_DOMAINNAME)
 			{
@@ -2017,7 +2019,9 @@ R"x*x*x(<html>
 					<< " to domain: "
 					<< domain
 					<< ":"
-					<< port;
+					<< port
+					<< ", command: "
+					<< command;
 			}
 			else if (atyp == SOCKS5_ATYP_IPV6)
 			{
@@ -2038,7 +2042,9 @@ R"x*x*x(<html>
 					<< ", "
 					<< remote_endpoint_string(m_local_socket)
 					<< " to ipv6: "
-					<< dst_endpoint;
+					<< dst_endpoint
+					<< ", command: "
+					<< command;
 			}
 
 			if (command == SOCKS_CMD_CONNECT)
@@ -2073,7 +2079,12 @@ R"x*x*x(<html>
 				udp::socket local_udp_socket(m_executor);
 				local_udp_socket.open(protocol, ec);
 				if (ec)
+				{
+					log_conn_warning()
+						<< ", open udp socket error: "
+						<< ec.message();
 					break;
+				}
 
 				// 如果有指定绑定本地地址, 则创建绑定到指定地址的 udp socket 用于数据发送.
 				std::optional<udp::socket> remote_bind_socket;
@@ -2087,21 +2098,41 @@ R"x*x*x(<html>
 					remote_bind_socket.emplace(m_executor);
 					remote_bind_socket->open(protocol, ec);
 					if (ec)
+					{
+						log_conn_warning()
+							<< ", open remote bind udp socket error: "
+							<< ec.message();
 						break;
+					}
 
 					// 绑定到指定的地址.
 					remote_bind_socket->bind(bind_if, ec);
+					if (ec)
+					{
+						log_conn_warning()
+							<< ", bind remote udp socket to "
+							<< bind_if
+							<< " error: "
+							<< ec.message();
+						break;
+					}
 
 					if (m_option.so_mark_)
 						co_await tproxy_set_mark((int)remote_bind_socket->native_handle());
 				}
 
 				// 绑定到和 tcp socket 相同的地址.
-				udp::endpoint local_udp_endp(tcp_remote_endpoint(m_local_socket).address(), 0);
+				udp::endpoint local_udp_endp(tcp_local_endpoint(m_local_socket).address(), 0);
 				local_udp_socket.bind(local_udp_endp, ec);
-
 				if (ec)
+				{
+					log_conn_warning()
+						<< ", bind local udp socket to "
+						<< local_udp_endp
+						<< " error: "
+						<< ec.message();
 					break;
+				}
 
 				if (m_proxy_pass)
 				{
@@ -2143,7 +2174,12 @@ R"x*x*x(<html>
 
 				auto local_endp = local_udp_socket.local_endpoint(ec);
 				if (ec)
+				{
+					log_conn_warning()
+						<< ", get local udp socket endpoint error: "
+						<< ec.message();
 					break;
+				}
 
 				log_conn_debug()
 					<< ", udp client address: "
@@ -2225,6 +2261,13 @@ R"x*x*x(<html>
 					error_code = SOCKS5_HOST_UNREACHABLE;
 				else if (ec)
 					error_code = SOCKS5_GENERAL_SOCKS_SERVER_FAILURE;
+
+				if (ec)
+				{
+					log_conn_warning()
+						<< ", connect to target error: "
+						<< ec.message();
+				}
 
 				//  +----+-----+-------+------+----------+----------+
 				//  |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
