@@ -96,6 +96,7 @@
 #include <boost/uuid/uuid_io.hpp>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/scope/scope_exit.hpp>
 
 #ifdef USE_BOOST_FILESYSTEM
 // 为避免低版本(gcc-12.3 以下)的 libstdc++ 中 filesystem 的
@@ -111,11 +112,15 @@
 
 #ifdef __linux__
 # include <sys/socket.h>
+# include <netinet/in.h>
+# include <netinet/ip.h>
+# include <arpa/inet.h>
 #endif // __linux__
 
 #include <cstdlib>
 #include <algorithm>
 #include <cstddef>
+#include <cstring>
 #include <filesystem>
 #include <limits>
 #include <memory>
@@ -322,6 +327,9 @@ R"x*x*x(<html>
 
 	// tcp_session_expired_time 用于指定 tcp session 的默认过期时间, 单位为秒.
 	inline const int tcp_session_expired_time = 60;
+
+	// udp_session_expire_time 用于指定 udp session 的过期时间, 单位为秒.
+	inline const int udp_session_expired_time = 60;
 
 	// noise_injection_max_len 用于指定噪声注入的最大长度, 单位为字节.
 	inline const uint16_t noise_injection_max_len = 0x0fff;
@@ -540,6 +548,12 @@ R"x*x*x(<html>
 		// - 用于控制连接建立/读写等阶段的超时。
 		// - 默认值为 tcp_session_expired_time。
 		int tcp_timeout_{ tcp_session_expired_time };
+
+		// UDP 会话/流过期时间（秒）。
+		//
+		// - 用于控制 UDP 会话的生命周期，尤其在透明代理模式下用于清理过期的流。
+		// - 默认值为 60 秒（可根据实际需求调整）。
+		int udp_timeout_{ udp_session_expired_time };
 
 		// TCP 连接速率限制（全局），单位：bytes/second。
 		//
@@ -5149,6 +5163,7 @@ R"x*x*x(<html>
 
 	//////////////////////////////////////////////////////////////////////////
 
+#ifdef __linux__
 	// udp_tproxy_flow 结构体保存每个 UDP TPROXY flow 的状态信息, 包括客户端地址、原始目标地址和 relay socket 等等.
 	struct udp_tproxy_flow
 	{
@@ -5170,9 +5185,12 @@ R"x*x*x(<html>
 
 		// tproxy_sock_ 保存 tproxy 模式下用于接收客户端数据包的 socket 的引用, 用于在 flow 中转发数据包时使用.
 		udp::socket& tproxy_sock_;
+
+		// expire 用于检查 flow 是否已过期.
+		int expire_{ 0 };
 	};
 	using udp_tproxy_flow_ptr = std::shared_ptr<udp_tproxy_flow>;
-
+#endif
 
 	class proxy_server
 		: public proxy_server_base
@@ -6492,8 +6510,54 @@ R"x*x*x(<html>
 			return h;
 		}
 
+		inline net::awaitable<void> udp_tproxy_check() noexcept
+		{
+			auto self = shared_from_this();
+
+			boost::system::error_code ec;
+			net::steady_timer timer(m_executor);
+
+			while (!m_abort)
+			{
+				timer.expires_after(std::chrono::seconds(1));
+				co_await timer.async_wait(net_awaitable[ec]);
+				if (ec)
+					break;
+
+				std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
+				std::vector<size_t> expired_keys;
+				for (auto [key, flow] : m_udp_tproxy_flows)
+				{
+					if (!flow)
+					{
+						expired_keys.push_back(key);
+						continue;
+					}
+
+					if (flow->expire_++ > m_option.udp_timeout_)
+					{
+						XLOG_DBG << "udp tproxy flow expired: "
+							<< flow->expire_ << ", key: "
+							<< key << ", client: "
+							<< flow->client_endp_ << ", dest: "
+							<< flow->original_endp_;
+
+						flow->relay_sock_.reset();
+						expired_keys.push_back(key);
+					}
+				}
+
+				for (auto key : expired_keys)
+				{
+					m_udp_tproxy_flows.erase(key);
+				}
+			}
+		}
+
 		inline net::awaitable<void> start_udp_tproxy() noexcept
 		{
+			auto self = shared_from_this();
+
 			// 检查配置项，UDP TPROXY 模式必须配置 proxy_pass 以转发数据包.
 			if (!m_option.proxy_pass_)
 			{
@@ -6507,6 +6571,10 @@ R"x*x*x(<html>
 				net::co_spawn(m_executor,
 					start_udp_tproxy_listen(udp_sock), net::detached);
 			}
+
+			// 启动 UDP TPROXY 检查协程, 定时检查是否有新的数据包需要处理.
+			net::co_spawn(m_executor,
+				udp_tproxy_check(), net::detached);
 
 			boost::system::error_code ec;
 
@@ -6657,7 +6725,6 @@ R"x*x*x(<html>
 					}
 				}
 
-				m_option.ssl_cacert_path_;
 				cli_ctx.set_verify_mode(net::ssl::verify_peer);
 				auto certs = default_root_certificates();
 
@@ -6760,8 +6827,25 @@ R"x*x*x(<html>
 
 		net::awaitable<void> udp_tproxy_response_loop(udp_tproxy_flow_ptr flow)
 		{
+			auto self = shared_from_this();
+
 			if (!flow)
 				co_return;
+
+			// 退出时清理 flow, 防止 map 泄漏.
+			boost::scope::scope_exit flows_guard([this, flow]()
+			{
+				if (!flow)
+					return;
+
+				flow->relay_sock_.reset();
+
+				auto flow_key = make_udp_flow_key(
+					flow->client_endp_, flow->original_endp_);
+
+				std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
+				m_udp_tproxy_flows.erase(flow_key);
+			});
 
 			if (!flow->relay_sock_)
 				flow->relay_sock_.emplace(m_executor);
@@ -6773,7 +6857,6 @@ R"x*x*x(<html>
 			if (ec)
 			{
 				XLOG_WARN << "udp tproxy relay socket open error: " << ec.message();
-				relay_sock.reset();
 				co_return;
 			}
 
@@ -6782,7 +6865,6 @@ R"x*x*x(<html>
 			if (ec)
 			{
 				XLOG_WARN << "udp tproxy relay socket bind error: " << ec.message();
-				relay_sock.reset();
 				co_return;
 			}
 
@@ -6795,8 +6877,7 @@ R"x*x*x(<html>
 				if (ec)
 					break;
 
-				// 收到数据后直接调用 flow 的 send_response_to_client 方法将数据转发回客户端, 这里不
-				// 再进行任何解析了, 直接把 proxy_pass 发过来的数据原封不动地转发回去.
+				flow->expire_ = 0; // 收到数据包重置过期计数.
 				send_response_to_client(flow, recv_buf, bytes);
 			}
 
@@ -6890,7 +6971,6 @@ R"x*x*x(<html>
 				.iov_len = payload_len
 			};
 
-			// 使用 IPv4/IPv6 所需的最大 control buffer 大小, 防止缓冲区溢出.
 			constexpr size_t ctrl_size_v4 = CMSG_SPACE(sizeof(struct in_pktinfo));
 			constexpr size_t ctrl_size_v6 = CMSG_SPACE(sizeof(struct in6_pktinfo));
 			constexpr size_t ctrl_max = ctrl_size_v4 > ctrl_size_v6
@@ -6917,9 +6997,8 @@ R"x*x*x(<html>
 				auto* pi = (struct in_pktinfo*)CMSG_DATA(cmsg);
 				std::memset(pi, 0, sizeof(*pi));
 				pi->ipi_ifindex = 0;
-				inet_pton(AF_INET, remote_addr.c_str(), &pi->ipi_spec_dst);
-
-				// pi->ipi_spec_dst.s_addr = htonl(m_original_dest.address().to_v4().to_uint());
+				pi->ipi_spec_dst.s_addr = htonl(
+					original_dest.address().to_v4().to_uint());
 
 				msg.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 			}
@@ -6932,6 +7011,7 @@ R"x*x*x(<html>
 				auto* pi6 = (struct in6_pktinfo*)CMSG_DATA(cmsg);
 				auto ab = original_dest.address().to_v6().to_bytes();
 				std::memcpy(&pi6->ipi6_addr, ab.data(), 16);
+				pi6->ipi6_ifindex = 0;
 				msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
 			}
 
@@ -6981,18 +7061,23 @@ R"x*x*x(<html>
 			}
 
 			size_t header_len = hp - header;
+			boost::system::error_code ec;
 
 			std::vector<char> buf(header_len + len);
 			std::memcpy(buf.data(), header, header_len);
 			std::memcpy(buf.data() + header_len, data, len);
 
-			boost::system::error_code ec;
-			relay_sock.send_to(
-				net::buffer(buf.data(), buf.size()), m_relay_endp, 0, ec);
+			relay_sock.send_to(net::buffer(buf.data(), buf.size()), m_relay_endp, 0, ec);
 			if (ec)
 			{
-				XLOG_WARN << "udp tproxy forward error: " << ec.message()
-					<< ", closing flow";
+				XLOG_WARN << "udp tproxy forward error: " << ec.message() << ", closing flow";
+				flow->relay_sock_.reset();
+
+				auto flow_key = make_udp_flow_key(
+					flow->client_endp_, flow->original_endp_);
+
+				std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
+				m_udp_tproxy_flows.erase(flow_key);
 			}
 		}
 
@@ -7069,13 +7154,13 @@ R"x*x*x(<html>
 					// 创建一个新的 flow 来处理这个客户端和原始目标地址的通信.
 					flow = std::make_shared<udp_tproxy_flow>(client_ep, original_dest, udp_sock);
 
-					// 创建 relay socket 后就启动一个协程循环等待 relay socket 上的响应数据, 并转发回客户端.
-					net::co_spawn(m_executor, udp_tproxy_response_loop(flow), net::detached);
-
 					{
 						std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
 						m_udp_tproxy_flows[flow_key] = flow;
 					}
+
+					// 创建 relay socket 后就启动一个协程循环等待 relay socket 上的响应数据, 并转发回客户端.
+					net::co_spawn(m_executor, udp_tproxy_response_loop(flow), net::detached);
 
 					XLOG_DBG << "new udp tproxy flow, client: " << client_ep
 						<< ", original dest: " << original_dest
@@ -7083,6 +7168,7 @@ R"x*x*x(<html>
 				}
 
 				BOOST_ASSERT(flow && "udp tproxy flow is null");
+				flow->expire_ = 0; // 收到数据包重置过期计数.
 				udp_tproxy_forward_packet(flow, data, static_cast<size_t>(ret));
 			}
 
