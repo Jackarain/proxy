@@ -627,6 +627,13 @@ R"x*x*x(<html>
 		// - false：允许明文与加密并存，由客户端与服务端协商确定是否加密。
 		bool disable_insecure_{ false };
 
+
+		// 是否禁用 TLS 证书校验（不安全，通常用于测试或特定环境）。
+		//
+		// - true ：不校验 TLS 证书，允许连接到证书无效/自签的服务器。
+		// - false：启用 TLS 证书校验，确保连接安全。
+		bool disable_check_cert_{ false };
+
 		// 是否禁用 UDP 代理服务。
 		//
 		// - true ：不提供 UDP 转发/代理能力（如 UDP ASSOCIATE 等）。
@@ -5019,7 +5026,14 @@ R"x*x*x(<html>
 			}
 
 			// ssl 加密, 先初始化 ssl socket, 然后实例化成 variant_stream_type 类型的对象.
-			m_ssl_cli_context.set_verify_mode(net::ssl::verify_peer);
+			auto verify = net::ssl::verify_peer;
+			if (m_option.disable_check_cert_)
+			{
+				verify = net::ssl::verify_none;
+				log_conn_debug() << ", disable check proxy server certificate";
+			}
+
+			m_ssl_cli_context.set_verify_mode(verify);
 			auto certificates = default_root_certificates();
 
 			m_ssl_cli_context.add_certificate_authority(
@@ -5039,7 +5053,10 @@ R"x*x*x(<html>
 			// 获取 proxy_pass 的主机名称.
 			auto proxy_host = std::string(m_proxy_pass->host());
 
-			m_ssl_cli_context.set_verify_callback(net::ssl::host_name_verification(proxy_host), ec);
+			// 若用户配置了 SNI, 则使用用户配置的 SNI 否则使用默认 hostname.
+			std::string sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;
+
+			m_ssl_cli_context.set_verify_callback(net::ssl::host_name_verification(sni), ec);
 			if (ec)
 			{
 				log_conn_warning()
@@ -5061,9 +5078,6 @@ R"x*x*x(<html>
 				next_layer.set_unscramble_key(m_outin_key);
 			}
 
-			// 若用户配置了 SNI, 则使用用户配置的 SNI 否则使用默认 hostname.
-			std::string sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;
-
 			// Set SNI Hostname.
 			if (!SSL_set_tlsext_host_name(ssl_socket.native_handle(), sni.c_str()))
 			{
@@ -5074,7 +5088,7 @@ R"x*x*x(<html>
 					<< ::ERR_get_error();
 			}
 
-			log_conn_debug() << ", performing TLS handshake with " << proxy_host << "...";
+			log_conn_debug() << ", performing TLS handshake with " << sni << "...";
 
 			// do async handshake.
 			co_await ssl_socket.async_handshake(net::ssl::stream_base::client, net_awaitable[ec]);
@@ -5632,7 +5646,7 @@ R"x*x*x(<html>
 
 #if defined(__linux__) && defined(IP_TRANSPARENT)
 			// 创建 UDP TPROXY 透明代理 sockets，用于接收被重定向的 UDP 数据包.
-			if (m_option.proxy_pass_)
+			if (m_option.proxy_pass_ && m_option.transparent_)
 			{
 				for (const auto& [tcp_endp, v6only] : m_option.listens_)
 				{
@@ -6689,6 +6703,7 @@ R"x*x*x(<html>
 			auto proxy_pass = *m_option.proxy_pass_;
 
 			auto proxy_host = std::string(proxy_pass.host());
+			auto sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;
 			auto scheme = boost::to_lower_copy(std::string(proxy_pass.scheme()));
 
 			// 目前仅支持 SOCKS 协议的 proxy_pass 转发, 因为 HTTP 代理不支持 UDP 转发.
@@ -6751,7 +6766,14 @@ R"x*x*x(<html>
 					}
 				}
 
-				cli_ctx.set_verify_mode(net::ssl::verify_peer);
+				auto verify = net::ssl::verify_peer;
+				if (m_option.disable_check_cert_)
+				{
+					XLOG_DBG << "udp tproxy certificate verification will be disabled";
+					verify = net::ssl::verify_none;
+				}
+
+				cli_ctx.set_verify_mode(verify);
 				auto certs = default_root_certificates();
 
 				cli_ctx.add_certificate_authority(net::buffer(certs.data(), certs.size()), ec);
@@ -6760,7 +6782,7 @@ R"x*x*x(<html>
 					XLOG_WARN << "udp tproxy add_certificate_authority error: " << ec.message();
 					co_return false;
 				}
-				cli_ctx.set_verify_callback(net::ssl::host_name_verification(proxy_host), ec);
+				cli_ctx.set_verify_callback(net::ssl::host_name_verification(sni), ec);
 				if (ec)
 				{
 					XLOG_WARN << "udp tproxy set_verify_callback error: " << ec.message();
@@ -6772,7 +6794,7 @@ R"x*x*x(<html>
 				auto& ssl_sock = boost::variant2::get<ssl_tcp_stream>(*socks5_control);
 
 				// 设置 SNI 主机名以兼容需要 SNI 的服务器.
-				if (!SSL_set_tlsext_host_name(ssl_sock.native_handle(), proxy_host.c_str()))
+				if (!SSL_set_tlsext_host_name(ssl_sock.native_handle(), sni.c_str()))
 					XLOG_WARN << "udp tproxy set sni failed";
 
 				// 进行 SSL 握手.
@@ -6783,6 +6805,8 @@ R"x*x*x(<html>
 					XLOG_WARN << "udp tproxy SSL handshake failed: " << ec.message();
 					co_return false;
 				}
+
+				XLOG_DBG << "udp tproxy SSL handshake with " << sni << " succeeded";
 
 				// 进行 SOCKS5 握手以获取 UDP 转发的目标 endpoint.
 				endpoint = co_await async_socks_handshake(*socks5_control, opt, net_awaitable[ec]);
