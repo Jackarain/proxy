@@ -6972,9 +6972,6 @@ R"x*x*x(<html>
 			auto payload = data + header_size;
 			auto payload_len = len - header_size;
 
-			XLOG_DBG << "udp tproxy receive packet from proxy_pass:"
-				<< remote_addr << ":" << port << ", payload len: " << payload_len;
-
 			auto& client_endp = flow->client_endp_;
 			auto& original_dest = flow->original_endp_;
 
