@@ -5636,6 +5636,7 @@ R"x*x*x(<html>
 			{
 				for (const auto& [tcp_endp, v6only] : m_option.listens_)
 				{
+					(void)v6only;
 					net::ip::udp::socket udp_sock(m_executor);
 					boost::system::error_code ec;
 
@@ -6923,57 +6924,25 @@ R"x*x*x(<html>
 
 			const char* p = data;
 
-			// 跳过 RSV, 保留字段
+			// 跳过 RSV(2) + FRAG(1)
 			read<uint16_t>(p);
+			if (read<uint8_t>(p) != 0)
+				return; // 不支持分片
 
-			// 目前不支持分片, 如果 FRAG 不为 0 则丢弃数据包.
-			auto frag = read<uint8_t>(p);
-			if (frag != 0)
-				return;
-
-			// 读取地址类型 ATYP.
-			auto atyp = read<uint8_t>(p);
-
-			// 计算 RSV(2) + FRAG(1) + ATYP(1) 长度
-			size_t header_size = 4;
-
-			std::string remote_addr;
-
-			if (atyp == proxy::SOCKS5_ATYP_IPV4)
+			// 跳过 ATYP + DST.ADDR + DST.PORT 计算 payload 偏移.
+			size_t header_size;
+			switch (read<uint8_t>(p))
 			{
-				char ip_str[INET_ADDRSTRLEN] = {0};
-				inet_ntop(AF_INET, p, ip_str, INET_ADDRSTRLEN);
-				remote_addr = ip_str;
-
-				p += 4;
-				header_size += 4 ; // IPv4 addr(4)
-			}
-			else if (atyp == proxy::SOCKS5_ATYP_DOMAINNAME)
-			{
-				auto domain_len = static_cast<uint8_t>(p[0]);
-				p++;
-
-				remote_addr.assign(p, p + domain_len);
-
-				p += domain_len;
-				header_size += 1 + domain_len; // len(1) + domain
-			}
-			else if (atyp == proxy::SOCKS5_ATYP_IPV6)
-			{
-				char ip_str[INET6_ADDRSTRLEN] = {0};
-				inet_ntop(AF_INET6, p, ip_str, INET6_ADDRSTRLEN);
-				remote_addr = ip_str;
-
-				p += 16;
-				header_size += 16; // IPv6 addr(16)
-			}
-			else
-			{
+			case proxy::SOCKS5_ATYP_IPV4:
+				p += 4; header_size = 10; break; // 4+2+4
+			case proxy::SOCKS5_ATYP_DOMAINNAME:
+				header_size = 7 + static_cast<uint8_t>(*p);
+				p += 1 + static_cast<uint8_t>(*p); break; // len(1)+domain
+			case proxy::SOCKS5_ATYP_IPV6:
+				p += 16; header_size = 22; break; // 4+2+16
+			default:
 				return; // 未知地址类型
 			}
-
-			uint16_t port = (p[0] << 8) | p[1];
-			header_size += 2; // DST.PORT(2)
 
 			if (len <= header_size)
 				return;
@@ -7149,17 +7118,7 @@ R"x*x*x(<html>
 				if (!parse_udp_tproxy_packet(msg, ret, client_ep, original_dest))
 					continue;
 
-#if 0
-				// 跳过回环和本机地址.
-				if (original_dest.address().is_loopback())
-					continue;
 
-				if (m_local_addrs.find(original_dest.address()) !=
-					m_local_addrs.end())
-				{
-					continue;
-				}
-#endif
 
 				size_t flow_key = make_udp_flow_key(client_ep, original_dest);
 
@@ -7260,9 +7219,6 @@ R"x*x*x(<html>
 
 		// 存储每个 UDP TPROXY flow 的状态信息, 包括客户端地址、原始目标地址和 relay socket 等等.
 		std::unordered_map<size_t, udp_tproxy_flow_ptr> m_udp_tproxy_flows;
-
-		// 用于维护和 proxy_pass 的 TCP 连接.
-		std::optional<variant_stream_type> m_remote_socket;
 
 		// proxy_pass 返回侦听的 UDP 端口地址信息, 所有 UDP TPROXY
 		// flow 共享这个地址信息将数据转发到 proxy_pass.
