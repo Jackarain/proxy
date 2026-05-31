@@ -97,6 +97,7 @@ bool ssl_prefer_server_ciphers = false;
 int64_t linux_so_mark;
 uint16_t noise_length;
 int tcp_timeout;
+int udp_timeout;
 int rate_limit;
 
 std::string asio_config;
@@ -250,6 +251,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.noise_length_ = noise_length;
 	opt.local_ip_ = local_ip;
 	opt.tcp_timeout_ = tcp_timeout;
+	opt.udp_timeout_ = udp_timeout == -1 ? std::numeric_limits<int>::max() : udp_timeout;
 	opt.tcp_rate_limit_ = rate_limit;
 
 	opt.ipip_db_ = ipip_db_name;
@@ -423,6 +425,7 @@ int main(int argc, char** argv)
 		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set SO_MARK for linux transparent proxy mode.")
 
 		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(-1), "Set TCP timeout for TCP connections.")
+		("udp_timeout", po::value<int>(&udp_timeout)->default_value(-1), "Set UDP timeout for UDP sessions.")
 		("rate_limit", po::value<int>(&rate_limit)->default_value(-1), "Set TCP rate limit for connection.")
 
 #ifdef USE_PAM_AUTH

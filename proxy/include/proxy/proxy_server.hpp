@@ -6006,8 +6006,11 @@ R"x*x*x(<html>
 			}
 
 #if defined(__linux__)
-			net::co_spawn(m_executor,
-				start_udp_tproxy(), net::detached);
+			if (m_option.transparent_)
+			{
+				net::co_spawn(m_executor,
+					start_udp_tproxy(), net::detached);
+			}
 #endif // defined(__linux__)
 
 			// 启动 证书检查定时器.
