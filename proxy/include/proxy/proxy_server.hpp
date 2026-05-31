@@ -1970,6 +1970,13 @@ R"x*x*x(<html>
 			}
 			else if (atyp == SOCKS5_ATYP_IPV6)
 				length = 17; // 18 - 1
+			else
+			{
+				log_conn_warning()
+					<< ", socks5 request, unsupported address type: "
+					<< atyp;
+				co_return;
+			}
 
 			bytes = co_await net::async_read(m_local_socket,
 				m_local_buffer,
@@ -2262,6 +2269,13 @@ R"x*x*x(<html>
 
 				co_return;
 			} while (0);
+			else
+			{
+				log_conn_warning()
+					<< ", unsupported socks5 command: "
+					<< command;
+				ec = make_error_code(boost::system::errc::not_supported);
+			}
 
 			// 连接成功或失败.
 			{
@@ -2273,6 +2287,8 @@ R"x*x*x(<html>
 					error_code = SOCKS5_NETWORK_UNREACHABLE;
 				else if (ec == net::error::host_unreachable)
 					error_code = SOCKS5_HOST_UNREACHABLE;
+				else if (ec == boost::system::errc::not_supported)
+					error_code = SOCKS5_COMMAND_NOT_SUPPORTED;
 				else if (ec)
 					error_code = SOCKS5_GENERAL_SOCKS_SERVER_FAILURE;
 
