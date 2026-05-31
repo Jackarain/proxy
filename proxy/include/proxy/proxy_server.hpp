@@ -2479,6 +2479,10 @@ R"x*x*x(<html>
 						final_remote_endp.address(net::ip::address_v6(addr));
 						final_remote_endp.port(read<uint16_t>(rp));
 					}
+					else
+					{
+						continue;
+					}
 
 					auto head_size = rp - rbuf;
 					auto udp_size = bytes - head_size;
@@ -5597,18 +5601,17 @@ R"x*x*x(<html>
 					using transparent6_udp = net::detail::socket_option::boolean<
 						IPPROTO_IPV6, IPV6_TRANSPARENT>;
 
-					udp_sock.set_option(transparent_udp(true), ec);
-					udp_sock.set_option(transparent6_udp(true), ec);
-
 					// 设置 IP_RECVORIGDSTADDR 以接收原始目标地址.
 					int opt = 1;
 					if (udp_endp.protocol() == net::ip::udp::v4())
 					{
+						udp_sock.set_option(transparent_udp(true), ec);
 						::setsockopt(udp_sock.native_handle(), IPPROTO_IP,
 							IP_RECVORIGDSTADDR, &opt, sizeof(opt));
 					}
 					else
 					{
+						udp_sock.set_option(transparent6_udp(true), ec);
 						::setsockopt(udp_sock.native_handle(), IPPROTO_IPV6,
 							IPV6_RECVORIGDSTADDR, &opt, sizeof(opt));
 					}
@@ -6403,11 +6406,30 @@ R"x*x*x(<html>
 			~udp_tproxy_flow() { do_close(); }
 			void close() { do_close(); }
 
+			net::awaitable<void> send_first_packet()
+			{
+				boost::system::error_code ec;
+
+				// 如果第一个数据包不为空，则首先发送第一个数据包.
+				if (!m_relay_buf.empty())
+				{
+					// 发送缓存在 m_relay_buf 中的第一个数据包.
+					forward_packet(m_relay_buf.data(), m_relay_buf.size());
+					m_relay_buf.clear();
+
+					XLOG_DBG << "udp tproxy relay socket send first packet success";
+				}
+
+				co_return;
+			}
+
 			net::awaitable<void> run(udp::socket& transparent_sock)
 			{
 				auto self = shared_from_this();
 
-				if (m_closed) co_return;
+				if (m_closed)
+					co_return;
+
 				m_transparent = &transparent_sock;
 
 				boost::system::error_code ec;
@@ -6442,12 +6464,16 @@ R"x*x*x(<html>
 					XLOG_WARN << "udp tproxy relay socket open failed: " << ec.message();
 					co_return;
 				}
+
 				m_relay_sock.bind(net::ip::udp::endpoint(protocol, 0), ec);
 				if (ec)
 				{
 					XLOG_WARN << "udp tproxy relay socket bind failed: " << ec.message();
 					co_return;
 				}
+
+				if (!m_relay_buf.empty())
+					co_await send_first_packet();
 
 				// m_relay_sock 已就绪，后续数据包直接转发.
 				net::co_spawn(m_executor,
@@ -6668,39 +6694,77 @@ R"x*x*x(<html>
 			// 去掉 SOCKS5 UDP 头, 然后使用 sendmsg + IP_PKTINFO 将原始数据送回客户端.
 			void send_response_to_client(const char* data, std::size_t len)
 			{
-				if (len < 4 || !m_transparent) return;
+				if (len < 6 || !m_transparent)
+					return;
+
+				//  +----+------+------+----------+-----------+----------+
+				//  |RSV | FRAG | ATYP | DST.ADDR | DST.PORT  |   DATA   |
+				//  +----+------+------+----------+-----------+----------+
+				//  | 2  |  1   |  1   | Variable |    2      | Variable |
+				//  +----+------+------+----------+-----------+----------+
 
 				const char* p = data;
-				io_util::read<uint16_t>(p);
-				auto frag = io_util::read<uint8_t>(p);
-				if (frag != 0) return;
 
-				auto atyp = io_util::read<uint8_t>(p);
+				// 跳过 RSV, 保留字段
+				read<uint16_t>(p);
 
-				size_t header_size = 4; // RSV(2) + FRAG(1) + ATYP(1)
+				// 目前不支持分片, 如果 FRAG 不为 0 则丢弃数据包.
+				auto frag = read<uint8_t>(p);
+				if (frag != 0)
+					return;
+
+				// 读取地址类型 ATYP.
+				auto atyp = read<uint8_t>(p);
+
+				// 计算 RSV(2) + FRAG(1) + ATYP(1) 长度
+				size_t header_size = 4;
+
+				std::string remote_addr;
+
 				if (atyp == proxy::SOCKS5_ATYP_IPV4)
 				{
-					header_size += 4 + 2; // IPv4 addr(4) + port(2)
+				    char ip_str[INET_ADDRSTRLEN] = {0};
+    				inet_ntop(AF_INET, p, ip_str, INET_ADDRSTRLEN);
+    				remote_addr = ip_str;
+
+					p += 4;
+					header_size += 4 ; // IPv4 addr(4)
 				}
 				else if (atyp == proxy::SOCKS5_ATYP_DOMAINNAME)
 				{
-					if (len <= header_size) return;
 					auto domain_len = static_cast<uint8_t>(p[0]);
-					header_size += 1 + domain_len + 2; // len(1) + domain + port(2)
+					p++;
+
+					remote_addr.assign(p, p + domain_len);
+
+					p += domain_len;
+					header_size += 1 + domain_len; // len(1) + domain
 				}
 				else if (atyp == proxy::SOCKS5_ATYP_IPV6)
 				{
-					header_size += 16 + 2; // IPv6 addr(16) + port(2)
+					char ip_str[INET6_ADDRSTRLEN] = {0};
+					inet_ntop(AF_INET6, p, ip_str, INET6_ADDRSTRLEN);
+					remote_addr = ip_str;
+
+					p += 16;
+					header_size += 16; // IPv6 addr(16)
 				}
 				else
 				{
 					return; // 未知地址类型
 				}
 
-				if (len <= header_size) return;
+				uint16_t port = (p[0] << 8) | p[1];
+				header_size += 2; // DST.PORT(2)
+
+				if (len <= header_size)
+					return;
 
 				auto payload = data + header_size;
 				auto payload_len = len - header_size;
+
+				XLOG_DBG << "udp tproxy receive packet from proxy_pass:"
+					<< remote_addr << ":" << port << ", payload len: " << payload_len;
 
 				struct sockaddr_storage ss;
 				auto addr_data = m_client_ep.data();
@@ -6734,10 +6798,14 @@ R"x*x*x(<html>
 					cmsg->cmsg_level = IPPROTO_IP;
 					cmsg->cmsg_type = IP_PKTINFO;
 					cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+
 					auto* pi = (struct in_pktinfo*)CMSG_DATA(cmsg);
 					std::memset(pi, 0, sizeof(*pi));
-					pi->ipi_spec_dst.s_addr =
-						htonl(m_original_dest.address().to_v4().to_uint());
+					pi->ipi_ifindex = 0;
+					inet_pton(AF_INET, remote_addr.c_str(), &pi->ipi_spec_dst);
+
+					// pi->ipi_spec_dst.s_addr = htonl(m_original_dest.address().to_v4().to_uint());
+
 					msg.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 				}
 				else
@@ -6745,6 +6813,7 @@ R"x*x*x(<html>
 					cmsg->cmsg_level = IPPROTO_IPV6;
 					cmsg->cmsg_type = IPV6_PKTINFO;
 					cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+
 					auto* pi6 = (struct in6_pktinfo*)CMSG_DATA(cmsg);
 					auto ab = m_original_dest.address().to_v6().to_bytes();
 					std::memcpy(&pi6->ipi6_addr, ab.data(), 16);
@@ -6754,39 +6823,49 @@ R"x*x*x(<html>
 				auto sent = ::sendmsg(m_transparent->native_handle(), &msg, 0);
 				if (sent < 0)
 				{
-					XLOG_WARN << "udp tproxy sendmsg error: "
-						<< strerror(errno);
+					XLOG_WARN << "udp tproxy sendmsg error: " << strerror(errno);
 				}
 			}
 
 		public:
 			void forward_packet(const char* data, std::size_t len)
 			{
-				if (m_closed || !m_relay_sock.is_open()) return;
+				if (is_closed())
+				{
+					XLOG_DBG << "udp tproxy flow is closed, drop packet";
+					return;
+				}
+
+				if (!relay_ready())
+				{
+					XLOG_DBG << "udp tproxy relay socket not ready, caching packet";
+					m_relay_buf.assign(data, data + len);
+					return;
+				}
 
 				// SOCKS5 UDP: RSV(2) + FRAG(1) + ATYP(1) + addr + port
 				// 最大 IPv6 地址长度: 2+1+1+16+2 = 22
 				char header[22];
 				char* hp = header;
 
-				io_util::write<uint16_t>(0x0, hp);
-				io_util::write<uint8_t>(0x0, hp);
+				write<uint16_t>(0x0, hp);
+				write<uint8_t>(0x0, hp);
 
 				if (m_original_dest.address().is_v4())
 				{
-					io_util::write<uint8_t>(proxy::SOCKS5_ATYP_IPV4, hp);
+					write<uint8_t>(proxy::SOCKS5_ATYP_IPV4, hp);
 					// write 已按大端序输出, 不需要 htonl.
-					io_util::write<uint32_t>(
+					write<uint32_t>(
 						m_original_dest.address().to_v4().to_uint(), hp);
-					io_util::write<uint16_t>(m_original_dest.port(), hp);
+					write<uint16_t>(m_original_dest.port(), hp);
 				}
 				else // IPv6
 				{
-					io_util::write<uint8_t>(proxy::SOCKS5_ATYP_IPV6, hp);
+					write<uint8_t>(proxy::SOCKS5_ATYP_IPV6, hp);
 					auto addr_bytes = m_original_dest.address().to_v6().to_bytes();
 					for (auto b : addr_bytes)
-						io_util::write<uint8_t>(b, hp);
-					io_util::write<uint16_t>(m_original_dest.port(), hp);
+						write<uint8_t>(b, hp);
+					write<uint16_t>(m_original_dest.port(), hp);
 				}
 
 				size_t header_len = hp - header;
@@ -6827,6 +6906,7 @@ R"x*x*x(<html>
 			proxy_server_option m_option;
 
 			udp::socket m_relay_sock;
+			std::vector<char> m_relay_buf;
 			bool m_closed = false;
 		};
 
@@ -6938,19 +7018,22 @@ R"x*x*x(<html>
 			XLOG_DBG << "udp tproxy listener started on: "
 				<< udp_sock.local_endpoint();
 
+			boost::system::error_code ec;
+
 			while (!m_abort)
 			{
-				boost::system::error_code ec;
-				co_await udp_sock.async_wait(
-					net::socket_base::wait_read, net_awaitable[ec]);
-				if (ec || m_abort) break;
+				co_await udp_sock.async_wait(net::socket_base::wait_read, net_awaitable[ec]);
+				if (ec || m_abort)
+					break;
 
 				// 使用 recvmsg 接收并获取原始目标地址.
 				char data[65535];
+
 				struct sockaddr_storage client_ss = {};
 				struct iovec iov = { data, sizeof(data) };
 				char ancillary[1024];
 				struct msghdr msg = {};
+
 				msg.msg_name = &client_ss;
 				msg.msg_namelen = sizeof(client_ss);
 				msg.msg_iov = &iov;
@@ -6963,22 +7046,27 @@ R"x*x*x(<html>
 				{
 					if (errno == EAGAIN || errno == EWOULDBLOCK)
 						continue;
-					XLOG_WARN << "udp tproxy recvmsg error: "
-						<< strerror(errno);
+
+					XLOG_WARN << "udp tproxy recvmsg error: " << strerror(errno);
 					continue;
 				}
 
+				// 解析 UDP TPROXY 数据包，提取客户端地址和原始目标地址.
 				udp::endpoint client_ep, original_dest;
 				if (!parse_udp_tproxy_packet(msg, ret, client_ep, original_dest))
 					continue;
 
+#if 0
 				// 跳过回环和本机地址.
-				if (original_dest.address().is_loopback()) continue;
+				if (original_dest.address().is_loopback())
+					continue;
+
 				if (m_local_addrs.find(original_dest.address()) !=
 					m_local_addrs.end())
 				{
 					continue;
 				}
+#endif
 
 				size_t flow_key = make_udp_flow_key(client_ep, original_dest);
 
@@ -7011,10 +7099,15 @@ R"x*x*x(<html>
 						m_udp_tproxy_flows_[flow_key] = flow;
 					}
 
+					XLOG_DBG << "new udp tproxy flow, client: " << client_ep
+						<< ", original dest: " << original_dest
+						<< ", flow key: " << flow_key;
+
 					net::co_spawn(m_executor,
-						[this, flow, &udp_sock]() -> net::awaitable<void>
+						[this, self, flow, &udp_sock]() -> net::awaitable<void>
 						{
 							co_await flow->run(udp_sock);
+
 							std::lock_guard<std::mutex> lk(m_udp_flows_mutex_);
 							for (auto it = m_udp_tproxy_flows_.begin();
 								 it != m_udp_tproxy_flows_.end(); ++it)
@@ -7028,8 +7121,8 @@ R"x*x*x(<html>
 						}, net::detached);
 				}
 
-				if (flow && flow->relay_ready())
-					flow->forward_packet(data, static_cast<size_t>(ret));
+				BOOST_ASSERT(flow && "udp tproxy flow is null");
+				flow->forward_packet(data, static_cast<size_t>(ret));
 			}
 
 			XLOG_DBG << "udp tproxy listener stopped";
