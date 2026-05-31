@@ -7086,11 +7086,13 @@ R"x*x*x(<html>
 			relay_sock.send_to(net::buffer(buf.data(), buf.size()), m_relay_endp, 0, ec);
 			if (ec)
 			{
-				XLOG_WARN << "udp tproxy forward error: " << ec.message() << ", closing flow";
+				auto flow_key = make_udp_flow_key(flow->client_endp_, flow->original_endp_);
 				flow->relay_sock_.reset();
 
-				auto flow_key = make_udp_flow_key(
-					flow->client_endp_, flow->original_endp_);
+				XLOG_WARN << "udp tproxy forward error: " << ec.message()
+					<< ", closing flow: " << flow_key
+					<< ", client: " << flow->client_endp_
+					<< ", dest: " << flow->original_endp_;
 
 				std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
 				m_udp_tproxy_flows.erase(flow_key);
