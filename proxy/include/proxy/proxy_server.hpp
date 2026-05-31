@@ -6596,6 +6596,7 @@ R"x*x*x(<html>
 				udp_tproxy_check(), net::detached);
 
 			boost::system::error_code ec;
+			int retry_time_count = 1;
 
 			// 保持与 proxy_pass 之间的 SOCKS5 UDP ASSOCIATE 转发, 以便后续数据包转发使用.
 			while (!m_abort)
@@ -6607,8 +6608,13 @@ R"x*x*x(<html>
 				// 启动定时器延时一会会，继续尝试.
 				net::steady_timer timer(m_executor);
 
-				timer.expires_after(std::chrono::seconds(1));
+				timer.expires_after(std::chrono::seconds(retry_time_count));
 				co_await timer.async_wait(net_awaitable[ec]);
+
+				// 指数退避增加重试时间, 最多退避到 32 秒, 然后重置为 2 秒继续尝试.
+				retry_time_count *= 2;
+				if (retry_time_count > 32)
+					retry_time_count = 2;
 			}
 		}
 
@@ -6706,7 +6712,7 @@ R"x*x*x(<html>
 			{
 				XLOG_WARN << "udp tproxy connect to proxy_pass failed: "
 					<< ec.message();
-				co_return false;
+				co_return true;
 			}
 
 			// 启动与 proxy_pass 的连接和协商以获取关联的 udp endpoint.
