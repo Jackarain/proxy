@@ -83,7 +83,7 @@ namespace proxy {
 	}
 
 	// 用于通过计算噪声数据的 xx128hash 得到一个随机的 key.
-	inline std::vector<uint8_t> compute_key(std::span<uint8_t> data)
+	inline std::array<uint8_t, 16> compute_key(std::span<uint8_t> data)
 	{
 		XXH3_state_t state;
 
@@ -91,7 +91,7 @@ namespace proxy {
 		XXH3_128bits_update(&state, data.data(), data.size());
 		auto result = XXH3_128bits_digest(&state);
 
-		std::vector<uint8_t> key(16, 0);
+		std::array<uint8_t, 16> key{};
 		for (int i = 0; i < 8; i++)
 		{
 			key[i] = static_cast<uint8_t>(result.high64 >> (i * CHAR_BIT));
@@ -112,20 +112,22 @@ namespace proxy {
 		~scramble_stream() = default;
 
 		scramble_stream(scramble_stream&& other) noexcept
-			: m_key(std::move(other.m_key))
+			: m_key(other.m_key)
 			, m_pos(other.m_pos)
+			, m_key_set(other.m_key_set)
 		{
 			other.m_pos = 0;
-			other.m_key.clear();
+			other.m_key_set = false;
 		}
 
 		scramble_stream& operator=(scramble_stream&& other) noexcept
 		{
-			m_key = std::move(other.m_key);
+			m_key = other.m_key;
 			m_pos = other.m_pos;
+			m_key_set = other.m_key_set;
 
 			other.m_pos = 0;
-			other.m_key.clear();
+			other.m_key_set = false;
 
 			return *this;
 		}
@@ -133,35 +135,38 @@ namespace proxy {
 	public:
 		inline bool is_valid() const noexcept
 		{
-			return !m_key.empty();
+			return m_key_set;
 		}
 
 		inline void reset() noexcept
 		{
-			m_key.clear();
+			m_key_set = false;
+			m_key = {};
 			m_pos = 0;
 		}
 
 		inline void reset(std::span<uint8_t> data) noexcept
 		{
 			m_key = compute_key(data);
+			m_key_set = true;
 			m_pos = 0;
 		}
 
-		inline void set_key(const std::vector<uint8_t>& key) noexcept
+		inline void set_key(const std::array<uint8_t, 16>& key) noexcept
 		{
 			m_key = key;
+			m_key_set = true;
 		}
 
 		// 将数据 data 加解密, 但不改变 scramble_stream 类的状态.
 		inline void peek_data(std::span<uint8_t> data) const noexcept
 		{
-			BOOST_ASSERT(m_key.size() == 16 && "key must be set!");
+			BOOST_ASSERT(m_key_set && "key must be set!");
 
-			if (data.empty() || m_key.empty())
+			if (data.empty() || !m_key_set)
 				return;
 
-			std::vector<uint8_t> tmp = m_key;
+			auto tmp = m_key;
 			size_t i = 0;
 			size_t pos = m_pos;
 
@@ -178,9 +183,9 @@ namespace proxy {
 
 		inline std::vector<uint8_t> scramble(std::span<uint8_t> data) noexcept
 		{
-			BOOST_ASSERT(m_key.size() == 16 && "key must be set!");
+			BOOST_ASSERT(m_key_set && "key must be set!");
 
-			if (data.empty() || m_key.empty())
+			if (data.empty() || !m_key_set)
 				return {};
 
 			std::vector<uint8_t> result(data.size(), 0);
@@ -201,9 +206,9 @@ namespace proxy {
 
 		inline virtual void scramble(uint8_t* data, size_t size) noexcept
 		{
-			BOOST_ASSERT(m_key.size() == 16 && "key must be set!");
+			BOOST_ASSERT(m_key_set && "key must be set!");
 
-			if (!data || size == 0 || m_key.empty())
+			if (!data || size == 0 || !m_key_set)
 				return;
 
 			size_t i = 0;
@@ -220,8 +225,9 @@ namespace proxy {
 		}
 
 	private:
-		std::vector<uint8_t> m_key;
+		std::array<uint8_t, 16> m_key{};
 		size_t m_pos = 0;
+		bool m_key_set = false;
 	};
 }
 

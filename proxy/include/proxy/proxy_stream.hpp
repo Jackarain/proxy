@@ -124,12 +124,12 @@ namespace util {
 			, unscramble_(std::move(other.unscramble_))
 		{}
 
-		void set_scramble_key(const std::vector<uint8_t>& key)
+		void set_scramble_key(const std::array<uint8_t, 16>& key)
 		{
 			scramble_.set_key(key);
 		}
 
-		void set_unscramble_key(const std::vector<uint8_t>& key)
+		void set_unscramble_key(const std::array<uint8_t, 16>& key)
 		{
 			unscramble_.set_key(key);
 		}

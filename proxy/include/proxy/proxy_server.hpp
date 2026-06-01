@@ -345,7 +345,7 @@ R"x*x*x(<html>
 			0x16, // ssl
 		};
 
-	inline const std::map<std::string, std::string> global_mimes =
+	inline const std::unordered_map<std::string, std::string> global_mimes =
 	{
 		{ ".html", "text/html; charset=utf-8" },
 		{ ".htm", "text/html; charset=utf-8" },
@@ -1383,7 +1383,7 @@ R"x*x*x(<html>
 
 		template <typename T>
 		inline net::awaitable<bool>
-		noise_handshake(T& socket, std::vector<uint8_t>& inkey, std::vector<uint8_t>& outkey) noexcept
+		noise_handshake(T& socket, std::array<uint8_t, 16>& inkey, std::array<uint8_t, 16>& outkey) noexcept
 		{
 			boost::system::error_code error;
 
@@ -1513,9 +1513,6 @@ R"x*x*x(<html>
 				if (!m_option.scramble_)
 					return;
 
-				if (m_inin_key.empty() || m_inout_key.empty())
-					return;
-
 				using Stream = std::decay_t<decltype(sock)>;
 
 				if constexpr (std::same_as<Stream, tcp::socket> ||
@@ -1566,9 +1563,6 @@ R"x*x*x(<html>
 			auto scramble_peek = [this](auto& sock, std::span<uint8_t> detect) mutable
 			{
 				if (!m_option.scramble_)
-					return;
-
-				if (m_inin_key.empty() || m_inout_key.empty())
 					return;
 
 				using Stream = std::decay_t<decltype(sock)>;
@@ -3973,15 +3967,16 @@ R"x*x*x(<html>
 			return path_list;
 		}
 
-		inline net::awaitable<void> on_http_all_json(const http_context& hctx) noexcept
+		template <typename DirIter>
+		inline net::awaitable<void> on_http_json_impl(const http_context& hctx) noexcept
 		{
 			boost::system::error_code ec;
 
 			auto& request = hctx.request_;
 			auto target = hctx.target_path_;
 
-			fs::recursive_directory_iterator end;
-			auto it = fs::recursive_directory_iterator(target, fs::directory_options::skip_permission_denied, ec);
+			DirIter end;
+			DirIter it(target, fs::directory_options::skip_permission_denied, ec);
 			if (ec)
 			{
 				string_response res{ http::status::found, request.version() };
@@ -4077,108 +4072,14 @@ R"x*x*x(<html>
 			co_return;
 		}
 
+		inline net::awaitable<void> on_http_all_json(const http_context& hctx) noexcept
+		{
+			co_await on_http_json_impl<fs::recursive_directory_iterator>(hctx);
+		}
+
 		inline net::awaitable<void> on_http_json(const http_context& hctx) noexcept
 		{
-			boost::system::error_code ec;
-
-			auto& request = hctx.request_;
-			auto target = hctx.target_path_;
-
-			fs::directory_iterator end;
-			fs::directory_iterator it(target, fs::directory_options::skip_permission_denied, ec);
-			if (ec)
-			{
-				string_response res{ http::status::found, request.version() };
-				res.set(http::field::server, version_string);
-				res.set(http::field::date, server_date_string());
-				res.set(http::field::location, "/");
-				res.keep_alive(request.keep_alive());
-				res.prepare_payload();
-
-				http::serializer<false, string_body, http::fields> sr(res);
-				co_await http::async_write(
-					m_local_socket,
-					sr,
-					net_awaitable[ec]);
-				if (ec)
-				{
-					log_conn_warning()
-						<< ", http_dir write location err: "
-						<< ec.message();
-				}
-
-				co_return;
-			}
-
-			bool hash = false;
-
-			urls::params_view qp(hctx.command_[1]);
-			if (qp.find("hash") != qp.end())
-				hash = true;
-
-			boost::json::array path_list;
-
-			for (; it != end && !m_abort; it++)
-			{
-				const auto& item = it->path();
-				boost::json::object obj;
-
-				auto [ftime, unc_path] = file_last_wirte_time(item);
-				obj["last_write_time"] = ftime;
-
-				if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))
-				{
-					auto leaf = boost::nowide::narrow(fs::relative(item, target).wstring());
-					obj["filename"] = leaf;
-					obj["is_dir"] = true;
-				}
-				else
-				{
-					auto leaf = boost::nowide::narrow(fs::relative(item, target).wstring());
-					obj["filename"] = leaf;
-					obj["is_dir"] = false;
-					if (unc_path.empty())
-						unc_path = item;
-					auto sz = fs::file_size(unc_path, ec);
-					if (ec)
-						sz = 0;
-					obj["filesize"] = sz;
-					if (hash)
-					{
-						auto ret = co_await
-							fileop::async_hash_file(unc_path, net_awaitable[ec]);
-						if (ec)
-							ret = "";
-						obj["hash"] = ret;
-					}
-				}
-
-				path_list.push_back(obj);
-			}
-
-			auto body = boost::json::serialize(path_list);
-
-			string_response res{ http::status::ok, request.version() };
-			res.set(http::field::server, version_string);
-			res.set(http::field::date, server_date_string());
-			res.set(http::field::content_type, "application/json");
-			res.keep_alive(request.keep_alive());
-			res.body() = body;
-			res.prepare_payload();
-
-			http::serializer<false, string_body, http::fields> sr(res);
-			co_await http::async_write(
-				m_local_socket,
-				sr,
-				net_awaitable[ec]);
-			if (ec)
-			{
-				log_conn_warning()
-					<< ", http dir write body err: "
-					<< ec.message();
-			}
-
-			co_return;
+			co_await on_http_json_impl<fs::directory_iterator>(hctx);
 		}
 
 		inline net::awaitable<void> on_http_dir(const http_context& hctx) noexcept
@@ -4585,14 +4486,24 @@ R"x*x*x(<html>
 
 		inline std::string server_date_string() const noexcept
 		{
-			auto time = std::time(nullptr);
-			auto gmt = gmtime((const time_t*)&time);
+			// 缓存 date string 以避免频繁调用 time/gmtime/strftime.
+			// 每秒刷新一次即可满足 HTTP Date 头精度要求.
+			static std::string cached;
+			static std::chrono::steady_clock::time_point last_update;
 
-			std::string str(64, '\0');
-			auto ret = strftime((char*)str.data(), 64, "%a, %d %b %Y %H:%M:%S GMT", gmt);
-			str.resize(ret);
+			auto now = std::chrono::steady_clock::now();
+			if (now - last_update >= std::chrono::seconds(1))
+			{
+				auto time = std::time(nullptr);
+				auto gmt = gmtime((const time_t*)&time);
 
-			return str;
+				cached.resize(64, '\0');
+				auto ret = strftime(cached.data(), 64, "%a, %d %b %Y %H:%M:%S GMT", gmt);
+				cached.resize(ret);
+				last_update = now;
+			}
+
+			return cached;
 		}
 
 		inline net::awaitable<void> default_http_route(
@@ -5163,9 +5074,9 @@ R"x*x*x(<html>
 		net::streambuf m_local_buffer;
 
 		// m_inin_key 用于身份为服务端时, 解密接收到的数据的 key.
-		std::vector<uint8_t> m_inin_key;
+		std::array<uint8_t, 16> m_inin_key{};
 		// m_inout_key 用于身份为服务端时, 加密发送的数据的 key.
-		std::vector<uint8_t> m_inout_key;
+		std::array<uint8_t, 16> m_inout_key{};
 
 		// m_proxy_server 当前代理服务器对象的弱引用.
 		std::weak_ptr<proxy_server_base> m_proxy_server;
@@ -5178,10 +5089,10 @@ R"x*x*x(<html>
 
 		// m_outin_key 用于身份为客户端时, 与下游代理服务器加密通信时, 解密接收到
 		// 下游代理服务器数据的 key.
-		std::vector<uint8_t> m_outin_key;
+		std::array<uint8_t, 16> m_outin_key{};
 		// m_outout_key 用于身份为客户端时, 与下游代理服务器加密通信时, 加密给下
 		// 游代理服务器发送的数据的 key.
-		std::vector<uint8_t> m_outout_key;
+		std::array<uint8_t, 16> m_outout_key{};
 
 		// 用于使用 ssl 加密通信与下游代理服务器通信时的 ssl context.
 		net::ssl::context m_ssl_cli_context{ net::ssl::context::sslv23_client };
