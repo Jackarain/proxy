@@ -31,7 +31,9 @@ jobs:
       - run:
           name: Build in docker
           command: |
-            docker build . -t proxy:v1
+            docker system prune -a -f --volumes
+            docker pull alpine:edge
+            docker build --no-cache . -t proxy:v1
             docker create --name ps proxy:v1
             mkdir -p build/docker
             docker cp ps:/usr/local/bin/proxy_server build/docker/
