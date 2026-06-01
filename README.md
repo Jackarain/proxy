@@ -103,7 +103,7 @@ docker build . -t proxy:v1
 | v4only | 仅使用 ipv4 向目标地址连接，默认为不启用 |
 | v6only | 仅使用 ipv6 向目标地址连接，默认为不启用 |
 | transparent | 启用透明代理，默认禁用，此选项仅 linux 平台有效 |
-| so_mark | 用于发起向 `proxy_pass` 连接时设置 so_mark 以方便实现代理流量的策略路由，仅在 transparent 启动时有效 |
+| so_mark | 用于设置所有出站连接的 `SO_MARK` 标记，方便实现代理流量的策略路由，默认不启用。|
 | local_ip | 用于向上游服务或目标服务发起连接时使用指定的本地网口 `ip` 地址，通常用于机器上有多个 `ip` 时使用特定 `ip` 向外发起连接 |
 | pam_auth | 用于指定使用 `PAM` 认证模块进行认证，参数值为 `PAM` 服务名称，`PAM` 能和使用 `auth_users` 参数同时用于认证，优先使用 `auth_users` 参数进行认证，需要在编译时添加 `-DENABLE_USE_PAM_AUTH=ON` 选项以启用 `PAM` 模块认证功能 |
 | auth_users | 认证信息列表，客户端必须满足其中一对用户/密码才能握手通过，默认用户密码是 `jack:1111`（默认需要认证是为了避免不小心被当成别人免费的跳板），若需要设置为无需要认证代理模式，必须置 `auth_users` 参数为 "" |

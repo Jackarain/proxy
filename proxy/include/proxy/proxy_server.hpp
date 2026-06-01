@@ -539,7 +539,8 @@ R"x*x*x(<html>
 
 		// 向外连接发起时使用的 SO_MARK（Linux）标记。
 		//
-		// - 仅当 transparent_ == true 时生效（一般用于策略路由/防火墙匹配）。
+		// - 设置后，所有由本代理发起的 TCP/UDP 出站连接都会带上此标记，
+		//   可用于策略路由/防火墙匹配。
 		// - 未设置表示不打 mark。
 		std::optional<uint32_t> so_mark_;
 
@@ -2155,6 +2156,11 @@ R"x*x*x(<html>
 						<< ec.message();
 					break;
 				}
+
+				// 对 local_udp_socket 也设置 SO_MARK，确保非 bridge 模式下
+				// 由 local_udp_socket 发出的 UDP 数据包也带有正确的标记。
+				if (m_option.so_mark_)
+					co_await tproxy_set_mark((int)local_udp_socket.native_handle());
 
 				if (m_proxy_pass)
 				{
@@ -4843,8 +4849,7 @@ R"x*x*x(<html>
 					},
 					net_awaitable[ec]);
 
-				if (m_option.transparent_)
-					co_await tproxy_set_mark((int)socket.native_handle());
+				co_await tproxy_set_mark((int)socket.native_handle());
 
 				co_return ec;
 			}
@@ -4891,8 +4896,7 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 				if (!ec)
 				{
-					if (m_option.transparent_)
-						co_await tproxy_set_mark((int)socket.native_handle());
+					co_await tproxy_set_mark((int)socket.native_handle());
 
 					break;
 				}
@@ -6604,7 +6608,20 @@ R"x*x*x(<html>
 
 				co_await remote_socket.async_connect(endp, net_awaitable[ec]);
 				if (!ec)
+				{
+#if defined(__linux__)
+					if (m_option.so_mark_)
+					{
+						uint32_t mark = m_option.so_mark_.value();
+						if (::setsockopt(remote_socket.native_handle(), SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0)
+						{
+							XLOG_WARN << "connect_to_proxy setsockopt SO_MARK error: "
+								<< strerror(errno);
+						}
+					}
+#endif
 					co_return ec;
+				}
 			}
 			co_return boost::asio::error::host_not_found;
 		}
@@ -6828,6 +6845,18 @@ R"x*x*x(<html>
 				XLOG_WARN << "udp tproxy relay socket bind error: " << ec.message();
 				co_return;
 			}
+
+#if defined(__linux__)
+			if (m_option.so_mark_)
+			{
+				uint32_t mark = m_option.so_mark_.value();
+				if (::setsockopt(relay_sock->native_handle(), SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0)
+				{
+					XLOG_WARN << "udp tproxy relay setsockopt SO_MARK error: "
+						<< strerror(errno);
+				}
+			}
+#endif
 
 			while (!m_abort)
 			{

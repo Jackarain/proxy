@@ -424,7 +424,7 @@ int main(int argc, char** argv)
 		("local_ip", po::value<std::string>(&local_ip), "Specify local IP for client TCP connection to server.")
 
 		("transparent", po::value<bool>(&transparent)->default_value(false, "false"), "Enable transparent proxy mode(only linux).")
-		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set SO_MARK for linux transparent proxy mode.")
+		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set SO_MARK for outbound connections.")
 
 		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(-1), "Set TCP timeout for TCP connections.")
 		("udp_timeout", po::value<int>(&udp_timeout)->default_value(-1), "Set UDP timeout for UDP sessions.")
