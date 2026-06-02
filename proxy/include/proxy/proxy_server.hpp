@@ -660,7 +660,7 @@ R"x*x*x(<html>
 		// 噪声注入的最大长度（单位：字节）。
 		//
 		// - 允许范围：[16, 64K]。
-		uint16_t noise_length_{ noise_injection_max_len };
+		int64_t noise_length_{ -1 };
 	};
 
 
@@ -1397,7 +1397,7 @@ R"x*x*x(<html>
 			// 5. 计算接收随机数据的 key 用于后续的接收到的数据的解密.
 
 			// 生成要发送的噪声数据.
-			int noise_length = m_option.noise_length_;
+			int noise_length = static_cast<int>(m_option.noise_length_);
 
 			if (noise_length < 16 ||
 				(noise_length > std::numeric_limits<uint16_t>::max() / 2))

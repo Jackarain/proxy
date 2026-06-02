@@ -96,7 +96,7 @@ bool scramble = false;
 bool ssl_prefer_server_ciphers = false;
 
 int64_t linux_so_mark;
-uint16_t noise_length;
+int64_t noise_length;
 int tcp_timeout;
 int udp_timeout;
 int rate_limit;
@@ -466,7 +466,7 @@ int main(int argc, char** argv)
 		("disable_check_cert", po::value<bool>(&disable_check_cert)->value_name("")->default_value(false, "false"), "Disable TLS certificate verification.")
 
 		("scramble", po::value<bool>(&scramble)->value_name("")->default_value(false, "false"), "Noise-based data security.")
-		("noise_length", po::value<uint16_t>(&noise_length)->value_name("length")->default_value(0x0fff), "Length of the noise data.")
+		("noise_length", po::value<int64_t>(&noise_length)->value_name("length")->default_value(-1), "Length of the noise data (-1 - 4095).")
 
 		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Enable asio config from environment variables.")
 	;
