@@ -61,6 +61,8 @@ namespace proxy {
 		uint16_t target_port;     // Target server port
 		std::string username;     // User authentication - username
 		std::string password;     // User authentication - password
+
+		beast::http::fields extra_headers; // Extra headers to add to the HTTP CONNECT request
 	};
 
 	namespace detail {
@@ -81,6 +83,10 @@ namespace proxy {
 			req.set(http::field::proxy_connection, "Keep-Alive");
 			req.set(http::field::host, target_host);
 			req.set(http::field::user_agent, "avpn/1.0");
+
+			// Add extra headers if provided in options
+			for (const auto& header : opt.extra_headers)
+				req.set(header.name(), header.value());
 
 			if (!opt.username.empty())
 			{
