@@ -62,7 +62,7 @@ namespace proxy {
 		std::string username;     // User authentication - username
 		std::string password;     // User authentication - password
 
-		beast::http::fields extra_headers; // Extra headers to add to the HTTP CONNECT request
+		http::fields extra_headers; // Extra headers to add to the HTTP CONNECT request
 	};
 
 	namespace detail {
@@ -85,8 +85,8 @@ namespace proxy {
 			req.set(http::field::user_agent, "avpn/1.0");
 
 			// Add extra headers if provided in options
-			for (const auto& header : opt.extra_headers)
-				req.set(header.name(), header.value());
+			for (const auto& field : opt.extra_headers)
+				req.insert(field.name_string(), field.value());
 
 			if (!opt.username.empty())
 			{

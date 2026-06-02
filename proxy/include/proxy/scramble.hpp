@@ -32,12 +32,11 @@ namespace proxy {
 	// 分析者即使通过阅读此源码得知数据的编码方法, 也很难将正常数据与通过此方式得到
 	// 的数据快速甄别.
 	inline std::vector<uint8_t>
-	generate_noise(uint16_t max_len = 0x7FFF, std::set<uint8_t> bfilter = {})
+	generate_noise(std::random_device& rd, uint16_t max_len = 0x7FFF, std::set<uint8_t> bfilter = {})
 	{
 		if (max_len < 16)
 			return {};
 
-		std::random_device rd;
 		std::mt19937 gen(rd());
 		std::uniform_int_distribution<> dis(0, 255);
 		std::uniform_int_distribution<> prefix(16, max_len);

@@ -410,6 +410,13 @@ R"x*x*x(<html>
 		return false;
 	}
 
+	// 全局随机数生成器, 用于生成随机数据.
+	inline std::random_device& global_random_device() noexcept
+	{
+		static std::random_device rd;
+		return rd;
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 
 	// proxy server 参数选项, 用于指定 proxy server 的各种参数.
@@ -1404,7 +1411,7 @@ R"x*x*x(<html>
 				noise_length = noise_injection_max_len;
 
 			std::vector<uint8_t> noise =
-				generate_noise(static_cast<uint16_t>(noise_length), global_known_proto);
+				generate_noise(global_random_device(), static_cast<uint16_t>(noise_length), global_known_proto);
 
 			// 计算数据发送 key.
 			outkey = compute_key(noise);
@@ -3051,12 +3058,14 @@ R"x*x*x(<html>
 
 		inline net::awaitable<bool> http_proxy_connect() noexcept
 		{
-			http::request<http::string_body> req;
 			boost::system::error_code ec;
+			http::request_parser<http::string_body> parser;
+
+			parser.header_limit(128 * 1024);
 
 			// 读取 http 请求头.
-			co_await http::async_read(m_local_socket,
-				m_local_buffer, req, net_awaitable[ec]);
+			co_await http::async_read_header(m_local_socket,
+				m_local_buffer, parser, net_awaitable[ec]);
 			if (ec)
 			{
 				log_conn_error()
@@ -3066,15 +3075,42 @@ R"x*x*x(<html>
 				co_return false;
 			}
 
+			http::request<http::string_body> req = parser.release();
+
 			auto mth = std::string(req.method_string());
 			auto target_view = std::string(req.target());
 			auto pa = std::string(req[http::field::proxy_authorization]);
+
+			std::string padding_value;
+			std::size_t padding_length = 0;
+
+			// 如果有 padding 头, 则回复一个随机长度的 padding 头, 以迷惑扫描者.
+			if (req.find("Proxy-Padding") != req.end())
+			{
+				auto noise_length = req["Proxy-Padding"].size();
+				padding_length = noise_length;
+
+				std::mt19937 gen(global_random_device()());
+				std::uniform_int_distribution<> dis(16, std::max<std::size_t>(16, noise_length));
+				noise_length = dis(gen);
+
+				auto noise = generate_noise(global_random_device(), noise_length);
+				auto len = boost::beast::detail::base64::encoded_size(noise_length);
+				padding_value.resize(len);
+				len = beast::detail::base64::encode(padding_value.data(), noise.data(), noise.size());
+				padding_value.resize(len);
+			}
 
 			log_conn_debug()
 				<< ", method: " << mth
 				<< ", target: " << target_view
 				<< (pa.empty() ? std::string()
-					: ", proxy_authorization: " + pa);
+					: ", proxy_authorization: " + pa)
+				<< (padding_length > 0 ?
+					", in padding: " + std::to_string(padding_length)
+					: std::string())
+				<< (padding_value.empty() ? std::string() :
+					", out padding: " + std::to_string(padding_value.size()));
 
 			// http 代理认证.
 			auto auth = co_await http_authorization(pa);
@@ -3126,6 +3162,9 @@ R"x*x*x(<html>
 			http::response<http::empty_body> res{
 				http::status::ok, req.version() };
 			res.reason("Connection established");
+
+			if (!padding_value.empty())
+				res.insert("Proxy-Padding", padding_value);
 
 			co_await http::async_write(
 				m_local_socket,
@@ -3523,6 +3562,22 @@ R"x*x*x(<html>
 				opt.target_port = target_port;
 				opt.username = std::string(proxy_url.user());
 				opt.password = std::string(proxy_url.password());
+
+				if (!m_option.scramble_ && (m_option.noise_length_ >= 16 && m_option.noise_length_ <= 64 * 1024))
+				{
+					// 如果配置了 noise_length_ 则启用 http 代理握手中的 padding, 以迷惑扫描者无法通过
+					// tcp 数据发送长度特征来识别出是 http 代理握手数据.
+					std::mt19937 gen(global_random_device()());
+					std::uniform_int_distribution<> dis(16, m_option.noise_length_);
+
+					auto padding = generate_noise(global_random_device(), dis(gen));
+					auto len = boost::beast::detail::base64::encoded_size(padding.size());
+					std::string padding_value(len, 0);
+					len = beast::detail::base64::encode(padding_value.data(), padding.data(), padding.size());
+					padding_value.resize(len);
+
+					opt.extra_headers.insert("Proxy-Padding", padding_value);
+				}
 
 				if (command == SOCKS5_CMD_UDP)
 				{
