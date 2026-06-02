@@ -124,6 +124,7 @@
 #include <filesystem>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <cstdint>
 #include <span>
@@ -3781,7 +3782,7 @@ R"x*x*x(<html>
 					ON_HTTP_ROUTE(R"(^(.*)?\/$)", on_http_dir)
 					ON_HTTP_ROUTE(R"(^(.*)?(\/\?r=json.*)$)", on_http_all_json)
 					ON_HTTP_ROUTE(R"(^(.*)?(\/\?q=json.*)$)", on_http_json)
-					ON_HTTP_ROUTE(R"(^\/dns-query\/?$)", on_http_dns_query)
+					ON_HTTP_ROUTE(R"(^\/dns-query\?(.*)$)", on_http_dns_query)
 					ON_HTTP_ROUTE(R"(^(?!.*\/$).*$)", on_http_get)
 				END_HTTP_ROUTE()
 
@@ -4609,7 +4610,7 @@ R"x*x*x(<html>
 					case 3: b64 += "="; break;
 				}
 				dns_query.resize(beast::detail::base64::decoded_size(b64.size()));
-				auto [len, _] = beast::detail::base64::decode(
+				auto [len, consumed] = beast::detail::base64::decode(
 					dns_query.data(), b64.data(), b64.size());
 				dns_query.resize(len);
 			}
@@ -4742,10 +4743,10 @@ R"x*x*x(<html>
 
 			// 解析 DoH 服务器地址（域名或 IP）.
 			tcp::resolver::results_type targets;
-			if (!is_hostname(std::string(doh_host)))
+			if (!is_hostname(doh_host))
 			{
 				tcp::endpoint endp(
-					net::ip::make_address(std::string(doh_host)), doh_port);
+					net::ip::make_address(doh_host), doh_port);
 				targets = tcp::resolver::results_type::create(
 					endp, std::string(doh_host), "");
 			}
@@ -4773,19 +4774,23 @@ R"x*x*x(<html>
 			}
 
 			// 设置 SSL context 进行 TLS 握手.
-			net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
+			// 使用 static 缓存 SSL context, 避免在每个 DoH 请求时重复创建.
+			static net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
+			static std::once_flag ssl_init_flag;
+			auto doh_host_str = std::string(doh_host);
+			std::call_once(ssl_init_flag, [&]() {
+				auto verify = net::ssl::verify_peer;
+				if (m_option.disable_check_cert_)
+					verify = net::ssl::verify_none;
 
-			auto verify = net::ssl::verify_peer;
-			if (m_option.disable_check_cert_)
-				verify = net::ssl::verify_none;
+				doh_ssl_ctx.set_verify_mode(verify);
+				auto certificates = default_root_certificates();
+				doh_ssl_ctx.add_certificate_authority(
+					net::buffer(certificates.data(), certificates.size()), ec);
 
-			doh_ssl_ctx.set_verify_mode(verify);
-			auto certificates = default_root_certificates();
-			doh_ssl_ctx.add_certificate_authority(
-				net::buffer(certificates.data(), certificates.size()), ec);
-
-			doh_ssl_ctx.set_verify_callback(
-				net::ssl::host_name_verification(std::string(doh_host)), ec);
+				doh_ssl_ctx.set_verify_callback(
+					net::ssl::host_name_verification(doh_host_str), ec);
+			});
 
 			// 创建 SSL stream.
 			ssl_tcp_stream ssl_stream(std::move(doh_socket), doh_ssl_ctx);
@@ -4817,8 +4822,8 @@ R"x*x*x(<html>
 
 			// 构造 HTTP POST 请求发送 DNS 查询.
 			http::request<http::string_body> doh_req{
-				http::verb::post, std::string(doh_path), 11 };
-			doh_req.set(http::field::host, std::string(doh_host));
+				http::verb::post, doh_path, 11 };
+			doh_req.set(http::field::host, doh_host);
 			doh_req.set(http::field::content_type, "application/dns-message");
 			doh_req.set(http::field::accept, "application/dns-message");
 			doh_req.body() = dns_query;
