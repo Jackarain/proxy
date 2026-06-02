@@ -71,6 +71,7 @@ std::string ssl_cacert_dir;
 std::string ssl_ciphers;
 std::string ssl_dhparam;
 std::string proxy_ssl_name;
+std::string dns_upstream;
 
 #ifdef USE_PAM_AUTH
 std::string pam_auth;
@@ -301,6 +302,8 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.doc_directory_ = doc_dir;
 	opt.autoindex_ = autoindex;
 	opt.htpasswd_ = htpasswd;
+	if (!dns_upstream.empty())
+		opt.dns_upstream_ = dns_upstream;
 
 	server = proxy_server::make(ioc.get_executor(), opt);
 	server->start();
@@ -456,6 +459,7 @@ int main(int argc, char** argv)
 		("htpasswd", po::value<bool>(&htpasswd)->value_name("")->default_value(false, "false"), "Enable WWW-Authenticate for HTTP server.")
 
 		("autoindex", po::value<bool>(&autoindex)->default_value(false, "false"), "Enable directory listing.")
+		("dns_upstream", po::value<std::string>(&dns_upstream)->value_name("ip:port"), "Upstream DNS server for DoH (DNS over HTTPS), default: 8.8.8.8:53.")
 		("logs_path", po::value<std::string>(&log_dir)->value_name(""), "Specify directory for log files.")
 
 		("disable_logs", po::value<bool>(&disable_logs)->value_name("")->default_value(default_logs), "Disable print logging in screen.")

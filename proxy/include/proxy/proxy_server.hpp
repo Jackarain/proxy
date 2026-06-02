@@ -605,6 +605,12 @@ R"x*x*x(<html>
 		// - 非空：对该目录提供文件访问能力（需注意安全，可启用 htpasswd_ 确保访问需要认证）。
 		std::string doc_directory_;
 
+		// DNS 上游服务器地址，用于 DoH (DNS over HTTPS) 查询转发。
+		//
+		// - 格式: "ip:port"，如 "8.8.8.8:53"。
+		// - 默认: "8.8.8.8:53"。
+		std::string dns_upstream_{ "8.8.8.8:53" };
+
 		// 是否启用目录列表（类似 nginx 的 autoindex）。
 		//
 		// - 仅在 doc_directory_ 非空、启用了静态站点功能时生效。
@@ -1064,6 +1070,8 @@ R"x*x*x(<html>
 
 			co_return false;
 		}
+
+		//////////////////////////////////////////////////////////////////////////
 
 	public:
 		proxy_session(
@@ -3773,6 +3781,7 @@ R"x*x*x(<html>
 					ON_HTTP_ROUTE(R"(^(.*)?\/$)", on_http_dir)
 					ON_HTTP_ROUTE(R"(^(.*)?(\/\?r=json.*)$)", on_http_all_json)
 					ON_HTTP_ROUTE(R"(^(.*)?(\/\?q=json.*)$)", on_http_json)
+					ON_HTTP_ROUTE(R"(^\/dns-query\/?$)", on_http_dns_query)
 					ON_HTTP_ROUTE(R"(^(?!.*\/$).*$)", on_http_get)
 				END_HTTP_ROUTE()
 
@@ -4544,6 +4553,336 @@ R"x*x*x(<html>
 
 			co_return;
 		}
+
+		//////////////////////////////////////////////////////////////////////////
+
+		inline net::awaitable<void> on_http_dns_query(const http_context& hctx) noexcept
+		{
+			boost::system::error_code ec;
+			const auto& request = hctx.request_;
+
+			// 检查请求方法.
+			if (request.method() != http::verb::post &&
+				request.method() != http::verb::get)
+			{
+				co_await default_http_route(
+					request, fake_400_content, http::status::bad_request);
+				co_return;
+			}
+
+			// 提取 DNS 查询数据.
+			std::string dns_query;
+
+			if (request.method() == http::verb::post)
+			{
+				auto content_type = request[http::field::content_type];
+				if (content_type != "application/dns-message")
+				{
+					co_await default_http_route(
+						request, fake_400_content, http::status::bad_request);
+					co_return;
+				}
+				dns_query = request.body();
+			}
+			else // GET
+			{
+				// 解析 ?dns=<base64url> 参数.
+				auto target = hctx.target_;
+				auto pos = target.find("?dns=");
+				if (pos == std::string::npos)
+				{
+					co_await default_http_route(
+						request, fake_400_content, http::status::bad_request);
+					co_return;
+				}
+				auto b64 = target.substr(pos + 5);
+				// base64url -> standard base64.
+				for (auto& c : b64)
+				{
+					if (c == '-') c = '+';
+					else if (c == '_') c = '/';
+				}
+				// 补充 padding.
+				switch (b64.size() % 4)
+				{
+					case 2: b64 += "=="; break;
+					case 3: b64 += "="; break;
+				}
+				dns_query.resize(beast::detail::base64::decoded_size(b64.size()));
+				auto [len, _] = beast::detail::base64::decode(
+					dns_query.data(), b64.data(), b64.size());
+				dns_query.resize(len);
+			}
+
+			if (dns_query.empty())
+			{
+				co_await default_http_route(
+					request, fake_400_content, http::status::bad_request);
+				co_return;
+			}
+
+			// 判断上游 DNS 服务器类型并转发查询.
+			auto& upstream = m_option.dns_upstream_;
+
+			if (boost::istarts_with(upstream, "https://"))
+			{
+				// DoH (DNS over HTTPS) 上游.
+				co_await doh_dns_query(request, dns_query);
+			}
+			else
+			{
+				// 传统 UDP DNS 上游.
+				co_await udp_dns_query(request, dns_query);
+			}
+
+			co_return;
+		}
+
+		// udp_dns_query 通过传统 UDP 协议转发 DNS 查询到上游服务器.
+		inline net::awaitable<void> udp_dns_query(
+			const string_request& request, const std::string& dns_query) noexcept
+		{
+			boost::system::error_code ec;
+
+			auto& upstream = m_option.dns_upstream_;
+			auto colon_pos = upstream.find(':');
+			if (colon_pos == std::string::npos)
+			{
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+			auto dns_host = upstream.substr(0, colon_pos);
+			auto dns_port = (uint16_t)std::stoi(upstream.substr(colon_pos + 1));
+
+			// 通过 UDP 转发 DNS 查询到上游服务器.
+			udp::socket dns_socket(co_await net::this_coro::executor);
+			udp::endpoint dns_endpoint(
+				net::ip::make_address(dns_host, ec), dns_port);
+			if (ec)
+			{
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			dns_socket.open(dns_endpoint.protocol(), ec);
+			if (ec)
+			{
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			co_await dns_socket.async_send_to(
+				net::buffer(dns_query), dns_endpoint, net_awaitable[ec]);
+			if (ec)
+			{
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			// 接收 DNS 响应.
+			std::array<char, 4096> recv_buf{};
+			udp::endpoint recv_endp;
+			auto recv_len = co_await dns_socket.async_receive_from(
+				net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
+			if (ec)
+			{
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			dns_socket.close(ec);
+
+			// 返回 DNS 响应.
+			string_response res{ http::status::ok, request.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.set(http::field::content_type, "application/dns-message");
+			res.keep_alive(true);
+			res.body().assign(recv_buf.data(), recv_len);
+			res.prepare_payload();
+
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", dns query write response error: "
+					<< ec.message();
+			}
+
+			co_return;
+		}
+
+		// doh_dns_query 通过 DoH (DNS over HTTPS) 转发 DNS 查询到上游服务器.
+		inline net::awaitable<void> doh_dns_query(
+			const string_request& request, const std::string& dns_query) noexcept
+		{
+			boost::system::error_code ec;
+
+			// 使用 parse_urlinfo 解析 DoH URL.
+			// 格式示例: https://dns.google/dns-query
+			auto parsed = parse_urlinfo(m_option.dns_upstream_);
+			if (parsed.has_error())
+			{
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			auto [scheme, user, passwd, doh_host, doh_port, doh_path] = *parsed;
+
+			// DoH 默认路径为 /dns-query.
+			if (doh_path.empty() || doh_path == "/")
+				doh_path = "/dns-query";
+
+			// 解析 DoH 服务器地址（域名或 IP）.
+			tcp::resolver::results_type targets;
+			if (!is_hostname(std::string(doh_host)))
+			{
+				tcp::endpoint endp(
+					net::ip::make_address(std::string(doh_host)), doh_port);
+				targets = tcp::resolver::results_type::create(
+					endp, std::string(doh_host), "");
+			}
+			else
+			{
+				targets = co_await resolve_targets(
+					std::string(doh_host), doh_port);
+			}
+
+			if (targets.empty())
+			{
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			// 连接到 DoH 服务器.
+			tcp::socket doh_socket(m_executor);
+			ec = co_await async_connect_targets(doh_socket, targets);
+			if (ec)
+			{
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			// 设置 SSL context 进行 TLS 握手.
+			net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
+
+			auto verify = net::ssl::verify_peer;
+			if (m_option.disable_check_cert_)
+				verify = net::ssl::verify_none;
+
+			doh_ssl_ctx.set_verify_mode(verify);
+			auto certificates = default_root_certificates();
+			doh_ssl_ctx.add_certificate_authority(
+				net::buffer(certificates.data(), certificates.size()), ec);
+
+			doh_ssl_ctx.set_verify_callback(
+				net::ssl::host_name_verification(std::string(doh_host)), ec);
+
+			// 创建 SSL stream.
+			ssl_tcp_stream ssl_stream(std::move(doh_socket), doh_ssl_ctx);
+
+			// 设置 SNI.
+			if (!SSL_set_tlsext_host_name(
+				ssl_stream.native_handle(), std::string(doh_host).c_str()))
+			{
+				log_conn_debug()
+					<< ", doh set sni name: "
+					<< doh_host
+					<< " failed";
+			}
+
+			// TLS 握手.
+			co_await ssl_stream.async_handshake(
+				net::ssl::stream_base::client, net_awaitable[ec]);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", doh tls handshake with "
+					<< doh_host
+					<< " failed: "
+					<< ec.message();
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			// 构造 HTTP POST 请求发送 DNS 查询.
+			http::request<http::string_body> doh_req{
+				http::verb::post, std::string(doh_path), 11 };
+			doh_req.set(http::field::host, std::string(doh_host));
+			doh_req.set(http::field::content_type, "application/dns-message");
+			doh_req.set(http::field::accept, "application/dns-message");
+			doh_req.body() = dns_query;
+			doh_req.prepare_payload();
+
+			// 发送 HTTP 请求.
+			co_await http::async_write(ssl_stream, doh_req, net_awaitable[ec]);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", doh http write error: "
+					<< ec.message();
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			// 接收 HTTP 响应.
+			beast::flat_buffer buf;
+			http::response<http::string_body> doh_res;
+			co_await http::async_read(ssl_stream, buf, doh_res, net_awaitable[ec]);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", doh http read error: "
+					<< ec.message();
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			// 检查 HTTP 响应状态.
+			if (doh_res.result() != http::status::ok)
+			{
+				log_conn_warning()
+					<< ", doh response status: "
+					<< doh_res.result_int();
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			// 返回 DNS 响应给客户端.
+			string_response res{ http::status::ok, request.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.set(http::field::content_type, "application/dns-message");
+			res.keep_alive(true);
+			res.body() = doh_res.body();
+			res.prepare_payload();
+
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", doh dns query write response error: "
+					<< ec.message();
+			}
+
+			co_return;
+		}
+
+		//////////////////////////////////////////////////////////////////////////
 
 		inline std::string server_date_string() const noexcept
 		{
