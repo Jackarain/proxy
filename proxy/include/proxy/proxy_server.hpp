@@ -738,8 +738,11 @@ R"x*x*x(<html>
 			PROXY_AUTH_ILLEGAL,
 		};
 
+		//////////////////////////////////////////////////////////////////////////
+		// 日志与工具函数
+
 		// http 认证错误代码对应的错误信息.
-		inline std::string pauth_error_message(int code) const noexcept
+		static std::string pauth_error_message(int code) noexcept
 		{
 			switch (code)
 			{
@@ -782,7 +785,7 @@ R"x*x*x(<html>
 		using http_ranges = std::vector<std::pair<int64_t, int64_t>>;
 
 		// parser_http_ranges 用于解析 http range 请求头.
-		inline http_ranges parser_http_ranges(std::string range) const noexcept
+		static http_ranges parser_http_ranges(std::string range) noexcept
 		{
 			// 去掉前后空白.
 			range = strutil::remove_spaces(range);
@@ -855,7 +858,7 @@ R"x*x*x(<html>
 		}
 
 		// 根据 range 计算文件偏移位置.
-		inline std::tuple<int64_t, int64_t, http::status>
+		static std::tuple<int64_t, int64_t, http::status>
 		offset_from_range(const http_ranges& range, int64_t content_length)
 		{
 			if (range.size() != 1)
@@ -919,6 +922,9 @@ R"x*x*x(<html>
 				m_bind_interface = bind_if;
 			}
 		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// PAM 认证
 
 #ifdef USE_PAM_AUTH
 		static int pam_conv_func(int num_msg, const struct pam_message **msg,
@@ -1013,6 +1019,9 @@ R"x*x*x(<html>
 				}, token);
 		}
 #endif // USE_PAM_AUTH
+
+		//////////////////////////////////////////////////////////////////////////
+		// 认证与授权
 
 		// 检查是否需要认证.
 		inline bool auth_required() const noexcept
@@ -1210,6 +1219,9 @@ R"x*x*x(<html>
 
 	private:
 
+		//////////////////////////////////////////////////////////////////////////
+		// 专用代理模式
+
 		inline net::awaitable<void> stdio_proxy() noexcept
 		{
 			auto executor = co_await net::this_coro::executor;
@@ -1396,6 +1408,9 @@ R"x*x*x(<html>
 
 			co_return;
 		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// 混淆与协议侦测
 
 		template <typename T>
 		inline net::awaitable<bool>
@@ -1715,6 +1730,9 @@ R"x*x*x(<html>
 
 			co_return;
 		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// 代理协议处理
 
 		inline net::awaitable<void> start_proxy() noexcept
 		{
@@ -2401,6 +2419,9 @@ R"x*x*x(<html>
 			co_return;
 		}
 
+		//////////////////////////////////////////////////////////////////////////
+		// UDP 转发
+
 		inline net::awaitable<void> forward_udp(udp::socket& client, udp::socket& server) noexcept
 		{
 			[[maybe_unused]] auto self = shared_from_this();
@@ -2942,7 +2963,7 @@ R"x*x*x(<html>
 					// 件请求处理, 否则返回 403.
 					if (!m_option.autoindex_)
 					{
-						auto path = make_real_target_path(req.target());
+						auto path = make_real_target_path(m_option.doc_directory_, req.target());
 
 						if (!fs::is_directory(path, ec))
 						{
@@ -3340,6 +3361,9 @@ R"x*x*x(<html>
 			co_return verify_passed;
 		}
 
+		//////////////////////////////////////////////////////////////////////////
+		// 数据传输
+
 		template<typename S1, typename S2>
 		net::awaitable<void>
 		transfer(S1& from, S2& to, size_t& bytes_transferred) noexcept
@@ -3456,6 +3480,9 @@ R"x*x*x(<html>
 
 			return true;
 		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// 连接相关，对外发起连接和对上游代理服务器的连接
 
 		inline net::awaitable<boost::system::error_code>
 		connect_proxy_pass(tcp::socket& remote_socket, tcp::resolver::results_type targets) noexcept
@@ -3684,6 +3711,9 @@ R"x*x*x(<html>
 			return boost::variant2::holds_alternative<ssl_tcp_stream>(m_remote_socket);
 		}
 
+		//////////////////////////////////////////////////////////////////////////
+		// HTTP 静态服务
+
 		inline net::awaitable<void>
 		normal_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser) noexcept
 		{
@@ -3761,7 +3791,11 @@ R"x*x*x(<html>
 
 				std::string target = req.target();
 				boost::smatch what;
-				http_context http_ctx{ {}, req, target, make_real_target_path(req.target()) };
+				http_context http_ctx{
+					{},
+					req,
+					target,
+					make_real_target_path(m_option.doc_directory_,req.target()) };
 
 				#define BEGIN_HTTP_ROUTE() if (false) {}
 				#define ON_HTTP_ROUTE(skip, exp, func) \
@@ -3800,8 +3834,8 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		inline fs::path path_cat(
-			const std::wstring& doc, const std::wstring& target) const noexcept
+		static fs::path path_cat(
+			const std::wstring& doc, const std::wstring& target) noexcept
 		{
 			size_t start_pos = 0;
 			for (auto& c : target)
@@ -3832,7 +3866,7 @@ R"x*x*x(<html>
 		};
 
 		template<typename Path>
-		inline fs::path make_unc_path(const Path& path) const noexcept
+		fs::path make_unc_path(const Path& path) noexcept
 		{
 #ifndef WIN32
 			return path;
@@ -3847,7 +3881,7 @@ R"x*x*x(<html>
 #endif
 		}
 
-		inline std::wstring make_target_path(const std::string& target) const noexcept
+		static std::wstring make_target_path(const std::string& target) noexcept
 		{
 			try
 			{
@@ -3862,10 +3896,11 @@ R"x*x*x(<html>
 			return boost::nowide::widen(target);
 		}
 
-		inline fs::path make_real_target_path(const std::string& target) const noexcept
+		static fs::path make_real_target_path(const std::string& doc_directory,
+			const std::string& target) noexcept
 		{
 			auto target_path = make_target_path(target);
-			auto doc_path = boost::nowide::widen(m_option.doc_directory_);
+			auto doc_path = boost::nowide::widen(doc_directory);
 
 #ifdef WIN32
 			auto ret = make_unc_path(path_cat(doc_path, target_path));
@@ -3876,7 +3911,7 @@ R"x*x*x(<html>
 			return ret;
 		}
 
-		inline std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file) const noexcept
+		static std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file) noexcept
 		{
 			static auto loc_time = [](auto t) -> struct tm*
 			{
@@ -4557,6 +4592,7 @@ R"x*x*x(<html>
 		}
 
 		//////////////////////////////////////////////////////////////////////////
+		// DNS 查询相关实现
 
 		inline net::awaitable<void> on_http_dns_query(const http_context& hctx) noexcept
 		{
@@ -4865,6 +4901,9 @@ R"x*x*x(<html>
 		static constexpr uint16_t DNS_TYPE_CAA = 257;
 
 		static constexpr uint16_t DNS_CLASS_IN = 1;
+
+		//////////////////////////////////////////////////////////////////////////
+		// DNS 辅助工具
 
 		// dns_encode_name 将域名编码为 DNS wire-format 标签序列.
 		static std::string dns_encode_name(const std::string& name) noexcept
@@ -5188,7 +5227,7 @@ R"x*x*x(<html>
 		}
 
 		// dns_response_to_json 将 DNS wire-format 响应解析为 Google JSON API 格式.
-		std::string dns_response_to_json(
+		static std::string dns_response_to_json(
 			const std::string& wire_response,
 			const std::string& question_name,
 			uint16_t question_type) noexcept
@@ -5875,8 +5914,9 @@ R"x*x*x(<html>
 		}
 
 		//////////////////////////////////////////////////////////////////////////
+		// HTTP 响应辅助
 
-		inline std::string server_date_string() const noexcept
+		static std::string server_date_string() noexcept
 		{
 			// 缓存 date string 以避免频繁调用 time/gmtime/strftime.
 			// 每秒刷新一次即可满足 HTTP Date 头精度要求.
@@ -6004,6 +6044,9 @@ R"x*x*x(<html>
 			co_return;
 		}
 
+		//////////////////////////////////////////////////////////////////////////
+		// 流控制工具
+
 		inline void user_rate_limit_config(const std::string& user) noexcept
 		{
 			// 在这里使用用户指定的速率设置替换全局速率配置.
@@ -6015,7 +6058,7 @@ R"x*x*x(<html>
 			}
 		}
 
-		inline void stream_expires_never(variant_stream_type& stream) const noexcept
+		static void stream_expires_never(variant_stream_type& stream) noexcept
 		{
 			boost::variant2::visit([](auto& s) mutable
 			{
@@ -6038,8 +6081,8 @@ R"x*x*x(<html>
 			}, stream);
 		}
 
-		inline void stream_expires_after(
-			variant_stream_type& stream, net::steady_timer::duration expiry_time) const noexcept
+		static void stream_expires_after(
+			variant_stream_type& stream, net::steady_timer::duration expiry_time) noexcept
 		{
 			if (expiry_time.count() < 0)
 				return;
@@ -6065,7 +6108,7 @@ R"x*x*x(<html>
 			}, stream);
 		}
 
-		inline void stream_rate_limit(variant_stream_type& stream, int rate) const noexcept
+		static void stream_rate_limit(variant_stream_type& stream, int rate) noexcept
 		{
 			boost::variant2::visit([rate](auto& s) mutable
 				{
@@ -6087,6 +6130,9 @@ R"x*x*x(<html>
 					}
 				}, stream);
 		}
+
+		//////////////////////////////////////////////////////////////////////////
+		// DNS 解析与缓存
 
 		inline tcp::resolver::results_type
 		get_resolver_from_cache(const std::string& hostname, uint16_t port) noexcept
@@ -6193,6 +6239,8 @@ R"x*x*x(<html>
 
 			co_return targets;
 		}
+
+		//////////////////////////////////////////////////////////////////////////
 
 		inline net::awaitable<void>
 		tproxy_set_mark(int socket_fd) const noexcept
@@ -6426,6 +6474,8 @@ R"x*x*x(<html>
 
 			co_return;
 		}
+
+		//////////////////////////////////////////////////////////////////////////
 
 	private:
 		// m_executor 保存当前 io_context 的 executor.
