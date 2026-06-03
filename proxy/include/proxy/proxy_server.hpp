@@ -609,8 +609,7 @@ R"x*x*x(<html>
 		// DNS 上游服务器地址，用于 DoH (DNS over HTTPS) 查询转发。
 		//
 		// - 格式: "ip:port"，如 "8.8.8.8:53"。
-		// - 默认: "8.8.8.8:53"。
-		std::string dns_upstream_{ "8.8.8.8:53" };
+		std::optional<std::string> dns_upstream_;
 
 		// 是否启用目录列表（类似 nginx 的 autoindex）。
 		//
@@ -3765,8 +3764,8 @@ R"x*x*x(<html>
 				http_context http_ctx{ {}, req, target, make_real_target_path(req.target()) };
 
 				#define BEGIN_HTTP_ROUTE() if (false) {}
-				#define ON_HTTP_ROUTE(exp, func) \
-				else if (boost::regex_match( \
+				#define ON_HTTP_ROUTE(skip, exp, func) \
+				else if (skip && boost::regex_match( \
 					target, what, boost::regex{ exp })) { \
 					for (auto i = 1; i < static_cast<int>(what.size()); i++) \
 						http_ctx.command_.emplace_back(what[i]); \
@@ -3778,12 +3777,14 @@ R"x*x*x(<html>
 						fake_400_content, \
 						http::status::bad_request ); }
 
+				bool dns_proxy = m_option.dns_upstream_.has_value();
+
 				BEGIN_HTTP_ROUTE()
-					ON_HTTP_ROUTE(R"(^(.*)?\/$)", on_http_dir)
-					ON_HTTP_ROUTE(R"(^(.*)?(\/\?r=json.*)$)", on_http_all_json)
-					ON_HTTP_ROUTE(R"(^(.*)?(\/\?q=json.*)$)", on_http_json)
-					ON_HTTP_ROUTE(R"(^\/dns-query(.*)$)", on_http_dns_query)
-					ON_HTTP_ROUTE(R"(^(?!.*\/$).*$)", on_http_get)
+					ON_HTTP_ROUTE(true, R"(^(.*)?\/$)", on_http_dir)
+					ON_HTTP_ROUTE(true, R"(^(.*)?(\/\?r=json.*)$)", on_http_all_json)
+					ON_HTTP_ROUTE(true, R"(^(.*)?(\/\?q=json.*)$)", on_http_json)
+					ON_HTTP_ROUTE(dns_proxy, R"(^\/dns-query(.*)$)", on_http_dns_query)
+					ON_HTTP_ROUTE(true, R"(^(?!.*\/$).*$)", on_http_get)
 				END_HTTP_ROUTE()
 
 				if (!keep_alive || !m_local_socket.is_open())
@@ -4744,7 +4745,7 @@ R"x*x*x(<html>
 			}
 
 			// 判断上游 DNS 服务器类型并转发查询.
-			auto& upstream = m_option.dns_upstream_;
+			auto& upstream = *m_option.dns_upstream_;
 
 			if (boost::istarts_with(upstream, "https://"))
 			{
@@ -4766,7 +4767,7 @@ R"x*x*x(<html>
 		{
 			boost::system::error_code ec;
 
-			auto& upstream = m_option.dns_upstream_;
+			auto& upstream = *m_option.dns_upstream_;
 			auto colon_pos = upstream.find(':');
 			if (colon_pos == std::string::npos)
 			{
@@ -5342,7 +5343,7 @@ R"x*x*x(<html>
 
 			// 2. 通过上游转发查询并获取 wire-format 响应.
 			std::string wire_response;
-			auto& upstream = m_option.dns_upstream_;
+			auto& upstream = *m_option.dns_upstream_;
 			bool ok = false;
 
 			if (boost::istarts_with(upstream, "https://"))
@@ -5393,7 +5394,7 @@ R"x*x*x(<html>
 		{
 			boost::system::error_code ec;
 
-			auto& upstream = m_option.dns_upstream_;
+			auto& upstream = *m_option.dns_upstream_;
 			auto colon_pos = upstream.find(':');
 			if (colon_pos == std::string::npos)
 				co_return false;
@@ -5436,7 +5437,7 @@ R"x*x*x(<html>
 		{
 			boost::system::error_code ec;
 
-			auto parsed = parse_urlinfo(m_option.dns_upstream_);
+			auto parsed = parse_urlinfo(*m_option.dns_upstream_);
 			if (parsed.has_error())
 				co_return false;
 
@@ -5533,7 +5534,7 @@ R"x*x*x(<html>
 
 			// 使用 parse_urlinfo 解析 DoH URL.
 			// 格式示例: https://dns.google/dns-query
-			auto parsed = parse_urlinfo(m_option.dns_upstream_);
+			auto parsed = parse_urlinfo(*m_option.dns_upstream_);
 			if (parsed.has_error())
 			{
 				co_await default_http_route(

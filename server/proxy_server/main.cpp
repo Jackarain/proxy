@@ -459,7 +459,7 @@ int main(int argc, char** argv)
 		("htpasswd", po::value<bool>(&htpasswd)->value_name("")->default_value(false, "false"), "Enable WWW-Authenticate for HTTP server.")
 
 		("autoindex", po::value<bool>(&autoindex)->default_value(false, "false"), "Enable directory listing.")
-		("dns_upstream", po::value<std::string>(&dns_upstream)->value_name("ip:port"), "Upstream DNS server for DoH (DNS over HTTPS), default: 8.8.8.8:53.")
+		("dns_upstream", po::value<std::string>(&dns_upstream)->value_name("ip:port/url"), "Upstream DNS server for DoH (DNS over HTTPS).")
 		("logs_path", po::value<std::string>(&log_dir)->value_name(""), "Specify directory for log files.")
 
 		("disable_logs", po::value<bool>(&disable_logs)->value_name("")->default_value(default_logs), "Disable print logging in screen.")
