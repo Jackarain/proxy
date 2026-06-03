@@ -112,7 +112,7 @@ docker build . -t proxy:v1
 | proxy_pass_ssl | 向 `proxy_pass` 指定的上游代理发起连接时，是否通过 SSL 加密传输。注意上游代理服务必须启用 SSL 相关证书 |
 | proxy_ssl_name | 指定 SNI 用于在单一 IP 上支持多个 SSL 证书的域名匹配，取代已废弃的 `ssl_sni` 选项 |
 | ssl_certificate_dir | SSL 证书密钥存放目录。`proxy_server` 会自动递归查找子目录，每个目录对应一个域名的证书文件（若私钥已加密，则需在相应目录下放置 `password.txt` 指明密码）。证书过期后将自动每 5 分钟热加载一次，无需重启服务 |
-| ssl_cacert_dir | 指定 CA 证书文件目录，用于客户端 SSL 连接验证。若不指定则默认使用内置的 cacert 文件（来自 https://curl.se/docs/caextract.html） |
+| ssl_cacert_dir | 指定 CA 证书文件目录，用于客户端 SSL 连接验证。若不指定则默认使用内置的 cacert 文件（来自 <https://curl.se/docs/caextract.html>） |
 | ssl_sni | （已废弃，改用 `proxy_ssl_name`）指定 SNI 用于客户端 SSL 连接 |
 | ssl_ciphers | SSL 协议允许的加密套件列表（除非了解其作用，否则无需关心） |
 | ssl_prefer_server_ciphers | 优先使用服务端加密套件顺序（除非了解其作用，否则无需关心） |
@@ -176,12 +176,12 @@ docker build . -t proxy:v1
 
 代理隧道功能实现了 [proxytunnel](https://github.com/proxytunnel/proxytunnel) 的功能，具体使用方式如下，在 `.ssh` 目录中的 `config` 配置文件中添加：
 
-```
+``` text
 Host example
-	HostName xxx.xxx.xxx.xxx
-	IdentityFile /root/.ssh/id_rsa
-	User root
-	ProxyCommand /path/to/proxy_server --stdio %h:%p --proxy_pass https://user:pass@proxy.server:8443
+    HostName xxx.xxx.xxx.xxx
+    IdentityFile /root/.ssh/id_rsa
+    User root
+    ProxyCommand /path/to/proxy_server --stdio %h:%p --proxy_pass https://user:pass@proxy.server:8443
 ```
 
 然后当使用 `ssh` 连接主机 `example` 时将会按上述配置文件中参数创建 `proxy_server` 代理隧道，通过 `proxy_pass` 指定的代理服务器连接目标 `HostName` 所指的服务器。
@@ -196,6 +196,53 @@ Host example
 4. 测试认证是否生效，如 `curl -x http://jack:1111@localhost:1080/ https://google.com`，如果返回 `200 OK` 则说明认证生效。
 
 `PAM` 模块认证可以使用 `linux` 命令添加或管理用户，可极大方便 `proxy_server` 的用户管理，而不必依赖复杂的数据库系统。如果你是开发人员，也可以开发一个支持数据库认证的 `PAM` 的 `so` 模块（可参考 `doc` 下 `pam.example` 的 `pam_sqlite.c` 了解如何实现 `PAM` 认证模块），或者使用 `PAM` 模块认证来实现 `LDAP` 认证等。
+
+## DNS over HTTPS (DoH) 代理功能
+
+`proxy server` 内置了 **DNS over HTTPS (DoH)** 代理功能，可以将传统的 DNS 查询转为通过 HTTPS 加密传输，有效防止 DNS 劫持和嗅探。
+
+### DoH 配置参数
+
+| 参数 | 用法解释 |
+| ---- | ----- |
+| dns_upstream | 指定上游 DNS 服务器地址。格式支持传统的 UDP DNS（`ip:port`）和 DoH（`https://host/path`），如 `--dns_upstream 8.8.8.8:53` 或 `--dns_upstream https://dns.google/dns-query` |
+
+相关参数：`disable_check_cert` 用于禁用 TLS 证书校验（不推荐用于正式环境）。
+
+### 使用示例
+
+``` bash
+./proxy_server --server_listen 0.0.0.0:1080 \
+    --dns_upstream https://dns.google/dns-query \
+    --ssl_certificate_dir /path/to/certs
+```
+
+### DNS 请求示例
+
+`proxy server` 支持标准的 DoH 接口（RFC 8484），客户端可以通过 HTTPS 协议直接请求 `/dns-query` 路径：
+
+- **GET 请求**: 通过 `?dns=` 参数传递 base64url 编码的 DNS 查询数据。
+- **POST 请求**: 将 DNS 查询数据作为请求体直接发送（`Content-Type: application/dns-message`）。
+- **JSON 格式**: 支持 `application/dns-json` 格式（Google DNS JSON API 兼容），通过 POST 请求发送 JSON 格式的查询参数。
+
+示例：使用 `curl` 查询 `example.com` 的 A 记录
+
+``` bash
+# 使用 GET 方式（base64url 编码）
+curl -H "Accept: application/dns-message" \
+    "https://domain:1080/dns-query?dns=AAABAAAAAAAAA3d3dwdleGFtcGxlA2NvbQAAAQAB"
+
+# 使用 POST 方式
+curl -X POST -H "Content-Type: application/dns-message" \
+    -H "Accept: application/dns-message" \
+    --data-binary @dns_query.bin \
+    https://domain:1080/dns-query
+
+# 使用 JSON API 方式
+curl -X POST -H "Content-Type: application/dns-json" \
+    -d '{"name":"example.com","type":"A"}' \
+    https://domain:1080/dns-query
+```
 
 ## 静态文件 http 服务器(可配置为云音乐播放器)
 
