@@ -3866,7 +3866,7 @@ R"x*x*x(<html>
 		};
 
 		template<typename Path>
-		fs::path make_unc_path(const Path& path) noexcept
+		static fs::path make_unc_path(const Path& path) noexcept
 		{
 #ifndef WIN32
 			return path;
