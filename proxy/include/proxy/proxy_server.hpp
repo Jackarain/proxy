@@ -4837,6 +4837,11 @@ R"x*x*x(<html>
 					<< ", dns query write response error: "
 					<< ec.message();
 			}
+			else
+			{
+				log_dns_result(dns_query,
+					std::string(recv_buf.data(), recv_len));
+			}
 
 			co_return;
 		}
@@ -5327,6 +5332,161 @@ R"x*x*x(<html>
 			return boost::json::serialize(root);
 		}
 
+		// log_dns_result 从 DNS wire-format 查询和响应中提取关键信息并输出日志.
+		// query_msg: 原始 wire-format 查询 (用于提取问题域名).
+		// response_msg: wire-format 响应 (用于提取答案记录).
+		// json_body: 可选的 JSON 响应体 (非空时优先从中提取答案).
+		inline void log_dns_result(
+			const std::string& query_msg,
+			const std::string& response_msg,
+			const std::string& json_body = {}) const noexcept
+		{
+			std::string qname;
+			uint16_t qtype = DNS_TYPE_A;
+
+			if (!json_body.empty())
+			{
+				// 从 JSON 响应体中提取域名和答案.
+				try
+				{
+					auto jv = boost::json::parse(json_body);
+					auto& obj = jv.as_object();
+
+					if (obj.contains("Question") && !obj["Question"].as_array().empty())
+					{
+						auto& q = obj["Question"].as_array()[0].as_object();
+						if (q.contains("name"))
+							qname = q["name"].as_string().c_str();
+						if (q.contains("type"))
+							qtype = static_cast<uint16_t>(q["type"].as_int64());
+					}
+
+					size_t answer_count = 0;
+					if (obj.contains("Answer"))
+						answer_count = obj["Answer"].as_array().size();
+
+					// 取前 5 条答案摘要.
+					std::string answer_summary;
+					auto& answers = obj["Answer"].as_array();
+					for (size_t i = 0; i < answer_count && i < 5; i++)
+					{
+						auto& a = answers[i].as_object();
+						auto aname = a["name"].as_string().c_str();
+						auto atype = dns_type_to_string(
+							static_cast<uint16_t>(a["type"].as_int64()));
+						auto data = a["data"].as_string().c_str();
+						if (!answer_summary.empty())
+							answer_summary += "; ";
+						answer_summary += aname;
+						answer_summary += " ";
+						answer_summary += atype;
+						answer_summary += " ";
+						answer_summary += data;
+					}
+					if (answer_count > 5)
+						answer_summary += fmt::format(" ... ({} total)", answer_count);
+
+					log_conn_debug()
+						<< ", dns query completed"
+						<< ", domain: " << qname
+						<< ", type: " << dns_type_to_string(qtype)
+						<< ", answers: " << answer_count
+						<< (!answer_summary.empty() ?
+							std::string(", result: ") + answer_summary
+							: std::string(", no answer"));
+				}
+				catch (const std::exception& e)
+				{
+					log_conn_debug()
+						<< ", dns query completed"
+						<< ", (json parse error: " << e.what() << ")";
+				}
+				return;
+			}
+
+			// 从 wire-format 查询中提取问题域名.
+			const char* qp = query_msg.data();
+			const char* qend = qp + query_msg.size();
+			if (query_msg.size() >= 12)
+			{
+				qp += 12; // 跳过 DNS 头.
+				auto [parsed_qname, np] = dns_parse_name(qp, qend, query_msg.data());
+				if (np && np + 4 <= qend)
+				{
+					qp = np;
+					qname = parsed_qname;
+					qtype = read<uint16_t>(qp);
+				}
+			}
+
+			// 从 wire-format 响应中提取答案.
+			const char* p = response_msg.data();
+			const char* end = p + response_msg.size();
+			const char* msg_start = p;
+
+			size_t ancount = 0;
+			std::string answer_summary;
+
+			if (response_msg.size() >= 12)
+			{
+				read<uint16_t>(p);  // ID
+				read<uint16_t>(p);  // Flags
+				auto qdcount = read<uint16_t>(p);
+				ancount = read<uint16_t>(p);
+				read<uint16_t>(p);  // NSCOUNT
+				read<uint16_t>(p);  // ARCOUNT
+
+				// 跳过问题区域.
+				for (uint16_t i = 0; i < qdcount && p < end; i++)
+				{
+					auto [_, np] = dns_parse_name(p, end, msg_start);
+					if (!np) break;
+					p = np;
+					if (p + 4 > end) break;
+					p += 4; // QTYPE + QCLASS
+				}
+
+				// 读取答案.
+				for (uint16_t i = 0; i < ancount && p < end; i++)
+				{
+					auto [aname, np] = dns_parse_name(p, end, msg_start);
+					if (!np) break;
+					p = np;
+					if (p + 10 > end) break;
+					auto atype = read<uint16_t>(p);
+					[[maybe_unused]] auto aclass = read<uint16_t>(p);
+					[[maybe_unused]] auto attl = read<uint32_t>(p);
+					auto rdlength = read<uint16_t>(p);
+					if (p + rdlength > end) break;
+
+					if (i < 5) // 只记录前 5 条.
+					{
+						if (!answer_summary.empty())
+							answer_summary += "; ";
+						answer_summary += aname;
+						answer_summary += " ";
+						answer_summary += dns_type_to_string(atype);
+						answer_summary += " ";
+						answer_summary += dns_rdata_to_string(atype, rdlength, p, end, msg_start);
+					}
+
+					p += rdlength;
+				}
+			}
+
+			if (ancount > 5)
+				answer_summary += fmt::format(" ... ({} total)", ancount);
+
+			log_conn_debug()
+				<< ", dns query completed"
+				<< ", domain: " << (qname.empty() ? "(unknown)" : qname)
+				<< ", type: " << dns_type_to_string(qtype)
+				<< ", answers: " << ancount
+				<< (!answer_summary.empty() ?
+					std::string(", result: ") + answer_summary
+					: std::string(", no answer"));
+		}
+
 		// dns_json_query 处理 application/dns-json 格式的 DNS 查询.
 		inline net::awaitable<void> dns_json_query(
 			const string_request& request,
@@ -5382,6 +5542,12 @@ R"x*x*x(<html>
 				log_conn_warning()
 					<< ", dns json query write response error: "
 					<< ec.message();
+			}
+			else
+			{
+				log_dns_result(dns_query,
+					wire_response,
+					res.body());
 			}
 
 			co_return;
@@ -5520,7 +5686,17 @@ R"x*x*x(<html>
 				co_return false;
 
 			if (doh_res.result() != http::status::ok)
+			{
+				log_conn_warning()
+					<< ", doh query raw response status: "
+					<< doh_res.result_int();
 				co_return false;
+			}
+
+			log_conn_debug()
+				<< ", doh query raw response received"
+				<< ", status: " << doh_res.result_int()
+				<< ", content-length: " << doh_res.payload_size().value_or(0);
 
 			output = std::move(doh_res.body());
 			co_return true;
@@ -5689,6 +5865,10 @@ R"x*x*x(<html>
 				log_conn_warning()
 					<< ", doh dns query write response error: "
 					<< ec.message();
+			}
+			else
+			{
+				log_dns_result(dns_query, doh_res.body());
 			}
 
 			co_return;
