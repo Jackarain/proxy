@@ -3782,7 +3782,7 @@ R"x*x*x(<html>
 					ON_HTTP_ROUTE(R"(^(.*)?\/$)", on_http_dir)
 					ON_HTTP_ROUTE(R"(^(.*)?(\/\?r=json.*)$)", on_http_all_json)
 					ON_HTTP_ROUTE(R"(^(.*)?(\/\?q=json.*)$)", on_http_json)
-					ON_HTTP_ROUTE(R"(^\/dns-query\?(.*)$)", on_http_dns_query)
+					ON_HTTP_ROUTE(R"(^\/dns-query(.*)$)", on_http_dns_query)
 					ON_HTTP_ROUTE(R"(^(?!.*\/$).*$)", on_http_get)
 				END_HTTP_ROUTE()
 
@@ -4577,6 +4577,60 @@ R"x*x*x(<html>
 			if (request.method() == http::verb::post)
 			{
 				auto content_type = request[http::field::content_type];
+
+				// 支持 JSON 格式的 DNS 查询 (application/dns-json).
+				if (content_type == "application/dns-json")
+				{
+					bool json_error = false;
+					std::string json_qname;
+					uint16_t json_qtype = DNS_TYPE_A;
+					bool json_cd = false;
+					bool json_do = false;
+
+					try
+					{
+						auto jv = boost::json::parse(request.body());
+						auto& obj = jv.as_object();
+
+						if (obj.contains("name"))
+							json_qname = obj["name"].as_string().c_str();
+						else
+							json_error = true;
+
+						if (obj.contains("type"))
+						{
+							auto& t = obj["type"];
+							if (t.is_string())
+								json_qtype = dns_type_from_string(t.as_string().c_str());
+							else if (t.is_int64())
+								json_qtype = static_cast<uint16_t>(t.as_int64());
+						}
+
+						if (obj.contains("cd"))
+							json_cd = obj["cd"].as_bool();
+
+						if (obj.contains("do"))
+							json_do = obj["do"].as_bool();
+					}
+					catch (const std::exception& e)
+					{
+						log_conn_warning()
+							<< ", dns json parse error: " << e.what();
+						json_error = true;
+					}
+
+					if (json_error)
+					{
+						co_await default_http_route(
+							request, fake_400_content, http::status::bad_request);
+					}
+					else
+					{
+						co_await dns_json_query(request, json_qname, json_qtype, json_cd, json_do);
+					}
+					co_return;
+				}
+
 				if (content_type != "application/dns-message")
 				{
 					co_await default_http_route(
@@ -4587,8 +4641,75 @@ R"x*x*x(<html>
 			}
 			else // GET
 			{
-				// 解析 ?dns=<base64url> 参数.
 				auto target = hctx.target_;
+
+				// 检查是否为 Google JSON API 格式 (?name=...&type=...).
+				auto name_pos = target.find("?name=");
+				if (name_pos != std::string::npos)
+				{
+					auto query_str = target.substr(name_pos + 1); // 去掉 ?.
+
+					auto get_param = [&](const std::string& key) -> std::string
+					{
+						auto kpos = query_str.find(key + "=");
+						if (kpos == std::string::npos)
+							return {};
+						auto vstart = kpos + key.size() + 1;
+						auto vend = query_str.find('&', vstart);
+						if (vend == std::string::npos)
+							return query_str.substr(vstart);
+						return query_str.substr(vstart, vend - vstart);
+					};
+
+					auto qname = get_param("name");
+					if (qname.empty())
+					{
+						co_await default_http_route(
+							request, fake_400_content, http::status::bad_request);
+						co_return;
+					}
+
+					// URL 解码.
+					auto url_decode = [](std::string src) -> std::string
+					{
+						std::string ret;
+						for (size_t i = 0; i < src.size(); i++)
+						{
+							if (src[i] == '%' && i + 2 < src.size())
+							{
+								char hex[3] = { src[i+1], src[i+2], 0 };
+								ret += static_cast<char>(std::strtoul(hex, nullptr, 16));
+								i += 2;
+							}
+							else
+							{
+								ret += src[i];
+							}
+						}
+						return ret;
+					};
+					qname = url_decode(qname);
+
+					auto type_str = get_param("type");
+					uint16_t qtype = DNS_TYPE_A;
+					if (!type_str.empty())
+						qtype = dns_type_from_string(type_str);
+
+					bool cd = false;
+					auto cd_str = get_param("cd");
+					if (cd_str == "true" || cd_str == "1")
+						cd = true;
+
+					bool do_flag = false;
+					auto do_str = get_param("do");
+					if (do_str == "true" || do_str == "1")
+						do_flag = true;
+
+					co_await dns_json_query(request, qname, qtype, cd, do_flag);
+					co_return;
+				}
+
+				// 解析 ?dns=<base64url> 参数 (标准 DoH wire-format).
 				auto pos = target.find("?dns=");
 				if (pos == std::string::npos)
 				{
@@ -4717,6 +4838,691 @@ R"x*x*x(<html>
 			}
 
 			co_return;
+		}
+
+		// ====================================================================
+		// DNS wire-format 编码/解码辅助函数 (用于 application/dns-json 支持)
+		// ====================================================================
+
+		// DNS 记录类型常量.
+		static constexpr uint16_t DNS_TYPE_A = 1;
+		static constexpr uint16_t DNS_TYPE_NS = 2;
+		static constexpr uint16_t DNS_TYPE_CNAME = 5;
+		static constexpr uint16_t DNS_TYPE_SOA = 6;
+		static constexpr uint16_t DNS_TYPE_PTR = 12;
+		static constexpr uint16_t DNS_TYPE_MX = 15;
+		static constexpr uint16_t DNS_TYPE_TXT = 16;
+		static constexpr uint16_t DNS_TYPE_AAAA = 28;
+		static constexpr uint16_t DNS_TYPE_SRV = 33;
+		static constexpr uint16_t DNS_TYPE_HTTPS = 65;
+		static constexpr uint16_t DNS_TYPE_ANY = 255;
+		static constexpr uint16_t DNS_TYPE_CAA = 257;
+
+		static constexpr uint16_t DNS_CLASS_IN = 1;
+
+		// dns_encode_name 将域名编码为 DNS wire-format 标签序列.
+		static std::string dns_encode_name(const std::string& name) noexcept
+		{
+			std::string encoded;
+			if (name.empty() || name == ".")
+			{
+				encoded.push_back('\0');
+				return encoded;
+			}
+			std::string s = name;
+			// 去掉末尾的 .
+			if (!s.empty() && s.back() == '.')
+				s.pop_back();
+
+			size_t pos = 0;
+			while (pos < s.size())
+			{
+				auto dot = s.find('.', pos);
+				if (dot == std::string::npos)
+					dot = s.size();
+				auto label_len = dot - pos;
+				if (label_len > 63)
+					label_len = 63;
+				encoded.push_back(static_cast<char>(static_cast<uint8_t>(label_len)));
+				encoded.append(s.data() + pos, label_len);
+				pos = dot + 1;
+				if (dot == s.size())
+					break;
+			}
+			encoded.push_back('\0');
+			return encoded;
+		}
+
+		// dns_type_from_string 将类型名字符串转换为 DNS 类型数值.
+		static uint16_t dns_type_from_string(const std::string& type_name) noexcept
+		{
+			static const std::unordered_map<std::string, uint16_t> type_map = {
+				{"A", 1}, {"NS", 2}, {"MD", 3}, {"MF", 4}, {"CNAME", 5},
+				{"SOA", 6}, {"MB", 7}, {"MG", 8}, {"MR", 9}, {"NULL", 10},
+				{"WKS", 11}, {"PTR", 12}, {"HINFO", 13}, {"MINFO", 14}, {"MX", 15},
+				{"TXT", 16}, {"RP", 17}, {"AFSDB", 18}, {"X25", 19}, {"ISDN", 20},
+				{"RT", 21}, {"NSAP", 22}, {"NSAP-PTR", 23}, {"SIG", 24}, {"KEY", 25},
+				{"PX", 26}, {"GPOS", 27}, {"AAAA", 28}, {"LOC", 29}, {"NXT", 30},
+				{"SRV", 33}, {"NAPTR", 35}, {"KX", 36}, {"CERT", 37}, {"DNAME", 39},
+				{"OPT", 41}, {"APL", 42}, {"DS", 43}, {"SSHFP", 44}, {"IPSECKEY", 45},
+				{"RRSIG", 46}, {"NSEC", 47}, {"DNSKEY", 48}, {"DHCID", 49},
+				{"NSEC3", 50}, {"NSEC3PARAM", 51}, {"TLSA", 52}, {"SMIMEA", 53},
+				{"HIP", 55}, {"CDS", 59}, {"CDNSKEY", 60}, {"OPENPGPKEY", 61},
+				{"CSYNC", 62}, {"ZONEMD", 63}, {"SVCB", 64}, {"HTTPS", 65},
+				{"SPF", 99}, {"TKEY", 249}, {"TSIG", 250}, {"IXFR", 251},
+				{"AXFR", 252}, {"ANY", 255}, {"URI", 256}, {"CAA", 257},
+				{"TA", 32768}, {"DLV", 32769},
+			};
+			auto it = type_map.find(type_name);
+			if (it != type_map.end())
+				return it->second;
+			// 尝试数字.
+			try { return static_cast<uint16_t>(std::stoul(type_name)); }
+			catch (...) { return DNS_TYPE_A; }
+		}
+
+		// dns_type_to_string 将 DNS 类型数值转换为字符串.
+		static std::string dns_type_to_string(uint16_t type) noexcept
+		{
+			static const std::unordered_map<uint16_t, std::string> type_map = {
+				{1, "A"}, {2, "NS"}, {3, "MD"}, {4, "MF"}, {5, "CNAME"},
+				{6, "SOA"}, {7, "MB"}, {8, "MG"}, {9, "MR"}, {10, "NULL"},
+				{11, "WKS"}, {12, "PTR"}, {13, "HINFO"}, {14, "MINFO"}, {15, "MX"},
+				{16, "TXT"}, {17, "RP"}, {18, "AFSDB"}, {19, "X25"}, {20, "ISDN"},
+				{21, "RT"}, {22, "NSAP"}, {23, "NSAP-PTR"}, {24, "SIG"}, {25, "KEY"},
+				{26, "PX"}, {27, "GPOS"}, {28, "AAAA"}, {29, "LOC"}, {30, "NXT"},
+				{33, "SRV"}, {35, "NAPTR"}, {36, "KX"}, {37, "CERT"}, {39, "DNAME"},
+				{41, "OPT"}, {42, "APL"}, {43, "DS"}, {44, "SSHFP"}, {45, "IPSECKEY"},
+				{46, "RRSIG"}, {47, "NSEC"}, {48, "DNSKEY"}, {49, "DHCID"},
+				{50, "NSEC3"}, {51, "NSEC3PARAM"}, {52, "TLSA"}, {53, "SMIMEA"},
+				{55, "HIP"}, {59, "CDS"}, {60, "CDNSKEY"}, {61, "OPENPGPKEY"},
+				{62, "CSYNC"}, {63, "ZONEMD"}, {64, "SVCB"}, {65, "HTTPS"},
+				{99, "SPF"}, {249, "TKEY"}, {250, "TSIG"}, {251, "IXFR"},
+				{252, "AXFR"}, {255, "ANY"}, {256, "URI"}, {257, "CAA"},
+				{32768, "TA"}, {32769, "DLV"},
+			};
+			auto it = type_map.find(type);
+			if (it != type_map.end())
+				return it->second;
+			return std::to_string(type);
+		}
+
+		// build_dns_wire_query 构建 DNS wire-format 查询包.
+		static std::string build_dns_wire_query(
+			const std::string& name, uint16_t type,
+			bool cd = false, bool do_bit = false) noexcept
+		{
+			std::string query;
+			query.reserve(512);
+
+			// Header (12 bytes).
+			uint16_t id = static_cast<uint16_t>(
+				global_random_device()() & 0xFFFF);
+			char hdr[12];
+			char* hp = hdr;
+			write<uint16_t>(id, hp);               // ID
+			write<uint16_t>(0x0100, hp);            // Flags: RD=1
+			write<uint16_t>(1, hp);                 // QDCOUNT = 1
+			write<uint16_t>(0, hp);                 // ANCOUNT = 0
+			write<uint16_t>(0, hp);                 // NSCOUNT = 0
+			if (do_bit)
+				write<uint16_t>(1, hp);             // ARCOUNT = 1 (OPT)
+			else
+				write<uint16_t>(0, hp);             // ARCOUNT = 0
+			query.append(hdr, 12);
+
+			// Question: QNAME.
+			auto qname = dns_encode_name(name);
+			query.append(qname);
+
+			// Question: QTYPE + QCLASS.
+			char qs[4];
+			char* qp = qs;
+			write<uint16_t>(type, qp);
+			write<uint16_t>(DNS_CLASS_IN, qp);
+			query.append(qs, 4);
+
+			// OPT pseudo-record for DNSSEC DO bit.
+			if (do_bit)
+			{
+				char opt[11];
+				char* op = opt;
+				write<uint8_t>(0, op);              // NAME: root (1 byte)
+				write<uint16_t>(41, op);             // TYPE: OPT
+				write<uint16_t>(1280, op);           // CLASS: UDP payload size
+				write<uint16_t>(0x8000, op);         // TTL high: DO=1
+				write<uint16_t>(0, op);              // TTL low
+				write<uint16_t>(0, op);              // RDLEN = 0
+				query.append(opt, 11);
+			}
+
+			// 若设置了 CD 标志, 修改 flags.
+			if (cd)
+			{
+				// Flags at offset 2-3.
+				uint16_t flags = 0x0100 | 0x0010; // RD=1, CD=1
+				char* fp = &query[2];
+				write<uint16_t>(flags, fp);
+			}
+
+			return query;
+		}
+
+		// dns_parse_name 从 wire-format 解析域名 (支持压缩指针).
+		static std::pair<std::string, const char*>
+		dns_parse_name(const char* p, const char* end, const char* msg_start) noexcept
+		{
+			std::string name;
+			bool jumped = false;
+			const char* next = nullptr;
+
+			while (p < end)
+			{
+				uint8_t len = static_cast<uint8_t>(*p);
+				if (len == 0)
+				{
+					if (!jumped) next = p + 1;
+					break;
+				}
+				if ((len & 0xC0) == 0xC0)
+				{
+					if (p + 1 >= end) break;
+					uint16_t offset =
+						((static_cast<uint16_t>(len & 0x3F)) << 8) |
+						static_cast<uint8_t>(*(p + 1));
+					if (!jumped) next = p + 2;
+					p = msg_start + offset;
+					jumped = true;
+					continue;
+				}
+				if (p + 1 + len > end) break;
+				if (!name.empty()) name += '.';
+				name.append(p + 1, p + 1 + len);
+				p += 1 + len;
+			}
+
+			if (!name.empty())
+			{
+				if (!jumped && next == nullptr)
+					next = p + 1; // 正常结束于 0 长度标签.
+				name += '.';
+			}
+			else if (p < end && *p == 0)
+			{
+				name = ".";
+				if (!jumped) next = p + 1;
+			}
+
+			return {name, next ? next : p};
+		}
+
+		// dns_rdata_to_string 将 RDATA 按类型解析为可读字符串.
+		static std::string dns_rdata_to_string(
+			uint16_t type, uint16_t rdlength,
+			const char* rdata, const char* end,
+			const char* msg_start) noexcept
+		{
+			if (rdata + rdlength > end)
+				return {rdata, (size_t)(end - rdata)};
+
+			switch (type)
+			{
+			case DNS_TYPE_A:
+			{
+				if (rdlength < 4) return {};
+				auto ip = net::ip::make_address_v4(
+					read<uint32_t>(rdata));
+				return ip.to_string();
+			}
+			case DNS_TYPE_AAAA:
+			{
+				if (rdlength < 16) return {};
+				net::ip::address_v6::bytes_type bytes;
+				for (auto& b : bytes)
+					b = read<uint8_t>(rdata);
+				return net::ip::make_address_v6(bytes).to_string();
+			}
+			case DNS_TYPE_CNAME:
+			case DNS_TYPE_NS:
+			case DNS_TYPE_PTR:
+			{
+				auto [name, _] = dns_parse_name(rdata, rdata + rdlength, msg_start);
+				(void)_;
+				return name;
+			}
+			case DNS_TYPE_MX:
+			{
+				if (rdlength < 2) return {};
+				auto pref = read<uint16_t>(rdata);
+				auto [name, _] = dns_parse_name(rdata, rdata + rdlength, msg_start);
+				(void)_;
+				return std::to_string(pref) + " " + name;
+			}
+			case DNS_TYPE_TXT:
+			{
+				std::string result;
+				const char* txt_end = rdata + rdlength;
+				while (rdata < txt_end)
+				{
+					uint8_t len = read<uint8_t>(rdata);
+					if (rdata + len > txt_end) break;
+					if (!result.empty()) result += "\n";
+					result.append(rdata, len);
+					rdata += len;
+				}
+				return result;
+			}
+			case DNS_TYPE_SOA:
+			{
+				auto [mname, p1] = dns_parse_name(rdata, rdata + rdlength, msg_start);
+				if (!p1) return {};
+				rdata = p1;
+				auto [rname, p2] = dns_parse_name(rdata, rdata + rdlength, msg_start);
+				if (!p2) return mname + " " + rname;
+				rdata = p2;
+				if (rdata + 20 > rdata + rdlength) return {};
+				auto serial = read<uint32_t>(rdata);
+				auto refresh = read<uint32_t>(rdata);
+				auto retry = read<uint32_t>(rdata);
+				auto expire = read<uint32_t>(rdata);
+				auto minimum = read<uint32_t>(rdata);
+				return mname + " " + rname + " " +
+					std::to_string(serial) + " " +
+					std::to_string(refresh) + " " +
+					std::to_string(retry) + " " +
+					std::to_string(expire) + " " +
+					std::to_string(minimum);
+			}
+			case DNS_TYPE_SRV:
+			{
+				if (rdlength < 6) return {};
+				auto priority = read<uint16_t>(rdata);
+				auto weight = read<uint16_t>(rdata);
+				auto srv_port = read<uint16_t>(rdata);
+				auto [target, _] = dns_parse_name(rdata, rdata + rdlength, msg_start);
+				(void)_;
+				return std::to_string(priority) + " " +
+					std::to_string(weight) + " " +
+					std::to_string(srv_port) + " " + target;
+			}
+			case DNS_TYPE_HTTPS:
+			{
+				// SVCB/HTTPS: priority(2) + target(name) + params...
+				if (rdlength < 2) return {};
+				auto svc_priority = read<uint16_t>(rdata);
+				auto [svc_target, _] = dns_parse_name(rdata, rdata + rdlength, msg_start);
+				(void)_;
+				return std::to_string(svc_priority) + " " + svc_target;
+			}
+			case DNS_TYPE_CAA:
+			{
+				if (rdlength < 2) return {};
+				auto flags = read<uint8_t>(rdata);
+				uint8_t tag_len = read<uint8_t>(rdata);
+				if (rdata + tag_len > rdata + rdlength) return {};
+				std::string tag(rdata, tag_len);
+				rdata += tag_len;
+				std::string value(rdata, (rdata + rdlength) - rdata);
+				return std::to_string(flags) + " " + tag + " \"" + value + "\"";
+			}
+			default:
+				// 未知类型, 返回 hex 表示.
+				{
+					std::string hex;
+					for (uint16_t i = 0; i < rdlength; i++)
+					{
+						char buf[3];
+						std::snprintf(buf, sizeof(buf), "%02x",
+							static_cast<uint8_t>(rdata[i]));
+						hex += buf;
+					}
+					return hex;
+				}
+			}
+		}
+
+		// dns_response_to_json 将 DNS wire-format 响应解析为 Google JSON API 格式.
+		std::string dns_response_to_json(
+			const std::string& wire_response,
+			const std::string& question_name,
+			uint16_t question_type) noexcept
+		{
+			boost::json::object root;
+
+			const char* p = wire_response.data();
+			const char* end = p + wire_response.size();
+			const char* msg_start = p;
+
+			if (wire_response.size() < 12)
+			{
+				root["Status"] = -1;
+				root["Comment"] = "Response too short";
+				return boost::json::serialize(root);
+			}
+
+			// Parse header.
+			[[maybe_unused]] auto id = read<uint16_t>(p);
+			auto flags = read<uint16_t>(p);
+			auto qdcount = read<uint16_t>(p);
+			auto ancount = read<uint16_t>(p);
+			auto nscount = read<uint16_t>(p);
+			auto arcount = read<uint16_t>(p);
+
+			auto rcode = flags & 0x0F;
+			bool tc = (flags & 0x0200) != 0;
+			bool rd = (flags & 0x0100) != 0;
+			bool ra = (flags & 0x0080) != 0;
+			bool ad = (flags & 0x0020) != 0;
+			bool cd = (flags & 0x0010) != 0;
+
+			root["Status"] = rcode;
+			root["TC"] = tc;
+			root["RD"] = rd;
+			root["RA"] = ra;
+			root["AD"] = ad;
+			root["CD"] = cd;
+
+			// Questions.
+			boost::json::array questions;
+			for (uint16_t i = 0; i < qdcount && p < end; i++)
+			{
+				auto [qname, np] = dns_parse_name(p, end, msg_start);
+				if (!np) break;
+				p = np;
+				if (p + 4 > end) break;
+				auto qtype = read<uint16_t>(p);
+				[[maybe_unused]] auto qclass = read<uint16_t>(p);
+
+				boost::json::object q;
+				q["name"] = qname;
+				q["type"] = qtype;
+				questions.push_back(std::move(q));
+			}
+			root["Question"] = std::move(questions);
+
+			// Answers.
+			boost::json::array answers;
+			for (uint16_t i = 0; i < ancount && p < end; i++)
+			{
+				auto [aname, np] = dns_parse_name(p, end, msg_start);
+				if (!np) break;
+				p = np;
+				if (p + 10 > end) break;
+				auto atype = read<uint16_t>(p);
+				[[maybe_unused]] auto aclass = read<uint16_t>(p);
+				auto attl = read<uint32_t>(p);
+				auto rdlength = read<uint16_t>(p);
+				if (p + rdlength > end) break;
+
+				boost::json::object a;
+				a["name"] = aname;
+				a["type"] = atype;
+				a["TTL"] = attl;
+				a["data"] = dns_rdata_to_string(atype, rdlength, p, end, msg_start);
+				answers.push_back(std::move(a));
+
+				p += rdlength;
+			}
+			root["Answer"] = std::move(answers);
+
+			// Authority.
+			boost::json::array authorities;
+			for (uint16_t i = 0; i < nscount && p < end; i++)
+			{
+				auto [nsname, np] = dns_parse_name(p, end, msg_start);
+				if (!np) break;
+				p = np;
+				if (p + 10 > end) break;
+				auto nstype = read<uint16_t>(p);
+				[[maybe_unused]] auto nsclass = read<uint16_t>(p);
+				auto nsttl = read<uint32_t>(p);
+				auto nsrdlength = read<uint16_t>(p);
+				if (p + nsrdlength > end) break;
+
+				boost::json::object ns;
+				ns["name"] = nsname;
+				ns["type"] = nstype;
+				ns["TTL"] = nsttl;
+				ns["data"] = dns_rdata_to_string(nstype, nsrdlength, p, end, msg_start);
+				authorities.push_back(std::move(ns));
+
+				p += nsrdlength;
+			}
+			root["Authority"] = std::move(authorities);
+
+			// Additional.
+			boost::json::array additional;
+			for (uint16_t i = 0; i < arcount && p < end; i++)
+			{
+				auto [adname, np] = dns_parse_name(p, end, msg_start);
+				if (!np) break;
+				p = np;
+				if (p + 10 > end) break;
+				auto adtype = read<uint16_t>(p);
+				[[maybe_unused]] auto adclass = read<uint16_t>(p);
+				auto adttl = read<uint32_t>(p);
+				auto adrdlength = read<uint16_t>(p);
+				if (p + adrdlength > end) break;
+
+				// OPT pseudo-record 不需要 data 字段.
+				if (adtype != 41)
+				{
+					boost::json::object ad;
+					ad["name"] = adname;
+					ad["type"] = adtype;
+					ad["TTL"] = adttl;
+					ad["data"] = dns_rdata_to_string(adtype, adrdlength, p, end, msg_start);
+					additional.push_back(std::move(ad));
+				}
+
+				p += adrdlength;
+			}
+			if (!additional.empty())
+				root["Additional"] = std::move(additional);
+
+			// 添加 Comment 记录查询摘要.
+			root["Comment"] = "Response from proxy DNS";
+
+			return boost::json::serialize(root);
+		}
+
+		// dns_json_query 处理 application/dns-json 格式的 DNS 查询.
+		inline net::awaitable<void> dns_json_query(
+			const string_request& request,
+			const std::string& question_name,
+			uint16_t question_type,
+			bool cd_flag,
+			bool do_flag) noexcept
+		{
+			boost::system::error_code ec;
+
+			// 1. 构建 DNS wire-format 查询.
+			auto dns_query = build_dns_wire_query(
+				question_name, question_type, cd_flag, do_flag);
+
+			// 2. 通过上游转发查询并获取 wire-format 响应.
+			std::string wire_response;
+			auto& upstream = m_option.dns_upstream_;
+			bool ok = false;
+
+			if (boost::istarts_with(upstream, "https://"))
+			{
+				ok = co_await doh_query_raw(dns_query, wire_response);
+			}
+			else
+			{
+				ok = co_await udp_query_raw(dns_query, wire_response);
+			}
+
+			if (!ok || wire_response.empty())
+			{
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+
+			// 3. 解析 wire-format 响应为 JSON.
+			auto json_body = dns_response_to_json(
+				wire_response, question_name, question_type);
+
+			// 4. 返回 JSON 响应给客户端.
+			string_response res{ http::status::ok, request.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.set(http::field::content_type, "application/dns-json");
+			res.keep_alive(true);
+			res.body() = std::move(json_body);
+			res.prepare_payload();
+
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", dns json query write response error: "
+					<< ec.message();
+			}
+
+			co_return;
+		}
+
+		// udp_query_raw 通过 UDP 上游发送 wire-format DNS 查询并返回响应.
+		// 结果通过 output 参数返回, 返回 true 表示成功.
+		inline net::awaitable<bool> udp_query_raw(
+			const std::string& dns_query, std::string& output) noexcept
+		{
+			boost::system::error_code ec;
+
+			auto& upstream = m_option.dns_upstream_;
+			auto colon_pos = upstream.find(':');
+			if (colon_pos == std::string::npos)
+				co_return false;
+
+			auto dns_host = upstream.substr(0, colon_pos);
+			auto dns_port = (uint16_t)std::stoi(upstream.substr(colon_pos + 1));
+
+			udp::socket dns_socket(co_await net::this_coro::executor);
+			udp::endpoint dns_endpoint(
+				net::ip::make_address(dns_host, ec), dns_port);
+			if (ec)
+				co_return false;
+
+			dns_socket.open(dns_endpoint.protocol(), ec);
+			if (ec)
+				co_return false;
+
+			co_await dns_socket.async_send_to(
+				net::buffer(dns_query), dns_endpoint, net_awaitable[ec]);
+			if (ec)
+				co_return false;
+
+			std::array<char, 4096> recv_buf{};
+			udp::endpoint recv_endp;
+			auto recv_len = co_await dns_socket.async_receive_from(
+				net::buffer(recv_buf), recv_endp, net_awaitable[ec]);
+			if (ec)
+				co_return false;
+
+			dns_socket.close(ec);
+
+			output.assign(recv_buf.data(), recv_len);
+			co_return true;
+		}
+
+		// doh_query_raw 通过 DoH 上游发送 wire-format DNS 查询并返回响应.
+		// 结果通过 output 参数返回, 返回 true 表示成功.
+		inline net::awaitable<bool> doh_query_raw(
+			const std::string& dns_query, std::string& output) noexcept
+		{
+			boost::system::error_code ec;
+
+			auto parsed = parse_urlinfo(m_option.dns_upstream_);
+			if (parsed.has_error())
+				co_return false;
+
+			auto [scheme, user, passwd, doh_host, doh_port, doh_path] = *parsed;
+			if (doh_path.empty() || doh_path == "/")
+				doh_path = "/dns-query";
+
+			// 解析 DoH 服务器地址.
+			tcp::resolver::results_type targets;
+			if (!is_hostname(doh_host))
+			{
+				tcp::endpoint endp(
+					net::ip::make_address(doh_host), doh_port);
+				targets = tcp::resolver::results_type::create(
+					endp, std::string(doh_host), "");
+			}
+			else
+			{
+				targets = co_await resolve_targets(
+					std::string(doh_host), doh_port);
+			}
+
+			if (targets.empty())
+				co_return false;
+
+			// 连接到 DoH 服务器.
+			tcp::socket doh_socket(m_executor);
+			ec = co_await async_connect_targets(doh_socket, targets);
+			if (ec)
+				co_return false;
+
+			// 设置 SSL context (static 缓存复用).
+			static net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
+			static std::once_flag ssl_init_flag;
+			auto doh_host_str = std::string(doh_host);
+			std::call_once(ssl_init_flag, [&]() {
+				auto verify = net::ssl::verify_peer;
+				if (m_option.disable_check_cert_)
+					verify = net::ssl::verify_none;
+				doh_ssl_ctx.set_verify_mode(verify);
+				auto certificates = default_root_certificates();
+				doh_ssl_ctx.add_certificate_authority(
+					net::buffer(certificates.data(), certificates.size()), ec);
+				doh_ssl_ctx.set_verify_callback(
+					net::ssl::host_name_verification(doh_host_str), ec);
+			});
+
+			ssl_tcp_stream ssl_stream(std::move(doh_socket), doh_ssl_ctx);
+
+			if (!SSL_set_tlsext_host_name(
+				ssl_stream.native_handle(), std::string(doh_host).c_str()))
+			{
+				log_conn_debug()
+					<< ", doh set sni name: "
+					<< doh_host << " failed";
+			}
+
+			co_await ssl_stream.async_handshake(
+				net::ssl::stream_base::client, net_awaitable[ec]);
+			if (ec)
+				co_return false;
+
+			// 构造 HTTP POST 请求.
+			http::request<http::string_body> doh_req{
+				http::verb::post, doh_path, 11 };
+			doh_req.set(http::field::host, doh_host);
+			doh_req.set(http::field::content_type, "application/dns-message");
+			doh_req.set(http::field::accept, "application/dns-message");
+			doh_req.body() = dns_query;
+			doh_req.prepare_payload();
+
+			co_await http::async_write(ssl_stream, doh_req, net_awaitable[ec]);
+			if (ec)
+				co_return false;
+
+			beast::flat_buffer buf;
+			http::response<http::string_body> doh_res;
+			co_await http::async_read(ssl_stream, buf, doh_res, net_awaitable[ec]);
+			if (ec)
+				co_return false;
+
+			if (doh_res.result() != http::status::ok)
+				co_return false;
+
+			output = std::move(doh_res.body());
+			co_return true;
 		}
 
 		// doh_dns_query 通过 DoH (DNS over HTTPS) 转发 DNS 查询到上游服务器.
