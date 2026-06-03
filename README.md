@@ -133,7 +133,7 @@ docker build . -t proxy:v1
 | disable_insecure | 禁止非安全连接（即只允许 SSL/TLS 加密连接） |
 | disable_check_cert | 禁用 TLS 证书校验（不安全的选项，通常仅用于测试环境） |
 | scramble | 启用数据噪声加扰（通过随机噪声混淆数据传输），此选项需要两端同时开启 |
-| noise_length | 启用 `scramble` 时随机发送的噪声数据最大长度，默认 4KB（0x0fff） |
+| noise_length | 发送的随机噪声数据最大长度以对抗长度分析探测，在启用 `scramble` 时决定随机噪声长度，未启用  `scramble` 时用于决定 HTTP Padding 长度 |
 | asio_config | 指定从环境变量读取 Asio 配置的变量名前缀，默认值为 `ASIO`（如 `ASIO_SCHEDULER_LOCKING=0` 可禁用调度器锁以提升性能） |
 
 ## 代理服务器功能
