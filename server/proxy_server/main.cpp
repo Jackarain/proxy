@@ -73,9 +73,7 @@ std::string ssl_dhparam;
 std::string proxy_ssl_name;
 std::string dns_upstream;
 
-#ifdef USE_PAM_AUTH
 std::string pam_auth;
-#endif // USE_PAM_AUTH
 
 bool transparent = false;
 bool autoindex = false;
@@ -433,9 +431,8 @@ int main(int argc, char** argv)
 		("udp_timeout", po::value<int>(&udp_timeout)->default_value(-1), "Set UDP timeout for UDP sessions.")
 		("rate_limit", po::value<int>(&rate_limit)->default_value(-1), "Set TCP rate limit for connection.")
 
-#ifdef USE_PAM_AUTH
 		("pam_auth", po::value<std::string>(&pam_auth)->value_name("pam service"), "Enable PAM authentication, specify PAM service name.")
-#endif
+
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users(default user: jack:1111) (e.g: user1:passwd1 user2:passwd2).")
 		("users_rate_limit", po::value<std::vector<std::string>>(&users_rate_limit)->multitoken(), "List of users rate limit (e.g: user1:1000000 user2:800000).")
 
