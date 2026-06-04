@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2015-2024 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2015-2026 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -10,7 +10,8 @@ use strict;
 use warnings;
 use OpenSSL::Test;
 use OpenSSL::Test::Utils;
-use OpenSSL::Test qw/:DEFAULT srctop_file/;
+use OpenSSL::Test qw/:DEFAULT srctop_file bldtop_dir/;
+use Cwd qw(abs_path);
 
 plan tests => 6;
 setup("test_rand");
@@ -27,26 +28,28 @@ ok(run(test(["drbgtest"])));
 ok(run(test(["rand_status_test"])));
 
 SKIP: {
-    skip "engine is not supported by this OpenSSL build", 2
-        if disabled("engine") || disabled("dynamic-engine");
-
     my $success;
     my @randdata;
     my $expected = '0102030405060708090a0b0c0d0e0f10';
 
-    @randdata = run(app(['openssl', 'rand', '-engine', 'ossltest', '-hex', '16' ]),
-                    capture => 1, statusvar => \$success);
+    $ENV{OPENSSL_MODULES} = abs_path(bldtop_dir("test"));
+    skip "provider modules are not supported by this OpenSSL build", 1
+        if disabled("module");
+
+    @randdata = run(app(['openssl', 'rand', '-provider', 'p_ossltest', '-provider', 'default', '-propquery', '?provider=p_ossltest', '-hex', '16' ]), capture => 1, statusvar => \$success);
+
     chomp(@randdata);
     ok($success && $randdata[0] eq $expected,
-       "rand with ossltest: Check rand output is as expected");
+       "rand with ossltest provider: Check rand output is as expected");
+}
+
+{
+    my $success;
+    my @randdata;
 
     @randdata = run(app(['openssl', 'rand', '-hex', '2K' ]),
                     capture => 1, statusvar => \$success);
     chomp(@randdata);
-
-    @randdata = run(app(['openssl', 'rand', '-engine', 'dasync', '-hex', '16' ]),
-                    capture => 1, statusvar => \$success);
-    chomp(@randdata);
-    ok($success && length($randdata[0]) == 32,
-       "rand with dasync: Check rand output is of expected length");
+    ok($success && length($randdata[0]) == 4096,
+       "rand: Check rand output is of expected length");
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2020-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -17,7 +17,7 @@ int log_set_verbosity(const char *prog, int level)
 {
     if (level < LOG_EMERG || level > LOG_TRACE) {
         trace_log_message(-1, prog, LOG_ERR,
-                          "Invalid verbosity level %d", level);
+            "Invalid verbosity level %d", level);
         return 0;
     }
     verbosity = level;
@@ -46,11 +46,14 @@ static void log_with_prefix(const char *prog, const char *fmt, va_list ap)
     char prefix[80];
     BIO *bio, *pre = BIO_new(BIO_f_prefix());
 
+    if (pre == NULL)
+        return;
+
     (void)BIO_snprintf(prefix, sizeof(prefix), "%s: ", prog);
     (void)BIO_set_prefix(pre, prefix);
     bio = BIO_push(pre, bio_err);
     (void)BIO_vprintf(bio, fmt, ap);
-    (void)BIO_printf(bio, "\n");
+    (void)BIO_puts(bio, "\n");
     (void)BIO_flush(bio);
     (void)BIO_pop(pre);
     BIO_free(pre);
@@ -65,11 +68,11 @@ static void log_with_prefix(const char *prog, const char *fmt, va_list ap)
  */
 #undef OSSL_NO_C99
 #if !defined(__STDC_VERSION__) || __STDC_VERSION__ + 0 < 199900L
-# define OSSL_NO_C99
+#define OSSL_NO_C99
 #endif
 
 void trace_log_message(int category,
-                       const char *prog, int level, const char *fmt, ...)
+    const char *prog, int level, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -89,7 +92,7 @@ void trace_log_message(int category,
 #else
         (void)BIO_vprintf(out, fmt, ap);
 #endif
-        (void)BIO_printf(out, "\n");
+        (void)BIO_puts(out, "\n");
         OSSL_trace_end(category, out);
     }
     if (verbosity < level) {
@@ -103,6 +106,6 @@ void trace_log_message(int category,
             ERR_print_errors_cb(print_syslog, &level);
     } else
 #endif
-    log_with_prefix(prog, fmt, ap);
+        log_with_prefix(prog, fmt, ap);
     va_end(ap);
 }

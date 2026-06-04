@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2021-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -8,14 +8,16 @@
  */
 
 #ifndef OSSL_CRYPTO_X509_ACERT_H
-# define OSSL_CRYPTO_X509_ACERT_H
-# pragma once
+#define OSSL_CRYPTO_X509_ACERT_H
+#pragma once
 
-# include <openssl/x509_acert.h>
+#include <openssl/x509_acert.h>
 
-#define OSSL_ODI_TYPE_PUBLIC_KEY      0
+#include <crypto/asn1.h>
+
+#define OSSL_ODI_TYPE_PUBLIC_KEY 0
 #define OSSL_ODI_TYPE_PUBLIC_KEY_CERT 1
-#define OSSL_ODI_TYPE_OTHER           2
+#define OSSL_ODI_TYPE_OTHER 2
 
 struct ossl_object_digest_info_st {
     ASN1_ENUMERATED digestedObjectType;
@@ -51,7 +53,7 @@ typedef struct X509_holder_st {
 } X509_HOLDER;
 
 struct X509_acert_info_st {
-    ASN1_INTEGER version;      /* default of v2 */
+    ASN1_INTEGER version; /* default of v2 */
     X509_HOLDER holder;
     X509_ACERT_ISSUER issuer;
     X509_ALGOR signature;

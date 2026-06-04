@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2024 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1999-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -14,17 +14,18 @@
 #include "crypto/asn1.h"
 #include "ext_dat.h"
 
+#include <crypto/asn1.h>
+
 DECLARE_ASN1_ITEM(OSSL_ISSUER_SERIAL)
 
-ASN1_ITEM_TEMPLATE(OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX) =
-    ASN1_EX_TEMPLATE_TYPE(ASN1_TFLG_SEQUENCE_OF, 0, OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX, OSSL_ISSUER_SERIAL)
+ASN1_ITEM_TEMPLATE(OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX) = ASN1_EX_TEMPLATE_TYPE(ASN1_TFLG_SEQUENCE_OF, 0, OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX, OSSL_ISSUER_SERIAL)
 ASN1_ITEM_TEMPLATE_END(OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX)
 
 IMPLEMENT_ASN1_FUNCTIONS(OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX)
 
 static int i2r_ISSUER_SERIAL(X509V3_EXT_METHOD *method,
-                             OSSL_ISSUER_SERIAL *iss,
-                             BIO *out, int indent)
+    OSSL_ISSUER_SERIAL *iss,
+    BIO *out, int indent)
 {
     if (iss->issuer != NULL) {
         BIO_printf(out, "%*sIssuer Names:\n", indent, "");
@@ -49,8 +50,8 @@ static int i2r_ISSUER_SERIAL(X509V3_EXT_METHOD *method,
 }
 
 static int i2r_auth_attr_id(X509V3_EXT_METHOD *method,
-                            OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX *aids,
-                            BIO *out, int indent)
+    OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX *aids,
+    BIO *out, int indent)
 {
     int i;
     OSSL_ISSUER_SERIAL *aid;

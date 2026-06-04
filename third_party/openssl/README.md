@@ -8,9 +8,10 @@ Welcome to the OpenSSL Project
 [![Provider Compatibility](https://github.com/openssl/openssl/actions/workflows/provider-compatibility.yml/badge.svg)](https://github.com/openssl/openssl/actions/workflows/provider-compatibility.yml)
 [![Quic Interop](https://github.com/openssl/openssl/actions/workflows/run_quic_interop.yml/badge.svg)](https://github.com/openssl/openssl/actions/workflows/run_quic_interop.yml)
 [![Daily checks](https://github.com/openssl/openssl/actions/workflows/run-checker-daily.yml/badge.svg)](https://github.com/openssl/openssl/actions/workflows/run-checker-daily.yml)
+[![LFX Health Score](https://insights.linuxfoundation.org/api/badge/health-score?project=openssl)](https://insights.linuxfoundation.org/project/openssl)
 
 OpenSSL is a robust, commercial-grade, full-featured Open Source Toolkit
-for the TLS (formerly SSL), DTLS and QUIC protocols.
+for the Transport Layer Security (TLS, formerly SSL), Datagram TLS (DTLS), and QUIC protocols.
 
 The protocol implementations are based on a full-strength general purpose
 cryptographic library, which can also be used stand-alone. Also included is a
@@ -135,7 +136,6 @@ containing additional information on specific topics.
  * [Information about the OpenSSL QUIC protocol implementation](README-QUIC.md)
  * [Information about the OpenSSL Provider architecture](README-PROVIDERS.md)
  * [Information about using the OpenSSL FIPS validated module](README-FIPS.md)
- * [Information about the legacy OpenSSL Engine architecture](README-ENGINES.md)
 
 The OpenSSL Guide
 -----------------
@@ -150,6 +150,7 @@ The manual pages for the master branch and all current stable releases are
 available online.
 
 - [OpenSSL master](https://docs.openssl.org/master/)
+- [OpenSSL 3.6](https://docs.openssl.org/3.6/)
 - [OpenSSL 3.5](https://docs.openssl.org/3.5/)
 - [OpenSSL 3.4](https://docs.openssl.org/3.4/)
 - [OpenSSL 3.3](https://docs.openssl.org/3.3/)
@@ -198,7 +199,7 @@ attempting to develop or distribute cryptographic code.
 Copyright
 =========
 
-Copyright (c) 1998-2025 The OpenSSL Project Authors
+Copyright (c) 1998-2026 The OpenSSL Project Authors
 
 Copyright (c) 1995-1998 Eric A. Young, Tim J. Hudson
 

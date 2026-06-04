@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -158,7 +158,6 @@ static const unsigned char clienthello_cookie_frag[] = {
     0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13 /* Cookie */
 };
 
-
 /* A ClientHello with a bad cookie */
 static const unsigned char clienthello_badcookie[] = {
     0x16, /* Handshake */
@@ -242,7 +241,9 @@ typedef struct {
      * VERIFY == 0 return value, HelloVerifyRequest sent
      * DROP == 0 return value, no output
      */
-    enum {GOOD, VERIFY, DROP} outtype;
+    enum { GOOD,
+        VERIFY,
+        DROP } outtype;
 } tests;
 
 static tests testpackets[9] = {
@@ -257,7 +258,7 @@ static tests testpackets[9] = {
     { record_short, sizeof(record_short), DROP }
 };
 
-# define COOKIE_LEN  20
+#define COOKIE_LEN 20
 
 static int cookie_gen(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len)
 {
@@ -271,7 +272,7 @@ static int cookie_gen(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len)
 }
 
 static int cookie_verify(SSL *ssl, const unsigned char *cookie,
-                         unsigned int cookie_len)
+    unsigned int cookie_len)
 {
     unsigned int i;
 
@@ -299,19 +300,19 @@ static int dtls_listen_test(int i)
     int ret, success = 0;
 
     if (!TEST_ptr(ctx = SSL_CTX_new(DTLS_server_method()))
-            || !TEST_ptr(peer = BIO_ADDR_new()))
+        || !TEST_ptr(peer = BIO_ADDR_new()))
         goto err;
     SSL_CTX_set_cookie_generate_cb(ctx, cookie_gen);
     SSL_CTX_set_cookie_verify_cb(ctx, cookie_verify);
 
     /* Create an SSL object and set the BIO */
     if (!TEST_ptr(ssl = SSL_new(ctx))
-            || !TEST_ptr(outbio = BIO_new(BIO_s_mem())))
+        || !TEST_ptr(outbio = BIO_new(BIO_s_mem())))
         goto err;
     SSL_set0_wbio(ssl, outbio);
 
     /* Set Non-blocking IO behaviour */
-    if (!TEST_ptr(inbio = BIO_new_mem_buf((char *)tp->in, tp->inlen)))
+    if (!TEST_ptr(inbio = BIO_new_mem_buf(tp->in, tp->inlen)))
         goto err;
     BIO_set_mem_eof_return(inbio, -1);
     SSL_set0_rbio(ssl, inbio);
@@ -323,7 +324,7 @@ static int dtls_listen_test(int i)
 
     if (tp->outtype == VERIFY) {
         if (!TEST_int_eq(ret, 0)
-                || !TEST_mem_eq(data, datalen, verify, sizeof(verify)))
+            || !TEST_mem_eq(data, datalen, verify, sizeof(verify)))
             goto err;
     } else if (datalen == 0) {
         if (!TEST_true((ret == 0 && tp->outtype == DROP)
@@ -338,7 +339,7 @@ static int dtls_listen_test(int i)
     SSL_set0_rbio(ssl, NULL);
     success = 1;
 
- err:
+err:
     /* Also frees up outbio */
     SSL_free(ssl);
     SSL_CTX_free(ctx);

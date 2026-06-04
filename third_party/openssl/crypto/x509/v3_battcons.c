@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2024 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1999-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -14,11 +14,13 @@
 #include "x509_local.h"
 #include "ext_dat.h"
 
+#include <crypto/asn1.h>
+
 static STACK_OF(CONF_VALUE) *i2v_OSSL_BASIC_ATTR_CONSTRAINTS(
     X509V3_EXT_METHOD *method,
     OSSL_BASIC_ATTR_CONSTRAINTS *battcons,
     STACK_OF(CONF_VALUE)
-    *extlist);
+        *extlist);
 static OSSL_BASIC_ATTR_CONSTRAINTS *v2i_OSSL_BASIC_ATTR_CONSTRAINTS(
     X509V3_EXT_METHOD *method,
     X509V3_CTX *ctx,
@@ -29,7 +31,7 @@ const X509V3_EXT_METHOD ossl_v3_battcons = {
     ASN1_ITEM_ref(OSSL_BASIC_ATTR_CONSTRAINTS),
     0, 0, 0, 0,
     0, 0,
-    (X509V3_EXT_I2V) i2v_OSSL_BASIC_ATTR_CONSTRAINTS,
+    (X509V3_EXT_I2V)i2v_OSSL_BASIC_ATTR_CONSTRAINTS,
     (X509V3_EXT_V2I)v2i_OSSL_BASIC_ATTR_CONSTRAINTS,
     NULL, NULL,
     NULL
@@ -80,7 +82,7 @@ static OSSL_BASIC_ATTR_CONSTRAINTS *v2i_OSSL_BASIC_ATTR_CONSTRAINTS(
         }
     }
     return battcons;
- err:
+err:
     OSSL_BASIC_ATTR_CONSTRAINTS_free(battcons);
     return NULL;
 }

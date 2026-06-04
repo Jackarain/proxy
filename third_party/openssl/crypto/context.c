@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -16,14 +16,14 @@
 #include "internal/core.h"
 #include "internal/bio.h"
 #include "internal/provider.h"
-#include "internal/threads_common.h"
+#include "internal/conf.h"
 #include "crypto/decoder.h"
 #include "crypto/context.h"
 
 struct ossl_lib_ctx_st {
     CRYPTO_RWLOCK *lock;
     OSSL_EX_DATA_GLOBAL global;
-
+    CONF_IMODULE *ssl_imod;
     void *property_string_data;
     void *evp_method_store;
     void *provider_store;
@@ -83,6 +83,34 @@ int ossl_lib_ctx_is_child(OSSL_LIB_CTX *ctx)
     if (ctx == NULL)
         return 0;
     return ctx->ischild;
+}
+
+int ossl_lib_ctx_attach_ssl_conf_imodule(OSSL_LIB_CTX *ctx, CONF_IMODULE *md)
+{
+    if (ctx == NULL || md == NULL || ctx->ssl_imod != NULL)
+        return 0;
+
+    ctx->ssl_imod = md;
+    md->libctx = ctx;
+    return 1;
+}
+
+int ossl_lib_ctx_detach_ssl_conf_imodule(OSSL_LIB_CTX *ctx, CONF_IMODULE *md)
+{
+    if (ctx != NULL && md != NULL)
+        return 0;
+
+    if (ctx != NULL && ctx->ssl_imod) {
+        ctx->ssl_imod->libctx = NULL;
+        ctx->ssl_imod = NULL;
+    }
+
+    if (md != NULL && md->libctx) {
+        md->libctx->ssl_imod = NULL;
+        md->libctx = NULL;
+    }
+
+    return 1;
 }
 
 static void context_deinit_objs(OSSL_LIB_CTX *ctx);
@@ -214,7 +242,7 @@ static int context_init(OSSL_LIB_CTX *ctx)
 
     return 1;
 
- err:
+err:
     context_deinit_objs(ctx);
 
     if (exdata_done)
@@ -258,7 +286,6 @@ static void context_deinit_objs(OSSL_LIB_CTX *ctx)
         ossl_decoder_cache_free(ctx->decoder_cache);
         ctx->decoder_cache = NULL;
     }
-
 
     /* P2. We want encoder_store to be cleaned up before the provider store */
     if (ctx->encoder_store != NULL) {
@@ -354,13 +381,14 @@ static void context_deinit_objs(OSSL_LIB_CTX *ctx)
         ctx->comp_methods = NULL;
     }
 #endif
-
 }
 
 static int context_deinit(OSSL_LIB_CTX *ctx)
 {
     if (ctx == NULL)
         return 1;
+
+    ossl_lib_ctx_detach_ssl_conf_imodule(ctx, NULL);
 
     ossl_ctx_thread_stop(ctx);
 
@@ -378,24 +406,24 @@ static int context_deinit(OSSL_LIB_CTX *ctx)
 static OSSL_LIB_CTX default_context_int;
 
 static CRYPTO_ONCE default_context_init = CRYPTO_ONCE_STATIC_INIT;
+static CRYPTO_ONCE default_context_thread_key_init = CRYPTO_ONCE_STATIC_INIT;
 static CRYPTO_THREAD_LOCAL default_context_thread_local;
 static int default_context_inited = 0;
 
-DEFINE_RUN_ONCE_STATIC(default_context_do_init)
+DEFINE_RUN_ONCE_STATIC(default_context_do_thread_key_init)
 {
     if (!CRYPTO_THREAD_init_local(&default_context_thread_local, NULL))
-        goto err;
+        return 0;
+    return 1;
+}
 
+DEFINE_RUN_ONCE_STATIC(default_context_do_init)
+{
     if (!context_init(&default_context_int))
-        goto deinit_thread;
+        return 0;
 
     default_context_inited = 1;
     return 1;
-
-deinit_thread:
-    CRYPTO_THREAD_cleanup_local(&default_context_thread_local);
-err:
-    return 0;
 }
 
 void ossl_lib_ctx_default_deinit(void)
@@ -409,7 +437,18 @@ void ossl_lib_ctx_default_deinit(void)
 
 static OSSL_LIB_CTX *get_thread_default_context(void)
 {
+    if (!RUN_ONCE(&default_context_thread_key_init, default_context_do_thread_key_init))
+        return NULL;
+
     if (!RUN_ONCE(&default_context_init, default_context_do_init))
+        return NULL;
+
+    return CRYPTO_THREAD_get_local(&default_context_thread_local);
+}
+
+static OSSL_LIB_CTX *check_thread_default_context(void)
+{
+    if (!RUN_ONCE(&default_context_thread_key_init, default_context_do_thread_key_init))
         return NULL;
 
     return CRYPTO_THREAD_get_local(&default_context_thread_local);
@@ -418,6 +457,15 @@ static OSSL_LIB_CTX *get_thread_default_context(void)
 static OSSL_LIB_CTX *get_default_context(void)
 {
     OSSL_LIB_CTX *current_defctx = get_thread_default_context();
+
+    if (current_defctx == NULL && default_context_inited)
+        current_defctx = &default_context_int;
+    return current_defctx;
+}
+
+static OSSL_LIB_CTX *check_default_context(void)
+{
+    OSSL_LIB_CTX *current_defctx = check_thread_default_context();
 
     if (current_defctx == NULL && default_context_inited)
         current_defctx = &default_context_int;
@@ -446,7 +494,7 @@ OSSL_LIB_CTX *OSSL_LIB_CTX_new(void)
 
 #ifndef FIPS_MODULE
 OSSL_LIB_CTX *OSSL_LIB_CTX_new_from_dispatch(const OSSL_CORE_HANDLE *handle,
-                                             const OSSL_DISPATCH *in)
+    const OSSL_DISPATCH *in)
 {
     OSSL_LIB_CTX *ctx = OSSL_LIB_CTX_new();
 
@@ -462,7 +510,7 @@ OSSL_LIB_CTX *OSSL_LIB_CTX_new_from_dispatch(const OSSL_CORE_HANDLE *handle,
 }
 
 OSSL_LIB_CTX *OSSL_LIB_CTX_new_child(const OSSL_CORE_HANDLE *handle,
-                                     const OSSL_DISPATCH *in)
+    const OSSL_DISPATCH *in)
 {
     OSSL_LIB_CTX *ctx = OSSL_LIB_CTX_new_from_dispatch(handle, in);
 
@@ -486,7 +534,7 @@ int OSSL_LIB_CTX_load_config(OSSL_LIB_CTX *ctx, const char *config_file)
 
 void OSSL_LIB_CTX_free(OSSL_LIB_CTX *ctx)
 {
-    if (ctx == NULL || ossl_lib_ctx_is_default(ctx))
+    if (ctx == NULL || ossl_lib_ctx_is_default_nocreate(ctx))
         return;
 
 #ifndef FIPS_MODULE
@@ -500,6 +548,9 @@ void OSSL_LIB_CTX_free(OSSL_LIB_CTX *ctx)
 #ifndef FIPS_MODULE
 OSSL_LIB_CTX *OSSL_LIB_CTX_get0_global_default(void)
 {
+    if (!RUN_ONCE(&default_context_thread_key_init, default_context_do_thread_key_init))
+        return NULL;
+
     if (!RUN_ONCE(&default_context_init, default_context_do_init))
         return NULL;
 
@@ -542,6 +593,15 @@ int ossl_lib_ctx_is_default(OSSL_LIB_CTX *ctx)
 {
 #ifndef FIPS_MODULE
     if (ctx == NULL || ctx == get_default_context())
+        return 1;
+#endif
+    return 0;
+}
+
+int ossl_lib_ctx_is_default_nocreate(OSSL_LIB_CTX *ctx)
+{
+#ifndef FIPS_MODULE
+    if (ctx == NULL || ctx == check_default_context())
         return 1;
 #endif
     return 0;
@@ -611,6 +671,9 @@ void *ossl_lib_ctx_get_data(OSSL_LIB_CTX *ctx, int index)
 
     case OSSL_LIB_CTX_COMP_METHODS:
         return (void *)&ctx->comp_methods;
+
+    case OSSL_LIB_CTX_SSL_CONF_IMODULE:
+        return (void *)ctx->ssl_imod;
 
     default:
         return NULL;

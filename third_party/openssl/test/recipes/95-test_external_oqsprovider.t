@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2022 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2022-2026 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -19,10 +19,12 @@ plan skip_all => "oqsprovider tests not available on Windows or VMS"
     if $^O =~ /^(VMS|MSWin32)$/;
 plan skip_all => "oqsprovider tests only available in a shared build"
     if disabled("shared");
-plan skip_all => "oqsprovider tests not supported in out of tree builds"
-    if bldtop_dir() ne srctop_dir();
 
+plan skip_all => "oqsprovider HEAD is currently broken - skipping test";
+    
 plan tests => 1;
+
+$ENV{SHLIB_VERSION_NUMBER} = config('shlib_version');
 
 ok(run(cmd(["sh", data_file("oqsprovider.sh")])),
    "running oqsprovider tests");

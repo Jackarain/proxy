@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2017-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -29,22 +29,25 @@ static int test_fatalerr(void)
     };
 
     if (!TEST_true(create_ssl_ctx_pair(NULL, TLS_method(), TLS_method(),
-                                       TLS1_VERSION, 0,
-                                       &sctx, &cctx, cert, privkey)))
+            TLS1_VERSION, 0,
+            &sctx, &cctx, cert, privkey)))
         goto err;
 
     /*
      * Deliberately set the cipher lists for client and server to be different
-     * to force a handshake failure.
+     * to force a handshake failure. Also make sure the client and server don't
+     * accept TLS 1.2 ciphers as TLS 1.3 ciphersuites.
      */
     if (!TEST_true(SSL_CTX_set_cipher_list(sctx, "AES128-SHA"))
-            || !TEST_true(SSL_CTX_set_cipher_list(cctx, "AES256-SHA"))
-            || !TEST_true(SSL_CTX_set_ciphersuites(sctx,
-                                                   "TLS_AES_128_GCM_SHA256"))
-            || !TEST_true(SSL_CTX_set_ciphersuites(cctx,
-                                                   "TLS_AES_256_GCM_SHA384"))
-            || !TEST_true(create_ssl_objects(sctx, cctx, &sssl, &cssl, NULL,
-                          NULL)))
+        || !TEST_true(SSL_CTX_set_cipher_list(cctx, "AES256-SHA"))
+        || !TEST_false(SSL_CTX_set_ciphersuites(sctx, "AES128-SHA"))
+        || !TEST_false(SSL_CTX_set_ciphersuites(cctx, "AES256-SHA"))
+        || !TEST_true(SSL_CTX_set_ciphersuites(sctx,
+            "TLS_AES_128_GCM_SHA256"))
+        || !TEST_true(SSL_CTX_set_ciphersuites(cctx,
+            "TLS_AES_256_GCM_SHA384"))
+        || !TEST_true(create_ssl_objects(sctx, cctx, &sssl, &cssl, NULL,
+            NULL)))
         goto err;
 
     wbio = SSL_get_wbio(cssl);
@@ -73,7 +76,7 @@ static int test_fatalerr(void)
         goto err;
 
     ret = 1;
- err:
+err:
     SSL_free(sssl);
     SSL_free(cssl);
     SSL_CTX_free(sctx);
@@ -92,7 +95,7 @@ int setup_tests(void)
     }
 
     if (!TEST_ptr(cert = test_get_argument(0))
-            || !TEST_ptr(privkey = test_get_argument(1)))
+        || !TEST_ptr(privkey = test_get_argument(1)))
         return 0;
 
     ADD_TEST(test_fatalerr);

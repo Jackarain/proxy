@@ -2,109 +2,51 @@ cmake_minimum_required(VERSION 3.5)
 
 project(openssl)
 
+#[[
+    具体更新办法如下
+
+    1, 先执行 configure 配置 openssl 项目，生成所需要的文件
+
+    ./Configure no-shared no-buildtest-c++ no-devcryptoeng no-engine no-dso no-whirlpool no-afalgeng no-des no-idea no-seed no-blake2 no-rc2 no-rc4 no-rc5 no-ssl2 no-ssl3 no-legacy no-docs no-http no-brotli-dynamic no-brotli no-h3demo no-dynamic-engine no-tests no-asm no-acvp-tests no-allocfail-tests no-demos no-external-tests no-fips no-fips-jitter no-fips-post no-fips-securitychecks no-md2 no-md4 no-unit-test no-zlib no-zstd no-zlib-dynamic no-zstd-dynamic --prefix=/tmp/noasm_out
+
+    2，然后执行 make 进行编译，编译完成后保存 Makefile 文件，并从中截取 libcrypto.a: 和 libssl.a: 这 2 段用于更新 openssl 中的 CMakeLists.txt 源码文件列表，如
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_cbc.c
+	    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_cfb.c
+	...
+      注意排队一些用不到的目录
+
+    3，使用 tree -d 命令获得整个 openssl 目录结构，并使用 ai 将基转换成 cmake 指令如
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes
+	...
+      用于作为头文件包含，注意排除一些用不到的目录
+
+
+    4，编译成功后，执行下面命令清理中间文件
+
+      git clean -f "*.d" "*.o" "*.tmp" "*.a" "*.pc" "*.pm"
+
+    然后将整个 openssl 目录覆盖项目中
+]]
+
+
 option(SHARED_OPENSSL "build shared openssl lib" OFF)
 
 # Include directories
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/openssl)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/crypto)
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bio
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cmp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cms
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/conf
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ct
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/des
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dh
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/curve448
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/encode_decode
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/err
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/lms
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ml_dsa
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/modes
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/objects
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ocsp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/pem
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/perlasm
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/pkcs12
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/property
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/slh_dsa
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ts
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/store
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ffc
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/pkcs7
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/camellia
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dso
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bf
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cast
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rc5
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rc2
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/comp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/seed
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/poly1305
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ui
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/md5
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/idea
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/crmf
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/async
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ripemd
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sm3
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/chacha
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sm2
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rc4
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/whrlpool
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/http
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/thread
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/hmac
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/lhash
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/md4
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ess
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/hashtable
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/mdc2
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/md2
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/srp
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/buffer
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/hpke
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sm4
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/kdf
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/siphash
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ml_kem
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/txt_db
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/stack
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aria
-                    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/cmac
-
-                    ${CMAKE_CURRENT_SOURCE_DIR}/engines
-                    ${CMAKE_CURRENT_SOURCE_DIR}/ssl
-                    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/statem
-                    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/quic
-                    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record
-                    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record/methods
-                    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/rio
-
-                    ${CMAKE_CURRENT_SOURCE_DIR}/providers
-                    ${CMAKE_CURRENT_SOURCE_DIR}/providers/common
-                    ${CMAKE_CURRENT_SOURCE_DIR}/providers/common/include
-                    ${CMAKE_CURRENT_SOURCE_DIR}/providers/fips
-                    ${CMAKE_CURRENT_SOURCE_DIR}/providers/fips/include
-                    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/include
+set(OPENSSL_INCLUDES
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/modes
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/common/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/common/include/prov
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/fips/include
 )
 
 # crypto library
-
 file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_cbc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aes/aes_cfb.c
@@ -130,6 +72,7 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/a_strex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/a_strnid.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/a_time.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/a_time_posix.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/a_type.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/a_utctm.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1/a_utf8.c
@@ -243,7 +186,7 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_print.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_rand.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_recp.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_rsa_fips186_4.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_rsa_fips186_5.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_shift.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_sqr.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bn/bn_sqrt.c
@@ -336,7 +279,6 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dh/dh_key.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dh/dh_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dh/dh_meth.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dh/dh_pmeth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dh/dh_prn.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dh/dh_rfc5114.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_ameth.c
@@ -350,11 +292,9 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_meth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_ossl.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_pmeth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_prn.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_sign.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/dsa/dsa_vrf.c
-
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/curve448/arch_32/f_impl32.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/curve448/arch_64/f_impl64.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/curve448/curve448.c
@@ -378,7 +318,6 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ec_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ec_mult.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ec_oct.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ec_pmeth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ec_print.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ecdh_kdf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ec/ecdh_ossl.c
@@ -401,30 +340,6 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/encode_decode/encoder_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/encode_decode/encoder_meth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/encode_decode/encoder_pkey.c
-
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_all.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_cnf.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_ctrl.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_dyn.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_err.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_fat.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_init.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_lib.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_list.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_openssl.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_pkey.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_rdrand.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/eng_table.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/tb_asnmth.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/tb_cipher.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/tb_dh.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/tb_digest.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/tb_dsa.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/tb_eckey.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/tb_pkmeth.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/tb_rand.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/engine/tb_rsa.c
-
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/err/err.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/err/err_all.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/err/err_all_legacy.c
@@ -439,10 +354,8 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/bio_b64.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/bio_enc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/bio_md.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/bio_ok.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/c_allc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/c_alld.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/cmeth_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/ctrl_params_translate.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/dh_ctrl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/dh_support.c
@@ -469,6 +382,8 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/e_xcbc_d.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/ec_ctrl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/ec_support.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/enc_b64_avx2.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/enc_b64_scalar.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/encode.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/evp_cnf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/evp_enc.c
@@ -491,7 +406,6 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/legacy_md5_sha1.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/legacy_ripemd.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/legacy_sha.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/legacy_wp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/m_null.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/m_sigver.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/mac_lib.c
@@ -499,8 +413,8 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/names.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/p5_crpt.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/p5_crpt2.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/p_dec.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/p_enc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/p_dec.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/p_enc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/p_legacy.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/p_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/evp/p_open.c
@@ -530,6 +444,7 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/kdf/kdf_err.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/lhash/lh_stats.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/lhash/lhash.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/aligned_alloc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/array_alloc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/asn1_dsa.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/bsearch.c
@@ -560,7 +475,6 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/o_fopen.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/o_init.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/o_str.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/o_time.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/packet.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/param_build.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/param_build_set.c
@@ -662,7 +576,7 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/rand_deprecated.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/rand_err.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/rand_lib.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/rand_meth.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/rand_meth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/rand_pool.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/rand_uniform.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rand/randfile.c
@@ -684,7 +598,6 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_oaep.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_ossl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_pk1.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_pmeth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_prn.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_pss.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_saos.c
@@ -693,12 +606,13 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_sp800_56b_check.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_sp800_56b_gen.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_x931.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_x931g.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/rsa/rsa_x931g.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/keccak1600.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/sha1_one.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/sha1dgst.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/sha256.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/sha3.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/sha3_encode.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha/sha512.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/siphash/siphash.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/slh_dsa/slh_adrs.c
@@ -718,14 +632,14 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sm3/legacy_sm3.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sm3/sm3.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sm4/sm4.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/srp/srp_lib.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/srp/srp_vfy.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/srp/srp_lib.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/srp/srp_vfy.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/stack/stack.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/store/store_err.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/store/store_init.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/store/store_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/store/store_meth.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/store/store_register.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/store/store_register.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/store/store_result.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/store/store_strings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/thread/arch/thread_none.c
@@ -751,8 +665,6 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ui/ui_null.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ui/ui_openssl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ui/ui_util.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/whrlpool/wp_block.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/whrlpool/wp_dgst.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/by_dir.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/by_file.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/by_store.c
@@ -840,7 +752,7 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x509name.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x509rset.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x509spki.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x509type.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x509type.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x_all.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x_attrib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x_crl.c
@@ -851,9 +763,6 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x_req.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x_x509.c
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto/x509/x_x509a.c
-
-    ${CMAKE_CURRENT_SOURCE_DIR}/engines/e_capi.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/engines/e_padlock.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/baseprov.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/defltprov.c
@@ -920,8 +829,10 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_sm4_hw.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_sm4_xts.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/cipher_sm4_xts_hw.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/digests/cshake_prov.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/digests/md5_prov.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/digests/md5_sha1_prov.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/digests/ml_dsa_mu_prov.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/digests/null_prov.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/digests/ripemd_prov.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/digests/sha2_prov.c
@@ -953,6 +864,8 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/pbkdf2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/pkcs12kdf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/scrypt.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/snmpkdf.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/srtpkdf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/sshkdf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/sskdf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/kdfs/tls1_prf.c
@@ -1033,7 +946,6 @@ file(GLOB crypto_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/ciphercommon_gcm_hw.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/ciphers/ciphercommon_hw.c
     ${CMAKE_CURRENT_SOURCE_DIR}/providers/implementations/digests/digestcommon.c
-
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record/methods/tls_pad.c
 )
 
@@ -1060,8 +972,11 @@ else()
 endif()
 
 # ssl library
-
 file(GLOB ssl_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ech/ech_helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ech/ech_internal.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ech/ech_ssl_apis.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ech/ech_store.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/bio_ssl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/d1_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/d1_msg.c
@@ -1082,7 +997,7 @@ file(GLOB ssl_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_mcnf.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_rsa.c
-#   ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_rsa_legacy.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_rsa_legacy.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_sess.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_stat.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_txt.c
@@ -1138,7 +1053,6 @@ file(GLOB ssl_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record/rec_layer_d1.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record/rec_layer_s3.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record/methods/dtls_meth.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record/methods/ssl3_meth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record/methods/tls13_meth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record/methods/tls1_meth.c
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/record/methods/tls_common.c
@@ -1158,6 +1072,7 @@ file(GLOB ssl_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/ssl/statem/statem_srvr.c
 )
 
+
 if (SHARED_OPENSSL)
     add_library(crypto SHARED ${crypto_SRCS} ${dso_SRCS})
     add_library(ssl SHARED ${ssl_SRCS})
@@ -1168,6 +1083,16 @@ endif()
 
 set_target_properties(crypto PROPERTIES FOLDER "third_party/openssl")
 set_target_properties(ssl PROPERTIES FOLDER "third_party/openssl")
+
+target_include_directories(crypto
+    PUBLIC
+        ${OPENSSL_INCLUDES}
+)
+
+target_include_directories(ssl
+    PUBLIC
+        ${OPENSSL_INCLUDES}
+)
 
 target_compile_definitions(crypto PUBLIC
 	-DOPENSSL_NO_ASM
@@ -1229,7 +1154,6 @@ endif()
 set(OPENSSL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include PARENT_SCOPE)
 
 set(OPENSSL_LIBRARIES crypto ssl PARENT_SCOPE)
-set(OPENSSL_VERSION "1.0.1j" PARENT_SCOPE)
 set(OPENSSL_FOUND TRUE PARENT_SCOPE)
 
 set(LIB_EAY_LIBRARY crypto PARENT_SCOPE)

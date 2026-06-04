@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -20,27 +20,33 @@
 
 typedef enum OPTION_choice {
     OPT_COMMON,
-    OPT_INFORM, OPT_OUTFORM, OPT_IN, OPT_OUT,
-    OPT_TEXT, OPT_CERT, OPT_NOOUT, OPT_CONTEXT
+    OPT_INFORM,
+    OPT_OUTFORM,
+    OPT_IN,
+    OPT_OUT,
+    OPT_TEXT,
+    OPT_CERT,
+    OPT_NOOUT,
+    OPT_CONTEXT
 } OPTION_CHOICE;
 
 const OPTIONS sess_id_options[] = {
     OPT_SECTION("General"),
-    {"help", OPT_HELP, '-', "Display this summary"},
-    {"context", OPT_CONTEXT, 's', "Set the session ID context"},
+    { "help", OPT_HELP, '-', "Display this summary" },
+    { "context", OPT_CONTEXT, 's', "Set the session ID context" },
 
     OPT_SECTION("Input"),
-    {"in", OPT_IN, 's', "Input file - default stdin"},
-    {"inform", OPT_INFORM, 'F', "Input format - default PEM (DER or PEM)"},
+    { "in", OPT_IN, 's', "Input file - default stdin" },
+    { "inform", OPT_INFORM, 'F', "Input format - default PEM (DER or PEM)" },
 
     OPT_SECTION("Output"),
-    {"out", OPT_OUT, '>', "Output file - default stdout"},
-    {"outform", OPT_OUTFORM, 'f',
-     "Output format - default PEM (PEM, DER or NSS)"},
-    {"text", OPT_TEXT, '-', "Print ssl session id details"},
-    {"cert", OPT_CERT, '-', "Output certificate "},
-    {"noout", OPT_NOOUT, '-', "Don't output the encoded session info"},
-    {NULL}
+    { "out", OPT_OUT, '>', "Output file - default stdout" },
+    { "outform", OPT_OUTFORM, 'f',
+        "Output format - default PEM (PEM, DER or NSS)" },
+    { "text", OPT_TEXT, '-', "Print ssl session id details" },
+    { "cert", OPT_CERT, '-', "Output certificate " },
+    { "noout", OPT_NOOUT, '-', "Don't output the encoded session info" },
+    { NULL }
 };
 
 static SSL_SESSION *load_sess_id(char *file, int format);
@@ -60,7 +66,7 @@ int sess_id_main(int argc, char **argv)
         switch (o) {
         case OPT_EOF:
         case OPT_ERR:
- opthelp:
+        opthelp:
             BIO_printf(bio_err, "%s: Use -help for summary.\n", prog);
             goto end;
         case OPT_HELP:
@@ -73,7 +79,7 @@ int sess_id_main(int argc, char **argv)
             break;
         case OPT_OUTFORM:
             if (!opt_format(opt_arg(), OPT_FMT_PEMDER | OPT_FMT_NSS,
-                            &outformat))
+                    &outformat))
                 goto opthelp;
             break;
         case OPT_IN:
@@ -110,12 +116,12 @@ int sess_id_main(int argc, char **argv)
     if (context != NULL) {
         size_t ctx_len = strlen(context);
         if (ctx_len > SSL_MAX_SID_CTX_LENGTH) {
-            BIO_printf(bio_err, "Context too long\n");
+            BIO_puts(bio_err, "Context too long\n");
             goto end;
         }
         if (!SSL_SESSION_set1_id_context(x, (unsigned char *)context,
-                                         (unsigned int)ctx_len)) {
-            BIO_printf(bio_err, "Error setting id context\n");
+                (unsigned int)ctx_len)) {
+            BIO_puts(bio_err, "Error setting id context\n");
             goto end;
         }
     }
@@ -145,11 +151,11 @@ int sess_id_main(int argc, char **argv)
         } else if (outformat == FORMAT_NSS) {
             i = SSL_SESSION_print_keylog(out, x);
         } else {
-            BIO_printf(bio_err, "bad output format specified for outfile\n");
+            BIO_puts(bio_err, "bad output format specified for outfile\n");
             goto end;
         }
         if (!i) {
-            BIO_printf(bio_err, "unable to write SSL_SESSION\n");
+            BIO_puts(bio_err, "unable to write SSL_SESSION\n");
             goto end;
         }
     } else if (!noout && (peer != NULL)) { /* just print the certificate */
@@ -158,16 +164,16 @@ int sess_id_main(int argc, char **argv)
         } else if (outformat == FORMAT_PEM) {
             i = PEM_write_bio_X509(out, peer);
         } else {
-            BIO_printf(bio_err, "bad output format specified for outfile\n");
+            BIO_puts(bio_err, "bad output format specified for outfile\n");
             goto end;
         }
         if (!i) {
-            BIO_printf(bio_err, "unable to write X509\n");
+            BIO_puts(bio_err, "unable to write X509\n");
             goto end;
         }
     }
     ret = 0;
- end:
+end:
     BIO_free_all(out);
     SSL_SESSION_free(x);
     return ret;
@@ -186,12 +192,12 @@ static SSL_SESSION *load_sess_id(char *infile, int format)
     else
         x = PEM_read_bio_SSL_SESSION(in, NULL, NULL, NULL);
     if (x == NULL) {
-        BIO_printf(bio_err, "unable to load SSL_SESSION\n");
+        BIO_puts(bio_err, "unable to load SSL_SESSION\n");
         ERR_print_errors(bio_err);
         goto end;
     }
 
- end:
+end:
     BIO_free(in);
     return x;
 }

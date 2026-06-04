@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -10,6 +10,23 @@
 #include <string.h>
 #include <openssl/err.h>
 #include <openssl/e_os2.h>
+#include "internal/err.h"
+
+#define ERR_FLAG_MARK 0x01
+#define ERR_FLAG_CLEAR 0x02
+
+struct err_state_st {
+    int err_flags[ERR_NUM_ERRORS];
+    int err_marks[ERR_NUM_ERRORS];
+    unsigned long err_buffer[ERR_NUM_ERRORS];
+    char *err_data[ERR_NUM_ERRORS];
+    size_t err_data_size[ERR_NUM_ERRORS];
+    int err_data_flags[ERR_NUM_ERRORS];
+    char *err_file[ERR_NUM_ERRORS];
+    int err_line[ERR_NUM_ERRORS];
+    char *err_func[ERR_NUM_ERRORS];
+    int top, bottom;
+};
 
 static ossl_inline void err_get_slot(ERR_STATE *es)
 {
@@ -38,17 +55,16 @@ static ossl_inline void err_clear_data(ERR_STATE *es, size_t i, int deall)
 }
 
 static ossl_inline void err_set_error(ERR_STATE *es, size_t i,
-                                      int lib, int reason)
+    int lib, int reason)
 {
-    es->err_buffer[i] =
-        lib == ERR_LIB_SYS
-        ? (unsigned int)(ERR_SYSTEM_FLAG |  reason)
+    es->err_buffer[i] = lib == ERR_LIB_SYS
+        ? (unsigned int)(ERR_SYSTEM_FLAG | reason)
         : ERR_PACK(lib, 0, reason);
 }
 
 static ossl_inline void err_set_debug(ERR_STATE *es, size_t i,
-                                      const char *file, int line,
-                                      const char *fn)
+    const char *file, int line,
+    const char *fn)
 {
     /*
      * We dup the file and fn strings because they may be provider owned. If the
@@ -58,7 +74,8 @@ static ossl_inline void err_set_debug(ERR_STATE *es, size_t i,
     if (file == NULL || file[0] == '\0')
         es->err_file[i] = NULL;
     else if ((es->err_file[i] = CRYPTO_malloc(strlen(file) + 1,
-                                              NULL, 0)) != NULL)
+                  NULL, 0))
+        != NULL)
         /* We cannot use OPENSSL_strdup due to possible recursion */
         strcpy(es->err_file[i], file);
 
@@ -67,12 +84,13 @@ static ossl_inline void err_set_debug(ERR_STATE *es, size_t i,
     if (fn == NULL || fn[0] == '\0')
         es->err_func[i] = NULL;
     else if ((es->err_func[i] = CRYPTO_malloc(strlen(fn) + 1,
-                                              NULL, 0)) != NULL)
+                  NULL, 0))
+        != NULL)
         strcpy(es->err_func[i], fn);
 }
 
 static ossl_inline void err_set_data(ERR_STATE *es, size_t i,
-                                     void *data, size_t datasz, int flags)
+    void *data, size_t datasz, int flags)
 {
     if ((es->err_data_flags[i] & ERR_TXT_MALLOCED) != 0)
         OPENSSL_free(es->err_data[i]);
@@ -96,4 +114,4 @@ static ossl_inline void err_clear(ERR_STATE *es, size_t i, int deall)
 
 ERR_STATE *ossl_err_get_state_int(void);
 void ossl_err_string_int(unsigned long e, const char *func,
-                         char *buf, size_t len);
+    char *buf, size_t len);

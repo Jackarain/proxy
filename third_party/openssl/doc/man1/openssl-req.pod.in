@@ -27,9 +27,8 @@ B<openssl> B<req>
 [B<-noenc>]
 [B<-nodes>]
 [B<-key> I<filename>|I<uri>]
-[B<-keyform> B<DER>|B<PEM>|B<P12>|B<ENGINE>]
+[B<-keyform> B<DER>|B<PEM>|B<P12>]
 [B<-keyout> I<filename>]
-[B<-keygen_engine> I<id>]
 [B<-I<digest>>]
 [B<-config> I<filename>]
 [B<-section> I<name>]
@@ -59,7 +58,7 @@ B<openssl> B<req>
 [B<-quiet>]
 {- $OpenSSL::safe::opt_name_synopsis -}
 {- $OpenSSL::safe::opt_r_synopsis -}
-{- $OpenSSL::safe::opt_engine_synopsis -}{- $OpenSSL::safe::opt_provider_synopsis -}
+{- $OpenSSL::safe::opt_provider_synopsis -}
 
 =head1 DESCRIPTION
 
@@ -203,10 +202,11 @@ any necessary parameters should be specified via the B<-pkeyopt> option.
 
 B<dsa:>I<filename> generates a DSA key using the parameters
 in the file I<filename>. B<ec:>I<filename> generates EC key (usable both with
-ECDSA or ECDH algorithms), B<gost2001:>I<filename> generates GOST R
-34.10-2001 key (requires B<gost> engine configured in the configuration
-file). If just B<gost2001> is specified a parameter set should be
-specified by B<-pkeyopt> I<paramset:X>
+ECDSA or ECDH algorithms), B<gost2001:>I<filename>, B<gost2012_256:>I<filename>
+and B<gost2012_512:>I<filename> generate GOST R 34.10-2001 and GOST R 34.10-2012
+keys with a 256 and 512 bit modulus respectively (these require the B<gostprov>
+provider). If just B<gost2001> is specified, a parameter set should be specified
+by B<-pkeyopt> I<paramset:X>.
 
 =item B<-pkeyopt> I<opt>:I<value>
 
@@ -226,7 +226,7 @@ For certificate signing this option is overridden by the B<-CA> option.
 
 This option also accepts PKCS#8 format private keys for PEM format files.
 
-=item B<-keyform> B<DER>|B<PEM>|B<P12>|B<ENGINE>
+=item B<-keyform> B<DER>|B<PEM>|B<P12>
 
 The format of the private key; unspecified by default.
 See L<openssl-format-options(1)> for details.
@@ -312,15 +312,15 @@ X.509 extensions to be added can be specified in the configuration file,
 possibly using the B<-config> and B<-extensions> options,
 and/or using the B<-addext> option.
 
-Unless B<-x509v1> is given, generated certificates bear X.509 version 3.
-Unless specified otherwise,
-key identifier extensions are included as described in L<x509v3_config(5)>.
+Unless B<-x509v1> is given, generated certificates bear X.509 version 3
+even if no extensions are added.
 
 =item B<-x509v1>
 
 Request generation of certificates with X.509 version 1.
 This implies B<-x509>.
-If X.509 extensions are given, anyway X.509 version 3 is set.
+If X.509 extensions are added, X.509 version 3 is used regardless of this
+option.
 
 =item B<-CA> I<filename>|I<uri>
 
@@ -387,23 +387,49 @@ values for certain extensions such as subjectAltName.
 =item B<-extensions> I<section>,
 B<-reqexts> I<section>
 
-Can be used to override the name of the configuration file section
-from which X.509 extensions are included
-in the certificate (when B<-x509> is in use) or certificate request.
+Can be used to override the name of the configuration file section from which
+X.509 extensions are included in certificates (when B<-x509> is in use) or
+certificate requests.
 This allows several different sections to be used in the same configuration
 file to specify requests for a variety of purposes.
 
+When signing a new CSR or X.509 certificate, if neither the the B<-extensions>
+option nor its alias B<-reqexts> are specified, the name of the extension
+section is taken from from C<req> section of the configuration file.
+Specifically, from the value of that section's C<req_extensions> variable (for
+a CSR) or its C<x509_extensions> variable (for a certificate).
+If there is no setting for the variable (name/value assignment, see
+L<config(5)>) in question, the configuration file does not add any extensions.
+The B<-section> option can be used to override C<req> with a custom section in
+which to look for the above C<req_extensions> and C<x509_extensions> variables.
+
+OpenSSL 4.0 removed built-in generation of the B<subjectKeyIdentifier> and
+B<authorityKeyIdentifier> extensions when generating certificates.
+Any desired extensions need to be listed either in the configuration file or
+via the B<-addext> option described below.
+
 =item B<-addext> I<ext>
 
-Add a specific extension to the certificate (if B<-x509> is in use)
-or certificate request.  The argument must have the form of
-a C<key=value> pair as it would appear in a config file.
+Add a specific extension to the certificate (if B<-x509> is in use) or
+certificate request.
+The argument must have the form of a C<key=value> pair as it would appear in a
+configuration file.
 
-If an extension is added using this option that has the same OID as one
-defined in the extension section of the config file, it overrides that one.
+Each extension can appear at most once in a certificate or certificate request.
+Extensions listed via the option on the command-line override any corresponding
+extensions in the configuration file.
 
-This option can be given multiple times.
-Doing so, the same key most not be given more than once.
+This option can be given multiple times, but any given extension can be
+specified through this option at most once.
+
+To drop any unwanted B<subjectKeyIdentifier> or B<authorityKeyIdentifier>
+extensions that may be added by default via the configuration file use either
+or both of the options below:
+
+  -addext subjectKeyIdentifier=none
+  -addext authorityKeyIdentifier=none
+
+These work as expected even if the extensions were not there to begin with.
 
 =item B<-precert>
 
@@ -449,16 +475,9 @@ Print fewer details about the operations being performed, which may be
 handy during batch scripts or pipelines (specifically "progress dots"
 during key generation are suppressed).
 
-=item B<-keygen_engine> I<id>
-
-Specifies an engine (by its unique I<id> string) which would be used
-for key generation operations.
-
 {- $OpenSSL::safe::opt_name_item -}
 
 {- $OpenSSL::safe::opt_r_item -}
-
-{- $OpenSSL::safe::opt_engine_item -}
 
 {- $OpenSSL::safe::opt_provider_item -}
 
@@ -676,15 +695,6 @@ Generate a self-signed root certificate:
 
  openssl req -x509 -newkey rsa:2048 -keyout key.pem -out req.pem
 
-Create an SM2 private key and then generate a certificate request from it:
-
- openssl ecparam -genkey -name SM2 -out sm2.key
- openssl req -new -key sm2.key -out sm2.csr -sm3 -sigopt "distid:1234567812345678"
-
-Examine and verify an SM2 certificate request:
-
- openssl req -verify -in sm2.csr -sm3 -vfyopt "distid:1234567812345678"
-
 Example of a file pointed to by the B<oid_file> option:
 
  1.2.3.4        shortName       A longer Name
@@ -842,8 +852,7 @@ The B<-section> option was added in OpenSSL 3.0.0.
 The B<-multivalue-rdn> option has become obsolete in OpenSSL 3.0.0 and
 has no effect.
 
-The B<-engine> option was deprecated in OpenSSL 3.0.
-The <-nodes> option was deprecated in OpenSSL 3.0, too; use B<-noenc> instead.
+The <-nodes> option was deprecated in OpenSSL 3.0; use B<-noenc> instead.
 
 The B<-reqexts> option has been made an alias of B<-extensions> in OpenSSL 3.2.
 
@@ -853,9 +862,15 @@ and key identifier extensions are included by default.
 
 Since OpenSSL 3.3, the B<-verify> option will exit with 1 on failure.
 
+The B<-engine> option was removed in OpenSSL 4.0.
+
+As of OpenSSL 4.0, the B<req> utility no longer has specialised built-in logic
+to add the SKID or AKID extensions, they are handled through configuration
+files and command-line options just like any other extension.
+
 =head1 COPYRIGHT
 
-Copyright 2000-2025 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2000-2026 The OpenSSL Project Authors. All Rights Reserved.
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

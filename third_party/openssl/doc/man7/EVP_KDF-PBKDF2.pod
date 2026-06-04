@@ -40,6 +40,10 @@ This parameter has a default value of 2048.
 
 These parameters work as described in L<EVP_KDF(3)/PARAMETERS>.
 
+B<Note:> PBKDF2 uses HMAC internally, which does not support eXtendable Output
+Function (XOF) digests such as SHAKE128 or SHAKE256. Attempting to use an XOF
+digest with PBKDF2 will result in an error.
+
 =item "pkcs5" (B<OSSL_KDF_PARAM_PKCS5>) <integer>
 
 This parameter can be used to enable or disable SP800-132 compliance checks.
@@ -55,6 +59,15 @@ The checks performed are:
 
 =item - the derived key length is at least 112 bits.
 
+=item - the password length is at least minimum length.
+
+The default minimum password length can be configured when OpenSSL is
+compiled by setting B<-DKDF_PBKDF2_MIN_PASSWORD_LEN=length>. If not
+set then 1 is used for the default provider and 8 for the FIPS
+provider since 4.0.0. Please consult the security policy document of
+your FIPS provider from your vendor for further details, as
+implementation often vary by each vendor.
+
 =back
 
 The default provider uses a default mode of 1 for backwards compatibility,
@@ -66,10 +79,10 @@ to return 0.
 
 This option is used by the OpenSSL FIPS provider.
 
-A getter that returns 1 if the operation is FIPS approved, or 0 otherwise.
-This may be used after calling EVP_KDF_derive. It returns 0 if "pkcs5"
-is set to 1 and the derived key length, salt length or iteration count test
-fails.
+A getter that returns 1 if the operation is FIPS approved, or 0
+otherwise.  This may be used after calling EVP_KDF_derive. It returns
+0 if "pkcs5" is set to 1 and the password length, derived key length,
+salt length or iteration count test fails.
 
 =back
 
@@ -105,7 +118,7 @@ This functionality was added in OpenSSL 3.0.
 
 =head1 COPYRIGHT
 
-Copyright 2018-2024 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2018-2026 The OpenSSL Project Authors. All Rights Reserved.
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

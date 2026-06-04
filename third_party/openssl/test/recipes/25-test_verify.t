@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2015-2025 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2015-2026 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -30,7 +30,7 @@ sub verify {
     run(app([@args]));
 }
 
-plan tests => 205;
+plan tests => 213;
 
 # Canonical success
 ok(verify("ee-cert", "sslserver", ["root-cert"], ["ca-cert"]),
@@ -39,6 +39,8 @@ ok(verify("ee-cert", "sslserver", ["root-cert"], ["ca-cert"]),
 # Root CA variants
 ok(!verify("ee-cert", "sslserver", [qw(root-nonca)], [qw(ca-cert)]),
    "fail trusted non-ca root");
+ok(!verify("ee-cert", "sslserver", [qw(root-no-KeyCertSign)], [qw(ca-cert)]),
+   "fail trusted root excluding key usage KeyCertSign");
 ok(!verify("ee-cert", "sslserver", [qw(nroot+serverAuth)], [qw(ca-cert)]),
    "fail server trust non-ca root");
 ok(!verify("ee-cert", "sslserver", [qw(nroot+anyEKU)], [qw(ca-cert)]),
@@ -594,6 +596,34 @@ ok(!verify("ee-cert-policies-bad", "", ["root-cert"], ["ca-pol-cert"],
            "-explicit_policy"),
    "Bad certificate policy");
 
+# Verify Validity Period Boundaries with -attime
+# ee-expired2 Not Before: Sep 18 14:37:57 2025 GMT -- 1758206277
+#              Not After: Sep 16 14:37:57 2035 GMT -- 2073566277
+ok(!verify("ee-expired2", "", ["root-cert"], ["ca-cert"], "-attime",
+           "1758206276"), "Certificate invalid at time 1758206276");
+ok(verify("ee-expired2", "", ["root-cert"], ["ca-cert"], "-attime",
+          "1758206277"), "Certificate valid at time 1758206277");
+ok(verify("ee-expired2", "", ["root-cert"], ["ca-cert"], "-attime",
+          "1758206278"), "Certificate valid at time 1758206278");
+ok(verify("ee-expired2", "", ["root-cert"], ["ca-cert"], "-attime",
+          "2073566276"), "Certificate valid at time 2073566276");
+ok(verify("ee-expired2", "", ["root-cert"], ["ca-cert"], "-attime",
+          "2073566277"), "Certificate valid at time 2073566277");
+ok(!verify("ee-expired2", "", ["root-cert"], ["ca-cert"], "-attime",
+           "2073566278"), "Certificate invalid at time 2073566278");
+
+# CVE-2026-28388
+my $cve_28388_stderr = "cve-2026-28388.err";
+run(app(["openssl", "verify",
+         "-attime", "1739527200",
+         "-CAfile", srctop_file(@certspath, "cve-2026-28388-ca.pem"),
+         "-crl_check", "-use_deltas",
+         "-CRLfile", srctop_file(@certspath, "cve-2026-28388-crls.pem"),
+         srctop_file(@certspath, "cve-2026-28388-leaf.pem")],
+         stderr => $cve_28388_stderr));
+ok(grep(/CRL is not yet valid/, do { open my $fh, '<', $cve_28388_stderr; <$fh> }),
+   "CVE-2026-28388");
+
 # CAstore option
 my $rootcertname = "root-cert";
 my $rootcert = srctop_file(@certspath, "${rootcertname}.pem");
@@ -608,13 +638,15 @@ SKIP: {
         if $^O =~ /^(MSWin32|VMS)$/;
     my $foo_file = "foo:cert.pem";
     copy($rootcert, $foo_file);
-    ok(vfy_root("-CAstore", $foo_file), "CAstore foo:file");
-    ok(vfy_root("-CAstore", "file:".$foo_file), "CAstore file:foo:file");
+    ok(vfy_root("-CAstore", $foo_file), "CAstore foo:cert.pem");
+    ok(vfy_root("-CAstore", "file:".$foo_file), "CAstore file:foo:cert.pem");
 }
-my $foo_file = "cert.pem";
-copy($rootcert, $foo_file);
-ok(vfy_root("-CAstore", $foo_file), "CAstore foo:file");
-ok(vfy_root("-CAstore", "file:".$foo_file), "CAstore file:foo:file");
+
+my $file = "cert.pem";
+copy($rootcert, $file);
+ok(vfy_root("-CAstore", $file), "CAstore cert.pem");
+ok(vfy_root("-CAstore", "file:".$file), "CAstore file:cert.pem");
+
 my $abs_cert = abs_path($rootcert);
 # Windows file: URIs should have a path part starting with a slash, i.e.
 # file://authority/C:/what/ever/foo.pem and file:///C:/what/ever/foo.pem

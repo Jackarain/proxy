@@ -58,8 +58,8 @@ Keys and password options:
 [B<-inkey> I<filename>|I<uri>]
 [B<-passin> I<arg>]
 [B<-keyopt> I<name>:I<parameter>]
-[B<-keyform> B<DER>|B<PEM>|B<P12>|B<ENGINE>]
-{- $OpenSSL::safe::opt_engine_synopsis -}{- $OpenSSL::safe::opt_provider_synopsis -}
+[B<-keyform> B<DER>|B<PEM>|B<P12>]
+{- $OpenSSL::safe::opt_provider_synopsis -}
 {- $OpenSSL::safe::opt_r_synopsis -}
 
 Encryption options:
@@ -375,12 +375,10 @@ set customised parameters for the preceding key or certificate. It can
 currently be used to set RSA-PSS for signing, RSA-OAEP for encryption
 or to modify default parameters for ECDH.
 
-=item B<-keyform> B<DER>|B<PEM>|B<P12>|B<ENGINE>
+=item B<-keyform> B<DER>|B<PEM>|B<P12>
 
 The format of the private key file; unspecified by default.
 See L<openssl-format-options(1)> for details.
-
-{- $OpenSSL::safe::opt_engine_item -}
 
 {- $OpenSSL::safe::opt_provider_item -}
 
@@ -427,7 +425,7 @@ Currently, the AES variants with GCM mode are the only supported AEAD
 algorithms.
 
 If not specified, AES-256-CBC is used as the default. Only used with B<-encrypt> and
-B<-EncryptedData_create> commands.
+B<-EncryptedData_encrypt> commands.
 
 =item B<-kekcipher> I<cipher>
 
@@ -474,7 +472,13 @@ B<OSSL_KDF_PARAM_INFO> parameter of the B<KEMRecipientInfo> type's KDF.
 =item B<-md> I<digest>
 
 Digest algorithm to use when signing or resigning. If not present then the
-default digest algorithm for the signing key will be used (usually SHA1).
+default digest algorithm for the signing key will be used (usually SHA-256).
+
+Note that, in the case signed attributes are not used (B<-noattr>), for
+some hash-less signing schemes the given digest algorithm will be ignored
+and a digest algorithm required by the signing scheme will be used. This is
+the case for EdDSA (RFC 8419). For SLH-DSA (RFC 9814) and ML-DSA (RFC 9882),
+the scheme-suggested digest algorithm will only be used if none is given.
 
 =item B<-signer> I<file>
 
@@ -807,7 +811,7 @@ The use of PSS with B<-sign>.
 
 The use of OAEP or non-RSA keys with B<-encrypt>.
 
-Additionally the B<-EncryptedData_create> and B<-data_create> type cannot
+Additionally the B<-EncryptedData_encrypt> and B<-data_create> type cannot
 be processed by the older L<openssl-smime(1)> command.
 
 =head1 EXAMPLES
@@ -904,7 +908,7 @@ Use SHA256 KDF with an ECDH certificate:
 
 Print CMS signed binary data in human-readable form:
 
-openssl cms -in signed.cms -binary -inform DER -cmsout -print
+ openssl cms -in signed.cms -binary -inform DER -cmsout -print
 
 =head1 BUGS
 
@@ -925,6 +929,10 @@ user has to manually include the correct encryption algorithm. It should store
 the list of permitted ciphers in a database and only use those.
 
 No revocation checking is done on the signer's certificate.
+
+Ed448 signing is not supported when using signed-data with signed attributes
+since OpenSSL does not currently support the digestAlgorithm id-shake256-len
+as required per RFC 8419.
 
 =head1 SEE ALSO
 
@@ -948,15 +956,15 @@ The -no_alt_chains option was added in OpenSSL 1.0.2b.
 
 The B<-nameopt> option was added in OpenSSL 3.0.0.
 
-The B<-engine> option was deprecated in OpenSSL 3.0.
-
 The B<-digest> option was added in OpenSSL 3.2.
 
 The B<-recip_kdf> and B<-recip_ukm> options were added in OpenSSL 3.6.
 
+The B<-engine> option was removed in OpenSSL 4.0.
+
 =head1 COPYRIGHT
 
-Copyright 2008-2025 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2008-2026 The OpenSSL Project Authors. All Rights Reserved.
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

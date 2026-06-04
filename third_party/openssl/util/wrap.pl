@@ -9,7 +9,7 @@ use File::Spec::Functions;
 BEGIN {
     # This method corresponds exactly to 'use OpenSSL::Util',
     # but allows us to use a platform specific file spec.
-    require '/root/opens/ssl/openssl-3.6.0/util/perl/OpenSSL/Util.pm';
+    require '/root/opens/openssl-4.0.0/util/perl/OpenSSL/Util.pm';
     OpenSSL::Util->import();
 }
 
@@ -46,33 +46,31 @@ sub quote_arg_win32 {
 }
 
 my $there = canonpath(catdir(dirname($0), updir()));
-my $std_engines = catdir($there, 'engines');
 my $std_providers = catdir($there, 'providers');
 my $std_openssl_conf = catdir($there, 'apps/openssl.cnf');
 my $unix_shlib_wrap = catfile($there, 'util/shlib_wrap.sh');
 my $std_openssl_conf_include;
 
 if ($ARGV[0] eq '-fips') {
-    $std_openssl_conf = '/root/opens/ssl/openssl-3.6.0/test/fips-and-base.cnf';
+    $std_openssl_conf = '/root/opens/openssl-4.0.0/test/fips-and-base.cnf';
     shift;
 
     $std_openssl_conf_include = catdir($there, 'providers');
 }
 
 if ($ARGV[0] eq '-jitter') {
-    $std_openssl_conf = '/root/opens/ssl/openssl-3.6.0/test/default-and-jitter.cnf';
+    $std_openssl_conf = '/root/opens/openssl-4.0.0/test/default-and-jitter.cnf';
     shift;
 
     $std_openssl_conf_include = catdir($there, 'providers');
 }
 
+local $ENV{OPENSSL_RUNNING_UNIT_TESTS} = "yes";
 
 local $ENV{OPENSSL_CONF_INCLUDE} = $std_openssl_conf_include
     if defined $std_openssl_conf_include
        &&($ENV{OPENSSL_CONF_INCLUDE} // '') eq ''
        && -d $std_openssl_conf_include;
-local $ENV{OPENSSL_ENGINES} = $std_engines
-    if ($ENV{OPENSSL_ENGINES} // '') eq '' && -d $std_engines;
 local $ENV{OPENSSL_MODULES} = $std_providers
     if ($ENV{OPENSSL_MODULES} // '') eq '' && -d $std_providers;
 local $ENV{OPENSSL_CONF} = $std_openssl_conf

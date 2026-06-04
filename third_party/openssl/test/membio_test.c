@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2022-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -9,6 +9,41 @@
 
 #include <openssl/bio.h>
 #include "testutil.h"
+
+static int test_eof(void)
+{
+    BIO *bio = BIO_new(BIO_s_mem());
+    char buf[1];
+    int testresult = 0;
+
+    if (!TEST_ptr(bio))
+        goto err;
+
+    /* legacy default behaviour */
+    if (!TEST_int_eq(BIO_read(bio, buf, 1), -1)
+        || !TEST_true(BIO_eof(bio))
+        || !TEST_true(BIO_should_retry(bio)))
+        goto err;
+
+    /* manually set eof behaviour */
+    BIO_set_mem_eof_return(bio, 0);
+    if (!TEST_int_eq(BIO_read(bio, buf, 1), 0)
+        || !TEST_true(BIO_eof(bio))
+        || !TEST_false(BIO_should_retry(bio)))
+        goto err;
+
+    /* manually set retry behaviour */
+    BIO_set_mem_eof_return(bio, -1);
+    if (!TEST_int_eq(BIO_read(bio, buf, 1), -1)
+        || !TEST_false(BIO_eof(bio))
+        || !TEST_true(BIO_should_retry(bio)))
+        goto err;
+
+    testresult = 1;
+err:
+    BIO_free(bio);
+    return testresult;
+}
 
 #ifndef OPENSSL_NO_DGRAM
 static int test_dgram(void)
@@ -48,13 +83,13 @@ static int test_dgram(void)
 
     /* Reading all 4 dgrams out again should all be the correct size */
     if (!TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg1))
-            || !TEST_mem_eq(buf, sizeof(msg1), msg1, sizeof(msg1))
-            || !TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg2))
-            || !TEST_mem_eq(buf, sizeof(msg2), msg2, sizeof(msg2))
-            || !TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg3))
-            || !TEST_mem_eq(buf, sizeof(msg3), msg3, sizeof(msg3))
-            || !TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg4))
-            || !TEST_mem_eq(buf, sizeof(msg4), msg4, sizeof(msg4)))
+        || !TEST_mem_eq(buf, sizeof(msg1), msg1, sizeof(msg1))
+        || !TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg2))
+        || !TEST_mem_eq(buf, sizeof(msg2), msg2, sizeof(msg2))
+        || !TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg3))
+        || !TEST_mem_eq(buf, sizeof(msg3), msg3, sizeof(msg3))
+        || !TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg4))
+        || !TEST_mem_eq(buf, sizeof(msg4), msg4, sizeof(msg4)))
         goto err;
 
     /* Interleaving writes and reads should be fine */
@@ -63,14 +98,14 @@ static int test_dgram(void)
     if (!TEST_int_eq(BIO_write(bio, msg2, sizeof(msg2)), sizeof(msg2)))
         goto err;
     if (!TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg1))
-            || !TEST_mem_eq(buf, sizeof(msg1), msg1, sizeof(msg1)))
+        || !TEST_mem_eq(buf, sizeof(msg1), msg1, sizeof(msg1)))
         goto err;
     if (!TEST_int_eq(BIO_write(bio, msg3, sizeof(msg3)), sizeof(msg3)))
         goto err;
     if (!TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg2))
-            || !TEST_mem_eq(buf, sizeof(msg2), msg2, sizeof(msg2))
-            || !TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg3))
-            || !TEST_mem_eq(buf, sizeof(msg3), msg3, sizeof(msg3)))
+        || !TEST_mem_eq(buf, sizeof(msg2), msg2, sizeof(msg2))
+        || !TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg3))
+        || !TEST_mem_eq(buf, sizeof(msg3), msg3, sizeof(msg3)))
         goto err;
 
     /*
@@ -82,10 +117,10 @@ static int test_dgram(void)
     if (!TEST_int_eq(BIO_write(bio, msg2, sizeof(msg2)), sizeof(msg2)))
         goto err;
     if (!TEST_int_eq(BIO_read(bio, buf, /* Short buffer */ 2), 2)
-            || !TEST_mem_eq(buf, 2, msg1, 2))
+        || !TEST_mem_eq(buf, 2, msg1, 2))
         goto err;
     if (!TEST_int_eq(BIO_read(bio, buf, sizeof(buf)), sizeof(msg2))
-            || !TEST_mem_eq(buf, sizeof(msg2), msg2, sizeof(msg2)))
+        || !TEST_mem_eq(buf, sizeof(msg2), msg2, sizeof(msg2)))
         goto err;
 
     /*
@@ -94,17 +129,17 @@ static int test_dgram(void)
      * return a negative result, but not eof. Retry flags will be set.
      */
     if (!TEST_int_eq(BIO_write(bio, NULL, 0), 0)
-            || !TEST_int_lt(BIO_read(bio, buf, sizeof(buf)), 0)
-            || !TEST_false(BIO_eof(bio))
-            || !TEST_true(BIO_should_retry(bio)))
+        || !TEST_int_lt(BIO_read(bio, buf, sizeof(buf)), 0)
+        || !TEST_false(BIO_eof(bio))
+        || !TEST_true(BIO_should_retry(bio)))
         goto err;
 
     if (!TEST_int_eq(BIO_dgram_set_mtu(bio, 123456), 1)
-            || !TEST_int_eq(BIO_dgram_get_mtu(bio), 123456))
+        || !TEST_int_eq(BIO_dgram_get_mtu(bio), 123456))
         goto err;
 
     testresult = 1;
- err:
+err:
     BIO_free(rbio);
     BIO_free(bio);
     return testresult;
@@ -118,6 +153,7 @@ int setup_tests(void)
         return 0;
     }
 
+    ADD_TEST(test_eof);
 #ifndef OPENSSL_NO_DGRAM
     ADD_TEST(test_dgram);
 #endif

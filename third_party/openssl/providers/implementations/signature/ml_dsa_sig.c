@@ -1,12 +1,11 @@
 /*
- * Copyright 2024-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2024-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
-
 
 #include "internal/deprecated.h"
 
@@ -24,8 +23,14 @@
 #include "internal/common.h"
 #include "internal/packet.h"
 #include "internal/sizes.h"
+#include "internal/fips.h"
 
-#define ML_DSA_MESSAGE_ENCODE_RAW  0
+#define ml_dsa_set_ctx_params_st ml_dsa_verifymsg_set_ctx_params_st
+#define ml_dsa_set_ctx_params_decoder ml_dsa_verifymsg_set_ctx_params_decoder
+
+#include "providers/implementations/signature/ml_dsa_sig.inc"
+
+#define ML_DSA_MESSAGE_ENCODE_RAW 0
 #define ML_DSA_MESSAGE_ENCODE_PURE 1
 
 static OSSL_FUNC_signature_sign_message_init_fn ml_dsa_sign_msg_init;
@@ -58,8 +63,8 @@ typedef struct {
     int evp_type;
     /* The Algorithm Identifier of the signature algorithm */
     uint8_t aid_buf[OSSL_MAX_ALGORITHM_ID_SIZE];
-    size_t  aid_len;
-    int mu;     /* Flag indicating we should begin from \mu, not the message */
+    size_t aid_len;
+    int mu; /* Flag indicating we should begin from \mu, not the message */
 
     int operation;
     EVP_MD_CTX *md_ctx; /* Ctx for msg_init/update/final interface */
@@ -83,6 +88,12 @@ static void *ml_dsa_newctx(void *provctx, int evp_type, const char *propq)
 
     if (!ossl_prov_is_running())
         return NULL;
+
+#ifdef FIPS_MODULE
+    if (!ossl_deferred_self_test(PROV_LIBCTX_OF(provctx),
+            ST_ID_SIG_ML_DSA_65))
+        return NULL;
+#endif
 
     ctx = OPENSSL_zalloc(sizeof(PROV_ML_DSA_CTX));
     if (ctx == NULL)
@@ -161,14 +172,14 @@ static int set_alg_id_buffer(PROV_ML_DSA_CTX *ctx)
 }
 
 static int ml_dsa_signverify_msg_init(void *vctx, void *vkey,
-                                      const OSSL_PARAM params[], int operation,
-                                      const char *desc)
+    const OSSL_PARAM params[], int operation,
+    const char *desc)
 {
     PROV_ML_DSA_CTX *ctx = (PROV_ML_DSA_CTX *)vctx;
     ML_DSA_KEY *key = vkey;
 
     if (!ossl_prov_is_running()
-            || ctx == NULL)
+        || ctx == NULL)
         return 0;
 
     if (vkey == NULL && ctx->key == NULL) {
@@ -191,17 +202,17 @@ static int ml_dsa_signverify_msg_init(void *vctx, void *vkey,
 static int ml_dsa_sign_msg_init(void *vctx, void *vkey, const OSSL_PARAM params[])
 {
     return ml_dsa_signverify_msg_init(vctx, vkey, params,
-                                      EVP_PKEY_OP_SIGNMSG, "ML_DSA Sign Init");
+        EVP_PKEY_OP_SIGNMSG, "ML_DSA Sign Init");
 }
 
 static int ml_dsa_digest_signverify_init(void *vctx, const char *mdname,
-                                         void *vkey, const OSSL_PARAM params[])
+    void *vkey, const OSSL_PARAM params[])
 {
     PROV_ML_DSA_CTX *ctx = (PROV_ML_DSA_CTX *)vctx;
 
     if (mdname != NULL && mdname[0] != '\0') {
         ERR_raise_data(ERR_LIB_PROV, PROV_R_INVALID_DIGEST,
-                       "Explicit digest not supported for ML-DSA operations");
+            "Explicit digest not supported for ML-DSA operations");
         return 0;
     }
 
@@ -211,12 +222,12 @@ static int ml_dsa_digest_signverify_init(void *vctx, const char *mdname,
         return ml_dsa_set_ctx_params(ctx, params);
 
     return ml_dsa_signverify_msg_init(vctx, vkey, params,
-                                      EVP_PKEY_OP_SIGN, "ML_DSA Sign Init");
+        EVP_PKEY_OP_SIGN, "ML_DSA Sign Init");
 }
 
 static int ml_dsa_signverify_msg_update(void *vctx,
-                                        const unsigned char *data,
-                                        size_t datalen)
+    const unsigned char *data,
+    size_t datalen)
 {
     PROV_ML_DSA_CTX *ctx = (PROV_ML_DSA_CTX *)vctx;
 
@@ -231,8 +242,8 @@ static int ml_dsa_signverify_msg_update(void *vctx,
 
     if (ctx->md_ctx == NULL) {
         ctx->md_ctx = ossl_ml_dsa_mu_init(ctx->key, ctx->msg_encode,
-                                          ctx->context_string,
-                                          ctx->context_string_len);
+            ctx->context_string,
+            ctx->context_string_len);
         if (ctx->md_ctx == NULL)
             return 0;
     }
@@ -241,7 +252,7 @@ static int ml_dsa_signverify_msg_update(void *vctx,
 }
 
 static int ml_dsa_sign_msg_final(void *vctx, unsigned char *sig,
-                                 size_t *siglen, size_t sigsize)
+    size_t *siglen, size_t sigsize)
 {
     PROV_ML_DSA_CTX *ctx = (PROV_ML_DSA_CTX *)vctx;
     uint8_t rand_tmp[ML_DSA_ENTROPY_LEN], *rnd = NULL;
@@ -274,14 +285,14 @@ static int ml_dsa_sign_msg_final(void *vctx, unsigned char *sig,
     }
 
     ret = ossl_ml_dsa_sign(ctx->key, 1, mu, sizeof(mu), NULL, 0, rnd,
-                           sizeof(rand_tmp), 0, sig, siglen, sigsize);
+        sizeof(rand_tmp), 0, sig, siglen, sigsize);
     if (rnd != ctx->test_entropy)
         OPENSSL_cleanse(rand_tmp, sizeof(rand_tmp));
     return ret;
 }
 
 static int ml_dsa_sign(void *vctx, uint8_t *sig, size_t *siglen, size_t sigsize,
-                       const uint8_t *msg, size_t msg_len)
+    const uint8_t *msg, size_t msg_len)
 {
     int ret = 0;
     PROV_ML_DSA_CTX *ctx = (PROV_ML_DSA_CTX *)vctx;
@@ -303,16 +314,16 @@ static int ml_dsa_sign(void *vctx, uint8_t *sig, size_t *siglen, size_t sigsize,
         }
     }
     ret = ossl_ml_dsa_sign(ctx->key, ctx->mu, msg, msg_len,
-                           ctx->context_string, ctx->context_string_len,
-                           rnd, sizeof(rand_tmp), ctx->msg_encode,
-                           sig, siglen, sigsize);
+        ctx->context_string, ctx->context_string_len,
+        rnd, sizeof(rand_tmp), ctx->msg_encode,
+        sig, siglen, sigsize);
     if (rnd != ctx->test_entropy)
         OPENSSL_cleanse(rand_tmp, sizeof(rand_tmp));
     return ret;
 }
 
 static int ml_dsa_digest_sign(void *vctx, uint8_t *sig, size_t *siglen, size_t sigsize,
-                              const uint8_t *tbs, size_t tbslen)
+    const uint8_t *tbs, size_t tbslen)
 {
     return ml_dsa_sign(vctx, sig, siglen, sigsize, tbs, tbslen);
 }
@@ -320,7 +331,7 @@ static int ml_dsa_digest_sign(void *vctx, uint8_t *sig, size_t *siglen, size_t s
 static int ml_dsa_verify_msg_init(void *vctx, void *vkey, const OSSL_PARAM params[])
 {
     return ml_dsa_signverify_msg_init(vctx, vkey, params, EVP_PKEY_OP_VERIFYMSG,
-                                      "ML_DSA Verify Init");
+        "ML_DSA Verify Init");
 }
 
 static int ml_dsa_verify_msg_final(void *vctx)
@@ -338,23 +349,23 @@ static int ml_dsa_verify_msg_final(void *vctx)
         return 0;
 
     return ossl_ml_dsa_verify(ctx->key, 1, mu, sizeof(mu), NULL, 0, 0,
-                              ctx->sig, ctx->siglen);
+        ctx->sig, ctx->siglen);
 }
 
 static int ml_dsa_verify(void *vctx, const uint8_t *sig, size_t siglen,
-                         const uint8_t *msg, size_t msg_len)
+    const uint8_t *msg, size_t msg_len)
 {
     PROV_ML_DSA_CTX *ctx = (PROV_ML_DSA_CTX *)vctx;
 
     if (!ossl_prov_is_running())
         return 0;
     return ossl_ml_dsa_verify(ctx->key, ctx->mu, msg, msg_len,
-                              ctx->context_string, ctx->context_string_len,
-                              ctx->msg_encode, sig, siglen);
+        ctx->context_string, ctx->context_string_len,
+        ctx->msg_encode, sig, siglen);
 }
 static int ml_dsa_digest_verify(void *vctx,
-                                const uint8_t *sig, size_t siglen,
-                                const uint8_t *tbs, size_t tbslen)
+    const uint8_t *sig, size_t siglen,
+    const uint8_t *tbs, size_t tbslen)
 {
     return ml_dsa_verify(vctx, sig, siglen, tbs, tbslen);
 }
@@ -363,223 +374,6 @@ static int ml_dsa_digest_verify(void *vctx,
  * Only need the param list for the signing case.  The decoder and structure
  * are shared between the sign and verify cases.
  */
-#define ml_dsa_set_ctx_params_st        ml_dsa_verifymsg_set_ctx_params_st
-#define ml_dsa_set_ctx_params_decoder   ml_dsa_verifymsg_set_ctx_params_decoder
-
-/* Machine generated by util/perl/OpenSSL/paramnames.pm */
-#ifndef ml_dsa_set_ctx_params_list
-static const OSSL_PARAM ml_dsa_set_ctx_params_list[] = {
-    OSSL_PARAM_octet_string(OSSL_SIGNATURE_PARAM_CONTEXT_STRING, NULL, 0),
-    OSSL_PARAM_octet_string(OSSL_SIGNATURE_PARAM_TEST_ENTROPY, NULL, 0),
-    OSSL_PARAM_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, NULL),
-    OSSL_PARAM_int(OSSL_SIGNATURE_PARAM_MESSAGE_ENCODING, NULL),
-    OSSL_PARAM_int(OSSL_SIGNATURE_PARAM_MU, NULL),
-    OSSL_PARAM_END
-};
-#endif
-
-#ifndef ml_dsa_set_ctx_params_st
-struct ml_dsa_set_ctx_params_st {
-    OSSL_PARAM *ctx;
-    OSSL_PARAM *det;
-    OSSL_PARAM *ent;
-    OSSL_PARAM *msgenc;
-    OSSL_PARAM *mu;
-};
-#endif
-
-#ifndef ml_dsa_set_ctx_params_decoder
-static int ml_dsa_set_ctx_params_decoder
-    (const OSSL_PARAM *p, struct ml_dsa_set_ctx_params_st *r)
-{
-    const char *s;
-
-    memset(r, 0, sizeof(*r));
-    if (p != NULL)
-        for (; (s = p->key) != NULL; p++)
-            switch(s[0]) {
-            default:
-                break;
-            case 'c':
-                if (ossl_likely(strcmp("ontext-string", s + 1) == 0)) {
-                    /* OSSL_SIGNATURE_PARAM_CONTEXT_STRING */
-                    if (ossl_unlikely(r->ctx != NULL)) {
-                        ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                       "param %s is repeated", s);
-                        return 0;
-                    }
-                    r->ctx = (OSSL_PARAM *)p;
-                }
-                break;
-            case 'd':
-                if (ossl_likely(strcmp("eterministic", s + 1) == 0)) {
-                    /* OSSL_SIGNATURE_PARAM_DETERMINISTIC */
-                    if (ossl_unlikely(r->det != NULL)) {
-                        ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                       "param %s is repeated", s);
-                        return 0;
-                    }
-                    r->det = (OSSL_PARAM *)p;
-                }
-                break;
-            case 'm':
-                switch(s[1]) {
-                default:
-                    break;
-                case 'e':
-                    if (ossl_likely(strcmp("ssage-encoding", s + 2) == 0)) {
-                        /* OSSL_SIGNATURE_PARAM_MESSAGE_ENCODING */
-                        if (ossl_unlikely(r->msgenc != NULL)) {
-                            ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                           "param %s is repeated", s);
-                            return 0;
-                        }
-                        r->msgenc = (OSSL_PARAM *)p;
-                    }
-                    break;
-                case 'u':
-                    switch(s[2]) {
-                    default:
-                        break;
-                    case '\0':
-                        if (ossl_unlikely(r->mu != NULL)) {
-                            ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                           "param %s is repeated", s);
-                            return 0;
-                        }
-                        r->mu = (OSSL_PARAM *)p;
-                    }
-                }
-                break;
-            case 't':
-                if (ossl_likely(strcmp("est-entropy", s + 1) == 0)) {
-                    /* OSSL_SIGNATURE_PARAM_TEST_ENTROPY */
-                    if (ossl_unlikely(r->ent != NULL)) {
-                        ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                       "param %s is repeated", s);
-                        return 0;
-                    }
-                    r->ent = (OSSL_PARAM *)p;
-                }
-            }
-    return 1;
-}
-#endif
-/* End of machine generated */
-
-/* Machine generated by util/perl/OpenSSL/paramnames.pm */
-#ifndef ml_dsa_verifymsg_set_ctx_params_list
-static const OSSL_PARAM ml_dsa_verifymsg_set_ctx_params_list[] = {
-    OSSL_PARAM_octet_string(OSSL_SIGNATURE_PARAM_CONTEXT_STRING, NULL, 0),
-    OSSL_PARAM_octet_string(OSSL_SIGNATURE_PARAM_TEST_ENTROPY, NULL, 0),
-    OSSL_PARAM_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, NULL),
-    OSSL_PARAM_int(OSSL_SIGNATURE_PARAM_MESSAGE_ENCODING, NULL),
-    OSSL_PARAM_int(OSSL_SIGNATURE_PARAM_MU, NULL),
-    OSSL_PARAM_octet_string(OSSL_SIGNATURE_PARAM_SIGNATURE, NULL, 0),
-    OSSL_PARAM_END
-};
-#endif
-
-#ifndef ml_dsa_verifymsg_set_ctx_params_st
-struct ml_dsa_verifymsg_set_ctx_params_st {
-    OSSL_PARAM *ctx;
-    OSSL_PARAM *det;
-    OSSL_PARAM *ent;
-    OSSL_PARAM *msgenc;
-    OSSL_PARAM *mu;
-    OSSL_PARAM *sig;
-};
-#endif
-
-#ifndef ml_dsa_verifymsg_set_ctx_params_decoder
-static int ml_dsa_verifymsg_set_ctx_params_decoder
-    (const OSSL_PARAM *p, struct ml_dsa_verifymsg_set_ctx_params_st *r)
-{
-    const char *s;
-
-    memset(r, 0, sizeof(*r));
-    if (p != NULL)
-        for (; (s = p->key) != NULL; p++)
-            switch(s[0]) {
-            default:
-                break;
-            case 'c':
-                if (ossl_likely(strcmp("ontext-string", s + 1) == 0)) {
-                    /* OSSL_SIGNATURE_PARAM_CONTEXT_STRING */
-                    if (ossl_unlikely(r->ctx != NULL)) {
-                        ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                       "param %s is repeated", s);
-                        return 0;
-                    }
-                    r->ctx = (OSSL_PARAM *)p;
-                }
-                break;
-            case 'd':
-                if (ossl_likely(strcmp("eterministic", s + 1) == 0)) {
-                    /* OSSL_SIGNATURE_PARAM_DETERMINISTIC */
-                    if (ossl_unlikely(r->det != NULL)) {
-                        ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                       "param %s is repeated", s);
-                        return 0;
-                    }
-                    r->det = (OSSL_PARAM *)p;
-                }
-                break;
-            case 'm':
-                switch(s[1]) {
-                default:
-                    break;
-                case 'e':
-                    if (ossl_likely(strcmp("ssage-encoding", s + 2) == 0)) {
-                        /* OSSL_SIGNATURE_PARAM_MESSAGE_ENCODING */
-                        if (ossl_unlikely(r->msgenc != NULL)) {
-                            ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                           "param %s is repeated", s);
-                            return 0;
-                        }
-                        r->msgenc = (OSSL_PARAM *)p;
-                    }
-                    break;
-                case 'u':
-                    switch(s[2]) {
-                    default:
-                        break;
-                    case '\0':
-                        if (ossl_unlikely(r->mu != NULL)) {
-                            ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                           "param %s is repeated", s);
-                            return 0;
-                        }
-                        r->mu = (OSSL_PARAM *)p;
-                    }
-                }
-                break;
-            case 's':
-                if (ossl_likely(strcmp("ignature", s + 1) == 0)) {
-                    /* OSSL_SIGNATURE_PARAM_SIGNATURE */
-                    if (ossl_unlikely(r->sig != NULL)) {
-                        ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                       "param %s is repeated", s);
-                        return 0;
-                    }
-                    r->sig = (OSSL_PARAM *)p;
-                }
-                break;
-            case 't':
-                if (ossl_likely(strcmp("est-entropy", s + 1) == 0)) {
-                    /* OSSL_SIGNATURE_PARAM_TEST_ENTROPY */
-                    if (ossl_unlikely(r->ent != NULL)) {
-                        ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                       "param %s is repeated", s);
-                        return 0;
-                    }
-                    r->ent = (OSSL_PARAM *)p;
-                }
-            }
-    return 1;
-}
-#endif
-/* End of machine generated */
 
 static int ml_dsa_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 {
@@ -593,7 +387,7 @@ static int ml_dsa_set_ctx_params(void *vctx, const OSSL_PARAM params[])
         void *vp = pctx->context_string;
 
         if (!OSSL_PARAM_get_octet_string(p.ctx, &vp, sizeof(pctx->context_string),
-                                         &(pctx->context_string_len))) {
+                &(pctx->context_string_len))) {
             pctx->context_string_len = 0;
             return 0;
         }
@@ -604,8 +398,8 @@ static int ml_dsa_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 
         pctx->test_entropy_len = 0;
         if (!OSSL_PARAM_get_octet_string(p.ent, &vp, sizeof(pctx->test_entropy),
-                                         &(pctx->test_entropy_len)))
-                return 0;
+                &(pctx->test_entropy_len)))
+            return 0;
         if (pctx->test_entropy_len != sizeof(pctx->test_entropy)) {
             pctx->test_entropy_len = 0;
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_SEED_LENGTH);
@@ -627,7 +421,7 @@ static int ml_dsa_set_ctx_params(void *vctx, const OSSL_PARAM params[])
         pctx->sig = NULL;
         pctx->siglen = 0;
         if (!OSSL_PARAM_get_octet_string(p.sig, (void **)&pctx->sig,
-                                         0, &pctx->siglen))
+                0, &pctx->siglen))
             return 0;
     }
 
@@ -635,7 +429,7 @@ static int ml_dsa_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 }
 
 static const OSSL_PARAM *ml_dsa_settable_ctx_params(void *vctx,
-                                                    ossl_unused void *provctx)
+    ossl_unused void *provctx)
 {
     PROV_ML_DSA_CTX *pctx = (PROV_ML_DSA_CTX *)vctx;
 
@@ -645,45 +439,8 @@ static const OSSL_PARAM *ml_dsa_settable_ctx_params(void *vctx,
         return ml_dsa_set_ctx_params_list;
 }
 
-/* Machine generated by util/perl/OpenSSL/paramnames.pm */
-#ifndef ml_dsa_get_ctx_params_list
-static const OSSL_PARAM ml_dsa_get_ctx_params_list[] = {
-    OSSL_PARAM_octet_string(OSSL_SIGNATURE_PARAM_ALGORITHM_ID, NULL, 0),
-    OSSL_PARAM_END
-};
-#endif
-
-#ifndef ml_dsa_get_ctx_params_st
-struct ml_dsa_get_ctx_params_st {
-    OSSL_PARAM *id;
-};
-#endif
-
-#ifndef ml_dsa_get_ctx_params_decoder
-static int ml_dsa_get_ctx_params_decoder
-    (const OSSL_PARAM *p, struct ml_dsa_get_ctx_params_st *r)
-{
-    const char *s;
-
-    memset(r, 0, sizeof(*r));
-    if (p != NULL)
-        for (; (s = p->key) != NULL; p++)
-            if (ossl_likely(strcmp("algorithm-id", s + 0) == 0)) {
-                /* OSSL_SIGNATURE_PARAM_ALGORITHM_ID */
-                if (ossl_unlikely(r->id != NULL)) {
-                    ERR_raise_data(ERR_LIB_PROV, PROV_R_REPEATED_PARAMETER,
-                                   "param %s is repeated", s);
-                    return 0;
-                }
-                r->id = (OSSL_PARAM *)p;
-            }
-    return 1;
-}
-#endif
-/* End of machine generated */
-
 static const OSSL_PARAM *ml_dsa_gettable_ctx_params(ossl_unused void *vctx,
-                                                    ossl_unused void *provctx)
+    ossl_unused void *provctx)
 {
     return ml_dsa_get_ctx_params_list;
 }
@@ -698,8 +455,8 @@ static int ml_dsa_get_ctx_params(void *vctx, OSSL_PARAM *params)
 
     if (p.id != NULL
         && !OSSL_PARAM_set_octet_string(p.id,
-                                        ctx->aid_len == 0 ? NULL : ctx->aid_buf,
-                                        ctx->aid_len))
+            ctx->aid_len == 0 ? NULL : ctx->aid_buf,
+            ctx->aid_len))
         return 0;
 
     return 1;
@@ -714,36 +471,36 @@ static int ml_dsa_get_ctx_params(void *vctx, OSSL_PARAM *params)
     const OSSL_DISPATCH ossl_ml_dsa_##alg##_signature_functions[] = {          \
         { OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void))ml_dsa_##alg##_newctx }, \
         { OSSL_FUNC_SIGNATURE_SIGN_MESSAGE_INIT,                               \
-          (void (*)(void))ml_dsa_sign_msg_init },                              \
+            (void (*)(void))ml_dsa_sign_msg_init },                            \
         { OSSL_FUNC_SIGNATURE_SIGN_MESSAGE_UPDATE,                             \
-          (void (*)(void))ml_dsa_signverify_msg_update },                      \
+            (void (*)(void))ml_dsa_signverify_msg_update },                    \
         { OSSL_FUNC_SIGNATURE_SIGN_MESSAGE_FINAL,                              \
-          (void (*)(void))ml_dsa_sign_msg_final },                             \
+            (void (*)(void))ml_dsa_sign_msg_final },                           \
         { OSSL_FUNC_SIGNATURE_SIGN, (void (*)(void))ml_dsa_sign },             \
         { OSSL_FUNC_SIGNATURE_VERIFY_MESSAGE_INIT,                             \
-          (void (*)(void))ml_dsa_verify_msg_init },                            \
+            (void (*)(void))ml_dsa_verify_msg_init },                          \
         { OSSL_FUNC_SIGNATURE_VERIFY_MESSAGE_UPDATE,                           \
-          (void (*)(void))ml_dsa_signverify_msg_update },                      \
+            (void (*)(void))ml_dsa_signverify_msg_update },                    \
         { OSSL_FUNC_SIGNATURE_VERIFY_MESSAGE_FINAL,                            \
-          (void (*)(void))ml_dsa_verify_msg_final },                           \
+            (void (*)(void))ml_dsa_verify_msg_final },                         \
         { OSSL_FUNC_SIGNATURE_VERIFY, (void (*)(void))ml_dsa_verify },         \
         { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_INIT,                                \
-          (void (*)(void))ml_dsa_digest_signverify_init },                     \
+            (void (*)(void))ml_dsa_digest_signverify_init },                   \
         { OSSL_FUNC_SIGNATURE_DIGEST_SIGN,                                     \
-          (void (*)(void))ml_dsa_digest_sign },                                \
+            (void (*)(void))ml_dsa_digest_sign },                              \
         { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_INIT,                              \
-          (void (*)(void))ml_dsa_digest_signverify_init },                     \
+            (void (*)(void))ml_dsa_digest_signverify_init },                   \
         { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY,                                   \
-          (void (*)(void))ml_dsa_digest_verify },                              \
+            (void (*)(void))ml_dsa_digest_verify },                            \
         { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void))ml_dsa_freectx },       \
         { OSSL_FUNC_SIGNATURE_SET_CTX_PARAMS,                                  \
-          (void (*)(void))ml_dsa_set_ctx_params },                             \
+            (void (*)(void))ml_dsa_set_ctx_params },                           \
         { OSSL_FUNC_SIGNATURE_SETTABLE_CTX_PARAMS,                             \
-          (void (*)(void))ml_dsa_settable_ctx_params },                        \
+            (void (*)(void))ml_dsa_settable_ctx_params },                      \
         { OSSL_FUNC_SIGNATURE_GET_CTX_PARAMS,                                  \
-          (void (*)(void))ml_dsa_get_ctx_params },                             \
+            (void (*)(void))ml_dsa_get_ctx_params },                           \
         { OSSL_FUNC_SIGNATURE_GETTABLE_CTX_PARAMS,                             \
-          (void (*)(void))ml_dsa_gettable_ctx_params },                        \
+            (void (*)(void))ml_dsa_gettable_ctx_params },                      \
         { OSSL_FUNC_SIGNATURE_DUPCTX, (void (*)(void))ml_dsa_dupctx },         \
         OSSL_DISPATCH_END                                                      \
     }

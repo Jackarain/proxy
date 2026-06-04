@@ -39,7 +39,7 @@ tests against the local OpenSSL build.
 
 You will need a git checkout of krb5 at the top level:
 
-    $ git clone https://github.com/krb5/krb5
+    $ git submodule update --init
 
 krb5's master has to pass this same CI, but a known-good version is
 krb5-1.15.1-final if you want to be sure.
@@ -64,28 +64,6 @@ Test-failures suppressions
 krb5 will automatically adapt its test suite to account for the configuration
 of your system.  Certain tests may require more installed packages to run.  No
 tests are expected to fail.
-
-GOST engine test suite
-======================
-
-Much like the PYCA/Cryptography test suite, this builds and runs the GOST engine
-tests against the local OpenSSL build.
-
-You will need a git checkout of gost-engine at the top level:
-
-    $ git submodule update --init
-
-Then configure/build OpenSSL enabling external tests:
-
-    $ ./config enable-external-tests
-    $ make
-
-GOST engine requires CMake for the build process.
-
-GOST engine tests will then be run as part of the rest of the suite, or can be
-explicitly run (with more debugging):
-
-    $ make test VERBOSE=1 TESTS=test_external_gost_engine
 
 OQSprovider test suite
 ======================
@@ -144,6 +122,12 @@ Test failures and suppressions
 
 There are tests for different software tokens - softhsm, nss-softokn and kryoptic.
 Kryoptic tests will not run at this point. Currently no test fails.
+
+Encrypted Client Hello (ECH) external tests
+===========================================
+
+ECH external tests versus BoringSSL and NSS exist and are described
+in `doc/designs/ech-api.md`.
 
 Updating test suites
 ====================

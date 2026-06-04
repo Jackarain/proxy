@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2022 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -22,40 +22,43 @@
 
 typedef enum OPTION_choice {
     OPT_COMMON,
-    OPT_INFORM, OPT_OUTFORM, OPT_IN, OPT_OUT, OPT_NOOUT,
-    OPT_TEXT, OPT_PRINT, OPT_PRINT_CERTS, OPT_QUIET,
-    OPT_ENGINE, OPT_PROV_ENUM
+    OPT_INFORM,
+    OPT_OUTFORM,
+    OPT_IN,
+    OPT_OUT,
+    OPT_NOOUT,
+    OPT_TEXT,
+    OPT_PRINT,
+    OPT_PRINT_CERTS,
+    OPT_QUIET,
+    OPT_PROV_ENUM
 } OPTION_CHOICE;
 
 const OPTIONS pkcs7_options[] = {
     OPT_SECTION("General"),
-    {"help", OPT_HELP, '-', "Display this summary"},
-#ifndef OPENSSL_NO_ENGINE
-    {"engine", OPT_ENGINE, 's', "Use engine, possibly a hardware device"},
-#endif
+    { "help", OPT_HELP, '-', "Display this summary" },
 
     OPT_SECTION("Input"),
-    {"in", OPT_IN, '<', "Input file"},
-    {"inform", OPT_INFORM, 'F', "Input format - DER or PEM"},
+    { "in", OPT_IN, '<', "Input file" },
+    { "inform", OPT_INFORM, 'F', "Input format - DER or PEM" },
 
     OPT_SECTION("Output"),
-    {"outform", OPT_OUTFORM, 'F', "Output format - DER or PEM"},
-    {"out", OPT_OUT, '>', "Output file"},
-    {"noout", OPT_NOOUT, '-', "Don't output encoded data"},
-    {"text", OPT_TEXT, '-', "Print full details of certificates"},
-    {"print", OPT_PRINT, '-', "Print out all fields of the PKCS7 structure"},
-    {"print_certs", OPT_PRINT_CERTS, '-',
-     "Print_certs  print any certs or crl in the input"},
-    {"quiet", OPT_QUIET, '-',
-     "When used with -print_certs, it produces a cleaner output"},
+    { "outform", OPT_OUTFORM, 'F', "Output format - DER or PEM" },
+    { "out", OPT_OUT, '>', "Output file" },
+    { "noout", OPT_NOOUT, '-', "Don't output encoded data" },
+    { "text", OPT_TEXT, '-', "Print full details of certificates" },
+    { "print", OPT_PRINT, '-', "Print out all fields of the PKCS7 structure" },
+    { "print_certs", OPT_PRINT_CERTS, '-',
+        "Print_certs  print any certs or crl in the input" },
+    { "quiet", OPT_QUIET, '-',
+        "When used with -print_certs, it produces a cleaner output" },
 
     OPT_PROV_OPTIONS,
-    {NULL}
+    { NULL }
 };
 
 int pkcs7_main(int argc, char **argv)
 {
-    ENGINE *e = NULL;
     PKCS7 *p7 = NULL, *p7i;
     BIO *in = NULL, *out = NULL;
     int informat = FORMAT_PEM, outformat = FORMAT_PEM;
@@ -69,7 +72,7 @@ int pkcs7_main(int argc, char **argv)
         switch (o) {
         case OPT_EOF:
         case OPT_ERR:
- opthelp:
+        opthelp:
             BIO_printf(bio_err, "%s: Use -help for summary.\n", prog);
             goto end;
         case OPT_HELP:
@@ -105,9 +108,6 @@ int pkcs7_main(int argc, char **argv)
         case OPT_QUIET:
             quiet = 1;
             break;
-        case OPT_ENGINE:
-            e = setup_engine(opt_arg(), 0);
-            break;
         case OPT_PROV_CASES:
             if (!opt_provider(o))
                 goto end;
@@ -125,7 +125,7 @@ int pkcs7_main(int argc, char **argv)
 
     p7 = PKCS7_new_ex(libctx, app_get0_propq());
     if (p7 == NULL) {
-        BIO_printf(bio_err, "unable to allocate PKCS7 object\n");
+        BIO_puts(bio_err, "unable to allocate PKCS7 object\n");
         ERR_print_errors(bio_err);
         goto end;
     }
@@ -135,7 +135,7 @@ int pkcs7_main(int argc, char **argv)
     else
         p7i = PEM_read_bio_PKCS7(in, &p7, NULL, NULL);
     if (p7i == NULL) {
-        BIO_printf(bio_err, "unable to load PKCS7 object\n");
+        BIO_puts(bio_err, "unable to load PKCS7 object\n");
         ERR_print_errors(bio_err);
         goto end;
     }
@@ -209,15 +209,14 @@ int pkcs7_main(int argc, char **argv)
             i = PEM_write_bio_PKCS7(out, p7);
 
         if (!i) {
-            BIO_printf(bio_err, "unable to write pkcs7 object\n");
+            BIO_puts(bio_err, "unable to write pkcs7 object\n");
             ERR_print_errors(bio_err);
             goto end;
         }
     }
     ret = 0;
- end:
+end:
     PKCS7_free(p7);
-    release_engine(e);
     BIO_free(in);
     BIO_free_all(out);
     return ret;

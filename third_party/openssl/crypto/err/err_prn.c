@@ -1,13 +1,11 @@
 /*
- * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
-
-#define OSSL_FORCE_ERR_STATE
 
 #include <stdio.h>
 #include "internal/cryptlib.h"
@@ -17,8 +15,8 @@
 #include "err_local.h"
 
 #define ERR_PRINT_BUF_SIZE 4096
-void ERR_print_errors_cb(int (*cb) (const char *str, size_t len, void *u),
-                         void *u)
+void ERR_print_errors_cb(int (*cb)(const char *str, size_t len, void *u),
+    void *u)
 {
     CRYPTO_THREAD_ID tid = CRYPTO_THREAD_get_current_id();
     unsigned long l;
@@ -39,16 +37,16 @@ void ERR_print_errors_cb(int (*cb) (const char *str, size_t len, void *u),
         ossl_err_string_int(l, func, buf + offset, sizeof(buf) - offset);
         offset += (int)strlen(buf + offset);
         BIO_snprintf(buf + offset, sizeof(buf) - offset, ":%s:%d:%s\n",
-                     file, line, data);
+            file, line, data);
         OPENSSL_free(hex);
         if (cb(buf, strlen(buf), u) <= 0)
-            break;              /* abort outputting the error report */
+            break; /* abort outputting the error report */
     }
 }
 
 /* auxiliary function for incrementally reporting texts via the error queue */
 static void put_error(int lib, const char *func, int reason,
-                      const char *file, int line)
+    const char *file, int line)
 {
     ERR_new();
     ERR_set_debug(file, line, func);
@@ -87,7 +85,7 @@ void ERR_add_error_txt(const char *separator, const char *txt)
 
         /* workaround for limit of ERR_print_errors_cb() */
         if (data_len >= MAX_DATA_LEN
-                || strlen(separator) >= (size_t)(MAX_DATA_LEN - data_len))
+            || strlen(separator) >= (size_t)(MAX_DATA_LEN - data_len))
             available_len = 0;
         else
             available_len = MAX_DATA_LEN - data_len - strlen(separator) - 1;

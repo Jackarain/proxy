@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2016-2024 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2016-2026 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -11,21 +11,24 @@ use List::Util 'first';
 use OpenSSL::Test qw/:DEFAULT cmdstr srctop_file bldtop_dir/;
 use OpenSSL::Test::Utils;
 use TLSProxy::Proxy;
+use Cwd qw(abs_path);
 
 my $test_name = "test_renegotiation";
 setup($test_name);
 
+$ENV{OPENSSL_MODULES} = abs_path(bldtop_dir("test"));
+
 plan skip_all => "TLSProxy isn't usable on $^O"
     if $^O =~ /^(VMS)$/;
 
-plan skip_all => "$test_name needs the dynamic engine feature enabled"
-    if disabled("engine") || disabled("dynamic-engine");
+plan skip_all => "$test_name needs the module feature enabled"
+    if disabled("module");
 
 plan skip_all => "$test_name needs the sock feature enabled"
     if disabled("sock");
 
 plan skip_all => "$test_name needs TLS <= 1.2 enabled"
-    if alldisabled(("ssl3", "tls1", "tls1_1", "tls1_2"));
+    if alldisabled(("tls1", "tls1_1", "tls1_2"));
 
 plan tests => 9;
 
@@ -36,12 +39,23 @@ my $proxy = TLSProxy::Proxy->new(
     (!$ENV{HARNESS_ACTIVE} || $ENV{HARNESS_VERBOSE})
 );
 
+sub success_or_closenotify
+{
+    return 1 if TLSProxy::Message->success();
+
+    my $alert = TLSProxy::Message->alert();
+    return 0 unless defined $alert;
+
+    return ($alert->level() == TLSProxy::Message::AL_LEVEL_WARN()
+            && $alert->description() == TLSProxy::Message::AL_DESC_CLOSE_NOTIFY());
+}
+
 #Test 1: A basic renegotiation test
 $proxy->clientflags("-no_tls1_3");
 $proxy->serverflags("-client_renegotiation");
 $proxy->reneg(1);
 $proxy->start() or plan skip_all => "Unable to start up Proxy for tests";
-ok(TLSProxy::Message->success(), "Basic renegotiation");
+ok(success_or_closenotify(), "Basic renegotiation");
 
 #Test 2: Seclevel 0 client does not send the Reneg SCSV. Reneg should fail
 $proxy->clear();
@@ -94,7 +108,7 @@ SKIP: {
             }
         }
     }
-    ok(TLSProxy::Message->success() && $chmatch,
+    ok(success_or_closenotify() && $chmatch,
        "Check ClientHello version is the same");
 }
 

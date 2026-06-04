@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2004-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -18,7 +18,11 @@
 
 typedef enum OPTION_choice {
     OPT_COMMON,
-    OPT_HEX, OPT_GENERATE, OPT_BITS, OPT_SAFE, OPT_CHECKS,
+    OPT_HEX,
+    OPT_GENERATE,
+    OPT_BITS,
+    OPT_SAFE,
+    OPT_CHECKS,
     OPT_PROV_ENUM,
     OPT_IN_FILE
 } OPTION_CHOICE;
@@ -32,10 +36,13 @@ static int check_num(const char *s, const int is_hex)
      */
     if (is_hex) {
         for (i = 0; ('0' <= s[i] && s[i] <= '9')
-                    || ('A' <= s[i] && s[i] <= 'F')
-                    || ('a' <= s[i] && s[i] <= 'f'); i++);
+            || ('A' <= s[i] && s[i] <= 'F')
+            || ('a' <= s[i] && s[i] <= 'f');
+            i++)
+            ;
     } else {
-        for (i = 0;  '0' <= s[i] && s[i] <= '9'; i++);
+        for (i = 0; '0' <= s[i] && s[i] <= '9'; i++)
+            ;
     }
     return s[i] == 0;
 }
@@ -60,7 +67,7 @@ static void process_num(const char *s, const int is_hex)
     r = BN_check_prime(bn, NULL, NULL);
     BN_free(bn);
     if (r < 0) {
-        BIO_printf(bio_err, "Error checking prime\n");
+        BIO_puts(bio_err, "Error checking prime\n");
         return;
     }
 
@@ -68,26 +75,26 @@ static void process_num(const char *s, const int is_hex)
 }
 
 const OPTIONS prime_options[] = {
-    {OPT_HELP_STR, 1, '-', "Usage: %s [options] [number...]\n"},
+    { OPT_HELP_STR, 1, '-', "Usage: %s [options] [number...]\n" },
 
     OPT_SECTION("General"),
-    {"help", OPT_HELP, '-', "Display this summary"},
-    {"bits", OPT_BITS, 'p', "Size of number in bits"},
-    {"checks", OPT_CHECKS, 'p', "Number of checks"},
-    {"hex", OPT_HEX, '-',
-     "Enables hex format for output from prime generation or input to primality checking"},
-    {"in", OPT_IN_FILE, '-', "Provide file names containing numbers for primality checking"},
+    { "help", OPT_HELP, '-', "Display this summary" },
+    { "bits", OPT_BITS, 'p', "Size of number in bits" },
+    { "checks", OPT_CHECKS, 'p', "Number of checks" },
+    { "hex", OPT_HEX, '-',
+        "Enables hex format for output from prime generation or input to primality checking" },
+    { "in", OPT_IN_FILE, '-', "Provide file names containing numbers for primality checking" },
 
     OPT_SECTION("Output"),
-    {"generate", OPT_GENERATE, '-', "Generate a prime"},
-    {"safe", OPT_SAFE, '-',
-     "When used with -generate, generate a safe prime"},
+    { "generate", OPT_GENERATE, '-', "Generate a prime" },
+    { "safe", OPT_SAFE, '-',
+        "When used with -generate, generate a safe prime" },
 
     OPT_PROV_OPTIONS,
 
     OPT_PARAMETERS(),
-    {"number", 0, 0, "Number(s) to check for primality if not generating"},
-    {NULL}
+    { "number", 0, 0, "Number(s) to check for primality if not generating" },
+    { NULL }
 };
 
 int prime_main(int argc, char **argv)
@@ -104,7 +111,7 @@ int prime_main(int argc, char **argv)
         switch (o) {
         case OPT_EOF:
         case OPT_ERR:
-opthelp:
+        opthelp:
             BIO_printf(bio_err, "%s: Use -help for summary.\n", prog);
             goto end;
         case OPT_HELP:
@@ -143,7 +150,7 @@ opthelp:
     argc = opt_num_rest();
     argv = opt_rest();
     if (!generate && argc == 0) {
-        BIO_printf(bio_err, "Missing number (s) to check\n");
+        BIO_puts(bio_err, "Missing number (s) to check\n");
         goto opthelp;
     }
 
@@ -151,27 +158,27 @@ opthelp:
         char *s;
 
         if (!bits) {
-            BIO_printf(bio_err, "Specify the number of bits.\n");
+            BIO_puts(bio_err, "Specify the number of bits.\n");
             goto end;
         }
         bn = BN_new();
         if (bn == NULL) {
-            BIO_printf(bio_err, "Out of memory.\n");
+            BIO_puts(bio_err, "Out of memory.\n");
             goto end;
         }
         if (!BN_generate_prime_ex(bn, bits, safe, NULL, NULL, NULL)) {
-            BIO_printf(bio_err, "Failed to generate prime.\n");
+            BIO_puts(bio_err, "Failed to generate prime.\n");
             goto end;
         }
         s = hex ? BN_bn2hex(bn) : BN_bn2dec(bn);
         if (s == NULL) {
-            BIO_printf(bio_err, "Out of memory.\n");
+            BIO_puts(bio_err, "Out of memory.\n");
             goto end;
         }
         BIO_printf(bio_out, "%s\n", s);
         OPENSSL_free(s);
     } else {
-        for ( ; *argv; argv++) {
+        for (; *argv; argv++) {
             int bytes_read = 0;
 
             if (!in_file) {
@@ -189,8 +196,9 @@ opthelp:
                     /* Number is too long. Discard remainder of the line */
                     if (bytes_read == BUFSIZE - 1 && file_read_buf[BUFSIZE - 2] != '\n') {
                         BIO_printf(bio_err, "Value in %s is over the maximum size (%d digits)\n",
-                                   argv[0], BUFSIZE - 2);
-                        while (BIO_get_line(in, file_read_buf, BUFSIZE) == BUFSIZE - 1);
+                            argv[0], BUFSIZE - 2);
+                        while (BIO_get_line(in, file_read_buf, BUFSIZE) == BUFSIZE - 1)
+                            ;
                         continue;
                     }
 
@@ -209,7 +217,7 @@ opthelp:
     }
 
     ret = 0;
- end:
+end:
     BN_free(bn);
     return ret;
 }

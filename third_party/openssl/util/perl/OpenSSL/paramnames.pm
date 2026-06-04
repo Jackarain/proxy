@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2023-2025 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2023-2026 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -14,10 +14,12 @@ use warnings;
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(generate_public_macros
-                    produce_param_decoder);
+                    produce_param_decoder
+                    produce_param_decoder_with_count);
 
 my $case_sensitive = 1;
 my $need_break = 0;
+my $invalid_param = "invalid param";
 
 my %params = (
 # Well known parameter names that core passes to providers
@@ -83,14 +85,13 @@ my %params = (
     'OSSL_OBJECT_PARAM_INPUT_TYPE' =>        "input-type", # UTF8_STRING
 
 # Algorithm parameters
-# If "engine",or "properties",are specified, they should always be paired
+# If "properties" is specified, they should always be paired
 # with the algorithm type.
 # Note these are common names that are shared by many types (such as kdf, mac,
 # and pkey) e.g: see MAC_PARAM_DIGEST below.
 
     'OSSL_ALG_PARAM_DIGEST' =>       "digest",       # utf8_string
     'OSSL_ALG_PARAM_CIPHER' =>       "cipher",       # utf8_string
-    'OSSL_ALG_PARAM_ENGINE' =>       "engine",       # utf8_string
     'OSSL_ALG_PARAM_MAC' =>          "mac",          # utf8_string
     'OSSL_ALG_PARAM_PROPERTIES' =>   "properties",   # utf8_string
     'OSSL_ALG_PARAM_FIPS_APPROVED_INDICATOR' => 'fips-indicator',   # int, -1, 0 or 1
@@ -172,6 +173,15 @@ my %params = (
     'OSSL_DIGEST_PARAM_SIZE' =>         "size",         # size_t
     'OSSL_DIGEST_PARAM_XOF' =>          "xof",          # int, 0 or 1
     'OSSL_DIGEST_PARAM_ALGID_ABSENT' => "algid-absent", # int, 0 or 1
+    'OSSL_DIGEST_PARAM_FUNCTION_NAME' =>    "function-name", # utf8 string
+    'OSSL_DIGEST_PARAM_CUSTOMIZATION' =>    "customization", # utf8 string
+    'OSSL_DIGEST_PARAM_PROPERTIES' => '*OSSL_ALG_PARAM_PROPERTIES',# utf8 string
+
+# external mu digest parameters
+    'OSSL_DIGEST_PARAM_MU_PUB_KEY' =>        "pub",                        # octet string
+    'OSSL_DIGEST_PARAM_MU_CONTEXT_STRING' => "context-string",             # octet string
+    'OSSL_DIGEST_PARAM_MU_DIGEST' =>         '*OSSL_ALG_PARAM_DIGEST',     # utf8 string
+    'OSSL_DIGEST_PARAM_MU_PROPERTIES' =>     '*OSSL_ALG_PARAM_PROPERTIES', # utf8 string
 
 # MAC parameters
     'OSSL_MAC_PARAM_KEY' =>            "key",           # octet string
@@ -184,7 +194,7 @@ my %params = (
     'OSSL_MAC_PARAM_C_ROUNDS' =>       "c-rounds",      # unsigned int
     'OSSL_MAC_PARAM_D_ROUNDS' =>       "d-rounds",      # unsigned int
 
-# If "engine",or "properties",are specified, they should always be paired
+# If "properties" is specified, they should always be paired
 # with "cipher",or "digest".
 
     'OSSL_MAC_PARAM_CIPHER' =>           '*OSSL_ALG_PARAM_CIPHER',        # utf8 string
@@ -222,6 +232,10 @@ my %params = (
     'OSSL_KDF_PARAM_SCRYPT_MAXMEM' => "maxmem_bytes",            # uint64_t
     'OSSL_KDF_PARAM_INFO' =>         "info",                     # octet string
     'OSSL_KDF_PARAM_SEED' =>         "seed",                     # octet string
+    'OSSL_KDF_PARAM_SNMPKDF_EID' =>  "eid",                      # octet string
+    'OSSL_KDF_PARAM_SRTPKDF_INDEX' => "index",                   # octet string
+    'OSSL_KDF_PARAM_SRTPKDF_KDR' =>   "kdr",                     # uint32_t
+    'OSSL_KDF_PARAM_SRTPKDF_LABEL' => "label",                   # uint32_t
     'OSSL_KDF_PARAM_SSHKDF_XCGHASH' => "xcghash",                # octet string
     'OSSL_KDF_PARAM_SSHKDF_SESSION_ID' => "session_id",          # octet string
     'OSSL_KDF_PARAM_SSHKDF_TYPE' =>  "type",                     # int
@@ -294,7 +308,6 @@ my %params = (
     'OSSL_PKEY_PARAM_SECURITY_CATEGORY' =>   '*OSSL_ALG_PARAM_SECURITY_CATEGORY',
     'OSSL_PKEY_PARAM_DIGEST' =>              '*OSSL_ALG_PARAM_DIGEST',
     'OSSL_PKEY_PARAM_CIPHER' =>              '*OSSL_ALG_PARAM_CIPHER', # utf8 string
-    'OSSL_PKEY_PARAM_ENGINE' =>              '*OSSL_ALG_PARAM_ENGINE', # utf8 string
     'OSSL_PKEY_PARAM_PROPERTIES' =>          '*OSSL_ALG_PARAM_PROPERTIES',
     'OSSL_PKEY_PARAM_DEFAULT_DIGEST' =>      "default-digest",# utf8 string
     'OSSL_PKEY_PARAM_MANDATORY_DIGEST' =>    "mandatory-digest",# utf8 string
@@ -308,6 +321,7 @@ my %params = (
     'OSSL_PKEY_PARAM_DIST_ID' =>             "distid",
     'OSSL_PKEY_PARAM_PUB_KEY' =>             "pub",
     'OSSL_PKEY_PARAM_PRIV_KEY' =>            "priv",
+    'OSSL_PKEY_PARAM_OUTPUT_FORMATS' =>      "output_formats",
     # PKEY_PARAM_IMPLICIT_REJECTION isn't actually used, or meaningful.  We keep
     # it for API stability, but please use ASYM_CIPHER_PARAM_IMPLICIT_REJECTION
     # instead.
@@ -342,6 +356,7 @@ my %params = (
 
 # Elliptic Curve Explicit Domain Parameters
     'OSSL_PKEY_PARAM_EC_FIELD_TYPE' =>                   "field-type",
+    'OSSL_PKEY_PARAM_EC_FIELD_DEGREE' =>                 "field-degree",
     'OSSL_PKEY_PARAM_EC_P' =>                            "p",
     'OSSL_PKEY_PARAM_EC_A' =>                            "a",
     'OSSL_PKEY_PARAM_EC_B' =>                            "b",
@@ -420,6 +435,8 @@ my %params = (
     'OSSL_PKEY_PARAM_RSA_MGF1_DIGEST' =>      '*OSSL_PKEY_PARAM_MGF1_DIGEST',
     'OSSL_PKEY_PARAM_RSA_PSS_SALTLEN' =>      "saltlen",
     'OSSL_PKEY_PARAM_RSA_DERIVE_FROM_PQ'    =>     "rsa-derive-from-pq",
+    'OSSL_PKEY_PARAM_RSA_A' =>                "rsa-a",
+    'OSSL_PKEY_PARAM_RSA_B' =>                "rsa-b",
 
 # EC, X25519 and X448 Key generation parameters
     'OSSL_PKEY_PARAM_DHKEM_IKM' =>        "dhkem-ikm",
@@ -496,11 +513,11 @@ my %params = (
     'OSSL_SIGNATURE_PARAM_MU' =>                 "mu", # int
     'OSSL_SIGNATURE_PARAM_TEST_ENTROPY' =>       "test-entropy",
     'OSSL_SIGNATURE_PARAM_ADD_RANDOM' =>         "additional-random",
+    'OSSL_SIGNATURE_PARAM_TLS_VERSION' =>        "tls-version",
 
 # Asym cipher parameters
     'OSSL_ASYM_CIPHER_PARAM_DIGEST' =>                   '*OSSL_PKEY_PARAM_DIGEST',
     'OSSL_ASYM_CIPHER_PARAM_PROPERTIES' =>               '*OSSL_PKEY_PARAM_PROPERTIES',
-    'OSSL_ASYM_CIPHER_PARAM_ENGINE' =>                   '*OSSL_PKEY_PARAM_ENGINE',
     'OSSL_ASYM_CIPHER_PARAM_PAD_MODE' =>                 '*OSSL_PKEY_PARAM_PAD_MODE',
     'OSSL_ASYM_CIPHER_PARAM_MGF1_DIGEST' =>              '*OSSL_PKEY_PARAM_MGF1_DIGEST',
     'OSSL_ASYM_CIPHER_PARAM_MGF1_DIGEST_PROPS' =>        '*OSSL_PKEY_PARAM_MGF1_PROPERTIES',
@@ -624,7 +641,7 @@ my %params = (
     'OSSL_LIBSSL_RECORD_LAYER_PARAM_BLOCK_PADDING' =>  "block_padding",
     'OSSL_LIBSSL_RECORD_LAYER_PARAM_HS_PADDING' =>     "hs_padding",
 
-# Symmetric Key parametes
+# Symmetric Key parameters
     'OSSL_SKEY_PARAM_RAW_BYTES' => "raw-bytes",
     'OSSL_SKEY_PARAM_KEY_LENGTH' => "key-length",
 );
@@ -675,17 +692,23 @@ sub generate_public_macros {
 }
 
 sub trie_matched {
+  my $with_count = shift;
   my $field = shift;
   my $num = shift;
   my $indent1 = shift;
   my $indent2 = shift;
 
-  if (defined($num)) {
+  if ($field eq $invalid_param) {
+    printf "%sERR_raise_data(ERR_LIB_PROV, ERR_R_UNSUPPORTED,\n", $indent1;
+    printf "%s               \"param %%s is unsupported\", s);\n", $indent1;
+    printf "%sreturn 0;\n", $indent1;
+  } elsif (defined($num)) {
     printf "%sif (ossl_unlikely(r->num_%s >= %s)) {\n", $indent1, $field, $num;
     printf "%sERR_raise_data(ERR_LIB_PROV, PROV_R_TOO_MANY_RECORDS,\n", $indent2;
     printf "%s               \"param %%s present >%%d times\", s, $num);\n", $indent2;
     printf "%sreturn 0;\n", $indent2;
     printf "%s}\n", $indent1;
+    printf "%s++*count;\n", $indent1 if $with_count;
     printf "%sr->%s[r->num_%s++] = (OSSL_PARAM *)p;\n", $indent1, $field, $field;
   } else {
     printf "%sif (ossl_unlikely(r->%s != NULL)) {\n", $indent1, $field;
@@ -693,11 +716,13 @@ sub trie_matched {
     printf "%s               \"param %%s is repeated\", s);\n", $indent2;
     printf "%sreturn 0;\n", $indent2;
     printf "%s}\n", $indent1;
+    printf "%s++*count;\n", $indent1 if $with_count;
     printf "%sr->%s = (OSSL_PARAM *)p;\n", $indent1, $field;
   }
 }
 
 sub generate_decoder_from_trie {
+    my $with_count = shift;
     my $n = shift;
     my $trieref = shift;
     my $identmap = shift;
@@ -724,7 +749,7 @@ sub generate_decoder_from_trie {
         }
         print ")) {\n";
         printf "%s/* %s */\n", $indent1, $trieref->{'name'};
-        trie_matched($field, $num, $indent1, $indent2);
+        trie_matched($with_count, $field, $num, $indent1, $indent2);
         printf "%s}\n", $indent0;
 
         # If this is at the top level and it's conditional, we have to
@@ -746,7 +771,7 @@ sub generate_decoder_from_trie {
             printf "%sbreak;\n", $indent1;
             printf "%scase '\\0':\n", $indent0;
             output_ifdef($ifdefs->{$field});
-            trie_matched($field, $num, $indent1, $indent2);
+            trie_matched($with_count, $field, $num, $indent1, $indent2);
             output_endifdef($ifdefs->{$field});
         } else {
             printf "%sbreak;\n", $indent1;
@@ -756,7 +781,7 @@ sub generate_decoder_from_trie {
                 printf "   case '%s':", uc $l if ($l =~ /[a-z]/);
             }
             print "\n";
-            generate_decoder_from_trie($n + 1, $trieref->{$l}, $identmap, $concat_num, $ifdefs);
+            generate_decoder_from_trie($with_count, $n + 1, $trieref->{$l}, $identmap, $concat_num, $ifdefs);
         }
     }
     if ($need_break) {
@@ -829,8 +854,7 @@ sub locate_long_endings {
 }
 
 sub output_param_decoder {
-    my $decoder_name_base = shift;
-    my @params = @_;
+    my ($with_count, $decoder_name_base, @params) = @_;
     my @keys = ();
     my %prms = ();
     my %concat_num = ();
@@ -848,6 +872,10 @@ sub output_param_decoder {
 
         $prms{$pname} = $pident;
 
+        if ($pident eq $invalid_param) {
+            # Skip error cases in parameter list
+            next;
+        }
         if (defined $pnum) {
             if ($pnum eq 'hidden') {
                 next;
@@ -878,6 +906,10 @@ sub output_param_decoder {
     printf "struct %s_st {\n", $decoder_name_base;
     my %done_prms = ();
     foreach my $pident (sort values %prms) {
+        if ($pident eq $invalid_param) {
+            # Skip error cases in structure
+            next;
+        }
         if (not defined $done_prms{$pident}) {
             $done_prms{$pident} = 1;
             output_ifdef($ifdefs{$pident});
@@ -903,13 +935,15 @@ sub output_param_decoder {
 
     printf "#ifndef %s_decoder\n", $decoder_name_base;
     printf "static int %s_decoder\n", $decoder_name_base;
-    printf "    (const OSSL_PARAM *p, struct %s_st *r)\n", $decoder_name_base;
+    printf "    (const OSSL_PARAM *p, struct %s_st *r", $decoder_name_base;
+    printf "%s)\n", ($with_count ? ", int *count" : "");
     print "{\n";
     print "    const char *s;\n\n";
+    print "    *count = 0;\n" if $with_count;
     print "    memset(r, 0, sizeof(*r));\n";
     print "    if (p != NULL)\n";
     print "        for (; (s = p->key) != NULL; p++)\n";
-    generate_decoder_from_trie(0, \%t, \%prms, \%concat_num, \%ifdefs);
+    generate_decoder_from_trie($with_count, 0, \%t, \%prms, \%concat_num, \%ifdefs);
     print "    return 1;\n";
     print "}\n#endif\n";
     print "/* End of machine generated */";
@@ -919,6 +953,14 @@ sub produce_param_decoder {
     my $s;
 
     open(local *STDOUT, '>', \$s);
-    output_param_decoder(@_);
+    output_param_decoder(0, @_);
+    return $s;
+}
+
+sub produce_param_decoder_with_count {
+    my $s;
+
+    open(local *STDOUT, '>', \$s);
+    output_param_decoder(1, @_);
     return $s;
 }

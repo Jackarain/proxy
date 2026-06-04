@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1999-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -13,6 +13,8 @@
 #include <openssl/conf.h>
 #include <openssl/x509v3.h>
 #include "ext_dat.h"
+
+#include <crypto/asn1.h>
 
 const X509V3_EXT_METHOD ossl_v3_ns_ia5_list[8] = {
     EXT_IA5STRING(NID_netscape_base_url),
@@ -39,7 +41,7 @@ char *i2s_ASN1_IA5STRING(X509V3_EXT_METHOD *method, ASN1_IA5STRING *ia5)
 }
 
 ASN1_IA5STRING *s2i_ASN1_IA5STRING(X509V3_EXT_METHOD *method,
-                                   X509V3_CTX *ctx, const char *str)
+    X509V3_CTX *ctx, const char *str)
 {
     ASN1_IA5STRING *ia5;
     if (str == NULL) {
@@ -56,6 +58,6 @@ ASN1_IA5STRING *s2i_ASN1_IA5STRING(X509V3_EXT_METHOD *method,
     }
 #ifdef CHARSET_EBCDIC
     ebcdic2ascii(ia5->data, ia5->data, ia5->length);
-#endif                          /* CHARSET_EBCDIC */
+#endif /* CHARSET_EBCDIC */
     return ia5;
 }

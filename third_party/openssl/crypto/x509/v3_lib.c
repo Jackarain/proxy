@@ -1,5 +1,5 @@
 /*
- * Copyright 1999-2025 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1999-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -15,11 +15,12 @@
 #include <openssl/x509v3.h>
 
 #include "ext_dat.h"
+#include "x509_local.h"
 
 static STACK_OF(X509V3_EXT_METHOD) *ext_list = NULL;
 
 static int ext_cmp(const X509V3_EXT_METHOD *const *a,
-                   const X509V3_EXT_METHOD *const *b);
+    const X509V3_EXT_METHOD *const *b);
 static void ext_list_free(X509V3_EXT_METHOD *ext);
 
 int X509V3_EXT_add(X509V3_EXT_METHOD *ext)
@@ -37,22 +38,22 @@ int X509V3_EXT_add(X509V3_EXT_METHOD *ext)
 }
 
 static int ext_cmp(const X509V3_EXT_METHOD *const *a,
-                   const X509V3_EXT_METHOD *const *b)
+    const X509V3_EXT_METHOD *const *b)
 {
     return ((*a)->ext_nid - (*b)->ext_nid);
 }
 
 DECLARE_OBJ_BSEARCH_CMP_FN(const X509V3_EXT_METHOD *,
-                           const X509V3_EXT_METHOD *, ext);
+    const X509V3_EXT_METHOD *, ext);
 IMPLEMENT_OBJ_BSEARCH_CMP_FN(const X509V3_EXT_METHOD *,
-                             const X509V3_EXT_METHOD *, ext);
+    const X509V3_EXT_METHOD *, ext);
 
 #include "standard_exts.h"
 
 const X509V3_EXT_METHOD *X509V3_EXT_get_nid(int nid)
 {
     X509V3_EXT_METHOD tmp;
-    const X509V3_EXT_METHOD *t = &tmp, *const *ret;
+    const X509V3_EXT_METHOD *t = &tmp, *const * ret;
     int idx;
 
     if (nid < 0)
@@ -70,7 +71,7 @@ const X509V3_EXT_METHOD *X509V3_EXT_get_nid(int nid)
     return sk_X509V3_EXT_METHOD_value(ext_list, idx);
 }
 
-const X509V3_EXT_METHOD *X509V3_EXT_get(X509_EXTENSION *ext)
+const X509V3_EXT_METHOD *X509V3_EXT_get(const X509_EXTENSION *ext)
 {
     int nid;
     if ((nid = OBJ_obj2nid(X509_EXTENSION_get_object(ext))) == NID_undef)
@@ -129,13 +130,45 @@ int X509V3_add_standard_extensions(void)
     return 1;
 }
 
+int ossl_ignored_x509_extension(const X509_EXTENSION *ex, int flags)
+{
+    /*
+     * Empty OCTET STRINGs and empty SEQUENCEs encode to just two bytes of tag
+     * (0x04 or 0x30) and length (0x00).  We use this fact to suppress empty
+     * AKID and SKID extensions that may be briefly generated when processing
+     * the "= none" value or only ":nonss"-qualified AKIDs when the subject is
+     * self-signed.
+     *
+     * The resulting extension is empty, and must not be retained, but does
+     * serve to drop any previous value of the same extension, when called
+     * via
+     * - X509v3_add_extensions(), or
+     * - either of X509V3_add1_i2d() or X509V3_EXT_add_nconf_sk(),
+     *   with a flags (or ctx->flags) value that allows replacement.
+     */
+    if (ex->value.length == 2
+        && (ex->value.data[0] == 0x30 || ex->value.data[0] == 0x04)) {
+        ASN1_OBJECT *obj = ex->object;
+        ASN1_OBJECT *skid = OBJ_nid2obj(NID_subject_key_identifier);
+        ASN1_OBJECT *akid = OBJ_nid2obj(NID_authority_key_identifier);
+
+        if (OBJ_cmp(obj, skid) == 0 || OBJ_cmp(obj, akid) == 0) {
+            if ((flags & X509V3_ADD_SILENT) == 0)
+                ERR_raise_data(ERR_LIB_X509, X509_R_INVALID_EXTENSION,
+                    "Invalid empty X.509 %s extension", obj->sn);
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* Return an extension internal structure */
 
-void *X509V3_EXT_d2i(X509_EXTENSION *ext)
+void *X509V3_EXT_d2i(const X509_EXTENSION *ext)
 {
     const X509V3_EXT_METHOD *method;
     const unsigned char *p;
-    ASN1_STRING *extvalue;
+    const ASN1_STRING *extvalue;
     int extlen;
 
     if ((method = X509V3_EXT_get(ext)) == NULL)
@@ -165,7 +198,7 @@ void *X509V3_EXT_d2i(X509_EXTENSION *ext)
  */
 
 void *X509V3_get_d2i(const STACK_OF(X509_EXTENSION) *x, int nid, int *crit,
-                     int *idx)
+    int *idx)
 {
     int lastpos, i;
     X509_EXTENSION *ex, *found_ex = NULL;
@@ -221,7 +254,7 @@ void *X509V3_get_d2i(const STACK_OF(X509_EXTENSION) *x, int nid, int *crit,
  */
 
 int X509V3_add1_i2d(STACK_OF(X509_EXTENSION) **x, int nid, void *value,
-                    int crit, unsigned long flags)
+    int crit, unsigned long flags)
 {
     int errcode, extidx = -1;
     X509_EXTENSION *ext = NULL, *extmp;
@@ -257,8 +290,7 @@ int X509V3_add1_i2d(STACK_OF(X509_EXTENSION) **x, int nid, void *value,
         /*
          * If replace existing or delete, error since extension must exist
          */
-        if ((ext_op == X509V3_ADD_REPLACE_EXISTING) ||
-            (ext_op == X509V3_ADD_DELETE)) {
+        if ((ext_op == X509V3_ADD_REPLACE_EXISTING) || (ext_op == X509V3_ADD_DELETE)) {
             errcode = X509V3_R_EXTENSION_NOT_FOUND;
             goto err;
         }
@@ -279,9 +311,13 @@ int X509V3_add1_i2d(STACK_OF(X509_EXTENSION) **x, int nid, void *value,
     /* If extension exists replace it.. */
     if (extidx >= 0) {
         extmp = sk_X509_EXTENSION_value(*x, extidx);
-        X509_EXTENSION_free(extmp);
-        if (!sk_X509_EXTENSION_set(*x, extidx, ext))
+        if (ossl_ignored_x509_extension(ext, X509V3_ADD_SILENT)) {
+            if (!sk_X509_EXTENSION_delete(*x, extidx))
+                return -1;
+        } else if (!sk_X509_EXTENSION_set(*x, extidx, ext)) {
             return -1;
+        }
+        X509_EXTENSION_free(extmp);
         return 1;
     }
 
@@ -295,14 +331,14 @@ int X509V3_add1_i2d(STACK_OF(X509_EXTENSION) **x, int nid, void *value,
     *x = ret;
     return 1;
 
- m_fail:
+m_fail:
     /* ERR_raise(ERR_LIB_X509V3, ERR_R_CRYPTO_LIB); */
     if (ret != *x)
         sk_X509_EXTENSION_free(ret);
     X509_EXTENSION_free(ext);
     return -1;
 
- err:
+err:
     if (!(flags & X509V3_ADD_SILENT))
         ERR_raise(ERR_LIB_X509V3, errcode);
     return 0;

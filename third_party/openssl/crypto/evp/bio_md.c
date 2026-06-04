@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2021 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -32,7 +32,7 @@ static const BIO_METHOD methods_md = {
     md_write,
     bread_conv,
     md_read,
-    NULL,                       /* md_puts, */
+    NULL, /* md_puts, */
     md_gets,
     md_ctrl,
     md_new,
@@ -89,7 +89,8 @@ static int md_read(BIO *b, char *out, int outl)
     if (BIO_get_init(b)) {
         if (ret > 0) {
             if (EVP_DigestUpdate(ctx, (unsigned char *)out,
-                                 (unsigned int)ret) <= 0)
+                    (unsigned int)ret)
+                <= 0)
                 return -1;
         }
     }
@@ -115,7 +116,7 @@ static int md_write(BIO *b, const char *in, int inl)
     if (BIO_get_init(b)) {
         if (ret > 0) {
             if (!EVP_DigestUpdate(ctx, (const unsigned char *)in,
-                                  (unsigned int)ret)) {
+                    (unsigned int)ret)) {
                 BIO_clear_retry_flags(b);
                 return 0;
             }
@@ -135,7 +136,6 @@ static long md_ctrl(BIO *b, int cmd, long num, void *ptr)
     EVP_MD *md;
     long ret = 1;
     BIO *dbio, *next;
-
 
     ctx = BIO_get_data(b);
     next = BIO_next(b);
@@ -167,12 +167,22 @@ static long md_ctrl(BIO *b, int cmd, long num, void *ptr)
         else
             ret = 0;
         break;
+    case BIO_CTRL_EOF:
+        /*
+         * If there is no ctx or no next BIO, BIO_read() returns 0, which means
+         * EOF, BIO_eof() should return 1 in this case.
+         */
+        if (ctx == NULL || next == NULL)
+            ret = 1;
+        else
+            ret = BIO_ctrl(next, cmd, num, ptr);
+        break;
+    case BIO_CTRL_FLUSH:
     case BIO_C_DO_STATE_MACHINE:
         BIO_clear_retry_flags(b);
         ret = BIO_ctrl(next, cmd, num, ptr);
         BIO_copy_next_retry(b);
         break;
-
     case BIO_C_SET_MD:
         md = ptr;
         ret = EVP_DigestInit_ex(ctx, md, NULL);

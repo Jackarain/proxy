@@ -18,7 +18,7 @@ B<openssl> B<x509>
 [B<-inform> B<DER>|B<PEM>]
 [B<-vfyopt> I<nm>:I<v>]
 [B<-key> I<filename>|I<uri>]
-[B<-keyform> B<DER>|B<PEM>|B<P12>|B<ENGINE>]
+[B<-keyform> B<DER>|B<PEM>|B<P12>]
 [B<-signkey> I<filename>|I<uri>]
 [B<-out> I<filename>]
 [B<-outform> B<DER>|B<PEM>]
@@ -72,7 +72,7 @@ B<openssl> B<x509>
 [B<-CA> I<filename>|I<uri>]
 [B<-CAform> B<DER>|B<PEM>|B<P12>]
 [B<-CAkey> I<filename>|I<uri>]
-[B<-CAkeyform> B<DER>|B<PEM>|B<P12>|B<ENGINE>]
+[B<-CAkeyform> B<DER>|B<PEM>|B<P12>]
 [B<-CAserial> I<filename>]
 [B<-CAcreateserial>]
 [B<-trustout>]
@@ -82,7 +82,7 @@ B<openssl> B<x509>
 [B<-clrreject>]
 [B<-addreject> I<arg>]
 {- $OpenSSL::safe::opt_r_synopsis -}
-{- $OpenSSL::safe::opt_engine_synopsis -}{- $OpenSSL::safe::opt_provider_synopsis -}
+{- $OpenSSL::safe::opt_provider_synopsis -}
 
 =head1 DESCRIPTION
 
@@ -193,7 +193,7 @@ B<-not_before> and B<-not_after>.
 
 This option is an alias of B<-key>.
 
-=item B<-keyform> B<DER>|B<PEM>|B<P12>|B<ENGINE>
+=item B<-keyform> B<DER>|B<PEM>|B<P12>
 
 The key input format; unspecified by default.
 See L<openssl-format-options(1)> for details.
@@ -352,8 +352,12 @@ contained in the input.
 
 =item B<-checkend> I<arg>
 
-Checks if the certificate expires within the next I<arg> seconds and exits
-nonzero if yes it will expire or zero if not.
+Without B<-multi> checks if the certificate expires within the next
+I<arg> seconds and exits nonzero if it will expire or zero if not.
+
+With B<-multi> checks if any certificate in the input will expire
+within the next I<arg> seconds and exits nonzero if any will expire
+or zero if none will.
 
 =item B<-checkhost> I<host>
 
@@ -479,19 +483,44 @@ neither subject identifier nor authority key identifier extensions are included.
 
 Configuration file containing certificate and request X.509 extensions to add.
 
+When both of the B<-extfile> I<filename> and B<-extensions> I<section> options
+are given, the extensions to add are taken from the named I<section> of the
+file named I<filename>.
+This file must exist, be readable, and all the listed extensions must be valid.
+
+If only the B<-extfile> I<filename> option is given, the section name to use is
+taken from the value of the variable named C<extensions> in the file's unnamed
+section (also called its B<default> section, see L<config(5)>).
+If no B<extensions> setting is found, the file's B<default> (unnamed) section
+itself is instead used as the list of extensions to add.
+As before, the file must be readable and all the extensions must be valid.
+
+Prior to OpenSSL 4.0, the B<-extensions> option required that the B<-extfile>
+option be also specified.
+As of OpenSSL 4.0 the default configuration file is used instead as described
+below.
+
+If only the B<-extensions> I<section> option is given, the named I<section> of
+the default configuration file, whether from the C<OPENSSL_CONF> environment
+variable, or the built-in default, is used as list of extensions to add.
+As before, the file must be readable and all the extensions must be valid.
+
+If neither of the options are given, an attempt is made to open the default
+configuration file (as detailed above).
+If the file does not exist or cannot be opened, no extensions are added.
+If the unnamed section (B<default>, see L<config(5)>) of the file does not list
+an B<extensions> variable, no extensions are added.
+Otherwise, the section named by the B<extensions> variable is taken to be the
+list of extensions to add.
+The extensions listed there must all be valid.
+
 =item B<-extensions> I<section>
 
 The section in the extfile to add X.509 extensions from.
-If this option is not
-specified then the extensions should either be contained in the unnamed
-(default) section or the default section should contain a variable called
-"extensions" which contains the section to use.
+See the description of B<-extfile> above for details.
 
 See the L<x509v3_config(5)> manual page for details of the
 extension section format.
-
-Unless specified otherwise,
-key identifier extensions are included as described in L<x509v3_config(5)>.
 
 =item B<-sigopt> I<nm>:I<v>
 
@@ -542,7 +571,7 @@ Sets the CA private key to sign a certificate with.
 The private key must match the public key of the certificate given with B<-CA>.
 If this option is not provided then the key must be present in the B<-CA> input.
 
-=item B<-CAkeyform> B<DER>|B<PEM>|B<P12>|B<ENGINE>
+=item B<-CAkeyform> B<DER>|B<PEM>|B<P12>
 
 The format for the CA key; unspecified by default.
 See L<openssl-format-options(1)> for details.
@@ -640,8 +669,6 @@ It accepts the same values as the B<-addtrust> option.
 =over 4
 
 {- $OpenSSL::safe::opt_r_item -}
-
-{- $OpenSSL::safe::opt_engine_item -}
 
 {- $OpenSSL::safe::opt_provider_item -}
 
@@ -792,6 +819,12 @@ Set a certificate to be trusted for SSL client use and change set its alias to
  openssl x509 -in cert.pem -addtrust clientAuth \
         -setalias "Steve's Class 1 CA" -out trust.pem
 
+Check if any certificates in a chain are due to expire within the next 30 days
+(returns zero if none will expire, nonzero if any will expire):
+
+ openssl x509 -in chain.pem -multi -checkend $[3600*24*30] \
+        && echo 'perform renewal' || echo 'renewal unnecessary'
+
 =head1 NOTES
 
 The conversion to UTF8 format used with the name options assumes that
@@ -820,6 +853,7 @@ L<openssl-ca(1)>,
 L<openssl-genrsa(1)>,
 L<openssl-gendsa(1)>,
 L<openssl-verify(1)>,
+L<config(5)>,
 L<x509v3_config(5)>
 
 =head1 HISTORY
@@ -833,16 +867,24 @@ form must have their links rebuilt using L<openssl-rehash(1)> or similar.
 The B<-signkey> option has been renamed to B<-key> in OpenSSL 3.0,
 keeping the old name as an alias.
 
-The B<-engine> option was deprecated in OpenSSL 3.0.
-
 The B<-C> option was removed in OpenSSL 3.0.
 
 Since OpenSSL 3.2, generated certificates bear X.509 version 3,
 and key identifier extensions are included by default.
 
+The B<-engine> option was removed in OpenSSL 4.0.
+
+OpenSSL 4.0 added support for specifying extensions to add via the default
+configuration file.
+See B<-extfile> above for details.
+
+As of OpenSSL 4.0, the B<x509> utility no longer has specialised built-in logic
+to add the SKID or AKID extensions, they are handled through configuration
+files and command-line options just like any other extension.
+
 =head1 COPYRIGHT
 
-Copyright 2000-2025 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2000-2026 The OpenSSL Project Authors. All Rights Reserved.
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy
