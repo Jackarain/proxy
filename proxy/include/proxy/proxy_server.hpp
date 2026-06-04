@@ -6868,9 +6868,16 @@ R"x*x*x(<html>
 						if (gen->type == GEN_DNS)
 						{
 							const ASN1_IA5STRING* domain = gen->d.dNSName;
-							if (domain->type == V_ASN1_IA5STRING && domain->data && domain->length)
+							auto* non_const_domain = const_cast<ASN1_STRING*>(domain);
+
+							if (ASN1_STRING_type(non_const_domain) == V_ASN1_IA5STRING &&
+								ASN1_STRING_get0_data(non_const_domain) &&
+								ASN1_STRING_length(non_const_domain))
 							{
-								file.subject_alt_name_.emplace_back((const char*)(domain->data), domain->length);
+								file.subject_alt_name_.emplace_back(
+									(const char*)(ASN1_STRING_get0_data(non_const_domain)),
+									ASN1_STRING_length(non_const_domain)
+								);
 							}
 						}
 					}
@@ -6881,7 +6888,24 @@ R"x*x*x(<html>
 				}
 
 				char cert_cname[256] = { 0 };
-				X509_NAME_get_text_by_NID(X509_get_subject_name(x509_cert), NID_commonName, cert_cname, sizeof cert_cname);
+				{
+					auto* x509_name = X509_get_subject_name(x509_cert);
+					int idx = X509_NAME_get_index_by_NID(x509_name, NID_commonName, -1);
+					if (idx >= 0)
+					{
+						auto* entry = X509_NAME_get_entry(x509_name, idx);
+						if (entry)
+						{
+							auto* data = X509_NAME_ENTRY_get_data(entry);
+							if (data && ASN1_STRING_length(data) > 0)
+							{
+								int copy_len = (std::min)(ASN1_STRING_length(data), (int)(sizeof(cert_cname) - 1));
+								memcpy(cert_cname, ASN1_STRING_get0_data(data), copy_len);
+								cert_cname[copy_len] = '\0';
+							}
+						}
+					}
+				}
 				file.domain_ = cert_cname;
 
 				// 保存到 certificates 中.
