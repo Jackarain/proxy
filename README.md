@@ -199,7 +199,7 @@ Host example
 
 ## DNS over HTTPS (DoH) 代理功能
 
-`proxy server` 内置了 **DNS over HTTPS (DoH)** 代理功能，可以将传统的 DNS 查询转为通过 HTTPS 加密传输，有效防止 DNS 劫持和嗅探。
+`proxy server` 内置了 **DNS over HTTPS (DoH)** 代理功能，它可以代理 DoH 请求并最终通过指定的上游返回 DNS 查询结果，这可有效防止 DNS 劫持和嗅探。
 
 ### DoH 配置参数
 
