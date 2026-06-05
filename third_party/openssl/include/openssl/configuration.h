@@ -255,6 +255,34 @@ extern "C" {
 #undef OPENSSL_NO_COMP_ALG
 #endif
 
+/* Cross-platform word size definitions */
+#undef THIRTY_TWO_BIT
+#undef SIXTY_FOUR_BIT
+#undef SIXTY_FOUR_BIT_LONG
+
+#if defined(_WIN64)                                      /* WIN64 */
+#  define SIXTY_FOUR_BIT
+#  undef  SIXTY_FOUR_BIT_LONG
+#elif defined(_WIN32)                                    /* WIN32 */
+#  define THIRTY_TWO_BIT
+#elif defined(__x86_64__) || defined(__x86_64) || \
+      defined(__aarch64__)    || defined(_M_ARM64) || \
+      defined(__powerpc64__)  || defined(__ppc64__) || \
+      defined(__s390x__)      || \
+      defined(__mips64)       || defined(__mips64__) || \
+      defined(__riscv) && (__riscv_xlen == 64) || \
+      defined(__sparc64__)    || defined(__ia64__) || \
+      defined(__LP64__) && __LP64__
+#  define SIXTY_FOUR_BIT_LONG
+#  undef  SIXTY_FOUR_BIT
+#else
+#  define THIRTY_TWO_BIT
+#endif
+
+#if defined(SIXTY_FOUR_BIT) + defined(SIXTY_FOUR_BIT_LONG) + defined(THIRTY_TWO_BIT) != 1
+#  error "Exactly one of THIRTY_TWO_BIT, SIXTY_FOUR_BIT, SIXTY_FOUR_BIT_LONG must be defined!"
+#endif
+
 #ifdef __cplusplus
 }
 #endif
