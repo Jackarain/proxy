@@ -1,0 +1,8 @@
+--------------------
+./configure --help
+Sun Jun  7 01:03:20 AM CST 2026
+usage:
+  configure [--const] [--zprefix] [--prefix=PREFIX]  [--eprefix=EXPREFIX]
+    [--insecure] [--static] [--64] [--libdir=LIBDIR] [--sharedlibdir=LIBDIR]
+    [--includedir=INCLUDEDIR] [--mandir=MANDIR]
+    [--archs="-arch i386 -arch x86_64"] [--disable-crcvx]
