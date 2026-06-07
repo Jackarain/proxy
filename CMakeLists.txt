@@ -15,15 +15,6 @@ include(CheckCXXLinkerFlag)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_program(CCACHE_PROGRAM ccache)
-
-if (CCACHE_PROGRAM)
-    # 针对 C 和 C++ 分别开启 ccache
-    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
-    set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
-    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-endif()
-
 ################################################################################
 
 # Disable in-source builds to prevent source tree corruption.
@@ -78,6 +69,8 @@ option(ENABLE_USE_WOLFSSL			"Build with wolfssl support" OFF)
 
 option(ENABLE_MOLD					"Build using mold" OFF)
 option(ENABLE_LLD					"Build using lld" OFF)
+option(ENABLE_USE_CCACHE				"Using ccache for fast compile" OFF)
+
 option(ENABLE_ASIO_HANDLER_TRACKING "Enable asio handler tracking" OFF)
 
 option(ENABLE_STATIC_LINK_TO_GCC	"Build static link to gcc" ON)
@@ -108,6 +101,15 @@ endif()
 
 find_program(MOLD_LINKER mold)
 find_program(LLD_LINKER lld)
+find_program(CCACHE_PROGRAM ccache)
+
+if (CCACHE_PROGRAM AND ENABLE_USE_CCACHE)
+    # 针对 C 和 C++ 分别开启 ccache
+    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
+
 
 ################################################################################
 
