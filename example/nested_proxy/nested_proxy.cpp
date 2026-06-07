@@ -19,7 +19,7 @@
 
 #include "proxy/socks_client.hpp"
 #include "proxy/http_proxy_client.hpp"
-#include "proxy/proxy_server.hpp"
+#include "proxy/proxy.hpp"
 #include "proxy/logging.hpp"
 
 #include "proxy/use_awaitable.hpp"

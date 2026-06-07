@@ -19,6 +19,8 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/ssl_stream.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/stdio_stream.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_server.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_session.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/use_awaitable.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/http_proxy_client.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/xxhash.hpp
@@ -31,6 +33,8 @@ target_sources(libproxy
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ip_database.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_server.cpp
 )
 
 target_include_directories(libproxy
