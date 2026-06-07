@@ -8,6 +8,7 @@ add_executable(proxy_server
 
 target_link_libraries(proxy_server
     ${PROXY_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
 )
 
 set_property(SOURCE version.cpp PROPERTY COMPILE_DEFINITIONS "VERSION_GIT=\"${PVERSION}\"")
