@@ -570,11 +570,14 @@ namespace proxy {
 		// PAM 认证
 
 #ifdef USE_PAM_AUTH
+		// PAM 认证回调函数, 用于与 PAM 模块交互.
 		static int pam_conv_func(int num_msg, const struct pam_message **msg,
 			struct pam_response **resp, void *appdata_ptr);
 
+		// 同步执行 PAM 用户认证.
 		bool pam_authenticate_user(const char *service, const char *username, const char *password) noexcept;
 
+		// 异步执行 PAM 用户认证, 在后台线程中执行以避免阻塞.
 		template <typename CompletionToken>
 		auto async_pam_auth(const std::string& username, const std::string& passwd,
 			const std::string& service_name, CompletionToken&& token) noexcept
@@ -655,12 +658,16 @@ namespace proxy {
 		}
 
 	public:
+		// 启动 session, 开始处理客户端连接.
 		void start() noexcept override;
 
+		// 关闭当前 session 连接.
 		void close() noexcept override;
 
+		// 设置透明代理 (TPROXY) 的目标端点.
 		void setup_tproxy(const net::ip::tcp::endpoint& tproxy_remote) noexcept override;
 
+		// 返回当前连接的唯一标识符.
 		size_t connection_id() const noexcept override;
 
 	private:
@@ -668,13 +675,16 @@ namespace proxy {
 		//////////////////////////////////////////////////////////////////////////
 		// 专用代理模式
 
+		// stdio 代理模式, 将 stdin/stdout 作为一条逻辑连接进行转发.
 		net::awaitable<void> stdio_proxy() noexcept;
 
+		// 透明代理模式, 用于处理透明代理转发的流量.
 		net::awaitable<void> transparent_proxy() noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// 混淆与协议侦测
 
+		// 与客户端进行噪声(noise)握手, 协商后续数据加密的密钥.
 		template <typename T>
 		inline net::awaitable<bool>
 		noise_handshake(T& socket, std::array<uint8_t, 16>& inkey, std::array<uint8_t, 16>& outkey) noexcept
@@ -997,28 +1007,34 @@ namespace proxy {
 		//////////////////////////////////////////////////////////////////////////
 		// 代理协议处理
 
+		// 启动代理协议处理, 根据检测到的协议类型进入相应的处理流程.
 		net::awaitable<void> start_proxy() noexcept;
 
+		// SOCKS5 代理连接处理.
 		net::awaitable<void> socks_connect_v5() noexcept;
 
-		//////////////////////////////////////////////////////////////////////////
-		// UDP 转发
-
+		// 在 udp client 和 server 之间转发 UDP 数据包.
 		net::awaitable<void> forward_udp(udp::socket& client, udp::socket& server) noexcept;
 
+		// SOCKS4 代理连接处理.
 		net::awaitable<void> socks_connect_v4() noexcept;
 
+		// HTTP 代理认证处理, 解析 Proxy-Authorization 头并验证.
 		net::awaitable<int> http_authorization(std::string_view pa) noexcept;
 
+		// HTTP GET 代理请求处理.
 		net::awaitable<bool> http_proxy_get() noexcept;
 
+		// HTTP CONNECT 隧道代理请求处理.
 		net::awaitable<bool> http_proxy_connect() noexcept;
 
+		// SOCKS5 用户名/密码认证处理.
 		net::awaitable<bool> socks_auth() noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// 数据传输
 
+		// 在两个流之间并发传输数据, 支持限速和超时控制.
 		template<typename S1, typename S2>
 		net::awaitable<void>
 		transfer(S1& from, S2& to, size_t& bytes_transferred) noexcept
@@ -1115,6 +1131,7 @@ namespace proxy {
 			co_return;
 		}
 
+		// 检查连接条件, 在需要时绑定本地接口地址.
 		template <typename Stream, typename Endpoint>
 		inline bool check_condition(
 			const boost::system::error_code&, Stream& stream, Endpoint&) const noexcept
@@ -1139,14 +1156,17 @@ namespace proxy {
 		//////////////////////////////////////////////////////////////////////////
 		// 连接相关，对外发起连接和对上游代理服务器的连接
 
+		// 连接到上游代理服务器.
 		net::awaitable<boost::system::error_code>
 		connect_proxy_pass(tcp::socket& remote_socket, tcp::resolver::results_type targets) noexcept;
 
+		// 与上游代理服务器进行协议握手 (SOCKS/HTTP).
 		net::awaitable<boost::system::error_code>
 		proxy_pass_handshake(tcp::socket& remote_socket,
 			const std::string& target_host, uint16_t target_port,
 			const urls::url& proxy_url, int command = SOCKS_CMD_CONNECT);
 
+		// 开始连接到目标主机, 支持域名解析和代理级联.
 		net::awaitable<boost::system::error_code> start_connect_host(
 			std::string target_host,
 			uint16_t target_port,
@@ -1159,12 +1179,15 @@ namespace proxy {
 		//////////////////////////////////////////////////////////////////////////
 		// HTTP 静态服务
 
+		// 处理 HTTP 静态文件服务请求, 返回本地文档目录中的文件.
 		net::awaitable<void>
 		normal_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser) noexcept;
 
+		// 拼接文档目录和目标路径.
 		static fs::path path_cat(
 			const std::wstring& doc, const std::wstring& target) noexcept;
 
+		// 将路径转换为 UNC 路径 (Windows 下处理长路径).
 		template<typename Path>
 		static fs::path make_unc_path(const Path& path) noexcept
 		{
@@ -1181,16 +1204,21 @@ namespace proxy {
 #endif
 		}
 
+		// 从 HTTP 请求目标路径生成文件系统路径字符串.
 		static std::wstring make_target_path(const std::string& target) noexcept;
 
+		// 从文档根目录和请求目标生成实际文件系统路径.
 		static fs::path make_real_target_path(const std::string& doc_directory,
 			const std::string& target) noexcept;
 
+		// 获取文件的最后修改时间和 UNC 路径.
 		static std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file) noexcept;
 
+		// 格式化目录下的文件列表, 返回每个文件/目录的名称.
 		std::vector<std::wstring>
 		format_path_list(const fs::path& path, boost::system::error_code& ec) const;
 
+		// HTTP JSON 目录列表实现的模板函数, 支持迭代器遍历目录.
 		template <typename DirIter>
 		inline net::awaitable<void> on_http_json_impl(const http_context& hctx) noexcept
 		{
@@ -1296,17 +1324,22 @@ namespace proxy {
 			co_return;
 		}
 
+		// 处理 HTTP JSON 格式的完整目录列表请求.
 		net::awaitable<void> on_http_all_json(const http_context& hctx) noexcept;
 
+		// 处理 HTTP JSON 格式的目录列表请求.
 		net::awaitable<void> on_http_json(const http_context& hctx) noexcept;
 
+		// 处理 HTTP HTML 格式的目录列表请求.
 		net::awaitable<void> on_http_dir(const http_context& hctx) noexcept;
 
+		// 处理 HTTP GET 文件请求, 返回静态文件内容.
 		net::awaitable<void> on_http_get(const http_context& hctx) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// DNS 查询相关实现
 
+		// 处理 HTTP DNS 查询请求 (支持 DNS-over-HTTPS 和 UDP).
 		net::awaitable<void> on_http_dns_query(const http_context& hctx) noexcept;
 
 		// udp_dns_query 通过传统 UDP 协议转发 DNS 查询到上游服务器.
@@ -1380,53 +1413,69 @@ namespace proxy {
 		//////////////////////////////////////////////////////////////////////////
 		// HTTP 响应辅助
 
+		// 生成 HTTP 响应中的 Date 头字符串.
 		static std::string server_date_string() noexcept;
 
+		// 返回默认 HTTP 响应 (指定状态码和消息体).
 		net::awaitable<void> default_http_route(
 			const string_request& request, std::string response, http::status status) noexcept;
 
+		// 返回 HTTP 重定向响应 (Location).
 		net::awaitable<void> location_http_route(
 			const string_request& request, const std::string& path) noexcept;
 
+		// 返回 HTTP 403 Forbidden 响应.
 		net::awaitable<void> forbidden_http_route(const string_request& request) noexcept;
 
+		// 返回 HTTP 401 Unauthorized 响应.
 		net::awaitable<void> unauthorized_http_route(const string_request& request) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// 流控制工具
 
+		// 配置指定用户的速率限制.
 		void user_rate_limit_config(const std::string& user) noexcept;
 
+		// 取消流超时设置, 使其永不超时.
 		static void stream_expires_never(variant_stream_type& stream) noexcept;
 
+		// 设置流超时时间.
 		static void stream_expires_after(
 			variant_stream_type& stream, net::steady_timer::duration expiry_time) noexcept;
 
+		// 设置流速率限制.
 		static void stream_rate_limit(variant_stream_type& stream, int rate) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// DNS 解析与缓存
 
+		// 从 DNS 缓存中获取主机名解析结果.
 		tcp::resolver::results_type
 		get_resolver_from_cache(const std::string& hostname, uint16_t port) noexcept;
 
+		// 异步解析目标主机地址.
 		net::awaitable<tcp::resolver::results_type>
 		resolve_targets(const std::string& hostname, uint16_t port_number) noexcept;
 
+		// 异步解析上游代理服务器地址.
 		net::awaitable<tcp::resolver::results_type>
 		resolve_proxy_pass_targets() noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 
+		// 设置透明代理 (TPROXY) 的 socket mark, 用于策略路由.
 		net::awaitable<void>
 		tproxy_set_mark(int socket_fd) const noexcept;
 
+		// 异步连接到多个目标地址 (支持 Happy Eyeballs).
 		net::awaitable<boost::system::error_code>
 		async_connect_targets(tcp::socket& socket, tcp::resolver::results_type& targets) noexcept;
 
+		// 实例化上游代理连接, 可选择是否使用 SSL 加密.
 		net::awaitable<variant_stream_type>
 		instantiate_proxy_pass(tcp::socket remote_socket, bool proxy_pass_use_ssl) noexcept;
 
+		// 并发转发本地和远程之间的双向数据.
 		net::awaitable<void> concurrent_transfer();
 
 		//////////////////////////////////////////////////////////////////////////

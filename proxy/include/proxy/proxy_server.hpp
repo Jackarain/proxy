@@ -90,16 +90,20 @@ namespace proxy {
 		proxy_server(net::any_io_executor executor, proxy_server_option opt);
 
 	public:
+		// 创建 proxy_server 实例的工厂方法.
 		static std::shared_ptr<proxy_server>
 		make(net::any_io_executor executor, proxy_server_option opt);
 
 		virtual ~proxy_server() = default;
 
+		// 验证 SSL 证书是否匹配 RFC 2818 的主机名规则.
 		bool rfc2818_verification_match_pattern(
 			const char* pattern, std::size_t pattern_length, const char* host);
 
+		// 根据文件内容判断 PEM 文件类型 (cert/key/pwd/dhparam).
 		pem_file determine_pem_type(const fs::path& filepath) noexcept;
 
+		// 遍历证书目录, 收集所有证书文件信息.
 		void walk_certificate(
 			const fs::path& directory, std::vector<certificate_file>& certificates) noexcept;
 
@@ -124,39 +128,53 @@ namespace proxy {
 #  endif
 #endif // defined(__linux__)
 
+		// 初始化 acceptor 并开始监听客户端连接.
 		void init_acceptor() noexcept;
 
+		// 更新证书列表 (重新加载证书文件).
 		void update_certificate(
 			const fs::path& directory, std::vector<certificate_file>& certificates) noexcept;
 
+		// 初始化 SSL 上下文, 设置证书和回调.
 		void init_ssl_context() noexcept;
 
+		// ALPN 协议选择回调 (静态, 供 OpenSSL 调用).
 		static int alpn_select_proto_cb(SSL *ssl, const unsigned char **out,
 								unsigned char *outlen, const unsigned char *in,
 								unsigned int inlen, void *arg);
 
+		// ALPN 协议选择处理 (选择 http/1.1 协议).
 		int alpn_select_proto(SSL *ssl, const unsigned char **out,
 			unsigned char *outlen, const unsigned char *in,
 			unsigned int inlen) noexcept;
 
+		// SNI 回调 (静态, 供 OpenSSL 调用).
 		static int ssl_sni_callback(SSL *ssl, int *ad, void *arg);
 
+		// SNI 回调处理, 根据客户端 SNI 选择对应证书.
 		int sni_callback(SSL *ssl, [[maybe_unused]] int *ad) noexcept;
 
+		// 定时检查并更新过期证书.
 		net::awaitable<void> certificate_check_timer();
 
 	public:
+		// 启动代理服务, 开始监听客户端连接.
 		void start() noexcept;
 
+		// 关闭代理服务, 停止所有监听和会话.
 		void close() noexcept;
 
 	private:
+		// 移除指定 ID 的 session.
 		void remove_session(size_t id) override;
 
+		// 返回当前 session 数量.
 		size_t num_session() override;
 
+		// 返回当前服务器配置选项.
 		const proxy_server_option& option() override;
 
+		// 返回 SSL 上下文引用.
 		net::ssl::context& ssl_context() override;
 
 	private:
@@ -274,8 +292,8 @@ namespace proxy {
 		}
 
 		// start_proxy_listen 启动一个协程, 用于监听 proxy client 的连接.
-		// 当有新的连接到来时, 会创建一个 proxy_session 对象, 并启动 proxy_session
-		// 的对象.
+		// 当有新的连接到来时, 会创建一个 proxy_session 对象, 并启动
+		// proxy_session 对象.
 		template <typename T>
 		net::awaitable<void> start_proxy_listen(T& acceptor) noexcept
 		{
@@ -299,16 +317,20 @@ namespace proxy {
 			co_return;
 		}
 
+		// 设置透明代理, 获取客户端原始目标地址.
 		net::awaitable<std::optional<net::ip::tcp::endpoint>>
 		setup_tproxy(proxy_tcp_socket& socket, size_t connection_id) noexcept;
 
+		// 获取当前机器所有本地 IP 地址.
 		net::awaitable<void> get_local_address() noexcept;
 
 		// 判断 IP 地址是否在指定的 CIDR 范围.
 		bool ip_filter(const std::string& ip_cidr, const std::string& ip) const noexcept;
 
+		// 根据地区信息过滤客户端连接 (白/黑名单).
 		bool region_filter(const std::vector<std::string>& local_info) const noexcept;
 
+		// 后端线程入口, 用于处理同步转异步操作.
 		void backend_thread_run() noexcept;
 
 #if defined(__linux__)
@@ -319,27 +341,34 @@ namespace proxy {
 		// 为 (client_ep, original_dest) 生成查找 key.
 		static size_t make_udp_flow_key(const udp::endpoint& client, const udp::endpoint& dest);
 
+		// 清理过期的 UDP TPROXY flow.
 		net::awaitable<void> udp_tproxy_check() noexcept;
 
+		// 启动 UDP 透明代理监听.
 		net::awaitable<void> start_udp_tproxy() noexcept;
 
 		// 解析 proxy_pass 地址并返回 endpoints.
 		net::awaitable<std::optional<tcp::resolver::results_type>>
 		resolve_proxy_pass(const boost::urls::url& proxy_pass);
 
+		// 连接到上游代理服务器.
 		net::awaitable<boost::system::error_code>
 		connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::results_type& targets);
 
+		// 执行 SOCKS5 UDP ASSOCIATE 握手, 获取 relay endpoint.
 		net::awaitable<bool> do_sock5_associate();
 
+		// UDP TPROXY 响应循环, 从 upstream 接收数据并转发回客户端.
 		net::awaitable<void> udp_tproxy_response_loop(udp_tproxy_flow_ptr flow);
 
 		// 去掉 SOCKS5 UDP 头, 然后使用 sendmsg + IP_PKTINFO 将原始数据送回客户端.
 		void send_response_to_client(udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
 
+		// 将客户端数据通过 relay socket 转发到上游代理.
 		void udp_tproxy_forward_packet(
 			udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
 
+		// 启动 UDP TPROXY 监听协程.
 		net::awaitable<void> start_udp_tproxy_listen(udp::socket& udp_sock) noexcept;
 
 #endif // defined(__linux__)
