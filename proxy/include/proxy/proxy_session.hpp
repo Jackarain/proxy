@@ -1,6 +1,6 @@
 ﻿//
-// proxy_server.hpp
-// ~~~~~~~~~~~~~~~~
+// proxy_session.hpp
+// ~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2019 Jack (jack dot wgm at gmail dot com)
 //
