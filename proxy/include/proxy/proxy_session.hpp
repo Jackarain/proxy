@@ -544,22 +544,7 @@ namespace proxy {
 		// 日志与工具函数
 
 		// http 认证错误代码对应的错误信息.
-		static std::string pauth_error_message(int code) noexcept
-		{
-			switch (code)
-			{
-			case PROXY_AUTH_SUCCESS:
-				return "auth success";
-			case PROXY_AUTH_FAILED:
-				return "auth failed";
-			case PROXY_AUTH_NONE:
-				return "auth none";
-			case PROXY_AUTH_ILLEGAL:
-				return "auth illegal";
-			default:
-				return "auth unknown";
-			}
-		}
+		static std::string pauth_error_message(int code) noexcept;
 
 		// session 的连接日志输出函数, 用于输出连接 id 相关的日志信息, 简化重复
 		// 的 connection id 这些信息的代码.
@@ -579,25 +564,7 @@ namespace proxy {
 		}
 
 		// 更新 session 发起连接时使用的本地绑定地址.
-		inline void update_bind_interface(const std::string& addr) noexcept
-		{
-			if (addr.empty())
-				return;
-
-			boost::system::error_code ec;
-			auto bind_if = net::ip::make_address(addr, ec);
-			if (ec)
-			{
-				// bind 地址有问题, 忽略 bind 参数, 并输出日志.
-				log_conn_warning()
-					<< ", bind address: " << addr
-					<< ", invalid: " << ec.message();
-			}
-			else
-			{
-				m_bind_interface = bind_if;
-			}
-		}
+		void update_bind_interface(const std::string& addr) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// PAM 认证
@@ -641,16 +608,7 @@ namespace proxy {
 		// 认证与授权
 
 		// 检查是否需要认证.
-		inline bool auth_required() const noexcept
-		{
-			if (!m_option.auth_users_.empty())
-				return true;
-
-			if (!m_option.pam_auth_.empty())
-				return true;
-
-			return false;
-		}
+		bool auth_required() const noexcept;
 
 		// 检查用户密码等相关配置信息, 包括更新绑定的本地网络地址和限速等信息.
 		net::awaitable<bool> check_userpasswd(
@@ -703,10 +661,7 @@ namespace proxy {
 
 		void setup_tproxy(const net::ip::tcp::endpoint& tproxy_remote) noexcept override;
 
-		inline size_t connection_id() const noexcept override
-		{
-			return m_connection_id;
-		}
+		size_t connection_id() const noexcept override;
 
 	private:
 
@@ -1199,10 +1154,7 @@ namespace proxy {
 			int command = SOCKS_CMD_CONNECT) noexcept;
 
 		// is_crytpo_stream 判断当前连接是否为加密连接.
-		inline bool is_crytpo_stream() const noexcept
-		{
-			return boost::variant2::holds_alternative<ssl_tcp_stream>(m_remote_socket);
-		}
+		bool is_crytpo_stream() const noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// HTTP 静态服务
@@ -1234,61 +1186,7 @@ namespace proxy {
 		static fs::path make_real_target_path(const std::string& doc_directory,
 			const std::string& target) noexcept;
 
-		static std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file) noexcept
-		{
-			static auto loc_time = [](auto t) -> struct tm*
-			{
-				using time_type = std::decay_t<decltype(t)>;
-				if constexpr (std::is_same_v<time_type, std::filesystem::file_time_type>)
-				{
-					auto sctp = std::chrono::time_point_cast<
-						std::chrono::system_clock::duration>(t -
-							std::filesystem::file_time_type::clock::now() +
-								std::chrono::system_clock::now());
-					auto time = std::chrono::system_clock::to_time_t(sctp);
-					return std::localtime(&time);
-				}
-				else if constexpr (std::is_same_v<time_type, std::time_t>)
-				{
-					return std::localtime(&t);
-				}
-				else
-				{
-					static_assert(!std::is_same_v<time_type, time_type>, "time type required!");
-				}
-			};
-
-			boost::system::error_code ec;
-			std::string time_string;
-			fs::path unc_path;
-
-			auto ftime = fs::last_write_time(file, ec);
-			if (ec)
-			{
-		#ifdef WIN32
-				if (file.string().size() > MAX_PATH)
-				{
-					unc_path = make_unc_path(file);
-					ftime = fs::last_write_time(unc_path, ec);
-				}
-		#endif
-			}
-
-			if (!ec)
-			{
-				auto tm = loc_time(ftime);
-
-				char tmbuf[64] = { 0 };
-				std::strftime(tmbuf,
-					sizeof(tmbuf),
-					"%m-%d-%Y %H:%M",
-					tm);
-
-				time_string = tmbuf;
-			}
-
-			return { time_string, unc_path };
-		}
+		static std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file) noexcept;
 
 		std::vector<std::wstring>
 		format_path_list(const fs::path& path, boost::system::error_code& ec) const;
@@ -1398,15 +1296,9 @@ namespace proxy {
 			co_return;
 		}
 
-		inline net::awaitable<void> on_http_all_json(const http_context& hctx) noexcept
-		{
-			co_await on_http_json_impl<fs::recursive_directory_iterator>(hctx);
-		}
+		net::awaitable<void> on_http_all_json(const http_context& hctx) noexcept;
 
-		inline net::awaitable<void> on_http_json(const http_context& hctx) noexcept
-		{
-			co_await on_http_json_impl<fs::directory_iterator>(hctx);
-		}
+		net::awaitable<void> on_http_json(const http_context& hctx) noexcept;
 
 		net::awaitable<void> on_http_dir(const http_context& hctx) noexcept;
 
@@ -1420,26 +1312,6 @@ namespace proxy {
 		// udp_dns_query 通过传统 UDP 协议转发 DNS 查询到上游服务器.
 		net::awaitable<void> udp_dns_query(
 			const string_request& request, const std::string& dns_query) noexcept;
-
-		// ====================================================================
-		// DNS wire-format 编码/解码辅助函数 (用于 application/dns-json 支持)
-		// ====================================================================
-
-		// DNS 记录类型常量.
-		static constexpr uint16_t DNS_TYPE_A = 1;
-		static constexpr uint16_t DNS_TYPE_NS = 2;
-		static constexpr uint16_t DNS_TYPE_CNAME = 5;
-		static constexpr uint16_t DNS_TYPE_SOA = 6;
-		static constexpr uint16_t DNS_TYPE_PTR = 12;
-		static constexpr uint16_t DNS_TYPE_MX = 15;
-		static constexpr uint16_t DNS_TYPE_TXT = 16;
-		static constexpr uint16_t DNS_TYPE_AAAA = 28;
-		static constexpr uint16_t DNS_TYPE_SRV = 33;
-		static constexpr uint16_t DNS_TYPE_HTTPS = 65;
-		static constexpr uint16_t DNS_TYPE_ANY = 255;
-		static constexpr uint16_t DNS_TYPE_CAA = 257;
-
-		static constexpr uint16_t DNS_CLASS_IN = 1;
 
 		//////////////////////////////////////////////////////////////////////////
 		// DNS 辅助工具
@@ -1508,27 +1380,7 @@ namespace proxy {
 		//////////////////////////////////////////////////////////////////////////
 		// HTTP 响应辅助
 
-		static std::string server_date_string() noexcept
-		{
-			// 缓存 date string 以避免频繁调用 time/gmtime/strftime.
-			// 每秒刷新一次即可满足 HTTP Date 头精度要求.
-			static std::string cached;
-			static std::chrono::steady_clock::time_point last_update;
-
-			auto now = std::chrono::steady_clock::now();
-			if (now - last_update >= std::chrono::seconds(1))
-			{
-				auto time = std::time(nullptr);
-				auto gmt = gmtime((const time_t*)&time);
-
-				cached.resize(64, '\0');
-				auto ret = strftime(cached.data(), 64, "%a, %d %b %Y %H:%M:%S GMT", gmt);
-				cached.resize(ret);
-				last_update = now;
-			}
-
-			return cached;
-		}
+		static std::string server_date_string() noexcept;
 
 		net::awaitable<void> default_http_route(
 			const string_request& request, std::string response, http::status status) noexcept;
@@ -1543,89 +1395,14 @@ namespace proxy {
 		//////////////////////////////////////////////////////////////////////////
 		// 流控制工具
 
-		inline void user_rate_limit_config(const std::string& user) noexcept
-		{
-			// 在这里使用用户指定的速率设置替换全局速率配置.
-			auto found = m_option.users_rate_limit_.find(user);
-			if (found != m_option.users_rate_limit_.end())
-			{
-				auto& rate = *found;
-				m_option.tcp_rate_limit_ = rate.second;
-			}
-		}
+		void user_rate_limit_config(const std::string& user) noexcept;
 
-		static void stream_expires_never(variant_stream_type& stream) noexcept
-		{
-			boost::variant2::visit([](auto& s) mutable
-			{
-				using ValueType = std::decay_t<decltype(s)>;
-				using NextLayerType = util::proxy_tcp_socket::next_layer_type;
-
-				if constexpr (std::same_as<NextLayerType, util::tcp_socket>)
-				{
-					if constexpr (std::same_as<util::proxy_tcp_socket, ValueType>)
-					{
-						auto& next_layer = s.next_layer();
-						next_layer.expires_never();
-					}
-					else if constexpr (std::same_as<util::ssl_tcp_stream, ValueType>)
-					{
-						auto& next_layer = s.next_layer().next_layer();
-						next_layer.expires_never();
-					}
-				}
-			}, stream);
-		}
+		static void stream_expires_never(variant_stream_type& stream) noexcept;
 
 		static void stream_expires_after(
-			variant_stream_type& stream, net::steady_timer::duration expiry_time) noexcept
-		{
-			if (expiry_time.count() < 0)
-				return;
+			variant_stream_type& stream, net::steady_timer::duration expiry_time) noexcept;
 
-			boost::variant2::visit([expiry_time](auto& s) mutable
-			{
-				using ValueType = std::decay_t<decltype(s)>;
-				using NextLayerType = util::proxy_tcp_socket::next_layer_type;
-
-				if constexpr (std::same_as<NextLayerType, util::tcp_socket>)
-				{
-					if constexpr (std::same_as<util::proxy_tcp_socket, ValueType>)
-					{
-						auto& next_layer = s.next_layer();
-						next_layer.expires_after(expiry_time);
-					}
-					else if constexpr (std::same_as<util::ssl_tcp_stream, ValueType>)
-					{
-						auto& next_layer = s.next_layer().next_layer();
-						next_layer.expires_after(expiry_time);
-					}
-				}
-			}, stream);
-		}
-
-		static void stream_rate_limit(variant_stream_type& stream, int rate) noexcept
-		{
-			boost::variant2::visit([rate](auto& s) mutable
-				{
-					using ValueType = std::decay_t<decltype(s)>;
-					using NextLayerType = proxy_tcp_socket::next_layer_type;
-
-					if constexpr (std::same_as<NextLayerType, tcp_socket>)
-					{
-						if constexpr (std::same_as<proxy_tcp_socket, ValueType>)
-						{
-							auto& next_layer = s.next_layer();
-							next_layer.rate_limit(rate);
-						}
-						else if constexpr (std::same_as<ssl_tcp_stream, ValueType>)
-						{
-							auto& next_layer = s.next_layer().next_layer();
-							next_layer.rate_limit(rate);
-						}
-					}
-				}, stream);
-		}
+		static void stream_rate_limit(variant_stream_type& stream, int rate) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// DNS 解析与缓存
