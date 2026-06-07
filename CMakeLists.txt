@@ -15,6 +15,15 @@ include(CheckCXXLinkerFlag)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_program(CCACHE_PROGRAM ccache)
+
+if (CCACHE_PROGRAM)
+    # 针对 C 和 C++ 分别开启 ccache
+    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
+
 ################################################################################
 
 # Disable in-source builds to prevent source tree corruption.

@@ -8632,9 +8632,6 @@ R"x*x*x(<html>
 
 		net::steady_timer m_timer;
 
-		// 当前服务是否中止标志.
-		bool m_abort{ false };
-
 #if defined(__linux__)
 		// UDP TPROXY 透明代理相关成员.
 		std::vector<udp::socket> m_udp_tproxy_listeners;
@@ -8648,6 +8645,9 @@ R"x*x*x(<html>
 		// flow 共享这个地址信息将数据转发到 proxy_pass.
 		udp::endpoint m_relay_endp;
 #endif // defined(__linux__)
+
+		// 当前服务是否中止标志.
+		bool m_abort{ false };
 	};
 
 }

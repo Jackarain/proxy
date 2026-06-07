@@ -233,50 +233,6 @@ inline int platform_init()
 
 //////////////////////////////////////////////////////////////////////////
 
-inline std::string version_info()
-{
-	std::ostringstream oss;
-	std::string os_name;
-
-#ifdef _WIN32
-# ifdef _WIN64
-	os_name = "Windows (64bit)";
-# else
-	os_name = "Windows (32bit)";
-# endif
-#elif defined(HAVE_UNAME)
-	struct utsname un;
-	uname(&un);
-	os_name = std::string(un.sysname) + " " + un.release;
-
-	int ma_ver, mi_ver, patch_ver;
-	sscanf(un.release, "%d.%d.%d", &ma_ver, &mi_ver, &patch_ver);
-
-	if (os_name.find("Linux") != std::string::npos && ma_ver < 4)
-		std::cerr << "WARNING: kernel too old, please upgrade your system!" << std::endl;
-#else
-	os_name = BOOST_PLATFORM;
-#endif
-
-	std::string git_version;
-
-#ifdef VERSION_GIT
-	git_version = VERSION_GIT;
-#else
-	git_version = __DATE__ + std::string(" ") + __TIME__;
-#endif
-
-	oss << "Built: " << git_version
-		<< ", " << os_name
-		<< ", " << BOOST_COMPILER
-		<< ", Boost " << BOOST_LIB_VERSION
-		<< ", SSL: " << OPENSSL_VERSION_TEXT
-		;
-
-	std::cerr << oss.str() << "\n";
-	return oss.str();
-}
-
-
+std::string version_info();
 
 #endif // INCLUDE__2023_10_18__MAIN_HPP
