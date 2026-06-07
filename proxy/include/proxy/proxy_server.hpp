@@ -19,6 +19,38 @@ namespace proxy {
 
 	//////////////////////////////////////////////////////////////////////////
 
+	enum class pem_type
+	{
+		none,		// none.
+		cert,		// certificate file.
+		key,  		// certificate key file.
+		pwd,		// certificate password file.
+		dhparam		// dh param file.
+	};
+
+	struct pem_file
+	{
+		fs::path filepath_;
+		pem_type type_ { pem_type::none };
+		int chains_{ 0 };
+	};
+
+	struct certificate_file
+	{
+		pem_file cert_;
+		pem_file key_;
+		pem_file pwd_;
+		pem_file dhparam_;
+
+		std::string domain_;
+		std::vector<std::string> subject_alt_name_;
+		boost::posix_time::ptime expire_date_;
+
+		std::optional<net::ssl::context> ssl_context_;
+	};
+
+	//////////////////////////////////////////////////////////////////////////
+
 #ifdef __linux__
 	// udp_tproxy_flow 结构体保存每个 UDP TPROXY flow 的状态信息, 包括客户端地址、原始目标地址和 relay socket 等等.
 	struct udp_tproxy_flow
@@ -100,8 +132,8 @@ namespace proxy {
 		void init_ssl_context() noexcept;
 
 		static int alpn_select_proto_cb(SSL *ssl, const unsigned char **out,
-                                unsigned char *outlen, const unsigned char *in,
-                                unsigned int inlen, void *arg);
+								unsigned char *outlen, const unsigned char *in,
+								unsigned int inlen, void *arg);
 
 		int alpn_select_proto(SSL *ssl, const unsigned char **out,
 			unsigned char *outlen, const unsigned char *in,

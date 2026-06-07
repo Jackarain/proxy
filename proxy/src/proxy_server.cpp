@@ -541,8 +541,8 @@ void proxy_server::init_ssl_context() noexcept
 }
 
 int proxy_server::alpn_select_proto_cb(SSL *ssl, const unsigned char **out,
-                                unsigned char *outlen, const unsigned char *in,
-                                unsigned int inlen, void *arg)
+								unsigned char *outlen, const unsigned char *in,
+								unsigned int inlen, void *arg)
 {
 	proxy_server* self = (proxy_server*)arg;
 	return self->alpn_select_proto(ssl, out, outlen, in, inlen);
