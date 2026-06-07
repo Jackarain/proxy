@@ -139,7 +139,7 @@ namespace proxy {
 	constexpr urlinfo_rule_t urlinfo_rule{};
 
 	// 外部解析函数，匹配您的示例
-	boost::system::result<url_info> parse_urlinfo(std::string_view s) noexcept
+	inline boost::system::result<url_info> parse_urlinfo(std::string_view s) noexcept
 	{
 		return boost::urls::grammar::parse(s, urlinfo_rule);
 	}
