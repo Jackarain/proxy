@@ -1782,7 +1782,8 @@ void proxy_server::udp_tproxy_forward_packet(
 		XLOG_WARN << "udp tproxy forward error: " << ec.message()
 			<< ", closing flow: " << flow_key
 			<< ", client: " << flow->client_endp_
-			<< ", dest: " << flow->original_endp_;
+			<< ", dest: " << flow->original_endp_
+			<< ", relay endp: " << m_relay_endp;
 
 		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
 		m_udp_tproxy_flows.erase(flow_key);
