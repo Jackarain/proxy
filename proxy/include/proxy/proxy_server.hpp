@@ -68,10 +68,16 @@ namespace proxy {
 		// original_endp_ 保存客户端请求的原始目标地址.
 		udp::endpoint original_endp_;
 
-		// 每个 flow 创建一个用于转发数据包的 relay socket.
+		// 每个 flow 创建一个用于转发数据包的 backend socket.
+		// backend_sock_ 与上游代理服务器收发数据.
+		std::optional<udp::socket> backend_sock_;
+
+		// 每个 flow 创建一个用于转发数据包的 relay socket, relay_sock_ 用于伪装成目标服务器
+		// 与客户端通信, 从而让客户端认为自己直接与目标服务器通信一样.
 		std::optional<udp::socket> relay_sock_;
 
-		// tproxy_sock_ 保存 tproxy 模式下用于接收客户端数据包的 socket 的引用, 用于在 flow 中转发数据包时使用.
+		// tproxy_sock_ 保存 tproxy 模式下用于接收客户端数据包的 socket 的引用, 用于在 flow
+		// 中转发数据包时使用.
 		udp::socket& tproxy_sock_;
 
 		// expire 用于检查 flow 是否已过期.
@@ -340,6 +346,9 @@ namespace proxy {
 		// UDP TPROXY 响应循环, 从 upstream 接收数据并转发回客户端.
 		net::awaitable<void> udp_tproxy_response_loop(udp_tproxy_flow_ptr flow);
 
+		// 初始化 relay socket.
+		bool init_relay_socket(udp_tproxy_flow_ptr flow);
+
 		// 去掉 SOCKS5 UDP 头, 然后使用 sendmsg + IP_PKTINFO 将原始数据送回客户端.
 		void send_response_to_client(udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
 
@@ -406,12 +415,12 @@ namespace proxy {
 
 		std::mutex m_udp_flows_mutex;
 
-		// 存储每个 UDP TPROXY flow 的状态信息, 包括客户端地址、原始目标地址和 relay socket 等等.
+		// 存储每个 UDP TPROXY flow 的状态信息, 包括客户端地址、原始目标地址和 backend socket 等等.
 		std::unordered_map<size_t, udp_tproxy_flow_ptr> m_udp_tproxy_flows;
 
 		// proxy_pass 返回侦听的 UDP 端口地址信息, 所有 UDP TPROXY
 		// flow 共享这个地址信息将数据转发到 proxy_pass.
-		udp::endpoint m_relay_endp;
+		udp::endpoint m_backend_endp;
 #endif // defined(__linux__)
 
 		// 当前服务是否中止标志.

@@ -428,7 +428,7 @@ int main(int argc, char** argv)
 		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set SO_MARK for outbound connections.")
 
 		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(-1), "Set TCP timeout for TCP connections.")
-		("udp_timeout", po::value<int>(&udp_timeout)->default_value(-1), "Set UDP timeout for UDP sessions.")
+		("udp_timeout", po::value<int>(&udp_timeout)->default_value(60), "Set UDP timeout for UDP sessions.")
 		("rate_limit", po::value<int>(&rate_limit)->default_value(-1), "Set TCP rate limit for connection.")
 
 		("pam_auth", po::value<std::string>(&pam_auth)->value_name("pam service"), "Enable PAM authentication, specify PAM service name.")
