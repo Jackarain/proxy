@@ -1243,11 +1243,12 @@ net::awaitable<void> proxy_server::udp_tproxy_check() noexcept
 
 			if (flow->expire_++ > m_option.udp_timeout_)
 			{
-				XLOG_DBG << "udp tproxy flow expired: "
-					<< flow->expire_ << ", key: "
-					<< key << ", client: "
-					<< flow->client_endp_ << ", dest: "
-					<< flow->original_endp_;
+				XLOG_DBG
+					<< "tproxy flow: " << flow->flow_key_
+					<< ", expired: " << flow->expire_
+					<< ", client: " << flow->client_endp_
+					<< ", dest: " << flow->original_endp_
+					<< ", original_dest: " << flow->original_endp_;
 
 				flow->backend_sock_.reset();
 				flow->relay_sock_.reset();
@@ -1596,7 +1597,8 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 	backend_sock->open(m_backend_endp.protocol(), ec);
 	if (ec)
 	{
-		XLOG_WARN << "udp tproxy backend socket open error: " << ec.message();
+		XLOG_WARN << "tproxy flow: " << flow->flow_key_
+			<< ", backend socket open error: " << ec.message();
 		co_return;
 	}
 
@@ -1604,7 +1606,8 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 	backend_sock->bind(udp::endpoint(backend_sock->local_endpoint().protocol(), 0), ec);
 	if (ec)
 	{
-		XLOG_WARN << "udp tproxy backend socket bind error: " << ec.message();
+		XLOG_WARN << "tproxy flow: " << flow->flow_key_
+			<< ", backend socket bind error: " << ec.message();
 		co_return;
 	}
 
@@ -1614,15 +1617,16 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 		uint32_t mark = m_option.so_mark_.value();
 		if (::setsockopt(backend_sock->native_handle(), SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0)
 		{
-			XLOG_WARN << "udp tproxy backend setsockopt SO_MARK error: "
-				<< strerror(errno);
+			XLOG_WARN << "tproxy flow: " << flow->flow_key_
+				<< ", backend setsockopt SO_MARK error: " << strerror(errno);
 		}
 	}
 #endif
 
 	if (!init_relay_socket(flow))
 	{
-		XLOG_WARN << "udp tproxy init_relay_socket failed";
+		XLOG_WARN << "tproxy flow: " << flow->flow_key_
+			<< ", init_relay_socket failed";
 		co_return;
 	}
 
@@ -1656,7 +1660,9 @@ bool proxy_server::init_relay_socket(udp_tproxy_flow_ptr flow)
 	relay_sock.open(flow->original_endp_.protocol(), ec);
 	if (ec)
 	{
-		XLOG_WARN << "udp tproxy relay socket open error: " << ec.message();
+		XLOG_WARN
+			<< "tproxy flow: " << flow->flow_key_
+			<< ", relay socket open error: " << ec.message();
 		return false;
 	}
 
@@ -1681,7 +1687,9 @@ bool proxy_server::init_relay_socket(udp_tproxy_flow_ptr flow)
 	relay_sock.bind(flow->original_endp_, ec);
 	if (ec)
 	{
-		XLOG_WARN << "udp tproxy relay socket bind error: " << ec.message();
+		XLOG_WARN
+			<< "tproxy flow: " << flow->flow_key_
+			<< ", relay socket bind error: " << ec.message();
 		return false;
 	}
 
@@ -1735,7 +1743,8 @@ void proxy_server::send_response_to_client(udp_tproxy_flow_ptr flow, const char*
 	relay_sock.send_to(net::buffer(payload, payload_len), flow->client_endp_, 0, ec);
 	if (ec)
 	{
-		XLOG_WARN << "udp tproxy relay_sock send_to error: " << ec.message();
+		XLOG_WARN << "tproxy flow: " << flow->flow_key_
+			<< ", relay_sock send_to error: " << ec.message();
 	}
 }
 
@@ -1786,17 +1795,17 @@ void proxy_server::udp_tproxy_forward_packet(
 	backend_sock.send_to(net::buffer(buf.data(), buf.size()), m_backend_endp, 0, ec);
 	if (ec)
 	{
-		auto flow_key = make_udp_flow_key(flow->client_endp_, flow->original_endp_);
 		flow->backend_sock_.reset();
 
-		XLOG_WARN << "udp tproxy forward error: " << ec.message()
-			<< ", closing flow: " << flow_key
+		XLOG_WARN
+			<< "tproxy flow: " << flow->flow_key_
+			<< ", forward error: " << ec.message()
 			<< ", client: " << flow->client_endp_
 			<< ", dest: " << flow->original_endp_
 			<< ", backend endp: " << m_backend_endp;
 
 		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
-		m_udp_tproxy_flows.erase(flow_key);
+		m_udp_tproxy_flows.erase(flow->flow_key_);
 	}
 }
 
@@ -1859,7 +1868,7 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 		if (!flow)
 		{
 			// 创建一个新的 flow 来处理这个客户端和原始目标地址的通信.
-			flow = std::make_shared<udp_tproxy_flow>(client_ep, original_dest, udp_sock);
+			flow = std::make_shared<udp_tproxy_flow>(client_ep, original_dest, udp_sock, flow_key);
 
 			{
 				std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
@@ -1869,7 +1878,8 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 			// 创建 backend socket 后就启动一个协程循环等待 backend socket 上的响应数据, 并转发回客户端.
 			net::co_spawn(m_executor, udp_tproxy_response_loop(flow), net::detached);
 
-			XLOG_DBG << "new udp tproxy flow, client: " << client_ep
+			XLOG_DBG << "tproxy flow: " << flow_key
+				<< ", client: " << client_ep
 				<< ", original dest: " << original_dest
 				<< ", flow key: " << flow_key;
 		}

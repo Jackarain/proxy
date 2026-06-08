@@ -56,10 +56,11 @@ namespace proxy {
 	struct udp_tproxy_flow
 	{
 		udp_tproxy_flow(const udp::endpoint& client_endp,
-			const udp::endpoint& original_endp, udp::socket& tproxy_sock)
+			const udp::endpoint& original_endp, udp::socket& tproxy_sock, size_t flow_key)
 			: client_endp_(client_endp)
 			, original_endp_(original_endp)
 			, tproxy_sock_(tproxy_sock)
+			, flow_key_(flow_key)
 		{}
 
 		// client_endp_ 保存客户端的地址.
@@ -79,6 +80,10 @@ namespace proxy {
 		// tproxy_sock_ 保存 tproxy 模式下用于接收客户端数据包的 socket 的引用, 用于在 flow
 		// 中转发数据包时使用.
 		udp::socket& tproxy_sock_;
+
+		// flow_key_ 是 flow 的唯一标识, 可以根据客户端地址和原始目标地址计算得到, 用于在 flow
+		// 管理容器中快速查找对应的 flow.
+		size_t flow_key_{ 0 };
 
 		// expire 用于检查 flow 是否已过期.
 		int expire_{ 0 };
