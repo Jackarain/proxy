@@ -9,10 +9,32 @@
 //
 
 #include "proxy/proxy_server.hpp"
+#include "proxy/proxy_util.hpp"
 
 namespace proxy {
 
 //////////////////////////////////////////////////////////////////////////
+
+#if defined(__linux__)
+#  if !defined(IP_TRANSPARENT)
+#    define IP_TRANSPARENT 19
+#  endif
+#  if !defined(IPV6_TRANSPARENT)
+#    define IPV6_TRANSPARENT 75
+#  endif
+#  if !defined(IP_RECVORIGDSTADDR)
+#    define IP_RECVORIGDSTADDR 20
+#  endif
+#  if !defined(IP_ORIGDSTADDR)
+#    define IP_ORIGDSTADDR 20
+#  endif
+#  if !defined(IPV6_RECVORIGDSTADDR)
+#    define IPV6_RECVORIGDSTADDR 74
+#  endif
+#  if !defined(IPV6_ORIGDSTADDR)
+#    define IPV6_ORIGDSTADDR 74
+#  endif
+#endif // defined(__linux__)
 
 proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option opt)
 	: m_executor(executor)

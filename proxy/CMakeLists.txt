@@ -24,6 +24,7 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/use_awaitable.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/http_proxy_client.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/xxhash.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_util.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/proxy_stream.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tcp_socket.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/ip_database.hpp

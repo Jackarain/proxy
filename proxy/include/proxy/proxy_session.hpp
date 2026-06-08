@@ -32,6 +32,7 @@
 #include "proxy/proxy_stream.hpp"
 #include "proxy/url_info.hpp"
 #include "proxy/dns_cache.hpp"
+#include "proxy/proxy_util.hpp"
 
 
 #include <fmt/xchar.h>
@@ -200,25 +201,6 @@ namespace proxy {
 	//////////////////////////////////////////////////////////////////////////
 
 	inline const char* version_string = R"x*x*x(nginx/1.20.2)x*x*x";
-
-	//////////////////////////////////////////////////////////////////////////
-
-	// 检测 host 是否是域名或主机名, 如果是域名则返回 true, 否则返回 false.
-	inline bool is_hostname(std::string_view host) noexcept
-	{
-		boost::system::error_code ec;
-		net::ip::make_address(host, ec);
-		if (ec)
-			return true;
-		return false;
-	}
-
-	// 全局随机数生成器, 用于生成随机数据.
-	inline std::random_device& global_random_device() noexcept
-	{
-		static std::random_device rd;
-		return rd;
-	}
 
 	//////////////////////////////////////////////////////////////////////////
 
@@ -531,13 +513,6 @@ namespace proxy {
 
 			// 保存 http 客户端请求目标的具体路径, 即: doc 目录 + target_ 组成的路径.
 			fs::path target_path_;
-		};
-
-		enum {
-			PROXY_AUTH_SUCCESS = 0,
-			PROXY_AUTH_FAILED,
-			PROXY_AUTH_NONE,
-			PROXY_AUTH_ILLEGAL,
 		};
 
 		//////////////////////////////////////////////////////////////////////////

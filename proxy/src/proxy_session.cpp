@@ -336,7 +336,14 @@ R"x*x*x(<html>
 	}
 
 	//////////////////////////////////////////////////////////////////////////
-	// proxy_session 内联辅助函数（从 .hpp 移入）
+	// proxy_session 辅助函数
+
+	enum {
+		PROXY_AUTH_SUCCESS = 0,
+		PROXY_AUTH_FAILED,
+		PROXY_AUTH_NONE,
+		PROXY_AUTH_ILLEGAL,
+	};
 
 	std::string proxy_session::pauth_error_message(int code) noexcept
 	{
@@ -384,6 +391,9 @@ R"x*x*x(<html>
 	{
 		return boost::variant2::holds_alternative<ssl_tcp_stream>(m_remote_socket);
 	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// http 相关实现
 
 	std::tuple<std::string, fs::path> proxy_session::file_last_wirte_time(const fs::path& file) noexcept
 	{
