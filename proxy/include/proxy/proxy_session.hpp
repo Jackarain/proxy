@@ -586,6 +586,9 @@ namespace proxy {
 				void(boost::system::error_code, bool)>
 				([this, username, passwd, service_name](auto&& handler) mutable
 				{
+					// 这里不需要保持对 proxy_session 的 shared_ptr 引用, 因为 PAM 认证完成后无论结果如
+					// 何都不需要访问 proxy_session 的成员变量或方法了, 另外 async_pam_auth 总是运行在
+					// 协程中，协程在 proxy_session 启动时就已经保存了 shared_ptr 自身.
 					std::thread([this, username = std::move(username), passwd = std::move(passwd),
 						service_name = std::move(service_name), handler = std::move(handler)]() mutable
 						{
