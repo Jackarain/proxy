@@ -24,7 +24,7 @@ namespace proxy {
 
 	//////////////////////////////////////////////////////////////////////////
 
-	inline const char* fake_500_content_fmt =
+	static const char* fake_500_content_fmt =
 R"x*x*x(<html>
 <head><title>500 Internal Server Error</title></head>
 <body>
@@ -33,7 +33,7 @@ R"x*x*x(<html>
 </body>
 </html>)x*x*x";
 
-	inline const char* fake_400_content_fmt =
+	static const char* fake_400_content_fmt =
 R"x*x*x(HTTP/1.1 400 Bad Request
 Server: nginx/1.20.2
 Date: {}
@@ -49,7 +49,7 @@ Connection: close
 </body>
 </html>)x*x*x";
 
-	inline const char* fake_400_content =
+	static const char* fake_400_content =
 R"x*x*x(<html>
 <head><title>400 Bad Request</title></head>
 <body bgcolor="white">
@@ -58,7 +58,7 @@ R"x*x*x(<html>
 </body>
 </html>)x*x*x";
 
-	inline const char* fake_401_content =
+	static const char* fake_401_content =
 R"x*x*x(<html>
 <head><title>401 Authorization Required</title></head>
 <body>
@@ -67,7 +67,7 @@ R"x*x*x(<html>
 </body>
 </html>)x*x*x";
 
-	inline const char* fake_403_content =
+	static const char* fake_403_content =
 R"x*x*x(<html>
 <head><title>403 Forbidden</title></head>
 <body>
@@ -77,7 +77,7 @@ R"x*x*x(<html>
 </html>
 )x*x*x";
 
-	inline const char* fake_404_content_fmt =
+	static const char* fake_404_content_fmt =
 R"x*x*x(HTTP/1.1 404 Not Found
 Server: nginx/1.20.2
 Date: {}
@@ -93,7 +93,7 @@ Connection: close
 </body>
 </html>)x*x*x";
 
-	inline const char* fake_407_content_fmt =
+	static const char* fake_407_content_fmt =
 R"x*x*x(HTTP/1.1 407 Proxy Authentication Required
 Server: nginx/1.20.2
 Date: {}
@@ -104,7 +104,7 @@ Content-Length: 0
 
 )x*x*x";
 
-	inline const char* fake_416_content =
+	static const char* fake_416_content =
 R"x*x*x(<html>
 <head><title>416 Requested Range Not Satisfiable</title></head>
 <body>
@@ -114,7 +114,7 @@ R"x*x*x(<html>
 </html>
 )x*x*x";
 
-	inline const char* fake_302_content =
+	static const char* fake_302_content =
 R"x*x*x(<html>
 <head><title>301 Moved Permanently</title></head>
 <body>
@@ -125,16 +125,16 @@ R"x*x*x(<html>
 )x*x*x";
 
 
-	inline constexpr auto head_fmt =
+	static constexpr auto head_fmt =
 		LR"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><pre>)";
-	inline constexpr auto tail_fmt =
+	static constexpr auto tail_fmt =
 		L"</pre><hr></body></html>";
-	inline constexpr auto body_fmt =
+	static constexpr auto body_fmt =
 		L"<a href=\"{}\">{}</a>{} {}       {}\r\n";
 
 	//////////////////////////////////////////////////////////////////////////
 
-	inline const std::unordered_map<std::string, std::string> global_mimes =
+	static const std::unordered_map<std::string, std::string> global_mimes =
 	{
 		{ ".html", "text/html; charset=utf-8" },
 		{ ".htm", "text/html; charset=utf-8" },
