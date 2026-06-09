@@ -1402,6 +1402,8 @@ net::awaitable<bool> proxy_server::do_sock5_associate()
 		co_return false;
 	}
 
+	XLOG_DBG << "udp tproxy connecting to proxy_pass: " << proxy_pass.c_str();
+
 	// 解析 proxy_pass 地址并连接到代理服务器. 这里如果 proxy_pass 是一个域名, 则会进
 	// 行 DNS 解析以获取 IP 地址列表, 然后尝试连接列表中的每个地址直到成功连接为止.
 	tcp::socket remote_socket(m_executor);
@@ -1419,6 +1421,16 @@ net::awaitable<bool> proxy_server::do_sock5_associate()
 			<< ec.message();
 		co_return true;
 	}
+
+	net::socket_base::keep_alive option(true);
+	remote_socket.set_option(option, ec);
+
+	int idle_time = 30; 	// 30 seconds
+	setsockopt(remote_socket.native_handle(), IPPROTO_TCP, TCP_KEEPIDLE, &idle_time, sizeof(idle_time));
+	int interval = 15; 		// 15 seconds
+	setsockopt(remote_socket.native_handle(), IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+	int maxpkt = 3; 		// 3 probes
+	setsockopt(remote_socket.native_handle(), IPPROTO_TCP, TCP_KEEPCNT, &maxpkt, sizeof(maxpkt));
 
 	// 启动与 proxy_pass 的连接和协商以获取关联的 udp endpoint.
 	socks_client_option opt;
@@ -1562,6 +1574,8 @@ net::awaitable<bool> proxy_server::do_sock5_associate()
 			break;
 		}
 	}
+
+	XLOG_DBG << "udp tproxy control connection closed";
 
 	co_return true;
 }
