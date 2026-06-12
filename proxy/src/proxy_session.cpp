@@ -2385,10 +2385,10 @@ R"x*x*x(<html>
 			padding_length = noise_length;
 
 			std::mt19937 gen(global_random_device()());
-			std::uniform_int_distribution<> dis(16, std::max<std::size_t>(16, noise_length));
+			std::uniform_int_distribution<std::size_t> dis(16, std::max<std::size_t>(16, noise_length));
 			noise_length = dis(gen);
 
-			auto noise = generate_noise(global_random_device(), noise_length);
+			auto noise = generate_noise(global_random_device(), static_cast<uint16_t>(noise_length));
 			auto len = boost::beast::detail::base64::encoded_size(noise_length);
 			padding_value.resize(len);
 			len = beast::detail::base64::encode(padding_value.data(), noise.data(), noise.size());
@@ -2748,9 +2748,9 @@ R"x*x*x(<html>
 				// 如果配置了 noise_length_ 则启用 http 代理握手中的 padding, 以迷惑扫描者无法通过
 				// tcp 数据发送长度特征来识别出是 http 代理握手数据.
 				std::mt19937 gen(global_random_device()());
-				std::uniform_int_distribution<> dis(16, m_option.noise_length_);
+				std::uniform_int_distribution<int64_t> dis(16, m_option.noise_length_);
 
-				auto padding = generate_noise(global_random_device(), dis(gen));
+				auto padding = generate_noise(global_random_device(), static_cast<uint16_t>(dis(gen)));
 				auto len = boost::beast::detail::base64::encoded_size(padding.size());
 				std::string padding_value(len, 0);
 				len = beast::detail::base64::encode(padding_value.data(), padding.data(), padding.size());
