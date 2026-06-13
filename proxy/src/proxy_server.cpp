@@ -15,27 +15,6 @@ namespace proxy {
 
 //////////////////////////////////////////////////////////////////////////
 
-#if defined(__linux__)
-#  if !defined(IP_TRANSPARENT)
-#    define IP_TRANSPARENT 19
-#  endif
-#  if !defined(IPV6_TRANSPARENT)
-#    define IPV6_TRANSPARENT 75
-#  endif
-#  if !defined(IP_RECVORIGDSTADDR)
-#    define IP_RECVORIGDSTADDR 20
-#  endif
-#  if !defined(IP_ORIGDSTADDR)
-#    define IP_ORIGDSTADDR 20
-#  endif
-#  if !defined(IPV6_RECVORIGDSTADDR)
-#    define IPV6_RECVORIGDSTADDR 74
-#  endif
-#  if !defined(IPV6_ORIGDSTADDR)
-#    define IPV6_ORIGDSTADDR 74
-#  endif
-#endif // defined(__linux__)
-
 proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option opt)
 	: m_executor(executor)
 	, m_option(std::move(opt))
@@ -393,9 +372,6 @@ void proxy_server::init_acceptor() noexcept
 		if (m_option.reuse_port_)
 		{
 #ifdef ENABLE_REUSEPORT
-			using net::detail::socket_option::boolean;
-			using reuse_port = boolean<SOL_SOCKET, SO_REUSEPORT>;
-
 			acceptor.set_option(reuse_port(true), ec);
 			if (ec)
 			{
@@ -480,23 +456,17 @@ void proxy_server::init_acceptor() noexcept
 			udp_sock.set_option(
 				net::socket_base::reuse_address(true), ec);
 
-			// 设置 IP_TRANSPARENT 选项.
-			using transparent_udp = net::detail::socket_option::boolean<
-				IPPROTO_IP, IP_TRANSPARENT>;
-			using transparent6_udp = net::detail::socket_option::boolean<
-				IPPROTO_IPV6, IPV6_TRANSPARENT>;
-
 			// 设置 IP_RECVORIGDSTADDR 以接收原始目标地址.
 			int opt = 1;
 			if (udp_endp.protocol() == net::ip::udp::v4())
 			{
-				udp_sock.set_option(transparent_udp(true), ec);
+				udp_sock.set_option(transparent_opt(true), ec);
 				::setsockopt(udp_sock.native_handle(), IPPROTO_IP,
 					IP_RECVORIGDSTADDR, &opt, sizeof(opt));
 			}
 			else
 			{
-				udp_sock.set_option(transparent6_udp(true), ec);
+				udp_sock.set_option(transparent6_opt(true), ec);
 				::setsockopt(udp_sock.native_handle(), IPPROTO_IPV6,
 					IPV6_RECVORIGDSTADDR, &opt, sizeof(opt));
 			}
@@ -787,18 +757,12 @@ void proxy_server::start() noexcept
 #if defined(__linux__)
 
 #  if defined (IP_TRANSPARENT) && defined (IPV6_TRANSPARENT)
-		// 设置 acceptor 为透明代理模式.
-		using transparent = net::detail::socket_option::boolean<
-			IPPROTO_IP, IP_TRANSPARENT>;
-		using transparent6 = net::detail::socket_option::boolean<
-			IPPROTO_IPV6, IPV6_TRANSPARENT>;
-
 		for (auto& acceptor : m_tcp_acceptors)
 		{
 			boost::system::error_code error;
 
-			acceptor.set_option(transparent(true), error);
-			acceptor.set_option(transparent6(true), error);
+			acceptor.set_option(transparent_opt(true), error);
+			acceptor.set_option(transparent6_opt(true), error);
 		}
 #  endif
 
@@ -1684,16 +1648,11 @@ bool proxy_server::init_relay_socket(udp_tproxy_flow_ptr flow)
 	relay_sock.set_option(net::socket_base::reuse_address(true), ec);
 
 	// 设置 IP_TRANSPARENT 选项.
-	using transparent_udp = net::detail::socket_option::boolean<
-		IPPROTO_IP, IP_TRANSPARENT>;
-	using transparent6_udp = net::detail::socket_option::boolean<
-		IPPROTO_IPV6, IPV6_TRANSPARENT>;
-
 	int opt = 1;
 	if (flow->original_endp_.protocol() == net::ip::udp::v4())
-		relay_sock.set_option(transparent_udp(true), ec);
+		relay_sock.set_option(transparent_opt(true), ec);
 	else
-		relay_sock.set_option(transparent6_udp(true), ec);
+		relay_sock.set_option(transparent6_opt(true), ec);
 
 	// 绑定到一个 original 地址, 以模拟 original server 的行为, 让客户端认为这是原
 	// 始服务器的响应.

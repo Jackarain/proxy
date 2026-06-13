@@ -18,6 +18,7 @@
 #include <boost/system/error_code.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/asio/error.hpp>
+#include <boost/asio/socket_base.hpp>
 
 #include <boost/system/error_code.hpp>
 #include <boost/system/result.hpp>
@@ -33,7 +34,44 @@ namespace proxy {
 
     namespace net = boost::asio;
 
+#if defined(__linux__)
+#  if !defined(IP_TRANSPARENT)
+#    define IP_TRANSPARENT 19
+#  endif
+#  if !defined(IPV6_TRANSPARENT)
+#    define IPV6_TRANSPARENT 75
+#  endif
+#  if !defined(IP_RECVORIGDSTADDR)
+#    define IP_RECVORIGDSTADDR 20
+#  endif
+#  if !defined(IP_ORIGDSTADDR)
+#    define IP_ORIGDSTADDR 20
+#  endif
+#  if !defined(IPV6_RECVORIGDSTADDR)
+#    define IPV6_RECVORIGDSTADDR 74
+#  endif
+#  if !defined(IPV6_ORIGDSTADDR)
+#    define IPV6_ORIGDSTADDR 74
+#  endif
 
+	// 设置 IP_TRANSPARENT 和 IPV6_TRANSPARENT 选项.
+	using transparent_opt = net::detail::socket_option::boolean<
+		IPPROTO_IP, IP_TRANSPARENT>;
+	using transparent6_opt = net::detail::socket_option::boolean<
+		IPPROTO_IPV6, IPV6_TRANSPARENT>;
+
+#  ifdef ENABLE_REUSEPORT
+#    if !defined(SO_REUSEPORT)
+#      define SO_REUSEPORT 15
+#    endif
+	// 设置 SO_REUSEPORT 选项.
+	using reuse_port = net::detail::socket_option::boolean<
+		SOL_SOCKET, SO_REUSEPORT>;
+#endif
+
+#endif // defined(__linux__)
+
+	// 将错误代码设置为系统错误.
 	inline void make_error_code(boost::system::error_code& ec, bool err) noexcept
 	{
 		if (!err)
@@ -119,6 +157,7 @@ namespace proxy {
 	}
 #endif
 
+	// 设置 socket 的 mark 标志.
 	inline boost::system::result<bool> set_socket_mark(int fd, uint32_t mark) noexcept
 	{
 		boost::system::error_code ec;

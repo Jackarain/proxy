@@ -101,7 +101,7 @@ namespace proxy {
 		proxy_server(net::any_io_executor executor, proxy_server_option opt);
 
 	public:
-		// 创建 proxy_server 实例的工厂方法.
+		// 创建 proxy_server 实例的方法.
 		static std::shared_ptr<proxy_server>
 		make(net::any_io_executor executor, proxy_server_option opt);
 
