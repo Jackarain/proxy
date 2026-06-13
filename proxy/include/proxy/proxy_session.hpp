@@ -1006,6 +1006,12 @@ namespace proxy {
 		// HTTP CONNECT 隧道代理请求处理.
 		net::awaitable<bool> http_proxy_connect() noexcept;
 
+		// HTTP CONNECT-UDP (RFC 9298) 代理请求处理.
+		net::awaitable<void> http_proxy_connect_udp(
+			const http::request<http::string_body>& req,
+			const std::string& target_host,
+			uint16_t target_port) noexcept;
+
 		// SOCKS5 用户名/密码认证处理.
 		net::awaitable<bool> socks_auth() noexcept;
 

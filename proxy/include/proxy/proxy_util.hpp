@@ -26,6 +26,9 @@
 
 #if defined(__linux__) || defined(__APPLE__)
 # include <sys/socket.h>
+# if defined(__APPLE__)
+#  include <netinet/tcp.h>
+# endif
 #elif defined(BOOST_WINDOWS)
 # include <mstcpip.h>
 #endif
@@ -120,6 +123,39 @@ namespace proxy {
 		make_error_code(ec, ret != 0);
 		if (ret != 0)
 			return ec;
+		return true;
+	}
+#elif defined(__APPLE__)
+	// macOS 使用 TCP_KEEPALIVE 替代 TCP_KEEPIDLE.
+	inline boost::system::result<bool> set_tcp_keepalive(int fd) noexcept
+	{
+		boost::system::error_code ec;
+		int ret = 0;
+		int keepalive = 1;
+
+		ret = ::setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+		make_error_code(ec, ret != 0);
+		if (ret != 0)
+			return ec;
+
+		int idle_time = 30;     // 30 seconds
+		ret = ::setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &idle_time, sizeof(idle_time));
+		make_error_code(ec, ret != 0);
+		if (ret != 0)
+			return ec;
+
+		int interval = 15;      // 15 seconds
+		ret = ::setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+		make_error_code(ec, ret != 0);
+		if (ret != 0)
+			return ec;
+
+		int maxpkt = 3;         // 3 probes
+		ret = ::setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &maxpkt, sizeof(maxpkt));
+		make_error_code(ec, ret != 0);
+		if (ret != 0)
+			return ec;
+
 		return true;
 	}
 #else
