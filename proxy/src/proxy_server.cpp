@@ -1374,10 +1374,11 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 			if (m_option.so_mark_)
 			{
 				uint32_t mark = m_option.so_mark_.value();
-				if (::setsockopt(remote_socket.native_handle(), SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0)
+				auto ret = set_socket_mark(remote_socket.native_handle(), mark);
+				if (ret.has_error())
 				{
 					XLOG_WARN << "connect_to_proxy setsockopt SO_MARK error: "
-						<< strerror(errno);
+						<< ret.error().message();
 				}
 			}
 #endif
@@ -1422,15 +1423,13 @@ net::awaitable<bool> proxy_server::do_sock5_associate()
 		co_return true;
 	}
 
-	net::socket_base::keep_alive option(true);
-	remote_socket.set_option(option, ec);
-
-	int idle_time = 30; 	// 30 seconds
-	setsockopt(remote_socket.native_handle(), IPPROTO_TCP, TCP_KEEPIDLE, &idle_time, sizeof(idle_time));
-	int interval = 15; 		// 15 seconds
-	setsockopt(remote_socket.native_handle(), IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
-	int maxpkt = 3; 		// 3 probes
-	setsockopt(remote_socket.native_handle(), IPPROTO_TCP, TCP_KEEPCNT, &maxpkt, sizeof(maxpkt));
+	// 设置 TCP Keep-Alive.
+	auto ret = set_tcp_keepalive(remote_socket.native_handle());
+	if (ret.has_error())
+	{
+		XLOG_WARN << "udp tproxy do_sock5_associate tcp_keepalive failed: "
+			<< ret.error().message();
+	}
 
 	// 启动与 proxy_pass 的连接和协商以获取关联的 udp endpoint.
 	socks_client_option opt;

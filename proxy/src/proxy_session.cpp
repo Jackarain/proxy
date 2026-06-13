@@ -10,6 +10,7 @@
 
 #include "proxy/proxy_session.hpp"
 #include "proxy/async_connect.hpp"
+#include "proxy/proxy_util.hpp"
 #include "proxy/fileop.hpp"
 
 #ifdef USE_PAM_AUTH
@@ -1439,7 +1440,15 @@ R"x*x*x(<html>
 				}
 
 				if (m_option.so_mark_)
-					co_await tproxy_set_mark((int)remote_bind_socket->native_handle());
+				{
+					auto ret = set_socket_mark(remote_bind_socket->native_handle(), m_option.so_mark_.value());
+					if (ret.has_error())
+					{
+						log_conn_warning()
+							<< ", set socket mark error: "
+							<< ret.error().message();
+					}
+				}
 			}
 
 			// 绑定到和 tcp socket 相同的地址.
@@ -1458,7 +1467,15 @@ R"x*x*x(<html>
 			// 对 local_udp_socket 也设置 SO_MARK，确保非 bridge 模式下
 			// 由 local_udp_socket 发出的 UDP 数据包也带有正确的标记。
 			if (m_option.so_mark_)
-				co_await tproxy_set_mark((int)local_udp_socket.native_handle());
+			{
+				auto ret = set_socket_mark(local_udp_socket.native_handle(), m_option.so_mark_.value());
+				if (ret.has_error())
+				{
+					log_conn_warning()
+						<< ", set socket mark error: "
+						<< ret.error().message();
+				}
+			}
 
 			if (m_proxy_pass)
 			{
@@ -5033,26 +5050,6 @@ R"x*x*x(<html>
 
 	//////////////////////////////////////////////////////////////////////////
 
-	net::awaitable<void>
-	proxy_session::tproxy_set_mark(int socket_fd) const noexcept
-	{
-#if defined (__linux__)
-		if (!m_option.so_mark_)
-			co_return;
-
-		uint32_t mark = m_option.so_mark_.value();
-
-		if (::setsockopt(socket_fd, SOL_SOCKET, SO_MARK, &mark, sizeof(uint32_t)) < 0)
-		{
-			log_conn_warning()
-				<< ", tproxy setsockopt: " << socket_fd
-				<< ", mark: " << mark
-				<< ", error: " << strerror(errno);
-		}
-#endif
-		co_return;
-	}
-
 	net::awaitable<boost::system::error_code>
 	proxy_session::async_connect_targets(tcp::socket& socket, tcp::resolver::results_type& targets) noexcept
 	{
@@ -5074,7 +5071,26 @@ R"x*x*x(<html>
 				},
 				net_awaitable[ec]);
 
-			co_await tproxy_set_mark((int)socket.native_handle());
+			{
+				auto ret = set_tcp_keepalive(socket.native_handle());
+				if (ret.has_error())
+				{
+					log_conn_warning()
+						<< ", tcp keepalive error: "
+						<< ret.error().message();
+				}
+			}
+
+			if (m_option.so_mark_)
+			{
+				auto ret = set_socket_mark(socket.native_handle(), m_option.so_mark_.value());
+				if (ret.has_error())
+				{
+					log_conn_warning()
+						<< ", set socket mark error: "
+						<< ret.error().message();
+				}
+			}
 
 			co_return ec;
 		}
@@ -5121,7 +5137,26 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			if (!ec)
 			{
-				co_await tproxy_set_mark((int)socket.native_handle());
+				{
+					auto ret = set_tcp_keepalive(socket.native_handle());
+					if (ret.has_error())
+					{
+						log_conn_warning()
+							<< ", tcp keepalive error: "
+							<< ret.error().message();
+					}
+				}
+
+				if (m_option.so_mark_)
+				{
+					auto ret = set_socket_mark(socket.native_handle(), m_option.so_mark_.value());
+					if (ret.has_error())
+					{
+						log_conn_warning()
+							<< ", set socket mark error: "
+							<< ret.error().message();
+					}
+				}
 
 				break;
 			}

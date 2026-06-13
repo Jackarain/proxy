@@ -1441,10 +1441,6 @@ namespace proxy {
 
 		//////////////////////////////////////////////////////////////////////////
 
-		// 设置透明代理 (TPROXY) 的 socket mark, 用于策略路由.
-		net::awaitable<void>
-		tproxy_set_mark(int socket_fd) const noexcept;
-
 		// 异步连接到多个目标地址 (支持 Happy Eyeballs).
 		net::awaitable<boost::system::error_code>
 		async_connect_targets(tcp::socket& socket, tcp::resolver::results_type& targets) noexcept;
