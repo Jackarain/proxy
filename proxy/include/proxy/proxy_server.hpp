@@ -87,6 +87,10 @@ namespace proxy {
 
 		// expire 用于检查 flow 是否已过期.
 		int expire_{ 0 };
+
+		// 当使用 HTTP proxy_pass (RFC 9298 connect-udp) 时, 保存与上游的 TCP 连接.
+		std::optional<tcp::socket> connect_udp_sock_;
+		bool using_connect_udp_{ false };
 	};
 	using udp_tproxy_flow_ptr = std::shared_ptr<udp_tproxy_flow>;
 #endif
@@ -350,6 +354,9 @@ namespace proxy {
 
 		// UDP TPROXY 响应循环, 从 upstream 接收数据并转发回客户端.
 		net::awaitable<void> udp_tproxy_response_loop(udp_tproxy_flow_ptr flow);
+
+		// UDP TPROXY 使用 RFC 9298 connect-udp 转发循环.
+		net::awaitable<void> udp_tproxy_connect_udp_loop(udp_tproxy_flow_ptr flow);
 
 		// 初始化 relay socket.
 		bool init_relay_socket(udp_tproxy_flow_ptr flow);
