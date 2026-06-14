@@ -91,7 +91,7 @@ namespace proxy {
 		int expire_{ 0 };
 
 		// 当使用 HTTP proxy_pass (RFC 9298 connect-udp) 时, 保存与上游的 TCP 连接.
-		std::optional<tcp::socket> connect_udp_sock_;
+		std::optional<variant_stream_type> udp_http_sock_;
 		bool using_connect_udp_{ false };
 	};
 	using udp_tproxy_flow_ptr = std::shared_ptr<udp_tproxy_flow>;
@@ -151,7 +151,10 @@ namespace proxy {
 		int sni_callback(SSL *ssl, [[maybe_unused]] int *ad) noexcept;
 
 		// 定时检查并更新过期证书.
-		net::awaitable<void> certificate_check_timer();
+		net::awaitable<std::chrono::seconds> certificate_check();
+
+		// 定时器协程.
+		net::awaitable<void> tick();
 
 	public:
 		// 启动代理服务, 开始监听客户端连接.
@@ -330,11 +333,11 @@ namespace proxy {
 		void backend_thread_run() noexcept;
 
 #if defined(__linux__)
-		// msg 不能为 const，CMSG_NXTHDR 需要非 const msghdr*.
+		// 从 msg 中提取原客户端和原目标地址.
 		static bool parse_udp_tproxy_packet(struct msghdr& msg, ssize_t ret,
 			udp::endpoint& client_ep, udp::endpoint& original_dest);
 
-		// 为 (client_ep, original_dest) 生成查找 key.
+		// 用 (client_ep, original_dest) 计算查找 flow 的 key.
 		static size_t make_udp_flow_key(const udp::endpoint& client, const udp::endpoint& dest);
 
 		// 清理过期的 UDP TPROXY flow.
@@ -342,6 +345,9 @@ namespace proxy {
 
 		// 启动 UDP 透明代理监听.
 		net::awaitable<void> start_udp_tproxy() noexcept;
+
+		// 发起 UDP 向上游 socks5 代理服务器的连接.
+		net::awaitable<void> udp_tproxy_socks5_connect() noexcept;
 
 		// 解析 proxy_pass 地址并返回 endpoints.
 		net::awaitable<std::optional<tcp::resolver::results_type>>
@@ -351,14 +357,19 @@ namespace proxy {
 		net::awaitable<boost::system::error_code>
 		connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::results_type& targets);
 
-		// 执行 SOCKS5 UDP ASSOCIATE 握手, 获取 relay endpoint.
+		// 创建 ssl socket.
+		net::awaitable<boost::system::result<bool>>
+		make_ssl_socket(tcp::socket& remote_socket,
+			std::string_view sni, std::optional<variant_stream_type>& ssl_sock);
+
+		// 执行 SOCKS5 UDP ASSOCIATE 握手.
 		net::awaitable<bool> do_sock5_associate();
 
 		// UDP TPROXY 响应循环, 从 upstream 接收数据并转发回客户端.
 		net::awaitable<void> udp_tproxy_response_loop(udp_tproxy_flow_ptr flow);
 
 		// UDP TPROXY 使用 RFC 9298 connect-udp 转发循环.
-		net::awaitable<void> udp_tproxy_connect_udp_loop(udp_tproxy_flow_ptr flow);
+		net::awaitable<void> udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr flow);
 
 		// 初始化 relay socket.
 		bool init_relay_socket(udp_tproxy_flow_ptr flow);
@@ -371,7 +382,7 @@ namespace proxy {
 			udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
 
 		// UDP TPROXY 使用 connect-udp 转发数据包 (RFC 9298 capsule).
-		void udp_tproxy_forward_packet_connect_udp(
+		void udp_tproxy_forward_packet_http(
 			udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
 
 		// 启动 UDP TPROXY 监听协程.
@@ -439,10 +450,13 @@ namespace proxy {
 		// proxy_pass 返回侦听的 UDP 端口地址信息, 所有 UDP TPROXY
 		// flow 共享这个地址信息将数据转发到 proxy_pass.
 		udp::endpoint m_backend_endp;
+
+		// 重试 UDP TPROXY socks5 连接.
+		std::atomic_bool m_retry_tproxy_socks5_connect = { false };
 #endif // defined(__linux__)
 
 		// 当前服务是否中止标志.
-		std::atomic<bool> m_abort{ false };
+		std::atomic_bool m_abort{ false };
 	};
 
 }

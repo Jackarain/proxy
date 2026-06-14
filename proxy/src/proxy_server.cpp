@@ -697,57 +697,93 @@ int proxy_server::sni_callback(SSL *ssl, [[maybe_unused]] int *ad) noexcept
 	return SSL_TLSEXT_ERR_OK;
 }
 
-net::awaitable<void> proxy_server::certificate_check_timer()
+net::awaitable<std::chrono::seconds> proxy_server::certificate_check()
 {
-	auto self = shared_from_this();
 	boost::system::error_code ec;
 
-	// 定时检查证书是否有过期, 如果有过期证书, 则5分钟检查一次证书信息.
-	while (!m_abort)
+	std::chrono::seconds duration = std::chrono::years(1);
+	auto now = boost::posix_time::second_clock::local_time();
+
+	auto& certificates = *m_certificates;
+
+	for (const auto& ctx : certificates)
 	{
-		auto now = boost::posix_time::second_clock::local_time();
-		std::chrono::seconds duration(std::chrono::years(1));
-
-		auto& certificates = *m_certificates;
-
-		for (const auto& ctx : certificates)
+		if (now > ctx.expire_date_)
 		{
-			if (now > ctx.expire_date_)
-			{
-				XLOG_WARN << "domain: '" << ctx.domain_
-					<< "', cert: '" << ctx.cert_.filepath_.string()
-					<< "', key: '" << ctx.key_.filepath_.string()
-					<< "', dhparam: '" << ctx.dhparam_.filepath_.string()
-					<< "', pwd: '" << ctx.pwd_.filepath_.string()
-					<< "', expired: '" << ctx.expire_date_ << "'";
+			XLOG_WARN << "domain: '" << ctx.domain_
+				<< "', cert: '" << ctx.cert_.filepath_.string()
+				<< "', key: '" << ctx.key_.filepath_.string()
+				<< "', dhparam: '" << ctx.dhparam_.filepath_.string()
+				<< "', pwd: '" << ctx.pwd_.filepath_.string()
+				<< "', expired: '" << ctx.expire_date_ << "'";
 
-				// 有证书过期, 设定为5分钟检查一次证书目录.
-				duration = std::chrono::minutes(5);
-				continue;
-			}
-
-			// 设置为过期时检查证书.
-			auto expire_date = std::chrono::seconds((ctx.expire_date_ - now).total_seconds());
-			duration = std::min(duration, expire_date);
+			// 有证书过期, 设定为5分钟检查一次证书目录.
+			duration = std::chrono::seconds(0);
+			continue;
 		}
 
-		// 每隔 duration 检查一次证书是否过期.
-		m_timer.expires_after(duration);
+		// 设置为过期时检查证书.
+		auto expire_date = std::chrono::seconds((ctx.expire_date_ - now).total_seconds());
+		duration = std::min(duration, expire_date);
+	}
+
+	if (duration > std::chrono::seconds(0))
+		co_return duration;
+
+	// 热更新证书, 交替更新证书容器 master/slave.
+	if (m_certificates == &m_certificate_master)
+	{
+		update_certificate(m_option.ssl_cert_path_, m_certificate_slave);
+		m_certificates = &m_certificate_slave;
+	}
+	else
+	{
+		update_certificate(m_option.ssl_cert_path_, m_certificate_master);
+		m_certificates = &m_certificate_master;
+	}
+
+	co_return duration;
+}
+
+net::awaitable<void> proxy_server::tick()
+{
+	auto self = shared_from_this();
+
+	boost::system::error_code ec;
+	auto check_time_point = std::chrono::steady_clock::now();
+
+	while (!m_abort)
+	{
+		m_timer.expires_after(std::chrono::seconds(1));
 		co_await m_timer.async_wait(net_awaitable[ec]);
 		if (ec)
 			break;
 
-		// 热更新证书, 交替更新证书容器 master/slave.
-		if (m_certificates == &m_certificate_master)
+		auto now = std::chrono::steady_clock::now();
+
+		// 检查证书是否过期.
+		if (now > check_time_point)
 		{
-			update_certificate(m_option.ssl_cert_path_, m_certificate_slave);
-			m_certificates = &m_certificate_slave;
+			// 返回过期间隔期.
+			auto duration = co_await certificate_check();
+			// 至少 5 分钟后再检查.
+			check_time_point = now + duration + std::chrono::minutes(5);
 		}
-		else
+
+#if defined(__linux__)
+		if (m_option.transparent_)
 		{
-			update_certificate(m_option.ssl_cert_path_, m_certificate_master);
-			m_certificates = &m_certificate_master;
+			// 检查 UDP TPROXY 流是否过期.
+			co_await udp_tproxy_check();
+
+			// 检查 UDP TPROXY socks5 连接是否需要重试.
+			if (m_retry_tproxy_socks5_connect)
+			{
+				net::co_spawn(m_executor,
+					udp_tproxy_socks5_connect(), net::detached);
+			}
 		}
+#endif
 	}
 
 	co_return;
@@ -876,9 +912,9 @@ void proxy_server::start() noexcept
 	}
 #endif // defined(__linux__)
 
-	// 启动 证书检查定时器.
+	// 启动定时器.
 	net::co_spawn(m_executor,
-		certificate_check_timer(), net::detached);
+		tick(), net::detached);
 }
 
 void proxy_server::close() noexcept
@@ -1163,7 +1199,7 @@ void proxy_server::backend_thread_run() noexcept
 
 #if defined(__linux__)
 
-// msg 不能为 const，CMSG_NXTHDR 需要非 const msghdr*.
+// 从 msg 中提取原客户端和原目标地址.
 bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg, ssize_t ret,
 	udp::endpoint& client_ep, udp::endpoint& original_dest)
 {
@@ -1222,7 +1258,7 @@ bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg, ssize_t ret,
 	return true;
 }
 
-// 为 (client_ep, original_dest) 生成查找 key.
+// 用 (client_ep, original_dest) 计算查找 flow 的 key.
 size_t proxy_server::make_udp_flow_key(const udp::endpoint& client, const udp::endpoint& dest)
 {
 	size_t h = 0;
@@ -1257,55 +1293,43 @@ size_t proxy_server::make_udp_flow_key(const udp::endpoint& client, const udp::e
 
 net::awaitable<void> proxy_server::udp_tproxy_check() noexcept
 {
-	auto self = shared_from_this();
+	std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
+	std::vector<size_t> expired_keys;
 
-	boost::system::error_code ec;
-	net::steady_timer timer(m_executor);
-
-	while (!m_abort)
+	for (auto [key, flow] : m_udp_tproxy_flows)
 	{
-		timer.expires_after(std::chrono::seconds(1));
-		co_await timer.async_wait(net_awaitable[ec]);
-		if (ec)
-			break;
-
-		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
-		std::vector<size_t> expired_keys;
-		for (auto [key, flow] : m_udp_tproxy_flows)
+		if (!flow)
 		{
-			if (!flow)
-			{
-				expired_keys.push_back(key);
-				continue;
-			}
-
-			if (flow->expire_++ > m_option.udp_timeout_)
-			{
-				XLOG_DBG
-					<< "tproxy flow: " << flow->flow_key_
-					<< ", expired: " << flow->expire_
-					<< ", client: " << flow->client_endp_
-					<< ", dest: " << flow->original_endp_
-					<< ", original_dest: " << flow->original_endp_;
-
-				flow->backend_sock_.reset();
-				flow->relay_sock_.reset();
-
-				expired_keys.push_back(key);
-			}
+			expired_keys.push_back(key);
+			continue;
 		}
 
-		for (auto key : expired_keys)
-		{
-			m_udp_tproxy_flows.erase(key);
-		}
+		if (flow->expire_++ < m_option.udp_timeout_)
+			continue;
+
+		XLOG_DBG
+			<< "tproxy flow: " << flow->flow_key_
+			<< ", expired: " << flow->expire_
+			<< ", client: " << flow->client_endp_
+			<< ", dest: " << flow->original_endp_
+			<< ", original_dest: " << flow->original_endp_;
+
+		flow->backend_sock_.reset();
+		flow->relay_sock_.reset();
+
+		expired_keys.push_back(key);
 	}
+
+	for (auto key : expired_keys)
+	{
+		m_udp_tproxy_flows.erase(key);
+	}
+
+	co_return;
 }
 
 net::awaitable<void> proxy_server::start_udp_tproxy() noexcept
 {
-	auto self = shared_from_this();
-
 	// 检查配置项，UDP TPROXY 模式必须配置 proxy_pass 以转发数据包.
 	if (!m_option.proxy_pass_)
 	{
@@ -1320,52 +1344,38 @@ net::awaitable<void> proxy_server::start_udp_tproxy() noexcept
 			start_udp_tproxy_listen(udp_sock), net::detached);
 	}
 
-	// 启动 UDP TPROXY 检查协程, 定时检查是否有新的数据包需要处理.
-	net::co_spawn(m_executor,
-		udp_tproxy_check(), net::detached);
-
 	auto scheme = boost::to_lower_copy(
 		std::string(m_option.proxy_pass_->scheme()));
 
 	// 如果是 HTTP proxy_pass, 不需要 SOCKS5 UDP ASSOCIATE.
-	// connect-udp 隧道将在每个 flow 创建时按需建立.
+	// connect-udp 隧道将在每个 flow 创建时按需建立, 所以这里直
+	// 接退出协程即可.
 	if (scheme.starts_with("http"))
 	{
 		XLOG_DBG << "udp tproxy using RFC 9298 connect-udp via HTTP proxy: "
 			<< m_option.proxy_pass_->c_str();
-
-		// 等待中止信号.
-		while (!m_abort)
-		{
-			net::steady_timer timer(m_executor);
-			boost::system::error_code ec;
-			timer.expires_after(std::chrono::hours(24));
-			co_await timer.async_wait(net_awaitable[ec]);
-		}
 		co_return;
 	}
 
-	boost::system::error_code ec;
-	int retry_time_count = 1;
-
 	// 保持与 proxy_pass 之间的 SOCKS5 UDP ASSOCIATE 转发, 以便后续数据包转发使用.
-	while (!m_abort)
-	{
-		auto ret = co_await do_sock5_associate();
-		if (!ret)
-			co_return;
+	net::co_spawn(m_executor,
+		udp_tproxy_socks5_connect(), net::detached);
 
-		// 启动定时器延时一会会，继续尝试.
-		net::steady_timer timer(m_executor);
+	co_return;
+}
 
-		timer.expires_after(std::chrono::seconds(retry_time_count));
-		co_await timer.async_wait(net_awaitable[ec]);
+net::awaitable<void> proxy_server::udp_tproxy_socks5_connect() noexcept
+{
+	m_retry_tproxy_socks5_connect = false;
 
-		// 指数退避增加重试时间, 最多退避到 32 秒, 然后重置为 2 秒继续尝试.
-		retry_time_count *= 2;
-		if (retry_time_count > 32)
-			retry_time_count = 2;
-	}
+	auto ret = co_await do_sock5_associate();
+	if (!ret)
+		co_return;
+
+	// 标记需要重试 SOCKS5 连接, 稍后会在 tick 定时器中重试连接.
+	m_retry_tproxy_socks5_connect = true;
+
+	co_return;
 }
 
 // 解析 proxy_pass 地址并返回 endpoints.
@@ -1447,6 +1457,51 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 	co_return boost::asio::error::host_not_found;
 }
 
+net::awaitable<boost::system::result<bool>>
+proxy_server::make_ssl_socket(tcp::socket& remote_socket,
+	std::string_view sni,  std::optional<variant_stream_type>& ssl_sock)
+{
+	boost::system::error_code ec;
+	net::ssl::context cli_ctx(net::ssl::context::sslv23_client);
+
+	if (fs::exists(m_option.ssl_cacert_path_))
+	{
+		cli_ctx.add_verify_path(m_option.ssl_cacert_path_, ec);
+		if (ec)
+			co_return ec;
+	}
+
+	auto verify = net::ssl::verify_peer;
+	if (m_option.disable_check_cert_)
+		verify = net::ssl::verify_none;
+
+	cli_ctx.set_verify_mode(verify);
+	auto certs = default_root_certificates();
+
+	cli_ctx.add_certificate_authority(net::buffer(certs.data(), certs.size()), ec);
+	if (ec)
+		co_return ec;
+
+	cli_ctx.set_verify_callback(net::ssl::host_name_verification(std::string(sni)), ec);
+	if (ec)
+		co_return ec;
+
+	// 初始化为 SSL 加密的 SOCKS5 控制连接.
+	ssl_sock.emplace(init_proxy_stream(std::move(remote_socket), cli_ctx));
+	auto& ssl_socket = boost::variant2::get<ssl_tcp_stream>(*ssl_sock);
+
+	// 设置 SNI 主机名以兼容需要 SNI 的服务器.
+	SSL_set_tlsext_host_name(ssl_socket.native_handle(), sni.data());
+
+	// 进行 SSL 握手.
+	co_await ssl_socket.async_handshake(
+		net::ssl::stream_base::client, net_awaitable[ec]);
+	if (ec)
+		co_return ec;
+
+	co_return true;
+}
+
 net::awaitable<bool> proxy_server::do_sock5_associate()
 {
 	auto proxy_pass = *m_option.proxy_pass_;
@@ -1514,54 +1569,10 @@ net::awaitable<bool> proxy_server::do_sock5_associate()
 
 	if (use_ssl)
 	{
-		net::ssl::context cli_ctx(net::ssl::context::sslv23_client);
-		if (fs::exists(m_option.ssl_cacert_path_))
+		auto res = co_await make_ssl_socket(remote_socket, sni, socks5_control);
+		if (res.has_error())
 		{
-			cli_ctx.add_verify_path(m_option.ssl_cacert_path_, ec);
-			if (ec)
-			{
-				XLOG_WARN << "udp tproxy add_verify_path error: " << ec.message();
-				co_return false;
-			}
-		}
-
-		auto verify = net::ssl::verify_peer;
-		if (m_option.disable_check_cert_)
-		{
-			XLOG_DBG << "udp tproxy certificate verification will be disabled";
-			verify = net::ssl::verify_none;
-		}
-
-		cli_ctx.set_verify_mode(verify);
-		auto certs = default_root_certificates();
-
-		cli_ctx.add_certificate_authority(net::buffer(certs.data(), certs.size()), ec);
-		if (ec)
-		{
-			XLOG_WARN << "udp tproxy add_certificate_authority error: " << ec.message();
-			co_return false;
-		}
-		cli_ctx.set_verify_callback(net::ssl::host_name_verification(sni), ec);
-		if (ec)
-		{
-			XLOG_WARN << "udp tproxy set_verify_callback error: " << ec.message();
-			co_return false;
-		}
-
-		// 初始化为 SSL 加密的 SOCKS5 控制连接.
-		socks5_control.emplace(init_proxy_stream(std::move(remote_socket), cli_ctx));
-		auto& ssl_sock = boost::variant2::get<ssl_tcp_stream>(*socks5_control);
-
-		// 设置 SNI 主机名以兼容需要 SNI 的服务器.
-		if (!SSL_set_tlsext_host_name(ssl_sock.native_handle(), sni.c_str()))
-			XLOG_WARN << "udp tproxy set sni failed";
-
-		// 进行 SSL 握手.
-		co_await ssl_sock.async_handshake(
-			net::ssl::stream_base::client, net_awaitable[ec]);
-		if (ec)
-		{
-			XLOG_WARN << "udp tproxy SSL handshake failed: " << ec.message();
+			XLOG_WARN << "udp tproxy make_ssl_socket error: " << res.error().message();
 			co_return false;
 		}
 
@@ -1687,10 +1698,12 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 	if (m_option.so_mark_)
 	{
 		uint32_t mark = m_option.so_mark_.value();
-		if (::setsockopt(backend_sock->native_handle(), SOL_SOCKET, SO_MARK, &mark, sizeof(mark)) < 0)
+		auto ret = set_socket_mark(backend_sock->native_handle(), mark);
+		if (ret.has_error())
 		{
 			XLOG_WARN << "tproxy flow: " << flow->flow_key_
-				<< ", backend setsockopt SO_MARK error: " << strerror(errno);
+				<< ", backend setsockopt SO_MARK error: "
+				<< ret.error().message();
 		}
 	}
 #endif
@@ -1743,7 +1756,6 @@ bool proxy_server::init_relay_socket(udp_tproxy_flow_ptr flow)
 	relay_sock.set_option(net::socket_base::reuse_address(true), ec);
 
 	// 设置 IP_TRANSPARENT 选项.
-	int opt = 1;
 	if (flow->original_endp_.protocol() == net::ip::udp::v4())
 		relay_sock.set_option(transparent_opt(true), ec);
 	else
@@ -1920,15 +1932,18 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 		if (!parse_udp_tproxy_packet(msg, ret, client_ep, original_dest))
 			continue;
 
+		// 计算 flow 表的 key.
 		size_t flow_key = make_udp_flow_key(client_ep, original_dest);
 
 		auto scheme = boost::to_lower_copy(
 			std::string(m_option.proxy_pass_->scheme()));
+
+		// 如果上游代理是 HTTP 代理, 则通过 connect-udp 协议进行 udp 代理.
 		bool using_connect_udp = scheme.starts_with("http");
 
-		// 查找或创建 flow (原子操作, 避免 TOCTOU 竞态条件).
 		std::shared_ptr<udp_tproxy_flow> flow;
-		bool is_new = false;
+
+		auto make_tproxy_flow = [&]() mutable
 		{
 			std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
 
@@ -1936,27 +1951,33 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 			if (it != m_udp_tproxy_flows.end())
 			{
 				flow = it->second;
+				return false;
 			}
-			else
-			{
-				flow = std::make_shared<udp_tproxy_flow>(client_ep, original_dest, udp_sock, flow_key);
-				m_udp_tproxy_flows[flow_key] = flow;
-				is_new = true;
-			}
-		}
 
-		if (is_new)
+			flow = std::make_shared<udp_tproxy_flow>(
+				client_ep, original_dest, udp_sock, flow_key);
+
+			m_udp_tproxy_flows[flow_key] = flow;
+
+			return true;
+		};
+
+		// 创建 flow 对象的 shared_ptr 指针, make_tproxy_flow 返回 true 则表示新建 flow 连接.
+		if (make_tproxy_flow())
 		{
 			if (using_connect_udp)
 			{
 				flow->using_connect_udp_ = true;
+
 				net::co_spawn(m_executor,
-					udp_tproxy_connect_udp_loop(flow), net::detached);
+					udp_tproxy_http_udp_loop(flow), net::detached);
 			}
 			else
 			{
-				// 创建 backend socket 后就启动一个协程循环等待 backend socket 上的响应数据, 并转发回客户端.
-				net::co_spawn(m_executor, udp_tproxy_response_loop(flow), net::detached);
+				// 创建 backend socket 后就启动一个协程循环等待 backend socket 上的响应数
+				// 据, 并转发回客户端.
+				net::co_spawn(m_executor,
+					udp_tproxy_response_loop(flow), net::detached);
 			}
 
 			XLOG_DBG << "tproxy flow: " << flow_key
@@ -1970,7 +1991,7 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 		flow->expire_ = 0; // 收到数据包重置过期计数.
 
 		if (using_connect_udp)
-			udp_tproxy_forward_packet_connect_udp(flow, data, static_cast<size_t>(ret));
+			udp_tproxy_forward_packet_http(flow, data, static_cast<size_t>(ret));
 		else
 			udp_tproxy_forward_packet(flow, data, static_cast<size_t>(ret));
 	}
@@ -1979,10 +2000,10 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 }
 
 // UDP 透传 connect-udp 转发: 将客户端数据封装成 capsule 发送到上游 TCP 连接.
-void proxy_server::udp_tproxy_forward_packet_connect_udp(
+void proxy_server::udp_tproxy_forward_packet_http(
 	udp_tproxy_flow_ptr flow, const char* data, std::size_t len)
 {
-	if (!flow || !flow->connect_udp_sock_)
+	if (!flow || !flow->udp_http_sock_)
 		return;
 
 	static constexpr uint64_t UDP_PROXY_CAPSULE_TYPE = 0x8000;
@@ -2003,7 +2024,7 @@ void proxy_server::udp_tproxy_forward_packet_connect_udp(
 	pos += len;
 
 	boost::system::error_code ec;
-	auto& tcp_sock = *flow->connect_udp_sock_;
+	auto& tcp_sock = *flow->udp_http_sock_;
 
 	// 同步写入 TCP socket. 对于非阻塞 socket, 小数据量通常能直接写入内核缓冲.
 	net::write(tcp_sock, net::buffer(buf, pos), ec);
@@ -2017,13 +2038,13 @@ void proxy_server::udp_tproxy_forward_packet_connect_udp(
 
 		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
 		m_udp_tproxy_flows.erase(flow->flow_key_);
-		flow->connect_udp_sock_.reset();
+		flow->udp_http_sock_.reset();
 	}
 }
 
 // UDP TPROXY connect-udp 循环: 连接上游 HTTP 代理, 建立 RFC 9298 隧道,
 // 然后从 TCP 连接接收 capsule, 提取 UDP payload 并通过 relay_sock_ 送回客户端.
-net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_ptr flow)
+net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr flow)
 {
 	auto self = shared_from_this();
 
@@ -2038,7 +2059,7 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 		if (!flow)
 			return;
 
-		flow->connect_udp_sock_.reset();
+		flow->udp_http_sock_.reset();
 		flow->backend_sock_.reset();
 
 		auto flow_key = make_udp_flow_key(
@@ -2056,12 +2077,13 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 	}
 
 	auto proxy_pass = *m_option.proxy_pass_;
+
+	// 解析 proxy_pass 地址和端口.
 	auto proxy_host = std::string(proxy_pass.host());
 	auto proxy_port = proxy_pass.port_number();
 	if (proxy_port == 0)
 		proxy_port = urls::default_port(proxy_pass.scheme_id());
 
-	// 解析 proxy_pass 地址.
 	auto targets = co_await resolve_proxy_pass(proxy_pass);
 	if (!targets || targets->empty())
 		co_return;
@@ -2081,25 +2103,45 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 	XLOG_DBG << "tproxy flow: " << flow->flow_key_
 		<< ", connected to http proxy: " << proxy_host << ":" << proxy_port;
 
-	flow->connect_udp_sock_.emplace(std::move(remote_socket));
-	auto& tcp_sock = *flow->connect_udp_sock_;
+	// 检查是否使用 SSL.
+	bool use_ssl = m_option.proxy_pass_use_ssl_;
+	if (proxy_pass.scheme().ends_with("s"))
+		use_ssl = true;
 
-	// 构建 RFC 9298 connect-udp 请求.
-	// 使用 absolute-form URI.
+	std::optional<variant_stream_type>& http_sock = flow->udp_http_sock_;
+
+	if (use_ssl)
+	{
+		auto sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;
+		auto res = co_await make_ssl_socket(remote_socket, sni, http_sock);
+		if (res.has_error())
+		{
+			XLOG_WARN << "tproxy flow: " << flow->flow_key_
+				<< ", make_ssl_socket failed: " << res.error().message();
+			co_return;
+		}
+
+		XLOG_DBG << "udp tproxy SSL handshake with " << sni << " succeeded";
+	}
+	else
+	{
+		http_sock.emplace(init_proxy_stream(std::move(remote_socket)));
+	}
+
+	// 构建 RFC 9298 connect-udp 请求, 使用 absolute-form URI.
 	auto& original_dest = flow->original_endp_;
 	std::string target_host = original_dest.address().to_string();
 	uint16_t target_port = original_dest.port();
 
 	// 对 IPv6 地址中的冒号进行百分号编码.
 	if (original_dest.address().is_v6())
-	{
 		boost::replace_all(target_host, ":", "%3A");
-	}
 
 	std::string request_line =
 		"GET http://" + proxy_host + ":" + std::to_string(proxy_port) +
 		"/.well-known/masque/udp/" + target_host + "/" +
 		std::to_string(target_port) + "/ HTTP/1.1\r\n";
+
 	std::string headers =
 		"Host: " + proxy_host + ":" + std::to_string(proxy_port) + "\r\n"
 		"Connection: Upgrade\r\n"
@@ -2110,7 +2152,7 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 	std::string full_request = request_line + headers;
 
 	// 发送 connect-udp 请求.
-	co_await net::async_write(tcp_sock,
+	co_await net::async_write(*http_sock,
 		net::buffer(full_request), net_awaitable[ec]);
 	if (ec)
 	{
@@ -2125,7 +2167,7 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 	resp_parser.skip(true);
 
 	co_await http::async_read_header(
-		tcp_sock, resp_buf, resp_parser, net_awaitable[ec]);
+		*http_sock, resp_buf, resp_parser, net_awaitable[ec]);
 	if (ec)
 	{
 		XLOG_WARN << "tproxy flow: " << flow->flow_key_
@@ -2153,7 +2195,7 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 		// 读取 capsule type 的第一个字节.
 		uint8_t hdr_buf[18];
 		co_await net::async_read(
-			tcp_sock, net::buffer(hdr_buf, 1), net_awaitable[ec]);
+			*http_sock, net::buffer(hdr_buf, 1), net_awaitable[ec]);
 		if (ec) break;
 
 		uint8_t prefix = hdr_buf[0] >> 6;
@@ -2162,7 +2204,7 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 		if (type_len > 1)
 		{
 			co_await net::async_read(
-				tcp_sock, net::buffer(hdr_buf + 1, type_len - 1),
+				*http_sock, net::buffer(hdr_buf + 1, type_len - 1),
 				net_awaitable[ec]);
 			if (ec) break;
 		}
@@ -2172,7 +2214,7 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 
 		// 读取 capsule length.
 		co_await net::async_read(
-			tcp_sock, net::buffer(hdr_buf, 1), net_awaitable[ec]);
+			*http_sock, net::buffer(hdr_buf, 1), net_awaitable[ec]);
 		if (ec) break;
 
 		prefix = hdr_buf[0] >> 6;
@@ -2181,7 +2223,7 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 		if (len_len > 1)
 		{
 			co_await net::async_read(
-				tcp_sock, net::buffer(hdr_buf + 1, len_len - 1),
+				*http_sock, net::buffer(hdr_buf + 1, len_len - 1),
 				net_awaitable[ec]);
 			if (ec) break;
 		}
@@ -2202,7 +2244,7 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 		if (capsule_length > 0)
 		{
 			co_await net::async_read(
-				tcp_sock, net::buffer(capsule_value),
+				*http_sock, net::buffer(capsule_value),
 				net_awaitable[ec]);
 			if (ec) break;
 		}
@@ -2249,7 +2291,7 @@ net::awaitable<void> proxy_server::udp_tproxy_connect_udp_loop(udp_tproxy_flow_p
 	}
 
 	// 连接断开, 清理 flow.
-	flow->connect_udp_sock_.reset();
+	flow->udp_http_sock_.reset();
 	flow->backend_sock_.reset();
 
 	{
