@@ -98,8 +98,9 @@ namespace proxy {
 		// 发送队列, 用于序列化 connect-udp 数据包的 TCP 发送, 避免多个并发协程同时写入
 		// udp_http_sock_ 导致 capsule 数据在 TCP 流上交错损坏.
 		std::deque<std::vector<char>> send_queue_;
-		// 标识当前是否已有发送协程在运行.
-		bool sending_{ false };
+		// 用于通知发送协程有新数据到达的定时器.
+		// 当有新的 UDP 数据包推入 send_queue_ 时, 取消此定时器以唤醒发送协程.
+		std::optional<net::steady_timer> notify_timer_;
 	};
 	using udp_tproxy_flow_ptr = std::shared_ptr<udp_tproxy_flow>;
 #endif
@@ -389,7 +390,7 @@ namespace proxy {
 			udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
 
 		// UDP TPROXY 使用 connect-udp 转发数据包 (RFC 9298 capsule).
-		net::awaitable<void> udp_tproxy_forward_packet_http(
+		void udp_tproxy_forward_packet_http(
 			udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
 
 		// 启动 UDP TPROXY 监听协程.
