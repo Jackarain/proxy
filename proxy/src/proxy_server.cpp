@@ -1922,30 +1922,31 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 
 		size_t flow_key = make_udp_flow_key(client_ep, original_dest);
 
-		// 查找或创建 flow.
+		auto scheme = boost::to_lower_copy(
+			std::string(m_option.proxy_pass_->scheme()));
+		bool using_connect_udp = scheme.starts_with("http");
+
+		// 查找或创建 flow (原子操作, 避免 TOCTOU 竞态条件).
 		std::shared_ptr<udp_tproxy_flow> flow;
+		bool is_new = false;
 		{
 			std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
 
 			auto it = m_udp_tproxy_flows.find(flow_key);
 			if (it != m_udp_tproxy_flows.end())
+			{
 				flow = it->second;
+			}
+			else
+			{
+				flow = std::make_shared<udp_tproxy_flow>(client_ep, original_dest, udp_sock, flow_key);
+				m_udp_tproxy_flows[flow_key] = flow;
+				is_new = true;
+			}
 		}
 
-		auto scheme = boost::to_lower_copy(
-			std::string(m_option.proxy_pass_->scheme()));
-		bool using_connect_udp = scheme.starts_with("http");
-
-		if (!flow)
+		if (is_new)
 		{
-			// 创建一个新的 flow 来处理这个客户端和原始目标地址的通信.
-			flow = std::make_shared<udp_tproxy_flow>(client_ep, original_dest, udp_sock, flow_key);
-
-			{
-				std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
-				m_udp_tproxy_flows[flow_key] = flow;
-			}
-
 			if (using_connect_udp)
 			{
 				flow->using_connect_udp_ = true;

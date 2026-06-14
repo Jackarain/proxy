@@ -120,6 +120,7 @@
 
 #include <cstdlib>
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
 #include <cstring>
 #include <filesystem>
@@ -1521,7 +1522,7 @@ namespace proxy {
 		net::ssl::context m_ssl_cli_context{ net::ssl::context::sslv23_client };
 
 		// 当前 session 是否被中止的状态.
-		bool m_abort{ false };
+		std::atomic<bool> m_abort{ false };
 	};
 }
 

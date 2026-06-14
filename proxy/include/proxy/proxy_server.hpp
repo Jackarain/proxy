@@ -14,6 +14,8 @@
 
 #include "proxy/proxy_session.hpp"
 
+#include <atomic>
+
 
 namespace proxy {
 
@@ -368,6 +370,10 @@ namespace proxy {
 		void udp_tproxy_forward_packet(
 			udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
 
+		// UDP TPROXY 使用 connect-udp 转发数据包 (RFC 9298 capsule).
+		void udp_tproxy_forward_packet_connect_udp(
+			udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
+
 		// 启动 UDP TPROXY 监听协程.
 		net::awaitable<void> start_udp_tproxy_listen(udp::socket& udp_sock) noexcept;
 
@@ -436,7 +442,7 @@ namespace proxy {
 #endif // defined(__linux__)
 
 		// 当前服务是否中止标志.
-		bool m_abort{ false };
+		std::atomic<bool> m_abort{ false };
 	};
 
 }
