@@ -15,6 +15,7 @@
 #include "proxy/proxy_session.hpp"
 
 #include <atomic>
+#include <deque>
 
 
 namespace proxy {
@@ -93,6 +94,12 @@ namespace proxy {
 		// 当使用 HTTP proxy_pass (RFC 9298 connect-udp) 时, 保存与上游的 TCP 连接.
 		std::optional<variant_stream_type> udp_http_sock_;
 		bool using_connect_udp_{ false };
+
+		// 发送队列, 用于序列化 connect-udp 数据包的 TCP 发送, 避免多个并发协程同时写入
+		// udp_http_sock_ 导致 capsule 数据在 TCP 流上交错损坏.
+		std::deque<std::vector<char>> send_queue_;
+		// 标识当前是否已有发送协程在运行.
+		bool sending_{ false };
 	};
 	using udp_tproxy_flow_ptr = std::shared_ptr<udp_tproxy_flow>;
 #endif
@@ -382,7 +389,7 @@ namespace proxy {
 			udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
 
 		// UDP TPROXY 使用 connect-udp 转发数据包 (RFC 9298 capsule).
-		void udp_tproxy_forward_packet_http(
+		net::awaitable<void> udp_tproxy_forward_packet_http(
 			udp_tproxy_flow_ptr flow, const char* data, std::size_t len);
 
 		// 启动 UDP TPROXY 监听协程.

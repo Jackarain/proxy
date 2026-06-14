@@ -1991,7 +1991,9 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 		flow->expire_ = 0; // 收到数据包重置过期计数.
 
 		if (using_connect_udp)
-			udp_tproxy_forward_packet_http(flow, data, static_cast<size_t>(ret));
+			net::co_spawn(m_executor,
+				udp_tproxy_forward_packet_http(flow, data, static_cast<size_t>(ret)),
+				net::detached);
 		else
 			udp_tproxy_forward_packet(flow, data, static_cast<size_t>(ret));
 	}
@@ -1999,12 +2001,16 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 	XLOG_DBG << "udp tproxy listener stopped";
 }
 
-// UDP 透传 connect-udp 转发: 将客户端数据封装成 capsule 发送到上游 TCP 连接.
-void proxy_server::udp_tproxy_forward_packet_http(
+// UDP 透传 connect-udp 转发: 将客户端数据封装成 capsule 并推入发送队列, 由串行发送协程处理.
+// 使用发送队列确保对 udp_http_sock_ 的 TCP 写入是串行的, 避免 capsule 数据交错.
+net::awaitable<void> proxy_server::udp_tproxy_forward_packet_http(
 	udp_tproxy_flow_ptr flow, const char* data, std::size_t len)
 {
+	// 在第一次 co_await 前获取 shared_from_this(), 确保 proxy_server 在协程执行期间保持存活.
+	auto self = shared_from_this();
+
 	if (!flow || !flow->udp_http_sock_)
-		return;
+		co_return;
 
 	static constexpr uint64_t UDP_PROXY_CAPSULE_TYPE = 0x8000;
 
@@ -2023,22 +2029,69 @@ void proxy_server::udp_tproxy_forward_packet_http(
 	std::memcpy(buf + pos, data, len);
 	pos += len;
 
-	boost::system::error_code ec;
-	auto& tcp_sock = *flow->udp_http_sock_;
-
-	// 同步写入 TCP socket. 对于非阻塞 socket, 小数据量通常能直接写入内核缓冲.
-	net::write(tcp_sock, net::buffer(buf, pos), ec);
-	if (ec)
+	// 将 capsule 数据推入发送队列.
+	bool need_send = false;
 	{
-		XLOG_WARN
-			<< "tproxy flow: " << flow->flow_key_
-			<< ", connect-udp forward error: " << ec.message()
-			<< ", client: " << flow->client_endp_
-			<< ", dest: " << flow->original_endp_;
+		std::lock_guard<std::mutex> lock(self->m_udp_flows_mutex);
 
-		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
-		m_udp_tproxy_flows.erase(flow->flow_key_);
-		flow->udp_http_sock_.reset();
+		flow->send_queue_.emplace_back(buf, buf + pos);
+
+		// 如果没有其他协程在发送, 则由当前协程负责串行发送.
+		if (!flow->sending_)
+		{
+			flow->sending_ = true;
+			need_send = true;
+		}
+	}
+
+	if (!need_send)
+		co_return;
+
+	// 串行发送循环 — 同一时刻每个 flow 只有一个协程运行此循环.
+	boost::system::error_code ec;
+
+	while (!self->m_abort)
+	{
+		// 从队列取出下一个待发送的数据包.
+		std::vector<char> item;
+		{
+			std::lock_guard<std::mutex> lock(self->m_udp_flows_mutex);
+
+			if (flow->send_queue_.empty())
+			{
+				flow->sending_ = false;
+				break;
+			}
+
+			item = std::move(flow->send_queue_.front());
+			flow->send_queue_.pop_front();
+		}
+
+		// 检查 socket 在等待期间是否被关闭.
+		if (!flow->udp_http_sock_)
+		{
+			std::lock_guard<std::mutex> lock(self->m_udp_flows_mutex);
+			flow->sending_ = false;
+			break;
+		}
+
+		auto& tcp_sock = *flow->udp_http_sock_;
+
+		co_await net::async_write(tcp_sock, net::buffer(item), net_awaitable[ec]);
+		if (ec)
+		{
+			XLOG_WARN
+				<< "tproxy flow: " << flow->flow_key_
+				<< ", connect-udp forward error: " << ec.message()
+				<< ", client: " << flow->client_endp_
+				<< ", dest: " << flow->original_endp_;
+
+			std::lock_guard<std::mutex> lock(self->m_udp_flows_mutex);
+			flow->sending_ = false;
+			self->m_udp_tproxy_flows.erase(flow->flow_key_);
+			flow->udp_http_sock_.reset();
+			break;
+		}
 	}
 }
 
