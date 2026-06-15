@@ -978,6 +978,9 @@ net::ssl::context& proxy_server::ssl_context()
 	return m_ssl_srv_context;
 }
 
+// Forward declaration for static helper.
+static udp::endpoint sockaddr_to_udp_endpoint(const sockaddr_storage& addr) noexcept;
+
 net::awaitable<std::optional<net::ip::tcp::endpoint>>
 proxy_server::setup_tproxy(proxy_tcp_socket& socket, size_t connection_id) noexcept
 {
@@ -998,36 +1001,15 @@ proxy_server::setup_tproxy(proxy_tcp_socket& socket, size_t connection_id) noexc
 		co_return remote_endp;
 	}
 
-	if (addr.ss_family == AF_INET)
 	{
-		remote_endp.emplace();
-
-		auto addr4 = reinterpret_cast<sockaddr_in*>(&addr);
-		auto port = ntohs(addr4->sin_port);
-
-		remote_endp->address(net::ip::address_v4(htonl(addr4->sin_addr.s_addr)));
-		remote_endp->port(port);
-	}
-	else if (addr.ss_family == AF_INET6)
-	{
-		remote_endp.emplace();
-
-		auto addr6 = reinterpret_cast<sockaddr_in6*>(&addr);
-		auto port = ntohs(addr6->sin6_port);
-
-		net::ip::address_v6::bytes_type bt;
-
-		std::copy(std::begin(addr6->sin6_addr.s6_addr),
-			std::end(addr6->sin6_addr.s6_addr), std::begin(bt));
-
-		remote_endp->address(net::ip::make_address_v6(bt));
-		remote_endp->port(port);
-	}
-	else
-	{
-		XLOG_WARN << "connection id: " << connection_id
-			<< ", SO_ORIGINAL_DST unexpected family: " << addr.ss_family;
-		co_return remote_endp;
+		auto ep = sockaddr_to_udp_endpoint(addr);
+		if (ep.address().is_unspecified())
+		{
+			XLOG_WARN << "connection id: " << connection_id
+				<< ", SO_ORIGINAL_DST unexpected family: " << addr.ss_family;
+			co_return remote_endp;
+		}
+		remote_endp.emplace(ep.address(), ep.port());
 	}
 
 	XLOG_DBG << "connection id: " << connection_id << ", tproxy, remote: " << *remote_endp;
@@ -1044,6 +1026,28 @@ proxy_server::setup_tproxy(proxy_tcp_socket& socket, size_t connection_id) noexc
 		remote_endp.reset();
 
 	co_return remote_endp;
+}
+
+// 切换到后端执行上下文（非锁定调度时）.
+// 当 m_scheduler_locking 为 false 时, 协程会切换到后端线程池执行, 适用于需要执行
+// 同步操作（如 DNS 解析）的场景. 返回当前应使用的 executor.
+net::awaitable<net::any_io_executor> proxy_server::switch_to_backend_executor()
+{
+	if (!m_scheduler_locking)
+	{
+		co_await net::post(
+			net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
+		co_return m_backend_context.get_executor();
+	}
+	co_return m_executor;
+}
+
+// 从后端执行上下文切换回主执行上下文.
+net::awaitable<void> proxy_server::switch_from_backend_executor()
+{
+	if (!m_scheduler_locking)
+		co_await net::post(
+			net::bind_executor(m_executor, net::use_awaitable));
 }
 
 net::awaitable<void> proxy_server::get_local_address() noexcept
@@ -1067,20 +1071,13 @@ net::awaitable<void> proxy_server::get_local_address() noexcept
 		co_return;
 	}
 
-	// 切换线程到后端线程池中执行同步 dns 解析操作.
-	auto executor = m_executor;
-	if (!m_scheduler_locking)
-	{
-		co_await net::post(net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
-		executor = m_backend_context.get_executor();
-	}
+	// 切换到后端线程池执行 DNS 解析操作.
+	auto executor = co_await switch_to_backend_executor();
 
 	tcp::resolver resolver(executor);
-
 	auto results = co_await resolver.async_resolve(hostname, "", net_awaitable[ec]);
 
-	if (!m_scheduler_locking)
-		co_await net::post(net::bind_executor(m_executor, net::use_awaitable));
+	co_await switch_from_backend_executor();
 
 	if (ec)
 	{
@@ -1197,6 +1194,54 @@ void proxy_server::backend_thread_run() noexcept
 	{}
 }
 
+// 将 sockaddr_storage 转换为 udp::endpoint.
+// 统一处理 AF_INET / AF_INET6 转换逻辑，消除多处重复的 sockaddr 转换代码.
+static udp::endpoint sockaddr_to_udp_endpoint(const sockaddr_storage& addr) noexcept
+{
+	if (addr.ss_family == AF_INET)
+	{
+		const auto& addr4 = reinterpret_cast<const sockaddr_in&>(addr);
+		return udp::endpoint(
+			net::ip::address_v4(ntohl(addr4.sin_addr.s_addr)),
+			ntohs(addr4.sin_port));
+	}
+	if (addr.ss_family == AF_INET6)
+	{
+		const auto& addr6 = reinterpret_cast<const sockaddr_in6&>(addr);
+		net::ip::address_v6::bytes_type bt;
+		std::memcpy(bt.data(), &addr6.sin6_addr, 16);
+		return udp::endpoint(
+			net::ip::make_address_v6(bt),
+			ntohs(addr6.sin6_port));
+	}
+	return {};
+}
+
+// 从流中读取一个 QUIC 变长整数 (varint), 用于 RFC 9298 capsule 协议解析.
+// 返回读取到的值, ec 非零表示读取失败.
+static net::awaitable<uint64_t>
+read_varint_from_stream(variant_stream_type& stream, boost::system::error_code& ec)
+{
+	uint8_t buf[8];
+
+	co_await net::async_read(stream, net::buffer(buf, 1), net_awaitable[ec]);
+	if (ec) co_return 0;
+
+	uint8_t prefix = buf[0] >> 6;
+	size_t len = 1 << prefix;
+
+	if (len > 1)
+	{
+		co_await net::async_read(stream, net::buffer(buf + 1, len - 1),
+			net_awaitable[ec]);
+		if (ec) co_return 0;
+	}
+
+	auto [consumed, value] = varint_decode(buf);
+	(void)consumed;
+	co_return value;
+}
+
 #if defined(__linux__)
 
 // 从 msg 中提取原客户端和原目标地址.
@@ -1212,20 +1257,17 @@ bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg, ssize_t ret,
 		if (cmsg->cmsg_level == IPPROTO_IP &&
 			cmsg->cmsg_type == IP_ORIGDSTADDR)
 		{
-			auto* sin = (struct sockaddr_in*)CMSG_DATA(cmsg);
-			original_dest.address(
-				net::ip::address_v4(ntohl(sin->sin_addr.s_addr)));
-			original_dest.port(ntohs(sin->sin_port));
+			const auto& ss = *reinterpret_cast<const sockaddr_storage*>(
+				CMSG_DATA(cmsg));
+			original_dest = sockaddr_to_udp_endpoint(ss);
 			break;
 		}
 		if (cmsg->cmsg_level == IPPROTO_IPV6 &&
 			cmsg->cmsg_type == IPV6_ORIGDSTADDR)
 		{
-			auto* sin6 = (struct sockaddr_in6*)CMSG_DATA(cmsg);
-			net::ip::address_v6::bytes_type bt;
-			std::memcpy(bt.data(), &sin6->sin6_addr, 16);
-			original_dest.address(net::ip::make_address_v6(bt));
-			original_dest.port(ntohs(sin6->sin6_port));
+			const auto& ss = *reinterpret_cast<const sockaddr_storage*>(
+				CMSG_DATA(cmsg));
+			original_dest = sockaddr_to_udp_endpoint(ss);
 			break;
 		}
 	}
@@ -1235,25 +1277,9 @@ bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg, ssize_t ret,
 
 	// 提取客户端端点.
 	auto* ss = (struct sockaddr_storage*)msg.msg_name;
-	if (ss->ss_family == AF_INET)
-	{
-		auto* sin = (struct sockaddr_in*)ss;
-		client_ep.address(
-			net::ip::address_v4(ntohl(sin->sin_addr.s_addr)));
-		client_ep.port(ntohs(sin->sin_port));
-	}
-	else if (ss->ss_family == AF_INET6)
-	{
-		auto* sin6 = (struct sockaddr_in6*)ss;
-		net::ip::address_v6::bytes_type bt;
-		std::memcpy(bt.data(), &sin6->sin6_addr, 16);
-		client_ep.address(net::ip::make_address_v6(bt));
-		client_ep.port(ntohs(sin6->sin6_port));
-	}
-	else
-	{
+	client_ep = sockaddr_to_udp_endpoint(*ss);
+	if (client_ep.address().is_unspecified())
 		return false;
-	}
 
 	return true;
 }
@@ -1400,21 +1426,13 @@ proxy_server::resolve_proxy_pass(const boost::urls::url& proxy_pass)
 	}
 
 	// DNS 解析.
-	auto ex = m_executor;
-	if (!m_scheduler_locking)
-	{
-		co_await net::post(net::bind_executor(
-				m_backend_context.get_executor(), net::use_awaitable));
-		ex = m_backend_context.get_executor();
-	}
+	auto ex = co_await switch_to_backend_executor();
 
 	tcp::resolver resolver{ ex };
 	auto targets = co_await resolver.async_resolve(
 		proxy_host, std::to_string(proxy_port), net_awaitable[ec]);
 
-	if (!m_scheduler_locking)
-		co_await net::post(
-			net::bind_executor(m_executor, net::use_awaitable));
+	co_await switch_from_backend_executor();
 
 	if (ec)
 	{
@@ -1425,6 +1443,23 @@ proxy_server::resolve_proxy_pass(const boost::urls::url& proxy_pass)
 	}
 
 	co_return targets;
+}
+
+// 如果配置了 SO_MARK, 则对指定 socket 应用标记.
+// 返回设置结果, 调用方负责记录日志.
+boost::system::result<void>
+proxy_server::apply_so_mark(int fd) noexcept
+{
+#if defined(__linux__)
+	if (m_option.so_mark_)
+	{
+		uint32_t mark = m_option.so_mark_.value();
+		auto r = set_socket_mark(fd, mark);
+		if (r.has_error())
+			return r.error();
+	}
+#endif
+	return {};
 }
 
 net::awaitable<boost::system::error_code>
@@ -1439,18 +1474,12 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 		co_await remote_socket.async_connect(endp, net_awaitable[ec]);
 		if (!ec)
 		{
-#if defined(__linux__)
-			if (m_option.so_mark_)
+			auto ret = apply_so_mark(remote_socket.native_handle());
+			if (ret.has_error())
 			{
-				uint32_t mark = m_option.so_mark_.value();
-				auto ret = set_socket_mark(remote_socket.native_handle(), mark);
-				if (ret.has_error())
-				{
-					XLOG_WARN << "connect_to_proxy setsockopt SO_MARK error: "
-						<< ret.error().message();
-				}
+				XLOG_WARN << "connect_to_proxy setsockopt SO_MARK error: "
+					<< ret.error().message();
 			}
-#endif
 			co_return ec;
 		}
 	}
@@ -1694,11 +1723,8 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 		co_return;
 	}
 
-#if defined(__linux__)
-	if (m_option.so_mark_)
 	{
-		uint32_t mark = m_option.so_mark_.value();
-		auto ret = set_socket_mark(backend_sock->native_handle(), mark);
+		auto ret = apply_so_mark(backend_sock->native_handle());
 		if (ret.has_error())
 		{
 			XLOG_WARN << "tproxy flow: " << flow->flow_key_
@@ -1706,7 +1732,6 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 				<< ret.error().message();
 		}
 	}
-#endif
 
 	if (!init_relay_socket(flow))
 	{
@@ -2234,44 +2259,13 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	// 通过 relay_sock_ 发送回客户端.
 	while (!m_abort)
 	{
-		// 读取 capsule type 的第一个字节.
-		uint8_t hdr_buf[18];
-		co_await net::async_read(
-			*http_sock, net::buffer(hdr_buf, 1), net_awaitable[ec]);
+		// 读取 capsule type.
+		auto capsule_type = co_await read_varint_from_stream(*http_sock, ec);
 		if (ec) break;
-
-		uint8_t prefix = hdr_buf[0] >> 6;
-		size_t type_len = 1 << prefix;
-
-		if (type_len > 1)
-		{
-			co_await net::async_read(
-				*http_sock, net::buffer(hdr_buf + 1, type_len - 1),
-				net_awaitable[ec]);
-			if (ec) break;
-		}
-
-		auto [type_consumed, capsule_type] = varint_decode(hdr_buf);
-		(void)type_consumed;
 
 		// 读取 capsule length.
-		co_await net::async_read(
-			*http_sock, net::buffer(hdr_buf, 1), net_awaitable[ec]);
+		auto capsule_length = co_await read_varint_from_stream(*http_sock, ec);
 		if (ec) break;
-
-		prefix = hdr_buf[0] >> 6;
-		size_t len_len = 1 << prefix;
-
-		if (len_len > 1)
-		{
-			co_await net::async_read(
-				*http_sock, net::buffer(hdr_buf + 1, len_len - 1),
-				net_awaitable[ec]);
-			if (ec) break;
-		}
-
-		auto [len_consumed, capsule_length] = varint_decode(hdr_buf);
-		(void)len_consumed;
 
 		if (capsule_length > 65535)
 		{

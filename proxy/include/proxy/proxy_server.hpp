@@ -340,6 +340,12 @@ namespace proxy {
 		// 后端线程入口, 用于处理同步转异步操作.
 		void backend_thread_run() noexcept;
 
+		// 切换到后端执行上下文（非锁定调度时）.
+		net::awaitable<net::any_io_executor> switch_to_backend_executor();
+
+		// 从后端执行上下文切换回主执行上下文.
+		net::awaitable<void> switch_from_backend_executor();
+
 #if defined(__linux__)
 		// 从 msg 中提取原客户端和原目标地址.
 		static bool parse_udp_tproxy_packet(struct msghdr& msg, ssize_t ret,
@@ -360,6 +366,10 @@ namespace proxy {
 		// 解析 proxy_pass 地址并返回 endpoints.
 		net::awaitable<std::optional<tcp::resolver::results_type>>
 		resolve_proxy_pass(const boost::urls::url& proxy_pass);
+
+		// 如果配置了 SO_MARK, 则对指定 socket 应用标记.
+		boost::system::result<void>
+		apply_so_mark(int fd) noexcept;
 
 		// 连接到上游代理服务器.
 		net::awaitable<boost::system::error_code>
