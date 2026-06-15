@@ -17,6 +17,8 @@ namespace proxy {
 
 //////////////////////////////////////////////////////////////////////////
 
+static constexpr uint64_t udp_proxy_capsule_type = 0x8000;
+
 proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option opt)
 	: m_executor(executor)
 	, m_option(std::move(opt))
@@ -1530,9 +1532,6 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 {
 	auto self = shared_from_this();
 
-	if (!flow)
-		co_return;
-
 	// 退出时清理 flow, 防止 map 泄漏.
 	boost::scope::scope_exit flows_guard([this, flow]()
 	{
@@ -1850,6 +1849,8 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 		// 创建 flow 对象的 shared_ptr 指针, make_tproxy_flow 返回 true 则表示新建 flow 连接.
 		if (make_tproxy_flow())
 		{
+			BOOST_ASSERT(flow && "flow pointer is null");
+
 			if (using_connect_udp)
 			{
 				flow->using_connect_udp_ = true;
@@ -1893,8 +1894,6 @@ void proxy_server::udp_tproxy_forward_packet_http(
 	if (!flow || !flow->udp_http_sock_)
 		return;
 
-	static constexpr uint64_t UDP_PROXY_CAPSULE_TYPE = 0x8000;
-
 	// 构建 capsule:
 	//   capsule type (varint) = 0x8000
 	//   capsule length (varint) = 1 + len
@@ -1904,7 +1903,7 @@ void proxy_server::udp_tproxy_forward_packet_http(
 	uint8_t buf[65536];
 	size_t pos = 0;
 
-	pos += varint_encode(UDP_PROXY_CAPSULE_TYPE, buf + pos);
+	pos += varint_encode(udp_proxy_capsule_type, buf + pos);
 	pos += varint_encode(1 + len, buf + pos);
 	pos += varint_encode(0, buf + pos);
 	std::memcpy(buf + pos, data, len);
@@ -1927,11 +1926,6 @@ void proxy_server::udp_tproxy_forward_packet_http(
 net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr flow)
 {
 	auto self = shared_from_this();
-
-	static constexpr uint64_t UDP_PROXY_CAPSULE_TYPE = 0x8000;
-
-	if (!flow)
-		co_return;
 
 	// 退出时清理.
 	boost::scope::scope_exit flows_guard([this, flow]()
@@ -2146,7 +2140,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		}
 
 		// 仅处理 UDP_PROXY capsule.
-		if (capsule_type != UDP_PROXY_CAPSULE_TYPE)
+		if (capsule_type != udp_proxy_capsule_type)
 		{
 			XLOG_DBG << "tproxy flow: " << flow->flow_key_
 				<< ", unknown capsule type: " << capsule_type;
