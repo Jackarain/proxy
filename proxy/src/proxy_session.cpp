@@ -2145,86 +2145,6 @@ R"x*x*x(<html>
 		co_return PROXY_AUTH_SUCCESS;
 	}
 
-	//////////////////////////////////////////////////////////////////////////
-	// RFC 9298 CONNECT-UDP 辅助函数
-
-	// QUIC 可变长度整数编码 (Variable-Length Integer Encoding).
-	// 前缀编码: 0b00 = 1字节, 0b01 = 2字节, 0b10 = 4字节, 0b11 = 8字节.
-	// 返回编码后的字节数.
-	static size_t varint_encode(uint64_t value, uint8_t* buf) noexcept
-	{
-		if (value < 0x40)
-		{
-			buf[0] = static_cast<uint8_t>(value);
-			return 1;
-		}
-		else if (value < 0x4000)
-		{
-			value |= 0x4000;
-			buf[0] = static_cast<uint8_t>(value >> 8);
-			buf[1] = static_cast<uint8_t>(value);
-			return 2;
-		}
-		else if (value < 0x40000000)
-		{
-			value |= 0x80000000;
-			buf[0] = static_cast<uint8_t>(value >> 24);
-			buf[1] = static_cast<uint8_t>(value >> 16);
-			buf[2] = static_cast<uint8_t>(value >> 8);
-			buf[3] = static_cast<uint8_t>(value);
-			return 4;
-		}
-		else
-		{
-			value |= 0xC000000000000000;
-			buf[0] = static_cast<uint8_t>(value >> 56);
-			buf[1] = static_cast<uint8_t>(value >> 48);
-			buf[2] = static_cast<uint8_t>(value >> 40);
-			buf[3] = static_cast<uint8_t>(value >> 32);
-			buf[4] = static_cast<uint8_t>(value >> 24);
-			buf[5] = static_cast<uint8_t>(value >> 16);
-			buf[6] = static_cast<uint8_t>(value >> 8);
-			buf[7] = static_cast<uint8_t>(value);
-			return 8;
-		}
-	}
-
-	// QUIC 可变长度整数解码.
-	// 返回 {字节数, 值}.
-	static std::pair<size_t, uint64_t> varint_decode(const uint8_t* buf) noexcept
-	{
-		uint8_t prefix = buf[0] >> 6;
-		if (prefix == 0)
-		{
-			return { 1, buf[0] };
-		}
-		else if (prefix == 1)
-		{
-			uint64_t v = (static_cast<uint64_t>(buf[0]) << 8) | buf[1];
-			return { 2, v & 0x3FFF };
-		}
-		else if (prefix == 2)
-		{
-			uint64_t v = (static_cast<uint64_t>(buf[0]) << 24) |
-				(static_cast<uint64_t>(buf[1]) << 16) |
-				(static_cast<uint64_t>(buf[2]) << 8) |
-				buf[3];
-			return { 4, v & 0x3FFFFFFF };
-		}
-		else
-		{
-			uint64_t v = (static_cast<uint64_t>(buf[0]) << 56) |
-				(static_cast<uint64_t>(buf[1]) << 48) |
-				(static_cast<uint64_t>(buf[2]) << 40) |
-				(static_cast<uint64_t>(buf[3]) << 32) |
-				(static_cast<uint64_t>(buf[4]) << 24) |
-				(static_cast<uint64_t>(buf[5]) << 16) |
-				(static_cast<uint64_t>(buf[6]) << 8) |
-				buf[7];
-			return { 8, v & 0x3FFFFFFFFFFFFFFF };
-		}
-	}
-
 	net::awaitable<bool> proxy_session::http_proxy_get() noexcept
 	{
 		boost::system::error_code ec;
@@ -2662,30 +2582,6 @@ R"x*x*x(<html>
 		co_await concurrent_transfer();
 
 		co_return true;
-	}
-
-	// 从流中读取一个 QUIC 变长整数 (varint), 用于 RFC 9298 capsule 协议解析.
-	static net::awaitable<uint64_t>
-	read_varint_from_stream(variant_stream_type& stream, boost::system::error_code& ec)
-	{
-		uint8_t buf[8];
-
-		co_await net::async_read(stream, net::buffer(buf, 1), net_awaitable[ec]);
-		if (ec) co_return 0;
-
-		uint8_t prefix = buf[0] >> 6;
-		size_t len = 1 << prefix;
-
-		if (len > 1)
-		{
-			co_await net::async_read(stream, net::buffer(buf + 1, len - 1),
-				net_awaitable[ec]);
-			if (ec) co_return 0;
-		}
-
-		auto [consumed, value] = varint_decode(buf);
-		(void)consumed;
-		co_return value;
 	}
 
 	net::awaitable<void> proxy_session::http_proxy_connect_udp(

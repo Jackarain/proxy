@@ -11,13 +11,15 @@
 #ifndef INCLUDE__2025_11_25__DNS_CACHE_HPP
 #define INCLUDE__2025_11_25__DNS_CACHE_HPP
 
+
+#include <boost/asio/ip/basic_resolver.hpp>
+
 #include <string>
 #include <tuple>
 #include <chrono>
 #include <list>
 #include <unordered_map>
 
-#include <boost/asio/ip/basic_resolver.hpp>
 
 namespace proxy {
 

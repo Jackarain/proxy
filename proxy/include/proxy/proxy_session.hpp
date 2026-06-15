@@ -106,18 +106,6 @@
 # include <boost/filesystem.hpp>
 #endif // USE_BOOST_FILESYSTEM
 
-#ifdef USE_PAM_AUTH
-# include <security/pam_appl.h>
-# include <security/pam_misc.h>
-#endif // USE_PAM_AUTH
-
-#ifdef __linux__
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <netinet/ip.h>
-# include <arpa/inet.h>
-#endif // __linux__
-
 #include <cstdlib>
 #include <algorithm>
 #include <atomic>
@@ -139,6 +127,18 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+
+#ifdef USE_PAM_AUTH
+# include <security/pam_appl.h>
+# include <security/pam_misc.h>
+#endif // USE_PAM_AUTH
+
+#ifdef __linux__
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <netinet/ip.h>
+# include <arpa/inet.h>
+#endif // __linux__
 
 
 namespace proxy {
