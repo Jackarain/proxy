@@ -1794,12 +1794,7 @@ R"x*x*x(<html>
 
 					if (latest_domain != domain)
 					{
-						auto executor = m_executor;
-						if (!m_scheduler_locking)
-						{
-							co_await net::post(net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
-							executor = m_backend_context.get_executor();
-						}
+						auto executor = co_await switch_to_backend_executor();
 
 						udp::resolver resolver{ executor };
 
@@ -1809,8 +1804,7 @@ R"x*x*x(<html>
 								std::to_string(port),
 								net_awaitable[ec]);
 
-						if (!m_scheduler_locking)
-							co_await net::post(net::bind_executor(m_executor, net::use_awaitable));
+						co_await switch_from_backend_executor();
 
 						if (ec)
 							break;
@@ -2670,6 +2664,30 @@ R"x*x*x(<html>
 		co_return true;
 	}
 
+	// 从流中读取一个 QUIC 变长整数 (varint), 用于 RFC 9298 capsule 协议解析.
+	static net::awaitable<uint64_t>
+	read_varint_from_stream(variant_stream_type& stream, boost::system::error_code& ec)
+	{
+		uint8_t buf[8];
+
+		co_await net::async_read(stream, net::buffer(buf, 1), net_awaitable[ec]);
+		if (ec) co_return 0;
+
+		uint8_t prefix = buf[0] >> 6;
+		size_t len = 1 << prefix;
+
+		if (len > 1)
+		{
+			co_await net::async_read(stream, net::buffer(buf + 1, len - 1),
+				net_awaitable[ec]);
+			if (ec) co_return 0;
+		}
+
+		auto [consumed, value] = varint_decode(buf);
+		(void)consumed;
+		co_return value;
+	}
+
 	net::awaitable<void> proxy_session::http_proxy_connect_udp(
 		const http::request<http::string_body>& req,
 		const std::string& target_host,
@@ -2800,13 +2818,7 @@ R"x*x*x(<html>
 			if (resolve_ec)
 			{
 				// 域名, 需要异步解析.
-				if (!m_scheduler_locking)
-				{
-					co_await net::post(
-						net::bind_executor(
-							m_backend_context.get_executor(),
-							net::use_awaitable));
-				}
+				co_await switch_to_backend_executor();
 
 				udp::resolver resolver(m_backend_context);
 				auto results = co_await resolver.async_resolve(
@@ -2814,13 +2826,7 @@ R"x*x*x(<html>
 					std::to_string(target_port),
 					net_awaitable[resolve_ec]);
 
-				if (!m_scheduler_locking)
-				{
-					co_await net::post(
-						net::bind_executor(
-							m_executor,
-							net::use_awaitable));
-				}
+				co_await switch_from_backend_executor();
 
 				if (resolve_ec || results.empty())
 				{
@@ -2939,54 +2945,16 @@ R"x*x*x(<html>
 			() -> net::awaitable<void>
 		{
 			boost::system::error_code ec;
-			uint8_t hdr_buf[18]; // 最大 varint 2个 + 一些余量.
 
 			while (!m_abort)
 			{
-				// 读取 capsule type 的第一个字节.
-				co_await net::async_read(
-					m_local_socket,
-					net::buffer(hdr_buf, 1),
-					net_awaitable[ec]);
+				// 读取 capsule type.
+				auto capsule_type = co_await read_varint_from_stream(m_local_socket, ec);
 				if (ec) break;
 
-				// 根据前缀确定 varint 长度.
-				uint8_t prefix = hdr_buf[0] >> 6;
-				size_t type_len = 1 << prefix; // 1, 2, 4 或 8
-
-				if (type_len > 1)
-				{
-					co_await net::async_read(
-						m_local_socket,
-						net::buffer(hdr_buf + 1, type_len - 1),
-						net_awaitable[ec]);
-					if (ec) break;
-				}
-
-				auto [type_consumed, capsule_type] = varint_decode(hdr_buf);
-				(void)type_consumed;
-
-				// 读取 capsule length 的第一个字节.
-				co_await net::async_read(
-					m_local_socket,
-					net::buffer(hdr_buf, 1),
-					net_awaitable[ec]);
+				// 读取 capsule length.
+				auto capsule_length = co_await read_varint_from_stream(m_local_socket, ec);
 				if (ec) break;
-
-				prefix = hdr_buf[0] >> 6;
-				size_t len_len = 1 << prefix;
-
-				if (len_len > 1)
-				{
-					co_await net::async_read(
-						m_local_socket,
-						net::buffer(hdr_buf + 1, len_len - 1),
-						net_awaitable[ec]);
-					if (ec) break;
-				}
-
-				auto [len_consumed, capsule_length] = varint_decode(hdr_buf);
-				(void)len_consumed;
 
 				// 限制最大 capsule 大小.
 				if (capsule_length > 65535)
@@ -4467,27 +4435,10 @@ R"x*x*x(<html>
 		dns_socket.close(ec);
 
 		// 返回 DNS 响应.
-		string_response res{ http::status::ok, request.version() };
-		res.set(http::field::server, version_string);
-		res.set(http::field::date, server_date_string());
-		res.set(http::field::content_type, "application/dns-message");
-		res.keep_alive(true);
-		res.body().assign(recv_buf.data(), recv_len);
-		res.prepare_payload();
-
-		http::serializer<false, string_body, http::fields> sr(res);
-		co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
-		if (ec)
-		{
-			log_conn_warning()
-				<< ", dns query write response error: "
-				<< ec.message();
-		}
-		else
-		{
-			log_dns_result(dns_query,
-				std::string(recv_buf.data(), recv_len));
-		}
+		co_await send_http_string_response(
+			request, http::status::ok, "application/dns-message",
+			std::string(recv_buf.data(), recv_len), true);
+		log_dns_result(dns_query, std::string(recv_buf.data(), recv_len));
 
 		co_return;
 	}
@@ -5139,28 +5090,10 @@ R"x*x*x(<html>
 			wire_response, question_name, question_type);
 
 		// 4. 返回 JSON 响应给客户端.
-		string_response res{ http::status::ok, request.version() };
-		res.set(http::field::server, version_string);
-		res.set(http::field::date, server_date_string());
-		res.set(http::field::content_type, "application/dns-json");
-		res.keep_alive(true);
-		res.body() = std::move(json_body);
-		res.prepare_payload();
-
-		http::serializer<false, string_body, http::fields> sr(res);
-		co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
-		if (ec)
-		{
-			log_conn_warning()
-				<< ", dns json query write response error: "
-				<< ec.message();
-		}
-		else
-		{
-			log_dns_result(dns_query,
-				wire_response,
-				res.body());
-		}
+		co_await send_http_string_response(
+			request, http::status::ok, "application/dns-json",
+			json_body, true);
+		log_dns_result(dns_query, wire_response, json_body);
 
 		co_return;
 	}
@@ -5444,26 +5377,10 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		string_response res{ http::status::ok, request.version() };
-		res.set(http::field::server, version_string);
-		res.set(http::field::date, server_date_string());
-		res.set(http::field::content_type, "application/dns-message");
-		res.keep_alive(true);
-		res.body() = doh_res.body();
-		res.prepare_payload();
-
-		http::serializer<false, string_body, http::fields> sr(res);
-		co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
-		if (ec)
-		{
-			log_conn_warning()
-				<< ", doh dns query write response error: "
-				<< ec.message();
-		}
-		else
-		{
-			log_dns_result(dns_query, doh_res.body());
-		}
+		co_await send_http_string_response(
+			request, http::status::ok, "application/dns-message",
+			doh_res.body(), true);
+		log_dns_result(dns_query, doh_res.body());
 
 		co_return;
 	}
@@ -5471,18 +5388,21 @@ R"x*x*x(<html>
 	//////////////////////////////////////////////////////////////////////////
 	// HTTP 响应辅助
 
-	net::awaitable<void> proxy_session::default_http_route(
-		const string_request& request, std::string response, http::status status) noexcept
+	net::awaitable<void> proxy_session::send_http_string_response(
+		const string_request& request,
+		http::status status,
+		std::string content_type,
+		std::string body,
+		bool keep_alive) noexcept
 	{
 		boost::system::error_code ec;
 
 		string_response res{ status, request.version() };
 		res.set(http::field::server, version_string);
 		res.set(http::field::date, server_date_string());
-		res.set(http::field::content_type, "text/html");
-
-		res.keep_alive(true);
-		res.body() = response;
+		res.set(http::field::content_type, std::move(content_type));
+		res.keep_alive(keep_alive);
+		res.body() = std::move(body);
 		res.prepare_payload();
 
 		http::serializer<false, string_body, http::fields> sr(res);
@@ -5490,10 +5410,18 @@ R"x*x*x(<html>
 		if (ec)
 		{
 			log_conn_warning()
-				<< ", default http route err: "
+				<< ", send http response error: "
 				<< ec.message();
 		}
 
+		co_return;
+	}
+
+	net::awaitable<void> proxy_session::default_http_route(
+		const string_request& request, std::string response, http::status status) noexcept
+	{
+		co_await send_http_string_response(
+			request, status, "text/html", std::move(response), true);
 		co_return;
 	}
 
@@ -5526,56 +5454,37 @@ R"x*x*x(<html>
 
 	net::awaitable<void> proxy_session::forbidden_http_route(const string_request& request) noexcept
 	{
-		boost::system::error_code ec;
+	co_await send_http_string_response(
+		request, http::status::forbidden, "text/html",
+		fake_403_content, true);
+	co_return;
+}
 
-		string_response res{ http::status::forbidden, request.version() };
-		res.set(http::field::server, version_string);
-		res.set(http::field::date, server_date_string());
-		res.set(http::field::content_type, "text/html");
+net::awaitable<void> proxy_session::unauthorized_http_route(const string_request& request) noexcept
+{
+	boost::system::error_code ec;
 
-		res.keep_alive(true);
-		res.body() = fake_403_content;
-		res.prepare_payload();
+	// WWW-Authenticate 头无法通过 send_http_string_response 设置, 需单独构建.
+	string_response res{ http::status::unauthorized, request.version() };
+	res.set(http::field::server, version_string);
+	res.set(http::field::date, server_date_string());
+	res.set(http::field::content_type, "text/html; charset=UTF-8");
+	res.set(http::field::www_authenticate, "Basic realm=\"proxy\"");
+	res.keep_alive(true);
+	res.body() = fake_401_content;
+	res.prepare_payload();
 
-		http::serializer<false, string_body, http::fields> sr(res);
-		co_await http::async_write(
-			m_local_socket, sr, net_awaitable[ec]);
-		if (ec)
-		{
-			log_conn_warning()
-				<< ", forbidden http route err: "
-				<< ec.message();
-		}
-
-		co_return;
-	}
-
-	net::awaitable<void> proxy_session::unauthorized_http_route(const string_request& request) noexcept
+	http::serializer<false, string_body, http::fields> sr(res);
+	co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+	if (ec)
 	{
-		boost::system::error_code ec;
-
-		string_response res{ http::status::unauthorized, request.version() };
-		res.set(http::field::server, version_string);
-		res.set(http::field::date, server_date_string());
-		res.set(http::field::content_type, "text/html; charset=UTF-8");
-		res.set(http::field::www_authenticate, "Basic realm=\"proxy\"");
-
-		res.keep_alive(true);
-		res.body() = fake_401_content;
-		res.prepare_payload();
-
-		http::serializer<false, string_body, http::fields> sr(res);
-		co_await http::async_write(
-			m_local_socket, sr, net_awaitable[ec]);
-		if (ec)
-		{
-			log_conn_warning()
-				<< ", unauthorized http route err: "
-				<< ec.message();
-		}
-
-		co_return;
+		log_conn_warning()
+			<< ", unauthorized http route err: "
+			<< ec.message();
 	}
+
+	co_return;
+}
 
 	//////////////////////////////////////////////////////////////////////////
 	// DNS 解析与缓存
@@ -5606,6 +5515,24 @@ R"x*x*x(<html>
 		return {};
 	}
 
+	net::awaitable<net::any_io_executor> proxy_session::switch_to_backend_executor()
+	{
+		if (!m_scheduler_locking)
+		{
+			co_await net::post(
+				net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
+			co_return m_backend_context.get_executor();
+		}
+		co_return m_executor;
+	}
+
+	net::awaitable<void> proxy_session::switch_from_backend_executor()
+	{
+		if (!m_scheduler_locking)
+			co_await net::post(
+				net::bind_executor(m_executor, net::use_awaitable));
+	}
+
 	net::awaitable<tcp::resolver::results_type>
 	proxy_session::resolve_targets(const std::string& hostname, uint16_t port_number) noexcept
 	{
@@ -5617,12 +5544,7 @@ R"x*x*x(<html>
 
 		boost::system::error_code ec;
 
-		auto executor = m_executor;
-		if (!m_scheduler_locking)
-		{
-			co_await net::post(net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
-			executor = m_backend_context.get_executor();
-		}
+		auto executor = co_await switch_to_backend_executor();
 
 		tcp::resolver resolver{ executor };
 
@@ -5631,8 +5553,7 @@ R"x*x*x(<html>
 			std::to_string(port_number),
 			net_awaitable[ec]);
 
-		if (!m_scheduler_locking)
-			co_await net::post(net::bind_executor(m_executor, net::use_awaitable));
+		co_await switch_from_backend_executor();
 
 		if (ec)
 		{

@@ -1415,6 +1415,14 @@ namespace proxy {
 		// 返回 HTTP 401 Unauthorized 响应.
 		net::awaitable<void> unauthorized_http_route(const string_request& request) noexcept;
 
+		// 发送 HTTP 字符串响应, 自动设置常用头部 (server, date, content-type, keep-alive).
+		net::awaitable<void> send_http_string_response(
+			const string_request& request,
+			http::status status,
+			std::string content_type,
+			std::string body,
+			bool keep_alive = true) noexcept;
+
 		//////////////////////////////////////////////////////////////////////////
 		// 流控制工具
 
@@ -1445,6 +1453,12 @@ namespace proxy {
 		// 异步解析上游代理服务器地址.
 		net::awaitable<tcp::resolver::results_type>
 		resolve_proxy_pass_targets() noexcept;
+
+		// 切换到后端执行上下文（非锁定调度时）.
+		net::awaitable<net::any_io_executor> switch_to_backend_executor();
+
+		// 从后端执行上下文切换回主执行上下文.
+		net::awaitable<void> switch_from_backend_executor();
 
 		//////////////////////////////////////////////////////////////////////////
 
