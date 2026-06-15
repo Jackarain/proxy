@@ -19,6 +19,7 @@
 #include <chrono>
 #include <list>
 #include <unordered_map>
+#include <mutex>
 
 
 namespace proxy {
@@ -56,6 +57,7 @@ namespace proxy {
 
 		inline size_t size() const noexcept
 		{
+			std::lock_guard<std::mutex> lock(m_mutex);
 			return m_cache_map.size();
 		}
 
@@ -66,6 +68,8 @@ namespace proxy {
 
 		inline std::optional<dns_result> get(const key_type& key)
 		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+
 			auto it = m_cache_map.find(key);
 			if (it == m_cache_map.end())
 				return {};
@@ -82,9 +86,6 @@ namespace proxy {
 
 			// 更新 map 中的迭代器.
 			it->second = m_lru_list.begin();
-			// 更新时间点.
-			// 这里注释掉是因为如果访问频繁的域名将可能永远得不到更新!!!
-			// it->second->second = std::make_tuple(std::get<0>(it->second->second), now);
 
 			// 返回 dns_result
 			return it->second->second;
@@ -92,6 +93,8 @@ namespace proxy {
 
 		inline void put(const key_type& key, value_type&& results)
 		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+
 			auto it = m_cache_map.find(key);
 			if (it != m_cache_map.end())
 			{
@@ -121,6 +124,7 @@ namespace proxy {
 		}
 
 	private:
+		mutable std::mutex m_mutex;
 		list_type m_lru_list;
 		std::unordered_map<key_type, list_type::iterator> m_cache_map;
 		const size_t m_capacity;

@@ -11,6 +11,8 @@
 #include "proxy/proxy_server.hpp"
 #include "proxy/proxy_util.hpp"
 
+#include <boost/functional/hash.hpp>
+
 namespace proxy {
 
 //////////////////////////////////////////////////////////////////////////
@@ -1152,20 +1154,14 @@ bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg, ssize_t ret,
 {
 	if (ret < 0) return false;
 
-	// 提取原始目标地址.
+	// 提取原始目标地址, IP_ORIGDSTADDR / IPV6_ORIGDSTADDR 处理逻辑相同.
 	for (auto* cmsg = CMSG_FIRSTHDR(&msg); cmsg;
 		 cmsg = CMSG_NXTHDR(&msg, cmsg))
 	{
-		if (cmsg->cmsg_level == IPPROTO_IP &&
-			cmsg->cmsg_type == IP_ORIGDSTADDR)
-		{
-			const auto& ss = *reinterpret_cast<const sockaddr_storage*>(
-				CMSG_DATA(cmsg));
-			original_dest = sockaddr_to_udp_endpoint(ss);
-			break;
-		}
-		if (cmsg->cmsg_level == IPPROTO_IPV6 &&
-			cmsg->cmsg_type == IPV6_ORIGDSTADDR)
+		if ((cmsg->cmsg_level == IPPROTO_IP &&
+			cmsg->cmsg_type == IP_ORIGDSTADDR) ||
+			(cmsg->cmsg_level == IPPROTO_IPV6 &&
+			cmsg->cmsg_type == IPV6_ORIGDSTADDR))
 		{
 			const auto& ss = *reinterpret_cast<const sockaddr_storage*>(
 				CMSG_DATA(cmsg));
@@ -1187,34 +1183,25 @@ bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg, ssize_t ret,
 }
 
 // 用 (client_ep, original_dest) 计算查找 flow 的 key.
+// 使用 boost::hash_combine 以获得更好的哈希分布.
 size_t proxy_server::make_udp_flow_key(const udp::endpoint& client, const udp::endpoint& dest)
 {
 	size_t h = 0;
-	auto combine = [&h](size_t v) {
-		h ^= v + 0x9e3779b9 + (h << 6) + (h >> 2);
+
+	auto hash_addr = [&h](const net::ip::address& addr) {
+		if (addr.is_v4())
+			boost::hash_combine(h, addr.to_v4().to_uint());
+		else
+		{
+			auto b = addr.to_v6().to_bytes();
+			boost::hash_combine(h, std::string_view((const char*)b.data(), b.size()));
+		}
 	};
 
-	if (client.address().is_v4())
-	{
-		combine(std::hash<uint32_t>{}(client.address().to_v4().to_uint()));
-	}
-	else
-	{
-		auto b = client.address().to_v6().to_bytes();
-		combine(std::hash<std::string_view>{}(std::string_view((const char*)b.data(), b.size())));
-	}
-	combine(std::hash<uint16_t>{}(client.port()));
-
-	if (dest.address().is_v4())
-	{
-		combine(std::hash<uint32_t>{}(dest.address().to_v4().to_uint()));
-	}
-	else
-	{
-		auto b = dest.address().to_v6().to_bytes();
-		combine(std::hash<std::string_view>{}(std::string_view((const char*)b.data(), b.size())));
-	}
-	combine(std::hash<uint16_t>{}(dest.port()));
+	hash_addr(client.address());
+	boost::hash_combine(h, client.port());
+	hash_addr(dest.address());
+	boost::hash_combine(h, dest.port());
 
 	return h;
 }
@@ -1224,7 +1211,7 @@ net::awaitable<void> proxy_server::udp_tproxy_check() noexcept
 	std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
 	std::vector<size_t> expired_keys;
 
-	for (auto [key, flow] : m_udp_tproxy_flows)
+	for (const auto& [key, flow] : m_udp_tproxy_flows)
 	{
 		if (!flow)
 		{
@@ -1248,7 +1235,7 @@ net::awaitable<void> proxy_server::udp_tproxy_check() noexcept
 		expired_keys.push_back(key);
 	}
 
-	for (auto key : expired_keys)
+	for (const auto& key : expired_keys)
 	{
 		m_udp_tproxy_flows.erase(key);
 	}
@@ -1794,11 +1781,23 @@ void proxy_server::udp_tproxy_forward_packet(
 	size_t header_len = hp - header;
 	boost::system::error_code ec;
 
-	std::vector<char> buf(header_len + len);
-	std::memcpy(buf.data(), header, header_len);
-	std::memcpy(buf.data() + header_len, data, len);
+	// 使用栈缓冲区避免每次转发都产生堆分配.
+	// UDP 数据包通常不超过 65535 字节, 栈缓冲区足够容纳.
+	char buf_stack[65535];
+	char* buf_ptr = buf_stack;
+	size_t total_len = header_len + len;
 
-	backend_sock.send_to(net::buffer(buf.data(), buf.size()), m_backend_endp, 0, ec);
+	if (total_len > sizeof(buf_stack))
+	{
+		XLOG_WARN << "tproxy flow: " << flow->flow_key_
+			<< ", packet too large: " << total_len;
+		return;
+	}
+
+	std::memcpy(buf_ptr, header, header_len);
+	std::memcpy(buf_ptr + header_len, data, len);
+
+	backend_sock.send_to(net::buffer(buf_ptr, total_len), m_backend_endp, 0, ec);
 	if (ec)
 	{
 		flow->backend_sock_.reset();

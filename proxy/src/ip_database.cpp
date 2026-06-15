@@ -95,16 +95,40 @@ namespace proxy {
 		uint index_m_offset = 0;
 		uint index_length = 0;
 
-		for (start = start * 9 + 262144; start < max_comp_len; start += 9)
+		// 使用二分查找代替线性扫描, 将 O(n) 降为 O(log n).
+		// 数据按 IP 排序, 因此可以使用二分查找快速定位.
 		{
-			if (B2IU((const uint8_t*)m_index.data() + start) >= ip2long_value)
-			{
-				index_m_offset = B2IL(m_index.data() + start + 4) & 0x00FFFFFF;
-				index_length = (m_index[start + 7] << 8) + m_index[start + 8];
+			uint left = start * 9 + 262144;
+			uint right = max_comp_len - 9;
+			uint found = 0;
 
-				break;
+			while (left <= right)
+			{
+				uint mid = left + (right - left) / 18 * 9; // 对齐到 9 字节条目
+				uint mid_val = B2IU((const uint8_t*)m_index.data() + mid);
+
+				if (mid_val >= ip2long_value)
+				{
+					found = mid;
+					if (mid == 0)
+						break;
+					right = mid - 9;
+				}
+				else
+				{
+					left = mid + 9;
+				}
+			}
+
+			if (found > 0)
+			{
+				index_m_offset = B2IL(m_index.data() + found + 4) & 0x00FFFFFF;
+				index_length = (m_index[found + 7] << 8) + m_index[found + 8];
 			}
 		}
+
+		if (index_length == 0)
+			return ret;
 
 		result.resize(index_length);
 

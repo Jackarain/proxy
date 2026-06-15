@@ -466,22 +466,26 @@ R"x*x*x(<html>
 	{
 		// 缓存 date string 以避免频繁调用 time/gmtime/strftime.
 		// 每秒刷新一次即可满足 HTTP Date 头精度要求.
+		// 使用 mutex 保护静态变量, 防止多协程并发访问导致数据竞争.
 		static std::string cached;
 		static std::chrono::steady_clock::time_point last_update;
+		static std::mutex mtx;
 
 		auto now = std::chrono::steady_clock::now();
-		if (now - last_update >= std::chrono::seconds(1))
 		{
-			auto time = std::time(nullptr);
-			auto gmt = gmtime((const time_t*)&time);
+			std::lock_guard<std::mutex> lock(mtx);
+			if (now - last_update >= std::chrono::seconds(1))
+			{
+				auto time = std::time(nullptr);
+				auto gmt = gmtime((const time_t*)&time);
 
-			cached.resize(64, '\0');
-			auto ret = strftime(cached.data(), 64, "%a, %d %b %Y %H:%M:%S GMT", gmt);
-			cached.resize(ret);
-			last_update = now;
+				cached.resize(64, '\0');
+				auto ret = strftime(cached.data(), 64, "%a, %d %b %Y %H:%M:%S GMT", gmt);
+				cached.resize(ret);
+				last_update = now;
+			}
+			return cached;
 		}
-
-		return cached;
 	}
 
 	void proxy_session::user_rate_limit_config(const std::string& user) noexcept
@@ -1714,16 +1718,19 @@ R"x*x*x(<html>
 		udp::endpoint final_remote_endp;
 		std::string latest_domain;
 
+		// SOCKS5 UDP 最大头部长度: RSV(2) + FRAG(1) + ATYP(1) + 地址(最大255) + PORT(2)
+		static constexpr size_t udp_max_header_size = 261;
+
 		char read_buffer[4096];
 		size_t send_total = 0;
 		size_t recv_total = 0;
 
-		const char* rbuf = &read_buffer[96];
+		const char* rbuf = &read_buffer[udp_max_header_size];
 
 		while (!m_abort)
 		{
 			auto bytes = co_await client.async_receive_from(
-				net::buffer((char*)rbuf, 4000),
+				net::buffer((char*)rbuf, sizeof(read_buffer) - udp_max_header_size),
 				remote_endp,
 				net_awaitable[ec]);
 			if (ec)
@@ -4373,34 +4380,8 @@ R"x*x*x(<html>
 		return encoded;
 	}
 
-	uint16_t proxy_session::dns_type_from_string(const std::string& type_name) noexcept
-	{
-		static const std::unordered_map<std::string, uint16_t> type_map = {
-			{"A", 1}, {"NS", 2}, {"MD", 3}, {"MF", 4}, {"CNAME", 5},
-			{"SOA", 6}, {"MB", 7}, {"MG", 8}, {"MR", 9}, {"NULL", 10},
-			{"WKS", 11}, {"PTR", 12}, {"HINFO", 13}, {"MINFO", 14}, {"MX", 15},
-			{"TXT", 16}, {"RP", 17}, {"AFSDB", 18}, {"X25", 19}, {"ISDN", 20},
-			{"RT", 21}, {"NSAP", 22}, {"NSAP-PTR", 23}, {"SIG", 24}, {"KEY", 25},
-			{"PX", 26}, {"GPOS", 27}, {"AAAA", 28}, {"LOC", 29}, {"NXT", 30},
-			{"SRV", 33}, {"NAPTR", 35}, {"KX", 36}, {"CERT", 37}, {"DNAME", 39},
-			{"OPT", 41}, {"APL", 42}, {"DS", 43}, {"SSHFP", 44}, {"IPSECKEY", 45},
-			{"RRSIG", 46}, {"NSEC", 47}, {"DNSKEY", 48}, {"DHCID", 49},
-			{"NSEC3", 50}, {"NSEC3PARAM", 51}, {"TLSA", 52}, {"SMIMEA", 53},
-			{"HIP", 55}, {"CDS", 59}, {"CDNSKEY", 60}, {"OPENPGPKEY", 61},
-			{"CSYNC", 62}, {"ZONEMD", 63}, {"SVCB", 64}, {"HTTPS", 65},
-			{"SPF", 99}, {"TKEY", 249}, {"TSIG", 250}, {"IXFR", 251},
-			{"AXFR", 252}, {"ANY", 255}, {"URI", 256}, {"CAA", 257},
-			{"TA", 32768}, {"DLV", 32769},
-		};
-		auto it = type_map.find(type_name);
-		if (it != type_map.end())
-			return it->second;
-		// 尝试数字.
-		try { return static_cast<uint16_t>(std::stoul(type_name)); }
-		catch (...) { return DNS_TYPE_A; }
-	}
-
-	std::string proxy_session::dns_type_to_string(uint16_t type) noexcept
+	// 统一的 DNS 类型名称 <-> 数值映射表, 避免两份重复数据.
+	static const std::unordered_map<uint16_t, std::string>& dns_type_map()
 	{
 		static const std::unordered_map<uint16_t, std::string> type_map = {
 			{1, "A"}, {2, "NS"}, {3, "MD"}, {4, "MF"}, {5, "CNAME"},
@@ -4419,6 +4400,25 @@ R"x*x*x(<html>
 			{252, "AXFR"}, {255, "ANY"}, {256, "URI"}, {257, "CAA"},
 			{32768, "TA"}, {32769, "DLV"},
 		};
+		return type_map;
+	}
+
+	uint16_t proxy_session::dns_type_from_string(const std::string& type_name) noexcept
+	{
+		const auto& type_map = dns_type_map();
+		for (const auto& [num, name] : type_map)
+		{
+			if (name == type_name)
+				return num;
+		}
+		// 尝试数字.
+		try { return static_cast<uint16_t>(std::stoul(type_name)); }
+		catch (...) { return DNS_TYPE_A; }
+	}
+
+	std::string proxy_session::dns_type_to_string(uint16_t type) noexcept
+	{
+		const auto& type_map = dns_type_map();
 		auto it = type_map.find(type);
 		if (it != type_map.end())
 			return it->second;
@@ -5072,11 +5072,10 @@ R"x*x*x(<html>
 		if (ec)
 			co_return false;
 
-		// 设置 SSL context (static 缓存复用).
-		static net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
-		static std::once_flag ssl_init_flag;
-		auto doh_host_str = std::string(doh_host);
-		std::call_once(ssl_init_flag, [&]() {
+		// 创建 per-request SSL context, 确保每个 DoH 服务器使用正确的主机名校验.
+		// 使用静态 context 会导致多个不同 DoH 服务器共用同一份 host_name_verification.
+		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
+		{
 			auto verify = net::ssl::verify_peer;
 			if (m_option.disable_check_cert_)
 				verify = net::ssl::verify_none;
@@ -5085,8 +5084,8 @@ R"x*x*x(<html>
 			doh_ssl_ctx.add_certificate_authority(
 				net::buffer(certificates.data(), certificates.size()), ec);
 			doh_ssl_ctx.set_verify_callback(
-				net::ssl::host_name_verification(doh_host_str), ec);
-		});
+				net::ssl::host_name_verification(std::string(doh_host)), ec);
+		}
 
 		ssl_tcp_stream ssl_stream(std::move(doh_socket), doh_ssl_ctx);
 
@@ -5188,11 +5187,9 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		// 设置 SSL context.
-		static net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
-		static std::once_flag ssl_init_flag;
-		auto doh_host_str = std::string(doh_host);
-		std::call_once(ssl_init_flag, [&]() {
+		// 创建 per-request SSL context, 确保每个 DoH 服务器使用正确的主机名校验.
+		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
+		{
 			auto verify = net::ssl::verify_peer;
 			if (m_option.disable_check_cert_)
 				verify = net::ssl::verify_none;
@@ -5203,8 +5200,8 @@ R"x*x*x(<html>
 				net::buffer(certificates.data(), certificates.size()), ec);
 
 			doh_ssl_ctx.set_verify_callback(
-				net::ssl::host_name_verification(doh_host_str), ec);
-		});
+				net::ssl::host_name_verification(std::string(doh_host)), ec);
+		}
 
 		ssl_tcp_stream ssl_stream(std::move(doh_socket), doh_ssl_ctx);
 
@@ -5550,7 +5547,7 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 			co_return ec;
 		}
 
-		for (auto endpoint : targets)
+		for (const auto& endpoint : targets)
 		{
 			ec = boost::asio::error::host_not_found;
 

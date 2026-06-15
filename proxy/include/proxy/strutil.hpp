@@ -399,18 +399,28 @@ namespace strutil
 	inline std::vector<std::string> split(const std::string& str, const char delim)
 	{
 		std::vector<std::string> tokens;
-		std::stringstream ss(str);
-
-		std::string token;
-		while (std::getline(ss, token, delim))
+		if (str.empty())
 		{
-			tokens.push_back(token);
+			tokens.emplace_back();
+			return tokens;
+		}
+
+		size_t start = 0;
+		while (true)
+		{
+			auto pos = str.find(delim, start);
+			if (pos == std::string::npos)
+			{
+				tokens.push_back(str.substr(start));
+				break;
+			}
+			tokens.push_back(str.substr(start, pos - start));
+			start = pos + 1;
 		}
 
 		// Match semantics of split(str,str)
-		if (str.empty() || ends_with(str, delim)) {
+		if (ends_with(str, delim))
 			tokens.emplace_back();
-		}
 
 		return tokens;
 	}
