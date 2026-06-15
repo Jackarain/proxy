@@ -2013,7 +2013,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		boost::replace_all(target_host, ":", "%3A");
 
 	std::string request_line =
-		"GET http://" + proxy_host + ":" + std::to_string(proxy_port) +
+		"GET https://" + proxy_host + ":" + std::to_string(proxy_port) +
 		"/.well-known/masque/udp/" + target_host + "/" +
 		std::to_string(target_port) + "/ HTTP/1.1\r\n";
 
