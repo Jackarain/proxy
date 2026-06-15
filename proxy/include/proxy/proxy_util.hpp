@@ -12,6 +12,7 @@
 #define INCLUDE__2026_06_08__PROXY_UTIL_HPP
 
 
+#include "proxy/default_cert.hpp"
 #include "proxy/use_awaitable.hpp"
 
 #include <boost/system/error_code.hpp>
@@ -20,10 +21,21 @@
 #include <boost/asio/socket_base.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/read.hpp>
+#include <boost/asio/ssl.hpp>
+#include <boost/asio/ip/udp.hpp>
 
 #include <boost/system/error_code.hpp>
 #include <boost/system/result.hpp>
 #include <boost/config.hpp>
+
+#ifdef USE_BOOST_FILESYSTEM
+// 为避免低版本(gcc-12.3 以下)的 libstdc++ 中 filesystem 的
+// bug( https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95048 )
+// 可以使用 boost.filesystem 来规避这个 bug
+# include <boost/filesystem.hpp>
+#else
+# include <filesystem>
+#endif // USE_BOOST_FILESYSTEM
 
 #include <random>
 #include <string>
@@ -45,6 +57,14 @@
 namespace proxy {
 
     namespace net = boost::asio;
+	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
+
+#ifdef USE_BOOST_FILESYSTEM
+	namespace fs = boost::filesystem;
+#else
+	namespace fs = std::filesystem;
+#endif
+
 
 #if defined(__linux__)
 #  if !defined(IP_TRANSPARENT)
@@ -300,7 +320,8 @@ namespace proxy {
 		uint8_t buf[8];
 
 		co_await net::async_read(stream, net::buffer(buf, 1), net_awaitable[ec]);
-		if (ec) co_return 0;
+		if (ec)
+			co_return 0;
 
 		uint8_t prefix = buf[0] >> 6;
 		size_t len = 1 << prefix;
@@ -309,12 +330,86 @@ namespace proxy {
 		{
 			co_await net::async_read(stream, net::buffer(buf + 1, len - 1),
 				net_awaitable[ec]);
-			if (ec) co_return 0;
+			if (ec)
+				co_return 0;
 		}
 
 		auto [consumed, value] = varint_decode(buf);
 		(void)consumed;
+
 		co_return value;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+
+	// 将 sockaddr_storage 转换为 udp::endpoint.
+	inline udp::endpoint sockaddr_to_udp_endpoint(const sockaddr_storage& addr) noexcept
+	{
+		if (addr.ss_family == AF_INET)
+		{
+			const auto& addr4 = reinterpret_cast<const sockaddr_in&>(addr);
+			return udp::endpoint(
+				net::ip::address_v4(ntohl(addr4.sin_addr.s_addr)),
+				ntohs(addr4.sin_port));
+		}
+		if (addr.ss_family == AF_INET6)
+		{
+			const auto& addr6 = reinterpret_cast<const sockaddr_in6&>(addr);
+			net::ip::address_v6::bytes_type bt;
+			std::memcpy(bt.data(), &addr6.sin6_addr, 16);
+			return udp::endpoint(
+				net::ip::make_address_v6(bt),
+				ntohs(addr6.sin6_port));
+		}
+
+		return {};
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// SSL 客户端通用工具函数
+	// 将 proxy_server 和 proxy_session 中重复的 SSL 客户端连接代码抽象到此.
+
+	// 配置 SSL 客户端 context 的通用设置.
+	// 包括设置验证模式、加载 CA 根证书、以及配置主机名验证回调.
+	// 使用模板以避免在 proxy_util.hpp 中引入 SSL 相关头文件依赖，
+	// 函数体在实例化时需保证以下符号可用:
+	//   net::ssl::context, net::ssl::verify_peer, net::ssl::verify_none,
+	//   net::ssl::host_name_verification, net::buffer, default_root_certificates()
+	// 参数:
+	//   ctx - SSL context 引用
+	//   disable_check_cert - 是否禁用证书验证
+	//   hostname - 用于证书验证的主机名
+	//   cacert_path - 可选的自定义 CA 证书目录路径
+	inline boost::system::error_code
+	configure_ssl_client_ctx(net::ssl::context& ctx,
+		bool disable_check_cert,
+		const std::string& hostname,
+		const std::string& cacert_path = {}) noexcept
+	{
+		boost::system::error_code ec;
+
+		if (!cacert_path.empty() && fs::exists(cacert_path, ec))
+		{
+			ctx.add_verify_path(cacert_path, ec);
+			if (ec)
+				return ec;
+		}
+
+		auto verify = net::ssl::verify_peer;
+		if (disable_check_cert)
+			verify = net::ssl::verify_none;
+
+		ctx.set_verify_mode(verify);
+
+		auto certs = default_root_certificates();
+		ctx.add_certificate_authority(
+			net::buffer(certs.data(), certs.size()), ec);
+		if (ec) return ec;
+
+		ctx.set_verify_callback(
+			net::ssl::host_name_verification(hostname), ec);
+
+		return ec;
 	}
 }
 

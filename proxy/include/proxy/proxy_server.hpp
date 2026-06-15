@@ -348,7 +348,7 @@ namespace proxy {
 
 #if defined(__linux__)
 		// 从 msg 中提取原客户端和原目标地址.
-		static bool parse_udp_tproxy_packet(struct msghdr& msg, ssize_t ret,
+		static bool parse_udp_tproxy_packet(struct msghdr& msg,
 			udp::endpoint& client_ep, udp::endpoint& original_dest);
 
 		// 用 (client_ep, original_dest) 计算查找 flow 的 key.

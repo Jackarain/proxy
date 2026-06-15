@@ -2788,8 +2788,7 @@ R"x*x*x(<html>
 		if (m_option.so_mark_)
 		{
 			auto ret = set_socket_mark(
-				udp_socket.native_handle(),
-				m_option.so_mark_.value());
+				udp_socket.native_handle(), m_option.so_mark_.value());
 			if (ret.has_error())
 			{
 				log_conn_warning()
@@ -5073,18 +5072,16 @@ R"x*x*x(<html>
 			co_return false;
 
 		// 创建 per-request SSL context, 确保每个 DoH 服务器使用正确的主机名校验.
-		// 使用静态 context 会导致多个不同 DoH 服务器共用同一份 host_name_verification.
 		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
+		ec = configure_ssl_client_ctx(doh_ssl_ctx,
+			m_option.disable_check_cert_,
+			std::string(doh_host));
+		if (ec)
 		{
-			auto verify = net::ssl::verify_peer;
-			if (m_option.disable_check_cert_)
-				verify = net::ssl::verify_none;
-			doh_ssl_ctx.set_verify_mode(verify);
-			auto certificates = default_root_certificates();
-			doh_ssl_ctx.add_certificate_authority(
-				net::buffer(certificates.data(), certificates.size()), ec);
-			doh_ssl_ctx.set_verify_callback(
-				net::ssl::host_name_verification(std::string(doh_host)), ec);
+			log_conn_warning()
+				<< ", configure ssl context for doh: "
+				<< doh_host << " error: " << ec.message();
+			co_return false;
 		}
 
 		ssl_tcp_stream ssl_stream(std::move(doh_socket), doh_ssl_ctx);
@@ -5100,7 +5097,13 @@ R"x*x*x(<html>
 		co_await ssl_stream.async_handshake(
 			net::ssl::stream_base::client, net_awaitable[ec]);
 		if (ec)
+		{
+			log_conn_warning()
+				<< ", doh ssl handshake with "
+				<< doh_host
+				<< " failed";
 			co_return false;
+		}
 
 		// 构造 HTTP POST 请求.
 		http::request<http::string_body> doh_req{
@@ -5189,18 +5192,19 @@ R"x*x*x(<html>
 
 		// 创建 per-request SSL context, 确保每个 DoH 服务器使用正确的主机名校验.
 		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
+
+		ec = configure_ssl_client_ctx(doh_ssl_ctx,
+			m_option.disable_check_cert_,
+			std::string(doh_host));
+		if (ec)
 		{
-			auto verify = net::ssl::verify_peer;
-			if (m_option.disable_check_cert_)
-				verify = net::ssl::verify_none;
+			log_conn_warning()
+				<< ", configure ssl context for doh: "
+				<< doh_host << " error: " << ec.message();
 
-			doh_ssl_ctx.set_verify_mode(verify);
-			auto certificates = default_root_certificates();
-			doh_ssl_ctx.add_certificate_authority(
-				net::buffer(certificates.data(), certificates.size()), ec);
-
-			doh_ssl_ctx.set_verify_callback(
-				net::ssl::host_name_verification(std::string(doh_host)), ec);
+			co_await default_http_route(
+				request, fake_500_content_fmt, http::status::internal_server_error);
+			co_return;
 		}
 
 		ssl_tcp_stream ssl_stream(std::move(doh_socket), doh_ssl_ctx);
@@ -5638,57 +5642,27 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 			co_return sock_stream;
 		}
 
-		// 设置 ssl cert 证书目录.
-		if (fs::exists(m_option.ssl_cacert_path_))
-		{
-			m_ssl_cli_context.add_verify_path(m_option.ssl_cacert_path_, ec);
-			if (ec)
-			{
-				log_conn_warning()
-					<< ", load cert path: "
-					<< m_option.ssl_cacert_path_
-					<< ", error: "
-					<< ec.message();
-			}
-		}
-
-		// ssl 加密, 先初始化 ssl socket, 然后实例化成 variant_stream_type 类型的对象.
-		auto verify = net::ssl::verify_peer;
-		if (m_option.disable_check_cert_)
-		{
-			verify = net::ssl::verify_none;
-			log_conn_debug() << ", disable check proxy server certificate";
-		}
-
-		m_ssl_cli_context.set_verify_mode(verify);
-		auto certificates = default_root_certificates();
-
-		m_ssl_cli_context.add_certificate_authority(
-			net::buffer(certificates.data(), certificates.size()), ec);
-		if (ec)
-		{
-			log_conn_warning()
-				<< ", load default root cert error: " << ec.message();
-		}
-
-		m_ssl_cli_context.use_tmp_dh(net::buffer(default_dh_param()), ec);
-
-		// 设置 alpn 协议.
-		SSL_CTX_set_alpn_protos(m_ssl_cli_context.native_handle(),
-			(const unsigned char *)"\x08http/1.1", 9);
-
 		// 获取 proxy_pass 的主机名称.
 		auto proxy_host = std::string(m_proxy_pass->host());
 
 		// 若用户配置了 SNI, 则使用用户配置的 SNI 否则使用默认 hostname.
 		std::string sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;
 
-		m_ssl_cli_context.set_verify_callback(net::ssl::host_name_verification(sni), ec);
+		// 使用通用函数配置 SSL context (验证模式、CA 证书、主机名验证).
+		ec = configure_ssl_client_ctx(m_ssl_cli_context,
+			m_option.disable_check_cert_,
+			sni,
+			m_option.ssl_cacert_path_);
 		if (ec)
 		{
 			log_conn_warning()
-				<< ", load set_verify_callback error: " << ec.message();
+				<< ", configure ssl context error: " << ec.message();
 		}
+
+		// 额外的 SSL 上下文配置: DH 参数和 ALPN 协议.
+		m_ssl_cli_context.use_tmp_dh(net::buffer(default_dh_param()), ec);
+		SSL_CTX_set_alpn_protos(m_ssl_cli_context.native_handle(),
+			(const unsigned char *)"\x08http/1.1", 9);
 
 		// 生成 ssl_tcp_stream 的 variant_stream_type 对象.
 		auto sock_stream = init_proxy_stream(std::move(remote_socket), m_ssl_cli_context);

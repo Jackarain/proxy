@@ -104,6 +104,8 @@
 // bug( https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95048 )
 // 可以使用 boost.filesystem 来规避这个 bug
 # include <boost/filesystem.hpp>
+#else
+# include <filesystem>
 #endif // USE_BOOST_FILESYSTEM
 
 #include <cstdlib>
@@ -111,7 +113,6 @@
 #include <atomic>
 #include <cstddef>
 #include <cstring>
-#include <filesystem>
 #include <limits>
 #include <memory>
 #include <mutex>

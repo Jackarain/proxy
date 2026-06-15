@@ -907,9 +907,6 @@ net::ssl::context& proxy_server::ssl_context()
 	return m_ssl_srv_context;
 }
 
-// Forward declaration for static helper.
-static udp::endpoint sockaddr_to_udp_endpoint(const sockaddr_storage& addr) noexcept;
-
 net::awaitable<std::optional<net::ip::tcp::endpoint>>
 proxy_server::setup_tproxy(proxy_tcp_socket& socket, size_t connection_id) noexcept
 {
@@ -1123,37 +1120,12 @@ void proxy_server::backend_thread_run() noexcept
 	{}
 }
 
-// 将 sockaddr_storage 转换为 udp::endpoint.
-// 统一处理 AF_INET / AF_INET6 转换逻辑，消除多处重复的 sockaddr 转换代码.
-static udp::endpoint sockaddr_to_udp_endpoint(const sockaddr_storage& addr) noexcept
-{
-	if (addr.ss_family == AF_INET)
-	{
-		const auto& addr4 = reinterpret_cast<const sockaddr_in&>(addr);
-		return udp::endpoint(
-			net::ip::address_v4(ntohl(addr4.sin_addr.s_addr)),
-			ntohs(addr4.sin_port));
-	}
-	if (addr.ss_family == AF_INET6)
-	{
-		const auto& addr6 = reinterpret_cast<const sockaddr_in6&>(addr);
-		net::ip::address_v6::bytes_type bt;
-		std::memcpy(bt.data(), &addr6.sin6_addr, 16);
-		return udp::endpoint(
-			net::ip::make_address_v6(bt),
-			ntohs(addr6.sin6_port));
-	}
-	return {};
-}
-
 #if defined(__linux__)
 
 // 从 msg 中提取原客户端和原目标地址.
-bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg, ssize_t ret,
+bool proxy_server::parse_udp_tproxy_packet(struct msghdr& msg,
 	udp::endpoint& client_ep, udp::endpoint& original_dest)
 {
-	if (ret < 0) return false;
-
 	// 提取原始目标地址, IP_ORIGDSTADDR / IPV6_ORIGDSTADDR 处理逻辑相同.
 	for (auto* cmsg = CMSG_FIRSTHDR(&msg); cmsg;
 		 cmsg = CMSG_NXTHDR(&msg, cmsg))
@@ -1372,6 +1344,7 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 			co_return ec;
 		}
 	}
+
 	co_return boost::asio::error::host_not_found;
 }
 
@@ -1382,25 +1355,11 @@ proxy_server::make_ssl_socket(tcp::socket& remote_socket,
 	boost::system::error_code ec;
 	net::ssl::context cli_ctx(net::ssl::context::sslv23_client);
 
-	if (fs::exists(m_option.ssl_cacert_path_))
-	{
-		cli_ctx.add_verify_path(m_option.ssl_cacert_path_, ec);
-		if (ec)
-			co_return ec;
-	}
-
-	auto verify = net::ssl::verify_peer;
-	if (m_option.disable_check_cert_)
-		verify = net::ssl::verify_none;
-
-	cli_ctx.set_verify_mode(verify);
-	auto certs = default_root_certificates();
-
-	cli_ctx.add_certificate_authority(net::buffer(certs.data(), certs.size()), ec);
-	if (ec)
-		co_return ec;
-
-	cli_ctx.set_verify_callback(net::ssl::host_name_verification(std::string(sni)), ec);
+	// 使用通用函数配置 SSL context (验证模式、CA 证书、主机名验证).
+	ec = configure_ssl_client_ctx(cli_ctx,
+		m_option.disable_check_cert_,
+		std::string(sni),
+		m_option.ssl_cacert_path_);
 	if (ec)
 		co_return ec;
 
@@ -1855,7 +1814,7 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 
 		// 解析 UDP TPROXY 数据包，提取客户端地址和原始目标地址.
 		udp::endpoint client_ep, original_dest;
-		if (!parse_udp_tproxy_packet(msg, ret, client_ep, original_dest))
+		if (!parse_udp_tproxy_packet(msg, client_ep, original_dest))
 			continue;
 
 		// 计算 flow 表的 key.

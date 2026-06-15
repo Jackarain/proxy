@@ -505,7 +505,8 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 
 	if (vm.count("config"))
 	{
-		if (!fs::exists(config))
+		boost::system::error_code ignore_ec;
+		if (!fs::exists(config, ignore_ec))
 		{
 			std::cerr << "No such config file: " << config << std::endl;
 			return EXIT_FAILURE;
