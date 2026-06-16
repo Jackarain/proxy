@@ -632,8 +632,11 @@ net::awaitable<std::chrono::seconds> proxy_server::certificate_check()
 {
 	boost::system::error_code ec;
 
-	std::chrono::seconds duration = std::chrono::years(1);
+	// 找到下次需要检查证书的时间间隔, 如果有证书过期, 返回 0 表示应尽快检查.
+	// 如果所有证书都有效, 返回距最早过期的时间.
+
 	auto now = boost::posix_time::second_clock::local_time();
+	std::chrono::seconds earliest_expiry = std::chrono::hours(24) * 365;
 
 	auto& certificates = *m_certificates;
 
@@ -648,18 +651,16 @@ net::awaitable<std::chrono::seconds> proxy_server::certificate_check()
 				<< "', pwd: '" << ctx.pwd_.filepath_.string()
 				<< "', expired: '" << ctx.expire_date_ << "'";
 
-			// 有证书过期, 设定为5分钟检查一次证书目录.
-			duration = std::chrono::seconds(0);
+			earliest_expiry = std::chrono::seconds::zero();
 			continue;
 		}
 
-		// 设置为过期时检查证书.
-		auto expire_date = std::chrono::seconds((ctx.expire_date_ - now).total_seconds());
-		duration = std::min(duration, expire_date);
+		auto remaining = std::chrono::seconds((ctx.expire_date_ - now).total_seconds());
+		earliest_expiry = std::min(earliest_expiry, remaining);
 	}
 
-	if (duration > std::chrono::seconds(0))
-		co_return duration;
+	if (earliest_expiry > std::chrono::seconds::zero())
+		co_return earliest_expiry;
 
 	// 热更新证书, 交替更新证书容器 master/slave.
 	if (m_certificates == &m_certificate_master)
@@ -673,7 +674,7 @@ net::awaitable<std::chrono::seconds> proxy_server::certificate_check()
 		m_certificates = &m_certificate_master;
 	}
 
-	co_return duration;
+	co_return earliest_expiry;
 }
 
 net::awaitable<void> proxy_server::tick()
@@ -867,7 +868,7 @@ void proxy_server::close() noexcept
 #if defined(__linux__)
 
 	// 关闭 UDP TPROXY 相关资源.
-	for (auto& [key, flow] : m_udp_tproxy_flows)
+	for (auto& [_, flow] : m_udp_tproxy_flows)
 	{
 		if (flow)
 		{
@@ -1016,12 +1017,8 @@ net::awaitable<void> proxy_server::get_local_address() noexcept
 		co_return;
 	}
 
-	auto it = results.begin();
-	while (it != results.end())
-	{
-		tcp::endpoint ep = *it++;
-		m_local_addrs.insert(ep.address());
-	}
+	for (const auto& entry : results)
+		m_local_addrs.insert(entry.endpoint().address());
 }
 
 // 判断 IP 地址是否在指定的 CIDR 范围.
@@ -1040,28 +1037,20 @@ bool proxy_server::ip_filter(const std::string& ip_cidr, const std::string& ip) 
 	{
 		auto iponly = net::ip::make_address(ip_cidr, ec);
 		if (!ec)
-		{
-			if (iponly == ipaddr)
-				return true;
-			return false;
-		}
+			return iponly == ipaddr;
 
 		auto netaddr4 = net::ip::make_network_v4(ip_cidr, ec);
 		if (!ec)
 		{
 			auto target = net::ip::make_network_v4(ipaddr.to_v4(), netaddr4.netmask());
-			if (target == netaddr4)
-				return true;
-			return false;
+			return target == netaddr4;
 		}
 
 		auto netaddr6 = net::ip::make_network_v6(ip_cidr, ec);
 		if (!ec)
 		{
 			auto target = net::ip::make_network_v6(ipaddr.to_v6(), netaddr6.prefix_length());
-			if (target == netaddr6)
-				return true;
-			return false;
+			return target == netaddr6;
 		}
 	}
 	catch (const std::exception&)
@@ -1329,7 +1318,7 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 {
 	boost::system::error_code ec;
 
-	for (auto endp : targets)
+	for (const auto& endp : targets)
 	{
 		remote_socket.close(ec);
 
@@ -1733,18 +1722,18 @@ void proxy_server::udp_tproxy_forward_packet(
 	size_t header_len = hp - header;
 	boost::system::error_code ec;
 
-	// 使用栈缓冲区避免每次转发都产生堆分配.
-	// UDP 数据包通常不超过 65535 字节, 栈缓冲区足够容纳.
-	char buf_stack[65535];
-	char* buf_ptr = buf_stack;
 	size_t total_len = header_len + len;
 
-	if (total_len > sizeof(buf_stack))
+	// UDP 数据包通常不超过 65535 字节.
+	if (total_len > 65535)
 	{
 		XLOG_WARN << "tproxy flow: " << flow->flow_key_
 			<< ", packet too large: " << total_len;
 		return;
 	}
+
+	char buf[65535];
+	char* buf_ptr = &buf[0];
 
 	std::memcpy(buf_ptr, header, header_len);
 	std::memcpy(buf_ptr + header_len, data, len);

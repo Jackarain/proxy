@@ -1209,7 +1209,7 @@ namespace proxy {
 			const std::string& target) noexcept;
 
 		// 获取文件的最后修改时间和 UNC 路径.
-		static std::tuple<std::string, fs::path> file_last_wirte_time(const fs::path& file) noexcept;
+		static std::tuple<std::string, fs::path> file_last_write_time(const fs::path& file) noexcept;
 
 		// 格式化目录下的文件列表, 返回每个文件/目录的名称.
 		std::vector<std::wstring>
@@ -1263,7 +1263,7 @@ namespace proxy {
 				const auto& item = it->path();
 				boost::json::object obj;
 
-				auto [ftime, unc_path] = file_last_wirte_time(item);
+				auto [ftime, unc_path] = file_last_write_time(item);
 				obj["last_write_time"] = ftime;
 
 				if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))

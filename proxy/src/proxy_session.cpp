@@ -230,8 +230,9 @@ R"x*x*x(<html>
 		if (!range.starts_with("bytes="))
 			return {};
 
-		// 去掉开头的 bytes= 字符串.
-		boost::ireplace_first(range, "bytes=", "");
+		// 去掉开头的 bytes= 字符串 (不区分大小写).
+		static constexpr std::string_view bytes_prefix = "bytes=";
+		range.erase(0, bytes_prefix.size());
 
 		http_ranges results;
 
@@ -398,60 +399,63 @@ R"x*x*x(<html>
 	//////////////////////////////////////////////////////////////////////////
 	// http 相关实现
 
-	std::tuple<std::string, fs::path> proxy_session::file_last_wirte_time(const fs::path& file) noexcept
+	std::tuple<std::string, fs::path> proxy_session::file_last_write_time(const fs::path& file) noexcept
 	{
-		static auto loc_time = [](auto t) -> struct tm*
-		{
-			using time_type = std::decay_t<decltype(t)>;
-			if constexpr (std::is_same_v<time_type, std::filesystem::file_time_type>)
-			{
-				auto sctp = std::chrono::time_point_cast<
-					std::chrono::system_clock::duration>(t -
-						std::filesystem::file_time_type::clock::now() +
-							std::chrono::system_clock::now());
-				auto time = std::chrono::system_clock::to_time_t(sctp);
-				return std::localtime(&time);
-			}
-			else if constexpr (std::is_same_v<time_type, std::time_t>)
-			{
-				return std::localtime(&t);
-			}
-			else
-			{
-				static_assert(!std::is_same_v<time_type, time_type>, "time type required!");
-			}
-		};
-
-		boost::system::error_code ec;
 		std::string time_string;
-		fs::path unc_path;
+		fs::path returned_path; // 仅在 Windows 长路径处理时使用
+		std::time_t time_c = 0;
+		bool success = false;
 
-		auto ftime = fs::last_write_time(file, ec);
-		if (ec)
-		{
 	#ifdef WIN32
-			if (file.string().size() > MAX_PATH)
-			{
-				unc_path = make_unc_path(file);
-				ftime = fs::last_write_time(unc_path, ec);
-			}
-	#endif
+		WIN32_FILE_ATTRIBUTE_DATA file_attr;
+		std::wstring wpath = file.wstring();
+
+		// 如果路径超长且没有 UNC 前缀，尝试转换
+		if (wpath.size() > MAX_PATH && wpath.compare(0, 4, L"\\\\?\\") != 0)
+		{
+			returned_path = make_unc_path(file);
+			wpath = returned_path.wstring();
 		}
 
-		if (!ec)
+		if (GetFileAttributesExW(wpath.c_str(), GetFileExInfoStandard, &file_attr))
 		{
-			auto tm = loc_time(ftime);
+			// 将 Windows 的 FILETIME (100纳秒为单位) 转换为 Unix 的 time_t (秒为单位)
+			ULARGE_INTEGER ull;
+			ull.LowPart = file_attr.ftLastWriteTime.dwLowDateTime;
+			ull.HighPart = file_attr.ftLastWriteTime.dwHighDateTime;
+
+			// Windows Epoch 是 1601年1月1日，Unix Epoch 是 1970年1月1日，相差 11644473600 秒
+			time_c = static_cast<std::time_t>((ull.QuadPart / 10000000ULL) - 11644473600ULL);
+			success = true;
+		}
+	#else
+		struct stat file_stat;
+		if (::stat(file.c_str(), &file_stat) == 0)
+		{
+	#if defined(__APPLE__)
+			time_c = file_stat.st_mtimespec.tv_sec;
+	#else
+			time_c = file_stat.st_mtim.tv_sec; // 现代 Linux 的纳秒级结构体中的秒部分
+	#endif
+			success = true;
+		}
+	#endif
+
+		if (success)
+		{
+			struct tm tm_buf{};
+	#ifdef WIN32
+			localtime_s(&tm_buf, &time_c);
+	#else
+			localtime_r(&time_c, &tm_buf);
+	#endif
 
 			char tmbuf[64] = { 0 };
-			std::strftime(tmbuf,
-				sizeof(tmbuf),
-				"%m-%d-%Y %H:%M",
-				tm);
-
+			std::strftime(tmbuf, sizeof(tmbuf), "%m-%d-%Y %H:%M", &tm_buf);
 			time_string = tmbuf;
 		}
 
-		return { time_string, unc_path };
+		return { time_string, returned_path };
 	}
 
 	net::awaitable<void> proxy_session::on_http_all_json(const http_context& hctx) noexcept
@@ -735,7 +739,7 @@ R"x*x*x(<html>
 		if (m_tproxy_remote)
 		{
 			net::co_spawn(m_executor,
-				[this, self, server]() -> net::awaitable<void>
+				[this, self]() -> net::awaitable<void>
 				{
 					co_await transparent_proxy();
 					co_return;
@@ -748,7 +752,7 @@ R"x*x*x(<html>
 		if (!m_option.stdio_target_.empty())
 		{
 			net::co_spawn(m_executor,
-				[this, self, server]() -> net::awaitable<void>
+				[this, self]() -> net::awaitable<void>
 				{
 					co_await stdio_proxy();
 					co_return;
@@ -759,7 +763,7 @@ R"x*x*x(<html>
 
 		// 启动协议侦测协程.
 		net::co_spawn(m_executor,
-			[this, self, server]() -> net::awaitable<void>
+			[this, self]() -> net::awaitable<void>
 			{
 				if (boost::variant2::holds_alternative<proxy_tcp_socket>(m_local_socket))
 				{
@@ -3668,7 +3672,7 @@ R"x*x*x(<html>
 		{
 			const auto& item = it->path();
 
-			auto [ftime, unc_path] = file_last_wirte_time(item);
+			auto [ftime, unc_path] = file_last_write_time(item);
 			std::wstring time_string = boost::nowide::widen(ftime);
 
 			std::wstring rpath;
