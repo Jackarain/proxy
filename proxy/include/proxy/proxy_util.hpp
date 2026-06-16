@@ -424,6 +424,83 @@ namespace proxy {
 
 		return ec;
 	}
+
+	// 将路径转换为 UNC 路径 (Windows 下处理长路径).
+	template<typename Path>
+	static fs::path make_unc_path(const Path& path) noexcept
+	{
+#ifndef WIN32
+		return path;
+#else
+		auto ret = path.string();
+		if (ret.size() > MAX_PATH)
+		{
+			boost::replace_all(ret, "/", "\\");
+			return "\\\\?\\" + ret;
+		}
+		return ret;
+#endif
+	}
+
+	// 获取文件的最后修改时间和 UNC 路径.
+	inline std::tuple<std::string, fs::path> file_last_write_time(const fs::path& file) noexcept
+	{
+		std::string time_string;
+		fs::path returned_path; // 仅在 Windows 长路径处理时使用
+		std::time_t time_c = 0;
+		bool success = false;
+
+#ifdef WIN32
+		WIN32_FILE_ATTRIBUTE_DATA file_attr;
+		std::wstring wpath = file.wstring();
+
+		// 如果路径超长且没有 UNC 前缀，尝试转换
+		if (wpath.size() > MAX_PATH && wpath.compare(0, 4, L"\\\\?\\") != 0)
+		{
+			returned_path = make_unc_path(file);
+			wpath = returned_path.wstring();
+		}
+
+		if (GetFileAttributesExW(wpath.c_str(), GetFileExInfoStandard, &file_attr))
+		{
+			// 将 Windows 的 FILETIME (100纳秒为单位) 转换为 Unix 的 time_t (秒为单位)
+			ULARGE_INTEGER ull;
+			ull.LowPart = file_attr.ftLastWriteTime.dwLowDateTime;
+			ull.HighPart = file_attr.ftLastWriteTime.dwHighDateTime;
+
+			// Windows Epoch 是 1601年1月1日，Unix Epoch 是 1970年1月1日，相差 11644473600 秒
+			time_c = static_cast<std::time_t>((ull.QuadPart / 10000000ULL) - 11644473600ULL);
+			success = true;
+		}
+#else
+		struct stat file_stat;
+		if (::stat(file.c_str(), &file_stat) == 0)
+		{
+#if defined(__APPLE__)
+			time_c = file_stat.st_mtimespec.tv_sec;
+#else
+			time_c = file_stat.st_mtim.tv_sec; // 现代 Linux 的纳秒级结构体中的秒部分
+#endif
+			success = true;
+		}
+#endif
+
+		if (success)
+		{
+			struct tm tm_buf{};
+#ifdef WIN32
+			localtime_s(&tm_buf, &time_c);
+#else
+			localtime_r(&time_c, &tm_buf);
+#endif
+
+			char tmbuf[64] = { 0 };
+			std::strftime(tmbuf, sizeof(tmbuf), "%m-%d-%Y %H:%M", &tm_buf);
+			time_string = tmbuf;
+		}
+
+		return { time_string, returned_path };
+	}
 }
 
 #endif // INCLUDE__2026_06_08__PROXY_UTIL_HPP

@@ -1184,32 +1184,12 @@ namespace proxy {
 		static fs::path path_cat(
 			const std::wstring& doc, const std::wstring& target) noexcept;
 
-		// 将路径转换为 UNC 路径 (Windows 下处理长路径).
-		template<typename Path>
-		static fs::path make_unc_path(const Path& path) noexcept
-		{
-#ifndef WIN32
-			return path;
-#else
-			auto ret = path.string();
-			if (ret.size() > MAX_PATH)
-			{
-				boost::replace_all(ret, "/", "\\");
-				return "\\\\?\\" + ret;
-			}
-			return ret;
-#endif
-		}
-
 		// 从 HTTP 请求目标路径生成文件系统路径字符串.
 		static std::wstring make_target_path(const std::string& target) noexcept;
 
 		// 从文档根目录和请求目标生成实际文件系统路径.
 		static fs::path make_real_target_path(const std::string& doc_directory,
 			const std::string& target) noexcept;
-
-		// 获取文件的最后修改时间和 UNC 路径.
-		static std::tuple<std::string, fs::path> file_last_write_time(const fs::path& file) noexcept;
 
 		// 格式化目录下的文件列表, 返回每个文件/目录的名称.
 		std::vector<std::wstring>
