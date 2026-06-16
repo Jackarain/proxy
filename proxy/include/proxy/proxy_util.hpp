@@ -103,6 +103,10 @@ namespace proxy {
 
 #endif // defined(__linux__)
 
+
+	static constexpr uint64_t udp_proxy_capsule_type = 0x00; // RFC 9297 DATAGRAM
+
+
 	// 将错误代码设置为系统错误.
 	inline void make_error_code(boost::system::error_code& ec, bool err) noexcept
 	{
@@ -239,7 +243,7 @@ namespace proxy {
 	// QUIC 可变长度整数编码/解码 (RFC 9298 capsule 协议)
 
 	// 将 value 编码为 QUIC 变长整数, 写入 buf, 返回写入的字节数.
-	inline size_t varint_encode(uint64_t value, uint8_t* buf) noexcept
+	inline size_t varint_int_encode(uint64_t value, uint8_t* buf) noexcept
 	{
 		if (value < 0x40)
 		{
@@ -264,7 +268,7 @@ namespace proxy {
 		}
 		else
 		{
-			value |= 0xC000000000000000;
+			value |= 0xC000000000000000ULL;
 			buf[0] = static_cast<uint8_t>(value >> 56);
 			buf[1] = static_cast<uint8_t>(value >> 48);
 			buf[2] = static_cast<uint8_t>(value >> 40);
@@ -278,7 +282,7 @@ namespace proxy {
 	}
 
 	// 从 buf 解码一个 QUIC 变长整数, 返回 {字节数, 值}.
-	inline std::pair<size_t, uint64_t> varint_decode(const uint8_t* buf) noexcept
+	inline std::pair<size_t, uint64_t> varint_int_decode(const uint8_t* buf) noexcept
 	{
 		uint8_t prefix = buf[0] >> 6;
 		if (prefix == 0)
@@ -334,7 +338,7 @@ namespace proxy {
 				co_return 0;
 		}
 
-		auto [consumed, value] = varint_decode(buf);
+		auto [consumed, value] = varint_int_decode(buf);
 		(void)consumed;
 
 		co_return value;

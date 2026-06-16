@@ -2278,13 +2278,13 @@ R"x*x*x(<html>
 			// 解构 url 中的信息.
 			auto [scheme, user, passwd, host, port, resource] = *expect_url;
 
+			bool http_connect_udp = false;
+
 			// RFC 9298 CONNECT-UDP 检测: 检查是否为 connect-udp upgrade 请求.
 			{
 				auto upgrade = req.find("Upgrade");
 				auto capsule_proto = req.find("Capsule-Protocol");
 				auto connection = req.find("Connection");
-
-				bool is_connect_udp = false;
 
 				if (mth == "GET" &&
 					upgrade != req.end() &&
@@ -2299,74 +2299,36 @@ R"x*x*x(<html>
 						boost::icontains(conn_val, "upgrade") &&
 						cap_val == "?1")
 					{
-						is_connect_udp = true;
+						http_connect_udp = true;
 					}
 				}
+			}
 
-				if (is_connect_udp)
+			if (http_connect_udp)
+			{
+				// 从 URI path 中解析 target_host 和 target_port.
+				std::string target_host;
+				uint16_t target_port = 0;
+
+				// 格式: /.well-known/masque/udp/{target_host}/{target_port}/
+				if (!parse_connect_udp_target(resource, target_host, target_port))
 				{
-					// 从 URI path 中解析 target_host 和 target_port.
-					// 格式: /.well-known/masque/udp/{target_host}/{target_port}/
-					std::string path(resource);
-					const std::string udp_prefix = "/.well-known/masque/udp/";
+					log_conn_warning()
+						<< ", connect-udp: invalid target from path: "
+						<< resource;
 
-					std::string target_host;
-					uint16_t target_port = 0;
-
-					if (path.starts_with(udp_prefix))
-					{
-						auto remainder = path.substr(udp_prefix.size());
-						// 移除结尾的 '/'
-						while (!remainder.empty() && remainder.back() == '/')
-							remainder.pop_back();
-
-						auto slash_pos = remainder.rfind('/');
-						if (slash_pos != std::string::npos)
-						{
-							auto port_str = remainder.substr(slash_pos + 1);
-							target_host = remainder.substr(0, slash_pos);
-							// 对 host 进行百分号解码 (IPv6 地址中的冒号可能为 %3A).
-							{
-								std::string decoded;
-								decoded.reserve(target_host.size());
-								for (size_t i = 0; i < target_host.size(); i++)
-								{
-									if (target_host[i] == '%' && i + 2 < target_host.size())
-									{
-										auto hex_str = target_host.substr(i + 1, 2);
-										char* end = nullptr;
-										long val = std::strtol(hex_str.c_str(), &end, 16);
-										if (end == hex_str.c_str() + hex_str.size())
-										{
-											decoded += static_cast<char>(val);
-											i += 2;
-											continue;
-										}
-									}
-									decoded += target_host[i];
-								}
-								target_host = decoded;
-							}
-							target_port = static_cast<uint16_t>(std::stoul(std::string(port_str)));
-						}
-					}
-
-					if (target_host.empty() || target_port == 0)
-					{
-						log_conn_warning()
-							<< ", connect-udp: invalid target from path: "
-							<< path;
-						co_return false;
-					}
-
-					log_conn_debug()
-						<< ", connect-udp request for target: "
-						<< target_host << ":" << target_port;
-
-					co_await http_proxy_connect_udp(
-						req, target_host, target_port);
-					co_return !first;
+					co_return false;
 				}
+
+				log_conn_debug()
+					<< ", connect-udp request for target: "
+					<< target_host << ":" << target_port;
+
+				// 处理 connect-udp 请求.
+				co_await http_proxy_connect_udp(req, target_host, target_port);
+
+				// 完成 connect-udp 请求后返回.
+				co_return !first;
 			}
 
 			if (!m_remote_socket.is_open())
@@ -2601,167 +2563,64 @@ R"x*x*x(<html>
 		// 如果指定了 proxy_pass（有下级代理服务器）.
 		if (m_proxy_pass)
 		{
-			auto scheme = boost::to_lower_copy(
-				std::string(m_proxy_pass->scheme()));
-
-			// SOCKS proxy_pass 暂不支持, UDP 数据包转为 SOCKS UDP 转发太复杂.
-			if (scheme.starts_with("socks"))
-			{
-				log_conn_warning()
-					<< ", connect-udp: socks proxy_pass not supported";
-
-				http::response<http::string_body> res{
-					http::status::bad_gateway,
-					req.version() };
-				res.set(http::field::content_type, "text/html");
-				res.body() = "<html><body><h1>502 Bad Gateway</h1>"
-					"<p>connect-udp over socks proxy_pass not supported.</p>"
-					"</body></html>";
-				res.prepare_payload();
-
-				co_await http::async_write(
-					m_local_socket, res, net_awaitable[ec]);
-				co_return;
-			}
-
-			// HTTP proxy_pass: 连接上游并转发原始请求.
-			tcp::socket remote_socket(m_executor);
-			auto targets = co_await resolve_proxy_pass_targets();
-
-			ec = co_await connect_proxy_pass(remote_socket, targets);
-			if (ec)
-			{
-				http::response<http::string_body> res{
-					http::status::bad_gateway,
-					req.version() };
-				res.set(http::field::content_type, "text/html");
-				res.body() = "<html><body><h1>502 Bad Gateway</h1>"
-					"<p>Cannot connect to upstream proxy.</p>"
-					"</body></html>";
-				res.prepare_payload();
-
-				co_await http::async_write(
-					m_local_socket, res, net_awaitable[ec]);
-				co_return;
-			}
-
-			// 将 m_remote_socket 初始化为 TCP 流类型.
-			m_remote_socket = std::move(
-				co_await instantiate_proxy_pass(
-					std::move(remote_socket),
-					m_option.proxy_pass_use_ssl_));
-
-			// 发送原始请求头到上游.
-			co_await http::async_write(
-				m_remote_socket, req, net_awaitable[ec]);
-			if (ec)
-			{
-				log_conn_warning()
-					<< ", connect-udp: forward request to upstream: "
-					<< ec.message();
-				co_return;
-			}
-
-			// 读取上游的响应.
-			m_local_buffer.consume(m_local_buffer.size());
-			beast::flat_buffer buf;
-
-			http::response_parser<http::string_body> parser;
-			parser.body_limit(1024 * 1024);
-
-			co_await http::async_read(
-				m_remote_socket, buf, parser, net_awaitable[ec]);
-			if (ec)
-			{
-				log_conn_warning()
-					<< ", connect-udp: read upstream response: "
-					<< ec.message();
-				co_return;
-			}
-
-			auto upstream_res = parser.release();
-
-			// 把上游响应转发给客户端.
-			co_await http::async_write(
-				m_local_socket, upstream_res, net_awaitable[ec]);
-			if (ec)
-			{
-				log_conn_warning()
-					<< ", connect-udp: forward response to client: "
-					<< ec.message();
-				co_return;
-			}
-
-			// 如果上游返回 101, 则开始原始 TCP 双向转发 (上游负责 capsule ↔ UDP).
-			if (upstream_res.result() == http::status::switching_protocols)
-			{
-				log_conn_debug()
-					<< ", connect-udp: tunnel established via upstream, "
-					<< "starting raw tcp forwarding";
-
-				co_await concurrent_transfer();
-			}
-
+			co_await http_proxy_udp_proxy_pass(req, target_host, target_port);
 			co_return;
 		}
 
 		// 以下为终端代理场景: 无 proxy_pass, 直接与目标 UDP 服务器通信.
-
 		log_conn_debug()
-			<< ", connect-udp: terminal proxy, creating UDP socket to "
+			<< ", connect-udp: final proxy, creating UDP socket to "
 			<< target_host << ":" << target_port;
 
 		// 解析目标主机 (如果是域名需要 DNS 解析).
 		auto protocol = udp::v4();
 		net::ip::address target_addr;
 
+		// 尝试将目标主机解析为 IP 地址, 若发生错误, 则说明是域名需要通过 DNS 解析.
+		auto addr = net::ip::make_address(target_host, ec);
+		if (ec)
 		{
-			boost::system::error_code resolve_ec;
-			auto addr = net::ip::make_address(target_host, resolve_ec);
-			if (resolve_ec)
+			co_await switch_to_backend_executor();
+
+			udp::resolver resolver(m_backend_context);
+			auto results = co_await resolver.async_resolve(
+				target_host, std::to_string(target_port), net_awaitable[ec]);
+
+			co_await switch_from_backend_executor();
+
+			if (ec || results.empty())
 			{
-				// 域名, 需要异步解析.
-				co_await switch_to_backend_executor();
+				log_conn_warning()
+					<< ", connect-udp: DNS resolve failed for "
+					<< target_host << ": " << ec.message();
 
-				udp::resolver resolver(m_backend_context);
-				auto results = co_await resolver.async_resolve(
-					target_host,
-					std::to_string(target_port),
-					net_awaitable[resolve_ec]);
+				http::response<http::string_body> res{
+					http::status::bad_gateway,
+					req.version() };
 
-				co_await switch_from_backend_executor();
+				res.set(http::field::content_type, "text/html");
+				res.set("Proxy-Status", "dns_error");
+				res.body() = "<html><body><h1>502 Bad Gateway</h1>"
+					"<p>DNS resolution failed.</p></body></html>";
+				res.prepare_payload();
 
-				if (resolve_ec || results.empty())
-				{
-					log_conn_warning()
-						<< ", connect-udp: DNS resolve failed for "
-						<< target_host << ": " << resolve_ec.message();
+				co_await http::async_write(
+					m_local_socket, res, net_awaitable[ec]);
 
-					http::response<http::string_body> res{
-						http::status::bad_gateway,
-						req.version() };
-					res.set(http::field::content_type, "text/html");
-					res.set("Proxy-Status", "dns_error");
-					res.body() = "<html><body><h1>502 Bad Gateway</h1>"
-						"<p>DNS resolution failed.</p></body></html>";
-					res.prepare_payload();
-
-					co_await http::async_write(
-						m_local_socket, res, net_awaitable[ec]);
-					co_return;
-				}
-
-				target_addr = results.begin()->endpoint().address();
-				protocol = target_addr.is_v4() ? udp::v4() : udp::v6();
+				co_return;
 			}
-			else
-			{
-				target_addr = addr;
-				protocol = target_addr.is_v4() ? udp::v4() : udp::v6();
-			}
+
+			// 解析成功, 从结果中提取地址, 只取第一个地址即可.
+			target_addr = results.begin()->endpoint().address();
+			protocol = target_addr.is_v4() ? udp::v4() : udp::v6();
+		}
+		else
+		{
+			target_addr = addr;
+			protocol = target_addr.is_v4() ? udp::v4() : udp::v6();
 		}
 
-		// 创建并连接 UDP socket.
+		// 创建并连接 UDP socket, 专为目标地址的 udp socket 服务.
 		udp::socket udp_socket(m_executor);
 		udp_socket.open(protocol, ec);
 		if (ec)
@@ -2839,12 +2698,9 @@ R"x*x*x(<html>
 		// 开始 capsule ↔ UDP 双向转发.
 		auto self = shared_from_this();
 
-		// UDP capsule 类型常量.
-		static constexpr uint64_t UDP_PROXY_CAPSULE_TYPE = 0x8000;
-
 		// HTTP → UDP 转发协程: 从 HTTP 流读取 capsule, 解析出 UDP 数据并发送到 UDP socket.
 		auto http_to_udp = [this, self, &udp_socket]
-			() -> net::awaitable<void>
+			() mutable -> net::awaitable<void>
 		{
 			boost::system::error_code ec;
 
@@ -2852,11 +2708,23 @@ R"x*x*x(<html>
 			{
 				// 读取 capsule type.
 				auto capsule_type = co_await read_varint_from_stream(m_local_socket, ec);
-				if (ec) break;
+				if (ec)
+				{
+					log_conn_warning()
+						<< ", connect-udp: read capsule type error: "
+						<< ec.message();
+					break;
+				}
 
 				// 读取 capsule length.
 				auto capsule_length = co_await read_varint_from_stream(m_local_socket, ec);
-				if (ec) break;
+				if (ec)
+				{
+					log_conn_warning()
+						<< ", connect-udp: read capsule length error: "
+						<< ec.message();
+					break;
+				}
 
 				// 限制最大 capsule 大小.
 				if (capsule_length > 65535)
@@ -2868,19 +2736,24 @@ R"x*x*x(<html>
 				}
 
 				// 读取 capsule value.
-				std::string capsule_value(
-					static_cast<size_t>(capsule_length), '\0');
+				std::string capsule_value(static_cast<size_t>(capsule_length), '\0');
 				if (capsule_length > 0)
 				{
 					co_await net::async_read(
 						m_local_socket,
 						net::buffer(capsule_value),
 						net_awaitable[ec]);
-					if (ec) break;
+					if (ec)
+					{
+						log_conn_warning()
+							<< ", connect-udp: read capsule value error: "
+							<< ec.message();
+						break;
+					}
 				}
 
-				// 仅处理 UDP_PROXY capsule 类型.
-				if (capsule_type != UDP_PROXY_CAPSULE_TYPE)
+				// 仅处理 DATAGRAM capsule 类型 (RFC 9297).
+				if (capsule_type != udp_proxy_capsule_type)
 				{
 					log_conn_debug()
 						<< ", connect-udp: unknown capsule type: "
@@ -2891,14 +2764,13 @@ R"x*x*x(<html>
 				}
 
 				// 解析 context ID (应该为 0).
-				auto data = reinterpret_cast<const uint8_t*>(
-					capsule_value.data());
+				auto data = reinterpret_cast<const uint8_t*>(capsule_value.data());
 				size_t data_len = capsule_value.size();
 
 				if (data_len == 0)
 					continue;
 
-				auto [ctx_id_len, ctx_id] = varint_decode(data);
+				auto [ctx_id_len, ctx_id] = varint_int_decode(data);
 				if (ctx_id != 0)
 				{
 					log_conn_debug()
@@ -2927,16 +2799,16 @@ R"x*x*x(<html>
 
 			// 关闭连接.
 			m_abort = true;
-			boost::system::error_code ignore_ec;
-			udp_socket.close(ignore_ec);
-			m_local_socket.close(ignore_ec);
+
+			udp_socket.close(ec);
+			m_local_socket.close(ec);
 
 			co_return;
 		};
 
 		// UDP → HTTP 转发协程: 从 UDP socket 读取数据, 封装成 capsule 发送到 HTTP 流.
 		auto udp_to_http = [this, self, &udp_socket]
-			() -> net::awaitable<void>
+			() mutable -> net::awaitable<void>
 		{
 			boost::system::error_code ec;
 			// 最大 UDP payload + capsule header (type + length + ctx_id).
@@ -2950,24 +2822,23 @@ R"x*x*x(<html>
 					net_awaitable[ec]);
 				if (ec) break;
 
-				// 构建 capsule.
-				// Capsule type: UDP_PROXY (0x8000)
-				// Capsule length: ctx_id_size + udp_payload_size
-				// Context ID: 0 (1 byte as varint)
-				// UDP payload
+				// 构建 DATAGRAM capsule (RFC 9297).
+				// Capsule type: DATAGRAM (0x00)
+				// HTTP Datagram Payload (RFC 9298):
+				//   Context ID: 0 (1 byte as varint)
+				//   UDP payload
 
 				size_t pos = 0;
 
-				// capsule type
-				pos += varint_encode(UDP_PROXY_CAPSULE_TYPE, buf + pos);
-				// capsule value 长度 = 1 (ctx_id=0) + bytes (payload)
-				pos += varint_encode(1 + bytes, buf + pos);
-				// context ID = 0
-				pos += varint_encode(0, buf + pos);
+				pos += varint_int_encode(udp_proxy_capsule_type, buf + pos);	// capsule type
+				pos += varint_int_encode(1 + bytes, buf + pos);					// capsule value length
+
+				pos += varint_int_encode(0, buf + pos);							// context ID = 0
+
 				// UDP payload (已经在 buf + 18 处)
 				// 注意: 如果 varint 编码占用的空间超过预留的 18 字节,
-				// 需要调整. 实际情况: type=0x8000 用 2 字节, value_length
-				// 最大约 65528 用 4 字节, ctx_id=0 用 1 字节 = 7 字节,
+				// 需要调整. 实际情况: type=0x00 用 1 字节, value_length
+				// 最大约 65528 用 4 字节, ctx_id=0 用 1 字节 = 6 字节,
 				// 远远小于 18 字节.
 				memmove(buf + pos, buf + 18, bytes);
 				pos += bytes;
@@ -3005,6 +2876,198 @@ R"x*x*x(<html>
 			<< target_host << ":" << target_port;
 
 		co_return;
+	}
+
+	net::awaitable<void> proxy_session::http_proxy_udp_proxy_pass(
+		const http::request<http::string_body>& req,
+		const std::string& target_host,
+		uint16_t target_port
+	)
+	{
+		boost::system::error_code ec;
+
+		auto scheme = boost::to_lower_copy(std::string(m_proxy_pass->scheme()));
+
+		// TODO: SOCKS proxy_pass 暂不支持, UDP 数据包转为 SOCKS UDP 转发太复杂.
+		if (scheme.starts_with("socks"))
+		{
+			log_conn_warning()
+				<< ", connect-udp: socks proxy_pass not supported";
+
+			http::response<http::string_body> res{
+				http::status::bad_gateway,
+				req.version() };
+			res.set(http::field::content_type, "text/html");
+			res.body() = "<html><body><h1>502 Bad Gateway</h1>"
+				"<p>connect-udp over socks proxy_pass not supported.</p>"
+				"</body></html>";
+			res.prepare_payload();
+
+			co_await http::async_write(
+				m_local_socket, res, net_awaitable[ec]);
+
+			co_return;
+		}
+
+		// HTTP proxy_pass: 连接上游并转发原始请求.
+		tcp::socket remote_socket(m_executor);
+		auto targets = co_await resolve_proxy_pass_targets();
+
+		ec = co_await connect_proxy_pass(remote_socket, targets);
+		if (ec)
+		{
+			http::response<http::string_body> res{
+				http::status::bad_gateway,
+				req.version() };
+			res.set(http::field::content_type, "text/html");
+			res.body() = "<html><body><h1>502 Bad Gateway</h1>"
+				"<p>Cannot connect to upstream proxy.</p>"
+				"</body></html>";
+			res.prepare_payload();
+
+			co_await http::async_write(
+				m_local_socket, res, net_awaitable[ec]);
+			co_return;
+		}
+
+		// 将 m_remote_socket 初始化为 TCP 流类型.
+		m_remote_socket = std::move(
+			co_await instantiate_proxy_pass(
+				std::move(remote_socket),
+				m_option.proxy_pass_use_ssl_));
+
+		// 发送原始请求头到上游.
+		co_await http::async_write(
+			m_remote_socket, req, net_awaitable[ec]);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", connect-udp: forward request to upstream: "
+				<< ec.message();
+			co_return;
+		}
+
+		// 读取上游的响应.
+		m_local_buffer.consume(m_local_buffer.size());
+		beast::flat_buffer buf;
+
+		http::response_parser<http::string_body> parser;
+		parser.body_limit(1024 * 1024);
+
+		co_await http::async_read(
+			m_remote_socket, buf, parser, net_awaitable[ec]);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", connect-udp: read upstream response: "
+				<< ec.message();
+			co_return;
+		}
+
+		auto upstream_res = parser.release();
+
+		// 把上游响应转发给客户端.
+		co_await http::async_write(
+			m_local_socket, upstream_res, net_awaitable[ec]);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", connect-udp: forward response to client: "
+				<< ec.message();
+			co_return;
+		}
+
+		// 如果上游返回 101, 则开始原始 TCP 双向转发 (上游负责 capsule ↔ UDP).
+		if (upstream_res.result() == http::status::switching_protocols)
+		{
+			log_conn_debug()
+				<< ", connect-udp: tunnel established via upstream, "
+				<< "starting raw tcp forwarding";
+
+			co_await concurrent_transfer();
+		}
+
+		co_return;
+	}
+
+	bool proxy_session::parse_connect_udp_target(std::string_view path,
+		std::string& target_host, uint16_t& target_port)
+	{
+		if (path.empty() || path[0] != '/') return false;
+
+		std::string_view r_host, r_port;
+
+		// /.well-known/masque/udp/{target_host}/{target_port}/
+		if (size_t pos = path.find("/.well-known/masque/udp/");
+			pos != std::string_view::npos)
+		{
+			std::string_view sub = path.substr(pos + 24);
+			size_t slash = sub.find('/');
+
+			if (slash == std::string_view::npos || slash == 0)
+				return false;
+
+			r_host = sub.substr(0, slash);
+			r_port = sub.substr(slash + 1);
+
+			if (!r_port.empty() && r_port.back() == '/')
+				r_port.remove_suffix(1);
+		}
+		// ?h=...&p=... 或者 ?target_host=...&target_port=...
+		else if (size_t q_pos = path.find('?'); q_pos != std::string_view::npos)
+		{
+			std::string_view query = path.substr(q_pos + 1);
+			size_t pos = 0;
+
+			while (pos < query.size())
+			{
+				size_t next = query.find_first_of("&,", pos);
+				std::string_view pair = query.substr(
+					pos, next == std::string_view::npos ? next : next - pos);
+				pos = (next == std::string_view::npos) ? next : next + 1;
+
+				if (size_t eq = pair.find('='); eq != std::string_view::npos)
+				{
+					std::string_view k = pair.substr(0, eq);
+					std::string_view v = pair.substr(eq + 1);
+
+					if (k == "h" || k == "target_host")
+						r_host = v;
+					else if (k == "p" || k == "target_port")
+						r_port = v;
+				}
+			}
+		}
+
+		if (r_host.empty() || r_port.empty())
+			return false;
+
+		// 解析端口
+		auto [ptr, ec] = std::from_chars(
+			r_port.data(), r_port.data() + r_port.size(), target_port);
+
+		if (ec != std::errc{} || ptr != r_port.data() + r_port.size())
+			return false;
+
+		// 还原 Host, 处理 IPv6 中的 %3A 等情况.
+		target_host.clear();
+		target_host.reserve(r_host.size());
+
+		for (size_t i = 0; i < r_host.size(); ++i)
+		{
+			if (r_host[i] == '%' && i + 2 < r_host.size())
+			{
+				char hex[3] = {r_host[i + 1], r_host[i + 2], 0};
+				target_host += static_cast<char>(std::strtol(hex, nullptr, 16));
+				i += 2;
+			}
+			else
+			{
+				target_host += r_host[i];
+			}
+		}
+
+		return true;
 	}
 
 	net::awaitable<bool> proxy_session::socks_auth() noexcept

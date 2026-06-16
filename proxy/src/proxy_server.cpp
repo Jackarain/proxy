@@ -10,6 +10,7 @@
 
 #include "proxy/proxy_server.hpp"
 #include "proxy/proxy_util.hpp"
+#include "proxy/strutil.hpp"
 
 #include <boost/functional/hash.hpp>
 
@@ -17,7 +18,6 @@ namespace proxy {
 
 //////////////////////////////////////////////////////////////////////////
 
-static constexpr uint64_t udp_proxy_capsule_type = 0x8000;
 
 proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option opt)
 	: m_executor(executor)
@@ -1894,19 +1894,21 @@ void proxy_server::udp_tproxy_forward_packet_http(
 	if (!flow || !flow->udp_http_sock_)
 		return;
 
-	// 构建 capsule:
-	//   capsule type (varint) = 0x8000
-	//   capsule length (varint) = 1 + len
-	//   context ID (varint) = 0
-	//   UDP payload
+	// 构建 DATAGRAM capsule (RFC 9297):
+	//   capsule type (varint) = 0x00
+	//   capsule length (varint) = len + 1  # 这里 + 1 是因为 context ID 为 0 占用一字节
+	//   HTTP Datagram Payload (RFC 9298):
+	//     context ID (varint) = 0
+	//     UDP payload
 
 	uint8_t buf[65536];
 	size_t pos = 0;
 
-	pos += varint_encode(udp_proxy_capsule_type, buf + pos);
-	pos += varint_encode(1 + len, buf + pos);
-	pos += varint_encode(0, buf + pos);
-	std::memcpy(buf + pos, data, len);
+	pos += varint_int_encode(udp_proxy_capsule_type, buf + pos); // capsule type
+	pos += varint_int_encode(1 + len, buf + pos);				 // capsule length
+	pos += varint_int_encode(0, buf + pos);						 // context ID
+
+	std::memcpy(buf + pos, data, len);							 // UDP payload
 	pos += len;
 
 	// 推入发送队列并通知发送协程.
@@ -1983,12 +1985,13 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	if (proxy_pass.scheme().ends_with("s"))
 		use_ssl = true;
 
-	std::optional<variant_stream_type>& http_sock = flow->udp_http_sock_;
+	// 保存 HTTP socket 的对象引用.
+	std::optional<variant_stream_type>& http_sock_opt = flow->udp_http_sock_;
 
 	if (use_ssl)
 	{
 		auto sni = m_option.proxy_ssl_name_.empty() ? proxy_host : m_option.proxy_ssl_name_;
-		auto res = co_await make_ssl_socket(remote_socket, sni, http_sock);
+		auto res = co_await make_ssl_socket(remote_socket, sni, http_sock_opt);
 		if (res.has_error())
 		{
 			XLOG_WARN << "tproxy flow: " << flow->flow_key_
@@ -1996,11 +1999,12 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 			co_return;
 		}
 
-		XLOG_DBG << "udp tproxy SSL handshake with " << sni << " succeeded";
+		XLOG_DBG << "tproxy flow: " << flow->flow_key_
+			<< ", udp tproxy SSL handshake with " << sni << " succeeded";
 	}
 	else
 	{
-		http_sock.emplace(init_proxy_stream(std::move(remote_socket)));
+		http_sock_opt.emplace(init_proxy_stream(std::move(remote_socket)));
 	}
 
 	// 构建 RFC 9298 connect-udp 请求, 使用 absolute-form URI.
@@ -2012,23 +2016,37 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	if (original_dest.address().is_v6())
 		boost::replace_all(target_host, ":", "%3A");
 
-	std::string request_line =
-		"GET https://" + proxy_host + ":" + std::to_string(proxy_port) +
+	// 使用 boost.beast 构建 HTTP 请求.
+	std::string target =
+		"https://" + proxy_host + ":" + std::to_string(proxy_port) +
 		"/.well-known/masque/udp/" + target_host + "/" +
-		std::to_string(target_port) + "/ HTTP/1.1\r\n";
+		std::to_string(target_port) + "/";
 
-	std::string headers =
-		"Host: " + proxy_host + ":" + std::to_string(proxy_port) + "\r\n"
-		"Connection: Upgrade\r\n"
-		"Upgrade: connect-udp\r\n"
-		"Capsule-Protocol: ?1\r\n"
-		"\r\n";
+	http::request<http::empty_body> req{http::verb::get, target, 11};
+	req.set(http::field::host, proxy_host + ":" + std::to_string(proxy_port));
+	req.set(http::field::connection, "Upgrade");
+	req.set(http::field::upgrade, "connect-udp");
+	req.set("Capsule-Protocol", "?1");
 
-	std::string full_request = request_line + headers;
+	// 如果 proxy_pass 需要认证, 添加 Proxy-Authorization 头.
+	if (!proxy_pass.user().empty())
+	{
+		const auto userinfo =
+			std::string(proxy_pass.user()) + ":" +
+			std::string(proxy_pass.password());
+		req.set(http::field::proxy_authorization,
+			"Basic " + strutil::base64_encode(userinfo));
+	}
 
-	// 发送 connect-udp 请求.
-	co_await net::async_write(*http_sock,
-		net::buffer(full_request), net_awaitable[ec]);
+	beast::flat_buffer resp_buf;
+	http::response_parser<http::empty_body> resp_parser;
+	resp_parser.skip(true);
+
+	// 获取 HTTP socket 的引用.
+	auto& http_sock = *http_sock_opt;
+
+	// 使用 boost.beast 的序列化器发送 HTTP 请求.
+	co_await http::async_write(http_sock, req, net_awaitable[ec]);
 	if (ec)
 	{
 		XLOG_WARN << "tproxy flow: " << flow->flow_key_
@@ -2036,13 +2054,9 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		co_return;
 	}
 
-	// 读取响应状态行.
-	beast::flat_buffer resp_buf;
-	http::response_parser<http::empty_body> resp_parser;
-	resp_parser.skip(true);
-
+	// 读取响应 headers.
 	co_await http::async_read_header(
-		*http_sock, resp_buf, resp_parser, net_awaitable[ec]);
+		http_sock, resp_buf, resp_parser, net_awaitable[ec]);
 	if (ec)
 	{
 		XLOG_WARN << "tproxy flow: " << flow->flow_key_
@@ -2065,6 +2079,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 
 	// 创建通知定时器并启动发送协程, 用于串行发送队列中的 UDP 数据包.
 	flow->notify_timer_.emplace(m_executor);
+
 	net::co_spawn(m_executor, [this, self, flow]() -> net::awaitable<void>
 	{
 		boost::system::error_code ec;
@@ -2072,6 +2087,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		while (!self->m_abort)
 		{
 			std::vector<char> item;
+
 			{
 				std::lock_guard<std::mutex> lock(self->m_udp_flows_mutex);
 				if (!flow->send_queue_.empty())
@@ -2084,8 +2100,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 			if (item.empty())
 			{
 				// 队列为空, 等待通知.
-				flow->notify_timer_->expires_at(
-					net::steady_timer::time_point::max());
+				flow->notify_timer_->expires_after(std::chrono::seconds(1));
 				co_await flow->notify_timer_->async_wait(net_awaitable[ec]);
 				continue;
 			}
@@ -2094,9 +2109,9 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 			if (!flow->udp_http_sock_)
 				break;
 
-			auto& tcp_sock = *flow->udp_http_sock_;
+			auto& http_sock = *flow->udp_http_sock_;
 
-			co_await net::async_write(tcp_sock, net::buffer(item), net_awaitable[ec]);
+			co_await net::async_write(http_sock, net::buffer(item), net_awaitable[ec]);
 			if (ec)
 			{
 				XLOG_WARN
@@ -2114,12 +2129,14 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	while (!m_abort)
 	{
 		// 读取 capsule type.
-		auto capsule_type = co_await read_varint_from_stream(*http_sock, ec);
-		if (ec) break;
+		auto capsule_type = co_await read_varint_from_stream(http_sock, ec);
+		if (ec)
+			break;
 
 		// 读取 capsule length.
-		auto capsule_length = co_await read_varint_from_stream(*http_sock, ec);
-		if (ec) break;
+		auto capsule_length = co_await read_varint_from_stream(http_sock, ec);
+		if (ec)
+			break;
 
 		if (capsule_length > 65535)
 		{
@@ -2134,12 +2151,12 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		if (capsule_length > 0)
 		{
 			co_await net::async_read(
-				*http_sock, net::buffer(capsule_value),
+				http_sock, net::buffer(capsule_value),
 				net_awaitable[ec]);
 			if (ec) break;
 		}
 
-		// 仅处理 UDP_PROXY capsule.
+		// 仅处理 DATAGRAM capsule (RFC 9297).
 		if (capsule_type != udp_proxy_capsule_type)
 		{
 			XLOG_DBG << "tproxy flow: " << flow->flow_key_
@@ -2154,7 +2171,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 
 		if (val_len == 0) continue;
 
-		auto [ctx_id_len, ctx_id] = varint_decode(val_data);
+		auto [ctx_id_len, ctx_id] = varint_int_decode(val_data);
 		if (ctx_id != 0)
 		{
 			XLOG_DBG << "tproxy flow: " << flow->flow_key_
@@ -2170,8 +2187,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 
 		auto& relay_sock = *flow->relay_sock_;
 		relay_sock.send_to(
-			net::buffer(val_data + ctx_id_len, udp_len),
-			flow->client_endp_, 0, ec);
+			net::buffer(val_data + ctx_id_len, udp_len), flow->client_endp_, 0, ec);
 		if (ec)
 		{
 			XLOG_WARN << "tproxy flow: " << flow->flow_key_
