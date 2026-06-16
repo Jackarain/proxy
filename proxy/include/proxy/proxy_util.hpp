@@ -242,6 +242,15 @@ namespace proxy {
 	//////////////////////////////////////////////////////////////////////////
 	// QUIC 可变长度整数编码/解码 (RFC 9298 capsule 协议)
 
+	// 获取 QUIC 变长整数编码后的实际字节数
+	constexpr size_t varint_encoded_length(uint64_t val)
+	{
+		if (val <= 0x3F)       return 1;
+		if (val <= 0x3FFF)     return 2;
+		if (val <= 0x3FFFFFFF) return 4;
+		return 8;
+	}
+
 	// 将 value 编码为 QUIC 变长整数, 写入 buf, 返回写入的字节数.
 	inline size_t varint_int_encode(uint64_t value, uint8_t* buf) noexcept
 	{

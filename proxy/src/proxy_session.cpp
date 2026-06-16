@@ -2818,34 +2818,35 @@ R"x*x*x(<html>
 			{
 				// 从 UDP socket 接收数据.
 				auto bytes = co_await udp_socket.async_receive(
-					net::buffer(buf + 18, 65527),
+					net::buffer(buf + 32, 65527),
 					net_awaitable[ec]);
 				if (ec) break;
 
 				// 构建 DATAGRAM capsule (RFC 9297).
 				// Capsule type: DATAGRAM (0x00)
+				// Capsule length: 1 + bytes (1 byte for context ID + UDP payload)
 				// HTTP Datagram Payload (RFC 9298):
 				//   Context ID: 0 (1 byte as varint)
 				//   UDP payload
 
+				// 计算 capsule header 部分和长度.
+				auto capsule_length =
+					varint_encoded_length(udp_proxy_capsule_type) +
+					varint_encoded_length(1 + bytes) +
+					varint_encoded_length(0);
+
+				// 计算 capsule 起始位置.
+				auto capsule_start = buf + 32 - capsule_length;
 				size_t pos = 0;
 
-				pos += varint_int_encode(udp_proxy_capsule_type, buf + pos);	// capsule type
-				pos += varint_int_encode(1 + bytes, buf + pos);					// capsule value length
-
-				pos += varint_int_encode(0, buf + pos);							// context ID = 0
-
-				// UDP payload (已经在 buf + 18 处)
-				// 注意: 如果 varint 编码占用的空间超过预留的 18 字节,
-				// 需要调整. 实际情况: type=0x00 用 1 字节, value_length
-				// 最大约 65528 用 4 字节, ctx_id=0 用 1 字节 = 6 字节,
-				// 远远小于 18 字节.
-				memmove(buf + pos, buf + 18, bytes);
-				pos += bytes;
+				// 开始直接编码到 buf 中.
+				pos += varint_int_encode(udp_proxy_capsule_type, capsule_start + pos);
+				pos += varint_int_encode(1 + bytes, capsule_start + pos);
+				pos += varint_int_encode(0, capsule_start + pos);
 
 				co_await net::async_write(
 					m_local_socket,
-					net::buffer(buf, pos),
+					net::buffer(capsule_start, capsule_length + bytes),
 					net_awaitable[ec]);
 				if (ec)
 				{
@@ -2888,7 +2889,7 @@ R"x*x*x(<html>
 
 		auto scheme = boost::to_lower_copy(std::string(m_proxy_pass->scheme()));
 
-		// TODO: SOCKS proxy_pass 暂不支持, UDP 数据包转为 SOCKS UDP 转发太复杂.
+		// TODO: SOCKS proxy_pass 暂不支持, HTTP UDP 数据包转为 SOCKS UDP 转发太复杂.
 		if (scheme.starts_with("socks"))
 		{
 			log_conn_warning()
