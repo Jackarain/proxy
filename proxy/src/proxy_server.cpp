@@ -865,21 +865,21 @@ void proxy_server::close() noexcept
 		acceptor.close(ignore_ec);
 
 #if defined(__linux__)
+
 	// 关闭 UDP TPROXY 相关资源.
+	for (auto& [key, flow] : m_udp_tproxy_flows)
 	{
-		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
-		for (auto& [key, flow] : m_udp_tproxy_flows)
+		if (flow)
 		{
-			if (flow)
-			{
-				flow->backend_sock_.reset();
-				flow->relay_sock_.reset();
-			}
+			flow->backend_sock_.reset();
+			flow->relay_sock_.reset();
 		}
-		m_udp_tproxy_flows.clear();
 	}
+	m_udp_tproxy_flows.clear();
+
 	for (auto& s : m_udp_tproxy_listeners)
 		s.close(ignore_ec);
+
 #endif // defined(__linux__)
 
 	for (auto& [id, c] : m_clients)
@@ -1182,7 +1182,6 @@ size_t proxy_server::make_udp_flow_key(const udp::endpoint& client, const udp::e
 
 net::awaitable<void> proxy_server::udp_tproxy_check() noexcept
 {
-	std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
 	std::vector<size_t> expired_keys;
 
 	for (const auto& [key, flow] : m_udp_tproxy_flows)
@@ -1539,16 +1538,14 @@ net::awaitable<void> proxy_server::udp_tproxy_response_loop(udp_tproxy_flow_ptr 
 			return;
 
 		flow->backend_sock_.reset();
+		flow->relay_sock_.reset();
+		flow->udp_http_sock_.reset();
 
-		auto flow_key = make_udp_flow_key(
-			flow->client_endp_, flow->original_endp_);
-
-		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
-		m_udp_tproxy_flows.erase(flow_key);
+		m_udp_tproxy_flows.erase(flow->flow_key_);
 	});
 
-	if (!flow->backend_sock_)
-		flow->backend_sock_.emplace(m_executor);
+	// 创建 backend socket 用于接收来自 proxy_pass 的 UDP 数据包.
+	flow->backend_sock_.emplace(m_executor);
 
 	auto& backend_sock = flow->backend_sock_;
 	boost::system::error_code ec;
@@ -1702,9 +1699,6 @@ void proxy_server::send_response_to_client(udp_tproxy_flow_ptr flow, const char*
 void proxy_server::udp_tproxy_forward_packet(
 	udp_tproxy_flow_ptr flow, const char* data, std::size_t len)
 {
-	if (!flow)
-		return;
-
 	if (!flow->backend_sock_)
 		return;
 
@@ -1767,7 +1761,6 @@ void proxy_server::udp_tproxy_forward_packet(
 			<< ", dest: " << flow->original_endp_
 			<< ", backend endp: " << m_backend_endp;
 
-		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
 		m_udp_tproxy_flows.erase(flow->flow_key_);
 	}
 }
@@ -1779,6 +1772,12 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 	XLOG_DBG << "udp tproxy listener started on: " << udp_sock.local_endpoint();
 
 	boost::system::error_code ec;
+
+	auto scheme = boost::to_lower_copy(
+	std::string(m_option.proxy_pass_->scheme()));
+
+	// 如果上游代理是 HTTP 代理, 则通过 connect-udp 协议进行 udp 代理.
+	bool using_connect_udp = scheme.starts_with("http");
 
 	while (!m_abort)
 	{
@@ -1819,18 +1818,10 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 		// 计算 flow 表的 key.
 		size_t flow_key = make_udp_flow_key(client_ep, original_dest);
 
-		auto scheme = boost::to_lower_copy(
-			std::string(m_option.proxy_pass_->scheme()));
-
-		// 如果上游代理是 HTTP 代理, 则通过 connect-udp 协议进行 udp 代理.
-		bool using_connect_udp = scheme.starts_with("http");
-
 		std::shared_ptr<udp_tproxy_flow> flow;
 
 		auto make_tproxy_flow = [&]() mutable
 		{
-			std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
-
 			auto it = m_udp_tproxy_flows.find(flow_key);
 			if (it != m_udp_tproxy_flows.end())
 			{
@@ -1891,9 +1882,6 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 void proxy_server::udp_tproxy_forward_packet_http(
 	udp_tproxy_flow_ptr flow, const char* data, std::size_t len)
 {
-	if (!flow || !flow->udp_http_sock_)
-		return;
-
 	// 构建 DATAGRAM capsule (RFC 9297):
 	//   capsule type (varint) = 0x00
 	//   capsule length (varint) = len + 1  # 这里 + 1 是因为 context ID 为 0 占用一字节
@@ -1913,8 +1901,6 @@ void proxy_server::udp_tproxy_forward_packet_http(
 
 	// 推入发送队列并通知发送协程.
 	{
-		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
-
 		flow->send_queue_.emplace_back(buf, buf + pos);
 
 		// 通知发送协程有新数据到达.
@@ -1942,7 +1928,6 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		auto flow_key = make_udp_flow_key(
 			flow->client_endp_, flow->original_endp_);
 
-		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
 		m_udp_tproxy_flows.erase(flow_key);
 	});
 
@@ -2088,13 +2073,10 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		{
 			std::vector<char> item;
 
+			if (!flow->send_queue_.empty())
 			{
-				std::lock_guard<std::mutex> lock(self->m_udp_flows_mutex);
-				if (!flow->send_queue_.empty())
-				{
-					item = std::move(flow->send_queue_.front());
-					flow->send_queue_.pop_front();
-				}
+				item = std::move(flow->send_queue_.front());
+				flow->send_queue_.pop_front();
 			}
 
 			if (item.empty())
@@ -2124,7 +2106,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		}
 	}, net::detached);
 
-	// 隧道建立成功, 进入响应读取循环: 从 TCP 接收 capsule, 提取 UDP payload,
+	// 隧道建立成功, 进入响应读取循环: 从 http 接收 capsule, 提取 UDP payload,
 	// 通过 relay_sock_ 发送回客户端.
 	while (!m_abort)
 	{
@@ -2165,11 +2147,11 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		}
 
 		// 解析 context ID.
-		auto val_data = reinterpret_cast<const uint8_t*>(
-			capsule_value.data());
+		auto val_data = reinterpret_cast<const uint8_t*>(capsule_value.data());
 		size_t val_len = capsule_value.size();
 
-		if (val_len == 0) continue;
+		if (val_len == 0)
+			continue;
 
 		auto [ctx_id_len, ctx_id] = varint_int_decode(val_data);
 		if (ctx_id != 0)
@@ -2200,10 +2182,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	flow->udp_http_sock_.reset();
 	flow->backend_sock_.reset();
 
-	{
-		std::lock_guard<std::mutex> lock(m_udp_flows_mutex);
-		m_udp_tproxy_flows.erase(flow->flow_key_);
-	}
+	m_udp_tproxy_flows.erase(flow->flow_key_);
 
 	XLOG_DBG << "tproxy flow: " << flow->flow_key_
 		<< ", connect-udp loop ended";

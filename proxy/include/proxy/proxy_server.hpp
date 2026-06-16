@@ -98,6 +98,7 @@ namespace proxy {
 		// 发送队列, 用于序列化 connect-udp 数据包的 TCP 发送, 避免多个并发协程同时写入
 		// udp_http_sock_ 导致 capsule 数据在 TCP 流上交错损坏.
 		std::deque<std::vector<char>> send_queue_;
+
 		// 用于通知发送协程有新数据到达的定时器.
 		// 当有新的 UDP 数据包推入 send_queue_ 时, 取消此定时器以唤醒发送协程.
 		std::optional<net::steady_timer> notify_timer_;
@@ -459,8 +460,6 @@ namespace proxy {
 #if defined(__linux__)
 		// UDP TPROXY 透明代理相关成员.
 		std::vector<udp::socket> m_udp_tproxy_listeners;
-
-		std::mutex m_udp_flows_mutex;
 
 		// 存储每个 UDP TPROXY flow 的状态信息, 包括客户端地址、原始目标地址和 backend socket 等等.
 		std::unordered_map<size_t, udp_tproxy_flow_ptr> m_udp_tproxy_flows;
