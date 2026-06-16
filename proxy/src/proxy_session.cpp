@@ -13,6 +13,8 @@
 #include "proxy/proxy_util.hpp"
 #include "proxy/fileop.hpp"
 
+#include <charconv>
+
 #ifdef USE_PAM_AUTH
 # include <security/pam_appl.h>
 # include <security/pam_misc.h>
