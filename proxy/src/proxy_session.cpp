@@ -2857,9 +2857,9 @@ R"x*x*x(<html>
 			}
 
 			m_abort = true;
-			boost::system::error_code ignore_ec;
-			udp_socket.close(ignore_ec);
-			m_local_socket.close(ignore_ec);
+
+			udp_socket.close(ec);
+			m_local_socket.close(ec);
 
 			co_return;
 		};
