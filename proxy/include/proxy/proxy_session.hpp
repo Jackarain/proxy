@@ -1128,28 +1128,6 @@ namespace proxy {
 			co_return;
 		}
 
-		// 检查连接条件, 在需要时绑定本地接口地址.
-		template <typename Stream, typename Endpoint>
-		inline bool check_condition(
-			const boost::system::error_code&, Stream& stream, Endpoint&) const noexcept
-		{
-			if (!m_bind_interface)
-				return true;
-
-			tcp::endpoint bind_endpoint(*m_bind_interface, 0);
-			boost::system::error_code err;
-
-			stream.open(bind_endpoint.protocol(), err);
-			if (err)
-				return false;
-
-			stream.bind(bind_endpoint, err);
-			if (err)
-				return false;
-
-			return true;
-		}
-
 		//////////////////////////////////////////////////////////////////////////
 		// 连接相关，对外发起连接和对上游代理服务器的连接
 

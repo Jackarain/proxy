@@ -5526,8 +5526,24 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 			co_await asio_util::async_connect(
 				socket,
 				targets,
-				[this](const auto& ec, auto& stream, auto& endp) {
-					return check_condition(ec, stream, endp);
+				[this](const auto&, auto& stream, auto&)
+				{
+					boost::system::error_code ec;
+
+					if (!m_bind_interface)
+						return true;
+
+					tcp::endpoint bind_endpoint(*m_bind_interface, 0);
+
+					stream.open(bind_endpoint.protocol(), ec);
+					if (ec)
+						return false;
+
+					stream.bind(bind_endpoint, ec);
+					if (ec)
+						return false;
+
+					return true;
 				},
 				net_awaitable[ec]);
 
