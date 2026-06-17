@@ -5562,12 +5562,20 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 			if (m_option.connect_v4_only_)
 			{
 				if (endpoint.endpoint().address().is_v6())
+				{
+					XLOG_DBG << "connect_v4_only: skip IPv6 endpoint "
+						<< endpoint.endpoint();
 					continue;
+				}
 			}
 			else if (m_option.connect_v6_only_)
 			{
 				if (endpoint.endpoint().address().is_v4())
+				{
+					XLOG_DBG << "connect_v6_only: skip IPv4 endpoint "
+						<< endpoint.endpoint();
 					continue;
+				}
 			}
 
 			boost::system::error_code ignore_ec;

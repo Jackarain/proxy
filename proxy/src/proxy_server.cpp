@@ -1335,9 +1335,17 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 	for (const auto& endp : targets)
 	{
 		if (m_option.connect_v4_only_ && endp.endpoint().address().is_v6())
+		{
+			XLOG_DBG << "connect_v4_only: skip IPv6 endpoint "
+				<< endp.endpoint();
 			continue;
+		}
 		if (m_option.connect_v6_only_ && endp.endpoint().address().is_v4())
+		{
+			XLOG_DBG << "connect_v6_only: skip IPv4 endpoint "
+				<< endp.endpoint();
 			continue;
+		}
 
 		remote_socket.close(ec);
 
