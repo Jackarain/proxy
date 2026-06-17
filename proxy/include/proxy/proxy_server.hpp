@@ -451,7 +451,7 @@ namespace proxy {
 		net::ssl::context m_ssl_srv_context{ net::ssl::context::tls_server };
 
 		// m_certificates 保存当前服务端的证书信息.
-		std::vector<certificate_file>* m_certificates{ nullptr };
+		std::atomic<std::vector<certificate_file>*> m_certificates{ nullptr };
 		std::vector<certificate_file> m_certificate_master;
 		std::vector<certificate_file> m_certificate_slave;
 

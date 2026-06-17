@@ -27,7 +27,7 @@ proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option op
 	if (!m_option.stdio_target_.empty())
 		return;
 
-	m_certificates = &m_certificate_master;
+	m_certificates.store(&m_certificate_master);
 
 	init_ssl_context();
 
@@ -213,12 +213,7 @@ void proxy_server::walk_certificate(
 		if (m_option.ssl_prefer_server_ciphers_)
 			ssl_ctx.set_options(SSL_OP_CIPHER_SERVER_PREFERENCE);
 
-		// 默认的 ssl ciphers.
-		const std::string ssl_ciphers = "HIGH:!aNULL:!MD5:!3DES";
-		if (m_option.ssl_ciphers_.empty())
-			m_option.ssl_ciphers_ = ssl_ciphers;
-
-		// 设置 ssl ciphers.
+		// 设置 ssl ciphers. (默认值已在 init_ssl_context 中设定)
 		SSL_CTX_set_cipher_list(ssl_ctx.native_handle(),
 			m_option.ssl_ciphers_.c_str());
 		// 设置 alpn 协议.
@@ -528,8 +523,13 @@ void proxy_server::init_ssl_context() noexcept
 	if (m_option.ssl_cert_path_.empty())
 		return;
 
+	// 默认的 ssl ciphers, 确保在 walk_certificate 之前赋值.
+	const std::string ssl_ciphers = "HIGH:!aNULL:!MD5:!3DES";
+	if (m_option.ssl_ciphers_.empty())
+		m_option.ssl_ciphers_ = ssl_ciphers;
+
 	// 读取并更新证书文件.
-	update_certificate(m_option.ssl_cert_path_, *m_certificates);
+	update_certificate(m_option.ssl_cert_path_, *m_certificates.load());
 
 	// 设置 SNI 回调函数.
 	SSL_CTX_set_tlsext_servername_callback(
@@ -574,10 +574,11 @@ int proxy_server::ssl_sni_callback(SSL *ssl, int *ad, void *arg)
 
 int proxy_server::sni_callback(SSL *ssl, [[maybe_unused]] int *ad) noexcept
 {
-	if (!m_certificates)
+	auto certificates_ptr = m_certificates.load();
+	if (!certificates_ptr)
 		return SSL_TLSEXT_ERR_OK;
 
-	auto& certificates = *m_certificates;
+	auto& certificates = *certificates_ptr;
 	if (certificates.empty())
 		return SSL_TLSEXT_ERR_OK;
 
@@ -638,7 +639,8 @@ net::awaitable<std::chrono::seconds> proxy_server::certificate_check()
 	auto now = boost::posix_time::second_clock::local_time();
 	std::chrono::seconds earliest_expiry = std::chrono::hours(24) * 365;
 
-	auto& certificates = *m_certificates;
+	auto certificates_ptr = m_certificates.load();
+	auto& certificates = *certificates_ptr;
 
 	for (const auto& ctx : certificates)
 	{
@@ -663,15 +665,15 @@ net::awaitable<std::chrono::seconds> proxy_server::certificate_check()
 		co_return earliest_expiry;
 
 	// 热更新证书, 交替更新证书容器 master/slave.
-	if (m_certificates == &m_certificate_master)
+	if (certificates_ptr == &m_certificate_master)
 	{
 		update_certificate(m_option.ssl_cert_path_, m_certificate_slave);
-		m_certificates = &m_certificate_slave;
+		m_certificates.store(&m_certificate_slave);
 	}
 	else
 	{
 		update_certificate(m_option.ssl_cert_path_, m_certificate_master);
-		m_certificates = &m_certificate_master;
+		m_certificates.store(&m_certificate_master);
 	}
 
 	co_return earliest_expiry;
@@ -693,8 +695,8 @@ net::awaitable<void> proxy_server::tick()
 
 		auto now = std::chrono::steady_clock::now();
 
-		// 检查证书是否过期.
-		if (now > check_time_point)
+		// 检查证书是否过期 (仅在配置了证书路径时).
+		if (!m_option.ssl_cert_path_.empty() && now > check_time_point)
 		{
 			// 返回过期间隔期.
 			auto duration = co_await certificate_check();
@@ -706,7 +708,8 @@ net::awaitable<void> proxy_server::tick()
 		if (m_option.transparent_)
 		{
 			// 检查 UDP TPROXY 流是否过期.
-			co_await udp_tproxy_check();
+			if (!m_udp_tproxy_flows.empty())
+				co_await udp_tproxy_check();
 
 			// 检查 UDP TPROXY socks5 连接是否需要重试.
 			if (m_retry_tproxy_socks5_connect)
@@ -1249,8 +1252,10 @@ net::awaitable<void> proxy_server::udp_tproxy_socks5_connect() noexcept
 	if (!ret)
 		co_return;
 
-	// 标记需要重试 SOCKS5 连接, 稍后会在 tick 定时器中重试连接.
-	m_retry_tproxy_socks5_connect = true;
+	// do_sock5_associate 返回 true 表示控制连接已建立, 并在循环中等待直到
+	// 连接断开或服务器关闭. 仅当连接因非关闭原因断开时, 才标记需要重试.
+	if (!m_abort)
+		m_retry_tproxy_socks5_connect = true;
 
 	co_return;
 }
