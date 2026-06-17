@@ -1392,7 +1392,7 @@ R"x*x*x(<html>
 
 				if (m_option.so_mark_)
 				{
-					auto ret = set_socket_mark(remote_bind_socket->native_handle(), m_option.so_mark_.value());
+					auto ret = apply_so_mark(remote_bind_socket->native_handle(), m_option.so_mark_);
 					if (ret.has_error())
 					{
 						log_conn_warning()
@@ -1419,7 +1419,7 @@ R"x*x*x(<html>
 			// 由 local_udp_socket 发出的 UDP 数据包也带有正确的标记。
 			if (m_option.so_mark_)
 			{
-				auto ret = set_socket_mark(local_udp_socket.native_handle(), m_option.so_mark_.value());
+				auto ret = apply_so_mark(local_udp_socket.native_handle(), m_option.so_mark_);
 				if (ret.has_error())
 				{
 					log_conn_warning()
@@ -2593,8 +2593,8 @@ R"x*x*x(<html>
 		// 设置 SO_MARK.
 		if (m_option.so_mark_)
 		{
-			auto ret = set_socket_mark(
-				udp_socket.native_handle(), m_option.so_mark_.value());
+			auto ret = apply_so_mark(
+				udp_socket.native_handle(), m_option.so_mark_);
 			if (ret.has_error())
 			{
 				log_conn_warning()
@@ -5425,20 +5425,13 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 
 	net::awaitable<net::any_io_executor> proxy_session::switch_to_backend_executor()
 	{
-		if (!m_scheduler_locking)
-		{
-			co_await net::post(
-				net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
-			co_return m_backend_context.get_executor();
-		}
-		co_return m_executor;
+		co_return co_await backend_switch_to(
+			m_scheduler_locking, m_backend_context, m_executor);
 	}
 
 	net::awaitable<void> proxy_session::switch_from_backend_executor()
 	{
-		if (!m_scheduler_locking)
-			co_await net::post(
-				net::bind_executor(m_executor, net::use_awaitable));
+		co_await backend_switch_from(m_scheduler_locking, m_executor);
 	}
 
 	net::awaitable<tcp::resolver::results_type>
@@ -5550,7 +5543,7 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 
 			if (m_option.so_mark_)
 			{
-				auto ret = set_socket_mark(socket.native_handle(), m_option.so_mark_.value());
+				auto ret = apply_so_mark(socket.native_handle(), m_option.so_mark_);
 				if (ret.has_error())
 				{
 					log_conn_warning()
@@ -5616,7 +5609,7 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 
 				if (m_option.so_mark_)
 				{
-					auto ret = set_socket_mark(socket.native_handle(), m_option.so_mark_.value());
+					auto ret = apply_so_mark(socket.native_handle(), m_option.so_mark_);
 					if (ret.has_error())
 					{
 						log_conn_warning()

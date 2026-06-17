@@ -42,6 +42,7 @@
 #include <string_view>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -237,6 +238,22 @@ namespace proxy {
 			return ec;
 #endif
 		return true;
+	}
+
+	// 在配置了 SO_MARK 时, 对指定 fd 应用 mark 标记.
+	// 返回设置结果, 调用方负责记录日志.
+	inline boost::system::result<void>
+	apply_so_mark(int fd, const std::optional<uint32_t>& so_mark) noexcept
+	{
+#if defined(__linux__)
+		if (so_mark)
+		{
+			auto r = set_socket_mark(fd, so_mark.value());
+			if (r.has_error())
+				return r.error();
+		}
+#endif
+		return {};
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -500,6 +517,35 @@ namespace proxy {
 		}
 
 		return { time_string, returned_path };
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// 执行上下文切换工具
+	// 从 proxy_server 和 proxy_session 中提取公共代码消除重复.
+	// 当 m_scheduler_locking 为 false 时, 协程会切换到后端线程池执行, 适用于需要执行
+	// 同步操作（如 DNS 解析）的场景. 返回当前应使用的 executor.
+
+	// 切换到后端执行上下文（非锁定调度时）.
+	inline net::awaitable<net::any_io_executor>
+	backend_switch_to(bool scheduler_locking,
+		net::io_context& backend_context, net::any_io_executor executor)
+	{
+		if (!scheduler_locking)
+		{
+			co_await net::post(
+				net::bind_executor(backend_context.get_executor(), net::use_awaitable));
+			co_return backend_context.get_executor();
+		}
+		co_return executor;
+	}
+
+	// 从后端执行上下文切换回主执行上下文.
+	inline net::awaitable<void>
+	backend_switch_from(bool scheduler_locking, net::any_io_executor executor)
+	{
+		if (!scheduler_locking)
+			co_await net::post(
+				net::bind_executor(executor, net::use_awaitable));
 	}
 }
 

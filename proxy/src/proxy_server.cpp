@@ -14,6 +14,10 @@
 
 #include <boost/functional/hash.hpp>
 
+#ifndef SO_ORIGINAL_DST
+#  define SO_ORIGINAL_DST 80
+#endif
+
 namespace proxy {
 
 //////////////////////////////////////////////////////////////////////////
@@ -916,9 +920,6 @@ net::ssl::context& proxy_server::ssl_context()
 net::awaitable<std::optional<net::ip::tcp::endpoint>>
 proxy_server::setup_tproxy(proxy_tcp_socket& socket, size_t connection_id) noexcept
 {
-#ifndef SO_ORIGINAL_DST
-#  define SO_ORIGINAL_DST 80
-#endif
 	auto sockfd = socket.native_handle();
 	std::optional<net::ip::tcp::endpoint> remote_endp;
 
@@ -965,21 +966,14 @@ proxy_server::setup_tproxy(proxy_tcp_socket& socket, size_t connection_id) noexc
 // 同步操作（如 DNS 解析）的场景. 返回当前应使用的 executor.
 net::awaitable<net::any_io_executor> proxy_server::switch_to_backend_executor()
 {
-	if (!m_scheduler_locking)
-	{
-		co_await net::post(
-			net::bind_executor(m_backend_context.get_executor(), net::use_awaitable));
-		co_return m_backend_context.get_executor();
-	}
-	co_return m_executor;
+	co_return co_await backend_switch_to(
+		m_scheduler_locking, m_backend_context, m_executor);
 }
 
 // 从后端执行上下文切换回主执行上下文.
 net::awaitable<void> proxy_server::switch_from_backend_executor()
 {
-	if (!m_scheduler_locking)
-		co_await net::post(
-			net::bind_executor(m_executor, net::use_awaitable));
+	co_await backend_switch_from(m_scheduler_locking, m_executor);
 }
 
 net::awaitable<void> proxy_server::get_local_address() noexcept
@@ -1191,7 +1185,6 @@ net::awaitable<void> proxy_server::udp_tproxy_check() noexcept
 			<< "tproxy flow: " << flow->flow_key_
 			<< ", expired: " << flow->expire_
 			<< ", client: " << flow->client_endp_
-			<< ", dest: " << flow->original_endp_
 			<< ", original_dest: " << flow->original_endp_;
 
 		flow->backend_sock_.reset();
@@ -1312,16 +1305,7 @@ proxy_server::resolve_proxy_pass(const boost::urls::url& proxy_pass)
 boost::system::result<void>
 proxy_server::apply_so_mark(int fd) noexcept
 {
-#if defined(__linux__)
-	if (m_option.so_mark_)
-	{
-		uint32_t mark = m_option.so_mark_.value();
-		auto r = set_socket_mark(fd, mark);
-		if (r.has_error())
-			return r.error();
-	}
-#endif
-	return {};
+	return proxy::apply_so_mark(fd, m_option.so_mark_);
 }
 
 net::awaitable<boost::system::error_code>
@@ -1329,8 +1313,32 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 {
 	boost::system::error_code ec;
 
+	if (m_option.happyeyeballs_)
+	{
+		// 使用 Happy Eyeballs 并发连接 (RFC 8305), 加快连接建立速度.
+		auto endp = co_await asio_util::async_connect(
+			remote_socket, targets, net_awaitable[ec]);
+		if (!ec)
+		{
+			auto ret = apply_so_mark(remote_socket.native_handle());
+			if (ret.has_error())
+			{
+				XLOG_WARN << "connect_to_proxy setsockopt SO_MARK error: "
+					<< ret.error().message();
+			}
+		}
+
+		co_return ec;
+	}
+
+	// Happy Eyeballs 被禁用, 使用传统的顺序连接.
 	for (const auto& endp : targets)
 	{
+		if (m_option.connect_v4_only_ && endp.endpoint().address().is_v6())
+			continue;
+		if (m_option.connect_v6_only_ && endp.endpoint().address().is_v4())
+			continue;
+
 		remote_socket.close(ec);
 
 		co_await remote_socket.async_connect(endp, net_awaitable[ec]);
@@ -1830,7 +1838,7 @@ net::awaitable<void> proxy_server::start_udp_tproxy_listen(udp::socket& udp_sock
 			}
 
 			flow = std::make_shared<udp_tproxy_flow>(
-				client_ep, original_dest, udp_sock, flow_key);
+				client_ep, original_dest, flow_key);
 
 			m_udp_tproxy_flows[flow_key] = flow;
 

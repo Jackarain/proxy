@@ -59,10 +59,9 @@ namespace proxy {
 	struct udp_tproxy_flow
 	{
 		udp_tproxy_flow(const udp::endpoint& client_endp,
-			const udp::endpoint& original_endp, udp::socket& tproxy_sock, size_t flow_key)
+			const udp::endpoint& original_endp, size_t flow_key)
 			: client_endp_(client_endp)
 			, original_endp_(original_endp)
-			, tproxy_sock_(tproxy_sock)
 			, flow_key_(flow_key)
 		{}
 
@@ -79,10 +78,6 @@ namespace proxy {
 		// 每个 flow 创建一个用于转发数据包的 relay socket, relay_sock_ 用于伪装成目标服务器
 		// 与客户端通信, 从而让客户端认为自己直接与目标服务器通信一样.
 		std::optional<udp::socket> relay_sock_;
-
-		// tproxy_sock_ 保存 tproxy 模式下用于接收客户端数据包的 socket 的引用, 用于在 flow
-		// 中转发数据包时使用.
-		udp::socket& tproxy_sock_;
 
 		// flow_key_ 是 flow 的唯一标识, 可以根据客户端地址和原始目标地址计算得到, 用于在 flow
 		// 管理容器中快速查找对应的 flow.
