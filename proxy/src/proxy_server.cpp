@@ -1317,7 +1317,7 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 	{
 		// 使用 Happy Eyeballs 并发连接 (RFC 8305), 加快连接建立速度.
 		auto endp = co_await asio_util::async_connect(
-			remote_socket, targets, net_awaitable[ec]);
+			remote_socket, targets.begin(), targets.end(), net_awaitable[ec]);
 		if (!ec)
 		{
 			auto ret = apply_so_mark(remote_socket.native_handle());
