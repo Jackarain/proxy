@@ -127,6 +127,66 @@ R"x*x*x(<html>
 </html>
 )x*x*x";
 
+	static const char* fake_502_dns_content =
+R"x*x*x(<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx/1.20.2</center>
+<p>DNS resolution failed.</p>
+</body>
+</html>)x*x*x";
+
+	static const char* fake_502_socks_connect_content =
+R"x*x*x(<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx/1.20.2</center>
+<p>Cannot connect to upstream SOCKS proxy.</p>
+</body>
+</html>)x*x*x";
+
+	static const char* fake_502_ssl_config_content =
+R"x*x*x(<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx/1.20.2</center>
+<p>SSL configuration failed.</p>
+</body>
+</html>)x*x*x";
+
+	static const char* fake_502_ssl_handshake_content =
+R"x*x*x(<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx/1.20.2</center>
+<p>SSL handshake with upstream SOCKS proxy failed.</p>
+</body>
+</html>)x*x*x";
+
+	static const char* fake_502_socks_associate_content =
+R"x*x*x(<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx/1.20.2</center>
+<p>SOCKS5 UDP ASSOCIATE failed.</p>
+</body>
+</html>)x*x*x";
+
+	static const char* fake_502_proxy_connect_content =
+R"x*x*x(<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+<hr><center>nginx/1.20.2</center>
+<p>Cannot connect to upstream proxy.</p>
+</body>
+</html>)x*x*x";
+
 
 	static constexpr auto head_fmt =
 		LR"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><pre>)";
@@ -2589,8 +2649,7 @@ R"x*x*x(<html>
 
 				res.set(http::field::content_type, "text/html");
 				res.set("Proxy-Status", "dns_error");
-				res.body() = "<html><body><h1>502 Bad Gateway</h1>"
-					"<p>DNS resolution failed.</p></body></html>";
+				res.body() = fake_502_dns_content;
 				res.prepare_payload();
 
 				co_await http::async_write(
@@ -2900,9 +2959,7 @@ R"x*x*x(<html>
 				http::response<http::string_body> res{
 					http::status::bad_gateway, req.version() };
 				res.set(http::field::content_type, "text/html");
-				res.body() = "<html><body><h1>502 Bad Gateway</h1>"
-					"<p>Cannot connect to upstream SOCKS proxy.</p>"
-					"</body></html>";
+				res.body() = fake_502_socks_connect_content;
 				res.prepare_payload();
 				co_await http::async_write(
 					m_local_socket, res, net_awaitable[ec]);
@@ -2947,8 +3004,7 @@ R"x*x*x(<html>
 					http::response<http::string_body> res{
 						http::status::bad_gateway, req.version() };
 					res.set(http::field::content_type, "text/html");
-					res.body() = "<html><body><h1>502 Bad Gateway</h1>"
-						"<p>SSL configuration failed.</p></body></html>";
+					res.body() = fake_502_ssl_config_content;
 					res.prepare_payload();
 					co_await http::async_write(
 						m_local_socket, res, net_awaitable[ec]);
@@ -2974,9 +3030,7 @@ R"x*x*x(<html>
 					http::response<http::string_body> res{
 						http::status::bad_gateway, req.version() };
 					res.set(http::field::content_type, "text/html");
-					res.body() = "<html><body><h1>502 Bad Gateway</h1>"
-						"<p>SSL handshake with upstream SOCKS proxy failed."
-						"</p></body></html>";
+					res.body() = fake_502_ssl_handshake_content;
 					res.prepare_payload();
 					co_await http::async_write(
 						m_local_socket, res, net_awaitable[ec]);
@@ -3004,9 +3058,7 @@ R"x*x*x(<html>
 				http::response<http::string_body> res{
 					http::status::bad_gateway, req.version() };
 				res.set(http::field::content_type, "text/html");
-				res.body() = "<html><body><h1>502 Bad Gateway</h1>"
-					"<p>SOCKS5 UDP ASSOCIATE failed.</p>"
-					"</body></html>";
+				res.body() = fake_502_socks_associate_content;
 				res.prepare_payload();
 				co_await http::async_write(
 					m_local_socket, res, net_awaitable[ec]);
@@ -3389,9 +3441,7 @@ R"x*x*x(<html>
 				http::status::bad_gateway,
 				req.version() };
 			res.set(http::field::content_type, "text/html");
-			res.body() = "<html><body><h1>502 Bad Gateway</h1>"
-				"<p>Cannot connect to upstream proxy.</p>"
-				"</body></html>";
+			res.body() = fake_502_proxy_connect_content;
 			res.prepare_payload();
 
 			co_await http::async_write(
