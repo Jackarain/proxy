@@ -1196,6 +1196,12 @@ net::awaitable<void> proxy_server::udp_tproxy_check() noexcept
 
 		flow->backend_sock_.reset();
 		flow->relay_sock_.reset();
+		flow->udp_http_sock_.reset();
+
+		if (flow->notify_timer_)
+			flow->notify_timer_->cancel();
+
+		flow->notify_timer_.reset();
 
 		expired_keys.push_back(key);
 	}
@@ -2073,6 +2079,10 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 				flow->send_queue_.pop_front();
 			}
 
+			// 检查 socket 或 timer 是否仍有效.
+			if (!flow->udp_http_sock_ || !flow->notify_timer_)
+				break;
+
 			if (item.empty())
 			{
 				// 队列为空, 等待通知.
@@ -2080,10 +2090,6 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 				co_await flow->notify_timer_->async_wait(net_awaitable[ec]);
 				continue;
 			}
-
-			// 检查 socket 是否仍有效.
-			if (!flow->udp_http_sock_)
-				break;
 
 			auto& http_sock = *flow->udp_http_sock_;
 
