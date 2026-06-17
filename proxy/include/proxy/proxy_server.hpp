@@ -190,7 +190,6 @@ namespace proxy {
 		net::awaitable<void> start_accept(T& acceptor, S& socket)
 		{
 			boost::system::error_code error;
-			net::socket_base::keep_alive keep_alive_opt(true);
 			net::ip::tcp::no_delay no_delay_opt(true);
 			net::ip::tcp::no_delay delay_opt(false);
 
@@ -251,7 +250,8 @@ namespace proxy {
 				co_return;
 			}
 
-			socket.set_option(keep_alive_opt, error);
+			// 设置 TCP keepalive.
+			set_tcp_keepalive(socket.lowest_layer().native_handle());
 
 #if defined (__linux__)
 			std::optional<net::ip::tcp::endpoint> tproxy_endpoint;
