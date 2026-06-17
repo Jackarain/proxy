@@ -2878,23 +2878,502 @@ R"x*x*x(<html>
 
 		auto scheme = boost::to_lower_copy(std::string(m_proxy_pass->scheme()));
 
-		// TODO: SOCKS proxy_pass 暂不支持, HTTP UDP 数据包转为 SOCKS UDP 转发太复杂.
-		if (scheme.starts_with("socks"))
+		if (scheme.starts_with("socks5"))
 		{
-			log_conn_warning()
-				<< ", connect-udp: socks proxy_pass not supported";
+			// SOCKS proxy_pass: 通过 SOCKS5 UDP ASSOCIATE 转发 UDP 数据.
+			log_conn_debug()
+				<< ", connect-udp over socks proxy_pass: "
+				<< m_proxy_pass->encoded_origin()
+				<< ", target: " << target_host << ":" << target_port;
 
-			http::response<http::string_body> res{
-				http::status::bad_gateway,
-				req.version() };
-			res.set(http::field::content_type, "text/html");
-			res.body() = "<html><body><h1>502 Bad Gateway</h1>"
-				"<p>connect-udp over socks proxy_pass not supported.</p>"
-				"</body></html>";
-			res.prepare_payload();
+			// 1. 连接到 SOCKS5 代理服务器.
+			tcp::socket remote_socket(m_executor);
+			auto targets = co_await resolve_proxy_pass_targets();
 
-			co_await http::async_write(
-				m_local_socket, res, net_awaitable[ec]);
+			ec = co_await connect_proxy_pass(remote_socket, targets);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", connect-udp: connect to socks proxy_pass failed: "
+					<< ec.message();
+
+				http::response<http::string_body> res{
+					http::status::bad_gateway, req.version() };
+				res.set(http::field::content_type, "text/html");
+				res.body() = "<html><body><h1>502 Bad Gateway</h1>"
+					"<p>Cannot connect to upstream SOCKS proxy.</p>"
+					"</body></html>";
+				res.prepare_payload();
+				co_await http::async_write(
+					m_local_socket, res, net_awaitable[ec]);
+				co_return;
+			}
+
+			// 2. 判断是否使用 SSL 加密.
+			bool use_ssl = m_option.proxy_pass_use_ssl_;
+			if (scheme.ends_with("s"))
+				use_ssl = true;
+
+			// 3. 执行 SOCKS5 UDP ASSOCIATE 握手.
+			socks_client_option opt;
+			opt.target_host = target_host;
+			opt.target_port = target_port;
+			opt.proxy_hostname = true;
+			opt.command = SOCKS5_CMD_UDP;
+			opt.username = std::string(m_proxy_pass->user());
+			opt.password = std::string(m_proxy_pass->password());
+
+			std::optional<variant_stream_type> socks5_control;
+			endpoint_opt backend_endpoint;
+
+			if (use_ssl)
+			{
+				// 获取 proxy_pass 的主机名作为 SNI.
+				auto proxy_host = std::string(m_proxy_pass->host());
+				auto sni = m_option.proxy_ssl_name_.empty()
+					? proxy_host : m_option.proxy_ssl_name_;
+
+				net::ssl::context cli_ctx(net::ssl::context::sslv23_client);
+				ec = configure_ssl_client_ctx(cli_ctx,
+					m_option.disable_check_cert_,
+					sni,
+					m_option.ssl_cacert_path_);
+				if (ec)
+				{
+					log_conn_warning()
+						<< ", connect-udp: configure ssl context: "
+						<< ec.message();
+
+					http::response<http::string_body> res{
+						http::status::bad_gateway, req.version() };
+					res.set(http::field::content_type, "text/html");
+					res.body() = "<html><body><h1>502 Bad Gateway</h1>"
+						"<p>SSL configuration failed.</p></body></html>";
+					res.prepare_payload();
+					co_await http::async_write(
+						m_local_socket, res, net_awaitable[ec]);
+					co_return;
+				}
+
+				socks5_control.emplace(
+					init_proxy_stream(std::move(remote_socket), cli_ctx));
+				auto& ssl_socket =
+					boost::variant2::get<ssl_tcp_stream>(*socks5_control);
+
+				SSL_set_tlsext_host_name(
+					ssl_socket.native_handle(), sni.c_str());
+
+				co_await ssl_socket.async_handshake(
+					net::ssl::stream_base::client, net_awaitable[ec]);
+				if (ec)
+				{
+					log_conn_warning()
+						<< ", connect-udp: ssl handshake with socks proxy: "
+						<< ec.message();
+
+					http::response<http::string_body> res{
+						http::status::bad_gateway, req.version() };
+					res.set(http::field::content_type, "text/html");
+					res.body() = "<html><body><h1>502 Bad Gateway</h1>"
+						"<p>SSL handshake with upstream SOCKS proxy failed."
+						"</p></body></html>";
+					res.prepare_payload();
+					co_await http::async_write(
+						m_local_socket, res, net_awaitable[ec]);
+					co_return;
+				}
+
+				backend_endpoint = co_await async_socks_handshake(
+					*socks5_control, opt, net_awaitable[ec]);
+			}
+			else
+			{
+				socks5_control.emplace(
+					init_proxy_stream(std::move(remote_socket)));
+
+				backend_endpoint = co_await async_socks_handshake(
+					*socks5_control, opt, net_awaitable[ec]);
+			}
+
+			if (ec || !backend_endpoint)
+			{
+				log_conn_warning()
+					<< ", connect-udp: socks5 udp associate failed: "
+					<< ec.message();
+
+				http::response<http::string_body> res{
+					http::status::bad_gateway, req.version() };
+				res.set(http::field::content_type, "text/html");
+				res.body() = "<html><body><h1>502 Bad Gateway</h1>"
+					"<p>SOCKS5 UDP ASSOCIATE failed.</p>"
+					"</body></html>";
+				res.prepare_payload();
+				co_await http::async_write(
+					m_local_socket, res, net_awaitable[ec]);
+				co_return;
+			}
+
+			// 4. 保存 UDP 中继端点.
+			m_remote_udp_endpoint = *backend_endpoint;
+
+			// 若返回的地址是未指定的(如 0.0.0.0), 则使用 TCP 控制连接的远程地址.
+			if (m_remote_udp_endpoint.address().is_unspecified())
+			{
+				if (use_ssl)
+				{
+					auto& ssl_sock =
+						boost::variant2::get<ssl_tcp_stream>(*socks5_control);
+					auto remote_addr = ssl_sock.lowest_layer()
+						.remote_endpoint(ec).address();
+					if (!ec)
+						m_remote_udp_endpoint.address(remote_addr);
+				}
+				else
+				{
+					auto& tcp_sock =
+						boost::variant2::get<proxy_tcp_socket>(*socks5_control);
+					auto remote_addr = tcp_sock.lowest_layer()
+						.remote_endpoint(ec).address();
+					if (!ec)
+						m_remote_udp_endpoint.address(remote_addr);
+				}
+			}
+
+			log_conn_debug()
+				<< ", connect-udp: socks5 udp relay endpoint: "
+				<< m_remote_udp_endpoint;
+
+			// 5. 创建本地 UDP socket 用于与 SOCKS5 UDP 中继通信.
+			auto protocol = m_remote_udp_endpoint.address().is_v4()
+				? udp::v4() : udp::v6();
+			udp::socket udp_socket(m_executor);
+			udp_socket.open(protocol, ec);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", connect-udp: open udp socket: " << ec.message();
+				co_return;
+			}
+
+			// 绑定到随机端口.
+			udp_socket.bind(udp::endpoint(protocol, 0), ec);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", connect-udp: bind udp socket: " << ec.message();
+				co_return;
+			}
+
+			if (m_option.so_mark_)
+			{
+				auto ret = apply_so_mark(
+					udp_socket.native_handle(), m_option.so_mark_);
+				if (ret.has_error())
+				{
+					log_conn_warning()
+						<< ", connect-udp: set socket mark: "
+						<< ret.error().message();
+				}
+			}
+
+			// 6. 发送 101 Switching Protocols 响应给客户端.
+			{
+				http::response<http::empty_body> res;
+				res.version(11);
+				res.result(http::status::switching_protocols);
+				res.set(http::field::connection, "Upgrade");
+				res.set(http::field::upgrade, "connect-udp");
+				res.set("Capsule-Protocol", "?1");
+
+				co_await http::async_write(
+					m_local_socket, res, net_awaitable[ec]);
+				if (ec)
+				{
+					log_conn_warning()
+						<< ", connect-udp: send 101 response: "
+						<< ec.message();
+					co_return;
+				}
+			}
+
+			log_conn_debug()
+				<< ", connect-udp: 101 sent, "
+				<< "starting capsule/SOCKS5 UDP forwarding";
+
+			// 7. 启动双向转发.
+			auto self = shared_from_this();
+
+			// 预计算 SOCKS5 UDP 头部.
+			bool is_ipv4_target = false;
+			bool is_ipv6_target = false;
+			net::ip::address target_addr;
+			auto addr_ec = boost::system::error_code{};
+			target_addr = net::ip::make_address(target_host, addr_ec);
+			if (!addr_ec)
+			{
+				is_ipv4_target = target_addr.is_v4();
+				is_ipv6_target = target_addr.is_v6();
+			}
+
+			// 预构建 SOCKS5 UDP 头部 (RSV + FRAG + ATYP + DST.ADDR + DST.PORT).
+			size_t socks5_udp_header_size = 0;
+			if (is_ipv4_target)
+				socks5_udp_header_size = 10; // 2+1+1+4+2
+			else if (is_ipv6_target)
+				socks5_udp_header_size = 22; // 2+1+1+16+2
+			else
+				socks5_udp_header_size = 7 + target_host.size(); // 2+1+1+1+N+2
+
+			std::vector<uint8_t> socks5_udp_header(socks5_udp_header_size);
+			{
+				uint8_t* wp = socks5_udp_header.data();
+				write<uint16_t>(0x0, wp);  // RSV
+				write<uint8_t>(0x0, wp);   // FRAG
+
+				if (is_ipv4_target)
+				{
+					write<uint8_t>(SOCKS5_ATYP_IPV4, wp);
+					write<uint32_t>(target_addr.to_v4().to_uint(), wp);
+					write<uint16_t>(target_port, wp);
+				}
+				else if (is_ipv6_target)
+				{
+					write<uint8_t>(SOCKS5_ATYP_IPV6, wp);
+					auto v6_bytes = target_addr.to_v6().to_bytes();
+					for (auto b : v6_bytes)
+						write<uint8_t>(b, wp);
+					write<uint16_t>(target_port, wp);
+				}
+				else
+				{
+					write<uint8_t>(SOCKS5_ATYP_DOMAINNAME, wp);
+					write<uint8_t>(
+						static_cast<uint8_t>(target_host.size()), wp);
+					std::copy(target_host.begin(), target_host.end(), wp);
+					wp += target_host.size();
+					write<uint16_t>(target_port, wp);
+				}
+			}
+
+			// HTTP → SOCKS5 UDP: 读取 capsule, 提取 UDP payload,
+			// 附加 SOCKS5 UDP 头部, 发送到中继.
+			auto http_to_udp =
+				[this, self, &udp_socket, &socks5_udp_header, socks5_udp_header_size]
+				() -> net::awaitable<void>
+			{
+				boost::system::error_code ec;
+
+				while (!m_abort)
+				{
+					// 读取 capsule type.
+					auto capsule_type =
+						co_await read_varint_from_stream(
+							m_local_socket, ec);
+					if (ec) break;
+
+					// 读取 capsule length.
+					auto capsule_length =
+						co_await read_varint_from_stream(
+							m_local_socket, ec);
+					if (ec) break;
+
+					// 限制最大 capsule 大小.
+					if (capsule_length > 65535)
+						break;
+
+					// 读取 capsule value.
+					std::string capsule_value(
+						static_cast<size_t>(capsule_length), '\0');
+					if (capsule_length > 0)
+					{
+						co_await net::async_read(
+							m_local_socket,
+							net::buffer(capsule_value),
+							net_awaitable[ec]);
+						if (ec) break;
+					}
+
+					// 仅处理 DATAGRAM capsule.
+					if (capsule_type != udp_proxy_capsule_type)
+						continue;
+
+					// 解析 context ID (应为 0).
+					auto data = reinterpret_cast<const uint8_t*>(
+						capsule_value.data());
+					size_t data_len = capsule_value.size();
+
+					if (data_len == 0) continue;
+
+					auto [ctx_id_len, ctx_id] = varint_int_decode(data);
+					if (ctx_id != 0) continue;
+
+					// UDP payload.
+					size_t udp_payload_len = data_len - ctx_id_len;
+					if (udp_payload_len == 0) continue;
+
+					// 构建完整 SOCKS5 UDP 数据报并发送到中继.
+					std::vector<uint8_t> send_buf(
+						socks5_udp_header_size + udp_payload_len);
+					std::memcpy(send_buf.data(),
+						socks5_udp_header.data(),
+						socks5_udp_header_size);
+					std::memcpy(
+						send_buf.data() + socks5_udp_header_size,
+						data + ctx_id_len,
+						udp_payload_len);
+
+					co_await udp_socket.async_send_to(
+						net::buffer(send_buf),
+						m_remote_udp_endpoint,
+						net_awaitable[ec]);
+					if (ec)
+					{
+						log_conn_warning()
+							<< ", connect-udp: send to relay error: "
+							<< ec.message();
+						break;
+					}
+				}
+
+				m_abort = true;
+				udp_socket.close(ec);
+				m_local_socket.close(ec);
+				co_return;
+			};
+
+			// SOCKS5 UDP → HTTP: 从 UDP socket 接收数据,
+			// 解析 SOCKS5 头部, 封装成 capsule 发送到 HTTP 流.
+			auto udp_to_http =
+				[this, self, &udp_socket]()
+				-> net::awaitable<void>
+			{
+				boost::system::error_code ec;
+				uint8_t buf[65536];
+
+				while (!m_abort)
+				{
+					udp::endpoint relay_endp;
+					auto bytes = co_await udp_socket.async_receive_from(
+						net::buffer(buf), relay_endp, net_awaitable[ec]);
+					if (ec) break;
+
+					// 解析 SOCKS5 UDP 头部.
+					const uint8_t* rp = buf;
+					if (bytes < 4) continue;
+
+					read<uint16_t>(rp);  // RSV
+					auto frag = read<uint8_t>(rp);  // FRAG
+					if (frag != 0) continue;  // 不支持分片.
+
+					auto atyp = read<uint8_t>(rp);
+					const uint8_t* data_start = nullptr;
+					size_t data_size = 0;
+
+					if (atyp == SOCKS5_ATYP_IPV4)
+					{
+						if (bytes < 10) continue;
+						rp += 4;  // Skip IPv4 addr
+						rp += 2;  // Skip port
+						data_start = rp;
+						data_size = bytes - (rp - buf);
+					}
+					else if (atyp == SOCKS5_ATYP_DOMAINNAME)
+					{
+						if (bytes < 5) continue;
+						auto dlen = read<uint8_t>(rp);
+						if (rp + dlen + 2 > buf + bytes) continue;
+						rp += dlen;  // Skip domain
+						rp += 2;     // Skip port
+						data_start = rp;
+						data_size = bytes - (rp - buf);
+					}
+					else if (atyp == SOCKS5_ATYP_IPV6)
+					{
+						if (bytes < 22) continue;
+						rp += 16;  // Skip IPv6 addr
+						rp += 2;   // Skip port
+						data_start = rp;
+						data_size = bytes - (rp - buf);
+					}
+					else
+					{
+						continue;
+					}
+
+					if (data_size == 0) continue;
+
+					// 构建 DATAGRAM capsule (RFC 9297).
+					// Capsule type: 0x00 (DATAGRAM)
+					// Capsule length: 1 + data_size
+					// Context ID: 0 (1 byte)
+					// UDP payload
+					auto capsule_length = 1 + data_size;
+
+					uint8_t header_buf[32];
+					size_t pos = 0;
+					pos += varint_int_encode(
+						udp_proxy_capsule_type, header_buf + pos);
+					pos += varint_int_encode(
+						capsule_length, header_buf + pos);
+					pos += varint_int_encode(0, header_buf + pos);
+
+					co_await net::async_write(
+						m_local_socket,
+						net::buffer(header_buf, pos),
+						net_awaitable[ec]);
+					if (ec) break;
+
+					co_await net::async_write(
+						m_local_socket,
+						net::buffer(data_start, data_size),
+						net_awaitable[ec]);
+					if (ec) break;
+				}
+
+				m_abort = true;
+				udp_socket.close(ec);
+				m_local_socket.close(ec);
+				co_return;
+			};
+
+			// 保持 TCP 控制连接存活 (SOCKS5 UDP ASSOCIATE
+			// 需要在控制连接存活期间保持有效).
+			auto keep_control_alive =
+				[this, self, &socks5_control]()
+				-> net::awaitable<void>
+			{
+				boost::system::error_code ec;
+				while (!m_abort)
+				{
+					char bufs[64];
+					co_await socks5_control->async_read_some(
+						net::buffer(bufs, sizeof(bufs)),
+						net_awaitable[ec]);
+					if (ec)
+					{
+						log_conn_debug()
+							<< ", connect-udp: control connection closed: "
+							<< ec.message();
+						break;
+					}
+				}
+
+				m_abort = true;
+				co_return;
+			};
+
+			// 并发运行三个协程.
+			co_await(
+				http_to_udp()
+				&&
+				udp_to_http()
+				&&
+				keep_control_alive()
+			);
+
+			log_conn_debug()
+				<< ", connect-udp: socks forwarding completed for "
+				<< target_host << ":" << target_port;
 
 			co_return;
 		}
