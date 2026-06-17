@@ -221,77 +221,119 @@ R"x*x*x(<html>
 	using http_ranges = std::vector<std::pair<int64_t, int64_t>>;
 
 	// parser_http_ranges 用于解析 http range 请求头.
-	static http_ranges parser_http_ranges(std::string range) noexcept
+	static http_ranges parser_http_ranges(const std::string& range) noexcept
 	{
-		// 去掉前后空白.
-		range = strutil::remove_spaces(range);
+		http_ranges result;
 
-		// range 必须以 bytes= 开头, 否则返回空数组.
-		if (!range.starts_with("bytes="))
+		if (range.size() < 6 || range.substr(0, 6) != "bytes=")
 			return {};
 
-		// 去掉开头的 bytes= 字符串 (不区分大小写).
-		static constexpr std::string_view bytes_prefix = "bytes=";
-		range.erase(0, bytes_prefix.size());
+		std::string content = range.substr(6);
+		if (content.empty())
+			return {};
 
-		http_ranges results;
-
-		// 获取其中所有 range 字符串.
-		auto ranges = strutil::split(range, ",");
-		for (const auto& str : ranges)
+		size_t start = 0;
+		while (start < content.size())
 		{
-			auto r = strutil::split(std::string(str), "-");
+			size_t comma_pos = content.find(',', start);
 
-			// range 只有一个数值.
-			if (r.size() == 1)
+			std::string part = (comma_pos == std::string::npos)
+							? content.substr(start)
+							: content.substr(start, comma_pos - start);
+
+			// 去除首尾空白.
+			part.erase(0, part.find_first_not_of(" \t"));
+			part.erase(part.find_last_not_of(" \t") + 1);
+
+			if (part.empty())
+				return {};
+
+			// 统计 '-' 数量（最多1个）
+			size_t dash_count = std::count(part.begin(), part.end(), '-');
+			if (dash_count > 1)
+				return {};  // 多个 '-' 非法（如 0-100-200）
+
+			int64_t first = -1;
+			int64_t second = -1;
+
+			if (dash_count == 0)
 			{
-				if (str.empty())
-				{
-					results.emplace_back(0, -1);
+				// 纯数字：如 "600" → {600, -1}
+				try {
+					first = std::stoll(part);
+					if (first < 0)
+						return {};
+					second = -1;
+				} catch (...) {
+					return {};
 				}
-				else if (str.front() == '-')
-				{
-					auto pos = std::atoll(r.front().data());
-					results.emplace_back(-1, pos);
+			}
+			else if (part[0] == '-')
+			{
+				// 后缀长度：如 "-500"
+				std::string suffix = part.substr(1);
+				suffix.erase(0, suffix.find_first_not_of(" \t"));
+				if (suffix.empty())
+					return {};
+				try {
+					second = std::stoll(suffix);
+					if (second <= 0)
+						return {};
+				} catch (...) {
+					return {};
 				}
-				else
+			}
+			else {
+				// 普通范围： "0-100" 或 "200-"
+				size_t dash_pos = part.find('-');
+				std::string left = part.substr(0, dash_pos);
+				std::string right = part.substr(dash_pos + 1);
+
+				// 去除空白
+				left.erase(0, left.find_first_not_of(" \t"));
+				left.erase(left.find_last_not_of(" \t") + 1);
+				right.erase(0, right.find_first_not_of(" \t"));
+				right.erase(right.find_last_not_of(" \t") + 1);
+
+				if (!left.empty())
 				{
-					auto pos = std::atoll(r.front().data());
-					results.emplace_back(pos, -1);
+					try {
+						first = std::stoll(left);
+						if (first < 0)
+							return {};
+					} catch (...) {
+						return {};
+					}
 				}
 
-				continue;
+				if (!right.empty())
+				{
+					try {
+						second = std::stoll(right);
+						if (second < 0)
+							return {};
+					} catch (...) {
+						return {};
+					}
+				} else {
+					second = -1;  // "200-" 形式
+				}
+
+				if (first == -1 && second == -1)
+					return {};
+
+				if (first != -1 && second != -1 && first > second)
+					return {};
 			}
 
-			if (r.size() == 2)
-			{
-				// range 有 start 和 end 的情况, 解析成整数到容器.
-				auto& start_str = r[0];
-				auto& end_str = r[1];
+			result.emplace_back(first, second);
 
-				if (start_str.empty() && !end_str.empty())
-				{
-					auto end = std::atoll(end_str.data());
-					results.emplace_back(-1, end);
-				}
-				else
-				{
-					auto start = std::atoll(start_str.data());
-					auto end = std::atoll(end_str.data());
-					if (end_str.empty())
-						end = -1;
-
-					results.emplace_back(start, end);
-				}
-
-				continue;
-			}
-
-			// 在一个 range 项中不应该存在3个或以上的'-', 这属于无效的范围请求.
-			return {};
+			if (comma_pos == std::string::npos)
+				break;
+			start = comma_pos + 1;
 		}
 
-		return results;
+		return result;
 	}
 
 	// 根据 range 计算文件偏移位置.
@@ -3905,7 +3947,7 @@ R"x*x*x(<html>
 			referer = std::string(request[http::field::referer]);
 
 		// 解析 http 协议中的 range 部分.
-		auto range = parser_http_ranges(request["Range"]);
+		auto range = parser_http_ranges(boost::trim_copy(request["Range"]));
 
 		// 计算 range 得到偏移位置.
 		auto [http_range_start, http_range_end, st] = offset_from_range(range, content_length);
