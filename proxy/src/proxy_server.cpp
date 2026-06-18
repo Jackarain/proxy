@@ -432,7 +432,7 @@ void proxy_server::init_acceptor() noexcept
 
 #if defined(__linux__) && defined(IP_TRANSPARENT)
 	// 创建 UDP TPROXY 透明代理 sockets，用于接收被重定向的 UDP 数据包.
-	if (m_option.proxy_pass_ && m_option.transparent_)
+	if (m_option.proxy_pass_ && m_option.transparent_ && !m_option.disable_udp_)
 	{
 		for (const auto& [tcp_endp, v6only] : m_option.listens_)
 		{
@@ -844,7 +844,7 @@ void proxy_server::start() noexcept
 	}
 
 #if defined(__linux__)
-	if (m_option.transparent_)
+	if (m_option.transparent_ && !m_option.disable_udp_)
 	{
 		net::co_spawn(m_executor,
 			start_udp_tproxy(), net::detached);
