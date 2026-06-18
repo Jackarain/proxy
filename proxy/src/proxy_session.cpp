@@ -187,6 +187,16 @@ R"x*x*x(<html>
 </body>
 </html>)x*x*x";
 
+	static const char* fake_403_forbidden_content =
+R"x*x*x(<html>
+<head><title>403 Forbidden</title></head>
+<body>
+<center><h1>403 Forbidden</h1></center>
+<hr><center>nginx/1.20.2</center>
+<p>UDP protocol disabled.</p>
+</body>
+</html>)x*x*x";
+
 
 	static constexpr auto head_fmt =
 		LR"(<html><head><meta charset="UTF-8"><title>Index of {}</title></head><body bgcolor="white"><h1>Index of {}</h1><hr><pre>)";
@@ -2608,6 +2618,29 @@ R"x*x*x(<html>
 		uint16_t target_port) noexcept
 	{
 		boost::system::error_code ec;
+
+		// 如果禁用了 UDP 代理服务, 则拒绝 connect-udp 请求.
+		if (m_option.disable_udp_)
+		{
+			// 无 proxy_pass 时无法向外发出 UDP 请求, 直接拒绝.
+			// 有 proxy_pass 且为 SOCKS5 时依赖 UDP ASSOCIATE, 也应拒绝.
+			if (!m_proxy_pass ||
+				m_proxy_pass->scheme().starts_with("socks5"))
+			{
+				log_conn_warning()
+					<< ", connect-udp: udp protocol disabled";
+
+				http::response<http::string_body> res{
+					http::status::forbidden, req.version()};
+				res.set(http::field::content_type, "text/html");
+				res.body() = fake_403_forbidden_content;
+				res.prepare_payload();
+
+				co_await http::async_write(
+					m_local_socket, res, net_awaitable[ec]);
+				co_return;
+			}
+		}
 
 		// 如果指定了 proxy_pass（有下级代理服务器）.
 		if (m_proxy_pass)
