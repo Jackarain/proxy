@@ -410,66 +410,66 @@ int main(int argc, char** argv)
 
 	po::options_description desc("Options");
 	desc.add_options()
-		("help,h", "Help message.")
-		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load configuration options from specified file.")
+		("help,h", "Show this help message and exit.")
+		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load configuration options from the specified file.")
 
-		("server_listen", po::value<std::vector<std::string>>(&server_listens)->default_value({ "[::0]:1080" })->value_name("ip:port [ip:port ...]"), "Specify server listening address and port.")
-		("stdio", po::value<std::string>(&stdio_target), "Destination host:port combination.")
+		("server_listen", po::value<std::vector<std::string>>(&server_listens)->default_value({ "[::0]:1080" })->value_name("ip:port [ip:port ...]"), "Specify the server listening address and port (repeatable).")
+		("stdio", po::value<std::string>(&stdio_target), "Specify the destination host:port for stdio proxy mode.")
 
-		("reuse_port", po::value<bool>(&reuse_port)->default_value(false, "false"), "Enable TCP SO_REUSEPORT option (available since Linux 3.9).")
-		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true, "true"), "Enable Happy Eyeballs algorithm for TCP connections.")
+		("reuse_port", po::value<bool>(&reuse_port)->default_value(false, "false"), "Enable the TCP SO_REUSEPORT socket option (available since Linux 3.9).")
+		("happyeyeballs", po::value<bool>(&happyeyeballs)->default_value(true, "true"), "Enable the Happy Eyeballs algorithm for outbound TCP connections.")
 
-		("v6only", po::value<bool>(&connect_v6only)->default_value(false, "false"), "Enable IPv6 only mode for TCP connections.")
-		("v4only", po::value<bool>(&connect_v4only)->default_value(false, "false"), "Enable IPv4 only mode for TCP connections.")
+		("v6only", po::value<bool>(&connect_v6only)->default_value(false, "false"), "Restrict outbound TCP connections to IPv6 only.")
+		("v4only", po::value<bool>(&connect_v4only)->default_value(false, "false"), "Restrict outbound TCP connections to IPv4 only.")
 
-		("local_ip", po::value<std::string>(&local_ip), "Specify local IP for client TCP connection to server.")
+		("local_ip", po::value<std::string>(&local_ip), "Specify the local IP address for outbound TCP connections.")
 
-		("transparent", po::value<bool>(&transparent)->default_value(false, "false"), "Enable transparent proxy mode(only linux).")
-		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set SO_MARK for outbound connections.")
+		("transparent", po::value<bool>(&transparent)->default_value(false, "false"), "Enable transparent proxy mode (Linux only).")
+		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set the SO_MARK socket option for outbound connections (Linux only).")
 
-		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(-1), "Set TCP timeout for TCP connections.")
-		("udp_timeout", po::value<int>(&udp_timeout)->default_value(60), "Set UDP timeout for UDP sessions.")
-		("rate_limit", po::value<int>(&rate_limit)->default_value(-1), "Set TCP rate limit for connection.")
+		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(-1), "Set the idle timeout in seconds for TCP connections (-1 = disable).")
+		("udp_timeout", po::value<int>(&udp_timeout)->default_value(60), "Set the idle timeout in seconds for UDP sessions.")
+		("rate_limit", po::value<int>(&rate_limit)->default_value(-1), "Set the TCP rate limit in bytes/second per connection (-1 = disable).")
 
-		("pam_auth", po::value<std::string>(&pam_auth)->value_name("pam service"), "Enable PAM authentication, specify PAM service name.")
+		("pam_auth", po::value<std::string>(&pam_auth)->value_name("pam service"), "Enable PAM authentication with the specified PAM service name.")
 
-		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users(default user: jack:1111) (e.g: user1:passwd1 user2:passwd2).")
-		("users_rate_limit", po::value<std::vector<std::string>>(&users_rate_limit)->multitoken(), "List of users rate limit (e.g: user1:1000000 user2:800000).")
+		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users (default: jack:1111), format: user:password[:addr[:proxy_url]] (repeatable).")
+		("users_rate_limit", po::value<std::vector<std::string>>(&users_rate_limit)->multitoken(), "Per-user rate limit in bytes/second, format: user:rate (repeatable).")
 
-		("allow_region", po::value<std::vector<std::string>>(&allow_region)->multitoken(), "Allow region (e.g: 北京|河南|武汉|192.168.1.2|192.168.1.0/24|2001:0db8::1|2001:db8::/32).")
-		("deny_region", po::value<std::vector<std::string>>(&deny_region)->multitoken(), "Deny region (e.g: 广东|上海|山东|192.168.1.2|192.168.1.0/24|2001:0db8::1|2001:db8::/32).")
+		("allow_region", po::value<std::vector<std::string>>(&allow_region)->multitoken(), "Allow connections only from the specified regions/CIDRs (repeatable).")
+		("deny_region", po::value<std::vector<std::string>>(&deny_region)->multitoken(), "Deny connections from the specified regions/CIDRs (repeatable).")
 
-		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify next proxy pass (e.g: socks5://user:passwd@ip:port).")
-		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL for the next proxy pass.")
+		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify the upstream proxy URL (e.g: socks5://user:passwd@ip:port).")
+		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL/TLS for the upstream proxy connection.")
 
-		("ssl_certificate_dir", po::value<std::string>(&ssl_cert_dir)->value_name("path"), "Directory containing SSL certificates.")
-		("ssl_cacert_dir", po::value<std::string>(&ssl_cacert_dir)->value_name("path"), "Directory containing SSL CA certificates.")
+		("ssl_certificate_dir", po::value<std::string>(&ssl_cert_dir)->value_name("path"), "Directory containing SSL/TLS certificates.")
+		("ssl_cacert_dir", po::value<std::string>(&ssl_cacert_dir)->value_name("path"), "Directory containing SSL/TLS CA certificates for verification.")
 
-		("ssl_sni", po::value<std::string>(&proxy_ssl_name)->value_name("sni"), "Specifies SNI for multiple SSL certificates on one IP (Deprecated, using proxy_ssl_name instead).")
-		("proxy_ssl_name", po::value<std::string>(&proxy_ssl_name)->value_name("sni"), "Specifies SNI for multiple SSL certificates on one IP.")
+		("ssl_sni", po::value<std::string>(&proxy_ssl_name)->value_name("sni"), "Specify the SNI hostname for multiple SSL certificates on one IP (deprecated, use proxy_ssl_name instead).")
+		("proxy_ssl_name", po::value<std::string>(&proxy_ssl_name)->value_name("sni"), "Specify the SNI hostname for multiple SSL certificates on one IP.")
 
-		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specify enabled SSL ciphers")
+		("ssl_ciphers", po::value<std::string>(&ssl_ciphers)->value_name("ssl_ciphers"), "Specify the enabled SSL/TLS ciphers.")
 		("ssl_prefer_server_ciphers", po::value<bool>(&ssl_prefer_server_ciphers)->default_value(false, "false")->value_name(""), "Prefer server ciphers over client ciphers for SSLv3 and TLS protocols.")
 
-		("ipip_db", po::value<std::string>(&ipip_db_name)->value_name("")->default_value("17monipdb.datx"), "Specify ipip database filename.")
-		("http_doc", po::value<std::string>(&doc_dir)->value_name("doc"), "Specify document root directory for HTTP server.")
-		("htpasswd", po::value<bool>(&htpasswd)->value_name("")->default_value(false, "false"), "Enable WWW-Authenticate for HTTP server.")
+		("ipip_db", po::value<std::string>(&ipip_db_name)->value_name("")->default_value("17monipdb.datx"), "Specify the ipip database filename for geo-IP lookups.")
+		("http_doc", po::value<std::string>(&doc_dir)->value_name("doc"), "Specify the document root directory for the HTTP server.")
+		("htpasswd", po::value<bool>(&htpasswd)->value_name("")->default_value(false, "false"), "Enable HTTP Basic Authentication (WWW-Authenticate) for the HTTP server.")
 
-		("autoindex", po::value<bool>(&autoindex)->default_value(false, "false"), "Enable directory listing.")
-		("dns_upstream", po::value<std::string>(&dns_upstream)->value_name("ip:port/url"), "Upstream DNS server for DoH (DNS over HTTPS).")
-		("logs_path", po::value<std::string>(&log_dir)->value_name(""), "Specify directory for log files.")
+		("autoindex", po::value<bool>(&autoindex)->default_value(false, "false"), "Enable directory listing for the HTTP server.")
+		("dns_upstream", po::value<std::string>(&dns_upstream)->value_name("ip:port/url"), "Specify the upstream DNS server for DoH (DNS over HTTPS).")
+		("logs_path", po::value<std::string>(&log_dir)->value_name(""), "Specify the directory for log files.")
 
-		("disable_logs", po::value<bool>(&disable_logs)->value_name("")->default_value(default_logs), "Disable print logging in screen.")
-		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false, "false"), "Disable HTTP protocol.")
-		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false, "false"), "Disable SOCKS proxy protocol.")
-		("disable_udp", po::value<bool>(&disable_udp)->value_name("")->default_value(false, "false"), "Disable UDP protocol.")
-		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(false, "false"), "Disable insecure protocol.")
+		("disable_logs", po::value<bool>(&disable_logs)->value_name("")->default_value(default_logs), "Disable logging output to the console.")
+		("disable_http", po::value<bool>(&disable_http)->value_name("")->default_value(false, "false"), "Disable the HTTP proxy protocol.")
+		("disable_socks", po::value<bool>(&disable_socks)->value_name("")->default_value(false, "false"), "Disable the SOCKS proxy protocol.")
+		("disable_udp", po::value<bool>(&disable_udp)->value_name("")->default_value(false, "false"), "Disable the UDP proxy protocol.")
+		("disable_insecure", po::value<bool>(&disable_insecure)->value_name("")->default_value(false, "false"), "Disable insecure (non-SSL) proxy protocols.")
 		("disable_check_cert", po::value<bool>(&disable_check_cert)->value_name("")->default_value(false, "false"), "Disable TLS certificate verification.")
 
-		("scramble", po::value<bool>(&scramble)->value_name("")->default_value(false, "false"), "Noise-based data security.")
-		("noise_length", po::value<int64_t>(&noise_length)->value_name("length")->default_value(-1), "Length of the noise data (-1 - 4095).")
+		("scramble", po::value<bool>(&scramble)->value_name("")->default_value(false, "false"), "Enable noise-based data obfuscation for enhanced security.")
+		("noise_length", po::value<int64_t>(&noise_length)->value_name("length")->default_value(-1), "Length of the noise data in bytes (-1 = disable, 0-4095).")
 
-		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Enable asio config from environment variables.")
+		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Environment variable name for configuring Boost.Asio (default: ASIO).")
 	;
 
 	// 解析命令行.
