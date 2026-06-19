@@ -6161,6 +6161,42 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 				}
 			}
 
+			// 禁用 Nagle 算法, 使小数据包(如 HTTP 头、SOCKS 握手)立即发送.
+			{
+				auto ret = set_tcp_nodelay(socket.native_handle(), true);
+				if (ret.has_error())
+				{
+					log_conn_warning()
+						<< ", tcp nodelay error: "
+						<< ret.error().message();
+				}
+			}
+
+#if defined(__linux__)
+			// 启用 TCP_QUICKACK, 减少 ACK 延迟, 提升交互式代理场景的响应速率.
+			{
+				auto ret = set_tcp_quickack(socket.native_handle(), true);
+				if (ret.has_error())
+				{
+					log_conn_warning()
+						<< ", tcp quickack error: "
+						<< ret.error().message();
+				}
+			}
+#endif
+
+			// 增大 TCP 缓冲区以提升吞吐量 (256KB 接收, 256KB 发送).
+			{
+				auto ret = set_tcp_buffer_sizes(
+					socket.native_handle(), 256 * 1024, 256 * 1024);
+				if (ret.has_error())
+				{
+					log_conn_warning()
+						<< ", tcp buffer sizes error: "
+						<< ret.error().message();
+				}
+			}
+
 			if (m_option.so_mark_)
 			{
 				auto ret = apply_so_mark(socket.native_handle(), m_option.so_mark_);
@@ -6231,6 +6267,42 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 					{
 						log_conn_warning()
 							<< ", tcp keepalive error: "
+							<< ret.error().message();
+					}
+				}
+
+				// 禁用 Nagle 算法, 使小数据包立即发送.
+				{
+					auto ret = set_tcp_nodelay(socket.native_handle(), true);
+					if (ret.has_error())
+					{
+						log_conn_warning()
+							<< ", tcp nodelay error: "
+							<< ret.error().message();
+					}
+				}
+
+#if defined(__linux__)
+				// 启用 TCP_QUICKACK, 减少 ACK 延迟.
+				{
+					auto ret = set_tcp_quickack(socket.native_handle(), true);
+					if (ret.has_error())
+					{
+						log_conn_warning()
+							<< ", tcp quickack error: "
+							<< ret.error().message();
+					}
+				}
+#endif
+
+				// 增大 TCP 缓冲区以提升吞吐量.
+				{
+					auto ret = set_tcp_buffer_sizes(
+						socket.native_handle(), 256 * 1024, 256 * 1024);
+					if (ret.has_error())
+					{
+						log_conn_warning()
+							<< ", tcp buffer sizes error: "
 							<< ret.error().message();
 					}
 				}

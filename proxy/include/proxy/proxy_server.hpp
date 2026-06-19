@@ -248,6 +248,20 @@ namespace proxy {
 			// 设置 TCP keepalive.
 			set_tcp_keepalive(socket.lowest_layer().native_handle());
 
+			// 设置 TCP_NODELAY (非 scramble 模式默认已设) 和 TCP_QUICKACK.
+			if (!m_option.scramble_)
+			{
+#if defined(__linux__)
+				// 启用 TCP_QUICKACK, 减少 ACK 延迟, 提升交互式代理场景的响应速率.
+				auto ret = set_tcp_quickack(socket.lowest_layer().native_handle(), true);
+				if (ret.has_error())
+				{
+					XLOG_WARN << "connection id: " << connection_id
+						<< ", tcp quickack error: " << ret.error().message();
+				}
+#endif
+			}
+
 #if defined (__linux__)
 			std::optional<net::ip::tcp::endpoint> tproxy_endpoint;
 			// 是否启用透明代理.

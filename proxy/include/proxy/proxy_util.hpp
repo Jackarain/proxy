@@ -256,6 +256,61 @@ namespace proxy {
 		return {};
 	}
 
+	// 禁用 Nagle 算法 (TCP_NODELAY), 使小数据包立即发送, 降低延迟.
+	inline boost::system::result<bool> set_tcp_nodelay(int fd, bool on = true) noexcept
+	{
+		boost::system::error_code ec;
+		int opt = on ? 1 : 0;
+		int ret = ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt));
+		make_error_code(ec, ret != 0);
+		if (ret != 0)
+			return ec;
+		return true;
+	}
+
+#if defined(__linux__)
+	// 启用 TCP_QUICKACK, 立即发送 ACK 确认收到的数据, 减少延迟.
+	// 注意: TCP_QUICKACK 是瞬态选项, Linux 内核在收到数据后可能重置.
+	// 适合代理类场景, 因为双向转发会频繁交互.
+	inline boost::system::result<bool> set_tcp_quickack(int fd, bool on = true) noexcept
+	{
+		boost::system::error_code ec;
+		int opt = on ? 1 : 0;
+		int ret = ::setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &opt, sizeof(opt));
+		make_error_code(ec, ret != 0);
+		if (ret != 0)
+			return ec;
+		return true;
+	}
+#endif // defined(__linux__)
+
+	// 增大 TCP 收发缓冲区以提升吞吐量.
+	// 注意: 系统全局限制 (/proc/sys/net/core/rmem_max, wmem_max) 有上限.
+	inline boost::system::result<bool> set_tcp_buffer_sizes(
+		int fd, int recv_size, int send_size) noexcept
+	{
+		boost::system::error_code ec;
+		int ret = 0;
+
+		if (recv_size > 0)
+		{
+			ret = ::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &recv_size, sizeof(recv_size));
+			make_error_code(ec, ret != 0);
+			if (ret != 0)
+				return ec;
+		}
+
+		if (send_size > 0)
+		{
+			ret = ::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &send_size, sizeof(send_size));
+			make_error_code(ec, ret != 0);
+			if (ret != 0)
+				return ec;
+		}
+
+		return true;
+	}
+
 	//////////////////////////////////////////////////////////////////////////
 	// QUIC 可变长度整数编码/解码 (RFC 9298 capsule 协议)
 
