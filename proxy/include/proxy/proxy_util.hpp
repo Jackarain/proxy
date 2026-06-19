@@ -261,7 +261,8 @@ namespace proxy {
 	{
 		boost::system::error_code ec;
 		int opt = on ? 1 : 0;
-		int ret = ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt));
+		int ret = ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
+			reinterpret_cast<const char*>(&opt), sizeof(opt));
 		make_error_code(ec, ret != 0);
 		if (ret != 0)
 			return ec;
@@ -276,7 +277,8 @@ namespace proxy {
 	{
 		boost::system::error_code ec;
 		int opt = on ? 1 : 0;
-		int ret = ::setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &opt, sizeof(opt));
+		int ret = ::setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK,
+			reinterpret_cast<const char*>(&opt), sizeof(opt));
 		make_error_code(ec, ret != 0);
 		if (ret != 0)
 			return ec;
@@ -294,7 +296,8 @@ namespace proxy {
 
 		if (recv_size > 0)
 		{
-			ret = ::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &recv_size, sizeof(recv_size));
+			ret = ::setsockopt(fd, SOL_SOCKET, SO_RCVBUF,
+				reinterpret_cast<const char*>(&recv_size), sizeof(recv_size));
 			make_error_code(ec, ret != 0);
 			if (ret != 0)
 				return ec;
@@ -302,7 +305,8 @@ namespace proxy {
 
 		if (send_size > 0)
 		{
-			ret = ::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &send_size, sizeof(send_size));
+			ret = ::setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
+				reinterpret_cast<const char*>(&send_size), sizeof(send_size));
 			make_error_code(ec, ret != 0);
 			if (ret != 0)
 				return ec;
