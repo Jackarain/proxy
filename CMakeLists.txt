@@ -329,13 +329,7 @@ if (ENABLE_USE_OPENSSL)
 				set(CMAKE_EXE_LINKER_FLAGS "-Wl,--exclude-libs,ALL ${CMAKE_EXE_LINKER_FLAGS}")
 			endif()
 		endif()
-		add_library(OpenSSL::SSL ALIAS ssl)
-		add_library(OpenSSL::Crypto ALIAS crypto)
 	endif()
-
-	# 包含 openssl 的头文件和库文件.
-	include_directories(${OPENSSL_INCLUDE_DIR})
-	link_libraries(${OPENSSL_LIBRARIES})
 
 	message(STATUS "Using openssl...")
 endif()
