@@ -1126,3 +1126,7 @@ set(SSL_EAY_LIBRARY ssl PARENT_SCOPE)
 
 set(OPENSSL_SSL_LIBRARY ssl PARENT_SCOPE)
 set(OPENSSL_CRYPTO_LIBRARY crypto PARENT_SCOPE)
+
+add_library(OpenSSL::Crypto ALIAS crypto)
+add_library(OpenSSL::SSL ALIAS ssl)
+
