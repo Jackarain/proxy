@@ -172,21 +172,21 @@ void proxy_server::walk_certificate(
 		if (entry.is_regular_file())
 		{
 			// 读取文件, 并判断文件类型.
-			auto type = determine_pem_type(entry.path());
-			switch (type.type_)
+			auto pem = determine_pem_type(entry.path());
+			switch (pem.type_)
 			{
 				case pem_type::cert:
-					if (type.chains_ > file.cert_.chains_)
-						file.cert_ = type;
+					if (pem.chains_ > file.cert_.chains_)
+						file.cert_ = pem;
 					break;
 				case pem_type::key:
-					file.key_ = type;
+					file.key_ = pem;
 					break;
 				case pem_type::dhparam:
-					file.dhparam_ = type;
+					file.dhparam_ = pem;
 					break;
 				case pem_type::pwd:
-					file.pwd_ = type;
+					file.pwd_ = pem;
 					break;
 				default:
 					break;
