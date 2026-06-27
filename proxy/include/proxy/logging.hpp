@@ -223,9 +223,14 @@ namespace xlogger {
 #	define DEFAULT_LOG_MAXFILE_SIZE (-1)
 #endif // DEFAULT_LOG_MAXFILE_SIZE
 
+#ifdef NDEBUG
+#	define LOG2CONSOLE (false)
+#else
+#	define LOG2CONSOLE (true)
+#endif
 
 inline bool global_logging___ = true;
-inline bool global_console_logging___ = true;
+inline bool global_console_logging___ = LOG2CONSOLE;
 inline bool global_write_logging___ = true;
 inline int64_t global_logfile_size___ = DEFAULT_LOG_MAXFILE_SIZE;
 
@@ -824,17 +829,14 @@ private:
 #endif // DISABLE_XLOGGER_THREAD_SAFE
 
 #ifndef LOGGER_DBG_VIEW_
-#if defined(WIN32) && \
-	(defined(LOGGER_DBG_VIEW) || \
-	defined(DEBUG) || \
-	defined(_DEBUG))
-#define LOGGER_DBG_VIEW_(x)                \
-	do {                                   \
-		::OutputDebugStringW((x).c_str()); \
-	} while (0)
-#else
-#define LOGGER_DBG_VIEW_(x) ((void)0)
-#endif // WIN32 && LOGGER_DBG_VIEW
+# if defined(WIN32) && (defined(DEBUG) || defined(_DEBUG))
+#  define LOGGER_DBG_VIEW_(x)           \
+    do {                                \
+     ::OutputDebugStringW((x).c_str()); \
+    } while (0)
+# else
+#  define LOGGER_DBG_VIEW_(x) ((void)0)
+# endif // WIN32
 #endif // LOGGER_DBG_VIEW_
 
 enum logger_level__ {
@@ -1813,7 +1815,7 @@ public:
 };
 } // namespace xlogger
 
-#if (!defined(NDEBUG) || defined(ENABLE_XLOGGER)) && !defined(DISABLE_XLOGGER)
+#if !defined(DISABLE_XLOGGER)
 
 // API for logging.
 namespace xlogger {
