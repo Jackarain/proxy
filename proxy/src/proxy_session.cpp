@@ -608,6 +608,30 @@ R"x*x*x(<html>
 		}, stream);
 	}
 
+	void proxy_session::stream_cancel(variant_stream_type& stream) noexcept
+	{
+		boost::variant2::visit([](auto& s) mutable
+		{
+			using ValueType = std::decay_t<decltype(s)>;
+
+			// proxy_tcp_socket / proxy_uds_socket
+			if constexpr (std::same_as<util::proxy_tcp_socket, ValueType> ||
+				std::same_as<util::proxy_uds_socket, ValueType>)
+			{
+				boost::system::error_code ec;
+				s.next_layer().lowest_layer().close(ec);
+			}
+			// ssl_tcp_stream / ssl_uds_stream
+			else if constexpr (std::same_as<util::ssl_tcp_stream, ValueType> ||
+				std::same_as<util::ssl_uds_stream, ValueType>)
+			{
+				boost::system::error_code ec;
+				s.next_layer().next_layer().lowest_layer().close(ec);
+			}
+			// stdio_stream: 无需关闭
+		}, stream);
+	}
+
 	void proxy_session::stream_rate_limit(variant_stream_type& stream, int rate) noexcept
 	{
 		boost::variant2::visit([rate](auto& s) mutable
@@ -914,11 +938,14 @@ R"x*x*x(<html>
 			auto& in = m_local_socket;
 
 			// 并发读写, 在 local 和 remote 之间互传数据.
+			// 同时运行 idle_timeout 检测整体连接空闲超时.
 			co_await(
 				transfer(in, m_remote_socket, l2r_transferred)
 				&&
 				transfer(m_remote_socket, out, r2l_transferred)
-				);
+				&&
+				idle_timeout(in, m_remote_socket)
+			);
 
 #else
 			auto in_executor = boost::variant2::get<stdio_stream>(m_local_socket).get_in_executor();
@@ -6409,16 +6436,49 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 		co_return sock_stream;
 	}
 
+	net::awaitable<void> proxy_session::idle_timeout(
+		variant_stream_type& s1, variant_stream_type& s2) noexcept
+	{
+		auto executor = co_await net::this_coro::executor;
+		net::steady_timer timer(executor);
+		boost::system::error_code ec;
+
+		while (!m_abort)
+		{
+			auto last_tick = m_last_activity.fetch_add(1, std::memory_order_relaxed);
+			if (last_tick + 1 >= m_option.tcp_timeout_ && m_option.tcp_timeout_ > 0)
+			{
+				// 没有任何方向有数据传输, 超时关闭连接.
+				log_conn_warning() << ", idle timeout: " << last_tick;
+				m_abort = true;
+				stream_cancel(s1);
+				stream_cancel(s2);
+				co_return;
+			}
+
+			timer.expires_after(std::chrono::seconds(1));
+			co_await timer.async_wait(net_awaitable[ec]);
+		}
+	}
+
 	net::awaitable<void> proxy_session::concurrent_transfer()
 	{
 		size_t l2r_transferred = 0;
 		size_t r2l_transferred = 0;
 
+		// 重置连接活动.
+		m_last_activity.store(0, std::memory_order_relaxed);
+
 		// 并发读写, 在 local 和 remote 之间互传数据.
+		// 同时运行 idle_timeout 检测整体连接空闲超时.
+		// 只要任何一个方向有数据传输, idle_timeout 中的计时器就会被重置,
+		// 从而避免单向大文件传输时因空闲方向超时而断开连接.
 		co_await(
 			transfer(m_local_socket, m_remote_socket, l2r_transferred)
 			&&
 			transfer(m_remote_socket, m_local_socket, r2l_transferred)
+			&&
+			idle_timeout(m_local_socket, m_remote_socket)
 		);
 
 		log_conn_debug()

@@ -1058,9 +1058,6 @@ namespace proxy {
 			stream_rate_limit(from, m_option.tcp_rate_limit_);
 			stream_rate_limit(to, m_option.tcp_rate_limit_);
 
-			// 设置超时.
-			stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
-
 			// 首先读取第一个数据作为预备, 以用于后面的交替读写逻辑.
 			auto bytes = co_await from.async_read_some(net::buffer(primary_buf, buf_size), net_awaitable[from_ec]);
 			if (from_ec || m_abort)
@@ -1075,11 +1072,11 @@ namespace proxy {
 				co_return;
 			}
 
+			// 重置最后活跃计数.
+			m_last_activity.store(0, std::memory_order_relaxed);
+
 			for (; !m_abort;)
 			{
-				stream_expires_after(to, std::chrono::seconds(m_option.tcp_timeout_));
-				stream_expires_after(from, std::chrono::seconds(m_option.tcp_timeout_));
-
 				// 并发读写, 将上次接收到的数据 primary_buf 发送给 to, 同时异步读取 from 的数
 				// 据到 secondary_buf 中.
 				auto [write_bytes, read_bytes] =
@@ -1097,6 +1094,9 @@ namespace proxy {
 				// 保存接收到的数据大小用于转发给 to 端, 以及计算整个传输数据量.
 				bytes = read_bytes;
 				bytes_transferred += bytes;
+
+				// 重置最后活跃计数.
+				m_last_activity.store(0, std::memory_order_relaxed);
 
 				// 如果 async_write 失败, 则也无需要再读取数据, 如果 async_read_some 失败, 则
 				// 也无数据可用于写, 所以无论哪一种情况都可以直接退出.
@@ -1406,6 +1406,9 @@ namespace proxy {
 		static void stream_expires_after(
 			variant_stream_type& stream, net::steady_timer::duration expiry_time) noexcept;
 
+		// 关闭流, 用于超时 watchdog 中止挂起的 I/O 操作.
+		static void stream_cancel(variant_stream_type& stream) noexcept;
+
 		// 设置流速率限制.
 		static void stream_rate_limit(variant_stream_type& stream, int rate) noexcept;
 
@@ -1442,6 +1445,12 @@ namespace proxy {
 
 		// 并发转发本地和远程之间的双向数据.
 		net::awaitable<void> concurrent_transfer();
+
+		// 空闲超时检测协程, 用于并发传输中检测整体连接的空闲状态.
+		// 参数 s1/s2 为两个传输方向的流, 当 idle_timeout 检测到超时时会关闭它们.
+		// 当任何一个方向有数据传输时, 超时计时器会被重置.
+		net::awaitable<void> idle_timeout(
+			variant_stream_type& s1, variant_stream_type& s2) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 
@@ -1504,6 +1513,10 @@ namespace proxy {
 
 		// 用于使用 ssl 加密通信与下游代理服务器通信时的 ssl context.
 		net::ssl::context m_ssl_cli_context{ net::ssl::context::sslv23_client };
+
+		// m_last_activity 用于双向超时检测, 在代理传输过程中, 只要有任何一个
+		// 方向上有数据传输，都不应触发超时。
+		std::atomic<int64_t> m_last_activity{ 0 };
 
 		// 当前 session 是否被中止的状态.
 		std::atomic<bool> m_abort{ false };
