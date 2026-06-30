@@ -735,8 +735,12 @@ namespace util {
 	template <typename StreamType, typename Handler>
 	void ssl_layer_shutdown(StreamType& sock, Handler&& handler) noexcept
 	{
-		boost::system::error_code ec;
-		auto native_handle = sock.native_handle();
+		auto& lowest_layer = boost::beast::get_lowest_layer(sock);
+		if (!lowest_layer.is_open())
+		{
+			lowest_layer_shutdown(sock, std::move(handler));
+			return;
+		}
 
 		// 在这里直接调用 SSL_shutdown 而不通过 boost asio 的 async_shutdown，
 		// 是因为 boost asio 的 async_shutdown 内部实现会尝试读写数据，
@@ -749,6 +753,8 @@ namespace util {
 		// 这样可以在确定没有写操作的情况下，安全地调用 ssl_layer_shutdown
 		// 发起 SSL_shutdown 操作, 而不会引发同时多读的未定义行为.
 		::ERR_clear_error();
+
+		auto native_handle = sock.native_handle();
 
 		int result = ::SSL_shutdown(native_handle);
 		if (result == 0)
