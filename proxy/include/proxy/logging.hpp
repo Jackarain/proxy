@@ -229,9 +229,15 @@ namespace xlogger {
 #	define LOG2CONSOLE (true)
 #endif
 
+#ifdef DISABLE_WRITE_LOGGING
+#   define WRITE_LOGGING (false)
+#else
+#   define WRITE_LOGGING (true)
+#endif
+
 inline bool global_logging___ = true;
 inline bool global_console_logging___ = LOG2CONSOLE;
-inline bool global_write_logging___ = true;
+inline bool global_write_logging___ = WRITE_LOGGING;
 inline int64_t global_logfile_size___ = DEFAULT_LOG_MAXFILE_SIZE;
 
 
