@@ -570,6 +570,13 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 			{
 				terminator_signal.remove(sig);
 				server->close();
+
+#ifndef NDEBUG
+				std::thread([&] {
+					std::this_thread::sleep_for(std::chrono::seconds(5));
+					ioc.stop();
+				}).detach();
+#endif
 			});
 	}
 
