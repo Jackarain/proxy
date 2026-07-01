@@ -341,7 +341,7 @@ namespace proxy {
 		// TCP 会话/连接超时时间（秒）。
 		//
 		// - 用于控制连接建立/读写等阶段的超时。
-		// - 默认值为 tcp_session_expired_time。
+		// - 默认值为 tcp_session_expired_time, 小于等于0表示禁用超时检查。
 		int tcp_timeout_{ tcp_session_expired_time };
 
 		// UDP 会话/流过期时间（秒）。
