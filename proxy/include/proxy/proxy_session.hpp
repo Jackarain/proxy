@@ -1068,7 +1068,9 @@ namespace proxy {
 						<< ", read from endpoint: " << from_endpoint
 						<< ", error: " << from_ec.message();
 				}
-
+				log_conn_warning()
+					<< ", shutdown to endpoint: " << to_endpoint;
+				co_await async_shutdown(to, net_awaitable[to_ec]);
 				co_return;
 			}
 
