@@ -6439,14 +6439,17 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 	net::awaitable<void> proxy_session::idle_timeout(
 		variant_stream_type& s1, variant_stream_type& s2) noexcept
 	{
+		if (m_option.tcp_timeout_ <= 0)
+			co_return;
+
 		auto executor = co_await net::this_coro::executor;
 		net::steady_timer timer(executor);
 		boost::system::error_code ec;
 
 		while (!m_abort)
 		{
-			auto last_tick = m_last_activity.fetch_add(1, std::memory_order_relaxed);
-			if (last_tick + 1 >= m_option.tcp_timeout_ && m_option.tcp_timeout_ > 0)
+			auto last_tick = m_last_activity.fetch_add(1, std::memory_order_relaxed) + 1;
+			if (last_tick >= m_option.tcp_timeout_)
 			{
 				// 没有任何方向有数据传输, 超时关闭连接.
 				log_conn_warning() << ", idle timeout: " << last_tick;
@@ -6455,6 +6458,9 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 				stream_cancel(s2);
 				co_return;
 			}
+
+			if (last_tick % 3600 == 0)
+				log_conn_debug() << ", idle timeout long time check: " << last_tick;
 
 			timer.expires_after(std::chrono::seconds(1));
 			co_await timer.async_wait(net_awaitable[ec]);
