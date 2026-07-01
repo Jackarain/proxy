@@ -1118,7 +1118,11 @@ namespace proxy {
 					// shutdown 当前连接, 只关闭非 TLS 连接, 而 TLS 连接需要在 transfer 完成后再
 					// 操作, 否则有可能因为 async_shutdown 内部异步 io 导致未定义行业.
 					if (from_ec)
+					{
+						log_conn_warning()
+							<< ", shutdown to endpoint: " << to_endpoint;
 						co_await async_shutdown(to, net_awaitable[to_ec]);
+					}
 
 					// 只要出错即可退出.
 					co_return;
