@@ -48,23 +48,37 @@ target_compile_definitions(libproxy
 	-DXXH_INLINE_ALL
 )
 
-target_link_libraries(libproxy
-	Boost::thread
-	Boost::date_time
-	Boost::program_options
-	Boost::filesystem
-	Boost::signals2
-	Boost::nowide
-	Boost::url
-	Boost::json
-	Boost::uuid
-	Boost::asio
-	Boost::beast
-	Boost::scope
+if (ENABLE_SYSTEM_BOOST)
+	target_link_libraries(libproxy
+		Boost::date_time
+		Boost::program_options
+		Boost::filesystem
+		Boost::nowide
+		Boost::url
+		Boost::json
 
-	fmt
-	${OPENSSL_LIBRARIES}
+		fmt
+		${OPENSSL_LIBRARIES}
 )
+else()
+	target_link_libraries(libproxy
+		Boost::thread
+		Boost::date_time
+		Boost::program_options
+		Boost::filesystem
+		Boost::signals2
+		Boost::nowide
+		Boost::url
+		Boost::json
+		Boost::uuid
+		Boost::asio
+		Boost::beast
+		Boost::scope
+
+		fmt
+		${OPENSSL_LIBRARIES}
+	)
+endif()
 
 #source_group("Header Files\\proxy" FILES ${libproxy_HEADERS})
 #source_group("Source Files" FILES ${libproxy_SRCS})
