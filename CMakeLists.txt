@@ -47,6 +47,9 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "SYSTEM NAME: ${CMAKE_SYSTEM_NAME}")
 
+find_program(MOLD_LINKER mold)
+find_program(LLD_LINKER lld)
+find_program(CCACHE_PROGRAM ccache)
 
 ################################################################################
 
@@ -59,6 +62,7 @@ option(ENABLE_REUSEPORT				"Build with REUSEPORT support" OFF)
 
 option(ENABLE_SYSTEM_ZLIB			"Build with system zlib support" OFF)
 option(ENABLE_SYSTEM_OPENSSL		"Build with system openssl support" OFF)
+option(ENABLE_SYSTEM_BOOST			"Build with system installed Boost support" OFF)
 
 option(ENABLE_USE_SYSTEMD_LOG		"Build with systemd log support" OFF)
 option(ENABLE_USE_PAM_AUTH 			"Build with PAM authentication support" OFF)
@@ -66,10 +70,6 @@ option(ENABLE_USE_PAM_AUTH 			"Build with PAM authentication support" OFF)
 option(ENABLE_USE_OPENSSL			"Build with openssl support" ON)
 option(ENABLE_USE_BORINGSSL			"Build with boringssl support" OFF)
 option(ENABLE_USE_WOLFSSL			"Build with wolfssl support" OFF)
-
-option(ENABLE_MOLD					"Build using mold" OFF)
-option(ENABLE_LLD					"Build using lld" OFF)
-option(ENABLE_USE_CCACHE				"Using ccache for fast compile" OFF)
 
 option(ENABLE_ASIO_HANDLER_TRACKING "Enable asio handler tracking" OFF)
 
@@ -99,15 +99,13 @@ endif()
 
 ################################################################################
 
-find_program(MOLD_LINKER mold)
-find_program(LLD_LINKER lld)
-find_program(CCACHE_PROGRAM ccache)
-
-if (CCACHE_PROGRAM AND ENABLE_USE_CCACHE)
+if (CCACHE_PROGRAM)
     # 针对 C 和 C++ 分别开启 ccache
     message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
     set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
     set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+else()
+    message(STATUS "ccache not found - skipping")
 endif()
 
 
@@ -288,18 +286,12 @@ if (NOT MSVC)
 		message(FATAL_ERROR "need at least GCC 11 or clang 14")
 	endif()
 
-	if (ENABLE_MOLD)
-		if (MOLD_LINKER)
-			message(STATUS "Using the mold linker")
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold")
-		endif()
-	endif()
-
-	if (ENABLE_LLD)
-		if (LLD_LINKER)
-			message(STATUS "Using the lld linker")
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
-		endif()
+	if (MOLD_LINKER)
+		message(STATUS "Using the mold linker")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold")
+	elseif (LLD_LINKER)
+		message(STATUS "Using the lld linker")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
 	endif()
 endif(NOT MSVC)
 
@@ -407,9 +399,6 @@ if (ENABLE_ASIO_HANDLER_TRACKING)
 	add_definitions(-DBOOST_ASIO_ENABLE_HANDLER_TRACKING)
 endif()
 
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME ON)
-
 #默认使用 boost.filesystem 而不是 std.filesystem, 这是因为
 #std.filesystem 在 GCC-12.3 以下的版本在非 ASCII 中会构造失败
 #参考链接:https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95048
@@ -445,33 +434,48 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	add_definitions(-DBOOST_ASIO_HAS_CO_AWAIT)
 endif()
 
-set(BOOST_IOSTREAMS_ENABLE_ZSTD OFF)
-set(BOOST_IOSTREAMS_ENABLE_LZMA OFF)
-set(BOOST_IOSTREAMS_ENABLE_BZIP2 OFF)
-set(BOOST_IOSTREAMS_ENABLE_ZLIB OFF)
+if (ENABLE_SYSTEM_BOOST)
+	find_package(Boost REQUIRED COMPONENTS url json filesystem date_time program_options nowide)
+	message(STATUS "Using system Boost: ${Boost_VERSION}")
 
-set(BOOST_ASIO_BUILD_CONTEXT OFF)
-set(BOOST_EXCLUDE_LIBRARIES "context;coroutine;fiber;iostreams;graph;math;stacktrace;redis;mysql;multiprecision;log;iostreams;charconv;locale")
+	# 使用 system boost 时, proxy/CMakeLists.txt 中通过
+	# target_link_libraries 链接 Boost::* 目标,
+	# 需要确保系统安装的 boost 版本支持 CMake 导入目标.
+	# 如果系统 Boost 未提供 CMake 配置文件, 可手动设置
+	# Boost_INCLUDE_DIRS 和 Boost_LIBRARIES 等变量.
+else()
 
-add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
+	set(Boost_USE_STATIC_LIBS ON)
+	set(Boost_USE_STATIC_RUNTIME ON)
 
-set_property(TARGET boost_assert PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_container PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_atomic PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_chrono PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_core PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_date_time PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_exception PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_filesystem PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_json PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_url PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_nowide PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_program_options PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_system PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_thread PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_variant2 PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_unordered PROPERTY FOLDER "third_party/boost")
-set_property(TARGET boost_optional PROPERTY FOLDER "third_party/boost")
+	set(BOOST_IOSTREAMS_ENABLE_ZSTD OFF)
+	set(BOOST_IOSTREAMS_ENABLE_LZMA OFF)
+	set(BOOST_IOSTREAMS_ENABLE_BZIP2 OFF)
+	set(BOOST_IOSTREAMS_ENABLE_ZLIB OFF)
+
+	set(BOOST_ASIO_BUILD_CONTEXT OFF)
+	set(BOOST_EXCLUDE_LIBRARIES "context;coroutine;fiber;iostreams;graph;math;stacktrace;redis;mysql;multiprecision;log;iostreams;charconv;locale")
+
+	add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
+
+	set_property(TARGET boost_assert PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_container PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_atomic PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_chrono PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_core PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_date_time PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_exception PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_filesystem PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_json PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_url PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_nowide PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_program_options PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_system PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_thread PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_variant2 PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_unordered PROPERTY FOLDER "third_party/boost")
+	set_property(TARGET boost_optional PROPERTY FOLDER "third_party/boost")
+endif()
 
 ################################################################################
 # 使用 Threads
