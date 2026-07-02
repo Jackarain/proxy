@@ -1933,6 +1933,13 @@ void proxy_server::udp_tproxy_forward_packet_http(
 	pos += varint_int_encode(1 + len, buf + pos);				 // capsule length
 	pos += varint_int_encode(0, buf + pos);						 // context ID
 
+	if (pos + len > sizeof(buf))
+	{
+		XLOG_WARN << "tproxy flow: " << flow->flow_key_
+			<< ", capsule too large: " << (pos + len);
+		return;
+	}
+
 	std::memcpy(buf + pos, data, len);							 // UDP payload
 	pos += len;
 
