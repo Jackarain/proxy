@@ -120,7 +120,6 @@ pem_file proxy_server::determine_pem_type(const fs::path& filepath) noexcept
 		return result;
 	}
 
-	proxy::pem_type type = pem_type::none;
 	std::string line;
 
 	boost::regex re(R"(-----BEGIN\s.*\s?PRIVATE\sKEY-----)");
@@ -130,22 +129,21 @@ pem_file proxy_server::determine_pem_type(const fs::path& filepath) noexcept
 	{
 		if (line.find("-----BEGIN CERTIFICATE-----") != std::string::npos)
 		{
-			type = pem_type::cert;
+			result.type_ = pem_type::cert;
 			result.chains_++;
 			continue;
 		}
 		else if (line.find("DH PARAMETERS-----") != std::string::npos)
 		{
-			type = pem_type::dhparam;
+			result.type_ = pem_type::dhparam;
 			break;
 		}
 		else if (boost::regex_search(line, what, re))
 		{
-			type = pem_type::key;
+			result.type_ = pem_type::key;
 			break;
 		}
 	}
-	result.type_ = type;
 
 	return result;
 }
@@ -804,8 +802,6 @@ void proxy_server::start() noexcept
 	if (m_option.transparent_)
 	{
 #if defined(__linux__)
-
-#  if defined (IP_TRANSPARENT) && defined (IPV6_TRANSPARENT)
 		for (auto& acceptor : m_tcp_acceptors)
 		{
 			boost::system::error_code error;
@@ -813,8 +809,6 @@ void proxy_server::start() noexcept
 			acceptor.set_option(transparent_opt(true), error);
 			acceptor.set_option(transparent6_opt(true), error);
 		}
-#  endif
-
 #else
 		XLOG_WARN << "transparent proxy only support linux";
 #endif
@@ -2221,12 +2215,6 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 			break;
 		}
 	}
-
-	// 连接断开, 清理 flow.
-	flow->udp_http_sock_.reset();
-	flow->backend_sock_.reset();
-
-	m_udp_tproxy_flows.erase(flow->flow_key_);
 
 	XLOG_DBG << "tproxy flow: " << flow->flow_key_
 		<< ", connect-udp loop ended";
