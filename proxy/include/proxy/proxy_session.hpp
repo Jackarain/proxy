@@ -1154,8 +1154,8 @@ namespace proxy {
 			bool resolved = false,
 			int command = SOCKS_CMD_CONNECT) noexcept;
 
-		// is_crytpo_stream 判断当前连接是否为加密连接.
-		bool is_crytpo_stream() const noexcept;
+		// is_crypto_stream 判断当前连接是否为加密连接.
+		bool is_crypto_stream() const noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// HTTP 静态服务

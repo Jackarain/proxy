@@ -503,7 +503,7 @@ R"x*x*x(<html>
 		return m_connection_id;
 	}
 
-	bool proxy_session::is_crytpo_stream() const noexcept
+	bool proxy_session::is_crypto_stream() const noexcept
 	{
 		return boost::variant2::holds_alternative<ssl_tcp_stream>(m_remote_socket);
 	}
@@ -4463,7 +4463,7 @@ R"x*x*x(<html>
 			try
 			{
 				urls::url url;
-				if (is_crytpo_stream())
+				if (is_crypto_stream())
 					url.set_scheme_id(urls::scheme::https);
 				else
 					url.set_scheme_id(urls::scheme::http);
