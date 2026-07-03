@@ -2336,7 +2336,7 @@ R"x*x*x(<html>
 
 					if (!fs::is_directory(path, ec))
 					{
-						co_await normal_web_server(req, parser);
+						co_await static_web_server(req, parser);
 						co_return true;
 					}
 
@@ -2347,7 +2347,7 @@ R"x*x*x(<html>
 				}
 
 				// 按正常 http 目录请求来处理.
-				co_await normal_web_server(req, parser);
+				co_await static_web_server(req, parser);
 				co_return true;
 			}
 
@@ -4021,7 +4021,7 @@ R"x*x*x(<html>
 	// HTTP 静态服务
 
 	net::awaitable<void>
-	proxy_session::normal_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser) noexcept
+	proxy_session::static_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser) noexcept
 	{
 		boost::system::error_code ec;
 

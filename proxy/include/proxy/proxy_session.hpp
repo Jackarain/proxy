@@ -1162,7 +1162,7 @@ namespace proxy {
 
 		// 处理 HTTP 静态文件服务请求, 返回本地文档目录中的文件.
 		net::awaitable<void>
-		normal_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser) noexcept;
+		static_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser) noexcept;
 
 		// 拼接文档目录和目标路径.
 		static fs::path path_cat(
