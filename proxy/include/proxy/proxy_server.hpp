@@ -391,7 +391,7 @@ namespace proxy {
 			std::string_view sni, std::optional<variant_stream_type>& ssl_sock);
 
 		// 执行 SOCKS5 UDP ASSOCIATE 握手.
-		net::awaitable<bool> do_sock5_associate();
+		net::awaitable<bool> do_socks5_associate();
 
 		// UDP TPROXY 响应循环, 从 upstream 接收数据并转发回客户端.
 		net::awaitable<void> udp_tproxy_response_loop(udp_tproxy_flow_ptr flow);

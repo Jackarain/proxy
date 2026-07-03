@@ -1247,11 +1247,11 @@ net::awaitable<void> proxy_server::udp_tproxy_socks5_connect() noexcept
 {
 	m_retry_tproxy_socks5_connect = false;
 
-	auto ret = co_await do_sock5_associate();
+	auto ret = co_await do_socks5_associate();
 	if (!ret)
 		co_return;
 
-	// do_sock5_associate 返回 true 表示控制连接已建立, 并在循环中等待直到
+	// do_socks5_associate 返回 true 表示控制连接已建立, 并在循环中等待直到
 	// 连接断开或服务器关闭. 仅当连接因非关闭原因断开时, 才标记需要重试.
 	if (!m_abort)
 		m_retry_tproxy_socks5_connect = true;
@@ -1417,7 +1417,7 @@ proxy_server::make_ssl_socket(tcp::socket& remote_socket,
 	co_return true;
 }
 
-net::awaitable<bool> proxy_server::do_sock5_associate()
+net::awaitable<bool> proxy_server::do_socks5_associate()
 {
 	auto proxy_pass = *m_option.proxy_pass_;
 
@@ -1456,7 +1456,7 @@ net::awaitable<bool> proxy_server::do_sock5_associate()
 	auto ret = set_tcp_keepalive(remote_socket.native_handle());
 	if (ret.has_error())
 	{
-		XLOG_WARN << "udp tproxy do_sock5_associate tcp_keepalive failed: "
+		XLOG_WARN << "udp tproxy do_socks5_associate tcp_keepalive failed: "
 			<< ret.error().message();
 	}
 
