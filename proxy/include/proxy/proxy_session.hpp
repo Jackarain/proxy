@@ -505,7 +505,7 @@ namespace proxy {
 		struct http_context
 		{
 			// 在 http 请求时, 保存正则表达式命中时匹配的结果列表.
-			std::vector<std::string> command_;
+			std::vector<std::string> regex_results_;
 
 			// 保存 http 客户端的请求信息.
 			string_request& request_;
@@ -1216,7 +1216,7 @@ namespace proxy {
 
 			bool hash = false;
 
-			urls::params_view qp(hctx.command_[1]);
+			urls::params_view qp(hctx.regex_results_[1]);
 			if (qp.find("hash") != qp.end())
 				hash = true;
 

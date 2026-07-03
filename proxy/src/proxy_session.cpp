@@ -4108,7 +4108,7 @@ R"x*x*x(<html>
 			else if (skip && boost::regex_match( \
 				target, what, boost::regex{ exp })) { \
 				for (auto i = 1; i < static_cast<int>(what.size()); i++) \
-					http_ctx.command_.emplace_back(what[i]); \
+					http_ctx.regex_results_.emplace_back(what[i]); \
 				co_await func(http_ctx); \
 			}
 #define END_HTTP_ROUTE() else { \
