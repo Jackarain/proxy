@@ -1927,6 +1927,17 @@ R"x*x*x(<html>
 				}
 
 				auto head_size = rp - rbuf;
+
+				// 检查解析出的 SOCKS5 UDP 头部是否越界, 防止恶意或畸形
+				// 数据包导致无符号整数下溢 (head_size > bytes).
+				if (head_size > bytes)
+				{
+					log_conn_warning()
+						<< ", malformed SOCKS5 UDP header, head_size: "
+						<< head_size << ", packet_size: " << bytes;
+					continue;
+				}
+
 				auto udp_size = bytes - head_size;
 
 				send_total++;
