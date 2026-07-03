@@ -40,12 +40,12 @@ proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option op
 	if (fs::exists(m_option.ipip_db_, ec))
 	{
 		try {
-			m_ipdb = std::make_unique<ip_ipdb>();
-			if (!m_ipdb->load(m_option.ipip_db_))
+			m_ip_database = std::make_unique<ip_ipdb>();
+			if (!m_ip_database->load(m_option.ipip_db_))
 			{
-				m_ipdb = std::make_unique<ip_datx>();
-				if (!m_ipdb->load(m_option.ipip_db_))
-					m_ipdb.reset();
+				m_ip_database = std::make_unique<ip_datx>();
+				if (!m_ip_database->load(m_option.ipip_db_))
+					m_ip_database.reset();
 			}
 		} catch (const std::exception& e) {
 			XLOG_WARN << "ipip database " << m_option.ipip_db_ << ", load error: " << e.what();

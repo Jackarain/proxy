@@ -213,10 +213,10 @@ namespace proxy {
 				local_info.push_back(client);
 				client += ":" + std::to_string(endp.port());
 
-				if (m_ipdb)
+				if (m_ip_database)
 				{
 					try {
-						auto [ret, isp] = m_ipdb->lookup(endp.address());
+						auto [ret, isp] = m_ip_database->lookup(endp.address());
 						if (!ret.empty())
 						{
 							for (auto& c : ret)
@@ -448,7 +448,7 @@ namespace proxy {
 		std::set<net::ip::address> m_local_addrs;
 
 		// ipip 用于获取 ip 地址的地理位置信息.
-		std::unique_ptr<ip_database> m_ipdb;
+		std::unique_ptr<ip_database> m_ip_database;
 
 		using proxy_session_weak_ptr =
 			std::weak_ptr<proxy_session>;
