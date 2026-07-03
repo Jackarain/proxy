@@ -1089,6 +1089,7 @@ namespace proxy {
 						from.async_read_some(
 							net::buffer(secondary_buf, buf_size), net_awaitable[from_ec])
 					);
+				(void)write_bytes;
 
 				// 交换主从缓冲区.
 				std::swap(primary_buf, secondary_buf);
