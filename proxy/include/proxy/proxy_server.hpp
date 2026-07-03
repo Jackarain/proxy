@@ -197,6 +197,11 @@ namespace proxy {
 					co_return;
 
 				XLOG_WARN << "start_proxy_listen, async_accept: " << error.message();
+
+				// 添加退避延迟，避免 accept 失败时快速循环消耗 CPU，使用 50ms 延迟作为简单的退避策略.
+				net::steady_timer timer(co_await net::this_coro::executor);
+				timer.expires_after(std::chrono::milliseconds(50));
+				co_await timer.async_wait(net_awaitable[error]);
 				co_return;
 			}
 
