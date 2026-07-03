@@ -806,8 +806,8 @@ namespace proxy {
 				if constexpr (std::same_as<Stream, proxy_tcp_socket> ||
 					std::same_as<Stream, proxy_uds_socket>)
 				{
-					sock.set_scramble_key(m_inout_key);
-					sock.set_unscramble_key(m_inin_key);
+					sock.set_scramble_key(m_server_tx_key);
+					sock.set_unscramble_key(m_server_rx_key);
 				}
 			};
 
@@ -963,13 +963,13 @@ namespace proxy {
 				if constexpr (std::same_as<T, proxy_tcp_socket>)
 				{
 					if (!co_await noise_handshake<tcp::socket>(
-						net_tcp_socket(socket), m_inin_key, m_inout_key))
+						net_tcp_socket(socket), m_server_rx_key, m_server_tx_key))
 						co_return;
 				}
 				else if constexpr (std::same_as<T, proxy_uds_socket>)
 				{
 					if (!co_await noise_handshake<net::local::stream_protocol::socket>(
-						net_uds_socket(socket), m_inin_key, m_inout_key))
+						net_uds_socket(socket), m_server_rx_key, m_server_tx_key))
 						co_return;
 				}
 
@@ -1496,10 +1496,17 @@ namespace proxy {
 		// m_local_buffer 本地缓冲区, 用于接收客户端的数据的 buffer.
 		net::streambuf m_local_buffer;
 
-		// m_inin_key 用于身份为服务端时, 解密接收到的数据的 key.
-		std::array<uint8_t, 16> m_inin_key{};
-		// m_inout_key 用于身份为服务端时, 加密发送的数据的 key.
-		std::array<uint8_t, 16> m_inout_key{};
+		// m_server_rx_key 用于身份为服务端时, 解密接收到的混淆数据的 key.
+		std::array<uint8_t, 16> m_server_rx_key{};
+		// m_server_tx_key 用于身份为服务端时, 加密发送的混淆数据的 key.
+		std::array<uint8_t, 16> m_server_tx_key{};
+
+		// m_client_rx_key 用于身份为客户端时, 与下游代理服务器加密通信时, 解密接收到
+		// 下游代理服务器混淆数据的 key.
+		std::array<uint8_t, 16> m_client_rx_key{};
+		// m_client_tx_key 用于身份为客户端时, 与下游代理服务器加密通信时, 加密给下
+		// 游代理服务器发送的混淆数据的 key.
+		std::array<uint8_t, 16> m_client_tx_key{};
 
 		// m_proxy_server 当前代理服务器对象的弱引用.
 		std::weak_ptr<proxy_server_base> m_proxy_server;
@@ -1509,13 +1516,6 @@ namespace proxy {
 
 		// m_proxy_pass 作为中继桥接的时候, 下游代理服务器的地址.
 		std::optional<urls::url> m_proxy_pass;
-
-		// m_outin_key 用于身份为客户端时, 与下游代理服务器加密通信时, 解密接收到
-		// 下游代理服务器数据的 key.
-		std::array<uint8_t, 16> m_outin_key{};
-		// m_outout_key 用于身份为客户端时, 与下游代理服务器加密通信时, 加密给下
-		// 游代理服务器发送的数据的 key.
-		std::array<uint8_t, 16> m_outout_key{};
 
 		// 用于使用 ssl 加密通信与下游代理服务器通信时的 ssl context.
 		net::ssl::context m_ssl_cli_context{ net::ssl::context::sslv23_client };

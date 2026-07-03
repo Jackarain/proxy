@@ -3836,7 +3836,7 @@ R"x*x*x(<html>
 		// 数据以及接收 noise 数据进行握手.
 		if (m_option.scramble_)
 		{
-			if (!co_await noise_handshake(remote_socket, m_outin_key, m_outout_key))
+			if (!co_await noise_handshake(remote_socket, m_client_rx_key, m_client_tx_key))
 				co_return make_error_code(boost::system::errc::io_error);
 
 			log_conn_debug()
@@ -6367,8 +6367,8 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 				co_return sock_stream;
 
 			// 若是 scramble 混淆, 则配置相应的 key.
-			sock.set_scramble_key(m_outout_key);
-			sock.set_unscramble_key(m_outin_key);
+			sock.set_scramble_key(m_client_tx_key);
+			sock.set_unscramble_key(m_client_rx_key);
 
 			co_return sock_stream;
 		}
@@ -6406,8 +6406,8 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 			// 若是 scramble 混淆, 则配置相应的 key.
 			auto& next_layer = ssl_socket.next_layer();
 
-			next_layer.set_scramble_key(m_outout_key);
-			next_layer.set_unscramble_key(m_outin_key);
+			next_layer.set_scramble_key(m_client_tx_key);
+			next_layer.set_unscramble_key(m_client_rx_key);
 		}
 
 		// Set SNI Hostname.
