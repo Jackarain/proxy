@@ -6,7 +6,7 @@
 
 ## proxy 项目简介
 
-基于 `C++20 协程`，以极少的代码量实现具有极高性能且支持标准 `socks4`/`socks4a`/`socks5`/`http`/`https` 的 `server`/`client proxy`，该项目不仅可以直接作为 `proxy` 服务端/客户端来使用，也可以作为您的网络程序提供代理支持的开发库来使用。
+基于 `C++20 协程`，以极少的代码量实现具有极高性能且支持标准 `socks4`/`socks4a`/`socks5`/`http`/`https` 的 `server`/`client proxy`，同时还支持 [Proxying UDP in HTTP](https://datatracker.ietf.org/doc/html/rfc9298)，该项目不仅可以直接作为 `proxy` 服务端/客户端来使用，也可以作为您的网络程序提供代理支持的开发库来使用。
 
 该项目可以组织出绝大部分代理的使用场景，并且 `client` 与 `server` 之间可配置通过 `ssl` 加密通信，也可配置多级代理，如下架构：
 
