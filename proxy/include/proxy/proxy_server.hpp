@@ -291,8 +291,8 @@ namespace proxy {
 					connection_id,
 					self);
 
-			// 保存 proxy_session 对象到 m_clients 中.
-			m_clients[connection_id] = new_session;
+			// 保存 proxy_session 对象到 m_sessions 中.
+			m_sessions[connection_id] = new_session;
 
 #if defined (__linux__)
 			if constexpr (std::same_as<S, proxy_tcp_socket>)
@@ -454,7 +454,7 @@ namespace proxy {
 			std::weak_ptr<proxy_session>;
 
 		// 当前客户端连接列表.
-		std::unordered_map<size_t, proxy_session_weak_ptr> m_clients;
+		std::unordered_map<size_t, proxy_session_weak_ptr> m_sessions;
 
 		// 当前服务端作为 ssl 服务时的 ssl context.
 		net::ssl::context m_ssl_srv_context{ net::ssl::context::tls_server };

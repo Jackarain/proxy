@@ -890,7 +890,7 @@ void proxy_server::close() noexcept
 
 #endif // defined(__linux__)
 
-	for (auto& [id, c] : m_clients)
+	for (auto& [id, c] : m_sessions)
 	{
 		if (auto client = c.lock())
 			client->close();
@@ -899,12 +899,12 @@ void proxy_server::close() noexcept
 
 void proxy_server::remove_session(size_t id)
 {
-	m_clients.erase(id);
+	m_sessions.erase(id);
 }
 
 size_t proxy_server::num_session()
 {
-	return m_clients.size();
+	return m_sessions.size();
 }
 
 const proxy_server_option& proxy_server::option()
