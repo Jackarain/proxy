@@ -868,19 +868,34 @@ void proxy_server::close() noexcept
 
 #if defined(__linux__)
 
-	// 关闭 UDP TPROXY 相关资源.
-	for (auto& [_, flow] : m_udp_tproxy_flows)
-	{
-		if (flow)
-		{
-			flow->backend_sock_.reset();
-			flow->relay_sock_.reset();
-		}
-	}
-	m_udp_tproxy_flows.clear();
-
+	// 先关闭 UDP 监听 socket, 使 start_udp_tproxy_listen 中的
+	// 待处理 recvmsg 立即失败返回, 从而触发协程退出清理.
 	for (auto& s : m_udp_tproxy_listeners)
 		s.close(ignore_ec);
+
+	// 将 flow 清理 post 到 executor, 确保与协程 scope_exit 中
+	// 的 erase 在同一个执行上下文中顺序执行, 避免多线程 io_context
+	// 下 swap/erase 的数据竞争.
+	if (!m_udp_tproxy_flows.empty())
+	{
+		net::post(m_executor,
+			[this, self = shared_from_this()]()
+			{
+				std::unordered_map<size_t, udp_tproxy_flow_ptr> tmp_flows;
+				tmp_flows.swap(m_udp_tproxy_flows);
+
+				for (auto& [_, flow] : tmp_flows)
+				{
+					if (flow)
+					{
+						flow->backend_sock_.reset();
+						flow->relay_sock_.reset();
+						flow->udp_http_sock_.reset();
+						flow->notify_timer_.reset();
+					}
+				}
+			});
+	}
 
 #endif // defined(__linux__)
 
