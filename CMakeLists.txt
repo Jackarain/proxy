@@ -454,7 +454,35 @@ else()
 	set(BOOST_IOSTREAMS_ENABLE_ZLIB OFF)
 
 	set(BOOST_ASIO_BUILD_CONTEXT OFF)
-	set(BOOST_EXCLUDE_LIBRARIES "context;coroutine;fiber;iostreams;graph;math;stacktrace;redis;mysql;multiprecision;log;iostreams;charconv;locale")
+	set(BOOST_EXCLUDE_LIBRARIES
+	    "charconv"               # 字符转换
+	    "cobalt"                 # 协程框架
+	    "context"                # 上下文切换
+	    "contract"               # 契约编程
+	    "coroutine"              # 协程库
+	    #"date_time"              # 日期时间
+	    "fiber"                  # 用户态线程
+	    #"filesystem"             # 文件系统
+	    "graph"                  # 图论算法
+	    "graph_parallel"         # 并行图算法
+	    "iostreams"              # 流式输入输出扩展
+	    #"json"                   # JSON 解析
+	    "locale"                 # 本地化与多语言支持
+	    "log"                    # 日志框架
+	    "math"                   # 数学公式与特殊函数
+	    "mpi"                    # 消息传递接口(分布式计算)
+	    #"nowide"                 # Windows UTF-8 兼容库
+	    "process"                # 进程管理
+	    #"program_options"        # 命令行参数解析
+	    "python"                 # Python 绑定支持
+	    #"regex"                  # 正则表达式
+	    "serialization"          # 序列化库
+	    "stacktrace"             # 堆栈回溯
+	    "test"                   # 单元测试框架
+	    "type_erasure"           # 类型擦除
+	    #"url"                    # URL 解析库
+	    "wave"                   # C++ 预处理器解析器
+	)
 
 	add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
 
