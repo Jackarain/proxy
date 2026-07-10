@@ -121,7 +121,7 @@ namespace proxy {
 			if (ec) co_return endp;
 			BOOST_ASSERT(bytes_to_write == bytes);
 
-			net::streambuf response(5242880u);
+			net::streambuf response(288u);
 			bytes = co_await net::async_read(
 				socket,
 				response,
@@ -481,7 +481,7 @@ namespace proxy {
 				net_awaitable[ec]);
 			if (ec) co_return endp;
 
-			net::streambuf response(5242880u);
+			net::streambuf response(288u);
 			co_await net::async_read(
 				socket,
 				response,
