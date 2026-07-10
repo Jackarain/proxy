@@ -235,7 +235,7 @@ namespace proxy {
 
 				// domain size.
 				BOOST_ASSERT(hostname.size() <= 255);
-				write<uint8_t>(static_cast<int8_t>(
+				write<uint8_t>(static_cast<uint8_t>(
 					hostname.size()), req);
 
 				// domain.
