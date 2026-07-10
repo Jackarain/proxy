@@ -464,8 +464,6 @@ namespace proxy {
 					}
 					write<uint8_t>(username[i], req);    // USERID
 				}
-
-				req += username.size();
 			}
 			write<uint8_t>(0, req); // NULL.
 
