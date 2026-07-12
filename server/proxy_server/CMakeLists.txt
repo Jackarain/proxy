@@ -11,6 +11,10 @@ target_link_libraries(proxy_server
     ${PROXY_LIBRARIES}
 )
 
+if (TARGET IOUring::IOUring)
+    target_link_libraries(proxy_server IOUring::IOUring)
+endif()
+
 set_property(SOURCE version.cpp PROPERTY COMPILE_DEFINITIONS "VERSION_GIT=\"${PVERSION}\"")
 set_property(TARGET proxy_server PROPERTY FOLDER "server/proxy_server")
 

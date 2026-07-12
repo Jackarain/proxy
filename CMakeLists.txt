@@ -422,11 +422,10 @@ add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
 add_definitions(-DBOOST_PROCESS_USE_STD_FS)
 if (ENABLE_USE_IO_URING)
 	find_package(IOUring)
-
 	if (IOUring_FOUND)
 		message(STATUS "Linux using io_uring...")
-		add_definitions(-DBOOST_ASIO_HAS_IO_URING -DBOOST_ASIO_DISABLE_EPOLL)
-		link_libraries(${IOUring_LIBRARIES})
+		add_compile_definitions(BOOST_ASIO_HAS_IO_URING BOOST_ASIO_DISABLE_EPOLL)
+		#link_libraries(${IOUring_LIBRARIES})
 	endif()
 endif()
 
