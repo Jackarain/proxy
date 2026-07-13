@@ -4398,8 +4398,6 @@ R"x*x*x(<html>
 		}
 
 		auto target_path = make_target_path(hctx.target_);
-		log_conn_debug() << ", httpd_dir access: " << target_path;
-
 		std::wstring head = fmt::format(head_fmt,
 			target_path,
 			target_path);
