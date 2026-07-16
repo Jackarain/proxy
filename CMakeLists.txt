@@ -74,6 +74,13 @@ option(ENABLE_USE_WOLFSSL			"Build with wolfssl support" OFF)
 option(ENABLE_ASIO_HANDLER_TRACKING "Enable asio handler tracking" OFF)
 
 option(ENABLE_STATIC_LINK_TO_GCC	"Build static link to gcc" ON)
+option(ENABLE_USE_MOLD				"Use the mold linker" OFF)
+option(ENABLE_USE_LLD				"Use the lld linker" OFF)
+
+# ENABLE_USE_MOLD 和 ENABLE_USE_LLD 互斥，不可同时启用
+if (ENABLE_USE_MOLD AND ENABLE_USE_LLD)
+	message(FATAL_ERROR "ENABLE_USE_MOLD and ENABLE_USE_LLD are mutually exclusive! Please enable only one linker.")
+endif()
 
 option(ENABLE_TCMALLOC_STATIC		"Build with Tcmalloc support" OFF)
 option(ENABLE_JEMALLOC_STATIC		"Build with Jemalloc support" OFF)
@@ -287,11 +294,15 @@ if (NOT MSVC)
 	endif()
 
 	if (MOLD_LINKER)
-		message(STATUS "Using the mold linker")
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold")
+		if (ENABLE_USE_MOLD)
+			message(STATUS "Using the mold linker (ENABLE_USE_MOLD=ON)")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold")
+		endif()
 	elseif (LLD_LINKER)
-		message(STATUS "Using the lld linker")
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
+		if (ENABLE_USE_LLD)
+			message(STATUS "Using the lld linker (ENABLE_USE_LLD=ON)")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
+		endif()
 	endif()
 endif(NOT MSVC)
 
