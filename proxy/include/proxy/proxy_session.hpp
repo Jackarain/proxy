@@ -1335,6 +1335,10 @@ namespace proxy {
 			const char* rdata, const char* end,
 			const char* msg_start) noexcept;
 
+		// dns_svcparams_to_string 解析 HTTPS/SVCB 记录的 SvcParams (RFC 9460).
+		static std::string dns_svcparams_to_string(
+			const char* p, const char* end) noexcept;
+
 		// dns_response_to_json 将 DNS wire-format 响应解析为 Google JSON API 格式.
 		static std::string dns_response_to_json(
 			const std::string& wire_response,

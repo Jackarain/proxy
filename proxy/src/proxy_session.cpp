@@ -274,6 +274,7 @@ R"x*x*x(<html>
 	static constexpr uint16_t DNS_TYPE_TXT = 16;
 	static constexpr uint16_t DNS_TYPE_AAAA = 28;
 	static constexpr uint16_t DNS_TYPE_SRV = 33;
+	static constexpr uint16_t DNS_TYPE_SVCB = 64;
 	static constexpr uint16_t DNS_TYPE_HTTPS = 65;
 	static constexpr uint16_t DNS_TYPE_ANY = 255;
 	static constexpr uint16_t DNS_TYPE_CAA = 257;
@@ -5182,6 +5183,128 @@ R"x*x*x(<html>
 		return {name, next ? next : p};
 	}
 
+	// dns_svcparams_to_string 解析 HTTPS/SVCB 记录的 SvcParams (RFC 9460).
+	// p 指向 SvcParams 起始位置, end 指向 RDATA 结束位置.
+	std::string proxy_session::dns_svcparams_to_string(
+		const char* p, const char* end) noexcept
+	{
+		std::string result;
+		while (p + 4 <= end)
+		{
+			auto key = read<uint16_t>(p);
+			auto len = read<uint16_t>(p);
+			if (p + len > end) break;
+
+			if (!result.empty()) result += " ";
+
+			switch (key)
+			{
+			case 0: // mandatory
+			{
+				result += "mandatory=";
+				std::string keys;
+				const char* kv = p;
+				while (kv + 2 <= p + len)
+				{
+					auto k = read<uint16_t>(kv);
+					if (!keys.empty()) keys += ",";
+					keys += std::to_string(k);
+				}
+				result += keys;
+				break;
+			}
+			case 1: // alpn
+			{
+				result += "alpn=";
+				std::string alpn;
+				const char* av = p;
+				const char* const ae = p + len;
+				while (av < ae)
+				{
+					uint8_t alpn_len = static_cast<uint8_t>(*av++);
+					if (av + alpn_len > ae) break;
+					if (!alpn.empty()) alpn += ",";
+					alpn.append(av, alpn_len);
+					av += alpn_len;
+				}
+				result += alpn;
+				break;
+			}
+			case 2: // no-default-alpn
+				result += "no-default-alpn";
+				break;
+			case 3: // port
+				if (len >= 2)
+				{
+					const char* pv = p;
+					result += "port=" + std::to_string(read<uint16_t>(pv));
+				}
+				break;
+			case 4: // ipv4hint
+			{
+				result += "ipv4hint=";
+				std::string ips;
+				const char* iv = p;
+				while (iv + 4 <= p + len)
+				{
+					if (!ips.empty()) ips += ",";
+					ips += net::ip::make_address_v4(
+						read<uint32_t>(iv)).to_string();
+				}
+				result += ips;
+				break;
+			}
+			case 5: // ech
+			{
+				result += "ech=";
+				std::string hex;
+				for (uint16_t i = 0; i < len; i++)
+				{
+					char buf[3];
+					std::snprintf(buf, sizeof(buf), "%02x",
+						static_cast<uint8_t>(p[i]));
+					hex += buf;
+				}
+				result += hex;
+				break;
+			}
+			case 6: // ipv6hint
+			{
+				result += "ipv6hint=";
+				std::string ips;
+				const char* iv = p;
+				while (iv + 16 <= p + len)
+				{
+					net::ip::address_v6::bytes_type bytes;
+					for (auto& b : bytes)
+						b = read<uint8_t>(iv);
+					if (!ips.empty()) ips += ",";
+					ips += net::ip::make_address_v6(bytes).to_string();
+				}
+				result += ips;
+				break;
+			}
+			default:
+			{
+				result += std::to_string(key) + "=";
+				std::string hex;
+				for (uint16_t i = 0; i < len; i++)
+				{
+					char buf[3];
+					std::snprintf(buf, sizeof(buf), "%02x",
+						static_cast<uint8_t>(p[i]));
+					hex += buf;
+				}
+				result += hex;
+				break;
+			}
+			}
+
+			p += len;
+		}
+		return result;
+	}
+
 	std::string proxy_session::dns_rdata_to_string(
 		uint16_t type, uint16_t rdlength,
 		const char* rdata, const char* end,
@@ -5271,12 +5394,25 @@ R"x*x*x(<html>
 				std::to_string(srv_port) + " " + target;
 		}
 		case DNS_TYPE_HTTPS:
+		case DNS_TYPE_SVCB:
 		{
 			if (rdlength < 2) return {};
+			const char* const rd_start = rdata;
 			auto svc_priority = read<uint16_t>(rdata);
-			auto [svc_target, _] = dns_parse_name(rdata, rdata + rdlength, msg_start);
-			(void)_;
-			return std::to_string(svc_priority) + " " + svc_target;
+			auto [svc_target, next_pos] = dns_parse_name(rdata, rdata + rdlength, msg_start);
+
+			std::string result = std::to_string(svc_priority) + " " + svc_target;
+
+			// SvcParams (RFC 9460) 紧随 target 之后.
+			if (next_pos && next_pos < rd_start + rdlength)
+			{
+				auto svcparams = dns_svcparams_to_string(
+					next_pos, rd_start + rdlength);
+				if (!svcparams.empty())
+					result += " " + svcparams;
+			}
+
+			return result;
 		}
 		case DNS_TYPE_CAA:
 		{
