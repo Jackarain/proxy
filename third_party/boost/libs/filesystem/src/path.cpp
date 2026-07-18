@@ -31,7 +31,7 @@
 #elif defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__) || \
     defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__NETBSD__) || defined(__NetBSD__) || \
     defined(sun) || defined(__sun) || \
-    defined(__HAIKU__)
+    defined(__HAIKU__) || defined(BOOST_FILESYSTEM_USE_UTF8_CODECVT_FACET)
 // "All BSD system functions expect their string parameters to be in UTF-8 encoding
 // and nothing else." See
 // http://developer.apple.com/mac/library/documentation/MacOSX/Conceptual/BPInternational/Articles/FileEncodings.html
