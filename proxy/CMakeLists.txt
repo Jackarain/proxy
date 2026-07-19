@@ -36,6 +36,8 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ip_database.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_server.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/default_cert.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/xxhash.cpp
 )
 
 target_include_directories(libproxy
@@ -45,7 +47,7 @@ target_include_directories(libproxy
 
 target_compile_definitions(libproxy
 	PUBLIC
-	-DXXH_INLINE_ALL
+	-DXXH_STATIC_LINKING_ONLY
 )
 
 if (ENABLE_SYSTEM_BOOST)

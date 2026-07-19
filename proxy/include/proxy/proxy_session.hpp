@@ -609,33 +609,9 @@ namespace proxy {
 			variant_stream_type&& socket,
 			size_t id,
 			std::weak_ptr<proxy_server_base> server
-		)
-			: m_executor(executor)
-			, m_backend_context(backend_context)
-			, m_scheduler_locking(scheduler_locking)
-			, m_dns_cache(cache)
-			, m_local_socket(std::move(socket))
-			, m_remote_socket(init_proxy_stream(executor))
-			, m_connection_id(id)
-			, m_local_buffer(10485760u) // 10MB max buffer size.
-			, m_proxy_server(server)
-		{
-		}
+		);
 
-		~proxy_session()
-		{
-			auto server = m_proxy_server.lock();
-			if (!server)
-				return;
-
-			// 从 server 中移除当前 session.
-			server->remove_session(m_connection_id);
-
-			// 打印当前 session 数量相关日志.
-			auto num = server->num_session();
-
-			log_conn_debug() << ", terminated, " << num << " active connections remaining.";
-		}
+		~proxy_session();
 
 	public:
 		// 启动 session, 开始处理客户端连接.
