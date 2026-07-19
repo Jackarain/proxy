@@ -2,8 +2,8 @@
 
 add_executable(proxy_server
     main.cpp
-    main.hpp
-    version.cpp
+    ../common/main.hpp
+    ../common/version.cpp
 )
 
 target_link_libraries(proxy_server
@@ -11,11 +11,16 @@ target_link_libraries(proxy_server
     ${PROXY_LIBRARIES}
 )
 
+target_include_directories(proxy_server
+    PRIVATE
+    ../common
+)
+
 if (TARGET IOUring::IOUring)
     target_link_libraries(proxy_server IOUring::IOUring)
 endif()
 
-set_property(SOURCE version.cpp PROPERTY COMPILE_DEFINITIONS "VERSION_GIT=\"${PVERSION}\"")
+set_property(SOURCE ../common/version.cpp PROPERTY COMPILE_DEFINITIONS "VERSION_GIT=\"${PVERSION}\"")
 set_property(TARGET proxy_server PROPERTY FOLDER "server/proxy_server")
 
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)
