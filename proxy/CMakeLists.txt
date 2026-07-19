@@ -48,6 +48,7 @@ target_include_directories(libproxy
 target_compile_definitions(libproxy
 	PUBLIC
 	-DXXH_STATIC_LINKING_ONLY
+	-DFORCE_USE_FMT_FORMAT
 )
 
 if (ENABLE_SYSTEM_BOOST)

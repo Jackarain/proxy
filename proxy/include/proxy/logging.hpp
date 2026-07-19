@@ -118,34 +118,41 @@
 # endif
 #endif
 
-#if defined(__cpp_lib_format)
-# include <format>
-#endif
+#if defined(FORCE_USE_FMT_FORMAT) || \
+	!defined(__cpp_lib_format) || \
+	(_LIBCPP_VERSION < 170000) || \
+	defined(__ANDROID__)
 
-#if !defined(__cpp_lib_format)
 # ifdef _MSC_VER
 #  pragma warning(push)
 #  pragma warning(disable: 4244 4127)
 # endif // _MSC_VER
 
-#if (_LIBCPP_VERSION < 170000) || defined(__ANDROID__)
-
 # include <fmt/ostream.h>
 # include <fmt/printf.h>
 # include <fmt/format.h>
 
-namespace std {
+namespace xlogger {
 	using ::fmt::format;
 	using ::fmt::format_to;
 	using ::fmt::vformat;
 	using ::fmt::make_format_args;
 }
 
-#endif // _LIBCPP_VERSION
-
 # ifdef _MSC_VER
 #  pragma warning(pop)
 # endif
+
+#elif defined(__cpp_lib_format)
+# include <format>
+namespace xlogger {
+	using ::std::format;
+	using ::std::format_to;
+	using ::std::vformat;
+	using ::std::make_format_args;
+}
+#else
+# error "format not found"
 #endif
 
 #include <version>
@@ -663,7 +670,7 @@ namespace logger_aux__ {
 		if (!buffer)
 			return &ptm;
 
-		std::format_to(buffer,
+		xlogger::format_to(buffer,
 			"{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}",
 			ptm.tm_year + 1900, ptm.tm_mon + 1, ptm.tm_mday,
 			ptm.tm_hour, ptm.tm_min, ptm.tm_sec, (int)(time % 1000)
@@ -755,7 +762,7 @@ public:
 			fs::path filename;
 
 			if (global_logfile_size___ <= 0) {
-				auto logfile = std::format("{:04d}{:02d}{:02d}-{:02d}.log",
+				auto logfile = xlogger::format("{:04d}{:02d}{:02d}-{:02d}.log",
 					ptm->tm_year + 1900,
 					ptm->tm_mon + 1,
 					ptm->tm_mday,
@@ -763,7 +770,7 @@ public:
 				filename = logpath / logfile;
 			} else {
 				auto utc_time = std::mktime(ptm);
-				auto logfile = std::format("{:04d}{:02d}{:02d}-{}.log",
+				auto logfile = xlogger::format("{:04d}{:02d}{:02d}-{}.log",
 					ptm->tm_year + 1900,
 					ptm->tm_mon + 1,
 					ptm->tm_mday,
@@ -933,23 +940,23 @@ inline void logger_output_console__([[maybe_unused]] const logger_level__& level
 	switch (level)
 	{
 	case _logger_info_id__:
-		std::format_to(std::back_inserter(out),
+		xlogger::format_to(std::back_inserter(out),
 			"\033[32m{}\033[0m{}", prefix, message);
 		break;
 	case _logger_debug_id__:
-		std::format_to(std::back_inserter(out),
+		xlogger::format_to(std::back_inserter(out),
 			"\033[1;32m{}\033[0m{}", prefix, message);
 		break;
 	case _logger_warn_id__:
-		std::format_to(std::back_inserter(out),
+		xlogger::format_to(std::back_inserter(out),
 			"\033[1;33m{}\033[0m{}", prefix, message);
 		break;
 	case _logger_error_id__:
-		std::format_to(std::back_inserter(out),
+		xlogger::format_to(std::back_inserter(out),
 			"\033[1;31m{}\033[0m{}", prefix, message);
 		break;
 	case _logger_file_id__:
-		// std::format_to(std::back_inserter(out),
+		// xlogger::format_to(std::back_inserter(out),
 		//	"\033[1;34m{}\033[0m{}", prefix, message);
 		break;
 	}
@@ -1343,8 +1350,8 @@ public:
 	{
 		if (!global_logging___)
 			return *this;
-		out_ += std::vformat(fmt,
-			std::make_format_args(args...));
+		out_ += xlogger::vformat(fmt,
+			xlogger::make_format_args(args...));
 		return *this;
 	}
 
@@ -1353,7 +1360,7 @@ public:
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}", v);
+		xlogger::format_to(std::back_inserter(out_), "{}", v);
 		return *this;
 	}
 
@@ -1541,49 +1548,49 @@ public:
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{:#010x}", (std::size_t)v);
+		xlogger::format_to(std::back_inserter(out_), "{:#010x}", (std::size_t)v);
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::nanoseconds& v)
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}ns", v.count());
+		xlogger::format_to(std::back_inserter(out_), "{}ns", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::microseconds& v)
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}us", v.count());
+		xlogger::format_to(std::back_inserter(out_), "{}us", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::milliseconds& v)
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}ms", v.count());
+		xlogger::format_to(std::back_inserter(out_), "{}ms", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::seconds& v)
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}s", v.count());
+		xlogger::format_to(std::back_inserter(out_), "{}s", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::minutes& v)
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}min", v.count());
+		xlogger::format_to(std::back_inserter(out_), "{}min", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::hours& v)
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}h", v.count());
+		xlogger::format_to(std::back_inserter(out_), "{}h", v.count());
 		return *this;
 	}
 
@@ -1593,10 +1600,10 @@ public:
 		if (!global_logging___)
 			return *this;
 		if (v.address().is_v6())
-			std::format_to(std::back_inserter(out_),
+			xlogger::format_to(std::back_inserter(out_),
 				"[{}]:{}", v.address().to_string(), v.port());
 		else
-			std::format_to(std::back_inserter(out_),
+			xlogger::format_to(std::back_inserter(out_),
 				"{}:{}", v.address().to_string(), v.port());
 		return *this;
 	}
@@ -1605,10 +1612,10 @@ public:
 		if (!global_logging___)
 			return *this;
 		if (v.address().is_v6())
-			std::format_to(std::back_inserter(out_),
+			xlogger::format_to(std::back_inserter(out_),
 				"[{}]:{}", v.address().to_string(), v.port());
 		else
-			std::format_to(std::back_inserter(out_),
+			xlogger::format_to(std::back_inserter(out_),
 				"{}:{}", v.address().to_string(), v.port());
 		return *this;
 	}
@@ -1619,28 +1626,28 @@ public:
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}d", v.count());
+		xlogger::format_to(std::back_inserter(out_), "{}d", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::weeks& v)
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}weeks", v.count());
+		xlogger::format_to(std::back_inserter(out_), "{}weeks", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::years& v)
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}years", v.count());
+		xlogger::format_to(std::back_inserter(out_), "{}years", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::months& v)
 	{
 		if (!global_logging___)
 			return *this;
-		std::format_to(std::back_inserter(out_), "{}months", v.count());
+		xlogger::format_to(std::back_inserter(out_), "{}months", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::weekday& v)
@@ -1674,10 +1681,10 @@ public:
 		if (!global_logging___)
 			return *this;
 #if 0
-		std::format_to(std::back_inserter(out_),
+		xlogger::format_to(std::back_inserter(out_),
 			"{:04}", static_cast<int>(v));
 #else
-		std::format_to(std::back_inserter(out_),
+		xlogger::format_to(std::back_inserter(out_),
 			"{:04}{}", static_cast<int>(v),
 				logger_aux__::from_u8string(u8"年"));
 #endif
@@ -1724,10 +1731,10 @@ public:
 		if (!global_logging___)
 			return *this;
 #ifndef __cpp_lib_char8_t
-		std::format_to(std::back_inserter(out_),
+		xlogger::format_to(std::back_inserter(out_),
 			"{:02}", static_cast<int>(v));
 #else
-		std::format_to(std::back_inserter(out_),
+		xlogger::format_to(std::back_inserter(out_),
 			"{:02}{}", static_cast<unsigned int>(v),
 				logger_aux__::from_u8string(u8"日"));
 #endif
@@ -1765,23 +1772,23 @@ public:
 			auto date = p.date().year_month_day();
 			auto time = p.time_of_day();
 
-			std::format_to(std::back_inserter(out_),
+			xlogger::format_to(std::back_inserter(out_),
 				"{:04}", static_cast<unsigned int>(date.year));
-			std::format_to(std::back_inserter(out_),
+			xlogger::format_to(std::back_inserter(out_),
 				"-{:02}", date.month.as_number());
-			std::format_to(std::back_inserter(out_),
+			xlogger::format_to(std::back_inserter(out_),
 				"-{:02}", date.day.as_number());
 
-			std::format_to(std::back_inserter(out_),
+			xlogger::format_to(std::back_inserter(out_),
 				" {:02}", time.hours());
-			std::format_to(std::back_inserter(out_),
+			xlogger::format_to(std::back_inserter(out_),
 				":{:02}", time.minutes());
-			std::format_to(std::back_inserter(out_),
+			xlogger::format_to(std::back_inserter(out_),
 				":{:02}", time.seconds());
 
 			auto ms = time.total_milliseconds() % 1000;		// milliseconds.
 			if (ms != 0)
-				std::format_to(std::back_inserter(out_),
+				xlogger::format_to(std::back_inserter(out_),
 					".{:03}", ms);
 		}
 		else
