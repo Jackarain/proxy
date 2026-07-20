@@ -90,29 +90,6 @@ std::string httpd_cert_file;
 std::string httpd_key_file;
 bool autoindex = true;
 
-
-//////////////////////////////////////////////////////////////////////////
-
-net::awaitable<void> download_proxy_server(net::io_context& ioc)
-{
-	httpc::http_client httpc(ioc.get_executor(), net::buffer(default_root_certificates()));
-    httpc::http_request req;
-
-	req.method(httpc::verb::get);
-	httpc.set_download_file("./proxy_server.zip");
-	httpc.max_redirects(10);
-	httpc.user_agent("curl/8.21.0");
-
-	auto result = co_await httpc.async_perform(
-		DOWNLOAD_URL,
-		req);
-	if (result)
-	    auto& resp = *result;    // http_response
-	else
-		XLOG_ERR << "async_perform failed: " << result.error().message();
-	co_return;
-}
-
 //////////////////////////////////////////////////////////////////////////
 // HTTP 静态文件服务器
 
@@ -163,6 +140,30 @@ const static std::map<std::string, std::string> global_mimes =
 	{ ".m3u8", "application/vnd.apple.mpegurl" }
 };
 
+
+//////////////////////////////////////////////////////////////////////////
+
+net::awaitable<void> download_proxy_server(net::io_context& ioc)
+{
+	httpc::http_client httpc(ioc.get_executor(), net::buffer(default_root_certificates()));
+    httpc::http_request req;
+
+	req.method(httpc::verb::get);
+	httpc.set_download_file("./proxy_server.zip");
+	httpc.max_redirects(10);
+	httpc.user_agent("curl/8.21.0");
+
+	auto result = co_await httpc.async_perform(
+		DOWNLOAD_URL,
+		req);
+	if (result)
+	    auto& resp = *result;    // http_response
+	else
+		XLOG_ERR << "async_perform failed: " << result.error().message();
+	co_return;
+}
+
+//////////////////////////////////////////////////////////////////////////
 
 inline std::string server_date_string()
 {
