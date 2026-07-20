@@ -526,11 +526,10 @@ inline net::awaitable<void> http_session(Stream stream, fs::path doc_root, bool 
 		if (fs::is_directory(current_path))
 		{
 			// 尝试 index.html / index.htm
-			boost::system::error_code iec;
 			auto index_path = current_path / "index.html";
-			if (!fs::exists(index_path, iec))
+			if (!fs::exists(index_path, ec))
 				index_path = current_path / "index.htm";
-			if (!iec && fs::exists(index_path, iec))
+			if (!ec && fs::exists(index_path, ec))
 			{
 				co_await file_session(stream, req, index_path);
 				if (!req.keep_alive())
