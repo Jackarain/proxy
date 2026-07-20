@@ -164,6 +164,11 @@ inline bool parse_endpoint_string(std::string_view str,
 			ipv6only = true;
 	}
 
+	// 检查端口号是否有效
+	auto p = std::stoi(port);
+	if (p < 0 || p > 65535)
+		return false;
+
 	return true;
 }
 
