@@ -138,14 +138,7 @@ jobs:
           path: build/bin/proxy_server
 
   MacOS:
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        include:
-          - arch: x86_64
-            runner: macos-13
-          - arch: arm64
-            runner: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
 
@@ -153,15 +146,19 @@ jobs:
         run: |
           brew install cmake ninja
 
-      - name: Build proxy
+      - name: Build proxy (Universal Binary: x86_64 + arm64)
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -G Ninja
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_BUILD_WERROR=OFF \
+            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+            -G Ninja
           cmake --build build --config Release
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: proxy_server-macos_${{ matrix.arch }}
+          name: proxy_server-macos-universal
           path: build/bin/proxy_server
 
   Windows:
