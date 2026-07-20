@@ -341,6 +341,7 @@ inline std::string generate_directory_listing(
 	const std::string& request_target)
 {
 	std::string html;
+
 	html += "<html>\n<head><title>Index of ";
 	html += request_target;
 	html += "</title></head>\n<body>\n<h1>Index of ";
@@ -349,14 +350,7 @@ inline std::string generate_directory_listing(
 
 	// 添加父目录链接
 	if (request_target != "/")
-	{
-		auto parent = fs::path(request_target).parent_path().string();
-		if (parent.empty())
-			parent = "/";
-		html += "<a href=\"";
-		html += parent;
-		html += "/\">../</a>\n";
-	}
+		html += "<a href=\"../\">../</a>\n";
 
 	boost::system::error_code ec;
 	std::vector<fs::directory_entry> entries;
@@ -368,14 +362,14 @@ inline std::string generate_directory_listing(
 		entries.push_back(entry);
 	}
 
-	// 排序：目录在前，文件在后，按名称字母顺序
+	// 排序：目录在前，文件在后，按名称字母顺序.
 	std::sort(entries.begin(), entries.end(),
 		[](const fs::directory_entry& a, const fs::directory_entry& b)
 		{
 			bool a_dir = fs::is_directory(a.path());
 			bool b_dir = fs::is_directory(b.path());
 			if (a_dir != b_dir)
-				return a_dir;  // 目录排在文件前面
+				return a_dir;  // 目录排在文件前面.
 			return a.path().filename().string() < b.path().filename().string();
 		});
 
