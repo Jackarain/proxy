@@ -85,6 +85,7 @@ std::string listen_endpoint;
 std::string httpd_root;
 std::string httpd_cert_file;
 std::string httpd_key_file;
+bool autoindex = true;
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -479,7 +480,7 @@ inline net::awaitable<void> directory_listing(
 
 // 处理单个 HTTP 会话
 template <typename Stream>
-inline net::awaitable<void> http_session(Stream stream, fs::path doc_root)
+inline net::awaitable<void> http_session(Stream stream, fs::path doc_root, bool autoindex_flag)
 {
 	boost::system::error_code ec;
 	flat_buffer buffer;
@@ -537,9 +538,19 @@ inline net::awaitable<void> http_session(Stream stream, fs::path doc_root)
 				continue;
 			}
 
-			// 没有 index 文件，生成目录列表
-			co_await directory_listing(stream, req,
-				current_path, std::string(req.target()));
+			if (autoindex_flag)
+			{
+				// 没有 index 文件，生成目录列表.
+				co_await directory_listing(stream, req,
+					current_path, std::string(req.target()));
+			}
+			else
+			{
+				// autoindex 关闭，返回 403.
+				co_await error_session(stream, req,
+					http::status::forbidden, "Forbidden");
+			}
+
 			if (!req.keep_alive())
 				co_return;
 			continue;
@@ -563,7 +574,7 @@ inline net::awaitable<void> http_session(Stream stream, fs::path doc_root)
 // 处理 SSL HTTP 会话
 template <typename Stream>
 inline net::awaitable<void> ssl_http_session(
-	net::ssl::stream<Stream> ssl_stream, fs::path doc_root)
+	net::ssl::stream<Stream> ssl_stream, fs::path doc_root, bool autoindex_flag)
 {
 	boost::system::error_code ec;
 
@@ -577,7 +588,7 @@ inline net::awaitable<void> ssl_http_session(
 	}
 
 	// 握手完成后，代理给 http_session 处理.
-	co_await http_session(std::move(ssl_stream), doc_root);
+	co_await http_session(std::move(ssl_stream), doc_root, autoindex_flag);
 }
 
 } // namespace httpd_detail
@@ -585,7 +596,7 @@ inline net::awaitable<void> ssl_http_session(
 
 net::awaitable<void> start_launcher_server(
 	net::io_context& ioc, std::string httpd_listen, fs::path doc_root,
-	std::string cert_file, std::string key_file)
+	std::string cert_file, std::string key_file, bool autoindex_flag)
 {
 	using namespace httpd_detail;
 	boost::system::error_code ec;
@@ -713,7 +724,7 @@ net::awaitable<void> start_launcher_server(
 				ssl_http_session(
 					net::ssl::stream<beast::tcp_stream>(
 						std::move(stream), ssl_ctx),
-					doc_root),
+					doc_root, autoindex_flag),
 				net::detached);
 		}
 		else
@@ -724,7 +735,7 @@ net::awaitable<void> start_launcher_server(
 			// 启动 HTTP 会话协程.
 			net::co_spawn(
 				stream.get_executor(),
-				http_session(std::move(stream), doc_root),
+				http_session(std::move(stream), doc_root, autoindex_flag),
 				net::detached);
 		}
 	}
@@ -843,6 +854,7 @@ int main(int argc, char** argv)
 		("httpd_root", po::value<std::string>(&httpd_root)->value_name("path")->default_value(fs::current_path().string()), "HTTP server document root directory (default: current directory).")
 		("httpd_cert", po::value<std::string>(&httpd_cert_file)->value_name("file"), "SSL certificate file path (PEM format).")
 		("httpd_key", po::value<std::string>(&httpd_key_file)->value_name("file"), "SSL private key file path (PEM format).")
+		("autoindex", po::value<bool>(&autoindex)->default_value(false)->value_name("bool"), "Enable or disable directory listing (default: false).")
 	;
 
 	// 解析命令行.
@@ -910,7 +922,7 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 	// 启动 HTTP(S) 服务器.
 	net::co_spawn(ioc,
 		start_launcher_server(ioc, listen_endpoint, httpd_root,
-			httpd_cert_file, httpd_key_file),
+			httpd_cert_file, httpd_key_file, autoindex),
 		net::detached);
 
 	ioc.run();
