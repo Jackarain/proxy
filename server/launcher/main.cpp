@@ -41,6 +41,7 @@
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
+#include <boost/beast/websocket.hpp>
 
 #include <boost/nowide/args.hpp>
 #include <boost/nowide/convert.hpp>
@@ -485,6 +486,65 @@ inline net::awaitable<void> directory_listing(
 	co_return;
 }
 
+// 处理 WebSocket 会话
+template <typename Stream>
+inline net::awaitable<void> ws_session(
+	beast::websocket::stream<Stream> ws,
+	dynamic_request req)
+{
+	boost::system::error_code ec;
+
+	// 设置 WebSocket 超时选项.
+	ws.set_option(
+		beast::websocket::stream_base::timeout::suggested(
+			beast::role_type::server));
+
+	// 设置 WebSocket 响应装饰器.
+	ws.set_option(beast::websocket::stream_base::decorator(
+		[](beast::websocket::response_type& m)
+		{
+			m.set(http::field::server, version_string);
+		}));
+
+	// 接受 WebSocket 握手.
+	co_await ws.async_accept(req, net_awaitable[ec]);
+	if (ec)
+	{
+		XLOG_ERR << "websocket accept: " << ec.message();
+		co_return;
+	}
+
+	XLOG_INFO << "WebSocket connection established";
+
+	// WebSocket 消息处理循环（回声服务）.
+	beast::flat_buffer ws_buffer;
+	for (;;)
+	{
+		ws_buffer.clear();
+		co_await ws.async_read(ws_buffer, net_awaitable[ec]);
+		if (ec == beast::websocket::error::closed)
+		{
+			XLOG_INFO << "WebSocket connection closed";
+			break;
+		}
+		if (ec)
+		{
+			XLOG_ERR << "websocket read: " << ec.message();
+			break;
+		}
+
+		// 将消息原样发送回去（回声）.
+		ws.text(ws.got_text());
+		co_await ws.async_write(ws_buffer.data(), net_awaitable[ec]);
+		if (ec)
+		{
+			XLOG_ERR << "websocket write: " << ec.message();
+			break;
+		}
+	}
+	co_return;
+}
+
 // 处理单个 HTTP 会话
 template <typename Stream>
 inline net::awaitable<void> http_session(Stream stream, fs::path doc_root, bool autoindex_flag)
@@ -508,6 +568,15 @@ inline net::awaitable<void> http_session(Stream stream, fs::path doc_root, bool 
 		}
 
 		dynamic_request req = parser.release();
+
+		// 检测 WebSocket 升级请求，交给 ws_session 处理.
+		if (beast::websocket::is_upgrade(req))
+		{
+			co_await ws_session(
+				beast::websocket::stream<Stream>{std::move(stream)},
+				std::move(req));
+			co_return;
+		}
 
 		if (req.method() != http::verb::get)
 		{
