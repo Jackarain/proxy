@@ -146,7 +146,7 @@ jobs:
         run: |
           brew install cmake ninja
 
-      - name: Build proxy (Universal Binary: x86_64 + arm64)
+      - name: "Build proxy (Universal Binary: x86_64 + arm64)"
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
