@@ -9,6 +9,8 @@ add_executable(launcher
 target_link_libraries(launcher
     ${OPENSSL_LIBRARIES}
     ${PROXY_LIBRARIES}
+    httpc::httpc
+    Boost::json
 )
 
 target_include_directories(launcher
