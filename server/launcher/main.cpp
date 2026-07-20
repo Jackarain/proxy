@@ -414,7 +414,7 @@ inline std::string generate_directory_listing(
 		{
 			html += "/\">";
 			html += escaped;
-			html += "/</a>\n";
+			html += "/</a>";
 		}
 		else
 		{
