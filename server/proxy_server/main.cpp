@@ -101,6 +101,7 @@ int udp_timeout;
 int rate_limit;
 
 std::string asio_config;
+std::string monitor_url;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -302,6 +303,7 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.htpasswd_ = htpasswd;
 	if (!dns_upstream.empty())
 		opt.dns_upstream_ = dns_upstream;
+	opt.monitor_url_ = monitor_url;
 
 	server = proxy_server::make(ioc.get_executor(), opt);
 	server->start();
@@ -470,6 +472,7 @@ int main(int argc, char** argv)
 		("noise_length", po::value<int64_t>(&noise_length)->value_name("length")->default_value(-1), "Length of the noise data in bytes (-1 = disable, 0-4095).")
 
 		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Environment variable name for configuring Boost.Asio (default: ASIO).")
+		("monitor_url", po::value<std::string>(&monitor_url)->value_name("monitor url")->default_value(""), "Specify the monitor URL for the proxy server.")
 	;
 
 	// 解析命令行.
