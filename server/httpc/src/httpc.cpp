@@ -166,7 +166,7 @@ namespace {
 
             auto& resp = *result;
 
-            if (client.follow_redirect() && redirect_count < client.max_redirects())
+            if (redirect_count < client.max_redirects())
             {
                 auto status = resp.result_int();
                 if (status == 301 || status == 302 || status == 303 || status == 307
@@ -765,16 +765,6 @@ void http_client::check_certificate(bool check) noexcept
     {
         ssl_ctx_.set_verify_mode(ssl::verify_none);
     }
-}
-
-bool http_client::follow_redirect() const noexcept
-{
-    return follow_redirect_;
-}
-
-void http_client::follow_redirect(bool follow) noexcept
-{
-    follow_redirect_ = follow;
 }
 
 int http_client::max_redirects() const noexcept

@@ -174,11 +174,7 @@ public:
     bool check_certificate() const noexcept;
     void check_certificate(bool check) noexcept;
 
-    // 设置是否跟随重定向 (默认开启).
-    bool follow_redirect() const noexcept;
-    void follow_redirect(bool follow) noexcept;
-
-    // 设置最大重定向次数 (默认 5).
+    // 设置最大重定向次数 (0 表示不重定向, 默认 5).
     int max_redirects() const noexcept;
     void max_redirects(int n) noexcept;
 
@@ -231,7 +227,6 @@ private:
     bool check_certificate_ {false};
 
     // 重定向设置.
-    bool follow_redirect_ {true};
     int max_redirects_ {5};
 
     // 超时设置, 默认永不超时.
