@@ -21,8 +21,10 @@
 
 #include <boost/core/ignore_unused.hpp>
 
-// #include <boost/asio/ssl/impl/src.hpp>
-// #include <boost/beast/src.hpp>
+#if defined(BUILD_ASIO_SSL_AND_BEAST_SRC)
+# include <boost/asio/ssl/impl/src.hpp>
+# include <boost/beast/src.hpp>
+#endif
 
 #include <charconv>
 #include <fstream>
