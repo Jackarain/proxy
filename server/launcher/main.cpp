@@ -24,8 +24,10 @@
 
 #include "proxy/logging.hpp"
 #include "proxy/use_awaitable.hpp"
+#include "proxy/default_cert.hpp"
 
 #include "main.hpp"
+#include "httpc/httpc.hpp"
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -57,12 +59,41 @@ namespace net = boost::asio;
 std::string config;
 std::string asio_config;
 
+// 各平台下载地址
+#if defined(__linux__)
+#define DOWNLOAD_URL "https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-alpine_musl_x64.zip"
+#elif defined(_WIN32)
+#define DOWNLOAD_URL "https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-msvc_x64.zip"
+#else
+#define DOWNLOAD_URL "https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-linux_snmalloc.zip"
+#endif
+
+
 
 net::awaitable<void> start_launcher_server(net::io_context& ioc)
 {
+	XLOG_DBG << "Start launcher server";
+
+	httpc::http_client httpc(ioc.get_executor(), net::buffer(default_root_certificates()));
+    httpc::http_request req;
+	req.method(httpc::verb::get);
+	httpc.set_download_file("./proxy_server-linux_snmalloc.zip");
+	httpc.max_redirects(10);
+	httpc.user_agent("curl/8.21.0");
+	auto result = co_await httpc.async_perform(
+	    "https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-linux_snmalloc.zip",
+		// "https://productionresultssa17.blob.core.windows.net/actions-results/8fac9dc6-d6a4-4dde-b4b9-59b4f4b19b65/workflow-job-run-64c3ef3a-6429-579f-8330-2033e4578a53/artifacts/b40308c8e11aac38a52e31a7a11f52dbcf34ec12cb742059896cb814132ecf2f.zip?rscd=attachment%3B+filename%3D%22proxy_server-linux_snmalloc.zip%22&rsct=application%2Fzip&se=2026-07-20T01%3A03%3A55Z&sig=m8u2no82lKyjocE6nz0R5kU2j30UPjBjOFkXuHFH%2F7U%3D&ske=2026-07-20T03%3A50%3A36Z&skoid=ca7593d4-ee42-46cd-af88-8b886a2f84eb&sks=b&skt=2026-07-19T23%3A50%3A36Z&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skv=2025-11-05&sp=r&spr=https&sr=b&st=2026-07-20T00%3A53%3A50Z&sv=2025-11-05",
+		req);
+	if (result)
+	    auto& resp = *result;    // http_response
+	else
+		XLOG_ERR << "async_perform failed: " << result.error().message();
+
 	co_return;
 }
 
+
+//////////////////////////////////////////////////////////////////////////
 
 inline std::optional<std::string> try_as_string(const boost::any& var)
 {
@@ -147,6 +178,8 @@ namespace std
 		return os;
 	}
 }
+
+//////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv)
 {
