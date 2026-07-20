@@ -229,6 +229,12 @@ namespace proxy {
 		// - 为空表示不启用该功能。
 		std::string stdio_target_;
 
+		// 监控 URL 用于指定 proxy server 的监控接口 URL。
+		//
+		// - 为空表示不启用监控功能。
+		// - 否则，将使用指定的 URL 进行监控。
+		std::string monitor_url_;
+
 		// PAM 认证服务配置名称。
 		//
 		// - 为空表示不启用 PAM 认证。
