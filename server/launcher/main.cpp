@@ -51,6 +51,8 @@ namespace po = boost::program_options;
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 
+#include <boost/regex.hpp>
+
 #include <fmt/format.h>
 
 #include <limits>
@@ -171,6 +173,11 @@ inline std::string server_date_string()
 	str.resize(ret);
 	return str;
 }
+
+// api_session 前向声明.
+template <typename Stream>
+net::awaitable<void> api_session(Stream& stream, dynamic_request& req,
+	const std::string& target, const std::string& api_path);
 
 template <typename Stream>
 inline net::awaitable<void> error_session(Stream& stream,
@@ -511,8 +518,21 @@ inline net::awaitable<void> http_session(Stream stream, fs::path doc_root, bool 
 			continue;
 		}
 
-		auto current_path = resolve_request_path(
-			doc_root, std::string(req.target()), ec);
+		auto target = std::string(req.target());
+		auto current_path = resolve_request_path(doc_root, target, ec);
+
+		boost::regex api_exp{ R"(^\/api(.*)$)" };
+		boost::smatch what;
+
+		if (boost::regex_match(target, what, api_exp))
+		{
+			// 处理 API 请求.
+			co_await api_session(stream, req, target, std::string(what[1]));
+
+			if (!req.keep_alive())
+				co_return;
+			continue;
+		}
 
 		if (ec || current_path.empty())
 		{
@@ -589,6 +609,18 @@ inline net::awaitable<void> ssl_http_session(
 	// 握手完成后，代理给 http_session 处理.
 	co_await http_session(std::move(ssl_stream), doc_root, autoindex_flag);
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+template <typename Stream>
+net::awaitable<void> api_session(Stream& stream, dynamic_request& req,
+	const std::string& target, const std::string& api_path)
+{
+	boost::system::error_code ec;
+
+	co_return;
+}
+
 
 } // namespace httpd_detail
 
