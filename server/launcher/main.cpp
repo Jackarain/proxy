@@ -37,6 +37,7 @@
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -82,6 +83,8 @@ std::string config;
 std::string asio_config;
 std::string listen_endpoint;
 std::string httpd_root;
+std::string httpd_cert_file;
+std::string httpd_key_file;
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -562,11 +565,32 @@ inline net::awaitable<void> http_session(Stream stream, fs::path doc_root)
 	}
 }
 
+// 处理 SSL HTTP 会话
+template <typename Stream>
+inline net::awaitable<void> ssl_http_session(
+	net::ssl::stream<Stream> ssl_stream, fs::path doc_root)
+{
+	boost::system::error_code ec;
+
+	// 执行 SSL 握手.
+	co_await ssl_stream.async_handshake(
+		net::ssl::stream_base::server, net_awaitable[ec]);
+	if (ec)
+	{
+		XLOG_ERR << "SSL handshake failed: " << ec.message();
+		co_return;
+	}
+
+	// 握手完成后，代理给 http_session 处理.
+	co_await http_session(std::move(ssl_stream), doc_root);
+}
+
 } // namespace httpd_detail
 
 
-net::awaitable<void> start_launcher_server(net::io_context& ioc,
-	std::string httpd_listen, fs::path doc_root)
+net::awaitable<void> start_launcher_server(
+	net::io_context& ioc, std::string httpd_listen, fs::path doc_root,
+	std::string cert_file, std::string key_file)
 {
 	using namespace httpd_detail;
 	boost::system::error_code ec;
@@ -610,7 +634,59 @@ net::awaitable<void> start_launcher_server(net::io_context& ioc,
 	tcp::acceptor acceptor(ioc,
 		tcp::endpoint(listen_addr, (unsigned short)atoi(port.c_str())));
 
-	XLOG_INFO << "HTTP file server listening on "
+	// 尝试加载 SSL 证书和密钥.
+	bool use_ssl = false;
+	net::ssl::context ssl_ctx(net::ssl::context::sslv23);
+
+	if (!cert_file.empty() && !key_file.empty())
+	{
+		// 检查证书文件是否存在.
+		if (!fs::exists(cert_file, ec))
+		{
+			XLOG_ERR << "Certificate file not found: " << cert_file;
+			co_return;
+		}
+
+		// 检查密钥文件是否存在.
+		if (!fs::exists(key_file, ec))
+		{
+			XLOG_ERR << "Key file not found: " << key_file;
+			co_return;
+		}
+
+		// 设置 SSL 上下文选项.
+		ssl_ctx.set_options(
+			net::ssl::context::default_workarounds
+			| net::ssl::context::no_sslv2
+			| net::ssl::context::no_sslv3
+			| net::ssl::context::no_tlsv1
+			| net::ssl::context::no_tlsv1_1
+			| net::ssl::context::single_dh_use
+		);
+
+		// 加载证书文件.
+		ssl_ctx.use_certificate_chain_file(cert_file, ec);
+		if (ec)
+		{
+			XLOG_ERR << "Failed to load certificate file: "
+				<< cert_file << ", error: " << ec.message();
+			co_return;
+		}
+
+		// 加载私钥文件.
+		ssl_ctx.use_private_key_file(key_file, net::ssl::context::pem, ec);
+		if (ec)
+		{
+			XLOG_ERR << "Failed to load key file: "
+				<< key_file << ", error: " << ec.message();
+			co_return;
+		}
+
+		use_ssl = true;
+	}
+
+	XLOG_INFO << "HTTP" << (use_ssl ? "S" : "")
+		<< " file server listening on "
 		<< listen_addr.to_string() << ":" << port
 		<< ", document root: " << doc_root.string();
 
@@ -631,14 +707,31 @@ net::awaitable<void> start_launcher_server(net::io_context& ioc,
 		tcp::no_delay nd(true);
 		client.set_option(nd, ec);
 
-		// 创建 tcp_stream 对象.
-		beast::tcp_stream stream(std::move(client));
+		if (use_ssl)
+		{
+			// 创建 SSL stream 对象.
+			beast::tcp_stream stream(std::move(client));
 
-		// 启动 HTTP 会话协程.
-		net::co_spawn(
-			stream.get_executor(),
-			http_session(std::move(stream), doc_root),
-			net::detached);
+			// 启动 SSL HTTP 会话协程.
+			net::co_spawn(
+				stream.get_executor(),
+				ssl_http_session(
+					net::ssl::stream<beast::tcp_stream>(
+						std::move(stream), ssl_ctx),
+					doc_root),
+				net::detached);
+		}
+		else
+		{
+			// 创建 tcp_stream 对象.
+			beast::tcp_stream stream(std::move(client));
+
+			// 启动 HTTP 会话协程.
+			net::co_spawn(
+				stream.get_executor(),
+				http_session(std::move(stream), doc_root),
+				net::detached);
+		}
 	}
 
 	co_return;
@@ -753,6 +846,8 @@ int main(int argc, char** argv)
 		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Environment variable name for configuring Boost.Asio (default: ASIO).")
 		("httpd_listen", po::value<std::string>(&listen_endpoint)->value_name("addr:port")->default_value("0.0.0.0:8080"), "HTTP server listen address and port (default: 0.0.0.0:8080).")
 		("httpd_root", po::value<std::string>(&httpd_root)->value_name("path")->default_value(fs::current_path().string()), "HTTP server document root directory (default: current directory).")
+		("httpd_cert", po::value<std::string>(&httpd_cert_file)->value_name("file"), "SSL certificate file path (PEM format).")
+		("httpd_key", po::value<std::string>(&httpd_key_file)->value_name("file"), "SSL private key file path (PEM format).")
 	;
 
 	// 解析命令行.
@@ -817,9 +912,10 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 	signal(SIGPIPE, SIG_IGN);
 #endif
 
-	// 启动 HTTP 服务器.
+	// 启动 HTTP(S) 服务器.
 	net::co_spawn(ioc,
-		start_launcher_server(ioc, listen_endpoint, httpd_root),
+		start_launcher_server(ioc, listen_endpoint, httpd_root,
+			httpd_cert_file, httpd_key_file),
 		net::detached);
 
 	ioc.run();
