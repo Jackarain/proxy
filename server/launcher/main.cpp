@@ -138,6 +138,7 @@ const static std::map<std::string, std::string> global_mimes =
 	{ ".css", "text/css; charset=utf-8" },
 	{ ".txt", "text/plain; charset=utf-8" },
 	{ ".md", "text/plain; charset=utf-8" },
+	{ ".log", "text/plain; charset=utf-8" },
 	{ ".xml", "text/xml" },
 	{ ".ico", "image/x-icon" },
 	{ ".ttf", "application/x-font-ttf" },
