@@ -152,6 +152,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_BUILD_WERROR=OFF \
             -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
             -G Ninja
           cmake --build build --config Release
 
