@@ -77,9 +77,14 @@ using tcp = net::ip::tcp;
 #define DOWNLOAD_URL "https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-macos-universal.zip"
 #endif
 
+// 启动参数
 std::string config;
 std::string asio_config;
+std::string listen_endpoint;
+std::string httpd_root;
 
+
+//////////////////////////////////////////////////////////////////////////
 
 net::awaitable<void> download_proxy_server(net::io_context& ioc)
 {
@@ -163,11 +168,8 @@ inline std::string server_date_string()
 }
 
 template <typename Stream>
-inline net::awaitable<void> error_session(
-	Stream& stream,
-	dynamic_request& req,
-	http::status code,
-	const std::string& message)
+inline net::awaitable<void> error_session(Stream& stream,
+	dynamic_request& req, http::status code, const std::string& message)
 {
 	boost::system::error_code ec;
 
@@ -197,12 +199,9 @@ inline std::string select_content_type(const fs::path& file)
 }
 
 template <typename Stream>
-inline net::awaitable<void> stream_file_body(
-	Stream& stream,
-	buffer_response& res,
-	response_serializer& sr,
-	std::fstream& file_stream,
-	size_t content_length)
+inline net::awaitable<void> stream_file_body(Stream& stream,
+	buffer_response& res, response_serializer& sr,
+	std::fstream& file_stream, size_t content_length)
 {
 	boost::system::error_code ec;
 
@@ -261,10 +260,8 @@ inline net::awaitable<void> stream_file_body(
 
 // 处理文件下载
 template <typename Stream>
-inline net::awaitable<void> file_session(
-	Stream& stream,
-	dynamic_request& req,
-	fs::path file)
+inline net::awaitable<void> file_session(Stream& stream,
+	dynamic_request& req, fs::path file)
 {
 	if (req.method() != http::verb::get)
 	{
@@ -305,16 +302,16 @@ inline net::awaitable<void> file_session(
 	co_return;
 }
 
-// 解析请求路径并做路径遍历防护
-inline fs::path resolve_request_path(
-	const fs::path& doc_root,
-	const std::string& target,
-	boost::system::error_code& ec)
+// 解析请求路径并做路径遍历防护.
+inline fs::path resolve_request_path(const fs::path& doc_root,
+	const std::string& target, boost::system::error_code& ec)
 {
 	std::string path_part = target;
+
 	// 去掉开头的 '/'
 	if (!path_part.empty() && path_part[0] == '/')
 		path_part.erase(0, 1);
+
 	// 去掉查询字符串
 	auto qpos = path_part.find('?');
 	if (qpos != std::string::npos)
@@ -326,7 +323,7 @@ inline fs::path resolve_request_path(
 	auto current_path = fs::canonical(
 		doc_root / path_part, ec).make_preferred();
 
-	if (ec || current_path.string().find(doc_root.string()) != 0)
+	if (ec || !current_path.string().starts_with(doc_root.string()))
 	{
 		ec = boost::asio::error::not_found;
 		return {};
@@ -484,9 +481,7 @@ inline net::awaitable<void> directory_listing(
 
 // 处理单个 HTTP 会话
 template <typename Stream>
-inline net::awaitable<void> http_session(
-	Stream stream,
-	fs::path doc_root)
+inline net::awaitable<void> http_session(Stream stream, fs::path doc_root)
 {
 	boost::system::error_code ec;
 	flat_buffer buffer;
@@ -570,67 +565,50 @@ inline net::awaitable<void> http_session(
 } // namespace httpd_detail
 
 
-net::awaitable<void> start_launcher_server(
-	net::io_context& ioc,
-	std::string httpd_listen,
-	fs::path doc_root)
+net::awaitable<void> start_launcher_server(net::io_context& ioc,
+	std::string httpd_listen, fs::path doc_root)
 {
 	using namespace httpd_detail;
+	boost::system::error_code ec;
 
-	// 解析监听地址和端口
-	auto colon_pos = httpd_listen.rfind(':');
-	if (colon_pos == std::string::npos)
+	// 规范化文档根目录路径.
+	doc_root = fs::canonical(doc_root, ec);
+	if (ec)
 	{
-		XLOG_ERR << "Invalid httpd listen address: " << httpd_listen;
+		XLOG_ERR << "Invalid document root: "
+			<< doc_root.string()
+			<< ", err: "
+			<< ec.message();
 		co_return;
 	}
 
-	auto addr_str = httpd_listen.substr(0, colon_pos);
-	auto port_str = httpd_listen.substr(colon_pos + 1);
-
-	if (addr_str.empty() || port_str.empty())
-	{
-		XLOG_ERR << "Invalid httpd listen address: " << httpd_listen;
-		co_return;
-	}
-
-	// 处理 IPv6 地址（带方括号）
-	if (addr_str.size() >= 2 && addr_str.front() == '[' && addr_str.back() == ']')
-		addr_str = addr_str.substr(1, addr_str.size() - 2);
-
-	unsigned short port;
-	try
-	{
-		auto p = std::stoi(port_str);
-		if (p < 0 || p > 65535)
-		{
-			XLOG_ERR << "Invalid port number: " << port_str;
-			co_return;
-		}
-		port = static_cast<unsigned short>(p);
-	}
-	catch (...)
-	{
-		XLOG_ERR << "Invalid port number: " << port_str;
-		co_return;
-	}
-
+	// 检查文档根目录是否存在且为目录.
 	if (!fs::exists(doc_root) || !fs::is_directory(doc_root))
 	{
 		XLOG_ERR << "Document root does not exist: " << doc_root.string();
 		co_return;
 	}
 
-	boost::system::error_code ec;
-	auto listen_addr = boost::asio::ip::make_address(addr_str, ec);
+	// 解析监听地址和端口.
+	std::string host, port;
+	bool ipv6only = false;
+
+	// 解析监听地址和端口.
+	if (!parse_endpoint_string(httpd_listen, host, port, ipv6only))
+	{
+		XLOG_ERR << "Invalid httpd listen address: " << httpd_listen;
+		co_return;
+	}
+
+	auto listen_addr = boost::asio::ip::make_address(host, ec);
 	if (ec)
 	{
-		XLOG_ERR << "Invalid listen address: " << addr_str;
+		XLOG_ERR << "Invalid listen address: " << host;
 		co_return;
 	}
 
 	tcp::acceptor acceptor(ioc,
-			tcp::endpoint(listen_addr, port));
+		tcp::endpoint(listen_addr, (unsigned short)atoi(port.c_str())));
 
 	XLOG_INFO << "HTTP file server listening on "
 		<< listen_addr.to_string() << ":" << port
@@ -640,25 +618,23 @@ net::awaitable<void> start_launcher_server(
 	{
 		boost::system::error_code ec;
 
-		tcp::socket client =
-			co_await acceptor.async_accept(net_awaitable[ec]);
+		// 接受新连接.
+		tcp::socket client = co_await acceptor.async_accept(net_awaitable[ec]);
 		if (ec)
 		{
 			XLOG_ERR << "Accept error: " << ec.message();
 			break;
 		}
 
-		{
-			net::socket_base::keep_alive option(true);
-			client.set_option(option, ec);
-		}
-		{
-			tcp::no_delay option(true);
-			client.set_option(option, ec);
-		}
+		net::socket_base::keep_alive ka(true);
+		client.set_option(ka, ec);
+		tcp::no_delay nd(true);
+		client.set_option(nd, ec);
 
+		// 创建 tcp_stream 对象.
 		beast::tcp_stream stream(std::move(client));
 
+		// 启动 HTTP 会话协程.
 		net::co_spawn(
 			stream.get_executor(),
 			http_session(std::move(stream), doc_root),
@@ -775,8 +751,8 @@ int main(int argc, char** argv)
 		("help,h", "Show this help message and exit.")
 		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load configuration options from the specified file.")
 		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Environment variable name for configuring Boost.Asio (default: ASIO).")
-		("httpd_listen", po::value<std::string>()->value_name("addr:port")->default_value("0.0.0.0:8080"), "HTTP server listen address and port (default: 0.0.0.0:8080).")
-		("httpd_root", po::value<std::string>()->value_name("path")->default_value(fs::current_path().string()), "HTTP server document root directory (default: current directory).")
+		("httpd_listen", po::value<std::string>(&listen_endpoint)->value_name("addr:port")->default_value("0.0.0.0:8080"), "HTTP server listen address and port (default: 0.0.0.0:8080).")
+		("httpd_root", po::value<std::string>(&httpd_root)->value_name("path")->default_value(fs::current_path().string()), "HTTP server document root directory (default: current directory).")
 	;
 
 	// 解析命令行.
@@ -841,15 +817,11 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 	signal(SIGPIPE, SIG_IGN);
 #endif
 
-	// 解析 httpd 参数
-	std::string httpd_listen = "0.0.0.0:8080";
-	fs::path httpd_root = fs::current_path();
-	if (vm.count("httpd_listen"))
-		httpd_listen = vm["httpd_listen"].as<std::string>();
-	if (vm.count("httpd_root"))
-		httpd_root = vm["httpd_root"].as<std::string>();
+	// 启动 HTTP 服务器.
+	net::co_spawn(ioc,
+		start_launcher_server(ioc, listen_endpoint, httpd_root),
+		net::detached);
 
-	net::co_spawn(ioc, start_launcher_server(ioc, httpd_listen, httpd_root), net::detached);
 	ioc.run();
 
 	return EXIT_SUCCESS;
