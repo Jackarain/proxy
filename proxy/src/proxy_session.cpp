@@ -512,6 +512,121 @@ R"x*x*x(<html>
 	//////////////////////////////////////////////////////////////////////////
 	// http 相关实现
 
+	template <typename DirIter>
+	net::awaitable<void>
+	proxy_session::on_http_json_impl(const http_context& hctx) noexcept
+	{
+		boost::system::error_code ec;
+
+		auto& request = hctx.request_;
+		auto target = hctx.target_path_;
+
+		DirIter end;
+		DirIter it(target, fs::directory_options::skip_permission_denied, ec);
+		if (ec)
+		{
+			string_response res{ http::status::found, request.version() };
+			res.set(http::field::server, version_string);
+			res.set(http::field::date, server_date_string());
+			res.set(http::field::location, "/");
+			res.keep_alive(request.keep_alive());
+			res.prepare_payload();
+
+			http::serializer<false, string_body, http::fields> sr(res);
+			co_await http::async_write(
+				m_local_socket,
+				sr,
+				net_awaitable[ec]);
+			if (ec)
+			{
+				log_conn_warning()
+					<< ", http_dir write location err: "
+					<< ec.message();
+			}
+
+			co_return;
+		}
+
+		bool hash = false;
+
+		urls::params_view qp(hctx.regex_results_[1]);
+		if (qp.find("hash") != qp.end())
+			hash = true;
+
+		boost::json::array path_list;
+
+		for (; it != end && !m_abort; it++)
+		{
+			const auto& item = it->path();
+			boost::json::object obj;
+
+			auto [ftime, unc_path] = file_last_write_time(item);
+			obj["last_write_time"] = ftime;
+
+			if (fs::is_directory(unc_path.empty() ? item : unc_path, ec))
+			{
+				auto leaf = boost::nowide::narrow(fs::relative(item, target).wstring());
+				obj["filename"] = leaf;
+				obj["is_dir"] = true;
+			}
+			else
+			{
+				auto leaf = boost::nowide::narrow(fs::relative(item, target).wstring());
+				obj["filename"] = leaf;
+				obj["is_dir"] = false;
+				if (unc_path.empty())
+					unc_path = item;
+				auto sz = fs::file_size(unc_path, ec);
+				if (ec)
+					sz = 0;
+				obj["filesize"] = sz;
+				if (hash)
+				{
+					auto ret = co_await
+						fileop::async_hash_file(unc_path, net_awaitable[ec]);
+					if (ec)
+						ret = "";
+					obj["hash"] = ret;
+				}
+			}
+
+			path_list.push_back(obj);
+		}
+
+		auto body = boost::json::serialize(path_list);
+
+		string_response res{ http::status::ok, request.version() };
+		res.set(http::field::server, version_string);
+		res.set(http::field::date, server_date_string());
+		res.set(http::field::content_type, "application/json");
+		res.keep_alive(request.keep_alive());
+		res.body() = body;
+		res.prepare_payload();
+
+		http::serializer<false, string_body, http::fields> sr(res);
+		co_await http::async_write(
+			m_local_socket,
+			sr,
+			net_awaitable[ec]);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", http dir write body err: "
+				<< ec.message();
+		}
+
+		co_return;
+	}
+
+	// explicit instantiations for on_http_json_impl
+	template
+	net::awaitable<void>
+	proxy_session::on_http_json_impl<fs::recursive_directory_iterator>(const http_context&) noexcept;
+
+	template
+	net::awaitable<void>
+	proxy_session::on_http_json_impl<fs::directory_iterator>(const http_context&) noexcept;
+
 	net::awaitable<void> proxy_session::on_http_all_json(const http_context& hctx) noexcept
 	{
 		co_await on_http_json_impl<fs::recursive_directory_iterator>(hctx);
@@ -723,6 +838,46 @@ R"x*x*x(<html>
 
 		return true;
 	}
+
+	template <typename CompletionToken>
+	auto
+	proxy_session::async_pam_auth(const std::string& username, const std::string& passwd,
+		const std::string& service_name, CompletionToken&& token) noexcept
+	{
+		return net::async_initiate<CompletionToken,
+			void(boost::system::error_code, bool)>
+			([this, username, passwd, service_name](auto&& handler) mutable
+			{
+				// 这里不需要保持对 proxy_session 的 shared_ptr 引用, 因为 PAM 认证完成后无论结果如
+				// 何都不需要访问 proxy_session 的成员变量或方法了, 另外 async_pam_auth 总是运行在
+				// 协程中，协程在 proxy_session 启动时就已经保存了 shared_ptr 自身.
+				std::thread([this, username = std::move(username), passwd = std::move(passwd),
+					service_name = std::move(service_name), handler = std::move(handler)]() mutable
+					{
+						bool result = pam_authenticate_user(
+							service_name.c_str(),
+							username.c_str(),
+							passwd.c_str());
+
+						auto executor = net::get_associated_executor(handler);
+						net::post(executor,
+							[result, handler = std::move(handler)]() mutable
+							{
+								boost::system::error_code ec;
+								handler(ec, result);
+							});
+					}
+				).detach();
+			}, token);
+	}
+
+	// explicit instantiation for async_pam_auth
+	template
+	boost::asio::awaitable<bool, boost::asio::any_io_executor>
+	proxy_session::async_pam_auth<boost::asio::redirect_error_t<boost::asio::use_awaitable_t<boost::asio::any_io_executor>>>(
+		const std::string& username, const std::string& passwd,
+		const std::string& service_name,
+		boost::asio::redirect_error_t<boost::asio::use_awaitable_t<boost::asio::any_io_executor>>&& token) noexcept;
 #endif // USE_PAM_AUTH
 
 	//////////////////////////////////////////////////////////////////////////
@@ -1074,6 +1229,111 @@ R"x*x*x(<html>
 	//////////////////////////////////////////////////////////////////////////
 	// 混淆与协议侦测
 
+	template <typename T>
+	net::awaitable<bool>
+	proxy_session::noise_handshake(T& socket,
+		std::array<uint8_t, 16>& inkey,
+		std::array<uint8_t, 16>& outkey) noexcept
+	{
+		boost::system::error_code error;
+
+		// 工作流程:
+		// 1. 生成一段随机长度的随机数据(最大长度由配置文件中的参数 noise_length 指定), 用于发送给对方.
+		// 2. 根据这些随机数据计算发送数据的 key, 这个 key 将会用于后续的代理时数据的加密.
+		// 3. 发送随机数据.
+		// 4. 对方在接收到随机数据后, 同样会发送噪声随机数据(包含随机数长度本身, 在前16字节中的最后一位,
+		//    组成一个 16 位的整数表示长度).
+		// 5. 计算接收随机数据的 key 用于后续的接收到的数据的解密.
+
+		// 生成要发送的噪声数据.
+		int noise_length = static_cast<int>(m_option.noise_length_);
+
+		if (noise_length < 16 ||
+			(noise_length > std::numeric_limits<uint16_t>::max() / 2))
+			noise_length = noise_injection_max_len;
+
+		std::vector<uint8_t> noise =
+			generate_noise(global_random_device(), static_cast<uint16_t>(noise_length), global_known_proto);
+
+		// 计算数据发送 key.
+		outkey = compute_key(noise);
+
+		log_conn_debug()
+			<< ", send noise, length: "
+			<< noise.size();
+
+		// 发送 noise 消息.
+		co_await net::async_write(
+			socket,
+			net::buffer(noise),
+			net_awaitable[error]);
+		if (error)
+		{
+			log_conn_warning()
+				<< ", noise write error: "
+				<< error.message();
+
+			co_return false;
+		}
+
+		noise.resize(16);
+
+		// 接收对方发过来的 noise 回应消息.
+		co_await net::async_read(
+			socket,
+			net::buffer(noise, 16),
+			net_awaitable[error]);
+
+		if (error)
+		{
+			log_conn_warning()
+				<< ", noise read header error: "
+				<< error.message();
+
+			co_return false;
+		}
+
+		noise_length = extract_noise_length(noise);
+
+		// 计算要接收的剩余数据大小.
+		int remainder = static_cast<int>(noise_length) - 16;
+		if (remainder < 0 || remainder >= std::numeric_limits<uint16_t>::max())
+		{
+			log_conn_debug()
+				<< ", noise length: "
+				<< noise_length
+				<< ", is invalid, noise size: "
+				<< noise.size();
+
+			co_return false;
+		}
+
+		noise.resize(noise_length);
+		co_await net::async_read(
+				socket,
+				net::buffer(noise.data() + 16, remainder),
+				net_awaitable[error]);
+
+		if (error)
+		{
+			log_conn_warning()
+				<< ", noise read body error: "
+				<< error.message();
+
+			co_return false;
+		}
+
+		log_conn_debug()
+			<< ", recv noise, length: "
+			<< noise.size();
+
+		// 计算接收数据key.
+		inkey = compute_key(noise);
+
+		co_return true;
+	}
+
+	// explicit instantiations for noise_handshake
 	template
 	net::awaitable<bool>
 	proxy_session::noise_handshake<proxy_tcp_socket>(
@@ -1087,6 +1347,242 @@ R"x*x*x(<html>
 		net::local::stream_protocol::socket& socket,
 		std::array<uint8_t, 16>& inkey,
 		std::array<uint8_t, 16>& outkey) noexcept;
+
+	template
+	net::awaitable<bool>
+	proxy_session::noise_handshake<tcp::socket>(
+		tcp::socket& socket,
+		std::array<uint8_t, 16>& inkey,
+		std::array<uint8_t, 16>& outkey) noexcept;
+
+	//////////////////////////////////////////////////////////////////////////
+	// 协议侦测
+
+	template <typename T>
+	net::awaitable<void>
+	proxy_session::proto_detect(bool handshake_before) noexcept
+	{
+		// 如果 server 对象已经撤销, 说明服务已经关闭则直接退出这个 session 连接不再
+		// 进行任何处理.
+		auto server = m_proxy_server.lock();
+		if (!server)
+			co_return;
+
+		auto self = shared_from_this();
+
+		// 从 m_local_socket 中获取 tcp::socket 对象的引用.
+		auto& socket = boost::variant2::get<T>(m_local_socket);
+
+		boost::system::error_code error;
+
+		// 等待 read 事件以确保下面 recv 偷看数据时能有数据.
+		co_await async_wait(m_local_socket, net_awaitable[error]);
+		if (error)
+		{
+			log_conn_warning() << ", socket.async_wait error: " << error.message();
+			co_return;
+		}
+
+		auto scramble_setup = [this](auto& sock) mutable
+		{
+			if (!m_option.scramble_)
+				return;
+
+			using Stream = std::decay_t<decltype(sock)>;
+
+			if constexpr (std::same_as<Stream, tcp::socket> ||
+				std::same_as<Stream, net::local::stream_protocol::socket>)
+				return;
+
+			if constexpr (std::same_as<Stream, proxy_tcp_socket> ||
+				std::same_as<Stream, proxy_uds_socket>)
+			{
+				sock.set_scramble_key(m_server_tx_key);
+				sock.set_unscramble_key(m_server_rx_key);
+			}
+		};
+
+		// handshake_before 在调用 proto_detect 时第1次为 true, 第2次调用 proto_detect
+		// 时 handshake_before 为 false, 此时就表示已经完成了 scramble 握手并协
+		// 商好了 scramble 加解密用的 key, 则此时应该为 socket 配置好加解密用的 key.
+
+		if (!handshake_before)
+		{
+			// 为 socket 设置 scramble key.
+			scramble_setup(socket);
+		}
+
+		// 检查协议.
+		auto fd = socket.native_handle();
+		uint8_t detect[5] = { 0 };
+
+#if defined(WIN32) || defined(__APPLE__)
+		auto ret = recv(fd, (char*)detect, sizeof(detect), MSG_PEEK);
+#else
+		auto ret = recv(fd, (void*)detect, sizeof(detect), MSG_PEEK | MSG_NOSIGNAL | MSG_DONTWAIT);
+#endif
+		if (ret <= 0)
+		{
+			log_conn_warning() << ", peek message return: " << ret;
+			co_return;
+		}
+
+		// detect 中的数据只有下面几种情况, 它是 http/socks4/5/ssl 协议固定的头
+		// 几个字节, 如若不是, 在启用 scramble 的情况下, 则是 scramble 协议头
+		// 此时应该进入 scramble 协商密钥, 协商密钥之后则重新进入 proto_detect
+		// 以检测在 scramble 加密后的真实协议头.
+		// 如果没启用 scramble, 接受到 http/socks4/5/ssl 协议固定的头之外的数据
+		// 则视为未知协议退出.
+
+		// scramble_peek 用于解密 peek 数据.
+		auto scramble_peek = [this](auto& sock, std::span<uint8_t> detect) mutable
+		{
+			if (!m_option.scramble_)
+				return;
+
+			using Stream = std::decay_t<decltype(sock)>;
+
+			if constexpr (std::same_as<Stream, tcp::socket> ||
+				std::same_as<Stream, net::local::stream_protocol::socket>)
+				return;
+
+			if constexpr (std::same_as<Stream, proxy_tcp_socket> ||
+				std::same_as<Stream, proxy_uds_socket>)
+			{
+				auto& unscramble = sock.unscramble();
+				unscramble.peek_data(detect);
+			}
+		};
+
+		if (!handshake_before)
+		{
+			// peek 方式解密混淆的数据, 用于检测加密混淆的数据的代理协议. 在双方启用
+			// scramble 的情况下, 上面 recv 接收到的数据则会为 scramble 加密后的
+			// 数据, 要像未启用 scramble 时那样探测协议, 就必须将上面 recv 中
+			// peek 得到的数据：detect 临时解密(因为 proxy_stream 的加密为流式加
+			// 密, 非临时解密则会对整个数据流产生错误解密), 从而得到具体的协议字节
+			// 用于后面探测逻辑.
+			scramble_peek(socket, detect);
+		}
+
+		// 保存第一个字节用于协议类型甄别.
+		const uint8_t proto_byte = detect[0];
+
+		// 非安全连接检查.
+		if (m_option.disable_insecure_)
+		{
+			bool noise_proto = false;
+
+			// 如果启用了 scramble, 则也认为是安全连接.
+			if ((proto_byte != 0x05 &&
+				proto_byte != 0x04 &&
+				proto_byte != 0x47 &&
+				proto_byte != 0x50 &&
+				proto_byte != 0x43) ||
+				!handshake_before)
+			{
+				noise_proto = true;
+			}
+
+			if (detect[0] != 0x16 && !noise_proto)
+			{
+				log_conn_debug() << ", insecure protocol disabled";
+				co_return;
+			}
+		}
+
+		// plain socks4/5 protocol.
+		if (detect[0] == 0x05 || detect[0] == 0x04)
+		{
+			if (m_option.disable_socks_)
+			{
+				log_conn_debug() << ", socks protocol disabled";
+				co_return;
+			}
+
+			log_conn_debug() << ", plain socks4/5 protocol";
+
+			// 开始启动代理协议.
+			co_await start_proxy();
+		}
+		else if (detect[0] == 0x16) // http/socks proxy with ssl crypto protocol.
+		{
+			log_conn_debug() << ", ssl protocol";
+
+			auto& srv_ssl_context = server->ssl_context();
+
+			// instantiate socks stream with ssl context.
+			auto ssl_socks_stream = init_proxy_stream(std::move(socket), srv_ssl_context);
+
+			// get origin ssl stream type.
+			ssl_tcp_stream& ssl_socket = boost::variant2::get<ssl_tcp_stream>(ssl_socks_stream);
+
+			// do async ssl handshake.
+			co_await ssl_socket.async_handshake(net::ssl::stream_base::server, net_awaitable[error]);
+			if (error)
+			{
+				log_conn_debug() << ", ssl server protocol handshake error: " << error.message();
+				co_return;
+			}
+
+			// 使用 ssl_socks_stream 替换 m_local_socket.
+			m_local_socket = std::move(ssl_socks_stream);
+
+			// 开始启动代理协议.
+			co_await start_proxy();
+		}								// plain http protocol.
+		else if (detect[0] == 0x47 ||	// 'G'
+			detect[0] == 0x50 ||		// 'P'
+			detect[0] == 0x43)			// 'C'
+		{
+			if (m_option.disable_http_)
+			{
+				log_conn_debug() << ", http protocol disabled";
+				co_return;
+			}
+
+			log_conn_debug() << ", plain http protocol";
+
+			// 开始启动代理协议.
+			co_await start_proxy();
+		}
+		else if (handshake_before && m_option.scramble_)
+		{
+			// 进入噪声握手协议, 即: 返回一段噪声给客户端, 并等待客户端返回噪声.
+			log_conn_debug() << ", noise protocol";
+
+			if constexpr (std::same_as<T, proxy_tcp_socket>)
+			{
+				if (!co_await noise_handshake<tcp::socket>(
+					net_tcp_socket(socket), m_server_rx_key, m_server_tx_key))
+					co_return;
+			}
+			else if constexpr (std::same_as<T, proxy_uds_socket>)
+			{
+				if (!co_await noise_handshake<net::local::stream_protocol::socket>(
+					net_uds_socket(socket), m_server_rx_key, m_server_tx_key))
+					co_return;
+			}
+
+			// 在完成 noise 握手后, 重新检测被混淆之前的代理协议.
+			co_await proto_detect<T>(false);
+		}
+		else
+		{
+			log_conn_debug() << ", unknown protocol";
+		}
+
+		co_return;
+	}
+
+	// explicit instantiations for proto_detect
+	template
+	net::awaitable<void>
+	proxy_session::proto_detect<proxy_tcp_socket>(bool) noexcept;
+
+	template
+	net::awaitable<void>
+	proxy_session::proto_detect<proxy_uds_socket>(bool) noexcept;
 
 	//////////////////////////////////////////////////////////////////////////
 	// 代理协议处理
@@ -6650,6 +7146,115 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 			co_await timer.async_wait(net_awaitable[ec]);
 		}
 	}
+
+	template <typename S1, typename S2>
+	net::awaitable<void>
+	proxy_session::transfer(S1& from, S2& to, size_t& bytes_transferred) noexcept
+	{
+		bytes_transferred = 0;
+
+		// 记录 from 和 to 的 endpoint 信息.
+		auto from_endpoint = remote_endpoint_string(from);
+		auto to_endpoint = remote_endpoint_string(to);
+
+		constexpr auto buf_size = 512 * 1024;
+
+		std::unique_ptr<char, decltype(&std::free)> buf0((char*)std::malloc(buf_size), &std::free);
+		std::unique_ptr<char, decltype(&std::free)> buf1((char*)std::malloc(buf_size), &std::free);
+
+		// 分别使用主从缓冲指针用于并发读写.
+		auto primary_buf = buf0.get();
+		auto secondary_buf = buf1.get();
+
+		boost::system::error_code from_ec;
+		boost::system::error_code to_ec;
+
+		// 设置传输限速.
+		stream_rate_limit(from, m_option.tcp_rate_limit_);
+		stream_rate_limit(to, m_option.tcp_rate_limit_);
+
+		// 首先读取第一个数据作为预备, 以用于后面的交替读写逻辑.
+		auto bytes = co_await from.async_read_some(net::buffer(primary_buf, buf_size), net_awaitable[from_ec]);
+		if (from_ec || m_abort)
+		{
+			if (from_ec != net::error::eof)
+			{
+				log_conn_warning()
+					<< ", read from endpoint: " << from_endpoint
+					<< ", error: " << from_ec.message();
+			}
+			log_conn_warning()
+				<< ", shutdown to endpoint: " << to_endpoint;
+			co_await async_shutdown(to, net_awaitable[to_ec]);
+			co_return;
+		}
+
+		// 重置最后活跃计数.
+		m_last_activity.store(0, std::memory_order_relaxed);
+
+		for (; !m_abort;)
+		{
+			// 并发读写, 将上次接收到的数据 primary_buf 发送给 to, 同时异步读取 from 的数
+			// 据到 secondary_buf 中.
+			auto [write_bytes, read_bytes] =
+				co_await(
+					net::async_write(to,
+						net::buffer(primary_buf, bytes), net_awaitable[to_ec])
+					&&
+					from.async_read_some(
+						net::buffer(secondary_buf, buf_size), net_awaitable[from_ec])
+				);
+			(void)write_bytes;
+
+			// 交换主从缓冲区.
+			std::swap(primary_buf, secondary_buf);
+
+			// 保存接收到的数据大小用于转发给 to 端, 以及计算整个传输数据量.
+			bytes = read_bytes;
+			bytes_transferred += bytes;
+
+			// 重置最后活跃计数.
+			m_last_activity.store(0, std::memory_order_relaxed);
+
+			// 如果 async_write 失败, 则也无需要再读取数据, 如果 async_read_some 失败, 则
+			// 也无数据可用于写, 所以无论哪一种情况都可以直接退出.
+			if (from_ec || to_ec)
+			{
+				if (from_ec && from_ec != net::error::eof)
+				{
+					log_conn_warning()
+						<< ", read from endpoint: " << from_endpoint
+						<< ", error: " << from_ec.message();
+				}
+				if (to_ec && to_ec != net::error::eof)
+				{
+					log_conn_warning()
+						<< ", write to endpoint: " << to_endpoint
+						<< ", error: " << to_ec.message();
+				}
+
+				// shutdown 当前连接, 只关闭非 TLS 连接, 而 TLS 连接需要在 transfer 完成后再
+				// 操作, 否则有可能因为 async_shutdown 内部异步 io 导致未定义行业.
+				if (from_ec)
+				{
+					log_conn_warning()
+						<< ", shutdown to endpoint: " << to_endpoint;
+					co_await async_shutdown(to, net_awaitable[to_ec]);
+				}
+
+				// 只要出错即可退出.
+				co_return;
+			}
+		}
+
+		co_return;
+	}
+
+	// explicit instantiation for transfer
+	template
+	net::awaitable<void>
+	proxy_session::transfer<variant_stream_type, variant_stream_type>(
+		variant_stream_type& from, variant_stream_type& to, size_t& bytes_transferred) noexcept;
 
 	net::awaitable<void> proxy_session::concurrent_transfer()
 	{
