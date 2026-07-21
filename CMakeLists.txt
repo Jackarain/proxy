@@ -421,6 +421,9 @@ add_definitions(-DUSE_BOOST_FILESYSTEM)
 add_definitions(-DBOOST_ASIO_SEPARATE_COMPILATION)
 add_definitions(-DBOOST_BEAST_SEPARATE_COMPILATION)
 
+# 禁用 asio 弃用的兼容性代码
+add_definitions(-DBOOST_ASIO_NO_DEPRECATED)
+
 #此BOOST_ASIO_DYN_LINK只有在编译asio为动态链接的时候
 #才能启用, 它在msvc下将BOOST_ASIO_DECL分别自动作为
 #dllimport、dllexport添加.
