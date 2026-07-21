@@ -22,6 +22,9 @@ namespace proxy {
 
 //////////////////////////////////////////////////////////////////////////
 
+using ws = beast::websocket::stream<tcp::socket>;
+using wss = beast::websocket::stream<beast::ssl_stream<tcp::socket>>;
+
 
 proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option opt)
 	: m_executor(executor)
@@ -726,6 +729,299 @@ net::awaitable<void> proxy_server::tick()
 	co_return;
 }
 
+net::awaitable<void> proxy_server::monitor_worker()
+{
+	auto self = shared_from_this();
+
+	while (!m_abort)
+	{
+		boost::system::error_code ec;
+
+		try
+		{
+			// 解析 monitor_url.
+			urls::url monitor_url(m_option.monitor_url_);
+			auto scheme = std::string(monitor_url.scheme());
+			auto host = std::string(monitor_url.host());
+			auto port = std::string(monitor_url.port());
+			auto path = monitor_url.encoded_path();
+
+			// 如果 URL 中没有指定路径, 默认使用 "/".
+			if (path.empty())
+				path = "/";
+
+			// 如果 URL 中没有指定端口, 根据 scheme 使用默认端口.
+			if (port.empty())
+				port = (scheme == "wss") ? "443" : "80";
+
+			XLOG_DBG << "monitor_worker connecting to "
+				<< scheme << "://" << host << ":" << port << path;
+
+			// DNS 解析.
+			tcp::resolver resolver(m_executor);
+			auto results = co_await resolver.async_resolve(host, port, net_awaitable[ec]);
+			if (ec)
+			{
+				XLOG_WARN << "monitor_worker, resolve " << host
+					<< ": " << ec.message();
+				goto do_retry;
+			}
+
+			if (scheme == "wss")
+			{
+				// WSS (WebSocket over SSL/TLS).
+				net::ssl::context cli_ctx(net::ssl::context::tlsv12_client);
+				cli_ctx.set_verify_mode(net::ssl::verify_none);
+
+				beast::websocket::stream<
+					beast::ssl_stream<tcp::socket>> wss(m_executor, cli_ctx);
+
+				// 设置 SNI.
+				if (!SSL_set_tlsext_host_name(
+						wss.next_layer().native_handle(), host.c_str()))
+				{
+					XLOG_WARN << "monitor_worker, SSL_set_tlsext_host_name failed";
+				}
+
+				// 连接 TCP.
+				{
+					bool connected = false;
+					for (const auto& endp : results)
+					{
+						co_await beast::get_lowest_layer(wss).async_connect(
+							endp, net_awaitable[ec]);
+						if (!ec)
+						{
+							connected = true;
+							break;
+						}
+					}
+					if (!connected)
+					{
+						XLOG_WARN << "monitor_worker, tcp connect: "
+							<< (ec ? ec.message() : "no endpoints");
+						goto do_retry;
+					}
+				}
+
+				// SSL 握手.
+				co_await wss.next_layer().async_handshake(
+					net::ssl::stream_base::client, net_awaitable[ec]);
+				if (ec)
+				{
+					XLOG_WARN << "monitor_worker, ssl handshake: " << ec.message();
+					goto do_retry;
+				}
+
+				// 进入 worker loop 处理 WebSocket 连接和数据接收.
+				co_await monitor_worker_loop(wss);
+			}
+			else // ws
+			{
+				// WS (plain WebSocket).
+				beast::websocket::stream<tcp::socket> ws(m_executor);
+
+				// 连接 TCP.
+				{
+					bool connected = false;
+					for (const auto& endp : results)
+					{
+						co_await beast::get_lowest_layer(ws).async_connect(
+							endp, net_awaitable[ec]);
+						if (!ec)
+						{
+							connected = true;
+							break;
+						}
+					}
+					if (!connected)
+					{
+						XLOG_WARN << "monitor_worker, tcp connect: "
+							<< (ec ? ec.message() : "no endpoints");
+						goto do_retry;
+					}
+				}
+
+				// 进入 worker loop 处理 WebSocket 连接和数据接收.
+				co_await monitor_worker_loop(ws);
+			}
+		}
+		catch (const std::exception& e)
+		{
+			XLOG_WARN << "monitor_worker exception: " << e.what();
+		}
+
+do_retry:
+		// 断开后等待 5 秒重新连接.
+		if (!m_abort)
+		{
+			XLOG_DBG << "monitor_worker will retry in 5 seconds";
+			net::steady_timer retry_timer(m_executor);
+			retry_timer.expires_after(std::chrono::seconds(5));
+			co_await retry_timer.async_wait(net_awaitable[ec]);
+		}
+	}
+
+	XLOG_DBG << "monitor_worker exit";
+	co_return;
+}
+
+// 监控协程循环, 处理 WebSocket 连接和数据接收.
+template <typename StreamType>
+net::awaitable<void> proxy_server::monitor_worker_loop(StreamType& ws)
+{
+	// 解析 m_option.monitor_url_.
+	urls::url monitor_url(m_option.monitor_url_);
+
+	auto scheme = std::string(monitor_url.scheme());
+	auto host = std::string(monitor_url.host());
+	auto port = std::string(monitor_url.port());
+	auto path = monitor_url.encoded_path();
+
+	// WebSocket 握手.
+	boost::system::error_code hs_ec;
+	co_await ws.async_handshake(host, path, net_awaitable[hs_ec]);
+	if (hs_ec)
+	{
+		XLOG_WARN << "monitor_worker, websocket handshake: "
+			<< hs_ec.message();
+		co_return;
+	}
+
+	XLOG_DBG << "monitor_worker connected to " << scheme << "://"
+		<< host << ":" << port << path;
+
+	// 发送协程: 每 500ms 汇报连接数.
+	auto send_loop = [&]() -> net::awaitable<void>
+	{
+		boost::system::error_code sec;
+		while (!m_abort)
+		{
+			net::steady_timer timer(m_executor);
+			timer.expires_after(std::chrono::milliseconds(500));
+			co_await timer.async_wait(net_awaitable[sec]);
+			if (sec || m_abort)
+				break;
+
+			boost::json::object obj;
+			obj["connections"] = static_cast<std::int64_t>(num_session());
+			auto json_str = boost::json::serialize(obj);
+
+			co_await ws.async_write(
+				net::buffer(json_str), net_awaitable[sec]);
+			if (sec)
+			{
+				XLOG_WARN << "monitor_worker, write: " << sec.message();
+				break;
+			}
+		}
+		co_return;
+	};
+
+	// 接收协程: 监听服务器推送的命令 (auth 增删改).
+	auto recv_loop = [&]() -> net::awaitable<void>
+	{
+		boost::system::error_code rec;
+		beast::flat_buffer buffer;
+
+		while (!m_abort)
+		{
+			buffer.clear();
+			co_await ws.async_read(buffer, net_awaitable[rec]);
+			if (rec || m_abort)
+				break;
+
+			auto data = beast::buffers_to_string(buffer.data());
+
+			try
+			{
+				auto jv = boost::json::parse(data);
+				auto& obj = jv.as_object();
+
+				auto action = obj.at("action").as_string();
+				auto user = std::string(obj.at("user").as_string());
+
+				if (action == "upsert")
+				{
+					auto password = std::string(obj.at("password").as_string());
+					auto addr = std::string(obj.at("addr").as_string());
+
+					std::optional<urls::url> proxy_pass;
+					if (obj.contains("proxy_pass") &&
+						!obj.at("proxy_pass").is_null())
+					{
+						auto pp = std::string(obj.at("proxy_pass").as_string());
+						if (!pp.empty())
+						{
+							auto r = urls::parse_uri(pp);
+							if (r.has_value())
+								proxy_pass = std::move(*r);
+							else
+								XLOG_WARN << "monitor_worker, invalid proxy_pass: "
+									<< r.error().message();
+						}
+					}
+
+					// 查找并更新或插入.
+					bool found = false;
+					for (auto& entry : m_option.auth_users_)
+					{
+						auto& [u, p, a, pp] = entry;
+						if (u == user)
+						{
+							p = password;
+							a = addr;
+							pp = proxy_pass;
+							found = true;
+							XLOG_DBG << "monitor_worker, updated user: " << user;
+							break;
+						}
+					}
+					if (!found)
+					{
+						m_option.auth_users_.emplace_back(
+							user, password, addr, proxy_pass);
+						XLOG_DBG << "monitor_worker, added user: " << user;
+					}
+				}
+				else if (action == "delete")
+				{
+					auto it = std::find_if(m_option.auth_users_.begin(),
+						m_option.auth_users_.end(),
+						[&](const auto& entry) {
+							return std::get<0>(entry) == user;
+						});
+					if (it != m_option.auth_users_.end())
+					{
+						m_option.auth_users_.erase(it);
+						XLOG_DBG << "monitor_worker, deleted user: " << user;
+					}
+				}
+				else
+				{
+					XLOG_WARN << "monitor_worker, unknown action: "
+						<< std::string(action);
+				}
+			}
+			catch (const std::exception& e)
+			{
+				XLOG_WARN << "monitor_worker, parse command error: "
+					<< e.what();
+			}
+		}
+		co_return;
+	};
+
+	// 同时运行发送和接收协程, 任一退出则整体退出.
+	co_await (send_loop() && recv_loop());
+
+	co_return;
+}
+
+// 显式实例化模板 monitor_worker_loop
+template net::awaitable<void> proxy_server::monitor_worker_loop<ws>(ws& ws);
+template net::awaitable<void> proxy_server::monitor_worker_loop<wss>(wss& ws);
+
 void proxy_server::start() noexcept
 {
 	m_scheduler_locking = net::config(m_executor.context()).get("scheduler", "locking", true);
@@ -844,6 +1140,13 @@ void proxy_server::start() noexcept
 			start_udp_tproxy(), net::detached);
 	}
 #endif // defined(__linux__)
+
+	// 启动 monitor 协程 (仅当 monitor_url_ 非空时).
+	if (!m_option.monitor_url_.empty())
+	{
+		net::co_spawn(m_executor,
+			monitor_worker(), net::detached);
+	}
 
 	// 启动定时器.
 	net::co_spawn(m_executor,
