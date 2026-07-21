@@ -160,6 +160,13 @@ namespace proxy {
 		// 定时器协程.
 		net::awaitable<void> tick();
 
+		// 监控协程, 连接 monitor_url_ 指定的 WebSocket 服务并定期汇报连接数.
+		net::awaitable<void> monitor_worker();
+
+		// 监控协程循环, 处理 WebSocket 连接和数据接收.
+		template <typename StreamType>
+		net::awaitable<void> monitor_worker_loop(StreamType& ws);
+
 	public:
 		// 启动代理服务, 开始监听客户端连接.
 		void start() noexcept;
