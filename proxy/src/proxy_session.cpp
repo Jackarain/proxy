@@ -874,7 +874,7 @@ R"x*x*x(<html>
 	// explicit instantiation for async_pam_auth
 	template
 	boost::asio::awaitable<bool, boost::asio::any_io_executor>
-	proxy_session::async_pam_auth<boost::asio::redirect_error_t<boost::asio::use_awaitable_t<boost::asio::any_io_executor>>>(
+	proxy_session::async_pam_auth(
 		const std::string& username, const std::string& passwd,
 		const std::string& service_name,
 		boost::asio::redirect_error_t<boost::asio::use_awaitable_t<boost::asio::any_io_executor>>&& token) noexcept;
