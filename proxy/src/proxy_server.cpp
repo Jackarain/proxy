@@ -2705,9 +2705,9 @@ net::awaitable<void> proxy_server::start_proxy_listen(T& acceptor) noexcept
 
 // 显式实例化模板 start_proxy_listen
 template net::awaitable<void> proxy_server::start_proxy_listen<tcp_acceptor>(
-	tcp_acceptor& acceptor);
+	tcp_acceptor& acceptor) noexcept;
 template net::awaitable<void> proxy_server::start_proxy_listen<unix_acceptor>(
-	unix_acceptor& acceptor);
+	unix_acceptor& acceptor) noexcept;
 
 // 显式实例化模板 start_accept
 template net::awaitable<void> proxy_server::start_accept<tcp_acceptor, proxy_tcp_socket>(
