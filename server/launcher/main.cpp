@@ -29,6 +29,8 @@
 #include "main.hpp"
 #include "httpc/httpc.hpp"
 
+#include "unzip.h"
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -85,6 +87,7 @@ using tcp = net::ip::tcp;
 std::string config;
 std::string asio_config;
 std::string listen_endpoint;
+std::string proxy_server_path;
 std::string httpd_root;
 std::string httpd_cert_file;
 std::string httpd_key_file;
@@ -142,14 +145,191 @@ const static std::map<std::string, std::string> global_mimes =
 
 
 //////////////////////////////////////////////////////////////////////////
+// unzip proxy_server.zip
+bool unzip_proxy_server(const std::string& download_path)
+{
+	unzFile uf = unzOpen64(download_path.c_str());
+	if (uf == nullptr)
+	{
+		XLOG_ERR << "Cannot open zip file: " << download_path;
+		return false;
+	}
 
-net::awaitable<void> download_proxy_server(net::io_context& ioc)
+	// 确定解压目标目录（zip 文件所在目录）
+	fs::path target_dir = fs::path(download_path).parent_path();
+	if (target_dir.empty())
+		target_dir = ".";
+
+	// 确保目标目录存在
+	{
+		boost::system::error_code unused_ec;
+		fs::create_directories(target_dir, unused_ec);
+	}
+
+	unz_global_info64 gi;
+	int err = unzGetGlobalInfo64(uf, &gi);
+	if (err != UNZ_OK)
+	{
+		XLOG_ERR << "Error getting global info from zip: " << err;
+		unzClose(uf);
+		return false;
+	}
+
+	constexpr size_t kBufferSize = 8192;
+	std::vector<char> buf(kBufferSize);
+
+	err = unzGoToFirstFile(uf);
+	if (err != UNZ_OK && err != UNZ_END_OF_LIST_OF_FILE)
+	{
+		XLOG_ERR << "Error going to first file in zip: " << err;
+		unzClose(uf);
+		return false;
+	}
+
+	do
+	{
+		char filename_inzip[65536 + 1];
+		unz_file_info64 file_info;
+
+		err = unzGetCurrentFileInfo64(uf, &file_info,
+			filename_inzip, sizeof(filename_inzip),
+			nullptr, 0, nullptr, 0);
+		if (err != UNZ_OK)
+		{
+			XLOG_ERR << "Error getting current file info: " << err;
+			break;
+		}
+
+		// 构建输出路径
+		fs::path output_path = target_dir / filename_inzip;
+		XLOG_INFO << "Unzipping file: " << output_path.string();
+
+		// 检查路径遍历攻击: 确保解压路径在 target_dir 范围内
+		try
+		{
+			auto canonical_path = fs::absolute(output_path).lexically_normal();
+			auto canonical_target = fs::absolute(target_dir).lexically_normal();
+			if (canonical_path.string().find(canonical_target.string()) != 0)
+			{
+				XLOG_WARN << "Skipping file with path traversal: " << filename_inzip;
+				err = unzGoToNextFile(uf);
+				if (err == UNZ_END_OF_LIST_OF_FILE)
+					break;
+				continue;
+			}
+		}
+		catch (...)
+		{
+			XLOG_WARN << "Skipping file due to path error: " << filename_inzip;
+			err = unzGoToNextFile(uf);
+			if (err == UNZ_END_OF_LIST_OF_FILE)
+				break;
+			continue;
+		}
+
+		// 检查是否为目录（文件名以 '/' 或 '\\' 结尾）
+		size_t name_len = strlen(filename_inzip);
+		if (name_len > 0 &&
+			(filename_inzip[name_len - 1] == '/' ||
+			 filename_inzip[name_len - 1] == '\\'))
+		{
+			// 创建目录
+			boost::system::error_code unused_ec;
+			fs::create_directories(output_path, unused_ec);
+		}
+		else
+		{
+			// 创建父目录
+			boost::system::error_code unused_ec;
+			fs::create_directories(output_path.parent_path(), unused_ec);
+
+			// 打开当前文件进行读取
+			err = unzOpenCurrentFile(uf);
+			if (err != UNZ_OK)
+			{
+				XLOG_ERR << "Error opening current file in zip: "
+					<< filename_inzip << ", err: " << err;
+				err = unzGoToNextFile(uf);
+				if (err == UNZ_END_OF_LIST_OF_FILE)
+					break;
+				continue;
+			}
+
+			// 创建输出文件
+			FILE* fout = fopen(output_path.string().c_str(), "wb");
+			if (fout == nullptr)
+			{
+				XLOG_ERR << "Error creating output file: " << output_path.string();
+				unzCloseCurrentFile(uf);
+				err = unzGoToNextFile(uf);
+				if (err == UNZ_END_OF_LIST_OF_FILE)
+					break;
+				continue;
+			}
+
+			// 读取并写入
+			do
+			{
+				int read_bytes = unzReadCurrentFile(uf, buf.data(), (unsigned)kBufferSize);
+				if (read_bytes < 0)
+				{
+					XLOG_ERR << "Error reading from zip: " << filename_inzip
+						<< ", err: " << read_bytes;
+					break;
+				}
+				if (read_bytes == 0)
+					break;
+
+				if (fwrite(buf.data(), 1, read_bytes, fout) != (size_t)read_bytes)
+				{
+					XLOG_ERR << "Error writing to file: " << output_path.string();
+					break;
+				}
+			} while (true);
+
+			fclose(fout);
+
+			// 关闭当前文件
+			int close_err = unzCloseCurrentFile(uf);
+			if (close_err == UNZ_CRCERROR)
+			{
+				XLOG_WARN << "CRC error in file: " << filename_inzip;
+			}
+
+			// 设置文件权限为可执行（对于 Unix 系统）
+#if !defined(_WIN32)
+			boost::system::error_code perm_ec;
+			fs::permissions(output_path,
+				fs::owner_read | fs::owner_write | fs::owner_exe |
+				fs::group_read | fs::group_exe |
+				fs::others_read | fs::others_exe,
+				perm_ec);
+#endif
+		}
+
+		err = unzGoToNextFile(uf);
+		if (err == UNZ_END_OF_LIST_OF_FILE)
+			break;
+		if (err != UNZ_OK)
+		{
+			XLOG_ERR << "Error going to next file in zip: " << err;
+			break;
+		}
+	} while (true);
+
+	unzClose(uf);
+	return true;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+net::awaitable<bool> download_proxy_server(net::io_context& ioc, const std::string& download_path)
 {
 	httpc::http_client httpc(ioc.get_executor(), net::buffer(default_root_certificates()));
     httpc::http_request req;
 
 	req.method(httpc::verb::get);
-	httpc.set_download_file("./proxy_server.zip");
+	httpc.set_download_file(download_path);
 	httpc.max_redirects(10);
 	httpc.user_agent("curl/8.21.0");
 
@@ -157,10 +337,10 @@ net::awaitable<void> download_proxy_server(net::io_context& ioc)
 		DOWNLOAD_URL,
 		req);
 	if (result)
-	    auto& resp = *result;    // http_response
-	else
-		XLOG_ERR << "async_perform failed: " << result.error().message();
-	co_return;
+			co_return true;
+
+	XLOG_ERR << "async_perform failed: " << result.error().message();
+	co_return false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -696,11 +876,30 @@ net::awaitable<void> api_session(Stream& stream, dynamic_request& req,
 
 
 net::awaitable<void> start_launcher_server(
-	net::io_context& ioc, std::string httpd_listen, fs::path doc_root,
-	std::string cert_file, std::string key_file, bool autoindex_flag)
+	net::io_context& ioc, std::string proxy_server_path, std::string httpd_listen,
+	fs::path doc_root, std::string cert_file, std::string key_file, bool autoindex_flag)
 {
 	using namespace httpd_detail;
 	boost::system::error_code ec;
+
+	// 检查代理服务器路径是否存在, 如果不存在则下载.
+	if (!fs::exists(proxy_server_path, ec))
+	{
+		XLOG_WARN << "Proxy server path does not exist: " << proxy_server_path;
+
+		// 尝试下载代理服务器.
+		if (!co_await download_proxy_server(ioc, proxy_server_path))
+			co_return;
+
+		// 下载完成后解压 zip 文件.
+		XLOG_INFO << "Extracting proxy server from: " << proxy_server_path;
+		if (!unzip_proxy_server(proxy_server_path))
+		{
+			XLOG_ERR << "Failed to extract proxy server.";
+			co_return;
+		}
+		XLOG_INFO << "Proxy server extracted successfully.";
+	}
 
 	// 规范化文档根目录路径.
 	doc_root = fs::canonical(doc_root, ec);
@@ -952,6 +1151,7 @@ int main(int argc, char** argv)
 		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load configuration options from the specified file.")
 		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Environment variable name for configuring Boost.Asio (default: ASIO).")
 		("httpd_listen", po::value<std::string>(&listen_endpoint)->value_name("addr:port")->default_value("0.0.0.0:8080"), "HTTP server listen address and port (default: 0.0.0.0:8080).")
+		("proxy_server", po::value<std::string>(&proxy_server_path)->value_name("path")->default_value("./proxy_server.zip"), "Path to the proxy server executable.")
 		("httpd_root", po::value<std::string>(&httpd_root)->value_name("path")->default_value(fs::current_path().string()), "HTTP server document root directory (default: current directory).")
 		("httpd_cert", po::value<std::string>(&httpd_cert_file)->value_name("file"), "SSL certificate file path (PEM format).")
 		("httpd_key", po::value<std::string>(&httpd_key_file)->value_name("file"), "SSL private key file path (PEM format).")
@@ -1022,7 +1222,7 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 
 	// 启动 HTTP(S) 服务器.
 	net::co_spawn(ioc,
-		start_launcher_server(ioc, listen_endpoint, httpd_root,
+		start_launcher_server(ioc, proxy_server_path, listen_endpoint, httpd_root,
 			httpd_cert_file, httpd_key_file, autoindex),
 		net::detached);
 

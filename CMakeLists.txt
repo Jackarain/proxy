@@ -60,7 +60,6 @@ option(ENABLE_USE_IO_URING			"Enable auto use io_uring" OFF)
 option(ENABLE_BUILD_WITH_LIBCXX		"Build with libc++" OFF)
 option(ENABLE_REUSEPORT				"Build with REUSEPORT support" OFF)
 
-option(ENABLE_SYSTEM_ZLIB			"Build with system zlib support" OFF)
 option(ENABLE_SYSTEM_OPENSSL		"Build with system openssl support" OFF)
 option(ENABLE_SYSTEM_BOOST			"Build with system installed Boost support" OFF)
 
@@ -541,24 +540,26 @@ endif()
 ################################################################################
 # 使用 zlib
 
-if (WIN32 OR NOT ENABLE_SYSTEM_ZLIB)
+set(ZLIB_BUILD_TESTING OFF)
+set(ZLIB_BUILD_SHARED OFF)
+set(ZLIB_INSTALL OFF)
+set(ZLIB_BUILD_MINIZIP ON)
 
-	set(ZLIB_BUILD_TESTING OFF)
-	set(ZLIB_BUILD_SHARED OFF)
-	set(ZLIB_INSTALL OFF)
-	add_subdirectory(third_party/zlib EXCLUDE_FROM_ALL)
+set(MINIZIP_BUILD_STATIC ON)
+set(MINIZIP_BUILD_SHARED OFF)
+set(MINIZIP_BUILD_TESTING OFF)
+set(MINIZIP_INSTALL OFF)
+set(MINIZIP_ENABLE_BZIP2 OFF)
 
-	set(ZLIB_LIBRARIES zlibstatic)
-	set(ZLIB_INCLUDE_DIRS
-		${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib
-		${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib/contrib/minizip
-	)
+add_subdirectory(third_party/zlib EXCLUDE_FROM_ALL)
+set(ZLIB_LIBRARIES zlibstatic)
+set(ZLIB_INCLUDE_DIRS
+	${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib
+	${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib/contrib/minizip
+)
 
-	set_property(TARGET zlibstatic PROPERTY FOLDER "third_party")
+set_property(TARGET zlibstatic PROPERTY FOLDER "third_party")
 
-else()
-	find_package(ZLIB REQUIRED)
-endif()
 
 ################################################################################
 # 使用 fmt
