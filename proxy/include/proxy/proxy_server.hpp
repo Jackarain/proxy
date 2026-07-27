@@ -167,6 +167,15 @@ namespace proxy {
 		template <typename StreamType>
 		net::awaitable<void> monitor_worker_loop(StreamType& ws);
 
+	private:
+		// 监控发送协程: 每 500ms 汇报连接数.
+		template <typename StreamType>
+		net::awaitable<void> monitor_send_loop(StreamType& ws);
+
+		// 监控接收协程: 监听服务器推送的命令 (auth 增删改).
+		template <typename StreamType>
+		net::awaitable<void> monitor_recv_loop(StreamType& ws);
+
 	public:
 		// 启动代理服务, 开始监听客户端连接.
 		void start() noexcept;

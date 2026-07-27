@@ -906,136 +906,146 @@ net::awaitable<void> proxy_server::monitor_worker_loop(StreamType& ws)
 	XLOG_DBG << "monitor_worker connected to " << scheme << "://"
 		<< host << ":" << port << path;
 
-	// 发送协程: 每 500ms 汇报连接数.
-	auto send_loop = [&]() -> net::awaitable<void>
-	{
-		boost::system::error_code sec;
-		while (!m_abort)
-		{
-			net::steady_timer timer(m_executor);
-			timer.expires_after(std::chrono::milliseconds(500));
-			co_await timer.async_wait(net_awaitable[sec]);
-			if (sec || m_abort)
-				break;
-
-			boost::json::object obj;
-			obj["connections"] = static_cast<std::int64_t>(num_session());
-			auto json_str = boost::json::serialize(obj);
-
-			co_await ws.async_write(
-				net::buffer(json_str), net_awaitable[sec]);
-			if (sec)
-			{
-				XLOG_WARN << "monitor_worker, write: " << sec.message();
-				break;
-			}
-		}
-		co_return;
-	};
-
-	// 接收协程: 监听服务器推送的命令 (auth 增删改).
-	auto recv_loop = [&]() -> net::awaitable<void>
-	{
-		boost::system::error_code rec;
-		beast::flat_buffer buffer;
-
-		while (!m_abort)
-		{
-			buffer.clear();
-			co_await ws.async_read(buffer, net_awaitable[rec]);
-			if (rec || m_abort)
-				break;
-
-			auto data = beast::buffers_to_string(buffer.data());
-
-			try
-			{
-				auto jv = boost::json::parse(data);
-				auto& obj = jv.as_object();
-
-				auto action = obj.at("action").as_string();
-				auto user = std::string(obj.at("user").as_string());
-
-				if (action == "upsert")
-				{
-					auto password = std::string(obj.at("password").as_string());
-					auto addr = std::string(obj.at("addr").as_string());
-
-					std::optional<urls::url> proxy_pass;
-					if (obj.contains("proxy_pass") &&
-						!obj.at("proxy_pass").is_null())
-					{
-						auto pp = std::string(obj.at("proxy_pass").as_string());
-						if (!pp.empty())
-						{
-							auto r = urls::parse_uri(pp);
-							if (r.has_value())
-								proxy_pass = std::move(*r);
-							else
-								XLOG_WARN << "monitor_worker, invalid proxy_pass: "
-									<< r.error().message();
-						}
-					}
-
-					// 查找并更新或插入.
-					bool found = false;
-					for (auto& entry : m_option.auth_users_)
-					{
-						auto& [u, p, a, pp] = entry;
-						if (u == user)
-						{
-							p = password;
-							a = addr;
-							pp = proxy_pass;
-							found = true;
-							XLOG_DBG << "monitor_worker, updated user: " << user;
-							break;
-						}
-					}
-					if (!found)
-					{
-						m_option.auth_users_.emplace_back(
-							user, password, addr, proxy_pass);
-						XLOG_DBG << "monitor_worker, added user: " << user;
-					}
-				}
-				else if (action == "delete")
-				{
-					auto it = std::find_if(m_option.auth_users_.begin(),
-						m_option.auth_users_.end(),
-						[&](const auto& entry) {
-							return std::get<0>(entry) == user;
-						});
-					if (it != m_option.auth_users_.end())
-					{
-						m_option.auth_users_.erase(it);
-						XLOG_DBG << "monitor_worker, deleted user: " << user;
-					}
-				}
-				else
-				{
-					XLOG_WARN << "monitor_worker, unknown action: "
-						<< std::string(action);
-				}
-			}
-			catch (const std::exception& e)
-			{
-				XLOG_WARN << "monitor_worker, parse command error: "
-					<< e.what();
-			}
-		}
-		co_return;
-	};
-
 	// 同时运行发送和接收协程, 任一退出则整体退出.
-	co_await (send_loop() && recv_loop());
+	co_await (monitor_send_loop(ws) && monitor_recv_loop(ws));
 
+	co_return;
+}
+
+// 监控发送协程: 每 500ms 汇报连接数.
+template <typename StreamType>
+net::awaitable<void> proxy_server::monitor_send_loop(StreamType& ws)
+{
+	boost::system::error_code sec;
+	while (!m_abort)
+	{
+		net::steady_timer timer(m_executor);
+		timer.expires_after(std::chrono::milliseconds(500));
+		co_await timer.async_wait(net_awaitable[sec]);
+		if (sec || m_abort)
+			break;
+
+		boost::json::object obj;
+		obj["connections"] = static_cast<std::int64_t>(num_session());
+		auto json_str = boost::json::serialize(obj);
+
+		co_await ws.async_write(
+			net::buffer(json_str), net_awaitable[sec]);
+		if (sec)
+		{
+			XLOG_WARN << "monitor_worker, write: " << sec.message();
+			break;
+		}
+	}
+	co_return;
+}
+
+// 监控接收协程: 监听服务器推送的命令 (auth 增删改).
+template <typename StreamType>
+net::awaitable<void> proxy_server::monitor_recv_loop(StreamType& ws)
+{
+	boost::system::error_code rec;
+	beast::flat_buffer buffer;
+
+	while (!m_abort)
+	{
+		buffer.clear();
+		co_await ws.async_read(buffer, net_awaitable[rec]);
+		if (rec || m_abort)
+			break;
+
+		auto data = beast::buffers_to_string(buffer.data());
+
+		try
+		{
+			auto jv = boost::json::parse(data);
+			auto& obj = jv.as_object();
+
+			auto action = obj.at("action").as_string();
+			auto user = std::string(obj.at("user").as_string());
+
+			if (action == "upsert")
+			{
+				auto password = std::string(obj.at("password").as_string());
+				auto addr = std::string(obj.at("addr").as_string());
+
+				std::optional<urls::url> proxy_pass;
+				if (obj.contains("proxy_pass") &&
+					!obj.at("proxy_pass").is_null())
+				{
+					auto pp = std::string(obj.at("proxy_pass").as_string());
+					if (!pp.empty())
+					{
+						auto r = urls::parse_uri(pp);
+						if (r.has_value())
+							proxy_pass = std::move(*r);
+						else
+							XLOG_WARN << "monitor_worker, invalid proxy_pass: "
+								<< r.error().message();
+					}
+				}
+
+				// 查找并更新或插入.
+				bool found = false;
+				for (auto& entry : m_option.auth_users_)
+				{
+					auto& [u, p, a, pp] = entry;
+					if (u == user)
+					{
+						p = password;
+						a = addr;
+						pp = proxy_pass;
+						found = true;
+						XLOG_DBG << "monitor_worker, updated user: " << user;
+						break;
+					}
+				}
+				if (!found)
+				{
+					m_option.auth_users_.emplace_back(
+						user, password, addr, proxy_pass);
+					XLOG_DBG << "monitor_worker, added user: " << user;
+				}
+			}
+			else if (action == "delete")
+			{
+				auto it = std::find_if(m_option.auth_users_.begin(),
+					m_option.auth_users_.end(),
+					[&](const auto& entry) {
+						return std::get<0>(entry) == user;
+					});
+				if (it != m_option.auth_users_.end())
+				{
+					m_option.auth_users_.erase(it);
+					XLOG_DBG << "monitor_worker, deleted user: " << user;
+				}
+			}
+			else
+			{
+				XLOG_WARN << "monitor_worker, unknown action: "
+					<< std::string(action);
+			}
+		}
+		catch (const std::exception& e)
+		{
+			XLOG_WARN << "monitor_worker, parse command error: "
+				<< e.what();
+		}
+	}
 	co_return;
 }
 
 // 显式实例化模板 monitor_worker_loop
 template net::awaitable<void> proxy_server::monitor_worker_loop<ws>(ws& ws);
 template net::awaitable<void> proxy_server::monitor_worker_loop<wss>(wss& ws);
+
+// 显式实例化模板 monitor_send_loop
+template net::awaitable<void> proxy_server::monitor_send_loop<ws>(ws& ws);
+template net::awaitable<void> proxy_server::monitor_send_loop<wss>(wss& ws);
+
+// 显式实例化模板 monitor_recv_loop
+template net::awaitable<void> proxy_server::monitor_recv_loop<ws>(ws& ws);
+template net::awaitable<void> proxy_server::monitor_recv_loop<wss>(wss& ws);
 
 void proxy_server::start() noexcept
 {
