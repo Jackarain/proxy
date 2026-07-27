@@ -53,6 +53,7 @@ jobs:
 
       - name: Update OS and Compilers
         run: |
+          sudo apt update
           sudo apt install -y cmake ninja-build libpam0g-dev
 
       - name: Build proxy
@@ -94,6 +95,7 @@ jobs:
 
       - name: Update OS and Compilers
         run: |
+          sudo apt update
           sudo apt install -y cmake ninja-build libpam0g-dev
 
       - name: Build mimalloc
@@ -124,6 +126,7 @@ jobs:
 
       - name: Update OS and Compilers
         run: |
+          sudo apt update
           sudo apt install -y cmake ninja-build libpam0g-dev
 
       - name: Build proxy
