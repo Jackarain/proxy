@@ -1141,17 +1141,6 @@ namespace proxy {
 		net::awaitable<void>
 		static_web_server(http::request<http::string_body>& req, std::optional<request_parser>& parser) noexcept;
 
-		// 拼接文档目录和目标路径.
-		static fs::path path_cat(
-			const std::wstring& doc, const std::wstring& target) noexcept;
-
-		// 从 HTTP 请求目标路径生成文件系统路径字符串.
-		static std::wstring make_target_path(const std::string& target) noexcept;
-
-		// 从文档根目录和请求目标生成实际文件系统路径.
-		static fs::path make_real_target_path(const std::string& doc_directory,
-			const std::string& target) noexcept;
-
 		// 格式化目录下的文件列表, 返回每个文件/目录的名称.
 		std::vector<std::wstring>
 		format_path_list(const fs::path& path, boost::system::error_code& ec) const;

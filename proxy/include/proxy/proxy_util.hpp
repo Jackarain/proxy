@@ -37,6 +37,9 @@
 # include <filesystem>
 #endif // USE_BOOST_FILESYSTEM
 
+#include <boost/nowide/convert.hpp>
+#include <boost/url.hpp>
+
 #include <random>
 #include <string>
 #include <string_view>
@@ -59,6 +62,8 @@ namespace proxy {
 
     namespace net = boost::asio;
 	using udp = net::ip::udp;               // from <boost/asio/ip/udp.hpp>
+
+	namespace urls = boost::urls;			// form <boost/url.hpp>
 
 #ifdef USE_BOOST_FILESYSTEM
 	namespace fs = boost::filesystem;
@@ -576,6 +581,73 @@ namespace proxy {
 		}
 
 		return { time_string, returned_path };
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// HTTP 路径工具
+
+	// 拼接文档目录和目标路径.
+	inline fs::path path_cat(
+		const std::wstring& doc, const std::wstring& target) noexcept
+	{
+		size_t start_pos = 0;
+		for (auto& c : target)
+		{
+			if (!(c == L'/' || c == '\\'))
+				break;
+
+			start_pos++;
+		}
+
+		std::wstring_view sv;
+		std::wstring slash = L"/";
+
+		if (start_pos < target.size())
+			sv = std::wstring_view(target.c_str() + start_pos);
+#ifdef WIN32
+		slash = L"\\";
+		if (doc.back() == L'/' ||
+			doc.back() == L'\\')
+			slash = L"";
+		return fs::path(doc + slash + std::wstring(sv));
+#else
+		if (doc.back() == L'/')
+			slash = L"";
+		return fs::path(
+			boost::nowide::narrow(doc + slash + std::wstring(sv)));
+#endif // WIN32
+	}
+
+	// 从 HTTP 请求目标路径生成文件系统路径字符串.
+	inline std::wstring make_target_path(const std::string& target) noexcept
+	{
+		try
+		{
+			auto result = urls::url(
+				target.starts_with("/") ? target : "/" + target);
+
+			return boost::nowide::widen(result.path());
+		}
+		catch (const std::exception&)
+		{}
+
+		return boost::nowide::widen(target);
+	}
+
+	// 从文档根目录和请求目标生成实际文件系统路径.
+	inline fs::path make_real_target_path(const std::string& doc_directory,
+		const std::string& target) noexcept
+	{
+		auto target_path = make_target_path(target);
+		auto doc_path = boost::nowide::widen(doc_directory);
+
+#ifdef WIN32
+		auto ret = make_unc_path(path_cat(doc_path, target_path));
+#else
+		auto ret = path_cat(doc_path, target_path).string();
+#endif
+
+		return ret;
 	}
 
 	//////////////////////////////////////////////////////////////////////////
