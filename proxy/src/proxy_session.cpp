@@ -4172,11 +4172,9 @@ R"x*x*x(<html>
 
 		auto leaf_name = [this](const fs::path& p) -> std::string
 		{
-			static const std::codecvt_utf8<wchar_t> utf8_cvt;
-
 			try {
 				fs::path normalized = p.lexically_normal();
-				return boost::nowide::narrow(normalized.filename().wstring(utf8_cvt));
+				return boost::nowide::narrow(normalized.filename().wstring());
 			}
 			catch (const std::exception& e)
 			{
