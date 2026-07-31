@@ -940,11 +940,15 @@ R"x*x*x(<html>
 
 			// 并发读写, 在 local 和 remote 之间互传数据.
 			// 同时运行 idle_timeout 检测整体连接空闲超时.
+			// 只要任何一个方向有数据传输, idle_timeout 中的计时器就会被重置,
+			// 从而避免单向大文件传输时因空闲方向超时而断开连接.
+			// 当两个方向的传输都已完成(即两端都已断开)时, 立即结束传输,
+			// 避免连接已断开后 session 仍一直存活到空闲超时.
 			co_await(
-				transfer(in, m_remote_socket, l2r_transferred)
-				&&
-				transfer(m_remote_socket, out, r2l_transferred)
-				&&
+				(transfer(in, m_remote_socket, l2r_transferred)
+				 &&
+				 transfer(m_remote_socket, out, r2l_transferred))
+				||
 				idle_timeout(in, m_remote_socket)
 			);
 
@@ -6557,32 +6561,45 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 	net::awaitable<void> proxy_session::idle_timeout(
 		variant_stream_type& s1, variant_stream_type& s2) noexcept
 	{
-		if (m_option.tcp_timeout_ <= 0)
-			co_return;
-
 		auto executor = co_await net::this_coro::executor;
 		net::steady_timer timer(executor);
 		boost::system::error_code ec;
 
-		while (!m_abort)
-		{
-			auto last_tick = m_last_activity.fetch_add(1, std::memory_order_relaxed) + 1;
-			if (last_tick >= m_option.tcp_timeout_)
-			{
-				// 没有任何方向有数据传输, 超时关闭连接.
-				log_conn_warning() << ", idle timeout: " << last_tick;
-				m_abort = true;
-				stream_cancel(s1);
-				stream_cancel(s2);
-				co_return;
-			}
+		// tcp_timeout_ <= 0 表示禁用超时检查, 此时 idle_timeout 永不主动触发超时,
+		// 只等待两个方向的传输都完成(即本协程被并发传输中的或运算取消)或连接被
+		// 关闭后退出.
+		const int timeout = m_option.tcp_timeout_;
 
-			if (last_tick % 3600 == 0)
-				log_conn_debug() << ", idle timeout long time check: " << last_tick;
+		for (; !m_abort;)
+		{
+			if (timeout > 0)
+			{
+				auto last_tick = m_last_activity.fetch_add(1, std::memory_order_relaxed) + 1;
+				if (last_tick >= timeout)
+				{
+					// 没有任何方向有数据传输, 超时关闭连接.
+					log_conn_warning() << ", idle timeout: " << last_tick;
+					m_abort = true;
+					stream_cancel(s1);
+					stream_cancel(s2);
+					co_return;
+				}
+
+				if (last_tick % 3600 == 0)
+					log_conn_debug() << ", idle timeout long time check: " << last_tick;
+			}
 
 			timer.expires_after(std::chrono::seconds(1));
 			co_await timer.async_wait(net_awaitable[ec]);
+
+			// 当两个方向的传输都已完成时, 本协程会被并发传输中的或运算取消,
+			// 此时 async_wait 会以 operation_aborted 返回, 直接退出, 避免连接
+			// 已断开后 session 仍一直存活到空闲超时.
+			if (ec)
+				co_return;
 		}
+
+		co_return;
 	}
 
 	net::awaitable<void> proxy_session::concurrent_transfer()
@@ -6597,11 +6614,14 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 		// 同时运行 idle_timeout 检测整体连接空闲超时.
 		// 只要任何一个方向有数据传输, idle_timeout 中的计时器就会被重置,
 		// 从而避免单向大文件传输时因空闲方向超时而断开连接.
+		// 使用或运算组合: 当两个方向的传输都完成(即两端都已断开)时立即结束,
+		// 此时 idle_timeout 会被或运算取消并退出; 若一直空闲, 则由
+		// idle_timeout 触发超时并关闭连接.
 		co_await(
-			transfer(m_local_socket, m_remote_socket, l2r_transferred)
-			&&
-			transfer(m_remote_socket, m_local_socket, r2l_transferred)
-			&&
+			(transfer(m_local_socket, m_remote_socket, l2r_transferred)
+			 &&
+			 transfer(m_remote_socket, m_local_socket, r2l_transferred))
+			||
 			idle_timeout(m_local_socket, m_remote_socket)
 		);
 
