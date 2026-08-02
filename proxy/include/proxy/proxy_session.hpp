@@ -1060,7 +1060,10 @@ namespace proxy {
 				auto [write_bytes, read_bytes] =
 					co_await(
 						net::async_write(to,
-							net::buffer(primary_buf, bytes), write_all, net_awaitable[to_ec])
+							net::buffer(primary_buf, bytes),
+							[bytes](const boost::system::error_code& ec, std::size_t) -> std::size_t {
+								return ec ? 0 : bytes;
+							}, net_awaitable[to_ec])
 						&&
 						from.async_read_some(
 							net::buffer(secondary_buf, buf_size), net_awaitable[from_ec])

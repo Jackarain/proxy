@@ -683,8 +683,8 @@ namespace proxy {
 
 constexpr std::size_t custom_default_transfer_size = 1024 * 1024;
 
-// 用于单次向系统提交最大的
-inline std::size_t write_all(const boost::system::error_code& ec, std::size_t) noexcept
+// 用于单次向系统提交最大的发送数据量, 以提高效率.
+inline std::size_t custom_write_all(const boost::system::error_code& ec, std::size_t) noexcept
 {
     return ec ? 0 : (std::numeric_limits<std::size_t>::max)();
 }
