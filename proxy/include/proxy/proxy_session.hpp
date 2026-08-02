@@ -1060,7 +1060,7 @@ namespace proxy {
 				auto [write_bytes, read_bytes] =
 					co_await(
 						net::async_write(to,
-							net::buffer(primary_buf, bytes), net_awaitable[to_ec])
+							net::buffer(primary_buf, bytes), write_all, net_awaitable[to_ec])
 						&&
 						from.async_read_some(
 							net::buffer(secondary_buf, buf_size), net_awaitable[from_ec])
