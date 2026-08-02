@@ -3547,7 +3547,7 @@ R"x*x*x(<html>
 		beast::flat_buffer buf;
 
 		http::response_parser<http::string_body> parser;
-		parser.body_limit(1024 * 1024);
+		parser.body_limit(1024 * 1024 * 10);
 
 		co_await http::async_read(
 			m_remote_socket, buf, parser, net_awaitable[ec]);
@@ -4054,7 +4054,7 @@ R"x*x*x(<html>
 				// 当 keepalive 时，需要读取请求头, 此时 has_read_header
 				// 为 false, 则在此读取和解析后续的 http 请求头.
 				parser.emplace();
-				parser->body_limit(1024 * 512); // 512k
+				parser->body_limit(1024 * 1024 * 10);
 				m_local_buffer.consume(m_local_buffer.size());
 
 				co_await http::async_read_header(
