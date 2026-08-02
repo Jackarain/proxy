@@ -14,6 +14,7 @@
 #include "proxy/fileop.hpp"
 
 #include <charconv>
+#include <vector>
 
 #ifdef USE_PAM_AUTH
 # include <security/pam_appl.h>
@@ -2478,38 +2479,131 @@ R"x*x*x(<html>
 
 			m_local_buffer.consume(m_local_buffer.size());
 			beast::flat_buffer buf;
+			// 预分配读缓冲, 否则 flat_buffer 每次只读 512 字节,
+			// 导致大文件传输退化为每块 512 字节的系统调用.
+			buf.reserve(1024 * 1024);
 
-			http::response_parser<http::string_body> parser;
-			parser.body_limit(1024 * 1024 * 10);
+			// 流式转发响应 body, 避免将整个响应缓冲在内存中, 同时解除
+			// 对超大响应(Content-Length 超过 10MiB)的 body_limit 限制.
+			http::response_parser<http::buffer_body> resp_parser;
+			resp_parser.body_limit(boost::none);
+			resp_parser.eager(true);
 
-			auto bytes = co_await http::async_read(
-				m_remote_socket, buf, parser, net_awaitable[ec]);
+			// HEAD 请求的响应不包含 body, 让解析器跳过 body 解析.
+			if (mth == "HEAD")
+				resp_parser.skip(true);
+
+			// 读取响应头.
+			co_await http::async_read_header(
+				m_remote_socket, buf, resp_parser, net_awaitable[ec]);
 			if (ec)
 			{
 				log_conn_warning()
-					<< ", http_proxy_get response async_read: "
+					<< ", http_proxy_get response async_read_header: "
 					<< ec.message();
 				co_return !first;
 			}
 
-			co_await http::async_write(
-				m_local_socket, parser.release(), net_awaitable[ec]);
+			auto& res = resp_parser.get();
+
+			const bool skip_body = resp_parser.skip();
+			const bool is_chunked = res.chunked();
+			const bool has_length = res.payload_size().has_value();
+
+			// chunked 响应在解码后透传, 因此必须移除 Transfer-Encoding,
+			// 否则客户端会按 chunked 编码解析解码后的数据.
+			if (is_chunked)
+				res.erase(http::field::transfer_encoding);
+
+			// 若 body 长度未知(chunked 或依赖连接关闭终止)且未跳过 body,
+			// 客户端无法依据长度判断 body 结束, 只能依赖连接关闭, 因此
+			// 强制本地连接在响应后关闭.
+			if (!skip_body && (is_chunked || !has_length))
+				res.keep_alive(false);
+
+			// 仅转发响应头.
+			{
+				http::serializer<false, http::buffer_body> sr(res);
+				co_await http::async_write_header(
+					m_local_socket, sr, net_awaitable[ec]);
+			}
 			if (ec)
 			{
 				log_conn_warning()
-					<< ", http_proxy_get response async_write: "
+					<< ", http_proxy_get response async_write_header: "
 					<< ec.message();
-				co_return !first;
+				co_return true;
+			}
+
+			// 流式转发响应 body. 使用 malloc 而非 std::vector<char>,
+			// 避免构造时对缓冲做无谓的零初始化, 浪费 CPU 周期.
+			constexpr std::size_t body_buf_size = 1024 * 1024;
+			std::unique_ptr<char, decltype(&std::free)> body_buf(
+				(char*)std::malloc(body_buf_size), &std::free);
+			res.body().data = body_buf.get();
+			res.body().size = body_buf_size;
+
+			std::size_t resp_bytes = 0;
+
+			while (!resp_parser.is_done())
+			{
+				boost::system::error_code sec;
+				auto bytes = co_await http::async_read_some(
+					m_remote_socket, buf, resp_parser, net_awaitable[sec]);
+				resp_bytes += bytes;
+
+				if (sec == http::error::need_buffer)
+				{
+					// body 缓冲已满, 需要转发其中的数据.
+					sec = {};
+				}
+				else if (sec)
+				{
+					log_conn_warning()
+						<< ", http_proxy_get response async_read_some: "
+						<< sec.message();
+					break;
+				}
+
+				const auto n = body_buf_size - res.body().size;
+				if (n > 0)
+				{
+					co_await net::async_write(
+						m_local_socket,
+						net::buffer(body_buf.get(), n),
+						net_awaitable[ec]);
+					if (ec)
+					{
+						log_conn_warning()
+							<< ", http_proxy_get response body async_write: "
+							<< ec.message();
+						break;
+					}
+
+					res.body().data = body_buf.get();
+					res.body().size = body_buf_size;
+				}
+			}
+
+			// 响应 body 未完整转发(出错或提前截断)时, 不能继续复用连接.
+			if (!resp_parser.is_done())
+			{
+				if (m_local_socket.is_open())
+					co_await async_shutdown(m_local_socket, net_awaitable[ec]);
+				if (m_remote_socket.is_open())
+					co_await async_shutdown(m_remote_socket, net_awaitable[ec]);
+
+				co_return true;
 			}
 
 			log_conn_debug()
 				<< ", transfer completed"
 				<< ", remote to local: "
-				<< bytes;
+				<< resp_bytes;
 
 			first = false;
 
-			if (!keep_alive)
+			if (!keep_alive || !res.keep_alive())
 			{
 				if (m_local_socket.is_open())
 					co_await async_shutdown(m_local_socket, net_awaitable[ec]);
