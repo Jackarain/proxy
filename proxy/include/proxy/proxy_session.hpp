@@ -1018,7 +1018,7 @@ namespace proxy {
 			auto from_endpoint = remote_endpoint_string(from);
 			auto to_endpoint = remote_endpoint_string(to);
 
-			constexpr auto buf_size = 512 * 1024;
+			constexpr auto buf_size = 1024 * 1024; // 1 MiB 收发缓冲
 
 			std::unique_ptr<char, decltype(&std::free)> buf0((char*)std::malloc(buf_size), &std::free);
 			std::unique_ptr<char, decltype(&std::free)> buf1((char*)std::malloc(buf_size), &std::free);
