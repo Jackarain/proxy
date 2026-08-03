@@ -31,9 +31,11 @@ namespace detail {
 
 struct stream_core
 {
-  // According to the OpenSSL documentation, this is the buffer size that is
-  // sufficient to hold the largest possible TLS record.
-  enum { max_tls_record_size = 17 * 1024 };
+  // 输入/输出缓冲大小: 用于在底层传输与 OpenSSL BIO 之间批量搬运数据.
+  // 增大到 256KB 后, 配合 engine 中增大的 BIO pair 容量与去除
+  // SSL_MODE_ENABLE_PARTIAL_WRITE, SSL_write 一次可加密多个 TLS record,
+  // 从而一次取出批量密文发送, 大幅减少底层写 syscall 次数.
+  enum { max_tls_record_size = 256 * 1024 };
 
   template <typename Executor>
   stream_core(SSL_CTX* context, const Executor& ex)
