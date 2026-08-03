@@ -211,13 +211,19 @@ void proxy_server::walk_certificate(
 			| net::ssl::context::single_dh_use
 		);
 
-		// 如果设置了 ssl_prefer_server_ciphers_ 则设置 SSL_OP_CIPHER_SERVER_PREFERENCE.
-		if (m_option.ssl_prefer_server_ciphers_)
-			ssl_ctx.set_options(SSL_OP_CIPHER_SERVER_PREFERENCE);
+		// TLS 1.3 下默认启用服务端 cipher 偏好, 使下方 ciphersuites 的服务端
+		// 偏好顺序生效(默认优先 AES-128-GCM, 加密最快). 该选项不破坏兼容性,
+		// 服务端仅在客户端支持列表中按偏好选择; 若显式设置了
+		// ssl_prefer_server_ciphers_ 则同样开启, set_options 为幂等 OR 操作.
+		ssl_ctx.set_options(SSL_OP_CIPHER_SERVER_PREFERENCE);
 
 		// 设置 ssl ciphers. (默认值已在 init_ssl_context 中设定)
 		SSL_CTX_set_cipher_list(ssl_ctx.native_handle(),
 			m_option.ssl_ciphers_.c_str());
+		// TLS 1.3 ciphersuites: 优先 AES-128-GCM(加密最快, 与常见代理一致),
+		// 再 AES-256-GCM 与 CHACHA20.
+		SSL_CTX_set_ciphersuites(ssl_ctx.native_handle(),
+			"TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256");
 		// 设置 alpn 协议.
 		SSL_CTX_set_alpn_select_cb(ssl_ctx.native_handle(),
 			alpn_select_proto_cb, (void*)this);
@@ -529,6 +535,15 @@ void proxy_server::init_ssl_context() noexcept
 	const std::string ssl_ciphers = "HIGH:!aNULL:!MD5:!3DES";
 	if (m_option.ssl_ciphers_.empty())
 		m_option.ssl_ciphers_ = ssl_ciphers;
+
+	// TLS 1.3 ciphersuites: 默认优先 AES-128-GCM(加密最快, 与常见代理一致),
+	// 其次是 AES-256-GCM 和 CHACHA20. 若用户显式设置了 ssl_ciphers_ 则仍按
+	// 其配置(TLS 1.2 部分), 此处仅确保 TLS 1.3 走最快路径.
+	SSL_CTX_set_ciphersuites(m_ssl_srv_context.native_handle(),
+		"TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256");
+	// 启用服务端 cipher 偏好, 使上面的 ciphersuite 偏好顺序生效.
+	SSL_CTX_set_options(m_ssl_srv_context.native_handle(),
+		SSL_OP_CIPHER_SERVER_PREFERENCE);
 
 	// 读取并更新证书文件.
 	update_certificate(m_option.ssl_cert_path_, *m_certificates.load());
