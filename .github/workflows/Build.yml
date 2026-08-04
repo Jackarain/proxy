@@ -140,6 +140,297 @@ jobs:
           name: proxy_server-linux_snmalloc
           path: build/bin/proxy_server
 
+  LinuxClangLtoPgo:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build proxy (clang + snmalloc + system openssl, LTO+PGO)
+        run: |
+          # 在 ubuntu:22.04 容器内用 clang 14 构建, 保证产物 glibc 符号 <= 2.35,
+          # 与 doc/pgo/README.md 的 VPS 高优化构建一致.
+          docker run --rm -i \
+            -e DEBIAN_FRONTEND=noninteractive \
+            -v "$GITHUB_WORKSPACE":/workspace \
+            -w /workspace \
+            ubuntu:22.04 \
+            bash -s <<'PGO_EOF'
+          set -euxo pipefail
+
+          # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
+          # 否则 gitGetVersion 拿不到 commit hash.
+          git config --global --add safe.directory /workspace
+
+          # ==== toolchain (ubuntu 22.04 默认 clang 即 clang 14) ====
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends \
+            ca-certificates git cmake ninja-build pkg-config \
+            clang g++ libssl-dev curl python3 openssl llvm-14
+
+          # ==== Phase 1: PGO 埋点构建 ====
+          cmake -S /workspace -B /workspace/build-pgo-instr -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DENABLE_BUILD_WERROR=OFF \
+            -DENABLE_SNMALLOC_STATIC=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_BUILD_EXAMPLES=OFF \
+            -DCMAKE_C_FLAGS="-fprofile-instr-generate" \
+            -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -mcx16" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate"
+          ninja -C /workspace/build-pgo-instr -j2
+
+          # ==== Phase 2: 用真实代理流量采集 PGO profile ====
+          # 自签证书, 供 proxy 的 TLS 终结模式使用 (内容嗅探 cert.pem/key.pem).
+          mkdir -p /workspace/pgo-ci/cert
+          openssl req -x509 -newkey rsa:2048 -keyout /workspace/pgo-ci/cert/key.pem \
+            -out /workspace/pgo-ci/cert/cert.pem -days 2 -nodes -subj "/CN=localhost" >/dev/null 2>&1
+
+          mkdir -p /tmp/www
+          dd if=/dev/urandom of=/tmp/www/blob.bin bs=1M count=256 status=none
+          (cd /tmp/www && python3 -m http.server 18080 --bind 127.0.0.1 >/dev/null 2>&1) &
+          HTTP_PID=$!
+
+          wait_port() {
+            local port=$1
+            for i in $(seq 1 50); do
+              (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && break
+              sleep 0.2
+            done
+          }
+          wait_proxy() {
+            local port=$1 pid=$2
+            for i in $(seq 1 50); do
+              if ! kill -0 "$pid" 2>/dev/null; then
+                echo "FAIL: proxy (pid $pid) died before opening port $port" >&2
+                exit 1
+              fi
+              (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && return 0
+              sleep 0.2
+            done
+            echo "FAIL: proxy (pid $pid) did not open port $port in time" >&2
+            exit 1
+          }
+          wait_exit() {
+            local pid=$1
+            for i in $(seq 1 100); do
+              kill -0 "$pid" 2>/dev/null || return 0
+              sleep 0.2
+            done
+            # 优雅退出失败则强杀, 避免 CI 挂起 (该次 profile 丢失, 不影响整体).
+            kill -KILL "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+          }
+
+          wait_port 18080
+          export LLVM_PROFILE_FILE=/workspace/pgo-ci/pgo-%p.profraw
+
+          # Run 1: TLS 终结代理 -> 覆盖 SSL 引擎 (批量 TLS 写) + CONNECT 隧道 + HTTP 转发
+          /workspace/build-pgo-instr/bin/proxy_server \
+            --server_listen 127.0.0.1:18081 --auth_users "" --disable_logs 1 \
+            --ssl_certificate_dir /workspace/pgo-ci/cert >/dev/null 2>&1 &
+          TLS_PID=$!
+          wait_proxy 18081 "$TLS_PID"
+          curl -sS --proxy-insecure -x https://127.0.0.1:18081/ --proxytunnel -o /dev/null http://127.0.0.1:18080/blob.bin
+          curl -sS --proxy-insecure -x https://127.0.0.1:18081/ --proxytunnel -o /dev/null http://127.0.0.1:18080/blob.bin
+          curl -sS --proxy-insecure -x https://127.0.0.1:18081/ -o /dev/null http://127.0.0.1:18080/blob.bin
+          kill -TERM "$TLS_PID"
+          wait_exit "$TLS_PID"
+
+          # Run 2: 明文 HTTP 代理 -> 覆盖非 TLS 转发路径
+          /workspace/build-pgo-instr/bin/proxy_server \
+            --server_listen 127.0.0.1:18082 --auth_users "" --disable_logs 1 >/dev/null 2>&1 &
+          PLAIN_PID=$!
+          wait_proxy 18082 "$PLAIN_PID"
+          curl -sS -x http://127.0.0.1:18082 -o /dev/null http://127.0.0.1:18080/blob.bin
+          kill -TERM "$PLAIN_PID"
+          wait_exit "$PLAIN_PID"
+
+          unset LLVM_PROFILE_FILE
+          kill "$HTTP_PID" 2>/dev/null || true
+
+          nprof=$(ls /workspace/pgo-ci/*.profraw 2>/dev/null | wc -l)
+          echo "collected $nprof profraw file(s)"
+          [ "$nprof" -ge 1 ] || { echo "FAIL: no profile collected"; exit 1; }
+
+          # ==== Phase 3: 合并 profile + LTO+PGO 最终构建 ====
+          llvm-profdata-14 merge /workspace/pgo-ci/*.profraw -o /workspace/pgo-ci/merged.profdata
+          rm -rf /workspace/build-pgo-instr
+
+          cmake -S /workspace -B /workspace/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DENABLE_BUILD_WERROR=OFF \
+            -DENABLE_SNMALLOC_STATIC=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_BUILD_EXAMPLES=OFF \
+            -DCMAKE_C_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled" \
+            -DCMAKE_CXX_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -mcx16" \
+            -DCMAKE_EXE_LINKER_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata"
+          ninja -C /workspace/build -j2
+
+          # ==== 验证产物 ====
+          ls -la /workspace/build/bin/proxy_server
+          /workspace/build/bin/proxy_server --help 2>&1 | head -1 || true
+          ldd /workspace/build/bin/proxy_server 2>&1 | grep -E 'ssl|crypto' || true
+          PGO_EOF
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: proxy_server-linux_x64_clang_lto_pgo
+          path: build/bin/proxy_server
+
+  LinuxClangLtoPgoIoUring:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      # io_uring 会被 docker 默认 seccomp 拦截, 因此 profile 采集放到宿主机.
+      # 埋点二进制在容器内构建 (glibc <= 2.35), 宿主机 glibc 2.39 可直接运行.
+      - name: Install host dependencies for profile collection
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libssl3t64 liburing2 libatomic1 curl python3 openssl
+
+      - name: Build proxy (clang + snmalloc + system openssl + io_uring, LTO+PGO)
+        run: |
+          set -euxo pipefail
+
+          # ===== Phase 1: 容器内 PGO 埋点构建 (io_uring) =====
+          docker run --rm -i \
+            -e DEBIAN_FRONTEND=noninteractive \
+            -v "$GITHUB_WORKSPACE":/workspace \
+            -w /workspace \
+            ubuntu:22.04 \
+            bash -s <<'PGO_INSTR'
+          set -euxo pipefail
+          git config --global --add safe.directory /workspace
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends \
+            ca-certificates git cmake ninja-build pkg-config \
+            clang g++ libssl-dev liburing-dev curl python3 openssl llvm-14
+          cmake -S /workspace -B /workspace/build-pgo-instr -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DENABLE_BUILD_WERROR=OFF \
+            -DENABLE_USE_IO_URING=ON \
+            -DENABLE_SNMALLOC_STATIC=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_BUILD_EXAMPLES=OFF \
+            -DCMAKE_C_FLAGS="-fprofile-instr-generate" \
+            -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -mcx16" \
+            -DCMAKE_EXE_LINKER_FLAGS="-luring -fprofile-instr-generate"
+          ninja -C /workspace/build-pgo-instr -j2
+          PGO_INSTR
+
+          # ===== Phase 2: 宿主机采集 profile (io_uring 原生可用) =====
+          mkdir -p "$GITHUB_WORKSPACE/pgo-ci/cert"
+          openssl req -x509 -newkey rsa:2048 \
+            -keyout "$GITHUB_WORKSPACE/pgo-ci/cert/key.pem" \
+            -out "$GITHUB_WORKSPACE/pgo-ci/cert/cert.pem" \
+            -days 2 -nodes -subj "/CN=localhost" >/dev/null 2>&1
+
+          mkdir -p /tmp/www
+          dd if=/dev/urandom of=/tmp/www/blob.bin bs=1M count=256 status=none
+          (cd /tmp/www && python3 -m http.server 18080 --bind 127.0.0.1 >/dev/null 2>&1) &
+          HTTP_PID=$!
+
+          wait_port() {
+            local port=$1
+            for i in $(seq 1 50); do
+              (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && break
+              sleep 0.2
+            done
+          }
+          wait_proxy() {
+            local port=$1 pid=$2
+            for i in $(seq 1 50); do
+              if ! kill -0 "$pid" 2>/dev/null; then
+                echo "FAIL: proxy (pid $pid) died before opening port $port" >&2
+                exit 1
+              fi
+              (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && return 0
+              sleep 0.2
+            done
+            echo "FAIL: proxy (pid $pid) did not open port $port in time" >&2
+            exit 1
+          }
+          wait_exit() {
+            local pid=$1
+            for i in $(seq 1 100); do
+              kill -0 "$pid" 2>/dev/null || return 0
+              sleep 0.2
+            done
+            # 优雅退出失败则强杀, 避免 CI 挂起 (该次 profile 丢失, 不影响整体).
+            kill -KILL "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+          }
+
+          wait_port 18080
+          export LLVM_PROFILE_FILE="$GITHUB_WORKSPACE/pgo-ci/pgo-%p.profraw"
+
+          # Run 1: TLS 终结代理 -> SSL 引擎 + CONNECT 隧道 + HTTP 转发
+          "$GITHUB_WORKSPACE/build-pgo-instr/bin/proxy_server" \
+            --server_listen 127.0.0.1:18081 --auth_users "" --disable_logs 1 \
+            --ssl_certificate_dir "$GITHUB_WORKSPACE/pgo-ci/cert" >/dev/null 2>&1 &
+          TLS_PID=$!
+          wait_proxy 18081 "$TLS_PID"
+          curl -sS --proxy-insecure -x https://127.0.0.1:18081/ --proxytunnel -o /dev/null http://127.0.0.1:18080/blob.bin
+          curl -sS --proxy-insecure -x https://127.0.0.1:18081/ --proxytunnel -o /dev/null http://127.0.0.1:18080/blob.bin
+          curl -sS --proxy-insecure -x https://127.0.0.1:18081/ -o /dev/null http://127.0.0.1:18080/blob.bin
+          kill -TERM "$TLS_PID"
+          wait_exit "$TLS_PID"
+
+          # Run 2: 明文 HTTP 代理 -> 非 TLS 转发路径
+          "$GITHUB_WORKSPACE/build-pgo-instr/bin/proxy_server" \
+            --server_listen 127.0.0.1:18082 --auth_users "" --disable_logs 1 >/dev/null 2>&1 &
+          PLAIN_PID=$!
+          wait_proxy 18082 "$PLAIN_PID"
+          curl -sS -x http://127.0.0.1:18082 -o /dev/null http://127.0.0.1:18080/blob.bin
+          kill -TERM "$PLAIN_PID"
+          wait_exit "$PLAIN_PID"
+
+          unset LLVM_PROFILE_FILE
+          kill "$HTTP_PID" 2>/dev/null || true
+
+          nprof=$(ls "$GITHUB_WORKSPACE"/pgo-ci/*.profraw 2>/dev/null | wc -l)
+          echo "collected $nprof profraw file(s)"
+          [ "$nprof" -ge 1 ] || { echo "FAIL: no profile collected"; exit 1; }
+
+          # ===== Phase 3: 容器内合并 profile + LTO+PGO 最终构建 (io_uring) =====
+          docker run --rm -i \
+            -e DEBIAN_FRONTEND=noninteractive \
+            -v "$GITHUB_WORKSPACE":/workspace \
+            -w /workspace \
+            ubuntu:22.04 \
+            bash -s <<'PGO_FINAL'
+          set -euxo pipefail
+          git config --global --add safe.directory /workspace
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends \
+            ca-certificates git cmake ninja-build pkg-config \
+            clang g++ libssl-dev liburing-dev curl python3 openssl llvm-14
+          llvm-profdata-14 merge /workspace/pgo-ci/*.profraw -o /workspace/pgo-ci/merged.profdata
+          rm -rf /workspace/build-pgo-instr
+          cmake -S /workspace -B /workspace/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DENABLE_BUILD_WERROR=OFF \
+            -DENABLE_USE_IO_URING=ON \
+            -DENABLE_SNMALLOC_STATIC=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_BUILD_EXAMPLES=OFF \
+            -DCMAKE_C_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled" \
+            -DCMAKE_CXX_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -mcx16" \
+            -DCMAKE_EXE_LINKER_FLAGS="-luring -flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata"
+          ninja -C /workspace/build -j2
+          ls -la /workspace/build/bin/proxy_server
+          /workspace/build/bin/proxy_server --help 2>&1 | head -1 || true
+          PGO_FINAL
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: proxy_server-linux_x64_clang_lto_pgo_iouring
+          path: build/bin/proxy_server
+
   MacOS:
     runs-on: macos-latest
     steps:
