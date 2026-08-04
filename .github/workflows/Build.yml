@@ -157,15 +157,15 @@ jobs:
             bash -s <<'PGO_EOF'
           set -euxo pipefail
 
-          # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
-          # 否则 gitGetVersion 拿不到 commit hash.
-          git config --global --add safe.directory /workspace
-
           # ==== toolchain (ubuntu 22.04 默认 clang 即 clang 14) ====
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends \
             ca-certificates git cmake ninja-build pkg-config \
             clang g++ libssl-dev curl python3 openssl llvm-14
+
+          # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
+          # 否则 gitGetVersion 拿不到 commit hash. (需在安装 git 之后执行)
+          git config --global --add safe.directory /workspace
 
           # ==== Phase 1: PGO 埋点构建 ====
           cmake -S /workspace -B /workspace/build-pgo-instr -G Ninja \
@@ -303,11 +303,14 @@ jobs:
             ubuntu:22.04 \
             bash -s <<'PGO_INSTR'
           set -euxo pipefail
-          git config --global --add safe.directory /workspace
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends \
             ca-certificates git cmake ninja-build pkg-config \
             clang g++ libssl-dev liburing-dev curl python3 openssl llvm-14
+
+          # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
+          # 否则 gitGetVersion 拿不到 commit hash. (需在安装 git 之后执行)
+          git config --global --add safe.directory /workspace
           cmake -S /workspace -B /workspace/build-pgo-instr -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
@@ -403,11 +406,14 @@ jobs:
             ubuntu:22.04 \
             bash -s <<'PGO_FINAL'
           set -euxo pipefail
-          git config --global --add safe.directory /workspace
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends \
             ca-certificates git cmake ninja-build pkg-config \
             clang g++ libssl-dev liburing-dev curl python3 openssl llvm-14
+
+          # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
+          # 否则 gitGetVersion 拿不到 commit hash. (需在安装 git 之后执行)
+          git config --global --add safe.directory /workspace
           llvm-profdata-14 merge /workspace/pgo-ci/*.profraw -o /workspace/pgo-ci/merged.profdata
           rm -rf /workspace/build-pgo-instr
           cmake -S /workspace -B /workspace/build -G Ninja \
