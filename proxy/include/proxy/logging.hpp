@@ -158,10 +158,20 @@ namespace xlogger {
 #include <version>
 #include <codecvt>
 #include <clocale>
-#include <fstream>
+#include <sstream>
 #include <chrono>
 #include <mutex>
 #include <memory>
+
+#if defined(_WIN32) || defined(WIN32)
+# include <io.h>
+# include <fcntl.h>
+# include <sys/stat.h>
+#else
+# include <fcntl.h>
+# include <unistd.h>
+# include <sys/stat.h>
+#endif
 
 #if defined (__cpp_lib_polymorphic_allocator)
 # include <memory_resource>
@@ -711,12 +721,12 @@ public:
 	~auto_logger_file__()
 	{
 		m_last_time = 0;
+		close_file();
 	}
-
-	typedef std::shared_ptr<std::ofstream> ofstream_ptr;
 
 	inline void open(const char* path)
 	{
+		close_file();
 		m_log_path = path;
 
 		if (!global_logging___)
@@ -755,9 +765,6 @@ public:
 
 			auto ptm = logger_aux__::time_to_string(nullptr, m_last_time);
 
-			m_ofstream->close();
-			m_ofstream.reset();
-
 			auto logpath = fs::path(m_log_path.parent_path());
 			fs::path filename;
 
@@ -780,11 +787,20 @@ public:
 
 			m_last_time = time;
 
-			error_code ec;
-			if (!fs::copy_file(m_log_path, filename, ec))
-				break;
+			// 1. 关闭当前写入句柄，确保重命名不被句柄占用。
+			close_file();
 
-			fs::resize_file(m_log_path, 0, ec);
+			// 2. 将 application.log 原子重命名为副本文件名（用于压缩/保留）。
+			error_code ec;
+			fs::rename(m_log_path, filename, ec);
+
+			// 3. 重命名失败时（如目标文件被占用），移除 application.log
+			//    避免残留旧文件，随后会重新创建。
+			if (ec)
+				fs::remove(m_log_path, ec);
+
+			// 4. 副本已交由后台线程压缩，新日志将从重新打开的
+			//    application.log 开始写入。
 			m_log_size = 0;
 
 #ifdef LOGGING_ENABLE_COMPRESS_LOGS
@@ -794,6 +810,8 @@ public:
 					error_code ignore_ec;
 					std::mutex& m = xlogging_compress__::compress_lock();
 					std::lock_guard lock(m);
+					if (!fs::exists(fn, ignore_ec))
+						return;
 					if (!xlogging_compress__::do_compress_gz(fn))
 					{
 						auto file = fn + xlogging_compress__::LOGGING_GZ_SUFFIX;
@@ -812,24 +830,65 @@ public:
 			break;
 		}
 
-		if (!m_ofstream) {
-			m_ofstream.reset(new std::ofstream);
-			auto& ofstream = *m_ofstream;
-			ofstream.open(m_log_path.string().c_str(),
-				std::ios_base::out | std::ios_base::app);
-			ofstream.sync_with_stdio(false);
-		}
+		// 以 O_APPEND 标志打开日志文件，保证追加写入（跨进程/多次打开均安全）。
+		if (m_fd < 0)
+			open_file();
 
-		if (m_ofstream->is_open()) {
+		if (m_fd >= 0) {
 			m_log_size += static_cast<int64_t>(size);
-			m_ofstream->write(str, size);
-			m_ofstream->flush();
+			write_file(str, size);
 		}
 	}
 
 private:
+	inline void close_file() noexcept
+	{
+		if (m_fd < 0)
+			return;
+
+#ifdef WIN32
+		::_close(m_fd);
+#else
+		::close(m_fd);
+#endif
+		m_fd = -1;
+	}
+
+	inline bool open_file()
+	{
+		if (m_fd >= 0)
+			return true;
+
+		error_code ignore_ec;
+		if (!fs::exists(m_log_path, ignore_ec) && global_write_logging___)
+			fs::create_directories(
+				m_log_path.parent_path(), ignore_ec);
+
+#ifdef WIN32
+		m_fd = ::_open(m_log_path.string().c_str(),
+			_O_WRONLY | _O_CREAT | _O_APPEND,
+			_S_IREAD | _S_IWRITE);
+#else
+		m_fd = ::open(m_log_path.string().c_str(),
+			O_WRONLY | O_CREAT | O_APPEND, 0644);
+#endif
+		return m_fd >= 0;
+	}
+
+	inline void write_file(const char* str, std::streamsize size)
+	{
+		if (size <= 0)
+			return;
+
+#ifdef WIN32
+		::_write(m_fd, str, static_cast<unsigned int>(size));
+#else
+		::write(m_fd, str, static_cast<size_t>(size));
+#endif
+	}
+
 	fs::path m_log_path{"./logs"};
-	ofstream_ptr m_ofstream;
+	int m_fd{ -1 };
 	int64_t m_last_time{ -1 };
 	int64_t m_log_size{ 0 };
 };
