@@ -941,15 +941,13 @@ namespace jsonrpc
         });
     }
 
-    // 处理 WebSocket 写入消息的协程.
-    // 注意：写队列不依赖 running_ 标志，否则在 start() 之前入队的消息
-    // （如连接建立后立刻发送的 register/status 通知）会因 running=false
-    // 被永久滞留，导致对端收不到任何消息.
+    // 处理 WebSocket 写入消息的协程
     net::awaitable<void> write_messages()
     {
+      auto running = running_;
       try
       {
-        while (!write_msgs_.empty())
+        while (running && !write_msgs_.empty())
         {
           // 发送消息
           auto msg = std::move(write_msgs_.front());
@@ -959,9 +957,11 @@ namespace jsonrpc
       }
       catch(const std::exception& e)
       {
-        write_msgs_.clear();
-        if (error_cb_)
-          error_cb_(std::string_view(e.what()));
+          if (running && error_cb_)
+          {
+            write_msgs_.clear();
+            error_cb_(std::string_view(e.what()));
+          }
       }
     }
 
@@ -972,7 +972,7 @@ namespace jsonrpc
     // 会话运行状态标志.
     running_flag running_;
 
-    // 回调函数, 用于处理请求、通知消息和错误消息.
+    // 回调函数, 用于处理请求消息和错误消息.
     std::function<void(json::object)> method_cb_;
 
     // 处理通知消息的回调.
