@@ -1,1232 +1,279 @@
-﻿//
+//
 // main.cpp
 // ~~~~~~~~
 //
-// Copyright (c) 2023 Jack (jack dot wgm at gmail dot com)
+// launcher 是 gproxy 的 WebUI 管理器（C++ 版本，与 golang 版本协议完全兼容）：
+// 负责创建/启停多个 proxy_server 进程实例，并通过 WebSocket + JSON-RPC
+// 实现运行期热改配置与实时状态展示。
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable: 4005 4267 4244)
-#endif // _MSC_VER
-
-#ifdef USE_SNMALLOC
-# ifdef NDEBUG
-#  define SNMALLOC_STATIC_LIBRARY_PREFIX sn_
-#  include "src/snmalloc/override/malloc.cc"
-#  include "src/snmalloc/override/new.cc"
-# endif
-#endif // USE_SNMALLOC
-
-
-#include "proxy/logging.hpp"
-#include "proxy/use_awaitable.hpp"
-#include "proxy/default_cert.hpp"
-
-#include "main.hpp"
-#include "httpc/httpc.hpp"
-
-#include "unzip.h"
-
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/detached.hpp>
-#include <boost/asio/signal_set.hpp>
-#include <boost/asio/awaitable.hpp>
-#include <boost/asio/use_awaitable.hpp>
-#include <boost/asio/local/stream_protocol.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/ssl.hpp>
-
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/websocket.hpp>
-
-#include <boost/nowide/args.hpp>
-#include <boost/nowide/convert.hpp>
-#include <boost/algorithm/string/join.hpp>
-#include <boost/program_options.hpp>
-namespace po = boost::program_options;
+#include <algorithm>
+#include <atomic>
+#include <cctype>
+#include <chrono>
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include <boost/filesystem.hpp>
+
+#include "http_server.hpp"
+#include "manager.hpp"
+#include "version.hpp"
+
 namespace fs = boost::filesystem;
 
-#include <boost/regex.hpp>
+using namespace launcher;
 
-#include <fmt/format.h>
+namespace {
 
-#include <limits>
-#include <fstream>
-#include <map>
-#include <ctime>
-
-#ifdef _MSC_VER
-# pragma warning(pop)
-#endif
-
-namespace net = boost::asio;
-namespace beast = boost::beast;
-namespace http = beast::http;
-using tcp = net::ip::tcp;
-
-//////////////////////////////////////////////////////////////////////////
-
-// 各平台 proxy_server 的下载地址
-#if defined(__linux__)
-#define DOWNLOAD_URL "https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-alpine_musl_x64.zip"
-#elif defined(_WIN32)
-#define DOWNLOAD_URL "https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-msvc_x64.zip"
-#elif defined(__APPLE__)
-#define DOWNLOAD_URL "https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-macos-universal.zip"
-#endif
-
-// 启动参数
-std::string config;
-std::string asio_config;
-std::string listen_endpoint;
-std::string proxy_server_path;
-std::string httpd_root;
-std::string httpd_cert_file;
-std::string httpd_key_file;
-bool autoindex = true;
-
-//////////////////////////////////////////////////////////////////////////
-// HTTP 静态文件服务器
-
-namespace httpd_detail {
-
-using string_body = http::string_body;
-using string_response = http::response<string_body>;
-
-using buffer_body = http::buffer_body;
-using buffer_response = http::response<buffer_body>;
-using response_serializer = http::response_serializer<buffer_body, http::fields>;
-
-using dynamic_body = http::dynamic_body;
-using dynamic_request = http::request<dynamic_body>;
-using request_parser = http::request_parser<dynamic_request::body_type>;
-using flat_buffer = beast::flat_buffer;
-
-const auto global_buffer_size = 5 * 1024 * 1024;
-const char* version_string = "launcher/1.0";
-
-const static std::map<std::string, std::string> global_mimes =
-{
-	{ ".html", "text/html; charset=utf-8" },
-	{ ".htm", "text/html; charset=utf-8" },
-	{ ".js", "application/javascript; charset=utf-8" },
-	{ ".json", "application/json; charset=utf-8" },
-	{ ".css", "text/css; charset=utf-8" },
-	{ ".txt", "text/plain; charset=utf-8" },
-	{ ".md", "text/plain; charset=utf-8" },
-	{ ".log", "text/plain; charset=utf-8" },
-	{ ".xml", "text/xml" },
-	{ ".ico", "image/x-icon" },
-	{ ".ttf", "application/x-font-ttf" },
-	{ ".pdf", "application/pdf" },
-	{ ".png", "image/png" },
-	{ ".jpg", "image/jpg" },
-	{ ".jpeg", "image/jpg" },
-	{ ".gif", "image/gif" },
-	{ ".webp", "image/webp" },
-	{ ".svg", "image/svg+xml" },
-	{ ".wav", "audio/x-wav" },
-	{ ".ogg", "video/ogg" },
-	{ ".mp3", "audio/mpeg" },
-	{ ".mp4", "video/mp4" },
-	{ ".zip", "application/zip" },
-	{ ".xz", "application/x-xz" },
-	{ ".webm", "video/webm" },
-	{ ".m3u8", "application/vnd.apple.mpegurl" }
+// 命令行选项定义（与 golang 版本 cmd/launcher 一致）。
+struct option {
+	std::string name;
+	std::string typ; // string / bool
+	std::string help;
+	bool applied = false;
+	std::string str_value;
+	bool bool_value = false;
 };
 
+std::vector<option> make_options() {
+	return {
+		{ "help", "bool", "Show this help message and exit." },
+		{ "listen", "string", "WebUI HTTP listen address (default: 0.0.0.0:18080)." },
+		{ "ssl_certificate_dir", "string", "Directory containing SSL/TLS certificates for HTTPS WebUI (auto-search, same as proxy_server)." },
+		{ "proxy_server", "string", "Path to the proxy_server executable (default: ./proxy_server)." },
+		{ "data_dir", "string", "Directory to persist instance configurations (default: launcher_data)." },
+		{ "webui_user", "string", "Optional WebUI basic-auth username." },
+		{ "webui_password", "string", "Optional WebUI basic-auth password." },
+		{ "no_kill_on_exit", "bool", "Do not stop proxy_server instances when launcher exits." },
+	};
+}
 
-//////////////////////////////////////////////////////////////////////////
-// unzip proxy_server.zip
-bool unzip_proxy_server(const std::string& download_path)
-{
-	unzFile uf = unzOpen64(download_path.c_str());
-	if (uf == nullptr)
-	{
-		XLOG_ERR << "Cannot open zip file: " << download_path;
+option* find_option(std::vector<option>& opts, const std::string& name) {
+	for (auto& o : opts)
+		if (o.name == name)
+			return &o;
+	return nullptr;
+}
+
+bool parse_bool(const std::string& s) {
+	std::string lower = s;
+	std::transform(lower.begin(), lower.end(), lower.begin(),
+		[](unsigned char c) { return std::tolower(c); });
+	return lower == "true" || lower == "1" || lower == "yes" || lower == "on";
+}
+
+bool is_bool_val(const std::string& s) {
+	std::string lower = s;
+	std::transform(lower.begin(), lower.end(), lower.begin(),
+		[](unsigned char c) { return std::tolower(c); });
+	return lower == "true" || lower == "false" || lower == "1" || lower == "0" ||
+		lower == "yes" || lower == "no" || lower == "on" || lower == "off";
+}
+
+void print_help(const std::vector<option>& opts) {
+	std::printf("Usage: launcher [options]\n");
+	std::printf("Options:\n");
+	for (const auto& o : opts)
+		std::printf("  --%-22s %s\n", o.name.c_str(), o.help.c_str());
+}
+
+// 解析监听地址与端口。
+bool parse_listen_addr(const std::string& listen_addr, std::string& host, int& port) {
+	auto colon = listen_addr.rfind(':');
+	if (colon == std::string::npos)
+		return false;
+	host = listen_addr.substr(0, colon);
+	std::string port_str = listen_addr.substr(colon + 1);
+	try {
+		port = std::stoi(port_str);
+	} catch (...) {
 		return false;
 	}
-
-	// 确定解压目标目录（zip 文件所在目录）
-	fs::path target_dir = fs::path(download_path).parent_path();
-	if (target_dir.empty())
-		target_dir = ".";
-
-	// 确保目标目录存在
-	{
-		boost::system::error_code unused_ec;
-		fs::create_directories(target_dir, unused_ec);
-	}
-
-	unz_global_info64 gi;
-	int err = unzGetGlobalInfo64(uf, &gi);
-	if (err != UNZ_OK)
-	{
-		XLOG_ERR << "Error getting global info from zip: " << err;
-		unzClose(uf);
-		return false;
-	}
-
-	constexpr size_t kBufferSize = 8192;
-	std::vector<char> buf(kBufferSize);
-
-	err = unzGoToFirstFile(uf);
-	if (err != UNZ_OK && err != UNZ_END_OF_LIST_OF_FILE)
-	{
-		XLOG_ERR << "Error going to first file in zip: " << err;
-		unzClose(uf);
-		return false;
-	}
-
-	do
-	{
-		char filename_inzip[65536 + 1];
-		unz_file_info64 file_info;
-
-		err = unzGetCurrentFileInfo64(uf, &file_info,
-			filename_inzip, sizeof(filename_inzip),
-			nullptr, 0, nullptr, 0);
-		if (err != UNZ_OK)
-		{
-			XLOG_ERR << "Error getting current file info: " << err;
-			break;
-		}
-
-		// 构建输出路径
-		fs::path output_path = target_dir / filename_inzip;
-		XLOG_INFO << "Unzipping file: " << output_path.string();
-
-		// 检查路径遍历攻击: 确保解压路径在 target_dir 范围内
-		try
-		{
-			auto canonical_path = fs::absolute(output_path).lexically_normal();
-			auto canonical_target = fs::absolute(target_dir).lexically_normal();
-			if (canonical_path.string().find(canonical_target.string()) != 0)
-			{
-				XLOG_WARN << "Skipping file with path traversal: " << filename_inzip;
-				err = unzGoToNextFile(uf);
-				if (err == UNZ_END_OF_LIST_OF_FILE)
-					break;
-				continue;
-			}
-		}
-		catch (...)
-		{
-			XLOG_WARN << "Skipping file due to path error: " << filename_inzip;
-			err = unzGoToNextFile(uf);
-			if (err == UNZ_END_OF_LIST_OF_FILE)
-				break;
-			continue;
-		}
-
-		// 检查是否为目录（文件名以 '/' 或 '\\' 结尾）
-		size_t name_len = strlen(filename_inzip);
-		if (name_len > 0 &&
-			(filename_inzip[name_len - 1] == '/' ||
-			 filename_inzip[name_len - 1] == '\\'))
-		{
-			// 创建目录
-			boost::system::error_code unused_ec;
-			fs::create_directories(output_path, unused_ec);
-		}
-		else
-		{
-			// 创建父目录
-			boost::system::error_code unused_ec;
-			fs::create_directories(output_path.parent_path(), unused_ec);
-
-			// 打开当前文件进行读取
-			err = unzOpenCurrentFile(uf);
-			if (err != UNZ_OK)
-			{
-				XLOG_ERR << "Error opening current file in zip: "
-					<< filename_inzip << ", err: " << err;
-				err = unzGoToNextFile(uf);
-				if (err == UNZ_END_OF_LIST_OF_FILE)
-					break;
-				continue;
-			}
-
-			// 创建输出文件
-			FILE* fout = fopen(output_path.string().c_str(), "wb");
-			if (fout == nullptr)
-			{
-				XLOG_ERR << "Error creating output file: " << output_path.string();
-				unzCloseCurrentFile(uf);
-				err = unzGoToNextFile(uf);
-				if (err == UNZ_END_OF_LIST_OF_FILE)
-					break;
-				continue;
-			}
-
-			// 读取并写入
-			do
-			{
-				int read_bytes = unzReadCurrentFile(uf, buf.data(), (unsigned)kBufferSize);
-				if (read_bytes < 0)
-				{
-					XLOG_ERR << "Error reading from zip: " << filename_inzip
-						<< ", err: " << read_bytes;
-					break;
-				}
-				if (read_bytes == 0)
-					break;
-
-				if (fwrite(buf.data(), 1, read_bytes, fout) != (size_t)read_bytes)
-				{
-					XLOG_ERR << "Error writing to file: " << output_path.string();
-					break;
-				}
-			} while (true);
-
-			fclose(fout);
-
-			// 关闭当前文件
-			int close_err = unzCloseCurrentFile(uf);
-			if (close_err == UNZ_CRCERROR)
-			{
-				XLOG_WARN << "CRC error in file: " << filename_inzip;
-			}
-
-			// 设置文件权限为可执行（对于 Unix 系统）
-#if !defined(_WIN32)
-			boost::system::error_code perm_ec;
-			fs::permissions(output_path,
-				fs::owner_read | fs::owner_write | fs::owner_exe |
-				fs::group_read | fs::group_exe |
-				fs::others_read | fs::others_exe,
-				perm_ec);
-#endif
-		}
-
-		err = unzGoToNextFile(uf);
-		if (err == UNZ_END_OF_LIST_OF_FILE)
-			break;
-		if (err != UNZ_OK)
-		{
-			XLOG_ERR << "Error going to next file in zip: " << err;
-			break;
-		}
-	} while (true);
-
-	unzClose(uf);
-	return true;
+	return port > 0 && port <= 65535;
 }
 
-//////////////////////////////////////////////////////////////////////////
-
-net::awaitable<bool> download_proxy_server(net::io_context& ioc, const std::string& download_path)
-{
-	httpc::http_client httpc(ioc.get_executor(), net::buffer(default_root_certificates()));
-    httpc::http_request req;
-
-	req.method(httpc::verb::get);
-	httpc.set_download_file(download_path);
-	httpc.max_redirects(10);
-	httpc.user_agent("curl/8.21.0");
-
-	auto result = co_await httpc.async_perform(
-		DOWNLOAD_URL,
-		req);
-	if (result)
-			co_return true;
-
-	XLOG_ERR << "async_perform failed: " << result.error().message();
-	co_return false;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-inline std::string server_date_string()
-{
-	auto time = std::time(nullptr);
-	auto gmt = std::gmtime(&time);
-
-	std::string str(64, '\0');
-	auto ret = std::strftime(str.data(), 64, "%a, %d %b %Y %H:%M:%S GMT", gmt);
-	str.resize(ret);
-	return str;
-}
-
-// api_session 前向声明.
-template <typename Stream>
-net::awaitable<void> api_session(Stream& stream, dynamic_request& req,
-	const std::string& target, const std::string& api_path);
-
-template <typename Stream>
-inline net::awaitable<void> error_session(Stream& stream,
-	dynamic_request& req, http::status code, const std::string& message)
-{
-	boost::system::error_code ec;
-
-	string_response res{code, req.version()};
-	res.set(http::field::server, version_string);
-	res.set(http::field::content_type, "text/html");
-	res.keep_alive(req.keep_alive());
-	res.body() = message;
-	res.prepare_payload();
-
-	http::response_serializer<string_body, http::fields> sr{res};
-	co_await http::async_write(stream, sr, net_awaitable[ec]);
-	if (ec)
-		XLOG_ERR << "error_session async_write: " << ec.message();
-	co_return;
-}
-
-inline std::string select_content_type(const fs::path& file)
-{
-	auto ext = file.extension().string();
-	// 转小写
-	for (auto& c : ext) c = std::tolower(static_cast<unsigned char>(c));
-	auto it = global_mimes.find(ext);
-	if (it != global_mimes.end())
-		return it->second;
-	return "application/octet-stream";
-}
-
-template <typename Stream>
-inline net::awaitable<void> stream_file_body(Stream& stream,
-	buffer_response& res, response_serializer& sr,
-	std::fstream& file_stream, size_t content_length)
-{
-	boost::system::error_code ec;
-
-	res.body().data = nullptr;
-	res.body().more = false;
-
-	co_await http::async_write_header(stream, sr, net_awaitable[ec]);
-	if (ec)
-	{
-		XLOG_WARN << "async_write_header: " << ec.message();
-		co_return;
-	}
-
-	std::vector<char> buffer(global_buffer_size);
-	char* bufs = buffer.data();
-	std::streamsize total = 0;
-
-	do
-	{
-		file_stream.read(bufs, global_buffer_size);
-
-		auto bytes_transferred = std::min<std::streamsize>(
-			file_stream.gcount(),
-			static_cast<std::streamsize>(content_length) - total);
-
-		if (bytes_transferred == 0 ||
-			total >= static_cast<std::streamsize>(content_length))
-		{
-			res.body().data = nullptr;
-			res.body().more = false;
-		}
-		else
-		{
-			res.body().data = bufs;
-			res.body().size = bytes_transferred;
-			res.body().more = true;
-		}
-
-		co_await http::async_write(stream, sr, net_awaitable[ec]);
-		total += bytes_transferred;
-
-		if (ec == http::error::need_buffer)
-		{
-			ec = {};
-			continue;
-		}
-		if (ec)
-		{
-			XLOG_WARN << "async_write: " << ec.message();
-			co_return;
-		}
-	} while (!sr.is_done());
-
-	co_return;
-}
-
-// 处理文件下载
-template <typename Stream>
-inline net::awaitable<void> file_session(Stream& stream,
-	dynamic_request& req, fs::path file)
-{
-	if (req.method() != http::verb::get)
-	{
-		co_await error_session(stream, req,
-			http::status::bad_request, "Bad request");
-		co_return;
-	}
-
-	if (!fs::exists(file))
-	{
-		co_await error_session(stream, req,
-			http::status::not_found, "Not Found");
-		co_return;
-	}
-
-	boost::system::error_code ec;
-	size_t content_length = fs::file_size(file, ec);
-
-	std::fstream file_stream(
-		file.string(),
-		std::ios_base::binary | std::ios_base::in);
-
-	buffer_response res{http::status::ok, req.version()};
-	res.set(http::field::server, version_string);
-	res.set(http::field::content_type, select_content_type(file));
-	res.set(http::field::accept_ranges, "bytes");
-	res.keep_alive(req.keep_alive());
-	res.content_length(content_length);
-
-	XLOG_INFO << "serving file: " << file.filename().string()
-		<< ", size: " << content_length;
-
-	response_serializer sr(res);
-
-	co_await stream_file_body(
-		stream, res, sr, file_stream, content_length);
-
-	co_return;
-}
-
-// 解析请求路径并做路径遍历防护.
-inline fs::path resolve_request_path(const fs::path& doc_root,
-	const std::string& target, boost::system::error_code& ec)
-{
-	std::string path_part = target;
-
-	// 去掉开头的 '/'
-	if (!path_part.empty() && path_part[0] == '/')
-		path_part.erase(0, 1);
-
-	// 去掉查询字符串
-	auto qpos = path_part.find('?');
-	if (qpos != std::string::npos)
-		path_part = path_part.substr(0, qpos);
-
-	if (path_part.empty())
-		return doc_root;
-
-	auto current_path = fs::canonical(
-		doc_root / path_part, ec).make_preferred();
-
-	if (ec || !current_path.string().starts_with(doc_root.string()))
-	{
-		ec = boost::asio::error::not_found;
-		return {};
-	}
-
-	return current_path;
-}
-
-// 生成目录列表 HTML（类似 nginx autoindex）
-inline std::string generate_directory_listing(
-	const fs::path& dir_path,
-	const std::string& request_target)
-{
-	std::string html;
-
-	html += "<html>\n<head><title>Index of ";
-	html += request_target;
-	html += "</title></head>\n<body>\n<h1>Index of ";
-	html += request_target;
-	html += "</h1><hr><pre>\n";
-
-	// 添加父目录链接
-	if (request_target != "/")
-		html += "<a href=\"../\">../</a>\n";
-
-	boost::system::error_code ec;
-	std::vector<fs::directory_entry> entries;
-
-	for (auto& entry : fs::directory_iterator(dir_path, ec))
-	{
-		if (ec)
-			break;
-		entries.push_back(entry);
-	}
-
-	// 排序：目录在前，文件在后，按名称字母顺序.
-	std::sort(entries.begin(), entries.end(),
-		[](const fs::directory_entry& a, const fs::directory_entry& b)
-		{
-			bool a_dir = fs::is_directory(a.path());
-			bool b_dir = fs::is_directory(b.path());
-			if (a_dir != b_dir)
-				return a_dir;  // 目录排在文件前面.
-			return a.path().filename().string() < b.path().filename().string();
-		});
-
-	for (auto& entry : entries)
-	{
-		auto filename = entry.path().filename().string();
-		auto link_name = filename;
-
-		// 对特殊字符进行 HTML 转义
-		auto escape_html = [](const std::string& s) -> std::string
-		{
-			std::string result;
-			result.reserve(s.size());
-			for (char c : s)
-			{
-				switch (c)
-				{
-				case '&': result += "&amp;"; break;
-				case '<': result += "&lt;"; break;
-				case '>': result += "&gt;"; break;
-				case '"': result += "&quot;"; break;
-				default: result += c; break;
-				}
-			}
-			return result;
-		};
-
-		auto escaped = escape_html(link_name);
-
-		html += "<a href=\"";
-		html += escaped;
-
-		bool is_dir = fs::is_directory(entry.path(), ec);
-
-		if (is_dir)
-		{
-			html += "/\">";
-			html += escaped;
-			html += "/</a>";
-		}
-		else
-		{
-			html += "\">";
-			html += escaped;
-			// 填充空格使时间列对齐
-			std::string padding(60 - escaped.size() - 3, ' ');
-			if (padding.size() > 60) padding.clear();
-			html += "</a>";
-			html += padding;
-
-			// 最后修改时间
-			auto ft = fs::last_write_time(entry.path(), ec);
-			if (!ec)
-			{
-				std::time_t cftime = static_cast<std::time_t>(ft);
-				std::tm tm;
-#ifdef _WIN32
-				gmtime_s(&tm, &cftime);
-#else
-				gmtime_r(&cftime, &tm);
-#endif
-				char timebuf[64];
-				std::strftime(timebuf, sizeof(timebuf), "%d-%b-%Y %H:%M", &tm);
-				html += timebuf;
-				html += "    ";
-			}
-
-			// 文件大小
-			auto size = fs::file_size(entry.path(), ec);
-			if (!ec)
-				html += fmt::format("{:>12}", size);
-		}
-		html += "\n";
-	}
-
-	html += "</pre><hr></body>\n</html>\n";
-	return html;
-}
-
-// 处理目录列表请求
-template <typename Stream>
-inline net::awaitable<void> directory_listing(
-	Stream& stream,
-	dynamic_request& req,
-	const fs::path& dir_path,
-	const std::string& request_target)
-{
-	boost::system::error_code ec;
-
-	std::string body = generate_directory_listing(dir_path, request_target);
-
-	string_response res{http::status::ok, req.version()};
-	res.set(http::field::server, version_string);
-	res.set(http::field::content_type, "text/html; charset=utf-8");
-	res.keep_alive(req.keep_alive());
-	res.body() = body;
-	res.prepare_payload();
-
-	http::response_serializer<string_body, http::fields> sr{res};
-	co_await http::async_write(stream, sr, net_awaitable[ec]);
-	if (ec)
-		XLOG_WARN << "directory_listing async_write: " << ec.message();
-
-	co_return;
-}
-
-// 处理 WebSocket 会话
-template <typename Stream>
-inline net::awaitable<void> ws_session(
-	beast::websocket::stream<Stream> ws,
-	dynamic_request req)
-{
-	boost::system::error_code ec;
-
-	// 设置 WebSocket 超时选项.
-	ws.set_option(
-		beast::websocket::stream_base::timeout::suggested(
-			beast::role_type::server));
-
-	// 设置 WebSocket 响应装饰器.
-	ws.set_option(beast::websocket::stream_base::decorator(
-		[](beast::websocket::response_type& m)
-		{
-			m.set(http::field::server, version_string);
-		}));
-
-	// 接受 WebSocket 握手.
-	co_await ws.async_accept(req, net_awaitable[ec]);
-	if (ec)
-	{
-		XLOG_ERR << "websocket accept: " << ec.message();
-		co_return;
-	}
-
-	XLOG_INFO << "WebSocket connection established";
-
-	// WebSocket 消息处理循环（回声服务）.
-	beast::flat_buffer ws_buffer;
-	for (;;)
-	{
-		ws_buffer.clear();
-		co_await ws.async_read(ws_buffer, net_awaitable[ec]);
-		if (ec == beast::websocket::error::closed)
-		{
-			XLOG_INFO << "WebSocket connection closed";
-			break;
-		}
-		if (ec)
-		{
-			XLOG_ERR << "websocket read: " << ec.message();
-			break;
-		}
-
-		// 将消息原样发送回去（回声）.
-		ws.text(ws.got_text());
-		co_await ws.async_write(ws_buffer.data(), net_awaitable[ec]);
-		if (ec)
-		{
-			XLOG_ERR << "websocket write: " << ec.message();
-			break;
-		}
-	}
-	co_return;
-}
-
-// 处理单个 HTTP 会话
-template <typename Stream>
-inline net::awaitable<void> http_session(Stream stream, fs::path doc_root, bool autoindex_flag)
-{
-	boost::system::error_code ec;
-	flat_buffer buffer;
-	buffer.reserve(global_buffer_size);
-
-	for (;;)
-	{
-		request_parser parser;
-		parser.body_limit(std::numeric_limits<uint64_t>::max());
-		parser.header_limit(static_cast<uint32_t>(global_buffer_size >> 2));
-
-		co_await http::async_read_header(stream, buffer, parser, net_awaitable[ec]);
-		if (ec)
-		{
-			if (ec != http::error::end_of_stream)
-				XLOG_WARN << "async_read_header: " << ec.message();
-			co_return;
-		}
-
-		dynamic_request req = parser.release();
-
-		// 检测 WebSocket 升级请求，交给 ws_session 处理.
-		if (beast::websocket::is_upgrade(req))
-		{
-			co_await ws_session(
-				beast::websocket::stream<Stream>{std::move(stream)},
-				std::move(req));
-			co_return;
-		}
-
-		if (req.method() != http::verb::get)
-		{
-			co_await error_session(stream, req,
-				http::status::method_not_allowed, "Method not allowed");
-			if (!req.keep_alive())
-				co_return;
-			continue;
-		}
-
-		auto target = std::string(req.target());
-		auto current_path = resolve_request_path(doc_root, target, ec);
-
-		boost::regex api_exp{ R"(^\/api(.*)$)" };
-		boost::smatch what;
-
-		if (boost::regex_match(target, what, api_exp))
-		{
-			// 处理 API 请求.
-			co_await api_session(stream, req, target, std::string(what[1]));
-
-			if (!req.keep_alive())
-				co_return;
-			continue;
-		}
-
-		if (ec || current_path.empty())
-		{
-			co_await error_session(stream, req,
-				http::status::not_found, "Not Found");
-			if (!req.keep_alive())
-				co_return;
-			continue;
-		}
-
-		if (fs::is_directory(current_path))
-		{
-			// 尝试 index.html / index.htm
-			auto index_path = current_path / "index.html";
-			if (!fs::exists(index_path, ec))
-				index_path = current_path / "index.htm";
-			if (!ec && fs::exists(index_path, ec))
-			{
-				co_await file_session(stream, req, index_path);
-				if (!req.keep_alive())
-					co_return;
-				continue;
-			}
-
-			if (autoindex_flag)
-			{
-				// 没有 index 文件，生成目录列表.
-				co_await directory_listing(stream, req,
-					current_path, std::string(req.target()));
-			}
-			else
-			{
-				// autoindex 关闭，返回 403.
-				co_await error_session(stream, req,
-					http::status::forbidden, "Forbidden");
-			}
-
-			if (!req.keep_alive())
-				co_return;
-			continue;
-		}
-
-		if (fs::is_regular_file(current_path))
-		{
-			co_await file_session(stream, req, current_path);
-			if (!req.keep_alive())
-				co_return;
-			continue;
-		}
-
-		co_await error_session(stream, req,
-			http::status::not_found, "Not Found");
-		if (!req.keep_alive())
-			co_return;
-	}
-}
-
-// 处理 SSL HTTP 会话
-template <typename Stream>
-inline net::awaitable<void> ssl_http_session(
-	net::ssl::stream<Stream> ssl_stream, fs::path doc_root, bool autoindex_flag)
-{
-	boost::system::error_code ec;
-
-	// 执行 SSL 握手.
-	co_await ssl_stream.async_handshake(
-		net::ssl::stream_base::server, net_awaitable[ec]);
-	if (ec)
-	{
-		XLOG_ERR << "SSL handshake failed: " << ec.message();
-		co_return;
-	}
-
-	// 握手完成后，代理给 http_session 处理.
-	co_await http_session(std::move(ssl_stream), doc_root, autoindex_flag);
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-template <typename Stream>
-net::awaitable<void> api_session(Stream& stream, dynamic_request& req,
-	const std::string& target, const std::string& api_path)
-{
-	boost::system::error_code ec;
-
-	co_return;
-}
-
-
-} // namespace httpd_detail
-
-
-net::awaitable<void> start_launcher_server(
-	net::io_context& ioc, std::string proxy_server_path, std::string httpd_listen,
-	fs::path doc_root, std::string cert_file, std::string key_file, bool autoindex_flag)
-{
-	using namespace httpd_detail;
-	boost::system::error_code ec;
-
-	// 检查代理服务器路径是否存在, 如果不存在则下载.
-	if (!fs::exists(proxy_server_path, ec))
-	{
-		XLOG_WARN << "Proxy server path does not exist: " << proxy_server_path;
-
-		// 尝试下载代理服务器.
-		if (!co_await download_proxy_server(ioc, proxy_server_path))
-			co_return;
-
-		// 下载完成后解压 zip 文件.
-		XLOG_INFO << "Extracting proxy server from: " << proxy_server_path;
-		if (!unzip_proxy_server(proxy_server_path))
-		{
-			XLOG_ERR << "Failed to extract proxy server.";
-			co_return;
-		}
-		XLOG_INFO << "Proxy server extracted successfully.";
-	}
-
-	// 规范化文档根目录路径.
-	doc_root = fs::canonical(doc_root, ec);
-	if (ec)
-	{
-		XLOG_ERR << "Invalid document root: "
-			<< doc_root.string()
-			<< ", err: "
-			<< ec.message();
-		co_return;
-	}
-
-	// 检查文档根目录是否存在且为目录.
-	if (!fs::exists(doc_root) || !fs::is_directory(doc_root))
-	{
-		XLOG_ERR << "Document root does not exist: " << doc_root.string();
-		co_return;
-	}
-
-	// 解析监听地址和端口.
-	std::string host, port;
-	bool ipv6only = false;
-
-	// 解析监听地址和端口.
-	if (!parse_endpoint_string(httpd_listen, host, port, ipv6only))
-	{
-		XLOG_ERR << "Invalid httpd listen address: " << httpd_listen;
-		co_return;
-	}
-
-	auto listen_addr = boost::asio::ip::make_address(host, ec);
-	if (ec)
-	{
-		XLOG_ERR << "Invalid listen address: " << host;
-		co_return;
-	}
-
-	tcp::acceptor acceptor(ioc,
-		tcp::endpoint(listen_addr, (unsigned short)atoi(port.c_str())));
-
-	// 尝试加载 SSL 证书和密钥.
-	bool use_ssl = false;
-	net::ssl::context ssl_ctx(net::ssl::context::sslv23);
-
-	if (!cert_file.empty() && !key_file.empty())
-	{
-		// 检查证书文件是否存在.
-		if (!fs::exists(cert_file, ec))
-		{
-			XLOG_ERR << "Certificate file not found: " << cert_file;
-			co_return;
-		}
-
-		// 检查密钥文件是否存在.
-		if (!fs::exists(key_file, ec))
-		{
-			XLOG_ERR << "Key file not found: " << key_file;
-			co_return;
-		}
-
-		// 设置 SSL 上下文选项.
-		ssl_ctx.set_options(
-			net::ssl::context::default_workarounds
-			| net::ssl::context::no_sslv2
-			| net::ssl::context::no_sslv3
-			| net::ssl::context::no_tlsv1
-			| net::ssl::context::no_tlsv1_1
-			| net::ssl::context::single_dh_use
-		);
-
-		// 加载证书文件.
-		ssl_ctx.use_certificate_chain_file(cert_file, ec);
-		if (ec)
-		{
-			XLOG_ERR << "Failed to load certificate file: "
-				<< cert_file << ", error: " << ec.message();
-			co_return;
-		}
-
-		// 加载私钥文件.
-		ssl_ctx.use_private_key_file(key_file, net::ssl::context::pem, ec);
-		if (ec)
-		{
-			XLOG_ERR << "Failed to load key file: "
-				<< key_file << ", error: " << ec.message();
-			co_return;
-		}
-
-		use_ssl = true;
-	}
-
-	XLOG_INFO << "HTTP" << (use_ssl ? "S" : "")
-		<< " file server listening on "
-		<< listen_addr.to_string() << ":" << port
-		<< ", document root: " << doc_root.string();
-
-	for (;;)
-	{
+// 解析 webui 目录：优先可执行文件目录，其次当前目录。
+std::string resolve_webui_dir(const std::string& exe_path) {
+	auto try_dir = [](const std::string& base) -> std::string {
+		fs::path p = fs::path(base) / "webui";
 		boost::system::error_code ec;
-
-		// 接受新连接.
-		tcp::socket client = co_await acceptor.async_accept(net_awaitable[ec]);
-		if (ec)
-		{
-			XLOG_ERR << "Accept error: " << ec.message();
-			break;
-		}
-
-		net::socket_base::keep_alive ka(true);
-		client.set_option(ka, ec);
-		tcp::no_delay nd(true);
-		client.set_option(nd, ec);
-
-		if (use_ssl)
-		{
-			// 创建 SSL stream 对象.
-			beast::tcp_stream stream(std::move(client));
-
-			// 启动 SSL HTTP 会话协程.
-			net::co_spawn(
-				stream.get_executor(),
-				ssl_http_session(
-					net::ssl::stream<beast::tcp_stream>(
-						std::move(stream), ssl_ctx),
-					doc_root, autoindex_flag),
-				net::detached);
-		}
-		else
-		{
-			// 创建 tcp_stream 对象.
-			beast::tcp_stream stream(std::move(client));
-
-			// 启动 HTTP 会话协程.
-			net::co_spawn(
-				stream.get_executor(),
-				http_session(std::move(stream), doc_root, autoindex_flag),
-				net::detached);
+		if (fs::is_directory(p, ec))
+			return p.string();
+		return {};
+	};
+	if (!exe_path.empty()) {
+		fs::path exe(exe_path);
+		if (exe.has_parent_path()) {
+			auto d = try_dir(exe.parent_path().string());
+			if (!d.empty())
+				return d;
 		}
 	}
-
-	co_return;
+	{
+		auto d = try_dir(fs::current_path().string());
+		if (!d.empty())
+			return d;
+	}
+	return {};
 }
 
+std::atomic<bool> g_stopping{ false };
 
-//////////////////////////////////////////////////////////////////////////
+} // namespace
 
-inline std::optional<std::string> try_as_string(const boost::any& var)
-{
-	try {
-		return boost::any_cast<std::string>(var);
-	}
-	catch (const boost::bad_any_cast&) {
-		return std::nullopt;
-	}
-}
-
-inline std::optional<bool> try_as_bool(const boost::any& var)
-{
-	try {
-		return boost::any_cast<bool>(var);
-	}
-	catch (const boost::bad_any_cast&) {
-		return std::nullopt;
-	}
-}
-
-inline std::optional<int> try_as_int(const boost::any& var)
-{
-	try {
-		return boost::any_cast<int>(var);
-	}
-	catch (const boost::bad_any_cast&) {
-		return std::nullopt;
-	}
-}
-
-
-inline void print_args(int argc, char** argv, const po::variables_map& vm)
-{
-	XLOG_INFO << "Current directory: "
-		<< fs::current_path().string();
-
-	if (!vm.count("config"))
-	{
-		std::vector<std::string> args(argv, argv + argc);
-		XLOG_INFO << "Run: " << boost::algorithm::join(args, " ");
-		return;
-	}
-
-	for (const auto& [key, value] : vm)
-	{
-		if (value.empty() || key == "config")
-			continue;
-
-		if (auto s = try_as_string(value.value()))
-		{
-			XLOG_INFO << key << " = " << *s;
-			continue;
-		}
-
-		if (auto b = try_as_bool(value.value()))
-		{
-			XLOG_INFO << key << " = " << *b;
-			continue;
-		}
-
-		if (auto i = try_as_int(value.value()))
-		{
-			XLOG_INFO << key << " = " << *i;
-			continue;
-		}
-	}
-}
-
-namespace std
-{
-	std::ostream& operator<<(std::ostream &os, const std::vector<std::string> &users)
-	{
-		for (auto it = users.begin(); it != users.end();)
-		{
-			os << *it;
-			if (++it == users.end())
-				break;
-			os << " ";
-		}
-
-		return os;
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-int main(int argc, char** argv)
-{
-	[[maybe_unused]]boost::nowide::args a(argc, argv);
-	platform_init();
-
-	std::string config;
-
-#ifdef NDEBUG
-	const bool default_logs = true;
-#else
-	const bool default_logs = false;
-#endif
-
-	po::options_description desc("Options");
-	desc.add_options()
-		("help,h", "Show this help message and exit.")
-		("config", po::value<std::string>(&config)->value_name("config.conf"), "Load configuration options from the specified file.")
-		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Environment variable name for configuring Boost.Asio (default: ASIO).")
-		("httpd_listen", po::value<std::string>(&listen_endpoint)->value_name("addr:port")->default_value("0.0.0.0:8080"), "HTTP server listen address and port (default: 0.0.0.0:8080).")
-		("proxy_server", po::value<std::string>(&proxy_server_path)->value_name("path")->default_value("./proxy_server.zip"), "Path to the proxy server executable.")
-		("httpd_root", po::value<std::string>(&httpd_root)->value_name("path")->default_value(fs::current_path().string()), "HTTP server document root directory (default: current directory).")
-		("httpd_cert", po::value<std::string>(&httpd_cert_file)->value_name("file"), "SSL certificate file path (PEM format).")
-		("httpd_key", po::value<std::string>(&httpd_key_file)->value_name("file"), "SSL private key file path (PEM format).")
-		("autoindex", po::value<bool>(&autoindex)->default_value(false)->value_name("bool"), "Enable or disable directory listing (default: false).")
-	;
-
-	// 解析命令行.
-	po::variables_map vm;
-
-	try {
-		po::store(
-			po::command_line_parser(argc, argv)
-			.options(desc)
-			.style(po::command_line_style::unix_style
-				| po::command_line_style::allow_long_disguise)
-			.run()
-			, vm);
-		po::notify(vm);
-	}
-	catch (const po::error& e)
-	{
-		std::cerr << "Error parsing command line: " << e.what() << "\n";
-		return EXIT_FAILURE;
-	}
-
-	// 帮助输出.
-	if (vm.count("help") || argc == 1)
-	{
-		version_info();
-		std::cout << desc
-				  << "\n"
-				  << R"(Email bug reports, questions, discussions to <jack.wgm@gmail.com>
-and/or open issues at https://github.com/Jackarain/proxy)"
-				  << "\n";
-		return EXIT_SUCCESS;
-	}
-
-	if (vm.count("config"))
-	{
-		boost::system::error_code ignore_ec;
-		if (!fs::exists(config, ignore_ec))
-		{
-			std::cerr << "No such config file: " << config << std::endl;
-			return EXIT_FAILURE;
-		}
-
-		try {
-			auto cfg = po::parse_config_file(config.c_str(), desc, false);
-			po::store(cfg, vm);
-			po::notify(vm);
-		}
-		catch (const po::error& e)
-		{
-			std::cerr << "Error parsing config file: " << e.what() << "\n";
-			return EXIT_FAILURE;
-		}
-	}
-
-	print_args(argc, argv, vm);
-
-	auto cfg = net::config_from_env(asio_config);
-	net::io_context ioc(cfg);
-	net::signal_set terminator_signal(ioc);
-
+int main(int argc, char** argv) {
 #ifdef __linux__
 	signal(SIGPIPE, SIG_IGN);
 #endif
 
-	// 启动 HTTP(S) 服务器.
-	net::co_spawn(ioc,
-		start_launcher_server(ioc, proxy_server_path, listen_endpoint, httpd_root,
-			httpd_cert_file, httpd_key_file, autoindex),
-		net::detached);
+	auto opts = make_options();
 
-	ioc.run();
+	// 命令行为空时显示帮助。
+	if (argc == 1) {
+		print_help(opts);
+		return 0;
+	}
 
-	return EXIT_SUCCESS;
+	// 解析命令行（与 golang 版本一致）。
+	for (int i = 1; i < argc; i++) {
+		std::string arg = argv[i];
+		if (arg.rfind("--", 0) != 0)
+			continue;
+		std::string name = arg.substr(2);
+		std::string val;
+		bool has_val = false;
+		auto eq = name.find('=');
+		if (eq != std::string::npos) {
+			val = name.substr(eq + 1);
+			name = name.substr(0, eq);
+			has_val = true;
+		}
+		option* o = find_option(opts, name);
+		if (!o)
+			continue;
+		if (o->typ == "bool") {
+			if (!has_val && i + 1 < argc &&
+				std::string(argv[i + 1]).rfind("--", 0) != 0 &&
+				is_bool_val(argv[i + 1])) {
+				val = argv[i + 1];
+				has_val = true;
+				i++;
+			}
+			if (!has_val)
+				val = "true";
+			o->bool_value = parse_bool(val);
+			o->applied = true;
+			continue;
+		}
+		if (!has_val) {
+			if (i + 1 < argc && std::string(argv[i + 1]).rfind("--", 0) != 0) {
+				val = argv[i + 1];
+				has_val = true;
+				i++;
+			} else {
+				val = "";
+			}
+		}
+		o->str_value = val;
+		o->applied = true;
+	}
+
+	auto get_str = [&opts](const std::string& name, const std::string& def) -> std::string {
+		option* o = find_option(opts, name);
+		return (o && o->applied) ? o->str_value : def;
+	};
+	auto get_bool = [&opts](const std::string& name, bool def) -> bool {
+		option* o = find_option(opts, name);
+		return (o && o->applied) ? o->bool_value : def;
+	};
+
+	if (get_bool("help", false)) {
+		print_help(opts);
+		return 0;
+	}
+
+	std::string listen_addr = get_str("listen", "0.0.0.0:18080");
+	std::string ssl_dir = get_str("ssl_certificate_dir", "");
+	std::string proxy_path = get_str("proxy_server", "./proxy_server");
+	std::string data_dir = get_str("data_dir", "launcher_data");
+	std::string webui_user = get_str("webui_user", "");
+	std::string webui_password = get_str("webui_password", "");
+	bool no_kill_on_exit = get_bool("no_kill_on_exit", false);
+
+	// 检查 proxy_server 可执行文件是否存在。
+	{
+		boost::system::error_code ec;
+		if (!fs::exists(proxy_path, ec)) {
+			std::fprintf(stderr, "\x1b[31m[错误] 未找到 proxy_server 可执行文件: %s\x1b[0m\n", proxy_path.c_str());
+			std::fprintf(stderr, "请将 proxy_server 放到 launcher 的当前目录下，或使用 --proxy_server 指定其路径。\n");
+			return 1;
+		}
+	}
+
+	// 解析监听地址与端口（端口用于生成传给 proxy_server 的控制通道地址）。
+	std::string host;
+	int port = 0;
+	if (!parse_listen_addr(listen_addr, host, port)) {
+		std::fprintf(stderr, "invalid --listen address: %s\n", listen_addr.c_str());
+		return 1;
+	}
+
+	fs::path work_dir = fs::current_path();
+	std::string webui_dir = resolve_webui_dir(argv[0]);
+	if (webui_dir.empty())
+		std::fprintf(stderr, "[warn] webui directory not found, WebUI pages will be unavailable\n");
+
+	// 实例管理器。
+	auto mgr = std::make_shared<manager>(data_dir, proxy_path, work_dir.string());
+	// 必须先设置 WS 地址再 Load：Load 会自动启动 autostart 实例，
+	// 此时需要正确的地址/端口来构造 --launcher 控制通道 URL。
+	bool https = !ssl_dir.empty();
+	mgr->set_ws_addr(host, port, https);
+
+	// HTTP 服务。
+	http_server server(mgr, webui_dir, webui_user, webui_password, build_version());
+	std::string err;
+	if (!server.start(listen_addr, https, ssl_dir, err)) {
+		std::fprintf(stderr, "%s\n", err.c_str());
+		return 1;
+	}
+
+	std::fprintf(stderr, "[info] launcher started, WebUI %s://%s (control channel port %d)\n",
+		https ? "https" : "http", listen_addr.c_str(), port);
+	if (!webui_user.empty())
+		std::fprintf(stderr, "[info] WebUI basic auth enabled for user %s\n", webui_user.c_str());
+
+	// 加载实例配置并自动拉起 autostart 实例。
+	if (!mgr->load()) {
+		std::fprintf(stderr, "load instances data failed\n");
+		return 1;
+	}
+
+	// 信号处理：停止所有实例后退出。
+	signal(SIGINT, [](int) { g_stopping = true; });
+	signal(SIGTERM, [](int) { g_stopping = true; });
+
+	while (!g_stopping)
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+	std::fprintf(stderr, "[info] received signal, shutting down\n");
+	if (!no_kill_on_exit) {
+		for (const auto& id : mgr->ids()) {
+			std::string err;
+			if (!mgr->stop(id, err))
+				std::fprintf(stderr, "[warn] stop instance %s: %s\n", id.c_str(), err.c_str());
+		}
+	}
+	server.stop();
+	return 0;
 }

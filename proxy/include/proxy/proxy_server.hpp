@@ -16,6 +16,10 @@
 
 #include <atomic>
 #include <deque>
+#include <map>
+#include <mutex>
+
+#include <boost/json.hpp>
 
 
 namespace proxy {
@@ -183,6 +187,43 @@ namespace proxy {
 		// 关闭代理服务, 停止所有监听和会话.
 		void close() noexcept;
 
+		//////////////////////////////////////////////////////////////////////////
+		// launcher 控制通道支持（与 golang internal/agent 协议兼容）
+
+		// 实时状态快照（launcher status 上报）。
+		boost::json::object snapshot_report();
+
+		// 运行期应用配置（launcher set_config），返回 applied/needs_restart/errors。
+		boost::json::object apply_options(const boost::json::object& options);
+
+		// 添加/替换认证用户（user:password[:addr[:proxy_url]]）。
+		bool add_auth_user(const std::string& user, const std::string& password,
+			const std::string& addr, const std::string& proxy_url, std::string& err);
+
+		// 删除认证用户，返回是否找到并删除。
+		bool del_auth_user(const std::string& user);
+
+		// 修改用户密码，返回是否找到用户。
+		bool set_auth_user_password(const std::string& user, const std::string& password);
+
+		// 设置单个用户的独立限速（rate<=0 取消限速）。
+		bool set_auth_user_rate_limit(const std::string& user, int rate);
+
+		// 设置单个用户的下载流量配额（quota<=0 取消配额）。
+		bool set_auth_user_quota(const std::string& user, std::int64_t quota);
+
+		// 续接 launcher 持久化的用户已用量（配额续接）。
+		void set_user_usage(const boost::json::object& usage);
+
+		// 当前用户状态（auth_users / users_rate_limit / users_quota）。
+		boost::json::object users_state() const;
+
+		// 服务启动时间（Unix 秒）。
+		uint64_t started_at() const { return m_started_at; }
+
+		// 服务版本标识。
+		const std::string& server_version() const { return m_server_version; }
+
 	private:
 		// 移除指定 ID 的 session.
 		void remove_session(size_t id) override;
@@ -195,6 +236,10 @@ namespace proxy {
 
 		// 返回 SSL 上下文引用.
 		net::ssl::context& ssl_context() override;
+
+		// 会话结束时聚合累计流量（覆盖 proxy_server_base）。
+		void session_closed(size_t id, uint64_t rx, uint64_t tx,
+			const std::string& user) override;
 
 	private:
 		template <typename T, typename S>
@@ -328,6 +373,9 @@ namespace proxy {
 		// 当前客户端连接列表.
 		std::unordered_map<size_t, proxy_session_weak_ptr> m_sessions;
 
+		// 保护 m_sessions（agent 状态上报线程与 io_context 线程并发访问）。
+		std::mutex m_sessions_mutex;
+
 		// 当前服务端作为 ssl 服务时的 ssl context.
 		net::ssl::context m_ssl_srv_context{ net::ssl::context::tls_server };
 
@@ -355,6 +403,30 @@ namespace proxy {
 
 		// 当前服务是否中止标志.
 		std::atomic_bool m_abort{ false };
+
+		//////////////////////////////////////////////////////////////////////////
+		// launcher 状态统计相关成员.
+
+		// 服务启动时间（Unix 秒）与版本标识.
+		uint64_t m_started_at{ 0 };
+		std::string m_server_version;
+
+		// 全局累计连接数与收发字节数.
+		std::atomic<uint64_t> m_conn_total{ 0 };
+		std::atomic<uint64_t> m_global_rx{ 0 };
+		std::atomic<uint64_t> m_global_tx{ 0 };
+
+		// 已关闭会话的累计用户流量（user -> (rx, tx)）.
+		std::mutex m_user_mutex;
+		std::map<std::string, std::pair<uint64_t, uint64_t>> m_user_totals;
+
+		// 续接的 launcher 持久化用户已用量（TX 基线，配额续接）.
+		std::mutex m_usage_mutex;
+		std::map<std::string, int64_t> m_user_usage;
+
+		// 保护 m_option 运行期修改（apply_options / 用户管理）。
+		// 会话经 option() 的只读访问不加锁（与历史行为一致）。
+		mutable std::mutex m_option_mutex;
 	};
 
 }

@@ -904,6 +904,9 @@ R"x*x*x(<html>
 				if (!skip_passwd && passwd != pwd)
 					continue;
 
+				// 记录认证用户（供 launcher 状态按用户统计）.
+				m_auth_user = user;
+
 				user_rate_limit_config(user);
 				update_bind_interface(addr);
 
@@ -923,6 +926,9 @@ R"x*x*x(<html>
 				m_option.pam_auth_, net_awaitable[ec]);
 			if (result)
 			{
+				// 记录认证用户（供 launcher 状态按用户统计）.
+				m_auth_user = username;
+
 				user_rate_limit_config(username);
 				co_return true;
 			}
@@ -1094,9 +1100,9 @@ R"x*x*x(<html>
 			// 当两个方向的传输都已完成(即两端都已断开)时, 立即结束传输,
 			// 避免连接已断开后 session 仍一直存活到空闲超时.
 			co_await(
-				(transfer(in, m_remote_socket, l2r_transferred)
+				(transfer(in, m_remote_socket, l2r_transferred, true)
 				 &&
-				 transfer(m_remote_socket, out, r2l_transferred))
+				 transfer(m_remote_socket, out, r2l_transferred, false))
 				||
 				idle_timeout(in, m_remote_socket)
 			);
@@ -2759,11 +2765,13 @@ R"x*x*x(<html>
 				m_local_buffer.consume(m_local_buffer.size());
 
 			// 读取 http 请求头.
-			co_await http::async_read(
+			auto req_bytes = co_await http::async_read(
 				m_local_socket,
 				m_local_buffer,
 				*parser,
 				net_awaitable[ec]);
+			// 客户端上行请求数据计入 RX（供 launcher 状态统计）.
+			m_total_rx += static_cast<uint64_t>(req_bytes);
 			if (ec)
 			{
 				log_conn_warning()
@@ -3040,6 +3048,8 @@ R"x*x*x(<html>
 				auto bytes = co_await http::async_read_some(
 					m_remote_socket, buf, resp_parser, net_awaitable[sec]);
 				resp_bytes += bytes;
+				// 响应数据发送给客户端，计入 TX（供 launcher 状态统计）.
+				m_total_tx += static_cast<uint64_t>(bytes);
 
 				if (sec == http::error::need_buffer)
 				{
@@ -6620,6 +6630,10 @@ R"x*x*x(<html>
 		if (!server)
 			return;
 
+		// 上报会话累计流量（供 launcher 状态按用户/全局统计）.
+		server->session_closed(m_connection_id,
+			m_total_rx.load(), m_total_tx.load(), m_auth_user);
+
 		// 从 server 中移除当前 session.
 		server->remove_session(m_connection_id);
 
@@ -7187,7 +7201,7 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 
 	template <typename S1, typename S2>
 	net::awaitable<void>
-	proxy_session::transfer(S1& from, S2& to, size_t& bytes_transferred) noexcept
+	proxy_session::transfer(S1& from, S2& to, size_t& bytes_transferred, bool count_rx) noexcept
 	{
 		bytes_transferred = 0;
 
@@ -7227,6 +7241,12 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 			co_return;
 		}
 
+		// 累计本方向流量（供 launcher 状态统计）.
+		if (count_rx)
+			m_total_rx += static_cast<uint64_t>(bytes);
+		else
+			m_total_tx += static_cast<uint64_t>(bytes);
+
 		// 重置最后活跃计数.
 		m_last_activity.store(0, std::memory_order_relaxed);
 
@@ -7253,6 +7273,12 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 			// 保存接收到的数据大小用于转发给 to 端, 以及计算整个传输数据量.
 			bytes = read_bytes;
 			bytes_transferred += bytes;
+
+			// 累计本方向流量（供 launcher 状态统计）.
+			if (count_rx)
+				m_total_rx += static_cast<uint64_t>(bytes);
+			else
+				m_total_tx += static_cast<uint64_t>(bytes);
 
 			// 重置最后活跃计数.
 			m_last_activity.store(0, std::memory_order_relaxed);
@@ -7295,7 +7321,7 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 	template
 	net::awaitable<void>
 	proxy_session::transfer<variant_stream_type, variant_stream_type>(
-		variant_stream_type& from, variant_stream_type& to, size_t& bytes_transferred) noexcept;
+		variant_stream_type& from, variant_stream_type& to, size_t& bytes_transferred, bool count_rx) noexcept;
 
 	net::awaitable<void> proxy_session::concurrent_transfer()
 	{
@@ -7312,10 +7338,12 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 		// 使用或运算组合: 当两个方向的传输都完成(即两端都已断开)时立即结束,
 		// 此时 idle_timeout 会被或运算取消并退出; 若一直空闲, 则由
 		// idle_timeout 触发超时并关闭连接.
+		// local -> remote 方向为客户端上行（计入 RX），
+		// remote -> local 方向为客户端下行（计入 TX，即下载量）。
 		co_await(
-			(transfer(m_local_socket, m_remote_socket, l2r_transferred)
+			(transfer(m_local_socket, m_remote_socket, l2r_transferred, true)
 			 &&
-			 transfer(m_remote_socket, m_local_socket, r2l_transferred))
+			 transfer(m_remote_socket, m_local_socket, r2l_transferred, false))
 			||
 			idle_timeout(m_local_socket, m_remote_socket)
 		);

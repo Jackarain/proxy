@@ -263,6 +263,13 @@ namespace proxy {
 		// - 未配置某用户时：表示不对该用户单独限速（由全局 tcp_rate_limit_ 或默认策略决定）。
 		std::unordered_map<std::string, int> users_rate_limit_;
 
+		// 用户下载流量配额（按用户名粒度，单位字节）。
+		//
+		// - key   ：用户名
+		// - value ：下载流量配额（字节），0 表示不限制
+		// - 用于 launcher 状态展示与配额续接（本版本记录并在状态中上报）。
+		std::unordered_map<std::string, int64_t> users_quota_;
+
 		// 允许访问的地区集合（白名单）。
 		//
 		// - 例如：{ "中国", "香港", "台湾" }
@@ -481,6 +488,13 @@ namespace proxy {
 		virtual size_t num_session() = 0;
 		virtual const proxy_server_option& option() = 0;
 		virtual net::ssl::context& ssl_context() = 0;
+
+		// 会话结束时上报累计流量（供 launcher 状态按用户/全局统计）。
+		// 默认空实现，不要求所有 proxy_server 都实现统计。
+		virtual void session_closed(
+			size_t id, uint64_t rx, uint64_t tx, const std::string& user) {
+			(void)id; (void)rx; (void)tx; (void)user;
+		}
 	};
 
 
@@ -676,9 +690,11 @@ namespace proxy {
 		// 数据传输
 
 		// 在两个流之间并发传输数据, 支持限速和超时控制.
+		// count_rx 为 true 时该方向数据计入会话接收量（RX），
+		// 否则计入发送量（TX），供 launcher 状态按用户/全局统计。
 		template<typename S1, typename S2>
 		net::awaitable<void>
-		transfer(S1& from, S2& to, size_t& bytes_transferred) noexcept;
+		transfer(S1& from, S2& to, size_t& bytes_transferred, bool count_rx) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// 连接相关，对外发起连接和对上游代理服务器的连接
@@ -895,6 +911,23 @@ namespace proxy {
 		net::awaitable<void> idle_timeout(
 			variant_stream_type& s1, variant_stream_type& s2) noexcept;
 
+	public:
+		//////////////////////////////////////////////////////////////////////////
+		// 流量统计（供 launcher 状态上报）
+
+		// 会话是否仍存活（未中止）。
+		inline bool alive() const noexcept { return !m_abort.load(); }
+
+		// 本会话累计接收字节数（客户端 → 本服务端）。
+		inline uint64_t total_rx() const noexcept { return m_total_rx; }
+
+		// 本会话累计发送字节数（本服务端 → 客户端，即客户端下载量）。
+		inline uint64_t total_tx() const noexcept { return m_total_tx; }
+
+		// 本会话认证成功的用户名（匿名/未认证为空串）。
+		// 返回副本以避免与认证写入的并发读竞态。
+		inline std::string auth_user() const noexcept { return m_auth_user; }
+
 		//////////////////////////////////////////////////////////////////////////
 
 	private:
@@ -960,6 +993,13 @@ namespace proxy {
 		// m_last_activity 用于双向超时检测, 在代理传输过程中, 只要有任何一个
 		// 方向上有数据传输，都不应触发超时。
 		std::atomic<int64_t> m_last_activity{ 0 };
+
+		// m_total_rx / m_total_tx 本会话累计收发字节数（供 launcher 状态统计）。
+		std::atomic<uint64_t> m_total_rx{ 0 };
+		std::atomic<uint64_t> m_total_tx{ 0 };
+
+		// m_auth_user 认证成功的用户名（匿名/未认证为空串）。
+		std::string m_auth_user;
 
 		// 当前 session 是否被中止的状态.
 		std::atomic<bool> m_abort{ false };

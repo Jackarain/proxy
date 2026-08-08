@@ -14,6 +14,13 @@
 
 #include <boost/functional/hash.hpp>
 
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
+#include <optional>
+#include <sstream>
+#include <unordered_set>
+
 #ifndef SO_ORIGINAL_DST
 #  define SO_ORIGINAL_DST 80
 #endif
@@ -31,6 +38,10 @@ proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option op
 	, m_option(std::move(opt))
 	, m_timer(executor)
 {
+	// 记录启动时间与版本标识（供 launcher 状态上报）.
+	m_started_at = static_cast<uint64_t>(std::time(nullptr));
+	m_server_version = "cpp-proxy";
+
 	if (!m_option.stdio_target_.empty())
 		return;
 
@@ -1227,20 +1238,25 @@ void proxy_server::close() noexcept
 
 #endif // defined(__linux__)
 
-	for (auto& [id, c] : m_sessions)
 	{
-		if (auto client = c.lock())
-			client->close();
+		std::lock_guard<std::mutex> lock(m_sessions_mutex);
+		for (auto& [id, c] : m_sessions)
+		{
+			if (auto client = c.lock())
+				client->close();
+		}
 	}
 }
 
 void proxy_server::remove_session(size_t id)
 {
+	std::lock_guard<std::mutex> lock(m_sessions_mutex);
 	m_sessions.erase(id);
 }
 
 size_t proxy_server::num_session()
 {
+	std::lock_guard<std::mutex> lock(m_sessions_mutex);
 	return m_sessions.size();
 }
 
@@ -1252,6 +1268,480 @@ const proxy_server_option& proxy_server::option()
 net::ssl::context& proxy_server::ssl_context()
 {
 	return m_ssl_srv_context;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// launcher 控制通道支持（与 golang internal/agent 协议兼容）
+
+namespace {
+
+namespace json = boost::json;
+
+// 任意值转字符串。
+std::string to_str(const json::value& v)
+{
+	if (v.is_string())
+		return std::string(v.as_string());
+	if (v.is_bool())
+		return v.as_bool() ? "true" : "false";
+	if (v.is_int64())
+		return std::to_string(v.as_int64());
+	if (v.is_uint64())
+		return std::to_string(v.as_uint64());
+	if (v.is_double())
+		return json::serialize(v);
+	return {};
+}
+
+// 任意值转整数（兼容 int / float / string）。
+int to_int(const json::value& v)
+{
+	if (v.is_int64())
+		return static_cast<int>(v.as_int64());
+	if (v.is_uint64())
+		return static_cast<int>(v.as_uint64());
+	if (v.is_double())
+		return static_cast<int>(v.as_double());
+	if (v.is_bool())
+		return v.as_bool() ? 1 : 0;
+	if (v.is_string())
+		return std::atoi(std::string(v.as_string()).c_str());
+	return 0;
+}
+
+// 任意值转布尔。
+bool to_bool(const json::value& v)
+{
+	if (v.is_bool())
+		return v.as_bool();
+	if (v.is_int64())
+		return v.as_int64() != 0;
+	if (v.is_double())
+		return v.as_double() != 0;
+	if (v.is_string())
+	{
+		const auto& s = v.as_string();
+		return s == "true" || s == "1" || s == "yes" || s == "on";
+	}
+	return false;
+}
+
+// 任意值转字符串列表。
+std::vector<std::string> to_str_list(const json::value& v)
+{
+	std::vector<std::string> out;
+	if (v.is_array())
+	{
+		for (const auto& e : v.as_array())
+			out.push_back(to_str(e));
+	}
+	else if (v.is_string())
+	{
+		if (!v.as_string().empty())
+			out.push_back(std::string(v.as_string()));
+	}
+	return out;
+}
+
+} // namespace
+
+void proxy_server::session_closed(size_t id, uint64_t rx, uint64_t tx,
+	const std::string& user)
+{
+	(void)id;
+	m_global_rx += rx;
+	m_global_tx += tx;
+	if (!user.empty())
+	{
+		std::lock_guard<std::mutex> lock(m_user_mutex);
+		auto& t = m_user_totals[user];
+		t.first += rx;
+		t.second += tx;
+	}
+}
+
+boost::json::object proxy_server::snapshot_report()
+{
+	boost::json::object report;
+	uint64_t now = static_cast<uint64_t>(std::time(nullptr));
+	report["ts"] = static_cast<int64_t>(now);
+	report["uptime"] = static_cast<int64_t>(now - m_started_at);
+
+	std::map<std::string, uint64_t> user_rx, user_tx;
+	std::map<std::string, int> user_active;
+	std::map<std::string, int64_t> user_quota;
+	// 已关闭会话的累计流量.
+	uint64_t global_rx = m_global_rx.load();
+	uint64_t global_tx = m_global_tx.load();
+	int active = 0;
+
+	{
+		std::lock_guard<std::mutex> lock(m_user_mutex);
+		for (const auto& [user, t] : m_user_totals)
+		{
+			user_rx[user] += t.first;
+			user_tx[user] += t.second;
+		}
+	}
+	{
+		std::lock_guard<std::mutex> lock(m_sessions_mutex);
+		for (auto& [id, w] : m_sessions)
+		{
+			(void)id;
+			auto s = w.lock();
+			if (!s || !s->alive())
+				continue;
+			std::string user = s->auth_user();
+			uint64_t rx = s->total_rx();
+			uint64_t tx = s->total_tx();
+			user_rx[user] += rx;
+			user_tx[user] += tx;
+			user_active[user]++;
+			global_rx += rx;
+			global_tx += tx;
+			active++;
+		}
+	}
+	// 续接 launcher 持久化的用户已用量（配额续接，报告 TX 为含基线的累计下载）。
+	{
+		std::lock_guard<std::mutex> lock(m_usage_mutex);
+		for (auto& [user, base] : m_user_usage)
+			user_tx[user] += static_cast<uint64_t>(base);
+	}
+	{
+		std::lock_guard<std::mutex> lock(m_option_mutex);
+		for (auto& [user, quota] : m_option.users_quota_)
+			user_quota[user] = quota;
+	}
+
+	boost::json::object global;
+	global["rx_bytes"] = static_cast<int64_t>(global_rx);
+	global["tx_bytes"] = static_cast<int64_t>(global_tx);
+	report["global"] = std::move(global);
+	report["active_connections"] = active;
+	report["conn_total"] = static_cast<int64_t>(m_conn_total.load());
+
+	boost::json::array users;
+	for (auto& [user, rx] : user_rx)
+	{
+		boost::json::object u;
+		u["user"] = user;
+		u["rx_bytes"] = static_cast<int64_t>(rx);
+		u["tx_bytes"] = static_cast<int64_t>(user_tx[user]);
+		u["active_connections"] = user_active[user];
+		u["conn_total"] = user_active[user]; // 近似：历史累计未逐用户跟踪.
+		u["quota"] = user_quota.count(user) ? user_quota[user] : 0;
+		users.emplace_back(std::move(u));
+	}
+	report["users"] = std::move(users);
+	return report;
+}
+
+boost::json::object proxy_server::apply_options(const boost::json::object& options)
+{
+	boost::json::array applied;
+	boost::json::array needs_restart;
+	boost::json::object errors;
+
+	std::lock_guard<std::mutex> lock(m_option_mutex);
+	for (const auto& [name, val] : options)
+	{
+		// 运行期无法生效（需重启）的选项.
+		if (name == "stdio" || name == "transparent" ||
+			name == "ssl_ciphers" || name == "ssl_prefer_server_ciphers" ||
+			name == "server_listen")
+		{
+			needs_restart.emplace_back(name);
+			continue;
+		}
+		// 本版本接受但暂不影响运行的选项.
+		if (name == "http2" || name == "dns_udp_port" ||
+			name == "dns_cache_size" || name == "dns_cache_ttl" ||
+			name == "dns_no_ipv6" || name == "logs_path" ||
+			name == "disable_logs" || name == "help" || name == "config")
+		{
+			applied.emplace_back(name);
+			continue;
+		}
+
+		bool ok = false;
+		// 字符串选项.
+		if (name == "pam_auth") { m_option.pam_auth_ = to_str(val); ok = true; }
+		else if (name == "local_ip") { m_option.local_ip_ = to_str(val); ok = true; }
+		else if (name == "proxy_pass")
+		{
+			std::string s = to_str(val);
+			if (s.empty()) { m_option.proxy_pass_.reset(); ok = true; }
+			else if (auto r = urls::parse_uri(s); r.has_value()) { m_option.proxy_pass_ = r.value(); ok = true; }
+			else errors[name] = "invalid proxy_pass url";
+		}
+		else if (name == "ssl_sni" || name == "proxy_ssl_name") { m_option.proxy_ssl_name_ = to_str(val); ok = true; }
+		else if (name == "ssl_certificate_dir") { m_option.ssl_cert_path_ = to_str(val); ok = true; }
+		else if (name == "ssl_cacert_dir") { m_option.ssl_cacert_path_ = to_str(val); ok = true; }
+		else if (name == "ipip_db") { m_option.ipip_db_ = to_str(val); ok = true; }
+		else if (name == "http_doc") { m_option.doc_directory_ = to_str(val); ok = true; }
+		else if (name == "dns_upstream")
+		{
+			std::string s = to_str(val);
+			m_option.dns_upstream_ = s.empty() ? std::optional<std::string>{} : std::optional<std::string>{ s };
+			ok = true;
+		}
+		// 布尔选项.
+		else if (name == "reuse_port") { m_option.reuse_port_ = to_bool(val); ok = true; }
+		else if (name == "happyeyeballs") { m_option.happyeyeballs_ = to_bool(val); ok = true; }
+		else if (name == "v6only") { m_option.connect_v6_only_ = to_bool(val); ok = true; }
+		else if (name == "v4only") { m_option.connect_v4_only_ = to_bool(val); ok = true; }
+		else if (name == "proxy_pass_ssl") { m_option.proxy_pass_use_ssl_ = to_bool(val); ok = true; }
+		else if (name == "htpasswd") { m_option.htpasswd_ = to_bool(val); ok = true; }
+		else if (name == "autoindex") { m_option.autoindex_ = to_bool(val); ok = true; }
+		else if (name == "disable_http") { m_option.disable_http_ = to_bool(val); ok = true; }
+		else if (name == "disable_socks") { m_option.disable_socks_ = to_bool(val); ok = true; }
+		else if (name == "disable_udp") { m_option.disable_udp_ = to_bool(val); ok = true; }
+		else if (name == "disable_insecure") { m_option.disable_insecure_ = to_bool(val); ok = true; }
+		else if (name == "disable_check_cert") { m_option.disable_check_cert_ = to_bool(val); ok = true; }
+		else if (name == "scramble") { m_option.scramble_ = to_bool(val); ok = true; }
+		// 整数选项.
+		else if (name == "so_mark")
+		{
+			int v = to_int(val);
+			if (v > 0)
+				m_option.so_mark_ = static_cast<uint32_t>(v);
+			else
+				m_option.so_mark_.reset();
+			ok = true;
+		}
+		else if (name == "tcp_timeout") { m_option.tcp_timeout_ = to_int(val); ok = true; }
+		else if (name == "udp_timeout") { m_option.udp_timeout_ = to_int(val); ok = true; }
+		else if (name == "rate_limit") { m_option.tcp_rate_limit_ = to_int(val); ok = true; }
+		else if (name == "noise_length") { m_option.noise_length_ = to_int(val); ok = true; }
+		// 列表选项.
+		else if (name == "auth_users")
+		{
+			std::vector<proxy_server_option::auth_users> list;
+			for (const auto& e : to_str_list(val))
+			{
+				// 解析 user:password:addr:proxy_pass 格式.
+				std::vector<std::string> parts;
+				std::stringstream ss(e);
+				std::string token;
+				while (std::getline(ss, token, ':'))
+					parts.push_back(token);
+				std::string user, password, addr, proxy_url;
+				if (parts.size() > 0) user = parts[0];
+				if (parts.size() > 1) password = parts[1];
+				if (parts.size() > 2) addr = parts[2];
+				if (parts.size() > 3) proxy_url = parts[3];
+				if (user.empty() && password.empty() && addr.empty() && proxy_url.empty())
+					continue;
+				std::optional<urls::url> proxy_url_result;
+				if (!proxy_url.empty())
+				{
+					auto result = urls::parse_uri(proxy_url);
+					if (result.has_value())
+						proxy_url_result = result.value();
+				}
+				list.emplace_back(user, password, addr, proxy_url_result);
+			}
+			m_option.auth_users_ = std::move(list);
+			ok = true;
+		}
+		else if (name == "users_rate_limit")
+		{
+			std::unordered_map<std::string, int> map;
+			for (const auto& e : to_str_list(val))
+			{
+				auto pos = e.find(':');
+				if (pos == std::string::npos)
+					continue;
+				map[e.substr(0, pos)] = std::atoi(e.substr(pos + 1).c_str());
+			}
+			m_option.users_rate_limit_ = std::move(map);
+			ok = true;
+		}
+		else if (name == "users_quota")
+		{
+			std::unordered_map<std::string, int64_t> map;
+			for (const auto& e : to_str_list(val))
+			{
+				auto pos = e.find(':');
+				if (pos == std::string::npos)
+					continue;
+				try {
+					map[e.substr(0, pos)] = std::stoll(e.substr(pos + 1));
+				} catch (...) {}
+			}
+			m_option.users_quota_ = std::move(map);
+			ok = true;
+		}
+		else if (name == "allow_region")
+		{
+			std::unordered_set<std::string> set;
+			for (const auto& e : to_str_list(val))
+			{
+				auto parts = strutil::split(e, '|');
+				set.insert(parts.begin(), parts.end());
+			}
+			m_option.allow_regions_ = std::move(set);
+			ok = true;
+		}
+		else if (name == "deny_region")
+		{
+			std::unordered_set<std::string> set;
+			for (const auto& e : to_str_list(val))
+			{
+				auto parts = strutil::split(e, '|');
+				set.insert(parts.begin(), parts.end());
+			}
+			m_option.deny_regions_ = std::move(set);
+			ok = true;
+		}
+		else
+		{
+			// 未知选项：接受但记录（避免 WebUI 提交的完整配置报错）.
+			applied.emplace_back(name);
+			continue;
+		}
+
+		if (ok)
+			applied.emplace_back(name);
+		else
+			errors[name] = "apply failed";
+	}
+
+	boost::json::object res;
+	res["applied"] = std::move(applied);
+	res["needs_restart"] = std::move(needs_restart);
+	res["errors"] = std::move(errors);
+	return res;
+}
+
+bool proxy_server::add_auth_user(const std::string& user, const std::string& password,
+	const std::string& addr, const std::string& proxy_url, std::string& err)
+{
+	if (user.empty())
+	{
+		err = "user is required";
+		return false;
+	}
+	std::optional<urls::url> proxy_url_result;
+	if (!proxy_url.empty())
+	{
+		auto result = urls::parse_uri(proxy_url);
+		if (result.has_value())
+			proxy_url_result = result.value();
+		else
+		{
+			err = "invalid proxy_url";
+			return false;
+		}
+	}
+	std::lock_guard<std::mutex> lock(m_option_mutex);
+	// 替换同名用户或追加.
+	auto& list = m_option.auth_users_;
+	for (auto it = list.begin(); it != list.end(); ++it)
+	{
+		if (std::get<0>(*it) == user)
+		{
+			*it = { user, password, addr, proxy_url_result };
+			return true;
+		}
+	}
+	list.emplace_back(user, password, addr, proxy_url_result);
+	return true;
+}
+
+bool proxy_server::del_auth_user(const std::string& user)
+{
+	std::lock_guard<std::mutex> lock(m_option_mutex);
+	auto& list = m_option.auth_users_;
+	for (auto it = list.begin(); it != list.end(); ++it)
+	{
+		if (std::get<0>(*it) == user)
+		{
+			list.erase(it);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool proxy_server::set_auth_user_password(const std::string& user, const std::string& password)
+{
+	std::lock_guard<std::mutex> lock(m_option_mutex);
+	for (auto& entry : m_option.auth_users_)
+	{
+		if (std::get<0>(entry) == user)
+		{
+			std::get<1>(entry) = password;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool proxy_server::set_auth_user_rate_limit(const std::string& user, int rate)
+{
+	std::lock_guard<std::mutex> lock(m_option_mutex);
+	if (rate <= 0)
+		m_option.users_rate_limit_.erase(user);
+	else
+		m_option.users_rate_limit_[user] = rate;
+	return true;
+}
+
+bool proxy_server::set_auth_user_quota(const std::string& user, int64_t quota)
+{
+	std::lock_guard<std::mutex> lock(m_option_mutex);
+	if (quota <= 0)
+		m_option.users_quota_.erase(user);
+	else
+		m_option.users_quota_[user] = quota;
+	return true;
+}
+
+void proxy_server::set_user_usage(const boost::json::object& usage)
+{
+	std::lock_guard<std::mutex> lock(m_usage_mutex);
+	for (const auto& [user, v] : usage)
+	{
+		if (v.is_int64())
+			m_user_usage[std::string(user)] = v.as_int64();
+		else if (v.is_uint64())
+			m_user_usage[std::string(user)] = static_cast<int64_t>(v.as_uint64());
+	}
+}
+
+boost::json::object proxy_server::users_state() const
+{
+	boost::json::array auth_users;
+	boost::json::array users_rate_limit;
+	boost::json::array users_quota;
+
+	std::lock_guard<std::mutex> lock(m_option_mutex);
+	for (const auto& [user, pwd, addr, proxy_pass] : m_option.auth_users_)
+	{
+		std::string e = user + ":" + pwd;
+		if (!addr.empty() || proxy_pass)
+		{
+			e += ":" + addr;
+			if (proxy_pass)
+			{
+				e += ":";
+				e += std::string(proxy_pass->buffer());
+			}
+		}
+		auth_users.emplace_back(e);
+	}
+	for (const auto& [user, rate] : m_option.users_rate_limit_)
+		users_rate_limit.emplace_back(user + ":" + std::to_string(rate));
+	for (const auto& [user, quota] : m_option.users_quota_)
+		users_quota.emplace_back(user + ":" + std::to_string(quota));
+
+	boost::json::object st;
+	st["auth_users"] = std::move(auth_users);
+	st["users_rate_limit"] = std::move(users_rate_limit);
+	st["users_quota"] = std::move(users_quota);
+	return st;
 }
 
 net::awaitable<std::optional<net::ip::tcp::endpoint>>
@@ -2687,7 +3177,13 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 			self);
 
 	// 保存 proxy_session 对象到 m_sessions 中.
-	m_sessions[connection_id] = new_session;
+	{
+		std::lock_guard<std::mutex> lock(m_sessions_mutex);
+		m_sessions[connection_id] = new_session;
+	}
+
+	// 累计连接数（供 launcher 状态上报）.
+	m_conn_total++;
 
 #if defined (__linux__)
 	if constexpr (std::same_as<S, proxy_tcp_socket>)

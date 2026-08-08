@@ -29,6 +29,8 @@
 
 #include "main.hpp"
 
+#include "agent.hpp"
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -40,6 +42,8 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
+#include <cmath>
+#include <fstream>
 #include <limits>
 
 #ifdef _MSC_VER
@@ -57,6 +61,7 @@ using server_ptr = std::shared_ptr<proxy_server>;
 std::vector<std::string> server_listens;
 std::vector<std::string> auth_users;
 std::vector<std::string> users_rate_limit;
+std::vector<std::string> users_quota;
 std::vector<std::string> deny_region;
 std::vector<std::string> allow_region;
 
@@ -102,6 +107,19 @@ int rate_limit;
 
 std::string asio_config;
 std::string monitor_url;
+
+// launcher agent 相关.
+std::string launcher_url;
+std::string pid_file;
+// 兼容 golang launcher 生成参数的选项（本版本接受但不实施）.
+int dns_udp_port = 0;
+int dns_cache_size = 0;
+int dns_cache_ttl = 0;
+bool dns_no_ipv6 = false;
+bool http2 = false;
+
+// launcher 控制代理全局实例（生命周期至进程退出）.
+std::shared_ptr<proxy_agent::agent> g_agent;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -209,6 +227,25 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 		opt.users_rate_limit_.insert_or_assign(name, rate);
 	}
 
+	for (const auto& entry : users_quota)
+	{
+		if (entry.empty())
+			continue;
+
+		auto pos = entry.find(':');
+		if (pos == std::string::npos)
+			continue;
+
+		auto name = entry.substr(0, pos);
+		std::int64_t quota = 0;
+		try {
+			quota = std::stoll(entry.substr(pos + 1));
+		} catch (...) {
+			continue;
+		}
+		opt.users_quota_.insert_or_assign(name, quota);
+	}
+
 	if (!proxy_pass.empty())
 	{
 		auto result = urls::parse_uri(proxy_pass);
@@ -308,6 +345,21 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	server = proxy_server::make(ioc.get_executor(), opt);
 	server->start();
 
+	// launcher 控制通道：proxy_server 作为 WS 客户端主动连接 launcher.
+	if (!launcher_url.empty())
+	{
+		if (launcher_url.rfind("ws://", 0) != 0 && launcher_url.rfind("wss://", 0) != 0)
+		{
+			XLOG_ERR << "invalid --launcher url: " << launcher_url;
+			co_return;
+		}
+		g_agent = std::make_shared<proxy_agent::agent>(server, launcher_url, []() {
+			// 收到 launcher 的 shutdown 请求时，通过 SIGTERM 走正常退出流程.
+			::raise(SIGTERM);
+		});
+		std::thread([ag = g_agent]() { ag->run(); }).detach();
+	}
+
 	co_return;
 }
 
@@ -404,11 +456,10 @@ int main(int argc, char** argv)
 
 	std::string config;
 
-#ifdef NDEBUG
-	const bool default_logs = true;
-#else
+	// 默认开启控制台日志（与 golang 版本 getBoolValue("disable_logs", false)
+	// 的行为一致）。launcher 仅在用户显式关闭日志时才传 --disable_logs true，
+	// 因此这里默认值必须为 false，否则 launcher 管理下控制台日志会被静默关闭。
 	const bool default_logs = false;
-#endif
 
 	po::options_description desc("Options");
 	desc.add_options()
@@ -437,6 +488,7 @@ int main(int argc, char** argv)
 
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users (default: jack:1111), format: user:password[:addr[:proxy_url]] (repeatable).")
 		("users_rate_limit", po::value<std::vector<std::string>>(&users_rate_limit)->multitoken(), "Per-user rate limit in bytes/second, format: user:rate (repeatable).")
+		("users_quota", po::value<std::vector<std::string>>(&users_quota)->multitoken(), "Per-user download traffic quota in bytes, format: user:bytes (repeatable).")
 
 		("allow_region", po::value<std::vector<std::string>>(&allow_region)->multitoken(), "Allow connections only from the specified regions/CIDRs (repeatable).")
 		("deny_region", po::value<std::vector<std::string>>(&deny_region)->multitoken(), "Deny connections from the specified regions/CIDRs (repeatable).")
@@ -473,14 +525,72 @@ int main(int argc, char** argv)
 
 		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Environment variable name for configuring Boost.Asio (default: ASIO).")
 		("monitor_url", po::value<std::string>(&monitor_url)->value_name("monitor url")->default_value(""), "Specify the monitor URL for the proxy server.")
+
+		("dns_udp_port", po::value<int>(&dns_udp_port)->default_value(0), "Listen UDP DNS requests on this port (accepted for launcher compatibility).")
+		("dns_cache_size", po::value<int>(&dns_cache_size)->default_value(0), "DNS cache size (accepted for launcher compatibility).")
+		("dns_cache_ttl", po::value<int>(&dns_cache_ttl)->default_value(0), "DNS cache TTL seconds (accepted for launcher compatibility).")
+		("dns_no_ipv6", po::value<bool>(&dns_no_ipv6)->default_value(false, "false"), "Disable IPv6 DNS resolution (accepted for launcher compatibility).")
+		("http2", po::value<bool>(&http2)->default_value(false, "false"), "Enable HTTP/2 (accepted for launcher compatibility).")
+
+		("launcher", po::value<std::string>(&launcher_url)->value_name("ws://host:port/rpc?..."), "Launcher WebSocket control channel URL (internal, set by launcher).")
+		("pid_file", po::value<std::string>(&pid_file)->value_name("path"), "Write process PID to this file (internal, set by launcher).")
 	;
 
 	// 解析命令行.
+	// 兼容 golang launcher 生成的参数：其 ArgsFor 会把整数值按 float64 格式化，
+	// 例如 --rate_limit 1.048576e+06（科学计数法），boost 的 int 解析不接受。
+	// 这里先把整数选项的科学计数法数值预处理为普通整数。
 	po::variables_map vm;
 
 	try {
+		const std::vector<std::string> int_opts = {
+			"so_mark", "noise_length", "tcp_timeout", "udp_timeout",
+			"rate_limit", "dns_udp_port", "dns_cache_size", "dns_cache_ttl",
+		};
+		auto is_int_opt = [&int_opts](const std::string& n) {
+			return std::find(int_opts.begin(), int_opts.end(), n) != int_opts.end();
+		};
+		auto normalize_num = [](const std::string& s) -> std::string {
+			if (s.find_first_of("eE") == std::string::npos)
+				return s;
+			char* end = nullptr;
+			double v = std::strtod(s.c_str(), &end);
+			if (end == s.c_str() || !std::isfinite(v))
+				return s;
+			return std::to_string(static_cast<long long>(v));
+		};
+
+		std::vector<std::string> normalized;
+		normalized.reserve(argc);
+		for (int i = 0; i < argc; i++)
+		{
+			std::string arg = argv[i];
+			if (arg.rfind("--", 0) == 0)
+			{
+				auto eq = arg.find('=');
+				if (eq != std::string::npos)
+				{
+					std::string name = arg.substr(2, eq - 2);
+					if (is_int_opt(name))
+						arg = arg.substr(0, eq + 1) + normalize_num(arg.substr(eq + 1));
+				}
+				else
+				{
+					std::string name = arg.substr(2);
+					if (is_int_opt(name) && i + 1 < argc)
+					{
+						normalized.push_back(arg);
+						normalized.push_back(normalize_num(argv[i + 1]));
+						i++;
+						continue;
+					}
+				}
+			}
+			normalized.push_back(arg);
+		}
+
 		po::store(
-			po::command_line_parser(argc, argv)
+			po::command_line_parser(normalized)
 			.options(desc)
 			.style(po::command_line_style::unix_style
 				| po::command_line_style::allow_long_disguise)
@@ -538,8 +648,9 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 		else
 			xlogger::init_logging(log_dir);
 
-		if (disable_logs)
-			xlogger::toggle_console_logging(false);
+		// release 构建下控制台日志默认关闭，此处按 --disable_logs 显式控制，
+		// 保证 launcher 传入 --disable_logs false 时能采集到 stdout/stderr 日志.
+		xlogger::toggle_console_logging(!disable_logs);
 	}
 
 	print_args(argc, argv, vm);
@@ -583,9 +694,40 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 			});
 	}
 
+	// 写入 pid 文件（供 launcher 重启后据此清理残余进程）；正常退出时删除.
+	if (!pid_file.empty())
+	{
+		if (auto dir = fs::path(pid_file).parent_path(); !dir.empty() && dir != ".")
+		{
+			boost::system::error_code ec;
+			fs::create_directories(dir, ec);
+		}
+		std::ofstream ofs(pid_file, std::ios::trunc);
+		if (ofs)
+			ofs << getpid() << "\n";
+		else
+			std::cerr << "write pid file " << pid_file << " error" << std::endl;
+	}
+
 	net::co_spawn(ioc, start_proxy_server(ioc, server), net::detached);
 
 	ioc.run();
+
+	// 停止 launcher 控制代理.
+	if (g_agent)
+		g_agent->stop();
+
+	// 删除 pid 文件（仅当内容仍是本进程 PID，避免竞态误删新进程文件）.
+	if (!pid_file.empty())
+	{
+		std::ifstream ifs(pid_file);
+		std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+		if (!content.empty() && std::stol(content) == static_cast<long>(getpid()))
+		{
+			boost::system::error_code ec;
+			fs::remove(pid_file, ec);
+		}
+	}
 
 	return EXIT_SUCCESS;
 }
