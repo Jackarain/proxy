@@ -46,11 +46,15 @@ namespace util {
 		/// The type of the executor associated with the object.
 		typedef typename lowest_layer_type::executor_type executor_type;
 
+		/// The size of the I/O buffers.
+		constexpr static std::size_t io_buffer_size = 256 * 1024;
+
 		/// Construct a stream.
 		template <typename Arg>
 		ssl_stream(Arg&& arg, net::ssl::context& ctx)
 			: next_layer_(static_cast<Arg&&>(arg)),
-			core_(ctx.native_handle(), next_layer_.lowest_layer().get_executor())
+			core_(ctx.native_handle(), next_layer_.lowest_layer().get_executor(),
+			io_buffer_size, io_buffer_size)
 		{
 		}
 
@@ -58,7 +62,8 @@ namespace util {
 		template <typename Arg>
 		ssl_stream(Arg&& arg, native_handle_type handle)
 			: next_layer_(static_cast<Arg&&>(arg)),
-			core_(handle, next_layer_.lowest_layer().get_executor())
+			core_(handle, next_layer_.lowest_layer().get_executor(),
+			io_buffer_size, io_buffer_size)
 		{
 		}
 
@@ -181,7 +186,7 @@ namespace util {
 		// A buffer that may be used to prepare output intended for the transport.
 		boost::asio::mutable_buffer get_output_buffer() noexcept
 		{
-			return core_.output_buffer_;
+			return core_.output_buffer();
 		}
 
   		// Put input data that was read from the transport.
@@ -193,7 +198,7 @@ namespace util {
 		// A buffer that may be used to read input intended for the engine.
 		boost::asio::mutable_buffer put_input_buffer() noexcept
 		{
-			return core_.input_buffer_;
+			return core_.input_buffer();
 		}
 
 		/// Perform SSL handshaking.
