@@ -357,7 +357,8 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 			// 收到 launcher 的 shutdown 请求时，通过 SIGTERM 走正常退出流程.
 			::raise(SIGTERM);
 		});
-		std::thread([ag = g_agent]() { ag->run(); }).detach();
+		// 协程方式启动连接循环（运行在 ioc 上，不创建线程）.
+		g_agent->start(ioc.get_executor());
 	}
 
 	co_return;
@@ -684,6 +685,10 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 			{
 				terminator_signal.remove(sig);
 				server->close();
+				// 停止 launcher 控制代理：关闭连接使 agent 协程退出，
+				// 否则 ioc.run() 因 agent 协程仍在运行而无法返回.
+				if (g_agent)
+					g_agent->stop();
 
 #ifndef NDEBUG
 				std::thread([&] {

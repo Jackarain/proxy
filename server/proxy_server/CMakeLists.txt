@@ -15,9 +15,7 @@ target_link_libraries(proxy_server
 target_include_directories(proxy_server
     PRIVATE
     ../common
-    # server/launcher 目录提供 json_rpc.hpp（launcher 与 proxy_server 共用的 JSON-RPC 协议实现）.
-    ${PROJECT_SOURCE_DIR}/server/launcher
-    # tinyrpc jsonrpc 头文件.
+    # tinyrpc jsonrpc 头文件（agent 直接使用，不依赖 launcher 代码）.
     ${PROJECT_SOURCE_DIR}/third_party/tinyrpc/include
 )
 

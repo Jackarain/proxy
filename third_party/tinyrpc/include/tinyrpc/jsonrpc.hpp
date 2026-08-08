@@ -941,13 +941,15 @@ namespace jsonrpc
         });
     }
 
-    // 处理 WebSocket 写入消息的协程
+    // 处理 WebSocket 写入消息的协程.
+    // 注意：写队列不依赖 running_ 标志，否则在 start() 之前入队的消息
+    // （如连接建立后立刻发送的 register/status 通知）会因 running=false
+    // 被永久滞留，导致对端收不到任何消息.
     net::awaitable<void> write_messages()
     {
-      auto running = running_;
       try
       {
-        while (running && !write_msgs_.empty())
+        while (!write_msgs_.empty())
         {
           // 发送消息
           auto msg = std::move(write_msgs_.front());
@@ -957,11 +959,9 @@ namespace jsonrpc
       }
       catch(const std::exception& e)
       {
-          if (running && error_cb_)
-          {
-            write_msgs_.clear();
-            error_cb_(std::string_view(e.what()));
-          }
+        write_msgs_.clear();
+        if (error_cb_)
+          error_cb_(std::string_view(e.what()));
       }
     }
 
