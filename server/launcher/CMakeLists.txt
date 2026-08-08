@@ -19,6 +19,12 @@ target_link_libraries(launcher
     ${PROXY_LIBRARIES}
 )
 
+# 启用 io_uring 时链接 liburing（与 proxy_server 一致），
+# 否则 asio 的 io_uring_service 会产生未定义符号链接错误。
+if (TARGET IOUring::IOUring)
+    target_link_libraries(launcher IOUring::IOUring)
+endif()
+
 # tinyrpc jsonrpc 头文件.
 target_include_directories(launcher
     PRIVATE
