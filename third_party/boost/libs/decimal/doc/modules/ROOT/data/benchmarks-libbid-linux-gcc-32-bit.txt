@@ -1,0 +1,25 @@
+== Generating Arrays ==
+===== Comparisons =====
+Comparisons    <Decimal32  >: 7259612    us (s=299999985)
+Comparisons    <Decimal64  >: 13689027   us (s=299999985)
+Comparisons    <Decimal128 >: 14084425   us (s=299999985)
+
+===== Addition =====
+Addition       <Decimal32  >: 10155501   us (s=1443440283)
+Addition       <Decimal64  >: 11869147   us (s=3503794904)
+Addition       <Decimal128 >: 9837845    us (s=3921265456)
+
+===== Subtraction =====
+Subtraction    <Decimal32  >: 11342434   us (s=2933565186)
+Subtraction    <Decimal64  >: 12277171   us (s=914656176)
+Subtraction    <Decimal128 >: 10883496   us (s=1008097658)
+
+===== Multiplication =====
+Multiplication <Decimal32  >: 10013583   us (s=2147483648)
+Multiplication <Decimal64  >: 20791232   us (s=0)
+Multiplication <Decimal128 >: 73505671   us (s=3052855093)
+
+===== Division =====
+Division       <Decimal32  >: 11776038   us (s=811708380)
+Division       <Decimal64  >: 24981386   us (s=778836270)
+Division       <Decimal128 >: 82414494   us (s=1962961712)

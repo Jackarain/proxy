@@ -51,6 +51,9 @@
 
 #include "pathsys.h"
 
+#include "object.h"
+#include "jam_strings.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>  /* needed for getpid() */

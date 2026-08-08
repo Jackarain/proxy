@@ -40,16 +40,10 @@
 namespace boost:: msm::backmp11
 {
 
-struct favor_compile_time
-{
-    // TODO fix adapter and remove this.
-    using compile_policy = int;
-};
+using any_event = std::any;
 
 namespace detail
 {
-
-using any_event = std::any;
 
 template <>
 struct compile_policy_impl<favor_compile_time>
@@ -143,7 +137,7 @@ struct compile_policy_impl<favor_compile_time>
         static bool convert_and_execute(const State& state,
                                         const any_event& event, const Fsm& fsm)
         {
-            return state.is_event_deferred(*any_cast<Event>(&event), fsm);
+            return state.is_event_deferred(*std::any_cast<Event>(&event), fsm);
         }
 
         std::unordered_map<std::type_index, generic_cell> m_cells;
@@ -175,8 +169,8 @@ struct compile_policy_impl<favor_compile_time>
         using visitor_t = is_event_deferred_visitor;
         using state_visitor =
             event_deferral_visitor<const StateMachine, 
-                                    visitor_t,
-                                    visitor_t::template predicate>;
+                                   visitor_t,
+                                   visitor_t::template predicate>;
         if constexpr (state_visitor::needs_traversal::value)
         {
             visitor_t visitor{event};
@@ -187,10 +181,22 @@ struct compile_policy_impl<favor_compile_time>
     }
 
     template <typename StateMachine>
-    static void defer_event(StateMachine& sm, any_event const& event,
-                            bool next_rtc_seq)
+    static bool try_defer_event(StateMachine& sm, const any_event& event)
     {
-        sm.do_defer_event(event, next_rtc_seq);
+        using visitor_t = is_event_deferred_visitor;
+        using state_visitor =
+            event_deferral_visitor<const StateMachine, 
+                                    visitor_t,
+                                    visitor_t::template predicate>;
+        if constexpr (state_visitor::needs_traversal::value)
+        {
+            if (is_event_deferred(sm, event))
+            {
+                sm.defer_event(event);
+                return true;
+            }
+        }
+        return false;
     }
 
     // Convert an event to a type index.
@@ -206,17 +212,19 @@ struct compile_policy_impl<favor_compile_time>
     class transition_chain
     {
       public:
-        template<typename StateMachine>
-        process_result execute(StateMachine& sm, int region_id, any_event const& event, process_result result) const
+        template <typename StateMachine>
+        process_result process(StateMachine& sm, uint8_t region_id,
+                               any_event const& event,
+                               process_result result) const
         {
             using cell_t = process_result (*)(StateMachine&, int, any_event const&);
             for (const generic_cell cell : m_transition_cells)
             {
                 result |= reinterpret_cast<cell_t>(cell)(sm, region_id, event);
-                if (result & handled_true_or_deferred)
+                if (any(result & consumed_or_deferred))
                 {
                     // If a guard rejected previously, ensure this bit is not present.
-                    return result & handled_true_or_deferred;
+                    return result & consumed_or_deferred;
                 }
             }
             // At this point result can be HANDLED_FALSE or HANDLED_GUARD_REJECT.
@@ -225,7 +233,7 @@ struct compile_policy_impl<favor_compile_time>
 
         template <typename StateMachine>
         void add_transition_cell(process_result (*cell)(StateMachine&,
-                                                        int /*region_id*/,
+                                                        uint8_t /*region_id*/,
                                                         any_event const&))
         {
             m_transition_cells.emplace_back(
@@ -242,17 +250,17 @@ struct compile_policy_impl<favor_compile_time>
     {
       public:
         template<typename StateMachine>
-        process_result execute(StateMachine& sm, any_event const& event) const
+        process_result process(StateMachine& sm, any_event const& event) const
         {
             using cell_t = process_result (*)(StateMachine&, any_event const&);
-            process_result result = process_result::HANDLED_FALSE;
+            process_result result = process_result::discarded;
             for (const generic_cell cell : m_transition_cells)
             {
                 result |= reinterpret_cast<cell_t>(cell)(sm, event);
-                if (result & handled_true_or_deferred)
+                if (any(result & consumed_or_deferred))
                 {
                     // If a guard rejected previously, ensure this bit is not present.
-                    return result & handled_true_or_deferred;
+                    return result & consumed_or_deferred;
                 }
             }
             // At this point result can be HANDLED_FALSE or HANDLED_GUARD_REJECT.
@@ -281,10 +289,10 @@ struct compile_policy_impl<favor_compile_time>
     {
       public:
         // Dispatch an event.
-        static process_result dispatch(StateMachine& sm, int region_id,
+        static process_result dispatch(StateMachine& sm, uint8_t region_id,
                                        const any_event& event)
         {
-            const int state_id = sm.m_active_state_ids[region_id];
+            const auto state_id = sm.m_active_state_ids[region_id];
             const dispatch_table& self = instance();
             return self.m_state_dispatch_tables[state_id].dispatch(sm, region_id, event);
         }
@@ -297,7 +305,7 @@ struct compile_policy_impl<favor_compile_time>
                 const dispatch_table& self = instance();
                 return self.m_internal_dispatch_table.dispatch(sm, event);
             }
-            return process_result::HANDLED_FALSE;
+            return process_result::discarded;
         }
 
       private:
@@ -305,7 +313,7 @@ struct compile_policy_impl<favor_compile_time>
         using submachines = mp11::mp_copy_if<state_set, has_state_machine_tag>;
         
         // Value used to initialize a cell of the dispatch table.
-        using cell_t = process_result (*)(StateMachine&, int /*region_id*/,
+        using cell_t = process_result (*)(StateMachine&, uint8_t /*region_id*/,
                                           any_event const&);
         struct init_cell_value
         {
@@ -321,10 +329,10 @@ struct compile_policy_impl<favor_compile_time>
         };
 
         template<typename Event, typename Transition>
-        static process_result convert_event_and_execute(
-            StateMachine& sm, int region_id, const any_event& event)
+        static process_result convert_event_and_process(
+            StateMachine& sm, uint8_t region_id, const any_event& event)
         {
-            return Transition::execute(sm, region_id, *any_cast<Event>(&event));
+            return Transition::process(sm, region_id, *std::any_cast<Event>(&event));
         }
 
         template <typename Transition>
@@ -333,7 +341,7 @@ struct compile_policy_impl<favor_compile_time>
             using type = init_cell_constant<
                 typename Transition::transition_event,
                 StateMachine::template get_state_id<typename Transition::current_state_type>(),
-                convert_event_and_execute<typename Transition::transition_event, Transition>
+                convert_event_and_process<typename Transition::transition_event, Transition>
                 >;
         };
         template<typename Transition>
@@ -363,13 +371,13 @@ struct compile_policy_impl<favor_compile_time>
             }
 
             // Dispatch an event.
-            process_result dispatch(StateMachine& sm, int region_id, const any_event& event) const
+            process_result dispatch(StateMachine& sm, uint8_t region_id, const any_event& event) const
             {
-                process_result result = process_result::HANDLED_FALSE;
+                process_result result = process_result::discarded;
                 if (m_call_process_event)
                 {
                     result = m_call_process_event(sm, event);
-                    if (result & handled_true_or_deferred)
+                    if (any(result & consumed_or_deferred))
                     {
                         return result;
                     }
@@ -377,7 +385,7 @@ struct compile_policy_impl<favor_compile_time>
                 auto it = m_transition_chains.find(event.type());
                 if (it != m_transition_chains.end())
                 {
-                    result = (it->second.execute)(sm, region_id, event, result);
+                    result = (it->second.process)(sm, region_id, event, result);
                 }
                 return result;
             }
@@ -387,7 +395,7 @@ struct compile_policy_impl<favor_compile_time>
             static process_result call_process_event(StateMachine& sm, const any_event& event)
             {
                 return sm.template get_state<Submachine&>()
-                    .process_event_internal(event, process_info::submachine_call);
+                    .process_event_observed(event, process_info::submachine_call);
             }
 
             std::unordered_map<std::type_index, transition_chain> m_transition_chains;
@@ -410,10 +418,10 @@ struct compile_policy_impl<favor_compile_time>
         };
 
         template<typename Event, typename Transition>
-        static process_result convert_event_and_execute_internal(
+        static process_result convert_event_and_process(
             StateMachine& sm, const any_event& event)
         {
-            return Transition::execute(sm, *any_cast<Event>(&event));
+            return Transition::process(sm, *std::any_cast<Event>(&event));
         }
 
         template <typename Transition>
@@ -421,8 +429,8 @@ struct compile_policy_impl<favor_compile_time>
         {
             using type = init_internal_cell_constant<
                 typename Transition::transition_event,
-                convert_event_and_execute_internal<typename Transition::transition_event, Transition>
-                >;
+                convert_event_and_process<typename Transition::transition_event,
+                                          Transition>>;
         };
         template <typename Transition>
         using get_internal_init_cell_constant =
@@ -443,11 +451,11 @@ struct compile_policy_impl<favor_compile_time>
             // Dispatch an event.
             process_result dispatch(StateMachine& sm, const any_event& event) const
             {
-                process_result result = process_result::HANDLED_FALSE;
+                process_result result = process_result::discarded;
                 auto it = m_transition_chains.find(event.type());
                 if (it != m_transition_chains.end())
                 {
-                    result = (it->second.execute)(sm, event);
+                    result = (it->second.process)(sm, event);
                 }
                 return result;
             }
@@ -465,9 +473,10 @@ struct compile_policy_impl<favor_compile_time>
                 [this](auto state_identity)
                 {
                     using Submachine = typename decltype(state_identity)::type;
-                    static constexpr int state_id =
+                    static constexpr auto state_id =
                         StateMachine::template get_state_id<Submachine>();
-                    m_state_dispatch_tables[state_id].template init_composite_state<Submachine>();
+                    m_state_dispatch_tables[state_id]
+                        .template init_composite_state<Submachine>();
                 });
             if constexpr (has_transitions::value)
             {
@@ -533,7 +542,7 @@ compile_policy_impl<favor_compile_time>::dispatch_table<StateMachine, any_event>
 
 #endif
 
-} // detail
-} // boost::msm::backmp11
+} // namespace detail
+} // namespace boost::msm::backmp11::detail
 
 #endif //BOOST_MSM_BACKMP11_FAVOR_COMPILE_TIME_HPP

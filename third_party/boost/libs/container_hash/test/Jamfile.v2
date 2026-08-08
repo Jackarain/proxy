@@ -135,3 +135,5 @@ run hash_tuple_like_test2.cpp
 
 run is_range_test4.cpp ;
 run hash_container_test2.cpp ;
+
+run hash_variant_test2.cpp ;

@@ -1,4 +1,4 @@
-/* Copyright 2003-2025 Joaquin M Lopez Munoz.
+/* Copyright 2003-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -85,10 +85,16 @@ private:
   typedef allocator_size_type_t<Allocator>    size_type;
 
 protected:
-  explicit index_base(const ctor_args_list&,const Allocator&){}
+  explicit index_base(
+    const ctor_args_list&,const Allocator&,index_node_type*){}
 
   index_base(
     const index_base<Value,IndexSpecifierList,Allocator>&,
+    const Allocator&,index_node_type*){}
+
+  index_base(
+    const index_base<Value,IndexSpecifierList,Allocator>&,
+    const Allocator&,index_node_type*,
     do_not_copy_elements_tag)
   {}
 

@@ -19,7 +19,7 @@ namespace detail {
 namespace impl {
 
 // This impl works regardless of intrinsics or otherwise
-constexpr u256 u256_add_impl(const int128::uint128_t& lhs, const int128::uint128_t& rhs) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR u256 u256_add_impl(const int128::uint128_t& lhs, const int128::uint128_t& rhs) noexcept
 {
     u256 result;
     std::uint64_t carry {};
@@ -39,7 +39,7 @@ constexpr u256 u256_add_impl(const int128::uint128_t& lhs, const int128::uint128
 
 #if !defined(BOOST_DECIMAL_NO_CONSTEVAL_DETECTION) && defined(BOOST_DECIMAL_ADD_CARRY)
 
-constexpr u256 u256_add(const int128::uint128_t& lhs, const int128::uint128_t& rhs) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR u256 u256_add(const int128::uint128_t& lhs, const int128::uint128_t& rhs) noexcept
 {
     if (BOOST_DECIMAL_IS_CONSTANT_EVALUATED(lhs))
     {
@@ -58,7 +58,7 @@ constexpr u256 u256_add(const int128::uint128_t& lhs, const int128::uint128_t& r
 
 #elif !defined(BOOST_DECIMAL_NO_CONSTEVAL_DETECTION) && defined(__GNUC__) && !defined(BOOST_DECIMAL_ADD_CARRY)
 
-constexpr u256 u256_add(const int128::uint128_t& lhs, const int128::uint128_t& rhs) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR u256 u256_add(const int128::uint128_t& lhs, const int128::uint128_t& rhs) noexcept
 {
     if (BOOST_DECIMAL_IS_CONSTANT_EVALUATED(lhs))
     {
@@ -79,7 +79,7 @@ constexpr u256 u256_add(const int128::uint128_t& lhs, const int128::uint128_t& r
 
 namespace impl {
 
-constexpr std::uint64_t sub_borrow_u64(const std::uint64_t borrow_in, const std::uint64_t a, const std::uint64_t b, std::uint64_t& result) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR std::uint64_t sub_borrow_u64(const std::uint64_t borrow_in, const std::uint64_t a, const std::uint64_t b, std::uint64_t& result) noexcept
 {
     const auto diff {a - b};
     const auto b1 {static_cast<std::uint64_t>(a < b)};
@@ -89,7 +89,7 @@ constexpr std::uint64_t sub_borrow_u64(const std::uint64_t borrow_in, const std:
     return borrow_out;
 }
 
-constexpr bool i256_sub_impl(const u256& a, const u256& b, u256& result) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR bool i256_sub_impl(const u256& a, const u256& b, u256& result) noexcept
 {
     if (a >= b)
     {
@@ -114,7 +114,7 @@ constexpr bool i256_sub_impl(const u256& a, const u256& b, u256& result) noexcep
 
 #if !defined(BOOST_DECIMAL_NO_CONSTEVAL_DETECTION) && defined(BOOST_DECIMAL_SUB_BORROW)
 
-constexpr bool i256_sub(const u256& a, const u256& b, u256& res) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR bool i256_sub(const u256& a, const u256& b, u256& res) noexcept
 {
     if (BOOST_DECIMAL_IS_CONSTANT_EVALUATED(lhs))
     {
@@ -153,7 +153,7 @@ constexpr bool i256_sub(const u256& a, const u256& b, u256& res) noexcept
 
 #elif !defined(BOOST_DECIMAL_NO_CONSTEVAL_DETECTION) && defined(__GNUC__) && !defined(BOOST_DECIMAL_SUB_BORROW) && BOOST_DECIMAL_HAS_BUILTIN(__builtin_subcll)
 
-constexpr bool i256_sub(const u256& a, const u256& b, u256& result) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR bool i256_sub(const u256& a, const u256& b, u256& result) noexcept
 {
     if (BOOST_DECIMAL_IS_CONSTANT_EVALUATED(lhs))
     {
@@ -205,7 +205,7 @@ inline std::uint64_t subcll(const std::uint64_t a, const std::uint64_t b, const 
 
 } // namespace impl
 
-constexpr bool i256_sub(const u256& a, const u256& b, u256& result) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR bool i256_sub(const u256& a, const u256& b, u256& result) noexcept
 {
     if (BOOST_DECIMAL_IS_CONSTANT_EVALUATED(lhs))
     {
@@ -240,7 +240,7 @@ constexpr bool i256_sub(const u256& a, const u256& b, u256& result) noexcept
 
 #else
 
-constexpr bool i256_sub(const u256& a, const u256& b, u256& result) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR bool i256_sub(const u256& a, const u256& b, u256& result) noexcept
 {
     return impl::i256_sub_impl(a, b, result);
 }

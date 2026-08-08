@@ -31,7 +31,6 @@
 #ifdef USE_FILEUNIX
 #include "filesys.h"
 
-#include "object.h"
 #include "pathsys.h"
 #include "jam_strings.h"
 #include "output.h"
@@ -307,6 +306,7 @@ int file_collect_archive_content_( file_archive_info_t * const archive )
         long   lar_date;
         long   lar_size;
         long   lar_offset;
+        long   ext_name_size;
         char * c;
         char * src;
         char * dest;
@@ -345,16 +345,41 @@ int file_collect_archive_content_( file_archive_info_t * const archive )
             }
         }
 
-        c = lar_name - 1;
-        while ( ( *++c != ' ' ) && ( *c != '/' ) );
-        *c = '\0';
+        if ( ! strncmp( "#1/", ar_hdr.ar_name, 3 ) )
+            /* BSD Extended Filename Format.
+             * File names that are either longer than 16 bytes or which contain
+             * embedded spaces are stored immediately after the archive header
+             * and the ar_name field of the archive header is set to the string
+             * "#1/" followed by a decimal representation of the number of
+             * bytes needed for the file name. See
+             * https://man.freebsd.org/cgi/man.cgi?query=ar&sektion=5
+             */
+        {
+            ext_name_size = atoi( lar_name + 3 );
+            if ( ( ext_name_size > 255 ) ||
+                ( read( fd, lar_name, ext_name_size ) != ext_name_size ) )
+            {
+                out_printf("error reading archive name\n");
+                ext_name_size = 0;
+            }
+            *(lar_name + ext_name_size) = '\0';
+        }
+        else
+        {
+            /* SVR4/GNU File names that are up to 15 characters long are stored
+             * directly in the ar_name field of the header, terminated by a "/".
+             */
+            c = lar_name - 1;
+            while ( ( *++c != ' ' ) && ( *c != '/' ) );
+            *c = '\0';
+        }
 
         if ( is_debug_bindscan() )
             out_printf( "archive name %s found\n", lar_name );
 
         auto name = b2::value::format( "%s", lar_name );
 
-        if ( name->as_string().size > 0 )
+        if ( name->as_string().size() > 0 )
         {
             file_info_t * member = 0;
 
@@ -419,7 +444,7 @@ static void collect_archive_content_small( int fd, file_archive_info_t * const a
 
         auto name = b2::value::format( "%s", ar_hdr.hdr._ar_name.ar_name );
 
-        if ( name->as_string().size > 0 )
+        if ( name->as_string().size() > 0 )
         {
             file_info_t * member = 0;
 
@@ -474,7 +499,7 @@ static void collect_archive_content_big( int fd, file_archive_info_t * const arc
 
         auto name = b2::value::format( "%s", ar_hdr.hdr._ar_name.ar_name );
 
-        if ( name->as_string().size > 0 )
+        if ( name->as_string().size() > 0 )
         {
             file_info_t * member = 0;
 

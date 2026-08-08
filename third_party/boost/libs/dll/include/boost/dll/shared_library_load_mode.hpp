@@ -5,10 +5,23 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+/// \file boost/dll/shared_library_load_mode.hpp
+/// \brief Contains only the boost::dll::load_mode::type enum and operators related to it.
+
 #ifndef BOOST_DLL_SHARED_LIBRARY_MODE_HPP
 #define BOOST_DLL_SHARED_LIBRARY_MODE_HPP
 
+#include <boost/dll/detail/config.hpp>
+
+#if !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+# pragma once
+#endif
+
 #include <boost/dll/config.hpp>
+
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
 #include <boost/predef/os.h>
 #include <boost/predef/library/c.h>
 
@@ -17,13 +30,9 @@
 #else
 #   include <dlfcn.h>
 #endif
+#endif // !defiend(BOOST_DLL_INTERFACE_UNIT)
 
-#ifdef BOOST_HAS_PRAGMA_ONCE
-# pragma once
-#endif
-
-/// \file boost/dll/shared_library_load_mode.hpp
-/// \brief Contains only the boost::dll::load_mode::type enum and operators related to it.
+BOOST_DLL_BEGIN_MODULE_EXPORT
 
 namespace boost { namespace dll { namespace load_mode {
 
@@ -244,5 +253,9 @@ BOOST_CONSTEXPR inline type operator~(type left) noexcept {
 }
 
 }}} // boost::dll::load_mode
+
+BOOST_DLL_END_MODULE_EXPORT
+
+#endif // !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
 
 #endif // BOOST_DLL_SHARED_LIBRARY_MODE_HPP

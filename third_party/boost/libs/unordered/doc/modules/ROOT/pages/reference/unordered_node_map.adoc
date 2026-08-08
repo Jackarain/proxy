@@ -81,6 +81,12 @@ namespace unordered {
     xref:#unordered_node_map_copy_constructor_with_allocator[unordered_node_map](const unordered_node_map& other, const Allocator& a);
     xref:#unordered_node_map_move_constructor_with_allocator[unordered_node_map](unordered_node_map&& other, const Allocator& a);
     xref:#unordered_node_map_move_constructor_from_concurrent_node_map[unordered_node_map](concurrent_node_map<Key, T, Hash, Pred, Allocator>&& other);
+    template<class FromRangeT, xref:#unordered_node_map_container_compatible_range[__container-compatible-range__]<value_type> R>
+      xref:#unordered_node_map_range_constructor[unordered_node_map](FromRangeT&&, R&& rg,
+                         size_type n = _implementation-defined_,
+                         const hasher& hf = hasher(),
+                         const key_equal& eql = key_equal(),
+                         const allocator_type& a = allocator_type());
     xref:#unordered_node_map_initializer_list_constructor[unordered_node_map](std::initializer_list<value_type> il,
                        size_type n = _implementation-defined_
                        const hasher& hf = hasher(),
@@ -92,6 +98,13 @@ namespace unordered {
       xref:#unordered_node_map_iterator_range_constructor_with_bucket_count_and_allocator[unordered_node_map](InputIterator f, InputIterator l, size_type n, const allocator_type& a);
     template<class InputIterator>
       xref:#unordered_node_map_iterator_range_constructor_with_bucket_count_and_hasher[unordered_node_map](InputIterator f, InputIterator l, size_type n, const hasher& hf,
+                         const allocator_type& a);
+    template<class FromRangeT, xref:#unordered_node_map_container_compatible_range[__container-compatible-range__]<value_type> R>
+      xref:#unordered_node_map_range_constructor_with_allocator[unordered_node_map](FromRangeT&&, R&& rg, const allocator_type& a);
+    template<class FromRangeT, xref:#unordered_node_map_container_compatible_range[__container-compatible-range__]<value_type> R>
+      xref:#unordered_node_map_range_constructor_with_bucket_count_and_allocator[unordered_node_map](FromRangeT&&, R&& rg, size_type n, const allocator_type& a);
+    template<class FromRangeT, xref:#unordered_node_map_container_compatible_range[__container-compatible-range__]<value_type> R>
+      xref:#unordered_node_map_range_constructor_with_bucket_count_and_hasher_and_allocator[unordered_node_map](FromRangeT&&, R&& rg, size_type n, const hasher& hf,
                          const allocator_type& a);
     xref:#unordered_node_map_initializer_list_constructor_with_allocator[unordered_node_map](std::initializer_list<value_type> il, const allocator_type& a);
     xref:#unordered_node_map_initializer_list_constructor_with_bucket_count_and_allocator[unordered_node_map](std::initializer_list<value_type> il, size_type n,
@@ -132,6 +145,8 @@ namespace unordered {
     iterator       xref:#unordered_node_map_move_insert_with_hint[insert](const_iterator hint, value_type&& obj);
     iterator       xref:#unordered_node_map_copy_insert_with_hint[insert](const_iterator hint, init_type&& obj);
     template<class InputIterator> void xref:#unordered_node_map_insert_iterator_range[insert](InputIterator first, InputIterator last);
+    template<xref:#unordered_node_map_container_compatible_range[__container-compatible-range__]<value_type> R>
+      void xref:#unordered_node_map_insert_range[insert_range](R&& rg);
     void xref:#unordered_node_map_insert_initializer_list[insert](std::initializer_list<value_type>);
     insert_return_type xref:#unordered_node_map_insert_node[insert](node_type&& nh);
     iterator xref:#unordered_node_map_insert_node_with_hint[insert](const_iterator hint, node_type&& nh);
@@ -239,6 +254,17 @@ namespace unordered {
       -> unordered_node_map<xref:#unordered_node_map_iter_key_type[__iter-key-type__]<InputIterator>, xref:#unordered_node_map_iter_mapped_type[__iter-mapped-type__]<InputIterator>, Hash,
                             Pred, Allocator>;
 
+  template<xref:#unordered_node_map_convertible_to_from_range_t[__convertible-to-from-range_t__] FromRangeT,
+           std::ranges::input_range R,
+           class Hash = boost::hash<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>>,
+           class Pred = std::equal_to<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>>,
+           class Allocator = std::allocator<xref:#unordered_node_map_range_to_alloc_type[__range-to-alloc-type__]<R>>>
+    unordered_node_map(FromRangeT&&, R&&,
+                       typename xref:#unordered_node_map_deduction_guides[__see below__]::size_type = xref:#unordered_node_map_deduction_guides[__see below__], Hash = Hash(),
+                       Pred = Pred(), Allocator = Allocator())
+      -> unordered_node_map<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>, xref:#unordered_node_map_range_mapped_type[__range-mapped-type__]<R>,
+                            Hash, Pred,Allocator>;
+
   template<class Key, class T, class Hash = boost::hash<Key>,
            class Pred = std::equal_to<Key>,
            class Allocator = std::allocator<std::pair<const Key, T>>>
@@ -264,6 +290,27 @@ namespace unordered {
                        Allocator)
       -> unordered_node_map<xref:#unordered_node_map_iter_key_type[__iter-key-type__]<InputIterator>, xref:#unordered_node_map_iter_mapped_type[__iter-mapped-type__]<InputIterator>, Hash,
                             std::equal_to<xref:#unordered_node_map_iter_key_type[__iter-key-type__]<InputIterator>>, Allocator>;
+
+  template<xref:#unordered_node_map_convertible_to_from_range_t[__convertible-to-from-range_t__] FromRangeT,
+           std::ranges::input_range R, class Allocator>
+    unordered_node_map(FromRangeT&&, R&&, typename xref:#unordered_node_map_deduction_guides[__see below__]::size_type, Allocator)
+      -> unordered_node_map<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>, xref:#unordered_node_map_range_mapped_type[__range-mapped-type__]<R>,
+                            boost::hash<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>>,
+                            std::equal_to<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>>, Allocator>;
+
+  template<xref:#unordered_node_map_convertible_to_from_range_t[__convertible-to-from-range_t__] FromRangeT,
+           std::ranges::input_range R, class Allocator>
+    unordered_node_map(FromRangeT&&, R&&, Allocator)
+      -> unordered_node_map<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>, xref:#unordered_node_map_range_mapped_type[__range-mapped-type__]<R>,
+                            boost::hash<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>>,
+                            std::equal_to<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>>, Allocator>;
+
+  template<xref:#unordered_node_map_convertible_to_from_range_t[__convertible-to-from-range_t__] FromRangeT,
+           std::ranges::input_range R, class Hash, class Allocator>
+    unordered_node_map(FromRangeT&&, R&&, typename xref:#unordered_node_map_deduction_guides[__see below__]::size_type, Hash,
+                       Allocator)
+      -> unordered_node_map<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>, xref:#unordered_node_map_range_mapped_type[__range-mapped-type__]<R>,
+                            Hash, std::equal_to<xref:#unordered_node_map_range_key_type[__range-key-type__]<R>>, Allocator>;
 
   template<class Key, class T, class Allocator>
     unordered_node_map(std::initializer_list<std::pair<Key, T>>, typename xref:#unordered_node_map_deduction_guides[__see below__]::size_type,
@@ -394,6 +441,15 @@ with `Iterator` = `iterator` and `NodeType` = `node_type`.
 ---
 
 === Constructors
+
+==== __container-compatible-range__
+[listings,subs="+macros,+quotes"]
+-----
+template<class R, class T>
+  concept container_compatible_range =
+    std::ranges::input_range<R> &&
+    std::convertible_to<std::ranges::range_reference_t<R>, T>; // exposition only
+-----
 
 ==== Default Constructor
 ```c++
@@ -530,6 +586,27 @@ Concurrency:;; Blocking on `other`.
 
 ---
 
+==== Range Constructor
+[source,c++,subs="+macros,+quotes"]
+----
+template<class FromRangeT, xref:#unordered_node_map_container_compatible_range[__container-compatible-range__]<value_type> R>
+  unordered_node_map(FromRangeT&&, R&& rg,
+                     size_type n = _implementation-defined_,
+                     const hasher& hf = hasher(),
+                     const key_equal& eql = key_equal(),
+                     const allocator_type& a = allocator_type());
+----
+
+Constructs an empty container with at least `n` buckets, using `hf` as the hash function, `eql` as the key equality predicate and `a` as the allocator, and inserts the elements from `rg` into it.
+
+Only participates in overload resolution if `FromRangeT` is convertible to `std::from_range_t` or `boost::unordered::from_range_t`.
+
+
+[horizontal]
+Requires:;; If the defaults are used, `hasher`, `key_equal` and `allocator_type` need to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+
+---
+
 ==== Initializer List Constructor
 [source,c++,subs="+quotes"]
 ----
@@ -540,7 +617,7 @@ unordered_node_map(std::initializer_list<value_type> il,
               const allocator_type& a = allocator_type());
 ----
 
-Constructs an empty container with at least `n` buckets, using `hf` as the hash function, `eql` as the key equality predicate and `a`, and inserts the elements from `il` into it.
+Constructs an empty container with at least `n` buckets, using `hf` as the hash function, `eql` as the key equality predicate and `a` as the allocator, and inserts the elements from `il` into it.
 
 [horizontal]
 Requires:;; If the defaults are used, `hasher`, `key_equal` and `allocator_type` need to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
@@ -596,6 +673,58 @@ Requires:;; `hasher`, `key_equal` need to be https://en.cppreference.com/w/cpp/n
 ----
 
 Constructs an empty container with at least `n` buckets, using `hf` as the hash function, `a` as the allocator, with the default key equality predicate, and inserts the elements from `[f, l)` into it.
+
+[horizontal]
+Requires:;; `key_equal` needs to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+
+---
+
+==== Range Constructor with Allocator
+
+[source,c++,subs="+macros,+quotes"]
+----
+template<class FromRangeT, xref:#unordered_node_map_container_compatible_range[__container-compatible-range__]<value_type> R>
+  unordered_node_map(FromRangeT&&, R&& rg, const allocator_type& a);
+----
+
+Constructs an empty container using `a` and default hash function and key equality predicate, and inserts the elements from `rg` into it.
+
+Only participates in overload resolution if `FromRangeT` is convertible to `std::from_range_t` or `boost::unordered::from_range_t`.
+
+[horizontal]
+Requires:;; `hasher` and `key_equal` need to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+
+---
+
+==== Range Constructor with Bucket Count and Allocator
+
+[source,c++,subs="+macros,+quotes"]
+----
+template<class FromRangeT, xref:#unordered_node_map_container_compatible_range[__container-compatible-range__]<value_type> R>
+  unordered_node_map(FromRangeT&&, R&& rg, size_type n, const allocator_type& a);
+----
+
+Constructs an empty container with at least `n` buckets, using `a` and default hash function and key equality predicate, and inserts the elements from `rg` into it.
+
+Only participates in overload resolution if `FromRangeT` is convertible to `std::from_range_t` or `boost::unordered::from_range_t`.
+
+[horizontal]
+Requires:;; `hasher` and `key_equal` need to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+
+---
+
+==== Range Constructor with Bucket Count and Hasher and Allocator
+
+[source,c++,subs="+macros,+quotes"]
+----
+template<class FromRangeT, xref:#unordered_node_map_container_compatible_range[__container-compatible-range__]<value_type> R>
+  unordered_node_map(FromRangeT&&, R&& rg, size_type n, const hasher& hf,
+                    const allocator_type& a);
+----
+
+Constructs an empty container with at least `n` buckets, using `hf` as the hash function, `a` as the allocator and default key equality predicate, and inserts the elements from `rg` into it.
+
+Only participates in overload resolution if `FromRangeT` is convertible to `std::from_range_t` or `boost::unordered::from_range_t`.
 
 [horizontal]
 Requires:;; `key_equal` needs to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
@@ -763,7 +892,8 @@ size_type size() const noexcept;
 ```
 
 [horizontal]
-Returns:;; `std::distance(begin(), end())`
+Returns:;; The number of elements in the container.
+Complexity:;; Constant time.
 
 ---
 
@@ -912,6 +1042,22 @@ Inserts a range of elements into the container. Elements are inserted if and onl
 
 [horizontal]
 Requires:;; `value_type` is https://en.cppreference.com/w/cpp/named_req/EmplaceConstructible[EmplaceConstructible^] into the container from `*first`.
+Throws:;; When inserting a single element, if an exception is thrown by an operation other than a call to `hasher` the function has no effect.
+Notes:;; Can invalidate iterators, but only if the insert causes the load to be greater than the maximum load.
+
+---
+
+==== Insert Range
+[source,c++,subs="+macros,+quotes"]
+----
+template<xref:#unordered_node_map_container_compatible_range[__container-compatible-range__]<value_type> R>
+  void insert_range(R&& rg);
+----
+
+Inserts a range of elements into the container. Elements are inserted if and only if there is no element in the container with an equivalent key.
+
+[horizontal]
+Requires:;; `value_type` is https://en.cppreference.com/w/cpp/named_req/EmplaceConstructible[EmplaceConstructible^] into the container from `*std::ranges​::​begin(rg)`.
 Throws:;; When inserting a single element, if an exception is thrown by an operation other than a call to `hasher` the function has no effect.
 Notes:;; Can invalidate iterators, but only if the insert causes the load to be greater than the maximum load.
 
@@ -1546,6 +1692,42 @@ template<class InputIterator>
   using __iter-to-alloc-type__ = std::pair<
     std::add_const_t<std::tuple_element_t<0, xref:#unordered_node_map_iter_value_type[__iter-value-type__]<InputIterator>>>,
     std::tuple_element_t<1, xref:#unordered_node_map_iter_value_type[__iter-value-type__]<InputIterator>>>; // exposition only
+-----
+
+==== __convertible-to-from-range_t__
+[listings,subs="+macros,+quotes"]
+-----
+template<typename FromRangeT>
+  concept __convertible-to-from_range_t__ =
+    // first clause not present if std::from_range_t does not exist
+    std::is_convertible_v<FromRangeT, std::from_range_t> ||
+    std::is_convertible_v<FromRangeT, boost::unordered::from_range_t>; // exposition only
+-----
+
+==== __range-key-type__
+[listings,subs="+macros,+quotes"]
+-----
+template<std::ranges::input_range R>
+  using __range-key-type__ =
+    std::remove_cvref_t<
+      std::tuple_element_t<0, std::ranges::range_value_t<R>>>; // exposition only
+-----
+
+==== __range-mapped-type__
+[listings,subs="+macros,+quotes"]
+-----
+template<std::ranges::input_range R>
+  using __range-mapped-type__ =
+    std::remove_cvref_t<
+      std::tuple_element_t<1, std::ranges::range_value_t<R>>>; // exposition only
+-----
+
+==== __range-to-alloc-type__
+[listings,subs="+macros,+quotes"]
+-----
+template<std::ranges::input_range R>
+  using __range-to-alloc-type__ = 
+    std::pair<const xref:#unordered_node_map_range_key_type[__range-key-type__]<R>, xref:#unordered_node_map_range_mapped_type[__range-mapped-type__]<R>>; // exposition only
 -----
 
 === Equality Comparisons

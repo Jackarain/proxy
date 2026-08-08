@@ -801,10 +801,11 @@ inline bool message_queue_t<VoidPointer>::do_send(
    }
 
    bool notify_blocked_receivers = false;
-   //---------------------------------------------
-   scoped_lock<interprocess_mutex> lock(p_hdr->m_mutex);
-   //---------------------------------------------
    {
+      //---------------------------------------------
+      scoped_lock<interprocess_mutex> lock(p_hdr->m_mutex);
+      //---------------------------------------------
+
       //If the queue is full execute blocking logic
       if (p_hdr->is_full()) {
          BOOST_INTERPROCESS_TRY{
@@ -911,10 +912,11 @@ inline bool
    }
 
    bool notify_blocked_senders = false;
-   //---------------------------------------------
-   scoped_lock<interprocess_mutex> lock(p_hdr->m_mutex);
-   //---------------------------------------------
    {
+      //---------------------------------------------
+      scoped_lock<interprocess_mutex> lock(p_hdr->m_mutex);
+      //---------------------------------------------
+
       //If there are no messages execute blocking logic
       if (p_hdr->is_empty()) {
          BOOST_INTERPROCESS_TRY{

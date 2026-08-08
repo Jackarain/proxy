@@ -6,15 +6,12 @@
 
 #include <boost/redis/connection.hpp>
 
+#include <boost/core/lightweight_test.hpp>
 #include <boost/system/error_code.hpp>
-
-#include <cstddef>
-
-#define BOOST_TEST_MODULE conn_exec_retry
-#include <boost/test/included/unit_test.hpp>
 
 #include "common.hpp"
 
+#include <cstddef>
 #include <iostream>
 
 namespace net = boost::asio;
@@ -30,7 +27,7 @@ using namespace std::chrono_literals;
 
 namespace {
 
-BOOST_AUTO_TEST_CASE(request_cancel_if_unresponded_true)
+void test_request_cancel_if_unresponded_true()
 {
    request req0;
    req0.get_config().cancel_on_connection_lost = true;
@@ -61,7 +58,7 @@ BOOST_AUTO_TEST_CASE(request_cancel_if_unresponded_true)
       // being it has already been written so
       // cancel_on_connection_lost does not apply.
       timer_finished = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn->cancel(operation::run);
       conn->cancel(operation::reconnection);
       std::cout << "async_wait" << std::endl;
@@ -70,19 +67,19 @@ BOOST_AUTO_TEST_CASE(request_cancel_if_unresponded_true)
    auto c2 = [&](error_code ec, std::size_t) {
       c2_called = true;
       std::cout << "c2" << std::endl;
-      BOOST_TEST(ec == net::error::operation_aborted);
+      BOOST_TEST_EQ(ec, net::error::operation_aborted);
    };
 
    auto c1 = [&](error_code ec, std::size_t) {
       c1_called = true;
       std::cout << "c1" << std::endl;
-      BOOST_TEST(ec == net::error::operation_aborted);
+      BOOST_TEST_EQ(ec, net::error::operation_aborted);
    };
 
    auto c0 = [&](error_code ec, std::size_t) {
       c0_called = true;
       std::cout << "c0" << std::endl;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn->async_exec(req1, ignore, c1);
       conn->async_exec(req2, ignore, c2);
    };
@@ -105,7 +102,7 @@ BOOST_AUTO_TEST_CASE(request_cancel_if_unresponded_true)
    BOOST_TEST(run_finished);
 }
 
-BOOST_AUTO_TEST_CASE(request_cancel_if_unresponded_false)
+void test_request_cancel_if_unresponded_false()
 {
    // The BLPOP request will block forever, causing the health checker
    // to trigger a reconnection. Although req2 has been written,
@@ -138,24 +135,24 @@ BOOST_AUTO_TEST_CASE(request_cancel_if_unresponded_false)
    auto c3 = [&](error_code ec, std::size_t) {
       c3_called = true;
       std::cout << "c3: " << ec.message() << std::endl;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn->cancel();
    };
 
    auto c2 = [&](error_code ec, std::size_t) {
       c2_called = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn->async_exec(req3, ignore, c3);
    };
 
    auto c1 = [&](error_code ec, std::size_t) {
       c1_called = true;
-      BOOST_TEST(ec == net::error::operation_aborted);
+      BOOST_TEST_EQ(ec, net::error::operation_aborted);
    };
 
    auto c0 = [&](error_code ec, std::size_t) {
       c0_called = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn->async_exec(req1, ignore, c1);
       conn->async_exec(req2, ignore, c2);
    };
@@ -167,7 +164,7 @@ BOOST_AUTO_TEST_CASE(request_cancel_if_unresponded_false)
    conn->async_run(cfg, [&](error_code ec) {
       run_finished = true;
       std::cout << ec.message() << std::endl;
-      BOOST_TEST(ec != error_code());
+      BOOST_TEST_NE(ec, error_code());
    });
 
    ioc.run_for(test_timeout);
@@ -180,3 +177,11 @@ BOOST_AUTO_TEST_CASE(request_cancel_if_unresponded_false)
 }
 
 }  // namespace
+
+int main()
+{
+   test_request_cancel_if_unresponded_true();
+   test_request_cancel_if_unresponded_false();
+
+   return boost::report_errors();
+}

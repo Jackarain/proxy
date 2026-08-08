@@ -25,6 +25,11 @@
 
 #if defined BOOST_THREAD_USES_CHRONO
 
+#include <boost/chrono/time_point.hpp>
+#include <boost/chrono/system_clocks.hpp>
+
+typedef boost::chrono::steady_clock clock_type;
+clock_type::time_point g_abs_timeout;
 
 bool try_lock_until_called = false;
 
@@ -33,8 +38,7 @@ struct mutex
   template <class Clock, class Duration>
   bool try_lock_until(const boost::chrono::time_point<Clock, Duration>& abs_time)
   {
-    typedef boost::chrono::milliseconds ms;
-    BOOST_TEST(Clock::now() - abs_time < ms(5));
+    BOOST_TEST(abs_time == g_abs_timeout);
     try_lock_until_called = !try_lock_until_called;
     return try_lock_until_called;
   }
@@ -43,18 +47,19 @@ struct mutex
   }
 };
 
-mutex m;
+mutex g_mutex;
 
 int main()
 {
-  typedef boost::chrono::steady_clock Clock;
-  boost::unique_lock<mutex> lk(m, boost::defer_lock);
-  BOOST_TEST(lk.try_lock_until(Clock::now()) == true);
+  boost::unique_lock<mutex> lk(g_mutex, boost::defer_lock);
+  g_abs_timeout = clock_type::now();
+  BOOST_TEST(lk.try_lock_until((clock_type::time_point)g_abs_timeout) == true);
   BOOST_TEST(try_lock_until_called == true);
   BOOST_TEST(lk.owns_lock() == true);
   try
   {
-    lk.try_lock_until(Clock::now());
+    g_abs_timeout = clock_type::now();
+    lk.try_lock_until((clock_type::time_point)g_abs_timeout);
     BOOST_TEST(false);
   }
   catch (boost::system::system_error& e)
@@ -62,13 +67,15 @@ int main()
     BOOST_TEST(e.code().value() == boost::system::errc::resource_deadlock_would_occur);
   }
   lk.unlock();
-  BOOST_TEST(lk.try_lock_until(Clock::now()) == false);
+  g_abs_timeout = clock_type::now();
+  BOOST_TEST(lk.try_lock_until((clock_type::time_point)g_abs_timeout) == false);
   BOOST_TEST(try_lock_until_called == false);
   BOOST_TEST(lk.owns_lock() == false);
   lk.release();
   try
   {
-    lk.try_lock_until(Clock::now());
+    g_abs_timeout = clock_type::now();
+    lk.try_lock_until((clock_type::time_point)g_abs_timeout);
     BOOST_TEST(false);
   }
   catch (boost::system::system_error& e)
@@ -81,4 +88,3 @@ int main()
 #else
 #error "Test not applicable: BOOST_THREAD_USES_CHRONO not defined for this platform as not supported"
 #endif
-

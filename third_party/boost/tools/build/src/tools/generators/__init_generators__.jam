@@ -12,7 +12,7 @@ import os path modules ;
 .this-module's-file = [ modules.binding $(__name__) ] ;
 .this-module's-dir = [ path.parent [ path.make $(.this-module's-file) ] ] ;
 .to-load-jamfiles =  [ path.glob $(.this-module's-dir) : *-$(key).jam ] ;
-.to-load-modules = [ MATCH ^(.*)\.jam$ : $(.to-load-jamfiles) ] ;
+.to-load-modules = [ MATCH ^(.*)\\.jam$ : $(.to-load-jamfiles) ] ;
 
 # A loop over all matched modules in this directory
 for local m in $(.to-load-modules)

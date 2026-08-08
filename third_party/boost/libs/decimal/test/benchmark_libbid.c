@@ -6,7 +6,7 @@
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
 #else
-#  define _POSIX_C_SOURCE 199309L
+#  define _GNU_SOURCE
 #endif
 
 #include <stdio.h>
@@ -16,8 +16,8 @@
 #include <float.h>
 #include <fenv.h>
 
-#include "..\LIBRARY\src\bid_conf.h"
-#include "..\LIBRARY\src\bid_functions.h"
+#include "../LIBRARY/src/bid_conf.h"
+#include "../LIBRARY/src/bid_functions.h"
 
 typedef BID_UINT32 Decimal32;
 typedef BID_UINT64 Decimal64;

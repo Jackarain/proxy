@@ -19,7 +19,6 @@ import ../util/test :
     test-bsl-run
     test-bsl-run_archive
     test-bsl-run_files
-    test-bsl-run_polymorphic_archive
 ;
 
 test-suite "demo-suite" :

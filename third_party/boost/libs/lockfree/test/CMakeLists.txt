@@ -22,7 +22,14 @@ endif()
 set(Tests
     destructor_test
     freelist_test
+    bounded_ticket_queue_comprehensive_stress_test
+    bounded_ticket_queue_stress_test
+    bounded_ticket_queue_test
+    mpsc_weak_queue_comprehensive_stress_test
+    mpsc_weak_queue_stress_test
+    mpsc_weak_queue_test
     queue_bounded_stress_test
+    queue_comprehensive_stress_test
     queue_fixedsize_stress_test
     queue_interprocess_test
     queue_test
@@ -30,6 +37,7 @@ set(Tests
     spsc_queue_stress_test
     spsc_queue_test
     stack_bounded_stress_test
+    stack_comprehensive_stress_test
     stack_fixedsize_stress_test
     stack_interprocess_test
     stack_test

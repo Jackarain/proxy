@@ -78,8 +78,14 @@ void var_defines(struct module_t * module, const char * const * e, int preproces
 	for (; *e; ++e)
 	{
 		::b2::string_view def(*e);
-		::b2::string_view var(def.begin(), def.find('='));
-		::b2::string_view val(def.begin() + var.size() + 1);
+		::b2::string_view var = def;
+		::b2::string_view val;
+		auto eq = def.find('=');
+		if (eq != ::b2::string_view::npos)
+		{
+			var = ::b2::string_view(def.begin(), eq);
+			val = ::b2::string_view(def.begin() + eq + 1);
+		}
 		b2::jam::variable jam_var { module,
 			std::string { var.begin(), var.end() }.c_str() };
 		// std::printf(">> var_defines: *e = %s\n", *e);
@@ -89,7 +95,7 @@ void var_defines(struct module_t * module, const char * const * e, int preproces
 		// }
 
 		// No value to set var with.
-		if (var.size() == def.size()) continue;
+		if (val.empty()) continue;
 
 		// Skip pre-processing, to just set the raw value.
 		if (preprocess == 0)

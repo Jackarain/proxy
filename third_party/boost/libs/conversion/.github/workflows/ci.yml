@@ -18,18 +18,52 @@ jobs:
       matrix:
         include:
           - toolset: gcc-14  # Do not remove! It is the only toolset that tests CMake tests down below
+            compiler: g++-14
             cxxstd: "03,11,14,17,20"
             os: ubuntu-24.04
           - toolset: gcc-12
+            compiler: g++-12
             cxxstd: "03,11,14,17,2a"
             os: ubuntu-22.04
             cxxflags: "cxxflags=--coverage -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined"
             linkflags: "linkflags=--coverage -lasan -lubsan"
             gcov_tool: "gcov-12"
-          - toolset: clang
+          - toolset: clang-14
             compiler: clang++-14
             cxxstd: "03,11,14,17,2a"
             os: ubuntu-22.04
+          - toolset: clang-19
+            compiler: clang++-19
+            cxxstd: "20"
+            cmake_cxx_standard: ""
+            os: ubuntu-24.04
+            install: &cxx19
+              - clang-19
+              - llvm-19
+              - libclang-rt-19-dev
+              - libc++-19-dev
+              - libc++abi-19-dev
+              - clang-tools-19
+          - toolset: clang-19
+            compiler: clang++-19
+            cxxstd: "20"
+            cmake_cxx_standard: 20
+            os: ubuntu-24.04
+            install: *cxx19
+          - toolset: clang-19
+            compiler: clang++-19
+            cxxstd: "23"
+            cmake_cxx_standard: 23
+            os: ubuntu-24.04
+            install: *cxx19
+          - toolset: clang-19
+            compiler: clang++-19
+            cxxstd: "26"
+            cmake_cxx_standard: 26
+            os: ubuntu-24.04
+            install: *cxx19
+    
+    name: ${{matrix.os}}, ${{matrix.toolset}}, ${{matrix.cxxstd}}
 
     runs-on: ${{matrix.os}}
 
@@ -38,7 +72,7 @@ jobs:
 
       - name: Install packages
         if: matrix.install
-        run: sudo apt install ${{matrix.install}}
+        run: sudo apt install -y ${{join(matrix.install, ' ')}}
 
       - name: Setup Boost
         run: |
@@ -65,16 +99,50 @@ jobs:
           ./b2 -j4 variant=debug tools/inspect
 
       - name: Run CMake tests
-        if: ${{matrix.toolset == 'gcc-14'}}
+        if: ${{matrix.toolset == 'gcc-14' || matrix.toolset == 'clang-19'}}
         run: |
           cd ../boost-root/
-          mkdir __build
-          cd __build
-          cmake -DBUILD_TESTING=1 -DBOOST_INCLUDE_LIBRARIES=conversion -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_C_COMPILER=gcc-14 ..
-          cmake --build . --target tests
-          ctest --output-on-failure --no-tests=error
-          cd ..
+          cmake -S . -B __build \
+                -DBUILD_TESTING=1 \
+                -DBOOST_INCLUDE_LIBRARIES=conversion \
+                -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+                ${{ matrix.cmake_cxx_standard != '' && format('-DCMAKE_CXX_STANDARD={0}', matrix.cmake_cxx_standard) || '' }}
+          cmake --build __build --target tests
+          ctest --test-dir __build --output-on-failure --no-tests=error
           rm -rf __build
+      
+      - name: Run modules tests
+        if: ${{matrix.toolset == 'clang-19'}}
+        run: |
+          cd ../boost-root/libs/$LIBRARY
+          cmake -S test/cmake_subdir_test \
+                -B build_module \
+                -GNinja \
+                -DBOOST_USE_MODULES=1 \
+                -DBUILD_TESTING=1 \
+                ${{ matrix.cmake_cxx_standard != '' && format('-DCMAKE_CXX_STANDARD={0}', matrix.cmake_cxx_standard) || '' }} \
+                -DCMAKE_CXX_COMPILER=${{matrix.compiler}} \
+                -DCMAKE_CXX_MODULE_STD=ON \
+                -DCMAKE_EXPERIMENTAL_CXX_IMPORT_STD=0e5b6991-d74f-4b3d-a41c-cf096e0b2508 \
+                -DCMAKE_CXX_FLAGS=-stdlib=libc++
+          cmake --build build_module
+          ctest --test-dir build_module -VV
+          rm -rf build_module
+      
+      - name: Run modules tests without 'import std;'
+        if: ${{matrix.toolset == 'clang-19'}}
+        run: |
+          cd ../boost-root/libs/$LIBRARY
+          cmake -S test/cmake_subdir_test \
+                -B build_module \
+                -GNinja \
+                -DBOOST_USE_MODULES=1 \
+                -DBUILD_TESTING=1 \
+                ${{ matrix.cmake_cxx_standard != '' && format('-DCMAKE_CXX_STANDARD={0}', matrix.cmake_cxx_standard) || '' }} \
+                -DCMAKE_CXX_COMPILER=${{matrix.compiler}}
+          cmake --build build_module
+          ctest --test-dir build_module -VV
+          rm -rf build_module
 
       - name: Run tests
         run: |
@@ -95,7 +163,7 @@ jobs:
 
           echo "$LCOV --directory ../boost-root/bin.v2/libs/$LIBRARY/ --base-directory `pwd`/libs/$LIBRARY/test --capture --output-file $GITHUB_WORKSPACE/coveralls/coverage.info"
           $LCOV --directory ../boost-root/bin.v2/libs/$LIBRARY/ --base-directory ../boost-root/ --capture --output-file $GITHUB_WORKSPACE/coveralls/coverage.info
-          $LCOV --remove $GITHUB_WORKSPACE/coveralls/coverage.info "/usr*" "*/$LIBRARY/test/*" ${{matrix.ignore_coverage}} "*/$LIBRARY/tests/*" "*/$LIBRARY/examples/*" "*/$LIBRARY/example/*" -o $GITHUB_WORKSPACE/coveralls/coverage.info
+          $LCOV --remove $GITHUB_WORKSPACE/coveralls/coverage.info "/usr*" "*/$LIBRARY/test/*" "*/$LIBRARY/tests/*" "*/$LIBRARY/examples/*" "*/$LIBRARY/example/*" -o $GITHUB_WORKSPACE/coveralls/coverage.info
 
           cd ../boost-root
           OTHER_LIBS=`grep "submodule .*" .gitmodules | sed 's/\[submodule\ "\(.*\)"\]/"\*\/boost\/\1\.hpp" "\*\/boost\/\1\/\*"/g'| sed "/\"\*\/boost\/$LIBRARY\/\*\"/d" | sed ':a;N;$!ba;s/\n/ /g'`

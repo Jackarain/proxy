@@ -55,7 +55,7 @@ rule make ( target-name : sources * : generating-rule + : requirements * :
         sources generating-rule requirements default-build usage-requirements ;
     # The '@' sign causes the feature.jam module to qualify rule name with the
     # module name of current project, if needed.
-    local m = [ MATCH ^(@).* : $(generating-rule) ] ;
+    local m = [ MATCH ^(@) : $(generating-rule) ] ;
     if ! $(m)
     {
         generating-rule = @$(generating-rule) ;

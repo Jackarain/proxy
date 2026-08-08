@@ -9,3 +9,6 @@ asciidoc:
     page-pagination: ''
     # Show an additional TOC on the right sidebar
     page-toc: ''
+ext:
+  cpp-reference:
+    config: doc/mrdocs.yml

@@ -1,6 +1,6 @@
 # Copyright 2022 Peter Dimov
-# Copyright 2023 - 2024 Matt Borland
-# Copyright 2023 - 2024 Christopher Kormanyos
+# Copyright 2023 - 2026 Matt Borland
+# Copyright 2023 - 2026 Christopher Kormanyos
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
@@ -51,6 +51,7 @@ project : requirements
 
 run-fail benchmarks.cpp ;
 run-fail benchmark_uint256.cpp ;
+run-fail bench_accumulation.cpp ;
 
 run compare_dec128_and_fast.cpp ;
 compile-fail concepts_test.cpp ;
@@ -92,6 +93,10 @@ run github_issue_1312.cpp ;
 run github_issue_1319.cpp ;
 run github_issue_1329.cpp ;
 run github_issue_1361.cpp ;
+run github_issue_1378.cpp ;
+run github_issue_1383.cpp ;
+run github_issue_1384.cpp ;
+run github_issue_1398.cpp ;
 
 run link_1.cpp link_2.cpp link_3.cpp ;
 run quick.cpp ;
@@ -129,6 +134,7 @@ run test_bid_conversions.cpp ;
 run test_big_uints.cpp ;
 run test_boost_math_univariate_stats.cpp ;
 run test_cbrt.cpp ;
+run test_cbrt_from_math.cpp ;
 run test_charconv_preservation.cpp ;
 run test_cmath.cpp ;
 run test_constants.cpp ;
@@ -187,6 +193,7 @@ run test_log1p.cpp ;
 run test_log10.cpp ;
 run test_nan_conversions.cpp ;
 run test_normalize.cpp ;
+run test_decompose.cpp ;
 run test_parser.cpp ;
 run test_pow.cpp ;
 run test_promotion.cpp ;
@@ -211,27 +218,28 @@ run test_zeta.cpp ;
 run limits_link_1.cpp limits_link_2.cpp limits_link_3.cpp ;
 
 # Run the examples too
-run ../examples/adl.cpp ;
-run ../examples/basic_construction.cpp ;
-run ../examples/bit_conversions.cpp ;
-run ../examples/charconv.cpp ;
-run ../examples/charconv_cohort_preservation.cpp ;
-run ../examples/literals.cpp ;
-run ../examples/rounding_mode.cpp ;
-run ../examples/rounding_mode_compile_time.cpp ;
-run ../examples/statistics.cpp ;
-run ../examples/format.cpp ;
-run ../examples/fmt_format.cpp ;
-run ../examples/print.cpp ;
-run ../examples/promotion.cpp ;
-run ../examples/numerical_parsing.cpp ;
-run ../examples/first_example.cpp ;
-run ../examples/basic_arithmetic.cpp ;
-run ../examples/to_from_file.cpp ;
-run ../examples/addition.cpp ;
-run ../examples/debugger.cpp ;
-run ../examples/binary_float_conversions.cpp ;
-run ../examples/integral_conversions.cpp ;
+run ../example/adl.cpp ;
+run ../example/basic_construction.cpp ;
+run ../example/bit_conversions.cpp ;
+run ../example/charconv.cpp ;
+run ../example/charconv_cohort_preservation.cpp ;
+run ../example/literals.cpp ;
+run ../example/rounding_mode.cpp ;
+run ../example/rounding_mode_compile_time.cpp ;
+run ../example/statistics.cpp ;
+run ../example/format.cpp ;
+run ../example/fmt_format.cpp ;
+run ../example/print.cpp ;
+run ../example/promotion.cpp ;
+run ../example/numerical_parsing.cpp ;
+run ../example/first_example.cpp ;
+run ../example/basic_arithmetic.cpp ;
+run ../example/to_from_file.cpp ;
+run ../example/addition.cpp ;
+run ../example/debugger.cpp ;
+run ../example/binary_float_conversions.cpp ;
+run ../example/integral_conversions.cpp ;
+run ../example/decompose_frexp10_normalize.cpp ;
 
 # Test compilation of separate headers
 compile compile_tests/bid_conversion.cpp ;

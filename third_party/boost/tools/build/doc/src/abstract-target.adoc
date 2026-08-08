@@ -23,7 +23,7 @@ link:#b2.reference.class.abstract-target[abstract-target]:
 * basic-target
 
 --
-1. `rule __init__ ( name : project )`
+1. `rule \\__init__ ( name : project )`
 +
 `name`::
   The name of the target in the Jamfile.

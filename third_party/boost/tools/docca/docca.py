@@ -330,6 +330,7 @@ def make_blocks(element, index):
     for child in element:
         func = {
             'itemizedlist': make_list,
+            'orderedlist': make_ordered_list,
             'simplesect': make_section,
             'programlisting': make_codeblock,
             'parameterlist': make_parameters,
@@ -355,6 +356,13 @@ def make_list(element, index):
         assert child.tag == 'listitem'
         items.append(make_blocks(child, index))
     return List(element.get('type'), items)
+
+def make_ordered_list(element, index):
+    items = []
+    for child in element:
+        assert child.tag == 'listitem'
+        items.append(make_blocks(child, index))
+    return List(element.get('type') or List.Arabic, items)
 
 def make_parameters(element, index):
     result = []

@@ -6,7 +6,7 @@ Copyright (c) 2008-2009: Joachim Faulhaber
            http://www.boost.org/LICENSE_1_0.txt)
 +-----------------------------------------------------------------------------*/
 #define BOOST_TEST_MODULE icl::set_itl_set unit test
-#include <libs/icl/test/disable_test_warnings.hpp>
+#include <disable_test_warnings.hpp>
 #include <string>
 #include <boost/mpl/list.hpp>
 #include "../unit_test_unwarned.hpp"

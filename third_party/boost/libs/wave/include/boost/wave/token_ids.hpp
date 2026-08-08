@@ -311,9 +311,13 @@ enum token_id : std::uint32_t {
     T_CO_RETURN    = TOKEN_FROM_ID(438, KeywordTokenType),
     T_CO_YIELD     = TOKEN_FROM_ID(439, KeywordTokenType),
     T_REQUIRES     = TOKEN_FROM_ID(440, KeywordTokenType),
+    T_MODULE       = TOKEN_FROM_ID(441, KeywordTokenType),
 
 // C++20 operators
-    T_SPACESHIP    = TOKEN_FROM_ID(441, OperatorTokenType),
+    T_SPACESHIP    = TOKEN_FROM_ID(442, OperatorTokenType),
+
+// c++23 features
+    T_SIZETLIT     = TOKEN_FROM_ID(443, IntegerLiteralTokenType),
 
     T_LAST_TOKEN_ID,
     T_LAST_TOKEN = ID_FROM_TOKEN(T_LAST_TOKEN_ID & ~PPTokenFlag),

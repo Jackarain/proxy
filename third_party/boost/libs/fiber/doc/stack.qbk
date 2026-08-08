@@ -294,7 +294,7 @@ as stack space which suppresses the errors.
 
 Sanitizers (GCC/Clang) are confused by the stack switches.
 The library (and Boost.Context too) is required to be compiled with property (b2 command-line)
-`context-impl=ucontext` and compilers santizer options.
+`context-impl=ucontext` and compilers sanitizer options.
 Users must define `BOOST_USE_ASAN` before including any Boost.Context headers
 when linking against Boost binaries.
 

@@ -105,6 +105,7 @@ project
         [ run cpp_mangling.cpp ]
         [ compile-fail cpp_mangling1_cf.cpp ]
         [ run cpp_load_test.cpp   : : cpp_plugin ]
+        [ run smart_library_test.cpp   : : cpp_plugin ]
         [ run cpp_import_test.cpp   : : cpp_plugin ]
         [ run template_method_linux_test.cpp : : cpp_plugin ]
         # TODO: uncomment (fails on some MSVCs and Clang-5)

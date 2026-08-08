@@ -2,6 +2,7 @@
 
 # Copyright 2014 Steven Watanabe
 # Copyright 2015 Artur Shepilko
+# Copyright 2026 Paolo Pastori
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
 
@@ -9,10 +10,7 @@
 
 import os
 import sys
-try:
-    from StringIO import StringIO
-except:
-    from io import StringIO
+
 import BoostBuild
 
 vms = ( os.name == 'posix' and sys.platform == 'OpenVMS')
@@ -39,42 +37,30 @@ sources = {
 def create_sources(path, sources):
     for s in sources :
         f = os.path.join(path, s)
-        t.write(f, "")
-        output = StringIO()
-        for sym in sources[s] :
-            output.write("int %s() { return 0; }\n" % sym)
-        t.write(f, output.getvalue())
+        t.write(f,
+                "".join(["int {}() {{ return 0; }}\n".format(sym)
+                         for sym in sources[s]]))
 
 
 def setup_archive(name, sources):
-    global archive
-    global obj_suffix
     archive = t.adjust_names(name)[0]
     obj_suffix = t.adjust_names(".obj")[0]
-    output = StringIO()
     t.write("jamroot.jam","")
-    output.write("""\
-static-lib %s :
-""" % name.split(".")[0])
     ## sort the sources, so we can test order of the globbed members
-    for s in sorted(sources) :
-        output.write("""\
-    %s
-""" % s)
-    output.write("""\
-    ;
-""")
-    t.write("lib/jamfile.jam", output.getvalue())
+    jl = [ "static-lib {} :".format(name.split(".")[0]) ]
+    jl.extend(sorted(sources))
+    jl.append(";\n")
+    t.write("lib/jamfile.jam", "\n".join(jl))
     create_sources("lib", sources)
     t.run_build_system(subdir="lib")
-    built_archive = "lib/bin/$toolset/debug*/%s" % name
+    built_archive = "lib/bin/$toolset/debug*/" + name
     t.expect_addition(built_archive)
     t.copy(built_archive, name)
     t.rm("lib")
+    return archive, obj_suffix
 
 
 def test_glob_archive(archives, glob, expected, sort_results = False):
-    output = StringIO()
     ## replace placeholders
     glob = glob.replace("$archive1", archives[0]).replace("$obj", obj_suffix)
     expected = [ m.replace("$archive1",
@@ -82,28 +68,26 @@ def test_glob_archive(archives, glob, expected, sort_results = False):
     if len(archives) > 1 :
         glob = glob.replace("$archive2", archives[1]).replace("$obj", obj_suffix)
         expected = [ m.replace("$archive2",
-               archives[1]).replace("$obj", obj_suffix) for m in expected ]
+                   archives[1]).replace("$obj", obj_suffix) for m in expected ]
     ## create test jamfile
-    if sort_results : glob = "[ SORT %s ]" % glob
-    output.write("""\
-    for local p in %s
-    {
-        ECHO $(p) ;
-    }
-    UPDATE ;
-    """ % glob)
-    t.write("file.jam", output.getvalue())
+    if sort_results : glob = "[ SORT {} ]".format(glob)
+    t.write("file.jam", """\
+for local p in {}
+{{
+    ECHO $(p) ;
+}}
+UPDATE ;
+""".format(glob))
     ## run test jamfile and match against expected results
     if sort_results : expected.sort()
-    t.run_build_system(["-ffile.jam"], stdout="\n".join(expected + [""]))
+    t.run_build_system(["-ffile.jam"],
+                       stdout="\n".join(expected + [""]))
     t.rm("file.jam")
 
 
 ## RUN TESTS
-setup_archive("auxilliary1.lib", sources)
-archive1 = archive
-setup_archive("auxilliary2.lib", sources)
-archive2 = archive
+archive1, obj_suffix = setup_archive("auxilliary1.lib", sources)
+archive2, obj_suffix = setup_archive("auxilliary2.lib", sources)
 
 ## all arguments empty
 test_glob_archive([archive1], "[ GLOB_ARCHIVE ]", [])

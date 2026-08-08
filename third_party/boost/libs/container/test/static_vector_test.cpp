@@ -583,6 +583,17 @@ void test_emplace_2p()
           BOOST_TEST(v[std::size_t(i)] == T(i, 100 + i));
    }
 
+   //unchecked_emplace_back(pos, int, int)
+   {
+      static_vector<T, N> v;
+
+      for (int i = 0 ; i < (int)N ; ++i )
+          v.unchecked_emplace_back(i, 100 + i);
+      BOOST_TEST(v.size() == N);
+      for (int i = 0 ; i < (int)N ; ++i )
+          BOOST_TEST(v[std::size_t(i)] == T(i, 100 + i));
+   }
+
    // emplace(pos, int, int)
    {
       typedef typename static_vector<T, N>::iterator It;

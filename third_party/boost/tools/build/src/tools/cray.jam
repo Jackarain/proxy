@@ -103,7 +103,7 @@ rule init ( : : options * : requirements * )
     local developer-build = ;
     {
         local version-string = [ SHELL "\"$(command-cxx)\" -VV 2>&1" ] ;
-        local version-components = [ MATCH "Version ([0-9]+).([0-9]+).([a-zA-Z0-9]+)" : $(version-string) ] ;
+        local version-components = [ MATCH "Version ([0-9]+)\\.([0-9]+)\\.([a-zA-Z0-9]+)" : $(version-string) ] ;
         if ! [ MATCH "([0-9]+)" : $(version-components[3]) ]
         {
 
@@ -236,7 +236,7 @@ rule set-cray-feature-defaults ( )
 
 .debug-configuration = [ args.get-arg debug-configuration ] ;
 
-args.add-arg debug-driver : --debug-driver : "?" ;
+args.add-arg debug-driver : --debug-driver : "?" : flag ;
 .debug-driver = [ args.get-arg debug-driver ] ;
 
 ###

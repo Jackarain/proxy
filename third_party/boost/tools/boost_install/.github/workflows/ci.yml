@@ -9,15 +9,210 @@ on:
       - feature/**
 
 jobs:
-  posix:
+  posix-libs:
     strategy:
       fail-fast: false
       matrix:
         include:
 
+          - lib: atomic
+          - lib: chrono
+          - lib: container
+          - lib: date_time
           - lib: filesystem
-            bopts: install
-            os: ubuntu-latest
+          - lib: headers
+          - lib: iostreams
+          - lib: log
+          - lib: mpi
+          - lib: program_options
+          - lib: python
+          - lib: random
+          - lib: regex
+          - lib: serialization
+          - lib: system
+          - lib: test
+          - lib: thread
+          - lib: wave
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install libbz2-dev libopenmpi-dev libpython3-dev
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update --init --jobs 3 tools/boostdep libs/assert libs/config libs/core libs/${{matrix.lib}}
+          python tools/boostdep/depinst/depinst.py -X test -g "--jobs 3" ${{matrix.lib}}
+          rm -rf tools/boost_install/*
+          cp -r $GITHUB_WORKSPACE/* tools/boost_install
+          ./bootstrap.sh
+          ./b2 -d0 headers
+
+      - name: Install Boost
+        run: |
+          cd ../boost-root
+          echo "using python ;" >> ~/user-config.jam
+          echo "using mpi ;" >> ~/user-config.jam
+          ./b2 -j3 --prefix=$HOME/.local --with-${{matrix.lib}} install
+
+      - name: Run tests
+        run: |
+          cd ../boost-root/tools/boost_install/test/${{matrix.lib}}
+          mkdir __build__ && cd __build__
+          cmake -DCMAKE_INSTALL_PREFIX=~/.local -DBoost_VERBOSE=ON ..
+          VERBOSE=1 cmake --build .
+          export LD_LIBRARY_PATH=$HOME/.local/lib:$GITHUB_WORKSPACE/../boost-root/stage/lib:$LD_LIBRARY_PATH
+          cmake --build . --target check
+
+  windows-libs:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+
+          - lib: atomic
+          - lib: chrono
+          - lib: container
+          - lib: date_time
+          - lib: filesystem
+          - lib: headers
+          - lib: iostreams
+          - lib: log
+          - lib: program_options
+          - lib: random
+          - lib: regex
+          - lib: serialization
+          - lib: system
+          - lib: test
+          - lib: thread
+          - lib: wave
+
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update --init --jobs 3 tools/boostdep libs/assert libs/config libs/core libs/${{matrix.lib}}
+          python tools/boostdep/depinst/depinst.py -X test -g "--jobs 3" ${{matrix.lib}}
+          rd /s/q tools\boost_install
+          xcopy /s /e /q %GITHUB_WORKSPACE% tools\boost_install\
+          cmd /c bootstrap
+          set USER_CONFIG=%HOMEDRIVE%%HOMEPATH%\user-config.jam
+          echo using python : 3.12 ; >> %USER_CONFIG%
+          echo using python : 3.14 ; >> %USER_CONFIG%
+          b2 -d0 headers
+
+      - name: Install Boost
+        shell: cmd
+        run: |
+          echo on
+          cd ..\boost-root
+          set ZLIB_SOURCE=%CD%\tools\boost_install\test\iostreams\zlib-1.2.11
+          set BZIP2_SOURCE=%CD%\tools\boost_install\test\iostreams\bzip2-1.0.8
+          b2 -j3 --with-${{matrix.lib}} install
+
+      - name: Run tests
+        shell: cmd
+        run: |
+          echo on
+          cd ..\boost-root\tools\boost_install\test\${{matrix.lib}}
+          mkdir __build__ && cd __build__
+          cmake -DCMAKE_INSTALL_PREFIX=C:\Boost -DBoost_VERBOSE=ON ..
+          PATH %PATH%;C:\Boost\bin
+          cmake --build . --config Debug && cmake --build . --config Debug --target check
+          cmake --build . --config Release && cmake --build . --config Release --target check
+          cmake --build . --config MinSizeRel && cmake --build . --config MinSizeRel --target check
+          cmake --build . --config RelWithDebInfo && cmake --build . --config RelWithDebInfo --target check
+
+  posix-check-installed:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install libopenmpi-dev libpython3-dev
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          git submodule update --init --jobs 3
+          rm -rf tools/boost_install/*
+          cp -r $GITHUB_WORKSPACE/* tools/boost_install
+          ./bootstrap.sh
+
+      - name: Install Boost --with-headers
+        run: |
+          cd ../boost-root
+          ./b2 -j3 --prefix=$HOME/.local --with-headers install
+
+      - name: Test installed headers
+        run: |
+          g++ -I ~/.local/include -I /usr/include/python3.12 -std=c++20 -c test/headers/include.cpp
+
+      - name: Check installed files
+        run: |
+          file -E ~/.local/share/boost_predef/build.jam
+          file -E ~/.local/lib/cmake/BoostDetectToolset-*.cmake
+          file -E ~/.local/lib/cmake/Boost-*/BoostConfig.cmake
+          file -E ~/.local/lib/cmake/Boost-*/BoostConfigVersion.cmake
+          file -E ~/.local/lib/cmake/boost_headers-*/boost_headers-config.cmake
+          file -E ~/.local/lib/cmake/boost_headers-*/boost_headers-config-version.cmake
+
+      - name: Install Boost --with-system
+        run: |
+          cd ../boost-root
+          ./b2 -j3 --prefix=$HOME/.local --with-system install
+
+      - name: Check installed files for System
+        run: |
+          file -E ~/.local/lib/cmake/boost_system-*/boost_system-config.cmake
+          file -E ~/.local/lib/cmake/boost_system-*/boost_system-config-version.cmake
+
+  posix-opts:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
 
           - lib: filesystem
             bopts: install
@@ -157,6 +352,20 @@ jobs:
             copts: -DBoost_USE_MULTITHREADED=OFF
             os: ubuntu-latest
 
+          # libdir, default cmakedir
+
+          - lib: filesystem
+            bopts: --libdir=$HOME/install-libdir install
+            copts: -DBoost_ROOT=$HOME/install-libdir/cmake
+            os: ubuntu-latest
+
+          # libdir, cmakedir
+
+          - lib: filesystem
+            bopts: --libdir=$HOME/install-libdir --cmakedir=$HOME/install-cmakedir install
+            copts: -DBoost_ROOT=$HOME/install-cmakedir
+            os: ubuntu-latest
+
           # staged
 
           - lib: filesystem
@@ -184,18 +393,7 @@ jobs:
             copts: -DBoost_ROOT=$GITHUB_WORKSPACE/../boost-root/lib64-gcc5/cmake
             os: ubuntu-latest
 
-          # ALL
-
-          - lib: filesystem
-            bopts: install
-            copts: -DUSE_ALL_COMPONENTS=ON
-            os: ubuntu-latest
-
           # Boost_INCLUDE_DIRS, old style
-
-          - lib: headers
-            bopts: install
-            os: ubuntu-latest
 
           - lib: headers
             bopts: stage
@@ -204,18 +402,6 @@ jobs:
 
           # other libraries
 
-          - lib: atomic
-            bopts: install
-            os: ubuntu-latest
-
-          - lib: chrono
-            bopts: install
-            os: ubuntu-latest
-
-          - lib: container
-            bopts: install
-            os: ubuntu-latest
-
           - lib: iostreams
             bopts: install
             os: ubuntu-latest
@@ -241,10 +427,6 @@ jobs:
 
           - lib: log
             bopts: install
-            os: ubuntu-latest
-
-          - lib: log
-            bopts: install
             copts: -DBoost_USE_STATIC_LIBS=ON
             os: ubuntu-latest
 
@@ -256,30 +438,11 @@ jobs:
           - lib: log
             bopts: stage
             copts: -DUSE_STAGED_BOOST=ON -DBoost_USE_STATIC_LIBS=ON
-            os: ubuntu-latest
-
-          - lib: log
-            bopts: install
-            copts: -DUSE_ALL_COMPONENTS=ON
             os: ubuntu-latest
 
           - lib: log
             bopts: --layout=tagged-1.66 threading=multi,single install
             os: ubuntu-latest
-
-          - lib: mpi
-            bopts: install
-            os: ubuntu-latest
-            install: libopenmpi-dev libpython3-dev
-
-          - lib: program_options
-            bopts: install
-            os: ubuntu-latest
-
-          - lib: python
-            bopts: install
-            os: ubuntu-latest
-            install: libpython3-dev
 
           - lib: python
             bopts: install
@@ -301,15 +464,7 @@ jobs:
 
           - lib: random
             bopts: install
-            os: ubuntu-latest
-
-          - lib: random
-            bopts: install
             copts: -DBUILD_SHARED_LIBS=ON
-            os: ubuntu-latest
-
-          - lib: regex
-            bopts: install
             os: ubuntu-latest
 
           - lib: regex
@@ -317,26 +472,10 @@ jobs:
             copts: -DBoost_USE_STATIC_LIBS=ON
             os: ubuntu-latest
 
-          - lib: serialization
-            bopts: install
-            os: ubuntu-latest
-
-          - lib: test
-            bopts: install
-            os: ubuntu-latest
-
-          - lib: thread
-            bopts: install
-            os: ubuntu-latest
-
-          - lib: wave
-            bopts: install
-            os: ubuntu-latest
-
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -363,21 +502,23 @@ jobs:
           ./bootstrap.sh
           ./b2 -d0 headers
 
-      - name: Run tests
+      - name: Install Boost
         run: |
           cd ../boost-root
           echo "using python ;" >> ~/user-config.jam
           echo "using mpi ;" >> ~/user-config.jam
-          ./b2 -d0 -j3 --prefix=$HOME/.local --with-headers ${{matrix.bopts}}
-          ./b2 -j3 --prefix=$HOME/.local --with-${{matrix.lib}} ${{matrix.bopts}}
-          cd tools/boost_install/test/${{matrix.lib}}
+          ./b2 -j3 --prefix=$HOME/.local --with-${{matrix.lib}} install
+
+      - name: Run tests
+        run: |
+          cd ../boost-root/tools/boost_install/test/${{matrix.lib}}
           mkdir __build__ && cd __build__
-          cmake -DCMAKE_INSTALL_PREFIX=~/.local -DUSE_BOOST_PACKAGE=1 -DBoost_VERBOSE=ON ${{matrix.copts}} ..
+          cmake -DCMAKE_INSTALL_PREFIX=~/.local -DBoost_VERBOSE=ON ${{matrix.copts}} ..
           VERBOSE=1 cmake --build .
           export LD_LIBRARY_PATH=$HOME/.local/lib:$GITHUB_WORKSPACE/../boost-root/stage/lib:$LD_LIBRARY_PATH
           cmake --build . --target check
 
-  windows:
+  windows-opts:
     strategy:
       fail-fast: false
       matrix:
@@ -412,6 +553,16 @@ jobs:
             copts: -DBoost_USE_STATIC_LIBS=ON
             os: windows-latest
 
+          - lib: filesystem
+            bopts: --libdir=%GITHUB_WORKSPACE%\..\libdir install
+            copts: -DBoost_ROOT=%GITHUB_WORKSPACE%\..\libdir\cmake
+            os: windows-latest
+
+          - lib: filesystem
+            bopts: --libdir=%GITHUB_WORKSPACE%\..\libdir --cmakedir=%GITHUB_WORKSPACE%\..\cmakedir install
+            copts: -DBoost_ROOT=%GITHUB_WORKSPACE%\..\cmakedir
+            os: windows-latest
+
           # stage
 
           - lib: filesystem
@@ -439,6 +590,16 @@ jobs:
             copts: -DUSE_STAGED_BOOST=ON -DBoost_USE_STATIC_LIBS=ON
             os: windows-latest
 
+          - lib: filesystem
+            bopts: --stagedir=stage64-msvc stage
+            copts: -DUSE_STAGED_BOOST=ON -DBoost_ROOT=%GITHUB_WORKSPACE%\..\boost-root\stage64-msvc\lib\cmake
+            os: windows-latest
+
+          - lib: filesystem
+            bopts: --stage-libdir=lib64-msvc stage
+            copts: -DUSE_STAGED_BOOST=ON -DBoost_ROOT=%GITHUB_WORKSPACE%\..\boost-root\lib64-msvc\cmake
+            os: windows-latest
+
           # mingw
 
           - lib: filesystem
@@ -461,21 +622,9 @@ jobs:
 
           # other libraries
 
-          - lib: headers
-            bopts: install
-            os: windows-latest
-
-          - lib: iostreams
-            bopts: install
-            os: windows-latest
-
           - lib: iostreams
             bopts: stage
             copts: -DUSE_STAGED_BOOST=ON
-            os: windows-latest
-
-          - lib: log
-            bopts: install
             os: windows-latest
 
           - lib: log
@@ -498,14 +647,6 @@ jobs:
             copts: "-DUSE_PYTHON_VERSION=\"3.12;EXACT\""
             os: windows-2025
 
-          - lib: serialization
-            bopts: install
-            os: windows-latest
-
-          - lib: random
-            bopts: install
-            os: windows-latest
-
           - lib: random
             bopts: link=shared install
             copts: -DBoost_USE_STATIC_LIBS=OFF
@@ -521,22 +662,10 @@ jobs:
             copts: -DBUILD_SHARED_LIBS=ON -DBoost_USE_STATIC_LIBS=OFF
             os: windows-latest
 
-          - lib: regex
-            bopts: install
-            os: windows-latest
-
-          - lib: test
-            bopts: install
-            os: windows-latest
-
-          - lib: thread
-            bopts: install
-            os: windows-latest
-
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -560,97 +689,23 @@ jobs:
           echo using python : 3.14 ; >> %USER_CONFIG%
           b2 -d0 headers
 
-      - name: Run tests
+      - name: Install or stage Boost
         shell: cmd
         run: |
           echo on
-          cd ../boost-root
+          cd ..\boost-root
           set ZLIB_SOURCE=%CD%\tools\boost_install\test\iostreams\zlib-1.2.11
           set BZIP2_SOURCE=%CD%\tools\boost_install\test\iostreams\bzip2-1.0.8
-          b2 -d0 -j3 --prefix=%GITHUB_WORKSPACE%\..\.local --with-headers ${{matrix.bopts}}
           b2 -j3 --prefix=%GITHUB_WORKSPACE%\..\.local --with-${{matrix.lib}} ${{matrix.bopts}}
-          cd tools\boost_install\test\${{matrix.lib}}
-          mkdir __build__ && cd __build__
-          cmake -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\..\.local -DUSE_BOOST_PACKAGE=1 -DBoost_VERBOSE=ON ${{matrix.copts}} ..
-          PATH %PATH%;%GITHUB_WORKSPACE%\..\.local\lib;%GITHUB_WORKSPACE%\..\boost-root\stage\lib
-          cmake --build . --config Debug && cmake --build . --config Debug --target check
-          cmake --build . --config Release && cmake --build . --config Release --target check
-          cmake --build . --config MinSizeRel && cmake --build . --config MinSizeRel --target check
-          cmake --build . --config RelWithDebInfo && cmake --build . --config RelWithDebInfo --target check
-
-  windows-noprefix:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-
-          - lib: filesystem
-            os: windows-latest
-
-          - lib: headers
-            os: windows-latest
-
-          - lib: iostreams
-            os: windows-latest
-
-          - lib: log
-            os: windows-latest
-
-          - lib: serialization
-            os: windows-latest
-
-          - lib: random
-            os: windows-latest
-
-          - lib: regex
-            os: windows-latest
-
-          - lib: test
-            os: windows-latest
-
-          - lib: thread
-            os: windows-latest
-
-    runs-on: ${{matrix.os}}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Boost
-        shell: cmd
-        run: |
-          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
-          echo GITHUB_REF: %GITHUB_REF%
-          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
-          set BOOST_BRANCH=develop
-          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
-          echo BOOST_BRANCH: %BOOST_BRANCH%
-          cd ..
-          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
-          cd boost-root
-          git submodule update --init --jobs 3 tools/boostdep libs/assert libs/config libs/core libs/${{matrix.lib}}
-          python tools/boostdep/depinst/depinst.py -X test -g "--jobs 3" ${{matrix.lib}}
-          rd /s/q tools\boost_install
-          xcopy /s /e /q %GITHUB_WORKSPACE% tools\boost_install\
-          cmd /c bootstrap
-          set USER_CONFIG=%HOMEDRIVE%%HOMEPATH%\user-config.jam
-          echo using python : 3.12 ; >> %USER_CONFIG%
-          echo using python : 3.14 ; >> %USER_CONFIG%
-          b2 -d0 headers
 
       - name: Run tests
         shell: cmd
         run: |
           echo on
-          cd ../boost-root
-          set ZLIB_SOURCE=%CD%\tools\boost_install\test\iostreams\zlib-1.2.11
-          set BZIP2_SOURCE=%CD%\tools\boost_install\test\iostreams\bzip2-1.0.8
-          b2 -d0 -j3 --with-headers install
-          b2 -j3 --with-${{matrix.lib}} install
-          cd tools\boost_install\test\${{matrix.lib}}
+          cd ..\boost-root\tools\boost_install\test\${{matrix.lib}}
           mkdir __build__ && cd __build__
-          cmake -DCMAKE_INSTALL_PREFIX=C:\Boost -DUSE_BOOST_PACKAGE=1 -DBoost_VERBOSE=ON ..
-          PATH %PATH%;C:\Boost\lib
+          cmake -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\..\.local -DBoost_VERBOSE=ON ${{matrix.copts}} ..
+          PATH %PATH%;%GITHUB_WORKSPACE%\..\.local\bin;%GITHUB_WORKSPACE%\..\boost-root\stage\lib
           cmake --build . --config Debug && cmake --build . --config Debug --target check
           cmake --build . --config Release && cmake --build . --config Release --target check
           cmake --build . --config MinSizeRel && cmake --build . --config MinSizeRel --target check

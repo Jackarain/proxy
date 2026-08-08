@@ -379,7 +379,8 @@ run cfoa/insert_tests.cpp
     : $(CPP11) <threading>multi
       <toolset>msvc:<cxxflags>/bigobj
       <toolset>gcc:<inlining>on
-      <toolset>gcc:<optimization>space
+      <toolset>gcc:<optimization>off
+      <toolset>gcc:<cxxflags>-g0
       <toolset>clang:<inlining>on
       <toolset>clang:<optimization>space
     : cfoa_insert_tests ;

@@ -8,11 +8,11 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt).
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/core/lightweight_test.hpp>
 
 #include <boost/array.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 using namespace boost;
 
@@ -61,7 +61,7 @@ static void testing_template_array_output_on_spec_value(T val)
         BOOST_TEST_THROWS(lexical_cast<sshort_arr_type>(val), boost::bad_lexical_cast);
     }
 
-#if !defined(BOOST_NO_STRINGSTREAM) && !defined(BOOST_NO_STD_WSTRING)
+#if !defined(BOOST_NO_STRINGSTREAM) && !defined(BOOST_NO_STD_WSTRING) && !defined(_LIBCPP_VERSION)
     typedef ArrayT<wchar_t, 300> warr_type;
     typedef ArrayT<wchar_t, 3> wshort_arr_type;
     std::wstring wethalon(L"100");
@@ -156,7 +156,7 @@ static void testing_template_array_output_on_char_value()
         BOOST_TEST_THROWS(lexical_cast<sshort_arr_type>(val), boost::bad_lexical_cast);
     }
 
-#if !defined(BOOST_NO_STRINGSTREAM) && !defined(BOOST_NO_STD_WSTRING)
+#if !defined(BOOST_NO_STRINGSTREAM) && !defined(BOOST_NO_STD_WSTRING) && !defined(_LIBCPP_VERSION)
     typedef ArrayT<wchar_t, 4> warr_type;
     typedef ArrayT<wchar_t, 3> wshort_arr_type;
     std::wstring wethalon(L"100");
@@ -238,11 +238,13 @@ static void testing_template_array_output_on_char_value()
 
 void testing_boost_array_output_conversion()
 {
+#ifndef _LIBCPP_VERSION
     testing_template_array_output_on_char_value<boost::array>();
     testing_template_array_output_on_spec_value<boost::array>(100);
     testing_template_array_output_on_spec_value<boost::array>(static_cast<short>(100));
     testing_template_array_output_on_spec_value<boost::array>(static_cast<unsigned short>(100));
     testing_template_array_output_on_spec_value<boost::array>(static_cast<unsigned int>(100));
+#endif
 }
 
 void testing_std_array_output_conversion()
@@ -344,7 +346,10 @@ static void testing_generic_array_input_conversion()
 
 void testing_boost_array_input_conversion()
 {
+#ifndef _LIBCPP_VERSION
     testing_generic_array_input_conversion<boost::array>();
+#endif
+    BOOST_TEST(true);
 }
 
 void testing_std_array_input_conversion()

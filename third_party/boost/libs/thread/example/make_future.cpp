@@ -112,21 +112,21 @@ int main()
 #if __cplusplus > 201103L
   {
     std::cout << __FILE__ << " "<< __LINE__ << std::endl;
-    int i = 0;
-    boost::future<int&> f = boost::make_ready_future(std::ref(i));
+    int x = 0;
+    boost::future<int&> f = boost::make_ready_future(std::ref(x));
     std::cout << f.get() << std::endl;
   }
 #endif
   {
     std::cout << __FILE__ << " "<< __LINE__ << std::endl;
-    int i = 0;
-    boost::future<int&> f = boost::make_ready_future(boost::ref(i));
+    int x = 0;
+    boost::future<int&> f = boost::make_ready_future(boost::ref(x));
     std::cout << f.get() << std::endl;
   }
   {
     std::cout << __FILE__ << " "<< __LINE__ << std::endl;
-    const int i = 0;
-    boost::future<int const&> f = boost::make_ready_future(boost::cref(i));
+    const int x = 0;
+    boost::future<int const&> f = boost::make_ready_future(boost::cref(x));
     std::cout << f.get() << std::endl;
   }
   {
@@ -142,12 +142,12 @@ int main()
   }
   catch (std::exception& ex)
   {
-    std::cout << "ERRORRRRR "<<ex.what() << "" << std::endl;
+    std::cout << "ERRORRRRR " << ex.what() << std::endl;
     return 1;
   }
   catch (...)
   {
-    std::cout << "ERRORRRRR "<<"ERRORRRRR exception thrown" << std::endl;
+    std::cout << "ERRORRRRR ERRORRRRR exception thrown" << std::endl;
     return 2;
   }
   return 0;

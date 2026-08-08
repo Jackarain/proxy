@@ -1,0 +1,65 @@
+////
+Copyright 2026 Matt Borland
+Distributed under the Boost Software License, Version 1.0.
+https://www.boost.org/LICENSE_1_0.txt
+////
+
+= CUDA Benchmarks
+:idprefix: cuda_benchmarks
+
+This section describes a range of performance benchmarks that have been run comparing this library with the standard library, and how to run your own benchmarks if required.
+
+The values are relative to the performance of `boost::charconv::to_chars` and `boost::charconv::from_chars`.
+Larger numbers are more performant, (e.g. 2.00 means twice as fast, and 0.50 means it takes twice as long).
+To make the comparison between host and device fairer, the time to launch the CUDA kernel is included in the device time.
+E.g. (in pseudocode)
+[source, c++]
+----
+time_point device_begin;
+run_cuda_to_chars<<<blocks, threads>>>(input, output, numElements);
+time_point device_end;
+
+time_point host_begin;
+for (int i = 0; i < num_Elements; ++i)
+{
+    uint32_t value;
+    boost::charconv::from_chars(input, input + sizeof(input), value);
+    results[i] = value;
+}
+time_point host_end;
+----
+
+== How to run the Benchmarks
+[#run_cuda_benchmarks_]
+
+To run the benchmarks yourself, navigate to the test folder, and you will find files of the form `cuda_benchmark_to_chars_<type>.cu`,
+and `cuda_benchmark_from_chars_<type>.cu`.
+You will need to compile these using a valid host compiler and version of the CUDA toolkit.
+In our CI we use CUDA Toolkit v12.8 while locally we use CUDA Toolkit v13.1.
+
+== Results
+[#benchmark_cuda_results]
+
+=== x86_64 Linux
+
+Data in the following tables were collected on Ubuntu 24.04 with x86_64 architecture using GCC 13.4.0 with libstdc++, CUDA Toolkit v13.1 on a device with `CUDA_ARCHITECTURE=86`.
+
+==== Integral
+
+.to_chars base 10 integers
+|===
+| Functions | Relative Performance (uint32_t / uint64_t)
+| Boost.Charconv.to_chars on Host
+| 1.00 / 1.00
+| Boost.Charconv.to_chars on Device
+| 10.53 / 10.45
+|===
+
+.from_chars base 10 integers
+|===
+| Functions | Relative Performance (uint32_t / uint64_t)
+| Boost.Charconv.from_chars on Host
+| 1.00 / 1.00
+| Boost.Charconv.from_chars on Device
+| 2.64 / 2.66
+|===

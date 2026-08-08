@@ -316,7 +316,7 @@ int main()
    ////////////////////////////////////
    //    Emplace testing
    ////////////////////////////////////
-   const test::EmplaceOptions Options = (test::EmplaceOptions)(test::EMPLACE_BACK | test::EMPLACE_BEFORE);
+   const test::EmplaceOptions Options = (test::EmplaceOptions)(test::EMPLACE_BACK | test::EMPLACE_BEFORE | test::UNCHECKED_EMPLACE_BACK);
    if(!boost::container::test::test_emplace< vector<test::EmplaceInt>, Options>()){
       return 1;
    }

@@ -76,6 +76,16 @@ boostbook standalone
         <format>xhtml:<xsl:param>img.src.path=../../../../doc/html/
         <xsl:param>generate.section.toc.level=3
         <xsl:param>chunk.first.sections=1
+        # Emit a separate HTML file for each level-2 section (e.g. the
+        # individual non-standard containers such as stable_vector or hub)
+        # instead of inlining them into their parent's single HTML page.
+        <xsl:param>chunk.section.depth=2
+        # In-page sub-index (TOC) at the top of every section page is produced
+        # by BoostBook's default generate.toc ("section toc") together with
+        # generate.section.toc.level (above). toc.section.depth bounds how many
+        # nested levels each in-page sub-index lists; toc.max.depth caps depth.
+        <xsl:param>toc.section.depth=2
+        <xsl:param>toc.max.depth=2
         <format>pdf:<xsl:param>img.src.path=$(images_location)/
         <dependency>autodoc
         <format>pdf:<xsl:param>boost.url.prefix=http://www.boost.org/doc/libs/release/doc/html

@@ -20,6 +20,7 @@
 #include <cfloat>
 #include <tuple>
 #include <cstring>
+#include <complex>
 #include <boost/multiprecision/detail/standalone_config.hpp>
 #include <boost/multiprecision/number.hpp>
 #include <boost/multiprecision/detail/hash.hpp>
@@ -294,6 +295,14 @@ struct float128_backend
    BOOST_MP_CXX14_CONSTEXPR const float128_type& value() const
    {
       return m_value;
+   }
+   BOOST_MP_CXX14_CONSTEXPR float128_type& data()
+   {
+       return m_value;
+   }
+   BOOST_MP_CXX14_CONSTEXPR const float128_type& data() const
+   {
+       return m_value;
    }
 };
 
@@ -710,6 +719,29 @@ inline boost::multiprecision::number<float128_backend, ExpressionTemplates> rsqr
    return res;
 }
 
+// The default std::abs(std::complex<>) implementation normalizes by max(|re|, |im|),
+// which yields NaN when an input is infinite (inf/inf).
+// Per IEEE 754, the result must be +infinity if either component is infinite, even if the other is NaN.
+template <boost::multiprecision::expression_template_option ExpressionTemplates>
+inline boost::multiprecision::number<float128_backend, ExpressionTemplates>
+abs BOOST_PREVENT_MACRO_SUBSTITUTION(const std::complex<boost::multiprecision::number<float128_backend, ExpressionTemplates>>& z)
+{
+   using number_type = boost::multiprecision::number<float128_backend, ExpressionTemplates>;
+   const float128_type re_v = z.real().backend().value();
+   const float128_type im_v = z.imag().backend().value();
+#ifdef BOOST_MP_USE_FLOAT128
+   return number_type(::hypotq(re_v, im_v));
+#else
+   if (isinfq(re_v) || isinfq(im_v))
+   {
+      return std::numeric_limits<number_type>::infinity();
+   }
+   const float128_type re_abs = re_v < 0 ? -re_v : re_v;
+   const float128_type im_abs = im_v < 0 ? -im_v : im_v;
+   return number_type(sqrtq(re_abs * re_abs + im_abs * im_abs));
+#endif
+}
+
 #ifndef BOOST_MP_USE_QUAD
 template <multiprecision::expression_template_option ExpressionTemplates>
 inline boost::multiprecision::number<boost::multiprecision::backends::float128_backend, ExpressionTemplates> copysign BOOST_PREVENT_MACRO_SUBSTITUTION(const boost::multiprecision::number<boost::multiprecision::backends::float128_backend, ExpressionTemplates>& a, const boost::multiprecision::number<boost::multiprecision::backends::float128_backend, ExpressionTemplates>& b)
@@ -833,12 +865,17 @@ class numeric_limits<boost::multiprecision::number<boost::multiprecision::backen
    static constexpr bool has_quiet_NaN                 = true;
    static constexpr bool has_signaling_NaN             = false;
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4996)
+#  pragma warning(push)
+#  pragma warning(disable : 4996)
+#elif (defined(__clang__) && (__clang_major__ >= 17))
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
    static constexpr float_denorm_style                                has_denorm      = denorm_present;
 #ifdef _MSC_VER
 #pragma warning(pop)
+#elif (defined(__clang__) && (__clang_major__ >= 17))
+#  pragma clang diagnostic pop
 #endif
    static constexpr bool                                              has_denorm_loss = true;
    static BOOST_MP_CXX14_CONSTEXPR number_type                        infinity() { return HUGE_VAL; /* conversion from double infinity OK */ }
@@ -902,14 +939,20 @@ constexpr bool numeric_limits<boost::multiprecision::number<boost::multiprecisio
 
 template <boost::multiprecision::expression_template_option ExpressionTemplates>
 constexpr float_round_style numeric_limits<boost::multiprecision::number<boost::multiprecision::backends::float128_backend, ExpressionTemplates> >::round_style;
+
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4996)
+#  pragma warning(push)
+#  pragma warning(disable : 4996)
+#elif (defined(__clang__) && (__clang_major__ >= 17))
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 template <boost::multiprecision::expression_template_option ExpressionTemplates>
 constexpr float_denorm_style numeric_limits<boost::multiprecision::number<boost::multiprecision::backends::float128_backend, ExpressionTemplates> >::has_denorm;
 #ifdef _MSC_VER
 #pragma warning(pop)
+#elif (defined(__clang__) && (__clang_major__ >= 17))
+#  pragma clang diagnostic pop
 #endif
 
 } // namespace std

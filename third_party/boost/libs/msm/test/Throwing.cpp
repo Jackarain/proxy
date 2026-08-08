@@ -13,7 +13,6 @@
 //front-end
 #include <boost/msm/front/state_machine_def.hpp>
 #include <boost/msm/front/functor_row.hpp>
-#include <string>
 #include <iostream>
 
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
@@ -21,8 +20,6 @@
 #endif
 #include <boost/test/unit_test.hpp>
 
-namespace msm = boost::msm;
-namespace mpl = boost::mpl;
 using namespace boost::msm::front;
 
 namespace
@@ -131,8 +128,13 @@ namespace
         BOOST_CHECK_MESSAGE(m.template get_state<End&>().entry_counter == 1, "End entry not called correctly");
         BOOST_CHECK_MESSAGE(m.template get_state<End&>().exit_counter == 0, "End exit not called correctly");
 
-
-        BOOST_CHECK_MESSAGE(m.current_state()[0] == 0, "Init should be active");
+        // backmp11 switches the active state earlier.
+#ifndef BOOST_MSM_TEST_SKIP_BACKMP11
+        if (!boost::msm::backmp11::is_backmp11_state_machine<MyMachine>::value)
+#endif
+        {
+            BOOST_CHECK_MESSAGE(m.current_state()[0] == 0, "Init should be active");
+        }
         BOOST_CHECK_MESSAGE(m.current_state()[1] == 3, "End should be active");
     }
 }

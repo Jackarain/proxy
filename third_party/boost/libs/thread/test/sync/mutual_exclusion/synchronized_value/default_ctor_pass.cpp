@@ -20,9 +20,11 @@ int main()
 
   {
       boost::synchronized_value<int, boost::mutex > f;
+      (void)f;
   }
   {
       boost::synchronized_value<int, boost::timed_mutex> f;
+      (void)f;
   }
 
   return boost::report_errors();

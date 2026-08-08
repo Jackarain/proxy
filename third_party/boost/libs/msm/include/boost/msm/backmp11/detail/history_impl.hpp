@@ -12,126 +12,83 @@
 #ifndef BOOST_MSM_BACKMP11_DETAIL_HISTORY_IMPL_HPP
 #define BOOST_MSM_BACKMP11_DETAIL_HISTORY_IMPL_HPP
 
+#include <boost/msm/backmp11/common_types.hpp>
+#include <boost/msm/backmp11/detail/metafunctions.hpp>
 #include <boost/msm/front/history_policies.hpp>
-#include <boost/mp11.hpp>
 
 namespace boost::msm::backmp11::detail
 {
 
-template<typename History, int NumberOfRegions>
+template <typename History, typename InitialStateIds>
 class history_impl;
 
-template <int NumberOfRegions>
-class history_impl<front::no_history, NumberOfRegions>
+template <typename InitialStateIds>
+class history_impl<front::no_history, InitialStateIds>
 {
   public:
-    void reset_active_state_ids(const std::array<int, NumberOfRegions>& initial_state_ids)
+    template <typename StateMachine, typename Event>
+    static void on_entry(StateMachine& sm, const Event&)
     {
-        m_initial_state_ids = initial_state_ids;
-    }
-
-    template <class Event>
-    const std::array<int, NumberOfRegions>& on_entry(Event const&)
-    {
-        return m_initial_state_ids;
-    }
-
-    void on_exit(const std::array<int, NumberOfRegions>&)
-    {
-        // ignore
-    }
-
-    // this policy deletes all waiting deferred events
-    template <class Event>
-    bool clear_event_pool(Event const&) const
-    {
-        return true;
-    }
-
-  private:
-    // Allow access to private members for serialization.
-    template<typename T, int N>
-    friend void serialize(T&, history_impl<front::no_history, N>&);
-
-    std::array<int, NumberOfRegions> m_initial_state_ids;
-};
-
-template <int NumberOfRegions>
-class history_impl<front::always_shallow_history, NumberOfRegions>
-{
-public:
-    void reset_active_state_ids(const std::array<int, NumberOfRegions>& initial_state_ids)
-    {
-        m_last_active_state_ids = initial_state_ids;
-    }
-
-    template <class Event>
-    const std::array<int, NumberOfRegions>& on_entry(Event const& )
-    {
-        return m_last_active_state_ids;
-    }
-
-    void on_exit(const std::array<int, NumberOfRegions>& active_state_ids)
-    {
-        m_last_active_state_ids = active_state_ids;
-    }
-
-    // the history policy keeps all deferred events until next reentry
-    template <class Event>
-    bool clear_event_pool(Event const&)const
-    {
-        return false;
-    }
-
-private:
-    // Allow access to private members for serialization.
-    template<typename T, int N>
-    friend void serialize(T&, history_impl<front::always_shallow_history, N>&);
-
-    std::array<int, NumberOfRegions> m_last_active_state_ids;
-};
-
-template <typename... Events, int NumberOfRegions>
-class history_impl<front::shallow_history<Events...>, NumberOfRegions>
-{
-    using events_mp11 = mp11::mp_list<Events...>;
-
-public:
-    void reset_active_state_ids(const std::array<int, NumberOfRegions>& initial_state_ids)
-    {
-        m_initial_state_ids = initial_state_ids;
-        m_last_active_state_ids = initial_state_ids;
-    }
-
-    template <class Event>
-    const std::array<int, NumberOfRegions>& on_entry(Event const&)
-    {
-        if constexpr (mp11::mp_contains<events_mp11,Event>::value)
+        sm.m_active_state_ids = value_array<InitialStateIds>;
+        if constexpr (StateMachine::has_event_pool)
         {
-            return m_last_active_state_ids;
+            sm.get_event_pool().events.clear();
         }
-        return m_initial_state_ids;
     }
 
-    void on_exit(const std::array<int, NumberOfRegions>& active_state_ids)
+    template <typename StateMachine, typename Visitor>
+    static void on_entry(StateMachine& sm, Visitor&& visitor)
     {
-        m_last_active_state_ids = active_state_ids;
+        mp11::mp_for_each<InitialStateIds>(
+            [&sm, &visitor](auto state_id)
+            {
+                auto& state = std::get<decltype(state_id)::value>(sm.m_states);
+                visitor(state);
+            });
     }
+};
 
-    // the history policy keeps deferred events until next reentry if coming from our history event
-    template <class Event>
-    bool clear_event_pool(Event const&) const
+template <typename InitialStateIds>
+class history_impl<front::always_shallow_history, InitialStateIds>
+{
+  public:
+    template <typename StateMachine, typename Event>
+    static void on_entry(StateMachine&, const Event&)
     {
-        return !mp11::mp_contains<events_mp11,Event>::value;
     }
 
-  private:
-    // Allow access to private members for serialization.
-    template<typename T, typename... Es, int N>
-    friend void serialize(T&, history_impl<front::shallow_history<Es...>, N>&);
+    template <typename StateMachine, typename Visitor>
+    static void on_entry(StateMachine& sm, Visitor&& visitor)
+    {
+        sm.template visit<visit_mode::active_non_recursive>(visitor);
+    }
+};
 
-    std::array<int, NumberOfRegions> m_initial_state_ids;
-    std::array<int, NumberOfRegions> m_last_active_state_ids;
+template <typename... Events, typename InitialStateIds>
+class history_impl<front::shallow_history<Events...>, InitialStateIds>
+    : public history_impl<front::always_shallow_history, InitialStateIds>
+{
+    using events = mp11::mp_list<Events...>;
+
+  public:
+    template <typename StateMachine, typename Event>
+    static void on_entry(StateMachine& sm, const Event&)
+    {
+        if constexpr (!mp11::mp_contains<events, Event>::value)
+        {
+            sm.m_active_state_ids = value_array<InitialStateIds>;
+            if constexpr (StateMachine::has_event_pool)
+            {
+                sm.get_event_pool().events.clear();
+            }
+        }
+    }
+
+    template <typename StateMachine, typename Visitor>
+    static void on_entry(StateMachine& sm, Visitor&& visitor)
+    {
+        sm.template visit<visit_mode::active_non_recursive>(visitor);
+    }
 };
 
 } // boost::msm::backmp11

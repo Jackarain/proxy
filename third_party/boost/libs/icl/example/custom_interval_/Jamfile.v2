@@ -6,6 +6,4 @@ exe custom_interval
     :
         custom_interval.cpp
     :
-        <include>../../..
-        <include>$(BOOST_ROOT)
     ;

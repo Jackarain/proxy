@@ -22,7 +22,7 @@ namespace decimal {
 #ifndef BOOST_DECIMAL_NO_CXX17_IF_CONSTEXPR
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE TargetType, BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Decimal>
-constexpr auto to_decimal(Decimal val) noexcept -> TargetType
+BOOST_DECIMAL_CUDA_CONSTEXPR auto to_decimal(Decimal val) noexcept -> TargetType
 {
     if (isinf(val))
     {
@@ -53,7 +53,7 @@ constexpr auto to_decimal(Decimal val) noexcept -> TargetType
 #else
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE TargetType, BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Decimal>
-constexpr auto to_decimal(Decimal val) noexcept -> TargetType
+BOOST_DECIMAL_CUDA_CONSTEXPR auto to_decimal(Decimal val) noexcept -> TargetType
 {
     if (isinf(val))
     {

@@ -22,8 +22,6 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::mutex m;
-
 int main()
 {
   {

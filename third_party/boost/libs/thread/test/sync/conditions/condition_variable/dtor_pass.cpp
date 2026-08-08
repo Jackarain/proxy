@@ -23,8 +23,8 @@
 #include <boost/thread/locks.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::condition_variable* cv;
-boost::mutex m;
+boost::condition_variable* g_cv;
+boost::mutex g_mutex;
 typedef boost::unique_lock<boost::mutex> Lock;
 
 bool f_ready = false;
@@ -32,33 +32,33 @@ bool g_ready = false;
 
 void f()
 {
-  Lock lk(m);
+  Lock lk(g_mutex);
   f_ready = true;
-  cv->notify_one();
-  cv->wait(lk);
-  delete cv;
+  g_cv->notify_one();
+  g_cv->wait(lk);
+  delete g_cv;
 }
 
 void g()
 {
-  Lock lk(m);
+  Lock lk(g_mutex);
   g_ready = true;
-  cv->notify_one();
+  g_cv->notify_one();
   while (!f_ready)
   {
-    cv->wait(lk);
+    g_cv->wait(lk);
   }
-  cv->notify_one();
+  g_cv->notify_one();
 }
 
 int main()
 {
-  cv = new boost::condition_variable;
+  g_cv = new boost::condition_variable;
   boost::thread th2(g);
-  Lock lk(m);
+  Lock lk(g_mutex);
   while (!g_ready)
   {
-    cv->wait(lk);
+    g_cv->wait(lk);
   }
   lk.unlock();
   boost::thread th1(f);

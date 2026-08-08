@@ -6,29 +6,44 @@
 #ifndef BOOST_DECIMAL_DETAIL_INT128_DETAIL_MINI_TO_CHARS_HPP
 #define BOOST_DECIMAL_DETAIL_INT128_DETAIL_MINI_TO_CHARS_HPP
 
-#include "uint128_imp.hpp"
-#include "int128_imp.hpp"
+#include <boost/decimal/detail/int128/int128.hpp>
 
 namespace boost {
 namespace int128 {
 namespace detail {
 
-BOOST_DECIMAL_INLINE_CONSTEXPR_VARIABLE char lower_case_digit_table[] = {
+#if !(defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA))
+
+BOOST_DECIMAL_DETAIL_INT128_INLINE_CONSTEXPR char lower_case_digit_table[] = {
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
     'a', 'b', 'c', 'd', 'e', 'f'
 };
 
 static_assert(sizeof(lower_case_digit_table) == sizeof(char) * 16, "10 numbers, and 6 letters");
 
-BOOST_DECIMAL_INLINE_CONSTEXPR_VARIABLE char upper_case_digit_table[] = {
+BOOST_DECIMAL_DETAIL_INT128_INLINE_CONSTEXPR char upper_case_digit_table[] = {
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
     'A', 'B', 'C', 'D', 'E', 'F'
 };
 
 static_assert(sizeof(upper_case_digit_table) == sizeof(char) * 16, "10 numbers, and 6 letters");
 
-constexpr char* mini_to_chars(char (&buffer)[64], uint128_t v, const int base, const bool uppercase) noexcept
+#endif // !__NVCC__
+
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE constexpr char* mini_to_chars(char (&buffer)[64], uint128_t v, const int base, const bool uppercase) noexcept
 {
+    #if defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA)
+    constexpr char lower_case_digit_table[] = {
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        'a', 'b', 'c', 'd', 'e', 'f'
+    };
+
+    constexpr char upper_case_digit_table[] = {
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        'A', 'B', 'C', 'D', 'E', 'F'
+    };
+    #endif
+
     char* last {buffer + 64U};
     *--last = '\0';
 
@@ -42,6 +57,14 @@ constexpr char* mini_to_chars(char (&buffer)[64], uint128_t v, const int base, c
 
     switch (base)
     {
+        case 2:
+            while (v != 0U)
+            {
+                *--last = v.low & 1U ? '1' : '0';
+                v >>= 1U;
+            }
+            break;
+
         case 8:
             while (v != 0U)
             {
@@ -74,7 +97,7 @@ constexpr char* mini_to_chars(char (&buffer)[64], uint128_t v, const int base, c
     return last;
 }
 
-constexpr char* mini_to_chars(char (&buffer)[64], const int128_t v, const int base, const bool uppercase) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE constexpr char* mini_to_chars(char (&buffer)[64], const int128_t v, const int base, const bool uppercase) noexcept
 {
     char* p {nullptr};
 

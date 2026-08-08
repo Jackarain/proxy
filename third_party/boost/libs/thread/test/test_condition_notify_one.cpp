@@ -16,6 +16,8 @@
 #include "./util.inl"
 #include "./condition_test_common.hpp"
 
+unsigned const timeout_grace=1;
+
 void do_test_condition_notify_one_wakes_from_wait()
 {
     wait_for_flag data;
@@ -125,24 +127,23 @@ void do_test_multiple_notify_one_calls_wakes_multiple_threads()
     boost::this_thread::sleep(boost::posix_time::milliseconds(200));
     multiple_wake_cond.notify_one();
     multiple_wake_cond.notify_one();
-    boost::this_thread::sleep(boost::posix_time::milliseconds(200));
-
-    {
-        boost::unique_lock<boost::mutex> lk(multiple_wake_mutex);
-        BOOST_CHECK(multiple_wake_count==3);
-    }
 
     thread1.join();
     thread2.join();
     thread3.join();
+
+    {
+        boost::unique_lock<boost::mutex> lk(multiple_wake_mutex);
+        BOOST_CHECK_EQUAL(multiple_wake_count, 3u);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_condition_notify_one)
 {
-    timed_test(&do_test_condition_notify_one_wakes_from_wait, timeout_seconds, execution_monitor::use_mutex);
-    timed_test(&do_test_condition_notify_one_wakes_from_wait_with_predicate, timeout_seconds, execution_monitor::use_mutex);
-    timed_test(&do_test_condition_notify_one_wakes_from_timed_wait, timeout_seconds, execution_monitor::use_mutex);
-    timed_test(&do_test_condition_notify_one_wakes_from_timed_wait_with_predicate, timeout_seconds, execution_monitor::use_mutex);
-    timed_test(&do_test_condition_notify_one_wakes_from_relative_timed_wait_with_predicate, timeout_seconds, execution_monitor::use_mutex);
-    timed_test(&do_test_multiple_notify_one_calls_wakes_multiple_threads, timeout_seconds, execution_monitor::use_mutex);
+    timed_test(&do_test_condition_notify_one_wakes_from_wait, timeout_seconds+timeout_grace, execution_monitor::use_mutex);
+    timed_test(&do_test_condition_notify_one_wakes_from_wait_with_predicate, timeout_seconds+timeout_grace, execution_monitor::use_mutex);
+    timed_test(&do_test_condition_notify_one_wakes_from_timed_wait, timeout_seconds+timeout_grace, execution_monitor::use_mutex);
+    timed_test(&do_test_condition_notify_one_wakes_from_timed_wait_with_predicate, timeout_seconds+timeout_grace, execution_monitor::use_mutex);
+    timed_test(&do_test_condition_notify_one_wakes_from_relative_timed_wait_with_predicate, timeout_seconds+timeout_grace, execution_monitor::use_mutex);
+    timed_test(&do_test_multiple_notify_one_calls_wakes_multiple_threads, timeout_seconds+timeout_grace, execution_monitor::use_mutex);
 }

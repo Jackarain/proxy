@@ -1,0 +1,65 @@
+# Copyright 2022-2023 René Ferdinand Rivera Morell
+# Use, modification, and distribution are subject to the
+# Boost Software License, Version 1.0. (See accompanying file LICENSE.txt)
+
+name: "Installer"
+
+on:
+  # Allow manual runs.
+  workflow_dispatch:
+  # Run on publishing of releases.
+  release: { types: [published] }
+  # And run on pushes, for main and release branches.
+  push:
+    branches: ["main", "release", "version/*"]
+    paths-ignore:
+      [
+        ".circleci/**",
+        ".cirrus.yml",
+        ".drone.star",
+        ".semaphore/**",
+        ".travis.yml",
+        "appveyor.yml",
+        "azure-pipelines.yml",
+        ".ci/azp-*.yml",
+      ]
+
+jobs:
+  portable:
+    strategy:
+      matrix:
+        include:
+          - { name: "linux-x86_64", runson: "ubuntu-latest" }
+          - { name: "linux-arm64", runson: "ubuntu-24.04-arm" }
+          - { name: "macos-x86_64", runson: "macos-26-intel" }
+          - { name: "macos-arm64", runson: "macos-26" }
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runson }}
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@main
+      - name: "Bootstrap"
+        run: |
+          uname -a
+          ./bootstrap.sh
+      - name: "Build"
+        run: |
+          ./b2 --debug-configuration -d+2 b2-release
+      - name: "Package"
+        run: |
+          cd "${{github.workspace}}/.build"
+          name=`ls -d1 b2-*`
+          archive_bz2="${{github.workspace}}/${name}-${{ matrix.name }}.bz2"
+          tar -cv -j -f "${archive_bz2}" "${name}"
+          sha256sum -b "${archive_bz2}" > "${archive_bz2}.sha256sum.txt"
+          ls -laF "${{github.workspace}}"
+      - name: "Upload"
+        uses: actions/upload-artifact@main
+        with:
+          name: portable-${{ matrix.name }}
+          path: "${{github.workspace}}/b2-*"
+      - name: "Publish"
+        uses: softprops/action-gh-release@master
+        if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+        with:
+          files: "${{github.workspace}}/b2-*"

@@ -17,21 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: gcc-4.8
-            cxxstd: "11"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-4.8
-          - toolset: gcc-5
-            cxxstd: "11,14,1z"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-5
-          - toolset: gcc-6
-            cxxstd: "11,14,1z"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-6
           - toolset: gcc-7
             cxxstd: "11,14,17"
             container: ubuntu:20.04
@@ -53,10 +38,12 @@ jobs:
             install: g++-10
           - toolset: gcc-11
             cxxstd: "11,14,17,2a"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
           - toolset: gcc-12
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: g++-12
           - toolset: gcc-13
             cxxstd: "11,14,17,20,2b"
@@ -68,24 +55,16 @@ jobs:
             container: ubuntu:24.04
             os: ubuntu-latest
             install: g++-14
-          - toolset: clang
-            compiler: clang++-3.9
-            cxxstd: "11,14"
-            container: ubuntu:18.04
+          - toolset: gcc-15
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
             os: ubuntu-latest
-            install: clang-3.9
-          - toolset: clang
-            compiler: clang++-4.0
-            cxxstd: "11,14"
-            container: ubuntu:18.04
+            install: g++-15
+          - toolset: gcc-16
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
             os: ubuntu-latest
-            install: clang-4.0
-          - toolset: clang
-            compiler: clang++-5.0
-            cxxstd: "11,14,1z"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: clang-5.0
+            install: g++-16
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "11,14,17"
@@ -177,6 +156,18 @@ jobs:
             os: ubuntu-latest
             install: clang-20
           - toolset: clang
+            compiler: clang++-21
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: clang-21
+          - toolset: clang
+            compiler: clang++-22
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: clang-22
+          - toolset: clang
             os: macos-14
             cxxstd: "11,14,17,20,2b"
           - toolset: clang
@@ -187,12 +178,7 @@ jobs:
             cxxstd: "11,14,17,20,23,2c"
 
     runs-on: ${{matrix.os}}
-
-    container:
-      image: ${{matrix.container}}
-      volumes:
-        - /node20217:/node20217:rw,rshared
-        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
+    container: ${{matrix.container}}
 
     defaults:
       run:
@@ -205,14 +191,7 @@ jobs:
           apt-get update
           apt-get -y install sudo python3 git g++ curl xz-utils
 
-      - name: Install nodejs20glibc2.17
-        if: ${{ startsWith( matrix.container, 'ubuntu:1' ) }}
-        run: |
-          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
-          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
-          ldd /__e/node20/bin/node
-
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -270,7 +249,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -302,7 +281,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         run: |
@@ -327,28 +306,57 @@ jobs:
           python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" ../tools/boostdep
           ./b2 -j3 tools/boostdep/build
 
-  posix-cmake:
+  posix-cmake-build:
 
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Install packages
         run: sudo apt-get install libboost-filesystem-dev
 
       - name: Build Boostdep with CMake
         run: |
-          mkdir __build__ && cd __build__
-          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~ ..
-          cmake --build . --target install
+          cmake -S . -B __build__ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local
+          cmake --build __build__ --target install
+
+  windows-cmake-build:
+
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Boost
+        shell: cmd
+        run: |
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% tools\boostdep\
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" ../tools/boostdep
+          cmd /c bootstrap
+          b2 install
+
+      - name: Build Boostdep with CMake
+        run: |
+          cmake -S . -B __build__ -DBoost_ROOT=C:/Boost -DCMAKE_INSTALL_PREFIX=C:/usr/local
+          cmake --build __build__ --target install --config Release
 
   posix-check-exceptions:
 
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         run: |
@@ -402,7 +410,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         run: |
@@ -418,8 +426,10 @@ jobs:
           git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
           cd boost-root
           cp -r $GITHUB_WORKSPACE/* tools/boostdep
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/${{matrix.library}}.git libs/${{matrix.library}}
+          rm -rf libs/${{matrix.library}}/.git
 
       - name: Use depinst
         run: |
           cd ../boost-root
-          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" -u ${{matrix.args}} ${{matrix.library}}
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" ${{matrix.args}} ${{matrix.library}}

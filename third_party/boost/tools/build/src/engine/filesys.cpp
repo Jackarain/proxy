@@ -30,8 +30,8 @@
 #include "jam.h"
 #include "filesys.h"
 
+#include "hash.h"
 #include "lists.h"
-#include "object.h"
 #include "pathsys.h"
 #include "jam_strings.h"
 #include "output.h"

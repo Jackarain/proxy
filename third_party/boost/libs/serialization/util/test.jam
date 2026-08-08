@@ -1,8 +1,8 @@
 # Boost serialization Library utility test Jamfile
 
 #  (C) Copyright Robert Ramey 2002-2004.
-#  Use, modification, and distribution are subject to the 
-#  Boost Software License, Version 1.0. (See accompanying file 
+#  Use, modification, and distribution are subject to the
+#  Boost Software License, Version 1.0. (See accompanying file
 #  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
 
@@ -11,19 +11,19 @@
 # tests.
 
 # import rules for testing conditional on config file variables
-import ../../config/checks/config : requires ;
+import config : requires ;
 
 BOOST_ARCHIVE_LIST = [ modules.peek : BOOST_ARCHIVE_LIST ] ;
 
 # these are used to shorten testing while in development.  It permits
 # testing to be applied to just a particular type of archive
 if ! $(BOOST_ARCHIVE_LIST) {
-    BOOST_ARCHIVE_LIST = 
-        "text_archive.hpp" 
-        "text_warchive.hpp" 
-        "binary_archive.hpp" 
-        "xml_archive.hpp" 
-        "xml_warchive.hpp" 
+    BOOST_ARCHIVE_LIST =
+        "text_archive.hpp"
+        "text_warchive.hpp"
+        "binary_archive.hpp"
+        "xml_archive.hpp"
+        "xml_warchive.hpp"
     ;
     # enable the tests which don't depend on a particular archive
     BOOST_SERIALIZATION_TEST = true ;
@@ -50,15 +50,13 @@ rule run-template ( test-name : sources * : files * : requirements * ) {
             <toolset>msvc:<define>_CRT_SECURE_NO_WARNINGS
             <toolset>msvc:<define>_CRT_SECURE_NO_DEPRECATE
             <toolset>msvc:<cxxflags>"-wd4996"
+            <toolset>clang,<target-os>windows:<define>_CRT_SECURE_NO_WARNINGS
             <toolset>clang:<variant>debug:<cxxflags>"-fsanitize=memory"
             # toolset optimizations
-            <toolset>gcc:<cxxflags>"-ftemplate-depth-255"
-            <toolset>clang:<cxxflags>"-ftemplate-depth-255"
-            <toolset>darwin:<cxxflags>"-ftemplate-depth-255"
             <toolset>msvc:<cxxflags>"-Gy"
             # linking
-            <link>shared:<define>BOOST_SERIALIZATION_DYN_LINK=1 
-            <link>shared:<define>BOOST_WSERIALIZATION_DYN_LINK=1 
+            <link>shared:<define>BOOST_SERIALIZATION_DYN_LINK=1
+            <link>shared:<define>BOOST_WSERIALIZATION_DYN_LINK=1
             $(requirements)
         : # test name
             $(test-name)
@@ -73,7 +71,7 @@ rule dependency-save-test ( test )
     if $(m)
     {
         return $(m[1])save$(m[2]) ;
-    }  
+    }
 }
 
 # each of the following tests is run with each type of archive
@@ -82,7 +80,7 @@ rule run-invoke ( test-name : sources * : files * : requirements * )
     local save-test = [ dependency-save-test $(test-name) ] ;
 
     local tests ;
-    tests += [ 
+    tests += [
         run-template $(test-name)
         : # sources
             $(sources)
@@ -102,7 +100,7 @@ rule run-winvoke ( test-name : sources * : files * : requirements * )
     local save-test = [ dependency-save-test $(test-name) ] ;
 
     local tests ;
-    tests += [ 
+    tests += [
         run-template $(test-name)
         : # sources
             $(sources)
@@ -124,7 +122,7 @@ rule run-winvoke ( test-name : sources * : files * : requirements * )
 rule test-bsl-run-no-lib  ( test-name : sources * : requirements * )
 {
     local tests ;
-    tests += [ 
+    tests += [
         run-template $(test-name)
         : # sources
             $(test-name).cpp $(sources).cpp
@@ -139,8 +137,8 @@ rule test-bsl-run-no-lib  ( test-name : sources * : requirements * )
 rule test-bsl-run ( test-name : sources * : libs * : requirements * )
 {
     local tests ;
-    tests +=  [ 
-        run-invoke $(test-name) 
+    tests +=  [
+        run-invoke $(test-name)
         : # sources
             $(test-name).cpp $(sources).cpp $(libs)
         : # input files
@@ -191,27 +189,27 @@ rule test-bsl-run_archive ( test-name : archive-name : sources * : libs * : requ
 rule test-bsl-run_files ( test-name : sources * : libs * : requirements * ) {
     local tests ;
     for local defn in $(BOOST_ARCHIVE_LIST) {
-        tests += [ 
-            test-bsl-run_archive $(test-name) 
-            : $(defn:LB) 
-            : $(test-name) $(sources) 
-            : $(libs) 
-            : $(requirements) 
+        tests += [
+            test-bsl-run_archive $(test-name)
+            : $(defn:LB)
+            : $(test-name) $(sources)
+            : $(libs)
+            : $(requirements)
         ] ;
     }
     return $(tests) ;
 }
-    
+
 rule test-bsl-run_polymorphic_files ( test-name : sources * : libs * : requirements * ) {
     local tests ;
     for local defn in $(BOOST_ARCHIVE_LIST) {
         #ECHO polymorphic_$(defn:LB) ;
-        tests += [ 
-            test-bsl-run_archive $(test-name) 
+        tests += [
+            test-bsl-run_archive $(test-name)
             : polymorphic_$(defn:LB)
-            : $(test-name) $(sources) 
-            : $(libs) 
-            : $(requirements) 
+            : $(test-name) $(sources)
+            : $(libs)
+            : $(requirements)
         ] ;
     }
     return $(tests) ;

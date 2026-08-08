@@ -79,15 +79,9 @@ rule init ( version ? :  command * : options * )
         }
     }
 
-    local m = [ MATCH (..).* : $(version) ] ;
-    local n = [ MATCH (.)\\. : $(m) ] ;
-    if $(n) {
-      m = $(n) ;
-    }
+    local major = [ MATCH "([0-9]+)\\." : $(version) ] ;
 
-    local major = $(m) ;
-
-    if $(major) = "9" {
+    if $(major) = 9 {
       flags intel-darwin.compile OPTIONS $(condition)/<inlining>off : -Ob0 ;
       flags intel-darwin.compile OPTIONS $(condition)/<inlining>on : -Ob1  ;
       flags intel-darwin.compile OPTIONS $(condition)/<inlining>full : -Ob2  ;
@@ -108,10 +102,10 @@ rule init ( version ? :  command * : options * )
       flags intel-darwin.link OPTIONS $(condition)/<runtime-link>shared : -shared-intel -lstdc++ -lpthread ;
     }
 
-    local minor = [ MATCH ".*\\.(.).*" : $(version) ] ;
+    local minor = [ MATCH "\\.([0-9]+)" : $(version) ] ;
 
     # wchar_t char_traits workaround for compilers older than 10.2
-    if $(major) = "9" || ( $(major) = "10" && ( $(minor) = "0" || $(minor) = "1" ) ) {
+    if $(major) = 9 || ( $(major) = 10 && ( $(minor) = 0 || $(minor) = 1 ) ) {
         flags intel-darwin.compile DEFINES $(condition) : __WINT_TYPE__=int : unchecked ;
     }
 

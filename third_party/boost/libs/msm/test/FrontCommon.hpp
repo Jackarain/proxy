@@ -58,7 +58,7 @@ struct StateMachineBase_ : state_machine_def<T>
     template <class FSM, class Event>
     void no_transition(Event const&, FSM&, int)
     {
-        BOOST_TEST_FAIL("no_transition called!");
+        throw std::logic_error{"no_transition called"};
     }
 
     size_t entry_counter{};

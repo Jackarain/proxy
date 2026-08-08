@@ -73,10 +73,12 @@ void run_test(
                 BOOST_TEST(rcs[i] == reason_codes::empty);
         };
 
-    detail::subscribe_op<
+    auto sub_op = detail::subscribe_op<
         client_service_type, decltype(handler)
-    > { svc_ptr, std::move(handler) }
-    .perform(topics, sprops);
+    > { svc_ptr, std::move(handler) };
+
+    BOOST_TEST(static_cast<bool>(sub_op.get_executor() == asio::any_io_executor(ioc.get_executor())));
+    sub_op.perform(topics, sprops);
 
     ioc.poll();
     BOOST_TEST(handlers_called == expected_handlers_called);

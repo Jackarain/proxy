@@ -23,7 +23,7 @@ Copyright (c) 2008-2009: Joachim Faulhaber
 
 #ifdef BOOST_ICL_TEST_CHRONO
 #   define BOOST_CHRONO_EXTENSIONS
-#   include <libs/icl/test/chrono/utility.hpp>
+#   include <chrono/utility.hpp>
 
     namespace boch  = boost::chrono;
 #endif

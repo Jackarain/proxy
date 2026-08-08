@@ -1,0 +1,15 @@
+lib ext : : <name>ext10 <version>1.0 ;
+lib ext : : <name>ext12 <version>1.2 ;
+lib ext : : <name>ext20 <version>2.0 ;
+explicit ext ;
+
+exe hello : hello.cpp ext/<version>2 : <version>2.0 ;
+exe hello : hello.cpp ext/<version>1 : <version>1.1 ;
+explicit hello ;
+
+explicit
+    [ exe hello20 : hello.cpp ext/<version>2 : <version>2.0 ]
+    [ exe hello11 : hello.cpp ext/<version>1.1 : <version>1.1 ]
+    [ exe hello10 : hello.cpp ext/<version>1.0 : <version>1.0 ] ;
+
+alias all : hello/<version>2 hello/<version>1 hello20 hello11 hello10 ;

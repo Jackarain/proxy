@@ -99,7 +99,7 @@ The entire library can be accessed using the convenience header `<boost/decimal.
 A short example of the basic usage:
 
 [#first_example]
-.This https://github.com/boostorg/decimal/blob/develop/examples/first_example.cpp[example] shows the very basics on how to make a complete and working program using the decimal library
+.This https://github.com/boostorg/decimal/blob/develop/example/first_example.cpp[example] shows the very basics on how to make a complete and working program using the decimal library
 ====
 [source, c++]
 ----

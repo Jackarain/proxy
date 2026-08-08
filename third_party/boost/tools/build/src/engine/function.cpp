@@ -16,14 +16,19 @@
 #include "execcmd.h"
 #include "filesys.h"
 #include "frames.h"
+#include "hash.h"
 #include "lists.h"
 #include "mem.h"
+#include "outerr.h"
+#include "output.h"
 #include "pathsys.h"
 #include "rules.h"
 #include "search.h"
 #include "variable.h"
 #include "output.h"
+#include "parse.h"
 #include "startup.h"
+#include "jam_strings.h"
 #include "mod_sysinfo.h"
 
 #include <assert.h>
@@ -59,8 +64,6 @@
 #endif
 
 int32_t glob( char const * s, char const * c );
-void backtrace( FRAME * );
-void backtrace_line( FRAME * );
 
 #define INSTR_PUSH_EMPTY                   0
 #define INSTR_PUSH_CONSTANT                1
@@ -301,7 +304,7 @@ struct _stack
             while ( cleanups_size > 0 )
             {
                 cleanups_size -= 1;
-                cleanups[cleanups_size].clean( this );
+                cleanups[cleanups_size].clean( this, nullptr );
             }
         }
         BJAM_FREE( start );
@@ -390,9 +393,10 @@ struct _stack
             #if B2_FUNCTION_STACK_VALIDATE
             if (stack->get<char>() != saved)
             {
-                backtrace_line( frame );
-                err_printf( "error: stack check failed.\n" );
-                backtrace( frame );
+                b2::list_ref msgs;
+                msgs.push_back( b2::rule_and_args_to_string( frame ) );
+                msgs.push_back( "stack check failed." );
+                b2::out_warning( *msgs, frame );
                 b2::ensure( false );
             }
             #endif
@@ -412,7 +416,7 @@ struct _stack
     void * start = nullptr;
     void * end = nullptr;
     void * data = nullptr;
-    using cleanup_f = void(*)( _stack* );
+    using cleanup_f = void(*)( _stack*, void* );
     struct cleanup_t
     {
         cleanup_f clean = nullptr;
@@ -716,6 +720,9 @@ static void function_default_named_variable( JAM_FUNCTION * function,
     var_set( frame->module, name, value, VAR_DEFAULT );
 }
 
+#define QUOTE_EXPANDED(x) STRINGIFY(x)
+#define STRINGIFY(x) #x
+
 static LIST * function_call_rule( JAM_FUNCTION * function, FRAME * frame,
     STACK * s, int32_t n_args, char const * unexpanded, OBJECT * file, int32_t line )
 {
@@ -730,9 +737,11 @@ static LIST * function_call_rule( JAM_FUNCTION * function, FRAME * frame,
 
     if ( first.empty() )
     {
-        backtrace_line( frame );
-        out_printf( "warning: rulename %s expands to empty string\n", unexpanded );
-        backtrace( frame );
+        b2::list_ref msgs;
+        msgs.push_back( b2::rule_and_args_to_string( frame ) );
+        msgs.push_back( std::string("rulename \"")
+            + unexpanded + "\" expands to empty string." );
+        b2::out_warning( *msgs, frame );
         first.reset();
         for ( i = 0; i < n_args; ++i )
             list_free( s->pop<LIST *>() );
@@ -747,9 +756,10 @@ static LIST * function_call_rule( JAM_FUNCTION * function, FRAME * frame,
 
     if ( n_args > LOL_MAX )
     {
-        out_printf( "ERROR: rules are limited to %d arguments\n", LOL_MAX );
-        backtrace( &inner );
-        b2::clean_exit( EXITBAD );
+        b2::list_ref msgs;
+        msgs.push_back(
+            "rules are limited to " QUOTE_EXPANDED(LOL_MAX) " arguments." );
+        b2::out_error( *msgs, frame );
     }
 
     for ( i = 0; i < n_args; ++i )
@@ -778,9 +788,10 @@ static LIST * function_call_member_rule( JAM_FUNCTION * function, FRAME * frame,
 {
     if ( n_args > LOL_MAX )
     {
-        out_printf( "ERROR: member rules are limited to %d arguments\n", LOL_MAX );
-        backtrace( frame );
-        b2::clean_exit( EXITBAD );
+        b2::list_ref msgs;
+        msgs.push_back(
+            "member rules are limited to " QUOTE_EXPANDED(LOL_MAX) " arguments." );
+        b2::out_error( *msgs, frame );
     }
 
     b2::list_ref first(s->pop<LIST *>(), true);
@@ -794,6 +805,8 @@ static LIST * function_call_member_rule( JAM_FUNCTION * function, FRAME * frame,
     return call_member_rule( rulename, frame, std::move(first), std::move(args) );
 }
 
+#undef QUOTE_EXPANDED
+#undef STRINGIFY
 
 /* Variable expansion */
 
@@ -3356,7 +3369,7 @@ FUNCTION * function_compile_actions( char const * actions, OBJECT * file,
     return (FUNCTION *)result;
 }
 
-static void argument_list_print( struct arg_list * args, int32_t num_args );
+static std::string argument_list_to_string( struct arg_list * args, int32_t num_args );
 
 
 /* Define delimiters for type check elements in argument lists (and return type
@@ -3379,20 +3392,23 @@ int32_t is_type_name( char const * s )
 static void argument_error( char const * message, FUNCTION * procedure,
     FRAME * frame, OBJECT * arg )
 {
-    extern void print_source_line( FRAME * );
-    LOL * actual = frame->args;
-    backtrace_line( frame->prev );
-    out_printf( "*** argument error\n* rule %s ( ", frame->rulename );
-    argument_list_print( procedure->formal_arguments,
-        procedure->num_formal_arguments );
-    out_printf( " )\n* called with: ( " );
-    lol_print( actual );
-    out_printf( " )\n* %s %s\n", message, arg ? object_str ( arg ) : "" );
-    function_location( procedure, &frame->file, &frame->line );
-    print_source_line( frame );
-    out_printf( "see definition of rule '%s' being called\n", frame->rulename );
-    backtrace( frame->prev );
-    b2::clean_exit( EXITBAD );
+    b2::list_ref msgs;
+
+    msgs.push_back(
+        std::string("rule ") + frame->rulename + " ( "
+        + argument_list_to_string( procedure->formal_arguments,
+                                   procedure->num_formal_arguments )
+        + " )" );
+
+    msgs.push_back( "called with: ("
+        + b2::args_to_string( frame->args ) + " )" );
+
+    std::string m(message);
+    if (arg)
+        m += std::string(" ") + arg->str();
+    msgs.push_back( m );
+
+    b2::out_error( *msgs, frame );
 }
 
 static void type_check_range( OBJECT * type_name, LISTITER iter, LISTITER end,
@@ -3845,31 +3861,37 @@ static struct arg_list * arg_list_compile_builtin( char const * * args,
     return 0;
 }
 
-static void argument_list_print( struct arg_list * args, int32_t num_args )
+static std::string argument_list_to_string( struct arg_list * args,
+                                            int32_t num_args )
 {
+    std::string res;
     if ( args )
     {
         int32_t i;
         for ( i = 0; i < num_args; ++i )
         {
             int32_t j;
-            if ( i ) out_printf( " : " );
+            if ( i ) res += " : ";
             for ( j = 0; j < args[ i ].size; ++j )
             {
                 struct argument * formal_arg = &args[ i ].args[ j ];
-                if ( j ) out_printf( " " );
+                if ( j ) res += " ";
                 if ( formal_arg->type_name )
-                    out_printf( "%s ", object_str( formal_arg->type_name ) );
-                out_printf( "%s", object_str( formal_arg->arg_name ) );
+                {
+                    res += formal_arg->type_name->str();
+                    res += " ";
+                }
+                res += formal_arg->arg_name->str();
                 switch ( formal_arg->flags )
                 {
-                case ARG_OPTIONAL: out_printf( " ?" ); break;
-                case ARG_PLUS:     out_printf( " +" ); break;
-                case ARG_STAR:     out_printf( " *" ); break;
+                case ARG_OPTIONAL: res += " ?"; break;
+                case ARG_PLUS:     res += " +"; break;
+                case ARG_STAR:     res += " *"; break;
                 }
             }
         }
     }
+    return res;
 }
 
 
@@ -4816,15 +4838,28 @@ LIST * function_run( FUNCTION * function_, FRAME * frame )
             LIST * vars = s->pop<LIST *>();
             LISTITER iter = list_begin( targets );
             LISTITER const end = list_end( targets );
+            bool not_in_root_m = frame->module != root_module();
             for ( ; iter != end; iter = list_next( iter ) )
             {
-                TARGET * t = bindtarget( list_item( iter ) );
+                b2::target_ref tr( bindtarget( list_item( iter ) ) );
                 LISTITER vars_iter = list_begin( vars );
                 LISTITER const vars_end = list_end( vars );
                 for ( ; vars_iter != vars_end; vars_iter = list_next( vars_iter
                     ) )
-                    t->settings = addsettings( t->settings, VAR_SET, list_item(
-                        vars_iter ), list_copy( value ) );
+                {
+                    // when setting an HDRULE on some target which is not
+                    // on root module decorate the target with module
+                    // information to allow next retrieval of the rule,
+                    // as a workaround for issue #502
+                    if (not_in_root_m &&
+                        object_equal(list_item(vars_iter), constant_HDRRULE))
+                    {
+                        if (frame->file)
+                            tr.on_set( constant_FILENAME, frame->file );
+                        tr.on_set( constant_MODULE, frame->module->name );
+                    }
+                    tr.on_set( list_item( vars_iter ), value );
+                }
             }
             list_free( vars );
             list_free( targets );

@@ -1,0 +1,107 @@
+# Copyright 2023 Nikita Kniazev
+#
+# Use, modification, and distribution are subject to the
+# Boost Software License, Version 1.0. (See accompanying file LICENSE.txt)
+
+name: "BSD"
+
+on:
+  push:
+    paths-ignore: &ignore_paths
+      - ".circleci/**"
+      - ".drone.star"
+      - ".semaphore/**"
+      - ".travis.yml"
+      - "appveyor.yml"
+      - "azure-pipelines.yml"
+      - ".ci/azp-*.yml"
+  pull_request:
+    paths-ignore: *ignore_paths
+
+jobs:
+  BSD:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["freebsd"]
+        # "ghostbsd"
+        arch: ["x86_64", "aarch64"]
+        toolset:
+          - { cxx: "g++16", package: "lang/gcc16", b2tool: gcc }
+          - { cxx: "g++15", package: "lang/gcc15", b2tool: gcc }
+          - { cxx: "g++14", package: "lang/gcc14", b2tool: gcc }
+          - { cxx: "g++13", package: "gcc13", b2tool: gcc }
+          - { cxx: "g++12", package: "gcc12", b2tool: gcc }
+          - { cxx: "clang++21", package: "devel/llvm21", b2tool: clang }
+          - { cxx: "clang++20", package: "devel/llvm20", b2tool: clang }
+          - { cxx: "clang++19", package: "devel/llvm19", b2tool: clang }
+          - { cxx: "clang++18", package: "devel/llvm18", b2tool: clang }
+          - { cxx: "clang++17", package: "devel/llvm17", b2tool: clang }
+          - { cxx: "clang++16", package: "devel/llvm16", b2tool: clang }
+          - { cxx: "clang++15", package: "devel/llvm15", b2tool: clang }
+          - { cxx: "clang++14", package: "devel/llvm14", b2tool: clang }
+          - { cxx: "clang++13", package: "devel/llvm13", b2tool: clang }
+          - { cxx: "clang++12", package: "devel/llvm12", b2tool: clang }
+        exclude:
+          - { os: "freebsd", arch: "aarch64", toolset: { b2tool: gcc } }
+          # - { os: "ghostbsd", arch: "aarch64" }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+      - name: Start FreeBSD
+        if: ${{ matrix.os == 'freebsd' }}
+        uses: vmactions/freebsd-vm@v1
+        with:
+          arch: ${{ matrix.arch }}
+          usesh: true
+          custom-shell-name: vmsh
+      - name: Start GhostBSD
+        if: ${{ matrix.os == 'ghostbsd' }}
+        uses: vmactions/ghostbsd-vm@v1
+        with:
+          arch: ${{ matrix.arch }}
+          usesh: true
+          custom-shell-name: vmsh
+      - name: Info-Basic
+        shell: vmsh {0}
+        run: |
+          echo ${PWD}
+          whoami
+          env
+          uname -a
+      - name: Info-FreeBSD
+        if: ${{ matrix.os == 'freebsd' }}
+        shell: vmsh {0}
+        run: |
+          echo ${PWD}
+          freebsd-version
+          sysctl hw.ncpu
+          sysctl hw.physmem
+          sysctl hw.usermem
+      - name: Install
+        shell: vmsh {0}
+        run: |
+          uname -a
+          export ASSUME_ALWAYS_YES=YES
+          pkg bootstrap
+          pkg install ${{ matrix.toolset.package }}
+          pkg install python3
+      - name: Setup
+        shell: vmsh {0}
+        run: |
+          set -e
+          cd src/engine
+          ./build.sh --cxx=${{ matrix.toolset.cxx }} ${{ matrix.toolset.b2tool }}
+          ./b2 -v
+          cd ../..
+      - name: Run
+        shell: vmsh {0}
+        run: |
+          set -e
+          CXX_PATH=`which ${{ matrix.toolset.cxx }}`
+          B2_ARGS=${{ case(matrix.arch != 'x86_64', '--slow', '') }}
+          cd test
+          echo "using ${{ matrix.toolset.b2tool }} : : ${CXX_PATH} ;" > ${HOME}/user-config.jam
+          python3 test_all.py ${{ matrix.toolset.b2tool }} ${B2_ARGS}
+          cd ..

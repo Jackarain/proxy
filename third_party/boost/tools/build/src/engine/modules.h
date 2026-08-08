@@ -9,12 +9,7 @@
 #define MODULES_DWA10182001_H
 
 #include "config.h"
-#include "bind.h"
-#include "lists.h"
-#include "object.h"
-
-#include <string>
-#include <vector>
+#include "jam_fwd.h"
 
 typedef struct module_t module_t ;
 
@@ -34,6 +29,7 @@ struct module_t
     int user_module = 0;
 };
 
+module_t * find_module( OBJECT * name );
 module_t * bindmodule( OBJECT * name );
 module_t * root_module();
 void delete_module( module_t * );

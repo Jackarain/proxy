@@ -32,7 +32,7 @@ Below is an example of how cohorts can be preserved if one so wishes.
 
 == Cohort Preserving `<charconv>` Example
 
-This example can be found in the `examples/` folder as https://github.com/boostorg/decimal/blob/develop/examples/charconv_cohort_preservation.cpp[charconv_cohort_preservation.cpp].
+This example can be found in the `example/` folder as https://github.com/boostorg/decimal/blob/develop/example/charconv_cohort_preservation.cpp[charconv_cohort_preservation.cpp].
 
 [source, c++]
 ----

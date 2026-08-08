@@ -1,4 +1,4 @@
-/* Copyright 2003-2025 Joaquin M Lopez Munoz.
+/* Copyright 2003-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -131,6 +131,7 @@ struct ordered_index_node_compressed_base
 {
   typedef ordered_index_node_traits<
     AugmentPolicy,Allocator>                    node_traits;
+  typedef typename node_traits::allocator       node_allocator;
   typedef ordered_index_node_impl<
     AugmentPolicy,Allocator>*                   pointer;
   typedef const ordered_index_node_impl<
@@ -608,6 +609,14 @@ public:
   typedef typename trampoline::const_pointer   const_impl_pointer;
   typedef typename trampoline::difference_type difference_type;
   typedef typename trampoline::size_type       size_type;
+  typedef allocator_rebind_t<
+    typename trampoline::node_allocator,
+    ordered_index_node>                        final_allocator_type;
+  typedef allocator_pointer_t<
+    final_allocator_type>                      pointer;
+  typedef allocator_const_pointer_t<
+    final_allocator_type>                      const_pointer;
+
 
   impl_color_ref      color(){return trampoline::color();}
   ordered_index_color color()const{return trampoline::color();}
@@ -646,20 +655,24 @@ public:
           raw_ptr<const impl_type*>(x)));
   }
 
-  /* interoperability with bidir_node_iterator */
+  /* Interoperability with bidir_node_iterator and index impl.
+   * Templated for raw-pointer/non-raw-pointer versions.
+   */
 
-  static void increment(ordered_index_node*& x)
+  template<typename NodePtr>
+  static void increment(NodePtr& x)
   {
     impl_pointer xi=x->impl();
     trampoline::increment(xi);
-    x=from_impl(xi);
+    x=NodePtr(from_impl(xi));
   }
 
-  static void decrement(ordered_index_node*& x)
+  template<typename NodePtr>
+  static void decrement(NodePtr& x)
   {
     impl_pointer xi=x->impl();
     trampoline::decrement(xi);
-    x=from_impl(xi);
+    x=NodePtr(from_impl(xi));
   }
 };
 

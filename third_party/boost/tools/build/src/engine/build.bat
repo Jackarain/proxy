@@ -33,7 +33,7 @@ ECHO ###     vc12, vc14, vc141, vc142, vc143, vc145
 ECHO ###
 ECHO ### If you have Visual Studio 2017 installed you will need to either update
 ECHO ### the Visual Studio 2017 installer or run from VS 2017 Command Prompt
-ECHO ### as we where unable to detect your toolset installation.
+ECHO ### as we were unable to detect your toolset installation.
 ECHO ###
 call :Set_Error
 endlocal
@@ -172,9 +172,9 @@ set B2_SOURCES=%B2_SOURCES% command.cpp compile.cpp constants.cpp cwd.cpp
 set B2_SOURCES=%B2_SOURCES% debug.cpp debugger.cpp
 set B2_SOURCES=%B2_SOURCES% events.cpp
 set B2_SOURCES=%B2_SOURCES% execcmd.cpp execnt.cpp execunix.cpp filent.cpp filesys.cpp fileunix.cpp frames.cpp function.cpp
-set B2_SOURCES=%B2_SOURCES% glob.cpp hash.cpp hcache.cpp hdrmacro.cpp headers.cpp jam.cpp
-set B2_SOURCES=%B2_SOURCES% jamgram.cpp lists.cpp make.cpp make1.cpp md5.cpp mem.cpp modules.cpp
-set B2_SOURCES=%B2_SOURCES% native.cpp output.cpp parse.cpp pathnt.cpp
+set B2_SOURCES=%B2_SOURCES% glob.cpp hash.cpp hcache.cpp headers.cpp jam.cpp
+set B2_SOURCES=%B2_SOURCES% jamgram.cpp lists.cpp make.cpp make1.cpp md5.cpp modules.cpp
+set B2_SOURCES=%B2_SOURCES% native.cpp outerr.cpp output.cpp parse.cpp pathnt.cpp
 set B2_SOURCES=%B2_SOURCES% pathsys.cpp pathunix.cpp regexp.cpp rules.cpp scan.cpp search.cpp jam_strings.cpp
 set B2_SOURCES=%B2_SOURCES% startup.cpp tasks.cpp
 set B2_SOURCES=%B2_SOURCES% timestamp.cpp value.cpp variable.cpp w32_getreg.cpp

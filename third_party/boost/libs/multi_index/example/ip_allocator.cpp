@@ -1,6 +1,6 @@
 /* Boost.MultiIndex example of use of Boost.Interprocess allocators.
  *
- * Copyright 2003-2025 Joaquin M Lopez Munoz.
+ * Copyright 2003-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -10,7 +10,6 @@
 
 #if !defined(NDEBUG)
 #define BOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING
-#define BOOST_MULTI_INDEX_ENABLE_SAFE_MODE
 #endif
 
 #include <boost/config.hpp> /* keep it first to prevent nasty warns in MSVC */

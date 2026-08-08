@@ -54,6 +54,7 @@ void consumer(
   try {
     for(int i=0; ;++i)
     {
+      (void)i;
       int r;
       sbq.pull(r);
       //sbq >> r;
@@ -77,6 +78,7 @@ void consumer2(the_ostream &/*mos*/, boost::sync_queue<int> & sbq)
   try {
     for(int i=0; ;++i)
     {
+      (void)i;
       int r;
       queue_op_status st = sbq.try_pull(r);
       if (queue_op_status::closed == st) break;
@@ -97,6 +99,7 @@ void consumer3(the_ostream &/*mos*/, boost::sync_queue<int> & sbq)
   try {
     for(int i=0; ;++i)
     {
+      (void)i;
       int r;
       queue_op_status res = sbq.wait_pull(r);
       if (res==queue_op_status::closed) break;

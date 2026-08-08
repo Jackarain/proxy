@@ -20,7 +20,7 @@ namespace decimal {
 namespace detail {
 
 template <typename TargetType = std::uint32_t, typename Integer, typename Exp>
-constexpr auto shrink_significand(Integer sig, Exp& exp) noexcept -> TargetType
+BOOST_DECIMAL_CUDA_CONSTEXPR auto shrink_significand(Integer sig, Exp& exp) noexcept -> TargetType
 {
     using Unsigned_Integer = make_unsigned_t<Integer>;
     constexpr auto max_digits {std::numeric_limits<TargetType>::digits10};

@@ -145,7 +145,7 @@ rule propagate ( scanner : targets * : including-target )
 {
     HDRSCAN on $(targets) = [ on $(including-target) return $(HDRSCAN) ] ;
     SCANNER on $(targets) = $(scanner) ;
-    HDRRULE on $(targets) = scanner.hdrrule ;
+    HDRRULE on $(targets) = hdrrule ;
     HDRGRIST on $(targets) = [ on $(including-target) return $(HDRGRIST) ] ;
 }
 
@@ -155,9 +155,3 @@ rule hdrrule ( target : matches * : binding )
     local scanner = [ on $(target) return $(SCANNER) ] ;
     $(scanner).process $(target) : $(matches) : $(binding) ;
 }
-
-
-# hdrrule must be available at global scope so it can be invoked by header
-# scanning.
-#
-IMPORT scanner : hdrrule : : scanner.hdrrule ;

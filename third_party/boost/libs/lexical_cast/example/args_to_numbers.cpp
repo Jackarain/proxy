@@ -7,8 +7,9 @@
 //[lexical_cast_args_example
 //`The following example treats command line arguments as a sequence of numeric data
 
-#include <boost/lexical_cast.hpp>
 #include <vector>
+
+#include <boost/lexical_cast.hpp>
 
 int main(int /*argc*/, char * argv[])
 {

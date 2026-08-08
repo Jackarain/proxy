@@ -12,7 +12,7 @@
 #define TIMESTAMP_H_SW_2011_11_18
 
 #include "config.h"
-#include "object.h"
+#include "jam_fwd.h"
 
 #ifdef OS_NT
 # include <windows.h>

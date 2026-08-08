@@ -82,6 +82,15 @@ template < typename bound_args, bool default_ = false >
 using extract_allow_multiple_reads
     = extract_integral_arg_or_default_t< bound_args, tag::allow_multiple_reads, bool, default_ >;
 
+template < typename bound_args, bool default_ = false >
+using extract_freelist = extract_integral_arg_or_default_t< bound_args, tag::freelist, bool, default_ >;
+
+template < typename bound_args, bool default_ = false >
+using extract_single_producer = extract_integral_arg_or_default_t< bound_args, tag::single_producer, bool, default_ >;
+
+template < typename bound_args, bool default_ = false >
+using extract_single_consumer = extract_integral_arg_or_default_t< bound_args, tag::single_consumer, bool, default_ >;
+
 //----------------------------------------------------------------------------------------------------------------------
 
 }}} // namespace boost::lockfree::detail

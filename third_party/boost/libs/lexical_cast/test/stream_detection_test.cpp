@@ -8,12 +8,12 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt).
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/core/lightweight_test.hpp>
 
 #include <iostream>
 #include <type_traits>
+
+#include <boost/lexical_cast.hpp>
 
 
 ///////////////////////// char streamable classes ///////////////////////////////////////////

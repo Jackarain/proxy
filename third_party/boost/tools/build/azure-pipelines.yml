@@ -11,6 +11,7 @@ trigger:
     - release
     - feature/*
     - version/*
+    - pr/*
   paths:
     exclude:
     - .circleci/*
@@ -33,12 +34,12 @@ pr:
 variables:
 - { name: linux_latest_vm, value: 'ubuntu-24.04' }
 - { name: linux_latest_os, value: 'noble' }
-- { name: windows_latest_vm, value: 'windows-2022' }
-- { name: clang_latest, value: '21' }
+- { name: windows_latest_vm, value: 'windows-2025-vs2026' }
+- { name: clang_latest, value: '22' }
 - { name: clang_latest_libstdcxx, value: '12' }
 - { name: gcc_latest, value: '14' }
-- { name: vc_latest, value: 'vc143' }
-- { name: vs_latest, value: '2022' }
+- { name: vc_latest, value: 'vc145' }
+- { name: vs_latest, value: '2026' }
 - { name: xc_latest, value: '16.4' }
 - { name: macos_latest_vm, value: 'macOS-15' }
 - { name: co_options, value: '--name container' }
@@ -63,6 +64,7 @@ resources:
         volumes: [
           "/node20217:/node20217:rw,rshared",
           "/node20217:/__e/node20:ro,rshared" ] }
+    - { container: linux_gcc16, image: 'teeks99/gcc-ubuntu:16', options: "${{variables.co_options}}" }
     - { container: linux_gcc15, image: 'teeks99/gcc-ubuntu:15', options: "${{variables.co_options}}" }
     - { container: linux_gcc14, image: 'teeks99/gcc-ubuntu:14', options: "${{variables.co_options}}" }
     - { container: linux_gcc13, image: 'teeks99/gcc-ubuntu:13', options: "${{variables.co_options}}" }
@@ -76,6 +78,8 @@ resources:
     - { container: linux_gcc5, image: 'teeks99/gcc-ubuntu:5', options: "${{variables.co_options}}" }
     - { container: linux_gcc49, image: 'teeks99/gcc-ubuntu:4.9', options: "${{variables.co_options}}" }
     - { container: linux_gcc48, image: 'teeks99/gcc-ubuntu:4.8', options: "${{variables.co_options}}" }
+    - { container: linux_clang23, image: 'teeks99/clang-ubuntu:23', options: "${{variables.co_options}}" }
+    - { container: linux_clang22, image: 'teeks99/clang-ubuntu:22', options: "${{variables.co_options}}" }
     - { container: linux_clang21, image: 'teeks99/clang-ubuntu:21', options: "${{variables.co_options}}" }
     - { container: linux_clang20, image: 'teeks99/clang-ubuntu:20', options: "${{variables.co_options}}" }
     - { container: linux_clang19, image: 'teeks99/clang-ubuntu:19', options: "${{variables.co_options}}" }
@@ -269,6 +273,7 @@ stages:
   - job: 'Co_Linux'
     strategy:
       matrix:
+        GCC 16: {CXX: g++-16, TOOLSET: gcc-16, CONTAINER: "linux_gcc16"}
         GCC 15: {CXX: g++-15, TOOLSET: gcc-15, CONTAINER: "linux_gcc15"}
         GCC 14: {CXX: g++-14, TOOLSET: gcc-14, CONTAINER: "linux_gcc14"}
         GCC 13: {CXX: g++-13, TOOLSET: gcc-13, CONTAINER: "linux_gcc13"}
@@ -282,6 +287,8 @@ stages:
         GCC 5: {CXX: g++-5, TOOLSET: gcc-5, CONTAINER: "linux_gcc5"}
         GCC 4.9: {CXX: g++-4.9, TOOLSET: gcc-4.9, CONTAINER: "linux_gcc49"}
         GCC 4.8: {CXX: g++-4.8, TOOLSET: gcc-4.8, CONTAINER: "linux_gcc48"}
+        Clang 23: {CXX: clang++-23, TOOLSET: clang-23, CONTAINER: "linux_clang23"}
+        Clang 22: {CXX: clang++-22, TOOLSET: clang-22, CONTAINER: "linux_clang22"}
         Clang 21: {CXX: clang++-21, TOOLSET: clang-21, CONTAINER: "linux_clang21"}
         Clang 20: {CXX: clang++-20, TOOLSET: clang-20, CONTAINER: "linux_clang20"}
         Clang 19: {CXX: clang++-19, TOOLSET: clang-19, CONTAINER: "linux_clang19"}
@@ -317,6 +324,7 @@ stages:
   - job: 'Windows'
     strategy:
       matrix:
+        VS 2025: {TOOLSET: vc145, TEST_TOOLSET: msvc, VM_IMAGE: 'windows-2025-vs2026'}
         VS 2022: {TOOLSET: vc143, TEST_TOOLSET: msvc, VM_IMAGE: 'windows-2025'}
         # VS 2019: {TOOLSET: vc142, TEST_TOOLSET: msvc, VM_IMAGE: 'windows-2019'}
         # MinGW 8.1.0: {TOOLSET: mingw, TEST_TOOLSET: gcc, VM_IMAGE: 'windows-2022'}
@@ -452,6 +460,7 @@ stages:
     displayName: 'Release Linux'
     strategy:
       matrix:
+        1.91.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.91.0, BOOST_VERSION_U: 1_91_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         1.90.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.90.0, BOOST_VERSION_U: 1_90_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         # 1.89.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.89.0, BOOST_VERSION_U: 1_89_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
         # 1.88.0 .. GCC ${{variables.gcc_latest}}: {BOOST_VERSION: 1.88.0, BOOST_VERSION_U: 1_88_0, TOOLSET: gcc, CXX: "g++-${{variables.gcc_latest}}", PACKAGES: "g++-${{variables.gcc_latest}}", VM_IMAGE: "${{variables.linux_latest_vm}}"}
@@ -508,6 +517,7 @@ stages:
       vmImage: "${{variables.macos_latest_vm}}"
     strategy:
       matrix:
+        1.91.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.91.0, BOOST_VERSION_U: 1_91_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         1.90.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.90.0, BOOST_VERSION_U: 1_90_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         # 1.89.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.89.0, BOOST_VERSION_U: 1_89_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
         # 1.88.0 .. Xcode ${{variables.xc_latest}}: {BOOST_VERSION: 1.88.0, BOOST_VERSION_U: 1_88_0, TOOLSET: clang, CXX: clang++, XCODE_APP: "/Applications/Xcode_${{variables.xc_latest}}.app"}
@@ -563,6 +573,7 @@ stages:
       vmImage: "${{variables.windows_latest_vm}}"
     strategy:
       matrix:
+        1.91.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.91.0, BOOST_VERSION_U: 1_91_0, TOOLSET: "${{variables.vc_latest}}"}
         1.90.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.90.0, BOOST_VERSION_U: 1_90_0, TOOLSET: "${{variables.vc_latest}}"}
         # 1.89.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.89.0, BOOST_VERSION_U: 1_89_0, TOOLSET: "${{variables.vc_latest}}"}
         # 1.88.0 .. VS ${{variables.vs_latest}}: {BOOST_VERSION: 1.88.0, BOOST_VERSION_U: 1_88_0, TOOLSET: "${{variables.vc_latest}}"}

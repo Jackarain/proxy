@@ -113,11 +113,11 @@ intention in such cases.
 
 Many users would like to use environment variables in Jamfiles, for
 example, to control the location of external libraries. In many cases it
-is better to declare those external libraries in the site-config.jam
+is better to declare those external libraries in the `site-config.jam`
 file, as documented in the link:#b2.recipes.site-config[recipes
 section]. However, if the users already have the environment variables
 set up, it may not be convenient for them to set up their
-site-config.jam files as well and using the environment variables might
+`site-config.jam` files as well and using the environment variables might
 be reasonable.
 
 Boost.Jam automatically imports all environment variables into its

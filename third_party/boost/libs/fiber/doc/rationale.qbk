@@ -22,12 +22,12 @@
     [
         [BOOST_FIBERS_SPIN_BACKOFF]
         [limit determines when to used `std::this_thread::yield()` instead of
-        mnemonic `pause/yield` during busy wait (apllies on to `XCHG`-spinlock)]
+        mnemonic `pause/yield` during busy wait (applies on to `XCHG`-spinlock)]
     ]
     [
         [BOOST_FIBERS_SINGLE_CORE]
-        [allways call `std::this_thread::yield()` without backoff during busy wait
-        (apllies on to `XCHG`-spinlock)]
+        [always call `std::this_thread::yield()` without backoff during busy wait
+        (applies on to `XCHG`-spinlock)]
     ]
 ]
 

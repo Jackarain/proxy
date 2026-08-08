@@ -204,6 +204,22 @@ BOOST_FIXTURE_TEST_CASE(fail_reading_connack_payload, shared_test_data) {
     run_unit_test(std::move(broker_side), std::move(handler));
 }
 
+BOOST_FIXTURE_TEST_CASE(fail_reading_connack_fixed_header, shared_test_data) {
+    test::msg_exchange broker_side;
+    broker_side
+        .expect(connect)
+            .complete_with(success, after(2ms))
+        // Send only 3 bytes (min packet size is 5)
+        .send(std::string({0x20, 0x02, 0x00}), after(30ms))
+        .send(fail, after(60ms));
+
+    auto handler = [&](error_code ec) {
+        BOOST_TEST(ec == fail);
+    };
+
+    run_unit_test(std::move(broker_side), std::move(handler));
+}
+
 BOOST_FIXTURE_TEST_CASE(receive_unexpected_auth, shared_test_data) {
     auth_props aprops;
     aprops[prop::authentication_method] = "method";

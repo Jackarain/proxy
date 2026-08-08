@@ -17,21 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: gcc-4.8
-            cxxstd: "11"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-4.8
-          - toolset: gcc-5
-            cxxstd: "11,14,1z"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-5
-          - toolset: gcc-6
-            cxxstd: "11,14,1z"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-6
           - toolset: gcc-7
             cxxstd: "11,14,17"
             container: ubuntu:20.04
@@ -66,24 +51,21 @@ jobs:
             container: ubuntu:24.04
             os: ubuntu-latest
             install: g++-13
-          - toolset: clang
-            compiler: clang++-3.9
-            cxxstd: "11,14"
-            container: ubuntu:18.04
+          - toolset: gcc-14
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
             os: ubuntu-latest
-            install: clang-3.9
-          - toolset: clang
-            compiler: clang++-4.0
-            cxxstd: "11,14"
-            container: ubuntu:18.04
+            install: g++-14
+          - toolset: gcc-15
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
             os: ubuntu-latest
-            install: clang-4.0
-          - toolset: clang
-            compiler: clang++-5.0
-            cxxstd: "11,14,1z"
-            container: ubuntu:18.04
+            install: g++-15
+          - toolset: gcc-16
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
             os: ubuntu-latest
-            install: clang-5.0
+            install: g++-16
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "11,14,17"
@@ -153,40 +135,57 @@ jobs:
           - toolset: clang
             compiler: clang++-17
             cxxstd: "11,14,17,20,2b"
-            container: ubuntu:24.10
+            container: ubuntu:24.04
             os: ubuntu-latest
             install: clang-17
           - toolset: clang
+            compiler: clang++-18
             cxxstd: "11,14,17,20,2b"
-            os: macos-13
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-18
+          - toolset: clang
+            compiler: clang++-19
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-19
+          - toolset: clang
+            compiler: clang++-20
+            cxxstd: "11,14,17,20,2b"
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-20
+          - toolset: clang
+            compiler: clang++-21
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: clang-21
+          - toolset: clang
+            compiler: clang++-22
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: clang-22
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-14
           - toolset: clang
-            cxxstd: "11,14,17,20,23"
+            cxxstd: "11,14,17,20,23,2c"
             os: macos-15
+          - toolset: clang
+            cxxstd: "11,14,17,20,23,2c"
+            os: macos-26
 
     runs-on: ${{matrix.os}}
-    container:
-      image: ${{matrix.container}}
-      volumes:
-        - /node20217:/node20217:rw,rshared
-        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
+    container: ${{matrix.container}}
 
     defaults:
       run:
         shell: bash
 
     steps:
-      - name: Install nodejs20glibc2.17
-        if: ${{ startsWith( matrix.container, 'ubuntu:1' ) }}
-        run: |
-          set -x
-          apt-get update
-          apt-get install -y curl xz-utils
-          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
-          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
-
       - name: Setup container environment
         if: matrix.container
         run: |
@@ -199,7 +198,7 @@ jobs:
           sudo apt-get update
           sudo apt-get -y install ${{matrix.install}}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         run: |
@@ -238,31 +237,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            cxxstd: "14,latest"
-            addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.2
+          - toolset: msvc
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
-            os: windows-2019
-          - toolset: msvc-14.3
-            cxxstd: "14,17,20,latest"
-            addrmd: 32,64
-            os: windows-2022
+            os: windows-latest
           - toolset: clang-win
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
-            os: windows-2022
+            os: windows-latest
           - toolset: gcc
             cxxstd: "11,14,17,2a"
             addrmd: 64
-            os: windows-2019
+            os: windows-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -297,16 +288,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-          - os: ubuntu-22.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -345,16 +333,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-          - os: ubuntu-22.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -403,16 +388,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-          - os: ubuntu-22.04
-          - os: macos-13
-          - os: macos-14
-          - os: macos-15
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -459,13 +441,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -508,13 +489,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -575,13 +555,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-          - os: windows-2022
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd

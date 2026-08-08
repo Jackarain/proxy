@@ -19,9 +19,8 @@
 #define BOOST_JAM_HASH_H
 
 #include "config.h"
-
+#include "jam_fwd.h"
 #include "mem.h"
-#include "object.h"
 
 #include <mutex>
 

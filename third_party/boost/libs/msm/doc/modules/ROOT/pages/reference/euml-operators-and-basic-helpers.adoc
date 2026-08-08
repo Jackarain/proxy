@@ -2,6 +2,14 @@
 
 = eUML operators and basic helpers
 
+To use these functions, you need to include:
+
+[source,cpp]
+----
+#include <msm/front/euml/euml.hpp>
+----
+
+
 .eUML operators and basic helpers
 [cols="1,2,1",options="header"]
 |===
@@ -188,10 +196,3 @@
 |Returns (as reference) the state state_name referenced in the current state machine or the one given as argument.
 |`SubState_`
 |===
-
-To use these functions, you need to include:
-
-[source,cpp]
-----
-#include <msm/front/euml/euml.hpp>
-----

@@ -2010,7 +2010,7 @@ protected:    // interface for the derived class
                 deferred_fct next = pair.first;
                 m_events_queue.m_deferred_events_queue.pop_front();
                 boost::msm::back::execute_return res = next();
-                if (res != ::boost::msm::back::HANDLED_FALSE && res != ::boost::msm::back::HANDLED_DEFERRED)
+                if (res != ::boost::msm::back::HANDLED_FALSE && !(res & ::boost::msm::back::HANDLED_DEFERRED))
                 {
                     not_only_deferred = true;
                 }

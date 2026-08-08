@@ -305,7 +305,7 @@ class managed_open_or_create_impl
       //We'll put a maximum retry limit just to avoid possible deadlocks, we don't
       //want to support pathological use cases.
       spin_wait swait;
-      unsigned tries = 0;
+      unsigned tries = 0; (void)tries;
       while(1){
          BOOST_INTERPROCESS_TRY{
             create_device<FileBased>(dev, id, size, perm, file_like_t());

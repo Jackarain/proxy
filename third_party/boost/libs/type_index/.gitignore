@@ -1,2 +1,5 @@
 doc/autodoc.xml
 doc/html
+build*
+.cache
+.vscode

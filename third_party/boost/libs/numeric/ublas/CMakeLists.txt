@@ -24,7 +24,6 @@ target_link_libraries(boost_numeric_ublas
     Boost::range
     Boost::serialization
     Boost::smart_ptr
-    Boost::static_assert
     Boost::type_traits
     Boost::typeof
 )

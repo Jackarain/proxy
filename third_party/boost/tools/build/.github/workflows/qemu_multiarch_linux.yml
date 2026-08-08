@@ -83,7 +83,7 @@ jobs:
           echo ">>>>>  WORKDIR: ${{ github.workspace }}"
           ls -laF ${{ github.workspace }}
       - name: "Run"
-        uses: addnab/docker-run-action@v3
+        uses: maus007/docker-run-action-fork@v1
         with:
           image: ${{ matrix.image }}
           options: -v ${{ github.workspace }}:${{ github.workspace }} -w ${{ github.workspace }} --env-file docker-run-action.env

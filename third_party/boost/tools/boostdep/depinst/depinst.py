@@ -267,6 +267,9 @@ if( __name__ == "__main__" ):
 
     essentials = [ 'config', 'headers', '../tools/boost_install', '../tools/build', '../tools/cmake' ]
 
+    if args.library in essentials:
+        essentials.remove( args.library )
+
     essentials = [ e for e in essentials if os.path.exists( 'libs/' + e ) ]
 
     if args.update:

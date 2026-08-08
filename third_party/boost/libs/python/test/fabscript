@@ -68,6 +68,7 @@ for t in [('injected',),
           ('raw_ctor',),
           ('exception_translator',),
           ('module_init_exception',),
+          ('module_nogil',),
           ('test_enum', ['enum_ext']),
           ('test_cltree', ['cltree']),
           ('newtest', ['m1', 'm2']),
@@ -172,5 +173,14 @@ for t in ['numpy/dtype',
           'numpy/shapes']:
     tests.append(extension_test(t, numpy=True,
                                 condition=set.define.contains('HAS_NUMPY')))
+
+python_version_major, python_version_minor = map(int, python.instance().version.split('.')[:2])
+
+tests.append(extension_test("module_multi_phase",
+                            condition=python_version_major > 3 or (python_version_major == 3 and python_version_minor >= 5)))
+tests.append(extension_test("module_multi_phase_nogil",
+                            condition=python_version_major > 3 or (python_version_major == 3 and python_version_minor >= 5)))
+tests.append(extension_test("module_multi_phase_state",
+                            condition=python_version_major > 3 or (python_version_major == 3 and python_version_minor >= 5)))
 
 default = report('report', tests, fail_on_failures=True)

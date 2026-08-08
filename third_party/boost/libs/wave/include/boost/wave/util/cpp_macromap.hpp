@@ -1686,7 +1686,7 @@ macromap<ContextT>::expand_predefined_macro(token_type const &curr_token,
     {
         // do not expand this macro, just copy the whole sequence
         expanded.push_back(curr_token);
-        return false;           // no further preprocessing required
+        return true;           // no further preprocessing required
     }
 
     token_type replacement;

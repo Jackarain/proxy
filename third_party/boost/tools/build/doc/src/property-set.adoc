@@ -16,9 +16,9 @@ class property-set {
 }
 ----
 
-There is 1<->1 correspondence between identity and value. No two
+There is +1<->1+ correspondence between identity and value. No two
 instances of the class are equal. To maintain this property, the
-'property-set.create' rule should be used to create new instances.
+`property-set.create` rule should be used to create new instances.
 Instances are immutable.
 
 --

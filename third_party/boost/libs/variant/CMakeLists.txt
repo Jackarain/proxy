@@ -20,7 +20,6 @@ target_link_libraries( boost_variant
         Boost::integer
         Boost::mpl
         Boost::preprocessor
-        Boost::static_assert
         Boost::throw_exception
         Boost::type_index
         Boost::type_traits

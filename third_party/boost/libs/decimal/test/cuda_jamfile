@@ -1,0 +1,45 @@
+# Copyright 2026 Matt Borland
+# Distributed under the Boost Software License, Version 1.0.
+# https://www.boost.org/LICENSE_1_0.txt
+
+import testing ;
+
+run test_cuda_decimal32_t_construct.cu ;
+run test_cuda_decimal32_t_add.cu ;
+run test_cuda_decimal32_t_sub.cu ;
+run test_cuda_decimal32_t_mul.cu ;
+run test_cuda_decimal32_t_div.cu ;
+
+run test_cuda_decimal64_t_construct.cu ;
+run test_cuda_decimal64_t_add.cu ;
+run test_cuda_decimal64_t_sub.cu ;
+run test_cuda_decimal64_t_mul.cu ;
+run test_cuda_decimal64_t_div.cu ;
+
+run test_cuda_decimal128_t_construct.cu ;
+run test_cuda_decimal128_t_add.cu ;
+run test_cuda_decimal128_t_sub.cu ;
+run test_cuda_decimal128_t_mul.cu ;
+run test_cuda_decimal128_t_div.cu ;
+
+run test_cuda_decimal32_t_charconv.cu ;
+run test_cuda_decimal64_t_charconv.cu ;
+run test_cuda_decimal128_t_charconv.cu ;
+
+run test_cuda_decimal32_t_numbers.cu ;
+run test_cuda_decimal64_t_numbers.cu ;
+run test_cuda_decimal128_t_numbers.cu ;
+
+run test_cuda_mixed_decimal_add.cu ;
+run test_cuda_mixed_decimal_sub.cu ;
+run test_cuda_mixed_decimal_mul.cu ;
+run test_cuda_mixed_decimal_div.cu ;
+run test_cuda_mixed_decimal_cmp.cu ;
+
+run test_cuda_decimal32_t_bid.cu ;
+run test_cuda_decimal64_t_bid.cu ;
+run test_cuda_decimal128_t_bid.cu ;
+
+run test_cuda_decimal32_t_dpd.cu ;
+run test_cuda_decimal64_t_dpd.cu ;
+run test_cuda_decimal128_t_dpd.cu ;

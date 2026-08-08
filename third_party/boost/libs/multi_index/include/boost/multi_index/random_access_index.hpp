@@ -1,4 +1,4 @@
-/* Copyright 2003-2025 Joaquin M Lopez Munoz.
+/* Copyright 2003-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -741,9 +741,10 @@ public:
     
 protected:
   random_access_index(
-    const ctor_args_list& args_list,const allocator_type& al):
-    super(args_list.get_tail(),al),
-    ptrs(al,header()->impl(),0)
+    const ctor_args_list& args_list,
+    const allocator_type& al,index_node_type* h):
+    super(args_list.get_tail(),al,h),
+    ptrs(al,h->impl(),0)
 
 #if defined(BOOST_MULTI_INDEX_ENABLE_SAFE_MODE)
     ,safe(*this)
@@ -752,9 +753,11 @@ protected:
   {
   }
 
-  random_access_index(const random_access_index<SuperMeta,TagList>& x):
-    super(x),
-    ptrs(x.get_allocator(),header()->impl(),x.size())
+  random_access_index(
+    const random_access_index<SuperMeta,TagList>& x,
+    const allocator_type& al,index_node_type* h):
+    super(x,al,h),
+    ptrs(al,h->impl(),x.size())
 
 #if defined(BOOST_MULTI_INDEX_ENABLE_SAFE_MODE)
     ,safe(*this)
@@ -766,9 +769,11 @@ protected:
   }
 
   random_access_index(
-    const random_access_index<SuperMeta,TagList>& x,do_not_copy_elements_tag):
-    super(x,do_not_copy_elements_tag()),
-    ptrs(x.get_allocator(),header()->impl(),0)
+    const random_access_index<SuperMeta,TagList>& x,
+    const allocator_type& al,index_node_type* h,
+    do_not_copy_elements_tag):
+    super(x,al,h,do_not_copy_elements_tag()),
+    ptrs(al,h->impl(),0)
 
 #if defined(BOOST_MULTI_INDEX_ENABLE_SAFE_MODE)
     ,safe(*this)

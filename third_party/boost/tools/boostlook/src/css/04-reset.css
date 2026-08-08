@@ -15,23 +15,24 @@
  */
 
 /* Box sizing rules */
-*,
-*::before,
-*::after {
+.boostlook,
+.boostlook *,
+.boostlook *::before,
+.boostlook *::after {
   box-sizing: border-box;
 }
 
 /* Remove default margin */
-* {
+.boostlook * {
   margin: 0;
 }
 
-html body {
+.boostlook {
   margin: 0;
 }
 
 /* Body defaults */
-body {
+.boostlook {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   margin: 0;
@@ -39,49 +40,42 @@ body {
 }
 
 /* Media elements */
-img,
-picture,
-video,
-canvas,
-svg {
+.boostlook img,
+.boostlook picture,
+.boostlook video,
+.boostlook canvas,
+.boostlook svg {
   display: block;
   max-width: 100%;
   /* Responsive media elements */
 }
 
 /* Form elements */
-input,
-button,
-textarea,
-select {
+.boostlook input,
+.boostlook button,
+.boostlook textarea,
+.boostlook select {
   font: inherit;
   /* Inherit typography */
 }
 
 /* Text elements */
-p,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+.boostlook p,
+.boostlook h1,
+.boostlook h2,
+.boostlook h3,
+.boostlook h4,
+.boostlook h5,
+.boostlook h6 {
   overflow-wrap: break-word;
   /* Prevent text overflow */
 }
 
-body :not(pre):not([class^="L"]) > code {
+.boostlook :not(pre):not([class^="L"]) > code {
   /* overrides builtin colors */
-  color: var(--text-code-neutral, #0d0e0f);
+  color: var(--text-code-text, #050816);
   border: 0;
   background-color: unset;
-}
-
-/* Stacking context */
-#root,
-#__next {
-  isolation: isolate;
-  /* Create new stacking context */
 }
 
 /* Reset Legacy Table and Next to Table Element Styles */

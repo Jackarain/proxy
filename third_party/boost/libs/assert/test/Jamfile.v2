@@ -45,3 +45,8 @@ run source_location_test3.cpp ;
 run source_location_test4.cpp ;
 run source_location_test5.cpp ;
 run source_location_test6.cpp ;
+
+run assert_test3.cpp ;
+run assert_test4.cpp ;
+run assert_is_void_test2.cpp ;
+run verify_test2.cpp ;

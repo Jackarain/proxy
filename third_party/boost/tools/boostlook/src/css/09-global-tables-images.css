@@ -35,16 +35,6 @@
   display: revert;
 }
 
-/* Add intendation */
-.boostlook #content .sectionbody > table.tableblock,
-.boostlook #content .section > table.tableblock,
-.boostlook .sectionbody > div.informaltable:not(:is(.informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))))),
-.boostlook .section > div.informaltable:not(:is(.informaltable:has(> table:nth-of-type(2)):not(:has(> *:not(table))))),
-.boostlook:not(:has(.doc)) .sectionbody > div.table .table-contents,
-.boostlook:not(:has(.doc)) .section > div.table .table-contents,
-.boostlook#libraryReadMe > table {
-  margin-left: var(--spacing-size-xl, 2rem);
-}
 
 .boostlook #content table.tableblock:not(:first-child),
 .boostlook:not(:has(.doc)) .table:not(:first-child),
@@ -56,7 +46,38 @@
 .boostlook:not(:has(.doc)) table.table,
 .boostlook#libraryReadMe > table.stretch {
   min-width: 100%;
-  margin-left: var(--spacing-size-xl, 2rem);
+}
+
+/* Horizontal scroll for tables on mobile */
+@media screen and (max-width: 767px) {
+  .boostlook #content table.tableblock,
+  .boostlook:not(:has(.doc)) table.table,
+  .boostlook#libraryReadMe > table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  .boostlook #content table.tableblock.stretch,
+  .boostlook:not(:has(.doc)) table.table,
+  .boostlook#libraryReadMe > table.stretch {
+    min-width: unset;
+  }
+
+  .boostlook #content table.tableblock colgroup,
+  .boostlook:not(:has(.doc)) table.table colgroup {
+    display: none;
+  }
+
+  .boostlook #content table.tableblock th,
+  .boostlook #content table.tableblock td,
+  .boostlook:not(:has(.doc)) table.table th,
+  .boostlook:not(:has(.doc)) table.table td,
+  .boostlook#libraryReadMe > table th,
+  .boostlook#libraryReadMe > table td {
+    min-width: 100px !important;
+  }
 }
 
 .boostlook #content table.tableblock caption,
@@ -64,7 +85,7 @@
   color: var(--text-main-text-body-primary, #2a2c30);
   font-size: var(--typography-font-size-xs, 0.875rem);
   font-style: normal;
-  font-variation-settings: "wght" 600, "wdth" 80;
+  font-variation-settings: "wght" 600, "wdth" 87.5;
   line-height: var(--typography-line-height-md, 1.25rem); /* 142.857% */
   padding: 0;
   padding-bottom: var(--padding-padding-2xs, 0.5rem);
@@ -73,7 +94,7 @@
 .boostlook #content table.tableblock caption > *,
 .boostlook:not(:has(.doc)) div.table .title > * {
   font: inherit;
-  font-variation-settings: "wght" 500, "wdth" 80;
+  font-variation-settings: "wght" 500, "wdth" 87.5;
   text-decoration: none;
 }
 
@@ -81,16 +102,18 @@
   padding-bottom: var(--padding-padding-2xs, 0.5rem) !important;
 }
 
+/* Table cells — Metalab 2.0 */
 .boostlook #content table.tableblock th,
 .boostlook #content table.tableblock td,
 .boostlook:not(:has(.doc)) table.table th,
 .boostlook:not(:has(.doc)) table.table td,
 .boostlook#libraryReadMe > table th,
 .boostlook#libraryReadMe > table td {
-  padding: var(--padding-padding-3xs, 0.25rem) var(--padding-padding-2xs, 0.5rem);
+  padding: 12px 16px;
+  min-height: 28px;
   text-align: left;
-  border-top: 1px solid var(--border-border-primary, #e4e7ea);
-  border-left: 1px solid var(--border-border-primary, #e4e7ea);
+  border-top: 1px solid var(--table-stroke, #0508161A);
+  border-left: 1px solid var(--table-stroke, #0508161A);
 }
 
 .boostlook #content table.tableblock th:last-child,
@@ -99,13 +122,13 @@
 .boostlook:not(:has(.doc)) table.table td:last-child,
 .boostlook#libraryReadMe > table th:last-child,
 .boostlook#libraryReadMe > table td:last-child {
-  border-right: 1px solid var(--border-border-primary, #e4e7ea);
+  border-right: 1px solid var(--table-stroke, #0508161A);
 }
 
 .boostlook #content table.tableblock tr:last-child td,
 .boostlook:not(:has(.doc)) table.table tr:last-child td,
 .boostlook#libraryReadMe > table tr:last-child td {
-  border-bottom: 1px solid var(--border-border-primary, #e4e7ea);
+  border-bottom: 1px solid var(--table-stroke, #0508161A);
 }
 
 .boostlook #content table.tableblock:has(thead) th:first-child,
@@ -138,27 +161,36 @@
   /*border-bottom-right-radius: var(--spacing-size-2xs, 0.5rem);*/
 }
 
-.boostlook #content table.tableblock th,
-.boostlook #content table.tableblock th strong,
+/* Table header — Metalab 2.0: Surface-Mid bg, 12px per Figma */
+.boostlook #content .doc table.tableblock th,
+.boostlook #content .doc table.tableblock th strong,
+.boostlook #content .doc table.tableblock:not(:has(thead)) > tbody > tr:first-child > td,
+.boostlook:not(:has(.doc)) #content table.tableblock th,
+.boostlook:not(:has(.doc)) #content table.tableblock th strong,
+.boostlook:not(:has(.doc)) #content table.tableblock:not(:has(thead)) > tbody > tr:first-child > td,
 .boostlook:not(:has(.doc)) table.table th,
 .boostlook:not(:has(.doc)) table.table th strong,
 .boostlook#libraryReadMe > table th,
 .boostlook#libraryReadMe > table th strong {
-  background: var(--surface-background-main-surface-primary, #f5f6f8);
-  color: var(--text-main-text-primary, #000000);
+  background-color: var(--table-header-bg, #F7F7F8);
+  color: var(--text-main-text-primary, #050816);
   font-size: var(--typography-font-size-xs, 0.875rem);
-  font-variation-settings: "wght" 500, "wdth" 80;
-  line-height: var(--typography-line-height-lg, 1.5rem); /* 171.429% */
+  font-variation-settings: "wght" 700, "wdth" 87.5;
+  line-height: 140%;
+  letter-spacing: -0.12px;
 }
 
-.boostlook #content table.tableblock td,
+/* Table data — Metalab 2.0: 12px per Figma, Text-Secondary */
+.boostlook #content .doc table.tableblock td,
+.boostlook:not(:has(.doc)) #content table.tableblock td,
 .boostlook:not(:has(.doc)) table.table td,
 .boostlook#libraryReadMe > table td {
-  color: var(--text-main-text-body-primary, #2a2c30);
-  font-size: var(--typography-font-size-xs, 0.875rem);
+  background-color: var(--table-bg, #fff);
+  color: var(--text-main-text-body-secondary, #585A64);
+  font-size: var(--typography-font-size-2xs, 0.75rem);
   font-style: normal;
-  line-height: var(--typography-line-height-lg, 1.5rem); /* 171.429% */
-  letter-spacing: var(--spacing-size-size-0, 0rem);
+  line-height: 140%;
+  letter-spacing: -0.12px;
 }
 
 .boostlook#libraryReadMe > table td {
@@ -208,7 +240,7 @@
 .boostlook #content table.tableblock td strong,
 .boostlook:not(:has(.doc)) table.table td strong,
 .boostlook#libraryReadMe > table td strong {
-  font-variation-settings: "wght" 600, "wdth" 80;
+  font-variation-settings: "wght" 600, "wdth" 87.5;
 }
 
 .boostlook #content table.tableblock td code,
@@ -217,6 +249,7 @@
   background: transparent !important;
   padding: 0;
   border: none;
+  font-size: var(--typography-font-size-2xs, 0.75rem);
 }
 
 .boostlook #content table.tableblock .footnotes tr td,
@@ -259,7 +292,7 @@
   line-height: 0;
 }
 
-.doc ul.checklist p>i.fa-check-square-o:first-child, .doc ul.checklist p>i.fa-square-o:first-child {
+.boostlook .doc ul.checklist p>i.fa-check-square-o:first-child, .boostlook .doc ul.checklist p>i.fa-square-o:first-child {
   display: none;
 }
 

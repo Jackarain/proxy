@@ -105,6 +105,18 @@ struct resolve_test_data {
             std::string(host), std::string(port)
         );
     }
+
+    auto few_endpoints() {
+        std::vector<asio::ip::tcp::resolver::endpoint_type> eps;
+        eps.emplace_back(asio::ip::make_address("127.0.0.1"), 1883);
+        eps.emplace_back(asio::ip::make_address("127.0.0.2"), 1883);
+        eps.emplace_back(asio::ip::make_address("127.0.0.3"), 1883);
+
+        return asio::ip::tcp::resolver::results_type::create(
+            eps.begin(), eps.end(),
+            std::string(host), std::string(port)
+        );
+    }
 };
 
 BOOST_FIXTURE_TEST_CASE(at_resolve_success_warning, resolve_test_data) {
@@ -152,6 +164,20 @@ BOOST_FIXTURE_TEST_CASE(at_resolve_success_debug, resolve_test_data) {
     auto test_fun = [this] {
         logger l(log_level::debug);
         l.at_resolve(error_code {}, host, port, endpoints());
+    };
+
+    test_logger_output(std::move(test_fun), expected_output);
+}
+
+BOOST_FIXTURE_TEST_CASE(at_resolve_success_debug_few_eps, resolve_test_data) {
+    const auto expected_output =
+        "[Boost.MQTT5] resolve: localhost:1883 - " +
+         success_msg() + ". [127.0.0.1,127.0.0.2,127.0.0.3]\n"
+    ;
+
+    auto test_fun = [this] {
+        logger l(log_level::debug);
+        l.at_resolve(error_code {}, host, port, few_endpoints());
     };
 
     test_logger_output(std::move(test_fun), expected_output);
@@ -406,6 +432,17 @@ BOOST_AUTO_TEST_CASE(at_transport_error_info) {
 
     auto test_fun = [] {
         logger l(log_level::info);
+        l.at_transport_error(asio::error::eof);
+    };
+
+    test_logger_output(std::move(test_fun), expected_output);
+}
+
+BOOST_AUTO_TEST_CASE(at_transport_error_warning) {
+    const auto expected_output = "";
+
+    auto test_fun = [] {
+        logger l(log_level::warning);
         l.at_transport_error(asio::error::eof);
     };
 

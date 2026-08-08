@@ -8,8 +8,8 @@
 // MinGW related workaround
 #define BOOST_DLL_FORCE_ALIAS_INSTANTIATION
 
-#include <boost/dll.hpp>
 #include <string>
+#include <boost/dll.hpp>
 
 #define API extern "C" BOOST_SYMBOL_EXPORT
 

@@ -18,6 +18,8 @@
 #include "jam.h"
 #include "command.h"
 
+#include "frames.h"
+#include "function.h"
 #include "lists.h"
 #include "rules.h"
 

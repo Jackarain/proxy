@@ -45,7 +45,6 @@ target_link_libraries(boost_wave
     Boost::serialization
     Boost::smart_ptr
     Boost::spirit
-    Boost::static_assert
     Boost::throw_exception
     Boost::type_traits
 )

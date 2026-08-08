@@ -5,6 +5,8 @@
 #ifndef BOOST_DECIMAL_DETAIL_CONSTRUCTION_SIGN_HPP
 #define BOOST_DECIMAL_DETAIL_CONSTRUCTION_SIGN_HPP
 
+#include <boost/decimal/detail/config.hpp>
+
 namespace boost {
 namespace decimal {
 
@@ -26,12 +28,12 @@ public:
 
     constexpr construction_sign_wrapper() noexcept = delete;
 
-    constexpr construction_sign_wrapper(const construction_sign value) noexcept : value_{value} {}
+    BOOST_DECIMAL_CUDA_CONSTEXPR construction_sign_wrapper(const construction_sign value) noexcept : value_{value} {}
 
-    constexpr construction_sign_wrapper(const bool value) noexcept
+    BOOST_DECIMAL_CUDA_CONSTEXPR construction_sign_wrapper(const bool value) noexcept
         : value_{ value ? construction_sign::negative : construction_sign::positive } {}
 
-    constexpr operator bool() const noexcept { return static_cast<bool>(value_); }
+    BOOST_DECIMAL_CUDA_CONSTEXPR operator bool() const noexcept { return static_cast<bool>(value_); }
 };
 
 } // namespace detail

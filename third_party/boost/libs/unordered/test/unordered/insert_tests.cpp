@@ -1,6 +1,7 @@
 
 // Copyright 2006-2010 Daniel James.
 // Copyright (C) 2022-2023 Christian Mazakas
+// Copyright (C) 2026 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -405,6 +406,27 @@ namespace insert_tests {
         test::check_equivalent_keys(x);
       }
     }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    UNORDERED_SUB_TEST("insert_range tests")
+    {
+      test::check_instances check_;
+
+      X x;
+
+      test::random_values<X> v(1000, generator);
+      x.insert_range(v);
+
+      test::check_container(x, v);
+      test::check_equivalent_keys(x);
+
+      x.clear();
+      x.insert_range(v | std::views::take(v.size()));
+
+      test::check_container(x, v);
+      test::check_equivalent_keys(x);
+    }
+#endif
   }
 
   template <class X>

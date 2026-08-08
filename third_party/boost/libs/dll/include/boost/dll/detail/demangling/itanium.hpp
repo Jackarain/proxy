@@ -7,15 +7,18 @@
 #ifndef BOOST_DLL_DETAIL_DEMANGLING_ITANIUM_HPP_
 #define BOOST_DLL_DETAIL_DEMANGLING_ITANIUM_HPP_
 
-#include <boost/dll/detail/demangling/mangled_storage_base.hpp>
-
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#if !defined(BOOST_DLL_USE_STD_MODULE)
 #include <algorithm>
 #include <iterator>
 #include <type_traits>
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
+
+#include <boost/dll/detail/demangling/mangled_storage_base.hpp>
 
 
 namespace boost { namespace dll { namespace detail {
-
 
 class mangled_storage_impl : public mangled_storage_base
 {
@@ -79,8 +82,6 @@ public:
     std::vector<std::string> get_related() const;
 
 };
-
-
 
 namespace parser
 {
@@ -283,8 +284,6 @@ namespace parser
         return  parse_type(ms, type());
     }
 }
-
-
 
 template<typename T> std::string mangled_storage_impl::get_variable(const std::string &name) const
 {

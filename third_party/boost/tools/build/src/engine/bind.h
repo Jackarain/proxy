@@ -8,11 +8,9 @@ Distributed under the Boost Software License, Version 1.0.
 #define B2_BIND_H
 
 #include "config.h"
-#include <functional>
+
 #include <string>
 #include <tuple>
-#include <type_traits>
-#include <utility>
 
 /** tag::binder[]
 
@@ -60,7 +58,7 @@ binder.def_class("system_info", type_<b2::system_info>())
 end::binder_init[] */
 template <class... Args>
 struct init_
-{};
+{ };
 
 // Forward declare..
 template <int C>
@@ -81,7 +79,7 @@ struct param_
 		any,
 		many,
 		optional,
-        rest
+		rest
 	};
 
 	// The symbolic name of this argument.
@@ -90,11 +88,11 @@ struct param_
 	// How many values this argument can accept.
 	count_ count = one;
 
-	param_() {}
+	param_() { }
 	param_(const char * n, count_ c)
 		: name(n)
 		, count(c)
-	{}
+	{ }
 };
 
 /** tag::binder_arg[]
@@ -131,7 +129,7 @@ template <int C>
 arg_<C + 1> operator+(const arg_<C> & a, const param_ & b)
 {
 	arg_<C + 1> result;
-	for (std::size_t i = 0; i < C - 1; ++i) result.args[i] = a.args[i];
+	for (std::size_t i = 0; i < C; ++i) result.args[i] = a.args[i];
 	result.args[C] = b;
 	return result;
 }
@@ -149,8 +147,7 @@ struct args_
 };
 
 template <class... A, int BC>
-auto operator|(const args_<A...> & a, const arg_<BC> & b)
-	-> args_<A..., arg_<BC>>
+auto operator|(const args_<A...> & a, const arg_<BC> & b) -> args_<A..., arg_<BC>>
 {
 	return { { std::tuple_cat(a.arg, std::make_tuple(b)) } };
 }
@@ -270,7 +267,7 @@ struct class_
 	class_ & def(init_<Args...> init_args)
 	{
 		// Forward to the language specific binder.
-		binder.def_init(this->name(), (Class *)nullptr, init_args, args_<> {});
+		binder.def_init(this->name(), (Class *)nullptr, init_args, args_<> { });
 		return *this;
 	}
 	template <class... Args, class... A>
@@ -312,7 +309,7 @@ struct class_
 	template <class F>
 	class_ & def(F function, const char * name)
 	{
-		return this->def(function, name, args_<> {});
+		return this->def(function, name, args_<> { });
 	}
 
 	private:
@@ -336,13 +333,13 @@ struct converter_
 };
 
 struct context_
-{};
+{ };
 
 struct context_ref_
 {
 	explicit context_ref_(context_ & c)
 		: context(&c)
-	{}
+	{ }
 	context_ref_() = default;
 	context_ref_(const context_ref_ &) = default;
 	context_ref_(context_ref_ && o)
@@ -435,7 +432,7 @@ struct binder_ : binder_interface_
 	template <class F>
 	binder_ & def(F function, const char * name)
 	{
-		return this->def(function, name, args_<> {});
+		return this->def(function, name, args_<> { });
 	}
 
 	binder_ & eval(const char * data)
@@ -472,8 +469,7 @@ struct binder_ : binder_interface_
 		args_<A...> args,
 		Function f)
 	{
-		self().bind_method(
-			current_module_name, class_name, method_name, args, f);
+		self().bind_method(current_module_name, class_name, method_name, args, f);
 	}
 
 	// Respond to a constructor definition of a class. This calls the subclass

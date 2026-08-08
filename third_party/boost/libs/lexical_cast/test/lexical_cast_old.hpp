@@ -42,6 +42,9 @@
 #include <sstream>
 #endif
 
+#if defined(BOOST_USE_MODULES)
+#undef BOOST_USE_MODULES
+#endif
 #include <boost/lexical_cast/detail/lcast_precision.hpp>
 #include <boost/lexical_cast/bad_lexical_cast.hpp>
 #include <boost/lexical_cast/detail/widest_char.hpp>

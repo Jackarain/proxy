@@ -2,7 +2,7 @@
 # subject to the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
-# Copyright Rene Ferdinand Rivera Morell 2015-2023.
+# Copyright Rene Ferdinand Rivera Morell 2015-2026.
 
 branches:
   only:
@@ -11,6 +11,7 @@ branches:
     - /feature\/.*/
     - /backport-.*/
     - /version\/.*/
+    - /pr\/.*/
 
 skip_commits:
   files:

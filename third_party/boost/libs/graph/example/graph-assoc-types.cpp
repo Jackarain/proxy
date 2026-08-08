@@ -7,20 +7,22 @@
 //=======================================================================
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/core/ignore_unused.hpp>
 
 using namespace boost;
 
 template < typename Graph > void generic_foo(Graph& g)
 {
     // Access descriptor types
-    typedef typename graph_traits< Graph >::vertex_descriptor Vertex;
-    typedef typename graph_traits< Graph >::edge_descriptor Edge;
+    using Vertex = typename graph_traits< Graph >::vertex_descriptor;
+    using Edge = typename graph_traits< Graph >::edge_descriptor;
     // Access category types
-    typedef typename graph_traits< Graph >::directed_category Dir;
-    typedef typename graph_traits< Graph >::edge_parallel_category Par;
+    using Dir = typename graph_traits< Graph >::directed_category;
+    using Par = typename graph_traits< Graph >::edge_parallel_category;
     // Access iterator types...
     // Access size types...
     // Now do something useful...
+    boost::ignore_unused< Vertex, Edge, Dir, Par >();
 }
 
 template < typename Graph > void generic_bar(Graph& g)
@@ -52,7 +54,7 @@ template < typename Graph > void foo_dispatch(Graph& g, boost::undirected_tag)
 
 template < typename Graph > void foo(Graph& g)
 {
-    typedef typename boost::graph_traits< Graph >::directed_category Cat;
+    using Cat = typename boost::graph_traits< Graph >::directed_category;
     foo_dispatch(g, Cat());
 }
 
@@ -61,7 +63,7 @@ void foo(Digraph& digraph,
     typename graph_traits< Digraph >::vertex_descriptor u,
     typename graph_traits< Digraph >::vertex_descriptor v)
 {
-    typedef typename graph_traits< Digraph >::edge_descriptor edge_t;
+    using edge_t = typename graph_traits< Digraph >::edge_descriptor;
     std::pair< edge_t, bool > e1, e2;
     e1 = edge(u, v, digraph);
     e2 = edge(v, u, digraph);
@@ -72,7 +74,7 @@ void bar(Undigraph& undigraph,
     typename graph_traits< Undigraph >::vertex_descriptor u,
     typename graph_traits< Undigraph >::vertex_descriptor v)
 {
-    typedef typename graph_traits< Undigraph >::edge_descriptor edge_t;
+    using edge_t = typename graph_traits< Undigraph >::edge_descriptor;
     std::pair< edge_t, bool > e1, e2;
     e1 = edge(u, v, undigraph);
     e2 = edge(v, u, undigraph);

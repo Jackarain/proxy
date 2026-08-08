@@ -21,7 +21,7 @@ from sources. Allows sources to be either files or other main targets
 and handles generation of those dependency targets.
 
 --
-1. `rule __init__ ( name : project : sources * : requirements * : default-build * : usage-requirements * )`
+1. `rule \\__init__ ( name : project : sources * : requirements * : default-build * : usage-requirements * )`
 +
 `name`::
   The name of the target

@@ -7,12 +7,13 @@ if(NOT TARGET tests)
 endif()
 
 link_libraries(Boost::msm Boost::unit_test_framework)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../doc/modules/ROOT)
 add_compile_definitions("BOOST_MSM_NONSTANDALONE_TEST")
 if(BOOST_MSM_TEST_ONLY_BACKMP11)
     add_compile_definitions("BOOST_MSM_TEST_ONLY_BACKMP11")
 endif()
 if(BOOST_MSM_TEST_STRICT)
-    add_compile_options(-Wall -Wpedantic -Wextra -Werror -Wno-language-extension-token)
+    add_compile_options(-Wall -Wpedantic -Wextra -Wconversion -Werror -Wno-language-extension-token)
 endif()
 if(BOOST_MSM_TEST_ENABLE_SANITIZERS)
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
@@ -33,9 +34,10 @@ add_executable(boost_msm_tests
     History.cpp
     KleeneDeferred.cpp
     ManyDeferTransitions.cpp
+    OrthogonalDeferred.cpp
     OrthogonalDeferred2.cpp
     OrthogonalDeferred3.cpp
-    OrthogonalDeferred.cpp
+    OrthogonalDeferred4.cpp
     Serialize.cpp
     SerializeWithHistory.cpp
     SetStates.cpp
@@ -83,13 +85,26 @@ add_executable(boost_msm_cxx17_tests
     Backmp11CopyMove.cpp
     Backmp11Deferred.cpp
     Backmp11EntryExit.cpp
+    Backmp11Exceptions.cpp
     Backmp11FunctorApi.cpp
+    Backmp11Heapless.cpp
+    Backmp11History.cpp
+    Backmp11MachineState.cpp
     Backmp11ManyDeferTransitions.cpp
+    Backmp11Observer.cpp
     Backmp11RootSm.cpp
+    Backmp11Serialization.cpp
+    Backmp11StateMachineInterface.cpp
     Backmp11Transitions.cpp
     Backmp11Visitor.cpp
     main.cpp
 )
+if(NOT BOOST_MSM_IS_ROOT)
+    target_link_libraries(boost_msm_cxx17_tests Boost::json)
+endif()
+if(BOOST_MSM_TEST_NLOHMANN_JSON)
+    target_compile_definitions(boost_msm_cxx17_tests PRIVATE "BOOST_MSM_TEST_NLOHMANN_JSON")
+endif()
 target_compile_features(boost_msm_cxx17_tests PRIVATE cxx_std_17)
 if(((DEFINED CMAKE_CXX_STANDARD)     AND (CMAKE_CXX_STANDARD GREATER_EQUAL 17)) OR
    ((NOT DEFINED CMAKE_CXX_STANDARD) AND ("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)))

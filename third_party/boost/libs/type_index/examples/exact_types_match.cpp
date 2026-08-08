@@ -14,10 +14,10 @@
     type is checked against the stored parameter type and an exception is thrown in case of mismatch.
 */
 
-#include <boost/type_index.hpp>
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
+#include <boost/type_index.hpp>
     
 //<-
 // Making `#include <cassert>` visible in docs, while actually using hand-made check

@@ -26,6 +26,7 @@ struct func
     int& i;
 
     func(int& i_):i(i_){}
+    func(func const& that):i(that.i){}
 
     void operator()()
     {

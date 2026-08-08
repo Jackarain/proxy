@@ -8,10 +8,8 @@
 #define NATIVE_H_VP_2003_12_09
 
 #include "config.h"
+#include "jam_fwd.h"
 #include "function.h"
-#include "frames.h"
-#include "lists.h"
-#include "object.h"
 
 typedef struct native_rule_t
 {

@@ -15,11 +15,13 @@
 /example/named-install-dirs/foo
 /example/named-install-dirs/q
 /project-config.jam
+/src/engine/*.o
 /src/engine/*.ilk
 /src/engine/*.obj
 /src/engine/*.pdb
 /src/engine/b2
 /src/engine/b2.*
+/src/engine/Makefile
 /test/file.jam
 /test/test_results.txt
 build.log

@@ -56,7 +56,7 @@ typedef boost::chrono::milliseconds milliseconds;
 typedef boost::chrono::milliseconds ms;
 typedef boost::chrono::nanoseconds ns;
 
-const ms max_diff(BOOST_THREAD_TEST_TIME_MS);
+BOOST_ATTRIBUTE_UNUSED const ms max_diff(BOOST_THREAD_TEST_TIME_MS);
 
 void f()
 {
@@ -68,6 +68,8 @@ void f()
     BOOST_ATTRIBUTE_UNUSED Clock::time_point t0 = Clock::now();
     cv.wait_for(lk, milliseconds(250), Pred(test2));
     BOOST_ATTRIBUTE_UNUSED Clock::time_point t1 = Clock::now();
+    (void)t0;
+    (void)t1;
     if (runs == 0)
     {
       assert(t1 - t0 < max_diff);

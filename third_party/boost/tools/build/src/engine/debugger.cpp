@@ -5,14 +5,20 @@
  * https://www.bfgroup.xyz/b2/LICENSE.txt)
  */
 
+#include "jam.h"
 #include "debugger.h"
+
 #include "constants.h"
-#include "jam_strings.h"
-#include "pathsys.h"
 #include "cwd.h"
 #include "function.h"
+#include "frames.h"
 #include "mem.h"
+#include "object.h"
+#include "parse.h"
+#include "pathsys.h"
 #include "startup.h"
+#include "jam_strings.h"
+
 #include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -859,7 +865,7 @@ static const char * debug_format_message( const char * format, va_list vargs )
         #endif
         va_end( args );
         if ( 0 <= result && result < sz )
-	    return buf;
+            return buf;
         free( buf );
         if ( result < 0 )
             return 0;
@@ -1147,7 +1153,7 @@ static void debug_start_child( int argc, const char * * argv )
     string_append( command_line, debugger_opt );
     string_append( command_line, b2::value::format( "=%p", pipe2[ 1 ] )->str() );
     /* Pass the rest of the command line. */
-	{
+    {
         int i;
         for ( i = 1; i < argc; ++i )
         {
@@ -1622,7 +1628,7 @@ static const char * const help_text[][2] =
     {
         "break",
         "break <location>\n"
-        "Sets a breakpoint at <location>.  <location> can be either a the name of a\nfunction or <filename>:<lineno>\n"
+        "Sets a breakpoint at <location>.  <location> can be either the name of a\nfunction or <filename>:<lineno>\n"
     },
     {
         "disable",
@@ -2685,6 +2691,7 @@ static int process_command( char * line )
             *iter++ = '\0';
         }
     }
+    if (tokens.empty()) { static char c[] = {'\0'}; tokens.push_back(c); }
     result = run_command( (int) tokens.size(), const_cast<const char **>( &tokens[0] ) );
     return result;
 }
@@ -2708,6 +2715,7 @@ static int read_command( void )
             string_push_back( line, (char)ch );
         }
     }
+    if ( ch == EOF ) b2::clean_exit( 1 );
     result = process_command( line->value );
     return result;
 }

@@ -1,0 +1,24 @@
+===== Comparisons =====
+Comparisons    <_Decimal32 >: 2008198    us (s=299999985)
+Comparisons    <_Decimal64 >: 1371538    us (s=299999985)
+Comparisons    <_Decimal128>: 3599488    us (s=299999985)
+
+===== Addition =====
+Addition       <_Decimal32 >: 8992119    us (s=50021035)
+Addition       <_Decimal64 >: 6286686    us (s=49999755)
+Addition       <_Decimal128>: 11553019   us (s=50009690)
+
+===== Subtraction =====
+Subtraction    <_Decimal32 >: 6535773    us (s=0)
+Subtraction    <_Decimal64 >: 5228611    us (s=0)
+Subtraction    <_Decimal128>: 10506473   us (s=0)
+
+===== Multiplication =====
+Multiplication <_Decimal32 >: 10260711   us (s=0)
+Multiplication <_Decimal64 >: 10233556   us (s=0)
+Multiplication <_Decimal128>: 24483677   us (s=0)
+
+===== Division =====
+Division       <_Decimal32 >: 19020688   us (s=983097120)
+Division       <_Decimal64 >: 14541743   us (s=897471440)
+Division       <_Decimal128>: 49702372   us (s=833616800)

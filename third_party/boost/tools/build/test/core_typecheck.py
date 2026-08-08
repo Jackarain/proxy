@@ -8,7 +8,7 @@
 
 import BoostBuild
 
-t = BoostBuild.Tester(["-ffile.jam"], pass_toolset=0)
+t = BoostBuild.Tester(["-ffile.jam"], pass_toolset=False)
 
 t.write("file.jam", """
 module .typecheck
@@ -37,11 +37,9 @@ t.run_build_system(["-sARGUMENT=::a/b/c"])
 t.run_build_system(["-sARGUMENT=a/b/c"], status=1, stdout="""\
 Error: a/b/c is not a path
 file.jam:18: in module scope
-*** argument error
-* rule do ( [path] a )
-* called with: ( a/b/c )
-* true a
-file.jam:16:see definition of rule 'do' being called
+error: rule do ( [path] a )
+error: called with: ( a/b/c )
+error: true a
 """)
 
 t.cleanup()

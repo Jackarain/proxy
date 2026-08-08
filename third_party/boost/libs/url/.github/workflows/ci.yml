@@ -65,6 +65,11 @@ jobs:
             clang-cl *
           subrange-policy: |
             msvc: one-per-minor
+          containers: |
+            # ubuntu:25.04 (plucky), the v1.9.3 default for GCC 16, is EOL
+            # and never gained gcc-16 in apt or toolchain-r/ppa. GCC 16 ships
+            # natively on ubuntu:26.04 so target that instead.
+            gcc 16: ubuntu:26.04
           standards: '>=11'
           latest-factors: |
             gcc  ASan

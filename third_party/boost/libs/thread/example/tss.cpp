@@ -8,21 +8,21 @@
 #include <boost/thread/tss.hpp>
 #include <cassert>
 
-boost::thread_specific_ptr<int> value;
+boost::thread_specific_ptr<int> g_value;
 
 void increment()
 {
-    int* p = value.get();
+    int* p = g_value.get();
     ++*p;
 }
 
 void thread_proc()
 {
-    value.reset(new int(0)); // initialize the thread's storage
+    g_value.reset(new int(0)); // initialize the thread's storage
     for (int i=0; i<10; ++i)
     {
         increment();
-        int* p = value.get();
+        int* p = g_value.get();
         assert(*p == i+1);
         (void)(p);
     }

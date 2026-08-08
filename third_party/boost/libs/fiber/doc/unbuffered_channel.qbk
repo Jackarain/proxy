@@ -7,7 +7,7 @@
 
 [section:unbuffered_channel Unbuffered Channel]
 
-__boost_fiber__ provides template `unbuffered_channel` suitable to synchonize
+__boost_fiber__ provides template `unbuffered_channel` suitable to synchronize
 fibers (running on same or different threads) via synchronous message passing.
 A fiber waiting to consume an value will block until the value is produced.
 If a fiber attempts to send a value through an unbuffered channel and no fiber

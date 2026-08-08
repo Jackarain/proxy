@@ -5,10 +5,15 @@
 #ifndef BOOST_DECIMAL_DETAIL_INT128_DETAIL_COMMON_DIV_HPP
 #define BOOST_DECIMAL_DETAIL_INT128_DETAIL_COMMON_DIV_HPP
 
-#include "config.hpp"
-#include "clz.hpp"
+#include <boost/decimal/detail/int128/detail/config.hpp>
+#include <boost/decimal/detail/int128/detail/clz.hpp>
+
+#ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
+
 #include <cstdint>
 #include <cstring>
+
+#endif
 
 namespace boost {
 namespace int128 {
@@ -20,7 +25,7 @@ namespace detail {
 #endif
 
 template <typename T>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void half_word_div(const T& lhs, const std::uint32_t rhs, T& quotient, T& remainder) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void half_word_div(const T& lhs, const std::uint32_t rhs, T& quotient, T& remainder) noexcept
 {
     using high_word_type = decltype(T{}.high);
 
@@ -49,11 +54,13 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void half_word_div(const T& l
 }
 
 template <typename T>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void half_word_div(const T& lhs, const std::uint32_t rhs, T& quotient) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void half_word_div(const T& lhs, const std::uint32_t rhs, T& quotient) noexcept
 {
+    using high_word_type = decltype(T{}.high);
+
     BOOST_DECIMAL_DETAIL_INT128_ASSUME(rhs != 0); // LCOV_EXCL_LINE
 
-    quotient.high = lhs.high / rhs;
+    quotient.high = static_cast<high_word_type>(static_cast<std::uint64_t>(lhs.high) / rhs);
     auto remainder {((static_cast<std::uint64_t>(lhs.high) % rhs) << 32) | (lhs.low >> 32)};
     quotient.low = (remainder / rhs) << 32;
     remainder = ((remainder % rhs) << 32) | (lhs.low & UINT32_MAX);
@@ -68,7 +75,7 @@ namespace impl {
 #endif
 
 template <std::size_t v_size>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_v(std::uint32_t (&vn)[4], const std::uint32_t (&v)[v_size],
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_v(std::uint32_t (&vn)[4], const std::uint32_t (&v)[v_size],
     const bool needs_shift, const int s, const int complement_s, const std::integral_constant<std::size_t, 2>&) noexcept
 {
     vn[1] = needs_shift ? ((v[1] << s) | (v[0] >> complement_s)) : v[1];
@@ -76,7 +83,7 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_v(std::uint32_t (
 }
 
 template <std::size_t v_size>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_v(std::uint32_t (&vn)[4], const std::uint32_t (&v)[v_size],
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_v(std::uint32_t (&vn)[4], const std::uint32_t (&v)[v_size],
     const bool needs_shift, const int s, const int complement_s, const std::integral_constant<std::size_t, 4>&) noexcept
 {
     vn[3] = needs_shift ? ((v[3] << s) | (v[2] >> complement_s)) : v[3];
@@ -86,7 +93,7 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_v(std::uint32_t (
 }
 
 template <std::size_t v_size>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_v(std::uint32_t (&vn)[8], const std::uint32_t (&v)[v_size],
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_v(std::uint32_t (&vn)[8], const std::uint32_t (&v)[v_size],
     const bool needs_shift, const int s, const int complement_s, const std::integral_constant<std::size_t, 8>&) noexcept
 {
     vn[7] = needs_shift ? ((v[7] << s) | (v[6] >> complement_s)) : v[7];
@@ -100,7 +107,7 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_v(std::uint32_t (
 }
 
 template <std::size_t un_size, std::size_t u_size>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_u(std::uint32_t (&un)[un_size], const std::uint32_t (&u)[u_size],
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_u(std::uint32_t (&un)[un_size], const std::uint32_t (&u)[u_size],
     const bool needs_shift, const int s, const int complement_s, const std::integral_constant<std::size_t, 4>&) noexcept
 {
     un[4] = needs_shift ? (u[3] >> complement_s) : 0;
@@ -111,7 +118,7 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_u(std::uint32_t (
 }
 
 template <std::size_t un_size, std::size_t u_size>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_u(std::uint32_t (&un)[un_size], const std::uint32_t (&u)[u_size],
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_u(std::uint32_t (&un)[un_size], const std::uint32_t (&u)[u_size],
     const bool needs_shift, const int s, const int complement_s, const std::integral_constant<std::size_t, 8>&) noexcept
 {
     un[8] = needs_shift ? (u[7] >> complement_s) : 0;
@@ -128,7 +135,7 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void unpack_u(std::uint32_t (
 // See: The Art of Computer Programming Volume 2 (Semi-numerical algorithms) section 4.3.1
 // Algorithm D: Division of Non-negative integers
 template <bool need_remainder, std::size_t u_size, std::size_t v_size, std::size_t q_size>
-constexpr void knuth_divide(std::uint32_t (&u)[u_size], const std::size_t m,
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE constexpr void knuth_divide(std::uint32_t (&u)[u_size], const std::size_t m,
                             const std::uint32_t (&v)[v_size], const std::size_t n,
                             std::uint32_t (&q)[q_size]) noexcept
 {
@@ -235,7 +242,7 @@ constexpr void knuth_divide(std::uint32_t (&u)[u_size], const std::size_t m,
 #endif
 
 template <typename T>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr std::size_t to_words(const T& x, std::uint32_t (&words)[4]) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr std::size_t to_words(const T& x, std::uint32_t (&words)[4]) noexcept
 {
     #if !defined(BOOST_DECIMAL_DETAIL_INT128_NO_CONSTEVAL_DETECTION) && !BOOST_DECIMAL_DETAIL_INT128_ENDIAN_BIG_BYTE
     if (!BOOST_DECIMAL_DETAIL_INT128_IS_CONSTANT_EVALUATED(x))
@@ -251,6 +258,8 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr std::size_t to_words(const T&
         words[3] = static_cast<std::uint32_t>(static_cast<std::uint64_t>(x.high) >> 32);        // LCOV_EXCL_LINE
     }
 
+    BOOST_DECIMAL_DETAIL_INT128_ASSERT_MSG(x != static_cast<T>(0), "Division by 0");
+
     std::size_t word_count {4};
     while (words[word_count - 1U] == 0U)
     {
@@ -260,7 +269,7 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr std::size_t to_words(const T&
     return word_count;
 }
 
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr std::size_t to_words(const std::uint64_t x, std::uint32_t (&words)[2]) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr std::size_t to_words(const std::uint64_t x, std::uint32_t (&words)[2]) noexcept
 {
     #if !defined(BOOST_DECIMAL_DETAIL_INT128_NO_CONSTEVAL_DETECTION) && !BOOST_DECIMAL_DETAIL_INT128_ENDIAN_BIG_BYTE
     if (!BOOST_DECIMAL_DETAIL_INT128_IS_CONSTANT_EVALUATED(x))
@@ -277,7 +286,7 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr std::size_t to_words(const st
     return x > UINT32_MAX ? 2 : 1;
 }
 
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr std::size_t to_words(const std::uint32_t x, std::uint32_t (&words)[1]) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr std::size_t to_words(const std::uint32_t x, std::uint32_t (&words)[1]) noexcept
 {
     words[0] = x;
 
@@ -285,7 +294,7 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr std::size_t to_words(const st
 }
 
 template <typename T>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr T from_words(const std::uint32_t (&words)[4]) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr T from_words(const std::uint32_t (&words)[4]) noexcept
 {
     using high_word_type = decltype(T{}.high);
 
@@ -295,17 +304,105 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr T from_words(const std::uint3
     return {static_cast<high_word_type>(high), low};
 }
 
+// HAS_FAST_DIV128 is true on platforms where we expose a hardware 128-by-64
+// division primitive: MSVC x64 via _udiv128, and GCC/Clang on x86-64 via
+// inline divq. Both flavors share the same Moller-Granlund-style 2x2 division
+// scaffolding below, parameterized over portable umul128/udiv128 helpers.
+//
+// AArch64 stays on the __udivti3 / Knuth-D path -- UDIV is already 7c/0.5
+// there and the inline-divq port is x86-only. CUDA device code is excluded
+// because inline asm and _udiv128 are not available in that environment.
 #if defined(_M_AMD64) && !defined(__GNUC__) && !defined(__clang__) && _MSC_VER >= 1920
+#  define BOOST_DECIMAL_DETAIL_INT128_HAS_FAST_DIV128
+#elif defined(BOOST_DECIMAL_DETAIL_INT128_HAS_INT128) \
+   && (defined(__GNUC__) || defined(__clang__))      \
+   && defined(__x86_64__)                            \
+   && !defined(__CUDA_ARCH__)
+#  define BOOST_DECIMAL_DETAIL_INT128_HAS_FAST_DIV128
+#endif
+
+#ifdef BOOST_DECIMAL_DETAIL_INT128_HAS_FAST_DIV128
+
+// MSVC's _addcarry_u64 takes std::uint64_t* (unsigned __int64*); GCC/Clang's
+// _addcarry_u64 takes unsigned long long*, which on LP64 Linux is a distinct
+// type from std::uint64_t (typedef'd to unsigned long there). Wrap the macros
+// with helpers that accept std::uint64_t* and convert internally.
+BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE unsigned char int128_addcarry_u64(unsigned char c, std::uint64_t x, std::uint64_t y, std::uint64_t* out) noexcept
+{
+#if defined(_M_AMD64) && !defined(__GNUC__) && !defined(__clang__)
+    return BOOST_DECIMAL_DETAIL_INT128_ADD_CARRY(c, x, y, out);
+#else
+    unsigned long long tmp {static_cast<unsigned long long>(*out)};
+    const unsigned char result {BOOST_DECIMAL_DETAIL_INT128_ADD_CARRY(c, x, y, &tmp)};
+    *out = static_cast<std::uint64_t>(tmp);
+    return result;
+#endif
+}
+
+BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE unsigned char int128_subborrow_u64(unsigned char c, std::uint64_t x, std::uint64_t y, std::uint64_t* out) noexcept
+{
+#if defined(_M_AMD64) && !defined(__GNUC__) && !defined(__clang__)
+    return BOOST_DECIMAL_DETAIL_INT128_SUB_BORROW(c, x, y, out);
+#else
+    unsigned long long tmp {static_cast<unsigned long long>(*out)};
+    const unsigned char result {BOOST_DECIMAL_DETAIL_INT128_SUB_BORROW(c, x, y, &tmp)};
+    *out = static_cast<std::uint64_t>(tmp);
+    return result;
+#endif
+}
+
+// 64x64 -> 128-bit unsigned multiply. MSVC uses the _umul128 intrinsic;
+// GCC/Clang use the native __uint128_t multiply which the compiler lowers
+// to mul/mulx on x86-64. Neither path is usable in a constant expression
+// (callers gate via IS_CONSTANT_EVALUATED), so this is not constexpr.
+BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE std::uint64_t int128_umul128_intrinsic(std::uint64_t a, std::uint64_t b, std::uint64_t* hi) noexcept
+{
+#if defined(_M_AMD64) && !defined(__GNUC__) && !defined(__clang__)
+    return _umul128(a, b, hi);
+#else
+    const __uint128_t prod {static_cast<__uint128_t>(a) * b};
+    *hi = static_cast<std::uint64_t>(prod >> 64);
+    return static_cast<std::uint64_t>(prod);
+#endif
+}
+
+// 128-bit-by-64-bit unsigned divide. MSVC uses _udiv128; GCC/Clang use
+// inline divq. Caller must guarantee `high < divisor` so divq does not
+// raise #DE (the Moller-Granlund normalization in div_mod_intrinsic
+// below ensures this). Not constexpr because inline asm and _udiv128
+// are runtime-only; div_mod_intrinsic gates its call with
+// IS_CONSTANT_EVALUATED.
+BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE std::uint64_t int128_udiv128_intrinsic(std::uint64_t high, std::uint64_t low, std::uint64_t divisor, std::uint64_t* remainder) noexcept
+{
+#if defined(_M_AMD64) && !defined(__GNUC__) && !defined(__clang__) && _MSC_VER >= 1920
+    return _udiv128(high, low, divisor, remainder);
+#else
+    std::uint64_t q;
+    std::uint64_t r;
+    __asm__ ("divq %4"
+             : "=a"(q), "=d"(r)
+             : "0"(low), "1"(high), "r"(divisor)
+             : "cc");
+    *remainder = r;
+    return q;
+#endif
+}
 
 template <bool needs_mod, typename T>
-constexpr T div_mod_msvc(T dividend, T divisor, T& remainder)
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE constexpr T div_mod_intrinsic(T dividend, T divisor, T& remainder)
 {
     using high_word_type = decltype(T{}.high);
 
     // Skip normalization if divisor is already large enough
     // use direct division and intrinsic
-    // This is only possible in the unsigned case
-    BOOST_DECIMAL_DETAIL_INT128_IF_CONSTEXPR (!std::numeric_limits<T>::is_signed)
+    // This is only possible in the unsigned case. The check uses
+    // std::is_unsigned on the high-word type rather than
+    // std::numeric_limits<T>::is_signed to avoid forcing implicit
+    // instantiation of std::numeric_limits<T> from inside this header (the
+    // explicit specialization sits later in uint128_imp.hpp; instantiating
+    // first via numeric_limits<T> here causes clang to reject the
+    // specialization as "explicit specialization after instantiation").
+    BOOST_DECIMAL_DETAIL_INT128_IF_CONSTEXPR (std::is_unsigned<high_word_type>::value)
     {
         constexpr auto divisor_lower_bound{UINT64_MAX >> 1};
         if (divisor.high >= divisor_lower_bound)
@@ -315,14 +412,16 @@ constexpr T div_mod_msvc(T dividend, T divisor, T& remainder)
             quotient.low = static_cast<std::uint64_t>(dividend.high / divisor.high);
 
             std::uint64_t product0_high{};
-            auto product0_low{_umul128(quotient.low, divisor.low, &product0_high)};
+            auto product0_low{int128_umul128_intrinsic(quotient.low, divisor.low, &product0_high)};
 
             std::uint64_t product1_high{};
-            auto product1_low{_umul128(quotient.low, static_cast<std::uint64_t>(divisor.high), &product1_high)};
+            auto product1_low{int128_umul128_intrinsic(quotient.low, static_cast<std::uint64_t>(divisor.high), &product1_high)};
 
             T product{};
             product.low = product0_low;
-            auto carry{BOOST_DECIMAL_DETAIL_INT128_ADD_CARRY(0, product0_high, product1_low, reinterpret_cast<std::uint64_t*>(&product.high))};
+            std::uint64_t product_high_tmp {static_cast<std::uint64_t>(product.high)};
+            auto carry{int128_addcarry_u64(0, product0_high, product1_low, &product_high_tmp)};
+            product.high = static_cast<high_word_type>(product_high_tmp);
             product1_high += static_cast<std::uint64_t>(carry);
 
             if (product1_high > 0 || product > dividend)
@@ -330,18 +429,22 @@ constexpr T div_mod_msvc(T dividend, T divisor, T& remainder)
                 --quotient.low;
 
                 // Recalculate with adjusted quotient
-                product0_low = _umul128(quotient.low, divisor.low, &product0_high);
-                product1_low = _umul128(quotient.low, divisor.high, &product1_high);
+                product0_low = int128_umul128_intrinsic(quotient.low, divisor.low, &product0_high);
+                product1_low = int128_umul128_intrinsic(quotient.low, static_cast<std::uint64_t>(divisor.high), &product1_high);
 
                 product.low = product0_low;
-                carry = BOOST_DECIMAL_DETAIL_INT128_ADD_CARRY(0, product0_high, product1_low, reinterpret_cast<std::uint64_t*>(&product.high));
+                product_high_tmp = static_cast<std::uint64_t>(product.high);
+                carry = int128_addcarry_u64(0, product0_high, product1_low, &product_high_tmp);
+                product.high = static_cast<high_word_type>(product_high_tmp);
                 product1_high += static_cast<std::uint64_t>(carry);
             }
 
             BOOST_DECIMAL_DETAIL_INT128_IF_CONSTEXPR(needs_mod)
             {
-                auto borrow{BOOST_DECIMAL_DETAIL_INT128_SUB_BORROW(0, dividend.low, product.low, &remainder.low)};
-                BOOST_DECIMAL_DETAIL_INT128_SUB_BORROW(borrow, dividend.high, product.high, reinterpret_cast<std::uint64_t*>(&remainder.high));
+                auto borrow{int128_subborrow_u64(0, dividend.low, product.low, &remainder.low)};
+                std::uint64_t remainder_high_tmp {static_cast<std::uint64_t>(remainder.high)};
+                int128_subborrow_u64(borrow, static_cast<std::uint64_t>(dividend.high), static_cast<std::uint64_t>(product.high), &remainder_high_tmp);
+                remainder.high = static_cast<high_word_type>(remainder_high_tmp);
             }
 
             return quotient;
@@ -360,8 +463,8 @@ constexpr T div_mod_msvc(T dividend, T divisor, T& remainder)
     quotient.high = high_digit_gte_divisor ? 1 : 0;
     std::uint64_t remainder_estimate {};
 
-    quotient.low = _udiv128(high_digit_gte_divisor ? high_digit - divisor.high : high_digit,
-                            dividend.high, divisor.high, &remainder_estimate);
+    quotient.low = int128_udiv128_intrinsic(high_digit_gte_divisor ? high_digit - divisor.high : high_digit,
+                                            dividend.high, static_cast<std::uint64_t>(divisor.high), &remainder_estimate);
 
     // Bounded correction loop with early exit
     // Typically 2 is the most number of corrections we need since this is only for 2x2 division
@@ -372,7 +475,9 @@ constexpr T div_mod_msvc(T dividend, T divisor, T& remainder)
     while (correction_steps < max_corrections)
     {
         T product{};
-        product.low = _umul128(quotient.low, divisor.low, reinterpret_cast<std::uint64_t*>(&product.high));
+        std::uint64_t product_high_tmp {};
+        product.low = int128_umul128_intrinsic(quotient.low, divisor.low, &product_high_tmp);
+        product.high = static_cast<high_word_type>(product_high_tmp);
         if (product <= T{static_cast<high_word_type>(remainder_estimate), dividend.low})
         {
             break;
@@ -391,23 +496,27 @@ constexpr T div_mod_msvc(T dividend, T divisor, T& remainder)
 
     // Final verification and adjustment
     std::uint64_t product0_high{};
-    auto product_low {_umul128(quotient.low, divisor.low, &product0_high)};
-    auto borrow {BOOST_DECIMAL_DETAIL_INT128_SUB_BORROW(0, dividend.low, product_low, &dividend.low)};
+    auto product_low {int128_umul128_intrinsic(quotient.low, divisor.low, &product0_high)};
+    auto borrow {int128_subborrow_u64(0, dividend.low, product_low, &dividend.low)};
 
     std::uint64_t product1_high{};
-    product_low = _umul128(quotient.low, divisor.high, &product1_high);
-    product1_high += static_cast<std::uint64_t>(BOOST_DECIMAL_DETAIL_INT128_ADD_CARRY(0, product_low, product0_high, &product_low));
+    product_low = int128_umul128_intrinsic(quotient.low, static_cast<std::uint64_t>(divisor.high), &product1_high);
+    product1_high += static_cast<std::uint64_t>(int128_addcarry_u64(0, product_low, product0_high, &product_low));
 
-    borrow = BOOST_DECIMAL_DETAIL_INT128_SUB_BORROW(borrow, static_cast<std::uint64_t>(dividend.high), product_low, reinterpret_cast<std::uint64_t*>(&dividend.high));
-    borrow = BOOST_DECIMAL_DETAIL_INT128_SUB_BORROW(borrow, high_digit, product1_high, &high_digit);
+    std::uint64_t dividend_high_tmp {static_cast<std::uint64_t>(dividend.high)};
+    borrow = int128_subborrow_u64(borrow, static_cast<std::uint64_t>(dividend.high), product_low, &dividend_high_tmp);
+    dividend.high = static_cast<high_word_type>(dividend_high_tmp);
+    borrow = int128_subborrow_u64(borrow, high_digit, product1_high, &high_digit);
     quotient.low -= static_cast<std::uint64_t>(borrow);
 
     BOOST_DECIMAL_DETAIL_INT128_IF_CONSTEXPR (needs_mod)
     {
         if (borrow)
         {
-            auto carry { BOOST_DECIMAL_DETAIL_INT128_ADD_CARRY(0, dividend.low, divisor.low, &dividend.low) };
-            BOOST_DECIMAL_DETAIL_INT128_ADD_CARRY(carry, static_cast<std::uint64_t>(dividend.high), static_cast<std::uint64_t>(divisor.high), reinterpret_cast<std::uint64_t*>(&dividend.high));
+            auto carry { int128_addcarry_u64(0, dividend.low, divisor.low, &dividend.low) };
+            std::uint64_t dividend_high_tmp2 {static_cast<std::uint64_t>(dividend.high)};
+            int128_addcarry_u64(carry, static_cast<std::uint64_t>(dividend.high), static_cast<std::uint64_t>(divisor.high), &dividend_high_tmp2);
+            dividend.high = static_cast<high_word_type>(dividend_high_tmp2);
         }
 
         dividend >>= shift_amount;
@@ -415,6 +524,129 @@ constexpr T div_mod_msvc(T dividend, T divisor, T& remainder)
     }
 
     return quotient;
+}
+
+// Moller-Granlund 3/2 reciprocal division for u256 by uint128.
+//
+// Computes (q, r) such that u = q*d + r, where u is 256-bit (3 limbs effective),
+// d is 128-bit (2 limbs, normalized so d.high MSB is set), and v is the
+// 64-bit reciprocal of d.
+//
+// The algorithm requires `d` to be normalized (d.high >= 2^63) and the top
+// 128 bits of `u` to be strictly less than `d` so the quotient fits in one
+// limb. The d128 division flow satisfies both: the divisor is post-
+// expand_significand, so it is in [10^33, 10^34) and shifts to fill 128 bits;
+// the dividend top 128 bits after the same shift remain well under 2^127.
+//
+// The reciprocal v is from reciprocal_2by1 below and must be precomputed.
+// References: Moller & Granlund, "Improved Division by Invariant Integers"
+// (2010), Algorithm 4.
+template <typename U128>
+BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE std::uint64_t mg32_div_3by2(
+    U128 u_high, std::uint64_t u_low, U128 d, std::uint64_t v, U128& r) noexcept
+{
+    // q = u_high.high * v + u_high  (a 128-bit fused-multiply-add).
+    // int128_umul128_intrinsic returns the low 64 bits and writes the high
+    // 64 bits through the out pointer.
+    std::uint64_t q_high{};
+    std::uint64_t q_low {int128_umul128_intrinsic(u_high.high, v, &q_high)};
+    // Add u_high to (q_high, q_low). Carry from low into high.
+    {
+        const std::uint64_t low_sum {q_low + u_high.low};
+        const unsigned char carry_into_high {static_cast<unsigned char>(low_sum < q_low ? 1U : 0U)};
+        q_low = low_sum;
+        q_high += u_high.high + carry_into_high;
+    }
+
+    // r1 = u_high.low - q_high * d.high  (single 64-bit limb)
+    const std::uint64_t r1 {u_high.low - q_high * d.high};
+
+    // (t_high, t_low) = q_high * d.low (full 128-bit product)
+    std::uint64_t t_high{};
+    const std::uint64_t t_low {int128_umul128_intrinsic(q_high, d.low, &t_high)};
+
+    // r = (r1, u_low) - (t_high, t_low) - d
+    std::uint64_t r_low {u_low};
+    std::uint64_t r_high {r1};
+    unsigned char borrow {int128_subborrow_u64(0, r_low, t_low, &r_low)};
+    int128_subborrow_u64(borrow, r_high, t_high, &r_high);
+    borrow = int128_subborrow_u64(0, r_low, d.low, &r_low);
+    int128_subborrow_u64(borrow, r_high, d.high, &r_high);
+
+    // q' = q_high + 1
+    std::uint64_t quotient {q_high + 1U};
+
+    // First correction: if r_high >= q_low, q'-- and r += d.
+    if (r_high >= q_low)
+    {
+        --quotient;
+        const unsigned char carry {int128_addcarry_u64(0, r_low, d.low, &r_low)};
+        int128_addcarry_u64(carry, r_high, d.high, &r_high);
+    }
+
+    // Second correction (very rare): if r >= d, q'++ and r -= d.
+    const bool r_ge_d {r_high > d.high || (r_high == d.high && r_low >= d.low)};
+    if (BOOST_DECIMAL_DETAIL_INT128_UNLIKELY(r_ge_d))
+    {
+        ++quotient;
+        const unsigned char b2 {int128_subborrow_u64(0, r_low, d.low, &r_low)};
+        int128_subborrow_u64(b2, r_high, d.high, &r_high);
+    }
+
+    r.low = r_low;
+    r.high = static_cast<decltype(r.high)>(r_high);
+    return quotient;
+}
+
+// Precompute the 64-bit reciprocal for a normalized 128-bit divisor.
+// Returns v such that floor((2^192 - 1) / d) = 2^128 + v.
+// Precondition: d.high has its MSB set (d >= 2^127).
+// Reference: Moller & Granlund 2010, Algorithm 2.
+template <typename U128>
+BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE std::uint64_t mg32_reciprocal_2by1(U128 d) noexcept
+{
+    // v_1 = floor((2^128 - 1) / d.high) - 2^64, computed via one 128/64 divide.
+    // The trick: divq(UINT64_MAX - d.high, UINT64_MAX, d.high) sidesteps the
+    // overflow trap (the divq precondition that high < divisor) because
+    // d.high >= 2^63 guarantees UINT64_MAX - d.high < d.high.
+    std::uint64_t dummy{};
+    std::uint64_t v {int128_udiv128_intrinsic(~d.high, UINT64_MAX, d.high, &dummy)};
+
+    // p = d.high * v + d.low (modular, low 64 bits only; the high part is
+    // implicit in the residue analysis below).
+    std::uint64_t p {d.high * v + d.low};
+
+    // Adjust if the addition wrapped (p < d.low).
+    if (p < d.low)
+    {
+        --v;
+        if (p >= d.high)
+        {
+            --v;
+            p -= d.high;
+        }
+        p -= d.high;
+    }
+
+    // (t_high, t_low) = v * d.low.
+    // int128_umul128_intrinsic returns the low limb and writes the high
+    // limb through the out pointer.
+    std::uint64_t t_high{};
+    const std::uint64_t t_low {int128_umul128_intrinsic(v, d.low, &t_high)};
+
+    // p += t_high (with overflow detection)
+    const std::uint64_t p_new {p + t_high};
+    if (p_new < p)
+    {
+        // Overflow; adjust.
+        --v;
+        // If (p_new, t_low) >= d, decrement again.
+        if (p_new > d.high || (p_new == d.high && t_low >= d.low))
+        {
+            --v;
+        }
+    }
+    return v;
 }
 
 #endif
@@ -425,9 +657,9 @@ constexpr T div_mod_msvc(T dividend, T divisor, T& remainder)
 // In the division case it is a waste of cycles
 
 template <typename T>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lhs, const std::uint64_t rhs, T& quotient) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lhs, const std::uint64_t rhs, T& quotient) noexcept
 {
-    #if defined(_M_AMD64) && !defined(__GNUC__) && !defined(__clang__) && _MSC_VER >= 1920 && !defined(BOOST_DECIMAL_DETAIL_INT128_NO_CONSTEVAL_DETECTION)
+    #if defined(BOOST_DECIMAL_DETAIL_INT128_HAS_FAST_DIV128) && !defined(BOOST_DECIMAL_DETAIL_INT128_NO_CONSTEVAL_DETECTION)
 
     if (!BOOST_DECIMAL_DETAIL_INT128_IS_CONSTANT_EVALUATED(lhs))
     {
@@ -435,7 +667,7 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lh
 
         quotient.high = static_cast<high_word_type>(static_cast<std::uint64_t>(lhs.high) / rhs);
         auto remainder {static_cast<std::uint64_t>(lhs.high) % rhs};
-        quotient.low = _udiv128(remainder, lhs.low, rhs, &remainder);
+        quotient.low = impl::int128_udiv128_intrinsic(remainder, lhs.low, rhs, &remainder);
         return;
     }
 
@@ -461,9 +693,9 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lh
 }
 
 template <typename T>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lhs, const std::uint64_t rhs, T& quotient, T& remainder) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lhs, const std::uint64_t rhs, T& quotient, T& remainder) noexcept
 {
-    #if defined(_M_AMD64) && !defined(__GNUC__) && !defined(__clang__) && _MSC_VER >= 1920 && !defined(BOOST_DECIMAL_DETAIL_INT128_NO_CONSTEVAL_DETECTION)
+    #if defined(BOOST_DECIMAL_DETAIL_INT128_HAS_FAST_DIV128) && !defined(BOOST_DECIMAL_DETAIL_INT128_NO_CONSTEVAL_DETECTION)
 
     if (!BOOST_DECIMAL_DETAIL_INT128_IS_CONSTANT_EVALUATED(lhs))
     {
@@ -471,7 +703,7 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lh
 
         quotient.high = static_cast<high_word_type>(static_cast<std::uint64_t>(lhs.high) / rhs);
         remainder.low = static_cast<std::uint64_t>(lhs.high) % rhs;
-        quotient.low = _udiv128(remainder.low, lhs.low, rhs, &remainder.low);
+        quotient.low = impl::int128_udiv128_intrinsic(remainder.low, lhs.low, rhs, &remainder.low);
         return;
     }
 
@@ -500,13 +732,13 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lh
 }
 
 template <typename T>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lhs, const std::uint32_t rhs, T& quotient, T& remainder) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lhs, const std::uint32_t rhs, T& quotient, T& remainder) noexcept
 {
     half_word_div(lhs, rhs, quotient, remainder);
 }
 
 template <typename T>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lhs, const std::uint32_t rhs, T& quotient) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lhs, const std::uint32_t rhs, T& quotient) noexcept
 {
     half_word_div(lhs, rhs, quotient);
 }
@@ -518,18 +750,18 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr void one_word_div(const T& lh
 #endif
 
 template <typename T>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr T knuth_div(const T& dividend, const T& divisor) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr T knuth_div(const T& dividend, const T& divisor) noexcept
 {
     BOOST_DECIMAL_DETAIL_INT128_ASSUME(divisor != static_cast<T>(0));
 
-    #if defined(_M_AMD64) && !defined(__GNUC__) && !defined(__clang__) && _MSC_VER >= 1920
+    #ifdef BOOST_DECIMAL_DETAIL_INT128_HAS_FAST_DIV128
 
-    BOOST_DECIMAL_DETAIL_INT128_IF_CONSTEXPR(!std::numeric_limits<T>::is_signed)
+    BOOST_DECIMAL_DETAIL_INT128_IF_CONSTEXPR(std::is_unsigned<decltype(T{}.high)>::value)
     {
         if (!BOOST_DECIMAL_DETAIL_INT128_IS_CONSTANT_EVALUATED(dividend))
         {
             T remainder{};
-            return impl::div_mod_msvc<false>(dividend, divisor, remainder);
+            return impl::div_mod_intrinsic<false>(dividend, divisor, remainder);
         }
     }
 
@@ -539,8 +771,8 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr T knuth_div(const T& dividend
     std::uint32_t v[4]{};
     std::uint32_t q[4]{};
 
-    const auto m{impl::to_words(dividend, u)};
-    const auto n{impl::to_words(divisor, v)};
+    const auto m{ impl::to_words(dividend, u) };
+    const auto n{ impl::to_words(divisor, v) };
 
     impl::knuth_divide<false>(u, m, v, n, q);
 
@@ -549,17 +781,17 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr T knuth_div(const T& dividend
 }
 
 template <typename T>
-BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr T knuth_div(const T& dividend, const T& divisor, T& remainder) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr T knuth_div(const T& dividend, const T& divisor, T& remainder) noexcept
 {
     BOOST_DECIMAL_DETAIL_INT128_ASSUME(divisor != static_cast<T>(0));
 
-    #if defined(_M_AMD64) && !defined(__GNUC__) && !defined(__clang__) && _MSC_VER >= 1920
+    #ifdef BOOST_DECIMAL_DETAIL_INT128_HAS_FAST_DIV128
 
-    BOOST_DECIMAL_DETAIL_INT128_IF_CONSTEXPR(!std::numeric_limits<T>::is_signed)
+    BOOST_DECIMAL_DETAIL_INT128_IF_CONSTEXPR(std::is_unsigned<decltype(T{}.high)>::value)
     {
         if (!BOOST_DECIMAL_DETAIL_INT128_IS_CONSTANT_EVALUATED(dividend))
         {
-            return impl::div_mod_msvc<true>(dividend, divisor, remainder);
+            return impl::div_mod_intrinsic<true>(dividend, divisor, remainder);
         }
     }
 
@@ -570,8 +802,8 @@ BOOST_DECIMAL_DETAIL_INT128_FORCE_INLINE constexpr T knuth_div(const T& dividend
     std::uint32_t v[4]{};
     std::uint32_t q[4]{};
 
-    const auto m{impl::to_words(dividend, u)};
-    const auto n{impl::to_words(divisor, v)};
+    const auto m{ impl::to_words(dividend, u) };
+    const auto n{ impl::to_words(divisor, v) };
 
     impl::knuth_divide<true>(u, m, v, n, q);
 

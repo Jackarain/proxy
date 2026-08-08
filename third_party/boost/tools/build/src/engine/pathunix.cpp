@@ -19,7 +19,9 @@
 #include "jam.h"
 #ifdef USE_PATHUNIX
 
+#include "object.h"
 #include "pathsys.h"
+#include "jam_strings.h"
 
 #include <stdlib.h>
 #include <unistd.h>  /* needed for getpid() */

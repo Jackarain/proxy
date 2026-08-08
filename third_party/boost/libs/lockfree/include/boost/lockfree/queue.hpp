@@ -104,29 +104,26 @@ private:
     static constexpr bool node_based         = !( has_capacity || fixed_sized );
     static constexpr bool compile_time_sized = has_capacity;
 
-    struct alignas( detail::cacheline_bytes ) node
+    struct BOOST_MAY_ALIAS node
     {
         typedef typename detail::select_tagged_handle< node, node_based >::tagged_handle_type tagged_node_handle;
         typedef typename detail::select_tagged_handle< node, node_based >::handle_type        handle_type;
 
-        node( T const& v, handle_type null_handle ) :
+        template < typename TagT >
+        node( T const& v, handle_type null_handle, TagT next_tag ) :
+            next( tagged_node_handle( null_handle, next_tag ) ),
             data( v )
-        {
-            /* increment tag to avoid ABA problem */
-            tagged_node_handle old_next = next.load( memory_order_relaxed );
-            tagged_node_handle new_next( null_handle, old_next.get_next_tag() );
-            next.store( new_next, memory_order_release );
-        }
-
-        node( handle_type null_handle ) :
-            next( tagged_node_handle( null_handle, 0 ) )
         {}
 
-        node( void )
+        template < typename TagT >
+        node( handle_type null_handle, TagT next_tag ) :
+            next( tagged_node_handle( null_handle, next_tag ) )
         {}
 
-        atomic< tagged_node_handle > next;
-        T                            data;
+        node() = delete;
+
+        alignas( detail::cacheline_bytes ) atomic< tagged_node_handle > next;
+        T data;
     };
 
     typedef detail::extract_allocator_t< bound_args, node >                                              node_allocator;
@@ -177,8 +174,6 @@ public:
         requires( has_capacity )
 #endif
         :
-        head_( tagged_node_handle( 0, 0 ) ),
-        tail_( tagged_node_handle( 0, 0 ) ),
         pool( node_allocator(), capacity )
     {
         // Don't use BOOST_STATIC_ASSERT() here since it will be evaluated when compiling
@@ -191,10 +186,13 @@ public:
      *
      *  \pre Must specify a capacity<> argument
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    template < typename U >
+        requires( has_capacity )
+#else
     template < typename U, typename Enabler = std::enable_if< has_capacity > >
+#endif
     explicit queue( typename boost::allocator_rebind< node_allocator, U >::type const& alloc ) :
-        head_( tagged_node_handle( 0, 0 ) ),
-        tail_( tagged_node_handle( 0, 0 ) ),
         pool( alloc, capacity )
     {
         initialize();
@@ -204,10 +202,14 @@ public:
      *
      *  \pre Must specify a capacity<> argument
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    explicit queue( allocator const& alloc )
+        requires( has_capacity )
+        :
+#else
     template < typename Enabler = std::enable_if< has_capacity > >
     explicit queue( allocator const& alloc ) :
-        head_( tagged_node_handle( 0, 0 ) ),
-        tail_( tagged_node_handle( 0, 0 ) ),
+#endif
         pool( alloc, capacity )
     {
         initialize();
@@ -219,10 +221,14 @@ public:
      *
      *  \pre Must \b not specify a capacity<> argument
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    explicit queue( size_type n )
+        requires( !has_capacity )
+        :
+#else
     template < typename Enabler = std::enable_if< !has_capacity > >
     explicit queue( size_type n ) :
-        head_( tagged_node_handle( 0, 0 ) ),
-        tail_( tagged_node_handle( 0, 0 ) ),
+#endif
         pool( node_allocator(), n + 1 )
     {
         initialize();
@@ -234,10 +240,13 @@ public:
      *
      *  \pre Must \b not specify a capacity<> argument
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    template < typename U >
+        requires( !has_capacity )
+#else
     template < typename U, typename Enabler = std::enable_if< !has_capacity > >
+#endif
     queue( size_type n, typename boost::allocator_rebind< node_allocator, U >::type const& alloc ) :
-        head_( tagged_node_handle( 0, 0 ) ),
-        tail_( tagged_node_handle( 0, 0 ) ),
         pool( alloc, n + 1 )
     {
         initialize();
@@ -249,10 +258,14 @@ public:
      *
      *  \pre Must \b not specify a capacity<> argument
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    queue( size_type n, allocator const& alloc )
+        requires( !has_capacity )
+        :
+#else
     template < typename Enabler = std::enable_if< !has_capacity > >
     queue( size_type n, allocator const& alloc ) :
-        head_( tagged_node_handle( 0, 0 ) ),
-        tail_( tagged_node_handle( 0, 0 ) ),
+#endif
         pool( alloc, n + 1 )
     {
         initialize();
@@ -434,7 +447,6 @@ private:
 
 #endif
 public:
-
     /** Pops object from queue.
      *
      * \post if pop operation is successful, object will be copied to ret.
@@ -455,7 +467,12 @@ public:
      *
      * \note Thread-safe and non-blocking. Might modify return argument even if operation fails.
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
     template < typename U >
+        requires( std::is_constructible_v< U, T && > )
+#else
+    template < typename U, typename Enabler = std::enable_if_t< std::is_constructible< U, T&& >::value > >
+#endif
     bool pop( U& ret )
     {
         for ( ;; ) {
@@ -554,7 +571,12 @@ public:
      * \note Not thread-safe, but non-blocking. Might modify return argument even if operation fails.
      *
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
     template < typename U >
+        requires( std::is_constructible_v< U, T && > )
+#else
+    template < typename U, typename Enabler = std::enable_if_t< std::is_constructible< U, T&& >::value > >
+#endif
     bool unsynchronized_pop( U& ret )
     {
         for ( ;; ) {
@@ -626,11 +648,12 @@ public:
 
 private:
 #ifndef BOOST_DOXYGEN_INVOKED
-    atomic< tagged_node_handle > head_;
-    static constexpr int         padding_size = detail::cacheline_bytes - sizeof( tagged_node_handle );
-    char                         padding1[ padding_size ];
-    atomic< tagged_node_handle > tail_;
-    char                         padding2[ padding_size ];
+    atomic< tagged_node_handle > head_ {
+        tagged_node_handle( 0, 0 ),
+    };
+    alignas( detail::cacheline_bytes ) atomic< tagged_node_handle > tail_ {
+        tagged_node_handle( 0, 0 ),
+    };
 
     pool_t pool;
 #endif

@@ -17,26 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: gcc-4.8
-            cxxstd: "03,11"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-4.8
-          - toolset: gcc-4.9
-            cxxstd: "03,11"
-            container: ubuntu:16.04
-            os: ubuntu-latest
-            install: g++-4.9
-          - toolset: gcc-5
-            cxxstd: "03,11,14,1z"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-5
-          - toolset: gcc-6
-            cxxstd: "03,11,14,1z"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-6
           - toolset: gcc-7
             cxxstd: "03,11,14,17"
             container: ubuntu:20.04
@@ -53,14 +33,17 @@ jobs:
             os: ubuntu-latest
           - toolset: gcc-10
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: g++-10
           - toolset: gcc-11
             cxxstd: "03,11,14,17,2a"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
           - toolset: gcc-12
             cxxstd: "03,11,14,17,20,2b"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: g++-12
           - toolset: gcc-13
             cxxstd: "03,11,14,17,20,2b"
@@ -75,26 +58,13 @@ jobs:
           - toolset: gcc-15
             cxxstd: "03,11,14,17,20,23,2c"
             os: ubuntu-latest
-            container: ubuntu:25.04
+            container: ubuntu:26.04
             install: g++-15
-          - toolset: clang
-            compiler: clang++-3.9
-            cxxstd: "03,11,14"
+          - toolset: gcc-16
+            cxxstd: "03,11,14,17,20,23,2c"
             os: ubuntu-latest
-            container: ubuntu:18.04
-            install: clang-3.9
-          - toolset: clang
-            compiler: clang++-4.0
-            cxxstd: "03,11,14"
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install: clang-4.0
-          - toolset: clang
-            compiler: clang++-5.0
-            cxxstd: "03,11,14"
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install: clang-5.0
+            container: ubuntu:26.04
+            install: g++-16
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "03,11,14,17"
@@ -188,9 +158,15 @@ jobs:
           - toolset: clang
             compiler: clang++-21
             cxxstd: "03,11,14,17,20,23,2c"
-            container: ubuntu:25.10
+            container: ubuntu:26.04
             os: ubuntu-latest
             install: clang-21
+          - toolset: clang
+            compiler: clang++-22
+            cxxstd: "03,11,14,17,20,23,2c"
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: clang-22
           - toolset: clang
             os: macos-14
             cxxstd: "03,11,14,17,20,2b"
@@ -227,7 +203,7 @@ jobs:
           tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
           ldd /__e/node20/bin/node
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -276,8 +252,12 @@ jobs:
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
+          - toolset: msvc-14.5
+            cxxstd: "14,17,20,latest"
+            addrmd: 32,64
+            os: windows-2025-vs2026
           - toolset: clang-win
-            cxxstd: "14,17,latest"
+            cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
           - toolset: gcc
@@ -288,7 +268,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -332,7 +312,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -380,7 +360,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -438,7 +418,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -494,7 +474,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -522,7 +502,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -559,7 +539,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -584,8 +564,9 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: Jimver/cuda-toolkit@v0.2.16
+      - uses: actions/checkout@v6
+
+      - uses: Jimver/cuda-toolkit@v0.2.35
         with:
           cuda: '11.7.1'
           linux-local-args: '["--toolkit"]'
@@ -620,16 +601,15 @@ jobs:
           nvcc -x cu -I ./include -I ../assert/include -I ../config/include -I ../core/include -std=c++17 -c test/mp_count_if.cpp
 
   cuda-windows:
-    runs-on: windows-latest
+    runs-on: windows-2025
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: Jimver/cuda-toolkit@v0.2.16
+      - uses: actions/checkout@v6
+
+      - uses: Jimver/cuda-toolkit@v0.2.35
         with:
           use-local-cache: false
           use-github-cache: false
-
-      - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Setup Boost
         run: |
@@ -641,6 +621,7 @@ jobs:
       - name: Run Tests
         shell: cmd
         run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           nvcc -x cu -I ./include -I ../assert/include -I ../config/include -I ../core/include -c test/mp11.cpp || exit /b
           nvcc -x cu -I ./include -I ../assert/include -I ../config/include -I ../core/include -c test/mp_all.cpp || exit /b
           nvcc -x cu -I ./include -I ../assert/include -I ../config/include -I ../core/include -c test/mp_any.cpp || exit /b
@@ -657,7 +638,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -705,7 +686,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -771,7 +752,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd

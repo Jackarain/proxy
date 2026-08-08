@@ -32,6 +32,7 @@
 #include "cwd.h"
 #include "filesys.h"
 #include "pathsys.h"
+#include "jam_strings.h"
 
 #include <stdlib.h>
 #include <time.h>

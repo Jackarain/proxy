@@ -13,6 +13,9 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
+// Front-end constructor arguments are not supported by backmp11.
+#define BOOST_MSM_TEST_SKIP_BACKMP11
+
 #include <memory>
 // back-end
 #include "BackCommon.hpp"

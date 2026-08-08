@@ -13,6 +13,7 @@ env:
   UBSAN_OPTIONS: print_stacktrace=1
   B2_CI_VERSION: 1
   LCOV_BRANCH_COVERAGE: 0
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true  
 
 jobs:
   posix:
@@ -179,10 +180,13 @@ jobs:
             install: clang-18
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
-            os: macos-13
-          - toolset: clang
-            cxxstd: "11,14,17,20,2b"
             os: macos-14
+          - toolset: clang
+            cxxstd: "11,14,17,20,23,2c"
+            os: macos-15
+          - toolset: clang
+            cxxstd: "11,14,17,20,23,2c"
+            os: macos-26
 
     runs-on: ${{matrix.os}}
     container:
@@ -317,9 +321,9 @@ jobs:
         include:
           - os: ubuntu-22.04
           - os: ubuntu-24.04
-          - os: macos-13
           - os: macos-14
           - os: macos-15
+          - os: macos-26
 
     runs-on: ${{matrix.os}}
 

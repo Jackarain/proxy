@@ -175,6 +175,39 @@ namespace {
     }
   } iterator_range_inserter;
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  struct range_inserter_type
+  {
+    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    {
+      static constexpr auto value_type_cardinality = 
+        value_cardinality<typename X::value_type>::value;
+
+      std::vector<raii_convertible> values2;
+      values2.reserve(values.size());
+      for (auto const& v : values) { 
+        values2.push_back(raii_convertible(v));
+      }
+
+      auto sz = x.size();
+      std::atomic<std::uint64_t> num_inserts{0};
+      std::atomic<std::uint64_t> num_attempted_inserts{0};
+      thread_runner(values2, [&x, &num_inserts, &num_attempted_inserts](boost::span<raii_convertible> s) {
+        num_inserts += x.insert_range(s | std::views::take(s.size() / 2));
+        num_inserts += x.insert_range(s);
+        num_attempted_inserts += s.size() + s.size() / 2;
+      });
+      BOOST_TEST_EQ(x.size(), sz + num_inserts);
+
+      BOOST_TEST_EQ(
+        raii::default_constructor, value_type_cardinality * num_attempted_inserts);
+      BOOST_TEST_EQ(raii::copy_constructor, 0u);
+      BOOST_TEST_EQ(raii::copy_assignment, 0u);
+      BOOST_TEST_EQ(raii::move_assignment, 0u);
+    }
+  } range_inserter;
+#endif
+
   struct lvalue_insert_or_assign_copy_assign_type
   {
     template <class T, class X> void operator()(std::vector<T>& values, X& x)
@@ -798,6 +831,41 @@ namespace {
     }
   } iterator_range_insert_or_cvisit;
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  struct insert_range_or_cvisit_type
+  {
+    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    {
+      static constexpr auto value_type_cardinality = 
+        value_cardinality<typename X::value_type>::value;
+
+      std::vector<raii_convertible> values2;
+      values2.reserve(values.size());
+      for (auto const& v : values) {
+        values2.push_back(raii_convertible(v));
+      }
+
+      std::atomic<std::uint64_t> num_invokes{0};
+      thread_runner(
+        values2, [&x, &num_invokes](boost::span<raii_convertible> s) {
+          BOOST_TEST_EQ(x.insert_range_or_cvisit(s,
+                          [&num_invokes](typename X::value_type const& v) {
+                            (void)v;
+                            ++num_invokes;
+                          }),
+            s.size());
+        });
+
+      BOOST_TEST_EQ(num_invokes, values.size() - x.size());
+
+      BOOST_TEST_EQ(
+        raii::default_constructor, value_type_cardinality * values2.size());
+      BOOST_TEST_EQ(raii::copy_constructor, 0u);
+      BOOST_TEST_GT(raii::move_constructor, 0u);
+    }
+  } insert_range_or_cvisit;
+#endif
+
   struct iterator_range_insert_and_cvisit_type
   {
     template <class T, class X> void operator()(std::vector<T>& values, X& x)
@@ -852,6 +920,55 @@ namespace {
     }
   } iterator_range_insert_and_cvisit;
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  struct insert_range_and_cvisit_type
+  {
+    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    {
+      static constexpr auto value_type_cardinality = 
+        value_cardinality<typename X::value_type>::value;
+
+      // concurrent_flat_set visit is always const access
+      using arg_type = typename std::conditional<
+        std::is_same<typename X::key_type, typename X::value_type>::value,
+        typename X::value_type const,
+        typename X::value_type
+      >::type;
+
+      std::vector<raii_convertible> values2;
+      values2.reserve(values.size());
+      for (auto const& v : values) {
+        values2.push_back(raii_convertible(v));
+      }
+
+      std::atomic<std::uint64_t> num_inserts{0};
+      std::atomic<std::uint64_t> num_invokes{0};
+      thread_runner(values2,
+        [&x, &num_inserts, &num_invokes](boost::span<raii_convertible> s) {
+          BOOST_TEST_EQ(x.insert_range_and_cvisit(
+                          s,
+                          [&num_inserts](arg_type& v) {
+                            (void)v;
+                            ++num_inserts;
+                          },
+                          [&num_invokes](typename X::value_type const& v) {
+                            (void)v;
+                            ++num_invokes;
+                          }),
+            s.size());
+        });
+
+      BOOST_TEST_EQ(num_inserts, x.size());
+      BOOST_TEST_EQ(num_invokes, values.size() - x.size());
+
+      BOOST_TEST_EQ(
+        raii::default_constructor, value_type_cardinality * values2.size());
+      BOOST_TEST_EQ(raii::copy_constructor, 0u);
+      BOOST_TEST_GT(raii::move_constructor, 0u);
+    }
+  } insert_range_and_cvisit;
+#endif
+
   struct iterator_range_insert_or_visit_type
   {
     template <class T, class X> void operator()(std::vector<T>& values, X& x)
@@ -898,6 +1015,48 @@ namespace {
       BOOST_TEST_GT(raii::move_constructor, 0u);
     }
   } iterator_range_insert_or_visit;
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  struct insert_range_or_visit_type
+  {
+    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    {
+      static constexpr auto value_type_cardinality = 
+        value_cardinality<typename X::value_type>::value;
+
+      // concurrent_flat_set visit is always const access
+      using arg_type = typename std::conditional<
+        std::is_same<typename X::key_type, typename X::value_type>::value,
+        typename X::value_type const,
+        typename X::value_type
+      >::type;
+
+      std::vector<raii_convertible> values2;
+      values2.reserve(values.size());
+      for (auto const& v : values) {
+        values2.push_back(raii_convertible(v));
+      }
+
+      std::atomic<std::uint64_t> num_invokes{0};
+      thread_runner(
+        values2, [&x, &num_invokes](boost::span<raii_convertible> s) {
+          BOOST_TEST_EQ(x.insert_range_or_visit(s,
+                          [&num_invokes](arg_type& v) {
+                            (void)v;
+                            ++num_invokes;
+                          }),
+            s.size());
+        });
+
+      BOOST_TEST_EQ(num_invokes, values.size() - x.size());
+
+      BOOST_TEST_EQ(
+        raii::default_constructor, value_type_cardinality * values2.size());
+      BOOST_TEST_EQ(raii::copy_constructor, 0u);
+      BOOST_TEST_GT(raii::move_constructor, 0u);
+    }
+  } insert_range_or_visit;
+#endif
 
   struct iterator_range_insert_and_visit_type
   {
@@ -952,6 +1111,55 @@ namespace {
       BOOST_TEST_GT(raii::move_constructor, 0u);
     }
   } iterator_range_insert_and_visit;
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  struct insert_range_and_visit_type
+  {
+    template <class T, class X> void operator()(std::vector<T>& values, X& x)
+    {
+      static constexpr auto value_type_cardinality = 
+        value_cardinality<typename X::value_type>::value;
+
+      // concurrent_flat_set visit is always const access
+      using arg_type = typename std::conditional<
+        std::is_same<typename X::key_type, typename X::value_type>::value,
+        typename X::value_type const,
+        typename X::value_type
+      >::type;
+
+      std::vector<raii_convertible> values2;
+      values2.reserve(values.size());
+      for (auto const& v : values) {
+        values2.push_back(raii_convertible(v));
+      }
+
+      std::atomic<std::uint64_t> num_inserts{0};
+      std::atomic<std::uint64_t> num_invokes{0};
+      thread_runner(values2,
+        [&x, &num_inserts, &num_invokes](boost::span<raii_convertible> s) {
+          BOOST_TEST_EQ(x.insert_range_and_visit(
+                          s,
+                          [&num_inserts](arg_type& v) {
+                            (void)v;
+                            ++num_inserts;
+                          },
+                          [&num_invokes](typename X::value_type const& v) {
+                            (void)v;
+                            ++num_invokes;
+                          }),
+            s.size());
+        });
+
+      BOOST_TEST_EQ(num_inserts, x.size());
+      BOOST_TEST_EQ(num_invokes, values.size() - x.size());
+
+      BOOST_TEST_EQ(
+        raii::default_constructor, value_type_cardinality * values2.size());
+      BOOST_TEST_EQ(raii::copy_constructor, 0u);
+      BOOST_TEST_GT(raii::move_constructor, 0u);
+    }
+  } insert_range_and_visit;
+#endif
 
   struct non_copyable_function
   {
@@ -1265,16 +1473,31 @@ UNORDERED_TEST(
   ((map_and_init_list)(node_map_and_init_list)
    (set_and_init_list)(node_set_and_init_list)))
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+#define RANGE_INSERTER (range_inserter)
+#define INSERT_RANGE_OR_CVISIT (insert_range_or_cvisit)
+#define INSERT_RANGE_OR_VISIT (insert_range_or_visit)
+#define INSERT_RANGE_AND_CVISIT (insert_range_and_cvisit)
+#define INSERT_RANGE_AND_VISIT (insert_range_and_visit)
+#else
+#define RANGE_INSERTER
+#define INSERT_RANGE_OR_CVISIT
+#define INSERT_RANGE_OR_VISIT
+#define INSERT_RANGE_AND_CVISIT
+#define INSERT_RANGE_AND_VISIT
+#endif
+
 UNORDERED_TEST(
   insert,
   ((map)(fancy_map)(node_map)(fancy_node_map)
    (set)(fancy_set)(node_set)(fancy_node_set))
   ((value_type_generator_factory)(init_type_generator_factory))
   ((lvalue_inserter)(rvalue_inserter)(iterator_range_inserter)
-   (norehash_lvalue_inserter)(norehash_rvalue_inserter)
+   RANGE_INSERTER (norehash_lvalue_inserter)(norehash_rvalue_inserter)
    (lvalue_insert_or_cvisit)(lvalue_insert_or_visit)
    (rvalue_insert_or_cvisit)(rvalue_insert_or_visit)
-   (iterator_range_insert_or_cvisit)(iterator_range_insert_or_visit))
+   (iterator_range_insert_or_cvisit)(iterator_range_insert_or_visit)
+   INSERT_RANGE_OR_CVISIT INSERT_RANGE_OR_VISIT )
   ((default_generator)(sequential)(limited_range)))
 
 UNORDERED_TEST(
@@ -1284,7 +1507,8 @@ UNORDERED_TEST(
   ((value_type_generator_factory)(init_type_generator_factory))
   ((lvalue_insert_and_cvisit)(lvalue_insert_and_visit)
    (rvalue_insert_and_cvisit)(rvalue_insert_and_visit)
-   (iterator_range_insert_and_cvisit)(iterator_range_insert_and_visit))
+   (iterator_range_insert_and_cvisit)(iterator_range_insert_and_visit)
+   INSERT_RANGE_AND_CVISIT INSERT_RANGE_AND_VISIT )
   ((default_generator)(sequential)(limited_range)))
 
  UNORDERED_TEST(

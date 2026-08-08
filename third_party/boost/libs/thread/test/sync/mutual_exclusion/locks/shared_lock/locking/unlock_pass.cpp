@@ -36,11 +36,11 @@ struct shared_mutex
   }
 };
 
-shared_mutex m;
+shared_mutex g_mutex;
 
 int main()
 {
-  boost::shared_lock<shared_mutex> lk(m);
+  boost::shared_lock<shared_mutex> lk(g_mutex);
   lk.unlock();
   BOOST_TEST(unlock_called == true);
   BOOST_TEST(lk.owns_lock() == false);

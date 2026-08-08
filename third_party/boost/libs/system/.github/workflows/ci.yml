@@ -17,25 +17,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: gcc-4.8
-            cxxstd: "11"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-4.8
-          - toolset: gcc-5
-            cxxstd: "11,14,1z"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-5
-          - toolset: gcc-6
-            cxxstd: "11,14,1z"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-6
           - toolset: gcc-7
             cxxstd: "11,14,17"
-            container: ubuntu:18.04
+            container: ubuntu:20.04
             os: ubuntu-latest
+            install: g++-7
           - toolset: gcc-8
             cxxstd: "11,14,17,2a"
             container: ubuntu:20.04
@@ -52,10 +38,12 @@ jobs:
             install: g++-10
           - toolset: gcc-11
             cxxstd: "11,14,17,2a"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
           - toolset: gcc-12
             cxxstd: "11,14,17,20,2b"
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: g++-12
           - toolset: gcc-13
             cxxstd: "11,14,17,20,2b"
@@ -69,27 +57,14 @@ jobs:
             install: g++-14
           - toolset: gcc-15
             cxxstd: "11,14,17,20,23,2c"
-            container: ubuntu:25.04
+            container: ubuntu:26.04
             os: ubuntu-latest
             install: g++-15
-          - toolset: clang
-            compiler: clang++-3.9
-            cxxstd: "11,14"
-            container: ubuntu:18.04
+          - toolset: gcc-16
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
             os: ubuntu-latest
-            install: clang-3.9
-          - toolset: clang
-            compiler: clang++-4.0
-            cxxstd: "11,14"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: clang-4.0
-          - toolset: clang
-            compiler: clang++-5.0
-            cxxstd: "11,14,1z"
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: clang-5.0
+            install: g++-16
           - toolset: clang
             compiler: clang++-6.0
             cxxstd: "11,14,17"
@@ -198,9 +173,16 @@ jobs:
             compiler: clang++-21
             cxxstd: "11,14,17,20,23,2c"
             stdlib: "native,libc++"
-            container: ubuntu:25.10
+            container: ubuntu:26.04
             os: ubuntu-latest
             install: clang-21 libc++-21-dev libc++abi-21-dev
+          - toolset: clang
+            compiler: clang++-22
+            cxxstd: "11,14,17,20,23,2c"
+            stdlib: "native,libc++"
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: clang-22 libc++-22-dev libc++abi-22-dev
           - toolset: clang
             cxxstd: "11,14,17,20,2b"
             os: macos-14
@@ -212,12 +194,7 @@ jobs:
             os: macos-26
 
     runs-on: ${{matrix.os}}
-
-    container:
-      image: ${{matrix.container}}
-      volumes:
-        - /node20217:/node20217:rw,rshared
-        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
+    container: ${{matrix.container}}
 
     defaults:
       run:
@@ -230,14 +207,7 @@ jobs:
           apt-get update
           apt-get -y install sudo python3 git g++ curl xz-utils
 
-      - name: Install nodejs20glibc2.17
-        if: ${{ startsWith( matrix.container, 'ubuntu:1' ) }}
-        run: |
-          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
-          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
-          ldd /__e/node20/bin/node
-
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -286,19 +256,23 @@ jobs:
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
             os: windows-2022
+          - toolset: msvc-14.5
+            cxxstd: "14,17,20,latest"
+            addrmd: 32,64
+            os: windows-2025-vs2026
           - toolset: clang-win
             cxxstd: "14,17,20,latest"
             addrmd: 32,64
-            os: windows-2022
+            os: windows-latest
           - toolset: gcc
             cxxstd: "11,14,17,2a"
             addrmd: 64
-            os: windows-2022
+            os: windows-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -339,7 +313,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -384,7 +358,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -439,7 +413,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -481,6 +455,57 @@ jobs:
           cd ../boost-root/__build__
           ctest --output-on-failure --no-tests=error
 
+  posix-cmake-use:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: macos-latest
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install packages
+        if: matrix.install
+        run: sudo apt-get -y install ${{matrix.install}}
+
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+          ./bootstrap.sh
+          ./b2 -d0 headers
+
+      - name: Install Boost --with-library
+        run: |
+          cd ../boost-root
+          ./b2 -j3 --with-$LIBRARY --prefix=$HOME/.local install
+
+      - name: Use the installed library
+        run: |
+          cd ../boost-root/libs/$LIBRARY/test/cmake_install_test && mkdir __build__ && cd __build__
+          cmake -DCMAKE_INSTALL_PREFIX=~/.local ..
+          cmake --build .
+          ctest --output-on-failure --no-tests=error
+
   windows-cmake-subdir:
     strategy:
       fail-fast: false
@@ -491,7 +516,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -539,7 +564,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -605,7 +630,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -656,4 +681,59 @@ jobs:
         shell: cmd
         run: |
           cd ../boost-root/__build__
+          ctest --output-on-failure --no-tests=error -C Release
+
+  windows-cmake-use:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+
+    runs-on: ${{matrix.os}}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          for /f %%i in ("%GITHUB_REPOSITORY%") do set LIBRARY=%%~nxi
+          echo LIBRARY: %LIBRARY%
+          echo LIBRARY=%LIBRARY%>>%GITHUB_ENV%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+          cmd /c bootstrap
+          b2 -d0 headers
+
+      - name: Install Boost --with-library
+        shell: cmd
+        run: |
+          cd ../boost-root
+          b2 -j3 --with-%LIBRARY% install
+
+      - name: Use the installed library (Debug)
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%/test/cmake_install_test && mkdir __build__ && cd __build__
+          cmake -DBoost_ROOT=C:/Boost ..
+          cmake --build . --config Debug
+          ctest --output-on-failure --no-tests=error -C Debug
+
+      - name: Use the installed library (Release)
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%/test/cmake_install_test/__build__
+          cmake --build . --config Release
           ctest --output-on-failure --no-tests=error -C Release

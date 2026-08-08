@@ -1,1 +1,7 @@
 = Reference
+
+The following pages describe the API provided by MSM's components. 
+
+== External references to MSM
+
+An interesting mapping UML <-> MSM from Takatoshi Kondo can be found at http://redboltz.wikidot.com/boost-msm-guide[Redboltz].

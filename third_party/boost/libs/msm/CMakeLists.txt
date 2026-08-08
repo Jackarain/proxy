@@ -7,10 +7,47 @@ cmake_minimum_required(VERSION 3.12...3.16)
 
 project(boost_msm VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
+option(BOOST_MSM_BUILD_MRDOCS "Build the target for MrDocs" OFF)
+option(BOOST_MSM_TEST_NLOHMANN_JSON "Test serialization with nlohmann/json" OFF)
+
 add_library(boost_msm INTERFACE)
 add_library(Boost::msm ALIAS boost_msm)
 
 target_include_directories(boost_msm INTERFACE include)
+
+set(BOOST_MSM_DEPENDENCIES
+  Boost::any
+  Boost::assert
+  Boost::bind
+  Boost::circular_buffer
+  Boost::config
+  Boost::core
+  Boost::function
+  Boost::fusion
+  Boost::mp11
+  Boost::mpl
+  Boost::parameter
+  Boost::phoenix
+  Boost::preprocessor
+  Boost::proto
+  Boost::serialization
+  Boost::tuple
+  Boost::type_traits
+  Boost::typeof)
+
+if(BOOST_MSM_BUILD_MRDOCS AND DEFINED ENV{BOOST_SRC_DIR})
+  set(BOOST_MSM_DEPENDENCIES_PLAIN "")
+  foreach(dep ${BOOST_MSM_DEPENDENCIES})
+    string(REPLACE "Boost::" "" dep_plain ${dep})
+    list(APPEND BOOST_MSM_DEPENDENCIES_PLAIN ${dep_plain})
+  endforeach()
+  set(BOOST_INCLUDE_LIBRARIES ${BOOST_MSM_DEPENDENCIES_PLAIN})
+  set(BOOST_EXCLUDE_LIBRARIES msm)
+  # Exclude MSM's dependencies from compile_commands.json to reduce MrDocs runtime.
+  set(CMAKE_EXPORT_COMPILE_COMMANDS OFF)
+  add_subdirectory($ENV{BOOST_SRC_DIR} deps_/boost EXCLUDE_FROM_ALL)
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(BOOST_MSM_IS_ROOT ON)
@@ -18,28 +55,8 @@ else()
     set(BOOST_MSM_IS_ROOT OFF)
 endif()
 
-if(NOT BOOST_MSM_IS_ROOT)
-  target_link_libraries(boost_msm
-    INTERFACE
-      Boost::any
-      Boost::assert
-      Boost::bind
-      Boost::circular_buffer
-      Boost::config
-      Boost::core
-      Boost::function
-      Boost::fusion
-      Boost::mp11
-      Boost::mpl
-      Boost::parameter
-      Boost::phoenix
-      Boost::preprocessor
-      Boost::proto
-      Boost::serialization
-      Boost::tuple
-      Boost::type_traits
-      Boost::typeof
-  )
+if(NOT BOOST_MSM_IS_ROOT OR (BOOST_MSM_BUILD_MRDOCS AND DEFINED ENV{BOOST_SRC_DIR}))
+  target_link_libraries(boost_msm INTERFACE ${BOOST_MSM_DEPENDENCIES})
 else()
   # Boost 1.66 is the first version with Mp11
   find_package(Boost 1.66 REQUIRED COMPONENTS serialization)
@@ -49,4 +66,9 @@ endif()
 if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
   enable_testing()
   add_subdirectory(test)
+endif()
+
+if(BOOST_MSM_BUILD_MRDOCS)
+  add_library(boost_msm_mrdocs ${CMAKE_CURRENT_SOURCE_DIR}/doc/mrdocs.cpp)
+  target_link_libraries(boost_msm_mrdocs boost_msm)
 endif()

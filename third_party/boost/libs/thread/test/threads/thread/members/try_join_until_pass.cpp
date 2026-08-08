@@ -22,6 +22,7 @@
 #include <boost/thread/thread_only.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
+#include <boost/thread/barrier.hpp>
 #include <new>
 #include <cstdlib>
 #include <cassert>
@@ -32,15 +33,23 @@
 
 class G
 {
+  boost::barrier* bar_;
   int alive_;
 public:
   static bool op_run;
 
   G() :
+    bar_(nullptr),
+    alive_(1)
+  {
+  }
+  explicit G(boost::barrier& bar) :
+    bar_(&bar),
     alive_(1)
   {
   }
   G(const G& g) :
+    bar_(g.bar_),
     alive_(g.alive_)
   {
   }
@@ -52,6 +61,8 @@ public:
   void operator()()
   {
     BOOST_TEST(alive_ == 1);
+    if (bar_)
+      bar_->count_down_and_wait();
     op_run = true;
   }
 };
@@ -87,9 +98,11 @@ void th_250_ms()
 int main()
 {
   {
-    boost::thread t0( (G()));
+    boost::barrier bar(2u);
+    boost::thread t0( (G(bar)));
     BOOST_TEST(t0.joinable());
-    t0.try_join_until(boost::chrono::steady_clock::now()+boost::chrono::milliseconds(250));
+    bar.count_down_and_wait();
+    t0.try_join_until(boost::chrono::steady_clock::now()+boost::chrono::milliseconds(500));
     BOOST_TEST(!t0.joinable());
   }
   {
@@ -124,8 +137,10 @@ int main()
     }
   }
   {
-    boost::thread t0( (G()));
+    boost::barrier bar(2u);
+    boost::thread t0( (G(bar)));
     BOOST_TEST(t0.joinable());
+    bar.count_down_and_wait();
     t0.join();
     try
     {
@@ -139,9 +154,11 @@ int main()
 
   }
   {
-    boost::thread t0( (G()));
+    boost::barrier bar(2u);
+    boost::thread t0( (G(bar)));
     BOOST_TEST(t0.joinable());
-    t0.try_join_until(boost::chrono::steady_clock::now()+boost::chrono::milliseconds(250));
+    bar.count_down_and_wait();
+    t0.try_join_until(boost::chrono::steady_clock::now()+boost::chrono::milliseconds(500));
     try
     {
       t0.join();

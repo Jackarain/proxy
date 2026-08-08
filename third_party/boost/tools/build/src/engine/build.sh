@@ -65,7 +65,7 @@ You can specify the toolset as the argument, i.e.:
     ./build.sh [options] gcc
 
 Toolsets supported by this script are:
-    acc, clang, como, gcc, ibmcxx-clang, intel-darwin, intel-linux,
+    acc, clang, como, filc, gcc, ibmcxx-clang, intel-darwin, intel-linux,
     kcc, kylix, mipspro, pathscale, pgi, qcc, sun, sunpro, tru64cxx
 
 For any toolset you can override the path to the compiler with the '--cxx'
@@ -238,6 +238,8 @@ check_toolset ()
     if test_toolset acc && test_compiler aCC -AA ; then B2_TOOLSET=acc ; return ${TRUE} ; fi
     # Sun Pro C++ (sunpro)
     if test_toolset sunpro && test_compiler /opt/SUNWspro/bin/CC -std=c++11 ; then B2_TOOLSET=sunpro ; return ${TRUE} ; fi
+    # Fil-C
+    if test_toolset filc && test_compiler /opt/fil/bin/fil++ -std=c++11 ; then B2_TOOLSET=filc ; return ${TRUE} ; fi
     # Generic (cxx)
     if test_toolset cxx && test_compiler cxx ; then B2_TOOLSET=cxx ; return ${TRUE} ; fi
     if test_toolset cxx && test_compiler c++ ; then B2_TOOLSET=cxx ; return ${TRUE} ; fi
@@ -400,6 +402,12 @@ case "${B2_TOOLSET}" in
         CXX_VERSION_OPT=${CXX_VERSION_OPT:---version}
     ;;
 
+    filc)
+        CXX_VERSION_OPT=${CXX_VERSION_OPT:---version}
+        B2_CXXFLAGS_RELEASE="-O3 -s -Wno-deprecated-declarations"
+        B2_CXXFLAGS_DEBUG="-O0 -fno-inline -g -Wno-deprecated-declarations"
+    ;;
+
     *)
         error_exit "Unknown toolset: ${B2_TOOLSET}"
     ;;
@@ -443,7 +451,6 @@ function.cpp \
 glob.cpp \
 hash.cpp \
 hcache.cpp \
-hdrmacro.cpp \
 headers.cpp \
 jam_strings.cpp \
 jam.cpp \
@@ -452,9 +459,9 @@ lists.cpp \
 make.cpp \
 make1.cpp \
 md5.cpp \
-mem.cpp \
 modules.cpp \
 native.cpp \
+outerr.cpp \
 output.cpp \
 parse.cpp \
 pathnt.cpp \

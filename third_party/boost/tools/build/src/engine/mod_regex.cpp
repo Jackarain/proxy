@@ -8,11 +8,13 @@ Distributed under the Boost Software License, Version 1.0.
 
 #include "filesys.h"
 #include "mem.h"
+#include "pathsys.h"
 #include "regexp.h"
 #include "tasks.h"
 
 #include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -90,7 +92,7 @@ list_ref b2::regex_match(
 		else
 		{
 			for (int_t index = 1;
-				 index < NSUBEXP && re_i[index].end() != nullptr; ++index)
+				index < NSUBEXP && re_i[index].end() != nullptr; ++index)
 				result.push_back(re_i[index].begin(), re_i[index].end());
 		}
 	}
@@ -110,8 +112,7 @@ list_ref b2::regex_transform(
 				for (int_t index : indices)
 				{
 					if (index < NSUBEXP && re_i[index].end() != nullptr)
-						result.push_back(
-							re_i[index].begin(), re_i[index].end());
+						result.push_back(re_i[index].begin(), re_i[index].end());
 				}
 		}
 	}
@@ -127,18 +128,23 @@ list_ref b2::regex_transform(
 	return result;
 }
 
-value_ref b2::regex_escape(
-	value_ref string, value_ref symbols, value_ref escape_symbol)
+list_ref b2::regex_escape(
+	list_cref strings, value_ref symbols, value_ref escape_symbol)
 {
-	string_t result = string;
-	string_t::size_type i = 0;
-	for (i = result.find_first_of(symbols, i); i != string_t::npos;
-		 i = result.find_first_of(symbols, i))
+	list_ref result;
+	for (auto string : strings)
 	{
-		result.insert(i, escape_symbol);
-		i += escape_symbol->as_string().size + 1;
+		string_t s = string->str();
+		string_t::size_type i = 0;
+		for (i = s.find_first_of(symbols->str(), i); i != string_t::npos;
+			i = s.find_first_of(symbols->str(), i))
+		{
+			s.insert(i, escape_symbol);
+			i += escape_symbol->as_string().size() + 1;
+		}
+		result.push_back(s);
 	}
-	return value_ref(result);
+	return result;
 }
 
 namespace b2 { namespace {
@@ -164,8 +170,8 @@ string_t regex_replace(
 }
 }} // namespace b2
 
-value_ref b2::regex_replace(const std::tuple<value_ref, value_ref, value_ref> &
-		string_match_replacement)
+value_ref b2::regex_replace(
+	const std::tuple<value_ref, value_ref, value_ref> & string_match_replacement)
 {
 	value_ref string = std::get<0>(string_match_replacement);
 	auto re = program(std::get<1>(string_match_replacement)->str());
@@ -242,10 +248,8 @@ struct regex_grep_task
 		});
 	}
 
-	static void dirscan_callback(regex_grep_task * self,
-		OBJECT * path,
-		int found,
-		timestamp const * const)
+	static void dirscan_callback(
+		regex_grep_task * self, OBJECT * path, int found, timestamp const * const)
 	{
 		self->dirscan_file(path);
 	}
@@ -350,8 +354,9 @@ list_ref b2::regex_grep(list_cref directories,
 	for (auto glob : files)
 	{
 		std::string g(glob->str());
-		std::transform(g.begin(), g.end(), g.begin(),
-			[](unsigned char c) { return std::tolower(c); });
+		std::transform(g.begin(), g.end(), g.begin(), [](unsigned char c) {
+			return std::tolower(c);
+		});
 		globs.push_back(value_ref(g));
 	}
 

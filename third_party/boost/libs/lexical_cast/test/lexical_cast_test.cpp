@@ -19,8 +19,6 @@
 //
 #define _SCL_SECURE_NO_WARNINGS
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/cstdint.hpp>
 
 #include <boost/core/lightweight_test.hpp>
@@ -30,6 +28,8 @@
 #include <vector>
 #include <algorithm> // std::transform
 #include <memory>
+
+#include <boost/lexical_cast.hpp>
 
 #if (defined(BOOST_HAS_LONG_LONG) || defined(BOOST_HAS_MS_INT64)) \
     && !(defined(BOOST_MSVC) && BOOST_MSVC < 1300)
@@ -528,7 +528,9 @@ void test_char16_conversions()
 // There's no std::ctype<char16_t> in Xcode_15.0.1
 #if !defined(BOOST_NO_CXX11_CHAR16_T) && !defined(BOOST_NO_CXX11_UNICODE_LITERALS) && !defined(__APPLE__)
     BOOST_TEST(u"100" == lexical_cast<std::u16string>(u"100"));
+#if !defined(_LIBCPP_VERSION) // libc++ also does not have std::ctype<char16_t>
     BOOST_TEST(u"1" == lexical_cast<std::u16string>(u'1'));
+#endif
 #endif
 }
 
@@ -537,7 +539,9 @@ void test_char32_conversions()
 // There's no std::ctype<char32_t> in Xcode_15.0.1
 #if !defined(BOOST_NO_CXX11_CHAR32_T) && !defined(BOOST_NO_CXX11_UNICODE_LITERALS) && !defined(__APPLE__)
     BOOST_TEST(U"100" == lexical_cast<std::u32string>(U"100"));
+#if !defined(_LIBCPP_VERSION) // libc++ also does not have std::ctype<char32_t>
     BOOST_TEST(U"1" == lexical_cast<std::u32string>(U'1'));
+#endif
 #endif
 }
 

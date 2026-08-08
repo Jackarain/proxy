@@ -91,7 +91,7 @@ lib b : : <name>b <search>/pool/debug ;
 ----
 
 If /pool/release/a.so, /pool/release/b.so, /pool/debug/a.so, and
-/pool/release/b.so all exist, the linker will probably take both `a` and
+/pool/debug/b.so all exist, the linker will probably take both `a` and
 `b` from the same directory, instead of finding `a` in /pool/release and
 `b` in /pool/debug. If you need to distinguish between multiple
 libraries with the same name, it's safer to use `file`.
@@ -738,7 +738,7 @@ B2 supports automatic searching for referenced global projects. For example,
 if you have references to `/boost/predef` with some minimal configuration B2
 can find the B2 project for it and automatically resolve the reference. The
 searching supports two modes: finding regular B2 project directories, and
-package/config style loading of single jam files.
+package/config style loading of single Jam files.
 
 [[b2.tasks.projectsearch.path]]
 === Search Path
@@ -774,7 +774,7 @@ Regardless of how the search path is specified, how the search happens is the
 same. Searching involves either searching for a B2 project directory, i.e.
 a directory containing a jamfile, or searching for a specially named `*.jam`
 file to include (similar to how the <<Package Managers>> support includes
-jam files).
+Jam files).
 
 For a given _project-id_ of the form `/d1/d2/../dn` we search for the following,
 in this order:

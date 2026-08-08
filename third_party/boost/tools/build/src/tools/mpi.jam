@@ -104,7 +104,7 @@ rule add_feature ( prefix name cmdline )
 # result.
 rule strip-eol ( string )
 {
-  local match = [ MATCH "^(([A-Za-z0-9~`\.!@#$%^&*()_+={};:'\",.<>/?\\| -]|[|])*).*$" : $(string) ] ;
+  local match = [ MATCH "^([^\r\n]*)" : $(string) ] ;
 
   if $(match)
   {
@@ -123,7 +123,7 @@ rule strip-eol ( string )
 # using the features in the unknown-features parameter, because we
 # don't know how to deal with them. For instance, if your compile and
 # correct. The incoming command line should be a string starting with
-# an executable (e.g., g++ -I/include/path") and may contain any
+# an executable (e.g., g++ -I/include/path) and may contain any
 # number of command-line arguments thereafter. The result is a list of
 # features corresponding to the given command line, ignoring the
 # executable.
@@ -232,7 +232,7 @@ rule cmdline_to_features ( cmdline : unknown-features ? )
 local rule safe-shell-command ( cmdline )
 {
   local result = [ SHELL "$(cmdline) > /dev/null 2>/dev/null; if [ "$?" -eq "0" ]; then echo SSCOK; fi" ] ;
-  return [ MATCH ".*(SSCOK).*" : $(result) ] ;
+  return [ MATCH (SSCOK) : $(result) ] ;
 }
 
 # Initialize the MPI module.
@@ -440,7 +440,7 @@ rule init ( mpicxx ? : options * : mpirun-with-options * )
 
         #
         compile_flags = [ SHELL "$(command) -c -v 2>/dev/null" ] ;
-        compile_flags = [ MATCH "(.*)exec: export.*" : $(compile_flags) ] ;
+        compile_flags = [ MATCH "(.*)exec: export" : $(compile_flags) ] ;
         local front = [ MATCH "(.*)-v" :  $(compile_flags) ] ;
         local back = [ MATCH "-v(.*)" :  $(compile_flags) ] ;
         compile_flags = "$(front) $(back)" ;
@@ -451,7 +451,7 @@ rule init ( mpicxx ? : options * : mpirun-with-options * )
 
         # get location of mpif.h from mpxlf
         local f_flags = [ SHELL "mpxlf -v 2>/dev/null" ] ;
-        f_flags = [ MATCH "(.*)exec: export.*" : $(f_flags) ] ;
+        f_flags = [ MATCH "(.*)exec: export" : $(f_flags) ] ;
         front = [ MATCH "(.*)-v" :  $(f_flags) ] ;
         back = [ MATCH "-v(.*)" :  $(f_flags) ] ;
         f_flags = "$(front) $(back)" ;
@@ -503,10 +503,10 @@ rule init ( mpicxx ? : options * : mpirun-with-options * )
         }
         else
         {
-	  local match = [ MATCH "^([^\" ]+|\"[^\"]+\") *(.*)$"
+          local match = [ MATCH "^([^\" ]+|\"[^\"]+\") *(.*)$"
                                 : $(compile_flags) ] ;
           ECHO "MPI compilation flags: $(match[2])" ;
-	  local match = [ MATCH "^([^\" ]+|\"[^\"]+\") *(.*)$"
+          local match = [ MATCH "^([^\" ]+|\"[^\"]+\") *(.*)$"
                                 : $(link_flags) ] ;
           ECHO "MPI link flags: $(match[2])" ;
         }

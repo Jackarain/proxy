@@ -240,7 +240,7 @@ rule init ( version ? :  command * : options * )
         local command-string = [ common.make-command-string $(command) ] ;
         local soutput = [ SHELL "$(command-string) --version" ] ;
         version ?= [ MATCH "Embarcadero C[+][+] ([0-9.]+)" : $(soutput) ] ;
-        cl_version = [ MATCH ".+version[ ]+([0-9.]+)" : $(soutput) ] ;
+        cl_version = [ MATCH "version +([0-9.]+)" : $(soutput) ] ;
         if ! $(cl_version)
             {
             cl_version = 5.0 ;
@@ -447,8 +447,8 @@ local rule concatenate ( path : name )
     {
 
     local result ;
-    local has_ending_slash = [ MATCH ".*([/\\])$" : $(path) ] ;
-    local has_backward_slash = [ MATCH ".*([\\])" : $(path) ] ;
+    local has_ending_slash = [ MATCH "([/\\])$" : $(path) ] ;
+    local has_backward_slash = [ MATCH "([\\])" : $(path) ] ;
 
     if $(has_ending_slash)
         {

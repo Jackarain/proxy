@@ -1,0 +1,38 @@
+# Copyright René Ferdinand Rivera Morell 2023-2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/assert//boost_assert
+    /boost/concept_check//boost_concept_check
+    /boost/config//boost_config
+    /boost/container//boost_container
+    /boost/core//boost_core
+    /boost/date_time//boost_date_time
+    /boost/detail//boost_detail
+    /boost/iterator//boost_iterator
+    /boost/move//boost_move
+    /boost/mpl//boost_mpl
+    /boost/range//boost_range
+    /boost/rational//boost_rational
+    /boost/type_traits//boost_type_traits
+    /boost/utility//boost_utility ;
+
+project /boost/icl
+    ;
+
+explicit
+    [ alias boost_icl : : :
+        : <include>include <library>$(boost_dependencies) ]
+    [ alias all : boost_icl
+        example example/boost_party_ example/custom_interval_
+        example/partys_height_average_ example/partys_tallest_guests_
+        test ]
+    ;
+
+call-if : boost-library icl
+    ;
+

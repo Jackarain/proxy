@@ -27,6 +27,7 @@ div.source-docs-antora.boostlook {
   overflow: hidden;
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .boostlook#boost-legacy-docs-wrapper > #header,
@@ -75,7 +76,7 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) {
   color: var(--text-main-text-primary, #18191b);
   font-size: var(--typography-font-size-2xl, 1.75rem);
   font-style: normal;
-  font-variation-settings: "wght" 500, "wdth" 80;
+  font-variation-settings: "wght" 500, "wdth" 87.5;
   line-height: var(--typography-line-height-3xl, 2.5rem);
   letter-spacing: var(--spacing-size-size-0, 0rem);
   margin: 0;
@@ -96,7 +97,7 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #conte
   color: var(--text-main-text-primary, #18191b);
   font-size: var(--typography-font-size-lg, 1.25rem);
   font-style: normal;
-  font-variation-settings: "wght" 500, "wdth" 80;
+  font-variation-settings: "wght" 500, "wdth" 87.5;
   line-height: var(--typography-line-height-xl, 1.75rem);
   letter-spacing: var(--spacing-size-size-0, 0rem);
 }
@@ -196,7 +197,7 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #cont
 /* Table of Contents */
 .boostlook:not(:has(.doc)) div.toc {
   color: var(--text-main-text-body-secondary, #494d50);
-  font-family: var(--font-family-body, "Noto Sans");
+  font-family: var(--font-family-body, "Mona Sans");
   font-size: var(--typography-font-size-xs, 0.875rem);
   font-style: normal;
   line-height: var(--typography-line-height-md, 1.25rem);
@@ -211,7 +212,7 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) > #cont
   padding: var(--spacing-size-3xs, 0.25rem);
   color: var(--text-main-text-primary, #18191b);
   font-size: var(--typography-font-size-2xs, 0.75rem);
-  font-variation-settings: "wght" 600, "wdth" 80;
+  font-variation-settings: "wght" 600, "wdth" 87.5;
   line-height: var(--typography-line-height-sm, 1rem); /* 133.333% */
   letter-spacing: var(--spacing-size-size-0, 0rem);
 }
@@ -259,6 +260,18 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) div.spi
 /* Content Blocks */
 .boostlook:not(:has(.doc)) .inlinemediaobject:has(> img):first-child:last-child {
   margin: var(--padding-padding-xs, 0.75rem) 0;
+}
+
+.boostlook :is(h1, h2, h3, h4, h5) code,
+.boostlook .doc :is(h1, h2, h3, h4, h5) code {
+  background: transparent !important;
+  border: none;
+  font-size: 0.85em;
+  font-weight: 400;
+  color: inherit;
+  padding: 0;
+  display: initial;
+  transition: none;
 }
 
 .boostlook:not(:has(.doc)) a:is(h1 a, h2 a, h3 a, h4 a, h5 a) code {
@@ -339,7 +352,7 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) div.spi
   color: var(--text-main-text-primary, #18191b);
   font-size: var(--typography-font-size-md, 1.125rem);
   font-style: normal;
-  font-variation-settings: "wght" 500, "wdth" 80;
+  font-variation-settings: "wght" 500, "wdth" 87.5;
   line-height: var(--typography-line-height-xl, 1.75rem); /* 155.556% */
   letter-spacing: var(--spacing-size-size-0, 0rem);
 }
@@ -369,7 +382,7 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) div.spi
   color: var(--text-main-text-body-tetriary, #62676b);
   font-size: var(--typography-font-size-xs, 0.875rem);
   font-style: normal;
-  font-variation-settings: "wght" 500, "wdth" 80;
+  font-variation-settings: "wght" 500, "wdth" 87.5;
   line-height: var(--typography-line-height-lg, 1.5rem); /* 171.429% */
   letter-spacing: var(--spacing-size-size-0, 0rem);
 }
@@ -409,7 +422,7 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(> .boostlook)) div.spi
 .boostlook:not(:has(.doc)) .copyright-footer {
   color: var(--text-main-text-body-quaternary, #949a9e);
   font-size: var(--typography-font-size-xs);
-  font-variation-settings: "wght" 500, "wdth" 80;
+  font-variation-settings: "wght" 500, "wdth" 87.5;
   line-height: var(--typography-line-height-sm, 1rem);
   letter-spacing: var(--spacing-size-size-0, 0rem);
   text-align: left;

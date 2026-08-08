@@ -526,7 +526,12 @@ void test_push_consumer()
          if (ec) {
             BOOST_TEST_EQ(ec, net::error::operation_aborted);
             push_consumer_finished = true;
-            resp.clear();
+            return;
+         } else if (!conn.will_reconnect()) {
+            // The connection might be cancelled after async_receive2 is scheduled
+            // for completion, but before the callback is called. An equivalent clause
+            // is also present in the examples.
+            push_consumer_finished = true;
             return;
          }
          launch_push_consumer();

@@ -205,7 +205,7 @@
 <!ELEMENT type ANY>
 <!ATTLIST type %boost.common.attrib;>
 
-<!ELEMENT typedef (type, purpose?, description?)>
+<!ELEMENT typedef (template?, type, purpose?, description?)>
 <!ATTLIST typedef
     name     CDATA  #REQUIRED
     %boost.common.attrib;>

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////
-//  Copyright Christopher Kormanyos 2024 - 2025.
+//  Copyright Christopher Kormanyos 2024 - 2026.
 //  Distributed under the Boost
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt
@@ -120,11 +120,9 @@ private:
 namespace util {
 
 template<typename UnsignedIntegralType>
-auto util_pseudorandom_time_point_seed() -> UnsignedIntegralType
+auto util_fixed_seed() -> UnsignedIntegralType
 {
-  using stopwatch_type = concurrency::stopwatch;
-
-  return static_cast<UnsignedIntegralType>(stopwatch_type::now());
+  return UnsignedIntegralType { UINT8_C(42) };
 }
 
 } // namespace util
@@ -192,8 +190,6 @@ auto do_trials(const std::size_t trial_count) -> void
   static std::size_t heat_count { };
   static std::size_t total_count { };
 
-  std::cout << "\nheat_count: " << ++heat_count << std::endl;
-
   using dbl_float_type = boost::multiprecision::cpp_double_double;
 
   constexpr int local_digits10 = ((std::numeric_limits<dbl_float_type>::digits10 < 32) ? 32 : std::numeric_limits<dbl_float_type>::digits10);
@@ -222,8 +218,8 @@ auto do_trials(const std::size_t trial_count) -> void
   {
     if(std::size_t { total_count % unsigned { UINT32_C(0x1000) } } == std::size_t { UINT8_C(0) })
     {
-      eng_sgn.seed(util::util_pseudorandom_time_point_seed<typename eng_sgn_type::result_type>());
-      eng_dig.seed(util::util_pseudorandom_time_point_seed<typename eng_dig_type::result_type>());
+      eng_sgn.seed(util::util_fixed_seed<typename eng_sgn_type::result_type>());
+      eng_dig.seed(util::util_fixed_seed<typename eng_dig_type::result_type>());
     }
 
     ++total_count;
@@ -321,27 +317,18 @@ auto do_trials(const std::size_t trial_count) -> void
   const double elapsed_flt { stopwatch_type::elapsed_time<double>(my_stopwatch) };
   #endif
 
-  std::stringstream strm { };
-
-  strm << std::fixed << std::setprecision(3) << "elapsed_dbl     : " << elapsed_dbl << "s\n"
-       << std::fixed << std::setprecision(3) << "elapsed_dec     : " << elapsed_dec << "s\n"
-       << std::fixed << std::setprecision(3) << "elapsed_bin     : " << elapsed_bin << "s\n"
-  #if defined(BOOST_HAS_FLOAT128)
-       << std::fixed << std::setprecision(3) << "elapsed_flt     : " << elapsed_flt << "s\n"
-  #endif
-       << std::fixed << std::setprecision(3) << "ratio (dec/dbl) : " << elapsed_dec / elapsed_dbl << "\n"
-       << std::fixed << std::setprecision(3) << "ratio (bin/dbl) : " << elapsed_bin / elapsed_dbl << "\n"
-  #if defined(BOOST_HAS_FLOAT128)
-       << std::fixed << std::setprecision(3) << "ratio (flt/dbl) : " << elapsed_flt / elapsed_dbl << "\n"
-  #endif
-    ;
-
   BOOST_TEST(elapsed_dec / elapsed_dbl > 1.0);
   BOOST_TEST(elapsed_bin / elapsed_dbl > 1.0);
 
-  std::cout << strm.str() << std::endl;
-
-  std::cout << "verifying results...\n";
+  #if 0
+  std::cout <<   "elapsed_dec: " << elapsed_dec
+            << ", elapsed_bin: " << elapsed_bin
+            << ", elapsed_dbl: " << elapsed_dbl
+            << ", elapsed_dec / elapsed_dbl: " << elapsed_dec / elapsed_dbl
+            << ", elapsed_bin / elapsed_dbl: " << elapsed_bin / elapsed_dbl
+            << std::endl
+            ;
+  #endif
 
   std::size_t count { UINT8_C(0) };
 
@@ -355,19 +342,32 @@ auto do_trials(const std::size_t trial_count) -> void
     const dbl_float_type ctrl_flt { flt_float_c_vec[count] };
     #endif
 
-    BOOST_TEST(is_close_fraction(lhs, ctrl_dec, tol_dbl));
-    BOOST_TEST(is_close_fraction(lhs, ctrl_bin, tol_dbl));
+    const bool result_dec_is_ok { is_close_fraction(lhs, ctrl_dec, tol_dbl) };
+    const bool result_bin_is_ok { is_close_fraction(lhs, ctrl_bin, tol_dbl) };
     #if defined(BOOST_HAS_FLOAT128)
-    BOOST_TEST(is_close_fraction(lhs, ctrl_flt, tol_dbl));
+    const bool result_flt_is_ok { is_close_fraction(lhs, ctrl_flt, tol_dbl) };
+    #endif
+
+    BOOST_TEST(result_dec_is_ok);
+    if(!result_dec_is_ok) { std::stringstream strm { }; strm << std::setprecision(local_digits10) << "expected: " << ctrl_dec << ", got: " << lhs << ", a: " << dec_float_a_vec.at(count) << ", b: " << dec_float_b_vec.at(count); std::cout << strm.str() << std::endl; }
+
+    BOOST_TEST(result_bin_is_ok);
+    if(!result_bin_is_ok) { std::stringstream strm { }; strm << std::setprecision(local_digits10) << "expected: " << ctrl_bin << ", got: " << lhs << ", a: " << bin_float_a_vec.at(count) << ", b: " << bin_float_b_vec.at(count); std::cout << strm.str() << std::endl; }
+
+    #if defined(BOOST_HAS_FLOAT128)
+    BOOST_TEST(result_flt_is_ok);
+    if(!result_flt_is_ok) { std::stringstream strm { }; strm << std::setprecision(local_digits10) << "expected: " << ctrl_flt << ", got: " << lhs << ", a: " << flt_float_a_vec.at(count) << ", b: " << flt_float_b_vec.at(count); std::cout << strm.str() << std::endl; }
     #endif
 
     ++count;
   }
 }
 
+auto main() -> int;
+
 auto main() -> int
 {
-  constexpr std::size_t trials { UINT32_C(0x4000) };
+  constexpr std::size_t trials { UINT32_C(0x400) };
   constexpr std::size_t heats { UINT32_C(0x4) };
 
   for(std::size_t heat_count { UINT8_C(0) }; heat_count < heats; ++heat_count)

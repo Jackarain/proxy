@@ -35,7 +35,7 @@ Jam:: `rule new ( class args * : * )`
 & rest, bind::context_ref_ context_ref)`
 ====
 
-Instantiates a new instance of the given class and calls the `__init__` with
+Instantiates a new instance of the given class and calls the `\\__init__` with
 the given arguments. Returns the instance ID.
 
 end::reference[] */

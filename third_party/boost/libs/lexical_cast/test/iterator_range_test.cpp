@@ -9,11 +9,11 @@
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt).
 
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/range/iterator_range.hpp>
 
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 using namespace boost;
 
@@ -136,7 +136,7 @@ void test_it_range_using_char(CharT* one, CharT* eleven)
 #endif
     BOOST_TEST_EQ(lexical_cast<class_with_user_defined_sream_operators>(crng2), 1);
 
-#ifndef BOOST_LCAST_NO_WCHAR_T
+#if !defined(BOOST_LCAST_NO_WCHAR_T) && !defined(_LIBCPP_VERSION)
     BOOST_TEST(lexical_cast<std::wstring>(rng1) == L"1");
     BOOST_TEST(lexical_cast<std::wstring>(crng1) == L"1");
     BOOST_TEST(lexical_cast<std::wstring>(rng2) == L"1");
@@ -191,7 +191,7 @@ void test_signed_char_iterator_ranges()
 
 void test_wchar_iterator_ranges()
 {
-#ifndef BOOST_LCAST_NO_WCHAR_T
+#if !defined(BOOST_LCAST_NO_WCHAR_T) && !defined(_LIBCPP_VERSION)
     typedef wchar_t test_char_type;
     test_char_type data1[] = L"1";
     test_char_type data2[] = L"11";

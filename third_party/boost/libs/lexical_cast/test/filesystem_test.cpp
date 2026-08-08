@@ -10,10 +10,10 @@
 //
 // Test lexical_cast usage with long filesystem::path. Bug 7704.
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/core/lightweight_test.hpp>
 #include <boost/filesystem/path.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 void test_filesystem()
 {

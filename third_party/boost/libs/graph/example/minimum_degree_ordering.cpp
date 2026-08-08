@@ -42,7 +42,6 @@ struct harwell_boeing
 {
     harwell_boeing(char* filename)
     {
-        int Nrhs;
         char* Type;
         Type = new char[4];
         isComplex = false;
@@ -118,7 +117,7 @@ int main(int argc, char* argv[])
     harwell_boeing hbs(argv[1]);
 
     // must be BGL directed graph now
-    typedef adjacency_list< vecS, vecS, directedS > Graph;
+    using Graph = adjacency_list< vecS, vecS, directedS >;
 
     int n = hbs.nrows();
 
@@ -139,7 +138,7 @@ int main(int argc, char* argv[])
 
     cout << "number of off-diagnal elements: " << num_edge << endl;
 
-    typedef std::vector< int > Vector;
+    using Vector = std::vector< int >;
 
     Vector inverse_perm(n, 0);
     Vector perm(n, 0);

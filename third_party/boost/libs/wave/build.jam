@@ -22,7 +22,6 @@ constant boost_dependencies :
     /boost/serialization//boost_serialization
     /boost/smart_ptr//boost_smart_ptr
     /boost/spirit//boost_spirit
-    /boost/static_assert//boost_static_assert
     /boost/throw_exception//boost_throw_exception
     /boost/type_traits//boost_type_traits ;
 

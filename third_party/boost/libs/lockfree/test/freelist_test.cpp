@@ -36,6 +36,14 @@ struct dummy
         allocated = 1;
     }
 
+    template < typename TagT >
+    dummy( TagT /*tag*/ )
+    {
+        if ( test_running.load( boost::lockfree::detail::memory_order_relaxed ) )
+            assert( allocated == 0 );
+        allocated = 1;
+    }
+
     ~dummy( void )
     {
         if ( test_running.load( boost::lockfree::detail::memory_order_relaxed ) )
@@ -77,6 +85,9 @@ void run_test( void )
     for ( int i = 0; i != 4; ++i )
         nodes.insert( fl.template construct< threadsafe, bounded >() );
 
+    for ( dummy* d : nodes )
+        fl.template destruct< threadsafe >( d );
+
     if ( bounded )
         test_running.store( false );
 }
@@ -101,11 +112,18 @@ void oom_test( void )
     const bool    bounded = true;
     freelist_type fl( std::allocator< int >(), 8 );
 
-    for ( int i = 0; i != 8; ++i )
-        fl.template construct< threadsafe, bounded >();
+    std::vector< dummy* > allocated_nodes;
+    for ( int i = 0; i != 8; ++i ) {
+        dummy* node = fl.template construct< threadsafe, bounded >();
+        allocated_nodes.push_back( node );
+    }
 
     dummy* allocated = fl.template construct< threadsafe, bounded >();
     BOOST_TEST_REQUIRE( allocated == (dummy*)NULL );
+
+    // Clean up allocated nodes
+    for ( dummy* node : allocated_nodes )
+        fl.template destruct< threadsafe >( node );
 }
 
 BOOST_AUTO_TEST_CASE( oom_tests )
@@ -139,6 +157,16 @@ struct freelist_tester
         fl( std::allocator< int >(), size ),
         allocated_nodes( 256 )
     {}
+
+    ~freelist_tester( void )
+    {
+        // Drain remaining nodes on abnormal exit (e.g., test abort, sanitizer stop)
+        dummy* node;
+        while ( allocated_nodes.pop( node ) ) {
+            working_set.erase( node );
+            fl.template destruct< true >( node );
+        }
+    }
 
     void run()
     {

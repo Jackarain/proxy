@@ -7,10 +7,8 @@
 #include <boost/redis/connection.hpp>
 #include <boost/redis/ignore.hpp>
 
+#include <boost/core/lightweight_test.hpp>
 #include <boost/system/error_code.hpp>
-
-#define BOOST_TEST_MODULE conversions
-#include <boost/test/included/unit_test.hpp>
 
 #include "common.hpp"
 
@@ -23,7 +21,7 @@ using boost::system::error_code;
 
 namespace {
 
-BOOST_AUTO_TEST_CASE(ints)
+void test_ints()
 {
    // Setup
    net::io_context ioc;
@@ -54,7 +52,7 @@ BOOST_AUTO_TEST_CASE(ints)
 
    conn->async_exec(req, resp, [conn, &finished](error_code ec, std::size_t) {
       finished = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn->cancel();
    });
 
@@ -63,19 +61,19 @@ BOOST_AUTO_TEST_CASE(ints)
    BOOST_TEST(finished);
 
    // Check
-   BOOST_TEST(std::get<1>(resp).value() == 42);
-   BOOST_TEST(std::get<2>(resp).value() == 42u);
-   BOOST_TEST(std::get<3>(resp).value() == 42);
-   BOOST_TEST(std::get<4>(resp).value() == 42u);
-   BOOST_TEST(std::get<5>(resp).value() == 42);
-   BOOST_TEST(std::get<6>(resp).value() == 42u);
-   BOOST_TEST(std::get<7>(resp).value() == 42);
-   BOOST_TEST(std::get<8>(resp).value() == 42u);
-   BOOST_TEST(std::get<9>(resp).value() == 42);
-   BOOST_TEST(std::get<10>(resp).value() == 42u);
+   BOOST_TEST_EQ(std::get<1>(resp).value(), 42);
+   BOOST_TEST_EQ(std::get<2>(resp).value(), 42u);
+   BOOST_TEST_EQ(std::get<3>(resp).value(), 42);
+   BOOST_TEST_EQ(std::get<4>(resp).value(), 42u);
+   BOOST_TEST_EQ(std::get<5>(resp).value(), 42);
+   BOOST_TEST_EQ(std::get<6>(resp).value(), 42u);
+   BOOST_TEST_EQ(std::get<7>(resp).value(), 42);
+   BOOST_TEST_EQ(std::get<8>(resp).value(), 42u);
+   BOOST_TEST_EQ(std::get<9>(resp).value(), 42);
+   BOOST_TEST_EQ(std::get<10>(resp).value(), 42u);
 }
 
-BOOST_AUTO_TEST_CASE(bools)
+void test_bools()
 {
    // Setup
    net::io_context ioc;
@@ -95,7 +93,7 @@ BOOST_AUTO_TEST_CASE(bools)
 
    conn->async_exec(req, resp, [conn, &finished](error_code ec, std::size_t) {
       finished = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn->cancel();
    });
 
@@ -103,11 +101,11 @@ BOOST_AUTO_TEST_CASE(bools)
    ioc.run_for(test_timeout);
 
    // Check
-   BOOST_TEST(std::get<2>(resp).value() == true);
-   BOOST_TEST(std::get<3>(resp).value() == false);
+   BOOST_TEST(std::get<2>(resp).value());
+   BOOST_TEST_NOT(std::get<3>(resp).value());
 }
 
-BOOST_AUTO_TEST_CASE(floating_points)
+void test_floating_points()
 {
    // Setup
    net::io_context ioc;
@@ -125,7 +123,7 @@ BOOST_AUTO_TEST_CASE(floating_points)
 
    conn->async_exec(req, resp, [conn, &finished](error_code ec, std::size_t) {
       finished = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn->cancel();
    });
 
@@ -134,7 +132,16 @@ BOOST_AUTO_TEST_CASE(floating_points)
    BOOST_TEST(finished);
 
    // Check
-   BOOST_TEST(std::get<1>(resp).value() == 4.12);
+   BOOST_TEST_EQ(std::get<1>(resp).value(), 4.12);
 }
 
 }  // namespace
+
+int main()
+{
+   test_ints();
+   test_bools();
+   test_floating_points();
+
+   return boost::report_errors();
+}

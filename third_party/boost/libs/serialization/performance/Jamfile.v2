@@ -21,7 +21,6 @@ import ../util/test :
     test-bsl-run
     test-bsl-run_archive
     test-bsl-run_files
-    test-bsl-run_polymorphic_archive
 ;
 
 BOOST_ARCHIVE_LIST = [ modules.peek : BOOST_ARCHIVE_LIST ] ;
@@ -33,7 +32,6 @@ test-suite "performance" :
 #    [ test-bsl-run_files performance_vector ]
 #    [ test-bsl-run_files performance_no_rtti ]
 #    [ test-bsl-run_files performance_simple_class ]
-#    [ test-bsl-run_polymorphic_archive performance_polymorphic : ../test/test_polymorphic_A ]
     
     [ test-bsl-run-no-lib performance_iterators ]
     [ test-bsl-run-no-lib performance_iterators_base64 ]

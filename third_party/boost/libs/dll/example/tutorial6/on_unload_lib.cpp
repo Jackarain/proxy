@@ -9,9 +9,9 @@
 #define BOOST_DLL_FORCE_ALIAS_INSTANTIATION
 
 //[plugcpp_on_unload
-#include <boost/dll/alias.hpp> // for BOOST_DLL_ALIAS
 #include <functional>
 #include <vector>
+#include <boost/dll/alias.hpp> // for BOOST_DLL_ALIAS
 
 namespace my_namespace {
 

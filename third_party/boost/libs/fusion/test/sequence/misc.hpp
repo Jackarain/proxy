@@ -127,9 +127,9 @@ test()
 
     {   // testing const sequences
 
-        const FUSION_SEQUENCE<int, float> t1(5, 3.3f);
+        const FUSION_SEQUENCE<int, float> t1(5, 3.25f);
         BOOST_TEST(FUSION_AT<0>(t1) == 5);
-        BOOST_TEST(FUSION_AT<1>(t1) == 3.3f);
+        BOOST_TEST(FUSION_AT<1>(t1) == 3.25f);
     }
 
     {   // testing at<N> works with MPL integral constants

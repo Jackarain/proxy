@@ -2149,10 +2149,11 @@ normalize_path()
     // remove_dot_segments can produce output that
     // needs a 2-byte shield prefix, as explained
     // in step 2. The memmove below writes within
-    // the original path region (before shrink_impl)
-    // and always has room because ".." cancellation
-    // consumes >= 5 bytes but we only need 2 for the
-    // shield.
+    // the path region; when ".." cancellation has
+    // consumed >= 2 bytes there is already slack,
+    // but for short inputs that take the shield
+    // branch without any cancellation (e.g. "//"),
+    // the region has to grow to fit the prefix.
     //
     bool needs_shield = [&]()
     {
@@ -2204,7 +2205,14 @@ normalize_path()
     }();
     if (needs_shield)
     {
-        BOOST_ASSERT(n + 2 <= pn);
+        if (n + 2 > pn)
+        {
+            // No "..  cancellation slack — grow the path
+            // region to fit the 2-byte shield. p_dest may
+            // be invalidated by the underlying reallocation.
+            p_dest = resize_impl(id_path, n + 2, op);
+            pn = n + 2;
+        }
         std::memmove(p_dest + 2, p_dest, n);
         if (was_absolute)
         {
@@ -3159,7 +3167,12 @@ edit_params(
     BOOST_ASSERT(pos1 <= impl_.offset(id_frag));
 
     // calc decoded size of old range,
-    // minus one if '?' or '&' prefixed
+    // minus one for the leading '?' which is
+    // not counted in decoded_[id_query].
+    // dn0 may be -1 here when the old range is
+    // empty and the query was non-empty; the
+    // matching subtraction on dn below cancels
+    // that out when the delta is taken.
     auto dn0 =
         static_cast<std::ptrdiff_t>(
             detail::decode_bytes_unsafe(
@@ -3168,8 +3181,6 @@ edit_params(
                     pos1 - pos0)));
     if(impl_.len(id_query) > 0)
         dn0 -= 1;
-    if(dn0 < 0)
-        dn0 = 0;
 
 //------------------------------------------------
 //
@@ -3267,16 +3278,13 @@ edit_params(
         }
     }
 
-    // calc decoded size of new range,
-    // minus one if '?' or '&' prefixed
+    // calc decoded size of new range; see dn0.
     auto dn =
         static_cast<std::ptrdiff_t>(
             detail::decode_bytes_unsafe(
                 core::string_view(dest0, dest - dest0)));
     if(impl_.len(id_query) > 0)
         dn -= 1;
-    if(dn < 0)
-        dn = 0;
 
     if(dn >= dn0)
         impl_.decoded_[id_query] +=

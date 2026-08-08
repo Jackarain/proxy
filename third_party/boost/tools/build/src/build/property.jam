@@ -15,6 +15,7 @@ import sequence ;
 import set ;
 import utility ;
 import args ;
+import version ;
 
 
 # Refines 'properties' by overriding any non-free and non-conditional properties
@@ -25,6 +26,7 @@ rule refine ( properties * : requirements * )
 {
     local result ;
     local unset ;
+    local to-resolve-version ;
 
     # Collect all non-free features in requirements
     for local r in $(requirements)
@@ -32,7 +34,11 @@ rule refine ( properties * : requirements * )
         # Do not consider conditional requirements.
         if ! [ MATCH "(:<)" : $(r:G=) ] && ! free in [ feature.attributes $(r:G) ]
         {
-            if ! $(r) in $(properties)
+            if version in [ feature.attributes $(r:G) ]
+            {
+                to-resolve-version += $(r) ;
+            }
+            else if ! $(r) in $(properties)
             {
                 # Kill subfeatures of properties that we're changing
                 local sub = [ modules.peek feature : $(r:G).subfeatures ] ;
@@ -48,16 +54,49 @@ rule refine ( properties * : requirements * )
         }
     }
 
+    # The version props to resolve get removed from both the props and
+    # requirements. As the resolved version gets added in tot he result.
+    requirements = [ set.difference $(requirements) : $(to-resolve-version) ] ;
+
     # Remove properties that are overridden by requirements
     for local p in $(properties)
     {
-        if [ MATCH "(:<)" : $(p:G=) ] || ! $(p:G) in $(unset)
+        if [ MATCH "(:<)" : $(p:G=) ]
         {
+            # Keep conditional properties in result.
+            result += $(p) ;
+        }
+        else if $(p:G) in $(to-resolve-version:G)
+        {
+            # For version feature need to resolve which one is compatible.
+            local resolved = $(p:G=) ;
+            for local r in $(to-resolve-version)
+            {
+                if $(p:G) = $(r:G)
+                {
+                    resolved = [ version.semver-resolve $(resolved) $(r:G=) ] $(resolved) ;
+                    resolved = $(resolved[1]) ;
+                }
+            }
+            result += $(p:G)$(resolved) ;
+        }
+        else if ! $(p:G) in $(unset)
+        {
+            # Keep anything that is not overridden, i.e. not in the requirements.
             result += $(p) ;
         }
     }
 
-    return [ sequence.unique $(result) $(requirements) ] ;
+    for local r in $(to-resolve-version)
+    {
+        if ! $(r:G) in $(result:G)
+        {
+            result += $(r) ;
+        }
+    }
+
+    local result = [ sequence.unique $(result) $(requirements) ] ;
+    return $(result) ;
 }
 
 
@@ -282,7 +321,8 @@ local rule identity ( string )
 
 
 args.add-arg abbreviate-paths : --abbreviate-paths
-    : "Compresses target paths by abbreviating each component." ;
+    : "Compresses target paths by abbreviating each component."
+    : flag ;
 if [ args.get-arg abbreviate-paths ]
 {
     .abbrev = abbreviate-dashed ;
@@ -293,16 +333,23 @@ else
 }
 
 
-# Returns a path representing the given expanded property set.
+# Returns a path representing the given property set.
 #
-rule as-path ( properties * )
+rule as-path (
+    properties *
+    : dont-minimize ?  # IF set, do not try to minimize properties,
+                       # which are likely to be unexpanded.
+)
 {
     local entry = .result.$(properties:J=-) ;
 
     if ! $($(entry))
     {
-        # Trim redundancy.
-        properties = [ feature.minimize $(properties) ] ;
+        if ! $(dont-minimize)
+        {
+            # Trim redundancy.
+            properties = [ feature.minimize $(properties) ] ;
+        }
 
         # Sort according to path-order.
         properties = [ sequence.insertion-sort $(properties) : path-order ] ;
@@ -830,7 +877,7 @@ class property-map
         if $(best[2])
         {
             import errors : error : errors.error ;
-	        properties = [ $(property-set).raw ] ;
+            properties = [ $(property-set).raw ] ;
             errors.error "Ambiguous key $(properties:J= :E=)" ;
         }
         return $(best) ;
@@ -869,6 +916,61 @@ class property-map
 }
 
 
+rule next-is-match ( current * : next * )
+{
+    if $(current) in $(next)
+    {
+        return true ;
+    }
+    local current-plain ;
+    local current-version ;
+    local next-plain ;
+    local next-version ;
+    for local c in $(current)
+    {
+        if version in [ feature.attributes $(c:G) ]
+        {
+            current-version += $(c) ;
+        }
+        else
+        {
+            current-plain += $(c) ;
+        }
+    }
+    for local n in $(next)
+    {
+        if version in [ feature.attributes $(n:G) ]
+        {
+            next-version += $(n) ;
+        }
+        else
+        {
+            next-plain += $(n) ;
+        }
+    }
+    if ! $(current-plain) in $(next-plain)
+    {
+        return ;
+    }
+    if ! $(current-version:G) in $(next-version:G)
+    {
+        return ;
+    }
+    local next-match ;
+    for local p in $(current-version)
+    {
+        for local q in $(next-version)
+        {
+            if $(p:G) = $(q:G) && ! [ version.semver-resolve $(p:G=) $(q:G=) ]
+            {
+                return ;
+            }
+        }
+    }
+    return true ;
+}
+
+
 rule __test__ ( )
 {
     import assert ;
@@ -889,6 +991,7 @@ rule __test__ ( )
     feature.feature optimization : on off ;
     feature.feature variant : debug release : implicit composite symmetric ;
     feature.feature rtti : on off : link-incompatible ;
+    feature.feature version : : version ;
 
     feature.compose <variant>debug : <define>_DEBUG <optimization>off ;
     feature.compose <variant>release : <define>NDEBUG <optimization>on ;
@@ -922,6 +1025,13 @@ rule __test__ ( )
     assert.result-set-equal <toolset>gcc:<define>foo <toolset>gcc:<define>bar
         : refine <toolset>gcc:<define>foo : <toolset>gcc:<define>bar
         : $(test-space) ;
+
+    assert.result-set-equal <toolset>gcc <version>2.1
+        : refine <toolset>gcc <version>2.0
+        : <version>2.1 ;
+    assert.result-set-equal <toolset>gcc <version>3.0
+        : refine <toolset>gcc
+        : <version>3.0 ;
 
     assert.result
         : evaluate-conditionals-in-context
@@ -972,6 +1082,11 @@ rule __test__ ( )
         validate value : $(test-space) ;
     catch \"value\" is not an implicit feature value ;
 
+    validate <version>1.2.3 ;
+    try ;
+        validate <version>a.b.c ;
+    catch \"a.b.c\" is not a valid semantic version for feature \"<version>\" ;
+
     assert.result-set-equal <rtti>on
         : remove free implicit : <toolset>gcc <define>foo <rtti>on : $(test-space) ;
 
@@ -1018,6 +1133,10 @@ rule __test__ ( )
     assert.result <toolset>gcc,!<rtti>off:<define>HELLO
         : translate <toolset>gcc,!<rtti>off:<define>HELLO
         : project-id : project-location : context-module ;
+
+    assert.true next-is-match <version>1.1 : <version>1.2 ;
+    assert.false next-is-match <version>1.1 : <version>2.0 ;
+    assert.false next-is-match <version>1.1 : <version>1.0 ;
 
     feature.finish-test property-test-temp ;
 }

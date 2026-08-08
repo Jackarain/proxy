@@ -352,7 +352,7 @@ public:
          return;
       }
 
-      typename Result::key_type obj;
+      typename Result::key_type obj{};
       boost_redis_from_bulk(obj, nd, ec);
       hint_ = result.insert(hint_, std::move(obj));
    }
@@ -387,11 +387,11 @@ public:
       }
 
       if (on_key_) {
-         typename Result::key_type obj;
+         typename Result::key_type obj{};
          boost_redis_from_bulk(obj, nd, ec);
          current_ = result.insert(current_, {std::move(obj), {}});
       } else {
-         typename Result::mapped_type obj;
+         typename Result::mapped_type obj{};
          boost_redis_from_bulk(obj, nd, ec);
          current_->second = std::move(obj);
       }

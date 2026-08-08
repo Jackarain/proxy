@@ -14,12 +14,11 @@
 #include "filesys.h"
 #include "frames.h"
 #include "hash.h"
-#include "hdrmacro.h"
 #include "lists.h"
 #include "make.h"
 #include "md5.h"
 #include "native.h"
-#include "object.h"
+#include "outerr.h"
 #include "parse.h"
 #include "pathsys.h"
 #include "regexp.h"
@@ -31,6 +30,7 @@
 #include "output.h"
 
 #include <string>
+#include <type_traits>
 
 #include <assert.h>
 #include <ctype.h>
@@ -54,7 +54,7 @@
 # define FSCTL_GET_REPARSE_POINT 0x000900a8
 #endif
 #ifndef IO_REPARSE_TAG_SYMLINK
-# define IO_REPARSE_TAG_SYMLINK	(0xA000000CL)
+# define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
 #endif
 
 #include <io.h>
@@ -81,13 +81,20 @@
 # define WEXITSTATUS(w)(w)
 #endif
 
+namespace b2 {
+template<typename R,
+         typename = typename std::enable_if<std::is_pointer<R>::value>::type>
+R find_hash(struct hash * ht, OBJECT * obj)
+{
+    return reinterpret_cast<R>( ht ? hash_find(ht, obj) : nullptr );
+}
+} // namespace b2
+
 /*
  * builtins.c - builtin jam rules
  *
  * External routines:
  *  load_builtins()               - define builtin rules
- *  unknown_rule()                - reports an unknown rule occurrence to the
- *                                  user and exits
  *
  * Internal routines:
  *  append_if_exists()            - if file exists, append it to the list
@@ -97,10 +104,10 @@
  *  builtin_echo()                - ECHO rule
  *  builtin_exit()                - EXIT rule
  *  builtin_export()              - EXPORT ( MODULE ? : RULES * )
- *  builtin_flags()               - NOCARE, NOTFILE, TEMPORARY rule
+ *  builtin_flags()               - ALWAYS/LEAVES/NOCARE/NOTIME/NOTFILE/NOUPDATE
+ *                                  TEMPORARY/ISFILE/FAIL_EXPECTED/RMOLD rule
  *  builtin_glob()                - GLOB rule
- *  builtin_glob_recursive()      - ???
- *  builtin_hdrmacro()            - ???
+ *  builtin_glob_recursive()      - GLOB_RECURSIVELY rule
  *  builtin_import()              - IMPORT rule
  *  builtin_match()               - MATCH rule, regexp matching
  *  builtin_rebuilds()            - REBUILDS rule
@@ -125,10 +132,6 @@
 #endif
 
 int glob( char const * s, char const * c );
-
-void backtrace        ( FRAME * );
-void backtrace_line   ( FRAME * );
-void print_source_line( FRAME * );
 
 
 RULE * bind_builtin( char const * name_, LIST * (* f)( FRAME *, int flags ),
@@ -165,18 +168,27 @@ RULE * duplicate_rule( char const * name_, RULE * other )
 
 void load_builtins()
 {
-    duplicate_rule( "Always",
-      bind_builtin( "ALWAYS",
-                    builtin_flags, T_FLAG_TOUCHED, 0 ) );
+    {
+        char const * args[] = { "targets", "*", 0 };
+        duplicate_rule( "Always",
+          bind_builtin( "ALWAYS",
+                        builtin_flags, T_FLAG_TOUCHED, args ) );
+    }
 
-    duplicate_rule( "Depends",
-      bind_builtin( "DEPENDS",
-                    builtin_depends, 0, 0 ) );
+    {
+        char const * args[] = { "targets1", "*", ":", "targets2", "*", 0 };
+        duplicate_rule( "Depends",
+          bind_builtin( "DEPENDS",
+                        builtin_depends, 0, args ) );
+    }
 
-    duplicate_rule( "echo",
-    duplicate_rule( "Echo",
-      bind_builtin( "ECHO",
-                    builtin_echo, 0, 0 ) ) );
+    {
+        char const * args[] = { "args", "*", 0 };
+        duplicate_rule( "echo",
+        duplicate_rule( "Echo",
+          bind_builtin( "ECHO",
+                        builtin_echo, 0, args ) ) );
+    }
 
     {
         char const * args[] = { "message", "*", ":", "result-value", "?", 0 };
@@ -188,20 +200,24 @@ void load_builtins()
 
     {
         char const * args[] = { "directories", "*", ":", "patterns", "*", ":",
-            "case-insensitive", "?", 0 };
+            "downcase-opt", "?", 0 };
         duplicate_rule( "Glob",
-                        bind_builtin( "GLOB", builtin_glob, 0, args ) );
+          bind_builtin( "GLOB", builtin_glob, 0, args ) );
     }
 
     {
         char const * args[] = { "patterns", "*", 0 };
-        bind_builtin( "GLOB-RECURSIVELY",
-                      builtin_glob_recursive, 0, args );
+        duplicate_rule( "GLOB-RECURSIVELY",
+          bind_builtin( "GLOB_RECURSIVELY",
+                        builtin_glob_recursive, 0, args ) );
     }
 
-    duplicate_rule( "Includes",
-      bind_builtin( "INCLUDES",
-                    builtin_depends, 1, 0 ) );
+    {
+        char const * args[] = { "targets1", "*", ":", "targets2", "*", 0 };
+        duplicate_rule( "Includes",
+          bind_builtin( "INCLUDES",
+                        builtin_depends, 1, args ) );
+    }
 
     {
         char const * args[] = { "targets", "*", ":", "targets-to-rebuild", "*",
@@ -210,13 +226,22 @@ void load_builtins()
                       builtin_rebuilds, 0, args );
     }
 
-    duplicate_rule( "Leaves",
-      bind_builtin( "LEAVES",
-                    builtin_flags, T_FLAG_LEAVES, 0 ) );
+    {
+        char const * args[] = { "targets", "*", 0 };
+        duplicate_rule( "Leaves",
+          bind_builtin( "LEAVES",
+                        builtin_flags, T_FLAG_LEAVES, args ) );
+    }
 
-    duplicate_rule( "Match",
-      bind_builtin( "MATCH",
-                    builtin_match, 0, 0 ) );
+    {
+        char const * args[] = { "regexps", "*", ":", "list", "*", ":",
+                                // for backward compatibilty with Boost
+                                // releases (1.69 .. 1.72), see PR #487
+                                "unused", "*", 0 };
+        duplicate_rule( "Match",
+          bind_builtin( "MATCH",
+                        builtin_match, 0, args ) );
+    }
 
     {
         char const * args[] = { "string", ":", "delimiters", 0 };
@@ -224,39 +249,56 @@ void load_builtins()
                       builtin_split_by_characters, 0, args );
     }
 
-    duplicate_rule( "NoCare",
-      bind_builtin( "NOCARE",
-                    builtin_flags, T_FLAG_NOCARE, 0 ) );
+    {
+        char const * args[] = { "targets", "*", 0 };
+        duplicate_rule( "NoCare",
+          bind_builtin( "NOCARE",
+                        builtin_flags, T_FLAG_NOCARE, args ) );
+    }
 
-    duplicate_rule( "NOTIME",
-    duplicate_rule( "NotFile",
-      bind_builtin( "NOTFILE",
-                    builtin_flags, T_FLAG_NOTFILE, 0 ) ) );
+    {
+        char const * args[] = { "targets", "*", 0 };
+        /*duplicate_rule( "NOTIME",    // Bad alias, discontinued. */
+        duplicate_rule( "NotFile",
+          bind_builtin( "NOTFILE",
+                        builtin_flags, T_FLAG_NOTFILE, args ) );
+    }
 
-    duplicate_rule( "NoUpdate",
-      bind_builtin( "NOUPDATE",
-                    builtin_flags, T_FLAG_NOUPDATE, 0 ) );
+    {
+        char const * args[] = { "targets", "*", 0 };
+        duplicate_rule( "NoUpdate",
+          bind_builtin( "NOUPDATE",
+                        builtin_flags, T_FLAG_NOUPDATE, args ) );
+    }
 
-    duplicate_rule( "Temporary",
-      bind_builtin( "TEMPORARY",
-                    builtin_flags, T_FLAG_TEMP, 0 ) );
+    {
+        char const * args[] = { "targets", "*", 0 };
+        duplicate_rule( "Temporary",
+          bind_builtin( "TEMPORARY",
+                        builtin_flags, T_FLAG_TEMP, args ) );
+    }
 
-      bind_builtin( "ISFILE",
-                    builtin_flags, T_FLAG_ISFILE, 0 );
+    {
+        char const * args[] = { "targets", "*", 0 };
+          bind_builtin( "ISFILE",
+                        builtin_flags, T_FLAG_ISFILE, args );
+    }
 
-    duplicate_rule( "HdrMacro",
-      bind_builtin( "HDRMACRO",
-                    builtin_hdrmacro, 0, 0 ) );
+    {
+        /* FAIL_EXPECTED is used to indicate that the result of a target build
+         * action should be inverted (ok <=> fail) this can be useful when
+         * performing test runs from Jamfiles.
+         */
+        char const * args[] = { "targets", "*", 0 };
+        bind_builtin( "FAIL_EXPECTED",
+                      builtin_flags, T_FLAG_FAIL_EXPECTED, args );
+    }
 
-    /* FAIL_EXPECTED is used to indicate that the result of a target build
-     * action should be inverted (ok <=> fail) this can be useful when
-     * performing test runs from Jamfiles.
-     */
-    bind_builtin( "FAIL_EXPECTED",
-                  builtin_flags, T_FLAG_FAIL_EXPECTED, 0 );
-
-    bind_builtin( "RMOLD",
-                  builtin_flags, T_FLAG_RMOLD, 0 );
+    {
+        char const * args[] = { "targets", "*", 0 };
+        bind_builtin( "RMOLD",
+                      builtin_flags, T_FLAG_RMOLD, args );
+    }
 
     {
         char const * args[] = { "targets", "*", 0 };
@@ -409,8 +451,8 @@ void load_builtins()
 
     {
         char const * args[] = { "command", ":", "*", 0 };
-        duplicate_rule( "SHELL",
-          bind_builtin( "COMMAND",
+        duplicate_rule( "COMMAND",
+          bind_builtin( "SHELL",
                         builtin_shell, 0, args ) );
     }
 
@@ -456,17 +498,17 @@ void load_builtins()
     {
         char const * args[] = { "archives", "*",
                                 ":", "member-patterns", "*",
-                                ":", "case-insensitive", "?",
+                                ":", "downcase-opt", "?",
                                 ":", "symbol-patterns", "*", 0 };
         bind_builtin( "GLOB_ARCHIVE", builtin_glob_archive, 0, args );
     }
 
 #ifdef JAM_DEBUGGER
 
-	{
-		const char * args[] = { "list", "*", 0 };
-		bind_builtin("__DEBUG_PRINT_HELPER__", builtin_debug_print_helper, 0, args);
-	}
+    {
+        const char * args[] = { "list", "*", 0 };
+        bind_builtin("__DEBUG_PRINT_HELPER__", builtin_debug_print_helper, 0, args);
+    }
 
 #endif
 
@@ -927,9 +969,13 @@ LIST * glob_recursive( char const * pattern )
 }
 
 
-/*
- * builtin_glob_recursive() - ???
- */
+//
+// builtin_glob_recursive() - GLOB_RECURSIVELY rule
+//
+// Recursively expands each of the provided patterns (GLOBs) into a list
+// of paths. Each pattern can have different components, one for each
+// directory, for example: */*.test
+//
 
 LIST * builtin_glob_recursive( FRAME * frame, int flags )
 {
@@ -944,6 +990,10 @@ LIST * builtin_glob_recursive( FRAME * frame, int flags )
 }
 
 
+/*
+ * builtin_subst() - SUBST rule, regexp replacing
+ */
+
 LIST * builtin_subst( FRAME * frame, int flags )
 {
     LIST * result = L0;
@@ -954,27 +1004,32 @@ LIST * builtin_subst( FRAME * frame, int flags )
     if ( iter != end && list_next( iter ) != end && list_next( list_next( iter )
         ) != end )
     {
-        char const * const source = object_str( list_item( iter ) );
-        b2::regex::program re( list_item( list_next( iter ) )->str() );
+        b2::regex::program re;
+        {
+            // compilation errors print a nice error message and exit
+            b2::regex::frame_ctx ctx(frame);
+            re.reset( list_item( list_next( iter ) )->str() );
+        }
 
+        char const * const source = object_str( list_item( iter ) );
         if ( auto re_i = re.search(source) )
         {
             LISTITER subst = list_next( iter );
 
             while ( ( subst = list_next( subst ) ) != end )
             {
-#define BUFLEN 4096
-                char buf[ BUFLEN + 1 ];
+#define BUFLEN 4094
+                char buf[ BUFLEN + 2 ];
                 char const * in = object_str( list_item( subst ) );
                 char * out = buf;
 
                 for ( ; *in && out < buf + BUFLEN; ++in )
                 {
+                    /* check for placeholders "\\N" and "$N" */
                     if ( *in == '\\' || *in == '$' )
                     {
+                        char plcc = *in;
                         ++in;
-                        if ( *in == 0 )
-                            break;
                         if ( *in >= '0' && *in <= '9' )
                         {
                             unsigned int const n = *in - '0';
@@ -985,6 +1040,15 @@ LIST * builtin_subst( FRAME * frame, int flags )
                                 : remaining;
                             memcpy( out, re_i[ n ].begin(), len );
                             out += len;
+                            continue;
+                        }
+                        *out++ = plcc;
+                        if ( *in == 0 )
+                            break;
+                        /* reparse the next character if can be a placeholder */
+                        if ( *in == '\\' || *in == '$' )
+                        {
+                            --in;
                             continue;
                         }
                         /* fall through and copy the next character */
@@ -1018,7 +1082,12 @@ LIST * builtin_match( FRAME * frame, int flags )
     b2::list_cref patterns( lol_get( frame->args, 0 ) );
     for ( auto pattern : patterns )
     {
-        b2::regex::program re( pattern->str() );
+        b2::regex::program re;
+        {
+            // compilation errors print a nice error message and exit
+            b2::regex::frame_ctx ctx(frame);
+            re.reset( pattern->str() );
+        }
 
         /* For each text string to match against. */
         b2::list_cref texts( lol_get( frame->args, 1 ) );
@@ -1026,12 +1095,10 @@ LIST * builtin_match( FRAME * frame, int flags )
         {
             if ( auto re_i = re.search( text->str() ) )
             {
-                /* Find highest parameter */
-                int top = NSUBEXP-1;
-                while ( !re_i[top].begin() ) top -= 1;
-                /* And add all parameters up to highest onto list. */
-                /* Must have parameters to have results! */
-                for ( int i = 1; i <= top ; ++i )
+                /* Find total groups matched */
+                int tot = re_i.count();
+                /* And add all catched matches onto result list. */
+                for ( int i = 1; i <= tot ; ++i )
                 {
                     string_append_range( buf, re_i[i].begin(), re_i[i].end() );
                     result.push_back( object_new( buf->value ) );
@@ -1078,58 +1145,53 @@ LIST * builtin_split_by_characters( FRAME * frame, int flags )
 
 
 /*
- * builtin_hdrmacro() - ???
+ * Search for an optional module, when no name is supplied
+ * return the root module. When the supplied name is not found
+ * emit an error (and exit) or a warning (and return the root module)
+ * according to the value of miss_is_error.
  */
-
-LIST * builtin_hdrmacro( FRAME * frame, int flags )
+module_t * try_bind_module(LIST * module_list, FRAME * frame, bool miss_is_error)
 {
-    LIST * const l = lol_get( frame->args, 0 );
-    LISTITER iter = list_begin( l );
-    LISTITER const end = list_end( l );
-
-    for ( ; iter != end; iter = list_next( iter ) )
+    OBJECT * mod_name = ( list_empty( module_list )
+        ? nullptr : list_front( module_list ) );
+    module_t * mod = nullptr;
+    if ( mod_name )
     {
-        TARGET * const t = bindtarget( list_item( iter ) );
+        mod = find_module( mod_name );
+        if ( ! mod )
+        {
+            b2::list_ref msgs;
 
-        /* Scan file for header filename macro definitions. */
-        if ( is_debug_header() )
-            out_printf( "scanning '%s' for header file macro definitions\n",
-                object_str( list_item( iter ) ) );
+            msgs.push_back(
+                b2::rule_and_args_to_string( frame ) );
+            msgs.push_back(
+                std::string("module \"") + mod_name->str() + "\" not found"
+                + (miss_is_error ? "." : ", using root module.") );
 
-        macro_headers( t );
+            if ( miss_is_error ) b2::out_error( *msgs, frame );
+            else b2::out_warning( *msgs, frame );
+        }
     }
-
-    return L0;
+    if ( ! mod ) mod = root_module();
+    return mod;
 }
 
 
 /*
  * builtin_rulenames() - RULENAMES ( MODULE ? )
  *
- * Returns a list of the non-local rule names in the given MODULE. If MODULE is
- * not supplied, returns the list of rule names in the global module.
+ * Returns a list of the non-local rule names in the given MODULE. If MODULE
+ * is not supplied, returns the list of rule names in the root module.
+ * If MODULE is not found, an error is issued.
  */
-
-static void add_rule_name( void * r_, void * result_ )
-{
-    RULE * const r = (RULE *)r_;
-    LIST * * const result = (LIST * *)result_;
-    if ( r->exported )
-        *result = list_push_back( *result, object_copy( r->name ) );
-}
-
 
 LIST * builtin_rulenames( FRAME * frame, int flags )
 {
-    LIST * arg0 = lol_get( frame->args, 0 );
-    LIST * result = L0;
-    module_t * const source_module = bindmodule( list_empty( arg0 )
-        ? 0
-        : list_front( arg0 ) );
+    LIST * module_list = lol_get( frame->args, 0 );
+    module_t * module = try_bind_module( module_list, frame,
+            true /* emit an error on missing module */ );
 
-    if ( source_module->rules )
-        hashenumerate( source_module->rules, add_rule_name, &result );
-    return result;
+    return module_rules( module );
 }
 
 
@@ -1182,28 +1244,6 @@ LIST * builtin_delete_module( FRAME * frame, int flags )
 
 
 /*
- * unknown_rule() - reports an unknown rule occurrence to the user and exits
- */
-
-void unknown_rule( FRAME * frame, char const * key, module_t * module,
-    OBJECT * rule_name )
-{
-    backtrace_line( frame->prev );
-    if ( key )
-        out_printf("%s error", key);
-    else
-        out_printf("ERROR");
-    out_printf( ": rule \"%s\" unknown in ", object_str( rule_name ) );
-    if ( module->name )
-        out_printf( "module \"%s\".\n", object_str( module->name ) );
-    else
-        out_printf( "root module.\n" );
-    backtrace( frame->prev );
-    b2::clean_exit( EXITBAD );
-}
-
-
-/*
  * builtin_import() - IMPORT rule
  *
  * IMPORT
@@ -1217,7 +1257,7 @@ void unknown_rule( FRAME * frame, char const * key, module_t * module,
  *
  * Imports rules from the SOURCE_MODULE into the TARGET_MODULE as local rules.
  * If either SOURCE_MODULE or TARGET_MODULE is not supplied, it refers to the
- * global module. SOURCE_RULES specifies which rules from the SOURCE_MODULE to
+ * root module. SOURCE_RULES specifies which rules from the SOURCE_MODULE to
  * import; TARGET_RULES specifies the names to give those rules in
  * TARGET_MODULE. If SOURCE_RULES contains a name that does not correspond to
  * a rule in SOURCE_MODULE, or if it contains a different number of items than
@@ -1237,9 +1277,8 @@ LIST * builtin_import( FRAME * frame, int flags )
     module_t * target_module = bindmodule( list_empty( target_module_list )
         ? 0
         : list_front( target_module_list ) );
-    module_t * source_module = bindmodule( list_empty( source_module_list )
-        ? 0
-        : list_front( source_module_list ) );
+    module_t * source_module = try_bind_module( source_module_list, frame,
+            false /* emit a warning on missing module */ );
 
     LISTITER source_iter = list_begin( source_rules );
     LISTITER const source_end = list_end( source_rules );
@@ -1251,37 +1290,40 @@ LIST * builtin_import( FRAME * frame, int flags )
           source_iter = list_next( source_iter ),
           target_iter = list_next( target_iter ) )
     {
-        RULE * r = nullptr;
-        RULE * imported = nullptr;
-
-        if ( !source_module->rules || !(r = (RULE *)hash_find(
-            source_module->rules, list_item( source_iter ) ) ) )
+        RULE * r = b2::find_hash<RULE*>( source_module->rules, list_item( source_iter ) );
+        if ( !r )
         {
-            unknown_rule( frame, "IMPORT", source_module, list_item( source_iter
-                ) );
+            unknown_rule_error( frame, source_module, list_item( source_iter ) );
         }
 
-        imported = import_rule( r, target_module, list_item( target_iter ) );
+        RULE * imported = import_rule( r, target_module, list_item( target_iter ) );
         if ( !list_empty( localize ) )
             rule_localize( imported, target_module );
-        /* This rule is really part of some other module. Just refer to it here,
-         * but do not let it out.
+        /* This rule is really part of some other module. Just refer to it
+         * here, but it shall be considered a local rule.
          */
         imported->exported = 0;
     }
 
     if ( source_iter != source_end || target_iter != target_end )
     {
-        backtrace_line( frame->prev );
-        out_printf( "import error: length of source and target rule name lists "
-            "don't match!\n" );
-        out_printf( "    source: " );
-        list_print( source_rules );
-        out_printf( "\n    target: " );
-        list_print( target_rules );
-        out_printf( "\n" );
-        backtrace( frame->prev );
-        b2::clean_exit( EXITBAD );
+        b2::list_ref msgs;
+
+        msgs.push_back( b2::rule_and_args_to_string( frame ) );
+
+        msgs.push_back( "source and target rule name lists don't match" );
+
+        std::string rlst = "source:";
+        for ( auto el : b2::list_cref(source_rules) )
+            rlst += std::string(" ") + el->str();
+        msgs.push_back( rlst );
+
+        rlst = "target:";
+        for ( auto el : b2::list_cref(target_rules) )
+            rlst += std::string(" ") + el->str();
+        msgs.push_back( rlst );
+
+        b2::out_error( *msgs, frame );
     }
 
     return L0;
@@ -1291,27 +1333,27 @@ LIST * builtin_import( FRAME * frame, int flags )
 /*
  * builtin_export() - EXPORT ( MODULE ? : RULES * )
  *
- * The EXPORT rule marks RULES from the SOURCE_MODULE as non-local (and thus
- * exportable). If an element of RULES does not name a rule in MODULE, an error
- * is issued.
+ * The EXPORT rule marks RULES from the MODULE as non-local (and thus
+ * exportable). If MODULE is not supplied, it refers to the root module.
+ * If MODULE is not found, or an element of RULES does not name a rule
+ * in MODULE, an error is issued.
  */
 
 LIST * builtin_export( FRAME * frame, int flags )
 {
     LIST * const module_list = lol_get( frame->args, 0 );
     LIST * const rules = lol_get( frame->args, 1 );
-    module_t * const m = bindmodule( list_empty( module_list ) ? 0 : list_front(
-        module_list ) );
+    module_t * const m = try_bind_module( module_list, frame,
+            true /* emit an error on missing module */ );
 
     LISTITER iter = list_begin( rules );
     LISTITER const end = list_end( rules );
     for ( ; iter != end; iter = list_next( iter ) )
     {
-        RULE * r = nullptr;
-        if ( !m->rules || !( r = (RULE *)hash_find( m->rules, list_item( iter )
-            ) ) )
+        RULE * r = b2::find_hash<RULE*>( m->rules, list_item( iter ) );
+        if ( !r )
         {
-            unknown_rule( frame, "EXPORT", m, list_item( iter ) );
+            unknown_rule_error( frame, m, list_item( iter ) );
         }
         r->exported = 1;
     }
@@ -1326,7 +1368,7 @@ LIST * builtin_export( FRAME * frame, int flags )
  * output or an error backtrace.
  */
 
-static void get_source_line( FRAME * frame, char const * * file, int * line )
+void get_source_line( FRAME * frame, char const * * file, int * line )
 {
     if ( frame->file )
     {
@@ -1340,50 +1382,6 @@ static void get_source_line( FRAME * frame, char const * * file, int * line )
         *file = "(builtin)";
         *line = -1;
     }
-}
-
-
-void print_source_line( FRAME * frame )
-{
-    char const * file;
-    int line;
-    get_source_line( frame, &file, &line );
-    if ( line < 0 )
-        out_printf( "(builtin):" );
-    else
-        out_printf( "%s:%d:", file, line );
-}
-
-
-/*
- * backtrace_line() - print a single line of error backtrace for the given
- * frame.
- */
-
-void backtrace_line( FRAME * frame )
-{
-    if ( frame == 0 )
-    {
-        out_printf( "(no frame):" );
-    }
-    else
-    {
-        print_source_line( frame );
-        out_printf( " in %s\n", frame->rulename );
-    }
-}
-
-
-/*
- * backtrace() - Print the entire backtrace from the given frame to the Jambase
- * which invoked it.
- */
-
-void backtrace( FRAME * frame )
-{
-    if ( !frame ) return;
-    while ( ( frame = frame->prev ) )
-        backtrace_line( frame );
 }
 
 
@@ -1629,19 +1627,23 @@ LIST * builtin_native_rule( FRAME * frame, int flags )
 
     module_t * module = bindmodule( list_front( module_name ) );
 
-    native_rule_t * np;
-    if ( module->native_rules && (np = (native_rule_t *)hash_find(
-        module->native_rules, list_front( rule_name ) ) ) )
+    native_rule_t * np = b2::find_hash<native_rule_t*>(
+            module->native_rules, list_front( rule_name ) );
+    if ( np )
     {
         new_rule_body( module, np->name, np->procedure, 1 );
     }
     else
     {
-        backtrace_line( frame->prev );
-        out_printf( "error: no native rule \"%s\" defined in module \"%s.\"\n",
-            object_str( list_front( rule_name ) ), object_str( module->name ) );
-        backtrace( frame->prev );
-        b2::clean_exit( EXITBAD );
+        b2::list_ref msgs;
+
+        msgs.push_back( b2::rule_and_args_to_string( frame ) );
+
+        msgs.push_back(
+            std::string("no native rule \"") + list_front( rule_name )->str()
+            + "\" defined in module \"" + module->name->str() + "\"." );
+
+        b2::out_error( *msgs, frame );
     }
     return L0;
 }
@@ -1655,9 +1657,9 @@ LIST * builtin_has_native_rule( FRAME * frame, int flags )
 
     module_t * module = bindmodule( list_front( module_name ) );
 
-    native_rule_t * np;
-    if ( module->native_rules && (np = (native_rule_t *)hash_find(
-        module->native_rules, list_front( rule_name ) ) ) )
+    native_rule_t * np = b2::find_hash<native_rule_t*>(
+            module->native_rules, list_front( rule_name ) );
+    if ( np )
     {
         int expected_version = atoi( object_str( list_front( version ) ) );
         if ( np->version == expected_version )

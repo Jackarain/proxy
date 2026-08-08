@@ -3,9 +3,10 @@
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/implicit_cast.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/type.hpp>
+
+#include <boost/implicit_cast.hpp>
 
 using boost::implicit_cast;
 using boost::type;

@@ -989,6 +989,29 @@ testCapacity()
     BOOST_TEST(static_string<3>{"abc"}.max_size() == 3);
     BOOST_TEST(static_string<5>{"abc"}.max_size() == 5);
 
+    // available()
+    BOOST_TEST(static_string<0>{}.available() == 0);
+    BOOST_TEST(static_string<1>{}.available() == 1);
+    BOOST_TEST(static_string<1>{"a"}.available() == 0);
+    BOOST_TEST(static_string<3>{"abc"}.available() == 0);
+    BOOST_TEST(static_string<5>{"abc"}.available() == 2);
+    BOOST_TEST(static_string<5>{}.available() == 5);
+    {
+        static_string<8> s("hi");
+        BOOST_TEST(s.available() == 6);
+        s.append(" there");
+        BOOST_TEST(s.available() == 0);
+        s.clear();
+        BOOST_TEST(s.available() == 8);
+    }
+    // Intended use with the pos/count-taking overloads.
+    {
+        static_string<5> s("ab");
+        s.append(string_view{"xyzwv"}, 0, s.available());
+        BOOST_TEST(s == "abxyz");
+        BOOST_TEST(s.available() == 0);
+    }
+
     // reserve(std::size_t n)
     static_string<3>{}.reserve(0);
     static_string<3>{}.reserve(1);

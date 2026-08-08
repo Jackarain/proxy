@@ -33,41 +33,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: gcc-5
-            cxxstd: "03,11,14,1z"
-            address_model: 32,64
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - g++-5-multilib
-          - toolset: gcc-5
-            cxxstd: "03-gnu,11-gnu,14-gnu,1z-gnu"
-            address_model: 32,64
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - g++-5-multilib
-          - toolset: gcc-6
-            cxxstd: "03,11,14,1z"
-            address_model: 32,64
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install:
-              - g++-6-multilib
-          - toolset: gcc-7
-            cxxstd: "03,11,14,17"
-            address_model: 32,64
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install:
-              - g++-7-multilib
-          - toolset: gcc-8
-            cxxstd: "03,11,14,17,2a"
-            address_model: 32,64
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install:
-              - g++-8-multilib
           - toolset: gcc-9
             cxxstd: "03,11,14,17,2a"
             address_model: 32,64
@@ -128,58 +93,6 @@ jobs:
             cxxflags: -fexcess-precision=fast
 
           # Linux, clang
-          - toolset: clang
-            compiler: clang++-3.8
-            cxxstd: "03,11,14"
-            os: ubuntu-latest
-            container: ubuntu:16.04
-            install:
-              - clang-3.8
-          - toolset: clang
-            compiler: clang++-3.9
-            cxxstd: "03,11,14"
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install:
-              - clang-3.9
-          - toolset: clang
-            compiler: clang++-4.0
-            cxxstd: "03,11,14"
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install:
-              - clang-4.0
-          - toolset: clang
-            compiler: clang++-5.0
-            cxxstd: "03,11,14,1z"
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install:
-              - clang-5.0
-          - toolset: clang
-            compiler: clang++-6.0
-            cxxstd: "03,11,14,17"
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install:
-              - clang-6.0
-          - toolset: clang
-            compiler: clang++-7
-            cxxstd: "03,11,14,17"
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install:
-              - clang-7
-          # Note: clang-8 does not fully support C++20, so it is not compatible with libstdc++-8 in this mode
-          - toolset: clang
-            compiler: clang++-8
-            cxxstd: "03,11,14,17,2a"
-            os: ubuntu-latest
-            container: ubuntu:18.04
-            install:
-              - clang-8
-              - g++-7
-            gcc_toolchain: 7
           - toolset: clang
             compiler: clang++-9
             cxxstd: "03,11,14,17,2a"
@@ -334,7 +247,7 @@ jobs:
                 fi
             fi
             git config --global pack.threads 0
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -529,7 +442,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -765,3 +678,65 @@ jobs:
 
       - name: Run tests
         run: ci/build.sh
+
+
+  cuda-cmake-test:
+    strategy:
+      fail-fast: false
+
+    # Only in cppa mirror
+    # runs-on: gpu-runner-1
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: Jimver/cuda-toolkit@v0.2.35
+        id: cuda-toolkit
+        with:
+          cuda: '12.8.0'
+          method: 'network'
+          sub-packages: '["nvcc"]'
+
+      - name: Output CUDA information
+        run: |
+          echo "Installed cuda version is: ${{steps.cuda-toolkit.outputs.cuda}}"+
+          echo "Cuda install location: ${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
+          nvcc -V
+      - uses: actions/checkout@v6
+
+      - name: Install Packages
+        run: |
+          sudo apt-get install -y cmake make
+      - name: Setup Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo LIBRARY: $LIBRARY
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          mkdir -p libs/$LIBRARY
+          cp -r $GITHUB_WORKSPACE/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs 3" $LIBRARY
+      - name: Configure
+        run: |
+          cd ../boost-root
+          mkdir __build__ && cd __build__
+          cmake -DBOOST_INCLUDE_LIBRARIES=$LIBRARY -DBUILD_TESTING=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc -DBOOST_CHARCONV_ENABLE_CUDA=1 -DCMAKE_CUDA_ARCHITECTURES="75;86" -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.8 -DCMAKE_CUDA_STANDARD=17 ..
+      - name: Build tests
+        run: |
+          cd ../boost-root/__build__
+          cmake --build . --target tests -j $(nproc)
+      # Only runs in cppa mirror
+      #- name: Run tests
+      #  run: |
+      #    cd ../boost-root/__build__
+      #    ctest --output-on-failure --no-tests=error

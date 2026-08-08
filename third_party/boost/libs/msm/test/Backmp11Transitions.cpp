@@ -22,6 +22,8 @@
 
 #include "Utils.hpp"
 
+#include "attachments/backmp11/MinimalExample.cpp"
+
 namespace msm = boost::msm;
 namespace mp11 = boost::mp11;
 
@@ -41,14 +43,26 @@ struct TriggerInternalTransitionWithGuard
 };
 struct TriggerSmInternalTransition{};
 struct TriggerAnyTransition{};
+struct TriggerNoTransition{};
 
 // Actions
 struct MyAction
 {
     template<typename Event, typename Fsm, typename Source, typename Target>
-    void operator()(const Event&, Fsm&, Source& source, Target&)
+    void operator()(const Event&, Fsm& fsm, Source& source, Target&)
     {
         source.action_counter++;
+        if constexpr (std::is_same_v<typename Fsm::config_t::compile_policy, favor_runtime_speed>)
+        {
+            // An action in favor_runtime_speed shall not receive an event
+            // converted to Kleene, the Kleene event type is only used as a
+            // placeholder in the front-end.
+            static_assert(!std::is_same_v<Event, std::any>);
+        }
+        // Attempting to process events while the state machine is processing
+        // shall discard the event.
+        BOOST_REQUIRE(fsm.process_event(TriggerNoTransition{}) ==
+                      process_result::discarded);
     }
 };
 
@@ -80,8 +94,7 @@ struct StateMachine_;
 struct default_config : state_machine_config
 {
     // using root_sm = StateMachine;
-    template <typename T>
-    using event_container = no_event_container<T>;
+    using event_pool = no_event_pool;
 };
 struct favor_compile_time_config : default_config
 {
@@ -150,6 +163,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(transitions, StateMachine, TestMachines)
     using TestMachine = typename StateMachine::StateMachine;
     using compile_policy = typename TestMachine::config_t::compile_policy;
     TestMachine test_machine;
+
+    BOOST_REQUIRE(test_machine.process_event(TriggerInternalTransition{}) ==
+                  process_result::discarded);
+    ASSERT_AND_RESET(test_machine.template get_state<MyState>().action_counter, 0);
 
     test_machine.start();
 

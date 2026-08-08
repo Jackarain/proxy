@@ -8,6 +8,11 @@ https://www.boost.org/LICENSE_1_0.txt
 # Revision History
 :idprefix:
 
+## Changes in 1.92.0
+
+* Added built-in support for `std::optional`
+* Added built-in support for `std::variant`, `std::monostate`
+
 ## Changes in 1.89.0
 
 * Added Blake2 algorithm (`blake2s_256`, `blake2b_512`).

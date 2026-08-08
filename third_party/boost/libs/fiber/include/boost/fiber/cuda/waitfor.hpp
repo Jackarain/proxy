@@ -17,7 +17,7 @@
 #include <boost/assert.hpp>
 #include <boost/config.hpp>
 
-#include <cuda.h>
+#include <cuda_runtime_api.h>
 
 #include <boost/fiber/detail/config.hpp>
 #include <boost/fiber/detail/is_all_same.hpp>

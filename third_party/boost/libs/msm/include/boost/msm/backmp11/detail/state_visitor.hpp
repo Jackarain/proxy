@@ -12,6 +12,7 @@
 #ifndef BOOST_MSM_BACKMP11_DETAIL_STATE_VISITOR_HPP
 #define BOOST_MSM_BACKMP11_DETAIL_STATE_VISITOR_HPP
 
+#include <boost/msm/backmp11/detail/common.hpp>
 #include <boost/msm/backmp11/detail/metafunctions.hpp>
 #include <boost/msm/backmp11/state_machine_config.hpp>
 
@@ -127,6 +128,10 @@ struct recursive_visit_set<StateMachine, FirstPredicate, Predicate>
     using needs_traversal = mp11::mp_not<mp11::mp_empty<states_to_traverse>>;
 };
 
+template <visit_mode Mode, template <typename> typename... Predicates,
+          typename StateMachine, typename Visitor>
+void visit_if(StateMachine& sm, Visitor&& visitor);
+
 template <typename StateMachine,
           template <typename> typename... Predicates>
 class state_visitor_base_impl<
@@ -154,7 +159,7 @@ class state_visitor_base_impl<
                           typename visit_set::submachines_to_traverse,
                           State>::value)
         {
-            state.template visit_if<Mode, Predicates...>(visitor);
+            visit_if<Mode, Predicates...>(state, visitor);
         }
     }
 };
@@ -194,19 +199,19 @@ class state_visitor_impl<
     {
         if constexpr (base::needs_traversal::value)
         {
-            if (sm.m_running)
+            if (sm.m_machine_state != machine_state::stopped)
             {
                 using state_identities = mp11::mp_transform<
                             mp11::mp_identity,
                             typename base::states_to_traverse>;
-                for (const int active_state_id : sm.m_active_state_ids)
+                for (const auto active_state_id : sm.get_active_state_ids())
                 {
                     mp11::mp_for_each<state_identities>(
                         [&sm, &visitor, active_state_id](auto state_identity)
                         {
                             using State =
                                 typename decltype(state_identity)::type;
-                            constexpr int state_id =
+                            constexpr auto state_id =
                                 StateMachine::template get_state_id<State>();
                             if (active_state_id == state_id)
                             {
@@ -288,18 +293,18 @@ class event_deferral_visitor
         // is evaluated before it's called.
         static_assert(visit_set::needs_traversal::value,
                       "The visitor must have at least one state to visit");
-        if (sm.m_running)
+        if (sm.m_machine_state != machine_state::stopped)
         {
             using state_identities = mp11::mp_transform<
                         mp11::mp_identity,
                         typename visit_set::states_to_traverse>;
-            for (const int active_state_id : sm.m_active_state_ids)
+            for (const auto active_state_id : sm.get_active_state_ids())
             {
                 mp11::mp_for_each<state_identities>(
                     [&sm, &visitor, active_state_id](auto state_identity)
                     {
                         using State = typename decltype(state_identity)::type;
-                        constexpr int state_id =
+                        constexpr auto state_id =
                             StateMachine::template get_state_id<State>();
                         if (active_state_id == state_id)
                         {
@@ -331,6 +336,16 @@ class event_deferral_visitor
         }
     }
 };
+
+// Visit states with a compile-time filter (reduces template instantiations).
+template <visit_mode Mode, template <typename> typename... Predicates,
+          typename StateMachine, typename Visitor>
+void visit_if(StateMachine& sm, Visitor&& visitor)
+{
+    using state_visitor =
+        state_visitor<StateMachine, Visitor, Mode, Predicates...>;
+    state_visitor::visit(sm, visitor);
+}
 
 // Predefined visitor functors used in backmp11.
 
@@ -449,8 +464,8 @@ class init_state_visitor
                 std::is_same_v<typename State::context_t, no_context> ||
                 std::is_same_v<typename State::context_t, typename RootSm::context_t>,
                 "The configured context must match the root sm's one");
-            static_assert(std::is_same_v<typename RootSm::compile_policy,
-                                         typename State::compile_policy>,
+            static_assert(std::is_same_v<typename RootSm::config_t::compile_policy,
+                                         typename State::config_t::compile_policy>,
                           "All compile policies must be identical");
 
             *state.m_root_sm = &m_root_sm;

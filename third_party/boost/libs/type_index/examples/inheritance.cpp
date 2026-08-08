@@ -12,9 +12,9 @@
     Example works with and without RTTI."
 */
 
+#include <iostream>
 #include <boost/type_index.hpp>
 #include <boost/type_index/runtime_cast/register_runtime_class.hpp>
-#include <iostream>
 
 struct A {
     BOOST_TYPE_INDEX_REGISTER_CLASS

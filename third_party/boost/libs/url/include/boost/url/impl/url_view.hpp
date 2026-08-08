@@ -67,9 +67,10 @@ persist() const
     auto p = std::allocate_shared<T>(
         detail::over_allocator<T, Alloc>(
             size(), a), url_view(impl()));
-    std::memcpy(
-        reinterpret_cast<char*>(
-            p.get() + 1), data(), size());
+    if(size())
+        std::memcpy(
+            reinterpret_cast<char*>(
+                p.get() + 1), data(), size());
     return p;
 }
 

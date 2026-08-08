@@ -280,7 +280,7 @@ int main(int argc, char* argv[])
 
         // First thing, the filesystem should record the current working
         // directory.
-        fs::initial_path<fs::path>();
+        fs::initial_path();
 
         // Various initialisation methods
         quickbook::detail::initialise_output();

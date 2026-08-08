@@ -1,7 +1,7 @@
 [library Boost.Lockfree
     [quickbook 1.4]
     [authors [Blechmann, Tim]]
-    [copyright 2008-2011 Tim Blechmann]
+    [copyright 2008-2026 Tim Blechmann]
     [category algorithms]
     [purpose
         lockfree concurrent data structures
@@ -115,15 +115,25 @@ lock-freedom:
 
 [h2 Data Structures]
 
-_lockfree_ implements four lock-free data structures:
+_lockfree_ implements six lock-free data structures:
 
 [variablelist
     [[[classref boost::lockfree::queue]]
-     [a lock-free multi-producer/multi-consumer queue]
+     [a lock-free multi-producer/multi-consumer queue (Based on Michael & Scott's algorithm)]
+    ]
+
+    [[[classref boost::lockfree::bounded_ticket_queue]]
+     [a bounded multi-producer/multi-consumer queue based on the Dyukov turnstile
+      (Vyukov bounded MPMC algorithm).  Configurable via `single_producer<>` and
+      `single_consumer<>` policy tags to obtain wait-free push or pop.]
+    ]
+
+    [[[classref boost::lockfree::mpsc_weak_queue]]
+     [a multi-producer/single-consumer queue (Based on Dmitry Vyukov's algorithm)]
     ]
 
     [[[classref boost::lockfree::stack]]
-     [a lock-free multi-producer/multi-consumer stack]
+     [a lock-free multi-producer/multi-consumer stack (Based on Treiber's algorithm)]
     ]
 
     [[[classref boost::lockfree::spsc_queue]]
@@ -159,6 +169,16 @@ The data structures can be configured with [@boost:/libs/parameter/doc/html/inde
 
     [[[classref boost::lockfree::allow_multiple_reads]]
     [Configures the [classref boost::lockfree::spsc_value] to allow the content to be read multiple times.]
+    ]
+
+    [[[classref boost::lockfree::single_producer]]
+    [Configures a data structure for single-producer usage. When set to `true`, push
+     does not use a CAS and is wait-free. Only valid for [classref boost::lockfree::bounded_ticket_queue].]
+    ]
+
+    [[[classref boost::lockfree::single_consumer]]
+    [Configures a data structure for single-consumer usage. When set to `true`, pop
+     does not use a CAS and is wait-free. Only valid for [classref boost::lockfree::bounded_ticket_queue].]
     ]
 ]
 
@@ -278,6 +298,7 @@ _lockfree_ requires a c++14 compliant compiler. Users of MSVC are strongly recom
 # [@http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.37.3574 Simple, Fast, and Practical Non-Blocking and Blocking Concurrent Queue Algorithms by Michael Scott and Maged Michael],
 In Symposium on Principles of Distributed Computing, pages 267–275, 1996.
 # [@http://books.google.com/books?id=pFSwuqtJgxYC M. Herlihy & Nir Shavit. The Art of Multiprocessor Programming], Morgan Kaufmann Publishers, 2008
+# [@http://www.1024cores.net/home/lock-free-algorithms/queues/intrusive-mpsc-node-based-queue Multiple Producer Single Consumer Lock-Free Queue by Dmitry Vyukov], 2010
 
 [endsect]
 

@@ -25,22 +25,45 @@
 #include <boost/core/lightweight_test.hpp>
 #include <boost/config.hpp>
 
-unsigned throw_one = 0xFFFF;
+thread_local unsigned throw_one = 0xFFFF;
+thread_local unsigned operator_new_recursion_level = 0u;
+
+struct operator_new_recursion_counter
+{
+  operator_new_recursion_counter() BOOST_NOEXCEPT_OR_NOTHROW
+  {
+    ++operator_new_recursion_level;
+  }
+  ~operator_new_recursion_counter() BOOST_NOEXCEPT_OR_NOTHROW
+  {
+    --operator_new_recursion_level;
+  }
+};
 
 #if defined _GLIBCXX_THROW
 void* operator new(std::size_t s) _GLIBCXX_THROW (std::bad_alloc)
-#elif defined BOOST_MSVC
-void* operator new(std::size_t s)
-#elif __cplusplus > 201402L
-void* operator new(std::size_t s)
 #else
-void* operator new(std::size_t s) throw (std::bad_alloc)
+void* operator new(std::size_t s)
 #endif
 {
   //std::cout << __FILE__ << ":" << __LINE__ << std::endl;
-  if (throw_one == 0) throw std::bad_alloc();
-  --throw_one;
-  return std::malloc(s);
+  // Throwing an exception may recursively call operator new. If we're throwing std::bad_alloc,
+  // this may cause infinite recursion and a crash. So only throw if we're at the top recursion level.
+  operator_new_recursion_counter auto_counter;
+  if (operator_new_recursion_level == 1u)
+  {
+    if (throw_one == 0) throw std::bad_alloc();
+    --throw_one;
+  }
+  void* p = std::malloc(s);
+  if (!p)
+  {
+    if (operator_new_recursion_level == 1u)
+      throw std::bad_alloc();
+    else
+      std::abort();
+  }
+  return p;
 }
 
 #if defined BOOST_MSVC
@@ -124,7 +147,8 @@ int main()
     BOOST_TEST(f_run == true);
     std::cout << __FILE__ << ":" << __LINE__ <<" " << G::n_alive << std::endl;
   }
-#if !defined(BOOST_MSVC) && !defined(__MINGW32__)
+// On OpenBSD, the test crashes for unknown reason when operator new throws an exception.
+#if !defined(BOOST_MSVC) && !defined(__MINGW32__) && !defined(__OpenBSD__)
   f_run = false;
   {
     std::cout << __FILE__ << ":" << __LINE__ <<" " << G::n_alive << std::endl;

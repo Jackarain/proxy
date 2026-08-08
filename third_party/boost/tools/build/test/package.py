@@ -194,6 +194,7 @@ def test_multiple():
     t.expect_addition("p/yyy/lib/b.dll")
     t.expect_addition("p/yyy/lib/b.lib")
     t.expect_addition("p/yyy/include/a.h")
+    t.cleanup()
 
 def test_paths():
     t = BoostBuild.Tester(pass_toolset=False)

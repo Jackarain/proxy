@@ -43,8 +43,11 @@ The `kill` command terminates the current child immediately.
 Breakpoints are set using the `break` command. The location of the
 breakpoint can be specified as either the name of a function (including
 the module name) or or a file name and line number of the form
-`file:line`. When a breakpoint is created it is given a unique id which
-is used to identify it for other commands.
+`file:line` (in this last case the line must contain a Jam statement for the
+breakpoint to be effective, a breakpoint set on an empty line or a line
+with a comment will not work.)
+When a breakpoint is created it is given a unique id which is used to
+refer it in other commands.
 
 ....
 (b2db) break Jamfile:10

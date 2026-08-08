@@ -1,0 +1,90 @@
+= Examples
+
+== xref:attachment$backmp11/BackAdapter.cpp[`back` adapter]
+
+This example contains a state machine implementation with an API adapter that adheres to the `back::state_machine` interface.
+It is helpful for utilizing `backmp11` in a legacy code base.
+
+
+== xref:attachment$backmp11/HeaplessStateMachine.cpp[Heapless state machine]
+
+This example demonstrates a state machine configured for heapless execution.
+
+It uses `boost::container::static_vector` as the event pool container — a fixed-capacity replacement for the default `std::deque` container. Note that this container type does not support completion transitions; use a heapless deque (e.g. `etl::deque`) if those are required.
+
+
+== xref:attachment$backmp11/InterruptibleStateMachine.cpp[Interruptible state machine]
+
+This example demonstrates a state machine extended with an interrupt mechanism.
+
+The state machine provides a public API to pause and resume its execution. This way it can be interrupted externally as well as internally through an event.
+It can immediately continue from where it was interrupted, since the interruption does not require a state change.
+
+
+== xref:attachment$backmp11/Logger.cpp[Logger]
+
+This example contains an observer implementation for logging state machine activities.
+The implementation logs the start of event processing and every processed transition.
+
+Running the example produces the following output:
+
+```bash
+Starting state machine...
+MyStateMachine processed transition "none + starting -> MyState" (handled)
+MyStateMachine processing event TransitionEvent
+MyStateMachine processed transition "MyState + TransitionEvent [ NotMyGuard ] / MyAction -> MyOtherState" (rejected)
+MyStateMachine processed transition "MyState + TransitionEvent [ MyGuard ] / MyAction -> MyOtherState" (handled)
+MyStateMachine processing event TransitionEvent
+MyStateMachine processed transition "MyOtherState + TransitionEvent -> MyState" (handled)
+MyStateMachine processing event InternalTransitionEvent
+MyStateMachine processed transition "MyState + InternalTransitionEvent / MyAction" (handled)
+MyStateMachine processing event SmInternalTransitionEvent
+MyStateMachine processed transition "MyStateMachine + SmInternalTransitionEvent / MyAction" (handled)
+Stopping state machine...
+```
+
+
+== Serialization
+
+These examples demonstrate how to implement `reflect(...)` methods to serialize a state machine.
+
+A serialization to JSON is particularly useful for inspecting a state machine's overall state in a human-readable format:
+
+```json
+{
+    "active_state_ids": [
+        1 // On
+    ],
+    "front_end": {
+        "brightness": 75
+    },
+    "machine_state": 1, // idle
+    "states": {
+        "1": {
+            "times_pressed": 1
+        }
+    }
+}
+```
+
+=== xref:attachment$backmp11/serializer/DimSwitch.hpp[`DimSwitch` state machine] (used by all examples)
+
+=== xref:attachment$backmp11/serializer/BoostSerialization.cpp[Boost.Serialization]
+
+=== xref:attachment$backmp11/serializer/BoostJson.cpp[Boost.Json]
+
+=== xref:attachment$backmp11/serializer/NlohmannJson.cpp[nlohmann/json]
+
+
+== xref:attachment$backmp11/StateMachineInterface.cpp[State machine interface]
+
+This example demonstrates how to establish a generic state machine interface with the `favor_compile_time` policy.
+
+Hiding a state machine behind an interface enables full encapsulation of its implementation — useful for improving compilation times, unit testing, and concealing proprietary logic when distributing pre-compiled libraries.
+
+
+== xref:attachment$backmp11/Visitor.cpp[Visitor]
+
+This example demonstrates the usage of a visitor. 
+
+A jukebox can play 3 different types of songs. An active state visitor reports which song is currently playing. An all states visitor reports how many times each song has been played.

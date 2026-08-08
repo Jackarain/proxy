@@ -220,7 +220,7 @@ bool node_type_test()
    return true;
 }
 
-template<class VoidAllocator, boost::container::tree_type_enum tree_type_value>
+template<class VoidAllocator, boost::container::tree_type_enum tree_type_value, bool Transparent = false>
 struct GetAllocatorMap
 {
    template<class ValueType>
@@ -228,7 +228,7 @@ struct GetAllocatorMap
    {
       typedef map< ValueType
                  , ValueType
-                 , std::less<ValueType>
+                 , typename dtl::if_c<Transparent, test::less_transparent, std::less<ValueType> >::type
                  , typename allocator_traits<VoidAllocator>
                     ::template portable_rebind_alloc< std::pair<const ValueType, ValueType> >::type
                   , typename boost::container::tree_assoc_options
@@ -238,7 +238,7 @@ struct GetAllocatorMap
 
       typedef multimap< ValueType
                  , ValueType
-                 , std::less<ValueType>
+                 , typename dtl::if_c<Transparent, test::less_transparent, std::less<ValueType> >::type
                  , typename allocator_traits<VoidAllocator>
                     ::template portable_rebind_alloc< std::pair<const ValueType, ValueType> >::type
                   , typename boost::container::tree_assoc_options
@@ -487,6 +487,15 @@ int main ()
          , GetAllocatorMap<new_allocator<void>, red_black_tree>::apply<test::moveconstruct_int>::multimap_type
          , MyStdMultiMap>()) {
          std::cout << "Error in map_test<new_allocator<void>, red_black_tree>" << std::endl;
+         return 1;
+      }
+
+      if (0 != test::map_test
+         < GetAllocatorMap<new_allocator<void>, red_black_tree, true>::apply<test::movable_and_copyable_int>::map_type
+         , MyStdMap
+         , GetAllocatorMap<new_allocator<void>, red_black_tree, true>::apply<test::movable_and_copyable_int>::multimap_type
+         , MyStdMultiMap>()) {
+         std::cout << "Error in map_test<new_allocator<void>, red_black_tree>>, transparent" << std::endl;
          return 1;
       }
    }

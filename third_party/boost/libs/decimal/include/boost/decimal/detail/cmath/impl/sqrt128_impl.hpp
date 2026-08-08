@@ -80,8 +80,8 @@ constexpr auto sqrt128_impl(T x, int exp10val) noexcept -> T
     // ---------- Compute initial sig_z = sig_gx * r / 10^16 ----------
     // sig_z ≈ sqrt(gx) * 10^33
     // sig_z = sig_gx * r_scaled / 10^16
-    // r_scaled is 64-bit; use mul128By64 (SoftFloat-style) instead of full umul256
-    u256 sig_z = mul128By64(gx_sig, r_scaled) / scale16;
+    // r_scaled is 64-bit; use mul128_by_64 (SoftFloat-style) instead of full umul256
+    u256 sig_z = mul128_by_64(gx_sig, r_scaled) / scale16;
 
     // Precompute target = sig_gx * 10^33 (avoids recomputing in each Newton iteration)
     const u256 target = umul256(gx_sig, scale33_128);

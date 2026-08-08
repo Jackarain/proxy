@@ -44,13 +44,11 @@
 // Boost Variant2 supports all C++ versions back to C++11
 #if BOOST_CXX_VERSION >= 201103L
 #include <boost/variant2/variant.hpp>
-#include <type_traits>
 #endif
 
-// Boost Variant2 supports all C++ versions back to C++11
+// std::variant supports all C++ versions back to C++11
 #ifndef BOOST_NO_CXX17_HDR_VARIANT
 #include <variant>
-//#include <type_traits>
 #endif
 
 #include <boost/archive/archive_exception.hpp>
@@ -218,7 +216,7 @@ void load(
     int which;
     typedef typename boost::variant<Types...>::types types;
     ar >> BOOST_SERIALIZATION_NVP(which);
-    if(which >=  sizeof...(Types)){
+    if(static_cast<std::size_t>(which) >= sizeof...(Types)){
         // this might happen if a type was removed from the list of variant types
         boost::serialization::throw_exception(
             boost::archive::archive_exception(
@@ -240,7 +238,7 @@ void load(
     int which;
     typedef typename boost::variant<Types...>::types types;
     ar >> BOOST_SERIALIZATION_NVP(which);
-    if(which >=  sizeof...(Types)){
+    if(static_cast<std::size_t>(which) >= sizeof...(Types)){
         // this might happen if a type was removed from the list of variant types
         boost::serialization::throw_exception(
             boost::archive::archive_exception(

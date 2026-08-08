@@ -12,8 +12,8 @@
 #include <boost/core/lightweight_test.hpp>
 #include <boost/static_assert.hpp>
 
-int count = 0;
-boost::mutex mutex;
+int g_count = 0;
+boost::mutex g_mutex;
 
 namespace
 {
@@ -40,8 +40,8 @@ void interrupt_all(TC & tc)
 
 void increment_count()
 {
-  boost::unique_lock<boost::mutex> lock(mutex);
-  std::cout << "count = " << ++count << std::endl;
+  boost::unique_lock<boost::mutex> lock(g_mutex);
+  std::cout << "count = " << ++g_count << std::endl;
 }
 
 #if defined  BOOST_NO_CXX11_RVALUE_REFERENCES && defined BOOST_THREAD_USES_MOVE
@@ -61,7 +61,7 @@ int main()
     }
     join_all(threads);
   }
-  count = 0;
+  g_count = 0;
   {
     thread_vector threads;
     threads.reserve(10);
@@ -71,7 +71,7 @@ int main()
     }
     join_all(threads);
   }
-  count = 0;
+  g_count = 0;
   {
     thread_vector threads;
     threads.reserve(10);
@@ -81,7 +81,7 @@ int main()
     }
     join_all(threads);
   }
-  count = 0;
+  g_count = 0;
   {
     thread_vector threads;
     threads.reserve(10);

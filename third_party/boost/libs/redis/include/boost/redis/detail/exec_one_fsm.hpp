@@ -21,7 +21,7 @@
 
 namespace boost::redis::detail {
 
-class read_buffer;
+class multiplexer;
 
 // What should we do next?
 enum class exec_one_action_type
@@ -57,8 +57,10 @@ public:
    , remaining_responses_(expected_responses)
    { }
 
+   // Instead of using the read_buffer directly we use its facade in the
+   // multiplexer because it keeps track of usage information.
    exec_one_action resume(
-      read_buffer& buffer,
+      multiplexer& mpx,
       system::error_code ec,
       std::size_t bytes_transferred,
       asio::cancellation_type_t cancel_state);

@@ -4,12 +4,12 @@
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/stacktrace.hpp>
-
 #include <iostream>
 #include <thread>
 
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/stacktrace.hpp>
 
 namespace boost { namespace stacktrace { namespace impl {
   void assert_no_pending_traces() noexcept;
@@ -146,7 +146,7 @@ BOOST_NOINLINE BOOST_SYMBOL_VISIBLE void test_rethrow_nested() {
   } catch (...) {
     auto trace = stacktrace::from_current_exception();
     BOOST_TEST(trace);
-    std::cout << "Tarce in test_rethrow_nested(): " << trace << '\n';
+    std::cout << "Trace in test_rethrow_nested(): " << trace << '\n';
     BOOST_TEST(to_string(trace).find("in_test_throw_1") == std::string::npos);
 #if defined(BOOST_MSVC)
     BOOST_TEST(to_string(trace).find("in_test_throw_2") == std::string::npos);

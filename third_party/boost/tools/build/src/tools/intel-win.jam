@@ -152,7 +152,7 @@ local rule configure ( version ? : command * : options * )
             if [ MATCH "($(v))" : $(.iclvars-$(version)-supported-vcs) ]
             {
                 # Strip trailing .0 from msvc version as intel compiler uses atm only major version for Qvc
-                local m = [ MATCH "([0-9]+).0$" : $(v) ] ;
+                local m = [ MATCH "([0-9]+)\\.0$" : $(v) ] ;
                 if $(m)
                 {
                     v = $(m) ;
@@ -180,7 +180,7 @@ local rule configure-really ( version ? : command * : options * : compatibility 
     local condition = [  common.check-init-parameters intel-win
         : version $(version) : compatibility $(compatibility) ] ;
 
-    local m = [ MATCH "([0-9]+).*" : $(version) ] ;
+    local m = [ MATCH "([0-9]+)" : $(version) ] ;
     local major = $(m[1]) ;
     if ! $(major)
     {
@@ -462,7 +462,7 @@ local rule get-autodetect-versions
     local result ;
     for local v in $(.intel-autodetect-versions)
     {
-        local major = [ MATCH "([0-9]+).*" : $(v) ] ; # Use only major version
+        local major = [ MATCH "([0-9]+)" : $(v) ] ; # Use only major version
         if [ get-icl-path-from-environment $(major) ]
         {
             result += $(v) ;

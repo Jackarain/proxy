@@ -38,7 +38,7 @@ The exponent will always have a minimum of 2 digits.
 
 === Fixed Format
 Fixed format will be of the form `2.30` or `3090`. An exponent will not appear with this format.
-If the precision of `to_chars` exceeds that of the type (e.g. `std::numeric_limits<double>::chars10`), 0s will be appended to the end of the significant digits.
+If the precision of `to_chars` exceeds that of the type (e.g. `std::numeric_limits<double>::max_digits10`), 0s will be appended to the end of the significant digits.
 
 === Hex Format
 Hex format will be of the form `1.0cp+05`. The integer part will always be 0 or 1.
@@ -58,4 +58,4 @@ Each hexadecimal digit corresponds to a specific group of bits, making it easier
 This can be helpful for debugging or analyzing floating-point arithmetic operations (e.g. Computing https://en.wikipedia.org/wiki/Unit_in_the_last_place[ULP] distances).
 
 === General
-General format will be the shortest representation of a number in either fixed or general format (e.g. `1234` instead of `1.234e+03`.
+General format will be the shortest representation of a number in either fixed or scientific format (e.g. `1234` instead of `1.234e+03`).

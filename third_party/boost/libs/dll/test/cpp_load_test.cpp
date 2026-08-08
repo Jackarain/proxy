@@ -10,8 +10,6 @@
 #include <boost/config.hpp>
 #include <boost/predef.h>
 
-#  include <boost/dll/smart_library.hpp>
-
 #include "../example/b2_workarounds.hpp"
 
 #include <boost/core/lightweight_test.hpp>
@@ -19,6 +17,8 @@
 #include <boost/variant.hpp>
 
 #include <iostream>
+
+#include <boost/dll/smart_library.hpp>
 
 struct override_class
 {

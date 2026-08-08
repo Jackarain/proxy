@@ -13,7 +13,7 @@
 #define LYRA_VERSION_HPP
 
 #define LYRA_VERSION_MAJOR 1
-#define LYRA_VERSION_MINOR 7
+#define LYRA_VERSION_MINOR 8
 #define LYRA_VERSION_PATCH 0
 
 #define LYRA_VERSION \
@@ -39,23 +39,8 @@
 #define LYRA_DETAIL_TRAIT_UTILS_HPP
 
 #include <type_traits>
-#include <utility>
 
 namespace lyra { namespace detail {
-
-template <class F, class... Args>
-struct is_callable
-{
-	template <class U>
-	static auto test(U * p) -> decltype((*p)(std::declval<Args>()...),
-								void(),
-								std::true_type());
-
-	template <class U>
-	static auto test(...) -> decltype(std::false_type());
-
-	static constexpr bool value = decltype(test<F>(nullptr))::value;
-};
 
 template <class T>
 struct remove_cvref
@@ -68,8 +53,8 @@ template <class F>
 struct is_invocable
 {
 	template <class U>
-	static auto test(
-		U * p) -> decltype((&U::operator()), void(), std::true_type());
+	static auto test(U * p)
+		-> decltype((&U::operator()), void(), std::true_type());
 
 	template <class U>
 	static auto test(...) -> decltype(std::false_type());
@@ -78,20 +63,27 @@ struct is_invocable
 		= decltype(test<typename remove_cvref<F>::type>(nullptr))::value;
 };
 
-template <typename... Ts>
-struct make_void
-{
-	typedef void type;
-};
-template <typename... Ts>
-using valid_t = typename make_void<Ts...>::type;
-
 template <class T, template <class...> class Primary>
 struct is_specialization_of : std::false_type
 {};
 template <template <class...> class Primary, class... Args>
 struct is_specialization_of<Primary<Args...>, Primary> : std::true_type
 {};
+
+template <typename C>
+struct is_character
+{
+	using bare_t = typename remove_cvref<C>::type;
+	static constexpr bool value = false || std::is_same<char, bare_t>::value
+		|| std::is_same<signed char, bare_t>::value
+		|| std::is_same<unsigned char, bare_t>::value
+		|| std::is_same<wchar_t, bare_t>::value
+#if (__cplusplus >= 202002L)
+		|| std::is_same<char8_t, bare_t>::value
+#endif
+		|| std::is_same<char16_t, bare_t>::value
+		|| std::is_same<char32_t, bare_t>::value;
+};
 
 }} // namespace lyra::detail
 
@@ -103,8 +95,14 @@ struct is_specialization_of<Primary<Args...>, Primary> : std::true_type
 #include <type_traits>
 
 #ifndef LYRA_CONFIG_OPTIONAL_TYPE
-#	ifdef __has_include
-#		if __has_include(<optional>) && __cplusplus >= 201703L
+#	if defined(__has_include)
+#		if __has_include(<version>)
+#			include <version>
+#		elif __has_include(<ciso646>)
+#			include <ciso646>
+#		endif
+#		if __has_include(<optional>) \
+		&& defined(__cpp_lib_optional) && (__cpp_lib_optional >= 201606L)
 #			include <optional>
 #			define LYRA_CONFIG_OPTIONAL_TYPE std::optional
 #		endif
@@ -155,13 +153,13 @@ inline bool to_string(
 
 template <typename, typename = void>
 struct is_convertible_from_string : std::false_type
-{};
+{ };
 
 template <typename T>
 struct is_convertible_from_string<T,
 	typename std::enable_if<std::is_arithmetic<T>::value>::type>
 	: std::true_type
-{};
+{ };
 
 template <typename, typename = void>
 struct validate_from_string
@@ -198,7 +196,7 @@ inline bool from_string(S const & source, T & target)
 	std::stringstream ss;
 	ss << source;
 	if (!validate_from_string<T>::validate(ss.str())) return false;
-	T temp {};
+	T temp { };
 	ss >> temp;
 	if (!ss.fail() && ss.eof())
 	{
@@ -219,7 +217,7 @@ template <typename T>
 struct is_convertible_from_string<T,
 	typename std::enable_if<std::is_same<T, bool>::value>::type>
 	: std::true_type
-{};
+{ };
 
 template <typename S>
 inline bool from_string(S const & source, bool & target)
@@ -245,14 +243,15 @@ struct is_convertible_from_string<T,
 	typename std::enable_if<
 		is_specialization_of<T, LYRA_CONFIG_OPTIONAL_TYPE>::value>::type>
 	: std::true_type
-{};
+{ };
 
 template <typename S, typename T>
 inline bool from_string(S const & source, LYRA_CONFIG_OPTIONAL_TYPE<T> & target)
 {
 	std::string srcLC;
 	to_string(source, srcLC);
-	for (std::string::value_type & c : srcLC) c = ::tolower(c);
+	for (std::string::value_type & c : srcLC)
+		c = static_cast<std::string::value_type>(::tolower(c));
 	if (srcLC == "<nullopt>")
 	{
 		target.reset();
@@ -307,15 +306,15 @@ class result_base
 		error
 	};
 
-	explicit result_base(result_kind kind, const std::string & message = "")
+	explicit result_base(result_kind kind, const std::string & msg = "")
 		: kind_(kind)
-		, message_(message)
-	{}
+		, message_(msg)
+	{ }
 
 	explicit result_base(const result_base & other)
 		: kind_(other.kind_)
 		, message_(other.message_)
-	{}
+	{ }
 
 	virtual ~result_base() = default;
 
@@ -338,15 +337,13 @@ class result_value_base : public result_base
 	protected:
 	std::unique_ptr<value_type> value_;
 
-	explicit result_value_base(
-		result_kind kind, const std::string & message = "")
-		: result_base(kind, message)
-	{}
+	explicit result_value_base(result_kind kind, const std::string & msg = "")
+		: result_base(kind, msg)
+	{ }
 
-	explicit result_value_base(result_kind kind,
-		const value_type & val,
-		const std::string & message = "")
-		: result_base(kind, message)
+	explicit result_value_base(
+		result_kind kind, const value_type & val, const std::string & msg = "")
+		: result_base(kind, msg)
 	{
 		value_.reset(new value_type(val));
 	}
@@ -359,7 +356,7 @@ class result_value_base : public result_base
 
 	explicit result_value_base(const result_base & other)
 		: result_base(other)
-	{}
+	{ }
 
 	result_value_base & operator=(result_value_base const & other)
 	{
@@ -378,11 +375,10 @@ class result_value_base<void> : public result_base
 	protected:
 	explicit result_value_base(const result_base & other)
 		: result_base(other)
-	{}
-	explicit result_value_base(
-		result_kind kind, const std::string & message = "")
-		: result_base(kind, message)
-	{}
+	{ }
+	explicit result_value_base(result_kind kind, const std::string & msg = "")
+		: result_base(kind, msg)
+	{ }
 };
 
 template <typename T>
@@ -393,7 +389,7 @@ class basic_result : public result_value_base<T>
 
 	explicit basic_result(result_base const & other)
 		: result_value_base<T>(other)
-	{}
+	{ }
 
 
 	static basic_result ok(value_type const & val)
@@ -401,10 +397,9 @@ class basic_result : public result_value_base<T>
 		return basic_result(result_base::result_kind::ok, val);
 	}
 
-	static basic_result error(
-		value_type const & val, std::string const & message)
+	static basic_result error(value_type const & val, std::string const & msg)
 	{
-		return basic_result(result_base::result_kind::error, val, message);
+		return basic_result(result_base::result_kind::error, val, msg);
 	}
 
 	protected:
@@ -419,7 +414,7 @@ class basic_result<void> : public result_value_base<void>
 
 	explicit basic_result(result_base const & other)
 		: result_value_base<void>(other)
-	{}
+	{ }
 
 
 	static basic_result ok()
@@ -427,9 +422,9 @@ class basic_result<void> : public result_value_base<void>
 		return basic_result(result_base::result_kind::ok);
 	}
 
-	static basic_result error(std::string const & message)
+	static basic_result error(std::string const & msg)
 	{
-		return basic_result(result_base::result_kind::error, message);
+		return basic_result(result_base::result_kind::error, msg);
 	}
 
 	protected:
@@ -576,8 +571,8 @@ struct NonCopyable
 struct BoundRef : NonCopyable
 {
 	virtual ~BoundRef() = default;
-	virtual auto isContainer() const -> bool { return false; }
-	virtual auto isFlag() const -> bool { return false; }
+	virtual bool isContainer() const { return false; }
+	virtual bool isFlag() const { return false; }
 
 	virtual size_t get_value_count() const { return 0; }
 	virtual std::string get_value(size_t) const { return ""; }
@@ -585,13 +580,13 @@ struct BoundRef : NonCopyable
 
 struct BoundValueRefBase : BoundRef
 {
-	virtual auto setValue(std::string const & arg) -> parser_result = 0;
+	virtual parser_result setValue(std::string const & arg) = 0;
 };
 
 struct BoundFlagRefBase : BoundRef
 {
-	virtual auto setFlag(bool flag) -> parser_result = 0;
-	virtual auto isFlag() const -> bool { return true; }
+	virtual parser_result setFlag(bool flag) = 0;
+	virtual bool isFlag() const { return true; }
 };
 
 template <typename T>
@@ -601,9 +596,9 @@ struct BoundValueRef : BoundValueRefBase
 
 	explicit BoundValueRef(T & ref)
 		: m_ref(ref)
-	{}
+	{ }
 
-	auto setValue(std::string const & arg) -> parser_result override
+	parser_result setValue(std::string const & arg) override
 	{
 		return parse_string(arg, m_ref);
 	}
@@ -628,11 +623,11 @@ struct BoundValueRef<std::vector<T>> : BoundValueRefBase
 
 	explicit BoundValueRef(std::vector<T> & ref)
 		: m_ref(ref)
-	{}
+	{ }
 
-	auto isContainer() const -> bool override { return true; }
+	bool isContainer() const override { return true; }
 
-	auto setValue(std::string const & arg) -> parser_result override
+	parser_result setValue(std::string const & arg) override
 	{
 		T temp;
 		auto str_result = parse_string(arg, temp);
@@ -659,9 +654,9 @@ struct BoundFlagRef : BoundFlagRefBase
 
 	explicit BoundFlagRef(bool & ref)
 		: m_ref(ref)
-	{}
+	{ }
 
-	auto setFlag(bool flag) -> parser_result override
+	parser_result setFlag(bool flag) override
 	{
 		m_ref = flag;
 		return parser_result::ok(parser_result_type::matched);
@@ -682,11 +677,18 @@ struct BoundLambda : BoundValueRefBase
 
 	static_assert(unary_lambda_traits<L>::isValid,
 		"Supplied lambda must take exactly one argument");
+	static_assert(
+		std::is_same<L, typename detail::remove_cvref<L>::type>::value,
+		"Supplied lambda must not be a reference");
+
 	explicit BoundLambda(L const & lambda)
 		: m_lambda(lambda)
-	{}
+	{ }
+	explicit BoundLambda(L && lambda)
+		: m_lambda(std::move(lambda))
+	{ }
 
-	auto setValue(std::string const & arg) -> parser_result override
+	parser_result setValue(std::string const & arg) override
 	{
 		return invokeLambda<typename unary_lambda_traits<L>::ArgType>(
 			m_lambda, arg);
@@ -701,14 +703,21 @@ struct BoundFlagLambda : BoundFlagRefBase
 	static_assert(unary_lambda_traits<L>::isValid,
 		"Supplied lambda must take exactly one argument");
 	static_assert(
+		std::is_same<L, typename detail::remove_cvref<L>::type>::value,
+		"Supplied lambda must not be a reference");
+	static_assert(
 		std::is_same<typename unary_lambda_traits<L>::ArgType, bool>::value,
 		"flags must be boolean");
 
 	explicit BoundFlagLambda(L const & lambda)
 		: m_lambda(lambda)
-	{}
+	{ }
 
-	auto setFlag(bool flag) -> parser_result override
+	explicit BoundFlagLambda(L && lambda)
+		: m_lambda(std::move(lambda))
+	{ }
+
+	parser_result setFlag(bool flag) override
 	{
 		return LambdaInvoker<
 			typename unary_lambda_traits<L>::ReturnType>::invoke(m_lambda,
@@ -724,12 +733,12 @@ struct BoundVal : BoundValueRef<T>
 	BoundVal(T && v)
 		: BoundValueRef<T>(value)
 		, value(v)
-	{}
+	{ }
 
 	BoundVal(BoundVal && other) noexcept
 		: BoundValueRef<T>(value)
 		, value(std::move(other.value))
-	{}
+	{ }
 
 	std::shared_ptr<BoundRef> move_to_shared()
 	{
@@ -744,15 +753,15 @@ struct BoundVal : BoundValueRef<T>
 #ifndef LYRA_DETAIL_PRINT_HPP
 #define LYRA_DETAIL_PRINT_HPP
 
+#ifndef LYRA_DEBUG
+#	define LYRA_DEBUG 0
+#endif
+
 #if LYRA_DEBUG
 #	include <iostream>
 #endif
 
 #include <string>
-
-#ifndef LYRA_DEBUG
-#	define LYRA_DEBUG 0
-#endif
 
 namespace lyra { namespace detail {
 
@@ -788,8 +797,9 @@ struct print
 	{
 		if (is_debug)
 		{
+			static auto indent = " | : | : | : | : | : | : | : | : | : | : ";
 			std::cerr << "[DEBUG]"
-					  << std::string((print::depth() - 1) * 2, ' ');
+					  << std::string(indent, (print::depth() - 1) * 2);
 			std::string args[] = { to_string(arg)... };
 			for (auto & arg_string : args)
 			{
@@ -1039,6 +1049,10 @@ inline const option_style & option_style::windows()
 #include <string>
 #include <vector>
 
+#ifndef LYRA_USE_BASIC_TOKEN
+#	define LYRA_USE_BASIC_TOKEN false
+#endif
+
 namespace lyra { namespace detail {
 
 enum class token_type
@@ -1048,6 +1062,7 @@ enum class token_type
 	argument
 };
 
+#if LYRA_USE_BASIC_TOKEN
 template <typename Char, class Traits = std::char_traits<Char>>
 class basic_token_name
 {
@@ -1069,19 +1084,19 @@ class basic_token_name
 	basic_token_name() noexcept
 		: str { nullptr }
 		, len { 0 }
-	{}
+	{ }
 
 	basic_token_name(const basic_token_name &) noexcept = default;
 
 	basic_token_name(const_pointer s) noexcept
 		: str { s }
 		, len { traits_type::length(s) }
-	{}
+	{ }
 
 	basic_token_name(const_pointer s, size_type count) noexcept
 		: str { s }
 		, len { count }
-	{}
+	{ }
 
 	basic_token_name & operator=(const basic_token_name &) noexcept = default;
 
@@ -1117,7 +1132,13 @@ class basic_token_name
 	size_type len;
 };
 
+using token_name = basic_token_name<std::string::value_type>;
+
+#else
+
 using token_name = std::string;
+
+#endif
 
 struct token
 {
@@ -1126,12 +1147,12 @@ struct token
 
 	token()
 		: type(token_type::unknown)
-	{}
+	{ }
 	token(const token & other) = default;
 	token(token_type t, const token_name & n)
 		: type(t)
 		, name(n)
-	{}
+	{ }
 
 	explicit operator bool() const { return type != token_type::unknown; }
 };
@@ -1145,7 +1166,7 @@ class token_iterator
 		, args_i(args.begin())
 		, args_e(args.end())
 		, args_i_sub(opt_style.short_option_size)
-	{}
+	{ }
 
 	explicit operator bool() const noexcept { return args_i != args_e; }
 
@@ -1169,12 +1190,12 @@ class token_iterator
 
 	token_iterator & pop(const token & /* opt */, const token & /* val */)
 	{
-		if (has_short_option_prefix() && args_i->size() > 2)
-			++args_i;
-		else if (!has_value_delimiter())
-			args_i += 2;
+		if (
+			has_value_delimiter() ||
+			(has_short_option_prefix() && (args_i->size() - args_i_sub) > 1))
+			args_i += 1;
 		else
-			++args_i;
+			args_i += 2;
 		args_i_sub = style.short_option_size;
 		return *this;
 	}
@@ -1230,7 +1251,8 @@ class token_iterator
 		if (has_short_option_prefix()
 			&& (args_i->find_first_of(style.value_delimiters)
 				== (style.short_option_size + 1)))
-			return token(token_type::argument, args_i->substr(3));
+			return token(token_type::argument,
+				args_i->substr(style.short_option_size + 2));
 		else if (has_long_option_prefix() && has_value_delimiter())
 			return token(token_type::argument,
 				args_i->substr(
@@ -1266,6 +1288,11 @@ class token_iterator
 			}
 		}
 		return false;
+	}
+
+	int count() const
+	{
+		return static_cast<int>(std::distance(args_i, args_e));
 	}
 
 	private:
@@ -1549,7 +1576,7 @@ class ostream_printer : public printer
 		const option_style & style, const std::string & txt) override
 	{
 		const std::string indent_str(
-			get_indent_level() * style.indent_size, ' ');
+			static_cast<unsigned int>(get_indent_level()) * style.indent_size, ' ');
 		os << indent_str << txt << "\n\n";
 		return *this;
 	}
@@ -1558,9 +1585,9 @@ class ostream_printer : public printer
 		const std::string & description) override
 	{
 		const std::string indent_str(
-			get_indent_level() * style.indent_size, ' ');
+			static_cast<unsigned int>(get_indent_level()) * style.indent_size, ' ');
 		const std::string opt_pad(
-			26 - get_indent_level() * style.indent_size - 1, ' ');
+			26 - static_cast<unsigned int>(get_indent_level()) * style.indent_size - 1, ' ');
 		if (opt.size() > opt_pad.size())
 			os << indent_str << opt << "\n"
 			   << indent_str << opt_pad << " " << description << "\n";
@@ -1625,7 +1652,7 @@ struct parser_cardinality
 	parser_cardinality(std::size_t a, std::size_t b)
 		: minimum(a)
 		, maximum(b)
-	{}
+	{ }
 
 	bool is_optional() const { return (minimum == 0); }
 
@@ -1655,6 +1682,25 @@ struct parser_cardinality
 		minimum = n;
 		maximum = m;
 	}
+
+	bool includes(std::size_t v) const
+	{
+		return is_bounded() && (minimum <= v) && (v <= maximum);
+	}
+
+	bool is_maximum(std::size_t v) const
+	{
+		return is_bounded() && v == maximum;
+	}
+};
+
+enum class ctor_lambda_e : char
+{
+	val
+};
+enum class ctor_ref_e : char
+{
+	val
 };
 
 } // namespace detail
@@ -1677,7 +1723,7 @@ class parse_result : public detail::basic_result<detail::parse_state>
 
 	parse_result(const base & other)
 		: base(other)
-	{}
+	{ }
 };
 
 /* tag::reference[]
@@ -1724,9 +1770,8 @@ class parser
 		return "";
 	}
 
-	virtual parse_result parse(
-		detail::token_iterator const & tokens, const option_style & style) const
-		= 0;
+	virtual parse_result parse(detail::token_iterator const & tokens,
+		const option_style & style) const = 0;
 
 	virtual std::string get_print_order_key(const option_style &) const
 	{
@@ -1734,7 +1779,7 @@ class parser
 	}
 
 	virtual void print_help_text_details(printer &, const option_style &) const
-	{}
+	{ }
 
 	protected:
 	virtual void print_help_text(printer & p, const option_style & style) const
@@ -1767,17 +1812,17 @@ class parser
 		if (style.options_print_order
 			!= option_style::opt_print_order::per_declaration)
 		{
-			std::vector<std::size_t> order_index(std::distance(b, e));
+			std::vector<std::size_t> order_index( static_cast<std::size_t>(std::distance(b, e)) );
 			std::iota(order_index.begin(), order_index.end(), 0);
 			std::stable_sort(order_index.begin(), order_index.end(),
 				[&](std::size_t i, std::size_t j) {
-					const parser & pa = **(b + i);
-					const parser & pb = **(b + j);
+					const parser & pa = **(b + static_cast<std::ptrdiff_t>(i));
+					const parser & pb = **(b + static_cast<std::ptrdiff_t>(j));
 					return style.opt_print_order_less(
 						pa.get_print_order_key(style),
 						pb.get_print_order_key(style));
 				});
-			for (auto i : order_index) f(style, **(b + i));
+			for (auto i : order_index) f(style, **(b + static_cast<std::ptrdiff_t>(i)));
 		}
 		else
 		{
@@ -1832,7 +1877,7 @@ two `composable_parser` instances generates a `cli` parser.
 end::reference[] */
 template <typename Derived>
 class composable_parser : public parser
-{};
+{ };
 
 /* tag::reference[]
 
@@ -1879,29 +1924,32 @@ class bound_parser : public composable_parser<Derived>
 	}
 
 	public:
-	enum class ctor_lambda_e
-	{
-		val
-	};
-
 	template <typename Reference>
-	bound_parser(Reference & ref, std::string const & hint);
+	bound_parser(Reference & ref,
+		std::string const & hint,
+		typename std::enable_if<!detail::is_invocable<Reference>::value,
+			detail::ctor_ref_e>::type = detail::ctor_ref_e::val);
 
 	template <typename Lambda>
 	bound_parser(Lambda const & ref,
 		std::string const & hint,
 		typename std::enable_if<detail::is_invocable<Lambda>::value,
-			ctor_lambda_e>::type
-		= ctor_lambda_e::val);
+			detail::ctor_lambda_e>::type = detail::ctor_lambda_e::val);
+
+	template <typename Lambda>
+	bound_parser(Lambda && ref,
+		std::string const & hint,
+		typename std::enable_if<detail::is_invocable<Lambda>::value,
+			detail::ctor_lambda_e>::type = detail::ctor_lambda_e::val);
 
 	template <typename T>
 	explicit bound_parser(detail::BoundVal<T> && val)
 		: bound_parser(val.move_to_shared())
-	{}
+	{ }
 	template <typename T>
 	bound_parser(detail::BoundVal<T> && val, std::string const & hint)
 		: bound_parser(val.move_to_shared(), hint)
-	{}
+	{ }
 
 	Derived & help(const std::string & text);
 	Derived & operator()(std::string const & description);
@@ -1924,7 +1972,9 @@ class bound_parser : public composable_parser<Derived>
 		typename std::enable_if<detail::is_invocable<Lambda>::value, int>::type
 		= 1>
 	Derived & choices(Lambda const & check_choice);
-	template <typename T, std::size_t N>
+	template <typename T,
+		std::size_t N,
+		typename std::enable_if<!detail::is_character<T>::value, int>::type = 2>
 	Derived & choices(const T (&choice_values)[N]);
 
 	std::unique_ptr<parser> clone() const override
@@ -1960,6 +2010,10 @@ bound_parser<Derived>::bound_parser(Reference& ref, std::string const& hint);
 template <typename Derived>
 template <typename Lambda>
 bound_parser<Derived>::bound_parser(Lambda const& ref, std::string const& hint);
+
+template <typename Derived>
+template <typename Lambda>
+bound_parser<Derived>::bound_parser(Lambda && ref, std::string const& hint);
 ----
 
 Constructs a value option with a target typed variable or callback. These are
@@ -1974,19 +2028,39 @@ contain all the specified values.
 end::reference[] */
 template <typename Derived>
 template <typename Reference>
-bound_parser<Derived>::bound_parser(Reference & ref, std::string const & hint)
+bound_parser<Derived>::bound_parser(Reference & ref,
+	std::string const & hint,
+	typename std::enable_if<!detail::is_invocable<Reference>::value,
+		detail::ctor_ref_e>::type)
 	: bound_parser(
 		  std::make_shared<detail::BoundValueRef<Reference>>(ref), hint)
-{}
+{ }
 
 template <typename Derived>
 template <typename Lambda>
 bound_parser<Derived>::bound_parser(Lambda const & ref,
 	std::string const & hint,
 	typename std::enable_if<detail::is_invocable<Lambda>::value,
-		ctor_lambda_e>::type)
-	: bound_parser(std::make_shared<detail::BoundLambda<Lambda>>(ref), hint)
-{}
+		detail::ctor_lambda_e>::type)
+	: bound_parser(
+		  std::make_shared<
+			  detail::BoundLambda<typename detail::remove_cvref<Lambda>::type>>(
+			  ref),
+		  hint)
+{ }
+
+template <typename Derived>
+template <typename Lambda>
+bound_parser<Derived>::bound_parser(Lambda && ref,
+	std::string const & hint,
+	typename std::enable_if<detail::is_invocable<Lambda>::value,
+		detail::ctor_lambda_e>::type)
+	: bound_parser(
+		  std::make_shared<
+			  detail::BoundLambda<typename detail::remove_cvref<Lambda>::type>>(
+			  std::move(ref)),
+		  hint)
+{ }
 
 /* tag::reference[]
 
@@ -2122,7 +2196,7 @@ lyra::opt& lyra::bound_parser<Derived>::choices(Lambda const &check_choice)
 ----
 
 Limit the allowed values of an argument. In the first form the value is
-limited to the ones listed in the call (two or more values). In the second
+limited to the ones listed in the call (one or more values). In the second
 form the `check_choice` function is called with the parsed value and returns
 `true` if it's an allowed value.
 
@@ -2148,7 +2222,9 @@ Derived & bound_parser<Derived>::choices(Lambda const & check_choice)
 }
 
 template <typename Derived>
-template <typename T, std::size_t N>
+template <typename T,
+	std::size_t N,
+	typename std::enable_if<!detail::is_character<T>::value, int>::type>
 Derived & bound_parser<Derived>::choices(const T (&choice_values)[N])
 {
 	value_choices = std::make_shared<detail::choices_set<T>>(
@@ -2195,6 +2271,7 @@ Derived & bound_parser<Derived>::hint(std::string const & hint)
 
 #include <cstddef>
 #include <string>
+#include <utility>
 
 namespace lyra {
 
@@ -2212,7 +2289,10 @@ Is-a <<lyra_bound_parser>>.
 class arg : public bound_parser<arg>
 {
 	public:
-	using bound_parser::bound_parser;
+	template <typename Value>
+	arg(Value && val, std::string const & hint)
+		: bound_parser(std::forward<Value>(val), hint)
+	{ }
 
 	std::string get_usage_text(const option_style &) const override
 	{
@@ -2301,6 +2381,37 @@ class arg : public bound_parser<arg>
 	}
 };
 
+/* tag::reference[]
+
+[#lyra_arg_ctor]
+== Construction
+
+end::reference[] */
+
+/* tag::reference[]
+[source]
+----
+template <typename Reference>
+arg<Derived>::arg(Reference& ref, std::string const& hint);
+
+template <typename Lambda>
+arg<Derived>::arg(Lambda const& ref, std::string const& hint);
+
+template <typename Lambda>
+arg<Derived>::arg(Lambda && ref, std::string const& hint);
+----
+
+Constructs a value argument with a target typed variable or callback. These are
+bare arguments that take a value as in `value`. In the first form the given
+`ref` receives the value of the argument after parsing. The second form the
+callback is invoked during the parse with the given value. Both take a
+`hint` that is used in the help text. When the argument can be specified
+multiple times the callback will be called consecutively for each argument value
+given. And if a container is given as a reference on the first form it will
+contain all the specified values.
+
+end::reference[] */
+
 } // namespace lyra
 
 #endif
@@ -2322,8 +2433,8 @@ namespace lyra {
 [#lyra_arguments]
 = `lyra::arguments`
 
-A Combined parser made up of any number of parsers. Creating and using
-one of these as a basis one can incrementally compose other parsers into this
+A combined parser made up of any number of sub-parsers. Creating and using
+one of these as a basis, one can incrementally compose other parsers into this
 one. For example:
 
 [source]
@@ -2342,7 +2453,7 @@ p.add_argument(lyra::opt(where, "where").name("--where")
 class arguments : public parser
 {
 	public:
-	enum evaluation
+	enum evaluation : char
 	{
 		eval_any = 0,
 		eval_sequence = 1,
@@ -2353,7 +2464,7 @@ class arguments : public parser
 
 	arguments(evaluation e)
 		: eval_mode(e)
-	{}
+	{ }
 
 	arguments(const arguments & other);
 
@@ -2368,23 +2479,16 @@ class arguments : public parser
 		std::is_base_of<arguments,
 			typename detail::remove_cvref<T>::type>::value,
 		T &>::type
-		operator|(T & self, U const & other)
-	{
-		return static_cast<T &>(self.add_argument(other));
-	}
-	template <typename T, typename U>
-	friend typename std::enable_if<
-		std::is_base_of<arguments,
-			typename detail::remove_cvref<T>::type>::value,
-		T &>::type
 		operator|(T && self, U const & other)
 	{
-		return static_cast<T &>(self.add_argument(other));
+		return static_cast<T &>(static_cast<T &>(self).add_argument(other));
 	}
 
 	arguments & sequential();
 	arguments & inclusive();
 	arguments & relaxed();
+
+	arguments & require(std::size_t n, std::size_t m = 0);
 
 	template <typename T>
 	T & get(std::size_t i);
@@ -2460,12 +2564,14 @@ class arguments : public parser
 		LYRA_PRINT_SCOPE("arguments::parse_any");
 
 		std::vector<std::size_t> parsing_count(parsers.size(), 0);
+		std::size_t parsed_total = 0;
 		auto parsing_result = parse_result::ok(
 			detail::parse_state(parser_result_type::empty_match, tokens));
 		auto nomatch_result = parse_result::ok(
 			detail::parse_state(parser_result_type::no_match, tokens));
 
-		while (parsing_result.value().remainingTokens())
+		while (parsing_result.value().remainingTokens()
+			&& !parse_limit.is_maximum(parsed_total))
 		{
 			LYRA_PRINT_DEBUG("(?)", get_usage_text(style), "?=",
 				parsing_result.value().remainingTokens()
@@ -2494,7 +2600,15 @@ class arguments : public parser
 							&& subparse_result.value().type()
 								== parser_result_type::short_circuit_all)
 							return subparse_result;
-						else if (nomatch_result)
+						else if (nomatch_result.is_ok()
+							|| (nomatch_result.has_value()
+								&& subparse_result.has_value()
+								&& nomatch_result.value()
+										.remainingTokens()
+										.count()
+									> subparse_result.value()
+										.remainingTokens()
+										.count()))
 							nomatch_result = parse_result(subparse_result);
 					}
 					else if (subparse_result
@@ -2513,7 +2627,8 @@ class arguments : public parser
 						&& subparse_result.value().type()
 							!= parser_result_type::no_match)
 					{
-						LYRA_PRINT_DEBUG("(=)", get_usage_text(style), "==",
+						LYRA_PRINT_DEBUG("(=) #", parsed_total + 1,
+							get_usage_text(style), "==",
 							parsing_result.value()
 								.remainingTokens()
 								.argument()
@@ -2522,6 +2637,7 @@ class arguments : public parser
 						parsing_result = parse_result(subparse_result);
 						token_parsed = true;
 						*parsing_count_i += 1;
+						parsed_total += 1;
 						break;
 					}
 				}
@@ -2563,7 +2679,9 @@ class arguments : public parser
 							|| parser_cardinality.maximum < *parsing_count_i))
 					|| (parser_cardinality.is_required()
 						&& (*parsing_count_i < parser_cardinality.minimum)))
-					return make_parse_error(tokens, *p, parsing_result, style);
+					return make_parse_error(
+						parsing_result.value().remainingTokens(), *p,
+						parsing_result, style);
 				++parsing_count_i;
 			}
 		}
@@ -2589,6 +2707,10 @@ class arguments : public parser
 			{
 				auto subresult
 					= p->parse(p_result.value().remainingTokens(), style);
+				if (subresult.has_value()
+					&& parser_result_type::short_circuit_all
+						== subresult.value().type())
+					return subresult;
 				if (!subresult) break;
 				if (parser_result_type::no_match == subresult.value().type())
 				{
@@ -2599,9 +2721,6 @@ class arguments : public parser
 						"==>", subresult.value().type());
 					break;
 				}
-				if (parser_result_type::short_circuit_all
-					== subresult.value().type())
-					return subresult;
 				if (parser_result_type::matched == subresult.value().type())
 				{
 					LYRA_PRINT_DEBUG("(=)", get_usage_text(style), "==",
@@ -2630,7 +2749,8 @@ class arguments : public parser
 						|| parser_cardinality.maximum < *parsing_count_i))
 				|| (parser_cardinality.is_required()
 					&& (*parsing_count_i < parser_cardinality.minimum)))
-				return make_parse_error(tokens, *p, p_result, style);
+				return make_parse_error(
+					p_result.value().remainingTokens(), *p, p_result, style);
 			++parsing_count_i;
 		}
 		return p_result;
@@ -2678,6 +2798,7 @@ class arguments : public parser
 	std::shared_ptr<option_style> opt_style;
 	std::vector<std::unique_ptr<parser>> parsers;
 	evaluation eval_mode = eval_any;
+	detail::parser_cardinality parse_limit = { 0, 0 };
 
 	option_style get_option_style() const
 	{
@@ -2738,6 +2859,7 @@ inline arguments::arguments(const arguments & other)
 	: parser(other)
 	, opt_style(other.opt_style)
 	, eval_mode(other.eval_mode)
+	, parse_limit(other.parse_limit)
 {
 	for (auto & other_parser : other.parsers)
 	{
@@ -2752,6 +2874,16 @@ inline arguments::arguments(const arguments & other)
 
 end::reference[] */
 
+
+/* tag::reference[]
+[#lyra_arguments_specification_composition]
+=== Composition
+
+This parser is composed of sub-parsers that consume the arguments as possible.
+One can configure how the sub-parsers are used. And depending on the mode
+the ordering of the sub-parsers can matter.
+
+end::reference[] */
 
 /* tag::reference[]
 [#lyra_arguments_add_argument]
@@ -2801,7 +2933,17 @@ inline arguments & arguments::operator|=(arguments const & other)
 }
 
 /* tag::reference[]
-=== `lyra::arguments::sequential`
+[#lyra_arguments_specification_parsemode]
+=== Parsing Mode
+
+The parsing mode controls how the parsing of the added arguments happens.
+Depending on how this is specified different parsing algorithms get used to
+match parsers with arguments.
+
+end::reference[] */
+
+/* tag::reference[]
+==== `lyra::arguments::sequential`
 
 [source]
 ----
@@ -2857,6 +2999,45 @@ inline arguments & arguments::relaxed()
 	eval_mode = eval_relaxed;
 	return *this;
 }
+
+/* tag::reference[]
+[#lyra_arguments_specification_limits]
+=== Limits
+
+The parsing of sub-parsers can be restrained with limits. The limits can
+control how many parsed arguments are required or allowed.
+
+end::reference[] */
+
+/* tag::reference[]
+=== `lyra::arguments::require`
+
+[source]
+----
+arguments & arguments::require(std::size_t n, std::size_t m);
+----
+
+Requires a minimum and/or maximum number of arguments *only* to be successfully
+parsed by the sub-parsers to make this collection of arguments valid. Specifying
+the minimum or maximum as zero (`0`) indicates it's undefined. I.e. there would
+be no minimum or maximum. If a maximum is indicated, as soon as that maximum
+is reached the parsing is considered successful and completes.
+
+WARNING: Side-effects of parsing arguments, even if overall the collection as
+a whole fails for not satisfying the required bounds.
+
+end::reference[] */
+inline arguments & arguments::require(std::size_t n, std::size_t m)
+{
+	parse_limit.bounded(n, m);
+	return *this;
+}
+
+/* tag::reference[]
+[#lyra_arguments_specification_other]
+=== Other
+
+end::reference[] */
 
 /* tag::reference[]
 === `lyra::arguments::get`
@@ -3440,15 +3621,12 @@ class cli : protected arguments
 	cli & add_argument(cli const & other);
 	cli & operator|=(cli const & other);
 
-	template <typename T>
-	cli operator|(T const & other) const;
-
 	struct value_result
 	{
 		public:
 		explicit value_result(const parser * p)
 			: parser_ref(p)
-		{}
+		{ }
 
 		template <typename T,
 			typename std::enable_if<detail::is_convertible_from_string<
@@ -3456,7 +3634,7 @@ class cli : protected arguments
 				type * = nullptr>
 		operator T() const
 		{
-			typename detail::remove_cvref<T>::type converted_value {};
+			typename detail::remove_cvref<T>::type converted_value { };
 			if (parser_ref)
 				detail::from_string<std::string,
 					typename detail::remove_cvref<T>::type>(
@@ -3512,6 +3690,11 @@ class cli : protected arguments
 	cli & sequential() { return arguments::sequential(), *this; }
 	cli & inclusive() { return arguments::inclusive(), *this; }
 	cli & relaxed() { return arguments::relaxed(), *this; }
+
+	cli & require(std::size_t n, std::size_t m = 0)
+	{
+		return arguments::require(n, m), *this;
+	}
 
 
 	using arguments::parse;
@@ -3570,7 +3753,7 @@ end::reference[] */
 inline cli::cli(const cli & other)
 	: arguments(other)
 	, m_exeName(other.m_exeName)
-{}
+{ }
 
 /* tag::reference[]
 
@@ -3638,12 +3821,6 @@ inline cli & cli::add_argument(cli const & other)
 inline cli & cli::operator|=(cli const & other)
 {
 	return this->add_argument(other);
-}
-
-template <typename T>
-inline cli cli::operator|(T const & other) const
-{
-	return cli(*this).add_argument(other);
 }
 
 template <typename DerivedT, typename T>
@@ -4213,38 +4390,42 @@ end::reference[] */
 class opt : public bound_parser<opt>
 {
 	public:
-	enum class ctor_lambda_e
-	{
-		val
-	};
-	enum class ctor_ref_e
-	{
-		val
-	};
-
 
 	explicit opt(bool & ref);
 
 	template <typename L>
 	explicit opt(L const & ref,
 		typename std::enable_if<detail::is_invocable<L>::value,
-			ctor_lambda_e>::type
-		= ctor_lambda_e::val);
+			detail::ctor_lambda_e>::type
+		= detail::ctor_lambda_e::val);
+
+	template <typename L>
+	explicit opt(L && ref,
+		typename std::enable_if<detail::is_invocable<L>::value,
+			detail::ctor_lambda_e>::type
+		= detail::ctor_lambda_e::val);
 
 
 	template <typename T>
 	opt(T & ref,
 		std::string const & hint,
 		typename std::enable_if<!detail::is_invocable<T>::value,
-			ctor_ref_e>::type
-		= ctor_ref_e::val);
+			detail::ctor_ref_e>::type
+		= detail::ctor_ref_e::val);
 
 	template <typename L>
 	opt(L const & ref,
 		std::string const & hint,
 		typename std::enable_if<detail::is_invocable<L>::value,
-			ctor_lambda_e>::type
-		= ctor_lambda_e::val);
+			detail::ctor_lambda_e>::type
+		= detail::ctor_lambda_e::val);
+
+	template <typename L>
+	opt(L && ref,
+		std::string const & hint,
+		typename std::enable_if<detail::is_invocable<L>::value,
+			detail::ctor_lambda_e>::type
+		= detail::ctor_lambda_e::val);
 
 	template <typename T>
 	explicit opt(detail::BoundVal<T> && val)
@@ -4460,6 +4641,9 @@ lyra::opt::opt(bool& ref);
 
 template <typename L>
 lyra::opt::opt(L const& ref);
+
+template <typename L>
+lyra::opt::opt(L && ref);
 ----
 
 Constructs a flag option with a target `bool` to indicate if the flag is
@@ -4474,8 +4658,17 @@ inline opt::opt(bool & ref)
 template <typename L>
 opt::opt(L const & ref,
 	typename std::enable_if<detail::is_invocable<L>::value,
-		opt::ctor_lambda_e>::type)
-	: bound_parser(std::make_shared<detail::BoundFlagLambda<L>>(ref))
+		detail::ctor_lambda_e>::type)
+	: bound_parser(std::make_shared<
+		  detail::BoundFlagLambda<typename detail::remove_cvref<L>::type>>(ref))
+{}
+template <typename L>
+opt::opt(L && ref,
+	typename std::enable_if<detail::is_invocable<L>::value,
+		detail::ctor_lambda_e>::type)
+	: bound_parser(std::make_shared<
+		  detail::BoundFlagLambda<typename detail::remove_cvref<L>::type>>(
+		  std::move(ref)))
 {}
 
 /* tag::reference[]
@@ -4490,6 +4683,9 @@ lyra::opt::opt(T& ref, std::string const& hint);
 
 template <typename L>
 lyra::opt::opt(L const& ref, std::string const& hint)
+
+template <typename L>
+lyra::opt::opt(L && ref, std::string const& hint)
 ----
 
 Constructs a value option with a target `ref`. The first form takes a reference
@@ -4501,15 +4697,22 @@ template <typename T>
 opt::opt(T & ref,
 	std::string const & hint,
 	typename std::enable_if<!detail::is_invocable<T>::value,
-		opt::ctor_ref_e>::type)
+		detail::ctor_ref_e>::type)
 	: bound_parser(ref, hint)
 {}
 template <typename L>
 opt::opt(L const & ref,
 	std::string const & hint,
 	typename std::enable_if<detail::is_invocable<L>::value,
-		opt::ctor_lambda_e>::type)
+		detail::ctor_lambda_e>::type)
 	: bound_parser(ref, hint)
+{}
+template <typename L>
+opt::opt(L && ref,
+	std::string const & hint,
+	typename std::enable_if<detail::is_invocable<L>::value,
+		detail::ctor_lambda_e>::type)
+	: bound_parser(std::move(ref), hint)
 {}
 
 /* tag::reference[]
@@ -4708,7 +4911,10 @@ class main final : protected cli
 	template <typename L>
 	int operator()(int argc, const char ** argv, L action);
 
-	using cli::operator[];
+	value_result operator[](const std::string & n)
+	{
+		return cli::operator[](n);
+	}
 
 	main & style(const option_style & style)
 	{
@@ -4797,7 +5003,7 @@ the type of argument created and added:
 
 Specify either `-<name>` or `--<name>` to add a `lyra::opt`. You can specify as
 many option names following the first name. A name that doesn't follow the
-option syntax is considered the as the help text for the option.
+option syntax is considered as the help text for the option.
 
 Specify a non `-` prefixed name as the first item to signify a positional
 `lyra::arg`.
@@ -4844,7 +5050,7 @@ main & main::operator()(
 	{
 		arg a(std::move(bound_val), *arg_names.begin());
 		a.optional();
-		if (arg_names.size() > 2) a.help(*(arg_names.begin() + 1));
+		if (arg_names.size() > 1) a.help(*(arg_names.begin() + 1));
 		cli::add_argument(a);
 	}
 	return *this;

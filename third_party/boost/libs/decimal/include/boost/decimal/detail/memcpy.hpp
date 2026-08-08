@@ -33,7 +33,7 @@ namespace detail {
 
 namespace impl {
 
-constexpr char* memcpy_impl(char* dest, const char* src, std::size_t count)
+BOOST_DECIMAL_CUDA_CONSTEXPR char* memcpy_impl(char* dest, const char* src, std::size_t count)
 {
     for (std::size_t i = 0; i < count; ++i)
     {
@@ -43,7 +43,7 @@ constexpr char* memcpy_impl(char* dest, const char* src, std::size_t count)
     return dest;
 }
 
-constexpr char* memset_impl(char* dest, int ch, std::size_t count)
+BOOST_DECIMAL_CUDA_CONSTEXPR char* memset_impl(char* dest, int ch, std::size_t count)
 {
     for (std::size_t i = 0; i < count; ++i)
     {
@@ -53,7 +53,7 @@ constexpr char* memset_impl(char* dest, int ch, std::size_t count)
     return dest;
 }
 
-constexpr char* memmove_impl(char* dest, const char* src, std::size_t count)
+BOOST_DECIMAL_CUDA_CONSTEXPR char* memmove_impl(char* dest, const char* src, std::size_t count)
 {
     if (dest < src || dest >= src + count)
     {
@@ -79,7 +79,7 @@ constexpr char* memmove_impl(char* dest, const char* src, std::size_t count)
 
 #if !defined(BOOST_DECIMAL_NO_CONSTEVAL_DETECTION)
 
-constexpr char* memcpy(char* dest, const char* src, std::size_t count)
+BOOST_DECIMAL_CUDA_CONSTEXPR char* memcpy(char* dest, const char* src, std::size_t count)
 {
     if (BOOST_DECIMAL_IS_CONSTANT_EVALUATED(count))
     {
@@ -103,7 +103,7 @@ constexpr char* memcpy(char* dest, const char* src, std::size_t count)
     }
 }
 
-constexpr char* memset(char* dest, int ch, std::size_t count)
+BOOST_DECIMAL_CUDA_CONSTEXPR char* memset(char* dest, int ch, std::size_t count)
 {
     if (BOOST_DECIMAL_IS_CONSTANT_EVALUATED(count))
     {
@@ -115,7 +115,7 @@ constexpr char* memset(char* dest, int ch, std::size_t count)
     }
 }
 
-constexpr char* memmove(char* dest, const char* src, std::size_t count)
+BOOST_DECIMAL_CUDA_CONSTEXPR char* memmove(char* dest, const char* src, std::size_t count)
 {
     if (BOOST_DECIMAL_IS_CONSTANT_EVALUATED(count))
     {
@@ -129,17 +129,17 @@ constexpr char* memmove(char* dest, const char* src, std::size_t count)
 
 #else // No consteval detection
 
-constexpr char* memcpy(char* dest, const char* src, std::size_t count)
+BOOST_DECIMAL_CUDA_CONSTEXPR char* memcpy(char* dest, const char* src, std::size_t count)
 {
     return impl::memcpy_impl(dest, src, count);
 }
 
-constexpr char* memset(char* dest, int ch, std::size_t count)
+BOOST_DECIMAL_CUDA_CONSTEXPR char* memset(char* dest, int ch, std::size_t count)
 {
     return impl::memset_impl(dest, ch, count);
 }
 
-constexpr char* memmove(char* dest, const char* src, std::size_t count)
+BOOST_DECIMAL_CUDA_CONSTEXPR char* memmove(char* dest, const char* src, std::size_t count)
 {
     return impl::memmove_impl(dest, src, count);
 }

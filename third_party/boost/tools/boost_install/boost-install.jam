@@ -488,7 +488,7 @@ rule generate-cmake-variant- ( target : sources * : properties * )
     print.text
 
         "set_target_properties($(target) PROPERTIES"
-        "  IMPORTED_LOCATION_$(variant:U) \"${_BOOST_LIBDIR}/$(dll-name)\""
+        "  IMPORTED_LOCATION_$(variant:U) \"${_BOOST_DLLDIR}/$(dll-name)\""
         "  )"
         ""
         : true ;
@@ -770,6 +770,10 @@ rule make-cmake-config ( target : sources * : properties * )
     libdir = [ path.relative-to $(cmakedir) $(libdir) ] ;
     .info "  libdir=" $(libdir) ;
 
+    local dlldir = [ stage.get-dir dlldir : $(ps) : Boost ] ;
+    dlldir = [ path.relative-to $(cmakedir) $(dlldir) ] ;
+    .info "  dlldir=" $(dlldir) ;
+
     local lname = [ MATCH boost_(.*) : $(name) ] ;
     .info "  lname=" $(lname) ;
 
@@ -837,6 +841,7 @@ rule make-cmake-config ( target : sources * : properties * )
     else
     {
         get-dir "_BOOST_LIBDIR" : $(libdir) ;
+        get-dir "_BOOST_DLLDIR" : $(dlldir) ;
 
         print.text
 
@@ -872,6 +877,7 @@ rule make-cmake-config ( target : sources * : properties * )
             "unset(_BOOST_LIBDIR)"
             "unset(_BOOST_INCLUDEDIR)"
             "unset(_BOOST_CMAKEDIR)"
+            "unset(_BOOST_DLLDIR)"
             ""
             "if(NOT __boost_variants AND (Boost_VERBOSE OR Boost_DEBUG))"
             "  message(STATUS \"  Library has no variants and is considered not found\")"
@@ -1015,7 +1021,7 @@ local rule install-cmake-config- ( install-or-stage : version : name : requireme
 
         local library-type = UNKNOWN ;
 
-        if $(name) = boost_headers || $(name) = boost_math || $(name) = boost_exception || $(name) = boost_system
+        if $(name) = boost_headers || $(name) = boost_math || $(name) = boost_exception || $(name) = boost_system || $(name) = boost_regex
         {
             library-type = INTERFACE ;
         }
@@ -1057,11 +1063,13 @@ rule install-or-stage-cmake-config ( name * : install-or-stage )
     else
     {
         local reqs ;
+
         if $(install-or-stage) = stage
         {
             local libdir = [ boost-install-dirs.stage-libdir ] ;
             local includedir = [ boost-install-dirs.stage-includedir ] ;
-            reqs = <install-libdir>$(libdir) <install-includedir>$(includedir) ;
+
+            reqs = <install-libdir>$(libdir) <install-dlldir>$(libdir) <install-includedir>$(includedir) ;
         }
         else
         {
@@ -1261,14 +1269,15 @@ rule boost-install ( libraries * )
         $(p).mark-target-as-explicit install-libraries-static ;
 
         alias install-libraries-shared : install-libraries-shared- ;
-        alias install-libraries-shared : install-libraries-shared-cygwin : <target-os>cygwin ;
+        alias install-libraries-shared : install-libraries-shared-windows : <target-os>windows ;
+        alias install-libraries-shared : install-libraries-shared-windows : <target-os>cygwin ;
         $(p).mark-target-as-explicit install-libraries-shared ;
 
         install install-libraries-shared- : $(libraries) : <location>(libdir) <install-type>SHARED_LIB <install-type>PDB <install-dependencies>on <install-no-version-symlinks>on : <install-package>Boost ;
         $(p).mark-target-as-explicit install-libraries-shared- ;
 
-        install install-libraries-shared-cygwin : $(libraries) : <location>(bindir) <install-type>SHARED_LIB <install-type>PDB <install-dependencies>on <install-no-version-symlinks>on : <install-package>Boost ;
-        $(p).mark-target-as-explicit install-libraries-shared-cygwin ;
+        install install-libraries-shared-windows : $(libraries) : <location>(dlldir) <install-type>SHARED_LIB <install-type>PDB <install-dependencies>on <install-no-version-symlinks>on : <install-package>Boost ;
+        $(p).mark-target-as-explicit install-libraries-shared-windows ;
 
         install install-unprefixed-static : $(unprefixed) : <install-type>STATIC_LIB <conditional>@boost-install%install-subdir : <install-package>Boost ;
         $(p).mark-target-as-explicit install-unprefixed-static ;
@@ -1290,7 +1299,7 @@ rule boost-install ( libraries * )
     if ! [ $(p).has-alternative-for-target stage ]
     {
         local stage-libdir = [ boost-install-dirs.stage-libdir ] ;
-        local reqs = <install-libdir>$(stage-libdir) ;
+        local reqs = <install-libdir>$(stage-libdir) <install-dlldir>$(stage-libdir) ;
 
         stage-cmake-config $(libraries) ;
 
@@ -1316,6 +1325,7 @@ rule boost-install ( libraries * )
 
 # If --{parent} is explicitly specified on the command line, then we need to
 # clear every dir setting in config files that depends on it
+
 if [ MATCH --prefix=(.*) : [ modules.peek : ARGV ] ]
 {
     option.set exec-prefix : ;
@@ -1325,18 +1335,28 @@ if [ MATCH --prefix=(.*) : [ modules.peek : ARGV ] ]
     option.set datadir : ;
     option.set datarootdir : ;
     option.set cmakedir : ;
+    option.set dlldir : ;
 }
+
 if [ MATCH --exec-prefix=(.*) : [ modules.peek : ARGV ] ]
 {
     option.set bindir : ;
     option.set libdir : ;
     option.set cmakedir : ;
+    option.set dlldir : ;
 }
-if [ MATCH --libdir-prefix=(.*) : [ modules.peek : ARGV ] ]
+
+if [ MATCH --bindir=(.*) : [ modules.peek : ARGV ] ]
+{
+    option.set dlldir : ;
+}
+
+if [ MATCH --libdir=(.*) : [ modules.peek : ARGV ] ]
 {
     option.set cmakedir : ;
 }
-if [ MATCH --dataroot-prefix=(.*) : [ modules.peek : ARGV ] ]
+
+if [ MATCH --datarootdir=(.*) : [ modules.peek : ARGV ] ]
 {
     option.set datadir : ;
 }

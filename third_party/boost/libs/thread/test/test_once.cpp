@@ -15,15 +15,15 @@
 
 #include <boost/thread/detail/log.hpp>
 
-boost::once_flag flag=BOOST_ONCE_INIT;
-int var_to_init=0;
-boost::mutex m;
+boost::once_flag g_flag=BOOST_ONCE_INIT;
+int g_var_to_init=0;
+boost::mutex g_mutex;
 
 void initialize_variable()
 {
     // ensure that if multiple threads get in here, they are serialized, so we can see the effect
-    boost::unique_lock<boost::mutex> lock(m);
-    ++var_to_init;
+    boost::unique_lock<boost::mutex> lock(g_mutex);
+    ++g_var_to_init;
 }
 
 
@@ -33,14 +33,14 @@ void call_once_thread()
     int my_once_value=0;
     for(unsigned i=0;i<loop_count;++i)
     {
-        boost::call_once(flag, &initialize_variable);
-        my_once_value=var_to_init;
+        boost::call_once(g_flag, &initialize_variable);
+        my_once_value=g_var_to_init;
         if(my_once_value!=1)
         {
             break;
         }
     }
-    boost::unique_lock<boost::mutex> lock(m);
+    boost::unique_lock<boost::mutex> lock(g_mutex);
     BOOST_CHECK_EQUAL(my_once_value, 1);
 }
 
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(test_call_once)
         throw;
     }
 
-    BOOST_CHECK_EQUAL(var_to_init,1);
+    BOOST_CHECK_EQUAL(g_var_to_init,1);
 }
 
 int var_to_init_with_functor=0;
@@ -80,7 +80,7 @@ struct increment_value
 
     void operator()() const
     {
-        boost::unique_lock<boost::mutex> lock(m);
+        boost::unique_lock<boost::mutex> lock(g_mutex);
         ++(*value);
     }
 };
@@ -99,7 +99,7 @@ void call_once_with_functor()
             break;
         }
     }
-    boost::unique_lock<boost::mutex> lock(m);
+    boost::unique_lock<boost::mutex> lock(g_mutex);
     BOOST_CHECK_EQUAL(my_once_value, 1);
 }
 
@@ -138,7 +138,7 @@ struct throw_before_third_pass
 
     void operator()() const
     {
-        boost::unique_lock<boost::mutex> lock(m);
+        boost::unique_lock<boost::mutex> lock(g_mutex);
         ++pass_counter;
         if(pass_counter<3)
         {
@@ -159,14 +159,14 @@ void call_once_with_exception()
     }
     catch(throw_before_third_pass::my_exception)
     {
-        boost::unique_lock<boost::mutex> lock(m);
+        boost::unique_lock<boost::mutex> lock(g_mutex);
         ++exception_counter;
     }
 }
 
 BOOST_AUTO_TEST_CASE(test_call_once_retried_on_exception)
 {
-  BOOST_DETAIL_THREAD_LOG;
+    BOOST_DETAIL_THREAD_LOG;
     unsigned const num_threads=20;
     boost::thread_group group;
 
@@ -188,5 +188,3 @@ BOOST_AUTO_TEST_CASE(test_call_once_retried_on_exception)
     BOOST_CHECK_EQUAL(throw_before_third_pass::pass_counter,3u);
     BOOST_CHECK_EQUAL(exception_counter,2u);
 }
-
-

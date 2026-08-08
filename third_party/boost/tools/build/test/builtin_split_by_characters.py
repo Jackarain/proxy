@@ -10,14 +10,14 @@
 import BoostBuild
 
 def test_invalid(params, expected_error_line):
-    t = BoostBuild.Tester(pass_toolset=0)
+    t = BoostBuild.Tester(pass_toolset=False)
     t.write("file.jam", "SPLIT_BY_CHARACTERS %s ;" % params)
     t.run_build_system(["-ffile.jam"], status=1)
-    t.expect_output_lines("[*] %s" % expected_error_line)
+    t.expect_output_lines("error: %s" % expected_error_line)
     t.cleanup()
 
 def test_valid():
-    t = BoostBuild.Tester(pass_toolset=0)
+    t = BoostBuild.Tester(pass_toolset=False)
     t.write("jamroot.jam", """\
 import assert ;
 

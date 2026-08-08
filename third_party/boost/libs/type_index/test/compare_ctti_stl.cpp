@@ -5,9 +5,9 @@
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
+#include <boost/core/lightweight_test.hpp>
 #include <boost/type_index/ctti_type_index.hpp>
 #include <boost/type_index/stl_type_index.hpp>
-#include <boost/core/lightweight_test.hpp>
 
 
 namespace my_namespace1 {

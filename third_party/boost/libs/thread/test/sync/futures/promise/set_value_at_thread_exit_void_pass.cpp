@@ -23,35 +23,35 @@
 #include <boost/thread/future.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-int i = 0;
+int g_i = 0;
 
-boost::promise<void> p;
+boost::promise<void> g_p;
 void func()
 {
-  p.set_value_at_thread_exit();
-  i = 1;
+  g_p.set_value_at_thread_exit();
+  g_i = 1;
 }
 
 //void func2_mv(BOOST_THREAD_RV_REF(boost::promise<void>) p2)
 void func2_mv(boost::promise<void> p2)
 {
   p2.set_value_at_thread_exit();
-  i = 2;
+  g_i = 2;
 }
 
 void func2(boost::promise<void> *p2)
 {
   p2->set_value_at_thread_exit();
-  i = 2;
+  g_i = 2;
 }
 int main()
 {
   try
   {
-    boost::future<void> f = p.get_future();
+    boost::future<void> f = g_p.get_future();
     boost::thread(func).detach();
     f.get();
-    BOOST_TEST(i == 1);
+    BOOST_TEST(g_i == 1);
 
   }
   catch(std::exception& )
@@ -67,10 +67,10 @@ int main()
   {
     boost::promise<void> p2;
     boost::future<void> f = p2.get_future();
-    p = boost::move(p2);
+    g_p = boost::move(p2);
     boost::thread(func).detach();
     f.get();
-    BOOST_TEST(i == 1);
+    BOOST_TEST(g_i == 1);
 
   }
   catch(std::exception& ex)
@@ -94,7 +94,7 @@ int main()
 #endif
     f.wait();
     f.get();
-    BOOST_TEST(i == 2);
+    BOOST_TEST(g_i == 2);
   }
   catch(std::exception& ex)
   {

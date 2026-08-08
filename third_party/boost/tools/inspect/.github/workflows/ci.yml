@@ -21,11 +21,11 @@ jobs:
             toolset: gcc
           - os: ubuntu-24.04
             toolset: gcc
-          - os: macos-13
-            toolset: clang
           - os: macos-14
             toolset: clang
           - os: macos-15
+            toolset: clang
+          - os: macos-26
             toolset: clang
 
     runs-on: ${{matrix.os}}
@@ -36,7 +36,7 @@ jobs:
         shell: bash
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup container environment
         if: matrix.container
@@ -84,19 +84,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            os: windows-2019
-          - toolset: msvc-14.2
-            os: windows-2019
           - toolset: msvc-14.3
             os: windows-2022
+          - toolset: msvc-14.5
+            os: windows-2025-vs2026
+          - toolset: clang-win
+            os: windows-latest
           - toolset: gcc
-            os: windows-2019
+            os: windows-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -121,3 +121,65 @@ jobs:
         run: |
           cd ../boost-root
           b2 -j3 tools/inspect/build toolset=${{matrix.toolset}} embed-manifest-via=linker
+
+  posix-cmake-build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          cp -r $GITHUB_WORKSPACE/* tools/inspect
+          git submodule update --init tools/boostdep
+          python3 tools/boostdep/depinst/depinst.py -X test --git_args "--jobs 3" ../tools/inspect
+          ./bootstrap.sh
+          ./b2 --prefix=$HOME/.local install
+
+      - name: Build Inspect with CMake
+        run: |
+          cmake -S . -B __build__ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local
+          cmake --build __build__ --target install
+
+  windows-cmake-build:
+
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Boost
+        shell: cmd
+        run: |
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% tools\inspect\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py -X test --git_args "--jobs 3" ../tools/inspect
+          cmd /c bootstrap
+          b2 install
+
+      - name: Build Inspect with CMake
+        run: |
+          cmake -S . -B __build__ -DBoost_ROOT=C:/Boost -DCMAKE_INSTALL_PREFIX=C:/usr/local
+          cmake --build __build__ --target install --config Release

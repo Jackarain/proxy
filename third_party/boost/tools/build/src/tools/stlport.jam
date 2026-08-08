@@ -85,7 +85,7 @@ class stlport-target-class : basic-target
         self.headers = $(headers) ;
         self.libraries = $(libraries) ;
         self.version = $(version) ;
-        self.version.5 = [ MATCH "^(5[.][0123456789]+).*" : $(version) ] ;
+        self.version.5 = [ MATCH "^(5[.][0-9]+)" : $(version) ] ;
 
         local requirements ;
         requirements += <stdlib-stlport:version>$(self.version) ;
@@ -147,7 +147,7 @@ class stlport-target-class : basic-target
 
             # Starting with version 5.2.0, the STLport static libraries no
             # longer include a version number in their name
-            local version.pre.5.2 = [ MATCH "^(5[.][01]+).*" : $(version) ] ;
+            local version.pre.5.2 = [ MATCH "^(5[.][01])" : $(version) ] ;
             if $(version.pre.5.2) || [ feature.get-values <runtime-link> :
                 $(raw) ] != "static"
             {

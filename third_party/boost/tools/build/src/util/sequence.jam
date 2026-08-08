@@ -4,19 +4,16 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
 
-import assert ;
 import numbers ;
 import modules ;
 
-
 # Note that algorithms in this module execute largely in the caller's module
-# namespace, so that local rules can be used as function objects. Also note that
-# most predicates can be multi-element lists. In that case, all but the first
-# element are prepended to the first argument which is passed to the rule named
-# by the first element.
+# namespace, so that local rules can be used as function objects (predicates.)
+# Also note that predicates can be multi-element lists, any further argument
+# to be passed is simply appended before the call.
 
 
-# Return the elements e of $(sequence) for which [ $(predicate) e ] has a
+# Return the elements e of 'sequence' for which [ $(predicate) e ] has a
 # non-null value.
 #
 rule filter ( predicate + : sequence * )
@@ -34,9 +31,8 @@ rule filter ( predicate + : sequence * )
     return $(result) ;
 }
 
-
-# Return a new sequence consisting of [ $(function) $(e) ] for each element e of
-# $(sequence).
+# Return a new sequence consisting of [ $(function) e ] for each
+# element e of 'sequence'.
 #
 rule transform ( function + : sequence * )
 {
@@ -55,7 +51,7 @@ if [ HAS_NATIVE_RULE sequence : transform : 1 ]
     NATIVE_RULE sequence : transform ;
 }
 
-# Returns the elements of 's' in reverse order
+# Returns the elements of 's' in reverse order.
 rule reverse ( s * )
 {
     local r ;
@@ -66,7 +62,9 @@ rule reverse ( s * )
     return $(r) ;
 }
 
-
+# NOTE: This is primarily for internal use, but cannot be a local rule
+#       otherwise neither insertion-sort nor merge rules will be able
+#       to find it in caller module.
 rule less ( a b )
 {
     if $(a) < $(b)
@@ -75,8 +73,8 @@ rule less ( a b )
     }
 }
 
-
-# Insertion-sort s using the BinaryPredicate ordered.
+# Insertion-sort 's' using the 'ordered' predicate or
+# lexicagraphically (i.e. using '<') when no predicate is supplied.
 #
 rule insertion-sort ( s * : ordered * )
 {
@@ -87,7 +85,6 @@ rule insertion-sort ( s * : ordered * )
     else
     {
         local caller = [ CALLER_MODULE ] ;
-        ordered ?= sequence.less ;
         local result = $(s[1]) ;
         if $(ordered) = sequence.less
         {
@@ -123,25 +120,25 @@ rule insertion-sort ( s * : ordered * )
     }
 }
 
-
-# Merge two ordered sequences using the BinaryPredicate ordered.
+# Merge two ordered sequences using the 'ordered' predicate or
+# lexicagraphically (i.e. using '<') when no predicate is supplied.
 #
 rule merge ( s1 * : s2 * : ordered * )
 {
     ordered ?= sequence.less ;
-    local result__ ;
+    local result ;
     local caller = [ CALLER_MODULE ] ;
 
     while $(s1) && $(s2)
     {
         if [ modules.call-in $(caller) : $(ordered) $(s1[1]) $(s2[1]) ]
         {
-            result__ += $(s1[1]) ;
+            result += $(s1[1]) ;
             s1 = $(s1[2-]) ;
         }
         else if [ modules.call-in $(caller) : $(ordered) $(s2[1]) $(s1[1]) ]
         {
-            result__ += $(s2[1]) ;
+            result += $(s2[1]) ;
             s2 = $(s2[2-]) ;
         }
         else
@@ -150,13 +147,14 @@ rule merge ( s1 * : s2 * : ordered * )
         }
 
     }
-    result__ += $(s1) ;
-    result__ += $(s2) ;
+    result += $(s1) ;
+    result += $(s2) ;
 
-    return $(result__) ;
+    return $(result) ;
 }
 
-# Compares two sequences lexicagraphically
+# Compares two sequences using the 'ordered' predicate or
+# lexicagraphically (i.e. using '<') when no predicate is supplied.
 #
 rule compare ( s1 * : s2 * : ordered * )
 {
@@ -193,15 +191,13 @@ rule compare ( s1 * : s2 * : ordered * )
     }
 }
 
-# Join the elements of s into one long string. If joint is supplied, it is used
-# as a separator.
+# Join the elements of 's' using 'joint' as separator if supplied.
 #
 rule join ( s * : joint ? )
 {
     joint ?= "" ;
     return $(s:J=$(joint)) ;
 }
-
 
 # Find the length of any sequence.
 #
@@ -215,14 +211,12 @@ rule length ( s * )
     return $(result) ;
 }
 
-# Removes duplicates from 'list'.  If 'stable' is
-# passed, then the order of the elements will
-# be unchanged.
+# Removes duplicates from 'list'.  If 'stable' is passed,
+# then the order of the elements will be unchanged.
 #
 # rule unique ( list * : stable ? )
 
 NATIVE_RULE sequence : unique ;
-
 
 # Returns the maximum number in 'elements'. Uses 'ordered' for comparisons or
 # 'numbers.less' if none is provided.
@@ -242,34 +236,16 @@ rule max-element ( elements + : ordered ? )
     return $(max) ;
 }
 
-
 # Returns all of 'elements' for which corresponding element in parallel list
 # 'rank' is equal to the maximum value in 'rank'.
 #
-rule select-highest-ranked ( elements * : ranks * )
-{
-    if $(elements)
-    {
-        local max-rank = [ max-element $(ranks) ] ;
-        local result ;
-        while $(elements)
-        {
-            if $(ranks[1]) = $(max-rank)
-            {
-                result += $(elements[1]) ;
-            }
-            elements = $(elements[2-]) ;
-            ranks = $(ranks[2-]) ;
-        }
-        return $(result) ;
-    }
-}
-NATIVE_RULE sequence : select-highest-ranked ;
+# rule select-highest-ranked ( elements * : ranks * )
 
+NATIVE_RULE sequence : select-highest-ranked ;
 
 rule __test__ ( )
 {
-    # Use a unique module so we can test the use of local rules.
+    # Use a module so we can test the use of local rules.
     module sequence.__test__
     {
         import assert ;

@@ -35,7 +35,6 @@ target_link_libraries(boost_program_options
     Boost::iterator
     Boost::lexical_cast
     Boost::smart_ptr
-    Boost::static_assert
     Boost::throw_exception
     Boost::type_traits
   PRIVATE

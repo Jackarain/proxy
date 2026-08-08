@@ -9,6 +9,7 @@
 
 import project ;
 import configure ;
+import regex ;
 import-search /boost/config/checks ;
 import config : requires ;
 
@@ -114,11 +115,36 @@ rule check-linkflag-no-undefined ( properties * )
 
     if <link>shared in $(properties)
     {
-        if [ configure.builds ../config//has_linkflag_no_undefined : $(properties) : "has -Wl,--no-undefined" ]
+        local props ;
+
+        # Strip sanitizer flags. Clang has a bug (https://github.com/llvm/llvm-project/issues/60578) where
+        # it doesn't add sanitizer runtime libraries to linker flags, which results in linking errors when
+        # -Wl,--no-undefined or equivalent is used. We want to know if -Wl,--no-undefined is supported, so
+        # to avoid false negatives remove any sanitizer flags for this check. Users will have to explicitly
+        # specify sanitizer libraries in their linker flags to work around the clang bug.
+        for local property in $(properties)
+        {
+            #ECHO "Input property: $(property)" ;
+
+            if [ MATCH "^(<(compile|c|cxx|link)flags>.*-fsanitize=.+)$" : $(property) ]
+            {
+                property = [ regex.replace $(property) "-fsanitize=[^\s]+\s*" "" ] ;
+                if [ MATCH "^(<(compile|c|cxx|link)flags>)\s*$" : $(property) ]
+                {
+                    continue ;
+                }
+            }
+
+            #ECHO "Output property: $(property)" ;
+
+            props += $(property) ;
+        }
+
+        if [ configure.builds ../config//has_linkflag_no_undefined : $(props) : "has -Wl,--no-undefined" ]
         {
             result = <linkflags>"-Wl,--no-undefined" ;
         }
-        else if [ configure.builds ../config//has_linkflag_undefined_error : $(properties) : "has -Wl,-undefined,error" ]
+        else if [ configure.builds ../config//has_linkflag_undefined_error : $(props) : "has -Wl,-undefined,error" ]
         {
             result = <linkflags>"-Wl,-undefined,error" ;
         }

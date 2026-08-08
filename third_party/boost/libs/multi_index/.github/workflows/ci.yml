@@ -11,6 +11,7 @@ on:
 
 env:
   UBSAN_OPTIONS: print_stacktrace=1
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   posix:
@@ -78,6 +79,18 @@ jobs:
             cxxstd: "11,14,17,20,2b"
             os: ubuntu-24.04
             install: g++-14-multilib
+            address-model: 32,64
+          - toolset: gcc-15
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: g++-15-multilib
+            address-model: 32,64
+          - toolset: gcc-16
+            cxxstd: "11,14,17,20,23,2c"
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: g++-16-multilib
             address-model: 32,64
           - toolset: clang
             compiler: clang++-3.9

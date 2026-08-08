@@ -7,7 +7,7 @@ Copyright (c) 2008-2009: Joachim Faulhaber
 +-----------------------------------------------------------------------------*/
 #define BOOST_TEST_MODULE icl::example_boost_party unit test
 
-#include <libs/icl/test/disable_test_warnings.hpp>
+#include <disable_test_warnings.hpp>
 #include "../unit_test_unwarned.hpp"
 //#include <boost/icl/set.hpp> // Needed for implicit calls of operator << on
 //JODO CLANG                   // GuestSets via test macros.

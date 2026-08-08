@@ -4,13 +4,14 @@
  * accompanying file LICENSE.txt)
  */
 
+// clang-format off
+
 #include <boost/redis/adapter/adapt.hpp>
 #include <boost/redis/request.hpp>
 #include <boost/redis/resp3/parser.hpp>
 #include <boost/redis/response.hpp>
 
-#define BOOST_TEST_MODULE low_level
-#include <boost/test/included/unit_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #include <map>
 #include <optional>
@@ -22,6 +23,8 @@ namespace std {
 auto operator==(boost::redis::ignore_t, boost::redis::ignore_t) noexcept { return true; }
 auto operator!=(boost::redis::ignore_t, boost::redis::ignore_t) noexcept { return false; }
 }  // namespace std
+
+namespace {
 
 namespace redis = boost::redis;
 namespace resp3 = boost::redis::resp3;
@@ -112,15 +115,15 @@ void test_sync(expect<Result> e)
    BOOST_TEST(res);  // None of these tests need more data.
 
    if (ec) {
-      BOOST_CHECK_EQUAL(ec, e.ec);
+      BOOST_TEST_EQ(ec, e.ec);
       return;
    }
 
    if (result.has_value()) {
       BOOST_TEST(bool(result == e.expected));
-      BOOST_CHECK_EQUAL(e.in.size(), p.get_consumed());
+      BOOST_TEST_EQ(e.in.size(), p.get_consumed());
    } else {
-      BOOST_CHECK_EQUAL(result.error().data_type, e.error_type);
+      BOOST_TEST_EQ(result.error().data_type, e.error_type);
    }
 }
 
@@ -134,7 +137,7 @@ void test_sync2(expect<Result> e)
    auto const res = parse(p, e.in, adapter, ec);
 
    BOOST_TEST(res);  // None of these tests need more data.
-   BOOST_CHECK_EQUAL(ec, e.ec);
+   BOOST_TEST_EQ(ec, e.ec);
 }
 
 auto make_blob()
@@ -473,29 +476,28 @@ generic_response const attr_e1b
    test(make_expected(S12b, node_type{{resp3::type::blob_error, 1UL, 0UL, {}}}, {}, resp3::type::blob_error));\
    test(make_expected(S12c, result<ignore_t>{}, boost::redis::error::resp3_blob_error));
 
-// clang-format on
 
-BOOST_AUTO_TEST_CASE(sansio){NUMBER_TEST_CONDITIONS(test_sync)}
+void test_sansio(){NUMBER_TEST_CONDITIONS(test_sync)}
 
-BOOST_AUTO_TEST_CASE(ignore_adapter_simple_error)
+void test_ignore_adapter_simple_error()
 {
    test_sync2(make_expected(S10a, ignore, boost::redis::error::resp3_simple_error));
 }
 
-BOOST_AUTO_TEST_CASE(ignore_adapter_blob_error)
+void test_ignore_adapter_blob_error()
 {
    test_sync2(make_expected(S12a, ignore, boost::redis::error::resp3_blob_error));
 }
 
-BOOST_AUTO_TEST_CASE(ignore_adapter_no_error) { test_sync2(make_expected(S05b, ignore)); }
+void test_ignore_adapter_no_error() { test_sync2(make_expected(S05b, ignore)); }
 
 //-----------------------------------------------------------------------------------
 void check_error(char const* name, boost::redis::error ev)
 {
    auto const ec = boost::redis::make_error_code(ev);
    auto const& cat = ec.category();
-   BOOST_TEST(std::string(ec.category().name()) == name);
-   BOOST_TEST(!ec.message().empty());
+   BOOST_TEST_EQ(std::string(ec.category().name()), name);
+   BOOST_TEST_NOT(ec.message().empty());
    BOOST_TEST(cat.equivalent(
       static_cast<std::underlying_type<boost::redis::error>::type>(ev),
       ec.category().default_error_condition(
@@ -503,7 +505,7 @@ void check_error(char const* name, boost::redis::error ev)
    BOOST_TEST(cat.equivalent(ec, static_cast<std::underlying_type<boost::redis::error>::type>(ev)));
 }
 
-BOOST_AUTO_TEST_CASE(cover_error)
+void test_cover_error()
 {
    check_error("boost.redis", boost::redis::error::invalid_data_type);
    check_error("boost.redis", boost::redis::error::not_a_number);
@@ -544,7 +546,7 @@ std::string get_type_as_str(boost::redis::resp3::type t)
    return ss.str();
 }
 
-BOOST_AUTO_TEST_CASE(type_string)
+void test_type_string()
 {
    BOOST_TEST(!get_type_as_str(boost::redis::resp3::type::array).empty());
    BOOST_TEST(!get_type_as_str(boost::redis::resp3::type::push).empty());
@@ -565,13 +567,13 @@ BOOST_AUTO_TEST_CASE(type_string)
    BOOST_TEST(!get_type_as_str(boost::redis::resp3::type::invalid).empty());
 }
 
-BOOST_AUTO_TEST_CASE(type_convert)
+void test_type_convert()
 {
    using boost::redis::resp3::to_code;
    using boost::redis::resp3::to_type;
    using boost::redis::resp3::type;
 
-#define CHECK_CASE(A) BOOST_CHECK_EQUAL(to_type(to_code(type::A)), type::A);
+#define CHECK_CASE(A) BOOST_TEST_EQ(to_type(to_code(type::A)), type::A);
    CHECK_CASE(array);
    CHECK_CASE(push);
    CHECK_CASE(set);
@@ -591,7 +593,7 @@ BOOST_AUTO_TEST_CASE(type_convert)
 #undef CHECK_CASE
 }
 
-BOOST_AUTO_TEST_CASE(adapter)
+void test_adapter()
 {
    using boost::redis::adapter::boost_redis_adapt;
    using resp3::type;
@@ -608,16 +610,16 @@ BOOST_AUTO_TEST_CASE(adapter)
    f.on_node(resp3::node_view{type::number, 1, 0, "42"}, ec);
    f.on_done();
 
-   BOOST_CHECK_EQUAL(std::get<0>(resp).value(), "Hello");
-   BOOST_TEST(!ec);
+   BOOST_TEST_EQ(std::get<0>(resp).value(), "Hello");
+   BOOST_TEST_NOT(ec);
 
-   BOOST_CHECK_EQUAL(std::get<1>(resp).value(), 42);
-   BOOST_TEST(!ec);
+   BOOST_TEST_EQ(std::get<1>(resp).value(), 42);
+   BOOST_TEST_NOT(ec);
 }
 
 // TODO: This was an experiment, I will resume implementing this
 // later.
-BOOST_AUTO_TEST_CASE(adapter_as)
+void test_adapter_as()
 {
    result<std::set<std::string>> set;
    auto adapter = adapt2(set);
@@ -628,7 +630,7 @@ BOOST_AUTO_TEST_CASE(adapter_as)
    }
 }
 
-BOOST_AUTO_TEST_CASE(cancel_one_1)
+void test_cancel_one_1()
 {
    auto resp = push_e1a;
    BOOST_TEST(resp.has_value());
@@ -637,7 +639,7 @@ BOOST_AUTO_TEST_CASE(cancel_one_1)
    BOOST_TEST(resp.value().empty());
 }
 
-BOOST_AUTO_TEST_CASE(cancel_one_empty)
+void test_cancel_one_empty()
 {
    generic_response resp;
    BOOST_TEST(resp.has_value());
@@ -646,7 +648,7 @@ BOOST_AUTO_TEST_CASE(cancel_one_empty)
    BOOST_TEST(resp.value().empty());
 }
 
-BOOST_AUTO_TEST_CASE(cancel_one_has_error)
+void test_cancel_one_has_error()
 {
    generic_response resp = boost::redis::adapter::error{resp3::type::simple_string, {}};
    BOOST_TEST(resp.has_error());
@@ -655,7 +657,7 @@ BOOST_AUTO_TEST_CASE(cancel_one_has_error)
    BOOST_TEST(resp.has_error());
 }
 
-BOOST_AUTO_TEST_CASE(cancel_one_has_does_not_consume_past_the_end)
+void test_cancel_one_has_does_not_consume_past_the_end()
 {
    auto resp = push_e1a;
    BOOST_TEST(resp.has_value());
@@ -666,10 +668,10 @@ BOOST_AUTO_TEST_CASE(cancel_one_has_does_not_consume_past_the_end)
 
    consume_one(resp);
 
-   BOOST_CHECK_EQUAL(resp.value().size(), push_e1a.value().size());
+   BOOST_TEST_EQ(resp.value().size(), push_e1a.value().size());
 }
 
-BOOST_AUTO_TEST_CASE(cancel_one_incompatible_depth)
+void test_cancel_one_incompatible_depth()
 {
    auto resp = streamed_string_e1;
    BOOST_TEST(resp.has_value());
@@ -678,7 +680,31 @@ BOOST_AUTO_TEST_CASE(cancel_one_incompatible_depth)
    consume_one(resp, ec);
 
    error_code expected = error::incompatible_node_depth;
-   BOOST_CHECK_EQUAL(ec, expected);
+   BOOST_TEST_EQ(ec, expected);
 
-   BOOST_CHECK_EQUAL(resp.value().size(), push_e1a.value().size());
+   BOOST_TEST_EQ(resp.value().size(), push_e1a.value().size());
 }
+
+}
+
+int main()
+{
+   test_sansio();
+   test_ignore_adapter_simple_error();
+   test_ignore_adapter_blob_error();
+   test_ignore_adapter_no_error();
+   test_cover_error();
+   test_type_string();
+   test_type_convert();
+   test_adapter();
+   test_adapter_as();
+   test_cancel_one_1();
+   test_cancel_one_empty();
+   test_cancel_one_has_error();
+   test_cancel_one_has_does_not_consume_past_the_end();
+   test_cancel_one_incompatible_depth();
+
+   return boost::report_errors();
+}
+
+// clang-format on

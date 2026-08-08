@@ -1,6 +1,7 @@
 
 // Copyright 2006-2010 Daniel James.
 // Copyright (C) 2022-2023 Christian Mazakas
+// Copyright (C) 2026 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -14,6 +15,7 @@
 #include "../helpers/tracker.hpp"
 #include "../objects/test.hpp"
 
+#include <list>
 #include <vector>
 
 namespace constructor_tests {
@@ -336,6 +338,205 @@ namespace constructor_tests {
     // deleted for some of the test types
     //
     std::vector<value_type> expected(vec.begin(), vec.begin() + 3);
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+    auto std_list = std::list{vec[0], vec[1], vec[2]};
+    auto sentineled_rg = std_list | std::views::take(3);
+
+    UNORDERED_SUB_TEST("Range construct 1")
+    {
+      test::check_instances check_;
+
+      {
+        T x(boost::unordered::from_range, list);
+        BOOST_TEST(x.empty());
+        BOOST_TEST(test::equivalent(x.hash_function(), hf));
+        BOOST_TEST(test::equivalent(x.key_eq(), eq));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al));
+      }
+
+      {
+        T x(boost::unordered::from_range, std::vector{vec[0], vec[1], vec[2]});
+        BOOST_TEST_NOT(x.empty());
+        BOOST_TEST_GT(x.bucket_count(), 0u);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf));
+        BOOST_TEST(test::equivalent(x.key_eq(), eq));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al));
+        test::check_container(x, expected);
+      }
+    }
+
+    UNORDERED_SUB_TEST("Range construct 2")
+    {
+      test::check_instances check_;
+
+      {
+        T x(boost::unordered::from_range, list, 1000);
+        BOOST_TEST(x.empty());
+        BOOST_TEST(x.bucket_count() >= 1000);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf));
+        BOOST_TEST(test::equivalent(x.key_eq(), eq));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al));
+      }
+
+      {
+        T x(boost::unordered::from_range, sentineled_rg, 1000);
+        BOOST_TEST_NOT(x.empty());
+        BOOST_TEST(x.bucket_count() >= 1000);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf));
+        BOOST_TEST(test::equivalent(x.key_eq(), eq));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al));
+        test::check_container(x, expected);
+      }
+    }
+
+    UNORDERED_SUB_TEST("Range construct 3")
+    {
+      {
+        test::check_instances check_;
+
+        T x(boost::unordered::from_range, list, 10, hf1);
+        BOOST_TEST(x.empty());
+        BOOST_TEST(x.bucket_count() >= 10);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf1));
+        BOOST_TEST(test::equivalent(x.key_eq(), eq));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al));
+      }
+
+      {
+        test::check_instances check_;
+
+        T x(
+          boost::unordered::from_range, std::vector{vec[0], vec[1], vec[2]},
+          10, hf1);
+        BOOST_TEST_NOT(x.empty());
+        BOOST_TEST(x.bucket_count() >= 10);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf1));
+        BOOST_TEST(test::equivalent(x.key_eq(), eq));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al));
+        test::check_container(x, expected);
+      }
+    }
+
+    UNORDERED_SUB_TEST("Range construct 4")
+    {
+      {
+        test::check_instances check_;
+
+        T x(boost::unordered::from_range, list, 10, hf1, eq1);
+        BOOST_TEST(x.empty());
+        BOOST_TEST(x.bucket_count() >= 10);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf1));
+        BOOST_TEST(test::equivalent(x.key_eq(), eq1));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al));
+      }
+
+      {
+        test::check_instances check_;
+
+        T x(boost::unordered::from_range, sentineled_rg, 10, hf1, eq1);
+        BOOST_TEST_NOT(x.empty());
+        BOOST_TEST(x.bucket_count() >= 10);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf1));
+        BOOST_TEST(test::equivalent(x.key_eq(), eq1));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al));
+        test::check_container(x, expected);
+      }
+    }
+
+    UNORDERED_SUB_TEST("Range construct 5")
+    {
+      {
+        test::check_instances check_;
+
+        T x(boost::unordered::from_range, list, 10, hf1, eq1, al1);
+        BOOST_TEST(x.empty());
+        BOOST_TEST(x.bucket_count() >= 10);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf1));
+        BOOST_TEST(test::equivalent(x.key_eq(), eq1));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al1));
+      }
+
+      {
+        test::check_instances check_;
+
+        T x(
+          boost::unordered::from_range, 
+          std::vector{vec[0], vec[1], vec[2]}, 10, hf1, eq1, al1);
+        BOOST_TEST_NOT(x.empty());
+        BOOST_TEST(x.bucket_count() >= 10);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf1));
+        BOOST_TEST(test::equivalent(x.key_eq(), eq1));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al1));
+        test::check_container(x, expected);
+      }
+    }
+
+    UNORDERED_SUB_TEST("Range construct 6")
+    {
+      {
+        test::check_instances check_;
+
+        T x(boost::unordered::from_range, list, 10, al1);
+        BOOST_TEST(x.empty());
+        BOOST_TEST(x.bucket_count() >= 10);
+        BOOST_TEST(test::equivalent(x.get_allocator(), al1));
+      }
+
+      {
+        test::check_instances check_;
+
+        T x(boost::unordered::from_range, sentineled_rg, 10, al1);
+        BOOST_TEST_NOT(x.empty());
+        BOOST_TEST(x.bucket_count() >= 10);
+        BOOST_TEST(test::equivalent(x.get_allocator(), al1));
+        test::check_container(x, expected);
+      }
+    }
+
+    UNORDERED_SUB_TEST("Range construct 7")
+    {
+      {
+        test::check_instances check_;
+
+        T x(boost::unordered::from_range, list, 10, hf1, al1);
+        BOOST_TEST(x.empty());
+        BOOST_TEST(x.bucket_count() >= 10);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf1));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al1));
+      }
+
+      {
+        test::check_instances check_;
+
+        T x(
+          boost::unordered::from_range, 
+          std::vector{vec[0], vec[1], vec[2]}, 10, hf1, al1);
+        BOOST_TEST_NOT(x.empty());
+        BOOST_TEST(x.bucket_count() >= 10);
+        BOOST_TEST(test::equivalent(x.hash_function(), hf1));
+        BOOST_TEST(test::equivalent(x.get_allocator(), al1));
+        test::check_container(x, expected);
+      }
+    }
+
+    UNORDERED_SUB_TEST("Range construct 8")
+    {
+      test::check_instances check_;
+
+      {
+        T x(boost::unordered::from_range, list, al1);
+        BOOST_TEST(x.empty());
+        BOOST_TEST(test::equivalent(x.get_allocator(), al1));
+      }
+
+      {
+        T x(boost::unordered::from_range, sentineled_rg, al1);
+        BOOST_TEST(test::equivalent(x.get_allocator(), al1));
+        test::check_container(x, expected);
+      }
+    }
+#endif
 
     UNORDERED_SUB_TEST("Initializer list construct 1")
     {

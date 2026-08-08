@@ -102,9 +102,9 @@ test()
 
     {   // testing const sequences
 
-        const map<pair<k1, int>, pair<k2, float> > t1(5, 3.3f);
+        const map<pair<k1, int>, pair<k2, float> > t1(5, 3.25f);
         BOOST_TEST(at_c<0>(t1).second == 5);
-        BOOST_TEST(at_c<1>(t1).second == 3.3f);
+        BOOST_TEST(at_c<1>(t1).second == 3.25f);
     }
 
     {   // testing at<N> works with MPL integral constants

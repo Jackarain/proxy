@@ -8,14 +8,16 @@
 // file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-// back-end
-#include "BackCommon.hpp"
-//front-end
-#include <boost/msm/front/state_machine_def.hpp>
 #ifndef BOOST_MSM_NONSTANDALONE_TEST
 #define BOOST_TEST_MODULE serialize_with_history_test
 #endif
 #include <boost/test/unit_test.hpp>
+
+// back-end
+#include "BackCommon.hpp"
+//front-end
+#include "FrontCommon.hpp"
+
 // include headers that implement a archive in simple text format
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -44,11 +46,11 @@ namespace
         std::string name;
     };
 
-    template<template <typename...> class Back, typename Policy = void>
+    template <template <typename...> class Back, typename Policy = void>
     struct hierarchical_state_machine
     {
     // front-end: define the FSM structure 
-    struct player_ : public msm::front::state_machine_def<player_>
+    struct player_ : public msm::front::test::StateMachineBase_<player_>
     {
         BOOST_MSM_TEST_DEFINE_DEPENDENT_TEMPLATES(player_)
 
@@ -60,84 +62,37 @@ namespace
         can_close_drawer_counter(0)
         {}
         // The list of FSM states
-        struct Empty : public msm::front::state<> 
+        struct Empty : msm::front::test::StateBase
         {
-            template <class Event,class FSM>
-            void on_entry(Event const&,FSM& ) {++entry_counter;}
-            template <class Event,class FSM>
-            void on_exit(Event const&,FSM& ) {++exit_counter;}
-            int entry_counter;
-            int exit_counter;
         };
-        struct Open : public msm::front::state<> 
+        struct Open : msm::front::test::StateBase
         {	 
-            template <class Event,class FSM>
-            void on_entry(Event const&,FSM& ) {++entry_counter;}
-            template <class Event,class FSM>
-            void on_exit(Event const&,FSM& ) {++exit_counter;}
-            int entry_counter;
-            int exit_counter;
         };
 
         // sm_ptr still supported but deprecated as functors are a much better way to do the same thing
-        struct Stopped : public msm::front::state<> 
+        struct Stopped : msm::front::test::StateBase
         {	 
-            template <class Event,class FSM>
-            void on_entry(Event const&,FSM& ) {++entry_counter;}
-            template <class Event,class FSM>
-            void on_exit(Event const&,FSM& ) {++exit_counter;}
-            int entry_counter;
-            int exit_counter;
         };
 
-        struct Playing_ : public msm::front::state_machine_def<Playing_>
+        struct Playing_ : public msm::front::test::StateMachineBase_<Playing_>
         {
             BOOST_MSM_TEST_DEFINE_DEPENDENT_TEMPLATES(Playing_)
 
             // History for backmp11
             using history = msm::front::shallow_history<end_pause>;
 
-            template <class Event,class FSM>
-            void on_entry(Event const&,FSM& ) {++entry_counter;}
-            template <class Event,class FSM>
-            void on_exit(Event const&,FSM& ) {++exit_counter;}
-            int entry_counter;
-            int exit_counter;
-            unsigned int start_next_song_counter;
-            unsigned int start_prev_song_guard_counter;
-
-            Playing_():
-            start_next_song_counter(0),
-            start_prev_song_guard_counter(0)
-            {}
+            unsigned int start_next_song_counter{};
+            unsigned int start_prev_song_guard_counter{};
 
             // The list of FSM states
-            struct Song1 : public msm::front::state<>
+            struct Song1 : msm::front::test::StateBase
             {
-                template <class Event,class FSM>
-                void on_entry(Event const&,FSM& ) {++entry_counter;}
-                template <class Event,class FSM>
-                void on_exit(Event const&,FSM& ) {++exit_counter;}
-                int entry_counter;
-                int exit_counter;
             };
-            struct Song2 : public msm::front::state<>
+            struct Song2 : msm::front::test::StateBase
             {	 
-                template <class Event,class FSM>
-                void on_entry(Event const&,FSM& ) {++entry_counter;}
-                template <class Event,class FSM>
-                void on_exit(Event const&,FSM& ) {++exit_counter;}
-                int entry_counter;
-                int exit_counter;
             };
-            struct Song3 : public msm::front::state<>
+            struct Song3 : msm::front::test::StateBase
             {	 
-                template <class Event,class FSM>
-                void on_entry(Event const&,FSM& ) {++entry_counter;}
-                template <class Event,class FSM>
-                void on_exit(Event const&,FSM& ) {++exit_counter;}
-                int entry_counter;
-                int exit_counter;
             };
             // the initial state. Must be defined
             typedef Song1 initial_state;
@@ -158,25 +113,13 @@ namespace
                 g_row < Song3   , PreviousSong, Song2                         ,&pl::start_prev_song_guard>
                 //    +---------+-------------+---------+---------------------+----------------------+
             > {};
-            // Replaces the default no-transition response.
-            template <class FSM,class Event>
-            void no_transition(Event const&, FSM&,int)
-            {
-                BOOST_FAIL("no_transition called!");
-            }
         };
         // back-end
         typedef Back<Playing_,Policy,msm::back::ShallowHistory<mpl::vector<end_pause> > > Playing;
 
         // state not defining any entry or exit
-        struct Paused : public msm::front::state<>
+        struct Paused : msm::front::test::StateBase
         {
-            template <class Event,class FSM>
-            void on_entry(Event const&,FSM& ) {++entry_counter;}
-            template <class Event,class FSM>
-            void on_exit(Event const&,FSM& ) {++exit_counter;}
-            int entry_counter;
-            int exit_counter;
         };
 
         // the initial state of the player SM. Must be defined
@@ -223,42 +166,11 @@ namespace
           a_row < Paused  , open_close  , Open    , &p::stop_and_open                          >
             //  +---------+-------------+---------+---------------------+----------------------+
         > {};
-        // Replaces the default no-transition response.
-        template <class FSM,class Event>
-        void no_transition(Event const&, FSM&,int)
-        {
-            BOOST_FAIL("no_transition called!");
-        }
-        // init counters
-        template <class Event,class FSM>
-        void on_entry(Event const&,FSM& fsm) 
-        {
-            fsm.template get_state<typename player_::Stopped&>().entry_counter=0;
-            fsm.template get_state<typename player_::Stopped&>().exit_counter=0;
-            fsm.template get_state<typename player_::Open&>().entry_counter=0;
-            fsm.template get_state<typename player_::Open&>().exit_counter=0;
-            fsm.template get_state<typename player_::Empty&>().entry_counter=0;
-            fsm.template get_state<typename player_::Empty&>().exit_counter=0;
-            fsm.template get_state<typename player_::Playing&>().entry_counter=0;
-            fsm.template get_state<typename player_::Playing&>().exit_counter=0;
-            fsm.template get_state<typename player_::Playing&>().template get_state<typename player_::Playing::Song1&>().entry_counter=0;
-            fsm.template get_state<typename player_::Playing&>().template get_state<typename player_::Playing::Song1&>().exit_counter=0;
-            fsm.template get_state<typename player_::Playing&>().template get_state<typename player_::Playing::Song2&>().entry_counter=0;
-            fsm.template get_state<typename player_::Playing&>().template get_state<typename player_::Playing::Song2&>().exit_counter=0;
-            fsm.template get_state<typename player_::Playing&>().template get_state<typename player_::Playing::Song3&>().entry_counter=0;
-            fsm.template get_state<typename player_::Playing&>().template get_state<typename player_::Playing::Song3&>().exit_counter=0;
-            fsm.template get_state<typename player_::Paused&>().entry_counter=0;
-            fsm.template get_state<typename player_::Paused&>().exit_counter=0;
-        }
-
     };
     typedef Back<player_, Policy> player;
     };
     // Pick a back-end
     typedef get_hierarchical_test_machines<hierarchical_state_machine> test_machines;
-
-//    static char const* const state_names[] = { "Stopped", "Open", "Empty", "Playing", "Paused" };
-
 
     BOOST_AUTO_TEST_CASE_TEMPLATE( serialize_with_history_test, test_machine, test_machines )
     {     

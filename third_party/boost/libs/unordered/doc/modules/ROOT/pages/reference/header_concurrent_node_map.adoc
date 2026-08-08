@@ -19,6 +19,10 @@ namespace unordered {
            class Allocator = std::allocator<std::pair<const Key, T>>>
   class xref:reference/concurrent_node_map.adoc#concurrent_node_map[concurrent_node_map];
 
+  // Tag for construction from ranges (pass:[C++20] and up)
+  struct from_range_t { explicit from_range_t() = default; };
+  inline constexpr from_range_t from_range{};
+
   // Equality Comparisons
   template<class Key, class T, class Hash, class Pred, class Alloc>
     bool xref:reference/concurrent_node_map.adoc#concurrent_node_map_operator[operator++==++](const concurrent_node_map<Key, T, Hash, Pred, Alloc>& x,
@@ -39,7 +43,7 @@ namespace unordered {
     typename concurrent_node_map<K, T, H, P, A>::size_type
       xref:reference/concurrent_node_map.adoc#concurrent_node_map_erase_if[erase_if](concurrent_node_map<K, T, H, P, A>& c, Predicate pred);
 
-  // Pmr aliases (C++17 and up)
+  // Pmr aliases (pass:[C++17] and up)
   namespace pmr {
     template<class Key,
              class T,

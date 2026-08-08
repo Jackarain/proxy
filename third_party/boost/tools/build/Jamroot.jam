@@ -14,6 +14,7 @@ import feature ;
 import indirect ;
 import os ;
 import path ;
+import regex ;
 import set ;
 import stage : add-install-dir ;
 import toolset ;
@@ -21,6 +22,10 @@ import type ;
 import virtual-target ;
 
 path-constant SELF : . ;
+
+local b2_version = [ regex.grep $(SELF)/src/engine : patchlevel.h :
+	"VERSION_[^ ]+ ([0-9]+)" : 1 ] ;
+b2_version = $(b2_version[2]).$(b2_version[4]).$(b2_version[6]) ;
 
 project /bfgroup/b2
     : build-dir .build
@@ -258,3 +263,38 @@ else
     alias install : b2-engine b2-core ;
 }
 explicit install ;
+
+#|
+Release build install. Main aspect is to make this as standalone and optimized
+as possible.
+|#
+install b2-exe
+    :   b2
+    :   <b2-install-layout>standard:<location>(b2bindir-standard)
+        <b2-install-layout>portable:<location>(b2bindir-portable)
+    ;
+explicit b2-exe ;
+rule b2-release-static ( props * )
+{
+    local target-os = [ feature.get-values <target-os> : $(props) ] ;
+    local host-os = [ feature.get-values <host-os> : $(props) ] ;
+    if ! $(target-os) in darwin
+    {
+        return
+            <runtime-link>static
+            <link>static ;
+    }
+}
+alias b2-release
+    :   b2-exe/<install-prefix>$(SELF)/.build/b2-$(b2_version)
+        b2-core/<install-prefix>$(SELF)/.build/b2-$(b2_version)
+    :   <b2-install-layout>portable
+        <variant>release
+        <lto>on
+        <optimization>speed
+        <inlining>full
+        <vectorize>full
+        <visibility>hidden
+        <conditional>@b2-release-static
+    ;
+explicit b2-release ;

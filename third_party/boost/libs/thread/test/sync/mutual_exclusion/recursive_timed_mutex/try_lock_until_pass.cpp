@@ -26,49 +26,49 @@
 
 #if defined BOOST_THREAD_USES_CHRONO
 
-boost::recursive_timed_mutex m;
+boost::recursive_timed_mutex g_mutex;
 
 typedef boost::chrono::high_resolution_clock Clock;
 typedef Clock::time_point time_point;
 typedef Clock::duration duration;
 typedef boost::chrono::milliseconds ms;
 typedef boost::chrono::nanoseconds ns;
-time_point t0;
-time_point t1;
+time_point g_t0;
+time_point g_t1;
 
 const ms max_diff(BOOST_THREAD_TEST_TIME_MS);
 
 void f1()
 {
-  t0 = Clock::now();
-  BOOST_TEST(m.try_lock_until(Clock::now() + ms(750)) == true);
-  t1 = Clock::now();
-  m.unlock();
+  g_t0 = Clock::now();
+  BOOST_TEST(g_mutex.try_lock_until(Clock::now() + ms(750)) == true);
+  g_t1 = Clock::now();
+  g_mutex.unlock();
 }
 
 void f2()
 {
-  t0 = Clock::now();
-  BOOST_TEST(m.try_lock_until(Clock::now() + ms(250)) == false);
-  t1 = Clock::now();
-  ns d = t1 - t0 - ms(250);
+  g_t0 = Clock::now();
+  BOOST_TEST(g_mutex.try_lock_until(Clock::now() + ms(250)) == false);
+  g_t1 = Clock::now();
+  ns d = g_t1 - g_t0 - ms(250);
   BOOST_THREAD_TEST_IT(d, ns(max_diff));
 }
 
 int main()
 {
   {
-    m.lock();
+    g_mutex.lock();
     boost::thread t(f1);
     time_point t2 = Clock::now();
     boost::this_thread::sleep_for(ms(250));
     time_point t3 = Clock::now();
-    m.unlock();
+    g_mutex.unlock();
     t.join();
 
 #if defined BOOST_THREAD_USES_CHRONO
     ns sleep_time = t3 - t2;
-    ns d_ns = t1 - t0 - sleep_time;
+    ns d_ns = g_t1 - g_t0 - sleep_time;
     ms d_ms = boost::chrono::duration_cast<boost::chrono::milliseconds>(d_ns);
     // BOOST_TEST_GE(d_ms.count(), 0);
     BOOST_THREAD_TEST_IT(d_ms, max_diff);
@@ -76,10 +76,10 @@ int main()
 #endif
   }
   {
-    m.lock();
+    g_mutex.lock();
     boost::thread t(f2);
     boost::this_thread::sleep_for(ms(750));
-    m.unlock();
+    g_mutex.unlock();
     t.join();
   }
 

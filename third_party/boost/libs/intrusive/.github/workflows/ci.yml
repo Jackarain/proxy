@@ -126,7 +126,7 @@ jobs:
             address-model: 32,64
           # Linux, gcc-14
           - toolset: gcc-14
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "03,11,14,17,20,23,26"
             cxxflags: -pipe
             os: ubuntu-latest
             container: ubuntu:24.04
@@ -134,30 +134,38 @@ jobs:
             address-model: 32,64
           # Linux, gcc-15
           - toolset: gcc-15
-            cxxstd: "03,11,14,17,20,23,2c"
+            cxxstd: "03,11,14,17,20,23,26"
             cxxflags: -pipe
             os: ubuntu-latest
-            container: ubuntu:25.04
+            container: ubuntu:26.04
             install: g++-15-multilib
             address-model: 32,64
-          # Linux, gcc-15, ubsan
+          # Linux, gcc-16
+          - toolset: gcc-16
+            cxxstd: "03,11,14,17,20,23,26"
+            cxxflags: -pipe
+            os: ubuntu-latest
+            container: ubuntu:26.04
+            install: g++-16-multilib
+            address-model: 32,64
+          # Linux, gcc-16, ubsan
           - name: UBSAN
-            toolset: gcc-15
-            cxxstd: "03,11,14,17,20,23"
+            toolset: gcc-16
+            cxxstd: "03,11,14,17,20,23,26"
             cxxflags: -pipe
             ubsan: 1
             os: ubuntu-latest
-            container: ubuntu:25.04
-            install: g++-15
-          # Linux, gcc-15, asan
+            container: ubuntu:26.04
+            install: g++-16
+          # Linux, gcc-16, asan
           - name: ASAN
-            toolset: gcc-15
-            cxxstd: "03,11,14,17,20,23"
+            toolset: gcc-16
+            cxxstd: "03,11,14,17,20,23,26"
             cxxflags: -pipe
             asan: 1
             os: ubuntu-latest
-            container: ubuntu:25.04
-            install: g++-15
+            container: ubuntu:26.04
+            install: g++-16
           #------------------
           # Linux, clang
           #------------------
@@ -302,7 +310,7 @@ jobs:
           # Linux, clang-15
           - toolset: clang
             compiler: clang++-15
-            cxxstd: "03,11,14,17,20"
+            cxxstd: "03,11,14,17,20,2b"
             cxxflags: -pipe
             container: ubuntu:22.04
             os: ubuntu-latest
@@ -318,7 +326,7 @@ jobs:
           # Linux, clang-17
           - toolset: clang
             compiler: clang++-17
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "03,11,14,17,20,23,26"
             cxxflags: -pipe
             container: ubuntu:24.04
             os: ubuntu-latest
@@ -326,7 +334,7 @@ jobs:
           # Linux, clang-18
           - toolset: clang
             compiler: clang++-18
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "03,11,14,17,20,23,26"
             cxxflags: -pipe
             container: ubuntu:24.04
             os: ubuntu-latest
@@ -334,7 +342,7 @@ jobs:
           # Linux, clang-19
           - toolset: clang
             compiler: clang++-19
-            cxxstd: "03,11,14,17,20,2b"
+            cxxstd: "03,11,14,17,20,23,26"
             cxxflags: -pipe
             container: ubuntu:24.04
             os: ubuntu-latest
@@ -342,11 +350,27 @@ jobs:
           # Linux, clang-20
           - toolset: clang
             compiler: clang++-20
-            cxxstd: "03,11,14,17,20,23,2c"
+            cxxstd: "03,11,14,17,20,23,23,26"
             cxxflags: -pipe
-            container: ubuntu:25.04
+            container: ubuntu:26.04
             os: ubuntu-latest
             install: clang-20
+          # Linux, clang-21
+          - toolset: clang
+            compiler: clang++-21
+            cxxstd: "03,11,14,17,20,23,23,26"
+            cxxflags: -pipe
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: clang-21
+          # Linux, clang-22
+          - toolset: clang
+            compiler: clang++-22
+            cxxstd: "03,11,14,17,20,23,23,26"
+            cxxflags: -pipe
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: clang-22
           # Linux, clang-15 libc++
           - toolset: clang
             compiler: clang++-15
@@ -362,7 +386,7 @@ jobs:
           # Linux, clang-18 libc++
           - toolset: clang
             compiler: clang++-18
-            cxxstd: "11,14,17,20,2b"
+            cxxstd: "11,14,17,20,23,26"
             os: ubuntu-latest
             container: ubuntu:24.04
             install:
@@ -374,9 +398,9 @@ jobs:
           # Linux, clang-20 libc++
           - toolset: clang
             compiler: clang++-20
-            cxxstd: "11,14,17,20,23,2c"
+            cxxstd: "11,14,17,20,23,23,26"
             os: ubuntu-latest
-            container: ubuntu:25.04
+            container: ubuntu:26.04
             install:
               - clang-20
               - libc++-20-dev
@@ -387,12 +411,12 @@ jobs:
           - name: UBSAN
             toolset: clang
             compiler: clang++-20
-            cxxstd: "11,14,17,20,23,2c"
+            cxxstd: "11,14,17,20,23,23,26"
             cxxflags: -pipe -stdlib=libc++
             linkflags: -stdlib=libc++
             ubsan: 1
             os: ubuntu-latest
-            container: ubuntu:25.04
+            container: ubuntu:26.04
             install:
               - clang-20
               - libc++-20-dev
@@ -401,22 +425,30 @@ jobs:
           - name: ASAN
             toolset: clang
             compiler: clang++-20
-            cxxstd: "11,14,17,20,23,2c"
+            cxxstd: "11,14,17,20,23,23,26"
             cxxflags: -pipe -stdlib=libc++
             linkflags: -stdlib=libc++
             asan: 1
             os: ubuntu-latest
-            container: ubuntu:25.04
+            container: ubuntu:26.04
             install:
               - clang-20
               - libc++-20-dev
               - libc++abi-20-dev
-          # Linux, ARM64
+          # Linux, ARM64 GCC
           - toolset: gcc
+            cxxstd: "03,11,14,17,20,23,26"
+            cxxflags: -pipe
+            os: ubuntu-26.04-arm
+            install: g++
+          # Linux, ARM64 Clang
+          - toolset: clang
             cxxstd: "03,11,14,17,20,2b"
             cxxflags: -pipe
             os: ubuntu-24.04-arm
-            install: g++
+            install:
+              - clang
+              - g++
           #------------------
           # MacOS, clang
           #------------------
@@ -680,11 +712,11 @@ jobs:
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 32
-            os: windows-2025
+            os: windows-2022
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
             addrmd: 64
-            os: windows-2025
+            os: windows-2022
           - toolset: clang-win
             cxxstd: "14,17,latest"
             addrmd: 64
@@ -696,11 +728,11 @@ jobs:
           - toolset: msvc-14.5
             cxxstd: "14,17,20,latest"
             addrmd: 32
-            os: windows-2025-vs2026
+            os: windows-2025
           - toolset: msvc-14.5
             cxxstd: "14,17,20,latest"
             addrmd: 64
-            os: windows-2025-vs2026
+            os: windows-2025
          #Now ARM version
           - toolset: msvc-14.3
             cxxstd: "14,17,20,latest"
@@ -919,15 +951,24 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Test on ${{matrix.vm}}
-        uses: cross-platform-actions/action@v0.30.0
-        with:
-          operating_system: ${{matrix.vm}}
-          version: ${{matrix.bsd_version}}
-          environment_variables: GIT_FETCH_JOBS NET_RETRY_COUNT DEFAULT_BUILD_VARIANT
-          sync_files: false
-          shell: bash
+        - uses: actions/checkout@v6
+
+        # Step 1: Boot and configure the BSD Virtual Machine
+        - name: Initialize ${{matrix.vm}} Environment
+          uses: cross-platform-actions/action@v1.2.0
+          with:
+            operating_system: ${{matrix.vm}}
+            version: ${{matrix.bsd_version}}
+            environment_variables: GIT_FETCH_JOBS NET_RETRY_COUNT DEFAULT_BUILD_VARIANT
+            sync_files: false
+            # The 'run' script below uses bash arrays (DEPINST_ARGS / B2_ARGS), so the
+            # commands forwarded into the VM by cpa.sh must be executed with bash. Without
+            # this the BSD default /bin/sh that does not support the following syntax
+            shell: bash
+
+        # Step 2: Run your commands inside the VM using the custom shell
+        - name: Test on ${{matrix.vm}}
+          shell: cpa.sh {0}
           run: |
             export PATH=/usr/pkg/bin:/sbin:/usr/local/bin:$PATH >> ~/.profile
             export PATH=/usr/pkg/bin:/sbin:/usr/local/bin:$PATH
@@ -1075,9 +1116,6 @@ jobs:
             B2_ARGS+=("libs/$LIBRARY/test")
             ./b2 "${B2_ARGS[@]}"
 
-            B2_ARGS+=("libs/$LIBRARY/test")
-            ./b2 "${B2_ARGS[@]}"
-
 
   docs:
     defaults:
@@ -1096,7 +1134,7 @@ jobs:
     container: ${{matrix.container}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 3
 
@@ -1104,7 +1142,7 @@ jobs:
         run: |
           git status || git config --system --add safe.directory "$GITHUB_WORKSPACE"
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: changes
         with:
           filters: |

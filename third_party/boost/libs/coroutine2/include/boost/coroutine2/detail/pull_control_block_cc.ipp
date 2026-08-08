@@ -35,10 +35,10 @@ template< typename T >
 void
 pull_coroutine< T >::control_block::destroy( control_block * cb) noexcept {
     boost::context::fiber c = std::move( cb->c);
-    // destroy control structure
-    cb->~control_block();
     // destroy coroutine's stack
     cb->state |= state_t::destroy;
+    // destroy control structure
+    cb->~control_block();
 }
 
 template< typename T >
@@ -191,10 +191,10 @@ template< typename T >
 void
 pull_coroutine< T & >::control_block::destroy( control_block * cb) noexcept {
     boost::context::fiber c = std::move( cb->c);
-    // destroy control structure
-    cb->~control_block();
     // destroy coroutine's stack
     cb->state |= state_t::destroy;
+    // destroy control structure
+    cb->~control_block();
 }
 
 template< typename T >
@@ -324,10 +324,10 @@ inline
 void
 pull_coroutine< void >::control_block::destroy( control_block * cb) noexcept {
     boost::context::fiber c = std::move( cb->c);
-    // destroy control structure
-    cb->~control_block();
     // destroy coroutine's stack
     cb->state |= state_t::destroy;
+    // destroy control structure
+    cb->~control_block();
 }
 
 template< typename StackAllocator, typename Fn >

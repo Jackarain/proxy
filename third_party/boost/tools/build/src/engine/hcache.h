@@ -9,9 +9,7 @@
 #define HCACHE_H
 
 #include "config.h"
-#include "lists.h"
-#include "regexp.h"
-#include "rules.h"
+#include "jam_fwd.h"
 
 void hcache_init( void );
 void hcache_done( void );

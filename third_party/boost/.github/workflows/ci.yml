@@ -16,18 +16,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-22.04-arm
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
           - os: ubuntu-24.04-arm
-          - os: macos-14
-          - os: macos-15
-          - os: macos-26
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -54,13 +50,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2022
-          - os: windows-2025
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -83,24 +78,141 @@ jobs:
           cd status
           ../b2 -j3 quick
 
+  b2-check-installed-posix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install Boost
+        run: |
+          ./bootstrap.sh
+          ./b2 -j3 --prefix=$HOME/.local install
+
+      - name: Test installed headers
+        run: |
+          g++ -I ~/.local/include -I /usr/include/python3.12 -std=c++20 -c tools/boost_install/test/headers/include.cpp
+
+      - name: Check installed files
+        run: |
+          file -E ~/.local/share/boost_predef/build.jam
+          file -E ~/.local/lib/cmake/BoostDetectToolset-*.cmake
+          file -E ~/.local/lib/cmake/Boost-*/BoostConfig.cmake
+          file -E ~/.local/lib/cmake/Boost-*/BoostConfigVersion.cmake
+          file -E ~/.local/lib/cmake/boost_headers-*/boost_headers-config.cmake
+          file -E ~/.local/lib/cmake/boost_headers-*/boost_headers-config-version.cmake
+          file -E ~/.local/lib/cmake/boost_system-*/boost_system-config.cmake
+          file -E ~/.local/lib/cmake/boost_system-*/boost_system-config-version.cmake
+
+  b2-cmake-tool-posix:
+    strategy:
+      fail-fast: false
+      matrix:
+        tool:
+          - boostdep
+          - inspect
+          - quickbook
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install Boost
+        run: |
+          ./bootstrap.sh
+          ./b2 -j3 --prefix=$HOME/.local --with-filesystem --with-regex --with-program_options install
+
+      - name: Build tool with CMake
+        run: |
+          cmake -S tools/${{matrix.tool}} -B __build__ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local
+          cmake --build __build__ --target install
+
+  b2-cmake-tool-windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        tool:
+          - boostdep
+          - inspect
+          - quickbook
+
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install Boost
+        shell: cmd
+        run: |
+          cmd /c bootstrap
+          b2 -j3 --with-filesystem --with-regex --with-program_options install
+
+      - name: Build tool with CMake
+        run: |
+          cmake -S tools/${{matrix.tool}} -B __build__ -DBoost_ROOT=C:/Boost -DCMAKE_INSTALL_PREFIX=C:/usr/local
+          cmake --build __build__ --target install --config Release
+
+  b2-cmake-use-lib-posix:
+    strategy:
+      fail-fast: false
+      matrix:
+        lib:
+          - atomic
+          - container
+          - date_time
+          - filesystem
+          - headers
+          - log
+          - program_options
+          - python
+          - random
+          - regex
+          - serialization
+          - system
+          - test
+          - thread
+          - wave
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Install Boost --with-library
+        run: |
+          ./bootstrap.sh
+          ./b2 -j3 --prefix=$HOME/.local --with-${{matrix.lib}} install
+
+      - name: Use library from CMake
+        run: |
+          cmake -S tools/boost_install/test/${{matrix.lib}} -B __build__ -DCMAKE_INSTALL_PREFIX=~/.local
+          cmake --build __build__
+          export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
+          cmake --build __build__ --target check
+
   cmake-install-posix:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-22.04-arm
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
           - os: ubuntu-24.04-arm
-          - os: macos-14
-          - os: macos-15
-          - os: macos-26
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -124,13 +236,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2022
-          - os: windows-2025
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -159,7 +270,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -183,19 +294,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
-          - os: ubuntu-22.04-arm
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
           - os: ubuntu-24.04-arm
-          - os: macos-14
-          - os: macos-15
-          - os: macos-26
+          - os: macos-latest
 
     runs-on: ${{matrix.os}}
     timeout-minutes: 90
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -219,13 +326,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2022
-          - os: windows-2025
+          - os: windows-latest
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -243,3 +349,149 @@ jobs:
         run: |
           cd __build__
           ctest --output-on-failure --no-tests=error -j 3 -R quick -C Debug
+
+  # setup windows-11-arm as it is new and does not have all requirements pre-installed.
+  setup-windows-arm64:
+    runs-on: windows-11-arm
+    outputs:
+      vcpkg-root: ${{ steps.set-vcpkg-root.outputs.vcpkg-root }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install vcpkg
+        run: |
+          if (!(Test-Path C:\vcpkg)) {
+            git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+            C:\vcpkg\bootstrap-vcpkg.bat
+          }
+          else {
+             echo "vcpkg already installed"
+          }
+
+      - name: Restore vcpkg cache
+        id: cache-vcpkg
+        uses: actions/cache@v5
+        with:
+          path: |
+            C:\vcpkg\downloads
+            C:\vcpkg\installed
+          key: vcpkg-${{ runner.os }}-arm64
+          restore-keys: |
+            vcpkg-${{ runner.os }}-arm64
+
+      - name: Install OpenSSL via vcpkg (if not cached)
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+        run: |
+          C:\vcpkg\vcpkg install openssl:arm64-windows
+
+      - name: Set vcpkg-root output
+        id: set-vcpkg-root
+        shell: pwsh
+        run: |
+          echo "Writing vcpkg-root=C:\vcpkg to GITHUB_OUTPUT"
+          echo "vcpkg-root=C:\vcpkg" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Log step output
+        run: |
+          echo "Step output is: ${{ steps.set-vcpkg-root.outputs.vcpkg-root }}"
+
+
+  b2-windows-arm64:
+    needs: setup-windows-arm64
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Setup Boost
+        shell: cmd
+        run: |
+          bootstrap
+          b2 -d0 headers
+
+      # There is no mpi support yet for Windows arm64. So built without mpi for now
+      # pch needs to be turned off, otherwise few components fail.
+      # It requires additional parameters to be pass for selecting correct asm files for boost:context
+      - name: Build Boost
+        run: ./b2 -j2 toolset=msvc architecture=arm address-model=64 abi=ms pch=off --without-mpi --without-graph_parallel stage
+
+      - name: Install Boost
+        run: ./b2 -j2 toolset=msvc architecture=arm address-model=64 abi=ms pch=off --without-mpi --without-graph_parallel install
+
+      - name: Test Boost
+        run: |
+          cd status
+          ../b2 -j3 pch=off quick
+
+  # Win Arm64 CMake job
+  cmake-install-windows-arm64:
+    needs: setup-windows-arm64
+    runs-on: windows-11-arm
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            C:\vcpkg\downloads
+            C:\vcpkg\installed
+          key: vcpkg-${{ runner.os }}-arm64
+
+      # We are using vcpkg to install dependencies such as OpenSSL in  windows-11-arm runner.
+      - name: Configure Boost
+        run: |
+          mkdir __build__ && cd __build__
+          $vcpkgRoot="${{ needs.setup-windows-arm64.outputs.vcpkg-root }}"
+          cmake -DBUILD_SHARED_LIBS=ON `
+                -DCMAKE_TOOLCHAIN_FILE="$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" `
+                -DVCPKG_TARGET_TRIPLET=arm64-windows ..
+
+      - name: Build Boost
+        run: |
+          cd __build__
+          cmake --build . -j 3
+
+      - name: Install Boost
+        run: |
+          cd __build__
+          cmake --build . -j 3 --target install
+
+  # Win Arm64 CMake test job
+  cmake-test-windows-arm64-quick:
+    needs: setup-windows-arm64
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      # Restore cache
+      - uses: actions/cache@v5
+        with:
+          path: |
+            C:\vcpkg\downloads
+            C:\vcpkg\installed
+          key: vcpkg-${{ runner.os }}-arm64
+
+      # we are using vcpkg to install OpenSSL in  windows-11-arm runner.
+      - name: Configure Boost
+        run: |
+          mkdir __build__; cd __build__
+          $vcpkgRoot="${{ needs.setup-windows-arm64.outputs.vcpkg-root }}"
+          cmake -DBUILD_TESTING=ON -DCMAKE_TOOLCHAIN_FILE="$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=arm64-windows ..
+
+      - name: Build tests
+        run: |
+          cd __build__
+          cmake --build . -j2 --target tests-quick
+
+      - name: Run tests
+        run: |
+          cd __build__
+          ctest --output-on-failure --no-tests=error -j2 -R quick -C Debug

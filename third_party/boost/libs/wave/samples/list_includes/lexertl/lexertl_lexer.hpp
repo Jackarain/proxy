@@ -52,15 +52,15 @@ namespace boost { namespace wave { namespace cpplexer { namespace lexertl
 //  The following numbers are the array sizes of the token regex's which we
 //  need to specify to make the CW compiler happy (at least up to V9.5).
 #if BOOST_WAVE_SUPPORT_MS_EXTENSIONS != 0
-#define INIT_DATA_SIZE              176
+#define INIT_DATA_SIZE              177
 #else
-#define INIT_DATA_SIZE              159
+#define INIT_DATA_SIZE              160
 #endif
 #define INIT_DATA_CPP_SIZE          15
 #define INIT_DATA_PP_NUMBER_SIZE    2
 #define INIT_DATA_CPP0X_SIZE        15
-#define INIT_DATA_CPP2A_SIZE        10
-#define INIT_MACRO_DATA_SIZE        28
+#define INIT_DATA_CPP2A_SIZE        11
+#define INIT_MACRO_DATA_SIZE        30
 #endif // #if BOOST_WAVE_LEXERTL_USE_STATIC_TABLES == 0
 
 //  this is just a hack to have a unique token id not otherwise used by Wave
@@ -159,12 +159,17 @@ lexertl<Iterator, Position>::init_macro_data[INIT_MACRO_DATA_SIZE] =
     MACRO_DATA("OCTALDIGIT", "[0-7]"),
     MACRO_DATA("DIGIT", "[0-9]"),
     MACRO_DATA("HEXDIGIT", "[0-9a-fA-F]"),
+    MACRO_DATA("BINARYDIGIT", "[0-1]"),
     MACRO_DATA("OPTSIGN", "[-+]?"),
     MACRO_DATA("EXPSTART", "[eE][-+]"),
-    MACRO_DATA("EXPONENT", "([eE]{OPTSIGN}{DIGIT}+)"),
+    MACRO_DATA("EXPONENT", "([eE]{OPTSIGN}{DIGIT}('{DIGIT}|{DIGIT})*)"),
     MACRO_DATA("NONDIGIT", "[a-zA-Z_]"),
-    MACRO_DATA("INTEGER", "(" "(0x|0X){HEXDIGIT}+" OR "0{OCTALDIGIT}*" OR "[1-9]{DIGIT}*" ")"),
+    MACRO_DATA("INTEGER", "(" "(0x|0X){HEXDIGIT}('{HEXDIGIT}|{HEXDIGIT})*" 
+               OR "0('{OCTALDIGIT}|{OCTALDIGIT})*" 
+               OR "[1-9]('{DIGIT}|{DIGIT})*"
+               OR "(0b|0B){BINARYDIGIT}('{BINARYDIGIT}|{BINARYDIGIT})*" ")"),
     MACRO_DATA("INTEGER_SUFFIX", "(" "[uU][lL]?" OR "[lL][uU]?" ")"),
+    MACRO_DATA("SIZET_SUFFIX", "(" "[uU]?[zZ]" OR "[zZ][uU]?" ")"),
 #if BOOST_WAVE_SUPPORT_MS_EXTENSIONS != 0
     MACRO_DATA("LONGINTEGER_SUFFIX", "([uU](ll|LL)|(ll|LL)[uU]?|i64)"),
 #else
@@ -352,9 +357,11 @@ lexertl<Iterator, Position>::init_data[INIT_DATA_SIZE] =
 #endif // BOOST_WAVE_SUPPORT_MS_EXTENSIONS != 0
     TOKEN_DATA(T_LONGINTLIT, "{INTEGER}{LONGINTEGER_SUFFIX}"),
     TOKEN_DATA(T_INTLIT, "{INTEGER}{INTEGER_SUFFIX}?"),
+    TOKEN_DATA(T_SIZETLIT, "{INTEGER}{SIZET_SUFFIX}?"),
     TOKEN_DATA(T_FLOATLIT,
-        "(" "{DIGIT}*" Q(".") "{DIGIT}+" OR "{DIGIT}+" Q(".") "){EXPONENT}?{FLOAT_SUFFIX}?" OR
-        "{DIGIT}+{EXPONENT}{FLOAT_SUFFIX}?"),
+        "(" "({DIGIT}|{DIGIT}'{DIGIT})*" Q(".") "{DIGIT}('{DIGIT}|{DIGIT})*" OR 
+            "{DIGIT}('{DIGIT}|{DIGIT})*" Q(".") "){EXPONENT}?{FLOAT_SUFFIX}?" OR
+            "{DIGIT}+{EXPONENT}{FLOAT_SUFFIX}?"),
 #if BOOST_WAVE_USE_STRICT_LEXER != 0
     TOKEN_DATA(T_IDENTIFIER,
         "(" "{NONDIGIT}" OR "{UNIVERSALCHAR}" ")"
@@ -464,6 +471,7 @@ lexertl<Iterator, Position>::init_data_cpp2a[INIT_DATA_CPP2A_SIZE] =
     TOKEN_DATA(T_CO_RETURN, "co_return"),
     TOKEN_DATA(T_CO_YIELD, "co_yield"),
     TOKEN_DATA(T_REQUIRES, "requires"),
+    TOKEN_DATA(T_MODULE, "module"),
     TOKEN_DATA(T_SPACESHIP, "<=>"),
     { token_id(0) }       // this should be the last entry
 };
@@ -516,7 +524,7 @@ std::ifstream dfa_in("wave_lexertl_lexer.dfa", std::ios::in|std::ios::binary);
 
     // if in C++0x mode, add appropriate keywords
 #if BOOST_WAVE_SUPPORT_CPP0X != 0
-        if (wave::need_cpp0x(lang) || wave::need_cpp2a(lang)) {
+        if (wave::need_cpp0x(lang) || wave::need_cpp2a(lang) || wave::need_cpp2b(lang)) {
             for (int j = 0; 0 != init_data_cpp0x[j].tokenid; ++j) {
                 rules.add(init_data_cpp0x[j].tokenregex,
                           init_data_cpp0x[j].tokenid);
@@ -526,7 +534,7 @@ std::ifstream dfa_in("wave_lexertl_lexer.dfa", std::ios::in|std::ios::binary);
 
     // if in C++2a mode, add those keywords
 #if BOOST_WAVE_SUPPORT_CPP2A != 0
-        if (wave::need_cpp2a(lang)) {
+        if (wave::need_cpp2a(lang) || wave::need_cpp2b(lang)) {
             for (int j = 0; 0 != init_data_cpp2a[j].tokenid; ++j) {
                 rules.add(init_data_cpp2a[j].tokenregex,
                           init_data_cpp2a[j].tokenid);

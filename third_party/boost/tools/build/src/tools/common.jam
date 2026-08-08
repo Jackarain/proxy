@@ -24,7 +24,7 @@ import numbers ;
 
 .debug-configuration = [ args.get-arg debug-configuration ] ;
 
-args.add-arg show-configuration : --show-configuration : "?" ;
+args.add-arg show-configuration : --show-configuration : "?" : flag ;
 .show-configuration = [ args.get-arg show-configuration ] ;
 
 # Configurations
@@ -176,7 +176,7 @@ rule check-init-parameters ( toolset requirement * : * )
             # because in that case it will be impossible to register versionless
             # intel-linux and intel-win toolsets of a specific version.
             local t = $(toolset) ;
-            local m = [ MATCH "([^-]*)-" : $(toolset) ] ;
+            local m = [ MATCH "([^-]+)-" : $(toolset) ] ;
             if $(m)
             {
                 t = $(m[1]) ;
@@ -955,7 +955,7 @@ local rule toolset-tag ( name : type ? : property-set )
         case tru64cxx* : tag += tru ;
         case vacpp* : tag += xlc ;
     }
-    local version = [ MATCH "<toolset.*version>([0123456789]+)[.]?([0123456789]*)"
+    local version = [ MATCH "<toolset.*version>([0-9]+)[.]?([0-9]*)"
         : $(properties) ] ;
     # For historical reasons, vc6.0 and vc7.0 use different naming.
     if $(tag) = vc
@@ -1052,7 +1052,7 @@ local rule runtime-tag ( name : type ? : property-set )
 # "<qt>4.6.0" will result in tag "qt460"
 local rule qt-tag ( name : type ? : property-set )
 {
-    local v = [ MATCH "([0123456789]+)[.]?([0123456789]*)[.]?([0123456789]*)" :
+    local v = [ MATCH "([0-9]+)[.]?([0-9]*)[.]?([0-9]*)" :
         [ $(property-set).get <qt> ] ] ;
     return qt$(v:J=) ;
 }

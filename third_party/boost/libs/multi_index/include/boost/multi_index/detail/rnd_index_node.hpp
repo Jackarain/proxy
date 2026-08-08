@@ -1,4 +1,4 @@
-/* Copyright 2003-2025 Joaquin M Lopez Munoz.
+/* Copyright 2003-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -215,11 +215,18 @@ private:
   typedef random_access_index_node_trampoline<Super> trampoline;
 
 public:
-  typedef typename trampoline::impl_type         impl_type;
-  typedef typename trampoline::pointer           impl_pointer;
-  typedef typename trampoline::const_pointer     const_impl_pointer;
-  typedef typename trampoline::difference_type   difference_type;
-  typedef typename trampoline::ptr_pointer       impl_ptr_pointer;
+  typedef typename trampoline::impl_type       impl_type;
+  typedef typename trampoline::pointer         impl_pointer;
+  typedef typename trampoline::const_pointer   const_impl_pointer;
+  typedef typename trampoline::difference_type difference_type;
+  typedef typename trampoline::ptr_pointer     impl_ptr_pointer;
+  typedef allocator_rebind_t<
+    typename trampoline::node_allocator,
+    random_access_index_node>                  final_allocator_type;
+  typedef allocator_pointer_t<
+    final_allocator_type>                      pointer;
+  typedef allocator_const_pointer_t<
+    final_allocator_type>                      const_pointer;
 
   impl_ptr_pointer& up(){return trampoline::up();}
   impl_ptr_pointer  up()const{return trampoline::up();}
@@ -254,25 +261,25 @@ public:
 
   /* interoperability with rnd_node_iterator */
 
-  static void increment(random_access_index_node*& x)
+  static void increment(pointer& x)
   {
     impl_pointer xi=x->impl();
     trampoline::increment(xi);
-    x=from_impl(xi);
+    x=pointer(from_impl(xi));
   }
 
-  static void decrement(random_access_index_node*& x)
+  static void decrement(pointer& x)
   {
     impl_pointer xi=x->impl();
     trampoline::decrement(xi);
-    x=from_impl(xi);
+    x=pointer(from_impl(xi));
   }
 
-  static void advance(random_access_index_node*& x,difference_type n)
+  static void advance(pointer& x,difference_type n)
   {
     impl_pointer xi=x->impl();
     trampoline::advance(xi,n);
-    x=from_impl(xi);
+    x=pointer(from_impl(xi));
   }
 
   static difference_type distance(

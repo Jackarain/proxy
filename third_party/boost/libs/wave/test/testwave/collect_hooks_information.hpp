@@ -106,12 +106,18 @@ class collect_hooks_information
 
 public:
     collect_hooks_information(std::string& trace)
-      : hooks_trace(trace), skipped_token_hooks(false)
+            : hooks_trace(trace), skipped_token_hooks(false),
+                object_like_macro_passthrough(false)
     {}
 
     void set_skipped_token_hooks(bool flag) 
     {
         skipped_token_hooks = flag;
+    }
+
+    void set_object_like_macro_passthrough(bool flag)
+    {
+        object_like_macro_passthrough = flag;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -212,7 +218,7 @@ public:
         strm << "01: " << repr(macro.get_position()) << ": " 
              << macro.get_value() << std::endl;
         hooks_trace += BOOST_WAVETEST_GETSTRING(strm);
-        return false;   // default is to normally expand the macro
+        return object_like_macro_passthrough;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -865,6 +871,7 @@ public:
 private:
     std::string& hooks_trace;
     bool skipped_token_hooks;
+    bool object_like_macro_passthrough;
 };
 
 #endif

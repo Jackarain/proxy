@@ -154,7 +154,7 @@ main()
         map_type m(make_pair<void>(0));
 
         typedef set<std::string, float> set_type;
-        set_type s("foo", 1.3f);
+        set_type s("foo", 1.25f);
 
         typedef joint_view<map_type, set_type> joint_view_type;
         joint_view_type j(m,s);
@@ -180,7 +180,7 @@ main()
         std::cout << deref_data(fusion::next(fusion::next(begin(j)))) << std::endl;
         BOOST_TEST((deref_data(begin(j)) == 0));
         BOOST_TEST((deref_data(fusion::next(begin(j))) == "foo"));
-        BOOST_TEST((deref_data(fusion::next(fusion::next(begin(j)))) == 1.3f));
+        BOOST_TEST((deref_data(fusion::next(fusion::next(begin(j)))) == 1.25f));
     }
 
     return boost::report_errors();

@@ -42,4 +42,5 @@ except ValueError as e:
 else:
     raise ValueError("exception expected")
 finally:
+    t.rm('file.jam')
     t.cleanup()

@@ -1,4 +1,4 @@
-/* Copyright 2003-2025 Joaquin M Lopez Munoz.
+/* Copyright 2003-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -158,6 +158,13 @@ public:
   typedef typename trampoline::pointer         impl_pointer;
   typedef typename trampoline::const_pointer   const_impl_pointer;
   typedef typename trampoline::difference_type difference_type;
+  typedef allocator_rebind_t<
+    typename trampoline::node_allocator,
+    sequenced_index_node>                      final_allocator_type;
+  typedef allocator_pointer_t<
+    final_allocator_type>                      pointer;
+  typedef allocator_const_pointer_t<
+    final_allocator_type>                      const_pointer;
 
   impl_pointer& prior(){return trampoline::prior();}
   impl_pointer  prior()const{return trampoline::prior();}
@@ -192,20 +199,24 @@ public:
           raw_ptr<const impl_type*>(x)));
   }
 
-  /* interoperability with bidir_node_iterator */
+  /* Interoperability with bidir_node_iterator and index impl.
+   * Templated for raw-pointer/non-raw-pointer versions.
+   */
 
-  static void increment(sequenced_index_node*& x)
+  template<typename NodePtr>
+  static void increment(NodePtr& x)
   {
     impl_pointer xi=x->impl();
     trampoline::increment(xi);
-    x=from_impl(xi);
+    x=NodePtr(from_impl(xi));
   }
 
-  static void decrement(sequenced_index_node*& x)
+  template<typename NodePtr>
+  static void decrement(NodePtr& x)
   {
     impl_pointer xi=x->impl();
     trampoline::decrement(xi);
-    x=from_impl(xi);
+    x=NodePtr(from_impl(xi));
   }
 };
 

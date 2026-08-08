@@ -21,80 +21,68 @@
   color: var(--text-main-text-primary, #18191b);
   font-size: var(--typography-font-size-lg, 1.25rem);
   font-style: normal;
-  font-variation-settings: "wght" 500, "wdth" 80;
+  font-variation-settings: "wght" 500, "wdth" 87.5;
   line-height: var(--typography-line-height-xl, 1.75rem);
   letter-spacing: var(--spacing-size-size-0, 0rem);
 }
 
-/* Rouge Syntax Highlighting */
-/* Light theme Rouge syntax highlighting */
-.boostlook pre.rouge .k { /* Keywords like const, auto */
-  color: var(--atom-one-light-keyword, #a626a4);
-}
-.boostlook pre.rouge .kt { /* Types like char, int */
-  color: var(--atom-one-light-keyword, #a626a4);
-}
-.boostlook pre.rouge .n,
-.boostlook pre.rouge .nf { /* Names, identifiers, functions */
-  color: var(--atom-one-light-text, #383a42);
-}
-.boostlook pre.rouge .o { /* Operators */
-  color: var(--atom-one-light-operator, #e45649);
-}
-.boostlook pre.rouge .s,
-.boostlook pre.rouge .s1,
-.boostlook pre.rouge .s2 { /* Strings */
-  color: var(--atom-one-light-string, #50a14f);
-}
-.boostlook pre.rouge .mi,
-.boostlook pre.rouge .mf { /* Numbers */
-  color: var(--atom-one-light-variable, #986801);
-}
-.boostlook pre.rouge .p { /* Punctuation */
-  color: var(--atom-one-light-text, #383a42);
-}
-.boostlook pre.rouge .c,
-.boostlook pre.rouge .c1,
-.boostlook pre.rouge .cm { /* Comments */
-  color: var(--atom-one-light-comment, #a0a1a7);
-  font-family: "Monaspace Xenon", monospace;
-  font-style: italic;
-}
-
-/* Dark theme Rouge syntax highlighting */
-html.dark .boostlook pre.rouge .k,
-html.dark .boostlook pre.rouge .kt {
-  color: var(--atom-one-dark-keyword, #c678dd);
-}
-html.dark .boostlook pre.rouge .n,
-html.dark .boostlook pre.rouge .nf {
-  color: var(--atom-one-dark-text, #abb2bf);
-}
-html.dark .boostlook pre.rouge .o {
-  color: var(--atom-one-dark-operator, #e06c75);
-}
-html.dark .boostlook pre.rouge .s,
-html.dark .boostlook pre.rouge .s1,
-html.dark .boostlook pre.rouge .s2 {
-  color: var(--atom-one-dark-string, #98c379);
-}
-html.dark .boostlook pre.rouge .mi,
-html.dark .boostlook pre.rouge .mf {
-  color: var(--atom-one-dark-variable, #d19a66);
-}
-html.dark .boostlook pre.rouge .p {
-  color: var(--atom-one-dark-text, #abb2bf);
-}
-html.dark .boostlook pre.rouge .c,
-html.dark .boostlook pre.rouge .c1,
-html.dark .boostlook pre.rouge .cm {
-  color: var(--atom-one-dark-comment, #5c6370);
-  font-family: "Monaspace Xenon", monospace;
-  font-style: italic;
-}
-
+/* Rouge — reset font-style so only comments are italic (handled by 07-global-code.css) */
 .boostlook pre.rouge code span {
   font-style: normal;
 }
+
+/* Toctitle flex layout for theme toggle */
+.boostlook #toctitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* TOC leaf links — match Antora .nav-link styling for hover */
+.boostlook #toc > ul.sectlevel1 li:not(.nav-item) > a {
+  display: inline-block;
+  padding: var(--leftbar-paddings-leftbar-padding-3xs, 0.25rem) var(--leftbar-paddings-leftbar-padding-2xs, 0.5rem);
+  border-radius: var(--padding-padding-3xs, 0.25rem);
+  transition: background 0.15s ease;
+}
+.boostlook #toc > ul.sectlevel1 li:not(.nav-item) > a:hover {
+  background: var(--colors-primary-100, #EFEFF1);
+}
+html.dark .boostlook #toc > ul.sectlevel1 li:not(.nav-item) > a:hover {
+  background: var(--colors-primary-600, #585A64);
+}
+
+/* Active TOC link — highlights link matching current hash (match Antora) */
+.boostlook #toc a.is-active-link {
+  background: var(--colors-primary-100, #EFEFF1);
+  border-radius: var(--padding-padding-3xs, 0.25rem);
+  color: var(--text-main-text-primary, #18191b);
+}
+html.dark .boostlook #toc a.is-active-link {
+  background: var(--colors-primary-600, #585A64);
+  color: var(--text-main-text-primary, #fff);
+}
+
+/* Theme toggle for Asciidoctor pages (scoped to #toctitle to avoid Antora) */
+.boostlook #toctitle .theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text-main-text-body-tetriary, #62676b);
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+.boostlook #toctitle .theme-toggle:hover {
+  color: var(--text-main-text-body-primary, #050816);
+}
+html.dark .boostlook #toctitle .theme-toggle:hover {
+  color: var(--text-main-text-primary, #fff);
+}
+/* Toggle icon visibility — match Antora: moon in light, sun in dark */
+.boostlook #toctitle .theme-toggle .theme-icon-light { display: none; }
+html.dark .boostlook #toctitle .theme-toggle .theme-icon-light { display: inline; }
+html.dark .boostlook #toctitle .theme-toggle .theme-icon-dark { display: none; }
 
 /*----------------- Styles specific to AsciiDoctor content end -----------------*/

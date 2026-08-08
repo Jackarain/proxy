@@ -1152,7 +1152,13 @@
         <xsl:attribute name="name">
           <xsl:value-of select="name/text()"/>
         </xsl:attribute>
-        
+
+        <!-- Alias templates ("template<...> using X = ...;") are emitted by
+             Doxygen as typedef memberdefs carrying a templateparamlist. Keep
+             that information so the typedef is rendered as an alias template
+             instead of a plain typedef. -->
+        <xsl:apply-templates select="templateparamlist" mode="template"/>
+
         <xsl:apply-templates select="briefdescription" mode="passthrough"/>
         <xsl:apply-templates select="detaileddescription" mode="passthrough"/>
         <xsl:apply-templates select="inbodydescription" mode="passthrough"/>

@@ -142,6 +142,11 @@ struct params_ref_test
         params_ref ps(u.params());
         f(ps);
         BOOST_TEST_EQ(u.encoded_query(), s1);
+        BOOST_TEST_EQ(
+            u.encoded_query().decoded_size(),
+            pct_string_view(s1).decoded_size());
+        BOOST_TEST_NO_THROW(u.encoded_target());
+        BOOST_TEST_NO_THROW(u.encoded_resource());
         if(! BOOST_TEST_EQ(
                 ps.size(), init.size()))
             return;
@@ -813,6 +818,62 @@ struct params_ref_test
             };
             check(f, "?k0&k1=&k2=key", "k0&k1=" BIGSTR "&k2=key",
                 { {"k0",no_value}, {"k1",BIGSTR}, {"k2","key"} });
+        }
+
+        // issue #989: encoded_target() asserts after
+        // successive params().set() on a fresh url.
+        // Regression for broken decoded_[id_query]
+        // bookkeeping in url_base::edit_params.
+        {
+            url u;
+            u.params().set("a", "b");
+            BOOST_TEST_EQ(u.encoded_query(), "a=b");
+            BOOST_TEST_EQ(u.encoded_query().decoded_size(), 3u);
+            BOOST_TEST_EQ(u.encoded_target(), "?a=b");
+
+            u.params().set("c", "d");
+            BOOST_TEST_EQ(u.encoded_query(), "a=b&c=d");
+            BOOST_TEST_EQ(u.encoded_query().decoded_size(), 7u);
+            BOOST_TEST_EQ(u.encoded_target(), "?a=b&c=d");
+        }
+
+        // Related: erase first param must leave a
+        // consistent decoded_[id_query].
+        {
+            url u("?a=b&c=d");
+            BOOST_TEST_EQ(u.encoded_query().decoded_size(), 7u);
+            u.params().erase(u.params().begin());
+            BOOST_TEST_EQ(u.encoded_query(), "c=d");
+            BOOST_TEST_EQ(u.encoded_query().decoded_size(), 3u);
+            BOOST_TEST_EQ(u.encoded_target(), "?c=d");
+        }
+
+        // Related: erase last param must leave a
+        // consistent decoded_[id_query].
+        {
+            url u("?a=b&c=d");
+            u.params().erase(std::next(u.params().begin()));
+            BOOST_TEST_EQ(u.encoded_query(), "a=b");
+            BOOST_TEST_EQ(u.encoded_query().decoded_size(), 3u);
+            BOOST_TEST_EQ(u.encoded_target(), "?a=b");
+        }
+
+        // Related: insert at front of non-empty query.
+        {
+            url u("?x=y");
+            u.params().insert(u.params().begin(), {"a", "b"});
+            BOOST_TEST_EQ(u.encoded_query(), "a=b&x=y");
+            BOOST_TEST_EQ(u.encoded_query().decoded_size(), 7u);
+            BOOST_TEST_EQ(u.encoded_target(), "?a=b&x=y");
+        }
+
+        // Related: append to non-empty query.
+        {
+            url u("?x=y");
+            u.params().append({"a", "b"});
+            BOOST_TEST_EQ(u.encoded_query(), "x=y&a=b");
+            BOOST_TEST_EQ(u.encoded_query().decoded_size(), 7u);
+            BOOST_TEST_EQ(u.encoded_target(), "?x=y&a=b");
         }
     }
 

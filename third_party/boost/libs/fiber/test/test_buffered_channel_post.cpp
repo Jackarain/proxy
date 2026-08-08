@@ -4,6 +4,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <atomic>
 #include <chrono>
 #include <sstream>
 #include <string>
@@ -458,6 +459,47 @@ void test_moveable() {
     BOOST_CHECK_EQUAL( 3, m2.value);
 }
 
+struct counted_type {
+    static std::atomic< std::size_t > count;
+
+    int value;
+
+    counted_type( int v = 0) noexcept :
+        value( v) {
+        ++count;
+    }
+
+    counted_type( counted_type const& other) noexcept :
+        value( other.value) {
+        ++count;
+    }
+
+    counted_type( counted_type && other) noexcept :
+        value( other.value) {
+        other.value = -1;
+        ++count;
+    }
+
+    counted_type & operator=( counted_type const& other) noexcept {
+        if ( this == & other) return * this;
+        value = other.value;
+        return * this;
+    }
+
+    counted_type & operator=( counted_type && other) noexcept {
+        if ( this == & other) return * this;
+        value = other.value;
+        other.value = -1;
+        return * this;
+    }
+
+    ~counted_type() {
+        --count;
+    }
+};
+
+std::atomic< std::size_t > counted_type::count{ 0 };
+
 void test_rangefor() {
     boost::fibers::buffered_channel< int > chan{ 2 };
     std::vector< int > vec;
@@ -485,6 +527,38 @@ void test_rangefor() {
     BOOST_CHECK_EQUAL( 5, vec[4]);
     BOOST_CHECK_EQUAL( 8, vec[5]);
     BOOST_CHECK_EQUAL( 12, vec[6]);
+}
+
+void test_rangefor_non_trivial_dtor() {
+    {
+        boost::fibers::buffered_channel< counted_type > chan{ 2 };
+        std::vector< int > vec;
+        boost::fibers::fiber f1([&chan]{
+            chan.push( counted_type{ 1} );
+            chan.push( counted_type{ 1} );
+            chan.push( counted_type{ 2} );
+            chan.push( counted_type{ 3} );
+            chan.push( counted_type{ 5} );
+            chan.push( counted_type{ 8} );
+            chan.push( counted_type{ 12} );
+            chan.close();
+        });
+        boost::fibers::fiber f2([&vec,&chan]{
+            for ( counted_type val : chan) {
+                vec.push_back( val.value);
+            }
+        });
+        f1.join();
+        f2.join();
+        BOOST_CHECK_EQUAL( 1, vec[0]);
+        BOOST_CHECK_EQUAL( 1, vec[1]);
+        BOOST_CHECK_EQUAL( 2, vec[2]);
+        BOOST_CHECK_EQUAL( 3, vec[3]);
+        BOOST_CHECK_EQUAL( 5, vec[4]);
+        BOOST_CHECK_EQUAL( 8, vec[5]);
+        BOOST_CHECK_EQUAL( 12, vec[6]);
+    }
+    BOOST_CHECK_EQUAL( (std::size_t)0, counted_type::count);
 }
 
 boost::unit_test::test_suite * init_unit_test_suite( int, char* []) {
@@ -524,6 +598,7 @@ boost::unit_test::test_suite * init_unit_test_suite( int, char* []) {
      test->add( BOOST_TEST_CASE( & test_wm_2) );
      test->add( BOOST_TEST_CASE( & test_moveable) );
      test->add( BOOST_TEST_CASE( & test_rangefor) );
+     test->add( BOOST_TEST_CASE( & test_rangefor_non_trivial_dtor) );
 
     return test;
 }

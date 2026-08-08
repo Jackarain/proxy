@@ -6,8 +6,7 @@
 
 #include <boost/redis/connection.hpp>
 
-#define BOOST_TEST_MODULE conn_exec_error
-#include <boost/test/included/unit_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #include "common.hpp"
 
@@ -30,7 +29,7 @@ using namespace std::chrono_literals;
 
 namespace {
 
-BOOST_AUTO_TEST_CASE(no_ignore_error)
+void test_no_ignore_error()
 {
    request req;
 
@@ -45,7 +44,7 @@ BOOST_AUTO_TEST_CASE(no_ignore_error)
 
    conn->async_exec(req, ignore, [&](error_code ec, std::size_t) {
       exec_finished = true;
-      BOOST_TEST(ec == error::resp3_simple_error);
+      BOOST_TEST_EQ(ec, error::resp3_simple_error);
       conn->cancel(operation::run);
       conn->cancel(operation::reconnection);
    });
@@ -57,7 +56,7 @@ BOOST_AUTO_TEST_CASE(no_ignore_error)
    BOOST_TEST(exec_finished);
 }
 
-BOOST_AUTO_TEST_CASE(has_diagnostic)
+void test_has_diagnostic()
 {
    request req;
 
@@ -77,18 +76,18 @@ BOOST_AUTO_TEST_CASE(has_diagnostic)
    conn->async_exec(req, resp, [&](error_code ec, std::size_t) {
       exec_finished = true;
 
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
 
       // HELLO
       BOOST_TEST(std::get<0>(resp).has_error());
-      BOOST_TEST(std::get<0>(resp).error().data_type == resp3::type::simple_error);
+      BOOST_TEST_EQ(std::get<0>(resp).error().data_type, resp3::type::simple_error);
       auto const diag = std::get<0>(resp).error().diagnostic;
       BOOST_TEST(!std::empty(diag));
       std::cout << "has_diagnostic: " << diag << std::endl;
 
       // PING
       BOOST_TEST(std::get<1>(resp).has_value());
-      BOOST_TEST(std::get<1>(resp).value() == "Barra do Una");
+      BOOST_TEST_EQ(std::get<1>(resp).value(), "Barra do Una");
 
       conn->cancel(operation::run);
       conn->cancel(operation::reconnection);
@@ -101,7 +100,7 @@ BOOST_AUTO_TEST_CASE(has_diagnostic)
    BOOST_TEST(exec_finished);
 }
 
-BOOST_AUTO_TEST_CASE(resp3_error_in_cmd_pipeline)
+void test_resp3_error_in_cmd_pipeline()
 {
    request req1;
    req1.push("HELLO", "3");
@@ -123,24 +122,24 @@ BOOST_AUTO_TEST_CASE(resp3_error_in_cmd_pipeline)
 
    auto c2 = [&](error_code ec, std::size_t) {
       c2_called = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       BOOST_TEST(std::get<0>(resp2).has_value());
-      BOOST_TEST(std::get<0>(resp2).value() == "req2-msg1");
+      BOOST_TEST_EQ(std::get<0>(resp2).value(), "req2-msg1");
       conn->cancel(operation::run);
       conn->cancel(operation::reconnection);
    };
 
    auto c1 = [&](error_code ec, std::size_t) {
       c1_called = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       BOOST_TEST(std::get<2>(resp1).has_error());
-      BOOST_TEST(std::get<2>(resp1).error().data_type == resp3::type::simple_error);
+      BOOST_TEST_EQ(std::get<2>(resp1).error().data_type, resp3::type::simple_error);
       auto const diag = std::get<2>(resp1).error().diagnostic;
       BOOST_TEST(!std::empty(diag));
       std::cout << "resp3_error_in_cmd_pipeline: " << diag << std::endl;
 
       BOOST_TEST(std::get<3>(resp1).has_value());
-      BOOST_TEST(std::get<3>(resp1).value() == "req1-msg3");
+      BOOST_TEST_EQ(std::get<3>(resp1).value(), "req1-msg3");
 
       conn->async_exec(req2, resp2, c2);
    };
@@ -154,7 +153,7 @@ BOOST_AUTO_TEST_CASE(resp3_error_in_cmd_pipeline)
    BOOST_TEST(c2_called);
 }
 
-BOOST_AUTO_TEST_CASE(error_in_transaction)
+void test_error_in_transaction()
 {
    request req;
    req.push("HELLO", 3);
@@ -184,7 +183,7 @@ BOOST_AUTO_TEST_CASE(error_in_transaction)
 
    conn->async_exec(req, resp, [&](error_code ec, std::size_t) {
       finished = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
 
       BOOST_TEST(std::get<0>(resp).has_value());
       BOOST_TEST(std::get<1>(resp).has_value());
@@ -195,22 +194,23 @@ BOOST_AUTO_TEST_CASE(error_in_transaction)
 
       // Test errors in the pipeline commands.
       BOOST_TEST(std::get<0>(std::get<5>(resp).value()).has_value());
-      BOOST_TEST(std::get<0>(std::get<5>(resp).value()).value() == "PONG");
+      BOOST_TEST_EQ(std::get<0>(std::get<5>(resp).value()).value(), "PONG");
 
       // The ping in the transaction that should be an error.
       BOOST_TEST(std::get<1>(std::get<5>(resp).value()).has_error());
-      BOOST_TEST(
-         std::get<1>(std::get<5>(resp).value()).error().data_type == resp3::type::simple_error);
+      BOOST_TEST_EQ(
+         std::get<1>(std::get<5>(resp).value()).error().data_type,
+         resp3::type::simple_error);
       auto const diag = std::get<1>(std::get<5>(resp).value()).error().diagnostic;
       BOOST_TEST(!std::empty(diag));
 
       // The ping thereafter in the transaction should not be an error.
       BOOST_TEST(std::get<2>(std::get<5>(resp).value()).has_value());
-      BOOST_TEST(std::get<2>(std::get<5>(resp).value()).value() == "PONG");
+      BOOST_TEST_EQ(std::get<2>(std::get<5>(resp).value()).value(), "PONG");
 
       // The command right after the pipeline should be successful.
       BOOST_TEST(std::get<6>(resp).has_value());
-      BOOST_TEST(std::get<6>(resp).value() == "PONG");
+      BOOST_TEST_EQ(std::get<6>(resp).value(), "PONG");
 
       conn->cancel(operation::run);
       conn->cancel(operation::reconnection);
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE(error_in_transaction)
 // response to the PING command that comes thereafter and won't be
 // forwarded to the receive_op, resulting in a difficult to handle
 // error.
-BOOST_AUTO_TEST_CASE(subscriber_wrong_syntax)
+void test_subscriber_wrong_syntax()
 {
    request req1;
    req1.push("PING");
@@ -254,13 +254,13 @@ BOOST_AUTO_TEST_CASE(subscriber_wrong_syntax)
    auto c2 = [&](error_code ec, std::size_t) {
       c2_called = true;
       std::cout << "async_exec: subscribe" << std::endl;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
    };
 
    auto c1 = [&](error_code ec, std::size_t) {
       c1_called = true;
       std::cout << "async_exec: hello" << std::endl;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn->async_exec(req2, ignore, c2);
    };
 
@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(subscriber_wrong_syntax)
       std::cout << "async_receive2" << std::endl;
       BOOST_TEST(!ec);
       BOOST_TEST(gresp.has_error());
-      BOOST_CHECK_EQUAL(gresp.error().data_type, resp3::type::simple_error);
+      BOOST_TEST_EQ(gresp.error().data_type, resp3::type::simple_error);
       BOOST_TEST(!std::empty(gresp.error().diagnostic));
       std::cout << gresp.error().diagnostic << std::endl;
       conn->cancel(operation::run);
@@ -292,7 +292,7 @@ BOOST_AUTO_TEST_CASE(subscriber_wrong_syntax)
    BOOST_TEST(c3_called);
 }
 
-BOOST_AUTO_TEST_CASE(issue_287_generic_response_error_then_success)
+void test_issue_287_generic_response_error_then_success()
 {
    // Setup
    auto cfg = make_test_config();
@@ -308,12 +308,12 @@ BOOST_AUTO_TEST_CASE(issue_287_generic_response_error_then_success)
    bool run_finished = false, exec_finished = false;
 
    conn.async_run(cfg, [&](error_code ec) {
-      BOOST_TEST(ec == net::error::operation_aborted);
+      BOOST_TEST_EQ(ec, net::error::operation_aborted);
       run_finished = true;
    });
 
    conn.async_exec(req, resp, [&](error_code ec, std::size_t) {
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       exec_finished = true;
       conn.cancel();
    });
@@ -323,7 +323,19 @@ BOOST_AUTO_TEST_CASE(issue_287_generic_response_error_then_success)
    BOOST_TEST(run_finished);
    BOOST_TEST(exec_finished);
    BOOST_TEST(resp.has_error());
-   BOOST_TEST(resp.error().diagnostic == "ERR wrong number of arguments for 'set' command");
+   BOOST_TEST_EQ(resp.error().diagnostic, "ERR wrong number of arguments for 'set' command");
 }
 
 }  // namespace
+
+int main()
+{
+   test_no_ignore_error();
+   test_has_diagnostic();
+   test_resp3_error_in_cmd_pipeline();
+   test_error_in_transaction();
+   test_subscriber_wrong_syntax();
+   test_issue_287_generic_response_error_then_success();
+
+   return boost::report_errors();
+}

@@ -3,64 +3,82 @@
 # Distributed under the Boost Software License, Version 1.0.
 # See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
 
-include(BoostTest OPTIONAL RESULT_VARIABLE HAVE_BOOST_TEST)
-
-if(NOT HAVE_BOOST_TEST)
-  return()
+if(NOT TARGET tests)
+  add_custom_target(tests)
 endif()
 
-set(BOOST_TEST_LINK_LIBRARIES Boost::lexical_cast Boost::core)
+function(boost_lexical_cast_add_test_impl test_name test_file libs)
+    add_executable(${test_name} ${test_file})
+    target_link_libraries(${test_name} PRIVATE ${libs})
+    add_test(NAME ${test_name} COMMAND ${test_name})
+    add_dependencies(tests ${test_name})
+endfunction()
 
-boost_test(TYPE run SOURCES lexical_cast_test.cpp LINK_LIBRARIES Boost::type_traits)
-boost_test(TYPE run SOURCES loopback_test.cpp)
-boost_test(TYPE run SOURCES abstract_test.cpp)
-boost_test(TYPE run SOURCES noncopyable_test.cpp)
-boost_test(TYPE run SOURCES vc8_bug_test.cpp)
-boost_test(TYPE run SOURCES implicit_convert.cpp)
-boost_test(TYPE run SOURCES wchars_test.cpp)
-boost_test(TYPE run SOURCES float_types_test.cpp)
+function(boost_lexical_cast_add_test name libs)
+    set(test_name lexical_cast_${name})
+    set(test_file ${name}.cpp)
+    boost_lexical_cast_add_test_impl(${test_name} ${test_file} "Boost::lexical_cast;${libs}")
+endfunction()
+
+boost_lexical_cast_add_test(lexical_cast_test Boost::type_traits)
+boost_lexical_cast_add_test(loopback_test "")
+boost_lexical_cast_add_test(abstract_test "")
+boost_lexical_cast_add_test(noncopyable_test "")
+boost_lexical_cast_add_test(vc8_bug_test "")
+boost_lexical_cast_add_test(implicit_convert "")
+boost_lexical_cast_add_test(wchars_test "")
+boost_lexical_cast_add_test(float_types_test "")
 
 if(NOT MSVC)
     # Make sure that LexicalCast works the same way as some of the C++ Standard Libraries
-    boost_test(TYPE run SOURCES float_types_test.cpp COMPILE_DEFINITIONS BOOST_LEXICAL_CAST_DETAIL_TEST_ON_OLD NAME float_types_non_opt)
+    boost_lexical_cast_add_test_impl(lexical_cast_float_types_non_opt float_types_test.cpp Boost::lexical_cast)
+    target_compile_definitions(lexical_cast_float_types_non_opt PRIVATE BOOST_LEXICAL_CAST_DETAIL_TEST_ON_OLD)
 endif()
 
-boost_test(TYPE run SOURCES inf_nan_test.cpp)
-boost_test(TYPE run SOURCES containers_test.cpp)
-boost_test(TYPE run SOURCES empty_input_test.cpp LINK_LIBRARIES Boost::range)
-boost_test(TYPE run SOURCES pointers_test.cpp)
+boost_lexical_cast_add_test(inf_nan_test "")
+boost_lexical_cast_add_test(containers_test "")
+boost_lexical_cast_add_test(empty_input_test Boost::range)
+boost_lexical_cast_add_test(pointers_test "")
 
 if(MSVC)
-    boost_test(TYPE compile SOURCES typedefed_wchar_test.cpp COMPILE_OPTIONS "/Zc:wchar_t-")
-    boost_test(TYPE run SOURCES typedefed_wchar_test_runtime.cpp COMPILE_OPTIONS "/Zc:wchar_t-")
+    add_executable(lexical_cast_typedefed_wchar_test_compile typedefed_wchar_test.cpp)
+    target_compile_options(lexical_cast_typedefed_wchar_test_compile PRIVATE "/Zc:wchar_t-")
+
+    boost_lexical_cast_add_test(typedefed_wchar_test_runtime "")
+    target_compile_options(lexical_cast_typedefed_wchar_test_runtime PRIVATE "/Zc:wchar_t-")
 endif()
 
-boost_test(TYPE run SOURCES no_locale_test.cpp
-    COMPILE_DEFINITIONS BOOST_NO_STD_LOCALE BOOST_LEXICAL_CAST_ASSUME_C_LOCALE
-    LINK_LIBRARIES Boost::range
+boost_lexical_cast_add_test(no_locale_test Boost::range)
+target_compile_definitions(lexical_cast_no_locale_test
+    PRIVATE
+      BOOST_NO_STD_LOCALE
+      BOOST_LEXICAL_CAST_ASSUME_C_LOCALE
 )
 
-boost_test(TYPE run SOURCES no_exceptions_test.cpp
-    COMPILE_OPTIONS "-fno-exceptions"
-    COMPILE_DEFINITIONS
-        _HAS_EXCEPTIONS=0 # MSVC stdlib
-        _STLP_NO_EXCEPTIONS # STLPort
-    LINK_LIBRARIES Boost::range
+boost_lexical_cast_add_test_impl(lexical_cast_no_exceptions_test no_exceptions_test.cpp "Boost::container;Boost::range")
+target_include_directories(lexical_cast_no_exceptions_test PRIVATE ../include)
+target_compile_definitions(lexical_cast_no_exceptions_test
+    PRIVATE
+      _HAS_EXCEPTIONS=0 # MSVC stdlib
+      _STLP_NO_EXCEPTIONS # STLPort
 )
+if(MSVC)
+    target_compile_definitions(lexical_cast_no_exceptions_test PRIVATE BOOST_NO_EXCEPTIONS)
+endif()
+target_compile_options(lexical_cast_no_exceptions_test PRIVATE "-fno-exceptions")
 
-boost_test(TYPE run SOURCES iterator_range_test.cpp LINK_LIBRARIES Boost::range)
-boost_test(TYPE run SOURCES string_view_test.cpp LINK_LIBRARIES Boost::utility)
-boost_test(TYPE run SOURCES arrays_test.cpp LINK_LIBRARIES Boost::array)
-boost_test(TYPE run SOURCES integral_types_test.cpp LINK_LIBRARIES Boost::type_traits)
-boost_test(TYPE run SOURCES stream_detection_test.cpp)
-boost_test(TYPE run SOURCES stream_traits_test.cpp LINK_LIBRARIES Boost::array Boost::range Boost::utility)
+boost_lexical_cast_add_test(iterator_range_test Boost::range)
+boost_lexical_cast_add_test(string_view_test Boost::utility)
+boost_lexical_cast_add_test(arrays_test Boost::array)
+boost_lexical_cast_add_test(integral_types_test Boost::type_traits)
+boost_lexical_cast_add_test(stream_detection_test "")
+boost_lexical_cast_add_test(stream_traits_test "Boost::array;Boost::range;Boost::utility")
 
-boost_test(TYPE compile-fail SOURCES to_pointer_test.cpp)
-boost_test(TYPE compile-fail SOURCES from_volatile.cpp)
-boost_test(TYPE run SOURCES filesystem_test.cpp LINK_LIBRARIES Boost::filesystem)
-boost_test(TYPE run SOURCES try_lexical_convert.cpp)
+boost_lexical_cast_add_test(filesystem_test Boost::filesystem)
+boost_lexical_cast_add_test(try_lexical_convert "")
 
 file(GLOB EXAMPLE_FILES "../example/*.cpp")
 foreach (testsourcefile ${EXAMPLE_FILES})
-    boost_test(TYPE run SOURCES ${testsourcefile} LINK_LIBRARIES Boost::variant Boost::date_time)
+    get_filename_component(testname ${testsourcefile} NAME_WE)
+    boost_lexical_cast_add_test_impl(lexical_cast_example_${testname} ${testsourcefile} "Boost::variant;Boost::date_time")
 endforeach()

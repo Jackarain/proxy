@@ -22,7 +22,7 @@ content:
   sources:
     - url: ..
       start_path: doc
-      edit_url: 'https://github.com/boostorg/openmethod/edit/{refname}/{path}'
+      edit_url: 'https://github.com/boostorg/openmethod/edit/develop/{path}'
 
 ui:
   bundle:

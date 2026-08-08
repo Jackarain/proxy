@@ -24,7 +24,7 @@ kind of target alternative. Rules for creating typed targets are defined
 automatically for each type.
 
 --
-1. `rule __init__ ( name : project : type : sources * : requirements * : default-build * : usage-requirements * )`
+1. `rule \\__init__ ( name : project : type : sources * : requirements * : default-build * : usage-requirements * )`
 +
 `name`::
   The name of the target

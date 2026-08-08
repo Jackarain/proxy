@@ -25,6 +25,7 @@ int main()
 {
   boost::shared_mutex m0;
   boost::shared_mutex m1(m0);
+  (void)m1;
 }
 
 #include "../../../remove_error_code_unused_warning.hpp"

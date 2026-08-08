@@ -35,7 +35,7 @@ ShallowHistory. Default is NoHistory.
 The trade-off performance / compile-time. There are two predefined
 policies, favor_runtime_speed and favor_compile_time. Default is
 favor_runtime_speed, best performance, longer compile-time. See
-link:#backend-tradeof-rt-ct[the backend].
+xref:back-back-end.adoc#backend-tradeof-rt-ct[the backend].
 
 [[methods]]
 
@@ -47,7 +47,7 @@ link:#backend-tradeof-rt-ct[the backend].
 
 The start methods must be called before any call to process_event. It
 activates the entry action of the initial state(s). This allows you to
-choose when a state machine can start. See link:#backend-start[backend].
+choose when a state machine can start. See xref:back-back-end.adoc#backend-start[backend].
 
 void start
 

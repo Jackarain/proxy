@@ -10,23 +10,23 @@
 #include <boost/thread/once.hpp>
 #include <cassert>
 
-int value=0;
+int g_value=0;
 #ifdef BOOST_THREAD_PROVIDES_ONCE_CXX11
-static boost::once_flag once;
-//static boost::once_flag once2 = BOOST_ONCE_INIT;
+static boost::once_flag g_once;
+//static boost::once_flag g_once2 = BOOST_ONCE_INIT;
 #else
-static boost::once_flag once = BOOST_ONCE_INIT;
-//static boost::once_flag once2 = once;
+static boost::once_flag g_once = BOOST_ONCE_INIT;
+//static boost::once_flag g_once2 = g_once;
 #endif
 
 void init()
 {
-    ++value;
+    ++g_value;
 }
 
 void thread_proc()
 {
-    boost::call_once(&init, once);
+    boost::call_once(&init, g_once);
 }
 
 int main()
@@ -35,5 +35,5 @@ int main()
     for (int i=0; i<5; ++i)
         threads.create_thread(&thread_proc);
     threads.join_all();
-    assert(value == 1);
+    assert(g_value == 1);
 }

@@ -22,16 +22,15 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::shared_mutex m0;
-boost::shared_mutex m1;
+boost::shared_mutex g_mutex0;
+boost::shared_mutex g_mutex1;
 
 int main()
 {
-  boost::shared_lock_guard<boost::shared_mutex> lk0(m0);
-  boost::shared_lock_guard<boost::shared_mutex> lk1(m1);
+  boost::shared_lock_guard<boost::shared_mutex> lk0(g_mutex0);
+  boost::shared_lock_guard<boost::shared_mutex> lk1(g_mutex1);
   lk1 = lk0;
-
+  (void)lk1;
 }
 
 #include "../../../../remove_error_code_unused_warning.hpp"
-

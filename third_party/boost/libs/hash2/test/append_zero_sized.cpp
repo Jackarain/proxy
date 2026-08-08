@@ -8,6 +8,7 @@
 #include <boost/describe/class.hpp>
 #include <boost/array.hpp>
 #include <array>
+#include <tuple>
 
 template<class Hash, class Flavor, class T, class R> void test( T const* first, T const* last, R r )
 {
@@ -33,7 +34,7 @@ int main()
 
     {
         boost::array<int, 0> v[ 3 ];
-    
+
         test<fnv1a_32, default_flavor>( v + 0, v + 1, 84696351 );
         test<fnv1a_32, default_flavor>( v + 0, v + 2, 292984781 );
         test<fnv1a_32, default_flavor>( v + 0, v + 3, 1253111735 );
@@ -41,7 +42,15 @@ int main()
 
     {
         std::array<int, 0> v[ 3 ];
-    
+
+        test<fnv1a_32, default_flavor>( v + 0, v + 1, 84696351 );
+        test<fnv1a_32, default_flavor>( v + 0, v + 2, 292984781 );
+        test<fnv1a_32, default_flavor>( v + 0, v + 3, 1253111735 );
+    }
+
+    {
+        std::tuple<> v[ 3 ];
+
         test<fnv1a_32, default_flavor>( v + 0, v + 1, 84696351 );
         test<fnv1a_32, default_flavor>( v + 0, v + 2, 292984781 );
         test<fnv1a_32, default_flavor>( v + 0, v + 3, 1253111735 );
@@ -51,7 +60,7 @@ int main()
 
     {
         X v[ 3 ];
-    
+
         test<fnv1a_32, default_flavor>( v + 0, v + 1, 84696351 );
         test<fnv1a_32, default_flavor>( v + 0, v + 2, 292984781 );
         test<fnv1a_32, default_flavor>( v + 0, v + 3, 1253111735 );

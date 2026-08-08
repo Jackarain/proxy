@@ -30,6 +30,7 @@ on:
       - LICENSE
       - meta/**
       - README.md
+  workflow_dispatch:
 
 jobs:
   call-boost-ci:

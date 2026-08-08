@@ -372,7 +372,7 @@ inline OS_systemwide_thread_id_t get_current_systemwide_thread_id()
 {  return thread_self();   }
 
 inline OS_systemwide_thread_id_t get_invalid_systemwide_thread_id()
-{  return (thread_t)(-1);  }
+{  return (tid_t)(-1);  }
 
 #elif defined(__CYGWIN__) && !defined(BOOST_INTERPROCESS_USE_PTHREAD_AS_SYSTEMWIDE_THREAD_ID)
 

@@ -6,6 +6,16 @@
 :github-pr-url: https://github.com/boostorg/unordered/pull
 :cpp: C++
 
+== Release 1.92.0
+
+* Added interoperability with pass:[C++20] ranges to all the containers in the library:
+`insert_range` (plus `insert_range_(or|and)_[c]visit` for concurrent containers),
+`std::from_range` construction and associated CTAD deduction guides.
+The `boost::unordered::from_range` construction tag is provided
+as an alternative to pass:[C++23] `std::from_range` or when this is not available.
+* Fixed a performance issue with closed-addressing containers when rehashing at very
+large container sizes ({github-pr-url}/348[PR#348^]). Contributed by Daniel Kr&aacute;l. 
+
 == Release 1.91.0
 
 * Fixed the returned value of range insertion in concurrent containers

@@ -225,7 +225,7 @@ rule dump-tests
     }
 }
 
-args.add-arg dump-tests : --dump-tests : "?" ;
+args.add-arg dump-tests : --dump-tests : "?" : flag ;
 if [ args.get-arg dump-tests ]
 {
     IMPORT testing : dump-tests : : testing.dump-tests ;
@@ -240,7 +240,7 @@ local rule get-library-name ( path )
     # Path is in normalized form, so all slashes are forward.
     local match1 = [ MATCH /(tools|libs)/(.*)/(test|example) : $(path) ] ;
     local match2 = [ MATCH /(tools|libs)/(.*)$ : $(path) ] ;
-    local match3 = [ MATCH (/status$) : $(path) ] ;
+    local match3 = [ MATCH (/status)$ : $(path) ] ;
 
     if $(match1) { return $(match1[2]) ; }
     else if $(match2) { return $(match2[2]) ; }
@@ -520,7 +520,7 @@ toolset.uses-features testing.capture-output :
     <testing.launcher> <testing.execute> <dll-path> <xdll-path> <target-os> ;
 
 args.add-arg remove-test-targets : --remove-test-targets
-    : "Delete intermediate test files for successful tests." ;
+    : "Delete intermediate test files for successful tests." : flag ;
 if [ args.get-arg remove-test-targets ]
 {
     feature.set-default preserve-test-targets : off ;
@@ -649,7 +649,7 @@ else
 
 
 args.add-arg verbose-test : --verbose-test
-    : "Include output of tests when run." ;
+    : "Include output of tests when run." : flag ;
 .VERBOSE_TEST = 0 ;
 if [ args.get-arg verbose-test ]
 {

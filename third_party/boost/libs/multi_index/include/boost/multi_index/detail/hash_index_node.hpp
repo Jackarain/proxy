@@ -1,4 +1,4 @@
-/* Copyright 2003-2025 Joaquin M Lopez Munoz.
+/* Copyright 2003-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -712,6 +712,13 @@ public:
   typedef typename trampoline::pointer            impl_pointer;
   typedef typename trampoline::const_pointer      const_impl_pointer;
   typedef typename trampoline::difference_type    difference_type;
+  typedef allocator_rebind_t<
+    typename trampoline::impl_allocator_type,
+    hashed_index_node>                            final_allocator_type;
+  typedef allocator_pointer_t<
+    final_allocator_type>                         pointer;
+  typedef allocator_const_pointer_t<
+    final_allocator_type>                         const_pointer;
 
   template<typename Category>
   struct node_alg{
@@ -754,15 +761,15 @@ public:
   /* interoperability with hashed_index_iterator */
 
   template<typename Category>
-  static void increment(hashed_index_node*& x)
+  static void increment(pointer& x)
   {
-    x=from_impl(node_alg<Category>::type::after(x->impl()));
+    x=pointer(from_impl(node_alg<Category>::type::after(x->impl())));
   }
 
   template<typename Category>
-  static void increment_local(hashed_index_node*& x)
+  static void increment_local(pointer& x)
   {
-    x=from_impl(node_alg<Category>::type::after_local(x->impl()));
+    x=pointer(from_impl(node_alg<Category>::type::after_local(x->impl())));
   }
 };
 

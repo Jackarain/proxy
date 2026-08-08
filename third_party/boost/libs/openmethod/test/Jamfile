@@ -30,7 +30,7 @@ project
 
 alias unit_test_framework
     : # sources
-        /boost/test//boost_unit_test_framework/<warnings>off
+        /boost/test//boost_unit_test_framework/<warnings-as-errors>off
     ;
 
 for local src in [ glob test_*.cpp ]

@@ -1,5 +1,5 @@
 // Copyright 2023 -2024 Matt Borland
-// Copyright 2023 -2024 Christopher Kormanyos
+// Copyright 2023 -2026 Christopher Kormanyos
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
@@ -217,6 +217,32 @@ namespace local
       result_is_ok = (result_val_zero_neg_is_ok && result_is_ok);
     }
 
+    for(auto i = static_cast<unsigned>(UINT8_C(0)); i < static_cast<unsigned>(UINT8_C(4)); ++i)
+    {
+      static_cast<void>(i);
+
+      const auto val_cosh_one =
+        cosh
+        (
+          decimal_type
+          {
+            static_cast<int>
+            (
+              ::my_one() + static_cast<decimal_type>(dist(gen) - 1.0F)
+            )
+          }
+        );
+
+      // N[Cosh[1], 40]
+      constexpr decimal_type local_cosh_one { "1.543080634815243778477905620757061682602" };
+
+      const auto result_val_one_is_ok = local::is_close_fraction(val_cosh_one, local_cosh_one, std::numeric_limits<decimal_type>::epsilon() * 4);
+
+      BOOST_TEST(result_val_one_is_ok);
+
+      result_is_ok = (result_val_one_is_ok && result_is_ok);
+    }
+
     return result_is_ok;
   }
 
@@ -351,9 +377,9 @@ auto main() -> int
 
   const auto result_edge_is_ok = local::test_cosh_edge();
 
-  const auto result_pos64_is_ok = local::test_cosh_64(64);
+  const auto result_pos64_is_ok = local::test_cosh_64(32);
 
-  const auto result_pos128_is_ok = local::test_cosh_128(400000);
+  const auto result_pos128_is_ok = local::test_cosh_128(32);
 
   BOOST_TEST(result_pos_is_ok);
   BOOST_TEST(result_neg_is_ok);
@@ -390,5 +416,5 @@ auto main() -> int
   return (result_is_ok ? 0 : -1);
 }
 
-auto my_zero() -> boost::decimal::decimal32_t& { static boost::decimal::decimal32_t val_zero { 0, 0 }; return val_zero; }
-auto my_one () -> boost::decimal::decimal32_t& { static boost::decimal::decimal32_t val_one  { 1, 0 }; return val_one; }
+auto my_zero() -> boost::decimal::decimal32_t& { static boost::decimal::decimal32_t val_instance { 0 }; return val_instance; }
+auto my_one () -> boost::decimal::decimal32_t& { static boost::decimal::decimal32_t val_instance { 1 }; return val_instance; }

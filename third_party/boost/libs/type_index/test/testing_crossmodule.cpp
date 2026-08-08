@@ -5,10 +5,10 @@
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/type_index.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include "test_lib.hpp"
 
-#include <boost/core/lightweight_test.hpp>
+#include <boost/type_index.hpp>
 
 namespace user_defined_namespace {
     class user_defined{};

@@ -58,6 +58,10 @@ constexpr auto exp_impl(T x) noexcept
         {
             result = one / exp(-x);
         }
+        else if(x == one)
+        {
+            result = numbers::e_v<T>;
+        }
         else
         {
             // Scale the argument to 0 < x < log(2).

@@ -16,11 +16,15 @@
 #pragma warning(disable: 4097 4100 4121 4127 4146 4244 4245 4511 4512 4701 4800)
 #endif
 
-#include <boost/lexical_cast.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/range/iterator_range.hpp>
 
 #include <cstdlib>
+
+#if defined(BOOST_USE_MODULES)
+#undef BOOST_USE_MODULES
+#endif
+#include <boost/lexical_cast.hpp>
 
 #include "escape_struct.hpp"
 

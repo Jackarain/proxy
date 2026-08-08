@@ -370,9 +370,11 @@ measure(
         dn += measure_one(sign, cs);
         ++n;
     }
-    // Use unsigned to avoid UB when v == LLONG_MIN
+    // Use bitwise two's-complement negation to obtain |v| without
+    // tripping signed-overflow (v == LLONG_MIN) or
+    // unsigned-overflow (0ull - x) sanitizers.
     unsigned long long int uv = v < 0
-        ? 0ull - static_cast<unsigned long long int>(v)
+        ? ~static_cast<unsigned long long int>(v) + 1ull
         : static_cast<unsigned long long int>(v);
     do
     {
@@ -448,10 +450,12 @@ format(
     grammar::lut_chars const& cs) const
 {
     // get n digits
-    // Use unsigned to avoid UB when v == LLONG_MIN
+    // Bitwise two's-complement negation to obtain |v| without
+    // tripping signed-overflow (v == LLONG_MIN) or
+    // unsigned-overflow (0ull - x) sanitizers.
     bool const neg = v < 0;
     unsigned long long int uv = neg
-        ? 0ull - static_cast<unsigned long long int>(v)
+        ? ~static_cast<unsigned long long int>(v) + 1ull
         : static_cast<unsigned long long int>(v);
     unsigned long long int uv0 = uv;
     unsigned long long int p = 1;

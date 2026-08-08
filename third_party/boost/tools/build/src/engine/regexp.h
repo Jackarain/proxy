@@ -9,10 +9,7 @@
 
 #include "config.h"
 
-#include "mem.h"
 #include "strview.h"
-#include "types.h"
-#include "value.h"
 
 #include <functional>
 #include <memory>
@@ -22,7 +19,7 @@
 namespace b2 { namespace regex {
 
 // The resulting matches for a regex match. Expression 0 is the full match.
-// And expressions [1,NSUBEXP] are the subexpressions matched.
+// And expressions [1, NSUBEXP] are the subexpressions (groups) matched.
 struct regex_expr
 {
 	string_view sub[NSUBEXP];
@@ -52,7 +49,7 @@ struct program
 	private:
 	const regex_prog * compiled = nullptr;
 
-	static regex_prog & compile(const char * patter);
+	static regex_prog * compile(const char * pattern);
 };
 
 struct program::result_iterator
@@ -78,11 +75,18 @@ struct program::result_iterator
 	}
 	inline reference operator*() const { return (*this)[0]; }
 	inline pointer operator->() const { return &(*this)[0]; }
-	explicit inline operator bool() const { return !(*this)[0].empty(); }
+	inline operator bool() const { return !(*this)[0].empty(); }
 	inline reference operator[](std::size_t i) const
 	{
 		static const value_type invalid { nullptr, 0 };
-		return i <= NSUBEXP ? expressions.sub[i] : invalid;
+		return i < NSUBEXP ? expressions.sub[i] : invalid;
+	}
+	// total groups matched
+	inline int count() const
+	{
+		int i = NSUBEXP - 1;
+		while ( expressions.sub[i].begin() == nullptr && i ) i--;
+		return i;
 	}
 
 	private:
@@ -108,6 +112,25 @@ inline program::result_iterator program::search(const char * str_begin)
 {
 	return this->search(string_view(str_begin, std::strlen(str_begin)));
 }
+
+}} // namespace b2::regex
+
+typedef struct frame FRAME;
+
+namespace b2 { namespace regex {
+
+thread_local extern FRAME * frame;
+
+/*
+ * Simple class which use RAII to set b2::regex::frame during
+ * compilation phase, for proper error message emission and
+ * program exit.
+ */
+struct frame_ctx
+{
+	frame_ctx(FRAME * frm) { frame = frm; }
+	~frame_ctx() { frame = nullptr; }
+};
 
 }} // namespace b2::regex
 

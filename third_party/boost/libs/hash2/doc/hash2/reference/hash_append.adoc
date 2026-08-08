@@ -64,10 +64,13 @@ Effects: ::
   - `has_constant_size<T>::value` is `false`, calls `hash_append_range_and_size(h, f, v.begin(), v.end())`;
 * If `boost::container_hash::is_tuple_like<T>::value` is `true`, calls `hash_append(h, f, w)` for each tuple element `w`;
 * If `boost::container_hash::is_described_class<T>::value` is `true`, calls `hash_append(h, f, b)` for each base class subobject `b` of `v`, then `hash_append(h, f, m)` for each member subobject `m` of `v`;
+* If `T` is an instance of `std::optional`, calls `hash_append(h, f, v.has_value())`, then, if `v` is engaged, calls `hash_append(h, f, *v)`;
+* If `T` is an instance of `std::variant`, if `v` is not valueless, calls `hash_append_size(h, f, v.index())` and `hash_append(h, f, w)` where `w` is the active alternative of `v`;
+* If `T` is `std::monostate`, calls `hash_append(h, f, '\x00')`;
 * Otherwise, the result is a compile-time error.
 
 Remarks: ::
-  In case the above description would result in no calls being made (e.g. for a range of constant size zero, or a described `struct` with no bases and members),
+  In case the above description would result in no calls being made (e.g. for a range of constant size zero, a valueless `std::variant`, or a described `struct` with no bases and members),
   a call to `hash_append(h, f, '\x00')` is made to satisfy the requirement that `hash_append` always results in at least one call to `Hash::update`.
 
 ## hash_append_range
@@ -117,7 +120,7 @@ Requires: ::
   `It` must be an _iterator_ type. `[first, last)` must be a valid _iterator range_.
 
 Effects: ::
-  Equivalent to `hash_append_range(h, f, first, last); hash_append(h, f, m);`, where `m` is `std::distance(first, last)`.
+  Equivalent to `hash_append_range(h, f, first, last); hash_append_size(h, f, m);`, where `m` is `std::distance(first, last)`.
 
 ## hash_append_unordered_range
 

@@ -2,43 +2,29 @@
 
 # Copyright 2007 Rene Rivera.
 # Copyright 2011 Steven Watanabe
+# Copyright 2026 Paolo Pastori
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or copy at
 # https://www.bfgroup.xyz/b2/LICENSE.txt)
 
 import BoostBuild
+import sys
 
-t = BoostBuild.Tester(pass_toolset=0)
+sleep_s = 1.5
 
-t.write("sleep.bat", """\
-::@timeout /T %1 /NOBREAK >nul
-@ping 127.0.0.1 -n 2 -w 1000 >nul
-@ping 127.0.0.1 -n %1 -w 1000 >nul
-@exit /B 0
-""")
+t = BoostBuild.Tester(pass_toolset=False)
 
 t.write("file.jam", """\
-if $(NT)
-{
-    SLEEP = @call sleep.bat ;
-}
-else
-{
-    SLEEP = sleep ;
-}
-
-actions .a. {
-echo 001
-$(SLEEP) 4
-echo 002
-}
+actions .a. {{
+"{}" -c "import time; time.sleep({})"
+}}
 
 .a. sleeper ;
 
 DEPENDS all : sleeper ;
-""")
+""".format(sys.executable, sleep_s))
 
-t.run_build_system(["-ffile.jam", "-d1", "-l2"], status=1)
-t.expect_output_lines("2 second time limit exceeded")
+t.run_build_system(["-ffile.jam", "-l1"], status=1)
+t.expect_output_lines("1 second time limit exceeded")
 
 t.cleanup()

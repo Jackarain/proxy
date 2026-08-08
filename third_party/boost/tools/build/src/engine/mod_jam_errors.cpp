@@ -7,6 +7,7 @@ Distributed under the Boost Software License, Version 1.0.
 #include "mod_jam_errors.h"
 
 #include "bindjam.h"
+#include "frames.h"
 #include "startup.h"
 #include "variable.h"
 

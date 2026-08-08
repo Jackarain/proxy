@@ -58,7 +58,7 @@ void multiplexer::cancel(std::shared_ptr<elem> const& ptr)
 {
    if (ptr->is_waiting()) {
       // We can safely remove it from the queue, since it hasn't been sent yet
-      reqs_.erase(std::remove(std::begin(reqs_), std::end(reqs_), ptr));
+      reqs_.erase(std::remove(std::begin(reqs_), std::end(reqs_), ptr), std::end(reqs_));
    } else {
       // Removing the request would cause trouble when the response arrived.
       // Mark it as abandoned, so the response is discarded when it arrives
@@ -174,13 +174,18 @@ std::pair<consume_result, std::size_t> multiplexer::consume(system::error_code& 
       parser_.reset();
       auto const res = read_buffer_.consume(consumed);
       commit_usage(ret == consume_result::got_push, res);
-      return std::make_pair(ret, res.consumed);
+      return std::make_pair(ret, res);
    }
 
    return std::make_pair(consume_result::needs_more, consumed);
 }
 
-auto multiplexer::prepare_read() noexcept -> system::error_code { return read_buffer_.prepare(); }
+auto multiplexer::prepare_read() -> system::error_code
+{
+   auto const res = read_buffer_.prepare(append_size_);
+   usage_.bytes_rotated += res.rotated;
+   return res.ec;
+}
 
 auto multiplexer::get_prepared_read_buffer() noexcept -> read_buffer::span_type
 {
@@ -286,18 +291,16 @@ void multiplexer::cancel_on_conn_lost()
    });
 }
 
-void multiplexer::commit_usage(bool is_push, read_buffer::consume_result res)
+void multiplexer::commit_usage(bool is_push, std::size_t consumed)
 {
    if (is_push) {
       usage_.pushes_received += 1;
-      usage_.push_bytes_received += res.consumed;
+      usage_.push_bytes_received += consumed;
       on_push_ = false;
    } else {
       usage_.responses_received += 1;
-      usage_.response_bytes_received += res.consumed;
+      usage_.response_bytes_received += consumed;
    }
-
-   usage_.bytes_rotated += res.rotated;
 }
 
 bool multiplexer::is_next_push(std::string_view data) const noexcept
@@ -359,7 +362,8 @@ void multiplexer::set_receive_adapter(any_adapter adapter)
 
 void multiplexer::set_config(config const& cfg)
 {
-   read_buffer_.set_config({cfg.read_buffer_append_size, cfg.max_read_size});
+   append_size_ = cfg.read_buffer_append_size;
+   read_buffer_.set_config({cfg.max_read_size});
 }
 
 auto make_elem(request const& req, any_adapter adapter) -> std::shared_ptr<multiplexer::elem>

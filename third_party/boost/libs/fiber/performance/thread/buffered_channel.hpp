@@ -38,11 +38,11 @@ public:
     typedef T   value_type;
 
 private:
-    typedef typename std::aligned_storage< sizeof( T), alignof( T) >::type  storage_type;
+    typedef unsigned char storage_type[sizeof(T)];
 
     struct alignas(cache_alignment) slot {
         std::atomic< std::size_t >  cycle{ 0 };
-        storage_type                storage{};
+        alignas(T) storage_type     storage{};
 
         slot() = default;
     };

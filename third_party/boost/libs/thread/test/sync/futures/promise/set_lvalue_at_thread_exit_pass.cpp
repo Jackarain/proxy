@@ -24,22 +24,22 @@
 #include <boost/core/lightweight_test.hpp>
 #include <memory>
 
-int i = 0;
+int g_i = 0;
 
 //void func(boost::promise<int&> p)
-boost::promise<int&> p;
+boost::promise<int&> g_p;
 void func()
 {
-  p.set_value_at_thread_exit(i);
-  i = 4;
+  g_p.set_value_at_thread_exit(g_i);
+  g_i = 4;
 }
 
 int main()
 {
   {
-    //boost::promise<int&> p;
-    boost::future<int&> f = p.get_future();
-    //boost::thread(func, boost::move(p)).detach();
+    //boost::promise<int&> g_p;
+    boost::future<int&> f = g_p.get_future();
+    //boost::thread(func, boost::move(g_p)).detach();
     boost::thread(func).detach();
     int r = f.get();
     BOOST_TEST(r == 4);

@@ -5,7 +5,7 @@ content:
   sources:
     - url: ..
       start_path: doc
-      branches: HEAD
+      edit_url: 'https://github.com/boostorg/decimal/edit/develop/{path}'
 output:
   dir: html
 ui:

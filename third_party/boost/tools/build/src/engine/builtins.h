@@ -5,10 +5,10 @@
  */
 
 #ifndef JAM_BUILTINS_H
-# define JAM_BUILTINS_H
+#define JAM_BUILTINS_H
 
-# include "config.h"
-# include "frames.h"
+#include "config.h"
+#include "jam_fwd.h"
 
 /*
  * builtins.h - compile parsed jam statements
@@ -33,7 +33,6 @@ LIST *builtin_glob_recursive( FRAME * frame, int flags );
 LIST *builtin_subst( FRAME * frame, int flags );
 LIST *builtin_match( FRAME * frame, int flags );
 LIST *builtin_split_by_characters( FRAME * frame, int flags );
-LIST *builtin_hdrmacro( FRAME * frame, int flags );
 LIST *builtin_rulenames( FRAME * frame, int flags );
 LIST *builtin_varnames( FRAME * frame, int flags );
 LIST *builtin_delete_module( FRAME * frame, int flags );
@@ -65,7 +64,6 @@ LIST *builtin_readlink( FRAME * frame, int flags );
 LIST *builtin_glob_archive( FRAME * frame, int flags );
 LIST *builtin_debug_print_helper( FRAME * frame, int flags );
 
-void backtrace( FRAME *frame );
 extern int last_update_now_status;
 
 #endif

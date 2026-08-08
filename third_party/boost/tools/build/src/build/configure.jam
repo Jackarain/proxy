@@ -193,7 +193,9 @@ rule try-build ( targets * : ps : what : retry ? )
     local cache-name = $(what) $(cache-props) ;
     cache-name = $(cache-name:J=-) ;
     local value = [ config-cache.get $(cache-name) ] ;
-    local cache-min = [ property.as-path [ SORT [ feature.minimize $(cache-props) ] ] ] ;
+    # NOTE: properties returned by feature.minimize are unexpanded (no grist).
+    local cache-sorted = [ SORT [ feature.minimize $(cache-props) ] ] ;
+    local cache-min = [ property.as-path $(cache-sorted) : dont-minimize ] ;
 
     local result ;
     local jam-targets ;
@@ -269,7 +271,9 @@ rule try-find-build ( ps : what : * )
     local cache-name = $(what) $($(args)[1]) $(cache-props) ;
     cache-name = $(cache-name:J=-) ;
     local value = [ config-cache.get $(cache-name) ] ;
-    local cache-min = [ property.as-path [ SORT [ feature.minimize $(cache-props) ] ] ] ;
+    # NOTE: properties returned by feature.minimize are unexpanded (no grist).
+    local cache-sorted = [ SORT [ feature.minimize $(cache-props) ] ] ;
+    local cache-min = [ property.as-path $(cache-sorted) : dont-minimize ] ;
 
     local result ;
     local jam-targets ;

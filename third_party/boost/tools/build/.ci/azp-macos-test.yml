@@ -1,27 +1,28 @@
 parameters:
-- name: b2_opts
-  type: string
-  default: ''
+  - name: b2_opts
+    type: string
+    default: ""
 
 steps:
-- bash: ./.ci/macos-install.sh
-  displayName: Install
-- bash: ./.ci/macos-build.sh
-  displayName: Build
-- bash: ./.ci/macos-test.sh
-  displayName: Test
-- bash: |
-    set -e
-    ./src/engine/b2 b2 warnings-as-errors=on variant=debug,release ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
-  displayName: "No Warnings"
-- bash: |
-    set -e
-    ./bootstrap.sh ${TOOLSET}
-    ./b2 --prefix=$HOME/temp/.b2 install ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
-    rm ./b2
-    export PATH=$HOME/temp/.b2/bin:$PATH
-    cd $HOME
-    touch build.jam
-    b2 -v
-    b2 -n --debug-configuration ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
-  displayName: Bootstrap
+  - bash: ./.ci/macos-install.sh
+    displayName: Install
+  - bash: ./.ci/macos-build.sh
+    displayName: Build
+  - bash: ./.ci/macos-test.sh
+    timeoutInMinutes: 30
+    displayName: Test
+  - bash: |
+      set -e
+      ./src/engine/b2 b2 warnings-as-errors=on variant=debug,release ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
+    displayName: "No Warnings"
+  - bash: |
+      set -e
+      ./bootstrap.sh ${TOOLSET}
+      ./b2 --prefix=$HOME/temp/.b2 install ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
+      rm ./b2
+      export PATH=$HOME/temp/.b2/bin:$PATH
+      cd $HOME
+      touch build.jam
+      b2 -v
+      b2 -n --debug-configuration ${TOOLSET:+toolset=$TOOLSET} ${{ parameters.b2_opts }}
+    displayName: Bootstrap

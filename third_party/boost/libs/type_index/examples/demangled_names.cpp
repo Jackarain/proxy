@@ -12,8 +12,8 @@
 */
 
 
-#include <boost/type_index.hpp>
 #include <iostream>
+#include <boost/type_index.hpp>
 
 template <class T>
 void foo(T) {

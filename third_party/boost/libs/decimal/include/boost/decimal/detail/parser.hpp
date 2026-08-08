@@ -27,22 +27,22 @@ namespace boost {
 namespace decimal {
 namespace detail {
 
-constexpr auto is_integer_char(char c) noexcept -> bool
+BOOST_DECIMAL_CUDA_CONSTEXPR auto is_integer_char(char c) noexcept -> bool
 {
     return (c >= '0') && (c <= '9');
 }
 
-constexpr auto is_hex_char(char c) noexcept -> bool
+BOOST_DECIMAL_CUDA_CONSTEXPR auto is_hex_char(char c) noexcept -> bool
 {
     return is_integer_char(c) || (((c >= 'a') && (c <= 'f')) || ((c >= 'A') && (c <= 'F')));
 }
 
-constexpr auto is_payload_char(const char c) noexcept -> bool
+BOOST_DECIMAL_CUDA_CONSTEXPR auto is_payload_char(const char c) noexcept -> bool
 {
     return is_integer_char(c) || (((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')));
 }
 
-constexpr auto is_delimiter(char c, chars_format fmt) noexcept -> bool
+BOOST_DECIMAL_CUDA_CONSTEXPR auto is_delimiter(char c, chars_format fmt) noexcept -> bool
 {
     if (fmt != chars_format::hex)
     {
@@ -53,19 +53,19 @@ constexpr auto is_delimiter(char c, chars_format fmt) noexcept -> bool
 }
 
 #if !defined(BOOST_DECIMAL_DISABLE_CLIB)
-constexpr auto from_chars_dispatch(const char* first, const char* last, std::uint64_t& value, int base) noexcept -> from_chars_result
+BOOST_DECIMAL_CUDA_CONSTEXPR auto from_chars_dispatch(const char* first, const char* last, std::uint64_t& value, int base) noexcept -> from_chars_result
 {
     return boost::decimal::detail::from_chars(first, last, value, base);
 }
 
-constexpr auto from_chars_dispatch(const char* first, const char* last, int128::uint128_t& value, int base) noexcept -> from_chars_result
+BOOST_DECIMAL_CUDA_CONSTEXPR auto from_chars_dispatch(const char* first, const char* last, int128::uint128_t& value, int base) noexcept -> from_chars_result
 {
     return boost::decimal::detail::from_chars128(first, last, value, base);
 }
 #endif
 
 #ifdef BOOST_DECIMAL_HAS_INT128
-constexpr auto from_chars_dispatch(const char* first, const char* last, builtin_uint128_t& value, int base) noexcept -> from_chars_result
+BOOST_DECIMAL_CUDA_CONSTEXPR auto from_chars_dispatch(const char* first, const char* last, builtin_uint128_t& value, int base) noexcept -> from_chars_result
 {
     return boost::decimal::detail::from_chars128(first, last, value, base);
 }
@@ -73,7 +73,7 @@ constexpr auto from_chars_dispatch(const char* first, const char* last, builtin_
 
 #if !defined(BOOST_DECIMAL_DISABLE_CLIB)
 template <typename Unsigned_Integer, typename Integer>
-constexpr auto parser(const char* first, const char* last, bool& sign, Unsigned_Integer& significand, Integer& exponent, const chars_format fmt = chars_format::general) noexcept -> from_chars_result
+BOOST_DECIMAL_CUDA_CONSTEXPR auto parser(const char* first, const char* last, bool& sign, Unsigned_Integer& significand, Integer& exponent, const chars_format fmt = chars_format::general) noexcept -> from_chars_result
 {
     if (first >= last)
     {
@@ -244,15 +244,24 @@ constexpr auto parser(const char* first, const char* last, bool& sign, Unsigned_
         ++next;
     }
 
-    // If the number is 0 we can abort now
     const char exp_char {fmt != chars_format::hex ? 'e' : 'p'};
     const char capital_exp_char {fmt != chars_format::hex ? 'E' : 'P'};
 
-    if (next == last || *next == exp_char || *next == capital_exp_char)
+    // Plain "0" (or "00...") with no fractional or exponent part: significand and exponent are both 0.
+    if (next == last)
     {
         significand = 0;
         exponent = 0;
         return {next, std::errc()};
+    }
+
+    // "0e-3" or "0E+5": significand is 0, but the exponent must be parsed so the cohort is preserved
+    // per IEEE 754-2008 3.5.1 ("the cohort of +0 contains a representation for each exponent").
+    // Set significand to 0 here and fall through to the existing significand-then-exponent flow,
+    // which will hit the exp_char branch at line 380 and read the exponent value into `exponent`.
+    if (*next == exp_char || *next == capital_exp_char)
+    {
+        significand = 0;
     }
 
     // Next we get the significand
@@ -318,6 +327,11 @@ constexpr auto parser(const char* first, const char* last, bool& sign, Unsigned_
 
             if (next == last)
             {
+                // Inputs like "0.0" or "0.000" are mathematically zero, but the trailing
+                // fractional zeros define the cohort (IEEE 754-2008 3.5.1). Propagate
+                // leading_zero_powers as the resulting exponent so the cohort is preserved.
+                significand = 0;
+                exponent = static_cast<Integer>(leading_zero_powers);
                 return {last, std::errc()};
             }
         }

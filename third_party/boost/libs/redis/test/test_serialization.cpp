@@ -142,7 +142,7 @@ void test_pair_custom()
 void test_tuple()
 {
    std::vector<std::tuple<std::string_view, int, unsigned char>> vec{
-      {"k1", 42, 1}
+      {"k1", 42, static_cast<unsigned char>(1)}
    };
    request req;
    req.push_range("GET", vec);

@@ -19,10 +19,9 @@
 #define FILESYS_DWA20011025_H
 
 #include "config.h"
-#include "hash.h"
+#include "jam_fwd.h"
 #include "lists.h"
 #include "object.h"
-#include "pathsys.h"
 #include "timestamp.h"
 
 #include <memory>

@@ -1,0 +1,41 @@
+= Examples
+
+== xref:attachment$iPodSearch.cpp[iPod search]
+
+== xref:attachment$Serialize.cpp[Serialization]
+
+== xref:attachment$SM-2Arg.cpp[Visitor]
+
+== xref:attachment$Constructor.cpp[Constructor]
+
+== Multi-TU compilation
+
+=== xref:attachment$iPod_distributed/Events.hpp[Events.hpp]
+
+Events are in a separate header as all machines use it.
+
+=== xref:attachment$iPod_distributed/PlayingMode.hpp[PlayingMode.hpp]
+
+=== xref:attachment$iPod_distributed/PlayingMode.cpp[PlayingMode.cpp]
+
+=== xref:attachment$iPod_distributed/MenuMode.hpp[MenuMode.hpp]
+
+=== xref:attachment$iPod_distributed/MenuMode.cpp[MenuMode.cpp]
+
+=== xref:attachment$iPod_distributed/iPod.cpp[iPod.cpp]
+
+Main state machine and main function.
+
+== xref:attachment$TestErrorOrthogonality.cpp[FSM check]
+
+== Active state switch policy
+
+=== xref:attachment$ActiveStateSetBeforeTransition.cpp[Functor front-end]
+
+=== xref:attachment$ActivateStateBeforeTransitionEuml.cpp[`euml` front-end]
+
+== FSM as pointer
+
+=== xref:attachment$FsmAsPtr.hpp[Header]
+
+=== xref:attachment$FsmAsPtr.cpp[Source file]

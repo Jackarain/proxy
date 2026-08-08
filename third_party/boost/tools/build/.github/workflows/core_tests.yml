@@ -8,24 +8,24 @@ name: "Extra Tests"
 on:
   push:
     paths-ignore: #&paths
-      - '.circleci/**'
-      - '.cirrus.yml'
-      - '.drone.star'
-      - '.semaphore/**'
-      - '.travis.yml'
-      - 'appveyor.yml'
-      - 'azure-pipelines.yml'
-      - '.ci/azp-*.yml'
+      - ".circleci/**"
+      - ".cirrus.yml"
+      - ".drone.star"
+      - ".semaphore/**"
+      - ".travis.yml"
+      - "appveyor.yml"
+      - "azure-pipelines.yml"
+      - ".ci/azp-*.yml"
   pull_request:
     paths-ignore: #*paths #https://github.com/actions/runner/issues/1182
-      - '.circleci/**'
-      - '.cirrus.yml'
-      - '.drone.star'
-      - '.semaphore/**'
-      - '.travis.yml'
-      - 'appveyor.yml'
-      - 'azure-pipelines.yml'
-      - '.ci/azp-*.yml'
+      - ".circleci/**"
+      - ".cirrus.yml"
+      - ".drone.star"
+      - ".semaphore/**"
+      - ".travis.yml"
+      - "appveyor.yml"
+      - "azure-pipelines.yml"
+      - ".ci/azp-*.yml"
 
 concurrency:
   # cancel test runners on force-push in pull requests
@@ -41,7 +41,6 @@ jobs:
       matrix:
         msys:
           - mingw64
-          - mingw32
           - ucrt64
           - clang64
         toolset:
@@ -55,7 +54,7 @@ jobs:
         uses: actions/checkout@main
 
       - name: Install Toolset
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@v2.31.1
         with:
           msystem: ${{matrix.msys}}
           pacboy: python:p ${{matrix.toolset}}:p
@@ -68,5 +67,43 @@ jobs:
         env: { PYTHONUTF8: 1 }
         run: ./test_all.py ${{matrix.toolset}}
 
-      - name: 'No Warnings'
-        run: ./b2 warnings=all warnings-as-errors=on variant=debug,release debug-symbols=off toolset=${{matrix.toolset}} b2
+      - name: "No Warnings"
+        run: ./b2 --debug-configuration warnings=all warnings-as-errors=on variant=debug,release debug-symbols=off toolset=${{matrix.toolset}} b2
+
+  filc:
+    name: Fil-C
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - "0.680"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with: { path: "b2" }
+
+      - name: Install Toolset
+        run: |
+          cd "${{github.workspace}}"
+          wget "https://github.com/pizlonator/fil-c/releases/download/v${{matrix.version}}/optfil-${{matrix.version}}-linux-x86_64.tar.xz"
+          tar -Jxvf "optfil-${{matrix.version}}-linux-x86_64.tar.xz"
+          cd "optfil-${{matrix.version}}-linux-x86_64"
+          sudo ./setup.sh -u
+          /opt/fil/bin/fil++ --version
+          echo | /opt/fil/bin/fil++ -dM -E -x c++ -
+
+      - name: Bootstrap
+        working-directory: b2
+        run: |
+          ./bootstrap.sh filc
+          echo "using filc ;" > "${HOME}/user-config.jam"
+
+      - name: Test
+        working-directory: b2/test
+        env: { PYTHONUTF8: 1 }
+        run: ./test_all.py filc
+
+      - name: "No Warnings"
+        working-directory: b2
+        run: ./b2 --debug-configuration warnings=all warnings-as-errors=on variant=debug,release debug-symbols=off toolset=filc b2

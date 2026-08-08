@@ -1,4 +1,4 @@
-# Copyright 2019 Peter Dimov
+# Copyright 2019, 2026 Peter Dimov
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
@@ -17,21 +17,6 @@
 # Boost::filesystem and Boost::regex. Boost::headers represents all
 # header-only libraries. An alias, Boost::boost, for Boost::headers is
 # provided for compatibility.
-#
-# Requesting the special component "ALL" will make all installed components
-# available, as in the following example:
-#
-# find_package(Boost 1.73 REQUIRED COMPONENTS ALL)
-#
-# Since COMPONENTS is optional when REQUIRED is specified, the above can be
-# shortened to
-#
-# find_package(Boost 1.73 REQUIRED ALL)
-#
-# When ALL is used, a variable Boost_ALL_TARGETS will be set and will contain
-# the names of all created targets.
-#
-# The ALL component cannot be combined with named components.
 #
 # Since Boost libraries can coexist in many variants - 32/64 bit,
 # static/dynamic runtime, debug/release, the following variables can be used
@@ -174,39 +159,16 @@ macro(boost_find_component comp required quiet)
 
 endmacro()
 
-macro(boost_find_all_components)
+macro(boost_find_hdronly_component comp required quiet)
 
-  # Search for all available component-configuration directories...
-  file(GLOB __boost_all_components
-       LIST_DIRECTORIES true RELATIVE "${CMAKE_CURRENT_LIST_DIR}/.."
-       "${CMAKE_CURRENT_LIST_DIR}/../boost_*-${Boost_VERSION}")
-  # ...and extract component names from it.
-  string(REGEX REPLACE "boost_([_a-z0-9]+)-${Boost_VERSION}" "\\1"
-         __boost_all_components "${__boost_all_components}")
+  if(NOT TARGET Boost::${comp})
 
-  if(Boost_DEBUG)
-    message(STATUS "BoostConfig: discovered components: ${__boost_all_components}")
+    add_library(Boost::${comp} INTERFACE IMPORTED)
+    set_property(TARGET Boost::${comp} APPEND PROPERTY INTERFACE_LINK_LIBRARIES Boost::headers)
+
   endif()
 
-  list(REMOVE_ITEM __boost_all_components "headers")
-
-  # Try to find each component.
-  foreach(__boost_comp IN LISTS __boost_all_components)
-
-    boost_find_component(${__boost_comp} 0 1)
-
-    # Append to list of all targets (if found).
-    if(Boost_${__boost_comp}_FOUND)
-      list(APPEND Boost_ALL_TARGETS Boost::${__boost_comp})
-    endif()
-
-  endforeach()
-
-  unset(__boost_all_components)
-
-  if(Boost_DEBUG)
-    message(STATUS "BoostConfig: Boost_ALL_TARGETS: ${Boost_ALL_TARGETS}")
-  endif()
+  set(Boost_${comp}_FOUND TRUE)
 
 endmacro()
 
@@ -235,35 +197,190 @@ set(Boost_VERSION_MACRO ${Boost_VERSION_MAJOR}0${Boost_VERSION_MINOR}0${Boost_VE
 get_target_property(Boost_INCLUDE_DIRS Boost::headers INTERFACE_INCLUDE_DIRECTORIES)
 set(Boost_LIBRARIES "")
 
+# Header-only libraries
+
+set(__boost_hdronly_libraries
+
+accumulators
+algorithm
+align
+any
+array
+asio
+assert
+assign
+# atomic
+beast
+bimap
+bind
+bloom
+callable_traits
+# charconv
+# chrono
+circular_buffer
+# cobalt
+compat
+compute
+concept_check
+config
+# container
+container_hash
+# context
+# contract
+conversion
+convert
+core
+# coroutine
+coroutine2
+crc
+# date_time
+decimal
+describe
+detail
+dll
+dynamic_bitset
+endian
+# exception
+# fiber
+# filesystem
+flyweight
+foreach
+format
+function
+functional
+function_types
+fusion
+geometry
+gil
+# graph
+# graph_parallel
+hana
+hash2
+# headers
+heap
+histogram
+hof
+icl
+integer
+interprocess
+intrusive
+io
+# iostreams
+iterator
+# json
+lambda
+lambda2
+leaf
+lexical_cast
+# locale
+local_function
+lockfree
+# log
+logic
+# math
+metaparse
+move
+mp11
+# mpi
+mpl
+mqtt5
+msm
+multiprecision
+multi_array
+multi_index
+mysql
+# nowide
+numeric_conversion
+numeric_interval
+numeric_odeint
+numeric_ublas
+openmethod
+optional
+outcome
+parameter
+parameter_python
+parser
+pfr
+phoenix
+polygon
+poly_collection
+pool
+predef
+preprocessor
+# process
+# program_options
+property_map
+property_map_parallel
+property_tree
+proto
+ptr_container
+# python
+qvm
+# random
+range
+ratio
+rational
+redis
+# regex
+safe_numerics
+scope
+scope_exit
+# serialization
+signals2
+smart_ptr
+sort
+spirit
+# stacktrace
+statechart
+static_assert
+static_string
+stl_interfaces
+# system
+# test
+# thread
+throw_exception
+# timer
+tokenizer
+tti
+tuple
+typeof
+# type_erasure
+type_index
+type_traits
+units
+unordered
+# url
+utility
+uuid
+variant
+variant2
+vmd
+# wave
+winapi
+xpressive
+yap
+)
+
 # Save project's policies
+
 cmake_policy(PUSH)
 cmake_policy(SET CMP0057 NEW) # if IN_LIST
 
 # Find components
 
-if("ALL" IN_LIST Boost_FIND_COMPONENTS)
+foreach(__boost_comp IN LISTS Boost_FIND_COMPONENTS)
 
-  # Make sure "ALL" is the only requested component.
-  list(LENGTH Boost_FIND_COMPONENTS __boost_find_components_count)
-  if(NOT ${__boost_find_components_count} EQUAL 1)
-    message(AUTHOR_WARNING "ALL cannot be combined with named components; the named components will be ignored.")
-  endif()
+  if(__boost_comp IN_LIST __boost_hdronly_libraries)
 
-  unset(__boost_find_components_count)
+    boost_find_hdronly_component(${__boost_comp} ${Boost_FIND_REQUIRED_${__boost_comp}} 0)
 
-  set(Boost_ALL_TARGETS Boost::headers)
-
-  boost_find_all_components()
-
-else()
-
-  foreach(__boost_comp IN LISTS Boost_FIND_COMPONENTS)
+  else()
 
     boost_find_component(${__boost_comp} ${Boost_FIND_REQUIRED_${__boost_comp}} 0)
 
-  endforeach()
+  endif()
 
-endif()
+endforeach()
 
 # Compatibility targets
 
@@ -286,11 +403,6 @@ if(NOT TARGET Boost::boost)
 
 endif()
 
-# Compatibility variable when using meta-component "ALL"
-
-if("ALL" IN_LIST Boost_FIND_COMPONENTS)
-  set(Boost_ALL_FOUND ${boost_headers_FOUND})
-endif()
-
 # Restore project's policies
+
 cmake_policy(POP)

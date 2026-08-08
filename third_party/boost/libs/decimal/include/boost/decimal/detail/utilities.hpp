@@ -16,7 +16,7 @@ namespace decimal {
 namespace detail {
 
 template <typename T>
-constexpr auto swap(T& x, T& y) noexcept -> void
+BOOST_DECIMAL_CUDA_CONSTEXPR auto swap(T& x, T& y) noexcept -> void
 {
     const T temp {x};
     x = y;
@@ -40,6 +40,12 @@ constexpr auto strlen(const T* str) noexcept -> std::size_t
     }
 
     return i;
+}
+
+template <typename T>
+BOOST_DECIMAL_CUDA_CONSTEXPR auto (max)(const T& b, const T& a) noexcept -> const T&
+{
+    return (a < b) ? b : a;
 }
 
 } // namespace detail

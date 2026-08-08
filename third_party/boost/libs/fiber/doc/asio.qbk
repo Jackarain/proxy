@@ -92,7 +92,7 @@ synchronize different fibers and use asynchronous network I/O at the same
 time.
 
 __boost_fiber__ provides the same classes and interfaces as __boost_thread__.
-Therefore developers are able to use patterns familiar from multi-threaded
+Therefore developers are able to use patterns familiar from multithreaded
 programming. For instance the strategy 'serve one client with one thread'
 could be transformed into 'serve one client with one fiber'.
 
@@ -103,7 +103,7 @@ directory. The author believes, that a better, more tight integration is
 possible but requires input of boost.asio's author and maybe some changes in the
 boost.asio framework.
 
-The current integration pattern requires to runn __io_service__ in
+The current integration pattern requires to run __io_service__ in
 __run_service__ (separate fiber).
 
 

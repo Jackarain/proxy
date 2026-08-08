@@ -686,6 +686,8 @@ try_again:
                     } else {
                         this_iterator = trees.erase( this_iterator );
                         carry_node    = merge_trees( this_node, carry_node );
+                        if ( this_iterator == trees.end() )
+                            break;
                     }
                     goto try_again;
                 } else {

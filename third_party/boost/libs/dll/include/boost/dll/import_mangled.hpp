@@ -5,31 +5,37 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_DLL_IMPORT_MANGLED_HPP_
-#define BOOST_DLL_IMPORT_MANGLED_HPP_
-
 /// \file boost/dll/import_mangled.hpp
 /// \warning Experimental feature that relies on an incomplete implementation of platform specific C++
 ///          mangling. In case of an issue provide a PR with a fix and tests to https://github.com/boostorg/dll .
 ///          boost/dll/import_mangled.hpp is not included in boost/dll.hpp
 /// \brief Contains the boost::dll::experimental::import_mangled function for importing mangled symbols.
 
+#ifndef BOOST_DLL_IMPORT_MANGLED_HPP_
+#define BOOST_DLL_IMPORT_MANGLED_HPP_
+
+#include <boost/dll/detail/config.hpp>
+
+#if !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+# pragma once
+#endif
+
 #include <boost/dll/config.hpp>
 #if (__cplusplus < 201103L) && (!defined(_MSVC_LANG) || _MSVC_LANG < 201103L)
 #  error This file requires C++11 at least!
 #endif
 
-#include <boost/dll/config.hpp>
-#include <boost/dll/smart_library.hpp>
-#include <boost/dll/detail/import_mangled_helpers.hpp>
-
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#if !defined(BOOST_DLL_USE_STD_MODULE)
 #include <memory>  // std::addressof
 #include <type_traits>
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
-
-#ifdef BOOST_HAS_PRAGMA_ONCE
-# pragma once
-#endif
+#include <boost/dll/smart_library.hpp>
+#include <boost/dll/detail/import_mangled_helpers.hpp>
 
 namespace boost { namespace dll { namespace experimental {
 
@@ -226,6 +232,7 @@ struct mangled_import_type<sequence<T>, false, false, true> //is variable
 *       Overload that accepts path also throws std::bad_alloc in case of insufficient memory.
 */
 
+BOOST_DLL_BEGIN_MODULE_EXPORT
 
 template <class ...Args>
 BOOST_DLL_MANGLED_IMPORT_RESULT_TYPE import_mangled(const boost::dll::fs::path& lib, const char* name,
@@ -306,9 +313,12 @@ BOOST_DLL_MANGLED_IMPORT_RESULT_TYPE import_mangled(shared_library&& lib, const 
     return boost::dll::experimental::import_mangled<Args...>(std::move(lib), name.c_str());
 }
 
+BOOST_DLL_END_MODULE_EXPORT
+
 #undef BOOST_DLL_MANGLED_IMPORT_RESULT_TYPE
 
 }}}
 
+#endif // !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
 
 #endif /* BOOST_DLL_IMPORT_MANGLED_HPP_ */

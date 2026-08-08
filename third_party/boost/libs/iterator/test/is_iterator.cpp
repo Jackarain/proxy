@@ -17,6 +17,7 @@
 #include <vector>
 #include <string>
 #include <iterator>
+#include <boost/config.hpp>
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/core/lightweight_test.hpp>
 
@@ -159,6 +160,26 @@ int main()
     BOOST_TEST(!boost::iterators::is_iterator< int*& >::value);
     BOOST_TEST(!boost::iterators::is_iterator< int (&)(int) >::value);
     BOOST_TEST(!boost::iterators::is_iterator< int (&)[10] >::value);
+
+#if !defined(BOOST_NO_CXX14_VARIABLE_TEMPLATES)
+    BOOST_TEST(boost::iterators::is_iterator_v< int* >);
+    BOOST_TEST(boost::iterators::is_iterator_v< const int* >);
+    BOOST_TEST(boost::iterators::is_iterator_v< complete* >);
+    BOOST_TEST(boost::iterators::is_iterator_v< std::reverse_iterator< int* > >);
+    BOOST_TEST(boost::iterators::is_iterator_v< std::reverse_iterator< complete* > >);
+    BOOST_TEST(boost::iterators::is_iterator_v< adapted_iterator< int* > >);
+
+    BOOST_TEST(!boost::iterators::is_iterator_v< int >);
+    BOOST_TEST(!boost::iterators::is_iterator_v< void* >);
+    BOOST_TEST(!boost::iterators::is_iterator_v< int (int) >);
+    BOOST_TEST(!boost::iterators::is_iterator_v< int (*)(int) >);
+    BOOST_TEST(!boost::iterators::is_iterator_v< int complete::* >);
+    BOOST_TEST(!boost::iterators::is_iterator_v< int (complete::*)(int) >);
+    BOOST_TEST(!boost::iterators::is_iterator_v< int*[] >);
+    BOOST_TEST(!boost::iterators::is_iterator_v< int*[10] >);
+    BOOST_TEST(!boost::iterators::is_iterator_v< int& >);
+    BOOST_TEST(!boost::iterators::is_iterator_v< int*& >);
+#endif // !defined(BOOST_NO_CXX14_VARIABLE_TEMPLATES)
 
     return boost::report_errors();
 }

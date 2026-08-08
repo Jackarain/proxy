@@ -25,29 +25,11 @@
 #include <cassert>   //assert
 
 #include <boost/move/detail/nsec_clock.hpp>
-using boost::move_detail::cpu_timer;
+#include "bench_utils.hpp"   //MyInt
 using boost::move_detail::cpu_times;
 using boost::move_detail::nanosecond_type;
 
 namespace bc = boost::container;
-
-class MyInt
-{
-   std::ptrdiff_t int_; //Use a type that will grow on 64 bit machines
-
-   public:
-   MyInt(int i = 0) : int_(i){}
-
-   MyInt(const MyInt &other)
-      :  int_(other.int_)
-   {}
-
-   MyInt & operator=(const MyInt &other)
-   {
-      int_ = other.int_;
-      return *this;
-   }
-};
 
 typedef std::allocator<MyInt>   StdAllocator;
 typedef bc::allocator<MyInt, 2> AllocatorPlusV2;
@@ -76,11 +58,17 @@ void vector_test_template(std::size_t num_iterations, std::size_t num_elements, 
    typedef Allocator IntAllocator;
 
    std::size_t capacity = 0;
-   const std::size_t Step = 5;
+   //Erase enough elements per iteration to free ~40 bytes (as the original
+   //8-byte element x Step 5 did). A version-2 allocator can only shrink in
+   //place once the freed region reaches dlmalloc's chunk granularity (16 bytes
+   //on 64-bit); a smaller step (e.g. a 4-byte element x 5 = 20 bytes) fails to
+   //cross a chunk boundary every iteration, so v.num_shrink would not advance
+   //and the assertion below would fire. Step is kept a divisor of num_elements.
+   const std::size_t Step = 40u/sizeof(MyInt) ? 40u/sizeof(MyInt) : 1u;
    std::size_t num_shrink = 0;
    (void)capacity;
 
-   cpu_timer timer;
+   boost::move_detail::cpu_timer timer;
    timer.resume();
 
    #ifndef NDEBUG

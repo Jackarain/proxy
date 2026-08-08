@@ -212,12 +212,8 @@ constexpr auto pow(const T x, const T a) noexcept
         #endif
         else
         {
-            if (fpc_a == FP_ZERO)
-            {
-                result = one;
-            }
             #ifndef BOOST_DECIMAL_FAST_MATH
-            else if (fpc_a == FP_INFINITE)
+            if (fpc_a == FP_INFINITE)
             {
                 result =
                     (
@@ -226,10 +222,10 @@ constexpr auto pow(const T x, const T a) noexcept
                         : one
                     );
             }
-            #endif
             else
+            #endif
             {
-                const T a_log_x { a * log(x) };
+                const T a_log_x { a * ::boost::decimal::log(x) };
 
                 result = exp(a_log_x);
             }

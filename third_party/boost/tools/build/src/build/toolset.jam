@@ -30,7 +30,7 @@ import utility ;
 # This is used only for testing, to make sure we do not get random extra
 # elements in paths.
 args.add-arg ignore-toolset-requirements : --ignore-toolset-requirements
-    : "?" ;
+    : "?" : flag ;
 .ignore-requirements = [ args.get-arg ignore-toolset-requirements ] ;
 
 
@@ -55,7 +55,7 @@ rule using ( toolset-module : * )
 
 
 # Expands subfeatures in each property sets, e.g. '<toolset>gcc-3.2' will be
-# converted to '<toolset>gcc/<toolset-version>3.2'.
+# converted to '<toolset>gcc/<toolset-gcc:version>3.2'.
 #
 local rule normalize-condition ( property-sets * )
 {
@@ -93,7 +93,7 @@ rule pop-checking-for-flags-module ( )
 rule uses-features ( rule-or-module : features * : unchecked ? )
 {
     local caller = [ CALLER_MODULE ] ;
-    if ! [ MATCH ".*([.]).*" : $(rule-or-module) ]
+    if ! [ MATCH "([.])" : $(rule-or-module) ]
        && [ MATCH "(Jamfile<.*)" : $(caller) ]
     {
         # Unqualified rule name, used inside Jamfile. Most likely used with
@@ -105,7 +105,7 @@ rule uses-features ( rule-or-module : features * : unchecked ? )
     }
     else
     {
-        local module_ = [ MATCH "([^.]*).*" : $(rule-or-module) ] ;
+        local module_ = [ MATCH "([^.]*)" : $(rule-or-module) ] ;
         if $(unchecked) != unchecked
             && $(.flags-module-checking[1]) != unchecked
             && $(module_) != $(caller)
@@ -159,7 +159,7 @@ rule flags (
 )
 {
     local caller = [ CALLER_MODULE ] ;
-    if ! [ MATCH ".*([.]).*" : $(rule-or-module) ]
+    if ! [ MATCH "([.])" : $(rule-or-module) ]
        && [ MATCH "(Jamfile<.*)" : $(caller) ]
     {
         # Unqualified rule name, used inside Jamfile. Most likely used with
@@ -171,7 +171,7 @@ rule flags (
     }
     else
     {
-        local module_ = [ MATCH "([^.]*).*" : $(rule-or-module) ] ;
+        local module_ = [ MATCH "([^.]*)" : $(rule-or-module) ] ;
         if $(unchecked) != unchecked
             && $(.flags-module-checking[1]) != unchecked
             && $(module_) != $(caller)
@@ -208,7 +208,7 @@ local rule add-flag ( rule-or-module : variable-name : condition * : values * )
     .$(rule-or-module).flags += $(.flag-no) ;
 
     # Store all flags for a module.
-    local module_ = [ MATCH "([^.]*).*" : $(rule-or-module) ] ;
+    local module_ = [ MATCH "([^.]*)" : $(rule-or-module) ] ;
     .module-flags.$(module_) += $(.flag-no) ;
     # Store flag-no -> rule-or-module mapping.
     .rule-or-module.$(.flag-no) = $(rule-or-module) ;
@@ -376,7 +376,7 @@ rule set-target-variables-aux ( rule-or-module : property-set )
     }
 
     # Strip away last dot separated part and recurse.
-    local next = [ MATCH "^(.+)\\.([^\\.])*" : $(rule-or-module) ] ;
+    local next = [ MATCH "^(.+)\\.([^.]*)" : $(rule-or-module) ] ;
     if $(next)
     {
         result += [ set-target-variables-aux $(next[1]) : $(property-set) ] ;
@@ -420,7 +420,7 @@ rule relevant-features ( rule-or-module )
         }
 
         # Strip away last dot separated part and recurse.
-        local next = [ MATCH "^(.+)\\.([^\\.])*" : $(rule-or-module) ] ;
+        local next = [ MATCH "^(.+)\\.([^.]*)" : $(rule-or-module) ] ;
         if $(next)
         {
             result += [ relevant-features $(next[1]) ] ;
@@ -448,7 +448,7 @@ local rule used-features ( rule-or-module )
         local result = $(.uses-features.$(rule-or-module)) ;
 
         # Strip away last dot separated part and recurse.
-        local next = [ MATCH "^(.+)\\.([^\\.])*" : $(rule-or-module) ] ;
+        local next = [ MATCH "^(.+)\\.([^.]*)" : $(rule-or-module) ] ;
         if $(next)
         {
             result += [ used-features $(next[1]) ] ;
@@ -618,7 +618,7 @@ rule inherit-flags ( toolset : base : prohibited-properties * : prohibited-vars 
                   || ! $(.$(rule-or-module).condition.$(f))
         ) && ( ! $(.$(rule-or-module).variable.$(f)) in $(prohibited-vars) )
         {
-            local rule_ = [ MATCH "[^.]*\.(.*)" : $(rule-or-module) ] ;
+            local rule_ = [ MATCH "[^.]*.(.*)" : $(rule-or-module) ] ;
             local new-rule-or-module ;
             if $(rule_)
             {
@@ -646,7 +646,7 @@ rule inherit-rules ( toolset : base : localize ? )
     local rules ;
     for local g in $(base-generators)
     {
-        rules += [ MATCH "[^.]*\.(.*)" : [ $(g).rule-name ] ] ;
+        rules += [ MATCH "[^.]*.(.*)" : [ $(g).rule-name ] ] ;
     }
     rules = [ sequence.unique $(rules) ] ;
     IMPORT $(base) : $(rules) : $(toolset) : $(rules) : $(localize) ;

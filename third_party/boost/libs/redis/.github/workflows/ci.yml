@@ -25,11 +25,9 @@ jobs:
           #- { toolset: msvc-14.2, os: windows-2019, generator: "Visual Studio 16 2019", cxxstd: '17', build-type: 'Release', build-shared-libs: 0 }
           - { toolset: msvc-14.3, os: windows-2022, generator: "Visual Studio 17 2022", cxxstd: '20', build-type: 'Debug',   build-shared-libs: 0 }
           - { toolset: msvc-14.3, os: windows-2022, generator: "Visual Studio 17 2022", cxxstd: '20', build-type: 'Release', build-shared-libs: 1 }
-    env:
-      CMAKE_BUILD_PARALLEL_LEVEL: 4
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Setup Boost
       run: python3 tools/ci.py setup-boost --source-dir=$(pwd)
@@ -39,29 +37,19 @@ jobs:
         python3 tools/ci.py build-b2-distro \
           --toolset ${{ matrix.toolset }}
 
-    - name: Build a Boost distribution using CMake
+    # No Redis server is available on this job, so integration tests are skipped.
+    # Unit tests are built and run via the CMake superproject build.
+    # Double backslash '//' prevents MSYS from interpreting flags as paths
+    - name: Build a Boost distribution and run the tests using CMake
       run: |
         python3 tools/ci.py build-cmake-distro \
           --build-type ${{ matrix.build-type }} \
           --cxxstd ${{ matrix.cxxstd }} \
           --toolset ${{ matrix.toolset }} \
           --generator "${{ matrix.generator }}" \
-          --build-shared-libs ${{ matrix.build-shared-libs }}
-        
-    - name: Build the project tests
-      run: |
-        python3 tools/ci.py build-cmake-standalone-tests \
-          --build-type ${{ matrix.build-type }} \
-          --cxxstd ${{ matrix.cxxstd }} \
-          --toolset ${{ matrix.toolset }} \
-          --generator "${{ matrix.generator }}" \
-          --build-shared-libs ${{ matrix.build-shared-libs }}
-
-    # # TODO: re-enable this when a Redis server is available for this job
-    # - name: Run the project tests
-    #   run: |
-    #     python3 tools/ci.py run-cmake-standalone-tests \
-    #       --build-type ${{ matrix.build-type }}
+          --build-shared-libs ${{ matrix.build-shared-libs }} \
+          --integration-tests 0 \
+          "--cxxflags=//WX"
 
     - name: Run add_subdirectory tests
       run: |
@@ -70,7 +58,8 @@ jobs:
           --cxxstd ${{ matrix.cxxstd }} \
           --toolset ${{ matrix.toolset }} \
           --generator "${{ matrix.generator }}" \
-          --build-shared-libs ${{ matrix.build-shared-libs }}
+          --build-shared-libs ${{ matrix.build-shared-libs }} \
+          "--cxxflags=//WX"
 
     - name: Run find_package tests with the built cmake distribution
       run: |
@@ -79,7 +68,8 @@ jobs:
           --cxxstd ${{ matrix.cxxstd }} \
           --toolset ${{ matrix.toolset }} \
           --generator "${{ matrix.generator }}" \
-          --build-shared-libs ${{ matrix.build-shared-libs }}
+          --build-shared-libs ${{ matrix.build-shared-libs }} \
+          "--cxxflags=//WX"
 
     - name: Run find_package tests with the built b2 distribution
       run: |
@@ -88,7 +78,8 @@ jobs:
           --cxxstd ${{ matrix.cxxstd }} \
           --toolset ${{ matrix.toolset }} \
           --generator "${{ matrix.generator }}" \
-          --build-shared-libs ${{ matrix.build-shared-libs }}
+          --build-shared-libs ${{ matrix.build-shared-libs }} \
+          "--cxxflags=//WX"
 
   windows-b2:
     name: "B2 ${{matrix.toolset}}"
@@ -102,14 +93,12 @@ jobs:
         include:
           #- { toolset: msvc-14.2, os: windows-2019 }
           - { toolset: msvc-14.3, os: windows-2022 }
-    env:
-      OPENSSL_ROOT: "C:\\Program Files\\OpenSSL"
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Setup user-config.jam
-      run: cp tools/user-config.jam "${HOMEDRIVE}${HOMEPATH}/"
+      run: cp tools/user-config-win-gha.jam "${HOMEDRIVE}${HOMEPATH}/user-config.jam"
 
     - name: Setup Boost
       run: python3 tools/ci.py setup-boost --source-dir=$(pwd)
@@ -121,7 +110,7 @@ jobs:
           --cxxstd 17,20 \
           --variant debug,release
 
-  posix-cmake:
+  linux-cmake:
     name: "CMake ${{ matrix.toolset }} ${{ matrix.cxxstd }} ${{ matrix.build-type }} ${{ matrix.cxxflags }}"
     defaults:
       run:
@@ -131,107 +120,249 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # gcc-11 is the default in Ubuntu 22.04, defaults to c++17
           - toolset: gcc-11
             install: g++-11
             container: ubuntu:22.04
             cxxstd: '17'
             build-type: 'Debug'
-            ldflags: ''
-            server: "redis:7.4.5-alpine"
+            server: "redis:8.2.1-alpine"
+            corosio-tests: '0'
 
           - toolset: gcc-11
             install: g++-11
             container: ubuntu:22.04
             cxxstd: '20'
-            build-type: 'Release'
-            ldflags: ''
-            server: "redis:7.4.5-alpine"
-
-          - toolset: clang-11
-            install: clang-11
-            container: ubuntu:22.04
-            cxxstd: '17'
             build-type: 'Debug'
-            ldflags: ''
-            server: "redis:7.4.5-alpine"
-
-          - toolset: clang-11
-            install: clang-11
-            container: ubuntu:22.04
-            cxxstd: '20'
-            build-type: 'Debug'
-            ldflags: ''
-            server: "redis:7.4.5-alpine"
-
-          - toolset: clang-13
-            install: clang-13
-            container: ubuntu:22.04
-            cxxstd: '17'
-            build-type: 'Release'
-            ldflags: ''
-            server: "redis:8.2.1-alpine"
-
-          - toolset: clang-13
-            install: clang-13
-            container: ubuntu:22.04
-            cxxstd: '20'
-            build-type: 'Release'
-            ldflags: ''
-            server: "redis:8.2.1-alpine"
-
-          - toolset: clang-14
-            install: 'clang-14 libc++-14-dev libc++abi-14-dev'
-            container: ubuntu:22.04
-            cxxstd: '17'
-            build-type: 'Debug'
-            cxxflags: '-stdlib=libc++'
-            ldflags: '-lc++'
-            server: "redis:8.2.1-alpine"
-
-          - toolset: clang-14
-            install: 'clang-14 libc++-14-dev libc++abi-14-dev'
-            container: ubuntu:22.04
-            cxxstd: '20'
-            build-type: 'Release'
-            cxxflags: '-stdlib=libc++'
-            ldflags: '-lc++'
-            server: "redis:8.2.1-alpine"
-          
-          - toolset: clang-19
-            install: 'clang-19'
-            container: ubuntu:24.04
-            cxxstd: '23'
-            build-type: 'Debug'
-            cxxflags: '-fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all'
-            ldflags: '-fsanitize=address -fsanitize=undefined'
-            server: "redis:8.2.1-alpine"
-
-          - toolset: gcc-14
-            install: 'g++-14'
-            container: ubuntu:24.04
-            cxxstd: '23'
-            build-type: 'Debug'
-            cxxflags: '-DBOOST_ASIO_DISABLE_LOCAL_SOCKETS=1' # If a system had no UNIX socket support, we build correctly
             server: "valkey/valkey:8.1.3-alpine"
-          
-          - toolset: gcc-14
-            install: 'g++-14'
+            corosio-tests: '0'
+
+          - toolset: gcc-11
+            install: g++-11
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Release'
+            server: "redis:7.4.5-alpine"
+            corosio-tests: '0'
+
+          - toolset: gcc-12
+            install: g++-12
+            container: ubuntu:22.04
+            cxxstd: '23'
+            build-type: 'Debug'
+            server: "redis:8.2.1-alpine"
+
+          # gcc-13 is the default in Ubuntu 24.04, defaults to c++17
+          - toolset: gcc-13
+            install: g++-13
             container: ubuntu:24.04
+            cxxstd: '17'
+            build-type: 'Debug'
+            server: "valkey/valkey:8.1.3-alpine"
+            corosio-tests: '0'
+
+          - toolset: gcc-13
+            install: g++-13
+            container: ubuntu:24.04
+            cxxstd: '23'
+            build-type: 'Debug'
+            server: "redis:7.4.5-alpine"
+
+          - toolset: gcc-13
+            install: g++-13
+            container: ubuntu:24.04
+            cxxstd: '23'
+            build-type: 'Release'
+            server: "redis:8.2.1-alpine"
+
+          - toolset: gcc-14
+            install: g++-14
+            container: ubuntu:24.04
+            cxxstd: '23'
+            build-type: 'Debug'
+            server: "valkey/valkey:8.1.3-alpine"
+
+          # gcc-15 is the default in Ubuntu 26.04, defaults to c++17
+          - toolset: gcc-15
+            install: g++-15
+            container: ubuntu:26.04
+            cxxstd: '17'
+            build-type: 'Debug'
+            server: "redis:7.4.5-alpine"
+            corosio-tests: '0'
+
+          - toolset: gcc-15
+            install: g++-15
+            container: ubuntu:26.04
+            cxxstd: '26'
+            build-type: 'Debug'
+            cxxflags: '-fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all'
+            ldflags: '-fsanitize=address -fsanitize=undefined'
+            server: "valkey/valkey:8.1.3-alpine"
+
+          - toolset: gcc-15
+            install: g++-15
+            container: ubuntu:26.04
+            cxxstd: '26'
+            build-type: 'Release'
+            server: "redis:7.4.5-alpine"
+
+          - toolset: clang-11
+            install: clang-11
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Debug'
+            server: "redis:7.4.5-alpine"
+            corosio-tests: '0'
+
+          - toolset: clang-12
+            install: clang-12
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Debug'
+            server: "redis:8.2.1-alpine"
+            corosio-tests: '0'
+
+          - toolset: clang-13
+            install: clang-13
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Debug'
+            server: "valkey/valkey:8.1.3-alpine"
+            corosio-tests: '0'
+
+          # clang-14 is the default in Ubuntu 22.04
+          - toolset: clang-14
+            install: clang-14
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Debug'
+            server: "redis:7.4.5-alpine"
+            corosio-tests: '0'
+
+          - toolset: clang-14
+            install: 'clang-14 libc++-14-dev libc++abi-14-dev'
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Debug'
+            cxxflags: '-stdlib=libc++'
+            ldflags: '-lc++'
+            server: "redis:8.2.1-alpine"
+            corosio-tests: '0'
+
+          - toolset: clang-14
+            install: 'clang-14 libc++-14-dev libc++abi-14-dev'
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Release'
+            cxxflags: '-stdlib=libc++'
+            ldflags: '-lc++'
+            server: "valkey/valkey:8.1.3-alpine"
+
+          - toolset: clang-15
+            install: clang-15
+            container: ubuntu:22.04
+            cxxstd: '20'
+            build-type: 'Debug'
+            server: "redis:7.4.5-alpine"
+            corosio-tests: '0'
+
+          - toolset: clang-16
+            install: clang-16
+            container: ubuntu:24.04
+            cxxstd: '20'
+            build-type: 'Debug'
+            cxxflags: '-DBOOST_ASIO_DISABLE_LOCAL_SOCKETS=1' # If a system has no UNIX socket support, we build correctly
+            server: "redis:8.2.1-alpine"
+            corosio-tests: '0'
+
+          - toolset: clang-17
+            install: clang-17
+            container: ubuntu:24.04
+            cxxstd: '20'
+            build-type: 'Debug'
+            server: "valkey/valkey:8.1.3-alpine"
+
+          # clang-18 is the default in Ubuntu 24.04
+          - toolset: clang-18
+            install: clang-18
+            container: ubuntu:24.04
+            cxxstd: '20'
+            build-type: 'Debug'
+            server: "redis:7.4.5-alpine"
+
+          - toolset: clang-18
+            install: 'clang-18 libc++-18-dev libc++abi-18-dev'
+            container: ubuntu:24.04
+            cxxstd: '20'
+            build-type: 'Release'
+            cxxflags: '-stdlib=libc++'
+            ldflags: '-lc++'
+            server: "valkey/valkey:8.1.3-alpine"
+
+          - toolset: clang-18
+            install: 'clang-18 libc++-18-dev libc++abi-18-dev'
+            container: ubuntu:24.04
+            cxxstd: '23'
+            build-type: 'Debug'
+            cxxflags: '-stdlib=libc++'
+            ldflags: '-lc++'
+            server: "redis:8.2.1-alpine"
+
+          - toolset: clang-19
+            install: clang-19
+            container: ubuntu:24.04
+            cxxstd: '23'
+            build-type: 'Debug'
+            server: "redis:7.4.5-alpine"
+
+          - toolset: clang-20
+            install: clang-20
+            container: ubuntu:24.04
+            cxxstd: '23'
+            build-type: 'Debug'
+            server: "redis:8.2.1-alpine"
+
+          # clang-21 is the default in Ubuntu 26.04
+          - toolset: clang-21
+            install: 'clang-21 libclang-rt-21-dev'
+            container: ubuntu:26.04
             cxxstd: '23'
             build-type: 'Debug'
             cxxflags: '-fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all'
             ldflags: '-fsanitize=address -fsanitize=undefined'
+            server: "valkey/valkey:8.1.3-alpine"
+
+          - toolset: clang-21
+            install: 'clang-21 libc++-21-dev libc++abi-21-dev'
+            container: ubuntu:26.04
+            cxxstd: '23'
+            build-type: 'Debug'
+            cxxflags: '-stdlib=libc++'
+            ldflags: '-lc++'
+            server: "redis:7.4.5-alpine"
+
+          - toolset: clang-21
+            install: 'clang-21 libc++-21-dev libc++abi-21-dev'
+            container: ubuntu:26.04
+            cxxstd: '23'
+            build-type: 'Release'
+            cxxflags: '-stdlib=libc++'
+            ldflags: '-lc++'
+            server: "redis:8.2.1-alpine"
+
+          - toolset: clang-22
+            install: clang-22
+            container: ubuntu:26.04
+            cxxstd: '23'
+            build-type: 'Debug'
             server: "valkey/valkey:8.1.3-alpine"
 
     runs-on: ubuntu-latest
-    env:
-      CXXFLAGS: ${{matrix.cxxflags}} -Wall -Wextra
-      LDFLAGS:  ${{matrix.ldflags}}
-      CMAKE_BUILD_PARALLEL_LEVEL: 4
     
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     
     - name: Generate TLS certificates
       run: |
@@ -244,7 +375,7 @@ jobs:
     - name: Install dependencies
       run: |
         docker exec builder apt-get update
-        docker exec builder apt-get -y --no-install-recommends install \
+        docker exec --env DEBIAN_FRONTEND=noninteractive builder apt-get -y --no-install-recommends install \
           git \
           g++ \
           libssl-dev \
@@ -263,47 +394,45 @@ jobs:
         docker exec builder /boost-redis/tools/ci.py build-b2-distro \
           --toolset ${{ matrix.toolset }}
 
-    - name: Build a Boost distribution using CMake
+    # The CMake superproject build also drives the project tests, including
+    # integration tests against the Redis server set up above.
+    - name: Build a Boost distribution and run the tests using CMake
       run: |
         docker exec builder /boost-redis/tools/ci.py build-cmake-distro \
           --build-type ${{ matrix.build-type }} \
           --cxxstd ${{ matrix.cxxstd }} \
-          --toolset ${{ matrix.toolset }}
-
-    - name: Build the project tests
-      run: |
-        docker exec builder /boost-redis/tools/ci.py build-cmake-standalone-tests \
-          --build-type ${{ matrix.build-type }} \
-          --cxxstd ${{ matrix.cxxstd }} \
-          --toolset ${{ matrix.toolset }}
-  
-    - name: Run the project tests
-      run: |
-        docker exec builder /boost-redis/tools/ci.py run-cmake-standalone-tests \
-          --build-type ${{ matrix.build-type }}
+          --toolset ${{ matrix.toolset }} \
+          "--cxxflags=${{ matrix.cxxflags }} -Werror" \
+          "--ldflags=${{ matrix.ldflags }}"
 
     - name: Run add_subdirectory tests
       run: |
         docker exec builder /boost-redis/tools/ci.py run-cmake-add-subdirectory-tests \
           --build-type ${{ matrix.build-type }} \
           --cxxstd ${{ matrix.cxxstd }} \
-          --toolset ${{ matrix.toolset }}
+          --toolset ${{ matrix.toolset }} \
+          "--cxxflags=${{ matrix.cxxflags }} -Werror" \
+          "--ldflags=${{ matrix.ldflags }}"
 
     - name: Run find_package tests with the built cmake distribution
       run: |
         docker exec builder /boost-redis/tools/ci.py run-cmake-find-package-tests \
           --build-type ${{ matrix.build-type }} \
           --cxxstd ${{ matrix.cxxstd }} \
-          --toolset ${{ matrix.toolset }}
+          --toolset ${{ matrix.toolset }} \
+          "--cxxflags=${{ matrix.cxxflags }} -Werror" \
+          "--ldflags=${{ matrix.ldflags }}"
 
     - name: Run find_package tests with the built b2 distribution
       run: |
         docker exec builder /boost-redis/tools/ci.py run-cmake-b2-find-package-tests \
           --build-type ${{ matrix.build-type }} \
           --cxxstd ${{ matrix.cxxstd }} \
-          --toolset ${{ matrix.toolset }}
+          --toolset ${{ matrix.toolset }} \
+          "--cxxflags=${{ matrix.cxxflags }} -Werror" \
+          "--ldflags=${{ matrix.ldflags }}"
 
-  posix-b2:
+  linux-b2:
     name: "B2 ${{ matrix.toolset }}"
     defaults:
       run:
@@ -313,32 +442,40 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # We don't have integration tests here, so we only test the compilers
+          # that get installed by default in Ubuntu 22.04, 24.04 and 26.04
           - toolset: gcc-11
             install: g++-11
             cxxstd: "11,17,20" # Having C++11 shouldn't break the build
-            os: ubuntu-latest
             container: ubuntu:22.04
-          - toolset: clang-14
-            install: clang-14
-            os: ubuntu-latest
-            container: ubuntu:22.04
-            cxxstd: "17,20"
-    runs-on: ${{ matrix.os }}
+          - toolset: gcc-13
+            install: g++-13
+            cxxstd: "17,20,23"
+            container: ubuntu:24.04
+          - toolset: gcc-15
+            install: g++-15
+            cxxstd: "17,20,23"
+            container: ubuntu:26.04
+          - toolset: clang-18
+            install: clang-18
+            cxxstd: "11,17,20"
+            container: ubuntu:24.04
+          - toolset: clang-21
+            install: clang-21
+            cxxstd: "17,20,23"
+            container: ubuntu:26.04
+    runs-on: ubuntu-latest
     container: ${{matrix.container}}
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Setup container environment
       if: matrix.container
       run: |
+        export DEBIAN_FRONTEND=noninteractive
         apt-get update
-        apt-get -y install sudo python3 git g++ libssl-dev
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get -y install python3 ${{ matrix.install }}
+        apt-get -y install python3 git g++ libssl-dev ${{ matrix.install }}
 
     - name: Setup Boost
       run: ./tools/ci.py setup-boost --source-dir=$(pwd)
@@ -350,6 +487,81 @@ jobs:
           --cxxstd ${{ matrix.cxxstd }} \
           --variant debug,release
 
+  osx-cmake:
+    name: "CMake OSX"
+
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+    
+    - name: Setup Boost
+      run: ./tools/ci.py setup-boost --source-dir=$(pwd)
+
+    - name: Build a Boost distribution using B2
+      run: |
+        ./tools/ci.py build-b2-distro \
+          --toolset clang
+
+    - name: Build a Boost distribution and run the tests using CMake
+      run: |
+        ./tools/ci.py build-cmake-distro \
+          --build-type Debug \
+          --cxxstd 20 \
+          --toolset clang \
+          "--cxxflags=-Werror" \
+          --integration-tests 0
+
+    - name: Run add_subdirectory tests
+      run: |
+        ./tools/ci.py run-cmake-add-subdirectory-tests \
+          --build-type Debug \
+          --cxxstd 20 \
+          --toolset clang \
+          "--cxxflags=-Werror"
+
+    - name: Run find_package tests with the built cmake distribution
+      run: |
+        ./tools/ci.py run-cmake-find-package-tests \
+          --build-type Debug \
+          --cxxstd 20 \
+          --toolset clang \
+          "--cxxflags=-Werror"
+
+    - name: Run find_package tests with the built b2 distribution
+      run: |
+        ./tools/ci.py run-cmake-b2-find-package-tests \
+          --build-type Debug \
+          --cxxstd 20 \
+          --toolset clang \
+          "--cxxflags=-Werror"
+
+  osx-b2:
+    name: "B2 ${{ matrix.os }}"
+    defaults:
+      run:
+        shell: bash
+
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Setup user-config.jam
+      run: cp tools/user-config-osx-gha.jam ~/user-config.jam
+
+    - name: Setup Boost
+      run: ./tools/ci.py setup-boost --source-dir=$(pwd)
+    
+    - name: Build and run project tests using B2
+      run: |
+        ./tools/ci.py run-b2-tests \
+          --toolset clang \
+          --cxxstd 20 \
+          --variant debug,release
+  
+
   # Checks that we don't have any errors in docs
   check-docs:
     name: Check docs
@@ -360,7 +572,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Setup Boost
       run: ./tools/ci.py setup-boost --source-dir=$(pwd)

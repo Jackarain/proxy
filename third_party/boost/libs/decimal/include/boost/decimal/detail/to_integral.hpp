@@ -5,6 +5,7 @@
 #ifndef BOOST_DECIMAL_DETAIL_TO_INTEGRAL_HPP
 #define BOOST_DECIMAL_DETAIL_TO_INTEGRAL_HPP
 
+#include <boost/decimal/detail/config.hpp>
 #include <boost/decimal/detail/type_traits.hpp>
 #include <boost/decimal/detail/power_tables.hpp>
 #include <boost/decimal/detail/apply_sign.hpp>
@@ -30,7 +31,7 @@ namespace decimal {
 // If this is nan sets errno to EINVAL and returns 0
 // If this is not representable sets errno to ERANGE and returns 0
 template <typename Decimal, typename TargetType>
-constexpr auto to_integral(Decimal val) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR auto to_integral(Decimal val) noexcept
     BOOST_DECIMAL_REQUIRES_TWO_RETURN(detail::is_decimal_floating_point_v, Decimal, detail::is_integral_v, TargetType, TargetType)
 {
     using Conversion_Type = std::conditional_t<std::numeric_limits<TargetType>::is_signed, std::int64_t, std::uint64_t>;

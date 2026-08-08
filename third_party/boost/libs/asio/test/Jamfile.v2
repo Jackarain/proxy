@@ -161,6 +161,8 @@ test-suite "asio" :
   [ run error.cpp : : : $(USE_SELECT) : error_select ]
   [ link file_base.cpp ]
   [ link file_base.cpp : $(USE_SELECT) : file_base_select ]
+  [ link fwd_first.cpp ]
+  [ link fwd_last.cpp ]
   [ link generic/basic_endpoint.cpp : : generic_basic_endpoint ]
   [ link generic/basic_endpoint.cpp : $(USE_SELECT) : generic_basic_endpoint_select ]
   [ link generic/datagram_protocol.cpp : : generic_datagram_protocol ]

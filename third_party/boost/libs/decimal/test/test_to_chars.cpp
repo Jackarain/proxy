@@ -606,8 +606,28 @@ void zero_test()
     test_value(val * T{dist(rng)}, "0.000000000", chars_format::fixed, 9);
     test_value(val * T{dist(rng)}, "0.0000000000", chars_format::fixed, 10);
     test_value(val * T{dist(rng)}, "0.00000000000000000000000000000000000000000000000000", chars_format::fixed, 50);
-    
+
     test_value(val * T{dist(rng)}, "0", chars_format::fixed);
+
+    // IEEE 754-2008 3.5.1: zero has a cohort with one representation per exponent.
+    // The general/scientific/fixed formats still short-circuit zero output to the canonical
+    // "0" / "0e+00" / "0.0..." form, regardless of which member of the cohort is held.
+    constexpr T zero_neg3 {0, -3};
+    constexpr T zero_pos5 {0, 5};
+    test_value(zero_neg3, "0", chars_format::general);
+    test_value(zero_pos5, "0", chars_format::general);
+    test_value(zero_neg3, "0e+00", chars_format::scientific);
+    test_value(zero_pos5, "0e+00", chars_format::scientific);
+    test_value(-zero_neg3, "-0", chars_format::general);
+
+    // cohort_preserving_scientific must, by definition, expose the actual cohort.
+    // Fast types do not support this format and return invalid_argument.
+    BOOST_DECIMAL_IF_CONSTEXPR (!detail::is_fast_type_v<T>)
+    {
+        test_value(zero_neg3, "0e-03", chars_format::cohort_preserving_scientific);
+        test_value(zero_pos5, "0e+05", chars_format::cohort_preserving_scientific);
+        test_value(-zero_neg3, "-0e-03", chars_format::cohort_preserving_scientific);
+    }
 }
 
 // See: https://github.com/boostorg/decimal/issues/434
@@ -1009,6 +1029,14 @@ consteval int consteval_zero_test()
     errors += test_immediate_value(val, "0.00000000000000000000000000000000000000000000000000", chars_format::fixed, 50);
 
     errors += test_immediate_value(val, "0", chars_format::fixed, 0);
+
+    // IEEE 754-2008 3.5.1: cohorted zeros still print "0" in general/scientific/fixed.
+    constexpr T zero_neg3 {0, -3};
+    constexpr T zero_pos5 {0, 5};
+    errors += test_immediate_value(zero_neg3, "0", chars_format::general, 0);
+    errors += test_immediate_value(zero_pos5, "0", chars_format::general, 0);
+    errors += test_immediate_value(zero_neg3, "0e+00", chars_format::scientific, 0);
+    errors += test_immediate_value(zero_pos5, "0e+00", chars_format::scientific, 0);
 
     return errors;
 }

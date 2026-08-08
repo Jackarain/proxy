@@ -13,6 +13,8 @@
 
 #include <boost/wave/wave_config.hpp>
 
+#include <boost/iterator/filter_iterator.hpp>
+
 #include <boost/spirit/include/classic_core.hpp>
 #include <boost/spirit/include/classic_closure.hpp>
 #include <boost/spirit/include/classic_assign_actor.hpp>
@@ -79,6 +81,7 @@ struct intlit_grammar :
         boost::spirit::classic::subrule<1> oct_lit;
         boost::spirit::classic::subrule<2> hex_lit;
         boost::spirit::classic::subrule<3> dec_lit;
+        boost::spirit::classic::subrule<4> bin_lit;
 
         definition(intlit_grammar const &self)
         {
@@ -88,7 +91,7 @@ struct intlit_grammar :
 
             int_lit = (
                     sub_int_lit =
-                        (   ch_p('0')[self.val = 0] >> (hex_lit | oct_lit)
+                        (   ch_p('0')[self.val = 0] >> (hex_lit | oct_lit | bin_lit)
                         |   dec_lit
                         )
                         >> !as_lower_d[
@@ -114,6 +117,14 @@ struct intlit_grammar :
                         ]
                     ,
 
+                    bin_lit =
+                        (ch_p('b') | ch_p('B'))
+                        >> uint_parser<uint_literal_type, 2>()
+                        [
+                            self.val = phx::arg1
+                        ]
+                    ,
+
                     dec_lit =
                         uint_parser<uint_literal_type, 10>()
                         [
@@ -127,6 +138,7 @@ struct intlit_grammar :
             BOOST_SPIRIT_DEBUG_TRACE_RULE(hex_lit, TRACE_INTLIT_GRAMMAR);
             BOOST_SPIRIT_DEBUG_TRACE_RULE(oct_lit, TRACE_INTLIT_GRAMMAR);
             BOOST_SPIRIT_DEBUG_TRACE_RULE(dec_lit, TRACE_INTLIT_GRAMMAR);
+            BOOST_SPIRIT_DEBUG_TRACE_RULE(bin_lit, TRACE_INTLIT_GRAMMAR);
         }
 
         // start rule of this grammar
@@ -161,13 +173,20 @@ intlit_grammar_gen<TokenT>::evaluate(TokenT const &token,
     intlit_grammar g(is_unsigned);
     uint_literal_type result = 0;
     typename TokenT::string_type const &token_val = token.get_value();
+
+    // filter out digit separators
+    auto not_digit_separator = [](char c){ return c != '\''; };
+    auto digits_begin = boost::make_filter_iterator(not_digit_separator, token_val.begin(), token_val.end());
+    auto digits_end = boost::make_filter_iterator(not_digit_separator, token_val.end(), token_val.end());
+    typename TokenT::string_type token_digits(digits_begin, digits_end);
+
     using boost::spirit::classic::parse_info;
     parse_info<typename TokenT::string_type::const_iterator> hit =
-        parse(token_val.begin(), token_val.end(), g[spirit_assign_actor(result)]);
+        parse(token_digits.begin(), token_digits.end(), g[spirit_assign_actor(result)]);
 
     if (!hit.hit) {
         BOOST_WAVE_THROW(preprocess_exception, ill_formed_integer_literal,
-            token_val.c_str(), token.get_position());
+            token_digits.c_str(), token.get_position());
     }
     return result;
 }

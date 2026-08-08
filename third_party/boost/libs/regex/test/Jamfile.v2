@@ -5,7 +5,7 @@
 
 project
     : requirements
-      <library>/boost/regex//boost_regex
+      <library>/boost/regex//boost_regex_old
       <library>/boost/detail//boost_detail
       <threading>multi
       <link>shared:<define>BOOST_REGEX_DYN_LINK=1

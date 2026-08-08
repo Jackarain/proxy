@@ -3,9 +3,9 @@
 
 /* Prevent header/content/footer padding from jumping at 990px breakpoint */
 @media (min-width: 990px) {
-  :root {
+  :root:has(.boostlook) {
     --main-max-width-leftbar: 18.25rem;
-    --main-margin: var(--spacing-size-xl);
+    --main-margin: 0rem;
   }
 }
 
@@ -17,6 +17,7 @@
     width: var(--main-max-width-leftbar) !important;
     top: 0 !important;
     height: 100vh !important;
+    height: 100dvh !important;
   }
 
   .boostlook #toggle-toc {
@@ -33,18 +34,18 @@
     margin-left: 0 !important;
   }
 
-  .article.toc2.toc-left {
+  .article.toc2.toc-left:has(.boostlook) {
     max-width: none !important;
   }
-  html:not(.toc-hidden, .toc-visible) .article.toc2.toc-left,
-  .toc-visible.toc-pinned .article.toc2.toc-left {
+  html:not(.toc-hidden, .toc-visible) .article.toc2.toc-left:has(.boostlook),
+  .toc-visible.toc-pinned .article.toc2.toc-left:has(.boostlook) {
     margin-left: var(--main-max-width-leftbar) !important;
   }
 }
 
 /* === Wide Screens: Expanded Content Width (1536px+) === */
 @media screen and (min-width: 1536px) {
-  :root {
+  :root:has(.boostlook) {
     --main-content-width: 1100px;
     --main-content-left-spacing: 2rem;
   }
@@ -52,7 +53,7 @@
 
 /* === Ultra-Wide Screens: Maximum content width (1920px+) === */
 @media screen and (min-width: 1920px) {
-  :root {
+  :root:has(.boostlook) {
     --main-content-width: 1300px;
     --main-content-left-spacing: 4rem;
   }

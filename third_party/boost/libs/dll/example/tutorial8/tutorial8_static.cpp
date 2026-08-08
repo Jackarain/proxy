@@ -6,9 +6,9 @@
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 //[callplugcpp_tutorial8_static
-#include <boost/dll/runtime_symbol_info.hpp> // program_location()
 #include <iostream>
 #include "refcounting_plugin.hpp"
+#include <boost/dll/runtime_symbol_info.hpp> // program_location()
 
 int main() {
     std::shared_ptr<my_refcounting_api> plugin = get_plugin(

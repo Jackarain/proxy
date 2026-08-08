@@ -13,6 +13,18 @@
 #  define BOOST_DECIMAL_DEC_EVAL_METHOD 0
 #endif
 
+// Fundamental CUDACC options
+#if defined(__CUDACC__) && defined(BOOST_DECIMAL_ENABLE_CUDA)
+#  define BOOST_DECIMAL_HOST_DEVICE __host__ __device__
+#  define BOOST_DECIMAL_CUDA_CONSTEXPR __host__ __device__ constexpr
+#  define BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA
+#  define BOOST_DECIMAL_DISABLE_EXCEPTIONS
+#  define BOOST_DECIMAL_DISABLE_CASSERT
+#else
+#  define BOOST_DECIMAL_HOST_DEVICE
+#  define BOOST_DECIMAL_CUDA_CONSTEXPR constexpr
+#endif
+
 // Determine endianness
 #if defined(_WIN32)
 
@@ -85,6 +97,8 @@
 #  endif
 #endif
 
+#if defined(__CUDACC__) && defined(BOOST_DECIMAL_ENABLE_CUDA)
+
 // Include intrinsics if available
 #if defined(_MSC_VER)
 #  ifndef BOOST_DECIMAL_BUILD_MODULE
@@ -128,8 +142,12 @@
 #  define BOOST_DECIMAL_HAS_NO_INTRINSICS
 #endif
 
+#else
+#  define BOOST_DECIMAL_HAS_NO_INTRINSICS
+#endif
+
 // Use 128-bit integers and suppress warnings for using extensions
-#if defined(BOOST_HAS_INT128) || (defined(__SIZEOF_INT128__) && !defined(_MSC_VER))
+#if (defined(BOOST_HAS_INT128) || (defined(__SIZEOF_INT128__) && !defined(_MSC_VER))) && !(defined(__CUDACC__) && defined(BOOST_DECIMAL_ENABLE_CUDA))
 
 namespace boost { namespace decimal { namespace detail {
 
@@ -152,7 +170,7 @@ typedef unsigned __int128 builtin_uint128_t;
 #endif
 
 // 128-bit floats
-#if defined(BOOST_HAS_FLOAT128) || defined(__SIZEOF_FLOAT128__)
+#if (defined(BOOST_HAS_FLOAT128) || defined(__SIZEOF_FLOAT128__)) && !(defined(__CUDACC__) && defined(BOOST_DECIMAL_ENABLE_CUDA))
 #  define BOOST_DECIMAL_HAS_FLOAT128
 #endif
 
@@ -265,9 +283,9 @@ typedef unsigned __int128 builtin_uint128_t;
 #  define BOOST_DECIMAL_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
-#if defined(BOOST_DECIMAL_HAS_IS_CONSTANT_EVALUATED)
+#if defined(BOOST_DECIMAL_HAS_IS_CONSTANT_EVALUATED) && !(defined(__CUDACC__) && defined(BOOST_DECIMAL_ENABLE_CUDA))
 #  define BOOST_DECIMAL_IS_CONSTANT_EVALUATED(x) std::is_constant_evaluated()
-#elif defined(BOOST_DECIMAL_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+#elif defined(BOOST_DECIMAL_HAS_BUILTIN_IS_CONSTANT_EVALUATED) && !(defined(__CUDACC__) && defined(BOOST_DECIMAL_ENABLE_CUDA))
 #  define BOOST_DECIMAL_IS_CONSTANT_EVALUATED(x) __builtin_is_constant_evaluated()
 #else
 #  define BOOST_DECIMAL_IS_CONSTANT_EVALUATED(x) false

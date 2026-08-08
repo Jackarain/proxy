@@ -110,7 +110,7 @@ In order to keep the memory access local as possible, the NUMA topology must be 
         node: 1 | cpus: 8 9 10 11 12 13 14 15 24 25 26 27 28 29 30 31 | distance: 21 10
         done
 
-The example shows that the systems consits out of 2 NUMA-nodes, to each NUMA-node belong
+The example shows that the systems consists out of 2 NUMA-nodes, to each NUMA-node belong
 16 logical cpus. The distance measures the costs to access the memory of another NUMA-node.
 A NUMA-node has always a distance `10` to itself (lowest possible value).[br]
 The position in the array corresponds with the NUMA-node ID.
@@ -370,7 +370,7 @@ fiber scheduler).]]
 [[Returns:] [the fiber at the head of the ready queue, or `nullptr` if the
 queue is empty.]]
 [[Throws:] [Nothing.]]
-[[Note:] [Placing ready fibers onto the tail of the sahred queue, and returning them
+[[Note:] [Placing ready fibers onto the tail of the shared queue, and returning them
 from the head of that queue, shares the thread between ready fibers in
 round-robin fashion.]]
 ]

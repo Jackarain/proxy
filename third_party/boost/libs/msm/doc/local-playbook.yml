@@ -35,31 +35,25 @@
 #
 
 site:
-  url: https://antora.cppalliance.org/${page-boost-branch}/lib/doc
   title: Boost Libraries Documentation
   robots: allow
 
 antora:
   extensions:
-    - require: '@cppalliance/antora-playbook-macros-extension'
-      macros:
-        # Default values for macros
-        # These values can be overridden with environment variables,
-        # asciidoc.attributes, or --attribute command line option.
-        page-boost-branch: develop
-        page-boost-ui-branch: develop
-        page-commit-id: '000000'
+    - require: '@antora/lunr-extension'
+      index_latest_only: true
     - require: '@cppalliance/antora-cpp-tagfiles-extension'
       cpp-tagfiles:
         using-namespaces:
           - 'boost::'
-    # - require: '@cppalliance/antora-cpp-reference-extension'
-    #   dependencies:
-    #     - name: 'boost'
-    #       repo: 'https://github.com/boostorg/boost.git'
-    #       tag: 'develop'
-    #       variable: 'BOOST_SRC_DIR'
-    #       system-env: 'BOOST_SRC_DIR'
+    - require: '@cppalliance/antora-cpp-reference-extension'
+      dependencies:
+        - name: 'boost'
+          repo: 'https://github.com/boostorg/boost.git'
+          tag: 'develop'
+          variable: 'BOOST_SRC_DIR'
+          system-env: 'BOOST_SRC_DIR'
+    - require: '@cppalliance/antora-downloads-extension'
 
 asciidoc:
   attributes:
@@ -69,12 +63,17 @@ asciidoc:
     - '@cppalliance/asciidoctor-boost-links'
     - '@asciidoctor/tabs'
 
+runtime:
+  log:
+    level: warn
+    failure_level: warn
+
 # Libraries that support Antora should be included here
 content:
   sources:
-    - url: .
-      start_path: .
-      # edit_url: 'https://github.com/boostorg/msm/edit/{refname}/{path}'
+    - url: ..
+      start_path: doc
+      edit_url: 'https://github.com/boostorg/msm/edit/develop/{path}'
 
 ui:
   bundle:

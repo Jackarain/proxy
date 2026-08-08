@@ -115,7 +115,7 @@ constexpr auto tgamma_impl(const T x) noexcept
                 {
                     // Use large-argument asymptotic expansion.
 
-                    const T prefix { exp(((x  - T { 5, -1 }) * log(x)) - x) };
+                    const T prefix { exp(((x  - T { 5, -1 }) * ::boost::decimal::log(x)) - x) };
 
                     result =  prefix * detail::tgamma_series_expansion_asymp(one / x);
                 }

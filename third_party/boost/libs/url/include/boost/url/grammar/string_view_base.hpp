@@ -159,7 +159,7 @@ public:
     */
     explicit
     operator
-    std::string() const noexcept
+    std::string() const
     {
         return std::string(s_);
     }

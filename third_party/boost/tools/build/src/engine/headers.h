@@ -12,9 +12,7 @@
 #define HEADERS_SW20111118_H
 
 #include "config.h"
-#include "object.h"
-#include "rules.h"
-#include "regexp.h"
+#include "jam_fwd.h"
 
 void headers( TARGET * t );
 

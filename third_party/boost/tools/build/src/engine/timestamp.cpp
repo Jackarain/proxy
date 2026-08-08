@@ -29,7 +29,6 @@
 #include "filesys.h"
 #include "hash.h"
 #include "jam_strings.h"
-#include "object.h"
 #include "output.h"
 #include "pathsys.h"
 #include "timestamp.h"

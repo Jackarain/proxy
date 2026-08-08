@@ -387,15 +387,19 @@ inner_parse_fields(char const*& in,
         if(ec)
             return;
         auto const f = string_to_field(name);
-        do_field(f, value, ec);
-        if(ec)
-            return;
         if(BOOST_UNLIKELY(state_ == state::trailer_fields))
         {
+            // do_field() applies header-section semantics
+            // (Content-Length, Transfer-Encoding, Connection,
+            // Upgrade) which must not be honored when they appear
+            // in a chunked trailer, see rfc7230 section 4.1.2.
             this->on_trailer_field_impl(f, name, value, ec);
         }
         else
         {
+            do_field(f, value, ec);
+            if(ec)
+                return;
             this->on_field_impl(f, name, value, ec);
         }
         if(ec)
@@ -427,6 +431,25 @@ finish_header(error_code& ec, std::true_type)
 {
     // RFC 7230 section 3.3
     // https://tools.ietf.org/html/rfc7230#section-3.3
+
+    // chunked is an HTTP/1.1 transfer coding; an HTTP/1.0 request that
+    // resolves to chunked framing cannot be delimited reliably by a
+    // recipient that ignores Transfer-Encoding per HTTP/1.0, so reject
+    // it here instead of consuming the body as chunks.
+    if((f_ & flagChunked) && ! (f_ & flagHTTP11))
+    {
+        BOOST_BEAST_ASSIGN_EC(ec, error::bad_transfer_encoding);
+        return;
+    }
+
+    // if a Transfer-Encoding is present in a request and chunked is not the
+    // final coding, the body length cannot be determined reliably; reject the
+    // request instead of silently treating it as having no body.
+    if((f_ & flagTransferEncoding) && ! (f_ & flagChunked))
+    {
+        BOOST_BEAST_ASSIGN_EC(ec, error::bad_transfer_encoding);
+        return;
+    }
 
     if(f_ & flagSkipBody)
     {
@@ -739,8 +762,11 @@ do_field(field f,
             BOOST_BEAST_ASSIGN_EC(ec, error::multiple_content_length);
         };
 
-        // conflicting field
-        if(f_ & flagChunked)
+        // conflicting field: a Transfer-Encoding was already seen, and a
+        // message must not carry both Transfer-Encoding and Content-Length
+        // regardless of the transfer coding or the order the two fields
+        // arrive in (RFC 7230 3.3.3).
+        if(f_ & (flagChunked | flagTransferEncoding))
             return bad_content_length();
 
         // Content-length may be a comma-separated list of integers
@@ -796,6 +822,11 @@ do_field(field f,
             BOOST_BEAST_ASSIGN_EC(ec, error::bad_transfer_encoding);
             return;
         }
+
+        // Record that a Transfer-Encoding was present so a Content-Length
+        // arriving afterwards is rejected the same way it would be if the
+        // fields arrived in the opposite order.
+        f_ |= flagTransferEncoding;
 
         ec = {};
         auto const v = token_list{value};

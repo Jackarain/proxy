@@ -356,7 +356,7 @@ struct param
     param(
         core::string_view key,
         core::string_view value,
-        bool has_value) noexcept
+        bool has_value)
         : key(key)
         , value(has_value
             ? value

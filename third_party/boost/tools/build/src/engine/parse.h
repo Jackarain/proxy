@@ -18,9 +18,7 @@
 #define PARSE_DWA20011020_H
 
 #include "config.h"
-#include "frames.h"
-#include "lists.h"
-#include "modules.h"
+#include "jam_fwd.h"
 
 
 #define PARSE_APPEND    0

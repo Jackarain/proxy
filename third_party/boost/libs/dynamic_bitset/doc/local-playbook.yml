@@ -22,7 +22,7 @@ content:
   sources:
     - url: ..
       start_path: doc
-      edit_url: 'https://github.com/boostorg/dynamic_bitset/edit/{refname}/{path}'
+      edit_url: 'https://github.com/boostorg/dynamic_bitset/edit/develop/{path}'
 
 output:
   dir: html
@@ -47,6 +47,7 @@ antora:
           tag: 'develop'
           variable: 'BOOST_SRC_DIR'
           system-env: 'BOOST_SRC_DIR'
+    - require: '@cppalliance/antora-downloads-extension'
 
 asciidoc:
   attributes:

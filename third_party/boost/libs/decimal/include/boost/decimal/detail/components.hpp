@@ -43,25 +43,30 @@ struct decimal_components
     constexpr decimal_components() = default;
     constexpr decimal_components(const decimal_components& rhs) = default;
     constexpr decimal_components& operator=(const decimal_components& rhs) = default;
-    constexpr decimal_components(SigType sig_, BiasedExpType exp_, bool sign_) : sig{sig_}, exp{exp_}, sign{sign_} {}
+    BOOST_DECIMAL_CUDA_CONSTEXPR decimal_components(SigType sig_, BiasedExpType exp_, bool sign_) : sig{sig_}, exp{exp_}, sign{sign_} {}
 
-    constexpr auto full_significand() const -> significand_type
+    BOOST_DECIMAL_CUDA_CONSTEXPR auto full_significand() const -> significand_type
     {
         return sig;
     }
 
-    constexpr auto biased_exponent() const -> biased_exponent_type
+    BOOST_DECIMAL_CUDA_CONSTEXPR auto biased_exponent() const -> biased_exponent_type
     {
         return exp;
     }
 
-    constexpr auto isneg() const -> bool
+    BOOST_DECIMAL_CUDA_CONSTEXPR auto isneg() const -> bool
     {
         return sign;
     }
 
+    BOOST_DECIMAL_CUDA_CONSTEXPR auto to_components() const -> decimal_components
+    {
+        return *this;
+    }
+
     template <typename T1, typename T2>
-    explicit constexpr operator decimal_components<T1, T2>() const
+    explicit BOOST_DECIMAL_CUDA_CONSTEXPR operator decimal_components<T1, T2>() const
     {
         return decimal_components<T1, T2>{static_cast<T1>(sig), static_cast<T2>(exp), sign};
     }

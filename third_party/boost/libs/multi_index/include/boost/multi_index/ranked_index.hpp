@@ -1,4 +1,4 @@
-/* Copyright 2003-2025 Joaquin M Lopez Munoz.
+/* Copyright 2003-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -165,14 +165,19 @@ public:
   }
 
 protected:
-  ranked_index(const ranked_index& x):super(x){};
-
-  ranked_index(const ranked_index& x,do_not_copy_elements_tag):
-    super(x,do_not_copy_elements_tag()){};
+  ranked_index(
+    const ranked_index& x,const allocator_type& al,index_node_type* h):
+    super(x,al,h){};
 
   ranked_index(
-    const ctor_args_list& args_list,const allocator_type& al):
-    super(args_list,al){}
+    const ranked_index& x,const allocator_type& al,index_node_type* h,
+    do_not_copy_elements_tag):
+    super(x,al,h,do_not_copy_elements_tag()){};
+
+  ranked_index(
+    const ctor_args_list& args_list,
+    const allocator_type& al,index_node_type* h):
+    super(args_list,al,h){}
 
 private:
   template<typename LowerBounder,typename UpperBounder>

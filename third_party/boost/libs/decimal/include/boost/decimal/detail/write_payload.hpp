@@ -12,14 +12,14 @@
 namespace boost {
 namespace decimal {
 
-constexpr auto from_bits(const std::uint32_t rhs) noexcept -> decimal32_t;
-constexpr auto from_bits(const std::uint64_t rhs) noexcept -> decimal64_t;
-constexpr auto from_bits(const int128::uint128_t rhs) noexcept -> decimal128_t;
+BOOST_DECIMAL_CUDA_CONSTEXPR auto from_bits(const std::uint32_t rhs) noexcept -> decimal32_t;
+BOOST_DECIMAL_CUDA_CONSTEXPR auto from_bits(const std::uint64_t rhs) noexcept -> decimal64_t;
+BOOST_DECIMAL_CUDA_CONSTEXPR auto from_bits(const int128::uint128_t rhs) noexcept -> decimal128_t;
 
 namespace detail {
 
 template <typename TargetDecimalType, bool is_snan>
-constexpr auto write_payload(typename TargetDecimalType::significand_type payload_value)
+BOOST_DECIMAL_CUDA_CONSTEXPR auto write_payload(typename TargetDecimalType::significand_type payload_value)
     BOOST_DECIMAL_REQUIRES(detail::is_fast_type_v, TargetDecimalType)
 {
     using sig_type = typename TargetDecimalType::significand_type;
@@ -42,7 +42,7 @@ constexpr auto write_payload(typename TargetDecimalType::significand_type payloa
 }
 
 template <typename TargetDecimalType, bool is_snan>
-constexpr auto write_payload(typename TargetDecimalType::significand_type payload_value)
+BOOST_DECIMAL_CUDA_CONSTEXPR auto write_payload(typename TargetDecimalType::significand_type payload_value)
     BOOST_DECIMAL_REQUIRES(detail::is_ieee_type_v, TargetDecimalType)
 {
     using sig_type = typename TargetDecimalType::significand_type;

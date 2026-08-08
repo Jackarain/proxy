@@ -64,7 +64,7 @@ rule check-target-builds ( target message ? : true-properties * : false-properti
 +
 This function can only be used when passing requirements or usage
 requirements to a metatarget rule. For example, to make an application
-link to a library if it's available, one has use the following:
+link to a library if it's available, one has to use the following:
 +
 ----
 exe app : app.cpp : [ check-target-builds has_foo "System has foo" : <library>foo : <define>FOO_MISSING=1 ] ;
@@ -604,7 +604,7 @@ _`<option-name>option-value syntax`_:
   A catalog file used to rewrite remote URL's to a local copy.
 
 The xsltproc module provides the following rules. Note that these
-operate on jam targets and are intended to be used by another toolset,
+operate on Jam targets and are intended to be used by another toolset,
 such as boostbook, rather than directly by users.
 
 `xslt`::
@@ -949,7 +949,7 @@ will create the files for `a` in `bin/subdir/gcc-4.6.1/debug`
 
 A _feature_ is a normalized (toolset-independent) aspect of a build
 configuration, such as whether inlining is enabled. Feature names may
-not contain the '`>`' character.
+not contain the ‘`>`’ character.
 
 Each feature in a build configuration has one or more associated
 __value__s. Feature values for non-free features may not contain the
@@ -1090,6 +1090,16 @@ For example, dependency features allow to state that library A depends
 on library B. As the result, whenever an application will link to A, it
 will also link to B. Specifying B as dependency of A is different from
 adding B to the sources of A.
+
+* [[b2.reference.features.attributes.version]] _version_
++
+The value of a version feature is a valid Semantic Version.
+footnote:[Semantic Versioning (https://semver.org/)] Like free features, the
+set of values are unbounded. When a version feature is specified it will use
+the semnantic versioning rules to match them against each other.
++
+_Note, this is an experimental feature and how it works is subject to future
+changes as use cases get discovered._
 
 [[b2.reference.features.attributes.base]]
 Features that are neither free nor incidental are called _base_

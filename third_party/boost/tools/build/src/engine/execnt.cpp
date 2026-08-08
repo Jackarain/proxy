@@ -44,15 +44,17 @@
 #include "execcmd.h"
 
 #include "lists.h"
+#include "object.h"
 #include "output.h"
 #include "pathsys.h"
 #include "startup.h"
-#include "string.h"
+#include "jam_strings.h"
 
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <time.h>
+#include <string.h>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>

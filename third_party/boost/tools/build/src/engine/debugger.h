@@ -9,10 +9,10 @@
 #define DEBUGGER_SW20150314_H
 
 #include "config.h"
-#include <setjmp.h>
-#include "object.h"
-#include "frames.h"
+#include "jam_fwd.h"
 #include "lists.h"
+
+#include <setjmp.h>
 
 #ifdef JAM_DEBUGGER
 

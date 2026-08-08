@@ -946,6 +946,31 @@ do_actual_work (std::string file_name, std::istream &instream,
         }
 #endif // BOOST_WAVE_SUPPORT_CPP2A != 0
 
+#if BOOST_WAVE_SUPPORT_CPP2B != 0
+        if (vm.count("c++23")) {
+            ctx.set_language(
+                boost::wave::language_support(
+                    boost::wave::support_cpp2b
+#if BOOST_WAVE_SUPPORT_HAS_INCLUDE != 0
+                 |  boost::wave::support_option_has_include
+#endif
+#if BOOST_WAVE_SUPPORT_VA_OPT != 0
+                 |  boost::wave::support_option_va_opt
+#endif
+                 |  boost::wave::support_option_convert_trigraphs
+                 |  boost::wave::support_option_long_long
+                 |  boost::wave::support_option_emit_line_directives
+#if BOOST_WAVE_SUPPORT_PRAGMA_ONCE != 0
+                 |  boost::wave::support_option_include_guard_detection
+#endif
+#if BOOST_WAVE_EMIT_PRAGMA_DIRECTIVES != 0
+                 |  boost::wave::support_option_emit_pragma_directives
+#endif
+                 |  boost::wave::support_option_insert_whitespace
+                ));
+        }
+#endif // BOOST_WAVE_SUPPORT_CPP2B != 0
+
         // enable long long support, if appropriate
         if (vm.count("long_long")) {
             ctx.set_language(
@@ -1380,6 +1405,9 @@ main (int argc, char *argv[])
 #endif
 #if BOOST_WAVE_SUPPORT_CPP2A != 0
             ("c++20", "enable C++20 mode (implies --variadics and --long_long, adds __VA_OPT__)")
+#endif
+#if BOOST_WAVE_SUPPORT_CPP2B != 0
+            ("c++23", "enable C++23 mode (all C++20 features, plus size_t literals)")
 #endif
             ("listincludes,l", po::value<std::string>(),
                 "list names of included files to a file [arg] or to stdout [-]")

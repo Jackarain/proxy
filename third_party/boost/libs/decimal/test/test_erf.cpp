@@ -566,7 +566,7 @@ void test_erfc()
         const auto dec_res {static_cast<float_type>(erfc(dec_val))};
         const auto distance {boost::math::float_distance(float_res, dec_res)};
 
-        if (!BOOST_TEST(distance < 150))
+        if (!BOOST_TEST(distance < 200))
         {
             // LCOV_EXCL_START
             std::cerr << "  Val: " << val

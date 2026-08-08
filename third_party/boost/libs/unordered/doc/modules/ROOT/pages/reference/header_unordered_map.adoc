@@ -20,6 +20,10 @@ namespace unordered {
            class Allocator = std::allocator<std::pair<const Key, T>>>
   class xref:reference/unordered_map.adoc#unordered_map[unordered_map];
 
+  // Tag for construction from ranges (pass:[C++20] and up)
+  struct from_range_t { explicit from_range_t() = default; };
+  inline constexpr from_range_t from_range{};
+
   // Equality Comparisons
   template<class Key, class T, class Hash, class Pred, class Alloc>
     bool xref:reference/unordered_map.adoc#unordered_map_operator_2[operator++==++](const unordered_map<Key, T, Hash, Pred, Alloc>& x,
@@ -67,7 +71,7 @@ namespace unordered {
     typename unordered_multimap<K, T, H, P, A>::size_type
       xref:reference/unordered_multimap.adoc#unordered_multimap_erase_if[erase_if](unordered_multimap<K, T, H, P, A>& c, Predicate pred);
 
-  // Pmr aliases (C++17 and up)
+  // Pmr aliases (pass:[C++17] and up)
   namespace pmr {
     template<class Key,
              class T,

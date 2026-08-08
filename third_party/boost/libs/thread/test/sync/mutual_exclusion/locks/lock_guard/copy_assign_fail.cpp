@@ -22,16 +22,15 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::mutex m0;
-boost::mutex m1;
+boost::mutex g_mutex0;
+boost::mutex g_mutex1;
 
 int main()
 {
-  boost::lock_guard<boost::mutex> lk0(m0);
-  boost::lock_guard<boost::mutex> lk1(m1);
+  boost::lock_guard<boost::mutex> lk0(g_mutex0);
+  boost::lock_guard<boost::mutex> lk1(g_mutex1);
   lk1 = lk0;
-
+  (void)lk1;
 }
 
 #include "../../../../remove_error_code_unused_warning.hpp"
-

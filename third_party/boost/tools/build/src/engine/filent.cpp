@@ -32,7 +32,6 @@
 #ifdef OS_NT
 #include "filesys.h"
 
-#include "object.h"
 #include "pathsys.h"
 #include "jam_strings.h"
 #include "output.h"
@@ -486,7 +485,7 @@ int file_collect_archive_content_( file_archive_info_t * const archive )
 
         auto member_name = b2::value::format( "%.*s", int(endname - name), name );
 
-        if ( member_name->as_string().size > 0 )
+        if ( member_name->as_string().size() > 0 )
         {
             file_info_t * member = 0;
 

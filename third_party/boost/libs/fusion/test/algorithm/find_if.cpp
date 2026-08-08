@@ -32,7 +32,7 @@ main()
         using boost::mpl::_;
 
         typedef vector<int, char, int, double> vector_type;
-        vector_type v(12345, 'x', 678910, 3.36);
+        vector_type v(12345, 'x', 678910, 3.25);
 
         std::cout << *find_if<is_same<_, char> >(v) << std::endl;
         BOOST_TEST((*find_if<is_same<_, char> >(v) == 'x'));
@@ -41,7 +41,7 @@ main()
         BOOST_TEST((*find_if<is_same<_, int> >(v) == 12345));
 
         std::cout << *find_if<is_same<_, double> >(v) << std::endl;
-        BOOST_TEST((*find_if<is_same<_, double> >(v) == 3.36));
+        BOOST_TEST((*find_if<is_same<_, double> >(v) == 3.25));
     }
 
     {

@@ -1,18 +1,28 @@
 # Boost serialization Library Build Jamfile
 #  (C) Copyright Robert Ramey 2002-2004.
-#  Use, modification, and distribution are subject to the 
-#  Boost Software License, Version 1.0. (See accompanying file 
+#  Use, modification, and distribution are subject to the
+#  Boost Software License, Version 1.0. (See accompanying file
 #  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
 #  See http://www.boost.org/libs/serialization for the library home page.
 
-project boost/serialization
+require-b2 5.0.1 ;
+import-search /boost/config/checks ;
+import config : requires ;
+
+constant boost_dependencies_private :
+    /boost/function//boost_function
+    ;
+
+project
     : source-location ../src
+    : common-requirements <library>$(boost_dependencies)
     : requirements
       <conditional>@include-spirit
+      <library>$(boost_dependencies_private)
+    : usage-requirements
+        <define>BOOST_SERIALIZATION_NO_LIB=1
 ;
-
-import ../../config/checks/config : requires ;
 
 SPIRIT_ROOT = [ modules.peek : SPIRIT_ROOT ] ;
 rule include-spirit ( properties * )
@@ -20,41 +30,41 @@ rule include-spirit ( properties * )
     local old-compiler ;
     if <toolset>borland in $(properties)
     {
-        if ! <toolset-borland:version>6.1.0 in $(properties)  
-        {  
-            old-compiler = true ;  
-        }  
+        if ! <toolset-borland:version>6.1.0 in $(properties)
+        {
+            old-compiler = true ;
+        }
 
     }
     else if <toolset>msvc in $(properties)
     {
         if <toolset-msvc:version>6.5 in $(properties)
           || <toolset-msvc:version>7.0 in $(properties)
-        {            
+        {
             old-compiler = true ;
-        }        
+        }
     }
-        
+
     local result ;
     if $(old-compiler)
-    {        
+    {
         if $(SPIRIT_ROOT)
         {
-            # note - we can't use <include>$(SPIRIT_ROOT) because 
+            # note - we can't use <include>$(SPIRIT_ROOT) because
             # it puts -I$(SPIRIT_ROOT) AFTER the "../../.." in the command line.
-            # so use these instead 
+            # so use these instead
             result = <cxxflags>-I$(SPIRIT_ROOT) ;
         }
-        else 
+        else
         {
             echo **** spirit 1.6x required to build library with this compiler **** ;
             result = <build>no ;
         }
-    }    
+    }
     return $(result) ;
 }
 
-SOURCES = 
+SOURCES =
     archive_exception
     basic_archive
     basic_iarchive
@@ -90,12 +100,12 @@ SOURCES =
     codecvt_null
  ;
 
-SOURCES_HAS_STD_WSTREAMBUF = 
+SOURCES_HAS_STD_WSTREAMBUF =
     xml_oarchive
     utf8_codecvt_facet
 ;
 
-WSOURCES = 
+WSOURCES =
     basic_text_wiprimitive
     basic_text_woprimitive
     text_wiarchive
@@ -107,41 +117,28 @@ WSOURCES =
     xml_woarchive
     polymorphic_xml_wiarchive
     polymorphic_xml_woarchive
+    codecvt_null
 ;
 
-lib boost_serialization 
+lib boost_serialization
     : ## sources ##
      $(SOURCES).cpp
     : ## requirements ##
-    [ check-target-builds ../../config/checks//std_wstreambuf : <source>../src/$(SOURCES_HAS_STD_WSTREAMBUF).cpp ]
+    [ check-target-builds /boost/config/checks//std_wstreambuf : <source>../src/$(SOURCES_HAS_STD_WSTREAMBUF).cpp ]
     <toolset>msvc:<cxxflags>/Gy
     <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
     <toolset>msvc:<define>_CRT_SECURE_NO_WARNINGS
-    <toolset>clang:<cxxflags>"-fvisibility=hidden -fvisibility-inlines-hidden"
-    <toolset>gcc:<cxxflags>"-fvisibility=hidden -fvisibility-inlines-hidden"
-    <toolset>darwin:<cxxflags>"-fvisibility=hidden -fvisibility-inlines-hidden"
-    <toolset>gcc:<cxxflags>"-ftemplate-depth-255"
-    <toolset>clang:<cxxflags>"-ftemplate-depth-255"
-    <toolset>darwin:<cxxflags>"-ftemplate-depth-255"
     <link>shared:<define>BOOST_SERIALIZATION_DYN_LINK=1
     ;
 
-lib boost_wserialization 
-    : $(WSOURCES).cpp boost_serialization 
-    : 
+lib boost_wserialization
+    : $(WSOURCES).cpp boost_serialization
+    :
     [ requires std_wstreambuf ]
-    <toolset>msvc:<cxxflags>/Gy 
+    <toolset>msvc:<cxxflags>/Gy
     <toolset>msvc:<define>_SCL_SECURE_NO_WARNINGS
     <toolset>msvc:<define>_CRT_SECURE_NO_WARNINGS
-    <toolset>clang:<cxxflags>"-fvisibility=hidden -fvisibility-inlines-hidden"
-    <toolset>gcc:<cxxflags>"-fvisibility=hidden -fvisibility-inlines-hidden"
-    <toolset>darwin:<cxxflags>"-fvisibility=hidden -fvisibility-inlines-hidden"
-    <toolset>gcc:<cxxflags>"-ftemplate-depth-255"
-    <toolset>clang:<cxxflags>"-ftemplate-depth-255"
-    <toolset>darwin:<cxxflags>"-ftemplate-depth-255"
     # note: both serialization and wserialization are conditioned on the this
     # switch - don't change it to BOOST_WSERIALIZATION_DYN_LINK
     <link>shared:<define>BOOST_SERIALIZATION_DYN_LINK=1
     ;
-
-boost-install boost_serialization boost_wserialization ;

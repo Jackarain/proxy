@@ -23,60 +23,56 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::shared_mutex m0;
-boost::shared_mutex m1;
+boost::shared_mutex g_mutex0;
+boost::shared_mutex g_mutex1;
 
 int main()
 {
   {
-    boost::shared_lock<boost::shared_mutex> lk0(m0);
-    boost::shared_lock<boost::shared_mutex> lk1(m1);
+    boost::shared_lock<boost::shared_mutex> lk0(g_mutex0);
+    boost::shared_lock<boost::shared_mutex> lk1(g_mutex1);
     lk1 = boost::move(lk0);
-    BOOST_TEST(lk1.mutex() == &m0);
+    BOOST_TEST(lk1.mutex() == &g_mutex0);
     BOOST_TEST(lk1.owns_lock() == true);
     BOOST_TEST(lk0.mutex() == 0);
     BOOST_TEST(lk0.owns_lock() == false);
   }
   {
-
     boost::shared_lock<boost::shared_mutex> lk1;
-    lk1 = BOOST_THREAD_MAKE_RV_REF(boost::shared_lock<boost::shared_mutex>(m0));
-    BOOST_TEST(lk1.mutex() == &m0);
+    lk1 = BOOST_THREAD_MAKE_RV_REF(boost::shared_lock<boost::shared_mutex>(g_mutex0));
+    BOOST_TEST(lk1.mutex() == &g_mutex0);
     BOOST_TEST(lk1.owns_lock() == true);
   }
   {
-    boost::unique_lock<boost::shared_mutex> lk0(m0);
-    boost::shared_lock<boost::shared_mutex> lk1(m1);
+    boost::unique_lock<boost::shared_mutex> lk0(g_mutex0);
+    boost::shared_lock<boost::shared_mutex> lk1(g_mutex1);
     lk1 = BOOST_THREAD_MAKE_RV_REF(boost::shared_lock<boost::shared_mutex>(boost::move(lk0)));
-    BOOST_TEST(lk1.mutex() == &m0);
+    BOOST_TEST(lk1.mutex() == &g_mutex0);
     BOOST_TEST(lk1.owns_lock() == true);
     BOOST_TEST(lk0.mutex() == 0);
     BOOST_TEST(lk0.owns_lock() == false);
   }
   {
-
     boost::shared_lock<boost::shared_mutex> lk1;
-    lk1 = BOOST_THREAD_MAKE_RV_REF(boost::shared_lock<boost::shared_mutex>(boost::unique_lock<boost::shared_mutex>(m0)));
-    BOOST_TEST(lk1.mutex() == &m0);
+    lk1 = BOOST_THREAD_MAKE_RV_REF(boost::shared_lock<boost::shared_mutex>(boost::unique_lock<boost::shared_mutex>(g_mutex0)));
+    BOOST_TEST(lk1.mutex() == &g_mutex0);
     BOOST_TEST(lk1.owns_lock() == true);
   }
   {
-    boost::upgrade_lock<boost::shared_mutex> lk0(m0);
-    boost::shared_lock<boost::shared_mutex> lk1(m1);
+    boost::upgrade_lock<boost::shared_mutex> lk0(g_mutex0);
+    boost::shared_lock<boost::shared_mutex> lk1(g_mutex1);
     lk1 = BOOST_THREAD_MAKE_RV_REF(boost::shared_lock<boost::shared_mutex>(boost::move(lk0)));
-    BOOST_TEST(lk1.mutex() == &m0);
+    BOOST_TEST(lk1.mutex() == &g_mutex0);
     BOOST_TEST(lk1.owns_lock() == true);
     BOOST_TEST(lk0.mutex() == 0);
     BOOST_TEST(lk0.owns_lock() == false);
   }
   {
-
     boost::shared_lock<boost::shared_mutex> lk1;
-    lk1 = BOOST_THREAD_MAKE_RV_REF(boost::shared_lock<boost::shared_mutex>(boost::upgrade_lock<boost::shared_mutex>(m0)));
-    BOOST_TEST(lk1.mutex() == &m0);
+    lk1 = BOOST_THREAD_MAKE_RV_REF(boost::shared_lock<boost::shared_mutex>(boost::upgrade_lock<boost::shared_mutex>(g_mutex0)));
+    BOOST_TEST(lk1.mutex() == &g_mutex0);
     BOOST_TEST(lk1.owns_lock() == true);
   }
+
   return boost::report_errors();
-
 }
-

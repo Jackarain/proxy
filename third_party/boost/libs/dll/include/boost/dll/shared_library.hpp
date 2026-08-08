@@ -5,17 +5,34 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_DLL_SHARED_LIBRARY_HPP
-#define BOOST_DLL_SHARED_LIBRARY_HPP
-
 /// \file boost/dll/shared_library.hpp
 /// \brief Contains the boost::dll::shared_library class, core class for all the
 /// DLL/DSO operations.
 
+#ifndef BOOST_DLL_SHARED_LIBRARY_HPP
+#define BOOST_DLL_SHARED_LIBRARY_HPP
+
+#include <boost/dll/detail/config.hpp>
+
+#if !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+# pragma once
+#endif
+
 #include <boost/dll/config.hpp>
+
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
 #include <boost/predef/os.h>
 #include <boost/core/enable_if.hpp>
 #include <boost/core/explicit_operator_bool.hpp>
+
+#if !defined(BOOST_DLL_USE_STD_MODULE)
+#include <type_traits>
+#include <utility>  // std::move
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
+
 #include <boost/dll/detail/system_error.hpp>
 #include <boost/dll/detail/aggressive_ptr_cast.hpp>
 
@@ -25,12 +42,7 @@
 #   include <boost/dll/detail/posix/shared_library_impl.hpp>
 #endif
 
-#include <type_traits>
-#include <utility>  // std::move
-
-#ifdef BOOST_HAS_PRAGMA_ONCE
-# pragma once
-#endif
+BOOST_DLL_BEGIN_MODULE_EXPORT
 
 namespace boost { namespace dll {
 
@@ -567,5 +579,9 @@ inline void swap(shared_library& lhs, shared_library& rhs) noexcept {
 }
 
 }} // boost::dll
+
+BOOST_DLL_END_MODULE_EXPORT
+
+#endif // !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
 
 #endif // BOOST_DLL_SHARED_LIBRARY_HPP

@@ -27,7 +27,7 @@
 namespace boost::redis::detail {
 
 exec_one_action exec_one_fsm::resume(
-   read_buffer& buffer,
+   multiplexer& mpx,
    system::error_code ec,
    std::size_t bytes_transferred,
    asio::cancellation_type_t cancel_state)
@@ -49,10 +49,10 @@ exec_one_action exec_one_fsm::resume(
          return system::error_code{};
 
       // Read responses until we're done
-      buffer.clear();
+      mpx.get_read_buffer().clear();
       while (true) {
          // Prepare the buffer to read some data
-         ec = buffer.prepare();
+         ec = mpx.prepare_read();
          if (ec)
             return ec;
 
@@ -66,16 +66,16 @@ exec_one_action exec_one_fsm::resume(
             return ec;
 
          // Commit the data into the buffer
-         buffer.commit(bytes_transferred);
+         mpx.commit_read(bytes_transferred);
 
          // Consume the data until we run out or all the responses have been read
-         while (resp3::parse(parser_, buffer.get_commited(), adapter_, ec)) {
+         while (resp3::parse(parser_, mpx.get_read_buffer().get_commited(), adapter_, ec)) {
             // Check for errors
             if (ec)
                return ec;
 
             // We've finished parsing a response
-            buffer.consume(parser_.get_consumed());
+            mpx.get_read_buffer().consume(parser_.get_consumed());
             parser_.reset();
 
             // When no more responses remain, we're done.

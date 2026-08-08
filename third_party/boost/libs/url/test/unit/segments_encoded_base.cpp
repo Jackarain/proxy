@@ -201,6 +201,64 @@ struct segments_encoded_base_test
     }
 
     void
+    testDecrementDecodedLength()
+    {
+        // Regression: decrement to index 0 must
+        // recompute dn so that a subsequent
+        // increment gets decoded_prefix right.
+        {
+            // percent-encoded first segment
+            auto rv = parse_uri_reference(
+                "/a%20b/c");
+            BOOST_TEST(rv.has_value());
+            auto const& ps =
+                rv->encoded_segments();
+            // iterate forward then backward
+            auto it = ps.begin();
+            BOOST_TEST_EQ(*it, "a%20b");
+            BOOST_TEST_EQ(
+                it->decoded_size(), 3u);
+            ++it;
+            BOOST_TEST_EQ(*it, "c");
+            // decrement back to first segment
+            --it;
+            BOOST_TEST_EQ(*it, "a%20b");
+            BOOST_TEST_EQ(
+                it->decoded_size(), 3u);
+            // increment again: decoded_prefix
+            // must be consistent
+            ++it;
+            BOOST_TEST_EQ(*it, "c");
+            BOOST_TEST_EQ(
+                it->decoded_size(), 1u);
+        }
+        {
+            // multiple percent-encoded segments
+            auto rv = parse_uri_reference(
+                "/%25a/%20b/c");
+            BOOST_TEST(rv.has_value());
+            auto const& ps =
+                rv->encoded_segments();
+            auto it = ps.end();
+            --it;
+            BOOST_TEST_EQ(*it, "c");
+            --it;
+            BOOST_TEST_EQ(*it, "%20b");
+            BOOST_TEST_EQ(
+                it->decoded_size(), 2u);
+            --it;
+            BOOST_TEST_EQ(*it, "%25a");
+            BOOST_TEST_EQ(
+                it->decoded_size(), 2u);
+            // roundtrip back to end
+            ++it;
+            BOOST_TEST_EQ(*it, "%20b");
+            ++it;
+            BOOST_TEST_EQ(*it, "c");
+        }
+    }
+
+    void
     testRange()
     {
     /*  Legend
@@ -223,6 +281,10 @@ struct segments_encoded_base_test
         check( "images/cat-pic.gif", { "images", "cat-pic.gif" });
         check( "/fast//query", { "fast", "", "query" });
         check( "fast//",  { "fast", "", "" });
+        // percent-encoded first segment (exercises
+        // decrement to index 0 with dn recalculation)
+        check( "/a%20b/c", { "a%20b", "c" });
+        check( "/%25x/%20y/z", { "%25x", "%20y", "z" });
     }
 
     void
@@ -269,6 +331,8 @@ struct segments_encoded_base_test
     void
     run()
     {
+        testObservers();
+        testDecrementDecodedLength();
         testRange();
         testJavadocs();
     }

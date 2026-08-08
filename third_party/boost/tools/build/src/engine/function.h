@@ -10,11 +10,8 @@
 #define B2_FUNCTION_H
 
 #include "config.h"
-#include "frames.h"
-#include "jam_strings.h"
+#include "jam_fwd.h"
 #include "lists.h"
-#include "object.h"
-#include "parse.h"
 
 #include <functional>
 #include <string>

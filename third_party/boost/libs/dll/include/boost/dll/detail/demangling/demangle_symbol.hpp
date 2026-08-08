@@ -9,9 +9,14 @@
 #define BOOST_DLL_DEMANGLE_SYMBOL_HPP_
 
 #include <boost/dll/config.hpp>
+
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#if !defined(BOOST_DLL_USE_STD_MODULE)
 #include <string>
 #include <algorithm>
 #include <memory>
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 #if defined(_MSC_VER) // MSVC, Clang-cl, and ICC on Windows
 
@@ -61,7 +66,9 @@ inline std::string demangle_symbol(const std::string& mangled_name)
 }}}
 #else
 
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
 #include <boost/core/demangle.hpp>
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 namespace boost
 {

@@ -46,7 +46,7 @@ static std::mt19937_64 rng(42);
 using namespace boost::decimal;
 
 template <typename Dec>
-void test_sin()
+auto test_sin() -> void
 {
     std::uniform_real_distribution<float> dist(-3.14F * 2, 3.14F * 2);
 
@@ -94,7 +94,7 @@ void test_sin()
 }
 
 template <typename Dec>
-void test_cos()
+auto test_cos() -> void
 {
     std::uniform_real_distribution<float> dist(-3.14F * 2, 3.14F * 2);
 
@@ -142,7 +142,7 @@ void test_cos()
 }
 
 template <typename T>
-void print_value(T value, const char* str)
+auto print_value(T value, const char* str) -> void
 {
     int ptr;
     const auto sig_val = frexp10(value, &ptr);
@@ -370,9 +370,73 @@ namespace local
     return result_is_ok;
   }
 
+  template<typename T>
+  auto test_sin_tiny(const int tol_factor) -> bool
+  {
+    using decimal_type = T;
+
+    using str_ctrl_array_type = std::array<const char*, 21U>;
+
+    const str_ctrl_array_type ctrl_strings =
+    {{
+      // Table[N[Sin[10^(n)], 42], {n, -20, 0  1}]
+      "9.99999999999999999999999999999999999999983E-21",
+      "9.99999999999999999999999999999999999998333E-20",
+      "9.99999999999999999999999999999999999833333E-19",
+      "9.99999999999999999999999999999999983333333E-18",
+      "9.99999999999999999999999999999998333333333E-17",
+      "9.99999999999999999999999999999833333333333E-16",
+      "9.99999999999999999999999999983333333333333E-15",
+      "9.99999999999999999999999998333333333333333E-14",
+      "9.99999999999999999999999833333333333333333E-13",
+      "9.99999999999999999999983333333333333333333E-12",
+      "9.99999999999999999998333333333333333333334E-11",
+      "9.99999999999999999833333333333333333341667E-10",
+      "9.99999999999999983333333333333333416666667E-9",
+      "9.9999999999999833333333333333416666666667E-8",
+      "9.99999999999833333333333341666666666666468E-7",
+      "9.99999999983333333333416666666666468253968E-6",
+      "0.0000999999998333333334166666666468253968281526",
+      "0.000999999833333341666666468253971009700151315",
+      "0.00999983333416666468254243826909972903896439",
+      "0.0998334166468281523068141984106220269899154",
+      "0.841470984807896506652502321630298999622563"
+    }};
+
+    std::array<decimal_type, std::tuple_size<str_ctrl_array_type>::value> sin_values  { };
+    std::array<decimal_type, std::tuple_size<str_ctrl_array_type>::value> ctrl_values { };
+
+    int np { -20 };
+
+    bool result_is_ok { true };
+
+    const decimal_type my_tol { std::numeric_limits<decimal_type>::epsilon() * static_cast<decimal_type>(tol_factor) };
+
+    for(auto i = static_cast<std::size_t>(UINT8_C(0)); i < std::tuple_size<str_ctrl_array_type>::value; ++i)
+    {
+      const decimal_type x_arg { 1, np };
+
+      ++np;
+
+      sin_values[i] = sin(x_arg);
+
+      static_cast<void>
+      (
+        from_chars(ctrl_strings[i], ctrl_strings[i] + std::strlen(ctrl_strings[i]), ctrl_values[i])
+      );
+
+      const auto result_sin_is_ok = is_close_fraction(sin_values[i], ctrl_values[i], my_tol);
+
+      result_is_ok = (result_sin_is_ok && result_is_ok);
+    }
+
+    return result_is_ok;
+  }
 } // namespace local
 
-int main()
+auto main() -> int;
+
+auto main() -> int
 {
     #ifdef BOOST_DECIMAL_GENERATE_CONSTANT_SIGS
     std::cerr << "----- Sin Coeffs -----" << '\n';
@@ -447,6 +511,14 @@ int main()
 
         BOOST_TEST(result_sin128_is_ok);
         BOOST_TEST(result_cos128_is_ok);
+    }
+
+    {
+        const auto result_sin064_tiny_is_ok = local::test_sin_tiny<decimal64_t>(0x400);
+        const auto result_sin128_tiny_is_ok = local::test_sin_tiny<decimal128_t>(0x400);
+
+        BOOST_TEST(result_sin064_tiny_is_ok);
+        BOOST_TEST(result_sin128_tiny_is_ok);
     }
 
     return boost::report_errors();

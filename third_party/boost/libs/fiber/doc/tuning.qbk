@@ -21,7 +21,7 @@ and/or fibers are not synchronized between threads.
 Memory allocation algorithm is significant for performance in a multithreaded
 environment, especially for __boost_fiber__ where fiber stacks are allocated on
 the heap. The default user-level memory allocator (UMA) of glibc is ptmalloc2
-but it can be replaced by another UMA that fit better for the concret work-load
+but it can be replaced by another UMA that fit better for the concrete work-load
 For instance Google[s]
 [@http://goog-perftools.sourceforge.net/doc/tcmalloc.html TCmalloc] enables a
 better performance at the ['skynet] microbenchmark than glibc[s] default memory
@@ -35,7 +35,7 @@ cooperatively, rather than preemptively.
 Depending on the work-load several strategies of scheduling the fibers are
 possible [footnote 1024cores.net:
 [@http://www.1024cores.net/home/scalable-architecture/task-scheduling-strategies Task Scheduling Strategies]]
-that can be implmented on behalf of __algo__.
+that can be implemented on behalf of __algo__.
 
 * work-stealing: ready fibers are hold in a local queue, when the
   fiber-scheduler's local queue runs out of ready fibers, it randomly
@@ -51,11 +51,11 @@ that can be implmented on behalf of __algo__.
   concurrently push and pop ready fibers to/from the global queue
   (implemented in __shared_work__)
 
-* work-distribution: fibers that became ready are proactivly distributed to
+* work-distribution: fibers that became ready are proactively distributed to
   idle fiber-schedulers or fiber-schedulers with low load
 
 * work-balancing: a dedicated (helper) fiber-scheduler periodically collects
- informations about all fiber-scheduler running in other threads and
+ information about all fiber-scheduler running in other threads and
  re-distributes ready fibers among them
 
 
@@ -121,12 +121,12 @@ are disabled.]
 
 Modern multi-socket systems are usually designed as [link numa NUMA systems].
 A suitable fiber scheduler like __numa_work_stealing__ reduces 
-remote memory access (latence).
+remote memory access (latency).
 
 
 [heading Parameters]
 
-[table Parameters that migh be defiend at compiler's command line
+[table Parameters that might be defined at compiler's command line
     [
         [Parameter]
         [Default value]

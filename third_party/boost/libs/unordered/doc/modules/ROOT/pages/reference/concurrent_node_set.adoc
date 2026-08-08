@@ -75,6 +75,12 @@ namespace unordered {
     xref:#concurrent_node_set_copy_constructor_with_allocator[concurrent_node_set](const concurrent_node_set& other, const Allocator& a);
     xref:#concurrent_node_set_move_constructor_with_allocator[concurrent_node_set](concurrent_node_set&& other, const Allocator& a);
     xref:#concurrent_node_set_move_constructor_from_unordered_node_set[concurrent_node_set](unordered_node_set<Key, Hash, Pred, Allocator>&& other);
+    template<class FromRangeT, xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R>
+      xref:#concurrent_node_set_range_constructor[concurrent_node_set](FromRangeT&&, R&& rg,
+                          size_type n = _implementation-defined_,
+                          const hasher& hf = hasher(),
+                          const key_equal& eql = key_equal(),
+                          const allocator_type& a = allocator_type());
     xref:#concurrent_node_set_initializer_list_constructor[concurrent_node_set](std::initializer_list<value_type> il,
                         size_type n = _implementation-defined_
                         const hasher& hf = hasher(),
@@ -87,6 +93,13 @@ namespace unordered {
                           const allocator_type& a);
     template<class InputIterator>
       xref:#concurrent_node_set_iterator_range_constructor_with_bucket_count_and_hasher[concurrent_node_set](InputIterator f, InputIterator l, size_type n, const hasher& hf,
+                          const allocator_type& a);
+    template<class FromRangeT, xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R>
+      xref:#concurrent_node_set_range_constructor_with_allocator[concurrent_node_set](FromRangeT&&, R&& rg, const allocator_type& a);
+    template<class FromRangeT, xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R>
+      xref:#concurrent_node_set_range_constructor_with_bucket_count_and_allocator[concurrent_node_set](FromRangeT&&, R&& rg, size_type n, const allocator_type& a);
+    template<class FromRangeT, xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R>
+      xref:#concurrent_node_set_range_constructor_with_bucket_count_and_hasher_and_allocator[concurrent_node_set](FromRangeT&&, R&& rg, size_type n, const hasher& hf,
                           const allocator_type& a);
     xref:#concurrent_node_set_initializer_list_constructor_with_allocator[concurrent_node_set](std::initializer_list<value_type> il, const allocator_type& a);
     xref:#concurrent_node_set_initializer_list_constructor_with_bucket_count_and_allocator[concurrent_node_set](std::initializer_list<value_type> il, size_type n,
@@ -148,6 +161,8 @@ namespace unordered {
     bool xref:#concurrent_node_set_move_insert[insert](value_type&& obj);
     template<class K> bool xref:#concurrent_node_set_transparent_insert[insert](K&& k);
     template<class InputIterator> size_type xref:#concurrent_node_set_insert_iterator_range[insert](InputIterator first, InputIterator last);
+    template<xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R>
+      size_type xref:#concurrent_node_set_insert_range[insert_range](R&& rg);
     size_type xref:#concurrent_node_set_insert_initializer_list[insert](std::initializer_list<value_type> il);
     insert_return_type xref:#concurrent_node_set_insert_node[insert](node_type&& nh);
 
@@ -163,6 +178,10 @@ namespace unordered {
       size_type xref:#concurrent_node_set_insert_iterator_range_or_visit[insert_or_visit](InputIterator first, InputIterator last, F f);
     template<class InputIterator,class F>
       size_type xref:#concurrent_node_set_insert_iterator_range_or_visit[insert_or_cvisit](InputIterator first, InputIterator last, F f);
+    template<xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R, class F>
+      size_type xref:#concurrent_node_set_insert_range_or_visit[insert_range_or_visit](R&& rg, F f);
+    template<xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R, class F>
+      size_type xref:#concurrent_node_set_insert_range_or_visit[insert_range_or_cvisit](R&& rg, F f);
     template<class F> size_type xref:#concurrent_node_set_insert_initializer_list_or_visit[insert_or_visit](std::initializer_list<value_type> il, F f);
     template<class F> size_type xref:#concurrent_node_set_insert_initializer_list_or_visit[insert_or_cvisit](std::initializer_list<value_type> il, F f);
     template<class F> insert_return_type xref:#concurrent_node_set_insert_node_or_visit[insert_or_visit](node_type&& nh, F f);
@@ -182,6 +201,10 @@ namespace unordered {
       size_type xref:#concurrent_node_set_insert_iterator_range_and_visit[insert_and_visit](InputIterator first, InputIterator last, F1 f1, F2 f2);
     template<class InputIterator,class F1, class F2>
       size_type xref:#concurrent_node_set_insert_iterator_range_and_visit[insert_and_cvisit](InputIterator first, InputIterator last, F1 f1, F2 f2);
+    template<xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R, class F1, class F2>
+      size_type xref:#concurrent_node_set_insert_range_and_visit[insert_range_and_visit](R&& rg, F1 f1, F2 f2);
+    template<xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R, class F1, class F2>
+      size_type xref:#concurrent_node_set_insert_range_and_visit[insert_range_and_cvisit](R&& rg, F1 f1, F2 f2);
     template<class F1, class F2>
       size_type xref:#concurrent_node_set_insert_initializer_list_and_visit[insert_and_visit](std::initializer_list<value_type> il, F1 f1, F2 f2);
     template<class F1, class F2>
@@ -253,6 +276,16 @@ namespace unordered {
                         Hash = Hash(), Pred = Pred(), Allocator = Allocator())
       -> concurrent_node_set<xref:#concurrent_node_set_iter_value_type[__iter-value-type__]<InputIterator>, Hash, Pred, Allocator>;
 
+  template<xref:#concurrent_node_set_convertible_to_from_range_t[__convertible-to-from-range_t__] FromRangeT,
+           std::ranges::input_range R,
+           class Hash = boost::hash<std::ranges::range_value_t<R>>,
+           class Pred = std::equal_to<std::ranges::range_value_t<R>>,
+           class Allocator = std::allocator<std::ranges::range_value_t<R>>
+    concurrent_node_set(FromRangeT&&, R&&,
+                        typename xref:#concurrent_node_set_deduction_guides[__see below__]::size_type = xref:#concurrent_node_set_deduction_guides[__see below__], Hash = Hash(),
+                        Pred = Pred(), Allocator = Allocator())
+      -> concurrent_node_set<std::ranges::range_value_t<R>, Hash, Pred,Allocator>;
+
   template<class T, class Hash = boost::hash<T>, class Pred = std::equal_to<T>,
            class Allocator = std::allocator<T>>
     concurrent_node_set(std::initializer_list<T>, typename xref:#concurrent_node_set_deduction_guides[__see below__]::size_type = xref:#concurrent_node_set_deduction_guides[__see below__],
@@ -277,6 +310,26 @@ namespace unordered {
       -> concurrent_node_set<xref:#concurrent_node_set_iter_value_type[__iter-value-type__]<InputIterator>, Hash,
                              std::equal_to<xref:#concurrent_node_set_iter_value_type[__iter-value-type__]<InputIterator>>, Allocator>;
 
+  template<xref:#concurrent_node_set_convertible_to_from_range_t[__convertible-to-from-range_t__] FromRangeT,
+           std::ranges::input_range R, class Allocator>
+    concurrent_node_set(FromRangeT&&, R&&, typename xref:#concurrent_node_set_deduction_guides[__see below__]::size_type, Allocator)
+      -> concurrent_node_set<std::ranges::range_value_t<R>,
+                             boost::hash<std::ranges::range_value_t<R>>,
+                             std::equal_to<std::ranges::range_value_t<R>>, Allocator>;
+
+  template<xref:#concurrent_node_set_convertible_to_from_range_t[__convertible-to-from-range_t__] FromRangeT,
+           std::ranges::input_range R, class Allocator>
+    concurrent_node_set(FromRangeT&&, R&&, Allocator)
+      -> concurrent_node_set<std::ranges::range_value_t<R>, 
+                             boost::hash<std::ranges::range_value_t<R>>,
+                             std::equal_to<std::ranges::range_value_t<R>>, Allocator>;
+
+  template<xref:#concurrent_node_set_convertible_to_from_range_t[__convertible-to-from-range_t__] FromRangeT,
+           std::ranges::input_range R, class Hash, class Allocator>
+    concurrent_node_set(FromRangeT&&, R&&, typename xref:#concurrent_node_set_deduction_guides[__see below__]::size_type, Hash,
+                        Allocator)
+      -> concurrent_node_set<std::ranges::range_value_t<R>,
+                             Hash, std::equal_to<std::ranges::range_value_t<R>>, Allocator>;
   template<class T, class Allocator>
     concurrent_node_set(std::initializer_list<T>, typename xref:#concurrent_node_set_deduction_guides[__see below__]::size_type, Allocator)
       -> concurrent_node_set<T, boost::hash<T>, std::equal_to<T>, Allocator>;
@@ -441,6 +494,15 @@ Chunk size internally used in xref:concurrent_node_set_bulk_visit[bulk visit] op
 
 === Constructors
 
+==== __container-compatible-range__
+[listings,subs="+macros,+quotes"]
+-----
+template<class R, class T>
+  concept container_compatible_range =
+    std::ranges::input_range<R> &&
+    std::convertible_to<std::ranges::range_reference_t<R>, T>; // exposition only
+-----
+
 ==== Default Constructor
 ```c++
 concurrent_node_set();
@@ -588,6 +650,27 @@ Complexity:;; O(`bucket_count()`)
 
 ---
 
+==== Range Constructor
+[source,c++,subs="+macros,+quotes"]
+----
+template<class FromRangeT, xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R>
+  concurrent_node_set(FromRangeT&&, R&& rg,
+                      size_type n = _implementation-defined_,
+                      const hasher& hf = hasher(),
+                      const key_equal& eql = key_equal(),
+                      const allocator_type& a = allocator_type());
+----
+
+Constructs an empty table with at least `n` buckets, using `hf` as the hash function, `eql` as the key equality predicate and `a` as the allocator, and inserts the elements from `rg` into it.
+
+Only participates in overload resolution if `FromRangeT` is convertible to `std::from_range_t` or `boost::concurrent::from_range_t`.
+
+
+[horizontal]
+Requires:;; If the defaults are used, `hasher`, `key_equal` and `allocator_type` need to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+
+---
+
 ==== Initializer List Constructor
 [source,c++,subs="+quotes"]
 ----
@@ -654,6 +737,58 @@ Requires:;; `hasher`, `key_equal` need to be https://en.cppreference.com/w/cpp/n
 ----
 
 Constructs an empty table with at least `n` buckets, using `hf` as the hash function, `a` as the allocator, with the default key equality predicate, and inserts the elements from `[f, l)` into it.
+
+[horizontal]
+Requires:;; `key_equal` needs to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+
+---
+
+==== Range Constructor with Allocator
+
+[source,c++,subs="+macros,+quotes"]
+----
+template<class FromRangeT, xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R>
+  concurrent_node_set(FromRangeT&&, R&& rg, const allocator_type& a);
+----
+
+Constructs an empty table using `a` and default hash function and key equality predicate, and inserts the elements from `rg` into it.
+
+Only participates in overload resolution if `FromRangeT` is convertible to `std::from_range_t` or `boost::concurrent::from_range_t`.
+
+[horizontal]
+Requires:;; `hasher` and `key_equal` need to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+
+---
+
+==== Range Constructor with Bucket Count and Allocator
+
+[source,c++,subs="+macros,+quotes"]
+----
+template<class FromRangeT, xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R>
+  concurrent_node_set(FromRangeT&&, R&& rg, size_type n, const allocator_type& a);
+----
+
+Constructs an empty table with at least `n` buckets, using `a` and default hash function and key equality predicate, and inserts the elements from `rg` into it.
+
+Only participates in overload resolution if `FromRangeT` is convertible to `std::from_range_t` or `boost::concurrent::from_range_t`.
+
+[horizontal]
+Requires:;; `hasher` and `key_equal` need to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
+
+---
+
+==== Range Constructor with Bucket Count and Hasher and Allocator
+
+[source,c++,subs="+macros,+quotes"]
+----
+template<class FromRangeT, xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R>
+  concurrent_node_set(FromRangeT&&, R&& rg, size_type n, const hasher& hf,
+                      const allocator_type& a);
+----
+
+Constructs an empty table with at least `n` buckets, using `hf` as the hash function, `a` as the allocator and default key equality predicate, and inserts the elements from `rg` into it.
+
+Only participates in overload resolution if `FromRangeT` is convertible to `std::from_range_t` or `boost::concurrent::from_range_t`.
 
 [horizontal]
 Requires:;; `key_equal` needs to be https://en.cppreference.com/w/cpp/named_req/DefaultConstructible[DefaultConstructible^].
@@ -916,8 +1051,7 @@ size_type size() const noexcept;
 
 [horizontal]
 Returns:;; The number of elements in the table.
-
-[horizontal]
+Complexity:;; Constant time.
 Notes:;; In the presence of concurrent insertion operations, the value returned may not accurately reflect
 the true size of the table right after execution.
 
@@ -1008,6 +1142,25 @@ Equivalent to
 Returns:;; The number of elements inserted.
 
 ---
+
+==== Insert Range
+[source,c++,subs="+macros,+quotes"]
+----
+template<xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R>
+  void insert_range(R&& rg);
+----
+
+Equivalent to
+[listing,subs="+macros,+quotes"]
+-----
+  for(auto&& x: rg) this->xref:#concurrent_node_set_emplace[emplace](std::forward<decltype(x)>(x));
+-----
+
+[horizontal]
+Returns:;; The number of elements inserted.
+
+---
+
 
 ==== Insert Initializer List
 ```c++
@@ -1122,6 +1275,27 @@ Equivalent to
 [listing,subs="+macros,+quotes"]
 -----
   while(first != last) this->xref:#concurrent_node_set_emplace_or_cvisit[emplace_or_[c\]visit](*first++, f);
+-----
+
+[horizontal]
+Returns:;; The number of elements inserted.
+
+---
+
+==== Insert Range or Visit
+[source,c++,subs="+macros,+quotes"]
+----
+template<xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R, class F>
+  size_type insert_range_or_visit(R&& rg, F f);
+template<xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R, class F>
+  size_type insert_range_or_visit(R&& rg, F f);
+----
+
+Equivalent to
+[listing,subs="+macros,+quotes"]
+-----
+  for(auto&& x: rg) 
+    this->xref:#concurrent_node_set_emplace_or_cvisit[emplace_or_[c\]visit](std::forward<decltype(x)>(x), std::ref(f));
 -----
 
 [horizontal]
@@ -1251,6 +1425,28 @@ Equivalent to
 [listing,subs="+macros,+quotes"]
 -----
   while(first != last) this->xref:#concurrent_node_set_emplace_and_cvisit[emplace_and_[c\]visit](*first++, f1, f2);
+-----
+
+[horizontal]
+Returns:;; The number of elements inserted.
+
+---
+
+==== Insert Range and Visit
+[source,c++,subs="+macros,+quotes"]
+----
+template<xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R, class F1, class F2>
+  size_type insert_range_and_visit(R&& rg, F1 f1, F2 f2);
+template<xref:#concurrent_node_set_container_compatible_range[__container-compatible-range__]<value_type> R, class F1, class F2>
+  size_type insert_range_and_cvisit(R&& rg, F1 f1, F2 f2);
+----
+
+Equivalent to
+[listing,subs="+macros,+quotes"]
+-----
+  for(auto&& x: rg)
+    this->xref:#concurrent_node_set_emplace_and_cvisit[emplace_and_[c\]visit](
+      std::forward<decltype(x)>(x), std::ref(f1), std::ref(f2));
 -----
 
 [horizontal]
@@ -1638,6 +1834,16 @@ of the constructor selected.
 template<class InputIterator>
   using __iter-value-type__ =
     typename std::iterator_traits<InputIterator>::value_type; // exposition only
+-----
+
+==== __convertible-to-from-range_t__
+[listings,subs="+macros,+quotes"]
+-----
+template<typename FromRangeT>
+  concept __convertible-to-from_range_t__ =
+    // first clause not present if std::from_range_t does not exist
+    std::is_convertible_v<FromRangeT, std::from_range_t> ||
+    std::is_convertible_v<FromRangeT, boost::unordered::from_range_t>; // exposition only
 -----
 
 === Equality Comparisons

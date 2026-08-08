@@ -9,11 +9,9 @@
 #define BJAM_DEBUG_H
 
 #include "config.h"
+#include "jam_fwd.h"
 #include "constants.h"
-#include "object.h"
 #include "psnip_debug_trap.h"
-#include "output.h"
-
 
 typedef struct profile_info
 {

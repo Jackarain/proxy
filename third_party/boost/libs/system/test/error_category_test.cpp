@@ -8,6 +8,10 @@
 
 // See library home page at http://www.boost.org/libs/system
 
+#if defined(__GNUC__) && __GNUC__ >= 16
+# pragma GCC diagnostic ignored "-Wformat-truncation"
+#endif
+
 #include <boost/system/error_code.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/core/snprintf.hpp>

@@ -2,6 +2,26 @@
 
 = Version history
 
+== Boost 1.92
+
+* New features (`backmp11`):
+** Provide an observer API for logging support (https://github.com/boostorg/msm/issues/220[#220])
+** Forward Kleene events to actions and guards without conversion (https://github.com/boostorg/msm/issues/229[#229])
+** Ensure basic exception guarantee and propagate exceptions to the caller (https://github.com/boostorg/msm/issues/221[#221])
+** Provide a reflection API and serialization support for Boost.Serialization, Boost.JSON and nlohmann/json (https://github.com/boostorg/msm/issues/197[#197])
+** Rework terminate and interrupt state handling and provide a `machine_state` enum (https://github.com/boostorg/msm/issues/244[#244])
+** Configurable event pool and inline storage (https://github.com/boostorg/msm/issues/239[#239])
+** API reference and examples are now available
+* Bug fixes (`backmp11`):
+** State machine processes events although it is not running (https://github.com/boostorg/msm/issues/198[#198])
+* **Breaking changes (`backmp11`)**:
+** Events in `process_event(...)` are not enqueued automatically anymore to reduce memory footprint, use `enqueue_event(...)` in actions (https://github.com/boostorg/msm/issues/178[#178])
+** The back-end does not forward constructor arguments to the front-end anymore, it must be default-constructible. To use custom constructors, define them in the back-end (https://github.com/boostorg/msm/issues/232[#232])
+** The deprecated APIs `process_queued_events()` and `process_single_queued_event()` are removed, use `process_event_pool(...)` instead
+** The default active state switch policy is set to "after source exit" in compliance to the UML specification. The other options are not UML-compliant and will be removed (https://github.com/boostorg/msm/issues/222[#222])
+** The back-end uses its own `process_result` type with new enum values instead of aliasing the enum of the `back` namespace. The old enum values are deprecated (https://github.com/boostorg/msm/issues/242[#242]) and will be removed
+* fix(back, back11): Infinite recursion with event deferral in orthogonal regions (regression from 1.78) (https://github.com/boostorg/msm/issues/184[#184])
+
 == Boost 1.91
 
 * New features (`backmp11`):

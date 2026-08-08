@@ -1,0 +1,349 @@
+# ------------------------------------------------------------------------------
+#  Copyright Matt Borland 2026.
+#  Distributed under the Boost Software License,
+#  Version 1.0. (See accompanying file LICENSE_1_0.txt
+#  or copy at http://www.boost.org/LICENSE_1_0.txt)
+# ------------------------------------------------------------------------------
+#
+# Runs the Boost.Decimal benchmarks (test/benchmarks.cpp) in release mode on a
+# spread of native runners so that performance numbers, and any regressions in
+# them, are captured on every run. The benchmark target is a run-fail test that
+# always returns non-zero, so b2 reports success and the timing output is read
+# back from the captured .output file.
+
+name: Run Benchmarks
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - feature/**
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ format('{0}:{1}:benchmarks', github.repository, github.ref) }}
+  cancel-in-progress: true
+
+env:
+  GIT_FETCH_JOBS: 8
+
+jobs:
+  linux:
+    name: Linux GCC ${{ matrix.address_model }}-bit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        address_model: [ 32, 64 ]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-14 g++-14-multilib gcc-14
+          # The Intel libbid makefile only accepts CC names icx/icc/icl/gcc/cl/cc/clang,
+          # so expose gcc-14 under the plain name gcc (and use its 32-bit multilib).
+          sudo ln -sf /usr/bin/gcc-14 /usr/local/bin/gcc
+      - name: Setup Boost
+        run: |
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          BOOST_BRANCH=develop && [ "$REF" = "master" ] && BOOST_BRANCH=master || true
+          echo "BOOST_BRANCH: $BOOST_BRANCH"
+          cd ..
+          git clone -b "$BOOST_BRANCH" --depth 1 "https://github.com/boostorg/boost.git" boost-root
+          cd boost-root
+          mkdir -p libs/$LIBRARY
+          cp -r "$GITHUB_WORKSPACE"/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs $GIT_FETCH_JOBS" $LIBRARY
+          ./bootstrap.sh
+          ./b2 headers
+          echo "using gcc : : g++-14 ;" > ~/user-config.jam
+      - name: Run benchmarks (release)
+        run: |
+          cd ../boost-root
+          ./b2 -j$(nproc) toolset=gcc cxxstd=20 variant=release address-model=${{ matrix.address_model }} \
+            define=BOOST_DECIMAL_RUN_BENCHMARKS libs/$LIBRARY/test//benchmarks
+          echo "==================== Benchmark results (Linux GCC ${{ matrix.address_model }}-bit) ===================="
+          find bin.v2 -path '*release*' -name 'benchmarks.output' -exec cat {} +
+          find bin.v2 -path '*release*' -name 'benchmarks.output' -exec cp {} "$GITHUB_WORKSPACE/benchmarks-linux-gcc-${{ matrix.address_model }}-bit.txt" \;
+      - name: Upload benchmark output
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: benchmarks-linux-gcc-${{ matrix.address_model }}-bit
+          path: benchmarks-linux-gcc-${{ matrix.address_model }}-bit.txt
+          if-no-files-found: warn
+      # The Intel Decimal Floating-Point Math Library (libbid) supports IA-32 and
+      # Intel x64, so it is benchmarked on both the 32-bit and 64-bit GCC builds.
+      # The netlib tarball is cached, so it is fetched at most once per cache window.
+      - name: Cache Intel RDFP tarball
+        uses: actions/cache@v6
+        with:
+          path: intel-rdfp.tar.gz
+          key: intel-rdfp-IntelRDFPMathLib20U4
+      - name: Build and run Intel libbid benchmark (release)
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          MARCH=""
+          if [ "${{ matrix.address_model }}" = "32" ]; then MARCH="-m32"; fi
+          if [ ! -f intel-rdfp.tar.gz ]; then
+            curl -fL --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --max-time 600 \
+              -o intel-rdfp.tar.gz https://www.netlib.org/misc/intel/IntelRDFPMathLib20U4.tar.gz
+          fi
+          mkdir -p intel-rdfp
+          tar xzf intel-rdfp.tar.gz -C intel-rdfp
+          mv intel-rdfp/LIBRARY ./LIBRARY
+          ( cd LIBRARY && make CC="gcc $MARCH" CALL_BY_REF=0 GLOBAL_RND=0 GLOBAL_FLAGS=0 UNCHANGED_BINARY_FLAGS=0 -j"$(nproc)" )
+          gcc $MARCH test/benchmark_libbid.c -O3 -std=c17 LIBRARY/libbid.a -o benchmark_libbid -lm
+          echo "==================== Intel libbid results (Linux GCC ${{ matrix.address_model }}-bit) ===================="
+          ./benchmark_libbid | tee "benchmarks-libbid-linux-gcc-${{ matrix.address_model }}-bit.txt"
+      - name: Upload Intel libbid benchmark output
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: benchmarks-libbid-linux-gcc-${{ matrix.address_model }}-bit
+          path: benchmarks-libbid-linux-gcc-${{ matrix.address_model }}-bit.txt
+          if-no-files-found: warn
+      # The GCC _Decimal32/64/128 types (benchmark_libdfp.c) are a GCC-only
+      # extension, benchmarked on both the 32-bit and 64-bit GCC builds.
+      - name: Build and run GCC _Decimal benchmark (release)
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          MARCH=""
+          if [ "${{ matrix.address_model }}" = "32" ]; then MARCH="-m32"; fi
+          gcc $MARCH test/benchmark_libdfp.c -O3 -std=c17 -o benchmark_libdfp
+          echo "==================== GCC _Decimal results (Linux GCC ${{ matrix.address_model }}-bit) ===================="
+          ./benchmark_libdfp | tee "benchmarks-libdfp-linux-gcc-${{ matrix.address_model }}-bit.txt"
+      - name: Upload GCC _Decimal benchmark output
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: benchmarks-libdfp-linux-gcc-${{ matrix.address_model }}-bit
+          path: benchmarks-libdfp-linux-gcc-${{ matrix.address_model }}-bit.txt
+          if-no-files-found: warn
+
+  windows:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64 MSVC
+            os: windows-latest
+            arch: x64
+          - name: Windows ARM64 MSVC
+            os: windows-11-arm
+            arch: arm64
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Boost
+        run: |
+          for /f %%i in ("%GITHUB_REPOSITORY%") do set LIBRARY=%%~nxi
+          echo LIBRARY=%LIBRARY%>>%GITHUB_ENV%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% libs\%LIBRARY%\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs 3" %LIBRARY%
+          cmd /c bootstrap
+          b2 -d0 headers
+      - name: Run benchmarks (release)
+        run: |
+          cd ../boost-root
+          b2 -j3 libs/%LIBRARY%/test//benchmarks toolset=msvc cxxstd=latest address-model=64 variant=release define=BOOST_DECIMAL_RUN_BENCHMARKS embed-manifest-via=linker || exit /b 1
+          echo ==================== Benchmark results (%RUNNER_OS% %RUNNER_ARCH%) ====================
+          for /f "delims=" %%f in ('dir /s /b bin.v2\benchmarks.output 2^>nul') do @type "%%f"
+          for /f "delims=" %%f in ('dir /s /b bin.v2\benchmarks.output 2^>nul') do @copy /y "%%f" "%GITHUB_WORKSPACE%\benchmarks-windows-${{ matrix.arch }}.txt" >nul
+          exit /b 0
+      - name: Upload benchmark output
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: benchmarks-windows-${{ matrix.arch }}
+          path: benchmarks-windows-${{ matrix.arch }}.txt
+          if-no-files-found: warn
+      # The Intel Decimal Floating-Point Math Library (libbid) only supports
+      # IA-32, IA-64 and Intel x64, so it is benchmarked on the x64 runner only,
+      # matching the "x64 Windows" Intel results in the benchmarks documentation.
+      # The netlib tarball is cached, so it is fetched at most once per cache window.
+      - name: Cache Intel RDFP tarball
+        if: ${{ matrix.arch == 'x64' }}
+        uses: actions/cache@v6
+        with:
+          path: intel-rdfp.tar.gz
+          key: intel-rdfp-IntelRDFPMathLib20U4
+      - name: Build and run Intel libbid benchmark (release)
+        if: ${{ matrix.arch == 'x64' }}
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSPATH=%%i"
+          call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          cd /d "%GITHUB_WORKSPACE%"
+          if not exist intel-rdfp.tar.gz curl -fL --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o intel-rdfp.tar.gz https://www.netlib.org/misc/intel/IntelRDFPMathLib20U4.tar.gz
+          if not exist intel-rdfp.tar.gz exit /b 1
+          tar -xzf intel-rdfp.tar.gz || exit /b 1
+          cd LIBRARY
+          nmake -fmakefile.mak CC=cl CALL_BY_REF=0 GLOBAL_RND=0 GLOBAL_FLAGS=0 UNCHANGED_BINARY_FLAGS=0 || exit /b 1
+          cd ..
+          cl test\benchmark_libbid.c /O2 /std:c17 /Fe:benchmark_libbid.exe LIBRARY\libbid.lib || exit /b 1
+          echo ==================== Intel libbid results (Windows x64) ====================
+          benchmark_libbid.exe > benchmarks-libbid-windows-x64.txt
+          type benchmarks-libbid-windows-x64.txt
+      - name: Upload Intel libbid benchmark output
+        if: ${{ always() && matrix.arch == 'x64' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: benchmarks-libbid-windows-x64
+          path: benchmarks-libbid-windows-x64.txt
+          if-no-files-found: warn
+
+  # Reproduces the "Intel Compiler" x64 Linux benchmarks: the Boost.Decimal
+  # types via benchmarks.cpp built with icpx, and the Intel BID rows via libbid
+  # and benchmark_libbid.c built with icx. icpx/icx are the LLVM-based Intel
+  # oneAPI compilers.
+  linux-intel:
+    name: Linux Intel oneAPI icx/icpx 64-bit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - name: Intel Apt repository
+        timeout-minutes: 1
+        run: |
+          wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+          sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+          rm GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+          echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt-get update
+      - name: Install Intel oneAPI compiler
+        timeout-minutes: 5
+        run: sudo apt-get install -y intel-oneapi-compiler-dpcpp-cpp
+      - name: Setup Intel oneAPI environment
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          printenv >> $GITHUB_ENV
+      - name: Setup Boost
+        run: |
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          BOOST_BRANCH=develop && [ "$REF" = "master" ] && BOOST_BRANCH=master || true
+          echo "BOOST_BRANCH: $BOOST_BRANCH"
+          cd ..
+          git clone -b "$BOOST_BRANCH" --depth 1 "https://github.com/boostorg/boost.git" boost-root
+          cd boost-root
+          mkdir -p libs/$LIBRARY
+          cp -r "$GITHUB_WORKSPACE"/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args "--jobs $GIT_FETCH_JOBS" $LIBRARY
+          ./bootstrap.sh
+          ./b2 headers
+          # icpx is the LLVM/clang-based Intel oneAPI compiler, so drive it through
+          # b2's clang toolset rather than the legacy intel-linux (icc) toolset.
+          echo "using clang : intel : icpx ;" > ~/user-config.jam
+      - name: Run Boost.Decimal benchmarks (icpx, release)
+        run: |
+          cd ../boost-root
+          ./b2 -j$(nproc) toolset=clang-intel cxxstd=20 variant=release address-model=64 \
+            define=BOOST_DECIMAL_RUN_BENCHMARKS libs/$LIBRARY/test//benchmarks
+          echo "==================== Benchmark results (Linux icpx 64-bit) ===================="
+          find bin.v2 -path '*release*' -name 'benchmarks.output' -exec cat {} +
+          find bin.v2 -path '*release*' -name 'benchmarks.output' -exec cp {} "$GITHUB_WORKSPACE/benchmarks-linux-icpx-64-bit.txt" \;
+      - name: Upload Boost.Decimal benchmark output
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: benchmarks-linux-icpx-64-bit
+          path: benchmarks-linux-icpx-64-bit.txt
+          if-no-files-found: warn
+      - name: Cache Intel RDFP tarball
+        uses: actions/cache@v6
+        with:
+          path: intel-rdfp.tar.gz
+          key: intel-rdfp-IntelRDFPMathLib20U4
+      - name: Build and run Intel libbid benchmark (icx, release)
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          if [ ! -f intel-rdfp.tar.gz ]; then
+            curl -fL --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 --max-time 600 \
+              -o intel-rdfp.tar.gz https://www.netlib.org/misc/intel/IntelRDFPMathLib20U4.tar.gz
+          fi
+          mkdir -p intel-rdfp
+          tar xzf intel-rdfp.tar.gz -C intel-rdfp
+          mv intel-rdfp/LIBRARY ./LIBRARY
+          ( cd LIBRARY && make CC=icx CALL_BY_REF=0 GLOBAL_RND=0 GLOBAL_FLAGS=0 UNCHANGED_BINARY_FLAGS=0 -j"$(nproc)" )
+          icx test/benchmark_libbid.c -O3 -std=c17 LIBRARY/libbid.a -o benchmark_libbid -lm
+          echo "==================== Intel libbid results (Linux icx 64-bit) ===================="
+          ./benchmark_libbid | tee "benchmarks-libbid-linux-icx-64-bit.txt"
+      - name: Upload Intel libbid benchmark output
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: benchmarks-libbid-linux-icx-64-bit
+          path: benchmarks-libbid-linux-icx-64-bit.txt
+          if-no-files-found: warn
+
+  # Generates the "ARM64 macOS" benchmarks on the GitHub Actions macos-latest
+  # (Apple Silicon) runner. There is no Intel libbid build here: the Intel
+  # Decimal Floating-Point Math Library only supports IA-32, IA-64 and Intel x64.
+  macos:
+    name: macOS ARM64 Clang
+    runs-on: macos-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Boost
+        run: |
+          LIBRARY=${GITHUB_REPOSITORY#*/}
+          echo "LIBRARY=$LIBRARY" >> $GITHUB_ENV
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          BOOST_BRANCH=develop && [ "$REF" = "master" ] && BOOST_BRANCH=master || true
+          echo "BOOST_BRANCH: $BOOST_BRANCH"
+          cd ..
+          git clone -b "$BOOST_BRANCH" --depth 1 "https://github.com/boostorg/boost.git" boost-root
+          cd boost-root
+          mkdir -p libs/$LIBRARY
+          cp -r "$GITHUB_WORKSPACE"/* libs/$LIBRARY
+          git submodule update --init tools/boostdep
+          python3 tools/boostdep/depinst/depinst.py --git_args "--jobs $GIT_FETCH_JOBS" $LIBRARY
+          ./bootstrap.sh
+          ./b2 headers
+      - name: Run benchmarks (release)
+        run: |
+          cd ../boost-root
+          ./b2 -j$(sysctl -n hw.ncpu) toolset=clang cxxstd=20 variant=release \
+            define=BOOST_DECIMAL_RUN_BENCHMARKS libs/$LIBRARY/test//benchmarks
+          echo "==================== Benchmark results (macOS ARM64 Clang) ===================="
+          find bin.v2 -path '*release*' -name 'benchmarks.output' -exec cat {} +
+          find bin.v2 -path '*release*' -name 'benchmarks.output' -exec cp {} "$GITHUB_WORKSPACE/benchmarks-macos-arm64.txt" \;
+      - name: Upload benchmark output
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: benchmarks-macos-arm64
+          path: benchmarks-macos-arm64.txt
+          if-no-files-found: warn

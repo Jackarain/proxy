@@ -143,6 +143,27 @@
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Decide whether to support C++23
+//
+#if !defined(BOOST_WAVE_SUPPORT_CPP2B)
+#  define BOOST_WAVE_SUPPORT_CPP2B 1
+#  undef BOOST_WAVE_SUPPORT_CPP2A
+#  define BOOST_WAVE_SUPPORT_CPP2A 1
+#  undef BOOST_WAVE_SUPPORT_CPP0X
+#  define BOOST_WAVE_SUPPORT_CPP0X 1
+#  undef BOOST_WAVE_SUPPORT_VARIADICS_PLACEMARKERS
+#  define BOOST_WAVE_SUPPORT_VARIADICS_PLACEMARKERS 1
+#  undef BOOST_WAVE_SUPPORT_CPP1Z
+#  define BOOST_WAVE_SUPPORT_CPP1Z 1
+#  if !defined(BOOST_WAVE_SUPPORT_HAS_INCLUDE)
+#    define BOOST_WAVE_SUPPORT_HAS_INCLUDE 1
+#  endif
+#  if !defined(BOOST_WAVE_SUPPORT_VA_OPT)
+#    define BOOST_WAVE_SUPPORT_VA_OPT 1
+#  endif
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
 //  Undefine the following, to enable some MS specific language extensions:
 //  __int8, __int16, __int32, __int64, __based, __declspec, __cdecl,
 //  __fastcall, __stdcall, __try, __except, __finally, __leave, __inline,

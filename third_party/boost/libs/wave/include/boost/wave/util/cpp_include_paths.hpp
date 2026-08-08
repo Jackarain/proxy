@@ -178,6 +178,24 @@ private:
     boost::filesystem::path current_dir;
     boost::filesystem::path current_rel_dir;
 
+    bool may_be_includable(const boost::filesystem::path& p) const
+    {
+        namespace fs = boost::filesystem;
+        if (!fs::exists(p) || fs::is_directory(p)) {
+            return false;
+        }
+        if (fs::is_symlink(p)) {
+            boost::system::error_code ec;
+            fs::file_status target = fs::status(p, ec);
+            if (ec || !fs::exists(target) || fs::is_directory(target)) {
+                return false;
+            }
+            return true;
+        } else {
+            return true;
+        }
+    }
+
 #if BOOST_WAVE_SUPPORT_PRAGMA_ONCE != 0
 public:
     bool has_pragma_once(std::string const &filename)
@@ -328,7 +346,7 @@ bool include_paths::find_include_file (std::string &s, std::string &dir,
             currpath /= create_path(s);      // append filename
         }
 
-        if (fs::exists(currpath)) {
+        if (may_be_includable(currpath)) {
             fs::path dirpath (create_path(s));
             if (!dirpath.has_root_directory()) {
                 dirpath = create_path((*it).second);
@@ -362,7 +380,7 @@ include_paths::find_include_file (std::string &s, std::string &dir,
                 currpath /= create_path(s);
             }
 
-            if (fs::exists(currpath) && 0 == current_file) {
+            if (0 == current_file && may_be_includable(currpath)) {
                 // if 0 != current_path (#include_next handling) it can't be
                 // the file in the current directory
                 fs::path dirpath(create_path(s));

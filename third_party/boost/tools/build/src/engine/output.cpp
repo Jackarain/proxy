@@ -7,6 +7,9 @@
 #include "jam.h"
 #include "output.h"
 
+#include "object.h"
+#include "timestamp.h"
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <errno.h>

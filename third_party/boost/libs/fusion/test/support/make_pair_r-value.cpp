@@ -6,19 +6,21 @@
 
 #include <boost/fusion/support/pair.hpp>
 
-struct noncopyable_type {
+struct noncopyable_type
+{
+    noncopyable_type() = default;
+
     noncopyable_type(const noncopyable_type &) = delete;
     noncopyable_type& operator=(const noncopyable_type &) = delete;
-#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+
     noncopyable_type(noncopyable_type &&) = default;
-    noncopyable_type& operaotr=(noncopyable_type &&) = default;
-#endif
+    noncopyable_type& operator=(noncopyable_type &&) = default;
 };
 
-int main() {
+int main()
+{
     using namespace boost::fusion;
 
     pair<int, noncopyable_type> val = make_pair<int>(noncopyable_type{});
-
-    return 0;
+    (void)val;
 }

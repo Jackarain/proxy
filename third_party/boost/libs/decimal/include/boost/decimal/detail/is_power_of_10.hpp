@@ -14,7 +14,7 @@ namespace decimal {
 namespace detail {
 
 template <typename T>
-constexpr auto is_power_of_10(const T x) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR auto is_power_of_10(const T x) noexcept
     BOOST_DECIMAL_REQUIRES_RETURN(detail::is_unsigned_v, T, bool)
 {
     const auto removed_zeros {detail::remove_trailing_zeros(x)};

@@ -37,11 +37,11 @@ struct mutex
   }
 };
 
-mutex m;
+mutex g_mutex;
 
 int main()
 {
-  boost::unique_lock<mutex> lk(m, boost::defer_lock);
+  boost::unique_lock<mutex> lk(g_mutex, boost::defer_lock);
   BOOST_TEST(lk.try_lock() == true);
   BOOST_TEST(try_lock_called == true);
   BOOST_TEST(lk.owns_lock() == true);

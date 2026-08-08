@@ -42,17 +42,71 @@ namespace boost{
 namespace container {
 namespace test{
 
-template<class Vector>
-struct vector_has_function_capacity
-{
-   typedef typename Vector::size_type size_type;
-   template <typename U, size_type (U::*)() const> struct Check;
-   template <typename U> static char func(Check<U, &U::capacity> *);
-   template <typename U> static int func(...);
 
-   public:
-   static const bool value = sizeof(func<Vector>(0)) == sizeof(char);
-};
+#define BOOST_VECTOR_TEST_HAS_MEMBER_FUNC(FUNC) \
+ \
+template<class T> \
+struct vector_has_function_##FUNC \
+{ \
+   typedef char yes[1]; \
+   typedef char no[2]; \
+  \
+   struct fallback { int FUNC; }; \
+   struct derived : T, fallback {}; \
+  \
+   template <typename U, U> \
+   struct check; \
+  \
+   template <typename U> \
+   static no& test(check<int fallback::*, &U::FUNC>*); \
+  \
+   template <typename U> \
+   static yes& test(...); \
+  \
+   static const bool value = sizeof(test<derived>(0)) == sizeof(yes); \
+}; \
+//
+
+BOOST_VECTOR_TEST_HAS_MEMBER_FUNC(capacity)
+BOOST_VECTOR_TEST_HAS_MEMBER_FUNC(unchecked_push_back)
+
+template<class V1, class V2>
+bool vector_unchecked_push_back_test(V1&, V2&, boost::container::dtl::false_type)
+{
+   return true;
+}
+
+template<class MyBoostVector, class MyStdVector>
+bool vector_unchecked_push_back_test(MyBoostVector& , MyStdVector& , boost::container::dtl::true_type)
+{
+   typedef typename MyBoostVector::value_type IntType;
+
+   MyBoostVector bv;
+   MyStdVector sv;
+
+   bv.reserve(10);
+   sv.reserve(10);
+
+   for (std::size_t i = 0, max = bv.capacity(); i < max; ++i) {
+      bv.unchecked_push_back(IntType((int)i));
+      sv.push_back((int)i);
+   }
+
+   if(!test::CheckEqualContainers(bv, sv)) return false;
+
+   bv.clear();
+   sv.clear();
+
+   for (std::size_t i = 0, max = bv.capacity(); i < max; ++i) {
+      IntType move_me((int)i);
+      bv.unchecked_push_back(boost::move(move_me));
+      sv.push_back((int)i);
+   }
+
+   if(!test::CheckEqualContainers(bv, sv)) return false;
+
+   return true;
+}
 
 template<class V1, class V2>
 bool vector_capacity_test(V1&, V2&, boost::container::dtl::false_type)
@@ -94,19 +148,20 @@ bool vector_capacity_test(MyBoostVector&boostvector, MyStdVector&stdvector, boos
       const std::size_t sz = a.size();
       const std::size_t cap = a.capacity();
 
-      a.resize(1000);
+      a.resize(sz);
+      b.resize(sz/10);
       a.swap(b);
-      if( !(b.capacity() == cap) ) return false;
+      if( !(b.capacity() >= cap) ) return false;
       if( !(b.size() == sz) ) return false;
-      if( !(a.capacity() != cap) ) return false;
-      if( !(a.empty()) ) return false;
+      if( !(a.capacity() >= cap/10) ) return false;
+      if( !(a.size() == sz/10) ) return false;
 
       a.swap(b);
 
-      if( !(a.capacity() == cap) ) return false;
+      if( !(a.capacity() >= cap) ) return false;
       if( !(a.size() == sz) ) return false;
-      if( !(b.capacity() != cap) ) return false;
-      if( !(b.empty()) ) return false;
+      if( !(b.capacity() >= cap/10) ) return false;
+      if( !(b.size() == sz/10) ) return false;
    }
 
    return true;
@@ -287,6 +342,9 @@ bool vector_copyable_only(MyBoostVector &boostvector, MyStdVector &stdvector, bo
       bcopy2 = boostvector;
       scopy2 = stdvector;
       if(!test::CheckEqualContainers(bcopy2, scopy2)) return false;
+
+      if(!vector_unchecked_push_back_test(boostvector, stdvector, dtl::bool_<vector_has_function_unchecked_push_back<MyBoostVector>::value>()))
+         return 1;
    }
 
    return true;

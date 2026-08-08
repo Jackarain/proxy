@@ -23,9 +23,6 @@
 #include <boost/thread/future.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::mutex m0;
-boost::mutex m1;
-
 int main()
 {
   {

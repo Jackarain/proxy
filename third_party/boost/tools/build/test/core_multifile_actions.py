@@ -133,30 +133,6 @@ updating x2 x3
 ...updated 3 targets...
 """)
 
-# JAM_SEMAPHORE rules:
-#
-# - if two updating actions have targets that share a semaphore,
-#   these actions cannot be run in parallel.
-#
-t.write("file.jam", """\
-actions update
-{
-    echo updating $(<)
-}
-
-targets = x1 x2 ;
-JAM_SEMAPHORE on $(targets) = <s>update_sem ;
-update x1 x2 ;
-""")
-t.run_build_system(["-ffile.jam", "x1"], stdout="""\
-...found 2 targets...
-...updating 2 targets...
-update x1
-updating x1 x2
-
-...updated 2 targets...
-""")
-
 # A target can appear multiple times in an action
 t.write("file.jam", """\
 actions update
@@ -205,7 +181,5 @@ updating x4 x3 : s5
 
 ...updated 4 targets...
 """)
-
-
 
 t.cleanup()

@@ -23,6 +23,7 @@ endif()
 file(GLOB_RECURSE BOOST_JSON_TESTS_FILES CONFIGURE_DEPENDS Jamfile *.cpp *.hpp)
 list(FILTER BOOST_JSON_TESTS_FILES EXCLUDE REGEX cmake_install_test/.*$)
 list(FILTER BOOST_JSON_TESTS_FILES EXCLUDE REGEX cmake-subdir/.*$)
+list(FILTER BOOST_JSON_TESTS_FILES EXCLUDE REGEX header_only\.cpp$)
 list(FILTER BOOST_JSON_TESTS_FILES EXCLUDE REGEX intrusive_macros\.cpp$)
 list(FILTER BOOST_JSON_TESTS_FILES EXCLUDE REGEX limits\.cpp$)
 list(FILTER BOOST_JSON_TESTS_FILES EXCLUDE REGEX no_exceptions\.cpp$)
@@ -54,6 +55,12 @@ target_compile_definitions(boost_json-limits PRIVATE
 add_test(NAME boost_json-limits COMMAND boost_json-limits)
 add_dependencies(tests boost_json-limits)
 
+add_executable(boost_json-header_only ${EXCLUDE_TESTS_FROM_ALL} header_only.cpp Jamfile)
+boost_json_setup_properties(boost_json-header_only)
+
+add_test(NAME boost_json-header_only COMMAND boost_json-header_only)
+add_dependencies(tests boost_json-header_only)
+
 add_executable(boost_json-no_exceptions ${EXCLUDE_TESTS_FROM_ALL} no_exceptions.cpp main.cpp ../src/src.cpp Jamfile)
 boost_json_setup_properties(boost_json-no_exceptions)
 
@@ -79,7 +86,7 @@ target_compile_definitions(boost_json-intrusive-macro-tests PRIVATE
 add_test(NAME boost_json-intrusive-macro-tests COMMAND boost_json-intrusive-macro-tests)
 add_dependencies(tests boost_json-intrusive-macro-tests)
 
-if(BoostPrettyPrinters_HAS_GDB)
+if(BoostPrettyPrinters_HAS_GDB AND (CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
     boost_pretty_printers_test_gdb_printers(
         TEST boost_json_test_gdb_printers
         SOURCES printers.cpp

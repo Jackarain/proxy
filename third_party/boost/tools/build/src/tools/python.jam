@@ -19,7 +19,6 @@ import type ;
 import testing ;
 import generators ;
 import project ;
-import errors ;
 import targets ;
 import "class" : new ;
 import os ;
@@ -27,15 +26,12 @@ import common ;
 import toolset ;
 import regex ;
 import numbers ;
-import string ;
-import property ;
 import sequence ;
 import path ;
 import feature ;
-import set ;
-import builtin ;
 import property-set ;
 import args ;
+import version ;
 
 
 # Make this module a project.
@@ -174,7 +170,7 @@ local rule is-cygwin-symlink ( path )
         local base-pat = [ regex.escape $(path:D=) : "].[()*+?|\\$^" : \\ ] ;
 
         # Extract the file's size from the directory listing.
-        local size-of-system-file = [ MATCH "([0-9]+) "$(base-pat) : $(dir-listing) : 1 ] ;
+        local size-of-system-file = [ MATCH "([0-9]+) "$(base-pat) : $(dir-listing) ] ;
 
         # If the file has a reasonably small size, look for the special symlink
         # identification text.
@@ -183,10 +179,7 @@ local rule is-cygwin-symlink ( path )
             local link = [ SHELL "FIND /OFF \"!<symlink>\" \""$(path)"\" 2>&1" ] ;
             if $(link[2]) != 0
             {
-                local nl = "
-
-" ;
-                is-symlink = [ MATCH ".*!<symlink>([^"$(nl)"]*)" : $(link[1]) : 1 ] ;
+                is-symlink = [ MATCH "!<symlink>([^\r\n]*)" : $(link[1]) ] ;
                 if $(is-symlink)
                 {
                     is-symlink = [ *nix-path-to-native $(is-symlink) ] ;
@@ -287,7 +280,7 @@ local rule windows-to-cygwin-path ( path )
     local p = [ SUBST $(path:T) $(.windows-drive-letter-re) /cygdrive/$1/$2 ] ;
 
     # Else if path is rooted without a drive letter, use the working directory.
-    p ?= [ SUBST $(path:T) ^/(.*) /cygdrive/$(.working-drive-letter:L)/$2 ] ;
+    p ?= [ SUBST $(path:T) ^/(.*) /cygdrive/$(.working-drive-letter:L)/$1 ] ;
 
     # Else return the path unchanged.
     return $(p:E=$(path:T)) ;
@@ -396,7 +389,7 @@ local rule path-to-native ( paths * )
 #
 local rule split-version ( version )
 {
-    local major-minor = [ MATCH "^([0-9]+)\.([0-9]+)(.*)$" : $(version) : 1 2 3 ] ;
+    local major-minor = [ MATCH "^([0-9]+)\\.([0-9]+)(.*)$" : $(version) ] ;
     if ! $(major-minor[2]) || $(major-minor[3])
     {
         ECHO "Warning: \"using python\" expects a two part (major, minor) version number; got" $(version) instead ;
@@ -416,7 +409,7 @@ local rule split-version ( version )
 .version-countdown = ;
 for local v in [ numbers.range 15 34 ]
 {
-    .version-countdown = [ SUBST $(v) (.)(.*) $1.$2 ] $(.version-countdown) ;
+    .version-countdown = [ SUBST $(v) (.)(.+) $1.$2 ] $(.version-countdown) ;
 }
 
 
@@ -504,14 +497,11 @@ local rule probe ( python-cmd )
         if $(output)
         {
             # Parse the output to get all the results.
-            local nl = "
-
-" ;
             for s in $(sys-elements)
             {
                 # These variables are expected to be declared local in the
                 # caller, so Jam's dynamic scoping will set their values there.
-                sys.$(s) = [ SUBST $(output) "\\<$(s)=([^$(nl)]+)" $1 ] ;
+                sys.$(s) = [ SUBST $(output) "\\<$(s)=([^\r\n]+)" $1 ] ;
             }
         }
         return $(output) ;
@@ -626,6 +616,49 @@ local rule candidate-interpreters ( version ? : prefix ? : target-os )
 }
 
 
+# Starting with GNU libc 2.34 libpthread, libdl, libutil, and libanl have been
+# merged into main library, so they could be no more available (fix issue #456)
+local rule gcc-use-libutil ( )
+{
+    local glibc ;
+    if [ feature.values <toolset> ] = gcc
+    {
+        debug-message Checking glibc (ldd) version... ;
+        # Determine ldd presence, on Linux/*BSD this is a shell script
+        # while on Cygwin/MSYS2 is an executable
+        local ldd = [ common.find-tool ldd ] ;
+        if $(ldd)
+        {
+            # Use ldd to determine the libc version, assuming
+            # that GNU ldd has the same version than libc
+            local ldd_version = [ shell-cmd $(ldd)" --version" ] ;
+            ldd_version ?= "" ;
+            local output = [ SPLIT_BY_CHARACTERS $(ldd_version) : "\r\n" ] ;
+            debug-message found ldd '$(output[1])' ;
+            glibc = [ MATCH "([0-9.]+)$" : $(output[1]) ] ;
+            if $(glibc)
+            {
+                debug-message found glibc $(glibc) ;
+                glibc = [ SPLIT_BY_CHARACTERS $(glibc) : . ] ;
+            }
+            else
+            {
+                debug-message cannot determine glibc version ;
+            }
+        }
+        else
+        {
+            debug-message cannot find ldd ;
+        }
+    }
+    # If cannot determine the libc version or libc < 2.34 must
+    # add "<library>util" to the usage requirements for gcc toolset
+    if ! $(glibc) || [ version.version-less $(glibc) : 2 34 ]
+    {
+        return <toolset>gcc:<library>util ;
+    }
+}
+
 # Compute system library dependencies for targets linking with static Python
 # libraries.
 #
@@ -679,7 +712,7 @@ local rule system-library-dependencies ( target-os )
         case aix : return  <library>pthread <library>dl ;
 
         case * : return  <library>pthread <library>dl
-            <toolset>gcc:<library>util <toolset-intel:platform>linux:<library>util ;
+            [ gcc-use-libutil ] <toolset-intel:platform>linux:<library>util ;
     }
 }
 
@@ -1173,8 +1206,6 @@ type.register RUN_PYD : : TEST ;
 
 class python-test-generator : generator
 {
-    import set ;
-
     rule __init__ ( * : * )
     {
         generator.__init__ $(1) : $(2) : $(3) : $(4) : $(5) : $(6) : $(7) : $(8) : $(9) ;

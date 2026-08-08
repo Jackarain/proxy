@@ -10,13 +10,13 @@
 
 #include "../example/b2_workarounds.hpp"
 
-#include <boost/dll/smart_library.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/variant.hpp>
 
 #include <iostream>
 
+#include <boost/dll/smart_library.hpp>
 
 struct override_class {};
 
@@ -24,7 +24,7 @@ struct override_class {};
 int main(int argc, char* argv[])
 {
     using namespace boost::dll;
-    using mangled_storage = detail::mangled_storage_impl;
+    using mangled_storage = boost::dll::experimental::smart_library::mangled_storage;
 
     boost::dll::fs::path pt = b2_workarounds::first_lib_from_argv(argc, argv);
 

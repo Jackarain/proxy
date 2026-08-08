@@ -4,10 +4,10 @@ add_library(boost_redis_project_options INTERFACE)
 target_link_libraries(boost_redis_project_options INTERFACE boost_redis)
 if (MSVC)
   # C4459: name hides outer scope variable is issued by Asio
-  target_compile_options(boost_redis_project_options INTERFACE /bigobj /W4 /WX /wd4459)
+  target_compile_options(boost_redis_project_options INTERFACE /bigobj /W4 /wd4459)
   target_compile_definitions(boost_redis_project_options INTERFACE _WIN32_WINNT=0x0601 _CRT_SECURE_NO_WARNINGS=1)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_compile_options(boost_redis_project_options INTERFACE -Wall -Wextra -Werror)
+  target_compile_options(boost_redis_project_options INTERFACE -Wall -Wextra)
 endif()
 
 add_library(boost_redis_src STATIC boost_redis.cpp)
@@ -15,92 +15,66 @@ target_link_libraries(boost_redis_src PRIVATE boost_redis_project_options)
 
 # Test utils
 add_library(boost_redis_tests_common STATIC common.cpp sansio_utils.cpp)
-target_link_libraries(boost_redis_tests_common PRIVATE boost_redis_project_options)
+target_link_libraries(boost_redis_tests_common PUBLIC boost_redis_project_options boost_redis_src)
+target_compile_definitions(boost_redis_tests_common INTERFACE BOOST_ALLOW_DEPRECATED=1) # we need to still test deprecated fns
 
-macro(make_test TEST_NAME)
+function(boost_redis_make_test TEST_NAME)
   set(EXE_NAME "boost_redis_${TEST_NAME}")
   add_executable(${EXE_NAME} ${TEST_NAME}.cpp)
-  target_link_libraries(${EXE_NAME} PRIVATE
-    boost_redis_src
-    boost_redis_tests_common
-    boost_redis_project_options
-    Boost::unit_test_framework
-  )
-  target_compile_definitions(${EXE_NAME} PRIVATE BOOST_ALLOW_DEPRECATED=1) # we need to still test deprecated fns
-  add_test(${EXE_NAME} ${EXE_NAME})
-endmacro()
+  target_link_libraries(${EXE_NAME} PRIVATE boost_redis_tests_common)
+  add_test(NAME ${EXE_NAME} COMMAND ${EXE_NAME})
+  add_dependencies(tests ${EXE_NAME})
+endfunction()
 
 # Unit tests
-make_test(test_low_level)
-make_test(test_request)
-make_test(test_serialization)
-make_test(test_low_level_sync_sans_io)
-make_test(test_any_adapter)
-make_test(test_log_to_file)
-make_test(test_conn_logging)
-make_test(test_exec_fsm)
-make_test(test_exec_one_fsm)
-make_test(test_writer_fsm)
-make_test(test_reader_fsm)
-make_test(test_connect_fsm)
-make_test(test_sentinel_resolve_fsm)
-make_test(test_receive_fsm)
-make_test(test_run_fsm)
-make_test(test_compose_setup_request)
-make_test(test_setup_adapter)
-make_test(test_multiplexer)
-make_test(test_parse_sentinel_response)
-make_test(test_update_sentinel_list)
-make_test(test_flat_tree)
-make_test(test_generic_flat_response)
-make_test(test_read_buffer)
-make_test(test_subscription_tracker)
-make_test(test_push_parser)
+boost_redis_make_test(test_low_level)
+boost_redis_make_test(test_request)
+boost_redis_make_test(test_serialization)
+boost_redis_make_test(test_low_level_sync_sans_io)
+boost_redis_make_test(test_any_adapter)
+boost_redis_make_test(test_log_to_file)
+boost_redis_make_test(test_conn_logging)
+boost_redis_make_test(test_exec_fsm)
+boost_redis_make_test(test_exec_one_fsm)
+boost_redis_make_test(test_writer_fsm)
+boost_redis_make_test(test_reader_fsm)
+boost_redis_make_test(test_connect_fsm)
+boost_redis_make_test(test_sentinel_resolve_fsm)
+boost_redis_make_test(test_receive_fsm)
+boost_redis_make_test(test_run_fsm)
+boost_redis_make_test(test_compose_setup_request)
+boost_redis_make_test(test_setup_adapter)
+boost_redis_make_test(test_multiplexer)
+boost_redis_make_test(test_parse_sentinel_response)
+boost_redis_make_test(test_update_sentinel_list)
+boost_redis_make_test(test_flat_tree)
+boost_redis_make_test(test_generic_flat_response)
+boost_redis_make_test(test_read_buffer)
+boost_redis_make_test(test_subscription_tracker)
+boost_redis_make_test(test_push_parser)
+boost_redis_make_test(test_config)
 
 # Tests that require a real Redis server
-make_test(test_conn_quit)
-make_test(test_conn_exec_retry)
-make_test(test_conn_exec_error)
-make_test(test_run)
-make_test(test_conn_run_cancel)
-make_test(test_conn_check_health)
-make_test(test_conn_exec)
-make_test(test_conn_push)
-make_test(test_conn_push2)
-make_test(test_conn_monitor)
-make_test(test_conn_reconnect)
-make_test(test_conn_exec_cancel)
-make_test(test_conn_echo_stress)
-make_test(test_conn_move)
-make_test(test_conn_setup)
-make_test(test_issue_50)
-make_test(test_conversions)
-make_test(test_conn_tls)
-make_test(test_unix_sockets)
-make_test(test_conn_cancel_after)
-make_test(test_conn_sentinel)
-
-# Coverage
-set(
-  COVERAGE_TRACE_COMMAND
-  lcov --capture
-  -output-file "${PROJECT_BINARY_DIR}/coverage.info"
-  --directory "${PROJECT_BINARY_DIR}"
-  --include "${PROJECT_SOURCE_DIR}/include/*"
-)
-
-set(
-  COVERAGE_HTML_COMMAND
-  genhtml --legend -f -q
-  "${PROJECT_BINARY_DIR}/coverage.info"
-  --prefix "${PROJECT_SOURCE_DIR}"
-  --output-directory "${PROJECT_BINARY_DIR}/coverage_html"
-)
-
-add_custom_target(
-  coverage
-  COMMAND ${COVERAGE_TRACE_COMMAND}
-  COMMAND ${COVERAGE_HTML_COMMAND}
-  COMMENT "Generating coverage report"
-  VERBATIM
-)
+if (BOOST_REDIS_INTEGRATION_TESTS)
+  boost_redis_make_test(test_conn_quit)
+  boost_redis_make_test(test_conn_exec_retry)
+  boost_redis_make_test(test_conn_exec_error)
+  boost_redis_make_test(test_run)
+  boost_redis_make_test(test_conn_run_cancel)
+  boost_redis_make_test(test_conn_check_health)
+  boost_redis_make_test(test_conn_exec)
+  boost_redis_make_test(test_conn_push)
+  boost_redis_make_test(test_conn_push2)
+  boost_redis_make_test(test_conn_monitor)
+  boost_redis_make_test(test_conn_reconnect)
+  boost_redis_make_test(test_conn_exec_cancel)
+  boost_redis_make_test(test_conn_echo_stress)
+  boost_redis_make_test(test_conn_move)
+  boost_redis_make_test(test_conn_setup)
+  boost_redis_make_test(test_issue_50)
+  boost_redis_make_test(test_conversions)
+  boost_redis_make_test(test_conn_tls)
+  boost_redis_make_test(test_unix_sockets)
+  boost_redis_make_test(test_conn_cancel_after)
+  boost_redis_make_test(test_conn_sentinel)
+endif()

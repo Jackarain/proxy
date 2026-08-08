@@ -33,8 +33,8 @@ Set class contains unique values.
 ====
 [horizontal]
 Jam:: `rule add ( elements * )`
-{CPP}:: `void b2::set::add(b2::list_cref elements);`, `void b2::set::add(const
-b2::set & elements);`
+{CPP}:: `void b2::set::add(b2::list_cref elements);`
+{CPP}:: `void b2::set::add(const b2::set & elements);`
 ====
 
 Add the `elements` to the set.
@@ -79,7 +79,7 @@ Jam:: `rule intersection ( set1 * : set2 * )`
 b2::list_cref set2);`
 ====
 
-Removes all the items appearing in both `set1` & `set2`.
+Returns all the items appearing in both `set1` & `set2`.
 
 === `b2::set::equal`
 

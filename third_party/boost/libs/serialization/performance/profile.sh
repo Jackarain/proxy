@@ -15,8 +15,8 @@ then
     echo "  threading=single,multi"
     echo "  -sBOOST_ARCHIVE_LIST=<archive name>"
 else
-    bjam --dump-tests variant=profile preserve-test-targets=on $@ >bjam.log 2>&1
-    process_jam_log --v2 <bjam.log
+    b2 --dump-tests variant=profile preserve-test-targets=on $@ >b2.log 2>&1
+    process_jam_log --v2 <b2ls.log
 
     # for each test directory
 

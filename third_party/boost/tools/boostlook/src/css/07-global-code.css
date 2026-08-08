@@ -26,9 +26,9 @@
 .boostlook pre code.hljs,
 .boostlook .doc .content pre code,
 .boostlook .doc pre.highlight code {
-  font-size: var(--typography-font-size-xs, 0.875rem);
+  font-size: var(--typography-font-size-2xs, 0.75rem);
   font-feature-settings: "calt" 1, "liga" 0;
-  line-height: var(--typography-line-height-lg, 1.5rem); /* 171.429% */
+  line-height: 130%;
   letter-spacing: var(--spacing-size-size-0, 0rem);
   color: var(--text-main-text-primary, #18191b);
   padding: revert;
@@ -63,9 +63,10 @@
 .boostlook .sidebarblock {
   padding: var(--spacing-size-xs, 0.75rem) var(--spacing-size-sm, 1rem);
   background: var(--atom-one-light-bg, #fafafa) !important;
-  border-radius: 0;
-  border: none;
+  border-radius: var(--radius-xxl, 1rem);
+  border: 1px solid var(--border-border-primary, #e4e7ea);
   box-shadow: none;
+  line-height: 130%;
 }
 
 .boostlook .sidebarblock {
@@ -100,7 +101,7 @@ html.dark .boostlook .listingblock > .content > pre {
 .boostlook .content:has(> pre.highlight) {
   border-radius: 0;
   /*border: 1px solid var(--border-border-secondary, #d5d7d9);*/
-  background: var(--surface-background-main-surface-secondary, #e4e7ea);
+  background: none;
 }
 
 .boostlook pre.programlisting,
@@ -116,7 +117,7 @@ html.dark .boostlook .listingblock > .content > pre {
   color: var(--text-main-text-body-primary, #2a2c30);
   font-size: var(--typography-font-size-xs, 0.875rem);
   font-style: normal;
-  font-variation-settings: "wght" 600, "wdth" 80;
+  font-variation-settings: "wght" 600, "wdth" 87.5;
   line-height: var(--typography-line-height-md, 1.25rem);
   letter-spacing: unset;
   padding-bottom: var(--padding-padding-2xs, 0.5rem);
@@ -147,7 +148,7 @@ html.dark .boostlook .listingblock > .content > pre {
   align-items: center;
   gap: var(--spacing-size-2xs, 0.5rem);
   color: var(--text-main-text-body-tetriary, #62676b);
-  font-family: "Noto Sans";
+  font-family: "Mona Sans";
   font-size: var(--typography-font-size-2xs, 0.75rem);
   font-style: normal;
   line-height: var(--typography-line-height-sm, 1rem);
@@ -177,8 +178,6 @@ html.dark .boostlook .listingblock > .content > pre {
 }
 
 /* Apply left margin only if code block not in definition block or in table */
-.boostlook .listingblock:has(> .content > pre):not(:is(dd pre, td pre)),
-.boostlook .listingblock:has(> .content > pre.highlight):not(:is(dd pre, td pre)),
 .boostlook:not(:has(.doc)) pre.programlisting:not(:is(dd pre, td pre)),
 .boostlook:not(:has(.doc)) pre.synopsis:not(:is(dd pre, td pre)),
 .boostlook#libraryReadMe > pre:not(:is(dd pre, td pre)),
@@ -194,12 +193,15 @@ html.dark .boostlook .listingblock > .content > pre {
   margin-left: var(--spacing-size-xl);
   border: 1px solid var(--border-border-secondary, #d5d7d9);
 }
+
+@media screen and (max-width: 767px) {
+  .boostlook#libraryReadMe .literalblock:has(pre):not(:is(dd pre, td pre)) {
+    margin-left: 0;
+  }
+}
 .boostlook .olist.arabic > ol > li .listingblock:has(> .content > pre):not(:is(dd pre, td pre)),
 .boostlook:not(:has(.doc)) .orderedlist > ol > li .listingblock:has(> .content > pre.highlight):not(:is(dd pre, td pre)) {
   margin-left: 0;
-}
-.boostlook .listingblock:has(> .content > pre):not(:is(dd pre, td pre)), .boostlook .listingblock:has(> .content > pre.highlight):not(:is(dd pre, td pre)) {
-  margin-left: var(--spacing-size-xl);
 }
 
 .boostlook .listingblock:has(> .content > pre):not(:is(dd pre, td pre)):has(.title) {
@@ -224,8 +226,8 @@ html.dark .boostlook .listingblock > .content > pre {
 .boostlook .highlight pre,
 .boostlook .content:has(> pre) pre.highlight,
 .boostlook .literalblock > .content > pre:not(.highlight) {
-  border: 1px solid var(--border-border-secondary, #d5d7d9);
-  border-radius: 0;
+  border: 1px solid var(--border-border-primary, #e4e7ea);
+  border-radius: var(--radius-xxl, 1rem);
 }
 .boostlook .content:has(> pre):has(> .source-toolbox) pre {
   /*border: 1px solid var(--border-border-secondary, #d5d7d9);*/
@@ -263,10 +265,10 @@ html.dark .boostlook .listingblock > .content > pre {
 .boostlook .content:has(> pre):has(> .source-toolbox) .source-lang {
   color: var(--text-main-text-body-quaternary, #949a9e);
   text-align: right;
-  font-family: "Noto Sans";
+  font-family: "Mona Sans";
   font-size: var(--typography-font-size-2xs, 0.75rem);
   font-style: normal;
-  font-variation-settings: "wght" 500, "wdth" 80;
+  font-variation-settings: "wght" 500, "wdth" 87.5;
   line-height: var(--typography-line-height-sm, 1rem); /* 133.333% */
   letter-spacing: var(--spacing-size-size-0, 0rem);
   text-transform: uppercase;
@@ -307,6 +309,13 @@ html.dark .boostlook .listingblock > .content > pre {
 .boostlook .content:has(> pre):has(> .source-toolbox):hover .copy-button {
   opacity: 1;
   visibility: visible;
+}
+
+/* Mobile: hide copy button (clipboard API requires HTTPS) */
+@media (hover: none) {
+  .boostlook .content:has(> pre):has(> .source-toolbox) .copy-button {
+    display: none !important;
+  }
 }
 
 .boostlook .content:has(> pre):has(> .source-toolbox) .copy-button img {
@@ -352,7 +361,7 @@ html.dark .boostlook .listingblock > .content > pre {
   color: var(--text-main-text-primary, #18191b);
   text-align: center;
   font-size: var(--typography-font-size-sm, 1rem);
-  font-variation-settings: "wght" 500, "wdth" 80;
+  font-variation-settings: "wght" 500, "wdth" 87.5;
   line-height: var(--typography-line-height-lg, 1.5rem); /* 150% */
 }
 
@@ -362,10 +371,10 @@ html.dark .boostlook .listingblock > .content > pre {
 .boostlook .doc p code:not(:has(> code)),
 .boostlook .doc .colist > table code:not(:has(> code)) {
   display: inline;
-  color: var(--text-code-neutral, #0d0e0f);
-  font-size: 0.96em;
+  color: var(--text-code-text, #050816);
+  font-size: 0.88em;
   font-style: normal;
-  font-variation-settings: "wght" 500, "wdth" 80;
+  font-variation-settings: "wght" 500, "wdth" 87.5;
   line-height: var(--typography-line-height-md);
   letter-spacing: var(--spacing-size-size-0, 0rem);
 }
@@ -455,10 +464,20 @@ html.dark .boostlook .listingblock > .content > pre {
   text-decoration-color: var(--border-border-blue, #92cbe9);
 }
 
-/* Syntax Highlighting */
+/* Syntax Highlighting — Figma 6-role palette:
+ * Keyword    (#1345E8 / #38DDFF) — keywords, types, titles, built-ins, operators
+ * Literal    (#289D30 / #72FE92) — strings, numbers
+ * Comment    (#A3A38C / #FFF173) — comments, quotes
+ * Preprocessor (#D31FA7 / #F358C0) — preprocessor directives
+ * Attribute  (#9E9E9E / #A3A3A3) — attributes, named constants
+ * Text       (#050816 / #FFFFFF) — default text, names, punctuation
+ */
+
+/* Keywords & types → Keyword */
 .boostlook .hljs-keyword,
 .boostlook .hljs-selector-tag,
 .boostlook .hljs-subst,
+.boostlook .hljs-type,
 .boostlook pre span.k,
 .boostlook pre span.kc,
 .boostlook pre span.kd,
@@ -468,19 +487,33 @@ html.dark .boostlook .listingblock > .content > pre {
 .boostlook pre span.kt,
 .boostlook pre span.keyword,
 .boostlook pre span.property {
-  color: var(--text-code-purple, #9f26e5);
+  color: var(--text-code-keyword, #1345E8);
 }
 
-.boostlook pre span.n,
+/* Titles, sections, built-ins → Keyword */
+.boostlook .hljs-title,
+.boostlook .hljs-section,
+.boostlook .hljs-selector-id,
+.boostlook .hljs-built_in,
+.boostlook pre span.nf,
+.boostlook pre span.nc {
+  color: var(--text-code-keyword, #1345E8);
+}
+
+/* Attributes → Attribute */
 .boostlook pre span.na,
+.boostlook pre span.no,
+.boostlook .hljs-attr {
+  color: var(--text-code-attribute, #9E9E9E);
+}
+
+/* Identifiers → Text */
+.boostlook pre span.n,
 .boostlook pre span.nb,
 .boostlook pre span.bp,
-.boostlook pre span.nc,
-.boostlook pre span.no,
 .boostlook pre span.nd,
 .boostlook pre span.ni,
 .boostlook pre span.ne,
-.boostlook pre span.nf,
 .boostlook pre span.py,
 .boostlook pre span.nl,
 .boostlook pre span.nn,
@@ -491,13 +524,13 @@ html.dark .boostlook .listingblock > .content > pre {
 .boostlook pre span.vg,
 .boostlook pre span.vi,
 .boostlook pre span.identifier {
-  color: var(--text-main-text-body-primary, #2a2c30);
+  color: var(--text-code-text, #050816);
 }
 
+/* Comments → Comment */
 .boostlook pre span.c,
 .boostlook pre span.ch,
 .boostlook pre span.cm,
-.boostlook pre span.cp,
 .boostlook pre span.cpf,
 .boostlook pre span.c1,
 .boostlook pre span.cs,
@@ -507,38 +540,19 @@ html.dark .boostlook .listingblock > .content > pre {
 .boostlook .hljs-comment,
 .boostlook .cpp-comment,
 .boostlook .hljs-quote,
-.boostlook .hljs-addition,
-.boostlook .hljs-built_in,
 .boostlook .hljs-bullet,
 .boostlook .hljs-code {
-  color: var(--atom-one-light-comment, #a0a1a7);
+  color: var(--text-code-comment, #A3A38C);
   font-family: "Monaspace Xenon", monospace;
   font-style: italic;
 }
 
-/* Dark theme comment color */
-html.dark .boostlook pre span.c,
-html.dark .boostlook pre span.ch,
-html.dark .boostlook pre span.cm,
-html.dark .boostlook pre span.cp,
-html.dark .boostlook pre span.cpf,
-html.dark .boostlook pre span.c1,
-html.dark .boostlook pre span.cs,
-html.dark .boostlook pre span.sd,
-html.dark .boostlook pre span.sh,
-html.dark .boostlook pre span.comment,
-html.dark .boostlook .hljs-comment,
-html.dark .boostlook .cpp-comment,
-html.dark .boostlook .hljs-quote,
-html.dark .boostlook .hljs-addition,
-html.dark .boostlook .hljs-built_in,
-html.dark .boostlook .hljs-bullet,
-html.dark .boostlook .hljs-code {
-  color: var(--atom-one-dark-comment, #5c6370);
-  font-family: "Monaspace Xenon", monospace;
-  font-style: italic;
+/* Preprocessor (Rouge span.cp) → Preprocessor */
+.boostlook pre span.cp {
+  color: var(--text-code-preprocessor, #D31FA7);
 }
 
+/* Strings → Literal */
 .boostlook pre span.s,
 .boostlook pre span.sa,
 .boostlook pre span.sb,
@@ -553,26 +567,51 @@ html.dark .boostlook .hljs-code {
 .boostlook pre span.string,
 .boostlook .hljs-doctag,
 .boostlook .hljs-string,
-.boostlook .hljs-deletion,
+.boostlook .hljs-addition {
+  color: var(--text-code-literal, #289D30);
+}
+
+/* Numbers → Literal */
 .boostlook .hljs-number,
-.boostlook .hljs-quote,
+.boostlook pre span.mi,
+.boostlook pre span.mf,
+.boostlook pre span.mb,
+.boostlook pre span.mh,
+.boostlook pre span.mo,
+.boostlook pre span.il {
+  color: var(--text-code-literal, #289D30);
+}
+
+/* Operators → Keyword */
+.boostlook pre span.o,
+.boostlook pre span.ow {
+  color: var(--text-code-keyword, #1345E8);
+}
+
+/* Punctuation → Text */
+.boostlook pre span.p {
+  color: var(--text-code-text, #050816);
+}
+
+/* Preprocessor / meta → Preprocessor */
+.boostlook .hljs-meta {
+  color: var(--text-code-preprocessor, #D31FA7);
+}
+
+/* Deletion, misc → Keyword */
+.boostlook .hljs-deletion,
 .boostlook .hljs-selector-class,
-.boostlook .hljs-selector-id,
-.boostlook .hljs-template-tag,
-.boostlook .hljs-type {
-  color: var(--text-code-red, #f9677f);
+.boostlook .hljs-template-tag {
+  color: var(--text-code-keyword, #1345E8);
 }
 
-.boostlook .hljs-section,
-.boostlook .hljs-selector-id,
-.boostlook .hljs-title {
-  color: var(--text-code-blue, #329cd2);
+.boostlook .hljs-attribute {
+  color: var(--text-code-attribute, #9E9E9E);
 }
 
-.boostlook .hljs-attribute,
 .boostlook .hljs-name,
 .boostlook .hljs-tag {
-  color: var(--text-main-text-primary, #18191b);
+  color: var(--text-code-text, #050816);
 }
 
 /* Syntax Defaults */
@@ -587,6 +626,151 @@ html.dark .boostlook .hljs-code {
   font-weight: inherit;
 }
 
-.boostlook .hljs-meta {
-  color: inherit;
+/* Dark mode hljs overrides — beat site.css html.dark .hljs-* selectors */
+html.dark .boostlook .hljs-keyword,
+html.dark .boostlook .hljs-selector-tag,
+html.dark .boostlook .hljs-subst,
+html.dark .boostlook .hljs-type {
+  color: var(--text-code-keyword, #38DDFF);
+}
+
+html.dark .boostlook .hljs-title,
+html.dark .boostlook .hljs-section,
+html.dark .boostlook .hljs-selector-id,
+html.dark .boostlook .hljs-built_in {
+  color: var(--text-code-keyword, #38DDFF);
+}
+
+html.dark .boostlook .hljs-comment,
+html.dark .boostlook .hljs-quote,
+html.dark .boostlook .hljs-bullet,
+html.dark .boostlook .hljs-code {
+  color: var(--text-code-comment, #FFF173);
+  font-style: italic;
+}
+
+html.dark .boostlook .hljs-doctag,
+html.dark .boostlook .hljs-string,
+html.dark .boostlook .hljs-addition {
+  color: var(--text-code-literal, #72FE92);
+}
+
+html.dark .boostlook .hljs-number,
+html.dark .boostlook .hljs-literal,
+html.dark .boostlook .hljs-variable,
+html.dark .boostlook .hljs-template-variable,
+html.dark .boostlook pre span.mi,
+html.dark .boostlook pre span.mf,
+html.dark .boostlook pre span.mb,
+html.dark .boostlook pre span.mh,
+html.dark .boostlook pre span.mo,
+html.dark .boostlook pre span.il {
+  color: var(--text-code-literal, #72FE92);
+}
+
+html.dark .boostlook pre span.o,
+html.dark .boostlook pre span.ow {
+  color: var(--text-code-keyword, #38DDFF);
+}
+
+html.dark .boostlook pre span.p {
+  color: var(--text-code-text, #FFFFFF);
+}
+
+html.dark .boostlook .hljs-meta {
+  color: var(--text-code-preprocessor, #F358C0);
+}
+
+html.dark .boostlook .hljs-deletion,
+html.dark .boostlook .hljs-selector-class,
+html.dark .boostlook .hljs-template-tag {
+  color: var(--text-code-keyword, #38DDFF);
+}
+
+html.dark .boostlook .hljs-attribute,
+html.dark .boostlook .hljs-attr {
+  color: var(--text-code-attribute, #A3A3A3);
+}
+
+html.dark .boostlook .hljs-name,
+html.dark .boostlook .hljs-tag {
+  color: var(--text-code-text, #FFFFFF);
+}
+
+/* Override cpp-highlight theme from site.css */
+.boostlook .doc pre.highlight code.cpp-highlight,
+.boostlook pre.highlight code.cpp-highlight,
+.boostlook code.cpp-highlight {
+  color: var(--text-main-text-body-primary, #050816);
+}
+
+.boostlook .doc pre.highlight code.cpp-highlight .cpp-keyword,
+.boostlook pre.highlight code.cpp-highlight .cpp-keyword,
+.boostlook code.cpp-highlight .cpp-keyword {
+  color: var(--text-code-keyword, #1345E8);
+}
+
+.boostlook .doc pre.highlight code.cpp-highlight .cpp-string,
+.boostlook pre.highlight code.cpp-highlight .cpp-string,
+.boostlook code.cpp-highlight .cpp-string {
+  color: var(--text-code-literal, #289D30);
+}
+
+.boostlook .doc pre.highlight code.cpp-highlight .cpp-preprocessor,
+.boostlook pre.highlight code.cpp-highlight .cpp-preprocessor,
+.boostlook code.cpp-highlight .cpp-preprocessor {
+  color: var(--text-code-preprocessor, #D31FA7);
+}
+
+.boostlook .doc pre.highlight code.cpp-highlight .cpp-comment,
+.boostlook pre.highlight code.cpp-highlight .cpp-comment,
+.boostlook code.cpp-highlight .cpp-comment {
+  color: var(--text-code-comment, #A3A38C);
+  font-family: "Monaspace Xenon", monospace;
+  font-style: italic;
+}
+
+.boostlook .doc pre.highlight code.cpp-highlight .cpp-attribute,
+.boostlook pre.highlight code.cpp-highlight .cpp-attribute,
+.boostlook code.cpp-highlight .cpp-attribute {
+  color: var(--text-code-attribute, #9E9E9E);
+}
+
+/* Dark mode cpp-highlight overrides */
+html.dark .boostlook .doc pre.highlight code.cpp-highlight,
+html.dark .boostlook pre.highlight code.cpp-highlight,
+html.dark .boostlook code.cpp-highlight {
+  color: var(--text-main-text-primary, #f5f6f8);
+}
+
+html.dark .boostlook .doc pre.highlight code.cpp-highlight .cpp-keyword,
+html.dark .boostlook pre.highlight code.cpp-highlight .cpp-keyword,
+html.dark .boostlook code.cpp-highlight .cpp-keyword {
+  color: var(--text-code-keyword, #38DDFF);
+}
+
+html.dark .boostlook .doc pre.highlight code.cpp-highlight .cpp-string,
+html.dark .boostlook pre.highlight code.cpp-highlight .cpp-string,
+html.dark .boostlook code.cpp-highlight .cpp-string {
+  color: var(--text-code-literal, #72FE92);
+}
+
+html.dark .boostlook .doc pre.highlight code.cpp-highlight .cpp-preprocessor,
+html.dark .boostlook pre.highlight code.cpp-highlight .cpp-preprocessor,
+html.dark .boostlook code.cpp-highlight .cpp-preprocessor {
+  color: var(--text-code-preprocessor, #F358C0);
+}
+
+html.dark .boostlook .doc pre.highlight code.cpp-highlight .cpp-comment,
+html.dark .boostlook pre.highlight code.cpp-highlight .cpp-comment,
+html.dark .boostlook code.cpp-highlight .cpp-comment {
+  color: var(--text-code-comment, #FFF173);
+  font-family: "Monaspace Xenon", monospace;
+  font-style: italic;
+}
+
+html.dark .boostlook .doc pre.highlight code.cpp-highlight .cpp-attribute,
+html.dark .boostlook pre.highlight code.cpp-highlight .cpp-attribute,
+html.dark .boostlook code.cpp-highlight .cpp-attribute {
+  color: var(--text-code-attribute, #A3A3A3);
 }

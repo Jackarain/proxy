@@ -39,7 +39,9 @@ using builtin_u128 = unsigned __int128;
 
 #elif __has_include(<__msvc_int128.hpp>) && _MSVC_LANG >= 202002L
 
+#ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
 #include <__msvc_int128.hpp>
+#endif
 
 #define BOOST_DECIMAL_DETAIL_INT128_HAS_MSVC_INT128
 
@@ -100,9 +102,9 @@ using builtin_u128 = std::_Unsigned128;
 #  define BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #endif
 
-#if defined(BOOST_DECIMAL_DETAIL_INT128_HAS_IS_CONSTANT_EVALUATED)
+#if defined(BOOST_DECIMAL_DETAIL_INT128_HAS_IS_CONSTANT_EVALUATED) && !(defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA))
 #  define BOOST_DECIMAL_DETAIL_INT128_IS_CONSTANT_EVALUATED(x) std::is_constant_evaluated()
-#elif defined(BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN_IS_CONSTANT_EVALUATED)
+#elif defined(BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN_IS_CONSTANT_EVALUATED) && !(defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA))
 #  define BOOST_DECIMAL_DETAIL_INT128_IS_CONSTANT_EVALUATED(x) __builtin_is_constant_evaluated()
 #else
 #  define BOOST_DECIMAL_DETAIL_INT128_IS_CONSTANT_EVALUATED(x) false
@@ -126,8 +128,10 @@ using builtin_u128 = std::_Unsigned128;
 
 #ifdef __x86_64__
 
+#ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
 #  include <x86intrin.h>
 #  include <emmintrin.h>
+#endif
 
 #  ifdef __ADX__
 #    define BOOST_DECIMAL_DETAIL_INT128_ADD_CARRY _addcarryx_u64
@@ -139,7 +143,9 @@ using builtin_u128 = std::_Unsigned128;
 
 #elif defined(_M_AMD64)
 
+#ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
 #  include <intrin.h>
+#endif
 
 #  ifdef __ADX__
 #    define BOOST_DECIMAL_DETAIL_INT128_ADD_CARRY _addcarryx_u64
@@ -151,11 +157,15 @@ using builtin_u128 = std::_Unsigned128;
 
 #elif defined(__i386__)
 
+#ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
 #  include <emmintrin.h>
+#endif
 
 #elif defined(_M_IX86)
 
+#ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
 #  include <intrin.h>
+#endif
 
 #endif // Platform macros
 
@@ -173,7 +183,9 @@ using builtin_u128 = std::_Unsigned128;
 #  define BOOST_DECIMAL_DETAIL_INT128_HAS_IF_CONSTEXPR
 #endif // if constexpr detection
 
+#ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
 #include <cassert>
+#endif
 
 #define BOOST_DECIMAL_DETAIL_INT128_ASSERT(x) assert(x)
 #define BOOST_DECIMAL_DETAIL_INT128_ASSERT_MSG(expr, msg) assert((expr)&&(msg))
@@ -228,6 +240,55 @@ using builtin_u128 = std::_Unsigned128;
 #  define BOOST_DECIMAL_DETAIL_INT128_UNREACHABLE __assume(0)
 #else
 #  define BOOST_DECIMAL_DETAIL_INT128_UNREACHABLE std::abort()
+#endif
+
+#ifdef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
+#  define BOOST_DECIMAL_DETAIL_INT128_INLINE_CONSTEXPR inline constexpr
+#  define BOOST_DECIMAL_DETAIL_INT128_EXPORT export
+#else
+#  define BOOST_DECIMAL_DETAIL_INT128_INLINE_CONSTEXPR static constexpr
+#  define BOOST_DECIMAL_DETAIL_INT128_EXPORT
+#endif
+
+// Detect if we can throw or not
+// First check if the user said no explicitly
+// Then check if it's been disabled elsewhere
+
+#ifdef BOOST_DECIMAL_DETAIL_INT128_DISABLE_EXCEPTIONS
+
+#  define BOOST_DECIMAL_DETAIL_INT128_THROW_EXCEPTION(expr)
+
+#else
+
+#  ifdef _MSC_VER
+#    ifdef _CPPUNWIND
+#      define BOOST_DECIMAL_DETAIL_INT128_THROW_EXCEPTION(expr) throw expr;
+#    else
+#      define BOOST_DECIMAL_DETAIL_INT128_THROW_EXCEPTION(expr)
+#      define BOOST_DECIMAL_DETAIL_INT128_DISABLE_EXCEPTIONS
+#    endif
+#  else
+#    ifdef __EXCEPTIONS
+#      define BOOST_DECIMAL_DETAIL_INT128_THROW_EXCEPTION(expr) throw expr;
+#    else
+#      define BOOST_DECIMAL_DETAIL_INT128_THROW_EXCEPTION(expr)
+#      define BOOST_DECIMAL_DETAIL_INT128_DISABLE_EXCEPTIONS
+#    endif
+#endif
+
+#endif // Exceptions
+
+#if defined(__cpp_impl_three_way_comparison) && __cpp_impl_three_way_comparison >= 201907L && __has_include(<compare>)
+#  define BOOST_DECIMAL_DETAIL_INT128_HAS_SPACESHIP_OPERATOR
+#  ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
+#    include <compare>
+#  endif
+#endif
+
+#if defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA)
+#  define BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE __host__ __device__
+#else
+#  define BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE
 #endif
 
 #endif // BOOST_DECIMAL_DETAIL_INT128_DETAIL_CONFIG_HPP

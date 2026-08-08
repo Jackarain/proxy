@@ -20,10 +20,10 @@ local rule type ( type : suffixes * : base-type ? : os * )
     }
 }
 
-.this-module's-file = [ modules.binding $(__name__) ] ;
-.this-module's-dir = [ path.parent [ path.make $(.this-module's-file) ] ] ;
-.sibling-jamfiles =  [ path.glob $(.this-module's-dir) : *.jam ] ;
-.sibling-modules = [ MATCH ^(.*)\.jam$ : $(.sibling-jamfiles) ] ;
+.this-module-file = [ modules.binding $(__name__) ] ;
+.this-module-dir = [ path.parent [ path.make $(.this-module-file) ] ] ;
+.sibling-jamfiles =  [ path.glob $(.this-module-dir) : *.jam ] ;
+.sibling-modules = [ MATCH ^(.+)\\.jam$ : $(.sibling-jamfiles) ] ;
 
 # A loop over all modules in this directory
 for m in $(.sibling-modules)
@@ -35,5 +35,4 @@ for m in $(.sibling-modules)
     IMPORT $(__name__) : type : $(m:B) : type ;
     import $(m) ;
 }
-
 

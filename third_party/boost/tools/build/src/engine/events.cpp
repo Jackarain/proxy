@@ -7,6 +7,7 @@ Distributed under the Boost Software License, Version 1.0.
 #include "events.h"
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <set>
 #include <vector>

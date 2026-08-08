@@ -26,8 +26,6 @@
 #include "../test_allocator.hpp"
 #endif
 
-boost::mutex m;
-
 int main()
 {
 #if defined BOOST_THREAD_PROVIDES_FUTURE_CTOR_ALLOCATORS
@@ -148,4 +146,3 @@ int main()
 
   return boost::report_errors();
 }
-

@@ -6,6 +6,4 @@ exe boost_party
     :
         boost_party.cpp
     :
-        <include>../../..
-        <include>$(BOOST_ROOT)
     ;

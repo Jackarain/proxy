@@ -20,15 +20,6 @@
 namespace boost::msm::backmp11
 {
 
-struct favor_runtime_speed
-{
-    // Dispatch strategy for processing events.
-    // Supported strategies:
-    // - flat_fold (default)
-    // - function_pointer_array
-    using dispatch_strategy = dispatch_strategy::flat_fold;
-};
-
 namespace detail
 {
 
@@ -71,7 +62,7 @@ struct compile_policy_impl<
     };
 
     template <typename StateMachine, typename Event>
-    static bool is_event_deferred(const StateMachine& sm, const Event& event)
+    static constexpr bool needs_event_deferral_check()
     {
         // Instantiate the templates for checking lazily,
         // optimize for the no deferred events case.
@@ -91,52 +82,41 @@ struct compile_policy_impl<
             // We have deferring states that defer this event.
             if constexpr (minimal_visit_set::needs_traversal::value)
             {
-                using state_visitor =
-                    event_deferral_visitor<const StateMachine, visitor_t,
-                                           visitor_t::template predicate,
-                                           visitor_t::template predicate2>;
-                visitor_t visitor{event};
-                state_visitor::visit(sm, visitor);
-                return visitor.result();
+                return true;
             }
         }
         return false;
     }
 
     template <typename StateMachine, typename Event>
-    static void defer_event(StateMachine& sm, Event const& event,
-                            bool next_rtc_seq)
+    static bool is_event_deferred(const StateMachine& sm, const Event& event)
     {
-        if constexpr (is_kleene_event<Event>::value)
+        if constexpr (needs_event_deferral_check<StateMachine, Event>())
         {
-            using event_set = generate_event_set<
-                typename StateMachine::front_end_t::transition_table>;
-            bool found =
-                mp_for_each_until<mp11::mp_transform<mp11::mp_identity, event_set>>(
-                    [&sm, &event, next_rtc_seq](auto event_identity)
-                    {
-                        using KnownEvent = typename decltype(event_identity)::type;
-                        if (event.type() == typeid(KnownEvent))
-                        {
-                            sm.do_defer_event(*any_cast<KnownEvent>(&event),
-                                              next_rtc_seq);
-                            return true;
-                        }
-                        return false;
-                    }
-            );
-            if (!found)
+            using visitor_t = is_event_deferred_visitor<Event>;
+            using state_visitor =
+                event_deferral_visitor<const StateMachine, visitor_t,
+                                       visitor_t::template predicate,
+                                       visitor_t::template predicate2>;
+            visitor_t visitor{event};
+            state_visitor::visit(sm, visitor);
+            return visitor.result();
+        }
+        return false;
+    }
+
+    template <typename StateMachine, typename Event>
+    static bool try_defer_event(StateMachine& sm, const Event& event)
+    {
+        if constexpr (needs_event_deferral_check<StateMachine, Event>())
+        {
+            if (is_event_deferred(sm, event))
             {
-                for (const auto state_id : sm.get_active_state_ids())
-                {
-                    sm.no_transition(event, sm.get_fsm_argument(), state_id);
-                }
+                sm.defer_event(event);
+                return true;
             }
         }
-        else
-        {
-            sm.do_defer_event(event, next_rtc_seq);
-        }
+        return false;
     }
 
     // Generates a singleton runtime lookup table that maps current state
@@ -147,7 +127,7 @@ struct compile_policy_impl<
     {
       public:
         // Dispatch an event.
-        static process_result dispatch(StateMachine& sm, int region_id,
+        static process_result dispatch(StateMachine& sm, uint8_t region_id,
                                        const Event& event)
         {
             if constexpr (has_transitions::value ||
@@ -156,7 +136,7 @@ struct compile_policy_impl<
                 using table = dispatch_impl<typename Policy::dispatch_strategy>;
                 return table::dispatch(sm, region_id, event);
             }
-            return process_result::HANDLED_FALSE;
+            return process_result::discarded;
         }
 
         // Dispatch an event to the SM's internal table.
@@ -165,9 +145,9 @@ struct compile_policy_impl<
         {
             if constexpr (has_internal_transitions::value)
             {
-                return internal_dispatch_impl::transition::execute(sm, event);
+                return internal_dispatch_impl::transition::process(sm, event);
             }
-            return process_result::HANDLED_FALSE;
+            return process_result::discarded;
         }
 
       private:
@@ -179,7 +159,7 @@ struct compile_policy_impl<
         // Compute the maximum state value in the sm so we know how big
         // to make the tables.
         using state_set = typename StateMachine::state_set;
-        static constexpr int max_state = mp11::mp_size<state_set>::value;
+        static constexpr auto max_state = mp11::mp_size<state_set>::value;
 
         // Filter the transition tables by event.
         template <typename Transition,
@@ -282,21 +262,19 @@ struct compile_policy_impl<
             struct forward_transition
             {
                 using current_state_type = Submachine;
-                using next_state_type = Submachine;
                 using transition_event = Event;
 
-                static process_result execute(
-                    StateMachine& sm,
-                    int region_id,
-                    Event const& event)
+                static process_result process(StateMachine& sm,
+                                              uint8_t region_id,
+                                              Event const& event)
                 {
-                    [[maybe_unused]] const int state_id = sm.m_active_state_ids[region_id];
+                    [[maybe_unused]] const auto state_id = sm.m_active_state_ids[region_id];
                     BOOST_ASSERT(state_id == StateMachine::template get_state_id<Submachine>());
                     constexpr process_info info =
                         process_info::submachine_call;
                     process_result result =
                         sm.template get_state<Submachine>()
-                            .process_event_internal(event, info);
+                            .process_event_observed(event, info);
                     return result;
                 }
             };
@@ -337,15 +315,6 @@ struct compile_policy_impl<
             using merged_transitions =
                 mp11::mp_transform<merge_transitions,
                                    filtered_transitions_by_state_map>;
-
-            template <typename Transition>
-            static process_result convert_event_and_execute(StateMachine& sm,
-                                                            int region_id,
-                                                            Event const& evt)
-            {
-                typename Transition::transition_event kleene_event{evt};
-                return Transition::execute(sm, region_id, kleene_event);
-            }
         };
 
         template <typename Strategy, typename NotExplicit = void>
@@ -357,38 +326,24 @@ struct compile_policy_impl<
         {
            using base = dispatch_base;
           public:
-            static inline process_result dispatch(StateMachine& sm, int region_id,
+            static inline process_result dispatch(StateMachine& sm, uint8_t region_id,
                                            const Event& event)
             {
-                const int state_id = sm.m_active_state_ids[region_id];
-                process_result result = process_result::HANDLED_FALSE;
+                const auto state_id = sm.m_active_state_ids[region_id];
+                process_result result = process_result::discarded;
                 mp11::mp_for_each<typename base::merged_transitions>(
                     [&sm, region_id, &event, state_id, &result](auto transition)
                     {
                         using Transition = decltype(transition);
-                        using TransitionEvent =
-                            typename Transition::transition_event;
                         using SourceState =
                             typename Transition::current_state_type;
-                        constexpr int source_state_id =
+                        constexpr auto source_state_id =
                             StateMachine::template get_state_id<SourceState>();
                         if (state_id == source_state_id)
                         {
-                            if constexpr (!is_kleene_event<
-                                              TransitionEvent>::value)
-                            {
-                                result =
-                                    Transition::execute(sm, region_id, event);
-                            }
-                            else
-                            {
-                                result =
-                                    base::template convert_event_and_execute<
-                                        Transition>(sm, region_id, event);
-                            }
+                            result = Transition::process(sm, region_id, event);
                         }
-                    }
-                );
+                    });
                 return result;
             }
         };
@@ -398,47 +353,28 @@ struct compile_policy_impl<
             : public dispatch_base
         {
             using base = dispatch_base;
-            using cell_t = process_result (*)(StateMachine&, int /*region_id*/,
+            using cell_t = process_result (*)(StateMachine&, uint8_t /*region_id*/,
                                               Event const&);
 
           public:
-            static process_result dispatch(
-                StateMachine& sm, int region_id, const Event& event)
+            static inline process_result dispatch(
+                StateMachine& sm, uint8_t region_id, const Event& event)
             {
-                const int state_id = sm.m_active_state_ids[region_id];
+                const auto state_id = sm.m_active_state_ids[region_id];
                 constexpr auto& cells = m_cells;
                 const cell_t cell = cells[state_id];
                 if (cell)
                 {
                     return cell(sm, region_id, event);
                 }
-                return process_result::HANDLED_FALSE;
+                return process_result::discarded;
             }
 
           private:
-            // Convert a transition to its function pointer.
-            template <typename Transition,
-                      bool IsKleeneEvent = is_kleene_event<
-                          typename Transition::transition_event>::value>
-            struct get_cell;
-            template <typename Transition>
-            struct get_cell<Transition, /*IsKleeneEvent=*/false>
-            {
-                static constexpr cell_t value = &Transition::execute;
-            };
-            template <typename Transition>
-            struct get_cell<Transition, /*IsKleeneEvent=*/true>
-            {
-                static constexpr cell_t value =
-                    &base::template convert_event_and_execute<Transition>;
-            };
-            template <typename Transition>
-            static constexpr cell_t cell_v = get_cell<Transition>::value;
-
             struct cell_table
             {
                 cell_t data[max_state]{};
-                constexpr cell_t operator[](int i) const { return data[i]; }
+                constexpr cell_t operator[](size_t i) const { return data[i]; }
             };
 
             // Build the cell table by traversing merged_transitions exactly once.
@@ -451,7 +387,7 @@ struct compile_policy_impl<
                 ((table.data[
                     StateMachine::template get_state_id<
                         typename Transitions::current_state_type>()] =
-                    get_cell<Transitions>::value), ...);
+                        &Transitions::process), ...);
                 return table;
             }
 
@@ -472,19 +408,19 @@ struct compile_policy_impl<
             {
                 using transition_event = Event;
 
-                static process_result execute(StateMachine& sm, Event const& evt)
+                static process_result process(StateMachine& sm, Event const& evt)
                 {
-                    process_result result = process_result::HANDLED_FALSE;
+                    process_result result = process_result::discarded;
                     mp_for_each_until<Transitions>(
                         [&result, &sm, &evt](auto transition)
                         {
                             using Transition = decltype(transition);
-                            result |= Transition::execute(sm, evt);
-                            if (result & handled_true_or_deferred)
+                            result |= Transition::process(sm, evt);
+                            if (any(result & consumed_or_deferred))
                             {
                                 // If a guard rejected previously,
                                 // ensure this bit is not present.
-                                result &= handled_true_or_deferred;
+                                result &= consumed_or_deferred;
                                 return true;
                             }
                             return false;

@@ -20,6 +20,12 @@
     Step 1: Making a functor that converts any type to a string and remembers result:
 */
 
+#include <string>
+
+#include <boost/fusion/include/for_each.hpp>
+#include <boost/fusion/adapted/std_tuple.hpp>
+#include <boost/fusion/adapted/std_pair.hpp>
+
 #include <boost/lexical_cast.hpp>
 
 struct stringize_functor {
@@ -38,7 +44,6 @@ public:
 };
 
 //` Step 2: Applying `stringize_functor` to each element in sequence:
-#include <boost/fusion/include/for_each.hpp>
 template <class Sequence>
 std::string stringize(const Sequence& seq) {
     std::string result;
@@ -47,9 +52,6 @@ std::string stringize(const Sequence& seq) {
 }
 
 //` Step 3: Using the `stringize` with different types:
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/adapted/std_pair.hpp>
-
 int main() {
     std::tuple<char, int, char, int> decim('-', 10, 'e', 5);
     if (stringize(decim) != "-10e5") {

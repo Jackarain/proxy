@@ -9,7 +9,7 @@ Copyright (c) 2008-2009: Joachim Faulhaber
 
 #define BOOST_ICL_TEST_CHRONO
 
-#include <libs/icl/test/disable_test_warnings.hpp>
+#include <disable_test_warnings.hpp>
 #include <string>
 #include <vector>
 #include <boost/mpl/list.hpp>

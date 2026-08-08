@@ -9,13 +9,17 @@
 #define BOOST_DLL_DETAIL_WINDOWS_PATH_FROM_HANDLE_HPP
 
 #include <boost/dll/config.hpp>
-#include <boost/dll/detail/system_error.hpp>
-#include <boost/winapi/dll.hpp>
-#include <boost/winapi/get_last_error.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 # pragma once
 #endif
+
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#include <boost/winapi/dll.hpp>
+#include <boost/winapi/get_last_error.hpp>
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
+
+#include <boost/dll/detail/system_error.hpp>
 
 namespace boost { namespace dll { namespace detail {
 

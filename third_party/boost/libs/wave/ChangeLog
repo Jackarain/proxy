@@ -18,6 +18,11 @@ TODO (known issues):
 
 CHANGELOG
 
+Boost V1.92:
+  - Fixed #243: find_include_file incorrectly accepts directories as include files
+  - Fixed #246: Predefined macros (__FILE__, __LINE__, __INCLUDE_LEVEL__) are expanded twice when expanding_object_like_macro returns true
+  - Introduce digit separators (C++14), module keyword (C++20), and size_t literals (C++23)
+
 Boost V1.87:
   - Fixed #220: Seg fault under C++20 and empty stringify parameter (thanks jwnhy)
   - Fixed #222: No line directive if first line of included file is blank (thanks Nick Nobles)

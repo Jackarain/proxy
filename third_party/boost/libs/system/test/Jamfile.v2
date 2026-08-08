@@ -228,3 +228,5 @@ run unwrap_and_construct.cpp ;
 run unwrap_and_construct2.cpp ;
 
 run detail_is_aggregate_test.cpp ;
+
+run unwrap_and_invoke3.cpp ;

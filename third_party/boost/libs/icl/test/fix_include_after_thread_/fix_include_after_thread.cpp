@@ -20,7 +20,7 @@ Copyright (c) 2011-2011: Joachim Faulhaber
 //The problem does not occur for gcc compilers.
 
 // #include <boost/thread.hpp> MEMO: The problem occured when using thread.hpp
-#include <boost/bind.hpp>    // but is also triggered from bind.hpp alone
+#include <boost/bind/bind.hpp>    // but is also triggered from bind.hpp alone
     // while the cause of it is an error in the msvc-7.1 to 10.0 compilers.
     // A minimal example is provided by test case 'cmp_msvc_value_born_error'
 

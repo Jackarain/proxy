@@ -6,7 +6,16 @@ cmake_minimum_required(VERSION 3.5...3.16)
 
 project(cmake_install_test LANGUAGES CXX)
 
-find_package(boost_heap REQUIRED)
+if(BOOST_CI_INSTALL_TEST)
+    find_package(Boost CONFIG QUIET COMPONENTS heap)
+    if(NOT TARGET Boost::heap)
+        add_library(Boost::heap INTERFACE IMPORTED)
+        set_target_properties(Boost::heap PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${Boost_INCLUDE_DIRS}")
+    endif()
+else()
+    find_package(boost_heap REQUIRED)
+endif()
 
 add_executable(main main.cpp)
 target_link_libraries(main Boost::heap)

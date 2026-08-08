@@ -5,10 +5,11 @@
 #ifndef BOOST_DECIMAL_DETAIL_INT128_HPP
 #define BOOST_DECIMAL_DETAIL_INT128_HPP
 
-#include "int128/int128.hpp"
-#include "int128/bit.hpp"
-#include "int128/iostream.hpp"
-#include "int128/literals.hpp"
-#include "int128/numeric.hpp"
+#include <boost/decimal/detail/config.hpp>
+#include <boost/decimal/detail/int128/int128.hpp>
+#include <boost/decimal/detail/int128/bit.hpp>
+#include <boost/decimal/detail/int128/iostream.hpp>
+#include <boost/decimal/detail/int128/literals.hpp>
+#include <boost/decimal/detail/int128/numeric.hpp>
 
 #endif // BOOST_DECIMAL_DETAIL_INT128_HPP

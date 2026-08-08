@@ -18,8 +18,10 @@ Distributed under the Boost Software License, Version 1.0.
 
 #include "jam.h"
 #include "mem.h"
+#include "object.h"
 #include "output.h"
 #include "startup.h"
+#include "value.h"
 
 #include <assert.h>
 
@@ -65,8 +67,7 @@ LIST * list_append(LIST * l, LIST * nl)
 		if (l_size <= (int32_t(1) << (bucket - 1)))
 		{
 			LIST * result = list_alloc(size);
-			memcpy(
-				list_begin(result), list_begin(l), l_size * sizeof(OBJECT *));
+			memcpy(list_begin(result), list_begin(l), l_size * sizeof(OBJECT *));
 			list_dealloc(l);
 			l = result;
 		}
@@ -254,16 +255,38 @@ int32_t list_cmp(LIST * t, LIST * s)
 	LISTITER s_it = list_begin(s);
 	LISTITER const s_end = list_end(s);
 
+	while (!status && t_it != t_end && s_it != s_end)
+	{
+		b2::value_ptr vt = list_item(t_it);
+		b2::value_ptr vs = list_item(s_it);
+
+		status = vt->compare(*vs);
+
+		t_it = list_next(t_it);
+		s_it = list_next(s_it);
+	}
+
+#if false
+	// TODO: Find a better way to optimize for short circuit list compare while
+	// still maintaining back compat behaviour of empty padding of short lists.
+	if (!status && (t_it == t_end || s_it == s_end))
+		status = list_length(t) - list_length(s);
+#else
+	b2::value_ref empty = b2::value::make("");
 	while (!status && (t_it != t_end || s_it != s_end))
 	{
-		char const * st = t_it != t_end ? object_str(list_item(t_it)) : "";
-		char const * ss = s_it != s_end ? object_str(list_item(s_it)) : "";
-
-		status = strcmp(st, ss);
-
-		t_it = t_it != t_end ? list_next(t_it) : t_it;
-		s_it = s_it != s_end ? list_next(s_it) : s_it;
+		if (s_it == s_end)
+		{
+			status = list_item(t_it)->compare(*empty);
+			t_it = list_next(t_it);
+		}
+		else
+		{
+			status = empty->compare(*list_item(s_it));
+			s_it = list_next(s_it);
+		}
 	}
+#endif
 
 	return status;
 }
@@ -319,7 +342,7 @@ LIST * list_unique(LIST * sorted_list)
 	return result;
 }
 
-void list_done() {}
+void list_done() { }
 
 void lol_add_err()
 {

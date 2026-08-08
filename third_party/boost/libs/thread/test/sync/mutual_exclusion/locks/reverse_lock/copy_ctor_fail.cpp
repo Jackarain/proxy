@@ -15,9 +15,6 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/lock_types.hpp>
 
-boost::mutex m0;
-boost::mutex m1;
-
 int main()
 {
   boost::mutex m0;
@@ -25,8 +22,8 @@ int main()
   {
     boost::reverse_lock<boost::unique_lock<boost::mutex> > lg0(lk0);
     boost::reverse_lock<boost::unique_lock<boost::mutex> > lg1(lg0);
+    (void)lg1;
   }
 }
 
 #include "../../../../remove_error_code_unused_warning.hpp"
-

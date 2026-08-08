@@ -8,6 +8,7 @@ import path ;
 import stage ;
 
 stage.add-install-dir cmakedir : cmake : libdir ;
+stage.add-install-dir dlldir : "" : bindir ;
 
 # header-subdir
 

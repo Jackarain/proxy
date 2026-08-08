@@ -337,6 +337,21 @@ public:
         // length not canonical
         bad(string_view("\x81\x7e\x00\x7d", 4));
         bad(string_view("\x81\x7f\x00\x00\x00\x00\x00\x00\xff\xff", 10));
+
+        // 64-bit length with the most significant bit set
+        {
+            echo_server es{log};
+            net::io_context ioc;
+            stream<test::stream> ws{ioc};
+            ws.next_layer().connect(es.stream());
+            ws.handshake("localhost", "/");
+            ws.next_layer().append(
+                string_view("\x81\x7f\xff\xff\xff\xff\xff\xff\xff\xff", 10));
+            error_code ec;
+            multi_buffer b;
+            ws.read(b, ec);
+            BEAST_EXPECTS(ec == error::bad_size, ec.message());
+        }
     }
 
     void
@@ -349,9 +364,9 @@ public:
             stream<test::stream> ws{ioc};
             ws.next_layer().connect(es.stream());
             ws.handshake("localhost", "/");
-            // too-big message frame indicates payload of 2^64-1
+            // too-big message frame indicates payload of 2^63-1
             net::write(ws.next_layer(), sbuf(
-                "\x81\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"));
+                "\x81\xff\x7f\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"));
             multi_buffer b;
             error_code ec;
             ws.read(b, ec);

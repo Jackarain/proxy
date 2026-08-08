@@ -19,11 +19,13 @@
 #include <boost/core/span.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 namespace boost::redis::detail {
 

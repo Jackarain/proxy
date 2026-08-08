@@ -55,7 +55,7 @@ void test_pull_for()
 {
   sync_pq pq;
   steady_clock::time_point start = steady_clock::now();
-  int val;
+  int val = -1;
   boost::queue_op_status st = pq.pull_for(milliseconds(500), val);
   ns d = steady_clock::now() - start - milliseconds(500);
   BOOST_THREAD_TEST_IT(d, ns(max_diff));
@@ -66,7 +66,7 @@ void test_pull_until()
 {
   sync_pq pq;
   steady_clock::time_point start = steady_clock::now();
-  int val;
+  int val = -1;
   boost::queue_op_status st = pq.pull_until(start + milliseconds(500), val);
   ns d = steady_clock::now() - start - milliseconds(500);
   BOOST_THREAD_TEST_IT(d, ns(max_diff));
@@ -77,7 +77,7 @@ void test_nonblocking_pull()
 {
   sync_pq pq;
   steady_clock::time_point start = steady_clock::now();
-  int val;
+  int val = -1;
   boost::queue_op_status st = pq.nonblocking_pull(val);
   ns d = steady_clock::now() - start;
   BOOST_THREAD_TEST_IT(d, ns(max_diff));
@@ -89,7 +89,7 @@ void test_pull_for_when_not_empty()
   sync_pq pq;
   pq.push(1);
   steady_clock::time_point start = steady_clock::now();
-  int val;
+  int val = -1;
   boost::queue_op_status st = pq.pull_for(milliseconds(500), val);
   ns d = steady_clock::now() - start;
   BOOST_THREAD_TEST_IT(d, ns(max_diff));
@@ -102,7 +102,7 @@ void test_pull_until_when_not_empty()
   sync_pq pq;
   pq.push(1);
   steady_clock::time_point start = steady_clock::now();
-  int val;
+  int val = -1;
   boost::queue_op_status st = pq.pull_until(start + milliseconds(500), val);
   ns d = steady_clock::now() - start;
   BOOST_THREAD_TEST_IT(d, ns(max_diff));
@@ -274,7 +274,7 @@ int main()
     // 1-element queue try_pull succeed
       boost::concurrent::sync_priority_queue<int> q;
       q.push(1);
-      int i;
+      int i = -1;
       BOOST_TEST(boost::queue_op_status::success == q.try_pull(i));
       BOOST_TEST_EQ(i, 1);
       BOOST_TEST(q.empty());
@@ -301,7 +301,7 @@ int main()
     // 1-element queue nonblocking_pull succeed
       boost::concurrent::sync_priority_queue<int> q;
       q.push(1);
-      int i;
+      int i = -1;
       BOOST_TEST(boost::queue_op_status::success == q.nonblocking_pull(i));
       BOOST_TEST_EQ(i, 1);
       BOOST_TEST(q.empty());
@@ -341,7 +341,7 @@ int main()
     // 1-element queue wait_pull succeed
       boost::concurrent::sync_priority_queue<int> q;
       q.push(1);
-      int i;
+      int i = -1;
       BOOST_TEST(boost::queue_op_status::success == q.wait_pull(i));
       BOOST_TEST_EQ(i, 1);
       BOOST_TEST(q.empty());
@@ -406,7 +406,7 @@ int main()
       boost::concurrent::sync_priority_queue<int> q;
       q.push(1);
       q.close();
-      int i;
+      int i = -1;
       BOOST_TEST(boost::queue_op_status::success == q.wait_pull(i));
       BOOST_TEST_EQ(i, 1);
       BOOST_TEST(q.empty());
@@ -420,7 +420,7 @@ int main()
       q.close();
       BOOST_TEST(q.empty());
       BOOST_TEST(q.closed());
-      int i;
+      int i = -1;
       BOOST_TEST(boost::queue_op_status::closed == q.wait_pull(i));
       BOOST_TEST(q.empty());
       BOOST_TEST(q.closed());

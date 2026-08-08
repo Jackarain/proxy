@@ -133,6 +133,12 @@ parse(
                 BOOST_URL_CONSTEXPR_RETURN_EC(
                     grammar::error::invalid);
             }
+            if(! c)
+            {
+                // missing h16 before "."
+                BOOST_URL_CONSTEXPR_RETURN_EC(
+                    grammar::error::invalid);
+            }
             if(! detail::maybe_octet(
                 &bytes[2*(7-n)]))
             {

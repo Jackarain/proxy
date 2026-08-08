@@ -30,5 +30,7 @@ https://www.boost.org/LICENSE_1_0.txt
 
 == Macros
 
+- <<enable_cuda_, `BOOST_CHARCONV_ENABLE_CUDA`>>
+- <<enable_cuda_, `BOOST_CHARCONV_HOST_DEVICE`>>
 - <<integral_usage_notes_, `BOOST_CHARCONV_CONSTEXPR`>>
 - <<run_benchmarks_, `BOOST_CHARCONV_RUN_BENCHMARKS`>>

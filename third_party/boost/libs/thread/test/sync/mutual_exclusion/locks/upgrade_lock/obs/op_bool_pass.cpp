@@ -22,13 +22,13 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::shared_mutex m;
+boost::shared_mutex g_mutex;
 
 int main()
 {
   boost::upgrade_lock < boost::shared_mutex > lk0;
   BOOST_TEST(bool(lk0) == false);
-  boost::upgrade_lock < boost::shared_mutex > lk1(m);
+  boost::upgrade_lock < boost::shared_mutex > lk1(g_mutex);
   BOOST_TEST(bool(lk1) == true);
   lk1.unlock();
   BOOST_TEST(bool(lk1) == false);

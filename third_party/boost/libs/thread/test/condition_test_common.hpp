@@ -30,12 +30,16 @@ struct wait_for_flag
             flag(flag_)
         {}
 
+        check_flag(check_flag const& that):
+            flag(that.flag)
+        {}
+
         bool operator()() const
         {
             return flag;
         }
     private:
-        void operator=(check_flag&);
+        check_flag& operator=(check_flag const&);
     };
 
 

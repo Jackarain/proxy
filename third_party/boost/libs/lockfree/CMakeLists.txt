@@ -19,6 +19,8 @@ target_include_directories(boost_lockfree INTERFACE include)
 
 if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.23 AND BOOST_LOCKFREE_USE_FILE_SET)
     set(Headers
+        include/boost/lockfree/bounded_ticket_queue.hpp
+        include/boost/lockfree/mpsc_weak_queue.hpp
         include/boost/lockfree/spsc_queue.hpp
         include/boost/lockfree/spsc_value.hpp
         include/boost/lockfree/policies.hpp
@@ -28,6 +30,7 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.23 AND BOOST_LOCKFREE_USE_FILE_SET)
         include/boost/lockfree/detail/copy_payload.hpp
         include/boost/lockfree/detail/freelist.hpp
         include/boost/lockfree/detail/parameter.hpp
+        include/boost/lockfree/detail/power_of_two.hpp
         include/boost/lockfree/detail/prefix.hpp
         include/boost/lockfree/detail/tagged_ptr.hpp
         include/boost/lockfree/detail/tagged_ptr_dcas.hpp

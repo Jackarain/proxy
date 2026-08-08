@@ -11,13 +11,14 @@
 // MinGW related workaround
 #define BOOST_DLL_FORCE_ALIAS_INSTANTIATION
 
-#include <boost/dll/config.hpp>
-#include <boost/dll/alias.hpp>
 #include <memory>
 #include <iostream>
 #include <vector>
 
 #include <boost/fusion/container.hpp>
+
+#include <boost/dll/config.hpp>
+#include <boost/dll/alias.hpp>
 
 #define LIBRARY_API BOOST_SYMBOL_EXPORT
 

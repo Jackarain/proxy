@@ -5,30 +5,41 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+/// \file boost/dll/library_info.hpp
+/// \brief Contains only the boost::dll::library_info class that is capable of
+/// extracting different information from binaries.
+
 #ifndef BOOST_DLL_LIBRARY_INFO_HPP
 #define BOOST_DLL_LIBRARY_INFO_HPP
 
+#include <boost/dll/detail/config.hpp>
+
+#if !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+# pragma once
+#endif
+
 #include <boost/dll/config.hpp>
+
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
 #include <boost/assert.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/predef/os.h>
 #include <boost/predef/architecture.h>
 #include <boost/throw_exception.hpp>
 
+#if !defined(BOOST_DLL_USE_STD_MODULE)
 #include <fstream>
 #include <type_traits>
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 #include <boost/dll/detail/pe_info.hpp>
 #include <boost/dll/detail/elf_info.hpp>
 #include <boost/dll/detail/macho_info.hpp>
 
-#ifdef BOOST_HAS_PRAGMA_ONCE
-# pragma once
-#endif
-
-/// \file boost/dll/library_info.hpp
-/// \brief Contains only the boost::dll::library_info class that is capable of
-/// extracting different information from binaries.
+BOOST_DLL_BEGIN_MODULE_EXPORT
 
 namespace boost { namespace dll {
 
@@ -210,4 +221,9 @@ public:
 };
 
 }} // namespace boost::dll
+
+BOOST_DLL_END_MODULE_EXPORT
+
+#endif // !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
+
 #endif // BOOST_DLL_LIBRARY_INFO_HPP

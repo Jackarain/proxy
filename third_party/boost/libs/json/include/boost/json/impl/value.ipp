@@ -637,21 +637,24 @@ string&
 value::
 emplace_string() noexcept
 {
-    return *::new(&str_) string(destroy());
+    storage_ptr sp = destroy();
+    return *::new(&str_) string(sp);
 }
 
 array&
 value::
 emplace_array() noexcept
 {
-    return *::new(&arr_) array(destroy());
+    storage_ptr sp = destroy();
+    return *::new(&arr_) array(sp);
 }
 
 object&
 value::
 emplace_object() noexcept
 {
-    return *::new(&obj_) object(destroy());
+    storage_ptr sp = destroy();
+    return *::new(&obj_) object(sp);
 }
 
 void

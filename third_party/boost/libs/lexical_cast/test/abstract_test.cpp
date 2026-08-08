@@ -12,9 +12,9 @@
 // Test abstract class. Bug 1358600:
 // http://sf.net/tracker/?func=detail&aid=1358600&group_id=7586&atid=107586
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 class A
 {

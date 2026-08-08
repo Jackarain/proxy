@@ -1,19 +1,26 @@
 
 // Copyright 2017-2018 Daniel James.
+// Copyright 2026 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+#include <boost/unordered_map.hpp>
+#include <iostream>
+
+#if BOOST_UNORDERED_TEMPLATE_DEDUCTION_GUIDES
 
 #include <boost/core/lightweight_test_trait.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
-#include <iostream>
-#include <vector>
-
-#if BOOST_UNORDERED_TEMPLATE_DEDUCTION_GUIDES
-
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
+#include <boost/unordered/unordered_node_map.hpp>
+#include <boost/unordered/unordered_node_set.hpp>
 #include <boost/unordered/concurrent_flat_map.hpp>
+#include <boost/unordered/concurrent_flat_set.hpp>
+#include <boost/unordered/concurrent_node_map.hpp>
+#include <boost/unordered/concurrent_node_set.hpp>
+#include <vector>
 
 struct hash_equals
 {
@@ -86,6 +93,44 @@ template <template <class...> class UnorderedMap> void map_tests()
       decltype(m), UnorderedMap<int, int, std::hash<int>, std::equal_to<int>,
                      test_allocator<std::pair<const int, int> > >);
   }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  /*
+   template<ranges::input_range R, class Hash = hash<range-key-type<R>>,
+            class Pred = equal_to<range-key-type<R>>,
+            class Allocator = allocator<range-to-alloc-type<R>>>
+     unordered_map(from_range_t, R&&, 
+                   typename see below::size_type = see below,
+                   Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+       -> unordered_map<
+            range-key-type<R>, range-mapped-type<R>, Hash, Pred, Allocator>;
+   */
+
+  {
+    UnorderedMap m(boost::unordered::from_range, x);
+    BOOST_TEST_TRAIT_SAME(decltype(m), UnorderedMap<int, int>);
+  }
+
+  {
+    UnorderedMap m(boost::unordered::from_range, x, 0, std::hash<int>());
+    BOOST_TEST_TRAIT_SAME(decltype(m), UnorderedMap<int, int, std::hash<int> >);
+  }
+
+  {
+    UnorderedMap m(
+      boost::unordered::from_range, x, 0, std::hash<int>(), std::equal_to<int>());
+    BOOST_TEST_TRAIT_SAME(
+      decltype(m), UnorderedMap<int, int, std::hash<int>, std::equal_to<int> >);
+  }
+
+  {
+    UnorderedMap m(boost::unordered::from_range, x, 0, std::hash<int>(),
+      std::equal_to<int>(), pair_allocator);
+    BOOST_TEST_TRAIT_SAME(
+      decltype(m), UnorderedMap<int, int, std::hash<int>, std::equal_to<int>,
+                     test_allocator<std::pair<const int, int> > >);
+  }
+#endif
 
   /*
   template<class Key, class T, class Hash = hash<Key>,
@@ -162,6 +207,24 @@ template <template <class...> class UnorderedMap> void map_tests()
                      test_allocator<std::pair<const int, int> > >);
   }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  /*
+   template<ranges::input_range R, class Allocator>
+      unordered_map(
+        from_range_t, R&&, typename see below::size_type, Allocator)
+        -> unordered_map<
+             range-key-type<R>, range-mapped-type<R>, hash<range-key-type<R>>,
+             equal_to<range-key-type<R>>, Allocator>;
+   */
+
+  {
+    UnorderedMap m(boost::unordered::from_range, x, 0u, pair_allocator);
+    BOOST_TEST_TRAIT_SAME(
+      decltype(m), UnorderedMap<int, int, boost::hash<int>, std::equal_to<int>,
+                     test_allocator<std::pair<const int, int> > >);
+  }
+#endif
+
   /*
     template<class InputIterator, class Allocator>
     unordered_map(InputIterator, InputIterator, Allocator)
@@ -178,6 +241,23 @@ template <template <class...> class UnorderedMap> void map_tests()
                      test_allocator<std::pair<const int, int> > >);
   }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  /*
+   template<ranges::input_range R, class Allocator>
+     unordered_map(from_range_t, R&&, Allocator)
+       -> unordered_map<
+            range-key-type<R>, range-mapped-type<R>, hash<range-key-type<R>>,
+            equal_to<range-key-type<R>>, Allocator>;
+  */
+
+  {
+    UnorderedMap m(boost::unordered::from_range, x, pair_allocator);
+    BOOST_TEST_TRAIT_SAME(
+      decltype(m), UnorderedMap<int, int, boost::hash<int>, std::equal_to<int>,
+                     test_allocator<std::pair<const int, int> > >);
+  }
+#endif
+
   /*
   template<class InputIterator, class Hash, class Allocator>
     unordered_map(InputIterator, InputIterator, typename see below::size_type,
@@ -193,6 +273,23 @@ template <template <class...> class UnorderedMap> void map_tests()
       decltype(m), UnorderedMap<int, int, hash_equals, std::equal_to<int>,
                      test_allocator<std::pair<const int, int> > >);
   }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  /*
+   template<ranges::input_range R, class Hash, class Allocator>
+     unordered_map(
+       from_range_t, R&&, typename see below::size_type, Hash, Allocator)
+       -> unordered_map<range-key-type<R>, range-mapped-type<R>, Hash,
+                        equal_to<range-key-type<R>>, Allocator>;
+  */
+
+  {
+    UnorderedMap m(boost::unordered::from_range, x, 0u, f, pair_allocator);
+    BOOST_TEST_TRAIT_SAME(
+      decltype(m), UnorderedMap<int, int, hash_equals, std::equal_to<int>,
+                     test_allocator<std::pair<const int, int> > >);
+  }
+#endif
 
   /*
     template<class Key, class T, typename Allocator>
@@ -305,6 +402,45 @@ template <template <class...> class UnorderedSet> void set_tests()
                      test_allocator<int> >);
   }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  /*   
+   template<ranges::input_range R,
+            class Hash = hash<ranges::range_value_t<R>>,
+            class Pred = equal_to<ranges::range_value_t<R>>,
+            class Allocator = allocator<ranges::range_value_t<R>>>
+     unordered_set(from_range_t, R&&, 
+                   typename see below::size_type = see below,
+                   Hash = Hash(), Pred = Pred(), Allocator = Allocator())
+       -> unordered_set<ranges::range_value_t<R>, Hash, Pred, Allocator>;   
+   */
+
+  {
+    UnorderedSet s(boost::unordered::from_range, y);
+    BOOST_TEST_TRAIT_SAME(decltype(s), UnorderedSet<int>);
+  }
+
+  {
+    UnorderedSet s(boost::unordered::from_range, y, 0, std::hash<int>());
+    BOOST_TEST_TRAIT_SAME(decltype(s), UnorderedSet<int, std::hash<int> >);
+  }
+
+  {
+    UnorderedSet s(
+      boost::unordered::from_range, y, 0, std::hash<int>(),
+      std::equal_to<int>());
+    BOOST_TEST_TRAIT_SAME(
+      decltype(s), UnorderedSet<int, std::hash<int>, std::equal_to<int> >);
+  }
+
+  {
+    UnorderedSet s(boost::unordered::from_range, y, 0, std::hash<int>(),
+      std::equal_to<int>(), int_allocator);
+    BOOST_TEST_TRAIT_SAME(
+      decltype(s), UnorderedSet<int, std::hash<int>, std::equal_to<int>,
+                     test_allocator<int> >);
+  }
+#endif
+
   /* template<class T,
            class Hash = std::hash<T>,
            class Pred = std::equal_to<T>,
@@ -358,6 +494,24 @@ template <template <class...> class UnorderedSet> void set_tests()
                      test_allocator<int> >);
   }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  /* 
+   template<ranges::input_range R, class Allocator>
+      unordered_set(from_range_t, R&&, 
+                    typename see below::size_type, Allocator)
+        -> unordered_set<ranges::range_value_t<R>, 
+                         hash<ranges::range_value_t<R>>,
+                         equal_to<ranges::range_value_t<R>>, Allocator>;
+   */
+
+  {
+    UnorderedSet s(boost::unordered::from_range, y, 0u, int_allocator);
+    BOOST_TEST_TRAIT_SAME(
+      decltype(s), UnorderedSet<int, boost::hash<int>, std::equal_to<int>,
+                     test_allocator<int> >);
+  }
+#endif
+
   /* template<class InputIt, class Hash, class Alloc>
   unordered_set(InputIt, InputIt, typename see below::size_type, Hash, Alloc)
     -> unordered_set<typename std::iterator_traits<InputIt>::value_type, Hash,
@@ -369,6 +523,22 @@ template <template <class...> class UnorderedSet> void set_tests()
     BOOST_TEST_TRAIT_SAME(decltype(s),
       UnorderedSet<int, hash_equals, std::equal_to<int>, test_allocator<int> >);
   }
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  /* 
+   template<ranges::input_range R, class Hash, class Allocator>
+     unordered_set(from_range_t, R&&, typename see below::size_type,
+                   Hash, Allocator)
+       -> unordered_set<ranges::range_value_t<R>, Hash,
+                        equal_to<ranges::range_value_t<R>>, Allocator>;  
+   */
+
+  {
+    UnorderedSet s(boost::unordered::from_range, y, 0u, f, int_allocator);
+    BOOST_TEST_TRAIT_SAME(decltype(s),
+      UnorderedSet<int, hash_equals, std::equal_to<int>, test_allocator<int> >);
+  }
+#endif
 
   /*   template<class T, class Allocator>
   unordered_set(std::initializer_list<T>, typename see below::size_type,
@@ -408,6 +578,23 @@ template <template <class...> class UnorderedSet> void set_tests()
                      test_allocator<int> >);
   }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  /*
+   template<ranges::input_range R, class Allocator>
+     unordered_set(from_range_t, R&&, Allocator)
+       -> unordered_set<ranges::range_value_t<R>, 
+                        hash<ranges::range_value_t<R>>,
+                        equal_to<ranges::range_value_t<R>>, Allocator>;
+   */
+
+  {
+    UnorderedSet s(boost::unordered::from_range, y, int_allocator);
+    BOOST_TEST_TRAIT_SAME(
+      decltype(s), UnorderedSet<int, boost::hash<int>, std::equal_to<int>,
+                     test_allocator<int> >);
+  }
+#endif
+
   /*
   template<class T, class Allocator>
     unordered_set(initializer_list<T>, Allocator)
@@ -433,10 +620,15 @@ int main()
   map_tests<boost::unordered_map>();
   map_tests<boost::unordered_multimap>();
   map_tests<boost::unordered_flat_map>();
+  map_tests<boost::unordered_node_map>();
   map_tests<boost::concurrent_flat_map>();
+  map_tests<boost::concurrent_node_map>();
   set_tests<boost::unordered_set>();
   set_tests<boost::unordered_multiset>();
   set_tests<boost::unordered_flat_set>();
+  set_tests<boost::unordered_node_set>();
+  set_tests<boost::concurrent_flat_set>();
+  set_tests<boost::concurrent_node_set>();
 
   return boost::report_errors();
 #endif

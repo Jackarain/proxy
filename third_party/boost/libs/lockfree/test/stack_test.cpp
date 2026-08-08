@@ -337,7 +337,7 @@ BOOST_AUTO_TEST_CASE( stack_consume_all_atomic_order_test )
 
     // consume_all_atomic pops all atomically and then processes in stack order (LIFO: 3, 2, 1)
     std::vector< int > consumed_order;
-    size_t consumed = f.consume_all_atomic( [&]( int i ) {
+    size_t             consumed = f.consume_all_atomic( [ & ]( int i ) {
         consumed_order.push_back( i );
     } );
 
@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE( stack_consume_all_atomic_reversed_order_test )
 
     // consume_all_atomic_reversed processes in FIFO order (1, 2, 3)
     std::vector< int > consumed_order;
-    size_t consumed = f.consume_all_atomic_reversed( [&]( int i ) {
+    size_t             consumed = f.consume_all_atomic_reversed( [ & ]( int i ) {
         consumed_order.push_back( i );
     } );
 

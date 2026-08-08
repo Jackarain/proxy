@@ -23,8 +23,6 @@
 #include <boost/thread/future.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::mutex m;
-
 int main()
 {
   {
@@ -75,4 +73,3 @@ int main()
 
   return boost::report_errors();
 }
-

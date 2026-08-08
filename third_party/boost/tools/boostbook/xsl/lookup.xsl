@@ -386,16 +386,33 @@
       </xsl:call-template>
     </xsl:variable>
 
+    <!-- A leading '::' denotes a name rooted at the global namespace.
+         Fully-qualified node names never carry this prefix, so strip it and,
+         when it is present, require an exact match with no extra enclosing
+         qualifiers (i.e. the name is resolved from the global scope). -->
+    <xsl:variable name="absolute" select="starts-with($name, '::')"/>
+    <xsl:variable name="lookup-name">
+      <xsl:choose>
+        <xsl:when test="$absolute">
+          <xsl:value-of select="substring($name, 3)"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:value-of select="$name"/>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+
     <xsl:variable name="leading-chars"
-                  select="string-length($node-name) - string-length($name)"/>
+                  select="string-length($node-name) - string-length($lookup-name)"/>
 
     <!-- Check if this node matches any visible namespace -->
-    <xsl:if test="string-length($node-name) &gt;= string-length($name) and
+    <xsl:if test="string-length($node-name) &gt;= string-length($lookup-name) and
                   substring($node-name, $leading-chars + 1,
-                                        string-length($name)) = $name">
+                                        string-length($lookup-name)) = $lookup-name">
       <xsl:variable name="qualifiers"
                     select="substring($node-name, 1, $leading-chars)"/>
-      <xsl:if test="contains($directives-str, $qualifiers)">
+      <xsl:if test="($absolute and $qualifiers = '') or
+                    (not($absolute) and contains($directives-str, $qualifiers))">
         <xsl:variable name="myid">
           <xsl:call-template name="generate.id">
             <xsl:with-param name="node" select="."/>

@@ -17,6 +17,8 @@
 
 #include "constants.h"
 
+#include "object.h"
+
 
 void constants_init( void )
 {
@@ -68,6 +70,9 @@ void constants_init( void )
     constant_FILE_ARCHIVESCAN         = object_new( "FILE_ARCHIVESCAN" );
 
     constant_RESPONSE_FILE_SUB = object_new( "RESPONSE_FILE_SUB" );
+    constant_FILENAME          = object_new( "__FILENAME__" );
+    constant_MODULE            = object_new( "__MODULE__" );
+
 }
 
 void constants_done( void )
@@ -120,6 +125,8 @@ void constants_done( void )
     object_free( constant_BUILTIN_GLOB_ARCHIVE_BACK );
 
     object_free( constant_RESPONSE_FILE_SUB );
+    object_free( constant_FILENAME );
+    object_free( constant_MODULE );
 }
 
 OBJECT * constant_empty;
@@ -170,3 +177,5 @@ OBJECT * constant_FILE_ARCHIVESCAN;
 OBJECT * constant_BUILTIN_GLOB_ARCHIVE_BACK;
 
 OBJECT * constant_RESPONSE_FILE_SUB;
+OBJECT * constant_FILENAME;
+OBJECT * constant_MODULE;

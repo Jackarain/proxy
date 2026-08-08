@@ -24,6 +24,7 @@
 int main()
 {
   boost::recursive_timed_mutex m0;
+  (void)m0;
   return boost::report_errors();
 }
 

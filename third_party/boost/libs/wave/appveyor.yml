@@ -1,6 +1,24 @@
-# Copyright 2016-2018 Peter Dimov
+# Copyright 2016, 2017 Peter Dimov
+# Copyright 2017 - 2019 James E. King III
+# Copyright 2019 - 2021 Alexander Grund
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
+
+#
+# Generic Appveyor build script for boostorg repositories
+# See: https://github.com/boostorg/boost-ci/
+#
+# Instructions for customizing this script for your library:
+#
+# 1. Customize the compilers and language levels you want.
+# 2. If you have more than include/, src/, test/, example/, examples/,
+#    benchmark/ or tools/ directories, set the environment variable DEPINST.
+#    For example if your build uses code in "bench/" and "fog/" directories:
+#      - DEPINST: --include bench --include fog
+# 3. Enable pull request builds in your boostorg/<library> account.
+#
+# That's it - the script will do everything else for you.
+#
 
 version: 1.0.{build}-{branch}
 
@@ -10,65 +28,78 @@ branches:
   only:
     - master
     - develop
-    - /feature\/.*/
+    - /appveyor\/.*/
     - /bugfix\/.*/
+    - /feature\/.*/
+    - /fix\/.*/
+    - /pr\/.*/
+
+skip_commits:
+  files:
+    - .drone.star
+    - .github/workflows/*
+    - .travis.yml
+    - azure-pipelines/*
+    - drone/*
+    - travis/*
+    - LICENSE
+    - meta/*
+    - README.md
+
+matrix:
+  fast_finish: false
+  # Adding MAYFAIL to any matrix job allows it to fail but the build stays green:
+  allow_failures:
+    - MAYFAIL: true
 
 environment:
+  global:
+    GIT_FETCH_JOBS: 4
+    # see: http://www.boost.org/build/doc/html/bbv2/overview/invocation.html#bbv2.overview.invocation.properties
+    # to use the default for a given environment, comment it out; recommend you build debug and release however:
+    # on Windows it is important to exercise all the possibilities, especially shared vs static, however most
+    # libraries that care about this exercise it in their Jamfiles...
+    B2_ADDRESS_MODEL: 32,64
+    B2_LINK: shared,static
+    # B2_THREADING: threading=multi,single
+    B2_VARIANT: release
+    # per customization instructions at top:
+    DEPINST: --include tool --include samples
+
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      TOOLSET: msvc-12.0,msvc-14.0
-      ADDRMD: 32,64
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      TOOLSET: msvc-14.1
-      CXXSTD: 14,17
-      ADDRMD: 32,64
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      TOOLSET: msvc-14.2
-      CXXSTD: 14,17
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
-      TOOLSET: msvc-14.3
-      CXXSTD: 14,17,20
-##
-## cygwin and mingw disabled for now, failing to build
-## for reasons unrelated to wave
-##
-#    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-#      ADDPATH: C:\cygwin\bin;
-#      TOOLSET: gcc
-#      CXXSTD: 11,14,1z
-#    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-#      ADDPATH: C:\cygwin64\bin;
-#      TOOLSET: gcc
-#      CXXSTD: 11,14,1z
-#    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-#      ADDPATH: C:\mingw\bin;
-#      TOOLSET: gcc
-#      CXXSTD: 11,14,1z
-#    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
-#      ADDPATH: C:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64\bin;
-#      TOOLSET: gcc
-#      CXXSTD: 11,14,1z
+    - FLAVOR: Visual Studio 2013, 2015
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      B2_TOOLSET: msvc-12.0,msvc-14.0
+
+    - FLAVOR: Visual Studio 2017 C++14/17
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      B2_CXXSTD: 14,17
+      B2_TOOLSET: msvc-14.1
+
+    - FLAVOR: Visual Studio 2019
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      B2_CXXFLAGS: -permissive-
+      B2_CXXSTD: 14,17
+      B2_TOOLSET: msvc-14.2
+
+    - FLAVOR: Visual Studio 2022
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+      B2_CXXSTD: 14,17,20
+      B2_TOOLSET: msvc-14.3
 
 install:
-  - set BOOST_BRANCH=develop
-  - if "%APPVEYOR_REPO_BRANCH%" == "master" set BOOST_BRANCH=master
-  - cd ..
-  - git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
-  - cd boost-root
-  - git submodule update --init tools/build
-  - git submodule update --init libs/config
-  - git submodule update --init tools/boostdep
-  - xcopy /s /e /q %APPVEYOR_BUILD_FOLDER% libs\wave
-  - python tools/boostdep/depinst/depinst.py -I tool -I samples wave
-  - cmd /c bootstrap
-  - b2 -d0 headers
+  - git clone --depth 1 https://github.com/boostorg/boost-ci.git C:\boost-ci-cloned
+  # Copy ci folder if not testing Boost.CI
+  - if NOT "%APPVEYOR_PROJECT_NAME%" == "boost-ci" xcopy /s /e /q /i /y C:\boost-ci-cloned\ci .\ci
+  - rmdir /s /q C:\boost-ci-cloned
+  - ci\appveyor\install.bat
 
 build: off
 
-test_script:
-  - PATH=%ADDPATH%%PATH%
-  - if not "%CXXSTD%" == "" set CXXSTD=cxxstd=%CXXSTD%
-  - if not "%ADDRMD%" == "" set ADDRMD=address-model=%ADDRMD%
-  - b2 -j3 libs/wave/test toolset=%TOOLSET% %CXXSTD% %ADDRMD% variant=debug,release
-  - b2 -j3 libs/wave/tool/build//wave toolset=%TOOLSET% %CXXSTD% %ADDRMD% variant=release
-  - b2 -j3 libs/wave/samples toolset=%TOOLSET% %CXXSTD% %ADDRMD% variant=release
+test_script: ci\build.bat
+
+for:
+  # CodeCov coverage build
+  - matrix:
+      only: [COVERAGE: true]
+    test_script: [ps: ci\codecov.ps1]

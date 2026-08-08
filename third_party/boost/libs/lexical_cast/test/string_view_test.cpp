@@ -9,8 +9,6 @@
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt).
 
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/utility/string_view.hpp>
 
 #ifndef BOOST_NO_CXX17_HDR_STRING_VIEW
@@ -18,6 +16,8 @@
 #endif
 
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 
 template <class StringView>

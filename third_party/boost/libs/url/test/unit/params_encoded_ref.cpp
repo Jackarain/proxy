@@ -121,6 +121,11 @@ struct params_encoded_ref_test
         params_encoded_ref ps(u.encoded_params());
         f(ps);
         BOOST_TEST_EQ(u.encoded_query(), s1);
+        BOOST_TEST_EQ(
+            u.encoded_query().decoded_size(),
+            pct_string_view(s1).decoded_size());
+        BOOST_TEST_NO_THROW(u.encoded_target());
+        BOOST_TEST_NO_THROW(u.encoded_resource());
         if(! BOOST_TEST_EQ(
                 ps.size(), init.size()))
             return;

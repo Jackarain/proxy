@@ -13,9 +13,9 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::mutex m;
+boost::mutex g_mutex;
 
 void fail()
 {
-  boost::lock_guard<boost::mutex> lk(m, boost::adopt_lock);
+  boost::lock_guard<boost::mutex> lk(g_mutex, boost::adopt_lock);
 }

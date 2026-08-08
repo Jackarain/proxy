@@ -5,24 +5,24 @@
 #ifndef BOOST_DECIMAL_DETAIL_INT128_CSTDLIB_HPP
 #define BOOST_DECIMAL_DETAIL_INT128_CSTDLIB_HPP
 
-#include "int128.hpp"
+#include <boost/decimal/detail/int128/int128.hpp>
 
 namespace boost {
 namespace int128 {
 
-struct u128div_t
+BOOST_DECIMAL_DETAIL_INT128_EXPORT struct u128div_t
 {
     uint128_t quot;
     uint128_t rem;
 };
 
-struct i128div_t
+BOOST_DECIMAL_DETAIL_INT128_EXPORT struct i128div_t
 {
     int128_t quot;
     int128_t rem;
 };
 
-constexpr u128div_t div(const uint128_t x, const uint128_t y) noexcept
+BOOST_DECIMAL_DETAIL_INT128_EXPORT BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE constexpr u128div_t div(const uint128_t x, const uint128_t y) noexcept
 {
     if (BOOST_DECIMAL_DETAIL_INT128_UNLIKELY(x == 0U || y == 0U))
     {
@@ -54,7 +54,7 @@ constexpr u128div_t div(const uint128_t x, const uint128_t y) noexcept
     }
 }
 
-constexpr i128div_t div(const int128_t x, const int128_t y) noexcept
+BOOST_DECIMAL_DETAIL_INT128_EXPORT BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE constexpr i128div_t div(const int128_t x, const int128_t y) noexcept
 {
     if (BOOST_DECIMAL_DETAIL_INT128_UNLIKELY(x == 0 || y == 0))
     {
@@ -81,11 +81,7 @@ constexpr i128div_t div(const int128_t x, const int128_t y) noexcept
     const auto unsigned_res {div(abs_lhs, abs_rhs)};
 
     const auto negative_quot {(x.high < 0) != (y.high < 0)};
-    #if defined(_MSC_VER) && !defined(__GNUC__)
     const auto negative_rem {x.high < 0};
-    #else
-    const auto negative_rem {(x.high < 0) != (y.high < 0)};
-    #endif
 
     i128div_t res {static_cast<int128_t>(unsigned_res.quot), static_cast<int128_t>(unsigned_res.rem)};
 

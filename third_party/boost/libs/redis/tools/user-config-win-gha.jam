@@ -1,0 +1,53 @@
+# Used on CI. This is required on Windows to make b2 find OpenSSL.
+#
+# Layout matches the Shining Light Productions OpenSSL installer:
+#   <root>/include/                  headers
+#   <root>/lib/VC/x64/MD/*.lib       release libs (linked against /MD  runtime)
+#   <root>/lib/VC/x64/MDd/*.lib      debug   libs (linked against /MDd runtime)
+#   <root>/lib/VC/x64/MT/*.lib       release libs (linked against /MT  runtime)
+#   <root>/lib/VC/x64/MTd/*.lib      debug   libs (linked against /MTd runtime)
+
+local openssl_root = "C:/Program Files/OpenSSL" ;
+
+using openssl : :
+    <include>$(openssl_root)/include
+    <search>"$(openssl_root)/lib/VC/x64/MD"
+    <ssl-name>libssl
+    <crypto-name>libcrypto
+    : 
+    <runtime-link>shared
+    <variant>release
+;
+
+using openssl : :
+    <include>$(openssl_root)/include
+    <search>"$(openssl_root)/lib/VC/x64/MDd"
+    <ssl-name>libssl
+    <crypto-name>libcrypto
+    :
+    <runtime-link>shared
+    <variant>debug
+;
+
+
+using openssl : :
+    <include>$(openssl_root)/include
+    <search>"$(openssl_root)/lib/VC/x64/MT"
+    <ssl-name>libssl
+    <crypto-name>libcrypto
+    :
+    <runtime-link>static
+    <variant>release
+;
+
+
+using openssl : :
+    <include>$(openssl_root)/include
+    <search>"$(openssl_root)/lib/VC/x64/MTd"
+    <ssl-name>libssl
+    <crypto-name>libcrypto
+    :
+    <runtime-link>static
+    <variant>debug
+;
+

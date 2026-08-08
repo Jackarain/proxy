@@ -90,7 +90,7 @@ public:
 
 std::set< std::uint32_t > compute_cpu_set( WORD group_id, KAFFINITY mask) {
 	std::set< std::uint32_t > cpus;
-	for ( int i = 0; i < sizeof( mask) * 8; ++i) {
+	for ( size_t i = 0; i < sizeof( mask) * 8; ++i) {
   		if ( mask & ( static_cast< KAFFINITY >( 1) << i) ) {
    			cpus.insert( static_cast< std::uint32_t >( 64 * group_id + i) );
   		}

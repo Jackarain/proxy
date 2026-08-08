@@ -28,7 +28,7 @@
 
 @supports (scrollbar-width: thin) {
   /* HTML Matches its scroll background to content background */
-  html {
+  html:has(.boostlook) {
     scrollbar-width: thin;
     scrollbar-color: var(--border-border-tetriary, #afb3b6) var(--surface-background-main-base-primary, #fff);
   }
@@ -58,14 +58,14 @@
   }
 }
 
-html::-webkit-scrollbar,
+html:has(.boostlook)::-webkit-scrollbar,
 .boostlook::-webkit-scrollbar,
 .boostlook *::-webkit-scrollbar {
   width: 8px !important;
   height: 8px !important;
 }
 
-html::-webkit-scrollbar-track {
+html:has(.boostlook)::-webkit-scrollbar-track {
   background: var(--surface-background-main-base-primary, #fff);
   border-radius: var(--spacing-size-2xs, 0.5rem);
 }
@@ -80,7 +80,7 @@ html::-webkit-scrollbar-track {
   border-radius: var(--spacing-size-2xs, 0.5rem);
 }
 
-html::-webkit-scrollbar-thumb,
+html:has(.boostlook)::-webkit-scrollbar-thumb,
 .boostlook::-webkit-scrollbar-thumb,
 .boostlook *::-webkit-scrollbar-thumb,
 .boostlook pre::-webkit-scrollbar-thumb,

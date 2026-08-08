@@ -11,9 +11,9 @@
         "String"
     ],
     "maintainers": [
-        "Krystian Stasiowski <sdkrystian@gmail.com>",
         "Alan de Freitas <alandefreitas@gmail.com>",
-        "Vinnie Falco <vinnie.falco@gmail.com>"
+        "Vinnie Falco <vinnie.falco@gmail.com>",
+        "Gennaro Prota <gennaro.prota@gmail.com>"
     ],
     "cxxstd": "11"
 }

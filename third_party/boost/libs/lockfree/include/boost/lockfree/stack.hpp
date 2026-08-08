@@ -22,7 +22,6 @@
 #include <boost/static_assert.hpp>
 
 #include <boost/lockfree/detail/atomic.hpp>
-#include <boost/lockfree/detail/copy_payload.hpp>
 #include <boost/lockfree/detail/freelist.hpp>
 #include <boost/lockfree/detail/parameter.hpp>
 #include <boost/lockfree/detail/tagged_ptr.hpp>
@@ -82,15 +81,19 @@ private:
     static const bool   node_based         = !( has_capacity || fixed_sized );
     static const bool   compile_time_sized = has_capacity;
 
-    struct node
+    struct BOOST_MAY_ALIAS node
     {
-        node( const T& val ) :
+        template < typename TagT >
+        node( const T& val, TagT /*next_tag*/ ) :
             v( val )
         {}
 
-        node( T&& val ) :
+        template < typename TagT >
+        node( T&& val, TagT /*next_tag*/ ) :
             v( std::forward< T >( val ) )
         {}
+
+        node() = delete;
 
         typedef typename detail::select_tagged_handle< node, node_based >::handle_type handle_t;
 
@@ -155,7 +158,12 @@ public:
      *
      *  \pre Must specify a capacity<> argument
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    template < typename U >
+        requires( has_capacity )
+#else
     template < typename U, typename Enabler = std::enable_if< has_capacity > >
+#endif
     explicit stack( typename boost::allocator_rebind< node_allocator, U >::type const& alloc ) :
         pool( alloc, capacity )
     {
@@ -166,8 +174,14 @@ public:
      *
      *  \pre Must specify a capacity<> argument
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    explicit stack( allocator const& alloc )
+        requires( has_capacity )
+        :
+#else
     template < typename Enabler = std::enable_if< has_capacity > >
     explicit stack( allocator const& alloc ) :
+#endif
         pool( alloc, capacity )
     {
         initialize();
@@ -179,8 +193,14 @@ public:
      *
      *  \pre Must \b not specify a capacity<> argument
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    explicit stack( size_type n )
+        requires( !has_capacity )
+        :
+#else
     template < typename Enabler = std::enable_if< !has_capacity > >
     explicit stack( size_type n ) :
+#endif
         pool( node_allocator(), n )
     {
         initialize();
@@ -198,7 +218,12 @@ public:
      *
      *  \pre Must \b not specify a capacity<> argument
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    template < typename U >
+        requires( !has_capacity )
+#else
     template < typename U, typename Enabler = std::enable_if< !has_capacity > >
+#endif
     stack( size_type n, typename boost::allocator_rebind< node_allocator, U >::type const& alloc ) :
         pool( alloc, n )
     {
@@ -211,8 +236,14 @@ public:
      *
      *  \pre Must \b not specify a capacity<> argument
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    stack( size_type n, node_allocator const& alloc )
+        requires( !has_capacity )
+        :
+#else
     template < typename Enabler = std::enable_if< !has_capacity > >
     stack( size_type n, node_allocator const& alloc ) :
+#endif
         pool( alloc, n )
     {
         initialize();
@@ -224,8 +255,13 @@ public:
      *  \note thread-safe, may block if memory allocator blocks
      *
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    void reserve( size_type n )
+        requires( !has_capacity )
+#else
     template < typename Enabler = std::enable_if< !has_capacity > >
     void reserve( size_type n )
+#endif
     {
         pool.template reserve< true >( n );
     }
@@ -236,8 +272,13 @@ public:
      *  \note not thread-safe, may block if memory allocator blocks
      *
      * */
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    void reserve_unsafe( size_type n )
+        requires( !has_capacity )
+#else
     template < typename Enabler = std::enable_if< !has_capacity > >
     void reserve_unsafe( size_type n )
+#endif
     {
         pool.template reserve< false >( n );
     }
@@ -263,7 +304,7 @@ private:
     {
         tagged_node_handle old_tos = tos.load( detail::memory_order_relaxed );
         for ( ;; ) {
-            tagged_node_handle new_tos( pool.get_handle( new_top_node ), old_tos.get_tag() );
+            tagged_node_handle new_tos( pool.get_handle( new_top_node ), old_tos.get_next_tag() );
             end_node->next = pool.get_handle( old_tos );
 
             if ( tos.compare_exchange_weak( old_tos, new_tos ) )
@@ -275,7 +316,7 @@ private:
     {
         tagged_node_handle old_tos = tos.load( detail::memory_order_relaxed );
 
-        tagged_node_handle new_tos( pool.get_handle( new_top_node ), old_tos.get_tag() );
+        tagged_node_handle new_tos( pool.get_handle( new_top_node ), old_tos.get_next_tag() );
         end_node->next = pool.get_handle( old_tos );
 
         tos.store( new_tos, memory_order_relaxed );
@@ -547,7 +588,12 @@ public:
      * \note Thread-safe and non-blocking
      *
      * */
-    template < typename U, typename Enabler = std::enable_if< std::is_convertible< T, U >::value > >
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    template < typename U >
+        requires( std::is_convertible_v< T, U > )
+#else
+    template < typename U, typename Enabler = std::enable_if_t< std::is_convertible< T, U >::value > >
+#endif
     bool pop( U& ret )
     {
         return consume_one( [ & ]( T&& arg ) {
@@ -613,7 +659,12 @@ public:
      * \note Not thread-safe, but non-blocking
      *
      * */
-    template < typename U, typename Enabler = std::enable_if< std::is_convertible< T, U >::value > >
+#if !defined( BOOST_NO_CXX20_HDR_CONCEPTS )
+    template < typename U >
+        requires( std::is_convertible_v< T, U > )
+#else
+    template < typename U, typename Enabler = std::enable_if_t< std::is_convertible< T, U >::value > >
+#endif
     bool unsynchronized_pop( U& ret )
     {
         tagged_node_handle old_tos         = tos.load( detail::memory_order_relaxed );
@@ -803,10 +854,7 @@ private:
 #ifndef BOOST_DOXYGEN_INVOKED
     detail::atomic< tagged_node_handle > tos;
 
-    static const int padding_size = detail::cacheline_bytes - sizeof( tagged_node_handle );
-    char             padding[ padding_size ];
-
-    pool_t pool;
+    alignas( detail::cacheline_bytes ) pool_t pool;
 #endif
 };
 

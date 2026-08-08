@@ -37,11 +37,11 @@ modules A and B both use a variable named X, each one gets its own copy
 of X. They won't interfere with each other in any way. Similarly,
 importing rules into one module has no effect on any other module.
 
-Every module has two special variables. `$(__file__)` contains the name
-of the file that the module was loaded from and `$(__name__)` contains
+Every module has two special variables. `$(\\__file__)` contains the name
+of the file that the module was loaded from and `$(\\__name__)` contains
 the name of the module.
 
-NOTE: `$(__file__)` does not contain the full path to the file. If you need
+NOTE: `$(\\__file__)` does not contain the full path to the file. If you need
 this, use `modules.binding`.
 
 end::reference[] */
@@ -229,7 +229,7 @@ Jam:: `rule run-tests ( m )`
 ====
 
 Runs internal B2 unit tests for the specified module. The module's
-`__test__` rule is executed in its own module to eliminate any inadvertent
+`\\__test__` rule is executed in its own module to eliminate any inadvertent
 effects of testing module dependencies (such as assert) on the module itself.
 
 end::reference[] */

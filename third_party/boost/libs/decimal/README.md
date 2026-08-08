@@ -32,11 +32,11 @@ then you can use `find_package(boost_decimal REQUIRED)`
 
 ## vcpkg
 
-Available in official vcpkg sources soon 
+Available in [official vcpkg sources](https://vcpkg.io/en/package/boost-decimal).
 
 ## Conan
 
-Available in official conan sources soon
+Available in [official conan sources](https://conan.io/center/recipes/boost) as part of the Boost distribution.
 
 # Supported Platforms
 

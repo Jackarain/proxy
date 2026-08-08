@@ -19,6 +19,7 @@ project
     requirements
        <library>/boost/msm//boost_msm
        <include>.
+       <include>../doc/modules/ROOT
        <toolset>gcc:<cxxflags>"-ftemplate-depth-300 -g0"
        <toolset>darwin:<cxxflags>"-ftemplate-depth-300 -g0"
        <toolset>intel:<cxxflags>"-g0"
@@ -48,6 +49,7 @@ test-suite msm-unit-tests
     [ run OrthogonalDeferred.cpp ]
     [ run OrthogonalDeferred2.cpp ]
     [ run OrthogonalDeferred3.cpp ]
+    [ run OrthogonalDeferred4.cpp ]
     # MSVC 32-bit runs out of memory when compiling this test
     [ run OrthogonalDeferredEuml.cpp : : : <toolset>msvc-14.3,<address-model>32:<build>no ]
     # GCC has a bug in std::type_info::before() that leads to a segfault.
@@ -82,10 +84,17 @@ test-suite msm-unit-tests-cxxstd17
     [ run Backmp11Context.cpp ]
     [ run Backmp11CopyMove.cpp ]
     [ run Backmp11Deferred.cpp ]
-    [ run Backmp11FunctorApi.cpp ]
     [ run Backmp11EntryExit.cpp ]
+    [ run Backmp11Exceptions.cpp ]
+    [ run Backmp11FunctorApi.cpp ]
+    [ run Backmp11Heapless.cpp ]
+    [ run Backmp11History.cpp ]
+    [ run Backmp11MachineState.cpp ]
     [ run Backmp11ManyDeferTransitions.cpp ]
+    [ run Backmp11Observer.cpp ]
     [ run Backmp11RootSm.cpp ]
+    [ run Backmp11Serialization.cpp : : : <define>BOOST_MSM_TEST_NLOHMANN_JSON ]
+    [ run Backmp11StateMachineInterface.cpp ]
     [ run Backmp11Transitions.cpp ]
     [ run Backmp11Visitor.cpp ]
     :

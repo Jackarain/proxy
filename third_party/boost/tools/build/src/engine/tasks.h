@@ -9,8 +9,6 @@ Distributed under the Boost Software License, Version 1.0.
 
 #include "config.h"
 
-#include "mod_sysinfo.h"
-
 #include <functional>
 #include <memory>
 

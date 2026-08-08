@@ -1,0 +1,74 @@
+// Copyright 2026 Peter Dimov
+// Distributed under the Boost Software License, Version 1.0.
+// https://www.boost.org/LICENSE_1_0.txt)
+
+// Test for BOOST_VERIFY with both BOOST_ENABLE_ASSERT_HANDLER and
+// BOOST_ENABLE_ASSERT_DEBUG_HANDLER defined
+
+#include <boost/core/lightweight_test.hpp>
+
+int handler_invoked = 0;
+int msg_handler_invoked = 0;
+
+#define BOOST_ENABLE_ASSERT_HANDLER
+#define BOOST_ENABLE_ASSERT_DEBUG_HANDLER
+#include <boost/assert.hpp>
+
+void test_both()
+{
+    int x = 1;
+
+    BOOST_VERIFY( 1 );
+    BOOST_TEST_EQ( handler_invoked, 0 );
+
+    BOOST_VERIFY_MSG( 1, "1" );
+    BOOST_TEST_EQ( msg_handler_invoked, 0 );
+
+    BOOST_VERIFY( x == 1 );
+    BOOST_TEST_EQ( handler_invoked, 0 );
+
+    BOOST_VERIFY_MSG( x == 1, "x == 1" );
+    BOOST_TEST_EQ( msg_handler_invoked, 0 );
+
+    BOOST_VERIFY( ++x );
+    BOOST_TEST_EQ( handler_invoked, 0 );
+    BOOST_TEST_EQ( x, 2 );
+
+    BOOST_VERIFY_MSG( ++x, "++x" );
+    BOOST_TEST_EQ( msg_handler_invoked, 0 );
+    BOOST_TEST_EQ( x, 3 );
+
+#if defined(NDEBUG)
+
+    BOOST_VERIFY( 0 );
+    BOOST_TEST_EQ( handler_invoked, 0 );
+
+    BOOST_VERIFY_MSG( 0, "0" );
+    BOOST_TEST_EQ( msg_handler_invoked, 0 );
+
+#else
+
+    BOOST_VERIFY( 0 );
+    BOOST_TEST_EQ( handler_invoked, 1 );
+
+    BOOST_VERIFY_MSG( 0, "0" );
+    BOOST_TEST_EQ( msg_handler_invoked, 1 );
+
+#endif
+}
+
+int main()
+{
+    test_both();
+    return boost::report_errors();
+}
+
+void boost::assertion_failed( char const*, char const*, char const*, long )
+{
+    ++handler_invoked;
+}
+
+void boost::assertion_failed_msg( char const*, char const*, char const*, char const*, long )
+{
+    ++msg_handler_invoked;
+}

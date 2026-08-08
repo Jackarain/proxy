@@ -21,7 +21,6 @@ set(deps
     detail
     function
     function_types
-    functional
     fusion
     intrusive
     io

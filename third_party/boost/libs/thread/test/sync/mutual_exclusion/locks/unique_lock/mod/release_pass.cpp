@@ -38,16 +38,16 @@ struct mutex
 int mutex::lock_count = 0;
 int mutex::unlock_count = 0;
 
-mutex m;
+mutex g_mutex;
 
 int main()
 {
-  boost::unique_lock<mutex> lk(m);
-  BOOST_TEST(lk.mutex() == &m);
+  boost::unique_lock<mutex> lk(g_mutex);
+  BOOST_TEST(lk.mutex() == &g_mutex);
   BOOST_TEST(lk.owns_lock() == true);
   BOOST_TEST(mutex::lock_count == 1);
   BOOST_TEST(mutex::unlock_count == 0);
-  BOOST_TEST(lk.release() == &m);
+  BOOST_TEST(lk.release() == &g_mutex);
   BOOST_TEST(lk.mutex() == 0);
   BOOST_TEST(lk.owns_lock() == false);
   BOOST_TEST(mutex::lock_count == 1);

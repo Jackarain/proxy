@@ -87,6 +87,12 @@ run limits.cpp main.cpp /boost/json//json_sources
       <define>BOOST_JSON_STACK_BUFFER_SIZE=256
     ;
 
+run header_only.cpp
+    : requirements
+      <include>../include
+      <dependency>/boost/json//boost_json
+    ;
+
 run no_exceptions.cpp main.cpp /boost/json//json_sources
     : requirements
       <exception-handling>off
@@ -103,5 +109,5 @@ boost-pretty-printers.test-gdb-printers gdb-printers
     ;
 explicit gdb-printers ;
 
-alias common : $(SOURCES:B) limits no_exceptions intrusive_macros ;
+alias common : $(SOURCES:B) limits header_only no_exceptions intrusive_macros ;
 alias heavy : $(HEAVY_SOURCES:B) ;

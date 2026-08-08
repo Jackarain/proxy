@@ -7,6 +7,7 @@
 
 //[plugcpp_my_plugin_refcounting_api
 #include "../tutorial_common/my_plugin_api.hpp"
+#include <memory>
 #include <boost/dll/config.hpp>
 
 class my_refcounting_api: public my_plugin_api {
@@ -19,7 +20,6 @@ public:
 
 
 //[plugcpp_library_holding_deleter_api_bind
-#include <memory>
 #include <boost/dll/shared_library.hpp>
 
 struct library_holding_deleter {

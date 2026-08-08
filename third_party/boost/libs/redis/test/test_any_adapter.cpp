@@ -8,33 +8,30 @@
 #include <boost/redis/ignore.hpp>
 #include <boost/redis/response.hpp>
 
+#include <boost/core/lightweight_test.hpp>
+
 #include <string>
-#define BOOST_TEST_MODULE any_adapter
-#include <boost/test/included/unit_test.hpp>
 
-using boost::redis::generic_response;
-using boost::redis::resp3::flat_tree;
-using boost::redis::response;
-using boost::redis::ignore;
-using boost::redis::any_adapter;
-using boost::redis::any_adapter;
+using namespace boost::redis;
 
-BOOST_AUTO_TEST_CASE(any_adapter_response_types)
+namespace {
+
+void test_response_types()
 {
    // any_adapter can be used with any supported responses
    response<int> r1;
    response<int, std::string> r2;
    generic_response r3;
-   flat_tree r4;
+   resp3::flat_tree r4;
 
-   BOOST_CHECK_NO_THROW(any_adapter{r1});
-   BOOST_CHECK_NO_THROW(any_adapter{r2});
-   BOOST_CHECK_NO_THROW(any_adapter{r3});
-   BOOST_CHECK_NO_THROW(any_adapter{r4});
-   BOOST_CHECK_NO_THROW(any_adapter{ignore});
+   BOOST_TEST_NO_THROW(any_adapter{r1});
+   BOOST_TEST_NO_THROW(any_adapter{r2});
+   BOOST_TEST_NO_THROW(any_adapter{r3});
+   BOOST_TEST_NO_THROW(any_adapter{r4});
+   BOOST_TEST_NO_THROW(any_adapter{ignore});
 }
 
-BOOST_AUTO_TEST_CASE(any_adapter_copy_move)
+void test_copy_move()
 {
    // any_adapter can be copied/moved
    response<int, std::string> r;
@@ -47,8 +44,18 @@ BOOST_AUTO_TEST_CASE(any_adapter_copy_move)
    auto ad3 = any_adapter(std::move(ad2));
 
    // copy assignment
-   BOOST_CHECK_NO_THROW(ad2 = ad1);
+   BOOST_TEST_NO_THROW(ad2 = ad1);
 
    // move assignment
-   BOOST_CHECK_NO_THROW(ad2 = std::move(ad1));
+   BOOST_TEST_NO_THROW(ad2 = std::move(ad1));
+}
+
+}  // namespace
+
+int main()
+{
+   test_response_types();
+   test_copy_move();
+
+   return boost::report_errors();
 }

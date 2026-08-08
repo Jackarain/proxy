@@ -109,12 +109,12 @@ int f0()
   return 3;
 }
 
-int i = 0;
+int g_i = 0;
 
 int& f1()
 {
   boost::this_thread::sleep_for(ms(200));
-  return i;
+  return g_i;
 }
 
 void f2()
@@ -153,8 +153,8 @@ struct check_timer {
   boost::chrono::nanoseconds delay;
   Clock::time_point start;
   check_timer(boost::chrono::nanoseconds delay)
-  : delay(delay)
-  , start(Clock::now())
+    : delay(delay)
+    , start(Clock::now())
   {
   }
   ~check_timer() {
@@ -490,7 +490,7 @@ int main()
         check_timer timer(ms(500));
         res = &f.get();
       }
-      BOOST_TEST(res == &i);
+      BOOST_TEST(res == &g_i);
     }
     catch (std::exception& ex)
     {
@@ -513,7 +513,7 @@ int main()
         check_timer timer(ms(500));
         res = &f.get();
       }
-      BOOST_TEST(res == &i);
+      BOOST_TEST(res == &g_i);
     }
     catch (std::exception& ex)
     {
@@ -536,7 +536,7 @@ int main()
         check_timer timer(ms(500));
         res = &f.get();
       }
-      BOOST_TEST(res == &i);
+      BOOST_TEST(res == &g_i);
     }
     catch (std::exception& ex)
     {
@@ -560,7 +560,7 @@ int main()
         check_timer timer(ms(500));
         res = &f.get();
       }
-      BOOST_TEST(res == &i);
+      BOOST_TEST(res == &g_i);
     }
     catch (std::exception& ex)
     {

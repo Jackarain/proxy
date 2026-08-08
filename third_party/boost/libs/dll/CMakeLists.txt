@@ -1,10 +1,11 @@
 # Copyright 2020 Peter Dimov
 # Copyright Antony Polukhin, 2021-2026
+# Copyright Fedor Osetrov, 2025-2026
 #
 # Distributed under the Boost Software License, Version 1.0.
 # https://www.boost.org/LICENSE_1_0.txt
 
-cmake_minimum_required(VERSION 3.5...3.16)
+cmake_minimum_required(VERSION 3.5...4.20)
 
 project(boost_dll VERSION "${BOOST_SUPERPROJECT_VERSION}" LANGUAGES CXX)
 
@@ -48,16 +49,43 @@ target_link_libraries(boost_dll_boost_fs
     Boost::filesystem
 )
 
-# Detault library
+# Default library
 
-add_library(boost_dll INTERFACE)
-add_library(Boost::dll ALIAS boost_dll)
-target_include_directories(boost_dll INTERFACE include)
-if (BOOST_DLL_USE_STD_FS)
-  target_link_libraries(boost_dll INTERFACE Boost::dll_std_fs)
+if (BOOST_USE_MODULES)
+  add_library(boost_dll)
+  target_compile_definitions(boost_dll PUBLIC BOOST_USE_MODULES)
+
+  get_property(__standard TARGET boost_dll PROPERTY CXX_STANDARD)
+  if (__standard IN_LIST CMAKE_CXX_COMPILER_IMPORT_STD AND CMAKE_CXX_MODULE_STD)
+    target_compile_features(boost_dll PUBLIC cxx_std_23)
+    target_compile_definitions(boost_dll PRIVATE BOOST_DLL_USE_STD_MODULE)
+    message(STATUS "Using `import std;`")
+  else()
+    target_compile_features(boost_dll PUBLIC cxx_std_20)
+    message(STATUS "`import std;` is not available")
+  endif()
+  unset(__standard)
+
+  target_sources(boost_dll
+    PUBLIC
+      FILE_SET CXX_MODULES
+      BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/modules
+      FILES ${CMAKE_CURRENT_SOURCE_DIR}/modules/boost_dll.cppm
+  )
+  set(__scope PUBLIC)
 else()
-  target_link_libraries(boost_dll INTERFACE Boost::dll_boost_fs)
+  add_library(boost_dll INTERFACE)
+  set(__scope INTERFACE)
 endif()
+
+add_library(Boost::dll ALIAS boost_dll)
+target_include_directories(boost_dll ${__scope} include)
+if (BOOST_DLL_USE_STD_FS)
+  target_link_libraries(boost_dll ${__scope} Boost::dll_std_fs)
+else()
+  target_link_libraries(boost_dll ${__scope} Boost::dll_boost_fs)
+endif()
+unset(__scope)
 
 if (BOOST_SUPERPROJECT_VERSION AND NOT CMAKE_VERSION VERSION_LESS 3.13)
   boost_install(

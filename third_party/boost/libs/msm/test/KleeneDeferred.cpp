@@ -69,8 +69,8 @@ namespace
 
         struct is_event1
         {
-            template <class EVT, class FSM, class SourceState, class TargetState>
-            bool operator()(EVT const& evt, FSM&, SourceState&, TargetState&)
+            template <class FSM, class SourceState, class TargetState>
+            bool operator()(boost::any const& evt, FSM&, SourceState&, TargetState&)
             {
                 bool is_deferred = boost::any_cast<event1>(&evt) != 0;
                 return is_deferred;

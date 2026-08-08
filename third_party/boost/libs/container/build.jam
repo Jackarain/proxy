@@ -18,7 +18,7 @@ project /boost/container
 
 explicit
     [ alias boost_container : build//boost_container ]
-    [ alias all : boost_container example test bench ]
+    [ alias all : boost_container example test bench experimental ]
     ;
 
 call-if : boost-library container

@@ -9,19 +9,27 @@
 #define BOOST_DLL_DETAIL_POSIX_PATH_FROM_HANDLE_HPP
 
 #include <boost/dll/config.hpp>
-#include <boost/dll/detail/system_error.hpp>
-#include <boost/dll/detail/posix/program_location_impl.hpp>
-#include <boost/predef/os.h>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 # pragma once
 #endif
 
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#include <boost/predef/os.h>
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
+
+#include <boost/dll/detail/system_error.hpp>
+#include <boost/dll/detail/posix/program_location_impl.hpp>
+
 #if BOOST_OS_MACOS || BOOST_OS_IOS
 
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
 #   include <mach-o/dyld.h>
 #   include <mach-o/nlist.h>
+#if !defined(BOOST_DLL_USE_STD_MODULE)
 #   include <cstddef> // for std::ptrdiff_t
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 namespace boost { namespace dll { namespace detail {
     inline void* strip_handle(void* handle) noexcept {
@@ -64,7 +72,9 @@ namespace boost { namespace dll { namespace detail {
 
 #elif BOOST_OS_ANDROID
 
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
 #include <boost/dll/runtime_symbol_info.hpp>
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 namespace boost { namespace dll { namespace detail {
 
@@ -99,11 +109,15 @@ namespace boost { namespace dll { namespace detail {
 #else // #if BOOST_OS_MACOS || BOOST_OS_IOS || BOOST_OS_ANDROID
 
 // for dlinfo
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
 #include <dlfcn.h>
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 #if BOOST_OS_QNX
 // QNX's copy of <elf.h> and <link.h> reside in sys folder
+# if !defined(BOOST_DLL_INTERFACE_UNIT)
 #   include <sys/link.h>
+# endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 #elif BOOST_OS_CYGWIN
 // Cygwin returns the opaque pointer-sized handle of type `HMODULE` on the invoke of `dlopen`,
 // which cannot be interpreted. As GCC on Cygwin always links to KERNEL32.DLL, we can use the
@@ -114,7 +128,9 @@ extern "C" void GetModuleFileNameW(void*, wchar_t*, unsigned long long);
 // Introduce the Win32 API `GetLastError` here
 extern "C" unsigned long long GetLastError();
 #else
+# if !defined(BOOST_DLL_INTERFACE_UNIT)
 #   include <link.h>    // struct link_map
+# endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 #endif
 
 namespace boost { namespace dll { namespace detail {

@@ -27,7 +27,7 @@ template <typename T>
 constexpr auto log2_impl(const T x) noexcept
     BOOST_DECIMAL_REQUIRES(detail::is_decimal_floating_point_v, T)
 {
-    return log(x) / numbers::ln2_v<T>;
+    return ::boost::decimal::log(x) / numbers::ln2_v<T>;
 }
 
 } //namespace detail

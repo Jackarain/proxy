@@ -31,13 +31,16 @@
 #include "jam.h"
 #include "rules.h"
 
+#include "function.h"
 #include "hash.h"
 #include "lists.h"
+#include "modules.h"
 #include "object.h"
 #include "output.h"
 #include "parse.h"
 #include "pathsys.h"
 #include "search.h"
+#include "jam_strings.h"
 #include "variable.h"
 
 
@@ -127,7 +130,9 @@ static rule_ptr define_rule( module_ptr src_module, b2::value_ptr rulename,
     rule_ptr const r = enter_rule( rulename, target_module );
     if ( r->module != src_module )
     {
-        /* If the rule was imported from elsewhere, clear it now. */
+        /* If the rule was imported from elsewhere, clear it now. This can
+         * can happen, for example, when an imported rule does an overwrite
+         */
         set_rule_body( r, 0 );
         set_rule_actions( r, 0 );
         /* r will be executed in the source module. */
@@ -147,6 +152,18 @@ void rule_free( rule_ptr r )
     if ( r->actions )
         actions_free( r->actions );
     r->actions = 0;
+}
+
+
+/*
+ * find_target() - return pointer to TARGET, or NULL
+ */
+
+target_ptr find_target( b2::value_ptr target_name )
+{
+    if ( targethash )
+        return (target_ptr)hash_find( targethash, target_name );
+    return 0;
 }
 
 
@@ -575,7 +592,7 @@ static rule_ptr global_rule( rule_ptr r )
 /*
  * new_rule_body() - make a new rule named rulename in the given module, with
  * the given argument list and procedure. If exported is true, the rule is
- * exported to the global module as modulename.rulename.
+ * a Jam "non local" rule, i.e. is supposed to appear in the global module.
  */
 
 rule_ptr new_rule_body( module_ptr m, b2::value_ptr rulename, function_ptr procedure,

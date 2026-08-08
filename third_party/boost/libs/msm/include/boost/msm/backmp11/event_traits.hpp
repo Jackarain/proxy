@@ -23,16 +23,6 @@ namespace boost::msm
 template <>
 struct is_kleene_event<std::any> : std::true_type {};
 
-} // boost::msm
-
-namespace boost::msm::backmp11
-{
-
-// Import std::any_cast for overload resolution:
-// In case boost::any is used as Kleene event,
-// overload resolution will pick boost::any_cast for us.
-using std::any_cast;
-
-} // boost::msm::backmp11
+} // namespace boost::msm
 
 #endif //BOOST_MSM_EVENT_TRAITS_HPP

@@ -5,26 +5,36 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+/// \file boost/dll/alias.hpp
+/// \brief Includes alias methods and macro. You can include this header or
+/// boost/dll/shared_library.hpp to reduce dependencies
+/// in case you do not use the refcountable functions.
+
 #ifndef BOOST_DLL_ALIAS_HPP
 #define BOOST_DLL_ALIAS_HPP
 
-#include <boost/dll/config.hpp>
-#include <boost/predef/compiler.h>
-#include <boost/predef/os.h>
-#include <boost/dll/detail/aggressive_ptr_cast.hpp>
+#include <boost/dll/detail/config.hpp>
 
-#if BOOST_COMP_GNUC // MSVC does not have <stdint.h> and defines it in some other header, MinGW requires that header.
-#include <stdint.h> // intptr_t
-#endif
+#if !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
+
+#include <boost/dll/config.hpp>
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 # pragma once
 #endif
 
-/// \file boost/dll/alias.hpp
-/// \brief Includes alias methods and macro. You can include this header or
-/// boost/dll/shared_library.hpp to reduce dependencies
-/// in case you do not use the refcountable functions.
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#include <boost/predef/compiler.h>
+#include <boost/predef/os.h>
+
+#if BOOST_COMP_GNUC // MSVC does not have <stdint.h> and defines it in some other header, MinGW requires that header.
+#include <stdint.h> // intptr_t
+#endif
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
+
+#include <boost/dll/detail/aggressive_ptr_cast.hpp>
+
+#endif // !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
 
 namespace boost { namespace dll {
 
@@ -283,7 +293,6 @@ namespace boost { namespace dll {
 
 
 }} // namespace boost::dll
-
 
 #endif // BOOST_DLL_ALIAS_HPP
 

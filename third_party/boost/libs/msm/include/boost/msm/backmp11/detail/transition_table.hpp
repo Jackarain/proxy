@@ -12,27 +12,45 @@
 #ifndef BOOST_MSM_BACKMP11_DETAIL_TRANSITION_TABLE_HPP
 #define BOOST_MSM_BACKMP11_DETAIL_TRANSITION_TABLE_HPP
 
-#include "boost/assert.hpp"
+#include <boost/assert.hpp>
 
 #include <boost/msm/active_state_switching_policies.hpp>
+#include <boost/msm/back/common_types.hpp>
+#include <boost/msm/row_tags.hpp>
+
+#include <boost/msm/backmp11/detail/common.hpp>
 #include <boost/msm/backmp11/detail/metafunctions.hpp>
-#include "boost/msm/backmp11/state_machine_config.hpp"
+#include <boost/msm/backmp11/state_machine_config.hpp>
 
 namespace boost::msm::front
 {
-    struct Defer;
-};
+
+struct Defer;
+
+}
 
 namespace boost::msm::backmp11::detail
 {
+
+// Adapter for the basic front-end.
+constexpr process_result to_process_result(back::HandledEnum value)
+{
+    return static_cast<process_result>(value);
+}
+
+constexpr process_result to_process_result(process_result result)
+{
+    return result;
+}
 
 // Chain of priority tags for SFINAE handling:
 // priority_tag_0 
 //   ↓ (SFINAE fails?)
 // priority_tag_1 (base of priority_tag_0)
 //   ↓ (SFINAE fails?)
-// priority_tag_2 (base of priority_tag_1)
-struct priority_tag_2 {};
+// ...
+struct priority_tag_3 {};
+struct priority_tag_2 : priority_tag_3 {};
 struct priority_tag_1 : priority_tag_2 {};
 struct priority_tag_0 : priority_tag_1 {};
 
@@ -57,6 +75,18 @@ auto invoke_functor(priority_tag_2, Functor&&, const Event&, Fsm& fsm, Source&,
                     Target&) -> decltype(Functor{}(fsm))
 {
     return Functor{}(fsm);
+}
+template <typename...>
+inline constexpr bool invokable = false;
+template <typename Functor, typename Event, typename Fsm, typename Source,
+          typename Target>
+auto invoke_functor(priority_tag_3, Functor&&, const Event&, Fsm&, Source&,
+                    Target&)
+{
+    static_assert(
+        invokable<Functor, Event, Fsm, Source, Target>,
+        "Action/Guard must be invokable with one of these signatures: "
+        "(event, fsm, source, target), (event, fsm), or (fsm)");
 }
 
 template <typename Row>
@@ -99,7 +129,7 @@ struct invoke_action_functor
     {
         invoke_functor<Functor>(priority_tag_0{}, Functor{}, event, fsm, source,
                                 target);
-        return process_result::HANDLED_TRUE;
+        return process_result::consumed;
     }
 };
 template <>
@@ -108,7 +138,7 @@ struct invoke_action_functor<front::none>
     template <typename Event, typename Fsm, typename Source, typename Target>
     static process_result execute(const Event&, Fsm&, Source&, Target&)
     {
-        return process_result::HANDLED_TRUE;
+        return process_result::consumed;
     }
 };
 template <>
@@ -119,7 +149,7 @@ struct invoke_action_functor<front::Defer>
                                   Target&)
     {
         fsm.defer_event(event);
-        return process_result::HANDLED_DEFERRED;
+        return process_result::deferred;
     }
 };
 
@@ -133,7 +163,7 @@ struct transition_table_impl
     template<typename T>
     using get_active_state_switch_policy = typename T::active_state_switch_policy;
     using active_state_switching =
-        boost::mp11::mp_eval_or<active_state_switch_after_entry,
+        boost::mp11::mp_eval_or<active_state_switch_after_exit,
                                 get_active_state_switch_policy, front_end_t>;
 
     template <typename Row, bool HasGuard, typename Event, typename Source,
@@ -170,12 +200,12 @@ struct transition_table_impl
         }
         else if constexpr (HasAction)
         {
-            return Row::action_call(
-                sm.get_fsm_argument(), event, source, target, sm.m_states);
+            return to_process_result(Row::action_call(
+                sm.get_fsm_argument(), event, source, target, sm.m_states));
         }
         else
         {
-            return process_result::HANDLED_TRUE;
+            return process_result::consumed;
         }
     }
 
@@ -228,17 +258,44 @@ struct transition_table_impl
         using next_state_type =
             convert_target_state<derived_t, typename Row::Target>;
 
-        // Take the transition action and return the next state.
-        static process_result execute(StateMachine& sm,
-                                      int region_id,
-                                      transition_event const& event)
+        template <typename Event>
+        static process_result process(StateMachine& sm,
+                                      uint8_t region_id,
+                                      const Event& event)
         {
-            int& state_id = sm.m_active_state_ids[region_id]; 
-            static constexpr int current_state_id =
+            if constexpr (!std::is_same_v<typename StateMachine::observer_t,
+                                          no_observer>)
+            {
+                sm.get_observer()
+                    .template pre_process_transition<
+                        typename Row::Source, typename Row::Evt,
+                        typename Row::Target, typename Row::Action,
+                        typename Row::Guard>(sm, region_id);
+            }
+            const auto result = process_impl(sm, region_id, event);
+            if constexpr (!std::is_same_v<typename StateMachine::observer_t,
+                                          no_observer>)
+            {
+                sm.get_observer()
+                    .template post_process_transition<
+                        typename Row::Source, typename Row::Evt,
+                        typename Row::Target, typename Row::Action,
+                        typename Row::Guard>(sm, region_id, result);
+            }
+            return result;
+        }
+
+        template <typename Event>
+        static process_result process_impl(StateMachine& sm,
+                                           uint8_t region_id,
+                                           const Event& event)
+        {
+            auto& state_id = sm.m_active_state_ids[region_id];
+            [[maybe_unused]] constexpr auto current_state_id =
                 StateMachine::template get_state_id<current_state_type>();
-            static constexpr int next_state_id =
-                StateMachine::template get_state_id<next_state_type>();
             BOOST_ASSERT(state_id == current_state_id);
+            constexpr auto next_state_id =
+                StateMachine::template get_state_id<next_state_type>();
 
             auto& source = sm.template get_state<current_state_type>();
             auto& target = sm.template get_state<next_state_type>();
@@ -246,29 +303,41 @@ struct transition_table_impl
             if (!call_guard_or_true<Row, HasGuard>(sm, event, source, target))
             {
                 // guard rejected the event, we stay in the current one
-                return process_result::HANDLED_GUARD_REJECT;
+                return process_result::rejected;
             }
-            state_id = active_state_switching::after_guard(current_state_id,
-                                                           next_state_id);
+            if constexpr (std::is_same_v<active_state_switching,
+                                         active_state_switch_before_transition>)
+            {
+                state_id = next_state_id;
+            }
 
             // first call the exit method of the current state
             source.on_exit(event, sm.get_fsm_argument());
-            state_id = active_state_switching::after_exit(current_state_id,
-                                                          next_state_id);
+            if constexpr (std::is_same_v<active_state_switching,
+                                         active_state_switch_after_exit>)
+            {
+                state_id = next_state_id;
+            }
 
             // then call the action method
             process_result res =
                 call_action_or_true<Row, HasAction>(sm, event, source, target);
-            state_id = active_state_switching::after_action(current_state_id,
-                                                            next_state_id);
+            if constexpr (std::is_same_v<active_state_switching,
+                                         active_state_switch_after_transition_action>)
+            {
+                state_id = next_state_id;
+            }
 
             // and finally the entry method of the new state
             call_entry<Row>(sm, event, target);
-            state_id = active_state_switching::after_entry(current_state_id,
-                                                           next_state_id);
+            if constexpr (std::is_same_v<active_state_switching,
+                                         active_state_switch_after_entry>)
+            {
+                state_id = next_state_id;
+            }
 
             // Give a chance to handle completion transitions.
-            sm.template on_state_entry_completed<next_state_type>(region_id);
+            sm.on_state_entry_completed(target, region_id);
 
             return res;
         }
@@ -282,14 +351,40 @@ struct transition_table_impl
     {
         using transition_event = typename Row::Evt;
         using current_state_type = State;
-        using next_state_type = current_state_type;
 
-        // Take the transition action and return the next state.
-        static process_result execute(StateMachine& sm,
-                                      int region_id,
-                                      transition_event const& event)
+        template <typename Event>
+        static process_result process(StateMachine& sm,
+                                      uint8_t region_id,
+                                      const Event& event)
         {
-            [[maybe_unused]] const int state_id = sm.m_active_state_ids[region_id];
+            if constexpr (!std::is_same_v<typename StateMachine::observer_t,
+                                          no_observer>)
+            {
+                sm.get_observer()
+                    .template pre_process_transition<
+                        typename Row::Source, typename Row::Evt,
+                        typename front::none, typename Row::Action,
+                        typename Row::Guard>(sm, region_id);
+            }
+            const auto result = process_impl(sm, region_id, event);
+            if constexpr (!std::is_same_v<typename StateMachine::observer_t,
+                                          no_observer>)
+            {
+                sm.get_observer()
+                    .template post_process_transition<
+                        typename Row::Source, typename Row::Evt,
+                        typename front::none, typename Row::Action,
+                        typename Row::Guard>(sm, region_id, result);
+            }
+            return result;
+        }
+
+        template <typename Event>
+        static process_result process_impl(StateMachine& sm,
+                                           uint8_t region_id,
+                                           const Event& event)
+        {
+            [[maybe_unused]] const auto state_id = sm.m_active_state_ids[region_id];
             BOOST_ASSERT(
                 state_id ==
                 StateMachine::template get_state_id<current_state_type>());
@@ -299,7 +394,7 @@ struct transition_table_impl
 
             if (!call_guard_or_true<Row, HasGuard>(sm, event, source, target))
             {
-                return process_result::HANDLED_GUARD_REJECT;
+                return process_result::rejected;
             }
             return call_action_or_true<Row, HasAction>(sm, event, source, target);
         }
@@ -312,16 +407,42 @@ struct transition_table_impl
     {
         using transition_event = typename Row::Evt;
 
-        // Take the transition action and return the next state.
-        static process_result execute(StateMachine& sm,
-                                      transition_event const& event)
+        template <typename Event>
+        static process_result process(StateMachine& sm,
+                                      const Event& event)
+        {
+            if constexpr (!std::is_same_v<typename StateMachine::observer_t,
+                                          no_observer>)
+            {
+                sm.get_observer()
+                    .template pre_process_transition<typename Row::Evt,
+                                                     typename Row::Action,
+                                                     typename Row::Guard>(
+                        sm);
+            }
+            const auto result = process_impl(sm, event);
+            if constexpr (!std::is_same_v<typename StateMachine::observer_t,
+                                          no_observer>)
+            {
+                sm.get_observer()
+                    .template post_process_transition<typename Row::Evt,
+                                                      typename Row::Action,
+                                                      typename Row::Guard>(
+                        sm, result);
+            }
+            return result;
+        }
+        
+        template <typename Event>
+        static process_result process_impl(StateMachine& sm,
+                                           const Event& event)
         {
             auto& source = sm;
             auto& target = source;
 
             if (!call_guard_or_true<Row, HasGuard>(sm, event, source, target))
             {
-                return process_result::HANDLED_GUARD_REJECT;
+                return process_result::rejected;
             }
             return call_action_or_true<Row, HasAction>(sm, event, source, target);
         }
@@ -430,15 +551,13 @@ struct transition_table_impl
 
     // Completion transitions are handled separately per state.
     template <typename Transition>
-    using has_completion_event = has_completion_event<typename Transition::transition_event>;
+    using has_completion_event =
+        has_completion_event<typename Transition::transition_event>;
     using completion_transition_table =
         mp11::mp_copy_if<transition_table, has_completion_event>;
-    static_assert(
-        mp11::mp_empty<completion_transition_table>::value || 
-        !std::is_same_v<
-            typename StateMachine::template event_container<void>,
-            no_event_container<void>>,
-        "Completion transitions require an event pool");
+    static_assert(mp11::mp_empty<completion_transition_table>::value ||
+                      StateMachine::has_event_pool,
+                  "Completion transitions require an event pool");
     template <typename State, typename Table = completion_transition_table>
     struct completion_transitions_impl
     {
@@ -480,18 +599,20 @@ struct transition_chain
     using current_state_type = State;
     using transition_event = Event;
 
-    static process_result execute(StateMachine& sm, int region_id, Event const& evt)
+    static process_result process(StateMachine& sm,
+                                  uint8_t region_id,
+                                  const Event& evt)
     {
-        process_result result = process_result::HANDLED_FALSE;
+        process_result result = process_result::discarded;
         mp_for_each_until<Transitions>(
             [&result, &sm, region_id, &evt](auto transition)
             {
                 using Transition = decltype(transition);
-                result |= Transition::execute(sm, region_id, evt);
-                if (result & handled_true_or_deferred)
+                result |= Transition::process(sm, region_id, evt);
+                if (any(result & consumed_or_deferred))
                 {
                     // If a guard rejected previously, ensure this bit is not present.
-                    result &= handled_true_or_deferred;
+                    result &= consumed_or_deferred;
                     return true;
                 }
                 return false;

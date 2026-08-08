@@ -30,8 +30,8 @@
 #include <cassert>   //assert
 
 #include <boost/move/detail/nsec_clock.hpp>
+#include "bench_utils.hpp"   //MyInt
 
-using boost::move_detail::cpu_timer;
 using boost::move_detail::cpu_times;
 using boost::move_detail::nanosecond_type;
 
@@ -115,22 +115,6 @@ template<> struct get_allocator_name<SimpleSegregatedStorageV1>
 template<> struct get_allocator_name<SimpleSegregatedStorageV2>
 {  static const char *get() {  return "SimpleSegregatedStorageV2";  } };
 
-class MyInt
-{
-   std::size_t int_;
-
-   public:
-   explicit MyInt(std::size_t i = 0) : int_(i){}
-   MyInt(const MyInt &other)
-      :  int_(other.int_)
-   {}
-   MyInt & operator=(const MyInt &other)
-   {
-      int_ = other.int_;
-      return *this;
-   }
-};
-
 template<class Allocator>
 void list_test_template(std::size_t num_iterations, std::size_t num_elements, bool csv_output)
 {
@@ -143,11 +127,11 @@ void list_test_template(std::size_t num_iterations, std::size_t num_elements, bo
    typedef bc::list<MyInt, IntAllocator>  list_t;
    typedef typename list_t::iterator      iterator_t;
    {
-      cpu_timer timer;
+      boost::move_detail::cpu_timer timer;
       timer.resume();
       list_t l;
       for(std::size_t r = 0; r != num_iterations; ++r){
-         l.insert(l.end(), num_elements, MyInt(r));
+         l.insert(l.end(), num_elements, MyInt((int)r));
       }
       timer.stop();
       tinsert = timer.elapsed().wall;

@@ -5,9 +5,14 @@
 #ifndef BOOST_DECIMAL_DETAIL_INT128_DETAIL_TRAITS_HPP
 #define BOOST_DECIMAL_DETAIL_INT128_DETAIL_TRAITS_HPP
 
-#include "config.hpp"
+#include <boost/decimal/detail/int128/detail/config.hpp>
+
+#ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
+
 #include <type_traits>
 #include <cstdint>
+
+#endif
 
 namespace boost {
 namespace int128 {
@@ -25,7 +30,7 @@ struct signed_integer
 };
 
 template <typename T>
-BOOST_DECIMAL_INLINE_CONSTEXPR_VARIABLE bool is_signed_integer_v = signed_integer<T>::value;
+BOOST_DECIMAL_DETAIL_INT128_INLINE_CONSTEXPR bool is_signed_integer_v = signed_integer<T>::value;
 
 template <typename T>
 struct unsigned_integer
@@ -39,10 +44,10 @@ struct unsigned_integer
 };
 
 template <typename T>
-BOOST_DECIMAL_INLINE_CONSTEXPR_VARIABLE bool is_unsigned_integer_v = unsigned_integer<T>::value;
+BOOST_DECIMAL_DETAIL_INT128_INLINE_CONSTEXPR bool is_unsigned_integer_v = unsigned_integer<T>::value;
 
 template <typename T>
-BOOST_DECIMAL_INLINE_CONSTEXPR_VARIABLE bool is_any_integer_v = signed_integer<T>::value || unsigned_integer<T>::value;
+BOOST_DECIMAL_DETAIL_INT128_INLINE_CONSTEXPR bool is_any_integer_v = signed_integer<T>::value || unsigned_integer<T>::value;
 
 // Decides if we can use a u32 or u64 implementation for some operations
 

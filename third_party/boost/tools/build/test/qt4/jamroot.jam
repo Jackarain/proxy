@@ -70,8 +70,7 @@ if [ qt4.initialized ]
 rule check_for_assistant ( properties * )
 {
     # Extract version number from toolset
-    local version = [ MATCH "<qt>([0-9.]+).*"
-        : $(properties) ] ;
+    local version = [ MATCH "<qt>([0-9.]+)" : $(properties) ] ;
 
     if $(version) > "4.6.99"
     {

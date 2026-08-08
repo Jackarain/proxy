@@ -91,14 +91,15 @@ class EmplaceInt
 namespace test {
 
 enum EmplaceOptions{
-   EMPLACE_BACK         = 1 << 0,
-   EMPLACE_FRONT        = 1 << 1,
-   EMPLACE_BEFORE       = 1 << 2,
-   EMPLACE_AFTER        = 1 << 3,
-   EMPLACE_ASSOC        = 1 << 4,
-   EMPLACE_HINT         = 1 << 5,
-   EMPLACE_ASSOC_PAIR   = 1 << 6,
-   EMPLACE_HINT_PAIR    = 1 << 7
+   EMPLACE_BACK            = 1 << 0,
+   EMPLACE_FRONT           = 1 << 1,
+   EMPLACE_BEFORE          = 1 << 2,
+   EMPLACE_AFTER           = 1 << 3,
+   EMPLACE_ASSOC           = 1 << 4,
+   EMPLACE_HINT            = 1 << 5,
+   EMPLACE_ASSOC_PAIR      = 1 << 6,
+   EMPLACE_HINT_PAIR       = 1 << 7,
+   UNCHECKED_EMPLACE_BACK  = 1 << 8
 };
 
 template<class Container>
@@ -216,7 +217,61 @@ bool test_emplace_back(dtl::true_)
 }
 
 template<class Container>
+bool test_unchecked_emplace_back(dtl::true_)
+{
+   std::cout << "Starting test_unchecked_emplace_back." << std::endl << "  Class: "
+      << typeid(Container).name() << std::endl;
+   static EmplaceInt expected [10];
+
+   {
+      new(&expected [0]) EmplaceInt();
+      new(&expected [1]) EmplaceInt(1);
+      new(&expected [2]) EmplaceInt(1, 2);
+      new(&expected [3]) EmplaceInt(1, 2, 3);
+      new(&expected [4]) EmplaceInt(1, 2, 3, 4);
+      new(&expected [5]) EmplaceInt(1, 2, 3, 4, 5);
+      Container c;
+      typedef typename Container::reference reference;
+      c.reserve(6);
+      {
+         reference r = c.unchecked_emplace_back();
+         if(&r != &c.back() && !test_expected_container(c, &expected[0], 1)){
+            return false;
+         }
+      }
+      {
+         reference r = c.unchecked_emplace_back(1);
+         if(&r != &c.back() && !test_expected_container(c, &expected[0], 2)){
+            return false;
+         }
+      }
+      c.unchecked_emplace_back(1, 2);
+      if(!test_expected_container(c, &expected[0], 3)){
+         return false;
+      }
+      c.unchecked_emplace_back(1, 2, 3);
+      if(!test_expected_container(c, &expected[0], 4)){
+         return false;
+      }
+      c.unchecked_emplace_back(1, 2, 3, 4);
+      if(!test_expected_container(c, &expected[0], 5)){
+         return false;
+      }
+      c.unchecked_emplace_back(1, 2, 3, 4, 5);
+      if(!test_expected_container(c, &expected[0], 6)){
+         return false;
+      }
+   }
+   std::cout << "...OK" << std::endl;
+   return true;
+}
+
+template<class Container>
 bool test_emplace_back(dtl::false_)
+{  return true;   }
+
+template<class Container>
+bool test_unchecked_emplace_back(dtl::false_)
 {  return true;   }
 
 template<class Container>
@@ -655,6 +710,9 @@ template<class Container, EmplaceOptions O>
 bool test_emplace()
 {
    if(!test_emplace_back<Container>(emplace_active<O, EMPLACE_BACK>())){
+      return false;
+   }
+   if(!test_unchecked_emplace_back<Container>(emplace_active<O, UNCHECKED_EMPLACE_BACK>())){
       return false;
    }
    if(!test_emplace_front<Container>(emplace_active<O, EMPLACE_FRONT>())){

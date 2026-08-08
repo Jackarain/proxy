@@ -52,10 +52,23 @@ Again, it must be defined before inclusion of decimal headers like so:
 
 - `BOOST_DECIMAL_DEC_EVAL_METHOD`: See xref:cfloat.adoc[`<cfloat>`] section for explanation
 
+[#enable_cuda]
+- `BOOST_DECIMAL_ENABLE_CUDA`: Defining this macro allows both the types and selected functions to be run on host and device when compiling with NVCC (i.e. when `pass:[__CUDACC__]` is defined).
+Allowed functions have `BOOST_DECIMAL_HOST_DEVICE` or `BOOST_DECIMAL_CUDA_CONSTEXPR` as part of their function signature.
+Defining this macro also automatically defines `BOOST_DECIMAL_DISABLE_EXCEPTIONS` and `BOOST_DECIMAL_DISABLE_CASSERT`, since neither exceptions nor `<cassert>` are available in device code.
+
 [#configuration_automatic]
 == Automatic Configuration Macros
 
 - `BOOST_DECIMAL_CXX20_CONSTEXPR`: This is defined to `constexpr` when compiling with C++20 or greater, otherwise it expands to nothing.
+
+[#host_device]
+- `BOOST_DECIMAL_HOST_DEVICE`: This is defined to `pass:[__host__ __device__]` when compiling with NVCC and `BOOST_DECIMAL_ENABLE_CUDA` is defined, and to nothing otherwise.
+Public functions, constructors, operators, and conversion operators annotated with this macro can be used in CUDA device code without modification.
+
+[#cuda_constexpr]
+- `BOOST_DECIMAL_CUDA_CONSTEXPR`: This is defined to `pass:[__host__ __device__ constexpr]` when compiling with NVCC and `BOOST_DECIMAL_ENABLE_CUDA` is defined, and to `constexpr` otherwise.
+The majority of the library's functions are annotated with this macro.
 
 - `BOOST_DECIMAL_HAS_STD_CHARCONV`: This macro is defined if header `<charconv>` exists and the language standard used is >= C++17
   * We only need the structs and enums out of the header so we are not concerned with being overly restrictive about the feature test macros.

@@ -19,6 +19,7 @@
 
 #include <boost/asio/ssl/detail/engine.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/detail/memory.hpp>
 #include <boost/asio/steady_timer.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
@@ -31,35 +32,35 @@ namespace detail {
 
 struct stream_core
 {
-  // 输入/输出缓冲大小: 用于在底层传输与 OpenSSL BIO 之间批量搬运数据.
-  // 增大到 256KB 后, 配合 engine 中增大的 BIO pair 容量与去除
-  // SSL_MODE_ENABLE_PARTIAL_WRITE, SSL_write 一次可加密多个 TLS record,
-  // 从而一次取出批量密文发送, 大幅减少底层写 syscall 次数.
-  enum { max_tls_record_size = 256 * 1024 };
+  // According to the OpenSSL documentation, this is the buffer size that is
+  // sufficient to hold the largest possible TLS record.
+  enum { max_tls_record_size = 17 * 1024 };
 
   template <typename Executor>
-  stream_core(SSL_CTX* context, const Executor& ex)
-    : engine_(context),
+  stream_core(SSL_CTX* context, const Executor& ex,
+      std::size_t output_buffer_size, std::size_t input_buffer_size)
+    : engine_(context, output_buffer_size, input_buffer_size),
       pending_read_(ex),
       pending_write_(ex),
-      output_buffer_space_(max_tls_record_size),
-      output_buffer_(boost::asio::buffer(output_buffer_space_)),
-      input_buffer_space_(max_tls_record_size),
-      input_buffer_(boost::asio::buffer(input_buffer_space_))
+      output_buffer_size_(clamp_buffer_size(output_buffer_size)),
+      input_buffer_size_(clamp_buffer_size(input_buffer_size)),
+      output_buffer_space_(new unsigned char[output_buffer_size_]()),
+      input_buffer_space_(new unsigned char[input_buffer_size_]())
   {
     pending_read_.expires_at(neg_infin());
     pending_write_.expires_at(neg_infin());
   }
 
   template <typename Executor>
-  stream_core(SSL* ssl_impl, const Executor& ex)
-    : engine_(ssl_impl),
+  stream_core(SSL* ssl_impl, const Executor& ex,
+      std::size_t output_buffer_size, std::size_t input_buffer_size)
+    : engine_(ssl_impl, output_buffer_size, input_buffer_size),
       pending_read_(ex),
       pending_write_(ex),
-      output_buffer_space_(max_tls_record_size),
-      output_buffer_(boost::asio::buffer(output_buffer_space_)),
-      input_buffer_space_(max_tls_record_size),
-      input_buffer_(boost::asio::buffer(input_buffer_space_))
+      output_buffer_size_(clamp_buffer_size(output_buffer_size)),
+      input_buffer_size_(clamp_buffer_size(input_buffer_size)),
+      output_buffer_space_(new unsigned char[output_buffer_size_]()),
+      input_buffer_space_(new unsigned char[input_buffer_size_]())
   {
     pending_read_.expires_at(neg_infin());
     pending_write_.expires_at(neg_infin());
@@ -73,18 +74,16 @@ struct stream_core
       pending_write_(
          static_cast<boost::asio::steady_timer&&>(
            other.pending_write_)),
+      output_buffer_size_(other.output_buffer_size_),
+      input_buffer_size_(other.input_buffer_size_),
       output_buffer_space_(
-          static_cast<std::vector<unsigned char>&&>(
+          static_cast<std::unique_ptr<unsigned char[]>&&>(
             other.output_buffer_space_)),
-      output_buffer_(other.output_buffer_),
       input_buffer_space_(
-          static_cast<std::vector<unsigned char>&&>(
+          static_cast<std::unique_ptr<unsigned char[]>&&>(
             other.input_buffer_space_)),
-      input_buffer_(other.input_buffer_),
       input_(other.input_)
   {
-    other.output_buffer_ = boost::asio::mutable_buffer(0, 0);
-    other.input_buffer_ = boost::asio::mutable_buffer(0, 0);
     other.input_ = boost::asio::const_buffer(0, 0);
   }
 
@@ -103,17 +102,15 @@ struct stream_core
       pending_write_ =
         static_cast<boost::asio::steady_timer&&>(
           other.pending_write_);
+      output_buffer_size_ = other.output_buffer_size_;
+      input_buffer_size_ = other.input_buffer_size_;
       output_buffer_space_ =
-        static_cast<std::vector<unsigned char>&&>(
+        static_cast<std::unique_ptr<unsigned char[]>&&>(
           other.output_buffer_space_);
-      output_buffer_ = other.output_buffer_;
       input_buffer_space_ =
-        static_cast<std::vector<unsigned char>&&>(
+        static_cast<std::unique_ptr<unsigned char[]>&&>(
           other.input_buffer_space_);
-      input_buffer_ = other.input_buffer_;
       input_ = other.input_;
-      other.output_buffer_ = boost::asio::mutable_buffer(0, 0);
-      other.input_buffer_ = boost::asio::mutable_buffer(0, 0);
       other.input_ = boost::asio::const_buffer(0, 0);
     }
     return *this;
@@ -147,17 +144,37 @@ struct stream_core
     return timer.expiry();
   }
 
-  // Buffer space used to prepare output intended for the transport.
-  std::vector<unsigned char> output_buffer_space_;
-
   // A buffer that may be used to prepare output intended for the transport.
-  boost::asio::mutable_buffer output_buffer_;
-
-  // Buffer space used to read input intended for the engine.
-  std::vector<unsigned char> input_buffer_space_;
+  boost::asio::mutable_buffer output_buffer()
+  {
+    return boost::asio::buffer(output_buffer_space_.get(), output_buffer_size_);
+  }
 
   // A buffer that may be used to read input intended for the engine.
-  boost::asio::mutable_buffer input_buffer_;
+  boost::asio::mutable_buffer input_buffer()
+  {
+    return boost::asio::buffer(input_buffer_space_.get(), input_buffer_size_);
+  }
+
+  // Ensure a requested buffer size is at least large enough to hold the
+  // largest possible TLS record. A size of zero requests the default.
+  static std::size_t clamp_buffer_size(std::size_t size)
+  {
+    return size < std::size_t(max_tls_record_size)
+      ? std::size_t(max_tls_record_size) : size;
+  }
+
+  // The size of the buffer used to prepare output intended for the transport.
+  std::size_t output_buffer_size_;
+
+  // The size of the buffer used to read input intended for the engine.
+  std::size_t input_buffer_size_;
+
+  // Buffer space used to prepare output intended for the transport.
+  std::unique_ptr<unsigned char[]> output_buffer_space_;
+
+  // Buffer space used to read input intended for the engine.
+  std::unique_ptr<unsigned char[]> input_buffer_space_;
 
   // The buffer pointing to the engine's unconsumed input.
   boost::asio::const_buffer input_;

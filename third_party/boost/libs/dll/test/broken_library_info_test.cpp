@@ -6,12 +6,12 @@
 
 // For more information, see http://www.boost.org
 
-#include <boost/dll/library_info.hpp>
-
 #include <fstream>
 #include <boost/filesystem.hpp>
 
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/dll/library_info.hpp>
 
 int main(int argc, char* argv[]) {
     BOOST_TEST(argc >= 1);

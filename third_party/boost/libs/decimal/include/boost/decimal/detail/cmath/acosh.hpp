@@ -76,7 +76,7 @@ constexpr auto acosh_impl(const T x) noexcept
                 {
                     // http://functions.wolfram.com/ElementaryFunctions/ArcCosh/06/01/06/01/0001/
                     // approximation by laurent series in 1/x at 0+ order from -1 to 0
-                    result = log(x) + numbers::ln2_v<T>;
+                    result = ::boost::decimal::log(x) + numbers::ln2_v<T>;
                 }
                 else if (x < T { 15, -1 })
                 {
@@ -85,12 +85,12 @@ constexpr auto acosh_impl(const T x) noexcept
 
                     const auto two_y = y + y;
 
-                    result = log1p(y + sqrt((y * y) + two_y));
+                    result = ::boost::decimal::log1p(y + sqrt((y * y) + two_y));
                 }
                 else
                 {
                     // http://functions.wolfram.com/ElementaryFunctions/ArcCosh/02/
-                    return(log(x + sqrt((x * x) - one)));
+                    return(::boost::decimal::log(x + sqrt((x * x) - one)));
                 }
             }
             else

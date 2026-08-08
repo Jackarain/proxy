@@ -38,16 +38,16 @@ struct shared_mutex
 int shared_mutex::lock_count = 0;
 int shared_mutex::unlock_count = 0;
 
-shared_mutex m;
+shared_mutex g_mutex;
 
 int main()
 {
-  boost::shared_lock<shared_mutex> lk(m);
-  BOOST_TEST(lk.mutex() == &m);
+  boost::shared_lock<shared_mutex> lk(g_mutex);
+  BOOST_TEST(lk.mutex() == &g_mutex);
   BOOST_TEST(lk.owns_lock() == true);
   BOOST_TEST(shared_mutex::lock_count == 1);
   BOOST_TEST(shared_mutex::unlock_count == 0);
-  BOOST_TEST(lk.release() == &m);
+  BOOST_TEST(lk.release() == &g_mutex);
   BOOST_TEST(lk.mutex() == 0);
   BOOST_TEST(lk.owns_lock() == false);
   BOOST_TEST(shared_mutex::lock_count == 1);

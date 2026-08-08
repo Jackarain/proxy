@@ -55,6 +55,7 @@ void consumer(the_ostream &/*mos*/, boost::sync_bounded_queue<int> & sbq)
   try {
     for(int i=0; ;++i)
     {
+      (void)i;
       int r;
       sbq.pull_front(r);
       //sbq >> r;
@@ -77,6 +78,7 @@ void consumer2(the_ostream &/*mos*/,  boost::sync_bounded_queue<int> & sbq)
   try {
     for(int i=0; ;++i)
     {
+      (void)i;
       int r;
       queue_op_status st = sbq.try_pull_front(r);
       if (queue_op_status::closed == st) break;

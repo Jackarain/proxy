@@ -11,7 +11,7 @@ https://www.boost.org/LICENSE_1_0.txt
 
 `from_chars` is a set of functions that parse a string from `[first, last)` in an attempt to convert the string into `value` according to the `chars_format` specified (if applicable).
 The parsing of number is locale-independent (e.g. equivalent to the "C" locale).
-The result of `from_chars` is `from_chars_result` which on success returns `ptr == last` and `ec == std::errc()`, and on failure returns `ptr` equal to the last valid character parsed or `last` on underflow/overflow, and `ec == std::errc::invalid_argument` or `std::errc::result_out_of_range` respectively. `from_chars` does not require the character sequence to be null terminated.
+The result of `from_chars` is `from_chars_result` which on success returns `ptr == last` and `ec == std::errc()`, and on failure returns `ptr` equal to the last valid character parsed or `last` on underflow/overflow, and `ec == std::errc::invalid_argument` or `std::errc::result_out_of_range` respectively. `from_chars` does not require the character sequence to be null-terminated.
 
 == Definitions
 [#from_chars_definitions_]
@@ -25,17 +25,18 @@ struct from_chars_result
     const char* ptr;
     std::errc ec;
 
-    friend constexpr bool operator==(const from_chars_result& lhs, const from_chars_result& rhs) noexcept = default;
-    constexpr explicit operator bool() const noexcept { return ec == std::errc{}; }
-}
+    BOOST_CHARCONV_HOST_DEVICE friend constexpr bool operator==(const from_chars_result& lhs, const from_chars_result& rhs) noexcept = default;
+    BOOST_CHARCONV_HOST_DEVICE constexpr explicit operator bool() const noexcept { return ec == std::errc{}; }
+};
 
 template <typename Integral>
-BOOST_CXX14_CONSTEXPR from_chars_result from_chars(const char* first, const char* last, Integral& value, int base = 10) noexcept;
+BOOST_CHARCONV_HOST_DEVICE BOOST_CXX14_CONSTEXPR from_chars_result from_chars(const char* first, const char* last, Integral& value, int base = 10) noexcept;
 
 template <typename Integral>
 BOOST_CXX14_CONSTEXPR from_chars_result from_chars(boost::core::string_view sv, Integral& value, int base = 10) noexcept;
 
-BOOST_CXX14_CONSTEXPR from_chars_result from_chars<bool>(const char* first, const char* last, bool& value, int base) = delete;
+template <>
+BOOST_CXX14_CONSTEXPR from_chars_result from_chars<bool>(const char* first, const char* last, bool& value, int base) noexcept = delete;
 
 template <typename Real>
 from_chars_result from_chars(const char* first, const char* last, Real& value, chars_format fmt = chars_format::general) noexcept;
@@ -53,6 +54,12 @@ from_chars_result from_chars_erange(boost::core::string_view sv, Real& value, ch
 
 }} // Namespace boost::charconv
 ----
+
+[#host_device_]
+== `BOOST_CHARCONV_HOST_DEVICE`
+
+When compiling the library with NVCC, functions marked `BOOST_CHARCONV_HOST_DEVICE` expand to `pass:[__host__ __device__]` for use on both CPU and GPU.
+Otherwise `BOOST_CHARCONV_HOST_DEVICE` expands to the empty string.
 
 == from_chars parameters
 * `first`, `last` - pointers to a valid range to parse
@@ -75,7 +82,7 @@ Compatible with boost::core::string_view, std::string, and std::string_view
 
 3) Leading space
 
-4) Incompatible formatting (e.g. exponent on `chars_format::fixed`, or p as exponent on value that is not `chars_format::hex`) See <<chars_format overview>>
+4) Incompatible formatting (e.g. exponent on `chars_format::fixed`, or p as exponent on value that is not `chars_format::hex`). See <<chars_format overview>>
 
 | `std::errc::result_out_of_range` | 1) Overflow
 
@@ -127,14 +134,14 @@ std::string str_buffer (buffer);
 boost::core::string_view sv(str_buffer);
 int v2;
 auto r2 = boost::charconv::from_chars(sv, v2);
-assert(r);
+assert(r2);
 assert(v2 == v);
 ----
 
 ==== Floating Point
 [source, c++]
 ----
-const char* buffer = "1.2345"
+const char* buffer = "1.2345";
 double v = 0;
 auto r = boost::charconv::from_chars(buffer, buffer + std::strlen(buffer), v);
 assert(r.ec == std::errc());
@@ -142,8 +149,9 @@ assert(r); // Same as above but less verbose. Added in C++26.
 assert(v == 1.2345);
 
 std::string str_buffer(buffer);
+boost::core::string_view sv(str_buffer);
 double v2;
-auto r2 = boost::charconv::from_chars(buffer, v2);
+auto r2 = boost::charconv::from_chars(sv, v2);
 assert(r2);
 assert(v == v2);
 ----
@@ -203,6 +211,6 @@ unsigned char v = 0;
 auto r = boost::charconv::from_chars(buffer, buffer + std::strlen(buffer), v);
 assert(r.ec == std::errc::result_out_of_range);
 assert(!r); // Same as above but less verbose. Added in C++26.
-assert(v == 0)
+assert(v == 0);
 ----
 Note: In the event of `std::errc::result_out_of_range`, v is not modified by `from_chars`

@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(class_with_throwing_move_constructor_test)
 {
     using polymorphic_t = basic_polymorphic<class_with_throwing_move_constructor>;
     {
-        polymorphic_t obj = polymorphic_t::make<class_with_throwing_move_constructor>(42);
+        polymorphic_t obj = polymorphic_t::make<class_with_throwing_move_constructor>(static_cast<uint8_t>(42));
         BOOST_REQUIRE(!obj.is_inline());
         BOOST_REQUIRE(obj->value == 42);
 

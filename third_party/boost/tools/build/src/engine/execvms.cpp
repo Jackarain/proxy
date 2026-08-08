@@ -34,8 +34,10 @@
 #include "jam.h"
 #include "lists.h"
 #include "execcmd.h"
+#include "object.h"
 #include "output.h"
 #include "startup.h"
+#include "jam_strings.h"
 
 #ifdef OS_VMS
 

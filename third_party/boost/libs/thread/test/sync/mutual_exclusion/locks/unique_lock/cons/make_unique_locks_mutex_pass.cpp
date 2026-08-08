@@ -18,9 +18,9 @@
 
 #if ! defined(BOOST_NO_CXX11_AUTO_DECLARATIONS) && ! defined BOOST_THREAD_NO_MAKE_UNIQUE_LOCKS && ! defined BOOST_NO_CXX11_RVALUE_REFERENCES
 
-boost::mutex m1;
-boost::mutex m2;
-boost::mutex m3;
+boost::mutex g_mutex1;
+boost::mutex g_mutex2;
+boost::mutex g_mutex3;
 
 
 #if defined BOOST_THREAD_USES_CHRONO
@@ -30,8 +30,8 @@ typedef Clock::time_point time_point;
 typedef Clock::duration duration;
 typedef boost::chrono::milliseconds ms;
 typedef boost::chrono::nanoseconds ns;
-time_point t0;
-time_point t1;
+time_point g_t0;
+time_point g_t1;
 #else
 #endif
 
@@ -40,28 +40,28 @@ const ms max_diff(BOOST_THREAD_TEST_TIME_MS);
 void f()
 {
 #if defined BOOST_THREAD_USES_CHRONO
-  t0 = Clock::now();
+  g_t0 = Clock::now();
   {
-    auto&& _ = boost::make_unique_locks(m1,m2,m3); (void)_;
-    t1 = Clock::now();
+    auto&& _ = boost::make_unique_locks(g_mutex1,g_mutex2,g_mutex3); (void)_;
+    g_t1 = Clock::now();
   }
 #else
-  //time_point t0 = Clock::now();
-  //time_point t1;
+  //time_point g_t0 = Clock::now();
+  //time_point g_t1;
   {
-    auto&& _ = boost::make_unique_locks(m1,m2,m3); (void)_;
-    //t1 = Clock::now();
+    auto&& _ = boost::make_unique_locks(g_mutex1,g_mutex2,g_mutex3); (void)_;
+    //g_t1 = Clock::now();
   }
-  //ns d = t1 - t0 - ms(250);
+  //ns d = g_t1 - g_t0 - ms(250);
   //BOOST_TEST(d < max_diff);
 #endif
 }
 
 int main()
 {
-  m1.lock();
-  m2.lock();
-  m3.lock();
+  g_mutex1.lock();
+  g_mutex2.lock();
+  g_mutex3.lock();
   boost::thread t(f);
 #if defined BOOST_THREAD_USES_CHRONO
   time_point t2 = Clock::now();
@@ -69,14 +69,14 @@ int main()
   time_point t3 = Clock::now();
 #else
 #endif
-  m1.unlock();
-  m2.unlock();
-  m3.unlock();
+  g_mutex1.unlock();
+  g_mutex2.unlock();
+  g_mutex3.unlock();
   t.join();
 
 #if defined BOOST_THREAD_USES_CHRONO
   ns sleep_time = t3 - t2;
-  ns d_ns = t1 - t0 - sleep_time;
+  ns d_ns = g_t1 - g_t0 - sleep_time;
   ms d_ms = boost::chrono::duration_cast<boost::chrono::milliseconds>(d_ns);
   // BOOST_TEST_GE(d_ms.count(), 0);
   BOOST_THREAD_TEST_IT(d_ms, max_diff);

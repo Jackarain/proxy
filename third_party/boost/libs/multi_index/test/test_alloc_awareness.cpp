@@ -1,6 +1,6 @@
 /* Boost.MultiIndex test for allocator awareness.
  *
- * Copyright 2003-2025 Joaquin M Lopez Munoz.
+ * Copyright 2003-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -115,7 +115,7 @@ void test_allocator_awareness_for()
     BOOST_TEST(element_transfer==(&*c3.begin()==pfirst));
     BOOST_TEST(!element_transfer==(c3.begin()->move_cted));
   }
-  if(Propagate||AlwaysEqual){
+  BOOST_IF_CONSTEXPR(Propagate||AlwaysEqual){
     container           c2(c);
     const move_tracker* pfirst=&*c2.begin();
     container           c3(root2);

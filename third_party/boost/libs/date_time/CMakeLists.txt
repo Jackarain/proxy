@@ -26,7 +26,6 @@ target_link_libraries(boost_date_time
     Boost::numeric_conversion
     Boost::range
     Boost::smart_ptr
-    Boost::static_assert
     Boost::throw_exception
     Boost::tokenizer
     Boost::type_traits

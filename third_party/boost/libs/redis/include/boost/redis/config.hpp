@@ -162,7 +162,7 @@ struct config {
     *
     * UNIX domain sockets can't be used with Sentinel.
     */
-   std::string unix_socket;
+   std::string unix_socket{};
 
    /** @brief (Deprecated) Username used for authentication during connection establishment.
     * 
@@ -212,7 +212,7 @@ struct config {
     * cfg.setup.hello("my_username", "my_password");
     * @endcode
     */
-   std::string password;
+   std::string password{};
 
    /** @brief (Deprecated) Client name parameter to use during connection establishment.
     * 
@@ -322,8 +322,8 @@ struct config {
 
    /** @brief Maximum size of the socket read-buffer in bytes.
     *  
-    * Sets a limit on how much data is allowed to be read into the
-    * read buffer. It can be used to prevent DDOS.
+    * Sets a limit on how large the read-buffer is allowed to grow. It can be
+    * used to prevent DDOS.
     *
     * When using Sentinel, this setting applies to masters, replicas and Sentinels.
     */

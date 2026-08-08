@@ -16,7 +16,7 @@ import quickbook ;
 
 doxygen icldoc
     :
-        [ glob ../../../boost/icl/*.hpp ]
+        [ glob ../include/boost/icl/*.hpp ]
     :
         <doxygen:param>EXTRACT_ALL=NO
         <doxygen:param>HIDE_UNDOC_MEMBERS=YES

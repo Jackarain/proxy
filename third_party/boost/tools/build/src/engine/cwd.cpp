@@ -9,7 +9,9 @@
 #include "cwd.h"
 
 #include "jam.h"
+#include "lists.h"
 #include "mem.h"
+#include "object.h"
 #include "output.h"
 #include "pathsys.h"
 #include "startup.h"

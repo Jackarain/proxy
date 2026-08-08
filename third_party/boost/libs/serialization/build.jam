@@ -1,0 +1,45 @@
+# Copyright René Ferdinand Rivera Morell 2023-2024
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
+require-b2 5.2 ;
+
+constant boost_dependencies :
+    /boost/array//boost_array
+    /boost/assert//boost_assert
+    /boost/config//boost_config
+    /boost/core//boost_core
+    /boost/detail//boost_detail
+    /boost/integer//boost_integer
+    /boost/io//boost_io
+    /boost/iterator//boost_iterator
+    /boost/move//boost_move
+    /boost/mp11//boost_mp11
+    /boost/mpl//boost_mpl
+    /boost/optional//boost_optional
+    /boost/predef//boost_predef
+    /boost/preprocessor//boost_preprocessor
+    /boost/smart_ptr//boost_smart_ptr
+    /boost/spirit//boost_spirit
+    /boost/throw_exception//boost_throw_exception
+    /boost/type_traits//boost_type_traits
+    /boost/utility//boost_utility
+    /boost/variant//boost_variant
+    /boost/variant2//boost_variant2 ;
+
+project /boost/serialization
+    : common-requirements
+        <include>include
+    ;
+
+explicit
+    [ alias boost_serialization : build//boost_serialization ]
+    [ alias boost_wserialization : build//boost_wserialization ]
+    [ alias all : boost_serialization boost_wserialization example test ]
+    ;
+
+call-if : boost-library serialization
+    : install boost_serialization boost_wserialization
+    ;
+

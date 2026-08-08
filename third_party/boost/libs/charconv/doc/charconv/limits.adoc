@@ -42,7 +42,7 @@ The following two examples are for `max_chars10` to optimize the buffer size wit
 
 [source, c++]
 ----
-char buffer [boost::charconv::limits<std::int32_t>::max_chars10;
+char buffer [boost::charconv::limits<std::int32_t>::max_chars10];
 auto r = boost::charconv::to_chars(buffer, buffer + sizeof(buffer), std::numeric_limits<std::int32_t>::max());
 
 assert(r.ec == std::errc());
@@ -52,7 +52,7 @@ assert(!strcmp(buffer, "2147483647")); // strcmp returns 0 on match
 
 [source, c++]
 ----
-char buffer [boost::charconv::limits<float>::max_chars10;
+char buffer [boost::charconv::limits<float>::max_chars10];
 auto r = boost::charconv::to_chars(buffer, buffer + sizeof(buffer), std::numeric_limits<float>::max());
 
 assert(r.ec == std::errc());
@@ -64,7 +64,7 @@ The following example is a usage of `max_chars` when used to serialize an intege
 
 [source, c++]
 ----
-char buffer [boost::charconv::limits<std::uint16_t>::max_chars;
+char buffer [boost::charconv::limits<std::uint16_t>::max_chars];
 auto r = boost::charconv::to_chars(buffer, buffer + sizeof(buffer), std::numeric_limits<std::uint16_t>::max(), 2);
 
 assert(r.ec == std::errc());

@@ -7,7 +7,6 @@
 # https://www.bfgroup.xyz/b2/LICENSE.txt)
 
 import BoostBuild
-from time import sleep
 
 
 t = BoostBuild.Tester()

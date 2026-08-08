@@ -1,0 +1,156 @@
+#
+# Copyright (c) 2025 Gennaro Prota (gennaro dot prota at gmail dot com)
+#
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
+#
+# Official repository: https://github.com/boostorg/static_string
+#
+
+name: Example (basic_static_cstring)
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - develop
+      - bugfix/**
+      - feature/**
+      - fix/**
+      - github/**
+      - pr/**
+    paths-ignore:
+      - LICENSE
+      - meta/**
+      - README.md
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { toolset: gcc-13,   cxxstd: '20,23' }
+          - { toolset: gcc-14,   cxxstd: '20,23,26' }
+          - { toolset: clang-17, cxxstd: '20,23' }
+          - { toolset: clang-18, cxxstd: '20,23,26' }
+
+    steps:
+      - name: Checkout Boost super-project
+        uses: actions/checkout@v4
+        with:
+          repository: boostorg/boost
+          ref: develop
+          fetch-depth: 0
+
+      - name: Checkout this library
+        uses: actions/checkout@v4
+        with:
+          path: libs/static_string
+          fetch-depth: 0
+
+      - name: Initialize Boost submodules
+        run: |
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args '--jobs 4' static_string
+
+      - name: Bootstrap b2
+        run: ./bootstrap.sh
+
+      - name: Generate Boost headers
+        run: ./b2 headers
+
+      - name: Build and run example tests
+        run: |
+          ./b2 libs/static_string/example/static_cstring \
+            toolset=${{ matrix.toolset }} \
+            cxxstd=${{ matrix.cxxstd }} \
+            variant=debug,release \
+            -j$(nproc)
+
+  macos:
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { toolset: clang, cxxstd: '20,23' }
+
+    steps:
+      - name: Checkout Boost super-project
+        uses: actions/checkout@v4
+        with:
+          repository: boostorg/boost
+          ref: develop
+          fetch-depth: 0
+
+      - name: Checkout this library
+        uses: actions/checkout@v4
+        with:
+          path: libs/static_string
+          fetch-depth: 0
+
+      - name: Initialize Boost submodules
+        run: |
+          git submodule update --init tools/boostdep
+          python3 tools/boostdep/depinst/depinst.py --git_args '--jobs 4' static_string
+
+      - name: Bootstrap b2
+        run: ./bootstrap.sh
+
+      - name: Generate Boost headers
+        run: ./b2 headers
+
+      - name: Build and run example tests
+        run: |
+          ./b2 libs/static_string/example/static_cstring \
+            toolset=${{ matrix.toolset }} \
+            cxxstd=${{ matrix.cxxstd }} \
+            variant=debug,release \
+            -j$(sysctl -n hw.ncpu)
+
+  windows:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { toolset: msvc-14.3, cxxstd: '20,latest' }
+
+    steps:
+      - name: Checkout Boost super-project
+        uses: actions/checkout@v4
+        with:
+          repository: boostorg/boost
+          ref: develop
+          fetch-depth: 0
+
+      - name: Checkout this library
+        uses: actions/checkout@v4
+        with:
+          path: libs/static_string
+          fetch-depth: 0
+
+      - name: Initialize Boost submodules
+        run: |
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py --git_args '--jobs 4' static_string
+
+      - name: Bootstrap b2
+        run: .\bootstrap.bat
+        shell: cmd
+
+      - name: Generate Boost headers
+        run: .\b2 headers
+        shell: cmd
+
+      - name: Build and run example tests
+        run: |
+          .\b2 libs/static_string/example/static_cstring ^
+            toolset=${{ matrix.toolset }} ^
+            cxxstd=${{ matrix.cxxstd }} ^
+            variant=debug,release ^
+            address-model=64
+        shell: cmd

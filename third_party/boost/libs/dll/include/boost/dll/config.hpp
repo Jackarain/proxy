@@ -7,10 +7,11 @@
 /// \file boost/dll/config.hpp
 /// \brief Imports filesystem, error_code, errc, system_error, make_error_code from Boost or C++17 into `boost::dll::fs` namespace.
 
-#ifndef BOOST_DLL_DETAIL_CONFIG_HPP
-#define BOOST_DLL_DETAIL_CONFIG_HPP
+#ifndef BOOST_DLL_CONFIG_HPP
+#define BOOST_DLL_CONFIG_HPP
 
-#include <boost/config.hpp>
+#include <boost/dll/detail/config.hpp>
+
 #ifdef BOOST_HAS_PRAGMA_ONCE
 #   pragma once
 #endif
@@ -44,9 +45,13 @@ using system_error = std::conditional_t<BOOST_DLL_USE_STD_FS, std::system_error,
 
 
 #ifdef BOOST_DLL_USE_STD_FS
-#include <filesystem>
 
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#if !defined(BOOST_DLL_USE_STD_MODULE)
+#include <filesystem>
 #include <system_error>
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 namespace boost { namespace dll { namespace fs {
 
@@ -58,10 +63,12 @@ using std::system_error;
 
 #else // BOOST_DLL_USE_STD_FS
 
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/system/system_error.hpp>
 #include <boost/system/error_code.hpp>
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 namespace boost { namespace dll { namespace fs {
 
@@ -76,7 +83,9 @@ using boost::system::system_error;
 
 #ifdef BOOST_DLL_USE_BOOST_SHARED_PTR
 
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
 #include <boost/make_shared.hpp>
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 namespace boost { namespace dll { namespace detail {
     template <class T>
@@ -86,7 +95,11 @@ namespace boost { namespace dll { namespace detail {
 
 #else  // BOOST_DLL_USE_STD_FS
 
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#if !defined(BOOST_DLL_USE_STD_MODULE)
 #include <memory>
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 namespace boost { namespace dll { namespace detail {
     template <class T>
@@ -96,5 +109,5 @@ namespace boost { namespace dll { namespace detail {
 
 #endif  // BOOST_DLL_USE_STD_FS
 
-#endif // BOOST_DLL_DETAIL_PUSH_OPTIONS_HPP
+#endif // BOOST_DLL_CONFIG_HPP
 

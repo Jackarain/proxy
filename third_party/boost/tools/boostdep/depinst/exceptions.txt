@@ -3,7 +3,6 @@ assert:
 atomic:
   boost/memory_order.hpp
 bind:
-  boost/is_placeholder.hpp
   boost/mem_fn.hpp
 circular_buffer:
   boost/circular_buffer_fwd.hpp
@@ -24,6 +23,7 @@ config:
   boost/cxx11_char_types.hpp
   boost/detail/workaround.hpp
   boost/limits.hpp
+  boost/static_assert.hpp
   boost/version.hpp
 container_hash:
   boost/functional/hash.hpp
@@ -47,6 +47,7 @@ core:
   boost/detail/scoped_enum_emulation.hpp
   boost/detail/sp_typeinfo.hpp
   boost/get_pointer.hpp
+  boost/is_placeholder.hpp
   boost/iterator.hpp
   boost/non_type.hpp
   boost/noncopyable.hpp
@@ -163,7 +164,6 @@ iterator:
   boost/shared_container_iterator.hpp
 lexical_cast:
   boost/detail/basic_pointerbuf.hpp
-  boost/detail/lcast_precision.hpp
 math:
   boost/cstdfloat.hpp
   boost/math_fwd.hpp

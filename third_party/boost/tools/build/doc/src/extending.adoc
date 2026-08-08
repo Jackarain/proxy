@@ -18,17 +18,17 @@ metatarget::
   with a set of properties to produce concrete targets.
 concrete target::
   Object that corresponds to a file or an action.
-jam target::
+Jam target::
   Low-level concrete target that is specific to Boost.Jam build engine.
   Essentially a string -- most often a name of file.
 
 In most cases, you will only have to deal with concrete targets and the
 process that creates concrete targets from metatargets. Extending
-metatarget level is rarely required. The jam targets are typically only
+metatarget level is rarely required. The Jam targets are typically only
 used inside the command line patterns.
 
-WARNING: All of the Boost.Jam target-related builtin functions, like
-`DEPENDS` or `ALWAYS` operate on jam targets. Applying them to metatargets or
+WARNING: All of the Boost.Jam target-related builtin rules, like
+`DEPENDS` or `ALWAYS` operate on Jam targets. Applying them to metatargets or
 concrete targets has no effect.
 
 [[b2.extender.overview.metatargets]]
@@ -54,8 +54,8 @@ instance of link:#b2.reference.class.property-set[property-set])
 `virtual-target` class.)
 
 It's possible to lookup a metatarget by target-id using the
-`targets.resolve-reference` function, and the
-`targets.generate-from-reference` function can both lookup and generate
+`targets.resolve-reference` rule, and the
+`targets.generate-from-reference` rule can both lookup and generate
 a metatarget.
 
 The link:#b2.reference.class.abstract-target[abstract-target] class
@@ -92,7 +92,7 @@ implicitly -- when loading a new Jamfiles, or when a new target
 alternative with as-yet unknown name is created. The instances of the
 classes derived from
 link:#b2.reference.class.basic-target[basic-target] are typically
-created when Jamfile calls a metatarget rule, such as such as `exe`.
+created when Jamfile calls a metatarget rule, such as `exe`.
 
 It it permissible to create a custom class derived from
 link:#b2.reference.class.basic-target[basic-target] and create new
@@ -126,8 +126,8 @@ local t = [ new file-target $(name) : CPP : $(project) : $(a) ] ;
 ----
 
 The first line creates an instance of the `action` class. The first
-parameter is the list of sources. The second parameter is the name a
-jam-level link:#b2.overview.jam_language.actions[action]. The third
+parameter is the list of sources. The second parameter is the name of a
+Jam-level link:#b2.overview.jam_language.actions[action]. The third
 parameter is the property-set applying to this action. The second line
 creates a target. We specify a name, a type and a project. We also pass
 the action object created earlier. If the action creates several
@@ -137,7 +137,7 @@ In some cases, code that creates concrete targets may be invoked more
 than once with the same properties. Returning two different instances of
 `file-target` that correspond to the same file clearly will result in
 problems. Therefore, whenever returning targets you should pass them via
-the `virtual-target.register` function, besides allowing B2 to
+the `virtual-target.register` rule, besides allowing B2 to
 track which virtual targets got created for each metatarget, this will
 also replace targets with previously created identical ones, as
 necessary.footnote:[This create-then-register pattern is caused by
@@ -162,7 +162,7 @@ metatargets.
 
 In practice, most files have specific types, and most tools consume and
 produce files of specific type. To take advantage of this fact,
-B2 defines concept of target type and generators generators,
+B2 defines concept of target type and generators,
 and has special metatarget class
 link:#b2.reference.class.typed-target[typed-target]. Target type is
 merely an identifier. It is associated with a set of file extensions
@@ -238,6 +238,10 @@ actions inline-file
 }
 ----
 
+Note that this action currently only works on Posix platforms (i.e. not
+on Windows), where the shell used by B2 can execute a command like
+`"./inline-file.py"` (on Windows you have to invoke the Python interpreter,
+i.e. use the syntax `python inline-file.py $(<) $(>)`.)
 Now, we're ready to tie it all together. Put all the code above in file
 `verbatim.jam`, add `import verbatim ;` to `Jamroot.jam`, and it's
 possible to write the following in your Jamfile:
@@ -325,7 +329,7 @@ class verbatim-scanner : common-scanner
 {
     rule pattern ( )
     {
-        return "//###include[ ]*\"([^\"]*)\"" ;
+        return "[ \t]*#[ \t]*include[ \t]*\"([^\"]+)\"" ;
     }
 }
 ----
@@ -336,8 +340,8 @@ used for scanning. The parentheses in the regular expression indicate
 which part of the string is the name of the included file. Only the
 first parenthesized group in the regular expression will be recognized;
 if you can't express everything you want that way, you can return
-multiple regular expressions, each of which contains a parenthesized
-group to be matched.
+multiple regular expressions (up to 10 expressions are currently
+supported), each of which contains a parenthesized group to be matched.
 
 After that, we need to register our scanner class:
 
@@ -419,12 +423,12 @@ target type. For example, the first generator invoked when building an
 `exe` target is a composing generator corresponding to the proper
 linker.
 
-You should also know about two specific functions for registering
+You should also know about two specific rules for registering
 generators: `generators.register-c-compiler` and
 `generators.register-linker`. The first sets up header dependency
 scanning for C files, and the seconds handles various complexities like
 searched libraries. For that reason, you should always use those
-functions when adding support for compilers and linkers.
+rules when adding support for compilers and linkers.
 
 (Need a note about UNIX)
 
@@ -484,7 +488,7 @@ class itrace-generator : generator {
                 leaves += $(t) ;
             }
         }
-        return [ generator.generated-targets $(sources) $(leafs)
+        return [ generator.generated-targets $(sources) $(leaves)
           : $(property-set) : $(project) $(name) ] ;
     }
 }
@@ -601,8 +605,7 @@ allow the user to pass any value to the command line parameters for a
 particular tool, if so desired. For example, the `<cxxflags>` feature
 allows you to pass any command line options to a {CPP} compiler. The
 `<include>` feature allows you to pass any string preceded by `-I` and
-the interpretation is tool-specific. (See <<b2.faq.external>>
-for an example of very smart usage of that feature). Of course one
+the interpretation is tool-specific. Of course one
 should always strive to use portable features, but these are still be
 provided as a backdoor just to make sure B2 does not take away
 any control from the user.
@@ -694,7 +697,8 @@ rule link
 }
 ----
 +
-This is a workaround for a bug in B2 engine, which will
+This is a workaround for a bug in B2 engine (due to dependency features
+that do not actually create a dependency on their values), which will
 hopefully be fixed one day.
 
 *Variants and composite features.*
@@ -758,6 +762,11 @@ type.register OBFUSCATED_CPP  : ocpp ;
 
 import generators ;
 generators.register-standard obfuscate.file : CPP : OBFUSCATED_CPP ;
+
+actions file
+{
+    # command(s) to obfuscate $(>) and build $(<)
+}
 ----
 
 and import that module, you'll be able to use the rule "obfuscated-cpp"

@@ -8,11 +8,12 @@
 #ifndef BOOST_DLL_EXAMPLE_COMMON_B2_WORKAROUNDS_HPP
 #define BOOST_DLL_EXAMPLE_COMMON_B2_WORKAROUNDS_HPP
 
-#include <boost/dll/config.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/system/error_code.hpp>
 #include <iostream>
 #include <cctype>
+
+#include <boost/dll/config.hpp>
 
 namespace b2_workarounds {
 

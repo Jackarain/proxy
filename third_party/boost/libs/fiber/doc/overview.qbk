@@ -10,7 +10,7 @@
 __boost_fiber__  provides a framework for micro-/userland-threads (fibers)
 scheduled cooperatively.
 The API contains classes and functions to manage and synchronize fibers
-similiarly to __std_thread__.
+similarly to __std_thread__.
 
 Each fiber has its own stack.
 

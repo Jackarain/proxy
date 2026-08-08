@@ -8,7 +8,7 @@
 
 #include <boost/redis/adapter/any_adapter.hpp>
 #include <boost/redis/detail/exec_one_fsm.hpp>
-#include <boost/redis/detail/read_buffer.hpp>
+#include <boost/redis/detail/multiplexer.hpp>
 #include <boost/redis/error.hpp>
 #include <boost/redis/resp3/node.hpp>
 #include <boost/redis/resp3/type.hpp>
@@ -31,6 +31,7 @@ using detail::exec_one_fsm;
 using detail::exec_one_action;
 using detail::exec_one_action_type;
 using detail::read_buffer;
+using detail::multiplexer;
 using boost::system::error_code;
 using boost::asio::cancellation_type_t;
 using parse_event = any_adapter::parse_event;
@@ -109,20 +110,20 @@ void test_success()
    // Setup
    std::vector<adapter_event> events;
    exec_one_fsm fsm{make_snoop_adapter(events), 2u};
-   read_buffer buff;
+   multiplexer mpx;
 
    // Write the request
-   auto act = fsm.resume(buff, error_code(), 0u, cancellation_type_t::none);
+   auto act = fsm.resume(mpx, error_code(), 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::write);
 
    // FSM should now ask for data
-   act = fsm.resume(buff, error_code(), 25u, cancellation_type_t::none);
+   act = fsm.resume(mpx, error_code(), 25u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::read_some);
 
    // Read the entire response in one go
    constexpr std::string_view payload = "$5\r\nhello\r\n*1\r\n+goodbye\r\n";
-   copy_to(buff, payload);
-   act = fsm.resume(buff, error_code(), payload.size(), cancellation_type_t::none);
+   copy_to(mpx.get_read_buffer(), payload);
+   act = fsm.resume(mpx, error_code(), payload.size(), cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::done);
 
    // Verify the adapter calls
@@ -144,14 +145,14 @@ void test_no_expected_response()
    // Setup
    std::vector<adapter_event> events;
    exec_one_fsm fsm{make_snoop_adapter(events), 0u};
-   read_buffer buff;
+   multiplexer mpx;
 
    // Write the request
-   auto act = fsm.resume(buff, error_code(), 0u, cancellation_type_t::none);
+   auto act = fsm.resume(mpx, error_code(), 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::write);
 
    // FSM shouldn't ask for data
-   act = fsm.resume(buff, error_code(), 25u, cancellation_type_t::none);
+   act = fsm.resume(mpx, error_code(), 25u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, error_code());
 
    // No adapter calls should be done
@@ -164,28 +165,28 @@ void test_short_reads()
    // Setup
    std::vector<adapter_event> events;
    exec_one_fsm fsm{make_snoop_adapter(events), 2u};
-   read_buffer buff;
+   multiplexer mpx;
 
    // Write the request
-   auto act = fsm.resume(buff, error_code(), 0u, cancellation_type_t::none);
+   auto act = fsm.resume(mpx, error_code(), 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::write);
 
    // FSM should now ask for data
-   act = fsm.resume(buff, error_code(), 25u, cancellation_type_t::none);
+   act = fsm.resume(mpx, error_code(), 25u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::read_some);
 
    // Read fragments
    constexpr std::string_view payload = "$5\r\nhello\r\n*1\r\n+goodbye\r\n";
-   copy_to(buff, payload.substr(0, 6u));
-   act = fsm.resume(buff, error_code(), 6u, cancellation_type_t::none);
+   copy_to(mpx.get_read_buffer(), payload.substr(0, 6u));
+   act = fsm.resume(mpx, error_code(), 6u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::read_some);
 
-   copy_to(buff, payload.substr(6, 10u));
-   act = fsm.resume(buff, error_code(), 10u, cancellation_type_t::none);
+   copy_to(mpx.get_read_buffer(), payload.substr(6, 10u));
+   act = fsm.resume(mpx, error_code(), 10u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::read_some);
 
-   copy_to(buff, payload.substr(16));
-   act = fsm.resume(buff, error_code(), payload.substr(16).size(), cancellation_type_t::none);
+   copy_to(mpx.get_read_buffer(), payload.substr(16));
+   act = fsm.resume(mpx, error_code(), payload.substr(16).size(), cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::done);
 
    // Verify the adapter calls
@@ -207,14 +208,14 @@ void test_write_error()
    // Setup
    std::vector<adapter_event> events;
    exec_one_fsm fsm{make_snoop_adapter(events), 2u};
-   read_buffer buff;
+   multiplexer mpx;
 
    // Write the request
-   auto act = fsm.resume(buff, error_code(), 0u, cancellation_type_t::none);
+   auto act = fsm.resume(mpx, error_code(), 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::write);
 
    // Write error
-   act = fsm.resume(buff, asio::error::connection_reset, 10u, cancellation_type_t::none);
+   act = fsm.resume(mpx, asio::error::connection_reset, 10u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, error_code(asio::error::connection_reset));
 }
 
@@ -223,14 +224,14 @@ void test_write_cancel()
    // Setup
    std::vector<adapter_event> events;
    exec_one_fsm fsm{make_snoop_adapter(events), 2u};
-   read_buffer buff;
+   multiplexer mpx;
 
    // Write the request
-   auto act = fsm.resume(buff, error_code(), 0u, cancellation_type_t::none);
+   auto act = fsm.resume(mpx, error_code(), 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::write);
 
    // Edge case where the operation finished successfully but with the cancellation state set
-   act = fsm.resume(buff, error_code(), 10u, cancellation_type_t::terminal);
+   act = fsm.resume(mpx, error_code(), 10u, cancellation_type_t::terminal);
    BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
 }
 
@@ -240,18 +241,18 @@ void test_read_error()
    // Setup
    std::vector<adapter_event> events;
    exec_one_fsm fsm{make_snoop_adapter(events), 2u};
-   read_buffer buff;
+   multiplexer mpx;
 
    // Write the request
-   auto act = fsm.resume(buff, error_code(), 0u, cancellation_type_t::none);
+   auto act = fsm.resume(mpx, error_code(), 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::write);
 
    // FSM should now ask for data
-   act = fsm.resume(buff, error_code(), 25u, cancellation_type_t::none);
+   act = fsm.resume(mpx, error_code(), 25u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::read_some);
 
    // Read error
-   act = fsm.resume(buff, asio::error::network_reset, 0u, cancellation_type_t::none);
+   act = fsm.resume(mpx, asio::error::network_reset, 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, error_code(asio::error::network_reset));
 }
 
@@ -260,19 +261,19 @@ void test_read_cancelled()
    // Setup
    std::vector<adapter_event> events;
    exec_one_fsm fsm{make_snoop_adapter(events), 2u};
-   read_buffer buff;
+   multiplexer mpx;
 
    // Write the request
-   auto act = fsm.resume(buff, error_code(), 0u, cancellation_type_t::none);
+   auto act = fsm.resume(mpx, error_code(), 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::write);
 
    // FSM should now ask for data
-   act = fsm.resume(buff, error_code(), 25u, cancellation_type_t::none);
+   act = fsm.resume(mpx, error_code(), 25u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::read_some);
 
    // Edge case where the operation finished successfully but with the cancellation state set
-   copy_to(buff, "$5\r\n");
-   act = fsm.resume(buff, error_code(), 4u, cancellation_type_t::terminal);
+   copy_to(mpx.get_read_buffer(), "$5\r\n");
+   act = fsm.resume(mpx, error_code(), 4u, cancellation_type_t::terminal);
    BOOST_TEST_EQ(act, error_code(asio::error::operation_aborted));
 }
 
@@ -282,15 +283,15 @@ void test_buffer_prepare_error()
    // Setup
    std::vector<adapter_event> events;
    exec_one_fsm fsm{make_snoop_adapter(events), 2u};
-   read_buffer buff;
-   buff.set_config({4096u, 8u});  // max size is 8 bytes
+   multiplexer mpx;
+   mpx.get_read_buffer().set_config({8u});  // max size is 8 bytes
 
    // Write the request
-   auto act = fsm.resume(buff, error_code(), 0u, cancellation_type_t::none);
+   auto act = fsm.resume(mpx, error_code(), 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::write);
 
    // When preparing the buffer, we encounter an error
-   act = fsm.resume(buff, error_code(), 25u, cancellation_type_t::none);
+   act = fsm.resume(mpx, error_code(), 25u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, error_code(error::exceeds_maximum_read_buffer_size));
 }
 
@@ -300,20 +301,20 @@ void test_parse_error()
    // Setup
    std::vector<adapter_event> events;
    exec_one_fsm fsm{make_snoop_adapter(events), 2u};
-   read_buffer buff;
+   multiplexer mpx;
 
    // Write the request
-   auto act = fsm.resume(buff, error_code(), 0u, cancellation_type_t::none);
+   auto act = fsm.resume(mpx, error_code(), 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::write);
 
    // FSM should now ask for data
-   act = fsm.resume(buff, error_code(), 25u, cancellation_type_t::none);
+   act = fsm.resume(mpx, error_code(), 25u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::read_some);
 
    // The response contains an invalid message
    constexpr std::string_view payload = "$bad\r\n";
-   copy_to(buff, payload);
-   act = fsm.resume(buff, error_code(), payload.size(), cancellation_type_t::none);
+   copy_to(mpx.get_read_buffer(), payload);
+   act = fsm.resume(mpx, error_code(), payload.size(), cancellation_type_t::none);
    BOOST_TEST_EQ(act, error_code(error::not_a_number));
 }
 
@@ -326,20 +327,20 @@ void test_adapter_error()
          ec = error::empty_field;
    }};
    exec_one_fsm fsm{std::move(adapter), 2u};
-   read_buffer buff;
+   multiplexer mpx;
 
    // Write the request
-   auto act = fsm.resume(buff, error_code(), 0u, cancellation_type_t::none);
+   auto act = fsm.resume(mpx, error_code(), 0u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::write);
 
    // FSM should now ask for data
-   act = fsm.resume(buff, error_code(), 25u, cancellation_type_t::none);
+   act = fsm.resume(mpx, error_code(), 25u, cancellation_type_t::none);
    BOOST_TEST_EQ(act, exec_one_action_type::read_some);
 
    // Read the entire response in one go
    constexpr std::string_view payload = "$5\r\nhello\r\n*1\r\n+goodbye\r\n";
-   copy_to(buff, payload);
-   act = fsm.resume(buff, error_code(), payload.size(), cancellation_type_t::none);
+   copy_to(mpx.get_read_buffer(), payload);
+   act = fsm.resume(mpx, error_code(), payload.size(), cancellation_type_t::none);
    BOOST_TEST_EQ(act, error_code(error::empty_field));
 }
 

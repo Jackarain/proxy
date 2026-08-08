@@ -25,6 +25,8 @@
 #define DEFAULT_EXECUTION_MONITOR_TYPE execution_monitor::use_sleep_only
 #include "./util.inl"
 
+const unsigned int max_wait_attempts = 10u;
+
 template <typename M>
 struct test_lock
 {
@@ -48,9 +50,12 @@ struct test_lock
         boost::xtime xt = delay(0, 100);
 
         // Test the lock and the mutex with condition variables.
-        // No one is going to notify this condition variable.  We expect to
-        // time out.
-        BOOST_CHECK(!condition.timed_wait(lock, xt));
+        // No one is going to notify this condition variable.  We expect it to
+        // usually time out. It may occasionally return true due to a spurious wakeup.
+        bool wait_result = true;
+        for (unsigned int attempt = 0u; wait_result && attempt < max_wait_attempts; ++attempt)
+            wait_result = condition.timed_wait(lock, xt);
+        BOOST_CHECK(!wait_result);
         BOOST_CHECK(lock ? true : false);
 
         // Test the lock and unlock methods.
@@ -88,9 +93,12 @@ struct test_trylock
         boost::xtime xt = delay(0, 100);
 
         // Test the lock and the mutex with condition variables.
-        // No one is going to notify this condition variable.  We expect to
-        // time out.
-        BOOST_CHECK(!condition.timed_wait(lock, xt));
+        // No one is going to notify this condition variable.  We expect it to
+        // usually time out. It may occasionally return true due to a spurious wakeup.
+        bool wait_result = true;
+        for (unsigned int attempt = 0u; wait_result && attempt < max_wait_attempts; ++attempt)
+            wait_result = condition.timed_wait(lock, xt);
+        BOOST_CHECK(!wait_result);
         BOOST_CHECK(lock ? true : false);
 
         // Test the lock, unlock and trylock methods.
@@ -222,8 +230,8 @@ struct test_timedlock
         boost::system_time timeout = boost::get_system_time()+boost::posix_time::milliseconds(100);
 
         // Test the lock and the mutex with condition variables.
-        // No one is going to notify this condition variable.  We expect to
-        // time out.
+        // No one is going to notify this condition variable.  We expect it to
+        // time out. Spurious wakeups should be handled by means of the predicate.
         BOOST_CHECK(!condition.timed_wait(lock, timeout, fake_predicate));
         BOOST_CHECK(lock ? true : false);
 
@@ -338,6 +346,3 @@ BOOST_AUTO_TEST_CASE(test_recursive_timed_mutex)
 {
     timed_test(&do_test_recursive_timed_mutex, 3);
 }
-
-
-

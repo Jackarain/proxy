@@ -7,7 +7,20 @@ include(BoostTestJamfile OPTIONAL RESULT_VARIABLE HAVE_BOOST_TEST)
 
 if(HAVE_BOOST_TEST)
 
-    if(BUILD_DECTEST_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/decimal-dectest/CMakeLists.txt")
+    if(BOOST_DECIMAL_ENABLE_CUDA)
+
+        message(STATUS "Building Boost.Decimal with CUDA")
+
+        enable_language(CUDA)
+        find_package(CUDAToolkit REQUIRED)
+        set(CMAKE_CUDA_EXTENSIONS OFF)
+        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+
+        enable_testing()
+
+        boost_test_jamfile(FILE cuda_jamfile LINK_LIBRARIES Boost::decimal CUDA::cudart COMPILE_DEFINITIONS BOOST_DECIMAL_ENABLE_CUDA=1)
+
+    elseif(BUILD_DECTEST_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/decimal-dectest/CMakeLists.txt")
 
         add_subdirectory(decimal-dectest)
 

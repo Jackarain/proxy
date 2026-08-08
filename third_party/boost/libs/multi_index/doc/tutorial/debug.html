@@ -34,6 +34,7 @@ Techniques
   <li><a href="#safe_mode">Safe mode</a>
     <ul>
        <li><a href="#serialization_and_safe_mode">Serialization and safe mode</a></li>
+       <li><a href="#shared_memory_and_safe_mode">Containers placed in shared memory</a></li>
     </ul>
   </li>
   <li><a href="#invariant_check">Invariant-checking mode</a></li>
@@ -199,6 +200,26 @@ checked value by using the following workaround:
 <span class=identifier>it</span><span class=special>=</span><span class=identifier>es</span><span class=special>.</span><span class=identifier>project</span><span class=special>&lt;</span><span class=number>1</span><span class=special>&gt;(</span><span class=identifier>it</span><span class=special>);</span>
 </pre></blockquote>
 
+<h3><a name="shared_memory_and_safe_mode">Containers placed in shared memory</a></h3>
+
+<p>
+In general, safe mode <b>can't be used</b> when placing <code>multi_index_container</code>s
+in shared memory for interprocess communication 
+(as in <a href="../examples.html#example12">this example</a>).
+There are some fundamental reasons for this limitation:
+<ul>
+  <li>
+    Operations from one process may invalidate or change ownership for iterators
+    living in non-shared memory within another process: safe-mode machinery can't 
+    access those for bookkeeping.
+  </li>
+  <li>
+    Safe mode uses internal mutexes not suitable for interprocess
+    synchronization or persistence to a memory-mapped file.
+  </li>
+</ul>
+</p>
+
 <h2><a name="invariant_check">Invariant-checking mode</a></h2>
 
 <p>
@@ -240,9 +261,9 @@ Techniques
 
 <br>
 
-<p>Revised May 9th 2020</p>
+<p>Revised June 27th 2026</p>
 
-<p>&copy; Copyright 2003-2020 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+<p>&copy; Copyright 2003-2026 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
 Distributed under the Boost Software 
 License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
 LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">

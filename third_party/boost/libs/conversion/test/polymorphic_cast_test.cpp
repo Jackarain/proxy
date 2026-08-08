@@ -7,6 +7,7 @@
 // Copyright 2014 Peter Dimov
 // Copyright 2014 Boris Rasin, Antony Polukhin
 // Copyright 2023 Antony Polukhin
+// Copyright 2025-2026 Fedor Osetrov
 //
 // Distributed under the Boost Software License, Version 1.0.
 //
@@ -14,13 +15,14 @@
 //
 
 #define BOOST_ENABLE_ASSERT_HANDLER
-#include <boost/polymorphic_cast.hpp>
-#include <boost/polymorphic_pointer_cast.hpp>
 #include <boost/smart_ptr/shared_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 #include <boost/core/lightweight_test.hpp>
-#include <string>
+
+#include <boost/polymorphic_cast.hpp>
+#include <boost/polymorphic_pointer_cast.hpp>
+
 #include <memory>
 
 static bool expect_assertion = false;
@@ -42,7 +44,7 @@ void boost::assertion_failed( char const * expr, char const * function, char con
     {
         BOOST_ERROR( "unexpected assertion" );
 
-        BOOST_LIGHTWEIGHT_TEST_OSTREAM
+        std::cerr
           << file << "(" << line << "): assertion '" << expr << "' failed in function '"
           << function << "'" << std::endl;
     }
@@ -370,14 +372,19 @@ int main()
     test_polymorphic_pointer_downcast_intrusive();
     test_polymorphic_cast_fail();
     test_polymorphic_pointer_cast_fail();
+
+// NOTE: this tests depend on BOOST_ASSERT macro implementation substitution
+// implemented via BOOST_ENABLE_ASSERT_HANDLER macro.
+// Such mechanism is not possible with modules because
+// module import in TU do not inherit defined TU's macroses.
+#ifndef BOOST_USE_MODULES
     test_polymorphic_downcast_fail();
     test_polymorphic_pointer_downcast_builtin_fail();
     test_polymorphic_pointer_downcast_boost_shared_fail();
     test_polymorphic_pointer_downcast_intrusive_fail();
-
     test_polymorphic_pointer_downcast_std_shared();
     test_polymorphic_pointer_downcast_std_shared_fail();
-
+#endif
 
     return boost::report_errors();
 }

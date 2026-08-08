@@ -24,25 +24,25 @@
 #include <boost/core/lightweight_test.hpp>
 
 #if defined BOOST_THREAD_PROVIDES_SIGNATURE_PACKAGED_TASK && defined(BOOST_THREAD_PROVIDES_VARIADIC_THREAD)
-void func(boost::promise<int> p)
+void func(boost::promise<int> prom)
 #else
-boost::promise<int> p;
+boost::promise<int> prom;
 void func()
 #endif
 {
   const int i = 5;
-  p.set_value_at_thread_exit(i);
+  prom.set_value_at_thread_exit(i);
 }
 
 int main()
 {
   {
 #if defined BOOST_THREAD_PROVIDES_SIGNATURE_PACKAGED_TASK && defined(BOOST_THREAD_PROVIDES_VARIADIC_THREAD)
-    boost::promise<int> p;
-    boost::future<int> f = p.get_future();
-    boost::thread(func, boost::move(p)).detach();
+    boost::promise<int> prom;
+    boost::future<int> f = prom.get_future();
+    boost::thread(func, boost::move(prom)).detach();
 #else
-    boost::future<int> f = p.get_future();
+    boost::future<int> f = prom.get_future();
     boost::thread(func).detach();
 #endif
     try

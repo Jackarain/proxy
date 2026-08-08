@@ -51,27 +51,26 @@ constexpr auto floor BOOST_DECIMAL_PREVENT_MACRO_SUBSTITUTION (const T val) noex
 
     const auto sig_dig {detail::precision_v<T>};
     auto decimal_digits {static_cast<unsigned>(sig_dig)};
-    bool round {false};
+    const auto zero_digits {detail::remove_trailing_zeros(new_sig).number_of_removed_zeros};
+    const auto non_zero_exp {exp_ptr + static_cast<int>(zero_digits)};
+
+    if (non_zero_exp >= 0)
+    {
+        // If the value is an integer, nothing should occur
+        return val;
+    }
 
     if (sig_dig > abs_exp)
     {
         decimal_digits = abs_exp;
-        if (sig_dig == abs_exp + 1)
-        {
-            round = true;
-        }
     }
     else if (exp_ptr < 1 && abs_exp >= sig_dig)
     {
         return is_neg ? neg_one : zero;
     }
-    else
-    {
-        --decimal_digits;
-    }
 
     new_sig /= detail::pow10<DivType>(decimal_digits);
-    if (is_neg && round)
+    if (is_neg)
     {
         ++new_sig;
     }

@@ -1,0 +1,52 @@
+===== Comparisons =====
+comparisons<float        >: 218958     us (s=299999985)
+comparisons<double       >: 219360     us (s=299999985)
+comparisons<decimal32_t  >: 1737544    us (s=299999985)
+comparisons<decimal64_t  >: 2641269    us (s=299999985)
+comparisons<decimal128_t >: 12785193   us (s=299999985)
+comparisons<dec32_fast   >: 810359     us (s=299999985)
+comparisons<dec64_fast   >: 973523     us (s=299999985)
+comparisons<dec128_fast  >: 1668334    us (s=299999985)
+
+===== Addition =====
+Addition<float        >: 405897     us (s=0)
+Addition<double       >: 396331     us (s=0)
+Addition<decimal32_t  >: 1939282    us (s=4278703377)
+Addition<decimal64_t  >: 3260021    us (s=3600421045)
+Addition<decimal128_t >: 10051940   us (s=1540208104)
+Addition<dec32_fast   >: 1560823    us (s=4278703377)
+Addition<dec64_fast   >: 2316658    us (s=3600421045)
+Addition<dec128_fast  >: 4063567    us (s=1540208104)
+
+===== Subtraction =====
+Subtraction<float        >: 406120     us (s=0)
+Subtraction<double       >: 399739     us (s=0)
+Subtraction<decimal32_t  >: 1992724    us (s=3853431876)
+Subtraction<decimal64_t  >: 3604077    us (s=896708466)
+Subtraction<decimal128_t >: 8985637    us (s=3970891641)
+Subtraction<dec32_fast   >: 1574896    us (s=3853431876)
+Subtraction<dec64_fast   >: 2594218    us (s=896708466)
+Subtraction<dec128_fast  >: 4758754    us (s=3970891641)
+
+===== Multiplication =====
+Multiplication<float        >: 405436     us (s=0)
+Multiplication<double       >: 399698     us (s=0)
+Multiplication<decimal32_t  >: 3588771    us (s=2043889788)
+Multiplication<decimal64_t  >: 16292591   us (s=1442443485)
+Multiplication<decimal128_t >: 59885317   us (s=2933133230)
+Multiplication<dec32_fast   >: 2185862    us (s=2043889788)
+Multiplication<dec64_fast   >: 15107474   us (s=1442443485)
+Multiplication<dec128_fast  >: 61364608   us (s=2933133230)
+
+===== Division =====
+Division<float        >: 232240     us (s=889346465)
+Division<double       >: 231965     us (s=889346420)
+Division<decimal32_t  >: 3783007    us (s=71786254)
+Division<decimal64_t  >: 13399342   us (s=4067647761)
+Division<decimal128_t >: 38156153   us (s=4043229021)
+Division<dec32_fast   >: 3558170    us (s=71786254)
+Division<dec64_fast   >: 12932823   us (s=4067647761)
+Division<dec128_fast  >: 32450569   us (s=4043229021)
+
+
+EXIT STATUS: 1

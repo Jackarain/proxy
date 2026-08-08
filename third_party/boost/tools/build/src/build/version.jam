@@ -9,8 +9,8 @@ import numbers ;
 
 # Mirror engine JAM_VERSION
 .major = 5 ;
-.minor = 4 ;
-.patch = 2 ;
+.minor = 5 ;
+.patch = 1 ;
 
 
 rule build ( )
@@ -70,7 +70,7 @@ rule verify-engine-version ( )
 # rule version-less ( lhs + : rhs + ) # BUILTIN
 
 # Returns "true" if the required version is compatible with the having one.
-# This uses sematic versioning where (major.x.y) is compatible with
+# This uses semantic versioning where (major.x.y) is compatible with
 # (major.n.m) and (major.x.z). And is incompatible for other values.
 #
 rule version-compatible ( req + : has + )
@@ -160,8 +160,12 @@ rule __test__ ( )
     assert.false version-less  3 1 10 0   : 03 1 10 0 0 ;
     assert.false version-less 03 1 10 0   :  3 1 10 0 0 ;
 
-    # TODO: Add tests for invalid input data being sent to version-less.
-
+    # NOTE: invalid data (in C++ sense, i.e. not an integer) prevents the
+    #       C++ binding, this always results in undefined (false) outcome.
+    assert.false version-less  x          :  0          ;
+    assert.false version-less  0          :  y          ;
+    # FIXME: negative integers, however, are not considered invalid.
+    #assert.true  version-less  -1         :  0          ;
 
     assert.true  version-compatible 4     : 4     ;
     assert.true  version-compatible 4     : 4 9   ;
@@ -190,5 +194,12 @@ rule __test__ ( )
     assert.true  version-compatible 04    : 4     ;
     assert.true  version-compatible 04 00 : 04    ;
     assert.true  version-compatible 04    : 04 00 ;
+
+    assert.true semver-verify 1.2.3 ;
+    assert.false semver-verify a.b.c ;
+    assert.false semver-verify "1.2.3 extra" ;
+
+    assert.true semver-resolve 1.2 1.3 ;
+    assert.false semver-resolve 1.3 1.2 ;
 }
 

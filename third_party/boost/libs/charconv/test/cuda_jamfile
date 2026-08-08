@@ -1,0 +1,66 @@
+# Copyright 2024 Matt Borland
+# Distributed under the Boost Software License, Version 1.0.
+# https://www.boost.org/LICENSE_1_0.txt
+
+import testing ;
+import ../../config/checks/config : requires ;
+
+project : requirements
+    [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ]
+    ;
+
+run test_from_chars_char.cu ;
+run test_from_chars_signed_char.cu ;
+run test_from_chars_unsigned_char.cu ;
+run test_from_chars_short.cu ;
+run test_from_chars_unsigned_short.cu ;
+run test_from_chars_int.cu ;
+run test_from_chars_unsigned_int.cu ;
+run test_from_chars_long.cu ;
+run test_from_chars_unsigned_long.cu ;
+run test_from_chars_long_long.cu ;
+run test_from_chars_unsigned_long_long.cu ;
+
+run test_from_chars_bases_char.cu ;
+run test_from_chars_bases_signed_char.cu ;
+run test_from_chars_bases_unsigned_char.cu ;
+run test_from_chars_bases_short.cu ;
+run test_from_chars_bases_unsigned_short.cu ;
+run test_from_chars_bases_int.cu ;
+run test_from_chars_bases_unsigned_int.cu ;
+run test_from_chars_bases_long.cu ;
+run test_from_chars_bases_unsigned_long.cu ;
+run test_from_chars_bases_long_long.cu ;
+run test_from_chars_bases_unsigned_long_long.cu ;
+
+run test_to_chars_char.cu ;
+run test_to_chars_signed_char.cu ;
+run test_to_chars_unsigned_char.cu ;
+run test_to_chars_short.cu ;
+run test_to_chars_unsigned_short.cu ;
+run test_to_chars_int.cu ;
+run test_to_chars_unsigned_int.cu ;
+run test_to_chars_long.cu ;
+run test_to_chars_unsigned_long.cu ;
+run test_to_chars_long_long.cu ;
+run test_to_chars_unsigned_long_long.cu ;
+
+run test_to_chars_bases_char.cu ;
+run test_to_chars_bases_signed_char.cu ;
+run test_to_chars_bases_unsigned_char.cu ;
+run test_to_chars_bases_short.cu ;
+run test_to_chars_bases_unsigned_short.cu ;
+run test_to_chars_bases_int.cu ;
+run test_to_chars_bases_unsigned_int.cu ;
+run test_to_chars_bases_long.cu ;
+run test_to_chars_bases_unsigned_long.cu ;
+run test_to_chars_bases_long_long.cu ;
+run test_to_chars_bases_unsigned_long_long.cu ;
+
+run test_num_digits_uint32.cu ;
+run test_num_digits_uint64.cu ;
+
+run cuda_benchmark_from_chars_u64.cu ;
+run cuda_benchmark_to_chars_u64.cu ;
+run cuda_benchmark_from_chars_u32.cu ;
+run cuda_benchmark_to_chars_u32.cu ;

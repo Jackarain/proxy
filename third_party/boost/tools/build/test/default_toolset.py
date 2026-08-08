@@ -24,34 +24,32 @@ configuring_default_toolset_message = \
 
 ###############################################################################
 #
-# test_conditions_on_default_toolset()
-# ------------------------------------
+# test_default_toolset()
+# ----------------------
 #
 ###############################################################################
 
-def test_conditions_on_default_toolset():
-    """Test that toolset and toolset subfeature conditioned properties get
-    applied correctly when the toolset is selected by default. Implicitly tests
-    that we can use the set-default-toolset rule to set the default toolset to
-    be used by Boost Build.
+def test_default_toolset():
+    """Test that we can use the set-default-toolset rule to set
+    the default toolset to be used by Boost Build.
     """
 
-    t = BoostBuild.Tester(["--user-config=", "--ignore-site-config"],
+    t = BoostBuild.Tester(['--user-config=', '--ignore-site-config'],
         pass_toolset=False, use_test_config=False)
 
-    toolset_name           = "myCustomTestToolset"
-    toolset_version        = "v"
-    toolset_version_unused = "v_unused"
+    toolset_name           = 'myCustomTestToolset'
+    toolset_version        = '1.1'
+    toolset_version_unused = '1.2rc'
     message_loaded         = "Toolset '%s' loaded." % toolset_name
     message_initialized    = "Toolset '%s' initialized." % toolset_name ;
 
     # Custom toolset.
-    t.write(toolset_name + ".jam", """
+    t.write(toolset_name + '.jam', """\
 import feature ;
 ECHO "%(message_loaded)s" ;
 feature.extend toolset : %(toolset_name)s ;
 feature.subfeature toolset %(toolset_name)s : version : %(toolset_version)s %(toolset_version_unused)s ;
-rule init ( version ) { ECHO "%(message_initialized)s" ; }
+rule init ( version ? ) { ECHO "%(message_initialized)s" ; }
 """ % {'message_loaded'     : message_loaded     ,
     'message_initialized'   : message_initialized,
     'toolset_name'          : toolset_name       ,
@@ -59,22 +57,19 @@ rule init ( version ) { ECHO "%(message_initialized)s" ; }
     'toolset_version_unused': toolset_version_unused})
 
     # Main Boost Build project script.
-    t.write("jamroot.jam", """
+    t.write('jamroot.jam', """\
 import build-system ;
-import errors ;
 import feature ;
 import notfile ;
 
+# NOTE: the version param is optional in
+#       rule set-default-toolset ( toolset : version ? )
 build-system.set-default-toolset %(toolset_name)s : %(toolset_version)s ;
-
-feature.feature description : : free incidental ;
 
 # We use a rule instead of an action to avoid problems with action output not
 # getting piped to stdout by the testing system.
 rule buildRule ( names : targets ? : properties * )
 {
-    local descriptions = [ feature.get-values description : $(properties) ] ;
-    ECHO "descriptions:" /$(descriptions)/ ;
     local toolset = [ feature.get-values toolset : $(properties) ] ;
     ECHO "toolset:" /$(toolset)/ ;
     local toolset-version = [ feature.get-values "toolset-$(toolset):version" : $(properties) ] ;
@@ -83,22 +78,14 @@ rule buildRule ( names : targets ? : properties * )
 
 notfile testTarget
     : @buildRule
-    :
-    :
-    <description>stand-alone
-    <toolset>%(toolset_name)s:<description>toolset
-    <toolset>%(toolset_name)s-%(toolset_version)s:<description>toolset-version
-    <toolset>%(toolset_name)s-%(toolset_version_unused)s:<description>toolset-version-unused ;
+    ;
 """ % {'toolset_name'       : toolset_name   ,
-    'toolset_version'       : toolset_version,
-    'toolset_version_unused': toolset_version_unused})
+    'toolset_version'       : toolset_version,})
 
     t.run_build_system()
     t.expect_output_lines(configuring_default_toolset_message % toolset_name)
     t.expect_output_lines(message_loaded)
     t.expect_output_lines(message_initialized)
-    t.expect_output_lines("descriptions: /stand-alone/ /toolset/ "
-        "/toolset-version/")
     t.expect_output_lines("toolset: /%s/" % toolset_name)
     t.expect_output_lines("toolset-version: /%s/" % toolset_version)
 
@@ -137,76 +124,12 @@ def test_default_toolset_on_os( os, expected_toolset ):
 
 ###############################################################################
 #
-# test_default_toolset_requirements()
-# -----------------------------------
-#
-###############################################################################
-
-def test_default_toolset_requirements():
-    """Test that default toolset's requirements get applied correctly.
-    """
-
-    t = BoostBuild.Tester(["--user-config=", "--ignore-site-config"],
-        pass_toolset=False, use_test_config=False,
-        ignore_toolset_requirements=False)
-
-    toolset_name = "customTestToolsetWithRequirements"
-
-    # Custom toolset.
-    t.write(toolset_name + ".jam", """
-import feature ;
-import toolset ;
-feature.extend toolset : %(toolset_name)s ;
-toolset.add-requirements <description>toolset-requirement ;
-rule init ( ) { }
-""" % {'toolset_name': toolset_name})
-
-    # Main Boost Build project script.
-    t.write("jamroot.jam", """
-import build-system ;
-import errors ;
-import feature ;
-import notfile ;
-
-build-system.set-default-toolset %(toolset_name)s ;
-
-feature.feature description : : free incidental ;
-
-# We use a rule instead of an action to avoid problems with action output not
-# getting piped to stdout by the testing system.
-rule buildRule ( names : targets ? : properties * )
-{
-    local descriptions = [ feature.get-values description : $(properties) ] ;
-    ECHO "descriptions:" /$(descriptions)/ ;
-    local toolset = [ feature.get-values toolset : $(properties) ] ;
-    ECHO "toolset:" /$(toolset)/ ;
-}
-
-notfile testTarget
-    : @buildRule
-    :
-    :
-    <description>target-requirement
-    <description>toolset-requirement:<description>conditioned-requirement
-    <description>unrelated-condition:<description>unrelated-description ;
-""" % {'toolset_name': toolset_name})
-
-    t.run_build_system()
-    t.expect_output_lines(configuring_default_toolset_message % toolset_name)
-    t.expect_output_lines("descriptions: /conditioned-requirement/ "
-        "/target-requirement/ /toolset-requirement/")
-    t.expect_output_lines("toolset: /%s/" % toolset_name)
-
-    t.cleanup()
-
-
-###############################################################################
-#
 # main()
 # ------
 #
 ###############################################################################
 
+test_default_toolset()
 test_default_toolset_on_os("NT"         , "msvc")
 test_default_toolset_on_os("LINUX"      , "gcc" )
 test_default_toolset_on_os("CYGWIN"     , "gcc" )
@@ -214,6 +137,3 @@ test_default_toolset_on_os("MACOSX"     , "clang" )
 test_default_toolset_on_os("FREEBSD"    , "clang" )
 test_default_toolset_on_os("OPENBSD"    , "clang" )
 test_default_toolset_on_os("SomeOtherOS", "gcc" )
-#test_default_toolset_requirements()
-# FIXME: Failure of this test seems to indicate subfeatures matching issue
-#test_conditions_on_default_toolset()

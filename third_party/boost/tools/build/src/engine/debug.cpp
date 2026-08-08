@@ -7,8 +7,11 @@
 
 #include "jam.h"
 #include "debug.h"
-#include "output.h"
+
 #include "hash.h"
+#include "object.h"
+#include "output.h"
+
 #include <time.h>
 
 

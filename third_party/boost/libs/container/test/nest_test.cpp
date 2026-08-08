@@ -12,6 +12,8 @@
 #include <boost/core/lightweight_test.hpp>
 #include <algorithm>
 #include <functional>
+#include <vector>
+#include <cstddef>
 
 using namespace boost::container;
 
@@ -91,6 +93,36 @@ void test_emplace()
    nest<int>::iterator it = h.emplace(42);
    BOOST_TEST_EQ(*it, 42);
    BOOST_TEST_EQ(h.size(), 1u);
+}
+
+void test_quick_emplace()
+{
+   nest<int> h;
+   nest<int>::iterator it = h.quick_emplace(0);
+   BOOST_TEST_EQ(*it, 0);
+   BOOST_TEST_EQ(h.size(), 1u);
+
+   //Fill enough elements to span several blocks and verify all are present.
+   const int count = 1000;
+   for(int i = 1; i < count; ++i){
+      nest<int>::iterator jt = h.quick_emplace(i);
+      BOOST_TEST_EQ(*jt, i);
+   }
+   BOOST_TEST_EQ(h.size(), (std::size_t)count);
+
+   //quick_emplace and emplace must interoperate on the same container.
+   h.emplace(-1);
+   h.quick_emplace(-2);
+   BOOST_TEST_EQ(h.size(), (std::size_t)(count + 2));
+
+   //All originally inserted values [0, count) must still be retrievable.
+   std::vector<bool> seen(count, false);
+   for(nest<int>::iterator b = h.begin(), e = h.end(); b != e; ++b){
+      if(*b >= 0 && *b < count)
+         seen[(std::size_t)*b] = true;
+   }
+   for(int i = 0; i < count; ++i)
+      BOOST_TEST(seen[(std::size_t)i]);
 }
 
 void test_assign()
@@ -353,7 +385,7 @@ void test_move_construction_unequal_allocator()
    BOOST_TEST_EQ(*it, 10); ++it;
    BOOST_TEST_EQ(*it, 20); ++it;
    BOOST_TEST_EQ(*it, 30);
-   BOOST_TEST_EQ(h1.size(), 3u);
+   BOOST_TEST_EQ(h1.size(), 0u);
 }
 
 void test_move_assignment_unequal_allocator()
@@ -550,10 +582,6 @@ void test_get_iterator()
    nest<int>::const_iterator cfound = ch.get_iterator(p);
    BOOST_TEST(cfound != ch.end());
    BOOST_TEST_EQ(*cfound, 42);
-
-   nest<int>::const_pointer bad = 0;
-   nest<int>::iterator not_found = h.get_iterator(bad);
-   (void)not_found;
 }
 
 struct sum_functor
@@ -587,7 +615,7 @@ void test_visit()
    h.insert(2);
    h.insert(3);
 
-   h.visit(h.begin(), h.end(), doubler_functor());
+   boost::container::for_each(h.begin(), h.end(), doubler_functor());
    h.sort();
    nest<int>::const_iterator it = h.begin();
    BOOST_TEST_EQ(*it, 2); ++it;
@@ -596,10 +624,10 @@ void test_visit()
 
    int sum = 0;
    const nest<int>& ch = h;
-   ch.visit(ch.begin(), ch.end(), sum_functor(&sum));
+   boost::container::for_each(ch.begin(), ch.end(), sum_functor(&sum));
    BOOST_TEST_EQ(sum, 12);
 
-   h.visit_all(doubler_functor());
+   boost::container::for_each(h, doubler_functor());
    h.sort();
    it = h.begin();
    BOOST_TEST_EQ(*it, 4); ++it;
@@ -607,7 +635,7 @@ void test_visit()
    BOOST_TEST_EQ(*it, 12);
 
    sum = 0;
-   ch.visit_all(sum_functor(&sum));
+   boost::container::for_each(ch, sum_functor(&sum));
    BOOST_TEST_EQ(sum, 24);
 }
 
@@ -622,24 +650,24 @@ void test_visit_while()
    h.sort();
 
    int sum = 0;
-   nest<int>::iterator stop_it = h.visit_while(
-      h.begin(), h.end(), conditional_sum_functor(&sum, 6));
+   nest<int>::iterator stop_it = boost::container::for_each_while(
+      h.begin(), h.end(), conditional_sum_functor(&sum, 6)).first;
    BOOST_TEST(sum <= 6);
    BOOST_TEST(stop_it != h.end());
 
    sum = 0;
-   stop_it = h.visit_all_while(conditional_sum_functor(&sum, 3));
+   stop_it = boost::container::for_each_while(h, conditional_sum_functor(&sum, 3)).first;
    BOOST_TEST(sum <= 3);
 
    const nest<int>& ch = h;
    sum = 0;
-   nest<int>::const_iterator cstop_it = ch.visit_while(
-      ch.begin(), ch.end(), conditional_sum_functor(&sum, 6));
+   nest<int>::const_iterator cstop_it = boost::container::for_each_while(
+      ch.begin(), ch.end(), conditional_sum_functor(&sum, 6)).first;
    BOOST_TEST(sum <= 6);
    BOOST_TEST(cstop_it != ch.end());
 
    sum = 0;
-   cstop_it = ch.visit_all_while(conditional_sum_functor(&sum, 3));
+   cstop_it = boost::container::for_each_while(ch, conditional_sum_functor(&sum, 3)).first;
    BOOST_TEST(sum <= 3);
 }
 
@@ -731,6 +759,7 @@ int main()
    test_move_construction();
    test_insert_erase();
    test_emplace();
+   test_quick_emplace();
    test_assign();
    test_copy_assignment();
    test_move_assignment();

@@ -268,7 +268,7 @@ class delete_noexcept_disposer< BPtr_Value >
    public:
    typedef delete_disposer< BPtr_Value > base_t;
 
-   void operator () (typename base_t::pointer p) BOOST_NOEXCEPT
+   void operator () (base_t::pointer p) BOOST_NOEXCEPT
    {
       this->delete_disposer< BPtr_Value >::operator()(p);
    }

@@ -6,9 +6,8 @@
 
 #include <boost/redis/connection.hpp>
 
+#include <boost/core/lightweight_test.hpp>
 #include <boost/system/error_code.hpp>
-#define BOOST_TEST_MODULE run
-#include <boost/test/included/unit_test.hpp>
 
 #include "common.hpp"
 
@@ -33,7 +32,7 @@ bool is_host_not_found(error_code ec)
    return false;
 }
 
-BOOST_AUTO_TEST_CASE(resolve_bad_host)
+void test_resolve_bad_host()
 {
    net::io_context ioc;
    connection conn{ioc};
@@ -47,16 +46,17 @@ BOOST_AUTO_TEST_CASE(resolve_bad_host)
    cfg.reconnect_wait_interval = 0s;
 
    bool run_finished = true;
-   conn.async_run(cfg, {}, [&run_finished](error_code ec) {
+   conn.async_run(cfg, [&run_finished](error_code ec) {
       run_finished = true;
-      BOOST_TEST(is_host_not_found(ec), "is_host_not_found(ec) is false, with ec = " << ec);
+      if (!BOOST_TEST(is_host_not_found(ec)))
+         std::cerr << "  ec = " << ec;
    });
 
    ioc.run_for(4 * test_timeout);
    BOOST_TEST(run_finished);
 }
 
-BOOST_AUTO_TEST_CASE(resolve_with_timeout)
+void test_resolve_with_timeout()
 {
    net::io_context ioc;
    connection conn{ioc};
@@ -70,16 +70,16 @@ BOOST_AUTO_TEST_CASE(resolve_with_timeout)
    cfg.reconnect_wait_interval = 0s;
 
    bool run_finished = true;
-   conn.async_run(cfg, {}, [&run_finished](error_code ec) {
+   conn.async_run(cfg, [&run_finished](error_code ec) {
       run_finished = true;
-      BOOST_TEST(ec != error_code());
+      BOOST_TEST_NE(ec, error_code());
    });
 
    ioc.run_for(4 * test_timeout);
    BOOST_TEST(run_finished);
 }
 
-BOOST_AUTO_TEST_CASE(connect_bad_port)
+void test_connect_bad_port()
 {
    net::io_context ioc;
    connection conn{ioc};
@@ -93,30 +93,22 @@ BOOST_AUTO_TEST_CASE(connect_bad_port)
    cfg.reconnect_wait_interval = 0s;
 
    bool run_finished = true;
-   conn.async_run(cfg, {}, [&run_finished](error_code ec) {
+   conn.async_run(cfg, [&run_finished](error_code ec) {
       run_finished = true;
-      BOOST_TEST(ec != error_code());
+      BOOST_TEST_NE(ec, error_code());
    });
 
    ioc.run_for(4 * test_timeout);
    BOOST_TEST(run_finished);
 }
 
-// Hard to test.
-//BOOST_AUTO_TEST_CASE(connect_with_timeout)
-//{
-//   net::io_context ioc;
-//
-//   config cfg;
-//   cfg.addr.host = "example.com";
-//   cfg.addr.port = "80";
-//   cfg.resolve_timeout = 10s;
-//   cfg.connect_timeout = 1ns;
-//   cfg.health_check_interval = 10h;
-//
-//   auto conn = std::make_shared<connection>(ioc);
-//   run(conn, cfg, boost::redis::error::connect_timeout);
-//   ioc.run();
-//}
-
 }  // namespace
+
+int main()
+{
+   test_resolve_bad_host();
+   test_resolve_with_timeout();
+   test_connect_bad_port();
+
+   return boost::report_errors();
+}

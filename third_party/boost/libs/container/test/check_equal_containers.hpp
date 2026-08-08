@@ -78,8 +78,7 @@ bool CheckEqualContainers(const ContA &cont_a, const ContB &cont_b)
    if(dist2 != cont_b.size()){
       return false;
    }
-   std::size_t i = 0;
-   for(; itcont_a != itcont_a_end; ++itcont_a, ++itcont_b, ++i){
+   for(; itcont_a != itcont_a_end; ++itcont_a, ++itcont_b){
       if(!CheckEqual(*itcont_a, *itcont_b))
          return false;
    }

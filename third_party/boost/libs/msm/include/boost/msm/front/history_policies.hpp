@@ -18,16 +18,16 @@ namespace boost { namespace msm { namespace front
 // Configurable history policies for state machine definitions
 // (only used by backmp11).
 
-// No history (default).
+/// No history (default).
 struct no_history {};
 
-// Shallow history.
-// For deep history use this policy for all the contained state machines.
+/// Shallow history.
+/// For deep history use this policy in all contained state machines.
 template <typename... Events>
 struct shallow_history {};
 
-// Shallow history for all events (not UML conform).
-// For deep history use this policy for all the contained state machines.
+/// Shallow history for all entry events.
+/// For deep history use this policy in all contained state machines.
 struct always_shallow_history {};
 
 }}} // boost::msm::front

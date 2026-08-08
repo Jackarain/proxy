@@ -27,14 +27,6 @@ struct object
 
 struct value
 {
-	struct str_view
-	{
-		const char * str;
-		std::size_t size;
-		inline const char * begin() const { return str; }
-		inline const char * end() const { return str + size; }
-	};
-
 	enum class type : char
 	{
 		null = '\0',
@@ -49,11 +41,11 @@ struct value
 	virtual type get_type() const = 0;
 	virtual bool equal_to(const value & o) const = 0;
 	virtual int compare_to(const value & o) const = 0;
-	virtual str_view as_string() const = 0;
+	virtual string_view as_string() const = 0;
 	virtual double as_number() const = 0;
 	virtual object * as_object() const = 0;
 	virtual value * to_string() = 0;
-	inline const char * str() { return as_string().str; }
+	inline const char * str() { return as_string().data(); }
 	static value * make(const char * str, std::size_t size);
 	static inline value * make(const char * str)
 	{
@@ -77,7 +69,7 @@ struct value
 	static inline void free(value *& v) { v = nullptr; }
 	static void done();
 
-	inline bool has_value() const { return get_type() == type::null; }
+	inline bool has_value() const { return get_type() != type::null; }
 
 	template <typename T>
 	static inline value * as_string(T v)
@@ -102,13 +94,11 @@ struct value
 	}
 };
 
-typedef value * value_ptr;
+using value_ptr = value *;
 
 struct value_ref
 {
-	inline value_ref()
-		: val(nullptr)
-	{}
+	inline value_ref() = default;
 	inline value_ref(const value_ref & a)
 		: val(value::copy(a.val))
 	{}
@@ -141,12 +131,15 @@ struct value_ref
 	inline bool operator==(value_ptr b) const { return val->equal_to(*b); }
 	inline bool operator==(const char * v) const
 	{
-		return (*this) == value_ref(v);
+		return val->equal_to(*value_ref(v));
 	}
-	template <typename T>
-	inline bool operator!=(T v) const
+	inline bool operator!=(value_ptr b) const
 	{
-		return !((*this) == v);
+		return !(val->equal_to(*b));
+	}
+	inline bool operator!=(const char * v) const
+	{
+		return !(val->equal_to(*value_ref(v)));
 	}
 	inline value_ptr operator->() const { return val; }
 	inline value & operator*() const { return *val; }
@@ -167,8 +160,8 @@ struct value_ref
 	{
 		inline std::size_t operator()(const value_ref & a) const
 		{
-			return (std::size_t)(
-				(std::numeric_limits<std::size_t>::max)() & a->hash64);
+			return (std::size_t)((std::numeric_limits<std::size_t>::max)()
+				& a->hash64);
 		}
 	};
 

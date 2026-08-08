@@ -10,7 +10,6 @@ constant boost_dependencies :
     /boost/container_hash//boost_container_hash
     /boost/core//boost_core
     /boost/function_types//boost_function_types
-    /boost/functional//boost_functional
     /boost/mpl//boost_mpl
     /boost/preprocessor//boost_preprocessor
     /boost/tuple//boost_tuple
@@ -18,16 +17,12 @@ constant boost_dependencies :
     /boost/typeof//boost_typeof
     /boost/utility//boost_utility ;
 
-project /boost/fusion
-    : common-requirements
-        <include>include
-    ;
+project /boost/fusion ;
 
 explicit
-    [ alias boost_fusion : : : : <library>$(boost_dependencies) ]
+    [ alias boost_fusion : : : : <include>include <library>$(boost_dependencies) ]
     [ alias all : boost_fusion test ]
     ;
 
 call-if : boost-library fusion
     ;
-

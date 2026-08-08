@@ -242,6 +242,8 @@ This is also useful when manipulating URLs:
 
 [source,cpp]
 ----
+url      u1 = parse_uri( "http://www.example.com" ).value();
+url_view u2 = parse_uri( "http://other.example.com" ).value();
 u1.set_host(u2.host());
 ----
 
@@ -313,7 +315,7 @@ Output::
 ----
 path
 to
-my-file.txt
+my%2dfile.txt
 ----
 --
 ====

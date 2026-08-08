@@ -10,7 +10,6 @@ add_subdirectory(../.. boostorg/reegx)
 add_subdirectory(../../../config boostorg/config)
 add_subdirectory(../../../core boostorg/core)
 add_subdirectory(../../../assert boostorg/assert)
-add_subdirectory(../../../static_assert boostorg/static_assert)
 add_subdirectory(../../../throw_exception boostorg/throw_exception)
 add_subdirectory(../../../predef boostorg/predef)
 

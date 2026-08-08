@@ -1,5 +1,5 @@
 // Copyright 2023 - 2024 Matt Borland
-// Copyright 2023 - 2024 Christopher Kormanyos
+// Copyright 2023 - 2026 Christopher Kormanyos
 // Distributed under the Boost Software License, Version 1.0.
 // https://www.boost.org/LICENSE_1_0.txt
 
@@ -22,8 +22,8 @@
 
 #include <boost/core/lightweight_test.hpp>
 
-template<typename DecimalType> auto my_zero() -> DecimalType& { using decimal_type = DecimalType; static decimal_type val_zero { 0, 0 }; return val_zero; }
-template<typename DecimalType> auto my_one () -> DecimalType& { using decimal_type = DecimalType; static decimal_type val_one  { 1, 0 }; return val_one; }
+template<typename DecimalType> auto my_zero() -> DecimalType;
+template<typename DecimalType> auto my_one () -> DecimalType;
 
 namespace local
 {
@@ -228,6 +228,30 @@ namespace local
       result_is_ok = (result_val_zero_neg_is_ok && result_is_ok);
     }
 
+    for(auto i = static_cast<unsigned>(UINT8_C(0)); i < static_cast<unsigned>(UINT8_C(8)); ++i)
+    {
+      static_cast<void>(i);
+
+      const int
+        arg_one_n
+        {
+          static_cast<int>
+          (
+            ::my_one<decimal_type>() * static_cast<decimal_type>(dist(gen)) * static_cast<decimal_type>(dist(gen))
+          )
+        };
+
+      const decimal_type arg_one { arg_one_n };
+
+      const auto val_one = exp(arg_one);
+
+      const auto result_val_one_is_ok = (val_one == ::boost::decimal::numbers::e_v<decimal_type>);
+
+      BOOST_TEST(result_val_one_is_ok);
+
+      result_is_ok = (result_val_one_is_ok && result_is_ok);
+    }
+
     return result_is_ok;
   }
 
@@ -381,7 +405,7 @@ auto main() -> int
   }
 
   {
-    const auto result_pos128_is_ok = local::test_exp_128(8192);
+    const auto result_pos128_is_ok = local::test_exp_128(256);
 
     BOOST_TEST(result_pos128_is_ok);
 
@@ -392,3 +416,6 @@ auto main() -> int
 
   return (result_is_ok ? 0 : -1);
 }
+
+template<typename DecimalType> auto my_zero() -> DecimalType { using decimal_type = DecimalType; return decimal_type { 0 }; }
+template<typename DecimalType> auto my_one () -> DecimalType { using decimal_type = DecimalType; return decimal_type { 1 }; }

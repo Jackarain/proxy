@@ -30,17 +30,17 @@ void test()
 
         char const* s = "Hello";
         typedef FUSION_SEQUENCE<int, char, double, char const*> seq_type;
-        seq_type v(1, 'x', 3.3, s);
+        seq_type v(1, 'x', 3.25, s);
         boost::fusion::result_of::begin<seq_type>::type i(v);
 
         BOOST_TEST(*i == 1);
         BOOST_TEST(*next(i) == 'x');
-        BOOST_TEST(*next(next(i)) == 3.3);
+        BOOST_TEST(*next(next(i)) == 3.25);
         BOOST_TEST(*next(next(next(i))) == s);
         next(next(next(next(i)))); // end
 
 #if !defined(FUSION_NO_PRIOR)
-        BOOST_TEST(*prior(next(next(next(i)))) == 3.3);
+        BOOST_TEST(*prior(next(next(next(i)))) == 3.25);
         BOOST_TEST(*prior(prior(next(next(next(i))))) == 'x');
         BOOST_TEST(*prior(prior(prior(next(next(next(i)))))) == 1);
 #endif
@@ -62,7 +62,7 @@ void test()
 
         char const* s = "Hello";
         typedef FUSION_SEQUENCE<int, char, double, char const*> const seq_type;
-        seq_type t(1, 'x', 3.3, s);
+        seq_type t(1, 'x', 3.25, s);
         boost::fusion::result_of::begin<seq_type>::type i(t);
 
         BOOST_TEST(*i == 1);
@@ -105,12 +105,12 @@ void test()
 
         char const* s = "Hello";
         typedef FUSION_SEQUENCE<int, char, double, char const*> seq_type;
-        seq_type t(1, 'x', 3.3, s);
+        seq_type t(1, 'x', 3.25, s);
         boost::fusion::result_of::begin<seq_type>::type i(t);
 
         BOOST_TEST(*i == 1);
         BOOST_TEST(*next(i) == 'x');
-        BOOST_TEST(*next(next(i)) == 3.3);
+        BOOST_TEST(*next(next(i)) == 3.25);
         BOOST_TEST(*next(next(next(i))) == s);
 
         next(next(next(next(i)))); // end
@@ -120,7 +120,7 @@ void test()
 #endif
 
 #if !defined(FUSION_NO_PRIOR)
-        BOOST_TEST(*prior(next(next(next(i)))) == 3.3);
+        BOOST_TEST(*prior(next(next(next(i)))) == 3.25);
         BOOST_TEST(*prior(prior(next(next(next(i))))) == 'x');
         BOOST_TEST(*prior(prior(prior(next(next(next(i)))))) == 1);
 #endif
@@ -137,7 +137,7 @@ void test()
     { // Testing distance
 
         typedef FUSION_SEQUENCE<int, char, double, char const*> seq_type;
-        seq_type t(1, 'x', 3.3, "Hello");
+        seq_type t(1, 'x', 3.25, "Hello");
 
         BOOST_STATIC_ASSERT((boost::fusion::result_of::distance<
             boost::fusion::result_of::begin<seq_type>::type
@@ -174,7 +174,7 @@ void test()
     { // Testing advance
 
         typedef FUSION_SEQUENCE<int, char, double, char const*> seq_type;
-        seq_type t(1, 'x', 3.3, "Hello");
+        seq_type t(1, 'x', 3.25, "Hello");
 
         BOOST_TEST(*advance_c<0>(begin(t)) == at_c<0>(t));
         BOOST_TEST(*advance_c<1>(begin(t)) == at_c<1>(t));
@@ -194,7 +194,3 @@ void test()
         BOOST_TEST(&*advance_c<3>(begin(t)) == &at_c<3>(t));
     }
 }
-
-
-
-

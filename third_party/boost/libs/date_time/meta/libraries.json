@@ -13,5 +13,5 @@
         "Jeff Garland <jeff -at- crystalclearsoftware.com>",
         "James E. King III <jking -at- apache.org>"
     ],
-    "cxxstd": "03"
+    "cxxstd": "11"
 }

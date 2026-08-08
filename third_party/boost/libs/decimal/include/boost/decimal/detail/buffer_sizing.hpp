@@ -23,7 +23,7 @@ namespace detail {
 #endif
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Dec>
-constexpr int get_real_precision(const int my_precision = -1) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR int get_real_precision(const int my_precision = -1) noexcept
 {
     // If the user did not specify precision than we use the maximum representable amount
     // and remove trailing zeros at the end
@@ -32,7 +32,7 @@ constexpr int get_real_precision(const int my_precision = -1) noexcept
 
 // We don't need to use the full digit counting since the range of the exponents is well-defined
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE DecimalType, BOOST_DECIMAL_INTEGRAL Int>
-constexpr auto buffer_length_exp(Int x) noexcept -> std::enable_if_t<std::numeric_limits<DecimalType>::max_exponent >= 1000, int>
+BOOST_DECIMAL_CUDA_CONSTEXPR auto buffer_length_exp(Int x) noexcept -> std::enable_if_t<std::numeric_limits<DecimalType>::max_exponent >= 1000, int>
 {
     if (x < 10) return 1;
     if (x < 100) return 2;
@@ -41,7 +41,7 @@ constexpr auto buffer_length_exp(Int x) noexcept -> std::enable_if_t<std::numeri
 }
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE DecimalType, BOOST_DECIMAL_INTEGRAL Int>
-constexpr auto buffer_length_exp(Int x) noexcept -> std::enable_if_t<std::numeric_limits<DecimalType>::max_exponent >= 100 && std::numeric_limits<DecimalType>::max_exponent < 1000, int>
+BOOST_DECIMAL_CUDA_CONSTEXPR auto buffer_length_exp(Int x) noexcept -> std::enable_if_t<std::numeric_limits<DecimalType>::max_exponent >= 100 && std::numeric_limits<DecimalType>::max_exponent < 1000, int>
 {
     if (x < 10) return 1;
     if (x < 100) return 2;
@@ -49,14 +49,14 @@ constexpr auto buffer_length_exp(Int x) noexcept -> std::enable_if_t<std::numeri
 }
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE DecimalType, BOOST_DECIMAL_INTEGRAL Int>
-constexpr auto buffer_length_exp(Int x) noexcept -> std::enable_if_t<std::numeric_limits<DecimalType>::max_exponent >= 10 && std::numeric_limits<DecimalType>::max_exponent < 100, int>
+BOOST_DECIMAL_CUDA_CONSTEXPR auto buffer_length_exp(Int x) noexcept -> std::enable_if_t<std::numeric_limits<DecimalType>::max_exponent >= 10 && std::numeric_limits<DecimalType>::max_exponent < 100, int>
 {
     if (x < 10) return 1;
     return 2;
 }
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE DecimalType, BOOST_DECIMAL_INTEGRAL Int>
-constexpr int total_buffer_length(int real_precision, Int exp, bool signed_value) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR int total_buffer_length(int real_precision, Int exp, bool signed_value) noexcept
 {
     // Sign + integer part + '.' + precision of fraction part + e+/e- or p+/p- + exponent digits
     return static_cast<int>(signed_value) + 1 + real_precision + 2 + buffer_length_exp<DecimalType>(make_positive_unsigned(exp));

@@ -12,8 +12,8 @@ import BoostBuild
 t = BoostBuild.Tester(["-d1"], pass_toolset=False)
 
 t.write("file.jam", """\
-prefix = "echo \\"" ;
-suffix = "\\"" ;
+prefix = "echo " ;
+suffix = "" ;
 if $(NT)
 {
     prefix = "(echo " ;

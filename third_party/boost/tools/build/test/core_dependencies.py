@@ -9,9 +9,7 @@
 
 import BoostBuild
 
-import string
-
-t = BoostBuild.Tester(pass_toolset=0)
+t = BoostBuild.Tester(pass_toolset=False)
 
 t.write("core-dependency-helpers", """
 rule hdrrule
@@ -111,7 +109,7 @@ t.fail_test(not correct_order(t.stdout()))
 
 t.write("a", "")
 
-code="""
+t.write('Jamroot', """
 DEPENDS all : main d ;
 
 actions copy
@@ -144,14 +142,19 @@ create-d d ;
 HDRSCAN on <1>c = (.*) ;
 HDRRULE on <1>c = hdrrule ;
 
-rule hdrrule
+# NOTE: b2 calls HDRULEs passing the bound name of $(<) as third argument,
+#       the following argument list declaration let test this too
+rule hdrrule ( target : deps * : bound_target )
 {
-    INCLUDES $(1) : d ;
+    INCLUDES $(<) : d ;
 }
-"""
+""")
 
 correct_order = mk_correct_order_func("create-d", "copy main")
-t.run_build_system(["-d2", "-f-"], stdin=code)
+# run without "-f" options to let build system run, see #502
+t.run_build_system()
 t.fail_test(not correct_order(t.stdout()))
+t.expect_addition(['c', 'd', 'main'])
+t.expect_nothing_more()
 
 t.cleanup()

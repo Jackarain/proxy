@@ -23,7 +23,7 @@
 #include <boost/core/lightweight_test.hpp>
 #include "../../../timming.hpp"
 
-boost::null_mutex m;
+boost::null_mutex g_mutex;
 
 #if defined BOOST_THREAD_USES_CHRONO
 typedef boost::chrono::high_resolution_clock Clock;
@@ -40,20 +40,20 @@ void f()
 {
 #if defined BOOST_THREAD_USES_CHRONO
   time_point t0 = Clock::now();
-  m.lock();
+  g_mutex.lock();
   time_point t1 = Clock::now();
-  m.lock();
-  m.unlock();
-  m.unlock();
+  g_mutex.lock();
+  g_mutex.unlock();
+  g_mutex.unlock();
   ns d = t1 - t0 ;
   BOOST_THREAD_TEST_IT(d, ns(max_diff));
 #else
   //time_point t0 = Clock::now();
-  m.lock();
+  g_mutex.lock();
   //time_point t1 = Clock::now();
-  m.lock();
-  m.unlock();
-  m.unlock();
+  g_mutex.lock();
+  g_mutex.unlock();
+  g_mutex.unlock();
   //ns d = t1 - t0 ;
   //BOOST_TEST(d < max_diff);
 #endif
@@ -61,9 +61,9 @@ void f()
 
 int main()
 {
-  m.lock();
+  g_mutex.lock();
   boost::thread t(f);
-  m.unlock();
+  g_mutex.unlock();
   t.join();
 
   return boost::report_errors();

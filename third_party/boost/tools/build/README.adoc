@@ -14,24 +14,25 @@ file LICENSE.txt or copy at https://www.bfgroup.xyz/b2/LICENSE.txt)
 
 Continuously tested on:
 
-* FreeBSD Clang 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
-* FreeBSD GCC 12, 13, 14, 15
-* Linux Clang 3.9, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
-* Linux GCC 4.8, 4.9, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
-* macOS Xcode 13.4.1, 14.3.0, 15.4, 16.4, 26.0.1
-* Windows MinGW 8.1.0
-* Windows 2015, 2017, 2019, 2022
-* Windows MSYS2 MinGW64/32 Clang-16, MinGW64/32 GCC-13
-* Cygwin 3.1.7 x64
-* Ubuntu 22.04 GCC 11 (armhf, arm64, ppc64el)
-* Ubuntu 20.04 GCC 9 (armhf, arm64, ppc64el)
+* Cygwin 3.4.6 x64 (x86_64)
 * Debian 11 GCC 10 (armhf)
+* FreeBSD Clang 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 (x86_64, aarch64)
+* FreeBSD GCC 12, 13, 14, 15, 16 (x86_64)
+* GhostBSD Clang 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 (x86_64)
+* Linux Clang 3.9, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 (x86_64)
+* Linux GCC 4.8, 4.9, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 (x86_64)
+* Linux Fil-C (x86_64)
+* macOS Xcode 13.4.1, 14.3.0, 15.4, 16.4, 26.0.1 (x86_64)
+* Ubuntu 20.04 GCC 9 (armhf, arm64, ppc64el)
+* Ubuntu 22.04 GCC 11 (armhf, arm64, ppc64el)
+* Windows VisualStudio 2015, 2017, 2019, 2022, 2026 (x86_64)
+* Windows MinGW 8.1.0 (x86_64)
+* Windows MSYS2 MinGW64 Clang-21, MinGW64/32 GCC-15 (x86_64)
 
 image:https://img.shields.io/azure-devops/build/bfgroup/3a4e7a7e-c1b4-4e2f-9199-f52918ea06c6/3/main.svg?label=main&logo=azuredevops["Linux/Windows/macOS: main", link="https://dev.azure.com/bfgroup/B2"]
 image:https://img.shields.io/appveyor/build/bfgroup/b2?logo=appveyor["Windows", link="https://ci.appveyor.com/project/bfgroup/b2"]
-image:https://img.shields.io/cirrus/github/bfgroup/b2?logo=cirrusci&label=release["FreeBSD: release", link="https://cirrus-ci.com/github/bfgroup/b2/release"]
-image:https://img.shields.io/cirrus/github/bfgroup/b2?logo=cirrusci&label=main["FreeBSD: main", link="https://cirrus-ci.com/github/bfgroup/b2/main"]
-image:https://img.shields.io/github/actions/workflow/status/bfgroup/b2/qemu_multiarch_linux.yml?logo=github["Ubuntu 22.04 GCC 11 (armhf, arm64, ppc64el)", link="https://github.com/bfgroup/b2/actions/workflows/qemu_multiarch_linux.yml"]
+image:https://img.shields.io/github/actions/workflow/status/bfgroup/b2/bsd.yml?label=BSD&logo=github["FreeBSD, GhostBSD", link="https://github.com/bfgroup/b2/actions/workflows/bsd.yml"]
+image:https://img.shields.io/github/actions/workflow/status/bfgroup/b2/qemu_multiarch_linux.yml?label=multi-arch&logo=github["Ubuntu 22.04 GCC 11 (armhf, arm64, ppc64el)", link="https://github.com/bfgroup/b2/actions/workflows/qemu_multiarch_linux.yml"]
 image:https://img.shields.io/github/actions/workflow/status/bfgroup/b2/core_tests.yml?logo=github["Windows MSYS2 MinGW64/32 Clang-16, MinGW64/32 GCC-13", link="https://github.com/bfgroup/b2/actions/workflows/core_tests.yml"]
 
 NOTE: A {CPP}11 capable compiler is needed to build the `b2` engine. But using

@@ -12,18 +12,18 @@
 #include <boost/thread/scoped_thread.hpp>
 #include <boost/thread/with_lock_guard.hpp>
 
-boost::mutex m; // protection for 'x' and 'std::cout'
-int x;
+boost::mutex g_mutex; // protection for 'g_x' and 'std::cout'
+int g_x = 0;
 
 #if defined(BOOST_NO_CXX11_LAMBDAS)  || (defined BOOST_MSVC && _MSC_VER < 1700)
 void print_x() {
-  ++x;
-  std::cout << "x = " << x << std::endl;
+  ++g_x;
+  std::cout << "x = " << g_x << std::endl;
 }
 
 void job() {
   for (int i = 0; i < 10; ++i) {
-    boost::with_lock_guard(m, print_x);
+    boost::with_lock_guard(g_mutex, print_x);
     boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
   }
 }
@@ -31,10 +31,10 @@ void job() {
 void job() {
   for (int i = 0; i < 10; ++i) {
     boost::with_lock_guard(
-        m,
+        g_mutex,
         []() {
-          ++x;
-          std::cout << "x = " << x << std::endl;
+          ++g_x;
+          std::cout << "x = " << g_x << std::endl;
         }
     );
     boost::this_thread::sleep_for(boost::chrono::milliseconds(100));

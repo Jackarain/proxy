@@ -1,4 +1,4 @@
-# Copyright 2021-2025 Andrey Semashev
+# Copyright 2021-2026 Andrey Semashev
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
@@ -342,6 +342,26 @@ jobs:
             vm: solaris
             version: "11.4-gcc"
             cxxstd: "11,14,17,20,23,26"
+            cxxflags: -D__SunOS_5_11
+            os: ubuntu-latest
+
+          - toolset: gcc
+            vm: omnios
+            version: "r151056-build"
+            cxxstd: "11,14,17,20,23,26"
+            os: ubuntu-latest
+
+          - toolset: gcc
+            vm: openindiana
+            version: "202510-build"
+            cxxstd: "11,14,17,20,23,26"
+            build_variant: debug
+            os: ubuntu-latest
+          - toolset: gcc
+            vm: openindiana
+            version: "202510-build"
+            cxxstd: "20,23,26"
+            build_variant: release
             os: ubuntu-latest
 
           - toolset: clang
@@ -493,6 +513,7 @@ jobs:
             BUILD_JOBS=$((nproc || sysctl -n hw.ncpu) 2> /dev/null)
             echo "BUILD_JOBS=$BUILD_JOBS" >> $GITHUB_ENV
             echo "CMAKE_BUILD_PARALLEL_LEVEL=$BUILD_JOBS" >> $GITHUB_ENV
+            echo BUILD_JOBS: $BUILD_JOBS
             DEPINST_ARGS=()
             GIT_VERSION="$(git --version | sed -e 's/git version //')"
             GIT_HAS_JOBS=1
@@ -604,6 +625,7 @@ jobs:
         uses: vmactions/freebsd-vm@v1
         with:
           release: "${{matrix.version}}"
+          custom-shell-name: vmsh
           usesh: true
           sync: rsync
           copyback: false
@@ -625,6 +647,7 @@ jobs:
         uses: vmactions/openbsd-vm@v1
         with:
           release: "${{matrix.version}}"
+          custom-shell-name: vmsh
           usesh: true
           sync: rsync
           copyback: false
@@ -646,6 +669,7 @@ jobs:
         uses: vmactions/netbsd-vm@v1
         with:
           release: "${{matrix.version}}"
+          custom-shell-name: vmsh
           usesh: true
           sync: rsync
           copyback: false
@@ -665,6 +689,7 @@ jobs:
         uses: vmactions/dragonflybsd-vm@v1
         with:
           release: "${{matrix.version}}"
+          custom-shell-name: vmsh
           usesh: true
           sync: rsync
           copyback: false
@@ -686,6 +711,39 @@ jobs:
         uses: vmactions/solaris-vm@v1
         with:
           release: "${{matrix.version}}"
+          custom-shell-name: vmsh
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LANG LIBRARY DEFAULT_BUILD_VARIANT BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          run: |
+              uname -mrs
+              locale
+              pwd
+              ls -la
+
+      - name: Setup OmniOS VM
+        if: matrix.vm == 'omnios'
+        uses: vmactions/omnios-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          custom-shell-name: vmsh
+          usesh: true
+          sync: rsync
+          copyback: false
+          envs: "LANG LIBRARY DEFAULT_BUILD_VARIANT BUILD_JOBS GCC_TOOLCHAIN_ROOT"
+          run: |
+              uname -mrs
+              locale
+              pwd
+              ls -la
+
+      - name: Setup OpenIndiana VM
+        if: matrix.vm == 'openindiana'
+        uses: vmactions/openindiana-vm@v1
+        with:
+          release: "${{matrix.version}}"
+          custom-shell-name: vmsh
           usesh: true
           sync: rsync
           copyback: false
@@ -701,37 +759,9 @@ jobs:
         run: |
             bash ./b2-run-tests.sh
 
-      - name: Run tests (FreeBSD VM)
-        if: matrix.cmake_tests == '' && matrix.vm == 'freebsd'
-        shell: freebsd {0}
-        run: |
-            cd "$GITHUB_WORKSPACE"
-            bash ./b2-run-tests.sh
-
-      - name: Run tests (OpenBSD VM)
-        if: matrix.cmake_tests == '' && matrix.vm == 'openbsd'
-        shell: openbsd {0}
-        run: |
-            cd "$GITHUB_WORKSPACE"
-            bash ./b2-run-tests.sh
-
-      - name: Run tests (NetBSD VM)
-        if: matrix.cmake_tests == '' && matrix.vm == 'netbsd'
-        shell: netbsd {0}
-        run: |
-            cd "$GITHUB_WORKSPACE"
-            bash ./b2-run-tests.sh
-
-      - name: Run tests (DragonFlyBSD VM)
-        if: matrix.cmake_tests == '' && matrix.vm == 'dragonflybsd'
-        shell: dragonflybsd {0}
-        run: |
-            cd "$GITHUB_WORKSPACE"
-            bash ./b2-run-tests.sh
-
-      - name: Run tests (Solaris VM)
-        if: matrix.cmake_tests == '' && matrix.vm == 'solaris'
-        shell: solaris {0}
+      - name: Run tests (VM)
+        if: matrix.cmake_tests == '' && matrix.vm != ''
+        shell: vmsh {0}
         run: |
             cd "$GITHUB_WORKSPACE"
             bash ./b2-run-tests.sh

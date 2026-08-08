@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Christian Mazakas
-// Copyright (C) 2023-2024 Joaquin M Lopez Munoz
+// Copyright (C) 2023-2026 Joaquin M Lopez Munoz
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -9,6 +9,8 @@
 #include <boost/unordered/concurrent_flat_set.hpp>
 #include <boost/unordered/concurrent_node_map.hpp>
 #include <boost/unordered/concurrent_node_set.hpp>
+
+#include <list>
 
 test::seed_t initialize_seed(4122023);
 
@@ -702,6 +704,97 @@ namespace {
     }
   }
 
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+  template <class X, class IL>
+  void range_with_all_params(std::pair<X*, IL> p)
+  {
+    using value_type = typename X::value_type;
+    static constexpr auto value_type_cardinality = 
+      value_cardinality<value_type>::value;
+    using allocator_type = typename X::allocator_type;
+
+    auto init_list = p.second;
+    auto init_std_list = std::list<value_type>{init_list};
+    auto sentineled_rg = init_std_list | std::views::take(init_list.size());
+
+    {
+      raii::reset_counts();
+
+      X x(
+        boost::unordered::from_range,
+        init_list, 0, hasher(1), key_equal(2), allocator_type(3));
+
+      BOOST_TEST_EQ(x.size(), 11u);
+      BOOST_TEST_EQ(x.hash_function(), hasher(1));
+      BOOST_TEST_EQ(x.key_eq(), key_equal(2));
+      BOOST_TEST(x.get_allocator() == allocator_type(3));
+
+      BOOST_TEST_EQ(raii::default_constructor, 0u);
+      BOOST_TEST_EQ(
+        raii::copy_constructor, value_type_cardinality * init_list.size() / 2u);
+      BOOST_TEST_EQ(
+        raii::move_constructor, 0u);
+    }
+    check_raii_counts();
+
+    {
+      raii::reset_counts();
+
+      X x(boost::unordered::from_range, sentineled_rg, allocator_type(3));
+
+      BOOST_TEST_EQ(x.size(), 11u);
+      BOOST_TEST_EQ(x.hash_function(), hasher());
+      BOOST_TEST_EQ(x.key_eq(), key_equal());
+      BOOST_TEST(x.get_allocator() == allocator_type(3));
+
+      BOOST_TEST_EQ(raii::default_constructor, 0u);
+      BOOST_TEST_EQ(
+        raii::copy_constructor, value_type_cardinality * init_list.size() / 2u);
+      BOOST_TEST_EQ(
+        raii::move_constructor, 0u);
+    }
+    check_raii_counts();
+
+    {
+      raii::reset_counts();
+
+      X x(boost::unordered::from_range, init_list, 0, allocator_type(3));
+
+      BOOST_TEST_EQ(x.size(), 11u);
+      BOOST_TEST_EQ(x.hash_function(), hasher());
+      BOOST_TEST_EQ(x.key_eq(), key_equal());
+      BOOST_TEST(x.get_allocator() == allocator_type(3));
+
+      BOOST_TEST_EQ(raii::default_constructor, 0u);
+      BOOST_TEST_EQ(
+        raii::copy_constructor, value_type_cardinality * init_list.size() / 2u);
+      BOOST_TEST_EQ(
+        raii::move_constructor, 0u);
+    }
+    check_raii_counts();
+
+    {
+      raii::reset_counts();
+
+      X x(
+        boost::unordered::from_range, 
+        sentineled_rg, 0, hasher(1), allocator_type(3));
+
+      BOOST_TEST_EQ(x.size(), 11u);
+      BOOST_TEST_EQ(x.hash_function(), hasher(1));
+      BOOST_TEST_EQ(x.key_eq(), key_equal());
+      BOOST_TEST(x.get_allocator() == allocator_type(3));
+
+      BOOST_TEST_EQ(raii::default_constructor, 0u);
+      BOOST_TEST_EQ(
+        raii::copy_constructor, value_type_cardinality * init_list.size() / 2u);
+      BOOST_TEST_EQ(
+        raii::move_constructor, 0u);
+    }
+    check_raii_counts();
+  }
+#endif
+
   template <class X, class IL>
   void initializer_list_with_all_params(std::pair<X*, IL> p)
   {
@@ -1039,6 +1132,13 @@ UNORDERED_TEST(
 UNORDERED_TEST(
   explicit_allocator,
   ((test_map)(test_node_map)(test_set)(test_node_set)))
+
+#if !defined(BOOST_UNORDERED_NO_RANGES)
+UNORDERED_TEST(
+  range_with_all_params,
+  ((test_map_and_init_list)(test_node_map_and_init_list)
+   (test_set_and_init_list)(test_node_set_and_init_list)))
+#endif
 
 UNORDERED_TEST(
   initializer_list_with_all_params,

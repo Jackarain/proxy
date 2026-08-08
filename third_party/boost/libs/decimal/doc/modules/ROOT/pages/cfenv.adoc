@@ -59,7 +59,7 @@ IMPORTANT: Much like `std::fesetround`, `boost::decimal::fesetround` is not thre
 
 [#examples_rounding_mode]
 
-.This https://github.com/boostorg/decimal/blob/develop/examples/rounding_mode.cpp[example] demonstrates how to set, get, and effects of the global rounding mode.
+.This https://github.com/boostorg/decimal/blob/develop/example/rounding_mode.cpp[example] demonstrates how to set, get, and effects of the global rounding mode.
 ====
 [source, c++]
 ----
@@ -102,7 +102,7 @@ This same example can be reduced for the cases where:
 
 2. You want to change the compile time rounding mode
 
-.This https://github.com/boostorg/decimal/blob/develop/examples/rounding_mode.cpp[example] demonstrates how the compile time rounding mode can be set, and it's effects on compile time and run time evaluation.
+.This https://github.com/boostorg/decimal/blob/develop/example/rounding_mode.cpp[example] demonstrates how the compile time rounding mode can be set, and it's effects on compile time and run time evaluation.
 ====
 [source, c++]
 ----

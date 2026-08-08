@@ -2,11 +2,12 @@
 // subject to the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#include <boost/iterator/is_lvalue_iterator.hpp>
 #include <deque>
 #include <iterator>
 #include <cstddef> // std::ptrdiff_t
+#include <boost/config.hpp>
 #include <boost/noncopyable.hpp>
-#include <boost/iterator/is_lvalue_iterator.hpp>
 
 struct v
 {
@@ -167,6 +168,26 @@ int main()
                   "boost::is_non_const_lvalue_iterator<constant_lvalue_iterator<char*>>::value is expected to be false.");
     static_assert(!boost::is_non_const_lvalue_iterator<constant_lvalue_iterator<float>>::value,
                   "boost::is_non_const_lvalue_iterator<constant_lvalue_iterator<float>>::value is expected to be false.");
+
+#if !defined(BOOST_NO_CXX14_VARIABLE_TEMPLATES)
+    static_assert(boost::is_lvalue_iterator_v<v*>,
+                  "boost::is_lvalue_iterator_v<v*> is expected to be true.");
+    static_assert(boost::is_lvalue_iterator_v<v const*>,
+                  "boost::is_lvalue_iterator_v<v const*> is expected to be true.");
+    static_assert(!boost::is_lvalue_iterator_v<proxy_iterator<int>>,
+                  "boost::is_lvalue_iterator_v<proxy_iterator<int>> is expected to be false.");
+    static_assert(!boost::is_lvalue_iterator_v<value_iterator>,
+                  "boost::is_lvalue_iterator_v<value_iterator> is expected to be false.");
+
+    static_assert(boost::is_non_const_lvalue_iterator_v<v*>,
+                  "boost::is_non_const_lvalue_iterator_v<v*> is expected to be true.");
+    static_assert(!boost::is_non_const_lvalue_iterator_v<v const*>,
+                  "boost::is_non_const_lvalue_iterator_v<v const*> is expected to be false.");
+    static_assert(!boost::is_non_const_lvalue_iterator_v<proxy_iterator<int>>,
+                  "boost::is_non_const_lvalue_iterator_v<proxy_iterator<int>> is expected to be false.");
+    static_assert(!boost::is_non_const_lvalue_iterator_v<value_iterator>,
+                  "boost::is_non_const_lvalue_iterator_v<value_iterator> is expected to be false.");
+#endif // !defined(BOOST_NO_CXX14_VARIABLE_TEMPLATES)
 
     return 0;
 }

@@ -12,13 +12,14 @@
 // implementation has changed and it does not use stringstream for casts
 // to integral types
 
-#include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 
 #include <boost/core/lightweight_test.hpp>
 
 #include <string>
 #include <sstream>
+
+#include <boost/lexical_cast.hpp>
 
 #ifdef BOOST_MSVC
 # pragma warning(disable: 4127) // conditional expression is constant

@@ -26,8 +26,9 @@
 #include "jam.h"
 #include "headers.h"
 
+#include "constants.h"
 #include "compile.h"
-#include "hdrmacro.h"
+#include "frames.h"
 #include "lists.h"
 #include "modules.h"
 #include "object.h"
@@ -42,71 +43,101 @@
 #endif
 
 #include <errno.h>
-#include <string.h>
+#include <stdio.h>
+
+#include <string>
+
+
+// max numebr of regular expression sourced from HDRSCAN
+#define MAX_SCAN_REGEXPS 10
 
 
 /*
  * headers() - scan a target for include files and call HDRRULE
  */
 
-#define MAXINC 10
-
 void headers( TARGET * t )
 {
-    LIST   * hdrscan;
-    LIST   * hdrrule;
-    #ifndef OPT_HEADER_CACHE_EXT
-    LIST   * headlist = L0;
-    #endif
-    b2::regex::program re_prog[MAXINC];
-    int rec = 0;
-    LISTITER iter;
-    LISTITER end;
+    module_t * rootm = root_module();
 
-    hdrscan = var_get( root_module(), constant_HDRSCAN );
-    if ( list_empty( hdrscan ) )
-        return;
+    b2::list_cref hdrscan( var_get( rootm, constant_HDRSCAN ) );
+    if ( hdrscan.empty() ) return;
 
-    hdrrule = var_get( root_module(), constant_HDRRULE );
-    if ( list_empty( hdrrule ) )
-        return;
+    b2::list_cref hdrrule( var_get( rootm, constant_HDRRULE ) );
+    if ( hdrrule.empty() ) return;
 
     if ( is_debug_header() )
         out_printf( "header scan %s\n", object_str( t->name ) );
 
-    /* Compile all regular expressions in HDRSCAN */
-    iter = list_begin( hdrscan );
-    end = list_end( hdrscan );
-    for ( ; ( rec < MAXINC ) && iter != end; iter = list_next( iter ) )
+    b2::list_cref fln_arg( var_get( rootm, constant_FILENAME ) );
+    b2::value_ptr file_ptr = fln_arg.empty() ? nullptr : list_front( *fln_arg );
+    b2::list_cref mod_arg( var_get( rootm, constant_MODULE ) );
+    b2::value_ptr user_mod = mod_arg.empty() ? nullptr : list_front( *mod_arg );
+
+    // this is used for error reporting purposes only
+    FRAME frame_re[ 1 ];
+    frame_init( frame_re );
+    std::string varname = std::string("HDRSCAN on ") + object_str( t->name );
+    frame_re->rulename = varname.c_str();
+    lol_add( frame_re->args, list_copy( *hdrscan ) );
+    // try to retrieve at least the user jamfile filename
+    if (file_ptr)
     {
-        re_prog[ rec ].reset( list_item( iter )->str() );
-        rec += 1;
+        frame_re->file = file_ptr;
+        frame_re->line = 0; // only filename is known
     }
 
-    /* Doctor up call to HDRRULE rule */
-    /* Call headers1() to get LIST of included files. */
+    // compile all regular expressions in HDRSCAN
+    b2::regex::program re_prog[MAX_SCAN_REGEXPS];
+    int rec = 0;
     {
-        FRAME frame[ 1 ];
-        frame_init( frame );
-        lol_add( frame->args, list_new( object_copy( t->name ) ) );
+        // compilation errors print a nice error message and exit
+        b2::regex::frame_ctx ctx(frame_re);
+
+        b2::list_cref::iterator iter = hdrscan.begin();
+        b2::list_cref::iterator end = hdrscan.end();
+        for ( ; ( rec < MAX_SCAN_REGEXPS ) && iter != end; iter++ )
+        {
+            re_prog[ rec ].reset( (*iter)->str() );
+            rec += 1;
+        }
+    }
+
+    FRAME frame[ 1 ];
+    frame_init( frame );
+    frame->prev = frame_re;
+    varname = std::string("HDRRULE on ") + object_str( t->name );
+    frame_re->rulename = varname.c_str();
+    if (user_mod)
+    {
+        // do not thrust user_mod, search for module with find_module
+        frame->module = find_module(user_mod);
+        if (! frame->module) frame->module = rootm;
+    }
+
+    // Get LIST of included files
+    lol_add( frame->args, list_new( object_copy( t->name ) ) );
 #ifdef OPT_HEADER_CACHE_EXT
-        lol_add( frame->args, hcache( t, rec, re_prog, hdrscan ) );
+    lol_add( frame->args, hcache( t, rec, re_prog, *hdrscan ) );
 #else
-        lol_add( frame->args, headers1( headlist, t->boundname, rec, re_prog ) );
+    LIST * headlist = L0;
+    lol_add( frame->args, headers1( headlist, t->boundname, rec, re_prog ) );
 #endif
 
-        if ( lol_get( frame->args, 1 ) )
-        {
-            OBJECT * rulename = list_front( hdrrule );
-            /* The third argument to HDRRULE is the bound name of $(<). */
-            lol_add( frame->args, list_new( object_copy( t->boundname ) ) );
-            list_free( evaluate_rule( bindrule( rulename, frame->module ), rulename, frame ) );
-        }
-
-        /* Clean up. */
-        frame_free( frame );
+    // Call HDRRULE rule
+    if ( lol_get( frame->args, 1 ) )
+    {
+        b2::value_ptr rulename = list_front( *hdrrule );
+        // The third argument to HDRRULE is the bound name of $(<).
+        lol_add( frame->args, list_new( object_copy( t->boundname ) ) );
+        list_free( evaluate_rule( bindrule( rulename, frame->module ), rulename, frame ) );
     }
+
+    // Clean up.
+    frame_free( frame );
+    frame_free( frame_re );
 }
+#undef MAX_SCAN_REGEXPS
 
 
 /*
@@ -119,12 +150,6 @@ LIST * headers1( LIST * l, OBJECT * file, int rec, b2::regex::program re[] )
     char buf[ 1024 ];
     int i;
 
-    /* The following regexp is used to detect cases where a file is included
-     * through a line like "#include MACRO".
-     */
-    b2::regex::program re_macros(
-        "#[ \t]*include[ \t]*([A-Za-z][A-Za-z0-9_]*).*$" );
-
 #ifdef OPT_IMPROVED_PATIENCE_EXT
     static int count = 0;
     ++count;
@@ -135,7 +160,7 @@ LIST * headers1( LIST * l, OBJECT * file, int rec, b2::regex::program re[] )
     }
 #endif
 
-    if ( file->as_string().size == 0 )
+    if ( file->as_string().size() == 0 )
     {
         /* If the scanning was fed empty file names we just ignore them. */
         return l;
@@ -161,31 +186,6 @@ LIST * headers1( LIST * l, OBJECT * file, int rec, b2::regex::program re[] )
                 if ( is_debug_header() )
                     out_printf( "header found: %s\n", header.c_str() );
                 l = list_push_back( l, object_new( header.c_str() ) );
-            }
-        }
-
-        /* Special treatment for #include MACRO. */
-        auto re_macros_i = re_macros.search( buf );
-        if ( re_macros_i && re_macros_i[ 1 ].end() != nullptr )
-        {
-            std::string macro_name(re_macros_i[ 1 ].begin(), re_macros_i[ 1 ].end());
-
-            if ( is_debug_header() )
-                out_printf( "macro header found: %s", macro_name.c_str() );
-
-            b2::value_ref macro_name_v(macro_name);
-            b2::value_ref header_filename_v(macro_header_get( macro_name_v ));
-            if ( header_filename_v.has_value() )
-            {
-                if ( is_debug_header() )
-                    out_printf( " resolved to '%s'\n", header_filename_v->str()
-                        );
-                l = list_push_back( l, header_filename_v );
-            }
-            else
-            {
-                if ( is_debug_header() )
-                    out_printf( " ignored !!\n" );
             }
         }
     }

@@ -28,9 +28,9 @@ enum game_state
     BOTH_PLAYERS_GONE
 };
 
-int state;
-boost::mutex mutex;
-boost::condition cond;
+int g_state;
+boost::mutex g_mutex;
+boost::condition g_cond;
 
 const char* player_name(int state)
 {
@@ -44,29 +44,29 @@ const char* player_name(int state)
 
 void player(int active)
 {
-    boost::unique_lock<boost::mutex> lock(mutex);
+    boost::unique_lock<boost::mutex> lock(g_mutex);
 
     int other = active == PLAYER_A ? PLAYER_B : PLAYER_A;
 
-    while (state < GAME_OVER)
+    while (g_state < GAME_OVER)
     {
         //std::cout << player_name(active) << ": Play." << std::endl;
-        state = other;
-        cond.notify_all();
+        g_state = other;
+        g_cond.notify_all();
         do
         {
-            cond.wait(lock);
-            if (state == other)
+            g_cond.wait(lock);
+            if (g_state == other)
             {
                 std::cout << "---" << player_name(active)
                           << ": Spurious wakeup!" << std::endl;
             }
-        } while (state == other);
+        } while (g_state == other);
     }
 
-    ++state;
+    ++g_state;
     std::cout << player_name(active) << ": Gone." << std::endl;
-    cond.notify_all();
+    g_cond.notify_all();
 }
 
 struct thread_adapt
@@ -100,7 +100,7 @@ private:
 
 int main()
 {
-    state = START;
+    g_state = START;
 
     boost::thread thrda(&player, PLAYER_A);
     boost::thread thrdb(&player, PLAYER_B);
@@ -110,22 +110,22 @@ int main()
     xt.sec += 1;
     boost::thread::sleep(xt);
     {
-        boost::unique_lock<boost::mutex> lock(mutex);
+        boost::unique_lock<boost::mutex> lock(g_mutex);
         std::cout << "---Noise ON..." << std::endl;
     }
 
     for (int i = 0; i < 10; ++i)
-        cond.notify_all();
+        g_cond.notify_all();
 
     {
-        boost::unique_lock<boost::mutex> lock(mutex);
+        boost::unique_lock<boost::mutex> lock(g_mutex);
         std::cout << "---Noise OFF..." << std::endl;
-        state = GAME_OVER;
-        cond.notify_all();
+        g_state = GAME_OVER;
+        g_cond.notify_all();
         do
         {
-            cond.wait(lock);
-        } while (state != BOTH_PLAYERS_GONE);
+            g_cond.wait(lock);
+        } while (g_state != BOTH_PLAYERS_GONE);
     }
 
     std::cout << "GAME OVER" << std::endl;

@@ -8,8 +8,7 @@
 #define BJAM_OUTPUT_H
 
 #include "config.h"
-#include "object.h"
-#include "timestamp.h"
+#include "jam_fwd.h"
 
 #define EXIT_OK 0
 #define EXIT_FAIL 1

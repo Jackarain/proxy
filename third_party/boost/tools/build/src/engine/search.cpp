@@ -16,10 +16,11 @@
 
 #include "compile.h"
 #include "filesys.h"
+#include "frames.h"
 #include "hash.h"
 #include "lists.h"
-#include "object.h"
 #include "pathsys.h"
+#include "rules.h"
 #include "jam_strings.h"
 #include "timestamp.h"
 #include "variable.h"

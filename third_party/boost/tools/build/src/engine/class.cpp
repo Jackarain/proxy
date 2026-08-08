@@ -5,6 +5,7 @@
  * https://www.bfgroup.xyz/b2/LICENSE.txt)
  */
 
+#include "config.h"
 #include "class.h"
 
 #include "constants.h"

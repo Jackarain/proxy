@@ -8,7 +8,7 @@
 #include <boost/thread/thread.hpp>
 #include <iostream>
 
-boost::mutex io_mutex; // The iostreams are not guaranteed to be thread-safe!
+boost::mutex g_io_mutex; // The iostreams are not guaranteed to be thread-safe!
 
 class counter
 {
@@ -25,12 +25,12 @@ private:
     int count;
 };
 
-counter c;
+counter g_counter;
 
 void change_count()
 {
-    int i = c.increment();
-    boost::unique_lock<boost::mutex> scoped_lock(io_mutex);
+    int i = g_counter.increment();
+    boost::unique_lock<boost::mutex> scoped_lock(g_io_mutex);
     std::cout << "count == " << i << std::endl;
 }
 

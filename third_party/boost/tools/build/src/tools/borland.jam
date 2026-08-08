@@ -75,7 +75,7 @@ rule init ( version ? : command * : options * )
 
     common.handle-options borland : $(condition) : $(command) : $(options) ;
 
-    local just_bcc32 = [ MATCH ".*(bcc32)([^a-z0-9]|$)" : $(command:L) ] ;
+    local just_bcc32 = [ MATCH "(bcc32)([^a-z0-9]|$)" : $(command:L) ] ;
 
     if $(command)
     {

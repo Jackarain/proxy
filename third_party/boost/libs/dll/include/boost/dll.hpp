@@ -12,16 +12,23 @@
 /// \file boost/dll.hpp
 /// \brief Includes all the non-experimental headers of the Boost.DLL library.
 
-#include <boost/dll/config.hpp>
-#include <boost/dll/shared_library.hpp>
-#include <boost/dll/alias.hpp>
-#include <boost/dll/import.hpp>
-#include <boost/dll/library_info.hpp>
-#include <boost/dll/runtime_symbol_info.hpp>
+#include <boost/dll/detail/config.hpp>
+
+#if !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 # pragma once
 #endif
+
+#include <boost/dll/config.hpp>
+#include <boost/dll/shared_library.hpp>
+#include <boost/dll/import.hpp>
+#include <boost/dll/library_info.hpp>
+#include <boost/dll/runtime_symbol_info.hpp>
+
+#endif // !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
+
+#include <boost/dll/alias.hpp>
 
 #endif // BOOST_DLL_DLL_HPP
 

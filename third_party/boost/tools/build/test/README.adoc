@@ -214,17 +214,21 @@ true on all platforms. In some contexts a list of files is allowed. In those
 cases any object with a sequence interface is allowed.
 
 [#__init__,reftext=__init__]
-=== `__init__(self, arguments="", executable="bjam", match=TestCmd.match_exact, boost_build_path=None, translate_suffixes=True, pass_toolset=True, use_test_config=True, ignore_toolset_requirements=True, workdir="", **keywords)`
+=== `\\__init__(self, arguments=None, executable=None, match=TestCmd.match_exact, boost_build_path=None, translate_suffixes=True, pass_toolset=True, use_test_config=True, ignore_toolset_requirements=False, workdir="", pass_d0=False, **keywords)`
 
 *Optional arguments*:
 
-`arguments`:: Arguments passed to the run executable.
+`arguments`:: Arguments passed to the run executable. Use a list to pass all
+needed arguments, e.g. `["-ffile.jam"]`.
 
-`executable`:: Name of the executable to invoke.
+`executable`:: Name of the executable to invoke. Usually automatically
+determined to run `b2`.
 
 `match`:: Function to use for comparing actual and expected file contents.
 
 `boost_build_path`:: Boost build path to be passed to the run executable.
+This value is passed with the `-sBOOST_BUILD_PATH` option.
+By default, the parent directory of the current one is used.
 
 `translate_suffixes`:: Whether to update suffixes on the the file names passed
 from the test script so they match those actually created by the current
@@ -242,6 +246,9 @@ read in the `test_config.jam` configuration file.
 executable to ignore toolset requirements.
 
 `workdir`:: Indicates an absolute directory where the test will be run from.
+
+`pass_d0`:: If set, when tests are not explicitly run in verbose mode, they
+are run as silent (as with `b2 -d0 --quiet` .)
 
 *Optional arguments inherited from the base class*:
 
@@ -305,14 +312,15 @@ Sets the access and modification times for all files in `names` to the current
 time. All the elements in `names` should be relative paths.
 
 [#run_build_system,reftext=run_build_system]
-=== `run_build_system(self, extra_args="", subdir="", stdout=None, stderr="", status=0, match=None, pass_toolset=None, use_test_config=None, ignore_toolset_requirements=None, expected_duration=None, **kw)`
+=== `run_build_system(self, extra_args=None, subdir="", stdout=None, stderr="", status=0, match=None, pass_toolset=None, use_test_config=None, ignore_toolset_requirements=None, expected_duration=None, **kw)`
 
 *Effects*:
 
 . Stores the state of the working directory in `self.previous_tree`.
 . Changes to `subdir`, if it is specified. It is relative to the
-  `original_workdir` or the workdir specified in `__init`.
-. Invokes the `b2` executable, passing `extra_args` to it. The binary should be
+  `original_workdir` or the workdir specified in `+__init__+`.
+. Invokes the `b2` executable, passing `extra_args` to it. Use a list to pass
+  all needed additional arguments, e.g. `["-j2"]`. The binary should be
   located under `<test_invocation_dir>/../src/engine`. This is to make sure
   tests use the version of `b2` build from source.
 . Compares the `stdout`, `stderr` and exit status of build system invocation
@@ -376,7 +384,7 @@ The members are:
 * `expect_modification`
 * `expect_nothing`
 
-Note that `expect_modification` is used to check that a either file content or
+Note that `expect_modification` is used to check if the file contents or
 timestamp has changed. The rationale is that some compilers change content even
 if sources does not change, and it's easier to have a method which checks for
 both content and time changes.
@@ -385,9 +393,46 @@ There's also a member `expect_nothing_more`, which checks that all the changes
 are either expected or ignored, in other words that `unexpected_difference` is
 empty by now.
 
+Expectations regarding the values output to stdout can be expressed less
+rigidly than using the `stdout` argument of the `run_build_system` method
+thanks to the method:
+
+`expect_output_lines(self, lines, expected=True)`
+
+Where `lines` may be specified in any of the following forms:
+
+* Single string containing text lines separated by newlines - the
+  given lines are searched for without any extra data lines between them.
+* Container of strings containing text lines separated by newlines - the
+  given lines are searched for with extra data lines allowed between lines
+  belonging to different strings.
+* Container of strings containing text lines separated by newlines
+  and containers containing strings - the same as above with the
+  internal containers containing strings being interpreted as if
+  all their content was joined together into a single string
+  separated by newlines.
+
+A newline at the end of any multi-line lines string is interpreted as
+an expected extra trailig empty line.
+Another important difference between this method and `run_build_system` is
+the ability to use fnmatch-style matching (Unix filename pattern matching)
+in the `lines` argument. This is very similar to glob and uses:
+
+* wildcard `*` - matches everything
+* wildcard `?` - matches any single character
+* `[seq]` - matches any character in seq
+* `[!seq]` - matches any character not in seq.
+
+The `expected` parameter allows you to reverse the logic of the method.
+
+The same convenience offered by `expect_output_lines` for checking
+stdout is available for any file thanks to the method:
+
+`expect_content_lines(self, filename, lines, expected=True)`
+
 Lastly, there's a method to compare file content with expected content:
 
-`expect_content(self, name, content, exact=0)`
+`expect_content(self, name, content, exact=False)`
 
 The method fails the test if the content of file identified by `name` is
 different from `content`. If `exact` is true, the file content is used as-is,
@@ -427,12 +472,12 @@ WARNING: At this moment, the method should not be used.
 
 The class has sequence interface and two additional methods.
 
-==== `__init__(self, string)`
+==== `\\__init__(self, string)`
 
 *Effects*: Splits the `string` on unescaped spaces and tabs. The split
 components can further be retrieved using standard sequence access.
 
-==== `__mul__(self, other)`
+==== `\\__mul__(self, other)`
 
 *Effects*: Returns an `List` instance, which elements are all possible
 concatenations of two string, first of which is from `self`, and second of

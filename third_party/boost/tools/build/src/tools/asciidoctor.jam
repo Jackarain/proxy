@@ -147,7 +147,7 @@ rule init ( command * )
     {
         local t = [ common.find-tool $(c) ] ;
         t ?= $(c) ;
-        if [ MATCH "(\ )" : $(t) ]
+        if [ MATCH "(\\ )" : $(t) ]
         {
             # Ruby handles quotes weirdly. So we only add them if absolutely
             # needed.

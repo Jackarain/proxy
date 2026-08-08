@@ -19,7 +19,7 @@ namespace boost {
 namespace decimal {
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Decimal1, BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Decimal2>
-constexpr auto operator+(Decimal1 lhs, Decimal2 rhs) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR auto operator+(Decimal1 lhs, Decimal2 rhs) noexcept
     -> std::enable_if_t<(detail::is_decimal_floating_point_v<Decimal1> &&
                          detail::is_decimal_floating_point_v<Decimal2>),
                          detail::promote_args_t<Decimal1, Decimal2>>
@@ -29,7 +29,7 @@ constexpr auto operator+(Decimal1 lhs, Decimal2 rhs) noexcept
 }
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Decimal1, BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Decimal2>
-constexpr auto operator-(Decimal1 lhs, Decimal2 rhs) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR auto operator-(Decimal1 lhs, Decimal2 rhs) noexcept
     -> std::enable_if_t<(detail::is_decimal_floating_point_v<Decimal1> &&
                          detail::is_decimal_floating_point_v<Decimal2>),
                          detail::promote_args_t<Decimal1, Decimal2>>
@@ -39,7 +39,7 @@ constexpr auto operator-(Decimal1 lhs, Decimal2 rhs) noexcept
 }
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Decimal1, BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Decimal2>
-constexpr auto operator*(Decimal1 lhs, Decimal2 rhs) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR auto operator*(Decimal1 lhs, Decimal2 rhs) noexcept
     -> std::enable_if_t<(detail::is_decimal_floating_point_v<Decimal1> &&
                          detail::is_decimal_floating_point_v<Decimal2>),
                          detail::promote_args_t<Decimal1, Decimal2>>
@@ -49,7 +49,7 @@ constexpr auto operator*(Decimal1 lhs, Decimal2 rhs) noexcept
 }
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Decimal1, BOOST_DECIMAL_DECIMAL_FLOATING_TYPE Decimal2>
-constexpr auto operator/(Decimal1 lhs, Decimal2 rhs) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR auto operator/(Decimal1 lhs, Decimal2 rhs) noexcept
     -> std::enable_if_t<(detail::is_decimal_floating_point_v<Decimal1> &&
                          detail::is_decimal_floating_point_v<Decimal2>),
                          detail::promote_args_t<Decimal1, Decimal2>>

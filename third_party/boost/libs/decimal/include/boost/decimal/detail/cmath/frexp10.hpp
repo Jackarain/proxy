@@ -24,10 +24,10 @@ namespace detail {
 
 // Hopefully the compiler makes this NOOP for the fast case
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE TargetType, BOOST_DECIMAL_INTEGRAL T1, BOOST_DECIMAL_INTEGRAL T2>
-BOOST_DECIMAL_FORCE_INLINE constexpr auto frexp10_normalize(T1&, T2&) noexcept -> std::enable_if_t<is_fast_type_v<TargetType>, void> {}
+BOOST_DECIMAL_FORCE_INLINE BOOST_DECIMAL_CUDA_CONSTEXPR auto frexp10_normalize(T1&, T2&) noexcept -> std::enable_if_t<is_fast_type_v<TargetType>, void> {}
 
 template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE TargetType, BOOST_DECIMAL_INTEGRAL T1, BOOST_DECIMAL_INTEGRAL T2>
-BOOST_DECIMAL_FORCE_INLINE constexpr auto frexp10_normalize(T1& sig, T2& exp) noexcept -> std::enable_if_t<!is_fast_type_v<TargetType>, void>
+BOOST_DECIMAL_FORCE_INLINE BOOST_DECIMAL_CUDA_CONSTEXPR auto frexp10_normalize(T1& sig, T2& exp) noexcept -> std::enable_if_t<!is_fast_type_v<TargetType>, void>
 {
     detail::normalize<TargetType>(sig, exp);
 }
@@ -40,7 +40,7 @@ BOOST_DECIMAL_FORCE_INLINE constexpr auto frexp10_normalize(T1& sig, T2& exp) no
 //   [1e15, 1e15 - 1] for decimal64_t
 // If the conversion can not be performed returns UINT32_MAX and exp = 0
 BOOST_DECIMAL_EXPORT template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE T>
-constexpr auto frexp10(const T num, int* expptr) noexcept -> typename T::significand_type
+BOOST_DECIMAL_CUDA_CONSTEXPR auto frexp10(const T num, int* expptr) noexcept -> typename T::significand_type
 {
     #ifndef BOOST_DECIMAL_FAST_MATH
     if (isinf(num) || isnan(num))

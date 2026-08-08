@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE( spsc_value_stress_test )
 {
     boost::lockfree::spsc_value< uint64_t > v;
 
-    std::atomic< bool > done;
+    std::atomic< bool > done( false );
 
     std::thread producer( [ & ] {
         for ( uint64_t i = 0; i != nodes_per_thread; ++i )
@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE( spsc_value_stress_test_allow_multiple_reads )
 {
     boost::lockfree::spsc_value< uint64_t, boost::lockfree::allow_multiple_reads< true > > v;
 
-    std::atomic< bool > done;
+    std::atomic< bool > done( false );
 
     std::thread producer( [ & ] {
         for ( uint64_t i = 0; i != nodes_per_thread; ++i ) {

@@ -16,11 +16,40 @@ namespace boost {
 namespace urls {
 namespace grammar {
 
+// Minimal derived class for testing
+struct test_string_view
+    : string_view_base
+{
+    explicit
+    test_string_view(
+        core::string_view s) noexcept
+        : string_view_base(s)
+    {
+    }
+};
+
 struct string_view_base_test
 {
     void
     run()
     {
+        // operator std::string() allocates
+        static_assert(
+            !noexcept(std::string(
+                std::declval<test_string_view const&>())),
+            "operator std::string() must not be noexcept");
+
+        // Verify the conversion still works correctly
+        {
+            test_string_view sv("hello");
+            std::string s = static_cast<std::string>(sv);
+            BOOST_TEST(s == "hello");
+        }
+        {
+            test_string_view sv("");
+            std::string s = static_cast<std::string>(sv);
+            BOOST_TEST(s.empty());
+        }
     }
 };
 

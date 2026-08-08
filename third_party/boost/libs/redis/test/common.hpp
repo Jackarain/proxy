@@ -6,7 +6,6 @@
 #include <boost/redis/operation.hpp>
 
 #include <boost/asio/awaitable.hpp>
-#include <boost/asio/redirect_error.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/system/error_code.hpp>
 
@@ -21,10 +20,6 @@
 inline constexpr std::chrono::seconds test_timeout{30};
 
 #ifdef BOOST_ASIO_HAS_CO_AWAIT
-inline auto redir(boost::system::error_code& ec)
-{
-   return boost::asio::redirect_error(boost::asio::use_awaitable, ec);
-}
 void run_coroutine_test(
    boost::asio::awaitable<void>,
    std::chrono::steady_clock::duration timeout = test_timeout);

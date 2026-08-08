@@ -25,7 +25,7 @@ b2::list_ref b2::string_chars(b2::value_ref string)
 b2::value_ref b2::string_abbreviate(b2::value_ref string)
 {
 	// Anything less than 4 characters gets no abbreviation.
-	if (string->as_string().size < 4) return string;
+	if (string->as_string().size() < 4) return string;
 	std::string s = string->str();
 	// Separate the initial letter in case it's a vowel.
 	auto first_c = s[0];

@@ -16,7 +16,7 @@
 #include "bitset_test.hpp"
 #include "boost/config.hpp"
 #include "boost/dynamic_bitset/dynamic_bitset.hpp"
-#include "boost/limits.hpp"
+#include <limits>
 
 #if ! defined( BOOST_NO_CXX11_ALLOCATOR )
 #    include <cstdlib>

@@ -40,9 +40,9 @@ public:
 
     std::string as_string()const
     {
-        const int MAX_TIMESTING_LEN = 256;
-        char repr[MAX_TIMESTING_LEN];
-        sprintf(repr, "%3s:%02d:%02d", getDayString().c_str(), getHours(), getMinutes());
+        const int max_timestring_len = 256;
+        char repr[max_timestring_len];
+        snprintf(repr, max_timestring_len, "%3s:%02d:%02d", getDayString().c_str(), getHours(), getMinutes());
         return std::string(repr);
     }
 

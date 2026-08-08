@@ -16,7 +16,7 @@
 <data-member id="doxygen.example_reference.classexample_1_1example_1a292e39fe25fd2adec252987fb7f6887d" name="static_const_integer" specifiers="static"><type>const int</type></data-member>
 <method-group name="public member functions">
 <constructor id="doxygen.example_reference.classexample_1_1example_1a19b27b70d9c7459d13f12dff227252a6" cv="= default"><parameter name=""><paramtype><classname>example</classname> const &amp;</paramtype></parameter></constructor>
-<copy-assignment id="doxygen.example_reference.classexample_1_1example_1a052088e28fe7735bf0764133ba40b8b0" cv="= delete"><type><classname>example</classname> &amp;</type><parameter name=""><paramtype><classname>example</classname> const &amp;</paramtype></parameter></copy-assignment>
+<copy-assignment id="doxygen.example_reference.classexample_1_1example_1aabda52a8976f6c3ab509a51929e3a783" cv="= delete"><type><classname>example</classname> &amp;</type><parameter name=""><paramtype><classname>example</classname> const &amp;</paramtype></parameter></copy-assignment>
 <method id="doxygen.example_reference.classexample_1_1example_1ab2bdbdf135a702f660e50c26ca9378da" name="virtual_method" specifiers="virtual"><type>int</type></method>
 <method id="doxygen.example_reference.classexample_1_1example_1a87f3722f5689c3a2e1692d817fe31fb0" name="virtual_abstract_method" cv="= 0" specifiers="virtual"><type>int</type></method>
 <method id="doxygen.example_reference.classexample_1_1example_1af246a7a937361f2df6d8cd2e1f9cc97c" name="virtual_const_method" cv="const" specifiers="virtual"><type>int</type></method>
@@ -91,7 +91,7 @@ int foo2();
     </template><specialization><template-arg>T *</template-arg></specialization><method-group name="public member functions">
 <constructor id="doxygen.example_reference.structexample_1_1specialization__test_3_01T_01_5_01_4_1a39ac19324a989c7fb4210083437e60a0"><description><para>A constructor. </para></description></constructor>
 <destructor id="doxygen.example_reference.structexample_1_1specialization__test_3_01T_01_5_01_4_1a7a18694691d4201521e17196f96c4c91"><description><para>A destructor. </para></description></destructor>
-<copy-assignment id="doxygen.example_reference.structexample_1_1specialization__test_3_01T_01_5_01_4_1a4869d58ece948f30e7f42cce63f75b33"><type><emphasis>unspecified</emphasis></type><parameter name=""><paramtype>const <classname>specialization_test</classname> &amp;</paramtype></parameter><description><para>An assignment operator. </para></description></copy-assignment>
+<copy-assignment id="doxygen.example_reference.structexample_1_1specialization__test_3_01T_01_5_01_4_1a60ba3a94bcb3fd24959565f844509e2a"><type><emphasis>unspecified</emphasis></type><parameter name=""><paramtype>const <classname>specialization_test</classname> &amp;</paramtype></parameter><description><para>An assignment operator. </para></description></copy-assignment>
 </method-group>
 </struct-specialization><enum id="doxygen.example_reference.example_8hpp_1a0a8881f7d06080025be5a0f336ceca0d" name="namespace_enum"><enumvalue id="doxygen.example_reference.example_8hpp_1a0a8881f7d06080025be5a0f336ceca0da385e078f4946b3beaafca21a140e53d1" name="enumerator"/></enum>
 <data-member id="doxygen.example_reference.example_8hpp_1a009e76bb0702b779cbc37aae1bee5884" name="namespace_integer"><type>int</type></data-member>

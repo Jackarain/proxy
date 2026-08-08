@@ -44,6 +44,14 @@ struct param_test
     // cheap, loses pct-validation
     BOOST_CORE_STATIC_ASSERT(std::is_constructible<param_view, param_pct_view>::value);
 
+    // param allocates std::string members
+    BOOST_CORE_STATIC_ASSERT(
+        !std::is_nothrow_constructible<
+            param,
+            core::string_view,
+            core::string_view,
+            bool>::value);
+
     // expensive constructions
     BOOST_CORE_STATIC_ASSERT(std::is_constructible<param_pct_view, param>::value);
     BOOST_CORE_STATIC_ASSERT(std::is_constructible<param_pct_view, param_view>::value);
@@ -161,6 +169,18 @@ struct param_test
             // capacity preserved on assignment
             BOOST_TEST_GE(qp.key.capacity(), 100);
             BOOST_TEST_GE(qp.value.capacity(), 100);
+        }
+
+        // param(string_view, string_view, bool) - 3-arg ctor
+        {
+            {
+                param qp("key", "value", true);
+                check(qp, "key", "value", true);
+            }
+            {
+                param qp("key", "value", false);
+                check(qp, "key", "", false);
+            }
         }
 
         // operator->

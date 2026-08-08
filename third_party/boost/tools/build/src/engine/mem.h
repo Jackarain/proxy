@@ -11,6 +11,7 @@
 #include "config.h"
 
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 
 #define bjam_malloc_x(s) std::malloc(s)

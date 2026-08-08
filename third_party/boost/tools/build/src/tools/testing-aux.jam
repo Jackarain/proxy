@@ -181,7 +181,7 @@ else
 
 
 args.add-arg verbose-test : --verbose-test
-    : "Include output of tests when run." ;
+    : "Include output of tests when run." : flag ;
 .VERBOSE_TEST = 0 ;
 if [ args.get-arg verbose-test ]
 {

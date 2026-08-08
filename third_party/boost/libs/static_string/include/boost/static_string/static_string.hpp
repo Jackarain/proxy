@@ -314,103 +314,129 @@ copy_with_traits(
 template<std::size_t N, typename CharT, typename Traits>
 class static_string_base
 {
-private:
+  using derived_type = basic_static_string<N, CharT, Traits>;
+  friend derived_type;
+
   using size_type = smallest_width<N>;
   using value_type = typename Traits::char_type;
   using pointer = value_type*;
   using const_pointer = const value_type*;
-public:
-  BOOST_STATIC_STRING_CPP11_CONSTEXPR
-  static_string_base() noexcept { };
 
-  BOOST_STATIC_STRING_CPP14_CONSTEXPR
-  pointer
-  data_impl() noexcept
+BOOST_STATIC_STRING_GCC_NESTED_CLASS_WORKAROUND
+
+  struct size
   {
-    return data_;
-  }
+    class basic_static_string
+    {
+      friend derived_type;
 
-  BOOST_STATIC_STRING_CPP14_CONSTEXPR
-  const_pointer
-  data_impl() const noexcept
+      BOOST_STATIC_STRING_CPP11_CONSTEXPR
+      size_type
+      size_impl() const noexcept
+      {
+        return size;
+      }
+
+      BOOST_STATIC_STRING_CPP14_CONSTEXPR
+      size_type
+      size_impl(std::size_t n) noexcept
+      {
+        // Functions that set size will throw
+        // if the new size would exceed max_size()
+        // therefore we can guarantee that this will
+        // not lose data.
+        return size = static_cast<size_type>(n);
+      }
+
+    public:
+      size_type size = 0;
+    };
+  };
+
+  struct data
   {
-    return data_;
-  }
+    class basic_static_string
+    {
+      friend derived_type;
 
-  BOOST_STATIC_STRING_CPP11_CONSTEXPR
-  std::size_t
-  size_impl() const noexcept
-  {
-    return size_;
-  }
+      BOOST_STATIC_STRING_CPP14_CONSTEXPR
+      pointer
+      data_impl() noexcept
+      {
+        return data;
+      }
 
-  BOOST_STATIC_STRING_CPP14_CONSTEXPR
-  std::size_t
-  set_size(std::size_t n) noexcept
-  {
-    // Functions that set size will throw
-    // if the new size would exceed max_size()
-    // therefore we can guarantee that this will
-    // not lose data.
-    return size_ = size_type(n);
-  }
+      BOOST_STATIC_STRING_CPP11_CONSTEXPR
+      const_pointer
+      data_impl() const noexcept
+      {
+        return data;
+      }
 
-  BOOST_STATIC_STRING_CPP14_CONSTEXPR
-  void
-  term_impl() noexcept
-  {
-    Traits::assign(data_[size_], value_type());
-  }
-
-  size_type size_ = 0;
-
-  value_type data_[N + 1]{};
+    public:
+      value_type data[N + 1]{};
+    };
+  };
 };
 
 // Optimization for when the size is 0
 template<typename CharT, typename Traits>
 class static_string_base<0, CharT, Traits>
 {
-private:
+  using derived_type = basic_static_string<0, CharT, Traits>;
+  friend derived_type;
+
+  using size_type = std::size_t;
   using value_type = typename Traits::char_type;
   using pointer = value_type*;
-public:
-  BOOST_STATIC_STRING_CPP11_CONSTEXPR
-  static_string_base() noexcept { }
 
-  // Modifying the null terminator is UB
-  BOOST_STATIC_STRING_CPP11_CONSTEXPR
-  pointer
-  data_impl() const noexcept
+BOOST_STATIC_STRING_GCC_NESTED_CLASS_WORKAROUND
+
+  struct size
   {
-    return const_cast<pointer>(&null_);
-  }
+    class basic_static_string
+    {
+      friend derived_type;
 
-  BOOST_STATIC_STRING_CPP11_CONSTEXPR
-  std::size_t
-  size_impl() const noexcept
+      BOOST_STATIC_STRING_CPP11_CONSTEXPR
+      size_type
+      size_impl() const noexcept
+      {
+        return 0;
+      }
+
+      BOOST_STATIC_STRING_CPP11_CONSTEXPR
+      size_type
+      size_impl(std::size_t) const noexcept
+      {
+        return 0;
+      }
+    };
+  };
+
+  struct data
   {
-    return 0;
-  }
+    class basic_static_string
+    {
+      friend derived_type;
 
-  BOOST_STATIC_STRING_CPP11_CONSTEXPR
-  std::size_t
-  set_size(std::size_t) const noexcept
-  {
-    return 0;
-  }
+      BOOST_STATIC_STRING_CPP11_CONSTEXPR
+      pointer
+      data_impl() const noexcept
+      {
+        return const_cast<pointer>(&data);
+      }
 
-  BOOST_STATIC_STRING_CPP14_CONSTEXPR
-  void
-  term_impl() const noexcept { }
-
-private:
-  static constexpr const value_type null_{};
+    public:
+      static constexpr value_type data{};
+    };
+  };
 };
 
 // This is only needed in C++14 and lower.
 // see http://eel.is/c++draft/depr.static.constexpr
 #ifndef BOOST_STATIC_STRING_CPP17
+#if 0
 template<typename CharT, typename Traits>
 constexpr
 const
@@ -418,6 +444,13 @@ typename static_string_base<0, CharT, Traits>::value_type
 static_string_base<0, CharT, Traits>::
 null_;
 #endif
+
+template<typename CharT, typename Traits>
+constexpr
+typename static_string_base<0, CharT, Traits>::value_type
+static_string_base<0, CharT, Traits>::data::basic_static_string::data;
+#endif
+
 
 template<typename CharT, typename Traits>
 BOOST_STATIC_STRING_CPP14_CONSTEXPR
@@ -1054,7 +1087,11 @@ template<std::size_t N, typename CharT,
   typename Traits = std::char_traits<CharT>>
 class basic_static_string
 #ifndef BOOST_STATIC_STRING_DOCS
-  : private detail::static_string_base<N, CharT, Traits>
+  // : public detail::static_string_base<N, CharT, Traits>
+  : public detail::static_string_base<
+    N, CharT, Traits>::size::basic_static_string
+  , public detail::static_string_base<
+    N, CharT, Traits>::data::basic_static_string
 #endif
 {
 private:
@@ -1202,7 +1239,7 @@ public:
   BOOST_STATIC_STRING_CPP14_CONSTEXPR
   basic_static_string(const_pointer s)
   {
-    assign(s);
+    assign(s, s + traits_type::length(s));
   }
 
   /** Constructor.
@@ -1373,7 +1410,7 @@ public:
   basic_static_string&
   operator=(const_pointer s)
   {
-    return assign(s);
+    return assign(s, s + traits_type::length(s));
   }
 
   /** Assign to the string.
@@ -2277,6 +2314,23 @@ public:
     return N;
   }
 
+  /** Return the number of additional characters that can be stored.
+
+      Returns `max_size() - size()`, i.e. the number of characters
+      that can still be inserted before the string reaches its
+      capacity.
+
+      @par Complexity
+
+      Constant.
+   */
+  BOOST_STATIC_STRING_CPP11_CONSTEXPR
+  size_type
+  available() const noexcept
+  {
+    return max_size() - size();
+  }
+
   /** Increase the capacity.
 
       This function has no effect.
@@ -2339,7 +2393,7 @@ public:
   void
   clear() noexcept
   {
-    this->set_size(0);
+    this->size_impl(0);
     term();
   }
 
@@ -2931,7 +2985,7 @@ public:
   pop_back() noexcept
   {
     BOOST_STATIC_STRING_ASSERT(!empty());
-    this->set_size(size() - 1);
+    this->size_impl(size() - 1);
     term();
   }
 
@@ -3107,7 +3161,7 @@ public:
     InputIterator first,
     InputIterator last)
   {
-    this->set_size(size() + read_back(true, first, last));
+    this->size_impl(size() + read_back(true, first, last));
     return term();
   }
 
@@ -5585,10 +5639,21 @@ public:
 
 private:
   BOOST_STATIC_STRING_CPP14_CONSTEXPR
+  void term_impl(std::true_type) noexcept
+  {
+    traits_type::assign(data()[size()], value_type());
+  }
+
+  BOOST_STATIC_STRING_CPP14_CONSTEXPR
+  void term_impl(std::false_type) noexcept
+  {
+  }
+
+  BOOST_STATIC_STRING_CPP14_CONSTEXPR
   basic_static_string&
   term() noexcept
   {
-    this->term_impl();
+    term_impl(std::integral_constant<bool, N != 0>());
     return *this;
   }
 
@@ -5596,7 +5661,7 @@ private:
   basic_static_string&
   assign_char(value_type ch, std::true_type) noexcept
   {
-    this->set_size(1);
+    this->size_impl(1);
     traits_type::assign(data()[0], ch);
     return term();
   }
@@ -5670,7 +5735,7 @@ private:
     const_pointer s,
     size_type count) noexcept
   {
-    this->set_size(count);
+    this->size_impl(count);
     traits_type::copy(data(), s, size() + 1);
     return *this;
   }
@@ -6481,7 +6546,7 @@ to_static_wstring(long double value) noexcept
 #ifdef BOOST_STATIC_STRING_USE_DEDUCT
 template<std::size_t N, typename CharT>
 basic_static_string(const CharT(&)[N]) ->
-  basic_static_string<N, CharT, std::char_traits<CharT>>;
+  basic_static_string<N - 1, CharT, std::char_traits<CharT>>;
 #endif
 
 //------------------------------------------------------------------------------
@@ -6591,7 +6656,7 @@ assign(
   if (count > max_size())
     detail::throw_exception<std::length_error>(
       "count > max_size()");
-  this->set_size(count);
+  this->size_impl(count);
   traits_type::assign(data(), size(), ch);
   return term();
 }
@@ -6608,7 +6673,7 @@ assign(
   if (count > max_size())
     detail::throw_exception<std::length_error>(
       "count > max_size()");
-  this->set_size(count);
+  this->size_impl(count);
   traits_type::move(data(), s, size());
   return term();
 }
@@ -6630,13 +6695,13 @@ assign(
   {
     if (i >= max_size())
     {
-      this->set_size(i);
+      this->size_impl(i);
       term();
       detail::throw_exception<std::length_error>("n > max_size()");
     }
     traits_type::assign(*ptr, *first);
   }
-  this->set_size(ptr - data());
+  this->size_impl(ptr - data());
   return term();
 }
 
@@ -6658,7 +6723,10 @@ insert(
   const auto index = pos - curr_data;
   traits_type::move(&curr_data[index + count], &curr_data[index], curr_size - index + 1);
   traits_type::assign(&curr_data[index], count, ch);
-  this->set_size(curr_size + count);
+  this->size_impl(curr_size + count);
+#if defined(__clang__) && __clang_major__ == 3 && __clang_minor__ == 7
+  term();
+#endif
   return &curr_data[index];
 }
 
@@ -6711,7 +6779,7 @@ insert(
       traits_type::copy(dest, src, count);
     }
   }
-  this->set_size(curr_size + count);
+  this->size_impl(curr_size + count);
   return curr_data + index;
 }
 
@@ -6735,7 +6803,7 @@ insert(
   const auto count = read_back(false, first, last);
   const std::size_t index = pos - curr_data;
   std::rotate(&curr_data[index], &curr_data[curr_size + 1], &curr_data[curr_size + count + 1]);
-  this->set_size(curr_size + count);
+  this->size_impl(curr_size + count);
   return curr_data + index;
 }
 
@@ -6751,7 +6819,7 @@ erase(
   const auto curr_data = data();
   const std::size_t index = first - curr_data;
   traits_type::move(&curr_data[index], last, (end() - last) + 1);
-  this->set_size(size() - std::size_t(last - first));
+  this->size_impl(size() - std::size_t(last - first));
   return curr_data + index;
 }
 
@@ -6767,7 +6835,7 @@ push_back(
     detail::throw_exception<std::length_error>(
       "curr_size >= max_size()");
   traits_type::assign(data()[curr_size], ch);
-  this->set_size(curr_size + 1);
+  this->size_impl(curr_size + 1);
   term();
 }
 
@@ -6785,7 +6853,7 @@ append(
     detail::throw_exception<std::length_error>(
       "count > max_size() - size()");
   traits_type::assign(end(), count, ch);
-  this->set_size(curr_size + count);
+  this->size_impl(curr_size + count);
   return term();
 }
 
@@ -6803,7 +6871,7 @@ append(
     detail::throw_exception<std::length_error>(
       "count > max_size() - size()");
   traits_type::copy(end(), s, count);
-  this->set_size(curr_size + count);
+  this->size_impl(curr_size + count);
   return term();
 }
 
@@ -6819,7 +6887,7 @@ resize(size_type n, value_type c)
   const auto curr_size = size();
   if(n > curr_size)
     traits_type::assign(data() + curr_size, n - curr_size, c);
-  this->set_size(n);
+  this->size_impl(n);
   term();
 }
 
@@ -6839,7 +6907,7 @@ resize_and_overwrite(
   CharT* p = data();
   const auto new_size = std::move(op)(p, n);
   BOOST_STATIC_STRING_ASSERT(new_size >= 0 && size_type(new_size) <= n);
-  this->set_size(size_type(new_size));
+  this->size_impl(size_type(new_size));
   term();
 }
 
@@ -6851,9 +6919,9 @@ swap(basic_static_string& s) noexcept
 {
   const auto curr_size = size();
   basic_static_string tmp(s);
-  s.set_size(curr_size);
+  s.size_impl(curr_size);
   traits_type::copy(&s.data()[0], data(), curr_size + 1);
-  this->set_size(tmp.size());
+  this->size_impl(tmp.size());
   traits_type::copy(data(), tmp.data(), size() + 1);
 }
 
@@ -6872,10 +6940,8 @@ swap(basic_static_string<M, CharT, Traits>& s)
     detail::throw_exception<std::length_error>(
       "s.size() > max_size()");
   basic_static_string tmp(s);
-  s.set_size(curr_size);
-  traits_type::copy(&s.data()[0], data(), curr_size + 1);
-  this->set_size(tmp.size());
-  traits_type::copy(data(), &tmp.data()[0], size() + 1);
+  s.assign_unchecked(data(), curr_size);
+  assign_unchecked(tmp.data(), tmp.size());
 }
 
 template<std::size_t N, typename CharT, typename Traits>
@@ -6898,7 +6964,7 @@ replace(
   const auto pos = i1 - curr_data;
   traits_type::move(&curr_data[pos + n], i2, (end() - i2) + 1);
   traits_type::assign(&curr_data[pos], n, c);
-  this->set_size((curr_size - n1) + n);
+  this->size_impl((curr_size - n1) + n);
   return *this;
 }
 
@@ -6959,7 +7025,7 @@ replace(
       traits_type::move(&curr_data[pos + n2], &curr_data[pos + n1], curr_size - pos - n1 + 1);
     }
   }
-  this->set_size((curr_size - n1) + n2);
+  this->size_impl((curr_size - n1) + n2);
   return *this;
 }
 
@@ -6991,7 +7057,7 @@ replace(
   // Move everything from the end of the splice point to the end of the rotated string to
   // the begining of the splice point
   traits_type::move(&curr_data[pos + n2], &curr_data[pos + n2 + n1], ((curr_size - n1) + n2) - pos);
-  this->set_size((curr_size - n1) + n2);
+  this->size_impl((curr_size - n1) + n2);
   return *this;
 }
 
@@ -7163,7 +7229,7 @@ replace_unchecked(
       "replaced string exceeds max_size()");
   traits_type::move(&curr_data[pos + n2], i2, (end() - i2) + 1);
   traits_type::copy(&curr_data[pos], s, n2);
-  this->set_size((curr_size - n1) + n2);
+  this->size_impl((curr_size - n1) + n2);
   return *this;
 }
 
@@ -7185,7 +7251,7 @@ insert_unchecked(
   const std::size_t index = pos - curr_data;
   traits_type::move(&curr_data[index + count], pos, (end() - pos) + 1);
   traits_type::copy(&curr_data[index], s, count);
-  this->set_size(curr_size + count);
+  this->size_impl(curr_size + count);
   return curr_data + index;
 }
 

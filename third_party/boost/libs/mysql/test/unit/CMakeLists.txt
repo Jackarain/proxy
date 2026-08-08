@@ -78,6 +78,7 @@ add_executable(
 
     test/impl/dt_to_string.cpp
     test/impl/ssl_context_with_default.cpp
+    test/impl/next_power_of_two.cpp
     test/impl/variant_stream.cpp
 
     test/spotchecks/connection_use_after_move.cpp
@@ -104,6 +105,7 @@ add_executable(
     test/resultset_view.cpp
     test/resultset.cpp
     test/client_errc.cpp
+    test/column_type.cpp
     test/common_server_errc.cpp
     test/mysql_server_errc.cpp
     test/mariadb_server_errc.cpp

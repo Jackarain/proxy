@@ -19,8 +19,6 @@
 //
 #define _SCL_SECURE_NO_WARNINGS
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/cstdint.hpp>
 
 #include <boost/core/lightweight_test.hpp>
@@ -33,6 +31,8 @@
 #include <vector>
 #include <memory>
 #include <type_traits>
+
+#include <boost/lexical_cast.hpp>
 
 #if (defined(BOOST_HAS_LONG_LONG) || defined(BOOST_HAS_MS_INT64)) \
     && !(defined(BOOST_MSVC) && BOOST_MSVC < 1300)

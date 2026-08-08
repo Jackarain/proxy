@@ -13,9 +13,9 @@
 */
 
 
+#include <iostream>
 #include <boost/type_index/stl_type_index.hpp>
 #include <boost/type_index/ctti_type_index.hpp>
-#include <iostream>
 
 template <class T>
 void print(const char* name) {

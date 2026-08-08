@@ -1,11 +1,12 @@
 
-/* Paragraph Styling */
+/* Paragraph Styling — Metalab 2.0: Sans/Desktop/Regular/Base/Tight */
 .boostlook p {
   padding-top: initial !important;
   padding-bottom: initial !important;
-  color: var(--text-main-text-body-primary, #2a2c30);
+  color: var(--text-main-text-body-secondary, #585A64);
   font-size: var(--typography-font-size-sm, 1rem);
-  line-height: var(--typography-line-height-lg, 1.5rem); /* 150% */
+  line-height: 120%;
+  letter-spacing: -0.16px;
 }
 
 /* Components margins */
@@ -40,6 +41,13 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #conte
 .boostlook:not(:has(.doc)) div.itemizedlist:has(+ a[id^="bind"]) + a + *,
 .boostlook:not(:has(.doc)) div.table:has(+ .table-break) + .table-break + *,
 .boostlook #content .paragraph + .olist,
+.boostlook #content .paragraph + .listingblock,
+.boostlook #content .paragraph + .literalblock,
+.boostlook #content .paragraph + .ulist,
+.boostlook #content .paragraph + .dlist,
+.boostlook #content .paragraph + .imageblock,
+.boostlook #content .paragraph + .exampleblock,
+.boostlook #content .paragraph + .quoteblock,
 .boostlook #content .ulist + .admonitionblock,
 .boostlook #content .ulist + .paragraph,
 .boostlook #content .colist + .admonitionblock,
@@ -53,6 +61,12 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #conte
 .boostlook #content .imageblock + .paragraph,
 .boostlook:not(:has(.doc)) .inlinemediaobject + p,
 .boostlook:not(:has(.doc)) p:has(> .inlinemediaobject:only-child) + p,
+.boostlook:not(:has(.doc)) p + pre,
+.boostlook:not(:has(.doc)) p + .listingblock,
+.boostlook:not(:has(.doc)) .section p + ul,
+.boostlook:not(:has(.doc)) .section p + dl,
+.boostlook#libraryReadMe > p + pre,
+.boostlook#libraryReadMe > p + ul,
 .boostlook#libraryReadMe > p + table,
 .boostlook#libraryReadMe > table + p,
 .boostlook#libraryReadMe > ul + p,
@@ -61,7 +75,7 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #conte
 .boostlook:not(:has(.doc))#boost-legacy-docs-wrapper > #content > ul:not([class]) + p,
 .boostlook:not(:has(.doc))#antora-template-wrapper > #content > ul:not([class]) + p,
 div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #content > ul:not([class]) + p {
-  margin-top: var(--padding-padding-xs, 0.75rem);
+  margin-top: var(--padding-padding-xs, 0.75rem) !important;
 }
 
 .boostlook #content .dlist + .paragraph,
@@ -108,6 +122,15 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #conte
   transition: color 0.3s ease;
 }
 
+/* Content body links: underline per Figma (paragraphs and lists only) */
+.boostlook #content .doc .paragraph a:not(.anchor),
+.boostlook #content .doc .ulist a:not(.anchor),
+.boostlook #content .doc .olist a:not(.anchor),
+.boostlook #content .doc .dlist a:not(.anchor) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* Link Hover States */
 .boostlook a:hover,
 .boostlook .doc a:hover {
@@ -134,7 +157,7 @@ div.source-docs-antora.boostlook:not(:has(.doc)):not(:has(>.boostlook)) > #conte
 /* Text Emphasis */
 .boostlook b,
 .boostlook strong {
-  font-variation-settings: "wght" 600, "wdth" 80;
+  font-variation-settings: "wght" 600, "wdth" 87.5;
   text-shadow: none;
 }
 

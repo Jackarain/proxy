@@ -78,13 +78,7 @@ rule init ( version ? :  command * : options * )
         }
     }
 
-    local m = [ MATCH (..).* : $(version) ] ;
-    local n = [ MATCH (.)\\. : $(m) ] ;
-    if $(n) {
-      m = $(n) ;
-    }
-
-    local major = $(m) ;
+    local major = [ MATCH "([0-9]+)\\." : $(version) ] ;
 
 
       flags intel-vxworks.compile OPTIONS $(condition)/<inlining>off : -inline-level=0 ;
@@ -95,7 +89,7 @@ rule init ( version ? :  command * : options * )
       flags intel-vxworks.link OPTIONS $(condition)/<runtime-link>shared : [ os.environ LDFLAGS_DYNAMIC ] ;
       flags intel-vxworks.compile OPTIONS $(condition)/<link>shared : -fPIC ;
 
-    local minor = [ MATCH ".*\\.(.).*" : $(version) ] ;
+    local minor = [ MATCH "\\.([0-9]+)" : $(version) ] ;
 
 
 }

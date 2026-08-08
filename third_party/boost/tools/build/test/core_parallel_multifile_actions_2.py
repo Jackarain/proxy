@@ -2,6 +2,7 @@
 
 # Copyright 2008 Jurko Gospodnetic, Vladimir Prus
 # Copyright 2011 Steven Watanabe
+# Copyright 2026 Paolo Pastori
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
 
@@ -19,44 +20,31 @@
 # prematurely.
 
 import BoostBuild
+import sys
 
-t = BoostBuild.Tester(pass_toolset=0)
+sleep_s = 0.2
 
-t.write("sleep.bat", """\
-::@timeout /T %1 /NOBREAK >nul
-@ping 127.0.0.1 -n 2 -w 1000 >nul
-@ping 127.0.0.1 -n %1 -w 1000 >nul
-@exit /B 0
-""")
+t = BoostBuild.Tester(pass_toolset=False)
 
 t.write("file.jam", """\
-if $(NT)
-{
-    SLEEP = @call sleep.bat ;
-}
-else
-{
-    SLEEP = sleep ;
-}
-
 actions link
-{
-    $(SLEEP) 1
+{{
+    "{}" -c "import time; time.sleep({})"
     echo 001 - linked
-}
+}}
 
 link dll lib ;
 
 actions install
-{
+{{
     echo 002 - installed
-}
+}}
 
 install installed_dll : dll ;
 DEPENDS installed_dll : dll ;
 
 DEPENDS all : lib installed_dll ;
-""")
+""".format(sys.executable, sleep_s))
 
 t.run_build_system(["-ffile.jam", "-j2"], stdout="""\
 ...found 4 targets...

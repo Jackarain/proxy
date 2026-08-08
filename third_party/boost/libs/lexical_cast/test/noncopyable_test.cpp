@@ -11,10 +11,11 @@
 //
 //  Test that Source can be non-copyable.
 
-#include <boost/lexical_cast.hpp>
 #include <boost/core/noncopyable.hpp>
 
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 class Noncopyable : private boost::noncopyable
 {

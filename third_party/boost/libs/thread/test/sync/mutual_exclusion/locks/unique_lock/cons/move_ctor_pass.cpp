@@ -23,33 +23,33 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::mutex m;
+boost::mutex g_mutex;
 
 int main()
 {
   {
-  boost::unique_lock<boost::mutex> lk0(m);
+  boost::unique_lock<boost::mutex> lk0(g_mutex);
   boost::unique_lock<boost::mutex> lk( (boost::move(lk0)));
-  BOOST_TEST(lk.mutex() == &m);
+  BOOST_TEST(lk.mutex() == &g_mutex);
   BOOST_TEST(lk.owns_lock() == true);
   BOOST_TEST(lk0.mutex() == 0);
   BOOST_TEST(lk0.owns_lock() == false);
   }
   {
-  boost::unique_lock<boost::mutex> lk( (BOOST_THREAD_MAKE_RV_REF(boost::unique_lock<boost::mutex>(m))));
-  BOOST_TEST(lk.mutex() == &m);
+  boost::unique_lock<boost::mutex> lk( (BOOST_THREAD_MAKE_RV_REF(boost::unique_lock<boost::mutex>(g_mutex))));
+  BOOST_TEST(lk.mutex() == &g_mutex);
   BOOST_TEST(lk.owns_lock() == true);
   }
   {
-  boost::unique_lock<boost::mutex> lk0(m, boost::defer_lock);
+  boost::unique_lock<boost::mutex> lk0(g_mutex, boost::defer_lock);
   boost::unique_lock<boost::mutex> lk( (boost::move(lk0)));
-  BOOST_TEST(lk.mutex() == &m);
+  BOOST_TEST(lk.mutex() == &g_mutex);
   BOOST_TEST(lk.owns_lock() == false);
   BOOST_TEST(lk0.mutex() == 0);
   BOOST_TEST(lk0.owns_lock() == false);
   }
   {
-  boost::unique_lock<boost::mutex> lk0(m, boost::defer_lock);
+  boost::unique_lock<boost::mutex> lk0(g_mutex, boost::defer_lock);
   lk0.release();
   boost::unique_lock<boost::mutex> lk( (boost::move(lk0)));
   BOOST_TEST(lk.mutex() == 0);

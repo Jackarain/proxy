@@ -32,6 +32,10 @@ module;
 #include <type_traits>
 #endif
 
+#ifdef BOOST_TYPE_INDEX_USER_TYPEINDEX
+#include BOOST_TYPE_INDEX_USER_TYPEINDEX
+#endif
+
 #define BOOST_TYPE_INDEX_INTERFACE_UNIT
 
 export module boost.type_index;
@@ -54,6 +58,8 @@ import std;
 #include <boost/type_index/runtime_cast/reference_cast.hpp>
 #include <boost/type_index/runtime_cast/register_runtime_class.hpp>
 #include <boost/type_index/runtime_cast/std_shared_ptr_cast.hpp>
+#ifndef BOOST_NO_RTTI
 #include <boost/type_index/stl_type_index.hpp>
+#endif
 #include <boost/type_index/type_index_facade.hpp>
 

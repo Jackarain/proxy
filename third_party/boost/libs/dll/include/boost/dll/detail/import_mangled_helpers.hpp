@@ -7,13 +7,16 @@
 #ifndef BOOST_DLL_DETAIL_IMPORT_MANGLED_HELPERS_HPP_
 #define BOOST_DLL_DETAIL_IMPORT_MANGLED_HELPERS_HPP_
 
-
-#include <type_traits>
-
-
+#include <boost/config.hpp>
 #ifdef BOOST_HAS_PRAGMA_ONCE
 # pragma once
 #endif
+
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#if !defined(BOOST_DLL_USE_STD_MODULE)
+#include <type_traits>
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 namespace boost { namespace dll { namespace experimental { namespace detail {
 

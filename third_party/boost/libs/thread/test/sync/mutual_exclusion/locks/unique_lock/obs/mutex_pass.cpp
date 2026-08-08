@@ -22,16 +22,16 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::mutex m;
+boost::mutex g_mutex;
 
 int main()
 {
   boost::unique_lock<boost::mutex> lk0;
   BOOST_TEST(lk0.mutex() == 0);
-  boost::unique_lock<boost::mutex> lk1(m);
-  BOOST_TEST(lk1.mutex() == &m);
+  boost::unique_lock<boost::mutex> lk1(g_mutex);
+  BOOST_TEST(lk1.mutex() == &g_mutex);
   lk1.unlock();
-  BOOST_TEST(lk1.mutex() == &m);
+  BOOST_TEST(lk1.mutex() == &g_mutex);
 
   return boost::report_errors();
 }

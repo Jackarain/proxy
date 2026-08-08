@@ -6,7 +6,7 @@ Copyright (c) 2011-2011: Joachim Faulhaber
            http://www.boost.org/LICENSE_1_0.txt)
 +-----------------------------------------------------------------------------*/
 #define BOOST_TEST_MODULE icl::cmp_clang_ttp_passing unit test
-#include <libs/icl/test/disable_test_warnings.hpp>
+#include <disable_test_warnings.hpp>
 #include <boost/config.hpp>
 #include "../unit_test_unwarned.hpp"
 

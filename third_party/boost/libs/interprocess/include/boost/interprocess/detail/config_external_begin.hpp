@@ -17,6 +17,7 @@
 #  pragma GCC diagnostic ignored "-Wshadow"
 #  pragma GCC diagnostic ignored "-Wsign-conversion"
 #  pragma GCC diagnostic ignored "-Wconversion"
+#  pragma GCC diagnostic ignored "-Wundef"
 #  if (BOOST_GCC >= 100000)
 #     pragma GCC diagnostic ignored "-Warith-conversion"
 #  endif

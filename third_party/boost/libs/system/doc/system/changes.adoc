@@ -8,6 +8,10 @@ https://www.boost.org/LICENSE_1_0.txt
 # Revision History
 :idprefix:
 
+## Changes in Boost 1.92
+
+* Fix `unwrap_and_invoke` for functions returning `void`.
+
 ## Changes in Boost 1.91
 
 * The return type of `operator|(result<T&>, U)` has been changed to non-reference.

@@ -59,6 +59,9 @@ class spsc_queue;
 template < typename T, typename... Options >
 struct spsc_value;
 
+template < typename T, typename... Options >
+class bounded_ticket_queue;
+
 }} // namespace boost::lockfree
 
 #endif // BOOST_DOXYGEN_INVOKED

@@ -13,27 +13,24 @@
 #include <boost/redis/resp3/type.hpp>
 #include <boost/redis/response.hpp>
 
-#define BOOST_TEST_MODULE low_level_sync_sans_io
-#include <boost/test/included/unit_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #include <iostream>
 #include <string>
 
-using boost::redis::request;
-using boost::redis::adapter::adapt2;
-using boost::redis::adapter::result;
-using boost::redis::resp3::tree;
-using boost::redis::generic_flat_response;
-using boost::redis::ignore_t;
-using boost::redis::resp3::detail::deserialize;
-using boost::redis::resp3::node;
-using boost::redis::resp3::node_view;
-using boost::redis::resp3::to_string;
-using boost::redis::response;
-using boost::redis::any_adapter;
+using namespace boost::redis;
+using adapter::adapt2;
+using adapter::result;
+using resp3::tree;
+using resp3::detail::deserialize;
+using resp3::node;
+using resp3::node_view;
+using resp3::to_string;
 using boost::system::error_code;
 
 namespace resp3 = boost::redis::resp3;
+
+namespace {
 
 #define RESP3_SET_PART1 "~6\r\n+orange\r"
 #define RESP3_SET_PART2 "\n+apple\r\n+one"
@@ -41,14 +38,14 @@ namespace resp3 = boost::redis::resp3;
 #define RESP3_SET_PART4 "\n+three\r\n+orange\r\n"
 char const* resp3_set = RESP3_SET_PART1 RESP3_SET_PART2 RESP3_SET_PART3 RESP3_SET_PART4;
 
-BOOST_AUTO_TEST_CASE(low_level_sync_sans_io)
+void test_low_level_sync_sans_io()
 {
    try {
       result<std::set<std::string>> resp;
 
       error_code ec;
       deserialize(resp3_set, adapt2(resp), ec);
-      BOOST_CHECK_EQUAL(ec, error_code{});
+      BOOST_TEST_EQ(ec, error_code{});
 
       for (auto const& e : resp.value())
          std::cout << e << std::endl;
@@ -59,7 +56,7 @@ BOOST_AUTO_TEST_CASE(low_level_sync_sans_io)
    }
 }
 
-BOOST_AUTO_TEST_CASE(issue_210_empty_set)
+void test_issue_210_empty_set()
 {
    try {
       result<std::tuple<
@@ -73,12 +70,12 @@ BOOST_AUTO_TEST_CASE(issue_210_empty_set)
 
       error_code ec;
       deserialize(wire, adapt2(resp), ec);
-      BOOST_CHECK_EQUAL(ec, error_code{});
+      BOOST_TEST_EQ(ec, error_code{});
 
-      BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
-      BOOST_CHECK(std::get<1>(resp.value()).value().empty());
-      BOOST_CHECK_EQUAL(std::get<2>(resp.value()).value(), "this_should_not_be_in_set");
-      BOOST_CHECK_EQUAL(std::get<3>(resp.value()).value(), 2);
+      BOOST_TEST_EQ(std::get<0>(resp.value()).value(), 1);
+      BOOST_TEST(std::get<1>(resp.value()).value().empty());
+      BOOST_TEST_EQ(std::get<2>(resp.value()).value(), "this_should_not_be_in_set");
+      BOOST_TEST_EQ(std::get<3>(resp.value()).value(), 2);
 
    } catch (std::exception const& e) {
       std::cerr << e.what() << std::endl;
@@ -86,7 +83,7 @@ BOOST_AUTO_TEST_CASE(issue_210_empty_set)
    }
 }
 
-BOOST_AUTO_TEST_CASE(issue_210_non_empty_set_size_one)
+void test_issue_210_non_empty_set_size_one()
 {
    try {
       result<std::tuple<
@@ -101,13 +98,13 @@ BOOST_AUTO_TEST_CASE(issue_210_non_empty_set_size_one)
 
       error_code ec;
       deserialize(wire, adapt2(resp), ec);
-      BOOST_CHECK_EQUAL(ec, error_code{});
+      BOOST_TEST_EQ(ec, error_code{});
 
-      BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
-      BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value().size(), 1u);
-      BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value().at(0), std::string{"foo"});
-      BOOST_CHECK_EQUAL(std::get<2>(resp.value()).value(), "this_should_not_be_in_set");
-      BOOST_CHECK_EQUAL(std::get<3>(resp.value()).value(), 2);
+      BOOST_TEST_EQ(std::get<0>(resp.value()).value(), 1);
+      BOOST_TEST_EQ(std::get<1>(resp.value()).value().size(), 1u);
+      BOOST_TEST_EQ(std::get<1>(resp.value()).value().at(0), std::string{"foo"});
+      BOOST_TEST_EQ(std::get<2>(resp.value()).value(), "this_should_not_be_in_set");
+      BOOST_TEST_EQ(std::get<3>(resp.value()).value(), 2);
 
    } catch (std::exception const& e) {
       std::cerr << e.what() << std::endl;
@@ -115,7 +112,7 @@ BOOST_AUTO_TEST_CASE(issue_210_non_empty_set_size_one)
    }
 }
 
-BOOST_AUTO_TEST_CASE(issue_210_non_empty_set_size_two)
+void test_issue_210_non_empty_set_size_two()
 {
    try {
       result<std::tuple<
@@ -130,12 +127,12 @@ BOOST_AUTO_TEST_CASE(issue_210_non_empty_set_size_two)
 
       error_code ec;
       deserialize(wire, adapt2(resp), ec);
-      BOOST_CHECK_EQUAL(ec, error_code{});
+      BOOST_TEST_EQ(ec, error_code{});
 
-      BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
-      BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value().at(0), std::string{"foo"});
-      BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value().at(1), std::string{"bar"});
-      BOOST_CHECK_EQUAL(std::get<2>(resp.value()).value(), "this_should_not_be_in_set");
+      BOOST_TEST_EQ(std::get<0>(resp.value()).value(), 1);
+      BOOST_TEST_EQ(std::get<1>(resp.value()).value().at(0), std::string{"foo"});
+      BOOST_TEST_EQ(std::get<1>(resp.value()).value().at(1), std::string{"bar"});
+      BOOST_TEST_EQ(std::get<2>(resp.value()).value(), "this_should_not_be_in_set");
 
    } catch (std::exception const& e) {
       std::cerr << e.what() << std::endl;
@@ -143,7 +140,7 @@ BOOST_AUTO_TEST_CASE(issue_210_non_empty_set_size_two)
    }
 }
 
-BOOST_AUTO_TEST_CASE(issue_210_no_nested)
+void test_issue_210_no_nested()
 {
    try {
       result<std::tuple<result<int>, result<std::string>, result<std::string>, result<std::string>>>
@@ -154,12 +151,12 @@ BOOST_AUTO_TEST_CASE(issue_210_no_nested)
 
       error_code ec;
       deserialize(wire, adapt2(resp), ec);
-      BOOST_CHECK_EQUAL(ec, error_code{});
+      BOOST_TEST_EQ(ec, error_code{});
 
-      BOOST_CHECK_EQUAL(std::get<0>(resp.value()).value(), 1);
-      BOOST_CHECK_EQUAL(std::get<1>(resp.value()).value(), std::string{"foo"});
-      BOOST_CHECK_EQUAL(std::get<2>(resp.value()).value(), std::string{"bar"});
-      BOOST_CHECK_EQUAL(std::get<3>(resp.value()).value(), "this_should_not_be_in_set");
+      BOOST_TEST_EQ(std::get<0>(resp.value()).value(), 1);
+      BOOST_TEST_EQ(std::get<1>(resp.value()).value(), std::string{"foo"});
+      BOOST_TEST_EQ(std::get<2>(resp.value()).value(), std::string{"bar"});
+      BOOST_TEST_EQ(std::get<3>(resp.value()).value(), "this_should_not_be_in_set");
 
    } catch (std::exception const& e) {
       std::cerr << e.what() << std::endl;
@@ -167,7 +164,7 @@ BOOST_AUTO_TEST_CASE(issue_210_no_nested)
    }
 }
 
-BOOST_AUTO_TEST_CASE(issue_233_array_with_null)
+void test_issue_233_array_with_null()
 {
    try {
       result<std::vector<std::optional<std::string>>> resp;
@@ -176,11 +173,11 @@ BOOST_AUTO_TEST_CASE(issue_233_array_with_null)
 
       error_code ec;
       deserialize(wire, adapt2(resp), ec);
-      BOOST_CHECK_EQUAL(ec, error_code{});
+      BOOST_TEST_EQ(ec, error_code{});
 
-      BOOST_CHECK_EQUAL(resp.value().at(0).value(), "one");
+      BOOST_TEST_EQ(resp.value().at(0).value(), "one");
       BOOST_TEST(!resp.value().at(1).has_value());
-      BOOST_CHECK_EQUAL(resp.value().at(2).value(), "two");
+      BOOST_TEST_EQ(resp.value().at(2).value(), "two");
 
    } catch (std::exception const& e) {
       std::cerr << e.what() << std::endl;
@@ -188,7 +185,7 @@ BOOST_AUTO_TEST_CASE(issue_233_array_with_null)
    }
 }
 
-BOOST_AUTO_TEST_CASE(issue_233_optional_array_with_null)
+void test_issue_233_optional_array_with_null()
 {
    try {
       result<std::optional<std::vector<std::optional<std::string>>>> resp;
@@ -197,11 +194,11 @@ BOOST_AUTO_TEST_CASE(issue_233_optional_array_with_null)
 
       error_code ec;
       deserialize(wire, adapt2(resp), ec);
-      BOOST_CHECK_EQUAL(ec, error_code{});
+      BOOST_TEST_EQ(ec, error_code{});
 
-      BOOST_CHECK_EQUAL(resp.value().value().at(0).value(), "one");
+      BOOST_TEST_EQ(resp.value().value().at(0).value(), "one");
       BOOST_TEST(!resp.value().value().at(1).has_value());
-      BOOST_CHECK_EQUAL(resp.value().value().at(2).value(), "two");
+      BOOST_TEST_EQ(resp.value().value().at(2).value(), "two");
 
    } catch (std::exception const& e) {
       std::cerr << e.what() << std::endl;
@@ -209,7 +206,7 @@ BOOST_AUTO_TEST_CASE(issue_233_optional_array_with_null)
    }
 }
 
-BOOST_AUTO_TEST_CASE(check_counter_adapter)
+void test_check_counter_adapter()
 {
    using boost::redis::any_adapter;
    using boost::redis::resp3::parse;
@@ -248,7 +245,23 @@ BOOST_AUTO_TEST_CASE(check_counter_adapter)
    BOOST_TEST(!ret3);
    BOOST_TEST(ret4);
 
-   BOOST_CHECK_EQUAL(init, 1);
-   BOOST_CHECK_EQUAL(node, 7);
-   BOOST_CHECK_EQUAL(done, 1);
+   BOOST_TEST_EQ(init, 1);
+   BOOST_TEST_EQ(node, 7);
+   BOOST_TEST_EQ(done, 1);
+}
+
+}  // namespace
+
+int main()
+{
+   test_low_level_sync_sans_io();
+   test_issue_210_empty_set();
+   test_issue_210_non_empty_set_size_one();
+   test_issue_210_non_empty_set_size_two();
+   test_issue_210_no_nested();
+   test_issue_233_array_with_null();
+   test_issue_233_optional_array_with_null();
+   test_check_counter_adapter();
+
+   return boost::report_errors();
 }

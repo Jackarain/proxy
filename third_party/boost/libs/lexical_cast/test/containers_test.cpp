@@ -8,10 +8,10 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt).
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/core/lightweight_test.hpp>
 #include <boost/container/string.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 using namespace boost;
 

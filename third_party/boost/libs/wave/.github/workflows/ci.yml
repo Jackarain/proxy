@@ -115,6 +115,8 @@ jobs:
             curl -sL https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz | tar -xJ --strip-components 1 -C /node20217
 
       - uses: actions/checkout@v4
+        env:
+          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
       - name: linux
         shell: bash
@@ -200,14 +202,14 @@ jobs:
           - name: "TOOLSET=clang CXXSTD=11,14,17,20 Job 5"
             buildtype: "boost"
             packages: ""
-            os: "macos-13"
+            os: "macos-15"
             cxx: "clang++"
             sources: ""
             llvm_os: ""
             llvm_ver: ""
-            xcode_version: 14.2.0
-            toolset: "clang"
-            cxxstd: "11,14,17,20"
+            xcode_version: 16.2.0
+            toolset: "clang-16"
+            cxxstd: "11,14,17,20,2b"
 
     runs-on: ${{ matrix.os }}
 

@@ -79,7 +79,7 @@ constexpr auto log10_impl(const T x) noexcept
             if (x < one)
             {
                 // Handle reflection.
-                result = -log10(one / x);
+                result = -::boost::decimal::log10(one / x);
             }
             else if(x > one)
             {

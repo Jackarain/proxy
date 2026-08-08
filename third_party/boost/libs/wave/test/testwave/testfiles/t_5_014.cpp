@@ -16,9 +16,10 @@
 // Tests integer preprocessing number token and type of #if expression.
 
 //O --long_long
+//O --c++17
 
 // 12.1:
-//R #line 26 "t_5_014.cpp"
+//R #line 27 "t_5_014.cpp"
 //R true
 #if __TESTWAVE_LONG_MAX__ <= __TESTWAVE_LONG_MIN__
     "Bad evaluation of long."
@@ -26,7 +27,7 @@
 true
 #endif
 
-//R #line 34 "t_5_014.cpp"
+//R #line 35 "t_5_014.cpp"
 //R true
 #if __TESTWAVE_LONG_MAX__ <= (__TESTWAVE_LONG_MAX__ / 2)  /* 0x3FFFFFFF   */
     "Bad evaluation of long."
@@ -35,7 +36,7 @@ true
 #endif
 
 // 12.2:
-//R #line 43 "t_5_014.cpp"
+//R #line 44 "t_5_014.cpp"
 //R true
 #if __TESTWAVE_ULONG_MAX__ / 2 < __TESTWAVE_LONG_MAX__
     "Bad evaluation of unsigned long."
@@ -44,7 +45,7 @@ true
 #endif
 
 // 12.3: Octal number.
-//R #line 52 "t_5_014.cpp"
+//R #line 53 "t_5_014.cpp"
 //R true
 #if 0177777 != 65535
     "Bad evaluation of octal number."
@@ -53,7 +54,7 @@ true
 #endif
 
 // 12.4: Hexadecimal number.
-//R #line 61 "t_5_014.cpp"
+//R #line 62 "t_5_014.cpp"
 //R true
 #if 0Xffff != 65535 || 0xFfFf != 65535
     "Bad evaluation of hexadecimal number."
@@ -62,7 +63,7 @@ true
 #endif
 
 // 12.5: Suffix 'L' or 'l'.
-//R #line 70 "t_5_014.cpp"
+//R #line 71 "t_5_014.cpp"
 //R true
 #if 0L != 0 || 0l != 0
     "Bad evaluation of 'L' suffix."
@@ -71,7 +72,7 @@ true
 #endif
 
 // 12.6: Suffix 'U' or 'u'.
-//R #line 79 "t_5_014.cpp"
+//R #line 80 "t_5_014.cpp"
 //R true
 #if 1U != 1 || 1u != 1
     "Bad evaluation of 'U' suffix."
@@ -80,7 +81,7 @@ true
 #endif
 
 // 12.7: Negative integer.
-//R #line 88 "t_5_014.cpp"
+//R #line 89 "t_5_014.cpp"
 //R true
 #if 0 <= -1
     "Bad evaluation of negative number."
@@ -89,7 +90,7 @@ true
 #endif
 
 // 12.8: Long Long integers
-//R #line 97 "t_5_014.cpp"
+//R #line 98 "t_5_014.cpp"
 //R true
 #if 0LL != 0 || 0ll != 0
     "Bad evaluation of 'LL' suffix."
@@ -98,7 +99,7 @@ true
 #endif
 
 // 12.8: Unsigned Long Long integers
-//R #line 106 "t_5_014.cpp"
+//R #line 107 "t_5_014.cpp"
 //R true
 #if 1ull != 1 || 1uLL != 1 || 1Ull != 1 || 1ULL != 1 || 1llu != 1 || 1llU != 1 || 1LLu != 1 || 1LLU != 1
     "Bad evaluation of 'ULL' or 'LLU' suffix."
@@ -107,7 +108,7 @@ true
 #endif
 
 // 12.9: invalid (mixed case) long long integers
-//R #line 115 "t_5_014.cpp"
+//R #line 116 "t_5_014.cpp"
 //R long long foo = 1234l L;
 //R long long bar = 5678L l;
 //R unsigned long long baz = 1234uL l;
@@ -116,6 +117,81 @@ long long foo = 1234lL;
 long long bar = 5678Ll;
 unsigned long long baz = 1234uLl;
 unsigned long long quux = 5678uLl;
+
+// Evaluating numbers containing digit separators
+
+//R #line 128 "t_5_014.cpp"
+//R true
+#if 120'3 < 120'2
+    "Bad comparison of signed integers with digit separators"
+#else
+    true
+#endif
+
+//R #line 136 "t_5_014.cpp"
+//R true
+#if 1'202 != 120'2l
+    "Bad equality comparison of signed integers with digit separators"
+#else
+    true
+#endif
+
+//R #line 144 "t_5_014.cpp"
+//R true
+#if 120'3ul < 120'2u
+    "Bad comparison of unsigned integers with digit separators"
+#else
+    true
+#endif
+
+//R #line 152 "t_5_014.cpp"
+//R true
+#if 1'202U != 120'2UL
+    "Bad equality comparison of unsigned integers with digit separators"
+#else
+    true
+#endif
+
+//R #line 160 "t_5_014.cpp"
+//R true
+#if 0x13'37c0de != 0x13'37c0'de
+    "Bad equality comparison of hex integers with digit separators"
+#else
+    true
+#endif
+
+//R #line 168 "t_5_014.cpp"
+//R true
+#if 0x13'37c0de < 0x13'27c0'de
+    "Bad comparison of hex integers with digit separators"
+#else
+    true
+#endif
+
+//R #line 176 "t_5_014.cpp"
+//R true
+#if 0b10'0101 != 0b1'00101
+    "Bad equality comparison of binary integers with digit separators"
+#else
+    true
+#endif
+
+//R #line 184 "t_5_014.cpp"
+//R true
+#if 0b10'0101 > 0b11'0101
+    "Bad comparison of binary integers with digit separators"
+#else
+    true
+#endif
+
+// Now one comparison the other way, just in case
+//R #line 191 "t_5_014.cpp"
+//R true
+#if 0x13'37c0d'e == 0x1'3'3'7'c0de
+    true
+#else
+    "Bad equality comparison for many hex digits with separator"
+#endif
 
 
 /*-

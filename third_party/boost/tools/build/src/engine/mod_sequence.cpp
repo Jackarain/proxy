@@ -5,10 +5,12 @@
  * https://www.bfgroup.xyz/b2/LICENSE.txt)
  */
 
+#include "compile.h"
+#include "frames.h"
+#include "lists.h"
 #include "native.h"
 #include "object.h"
-#include "lists.h"
-#include "compile.h"
+#include "rules.h"
 
 #include <stdlib.h>
 #include <algorithm>

@@ -35,7 +35,9 @@ toolset.inherit-flags clang-win : msvc : : YLOPTION ;
 toolset.inherit-rules clang-win : msvc ;
 
 
-if [ args.get-arg debug-configuration ]
+.debug-configuration = [ args.get-arg debug-configuration ] ;
+
+if $(.debug-configuration)
 {
     local rule .notice ( messages * )
     {
@@ -135,6 +137,25 @@ rule init ( version ? : command * : options * )
                 }
             }
 
+            local vswhere = [ os.environ "ProgramFiles(x86)" ] ;
+            vswhere ?= [ os.environ "ProgramFiles" ] ;
+            vswhere = "$(vswhere)/Microsoft Visual Studio/Installer/vswhere.exe" ;
+            local vspath = [ SPLIT_BY_CHARACTERS [ SHELL
+                "\"$(vswhere)\" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath"
+                ] : "\r\n" ] ;
+            vspath = $(vspath[1]) ;
+            .notice "$(arch)-$(addr):" "using VS tools in '$(vspath)'" ;
+            local msvcpath = [ path.glob [ path.make "$(vspath)\\VC\\Tools\\MSVC" ] : * ] ;
+            msvcpath = [ path.glob "$(msvcpath[-1])/bin" : Host* ] ;
+            msvcpath = [ path.glob "$(msvcpath)" : * ] ;
+            .notice "$(arch)-$(addr):" "using msvc tools in" "'$(msvcpath)'" ;
+            local vsasmpath = [ path.glob "$(msvcpath)" : "$(target-assembler).*" ] ;
+            if $(vsasmpath)
+            {
+                vsasmpath = [ path.native $(vsasmpath[-1]) ] ;
+            }
+            .notice "$(arch)-$(addr):" "found msvc assembler '$(vsasmpath)'" ;
+
             local assembler = [ get-option "assembler" : $(addr) : $(options) ] ;
             local linker ;
 
@@ -142,10 +163,13 @@ rule init ( version ? : command * : options * )
             {
                 linker = [ regex.replace $(items[1]) "\\\\HostX64\\\\x86\\\\" "\\HostX86\\x86\\" ] ;
             }
-            if $(linker) {
-                assembler ?= $(linker:B=$(target-assembler)) ;
-            }
-            assembler ?= $(target-assembler) ;
+
+            assembler ?= [ common.get-invocation-command clang-win
+                : $(target-assembler).exe
+                : $(assembler)
+                : "$(linker:D)" "$(vsasmpath:D)"
+                : path-last ] ;
+            assembler = \"$(assembler)\" ;
 
             .notice "$(arch)-$(addr):" "using linker '$(linker)'" ;
 

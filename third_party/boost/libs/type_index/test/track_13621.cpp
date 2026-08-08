@@ -5,10 +5,11 @@
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/type_index/ctti_type_index.hpp>
 #include <string>
 
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/type_index/ctti_type_index.hpp>
 
 class empty
 {

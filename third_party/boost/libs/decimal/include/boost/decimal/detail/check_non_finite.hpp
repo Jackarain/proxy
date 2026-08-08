@@ -19,7 +19,7 @@ namespace detail {
 // Prioritizes checking for nans and then checks for infs
 // Per IEEE 754 section 7.2 any operation on a sNaN returns qNaN
 template <typename Decimal>
-constexpr Decimal check_non_finite(Decimal lhs, Decimal rhs) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR Decimal check_non_finite(Decimal lhs, Decimal rhs) noexcept
 {
     static_assert(is_decimal_floating_point_v<Decimal>, "Types must both be decimal types");
 
@@ -58,7 +58,7 @@ constexpr Decimal check_non_finite(Decimal lhs, Decimal rhs) noexcept
 }
 
 template <typename Decimal>
-constexpr Decimal check_non_finite(Decimal x) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR Decimal check_non_finite(Decimal x) noexcept
 {
     static_assert(is_decimal_floating_point_v<Decimal>, "Types must be a decimal type");
 

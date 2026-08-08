@@ -64,13 +64,6 @@ void error_skip_frames(std::tuple<int, list_ref> skip_messages,
 
 == `b2::jam::errors::try-catch`
 
-====
-[horizontal]
-Jam:: `rule error-skip-frames ( skip-frames messages * : * )`
-{CPP}:: `void error_skip_frames(std::tuple<int, list_ref> skip_messages, const
-lists & rest, bind::context_ref_ context_ref);`
-====
-
 This is not really an exception-handling mechanism, but it does allow us to
 perform some error-checking on our error-checking. Errors are suppressed
 after a try, and the first one is recorded. Use catch to check that the
@@ -147,7 +140,7 @@ void warning(const lists & rest, bind::context_ref_ context_ref);
 
 ====
 [horizontal]
-Jam:: `rule lol->list ( * )`
+Jam:: `rule lol\->list ( * )`
 {CPP}:: `list_ref lol_to_list(const lists & rest);`
 ====
 

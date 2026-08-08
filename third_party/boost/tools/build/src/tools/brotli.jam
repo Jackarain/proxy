@@ -1,0 +1,155 @@
+# Copyright (c) 2025 Mohammad Nejati
+#
+# Use, modification and distribution is subject to the Boost Software
+# License Version 1.0. (See accompanying file LICENSE.txt or
+# https://www.bfgroup.xyz/b2/LICENSE.txt)
+
+# Supports the brotli library
+#
+# After 'using brotli', the following targets are available:
+#
+# /brotli//brotlicommon -- The brotli common library
+# /brotli//brotlidec -- The brotli decoder library
+# /brotli//brotlienc -- The brotli encoder library
+
+import project ;
+import ac ;
+import errors ;
+import feature ;
+import "class" : new ;
+import targets ;
+import path ;
+import modules ;
+import indirect ;
+import property ;
+import property-set ;
+import args ;
+
+header = brotli/decode.h ;
+brotlicommon_names = brotlicommon libbrotlicommon ;
+brotlidec_names = brotlidec libbrotlidec ;
+brotlienc_names = brotlienc libbrotlienc ;
+
+library-id = 0 ;
+
+.debug =  [ args.get-arg debug-configuration ] ;
+
+# Initializes the brotli library.
+#
+# Options for configuring brotli::
+#
+#   <search>
+#       The directory containing the brotli binaries.
+#   <brotlicommon-name>
+#       Overrides the default name of brotlicommon library.
+#   <brotlidec-name>
+#       Overrides the default name of brotlidec library.
+#   <brotlienc-name>
+#       Overrides the default name of brotlienc library.
+#   <include>
+#       The directory containing the brotli headers.
+#   <dll-path>
+#       Extra directories to add to library search paths of consumers during
+#       runtime (multiple instances are allowed).
+#
+# If none of these options is specified, then the environmental
+# variables BROTLI_LIBRARY_PATH, BROTLI_NAME, and BROTLI_INCLUDE will
+# be used instead.
+#
+# Examples::
+#
+#   # Find brotli in the default system location
+#   using brotli ;
+#   # Find brotli in /usr/local
+#   using brotli : 1.1.0
+#     : <include>/usr/local/include <search>/usr/local/lib ;
+#
+rule init (
+    version ?
+    # (currently ignored)
+
+    : options *
+    # A list of the options to use
+
+    : requirements *
+    # The requirements for the target
+
+    : is-default ?
+    )
+{
+    local caller = [ project.current ] ;
+
+    if ! $(.initialized)
+    {
+        .initialized = true ;
+
+        project.initialize $(__name__) ;
+        .project = [ project.current ] ;
+        project brotli ;
+    }
+
+    local library-path = [ feature.get-values <search> : $(options) ] ;
+    local include-path = [ feature.get-values <include> : $(options) ] ;
+    local brotlicommon-name = [ feature.get-values <brotlicommon-name> : $(options) ] ;
+    local brotlidec-name = [ feature.get-values <brotlidec-name> : $(options) ] ;
+    local brotlienc-name = [ feature.get-values <brotlienc-name> : $(options) ] ;
+    local dll-paths = [ property.select <dll-path> : $(options) ] ;
+
+    if ! $(options)
+    {
+        is-default = true ;
+    }
+
+    condition = [ property-set.create $(requirements) ] ;
+    condition = [ property-set.create [ $(condition).base ] ] ;
+
+    if $(.configured.$(condition))
+    {
+        if $(is-default)
+        {
+            if $(.debug)
+            {
+                ECHO "notice: [brotli] brotli is already configured" ;
+            }
+        }
+        else
+        {
+            errors.user-error "brotli is already configured" ;
+        }
+        return ;
+    }
+    else
+    {
+        if $(.debug)
+        {
+            ECHO "notice: [brotli] Using pre-installed library" ;
+            if $(condition)
+            {
+                ECHO "notice: [brotli] Condition" [ $(condition).raw ] ;
+            }
+        }
+
+        local brotlicommon = [ new ac-library brotlicommon : $(.project) : $(condition) :
+            $(include-path) : $(library-path) : $(brotlicommon-name) ] ;
+        $(brotlicommon).set-header $(header) ;
+        $(brotlicommon).set-default-names $(brotlicommon_names) ;
+        $(brotlicommon).add-usage-requirements $(dll-paths) ;
+
+        local brotlidec = [ new ac-library brotlidec : $(.project) : $(condition) :
+            $(include-path) : $(library-path) : $(brotlidec-name) ] ;
+        $(brotlidec).set-header $(header) ;
+        $(brotlidec).set-default-names $(brotlidec_names) ;
+        $(brotlidec).add-usage-requirements $(dll-paths) ;
+
+        local brotlienc = [ new ac-library brotlienc : $(.project) : $(condition) :
+            $(include-path) : $(library-path) : $(brotlienc-name) ] ;
+        $(brotlienc).set-header $(header) ;
+        $(brotlienc).set-default-names $(brotlienc_names) ;
+        $(brotlienc).add-usage-requirements $(dll-paths) ;
+
+        targets.main-target-alternative $(brotlicommon) ;
+        targets.main-target-alternative $(brotlidec) ;
+        targets.main-target-alternative $(brotlienc) ;
+    }
+    .configured.$(condition) = true ;
+}

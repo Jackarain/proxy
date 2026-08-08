@@ -1,12 +1,17 @@
-# Copyright 2018, 2019 Peter Dimov
-# Distributed under the Boost Software License, Version 1.0.
-# See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
-
 cmake_minimum_required(VERSION 3.5...3.16)
 
 project(cmake_install_test LANGUAGES CXX)
 
-find_package(boost_lockfree REQUIRED)
+if(BOOST_CI_INSTALL_TEST)
+    find_package(Boost CONFIG QUIET COMPONENTS lockfree)
+    if(NOT TARGET Boost::lockfree)
+        add_library(Boost::lockfree INTERFACE IMPORTED)
+        set_target_properties(Boost::lockfree PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${Boost_INCLUDE_DIRS}")
+    endif()
+else()
+    find_package(boost_lockfree REQUIRED)
+endif()
 
 add_executable(main main.cpp)
 target_link_libraries(main Boost::lockfree)

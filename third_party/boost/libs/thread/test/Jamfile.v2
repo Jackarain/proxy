@@ -110,18 +110,18 @@ project
         <toolset>msvc:<cxxflags>/wd6246
     ;
 
-rule thread-run ( sources )
+rule thread-run ( sources : reqs * )
 {
     sources = $(sources) winrt_init.cpp ;
     return
-    [ run $(sources) ../build//boost_thread ]
+    [ run $(sources) ../build//boost_thread : : : $(reqs) ]
     [ run $(sources) ../src/tss_null.cpp ../build//boost_thread/<link>static
-        : : : : $(sources[1]:B)_lib ]
+        : : : $(reqs) : $(sources[1]:B)_lib ]
     ;
 }
 
 
-rule thread-test ( sources )
+rule thread-test ( sources : reqs * )
 {
     sources = $(sources) winrt_init.cpp ;
     return
@@ -136,14 +136,14 @@ rule thread-test ( sources )
     ;
 }
 
-rule thread-run2 ( sources : name )
+rule thread-run2 ( sources : name : reqs * )
 {
     sources = $(sources) winrt_init.cpp ;
     return
-    [ run $(sources) ../build//boost_thread : : :
+    [ run $(sources) ../build//boost_thread : : : $(reqs)
       : $(name) ]
     [ run $(sources) ../src/tss_null.cpp ../build//boost_thread/<link>static
-        : : :
+        : : : $(reqs)
       : $(name)_lib ]
     ;
 }
@@ -362,7 +362,10 @@ rule generate_self_contained_header_tests
           [ thread-run test_7571.cpp ]
           [ thread-run test_9319.cpp ]
           #[ thread-run test_9711.cpp ] This is an invalid use of ::then deferred.
-          [ thread-run test_9856.cpp ]
+          [ thread-run test_9856.cpp :
+              <toolset>gcc:<cxxflags>-fopenmp
+              <toolset>gcc:<linkflags>-fopenmp
+          ]
           [ thread-compile test_10963.cpp : : test_10963_c ]
           [ thread-run test_10964.cpp ]
           [ thread-test test_11053.cpp ]

@@ -36,8 +36,8 @@ Contains rules for string processing using regular expressions.
 * `(x)` matches `"x"` and captures it.
 * `"^"` matches the beginning of the string.
 * `"$"` matches the end of the string.
-* `"<"` matches the beginning of a word.
-* `">"` matches the end of a word.
+* `"\<"` matches the beginning of a word.
+* `"\>"` matches the end of a word.
 
 See also: link:#jam.language.rules.builtins.utility.\_match__[MATCH]
 
@@ -52,7 +52,7 @@ namespace b2 {
 ====
 [horizontal]
 Jam:: `rule split ( string separator )`
-{CPP}:: `b2::list_ref rb2::egex_split(const std::tuple<b2::value_ref,
+{CPP}:: `b2::list_ref b2::regex_split(const std::tuple<b2::value_ref,
 b2::value_ref> & string_separator);`
 ====
 
@@ -78,7 +78,7 @@ Jam:: `rule split-list ( list * : separator )`
 separator);`
 ====
 
-Returns the concatenated results of Applying regex.split to every element of
+Returns the concatenated results of applying regex.split to every element of
 the list using the separator pattern.
 
 end::reference[] */
@@ -128,17 +128,17 @@ list_ref regex_transform(
 
 ====
 [horizontal]
-Jam:: `rule escape ( string : symbols : escape-symbol )`
-{CPP}:: `b2::value_ref regex_escape(b2::value_ref string,b2:: value_ref symbols,
-b2::value_ref escape_symbol);`
+Jam:: `rule escape ( string + : symbols : escape-symbol )`
+{CPP}:: `b2::list_ref regex_escape(b2::list_cref strings,
+b2:: value_ref symbols, b2::value_ref escape_symbol);`
 ====
 
 Escapes all of the characters in `symbols` using the escape symbol
-`escape-symbol` for the given string, and returns the escaped string.
+`escape-symbol` for the given strings, and returns the escaped strings.
 
 end::reference[] */
-value_ref regex_escape(
-	value_ref string, value_ref symbols, value_ref escape_symbol);
+list_ref regex_escape(
+	list_cref strings, value_ref symbols, value_ref escape_symbol);
 
 /* tag::reference[]
 
@@ -159,8 +159,8 @@ string. The match string can be a regex expression.
 * `replacement` -- The string to replace with.
 
 end::reference[] */
-value_ref regex_replace(const std::tuple<value_ref, value_ref, value_ref> &
-		string_match_replacement);
+value_ref regex_replace(
+	const std::tuple<value_ref, value_ref, value_ref> & string_match_replacement);
 
 /* tag::reference[]
 
@@ -218,14 +218,13 @@ struct regex_module : b2::bind::module_<regex_module>
 	void def(Binder & binder)
 	{
 		binder.def(&regex_split, "split", "string" * _1 + "separator" * _1)
-			.def(
-				&regex_split_each, "split-list", "list" * _n | "separator" * _1)
+			.def(&regex_split_each, "split-list", "list" * _n | "separator" * _1)
 			.def(&regex_match, "match",
 				"pattern" * _1 | "string" * _1 | "indices" * _n)
 			.def(&regex_transform, "transform",
 				"list" * _n | "pattern" * _1 | "indices" * _n)
 			.def(&regex_escape, "escape",
-				"string" * _1 | "symbols" * _1 | "escape-symbol" * _1)
+				"string" * _1n | "symbols" * _1 | "escape-symbol" * _1)
 			.def(&regex_replace, "replace",
 				"string" * _1 + "match" * _1 + "replacement" * _1)
 			.def(&regex_replace_each, "replace-list",

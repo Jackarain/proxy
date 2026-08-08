@@ -5,14 +5,20 @@
 #ifndef BOOST_DECIMAL_DETAIL_INT128_DETAIL_UTILITIES_HPP
 #define BOOST_DECIMAL_DETAIL_INT128_DETAIL_UTILITIES_HPP
 
+#include <boost/decimal/detail/int128/detail/config.hpp>
+
+#ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
+
 #include <cstddef>
+
+#endif
 
 namespace boost {
 namespace int128 {
 namespace detail {
 
 template <typename T>
-constexpr std::size_t strlen(const T* str) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE constexpr std::size_t strlen(const T* str) noexcept
 {
     std::size_t i {};
     while (*str != '\0')

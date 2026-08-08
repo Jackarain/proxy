@@ -25,27 +25,27 @@
 #include <boost/thread/detail/memory.hpp>
 #include <boost/thread/csbl/memory/unique_ptr.hpp>
 
-boost::promise<boost::csbl::unique_ptr<int> > p;
-boost::promise<boost::csbl::unique_ptr<int> > p2;
+boost::promise<boost::csbl::unique_ptr<int> > g_p;
+boost::promise<boost::csbl::unique_ptr<int> > g_p2;
 void func()
 {
   boost::csbl::unique_ptr<int> uptr(new int(5));
-  p.set_value_at_thread_exit(boost::move(uptr));
+  g_p.set_value_at_thread_exit(boost::move(uptr));
 }
 void func2()
 {
-  p2.set_value_at_thread_exit(boost::csbl::make_unique<int>(5));
+  g_p2.set_value_at_thread_exit(boost::csbl::make_unique<int>(5));
 }
 
 int main()
 {
   {
-    boost::future<boost::csbl::unique_ptr<int> > f = p.get_future();
+    boost::future<boost::csbl::unique_ptr<int> > f = g_p.get_future();
     boost::thread(func).detach();
     BOOST_TEST(*f.get() == 5);
   }
   {
-    boost::future<boost::csbl::unique_ptr<int> > f = p2.get_future();
+    boost::future<boost::csbl::unique_ptr<int> > f = g_p2.get_future();
     boost::thread(func2).detach();
     BOOST_TEST(*f.get() == 5);
   }

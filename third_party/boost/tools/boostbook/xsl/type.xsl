@@ -269,6 +269,45 @@ Unknown type element "<xsl:value-of select="local-name(.)"/>" in type.display.na
 
     <xsl:text>&#10;</xsl:text>
     <xsl:choose>
+      <!-- Alias template: render as "template<...> using name = type;" -->
+      <xsl:when test="template">
+        <xsl:call-template name="indent">
+          <xsl:with-param name="indentation" select="$indentation"/>
+        </xsl:call-template>
+        <xsl:apply-templates select="template" mode="reference">
+          <xsl:with-param name="indentation" select="$indentation"/>
+        </xsl:apply-templates>
+        <xsl:text>&#10;</xsl:text>
+        <xsl:call-template name="indent">
+          <xsl:with-param name="indentation" select="$indentation"/>
+        </xsl:call-template>
+        <xsl:call-template name="highlight-keyword">
+          <xsl:with-param name="keyword" select="'using'"/>
+        </xsl:call-template>
+        <xsl:text> </xsl:text>
+        <xsl:call-template name="link-or-anchor">
+          <xsl:with-param name="to" select="$link-to"/>
+          <xsl:with-param name="text" select="$typedef-name"/>
+          <xsl:with-param name="link-type" select="$link-type"/>
+          <xsl:with-param name="highlight" select="true()"/>
+        </xsl:call-template>
+        <xsl:call-template name="highlight-text">
+          <xsl:with-param name="text" select="' = '"/>
+        </xsl:call-template>
+        <xsl:apply-templates select="type/*|type/text()" mode="highlight"/>
+        <xsl:call-template name="highlight-special">
+          <xsl:with-param name="text" select="';'"/>
+        </xsl:call-template>
+        <xsl:if test="$compact and purpose">
+          <xsl:text>  </xsl:text>
+          <xsl:call-template name="highlight-comment">
+            <xsl:with-param name="text">
+              <xsl:text>// </xsl:text>
+              <xsl:apply-templates select="purpose" mode="comment"/>
+            </xsl:with-param>
+          </xsl:call-template>
+        </xsl:if>
+      </xsl:when>
       <!-- Create a vertical ellipsis -->
       <xsl:when test="@name = '...'">
         <xsl:call-template name="indent">
@@ -683,6 +722,11 @@ Unknown type element "<xsl:value-of select="local-name(.)"/>" in type.display.na
         <!-- Find the length of the type -->
         <xsl:variable name="length">
           <xsl:choose>
+            <!-- Alias templates are rendered on their own lines and do not
+                 participate in column alignment. -->
+            <xsl:when test="$typedef/template">
+              <xsl:value-of select="0"/>
+            </xsl:when>
             <xsl:when test="$typedef/@name != '...'">
               <xsl:choose>
                 <xsl:when test="$want-name">

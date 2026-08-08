@@ -2,7 +2,7 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.5...3.31)
 
 if(POLICY CMP0074)
   cmake_policy(SET CMP0074 NEW)
@@ -18,15 +18,7 @@ if(USE_STAGED_BOOST)
   set(BOOST_HINTS HINTS ../../../../stage)
 endif()
 
-if(USE_BOOST_PACKAGE)
-
-  find_package(Boost ${BOOST_VERSION} EXACT REQUIRED COMPONENTS iostreams ${BOOST_HINTS})
-
-else()
-
-  find_package(boost_iostreams ${BOOST_VERSION} EXACT CONFIG REQUIRED ${BOOST_HINTS})
-
-endif()
+find_package(Boost ${BOOST_VERSION} EXACT REQUIRED COMPONENTS iostreams ${BOOST_HINTS})
 
 add_executable(test_gzip test_gzip.cpp)
 target_link_libraries(test_gzip Boost::iostreams)

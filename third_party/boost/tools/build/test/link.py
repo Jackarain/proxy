@@ -165,7 +165,7 @@ def test_merge_recursive_existing(group1, group2):
     t.write("src/dir5/include/nested/xxx/yyy/file5.h", "file5")
 
     t.run_build_system(group1)
-    t.run_build_system(group2 + ["-d+12"])
+    t.run_build_system(group2)
 
     def check_file(target, file):
         if target in group2:

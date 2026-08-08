@@ -28,7 +28,13 @@
 #   --libdir=<LIBDIR>       Install library files here.
 #                           Default: <EPREFIX>/lib
 #
-#   --includedir=<HDRDIR>   Install header files here.
+#   --bindir=<BINDIR>       Install binary files here.
+#                           Default: <EPREFIX>/bin
+#
+#   --dlldir=<DLLDIR>       Install Windows .dll files here.
+#                           Default: <BINDIR>
+#
+#   --includedir=<INCDIR>   Install header files here.
 #                           Default: <PREFIX>/include
 #
 #   --cmakedir=<CMAKEDIR>   Install CMake configuration files here.
@@ -36,11 +42,20 @@
 #
 #   --no-cmake-config       Do not install CMake configuration files.
 #
+#   --datadir=<DATADIR>     Install data files here.
+#                           Default: <PREFIX>/share
+#
 #   stage                   Build and install only compiled library files to the
 #   =====                   stage directory.
 #
-#   --stagedir=<STAGEDIR>   Install library files here
-#                           Default: ./stage
+#   --stagedir=<STAGEDIR>             Stage library files here
+#                                     Default: <BOOST_ROOT>/stage
+#
+#   --stage-libdir=<STAGELIBDIR>      Stage library files here
+#                                     Default: <STAGEDIR>/lib
+#
+#   --stage-includedir=<STAGEINCDIR>  Stage header files here
+#                                     Default: <BOOST_ROOT>
 #
 # Other Options:
 #
@@ -148,7 +163,7 @@ import project ;
 import tools/boost\_install/boost-install ;
 
 path-constant BOOST_ROOT : . ;
-constant BOOST_VERSION : 1.91.0 ;
+constant BOOST_VERSION : 1.92.0 ;
 constant BOOST_JAMROOT_MODULE : $(__name__) ;
 
 # Allow subprojects to simply `import config : requires ;` to get access to the requires rule
@@ -391,7 +406,13 @@ rule boost-lib ( name : sources * : requirements * : default-build * : usage-req
 
 # Declare special top-level targets that build and install the desired variants
 # of the libraries.
-boostcpp.declare-targets $(all-libraries-to-build) ;
+local former-libraries-to-build ;
+if system in $(all-libraries)
+{
+    former-libraries-to-build += system ;
+}
+boostcpp.declare-targets $(all-libraries-modular-build) :
+    [ SORT $(all-libraries-to-build) $(former-libraries-to-build) ] ;
 
 # Declare a Boost library and run related declaration rules. This should be
 # called from the libroot/build.jam to define the components of a Boost lib.

@@ -5,6 +5,7 @@
 #ifndef BOOST_DECIMAL_CMATH_HPP
 #define BOOST_DECIMAL_CMATH_HPP
 
+#include <boost/decimal/detail/fwd_log.hpp>
 #include <boost/decimal/detail/promotion.hpp>
 #include <boost/decimal/decimal32_t.hpp>
 #include <boost/decimal/decimal64_t.hpp>
@@ -79,6 +80,7 @@
 #include <boost/decimal/detail/cmath/beta.hpp>
 #include <boost/decimal/detail/cmath/normalize.hpp>
 #include <boost/decimal/detail/cmath/comparetotal.hpp>
+#include <boost/decimal/detail/cmath/decompose.hpp>
 #include <boost/decimal/numbers.hpp>
 
 // Macros from 3.6.2
@@ -200,6 +202,11 @@ BOOST_DECIMAL_EXPORT constexpr auto samequantum(decimal64_t lhs, decimal64_t rhs
     return samequantumd64(lhs, rhs);
 }
 
+BOOST_DECIMAL_EXPORT constexpr auto samequantum(decimal_fast64_t lhs, decimal_fast64_t rhs) noexcept -> bool
+{
+    return samequantumd64f(lhs, rhs);
+}
+
 BOOST_DECIMAL_EXPORT constexpr auto samequantum(decimal128_t lhs, decimal128_t rhs) noexcept -> bool
 {
     return samequantumd128(lhs, rhs);
@@ -238,31 +245,6 @@ BOOST_DECIMAL_EXPORT constexpr auto quantexp(decimal128_t x) noexcept -> int
 BOOST_DECIMAL_EXPORT constexpr auto quantexp(decimal_fast128_t x) noexcept -> int
 {
     return quantexpd128f(x);
-}
-
-BOOST_DECIMAL_EXPORT constexpr auto quantize(decimal32_t lhs, decimal32_t rhs) noexcept -> decimal32_t
-{
-    return quantized32(lhs, rhs);
-}
-
-BOOST_DECIMAL_EXPORT constexpr auto quantize(decimal_fast32_t lhs, decimal_fast32_t rhs) noexcept -> decimal_fast32_t
-{
-    return quantized32f(lhs, rhs);
-}
-
-BOOST_DECIMAL_EXPORT constexpr auto quantize(decimal64_t lhs, decimal64_t rhs) noexcept -> decimal64_t
-{
-    return quantized64(lhs, rhs);
-}
-
-BOOST_DECIMAL_EXPORT constexpr auto quantize(decimal128_t lhs, decimal128_t rhs) noexcept -> decimal128_t
-{
-    return quantized128(lhs, rhs);
-}
-
-BOOST_DECIMAL_EXPORT constexpr auto quantize(decimal_fast128_t lhs, decimal_fast128_t rhs) noexcept -> decimal_fast128_t
-{
-    return quantized128f(lhs, rhs);
 }
 
 } // namespace decimal

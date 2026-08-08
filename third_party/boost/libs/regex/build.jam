@@ -10,7 +10,6 @@ constant boost_dependencies :
     /boost/concept_check//boost_concept_check
     /boost/config//boost_config
     /boost/predef//boost_predef
-    /boost/static_assert//boost_static_assert
     /boost/throw_exception//boost_throw_exception
     /boost/type_traits//boost_type_traits ;
 
@@ -20,11 +19,11 @@ project /boost/regex
     ;
 
 explicit
-    [ alias boost_regex : build//boost_regex ]
-    [ alias all : boost_regex example test ]
+    [ alias boost_regex : : : : <library>$(boost_dependencies) ]
+    [ alias boost_regex_old : build//boost_regex ]
+    [ alias all : boost_regex boost_regex_old example test ]
     ;
 
 call-if : boost-library regex
-    : install boost_regex
+    : install boost_regex boost_regex_old
     ;
-

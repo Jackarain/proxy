@@ -74,14 +74,14 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       ADDPATH: C:\cygwin\bin;
       B2_ADDRESS_MODEL: 32
-      B2_CXXSTD: 03,11,14,1z
+      B2_CXXSTD: 11,14,1z
       B2_TOOLSET: gcc
 
     - FLAVOR: cygwin (64-bit)
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       ADDPATH: C:\cygwin64\bin;
       B2_ADDRESS_MODEL: 64
-      B2_CXXSTD: 03,11,14,1z
+      B2_CXXSTD: 11,14,1z
       B2_TOOLSET: gcc
 
 install:

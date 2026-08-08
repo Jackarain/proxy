@@ -479,8 +479,8 @@ generators.register [ new fortran-compiling-generator
 
 rule set_command_db ( targets + )
 {
-    local config_command = [ regex.escape
-        [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ]
+    local config_command = [ on $(targets[1]) return $(CONFIG_COMMAND:E="") ] ;
+    local config_command = [ regex.escape "$(config_command:J= )"
         : "()[]\\+.*^$\"" : "\\" ] ;
     COMMAND_DATABASE on $(targets) = "(\"$(config_command)\"[^\n]*)" ;
 }

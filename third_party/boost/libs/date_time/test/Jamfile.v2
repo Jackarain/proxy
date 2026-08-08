@@ -3,10 +3,12 @@ import path ;
 import regex ;
 import testing ;
 
+project : requirements <library>/boost/date_time//boost_date_time ;
+
 local DATE_TIME_DYNAMIC_PROPERTIES = <define>BOOST_ALL_DYN_LINK <runtime-link>shared <define>BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG <define>BOOST_ALL_NO_LIB ;
 local DATE_TIME_PROPERTIES = <define>BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG
-  # FIXME 
-  #std::locale-support 
+  # FIXME
+  #std::locale-support
   <define>BOOST_ALL_NO_LIB ;
 
 # core stuff
@@ -43,12 +45,12 @@ run gregorian/testparse_date.cpp ;
 run gregorian/testperiod.cpp ;
 
 run gregorian/testgreg_serialize.cpp
-     ../../serialization/build//boost_serialization
+     /boost/serialization//boost_serialization
      : : : <define>DATE_TIME_XML_SERIALIZE
      : testgreg_serialize_xml ;
 
 run gregorian/testgreg_serialize.cpp
-    ../../serialization/build//boost_serialization
+    /boost/serialization//boost_serialization
     : : :
     : testgreg_serialize ;
 
@@ -65,7 +67,7 @@ run posix_time/testtime.cpp ;
 run posix_time/testmicrosec_time_clock.cpp ;
 run posix_time/testgreg_duration_operators.cpp ;
 run posix_time/testtime_facet.cpp ;
-run posix_time/testtime_input_facet.cpp 
+run posix_time/testtime_input_facet.cpp
     : : : <define>BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG
     : testtime_input_facet ;
 
@@ -75,35 +77,35 @@ run posix_time/testtime_formatters.cpp
 
 # text archive tests
 run posix_time/testtime_serialize.cpp
-    ../../serialization/build//boost_serialization
+    /boost/serialization//boost_serialization
     : : :
     : testtime_serialize ;
 
 run posix_time/testtime_serialize.cpp
-    ../../serialization/build//boost_serialization
+    /boost/serialization//boost_serialization
     : : : <define>BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG
     : testtime_serialize_std_config ;
 
 # xml archive tests
 run posix_time/testtime_serialize.cpp
-    ../../serialization/build//boost_serialization
+    /boost/serialization//boost_serialization
     : : :  <define>DATE_TIME_XML_SERIALIZE <define>BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG
     : testtime_serialize_xml_std_config ;
 
 run posix_time/testtime_serialize.cpp
-    ../../serialization/build//boost_serialization
+    /boost/serialization//boost_serialization
     : : : <define>DATE_TIME_XML_SERIALIZE
     : testtime_serialize_xml ;
 
 # versioning tests
 run posix_time/testtime_serialize_versioning.cpp
-    ../../serialization/build//boost_serialization
-    : : testtime_serialize_versioning_prev 
+    /boost/serialization//boost_serialization
+    : : testtime_serialize_versioning_prev
     : <define>BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG
     : testtime_serialize_versioning_curr ;
 
 run posix_time/testtime_serialize_versioning.cpp
-    ../../serialization/build//boost_serialization
+    /boost/serialization//boost_serialization
     : : :  <define>BOOST_DATE_TIME_POSIX_TIME_DURATION_VERSION=0
     : testtime_serialize_versioning_prev ;
 
@@ -124,7 +126,7 @@ run local_time/testlocal_time.cpp ;
 run local_time/testlocal_time_iterator.cpp ;
 run local_time/testlocal_time_period.cpp ;
 
-run local_time/testtz_database.cpp 
+run local_time/testtz_database.cpp
      : : ../data/date_time_zonespec.csv local_time/poorly_formed_zonespec.csv
      :  ;
 run local_time/testlocal_time_facet.cpp
@@ -137,17 +139,16 @@ run local_time/testclocks.cpp ;
 #{
 #  local DATE_TIME_PROPERTIES = <define>BOOST_ALL_NO_LIB  <define>USE_DATE_TIME_PRE_1_33_FACET_IO
 #    # FIXME
-#    # std::locale-support toolset::require-boost-spirit-support 
+#    # std::locale-support toolset::require-boost-spirit-support
 #    ;
 
 # Iterate over all public headers and generate a self-contained header test to check for any missing includes
 # and basic syntax errors.
 if ! [ os.environ BOOST_DATE_TIME_TEST_WITHOUT_SELF_CONTAINED_HEADER_TESTS ]
 {
-    local headers_path = [ path.make $(BOOST_ROOT)/libs/date_time/include/boost ] ;
-    for file in [ path.glob-tree $(headers_path) : *.hpp ]
+    for file in [ glob-tree-ex ../include/boost : *.hpp ]
     {
-        local rel_file = [ path.relative-to $(headers_path) $(file) ] ;
+        local rel_file = [ path.relative-to ../include/boost $(file) ] ;
         # Note: The test name starts with '~' in order to group these tests in the test report table, preferably at the end.
         #       All '/' are replaced with '-' because apparently test scripts have a problem with test names containing slashes.
         local test_name = [ regex.replace ~hdr/$(rel_file) "/" "-" ] ;
@@ -159,8 +160,8 @@ if ! [ os.environ BOOST_DATE_TIME_TEST_WITHOUT_SELF_CONTAINED_HEADER_TESTS ]
 
 # Copyright (c) 2000-2020
 # CrystalClear Software, Inc.
-# Subject to the Boost Software License, Version 1.0. 
-# (See accompanying file LICENSE_1_0.txt or 
+# Subject to the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE_1_0.txt or
 # http://www.boost.org/LICENSE_1_0.txt)
 
 

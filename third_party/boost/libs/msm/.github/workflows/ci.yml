@@ -166,6 +166,11 @@ jobs:
         run: |
           echo "using ${{matrix.toolset}} : : ${{matrix.compiler}} ;" > ~/user-config.jam
 
+      - name: Download nlohmann/json
+        run: |
+          cd ../boost-root/libs/$LIBRARY
+          python3 scripts/download_nlohmann_json.py
+
       - name: Run tests
         run: |
           cd ../boost-root
@@ -272,8 +277,79 @@ jobs:
           cmd /c bootstrap
           b2 -d0 headers
 
+      - name: Download nlohmann/json
+        shell: cmd
+        run: |
+          cd ../boost-root/libs/%LIBRARY%
+          python3 scripts/download_nlohmann_json.py
+
       - name: Run tests
         shell: cmd
         run: |
           cd ../boost-root
           b2 -j3 libs/%LIBRARY%/test toolset=${{matrix.toolset}} cxxstd=${{matrix.cxxstd}} address-model=${{matrix.addrmd}} variant=debug,release embed-manifest-via=linker
+
+  antora:
+    name: Antora docs
+    strategy:
+      matrix:
+        include:
+          - { name: Windows, os: windows-latest }
+          - { name: Ubuntu, os: ubuntu-latest }
+          - { name: macOS, os: macos-15 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install packages
+        uses: alandefreitas/cpp-actions/package-install@v1.9.3
+        with:
+          apt-get: git cmake
+
+      - name: Clone Boost.MSM
+        uses: actions/checkout@v4
+
+      - name: Clone Boost
+        uses: alandefreitas/cpp-actions/boost-clone@v1.9.3
+        id: boost-clone
+        with:
+          branch: ${{ (github.ref_name == 'master' && github.ref_name) || 'develop' }}
+          boost-dir: ../boost-source
+          scan-modules-dir: .
+          scan-modules-ignore: msm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup Ninja
+        if: runner.os == 'Windows'
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Build Antora docs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+
+          cd ..
+          BOOST_SRC_DIR="$(pwd)/boost-source"
+          export BOOST_SRC_DIR
+
+          cd msm
+          cd doc
+          bash ./build_antora.sh
+
+          # Antora returns zero even if it fails, so we check if the site directory exists.
+          if [ ! -d "build" ]
+          then
+              echo "Antora build failed"
+              exit 1
+          fi
+
+      - name: Create Antora docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: antora-docs-${{ matrix.name }}
+          path: doc/build

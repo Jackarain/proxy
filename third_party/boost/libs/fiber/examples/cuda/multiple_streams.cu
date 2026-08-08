@@ -12,7 +12,7 @@
 #include <random>
 #include <tuple>
 
-#include <cuda.h>
+#include <cuda_runtime_api.h>
 
 #include <boost/assert.hpp>
 #include <boost/bind.hpp>

@@ -1,0 +1,16 @@
+[[tutorial]]
+
+= `front` tutorial
+
+You will find four front-ends, which are as many state machine description languages, with many more
+possible. For potential language writers, the documentation contains a
+xref:internals.adoc#internals-front-back-interface[description of the interface between front-end and back-end].
+
+The first front-end is an adaptation of the example provided in the
+http://boostpro.com/mplbook[MPL book] with actions defined as pointers
+to state or state machine methods. The second one is based on functors.
+The third, eUML (embedded UML) is a deprecated language based on
+Boost.Proto and Boost.Typeof and hiding most of the metaprogramming to
+increase readability. It is superseded by an experimental PUML front-end that allows a more intuitive syntax.
+Both eUML and the functor front-end also offer a functional library (a bit like Boost.Phoenix)
+for use as action language (UML defining none).

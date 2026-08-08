@@ -23,18 +23,17 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::mutex m0;
-boost::mutex m1;
+boost::mutex g_mutex0;
+boost::mutex g_mutex1;
 
 int main()
 {
-  boost::unique_lock<boost::mutex> lk0(m0);
+  boost::unique_lock<boost::mutex> lk0(g_mutex0);
   boost::unique_lock<boost::mutex> lk1 = lk0;
-  BOOST_TEST(lk1.mutex() == &m1);
+  BOOST_TEST(lk1.mutex() == &g_mutex1);
   BOOST_TEST(lk1.owns_lock() == true);
   BOOST_TEST(lk0.mutex() == 0);
   BOOST_TEST(lk0.owns_lock() == false);
 }
 
 #include "../../../../../remove_error_code_unused_warning.hpp"
-

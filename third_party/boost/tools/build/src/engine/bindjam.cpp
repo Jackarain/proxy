@@ -6,7 +6,9 @@ Distributed under the Boost Software License, Version 1.0.
 
 #include "bindjam.h"
 
+#include "bind.h"
 #include "class.h"
+#include "frames.h"
 #include "function.h"
 #include "hash.h"
 #include "lists.h"
@@ -111,6 +113,28 @@ value_ref from_jam<value_ref>(value_ptr v)
 	return value_ref(v);
 }
 
+template <>
+unsigned long from_jam<unsigned long>(value_ptr jv)
+{
+	return std::stoul(from_jam<string_t>(jv));
+}
+template <>
+value_ptr to_jam(unsigned long v)
+{
+	return to_jam(std::to_string(v));
+}
+
+template <>
+unsigned long long from_jam<unsigned long long>(value_ptr jv)
+{
+	return std::stoull(from_jam<string_t>(jv));
+}
+template <>
+value_ptr to_jam(unsigned long long v)
+{
+	return to_jam(std::to_string(v));
+}
+
 // General marshaling of one jam value list. Default converts the first item
 // to/from the list.
 template <class CxxValue>
@@ -210,7 +234,7 @@ struct converter<std::tuple<ValueTypes...>>
 	static list_ref to_bind_value(const CxxValue & cxx_value)
 	{
 		return to_bind_value(cxx_value,
-			mp::make_index_sequence<std::tuple_size<CxxValue>::value> {});
+			mp::make_index_sequence<std::tuple_size<CxxValue>::value> { });
 	}
 	template <std::size_t... I>
 	static list_ref to_bind_value(
@@ -227,19 +251,17 @@ struct converter<std::tuple<ValueTypes...>>
 	static CxxValue from_bind_value(
 		list_cref::iterator & i, list_cref::iterator e)
 	{
-		return from_bind_value(
-			i, e, mp::make_index_sequence<std::tuple_size<CxxValue>::value> {});
+		return from_bind_value(i, e,
+			mp::make_index_sequence<std::tuple_size<CxxValue>::value> { });
 	}
 	template <std::size_t... I>
-	static CxxValue from_bind_value(list_cref::iterator & i,
-		list_cref::iterator e,
-		mp::index_sequence<I...>)
+	static CxxValue from_bind_value(
+		list_cref::iterator & i, list_cref::iterator e, mp::index_sequence<I...>)
 	{
 		CxxValue result;
 		int _[] { 0,
-			((void)(std::get<I>(result)
-				 = converter<typename std::tuple_element<I,
-					 CxxValue>::type>::from_bind_value(i, e)),
+			((void)(std::get<I>(result) = converter<typename std::tuple_element<
+						I, CxxValue>::type>::from_bind_value(i, e)),
 				0)... };
 		(void)_;
 		return result;
@@ -320,8 +342,7 @@ struct jam_cxx_self
 	{
 		value_ref cxx_self_name(value::make("__cxx_self__"));
 		value_ref cxx_self_value(value::make(self));
-		var_set(
-			frame->module, cxx_self_name, list_new(cxx_self_value), VAR_SET);
+		var_set(frame->module, cxx_self_name, list_new(cxx_self_value), VAR_SET);
 	}
 };
 
@@ -365,7 +386,7 @@ struct jam_marshal_arg<N, lists>
 template <class ArgsTuple, std::size_t N, class Enable = void>
 struct jam_marshal_args
 {
-	static void convert(ArgsTuple & to_args, jam_context & context) {}
+	static void convert(ArgsTuple & to_args, jam_context & context) { }
 };
 template <class ArgsTuple, std::size_t N>
 struct jam_marshal_args<ArgsTuple,
@@ -400,7 +421,7 @@ static LIST * jam_call_init(
 		// Construct the class instance, and set the hidden jam instance var
 		// to keep track of it.
 		Class * self = invoke<Class *>(cxx_call, args,
-			make_index_sequence<std::tuple_size<ArgsTuple>::value> {});
+			make_index_sequence<std::tuple_size<ArgsTuple>::value> { });
 		jam_cxx_self::set(frame, self);
 		// Nothing to return from an init.
 		return L0;
@@ -430,11 +451,9 @@ static LIST * jam_call_method(
 		jam_context context { frame };
 		jam_marshal_args<ArgsTuple, 0>::convert(args, context);
 		// Invoke call, and return marshaled result.
-		return jam_binder::convert_to_bind_value<LIST *>(
-			invoke<Return>(cxx_call,
-				std::tuple_cat(
-					std::make_tuple(jam_cxx_self::get<Class>(frame)), args),
-				make_index_sequence<1 + std::tuple_size<ArgsTuple>::value> {}));
+		return jam_binder::convert_to_bind_value<LIST *>(invoke<Return>(cxx_call,
+			std::tuple_cat(std::make_tuple(jam_cxx_self::get<Class>(frame)), args),
+			make_index_sequence<1 + std::tuple_size<ArgsTuple>::value> { }));
 	}
 	catch (const std::exception &)
 	{
@@ -461,9 +480,8 @@ static LIST * jam_call_method(
 		jam_marshal_args<ArgsTuple, 0>::convert(args, context);
 		// Invoke call, and return marshaled result.
 		invoke<Return>(cxx_call,
-			std::tuple_cat(
-				std::make_tuple(jam_cxx_self::get<Class>(frame)), args),
-			make_index_sequence<1 + std::tuple_size<ArgsTuple>::value> {});
+			std::tuple_cat(std::make_tuple(jam_cxx_self::get<Class>(frame)), args),
+			make_index_sequence<1 + std::tuple_size<ArgsTuple>::value> { });
 		return L0;
 	}
 	catch (const std::exception &)
@@ -489,9 +507,8 @@ static LIST * jam_call_function(
 		jam_context context { frame };
 		jam_marshal_args<ArgsTuple, 0>::convert(args, context);
 		// Invoke call, and return marshaled result.
-		return jam_binder::convert_to_bind_value<LIST *>(
-			invoke<Return>(cxx_call, args,
-				make_index_sequence<std::tuple_size<ArgsTuple>::value> {}));
+		return jam_binder::convert_to_bind_value<LIST *>(invoke<Return>(cxx_call,
+			args, make_index_sequence<std::tuple_size<ArgsTuple>::value> { }));
 	}
 	catch (const std::exception &)
 	{
@@ -515,7 +532,7 @@ static LIST * jam_call_function(
 		jam_marshal_args<ArgsTuple, 0>::convert(args, context);
 		// Invoke call, and return marshaled result.
 		invoke<Return>(cxx_call, args,
-			make_index_sequence<std::tuple_size<ArgsTuple>::value> {});
+			make_index_sequence<std::tuple_size<ArgsTuple>::value> { });
 		return L0;
 	}
 	catch (const std::exception &)
@@ -526,7 +543,7 @@ static LIST * jam_call_function(
 
 template <class... A>
 struct jam_arg_spec_count_sum
-{};
+{ };
 template <>
 struct jam_arg_spec_count_sum<>
 {
@@ -543,7 +560,7 @@ struct jam_arg_spec_count_sum<X, A...>
 	//     = X::count + jam_arg_spec_count_sum<A...>::value;
 	enum : std::size_t
 	{
-		value = X::count + jam_arg_spec_count_sum<A...>::value
+		value = static_cast<std::size_t>(X::count) + static_cast<std::size_t>(jam_arg_spec_count_sum<A...>::value)
 	};
 };
 
@@ -578,19 +595,16 @@ struct jam_arg_spec
 	int count;
 
 	jam_arg_spec(const args_t & args)
-		: jam_arg_spec(args, mp::make_index_sequence<sizeof...(A)> {})
-	{}
+		: jam_arg_spec(args, mp::make_index_sequence<sizeof...(A)> { })
+	{ }
 
 	template <std::size_t... I>
 	jam_arg_spec(const args_t & args, mp::index_sequence<I...>)
 	{
 		count = 0;
 		using std::get;
-#if 0
-        bool _[]{
-            false,
-            append_arg_list_to_spec(get<I>(args.arg))... };
-#endif
+		bool _[] { false, append_arg_list_to_spec(get<I>(args.arg))... };
+		(void)_; // Avoid unused val warnings on older compilers.
 		if (count == 0) spec[count++] = "*";
 		spec[count] = nullptr;
 	}
@@ -612,6 +626,8 @@ struct jam_arg_spec
 				case ::b2::bind::param_::any: spec[count++] = "*"; break;
 				case ::b2::bind::param_::many: spec[count++] = "+"; break;
 				case ::b2::bind::param_::optional: spec[count++] = "?"; break;
+				case ::b2::bind::param_::one:
+				case ::b2::bind::param_::rest: break;
 			}
 		}
 		return true;
@@ -705,8 +721,9 @@ void jam_bind(const string_t & module_name,
 		[function](FRAME * frame, int flags) -> LIST * {
 			return jam_call_function(
 				frame, flags,
-				[function](
-					Args... args) -> Return { return (*function)(args...); },
+				[function](Args... args) -> Return {
+					return (*function)(args...);
+				},
 				static_cast<Return (*)(Args...)>(nullptr));
 		},
 		static_cast<Return (*)(Args...)>(nullptr));
@@ -742,17 +759,17 @@ void jam_binder::bind_class(const char * module_name,
 {
 	value_ptr class_name_obj = object_new(class_name);
 	LIST * class_name_list = list_new(class_name_obj);
-	value_ptr bases_name_obj[]
-		= { object_new(::b2::bind::class_<Bases, jam_binder>::name())...,
-			  nullptr };
+	value_ptr bases_name_obj[] = {
+		object_new(::b2::bind::class_<Bases, jam_binder>::name())..., nullptr
+	};
 	LIST * bases_name_list = L0;
 	for (value_ptr base_name_obj : bases_name_obj)
 	{
 		if (base_name_obj)
 			bases_name_list = list_push_back(bases_name_list, base_name_obj);
 	}
-	/* value_ptr  class_module = */ make_class_module(
-		class_name_list, bases_name_list);
+	/* value_ptr  class_module = */
+	make_class_module(class_name_list, bases_name_list);
 	object_free(class_name_obj);
 	for (value_ptr base_name_obj : bases_name_obj)
 	{

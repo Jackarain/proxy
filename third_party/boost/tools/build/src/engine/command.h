@@ -48,7 +48,6 @@
 
 #include "config.h"
 #include "lists.h"
-#include "mem.h"
 #include "rules.h"
 #include "jam_strings.h"
 

@@ -53,11 +53,11 @@ constexpr auto log_impl(const T x) noexcept
     else if (x < one)
     {
         // Handle reflection.
-        result = -log(one / x);
+        result = -::boost::decimal::log(one / x);
     }
     else if(x > one)
     {
-        // Use the implementation of log10 in order to compute the natural
+        // Use the implementation of ::boost::decimal::log10 in order to compute the natural
         // logarithm. The base of the boost::decimal library is, in fact,
         // base-10. And so, somewhat uncommonly, the fastest and most accurate
         // logarithm in this system is log10 in base-10.

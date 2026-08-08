@@ -1,0 +1,31 @@
+# Copyright René Ferdinand Rivera Morell
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE.txt
+# or copy at https://www.bfgroup.xyz/b2/LICENSE.txt)
+
+import common ;
+import feature ;
+import toolset ;
+
+feature.extend toolset : filc ;
+
+import clang ;
+import clang-linux ;
+toolset.inherit-generators filc : clang-linux ;
+toolset.inherit-rules filc : clang-linux ;
+toolset.inherit-flags filc : clang-linux ;
+
+rule init ( version ? : command * : options * )
+{
+    command = [ common.find-compiler filc : fil++ : $(version) : $(command)
+        : /opt/fil/bin ] ;
+    local command-string = [ common.make-command-string $(command) ] ;
+    if ! $(version)
+    {
+        version ?= [ clang-linux.get-short-version $(command-string) ] ;
+    }
+    local condition = [ common.check-init-parameters filc
+        : version $(version) ] ;
+    common.handle-options filc : $(condition) : $(command) : $(options) ;
+    clang.init-flags filc : $(condition) : $(version) ;
+}

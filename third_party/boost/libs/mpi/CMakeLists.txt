@@ -51,7 +51,6 @@ target_link_libraries(boost_mpi
     Boost::optional
     Boost::serialization
     Boost::smart_ptr
-    Boost::static_assert
     Boost::throw_exception
     Boost::type_traits
 

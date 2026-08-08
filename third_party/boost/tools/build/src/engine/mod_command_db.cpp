@@ -4,6 +4,7 @@ Distributed under the Boost Software License, Version 1.0.
 (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
 */
 
+#include "jam.h"
 #include "mod_command_db.h"
 
 #include "command.h"

@@ -83,7 +83,7 @@ rule process ( )
             {
                 values = $(split[4]) ;
             }
-            if $(args) && ! [ MATCH ^(--).* : $(args[1]) ]
+            if $(args) && ! [ MATCH ^(--) : $(args[1]) ]
             {
                 values += $(args[1]) ;
                 args = $(args[2-]) ;

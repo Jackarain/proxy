@@ -1,19 +1,33 @@
 /* Copyright 2004. Vladimir Prus
+ * Copyright 2026 Paolo Pastori
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE.txt or copy at
  * https://www.bfgroup.xyz/b2/LICENSE.txt)
  */
 
+#include "frames.h"
 #include "lists.h"
-#include "mem.h"
 #include "native.h"
 #include "object.h"
-#include "jam_strings.h"
 #include "variable.h"
 
+#include <utility>
+#include <vector>
 
-/* Use quite klugy approach: when we add order dependency from 'a' to 'b', just
- * append 'b' to of value of variable 'a'.
+
+// vertex type, NOTE: limit the max number of vertices in the graph
+using node_typ = uint16_t;
+using node_vec = std::vector<node_typ>;
+using vec_graph = std::vector<node_vec>;
+
+enum node_state { TO_VISIT, VISITING, VISITED };
+using state_vec = std::vector<char>;
+
+
+/* Use quite klugy approach: when we add order dependency from 'a' to 'b',
+ * just append 'b' to of value of variable 'a'.  NOTE: This is still here
+ * only for backward compatibility reasons since latest order.jam use a
+ * normal class method rule instead of this.
  */
 LIST * add_pair( FRAME * frame, int32_t flags )
 {
@@ -29,7 +43,7 @@ LIST * add_pair( FRAME * frame, int32_t flags )
 /* Given a list and a value, returns position of that value in the list, or -1
  * if not found.
  */
-int32_t list_index( LIST * list, OBJECT * value )
+static int32_t list_index( LIST * list, OBJECT * value )
 {
     int32_t result = 0;
     LISTITER iter = list_begin( list );
@@ -40,114 +54,74 @@ int32_t list_index( LIST * list, OBJECT * value )
     return -1;
 }
 
-enum colors { white, gray, black };
-
-
-/* Main routine for topological sort. Calls itself recursively on all adjacent
- * vertices which were not yet visited. After that, 'current_vertex' is added to
- * '*result_ptr'.
+/* Routine for depth first traversal. Calls itself recursively on all adjacent
+ * vertices which were not yet visited. After that, 'current_vertex' is added
+ * to 'result'.
  */
-void do_ts( int32_t * * graph, int32_t current_vertex, int32_t * colors, int32_t * * result_ptr
-    )
+static void do_df( FRAME * frame, const vec_graph & graph,
+        int32_t current_vertex, state_vec & state, node_vec & result )
 {
-    int32_t i;
-
-    colors[ current_vertex ] = gray;
-    for ( i = 0; graph[ current_vertex ][ i ] != -1; ++i )
+    state[ current_vertex ] = VISITING;
+    for ( auto adjacent_vertex : graph[ current_vertex ] )
     {
-        int32_t adjacent_vertex = graph[ current_vertex ][ i ];
-        if ( colors[ adjacent_vertex ] == white )
-            do_ts( graph, adjacent_vertex, colors, result_ptr );
-        /* The vertex is either black, in which case we do not have to do
-         * anything, or gray, in which case we have a loop. If we have a loop,
-         * it is not clear what useful diagnostic we can emit, so we emit
-         * nothing.
-         */
+        if ( state[ adjacent_vertex ] == TO_VISIT )
+            do_df( frame, graph, adjacent_vertex, state, result );
+        // TODO
+        //if ( state[ adjacent_vertex ] == VISITING )
+        //    emit warning "Cyclic order dependency on 'x' and 'y'."
     }
-    colors[ current_vertex ] = black;
-    **result_ptr = current_vertex;
-    ( *result_ptr )++;
+    state[ current_vertex ] = VISITED;
+    result.push_back( static_cast<node_typ>( current_vertex ) );
 }
 
-
-static void topological_sort( int32_t * * graph, int32_t num_vertices, int32_t * result )
+static void topological_sort( FRAME * frame, const vec_graph & graph,
+        int32_t size, node_vec & result )
 {
-    int32_t i;
-    int32_t * colors = ( int32_t * )BJAM_CALLOC( num_vertices, sizeof( int32_t ) );
-    for ( i = 0; i < num_vertices; ++i )
-        colors[ i ] = white;
-
-    for ( i = num_vertices - 1; i >= 0; --i )
-        if ( colors[ i ] == white )
-            do_ts( graph, i, colors, &result );
-
-    BJAM_FREE( colors );
+    state_vec state(size, TO_VISIT);
+    for ( int32_t i = size - 1; i >= 0; --i )
+        if ( state[ i ] == TO_VISIT )
+            do_df( frame, graph, i, state, result );
 }
 
 
 LIST * order( FRAME * frame, int32_t flags )
 {
-    LIST * arg = lol_get( frame->args, 0 );
-    LIST * result = L0;
-    int32_t src;
-    LISTITER iter = list_begin( arg );
-    LISTITER const end = list_end( arg );
+    b2::list_cref arg( lol_get( frame->args, 0 ) );
+    int32_t length = arg.length();
+    if (length == 0) return L0;
 
-    /* We need to create a graph of order dependencies between the passed
-     * objects. We assume there are no duplicates passed to 'add_pair'.
-     */
-    int32_t length = list_length( arg );
-    int32_t * * graph = ( int32_t * * )BJAM_CALLOC( length, sizeof( int32_t * ) );
-    int32_t * order = ( int32_t * )BJAM_MALLOC( ( length + 1 ) * sizeof( int32_t ) );
-
-    for ( src = 0; iter != end; iter = list_next( iter ), ++src )
+    // Build dependency graph
+    vec_graph graph;
+    graph.reserve( length );
+    for ( auto & obj : arg )
     {
-        /* For all objects this one depends upon, add elements to 'graph'. */
-        LIST * dependencies = var_get( frame->module, list_item( iter ) );
-        int32_t index = 0;
-        LISTITER dep_iter = list_begin( dependencies );
-        LISTITER const dep_end = list_end( dependencies );
-
-        graph[ src ] = ( int32_t * )BJAM_CALLOC( list_length( dependencies ) + 1,
-            sizeof( int32_t ) );
-        for ( ; dep_iter != dep_end; dep_iter = list_next( dep_iter ) )
+        b2::list_cref deps( var_get( frame->module, obj ) );
+        node_vec depl;
+        depl.reserve( deps.length() );
+        for ( auto & dep : deps )
         {
-            int32_t const dst = list_index( arg, list_item( dep_iter ) );
+            int32_t dst = list_index( *arg, dep );
             if ( dst != -1 )
-                graph[ src ][ index++ ] = dst;
+                depl.push_back( static_cast<node_typ>( dst ) ) ;
         }
-        graph[ src ][ index ] = -1;
+        graph.push_back( std::move( depl ) );
     }
 
-    topological_sort( graph, length, order );
+    node_vec order;
+    order.reserve( length );
+    topological_sort( frame, graph, length, order );
 
-    {
-        int32_t index = length - 1;
-        for ( ; index >= 0; --index )
-        {
-            int32_t i;
-            LISTITER iter = list_begin( arg );
-            for ( i = 0; i < order[ index ]; ++i, iter = list_next( iter ) );
-            result = list_push_back( result, object_copy( list_item( iter ) ) );
-        }
-    }
+    b2::list_ref result;
+    for ( int32_t i = length - 1; i >= 0; --i )
+        result.push_back( object_copy( arg[ order[ i ] ] ) );
 
-    /* Clean up */
-    {
-        int32_t i;
-        for ( i = 0; i < length; ++i )
-            BJAM_FREE( graph[ i ] );
-        BJAM_FREE( graph );
-        BJAM_FREE( order );
-    }
-
-    return result;
+    return result.release();
 }
 
 
 void init_order()
 {
-    {
+    {   // for backward compatibility, see #593
         char const * args[] = { "first", "second", 0 };
         declare_native_rule( "class@order", "add-pair", args, add_pair, 1 );
     }

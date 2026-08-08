@@ -2,6 +2,7 @@
 
 # Copyright 2007 Rene Rivera.
 # Copyright 2011 Steven Watanabe
+# Copyright 2026 Paolo Pastori
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
 
@@ -16,51 +17,39 @@
 # depending on target A to be built prematurely.
 
 import BoostBuild
+import sys
 
-t = BoostBuild.Tester(["-d1"], pass_toolset=0)
+sleep1_s = 1.0
+sleep2_s = 0.1
 
-t.write("sleep.bat", """\
-::@timeout /T %1 /NOBREAK >nul
-@ping 127.0.0.1 -n 2 -w 1000 >nul
-@ping 127.0.0.1 -n %1 -w 1000 >nul
-@exit /B 0
-""")
+t = BoostBuild.Tester(["-d1"], pass_toolset=False)
 
 t.write("file.jam", """\
-if $(NT)
-{
-    SLEEP = @call sleep.bat ;
-}
-else
-{
-    SLEEP = sleep ;
-}
-
 actions .gen.
-{
+{{
     echo 001
-    $(SLEEP) 4
+    "{0}" -c "import time; time.sleep({1})"
     echo 002
-}
-rule .use.1 { DEPENDS $(<) : $(>) ; }
+}}
+rule .use.1 {{ DEPENDS $(<) : $(>) ; }}
 actions .use.1
-{
+{{
     echo 003
-}
+}}
 
-rule .use.2 { DEPENDS $(<) : $(>) ; }
+rule .use.2 {{ DEPENDS $(<) : $(>) ; }}
 actions .use.2
-{
-    $(SLEEP) 1
+{{
+    "{0}" -c "import time; time.sleep({2})"
     echo 004
-}
+}}
 
 .gen. g1.generated g2.generated ;
 .use.1 u1.user : g1.generated ;
 .use.2 u2.user : g2.generated ;
 
 DEPENDS all : u1.user u2.user ;
-""")
+""".format(sys.executable, sleep1_s, sleep2_s))
 
 t.run_build_system(["-ffile.jam", "-j2"], stdout="""\
 ...found 5 targets...

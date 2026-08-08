@@ -1,5 +1,5 @@
 # Copyright 2003, 2005, 2007 Dave Abrahams
-# Copyright 2006, 2007 Rene Rivera
+# Copyright 2006-2026 René Ferdinand Rivera Morell
 # Copyright 2003, 2004, 2005, 2006 Vladimir Prus
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or copy at
@@ -39,15 +39,12 @@ import virtual-target ;
 #
 ################################################################################
 
-# Shortcut used in this module for accessing used command-line parameters.
-.argv = [ modules.peek : ARGV ] ;
-
 # Flag indicating we should display additional debugging information related to
 # locating and loading Boost Build configuration files.
 .debug-config = [ args.get-arg debug-configuration ] ;
 
 # Virtual targets obtained when building main targets references on the command
-# line. When running 'bjam --clean main_target' we want to clean only files
+# line. When running 'b2 --clean main_target' we want to clean only files
 # belonging to that main target so we need to record which targets are produced
 # for it.
 .results-of-main-targets = ;
@@ -130,7 +127,7 @@ EXPORT build-system : set-pre-build-hook set-post-build-hook ;
 #
 local rule actual-clean-targets ( )
 {
-    # The cleaning is tricky. Say, if user says 'bjam --clean foo' where 'foo'
+    # The cleaning is tricky. Say, if user says 'b2 --clean foo' where 'foo'
     # is a directory, then we want to clean targets which are in 'foo' as well
     # as those in any children Jamfiles under foo but not in any unrelated
     # Jamfiles. To achieve this we first mark all projects explicitly detected
@@ -183,6 +180,7 @@ local rule actual-clean-targets ( )
 #
 local rule find-target ( target-id )
 {
+    # TODO: adjust this regex and related ones in property.jam at the same time
     local split = [ MATCH (.*)//(.*) : $(target-id) ] ;
 
     local pm ;
@@ -201,7 +199,7 @@ local rule find-target ( target-id )
         result = [ project.target $(pm) ] ;
     }
 
-    if $(split)
+    if $(result) && $(split)
     {
         result = [ $(result).find $(split[2]) ] ;
     }
@@ -215,10 +213,7 @@ local rule find-target ( target-id )
 local rule initialize-config-module ( module-name : location ? )
 {
     project.initialize $(module-name) : $(location) ;
-    if USER_MODULE in [ RULENAMES ]
-    {
-        USER_MODULE $(module-name) ;
-    }
+    USER_MODULE $(module-name) ;
 }
 
 
@@ -518,18 +513,20 @@ local rule load-configuration-files
 #
 args.add-arg toolsets : --toolset
     : "Autoconfigure toolsets (--toolset=xx,yy,...zz or toolset=xx,yy,...zz)." ;
+
 local rule process-explicit-toolset-requests
 {
     local extra-properties ;
 
     local option-toolsets  = [ regex.split-list [ args.get-arg toolsets ] : "," ] ;
-    local feature-toolsets = [ regex.split-list [ MATCH ^toolset=(.*)$ : $(.argv) ] : "," ] ;
+    local feature-toolsets = [ regex.split-list [ MATCH ^toolset=(.*)$ : [ args.extra-args ] ] : "," ] ;
 
     for local t in $(option-toolsets) $(feature-toolsets)
     {
         # Parse toolset-version/properties.
-        local toolset = [ MATCH "([^/]+)/?.*" : $(t) ] ;
-        local properties = [ feature.expand-subfeatures <toolset>$(toolset) : true ] ;
+        local toolset = [ MATCH "([^/]+)" : $(t) ] ;
+        local properties = [ feature.expand-subfeatures <toolset>$(toolset)
+            : dont-validate ] ;
         local toolset-property = [ property.select <toolset> : $(properties) ] ;
         local known ;
         if $(toolset-property:G=) in [ feature.values <toolset> ]
@@ -564,7 +561,7 @@ local rule process-explicit-toolset-requests
         # Make sure we get an appropriate property into the build request in
         # case toolset has been specified using the "--toolset=..." command-line
         # option form.
-        if ! $(t) in $(.argv) $(feature-toolsets)
+        if ! $(t) in [ args.extra-args ] $(feature-toolsets)
         {
             if $(.debug-config)
             {
@@ -655,17 +652,13 @@ local rule should-clean-project ( project )
         else
         {
             default-toolset = gcc ;
-            if [ os.name ] = NT
+            switch [ os.name ]
             {
-                default-toolset = msvc ;
-            }
-            else if [ os.name ] = VMS
-            {
-                default-toolset = vmsdecc ;
-            }
-            else if [ os.name ] = MACOSX || [ os.name ] = FREEBSD || [ os.name ] = OPENBSD
-            {
-                default-toolset = clang ;
+                case FREEBSD : default-toolset = clang ;
+                case MACOSX  : default-toolset = clang ;
+                case NT      : default-toolset = msvc ;
+                case OPENBSD : default-toolset = clang ;
+                case VMS     : default-toolset = vmsdecc ;
             }
         }
 
@@ -680,27 +673,12 @@ local rule should-clean-project ( project )
     }
 
 
-    # Parse command line for targets and properties. Note that this requires
-    # that all project files already be loaded.
-    # FIXME: This is not entirely true. Additional project files may be loaded
-    # only later via the project.find() rule when dereferencing encountered
-    # target ids containing explicit project references. See what to do about
-    # those as such 'lazy loading' may cause problems that are then extremely
-    # difficult to debug.
-    local build-request = [ build-request.from-command-line $(.argv)
-        $(extra-properties) ] ;
-    local target-ids = [ $(build-request).get-at 1 ] ;
-    local properties = [ $(build-request).get-at 2 ] ;
+    # all arguments have to be declared before calling of
+    # build-request.from-command-line because the rule need to know all
+    # options registered for correct parsing of command line args
 
-
-    # Check that we actually found something to build.
-    if ! $(current-project) && ! $(target-ids)
-    {
-        import errors ;
-        errors.user-error no Jamfile "in" current directory found, and no target
-            references specified. ;
-    }
-
+    args.add-arg durations : --durations
+        : "Display top durations targets by execution time." ;
 
     # Flags indicating that this build system run has been started in order to
     # clean existing instead of create new targets. Note that these are not the
@@ -714,6 +692,32 @@ local rule should-clean-project ( project )
         : "Remove known build results instead of building them."
         : flag ;
     local cleanall = [ args.get-arg clean-all ] ;
+
+    args.add-arg dump-generators : --dump-generators
+        : "Display the active build generators."
+        : flag ;
+
+
+    # Parse command line for targets and properties. Note that this requires
+    # that all project files already be loaded.
+    # FIXME: This is not entirely true. Additional project files may be loaded
+    # only later via the project.find() rule when dereferencing encountered
+    # target ids containing explicit project references. See what to do about
+    # those as such 'lazy loading' may cause problems that are then extremely
+    # difficult to debug.
+    local build-request = [ build-request.from-extra-args [ args.extra-args ]
+        $(extra-properties) ] ;
+    local target-ids = [ $(build-request).get-at 1 ] ;
+    local properties = [ $(build-request).get-at 2 ] ;
+
+
+    # Check that we actually found something to build.
+    if ! $(current-project) && ! $(target-ids)
+    {
+        import errors ;
+        errors.user-error no Jamfile "in" current directory found, and no target
+            references specified. ;
+    }
 
 
     # List of explicitly requested files to build. Any target references read
@@ -772,9 +776,6 @@ local rule should-clean-project ( project )
         targets += [ project.target [ project.module-name "." ] ] ;
     }
 
-    args.add-arg dump-generators : --dump-generators
-        : "Display the active build generators."
-        ;
     if [ args.get-arg dump-generators ]
     {
         generators.dump ;
@@ -797,15 +798,16 @@ local rule should-clean-project ( project )
     # set will be used for a single build run. E.g. if multiple toolsets are
     # specified then requested targets will be built with each of them.
     # The expansion is being performed as late as possible so that the feature
-    # validation is performed after all necessary modules (including project targets
-    # on the command line) have been loaded.
+    # validation is performed after all necessary modules (including project
+    # targets on the command line) have been loaded.
+    local expanded ;
     if $(properties)
     {
-        local cli_properties = [ build-request.convert-command-line-elements $(properties) ] ;
+        local cli_properties =
+            [ build-request.convert-command-line-elements $(properties) ] ;
         if $(cli_properties)
         {
-            expanded += $(cli_properties) ;
-            expanded = [ build-request.expand-no-defaults $(expanded) ] ;
+            expanded = [ build-request.expand-no-defaults $(cli_properties) ] ;
             local xexpanded ;
             for local e in $(expanded)
             {
@@ -841,26 +843,21 @@ local rule should-clean-project ( project )
         }
     }
 
-    args.add-arg durations : --durations
-        : "Record the timing of some number (default 10) of actions."
-        ;
     local durations = [ args.get-arg durations ] ;
     if $(durations) {
-        durations = $(durations[3]) ;
-        durations ?= 10 ;
 
-        .target-times = ;
+        local target-times = ;
         rule record-time ( : target : start end user system clock )
         {
             # limit precision to milliseconds
             clock = [ MATCH "^([0-9]+[.][0-9][0-9][0-9])" : $(clock) ] ;
 
-            .target-times += "$(clock):::$(target)" ;
+            target-times += "$(clock):::$(target)" ;
         }
         IMPORT build-system : record-time : : build-system.record-time ;
 
-        # When no __TIMING_RULE__ is set "on" a target, the search falls back to
-        # the global module.
+        # When no __TIMING_RULE__ is set "on" a target, the search falls back
+        # to the global module.
         module { __TIMING_RULE__ = build-system.record-time ; }
     }
 
@@ -898,8 +895,8 @@ local rule should-clean-project ( project )
             local os        = [ modules.peek : OS OSPLAT JAMUNAME ] "" ;
             local timestamp = [ modules.peek : JAMDATE ] ;
             local cwd       = [ PWD ] ;
-            local command   = $(.argv) ;
-            local bb-version = [ version.boost-build ] ;
+            local command   = [ modules.peek : ARGV ] ;
+            local bb-version = [ version.build ] ;
             .header on $(xml-file) =
                 "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
                 "$(nl)<build format=\"1.0\" version=\"$(bb-version)\">"
@@ -947,7 +944,7 @@ local rule should-clean-project ( project )
                 "$(nl)  </targets>" ;
 
             # Build $(xml-file) after $(constituents). Do so even if a
-            # constituent action fails and regenerate the xml on every bjam run.
+            # constituent action fails and regenerate the xml on every b2 run.
             INCLUDES $(xml-file) : $(constituents) ;
             ALWAYS $(xml-file) ;
             __ACTION_RULE__ on $(xml-file) =
@@ -1018,7 +1015,7 @@ local rule should-clean-project ( project )
                     "$(nl)    <properties>" ;
                 for local prop in [ $(action-props).raw ]
                 {
-                    local prop-name = [ MATCH ^<(.*)>$ : $(prop:G) ] ;
+                    local prop-name = [ MATCH ^<(.+)>$ : $(prop:G) ] ;
                     .contents on $(xml-file) +=
                         "$(nl)      <property name=\"$(prop-name)\"><![CDATA[$(prop:G=)]]></property>" ;
                 }
@@ -1037,8 +1034,8 @@ local rule should-clean-project ( project )
                 "$(nl)  </action>" ;
         }
 
-        # When no __ACTION_RULE__ is set "on" a target, the search falls back to
-        # the global module.
+        # When no __ACTION_RULE__ is set "on" a target, the search falls back
+        # to the global module.
         module
         {
             __ACTION_RULE__ = build-system.out-xml.collect
@@ -1055,7 +1052,7 @@ local rule should-clean-project ( project )
             ;
     }
 
-    # The 'all' pseudo target is not strictly needed expect in the case when we
+    # The 'all' pseudo target is not strictly needed except in the case when we
     # use it below but people often assume they always have this target
     # available and do not declare it themselves before use which may cause
     # build failures with an error message about not being able to build the
@@ -1100,32 +1097,27 @@ local rule should-clean-project ( project )
         }
 
         DEPENDS all : $(actual-targets) ;
-        if UPDATE_NOW in [ RULENAMES ]
+        local ok = [ UPDATE_NOW all ] ;
+        # Force sequence updating of regular targets, then the xml
+        # log output target. To ensure the output records all built
+        # as otherwise if could execute out-of-sequence when
+        # doing parallel builds.
+        if $(.out-xml)
         {
-            local ok = [ UPDATE_NOW all ] ;
-            # Force sequence updating of regular targets, then the xml
-            # log output target. To ensure the output records all built
-            # as otherwise if could execute out-of-sequence when
-            # doing parallel builds.
-            if $(.out-xml)
-            {
-                UPDATE_NOW $(.out-xml) : : ignore-minus-n ;
-            }
-            for local function in $(.post-build-hook)
-            {
-                indirect.call $(function) $(ok) ;
-            }
-            # Prevent automatic update of the 'all' target, now that we have
-            # explicitly updated what we wanted.
-            UPDATE ;
+            UPDATE_NOW $(.out-xml) : : ignore-minus-n ;
         }
-        else
+        for local function in $(.post-build-hook)
         {
-            UPDATE all $(.out-xml) ;
+            indirect.call $(function) $(ok) ;
         }
+        # Prevent automatic update of the 'all' target, now that we have
+        # explicitly updated what we wanted.
+        UPDATE ;
+
         if $(durations) {
-            ECHO "============================= slowest $(durations) durations =============================" ;
-            local sorted-durations = [ SORT $(.target-times) ] ;
+            ECHO "=============================" slowest $(durations) durations
+                 "=============================" ;
+            local sorted-durations = [ SORT $(target-times) ] ;
             for local t in [ sequence.reverse $(sorted-durations[-$(durations)--1]) ] {
                 t = [ SPLIT_BY_CHARACTERS $(t) : ":::" ] ;
                 local action = [ on $(t[-1]) return $(.action) ] ;

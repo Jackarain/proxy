@@ -86,7 +86,7 @@ local rule brief-comment (
 )
 {
     local d = $(docs:J=" ") ;
-    local p = [ MATCH ".*([.])$" : $(d) ] ;
+    local p = [ MATCH "([.])$" : $(d) ] ;
     if ! $(p) { d = $(d)"." ; }
     d = $(d)" " ;
     local m = [ MATCH "^([^.]+[.])(.*)" : $(d) ] ;
@@ -270,7 +270,7 @@ local rule print-help-top ( )
     print.list-item "-d0 Suppress all informational messages" ;
     print.list-item "-q Stop at first error" ;
     print.list-item "--reconfigure Rerun all configuration checks" ;
-    print.list-item "--durations[=N] Report top N targets by execution time" ;
+    print.list-item "--durations=N Report top N targets by execution time" ;
     print.list-item "--debug-configuration Diagnose configuration" ;
     print.list-item "--debug-building Report which targets are built with what properties" ;
     print.list-item "--debug-generator Diagnose generator search/execution" ;
@@ -786,7 +786,7 @@ local rule scan-rule (
         {
             rule-name = $(scope-name).$(rule-name) ;
         }
-        local is-local = [ MATCH "^(local).*" : $(rule-parts[1]) ] ;
+        local is-local = [ MATCH "^(local)" : $(rule-parts[1]) ] ;
         if $(comment-block)
         {
             set-rule-doc $(rule-name) $(module-name) $(is-local) : $(comment-block) ;
@@ -804,11 +804,11 @@ local rule scan-rule (
             if [ scan-rule $(syntax-block) : $(var) ]
             {
             }
-            else if [ MATCH "^(\\{)" : $(syntax-block) ]
+            else if [ MATCH "^([{])" : $(syntax-block) ]
             {
                 scope-level += "{" ;
             }
-            else if [ MATCH "^[^\\}]*([\\}])[$(ws)]*$"  : $(syntax-block) ]
+            else if [ MATCH "^[^}]*([}])[$(ws)]*$"  : $(syntax-block) ]
             {
                 scope-level = $(scope-level[2-]) ;
             }
@@ -849,7 +849,7 @@ local rule scan-rule-arguments (
         arg-name = $(token) ;
         arg-signature += $(token) ;
         token = [ extract-token $(var) ] ;
-        if [ MATCH "^([\\*\\+\\?])" : $(token) ]
+        if [ MATCH "^([*+?])" : $(token) ]
         {
             arg-qualifier = $(token) ;
             arg-signature += $(token) ;
@@ -887,10 +887,10 @@ local rule scan-variable (
 {
     # [1] = name, [2] = value(s)
     local var-parts =
-        [ MATCH "^[$(ws)]*([^$(ws)]+)[$(ws)]+([\\?\\=]*)[$(ws)]+([^\\;]*)\\;" : $(syntax) ] ;
+        [ MATCH "^[$(ws)]*([^$(ws)]+)[$(ws)]+([?]?=)[$(ws)]+([^;]*);" : $(syntax) ] ;
     if $(var-parts)
     {
-        local value = [ MATCH "^(.*)[ ]$" : $(var-parts[3-]:J=" ") ] ;
+        local value = [ MATCH "^(.*) $" : $(var-parts[3-]:J=" ") ] ;
         local default-value = "" ;
         local initial-valie = "" ;
         if $(var-parts[2]) = "?="
@@ -934,11 +934,11 @@ local rule scan-class (
             if [ scan-rule $(syntax-block) : $(var) ]
             {
             }
-            else if [ MATCH "^(\\{)" : $(syntax-block) ]
+            else if [ MATCH "^([{])" : $(syntax-block) ]
             {
                 scope-level += "{" ;
             }
-            else if [ MATCH "^[^\\}]*([\\}])[$(ws)]*$"  : $(syntax-block) ]
+            else if [ MATCH "^[^}]*([}])[$(ws)]*$"  : $(syntax-block) ]
             {
                 scope-level = $(scope-level[2-]) ;
             }
@@ -984,7 +984,7 @@ rule scan-module (
         if [ scan-rule $(syntax-block) : text ] { }
         else if [ scan-variable $(syntax-block) : text ] { }
         else if [ scan-class $(syntax-block) : text ] { }
-        else if [ MATCH ".*([cC]opyright).*" : $(comment-block:J=" ") ]
+        else if [ MATCH "([cC]opyright)" : $(comment-block:J=" ") ]
         {
             # mark as the copy for the module.
             set-module-copyright $(module-name) : $(comment-block) ;

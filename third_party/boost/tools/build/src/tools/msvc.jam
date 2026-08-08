@@ -483,7 +483,7 @@ rule configure-version-specific ( toolset : version : conditions )
     # 12.0 (VS2013 Update 2) introduced /Zc:inline opt-in standard conformance
     # compiler flag that also similar to linker /opt:ref removes unreferenced
     # variables and functions that have internal linkage
-    if ! [ version.version-less [ SPLIT_BY_CHARACTERS [ MATCH "^([0123456789.]+)" : $(version) ] : . ] : 12 ]
+    if ! [ version.version-less [ SPLIT_BY_CHARACTERS [ MATCH "^([0-9.]+)" : $(version) ] : . ] : 12 ]
     {
         toolset.flags $(toolset).compile OPTIONS $(conditions) : "/Zc:inline" ;
 
@@ -493,14 +493,14 @@ rule configure-version-specific ( toolset : version : conditions )
 
     # 14.0 introduced /Zc:throwingNew opt-in flag that disables a workaround
     # for not throwing operator new in VC up to 6.0
-    if ! [ version.version-less [ SPLIT_BY_CHARACTERS [ MATCH "^([0123456789.]+)" : $(version) ] : . ] : 14 ]
+    if ! [ version.version-less [ SPLIT_BY_CHARACTERS [ MATCH "^([0-9.]+)" : $(version) ] : . ] : 14 ]
     {
         toolset.flags $(toolset).compile C++FLAGS $(conditions) : "/Zc:throwingNew" ;
     }
 
     # 14.27 (VS2019 Version 16.7) introduced support for ASAN on x86 and x64 CPUs
     # This check however now only tests for 14.2 (which is 16.0) as msvc.jam doesn't distinguish between minor versions (e.g. 14.21..14.28 etc)
-    if ! [ version.version-less [ SPLIT_BY_CHARACTERS [ MATCH "^([0123456789.]+)" : $(version) ] : . ] : 14 2 ]
+    if ! [ version.version-less [ SPLIT_BY_CHARACTERS [ MATCH "^([0-9.]+)" : $(version) ] : . ] : 14 2 ]
     {
         # General asan compile and link options.
         toolset.flags $(toolset).compile OPTIONS
@@ -613,7 +613,7 @@ rule configure-version-specific ( toolset : version : conditions )
         toolset.flags $(toolset).link LINKFLAGS $(conditions)/$(.cpu-arch-arm64) : "/MACHINE:ARM64" ;
 
         local conditionx = [ feature.split $(conditions) ] ;
-        if ! [ version.version-less [ SPLIT_BY_CHARACTERS [ MATCH "^([0123456789.]+)" : $(version) ] : . ] : 11 ] {
+        if ! [ version.version-less [ SPLIT_BY_CHARACTERS [ MATCH "^([0-9.]+)" : $(version) ] : . ] : 11 ] {
             toolset.add-defaults $(conditionx:J=,)\:<embed-manifest-via>linker ;
         }
         else {
@@ -1155,7 +1155,7 @@ local rule generate-setup-cmd ( version : command : parent : options * : cpu : g
         }
         else
         {
-            if [ MATCH "(14.5)" : $(version) ]
+            if [ MATCH "(14\\.5)" : $(version) ]
             {
                 if $(.debug-configuration)
                 {
@@ -1163,7 +1163,7 @@ local rule generate-setup-cmd ( version : command : parent : options * : cpu : g
                 }
                 parent = [ path.native [ path.join  $(parent) "..\\..\\..\\..\\..\\Auxiliary\\Build" ] ] ;
             }
-            else if [ MATCH "(14.[34])" : $(version) ]
+            else if [ MATCH "(14\\.[34])" : $(version) ]
             {
                 if $(.debug-configuration)
                 {
@@ -1171,7 +1171,7 @@ local rule generate-setup-cmd ( version : command : parent : options * : cpu : g
                 }
                 parent = [ path.native [ path.join  $(parent) "..\\..\\..\\..\\..\\Auxiliary\\Build" ] ] ;
             }
-            else if [ MATCH "(14.2)" : $(version) ]
+            else if [ MATCH "(14\\.2)" : $(version) ]
             {
                 if $(.debug-configuration)
                 {
@@ -1179,7 +1179,7 @@ local rule generate-setup-cmd ( version : command : parent : options * : cpu : g
                 }
                 parent = [ path.native [ path.join  $(parent) "..\\..\\..\\..\\..\\Auxiliary\\Build" ] ] ;
             }
-            else if [ MATCH "(14.1)" : $(version) ]
+            else if [ MATCH "(14\\.1)" : $(version) ]
             {
                 if $(.debug-configuration)
                 {
@@ -1349,19 +1349,19 @@ local rule configure-really ( version ? : options * )
             # version from the path.
             # FIXME: We currently detect both Microsoft Visual Studio 9.0 and
             # 9.0express as 9.0 here.
-            if [ MATCH "(MSVC(\\/|\\\\)14.5)" : $(command) ]
+            if [ MATCH "(MSVC(\\/|\\\\)14\\.5)" : $(command) ]
             {
                 version = 14.5 ;
             }
-            else if [ MATCH "(MSVC(\\/|\\\\)14.[34])" : $(command) ]
+            else if [ MATCH "(MSVC(\\/|\\\\)14\\.[34])" : $(command) ]
             {
                 version = 14.3 ;
             }
-            else if [ MATCH "(MSVC(\\/|\\\\)14.2)" : $(command) ]
+            else if [ MATCH "(MSVC(\\/|\\\\)14\\.2)" : $(command) ]
             {
                 version = 14.2 ;
             }
-            else if [ MATCH "(MSVC(\\/|\\\\)14.1)" : $(command) ]
+            else if [ MATCH "(MSVC(\\/|\\\\)14\\.1)" : $(command) ]
             {
                 version = 14.1 ;
             }
@@ -1389,7 +1389,7 @@ local rule configure-really ( version ? : options * )
             {
                 version = 8.0 ;
             }
-            else if [ MATCH "(NET 2003[\/\\]VC7)" : $(command) ]
+            else if [ MATCH "(NET 2003[/\\]VC7)" : $(command) ]
             {
                 version = 7.1 ;
             }
@@ -1398,7 +1398,7 @@ local rule configure-really ( version ? : options * )
             {
                 version = 7.1toolkit ;
             }
-            else if [ MATCH "(.NET[\/\\]VC7)" : $(command) ]
+            else if [ MATCH "(.NET[/\\]VC7)" : $(command) ]
             {
                 version = 7.0 ;
             }
@@ -1440,7 +1440,7 @@ local rule configure-really ( version ? : options * )
 
         # For 14.1+ we need the exact version as MS is planning rolling updates
         # that will cause our `setup-cmd` to become invalid
-        exact-version = [ MATCH "(14\.[1-9][0-9]\.[0-9\.]+)" : $(command) ] ;
+        exact-version = [ MATCH "(14\\.[1-9][0-9]\\.[0-9\.]+)" : $(command) ] ;
 
         common.handle-options msvc : $(conditions) : $(command) : $(options) ;
 
@@ -1583,11 +1583,11 @@ local rule configure-really ( version ? : options * )
             # each of which have a different directory for their vcvars setup scripts.
             local phone-parent = [ path.native [ path.join $(parent) WPSDK ] ] ;
             local phone-directory = $(phone-parent) ;
-            if [ MATCH "(11.0)" : $(version) ]
+            if [ MATCH "(11\\.0)" : $(version) ]
             {
                 phone-directory = [ path.native [ path.join $(phone-directory) WP80 ] ] ;
             }
-            else if [ MATCH "(12.0)" : $(version) ]
+            else if [ MATCH "(12\\.0)" : $(version) ]
             {
                 phone-directory = [ path.native [ path.join $(phone-directory) WP81 ] ] ;
             }

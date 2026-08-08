@@ -8,23 +8,22 @@
 #include <iostream>
 #include <boost/detail/lightweight_test.hpp>
 
-int count = 0;
-boost::mutex mutex;
+int g_count = 0;
+boost::mutex g_mutex;
 
 void increment_count()
 {
-    boost::unique_lock<boost::mutex> lock(mutex);
-    std::cout << "count = " << ++count << std::endl;
+    boost::unique_lock<boost::mutex> lock(g_mutex);
+    std::cout << "count = " << ++g_count << std::endl;
 }
 
-boost::thread_group threads2;
-boost::thread* th2 = 0;
+boost::thread_group g_threads2;
 
 void increment_count_2()
 {
-    boost::unique_lock<boost::mutex> lock(mutex);
-    BOOST_TEST(threads2.is_this_thread_in());
-    std::cout << "count = " << ++count << std::endl;
+    boost::unique_lock<boost::mutex> lock(g_mutex);
+    BOOST_TEST(g_threads2.is_this_thread_in());
+    std::cout << "count = " << ++g_count << std::endl;
 }
 
 int main()
@@ -63,11 +62,11 @@ int main()
   }
   {
     {
-      boost::unique_lock<boost::mutex> lock(mutex);
+      boost::unique_lock<boost::mutex> lock(g_mutex);
       boost::thread* th2 = new boost::thread(&increment_count_2);
-      threads2.add_thread(th2);
+      g_threads2.add_thread(th2);
     }
-    threads2.join_all();
+    g_threads2.join_all();
   }
   return boost::report_errors();
 }

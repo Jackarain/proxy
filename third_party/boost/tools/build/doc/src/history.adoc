@@ -1,6 +1,81 @@
 [[b2.history]]
 = History
 
+== Version 5.5.1
+
+Fix python config error when `ldd --version` fails instead of resulting in not
+detecting `glibc` for the Python configuration.
+
+== Version 5.5.0
+
+This release has a bunch of internal cleanups and bug fixes. But it also has a
+handful of new features. There's initial support for the Fil-C compiler,
+the `version` attribute for features to manage versioning of targets,
+and additional support for JSON data.
+
+Special thanks to Paolo Pastori for the many fixes and cleanups in this release.
+
+* *New*: Add toolset, and bootstrapping, for Fil-C compiler.
+  -- _René Ferdinand Rivera Morell_
+* *New*: Add `version` feature attribute to tag and manage semantic versioning
+  of targets.
+  -- _René Ferdinand Rivera Morell_
+* *New*: Add reading/parsing of property database from JSON data to base CPS
+  support from.
+  -- _René Ferdinand Rivera Morell_
+* *New*: Argument lists description provided for all builtin rules,
+  GLOB-RECURSIVELY has become an alias of GLOB_RECURSIVELY.
+  -- _Paolo Pastori_
+* *New*: Added test for regular expressions with MATCH builtin rule.
+  -- _Paolo Pastori_
+* *New*: Improved control of source module by IMPORT, EXPORT, and
+  RULENAMES builtin rules.
+  -- _Paolo Pastori_
+* Fix Jam/{CPP} bind definitions of 4 or more values in a single
+  declared argument not actually adding all the definitions.
+  -- _Paolo Pastori_
+* Fix various regexp issues, allowing for mandatory regular expression
+  syntax checking, detailed error messages, and improved MATCH rule.
+  -- _Paolo Pastori_
+* Fix incorrect and/or inefficient regex expressions throughout all build jam
+  files.
+  -- _Paolo Pastori_
+* Fix argument count mismatch in Jam stack cleanup functions.
+  -- _René Ferdinand Rivera Morell_
+* Fix `--abbreviate-paths` eating following arg.
+  -- _René Ferdinand Rivera Morell_
+* Fix crash when reflecting environment variables that happen to have an empty
+  value.
+  -- _zyk2507_
+* Fix testing of JAM_SEMAPHORE.
+  -- _Paolo Pastori_
+* Fix finding an assembler when using plain LLVM for clang-win.
+  -- _René Ferdinand Rivera Morell_
+* Fix HDRRULE builtin rule to work in modules loaded by build system.
+  Added searching-only interfaces to modules and targets.
+  -- _Paolo Pastori_
+* Fix python linking to missing libutil.
+  -- _Paolo Pastori_
+* Fix properties minimization during target configuration.
+  -- _Paolo Pastori_
+* Fix GLOB_ARCHIVE builtin rule to work with BSD archive (ar).
+  -- _Paolo Pastori_
+* Fix parsing of options to not conflict with command line build request.
+  -- _René Ferdinand Rivera Morell_
+* Fix inversion of logic for `--keep-going` option.
+  -- _Paolo Pastori_
+* Fixed broken `--out-xml`, ignoring value `--durations` options.
+  -- _Paolo Pastori_
+* Fix missing bound native rule argument format checking.
+  -- _René Ferdinand Rivera Morell_
+* Fix gcc command-db collection not working with multi-string commands.
+  -- _René Ferdinand Rivera Morell_
+* Make `regex.escape` accept a list of strings to escape instead of just one
+  string.
+  -- _René Ferdinand Rivera Morell_
+* Fix SUBST builtin rule eating chars in replacement, test added.
+  -- _Paolo Pastori_
+
 == Version 5.4.2
 
 Fix detection of Visual Studio 2026 to account for non-native tools being
@@ -48,7 +123,7 @@ Visual Studio 2026 (aka msvc145).
 * Add `libstdc++` to `stdlib` feature as the current naming for that std
   library.
   -- _Dmitry Arkhipov_
-* Fix building when targetting WASM64 with emscripten.
+* Fix building when targeting WASM64 with emscripten.
   -- _Uilian Ries_
 * Fix resolution of subprojects of rooted projects.
   -- _Dmitry Arkhipov_

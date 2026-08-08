@@ -217,6 +217,16 @@ public:
         }
         }
 
+        // persist() with null data() and zero size()
+        {
+            url_view u;
+            BOOST_TEST(u.empty());
+            auto sp = u.persist();
+            BOOST_TEST(sp->empty());
+            BOOST_TEST_EQ(sp->size(), 0u);
+            BOOST_TEST_EQ(sp->buffer(), "");
+        }
+
         // operator core::string_view()
         {
             auto const f = []( core::string_view ) {};
@@ -1219,6 +1229,12 @@ public:
                 BOOST_TEST(!r.value().has_scheme());
                 BOOST_TEST(r.value().has_query());
             }
+        }
+
+        // Malformed IPv6 host must not read uninitialized memory (issue #993)
+        {
+            BOOST_URL_CXX20_CONSTEXPR auto r = parse_uri("https://[::.");
+            BOOST_TEST(! r.has_value());
         }
 
         // Detailed test

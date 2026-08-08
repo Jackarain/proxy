@@ -1,6 +1,7 @@
 
 // Copyright 2006-2009 Daniel James.
 // Copyright 2022-2023 Christian Mazakas.
+// Copyright 2026 Joaquin M Lopez Munoz.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -587,6 +588,102 @@ namespace rehash_tests {
     }
   }
 
+  // White-box tests for https://github.com/boostorg/unordered/pull/348
+
+  struct failing_allocator_exception { std::size_t n; };
+
+  template<typename T>
+  struct failing_allocator
+  {
+    using value_type = T;
+
+    failing_allocator() = default;
+    template<typename U> failing_allocator(const failing_allocator<U>&) {}
+
+    T* allocate(std::size_t n) { throw failing_allocator_exception{n}; }
+    void deallocate(T*, std::size_t) { }
+
+    bool operator==(const failing_allocator&) const { return true; }
+    bool operator!=(const failing_allocator&) const { return false; }
+  };
+
+  using test_gh348_table = typename boost::unordered::detail::set<
+    failing_allocator<int>, int, boost::hash<int>, std::equal_to<int>>::table;
+  static std::size_t test_gh348_table_bucket_count = 0;
+
+} // namespace rehash_tests
+
+namespace boost {
+namespace unordered {
+namespace detail {
+
+  template<> 
+  auto ::rehash_tests::test_gh348_table::bucket_count() const ->
+    ::rehash_tests::test_gh348_table::size_type
+  {
+    return ::rehash_tests::test_gh348_table_bucket_count;
+  }
+
+} // namespace detail
+} // namespace unordered
+} // namespace boost
+
+namespace rehash_tests {
+
+  void test_gh348_1(int /* dummy for UNORDERED_TEST */)
+  {
+    using primes = boost::unordered::detail::prime_fmod_size<>;
+    const auto size_t_max = (std::numeric_limits<std::size_t>::max)();
+
+    for(double mlf = 0.1; mlf < 10.0; mlf += 0.1) {
+      for(std::size_t i = 0; i < primes::sizes_len; ++i) {
+        test_gh348_table t;
+        t.mlf_ = (float)mlf;
+        test_gh348_table_bucket_count = 0;
+        auto bc = primes::sizes[i];
+        std::size_t n = boost::unordered::detail::double_to_size(
+          0.9 * static_cast<double>(t.mlf_) * static_cast<double>(bc));
+        if(n == size_t_max) continue;
+        try {
+          t.reserve(n);
+        }
+        catch(const failing_allocator_exception& e) {
+          test_gh348_table_bucket_count = e.n;
+          BOOST_TEST_LE(bc, test_gh348_table_bucket_count);
+        }
+        t.max_load_ = boost::unordered::detail::double_to_size(
+          static_cast<double>(t.mlf_) * 
+          static_cast<double>(test_gh348_table_bucket_count));
+        if(t.max_load_ == size_t_max) continue;
+        try {
+          t.reserve_for_insert(t.max_load_ + 1);
+        }
+        catch(const failing_allocator_exception& e) {
+          if(i == primes::sizes_len - 1) {
+            BOOST_TEST_EQ(test_gh348_table_bucket_count, e.n);
+          }
+          else{
+            BOOST_TEST_LT(test_gh348_table_bucket_count, e.n);
+          }
+        }
+      }
+    }
+  }
+
+  void test_gh348_2(int /* dummy for UNORDERED_TEST */)
+  {
+    for(double mlf = 0.1; mlf < 2.0; mlf += 0.1) {
+      test_gh348_table t;
+      t.mlf_ = (float)mlf;
+      try {
+        t.reserve((std::numeric_limits<std::size_t>::max)());
+      }
+      catch(const failing_allocator_exception& e) {
+        BOOST_TEST_GT(e.n, 1000u);
+      }
+    }
+  }
+
   using test::default_generator;
   using test::generate_collisions;
   using test::limited_range;
@@ -739,6 +836,8 @@ namespace rehash_tests {
      (test_multiset_ptr)(int_multimap_ptr)
      (test_multiset_tracking)(test_multimap_tracking))(
       (default_generator)(generate_collisions)(limited_range)))
+  UNORDERED_TEST(test_gh348_1, ((0)))
+  UNORDERED_TEST(test_gh348_2, ((0)))
 // clang-format on
 #endif
 } // namespace rehash_tests

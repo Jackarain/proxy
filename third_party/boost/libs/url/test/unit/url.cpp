@@ -1333,6 +1333,21 @@ struct url_test
             check("", "");
         }
 
+        // normalize path without authority: a "//" path must
+        // grow the buffer before prepending the "/." shield.
+        // https://github.com/boostorg/url/issues/992
+        {
+            auto check = [](core::string_view p,
+                            core::string_view e) {
+                url u = parse_origin_form(p).value();
+                u.normalize();
+                BOOST_TEST_EQ(u.encoded_path(), e);
+            };
+            check("//", "/.//");
+            check("///", "/.///");
+            check("////", "/.////");
+        }
+
         // inequality
         {
             auto check = [](core::string_view e1,

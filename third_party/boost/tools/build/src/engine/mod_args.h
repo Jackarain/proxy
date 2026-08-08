@@ -1,5 +1,5 @@
 /*
-Copyright 2025 René Ferdinand Rivera Morell
+Copyright 2025-2026 René Ferdinand Rivera Morell
 Distributed under the Boost Software License, Version 1.0.
 (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
 */
@@ -11,6 +11,8 @@ Distributed under the Boost Software License, Version 1.0.
 #include "ext_bfgroup_lyra.h"
 #include "lists.h"
 #include "value.h"
+
+#include <functional>
 
 /* tag::reference[]
 
@@ -80,9 +82,27 @@ Checks if an argument was previously added.
 end::reference[] */
 bool has_arg(const value_ref & name);
 
+/* tag::reference[]
+
+== `b2::args::extra_args`
+
+====
+[horizontal]
+Jam:: `rule extra_args ( )`
+{CPP}:: `list_ref extra_args();`
+====
+
+Retrieve "extra" arguments, i.e. those not parsed as options.
+
+end::reference[] */
+list_ref extra_args();
+
+// Internal..
+
 void set_args(int argc, char ** argv);
 lyra::cli & lyra_cli();
 void process_args(bool silent = false);
+void set_reparse_callback(std::function<void()> const & f);
 
 struct args_module : b2::bind::module_<args_module>
 {
@@ -96,7 +116,8 @@ struct args_module : b2::bind::module_<args_module>
 			.def(&add_arg, "add-arg",
 				"name" * _1 | "opts" * _1n | "help" * _1 | "flags" * _n)
 			.def(&get_arg, "get-arg", "name" * _1)
-			.def(&has_arg, "has-arg", "name" * _1);
+			.def(&has_arg, "has-arg", "name" * _1)
+			.def(&extra_args, "extra-args");
 		binder.eval(init_code);
 		binder.loaded();
 	}

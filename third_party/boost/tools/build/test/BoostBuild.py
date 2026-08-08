@@ -1,6 +1,7 @@
 # Copyright 2002-2005 Vladimir Prus.
 # Copyright 2002-2003 Dave Abrahams.
 # Copyright 2006 Rene Ferdinand Rivera Morell.
+# Copyright 2026 Paolo Pastori
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or copy at
 # https://www.bfgroup.xyz/b2/LICENSE.txt)
@@ -56,7 +57,7 @@ def print_annotation(name, value, xml):
         print("}}}")
     else:
         print(name + " {{{")
-        print(str(value).encode('utf8'))
+        print(str(value))
         print("}}}")
 
 
@@ -226,6 +227,7 @@ class Tester(TestCmd.TestCmd):
     Optional arguments:
 
     `arguments`                   - Arguments passed to the run executable.
+                                    Use a list to pass all needed arguments.
     `executable`                  - Name of the executable to invoke.
     `match`                       - Function to use for compating actual and
                                     expected file contents.
@@ -296,7 +298,7 @@ class Tester(TestCmd.TestCmd):
 
             # Find where jam_src is located. Try for the debug version if it is
             # lying around.
-            srcdir = os.path.join(os.path.dirname(__file__), "..", "src")
+            srcdir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src")
             dirs = [os.path.join(srcdir, "engine", jam_build_dir + ".debug"),
                     os.path.join(srcdir, "engine", jam_build_dir)]
             for d in dirs:
@@ -316,7 +318,7 @@ class Tester(TestCmd.TestCmd):
         self.verbosity = verbosity
 
         if boost_build_path is None:
-            boost_build_path = self.original_workdir + "/.."
+            boost_build_path = os.path.dirname(self.original_workdir)
 
         program_list = []
         if use_default_bjam:
@@ -426,6 +428,13 @@ class Tester(TestCmd.TestCmd):
             else:
                 os.utime(path, None)
 
+    def rm_error(self, func, path, excinfo):
+        # Ignore errors due to removal of working dir attempts. This is a
+        # workaround for PermissionError on Windows (VS 2022), caused by race
+        # conditions among an exiting shell and a self.rm("."), see #580.
+        if not os.path.samefile(self.workdir, path):
+            raise excinfo[1]
+
     def rm(self, names):
         if not type(names) == list:
             names = [names]
@@ -441,11 +450,12 @@ class Tester(TestCmd.TestCmd):
             n = glob.glob(self.native_file_name(name))
             if n: n = n[0]
             if not n:
-                n = self.glob_file(name.replace("$toolset", self.expanded_toolset + "*")
-                    )
+                n = self.glob_file(
+                    name.replace("$toolset", self.expanded_toolset + "*"))
             if n:
                 if os.path.isdir(n):
-                    shutil.rmtree(n, ignore_errors=False)
+                    shutil.rmtree(n, ignore_errors=False,
+                        onerror=self.rm_error if "." in names else None)
                 else:
                     os.unlink(n)
 
@@ -497,7 +507,9 @@ class Tester(TestCmd.TestCmd):
             kw["program"] += self.program
             if extra_args:
                 kw["program"] += extra_args
-            if not extra_args or not any(a.startswith("-j") for a in extra_args):
+            if ((not extra_args
+                 or not any(a.startswith("-j") for a in extra_args))
+                and not any(a.startswith("-j") for a in self.program[1:])):
                 kw["program"] += ["-j1"]
             if stdout is None and not any(a.startswith("-d") for a in kw["program"]):
                 kw["program"] += self.verbosity
@@ -599,8 +611,7 @@ class Tester(TestCmd.TestCmd):
                     break
         if not result:
             result = glob.glob(self.__native_file_name(name))
-            if result:
-                result = result[0]
+            result = result[0] if result else None
         return result
 
     def __read(self, name, binary=False):
@@ -610,9 +621,8 @@ class Tester(TestCmd.TestCmd):
                 openMode += "b"
             elif sys.version_info[0] < 3:
                 openMode += "U"
-            f = open(name, openMode)
-            result = f.read()
-            f.close()
+            with open(name, openMode) as f:
+                result = f.read()
             return result
         except Exception as e:
             annotation("failure", "Could not open '%s': %s" % (name, e))
@@ -621,15 +631,15 @@ class Tester(TestCmd.TestCmd):
             return ""
 
     def read(self, name, binary=False):
-        name = self.glob_file(name)
-        return self.__read(name, binary=binary)
+        n = self.glob_file(name)
+        return self.__read(n or name, binary=binary)
 
     def read_and_strip(self, name):
-        if not self.glob_file(name):
+        n = self.glob_file(name)
+        if not n:
             return ""
-        f = open(self.glob_file(name), "rb")
-        lines = f.readlines()
-        f.close()
+        with open(n, "rb") as f:
+            lines = f.readlines()
         result = "\n".join(x.decode().rstrip() for x in lines)
         if lines and lines[-1][-1] != "\n":
             return result + "\n"
@@ -802,8 +812,8 @@ class Tester(TestCmd.TestCmd):
     def expect_output_lines(self, lines, expected=True):
         self.__expect_lines(self.stdout(), lines, expected)
 
-    def expect_content_lines(self, filename, line, expected=True):
-        self.__expect_lines(self.read_and_strip(filename), line, expected)
+    def expect_content_lines(self, filename, lines, expected=True):
+        self.__expect_lines(self.read_and_strip(filename), lines, expected)
 
     def expect_content(self, name, content, exact=False):
         actual = self.read(name)

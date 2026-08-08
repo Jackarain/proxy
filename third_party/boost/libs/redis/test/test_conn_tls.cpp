@@ -9,18 +9,17 @@
 
 #include <boost/asio/ssl/host_name_verification.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
+
+#include "common.hpp"
 
 #include <cerrno>
 #include <cstddef>
 #include <fstream>
 #include <string>
 #include <string_view>
-#define BOOST_TEST_MODULE conn_tls
-#include <boost/test/included/unit_test.hpp>
-
-#include "common.hpp"
 
 namespace net = boost::asio;
 using namespace boost::redis;
@@ -55,7 +54,7 @@ config make_tls_config()
 }
 
 // Using the default TLS context allows establishing TLS connections and execute requests
-BOOST_AUTO_TEST_CASE(exec_default_ssl_context)
+void test_exec_default_ssl_context()
 {
    auto const cfg = make_tls_config();
    constexpr std::string_view ping_value = "Kabuf";
@@ -76,24 +75,24 @@ BOOST_AUTO_TEST_CASE(exec_default_ssl_context)
 
    conn.async_exec(req, resp, [&](error_code ec, std::size_t) {
       exec_finished = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn.cancel();
    });
 
    conn.async_run(cfg, {}, [&](error_code ec) {
       run_finished = true;
-      BOOST_TEST(ec == net::error::operation_aborted);
+      BOOST_TEST_EQ(ec, net::error::operation_aborted);
    });
 
    ioc.run_for(test_timeout);
 
    BOOST_TEST(exec_finished);
    BOOST_TEST(run_finished);
-   BOOST_TEST(std::get<0>(resp).value() == ping_value);
+   BOOST_TEST_EQ(std::get<0>(resp).value(), ping_value);
 }
 
 // Users can pass a custom context with TLS config
-BOOST_AUTO_TEST_CASE(exec_custom_ssl_context)
+void test_exec_custom_ssl_context()
 {
    std::string ca_pem = load_ca_certificate();
    auto const cfg = make_tls_config();
@@ -119,25 +118,25 @@ BOOST_AUTO_TEST_CASE(exec_custom_ssl_context)
 
    conn.async_exec(req, resp, [&](error_code ec, std::size_t) {
       exec_finished = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn.cancel();
    });
 
    conn.async_run(cfg, {}, [&](error_code ec) {
       run_finished = true;
-      BOOST_TEST(ec == net::error::operation_aborted);
+      BOOST_TEST_EQ(ec, net::error::operation_aborted);
    });
 
    ioc.run_for(test_timeout);
 
    BOOST_TEST(exec_finished);
    BOOST_TEST(run_finished);
-   BOOST_TEST(std::get<0>(resp).value() == ping_value);
+   BOOST_TEST_EQ(std::get<0>(resp).value(), ping_value);
 }
 
 // After an error, a TLS connection can recover.
 // Force an error using QUIT, then issue a regular request to verify that we could reconnect
-BOOST_AUTO_TEST_CASE(reconnection)
+void test_reconnection()
 {
    // Setup
    net::io_context ioc;
@@ -157,18 +156,18 @@ BOOST_AUTO_TEST_CASE(reconnection)
    // Run the connection
    conn.async_run(make_test_config(), [&](error_code ec) {
       run_finished = true;
-      BOOST_TEST(ec == net::error::operation_aborted);
+      BOOST_TEST_EQ(ec, net::error::operation_aborted);
    });
 
    // The PING is the end of the callback chain
    auto ping_callback = [&](error_code ec, std::size_t) {
       exec_finished = true;
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn.cancel();
    };
 
    auto quit_callback = [&](error_code ec, std::size_t) {
-      BOOST_TEST(ec == error_code());
+      BOOST_TEST_EQ(ec, error_code());
       conn.async_exec(ping_request, ignore, ping_callback);
    };
 
@@ -181,3 +180,12 @@ BOOST_AUTO_TEST_CASE(reconnection)
 }
 
 }  // namespace
+
+int main()
+{
+   test_exec_default_ssl_context();
+   test_exec_custom_ssl_context();
+   test_reconnection();
+
+   return boost::report_errors();
+}

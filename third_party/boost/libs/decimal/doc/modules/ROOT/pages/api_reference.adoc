@@ -51,9 +51,10 @@ enums, constants and macros that are provided in this library.
 | xref:config.adoc#configuration_user[`BOOST_DECIMAL_DISABLE_IOSTREAM`] | xref:config.adoc#configuration_automatic[`BOOST_DECIMAL_NO_CONSTEVAL_DETECTION`]
 | xref:config.adoc#configuration_user[`BOOST_DECIMAL_DISABLE_CLIB`] | xref:config.adoc#configuration_automatic[`BOOST_DECIMAL_HAS_STD_CHARCONV`]
 | xref:config.adoc#configuration_user[`BOOST_DECIMAL_DISABLE_EXCEPTIONS`] | xref:config.adoc#configuration_automatic[`BOOST_DECIMAL_HAS_STD_STRING_VIEW`]
-| xref:config.adoc#configuration_user[`BOOST_DECIMAL_ALLOW_IMPLICIT_INTEGER_CONVERSIONS`] |
-| xref:config.adoc#configuration_user[`BOOST_DECIMAL_ALLOW_IMPLICIT_FLOAT_CONVERSIONS`] |
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_ALLOW_IMPLICIT_INTEGER_CONVERSIONS`] | xref:config.adoc#host_device[`BOOST_DECIMAL_HOST_DEVICE`]
+| xref:config.adoc#configuration_user[`BOOST_DECIMAL_ALLOW_IMPLICIT_FLOAT_CONVERSIONS`] | xref:config.adoc#cuda_constexpr[`BOOST_DECIMAL_CUDA_CONSTEXPR`]
 | xref:config.adoc#configuration_user[`BOOST_DECIMAL_ALLOW_IMPLICIT_CONVERSIONS`] |
 | xref:config.adoc#configuration_user[`BOOST_DECIMAL_FAST_MATH`] |
 | xref:config.adoc#configuration_user[`BOOST_DECIMAL_DEC_EVAL_METHOD`] |
+| xref:config.adoc#enable_cuda[`BOOST_DECIMAL_ENABLE_CUDA`] |
 |===

@@ -28,6 +28,7 @@
 #define BOOST_THREAD_VERSION 4
 
 #include <boost/thread/future.hpp>
+#include <boost/thread/barrier.hpp>
 #include <boost/core/lightweight_test.hpp>
 #include <stdexcept>
 
@@ -44,9 +45,16 @@ int thr()
 {
   throw std::logic_error("123");
 }
+
 int p2()
 {
-  boost::this_thread::sleep_for(boost::chrono::milliseconds(200));
+  return 321;
+}
+
+int p3(boost::barrier* bar = nullptr)
+{
+  if (bar)
+    bar->count_down_and_wait();
   return 321;
 }
 
@@ -217,9 +225,10 @@ int main()
     BOOST_TEST(res[1].get() == 321);
   }
   { // async future copy-constructible
+    boost::barrier bar(2u);
     boost::future<int> f1 = boost::async(boost::launch::async, &p1);
     BOOST_TEST(f1.valid());
-    boost::future<int> f2 = boost::async(boost::launch::async, &p2);
+    boost::future<int> f2 = boost::async(boost::launch::async, &p3, &bar);
     BOOST_TEST(f2.valid());
     boost::csbl::vector<boost::future<int> > v;
     v.push_back(boost::move(f1));
@@ -236,12 +245,14 @@ int main()
     BOOST_TEST(res[0].get() == 123);
     BOOST_TEST(res[1].valid());
     BOOST_TEST(! res[1].is_ready());
+    bar.count_down_and_wait();
     BOOST_TEST(res[1].get() == 321);
   }
   { // async shared_future copy-constructible
+    boost::barrier bar(2u);
     boost::shared_future<int> f1 = boost::async(boost::launch::async, &p1).share();
     BOOST_TEST(f1.valid());
-    boost::shared_future<int> f2 = boost::async(boost::launch::async, &p2).share();
+    boost::shared_future<int> f2 = boost::async(boost::launch::async, &p3, &bar).share();
     BOOST_TEST(f2.valid());
     boost::csbl::vector<boost::shared_future<int> > v;
     v.push_back(f1);
@@ -260,6 +271,7 @@ int main()
     BOOST_TEST(res[0].get() == 123);
     BOOST_TEST(res[1].valid());
     BOOST_TEST(! res[1].is_ready());
+    bar.count_down_and_wait();
     BOOST_TEST(res[1].get() == 321);
   }
   { // async future copy-constructible
@@ -333,31 +345,30 @@ int main()
   }
 #endif
 #if ! defined BOOST_NO_CXX11_LAMBDAS
-    { // async futures copy-constructible then()
-      boost::future<int> f1 = boost::async(boost::launch::async, &p1);
-      BOOST_TEST(f1.valid());
-      boost::future<int> f2 = boost::async(boost::launch::async, &p2);
-      BOOST_TEST(f2.valid());
-      boost::csbl::vector<boost::future<int> > v;
-      v.push_back(boost::move(f1));
-      v.push_back(boost::move(f2));
-      BOOST_TEST(v[0].valid());
-      BOOST_TEST(v[1].valid());
-      boost::future<boost::csbl::vector<boost::future<int> > > all = boost::when_any(v.begin(), v.end());
-      BOOST_TEST(! v[0].valid());
-      BOOST_TEST(! v[1].valid());
-      BOOST_TEST(all.valid());
-      boost::future<int> sum = all.then([](boost::future<boost::csbl::vector<boost::future<int> > > f)
-      {
-        boost::csbl::vector<boost::future<int> > v = f.get();
-        return v[0].get() + v[1].get();
-      });
-      BOOST_TEST(sum.valid());
-      BOOST_TEST(sum.get() == 444);
-    }
+  { // async futures copy-constructible then()
+    boost::future<int> f1 = boost::async(boost::launch::async, &p1);
+    BOOST_TEST(f1.valid());
+    boost::future<int> f2 = boost::async(boost::launch::async, &p2);
+    BOOST_TEST(f2.valid());
+    boost::csbl::vector<boost::future<int> > v;
+    v.push_back(boost::move(f1));
+    v.push_back(boost::move(f2));
+    BOOST_TEST(v[0].valid());
+    BOOST_TEST(v[1].valid());
+    boost::future<boost::csbl::vector<boost::future<int> > > all = boost::when_any(v.begin(), v.end());
+    BOOST_TEST(! v[0].valid());
+    BOOST_TEST(! v[1].valid());
+    BOOST_TEST(all.valid());
+    boost::future<int> sum = all.then([](boost::future<boost::csbl::vector<boost::future<int> > > f)
+    {
+      boost::csbl::vector<boost::future<int> > v = f.get();
+      return v[0].get() + v[1].get();
+    });
+    BOOST_TEST(sum.valid());
+    BOOST_TEST(sum.get() == 444);
+  }
 #endif
 #endif
 
   return boost::report_errors();
 }
-

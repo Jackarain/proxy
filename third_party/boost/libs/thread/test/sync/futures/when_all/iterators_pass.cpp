@@ -332,28 +332,28 @@ int main()
   }
 #endif
 #if ! defined BOOST_NO_CXX11_LAMBDAS
-    { // async futures copy-constructible then()
-      boost::future<int> f1 = boost::async(boost::launch::async, &p1);
-      BOOST_TEST(f1.valid());
-      boost::future<int> f2 = boost::async(boost::launch::async, &p2);
-      BOOST_TEST(f2.valid());
-      boost::csbl::vector<boost::future<int> > v;
-      v.push_back(boost::move(f1));
-      v.push_back(boost::move(f2));
-      BOOST_TEST(v[0].valid());
-      BOOST_TEST(v[1].valid());
-      boost::future<boost::csbl::vector<boost::future<int> > > all = boost::when_all(v.begin(), v.end());
-      BOOST_TEST(! v[0].valid());
-      BOOST_TEST(! v[1].valid());
-      BOOST_TEST(all.valid());
-      boost::future<int> sum = all.then([](boost::future<boost::csbl::vector<boost::future<int> > > f)
-      {
-        boost::csbl::vector<boost::future<int> > v = f.get();
-        return v[0].get() + v[1].get();
-      });
-      BOOST_TEST(sum.valid());
-      BOOST_TEST(sum.get() == 444);
-    }
+  { // async futures copy-constructible then()
+    boost::future<int> f1 = boost::async(boost::launch::async, &p1);
+    BOOST_TEST(f1.valid());
+    boost::future<int> f2 = boost::async(boost::launch::async, &p2);
+    BOOST_TEST(f2.valid());
+    boost::csbl::vector<boost::future<int> > v;
+    v.push_back(boost::move(f1));
+    v.push_back(boost::move(f2));
+    BOOST_TEST(v[0].valid());
+    BOOST_TEST(v[1].valid());
+    boost::future<boost::csbl::vector<boost::future<int> > > all = boost::when_all(v.begin(), v.end());
+    BOOST_TEST(! v[0].valid());
+    BOOST_TEST(! v[1].valid());
+    BOOST_TEST(all.valid());
+    boost::future<int> sum = all.then([](boost::future<boost::csbl::vector<boost::future<int> > > f)
+    {
+      boost::csbl::vector<boost::future<int> > v = f.get();
+      return v[0].get() + v[1].get();
+    });
+    BOOST_TEST(sum.valid());
+    BOOST_TEST(sum.get() == 444);
+  }
 #endif
 #endif
 

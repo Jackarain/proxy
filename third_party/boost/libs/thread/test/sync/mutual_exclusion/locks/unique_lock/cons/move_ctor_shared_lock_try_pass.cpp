@@ -26,41 +26,40 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/core/lightweight_test.hpp>
 
-boost::shared_mutex m;
+boost::shared_mutex g_mutex;
 
 int main()
 {
   {
-  boost::shared_lock<boost::shared_mutex> lk0(m);
-  boost::unique_lock<boost::shared_mutex> lk(boost::move(lk0), boost::try_to_lock );
-  BOOST_TEST(lk.mutex() == &m);
-  BOOST_TEST(lk.owns_lock() == true);
-  BOOST_TEST(lk0.mutex() == 0);
-  BOOST_TEST(lk0.owns_lock() == false);
+    boost::shared_lock<boost::shared_mutex> lk0(g_mutex);
+    boost::unique_lock<boost::shared_mutex> lk(boost::move(lk0), boost::try_to_lock );
+    BOOST_TEST(lk.mutex() == &g_mutex);
+    BOOST_TEST(lk.owns_lock() == true);
+    BOOST_TEST(lk0.mutex() == 0);
+    BOOST_TEST(lk0.owns_lock() == false);
   }
   {
-  boost::unique_lock<boost::shared_mutex> lk(boost::shared_lock<boost::shared_mutex>(m), boost::try_to_lock);
-  BOOST_TEST(lk.mutex() == &m);
-  BOOST_TEST(lk.owns_lock() == true);
+    boost::unique_lock<boost::shared_mutex> lk(boost::shared_lock<boost::shared_mutex>(g_mutex), boost::try_to_lock);
+    BOOST_TEST(lk.mutex() == &g_mutex);
+    BOOST_TEST(lk.owns_lock() == true);
   }
   {
-  boost::shared_lock<boost::shared_mutex> lk0(m, boost::defer_lock);
-  boost::unique_lock<boost::shared_mutex> lk(boost::move(lk0), boost::try_to_lock);
-  BOOST_TEST(lk.mutex() == &m);
-  BOOST_TEST(lk.owns_lock() == false);
-  BOOST_TEST(lk0.mutex() == 0);
-  BOOST_TEST(lk0.owns_lock() == false);
+    boost::shared_lock<boost::shared_mutex> lk0(g_mutex, boost::defer_lock);
+    boost::unique_lock<boost::shared_mutex> lk(boost::move(lk0), boost::try_to_lock);
+    BOOST_TEST(lk.mutex() == &g_mutex);
+    BOOST_TEST(lk.owns_lock() == false);
+    BOOST_TEST(lk0.mutex() == 0);
+    BOOST_TEST(lk0.owns_lock() == false);
   }
   {
-  boost::shared_lock<boost::shared_mutex> lk0(m, boost::defer_lock);
-  lk0.release();
-  boost::unique_lock<boost::shared_mutex> lk(boost::move(lk0), boost::try_to_lock);
-  BOOST_TEST(lk.mutex() == 0);
-  BOOST_TEST(lk.owns_lock() == false);
-  BOOST_TEST(lk0.mutex() == 0);
-  BOOST_TEST(lk0.owns_lock() == false);
+    boost::shared_lock<boost::shared_mutex> lk0(g_mutex, boost::defer_lock);
+    lk0.release();
+    boost::unique_lock<boost::shared_mutex> lk(boost::move(lk0), boost::try_to_lock);
+    BOOST_TEST(lk.mutex() == 0);
+    BOOST_TEST(lk.owns_lock() == false);
+    BOOST_TEST(lk0.mutex() == 0);
+    BOOST_TEST(lk0.owns_lock() == false);
   }
 
   return boost::report_errors();
 }
-

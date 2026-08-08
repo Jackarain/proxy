@@ -83,7 +83,6 @@ target_link_libraries(boost_serialization
     Boost::preprocessor
     Boost::smart_ptr
     Boost::spirit
-    Boost::static_assert
     Boost::type_traits
     Boost::unordered
     Boost::utility

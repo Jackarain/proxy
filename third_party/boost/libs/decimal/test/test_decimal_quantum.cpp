@@ -132,30 +132,65 @@ void test_quantize()
     constexpr auto max_iter {std::is_same<Dec, decimal128_t>::value ? N / 4 : N};
     for (std::size_t i {}; i < max_iter; ++i)
     {
-        auto sig1 {static_cast<sig_type>(sig(rng))};
-        auto sig2 {static_cast<sig_type>(sig(rng))};
-        auto exp1 {exp(rng)};
-        auto exp2 {exp(rng)};
-
-        detail::normalize<Dec>(sig1, exp1);
-        detail::normalize<Dec>(sig1, exp1);
+        const auto sig1 {static_cast<sig_type>(sig(rng))};
+        const auto sig2 {static_cast<sig_type>(sig(rng))};
+        const auto exp1 {exp(rng)};
 
         const Dec val1 {sig1, exp1};
-        const Dec val2 {sig2, exp2};
+        // Both values share the quantum exponent so the IEEE 754-2008 quantize
+        // operation reduces to a no-op that returns lhs unchanged. Both
+        // significands have the same digit count, so the fast types normalize
+        // them identically and end up with the same stored exponent.
+        const Dec val2 {sig2, exp1};
 
-        const Dec quantized_val {sig1, exp2};
-
-        if (!BOOST_TEST_EQ(quantize(val1, val2), quantized_val))
+        if (!BOOST_TEST_EQ(quantize(val1, val2), val1))
         {
             // LCOV_EXCL_START
             std::cerr << std::setprecision(std::numeric_limits<Dec>::digits10)
                       << "Val 1: " << val1
                       << "\nVal 2: " << val2
-                      << "\nQuant: " << quantized_val
                       << "\n Func: " << quantize(val1, val2) << std::endl;
             // LCOV_EXCL_STOP
         }
     }
+}
+
+template <typename Dec>
+void test_quantize_spot()
+{
+    // IEEE 754-2008 5.3.2: quantize(x, y) returns a value equal to x (modulo
+    // rounding) but with the quantum exponent of y.
+
+    const auto check = [](Dec x, Dec y, Dec expected)
+    {
+        if (!BOOST_TEST_EQ(quantize(x, y), expected))
+        {
+            // LCOV_EXCL_START
+            std::cerr << std::setprecision(std::numeric_limits<Dec>::digits10)
+                      << "x:        " << x
+                      << "\ny:        " << y
+                      << "\nexpected: " << expected
+                      << "\nactual:   " << quantize(x, y) << std::endl;
+            // LCOV_EXCL_STOP
+        }
+    };
+
+    // Same exponent: identity
+    check(Dec{1, -1}, Dec{1, -1}, Dec{1, -1});
+
+    // Smaller rhs exponent: significand grows, value is exact
+    check(Dec{217}, Dec{1, -1}, Dec{2170, -1});
+
+    // Larger rhs exponent: significand shrinks with rounding
+    check(Dec{217}, Dec{1, 1}, Dec{22, 1});
+    check(Dec{217}, Dec{1, 2}, Dec{2, 2});
+
+    // Rounding all digits away rounds to zero or one based on the leading digit
+    check(Dec{1, -1}, Dec{1, 1}, Dec{0, 1});
+    check(Dec{1, -1}, Dec{1, 2}, Dec{0, 2});
+
+    // Sign of x is preserved on non-zero results
+    check(Dec{-217}, Dec{1, -1}, Dec{-2170, -1});
 }
 
 template <typename Dec>
@@ -181,6 +216,7 @@ int main()
     test_quantexp<decimal32_t>();
     test_nonfinite_quantexp<decimal32_t>();
     test_quantize<decimal32_t>();
+    test_quantize_spot<decimal32_t>();
     test_nonfinite_quantize<decimal32_t>();
 
     test_same_quantum<decimal_fast32_t>();
@@ -190,6 +226,9 @@ int main()
     //test_quantexp<decimal_fast32_t>();
     test_nonfinite_quantexp<decimal_fast32_t>();
     test_quantize<decimal_fast32_t>();
+    // The fast types renormalize the significand to full precision in their
+    // constructor, which changes the canonical quantum exponent, so the
+    // exponent-based spot tests use values that only apply to IEEE types.
     test_nonfinite_quantize<decimal_fast32_t>();
 
     test_same_quantum<decimal64_t>();
@@ -197,13 +236,27 @@ int main()
     test_quantexp<decimal64_t>();
     test_nonfinite_quantexp<decimal64_t>();
     test_quantize<decimal64_t>();
+    test_quantize_spot<decimal64_t>();
     test_nonfinite_quantize<decimal64_t>();
+
+    test_same_quantum<decimal_fast64_t>();
+    test_nonfinite_samequantum<decimal_fast64_t>();
+    // decimal_fast64_t normalizes its value in the constructor,
+    // so it will not match the values of the other types
+    //test_quantexp<decimal_fast64_t>();
+    test_nonfinite_quantexp<decimal_fast64_t>();
+    test_quantize<decimal_fast64_t>();
+    // The fast types renormalize the significand to full precision in their
+    // constructor, which changes the canonical quantum exponent, so the
+    // exponent-based spot tests use values that only apply to IEEE types.
+    test_nonfinite_quantize<decimal_fast64_t>();
 
     test_same_quantum<decimal128_t>();
     test_nonfinite_samequantum<decimal128_t>();
     test_quantexp<decimal128_t>();
     test_nonfinite_quantexp<decimal128_t>();
     test_quantize<decimal128_t>();
+    test_quantize_spot<decimal128_t>();
     test_nonfinite_quantize<decimal128_t>();
 
     return boost::report_errors();

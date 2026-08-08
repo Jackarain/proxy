@@ -183,7 +183,7 @@ namespace quickbook
 
     struct cond_phrase_push : scoped_action_base
     {
-        cond_phrase_push(quickbook::state& x) : state(x) {}
+        cond_phrase_push(quickbook::state& x) : state(x), saved_conditional() {}
 
         bool start();
         void cleanup();
@@ -270,7 +270,7 @@ namespace quickbook
 
     struct to_value_scoped_action : scoped_action_base
     {
-        to_value_scoped_action(quickbook::state& state_) : state(state_) {}
+        to_value_scoped_action(quickbook::state& state_) : state(state_), tag() {}
 
         bool start(value::tag_type = value::default_tag);
         void success(parse_iterator, parse_iterator);

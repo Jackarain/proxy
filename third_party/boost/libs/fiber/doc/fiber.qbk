@@ -574,7 +574,7 @@ implementation-defined total order of `fiber::id` values places `*this` before
         operator<<( std::basic_ostream< charT, traitsT > & os, id const& other);
 
 [variablelist
-[[Efects:] [Writes the representation of `other` to stream `os`. The
+[[Effects:] [Writes the representation of `other` to stream `os`. The
 representation is unspecified.]]
 [[Returns:] [`os`]]
 ]

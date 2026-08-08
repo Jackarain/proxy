@@ -1062,6 +1062,7 @@ test-suite misc :
       [ run constexpr_test_cpp_int_5.cpp : : : [ requires cxx14_constexpr cxx17_if_constexpr ] [ check-target-builds ../config//has_is_constant_evaluated : : <build>no ] ]
       [ run constexpr_test_cpp_int_6.cpp : : : [ requires cxx14_constexpr cxx17_if_constexpr ] [ check-target-builds ../config//has_is_constant_evaluated : "<toolset>msvc:<cxxflags>-constexpr:steps10000000" <toolset>clang:<cxxflags>-fconstexpr-steps=268435456 : <build>no ] [ check-target-builds ../config//has_constexpr_limits : <cxxflags>-fconstexpr-ops-limit=268435456 ] ]
       [ run constexpr_test_cpp_int_7.cpp : : : [ requires cxx14_constexpr cxx17_if_constexpr ] [ check-target-builds ../config//has_is_constant_evaluated : "<toolset>msvc:<cxxflags>-constexpr:steps10000000" <toolset>clang:<cxxflags>-fconstexpr-steps=268435456 : <build>no ] ]
+      [ run constexpr_test_cpp_int_8.cpp : : : [ requires cxx14_constexpr cxx17_if_constexpr ] [ check-target-builds ../config//has_is_constant_evaluated : : <build>no ] ]
 
       [ compile test_nothrow_cpp_int.cpp ]
       [ compile test_nothrow_cpp_rational.cpp ]
@@ -1280,6 +1281,8 @@ test-suite misc :
       [ run git_issue_636.cpp : : : [ check-target-builds ../config//has_float128 : <source>quadmath : <build>no ] ]
       [ run git_issue_652.cpp ]
       [ run git_issue_734.cpp ]
+      [ run git_issue_743.cpp : : : [ check-target-builds ../config//has_float128 : <source>quadmath : <build>no ] ]
+      [ run git_issue_759.cpp : : : [ check-target-builds ../config//has_float128 : <source>quadmath : <build>no ] ]
       [ compile git_issue_98.cpp :
          [ check-target-builds ../config//has_float128 : <define>TEST_FLOAT128 <source>quadmath : ]
          [ check-target-builds ../config//has_gmp : <define>TEST_GMP <source>gmp : ]

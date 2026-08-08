@@ -13,10 +13,9 @@
 #define CWD_H
 
 #include "config.h"
-#include "object.h"
+#include "jam_fwd.h"
 
 #include <string>
-
 
 /* cwd() - returns the current working folder */
 OBJECT * cwd( void );

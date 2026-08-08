@@ -2,11 +2,12 @@
 // subject to the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#include <boost/iterator/is_readable_iterator.hpp>
 #include <deque>
 #include <iterator>
 #include <cstddef> // std::ptrdiff_t
+#include <boost/config.hpp>
 #include <boost/noncopyable.hpp>
-#include <boost/iterator/is_readable_iterator.hpp>
 
 struct v
 {
@@ -96,6 +97,17 @@ int main()
     // readability
     static_assert(boost::is_readable_iterator<noncopyable_iterator>::value,
                   "boost::is_readable_iterator<noncopyable_iterator>::value is expected to be true.");
+
+#if !defined(BOOST_NO_CXX14_VARIABLE_TEMPLATES)
+    static_assert(boost::is_readable_iterator_v<v*>,
+                  "boost::is_readable_iterator_v<v*> is expected to be true.");
+    static_assert(boost::is_readable_iterator_v<v const*>,
+                  "boost::is_readable_iterator_v<v const*> is expected to be true.");
+    static_assert(boost::is_readable_iterator_v<proxy_iterator>,
+                  "boost::is_readable_iterator_v<proxy_iterator> is expected to be true.");
+    static_assert(!boost::is_readable_iterator_v<proxy_iterator2>,
+                  "boost::is_readable_iterator_v<proxy_iterator2> is expected to be false.");
+#endif // !defined(BOOST_NO_CXX14_VARIABLE_TEMPLATES)
 
     return 0;
 }

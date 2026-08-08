@@ -185,9 +185,11 @@ void spsc_queue_buffer_push_return_value( void )
     switch ( EnqueueMode ) {
     case pointer_and_size:   BOOST_TEST_REQUIRE( rb.push( data, xqueue_size ) == xqueue_size ); break;
     case reference_to_array: BOOST_TEST_REQUIRE( rb.push( data ) == xqueue_size ); break;
-    case iterator_pair:      BOOST_TEST_REQUIRE( rb.push( data, data + xqueue_size ) == data + xqueue_size ); break;
-    case span_:              BOOST_TEST_REQUIRE( rb.push( boost::span< const int >( data, xqueue_size ) ) == xqueue_size ); break;
-    default:                 assert( false );
+    case iterator_pair:
+        BOOST_TEST_REQUIRE( std::distance( data, rb.push( data, data + xqueue_size ) ) == (int)xqueue_size );
+        break;
+    case span_: BOOST_TEST_REQUIRE( rb.push( boost::span< const int >( data, xqueue_size ) ) == xqueue_size ); break;
+    default:    assert( false );
     }
 
     switch ( EnqueueMode ) {
@@ -197,7 +199,8 @@ void spsc_queue_buffer_push_return_value( void )
         BOOST_TEST_REQUIRE( rb.push( boost::span< const int >( data, xqueue_size ) ) == buffer_size - xqueue_size );
         break;
     case iterator_pair:
-        BOOST_TEST_REQUIRE( rb.push( data, data + xqueue_size ) == data + buffer_size - xqueue_size );
+        BOOST_TEST_REQUIRE( std::distance( data, rb.push( data, data + xqueue_size ) )
+                            == (int)( buffer_size - xqueue_size ) );
         break;
 
     default: assert( false );
@@ -498,7 +501,7 @@ BOOST_AUTO_TEST_CASE( spsc_queue_consume_all_test_compile_time )
     f.push( 3 );
 
     std::vector< int > consumed;
-    size_t count = f.consume_all( [&]( int i ) {
+    size_t             count = f.consume_all( [ & ]( int i ) {
         consumed.push_back( i );
     } );
 

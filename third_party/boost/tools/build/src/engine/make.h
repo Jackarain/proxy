@@ -12,9 +12,9 @@
 #define MAKE_SW20111118_H
 
 #include "config.h"
-#include "lists.h"
-#include "object.h"
-#include "rules.h"
+#include "jam_fwd.h"
+
+#include <cstdint>
 
 int32_t make( LIST * targets, bool anyhow );
 int32_t make1( LIST * t );

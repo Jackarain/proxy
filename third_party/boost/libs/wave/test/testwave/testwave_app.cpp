@@ -414,6 +414,8 @@ testwave_app::testwave_app(po::variables_map const& vm)
         ("noguard,G", "disable include guard detection")
 #endif
         ("skipped_token_hooks", "record skipped_token hook calls")
+        ("object_like_macro_passthrough",
+            "return true from expanding_object_like_macro hook")
 #if BOOST_WAVE_SUPPORT_CPP0X != 0
         ("c++11", "enable C++11 mode (implies --variadics and --long_long)")
 #endif
@@ -422,6 +424,9 @@ testwave_app::testwave_app(po::variables_map const& vm)
 #endif
 #if BOOST_WAVE_SUPPORT_CPP2A != 0
         ("c++20", "enable C++20 mode (implies --variadics and --long_long, adds __has_include and __VA_OPT__)")
+#endif
+#if BOOST_WAVE_SUPPORT_CPP2B != 0
+        ("c++23", "enable C++23 mode (all C++20 features, plus size_t literals)")
 #endif
         ("warning,W", po::value<std::vector<std::string> >()->composing(),
             "Warning settings.")
@@ -970,6 +975,14 @@ testwave_app::initialise_options(Context& ctx, po::variables_map const& vm,
         ctx.get_hooks().set_skipped_token_hooks(true);
     }
 
+    if (vm.count("object_like_macro_passthrough")) {
+        if (9 == debuglevel) {
+            std::cerr << "initialise_options: option: object_like_macro_passthrough"
+                      << std::endl;
+        }
+        ctx.get_hooks().set_object_like_macro_passthrough(true);
+    }
+
 //  initialize the given context from the parsed options
 #if BOOST_WAVE_SUPPORT_VARIADICS_PLACEMARKERS != 0
     // enable C99 mode, if appropriate (implies variadics)
@@ -1074,6 +1087,35 @@ testwave_app::initialise_options(Context& ctx, po::variables_map const& vm,
 
             if (9 == debuglevel) {
                 std::cerr << "initialise_options: option: c++20" << std::endl;
+            }
+    }
+#endif
+
+#if BOOST_WAVE_SUPPORT_CPP2B
+    if (vm.count("c++23")) {
+        ctx.set_language(
+            boost::wave::language_support(
+                 boost::wave::support_cpp2b
+#if BOOST_WAVE_SUPPORT_HAS_INCLUDE != 0
+              |  boost::wave::support_option_has_include
+#endif
+#if BOOST_WAVE_SUPPORT_VA_OPT != 0
+              |  boost::wave::support_option_va_opt
+#endif
+              |  boost::wave::support_option_convert_trigraphs
+              |  boost::wave::support_option_long_long
+              |  boost::wave::support_option_emit_line_directives
+ #if BOOST_WAVE_SUPPORT_PRAGMA_ONCE != 0
+              |  boost::wave::support_option_include_guard_detection
+ #endif
+ #if BOOST_WAVE_EMIT_PRAGMA_DIRECTIVES != 0
+              |  boost::wave::support_option_emit_pragma_directives
+ #endif
+              |  boost::wave::support_option_insert_whitespace
+            ));
+
+            if (9 == debuglevel) {
+                std::cerr << "initialise_options: option: c++23" << std::endl;
             }
     }
 #endif

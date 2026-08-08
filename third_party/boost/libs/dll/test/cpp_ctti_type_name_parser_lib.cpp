@@ -8,8 +8,9 @@
 
 #include <boost/config.hpp>
 
-#include <boost/dll/config.hpp>
 #include <string>
+
+#include <boost/dll/config.hpp>
 
 namespace space {
 template<typename... T>

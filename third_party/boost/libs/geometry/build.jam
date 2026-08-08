@@ -5,9 +5,6 @@
 
 require-b2 5.2 ;
 
-import-search /boost/config/checks ;
-import config : requires ;
-
 constant boost_dependencies :
     /boost/algorithm//boost_algorithm
     /boost/any//boost_any
@@ -34,31 +31,19 @@ constant boost_dependencies :
     /boost/range//boost_range
     /boost/rational//boost_rational
     /boost/serialization//boost_serialization
-    /boost/static_assert//boost_static_assert
     /boost/thread//boost_thread
     /boost/throw_exception//boost_throw_exception
     /boost/tokenizer//boost_tokenizer
     /boost/tuple//boost_tuple
-    /boost/type_traits//boost_type_traits
     /boost/variant//boost_variant
     /boost/variant2//boost_variant2 ;
 
-project /boost/geometry
-    : common-requirements
-        <include>include
-    : requirements
-        [ requires
-            cxx14_constexpr
-            cxx14_return_type_deduction
-        ]
-        <toolset>msvc:<asynch-exceptions>on
-    ;
+project /boost/geometry ;
 
 explicit
-    [ alias boost_geometry : : : : <library>$(boost_dependencies) ]
+    [ alias boost_geometry : : : : <include>include <library>$(boost_dependencies) ]
     [ alias all : boost_geometry test example doc/src/examples index extensions ]
     ;
 
 call-if : boost-library geometry
     ;
-

@@ -7,15 +7,15 @@
 
 #include <boost/config.hpp>
 
-#include <boost/dll/smart_library.hpp>
-#include <boost/dll/import_mangled.hpp>
-#include <boost/dll/import_class.hpp>
-
 #include <iostream>
 #include <string>
 
 #include "../example/b2_workarounds.hpp"
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/dll/smart_library.hpp>
+#include <boost/dll/import_mangled.hpp>
+#include <boost/dll/import_class.hpp>
 
 
 namespace space {

@@ -5,9 +5,14 @@
 #ifndef BOOST_DECIMAL_DETAIL_INT128_DETAIL_CTZ_HPP
 #define BOOST_DECIMAL_DETAIL_INT128_DETAIL_CTZ_HPP
 
-#include "config.hpp"
+#include <boost/decimal/detail/int128/detail/config.hpp>
+
+#ifndef BOOST_DECIMAL_DETAIL_INT128_BUILD_MODULE
+
 #include <limits>
 #include <cstdint>
+
+#endif
 
 namespace boost {
 namespace int128 {
@@ -15,7 +20,7 @@ namespace detail {
 
 namespace impl {
 
-#if BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN(__builtin_ctz)
+#if BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN(__builtin_ctz) && !(defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA))
 
 constexpr int countr_impl(unsigned int x) noexcept
 {
@@ -34,13 +39,17 @@ constexpr int countr_impl(unsigned long long x) noexcept
 
 #endif
 
-BOOST_DECIMAL_INLINE_CONSTEXPR_VARIABLE int countr_mod37[37] = {
+#if !(defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA))
+
+BOOST_DECIMAL_DETAIL_INT128_INLINE_CONSTEXPR int countr_mod37[37] = {
     32, 0, 1, 26, 2, 23, 27, 0,
     3, 16, 24, 30, 28, 11, 0, 13,
     4, 7, 17, 0, 25, 22, 31, 15,
     29, 10, 12, 6, 0, 21, 14, 9,
     5, 20, 8, 19, 18
 };
+
+#endif
 
 #if defined(_MSC_VER) && !defined(BOOST_DECIMAL_DETAIL_INT128_NO_CONSTEVAL_DETECTION) && !BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN(__builtin_ctz)
 
@@ -70,15 +79,27 @@ constexpr int countr_impl(std::uint32_t x) noexcept
 
 #pragma warning(pop)
 
-#elif !BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN(__builtin_ctz)
+#elif !BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN(__builtin_ctz) || (defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA))
 
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4146) // unary minus operator applied to unsigned type, result still unsigned
 #endif
 
-constexpr int countr_impl(std::uint32_t x) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE constexpr int countr_impl(std::uint32_t x) noexcept
 {
+    #if defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA)
+
+    constexpr int countr_mod37[37] = {
+        32, 0, 1, 26, 2, 23, 27, 0,
+        3, 16, 24, 30, 28, 11, 0, 13,
+        4, 7, 17, 0, 25, 22, 31, 15,
+        29, 10, 12, 6, 0, 21, 14, 9,
+        5, 20, 8, 19, 18
+    };
+
+    #endif
+
     return countr_mod37[(-x & x) % 37];
 }
 
@@ -88,7 +109,7 @@ constexpr int countr_impl(std::uint32_t x) noexcept
 
 #endif
 
-#if (defined(_M_AMD64) || defined(_M_ARM64)) && !defined(BOOST_DECIMAL_DETAIL_INT128_NO_CONSTEVAL_DETECTION) && !BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN(__builtin_ctz)
+#if (defined(_M_AMD64) || defined(_M_ARM64)) && !defined(BOOST_DECIMAL_DETAIL_INT128_NO_CONSTEVAL_DETECTION) && !BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN(__builtin_ctz) && !(defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA))
 
 constexpr int countr_impl(std::uint64_t x) noexcept
 {
@@ -111,9 +132,9 @@ constexpr int countr_impl(std::uint64_t x) noexcept
     }
 }
 
-#elif !BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN(__builtin_ctz)
+#elif !BOOST_DECIMAL_DETAIL_INT128_HAS_BUILTIN(__builtin_ctz) || (defined(__CUDACC__) && defined(BOOST_DECIMAL_DETAIL_INT128_ENABLE_CUDA))
 
-constexpr int countr_impl(std::uint64_t x) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE constexpr int countr_impl(std::uint64_t x) noexcept
 {
     return static_cast<std::uint32_t>(x) != 0 ? countr_impl(static_cast<std::uint32_t>(x)) :
                                                 countr_impl(static_cast<std::uint32_t>(x >> 32)) + 32;
@@ -124,7 +145,7 @@ constexpr int countr_impl(std::uint64_t x) noexcept
 } // namespace impl
 
 template <typename T>
-constexpr int countr_zero(T x) noexcept
+BOOST_DECIMAL_DETAIL_INT128_HOST_DEVICE constexpr int countr_zero(T x) noexcept
 {
     static_assert(std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed,
                   "Can only count with unsigned integers");

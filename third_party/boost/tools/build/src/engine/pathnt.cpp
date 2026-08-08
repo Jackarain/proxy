@@ -19,7 +19,9 @@
 #include "jam.h"
 #ifdef USE_PATHNT
 
+#include "object.h"
 #include "pathsys.h"
+#include "jam_strings.h"
 #include "hash.h"
 
 #define WIN32_LEAN_AND_MEAN

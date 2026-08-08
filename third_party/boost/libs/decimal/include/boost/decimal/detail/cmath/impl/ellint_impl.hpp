@@ -77,7 +77,7 @@ constexpr auto agm(T  phi,
 
     const T sp { sin(phi) };
 
-    Fpm = phi_is_pi_half ? std::numeric_limits<T>::quiet_NaN() : log((one + sp) / (one - sp)) / 2;
+    Fpm = phi_is_pi_half ? std::numeric_limits<T>::quiet_NaN() : ::boost::decimal::log((one + sp) / (one - sp)) / 2;
 
     if(has_e)
     {

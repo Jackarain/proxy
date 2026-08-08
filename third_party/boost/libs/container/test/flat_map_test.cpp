@@ -193,7 +193,7 @@ bool constructor_template_auto_deduction_test()
 
 }}}
 
-template<class VoidAllocatorOrContainer>
+template<class VoidAllocatorOrContainer, bool Transparent = false>
 struct GetMapContainer
 {
    template<class ValueType>
@@ -202,21 +202,21 @@ struct GetMapContainer
       typedef std::pair<ValueType, ValueType> type_t;
       typedef flat_map< ValueType
                  , ValueType
-                 , std::less<ValueType>
+                 , typename dtl::if_c<Transparent, test::less_transparent, std::less<ValueType> >::type
                  , typename boost::container::dtl::container_or_allocator_rebind<VoidAllocatorOrContainer, type_t>::type
                  > map_type;
 
       typedef flat_multimap< ValueType
                  , ValueType
-                 , std::less<ValueType>
+                 , typename dtl::if_c<Transparent, test::less_transparent, std::less<ValueType> >::type
                  , typename boost::container::dtl::container_or_allocator_rebind<VoidAllocatorOrContainer, type_t>::type
                  > multimap_type;
    };
 };
 
 //To test default parameters
-template<>
-struct GetMapContainer<void>
+template<bool Transparent>
+struct GetMapContainer<void, Transparent>
 {
    template<class ValueType>
    struct apply
@@ -390,15 +390,6 @@ int main()
       }
 
       if (0 != test::flat_map_test
-         < GetMapContainer<void>::apply<int>::map_type
-         , MyStdMap
-         , GetMapContainer<void>::apply<int>::multimap_type
-         , MyStdMultiMap>()) {
-         std::cout << "Error in flat_map_test<new_allocator<void> >" << std::endl;
-         return 1;
-      }
-
-      if (0 != test::flat_map_test
          < GetMapContainer<new_allocator<void> >::apply<int>::map_type
          , MyStdMap
          , GetMapContainer<new_allocator<void> >::apply<int>::multimap_type
@@ -431,6 +422,15 @@ int main()
          , GetMapContainer<new_allocator<void> >::apply<test::movable_and_copyable_int>::multimap_type
          , MyStdMultiMap>()) {
          std::cout << "Error in flat_map_test<new_allocator<void> >" << std::endl;
+         return 1;
+      }
+
+      if (0 != test::flat_map_test
+         < GetMapContainer<new_allocator<void>, true>::apply<test::movable_and_copyable_int>::map_type
+         , MyStdMap
+         , GetMapContainer<new_allocator<void>, true>::apply<test::movable_and_copyable_int>::multimap_type
+         , MyStdMultiMap>()) {
+         std::cout << "Error in flat_map_test<new_allocator<void>, transparent >" << std::endl;
          return 1;
       }
    }

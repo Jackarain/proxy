@@ -1,4 +1,4 @@
-/* Copyright 2003-2025 Joaquin M Lopez Munoz.
+/* Copyright 2003-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -707,8 +707,10 @@ public:
   }
 
 protected:
-  ordered_index_impl(const ctor_args_list& args_list,const allocator_type& al):
-    super(args_list.get_tail(),al),
+  ordered_index_impl(
+    const ctor_args_list& args_list,
+    const allocator_type& al,index_node_type* h):
+    super(args_list.get_tail(),al,h),
     key(tuples::get<0>(args_list.get_head())),
     comp_(tuples::get<1>(args_list.get_head()))
 
@@ -722,8 +724,9 @@ protected:
 
   ordered_index_impl(
     const ordered_index_impl<
-      KeyFromValue,Compare,SuperMeta,TagList,Category,AugmentPolicy>& x):
-    super(x),
+      KeyFromValue,Compare,SuperMeta,TagList,Category,AugmentPolicy>& x,
+    const allocator_type& al,index_node_type* h):
+    super(x,al,h),
     key(x.key),
     comp_(x.comp_)
 
@@ -740,8 +743,9 @@ protected:
   ordered_index_impl(
      const ordered_index_impl<
        KeyFromValue,Compare,SuperMeta,TagList,Category,AugmentPolicy>& x,
+     const allocator_type& al,index_node_type* h,
      do_not_copy_elements_tag):
-    super(x,do_not_copy_elements_tag()),
+    super(x,al,h,do_not_copy_elements_tag()),
     key(x.key),
     comp_(x.comp_)
 
@@ -1512,6 +1516,10 @@ class ordered_index:
         SuperMeta,TagList,Category,AugmentPolicy
       >
     >::type                                       super;
+
+protected:
+  typedef typename super::index_node_type         index_node_type;
+
 public:
   typedef typename super::ctor_args_list          ctor_args_list;
   typedef typename super::allocator_type          allocator_type;
@@ -1537,13 +1545,18 @@ public:
 
 protected:
   ordered_index(
-    const ctor_args_list& args_list,const allocator_type& al):
-    super(args_list,al){}
+    const ctor_args_list& args_list,
+    const allocator_type& al,index_node_type* h):
+    super(args_list,al,h){}
 
-  ordered_index(const ordered_index& x):super(x){}
+  ordered_index(
+    const ordered_index& x,const allocator_type& al,index_node_type* h):
+    super(x,al,h){}
 
-  ordered_index(const ordered_index& x,do_not_copy_elements_tag):
-    super(x,do_not_copy_elements_tag()){}
+  ordered_index(
+    const ordered_index& x,const allocator_type& al,index_node_type* h,
+    do_not_copy_elements_tag):
+    super(x,al,h,do_not_copy_elements_tag()){}
 };
 
 #if defined(BOOST_MSVC)

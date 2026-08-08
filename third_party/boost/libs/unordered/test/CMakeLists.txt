@@ -136,7 +136,17 @@ foa_tests(SOURCES exception/merge_exception_tests.cpp)
 
 # CFOA tests
 
-cfoa_tests(SOURCES cfoa/insert_tests.cpp COMPILE_OPTIONS $<$<CXX_COMPILER_ID:MSVC>:/bigobj>)
+set(cfoa_insert_test_options $<$<CXX_COMPILER_ID:MSVC>:/bigobj>)
+
+if(MINGW AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+  list(APPEND cfoa_insert_test_options
+    -O0 -g0
+    --param=ggc-min-expand=10
+    --param=ggc-min-heapsize=16384
+  ) # GCC MinGW32 OOMs otherwise
+endif()
+
+cfoa_tests(SOURCES cfoa/insert_tests.cpp COMPILE_OPTIONS ${cfoa_insert_test_options})
 cfoa_tests(SOURCES cfoa/erase_tests.cpp)
 cfoa_tests(SOURCES cfoa/try_emplace_tests.cpp)
 cfoa_tests(SOURCES cfoa/emplace_tests.cpp)

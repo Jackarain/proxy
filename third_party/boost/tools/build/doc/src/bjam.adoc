@@ -270,7 +270,7 @@ targets. Pseudo-targets are symbols representing dependencies on other
 targets, but which are not themselves associated with any real file.
 
 A file target's identifier is generally the file's name, which can be
-absolutely rooted, relative to the directory of `b2`s invocation, or
+absolutely rooted, relative to the directory of ``b2``s invocation, or
 simply local (no directory). Most often it is the last case, and the
 actual file path is bound using the `$(SEARCH)` and `$(LOCATE)` special
 variables. See link:#jam.language.variables.builtins.search[SEARCH and
@@ -303,7 +303,7 @@ used to make a record of that directory.
 === Rules
 
 The basic `b2` language entity is called a rule. A rule is defined in
-two parts: the procedure and the actions. The procedure is a body of jam
+two parts: the procedure and the actions. The procedure is a body of Jam
 statements to be run when the rule is invoked; the actions are the OS
 shell commands to execute when updating the built targets of the rule.
 
@@ -381,7 +381,7 @@ on target $(var) field1 : field2 : ... : fieldN ;
 ----
 
 The variable's value names the rule (or rules) to be invoked. A rule is
-invoked for each element in the list of `$(var)`s values. The fields
+invoked for each element in the list of ``$(var)``s values. The fields
 `field1 : field2 : ...` are passed as arguments for each invocation For the [
 ... ] forms, the return value is the concatenation of the return values
 for all of the invocations.
@@ -450,14 +450,14 @@ cause `b2` to exit with an error code:
 
 [source]
 ----
-### argument error
-# rule report ( pronoun index ?  : state  : names + )
-# called with: ( I 2 foo  : sorry  : Joe Dave Pete )
-# extra argument foo
-### argument error
-# rule report ( pronoun index ?  : state  : names + )
-# called with: ( I 2  : sorry )
-# missing argument names
+...
+error: rule report ( pronoun index ?  : state  : names + )
+error: called with: ( I 2 foo  : sorry  : Joe Dave Pete )
+error: extra argument foo
+...
+error: rule report ( pronoun index ?  : state  : names + )
+error: called with: ( I 2  : sorry )
+error: missing argument names
 ----
 
 If you omit the list of formal arguments, all checking is bypassed as in
@@ -471,7 +471,8 @@ any new Jam code you write.
 `B2` has a growing set of built-in rules, all of which are pure
 procedure rules without updating actions. They are in three groups: the
 first builds the dependency graph; the second modifies it; and the third
-are just utility rules.
+are just utility rules. A fourth set of rules relating to modules are
+described in link:#jam.language.modules[Modules].
 
 [[jam.language.rules.builtins.dependency_building]]
 ==== Dependency Building
@@ -663,8 +664,18 @@ WARNING: This is currently not fully implemented.
 [[jam.language.rules.builtins.utility]]
 ==== Utility
 
-The two rules `ECHO` and `EXIT` are utility rules, used only in `b2`s
-parsing phase.
+[[jam.language.rules.builtins.utility._backtrace__]]
+===== `BACKTRACE`
+
+[source]
+----
+rule BACKTRACE ( levels ? )
+----
+
+Returns a list of quadruples: _filename_ _line_ _module_ _rulename_...,
+describing each shallower level of the call stack, or only last _levels_
+when the argument is provided. This rule can be used to generate useful
+diagnostic messages from Jam rules.
 
 [[jam.language.rules.builtins.utility._echo__]]
 ===== `ECHO`
@@ -692,17 +703,31 @@ _result-value_.
 `ECHO` and `EXIT`, since it is hard to tell that these are built-in
 rules and not part of the language, like `include`.
 
+[[jam.language.rules.builtins.utility._file_open__]]
+===== `FILE_OPEN`
+
+[source]
+----
+rule FILE_OPEN ( filename : mode )
+----
+
+The `FILE_OPEN` rule opens the specified file and returns a file
+descriptor if the _mode_ parameter is either "w" or "r". Note that at
+present, only the `UPDATE_NOW` rule can use the resulting file
+descriptor number. If the _mode_ parameter is "t" this opens the file as a
+text file and returns the contents as a single string.
+
 [[jam.language.rules.builtins.utility._glob__]]
 ===== `GLOB`
 
-The `GLOB` rule does filename globing
+The `GLOB` rule does filename globing.
 
 [source]
 ----
 rule GLOB ( directories * : patterns * : downcase-opt ? )
 ----
 
-Using the same wildcards as for the patterns in the switch statement. It
+Using the same wildcards as for the patterns in the `switch` statement. It
 is invoked by being used as an argument to a rule invocation inside of
 "[ ]". For example: `FILES = [ GLOB dir1 dir2 : *.c *.h ]` sets `FILES` to
 the list of C source
@@ -723,7 +748,8 @@ The `GLOB_ARCHIVE` rule does name globing of object archive members.
 
 [source]
 ----
-rule GLOB_ARCHIVE ( archives * : member-patterns * : downcase-opt ? : symbol-patterns ? )
+rule GLOB_ARCHIVE ( archives * : member-patterns *
+                  : downcase-opt ? : symbol-patterns ? )
 ----
 
 Similarly to `GLOB`, this rule is used to match names of member files in
@@ -749,6 +775,30 @@ are applied as OR conditions, with member patterns taking precedence. On
 unsupported platforms, null is returned when any symbol patterns are
 specified.
 
+[[jam.language.rules.builtins.utility._glob_recursively__]]
+===== `GLOB_RECURSIVELY`
+
+The `GLOB_RECURSIVELY` rule can be thought of as the recursive version of
+the `GLOB` rule.
+
+[source]
+----
+rule GLOB_RECURSIVELY ( patterns * )
+----
+
+The pattern syntax is the same as that used by all globing rules (see
+`switch`.) Unlike `GLOB` which matches the pattern only on files, this rule
+uses the provided pattern(s) to match directories as well.
+This allows you to use patterns where each component corresponds to
+a directory (or file) and all components are expanded recursively,
+e.g. `+*/*.test+`.
+
+Another difference from `GLOB` is that it does not have a _downcase-opt_
+parameter and matching is performed according to OS conventions. The list
+of result paths is also in the canonical OS format.
+
+The results of `GLOB_RECURSIVELY` are stored in a cache to optimize speed.
+
 [[jam.language.rules.builtins.utility._match__]]
 ===== `MATCH`
 
@@ -756,24 +806,108 @@ The `MATCH` rule does pattern matching.
 
 [source]
 ----
-rule MATCH ( regexps + : list * )
+rule MATCH ( regexps * : list * )
 ----
 
 Matches the `egrep`(1) style regular expressions _regexps_ against the
 strings in _list_. The result is a list of matching `()` subexpressions
 for each string in _list_, and for each regular expression in _regexps_.
 
-[[jam.language.rules.builtins.utility._backtrace__]]
-===== `BACKTRACE`
+[[jam.language.rules.builtins.utility._md5__]]
+===== `MD5`
 
 [source]
 ----
-rule BACKTRACE ( )
+rule MD5 ( string )
 ----
 
-Returns a list of quadruples: _filename_ _line_ _module_ _rulename_...,
-describing each shallower level of the call stack. This rule can be used
-to generate useful diagnostic messages from Jam rules.
+`MD5` computes the MD5 hash of the string passed as parameter and
+returns it.
+
+[[jam.language.rules.builtins.utility._pad__]]
+===== `PAD`
+
+[source]
+----
+rule PAD ( string : width )
+----
+
+If _string_ is shorter than _width_ characters, pads it with whitespace
+characters on the right, and returns the result. Otherwise, returns
+_string_ unmodified.
+
+[[jam.language.rules.builtins.utility._precious__]]
+===== `PRECIOUS`
+
+[source]
+----
+rule PRECIOUS ( targets * )
+----
+
+The `PRECIOUS` rule specifies that each of the targets passed as the
+arguments should not be removed even if the command updating that target
+fails.
+
+[[jam.language.rules.builtins.utility._shell__]]
+===== `SHELL`
+
+[source]
+----
+rule SHELL ( command : * )
+----
+
+`SHELL` executes _command_, and then returns the standard output of
+_command_. `SHELL` only works on platforms with a `popen()` function in
+the C library. On platforms without a working `popen()` function,
+`SHELL` is implemented as a no-op. `SHELL` works on Unix, MacOS X, and
+most Windows compilers. `SHELL` is a no-op on Metrowerks compilers under
+Windows. There is a variable set of allowed options as additional
+arguments:
+
+`exit-status`::
+  In addition to the output the result status of the executed command is
+  returned as a second element of the result.
+`no-output`::
+  Don't capture the output of the command. Instead an empty ("") string
+  value is returned in place of the output.
+`strip-eol`::
+  Remove trailing end-of-line character from output, if any.
+
+Because the Perforce/Jambase defines a `SHELL` rule which hides the
+builtin rule, `COMMAND` can be used as an alias for `SHELL` in such a
+case.
+
+[[jam.language.rules.builtins.utility._split_by_characters__]]
+===== `SPLIT_BY_CHARACTERS`
+
+[source]
+----
+rule SPLIT_BY_CHARACTERS ( string : delimiters )
+----
+
+`SPLIT_BY_CHARACTERS` splits the specified _string_ on any delimiter
+character present in _delimiters_ and returns the resulting list.
+
+[[jam.language.rules.builtins.utility._subst__]]
+===== `SUBST`
+
+The `SUBST` rule does pattern matching and substitution.
+
+[source]
+----
+rule SUBST ( string regexp replacements + )
+----
+
+Replaces the _string_ matching the _regexp_ with all _replacements_.
+The _regexp_ argument accepts a regular expression of the same type
+as those used by the `MATCH` rule.
+In _replacements_, the placeholders `\0` and `$0` are replaced with the full
+matched string, while `\N` and `$N` are replaced with the substring matched
+by group (`()` regexp subexpression) N-th.  Currently only 9 groups are
+supported, so '$10' in a replacement is interpreted as '$1' followed by
+a '0' character.
+Note that unlike `MATCH`, _regexp_ does not have to contain a group
+for a result to be returned.
 
 [[jam.language.rules.builtins.utility._update__]]
 ===== `UPDATE`
@@ -783,7 +917,7 @@ to generate useful diagnostic messages from Jam rules.
 rule UPDATE ( targets * )
 ----
 
-Classic jam treats any non-option element of command line as a name of
+Classic Jam treats any non-option element of command line as a name of
 target to be updated. This prevented more sophisticated handling of
 command line. This is now enabled again but with additional changes to
 the `UPDATE` rule to allow for the flexibility of changing the list of
@@ -802,6 +936,21 @@ it possible to add targets as such:
 local previous-updates = [ UPDATE ] ;
 UPDATE $(previous-updates) a-new-target ;
 ----
+
+[[jam.language.rules.builtins.utility._update_now__]]
+===== `UPDATE_NOW`
+
+[source]
+----
+rule UPDATE_NOW ( targets * : log ? : ignore-minus-n ? )
+----
+
+The `UPDATE_NOW` caused the specified targets to be updated immediately.
+If update was successful, non-empty string is returned. The _log_
+parameter, if present, specifies a descriptor of a file where all output
+from building is redirected. If the _ignore-minus-n_ parameter is
+specified, the targets are updated even if the `-n` parameter is
+specified on the command line.
 
 [[jam.language.rules.builtins.utility._w32_getreg__]]
 ===== `W32_GETREG`
@@ -878,110 +1027,6 @@ for local subkey in $(subkeys)
     }
 }
 ----
-
-[[jam.language.rules.builtins.utility._shell__]]
-===== `SHELL`
-
-[source]
-----
-rule SHELL ( command : * )
-----
-
-`SHELL` executes _command_, and then returns the standard output of
-_command_. `SHELL` only works on platforms with a `popen()` function in
-the C library. On platforms without a working `popen()` function,
-`SHELL` is implemented as a no-op. `SHELL` works on Unix, MacOS X, and
-most Windows compilers. `SHELL` is a no-op on Metrowerks compilers under
-Windows. There is a variable set of allowed options as additional
-arguments:
-
-`exit-status`::
-  In addition to the output the result status of the executed command is
-  returned as a second element of the result.
-`no-output`::
-  Don't capture the output of the command. Instead an empty ("") string
-  value is returned in place of the output.
-`strip-eol`::
-  Remove trailing end-of-line character from output, if any.
-
-Because the Perforce/Jambase defines a `SHELL` rule which hides the
-builtin rule, `COMMAND` can be used as an alias for `SHELL` in such a
-case.
-
-[[jam.language.rules.builtins.utility._md5__]]
-===== `MD5`
-
-[source]
-----
-rule MD5 ( string )
-----
-
-`MD5` computes the MD5 hash of the string passed as parameter and
-returns it.
-
-[[jam.language.rules.builtins.utility._split_by_characters__]]
-===== `SPLIT_BY_CHARACTERS`
-
-[source]
-----
-rule SPLIT_BY_CHARACTERS ( string : delimiters )
-----
-
-`SPLIT_BY_CHARACTERS` splits the specified _string_ on any delimiter
-character present in _delimiters_ and returns the resulting list.
-
-[[jam.language.rules.builtins.utility._precious__]]
-===== `PRECIOUS`
-
-[source]
-----
-rule PRECIOUS ( targets * )
-----
-
-The `PRECIOUS` rule specifies that each of the targets passed as the
-arguments should not be removed even if the command updating that target
-fails.
-
-[[jam.language.rules.builtins.utility._pad__]]
-===== `PAD`
-
-[source]
-----
-rule PAD ( string : width )
-----
-
-If _string_ is shorter than _width_ characters, pads it with whitespace
-characters on the right, and returns the result. Otherwise, returns
-_string_ unmodified.
-
-[[jam.language.rules.builtins.utility._file_open__]]
-===== `FILE_OPEN`
-
-[source]
-----
-rule FILE_OPEN ( filename : mode )
-----
-
-The `FILE_OPEN` rule opens the specified file and returns a file
-descriptor if the _mode_ parameter is either "w" or "r". Note that at
-present, only the `UPDATE_NOW` rule can use the resulting file
-descriptor number. If the _mode_ parameter is "t" this opens the file as a
-text file and returns the contents as a single string.
-
-[[jam.language.rules.builtins.utility._update_now__]]
-===== `UPDATE_NOW`
-
-[source]
-----
-rule UPDATE_NOW ( targets * : log ? : ignore-minus-n ? )
-----
-
-The `UPDATE_NOW` caused the specified targets to be updated immediately.
-If update was successful, non-empty string is returned. The _log_
-parameter, if present, specifies a descriptor of a file where all output
-from building is redirected. If the _ignore-minus-n_ parameter is
-specified, the targets are updated even if the `-n` parameter is
-specified on the command line.
 
 [[jam.language.flow_of_control]]
 === Flow-of-Control
@@ -1145,8 +1190,12 @@ The first two forms set _variable_ globally. The third and forth forms
 set a target-specific variable. The `=` operator replaces any previous
 elements of _variable_ with _elements_; the `+=` operation adds
 _elements_ to _variable_'s list of elements. The final two forms are
-synonymous: they set _variable_ globally, but only if it was previously
+synonymous: they set _variable_ globally, but `?=` only if it was previously
 unset.
+
+NOTE: the `?=` operator does not short-circuit, that is in
+`some-var ?= [ some-rule ]` the `some-rule` is always called,
+regardless of whether the variable is set or not.
 
 Variables referenced in updating commands will be replaced with their
 values; target-specific values take precedence over global values.
@@ -1332,7 +1381,7 @@ _value_ is specific to either variable or generated file expansion.
 
 On VMS, `$(var:P)` is the parent directory of `$(var:D)`.
 
-`:<=value`::
+`:\<=value`::
 After evaluating the expansion of the variable prefixes the given _value_
 to the elements of the expanded expression values.
 
@@ -1503,10 +1552,11 @@ platform:
 `JAMUNAME`::
   Output of uname(1) command (Unix only)
 `JAMVERSION`::
-  `b2` version, as a sematic triplet "X.Y.Z".
+  `b2` version, as a semantic triplet "X.Y.Z".
 `JAM_VERSION`::
-  A predefined global variable with two elements indicates the version
-  number of Boost Jam. Boost Jam versions start at `03` `00`.
+  A predefined global variable with elements indicating the version
+  number of Boost Jam. Boost Jam versions start at `3` `0` but nowadays
+  it is composed of three elements (e.g. `5` `5` `0`.)
   Earlier versions of `Jam` do not automatically define `JAM_VERSION`.
 
 [[jam.language.variables.builtins.jamshell]]
@@ -1758,7 +1808,8 @@ have not returned at the time of the `VARNAMES` invocation.
 [source]
 ----
 rule IMPORT ( source_module ? : source_rules *
-            : target_module ? : target_rules * )
+            : target_module ? : target_rules *
+            : localize ? )
 ----
 
 The `IMPORT` rule copies rules from the _source_module_ into the
@@ -1777,6 +1828,11 @@ IMPORT m1 : rule1 : m2 : m1-rule1 ;
 # import all non-local rules from m1 into m2
 IMPORT m1 : [ RULENAMES m1 ] : m2 : [ RULENAMES m1 ] ;
 ----
+
+If _localize_ is supplied _target_rules_ are executed in _target_module_,
+with corresponding access to that module's local variables.
+Existing rules in _target_module_ are silently overwritten by
+imported _target_rules_.
 
 [[jam.language.modules.the__export__rule]]
 ==== The `EXPORT` Rule
@@ -1969,7 +2025,7 @@ the file system through a process called binding. Binding is a process
 of searching for a file with the same name as the target (sans grist),
 based on the settings of the target-specific `SEARCH` and `LOCATE`
 variables.
-* In addition to local and global variables, jam allows you to set a
+* In addition to local and global variables, Jam allows you to set a
 variable `on` a target. Target-specific variable values can usually not
 be read, and take effect only in the following contexts:
 ** In updating actions, variable values are first looked up `on` the
@@ -2015,7 +2071,7 @@ the leading and trailing angle brackets. When grist is added to a name
 with `$(var:G=expr)`, existing grist is first stripped. Then, if `expr` is
 non-empty, leading <s and trailing >s are added if necessary to form an
 expression of the form <expr2>; <expr2> is then prepended.
-* When Jam is invoked it imports all environment variable settings into
+* When bjam is invoked it imports all environment variable settings into
 corresponding Jam variables, followed by all command-line (-s...)
 variable settings. Variables whose name ends in PATH, Path, or path are
 split into string lists on OS-specific path-list separator boundaries
@@ -2032,9 +2088,9 @@ MESSAGE ?\= starting jam... ;
 if $(MESSAGE) { ECHO The message is: $(MESSAGE) ; }
 ----
 +
-If the user wants a specific message, he invokes jam with
+If the user wants a specific message, he invokes bjam with
 `-sMESSAGE=message
-            text`. If he wants no message, he invokes jam with
+            text`. If he wants no message, he invokes bjam with
 `-sMESSAGE=` and nothing at all is printed.
 * The parsing of command line options in Jam can be rather unintuitive,
 with regards to how other Unix programs accept options. There are two

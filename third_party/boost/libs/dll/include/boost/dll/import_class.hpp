@@ -5,26 +5,35 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_DLL_IMPORT_CLASS_HPP_
-#define BOOST_DLL_IMPORT_CLASS_HPP_
-
 /// \file boost/dll/import_class.hpp
 /// \warning Experimental feature that relies on an incomplete implementation of platform specific C++
 ///          mangling. In case of an issue provide a PR with a fix and tests to https://github.com/boostorg/dll .
 ///          boost/dll/import_class.hpp is not included in boost/dll.hpp
 /// \brief Contains the boost::dll::experimental::import_class function for importing classes.
 
-#include <boost/dll/smart_library.hpp>
-#include <boost/dll/import_mangled.hpp>
-#include <memory>
-#include <utility>  // std::move
+#ifndef BOOST_DLL_IMPORT_CLASS_HPP_
+#define BOOST_DLL_IMPORT_CLASS_HPP_
 
-#if (__cplusplus < 201103L) && (!defined(_MSVC_LANG) || _MSVC_LANG < 201103L)
-#  error This file requires C++11 at least!
-#endif
+#include <boost/dll/detail/config.hpp>
+
+#if !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
 
 #ifdef BOOST_HAS_PRAGMA_ONCE
 # pragma once
+#endif
+
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#if !defined(BOOST_DLL_USE_STD_MODULE)
+#include <memory>
+#include <utility>  // std::move
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
+
+#include <boost/dll/smart_library.hpp>
+#include <boost/dll/import_mangled.hpp>
+
+#if (__cplusplus < 201103L) && (!defined(_MSVC_LANG) || _MSVC_LANG < 201103L)
+#  error This file requires C++11 at least!
 #endif
 
 namespace boost { namespace dll { namespace experimental {
@@ -98,6 +107,8 @@ struct mem_fn_call_proxy<T, Return(Args...)>
 };
 
 }
+
+BOOST_DLL_BEGIN_MODULE_EXPORT
 
 template<typename T>
 class imported_class;
@@ -250,6 +261,7 @@ public:
     }
 };
 
+BOOST_DLL_END_MODULE_EXPORT
 
 
 //helper function, uses the allocating
@@ -512,6 +524,6 @@ import_class(smart_library & lib, const std::string & alias_name, std::size_t si
 }
 }
 
-
+#endif // !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
 
 #endif /* BOOST_DLL_IMPORT_CLASS_HPP_ */

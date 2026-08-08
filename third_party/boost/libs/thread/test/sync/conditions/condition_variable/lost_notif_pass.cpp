@@ -60,7 +60,7 @@ bool threadIsWaiting()
 
 #ifdef BOOST_THREAD_USES_DATETIME
 
-boost::posix_time::milliseconds posix_wait_time(1000);
+boost::posix_time::milliseconds posix_wait_time(2000);
 
 template <typename F>
 void test_posix_wait_function(F f)
@@ -68,12 +68,14 @@ void test_posix_wait_function(F f)
     flag = false;
     waiting = false;
     boost::thread t(f);
+    boost::unique_lock<boost::mutex> lk(mut);
     while (!threadIsWaiting())
     {
-        boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+        lk.unlock();
+        boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+        lk.lock();
     }
 
-    boost::unique_lock<boost::mutex> lk(mut);
     boost::this_thread::sleep(boost::posix_time::milliseconds(500));
     boost::posix_time::ptime t0 = boost::posix_time::microsec_clock::universal_time();
     flag = true;
@@ -82,7 +84,7 @@ void test_posix_wait_function(F f)
     t.join();
     boost::posix_time::ptime t1 = boost::posix_time::microsec_clock::universal_time();
 
-    BOOST_TEST(t1 - t0 < boost::posix_time::milliseconds(250));
+    BOOST_TEST(t1 - t0 < boost::posix_time::milliseconds(500));
 }
 
 //------------------------------------------------------------------------------
@@ -131,7 +133,7 @@ void timed_wait_relative_with_pred()
 
 #ifdef BOOST_THREAD_USES_CHRONO
 
-boost::chrono::milliseconds chrono_wait_time(1000);
+boost::chrono::milliseconds chrono_wait_time(2000);
 
 template <typename F>
 void test_chrono_wait_function(F f)
@@ -139,12 +141,14 @@ void test_chrono_wait_function(F f)
     flag = false;
     waiting = false;
     boost::thread t(f);
+    boost::unique_lock<boost::mutex> lk(mut);
     while (!threadIsWaiting())
     {
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
+        lk.unlock();
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+        lk.lock();
     }
 
-    boost::unique_lock<boost::mutex> lk(mut);
     boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
     boost::chrono::steady_clock::time_point t0 = boost::chrono::steady_clock::now();
     flag = true;
@@ -153,7 +157,7 @@ void test_chrono_wait_function(F f)
     t.join();
     boost::chrono::steady_clock::time_point t1 = boost::chrono::steady_clock::now();
 
-    BOOST_TEST(t1 - t0 < boost::chrono::milliseconds(250));
+    BOOST_TEST(t1 - t0 < boost::chrono::milliseconds(500));
 }
 
 //------------------------------------------------------------------------------

@@ -178,8 +178,9 @@ decoded_strcmp(decode_view s0, T s1)
     auto n = (std::min)(n0, n1);
     auto it0 = s0.begin();
     auto it1 = s1.begin();
-    while (n--)
+    while (n != 0)
     {
+        --n;
         const char c0 = *it0++;
         const char c1 = *it1++;
         if (c0 == c1)

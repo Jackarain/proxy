@@ -32,10 +32,11 @@
 #define RULES_DWA_20011020_H
 
 #include "config.h"
-#include "function.h"
+#include "jam_fwd.h"
 #include "mem.h"
-#include "modules.h"
+#include "lists.h"
 #include "timestamp.h"
+
 #include <utility>
 
 typedef struct _rule RULE;
@@ -53,8 +54,8 @@ typedef ACTIONS * actions_ptr;
 typedef SETTINGS * settings_ptr;
 
 typedef RULE & rule_ref;
-typedef TARGET & target_ref;
-typedef TARGETS & targets_ref;
+//typedef TARGET & target_ref;
+//typedef TARGETS & targets_ref;
 typedef ACTION & action_ref;
 typedef ACTIONS & actions_ref;
 typedef SETTINGS & settings_ref;
@@ -93,9 +94,9 @@ struct _rule
 	rule_actions_ptr actions; /* build actions, or NULL for no actions */
 	module_ptr module; /* module in which this rule is executed */
 	int exported; /* nonzero if this rule is supposed to appear in
-				   * the global module and be automatically
-				   * imported into other modules
-				   */
+	               * the global module and be automatically imported
+	               * into other modules (i.e. it is not a Jam "local rule")
+	               */
 };
 
 /* ACTIONS - a chain of ACTIONs. */
@@ -158,8 +159,8 @@ struct _target
 	targets_uptr depends; /* dependencies */
 	targets_uptr dependants; /* the inverse of dependencies */
 	targets_uptr rebuilds; /* targets that should be force-rebuilt
-							* whenever this one is
-							*/
+	                        * whenever this one is
+	                        */
 	target_ptr includes; /* internal includes node */
 
 	timestamp time; /* update time */
@@ -175,10 +176,10 @@ struct _target
 #define T_FLAG_NOUPDATE 0x0020 /* NOUPDATE applied */
 #define T_FLAG_VISITED 0x0040 /* CWM: Used in debugging */
 
-/* This flag has been added to support a new built-in rule named "RMBAD". It is
+/* This flag has been added to support a new built-in rule named "RMOLD". It is
  * used to force removal of outdated targets whose dependencies fail to build.
  */
-#define T_FLAG_RMOLD 0x0080 /* RMBAD applied */
+#define T_FLAG_RMOLD 0x0080 /* RMOLD applied */
 
 /* This flag was added to support a new built-in rule named "FAIL_EXPECTED" used
  * to indicate that the result of running a given action should be inverted,
@@ -196,8 +197,8 @@ struct _target
 #define T_FLAG_PRECIOUS 0x0800
 
 	char binding; /* how target relates to a real file or
-				   * folder
-				   */
+	               * folder
+	               */
 
 #define T_BIND_UNBOUND 0 /* a disembodied name */
 #define T_BIND_MISSING 1 /* could not find real file */
@@ -249,13 +250,13 @@ struct _target
 	int asynccnt; /* child deps outstanding */
 	targets_uptr parents; /* used by make1() for completion */
 	target_ptr scc_root; /* used by make to resolve cyclic includes
-						  */
+	                      */
 	target_ptr rescanning; /* used by make0 to mark visited targets
-							* when rescanning
-							*/
+	                        * when rescanning
+	                        */
 	int depth; /* The depth of the target in the make0
-				* stack.
-				*/
+	            * stack.
+	            */
 	char * cmds; /* type-punned command list */
 
 	char const * failed;
@@ -290,6 +291,7 @@ void rule_free(rule_ptr);
 
 /* Target related functions. */
 void bind_explicitly_located_targets();
+target_ptr find_target(b2::value_ptr);
 target_ptr bindtarget(b2::value_ptr const);
 targets_uptr targetchain(targets_uptr, targets_uptr);
 void targetentry(targets_uptr &, target_ptr);
@@ -310,6 +312,10 @@ struct target_ref
 {
 	target_ref(value_ref name)
 		: target(bindtarget(name))
+	{}
+
+	target_ref(target_ptr t)
+		: target(t)
 	{}
 
 	operator TARGET *() const { return target; }

@@ -1,4 +1,5 @@
 # Copyright 2002 Dave Abrahams
+# Copyright 2026 René Ferdinand Rivera Morell
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
 
@@ -172,37 +173,24 @@ local rule looks-like-implicit-value ( v )
 # specified in the command line, and second is the set of requested build
 # properties. Expects all the project files to already be loaded.
 #
-rule from-command-line ( command-line * )
+rule from-extra-args ( extra-args * )
 {
     local targets ;
     local properties ;
 
-    command-line = $(command-line[2-]) ;
-    local skip-next = ;
-    for local e in $(command-line)
+    for local e in $(extra-args)
     {
-        if $(skip-next)
+        # Build request spec either has "=" in it or completely consists of
+        # implicit feature values.
+        local fs = feature-space ;
+        if [ MATCH "(.+=.*)" : $(e) ]
+            || [ looks-like-implicit-value $(e:D=) : $(feature-space) ]
         {
-            skip-next = ;
+            properties += $(e) ;
         }
-        else if ! [ MATCH ^(-) : $(e) ]
+        else if $(e)
         {
-            # Build request spec either has "=" in it or completely consists of
-            # implicit feature values.
-            local fs = feature-space ;
-            if [ MATCH "(.*=.*)" : $(e) ]
-                || [ looks-like-implicit-value $(e:D=) : $(feature-space) ]
-            {
-                properties += $(e) ;
-            }
-            else if $(e)
-            {
-                targets += $(e) ;
-            }
-        }
-        else if [ MATCH "^(-[-ldjfsto])$" : $(e) ]
-        {
-            skip-next = true ;
+            targets += $(e) ;
         }
     }
     return [ new vector
@@ -234,7 +222,7 @@ local rule convert-command-line-element ( e )
     while $(parts)
     {
         local p = $(parts[1]) ;
-        local m = [ MATCH "([^=]*)=(.*)" : $(p) ] ;
+        local m = [ MATCH "([^=]+)=(.*)" : $(p) ] ;
         local lresult ;
         local feature ;
         local values ;
@@ -277,7 +265,7 @@ local rule convert-command-line-element ( e )
             parts = ;
         }
 
-        if ! [ MATCH (.*-.*) : $(p) ]
+        if ! [ MATCH (-) : $(p) ]
         {
             # property.validate cannot handle subfeatures, so we avoid the check
             # here.
@@ -361,12 +349,12 @@ rule __test__ ( )
 
     try ;
     {
-        r = [ build-request.from-command-line bjam gcc/debug runtime-link=dynamic/static ] ;
+        r = [ build-request.from-extra-args gcc/debug runtime-link=dynamic/static ] ;
         build-request.convert-command-line-elements [ $(r).get-at 2 ] ;
     }
     catch \"static\" is not an implicit feature value ;
 
-    r = [ build-request.from-command-line bjam debug runtime-link=dynamic ] ;
+    r = [ build-request.from-extra-args debug runtime-link=dynamic ] ;
     assert.equal [ $(r).get-at 1 ] : ;
     assert.equal [ $(r).get-at 2 ] : debug runtime-link=dynamic ;
 
@@ -374,7 +362,7 @@ rule __test__ ( )
         [ build-request.convert-command-line-elements debug runtime-link=dynamic ]
         : debug <runtime-link>dynamic ;
 
-    r = [ build-request.from-command-line bjam -d2 --debug debug target runtime-link=dynamic ] ;
+    r = [ build-request.from-extra-args debug target runtime-link=dynamic ] ;
     assert.equal [ $(r).get-at 1 ] : target ;
     assert.equal [ $(r).get-at 2 ] : debug runtime-link=dynamic ;
 
@@ -382,7 +370,7 @@ rule __test__ ( )
         [ build-request.convert-command-line-elements debug runtime-link=dynamic ]
         : debug <runtime-link>dynamic ;
 
-    r = [ build-request.from-command-line bjam debug runtime-link=dynamic,static ] ;
+    r = [ build-request.from-extra-args debug runtime-link=dynamic,static ] ;
     assert.equal [ $(r).get-at 1 ] : ;
     assert.equal [ $(r).get-at 2 ] : debug runtime-link=dynamic,static ;
 
@@ -390,7 +378,7 @@ rule __test__ ( )
         [ build-request.convert-command-line-elements debug runtime-link=dynamic,static ]
         : debug <runtime-link>dynamic <runtime-link>static ;
 
-    r = [ build-request.from-command-line bjam debug gcc/runtime-link=dynamic,static ] ;
+    r = [ build-request.from-extra-args debug gcc/runtime-link=dynamic,static ] ;
     assert.equal [ $(r).get-at 1 ] : ;
     assert.equal [ $(r).get-at 2 ] : debug gcc/runtime-link=dynamic,static ;
 
@@ -398,7 +386,7 @@ rule __test__ ( )
         [ build-request.convert-command-line-elements debug gcc/runtime-link=dynamic,static ]
         : debug gcc/<runtime-link>dynamic gcc/<runtime-link>static ;
 
-    r = [ build-request.from-command-line bjam msvc gcc,borland/runtime-link=static ] ;
+    r = [ build-request.from-extra-args msvc gcc,borland/runtime-link=static ] ;
     assert.equal [ $(r).get-at 1 ] : ;
     assert.equal [ $(r).get-at 2 ] : msvc gcc,borland/runtime-link=static ;
 
@@ -406,7 +394,7 @@ rule __test__ ( )
         [ build-request.convert-command-line-elements msvc gcc,borland/runtime-link=static ]
         : msvc gcc/<runtime-link>static borland/<runtime-link>static ;
 
-    r = [ build-request.from-command-line bjam gcc-3.0 ] ;
+    r = [ build-request.from-extra-args gcc-3.0 ] ;
     assert.equal [ $(r).get-at 1 ] : ;
     assert.equal [ $(r).get-at 2 ] : gcc-3.0 ;
 

@@ -17,25 +17,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: gcc-4.8
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-4.8
-          - toolset: gcc-5
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-5
-          - toolset: gcc-6
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: g++-6
           - toolset: gcc-7
             container: ubuntu:20.04
             os: ubuntu-latest
             install: g++-7
 # gcc-8 variant=release crashes
 #          - toolset: gcc-8
-#            os: ubuntu-20.04
+#            container: ubuntu:20.04
+#            os: ubuntu-latest
 #            install: g++-8
           - toolset: gcc-9
             container: ubuntu:20.04
@@ -45,10 +34,12 @@ jobs:
             os: ubuntu-latest
             install: g++-10
           - toolset: gcc-11
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: g++-11
           - toolset: gcc-12
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: g++-12
           - toolset: gcc-13
             container: ubuntu:24.04
@@ -58,21 +49,14 @@ jobs:
             container: ubuntu:24.04
             os: ubuntu-latest
             install: g++-14
-          - toolset: clang
-            compiler: clang++-3.9
-            container: ubuntu:18.04
+          - toolset: gcc-15
+            container: ubuntu:26.04
             os: ubuntu-latest
-            install: clang-3.9
-          - toolset: clang
-            compiler: clang++-4.0
-            container: ubuntu:18.04
+            install: g++-15
+          - toolset: gcc-16
+            container: ubuntu:26.04
             os: ubuntu-latest
-            install: clang-4.0
-          - toolset: clang
-            compiler: clang++-5.0
-            container: ubuntu:18.04
-            os: ubuntu-latest
-            install: clang-5.0
+            install: g++-16
           - toolset: clang
             compiler: clang++-6.0
             container: ubuntu:20.04
@@ -110,15 +94,18 @@ jobs:
             install: clang-12
           - toolset: clang
             compiler: clang++-13
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-13
           - toolset: clang
             compiler: clang++-14
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-14
           - toolset: clang
             compiler: clang++-15
-            os: ubuntu-22.04
+            container: ubuntu:22.04
+            os: ubuntu-latest
             install: clang-15
           - toolset: clang
             compiler: clang++-16
@@ -136,23 +123,38 @@ jobs:
             os: ubuntu-latest
             install: clang-18
           - toolset: clang
-            os: macos-13
+            compiler: clang++-19
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-19
+          - toolset: clang
+            compiler: clang++-20
+            container: ubuntu:24.04
+            os: ubuntu-latest
+            install: clang-20
+          - toolset: clang
+            compiler: clang++-21
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: clang-21
+          - toolset: clang
+            compiler: clang++-22
+            container: ubuntu:26.04
+            os: ubuntu-latest
+            install: clang-22
           - toolset: clang
             os: macos-14
           - toolset: clang
             os: macos-15
+          - toolset: clang
+            os: macos-26
 
     runs-on: ${{matrix.os}}
-    container:
-      image: ${{matrix.container}}
-      volumes:
-        - /node20217:/node20217:rw,rshared
-        - ${{ startsWith(matrix.container, 'ubuntu:1') && '/node20217:/__e/node20:ro,rshared' || ' ' }}
+    container: ${{matrix.container}}
 
     defaults:
       run:
         shell: bash
-
 
     steps:
       - name: Setup container environment
@@ -161,14 +163,7 @@ jobs:
           apt-get update
           apt-get -y install sudo python3 git g++ curl xz-utils
 
-      - name: Install nodejs20glibc2.17
-        if: ${{ startsWith( matrix.container, 'ubuntu:1' ) }}
-        run: |
-          curl -LO https://archives.boost.io/misc/node/node-v20.9.0-linux-x64-glibc-217.tar.xz
-          tar -xf node-v20.9.0-linux-x64-glibc-217.tar.xz --strip-components 1 -C /node20217
-          ldd /__e/node20/bin/node
-
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Install packages
         if: matrix.install
@@ -210,25 +205,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - toolset: msvc-14.0
-            os: windows-2019
-          - toolset: msvc-14.2
-            os: windows-2019
           - toolset: msvc-14.3
             os: windows-2022
+          - toolset: msvc-14.5
+            os: windows-2025-vs2026
 
 # The test Jamfile doesn't work with the clang-win toolset for some reason
 #         - toolset: clang-win
 #           os: windows-2022
 
 # gcc-8 variant=release crashes
-#         - toolset: gcc
-#           os: windows-2019
+          - toolset: gcc
+            os: windows-2025
 
     runs-on: ${{matrix.os}}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup Boost
         shell: cmd
@@ -253,3 +246,65 @@ jobs:
         run: |
           cd ../boost-root
           b2 -j3 tools/quickbook/test toolset=${{matrix.toolset}} variant=debug,release embed-manifest-via=linker
+
+  posix-cmake-build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Boost
+        run: |
+          echo GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          echo GITHUB_BASE_REF: $GITHUB_BASE_REF
+          echo GITHUB_REF: $GITHUB_REF
+          REF=${GITHUB_BASE_REF:-$GITHUB_REF}
+          REF=${REF#refs/heads/}
+          echo REF: $REF
+          BOOST_BRANCH=develop && [ "$REF" == "master" ] && BOOST_BRANCH=master || true
+          echo BOOST_BRANCH: $BOOST_BRANCH
+          cd ..
+          git clone -b $BOOST_BRANCH --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          cp -r $GITHUB_WORKSPACE/* tools/quickbook
+          git submodule update --init tools/boostdep
+          python3 tools/boostdep/depinst/depinst.py -X test --git_args "--jobs 3" ../tools/quickbook
+          ./bootstrap.sh
+          ./b2 --prefix=$HOME/.local install
+
+      - name: Build Quickbook with CMake
+        run: |
+          cmake -S . -B __build__ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=~/.local
+          cmake --build __build__ --target install
+
+  windows-cmake-build:
+
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Boost
+        shell: cmd
+        run: |
+          echo GITHUB_REPOSITORY: %GITHUB_REPOSITORY%
+          echo GITHUB_BASE_REF: %GITHUB_BASE_REF%
+          echo GITHUB_REF: %GITHUB_REF%
+          if "%GITHUB_BASE_REF%" == "" set GITHUB_BASE_REF=%GITHUB_REF%
+          set BOOST_BRANCH=develop
+          for /f %%i in ("%GITHUB_BASE_REF%") do if "%%~nxi" == "master" set BOOST_BRANCH=master
+          echo BOOST_BRANCH: %BOOST_BRANCH%
+          cd ..
+          git clone -b %BOOST_BRANCH% --depth 1 https://github.com/boostorg/boost.git boost-root
+          cd boost-root
+          xcopy /s /e /q %GITHUB_WORKSPACE% tools\quickbook\
+          git submodule update --init tools/boostdep
+          python tools/boostdep/depinst/depinst.py -X test --git_args "--jobs 3" ../tools/quickbook
+          cmd /c bootstrap
+          b2 install
+
+      - name: Build Quickbook with CMake
+        run: |
+          cmake -S . -B __build__ -DBoost_ROOT=C:/Boost -DCMAKE_INSTALL_PREFIX=C:/usr/local
+          cmake --build __build__ --target install --config Release

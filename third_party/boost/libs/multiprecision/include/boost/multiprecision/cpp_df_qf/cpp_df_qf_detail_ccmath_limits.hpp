@@ -39,7 +39,19 @@ public:
    static constexpr bool                    is_bounded                    = std::numeric_limits<float_type>::is_bounded;
    static constexpr bool                    is_modulo                     = std::numeric_limits<float_type>::is_modulo;
    static constexpr bool                    is_iec559                     = std::numeric_limits<float_type>::is_iec559;
+   #ifdef _MSC_VER
+   #  pragma warning(push)
+   #  pragma warning(disable : 4996)
+   #elif (defined(__clang__) && (__clang_major__ >= 17))
+   #  pragma clang diagnostic push
+   #  pragma clang diagnostic ignored "-Wdeprecated-declarations"
+   #endif
    static constexpr std::float_denorm_style has_denorm                    = std::numeric_limits<float_type>::has_denorm;
+   #ifdef _MSC_VER
+   #pragma warning(pop)
+   #elif (defined(__clang__) && (__clang_major__ >= 17))
+   #  pragma clang diagnostic pop
+   #endif
    static constexpr bool                    has_infinity                  = std::numeric_limits<float_type>::has_infinity;
    static constexpr bool                    has_quiet_NaN                 = std::numeric_limits<float_type>::has_quiet_NaN;
    static constexpr bool                    has_signaling_NaN             = std::numeric_limits<float_type>::has_signaling_NaN;
@@ -87,7 +99,19 @@ public:
    static constexpr bool                    is_bounded                    = true;
    static constexpr bool                    is_modulo                     = false;
    static constexpr bool                    is_iec559                     = true;
+   #ifdef _MSC_VER
+   #  pragma warning(push)
+   #  pragma warning(disable : 4996)
+   #elif (defined(__clang__) && (__clang_major__ >= 17))
+   #  pragma clang diagnostic push
+   #  pragma clang diagnostic ignored "-Wdeprecated-declarations"
+   #endif
    static constexpr std::float_denorm_style has_denorm                    = std::denorm_present;
+   #ifdef _MSC_VER
+   #pragma warning(pop)
+   #elif (defined(__clang__) && (__clang_major__ >= 17))
+   #  pragma clang diagnostic pop
+   #endif
    static constexpr bool                    has_infinity                  = true;
    static constexpr bool                    has_quiet_NaN                 = true;
    static constexpr bool                    has_signaling_NaN             = false;

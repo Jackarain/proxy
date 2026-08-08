@@ -31,7 +31,6 @@ common_install () {
   export SELF=`basename $REPO_NAME`
   export BOOST_CI_TARGET_BRANCH="$TRAVIS_BRANCH"
   export BOOST_CI_SRC_FOLDER=$(pwd)
-  : ${B2_DONT_BOOTSTRAP:=$B2_SEPARATE_BOOTSTRAP}
 
   . ./ci/common_install.sh
 
@@ -55,13 +54,6 @@ common_install () {
 
       popd
   fi
-
-  if [ "$B2_SEPARATE_BOOTSTRAP" = 1 ]; then
-    pushd tools/build
-    B2_TOOLSET= ./bootstrap.sh
-    popd
-    cp tools/build/b2 .
-  fi
 }
 
 common_cmake () {
@@ -79,9 +71,22 @@ common_cmake () {
 
 if [ "$DRONE_JOB_BUILDTYPE" == "boost" ]; then
 
-if [[ $(uname) == "Linux" && ( "$COMMENT" == tsan || "$COMMENT" == asan ) ]]; then
-    echo 0 | sudo tee /proc/sys/kernel/randomize_va_space
-    sudo sysctl vm.mmap_rnd_bits=28
+if [[ $(uname) == "Linux" ]]; then
+    error=0
+    if ! { echo 0 | sudo tee /proc/sys/kernel/randomize_va_space > /dev/null; } && [[ -n ${B2_ASAN:-} ]]; then
+        echo -e "\n\nWARNING: Failed to disable KASLR. ASAN might fail with 'DEADLYSIGNAL'."
+        error=1
+    fi
+    # sysctl just ignores some failures and does't return an error, only output
+    if { ! out=$(sudo sysctl vm.mmap_rnd_bits=28 2>&1) || [[ "$out" == *"ignoring:"* ]]; } && [[ -n ${B2_TSAN:-} ]]; then
+        echo -e "\n\nWARNING: Failed to change KASLR. TSAN might fail with 'FATAL: ThreadSanitizer: unexpected memory mapping'."
+        error=1
+    fi
+    if ((error == 1)); then
+        # shellcheck disable=SC2016
+        [[ "${DRONE_EXTRA_PRIVILEGED:-0}" == "True" ]] || echo 'Try passing `privileged=True` to the job in .drone.star'
+        echo -e "\n"
+    fi
 fi
 
 echo '==================================> INSTALL'
@@ -131,17 +136,6 @@ echo '==================================> SCRIPT'
 
 cd $BOOST_ROOT/libs/$SELF
 ci/travis/codecov.sh
-
-elif [ "$DRONE_JOB_BUILDTYPE" == "valgrind" ]; then
-
-echo '==================================> INSTALL'
-
-common_install
-
-echo '==================================> SCRIPT'
-
-cd $BOOST_ROOT/libs/$SELF
-ci/travis/valgrind.sh
 
 elif [ "$DRONE_JOB_BUILDTYPE" == "coverity" ]; then
 

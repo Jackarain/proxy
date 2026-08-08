@@ -1,0 +1,14 @@
+source-root: ../include
+compilation-database: ../CMakeLists.txt
+cmake: '-DCMAKE_CXX_STANDARD=20 -DBOOST_MSM_BUILD_MRDOCS=ON -DBUILD_TESTING=OFF'
+multipage: true
+generator: adoc
+exclude:
+  - ../include/boost/msm/mpl_graph
+include-symbols:
+  - 'boost::msm::backmp11'
+  - 'boost::msm::front'
+exclude-symbols:
+  - '**::detail::**'
+  - '**::internal'
+  - 'boost::msm::backmp11::operator|'

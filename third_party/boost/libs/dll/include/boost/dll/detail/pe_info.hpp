@@ -14,11 +14,15 @@
 # pragma once
 #endif
 
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#if !defined(BOOST_DLL_USE_STD_MODULE)
 #include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <string> // for std::getline
 #include <vector>
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 namespace boost { namespace dll { namespace detail {
 

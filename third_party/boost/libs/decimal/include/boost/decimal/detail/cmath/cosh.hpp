@@ -67,13 +67,17 @@ constexpr auto cosh_impl(const T x) noexcept
 
                 result = fma(result, xsq, one);
             }
-            else
+            else if (x > one)
             {
                 const auto exp_pos_val = exp(x);
 
-                constexpr T two { 2, 0 };
+                result = (exp_pos_val + (one / exp_pos_val)) / 2;
+            }
+            else
+            {
+                constexpr T local_cosh_one { numbers::e_v<T> };
 
-                result = (exp_pos_val + (one / exp_pos_val)) / two;
+                result = (local_cosh_one + (one / local_cosh_one)) / 2;
             }
         }
     }

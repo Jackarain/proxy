@@ -8,11 +8,12 @@
 // #include <boost/type_index/runtime_cast.hpp>
 // #include <boost/type_index/runtime_reference_cast.hpp>
 
-#include <boost/type_index/runtime_cast.hpp>
-#include <boost/type_index/runtime_cast/boost_shared_ptr_cast.hpp>
 #include <boost/smart_ptr/make_shared.hpp>
 
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/type_index/runtime_cast.hpp>
+#include <boost/type_index/runtime_cast/boost_shared_ptr_cast.hpp>
 
 #if !defined(BOOST_NO_CXX11_SMART_PTR)
 #  include <boost/type_index/runtime_cast/std_shared_ptr_cast.hpp>

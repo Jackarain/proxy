@@ -99,6 +99,9 @@ void
 segments_iter_impl::
 update() noexcept
 {
+    BOOST_ASSERT(
+        pos == 0 ||
+        ref.data()[pos - 1] == '/');
     auto const end = ref.end();
     char const* const p0 =
         ref.data() + pos;
@@ -182,39 +185,27 @@ decrement() noexcept
     --index;
     if(index == 0)
     {
-        next = pos;
         pos = path_prefix(ref.buffer());
         decoded_prefix = pos;
-        s_ = core::string_view(
-            ref.data() + pos,
-            next - pos);
+        update();
         BOOST_ASSERT(! s_.ends_with('/'));
         return;
     }
+    // scan backwards to find the '/' before
+    // the previous segment
     auto const begin = ref.data() +
         path_prefix(ref.buffer());
-    next = pos;
-    auto p = ref.data() + next;
-    auto const p1 = p;
+    auto p = ref.data() + pos;
     BOOST_ASSERT(p != begin);
-    dn = 0;
     while(p != begin)
     {
         --p;
         if(*p == '/')
-        {
-            ++dn;
             break;
-        }
-        if(*p == '%')
-            dn += 2;
     }
-    dn = p1 - p - dn;
-    pos = p - ref.data();
-    // keep decoded_prefix consistent with new pos
-    // (already adjusted above)
-    s_ = make_pct_string_view_unsafe(
-        p + 1, p1 - p - 1, dn);
+    pos = p - ref.data() + 1;
+    update();
+    --pos;
 }
 
 } // detail

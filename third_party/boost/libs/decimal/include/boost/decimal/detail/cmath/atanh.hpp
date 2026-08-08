@@ -62,11 +62,11 @@ constexpr auto atanh_impl(const T x) noexcept
 
                 if(xx < half)
                 {
-                    result = (log1p(xx) - log1p(-xx)) / 2;
+                    result = (::boost::decimal::log1p(xx) - ::boost::decimal::log1p(-xx)) / 2;
                 }
                 else
                 {
-                    result = (log((one + xx) / (one - xx)) / 2);
+                    result = (::boost::decimal::log((one + xx) / (one - xx)) / 2);
                 }
             }
             else

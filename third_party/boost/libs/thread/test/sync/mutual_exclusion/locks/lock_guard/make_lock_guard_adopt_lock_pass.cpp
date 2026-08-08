@@ -32,10 +32,10 @@ typedef Clock::time_point time_point;
 typedef Clock::duration duration;
 typedef boost::chrono::milliseconds ms;
 typedef boost::chrono::nanoseconds ns;
-time_point t0;
-time_point t1;
+time_point g_t0;
+time_point g_t1;
 #endif
-boost::mutex m;
+boost::mutex g_mutex;
 
 #if ! defined(BOOST_NO_CXX11_AUTO_DECLARATIONS) && ! defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && ! defined BOOST_THREAD_NO_MAKE_LOCK_GUARD
 
@@ -44,22 +44,22 @@ const ms max_diff(BOOST_THREAD_TEST_TIME_MS);
 void f()
 {
 #ifdef BOOST_THREAD_USES_CHRONO
-  t0 = Clock::now();
+  g_t0 = Clock::now();
   {
-    m.lock();
-    auto&& lg = boost::make_lock_guard(m, boost::adopt_lock); (void)lg;
+    g_mutex.lock();
+    auto&& lg = boost::make_lock_guard(g_mutex, boost::adopt_lock); (void)lg;
 
-    t1 = Clock::now();
+    g_t1 = Clock::now();
   }
 #else
-  //time_point t0 = Clock::now();
-  //time_point t1;
+  //time_point g_t0 = Clock::now();
+  //time_point g_t1;
   {
-    m.lock();
-    auto&& lg = boost::make_lock_guard(m, boost::adopt_lock); (void)lg;
-    //t1 = Clock::now();
+    g_mutex.lock();
+    auto&& lg = boost::make_lock_guard(g_mutex, boost::adopt_lock); (void)lg;
+    //g_t1 = Clock::now();
   }
-  //ns d = t1 - t0 - ms(250);
+  //ns d = g_t1 - g_t0 - ms(250);
   //BOOST_TEST(d < max_diff);
 #endif
 }
@@ -68,19 +68,19 @@ void f()
 int main()
 {
 #if ! defined(BOOST_NO_CXX11_AUTO_DECLARATIONS) && ! defined(BOOST_NO_CXX11_RVALUE_REFERENCES) && ! defined BOOST_THREAD_NO_MAKE_LOCK_GUARD
-  m.lock();
+  g_mutex.lock();
   boost::thread t(f);
 #ifdef BOOST_THREAD_USES_CHRONO
   time_point t2 = Clock::now();
   boost::this_thread::sleep_for(ms(250));
   time_point t3 = Clock::now();
 #endif
-  m.unlock();
+  g_mutex.unlock();
   t.join();
 
 #if defined BOOST_THREAD_USES_CHRONO
   ns sleep_time = t3 - t2;
-  ns d_ns = t1 - t0 - sleep_time;
+  ns d_ns = g_t1 - g_t0 - sleep_time;
   ms d_ms = boost::chrono::duration_cast<boost::chrono::milliseconds>(d_ns);
   // BOOST_TEST_GE(d_ms.count(), 0);
   BOOST_THREAD_TEST_IT(d_ms, max_diff);

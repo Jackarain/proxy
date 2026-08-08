@@ -11,7 +11,7 @@ Doc generation works in two modes: standalone embedded and website.
 For the standalone we just generate the local html for inclusion in a release
 archive. This is the default when no arguments are given.
 
-For the website we clone the website branch locally, generatate the docs in
+For the website we clone the website branch locally, generate the docs in
 the website tree, commit, and push. The default for those arguments is to
 build as if we are doing "develop" branch docs.
 

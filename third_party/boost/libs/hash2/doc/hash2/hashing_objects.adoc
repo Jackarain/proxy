@@ -59,6 +59,9 @@ to `v`.
 * Unordered containers and ranges;
 * Constant size containers (`std::array`, `boost::array`);
 * Tuple-like types (`std::pair`, `std::tuple`);
+* `std::optional`;
+* `std::variant`;
+* `std::monostate`;
 * Described classes (using Boost.Describe).
 
 User-defined types that aren't in the above categories can provide
@@ -312,6 +315,21 @@ int main()
     assert( h1.result() == h2.result() );
 }
 ```
+
+## `std::optional`
+
+When `T` is an instance of `std::optional`, first `hash_append(h, f, v.has_value())` is called, then, if `v` is engaged, `hash_append(h, f, *v)` is called.
+
+## `std::variant`
+
+When `T` is an instance of `std::variant`:
+
+* If `T` is valueless, `hash_append(h, f, '\x00')` is called;
+* Otherwise, `hash_append(h, f, v.index())` is called, followed by a call to `hash_append(h, f, w)`, where `w` is the active alternative of `v`.
+
+## `std::monostate`
+
+When `T` is `std::monostate`, `hash_append(h, f, '\x00')` is called.
 
 ## Described Classes
 

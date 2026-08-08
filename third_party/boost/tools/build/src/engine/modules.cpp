@@ -27,6 +27,14 @@ static struct hash * module_hash = 0;
 static module_t root;
 
 
+module_t * find_module( OBJECT * name )
+{
+	if ( module_hash )
+		return (module_t *)hash_find( module_hash, name );
+	return 0;
+}
+
+
 module_t * bindmodule( OBJECT * name )
 {
     if ( !name )

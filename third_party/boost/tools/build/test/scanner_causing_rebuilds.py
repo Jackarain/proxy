@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # Copyright 2012 Jurko Gospodnetic
+# Copyright 2026 Paolo Pastori
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
 
@@ -17,13 +18,15 @@
 # targets depending on it to be updated/rebuilt as well.
 
 import BoostBuild
+import sys
 
-t = BoostBuild.Tester(use_test_config=False)
+sleep_s = 0.5
 
-t.write("foo.jam", r"""
+t = BoostBuild.Tester()
+
+t.write("foo.jam", """\
 import common ;
 import generators ;
-import modules ;
 import type ;
 import types/cpp ;
 
@@ -31,23 +34,10 @@ type.register FOO : foo ;
 type.register BAR : bar ;
 generators.register-standard foo.foo : FOO : CPP BAR ;
 
-local rule sleep-cmd ( delay )
-{
-    if [ modules.peek : NT ]
-    {
-        return ping 127.0.0.1 -n $(delay) -w 1000 >NUL ;
-    }
-    else
-    {
-        return sleep $(delay) ;
-    }
-}
-
-.touch = [ common.file-creation-command ] ;
-.sleep = [ sleep-cmd 2 ] ;
+.touch = [ common.file-touch-command ] ;
 
 rule foo ( cpp bar : foo : properties * )
-{
+{{
     # We add the INCLUDE relationship between our generated CPP & BAR targets
     # explicitly instead of relying on Boost Jam's internal implementation
     # detail - automatically adding such relationships between all files
@@ -56,24 +46,20 @@ rule foo ( cpp bar : foo : properties * )
     # Note that adding this relationship by adding an #include directive in our
     # generated CPP file is not good enough as such a relationship would get
     # added only after the scanner target's relationships have already been
-    # established and they (as affected by our initial INCLUDE relationship) are
-    # the original reason for this test failing.
+    # established and they (as affected by our initial INCLUDE relationship)
+    # are the original reason for this test failing.
     INCLUDES $(cpp) : $(bar) ;
-}
+}}
 
 actions foo
-{
+{{
     $(.touch) "$(<[1])"
-    $(.sleep)
+    "{}" -c "import time; time.sleep({})"
     $(.touch) "$(<[2])"
-}
-""")
+}}
+""".format(sys.executable, sleep_s))
 
-t.write(
-    'foo.py',
-"""
-import os
-
+t.write("foo.py", """\
 from b2.build import type as type_, generators
 from b2.tools import common
 from b2.manager import get_manager
@@ -84,11 +70,6 @@ ENGINE = MANAGER.engine()
 type_.register('FOO', ['foo'])
 type_.register('BAR', ['bar'])
 generators.register_standard('foo.foo', ['FOO'], ['CPP', 'BAR'])
-
-def sleep_cmd(delay):
-    if os.name == 'nt':
-        return 'ping 127.0.0.1 -n {} -w 1000 >NUL'.format(delay)
-    return 'sleep {}'.format(delay)
 
 def foo(targets, sources, properties):
     cpp, bar = targets
@@ -101,20 +82,19 @@ def foo(targets, sources, properties):
     # Note that adding this relationship by adding an #include directive in our
     # generated CPP file is not good enough as such a relationship would get
     # added only after the scanner target's relationships have already been
-    # established and they (as affected by our initial INCLUDE relationship) are
-    # the original reason for this test failing.
+    # established and they (as affected by our initial INCLUDE relationship)
+    # are the original reason for this test failing.
     bjam.call('INCLUDES', cpp, bar)
 
 ENGINE.register_action(
     'foo.foo',
     '''
-    {touch} "$(<[1])"
-    {sleep}
-    {touch} "$(<[2])"
-    '''.format(touch=common.file_creation_command(), sleep=sleep_cmd(2))
+    {{touch}} "$(<[1])"
+    "{}" -c "import time; time.sleep({})"
+    {{touch}} "$(<[2])"
+    '''.format(touch=common.file-touch-command())
 )
-"""
-)
+""".format(sys.executable, sleep_s))
 
 t.write("x.foo", "")
 t.write("jamroot.jam", """\
@@ -130,3 +110,4 @@ t.run_build_system()
 # should not cause any files to be affected.
 t.run_build_system()
 t.expect_nothing_more()
+t.cleanup()

@@ -30,16 +30,16 @@ struct mutex
   }
 };
 
-mutex m;
+mutex g_mutex;
 
 int main()
 {
-  boost::unique_lock<mutex> lk1(m);
+  boost::unique_lock<mutex> lk1(g_mutex);
   boost::unique_lock<mutex> lk2;
   swap(lk1, lk2);
   BOOST_TEST(lk1.mutex() == 0);
   BOOST_TEST(lk1.owns_lock() == false);
-  BOOST_TEST(lk2.mutex() == &m);
+  BOOST_TEST(lk2.mutex() == &g_mutex);
   BOOST_TEST(lk2.owns_lock() == true);
 
   return boost::report_errors();

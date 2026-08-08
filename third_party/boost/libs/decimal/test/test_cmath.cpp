@@ -197,7 +197,7 @@ void test_floor()
 
     // Bigger numbers
     BOOST_TEST_EQ(floor(Dec(27777, -2) * dist(rng)), Dec(277, 0));
-    BOOST_TEST_EQ(floor(Dec(-27777, -2) * dist(rng)), Dec(-277, 0));
+    BOOST_TEST_EQ(floor(Dec(-27777, -2) * dist(rng)), Dec(-278, 0));
     BOOST_TEST_EQ(floor(Dec(27777, -1) * dist(rng)), Dec(2777, 0));
 
     // Near zero
@@ -978,7 +978,7 @@ void test_nearbyint()
         // Float goes to even while decimal is to nearest from zero
         float iptr {};
         const auto frac {std::modf(val1, &iptr)};
-        if (std::abs(frac) <= 0.5F && std::abs(frac) >= 0.49F)
+        if (std::abs(frac) <= 0.51F && std::abs(frac) >= 0.49F)
         {
             continue;
         }

@@ -217,7 +217,7 @@ def match_re(lines=None, res=None):
     if not type(res) is list:
         res = res.split("\n")
     for i in range(min(len(lines), len(res))):
-        if not re.compile("^" + res[i] + "$").search(lines[i]):
+        if not re.match(res[i] + "$", lines[i]):
             return MatchError("Mismatch at line %d\n- %s\n+ %s\n" %
                 (i+1, res[i], lines[i]))
     if len(lines) < len(res):

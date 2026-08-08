@@ -63,7 +63,6 @@ BOOST_AUTO_TEST_CASE(test_timed_lock_shared_succeeds_if_no_lock_held)
 
     boost::system_time const start=boost::get_system_time();
     boost::system_time const timeout=start+boost::posix_time::milliseconds(500);
-    boost::posix_time::milliseconds const timeout_resolution(50);
     bool timed_lock_succeeded=rw_mutex.timed_lock_shared(timeout);
     BOOST_CHECK(boost::get_system_time()<timeout);
     BOOST_CHECK(timed_lock_succeeded);
@@ -97,7 +96,6 @@ BOOST_AUTO_TEST_CASE(test_timed_lock_shared_succeeds_if_read_lock_held)
 
     boost::system_time const start=boost::get_system_time();
     boost::system_time const timeout=start+boost::posix_time::milliseconds(500);
-    boost::posix_time::milliseconds const timeout_resolution(50);
     bool timed_lock_succeeded=rw_mutex.timed_lock_shared(timeout);
     BOOST_CHECK(boost::get_system_time()<timeout);
     BOOST_CHECK(timed_lock_succeeded);
@@ -164,7 +162,6 @@ BOOST_AUTO_TEST_CASE(test_timed_lock_succeeds_if_no_lock_held)
 
     boost::system_time const start=boost::get_system_time();
     boost::system_time const timeout=start+boost::posix_time::milliseconds(500);
-    boost::posix_time::milliseconds const timeout_resolution(50);
     bool timed_lock_succeeded=rw_mutex.timed_lock(timeout);
     BOOST_CHECK(boost::get_system_time()<timeout);
     BOOST_CHECK(timed_lock_succeeded);

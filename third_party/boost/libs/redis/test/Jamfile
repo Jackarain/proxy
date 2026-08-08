@@ -2,9 +2,26 @@
 import-search /boost/config/checks ;
 import config : requires ;
 import ac ;
+import indirect ;
 
 # Configure openssl if it hasn't been done yet
 using openssl ;
+
+# Provide a way to fail the build if OpenSSL is not found - used by CIs
+rule do_fail_impl ( a * )
+{
+    exit "OpenSSL could not be found. Don't build target fail_if_no_openssl to skip this check" ;
+}
+
+local do_fail = [ indirect.make do_fail_impl ] ;
+
+alias fail_if_no_openssl
+    : requirements
+        [ ac.check-library /openssl//ssl    : : <conditional>@$(do_fail) ]
+        [ ac.check-library /openssl//crypto : : <conditional>@$(do_fail) ]
+;
+
+explicit fail_if_no_openssl ;
 
 # Use these requirements as both regular and usage requirements across all tests
 local requirements =
@@ -33,7 +50,6 @@ local requirements =
         ]
         [ ac.check-library /openssl//ssl    : <library>/openssl//ssl/<link>shared : <build>no ]
         [ ac.check-library /openssl//crypto : <library>/openssl//crypto/<link>shared : <build>no ]
-        <library>/boost/test//boost_unit_test_framework/<warnings-as-errors>off
     ;
 
 
@@ -75,6 +91,7 @@ local tests =
     test_read_buffer
     test_subscription_tracker
     test_push_parser
+    test_config
 ;
 
 # Build and run the tests
@@ -86,3 +103,4 @@ for local test in $(tests)
     : target-name $(test)
     ;
 }
+

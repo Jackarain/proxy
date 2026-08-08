@@ -73,9 +73,8 @@ immediately when the build description is parsed, which makes it
 impossible to perform multi-variant builds. Often, change in any build
 property requires a complete reconfiguration of the build tree.
 
-In order to support true multi-variant builds, B2 introduces the
-concept of a metatarget definition main target metatarget
-_metatarget_ -- an object that is created when the build description is
+In order to support true multi-variant builds, B2 introduces the concept
+of _metatarget_ -- an object that is created when the build description is
 parsed and can be called later with specific build properties to
 generate actual targets.
 
@@ -218,7 +217,7 @@ This is a regular if-statement. The condition is composed of:
 
 * Literals (true if at least one string is not empty)
 * Comparisons: `a operator b` where _operator_ is one of `=`, `!=`, `<`,
-`>`, `<=` or `>=`. The comparison is done pairwise between each string
+`>`, `\<=` or `>=`. The comparison is done pairwise between each string
 in the left and the right arguments.
 * Logical operations: `! a`, `a && b`, `a || b`
 * Grouping: `( cond )`
@@ -259,7 +258,7 @@ names.
 
 [[b2.overview.jam_language.actions]]
 Sometimes, you need to specify the actual command lines to be used when
-creating targets. In the jam language, you use named actions to do this.
+creating targets. In the Jam language, you use named actions to do this.
 For example:
 
 [source]
@@ -650,7 +649,7 @@ B2 recognizes the following command line options.
   Write the updating actions to the specified file instead of running
   them.
 `-s var=value`::
-  Set the variable `var` to `value` in the global scope of the jam language
+  Set the variable `var` to `value` in the global scope of the Jam language
   interpreter, overriding variables imported from the environment.
 `--command-database=_format_`::
   Output a compile commands database as _format_. Currently _format_ can be:

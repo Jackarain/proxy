@@ -6,7 +6,7 @@ Copyright (c) 2011-2011: Joachim Faulhaber
            http://www.boost.org/LICENSE_1_0.txt)
 +-----------------------------------------------------------------------------*/
 #define BOOST_TEST_MODULE icl::fix_icl_after_thread unit test
-#include <libs/icl/test/disable_test_warnings.hpp>
+#include <disable_test_warnings.hpp>
 #include "../unit_test_unwarned.hpp"
 
 //#define BOOST_ICL_USE_STATIC_BOUNDED_INTERVALS
@@ -171,6 +171,7 @@ BOOST_AUTO_TEST_CASE(extreme_valued_open_intervals)
 
 BOOST_AUTO_TEST_CASE(test_span_and_hull)
 {
+    using boost::icl::span;
     typedef closed_interval<int> cl_I_int;
     cl_I_int span_1_2 = span< cl_I_int >(1,2);
     cl_I_int span_2_1 = span< cl_I_int >(2,1);
@@ -249,3 +250,380 @@ BOOST_AUTO_TEST_CASE(github_25_intersects_for_empty_interval_throws)
     BOOST_CHECK_EQUAL(false, intersects(mt_set, Itv::right_open(-1,-1)));
 }
 
+//------------------------------------------------------------------------------
+// GitHub issue #51: exclusive_less_than strict weak ordering violation
+//
+// The following tests verify the expected semantics of lower_bound,
+// upper_bound, equal_range, and find on interval containers.
+//------------------------------------------------------------------------------
+
+// interval_set tests
+BOOST_AUTO_TEST_CASE(github_51_interval_set_upper_bound)
+{
+    typedef boost::icl::interval_set<int> ItvSet;
+    typedef ItvSet::interval_type Itv;
+
+    ItvSet s;
+    s.add(Itv::right_open(0, 10));
+    s.add(Itv::right_open(20, 30));
+    s.add(Itv::right_open(40, 50));
+
+    // upper_bound with query overlapping multiple stored intervals
+    {
+        ItvSet::iterator it = s.upper_bound(Itv::right_open(5, 25));
+        BOOST_CHECK(it != s.end());
+        BOOST_CHECK_EQUAL(*it, Itv::right_open(40, 50));
+    }
+
+    // upper_bound past all intervals
+    {
+        ItvSet::iterator it = s.upper_bound(Itv::right_open(5, 55));
+        BOOST_CHECK(it == s.end());
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_interval_set_lower_bound)
+{
+    typedef boost::icl::interval_set<int> ItvSet;
+    typedef ItvSet::interval_type Itv;
+
+    ItvSet s;
+    s.add(Itv::right_open(0, 10));
+    s.add(Itv::right_open(20, 30));
+    s.add(Itv::right_open(40, 50));
+
+    // lower_bound with query overlapping first and second intervals
+    {
+        ItvSet::iterator it = s.lower_bound(Itv::right_open(5, 25));
+        BOOST_CHECK(it != s.end());
+        BOOST_CHECK_EQUAL(*it, Itv::right_open(0, 10));
+    }
+
+    // lower_bound for interval before all stored
+    {
+        ItvSet::iterator it = s.lower_bound(Itv::right_open(-5, -1));
+        BOOST_CHECK(it != s.end());
+        BOOST_CHECK_EQUAL(*it, Itv::right_open(0, 10));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_interval_set_equal_range)
+{
+    typedef boost::icl::interval_set<int> ItvSet;
+    typedef ItvSet::interval_type Itv;
+
+    ItvSet s;
+    s.add(Itv::right_open(0, 10));
+    s.add(Itv::right_open(20, 30));
+    s.add(Itv::right_open(40, 50));
+
+    // equal_range covering first two intervals
+    {
+        std::pair<ItvSet::iterator, ItvSet::iterator> range =
+            s.equal_range(Itv::right_open(5, 25));
+        int count = 0;
+        for (ItvSet::iterator it = range.first; it != range.second; ++it)
+            ++count;
+        BOOST_CHECK_EQUAL(count, 2);
+    }
+
+    // equal_range covering all intervals
+    {
+        std::pair<ItvSet::iterator, ItvSet::iterator> range =
+            s.equal_range(Itv::right_open(-5, 55));
+        int count = 0;
+        for (ItvSet::iterator it = range.first; it != range.second; ++it)
+            ++count;
+        BOOST_CHECK_EQUAL(count, 3);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_interval_set_find)
+{
+    typedef boost::icl::interval_set<int> ItvSet;
+    typedef ItvSet::interval_type Itv;
+
+    ItvSet s;
+    s.add(Itv::right_open(0, 10));
+    s.add(Itv::right_open(20, 30));
+    s.add(Itv::right_open(40, 50));
+
+    // find for overlapping interval returns first overlapping
+    {
+        ItvSet::const_iterator it = s.find(Itv::right_open(5, 25));
+        BOOST_CHECK(it != s.end());
+        BOOST_CHECK_EQUAL(*it, Itv::right_open(0, 10));
+    }
+
+    // find for non-overlapping interval returns end
+    {
+        ItvSet::const_iterator it = s.find(Itv::right_open(10, 20));
+        BOOST_CHECK(it == s.end());
+    }
+}
+
+// split_interval_set tests
+BOOST_AUTO_TEST_CASE(github_51_split_interval_set_upper_bound)
+{
+    typedef boost::icl::split_interval_set<int> ItvSet;
+    typedef ItvSet::interval_type Itv;
+
+    ItvSet s;
+    s.add(Itv::right_open(0, 10));
+    s.add(Itv::right_open(20, 30));
+    s.add(Itv::right_open(40, 50));
+
+    {
+        ItvSet::iterator it = s.upper_bound(Itv::right_open(5, 25));
+        BOOST_CHECK(it != s.end());
+        BOOST_CHECK_EQUAL(*it, Itv::right_open(40, 50));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_split_interval_set_lower_bound)
+{
+    typedef boost::icl::split_interval_set<int> ItvSet;
+    typedef ItvSet::interval_type Itv;
+
+    ItvSet s;
+    s.add(Itv::right_open(0, 10));
+    s.add(Itv::right_open(20, 30));
+    s.add(Itv::right_open(40, 50));
+
+    {
+        ItvSet::iterator it = s.lower_bound(Itv::right_open(5, 25));
+        BOOST_CHECK(it != s.end());
+        BOOST_CHECK_EQUAL(*it, Itv::right_open(0, 10));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_split_interval_set_equal_range)
+{
+    typedef boost::icl::split_interval_set<int> ItvSet;
+    typedef ItvSet::interval_type Itv;
+
+    ItvSet s;
+    s.add(Itv::right_open(0, 10));
+    s.add(Itv::right_open(20, 30));
+    s.add(Itv::right_open(40, 50));
+
+    {
+        std::pair<ItvSet::iterator, ItvSet::iterator> range =
+            s.equal_range(Itv::right_open(5, 25));
+        int count = 0;
+        for (ItvSet::iterator it = range.first; it != range.second; ++it)
+            ++count;
+        BOOST_CHECK_EQUAL(count, 2);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_split_interval_set_find)
+{
+    typedef boost::icl::split_interval_set<int> ItvSet;
+    typedef ItvSet::interval_type Itv;
+
+    ItvSet s;
+    s.add(Itv::right_open(0, 10));
+    s.add(Itv::right_open(20, 30));
+    s.add(Itv::right_open(40, 50));
+
+    {
+        ItvSet::const_iterator it = s.find(Itv::right_open(5, 25));
+        BOOST_CHECK(it != s.end());
+        BOOST_CHECK_EQUAL(*it, Itv::right_open(0, 10));
+    }
+
+    {
+        ItvSet::const_iterator it = s.find(Itv::right_open(10, 20));
+        BOOST_CHECK(it == s.end());
+    }
+}
+
+// separate_interval_set tests
+BOOST_AUTO_TEST_CASE(github_51_separate_interval_set_upper_bound)
+{
+    typedef boost::icl::separate_interval_set<int> ItvSet;
+    typedef ItvSet::interval_type Itv;
+
+    ItvSet s;
+    s.add(Itv::right_open(0, 10));
+    s.add(Itv::right_open(20, 30));
+    s.add(Itv::right_open(40, 50));
+
+    {
+        ItvSet::iterator it = s.upper_bound(Itv::right_open(5, 25));
+        BOOST_CHECK(it != s.end());
+        BOOST_CHECK_EQUAL(*it, Itv::right_open(40, 50));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_separate_interval_set_lower_bound)
+{
+    typedef boost::icl::separate_interval_set<int> ItvSet;
+    typedef ItvSet::interval_type Itv;
+
+    ItvSet s;
+    s.add(Itv::right_open(0, 10));
+    s.add(Itv::right_open(20, 30));
+    s.add(Itv::right_open(40, 50));
+
+    {
+        ItvSet::iterator it = s.lower_bound(Itv::right_open(5, 25));
+        BOOST_CHECK(it != s.end());
+        BOOST_CHECK_EQUAL(*it, Itv::right_open(0, 10));
+    }
+}
+
+// interval_map tests
+BOOST_AUTO_TEST_CASE(github_51_interval_map_upper_bound)
+{
+    typedef boost::icl::interval_map<int, int> ItvMap;
+    typedef ItvMap::interval_type Itv;
+
+    ItvMap m;
+    m.add(make_pair(Itv::right_open(0, 10), 1));
+    m.add(make_pair(Itv::right_open(20, 30), 2));
+    m.add(make_pair(Itv::right_open(40, 50), 3));
+
+    {
+        ItvMap::iterator it = m.upper_bound(Itv::right_open(5, 25));
+        BOOST_CHECK(it != m.end());
+        BOOST_CHECK_EQUAL(it->first, Itv::right_open(40, 50));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_interval_map_lower_bound)
+{
+    typedef boost::icl::interval_map<int, int> ItvMap;
+    typedef ItvMap::interval_type Itv;
+
+    ItvMap m;
+    m.add(make_pair(Itv::right_open(0, 10), 1));
+    m.add(make_pair(Itv::right_open(20, 30), 2));
+    m.add(make_pair(Itv::right_open(40, 50), 3));
+
+    {
+        ItvMap::iterator it = m.lower_bound(Itv::right_open(5, 25));
+        BOOST_CHECK(it != m.end());
+        BOOST_CHECK_EQUAL(it->first, Itv::right_open(0, 10));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_interval_map_equal_range)
+{
+    typedef boost::icl::interval_map<int, int> ItvMap;
+    typedef ItvMap::interval_type Itv;
+
+    ItvMap m;
+    m.add(make_pair(Itv::right_open(0, 10), 1));
+    m.add(make_pair(Itv::right_open(20, 30), 2));
+    m.add(make_pair(Itv::right_open(40, 50), 3));
+
+    {
+        std::pair<ItvMap::iterator, ItvMap::iterator> range =
+            m.equal_range(Itv::right_open(5, 25));
+        int count = 0;
+        for (ItvMap::iterator it = range.first; it != range.second; ++it)
+            ++count;
+        BOOST_CHECK_EQUAL(count, 2);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_interval_map_find)
+{
+    typedef boost::icl::interval_map<int, int> ItvMap;
+    typedef ItvMap::interval_type Itv;
+
+    ItvMap m;
+    m.add(make_pair(Itv::right_open(0, 10), 1));
+    m.add(make_pair(Itv::right_open(20, 30), 2));
+    m.add(make_pair(Itv::right_open(40, 50), 3));
+
+    {
+        ItvMap::const_iterator it = m.find(Itv::right_open(5, 25));
+        BOOST_CHECK(it != m.end());
+        BOOST_CHECK_EQUAL(it->first, Itv::right_open(0, 10));
+    }
+
+    {
+        ItvMap::const_iterator it = m.find(Itv::right_open(10, 20));
+        BOOST_CHECK(it == m.end());
+    }
+}
+
+// split_interval_map tests
+BOOST_AUTO_TEST_CASE(github_51_split_interval_map_upper_bound)
+{
+    typedef boost::icl::split_interval_map<int, int> ItvMap;
+    typedef ItvMap::interval_type Itv;
+
+    ItvMap m;
+    m.add(make_pair(Itv::right_open(0, 10), 1));
+    m.add(make_pair(Itv::right_open(20, 30), 2));
+    m.add(make_pair(Itv::right_open(40, 50), 3));
+
+    {
+        ItvMap::iterator it = m.upper_bound(Itv::right_open(5, 25));
+        BOOST_CHECK(it != m.end());
+        BOOST_CHECK_EQUAL(it->first, Itv::right_open(40, 50));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_split_interval_map_lower_bound)
+{
+    typedef boost::icl::split_interval_map<int, int> ItvMap;
+    typedef ItvMap::interval_type Itv;
+
+    ItvMap m;
+    m.add(make_pair(Itv::right_open(0, 10), 1));
+    m.add(make_pair(Itv::right_open(20, 30), 2));
+    m.add(make_pair(Itv::right_open(40, 50), 3));
+
+    {
+        ItvMap::iterator it = m.lower_bound(Itv::right_open(5, 25));
+        BOOST_CHECK(it != m.end());
+        BOOST_CHECK_EQUAL(it->first, Itv::right_open(0, 10));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_split_interval_map_equal_range)
+{
+    typedef boost::icl::split_interval_map<int, int> ItvMap;
+    typedef ItvMap::interval_type Itv;
+
+    ItvMap m;
+    m.add(make_pair(Itv::right_open(0, 10), 1));
+    m.add(make_pair(Itv::right_open(20, 30), 2));
+    m.add(make_pair(Itv::right_open(40, 50), 3));
+
+    {
+        std::pair<ItvMap::iterator, ItvMap::iterator> range =
+            m.equal_range(Itv::right_open(5, 25));
+        int count = 0;
+        for (ItvMap::iterator it = range.first; it != range.second; ++it)
+            ++count;
+        BOOST_CHECK_EQUAL(count, 2);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(github_51_split_interval_map_find)
+{
+    typedef boost::icl::split_interval_map<int, int> ItvMap;
+    typedef ItvMap::interval_type Itv;
+
+    ItvMap m;
+    m.add(make_pair(Itv::right_open(0, 10), 1));
+    m.add(make_pair(Itv::right_open(20, 30), 2));
+    m.add(make_pair(Itv::right_open(40, 50), 3));
+
+    {
+        ItvMap::const_iterator it = m.find(Itv::right_open(5, 25));
+        BOOST_CHECK(it != m.end());
+        BOOST_CHECK_EQUAL(it->first, Itv::right_open(0, 10));
+    }
+
+    {
+        ItvMap::const_iterator it = m.find(Itv::right_open(10, 20));
+        BOOST_CHECK(it == m.end());
+    }
+}

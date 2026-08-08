@@ -22,8 +22,8 @@ creates a dispatcher fiber for each thread [mdash] this cannot migrate
 either.][superscript,][footnote Of course it would be problematic to migrate a
 fiber that relies on [link thread_local_storage thread-local storage].]
 
-Migrating a fiber from a logical CPU with heavy workload to another
-logical CPU with a lighter workload might speed up the overall execution.
+Migrating a fiber from a logical CPU with heavy work-load to another
+logical CPU with a lighter work-load might speed up the overall execution.
 Note that in the case of NUMA-architectures, it is not always advisable to
 migrate data between threads. Suppose fiber ['f] is running on logical CPU
 ['cpu0] which belongs to NUMA node ['node0]. The data of ['f] are allocated on

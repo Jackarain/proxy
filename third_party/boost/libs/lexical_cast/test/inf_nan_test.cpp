@@ -10,11 +10,11 @@
 
 #include <type_traits>
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/core/cmath.hpp>
 
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/lexical_cast.hpp>
 
 #if defined(BOOST_NO_STRINGSTREAM) || defined(BOOST_NO_STD_WSTRING)
 #define BOOST_LCAST_NO_WCHAR_T

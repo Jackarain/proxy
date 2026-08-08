@@ -16,7 +16,3 @@
 using namespace boost::openmethod;
 
 BOOST_OPENMETHOD_CLASSES(Animal, Cat);
-
-BOOST_OPENMETHOD_OVERRIDE(poke, (virtual_ptr<Cat>, std::ostream& os), void) {
-    os << "hiss";
-}

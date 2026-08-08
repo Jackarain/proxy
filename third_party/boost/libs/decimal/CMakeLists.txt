@@ -4,7 +4,7 @@
 
 cmake_minimum_required(VERSION 3.10...3.20)
 
-project(boost_decimal VERSION 1.91.0 LANGUAGES CXX)
+project(boost_decimal VERSION 1.92.0 LANGUAGES CXX)
 
 add_library(boost_decimal INTERFACE)
 

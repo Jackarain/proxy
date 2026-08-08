@@ -117,13 +117,13 @@ end of each stack. The memory is managed internally by
 [variablelist
 [[Preconditions:] [`! traits_type::is_unbounded() && ( traits_type::maximum:size() >= stack_size)`
 and `0 < nest_size`.]]
-[[Effects:] [Allocates memory of at least `stack_size` Bytes and stores a pointer to
+[[Effects:] [Allocates memory of at least `stack_size` bytes and stores a pointer to
 the stack and its actual size in `sctx`. Depending on the architecture (the
 stack grows downwards/upwards) the stored address is the highest/lowest
 address of the stack. Argument `next_size` determines the number of stacks to
 request from the system the first time that `*this` needs to allocate system
-memory. The third argument `max_size` controls how many memory might be
-allocated for stacks - a value of zero means no uper limit.]]
+memory. The third argument `max_size` controls how much memory might be
+allocated for stacks - a value of zero means no upper limit.]]
 ]
 
 [heading `stack_context allocate()`]
@@ -167,7 +167,7 @@ end of each stack. The memory is simply managed by `std::malloc()` and
 [variablelist
 [[Preconditions:] [`traits_type::minimum:size() <= size` and
 `! traits_type::is_unbounded() && ( traits_type::maximum:size() >= size)`.]]
-[[Effects:] [Allocates memory of at least `size` Bytes and stores a pointer to
+[[Effects:] [Allocates memory of at least `size` bytes and stores a pointer to
 the stack and its actual size in `sctx`. Depending on the architecture (the
 stack grows downwards/upwards) the stored address is the highest/lowest
 address of the stack.]]
@@ -237,7 +237,7 @@ available stack allocator.]
 [section:stack_traits Class ['stack_traits]]
 
 ['stack_traits] models a __stack_traits__ providing a way to access certain
-properites defined by the enironment. Stack allocators use __stack_traits__ to
+properties defined by the environment. Stack allocators use __stack_traits__ to
 allocate stacks.
 
         struct stack_traits
@@ -326,7 +326,7 @@ structures.
 [section:valgrind Support for valgrind]
 
 Running programs that switch stacks under valgrind causes problems.
-Property (b2 command-line) `valgrind=on` let valgrind treat the memory regions
+Property (b2 command-line) `valgrind=on` lets valgrind treat the memory regions
 as stack space which suppresses the errors.
 
 [endsect]
@@ -336,7 +336,7 @@ as stack space which suppresses the errors.
 
 Sanitizers (GCC/Clang) are confused by the stack switches.
 The library (and Boost.Context too) is required to be compiled with property (b2 command-line)
-`context-impl=ucontext` and compilers santizer options.
+`context-impl=ucontext` and compilers sanitizer options.
 Users must define `BOOST_USE_ASAN` before including any Boost.Context headers
 when linking against Boost binaries.
 

@@ -22,38 +22,77 @@ struct cxper_char_traits
   using int_type = int;
   using state_type = std::mbstate_t;
 
-  static constexpr void assign(char_type& a, const char_type& b) noexcept { a = b;  }
-  static constexpr bool eq(char_type a, char_type b) noexcept { return a == b; }
-  static constexpr bool lt(char_type a, char_type b) noexcept { return a < b; }
+  static constexpr void assign(char_type& a, const char_type& b) noexcept
+  {
+    a = b;
+  }
 
-  static constexpr int compare(const char_type*, const char_type*, std::size_t) { return 0; }
+  static constexpr bool eq(char_type a, char_type b) noexcept
+  {
+    return a == b;
+  }
+
+  static constexpr bool lt(char_type a, char_type b) noexcept
+  {
+    return a < b;
+  }
+
+  static constexpr int compare(const char_type* a, const char_type* b, std::size_t n)
+  {
+    for (; n--; ++a, ++b)
+    {
+      if(lt(*a, *b))
+        return 1;
+      else if(lt(*b, *a))
+        return -1;
+    }
+    return 0;
+  }
+
   static constexpr std::size_t length(const char_type* s)
   {
-    std::size_t n = 0;
-    while (*(s++));
-    return n;
+    auto ptr = s;
+    while (!eq(*ptr, char_type()))
+      ++ptr;
+    return ptr - s;
   }
-  static constexpr const char_type* find(const char_type*, std::size_t, const char_type&){ return 0; }
+
+  static constexpr const char_type* find(const char_type* s, std::size_t n, const char_type& ch)
+  {
+    for (; n--; ++s)
+    {
+      if (eq(*s, ch))
+        return s;
+    }
+    return nullptr;
+  }
+
   static constexpr char_type* move(char_type* dest, const char_type* src, std::size_t n)
   {
-    const auto temp = dest;
-    while (n--)
-      *(dest++) = *(src++);
-    return temp;
+    // This implementation does not handle overlapping ranges where
+    // dest > src. A correct implementation would need to detect this
+    // case and copy backwards, but detecting overlap requires pointer
+    // comparisons that many of the tested compilers (incorrectly) refuse
+    // in constant expressions.
+    //
+    // Since cxper_char_traits is only used for testing constexpr
+    // functionality and the tests do not exercise overlapping moves
+    // where dest > src, this simple forward copy is sufficient.
+    return copy(dest, src, n);
   }
+
   static constexpr char_type* copy(char_type* dest, const char_type* src, std::size_t n)
   {
-    const auto temp = dest;
-    while (n--)
-      *(dest++) = *(src++);
-    return temp;
+    for (auto ptr = dest; n--;)
+      assign(*ptr++, *src++);
+    return dest;
   }
+
   static constexpr char_type* assign(char_type* dest, std::size_t n, char_type ch)
   {
-    const auto temp = dest;
-    while (n--)
-      *(dest++) = ch;
-    return temp;
+    for (auto ptr = dest; n--;)
+      assign(*ptr++, ch);
+    return dest;
   }
 };
 #else
@@ -67,6 +106,23 @@ bool
 testConstantEvaluation()
 {
 #ifdef BOOST_STATIC_STRING_CPP20
+
+  // Check construction in a constexpr context
+  constexpr basic_static_string s("hello");
+  static_assert(s.size() == 5);
+  static_assert(s.static_capacity == 5);
+  static_assert(s == "hello");
+
+  // Check assignment in a constexpr context
+  constexpr auto s2 =
+  []()
+  {
+    basic_static_string s("hello");
+    s = "world";
+    return s;
+  }();
+  static_assert(s2 == "world");
+
   // c++20 constexpr tests
   cstatic_string a;
   cstatic_string b(1, 'a');
@@ -200,7 +256,8 @@ testConstantEvaluation()
   a.replace(a.begin(), a.end(), a.begin(), a.end());
   a.replace(a.begin(), a.end(), {'a'});
 
-#ifdef BOOST_STATIC_STRING_IS_CONST_EVAL
+#if defined(BOOST_STATIC_STRING_IS_CONST_EVAL) \
+        && !defined(BOOST_STATIC_STRING_CONSTEXPR_PTR_CMP_BROKEN)
   a.clear();
   a.replace(a.begin(), a.end(), "a");
   a.replace(a.begin(), a.end(), "a", 1);
@@ -388,7 +445,8 @@ testConstantEvaluation()
   a.replace(a.begin(), a.end(), a.begin(), a.end());
   a.replace(a.begin(), a.end(), {'a'});
 
-#ifdef BOOST_STATIC_STRING_IS_CONST_EVAL
+#if defined(BOOST_STATIC_STRING_IS_CONST_EVAL) \
+        && !defined(BOOST_STATIC_STRING_CONSTEXPR_PTR_CMP_BROKEN)
   a.clear();
   a.replace(a.begin(), a.end(), "a");
   a.replace(a.begin(), a.end(), "a", 1);
@@ -560,7 +618,8 @@ testConstantEvaluation()
   a.replace(a.begin(), a.end(), a.begin(), a.end());
   a.replace(a.begin(), a.end(), {'a'});
 
-#ifdef BOOST_STATIC_STRING_IS_CONST_EVAL
+#if defined(BOOST_STATIC_STRING_IS_CONST_EVAL) \
+        && !defined(BOOST_STATIC_STRING_CONSTEXPR_PTR_CMP_BROKEN)
   a.clear();
   a.replace(a.begin(), a.end(), "a");
   a.replace(a.begin(), a.end(), "a", 1);
@@ -607,5 +666,28 @@ testConstantEvaluation()
     cstatic_string().empty();
 #endif
 }
+
+#if __cpp_nontype_template_args >= 201911L
+
+template<basic_static_string<32, char, cxper_char_traits> X>
+struct nttp_primary
+{
+  static constexpr bool value = false;
+};
+
+template<>
+struct nttp_primary<"test string">
+{
+  static constexpr bool value = true;
+};
+
+static_assert(!nttp_primary<"random string">::value,
+  "structural equality broken");
+
+static_assert(nttp_primary<"test string">::value,
+  "structural equality broken");
+
+#endif
+
 } // static_strings
 } // boost

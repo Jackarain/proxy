@@ -654,6 +654,36 @@ If both operands are infinity, the result is infinity, with the same sign as x.
 
 The quantize functions do not signal underflow.
 
+=== `decompose`
+[source, c++]
+----
+#include <boost/decimal/cmath.hpp>
+
+namespace boost {
+namespace decimal {
+
+template <typename Decimal>
+struct decimal_components
+{
+    using significand_type = typename Decimal::significand_type;
+    using biased_exponent_type = typename Decimal::biased_exponent_type;
+
+    significand_type sig {};
+    biased_exponent_type exp {};
+    bool sign {};
+};
+
+template <typename Decimal>
+constexpr auto decompose(const Decimal value) noexcept -> decimal_components<Decimal>
+
+} // namespace decimal
+} // namespace boost
+----
+
+This function decomposes the input decimal value into a struct containing the significand, exponent, and sign.
+This function does not modify the stored value at all, so it returns the significand and exponent non-normalized i.e., in the cohort that they are stored in.
+For further discussion on normalized form see the page on xref:cohorts.adoc[cohorts].
+
 === `frexp10`
 
 [source, c++]
@@ -693,6 +723,51 @@ constexpr Decimal normalize(Decimal val) noexcept;
 Similar to the `frexp10` function above, but rather than returning the normalized significand, and exponent of the Decimal number, it returns a normalized number.
 This removes the effects of xref:cohorts.adoc[cohorts] on the IEEE 754 compliant types which for the example of `decimal32_t` means the significand will be in the range [1'000'000, 9'999'999].
 This function has *NO* effect on fast types since they are always normalized internally.
+
+.This https://github.com/boostorg/decimal/blob/develop/example/decompose_frexp10_normalize.cpp[example] demonstrates the difference between `decompose`, `frexp10` and `normalize` on both IEEE and fast types.
+====
+[source, c++]
+----
+include::example$decompose_frexp10_normalize.cpp[]
+----
+
+Output:
+----
+IEEE decimal32_t (cohort is preserved by the encoding):
+
+  value      = 300
+  decompose  : sig = 3, exp = 2, sign = 0
+  frexp10    : sig = 3000000, exp = -4
+  normalize  = 300
+
+  value      = 300
+  decompose  : sig = 300, exp = 0, sign = 0
+  frexp10    : sig = 3000000, exp = -4
+  normalize  = 300
+
+  value      = 300
+  decompose  : sig = 3000000, exp = -4, sign = 0
+  frexp10    : sig = 3000000, exp = -4
+  normalize  = 300
+
+decimal_fast32_t (always normalized internally):
+
+  value      = 300
+  decompose  : sig = 3000000, exp = -4, sign = 0
+  frexp10    : sig = 3000000, exp = -4
+  normalize  = 300
+
+  value      = 300
+  decompose  : sig = 3000000, exp = -4, sign = 0
+  frexp10    : sig = 3000000, exp = -4
+  normalize  = 300
+
+  value      = 300
+  decompose  : sig = 3000000, exp = -4, sign = 0
+  frexp10    : sig = 3000000, exp = -4
+  normalize  = 300
+----
+====
 
 === `rescale`
 

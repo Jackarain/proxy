@@ -34,17 +34,17 @@ BOOST_DECIMAL_EXPORT struct from_chars_result
     // ERANGE = result_out_of_range
     std::errc ec;
 
-    friend constexpr auto operator==(const from_chars_result& lhs, const from_chars_result& rhs) noexcept -> bool
+    friend BOOST_DECIMAL_CUDA_CONSTEXPR auto operator==(const from_chars_result& lhs, const from_chars_result& rhs) noexcept -> bool
     {
         return lhs.ptr == rhs.ptr && lhs.ec == rhs.ec;
     }
 
-    friend constexpr auto operator!=(const from_chars_result& lhs, const from_chars_result& rhs) noexcept -> bool
+    friend BOOST_DECIMAL_CUDA_CONSTEXPR auto operator!=(const from_chars_result& lhs, const from_chars_result& rhs) noexcept -> bool
     {
         return !(lhs == rhs); // NOLINT : Expression can not be simplified since this is the definition
     }
 
-    constexpr explicit operator bool() const noexcept { return ec == std::errc{}; }
+    BOOST_DECIMAL_CUDA_CONSTEXPR explicit operator bool() const noexcept { return ec == std::errc{}; }
 };
 
 #ifdef __GNUC__

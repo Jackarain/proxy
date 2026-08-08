@@ -457,7 +457,7 @@ struct expression_storage_base<T, true>
 };
 
 template <class T>
-struct expression_storage : public expression_storage_base<T, boost::multiprecision::detail::is_arithmetic<T>::value>
+struct expression_storage : public expression_storage_base<T, boost::multiprecision::detail::is_arithmetic<T>::value || std::is_empty<T>::value>
 {};
 
 template <class T>

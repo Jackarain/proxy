@@ -8,13 +8,14 @@
 // For more information, see http://www.boost.org
 
 #include "../example/b2_workarounds.hpp"
-#include <boost/dll.hpp>
 
 #include <system_error>
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
 
 #include <boost/core/lightweight_test.hpp>
+
+#include <boost/dll.hpp>
 // Unit Tests
 
 namespace boost { namespace dll { namespace fs {

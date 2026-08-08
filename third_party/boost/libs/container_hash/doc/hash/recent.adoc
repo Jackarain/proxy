@@ -8,6 +8,10 @@ https://www.boost.org/LICENSE_1_0.txt
 = Recent Changes
 :idprefix: recent_
 
+== Boost 1.92.0
+
+* Hashing a valueless `std::variant` instance no longer throws.
+
 == Boost 1.89.0
 
 * Added the `hash_is_avalanching` trait class.

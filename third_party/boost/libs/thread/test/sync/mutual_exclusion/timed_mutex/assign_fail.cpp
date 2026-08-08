@@ -24,7 +24,9 @@
 int main()
 {
   boost::timed_mutex m0;
-  boost::timed_mutex m1(m0);
+  boost::timed_mutex m1;
+  m1 = m0;
+  (void)m1;
 }
 
 #include "../../../remove_error_code_unused_warning.hpp"

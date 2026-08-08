@@ -5,24 +5,40 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_DLL_SMART_LIBRARY_HPP_
-#define BOOST_DLL_SMART_LIBRARY_HPP_
-
 /// \file boost/dll/smart_library.hpp
 /// \warning Experimental feature that relies on an incomplete implementation of platform specific C++
 ///          mangling. In case of an issue provide a PR with a fix and tests to https://github.com/boostorg/dll .
 ///          boost/dll/smart_library.hpp is not included in boost/dll.hpp
 /// \brief Contains the boost::dll::experimental::smart_library class for loading mangled symbols.
 
+#ifndef BOOST_DLL_SMART_LIBRARY_HPP_
+#define BOOST_DLL_SMART_LIBRARY_HPP_
+
+#include <boost/dll/detail/config.hpp>
+
+#if !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+# pragma once
+#endif
+
 #include <boost/dll/config.hpp>
+
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+#if !defined(BOOST_DLL_USE_STD_MODULE)
+#include <type_traits>
+#include <utility>  // std::move
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
+
+#if (__cplusplus < 201103L) && (!defined(_MSVC_LANG) || _MSVC_LANG < 201103L)
+#  error This file requires C++11 at least!
+#endif
+
 #if defined(_MSC_VER) // MSVC, Clang-cl, and ICC on Windows
 #   include <boost/dll/detail/demangling/msvc.hpp>
 #else
 #   include <boost/dll/detail/demangling/itanium.hpp>
-#endif
-
-#if (__cplusplus < 201103L) && (!defined(_MSVC_LANG) || _MSVC_LANG < 201103L)
-#  error This file requires C++11 at least!
 #endif
 
 #include <boost/dll/shared_library.hpp>
@@ -30,8 +46,6 @@
 #include <boost/dll/detail/ctor_dtor.hpp>
 #include <boost/dll/detail/type_info.hpp>
 
-#include <type_traits>
-#include <utility>  // std::move
 
 namespace boost {
 namespace dll {
@@ -39,6 +53,8 @@ namespace experimental {
 
 using boost::dll::detail::constructor;
 using boost::dll::detail::destructor;
+
+BOOST_DLL_BEGIN_MODULE_EXPORT
 
 /*!
 * \brief This class is an extension of \ref shared_library, which allows to load C++ symbols.
@@ -135,23 +151,26 @@ public:
       *
       * \throw Nothing.
       */
-      explicit smart_library(const shared_library & lib) noexcept
-          : lib_(lib)
-      {
-          storage_.load(lib.location());
-      }
-     /*!
-     * Construct from a shared_library object.
-     *
-     * \param lib A shared_library to move from.
-     *
-     * \throw Nothing.
-     */
-     explicit smart_library(shared_library&& lib) noexcept
-         : lib_(std::move(lib))
-     {
-         storage_.load(lib.location());
-     }
+    explicit smart_library(const shared_library & lib) noexcept
+        : lib_(lib) {
+        if (lib_.is_loaded()) {
+            storage_.load(lib_.location());
+        }
+    }
+    /*!
+    * Construct from a shared_library object.
+    *
+    * \param lib A shared_library to move from.
+    *
+    * \throw Nothing.
+    */
+    explicit smart_library(shared_library&& lib) noexcept
+        : lib_(std::move(lib))
+    {
+        if (lib_.is_loaded()) {
+            storage_.load(lib_.location());
+        }
+    }
 
     /*!
     * Destroys the smart_library.
@@ -451,9 +470,13 @@ auto get(const smart_library& sm, const std::string &name) -> typename detail::g
     return sm.get_mem_fn<Class, Signature>(name);
 }
 
+BOOST_DLL_END_MODULE_EXPORT
+
 
 } /* namespace experimental */
 } /* namespace dll */
 } /* namespace boost */
+
+#endif // !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
 
 #endif /* BOOST_DLL_SMART_LIBRARY_HPP_ */

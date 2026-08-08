@@ -81,7 +81,7 @@ constexpr auto lgamma_impl(const T x) noexcept
 
             const auto phase = sin(numbers::pi_v<T> * za);
 
-            result = log(numbers::pi_v<T>) - log(abs(phase)) - lgamma(za);
+            result = ::boost::decimal::log(numbers::pi_v<T>) - ::boost::decimal::log(abs(phase)) - lgamma(za);
         }
         else
         {
@@ -97,11 +97,11 @@ constexpr auto lgamma_impl(const T x) noexcept
                 // Perform the Taylor series expansion.
 
                 result =   (x * fma(detail::lgamma_taylor_series_expansion(x), x, -numbers::egamma_v<T>))
-                         - log(x);
+                         - ::boost::decimal::log(x);
             }
             else if (x < T { asymp_cutoff })
             {
-                result = log(tgamma(x));
+                result = ::boost::decimal::log(tgamma(x));
             }
             else
             {
@@ -111,7 +111,7 @@ constexpr auto lgamma_impl(const T x) noexcept
 
                 constexpr T half { 5, -1 };
 
-                result = (((x - half) * (log(x)) - x)) + log(detail::tgamma_series_expansion_asymp(one / x));
+                result = (((x - half) * (::boost::decimal::log(x)) - x)) + ::boost::decimal::log(detail::tgamma_series_expansion_asymp(one / x));
             }
         }
     }

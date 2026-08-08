@@ -58,6 +58,16 @@ html:has(.boostlook) {
   line-gap-override: 0%;
 }
 
+/* Mona Sans - Variable Font */
+@font-face {
+  font-family: "Mona Sans";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 75% 125%;
+  font-display: block;
+  src: url("../font/MonaSansVF.ttf") format("truetype");
+}
+
 /* Monaspace Neon - Regular */
 @font-face {
   font-family: "Monaspace Neon";

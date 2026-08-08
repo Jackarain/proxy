@@ -58,6 +58,15 @@ enum language_support {
         support_option_va_opt | 0x80000,
     support_cpp20 = support_cpp2a,
 #endif
+#if BOOST_WAVE_SUPPORT_CPP2B != 0
+    //  support flags for C++23
+    support_option_sizet_lit = 0x100000,
+
+    support_cpp2b = support_option_variadics | support_option_long_long |
+        support_option_no_newline_at_end_of_file | support_option_has_include |
+        support_option_va_opt | support_option_sizet_lit | 0x200000,
+    support_cpp23 = support_cpp2b,
+#endif
 #endif
 #endif
 
@@ -131,6 +140,31 @@ need_cpp2a(language_support language)
 
 inline bool
 need_cpp2a(language_support language)
+{
+    return false;
+}
+
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+//
+//  need_cpp2b
+//
+//      Extract if the language to support is C++23
+//
+///////////////////////////////////////////////////////////////////////////////
+#if BOOST_WAVE_SUPPORT_CPP2B != 0
+
+inline bool
+need_cpp2b(language_support language)
+{
+    return (language & ~support_option_mask) == support_cpp2b;
+}
+
+#else
+
+inline bool
+need_cpp2b(language_support language)
 {
     return false;
 }

@@ -12,8 +12,7 @@
 #define SEARCH_SW20111118_H
 
 #include "config.h"
-#include "object.h"
-#include "timestamp.h"
+#include "jam_fwd.h"
 
 void set_explicit_binding( OBJECT * target, OBJECT * locate );
 OBJECT * search( OBJECT * target, timestamp * const time,

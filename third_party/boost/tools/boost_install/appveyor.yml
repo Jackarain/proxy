@@ -12,7 +12,7 @@ branches:
     - develop
     - /feature\/.*/
 
-image: Visual Studio 2017
+image: Visual Studio 2019
 
 environment:
   matrix:
@@ -21,110 +21,22 @@ environment:
     GENERATOR: Ninja
     CMAKE_CXX_COMPILER: clang-cl
     CMAKE_BUILD_TYPE: RelWithDebInfo
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     SETUP_SCRIPT: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"
+
   - LIB: filesystem
     GENERATOR: MinGW Makefiles
     CMAKE_BUILD_TYPE: Debug
     PATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin;%PATH%
-    UBP: 1
     TOOLSET: gcc
+
   - LIB: filesystem
     GENERATOR: MinGW Makefiles
     CMAKE_BUILD_TYPE: RelWithDebInfo
     PATH: C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin;%PATH%
-    UBP: 1
     TOOLSET: gcc
-  - LIB: filesystem
-    TOOLSET: msvc-14.1
-  - LIB: filesystem
-    UBP: 1
-    TOOLSET: msvc-14.1
-  - LIB: filesystem
-    LAYOUT: tagged
-    TOOLSET: msvc-14.0
-  - LIB: filesystem
-    TOOLSET: msvc-14.1
-    STAGE: 1
-  - LIB: filesystem
-    UBP: 1
-    TOOLSET: msvc-14.1
-    STAGE: 1
-  - LIB: filesystem
-    UBP: 1
-    B2_LINK: shared
-    USE_STATIC_LIBS: OFF
-    TOOLSET: msvc-14.1
-  - LIB: filesystem
-    UBP: 1
-    B2_LINK: static,shared
-    TOOLSET: msvc-14.1
-  - LIB: filesystem
-    UBP: 1
-    B2_LINK: static,shared
-    USE_STATIC_LIBS: OFF
-    TOOLSET: msvc-14.1
-  - LIB: filesystem
-    UBP: 1
-    STAGE: 1
-    B2_LINK: shared
-    USE_STATIC_LIBS: OFF
-    TOOLSET: msvc-14.1
-  - LIB: filesystem
-    UBP: 1
-    STAGE: 1
-    B2_LINK: static,shared
-    TOOLSET: msvc-14.1
-  - LIB: filesystem
-    UBP: 1
-    STAGE: 1
-    B2_LINK: static,shared
-    USE_STATIC_LIBS: OFF
-    TOOLSET: msvc-14.1
-  - LIB: headers
-    TOOLSET: msvc-14.1
-  - LIB: iostreams
-    TOOLSET: msvc-14.1
-    UBP: 1
-  - LIB: iostreams
-    TOOLSET: msvc-14.1
-    UBP: 1
-    STAGE: 1
+
   - LIB: log
-    TOOLSET: msvc-14.1
-  - LIB: python
-    TOOLSET: msvc-14.1
-    PYTHON: 2.7,3.6,3.7
-    USE_PYTHON_VERSION: 2.7
-  - LIB: serialization
-    UBP: 1
-    TOOLSET: msvc-14.1
-  - LIB: random
-    UBP: 1
-    TOOLSET: msvc-14.1
-  - LIB: random
-    UBP: 1
-    B2_LINK: shared
-    USE_STATIC_LIBS: OFF
-    TOOLSET: msvc-14.1
-  - LIB: random
-    UBP: 1
-    BUILD_SHARED_LIBS: ON
-    TOOLSET: msvc-14.1
-  - LIB: random
-    UBP: 1
-    B2_LINK: shared
-    USE_STATIC_LIBS: OFF
-    BUILD_SHARED_LIBS: ON
-    TOOLSET: msvc-14.1
-  - LIB: regex
-    UBP: 1
-    TOOLSET: msvc-14.1
-  - LIB: test
-    UBP: 1
-    TOOLSET: msvc-14.1
-  - LIB: thread
-    TOOLSET: msvc-14.1
+    TOOLSET: msvc
 
 install:
   - set BOOST_BRANCH=develop
@@ -161,7 +73,6 @@ test_script:
   - cd tools\boost_install\test\%LIB%
   - mkdir __build__ && cd __build__
   - if NOT "%SETUP_SCRIPT%" == "" CALL "%SETUP_SCRIPT%"
-  - if "%UBP%" == "" SET UBP=0
   - if "%STAGE%" == "" SET CMAKE_INSTALL=-DCMAKE_INSTALL_PREFIX=C:\projects\.local
   - if NOT "%STAGE%" == "" SET CMAKE_INSTALL=-DUSE_STAGED_BOOST=1
   - if NOT "%USE_PYTHON_VERSION%" == "" SET USE_PYTHON_VERSION=-DUSE_PYTHON_VERSION=%USE_PYTHON_VERSION%
@@ -172,8 +83,8 @@ test_script:
   - if NOT "%CMAKE_CXX_COMPILER%" == "" SET CMAKE_CXX_COMPILER=-DCMAKE_CXX_COMPILER="%CMAKE_CXX_COMPILER%"
   - if NOT "%CMAKE_BUILD_TYPE%" == "" SET CMAKE_BUILD_TYPE=-DCMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE%
   - PATH %PATH:C:\Program Files\Git\usr\bin;=%
-  - cmake %GENERATOR% %GENERATOR_TOOLSET% -DUSE_BOOST_PACKAGE=%UBP% -DBoost_VERBOSE=ON %USE_PYTHON_VERSION% %USE_STATIC_LIBS% %BUILD_SHARED_LIBS% %CMAKE_CXX_COMPILER% %CMAKE_BUILD_TYPE% %CMAKE_INSTALL% ..
-  - PATH %PATH%;C:\projects\.local\lib;C:\projects\boost-root\stage\lib
+  - cmake %GENERATOR% %GENERATOR_TOOLSET% -DBoost_VERBOSE=ON %USE_PYTHON_VERSION% %USE_STATIC_LIBS% %BUILD_SHARED_LIBS% %CMAKE_CXX_COMPILER% %CMAKE_BUILD_TYPE% %CMAKE_INSTALL% ..
+  - PATH %PATH%;C:\projects\.local\bin;C:\projects\boost-root\stage\lib
   - if NOT "%CMAKE_BUILD_TYPE%" == "" cmake --build . && cmake --build . --target check
   - if "%CMAKE_BUILD_TYPE%" == "" cmake --build . --config Debug && cmake --build . --config Debug --target check
   - if "%CMAKE_BUILD_TYPE%" == "" cmake --build . --config Release && cmake --build . --config Release --target check

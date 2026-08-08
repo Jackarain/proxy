@@ -4,7 +4,17 @@
  * accompanying file LICENSE.txt)
  */
 
-// Must come before any asio header, otherwise build fails on msvc.
+#include <boost/asio/awaitable.hpp>
+
+#ifndef BOOST_ASIO_HAS_CO_AWAIT
+
+#include <boost/config/pragma_message.hpp>
+
+BOOST_PRAGMA_MESSAGE("test_issue_50 skipped because BOOST_ASIO_HAS_CO_AWAIT is not defined");
+
+int main() { }
+
+#else
 
 #include <boost/redis/connection.hpp>
 #include <boost/redis/logger.hpp>
@@ -14,17 +24,13 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/redirect_error.hpp>
+#include <boost/core/lightweight_test.hpp>
 #include <boost/system/error_code.hpp>
-
-#include <exception>
-#define BOOST_TEST_MODULE issue50
-#include <boost/test/included/unit_test.hpp>
 
 #include "common.hpp"
 
+#include <exception>
 #include <iostream>
-
-#if defined(BOOST_ASIO_HAS_CO_AWAIT)
 
 namespace net = boost::asio;
 using boost::redis::request;
@@ -86,7 +92,7 @@ auto periodic_task(std::shared_ptr<connection> conn) -> net::awaitable<void>
    conn->cancel(operation::reconnection);
 }
 
-BOOST_AUTO_TEST_CASE(issue_50)
+void test_issue_50()
 {
    bool receiver_finished = false, periodic_finished = false, run_finished = false;
 
@@ -121,6 +127,11 @@ BOOST_AUTO_TEST_CASE(issue_50)
 
 }  // namespace
 
-#else
-BOOST_AUTO_TEST_CASE(dummy) { }
-#endif  // defined(BOOST_ASIO_HAS_CO_AWAIT)
+int main()
+{
+   test_issue_50();
+
+   return boost::report_errors();
+}
+
+#endif

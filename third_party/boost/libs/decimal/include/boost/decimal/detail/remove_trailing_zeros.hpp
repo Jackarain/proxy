@@ -8,6 +8,7 @@
 #ifndef BOOST_DECIMAL_DETAIL_REMOVE_TRAILING_ZEROS_HPP
 #define BOOST_DECIMAL_DETAIL_REMOVE_TRAILING_ZEROS_HPP
 
+#include <boost/decimal/detail/config.hpp>
 #include <boost/decimal/detail/type_traits.hpp>
 #include <boost/decimal/detail/concepts.hpp>
 #include "int128.hpp"
@@ -22,7 +23,7 @@ namespace detail {
 
 // n is assumed to be at most of bit_width bits.
 template <std::size_t bit_width, typename UInt>
-constexpr auto rotr(UInt n, unsigned int r) noexcept
+BOOST_DECIMAL_CUDA_CONSTEXPR auto rotr(UInt n, unsigned int r) noexcept
     BOOST_DECIMAL_REQUIRES(detail::is_unsigned_v, UInt)
 {
     r &= (bit_width - 1);
@@ -46,8 +47,16 @@ struct remove_trailing_zeros_return
 #  pragma GCC diagnostic pop
 #endif
 
-constexpr auto remove_trailing_zeros(std::uint32_t n) noexcept -> remove_trailing_zeros_return<std::uint32_t>
+BOOST_DECIMAL_CUDA_CONSTEXPR auto remove_trailing_zeros(std::uint32_t n) noexcept -> remove_trailing_zeros_return<std::uint32_t>
 {
+    // Zero has no meaningful trailing zeros to remove; the rotr-based algorithm below
+    // would otherwise return a bogus count for n == 0 because the cohort exponent of
+    // zero is preserved by callers (IEEE 754-2008 3.5.1).
+    if (n == 0U)
+    {
+        return {0U, 0U};
+    }
+
     std::size_t s {};
 
     auto r = rotr<32>(n * UINT32_C(15273505), 8);
@@ -73,8 +82,13 @@ constexpr auto remove_trailing_zeros(std::uint32_t n) noexcept -> remove_trailin
     return {n, s};
 }
 
-constexpr auto remove_trailing_zeros(std::uint64_t n) noexcept -> remove_trailing_zeros_return<std::uint64_t>
+BOOST_DECIMAL_CUDA_CONSTEXPR auto remove_trailing_zeros(std::uint64_t n) noexcept -> remove_trailing_zeros_return<std::uint64_t>
 {
+    if (n == 0U)
+    {
+        return {0U, 0U};
+    }
+
     std::size_t s {};
 
     auto r = rotr<64>(n * UINT64_C(230079197716545), 16);
@@ -105,8 +119,13 @@ constexpr auto remove_trailing_zeros(std::uint64_t n) noexcept -> remove_trailin
     return {n, s};
 }
 
-constexpr auto remove_trailing_zeros(boost::int128::uint128_t n) noexcept -> remove_trailing_zeros_return<boost::int128::uint128_t>
+BOOST_DECIMAL_CUDA_CONSTEXPR auto remove_trailing_zeros(boost::int128::uint128_t n) noexcept -> remove_trailing_zeros_return<boost::int128::uint128_t>
 {
+    if (n == boost::int128::uint128_t{0})
+    {
+        return {boost::int128::uint128_t{0}, 0U};
+    }
+
     std::size_t s {};
 
     auto r = rotr<128>(n * boost::int128::uint128_t(UINT64_C(0x62B42691AD836EB1), UINT64_C(0x16590F420A835081)), 32);
@@ -147,6 +166,11 @@ constexpr auto remove_trailing_zeros(boost::int128::uint128_t n) noexcept -> rem
 constexpr auto remove_trailing_zeros(boost::int128::detail::builtin_u128 n) noexcept -> remove_trailing_zeros_return<boost::int128::uint128_t>
 {
     using u128 = boost::int128::detail::builtin_u128;
+
+    if (n == u128{0})
+    {
+        return {boost::int128::uint128_t{0}, 0U};
+    }
 
     std::size_t s {};
 

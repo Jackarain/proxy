@@ -54,13 +54,13 @@ void func1(boost::promise<int> p)
   p.set_value(3);
 }
 
-int j = 0;
+int g_j = 0;
 
 void func3(boost::promise<int&> p)
 {
   boost::this_thread::sleep_for(ms(500));
-  j = 5;
-  p.set_value(j);
+  g_j = 5;
+  p.set_value(g_j);
 }
 
 void func5(boost::promise<void> p)

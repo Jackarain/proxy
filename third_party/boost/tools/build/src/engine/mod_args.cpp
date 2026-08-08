@@ -1,5 +1,5 @@
 /*
-Copyright 2024 René Ferdinand Rivera Morell
+Copyright 2024-2026 René Ferdinand Rivera Morell
 Distributed under the Boost Software License, Version 1.0.
 (See accompanying file LICENSE.txt or https://www.bfgroup.xyz/b2/LICENSE.txt)
 */
@@ -12,6 +12,7 @@ Distributed under the Boost Software License, Version 1.0.
 #include "startup.h"
 #include "value.h"
 
+#include <functional>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -34,6 +35,7 @@ struct args_reg
 	std::unordered_map<std::string, std::shared_ptr<list_ref>> options;
 	std::vector<std::string> args;
 	bool need_reparse = true;
+	std::function<void()> reparse_callback;
 
 	args_reg() { cli.style_print_short_first(); }
 
@@ -48,6 +50,7 @@ struct args_reg
 
 	void reparse()
 	{
+		if (reparse_callback) reparse_callback();
 		need_reparse = false;
 		// We can call this multiple times. Hence we go back to a clean state
 		// on the collected values to get reproducible parsing.
@@ -100,7 +103,7 @@ struct args_reg
 			return globs.display_help ? list_ref("true") : list_ref();
 		if (name == "debug-configuration")
 			return globs.debug_configuration ? list_ref("true") : list_ref();
-		return {};
+		return { };
 	}
 
 	bool has_opt(const value_ref & name) { return (options.count(name) > 0); }
@@ -127,8 +130,7 @@ lyra::cli & lyra_cli() { return args_reg::ref().cli; }
 void process_args(bool silent)
 {
 	args_reg::ref().reparse();
-	if (silent)
-		return;
+	if (silent) return;
 
 	std::ostringstream out;
 	int return_code = EXITOK;
@@ -147,6 +149,11 @@ void process_args(bool silent)
 		err_puts(out.str().c_str());
 		b2::clean_exit(return_code);
 	}
+}
+
+void set_reparse_callback(std::function<void()> const & f)
+{
+	args_reg::ref().reparse_callback = f;
 }
 
 const char * args_module::init_code = R"jam(

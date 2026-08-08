@@ -6,9 +6,9 @@
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 //[plugcpp_my_plugin_static
-#include <boost/dll/alias.hpp>                          // for BOOST_DLL_ALIAS
 #include <memory>
 #include "../tutorial_common/my_plugin_api.hpp"
+#include <boost/dll/alias.hpp>                          // for BOOST_DLL_ALIAS
 
 namespace my_namespace {
     std::shared_ptr<my_plugin_api> create_plugin();   // Forward declaration

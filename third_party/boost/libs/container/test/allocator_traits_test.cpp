@@ -237,6 +237,16 @@ class copymovable
    {  return moved_;  }
 };
 
+//'default_init' must leave the storage uninitialized, unlike 'value_init' which
+//zero-initializes it. Observing "left as-is" means reading the bytes written before
+//construct(); but construct() ends the previous object's lifetime, so that read is of an
+//indeterminate value and a modern optimizer may legally drop the prior store
+//and fold the read to anything. Routing the pre-store and the post-read through volatile
+//glvalues prevents the store from being elided and forces a real memory load, so the test
+//observes the actual (untouched) bytes.
+inline void test_volatile_store(int &i, int v){ *static_cast<volatile int *>(&i) = v; }
+inline int  test_volatile_load (int &i){ return *static_cast<volatile int *>(&i); }
+
 void test_void_allocator()
 {
    boost::container::allocator_traits<std::allocator<void>   > stdtraits; (void)stdtraits;
@@ -379,9 +389,19 @@ int main()
       BOOST_TEST(c_alloc.construct_called() && !c.copymoveconstructed() && !c.moved());
    }
    {
-      int i = 5;
+      //gcc-16 considers the object uninitialized after the default-init placement-new and warns
+      //on the (intentional) volatile read-back below; the warning is spurious here, so silence it.
+      #if defined(__GNUC__)
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wuninitialized"
+      #endif
+      int i = 0;
+      test_volatile_store(i, 5);
       CAllocTraits::construct(c_alloc, &i, boost::container::default_init);
-      BOOST_TEST(c_alloc.construct_called() && i == 5);
+      BOOST_TEST(c_alloc.construct_called() && test_volatile_load(i) == 5);
+      #if defined(__GNUC__)
+      #pragma GCC diagnostic pop
+      #endif
    }
    {
       copymovable c;
@@ -403,9 +423,17 @@ int main()
       BOOST_TEST(!c.copymoveconstructed() && !c.moved());
    }
    {
-      int i = 4;
+      #if defined(__GNUC__)
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wuninitialized"
+      #endif
+      int i = 0;
+      test_volatile_store(i, 4);
       SAllocTraits::construct(s_alloc, &i, boost::container::default_init);
-      BOOST_TEST(i == 4);
+      BOOST_TEST(test_volatile_load(i) == 4);
+      #if defined(__GNUC__)
+      #pragma GCC diagnostic pop
+      #endif
    }
    {
       copymovable c;

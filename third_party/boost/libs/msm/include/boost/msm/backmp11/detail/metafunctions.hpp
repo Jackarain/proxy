@@ -12,15 +12,14 @@
 #ifndef BOOST_MSM_BACKMP11_DETAIL_METAFUNCTIONS_HPP
 #define BOOST_MSM_BACKMP11_DETAIL_METAFUNCTIONS_HPP
 
+#include <cstdint>
+
 #include <boost/mp11.hpp>
 #include <boost/mp11/mpl_list.hpp>
 
-#include <boost/msm/backmp11/common_types.hpp>
 #include <boost/msm/backmp11/detail/state_tags.hpp>
 #include <boost/msm/back/traits.hpp>
-#include <boost/msm/front/detail/state_tags.hpp>
 #include <boost/msm/front/completion_event.hpp>
-#include <boost/msm/row_tags.hpp>
 
 // Forward declarations to support MPL->Mp11 conversions
 // without MPL header dependencies.
@@ -56,23 +55,6 @@ constexpr bool mp_for_each_until(F &&func)
     return mp11::mp_apply<mp_for_each_until_impl, L>::invoke(std::forward<F>(func));
 }
 
-// Wrapper for an instance of a type, which might not be present.
-template<typename T, bool C>
-struct optional_instance;
-template <typename T>
-struct optional_instance<T, true>
-{
-    using type = T;
-    type instance;
-    static constexpr bool value = true;
-};
-template<typename T>
-struct optional_instance<T, false>
-{
-    using type = T;
-    static constexpr bool value = false;
-};
-
 // Helper to convert a single type or MPL sequence to Mp11
 template<typename T, typename Enable = void>
 struct to_mp_list
@@ -100,7 +82,7 @@ struct value_array_impl<mp11::mp_list<Ts...>>
 {
     using value_type =
         typename mp11::mp_front<mp11::mp_list<Ts...>>::value_type;
-    static constexpr value_type value[sizeof...(Ts)] {Ts::value...};
+    static constexpr std::array<value_type, sizeof...(Ts)> value{Ts::value...};
 };
 template <typename List>
 static constexpr const auto& value_array = value_array_impl<List>::value;
@@ -269,7 +251,8 @@ using generate_state_set = typename generate_state_set_impl<StateMachine>::type;
 template <class StateSet>
 struct generate_state_map_impl
 {
-    using indices = mp11::mp_iota<mp11::mp_size<StateSet>>;
+    using indices = mp11::mp_iota<
+        std::integral_constant<uint16_t, mp11::mp_size<StateSet>::value>>;
     using type = mp11::mp_transform_q<
         mp11::mp_bind<mp11::mp_list, mp11::_1, mp11::_2>,
         StateSet,
@@ -332,6 +315,10 @@ struct is_state_blocking_impl
 };
 template<typename T>
 using is_state_blocking = typename is_state_blocking_impl<T>::type;
+
+// Helper to print types within metafunctions for debugging.
+template <typename... Ts>
+struct [[deprecated]] print_types {};
 
 } // boost::msm::backmp11::detail
 

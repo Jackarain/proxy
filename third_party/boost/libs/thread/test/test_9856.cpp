@@ -7,7 +7,7 @@ using namespace boost;
 int main() {
     atomic<size_t> total(0), failures(0);
 
-#pragma omp parallel shared(total, failures) num_threads(1000)
+#pragma omp parallel shared(total, failures) num_threads(16)
     {
       mutex mtx;
       condition_variable cond;

@@ -191,7 +191,7 @@ public:
    auto get_prepared_read_buffer() noexcept -> read_buffer::span_type;
 
    [[nodiscard]]
-   auto prepare_read() noexcept -> system::error_code;
+   auto prepare_read()-> system::error_code;
 
    void commit_read(std::size_t read_size);
 
@@ -209,7 +209,7 @@ public:
    void set_config(config const& cfg);
 
 private:
-   void commit_usage(bool is_push, read_buffer::consume_result res);
+   void commit_usage(bool is_push, std::size_t consumed);
 
    [[nodiscard]]
    auto is_next_push(std::string_view data) const noexcept -> bool;
@@ -229,6 +229,7 @@ private:
    bool cancel_run_called_ = false;
    usage usage_;
    any_adapter receive_adapter_;
+   std::size_t append_size_ = 4096u;
 };
 
 auto make_elem(request const& req, any_adapter adapter) -> std::shared_ptr<multiplexer::elem>;

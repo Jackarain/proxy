@@ -25,19 +25,26 @@ rule test_all
 
    for local fileb in [ glob *.cpp ]
    {
-      all_rules += [ run $(fileb)
-      : # additional args
-      : # test-files
-      : # requirements
-        <toolset>acc:<linkflags>-lrt
-        <toolset>acc-pa_risc:<linkflags>-lrt
-        <target-os>windows,<toolset>gcc:<linkflags>"-lole32 -loleaut32 -lpsapi -ladvapi32"
-        <host-os>hpux,<toolset>gcc:<linkflags>"-Wl,+as,mpas"
-        <host-os>linux,<toolset>clang:<linkflags>"-latomic"
-        <threading>multi
-        <link>static
-        <define>BOOST_TEST_NO_OLD_TOOLS
-      ] ;
+      local reqs =
+         <toolset>acc:<linkflags>-lrt
+         <toolset>acc-pa_risc:<linkflags>-lrt
+         <target-os>windows,<toolset>gcc:<linkflags>"-lole32 -loleaut32 -lpsapi -ladvapi32"
+         <host-os>hpux,<toolset>gcc:<linkflags>"-Wl,+as,mpas"
+         <host-os>linux,<toolset>clang:<linkflags>"-latomic"
+         <host-os>linux,<toolset>intel:<linkflags>"-latomic"
+         <target-os>cygwin:<cxxflags>"-D_XOPEN_SOURCE=600"
+         <threading>multi
+         <link>static
+         <define>BOOST_TEST_NO_OLD_TOOLS
+      ;
+
+      # Interprocess tests fail under QEMU on s390x (bad_alloc in shared memory)
+      if $(fileb) = queue_interprocess_test.cpp || $(fileb) = stack_interprocess_test.cpp
+      {
+         reqs += <architecture>s390x:<build>no ;
+      }
+
+      all_rules += [ run $(fileb) : : : $(reqs) ] ;
    }
 
     return $(all_rules) ;

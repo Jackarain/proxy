@@ -8,11 +8,11 @@
 //  Software License, Version 1.0. (See accompanying file
 //  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt).
 
-#include <boost/lexical_cast.hpp>
-
 #include <boost/core/lightweight_test.hpp>
 
 #include <sstream>
+
+#include <boost/lexical_cast.hpp>
 
 #if defined(BOOST_NO_STRINGSTREAM)
             typedef std::strstream ss_t;

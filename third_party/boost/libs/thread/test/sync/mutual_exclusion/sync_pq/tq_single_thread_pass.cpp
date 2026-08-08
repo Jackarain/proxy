@@ -50,7 +50,7 @@ void test_all()
     BOOST_TEST_EQ(val, i);
   }
 
-  int val;
+  int val = -1;
   boost::queue_op_status st = pq.nonblocking_pull(val);
   BOOST_TEST(boost::queue_op_status::empty == st);
 
@@ -87,7 +87,7 @@ void test_all_with_try()
     BOOST_TEST_EQ(val, i);
   }
 
-  int val;
+  int val = -1;
   boost::queue_op_status st = pq.nonblocking_pull(val);
   BOOST_TEST(st == boost::queue_op_status::empty );
 

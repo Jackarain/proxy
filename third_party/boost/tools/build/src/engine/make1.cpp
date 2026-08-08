@@ -43,6 +43,7 @@
 #include "compile.h"
 #include "events.h"
 #include "execcmd.h"
+#include "frames.h"
 #include "headers.h"
 #include "lists.h"
 #include "object.h"

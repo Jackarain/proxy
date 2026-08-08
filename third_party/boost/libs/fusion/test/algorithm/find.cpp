@@ -29,7 +29,7 @@ main()
 
     {
         typedef vector<int, char, int, double> seq_type;
-        seq_type seq(12345, 'x', 678910, 3.36);
+        seq_type seq(12345, 'x', 678910, 3.25);
 
         std::cout << *boost::fusion::find<char>(seq) << std::endl;
         BOOST_TEST(*boost::fusion::find<char>(seq) == 'x');
@@ -38,14 +38,14 @@ main()
         BOOST_TEST(*boost::fusion::find<int>(seq) == 12345);
 
         std::cout << *boost::fusion::find<double>(seq) << std::endl;
-        BOOST_TEST(*boost::fusion::find<double>(seq) == 3.36);
+        BOOST_TEST(*boost::fusion::find<double>(seq) == 3.25);
 
         BOOST_TEST(boost::fusion::find<bool>(seq) == boost::fusion::end(seq));
     }
 
     {
         typedef set<int, char, double> seq_type;
-        seq_type seq(12345, 'x', 3.36);
+        seq_type seq(12345, 'x', 3.25);
         std::cout << *boost::fusion::find<char>(seq) << std::endl;
         BOOST_TEST(*boost::fusion::find<char>(seq) == 'x');
         BOOST_TEST(boost::fusion::find<bool>(seq) == boost::fusion::end(seq));

@@ -532,19 +532,19 @@ bool test_heterogeneous_lookup_by_partial_key()
 
 }}}
 
-template<class VoidAllocatorOrContainer>
+template<class VoidAllocatorOrContainer, bool Transparent = false>
 struct GetSetContainer
 {
    template<class ValueType>
    struct apply
    {
       typedef flat_set < ValueType
-                       , std::less<ValueType>
+                       , typename dtl::if_c<Transparent, test::less_transparent, std::less<ValueType> >::type
                        , typename boost::container::dtl::container_or_allocator_rebind<VoidAllocatorOrContainer, ValueType>::type
                         > set_type;
 
       typedef flat_multiset < ValueType
-                            , std::less<ValueType>
+                            , typename dtl::if_c<Transparent, test::less_transparent, std::less<ValueType> >::type
                             , typename boost::container::dtl::container_or_allocator_rebind<VoidAllocatorOrContainer, ValueType>::type
                             > multiset_type;
    };
@@ -731,6 +731,15 @@ int main()
          , GetSetContainer<new_allocator<void> >::apply<test::movable_and_copyable_int>::multiset_type
          , MyStdMultiSet>()) {
          std::cout << "Error in set_test<new_allocator<void> >" << std::endl;
+         return 1;
+      }
+
+      if (0 != test::set_test
+         < GetSetContainer<new_allocator<void>, true>::apply<test::movable_and_copyable_int>::set_type
+         , MyStdSet
+         , GetSetContainer<new_allocator<void>, true>::apply<test::movable_and_copyable_int>::multiset_type
+         , MyStdMultiSet>()) {
+         std::cout << "Error in set_test<new_allocator<void> >>, transparent" << std::endl;
          return 1;
       }
    }

@@ -127,6 +127,34 @@ BOOST_AUTO_TEST_CASE(per_op_cancellation) {
     BOOST_TEST(!mutex.is_locked());
 }
 
+BOOST_AUTO_TEST_CASE(cancel_ops_by_none_type) {
+    constexpr int expected_handlers_called = 4;
+    int handlers_called = 0;
+
+    asio::io_context ioc;
+    asio::cancellation_signal cs;
+
+    async_mutex mutex(asio::make_strand(ioc.get_executor()));
+
+    for (int i = 0; i < expected_handlers_called; ++i) {
+        mutex.lock(
+            [&mutex, &handlers_called](error_code ec) {
+                ++handlers_called;
+                BOOST_TEST(!ec);
+                mutex.unlock();
+            }
+        );
+    }
+
+    // Canceling with cancellation_type_t::none shouldn't cause cancellation
+    cs.emit(asio::cancellation_type_t::none);
+    cs.slot().clear();
+
+    ioc.poll();
+    BOOST_TEST(handlers_called == expected_handlers_called);
+    BOOST_TEST(!mutex.is_locked());
+}
+
 BOOST_AUTO_TEST_CASE(cancel_ops_by_destructor) {
     constexpr int expected_handlers_called = 2;
     int handlers_called = 0;

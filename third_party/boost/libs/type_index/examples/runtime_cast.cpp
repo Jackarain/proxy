@@ -14,8 +14,8 @@
     Example works with and without RTTI."
 */
 
-#include <boost/type_index/runtime_cast.hpp>
 #include <iostream>
+#include <boost/type_index/runtime_cast.hpp>
 
 struct A {
     BOOST_TYPE_INDEX_REGISTER_RUNTIME_CLASS()

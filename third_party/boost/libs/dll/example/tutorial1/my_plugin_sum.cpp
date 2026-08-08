@@ -16,9 +16,7 @@ namespace my_namespace {
 
 class my_plugin_sum final: public my_plugin_api {
 public:
-    my_plugin_sum() {
-        std::cout << "Constructing my_plugin_sum" << std::endl;
-    }
+    my_plugin_sum() = default;
 
     std::string name() const override {
         return "sum";
@@ -35,7 +33,7 @@ public:
 
 // Exporting `my_namespace::plugin` variable with name `plugin`
 extern "C" BOOST_SYMBOL_EXPORT my_plugin_sum plugin;
-my_plugin_sum plugin;
+/*constinit*/ my_plugin_sum plugin;
 
 } // namespace my_namespace
 

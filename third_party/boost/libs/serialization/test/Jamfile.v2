@@ -1,18 +1,22 @@
 # Boost serialization Library test Jamfile
 
 #  (C) Copyright Robert Ramey 2002-2004.
-#  Use, modification, and distribution are subject to the 
-#  Boost Software License, Version 1.0. (See accompanying file 
+#  Use, modification, and distribution are subject to the
+#  Boost Software License, Version 1.0. (See accompanying file
 #  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
 
-project libs/serialization/test
+project
     : id serialization_test
-    : requirements <library>/boost/filesystem
+    : requirements <library>/boost/filesystem//boost_filesystem
+        <library>/boost/math//boost_math_tr1
     ;
 
 # import rules for testing conditional on config file variables
-import ../../config/checks/config : requires ;
+import-search /boost/config/checks ;
+import config : requires ;
+
+import testing ;
 
 # import rules from the boost serialization test
 import ../util/test :
@@ -27,9 +31,9 @@ import ../util/test :
 ;
 
 BOOST_ARCHIVE_LIST = [ modules.peek : BOOST_ARCHIVE_LIST ] ;
-    
+
 lib dll_a
-    : 
+    :
         dll_a.cpp
         ../build//boost_serialization
     :
@@ -38,7 +42,7 @@ lib dll_a
 
 lib dll_polymorphic_base
     :
-        dll_polymorphic_base.cpp 
+        dll_polymorphic_base.cpp
         ../build//boost_serialization
     :
         <link>shared
@@ -130,7 +134,7 @@ test-suite "serialization" :
     ;
 
 if ! $(BOOST_ARCHIVE_LIST) {
-    test-suite "serialization2" : 
+    test-suite "serialization2" :
         [ test-bsl-run test_inclusion ]
         [ test-bsl-run test_inclusion2 ]
 
@@ -178,9 +182,12 @@ if ! $(BOOST_ARCHIVE_LIST) {
         #[ compile test_const_save_warn1_nvp.cpp ]
         #[ compile test_const_save_warn2_nvp.cpp ]
         #[ compile test_const_save_warn3_nvp.cpp ]
-        
+
         # should compile
         [ compile test_traits_pass.cpp ]
         [ compile test_const_pass.cpp ]
     ;
 }
+
+run quick.cpp ../build//boost_serialization ;
+compile quick.cpp : <exception-handling>off -<library>/boost/filesystem//boost_filesystem -<library>/boost/math//boost_math_tr1 : quick_nx ;

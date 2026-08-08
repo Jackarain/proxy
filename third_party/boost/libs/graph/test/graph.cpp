@@ -70,11 +70,8 @@ bool check_vertex_cleared(Graph& g, Vertex v, ID id)
                 found = ai;
                 break;
             }
-#elif defined(BOOST_NO_CXX98_BINDERS)
-        found
-            = std::find_if(ai, aiend, std::bind(cmp, v, std::placeholders::_1));
 #else
-        found = std::find_if(ai, aiend, std::bind1st(cmp, v));
+        found = std::find_if(ai, aiend, [&v, &cmp](const auto& el) { return cmp(v, el); });
 #endif
 
         if (found != aiend)
@@ -159,7 +156,7 @@ template < class Graph > std::size_t count_edges(Graph& g)
 int main(int, char*[])
 {
     int ret = 0;
-    std::size_t N = 5, E = 0;
+    std::size_t N = 5;
     std::size_t old_N;
 
     typedef ::Graph Graph;
@@ -221,7 +218,6 @@ int main(int, char*[])
                 ret = -1;
                 break;
             }
-            ++E;
         }
 
         // remove_edge(u, v, g)
@@ -238,7 +234,6 @@ int main(int, char*[])
 
             Edge e = random_edge(g, gen);
             boost::tie(a, b) = boost::incident(e, g);
-            --E;
 #if VERBOSE
             cerr << "remove_edge(" << vertex_id_map[a] << ","
                  << vertex_id_map[b] << ")" << endl;
@@ -281,7 +276,6 @@ int main(int, char*[])
             Vertex a, b;
             Edge e = random_edge(g, gen);
             boost::tie(a, b) = boost::incident(e, g);
-            --E;
 #if VERBOSE
             cerr << "remove_edge(" << vertex_id_map[a] << ","
                  << vertex_id_map[b] << ")" << endl;

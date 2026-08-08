@@ -71,14 +71,15 @@ struct MachineBase_ : public state_machine_def<MachineBase_<T>>
 };
 
 
-template <bool WithRootSm, bool WithFavorCompileTime>
+template <bool WithFavorCompileTime>
 struct Test
 {
     class UpperMachine;
 
-    struct Config : default_state_machine_config {
+    struct Config : default_state_machine_config
+    {
         using context = Context;
-        using root_sm = mp11::mp_if_c<WithRootSm, UpperMachine, no_root_sm>;
+        using root_sm = UpperMachine;
         using compile_policy = mp11::mp_if_c<WithFavorCompileTime, favor_compile_time, favor_runtime_speed>;
     };
 
@@ -96,16 +97,10 @@ struct Test
 
     struct UpperMachine_ : public MachineBase_<UpperMachine_>
     {
-        UpperMachine_() = default;
-
-        UpperMachine_(bool optional_argument) : optional_argument(optional_argument) {}
-
         using transition_table = mp11::mp_list<
             Row< Default       , EnterSubFsm , MiddleMachine>,
             Row< MiddleMachine , ExitSubFsm  , Default>
         >;
-
-        bool optional_argument;
     };
     class UpperMachine : public state_machine<UpperMachine_, Config, UpperMachine>
     {
@@ -116,37 +111,15 @@ struct Test
 
     static void run()
     {
-        // Test with only context.
-        {
-            Context context;
-            UpperMachine test_machine{context};
-            BOOST_ASSERT(&test_machine.get_context() == &context);
-            auto& middle_machine = test_machine.template get_state<MiddleMachine>();
-            BOOST_ASSERT(&middle_machine.get_context() == &context);
-            // Suppress warnings in case the assert is not present.
-            [[maybe_unused]] auto& lower_machine = middle_machine.template get_state<LowerMachine>();
-            BOOST_ASSERT(&lower_machine.get_context() == &context);
-            process_events(test_machine);
-        }
-
-        // Test with context and additional constructor argument.
-        {
-            Context context;
-            UpperMachine test_machine{context, true};
-            BOOST_ASSERT(test_machine.optional_argument == true);
-            BOOST_ASSERT(&test_machine.get_context() == &context);
-            auto& middle_machine = test_machine.template get_state<MiddleMachine>();
-            BOOST_ASSERT(&middle_machine.get_context() == &context);
-            // Suppress warnings in case the assert is not present.
-            [[maybe_unused]] auto& lower_machine = middle_machine.template get_state<LowerMachine>();
-            BOOST_ASSERT(&lower_machine.get_context() == &context);
-            BOOST_ASSERT(&lower_machine.get_context() == &context);
-            process_events(test_machine);
-        }
-    };
-
-    static void process_events(UpperMachine& test_machine)
-    {
+        Context context;
+        UpperMachine test_machine{context};
+        BOOST_ASSERT(&test_machine.get_context() == &context);
+        auto& middle_machine = test_machine.template get_state<MiddleMachine>();
+        BOOST_ASSERT(&middle_machine.get_context() == &context);
+        // Suppress warnings in case the assert is not present.
+        [[maybe_unused]] auto& lower_machine = middle_machine.template get_state<LowerMachine>();
+        BOOST_ASSERT(&lower_machine.get_context() == &context);
+        
         test_machine.start(); 
         BOOST_CHECK(test_machine.get_context().machine_entries == 1);
 
@@ -169,10 +142,8 @@ struct Test
 
 BOOST_AUTO_TEST_CASE( backmp11_context_test )
 {
-    Test<false, false>::run();
-    Test<false, true>::run();
-    Test<true, false>::run();
-    Test<true, true>::run();
+    Test<false>::run();
+    Test<true>::run();
 }
 
 } // namespace

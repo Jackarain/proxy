@@ -18,6 +18,10 @@ namespace unordered {
            class Allocator = std::allocator<Key>>
   class xref:reference/unordered_node_set.adoc#unordered_node_set[unordered_node_set];
 
+  // Tag for construction from ranges (pass:[C++20] and up)
+  struct from_range_t { explicit from_range_t() = default; };
+  inline constexpr from_range_t from_range{};
+
   // Equality Comparisons
   template<class Key, class Hash, class Pred, class Alloc>
     bool xref:reference/unordered_node_set.adoc#unordered_node_set_operator[operator++==++](const unordered_node_set<Key, Hash, Pred, Alloc>& x,
@@ -38,7 +42,7 @@ namespace unordered {
     typename unordered_node_set<K, H, P, A>::size_type
       xref:reference/unordered_node_set.adoc#unordered_node_set_erase_if[erase_if](unordered_node_set<K, H, P, A>& c, Predicate pred);
 
-  // Pmr aliases (C++17 and up)
+  // Pmr aliases (pass:[C++17] and up)
   namespace pmr {
     template<class Key,
              class Hash = boost::hash<Key>,

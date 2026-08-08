@@ -356,10 +356,10 @@ public:
 
     class iterator {
     private:
-        typedef typename std::aligned_storage< sizeof( value_type), alignof( value_type) >::type  storage_type;
+        typedef unsigned char storage_type[sizeof(value_type)];
 
-        buffered_channel    *   chan_{ nullptr };
-        storage_type            storage_;
+        buffered_channel    *            chan_{ nullptr };
+        alignas(value_type) storage_type storage_;
 
         void increment_( bool initial = false) {
             BOOST_ASSERT( nullptr != chan_);
@@ -409,7 +409,6 @@ public:
         }
 
         iterator & operator++() {
-            reinterpret_cast< value_type * >( std::addressof( storage_) )->~value_type();
             increment_();
             return * this;
         }

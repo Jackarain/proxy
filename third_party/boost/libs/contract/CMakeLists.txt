@@ -27,7 +27,6 @@ target_link_libraries(boost_contract
     Boost::optional
     Boost::preprocessor
     Boost::smart_ptr
-    Boost::static_assert
     Boost::thread
     Boost::type_traits
     Boost::typeof

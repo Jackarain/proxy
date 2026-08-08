@@ -485,7 +485,7 @@ PACKAGE_MANAGER_BUILD_INFO(CONAN) = "conanbuildinfo.jam" ;
 # 3. Environment variable "PACKAGE_MANAGER_BUILD_INFO".
 # 4. Conan, others.
 #
-args.add-arg use-package-manager : --use-package-manage
+args.add-arg use-package-manager : --use-package-manager
     : "Load target definitions from the given package manager." ;
 local .use-package-manager = [ args.get-arg use-package-manager ] ;
 PACKAGE_MANAGER_BUILD_INFO ?= $(PACKAGE_MANAGER_BUILD_INFO($(.use-package-manager:U))) ;
@@ -498,7 +498,8 @@ PACKAGE_MANAGER_BUILD_INFO ?= $(PACKAGE_MANAGER_BUILD_INFO(CONAN)) ;
 rule load-package-manager-build-info ( )
 {
     # This first variable is the one from the configuration (user, project, etc).
-    local package-manager-build-info = [ modules.peek [ CALLER_MODULE ] : PACKAGE_MANAGER_BUILD_INFO ] ;
+    local package-manager-build-info = [
+        modules.peek [ CALLER_MODULE ] : PACKAGE_MANAGER_BUILD_INFO ] ;
     # And this is the rest as it takes it from the settings in the "project" module.
     # I.e. the variable assignments above.
     package-manager-build-info ?= $(PACKAGE_MANAGER_BUILD_INFO) ;
@@ -572,7 +573,7 @@ local rule load-jamfile ( dir : jamfile-module : synthesize ? )
 
             local saved-project = $(.current-project) ;
 
-            mark-as-user $(jamfile-module) ;
+            USER_MODULE $(jamfile-module) ;
             if $(jamfile-to-load:B) = "@"
             {
                 # Not a real jamfile to load. Synthsize the load.
@@ -586,7 +587,7 @@ local rule load-jamfile ( dir : jamfile-module : synthesize ? )
                     : . ;
                 if [ MATCH ^($(JAMROOT))$ : $(jamfile-to-load:BS) ]
                 {
-                    jamfile = [ find-jamfile $(dir) : no-errors ] ;
+                    local jamfile = [ find-jamfile $(dir) : no-errors ] ;
                     if $(jamfile)
                     {
                         load-aux $(jamfile-module) : [ path.native $(jamfile) ] ;
@@ -655,18 +656,9 @@ rule end-load ( previous-project ? )
 }
 
 
-rule mark-as-user ( module-name )
-{
-    if USER_MODULE in [ RULENAMES ]
-    {
-        USER_MODULE $(module-name) ;
-    }
-}
-
-
 rule load-aux ( module-name : file )
 {
-    mark-as-user $(module-name) ;
+    USER_MODULE $(module-name) ;
 
     module $(module-name)
     {
@@ -714,8 +706,8 @@ rule initialize (
     {
         if ! [ MATCH ^($(JAMROOT))$ : $(basename) ]
         {
-            # We search for parent/jamroot only if this is a jamfile project, i.e.
-            # if is not a standalone or a jamroot project.
+            # We search for parent/jamroot only if this is a jamfile project,
+            # i.e. if is not a standalone or a jamroot project.
             parent-module = [ load-parent $(location) ] ;
         }
         if ! $(parent-module)
@@ -764,7 +756,7 @@ rule initialize (
             local cfgs = project site test user all ;
             if ! $(module-name) in $(cfgs)-config
             {
-                # This is a standalone project with known location. Set its
+                # This is a standalone project with unknown location. Set its
                 # source location so it can declare targets. This is needed so
                 # you can put a .jam file with your sources and use it via
                 # 'using'. Standard modules (in the 'tools' subdir) may not
@@ -968,18 +960,9 @@ class project-attributes
         }
         else if $(attribute) = "requirements"
         {
-            local result = [ property-set.refine-from-user-input
+            self.requirements = [ property-set.refine-from-user-input
                 $(self.requirements) : $(specification)
                 : $(self.project-module) : $(self.location) ] ;
-
-            if $(result[1]) = "@error"
-            {
-                import errors : error : errors.error ;
-                errors.error Requirements for project at '$(self.location)'
-                    conflict with parent's. : "Explanation:" $(result[2-]) ;
-            }
-
-            self.requirements = $(result) ;
         }
         else if $(attribute) = "usage-requirements"
         {
@@ -994,7 +977,7 @@ class project-attributes
             local non-free = [ property.remove free : $(unconditional) ] ;
             if $(non-free)
             {
-                import errors : error : errors.error ;
+                import errors ;
                 errors.error usage-requirements $(specification) have non-free
                     properties $(non-free) ;
             }
@@ -1036,7 +1019,7 @@ class project-attributes
         else if ! $(attribute) in "default-build" "location" "parent"
             "projects-to-build" "project-root" "source-location"
         {
-            import errors : error : errors.error ;
+            import errors ;
             errors.error Invalid project attribute '$(attribute)' specified for
                 project at '$(self.location)' ;
         }
@@ -1397,7 +1380,7 @@ module project-rules
                             combine that with the --build-dir option. ;
                     }
                     # Strip the leading slash from id.
-                    local rid = [ MATCH ^/(.*) : $(id) ] ;
+                    local rid = [ MATCH ^/(.+) : $(id) ] ;
                     local p = [ path.join $(global-build-dir) $(rid)
                         $(explicit-build-dir) ] ;
 
@@ -1569,8 +1552,8 @@ module project-rules
     }
 
     # This allows one to manually import a package manager build information file.
-    # The argument can be either a symbolic name of a supported package manager or
-    # the a glob pattern to load a b2 jam file.
+    # The argument can be either a symbolic name of a supported package manager
+    # or a glob pattern to load a b2 jam file.
     #
     rule use-packages ( name-or-glob-pattern ? )
     {
@@ -1653,7 +1636,6 @@ module project-rules
         {
             import errors ;
             errors.error Unable find project reference '$(reference)'. ;
-            return ;
         }
     }
 }

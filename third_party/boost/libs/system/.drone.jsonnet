@@ -239,17 +239,24 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
-        "Linux 25.04 GCC 15 UBSAN",
-        "cppalliance/droneubuntu2504:1",
+        "Linux 26.04 GCC 15 UBSAN",
+        "cppalliance/droneubuntu2604:1",
         { TOOLSET: 'gcc', COMPILER: 'g++-15', CXXSTD: '11,14,17,20,23,2c' } + ubsan,
         "g++-15-multilib",
     ),
 
     linux_pipeline(
-        "Linux 25.04 GCC 15 ASAN",
-        "cppalliance/droneubuntu2504:1",
+        "Linux 26.04 GCC 15 ASAN",
+        "cppalliance/droneubuntu2604:1",
         { TOOLSET: 'gcc', COMPILER: 'g++-15', CXXSTD: '11,14,17,20,23,2c' } + asan,
         "g++-15-multilib",
+    ),
+
+    linux_pipeline(
+        "Linux 26.04 GCC 16",
+        "cppalliance/droneubuntu2604:1",
+        { TOOLSET: 'gcc', COMPILER: 'g++-16', CXXSTD: '11,14,17,20,23,2c' },
+        "g++-16-multilib",
     ),
 
     linux_pipeline(
@@ -278,6 +285,27 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
         "cppalliance/droneubuntu1604:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-3.8', CXXSTD: '11,14' },
         "clang-3.8",
+    ),
+
+    linux_pipeline(
+        "Linux 18.04 Clang 3.9",
+        "cppalliance/droneubuntu1804:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-3.9', CXXSTD: '11,14' },
+        "clang-3.9",
+    ),
+
+    linux_pipeline(
+        "Linux 18.04 Clang 4.0",
+        "cppalliance/droneubuntu1804:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-4.0', CXXSTD: '11,14' },
+        "clang-4.0",
+    ),
+
+    linux_pipeline(
+        "Linux 18.04 Clang 5.0",
+        "cppalliance/droneubuntu1804:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-5.0', CXXSTD: '11,14' },
+        "clang-5.0",
     ),
 
     linux_pipeline(
@@ -316,52 +344,45 @@ local windows_pipeline(name, image, environment, arch = "amd64") =
     ),
 
     linux_pipeline(
-        "Linux 24.04 Clang 18 UBSAN",
+        "Linux 24.04 Clang 18",
         "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-18', CXXSTD: '11,14,17,20,2b' } + ubsan,
+        { TOOLSET: 'clang', COMPILER: 'clang++-18', CXXSTD: '11,14,17,20,2b' },
         "clang-18",
     ),
 
     linux_pipeline(
-        "Linux 24.04 Clang 18 ASAN",
+        "Linux 24.04 Clang 19",
         "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-18', CXXSTD: '11,14,17,20,2b' } + asan,
-        "clang-18",
-    ),
-
-    linux_pipeline(
-        "Linux 24.04 Clang 19 UBSAN",
-        "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-19', CXXSTD: '11,14,17,20,2b' } + ubsan,
+        { TOOLSET: 'clang', COMPILER: 'clang++-19', CXXSTD: '11,14,17,20,2b' },
         "clang-19",
     ),
 
     linux_pipeline(
-        "Linux 24.04 Clang 19 ASAN",
+        "Linux 24.04 Clang 20",
         "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-19', CXXSTD: '11,14,17,20,2b' } + asan,
-        "clang-19",
-    ),
-
-    linux_pipeline(
-        "Linux 24.04 Clang 20 UBSAN",
-        "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-20', CXXSTD: '11,14,17,20,23,2c' } + ubsan,
+        { TOOLSET: 'clang', COMPILER: 'clang++-20', CXXSTD: '11,14,17,20,23,2c' },
         "clang-20",
     ),
 
     linux_pipeline(
-        "Linux 24.04 Clang 20 ASAN",
-        "cppalliance/droneubuntu2404:1",
-        { TOOLSET: 'clang', COMPILER: 'clang++-20', CXXSTD: '11,14,17,20,23,2c' } + asan,
-        "clang-20",
-    ),
-
-    linux_pipeline(
-        "Linux 25.10 Clang 21",
-        "cppalliance/droneubuntu2510:1",
+        "Linux 26.04 Clang 21",
+        "cppalliance/droneubuntu2604:1",
         { TOOLSET: 'clang', COMPILER: 'clang++-21', CXXSTD: '11,14,17,20,23,2c' },
         "clang-21",
+    ),
+
+    linux_pipeline(
+        "Linux 26.04 Clang 22 UBSAN",
+        "cppalliance/droneubuntu2604:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-22', CXXSTD: '11,14,17,20,23,2c' } + ubsan,
+        "clang-22",
+    ),
+
+    linux_pipeline(
+        "Linux 26.04 Clang 22 ASAN",
+        "cppalliance/droneubuntu2604:1",
+        { TOOLSET: 'clang', COMPILER: 'clang++-22', CXXSTD: '11,14,17,20,23,2c' } + asan,
+        "clang-22",
     ),
 
     macos_pipeline(

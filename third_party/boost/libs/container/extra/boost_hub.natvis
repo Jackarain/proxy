@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2026 Joaquin M Lopez Munoz.
+Distributed under the Boost Software License, Version 1.0. (See accompanying
+file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+<!--
+Fancy pointer support: fancy pointer's Natvis Type element is assumed to provide
+an intrinsic boost_to_address() returning an equivalent raw pointer.
+-->
+
+<Type Name="boost::container::hub&lt;*&gt;" Inheritable="false">
+	<Intrinsic Name="to_address" Optional="true" Expression="&amp;**p">
+		<Parameter Name="p" Type="pointer*" />
+	</Intrinsic>
+	<Intrinsic Name="to_address" Optional="true" Expression="p-&gt;boost_to_address()">
+		<Parameter Name="p" Type="pointer*" />
+	</Intrinsic>
+	<Intrinsic Name="to_address" Optional="true" Expression="&amp;**p">
+		<Parameter Name="p" Type="block_base_pointer*" />
+	</Intrinsic>
+	<Intrinsic Name="to_address" Optional="true" Expression="p-&gt;boost_to_address()">
+		<Parameter Name="p" Type="block_base_pointer*" />
+	</Intrinsic>
+	<Intrinsic Name="check_bit" Expression="(n &amp; ((unsigned long long)1 &lt;&lt; i)) != 0">
+		<Parameter Name="n" Type="unsigned long long" />
+		<Parameter Name="i" Type="int" />
+	</Intrinsic>
+	<Intrinsic Name="countr_zero" Expression="
+		check_bit(n,  0) ?  0 : check_bit(n,  1) ?  1 : check_bit(n,  2) ?  2 : check_bit(n,  3) ?  3 :
+		check_bit(n,  4) ?  4 : check_bit(n,  5) ?  5 : check_bit(n,  6) ?  6 : check_bit(n,  7) ?  7 :
+		check_bit(n,  8) ?  8 : check_bit(n,  9) ?  9 : check_bit(n, 10) ? 10 : check_bit(n, 11) ? 11 :
+		check_bit(n, 12) ? 12 : check_bit(n, 13) ? 13 : check_bit(n, 14) ? 14 : check_bit(n, 15) ? 15 :
+		check_bit(n, 16) ? 16 : check_bit(n, 17) ? 17 : check_bit(n, 18) ? 18 : check_bit(n, 19) ? 19 :
+		check_bit(n, 20) ? 20 : check_bit(n, 21) ? 21 : check_bit(n, 22) ? 22 : check_bit(n, 23) ? 23 :
+		check_bit(n, 24) ? 24 : check_bit(n, 25) ? 25 : check_bit(n, 26) ? 26 : check_bit(n, 27) ? 27 :
+		check_bit(n, 28) ? 28 : check_bit(n, 29) ? 29 : check_bit(n, 30) ? 30 : check_bit(n, 31) ? 31 : 
+		check_bit(n, 32) ? 32 : check_bit(n, 33) ? 33 : check_bit(n, 34) ? 34 : check_bit(n, 35) ? 35 :
+		check_bit(n, 36) ? 36 : check_bit(n, 37) ? 37 : check_bit(n, 38) ? 38 : check_bit(n, 39) ? 39 :
+		check_bit(n, 40) ? 40 : check_bit(n, 41) ? 41 : check_bit(n, 42) ? 42 : check_bit(n, 43) ? 43 :
+		check_bit(n, 44) ? 44 : check_bit(n, 45) ? 45 : check_bit(n, 46) ? 46 : check_bit(n, 47) ? 47 :
+		check_bit(n, 48) ? 48 : check_bit(n, 49) ? 49 : check_bit(n, 50) ? 50 : check_bit(n, 51) ? 51 :
+		check_bit(n, 52) ? 52 : check_bit(n, 53) ? 53 : check_bit(n, 54) ? 54 : check_bit(n, 55) ? 55 :
+		check_bit(n, 56) ? 56 : check_bit(n, 57) ? 57 : check_bit(n, 58) ? 58 : check_bit(n, 59) ? 59 :
+		check_bit(n, 60) ? 60 : check_bit(n, 61) ? 61 : check_bit(n, 62) ? 62 : check_bit(n, 63) ? 63 : 64">
+		<Parameter Name="n" Type="unsigned long long" />
+	</Intrinsic>
+
+	<DisplayString>{{ size={size_} }}</DisplayString>
+	<Expand>
+		<Item Name="[capacity]">
+			num_blocks * N
+		</Item>
+		<Item Name="[allocator]">
+			*reinterpret_cast&lt;allocator_type*&gt;(static_cast&lt;allocator_base*&gt;(this))
+		</Item>
+		<CustomListItems MaxItemsPerView="100">
+			<Variable Name="pbb" InitialValue="to_address(&amp;blist.next)" />
+			<Variable Name="mask" InitialValue="pbb->mask" />
+			<Variable Name="i" InitialValue="(size_t)0" />
+			<Variable Name="n" InitialValue="(int)0" />
+			<Loop Condition="i &lt; size_">
+				<Exec>n = countr_zero(mask)</Exec>
+				<Exec>mask &amp;= (mask - 1)</Exec>
+				<Item>*(to_address(&amp;static_cast&lt;block*&gt;(pbb)->data_) + n)</Item>
+				<If Condition="!mask">
+					<Exec>pbb = to_address(&amp;pbb->next)</Exec>
+					<Exec>mask = pbb->mask</Exec>
+				</If>
+				<Exec>i += 1</Exec>
+			</Loop>
+		</CustomListItems>
+	</Expand>
+</Type>
+
+<Type Name="boost::container::hub_detail::iterator&lt;*&gt;" Inheritable="false">
+	<Intrinsic Name="to_address" Optional="true" Expression="&amp;**p">
+		<Parameter Name="p" Type="nonconst_pointer*" />
+	</Intrinsic>
+	<Intrinsic Name="to_address" Optional="true" Expression="p-&gt;boost_to_address()">
+		<Parameter Name="p" Type="nonconst_pointer*" />
+	</Intrinsic>
+	<Intrinsic Name="to_address" Optional="true" Expression="&amp;**p">
+		<Parameter Name="p" Type="block_base_pointer*" />
+	</Intrinsic>
+	<Intrinsic Name="to_address" Optional="true" Expression="p-&gt;boost_to_address()">
+		<Parameter Name="p" Type="block_base_pointer*" />
+	</Intrinsic>
+	<Intrinsic Name="operator_arrow" Expression="to_address(&amp;(static_cast&lt;block*&gt;(to_address(&amp;pbb)))->data_) + n" />
+	<Intrinsic Name="dereferenceable" Expression="operator_arrow() != nullptr" />
+
+	<DisplayString Condition="dereferenceable()">{*operator_arrow()}</DisplayString>
+	<DisplayString Condition="!dereferenceable()">{{ end iterator }}</DisplayString>
+	<Expand>
+		<ExpandedItem Condition="dereferenceable()">*operator_arrow()</ExpandedItem>
+	</Expand>
+</Type>
+
+</AutoVisualizer>

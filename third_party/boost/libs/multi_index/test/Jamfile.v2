@@ -1,6 +1,6 @@
 # Boost.MultiIndex tests Jamfile
 #
-# Copyright 2003-2025 Joaquín M López Muñoz.
+# Copyright 2003-2026 Joaquín M López Muñoz.
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)
@@ -37,6 +37,7 @@ project
       <toolset>msvc:<define>_CRT_SECURE_NO_WARNINGS
       <toolset>msvc:<define>_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
       <toolset>msvc:<cxxflags>/wd4494
+      <toolset>gcc-16:<cxxflags>-fno-thread-jumps # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=119321
     ;
 
 obj boost_multi_index_key_supported : check_bmi_key_supported.cpp  ;
@@ -52,7 +53,7 @@ test-suite "multi_index" :
     [ run test_copy_assignment.cpp  test_copy_assignment_main.cpp  ]
     [ run test_hash_ops.cpp         test_hash_ops_main.cpp         ]
     [ run test_iterators.cpp        test_iterators_main.cpp
-        /boost/foreach//boost_foreach                              ]
+          /boost/foreach//boost_foreach                            ]
     [ run test_key.cpp              test_key_main.cpp
         : : :
         [ check-target-builds boost_multi_index_key_supported
@@ -60,6 +61,9 @@ test-suite "multi_index" :
             : : <build>no                                        ] ]
     [ run test_key_extractors.cpp   test_key_extractors_main.cpp   ]
     [ run test_list_ops.cpp         test_list_ops_main.cpp         ]
+    [ run test_mmap.cpp             test_mmap_main.cpp             
+          /boost/interprocess//boost_interprocess
+          /boost/uuid//boost_uuid                                  ]
     [ run test_modifiers.cpp        test_modifiers_main.cpp        ]
     [ run test_mpl_ops.cpp          test_mpl_ops_main.cpp          ]
     [ run test_node_handling.cpp    test_node_handling_main.cpp    ]

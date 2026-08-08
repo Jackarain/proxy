@@ -41,11 +41,11 @@ struct shared_mutex
   }
 };
 
-shared_mutex m;
+shared_mutex g_mutex;
 
 int main()
 {
-  boost::upgrade_lock<shared_mutex> lk(m, boost::defer_lock);
+  boost::upgrade_lock<shared_mutex> lk(g_mutex, boost::defer_lock);
   BOOST_TEST(lk.try_lock_for(ms(5)) == true);
   BOOST_TEST(try_lock_for_called == true);
   BOOST_TEST(lk.owns_lock() == true);

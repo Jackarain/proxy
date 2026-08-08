@@ -5,14 +5,11 @@
 # https://www.bfgroup.xyz/b2/LICENSE.txt)
 
 import "class" : new ;
-import feature ;
 import indirect ;
 import path ;
 import project ;
 import property ;
-import sequence ;
-import set ;
-import option ;
+import set : difference : set.difference ;
 import args ;
 
 # Class for storing a set of properties.
@@ -29,19 +26,16 @@ import args ;
 #   It is possible to get a list of properties belonging to each category as
 # well as a list of properties with a specific attribute.
 #
-#   Several operations, like and refine and as-path are provided. They all use
+#   Several operations, like refine and as-path are provided. They all use
 # caching whenever possible.
 #
 class property-set
 {
-    import errors ;
     import feature ;
-    import modules ;
-    import path ;
+    import path : join : path.join ;
     import property ;
     import property-set ;
-    import set ;
-    import sequence ;
+    import sequence : transform : sequence.transform ;
 
     rule __init__ ( raw-properties * )
     {
@@ -51,6 +45,7 @@ class property-set
         {
             if ! $(p:G)
             {
+                import errors ;
                 errors.error "Invalid property: '$(p)'" ;
             }
         }
@@ -183,15 +178,8 @@ class property-set
     {
         if ! $(self.refined.$(ps))
         {
-            local r = [ property.refine $(self.raw) : [ $(ps).raw ] ] ;
-            if $(r[1]) != "@error"
-            {
-                self.refined.$(ps) = [ property-set.create $(r) ] ;
-            }
-            else
-            {
-                self.refined.$(ps) = $(r) ;
-            }
+            self.refined.$(ps) = [ property-set.create
+                [ property.refine $(self.raw) : [ $(ps).raw ] ] ] ;
         }
         return $(self.refined.$(ps)) ;
     }
@@ -326,21 +314,8 @@ class property-set
 
     # Returns all values of 'feature'.
     #
-    rule get ( feature )
-    {
-        if ! $(self.map-built)
-        {
-            # For each feature, create a member var and assign all values to it.
-            # Since all regular member vars start with 'self', there will be no
-            # conflicts between names.
-            self.map-built = true ;
-            for local v in $(self.raw)
-            {
-                $(v:G) += $(v:G=) ;
-            }
-        }
-        return $($(feature)) ;
-    }
+    # rule get ( feature )
+    NATIVE_RULE class@property-set : get ;
 
     # Returns true if the property-set contains all the
     # specified properties.
@@ -356,13 +331,8 @@ class property-set
     # Returns true if the property-set has values for
     # all the specified features
     #
-    rule contains-features ( features * )
-    {
-        if $(features) in $(self.raw:G)
-        {
-            return true ;
-        }
-    }
+    # rule contains-features ( features * )
+    NATIVE_RULE class@property-set : contains-features ;
 
     # private
 
@@ -436,7 +406,9 @@ class property-set
             # characters as well, e.g. free or indirect properties. Indirect
             # properties for example contain a full Jamfile path in their value
             # which on Windows file systems contains ':' as the drive separator.
-            if ( [ MATCH "(:)" : $(p:G=) ] && ! ( free in [ feature.attributes $(p:G) ] ) ) || $(p:G) = <conditional>
+            if ( [ MATCH "(:)" : $(p:G=) ]
+                 && ! ( free in [ feature.attributes $(p:G) ] )
+               ) || $(p:G) = <conditional>
             {
                 self.conditional += $(p) ;
             }
@@ -449,33 +421,10 @@ class property-set
     }
 }
 
-# Creates a new 'property-set' instance for the given raw properties or returns
-# an already existing ones.
-#
-rule create ( raw-properties * )
-{
-    raw-properties = [ sequence.unique
-        [ sequence.insertion-sort $(raw-properties) ] ] ;
-
-    local key = $(raw-properties:J=-:E=) ;
-
-    if ! $(.ps.$(key))
-    {
-        .ps.$(key) = [ new property-set $(raw-properties) ] ;
-    }
-    return $(.ps.$(key)) ;
-}
+# Creates a new 'property-set' instance for the given raw properties
+# or returns an already existing ones.
+# rule create ( raw-properties * )
 NATIVE_RULE property-set : create ;
-
-if [ HAS_NATIVE_RULE class@property-set : get : 1 ]
-{
-    NATIVE_RULE class@property-set : get ;
-}
-
-if [ HAS_NATIVE_RULE class@property-set : contains-features : 1 ]
-{
-    NATIVE_RULE class@property-set : contains-features ;
-}
 
 # Creates a new 'property-set' instance after checking that all properties are
 # valid and converting implicit properties into gristed form.
@@ -493,7 +442,10 @@ rule create-with-validation ( raw-properties * )
 rule create-from-user-input ( raw-properties * : jamfile-module location )
 {
     local project-id = [ project.attribute $(jamfile-module) id ] ;
-    project-id ?= [ path.root $(location) [ path.pwd ] ] ;
+    if ! $(project-id)
+    {
+        project-id = [ path.root $(location) [ path.pwd ] ] ;
+    }
     return [ property-set.create [ property.translate $(raw-properties)
         : $(project-id) : $(location) : $(jamfile-module) ] ] ;
 }

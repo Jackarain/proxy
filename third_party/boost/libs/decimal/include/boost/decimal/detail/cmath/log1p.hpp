@@ -61,7 +61,7 @@ constexpr auto log1p_impl(const T x) noexcept
     {
         if (x > T { 5, -1 })
         {
-            result = log(x + one);
+            result = ::boost::decimal::log(x + one);
         }
         else
         {

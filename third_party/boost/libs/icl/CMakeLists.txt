@@ -26,7 +26,6 @@ target_link_libraries(boost_icl
     Boost::mpl
     Boost::range
     Boost::rational
-    Boost::static_assert
     Boost::type_traits
     Boost::utility
 )

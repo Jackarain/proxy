@@ -27,6 +27,7 @@
 #  pragma GCC diagnostic ignored "-Wfloat-equal"
 #  pragma GCC diagnostic ignored "-Wfloat-conversion"
 #  pragma GCC diagnostic ignored "-Wuseless-cast"
+#  pragma GCC diagnostic ignored "-Wshadow"
 #endif
 
 #include <boost/core/lightweight_test.hpp>

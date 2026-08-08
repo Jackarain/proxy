@@ -4,6 +4,7 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
+#include <cstddef>
 #include <vector>
 #include <list>
 #include <boost/container/slist.hpp>
@@ -18,6 +19,13 @@ void test_distance(Iterator it_from, Iterator it_to, int n)
 {
     BOOST_TEST(boost::distance(it_from, it_to) == n);
 }
+
+// Definitely not an iterator.
+struct Foo
+{
+    constexpr friend
+    std::ptrdiff_t distance(Foo const &, Foo const &) { return -1; }
+};
 
 int main()
 {
@@ -80,5 +88,11 @@ int main()
         );
     }
 
+    {
+        // Make boost::distance visible since we're not actually in the boost namespace here.
+        using boost::distance;
+        auto result = distance(Foo{}, Foo{});
+        BOOST_TEST(result == -1);
+    }
     return boost::report_errors();
 }

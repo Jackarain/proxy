@@ -29,9 +29,18 @@
 #include <boost/describe/members.hpp>
 #include <boost/mp11/algorithm.hpp>
 #include <boost/mp11/integer_sequence.hpp>
+#include <boost/config.hpp>
 #include <cstdint>
 #include <type_traits>
 #include <iterator>
+
+#if !defined(BOOST_NO_CXX17_HDR_OPTIONAL)
+# include <optional>
+#endif
+
+#if !defined(BOOST_NO_CXX17_HDR_VARIANT)
+# include <variant>
+#endif
 
 namespace boost
 {
@@ -337,6 +346,53 @@ template<class Hash, class Flavor, class T>
     using Seq = mp11::make_index_sequence<std::tuple_size<T>::value>;
     detail::hash_append_tuple( h, f, v, Seq() );
 }
+
+// std::optional
+
+#if !defined(BOOST_NO_CXX17_HDR_OPTIONAL)
+
+template<class Hash, class Flavor, class T>
+    BOOST_CXX14_CONSTEXPR
+    void do_hash_append( Hash& h, Flavor const& f, std::optional<T> const& v )
+{
+    hash2::hash_append( h, f, v.has_value() );
+
+    if( v )
+    {
+        hash2::hash_append( h, f, *v );
+    }
+}
+
+#endif
+
+// std::variant, std::monostate
+
+#if !defined(BOOST_NO_CXX17_HDR_VARIANT)
+
+template<class Hash, class Flavor, class... T>
+    BOOST_CXX14_CONSTEXPR
+    void do_hash_append( Hash& h, Flavor const& f, std::variant<T...> const& v )
+{
+    if( v.valueless_by_exception() )
+    {
+        hash2::hash_append( h, f, '\x00' );
+    }
+    else
+    {
+        hash2::hash_append_size( h, f, v.index() );
+        std::visit( [&]( auto const& w ){ hash2::hash_append( h, f, w ); }, v );
+    }
+}
+
+template<class Hash, class Flavor, class T>
+    BOOST_CXX14_CONSTEXPR
+    typename std::enable_if< std::is_same<T, std::monostate>::value, void >::type
+    do_hash_append( Hash& h, Flavor const& f, T const& /*v*/ )
+{
+    hash2::hash_append( h, f, '\x00' );
+}
+
+#endif
 
 // described classes
 

@@ -51,14 +51,14 @@ namespace lexer {
 //  The following numbers are the array sizes of the token regex's which we
 //  need to specify to make the CW compiler happy (at least up to V9.5).
 #if BOOST_WAVE_SUPPORT_MS_EXTENSIONS != 0
-#define INIT_DATA_SIZE              175
+#define INIT_DATA_SIZE              176
 #else
-#define INIT_DATA_SIZE              158
+#define INIT_DATA_SIZE              159
 #endif
 #define INIT_DATA_CPP_SIZE          15
 #define INIT_DATA_PP_NUMBER_SIZE    2
 #define INIT_DATA_CPP0X_SIZE        15
-#define INIT_DATA_CPP2A_SIZE        10
+#define INIT_DATA_CPP2A_SIZE        11
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -135,14 +135,19 @@ private:
 #define DIGIT               "[0-9]"
 #define HEXDIGIT            "[0-9a-fA-F]"
 #define OPTSIGN             "[-+]?"
+#define BINARYDIGIT         "[01]"
 #define EXPSTART            "[eE]" "[-+]"
-#define EXPONENT            "(" "[eE]" OPTSIGN "[0-9]+" ")"
+#define EXPONENT            "(" "[eE]" OPTSIGN DIGIT "('" DIGIT OR DIGIT ")*" ")"
 #define NONDIGIT            "[a-zA-Z_]"
-
-#define INTEGER             \
-    "(" "(0x|0X)" HEXDIGIT "+" OR "0" OCTALDIGIT "*" OR "[1-9]" DIGIT "*" ")"
+#define INTEGER             "(" \
+                                "(0x|0X)" HEXDIGIT "('" HEXDIGIT OR HEXDIGIT ")*" OR \
+                                "(0b|0B)" BINARYDIGIT "('" BINARYDIGIT OR BINARYDIGIT ")*" OR \
+                                "0" "('" OCTALDIGIT OR OCTALDIGIT ")*" OR \
+                                "[1-9]" "('" DIGIT OR DIGIT ")*" \
+                            ")"
 
 #define INTEGER_SUFFIX      "(" "[uU][lL]?|[lL][uU]?" ")"
+#define SIZET_SUFFIX        "(" "[uU]?[zZ]|[zZ][uU]?" ")"
 #if BOOST_WAVE_SUPPORT_MS_EXTENSIONS != 0
 #define LONGINTEGER_SUFFIX  "(" "[uU]" "(" "ll" OR "LL" ")" OR \
                                 "(" "ll" OR "LL" ")" "[uU]" "?" OR \
@@ -373,9 +378,11 @@ lexer<IteratorT, PositionT>::init_data[INIT_DATA_SIZE] =
     TOKEN_DATA(LONGINTLIT, INTEGER LONGINTEGER_SUFFIX),
     TOKEN_DATA(INTLIT, INTEGER INTEGER_SUFFIX "?"),
     TOKEN_DATA(FLOATLIT,
-        "(" DIGIT "*" Q(".") DIGIT "+" OR DIGIT "+" Q(".") ")"
+        "(" DIGIT "?" "(" DIGIT "'" DIGIT OR DIGIT ")*" Q(".") DIGIT "('" DIGIT OR DIGIT ")*" OR
+            DIGIT "('" DIGIT OR DIGIT ")*" Q(".") ")" 
         EXPONENT "?" FLOAT_SUFFIX "?" OR
         DIGIT "+" EXPONENT FLOAT_SUFFIX "?"),
+    TOKEN_DATA(SIZETLIT, INTEGER SIZET_SUFFIX ),
     TOKEN_DATA(CCOMMENT, CCOMMENT),
     TOKEN_DATA(CPPCOMMENT, Q("/") Q("/[^\\n\\r]*") NEWLINEDEF ),
     TOKEN_DATA(CHARLIT, CHAR_SPEC "'"
@@ -485,6 +492,7 @@ lexer<IteratorT, PositionT>::init_data_cpp2a[INIT_DATA_CPP2A_SIZE] =
     TOKEN_DATA(CO_RETURN, "co_return"),
     TOKEN_DATA(CO_YIELD, "co_yield"),
     TOKEN_DATA(REQUIRES, "requires"),
+    TOKEN_DATA(MODULE, "module"),
     TOKEN_DATA(SPACESHIP, "<=>"),
 
     { token_id(0) }       // this should be the last entry
@@ -506,6 +514,7 @@ lexer<IteratorT, PositionT>::init_data_cpp2a[INIT_DATA_CPP2A_SIZE] =
 #undef EXPONENT
 #undef LONGINTEGER_SUFFIX
 #undef INTEGER_SUFFIX
+#undef SIZET_SUFFIX
 #undef INTEGER
 #undef FLOAT_SUFFIX
 #undef CHAR_SPEC
@@ -559,7 +568,7 @@ lexer<IteratorT, PositionT>::init_dfa(boost::wave::language_support lang)
 
 // if in C++0x mode, add appropriate keywords
 #if BOOST_WAVE_SUPPORT_CPP0X != 0
-    if (boost::wave::need_cpp0x(lang) || boost::wave::need_cpp2a(lang)) {
+    if (boost::wave::need_cpp0x(lang) || boost::wave::need_cpp2a(lang) || boost::wave::need_cpp2b(lang)) {
         for (int j = 0; 0 != init_data_cpp0x[j].tokenid; ++j) {
             this->register_regex(init_data_cpp0x[j].tokenregex,
                 init_data_cpp0x[j].tokenid, init_data_cpp0x[j].tokencb,
@@ -568,14 +577,14 @@ lexer<IteratorT, PositionT>::init_dfa(boost::wave::language_support lang)
     }
 #endif
 
-    // if in C++2a mode, add those keywords
+// if in C++2a mode, add those keywords
 #if BOOST_WAVE_SUPPORT_CPP2A != 0
-        if (wave::need_cpp2a(lang)) {
-            for (int j = 0; 0 != init_data_cpp2a[j].tokenid; ++j) {
-                this->register_regex(init_data_cpp2a[j].tokenregex,
-                                     init_data_cpp2a[j].tokenid,
-                                     init_data_cpp2a[j].tokencb,
-                                     init_data_cpp2a[j].lexerstate);
+    if (wave::need_cpp2a(lang) || wave::need_cpp2b(lang)) {
+        for (int j = 0; 0 != init_data_cpp2a[j].tokenid; ++j) {
+            this->register_regex(init_data_cpp2a[j].tokenregex,
+                                 init_data_cpp2a[j].tokenid,
+                                 init_data_cpp2a[j].tokencb,
+                                 init_data_cpp2a[j].lexerstate);
         }
     }
 #endif

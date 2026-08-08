@@ -5,19 +5,39 @@
 // (See accompanying file LICENSE_1_0.txt
 // or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+/// \file boost/dll/runtime_symbol_info.hpp
+/// \brief Provides methods for getting acceptable by boost::dll::shared_library location of symbol, source line or program.
+
 #ifndef BOOST_DLL_RUNTIME_SYMBOL_INFO_HPP
 #define BOOST_DLL_RUNTIME_SYMBOL_INFO_HPP
 
+#include <boost/dll/detail/config.hpp>
+
+#if !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
+
 #include <boost/dll/config.hpp>
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+# pragma once
+#endif
+
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
 #include <boost/predef/os.h>
 #include <boost/predef/compiler/visualc.h>
-#include <boost/dll/detail/aggressive_ptr_cast.hpp>
+
+#if !defined(BOOST_DLL_USE_STD_MODULE)
+#include <memory>  // std::addressof
+#endif // !defined(BOOST_DLL_USE_STD_MODULE)
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 #if BOOST_OS_WINDOWS
+# if !defined(BOOST_DLL_INTERFACE_UNIT)
 #   include <boost/winapi/dll.hpp>
 #   include <boost/dll/detail/windows/path_from_handle.hpp>
+# endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 #else
-#if BOOST_OS_CYGWIN
+
+# if BOOST_OS_CYGWIN
 // `Dl_info` & `dladdr` is hidden by `__GNU_VISIBLE`
 typedef struct Dl_info Dl_info;
 
@@ -30,19 +50,16 @@ struct Dl_info
 };
 
 extern "C" int dladdr (const void *addr, Dl_info *info);
-#endif
+# endif // BOOST_OS_CYGWIN
+
+# if !defined(BOOST_DLL_INTERFACE_UNIT)
 #   include <dlfcn.h>
 #   include <boost/dll/detail/posix/program_location_impl.hpp>
+# endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 #endif
 
-#include <memory>  // std::addressof
+#include <boost/dll/detail/aggressive_ptr_cast.hpp>
 
-#ifdef BOOST_HAS_PRAGMA_ONCE
-# pragma once
-#endif
-
-/// \file boost/dll/runtime_symbol_info.hpp
-/// \brief Provides methods for getting acceptable by boost::dll::shared_library location of symbol, source line or program.
 namespace boost { namespace dll {
 
 #if BOOST_OS_WINDOWS
@@ -52,6 +69,8 @@ namespace detail {
     }
 } // namespace detail
 #endif
+
+BOOST_DLL_BEGIN_MODULE_EXPORT
 
     /*!
     * On success returns full path and name to the binary object that holds symbol pointed by ptr_to_symbol.
@@ -182,43 +201,6 @@ namespace detail {
         return ret;
     }
 
-    /// @cond
-    // We have anonymous namespace here to make sure that `this_line_location()` method is instantiated in
-    // current translation unit and is not shadowed by instantiations from other units.
-    //
-    // boost-no-inspect
-    namespace {
-    /// @endcond
-
-    /*!
-    * On success returns full path and name of the binary object that holds the current line of code
-    * (the line in which the `this_line_location()` method was called).
-    *
-    * \param ec Variable that will be set to the result of the operation.
-    * \throws std::bad_alloc in case of insufficient memory. Overload that does not accept \forcedlinkfs{error_code} also throws \forcedlinkfs{system_error}.
-    */
-    static inline boost::dll::fs::path this_line_location(std::error_code& ec) {
-        typedef boost::dll::fs::path(func_t)(std::error_code& );
-        func_t& f = this_line_location;
-        return boost::dll::symbol_location(f, ec);
-    }
-
-    //! \overload this_line_location(std::error_code& ec)
-    static inline boost::dll::fs::path this_line_location() {
-        boost::dll::fs::path ret;
-        std::error_code ec;
-        ret = this_line_location(ec);
-
-        if (ec) {
-            boost::dll::detail::report_error(ec, "boost::dll::this_line_location() failed");
-        }
-
-        return ret;
-    }
-
-    /// @cond
-    } // anonymous namespace
-    /// @endcond
 
     /*!
     * On success returns full path and name of the currently running program (the one which contains the `main()` function).
@@ -248,7 +230,60 @@ namespace detail {
         return ret;
     }
 
+BOOST_DLL_END_MODULE_EXPORT
+
 }} // namespace boost::dll
+
+#endif // !defined(BOOST_USE_MODULES) || defined(BOOST_DLL_INTERFACE_UNIT)
+
+#if !defined(BOOST_DLL_INTERFACE_UNIT)
+
+#include <boost/dll/config.hpp>
+#include <boost/dll/detail/system_error.hpp>
+
+namespace boost { namespace dll {
+
+/// @cond
+// We have anonymous namespace here to make sure that `this_line_location()` method is instantiated in
+// current translation unit and is not shadowed by instantiations from other units.
+//
+// boost-no-inspect
+namespace {
+/// @endcond
+
+/*!
+* On success returns full path and name of the binary object that holds the current line of code
+* (the line in which the `this_line_location()` method was called).
+*
+* \param ec Variable that will be set to the result of the operation.
+* \throws std::bad_alloc in case of insufficient memory. Overload that does not accept \forcedlinkfs{error_code} also throws \forcedlinkfs{system_error}.
+*/
+static inline boost::dll::fs::path this_line_location(std::error_code& ec) {
+    typedef boost::dll::fs::path(func_t)(std::error_code& );
+    func_t& f = this_line_location;
+    return boost::dll::symbol_location(f, ec);
+}
+
+//! \overload this_line_location(std::error_code& ec)
+static inline boost::dll::fs::path this_line_location() {
+    boost::dll::fs::path ret;
+    std::error_code ec;
+    ret = this_line_location(ec);
+
+    if (ec) {
+        boost::dll::detail::report_error(ec, "boost::dll::this_line_location() failed");
+    }
+
+    return ret;
+}
+
+/// @cond
+} // anonymous namespace
+/// @endcond
+
+}} // namespace boost::dll
+
+#endif // !defined(BOOST_DLL_INTERFACE_UNIT)
 
 #endif // BOOST_DLL_RUNTIME_SYMBOL_INFO_HPP
 

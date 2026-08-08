@@ -14,7 +14,7 @@ Specifies an additional directory where the system should look for shared
 libraries when the target is run.
 +
 WARNING: Note that a relative path will be prepended with the directory of the relevant
-`jam` file - as supplied on the `b2` command line - thus _severely_ limiting its
+`Jam` file - as supplied on the `b2` command line - thus _severely_ limiting its
 practical use!.
 +
 Please see the link:#b2.faq.dll-path[FAQ entry on the

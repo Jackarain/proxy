@@ -279,22 +279,34 @@ BOOST_FIXTURE_TEST_CASE(throttling, shared_test_data) {
 }
 
 BOOST_FIXTURE_TEST_CASE(throttling_ordering, shared_test_data) {
-    constexpr int expected_handlers_called = 2;
+    constexpr int expected_handlers_called = 4;
     int handlers_called = 0;
 
     // packets
     auto publish_qos0 = encoders::encode_publish(
         0, topic, payload, qos_e::at_most_once, retain_e::no, dup_e::no, {}
     );
+    auto publish_1_qos1 = encoders::encode_publish(
+        1, topic, payload, qos_e::at_least_once, retain_e::no, dup_e::no, {}
+    );
+    auto publish_2_qos1 = encoders::encode_publish(
+        2, topic, payload, qos_e::at_least_once, retain_e::no, dup_e::no, {}
+    );
+
+    auto puback_1 = encoders::encode_puback(1, uint8_t(0x00), {});
+    auto puback_2 = encoders::encode_puback(2, uint8_t(0x00), {});
 
     test::msg_exchange broker_side;
     broker_side
         .expect(connect)
             .complete_with(success, after(1ms))
-            .reply_with(connack, after(2ms))
-        .expect(publish_qos1, publish_qos0)
+            .reply_with(connack_rm, after(2ms))
+        .expect(publish_qos0, publish_1_qos1, publish_qos0)
             .complete_with(success, after(1ms))
-            .reply_with(puback, after(2ms));
+            .reply_with(puback_1, after(2ms))
+        .expect(publish_2_qos1)
+            .complete_with(success, after(1ms))
+            .reply_with(puback_2, after(2ms));
 
     asio::io_context ioc;
     auto executor = ioc.get_executor();
@@ -307,30 +319,39 @@ BOOST_FIXTURE_TEST_CASE(throttling_ordering, shared_test_data) {
     c.brokers("127.0.0.1,127.0.0.1") // to avoid reconnect backoff
         .async_run(asio::detached);
 
-    c.async_publish<qos_e::at_least_once>(
-        topic, payload, retain_e::no, publish_props {},
-        [&](error_code ec, reason_code rc, puback_props) {
-            ++handlers_called;
+    auto send_qos0 = [&] {
+        c.async_publish<qos_e::at_most_once>(
+            topic, payload, retain_e::no, publish_props{},
+            [&](error_code ec) {
+                ++handlers_called;
 
-            BOOST_TEST(!ec);
-            BOOST_TEST(rc == reason_codes::success);
+                BOOST_TEST(!ec);
 
-            if (handlers_called == expected_handlers_called)
-                c.cancel();
-        }
-    );
+                if (handlers_called == expected_handlers_called)
+                    c.cancel();
+            }
+        );
+    };
 
-    c.async_publish<qos_e::at_most_once>(
-        topic, payload, retain_e::no, publish_props{},
-        [&](error_code ec) {
-            ++handlers_called;
+    auto send_qos1 = [&] {
+        c.async_publish<qos_e::at_least_once>(
+            topic, payload, retain_e::no, publish_props {},
+            [&](error_code ec, reason_code rc, puback_props) {
+                ++handlers_called;
 
-            BOOST_TEST(!ec);
+                BOOST_TEST(!ec);
+                BOOST_TEST(rc == reason_codes::success);
 
-            if (handlers_called == expected_handlers_called)
-                c.cancel();
-        }
-    );
+                if (handlers_called == expected_handlers_called)
+                    c.cancel();
+            }
+        );
+    };
+
+    send_qos0();
+    send_qos1();
+    send_qos1();
+    send_qos0();
 
     broker.run(ioc);
     BOOST_TEST(handlers_called == expected_handlers_called);

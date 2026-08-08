@@ -11,12 +11,12 @@
 // Verify that long integer literals from a macro expansion parse correctly
 // This test covers #162
 
-//O --c++11
+//O --c++17
 //O -DFOO=0x1234567ULL
 #define BAZ (FOO*2UL+1UL)
 #define BAR (BAZ + 1ULL)
 
-#if defined(BAR) && (BAR == 0x2468AD0)
+#if defined(BAR) && (BAR == 0x246'8AD0)
 struct Bar {};
 #else
 #endif

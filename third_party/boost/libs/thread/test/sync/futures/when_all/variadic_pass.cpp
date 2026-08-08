@@ -36,7 +36,6 @@
 
 int p1()
 {
-  boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
   return 123;
 }
 
@@ -44,9 +43,9 @@ int thr()
 {
   throw std::logic_error("123");
 }
+
 int p2()
 {
-  boost::this_thread::sleep_for(boost::chrono::milliseconds(200));
   return 321;
 }
 
@@ -275,23 +274,23 @@ int main()
   }
 #endif
 #if ! defined BOOST_NO_CXX11_LAMBDAS
-    { // async futures copy-constructible then()
-      boost::future<int> f1 = boost::async(boost::launch::async, &p1);
-      BOOST_TEST(f1.valid());
-      boost::future<int> f2 = boost::async(boost::launch::async, &p2);
-      BOOST_TEST(f2.valid());
-      boost::future<boost::csbl::tuple<boost::future<int>,boost::future<int> > > all = boost::when_all(boost::move(f1), boost::move(f2));
-      BOOST_TEST(! f1.valid());
-      BOOST_TEST(! f2.valid());
-      BOOST_TEST(all.valid());
-      boost::future<int> sum = all.then([](boost::future<boost::csbl::tuple<boost::future<int>, boost::future<int> > > f)
-      {
-        boost::csbl::tuple<boost::future<int>,boost::future<int> > v = f.get();
-        return boost::csbl::get<0>(v).get()+boost::csbl::get<1>(v).get();
-      });
-      BOOST_TEST(sum.valid());
-      BOOST_TEST(sum.get() == 444);
-    }
+  { // async futures copy-constructible then()
+    boost::future<int> f1 = boost::async(boost::launch::async, &p1);
+    BOOST_TEST(f1.valid());
+    boost::future<int> f2 = boost::async(boost::launch::async, &p2);
+    BOOST_TEST(f2.valid());
+    boost::future<boost::csbl::tuple<boost::future<int>,boost::future<int> > > all = boost::when_all(boost::move(f1), boost::move(f2));
+    BOOST_TEST(! f1.valid());
+    BOOST_TEST(! f2.valid());
+    BOOST_TEST(all.valid());
+    boost::future<int> sum = all.then([](boost::future<boost::csbl::tuple<boost::future<int>, boost::future<int> > > f)
+    {
+      boost::csbl::tuple<boost::future<int>,boost::future<int> > v = f.get();
+      return boost::csbl::get<0>(v).get()+boost::csbl::get<1>(v).get();
+    });
+    BOOST_TEST(sum.valid());
+    BOOST_TEST(sum.get() == 444);
+  }
 #endif
 #endif
 

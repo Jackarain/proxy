@@ -28,11 +28,11 @@ private:
     int count;
 };
 
-counter c;
+counter g_counter;
 
 void change_count()
 {
-    //std::cout << "count == " << c.increment() << std::endl;
+    //std::cout << "count == " << g_counter.increment() << std::endl;
 }
 
 int main(int, char*[])

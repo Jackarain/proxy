@@ -7,6 +7,8 @@
 #include "native.h"
 
 #include "hash.h"
+#include "modules.h"
+#include "object.h"
 
 #include <assert.h>
 

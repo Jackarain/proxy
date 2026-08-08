@@ -4,23 +4,32 @@
  * accompanying file LICENSE.txt)
  */
 
+#include <boost/asio/awaitable.hpp>
+
+#ifndef BOOST_ASIO_HAS_CO_AWAIT
+
+#include <boost/config/pragma_message.hpp>
+
+BOOST_PRAGMA_MESSAGE(
+   "test_conn_echo_stress skipped because BOOST_ASIO_HAS_CO_AWAIT is not defined");
+
+int main() { }
+
+#else
+
 #include <boost/redis/connection.hpp>
 #include <boost/redis/logger.hpp>
 
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/io_context.hpp>
-
-#include <cstddef>
-#include <exception>
-#define BOOST_TEST_MODULE echo_stress
-#include <boost/test/included/unit_test.hpp>
+#include <boost/core/lightweight_test.hpp>
 
 #include "common.hpp"
 
+#include <cstddef>
+#include <exception>
 #include <iostream>
-
-#ifdef BOOST_ASIO_HAS_CO_AWAIT
 
 namespace net = boost::asio;
 using error_code = boost::system::error_code;
@@ -91,7 +100,9 @@ request make_pub_req(std::size_t n_pubs)
    return req;
 }
 
-BOOST_AUTO_TEST_CASE(echo_stress)
+}  // namespace
+
+int main()
 {
    // Setup
    net::io_context ctx;
@@ -151,10 +162,8 @@ BOOST_AUTO_TEST_CASE(echo_stress)
              << conn.get_usage() << "\n"
              << "-------------------\n"
              << "Reallocations: " << resp.get_reallocs() << std::endl;
+
+   return boost::report_errors();
 }
 
-}  // namespace
-
-#else
-BOOST_AUTO_TEST_CASE(dummy) { }
 #endif

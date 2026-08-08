@@ -30,9 +30,7 @@ Distributed under the Boost Software License, Version 1.0.
  */
 
 #include "config.h"
-#include "lists.h"
-#include "parse.h"
-#include "value.h"
+#include "jam_fwd.h"
 
 /*
  * YYSTYPE - value of a lexical token

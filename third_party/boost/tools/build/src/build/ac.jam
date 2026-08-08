@@ -141,6 +141,7 @@ class ac-library : basic-target
     import configure ;
     import config-cache ;
     import os ;
+    import project ;
 
     rule __init__ ( name : project : requirements * : include-path ? : library-path ? : library-name ? )
     {
@@ -252,7 +253,9 @@ class ac-library : basic-target
                 [ $(property-set).raw ] ] ;
             relevant = [ property.select $(relevant) <link> :
                 [ $(property-set).raw ] ] ;
-            local min = [ property.as-path [ SORT [ feature.minimize $(relevant) ] ] ] ;
+            # NOTE: properties returned by feature.minimize are unexpanded (no grist).
+            local sorted = [ SORT [ feature.minimize $(relevant) ] ] ;
+            local min = [ property.as-path $(sorted) : dont-minimize ] ;
 
             local key = ac-library-$(name)-$(relevant:J=-) ;
             local lookup = [ config-cache.get $(key) ] ;

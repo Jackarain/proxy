@@ -110,7 +110,7 @@ constexpr auto riemann_zeta_impl(const T x) noexcept
 
                 constexpr std::size_t n_primes = std::tuple_size<prime_table_type>::value;
 
-                const T lg10_max_prime { log10(detail::prime_table<T>::primes[n_primes - 1U]) };
+                const T lg10_max_prime { ::boost::decimal::log10(detail::prime_table<T>::primes[n_primes - 1U]) };
 
                 if((x * lg10_max_prime) > std::numeric_limits<T>::digits10)
                 {

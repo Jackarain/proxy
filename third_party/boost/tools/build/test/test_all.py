@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2025 René Ferdinand Rivera Morell
+# Copyright 2025-2026 René Ferdinand Rivera Morell
 # Copyright 2002-2005 Dave Abrahams.
 # Copyright 2002-2006 Vladimir Prus.
 # Distributed under the Boost Software License, Version 1.0.
@@ -21,6 +21,7 @@ import threading
 import inspect
 
 xml = "--xml" in sys.argv
+slow = "--slow" in sys.argv
 toolset = BoostBuild.get_toolset()
 
 
@@ -63,8 +64,10 @@ def run_test(test):
         # Translate the SIGILL to an exception to stop with an apropos error.
         raise TimeoutError()
 
-    # Timer for the 5 minute limit for each test.
-    timeout = threading.Timer(5 * 60, early_exit)
+    # Timer for the 5 minute limit for each test. Unless we indicate it's a
+    # slow running context (like inside a VM).
+    timeout_seconds = 15 * 60 if slow else 5 * 60
+    timeout = threading.Timer(timeout_seconds, early_exit)
     timeout.start()
     signal.signal(signal.SIGILL, sig_handle)
     ts = time.perf_counter()
@@ -79,7 +82,14 @@ def run_test(test):
     return test, time.perf_counter() - ts, exc, annotations
 
 
-def run_tests(critical_tests, other_tests):
+cancelled = False
+pass_count = 0
+failures_count = 0
+total_count = 0
+start_ts = None
+invocation_dir = None
+
+def run_tests(critical_tests, other_tests, exclusive_tests):
     """
       Runs first the critical_tests and then the other_tests.
 
@@ -88,20 +98,28 @@ def run_tests(critical_tests, other_tests):
     one that failed first on the last test run.
 
     """
+    global cancelled
+    global pass_count
+    global failures_count
+    global total_count
+    global start_ts
+    global invocation_dir
+
     last_failed = last_failed_test()
     other_tests = reorder_tests(other_tests, last_failed)
     all_tests = critical_tests + other_tests
+    total_count = len(all_tests) + len(exclusive_tests)
 
     invocation_dir = os.getcwd()
     max_test_name_len = 10
-    for x in all_tests:
+    for x in all_tests + exclusive_tests:
         if len(x) > max_test_name_len:
             max_test_name_len = len(x)
 
     cancelled = False
     max_workers = 1 if "--not-parallel" in sys.argv else None
+
     exc_args = {}
-    exc_args["max_workers"] = max_workers
     if (
         "max_tasks_per_child"
         in inspect.signature(concurrent.futures.ProcessPoolExecutor).parameters.keys()
@@ -109,7 +127,6 @@ def run_tests(critical_tests, other_tests):
         # Limit to 1-to-1 processing to allow for timeout canceling at the
         # process level.
         exc_args["max_tasks_per_child"] = 1
-    executor = concurrent.futures.ProcessPoolExecutor(**exc_args)
 
     def handler(sig, frame):
         cancelled = True
@@ -123,8 +140,51 @@ def run_tests(critical_tests, other_tests):
     pass_count = 0
     failures_count = 0
     start_ts = time.perf_counter()
+
+    try:
+        if not cancelled:
+            executor = concurrent.futures.ProcessPoolExecutor(
+                max_workers=max_workers, **exc_args)
+            execute_tests(executor, all_tests, max_test_name_len)
+        if not cancelled:
+            executor = concurrent.futures.ProcessPoolExecutor(
+                max_workers=1, **exc_args)
+            execute_tests(executor, exclusive_tests, max_test_name_len)
+    except concurrent.futures.process.BrokenProcessPool:
+        # It could be us who broke the pool by terminating its threads
+        if not cancelled:
+            raise
+
+    # Erase the file on success.
+    if failures_count == 0:
+        open("test_results.txt", "w").close()
+
+    if not xml:
+        print(
+            """
+        === Test summary ===
+        PASS: {}
+        FAIL: {}
+        TIME: {:.0f}s
+        """.format(
+                pass_count, failures_count, time.perf_counter() - start_ts
+            )
+        )
+
+    # exit with failure with failures
+    if cancelled or failures_count > 0:
+        sys.exit(1)
+
+def execute_tests(executor, tests, max_test_name_len):
+    global cancelled
+    global pass_count
+    global failures_count
+    global total_count
+    global start_ts
+    global invocation_dir
+
     isatty = sys.stdout.isatty() or "--interactive" in sys.argv
-    futures = {executor.submit(run_test, test): test for test in all_tests}
+    futures = {executor.submit(run_test, test): test for test in tests}
     for future, pending in iterfutures(futures):
         test = futures[future]
         if not xml:
@@ -141,10 +201,6 @@ def run_tests(critical_tests, other_tests):
             if exc is not None:
                 raise exc from None
             passed = 1
-        except concurrent.futures.process.BrokenProcessPool:
-            # It could be us who broke the pool by terminating its threads
-            if not cancelled:
-                raise
         except KeyboardInterrupt:
             """This allows us to abort the testing manually using Ctrl-C."""
             print("\n\nTesting was cancelled by external signal.")
@@ -174,11 +230,8 @@ def run_tests(critical_tests, other_tests):
         else:
             failures_count += 1
             if failures_count == 1:
-                f = open(os.path.join(invocation_dir, "test_results.txt"), "w")
-                try:
+                with open(os.path.join(invocation_dir, "test_results.txt"), "w") as f:
                     f.write(test)
-                finally:
-                    f.close()
 
         #   Restore the current directory, which might have been changed by the
         # test.
@@ -197,7 +250,7 @@ def run_tests(critical_tests, other_tests):
                 )
                 if msg:
                     msg = "[{}/{}] {}".format(
-                        len(futures) - len(pending), len(futures), msg
+                        total_count - len(pending), total_count, msg
                     )
                     max_len = max_test_name_len + len(" :PASSED 12345ms")
                     if len(msg) > max_len:
@@ -230,35 +283,12 @@ def run_tests(critical_tests, other_tests):
         sys.stdout.flush()  # Makes testing under emacs more entertaining.
         BoostBuild.clear_annotations()
 
-    # Erase the file on success.
-    if failures_count == 0:
-        open("test_results.txt", "w").close()
-
-    if not xml:
-        print(
-            """
-        === Test summary ===
-        PASS: {}
-        FAIL: {}
-        TIME: {:.0f}s
-        """.format(
-                pass_count, failures_count, time.perf_counter() - start_ts
-            )
-        )
-
-    # exit with failure with failures
-    if cancelled or failures_count > 0:
-        sys.exit(1)
-
 
 def last_failed_test():
     "Returns the name of the last failed test or None."
     try:
-        f = open("test_results.txt")
-        try:
+        with open("test_results.txt") as f:
             return f.read().strip()
-        finally:
-            f.close()
     except Exception:
         return None
 
@@ -307,6 +337,7 @@ tests = [
     "builtin_echo",
     "builtin_exit",
     "builtin_glob",
+    "builtin_glob_archive",
     "builtin_readlink",
     "builtin_split_by_characters",
     "bzip2",
@@ -316,11 +347,11 @@ tests = [
     "cli_property_expansion",
     "command_line_properties",
     "composite",
+    "conditionals_multiple",
     "conditionals",
     "conditionals2",
     "conditionals3",
     "conditionals4",
-    "conditionals_multiple",
     "configuration",
     "configure",
     "copy_time",
@@ -329,27 +360,29 @@ tests = [
     "core_actions_quietly",
     "core_at_file",
     "core_bindrule",
+    "core_cmd_line",
     "core_dependencies",
-    "core_syntax_error_exit_status",
     "core_fail_expected",
     "core_jamshell",
     "core_modifiers",
     "core_multifile_actions",
     "core_nt_cmd_line",
     "core_option_d2",
+    "core_option_durations",
     "core_option_l",
     "core_option_n",
+    "core_option_out-xml",
     "core_parallel_actions",
     "core_parallel_multifile_actions_1",
     "core_parallel_multifile_actions_2",
     "core_scanner",
     "core_source_line_tracking",
+    "core_syntax_error_exit_status",
     "core_update_now",
     "core_variables_in_actions",
     "custom_generator",
     "debugger",
-    # Newly broken?
-    #         "debugger-mi",
+    "debugger-mi",
     "default_build",
     "default_features",
     "default_toolset",
@@ -373,7 +406,6 @@ tests = [
     "flags",
     "generator_selection",
     "generators_test",
-    "grep",
     "implicit_dependency",
     "indirect_conditional",
     "inherit_toolset",
@@ -381,19 +413,21 @@ tests = [
     "inline",
     "install_build_no",
     "lang_asm",
+    "libbrotli",
+    "lib_source_property",
+    "lib_zlib",
     "libjpeg",
     "liblzma",
     "libpng",
-    "libtiff",
-    "libzstd",
-    "lib_source_property",
-    "lib_zlib",
     "library_chain",
     "library_property",
+    "libtiff",
+    "libzstd",
     "link",
     "load_order",
     "loop",
     "make_rule",
+    "match_list",
     "message",
     "ndebug",
     "no_type",
@@ -412,9 +446,9 @@ tests = [
     "project_dependencies",
     "project_glob",
     "project_id",
-    "project_sub_resolution",
     "project_root_constants",
     "project_root_rule",
+    "project_sub_resolution",
     "project_test3",
     "project_test4",
     "property_expansion",
@@ -435,6 +469,7 @@ tests = [
     "stage",
     "standalone",
     "static_and_shared_library",
+    "subst_list",
     "suffix",
     "tag",
     "test_rc",
@@ -458,6 +493,10 @@ tests = [
     "using",
     "wrapper",
     "wrong_project",
+]
+
+exclusive_tests = [
+    "semaphore",
 ]
 
 if os.name == "posix":
@@ -489,9 +528,11 @@ if (
 if toolset.startswith("clang") and "-win" not in toolset or "darwin" in toolset:
     tests.append("lang_objc")
 
-# Disable on OSX as it doesn't seem to work for unknown reasons.
-if sys.platform != "darwin":
-    tests.append("builtin_glob_archive")
+# Run in exclusive mode to avoid interpreter hang on macOS (Xcode) and FreeBSD
+if sys.platform == "darwin" or sys.platform.startswith("freebsd"):
+    exclusive_tests.append("grep")
+else:
+    tests.append("grep")
 
 if "--extras" in sys.argv:
     tests.append("boostbook")
@@ -506,4 +547,4 @@ elif not xml and __name__ == "__main__":
     print("Note: skipping extra tests")
 
 if __name__ == "__main__":
-    run_tests(critical_tests, tests)
+    run_tests(critical_tests, tests, exclusive_tests)

@@ -27,28 +27,12 @@
 #include <boost/container/stable_vector.hpp>
 #include <boost/container/vector.hpp>
 #include <boost/move/detail/nsec_clock.hpp>
+#include "bench_utils.hpp"   //MyInt
 
-using boost::move_detail::cpu_timer;
 using boost::move_detail::cpu_times;
 using boost::move_detail::nanosecond_type;
 
 namespace bc = boost::container;
-
-class MyInt
-{
-   int int_;
-
-   public:
-   MyInt(int i = 0) : int_(i){}
-   MyInt(const MyInt &other)
-      :  int_(other.int_)
-   {}
-   MyInt & operator=(const MyInt &other)
-   {
-      int_ = other.int_;
-      return *this;
-   }
-};
 
 typedef std::allocator<MyInt>   StdAllocator;
 typedef bc::allocator<MyInt, 1> AllocatorPlusV1;
@@ -104,7 +88,7 @@ void stable_vector_test_template(std::size_t num_iterations, std::size_t num_ele
    {
       {
          vector_type l;
-         cpu_timer timer;
+         boost::move_detail::cpu_timer timer;
          timer.resume();
 
          for(std::size_t r = 0; r != num_iterations; ++r){

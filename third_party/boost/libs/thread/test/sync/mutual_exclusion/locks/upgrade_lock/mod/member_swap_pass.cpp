@@ -31,16 +31,16 @@ struct shared_mutex
   }
 };
 
-shared_mutex m;
+shared_mutex g_mutex;
 
 int main()
 {
-  boost::upgrade_lock<shared_mutex> lk1(m);
+  boost::upgrade_lock<shared_mutex> lk1(g_mutex);
   boost::upgrade_lock<shared_mutex> lk2;
   lk1.swap(lk2);
   BOOST_TEST(lk1.mutex() == 0);
   BOOST_TEST(lk1.owns_lock() == false);
-  BOOST_TEST(lk2.mutex() == &m);
+  BOOST_TEST(lk2.mutex() == &g_mutex);
   BOOST_TEST(lk2.owns_lock() == true);
 
   return boost::report_errors();

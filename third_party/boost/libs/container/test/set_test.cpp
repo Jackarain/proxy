@@ -1,3 +1,4 @@
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // (C) Copyright Ion Gaztanaga 2004-2013. Distributed under the Boost
@@ -346,14 +347,14 @@ bool constructor_template_auto_deduction_test()
 
 }}}   //boost::container::test
 
-template<class VoidAllocator, boost::container::tree_type_enum tree_type_value>
+template<class VoidAllocator, boost::container::tree_type_enum tree_type_value, bool Transparent = false>
 struct GetAllocatorSet
 {
    template<class ValueType>
    struct apply
    {
       typedef set < ValueType
-                  , std::less<ValueType>
+                  , typename dtl::if_c<Transparent, test::less_transparent, std::less<ValueType> >::type
                   , typename allocator_traits<VoidAllocator>
                      ::template portable_rebind_alloc<ValueType>::type
                   , typename boost::container::tree_assoc_options
@@ -362,7 +363,7 @@ struct GetAllocatorSet
                   > set_type;
 
       typedef multiset < ValueType
-                  , std::less<ValueType>
+                  , typename dtl::if_c<Transparent, test::less_transparent, std::less<ValueType> >::type
                   , typename allocator_traits<VoidAllocator>
                      ::template portable_rebind_alloc<ValueType>::type
                   , typename boost::container::tree_assoc_options
@@ -502,6 +503,24 @@ int main ()
          , GetAllocatorSet<new_allocator<void>, red_black_tree>::apply<test::moveconstruct_int>::multiset_type
          , MyStdMultiSet>()) {
          std::cout << "Error in set_test<new_allocator<void>, red_black_tree>" << std::endl;
+         return 1;
+      }
+
+      if (0 != test::set_test
+         < GetAllocatorSet<new_allocator<void>, red_black_tree>::apply<test::moveconstruct_int>::set_type
+         , MyStdSet
+         , GetAllocatorSet<new_allocator<void>, red_black_tree>::apply<test::moveconstruct_int>::multiset_type
+         , MyStdMultiSet>()) {
+         std::cout << "Error in set_test<new_allocator<void>, red_black_tree>" << std::endl;
+         return 1;
+      }
+
+      if (0 != test::set_test
+         < GetAllocatorSet<new_allocator<void>, red_black_tree, true>::apply<test::movable_and_copyable_int>::set_type
+         , MyStdSet
+         , GetAllocatorSet<new_allocator<void>, red_black_tree, true>::apply<test::movable_and_copyable_int>::multiset_type
+         , MyStdMultiSet>()) {
+         std::cout << "Error in set_test<new_allocator<void>, red_black_tree>>, transparent" << std::endl;
          return 1;
       }
    }

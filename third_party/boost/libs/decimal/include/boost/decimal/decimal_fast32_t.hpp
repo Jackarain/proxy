@@ -26,6 +26,7 @@
 #include <boost/decimal/detail/to_decimal.hpp>
 #include <boost/decimal/detail/promotion.hpp>
 #include <boost/decimal/detail/check_non_finite.hpp>
+#include <boost/decimal/detail/quantize_impl.hpp>
 #include <boost/decimal/detail/shrink_significand.hpp>
 #include <boost/decimal/detail/cmath/isfinite.hpp>
 #include <boost/decimal/detail/cmath/fpclassify.hpp>
@@ -479,6 +480,9 @@ public:
     template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE T>
     friend constexpr auto frexp10(T num, int* expptr) noexcept -> typename T::significand_type;
 
+    template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE T>
+    friend BOOST_DECIMAL_CUDA_CONSTEXPR auto decompose(const T x) noexcept;
+
     friend constexpr auto copysignd32f(decimal_fast32_t mag, decimal_fast32_t sgn) noexcept -> decimal_fast32_t;
     friend constexpr auto scalbnd32f(decimal_fast32_t num, int exp) noexcept -> decimal_fast32_t;
     friend constexpr auto scalblnd32f(decimal_fast32_t num, long exp) noexcept -> decimal_fast32_t;
@@ -497,7 +501,8 @@ public:
     // Specific decimal functionality
     friend constexpr auto samequantumd32f(decimal_fast32_t lhs, decimal_fast32_t rhs) noexcept -> bool;
     friend constexpr auto quantexpd32f(decimal_fast32_t x) noexcept -> int;
-    friend constexpr auto quantized32f(decimal_fast32_t lhs, decimal_fast32_t rhs) noexcept -> decimal_fast32_t;
+    template <BOOST_DECIMAL_DECIMAL_FLOATING_TYPE T>
+    friend BOOST_DECIMAL_CUDA_CONSTEXPR auto quantize(T lhs, T rhs) noexcept -> T;
 };
 
 #ifdef _MSC_VER
@@ -514,12 +519,41 @@ constexpr decimal_fast32_t::decimal_fast32_t(T1 coeff, T2 exp, const detail::con
     const auto is_negative {static_cast<bool>(resultant_sign)};
     sign_ = is_negative;
 
-    // Normalize in the constructor, so we never have to worry about it again
-    detail::normalize<decimal_fast32_t>(min_coeff, exp, is_negative);
+    // IEEE 754-2008 3.5.1: zero has a cohort with one representation per exponent.
+    // Skip normalization for zero (which would otherwise expand the significand and shift the exponent)
+    // and clamp the requested exponent to the representable range.
+    if (min_coeff == minimum_coefficient_size{0})
+    {
+        significand_ = static_cast<significand_type>(0);
+        auto biased_exp {static_cast<int>(exp) + detail::bias};
+        if (biased_exp < 0)
+        {
+            biased_exp = 0;
+        }
+        else if (biased_exp > detail::max_biased_exp_v<decimal_fast32_t>)
+        {
+            biased_exp = detail::max_biased_exp_v<decimal_fast32_t>;
+        }
+        exponent_ = static_cast<exponent_type>(biased_exp);
+        return;
+    }
+
+    // Fast path: if the coefficient already has exactly precision-many digits,
+    // normalize is a no-op apart from a num_digits call. Skip the call entirely.
+    constexpr minimum_coefficient_size min_normal_significand {
+        detail::pow10(static_cast<minimum_coefficient_size>(detail::precision_v<decimal_fast32_t> - 1))};
+    constexpr minimum_coefficient_size max_normal_significand {
+        static_cast<minimum_coefficient_size>(detail::max_significand_v<decimal_fast32_t>)};
+
+    if (min_coeff < min_normal_significand || min_coeff > max_normal_significand)
+    {
+        // Normalize in the constructor, so we never have to worry about it again
+        detail::normalize<decimal_fast32_t>(min_coeff, exp, is_negative);
+    }
 
     significand_ = static_cast<significand_type>(min_coeff);
 
-    const auto biased_exp {significand_ == 0U ? 0 : exp + detail::bias};
+    const auto biased_exp {static_cast<int>(exp) + detail::bias};
 
     // decimal32_t exponent holds 8 bits
     if (biased_exp > detail::max_biased_exp_v<decimal_fast32_t>)
@@ -532,10 +566,9 @@ constexpr decimal_fast32_t::decimal_fast32_t(T1 coeff, T2 exp, const detail::con
     }
     else
     {
-        // Flush denorms to zero
+        // Flush denorms to zero, preserving sign per IEEE 754-2008 3.5.1
         significand_ = static_cast<significand_type>(0);
-        exponent_ = static_cast<exponent_type>(detail::bias);
-        sign_ = false;
+        exponent_ = static_cast<exponent_type>(0);
     }
 }
 
@@ -691,9 +724,14 @@ BOOST_DECIMAL_CXX20_CONSTEXPR decimal_fast32_t::decimal_fast32_t(const Float val
     {
         significand_ = detail::d32_fast_qnan;
     }
-    else if (val == std::numeric_limits<Float>::infinity() || val == -std::numeric_limits<Float>::infinity())
+    else if (val == std::numeric_limits<Float>::infinity())
     {
         significand_ = detail::d32_fast_inf;
+    }
+    else if (val == -std::numeric_limits<Float>::infinity())
+    {
+        significand_ = detail::d32_fast_inf;
+        sign_ = true;
     }
     else
     #endif
@@ -1001,10 +1039,39 @@ constexpr auto operator+(const decimal_fast32_t lhs, const decimal_fast32_t rhs)
         {
             return direct_init(detail::d32_fast_qnan, UINT8_C((0)));
         }
-        
+
         return detail::check_non_finite(lhs, rhs);
     }
     #endif
+
+    // Dominant-operand short-circuit: for d32 add_impl uses uint64 promoted
+    // type with max_shift = digits10(uint64) - precision - 1 = 19 - 7 - 1 = 11.
+    // Above that the slow path returns one operand unchanged anyway. Fast
+    // types maintain canonical significands so no expansion buffer is needed.
+    {
+        const auto lhs_sig {lhs.full_significand()};
+        const auto rhs_sig {rhs.full_significand()};
+        if (BOOST_DECIMAL_LIKELY(lhs_sig != 0U && rhs_sig != 0U))
+        {
+            const auto lhs_exp {lhs.biased_exponent()};
+            const auto rhs_exp {rhs.biased_exponent()};
+            const auto exp_diff {lhs_exp > rhs_exp ? lhs_exp - rhs_exp : rhs_exp - lhs_exp};
+            if (exp_diff > 11)
+            {
+                auto round {_boost_decimal_global_rounding_mode};
+                #ifndef BOOST_DECIMAL_NO_CONSTEVAL_DETECTION
+                if (!BOOST_DECIMAL_IS_CONSTANT_EVALUATED(lhs))
+                {
+                    round = _boost_decimal_global_runtime_rounding_mode;
+                }
+                #endif
+                if (BOOST_DECIMAL_LIKELY(round == rounding_mode::fe_dec_to_nearest))
+                {
+                    return lhs_exp > rhs_exp ? lhs : rhs;
+                }
+            }
+        }
+    }
 
     return detail::add_impl<decimal_fast32_t>(lhs, rhs);
 }
@@ -1055,10 +1122,36 @@ constexpr auto operator-(const decimal_fast32_t lhs, decimal_fast32_t rhs) noexc
         {
             return -rhs;
         }
-        
+
         return detail::check_non_finite(lhs, rhs);
     }
     #endif
+
+    // Dominant-operand short-circuit; see operator+ above.
+    {
+        const auto lhs_sig {lhs.full_significand()};
+        const auto rhs_sig {rhs.full_significand()};
+        if (BOOST_DECIMAL_LIKELY(lhs_sig != 0U && rhs_sig != 0U))
+        {
+            const auto lhs_exp {lhs.biased_exponent()};
+            const auto rhs_exp {rhs.biased_exponent()};
+            const auto exp_diff {lhs_exp > rhs_exp ? lhs_exp - rhs_exp : rhs_exp - lhs_exp};
+            if (exp_diff > 11)
+            {
+                auto round {_boost_decimal_global_rounding_mode};
+                #ifndef BOOST_DECIMAL_NO_CONSTEVAL_DETECTION
+                if (!BOOST_DECIMAL_IS_CONSTANT_EVALUATED(lhs))
+                {
+                    round = _boost_decimal_global_runtime_rounding_mode;
+                }
+                #endif
+                if (BOOST_DECIMAL_LIKELY(round == rounding_mode::fe_dec_to_nearest))
+                {
+                    return lhs_exp > rhs_exp ? lhs : -rhs;
+                }
+            }
+        }
+    }
 
     rhs.sign_ = !rhs.sign_;
 
@@ -1633,9 +1726,7 @@ constexpr auto scalblnd32f(const decimal_fast32_t num, const long exp) noexcept 
     }
     #endif
 
-    const auto res {decimal_fast32_t(num.significand_, num.biased_exponent() + exp, num.sign_)};
-
-    return res;
+    return decimal_fast32_t(num.significand_, num.biased_exponent() + exp, num.sign_);
 }
 
 constexpr auto scalbnd32f(const decimal_fast32_t num, const int expval) noexcept -> decimal_fast32_t
@@ -1684,43 +1775,6 @@ constexpr auto quantexpd32f(const decimal_fast32_t x) noexcept -> int
     #endif
 
     return static_cast<int>(x.unbiased_exponent());
-}
-
-// Returns: a number that is equal in value (except for any rounding) and sign to x,
-// and which has an exponent set to be equal to the exponent of y.
-// If the exponent is being increased, the value is correctly rounded according to the current rounding mode;
-// if the result does not have the same value, as x, the "inexact" floating-point exception is raised.
-// If the exponent is being decreased and the significand of the result has more digits than the type would allow,
-// the "invalid" floating-point exception is raised and the result is NaN.
-// If one or both operands are NaN, the result is NaN.
-// Otherwise, if only one operand is infinity, the "invalid" floating-point exception is raised and the result is NaN.
-// If both operands are infinity, the result is DEC_INFINITY, with the same sign as x, converted to the type of x.
-// The quantize functions do not signal underflow.
-constexpr auto quantized32f(const decimal_fast32_t lhs, const decimal_fast32_t rhs) noexcept -> decimal_fast32_t
-{
-    #ifndef BOOST_DECIMAL_FAST_MATH
-    // Return the correct type of nan
-    if (isnan(lhs))
-    {
-        return lhs;
-    }
-    else if (isnan(rhs))
-    {
-        return rhs;
-    }
-
-    // If one is infinity then return a signaling NAN
-    if (isinf(lhs) != isinf(rhs))
-    {
-        return direct_init(detail::d32_fast_snan, UINT8_C(0));
-    }
-    else if (isinf(lhs) && isinf(rhs))
-    {
-        return lhs;
-    }
-    #endif
-
-    return {lhs.full_significand(), rhs.biased_exponent(), lhs.isneg()};
 }
 
 #if !defined(BOOST_DECIMAL_DISABLE_CLIB)

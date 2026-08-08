@@ -23,36 +23,11 @@
 
 #include <boost/move/detail/nsec_clock.hpp>
 
-using boost::move_detail::cpu_timer;
+#include "bench_utils.hpp"   //MyInt
+
 using boost::move_detail::cpu_times;
 using boost::move_detail::nanosecond_type;
 
-//typedef int MyInt;
-
-class MyInt
-{
-   int int_;
-
-   public:
-   MyInt(int i = 0)
-      : int_(i)
-   {}
-
-   MyInt(const MyInt &other)
-      :  int_(other.int_)
-   {}
-
-   MyInt & operator=(const MyInt &other)
-   {
-      int_ = other.int_;
-      return *this;
-   }
-
-   ~MyInt()
-   {
-      int_ = 0;
-   }
-};
 namespace boost{
 
 template<class T>
@@ -105,7 +80,7 @@ void vector_test_template(std::size_t num_iterations, std::size_t num_elements, 
    typedef Allocator IntAllocator;
    std::size_t numalloc = 0, numexpand = 0;
 
-   cpu_timer timer;
+   boost::move_detail::cpu_timer timer;
    timer.resume();
 
    std::size_t capacity = 0;

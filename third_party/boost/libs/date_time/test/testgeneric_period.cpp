@@ -125,8 +125,8 @@ int main(){
   check("Contains rep", !zero_len.contains(3));
   check("Contains period (not)", !zero_len.contains(a_period(5,8)));
   check("Contains period", p1.contains(zero_len));
-  check("Intersects", zero_len.intersects(p1));
-  check("Intersects", p1.intersects(zero_len));
+  check("Intersects", !zero_len.intersects(p1));
+  check("Intersects", !p1.intersects(zero_len));
   check("Adjacent", zero_len.is_adjacent(a_period(-10,3)));
   check("Adjacent", a_period(-10,3).is_adjacent(zero_len));
   check("Intersection", (zero_len.intersection(p1) == zero_len));
@@ -146,8 +146,8 @@ int main(){
   check("Contains rep in-between (always false)", !null_per.contains(3));
   check("Contains period (not)", !null_per.contains(a_period(7,9)));
   check("Contains period", p1.contains(null_per));
-  check("Intersects", null_per.intersects(p1));
-  check("Intersects", p1.intersects(null_per));
+  check("Intersects", !null_per.intersects(p1));
+  check("Intersects", !p1.intersects(null_per));
   check("Adjacent", null_per.is_adjacent(a_period(-10,5)));
   check("Adjacent", null_per.is_adjacent(a_period(1,10)));
 
