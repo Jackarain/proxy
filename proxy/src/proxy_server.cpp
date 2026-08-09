@@ -31,9 +31,6 @@ namespace proxy {
 
 //////////////////////////////////////////////////////////////////////////
 
-using ws = beast::websocket::stream<tcp::socket>;
-using wss = beast::websocket::stream<beast::ssl_stream<tcp::socket>>;
-
 // launcher 控制通道状态结构体（定义于 .cpp, 避免在头文件中暴露声明;
 // 所有使用它的成员函数均实现在本文件）.
 struct launcher_state
@@ -90,7 +87,7 @@ inline constexpr std::chrono::milliseconds k_launcher_dial_timeout{ 10000 };
 // 重连最大退避.
 inline constexpr int k_launcher_max_backoff_ms = 30000;
 
-namespace launcher_detail {
+namespace detail {
 
 // 判断 websocket 底层流是否为 ssl::stream（wss）.
 template <class T>
@@ -123,7 +120,140 @@ inline std::string json_str(const json::object& obj, const char* key)
 	return std::string(it->value().as_string());
 }
 
-} // namespace launcher_detail
+// 任意值转字符串。
+inline std::string to_str(const json::value& v)
+{
+	if (v.is_string())
+		return std::string(v.as_string());
+	if (v.is_bool())
+		return v.as_bool() ? "true" : "false";
+	if (v.is_int64())
+		return std::to_string(v.as_int64());
+	if (v.is_uint64())
+		return std::to_string(v.as_uint64());
+	if (v.is_double())
+		return json::serialize(v);
+	return {};
+}
+
+// 任意值转整数（兼容 int / float / string）。
+inline int to_int(const json::value& v)
+{
+	if (v.is_int64())
+		return static_cast<int>(v.as_int64());
+	if (v.is_uint64())
+		return static_cast<int>(v.as_uint64());
+	if (v.is_double())
+		return static_cast<int>(v.as_double());
+	if (v.is_bool())
+		return v.as_bool() ? 1 : 0;
+	if (v.is_string())
+		return std::atoi(std::string(v.as_string()).c_str());
+	return 0;
+}
+
+// 任意值转布尔。
+inline bool to_bool(const json::value& v)
+{
+	if (v.is_bool())
+		return v.as_bool();
+	if (v.is_int64())
+		return v.as_int64() != 0;
+	if (v.is_double())
+		return v.as_double() != 0;
+	if (v.is_string())
+	{
+		const auto& s = v.as_string();
+		return s == "true" || s == "1" || s == "yes" || s == "on";
+	}
+	return false;
+}
+
+// 任意值转字符串列表。
+inline std::vector<std::string> to_str_list(const json::value& v)
+{
+	std::vector<std::string> out;
+	if (v.is_array())
+	{
+		for (const auto& e : v.as_array())
+			out.push_back(to_str(e));
+	}
+	else if (v.is_string())
+	{
+		if (!v.as_string().empty())
+			out.push_back(std::string(v.as_string()));
+	}
+	return out;
+}
+
+// 解析 server_listen 端点字符串为 (tcp::endpoint, v6only) 元组。
+// 支持 ip:port、[ipv6]:port 格式，端口后可选 v6only/-v6only/ipv6only 后缀。
+// 成功返回 true 并填充 endp/v6only。
+inline bool parse_listen_endpoint(const std::string& str,
+	tcp::endpoint& endp, bool& v6only)
+{
+	v6only = false;
+	std::string host, port;
+	size_t pos = 0;
+
+	if (!str.empty() && str[0] == '[')
+	{
+		// [ipv6]:port 格式.
+		auto close = str.find(']');
+		if (close == std::string::npos)
+			return false;
+		host = str.substr(1, close - 1);
+		pos = close + 1;
+	}
+	else
+	{
+		// ip:port 格式.
+		auto colon = str.find(':');
+		if (colon == std::string::npos)
+			return false;
+		host = str.substr(0, colon);
+		pos = colon;
+	}
+
+	if (pos >= str.size() || str[pos] != ':')
+		return false;
+	pos++;
+
+	// 解析端口.
+	auto pstart = pos;
+	while (pos < str.size() && str[pos] >= '0' && str[pos] <= '9')
+		pos++;
+	port = str.substr(pstart, pos - pstart);
+	if (port.empty())
+		return false;
+
+	// 可选后缀 v6only.
+	if (pos < str.size())
+	{
+		auto opt = str.substr(pos);
+		if (opt == "ipv6only" || opt == "-ipv6only" ||
+			opt == "v6only" || opt == "-v6only")
+			v6only = true;
+		else
+			return false;
+	}
+
+	int p;
+	try { p = std::stoi(port); }
+	catch (const std::exception&) { return false; }
+	if (p < 0 || p > 65535)
+		return false;
+
+	boost::system::error_code ec;
+	auto addr = net::ip::make_address(host, ec);
+	if (ec)
+		return false;
+
+	endp = tcp::endpoint(addr, static_cast<unsigned short>(p));
+	return true;
+}
+
+} // namespace detail
 
 
 proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option opt)
@@ -915,7 +1045,7 @@ proxy_server::launcher_connect(const std::string& host, const std::string& port,
 		co_return std::nullopt;
 	}
 
-	if constexpr (launcher_detail::is_ssl_stream<typename WsStream::next_layer_type>::value)
+	if constexpr (detail::is_ssl_stream<typename WsStream::next_layer_type>::value)
 	{
 		// wss.
 		WsStream ws(ex, m_launcher_state->ssl_ctx_);
@@ -1070,7 +1200,7 @@ void proxy_server::launcher_register_handlers(jsonrpc::jsonrpc_session<WsStream>
 template <typename WsStream>
 net::awaitable<void> proxy_server::launcher_handle_request(jsonrpc::jsonrpc_session<WsStream>& sess, json::object req)
 {
-	std::string method = launcher_detail::json_str(req, "method");
+	std::string method = detail::json_str(req, "method");
 	json::value params;
 	if (auto it = req.if_contains("params"); it)
 		params = *it;
@@ -1105,7 +1235,7 @@ net::awaitable<void> proxy_server::launcher_handle_request(jsonrpc::jsonrpc_sess
 // 处理 launcher 下发的通知（无 id 消息, 如 set_user_usage）.
 net::awaitable<void> proxy_server::launcher_handle_notify(json::object req)
 {
-	std::string method = launcher_detail::json_str(req, "method");
+	std::string method = detail::json_str(req, "method");
 	json::value params;
 	if (auto it = req.if_contains("params"); it)
 		params = *it;
@@ -1149,10 +1279,10 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 		std::string user, password, addr, proxy_url;
 		if (params.is_object())
 		{
-			user = launcher_detail::json_str(params.as_object(), "user");
-			password = launcher_detail::json_str(params.as_object(), "password");
-			addr = launcher_detail::json_str(params.as_object(), "addr");
-			proxy_url = launcher_detail::json_str(params.as_object(), "proxy_url");
+			user = detail::json_str(params.as_object(), "user");
+			password = detail::json_str(params.as_object(), "password");
+			addr = detail::json_str(params.as_object(), "addr");
+			proxy_url = detail::json_str(params.as_object(), "proxy_url");
 		}
 		if (user.empty())
 			throw launcher_error{ -32602, "user is required" };
@@ -1164,7 +1294,7 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 
 	if (method == "del_user")
 	{
-		std::string user = params.is_object() ? launcher_detail::json_str(params.as_object(), "user") : "";
+		std::string user = params.is_object() ? detail::json_str(params.as_object(), "user") : "";
 		if (user.empty())
 			throw launcher_error{ -32602, "user is required" };
 		if (!del_auth_user(user))
@@ -1177,8 +1307,8 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 		std::string user, password;
 		if (params.is_object())
 		{
-			user = launcher_detail::json_str(params.as_object(), "user");
-			password = launcher_detail::json_str(params.as_object(), "password");
+			user = detail::json_str(params.as_object(), "user");
+			password = detail::json_str(params.as_object(), "password");
 		}
 		if (user.empty())
 			throw launcher_error{ -32602, "user is required" };
@@ -1193,8 +1323,8 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 		int rate = 0;
 		if (params.is_object())
 		{
-			user = launcher_detail::json_str(params.as_object(), "user");
-			rate = static_cast<int>(launcher_detail::json_num(params.as_object(), "rate"));
+			user = detail::json_str(params.as_object(), "user");
+			rate = static_cast<int>(detail::json_num(params.as_object(), "rate"));
 		}
 		if (user.empty())
 			throw launcher_error{ -32602, "user is required" };
@@ -1208,8 +1338,8 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 		std::int64_t quota = 0;
 		if (params.is_object())
 		{
-			user = launcher_detail::json_str(params.as_object(), "user");
-			quota = launcher_detail::json_num(params.as_object(), "quota");
+			user = detail::json_str(params.as_object(), "user");
+			quota = detail::json_num(params.as_object(), "quota");
 		}
 		if (user.empty())
 			throw launcher_error{ -32602, "user is required" };
@@ -1268,13 +1398,13 @@ void proxy_server::launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& se
 			int64_t cur_rx = 0, cur_tx = 0, prev_rx = 0, prev_tx = 0;
 			if (auto g = rep.if_contains("global"); g && g->is_object())
 			{
-				cur_rx = launcher_detail::json_num(g->as_object(), "rx_bytes");
-				cur_tx = launcher_detail::json_num(g->as_object(), "tx_bytes");
+				cur_rx = detail::json_num(g->as_object(), "rx_bytes");
+				cur_tx = detail::json_num(g->as_object(), "tx_bytes");
 			}
 			if (auto g = m_launcher_state->last_report_.as_object().if_contains("global"); g && g->is_object())
 			{
-				prev_rx = launcher_detail::json_num(g->as_object(), "rx_bytes");
-				prev_tx = launcher_detail::json_num(g->as_object(), "tx_bytes");
+				prev_rx = detail::json_num(g->as_object(), "rx_bytes");
+				prev_tx = detail::json_num(g->as_object(), "tx_bytes");
 			}
 			rx_rate = cur_rx > prev_rx ? (cur_rx - prev_rx) / sec : 0;
 			tx_rate = cur_tx > prev_tx ? (cur_tx - prev_tx) / sec : 0;
@@ -1595,145 +1725,6 @@ net::ssl::context& proxy_server::ssl_context()
 //////////////////////////////////////////////////////////////////////////
 // launcher 控制通道支持
 
-namespace {
-
-namespace json = boost::json;
-
-// 任意值转字符串。
-std::string to_str(const json::value& v)
-{
-	if (v.is_string())
-		return std::string(v.as_string());
-	if (v.is_bool())
-		return v.as_bool() ? "true" : "false";
-	if (v.is_int64())
-		return std::to_string(v.as_int64());
-	if (v.is_uint64())
-		return std::to_string(v.as_uint64());
-	if (v.is_double())
-		return json::serialize(v);
-	return {};
-}
-
-// 任意值转整数（兼容 int / float / string）。
-int to_int(const json::value& v)
-{
-	if (v.is_int64())
-		return static_cast<int>(v.as_int64());
-	if (v.is_uint64())
-		return static_cast<int>(v.as_uint64());
-	if (v.is_double())
-		return static_cast<int>(v.as_double());
-	if (v.is_bool())
-		return v.as_bool() ? 1 : 0;
-	if (v.is_string())
-		return std::atoi(std::string(v.as_string()).c_str());
-	return 0;
-}
-
-// 任意值转布尔。
-bool to_bool(const json::value& v)
-{
-	if (v.is_bool())
-		return v.as_bool();
-	if (v.is_int64())
-		return v.as_int64() != 0;
-	if (v.is_double())
-		return v.as_double() != 0;
-	if (v.is_string())
-	{
-		const auto& s = v.as_string();
-		return s == "true" || s == "1" || s == "yes" || s == "on";
-	}
-	return false;
-}
-
-// 任意值转字符串列表。
-std::vector<std::string> to_str_list(const json::value& v)
-{
-	std::vector<std::string> out;
-	if (v.is_array())
-	{
-		for (const auto& e : v.as_array())
-			out.push_back(to_str(e));
-	}
-	else if (v.is_string())
-	{
-		if (!v.as_string().empty())
-			out.push_back(std::string(v.as_string()));
-	}
-	return out;
-}
-
-// 解析 server_listen 端点字符串为 (tcp::endpoint, v6only) 元组。
-// 支持 ip:port、[ipv6]:port 格式，端口后可选 v6only/-v6only/ipv6only 后缀。
-// 成功返回 true 并填充 endp/v6only。
-bool parse_listen_endpoint(const std::string& str,
-	tcp::endpoint& endp, bool& v6only)
-{
-	v6only = false;
-	std::string host, port;
-	size_t pos = 0;
-
-	if (!str.empty() && str[0] == '[')
-	{
-		// [ipv6]:port 格式.
-		auto close = str.find(']');
-		if (close == std::string::npos)
-			return false;
-		host = str.substr(1, close - 1);
-		pos = close + 1;
-	}
-	else
-	{
-		// ip:port 格式.
-		auto colon = str.find(':');
-		if (colon == std::string::npos)
-			return false;
-		host = str.substr(0, colon);
-		pos = colon;
-	}
-
-	if (pos >= str.size() || str[pos] != ':')
-		return false;
-	pos++;
-
-	// 解析端口.
-	auto pstart = pos;
-	while (pos < str.size() && str[pos] >= '0' && str[pos] <= '9')
-		pos++;
-	port = str.substr(pstart, pos - pstart);
-	if (port.empty())
-		return false;
-
-	// 可选后缀 v6only.
-	if (pos < str.size())
-	{
-		auto opt = str.substr(pos);
-		if (opt == "ipv6only" || opt == "-ipv6only" ||
-			opt == "v6only" || opt == "-v6only")
-			v6only = true;
-		else
-			return false;
-	}
-
-	int p;
-	try { p = std::stoi(port); }
-	catch (const std::exception&) { return false; }
-	if (p < 0 || p > 65535)
-		return false;
-
-	boost::system::error_code ec;
-	auto addr = net::ip::make_address(host, ec);
-	if (ec)
-		return false;
-
-	endp = tcp::endpoint(addr, static_cast<unsigned short>(p));
-	return true;
-}
-
-} // namespace
-
 uint64_t proxy_server::started_at() const
 {
 	return m_launcher_state->started_at_;
@@ -1870,59 +1861,59 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 
 		bool ok = false;
 		// 字符串选项.
-		if (name == "pam_auth") { m_option.pam_auth_ = to_str(val); ok = true; }
-		else if (name == "local_ip") { m_option.local_ip_ = to_str(val); ok = true; }
+		if (name == "pam_auth") { m_option.pam_auth_ = detail::to_str(val); ok = true; }
+		else if (name == "local_ip") { m_option.local_ip_ = detail::to_str(val); ok = true; }
 		else if (name == "proxy_pass")
 		{
-			std::string s = to_str(val);
+			std::string s = detail::to_str(val);
 			if (s.empty()) { m_option.proxy_pass_.reset(); ok = true; }
 			else if (auto r = urls::parse_uri(s); r.has_value()) { m_option.proxy_pass_ = r.value(); ok = true; }
 			else errors[name] = "invalid proxy_pass url";
 		}
-		else if (name == "ssl_sni" || name == "proxy_ssl_name") { m_option.proxy_ssl_name_ = to_str(val); ok = true; }
-		else if (name == "ssl_certificate_dir") { m_option.ssl_cert_path_ = to_str(val); ok = true; }
-		else if (name == "ssl_cacert_dir") { m_option.ssl_cacert_path_ = to_str(val); ok = true; }
-		else if (name == "ipip_db") { m_option.ipip_db_ = to_str(val); ok = true; }
-		else if (name == "http_doc") { m_option.doc_directory_ = to_str(val); ok = true; }
+		else if (name == "ssl_sni" || name == "proxy_ssl_name") { m_option.proxy_ssl_name_ = detail::to_str(val); ok = true; }
+		else if (name == "ssl_certificate_dir") { m_option.ssl_cert_path_ = detail::to_str(val); ok = true; }
+		else if (name == "ssl_cacert_dir") { m_option.ssl_cacert_path_ = detail::to_str(val); ok = true; }
+		else if (name == "ipip_db") { m_option.ipip_db_ = detail::to_str(val); ok = true; }
+		else if (name == "http_doc") { m_option.doc_directory_ = detail::to_str(val); ok = true; }
 		else if (name == "dns_upstream")
 		{
-			std::string s = to_str(val);
+			std::string s = detail::to_str(val);
 			m_option.dns_upstream_ = s.empty() ? std::optional<std::string>{} : std::optional<std::string>{ s };
 			ok = true;
 		}
 		// 布尔选项.
-		else if (name == "reuse_port") { m_option.reuse_port_ = to_bool(val); ok = true; }
-		else if (name == "happyeyeballs") { m_option.happyeyeballs_ = to_bool(val); ok = true; }
-		else if (name == "v6only") { m_option.connect_v6_only_ = to_bool(val); ok = true; }
-		else if (name == "v4only") { m_option.connect_v4_only_ = to_bool(val); ok = true; }
-		else if (name == "proxy_pass_ssl") { m_option.proxy_pass_use_ssl_ = to_bool(val); ok = true; }
-		else if (name == "htpasswd") { m_option.htpasswd_ = to_bool(val); ok = true; }
-		else if (name == "autoindex") { m_option.autoindex_ = to_bool(val); ok = true; }
-		else if (name == "disable_http") { m_option.disable_http_ = to_bool(val); ok = true; }
-		else if (name == "disable_socks") { m_option.disable_socks_ = to_bool(val); ok = true; }
-		else if (name == "disable_udp") { m_option.disable_udp_ = to_bool(val); ok = true; }
-		else if (name == "disable_insecure") { m_option.disable_insecure_ = to_bool(val); ok = true; }
-		else if (name == "disable_check_cert") { m_option.disable_check_cert_ = to_bool(val); ok = true; }
-		else if (name == "scramble") { m_option.scramble_ = to_bool(val); ok = true; }
+		else if (name == "reuse_port") { m_option.reuse_port_ = detail::to_bool(val); ok = true; }
+		else if (name == "happyeyeballs") { m_option.happyeyeballs_ = detail::to_bool(val); ok = true; }
+		else if (name == "v6only") { m_option.connect_v6_only_ = detail::to_bool(val); ok = true; }
+		else if (name == "v4only") { m_option.connect_v4_only_ = detail::to_bool(val); ok = true; }
+		else if (name == "proxy_pass_ssl") { m_option.proxy_pass_use_ssl_ = detail::to_bool(val); ok = true; }
+		else if (name == "htpasswd") { m_option.htpasswd_ = detail::to_bool(val); ok = true; }
+		else if (name == "autoindex") { m_option.autoindex_ = detail::to_bool(val); ok = true; }
+		else if (name == "disable_http") { m_option.disable_http_ = detail::to_bool(val); ok = true; }
+		else if (name == "disable_socks") { m_option.disable_socks_ = detail::to_bool(val); ok = true; }
+		else if (name == "disable_udp") { m_option.disable_udp_ = detail::to_bool(val); ok = true; }
+		else if (name == "disable_insecure") { m_option.disable_insecure_ = detail::to_bool(val); ok = true; }
+		else if (name == "disable_check_cert") { m_option.disable_check_cert_ = detail::to_bool(val); ok = true; }
+		else if (name == "scramble") { m_option.scramble_ = detail::to_bool(val); ok = true; }
 		// 整数选项.
 		else if (name == "so_mark")
 		{
-			int v = to_int(val);
+			int v = detail::to_int(val);
 			if (v > 0)
 				m_option.so_mark_ = static_cast<uint32_t>(v);
 			else
 				m_option.so_mark_.reset();
 			ok = true;
 		}
-		else if (name == "tcp_timeout") { m_option.tcp_timeout_ = to_int(val); ok = true; }
-		else if (name == "udp_timeout") { m_option.udp_timeout_ = to_int(val); ok = true; }
-		else if (name == "rate_limit") { m_option.tcp_rate_limit_ = to_int(val); ok = true; }
-		else if (name == "noise_length") { m_option.noise_length_ = to_int(val); ok = true; }
+		else if (name == "tcp_timeout") { m_option.tcp_timeout_ = detail::to_int(val); ok = true; }
+		else if (name == "udp_timeout") { m_option.udp_timeout_ = detail::to_int(val); ok = true; }
+		else if (name == "rate_limit") { m_option.tcp_rate_limit_ = detail::to_int(val); ok = true; }
+		else if (name == "noise_length") { m_option.noise_length_ = detail::to_int(val); ok = true; }
 		// 列表选项.
 		else if (name == "auth_users")
 		{
 			std::vector<proxy_server_option::auth_users> list;
-			for (const auto& e : to_str_list(val))
+			for (const auto& e : detail::to_str_list(val))
 			{
 				// 解析 user:password:addr:proxy_pass 格式.
 				std::vector<std::string> parts;
@@ -1952,7 +1943,7 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 		else if (name == "users_rate_limit")
 		{
 			std::unordered_map<std::string, int> map;
-			for (const auto& e : to_str_list(val))
+			for (const auto& e : detail::to_str_list(val))
 			{
 				auto pos = e.find(':');
 				if (pos == std::string::npos)
@@ -1965,7 +1956,7 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 		else if (name == "users_quota")
 		{
 			std::unordered_map<std::string, int64_t> map;
-			for (const auto& e : to_str_list(val))
+			for (const auto& e : detail::to_str_list(val))
 			{
 				auto pos = e.find(':');
 				if (pos == std::string::npos)
@@ -1980,7 +1971,7 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 		else if (name == "allow_region")
 		{
 			std::unordered_set<std::string> set;
-			for (const auto& e : to_str_list(val))
+			for (const auto& e : detail::to_str_list(val))
 			{
 				auto parts = strutil::split(e, '|');
 				set.insert(parts.begin(), parts.end());
@@ -1991,7 +1982,7 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 		else if (name == "deny_region")
 		{
 			std::unordered_set<std::string> set;
-			for (const auto& e : to_str_list(val))
+			for (const auto& e : detail::to_str_list(val))
 			{
 				auto parts = strutil::split(e, '|');
 				set.insert(parts.begin(), parts.end());
@@ -2008,11 +1999,11 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 			// 解析接收到的监听列表.
 			std::vector<std::tuple<tcp::endpoint, bool>> new_listens;
 			bool parse_ok = true;
-			for (const auto& e : to_str_list(val))
+			for (const auto& e : detail::to_str_list(val))
 			{
 				tcp::endpoint endp;
 				bool v6only = false;
-				if (!parse_listen_endpoint(e, endp, v6only))
+				if (!detail::parse_listen_endpoint(e, endp, v6only))
 				{
 					errors[name] = "invalid listen endpoint: " + e;
 					parse_ok = false;
