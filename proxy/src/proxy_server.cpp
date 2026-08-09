@@ -1036,13 +1036,12 @@ void proxy_server::launcher_register_handlers(jsonrpc::jsonrpc_session<WsStream>
 	// 会话对象由调用方持有, 回调捕获其指针; serve 退出前等待在途处理归零.
 	sess.default_method_callback([this, &sess](json::object req) {
 		auto self = shared_from_this();
-		auto* sess_ptr = &sess;
 		++m_launcher_active_requests;
-		net::co_spawn(m_executor, [self, sess_ptr, req = std::move(req)]() mutable -> net::awaitable<void> {
+		net::co_spawn(m_executor, [self, &sess, req = std::move(req)]() mutable -> net::awaitable<void> {
 			// 无论协程如何结束都递减计数, 避免 serve 退出时永久等待.
 			auto guard = boost::scope::scope_exit(
 				[self]() { --self->m_launcher_active_requests; });
-			co_await self->launcher_handle_request(*sess_ptr, std::move(req));
+			co_await self->launcher_handle_request(sess, std::move(req));
 		}, net::detached);
 	});
 
