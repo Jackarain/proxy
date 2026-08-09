@@ -6630,12 +6630,9 @@ R"x*x*x(<html>
 		if (!server)
 			return;
 
-		// 上报会话累计流量（供 launcher 状态按用户/全局统计）.
+		// 上报会话结束，并汇报累计流量.
 		server->session_closed(m_connection_id,
 			m_total_rx.load(), m_total_tx.load(), m_auth_user);
-
-		// 从 server 中移除当前 session.
-		server->remove_session(m_connection_id);
 
 		// 打印当前 session 数量相关日志.
 		auto num = server->num_session();

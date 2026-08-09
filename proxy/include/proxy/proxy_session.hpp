@@ -487,7 +487,6 @@ namespace proxy {
 	class proxy_server_base {
 	public:
 		virtual ~proxy_server_base() {}
-		virtual void remove_session(size_t id) = 0;
 		virtual size_t num_session() = 0;
 		virtual const proxy_server_option& option() = 0;
 		virtual net::ssl::context& ssl_context() = 0;
@@ -495,9 +494,7 @@ namespace proxy {
 		// 会话结束时上报累计流量（供 launcher 状态按用户/全局统计）。
 		// 默认空实现，不要求所有 proxy_server 都实现统计。
 		virtual void session_closed(
-			size_t id, uint64_t rx, uint64_t tx, const std::string& user) {
-			(void)id; (void)rx; (void)tx; (void)user;
-		}
+			size_t id, uint64_t rx, uint64_t tx, const std::string& user) = 0;
 	};
 
 

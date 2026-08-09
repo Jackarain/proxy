@@ -272,9 +272,6 @@ namespace proxy {
 		static std::string launcher_parse_instance_id(const std::string& url);
 
 	private:
-		// 移除指定 ID 的 session.
-		void remove_session(size_t id) override;
-
 		// 返回当前 session 数量.
 		size_t num_session() override;
 

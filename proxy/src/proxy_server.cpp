@@ -1700,12 +1700,6 @@ void proxy_server::close() noexcept
 	}
 }
 
-void proxy_server::remove_session(size_t id)
-{
-	std::lock_guard<std::mutex> lock(m_sessions_mutex);
-	m_sessions.erase(id);
-}
-
 size_t proxy_server::num_session()
 {
 	std::lock_guard<std::mutex> lock(m_sessions_mutex);
@@ -1738,8 +1732,8 @@ const std::string& proxy_server::server_version() const
 void proxy_server::session_closed(size_t id, uint64_t rx, uint64_t tx,
 	const std::string& user)
 {
-	(void)id;
 	auto& stats = *m_launcher_state;
+
 	stats.global_rx_ += rx;
 	stats.global_tx_ += tx;
 	if (!user.empty())
@@ -1749,6 +1743,10 @@ void proxy_server::session_closed(size_t id, uint64_t rx, uint64_t tx,
 		t.first += rx;
 		t.second += tx;
 	}
+
+	// 移除已关闭的会话.
+	std::lock_guard<std::mutex> lock(m_sessions_mutex);
+	m_sessions.erase(id);
 }
 
 boost::json::object proxy_server::snapshot_report()
@@ -1780,9 +1778,8 @@ boost::json::object proxy_server::snapshot_report()
 	}
 	{
 		std::lock_guard<std::mutex> lock(m_sessions_mutex);
-		for (auto& [id, w] : m_sessions)
+		for ([[maybe_unused]]auto& [id, w] : m_sessions)
 		{
-			(void)id;
 			auto s = w.lock();
 			if (!s || !s->alive())
 				continue;
