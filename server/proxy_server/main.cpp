@@ -347,9 +347,6 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 			XLOG_ERR << "invalid --launcher url: " << launcher_url;
 			co_return;
 		}
-
-		// 关闭控制台日志颜色输出，避免 launcher 控制台日志被 ANSI 颜色码污染.
-		xlogger::toggle_console_logging_color(false);
 	}
 
 	server = proxy_server::make(ioc.get_executor(), opt);
@@ -645,6 +642,12 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 		// release 构建下控制台日志默认关闭，此处按 --disable_logs 显式控制，
 		// 保证 launcher 传入 --disable_logs false 时能采集到 stdout/stderr 日志.
 		xlogger::toggle_console_logging(!disable_logs);
+	}
+
+	if (!launcher_url.empty())
+	{
+		// 关闭控制台日志颜色输出，避免 launcher 控制台日志被 ANSI 颜色码污染.
+		xlogger::toggle_console_logging_color(false);
 	}
 
 	print_args(argc, argv, vm);

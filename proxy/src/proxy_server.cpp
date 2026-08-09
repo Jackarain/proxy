@@ -1322,13 +1322,15 @@ net::awaitable<bool> proxy_server::launcher_run_once()
 		if (!sess)
 			co_return false;
 		co_await launcher_serve(sess);
-		co_return true;
+	}
+	else
+	{
+		auto sess = co_await launcher_connect<launcher_ws>(host, port, target);
+		if (!sess)
+			co_return false;
+		co_await launcher_serve(sess);
 	}
 
-	auto sess = co_await launcher_connect<launcher_ws>(host, port, target);
-	if (!sess)
-		co_return false;
-	co_await launcher_serve(sess);
 	co_return true;
 }
 
