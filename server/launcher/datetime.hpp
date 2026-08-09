@@ -21,7 +21,7 @@ namespace launcher {
 
 using time_point = std::chrono::system_clock::time_point;
 
-// golang time.Time 零值（0001-01-01T00:00:00Z）。
+// time.Time 零值（0001-01-01T00:00:00Z）。
 inline time_point zero_time() {
 	return time_point{};
 }
@@ -31,7 +31,7 @@ inline time_point now_time() {
 	return std::chrono::system_clock::now();
 }
 
-// 按本地时区格式化为 RFC3339（不含小数秒，与 golang time.Format(time.RFC3339) 对齐）。
+// 按本地时区格式化为 RFC3339。
 inline std::string rfc3339_format(time_point tp) {
 	if (tp == zero_time())
 		return "0001-01-01T00:00:00Z";

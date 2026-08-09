@@ -1,7 +1,7 @@
 # launcher
 #
 # gproxy launcher 的 C++ 版本：
-# WebUI 实例管理器，与 golang 版本协议完全兼容
+# WebUI 实例管理器
 # （REST API + WebSocket JSON-RPC 控制通道 + instances.json 持久化）。
 # JSON-RPC 基于 third_party/tinyrpc 的 jsonrpc.hpp。
 
