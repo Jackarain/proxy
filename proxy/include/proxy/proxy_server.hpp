@@ -32,9 +32,9 @@ namespace jsonrpc {
 
 namespace proxy {
 
-	// launcher 状态统计结构体（完整定义在 proxy_server.cpp 中，避免在
+	// launcher 控制通道状态结构体（完整定义在 proxy_server.cpp 中，避免在
 	// 头文件中暴露其内部声明，相关成员函数均实现在 proxy_server.cpp）.
-	struct launcher_stats;
+	struct launcher_state;
 
 	//////////////////////////////////////////////////////////////////////////
 
@@ -131,7 +131,7 @@ namespace proxy {
 		static std::shared_ptr<proxy_server>
 		make(net::any_io_executor executor, proxy_server_option opt);
 
-		// 析构函数（定义于 proxy_server.cpp, launcher_stats 为不完整类型）.
+		// 析构函数（定义于 proxy_server.cpp, launcher_state 为不完整类型）.
 		virtual ~proxy_server();
 
 		// 验证 SSL 证书是否匹配 RFC 2818 的主机名规则.
@@ -450,28 +450,9 @@ namespace proxy {
 #endif // defined(__linux__)
 
 		//////////////////////////////////////////////////////////////////////////
-		// launcher 控制通道相关成员（launcher_stats 完整定义在 proxy_server.cpp）.
-
-		// launcher 状态统计（启动时间/版本/全局计数/用户累计流量等）.
-		std::unique_ptr<launcher_stats> m_launcher_stats;
-
-		// launcher 控制通道停止标志与当前连接关闭标志.
-		std::atomic_bool m_launcher_stopped{ false };
-		std::atomic_bool m_launcher_session_closed{ false };
-
-		// 在途请求处理协程计数（serve 结束时等待其归零, 确保会话对象存活期内
-		// 所有引用会话的协程已完成, 从而无需 shared_ptr 管理会话生命周期）.
-		std::atomic<int> m_launcher_active_requests{ 0 };
-
-		// launcher 控制通道地址与 instance ID.
-		std::string m_launcher_url;
-		std::string m_launcher_instance_id;
-
-		// 最近一次状态报告（get_status 返回用；仅 io_context 线程访问）.
-		boost::json::value m_launcher_last_report;
-
-		// TLS 客户端上下文（信任 launcher 自签证书）.
-		net::ssl::context m_launcher_ssl_ctx{ net::ssl::context::tls_client };
+		// launcher 控制通道状态：启动时间/版本标识/全局与用户流量统计、控制通道
+		// 地址、停止标志、在途请求计数、SSL 上下文与最近状态报告等.
+		std::unique_ptr<launcher_state> m_launcher_state;
 
 		// 当前服务是否中止标志.
 		std::atomic_bool m_abort{ false };

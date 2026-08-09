@@ -34,9 +34,9 @@ namespace proxy {
 using ws = beast::websocket::stream<tcp::socket>;
 using wss = beast::websocket::stream<beast::ssl_stream<tcp::socket>>;
 
-// launcher 状态统计结构体（定义于 .cpp, 避免在头文件中暴露声明;
+// launcher 控制通道状态结构体（定义于 .cpp, 避免在头文件中暴露声明;
 // 所有使用它的成员函数均实现在本文件）.
-struct launcher_stats
+struct launcher_state
 {
 	// 服务启动时间（Unix 秒）与版本标识.
 	uint64_t started_at_{ 0 };
@@ -54,6 +54,20 @@ struct launcher_stats
 	// 续接的 launcher 持久化用户已用量（TX 基线，配额续接）.
 	std::mutex usage_mutex_;
 	std::map<std::string, int64_t> user_usage_;
+
+	// 最近一次状态报告（get_status 返回用；仅 io_context 线程访问）.
+	boost::json::value last_report_;
+
+	// 控制通道停止标志与当前连接关闭标志.
+	std::atomic_bool stopped_{ false };
+	std::atomic_bool session_closed_{ false };
+
+	// 在途请求处理协程计数（serve 结束时等待其归零, 确保会话对象存活期内
+	// 所有引用会话的协程已完成, 从而无需 shared_ptr 管理会话生命周期）.
+	std::atomic<int> active_requests_{ 0 };
+
+	// TLS 客户端上下文（信任 launcher 自签证书）.
+	net::ssl::context ssl_ctx_{ net::ssl::context::tls_client };
 };
 
 // launcher 控制通道请求处理错误: 由 launcher_dispatch 抛出,
@@ -116,19 +130,16 @@ proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option op
 	: m_executor(executor)
 	, m_option(std::move(opt))
 	, m_timer(executor)
-	, m_launcher_stats(std::make_unique<launcher_stats>())
+	, m_launcher_state(std::make_unique<launcher_state>())
 {
 	// 记录启动时间与版本标识（供 launcher 状态上报）.
-	m_launcher_stats->started_at_ = static_cast<uint64_t>(std::time(nullptr));
-	m_launcher_stats->server_version_ = "cpp-proxy";
+	m_launcher_state->started_at_ = static_cast<uint64_t>(std::time(nullptr));
+	m_launcher_state->server_version_ = "cpp-proxy";
 
 	// 初始化 launcher 控制通道（URL 来自 m_option.launcher_url_, 为空不启用）.
-	m_launcher_url = m_option.launcher_url_;
-	m_launcher_instance_id = launcher_parse_instance_id(m_launcher_url);
-
 	// 信任 launcher 自签证书.
-	if (!m_launcher_url.empty())
-		m_launcher_ssl_ctx.set_verify_mode(net::ssl::verify_none);
+	if (!m_option.launcher_url_.empty())
+		m_launcher_state->ssl_ctx_.set_verify_mode(net::ssl::verify_none);
 
 	if (!m_option.stdio_target_.empty())
 		return;
@@ -159,7 +170,7 @@ proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option op
 
 proxy_server::~proxy_server()
 {
-	// launcher_stats 为不完整类型, unique_ptr 成员在此释放.
+	// launcher_state 为不完整类型, unique_ptr 成员在此释放.
 }
 
 std::shared_ptr<proxy_server>
@@ -855,10 +866,10 @@ net::awaitable<void> proxy_server::tick()
 // 为空则不启动）.
 void proxy_server::launcher_start() noexcept
 {
-	if (m_launcher_url.empty())
+	if (m_option.launcher_url_.empty())
 		return;
 
-	XLOG_DBG << "launcher control channel start: " << m_launcher_url;
+	XLOG_DBG << "launcher control channel start: " << m_option.launcher_url_;
 
 	auto self = shared_from_this();
 	net::co_spawn(m_executor, [self]() -> net::awaitable<void> {
@@ -869,7 +880,7 @@ void proxy_server::launcher_start() noexcept
 // 停止 launcher 控制通道（由 close() 调用, 设置停止标志使 serve 协程退出）.
 void proxy_server::launcher_stop() noexcept
 {
-	m_launcher_stopped = true;
+	m_launcher_state->stopped_ = true;
 	// serve 协程在状态上报循环中检查该标志后退出, 并在退出时自行关闭会话.
 }
 
@@ -906,7 +917,7 @@ proxy_server::launcher_connect(const std::string& host, const std::string& port,
 	if constexpr (launcher_detail::is_ssl_stream<typename WsStream::next_layer_type>::value)
 	{
 		// wss.
-		WsStream ws(ex, m_launcher_ssl_ctx);
+		WsStream ws(ex, m_launcher_state->ssl_ctx_);
 		if (!SSL_set_tlsext_host_name(ws.next_layer().native_handle(), host.c_str()))
 			co_return std::nullopt;
 
@@ -983,8 +994,8 @@ net::awaitable<void> proxy_server::launcher_serve(jsonrpc::jsonrpc_session<WsStr
 	// 注册请求/通知处理器.
 	launcher_register_handlers(sess);
 
-	m_launcher_session_closed = false;
-	sess.closed_callback([self = shared_from_this()]() { self->m_launcher_session_closed = true; });
+	m_launcher_state->session_closed_ = false;
+	sess.closed_callback([self = shared_from_this()]() { self->m_launcher_state->session_closed_ = true; });
 
 	// 先启动读循环（同 executor 上的独立协程）, 再发送通知;
 	// 否则会话尚未进入运行态, 入队的写消息可能无法发出.
@@ -992,24 +1003,24 @@ net::awaitable<void> proxy_server::launcher_serve(jsonrpc::jsonrpc_session<WsStr
 
 	// 注册实例信息.
 	json::object reg;
-	reg["instance_id"] = m_launcher_instance_id;
+	reg["instance_id"] = launcher_parse_instance_id(m_option.launcher_url_);
 	reg["pid"] = static_cast<int64_t>(::getpid());
 	reg["version"] = server_version();
 	reg["started_at"] = static_cast<int64_t>(started_at());
 	sess.notify("register", reg);
 
 	// 立即上报一次状态.
-	m_launcher_last_report = json::value(json::object_kind);
+	m_launcher_state->last_report_ = json::value(json::object_kind);
 	launcher_update_report(sess);
 
 	// 状态上报循环: 连接断开或 stop 时退出.
 	net::steady_timer timer(ex);
 	boost::system::error_code sec;
-	while (!m_launcher_stopped && !m_launcher_session_closed)
+	while (!m_launcher_state->stopped_ && !m_launcher_state->session_closed_)
 	{
 		timer.expires_after(k_launcher_status_interval);
 		co_await timer.async_wait(net_awaitable[sec]);
-		if (m_launcher_stopped || m_launcher_session_closed)
+		if (m_launcher_state->stopped_ || m_launcher_state->session_closed_)
 			break;
 		launcher_update_report(sess);
 	}
@@ -1019,7 +1030,7 @@ net::awaitable<void> proxy_server::launcher_serve(jsonrpc::jsonrpc_session<WsStr
 
 	// 等待所有在途请求处理完成（它们通过引用访问本会话, 必须在本协程
 	// 返回前结束, 调用方才能安全销毁会话对象）. 会话已停止, 不再有新请求.
-	while (m_launcher_active_requests.load() > 0)
+	while (m_launcher_state->active_requests_.load() > 0)
 	{
 		timer.expires_after(std::chrono::milliseconds(10));
 		co_await timer.async_wait(net_awaitable[sec]);
@@ -1036,11 +1047,11 @@ void proxy_server::launcher_register_handlers(jsonrpc::jsonrpc_session<WsStream>
 	// 会话对象由调用方持有, 回调捕获其指针; serve 退出前等待在途处理归零.
 	sess.default_method_callback([this, &sess](json::object req) {
 		auto self = shared_from_this();
-		++m_launcher_active_requests;
+		++m_launcher_state->active_requests_;
 		net::co_spawn(m_executor, [self, &sess, req = std::move(req)]() mutable -> net::awaitable<void> {
 			// 无论协程如何结束都递减计数, 避免 serve 退出时永久等待.
 			auto guard = boost::scope::scope_exit(
-				[self]() { --self->m_launcher_active_requests; });
+				[self]() { --self->m_launcher_state->active_requests_; });
 			co_await self->launcher_handle_request(sess, std::move(req));
 		}, net::detached);
 	});
@@ -1117,8 +1128,8 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 {
 	if (method == "get_status")
 	{
-		if (m_launcher_last_report.is_object())
-			return m_launcher_last_report;
+		if (m_launcher_state->last_report_.is_object())
+			return m_launcher_state->last_report_;
 		return snapshot_report();
 	}
 
@@ -1245,11 +1256,11 @@ void proxy_server::launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& se
 	// 差分速率.
 	json::object rates;
 	double rx_rate = 0, tx_rate = 0;
-	if (m_launcher_last_report.is_object())
+	if (m_launcher_state->last_report_.is_object())
 	{
 		auto cur_ts = rep.if_contains("ts") && rep.at("ts").is_int64() ? rep.at("ts").as_int64() : 0;
-		auto prev_ts = m_launcher_last_report.as_object().if_contains("ts") && m_launcher_last_report.as_object().at("ts").is_int64()
-			? m_launcher_last_report.as_object().at("ts").as_int64() : 0;
+		auto prev_ts = m_launcher_state->last_report_.as_object().if_contains("ts") && m_launcher_state->last_report_.as_object().at("ts").is_int64()
+			? m_launcher_state->last_report_.as_object().at("ts").as_int64() : 0;
 		double sec = static_cast<double>(cur_ts - prev_ts);
 		if (sec > 0)
 		{
@@ -1259,7 +1270,7 @@ void proxy_server::launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& se
 				cur_rx = launcher_detail::json_num(g->as_object(), "rx_bytes");
 				cur_tx = launcher_detail::json_num(g->as_object(), "tx_bytes");
 			}
-			if (auto g = m_launcher_last_report.as_object().if_contains("global"); g && g->is_object())
+			if (auto g = m_launcher_state->last_report_.as_object().if_contains("global"); g && g->is_object())
 			{
 				prev_rx = launcher_detail::json_num(g->as_object(), "rx_bytes");
 				prev_tx = launcher_detail::json_num(g->as_object(), "tx_bytes");
@@ -1273,7 +1284,7 @@ void proxy_server::launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& se
 	rep["rates"] = std::move(rates);
 	rep["user_rates"] = json::object();
 
-	m_launcher_last_report = rep;
+	m_launcher_state->last_report_ = rep;
 	sess.notify("status", rep);
 }
 
@@ -1286,10 +1297,10 @@ net::awaitable<void> proxy_server::launcher_worker()
 	int backoff_ms = 1000;
 	boost::system::error_code sec;
 
-	while (!m_launcher_stopped)
+	while (!m_launcher_state->stopped_)
 	{
 		bool connected = co_await launcher_run_once();
-		if (m_launcher_stopped)
+		if (m_launcher_state->stopped_)
 			break;
 		// 建连成功（即使后来断开）: 重置退避, 避免稳定运行后一次抖动
 		// 仍要等满上次退避.
@@ -1302,7 +1313,7 @@ net::awaitable<void> proxy_server::launcher_worker()
 		// 分小段退避等待, 便于及时响应 launcher_stop.
 		net::steady_timer timer(ex);
 		int left = backoff_ms;
-		while (left > 0 && !m_launcher_stopped)
+		while (left > 0 && !m_launcher_state->stopped_)
 		{
 			int chunk = (std::min)(left, 200);
 			timer.expires_after(std::chrono::milliseconds(chunk));
@@ -1319,10 +1330,14 @@ net::awaitable<void> proxy_server::launcher_worker()
 // 单次连接流程. 返回 true 表示成功建立了连接（尽管之后断开）.
 net::awaitable<bool> proxy_server::launcher_run_once()
 {
-	boost::urls::url_view u = boost::urls::parse_uri(m_launcher_url).value();
+	boost::urls::url_view u = boost::urls::parse_uri(m_option.launcher_url_).value();
 	std::string scheme = std::string(u.scheme());
 	std::string host = std::string(u.host());
-	std::string port = u.has_port() ? std::string(u.port()) : (scheme == "wss" ? "443" : "80");
+	std::string port;
+	if (u.has_port())
+		port = std::string(u.port());
+	else
+		port = std::to_string(urls::default_port(u.scheme_id()));
 	std::string target = std::string(u.encoded_target().empty() ? "/" : u.encoded_target());
 
 	if (scheme == "wss")
@@ -1653,19 +1668,19 @@ std::vector<std::string> to_str_list(const json::value& v)
 
 uint64_t proxy_server::started_at() const
 {
-	return m_launcher_stats->started_at_;
+	return m_launcher_state->started_at_;
 }
 
 const std::string& proxy_server::server_version() const
 {
-	return m_launcher_stats->server_version_;
+	return m_launcher_state->server_version_;
 }
 
 void proxy_server::session_closed(size_t id, uint64_t rx, uint64_t tx,
 	const std::string& user)
 {
 	(void)id;
-	auto& stats = *m_launcher_stats;
+	auto& stats = *m_launcher_state;
 	stats.global_rx_ += rx;
 	stats.global_tx_ += tx;
 	if (!user.empty())
@@ -1682,7 +1697,7 @@ boost::json::object proxy_server::snapshot_report()
 	boost::json::object report;
 	uint64_t now = static_cast<uint64_t>(std::time(nullptr));
 
-	auto& stats = *m_launcher_stats;
+	auto& stats = *m_launcher_state;
 
 	report["ts"] = static_cast<int64_t>(now);
 	report["uptime"] = static_cast<int64_t>(now - stats.started_at_);
@@ -2023,7 +2038,7 @@ bool proxy_server::set_auth_user_quota(const std::string& user, int64_t quota)
 
 void proxy_server::set_user_usage(const boost::json::object& usage)
 {
-	auto& stats = *m_launcher_stats;
+	auto& stats = *m_launcher_state;
 	std::lock_guard<std::mutex> lock(stats.usage_mutex_);
 	for (const auto& [user, v] : usage)
 	{
@@ -3506,7 +3521,7 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 	}
 
 	// 累计连接数（供 launcher 状态上报）.
-	m_launcher_stats->conn_total_++;
+	m_launcher_state->conn_total_++;
 
 #if defined (__linux__)
 	if constexpr (std::same_as<S, proxy_tcp_socket>)
