@@ -433,6 +433,9 @@ namespace proxy {
 		// 保护 m_sessions（agent 状态上报线程与 io_context 线程并发访问）。
 		std::mutex m_sessions_mutex;
 
+		// 作为客户端时, 连接到上游代理服务器（proxy_pass）的 ssl context.
+		std::optional<net::ssl::context> m_ssl_client_context;
+
 		// 当前服务端作为 ssl 服务时的 ssl context.
 		net::ssl::context m_ssl_srv_context{ net::ssl::context::tls_server };
 

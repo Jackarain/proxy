@@ -1869,6 +1869,9 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 			if (s.empty()) { m_option.proxy_pass_.reset(); ok = true; }
 			else if (auto r = urls::parse_uri(s); r.has_value()) { m_option.proxy_pass_ = r.value(); ok = true; }
 			else errors[name] = "invalid proxy_pass url";
+
+			// 重置 ssl_client_context, 以便使用新的 proxy_pass 证书验证配置.
+			m_ssl_client_context.reset();
 		}
 		else if (name == "ssl_sni" || name == "proxy_ssl_name") { m_option.proxy_ssl_name_ = detail::to_str(val); ok = true; }
 		else if (name == "ssl_certificate_dir") { m_option.ssl_cert_path_ = detail::to_str(val); ok = true; }
@@ -2759,18 +2762,26 @@ proxy_server::make_ssl_socket(tcp::socket& remote_socket,
 	std::string_view sni,  std::optional<variant_stream_type>& ssl_sock)
 {
 	boost::system::error_code ec;
-	net::ssl::context cli_ctx(net::ssl::context::sslv23_client);
 
-	// 使用通用函数配置 SSL context (验证模式、CA 证书、主机名验证).
-	ec = configure_ssl_client_ctx(cli_ctx,
-		m_option.disable_check_cert_,
-		std::string(sni),
-		m_option.ssl_cacert_path_);
-	if (ec)
-		co_return ec;
+	if (!m_ssl_client_context)
+	{
+		m_ssl_client_context.emplace(net::ssl::context::sslv23_client);
+
+		// 使用通用函数配置 SSL context (验证模式、CA 证书、主机名验证).
+		ec = configure_ssl_client_ctx(*m_ssl_client_context,
+			m_option.disable_check_cert_,
+			std::string(sni),
+			m_option.ssl_cacert_path_);
+		if (ec)
+		{
+			// 配置失败, 重置 context, 使下次调用重新初始化.
+			m_ssl_client_context.reset();
+			co_return ec;
+		}
+	}
 
 	// 初始化为 SSL 加密的 SOCKS5 控制连接.
-	ssl_sock.emplace(init_proxy_stream(std::move(remote_socket), cli_ctx));
+	ssl_sock.emplace(init_proxy_stream(std::move(remote_socket), *m_ssl_client_context));
 	auto& ssl_socket = boost::variant2::get<ssl_tcp_stream>(*ssl_sock);
 
 	// 设置 SNI 主机名以兼容需要 SNI 的服务器.
