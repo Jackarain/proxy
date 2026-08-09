@@ -254,6 +254,7 @@ namespace xlogger {
 
 inline bool global_logging___ = true;
 inline bool global_console_logging___ = LOG2CONSOLE;
+inline bool global_console_logging_color___ = true;
 inline bool global_write_logging___ = WRITE_LOGGING;
 inline int64_t global_logfile_size___ = DEFAULT_LOG_MAXFILE_SIZE;
 
@@ -957,36 +958,46 @@ inline void logger_output_console__([[maybe_unused]] const logger_level__& level
 #if !defined(DISABLE_XLOGGER_TO_CONSOLE)
 	HANDLE handle_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
-	GetConsoleScreenBufferInfo(handle_stdout, &csbi);
 
-	switch (level)
+	if (global_console_logging_color___)
 	{
-	case _logger_info_id__:
-		SetConsoleTextAttribute(handle_stdout,
-			FOREGROUND_GREEN);
-		break;
-	case _logger_debug_id__:
-		SetConsoleTextAttribute(handle_stdout,
-			FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-		break;
-	case _logger_warn_id__:
-		SetConsoleTextAttribute(handle_stdout,
-			FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
-		break;
-	case _logger_error_id__:
-		SetConsoleTextAttribute(handle_stdout,
-			FOREGROUND_RED | FOREGROUND_INTENSITY);
-		break;
+		GetConsoleScreenBufferInfo(handle_stdout, &csbi);
+		switch (level)
+		{
+		case _logger_info_id__:
+			SetConsoleTextAttribute(handle_stdout,
+				FOREGROUND_GREEN);
+			break;
+		case _logger_debug_id__:
+			SetConsoleTextAttribute(handle_stdout,
+				FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+			break;
+		case _logger_warn_id__:
+			SetConsoleTextAttribute(handle_stdout,
+				FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
+			break;
+		case _logger_error_id__:
+			SetConsoleTextAttribute(handle_stdout,
+				FOREGROUND_RED | FOREGROUND_INTENSITY);
+			break;
+		}
 	}
 
 	WriteConsoleW(handle_stdout,
 		title.data(), (DWORD)title.size(), nullptr, nullptr);
-	SetConsoleTextAttribute(handle_stdout,
-		FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE);
+	if (global_console_logging_color___)
+	{
+		SetConsoleTextAttribute(handle_stdout,
+			FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_BLUE);
+	}
 
 	WriteConsoleW(handle_stdout,
 		msg.data(), (DWORD)msg.size(), nullptr, nullptr);
-	SetConsoleTextAttribute(handle_stdout, csbi.wAttributes);
+
+	if (global_console_logging_color___)
+	{
+		SetConsoleTextAttribute(handle_stdout, csbi.wAttributes);
+	}
 #endif
 
 #if !defined(DISABLE_XLOGGER_TO_DBGVIEW)
@@ -996,28 +1007,35 @@ inline void logger_output_console__([[maybe_unused]] const logger_level__& level
 #elif !defined(DISABLE_XLOGGER_TO_CONSOLE)
 	std::string out;
 
-	switch (level)
+	if (global_console_logging_color___)
 	{
-	case _logger_info_id__:
-		xlogger::format_to(std::back_inserter(out),
-			"\033[32m{}\033[0m{}", prefix, message);
-		break;
-	case _logger_debug_id__:
-		xlogger::format_to(std::back_inserter(out),
-			"\033[1;32m{}\033[0m{}", prefix, message);
-		break;
-	case _logger_warn_id__:
-		xlogger::format_to(std::back_inserter(out),
-			"\033[1;33m{}\033[0m{}", prefix, message);
-		break;
-	case _logger_error_id__:
-		xlogger::format_to(std::back_inserter(out),
-			"\033[1;31m{}\033[0m{}", prefix, message);
-		break;
-	case _logger_file_id__:
-		// xlogger::format_to(std::back_inserter(out),
-		//	"\033[1;34m{}\033[0m{}", prefix, message);
-		break;
+		switch (level)
+		{
+		case _logger_info_id__:
+			xlogger::format_to(std::back_inserter(out),
+				"\033[32m{}\033[0m{}", prefix, message);
+			break;
+		case _logger_debug_id__:
+			xlogger::format_to(std::back_inserter(out),
+				"\033[1;32m{}\033[0m{}", prefix, message);
+			break;
+		case _logger_warn_id__:
+			xlogger::format_to(std::back_inserter(out),
+				"\033[1;33m{}\033[0m{}", prefix, message);
+			break;
+		case _logger_error_id__:
+			xlogger::format_to(std::back_inserter(out),
+				"\033[1;31m{}\033[0m{}", prefix, message);
+			break;
+		case _logger_file_id__:
+			// xlogger::format_to(std::back_inserter(out),
+			//	"\033[1;34m{}\033[0m{}", prefix, message);
+			break;
+		}
+	}
+	else
+	{
+		xlogger::format_to(std::back_inserter(out), "{}{}", prefix, message);
 	}
 
 	std::cout << out;
@@ -1331,6 +1349,11 @@ inline void toggle_write_logging(bool enable) noexcept
 inline void toggle_console_logging(bool enable) noexcept
 {
 	global_console_logging___ = enable;
+}
+
+inline void toggle_console_logging_color(bool enable) noexcept
+{
+	global_console_logging_color___ = enable;
 }
 
 inline void set_logfile_maxsize(int64_t size) noexcept

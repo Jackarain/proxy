@@ -341,11 +341,15 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.launcher_url_ = launcher_url;
 	if (!launcher_url.empty())
 	{
+		// 检查 launcher url 是否为 websocket 协议（ws:// 或 wss://），否则无法与 launcher 建立控制通道.
 		if (launcher_url.rfind("ws://", 0) != 0 && launcher_url.rfind("wss://", 0) != 0)
 		{
 			XLOG_ERR << "invalid --launcher url: " << launcher_url;
 			co_return;
 		}
+
+		// 关闭控制台日志颜色输出，避免 launcher 控制台日志被 ANSI 颜色码污染.
+		xlogger::toggle_console_logging_color(false);
 	}
 
 	server = proxy_server::make(ioc.get_executor(), opt);
