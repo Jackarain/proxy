@@ -43,6 +43,8 @@ target_sources(libproxy
 target_include_directories(libproxy
 	PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include/
+	# tinyrpc jsonrpc 头文件（launcher 控制通道直接使用）.
+	${CMAKE_SOURCE_DIR}/third_party/tinyrpc/include
 )
 
 target_compile_definitions(libproxy

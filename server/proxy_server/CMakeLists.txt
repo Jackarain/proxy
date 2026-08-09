@@ -2,7 +2,6 @@
 
 add_executable(proxy_server
     main.cpp
-    agent.hpp
     ../common/main.hpp
     ../common/version.cpp
 )
@@ -15,8 +14,6 @@ target_link_libraries(proxy_server
 target_include_directories(proxy_server
     PRIVATE
     ../common
-    # tinyrpc jsonrpc 头文件（agent 直接使用，不依赖 launcher 代码）.
-    ${PROJECT_SOURCE_DIR}/third_party/tinyrpc/include
 )
 
 if (TARGET IOUring::IOUring)

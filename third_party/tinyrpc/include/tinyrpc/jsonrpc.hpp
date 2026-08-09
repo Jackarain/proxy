@@ -68,6 +68,23 @@ namespace jsonrpc
     {
     };
 
+    template <typename T, typename Handler = net::detached_t, typename = void>
+    struct has_async_close : std::false_type {};
+
+    template <typename T, typename Handler>
+    struct has_async_close<
+      T, Handler,
+      std::void_t<decltype(
+        std::declval<T&>().async_close(
+          std::declval<beast::websocket::close_reason const&>(),
+          std::declval<Handler>()
+        )
+      )>
+    > : std::true_type {};
+
+    template <typename T, typename Handler = net::detached_t>
+    inline constexpr bool has_async_close_v = has_async_close<T, Handler>::value;
+
     // 函数特征模板，用于获取函数的参数类型和返回类型, 支持函数指针、函数对象和 lambda 表达式
     // 参考来源: boost/leaf/detail/function_traits.hpp
     template<class... T> struct mp_list
@@ -335,21 +352,29 @@ namespace jsonrpc
 
       running_.store(false);
 
-      try
+      auto self = this->shared_from_this();
+      net::co_spawn(stream_.get_executor(),
+      [self, this]() mutable -> net::awaitable<void>
       {
-        if constexpr (detail::has_is_open<stream_type>::value)
+        try
         {
-          if (stream_.is_open())
-          {
-            if constexpr (detail::has_close<stream_type>::value)
-              stream_.close();
-            else
-              beast::get_lowest_layer(stream_).close();
-          }
+          if constexpr (!detail::has_is_open<stream_type>::value)
+            co_return;
+
+          if (!stream_.is_open())
+            co_return;
+
+          if constexpr (detail::has_async_close<stream_type>::value)
+            co_await stream_.async_close(beast::websocket::close_code::normal, net::use_awaitable);
+          else if constexpr (detail::has_close<stream_type>::value)
+            stream_.close();
+          else
+            beast::get_lowest_layer(stream_).close();
         }
-      }
-      catch (const std::exception&)
-      {}
+        catch (const std::exception&)
+        {}
+        co_return;
+      }, net::detached);
     }
 
     // 手工调度一个 JSONRPC 协议, 这个函数可以用于在不运行 start 的前提下
@@ -1029,6 +1054,12 @@ namespace jsonrpc
     void stop()
     {
       impl_->stop();
+    }
+
+    // 查询服务是否处于运行状态.
+    bool running() const noexcept
+    {
+      return impl_->running();
     }
 
     // 手工调度一个 JSONRPC 协议, 可以用于在不运行 start 的前提下

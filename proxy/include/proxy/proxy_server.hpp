@@ -16,13 +16,25 @@
 
 #include <atomic>
 #include <deque>
+#include <functional>
 #include <map>
+#include <memory>
 #include <mutex>
+#include <string>
 
 #include <boost/json.hpp>
 
 
+// jsonrpc 会话模板前置声明（launcher 控制通道的完整实现在 proxy_server.cpp）.
+namespace jsonrpc {
+	template <class StreamType> class jsonrpc_session;
+}
+
 namespace proxy {
+
+	// launcher 状态统计结构体（完整定义在 proxy_server.cpp 中，避免在
+	// 头文件中暴露其内部声明，相关成员函数均实现在 proxy_server.cpp）.
+	struct launcher_stats;
 
 	//////////////////////////////////////////////////////////////////////////
 
@@ -119,7 +131,8 @@ namespace proxy {
 		static std::shared_ptr<proxy_server>
 		make(net::any_io_executor executor, proxy_server_option opt);
 
-		virtual ~proxy_server() = default;
+		// 析构函数（定义于 proxy_server.cpp, launcher_stats 为不完整类型）.
+		virtual ~proxy_server();
 
 		// 验证 SSL 证书是否匹配 RFC 2818 的主机名规则.
 		bool rfc2818_verification_match_pattern(
@@ -164,22 +177,6 @@ namespace proxy {
 		// 定时器协程.
 		net::awaitable<void> tick();
 
-		// 监控协程, 连接 monitor_url_ 指定的 WebSocket 服务并定期汇报连接数.
-		net::awaitable<void> monitor_worker();
-
-		// 监控协程循环, 处理 WebSocket 连接和数据接收.
-		template <typename StreamType>
-		net::awaitable<void> monitor_worker_loop(StreamType& ws);
-
-	private:
-		// 监控发送协程: 每 500ms 汇报连接数.
-		template <typename StreamType>
-		net::awaitable<void> monitor_send_loop(StreamType& ws);
-
-		// 监控接收协程: 监听服务器推送的命令 (auth 增删改).
-		template <typename StreamType>
-		net::awaitable<void> monitor_recv_loop(StreamType& ws);
-
 	public:
 		// 启动代理服务, 开始监听客户端连接.
 		void start() noexcept;
@@ -188,7 +185,7 @@ namespace proxy {
 		void close() noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
-		// launcher 控制通道支持（与 golang internal/agent 协议兼容）
+		// launcher 控制通道支持.
 
 		// 实时状态快照（launcher status 上报）。
 		boost::json::object snapshot_report();
@@ -219,10 +216,59 @@ namespace proxy {
 		boost::json::object users_state() const;
 
 		// 服务启动时间（Unix 秒）。
-		uint64_t started_at() const { return m_started_at; }
+		uint64_t started_at() const;
 
 		// 服务版本标识。
-		const std::string& server_version() const { return m_server_version; }
+		const std::string& server_version() const;
+
+	private:
+		// launcher 控制通道内部实现（全部协程, 运行于 m_executor）.
+
+		// 启动 launcher 控制通道（由 start() 调用, URL 来自
+		// m_option.launcher_url_, 为空则不启动）.
+		void launcher_start() noexcept;
+
+		// 停止 launcher 控制通道（由 close() 调用, 关闭当前连接使协程退出）.
+		void launcher_stop() noexcept;
+
+		// 连接循环: 连接失败/断开后退避重连（全部协程, 不创建线程）.
+		net::awaitable<void> launcher_worker();
+
+		// 单次连接流程. 返回 true 表示成功建立了连接（尽管之后断开）.
+		net::awaitable<bool> launcher_run_once();
+
+		// 建立 ws/wss 连接并返回 JSON-RPC 会话；失败返回 nullptr.
+		// 连接/握手全程受超时保护（超时后关闭 socket 使异步操作失败）.
+		template <typename WsStream>
+		net::awaitable<std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>>
+		launcher_connect(const std::string& host, const std::string& port,
+			const std::string& target);
+
+		// 一次连接的服务流程: 注册实例信息、启动读循环、状态上报循环,
+		// 直到连接断开或 stop.
+		template <typename WsStream>
+		net::awaitable<void> launcher_serve(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess);
+
+		// 注册 launcher → proxy_server 的请求/通知处理器.
+		template <typename WsStream>
+		void launcher_register_handlers(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess);
+
+		// 协程方式处理一个请求, 分发到对应方法并回复（支持错误响应）.
+		template <typename WsStream>
+		net::awaitable<void> launcher_handle_request(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess, boost::json::object req);
+
+		// 处理 launcher 下发的通知（无 id 消息, 如 set_user_usage）.
+		net::awaitable<void> launcher_handle_notify(boost::json::object req);
+
+		// 方法分发. 返回结果 json::value；失败抛出 launcher_error（定义于 .cpp）.
+		boost::json::value launcher_dispatch(const std::string& method, const boost::json::value& params);
+
+		// 采集快照、计算速率并上报.
+		template <typename WsStream>
+		void launcher_update_report(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess);
+
+		// 从 --launcher URL 解析 instance ID.
+		static std::string launcher_parse_instance_id(const std::string& url);
 
 	private:
 		// 移除指定 ID 的 session.
@@ -359,6 +405,7 @@ namespace proxy {
 		std::vector<unix_acceptor> m_unix_acceptors;
 
 		// m_option 保存当前服务器各选项配置.
+		mutable std::mutex m_option_mutex;
 		proxy_server_option m_option;
 
 		// 当前机器的所有 ip 地址.
@@ -401,32 +448,31 @@ namespace proxy {
 		std::atomic_bool m_retry_tproxy_socks5_connect = { false };
 #endif // defined(__linux__)
 
+		//////////////////////////////////////////////////////////////////////////
+		// launcher 控制通道相关成员（launcher_stats 完整定义在 proxy_server.cpp）.
+
+		// launcher 状态统计（启动时间/版本/全局计数/用户累计流量等）.
+		std::unique_ptr<launcher_stats> m_launcher_stats;
+
+		// launcher 控制通道停止标志与当前连接关闭标志.
+		std::atomic_bool m_launcher_stopped{ false };
+		std::atomic_bool m_launcher_session_closed{ false };
+
+		// launcher 控制通道地址与 instance ID.
+		std::string m_launcher_url;
+		std::string m_launcher_instance_id;
+
+		// 当前会话的关闭函数（供 launcher_stop 在 io_context 上关闭连接）.
+		std::function<void()> m_launcher_close_current;
+
+		// 最近一次状态报告（get_status 返回用；仅 io_context 线程访问）.
+		boost::json::value m_launcher_last_report;
+
+		// TLS 客户端上下文（信任 launcher 自签证书）.
+		net::ssl::context m_launcher_ssl_ctx{ net::ssl::context::tls_client };
+
 		// 当前服务是否中止标志.
 		std::atomic_bool m_abort{ false };
-
-		//////////////////////////////////////////////////////////////////////////
-		// launcher 状态统计相关成员.
-
-		// 服务启动时间（Unix 秒）与版本标识.
-		uint64_t m_started_at{ 0 };
-		std::string m_server_version;
-
-		// 全局累计连接数与收发字节数.
-		std::atomic<uint64_t> m_conn_total{ 0 };
-		std::atomic<uint64_t> m_global_rx{ 0 };
-		std::atomic<uint64_t> m_global_tx{ 0 };
-
-		// 已关闭会话的累计用户流量（user -> (rx, tx)）.
-		std::mutex m_user_mutex;
-		std::map<std::string, std::pair<uint64_t, uint64_t>> m_user_totals;
-
-		// 续接的 launcher 持久化用户已用量（TX 基线，配额续接）.
-		std::mutex m_usage_mutex;
-		std::map<std::string, int64_t> m_user_usage;
-
-		// 保护 m_option 运行期修改（apply_options / 用户管理）。
-		// 会话经 option() 的只读访问不加锁（与历史行为一致）。
-		mutable std::mutex m_option_mutex;
 	};
 
 }

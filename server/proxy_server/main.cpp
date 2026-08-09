@@ -29,8 +29,6 @@
 
 #include "main.hpp"
 
-#include "agent.hpp"
-
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -106,20 +104,16 @@ int udp_timeout;
 int rate_limit;
 
 std::string asio_config;
-std::string monitor_url;
 
-// launcher agent 相关.
+// launcher 控制通道相关.
 std::string launcher_url;
 std::string pid_file;
-// 兼容 golang launcher 生成参数的选项（本版本接受但不实施）.
+// launcher 生成参数的选项（本版本接受但不实施）.
 int dns_udp_port = 0;
 int dns_cache_size = 0;
 int dns_cache_ttl = 0;
 bool dns_no_ipv6 = false;
 bool http2 = false;
-
-// launcher 控制代理全局实例（生命周期至进程退出）.
-std::shared_ptr<proxy_agent::agent> g_agent;
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -340,12 +334,11 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.htpasswd_ = htpasswd;
 	if (!dns_upstream.empty())
 		opt.dns_upstream_ = dns_upstream;
-	opt.monitor_url_ = monitor_url;
 
-	server = proxy_server::make(ioc.get_executor(), opt);
-	server->start();
-
-	// launcher 控制通道：proxy_server 作为 WS 客户端主动连接 launcher.
+	// launcher 控制通道：URL 经 opt 传入, proxy_server 在 start() 时自动启动.
+	// 收到 launcher 的 shutdown 请求时, proxy_server 内部关闭所有 session/连接/
+	// accept/定时器, 使进程自然退出, 无需外部显式启停.
+	opt.launcher_url_ = launcher_url;
 	if (!launcher_url.empty())
 	{
 		if (launcher_url.rfind("ws://", 0) != 0 && launcher_url.rfind("wss://", 0) != 0)
@@ -353,13 +346,10 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 			XLOG_ERR << "invalid --launcher url: " << launcher_url;
 			co_return;
 		}
-		g_agent = std::make_shared<proxy_agent::agent>(server, launcher_url, []() {
-			// 收到 launcher 的 shutdown 请求时，通过 SIGTERM 走正常退出流程.
-			::raise(SIGTERM);
-		});
-		// 协程方式启动连接循环（运行在 ioc 上，不创建线程）.
-		g_agent->start(ioc.get_executor());
 	}
+
+	server = proxy_server::make(ioc.get_executor(), opt);
+	server->start();
 
 	co_return;
 }
@@ -457,7 +447,7 @@ int main(int argc, char** argv)
 
 	std::string config;
 
-	// 默认开启控制台日志（与 golang 版本 getBoolValue("disable_logs", false)
+	// 默认开启控制台日志
 	// 的行为一致）。launcher 仅在用户显式关闭日志时才传 --disable_logs true，
 	// 因此这里默认值必须为 false，否则 launcher 管理下控制台日志会被静默关闭。
 	const bool default_logs = false;
@@ -525,7 +515,6 @@ int main(int argc, char** argv)
 		("noise_length", po::value<int64_t>(&noise_length)->value_name("length")->default_value(-1), "Length of the noise data in bytes (-1 = disable, 0-4095).")
 
 		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Environment variable name for configuring Boost.Asio (default: ASIO).")
-		("monitor_url", po::value<std::string>(&monitor_url)->value_name("monitor url")->default_value(""), "Specify the monitor URL for the proxy server.")
 
 		("dns_udp_port", po::value<int>(&dns_udp_port)->default_value(0), "Listen UDP DNS requests on this port (accepted for launcher compatibility).")
 		("dns_cache_size", po::value<int>(&dns_cache_size)->default_value(0), "DNS cache size (accepted for launcher compatibility).")
@@ -538,7 +527,7 @@ int main(int argc, char** argv)
 	;
 
 	// 解析命令行.
-	// 兼容 golang launcher 生成的参数：其 ArgsFor 会把整数值按 float64 格式化，
+	// 兼容 launcher 生成的参数：其 ArgsFor 会把整数值按 float64 格式化，
 	// 例如 --rate_limit 1.048576e+06（科学计数法），boost 的 int 解析不接受。
 	// 这里先把整数选项的科学计数法数值预处理为普通整数。
 	po::variables_map vm;
@@ -685,11 +674,8 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 			{
 				terminator_signal.remove(sig);
 				server->close();
-				// 停止 launcher 控制代理：关闭连接使 agent 协程退出，
-				// 否则 ioc.run() 因 agent 协程仍在运行而无法返回.
-				if (g_agent)
-					g_agent->stop();
-
+				// server->close() 内部已停止 launcher 控制通道（关闭连接
+				// 使 launcher 协程退出），否则 ioc.run() 因协程仍在运行而无法返回.
 #ifndef NDEBUG
 				std::thread([&] {
 					std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -717,10 +703,6 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 	net::co_spawn(ioc, start_proxy_server(ioc, server), net::detached);
 
 	ioc.run();
-
-	// 停止 launcher 控制代理.
-	if (g_agent)
-		g_agent->stop();
 
 	// 删除 pid 文件（仅当内容仍是本进程 PID，避免竞态误删新进程文件）.
 	if (!pid_file.empty())

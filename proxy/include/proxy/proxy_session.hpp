@@ -229,11 +229,14 @@ namespace proxy {
 		// - 为空表示不启用该功能。
 		std::string stdio_target_;
 
-		// 监控 URL 用于指定 proxy server 的监控接口 URL。
+		// launcher 控制通道 URL。
 		//
-		// - 为空表示不启用监控功能。
-		// - 否则，将使用指定的 URL 进行监控。
-		std::string monitor_url_;
+		// - 为空表示不启用 launcher 控制通道。
+		// - 否则 proxy_server 作为 WebSocket 客户端主动连接 launcher，上报实时状态
+		//   （register/status）并处理 launcher 下发的运行期配置（set_config）与用户管理请求。
+		// - 收到 launcher 的 shutdown 请求时，proxy_server 内部关闭所有 session/连接/
+		//   accept/定时器，使进程自然退出，无需外部回调。
+		std::string launcher_url_;
 
 		// PAM 认证服务配置名称。
 		//
