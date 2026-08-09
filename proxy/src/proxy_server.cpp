@@ -866,13 +866,11 @@ void proxy_server::launcher_start() noexcept
 	}, net::detached);
 }
 
-// 停止 launcher 控制通道（由 close() 调用, 关闭当前连接使协程退出）.
+// 停止 launcher 控制通道（由 close() 调用, 设置停止标志使 serve 协程退出）.
 void proxy_server::launcher_stop() noexcept
 {
 	m_launcher_stopped = true;
-	// 在 io_context 上关闭当前会话, 使 serve 协程尽快退出.
-	if (auto close = m_launcher_close_current)
-		net::post(m_executor, close);
+	// serve 协程在状态上报循环中检查该标志后退出, 并在退出时自行关闭会话.
 }
 
 std::string proxy_server::launcher_parse_instance_id(const std::string& url)
@@ -886,11 +884,11 @@ std::string proxy_server::launcher_parse_instance_id(const std::string& url)
 	return {};
 }
 
-// 建立 ws/wss 连接并返回 JSON-RPC 会话；失败返回 nullptr.
+// 建立 ws/wss 连接并返回 JSON-RPC 会话；失败返回 nullopt.
 // 连接/握手全程受 k_launcher_dial_timeout 超时保护（超时后关闭 socket
-// 使异步操作失败）.
+// 使异步操作失败）. 会话对象由调用方持有, 后续均通过引用访问.
 template <typename WsStream>
-net::awaitable<std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>>
+net::awaitable<std::optional<jsonrpc::jsonrpc_session<WsStream>>>
 proxy_server::launcher_connect(const std::string& host, const std::string& port, const std::string& target)
 {
 	auto ex = co_await net::this_coro::executor;
@@ -902,7 +900,7 @@ proxy_server::launcher_connect(const std::string& host, const std::string& port,
 	if (ec)
 	{
 		XLOG_WARN << "launcher resolve " << host << ": " << ec.message();
-		co_return nullptr;
+		co_return std::nullopt;
 	}
 
 	if constexpr (launcher_detail::is_ssl_stream<typename WsStream::next_layer_type>::value)
@@ -910,7 +908,7 @@ proxy_server::launcher_connect(const std::string& host, const std::string& port,
 		// wss.
 		WsStream ws(ex, m_launcher_ssl_ctx);
 		if (!SSL_set_tlsext_host_name(ws.next_layer().native_handle(), host.c_str()))
-			co_return nullptr;
+			co_return std::nullopt;
 
 		// 超时保护: 超时后关闭 socket, 使进行中的异步操作立即失败.
 		net::steady_timer dial_timer(ex);
@@ -927,21 +925,21 @@ proxy_server::launcher_connect(const std::string& host, const std::string& port,
 		co_await net::async_connect(beast::get_lowest_layer(ws), results, net_awaitable[ec]);
 		dial_timer.cancel();
 		if (ec)
-			co_return nullptr;
+			co_return std::nullopt;
 
 		// TLS 握手.
 		co_await ws.next_layer().async_handshake(net::ssl::stream_base::client, net_awaitable[ec]);
 		dial_timer.cancel();
 		if (ec)
-			co_return nullptr;
+			co_return std::nullopt;
 
 		// WebSocket 握手.
 		co_await ws.async_handshake(host, target, net_awaitable[ec]);
 		dial_timer.cancel();
 		if (ec)
-			co_return nullptr;
+			co_return std::nullopt;
 
-		co_return std::make_shared<jsonrpc::jsonrpc_session<WsStream>>(std::move(ws));
+		co_return jsonrpc::jsonrpc_session<WsStream>(std::move(ws));
 	}
 	else
 	{
@@ -962,36 +960,35 @@ proxy_server::launcher_connect(const std::string& host, const std::string& port,
 		co_await net::async_connect(beast::get_lowest_layer(ws), results, net_awaitable[ec]);
 		dial_timer.cancel();
 		if (ec)
-			co_return nullptr;
+			co_return std::nullopt;
 
 		// WebSocket 握手.
 		co_await ws.async_handshake(host, target, net_awaitable[ec]);
 		dial_timer.cancel();
 		if (ec)
-			co_return nullptr;
+			co_return std::nullopt;
 
-		co_return std::make_shared<jsonrpc::jsonrpc_session<WsStream>>(std::move(ws));
+		co_return jsonrpc::jsonrpc_session<WsStream>(std::move(ws));
 	}
 }
 
 // 一次连接的服务流程: 注册实例信息、启动读循环、状态上报循环,
-// 直到连接断开或 stop. 全程协程, 不创建线程.
+// 直到连接断开或 stop. 全程协程, 不创建线程. 会话对象由调用方
+// （launcher_run_once）持有, 此处通过引用访问.
 template <typename WsStream>
-net::awaitable<void> proxy_server::launcher_serve(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess)
+net::awaitable<void> proxy_server::launcher_serve(jsonrpc::jsonrpc_session<WsStream>& sess)
 {
 	auto ex = co_await net::this_coro::executor;
 
 	// 注册请求/通知处理器.
 	launcher_register_handlers(sess);
 
-	// 记录当前会话, 供 launcher_stop 主动关闭连接以退出 serve.
-	m_launcher_close_current = [sess]() { sess->stop(); };
 	m_launcher_session_closed = false;
-	sess->closed_callback([self = shared_from_this()]() { self->m_launcher_session_closed = true; });
+	sess.closed_callback([self = shared_from_this()]() { self->m_launcher_session_closed = true; });
 
 	// 先启动读循环（同 executor 上的独立协程）, 再发送通知;
 	// 否则会话尚未进入运行态, 入队的写消息可能无法发出.
-	sess->start();
+	sess.start();
 
 	// 注册实例信息.
 	json::object reg;
@@ -999,7 +996,7 @@ net::awaitable<void> proxy_server::launcher_serve(const std::shared_ptr<jsonrpc:
 	reg["pid"] = static_cast<int64_t>(::getpid());
 	reg["version"] = server_version();
 	reg["started_at"] = static_cast<int64_t>(started_at());
-	sess->notify("register", reg);
+	sess.notify("register", reg);
 
 	// 立即上报一次状态.
 	m_launcher_last_report = json::value(json::object_kind);
@@ -1018,26 +1015,39 @@ net::awaitable<void> proxy_server::launcher_serve(const std::shared_ptr<jsonrpc:
 	}
 
 	// 清理: 关闭会话.
-	m_launcher_close_current = nullptr;
-	sess->stop();
+	sess.stop();
+
+	// 等待所有在途请求处理完成（它们通过引用访问本会话, 必须在本协程
+	// 返回前结束, 调用方才能安全销毁会话对象）. 会话已停止, 不再有新请求.
+	while (m_launcher_active_requests.load() > 0)
+	{
+		timer.expires_after(std::chrono::milliseconds(10));
+		co_await timer.async_wait(net_awaitable[sec]);
+	}
 
 	co_return;
 }
 
 // 注册 launcher → proxy_server 的请求/通知处理器.
 template <typename WsStream>
-void proxy_server::launcher_register_handlers(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess)
+void proxy_server::launcher_register_handlers(jsonrpc::jsonrpc_session<WsStream>& sess)
 {
 	// 请求（带 id）: 协程方式处理并回复（支持错误响应）.
-	sess->default_method_callback([this, sess](json::object req) {
+	// 会话对象由调用方持有, 回调捕获其指针; serve 退出前等待在途处理归零.
+	sess.default_method_callback([this, &sess](json::object req) {
 		auto self = shared_from_this();
-		net::co_spawn(m_executor, [self, sess, req = std::move(req)]() mutable -> net::awaitable<void> {
-			co_await self->launcher_handle_request(sess, std::move(req));
+		auto* sess_ptr = &sess;
+		++m_launcher_active_requests;
+		net::co_spawn(m_executor, [self, sess_ptr, req = std::move(req)]() mutable -> net::awaitable<void> {
+			// 无论协程如何结束都递减计数, 避免 serve 退出时永久等待.
+			auto guard = boost::scope::scope_exit(
+				[self]() { --self->m_launcher_active_requests; });
+			co_await self->launcher_handle_request(*sess_ptr, std::move(req));
 		}, net::detached);
 	});
 
-	// 通知（无 id）: 处理 set_user_usage 等.
-	sess->notify_callback([this](json::object req) {
+	// 通知（无 id）: 处理 set_user_usage 等（不引用会话, 无需计数）.
+	sess.notify_callback([this](json::object req) {
 		auto self = shared_from_this();
 		net::co_spawn(m_executor, [self, req = std::move(req)]() mutable -> net::awaitable<void> {
 			co_await self->launcher_handle_notify(std::move(req));
@@ -1047,7 +1057,7 @@ void proxy_server::launcher_register_handlers(const std::shared_ptr<jsonrpc::jso
 
 // 协程方式处理一个请求, 分发到对应方法并回复（支持错误响应）.
 template <typename WsStream>
-net::awaitable<void> proxy_server::launcher_handle_request(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess, json::object req)
+net::awaitable<void> proxy_server::launcher_handle_request(jsonrpc::jsonrpc_session<WsStream>& sess, json::object req)
 {
 	std::string method = launcher_detail::json_str(req, "method");
 	json::value params;
@@ -1057,12 +1067,12 @@ net::awaitable<void> proxy_server::launcher_handle_request(const std::shared_ptr
 	if (auto it = req.if_contains("id"); it)
 		id = *it;
 
-	auto reply_result = [&](json::value r) { sess->reply(std::move(r), id, false); };
+	auto reply_result = [&](json::value r) { sess.reply(std::move(r), id, false); };
 	auto reply_error = [&](int code, const std::string& msg) {
 		json::object err;
 		err["code"] = code;
 		err["message"] = msg;
-		sess->reply(std::move(err), id, true);
+		sess.reply(std::move(err), id, true);
 	};
 
 	try
@@ -1229,7 +1239,7 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 
 // 采集快照、计算速率并上报.
 template <typename WsStream>
-void proxy_server::launcher_update_report(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess)
+void proxy_server::launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& sess)
 {
 	json::object rep = snapshot_report();
 
@@ -1265,7 +1275,7 @@ void proxy_server::launcher_update_report(const std::shared_ptr<jsonrpc::jsonrpc
 	rep["user_rates"] = json::object();
 
 	m_launcher_last_report = rep;
-	sess->notify("status", rep);
+	sess.notify("status", rep);
 }
 
 // 连接循环: 连接失败/断开后退避重连（全部协程, 不创建线程）.
@@ -1321,40 +1331,40 @@ net::awaitable<bool> proxy_server::launcher_run_once()
 		auto sess = co_await launcher_connect<launcher_wss>(host, port, target);
 		if (!sess)
 			co_return false;
-		co_await launcher_serve(sess);
+		co_await launcher_serve(*sess);
 	}
 	else
 	{
 		auto sess = co_await launcher_connect<launcher_ws>(host, port, target);
 		if (!sess)
 			co_return false;
-		co_await launcher_serve(sess);
+		co_await launcher_serve(*sess);
 	}
 
 	co_return true;
 }
 
 // 显式实例化模板 launcher_connect
-template net::awaitable<std::shared_ptr<jsonrpc::jsonrpc_session<launcher_ws>>>
+template net::awaitable<std::optional<jsonrpc::jsonrpc_session<launcher_ws>>>
 proxy_server::launcher_connect<launcher_ws>(const std::string& host, const std::string& port, const std::string& target);
-template net::awaitable<std::shared_ptr<jsonrpc::jsonrpc_session<launcher_wss>>>
+template net::awaitable<std::optional<jsonrpc::jsonrpc_session<launcher_wss>>>
 proxy_server::launcher_connect<launcher_wss>(const std::string& host, const std::string& port, const std::string& target);
 
 // 显式实例化模板 launcher_serve
-template net::awaitable<void> proxy_server::launcher_serve<launcher_ws>(const std::shared_ptr<jsonrpc::jsonrpc_session<launcher_ws>>& sess);
-template net::awaitable<void> proxy_server::launcher_serve<launcher_wss>(const std::shared_ptr<jsonrpc::jsonrpc_session<launcher_wss>>& sess);
+template net::awaitable<void> proxy_server::launcher_serve<launcher_ws>(jsonrpc::jsonrpc_session<launcher_ws>& sess);
+template net::awaitable<void> proxy_server::launcher_serve<launcher_wss>(jsonrpc::jsonrpc_session<launcher_wss>& sess);
 
 // 显式实例化模板 launcher_register_handlers
-template void proxy_server::launcher_register_handlers<launcher_ws>(const std::shared_ptr<jsonrpc::jsonrpc_session<launcher_ws>>& sess);
-template void proxy_server::launcher_register_handlers<launcher_wss>(const std::shared_ptr<jsonrpc::jsonrpc_session<launcher_wss>>& sess);
+template void proxy_server::launcher_register_handlers<launcher_ws>(jsonrpc::jsonrpc_session<launcher_ws>& sess);
+template void proxy_server::launcher_register_handlers<launcher_wss>(jsonrpc::jsonrpc_session<launcher_wss>& sess);
 
 // 显式实例化模板 launcher_handle_request
-template net::awaitable<void> proxy_server::launcher_handle_request<launcher_ws>(const std::shared_ptr<jsonrpc::jsonrpc_session<launcher_ws>>& sess, json::object req);
-template net::awaitable<void> proxy_server::launcher_handle_request<launcher_wss>(const std::shared_ptr<jsonrpc::jsonrpc_session<launcher_wss>>& sess, json::object req);
+template net::awaitable<void> proxy_server::launcher_handle_request<launcher_ws>(jsonrpc::jsonrpc_session<launcher_ws>& sess, json::object req);
+template net::awaitable<void> proxy_server::launcher_handle_request<launcher_wss>(jsonrpc::jsonrpc_session<launcher_wss>& sess, json::object req);
 
 // 显式实例化模板 launcher_update_report
-template void proxy_server::launcher_update_report<launcher_ws>(const std::shared_ptr<jsonrpc::jsonrpc_session<launcher_ws>>& sess);
-template void proxy_server::launcher_update_report<launcher_wss>(const std::shared_ptr<jsonrpc::jsonrpc_session<launcher_wss>>& sess);
+template void proxy_server::launcher_update_report<launcher_ws>(jsonrpc::jsonrpc_session<launcher_ws>& sess);
+template void proxy_server::launcher_update_report<launcher_wss>(jsonrpc::jsonrpc_session<launcher_wss>& sess);
 
 void proxy_server::start() noexcept
 {

@@ -228,7 +228,7 @@ namespace proxy {
 		// m_option.launcher_url_, 为空则不启动）.
 		void launcher_start() noexcept;
 
-		// 停止 launcher 控制通道（由 close() 调用, 关闭当前连接使协程退出）.
+		// 停止 launcher 控制通道（由 close() 调用, 设置停止标志使协程退出）.
 		void launcher_stop() noexcept;
 
 		// 连接循环: 连接失败/断开后退避重连（全部协程, 不创建线程）.
@@ -237,25 +237,26 @@ namespace proxy {
 		// 单次连接流程. 返回 true 表示成功建立了连接（尽管之后断开）.
 		net::awaitable<bool> launcher_run_once();
 
-		// 建立 ws/wss 连接并返回 JSON-RPC 会话；失败返回 nullptr.
+		// 建立 ws/wss 连接并返回 JSON-RPC 会话；失败返回 nullopt.
 		// 连接/握手全程受超时保护（超时后关闭 socket 使异步操作失败）.
+		// 会话对象由调用方（launcher_run_once）持有, 后续均通过引用访问.
 		template <typename WsStream>
-		net::awaitable<std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>>
+		net::awaitable<std::optional<jsonrpc::jsonrpc_session<WsStream>>>
 		launcher_connect(const std::string& host, const std::string& port,
 			const std::string& target);
 
 		// 一次连接的服务流程: 注册实例信息、启动读循环、状态上报循环,
-		// 直到连接断开或 stop.
+		// 直到连接断开或 stop. 会话对象由调用方持有, 此处通过引用访问.
 		template <typename WsStream>
-		net::awaitable<void> launcher_serve(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess);
+		net::awaitable<void> launcher_serve(jsonrpc::jsonrpc_session<WsStream>& sess);
 
 		// 注册 launcher → proxy_server 的请求/通知处理器.
 		template <typename WsStream>
-		void launcher_register_handlers(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess);
+		void launcher_register_handlers(jsonrpc::jsonrpc_session<WsStream>& sess);
 
 		// 协程方式处理一个请求, 分发到对应方法并回复（支持错误响应）.
 		template <typename WsStream>
-		net::awaitable<void> launcher_handle_request(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess, boost::json::object req);
+		net::awaitable<void> launcher_handle_request(jsonrpc::jsonrpc_session<WsStream>& sess, boost::json::object req);
 
 		// 处理 launcher 下发的通知（无 id 消息, 如 set_user_usage）.
 		net::awaitable<void> launcher_handle_notify(boost::json::object req);
@@ -265,7 +266,7 @@ namespace proxy {
 
 		// 采集快照、计算速率并上报.
 		template <typename WsStream>
-		void launcher_update_report(const std::shared_ptr<jsonrpc::jsonrpc_session<WsStream>>& sess);
+		void launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& sess);
 
 		// 从 --launcher URL 解析 instance ID.
 		static std::string launcher_parse_instance_id(const std::string& url);
@@ -458,12 +459,13 @@ namespace proxy {
 		std::atomic_bool m_launcher_stopped{ false };
 		std::atomic_bool m_launcher_session_closed{ false };
 
+		// 在途请求处理协程计数（serve 结束时等待其归零, 确保会话对象存活期内
+		// 所有引用会话的协程已完成, 从而无需 shared_ptr 管理会话生命周期）.
+		std::atomic<int> m_launcher_active_requests{ 0 };
+
 		// launcher 控制通道地址与 instance ID.
 		std::string m_launcher_url;
 		std::string m_launcher_instance_id;
-
-		// 当前会话的关闭函数（供 launcher_stop 在 io_context 上关闭连接）.
-		std::function<void()> m_launcher_close_current;
 
 		// 最近一次状态报告（get_status 返回用；仅 io_context 线程访问）.
 		boost::json::value m_launcher_last_report;
