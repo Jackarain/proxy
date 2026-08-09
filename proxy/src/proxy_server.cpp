@@ -533,7 +533,8 @@ void proxy_server::init_acceptor() noexcept
 			continue;
 		}
 
-		m_tcp_acceptors.emplace_back(std::move(acceptor));
+		m_tcp_acceptors.emplace_back(
+			std::make_unique<tcp_acceptor>(std::move(acceptor)));
 	}
 
 	auto& uds_endps = m_option.uds_listens_;
@@ -1456,12 +1457,12 @@ void proxy_server::start() noexcept
 	if (m_option.transparent_)
 	{
 #if defined(__linux__)
-		for (auto& acceptor : m_tcp_acceptors)
+		for (auto& acc : m_tcp_acceptors)
 		{
 			boost::system::error_code error;
 
-			acceptor.set_option(transparent_opt(true), error);
-			acceptor.set_option(transparent6_opt(true), error);
+			acc->set_option(transparent_opt(true), error);
+			acc->set_option(transparent6_opt(true), error);
 		}
 #else
 		XLOG_WARN << "transparent proxy only support linux";
@@ -1472,12 +1473,12 @@ void proxy_server::start() noexcept
 	}
 
 	// 同时启动32个连接协程为每个 acceptor 用于为 proxy client 提供服务.
-	for (auto& acceptor : m_tcp_acceptors)
+	for (auto& acc : m_tcp_acceptors)
 	{
 		for (int i = 0; i < 32; i++)
 		{
 			net::co_spawn(m_executor,
-				start_proxy_listen(acceptor), net::detached);
+				start_proxy_listen(*acc), net::detached);
 		}
 	}
 
@@ -1521,8 +1522,8 @@ void proxy_server::close() noexcept
 
 	m_timer.cancel();
 
-	for (auto& acceptor : m_tcp_acceptors)
-		acceptor.close(ignore_ec);
+	for (auto& acc : m_tcp_acceptors)
+		acc->close(ignore_ec);
 	for (auto& acceptor : m_unix_acceptors)
 		acceptor.close(ignore_ec);
 
@@ -1664,6 +1665,73 @@ std::vector<std::string> to_str_list(const json::value& v)
 	return out;
 }
 
+// 解析 server_listen 端点字符串为 (tcp::endpoint, v6only) 元组。
+// 支持 ip:port、[ipv6]:port 格式，端口后可选 v6only/-v6only/ipv6only 后缀。
+// 成功返回 true 并填充 endp/v6only。
+bool parse_listen_endpoint(const std::string& str,
+	tcp::endpoint& endp, bool& v6only)
+{
+	v6only = false;
+	std::string host, port;
+	size_t pos = 0;
+
+	if (!str.empty() && str[0] == '[')
+	{
+		// [ipv6]:port 格式.
+		auto close = str.find(']');
+		if (close == std::string::npos)
+			return false;
+		host = str.substr(1, close - 1);
+		pos = close + 1;
+	}
+	else
+	{
+		// ip:port 格式.
+		auto colon = str.find(':');
+		if (colon == std::string::npos)
+			return false;
+		host = str.substr(0, colon);
+		pos = colon;
+	}
+
+	if (pos >= str.size() || str[pos] != ':')
+		return false;
+	pos++;
+
+	// 解析端口.
+	auto pstart = pos;
+	while (pos < str.size() && str[pos] >= '0' && str[pos] <= '9')
+		pos++;
+	port = str.substr(pstart, pos - pstart);
+	if (port.empty())
+		return false;
+
+	// 可选后缀 v6only.
+	if (pos < str.size())
+	{
+		auto opt = str.substr(pos);
+		if (opt == "ipv6only" || opt == "-ipv6only" ||
+			opt == "v6only" || opt == "-v6only")
+			v6only = true;
+		else
+			return false;
+	}
+
+	int p;
+	try { p = std::stoi(port); }
+	catch (const std::exception&) { return false; }
+	if (p < 0 || p > 65535)
+		return false;
+
+	boost::system::error_code ec;
+	auto addr = net::ip::make_address(host, ec);
+	if (ec)
+		return false;
+
+	endp = tcp::endpoint(addr, static_cast<unsigned short>(p));
+	return true;
+}
+
 } // namespace
 
 uint64_t proxy_server::started_at() const
@@ -1785,8 +1853,7 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 	{
 		// 运行期无法生效（需重启）的选项.
 		if (name == "stdio" || name == "transparent" ||
-			name == "ssl_ciphers" || name == "ssl_prefer_server_ciphers" ||
-			name == "server_listen")
+			name == "ssl_ciphers" || name == "ssl_prefer_server_ciphers")
 		{
 			needs_restart.emplace_back(name);
 			continue;
@@ -1930,6 +1997,151 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 				set.insert(parts.begin(), parts.end());
 			}
 			m_option.deny_regions_ = std::move(set);
+			ok = true;
+		}
+		else if (name == "server_listen")
+		{
+			// 运行期热配置监听地址: 解析接收到的参数为 (endpoint, v6only) 元组,
+			// 然后与 m_tcp_acceptors 双向同步, 最终保证 m_tcp_acceptors 的
+			// 监听集合与接收到的 server_listen 参数一致.
+
+			// 解析接收到的监听列表.
+			std::vector<std::tuple<tcp::endpoint, bool>> new_listens;
+			bool parse_ok = true;
+			for (const auto& e : to_str_list(val))
+			{
+				tcp::endpoint endp;
+				bool v6only = false;
+				if (!parse_listen_endpoint(e, endp, v6only))
+				{
+					errors[name] = "invalid listen endpoint: " + e;
+					parse_ok = false;
+					break;
+				}
+				new_listens.emplace_back(endp, v6only);
+			}
+			if (!parse_ok)
+				break;  // 解析失败, 不应用本次配置.
+
+			// 更新配置中的监听列表.
+			m_option.listens_ = new_listens;
+
+			// 1) 关闭并移除接收参数中已不存在的 acceptor.
+			// 被关闭的 acceptor 转移到 m_closed_tcp_acceptors 中保持对象存活,
+			// 直到其监听协程退出, 避免引用悬空 (UAF).
+			auto it = m_tcp_acceptors.begin();
+			while (it != m_tcp_acceptors.end())
+			{
+				boost::system::error_code lec;
+				auto local_ep = (*it)->local_endpoint(lec);
+				bool keep = false;
+				if (!lec)
+				{
+					for (const auto& [endp, v6only] : new_listens)
+					{
+						if (local_ep == endp)
+						{
+							keep = true;
+							break;
+						}
+					}
+				}
+				if (keep)
+				{
+					++it;
+				}
+				else
+				{
+					(*it)->close(lec);
+					XLOG_WARN << "server_listen, stop listening: " << local_ep;
+					m_closed_tcp_acceptors.emplace_back(std::move(*it));
+					it = m_tcp_acceptors.erase(it);
+				}
+			}
+
+			// 2) 为接收参数中新增的 endpoint 创建 acceptor 并启动监听.
+			for (const auto& [endp, v6only] : new_listens)
+			{
+				bool exists = false;
+				for (auto& acc : m_tcp_acceptors)
+				{
+					boost::system::error_code lec;
+					if (acc->local_endpoint(lec) == endp)
+					{
+						exists = true;
+						break;
+					}
+				}
+				if (exists)
+					continue;
+
+				tcp_acceptor acceptor(m_executor);
+				boost::system::error_code ec;
+
+				acceptor.open(endp.protocol(), ec);
+				if (ec)
+				{
+					XLOG_WARN << "server_listen, acceptor open: " << endp
+						<< ", error: " << ec.message();
+					continue;
+				}
+
+				acceptor.set_option(net::socket_base::reuse_address(true), ec);
+				if (ec)
+				{
+					XLOG_WARN << "server_listen, set_option with reuse_address: "
+						<< ec.message();
+				}
+
+				if (m_option.reuse_port_)
+				{
+#ifdef ENABLE_REUSEPORT
+					acceptor.set_option(reuse_port(true), ec);
+					if (ec)
+					{
+						XLOG_WARN << "server_listen, set_option with SO_REUSEPORT: "
+							<< ec.message();
+					}
+#endif
+				}
+
+				if (v6only)
+				{
+					acceptor.set_option(net::ip::v6_only(true), ec);
+					if (ec)
+					{
+						XLOG_ERR << "server_listen, set v6_only failed: "
+							<< ec.message();
+						continue;
+					}
+				}
+
+				acceptor.bind(endp, ec);
+				if (ec)
+				{
+					XLOG_ERR << "server_listen, acceptor bind: " << endp
+						<< ", error: " << ec.message();
+					continue;
+				}
+
+				acceptor.listen(net::socket_base::max_listen_connections, ec);
+				if (ec)
+				{
+					XLOG_ERR << "server_listen, acceptor listen: " << endp
+						<< ", error: " << ec.message();
+					continue;
+				}
+
+				m_tcp_acceptors.emplace_back(
+					std::make_unique<tcp_acceptor>(std::move(acceptor)));
+				auto& new_acceptor = *m_tcp_acceptors.back();
+
+				// 启动 32 个连接协程为新的 acceptor 服务.
+				start_tcp_listen(new_acceptor);
+
+				XLOG_DBG << "server_listen, start listening: " << endp;
+			}
+
 			ok = true;
 		}
 		else
@@ -3546,6 +3758,14 @@ net::awaitable<void> proxy_server::start_proxy_listen(T& acceptor) noexcept
 
 	while (!m_abort)
 	{
+		// acceptor 可能被运行时 server_listen 热配置关闭删除, 关闭后
+		// 退出监听协程, 避免对已关闭的 acceptor 反复 accept 造成忙循环.
+		if (!acceptor.is_open())
+		{
+			XLOG_WARN << "start_proxy_listen exit (acceptor closed) ...";
+			break;
+		}
+
 		if constexpr (std::same_as<std::decay_t<T>, tcp_acceptor>)
 		{
 			proxy_tcp_socket socket(m_executor);
@@ -3573,5 +3793,16 @@ template net::awaitable<void> proxy_server::start_accept<tcp_acceptor, proxy_tcp
 	tcp_acceptor& acceptor, proxy_tcp_socket& socket);
 template net::awaitable<void> proxy_server::start_accept<unix_acceptor, proxy_uds_socket>(
 	unix_acceptor& acceptor, proxy_uds_socket& socket);
+
+// 为指定 TCP acceptor 启动 32 个监听协程（供 apply_options 运行时
+// server_listen 热配置调用；非模板函数, 定义于模板之后, 便于实例化）.
+void proxy_server::start_tcp_listen(tcp_acceptor& acceptor)
+{
+	for (int i = 0; i < 32; i++)
+	{
+		net::co_spawn(m_executor,
+			start_proxy_listen(acceptor), net::detached);
+	}
+}
 
 } // namespace proxy

@@ -298,6 +298,10 @@ namespace proxy {
 		template <typename T>
 		net::awaitable<void> start_proxy_listen(T& acceptor) noexcept;
 
+		// 为指定 TCP acceptor 启动 32 个监听协程（非模板, 供 apply_options
+		// 运行时 server_listen 热配置使用, 避免在模板定义前实例化模板）.
+		void start_tcp_listen(tcp_acceptor& acceptor);
+
 		// 设置透明代理, 获取客户端原始目标地址.
 		net::awaitable<std::optional<net::ip::tcp::endpoint>>
 		setup_tproxy(proxy_tcp_socket& socket, size_t connection_id) noexcept;
@@ -401,7 +405,12 @@ namespace proxy {
 		bool m_scheduler_locking;
 
 		// m_tcp_acceptors 用于侦听客户端 tcp 连接请求.
-		std::vector<tcp_acceptor> m_tcp_acceptors;
+		// 使用 deque<unique_ptr> 持有: 元素在堆上分配, 监听协程通过引用绑定
+		// 堆对象, 增删元素时引用地址保持稳定, 避免 vector 重分配导致悬空引用.
+		std::deque<std::unique_ptr<tcp_acceptor>> m_tcp_acceptors;
+		// 已关闭并从 m_tcp_acceptors 移除的 acceptor, 暂存于此保持对象存活,
+		// 直到其监听协程退出后自然消亡, 避免 use-after-free.
+		std::deque<std::unique_ptr<tcp_acceptor>> m_closed_tcp_acceptors;
 		// m_unix_acceptors 用于侦听客户端 UDS 连接请求.
 		std::vector<unix_acceptor> m_unix_acceptors;
 
