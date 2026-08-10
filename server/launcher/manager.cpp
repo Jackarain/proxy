@@ -204,7 +204,7 @@ void set_config_list(json::object& cfg, const char* key, const std::vector<std::
 	cfg[key] = std::move(arr);
 }
 
-// 2 空格缩进的 JSON 序列化（与 golang json.MarshalIndent(list, "", "  ") 对齐）。
+// 2 空格缩进的 JSON 序列化, 便于阅读与跨端调试一致.
 std::string serialize_pretty(const json::value& v, int indent = 0) {
 	std::string out;
 	switch (v.kind()) {
