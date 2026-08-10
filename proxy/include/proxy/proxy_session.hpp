@@ -266,11 +266,11 @@ namespace proxy {
 		// - 未配置某用户时：表示不对该用户单独限速（由全局 tcp_rate_limit_ 或默认策略决定）。
 		std::unordered_map<std::string, int> users_rate_limit_;
 
-		// 用户下载流量配额（按用户名粒度，单位字节）。
+		// 用户流量配额（按用户名粒度，单位字节，按上行+下行总和计算）。
 		//
 		// - key   ：用户名
-		// - value ：下载流量配额（字节），0 表示不限制
-		// - 用于 launcher 状态展示与配额续接（本版本记录并在状态中上报）。
+		// - value ：流量配额（字节），0 表示不限制
+		// - 用于 launcher 状态展示与配额续接（超限停止该用户连接）。
 		std::unordered_map<std::string, int64_t> users_quota_;
 
 		// 允许访问的地区集合（白名单）。
@@ -495,6 +495,13 @@ namespace proxy {
 		// 默认空实现，不要求所有 proxy_server 都实现统计。
 		virtual void session_closed(
 			size_t id, uint64_t rx, uint64_t tx, const std::string& user) = 0;
+
+		// 查询用户流量配额（字节，按上行+下行总和计算）；<=0 或未配置表示不限制. 线程安全.
+		virtual int64_t user_quota(const std::string& user) { (void)user; return 0; }
+
+		// 查询用户总流量（上行+下行，含 launcher 下发的历史已用流量、已关闭会话与本进程活跃
+		// 会话），用于配额超限判断；未配置返回 0. 线程安全.
+		virtual int64_t user_total_flow(const std::string& user) { (void)user; return 0; }
 	};
 
 
@@ -857,6 +864,9 @@ namespace proxy {
 
 		// 配置指定用户的速率限制.
 		void user_rate_limit_config(const std::string& user) noexcept;
+
+		// 检查当前认证用户是否已超出流量配额（上行+下行总和，含历史已用流量与其他会话流量）.
+		bool quota_exceeded() const noexcept;
 
 		// 取消流超时设置, 使其永不超时.
 		static void stream_expires_never(variant_stream_type& stream) noexcept;

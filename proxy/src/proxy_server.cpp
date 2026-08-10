@@ -48,7 +48,9 @@ struct launcher_state
 	std::mutex user_mutex_;
 	std::map<std::string, std::pair<uint64_t, uint64_t>> user_totals_;
 
-	// 续接的 launcher 持久化用户已用量（TX 基线，配额续接）.
+	// launcher 记录的该用户历史已用流量（字节）。proxy_server 重启后，launcher
+	// 会把这份历史用量下发回来，配额判断从“历史用量 + 新增用量”继续累计，
+	// 避免重启导致用量归零.
 	std::mutex usage_mutex_;
 	std::map<std::string, int64_t> user_usage_;
 
@@ -1240,7 +1242,7 @@ net::awaitable<void> proxy_server::launcher_handle_notify(json::object req)
 	if (auto it = req.if_contains("params"); it)
 		params = *it;
 
-	// launcher 在连接建立后立即下发续接的持久化用户已用量（配额续接）.
+	// launcher 在连接建立后，下发该用户的历史已用流量（用于配额续接）.
 	if (method == "set_user_usage")
 	{
 		if (params.is_object())
@@ -1346,6 +1348,7 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 		set_auth_user_quota(user, quota);
 		return users_state();
 	}
+
 
 	if (method == "set_user_usage")
 	{
@@ -1758,7 +1761,7 @@ boost::json::object proxy_server::snapshot_report()
 	// 流量统计模型:
 	//   global = 已关闭会话累计(global_rx_/global_tx_) + 当前活跃会话实时值
 	//   user   = 已关闭该用户累计(user_totals_) + 活跃该用户实时值
-	//            + launcher 续接的持久化已用量(user_usage_, 仅 TX 基线)
+	//            + launcher 下发的历史已用流量(user_usage_, 独立字段 used_history)
 	//
 	// 生命周期不变量: session_closed() 在会话析构时把该会话流量并入"已关闭
 	// 累计"并从 m_sessions 移除; 快照只把仍存活的会话按实时值计入"活跃".
@@ -1816,17 +1819,18 @@ boost::json::object proxy_server::snapshot_report()
 		}
 	}
 
-	// 3) launcher 续接的持久化用户已用量（配额续接: TX 含基线; 防御负值）.
+	// 3) launcher 下发的用户历史已用流量（配额续接，独立上报 used_history; 防御负值）.
+	std::map<std::string, int64_t> user_usage_history;
 	{
 		std::lock_guard<std::mutex> lock(stats.usage_mutex_);
 		for (const auto& [user, base] : stats.user_usage_)
 		{
 			if (base > 0)
-				user_tx[user] += static_cast<uint64_t>(base);
+				user_usage_history[user] = base;
 		}
 	}
 
-	// 4) 用户配额.
+	// 4) 用户流量配额.
 	std::map<std::string, int64_t> user_quota;
 	{
 		std::lock_guard<std::mutex> lock(m_option_mutex);
@@ -1857,6 +1861,7 @@ boost::json::object proxy_server::snapshot_report()
 		u["active_connections"] = user_active[user];
 		u["conn_total"] = user_active[user]; // 近似: 历史累计未逐用户跟踪.
 		u["quota"] = user_quota.count(user) ? user_quota[user] : 0;
+		u["used_history"] = user_usage_history.count(user) ? user_usage_history[user] : 0;
 		users.emplace_back(std::move(u));
 	}
 	report["users"] = std::move(users);
@@ -2002,6 +2007,7 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 			m_option.users_quota_ = std::move(map);
 			ok = true;
 		}
+
 		else if (name == "allow_region")
 		{
 			std::unordered_set<std::string> set;
@@ -2273,6 +2279,8 @@ bool proxy_server::set_auth_user_quota(const std::string& user, int64_t quota)
 	return true;
 }
 
+
+
 void proxy_server::set_user_usage(const boost::json::object& usage)
 {
 	auto& stats = *m_launcher_state;
@@ -2284,6 +2292,59 @@ void proxy_server::set_user_usage(const boost::json::object& usage)
 		else if (v.is_uint64())
 			stats.user_usage_[std::string(user)] = static_cast<int64_t>(v.as_uint64());
 	}
+}
+
+// 查询用户下载配额（字节）；<=0 或未配置表示不限制.
+std::int64_t proxy_server::user_quota(const std::string& user)
+{
+	std::lock_guard<std::mutex> lock(m_option_mutex);
+	auto it = m_option.users_quota_.find(user);
+	if (it == m_option.users_quota_.end())
+		return 0;
+	return it->second;
+}
+
+// 查询用户总流量（上行+下行，含 launcher 下发的历史已用流量、已关闭会话与本进程活跃会话），
+// 用于配额超限判断.
+std::int64_t proxy_server::user_total_flow(const std::string& user)
+{
+	auto& stats = *m_launcher_state;
+	int64_t total = 0;
+
+	// launcher 下发的用户历史已用流量（配额续接，计入总流量）.
+	{
+		std::lock_guard<std::mutex> lock(stats.usage_mutex_);
+		auto it = stats.user_usage_.find(user);
+		if (it != stats.user_usage_.end() && it->second > 0)
+			total += it->second;
+	}
+	// 已关闭会话的累计流量（上行+下行）.
+	{
+		std::lock_guard<std::mutex> lock(stats.user_mutex_);
+		auto it = stats.user_totals_.find(user);
+		if (it != stats.user_totals_.end())
+		{
+			total += static_cast<int64_t>(it->second.first);
+			total += static_cast<int64_t>(it->second.second);
+		}
+	}
+	// 本进程活跃会话的当前流量（上行+下行）.
+	{
+		std::lock_guard<std::mutex> lock(m_sessions_mutex);
+		for (auto& [id, w] : m_sessions)
+		{
+			(void)id;
+			auto s = w.lock();
+			if (!s || !s->alive())
+				continue;
+			if (s->auth_user() != user)
+				continue;
+			total += static_cast<int64_t>(s->total_rx());
+			total += static_cast<int64_t>(s->total_tx());
+		}
+	}
+
+	return total;
 }
 
 boost::json::object proxy_server::users_state() const

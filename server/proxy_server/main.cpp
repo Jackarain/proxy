@@ -480,7 +480,7 @@ int main(int argc, char** argv)
 
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users (default: jack:1111), format: user:password[:addr[:proxy_url]] (repeatable).")
 		("users_rate_limit", po::value<std::vector<std::string>>(&users_rate_limit)->multitoken(), "Per-user rate limit in bytes/second, format: user:rate (repeatable).")
-		("users_quota", po::value<std::vector<std::string>>(&users_quota)->multitoken(), "Per-user download traffic quota in bytes, format: user:bytes (repeatable).")
+		("users_quota", po::value<std::vector<std::string>>(&users_quota)->multitoken(), "Per-user traffic quota (upload+download) in bytes, format: user:bytes (repeatable).")
 
 		("allow_region", po::value<std::vector<std::string>>(&allow_region)->multitoken(), "Allow connections only from the specified regions/CIDRs (repeatable).")
 		("deny_region", po::value<std::vector<std::string>>(&deny_region)->multitoken(), "Deny connections from the specified regions/CIDRs (repeatable).")

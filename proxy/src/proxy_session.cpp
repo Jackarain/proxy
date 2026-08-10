@@ -675,6 +675,25 @@ R"x*x*x(<html>
 		}
 	}
 
+	bool proxy_session::quota_exceeded() const noexcept
+	{
+		// 匿名/未认证会话不参与配额限制.
+		if (m_auth_user.empty())
+			return false;
+
+		auto server = m_proxy_server.lock();
+		if (!server)
+			return false;
+
+		// 未配置配额（<=0）表示不限制.
+		auto quota = server->user_quota(m_auth_user);
+		if (quota <= 0)
+			return false;
+
+		// 该用户总流量（上行+下行，含历史已用流量、已关闭会话与本进程活跃会话）超过配额.
+		return server->user_total_flow(m_auth_user) >= quota;
+	}
+
 	void proxy_session::stream_expires_never(variant_stream_type& stream) noexcept
 	{
 		boost::variant2::visit([](auto& s) mutable
@@ -2772,6 +2791,17 @@ R"x*x*x(<html>
 				net_awaitable[ec]);
 			// 客户端上行请求数据计入 RX（供 launcher 状态统计）.
 			m_total_rx += static_cast<uint64_t>(req_bytes);
+
+			// 流量配额检查（上行+下行总和）: 超出配额立即断开连接.
+			if (quota_exceeded())
+			{
+				log_conn_warning()
+					<< ", http_proxy_get traffic quota exceeded, closing connection, user: "
+					<< m_auth_user;
+				close();
+				co_return false;
+			}
+
 			if (ec)
 			{
 				log_conn_warning()
@@ -3050,6 +3080,16 @@ R"x*x*x(<html>
 				resp_bytes += bytes;
 				// 响应数据发送给客户端，计入 TX（供 launcher 状态统计）.
 				m_total_tx += static_cast<uint64_t>(bytes);
+
+				// 流量配额检查（上行+下行总和）: 超出配额立即断开连接.
+				if (quota_exceeded())
+				{
+					log_conn_warning()
+						<< ", http_proxy_get traffic quota exceeded, closing connection, user: "
+						<< m_auth_user;
+					close();
+					co_return true;
+				}
 
 				if (sec == http::error::need_buffer)
 				{
@@ -7244,6 +7284,16 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 		else
 			m_total_tx += static_cast<uint64_t>(bytes);
 
+		// 流量配额检查（上行+下行总和）: 超出配额立即断开连接.
+		if (quota_exceeded())
+		{
+			log_conn_warning()
+				<< ", traffic quota exceeded, closing connection, user: "
+				<< m_auth_user;
+			close();
+			co_return;
+		}
+
 		// 重置最后活跃计数.
 		m_last_activity.store(0, std::memory_order_relaxed);
 
@@ -7276,6 +7326,16 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 				m_total_rx += static_cast<uint64_t>(bytes);
 			else
 				m_total_tx += static_cast<uint64_t>(bytes);
+
+			// 流量配额检查（上行+下行总和）: 超出配额立即断开连接.
+			if (quota_exceeded())
+			{
+				log_conn_warning()
+					<< ", traffic quota exceeded, closing connection, user: "
+					<< m_auth_user;
+				close();
+				co_return;
+			}
 
 			// 重置最后活跃计数.
 			m_last_activity.store(0, std::memory_order_relaxed);
