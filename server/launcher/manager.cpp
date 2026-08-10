@@ -1175,7 +1175,8 @@ void manager::ws_attached(const instance_ptr& in, const std::shared_ptr<rpc::end
 			std::lock_guard<std::mutex> lock(mu_);
 			in->last_report = params;
 			in->last_seen = now_time();
-			// 记录用户已用量（报告 TX 为含续接基线的累计下载），重启后续接。
+			// 记录用户已用量（usage_total 为含续接基线的累计总流量），重启后续接。
+			// 兼容旧版 proxy_server：未上报 usage_total 时回退到会话级 tx+rx。
 			bool usage_changed = false;
 			if (params.is_object()) {
 				if (auto u = params.as_object().if_contains("users"); u && u->is_array()) {
@@ -1184,16 +1185,27 @@ void manager::ws_attached(const instance_ptr& in, const std::shared_ptr<rpc::end
 							continue;
 						const auto& uo = uu.as_object();
 						auto user_it = uo.find("user");
-						auto tx_it = uo.find("tx_bytes");
-						if (user_it == uo.end() || tx_it == uo.end())
+						if (user_it == uo.end())
 							continue;
 						std::string user = as_string(user_it->value());
-						std::int64_t tx = as_int64(tx_it->value());
+						// 匿名用户无配额，不持久化。
+						if (user == "(匿名)")
+							continue;
+						std::int64_t total = 0;
+						if (auto ut = uo.find("usage_total"); ut != uo.end())
+							total = as_int64(ut->value());
+						if (total <= 0) {
+							// 兼容旧版 proxy_server：未上报 usage_total 时回退到会话级 tx+rx。
+							auto tx_it = uo.find("tx_bytes");
+							auto rx_it = uo.find("rx_bytes");
+							total = (tx_it != uo.end() ? as_int64(tx_it->value()) : 0)
+								+ (rx_it != uo.end() ? as_int64(rx_it->value()) : 0);
+						}
 						std::int64_t cur = 0;
 						if (auto it = in->user_usage.find(user); it != in->user_usage.end())
 							cur = as_int64(it->value());
-						if (tx > cur) {
-							in->user_usage[user] = tx;
+						if (total > cur) {
+							in->user_usage[user] = total;
 							usage_changed = true;
 						}
 					}

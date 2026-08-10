@@ -2414,10 +2414,20 @@ void proxy_server::set_user_usage(const boost::json::object& usage)
 	std::lock_guard<std::mutex> lock(stats.usage_mutex_);
 	for (const auto& [user, v] : usage)
 	{
+		if (user.empty())
+			continue;
+		int64_t used = 0;
 		if (v.is_int64())
-			stats.user_usage_[std::string(user)] = v.as_int64();
+			used = v.as_int64();
 		else if (v.is_uint64())
-			stats.user_usage_[std::string(user)] = static_cast<int64_t>(v.as_uint64());
+			used = static_cast<int64_t>(v.as_uint64());
+		// 只增不减: 对每个用户取 max(当前计数, 传入值), 重连/重复通知
+		// 不会把已用的配额"退还".
+		if (used <= 0)
+			continue;
+		auto& cur = stats.user_usage_[std::string(user)];
+		if (used > cur)
+			cur = used;
 	}
 }
 
