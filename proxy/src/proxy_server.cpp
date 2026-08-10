@@ -44,9 +44,16 @@ struct launcher_state
 	std::atomic<uint64_t> global_rx_{ 0 };
 	std::atomic<uint64_t> global_tx_{ 0 };
 
-	// 已关闭会话的累计用户流量（user -> (rx, tx)）.
+	// 已关闭会话的累计用户流量（user -> (rx, tx, conns)）.
+	// conns 为已关闭会话累积连接数，用于状态上报 conn_total（含历史累计）.
+	struct user_total
+	{
+		uint64_t rx{ 0 };
+		uint64_t tx{ 0 };
+		uint64_t conns{ 0 };
+	};
 	std::mutex user_mutex_;
-	std::map<std::string, std::pair<uint64_t, uint64_t>> user_totals_;
+	std::map<std::string, user_total> user_totals_;
 
 	// launcher 记录的该用户历史已用流量（字节）。proxy_server 重启后，launcher
 	// 会把这份历史用量下发回来，配额判断从“历史用量 + 新增用量”继续累计，
@@ -88,6 +95,8 @@ inline constexpr std::chrono::milliseconds k_launcher_status_interval{ 2000 };
 inline constexpr std::chrono::milliseconds k_launcher_dial_timeout{ 10000 };
 // 重连最大退避.
 inline constexpr int k_launcher_max_backoff_ms = 30000;
+// 未认证（匿名）连接在状态上报中的用户标识. 匿名用户不受配额限制.
+inline constexpr const char* k_anon_user = "(匿名)";
 
 namespace detail {
 
@@ -1387,36 +1396,87 @@ void proxy_server::launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& se
 {
 	json::object rep = snapshot_report();
 
-	// 差分速率.
+	// 差分速率: 用相邻两次快照的差值除以时间间隔, 计数回退时钳制为 0.
 	json::object rates;
+	json::object user_rates;
 	double rx_rate = 0, tx_rate = 0;
 	if (m_launcher_state->last_report_.is_object())
 	{
 		auto cur_ts = rep.if_contains("ts") && rep.at("ts").is_int64() ? rep.at("ts").as_int64() : 0;
 		auto prev_ts = m_launcher_state->last_report_.as_object().if_contains("ts") && m_launcher_state->last_report_.as_object().at("ts").is_int64()
 			? m_launcher_state->last_report_.as_object().at("ts").as_int64() : 0;
-		double sec = static_cast<double>(cur_ts - prev_ts);
-		if (sec > 0)
+		// 首次上报或重连后快照被清空时 prev_ts 为 0, 此时没有可做差分的
+		// 上一份数据, 不计算速率, 避免用断线前的旧快照差分导致速率失真.
+		if (prev_ts > 0)
 		{
-			int64_t cur_rx = 0, cur_tx = 0, prev_rx = 0, prev_tx = 0;
-			if (auto g = rep.if_contains("global"); g && g->is_object())
+			double sec = static_cast<double>(cur_ts - prev_ts);
+			if (sec > 0)
 			{
-				cur_rx = detail::json_num(g->as_object(), "rx_bytes");
-				cur_tx = detail::json_num(g->as_object(), "tx_bytes");
+				int64_t cur_rx = 0, cur_tx = 0, prev_rx = 0, prev_tx = 0;
+				if (auto g = rep.if_contains("global"); g && g->is_object())
+				{
+					cur_rx = detail::json_num(g->as_object(), "rx_bytes");
+					cur_tx = detail::json_num(g->as_object(), "tx_bytes");
+				}
+				if (auto g = m_launcher_state->last_report_.as_object().if_contains("global"); g && g->is_object())
+				{
+					prev_rx = detail::json_num(g->as_object(), "rx_bytes");
+					prev_tx = detail::json_num(g->as_object(), "tx_bytes");
+				}
+				rx_rate = cur_rx > prev_rx ? (cur_rx - prev_rx) / sec : 0;
+				tx_rate = cur_tx > prev_tx ? (cur_tx - prev_tx) / sec : 0;
+
+				// 单用户速率: 对上一份报告存在且计数不回退的用户计算差分
+				// （回退时钳制为 0, 如用户被删除重建）.
+				std::map<std::string, std::pair<int64_t, int64_t>> prev_users;
+				if (auto pu = m_launcher_state->last_report_.as_object().if_contains("users");
+					pu && pu->is_array())
+				{
+					for (const auto& u : pu->as_array())
+					{
+						if (!u.is_object())
+							continue;
+						const auto& uo = u.as_object();
+						auto it = uo.find("user");
+						if (it == uo.end() || !it->value().is_string())
+							continue;
+						std::string name(it->value().as_string());
+						prev_users[name] = {
+							detail::json_num(uo, "rx_bytes"),
+							detail::json_num(uo, "tx_bytes")
+						};
+					}
+				}
+				if (auto cu = rep.if_contains("users"); cu && cu->is_array())
+				{
+					for (const auto& u : cu->as_array())
+					{
+						if (!u.is_object())
+							continue;
+						const auto& uo = u.as_object();
+						auto it = uo.find("user");
+						if (it == uo.end() || !it->value().is_string())
+							continue;
+						std::string name(it->value().as_string());
+						auto p = prev_users.find(name);
+						if (p == prev_users.end())
+							continue;
+						int64_t cur_r = detail::json_num(uo, "rx_bytes");
+						int64_t cur_t = detail::json_num(uo, "tx_bytes");
+						json::object ur;
+						ur["rx_rate_bps"] = cur_r > p->second.first ? (cur_r - p->second.first) / sec : 0;
+						ur["tx_rate_bps"] = cur_t > p->second.second ? (cur_t - p->second.second) / sec : 0;
+						user_rates[name] = std::move(ur);
+					}
+				}
 			}
-			if (auto g = m_launcher_state->last_report_.as_object().if_contains("global"); g && g->is_object())
-			{
-				prev_rx = detail::json_num(g->as_object(), "rx_bytes");
-				prev_tx = detail::json_num(g->as_object(), "tx_bytes");
-			}
-			rx_rate = cur_rx > prev_rx ? (cur_rx - prev_rx) / sec : 0;
-			tx_rate = cur_tx > prev_tx ? (cur_tx - prev_tx) / sec : 0;
 		}
 	}
 	rates["rx_rate_bps"] = rx_rate;
 	rates["tx_rate_bps"] = tx_rate;
 	rep["rates"] = std::move(rates);
-	rep["user_rates"] = json::object();
+	if (!user_rates.empty())
+		rep["user_rates"] = std::move(user_rates);
 
 	m_launcher_state->last_report_ = rep;
 	sess.notify("status", rep);
@@ -1739,12 +1799,14 @@ void proxy_server::session_closed(size_t id, uint64_t rx, uint64_t tx,
 
 	stats.global_rx_ += rx;
 	stats.global_tx_ += tx;
-	if (!user.empty())
 	{
 		std::lock_guard<std::mutex> lock(stats.user_mutex_);
-		auto& t = stats.user_totals_[user];
-		t.first += rx;
-		t.second += tx;
+		// 匿名（未认证）会话以 "(匿名)" 标识计入用户明细, 便于 launcher 统一展示.
+		std::string key = user.empty() ? std::string(k_anon_user) : user;
+		auto& t = stats.user_totals_[key];
+		t.rx += rx;
+		t.tx += tx;
+		t.conns++;  // 每关闭一个会话计一次累积连接（conn_total 口径）.
 	}
 
 	// 移除已关闭的会话.
@@ -1761,14 +1823,20 @@ boost::json::object proxy_server::snapshot_report()
 	// 流量统计模型:
 	//   global = 已关闭会话累计(global_rx_/global_tx_) + 当前活跃会话实时值
 	//   user   = 已关闭该用户累计(user_totals_) + 活跃该用户实时值
-	//            + launcher 下发的历史已用流量(user_usage_, 独立字段 used_history)
+	//            + launcher 下发的历史已用流量(user_usage_, 计入 usage_total)
 	//
 	// 生命周期不变量: session_closed() 在会话析构时把该会话流量并入"已关闭
 	// 累计"并从 m_sessions 移除; 快照只把仍存活的会话按实时值计入"活跃".
 	// 因此同一会话的流量不会同时出现在两个口径中（不重复、不遗漏）.
 	//
-	// 匿名(空 user)会话的流量只计入 global, 不计入用户明细, 保证用户列表
-	// 前后一致（不因匿名会话活跃/关闭而在列表中时有时无）.
+	// 匿名（未认证, user 为空）连接以 "(匿名)" 标识计入用户明细, 便于
+	// launcher 统一展示; 匿名用户不受配额限制（配额判定在会话侧对空 user
+	// 直接放行）.
+	//
+	// usage_total = rx_bytes + tx_bytes + 续接基线(user_usage_), 为含续接
+	// 基线的累计总流量, 供 launcher 持久化后跨重启续接配额.
+	//
+	// conn_total = 已关闭该用户会话累积连接数 + 当前活跃连接数.
 	//
 	// 注: 多线程 io_context 下, 会话若在"快照按活跃读取"之后、"析构按已
 	// 关闭累计"之前结束, 其流量可能被重复计入一次; 该窗口极小, 且状态上报
@@ -1780,11 +1848,22 @@ boost::json::object proxy_server::snapshot_report()
 	uint64_t global_tx = stats.global_tx_.load();
 	int active = 0;
 
-	// 按用户聚合: user -> (rx, tx, 活跃连接数).
-	std::map<std::string, uint64_t> user_rx, user_tx;
-	std::map<std::string, int> user_active;
+	// 按用户聚合:
+	//   rx/tx          已关闭累计 + 当前活跃实时（本次运行期会话级）
+	//   closed_conns   已关闭会话累积连接数
+	//   active         当前存活连接数
+	//   usage_base     launcher 下发的历史已用流量（配额续接基线）
+	struct user_agg
+	{
+		uint64_t rx{ 0 };
+		uint64_t tx{ 0 };
+		uint64_t closed_conns{ 0 };
+		int active{ 0 };
+		int64_t usage_base{ 0 };
+	};
+	std::map<std::string, user_agg> users_agg;
 
-	// 按用户聚合的活跃连接列表（字段结构与 golang gproxy 的 ConnStat 对齐）.
+	// 按用户聚合的活跃连接列表, 供状态上报的连接明细使用.
 	std::map<std::string, boost::json::array> user_conns;
 	constexpr int max_conn_per_user = 200;
 
@@ -1792,8 +1871,10 @@ boost::json::object proxy_server::snapshot_report()
 		std::lock_guard<std::mutex> lock(stats.user_mutex_);
 		for (const auto& [user, t] : stats.user_totals_)
 		{
-			user_rx[user] += t.first;
-			user_tx[user] += t.second;
+			auto& a = users_agg[user];
+			a.rx += t.rx;
+			a.tx += t.tx;
+			a.closed_conns += t.conns;
 		}
 	}
 
@@ -1809,17 +1890,17 @@ boost::json::object proxy_server::snapshot_report()
 			uint64_t rx = s->total_rx();
 			uint64_t tx = s->total_tx();
 			std::string user = s->auth_user();
+			if (user.empty())
+				user = k_anon_user;  // 匿名连接以 "(匿名)" 展示.
 
 			global_rx += rx;
 			global_tx += tx;
 			active++;
 
-			if (user.empty())
-				continue;  // 匿名流量仅计入 global.
-
-			user_rx[user] += rx;
-			user_tx[user] += tx;
-			user_active[user]++;
+			auto& a = users_agg[user];
+			a.rx += rx;
+			a.tx += tx;
+			a.active++;
 
 			// 组装连接信息（限制每用户连接数，避免大连接数时 JSON 过大）.
 			auto& conns = user_conns[user];
@@ -1854,14 +1935,13 @@ boost::json::object proxy_server::snapshot_report()
 		}
 	}
 
-	// 3) launcher 下发的用户历史已用流量（配额续接，独立上报 used_history; 防御负值）.
-	std::map<std::string, int64_t> user_usage_history;
+	// 3) launcher 下发的用户历史已用流量（配额续接基线; 防御负值）.
 	{
 		std::lock_guard<std::mutex> lock(stats.usage_mutex_);
 		for (const auto& [user, base] : stats.user_usage_)
 		{
 			if (base > 0)
-				user_usage_history[user] = base;
+				users_agg[user].usage_base = base;
 		}
 	}
 
@@ -1886,17 +1966,24 @@ boost::json::object proxy_server::snapshot_report()
 	report["conn_total"] = static_cast<int64_t>(stats.conn_total_.load());
 
 	// 6) 组装用户明细.
+	//    usage_total = rx + tx + 续接基线, 为含续接基线的累计总流量,
+	//    供 launcher 持久化后跨重启续接配额.
+	//    过滤无任何流量与连接的空条目, 避免用户列表出现无意义占位.
 	boost::json::array users;
-	for (const auto& [user, rx] : user_rx)
+	for (auto& [user, a] : users_agg)
 	{
+		int64_t conn_total = static_cast<int64_t>(a.closed_conns) + a.active;
+		if (a.rx == 0 && a.tx == 0 && conn_total == 0 && a.active == 0)
+			continue;
+
 		boost::json::object u;
 		u["user"] = user;
-		u["rx_bytes"] = static_cast<int64_t>(rx);
-		u["tx_bytes"] = static_cast<int64_t>(user_tx[user]);
-		u["active_connections"] = user_active[user];
-		u["conn_total"] = user_active[user]; // 近似: 历史累计未逐用户跟踪.
+		u["rx_bytes"] = static_cast<int64_t>(a.rx);
+		u["tx_bytes"] = static_cast<int64_t>(a.tx);
+		u["active_connections"] = a.active;
+		u["conn_total"] = conn_total;
 		u["quota"] = user_quota.count(user) ? user_quota[user] : 0;
-		u["used_history"] = user_usage_history.count(user) ? user_usage_history[user] : 0;
+		u["usage_total"] = static_cast<int64_t>(a.rx) + static_cast<int64_t>(a.tx) + a.usage_base;
 
 		// 活跃连接列表.
 		if (auto it = user_conns.find(user); it != user_conns.end())
@@ -2365,8 +2452,8 @@ int64_t proxy_server::user_total_flow(const proxy_session* self)
 		auto it = stats.user_totals_.find(user);
 		if (it != stats.user_totals_.end())
 		{
-			total += static_cast<int64_t>(it->second.first);
-			total += static_cast<int64_t>(it->second.second);
+			total += static_cast<int64_t>(it->second.rx);
+			total += static_cast<int64_t>(it->second.tx);
 		}
 	}
 	// 调用方当前会话的流量（上行+下行）；由会话直接提供，无需遍历会话表.
