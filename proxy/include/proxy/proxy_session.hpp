@@ -500,7 +500,7 @@ namespace proxy {
 			size_t id, uint64_t rx, uint64_t tx, const std::string& user) = 0;
 
 		// 查询用户流量配额（字节，按上行+下行总和计算）；<=0 或未配置表示不限制. 线程安全.
-		virtual int64_t user_quota(const std::string& user) { (void)user; return 0; }
+		virtual int64_t user_quota(const std::string& user) = 0;
 
 		// 查询用户总流量（上行+下行，含 launcher 下发的历史已用流量、已关闭会话与调用方
 		// 当前会话），用于配额超限判断；未配置返回 0. 线程安全.
