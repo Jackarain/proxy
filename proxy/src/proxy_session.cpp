@@ -506,6 +506,35 @@ R"x*x*x(<html>
 	}
 
 	//////////////////////////////////////////////////////////////////////////
+	// 会话状态与流量查询（供 launcher 状态上报）
+
+	bool proxy_session::alive() const noexcept
+	{
+		return !m_abort.load();
+	}
+
+	uint64_t proxy_session::total_rx() const noexcept
+	{
+		return m_total_rx;
+	}
+
+	uint64_t proxy_session::total_tx() const noexcept
+	{
+		return m_total_tx;
+	}
+
+	std::string proxy_session::auth_user() const noexcept
+	{
+		return m_auth_user;
+	}
+
+	int64_t proxy_session::elapsed() const noexcept
+	{
+		return m_started_at == 0 ? 0
+			: static_cast<int64_t>(std::time(nullptr)) - m_started_at;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
 	// 会话信息查询（供 launcher 连接列表上报）
 
 	std::string proxy_session::target() const noexcept

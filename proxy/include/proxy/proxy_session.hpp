@@ -631,6 +631,46 @@ namespace proxy {
 		// 返回当前连接的唯一标识符.
 		size_t connection_id() const noexcept override;
 
+		//////////////////////////////////////////////////////////////////////////
+		// 会话信息查询（供 launcher 状态上报）
+
+		// 会话是否仍存活（未中止）。
+		bool alive() const noexcept;
+
+		// 本会话累计接收字节数（客户端 → 本服务端）。
+		uint64_t total_rx() const noexcept;
+
+		// 本会话累计发送字节数（本服务端 → 客户端，即客户端下载量）。
+		uint64_t total_tx() const noexcept;
+
+		// 本会话认证成功的用户名（匿名/未认证为空串）。
+		std::string auth_user() const noexcept;
+
+		// 返回当前会话的代理目标。
+		std::string target() const noexcept;
+
+		// 返回当前会话的客户端信息（host:port）。
+		std::string client() const noexcept;
+
+		// 返回当前会话的地区信息（GeoIP），若无法获取则返回空字符串。
+		std::string geoip() const noexcept;
+
+		// 返回当前会话的协议类型（socks4/socks5/http/https/tproxy/stdio），未识别为空串。
+		std::string proto() const noexcept;
+
+		// 返回当前会话连接已持续秒数（连接建立于启动时，之后只读）。
+		int64_t elapsed() const noexcept;
+
+		// 设置客户端地址（host:port）与地区信息，由 proxy_server 在连接建立时调用，
+		// 仅在会话发布到 m_sessions 之前写入，之后只读（无锁）。
+		void set_client_info(const std::string& client, const std::string& region) noexcept;
+
+		// 记录当前会话的协议类型（运行期可变，内部加锁）。
+		void set_proto(std::string proto) noexcept;
+
+		// 记录当前会话的代理目标 host:port（运行期可变，内部加锁）。
+		void set_target(std::string target) noexcept;
+
 	private:
 
 		//////////////////////////////////////////////////////////////////////////
@@ -925,54 +965,6 @@ namespace proxy {
 		// 当任何一个方向有数据传输时, 超时计时器会被重置.
 		net::awaitable<void> idle_timeout(
 			variant_stream_type& s1, variant_stream_type& s2) noexcept;
-
-	public:
-		//////////////////////////////////////////////////////////////////////////
-		// 流量统计（供 launcher 状态上报）
-
-		// 会话是否仍存活（未中止）。
-		inline bool alive() const noexcept { return !m_abort.load(); }
-
-		// 本会话累计接收字节数（客户端 → 本服务端）。
-		inline uint64_t total_rx() const noexcept { return m_total_rx; }
-
-		// 本会话累计发送字节数（本服务端 → 客户端，即客户端下载量）。
-		inline uint64_t total_tx() const noexcept { return m_total_tx; }
-
-		// 本会话认证成功的用户名（匿名/未认证为空串）。
-		// 返回副本以避免与认证写入的并发读竞态。
-		inline std::string auth_user() const noexcept { return m_auth_user; }
-
-		// 返回当前会话的代理目标。
-		std::string target() const noexcept;
-
-		// 返回当前会话的客户端信息（host:port）。
-		std::string client() const noexcept;
-
-		// 返回当前会话的地区信息（GeoIP），若无法获取则返回空字符串。
-		std::string geoip() const noexcept;
-
-		// 返回当前会话的协议类型（socks4/socks5/http/https/tproxy/stdio），未识别为空串。
-		std::string proto() const noexcept;
-
-		// 返回当前会话连接已持续秒数（连接建立于启动时，之后只读）。
-		inline int64_t elapsed() const noexcept
-		{
-			return m_started_at == 0 ? 0
-				: static_cast<int64_t>(std::time(nullptr)) - m_started_at;
-		}
-
-		// 设置客户端地址（host:port）与地区信息，由 proxy_server 在连接建立时调用，
-		// 仅在会话发布到 m_sessions 之前写入，之后只读（无锁）。
-		void set_client_info(const std::string& client, const std::string& region) noexcept;
-
-		// 记录当前会话的协议类型（运行期可变，内部加锁）。
-		void set_proto(std::string proto) noexcept;
-
-		// 记录当前会话的代理目标 host:port（运行期可变，内部加锁）。
-		void set_target(std::string target) noexcept;
-
-		//////////////////////////////////////////////////////////////////////////
 
 	private:
 		// m_executor 保存当前 io_context 的 executor.
