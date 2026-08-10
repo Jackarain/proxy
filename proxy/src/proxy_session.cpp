@@ -505,6 +505,50 @@ R"x*x*x(<html>
 		return m_connection_id;
 	}
 
+	//////////////////////////////////////////////////////////////////////////
+	// 会话信息查询（供 launcher 连接列表上报）
+
+	std::string proxy_session::target() const noexcept
+	{
+		std::lock_guard<std::mutex> lock(m_conn_mutex);
+		return m_target;
+	}
+
+	std::string proxy_session::client() const noexcept
+	{
+		return m_client_addr;
+	}
+
+	std::string proxy_session::geoip() const noexcept
+	{
+		return m_region;
+	}
+
+	std::string proxy_session::proto() const noexcept
+	{
+		std::lock_guard<std::mutex> lock(m_conn_mutex);
+		return m_proto;
+	}
+
+	void proxy_session::set_client_info(
+		const std::string& client, const std::string& region) noexcept
+	{
+		m_client_addr = client;
+		m_region = region;
+	}
+
+	void proxy_session::set_proto(std::string proto) noexcept
+	{
+		std::lock_guard<std::mutex> lock(m_conn_mutex);
+		m_proto = std::move(proto);
+	}
+
+	void proxy_session::set_target(std::string target) noexcept
+	{
+		std::lock_guard<std::mutex> lock(m_conn_mutex);
+		m_target = std::move(target);
+	}
+
 	bool proxy_session::is_crypto_stream() const noexcept
 	{
 		return boost::variant2::holds_alternative<ssl_tcp_stream>(m_remote_socket);
@@ -990,6 +1034,8 @@ R"x*x*x(<html>
 		// 如果是透明代理, 则启动透明代理协程.
 		if (m_tproxy_remote)
 		{
+			set_proto("tproxy");
+
 			net::co_spawn(m_executor,
 				[this, self]() -> net::awaitable<void>
 				{
@@ -1003,6 +1049,8 @@ R"x*x*x(<html>
 		// 如果是 stdio proxy, 则启动 stdio proxy 协程.
 		if (!m_option.stdio_target_.empty())
 		{
+			set_proto("stdio");
+
 			net::co_spawn(m_executor,
 				[this, self]() -> net::awaitable<void>
 				{
@@ -1211,6 +1259,11 @@ R"x*x*x(<html>
 	{
 		auto executor = co_await net::this_coro::executor;
 		boost::system::error_code ec;
+
+		// 记录透明代理的原始目标（供 launcher 连接列表上报）.
+		if (m_tproxy_remote)
+			set_target(m_tproxy_remote->address().to_string() + ":" +
+				std::to_string(m_tproxy_remote->port()));
 
 		if (!m_proxy_pass)
 		{
@@ -1656,6 +1709,8 @@ R"x*x*x(<html>
 				co_return;
 			}
 
+			set_proto("socks5");
+
 			log_conn_debug()
 				<< ", socks version: "
 				<< socks_version;
@@ -1671,6 +1726,8 @@ R"x*x*x(<html>
 					<< ", socks4 protocol disabled";
 				co_return;
 			}
+
+			set_proto("socks4");
 
 			log_conn_debug()
 				<< ", socks version: "
@@ -1690,6 +1747,8 @@ R"x*x*x(<html>
 				co_return;
 			}
 
+			set_proto("http");
+
 			ret = co_await http_proxy_get();
 		}
 		else if (socks_version == 'C')
@@ -1700,6 +1759,8 @@ R"x*x*x(<html>
 					<< ", http protocol disabled";
 				co_return;
 			}
+
+			set_proto("https");
 
 			ret = co_await http_proxy_connect();
 		}
@@ -4608,6 +4669,9 @@ R"x*x*x(<html>
 		bool resolved,
 		int command) noexcept
 	{
+		// 记录本次会话的代理目标（供 launcher 连接列表上报）.
+		set_target(target_host + ":" + std::to_string(target_port));
+
 		tcp::socket& remote_socket = net_tcp_socket(m_remote_socket);
 		tcp::resolver::results_type targets;
 		boost::system::error_code ec;
@@ -6662,6 +6726,8 @@ R"x*x*x(<html>
 		, m_local_buffer(10485760u) // 10MB max buffer size.
 		, m_proxy_server(server)
 	{
+		// 记录连接建立时间（供 launcher 连接列表计算 elapsed）.
+		m_started_at = static_cast<int64_t>(std::time(nullptr));
 	}
 
 	proxy_session::~proxy_session()

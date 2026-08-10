@@ -113,6 +113,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstring>
+#include <ctime>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -942,6 +943,35 @@ namespace proxy {
 		// 返回副本以避免与认证写入的并发读竞态。
 		inline std::string auth_user() const noexcept { return m_auth_user; }
 
+		// 返回当前会话的代理目标。
+		std::string target() const noexcept;
+
+		// 返回当前会话的客户端信息（host:port）。
+		std::string client() const noexcept;
+
+		// 返回当前会话的地区信息（GeoIP），若无法获取则返回空字符串。
+		std::string geoip() const noexcept;
+
+		// 返回当前会话的协议类型（socks4/socks5/http/https/tproxy/stdio），未识别为空串。
+		std::string proto() const noexcept;
+
+		// 返回当前会话连接已持续秒数（连接建立于启动时，之后只读）。
+		inline int64_t elapsed() const noexcept
+		{
+			return m_started_at == 0 ? 0
+				: static_cast<int64_t>(std::time(nullptr)) - m_started_at;
+		}
+
+		// 设置客户端地址（host:port）与地区信息，由 proxy_server 在连接建立时调用，
+		// 仅在会话发布到 m_sessions 之前写入，之后只读（无锁）。
+		void set_client_info(const std::string& client, const std::string& region) noexcept;
+
+		// 记录当前会话的协议类型（运行期可变，内部加锁）。
+		void set_proto(std::string proto) noexcept;
+
+		// 记录当前会话的代理目标 host:port（运行期可变，内部加锁）。
+		void set_target(std::string target) noexcept;
+
 		//////////////////////////////////////////////////////////////////////////
 
 	private:
@@ -1014,6 +1044,28 @@ namespace proxy {
 
 		// m_auth_user 认证成功的用户名（匿名/未认证为空串）。
 		std::string m_auth_user;
+
+		// m_conn_mutex 保护 m_target/m_proto（运行期可变字段），
+		// 避免与 launcher 状态上报并发读取产生数据竞争.
+		mutable std::mutex m_conn_mutex;
+
+		// m_target 当前会话的代理目标（host:port），由各协议处理路径设置.
+		std::string m_target;
+
+		// m_proto 协议类型（socks4/socks5/http/https/tproxy/stdio），
+		// 由协议分发路径设置.
+		std::string m_proto;
+
+		// m_client_addr 客户端地址（host:port），连接建立时由 proxy_server
+		// 设置，之后只读（发布到 m_sessions 前写入）.
+		std::string m_client_addr;
+
+		// m_region 客户端地区信息（GeoIP 查询结果），连接建立时由
+		// proxy_server 设置，之后只读（同上）.
+		std::string m_region;
+
+		// m_started_at 连接建立时间（unix 秒），之后只读.
+		int64_t m_started_at{ 0 };
 
 		// 当前 session 是否被中止的状态.
 		std::atomic<bool> m_abort{ false };

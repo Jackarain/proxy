@@ -1784,6 +1784,10 @@ boost::json::object proxy_server::snapshot_report()
 	std::map<std::string, uint64_t> user_rx, user_tx;
 	std::map<std::string, int> user_active;
 
+	// 按用户聚合的活跃连接列表（字段结构与 golang gproxy 的 ConnStat 对齐）.
+	std::map<std::string, boost::json::array> user_conns;
+	constexpr int max_conn_per_user = 200;
+
 	{
 		std::lock_guard<std::mutex> lock(stats.user_mutex_);
 		for (const auto& [user, t] : stats.user_totals_)
@@ -1816,6 +1820,37 @@ boost::json::object proxy_server::snapshot_report()
 			user_rx[user] += rx;
 			user_tx[user] += tx;
 			user_active[user]++;
+
+			// 组装连接信息（限制每用户连接数，避免大连接数时 JSON 过大）.
+			auto& conns = user_conns[user];
+			if (conns.size() >= max_conn_per_user)
+				continue;
+
+			boost::json::object conn;
+			conn["id"] = static_cast<int64_t>(s->connection_id());
+			conn["client_ip"] = s->client();
+			conn["target"] = s->target();
+			// region: GeoIP 地区列表（geoip() 返回空格分隔的字符串）.
+			boost::json::array region;
+			std::string geo = s->geoip();
+			std::size_t pos = 0;
+			while (pos < geo.size())
+			{
+				auto sp = geo.find(' ', pos);
+				if (sp == std::string::npos)
+				{
+					region.emplace_back(geo.substr(pos));
+					break;
+				}
+				region.emplace_back(geo.substr(pos, sp - pos));
+				pos = sp + 1;
+			}
+			conn["region"] = std::move(region);
+			conn["proto"] = s->proto();
+			conn["elapsed"] = s->elapsed();
+			conn["rx_bytes"] = static_cast<int64_t>(rx);
+			conn["tx_bytes"] = static_cast<int64_t>(tx);
+			conns.emplace_back(std::move(conn));
 		}
 	}
 
@@ -1862,6 +1897,11 @@ boost::json::object proxy_server::snapshot_report()
 		u["conn_total"] = user_active[user]; // 近似: 历史累计未逐用户跟踪.
 		u["quota"] = user_quota.count(user) ? user_quota[user] : 0;
 		u["used_history"] = user_usage_history.count(user) ? user_usage_history[user] : 0;
+
+		// 活跃连接列表.
+		if (auto it = user_conns.find(user); it != user_conns.end())
+			u["connections"] = std::move(it->second);
+
 		users.emplace_back(std::move(u));
 	}
 	report["users"] = std::move(users);
@@ -3725,13 +3765,15 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 
 	std::vector<std::string> local_info;
 	std::string client;
+	std::string client_addr;
+	std::string region;
 
 	if constexpr (std::same_as<S, proxy_tcp_socket>)
 	{
 		auto endp = tcp_remote_endpoint(socket);
-		client = endp.address().to_string();
-		local_info.push_back(client);
-		client += ":" + std::to_string(endp.port());
+		client_addr = endp.address().to_string();
+		local_info.push_back(client_addr);
+		client = client_addr + ":" + std::to_string(endp.port());
 
 		if (m_ip_database)
 		{
@@ -3740,7 +3782,12 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 				if (!ret.empty())
 				{
 					for (auto& c : ret)
+					{
 						client += " " + c;
+						if (!region.empty())
+							region += " ";
+						region += c;
+					}
 
 					local_info.insert(local_info.end(), ret.begin(), ret.end());
 				}
@@ -3753,6 +3800,7 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 	{
 		auto endp = uds_remote_endpoint(socket);
 		client = endp.path();
+		client_addr = endp.path();
 	}
 
 	XLOG_DBG << "connection id: " << connection_id
@@ -3810,6 +3858,9 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 			init_proxy_stream(std::move(socket)),
 			connection_id,
 			self);
+
+	// 在会话发布到 m_sessions 之前写入客户端信息（之后只读，无锁）.
+	new_session->set_client_info(client_addr, region);
 
 	// 保存 proxy_session 对象到 m_sessions 中.
 	{
