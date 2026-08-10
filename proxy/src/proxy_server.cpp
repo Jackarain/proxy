@@ -1751,22 +1751,35 @@ void proxy_server::session_closed(size_t id, uint64_t rx, uint64_t tx,
 
 boost::json::object proxy_server::snapshot_report()
 {
-	boost::json::object report;
+	auto& stats = *m_launcher_state;
 	uint64_t now = static_cast<uint64_t>(std::time(nullptr));
 
-	auto& stats = *m_launcher_state;
+	// ------------------------------------------------------------------
+	// 流量统计模型:
+	//   global = 已关闭会话累计(global_rx_/global_tx_) + 当前活跃会话实时值
+	//   user   = 已关闭该用户累计(user_totals_) + 活跃该用户实时值
+	//            + launcher 续接的持久化已用量(user_usage_, 仅 TX 基线)
+	//
+	// 生命周期不变量: session_closed() 在会话析构时把该会话流量并入"已关闭
+	// 累计"并从 m_sessions 移除; 快照只把仍存活的会话按实时值计入"活跃".
+	// 因此同一会话的流量不会同时出现在两个口径中（不重复、不遗漏）.
+	//
+	// 匿名(空 user)会话的流量只计入 global, 不计入用户明细, 保证用户列表
+	// 前后一致（不因匿名会话活跃/关闭而在列表中时有时无）.
+	//
+	// 注: 多线程 io_context 下, 会话若在"快照按活跃读取"之后、"析构按已
+	// 关闭累计"之前结束, 其流量可能被重复计入一次; 该窗口极小, 且状态上报
+	// 本身是近似值, 可接受.
+	// ------------------------------------------------------------------
 
-	report["ts"] = static_cast<int64_t>(now);
-	report["uptime"] = static_cast<int64_t>(now - stats.started_at_);
-
-	std::map<std::string, uint64_t> user_rx, user_tx;
-	std::map<std::string, int> user_active;
-	std::map<std::string, int64_t> user_quota;
-
-	// 已关闭会话的累计流量.
+	// 1) 已关闭会话的累计流量（由 session_closed 在会话析构时累加）.
 	uint64_t global_rx = stats.global_rx_.load();
 	uint64_t global_tx = stats.global_tx_.load();
 	int active = 0;
+
+	// 按用户聚合: user -> (rx, tx, 活跃连接数).
+	std::map<std::string, uint64_t> user_rx, user_tx;
+	std::map<std::string, int> user_active;
 
 	{
 		std::lock_guard<std::mutex> lock(stats.user_mutex_);
@@ -1776,6 +1789,8 @@ boost::json::object proxy_server::snapshot_report()
 			user_tx[user] += t.second;
 		}
 	}
+
+	// 2) 当前活跃会话: 实时读取其累计收发, 并入 global 与对应用户.
 	{
 		std::lock_guard<std::mutex> lock(m_sessions_mutex);
 		for ([[maybe_unused]]auto& [id, w] : m_sessions)
@@ -1783,28 +1798,46 @@ boost::json::object proxy_server::snapshot_report()
 			auto s = w.lock();
 			if (!s || !s->alive())
 				continue;
-			std::string user = s->auth_user();
+
 			uint64_t rx = s->total_rx();
 			uint64_t tx = s->total_tx();
-			user_rx[user] += rx;
-			user_tx[user] += tx;
-			user_active[user]++;
+			std::string user = s->auth_user();
+
 			global_rx += rx;
 			global_tx += tx;
 			active++;
+
+			if (user.empty())
+				continue;  // 匿名流量仅计入 global.
+
+			user_rx[user] += rx;
+			user_tx[user] += tx;
+			user_active[user]++;
 		}
 	}
-	// 续接 launcher 持久化的用户已用量（配额续接，报告 TX 为含基线的累计下载）。
+
+	// 3) launcher 续接的持久化用户已用量（配额续接: TX 含基线; 防御负值）.
 	{
 		std::lock_guard<std::mutex> lock(stats.usage_mutex_);
-		for (auto& [user, base] : stats.user_usage_)
-			user_tx[user] += static_cast<uint64_t>(base);
+		for (const auto& [user, base] : stats.user_usage_)
+		{
+			if (base > 0)
+				user_tx[user] += static_cast<uint64_t>(base);
+		}
 	}
+
+	// 4) 用户配额.
+	std::map<std::string, int64_t> user_quota;
 	{
 		std::lock_guard<std::mutex> lock(m_option_mutex);
-		for (auto& [user, quota] : m_option.users_quota_)
+		for (const auto& [user, quota] : m_option.users_quota_)
 			user_quota[user] = quota;
 	}
+
+	// 5) 组装全局统计.
+	boost::json::object report;
+	report["ts"] = static_cast<int64_t>(now);
+	report["uptime"] = static_cast<int64_t>(now - stats.started_at_);
 
 	boost::json::object global;
 	global["rx_bytes"] = static_cast<int64_t>(global_rx);
@@ -1813,15 +1846,16 @@ boost::json::object proxy_server::snapshot_report()
 	report["active_connections"] = active;
 	report["conn_total"] = static_cast<int64_t>(stats.conn_total_.load());
 
+	// 6) 组装用户明细.
 	boost::json::array users;
-	for (auto& [user, rx] : user_rx)
+	for (const auto& [user, rx] : user_rx)
 	{
 		boost::json::object u;
 		u["user"] = user;
 		u["rx_bytes"] = static_cast<int64_t>(rx);
 		u["tx_bytes"] = static_cast<int64_t>(user_tx[user]);
 		u["active_connections"] = user_active[user];
-		u["conn_total"] = user_active[user]; // 近似：历史累计未逐用户跟踪.
+		u["conn_total"] = user_active[user]; // 近似: 历史累计未逐用户跟踪.
 		u["quota"] = user_quota.count(user) ? user_quota[user] : 0;
 		users.emplace_back(std::move(u));
 	}
