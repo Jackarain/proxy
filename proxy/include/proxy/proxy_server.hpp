@@ -210,11 +210,11 @@ namespace proxy {
 		bool set_auth_user_quota(const std::string& user, std::int64_t quota);
 
 		// 查询用户流量配额（字节）；<=0 或未配置表示不限制. 线程安全.
-		std::int64_t user_quota(const std::string& user) override;
+		int64_t user_quota(const std::string& user) override;
 
-		// 查询用户总流量（上行+下行，含 launcher 下发的历史已用流量、已关闭会话与本进程活跃会话），
-		// 用于配额超限判断. 线程安全.
-		std::int64_t user_total_flow(const std::string& user) override;
+		// 查询用户总流量（上行+下行，含 launcher 下发的历史已用流量、已关闭会话与调用方
+		// 当前会话），用于配额超限判断. 线程安全.
+		int64_t user_total_flow(const proxy_session* self) override;
 
 		// 续接 launcher 持久化的用户已用量（配额续接）。
 		void set_user_usage(const boost::json::object& usage);

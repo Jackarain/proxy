@@ -481,6 +481,9 @@ namespace proxy {
 
 	//////////////////////////////////////////////////////////////////////////
 
+	// proxy_session 前向声明.
+	class proxy_session;
+
 	// proxy server 虚基类, 任何 proxy server 的实现, 必须基于这个基类.
 	// 这样 proxy_session 才能通过虚基类指针访问 proxy server 的具体实
 	// 现以及虚函数方法.
@@ -499,9 +502,10 @@ namespace proxy {
 		// 查询用户流量配额（字节，按上行+下行总和计算）；<=0 或未配置表示不限制. 线程安全.
 		virtual int64_t user_quota(const std::string& user) { (void)user; return 0; }
 
-		// 查询用户总流量（上行+下行，含 launcher 下发的历史已用流量、已关闭会话与本进程活跃
-		// 会话），用于配额超限判断；未配置返回 0. 线程安全.
-		virtual int64_t user_total_flow(const std::string& user) { (void)user; return 0; }
+		// 查询用户总流量（上行+下行，含 launcher 下发的历史已用流量、已关闭会话与调用方
+		// 当前会话），用于配额超限判断；未配置返回 0. 线程安全.
+		// self 为发起检查的会话指针（可为空，为空则仅统计历史与已关闭部分）.
+		virtual int64_t user_total_flow(const proxy_session* self) = 0;
 	};
 
 

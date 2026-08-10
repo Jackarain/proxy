@@ -690,8 +690,8 @@ R"x*x*x(<html>
 		if (quota <= 0)
 			return false;
 
-		// 该用户总流量（上行+下行，含历史已用流量、已关闭会话与本进程活跃会话）超过配额.
-		return server->user_total_flow(m_auth_user) >= quota;
+		// 该用户总流量（上行+下行，含历史已用流量、已关闭会话与本会话）超过配额.
+		return server->user_total_flow(this) >= quota;
 	}
 
 	void proxy_session::stream_expires_never(variant_stream_type& stream) noexcept

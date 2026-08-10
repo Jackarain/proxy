@@ -2304,12 +2304,13 @@ std::int64_t proxy_server::user_quota(const std::string& user)
 	return it->second;
 }
 
-// 查询用户总流量（上行+下行，含 launcher 下发的历史已用流量、已关闭会话与本进程活跃会话），
-// 用于配额超限判断.
-std::int64_t proxy_server::user_total_flow(const std::string& user)
+// 查询用户总流量（上行+下行，含 launcher 下发的历史已用流量、已关闭会话与调用方
+// 当前会话），用于配额超限判断.
+int64_t proxy_server::user_total_flow(const proxy_session* self)
 {
 	auto& stats = *m_launcher_state;
 	int64_t total = 0;
+	auto user = self->auth_user();
 
 	// launcher 下发的用户历史已用流量（配额续接，计入总流量）.
 	{
@@ -2328,20 +2329,10 @@ std::int64_t proxy_server::user_total_flow(const std::string& user)
 			total += static_cast<int64_t>(it->second.second);
 		}
 	}
-	// 本进程活跃会话的当前流量（上行+下行）.
+	// 调用方当前会话的流量（上行+下行）；由会话直接提供，无需遍历会话表.
 	{
-		std::lock_guard<std::mutex> lock(m_sessions_mutex);
-		for (auto& [id, w] : m_sessions)
-		{
-			(void)id;
-			auto s = w.lock();
-			if (!s || !s->alive())
-				continue;
-			if (s->auth_user() != user)
-				continue;
-			total += static_cast<int64_t>(s->total_rx());
-			total += static_cast<int64_t>(s->total_tx());
-		}
+		total += static_cast<int64_t>(self->total_rx());
+		total += static_cast<int64_t>(self->total_tx());
 	}
 
 	return total;
