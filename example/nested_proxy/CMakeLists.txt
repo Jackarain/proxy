@@ -5,8 +5,14 @@ add_executable(nested_proxy
 )
 
 target_link_libraries(nested_proxy
+    ${OPENSSL_LIBRARIES}
     ${PROXY_LIBRARIES}
+    ${ZLIB_LIBRARIES}
 )
+
+if (TARGET IOUring::IOUring)
+    target_link_libraries(nested_proxy IOUring::IOUring)
+endif()
 
 set_property(TARGET nested_proxy PROPERTY FOLDER "example/nested_proxy")
 

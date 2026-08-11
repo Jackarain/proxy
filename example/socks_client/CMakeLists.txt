@@ -5,8 +5,14 @@ add_executable(socks_client
 )
 
 target_link_libraries(socks_client
+    ${OPENSSL_LIBRARIES}
     ${PROXY_LIBRARIES}
+    ${ZLIB_LIBRARIES}
 )
+
+if (TARGET IOUring::IOUring)
+    target_link_libraries(socks_client IOUring::IOUring)
+endif()
 
 set_property(TARGET socks_client PROPERTY FOLDER "example/socks_client")
 

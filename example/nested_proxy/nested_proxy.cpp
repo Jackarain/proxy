@@ -32,16 +32,16 @@ using server_ptr = std::shared_ptr<proxy::proxy_server>;
 net::awaitable<void> start_proxy_server(net::io_context& ioc, server_ptr& server)
 {
 	tcp::endpoint socks_listen(
-		net::ip::address::from_string("0.0.0.0"),
+		net::ip::make_address("0.0.0.0"),
 		10800);
 
 	proxy_server_option opt;
 
-	opt.auth_users_.emplace_back("jack", "1111");
+	opt.auth_users_.emplace_back("jack", "1111", "", std::nullopt);
+	opt.listens_.emplace_back(socks_listen, false);
 
 	auto executor = ioc.get_executor();
-	server = proxy_server::make(
-			executor, socks_listen, opt);
+	server = proxy_server::make(executor, opt);
 	server->start();
 
 	co_return;
@@ -55,7 +55,7 @@ net::awaitable<void> start_socks_client()
 	tcp::socket sock{ executor };
 
 	tcp::endpoint server_addr(
-		net::ip::address::from_string("127.0.0.1"),
+		net::ip::make_address("127.0.0.1"),
 		10800);
 
 	boost::system::error_code ec;

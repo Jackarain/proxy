@@ -31,7 +31,7 @@ net::awaitable<void> start_socks_client()
 	tcp::socket sock(executor);
 
 	tcp::endpoint server_addr(
-		net::ip::address::from_string("127.0.0.1"),
+		net::ip::make_address("127.0.0.1"),
 		1080);
 
 	boost::system::error_code ec;

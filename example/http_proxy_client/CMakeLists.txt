@@ -5,8 +5,14 @@ add_executable(http_proxy_client
 )
 
 target_link_libraries(http_proxy_client
+    ${OPENSSL_LIBRARIES}
     ${PROXY_LIBRARIES}
+    ${ZLIB_LIBRARIES}
 )
+
+if (TARGET IOUring::IOUring)
+    target_link_libraries(http_proxy_client IOUring::IOUring)
+endif()
 
 set_property(TARGET http_proxy_client PROPERTY FOLDER "example/http_proxy_client")
 

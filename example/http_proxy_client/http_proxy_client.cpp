@@ -30,7 +30,7 @@ net::awaitable<void> start_http_proxy_client()
 	tcp::socket sock(executor);
 
 	tcp::endpoint server_addr(
-		net::ip::address::from_string("10.0.0.1"),
+		net::ip::make_address("10.0.0.1"),
 		443);
 
 	boost::system::error_code ec;
