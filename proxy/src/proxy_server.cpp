@@ -3943,6 +3943,17 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 		co_return;
 	}
 
+	// 将 IPv4 映射的 IPv6 地址转换为 IPv4 字符串表示, 以便在日志中显示.
+	auto address_to_string = [](const net::ip::address& addr) -> std::string
+	{
+		if (addr.is_v6() && addr.to_v6().is_v4_mapped())
+		{
+			auto v4_addr = net::ip::make_address_v4(net::ip::v4_mapped, addr.to_v6());
+			return v4_addr.to_string();
+		}
+		return addr.to_string();
+	};
+
 	static std::atomic_size_t id{ 1 };
 	size_t connection_id = id++;
 
@@ -3954,7 +3965,7 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 	if constexpr (std::same_as<S, proxy_tcp_socket>)
 	{
 		auto endp = tcp_remote_endpoint(socket);
-		client_addr = endp.address().to_string();
+		client_addr = address_to_string(endp.address());
 		local_info.push_back(client_addr);
 		client = client_addr + ":" + std::to_string(endp.port());
 
