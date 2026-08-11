@@ -1276,13 +1276,33 @@ namespace proxy {
 	{
 		boost::system::error_code ec;
 
-		auto parsed = parse_urlinfo(*m_option.dns_upstream_);
-		if (parsed.has_error())
+		// 使用 boost.url 标准解析 DoH 上游 URL，获取 host/port/path，以及
+		// query 中指定的 SNI（如 https://1.2.3.4/dns-query?sni=example.com
+		// 时 SNI 为 example.com）；query 本身不随 POST 请求转发给上游.
+		auto u = boost::urls::parse_uri(*m_option.dns_upstream_);
+		if (!u)
 			co_return false;
 
-		auto [scheme, user, passwd, doh_host, doh_port, doh_path] = *parsed;
-		if (doh_path.empty() || doh_path == "/")
-			doh_path = "/dns-query";
+		std::string doh_host = std::string(u->encoded_host());
+		uint16_t doh_port = u->port_number();
+		if (doh_port == 0)
+			doh_port = boost::urls::default_port(u->scheme_id());
+
+		// 请求路径（不含 query）.
+		std::string request_path = "/dns-query";
+		auto path = u->path();
+		if (!path.empty() && path != "/")
+			request_path = std::string(path);
+
+		// query 中指定的 SNI（用于 TLS 握手与证书校验）.
+		std::string doh_sni;
+		if (auto it = u->params().find("sni");
+			it != u->params().end())
+			doh_sni = std::string((*it).value);
+
+		// TLS 校验与 SNI 使用的主机名：配置了 sni 参数时优先使用.
+		std::string tls_host =
+			doh_sni.empty() ? doh_host : doh_sni;
 
 		// 解析 DoH 服务器地址.
 		tcp::resolver::results_type targets;
@@ -1295,7 +1315,7 @@ namespace proxy {
 		}
 		else
 		{
-			targets = co_await resolve_host(std::string(doh_host), doh_port);
+			targets = co_await resolve_host(doh_host, doh_port);
 		}
 
 		if (targets.empty())
@@ -1336,10 +1356,10 @@ namespace proxy {
 		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
 		ec = configure_ssl_client_ctx(doh_ssl_ctx,
 			m_option.disable_check_cert_,
-			std::string(doh_host));
+			tls_host);
 		if (ec)
 		{
-			XLOG_WARN << "configure ssl context for doh: " << doh_host
+			XLOG_WARN << "configure ssl context for doh: " << tls_host
 				<< " error: " << ec.message();
 			co_return false;
 		}
@@ -1347,9 +1367,9 @@ namespace proxy {
 		net::ssl::stream<tcp::socket> ssl_stream(std::move(doh_socket), doh_ssl_ctx);
 
 		if (!SSL_set_tlsext_host_name(
-			ssl_stream.native_handle(), std::string(doh_host).c_str()))
+			ssl_stream.native_handle(), tls_host.c_str()))
 		{
-			XLOG_DBG << "doh set sni name: " << doh_host << " failed";
+			XLOG_DBG << "doh set sni name: " << tls_host << " failed";
 		}
 
 		co_await ssl_stream.async_handshake(
@@ -1362,8 +1382,8 @@ namespace proxy {
 
 		// 构造 HTTP POST 请求.
 		http::request<http::string_body> doh_req{
-			http::verb::post, doh_path, 11 };
-		doh_req.set(http::field::host, doh_host);
+			http::verb::post, request_path, 11 };
+		doh_req.set(http::field::host, tls_host);
 		doh_req.set(http::field::content_type, "application/dns-message");
 		doh_req.set(http::field::accept, "application/dns-message");
 		doh_req.body() = dns_query;
