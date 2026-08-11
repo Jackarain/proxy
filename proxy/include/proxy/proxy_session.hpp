@@ -850,41 +850,7 @@ namespace proxy {
 			std::string* output = nullptr) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
-		// DNS 辅助工具
-
-		// dns_encode_name 将域名编码为 DNS wire-format 标签序列.
-		static std::string dns_encode_name(const std::string& name) noexcept;
-
-		// dns_type_from_string 将类型名字符串转换为 DNS 类型数值.
-		static uint16_t dns_type_from_string(const std::string& type_name) noexcept;
-
-		// dns_type_to_string 将 DNS 类型数值转换为字符串.
-		static std::string dns_type_to_string(uint16_t type) noexcept;
-
-		// build_dns_wire_query 构建 DNS wire-format 查询包.
-		static std::string build_dns_wire_query(
-			const std::string& name, uint16_t type,
-			bool cd = false, bool do_bit = false) noexcept;
-
-		// dns_parse_name 从 wire-format 解析域名 (支持压缩指针).
-		static std::pair<std::string, const char*>
-		dns_parse_name(const char* p, const char* end, const char* msg_start) noexcept;
-
-		// dns_rdata_to_string 将 RDATA 按类型解析为可读字符串.
-		static std::string dns_rdata_to_string(
-			uint16_t type, uint16_t rdlength,
-			const char* rdata, const char* end,
-			const char* msg_start) noexcept;
-
-		// dns_svcparams_to_string 解析 HTTPS/SVCB 记录的 SvcParams (RFC 9460).
-		static std::string dns_svcparams_to_string(
-			const char* p, const char* end) noexcept;
-
-		// dns_response_to_json 将 DNS wire-format 响应解析为 Google JSON API 格式.
-		static std::string dns_response_to_json(
-			const std::string& wire_response,
-			const std::string& question_name,
-			uint16_t question_type) noexcept;
+		// DNS 查询处理
 
 		// log_dns_result 从 DNS wire-format 查询和响应中提取关键信息并输出日志.
 		// query_msg: 原始 wire-format 查询 (用于提取问题域名).
@@ -918,43 +884,6 @@ namespace proxy {
 		net::awaitable<void> doh_dns_query(
 			const string_request& request, const std::string& dns_query,
 			std::string* output = nullptr) noexcept;
-
-		// DNS 应答记录（用于构造 wire-format 响应报文）.
-		struct dns_answer
-		{
-			std::string name;  // 所有者域名（完整，无压缩）.
-			uint16_t type{ 1 }; // 记录类型（A/AAAA/CNAME...）.
-			uint32_t ttl{ 60 }; // 存活时间（秒）.
-			std::string data;  // RDATA（如 A 记录的 4 字节 IP）.
-		};
-
-		// 从 wire-format 查询报文解析查询域名与类型，成功返回 true.
-		static bool dns_parse_query(
-			const std::string& query, std::string& name, uint16_t& type) noexcept;
-
-		// 提取查询报文中的 CD 与 DO 标志位.
-		static void dns_query_flags(
-			const std::string& query, bool& cd, bool& do_bit) noexcept;
-
-		// 生成 DNS 缓存键（域名 + 类型 + CD/DO 标志）.
-		static std::string dns_cache_key(
-			const std::string& name, uint16_t type, bool cd, bool do_bit) noexcept;
-
-		// 返回剥离事务 ID 的响应副本（缓存存储用）.
-		static std::string dns_strip_id(const std::string& resp) noexcept;
-
-		// 返回写入指定事务 ID 的响应副本（缓存命中回包用）.
-		static std::string dns_set_id(const std::string& resp, uint16_t id) noexcept;
-
-		// 判断响应是否可缓存（SERVFAIL 是临时故障，不缓存）.
-		static bool dns_cacheable(const std::string& resp) noexcept;
-
-		// 根据查询报文构建 DNS wire-format 响应，回显问题并携带应答.
-		// rcode 为响应码（0=NOERROR, 1=FORMERR, 2=SERVFAIL, 3=NXDOMAIN）.
-		// 查询报文过短/无法解析时返回空串.
-		static std::string dns_build_response(
-			const std::string& query, int rcode,
-			const std::vector<dns_answer>& answers) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// HTTP 响应辅助

@@ -16,10 +16,107 @@
 #include "proxy/dns_response_cache.hpp"
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 
 namespace proxy {
+
+	//////////////////////////////////////////////////////////////////////////
+	// DNS wire-format 工具（命名空间级自由函数）。
+	//
+	// 供 UDP DNS 服务器（dns_server）与 HTTP DoH 路径（proxy_session）共享，
+	// 原为 proxy_session 的 static 成员函数，与连接状态无关，故独立于此。
+
+	// DNS 记录类型常量.
+	inline constexpr uint16_t DNS_TYPE_A = 1;
+	inline constexpr uint16_t DNS_TYPE_NS = 2;
+	inline constexpr uint16_t DNS_TYPE_CNAME = 5;
+	inline constexpr uint16_t DNS_TYPE_SOA = 6;
+	inline constexpr uint16_t DNS_TYPE_PTR = 12;
+	inline constexpr uint16_t DNS_TYPE_MX = 15;
+	inline constexpr uint16_t DNS_TYPE_TXT = 16;
+	inline constexpr uint16_t DNS_TYPE_AAAA = 28;
+	inline constexpr uint16_t DNS_TYPE_SRV = 33;
+	inline constexpr uint16_t DNS_TYPE_SVCB = 64;
+	inline constexpr uint16_t DNS_TYPE_HTTPS = 65;
+	inline constexpr uint16_t DNS_TYPE_ANY = 255;
+	inline constexpr uint16_t DNS_TYPE_CAA = 257;
+	inline constexpr uint16_t DNS_CLASS_IN = 1;
+
+	// DNS 应答记录（用于构造 wire-format 响应报文）.
+	struct dns_answer
+	{
+		std::string name;  // 所有者域名（完整，无压缩）.
+		uint16_t type{ 1 }; // 记录类型（A/AAAA/CNAME...）.
+		uint32_t ttl{ 60 }; // 存活时间（秒）.
+		std::string data;  // RDATA（如 A 记录的 4 字节 IP）.
+	};
+
+	// dns_encode_name 将域名编码为 DNS wire-format 标签序列.
+	std::string dns_encode_name(const std::string& name) noexcept;
+
+	// dns_type_from_string 将类型名字符串转换为 DNS 类型数值.
+	uint16_t dns_type_from_string(const std::string& type_name) noexcept;
+
+	// dns_type_to_string 将 DNS 类型数值转换为字符串.
+	std::string dns_type_to_string(uint16_t type) noexcept;
+
+	// build_dns_wire_query 构建 DNS wire-format 查询包.
+	std::string build_dns_wire_query(
+		const std::string& name, uint16_t type,
+		bool cd = false, bool do_bit = false) noexcept;
+
+	// dns_parse_name 从 wire-format 解析域名 (支持压缩指针).
+	std::pair<std::string, const char*>
+	dns_parse_name(const char* p, const char* end, const char* msg_start) noexcept;
+
+	// dns_svcparams_to_string 解析 HTTPS/SVCB 记录的 SvcParams (RFC 9460).
+	std::string dns_svcparams_to_string(
+		const char* p, const char* end) noexcept;
+
+	// dns_rdata_to_string 将 RDATA 按类型解析为可读字符串.
+	std::string dns_rdata_to_string(
+		uint16_t type, uint16_t rdlength,
+		const char* rdata, const char* end,
+		const char* msg_start) noexcept;
+
+	// dns_response_to_json 将 DNS wire-format 响应解析为 Google JSON API 格式.
+	std::string dns_response_to_json(
+		const std::string& wire_response,
+		const std::string& question_name,
+		uint16_t question_type) noexcept;
+
+	// 从 wire-format 查询报文解析查询域名与类型，成功返回 true.
+	bool dns_parse_query(
+		const std::string& query, std::string& name, uint16_t& type) noexcept;
+
+	// 提取查询报文中的 CD 与 DO 标志位.
+	void dns_query_flags(
+		const std::string& query, bool& cd, bool& do_bit) noexcept;
+
+	// 生成 DNS 缓存键（域名 + 类型 + CD/DO 标志）.
+	std::string dns_cache_key(
+		const std::string& name, uint16_t type, bool cd, bool do_bit) noexcept;
+
+	// 返回剥离事务 ID 的响应副本（缓存存储用）.
+	std::string dns_strip_id(const std::string& resp) noexcept;
+
+	// 返回写入指定事务 ID 的响应副本（缓存命中回包用）.
+	std::string dns_set_id(const std::string& resp, uint16_t id) noexcept;
+
+	// 判断响应是否可缓存（SERVFAIL 是临时故障，不缓存）.
+	bool dns_cacheable(const std::string& resp) noexcept;
+
+	// 根据查询报文构建 DNS wire-format 响应，回显问题并携带应答.
+	// rcode 为响应码（0=NOERROR, 1=FORMERR, 2=SERVFAIL, 3=NXDOMAIN）.
+	// 查询报文过短/无法解析时返回空串.
+	std::string dns_build_response(
+		const std::string& query, int rcode,
+		const std::vector<dns_answer>& answers) noexcept;
 
 	// dns_server 实现 UDP DNS 服务器：监听 dns_udp_port_ 端口，把接收到的
 	// DNS 查询转发到 dns_upstream_（若配置），否则按系统默认解析流程构造
