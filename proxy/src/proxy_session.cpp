@@ -5576,26 +5576,91 @@ R"x*x*x(<html>
 			co_return;
 		}
 
+		// 从服务端获取 DNS 缓存与 dns_no_ipv6 配置（UDP DNS 服务器与 HTTP DNS 共享）.
+		auto server = m_proxy_server.lock();
+		dns_response_cache* dns_cache =
+			server ? server->dns_query_cache() : nullptr;
+		bool no_ipv6 = server && server->dns_no_ipv6();
+
+		// 解析查询用于 no_ipv6 判断与缓存键.
+		std::string qname;
+		uint16_t qtype = DNS_TYPE_A;
+		bool cd = false;
+		bool do_flag = false;
+		dns_parse_query(dns_query, qname, qtype);
+		dns_query_flags(dns_query, cd, do_flag);
+
+		// 禁用 IPv6 解析返回：AAAA 查询直接返回空应答（NODATA），不转发上游.
+		if (no_ipv6 && qtype == DNS_TYPE_AAAA)
+		{
+			auto resp = dns_build_response(dns_query, 0, {});
+			if (resp.empty())
+			{
+				co_await default_http_route(
+					request, fake_500_content_fmt, http::status::internal_server_error);
+				co_return;
+			}
+			log_conn_debug()
+				<< ", dns query: " << qname
+				<< " type " << dns_type_to_string(qtype)
+				<< ", ipv6 disabled, return empty";
+			co_await send_http_string_response(
+				request, http::status::ok, "application/dns-message", resp, true);
+			log_dns_result(dns_query, resp);
+			co_return;
+		}
+
+		// 缓存命中直接返回（改写事务 ID）.
+		std::string cache_key;
+		if (dns_cache && !qname.empty())
+			cache_key = dns_cache_key(qname, qtype, cd, do_flag);
+
+		if (dns_cache && !cache_key.empty())
+		{
+			if (auto hit = dns_cache->get(cache_key); hit)
+			{
+				uint16_t qid = static_cast<uint16_t>(
+					(static_cast<uint8_t>(dns_query[0]) << 8) |
+					static_cast<uint8_t>(dns_query[1]));
+				auto resp = dns_set_id(*hit, qid);
+				log_conn_debug()
+					<< ", dns query: " << qname
+					<< " type " << dns_type_to_string(qtype)
+					<< ", cache hit";
+				co_await send_http_string_response(
+					request, http::status::ok, "application/dns-message", resp, true);
+				log_dns_result(dns_query, resp);
+				co_return;
+			}
+		}
+
 		// 判断上游 DNS 服务器类型并转发查询.
 		auto& upstream = *m_option.dns_upstream_;
+		std::string response;
 
 		if (boost::istarts_with(upstream, "https://"))
 		{
 			// DoH (DNS over HTTPS) 上游.
-			co_await doh_dns_query(request, dns_query);
+			co_await doh_dns_query(request, dns_query, &response);
 		}
 		else
 		{
 			// 传统 UDP DNS 上游.
-			co_await udp_dns_query(request, dns_query);
+			co_await udp_dns_query(request, dns_query, &response);
 		}
+
+		// 写入缓存（剥离事务 ID；SERVFAIL 是临时故障，不缓存）.
+		if (dns_cache && !cache_key.empty() &&
+			!response.empty() && dns_cacheable(response))
+			dns_cache->put(cache_key, dns_strip_id(response));
 
 		co_return;
 	}
 
 	// udp_dns_query 通过传统 UDP 协议转发 DNS 查询到上游服务器.
 	net::awaitable<void> proxy_session::udp_dns_query(
-		const string_request& request, const std::string& dns_query) noexcept
+		const string_request& request, const std::string& dns_query,
+		std::string* output) noexcept
 	{
 		boost::system::error_code ec;
 
@@ -5652,10 +5717,14 @@ R"x*x*x(<html>
 
 		dns_socket.close(ec);
 
+		auto body = std::string(recv_buf.data(), recv_len);
+		if (output)
+			*output = body;
+
 		// 返回 DNS 响应.
 		co_await send_http_string_response(
 			request, http::status::ok, "application/dns-message",
-			std::string(recv_buf.data(), recv_len), true);
+			std::move(body), true);
 		log_dns_result(dns_query, std::string(recv_buf.data(), recv_len));
 
 		co_return;
@@ -6397,6 +6466,227 @@ R"x*x*x(<html>
 				: std::string(", no answer"));
 	}
 
+	// dns_parse_query 从 wire-format 查询报文解析查询域名与类型.
+	// 成功返回 true，name/type 为解析结果；失败（报文过短或无法解析）返回 false.
+	bool proxy_session::dns_parse_query(
+		const std::string& query, std::string& name, uint16_t& type) noexcept
+	{
+		if (query.size() < 12)
+			return false;
+
+		const char* p = query.data() + 12;
+		const char* end = query.data() + query.size();
+		const char* msg_start = query.data();
+
+		auto [qname, np] = dns_parse_name(p, end, msg_start);
+		if (!np || np + 4 > end)
+			return false;
+
+		name = qname;
+		// 去掉末尾的 '.'.
+		if (!name.empty() && name.back() == '.')
+			name.pop_back();
+
+		type = io_util::read<uint16_t>(np);
+		return true;
+	}
+
+	// dns_query_flags 提取查询报文中的 CD 与 DO 标志位.
+	// CD：头部 flags 的 bit4（0x0010）。DO：附加区 OPT 记录 TTL 低 16 位
+	// （flags）的 bit15，即 OPT 记录 TYPE 之后第 6 个字节的 bit7。
+	void proxy_session::dns_query_flags(
+		const std::string& query, bool& cd, bool& do_bit) noexcept
+	{
+		cd = false;
+		do_bit = false;
+
+		if (query.size() < 12)
+			return;
+
+		const char* p = query.data();
+		const char* end = p + query.size();
+		const char* msg_start = p;
+
+		p += 2;
+		auto flags = io_util::read<uint16_t>(p);
+		if (flags & 0x0010)
+			cd = true;
+
+		auto qdcount = io_util::read<uint16_t>(p);
+		auto ancount = io_util::read<uint16_t>(p);
+		auto nscount = io_util::read<uint16_t>(p);
+		auto arcount = io_util::read<uint16_t>(p);
+
+		// 跳过问题区（QDCOUNT 条 question，每条 = NAME + QTYPE + QCLASS）.
+		for (uint16_t i = 0; i < qdcount; i++)
+		{
+			auto [_, np] = dns_parse_name(p, end, msg_start);
+			if (!np)
+				return;
+			p = np;
+			if (p + 4 > end)
+				return;
+			p += 4;
+		}
+
+		// 跳过 answer/authority 记录.
+		auto skip = static_cast<uint16_t>(ancount + nscount);
+		for (uint16_t i = 0; i < skip; i++)
+		{
+			auto [_, np] = dns_parse_name(p, end, msg_start);
+			if (!np)
+				return;
+			p = np;
+			if (p + 10 > end)
+				return;
+			const char* rd_p = p + 8;
+			auto rdlength = io_util::read<uint16_t>(rd_p);
+			p += 10 + rdlength;
+		}
+
+		// 遍历附加区查找 OPT 记录（type 41）.
+		for (uint16_t i = 0; i < arcount; i++)
+		{
+			auto [_, np] = dns_parse_name(p, end, msg_start);
+			if (!np)
+				return;
+			p = np;
+			if (p + 10 > end)
+				return;
+			auto rtype = io_util::read<uint16_t>(p);
+			const char* rd_p = p + 8;
+			auto rdlength = io_util::read<uint16_t>(rd_p);
+			if (rtype == 41 && p + 8 <= end)
+			{
+				// OPT 记录：NAME(1) TYPE(2) CLASS(2) TTL(4) RDLEN(2)。
+				// TTL 低 16 位为 flags，DO 是 flags 的 bit15，即 TTL 第 3
+				// 字节（p+6）的 bit7.
+				if (static_cast<uint8_t>(p[6]) & 0x80)
+					do_bit = true;
+			}
+			p += 10 + rdlength;
+		}
+	}
+
+	// dns_cache_key 生成 DNS 缓存键（域名 + 类型 + CD/DO 标志）.
+	// CD/DO 标志影响响应内容（DO=1 含 RRSIG，CD=1 跳过验证），
+	// 不同标志的查询不能复用彼此的缓存.
+	std::string proxy_session::dns_cache_key(
+		const std::string& name, uint16_t type, bool cd, bool do_bit) noexcept
+	{
+		int flags = 0;
+		if (cd)
+			flags |= 1;
+		if (do_bit)
+			flags |= 2;
+		return name + "/" + std::to_string(type) + "/" + std::to_string(flags);
+	}
+
+	// dns_strip_id 返回剥离事务 ID 的响应副本（缓存存储用）.
+	std::string proxy_session::dns_strip_id(const std::string& resp) noexcept
+	{
+		if (resp.size() < 2)
+			return resp;
+		std::string out = resp;
+		out[0] = '\0';
+		out[1] = '\0';
+		return out;
+	}
+
+	// dns_set_id 返回写入指定事务 ID 的响应副本（缓存命中回包用）.
+	std::string proxy_session::dns_set_id(const std::string& resp, uint16_t id) noexcept
+	{
+		if (resp.size() < 2)
+			return resp;
+		std::string out = resp;
+		out[0] = static_cast<char>((id >> 8) & 0xff);
+		out[1] = static_cast<char>(id & 0xff);
+		return out;
+	}
+
+	// dns_cacheable 判断响应是否可缓存：SERVFAIL（rcode=2）是上游临时
+	// 故障，不缓存.
+	bool proxy_session::dns_cacheable(const std::string& resp) noexcept
+	{
+		if (resp.size() < 4)
+			return false;
+		auto flags = static_cast<uint16_t>(
+			(static_cast<uint8_t>(resp[2]) << 8) |
+			static_cast<uint8_t>(resp[3]));
+		return (flags & 0x0F) != 2;
+	}
+
+	// dns_build_response 根据查询报文构建 DNS wire-format 响应，回显问题并
+	// 携带应答。rcode 为响应码（0=NOERROR, 1=FORMERR, 2=SERVFAIL,
+	// 3=NXDOMAIN）。查询报文过短或无法解析时返回空串.
+	std::string proxy_session::dns_build_response(
+		const std::string& query, int rcode,
+		const std::vector<dns_answer>& answers) noexcept
+	{
+		if (query.size() < 12)
+			return {};
+
+		const char* p = query.data();
+		const char* end = p + query.size();
+		const char* msg_start = p;
+
+		auto qid = io_util::read<uint16_t>(p);
+		// 回显 RD 标志.
+		bool rd = (static_cast<uint8_t>(query[2]) & 0x01) != 0;
+		p = msg_start + 12;
+
+		auto [qname, next] = dns_parse_name(p, end, msg_start);
+		if (!next || next + 4 > end)
+			return {};
+		auto qtype = io_util::read<uint16_t>(next);
+		auto qclass = io_util::read<uint16_t>(next);
+
+		std::string resp;
+		resp.reserve(512);
+
+		// Header（12 字节）.
+		char hdr[12];
+		char* hp = hdr;
+		io_util::write<uint16_t>(qid, hp);            // ID
+		auto flags = static_cast<uint16_t>(0x8000);   // QR=1
+		if (rd)
+			flags |= 0x0100;                          // 回显 RD
+		flags |= 0x0080;                              // RA=1
+		flags |= static_cast<uint16_t>(rcode & 0x0F);
+		io_util::write<uint16_t>(flags, hp);
+		io_util::write<uint16_t>(1, hp);              // QDCOUNT = 1
+		io_util::write<uint16_t>(
+			static_cast<uint16_t>(answers.size()), hp); // ANCOUNT
+		io_util::write<uint16_t>(0, hp);              // NSCOUNT = 0
+		io_util::write<uint16_t>(0, hp);              // ARCOUNT = 0
+		resp.append(hdr, 12);
+
+		// 回显问题.
+		resp += dns_encode_name(qname);
+		char qs[4];
+		char* qsp = qs;
+		io_util::write<uint16_t>(qtype, qsp);
+		io_util::write<uint16_t>(qclass, qsp);
+		resp.append(qs, 4);
+
+		// 应答记录.
+		for (const auto& a : answers)
+		{
+			resp += dns_encode_name(a.name);
+			char r[10];
+			char* rp = r;
+			io_util::write<uint16_t>(a.type, rp);
+			io_util::write<uint16_t>(DNS_CLASS_IN, rp);
+			io_util::write<uint32_t>(a.ttl, rp);
+			io_util::write<uint16_t>(
+				static_cast<uint16_t>(a.data.size()), rp);
+			resp.append(r, 10);
+			resp += a.data;
+		}
+
+		return resp;
+	}
+
 	net::awaitable<void> proxy_session::dns_json_query(
 		const string_request& request,
 		const std::string& question_name,
@@ -6410,21 +6700,69 @@ R"x*x*x(<html>
 		auto dns_query = build_dns_wire_query(
 			question_name, question_type, cd_flag, do_flag);
 
-		// 2. 通过上游转发查询并获取 wire-format 响应.
-		std::string wire_response;
-		auto& upstream = *m_option.dns_upstream_;
-		bool ok = false;
+		// 2. 从服务端获取 DNS 缓存与 dns_no_ipv6 配置（UDP DNS 服务器与 HTTP DNS 共享）.
+		auto server = m_proxy_server.lock();
+		dns_response_cache* dns_cache =
+			server ? server->dns_query_cache() : nullptr;
+		bool no_ipv6 = server && server->dns_no_ipv6();
 
-		if (boost::istarts_with(upstream, "https://"))
+		std::string wire_response;
+
+		// 禁用 IPv6 解析返回：AAAA 查询直接返回空应答（NODATA），不转发上游.
+		if (no_ipv6 && question_type == DNS_TYPE_AAAA)
 		{
-			ok = co_await doh_query_raw(dns_query, wire_response);
+			wire_response = dns_build_response(dns_query, 0, {});
 		}
 		else
 		{
-			ok = co_await udp_query_raw(dns_query, wire_response);
+			// 缓存键（域名 + 类型 + CD/DO 标志）.
+			std::string cache_key;
+			if (dns_cache && !question_name.empty())
+				cache_key = dns_cache_key(
+					question_name, question_type, cd_flag, do_flag);
+
+			// 缓存命中直接返回（改写事务 ID）.
+			if (dns_cache && !cache_key.empty())
+			{
+				if (auto hit = dns_cache->get(cache_key); hit)
+				{
+					uint16_t qid = static_cast<uint16_t>(
+						(static_cast<uint8_t>(dns_query[0]) << 8) |
+						static_cast<uint8_t>(dns_query[1]));
+					wire_response = dns_set_id(*hit, qid);
+				}
+			}
+
+			// 未命中缓存：通过上游转发查询.
+			if (wire_response.empty())
+			{
+				auto& upstream = *m_option.dns_upstream_;
+				bool ok = false;
+
+				if (boost::istarts_with(upstream, "https://"))
+				{
+					ok = co_await doh_query_raw(dns_query, wire_response);
+				}
+				else
+				{
+					ok = co_await udp_query_raw(dns_query, wire_response);
+				}
+
+				if (!ok || wire_response.empty())
+				{
+					co_await default_http_route(
+						request, fake_500_content_fmt, http::status::internal_server_error);
+					co_return;
+				}
+
+				// 写入缓存（剥离事务 ID；SERVFAIL 是临时故障，不缓存）.
+				if (dns_cache && !cache_key.empty() &&
+					dns_cacheable(wire_response))
+					dns_cache->put(cache_key, dns_strip_id(wire_response));
+			}
 		}
 
-		if (!ok || wire_response.empty())
+		if (wire_response.empty())
 		{
 			co_await default_http_route(
 				request, fake_500_content_fmt, http::status::internal_server_error);
@@ -6593,7 +6931,8 @@ R"x*x*x(<html>
 	}
 
 	net::awaitable<void> proxy_session::doh_dns_query(
-		const string_request& request, const std::string& dns_query) noexcept
+		const string_request& request, const std::string& dns_query,
+		std::string* output) noexcept
 	{
 		boost::system::error_code ec;
 
@@ -6728,6 +7067,8 @@ R"x*x*x(<html>
 		co_await send_http_string_response(
 			request, http::status::ok, "application/dns-message",
 			doh_res.body(), true);
+		if (output)
+			*output = doh_res.body();
 		log_dns_result(dns_query, doh_res.body());
 
 		co_return;

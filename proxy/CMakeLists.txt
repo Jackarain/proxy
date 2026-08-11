@@ -30,12 +30,15 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/ip_database.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/url_info.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/dns_cache.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/dns_response_cache.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/dns_server.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/uds_socket.hpp
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ip_database.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_server.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/dns_server.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/default_cert.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/xxhash.cpp
 )

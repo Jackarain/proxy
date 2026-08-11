@@ -1696,9 +1696,50 @@ void proxy_server::start() noexcept
 	// 启动 launcher 控制通道（URL 来自 m_option.launcher_url_, 为空不启动）.
 	launcher_start();
 
+	// 启动 UDP DNS 服务器（配置了 dns_udp_port_ 或 dns_cache_size_ 时创建）.
+	// 即使未启用 UDP 监听，只要启用了 DNS 查询结果缓存，HTTP DNS 路径也
+	// 需要共享该缓存实例.
+	if (m_option.dns_udp_port_ > 0 || m_option.dns_cache_size_ > 0)
+	{
+		m_dns_server = std::make_unique<dns_server>(
+			m_executor, m_backend_context, m_scheduler_locking, m_option);
+		m_dns_server->start();
+	}
+
 	// 启动定时器.
 	net::co_spawn(m_executor,
 		tick(), net::detached);
+}
+
+// dns_query_cache 返回 DNS 查询结果缓存（未启用返回 nullptr）.
+dns_response_cache* proxy_server::dns_query_cache() noexcept
+{
+	return m_dns_server ? m_dns_server->cache() : nullptr;
+}
+
+// dns_no_ipv6 返回是否禁用 DNS 的 IPv6 解析返回.
+bool proxy_server::dns_no_ipv6() const noexcept
+{
+	return m_option.dns_no_ipv6_;
+}
+
+// apply_dns_options 应用 DNS 相关选项热改，在 m_option_mutex 锁内调用.
+std::string proxy_server::apply_dns_options() noexcept
+{
+	if (!m_dns_server)
+	{
+		// 之前未创建（未启用任何 DNS 选项），现在需要时创建.
+		if (m_option.dns_udp_port_ > 0 || m_option.dns_cache_size_ > 0)
+		{
+			m_dns_server = std::make_unique<dns_server>(
+				m_executor, m_backend_context, m_scheduler_locking, m_option);
+			m_dns_server->start();
+		}
+		return {};
+	}
+
+	// 已创建：热改到 dns_server（端口/缓存/no_ipv6 变化由 dns_server 内部处理）.
+	return m_dns_server->apply_options(m_option);
 }
 
 void proxy_server::close() noexcept
@@ -1708,6 +1749,10 @@ void proxy_server::close() noexcept
 
 	// 停止 launcher 控制通道: 关闭当前连接, 使 launcher 协程退出.
 	launcher_stop();
+
+	// 停止 UDP DNS 服务器（关闭监听 socket 使协程退出）.
+	if (m_dns_server)
+		m_dns_server->close();
 
 	m_backend_context.stop();
 	if (m_backend_thread && m_backend_thread->joinable())
@@ -2013,9 +2058,7 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 			continue;
 		}
 		// 本版本接受但暂不影响运行的选项.
-		if (name == "http2" || name == "dns_udp_port" ||
-			name == "dns_cache_size" || name == "dns_cache_ttl" ||
-			name == "dns_no_ipv6" || name == "logs_path" ||
+		if (name == "http2" || name == "logs_path" ||
 			name == "disable_logs" || name == "help" || name == "config")
 		{
 			applied.emplace_back(name);
@@ -2075,6 +2118,45 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 		else if (name == "udp_timeout") { m_option.udp_timeout_ = detail::to_int(val); ok = true; }
 		else if (name == "rate_limit") { m_option.tcp_rate_limit_ = detail::to_int(val); ok = true; }
 		else if (name == "noise_length") { m_option.noise_length_ = detail::to_int(val); ok = true; }
+		// DNS 相关选项（UDP DNS 监听端口 / 查询结果缓存 / 禁用 IPv6 解析返回）.
+		else if (name == "dns_udp_port")
+		{
+			int v = detail::to_int(val);
+			if (v < 0 || v > 65535)
+				errors[name] = "invalid dns_udp_port: " + std::to_string(v);
+			else
+			{
+				m_option.dns_udp_port_ = v;
+				ok = true;
+			}
+		}
+		else if (name == "dns_cache_size")
+		{
+			int v = detail::to_int(val);
+			if (v < 0)
+				errors[name] = "invalid dns_cache_size: " + std::to_string(v);
+			else
+			{
+				m_option.dns_cache_size_ = v;
+				ok = true;
+			}
+		}
+		else if (name == "dns_cache_ttl")
+		{
+			int v = detail::to_int(val);
+			if (v < 0)
+				errors[name] = "invalid dns_cache_ttl: " + std::to_string(v);
+			else
+			{
+				m_option.dns_cache_ttl_ = v;
+				ok = true;
+			}
+		}
+		else if (name == "dns_no_ipv6")
+		{
+			m_option.dns_no_ipv6_ = detail::to_bool(val);
+			ok = true;
+		}
 		// 列表选项.
 		else if (name == "auth_users")
 		{
@@ -2314,6 +2396,10 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 		else
 			errors[name] = "apply failed";
 	}
+
+	// 应用 DNS 相关选项热改（dns_udp_port/dns_cache_size/dns_cache_ttl/
+	// dns_no_ipv6 任一变化都通过 apply_dns_options 同步到 dns_server）.
+	apply_dns_options();
 
 	boost::json::object res;
 	res["applied"] = std::move(applied);

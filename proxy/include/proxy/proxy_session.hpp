@@ -32,6 +32,7 @@
 #include "proxy/proxy_stream.hpp"
 #include "proxy/url_info.hpp"
 #include "proxy/dns_cache.hpp"
+#include "proxy/dns_response_cache.hpp"
 #include "proxy/proxy_util.hpp"
 
 
@@ -411,8 +412,38 @@ namespace proxy {
 
 		// DNS 上游服务器地址，用于 DoH (DNS over HTTPS) 查询转发。
 		//
-		// - 格式: "ip:port"，如 "8.8.8.8:53"。
+		// - 格式: "ip:port"，如 "8.8.8.8:53"；也支持 DoH URL，如
+		//   "https://dns.google/dns-query"。
 		std::optional<std::string> dns_upstream_;
+
+		// UDP DNS 服务器监听端口。
+		//
+		// - 0 表示不启用 UDP DNS 服务器（默认）。
+		// - 非 0 时，proxy_server 在启动时监听该 UDP 端口，把接收到的 DNS
+		//   查询转发到 dns_upstream_（若配置），否则按系统默认解析流程构造
+		//   响应。
+		int dns_udp_port_{ 0 };
+
+		// DNS 查询结果缓存条数上限。
+		//
+		// - 0 表示不启用 DNS 查询结果缓存（默认）。
+		// - 非 0 时配合 dns_cache_ttl_ 生效：缓存命中直接返回结果并重置
+		//   过期时间，达到上限后按最近最少使用（LRU）淘汰。
+		int dns_cache_size_{ 0 };
+
+		// DNS 查询结果缓存过期时间（秒）。
+		//
+		// - 0 表示不启用 DNS 查询结果缓存（默认）。
+		// - 非 0 时，缓存条目在过期后删除；过期前重复查询该域名会重置
+		//   过期时间（滑动 TTL）。
+		int dns_cache_ttl_{ 0 };
+
+		// 是否禁用 DNS 的 IPv6 解析返回。
+		//
+		// - true ：开启后 AAAA 查询直接返回空应答（NODATA），只返回 IPv4
+		//   地址，且不转发到上游 DNS。
+		// - false：不干预，按正常流程处理 AAAA 查询（默认）。
+		bool dns_no_ipv6_{ false };
 
 		// 是否启用目录列表（类似 nginx 的 autoindex）。
 		//
@@ -507,6 +538,13 @@ namespace proxy {
 		// 当前会话），用于配额超限判断；未配置返回 0. 线程安全.
 		// self 为发起检查的会话指针（可为空，为空则仅统计历史与已关闭部分）.
 		virtual int64_t user_total_flow(const proxy_session* self) = 0;
+
+		// 获取 DNS 查询结果缓存（UDP DNS 服务器与 HTTP DNS 路径共享）。
+		// 未启用缓存时返回 nullptr. 默认空实现.
+		virtual dns_response_cache* dns_query_cache() noexcept { return nullptr; }
+
+		// 是否禁用 DNS 的 IPv6 解析返回（AAAA 查询返回空应答）. 默认关闭.
+		virtual bool dns_no_ipv6() const noexcept { return false; }
 	};
 
 
@@ -801,12 +839,15 @@ namespace proxy {
 		//////////////////////////////////////////////////////////////////////////
 		// DNS 查询相关实现
 
+	public:
 		// 处理 HTTP DNS 查询请求 (支持 DNS-over-HTTPS 和 UDP).
 		net::awaitable<void> on_http_dns_query(const http_context& hctx) noexcept;
 
 		// udp_dns_query 通过传统 UDP 协议转发 DNS 查询到上游服务器.
+		// output 非空时，把收到的响应报文写入其中（供缓存写回）.
 		net::awaitable<void> udp_dns_query(
-			const string_request& request, const std::string& dns_query) noexcept;
+			const string_request& request, const std::string& dns_query,
+			std::string* output = nullptr) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// DNS 辅助工具
@@ -873,11 +914,52 @@ namespace proxy {
 			const std::string& dns_query, std::string& output) noexcept;
 
 		// doh_dns_query 通过 DoH (DNS over HTTPS) 转发 DNS 查询到上游服务器.
+		// output 非空时，把收到的响应报文写入其中（供缓存写回）.
 		net::awaitable<void> doh_dns_query(
-			const string_request& request, const std::string& dns_query) noexcept;
+			const string_request& request, const std::string& dns_query,
+			std::string* output = nullptr) noexcept;
+
+		// DNS 应答记录（用于构造 wire-format 响应报文）.
+		struct dns_answer
+		{
+			std::string name;  // 所有者域名（完整，无压缩）.
+			uint16_t type{ 1 }; // 记录类型（A/AAAA/CNAME...）.
+			uint32_t ttl{ 60 }; // 存活时间（秒）.
+			std::string data;  // RDATA（如 A 记录的 4 字节 IP）.
+		};
+
+		// 从 wire-format 查询报文解析查询域名与类型，成功返回 true.
+		static bool dns_parse_query(
+			const std::string& query, std::string& name, uint16_t& type) noexcept;
+
+		// 提取查询报文中的 CD 与 DO 标志位.
+		static void dns_query_flags(
+			const std::string& query, bool& cd, bool& do_bit) noexcept;
+
+		// 生成 DNS 缓存键（域名 + 类型 + CD/DO 标志）.
+		static std::string dns_cache_key(
+			const std::string& name, uint16_t type, bool cd, bool do_bit) noexcept;
+
+		// 返回剥离事务 ID 的响应副本（缓存存储用）.
+		static std::string dns_strip_id(const std::string& resp) noexcept;
+
+		// 返回写入指定事务 ID 的响应副本（缓存命中回包用）.
+		static std::string dns_set_id(const std::string& resp, uint16_t id) noexcept;
+
+		// 判断响应是否可缓存（SERVFAIL 是临时故障，不缓存）.
+		static bool dns_cacheable(const std::string& resp) noexcept;
+
+		// 根据查询报文构建 DNS wire-format 响应，回显问题并携带应答.
+		// rcode 为响应码（0=NOERROR, 1=FORMERR, 2=SERVFAIL, 3=NXDOMAIN）.
+		// 查询报文过短/无法解析时返回空串.
+		static std::string dns_build_response(
+			const std::string& query, int rcode,
+			const std::vector<dns_answer>& answers) noexcept;
 
 		//////////////////////////////////////////////////////////////////////////
 		// HTTP 响应辅助
+
+	private:
 
 		// 生成 HTTP 响应中的 Date 头字符串.
 		static std::string server_date_string() noexcept;

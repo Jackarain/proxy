@@ -13,6 +13,7 @@
 
 
 #include "proxy/proxy_session.hpp"
+#include "proxy/dns_server.hpp"
 
 #include <atomic>
 #include <deque>
@@ -184,6 +185,13 @@ namespace proxy {
 		// 关闭代理服务, 停止所有监听和会话.
 		void close() noexcept;
 
+		// 获取 DNS 查询结果缓存（UDP DNS 服务器与 HTTP DNS 路径共享）.
+		// 未启用缓存时返回 nullptr.
+		dns_response_cache* dns_query_cache() noexcept override;
+
+		// 是否禁用 DNS 的 IPv6 解析返回（AAAA 查询返回空应答）.
+		bool dns_no_ipv6() const noexcept override;
+
 		//////////////////////////////////////////////////////////////////////////
 		// launcher 控制通道支持.
 
@@ -234,6 +242,11 @@ namespace proxy {
 		// 启动 launcher 控制通道（由 start() 调用, URL 来自
 		// m_option.launcher_url_, 为空则不启动）.
 		void launcher_start() noexcept;
+
+		// 应用 DNS 相关选项热改（dns_udp_port_/dns_cache_size_/
+		// dns_cache_ttl_/dns_no_ipv6_），在 m_option_mutex 锁内调用.
+		// 返回错误信息，空串表示成功.
+		std::string apply_dns_options() noexcept;
 
 		// 停止 launcher 控制通道（由 close() 调用, 设置停止标志使协程退出）.
 		void launcher_stop() noexcept;
@@ -424,6 +437,10 @@ namespace proxy {
 
 		// 当前机器的所有 ip 地址.
 		std::set<net::ip::address> m_local_addrs;
+
+		// UDP DNS 服务器（dns_udp_port_/dns_cache_size_ 等选项），
+		// 配置了相关选项时在 start() 中创建.
+		std::unique_ptr<dns_server> m_dns_server;
 
 		// ipip 用于获取 ip 地址的地理位置信息.
 		std::unique_ptr<ip_database> m_ip_database;

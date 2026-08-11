@@ -108,7 +108,7 @@ std::string asio_config;
 // launcher 控制通道相关.
 std::string launcher_url;
 std::string pid_file;
-// launcher 生成参数的选项（本版本接受但不实施）.
+// launcher 生成参数的选项.
 int dns_udp_port = 0;
 int dns_cache_size = 0;
 int dns_cache_ttl = 0;
@@ -335,6 +335,12 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	if (!dns_upstream.empty())
 		opt.dns_upstream_ = dns_upstream;
 
+	// UDP DNS 服务器与 DNS 查询结果缓存选项.
+	opt.dns_udp_port_ = dns_udp_port;
+	opt.dns_cache_size_ = dns_cache_size;
+	opt.dns_cache_ttl_ = dns_cache_ttl;
+	opt.dns_no_ipv6_ = dns_no_ipv6;
+
 	// launcher 控制通道：URL 经 opt 传入, proxy_server 在 start() 时自动启动.
 	// 收到 launcher 的 shutdown 请求时, proxy_server 内部关闭所有 session/连接/
 	// accept/定时器, 使进程自然退出, 无需外部显式启停.
@@ -517,10 +523,10 @@ int main(int argc, char** argv)
 
 		("asio_config", po::value<std::string>(&asio_config)->value_name("enable asio config env")->default_value("ASIO"), "Environment variable name for configuring Boost.Asio (default: ASIO).")
 
-		("dns_udp_port", po::value<int>(&dns_udp_port)->default_value(0), "Listen UDP DNS requests on this port (accepted for launcher compatibility).")
-		("dns_cache_size", po::value<int>(&dns_cache_size)->default_value(0), "DNS cache size (accepted for launcher compatibility).")
-		("dns_cache_ttl", po::value<int>(&dns_cache_ttl)->default_value(0), "DNS cache TTL seconds (accepted for launcher compatibility).")
-		("dns_no_ipv6", po::value<bool>(&dns_no_ipv6)->default_value(false, "false"), "Disable IPv6 DNS resolution (accepted for launcher compatibility).")
+		("dns_udp_port", po::value<int>(&dns_udp_port)->default_value(0), "Listen UDP DNS requests on this port (0 = disabled).")
+		("dns_cache_size", po::value<int>(&dns_cache_size)->default_value(0), "DNS query result cache size (0 = disabled).")
+		("dns_cache_ttl", po::value<int>(&dns_cache_ttl)->default_value(0), "DNS query result cache TTL seconds (0 = disabled).")
+		("dns_no_ipv6", po::value<bool>(&dns_no_ipv6)->default_value(false, "false"), "Disable IPv6 DNS resolution (AAAA queries return empty).")
 		("http2", po::value<bool>(&http2)->default_value(false, "false"), "Enable HTTP/2 (accepted for launcher compatibility).")
 
 		("launcher", po::value<std::string>(&launcher_url)->value_name("ws://host:port/rpc?..."), "Launcher WebSocket control channel URL (internal, set by launcher).")
