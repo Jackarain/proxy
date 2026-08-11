@@ -629,6 +629,68 @@ namespace proxy {
 		return boost::json::serialize(root);
 	}
 
+	// dns_answer_summary 解析响应中的 Answer 记录，返回简洁摘要用于日志
+	// 输出（如 "A 93.184.216.34 (ttl=60), AAAA 2606:2800:220:1::248:1893
+	// (ttl=60)"）。无应答或无法解析时返回空串.
+	std::string dns_answer_summary(const std::string& resp) noexcept
+	{
+		if (resp.size() < 12)
+			return {};
+
+		const char* p = resp.data();
+		const char* end = p + resp.size();
+		const char* msg_start = p;
+
+		p += 2;  // 跳过事务 ID.
+		[[maybe_unused]] auto flags = read<uint16_t>(p);
+		auto qdcount = read<uint16_t>(p);
+		auto ancount = read<uint16_t>(p);
+		[[maybe_unused]] auto nscount = read<uint16_t>(p);
+		[[maybe_unused]] auto arcount = read<uint16_t>(p);
+
+		// 跳过问题区（QDCOUNT 条 question，每条 = NAME + QTYPE + QCLASS）.
+		for (uint16_t i = 0; i < qdcount; i++)
+		{
+			auto [_, np] = dns_parse_name(p, end, msg_start);
+			if (!np || np + 4 > end)
+				return {};
+			p = np + 4;
+		}
+
+		std::string result;
+		for (uint16_t i = 0; i < ancount; i++)
+		{
+			auto [_, np] = dns_parse_name(p, end, msg_start);
+			if (!np)
+				break;
+			p = np;
+			if (p + 10 > end)
+				break;
+			auto atype = read<uint16_t>(p);
+			[[maybe_unused]] auto aclass = read<uint16_t>(p);
+			auto attl = read<uint32_t>(p);
+			auto rdlength = read<uint16_t>(p);
+			if (p + rdlength > end)
+				break;
+
+			auto data = dns_rdata_to_string(atype, rdlength, p, end, msg_start);
+			// TXT 等多段数据以换行分隔，日志中替换为空格更易读.
+			for (auto& c : data)
+			{
+				if (c == '\n')
+					c = ' ';
+			}
+
+			if (!result.empty())
+				result += ", ";
+			result += dns_type_to_string(atype) + " " + data +
+				" (ttl=" + std::to_string(attl) + ")";
+
+			p += rdlength;
+		}
+		return result;
+	}
+
 	// dns_parse_query 从 wire-format 查询报文解析查询域名与类型.
 	// 成功返回 true，name/type 为解析结果；失败（报文过短或无法解析）返回 false.
 	bool dns_parse_query(
@@ -1153,9 +1215,13 @@ namespace proxy {
 			co_return;
 		}
 
+		std::string answer_summary = dns_answer_summary(response);
 		XLOG_DBG << "udp dns query: " << qname << " type "
 			<< dns_type_to_string(qtype)
-			<< " from " << peer << ", done";
+			<< " from " << peer
+			<< ", answer: "
+			<< (answer_summary.empty() ? "none" : answer_summary)
+			<< ", done";
 
 		co_return;
 	}
