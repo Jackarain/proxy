@@ -863,6 +863,7 @@ namespace proxy {
 		, m_option(std::move(option))
 	{
 		rebuild_cache();
+		update_bind_interface();
 	}
 
 	void dns_server::start() noexcept
@@ -893,6 +894,7 @@ namespace proxy {
 		m_option = opt;
 		if (cache_changed)
 			rebuild_cache();
+		update_bind_interface();
 
 		// 端口热改：启动 / 停止 / 切换监听.
 		if (new_port > 0 && !was_listening)
@@ -930,6 +932,31 @@ namespace proxy {
 				m_option.dns_cache_size_, m_option.dns_cache_ttl_);
 		else
 			m_cache.reset();
+	}
+
+	// update_bind_interface 根据 m_option.local_ip_ 解析向外发起请求时的
+	// 出口绑定地址；local_ip_ 为空或解析失败时重置（由系统路由自动选择源地址）.
+	void dns_server::update_bind_interface() noexcept
+	{
+		if (m_option.local_ip_.empty())
+		{
+			m_bind_interface.reset();
+			return;
+		}
+
+		boost::system::error_code ec;
+		auto bind_if = net::ip::make_address(m_option.local_ip_, ec);
+		if (ec)
+		{
+			// bind 地址有问题, 忽略 bind 参数, 并输出日志.
+			XLOG_WARN << "dns server bind address: " << m_option.local_ip_
+				<< ", invalid: " << ec.message();
+			m_bind_interface.reset();
+		}
+		else
+		{
+			m_bind_interface = bind_if;
+		}
 	}
 
 	// start_listen 创建 UDP socket 并绑定 dns_udp_port_ 端口.
@@ -1166,6 +1193,21 @@ namespace proxy {
 		if (ec)
 			co_return false;
 
+		// 若配置了 local_ip_ 出口地址，则绑定源地址后发出，保证 DNS 查询
+		// 与业务流量走同一出站链路.
+		if (m_bind_interface)
+		{
+			udp::endpoint bind_endpoint(*m_bind_interface, 0);
+			dns_socket->bind(bind_endpoint, ec);
+			if (ec)
+			{
+				XLOG_WARN << "udp dns bind source address: "
+					<< m_bind_interface->to_string()
+					<< ", error: " << ec.message();
+				co_return false;
+			}
+		}
+
 		co_await dns_socket->async_send_to(
 			net::buffer(dns_query), dns_endpoint, net_awaitable[ec]);
 		if (ec)
@@ -1265,6 +1307,24 @@ namespace proxy {
 		for (const auto& entry : targets)
 		{
 			auto endp = entry.endpoint();
+			if (m_bind_interface)
+			{
+				// 配置了 local_ip_ 出口地址：绑定源地址后连接，保证 DoH 查询
+				// 与业务流量走同一出站链路.
+				doh_socket.close(ec);
+				tcp::endpoint bind_endpoint(*m_bind_interface, 0);
+				doh_socket.open(bind_endpoint.protocol(), ec);
+				if (ec)
+					continue;
+				doh_socket.bind(bind_endpoint, ec);
+				if (ec)
+				{
+					XLOG_WARN << "doh bind source address: "
+						<< m_bind_interface->to_string()
+						<< ", error: " << ec.message();
+					continue;
+				}
+			}
 			co_await doh_socket.async_connect(endp, net_awaitable[ec]);
 			if (!ec)
 				break;

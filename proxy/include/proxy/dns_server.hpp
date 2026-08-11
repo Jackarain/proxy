@@ -18,6 +18,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -193,11 +194,18 @@ namespace proxy {
 		// 停止 UDP 监听（关闭 socket）.
 		void stop_listen() noexcept;
 
+		// 根据 m_option.local_ip_ 解析向外发起请求（UDP/DoH 上游）时的
+		// 出口绑定地址；为空或解析失败时重置（由系统路由自动选择源地址）.
+		void update_bind_interface() noexcept;
+
 	private:
 		net::any_io_executor m_executor;
 		net::io_context& m_backend_context;
 		bool m_scheduler_locking;
 		proxy_server_option m_option;
+
+		// 向外（UDP/DoH 上游）发起请求时绑定的本地源地址（来自 local_ip_）.
+		std::optional<net::ip::address> m_bind_interface;
 
 		// 当前 UDP 监听 socket（共享指针，监听协程与查询协程共同持有）.
 		std::shared_ptr<udp::socket> m_udp_socket;
