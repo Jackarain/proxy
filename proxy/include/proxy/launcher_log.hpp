@@ -2,6 +2,11 @@
 // launcher_log.hpp
 // ~~~~~~~~~~~~~~~~
 //
+// Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
 // 日志转发到 launcher 控制通道的钩子声明。
 //
 // logging.hpp 的 logger_tag 自定义点（logger_writer__ 在输出到 console/文件

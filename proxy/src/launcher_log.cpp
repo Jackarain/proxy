@@ -2,6 +2,11 @@
 // launcher_log.cpp
 // ~~~~~~~~~~~~~~~~
 //
+// Copyright (c) 2019 Jack (jack dot wgm at gmail dot com)
+//
+// Distributed under the Boost Software License, Version 1.0. (See accompanying
+// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
 // 日志转发到 launcher 控制通道的队列实现。
 //
 // 日志经 launcher_log.hpp 中定义的 logger_tag 钩子采集（可能来自多个
