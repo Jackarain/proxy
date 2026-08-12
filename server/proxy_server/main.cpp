@@ -454,9 +454,10 @@ int main(int argc, char** argv)
 
 	std::string config;
 
-	// 默认开启控制台日志
-	// 的行为一致）。launcher 仅在用户显式关闭日志时才传 --disable_logs true，
-	// 因此这里默认值必须为 false，否则 launcher 管理下控制台日志会被静默关闭。
+	// 默认开启控制台日志。独立运行（无 launcher）时用户期望看到日志，
+	// 因此默认值必须为 false，避免 launcher 传 --disable_logs false 时
+	// 控制台日志被静默关闭。launcher 管理下日志改由控制通道 RPC 推送，
+	// 控制台输出会由下方 --launcher 分支统一关闭。
 	const bool default_logs = false;
 
 	po::options_description desc("Options");
@@ -652,6 +653,9 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 
 	if (!launcher_url.empty())
 	{
+		// launcher 管理下日志经控制通道 RPC 推送, 关闭 console 输出;
+		// 否则 launcher 从 stdout/stderr 采集会与 RPC 日志重复.
+		xlogger::toggle_console_logging(false);
 		// 关闭控制台日志颜色输出，避免 launcher 控制台日志被 ANSI 颜色码污染.
 		xlogger::toggle_console_logging_color(false);
 	}

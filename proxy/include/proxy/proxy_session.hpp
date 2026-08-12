@@ -15,6 +15,7 @@
 #include "proxy/use_awaitable.hpp"
 #include "proxy/async_connect.hpp"
 #include "proxy/logging.hpp"
+#include "proxy/launcher_log.hpp"
 #include "proxy/variant_stream.hpp"
 #include "proxy/default_cert.hpp"
 #include "proxy/fileop.hpp"

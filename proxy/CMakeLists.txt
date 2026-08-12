@@ -11,6 +11,7 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/fileop.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/strutil.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/logging.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/launcher_log.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_client.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_enums.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/socks_error_code.hpp
@@ -36,6 +37,7 @@ target_sources(libproxy
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ip_database.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/launcher_log.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_server.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/dns_server.cpp

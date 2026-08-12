@@ -286,7 +286,11 @@ proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option op
 	// 初始化 launcher 控制通道（URL 来自 m_option.launcher_url_, 为空不启用）.
 	// 信任 launcher 自签证书.
 	if (!m_option.launcher_url_.empty())
+	{
 		m_launcher_state->ssl_ctx_.set_verify_mode(net::ssl::verify_none);
+		// 启用日志转发: logger_tag 钩子采集日志, 由控制通道上报时发送.
+		detail::launcher_log_set_enabled(true);
+	}
 
 	if (!m_option.stdio_target_.empty())
 		return;
@@ -318,6 +322,7 @@ proxy_server::proxy_server(net::any_io_executor executor, proxy_server_option op
 proxy_server::~proxy_server()
 {
 	// launcher_state 为不完整类型, unique_ptr 成员在此释放.
+	detail::launcher_log_set_enabled(false);
 }
 
 std::shared_ptr<proxy_server>
@@ -1486,6 +1491,18 @@ void proxy_server::launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& se
 
 	m_launcher_state->last_report_ = rep;
 	sess.notify("status", rep);
+
+	// 批量转发经 logger_tag 钩子采集的日志（逐条 notify 开销大）.
+	auto lines = detail::launcher_log_drain();
+	if (!lines.empty())
+	{
+		json::array arr;
+		for (auto& l : lines)
+			arr.emplace_back(std::move(l));
+		json::object log;
+		log["lines"] = std::move(arr);
+		sess.notify("log", log);
+	}
 }
 
 // 连接循环: 连接失败/断开后退避重连（全部协程, 不创建线程）.
