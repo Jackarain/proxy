@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #0f1420;
+  --foreground: #dfe6f2;
+  --card: #161c2c;
+  --card-foreground: #dfe6f2;
+  --popover: #161c2c;
+  --popover-foreground: #dfe6f2;
+  --primary: #4d9fff;
+  --primary-foreground: #0b1020;
+  --secondary: #1e2639;
+  --secondary-foreground: #dfe6f2;
+  --muted: #1e2639;
+  --muted-foreground: #8b97b3;
+  --accent: #1e2639;
+  --accent-foreground: #dfe6f2;
+  --destructive: #f0626d;
+  --destructive-foreground: #0b1020;
+  --border: #2a3350;
+  --input: #2a3350;
+  --ring: #4d9fff;
+  --radius: 0rem;
+
+  --ok: #37d67a;
+  --warn: #f5b942;
+  --err: #f0626d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-err: var(--err);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font:
+      14px/1.5 "PingFang SC",
+      "Microsoft YaHei",
+      system-ui,
+      sans-serif;
+  }
+  /* [hidden] 必须始终生效（部分组件用 flex 会覆盖 UA 默认） */
+  [hidden] {
+    display: none !important;
+  }
+}
+
+/* 等宽字体用于日志与连接 ID */
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* 数字等宽对齐 */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a3350;
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a4668;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* sonner toast 深色适配 */
+[data-sonner-toaster] {
+  --normal-bg: #1e2639;
+  --normal-border: #2a3350;
+  --normal-text: #dfe6f2;
+  --success-bg: rgba(55, 214, 122, 0.12);
+  --success-border: #37d67a;
+  --success-text: #37d67a;
+  --error-bg: rgba(240, 98, 109, 0.12);
+  --error-border: #f0626d;
+  --error-text: #f0626d;
+  --warning-bg: rgba(245, 185, 66, 0.12);
+  --warning-border: #f5b942;
+  --warning-text: #f5b942;
+  --info-bg: #1e2639;
+  --info-border: #2a3350;
+  --info-text: #dfe6f2;
+}

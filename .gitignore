@@ -283,7 +283,6 @@ mingw/
 llvm/
 linux/
 xcode/
-logs/
 
 .idea/
 .cache/
