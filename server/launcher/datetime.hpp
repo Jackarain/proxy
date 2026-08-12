@@ -2,7 +2,7 @@
 // datetime.hpp
 // ~~~~~~~~~~~~
 //
-// RFC3339 时间格式化/解析，与 golang time.Time 的 JSON 序列化格式兼容
+// RFC3339 时间格式化/解析
 // （YYYY-MM-DDTHH:MM:SS±HH:MM，支持解析小数秒与 Z 后缀）。
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying

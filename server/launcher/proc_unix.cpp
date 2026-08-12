@@ -1,6 +1,8 @@
 //
-// proc.cpp
-// ~~~~~~~~
+// proc_unix.cpp
+// ~~~~~~~~~~~~~
+//
+// POSIX 平台的子进程管理实现：fork/exec/pipe/waitpid + 进程组信号。
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -159,7 +161,7 @@ void stop_proc(const std::shared_ptr<proc>& p, int timeout_seconds) {
 	}
 }
 
-void stop_pid(pid_t pid) {
+void stop_pid(process_id pid) {
 	if (pid <= 0)
 		return;
 	::kill(pid, SIGTERM);
@@ -171,14 +173,14 @@ void stop_pid(pid_t pid) {
 	::kill(pid, SIGKILL);
 }
 
-bool process_alive(pid_t pid) {
+bool process_alive(process_id pid) {
 	if (pid <= 0)
 		return false;
 	int ret = ::kill(pid, 0);
 	return ret == 0 || errno == EPERM;
 }
 
-bool process_matches_pid_file(pid_t pid, const std::string& pid_file_path) {
+bool process_matches_pid_file(process_id pid, const std::string& pid_file_path) {
 	std::string cmdline_path = "/proc/" + std::to_string(pid) + "/cmdline";
 	int fd = ::open(cmdline_path.c_str(), O_RDONLY);
 	if (fd < 0)

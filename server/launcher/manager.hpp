@@ -3,8 +3,7 @@
 // ~~~~~~~~~~~
 //
 // 实例管理器：负责实例的增删改查、进程启停、运行期配置下发、
-// WS 控制通道接纳与状态/日志采集。与 golang 版本 internal/launcher/manager.go
-// 行为一致（持久化格式、自动重启、用量续接等）。
+// WS 控制通道接纳与状态/日志采集（持久化格式、自动重启、用量续接等）。
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -54,7 +53,7 @@ struct instance : public std::enable_shared_from_this<instance> {
 	time_point last_seen;
 	std::shared_ptr<ringbuf> logs_;
 	// 经 register 通知上报的进程 PID（用于停止 launcher 未拉起的孤儿实例）。
-	pid_t reg_pid = 0;
+	process_id reg_pid = 0;
 	// 上次持久化用量的时间（节流磁盘写入）。
 	time_point last_usage_save;
 
@@ -78,7 +77,7 @@ struct instance : public std::enable_shared_from_this<instance> {
 	}
 
 	// 进程 PID：优先取本 launcher 拉起的进程，否则用 register 上报的孤儿 PID。
-	pid_t pid() const {
+	process_id pid() const {
 		if (proc_ != nullptr && proc_->alive)
 			return proc_->pid;
 		return reg_pid;
@@ -91,7 +90,7 @@ struct summary {
 	std::string name;
 	std::string state;
 	bool online = false;
-	pid_t pid = 0;
+	process_id pid = 0;
 	bool autostart = false;
 	std::vector<std::string> listen;
 	int active = 0;
@@ -106,7 +105,7 @@ struct view {
 	std::string name;
 	std::string state;
 	bool online = false;
-	pid_t pid = 0;
+	process_id pid = 0;
 	bool autostart = false;
 	boost::json::object config;
 	time_point created_at;

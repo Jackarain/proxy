@@ -13,7 +13,7 @@
 
 namespace launcher {
 
-// 返回构建 git commit hash 前 6 位（与 golang buildVersion 行为一致）。
+// 返回构建 git commit hash 前 6 位。
 std::string build_version();
 
 } // namespace launcher

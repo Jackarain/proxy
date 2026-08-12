@@ -2,8 +2,8 @@
 // version.cpp
 // ~~~~~~~~~~~
 //
-// launcher 构建版本信息：返回 git commit hash 前 6 位（与 golang 版本
-// buildVersion 行为一致，供 /api/version 与 index.html 模板 {{.Version}} 使用）。
+// launcher 构建版本信息：返回 git commit hash 前 6 位
+// （供 /api/version 与 index.html 模板 {{.Version}} 使用）。
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)

@@ -2,7 +2,7 @@
 // main.cpp
 // ~~~~~~~~
 //
-// launcher 是 gproxy 的 WebUI 管理器（C++ 版本，与 golang 版本协议完全兼容）：
+// launcher 是 gproxy 的 WebUI 管理器（C++ 版本）：
 // 负责创建/启停多个 proxy_server 进程实例，并通过 WebSocket + JSON-RPC
 // 实现运行期热改配置与实时状态展示。
 //
@@ -35,7 +35,7 @@ using namespace launcher;
 
 namespace {
 
-// 命令行选项定义（与 golang 版本 cmd/launcher 一致）。
+// 命令行选项定义。
 struct option {
 	std::string name;
 	std::string typ; // string / bool
@@ -102,31 +102,6 @@ bool parse_listen_addr(const std::string& listen_addr, std::string& host, int& p
 	return port > 0 && port <= 65535;
 }
 
-// 解析 webui 目录：优先可执行文件目录，其次当前目录。
-std::string resolve_webui_dir(const std::string& exe_path) {
-	auto try_dir = [](const std::string& base) -> std::string {
-		fs::path p = fs::path(base) / "webui";
-		boost::system::error_code ec;
-		if (fs::is_directory(p, ec))
-			return p.string();
-		return {};
-	};
-	if (!exe_path.empty()) {
-		fs::path exe(exe_path);
-		if (exe.has_parent_path()) {
-			auto d = try_dir(exe.parent_path().string());
-			if (!d.empty())
-				return d;
-		}
-	}
-	{
-		auto d = try_dir(fs::current_path().string());
-		if (!d.empty())
-			return d;
-	}
-	return {};
-}
-
 std::atomic<bool> g_stopping{ false };
 
 } // namespace
@@ -144,7 +119,7 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	// 解析命令行（与 golang 版本一致）。
+	// 解析命令行。
 	for (int i = 1; i < argc; i++) {
 		std::string arg = argv[i];
 		if (arg.rfind("--", 0) != 0)
@@ -229,9 +204,6 @@ int main(int argc, char** argv) {
 	}
 
 	fs::path work_dir = fs::current_path();
-	std::string webui_dir = resolve_webui_dir(argv[0]);
-	if (webui_dir.empty())
-		std::fprintf(stderr, "[warn] webui directory not found, WebUI pages will be unavailable\n");
 
 	// 实例管理器。
 	auto mgr = std::make_shared<manager>(data_dir, proxy_path, work_dir.string());
@@ -240,8 +212,8 @@ int main(int argc, char** argv) {
 	bool https = !ssl_dir.empty();
 	mgr->set_ws_addr(host, port, https);
 
-	// HTTP 服务。
-	http_server server(mgr, webui_dir, webui_user, webui_password, build_version());
+	// HTTP 服务（WebUI 静态资源内嵌于可执行文件，从内存提供）。
+	http_server server(mgr, webui_user, webui_password, build_version());
 	std::string err;
 	if (!server.start(listen_addr, https, ssl_dir, err)) {
 		std::fprintf(stderr, "%s\n", err.c_str());

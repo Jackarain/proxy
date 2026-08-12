@@ -14,7 +14,13 @@
 #include <fstream>
 #include <sstream>
 
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/redirect_error.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/this_coro.hpp>
+#include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/filesystem.hpp>
 
@@ -24,6 +30,7 @@
 
 #include "datetime.hpp"
 #include "options.hpp"
+#include "webui_embedded.hpp"
 
 namespace net = boost::asio;
 namespace beast = boost::beast;
@@ -495,10 +502,9 @@ std::shared_ptr<ssl::context> build_ssl_context(const std::vector<cert_entry>& e
 
 // =====================================================================
 
-http_server::http_server(std::shared_ptr<manager> mgr, std::string webui_dir,
+http_server::http_server(std::shared_ptr<manager> mgr,
 	std::string webui_user, std::string webui_password, std::string version)
 	: mgr_(std::move(mgr))
-	, webui_dir_(std::move(webui_dir))
 	, webui_user_(std::move(webui_user))
 	, webui_password_(std::move(webui_password))
 	, version_(std::move(version))
@@ -571,7 +577,20 @@ bool http_server::start(const std::string& listen_addr, bool https,
 	}
 
 	stopped_ = false;
-	accept_thread_ = std::thread([this]() { accept_loop(); });
+	// 协程化的 accept 循环（挂在共享 io_context 上）。
+	net::co_spawn(ioc_, accept_loop(), net::detached);
+
+	// 启动 io_context 工作线程池。
+	// 路由处理中的管理操作（start/stop/config 等）可能阻塞等待 proxy_server
+	// 的 RPC 响应（future 超时等待），因此线程数取硬件并发数（下限 2、上限 16），
+	// 保证 RPC 等待期间 io_context 仍有线程处理响应读循环，不会死锁。
+	unsigned nthreads = std::thread::hardware_concurrency();
+	if (nthreads < 2)
+		nthreads = 2;
+	if (nthreads > 16)
+		nthreads = 16;
+	for (unsigned i = 0; i < nthreads; i++)
+		threads_.emplace_back([this]() { ioc_.run(); });
 	return true;
 }
 
@@ -583,79 +602,71 @@ void http_server::stop() {
 		boost::system::error_code ec;
 		acceptor_->close(ec);
 	}
-	if (accept_thread_.joinable())
-		accept_thread_.join();
+	// 终止 io_context：挂起中的异步操作/协程被取消，run() 返回。
+	ioc_.stop();
+	for (auto& t : threads_)
+		if (t.joinable())
+			t.join();
+	threads_.clear();
 }
 
-void http_server::accept_loop() {
-	// 注意：io_context 不运行（全部使用同步操作），Asio 的 close() 取消
-	// 无法被处理，阻塞的 accept() 不会因 acceptor.close() 返回。
-	// 因此用 poll 带超时监听，定期检查停止标志，使 stop() 能及时 join。
-	while (!stopped_) {
-		int fd = acceptor_->native_handle();
-		struct pollfd pfd;
-		pfd.fd = fd;
-		pfd.events = POLLIN;
-		pfd.revents = 0;
-		int ret = ::poll(&pfd, 1, 500);
-		if (ret <= 0)
-			continue;
-		if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))
-			break;
-		auto sock = std::make_shared<tcp::socket>(ioc_.get_executor());
+boost::asio::awaitable<void> http_server::accept_loop() {
+	// 纯 Asio 协程化 accept：async_accept 挂在 io_context 上，
+	// 无需 poll 轮询停止标志——stop() 关闭 acceptor 后挂起中的
+	// async_accept 以 operation_aborted 完成，循环随即退出。
+	auto ex = co_await net::this_coro::executor;
+	while (!stopped_.load()) {
+		tcp::socket sock(ex);
 		boost::system::error_code ec;
-		acceptor_->accept(*sock, ec);
+		co_await acceptor_->async_accept(sock, net::redirect_error(net::use_awaitable, ec));
+		if (stopped_.load())
+			break;
 		if (ec) {
-			if (stopped_ || ec == net::error::operation_aborted)
+			// 监听器被关闭（stop）或出致命错误。
+			if (ec == net::error::operation_aborted)
 				break;
+			// 瞬时错误（如 EMFILE）：短暂停顿后重试。
+			net::steady_timer timer(ex);
+			timer.expires_after(std::chrono::milliseconds(200));
+			co_await timer.async_wait(net::use_awaitable);
 			continue;
 		}
-		sock->set_option(net::socket_base::keep_alive(true), ec);
-		std::thread([this, sock]() { handle_connection(sock); }).detach();
+		boost::system::error_code sec;
+		sock.set_option(net::socket_base::keep_alive(true), sec);
+		// 每个连接一个协程，挂在共享 io_context 上处理。
+		net::co_spawn(ex, handle_connection(std::move(sock)), net::detached);
 	}
 }
 
 // ---- 连接处理 ----
 
-// 处理一个连接：创建连接级 io_context 并迁移 socket，使
-// /rpc 的 tinyrpc JSON-RPC 会话能运行在运行中的 io_context 上。
-void http_server::handle_connection(std::shared_ptr<tcp::socket> sock) {
-	// 连接专属 io_context（本连接线程 run）。
-	net::io_context conn_ioc;
-	tcp::socket cs(conn_ioc);
+// 处理一个连接（plain / TLS）：全部在共享 io_context 的线程池上协程化。
+boost::asio::awaitable<void> http_server::handle_connection(tcp::socket sock) {
 	boost::system::error_code ec;
-	// basic_stream_socket 无 protocol() 成员，从本地端点取协议类型.
-	boost::system::error_code lec;
-	tcp::endpoint lep = sock->local_endpoint(lec);
-	if (lec)
-		return;
-	cs.assign(lep.protocol(), sock->release(), ec);
-	if (ec)
-		return;
-	sock.reset();
-
 	if (ssl_ctx_) {
 		try {
-			beast::ssl_stream<tcp::socket> stream(std::move(cs), *ssl_ctx_);
-			stream.handshake(ssl::stream_base::server, ec);
+			beast::ssl_stream<tcp::socket> stream(std::move(sock), *ssl_ctx_);
+			co_await stream.async_handshake(ssl::stream_base::server,
+				net::redirect_error(net::use_awaitable, ec));
 			if (ec)
-				return;
-			serve_http(conn_ioc, stream);
+				co_return;
+			co_await serve_http(stream);
 		} catch (...) {}
 	} else {
 		try {
-			serve_http(conn_ioc, cs);
+			co_await serve_http(sock);
 		} catch (...) {}
 	}
 }
 
 template <class Stream>
-void http_server::serve_http(net::io_context& conn_ioc, Stream& stream) {
+boost::asio::awaitable<void> http_server::serve_http(Stream& stream) {
 	for (;;) {
 		beast::flat_buffer buffer;
 		http::request<http::string_body> req;
 		boost::system::error_code ec;
-		http::read(stream, buffer, req, ec);
+		co_await http::async_read(stream, buffer, req,
+			net::redirect_error(net::use_awaitable, ec));
 		if (ec == http::error::end_of_stream)
 			break;
 		if (ec)
@@ -671,18 +682,19 @@ void http_server::serve_http(net::io_context& conn_ioc, Stream& stream) {
 			auto in = mgr_->ws_auth(params["instance"], params["token"]);
 			if (!in) {
 				auto resp = make_error(http::status::unauthorized, "unauthorized");
-				http::write(stream, resp, ec);
+				co_await http::async_write(stream, resp,
+					net::redirect_error(net::use_awaitable, ec));
 				break;
 			}
 			// 升级为 WebSocket 并运行 JSON-RPC 控制通道（tinyrpc 会话）。
 			websocket::stream<Stream> ws(std::move(stream));
-			ws.accept(req, ec);
+			co_await ws.async_accept(req, net::redirect_error(net::use_awaitable, ec));
 			if (ec)
 				break;
 			auto ep = std::make_shared<rpc::endpoint<websocket::stream<Stream>>>(std::move(ws));
 			mgr_->ws_attached(in, ep);
-			// 运行会话直到连接关闭（阻塞，运行在 conn_ioc 上）。
-			ep->run(conn_ioc);
+			// 运行会话直到连接关闭（协程，运行在共享 io_context 上）。
+			co_await ep->run();
 			mgr_->ws_detached(in, ep);
 			break;
 		}
@@ -703,13 +715,15 @@ void http_server::serve_http(net::io_context& conn_ioc, Stream& stream) {
 			if (!ok) {
 				auto resp = make_error(http::status::unauthorized, "unauthorized");
 				resp.set(http::field::www_authenticate, "Basic realm=\"launcher\"");
-				http::write(stream, resp, ec);
+				co_await http::async_write(stream, resp,
+					net::redirect_error(net::use_awaitable, ec));
 				break;
 			}
 		}
 
 		auto resp = route(req);
-		http::write(stream, resp, ec);
+		co_await http::async_write(stream, resp,
+			net::redirect_error(net::use_awaitable, ec));
 		if (ec)
 			break;
 		if (!resp.keep_alive() || !req.keep_alive())
@@ -980,15 +994,13 @@ response http_server::route(const http::request<http::string_body>& req) {
 		return make_error(http::status::not_found, "not found");
 	}
 
-	// 静态资源与 index.html。
+	// 静态资源与 index.html（内嵌于可执行文件）。
 	if (path == "/" || path == "/index.html") {
 		// 渲染后的 index（含版本参数）。
-		std::ifstream ifs((fs::path(webui_dir_) / "index.html").string());
-		if (!ifs)
+		const embedded_file* f = find_embedded_file("index.html");
+		if (!f)
 			return make_error(http::status::not_found, "404 page not found");
-		std::stringstream ss;
-		ss << ifs.rdbuf();
-		std::string html = ss.str();
+		std::string html(reinterpret_cast<const char*>(f->data), f->size);
 		// 替换 {{.Version}} 为构建 git hash。
 		auto pos = html.find("{{.Version}}");
 		if (pos != std::string::npos)
@@ -1001,27 +1013,20 @@ response http_server::route(const http::request<http::string_body>& req) {
 		return res;
 	}
 
-	// 静态文件（no-store 禁用缓存）。
+	// 静态文件（内嵌，no-store 禁用缓存）。
 	std::string rel = path;
 	if (!rel.empty() && rel.front() == '/')
 		rel = rel.substr(1);
 	// 防目录穿越。
 	if (rel.find("..") != std::string::npos)
 		return make_error(http::status::not_found, "404 page not found");
-	std::string file_path = (fs::path(webui_dir_) / rel).string();
-	boost::system::error_code ec;
-	if (!fs::is_regular_file(file_path, ec)) {
+	const embedded_file* f = find_embedded_file(rel);
+	if (!f)
 		return make_error(http::status::not_found, "404 page not found");
-	}
-	std::ifstream ifs(file_path, std::ios::binary);
-	if (!ifs)
-		return make_error(http::status::not_found, "404 page not found");
-	std::stringstream ss;
-	ss << ifs.rdbuf();
 	response res{ http::status::ok, 11 };
-	res.set(http::field::content_type, mime_type(file_path));
+	res.set(http::field::content_type, mime_type(rel));
 	res.set(http::field::cache_control, "no-store, max-age=0");
-	res.body() = ss.str();
+	res.body().assign(reinterpret_cast<const char*>(f->data), f->size);
 	res.prepare_payload();
 	return res;
 }

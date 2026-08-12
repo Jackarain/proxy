@@ -3,8 +3,6 @@
 // ~~~~~~~~~~~
 //
 // gproxy launcher 的 C++ 版本：proxy_server 全部命令行选项的单一事实来源。
-//
-// 与 golang 版本 internal/options 完全一致：
 // 供 WebUI 配置表单、新建实例默认配置、启动参数生成共用，
 // 保证 WebUI 覆盖的功能与 proxy_server 命令行永远一致。
 //
@@ -21,7 +19,7 @@
 
 namespace launcher {
 
-// 选项值类型，与 golang options.Kind 对应。
+// 选项值类型。
 enum class option_kind {
 	boolean,       // bool
 	integer,       // int
@@ -29,7 +27,7 @@ enum class option_kind {
 	string_list    // stringlist
 };
 
-// 一个可配置项，与 golang options.Option 对应。
+// 一个可配置项。
 struct option {
 	std::string name;
 	option_kind kind = option_kind::string;
@@ -55,7 +53,7 @@ struct option {
 	std::string category;
 };
 
-// 全部可配置项，顺序与 golang 版本 options.All 保持一致。
+// 全部可配置项。
 const std::vector<option>& all_options();
 
 // 按名称查找选项，未找到返回 nullptr。

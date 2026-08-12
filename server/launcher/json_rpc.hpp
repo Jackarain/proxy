@@ -4,7 +4,7 @@
 //
 // JSON-RPC 2.0 over WebSocket 的对称连接端点封装。
 // 基于 tinyrpc（third_party/tinyrpc/include/tinyrpc/jsonrpc.hpp）的
-// jsonrpc_session 实现，提供与 golang 版本 internal/rpc 完全兼容的接口：
+// jsonrpc_session 实现，提供与控制通道协议完全兼容的接口：
 //   set_handler / notify / call / close / run
 // 支持双向 Call / Notify / Handle 与请求-响应按 id 关联。
 //
@@ -30,6 +30,9 @@
 #include <string>
 
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/this_coro.hpp>
+#include <boost/asio/use_awaitable.hpp>
 #include <boost/json.hpp>
 
 #include <tinyrpc/jsonrpc.hpp>
@@ -123,9 +126,10 @@ public:
 	// 连接是否已关闭。
 	virtual bool closed() const = 0;
 
-	// 启动会话并运行 io_context，直到连接关闭（阻塞）。
-	// ioc 为承载本会话的 io_context（连接线程运行）。
-	virtual void run(boost::asio::io_context& ioc) = 0;
+	// 启动会话并等待连接关闭（协程）。
+	// 会话运行在底层流的执行器上（本服务共享的 io_context 线程池），
+	// 协程挂起直到读循环退出/连接关闭。
+	virtual boost::asio::awaitable<void> run() = 0;
 };
 
 template <class WsStream>
@@ -193,8 +197,10 @@ public:
 		return closed_.load();
 	}
 
-	// 启动会话并运行 io_context，直到连接关闭。
-	void run(boost::asio::io_context& ioc) override {
+	// 启动会话并等待连接关闭（协程）。
+	// tinyrpc 会话的读循环自身即协程（co_spawn 于底层流执行器上），
+	// 因此只需 start() 后周期检查关闭标志，直到读循环退出/连接关闭。
+	boost::asio::awaitable<void> run() override {
 		// shared_from_this 返回基类指针，需转回具体端点以访问成员。
 		auto self = std::static_pointer_cast<endpoint<WsStream>>(shared_from_this());
 		sess_->notify_callback([self](boost::json::object obj) {
@@ -207,8 +213,13 @@ public:
 			self->closed_.store(true);
 		});
 		sess_->start();
-		// 运行 io_context 直到读循环退出（连接关闭）。
-		ioc.run();
+
+		auto ex = co_await boost::asio::this_coro::executor;
+		boost::asio::steady_timer timer(ex);
+		while (!closed_.load()) {
+			timer.expires_after(std::chrono::milliseconds(50));
+			co_await timer.async_wait(boost::asio::use_awaitable);
+		}
 		closed_.store(true);
 	}
 

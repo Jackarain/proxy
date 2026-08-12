@@ -18,7 +18,7 @@ namespace {
 
 namespace json = boost::json;
 
-// 与 golang options.All 完全一致（名称/类型/帮助/默认值/隐藏/重启/常用/提示/分组）。
+// 全部可配置项（名称/类型/帮助/默认值/隐藏/重启/常用/提示/分组）。
 const option k_options[] = {
 	{ "help", option_kind::boolean, "显示帮助信息并退出。", false, false, 0, "", {}, true, false, false, "", "其他" },
 	{ "config", option_kind::string, "从指定配置文件加载参数选项。", false, false, 0, "", {}, true, false, false, "", "其他" },
@@ -252,7 +252,7 @@ json::object default_config() {
 }
 
 std::vector<std::string> args_for(const json::object& cfg) {
-	// 按名称排序（与 golang sort.Strings 一致）。
+	// 按名称排序。
 	std::vector<std::string> names;
 	names.reserve(cfg.size());
 	for (const auto& kv : cfg)

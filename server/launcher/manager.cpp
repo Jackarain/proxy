@@ -14,6 +14,8 @@
 #include <iomanip>
 #include <sstream>
 
+#include <openssl/rand.h>
+
 #include <boost/filesystem.hpp>
 
 #include "options.hpp"
@@ -68,27 +70,22 @@ std::string as_string(const json::value& v) {
 	return {};
 }
 
-// 随机 hex 字符串（crypto 强度）。
+// 随机 hex 字符串（crypto 强度，跨平台：OpenSSL RAND_bytes）。
 std::string random_hex(std::size_t bytes) {
 	std::string out;
 	out.resize(bytes * 2);
-	FILE* f = std::fopen("/dev/urandom", "rb");
-	if (f) {
-		std::vector<unsigned char> buf(bytes);
-		std::size_t got = std::fread(buf.data(), 1, bytes, f);
-		std::fclose(f);
-		if (got == bytes) {
-			static const char* hex = "0123456789abcdef";
-			for (std::size_t i = 0; i < bytes; i++) {
-				out[i * 2] = hex[buf[i] >> 4];
-				out[i * 2 + 1] = hex[buf[i] & 0xf];
-			}
-			return out;
-		}
+	std::vector<unsigned char> buf(bytes);
+	if (RAND_bytes(buf.data(), static_cast<int>(bytes)) != 1) {
+		// 随机源失败时回退：实例 ID/令牌可预测，认证形同虚设，直接终止。
+		std::fprintf(stderr, "crypto random failed\n");
+		std::abort();
 	}
-	// 随机源失败时回退：实例 ID/令牌可预测，认证形同虚设，直接终止。
-	std::fprintf(stderr, "crypto random failed\n");
-	std::abort();
+	static const char* hex = "0123456789abcdef";
+	for (std::size_t i = 0; i < bytes; i++) {
+		out[i * 2] = hex[buf[i] >> 4];
+		out[i * 2 + 1] = hex[buf[i] & 0xf];
+	}
+	return out;
 }
 
 // 取 "user:..." 条目的用户名。
@@ -651,13 +648,12 @@ void manager::kill_by_pid_file(const std::string& id) {
 	if (!ifs)
 		return;
 	std::string data((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-	pid_t pid = 0;
+	process_id pid = 0;
 	try {
-		pid = static_cast<pid_t>(std::stoll(data));
+		pid = static_cast<process_id>(std::stoll(data));
 	} catch (...) {
 		return;
-	}
-	if (pid <= 0)
+	}	if (pid <= 0)
 		return;
 	if (!process_alive(pid)) {
 		// 进程已退出：仅清理陈旧 pid 文件。
@@ -684,7 +680,7 @@ void manager::kill_by_pid_file(const std::string& id) {
 bool manager::stop(const std::string& id, std::string& err) {
 	std::shared_ptr<proc> proc;
 	std::shared_ptr<rpc::endpoint_base> ep;
-	pid_t orphan_pid = 0;
+	process_id orphan_pid = 0;
 	{
 		std::lock_guard<std::mutex> lock(mu_);
 		auto it = instances_.find(id);
@@ -1161,9 +1157,9 @@ void manager::ws_attached(const instance_ptr& in, const std::shared_ptr<rpc::end
 		std::lock_guard<std::mutex> lock(mu_);
 		if (params.is_object()) {
 			if (auto p = params.as_object().if_contains("pid"); p && p->is_int64())
-				in->reg_pid = static_cast<pid_t>(p->as_int64());
+				in->reg_pid = static_cast<process_id>(p->as_int64());
 			else if (p && p->is_uint64())
-				in->reg_pid = static_cast<pid_t>(p->as_uint64());
+				in->reg_pid = static_cast<process_id>(p->as_uint64());
 		}
 		in->last_seen = now_time();
 		return json::value();
