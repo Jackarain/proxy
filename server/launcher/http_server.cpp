@@ -472,7 +472,12 @@ int sni_callback(SSL* ssl, int* /*al*/, void* arg)
 	}
 	SSL_use_certificate(ssl, ctx->chains[idx][0]);
 	SSL_use_PrivateKey(ssl, ctx->keys[idx]);
+#ifdef BOOST_ASIO_USE_WOLFSSL
+	// wolfSSL 未提供 SSL_clear_chain_certs（仅 SSL_CTX 级别），
+	// 且其 use_certificate 会整体替换证书链，无需显式清空。
+#else
 	SSL_clear_chain_certs(ssl);
+#endif
 	for (std::size_t i = 1; i < ctx->chains[idx].size(); i++)
 		SSL_add1_chain_cert(ssl, ctx->chains[idx][i]);
 	return SSL_TLSEXT_ERR_OK;
