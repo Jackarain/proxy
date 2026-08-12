@@ -11,8 +11,6 @@
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
-#include <future>
-#include <iomanip>
 #include <sstream>
 
 #include <openssl/rand.h>
@@ -1182,7 +1180,7 @@ bool manager::logs(const std::string& id, std::int64_t since, json::value& out) 
 	json::array lines;
 	json::array seqs;
 	if (since < 0)
-		in->logs_->tail_seq(500, l, s);
+		in->logs_->tail_seq(2000, l, s);
 	else
 		in->logs_->since(since, l, s);
 	for (std::size_t i = 0; i < l.size(); i++) {
