@@ -108,6 +108,17 @@ std::shared_ptr<proc> spawn_proc(const std::string& exe,
 		::close(err_pipe[0]);
 		::close(err_pipe[1]);
 
+		// 对继承自父进程（launcher）的所有 fd 设置 FD_CLOEXEC，exec 时自动关闭。
+		// 否则 launcher 的监听 socket / 连接 socket 会被 proxy_server 继承，
+		// launcher 意外退出（如 kill -9）后残留进程仍占用 launcher 的监听端口，
+		// 导致 launcher 无法再次启动。
+		const int maxfd = static_cast<int>(::sysconf(_SC_OPEN_MAX));
+		for (int fd = STDERR_FILENO + 1; fd < maxfd; fd++) {
+			const int flags = ::fcntl(fd, F_GETFD);
+			if (flags != -1 && !(flags & FD_CLOEXEC))
+				::fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+		}
+
 		// 构建 exec 参数。
 		std::vector<char*> argv;
 		argv.reserve(args.size() + 2);
