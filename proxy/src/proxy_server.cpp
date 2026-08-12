@@ -21,6 +21,12 @@
 #include <sstream>
 #include <unordered_set>
 
+#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+# include <ifaddrs.h>
+# include <netinet/in.h>
+# include <cstring>
+#endif
+
 #include <tinyrpc/jsonrpc.hpp>
 
 #ifndef SO_ORIGINAL_DST
@@ -2657,6 +2663,37 @@ net::awaitable<void> proxy_server::get_local_address() noexcept
 {
 	auto self = shared_from_this();
 	boost::system::error_code ec;
+
+	// POSIX 平台直接枚举所有网络接口地址，避免依赖主机名解析：
+	// OpenWrt 等嵌入式系统的 /etc/hosts 常缺少本机 IP 映射，
+	// 仅靠 host_name + DNS 解析拿不到本机地址，会导致 transparent
+	// 模式把访问本机监听端口的连接误判为 tproxy 转发目标。
+#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+	struct ifaddrs* ifa = nullptr;
+	if (::getifaddrs(&ifa) == 0)
+	{
+		for (struct ifaddrs* p = ifa; p != nullptr; p = p->ifa_next)
+		{
+			if (!p->ifa_addr)
+				continue;
+			if (p->ifa_addr->sa_family == AF_INET)
+			{
+				auto* sin = reinterpret_cast<struct sockaddr_in*>(p->ifa_addr);
+				net::ip::address_v4::bytes_type bytes;
+				std::memcpy(bytes.data(), &sin->sin_addr, bytes.size());
+				m_local_addrs.insert(net::ip::make_address_v4(bytes));
+			}
+			else if (p->ifa_addr->sa_family == AF_INET6)
+			{
+				auto* sin6 = reinterpret_cast<struct sockaddr_in6*>(p->ifa_addr);
+				net::ip::address_v6::bytes_type bytes;
+				std::memcpy(bytes.data(), &sin6->sin6_addr, bytes.size());
+				m_local_addrs.insert(net::ip::make_address_v6(bytes));
+			}
+		}
+		::freeifaddrs(ifa);
+	}
+#endif
 
 	auto hostname = net::ip::host_name(ec);
 	if (ec)
