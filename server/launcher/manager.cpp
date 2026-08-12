@@ -752,7 +752,41 @@ net::awaitable<bool> manager::stop(const std::string& id, std::string& err)
 
 net::awaitable<bool> manager::restart(const std::string& id, std::string& err)
 {
-	co_await stop(id, err);
+	std::shared_ptr<proc> proc;
+	jsonrpc_session sess;
+	{
+		auto in = find_instance(id);
+		if (!in) {
+			err = "instance not found";
+			co_return false;
+		}
+		std::lock_guard<std::mutex> lock(m_mu_);
+		in->stopping_ = true;
+		proc = in->proc_;
+		sess = in->channel_;
+	}
+
+	// 直接杀死子进程（不等优雅退出），实现快速重启。
+	if (proc)
+		stop_proc(proc, 0);
+	if (sess.valid())
+		sess.stop();
+
+	// 等待监控线程完成退出处理（proc_ 清空、不再自动重启），
+	// 避免紧接着 start 时与 wait_exit 竞争导致新进程句柄被清空。
+	auto ex = co_await net::this_coro::executor;
+	net::steady_timer timer(ex);
+	for (int i = 0; i < 50; i++) {
+		{
+			auto in = find_instance(id);
+			std::lock_guard<std::mutex> lock(m_mu_);
+			if (!in || in->proc_ == nullptr)
+				break;
+		}
+		timer.expires_after(std::chrono::milliseconds(50));
+		boost::system::error_code tec;
+		co_await timer.async_wait(net::redirect_error(net::use_awaitable, tec));
+	}
 	co_return start(id, err);
 }
 
