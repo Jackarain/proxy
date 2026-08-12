@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -94,7 +94,12 @@ enum class error : int {
     subscription_identifier_not_available,
 
     /** \brief The Server does not support Shared Subscriptions */
-    shared_subscription_not_available
+    shared_subscription_not_available,
+
+    // run
+    /** \brief The Client is already running because \ref mqtt_client::async_run
+        was already called */
+    already_running,
 };
 
 
@@ -125,6 +130,8 @@ inline std::string client_error_to_string(error err) {
             return "The Server does not support this Subscription Identifier";
         case error::shared_subscription_not_available:
             return "The Server does not support Shared Subscriptions";
+        case error::already_running:
+            return "The Client is already running";
         default:
             return "Unknown client error";
     }

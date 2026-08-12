@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -238,8 +238,10 @@ private:
             code != control_code_e::disconnect;
 
         if (is_reply) {
-            auto packet_id = decoders::decode_packet_id(first).value();
-            _svc._replies.dispatch(error_code {}, code, packet_id, first, last);
+            auto packet_id = decoders::decode_packet_id(first, last);
+            if (!packet_id)
+                return complete(client::error::malformed_packet, 0, {}, {});
+            _svc._replies.dispatch(error_code {}, code, *packet_id, first, last);
             return perform(asio::transfer_at_least(0));
         }
 

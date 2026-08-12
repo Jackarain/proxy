@@ -1,12 +1,12 @@
 [/
-    Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+    Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
     Distributed under the Boost Software License, Version 1.0.
     (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 ]
 
 [library Boost.MQTT5: a C++17 MQTT client
     [quickbook 1.7]
-    [copyright 2023-2025 Mireo]
+    [copyright 2023-2026 Mireo]
     [id mqtt5]
     [purpose C++17 MQTT client]
     [license

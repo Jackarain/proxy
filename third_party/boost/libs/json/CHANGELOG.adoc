@@ -5,7 +5,22 @@
 
 include::doc/pages/definitions.adoc[]
 
+== Boost 1.92.0
+
+.Fixes
+* {issue}1160[#1160] Fixed UB in `value::emplace_` functions.
+* {issue}1166[#1166] Fixed self-insert in `string::insert`.
+* {issue}1167[#1167] Fixed self-insert in `array::insert` and `array::resize`.
+* {issue}1168[#1168] Fixed self-append in `string::append`.
+
 == Boost 1.91.0
+
+.Fixes
+* {issue}1143[#1143] Changed <<ref_visit>> to always pass references to
+  persistent objects. This is particularly important when the visitor is a
+  coroutine.
+* {issue}1129[#1129] Fixed direct parsing of unexpected arrays in nested
+  described structs.
 
 .Improvements
 * {issue}1146[#1146] Changed <<ref_value>> construction from

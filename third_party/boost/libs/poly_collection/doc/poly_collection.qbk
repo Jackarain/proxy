@@ -1,7 +1,7 @@
 [library Boost.PolyCollection
   [quickbook 1.6]
   [authors [López Muñoz, Joaquín M]]
-  [copyright 2016-2025 Joaquín M López Muñoz]
+  [copyright 2016-2026 Joaquín M López Muñoz]
   [category containers]
   [id poly_collection]
   [dirname poly_collection]
@@ -1203,6 +1203,16 @@ to allow for the definition of container-level `operator<` and related operators
 [endsect]
 
 [section Release notes]
+
+[section Boost 1.92]
+
+* Made [' `variant_collection_value_type_impl`]`<Ts...>`'s relational operators available
+only when the corresponding relational operator is available for all `Ts...`, in
+accordance with WG21 paper
+[@https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2944r3.html P2944R3].
+* Fixed incompatibility problem with libc++ v21 or higher ([github_pr poly_collection 34]).
+
+[endsect]
 
 [section Boost 1.88]
 

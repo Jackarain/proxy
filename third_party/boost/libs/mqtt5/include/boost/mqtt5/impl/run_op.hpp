@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -7,6 +7,8 @@
 
 #ifndef BOOST_MQTT5_RUN_OP_HPP
 #define BOOST_MQTT5_RUN_OP_HPP
+
+#include <boost/mqtt5/error.hpp>
 
 #include <boost/mqtt5/detail/cancellable_handler.hpp>
 #include <boost/mqtt5/detail/control_packet.hpp>
@@ -72,6 +74,11 @@ public:
 
     void perform() {
         namespace asioex = boost::asio::experimental;
+
+        if (_svc_ptr->is_open())
+            return _handler.complete_immediate(
+                error_code(client::error::already_running)
+            );
 
         _svc_ptr->_stream.open();
         _svc_ptr->_rec_channel.reset();

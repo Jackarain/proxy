@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -190,7 +190,7 @@ template <
     bool> = true
 >
 inline std::string to_string(uint32_t remain_length, byte_citer& it) {
-    const auto packet_id = decoders::decode_packet_id(it).value_or(0);
+    const auto packet_id = decoders::decode_packet_id(it, it + remain_length).value_or(0);
     remain_length -= sizeof(uint16_t);
     uint8_t reason_code = remain_length == 0 ? 0 : uint8_t(*it);
     return concat_strings(
@@ -221,7 +221,7 @@ template <
     std::enable_if_t<code == control_code_e::subscribe, bool> = true
 >
 inline std::string to_string(uint32_t remain_length, byte_citer& it) {
-    const auto packet_id = decoders::decode_packet_id(it).value_or(0);
+    const auto packet_id = decoders::decode_packet_id(it, it + remain_length).value_or(0);
     remain_length -= sizeof(uint16_t);
     auto subscribe = decoders::decode_subscribe(remain_length, it);
     if (!subscribe.has_value())
@@ -251,7 +251,7 @@ template <
     std::enable_if_t<code == control_code_e::unsubscribe, bool> = true
 >
 inline std::string to_string(uint32_t remain_length, byte_citer& it) {
-    const auto packet_id = decoders::decode_packet_id(it).value_or(0);
+    const auto packet_id = decoders::decode_packet_id(it, it + remain_length).value_or(0);
     remain_length -= sizeof(uint16_t);
     auto unsubscribe = decoders::decode_unsubscribe(remain_length, it);
     if (!unsubscribe.has_value())
@@ -282,7 +282,7 @@ template <
     std::enable_if_t<code == control_code_e::suback, bool> = true
 >
 inline std::string to_string(uint32_t remain_length, byte_citer& it) {
-    const auto packet_id = decoders::decode_packet_id(it).value_or(0);
+    const auto packet_id = decoders::decode_packet_id(it, it + remain_length).value_or(0);
     remain_length -= sizeof(uint16_t);
     auto suback = decoders::decode_suback(remain_length, it);
     if (!suback.has_value())
@@ -302,7 +302,7 @@ template <
     std::enable_if_t<code == control_code_e::unsuback, bool> = true
 >
 inline std::string to_string(uint32_t remain_length, byte_citer& it) {
-    const auto packet_id = decoders::decode_packet_id(it).value_or(0);
+    const auto packet_id = decoders::decode_packet_id(it, it + remain_length).value_or(0);
     remain_length -= sizeof(uint16_t);
     auto unsuback = decoders::decode_unsuback(remain_length, it);
     if (!unsuback.has_value())

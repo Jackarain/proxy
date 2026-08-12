@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -105,6 +105,14 @@ BOOST_AUTO_TEST_CASE(packet_larger_than_allowed) {
         std::string({ 0x10, -1, -1, -1, 0 }),
         reason_codes::packet_too_large,
         "The packet size is greater than Maximum Packet Size"
+    );
+}
+
+BOOST_AUTO_TEST_CASE(receive_reply_with_truncated_packet_id) {
+    test_receive_malformed_packet(
+        std::string({ 0x40, 0x01, 0x00 }), // PUBACK with a 1-byte Packet Identifier
+        reason_codes::malformed_packet,
+        "Malformed Packet received from the Server"
     );
 }
 
@@ -293,8 +301,8 @@ BOOST_DATA_TEST_CASE_F(
     );
 
     const uint32_t max_packet_size = (std::max)(
-        publish1.size(),
-        publish1.size() * max_packet_size_multiplier + max_packet_size_offset
+        (uint32_t)publish1.size(),
+        (uint32_t)publish1.size() * max_packet_size_multiplier + max_packet_size_offset
     );
     connect_props cprops;
     cprops[prop::maximum_packet_size] = max_packet_size;

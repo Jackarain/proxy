@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -41,6 +41,45 @@ struct shared_test_data {
 };
 
 using client_type = mqtt_client<test::test_stream>;
+using test::after;
+
+BOOST_FIXTURE_TEST_CASE(async_run_while_running, shared_test_data) {
+    auto connect = encoders::encode_connect(
+        "", std::nullopt, std::nullopt, 60, false, test::dflt_cprops, std::nullopt
+    );
+
+    test::msg_exchange broker_side;
+    broker_side
+        .expect(connect)
+            .complete_with(success, after(0ms))
+            .reply_with(connack, after(1ms));
+
+    asio::io_context ioc;
+    auto executor = ioc.get_executor();
+    auto& broker = asio::make_service<test::test_broker>(
+        ioc, executor, std::move(broker_side)
+    );
+
+    client_type c(executor);
+    c.brokers("127.0.0.1")
+        .async_run(asio::detached);
+
+    int already_running_calls = 0;
+    for (int i = 0; i < 2; ++i)
+        c.async_run([&](error_code ec) {
+            ++already_running_calls;
+            BOOST_TEST(ec == client::error::already_running);
+        });
+
+    test::test_timer timer(executor);
+    timer.expires_after(100ms);
+    timer.async_wait([&c](error_code) { c.cancel(); });
+
+    broker.run(ioc);
+
+    BOOST_TEST(already_running_calls == 2);
+    BOOST_TEST(broker.received_all_expected());
+}
 
 template <typename TestingClientFun>
 void run_test(
@@ -66,8 +105,6 @@ void run_test(
     broker.run(ioc);
     BOOST_TEST(broker.received_all_expected());
 }
-
-using test::after;
 
 BOOST_AUTO_TEST_CASE(create_client_with_executor) {
     asio::io_context ioc;

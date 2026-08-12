@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -45,7 +45,7 @@ private:
         Handler _handler;
     public:
         tracked_op(Handler&& h, const Executor& ex) :
-            _executor(tracking_executor(h, ex)), _handler(std::move(h))
+            _executor(boost::mqtt5::detail::tracking_executor(h, ex)), _handler(std::move(h))
         {}
 
         tracked_op(tracked_op&&) = default;

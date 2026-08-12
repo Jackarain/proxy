@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -31,7 +31,7 @@ public:
     cancellable_handler(Handler&& handler, const Executor& ex) :
         _executor(ex),
         _handler(std::move(handler)),
-        _handler_ex(tracking_executor(_handler, ex)),
+        _handler_ex(boost::mqtt5::detail::tracking_executor(_handler, ex)),
         _cancellation_state(
             asio::get_associated_cancellation_slot(_handler),
             asio::enable_total_cancellation {},

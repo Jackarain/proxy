@@ -11,6 +11,10 @@
 
 [section:relnotes Release Notes]
 
+[heading Boost Release 1.92]
+
+* Fixed regression in the copy-initialization of `optional<bool>`. This fixes [@https://github.com/boostorg/optional/issues/146 issue #146].
+
 [heading Boost Release 1.91]
 
 * For compilers with full C++11 support (including "unrestricted  unions" and ref-qualifiers)

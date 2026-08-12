@@ -7,6 +7,25 @@
 
 = Changelog
 
+== Boost 1.92
+
+* (Pull request https://github.com/boostorg/redis/pull/428[428])
+  Fixed a case of undefined behavior within `connection`
+  when attempting to cancel a request that has completed, but whose handler
+  hasn't been called yet. This happened due to an incorrect erase-remove use
+  with a `std::deque`. Thanks to Lorentz-Andrea Romeo (`@L0rentz`) for the fix.
+* (Pull request https://github.com/boostorg/redis/pull/415[415])
+  Optimized buffer rotations to reduce CPU consumption
+  when many small messages arrive in a single network packet.
+* (Pull request https://github.com/boostorg/redis/pull/424[424])
+  Added initializers to all members in the `config` struct.
+  This allows using designated initializers to create `config` objects.
+* (Pull request https://github.com/boostorg/redis/pull/409[409])
+  Removed the standalone workflow from the CMake.
+  This was an undocumented way of consuming Boost.Redis with CMake aimed
+  to internal development.
+
+
 == Boost 1.91
 
 * (Pull request https://github.com/boostorg/redis/pull/345[345],

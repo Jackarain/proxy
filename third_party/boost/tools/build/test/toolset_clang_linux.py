@@ -27,3 +27,6 @@ test_toolset("clang-linux", "3.9.0", [
     ["target-os=windows", "link=static"],
     ["target-os=windows", "architecture=x86", "address-model=32"]
     ])
+
+# Auto-deduced ar
+test_toolset("clang-linux", "3.9.1", [["target-os=linux"]])

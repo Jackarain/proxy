@@ -27,6 +27,15 @@ class string;
 
 namespace detail {
 
+inline
+bool
+ptr_in_range(char const* first, char const* last, char const* ptr) noexcept
+{
+    return std::less<char const*>()(ptr, last) &&
+        std::greater_equal<char const*>()(ptr, first);
+}
+
+
 class string_impl
 {
     struct table

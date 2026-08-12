@@ -494,11 +494,15 @@ insert(
     value const& v) ->
         iterator
 {
+    // v may refer to an element of this array, whose
+    // storage revert_insert can relocate and free, so
+    // copy it before inserting
+    value const tmp(v, sp_);
     revert_insert r(
         pos, count, *this);
     while(count--)
     {
-        ::new(r.p) value(v, sp_);
+        ::new(r.p) value(tmp, sp_);
         ++r.p;
     }
     return r.commit();
@@ -619,11 +623,15 @@ resize(
         return;
     }
     count -= size();
+    // v may refer to an element of this array, whose
+    // storage revert_insert can relocate and free, so
+    // copy it before inserting
+    value const tmp(v, sp_);
     revert_insert r(
         end(), count, *this);
     while(count--)
     {
-        ::new(r.p) value(v, sp_);
+        ::new(r.p) value(tmp, sp_);
         ++r.p;
     }
     r.commit();

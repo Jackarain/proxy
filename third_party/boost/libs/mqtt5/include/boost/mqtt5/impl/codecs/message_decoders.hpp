@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -37,10 +37,10 @@ inline std::optional<fixed_header> decode_fixed_header(
 using packet_id = uint16_t;
 
 inline std::optional<packet_id> decode_packet_id(
-    byte_citer& it
+    byte_citer& it, const byte_citer last
 ) {
     constexpr auto packet_id_ = basic::word_;
-    return type_parse(it, it + sizeof(uint16_t), packet_id_);
+    return type_parse(it, last, packet_id_);
 }
 
 using connect_message = std::tuple<

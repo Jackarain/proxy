@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -159,6 +159,41 @@ BOOST_FIXTURE_TEST_CASE(malformed_connack_varlen, shared_test_data) {
 
     auto handler = [&](error_code ec) {
         BOOST_TEST(ec == asio::error::try_again);
+    };
+
+    run_unit_test(std::move(broker_side), std::move(handler));
+}
+
+BOOST_FIXTURE_TEST_CASE(connack_varlen_smaller_than_bytes_read, shared_test_data) {
+    // Remaining Length (2) is smaller than the number of variable header bytes
+    // that were already read along with the fixed header
+    auto malformed_connack = std::string({ 0x20, 0x02, 0x00, 0x00, 0x00 });
+
+    test::msg_exchange broker_side;
+    broker_side
+        .expect(connect)
+            .complete_with(success, after(2ms))
+            .reply_with(malformed_connack, after(3ms));
+
+    auto handler = [&](error_code ec) {
+        BOOST_TEST(ec == client::error::malformed_packet);
+    };
+
+    run_unit_test(std::move(broker_side), std::move(handler));
+}
+
+BOOST_FIXTURE_TEST_CASE(connack_larger_than_max_packet_size, shared_test_data) {
+    // Remaining Length is 268'435'455
+    auto malformed_connack = std::string({ 0x20, -1 /* 0xFF */, -1, -1, 0x7F });
+
+    test::msg_exchange broker_side;
+    broker_side
+        .expect(connect)
+            .complete_with(success, after(2ms))
+            .reply_with(malformed_connack, after(3ms));
+
+    auto handler = [&](error_code ec) {
+        BOOST_TEST(ec == client::error::malformed_packet);
     };
 
     run_unit_test(std::move(broker_side), std::move(handler));

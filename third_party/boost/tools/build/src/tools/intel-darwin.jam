@@ -191,5 +191,5 @@ actions link bind LIBRARIES
 
 actions link.dll bind LIBRARIES
 {
-    "$(CONFIG_COMMAND)" $(USER_OPTIONS) -L"$(LINKPATH)" -o "$(<)" -single_module -dynamiclib -install_name "$(<[1]:D=)" "$(>)"  "$(LIBRARIES)" -l$(FINDLIBS-SA) -l$(FINDLIBS-ST) $(OPTIONS)
+    "$(CONFIG_COMMAND)" $(USER_OPTIONS) -L"$(LINKPATH)" -o "$(<)" -dynamiclib -install_name "$(<[1]:D=)" "$(>)"  "$(LIBRARIES)" -l$(FINDLIBS-SA) -l$(FINDLIBS-ST) $(OPTIONS)
 }

@@ -1,6 +1,23 @@
 [[b2.history]]
 = History
 
+== Version 5.5.3
+
+* Fix regression when using ccache with clang-linux toolset.
+  -- _Alexander Grund_
+
+== Version 5.5.2
+
+* Fix invalid use of system `ar` when cross-compiling with llvm on Linux instead
+  of defaulting to the matching cross-compiler `llvm-ar`.
+  -- _Uilian Ries_
+* Fix use of obsolete/deprecated `-single_module` option in darwin/mscOS
+  tooling.
+  -- _René Ferdinand Rivera Morell_
+* Fix startup, post-config, crashes when building B2 for install after
+  bootstrap.
+  -- _René Ferdinand Rivera Morell_
+
 == Version 5.5.1
 
 Fix python config error when `ldd --version` fails instead of resulting in not

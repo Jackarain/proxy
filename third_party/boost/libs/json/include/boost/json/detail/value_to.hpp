@@ -238,7 +238,7 @@ value_to_impl(
             return {boost::system::in_place_error, elem_res.error()};
         *ins++ = value_type<T>{
             key_type<T>(kv.key()),
-            std::move(*elem_res)};
+            std::move(elem_res.unsafe_value())};
     }
     return res;
 }
@@ -276,7 +276,7 @@ value_to_impl(
         auto elem_res = try_value_to<value_type<T>>( val, ctx );
         if( elem_res.has_error() )
             return {boost::system::in_place_error, elem_res.error()};
-        *ins++ = std::move(*elem_res);
+        *ins++ = std::move(elem_res.unsafe_value());
     }
     return result;
 }
@@ -401,7 +401,7 @@ struct to_described_member
 # pragma GCC diagnostic pop
 #endif
         if( member_res )
-            (*res).* D::pointer = std::move(*member_res);
+            (*res).* D::pointer = std::move(member_res.unsafe_value());
         else
             res = {boost::system::in_place_error, member_res.error()};
     }
@@ -543,7 +543,8 @@ struct alternative_converter
         if( attempt )
         {
             using cat = variant_construction_category<T, V, I>;
-            res = initialize_variant<T, I>( std::move(*attempt), cat() );
+            res = initialize_variant<T, I>(
+                std::move(attempt.unsafe_value()), cat() );
         }
     }
 };
@@ -634,10 +635,7 @@ mp11::mp_if_c< !mp11::mp_valid<has_user_conversion_to_impl, T>::value, T>
 value_to_impl(
     user_conversion_tag, value_to_tag<T>, value const& jv, Ctx const& )
 {
-    auto res = tag_invoke(try_value_to_tag<T>(), jv);
-    if( res.has_error() )
-        throw_system_error( res.error() );
-    return std::move(*res);
+    return tag_invoke(try_value_to_tag<T>(), jv).value();
 }
 
 template<
@@ -652,10 +650,7 @@ mp11::mp_if_c<
 value_to_impl(
     context_conversion_tag, value_to_tag<T>, value const& jv, Ctx const& ctx )
 {
-    auto res = tag_invoke( try_value_to_tag<T>(), jv, Sup::get(ctx) );
-    if( res.has_error() )
-        throw_system_error( res.error() );
-    return std::move(*res);
+    return tag_invoke( try_value_to_tag<T>(), jv, Sup::get(ctx) ).value();
 }
 
 template<
@@ -673,10 +668,7 @@ value_to_impl(
     value const& jv,
     Ctx const& ctx )
 {
-    auto res = tag_invoke(try_value_to_tag<T>(), jv, Sup::get(ctx), ctx);
-    if( res.has_error() )
-        throw_system_error( res.error() );
-    return std::move(*res);
+    return tag_invoke(try_value_to_tag<T>(), jv, Sup::get(ctx), ctx).value();
 }
 
 //----------------------------------------------------------

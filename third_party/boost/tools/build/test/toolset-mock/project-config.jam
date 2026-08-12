@@ -27,6 +27,8 @@ using darwin : 4.2.1 : $(PYTHON) $(here)/src/darwin-4.2.1.py
 
 using clang-darwin  : 3.9.0 : $(PYTHON) $(here)/src/clang-3.9.0-darwin.py : $(ar) ;
 using clang-linux   : 3.9.0 : $(PYTHON) $(here)/src/clang-linux-3.9.0.py : $(ar) ;
+# Let clang-linux auto-deduce the archiver
+using clang-linux   : 3.9.1 : $(PYTHON) $(here)/src/clang-linux-3.9.0.py ;
 using clang-vxworks : 4.0.1 : $(PYTHON) $(here)/src/clang-vxworks-4.0.1.py : $(ar) ;
 using intel-darwin  : 10.2  : $(PYTHON) $(here)/src/intel-darwin-10.2.py : $(ar) ;
 

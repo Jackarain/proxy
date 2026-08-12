@@ -1416,6 +1416,8 @@ a pointer to the contained value otherwise.
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
 
+[*Constraints:]  `std::declval<const Ti&>()==std::declval<const Ti&>()` is a valid expression
+convertible to `bool` for all `Ti` in `Ts...`.[br]
 [*Returns:] `x.index()==y.index()&&get<I>(x)==get<I>(y)` with `I==x.index()`.
 
 [#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_ne]
@@ -1425,6 +1427,8 @@ a pointer to the contained value otherwise.
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
 
+[*Constraints:]  `std::declval<const Ti&>()!=std::declval<const Ti&>()` is a valid expression
+convertible to `bool` for all `Ti` in `Ts...`.[br]
 [*Returns:] `x.index()!=y.index()||get<I>(x)!=get<I>(y)` with `I==x.index()`.
 
 [#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_lt]
@@ -1434,6 +1438,8 @@ a pointer to the contained value otherwise.
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
 
+[*Constraints:]  `std::declval<const Ti&>()<std::declval<const Ti&>()` is a valid expression
+convertible to `bool` for all `Ti` in `Ts...`.[br]
 [*Returns:] `x.index()<y.index()||x.index()==y.index()&&get<I>(x)<get<I>(y)` with `I==x.index()`.
 
 [#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_gt]
@@ -1443,6 +1449,8 @@ a pointer to the contained value otherwise.
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
 
+[*Constraints:]  `std::declval<const Ti&>()>std::declval<const Ti&>()` is a valid expression
+convertible to `bool` for all `Ti` in `Ts...`.[br]
 [*Returns:] `x.index()>y.index()||x.index()==y.index()&&get<I>(x)>get<I>(y)` with `I==x.index()`.
 
 [#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_le]
@@ -1452,6 +1460,8 @@ a pointer to the contained value otherwise.
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
 
+[*Constraints:]  `std::declval<const Ti&>()<=std::declval<const Ti&>()` is a valid expression
+convertible to `bool` for all `Ti` in `Ts...`.[br]
 [*Returns:] `x.index()<y.index()||x.index()==y.index()&&get<I>(x)<=get<I>(y)` with `I==x.index()`.
 
 [#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.operator_ge]
@@ -1461,6 +1471,8 @@ a pointer to the contained value otherwise.
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& x,`[br]
 [^ \u00a0\u00a0]`const `[^ /variant_collection_value_type_impl/]`<Ts...>& y);`
 
+[*Constraints:]  `std::declval<const Ti&>()>=std::declval<const Ti&>()` is a valid expression
+convertible to `bool` for all `Ti` in `Ts...`.[br]
 [*Returns:] `x.index()>y.index()||x.index()==y.index()&&get<I>(x)>=get<I>(y)` with `I==x.index()`.
 
 [#poly_collection.reference.header_boost_poly_collection_va0.alias_template_variant_collectio.visit]

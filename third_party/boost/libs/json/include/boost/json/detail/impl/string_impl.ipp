@@ -20,17 +20,6 @@ namespace boost {
 namespace json {
 namespace detail {
 
-inline
-bool
-ptr_in_range(
-    const char* first,
-    const char* last,
-    const char* ptr) noexcept
-{
-    return std::less<const char*>()(ptr, last) &&
-        std::greater_equal<const char*>()(ptr, first);
-}
-
 string_impl::
 string_impl() noexcept
 {
@@ -395,6 +384,7 @@ replace_unchecked(
         detail::throw_system_error( error::out_of_range, &loc );
     }
     const auto curr_data = data();
+    n1 = (std::min)(n1, curr_size - pos);
     const auto delta = (std::max)(n1, n2) -
         (std::min)(n1, n2);
     // if the size doesn't change, we don't need to

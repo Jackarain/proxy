@@ -911,7 +911,7 @@ toolset.flags gcc.link OPTIONS <coverage>on : --coverage ;
     # This does not support -R.
     toolset.flags gcc.link RPATH_OPTION <target-os>darwin : -rpath ;
     # -rpath-link is not supported at all.
-    toolset.flags gcc.link SHARED_OPTION <target-os>darwin : -dynamiclib -single_module ;
+    toolset.flags gcc.link SHARED_OPTION <target-os>darwin : -dynamiclib ;
     toolset.flags gcc.link HAVE_SONAME <target-os>darwin : "" ;
     toolset.flags gcc.link SONAME_OPTION <target-os>darwin : -install_name ;
     toolset.flags gcc.link SONAME_PREFIX <target-os>darwin : @rpath/ ;

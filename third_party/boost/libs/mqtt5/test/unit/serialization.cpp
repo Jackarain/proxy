@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2023-2025 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
+// Copyright (c) 2023-2026 Ivica Siladic, Bruno Iljazovic, Korina Simicevic
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -315,7 +315,7 @@ BOOST_AUTO_TEST_CASE(test_puback) {
     auto header = decoders::decode_fixed_header(it, last);
     BOOST_TEST_REQUIRE(header.has_value());
 
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     BOOST_TEST(*packet_id_ == packet_id);
 
@@ -351,7 +351,7 @@ BOOST_AUTO_TEST_CASE(test_pubrec) {
     auto header = decoders::decode_fixed_header(it, last);
     BOOST_TEST_REQUIRE(header.has_value());
 
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     BOOST_TEST(*packet_id_ == packet_id);
 
@@ -387,7 +387,7 @@ BOOST_AUTO_TEST_CASE(test_pubrel) {
     auto header = decoders::decode_fixed_header(it, last);
     BOOST_TEST_REQUIRE(header.has_value());
 
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     BOOST_TEST(*packet_id_ == packet_id);
 
@@ -423,7 +423,7 @@ BOOST_AUTO_TEST_CASE(test_pubcomp) {
     auto header = decoders::decode_fixed_header(it, last);
     BOOST_TEST_REQUIRE(header.has_value());
 
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     BOOST_TEST(*packet_id_ == packet_id);
 
@@ -470,7 +470,7 @@ BOOST_AUTO_TEST_CASE(test_subscribe) {
     BOOST_TEST_REQUIRE(header.has_value());
 
     const auto& [control_byte, remain_length] = *header;
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     BOOST_TEST(*packet_id_ == packet_id);
     auto rv = decoders::decode_subscribe(remain_length - sizeof(uint16_t), it);
@@ -514,7 +514,7 @@ BOOST_AUTO_TEST_CASE(test_suback) {
     BOOST_TEST_REQUIRE(header.has_value());
 
     const auto& [control_byte, remain_length] = *header;
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     BOOST_TEST(*packet_id_ == packet_id);
     auto rv = decoders::decode_suback(remain_length - sizeof(uint16_t), it);
@@ -548,7 +548,7 @@ BOOST_AUTO_TEST_CASE(test_unsubscribe) {
     BOOST_TEST_REQUIRE(header.has_value());
 
     const auto& [control_byte, remain_length] = *header;
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     BOOST_TEST(*packet_id_ == packet_id);
     auto rv = decoders::decode_unsubscribe(remain_length - sizeof(uint16_t), it);
@@ -583,7 +583,7 @@ BOOST_AUTO_TEST_CASE(test_unsuback) {
     BOOST_TEST_REQUIRE(header.has_value());
 
     const auto& [control_byte, remain_length] = *header;
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     BOOST_TEST(*packet_id_ == packet_id);
     auto rv = decoders::decode_unsuback(remain_length - sizeof(uint16_t), it);
@@ -745,7 +745,7 @@ BOOST_AUTO_TEST_CASE(deserialize_user_property) {
     byte_citer it = msg.cbegin(), last = msg.cend();
     auto header = decoders::decode_fixed_header(it, last);
     BOOST_TEST_REQUIRE(header.has_value());
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     const auto& [control_byte, remain_length] = *header;
     auto rv = decoders::decode_puback(remain_length - sizeof(uint16_t), it);
@@ -768,7 +768,7 @@ BOOST_AUTO_TEST_CASE(deserialize_empty_user_property) {
     byte_citer it = msg.cbegin(), last = msg.cend();
     auto header = decoders::decode_fixed_header(it, last);
     BOOST_TEST_REQUIRE(header.has_value());
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     const auto& [control_byte, remain_length] = *header;
     auto rv = decoders::decode_puback(remain_length - sizeof(uint16_t), it);
@@ -791,7 +791,38 @@ BOOST_AUTO_TEST_CASE(malformed_user_property) {
     byte_citer it = msg.cbegin(), last = msg.cend();
     auto header = decoders::decode_fixed_header(it, last);
     BOOST_TEST_REQUIRE(header.has_value());
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
+    BOOST_TEST_REQUIRE(packet_id_.has_value());
+    const auto& [control_byte, remain_length] = *header;
+    auto rv = decoders::decode_puback(remain_length - sizeof(uint16_t), it);
+    BOOST_TEST(!rv);
+}
+
+BOOST_AUTO_TEST_CASE(truncated_packet_id) {
+    const char malformed_puback[] = {
+        64, 1, 0 // Packet Identifier is one byte short
+    };
+    std::string msg { malformed_puback, sizeof(malformed_puback) / sizeof(char) };
+
+    byte_citer it = msg.cbegin(), last = msg.cend();
+    auto header = decoders::decode_fixed_header(it, last);
+    BOOST_TEST_REQUIRE(header.has_value());
+    auto packet_id_ = decoders::decode_packet_id(it, last);
+    BOOST_TEST(!packet_id_);
+}
+
+BOOST_AUTO_TEST_CASE(props_length_past_end_of_packet) {
+    // Remaining Length leaves 4 bytes for the properties,
+    // but the Property Length claims there are 11
+    const char malformed_puback[] = {
+        64, 8, 0, 1, 0, 11, 38, 0, 3, 'k', 'e', 'y', 0, 3, 'v', 'a', 'l'
+    };
+    std::string msg { malformed_puback, sizeof(malformed_puback) / sizeof(char) };
+
+    byte_citer it = msg.cbegin(), last = msg.cend();
+    auto header = decoders::decode_fixed_header(it, last);
+    BOOST_TEST_REQUIRE(header.has_value());
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     const auto& [control_byte, remain_length] = *header;
     auto rv = decoders::decode_puback(remain_length - sizeof(uint16_t), it);
@@ -808,7 +839,7 @@ BOOST_AUTO_TEST_CASE(malformed_reason_string) {
     byte_citer it = msg.cbegin(), last = msg.cend();
     auto header = decoders::decode_fixed_header(it, last);
     BOOST_TEST_REQUIRE(header.has_value());
-    auto packet_id_ = decoders::decode_packet_id(it);
+    auto packet_id_ = decoders::decode_packet_id(it, last);
     BOOST_TEST_REQUIRE(packet_id_.has_value());
     const auto& [control_byte, remain_length] = *header;
     auto rv = decoders::decode_puback(remain_length - sizeof(uint16_t), it);

@@ -1,4 +1,4 @@
-/* Copyright 2024-2025 Joaquin M Lopez Munoz.
+/* Copyright 2024-2026 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -24,6 +24,12 @@
 #include <boost/mp11/utility.hpp>
 #include <boost/poly_collection/detail/is_equality_comparable.hpp>
 #include <boost/poly_collection/detail/is_nothrow_eq_comparable.hpp>
+#include <boost/type_traits/has_equal_to.hpp>
+#include <boost/type_traits/has_greater.hpp>
+#include <boost/type_traits/has_greater_equal.hpp>
+#include <boost/type_traits/has_less.hpp>
+#include <boost/type_traits/has_less_equal.hpp>
+#include <boost/type_traits/has_not_equal_to.hpp>
 #include <boost/type_traits/is_constructible.hpp>
 #include <cstddef>
 #include <limits>
@@ -511,7 +517,14 @@ struct eq_
   bool operator()(const T& x,const T& y)const{return x==y;}
 };
 
-template<typename... Ts>
+template<typename T>
+using eq_constraint=has_equal_to<T,T,bool>;
+
+template<
+  typename... Ts,
+  typename std::enable_if<
+    mp11::mp_all<eq_constraint<Ts>...>::value>::type* =nullptr
+>
 bool operator==(
   const fixed_variant<Ts...>& x,const fixed_variant<Ts...>& y)
 {
@@ -526,7 +539,14 @@ struct neq_
   bool operator()(const T& x,const T& y)const{return x!=y;}
 };
 
-template<typename... Ts>
+template<typename T>
+using neq_constraint=has_not_equal_to<T,T,bool>;
+
+template<
+  typename... Ts,
+  typename std::enable_if<
+    mp11::mp_all<neq_constraint<Ts>...>::value>::type* =nullptr
+>
 bool operator!=(
   const fixed_variant<Ts...>& x,const fixed_variant<Ts...>& y)
 {
@@ -542,7 +562,14 @@ struct lt_
   bool operator()(const T& x,const T& y)const{return x<y;}
 };
 
-template<typename... Ts>
+template<typename T>
+using lt_constraint=has_less<T,T,bool>;
+
+template<
+  typename... Ts,
+  typename std::enable_if<
+    mp11::mp_all<lt_constraint<Ts>...>::value>::type* =nullptr
+>
 bool operator<(
   const fixed_variant<Ts...>& x,const fixed_variant<Ts...>& y)
 {
@@ -558,7 +585,14 @@ struct lte_
   bool operator()(const T& x,const T& y)const{return x<=y;}
 };
 
-template<typename... Ts>
+template<typename T>
+using lte_constraint=has_less_equal<T,T,bool>;
+
+template<
+  typename... Ts,
+  typename std::enable_if<
+    mp11::mp_all<lte_constraint<Ts>...>::value>::type* =nullptr
+>
 bool operator<=(
   const fixed_variant<Ts...>& x,const fixed_variant<Ts...>& y)
 {
@@ -574,7 +608,14 @@ struct gt_
   bool operator()(const T& x,const T& y)const{return x>y;}
 };
 
-template<typename... Ts>
+template<typename T>
+using gt_constraint=has_greater<T,T,bool>;
+
+template<
+  typename... Ts,
+  typename std::enable_if<
+    mp11::mp_all<gt_constraint<Ts>...>::value>::type* =nullptr
+>
 bool operator>(
   const fixed_variant<Ts...>& x,const fixed_variant<Ts...>& y)
 {
@@ -590,7 +631,14 @@ struct gte_
   bool operator()(const T& x,const T& y)const{return x>=y;}
 };
 
-template<typename... Ts>
+template<typename T>
+using gte_constraint=has_greater_equal<T,T,bool>;
+
+template<
+  typename... Ts,
+  typename std::enable_if<
+    mp11::mp_all<gte_constraint<Ts>...>::value>::type* =nullptr
+>
 bool operator>=(
   const fixed_variant<Ts...>& x,const fixed_variant<Ts...>& y)
 {

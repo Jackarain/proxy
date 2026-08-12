@@ -108,6 +108,11 @@ rule init ( version ? :  command * : options * ) {
     {
     archiver = $(root)/bin/ar ;
     }
+  if ! $(archiver)
+    {
+    local bin = [ common.get-absolute-tool-path $(command[-1]) ] ;
+    archiver = [ common.get-invocation-command-nodefault clang-linux : llvm-ar : : $(bin) : search-path ] ;
+    }
   toolset.flags clang-linux.archive .AR $(condition) : $(archiver[1]) ;
 
     # - Resource compiler.

@@ -26,7 +26,6 @@ class Asciidoctor::AbstractBlock
     end
 
     def document_filepath
-        suffix = @document.attributes['outfilesuffix']
         File.join(document_dirname, @document.document_filename).delete_prefix(
             ".#{File::SEPARATOR}")
     end
