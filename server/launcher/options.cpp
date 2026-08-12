@@ -9,8 +9,7 @@
 #include "options.hpp"
 
 #include <algorithm>
-#include <charconv>
-#include <cmath>
+#include <cstdlib>
 
 namespace launcher {
 
@@ -162,10 +161,12 @@ std::int64_t to_int_value(const json::value& v)
 	if (v.is_double())
 		return static_cast<std::int64_t>(v.as_double());
 	if (v.is_string()) {
+		// std::from_chars 的浮点重载在 macOS 上不可用（macOS 26 才引入），
+		// 改用 strtod 实现相同语义：解析出有效数字即视为成功。
 		const auto& s = v.as_string();
-		double f = 0;
-		auto res = std::from_chars(s.data(), s.data() + s.size(), f);
-		if (res.ec == std::errc())
+		char* end = nullptr;
+		const double f = std::strtod(s.data(), &end);
+		if (end != s.data())
 			return static_cast<std::int64_t>(f);
 	}
 	return 0;
