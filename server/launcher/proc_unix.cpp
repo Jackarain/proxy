@@ -8,6 +8,12 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+// musl 下 id_t 等类型仅在 _GNU_SOURCE/_BSD_SOURCE 时可见；
+// 严格 ISO 模式（-std=c++23）不会自动定义，需在此显式声明。
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "proc.hpp"
 
 #include <cerrno>
@@ -27,7 +33,8 @@ namespace launcher {
 namespace {
 
 // 从 fd 逐行读取到环形缓冲。prefix 为行前缀。
-void pump_fd(int fd, const std::shared_ptr<ringbuf>& logs, const std::string& prefix) {
+void pump_fd(int fd, const std::shared_ptr<ringbuf>& logs, const std::string& prefix)
+{
 	char buf[8192];
 	std::string pending;
 	for (;;) {
@@ -52,27 +59,29 @@ void pump_fd(int fd, const std::shared_ptr<ringbuf>& logs, const std::string& pr
 
 } // namespace
 
-proc::~proc() {
+proc::~proc()
+{
 	// 析构可能发生在自身线程内（监控/读取线程持有 proc 的最后引用）：
 	// 不能 join 当前线程（EDEADLK），此时 detach 让线程自然结束。
 	auto this_id = std::this_thread::get_id();
-	if (reader_out.joinable() && reader_out.get_id() != this_id)
-		reader_out.join();
-	else if (reader_out.joinable())
-		reader_out.detach();
-	if (reader_err.joinable() && reader_err.get_id() != this_id)
-		reader_err.join();
-	else if (reader_err.joinable())
-		reader_err.detach();
-	if (monitor.joinable() && monitor.get_id() != this_id)
-		monitor.join();
-	else if (monitor.joinable())
-		monitor.detach();
+	if (reader_out_.joinable() && reader_out_.get_id() != this_id)
+		reader_out_.join();
+	else if (reader_out_.joinable())
+		reader_out_.detach();
+	if (reader_err_.joinable() && reader_err_.get_id() != this_id)
+		reader_err_.join();
+	else if (reader_err_.joinable())
+		reader_err_.detach();
+	if (monitor_.joinable() && monitor_.get_id() != this_id)
+		monitor_.join();
+	else if (monitor_.joinable())
+		monitor_.detach();
 }
 
 std::shared_ptr<proc> spawn_proc(const std::string& exe,
 	const std::vector<std::string>& args, const std::string& workdir,
-	std::shared_ptr<ringbuf> logs, std::function<void()> on_exit) {
+	std::shared_ptr<ringbuf> logs, std::function<void()> on_exit)
+{
 	int out_pipe[2];
 	int err_pipe[2];
 	if (::pipe(out_pipe) != 0 || ::pipe(err_pipe) != 0)
@@ -116,52 +125,54 @@ std::shared_ptr<proc> spawn_proc(const std::string& exe,
 	::close(err_pipe[1]);
 
 	auto p = std::make_shared<proc>();
-	p->pid = pid;
-	p->alive = true;
-	p->logs = logs;
-	p->on_exit = std::move(on_exit);
+	p->pid_ = pid;
+	p->alive_ = true;
+	p->logs_ = logs;
+	p->on_exit_ = std::move(on_exit);
 
 	int out_fd = out_pipe[0];
 	int err_fd = err_pipe[0];
 
 	// 监控线程：等待进程退出。
-	p->monitor = std::thread([p, pid]() {
+	p->monitor_ = std::thread([p, pid]() {
 		int status = 0;
 		::waitpid(pid, &status, 0);
-		p->exit_code = WIFEXITED(status) ? WEXITSTATUS(status)
+		p->exit_code_ = WIFEXITED(status) ? WEXITSTATUS(status)
 			: (WIFSIGNALED(status) ? 128 + WTERMSIG(status) : 0);
-		p->alive = false;
-		p->terminated = true;
-		if (p->on_exit)
-			p->on_exit();
+		p->alive_ = false;
+		p->terminated_ = true;
+		if (p->on_exit_)
+			p->on_exit_();
 	});
 
 	// 输出采集线程。
-	p->reader_out = std::thread([p, out_fd]() { pump_fd(out_fd, p->logs, ""); });
-	p->reader_err = std::thread([p, err_fd]() { pump_fd(err_fd, p->logs, "[stderr] "); });
+	p->reader_out_ = std::thread([p, out_fd]() { pump_fd(out_fd, p->logs_, ""); });
+	p->reader_err_ = std::thread([p, err_fd]() { pump_fd(err_fd, p->logs_, "[stderr] "); });
 
 	return p;
 }
 
-void stop_proc(const std::shared_ptr<proc>& p, int timeout_seconds) {
-	if (!p || !p->alive)
+void stop_proc(const std::shared_ptr<proc>& p, int timeout_seconds)
+{
+	if (!p || !p->alive_)
 		return;
 	// 向进程组发送 SIGTERM。
-	::kill(-p->pid, SIGTERM);
+	::kill(-p->pid_, SIGTERM);
 	// 等待退出。
 	auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_seconds);
-	while (p->alive && std::chrono::steady_clock::now() < deadline)
+	while (p->alive_ && std::chrono::steady_clock::now() < deadline)
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
-	if (p->alive) {
+	if (p->alive_) {
 		// 超时后 SIGKILL。
-		::kill(-p->pid, SIGKILL);
+		::kill(-p->pid_, SIGKILL);
 		deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_seconds);
-		while (p->alive && std::chrono::steady_clock::now() < deadline)
+		while (p->alive_ && std::chrono::steady_clock::now() < deadline)
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	}
 }
 
-void stop_pid(process_id pid) {
+void stop_pid(process_id pid)
+{
 	if (pid <= 0)
 		return;
 	::kill(pid, SIGTERM);
@@ -173,14 +184,16 @@ void stop_pid(process_id pid) {
 	::kill(pid, SIGKILL);
 }
 
-bool process_alive(process_id pid) {
+bool process_alive(process_id pid)
+{
 	if (pid <= 0)
 		return false;
 	int ret = ::kill(pid, 0);
 	return ret == 0 || errno == EPERM;
 }
 
-bool process_matches_pid_file(process_id pid, const std::string& pid_file_path) {
+bool process_matches_pid_file(process_id pid, const std::string& pid_file_path)
+{
 	std::string cmdline_path = "/proc/" + std::to_string(pid) + "/cmdline";
 	int fd = ::open(cmdline_path.c_str(), O_RDONLY);
 	if (fd < 0)

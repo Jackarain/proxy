@@ -2,11 +2,11 @@
 // ringbuf.hpp
 // ~~~~~~~~~~~
 //
-// 线程安全的定长日志环形缓冲。
-// 每行带单调递增序号（增量拉取用）；gen 为缓冲代次，实例重启重建缓冲时变化。
-//
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// 线程安全的定长日志环形缓冲。每行带单调递增序号（增量拉取用）；
+// gen 为缓冲代次，实例重启重建缓冲时变化。
 //
 
 #ifndef LAUNCHER_RINGBUF_HPP
@@ -20,7 +20,8 @@
 
 namespace launcher {
 
-class ringbuf {
+class ringbuf
+{
 public:
 	explicit ringbuf(int max = 2000)
 		: max_(max > 0 ? max : 2000)
@@ -28,7 +29,8 @@ public:
 	{}
 
 	// 追加一行，超出容量时丢弃最旧行。
-	void add(const std::string& line) {
+	void add(const std::string& line)
+	{
 		std::lock_guard<std::mutex> lock(mu_);
 		if (lines_.size() == static_cast<std::size_t>(max_)) {
 			lines_.erase(lines_.begin());
@@ -40,7 +42,8 @@ public:
 	}
 
 	// 返回最近 n 行。
-	std::vector<std::string> tail(int n) {
+	std::vector<std::string> tail(int n)
+	{
 		std::lock_guard<std::mutex> lock(mu_);
 		if (n <= 0 || n > static_cast<int>(lines_.size()))
 			n = static_cast<int>(lines_.size());
@@ -49,7 +52,8 @@ public:
 	}
 
 	// 返回最近 n 行及其序号。
-	void tail_seq(int n, std::vector<std::string>& lines, std::vector<std::int64_t>& seqs) {
+	void tail_seq(int n, std::vector<std::string>& lines, std::vector<std::int64_t>& seqs)
+	{
 		std::lock_guard<std::mutex> lock(mu_);
 		if (n <= 0 || n > static_cast<int>(lines_.size()))
 			n = static_cast<int>(lines_.size());
@@ -58,7 +62,8 @@ public:
 	}
 
 	// 返回序号大于 pos 的行及其序号。
-	void since(std::int64_t pos, std::vector<std::string>& lines, std::vector<std::int64_t>& seqs) {
+	void since(std::int64_t pos, std::vector<std::string>& lines, std::vector<std::int64_t>& seqs)
+	{
 		std::lock_guard<std::mutex> lock(mu_);
 		lines.clear();
 		seqs.clear();
@@ -70,12 +75,14 @@ public:
 		}
 	}
 
-	std::int64_t next_seq() {
+	std::int64_t next_seq()
+	{
 		std::lock_guard<std::mutex> lock(mu_);
 		return next_;
 	}
 
-	std::int64_t generation() {
+	std::int64_t generation()
+	{
 		std::lock_guard<std::mutex> lock(mu_);
 		return gen_;
 	}

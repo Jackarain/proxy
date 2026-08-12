@@ -18,8 +18,9 @@ else()
 endif()
 
 # 构建期内嵌 WebUI：生成 webui_embedded.cpp（静态资源直接编入可执行文件）。
+# CONFIGURE_DEPENDS 使更新 webui 文件后 CMake 自动重新收集列表并重新配置。
 set(WEBUI_EMBEDDED_CPP ${CMAKE_CURRENT_BINARY_DIR}/webui_embedded.cpp)
-file(GLOB_RECURSE WEBUI_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/webui
+file(GLOB_RECURSE WEBUI_FILES CONFIGURE_DEPENDS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/webui
 	${CMAKE_CURRENT_SOURCE_DIR}/webui/*)
 set(WEBUI_FILE_DEPS)
 foreach (f ${WEBUI_FILES})
@@ -50,6 +51,7 @@ add_executable(launcher
 target_link_libraries(launcher
 	${OPENSSL_LIBRARIES}
 	${PROXY_LIBRARIES}
+	Boost::program_options
 )
 
 # 启用 io_uring 时链接 liburing（与 proxy_server 一致），

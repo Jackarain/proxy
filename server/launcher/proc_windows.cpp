@@ -24,7 +24,8 @@ namespace launcher {
 namespace {
 
 // UTF-8 → UTF-16（CreateProcessW 需要宽字符路径/命令行）。
-std::wstring utf8_to_wide(const std::string& s) {
+std::wstring utf8_to_wide(const std::string& s)
+{
 	if (s.empty())
 		return {};
 	int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), nullptr, 0);
@@ -37,7 +38,8 @@ std::wstring utf8_to_wide(const std::string& s) {
 
 // 单个命令行参数加引号（遵循 CommandLineToArgvW 的解析规则）：
 // 含空格/Tab/引号或为空时用双引号包裹，引号前反斜杠翻倍。
-std::wstring quote_arg(const std::string& s) {
+std::wstring quote_arg(const std::string& s)
+{
 	bool need_quote = s.empty();
 	for (char c : s) {
 		if (c == ' ' || c == '\t' || c == '"') {
@@ -70,7 +72,8 @@ std::wstring quote_arg(const std::string& s) {
 }
 
 // 从管道句柄逐行读取到环形缓冲。prefix 为行前缀。
-void pump_handle(HANDLE h, const std::shared_ptr<ringbuf>& logs, const std::string& prefix) {
+void pump_handle(HANDLE h, const std::shared_ptr<ringbuf>& logs, const std::string& prefix)
+{
 	char buf[8192];
 	std::string pending;
 	for (;;) {
@@ -95,27 +98,29 @@ void pump_handle(HANDLE h, const std::shared_ptr<ringbuf>& logs, const std::stri
 
 } // namespace
 
-proc::~proc() {
+proc::~proc()
+{
 	// 析构可能发生在自身线程内（监控/读取线程持有 proc 的最后引用）：
 	// 不能 join 当前线程（死锁），此时 detach 让线程自然结束。
 	auto this_id = std::this_thread::get_id();
-	if (reader_out.joinable() && reader_out.get_id() != this_id)
-		reader_out.join();
-	else if (reader_out.joinable())
-		reader_out.detach();
-	if (reader_err.joinable() && reader_err.get_id() != this_id)
-		reader_err.join();
-	else if (reader_err.joinable())
-		reader_err.detach();
-	if (monitor.joinable() && monitor.get_id() != this_id)
-		monitor.join();
-	else if (monitor.joinable())
-		monitor.detach();
+	if (reader_out_.joinable() && reader_out_.get_id() != this_id)
+		reader_out_.join();
+	else if (reader_out_.joinable())
+		reader_out_.detach();
+	if (reader_err_.joinable() && reader_err_.get_id() != this_id)
+		reader_err_.join();
+	else if (reader_err_.joinable())
+		reader_err_.detach();
+	if (monitor_.joinable() && monitor_.get_id() != this_id)
+		monitor_.join();
+	else if (monitor_.joinable())
+		monitor_.detach();
 }
 
 std::shared_ptr<proc> spawn_proc(const std::string& exe,
 	const std::vector<std::string>& args, const std::string& workdir,
-	std::shared_ptr<ringbuf> logs, std::function<void()> on_exit) {
+	std::shared_ptr<ringbuf> logs, std::function<void()> on_exit)
+{
 	// 可继承句柄的匿名管道（子进程 stdout/stderr）。
 	SECURITY_ATTRIBUTES sa{ sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE };
 	HANDLE out_read = nullptr, out_write = nullptr;
@@ -172,44 +177,45 @@ std::shared_ptr<proc> spawn_proc(const std::string& exe,
 	CloseHandle(err_write);
 
 	auto p = std::make_shared<proc>();
-	p->pid = pi.dwProcessId;
-	p->alive = true;
-	p->logs = logs;
-	p->on_exit = std::move(on_exit);
+	p->pid_ = pi.dwProcessId;
+	p->alive_ = true;
+	p->logs_ = logs;
+	p->on_exit_ = std::move(on_exit);
 
 	// 监控线程：等待进程退出并上报退出码。
 	HANDLE hprocess = pi.hProcess;
-	p->monitor = std::thread([p, hprocess]() {
+	p->monitor_ = std::thread([p, hprocess]() {
 		WaitForSingleObject(hprocess, INFINITE);
 		DWORD code = 0;
 		GetExitCodeProcess(hprocess, &code);
-		p->exit_code = static_cast<int>(code);
+		p->exit_code_ = static_cast<int>(code);
 		CloseHandle(hprocess);
-		p->alive = false;
-		p->terminated = true;
-		if (p->on_exit)
-			p->on_exit();
+		p->alive_ = false;
+		p->terminated_ = true;
+		if (p->on_exit_)
+			p->on_exit_();
 	});
 
 	// 输出采集线程。
-	p->reader_out = std::thread([p, h = out_read]() { pump_handle(h, p->logs, ""); });
-	p->reader_err = std::thread([p, h = err_read]() { pump_handle(h, p->logs, "[stderr] "); });
+	p->reader_out_ = std::thread([p, h = out_read]() { pump_handle(h, p->logs_, ""); });
+	p->reader_err_ = std::thread([p, h = err_read]() { pump_handle(h, p->logs_, "[stderr] "); });
 
 	return p;
 }
 
-void stop_proc(const std::shared_ptr<proc>& p, int timeout_seconds) {
-	if (!p || !p->alive)
+void stop_proc(const std::shared_ptr<proc>& p, int timeout_seconds)
+{
+	if (!p || !p->alive_)
 		return;
 	// Windows 无 SIGTERM，直接 TerminateProcess。
 	// 优雅退出由 manager 先经 RPC shutdown 完成，这里仅兜底强制终止。
-	HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, p->pid);
+	HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, p->pid_);
 	if (h) {
 		TerminateProcess(h, 1);
 		CloseHandle(h);
 	}
 	auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_seconds);
-	while (p->alive && std::chrono::steady_clock::now() < deadline)
+	while (p->alive_ && std::chrono::steady_clock::now() < deadline)
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 }
 

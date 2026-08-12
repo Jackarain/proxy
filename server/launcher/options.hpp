@@ -1,13 +1,12 @@
 //
 // options.hpp
-// ~~~~~~~~~~~
-//
-// gproxy launcher 的 C++ 版本：proxy_server 全部命令行选项的单一事实来源。
-// 供 WebUI 配置表单、新建实例默认配置、启动参数生成共用，
-// 保证 WebUI 覆盖的功能与 proxy_server 命令行永远一致。
+// ~~~~~~~~~~~~
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// proxy_server 全部命令行选项的单一事实来源：供 WebUI 配置表单、新建实例默认
+// 配置、启动参数生成共用，保证 WebUI 覆盖的功能与 proxy_server 命令行一致。
 //
 
 #ifndef LAUNCHER_OPTIONS_HPP
@@ -28,29 +27,30 @@ enum class option_kind {
 };
 
 // 一个可配置项。
-struct option {
-	std::string name;
-	option_kind kind = option_kind::string;
-	std::string help;
+struct option
+{
+	std::string name_;
+	option_kind kind_ = option_kind::string;
+	std::string help_;
 
 	// 默认值。
-	bool has_default = false;
-	bool def_bool = false;
-	std::int64_t def_int = 0;
-	std::string def_str;
-	std::vector<std::string> def_list;
+	bool has_default_ = false;
+	bool def_bool_ = false;
+	std::int64_t def_int_ = 0;
+	std::string def_str_;
+	std::vector<std::string> def_list_;
 
-	// Hidden 为 true 时不在 WebUI 表单中展示
+	// hidden_ 为 true 时不在 WebUI 表单中展示
 	// （help/config/asio_config/launcher/pid_file 等进程内部或已废弃选项）。
-	bool hidden = false;
-	// RestartOnly 为 true 时运行期修改需重启实例生效（如 stdio/transparent）。
-	bool restart_only = false;
-	// Common 为 true 时在 WebUI 配置页的「常用配置」区置顶展示（不折叠）。
-	bool common = false;
-	// Hint 为常用选项的中文用法说明，展示在表单输入框上方。
-	std::string hint;
-	// Category 为选项在 WebUI 表单中的分组。
-	std::string category;
+	bool hidden_ = false;
+	// restart_only_ 为 true 时运行期修改需重启实例生效（如 stdio/transparent）。
+	bool restart_only_ = false;
+	// common_ 为 true 时在 WebUI 配置页的「常用配置」区置顶展示（不折叠）。
+	bool common_ = false;
+	// hint_ 为常用选项的中文用法说明，展示在表单输入框上方。
+	std::string hint_;
+	// category_ 为选项在 WebUI 表单中的分组。
+	std::string category_;
 };
 
 // 全部可配置项。

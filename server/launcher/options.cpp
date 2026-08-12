@@ -94,15 +94,17 @@ const option k_options[] = {
 	{ "pid_file", option_kind::string, "把进程 PID 写入指定文件（内部使用，由 launcher 传入）。", false, false, 0, "", {}, true, false, false, "", "其他" },
 };
 
-const std::vector<option>& all_options_impl() {
+const std::vector<option>& all_options_impl()
+{
 	static const std::vector<option> all(std::begin(k_options), std::end(k_options));
 	return all;
 }
 
 // 判断配置值是否与注册表默认值相同（相同则无需显式传入命令行）。
-bool equals_default(const option& o, const json::value& val) {
-	const bool has_def = o.has_default;
-	const auto kind = o.kind;
+bool equals_default(const option& o, const json::value& val)
+{
+	const bool has_def = o.has_default_;
+	const auto kind = o.kind_;
 
 	// 无默认值：仅当值等于该类型的零值时视为"未设置"。
 	auto is_zero_value = [kind](const json::value& v) -> bool {
@@ -127,20 +129,20 @@ bool equals_default(const option& o, const json::value& val) {
 	switch (kind) {
 	case option_kind::boolean: {
 		bool b = val.is_bool() ? val.as_bool() : false;
-		return b == o.def_bool;
+		return b == o.def_bool_;
 	}
 	case option_kind::integer: {
 		std::int64_t v = to_int_value(val);
-		return v == o.def_int;
+		return v == o.def_int_;
 	}
 	case option_kind::string:
-		return to_string_value(val) == o.def_str;
+		return to_string_value(val) == o.def_str_;
 	case option_kind::string_list: {
 		std::vector<std::string> list = to_string_list(val);
-		if (list.size() != o.def_list.size())
+		if (list.size() != o.def_list_.size())
 			return false;
 		for (std::size_t i = 0; i < list.size(); i++)
-			if (list[i] != o.def_list[i])
+			if (list[i] != o.def_list_[i])
 				return false;
 		return true;
 	}
@@ -151,7 +153,8 @@ bool equals_default(const option& o, const json::value& val) {
 } // namespace
 
 // 兼容 int / int64 / float64 的整数取值。
-std::int64_t to_int_value(const json::value& v) {
+std::int64_t to_int_value(const json::value& v)
+{
 	if (v.is_int64())
 		return v.as_int64();
 	if (v.is_uint64())
@@ -168,7 +171,8 @@ std::int64_t to_int_value(const json::value& v) {
 	return 0;
 }
 
-std::string to_string_value(const json::value& v) {
+std::string to_string_value(const json::value& v)
+{
 	if (v.is_string())
 		return std::string(v.as_string());
 	if (v.is_bool())
@@ -183,7 +187,8 @@ std::string to_string_value(const json::value& v) {
 }
 
 // stringlist 值统一转为 []string。
-std::vector<std::string> to_string_list(const json::value& v) {
+std::vector<std::string> to_string_list(const json::value& v)
+{
 	std::vector<std::string> out;
 	if (v.is_array()) {
 		for (const auto& e : v.as_array())
@@ -195,18 +200,21 @@ std::vector<std::string> to_string_list(const json::value& v) {
 	return out;
 }
 
-const std::vector<option>& all_options() {
+const std::vector<option>& all_options()
+{
 	return all_options_impl();
 }
 
-const option* find_option(const std::string& name) {
+const option* find_option(const std::string& name)
+{
 	for (const auto& o : all_options_impl())
-		if (o.name == name)
+		if (o.name_ == name)
 			return &o;
 	return nullptr;
 }
 
-const char* kind_type_name(option_kind kind) {
+const char* kind_type_name(option_kind kind)
+{
 	switch (kind) {
 	case option_kind::boolean: return "bool";
 	case option_kind::integer: return "int";
@@ -215,43 +223,45 @@ const char* kind_type_name(option_kind kind) {
 	}
 }
 
-json::object default_config() {
+json::object default_config()
+{
 	json::object cfg;
 	for (const auto& o : all_options_impl()) {
-		if (o.hidden)
+		if (o.hidden_)
 			continue;
-		if (!o.has_default) {
-			switch (o.kind) {
-			case option_kind::string_list: cfg[o.name] = json::array(); break;
-			case option_kind::integer: cfg[o.name] = std::int64_t{0}; break;
-			case option_kind::boolean: cfg[o.name] = false; break;
-			default: cfg[o.name] = "";
+		if (!o.has_default_) {
+			switch (o.kind_) {
+			case option_kind::string_list: cfg[o.name_] = json::array(); break;
+			case option_kind::integer: cfg[o.name_] = std::int64_t{0}; break;
+			case option_kind::boolean: cfg[o.name_] = false; break;
+			default: cfg[o.name_] = "";
 			}
 			continue;
 		}
-		switch (o.kind) {
+		switch (o.kind_) {
 		case option_kind::string_list: {
 			json::array arr;
-			for (const auto& s : o.def_list)
+			for (const auto& s : o.def_list_)
 				arr.emplace_back(s);
-			cfg[o.name] = std::move(arr);
+			cfg[o.name_] = std::move(arr);
 			break;
 		}
 		case option_kind::boolean:
-			cfg[o.name] = o.def_bool;
+			cfg[o.name_] = o.def_bool_;
 			break;
 		case option_kind::integer:
-			cfg[o.name] = o.def_int;
+			cfg[o.name_] = o.def_int_;
 			break;
 		default:
-			cfg[o.name] = o.def_str;
+			cfg[o.name_] = o.def_str_;
 			break;
 		}
 	}
 	return cfg;
 }
 
-std::vector<std::string> args_for(const json::object& cfg) {
+std::vector<std::string> args_for(const json::object& cfg)
+{
 	// 按名称排序。
 	std::vector<std::string> names;
 	names.reserve(cfg.size());
@@ -262,13 +272,13 @@ std::vector<std::string> args_for(const json::object& cfg) {
 	std::vector<std::string> args;
 	for (const auto& name : names) {
 		const option* o = find_option(name);
-		if (o == nullptr || o->hidden)
+		if (o == nullptr || o->hidden_)
 			continue;
 		const json::value& val = cfg.at(name);
 		// 跳过与注册表默认值相同的选项。
 		if (equals_default(*o, val))
 			continue;
-		switch (o->kind) {
+		switch (o->kind_) {
 		case option_kind::string_list: {
 			auto items = to_string_list(val);
 			if (items.empty()) {
@@ -305,7 +315,8 @@ std::vector<std::string> args_for(const json::object& cfg) {
 	return args;
 }
 
-std::string validate_config(json::object& cfg) {
+std::string validate_config(json::object& cfg)
+{
 	// 兼容旧配置：proxy_ssl_name 已并入 ssl_sni。
 	if (auto it = cfg.find("proxy_ssl_name"); it != cfg.end()) {
 		if (!cfg.contains("ssl_sni"))
@@ -316,7 +327,7 @@ std::string validate_config(json::object& cfg) {
 		const option* o = find_option(std::string(kv.key()));
 		if (o == nullptr)
 			return "unknown option: " + std::string(kv.key());
-		if (o->hidden)
+		if (o->hidden_)
 			return "internal option cannot be set: " + std::string(kv.key());
 	}
 	return {};

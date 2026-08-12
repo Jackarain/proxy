@@ -2,11 +2,11 @@
 // datetime.hpp
 // ~~~~~~~~~~~~
 //
-// RFC3339 时间格式化/解析
-// （YYYY-MM-DDTHH:MM:SS±HH:MM，支持解析小数秒与 Z 后缀）。
-//
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// RFC3339 时间格式化/解析（YYYY-MM-DDTHH:MM:SS±HH:MM，
+// 支持解析小数秒与 Z 后缀）。
 //
 
 #ifndef LAUNCHER_DATETIME_HPP
@@ -22,17 +22,20 @@ namespace launcher {
 using time_point = std::chrono::system_clock::time_point;
 
 // time.Time 零值（0001-01-01T00:00:00Z）。
-inline time_point zero_time() {
+inline time_point zero_time()
+{
 	return time_point{};
 }
 
 // 当前时间。
-inline time_point now_time() {
+inline time_point now_time()
+{
 	return std::chrono::system_clock::now();
 }
 
 // 按本地时区格式化为 RFC3339。
-inline std::string rfc3339_format(time_point tp) {
+inline std::string rfc3339_format(time_point tp)
+{
 	if (tp == zero_time())
 		return "0001-01-01T00:00:00Z";
 	auto tt = std::chrono::system_clock::to_time_t(tp);
@@ -54,7 +57,8 @@ inline std::string rfc3339_format(time_point tp) {
 }
 
 // 解析 RFC3339（含小数秒与 Z/±HH:MM 时区），转换为绝对时间点。
-inline bool rfc3339_parse(const std::string& s, time_point& out) {
+inline bool rfc3339_parse(const std::string& s, time_point& out)
+{
 	int y = 0, mo = 0, d = 0, h = 0, mi = 0, sec = 0;
 	double frac = 0;
 	char tz = 'Z';

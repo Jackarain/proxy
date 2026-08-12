@@ -12,7 +12,15 @@
 #include <cctype>
 #include <cstring>
 #include <fstream>
+#include <map>
+#include <mutex>
 #include <sstream>
+
+#ifdef _WIN32
+# include <winsock2.h>
+#else
+# include <sys/socket.h>
+#endif
 
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -23,26 +31,29 @@
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/scope/scope_exit.hpp>
 
 #include <openssl/asn1.h>
 #include <openssl/pem.h>
 #include <openssl/x509v3.h>
 
+#include <tinyrpc/jsonrpc.hpp>
+
 #include "datetime.hpp"
 #include "options.hpp"
 #include "webui_embedded.hpp"
 
+namespace launcher {
+
 namespace net = boost::asio;
+namespace ssl = net::ssl;
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace websocket = beast::websocket;
-namespace ssl = net::ssl;
 namespace fs = boost::filesystem;
 namespace json = boost::json;
 
 using tcp = net::ip::tcp;
-
-namespace launcher {
 
 namespace {
 
@@ -51,7 +62,8 @@ using response = http::response<http::string_body>;
 // ---- 小工具 ----
 
 // 拆分路径为段。
-std::vector<std::string> split_path(const std::string& p) {
+std::vector<std::string> split_path(const std::string& p)
+{
 	std::vector<std::string> out;
 	std::string cur;
 	for (char c : p) {
@@ -70,7 +82,8 @@ std::vector<std::string> split_path(const std::string& p) {
 }
 
 // URL 解码。
-std::string url_decode(const std::string& s) {
+std::string url_decode(const std::string& s)
+{
 	std::string out;
 	out.reserve(s.size());
 	for (std::size_t i = 0; i < s.size(); i++) {
@@ -95,7 +108,8 @@ std::string url_decode(const std::string& s) {
 }
 
 // 解析查询参数。
-std::map<std::string, std::string> parse_query(const std::string& target) {
+std::map<std::string, std::string> parse_query(const std::string& target)
+{
 	std::map<std::string, std::string> out;
 	auto q = target.find('?');
 	if (q == std::string::npos)
@@ -118,7 +132,8 @@ std::map<std::string, std::string> parse_query(const std::string& target) {
 }
 
 // Base64 解码。
-std::string base64_decode(const std::string& in) {
+std::string base64_decode(const std::string& in)
+{
 	static const char* tbl =
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	int lut[256];
@@ -145,7 +160,8 @@ std::string base64_decode(const std::string& in) {
 	return out;
 }
 
-std::string mime_type(const std::string& path) {
+std::string mime_type(const std::string& path)
+{
 	auto dot = path.rfind('.');
 	if (dot == std::string::npos)
 		return "application/octet-stream";
@@ -176,7 +192,8 @@ std::string mime_type(const std::string& path) {
 
 // ---- 响应构造 ----
 
-response make_json_response(http::status status, const json::value& v) {
+response make_json_response(http::status status, const json::value& v)
+{
 	response res{ status, 11 };
 	res.set(http::field::content_type, "application/json; charset=utf-8");
 	res.body() = json::serialize(v);
@@ -184,7 +201,8 @@ response make_json_response(http::status status, const json::value& v) {
 	return res;
 }
 
-response make_text_response(http::status status, const std::string& body) {
+response make_text_response(http::status status, const std::string& body)
+{
 	response res{ status, 11 };
 	res.set(http::field::content_type, "text/plain; charset=utf-8");
 	res.set(http::field::x_content_type_options, "nosniff");
@@ -193,12 +211,14 @@ response make_text_response(http::status status, const std::string& body) {
 	return res;
 }
 
-response make_error(http::status status, const std::string& msg) {
+response make_error(http::status status, const std::string& msg)
+{
 	return make_text_response(status, msg + "\n");
 }
 
 // 任意值转 int64（供 handler 使用）。
-std::int64_t as_int(const json::value& v) {
+std::int64_t as_int(const json::value& v)
+{
 	if (v.is_int64())
 		return v.as_int64();
 	if (v.is_uint64())
@@ -215,7 +235,8 @@ std::int64_t as_int(const json::value& v) {
 	return 0;
 }
 
-std::string as_str(const json::value& v) {
+std::string as_str(const json::value& v)
+{
 	if (v.is_string())
 		return std::string(v.as_string());
 	return {};
@@ -223,37 +244,50 @@ std::string as_str(const json::value& v) {
 
 // ---- 证书加载 ----
 
-bool looks_like_private_key(const std::string& data) {
+bool looks_like_private_key(const std::string& data)
+{
 	return data.find("PRIVATE KEY") != std::string::npos ||
 		data.find("ENCRYPTED") != std::string::npos;
 }
 
-void extract_cert_names(X509* cert, std::string& cn, std::vector<std::string>& sans) {
-	const X509_NAME* subj = X509_get_subject_name(cert);
-	if (subj) {
-		char buf[256];
-		if (X509_NAME_get_text_by_NID(subj, NID_commonName, buf, sizeof(buf)) > 0)
-			cn = buf;
+void extract_cert_names(X509* cert, std::string& cn, std::vector<std::string>& sans)
+{
+	// 提取 CN（subject CommonName）。
+	auto* subj = X509_get_subject_name(cert);
+	int idx = subj ? X509_NAME_get_index_by_NID(subj, NID_commonName, -1) : -1;
+	if (idx >= 0) {
+		auto* entry = X509_NAME_get_entry(subj, idx);
+		auto* data = entry ? X509_NAME_ENTRY_get_data(entry) : nullptr;
+		if (data && ASN1_STRING_length(data) > 0)
+			cn.assign(reinterpret_cast<const char*>(ASN1_STRING_get0_data(data)),
+				static_cast<std::size_t>(ASN1_STRING_length(data)));
 	}
-	GENERAL_NAMES* names = static_cast<GENERAL_NAMES*>(
-		X509_get_ext_d2i(cert, NID_subject_alt_name, nullptr, nullptr));
+
+	// SAN（subjectAltName）。
+	std::unique_ptr<GENERAL_NAMES, decltype(&GENERAL_NAMES_free)> names{
+		static_cast<GENERAL_NAMES*>(X509_get_ext_d2i(cert, NID_subject_alt_name, nullptr, nullptr)),
+		&GENERAL_NAMES_free
+	};
 	if (names) {
-		int n = sk_GENERAL_NAME_num(names);
+		int n = sk_GENERAL_NAME_num(names.get());
 		for (int i = 0; i < n; i++) {
-			GENERAL_NAME* gn = sk_GENERAL_NAME_value(names, i);
+			GENERAL_NAME* gn = sk_GENERAL_NAME_value(names.get(), i);
 			if (gn->type == GEN_DNS && gn->d.dNSName) {
-				const unsigned char* data = ASN1_STRING_get0_data(gn->d.dNSName);
-				int len = ASN1_STRING_length(gn->d.dNSName);
-				if (data && len > 0)
-					sans.emplace_back(reinterpret_cast<const char*>(data), static_cast<std::size_t>(len));
+				auto* s = gn->d.dNSName;
+				if (ASN1_STRING_type(s) == V_ASN1_IA5STRING) {
+					const unsigned char* data = ASN1_STRING_get0_data(s);
+					int len = ASN1_STRING_length(s);
+					if (data && len > 0)
+						sans.emplace_back(reinterpret_cast<const char*>(data), static_cast<std::size_t>(len));
+				}
 			}
 		}
-		GENERAL_NAMES_free(names);
 	}
 }
 
 // 读取 PEM 证书链。
-std::vector<X509*> read_cert_chain(const std::string& path) {
+std::vector<X509*> read_cert_chain(const std::string& path)
+{
 	std::vector<X509*> chain;
 	FILE* f = std::fopen(path.c_str(), "rb");
 	if (!f)
@@ -267,7 +301,8 @@ std::vector<X509*> read_cert_chain(const std::string& path) {
 
 } // namespace
 
-bool load_certificates(const std::string& dir, std::vector<cert_entry>& entries, std::string& err) {
+bool load_certificates(const std::string& dir, std::vector<cert_entry>& entries, std::string& err)
+{
 	boost::system::error_code ec;
 	if (!fs::exists(dir, ec) || !fs::is_directory(dir, ec)) {
 		err = "certificate directory not found: " + dir;
@@ -366,9 +401,9 @@ bool load_certificates(const std::string& dir, std::vector<cert_entry>& entries,
 		}
 
 		cert_entry e;
-		e.cert_file = cf.string();
-		e.key_file = key_path;
-		extract_cert_names(chain[0], e.domain, e.sans);
+		e.cert_file_ = cf.string();
+		e.key_file_ = key_path;
+		extract_cert_names(chain[0], e.domain_, e.sans_);
 		entries.push_back(std::move(e));
 
 		for (std::size_t i = 1; i < chain.size(); i++)
@@ -388,7 +423,8 @@ namespace {
 
 // 通配符主机名匹配。
 bool match_hostname(const std::string& name, const std::string& domain,
-	const std::vector<std::string>& sans) {
+	const std::vector<std::string>& sans)
+{
 	std::vector<std::string> patterns = sans;
 	if (!domain.empty())
 		patterns.push_back(domain);
@@ -418,7 +454,8 @@ struct sni_ctx {
 	std::vector<std::vector<std::string>> sans;
 };
 
-int sni_callback(SSL* ssl, int* /*al*/, void* arg) {
+int sni_callback(SSL* ssl, int* /*al*/, void* arg)
+{
 	auto* ctx = static_cast<sni_ctx*>(arg);
 	if (ctx->chains.empty())
 		return SSL_TLSEXT_ERR_ALERT_FATAL;
@@ -443,20 +480,21 @@ int sni_callback(SSL* ssl, int* /*al*/, void* arg) {
 
 } // namespace
 
-std::shared_ptr<ssl::context> build_ssl_context(const std::vector<cert_entry>& entries) {
-	auto ctx = std::make_shared<ssl::context>(ssl::context::tls_server);
-	ssl::context::options opts = ssl::context::default_workarounds |
-		ssl::context::no_sslv2 | ssl::context::no_sslv3 |
-		ssl::context::no_tlsv1 | ssl::context::no_tlsv1_1;
+std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entry>& entries)
+{
+	auto ctx = std::make_shared<net::ssl::context>(net::ssl::context::tls_server);
+	net::ssl::context::options opts = net::ssl::context::default_workarounds |
+		net::ssl::context::no_sslv2 | net::ssl::context::no_sslv3 |
+		net::ssl::context::no_tlsv1 | net::ssl::context::no_tlsv1_1;
 	ctx->set_options(opts);
 	SSL_CTX_set_min_proto_version(ctx->native_handle(), TLS1_2_VERSION);
 
 	auto sni = std::make_shared<sni_ctx>();
 	for (const auto& e : entries) {
-		auto chain = read_cert_chain(e.cert_file);
+		auto chain = read_cert_chain(e.cert_file_);
 		if (chain.empty())
 			continue;
-		FILE* kf = std::fopen(e.key_file.c_str(), "rb");
+		FILE* kf = std::fopen(e.key_file_.c_str(), "rb");
 		if (!kf) {
 			for (auto* c : chain)
 				X509_free(c);
@@ -477,8 +515,8 @@ std::shared_ptr<ssl::context> build_ssl_context(const std::vector<cert_entry>& e
 		}
 		sni->chains.push_back(std::move(chain));
 		sni->keys.push_back(pkey);
-		sni->domains.push_back(e.domain);
-		sni->sans.push_back(e.sans);
+		sni->domains.push_back(e.domain_);
+		sni->sans.push_back(e.sans_);
 	}
 
 	// 首条作为默认证书。
@@ -502,20 +540,23 @@ std::shared_ptr<ssl::context> build_ssl_context(const std::vector<cert_entry>& e
 
 // =====================================================================
 
-http_server::http_server(std::shared_ptr<manager> mgr,
+http_server::http_server(std::shared_ptr<manager> mgr, net::io_context& ioc,
 	std::string webui_user, std::string webui_password, std::string version)
-	: mgr_(std::move(mgr))
-	, webui_user_(std::move(webui_user))
-	, webui_password_(std::move(webui_password))
-	, version_(std::move(version))
+	: m_mgr_(std::move(mgr))
+	, m_ioc_(ioc)
+	, m_webui_user_(std::move(webui_user))
+	, m_webui_password_(std::move(webui_password))
+	, m_version_(std::move(version))
 {}
 
-http_server::~http_server() {
+http_server::~http_server()
+{
 	stop();
 }
 
 bool http_server::start(const std::string& listen_addr, bool https,
-	const std::string& ssl_dir, std::string& err) {
+	const std::string& ssl_dir, std::string& err)
+{
 	// 解析 host:port。
 	auto colon = listen_addr.rfind(':');
 	if (colon == std::string::npos) {
@@ -555,71 +596,76 @@ bool http_server::start(const std::string& listen_addr, bool https,
 			err = "load ssl certificates failed: " + cerr;
 			return false;
 		}
-		ssl_ctx_ = build_ssl_context(entries);
+		m_ssl_ctx_ = build_ssl_context(entries);
 	}
 
-	acceptor_ = std::make_unique<tcp::acceptor>(ioc_.get_executor());
-	acceptor_->open(addr.is_v6() ? tcp::v6() : tcp::v4(), ec);
+	m_acceptor_ = std::make_unique<tcp::acceptor>(m_ioc_.get_executor());
+	m_acceptor_->open(addr.is_v6() ? tcp::v6() : tcp::v4(), ec);
 	if (ec) {
 		err = "open listener failed: " + ec.message();
 		return false;
 	}
-	acceptor_->set_option(net::socket_base::reuse_address(true), ec);
-	acceptor_->bind(tcp::endpoint(addr, static_cast<unsigned short>(port)), ec);
+	m_acceptor_->set_option(net::socket_base::reuse_address(true), ec);
+	m_acceptor_->bind(tcp::endpoint(addr, static_cast<unsigned short>(port)), ec);
 	if (ec) {
 		err = "listen " + listen_addr + " failed: " + ec.message();
 		return false;
 	}
-	acceptor_->listen(net::socket_base::max_listen_connections, ec);
+	m_acceptor_->listen(net::socket_base::max_listen_connections, ec);
 	if (ec) {
 		err = "listen " + listen_addr + " failed: " + ec.message();
 		return false;
 	}
 
-	stopped_ = false;
+	m_stopped_ = false;
 	// 协程化的 accept 循环（挂在共享 io_context 上）。
-	net::co_spawn(ioc_, accept_loop(), net::detached);
-
-	// 启动 io_context 工作线程池。
-	// 路由处理中的管理操作（start/stop/config 等）可能阻塞等待 proxy_server
-	// 的 RPC 响应（future 超时等待），因此线程数取硬件并发数（下限 2、上限 16），
-	// 保证 RPC 等待期间 io_context 仍有线程处理响应读循环，不会死锁。
-	unsigned nthreads = std::thread::hardware_concurrency();
-	if (nthreads < 2)
-		nthreads = 2;
-	if (nthreads > 16)
-		nthreads = 16;
-	for (unsigned i = 0; i < nthreads; i++)
-		threads_.emplace_back([this]() { ioc_.run(); });
+	net::co_spawn(m_ioc_, accept_loop(), net::detached);
 	return true;
 }
 
-void http_server::stop() {
+void http_server::stop()
+{
 	bool expected = false;
-	if (!stopped_.compare_exchange_strong(expected, true))
+	if (!m_stopped_.compare_exchange_strong(expected, true))
 		return;
-	if (acceptor_) {
+	if (m_acceptor_) {
 		boost::system::error_code ec;
-		acceptor_->close(ec);
+		m_acceptor_->close(ec);
 	}
-	// 终止 io_context：挂起中的异步操作/协程被取消，run() 返回。
-	ioc_.stop();
-	for (auto& t : threads_)
-		if (t.joinable())
-			t.join();
-	threads_.clear();
+	// 唤醒所有活动连接，使挂起的协程以错误完成并退出（不停止 ioc）。
+	std::lock_guard<std::mutex> lock(m_conn_mu_);
+	for (auto h : m_conns_) {
+#ifdef _WIN32
+		::shutdown(h, SD_BOTH);
+#else
+		::shutdown(h, SHUT_RDWR);
+#endif
+	}
 }
 
-boost::asio::awaitable<void> http_server::accept_loop() {
+void http_server::add_conn(net::ip::tcp::socket::native_handle_type h)
+{
+	std::lock_guard<std::mutex> lock(m_conn_mu_);
+	m_conns_.insert(h);
+}
+
+void http_server::remove_conn(net::ip::tcp::socket::native_handle_type h)
+{
+	std::lock_guard<std::mutex> lock(m_conn_mu_);
+	m_conns_.erase(h);
+}
+
+net::awaitable<void> http_server::accept_loop()
+{
 	// 纯 Asio 协程化 accept：async_accept 挂在 io_context 上，
 	// 无需 poll 轮询停止标志——stop() 关闭 acceptor 后挂起中的
 	// async_accept 以 operation_aborted 完成，循环随即退出。
 	auto ex = co_await net::this_coro::executor;
-	while (!stopped_.load()) {
+	while (!m_stopped_.load()) {
 		tcp::socket sock(ex);
 		boost::system::error_code ec;
-		co_await acceptor_->async_accept(sock, net::redirect_error(net::use_awaitable, ec));
-		if (stopped_.load())
+		co_await m_acceptor_->async_accept(sock, net::redirect_error(net::use_awaitable, ec));
+		if (m_stopped_.load())
 			break;
 		if (ec) {
 			// 监听器被关闭（stop）或出致命错误。
@@ -641,11 +687,12 @@ boost::asio::awaitable<void> http_server::accept_loop() {
 // ---- 连接处理 ----
 
 // 处理一个连接（plain / TLS）：全部在共享 io_context 的线程池上协程化。
-boost::asio::awaitable<void> http_server::handle_connection(tcp::socket sock) {
+net::awaitable<void> http_server::handle_connection(tcp::socket sock)
+{
 	boost::system::error_code ec;
-	if (ssl_ctx_) {
+	if (m_ssl_ctx_) {
 		try {
-			beast::ssl_stream<tcp::socket> stream(std::move(sock), *ssl_ctx_);
+			beast::ssl_stream<tcp::socket> stream(std::move(sock), *m_ssl_ctx_);
 			co_await stream.async_handshake(ssl::stream_base::server,
 				net::redirect_error(net::use_awaitable, ec));
 			if (ec)
@@ -660,7 +707,13 @@ boost::asio::awaitable<void> http_server::handle_connection(tcp::socket sock) {
 }
 
 template <class Stream>
-boost::asio::awaitable<void> http_server::serve_http(Stream& stream) {
+net::awaitable<void> http_server::serve_http(Stream& stream)
+{
+	// 登记活动连接（stop 时 shutdown 使挂起协程退出）。
+	auto conn = stream.lowest_layer().native_handle();
+	add_conn(conn);
+	auto conn_guard = boost::scope::scope_exit([this, conn] { remove_conn(conn); });
+
 	for (;;) {
 		beast::flat_buffer buffer;
 		http::request<http::string_body> req;
@@ -679,28 +732,61 @@ boost::asio::awaitable<void> http_server::serve_http(Stream& stream) {
 
 		if (path == "/rpc" && upgrade) {
 			auto params = parse_query(target);
-			auto in = mgr_->ws_auth(params["instance"], params["token"]);
+			auto in = m_mgr_->ws_auth(params["instance"], params["token"]);
 			if (!in) {
 				auto resp = make_error(http::status::unauthorized, "unauthorized");
 				co_await http::async_write(stream, resp,
 					net::redirect_error(net::use_awaitable, ec));
 				break;
 			}
-			// 升级为 WebSocket 并运行 JSON-RPC 控制通道（tinyrpc 会话）。
+			// 升级为 WebSocket 并运行 JSON-RPC 控制通道。
 			websocket::stream<Stream> ws(std::move(stream));
 			co_await ws.async_accept(req, net::redirect_error(net::use_awaitable, ec));
 			if (ec)
 				break;
-			auto ep = std::make_shared<rpc::endpoint<websocket::stream<Stream>>>(std::move(ws));
-			mgr_->ws_attached(in, ep);
-			// 运行会话直到连接关闭（协程，运行在共享 io_context 上）。
-			co_await ep->run();
-			mgr_->ws_detached(in, ep);
+			ws.read_message_max(16 * 1024 * 1024);
+			ws.binary(true);
+
+			using ws_stream = websocket::stream<Stream>;
+			auto sess = std::make_shared<jsonrpc::jsonrpc_session<ws_stream>>(std::move(ws));
+			jsonrpc_session ch(sess);
+			std::uint64_t gen = in->chan_gen_.fetch_add(1) + 1;
+			auto closed = std::make_shared<std::atomic<bool>>(false);
+
+			// 通知（register/status/log）转发到 manager。
+			sess->notify_callback([mgr = m_mgr_, in](json::object obj) {
+				std::string method = json_str(obj, "method");
+				json::value params;
+				if (auto p = obj.if_contains("params"); p)
+					params = *p;
+				mgr->handle_notify(in, method, params);
+			});
+			// 未绑定方法：回复 -32601。
+			sess->default_method_callback([sess](json::object obj) {
+				json::object err;
+				err["code"] = kCodeMethod;
+				err["message"] = "method not found";
+				auto id = obj.if_contains("id") ? obj.at("id") : json::value();
+				sess->reply(std::move(err), id, true);
+			});
+			sess->closed_callback([closed]() { closed->store(true); });
+
+			sess->start();
+			m_mgr_->ws_attached(in, std::move(ch));
+
+			// 等待连接关闭（协程，运行在共享 io_context 上）。
+			auto ex = co_await net::this_coro::executor;
+			net::steady_timer timer(ex);
+			while (!closed->load()) {
+				timer.expires_after(std::chrono::milliseconds(50));
+				co_await timer.async_wait(net::use_awaitable);
+			}
+			m_mgr_->ws_detached(in, gen);
 			break;
 		}
 
 		// WebUI Basic 鉴权（/rpc 已在上方处理，不受影响）。
-		if (!webui_user_.empty()) {
+		if (!m_webui_user_.empty()) {
 			bool ok = false;
 			auto auth = req[http::field::authorization];
 			if (auth.size() > 6 && auth.substr(0, 6) == "Basic ") {
@@ -709,7 +795,7 @@ boost::asio::awaitable<void> http_server::serve_http(Stream& stream) {
 				if (colon != std::string::npos) {
 					std::string user = decoded.substr(0, colon);
 					std::string pass = decoded.substr(colon + 1);
-					ok = user == webui_user_ && pass == webui_password_;
+					ok = user == m_webui_user_ && pass == m_webui_password_;
 				}
 			}
 			if (!ok) {
@@ -721,7 +807,8 @@ boost::asio::awaitable<void> http_server::serve_http(Stream& stream) {
 			}
 		}
 
-		auto resp = route(req);
+		// 路由处理（协程：涉及 RPC 的操作异步等待 proxy_server 响应）。
+		auto resp = co_await route(req);
 		co_await http::async_write(stream, resp,
 			net::redirect_error(net::use_awaitable, ec));
 		if (ec)
@@ -733,75 +820,72 @@ boost::asio::awaitable<void> http_server::serve_http(Stream& stream) {
 
 // ---- 路由 ----
 
-// 需要在 http_server 内访问私有成员，用成员函数实现。
-// 各 REST 处理在 route() 中完成。
-
-response http_server::route(const http::request<http::string_body>& req) {
+net::awaitable<response> http_server::route(const http::request<http::string_body>& req)
+{
 	std::string target(req.target());
 	auto q = target.find('?');
 	std::string path = q == std::string::npos ? target : target.substr(0, q);
-	std::string query = q == std::string::npos ? "" : target.substr(q + 1);
 
 	// /api/version
 	if (path == "/api/version") {
 		if (req.method() != http::verb::get)
-			return make_error(http::status::method_not_allowed, "method not allowed");
+			co_return make_error(http::status::method_not_allowed, "method not allowed");
 		json::object o;
-		o["version"] = version_;
-		return make_json_response(http::status::ok, o);
+		o["version"] = m_version_;
+		co_return make_json_response(http::status::ok, o);
 	}
 
 	// /api/options
 	if (path == "/api/options") {
 		if (req.method() != http::verb::get)
-			return make_error(http::status::method_not_allowed, "method not allowed");
+			co_return make_error(http::status::method_not_allowed, "method not allowed");
 		json::array out;
 		for (const auto& o : all_options()) {
-			if (o.hidden)
+			if (o.hidden_)
 				continue;
 			json::object it;
-			it["name"] = o.name;
-			it["kind"] = kind_type_name(o.kind);
-			it["category"] = o.category;
-			it["help"] = o.help;
-			if (!o.hint.empty())
-				it["hint"] = o.hint;
-			if (o.has_default) {
-				switch (o.kind) {
+			it["name"] = o.name_;
+			it["kind"] = kind_type_name(o.kind_);
+			it["category"] = o.category_;
+			it["help"] = o.help_;
+			if (!o.hint_.empty())
+				it["hint"] = o.hint_;
+			if (o.has_default_) {
+				switch (o.kind_) {
 				case option_kind::boolean:
-					it["default"] = o.def_bool;
+					it["default"] = o.def_bool_;
 					break;
 				case option_kind::integer:
-					it["default"] = o.def_int;
+					it["default"] = o.def_int_;
 					break;
 				case option_kind::string_list: {
 					json::array arr;
-					for (const auto& s : o.def_list)
+					for (const auto& s : o.def_list_)
 						arr.emplace_back(s);
 					it["default"] = std::move(arr);
 					break;
 				}
 				default:
-					it["default"] = o.def_str;
+					it["default"] = o.def_str_;
 					break;
 				}
 			}
-			it["restart_only"] = o.restart_only;
-			it["common"] = o.common;
+			it["restart_only"] = o.restart_only_;
+			it["common"] = o.common_;
 			out.emplace_back(std::move(it));
 		}
-		return make_json_response(http::status::ok, out);
+		co_return make_json_response(http::status::ok, out);
 	}
 
 	// /api/instances
 	if (path == "/api/instances") {
 		if (req.method() == http::verb::get)
-			return make_json_response(http::status::ok, mgr_->summaries());
+			co_return make_json_response(http::status::ok, m_mgr_->summaries());
 		if (req.method() == http::verb::post) {
 			boost::system::error_code ec;
 			auto jv = json::parse(req.body(), ec);
 			if (ec || !jv.is_object()) {
-				return make_error(http::status::bad_request, "invalid body: " + ec.message());
+				co_return make_error(http::status::bad_request, "invalid body: " + ec.message());
 			}
 			const auto& obj = jv.as_object();
 			std::string name = as_str(obj.if_contains("name") ? obj.at("name") : json::value());
@@ -809,16 +893,16 @@ response http_server::route(const http::request<http::string_body>& req) {
 			if (auto c = obj.if_contains("config"); c && c->is_object())
 				config = c->as_object();
 			std::string err;
-			auto in = mgr_->create(name, std::move(config), err);
+			auto in = m_mgr_->create(name, std::move(config), err);
 			if (!in) {
-				return make_error(http::status::bad_request, err);
+				co_return make_error(http::status::bad_request, err);
 			}
 			json::object o;
-			o["id"] = in->id;
-			o["name"] = in->name;
-			return make_json_response(http::status::ok, o);
+			o["id"] = in->id_;
+			o["name"] = in->name_;
+			co_return make_json_response(http::status::ok, o);
 		}
-		return make_error(http::status::method_not_allowed, "method not allowed");
+		co_return make_error(http::status::method_not_allowed, "method not allowed");
 	}
 
 	// /api/instances/...
@@ -826,88 +910,88 @@ response http_server::route(const http::request<http::string_body>& req) {
 		std::string rest = path.substr(std::string("/api/instances/").size());
 		auto parts = split_path(rest);
 		if (parts.empty()) {
-			return make_error(http::status::not_found, "not found");
+			co_return make_error(http::status::not_found, "not found");
 		}
 		const std::string& id = parts[0];
 
 		if (parts.size() == 1) {
 			if (req.method() == http::verb::get) {
 				view v;
-				if (!mgr_->view(id, v))
-					return make_error(http::status::not_found, "not found");
+				if (!m_mgr_->view(id, v))
+					co_return make_error(http::status::not_found, "not found");
 				json::object o;
-				o["id"] = v.id;
-				o["name"] = v.name;
-				o["state"] = v.state;
-				o["online"] = v.online;
-				o["pid"] = v.pid;
-				o["autostart"] = v.autostart;
-				o["config"] = json::value(v.config);
-				o["created_at"] = rfc3339_format(v.created_at);
-				return make_json_response(http::status::ok, o);
+				o["id"] = v.id_;
+				o["name"] = v.name_;
+				o["state"] = v.state_;
+				o["online"] = v.online_;
+				o["pid"] = v.pid_;
+				o["autostart"] = v.autostart_;
+				o["config"] = json::value(v.config_);
+				o["created_at"] = rfc3339_format(v.created_at_);
+				co_return make_json_response(http::status::ok, o);
 			}
 			if (req.method() == http::verb::delete_) {
 				std::string err;
-				if (!mgr_->del(id, err))
-					return make_error(http::status::not_found, err);
+				if (!co_await m_mgr_->del(id, err))
+					co_return make_error(http::status::not_found, err);
 				json::object o;
 				o["ok"] = true;
-				return make_json_response(http::status::ok, o);
+				co_return make_json_response(http::status::ok, o);
 			}
 			if (req.method() == http::verb::put) {
 				boost::system::error_code ec;
 				auto jv = json::parse(req.body(), ec);
 				if (ec || !jv.is_object())
-					return make_error(http::status::bad_request, "invalid body: " + ec.message());
+					co_return make_error(http::status::bad_request, "invalid body: " + ec.message());
 				const auto& obj = jv.as_object();
 				std::string name = as_str(obj.if_contains("name") ? obj.at("name") : json::value());
 				std::optional<bool> autostart;
 				if (auto a = obj.if_contains("autostart"); a && a->is_bool())
 					autostart = a->as_bool();
 				if (name.empty() && !autostart)
-					return make_error(http::status::bad_request, "nothing to update");
+					co_return make_error(http::status::bad_request, "nothing to update");
 				std::string err;
-				if (!mgr_->update(id, name, autostart, err))
-					return make_error(http::status::not_found, err);
+				if (!m_mgr_->update(id, name, autostart, err))
+					co_return make_error(http::status::not_found, err);
 				json::object o;
 				o["ok"] = true;
-				return make_json_response(http::status::ok, o);
+				co_return make_json_response(http::status::ok, o);
 			}
-			return make_error(http::status::method_not_allowed, "method not allowed");
+			co_return make_error(http::status::method_not_allowed, "method not allowed");
 		}
 
 		const std::string& action = parts[1];
 
 		if (action == "start" || action == "stop" || action == "restart") {
 			if (req.method() != http::verb::post)
-				return make_error(http::status::method_not_allowed, "method not allowed");
+				co_return make_error(http::status::method_not_allowed, "method not allowed");
 			std::string err;
 			bool ok = false;
 			if (action == "start")
-				ok = mgr_->start(id, err);
+				ok = m_mgr_->start(id, err);
 			else if (action == "stop")
-				ok = mgr_->stop(id, err);
+				ok = co_await m_mgr_->stop(id, err);
 			else
-				ok = mgr_->restart(id, err);
+				ok = co_await m_mgr_->restart(id, err);
 			if (!ok)
-				return make_error(http::status::bad_request, err);
+				co_return make_error(http::status::bad_request, err);
 			json::object o;
 			o["ok"] = true;
-			return make_json_response(http::status::ok, o);
+			co_return make_json_response(http::status::ok, o);
 		}
 
 		if (action == "status") {
 			if (req.method() != http::verb::get)
-				return make_error(http::status::method_not_allowed, "method not allowed");
+				co_return make_error(http::status::method_not_allowed, "method not allowed");
 			json::value out;
-			if (!mgr_->status_view(id, out))
-				return make_error(http::status::not_found, "not found");
-			return make_json_response(http::status::ok, out);
+			if (!m_mgr_->status_view(id, out))
+				co_return make_error(http::status::not_found, "not found");
+			co_return make_json_response(http::status::ok, out);
 		}
 
 		if (action == "logs") {
 			if (req.method() != http::verb::get)
-				return make_error(http::status::method_not_allowed, "method not allowed");
+				co_return make_error(http::status::method_not_allowed, "method not allowed");
 			std::int64_t since = 0;
 			auto qp = parse_query(target);
 			if (auto it = qp.find("since"); it != qp.end()) {
@@ -916,27 +1000,27 @@ response http_server::route(const http::request<http::string_body>& req) {
 				} catch (...) {}
 			}
 			json::value out;
-			if (!mgr_->logs(id, since, out))
-				return make_error(http::status::not_found, "not found");
-			return make_json_response(http::status::ok, out);
+			if (!m_mgr_->logs(id, since, out))
+				co_return make_error(http::status::not_found, "not found");
+			co_return make_json_response(http::status::ok, out);
 		}
 
 		if (action == "config") {
 			if (req.method() != http::verb::put)
-				return make_error(http::status::method_not_allowed, "method not allowed");
+				co_return make_error(http::status::method_not_allowed, "method not allowed");
 			boost::system::error_code ec;
 			auto jv = json::parse(req.body(), ec);
 			if (ec || !jv.is_object())
-				return make_error(http::status::bad_request, "invalid body: " + ec.message());
+				co_return make_error(http::status::bad_request, "invalid body: " + ec.message());
 			const auto& obj = jv.as_object();
 			auto c = obj.if_contains("config");
 			if (!c || !c->is_object())
-				return make_error(http::status::bad_request, "config is required");
+				co_return make_error(http::status::bad_request, "config is required");
 			json::value result;
 			std::string err;
-			if (!mgr_->apply_config(id, c->as_object(), result, err))
-				return make_error(http::status::bad_request, err);
-			return make_json_response(http::status::ok, result);
+			if (!co_await m_mgr_->apply_config(id, c->as_object(), result, err))
+				co_return make_error(http::status::bad_request, err);
+			co_return make_json_response(http::status::ok, result);
 		}
 
 		if (action == "users") {
@@ -944,54 +1028,54 @@ response http_server::route(const http::request<http::string_body>& req) {
 				boost::system::error_code ec;
 				auto jv = json::parse(req.body(), ec);
 				if (ec || !jv.is_object())
-					return make_error(http::status::bad_request, "invalid body: " + ec.message());
+					co_return make_error(http::status::bad_request, "invalid body: " + ec.message());
 				json::value result;
 				std::string err;
-				if (!mgr_->add_user(id, jv.as_object(), result, err))
-					return make_error(http::status::bad_request, err);
-				return make_json_response(http::status::ok, result);
+				if (!co_await m_mgr_->add_user(id, jv.as_object(), result, err))
+					co_return make_error(http::status::bad_request, err);
+				co_return make_json_response(http::status::ok, result);
 			}
 			if (parts.size() < 3)
-				return make_error(http::status::not_found, "not found");
+				co_return make_error(http::status::not_found, "not found");
 			const std::string& user = parts[2];
 			if (req.method() == http::verb::delete_) {
 				json::value result;
 				std::string err;
-				if (!mgr_->del_user(id, user, result, err))
-					return make_error(http::status::bad_request, err);
-				return make_json_response(http::status::ok, result);
+				if (!co_await m_mgr_->del_user(id, user, result, err))
+					co_return make_error(http::status::bad_request, err);
+				co_return make_json_response(http::status::ok, result);
 			}
 			if (req.method() == http::verb::put) {
 				boost::system::error_code ec;
 				auto jv = json::parse(req.body(), ec);
 				if (ec || !jv.is_object())
-					return make_error(http::status::bad_request, "invalid body: " + ec.message());
+					co_return make_error(http::status::bad_request, "invalid body: " + ec.message());
 				const auto& obj = jv.as_object();
 				json::value result;
 				std::string err;
 				if (parts.size() >= 4 && parts[3] == "rate") {
 					int rate = static_cast<int>(as_int(obj.if_contains("rate") ? obj.at("rate") : json::value()));
-					if (!mgr_->set_user_rate_limit(id, user, rate, result, err))
-						return make_error(http::status::bad_request, err);
-					return make_json_response(http::status::ok, result);
+					if (!co_await m_mgr_->set_user_rate_limit(id, user, rate, result, err))
+						co_return make_error(http::status::bad_request, err);
+					co_return make_json_response(http::status::ok, result);
 				}
 				if (parts.size() >= 4 && parts[3] == "quota") {
 					std::int64_t quota = as_int(obj.if_contains("quota") ? obj.at("quota") : json::value());
-					if (!mgr_->set_user_quota(id, user, quota, result, err))
-						return make_error(http::status::bad_request, err);
-					return make_json_response(http::status::ok, result);
+					if (!co_await m_mgr_->set_user_quota(id, user, quota, result, err))
+						co_return make_error(http::status::bad_request, err);
+					co_return make_json_response(http::status::ok, result);
 				}
 				std::string password = as_str(obj.if_contains("password") ? obj.at("password") : json::value());
 				if (password.empty())
-					return make_error(http::status::bad_request, "password is required");
-				if (!mgr_->set_user_password(id, user, password, result, err))
-					return make_error(http::status::bad_request, err);
-				return make_json_response(http::status::ok, result);
+					co_return make_error(http::status::bad_request, "password is required");
+				if (!co_await m_mgr_->set_user_password(id, user, password, result, err))
+					co_return make_error(http::status::bad_request, err);
+				co_return make_json_response(http::status::ok, result);
 			}
-			return make_error(http::status::method_not_allowed, "method not allowed");
+			co_return make_error(http::status::method_not_allowed, "method not allowed");
 		}
 
-		return make_error(http::status::not_found, "not found");
+		co_return make_error(http::status::not_found, "not found");
 	}
 
 	// 静态资源与 index.html（内嵌于可执行文件）。
@@ -999,18 +1083,18 @@ response http_server::route(const http::request<http::string_body>& req) {
 		// 渲染后的 index（含版本参数）。
 		const embedded_file* f = find_embedded_file("index.html");
 		if (!f)
-			return make_error(http::status::not_found, "404 page not found");
+			co_return make_error(http::status::not_found, "404 page not found");
 		std::string html(reinterpret_cast<const char*>(f->data), f->size);
 		// 替换 {{.Version}} 为构建 git hash。
 		auto pos = html.find("{{.Version}}");
 		if (pos != std::string::npos)
-			html.replace(pos, std::string("{{.Version}}").size(), version_);
+			html.replace(pos, std::string("{{.Version}}").size(), m_version_);
 		response res{ http::status::ok, 11 };
 		res.set(http::field::content_type, "text/html; charset=utf-8");
 		res.set(http::field::cache_control, "no-store, max-age=0");
 		res.body() = std::move(html);
 		res.prepare_payload();
-		return res;
+		co_return res;
 	}
 
 	// 静态文件（内嵌，no-store 禁用缓存）。
@@ -1019,16 +1103,16 @@ response http_server::route(const http::request<http::string_body>& req) {
 		rel = rel.substr(1);
 	// 防目录穿越。
 	if (rel.find("..") != std::string::npos)
-		return make_error(http::status::not_found, "404 page not found");
+		co_return make_error(http::status::not_found, "404 page not found");
 	const embedded_file* f = find_embedded_file(rel);
 	if (!f)
-		return make_error(http::status::not_found, "404 page not found");
+		co_return make_error(http::status::not_found, "404 page not found");
 	response res{ http::status::ok, 11 };
 	res.set(http::field::content_type, mime_type(rel));
 	res.set(http::field::cache_control, "no-store, max-age=0");
 	res.body().assign(reinterpret_cast<const char*>(f->data), f->size);
 	res.prepare_payload();
-	return res;
+	co_return res;
 }
 
 } // namespace launcher
