@@ -6833,11 +6833,14 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 
 		// tcp_timeout_ <= 0 表示禁用超时检查, 此时 idle_timeout 永不主动触发超时,
 		// 只等待两个方向的传输都完成(即本协程被并发传输中的或运算取消)或连接被
-		// 关闭后退出.
-		const int timeout = m_option.tcp_timeout_;
+		// 关闭后退出. 但若某个方向的 transfer 已因错误退出, 会把 m_transfer_timeout
+		// 重置为 5 秒兜底, 避免另一方向因对端忽略 FIN 而永久挂起.
 
 		for (; !m_abort;)
 		{
+			// 每次循环重新读取, 使 transfer 退出分支中动态设置的兜底超时生效.
+			const int timeout = m_transfer_timeout.load(std::memory_order_relaxed);
+
 			if (timeout > 0)
 			{
 				auto last_tick = m_last_activity.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -6904,6 +6907,11 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 					<< ", read from endpoint: " << from_endpoint
 					<< ", error: " << from_ec.message();
 			}
+
+			// 发生错误, 重置超时时间, 避免另一个 transfer 因另一端忽略响应 eof 导致长期不退出.
+			if (m_transfer_timeout <= 0)
+				m_transfer_timeout.store(5, std::memory_order_relaxed);
+
 			log_conn_warning()
 				<< ", shutdown to endpoint: " << to_endpoint;
 			co_await async_shutdown(to, net_awaitable[to_ec]);
@@ -6989,6 +6997,10 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 						<< ", error: " << to_ec.message();
 				}
 
+				// 发生错误, 重置超时时间, 避免另一个 transfer 因另一端忽略响应 eof 导致长期不退出.
+				if (m_transfer_timeout <= 0)
+					m_transfer_timeout.store(5, std::memory_order_relaxed);
+
 				// shutdown 当前连接, 只关闭非 TLS 连接, 而 TLS 连接需要在 transfer 完成后再
 				// 操作, 否则有可能因为 async_shutdown 内部异步 io 导致未定义行业.
 				if (from_ec)
@@ -7019,6 +7031,9 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 
 		// 重置连接活动.
 		m_last_activity.store(0, std::memory_order_relaxed);
+
+		// 保存超时配置.
+		m_transfer_timeout.store(m_option.tcp_timeout_, std::memory_order_relaxed);
 
 		// 并发读写, 在 local 和 remote 之间互传数据.
 		// 同时运行 idle_timeout 检测整体连接空闲超时.

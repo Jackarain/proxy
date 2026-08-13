@@ -997,6 +997,9 @@ namespace proxy {
 		// m_remote_socket 远程 socket, 即连接远程代理服务端或远程服务的 socket.
 		variant_stream_type m_remote_socket;
 
+		// 用于优雅关闭时, 取消所有超时的异步传输操作.
+		std::atomic<int> m_transfer_timeout{ 0 };
+
 		// m_bind_interface 用于向外发起连接时, 指定的 bind 地址.
 		std::optional<net::ip::address> m_bind_interface;
 
