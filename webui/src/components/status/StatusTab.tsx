@@ -71,7 +71,7 @@ function StatsBar({ report }: { report: StatusReport | null }) {
 
 const CONN_COLS: { key: string; label: string; num?: boolean }[] = [
   { key: "id", label: "ID", num: true },
-  { key: "client_ip", label: "客户端 IP" },
+  { key: "client_ip", label: "客户端" },
   { key: "target", label: "目标" },
   { key: "region", label: "地区" },
   { key: "proto", label: "协议" },
@@ -83,7 +83,7 @@ const CONN_COLS: { key: string; label: string; num?: boolean }[] = [
 // 连接表各列默认宽度（px），表头可拖拽调整并持久化到 localStorage。
 const CONN_COL_WIDTHS: Record<string, number> = {
   id: 80,
-  client_ip: 180,
+  client_ip: 220,
   target: 220,
   region: 160,
   proto: 90,

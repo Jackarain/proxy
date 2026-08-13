@@ -4014,6 +4014,8 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 	std::vector<std::string> local_info;
 	std::string client;
 	std::string client_addr;
+	// client_ep 客户端地址（host:port），写入会话供状态上报连接明细展示.
+	std::string client_ep;
 	std::string region;
 
 	if constexpr (std::same_as<S, proxy_tcp_socket>)
@@ -4022,6 +4024,7 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 		client_addr = address_to_string(endp.address());
 		local_info.push_back(client_addr);
 		client = client_addr + ":" + std::to_string(endp.port());
+		client_ep = client;
 
 		if (m_ip_database)
 		{
@@ -4049,6 +4052,7 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 		auto endp = uds_remote_endpoint(socket);
 		client = endp.path();
 		client_addr = endp.path();
+		client_ep = client_addr;
 	}
 
 	XLOG_DBG << "connection id: " << connection_id
@@ -4108,7 +4112,8 @@ net::awaitable<void> proxy_server::start_accept(T& acceptor, S& socket)
 			self);
 
 	// 在会话发布到 m_sessions 之前写入客户端信息（之后只读，无锁）.
-	new_session->set_client_info(client_addr, region);
+	// client_ep 为 host:port（UDS 场景为路径），供状态上报连接明细展示.
+	new_session->set_client_info(client_ep, region);
 
 	// 保存 proxy_session 对象到 m_sessions 中.
 	{
