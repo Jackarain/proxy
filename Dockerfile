@@ -17,6 +17,7 @@ RUN cd /proxy && mkdir -p wolfssl && cd wolfssl && cmake .. -DCMAKE_BUILD_TYPE=R
 
 FROM alpine:edge
 COPY --from=builder /proxy/build/bin/proxy_server /usr/local/bin/
+COPY --from=builder /proxy/build/bin/launcher /usr/local/bin/
 COPY --from=builder /proxy/wolfssl/bin/proxy_server /usr/local/bin/proxy_server-wolfssl
 
 WORKDIR /root
