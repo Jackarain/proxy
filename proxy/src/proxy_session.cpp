@@ -5111,21 +5111,16 @@ R"x*x*x(<html>
 			co_return;
 		}
 
-		auto target_path = make_target_path(hctx.target_);
-		std::wstring head = fmt::format(head_fmt,
-			target_path,
-			target_path);
-
-		std::wstring body = fmt::format(body_fmt,
-			L"../",
-			L"../",
-			L"",
-			L"",
-			L"");
+		auto target_path = make_target_path(std::string(hctx.target_));
+		// 预分配并连续追加, 避免多次拼接产生中间临时字符串.
+		std::wstring body;
+		body.reserve(4096);
+		fmt::format_to(std::back_inserter(body), head_fmt, target_path, target_path);
+		fmt::format_to(std::back_inserter(body), body_fmt, L"../", L"../", L"", L"", L"");
 
 		for (auto& s : path_list)
 			body += s;
-		body = head + body + tail_fmt;
+		body += tail_fmt;
 
 		string_response res{ http::status::ok, request.version() };
 		res.set(http::field::server, version_string);
