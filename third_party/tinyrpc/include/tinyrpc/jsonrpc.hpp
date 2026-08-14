@@ -449,6 +449,18 @@ namespace jsonrpc
 
         {
           std::lock_guard<std::mutex> lock(self_->call_op_mutex_);
+          // 会话消息循环已结束（连接已断开/已停止），此时挂起调用永远不会
+          // 被 fail_pending_calls 或响应完成，立即以错误完成调用，避免调用
+          // 协程永久挂起并持续持有会话资源.
+          if (!self_->running_.load())
+          {
+            net::post(executor,
+              [op = std::move(op)]() mutable
+              {
+                (*op)(boost::asio::error::operation_aborted);
+              });
+            return;
+          }
           if (self_->id_recycle_.empty())
           {
             auto session_id = static_cast<int64_t>(self_->call_ops_.size());
