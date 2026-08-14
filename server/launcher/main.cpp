@@ -47,8 +47,8 @@ namespace {
 // 本地找不到 proxy_server 时，自动下载解压的地址与目录。
 static constexpr const char* kProxyServerDownloadUrl =
 	"https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-alpine_musl_x64.zip";
-static constexpr const char* kProxyServerDownloadZip = "/tmp/proxy_server.zip";
-static constexpr const char* kProxyServerDownloadedExe = "/tmp/proxy_server";
+static constexpr const char* kProxyServerDownloadZip = "/tmp/proxy_tmp/proxy_server.zip";
+static constexpr const char* kProxyServerDownloadedExe = "/tmp/proxy_tmp/proxy_server";
 
 // 解压 proxy_server.zip 到其所在目录（/tmp）。
 bool unzip_proxy_server(const std::string& download_path)
@@ -206,6 +206,12 @@ bool unzip_proxy_server(const std::string& download_path)
 net::awaitable<bool> download_proxy_server(net::io_context& ioc,
 	const std::string& download_path)
 {
+	// 确保下载目录存在（如 /tmp/proxy_tmp）。
+	{
+		boost::system::error_code unused_ec;
+		fs::create_directories(fs::path(download_path).parent_path(), unused_ec);
+	}
+
 	httpc::http_client client(ioc.get_executor(),
 		net::buffer(default_root_certificates()));
 	httpc::http_request req;
