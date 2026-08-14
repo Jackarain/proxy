@@ -45,6 +45,7 @@
 #include <string_view>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <utility>
 
@@ -138,6 +139,34 @@ namespace proxy {
 		if (ec)
 			return true;
 		return false;
+	}
+
+	// 解析十进制数字字符串为 int64_t, 失败或溢出时返回空 optional.
+	// 仅接受非负十进制数字, 不进行动态内存分配, 用于解析 HTTP 头等场景.
+	inline std::optional<int64_t> parse_num(std::string_view s) noexcept
+	{
+		if (s.empty())
+			return std::nullopt;
+
+		int64_t v = 0;
+		for (char c : s)
+		{
+			if (c < '0' || c > '9')
+				return std::nullopt;
+
+			int64_t d = c - '0';
+			if (v > (std::numeric_limits<int64_t>::max() - d) / 10)
+				return std::nullopt;
+			v = v * 10 + d;
+		}
+		return v;
+	}
+
+	// 判定是否为 ASCII 空白字符 (空格, \t, \n, \v, \f, \r).
+	// 避免使用 std::isspace: 该函数依赖 locale 且通常无法内联, 在解析热路径上开销较大.
+	inline bool is_ascii_space(char c) noexcept
+	{
+		return c == ' ' || (c >= '\t' && c <= '\r');
 	}
 
 	// 全局随机数生成器, 用于生成随机数据.
