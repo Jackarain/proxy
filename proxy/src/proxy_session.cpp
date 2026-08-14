@@ -1570,6 +1570,10 @@ R"x*x*x(<html>
 				proto_byte != 0x04 &&
 				proto_byte != 0x47 &&
 				proto_byte != 0x50 &&
+				proto_byte != 0x48 &&
+				proto_byte != 0x44 &&
+				proto_byte != 0x4F &&
+				proto_byte != 0x54 &&
 				proto_byte != 0x43) ||
 				!handshake_before)
 			{
@@ -1625,6 +1629,10 @@ R"x*x*x(<html>
 		}								// plain http protocol.
 		else if (detect[0] == 0x47 ||	// 'G'
 			detect[0] == 0x50 ||		// 'P'
+			detect[0] == 0x48 ||		// 'H'
+			detect[0] == 0x44 ||		// 'D'
+			detect[0] == 0x4F ||		// 'O'
+			detect[0] == 0x54 ||		// 'T'
 			detect[0] == 0x43)			// 'C'
 		{
 			if (m_option.disable_http_)
@@ -1754,7 +1762,9 @@ R"x*x*x(<html>
 		}
 
 		bool ret = false;
-		if (socks_version == 'G' || socks_version == 'P')
+		if (socks_version == 'G' || socks_version == 'P' ||
+			socks_version == 'H' || socks_version == 'D' ||
+			socks_version == 'O' || socks_version == 'T')
 		{
 			if (m_option.disable_http_)
 			{
