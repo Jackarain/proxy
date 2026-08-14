@@ -12,6 +12,7 @@
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -28,6 +29,10 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
+#include "httpc/httpc.hpp"
+#include "proxy/default_cert.hpp"
+#include "unzip.h"
+
 #include "http_server.hpp"
 #include "manager.hpp"
 #include "version.hpp"
@@ -38,6 +43,185 @@ namespace po = boost::program_options;
 using namespace launcher;
 
 namespace {
+
+// 本地找不到 proxy_server 时，自动下载解压的地址与目录。
+static constexpr const char* kProxyServerDownloadUrl =
+	"https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-alpine_musl_x64.zip";
+static constexpr const char* kProxyServerDownloadZip = "/tmp/proxy_server.zip";
+static constexpr const char* kProxyServerDownloadedExe = "/tmp/proxy_server";
+
+// 解压 proxy_server.zip 到其所在目录（/tmp）。
+bool unzip_proxy_server(const std::string& download_path)
+{
+	unzFile uf = unzOpen64(download_path.c_str());
+	if (uf == nullptr) {
+		std::fprintf(stderr, "[错误] 无法打开压缩包: %s\n", download_path.c_str());
+		return false;
+	}
+
+	// 解压目标目录为压缩包所在目录（/tmp）。
+	fs::path target_dir = fs::path(download_path).parent_path();
+	if (target_dir.empty())
+		target_dir = ".";
+
+	// 确保目标目录存在。
+	{
+		boost::system::error_code unused_ec;
+		fs::create_directories(target_dir, unused_ec);
+	}
+
+	constexpr std::size_t kBufferSize = 8192;
+	std::vector<char> buf(kBufferSize);
+
+	int err = unzGoToFirstFile(uf);
+	if (err != UNZ_OK && err != UNZ_END_OF_LIST_OF_FILE) {
+		std::fprintf(stderr, "[错误] 读取压缩包失败: %d\n", err);
+		unzClose(uf);
+		return false;
+	}
+
+	do {
+		char filename_inzip[65536 + 1];
+		unz_file_info64 file_info;
+
+		err = unzGetCurrentFileInfo64(uf, &file_info,
+			filename_inzip, sizeof(filename_inzip),
+			nullptr, 0, nullptr, 0);
+		if (err != UNZ_OK) {
+			std::fprintf(stderr, "[错误] 读取压缩包文件信息失败: %d\n", err);
+			break;
+		}
+
+		// 构建输出路径。
+		fs::path output_path = target_dir / filename_inzip;
+		std::fprintf(stderr, "[info] 解压文件: %s\n", output_path.string().c_str());
+
+		// 检查路径遍历攻击: 确保解压路径在 target_dir 范围内。
+		try {
+			auto canonical_path = fs::absolute(output_path).lexically_normal();
+			auto canonical_target = fs::absolute(target_dir).lexically_normal();
+			if (canonical_path.string().find(canonical_target.string()) != 0) {
+				std::fprintf(stderr, "[warn] 跳过路径越界文件: %s\n", filename_inzip);
+				err = unzGoToNextFile(uf);
+				if (err == UNZ_END_OF_LIST_OF_FILE)
+					break;
+				continue;
+			}
+		} catch (...) {
+			std::fprintf(stderr, "[warn] 跳过路径错误文件: %s\n", filename_inzip);
+			err = unzGoToNextFile(uf);
+			if (err == UNZ_END_OF_LIST_OF_FILE)
+				break;
+			continue;
+		}
+
+		// 检查是否为目录（文件名以 '/' 或 '\\' 结尾）。
+		std::size_t name_len = std::strlen(filename_inzip);
+		if (name_len > 0 &&
+			(filename_inzip[name_len - 1] == '/' ||
+			 filename_inzip[name_len - 1] == '\\')) {
+			// 创建目录。
+			boost::system::error_code unused_ec;
+			fs::create_directories(output_path, unused_ec);
+		} else {
+			// 创建父目录。
+			{
+				boost::system::error_code unused_ec;
+				fs::create_directories(output_path.parent_path(), unused_ec);
+			}
+
+			// 打开当前文件进行读取。
+			err = unzOpenCurrentFile(uf);
+			if (err != UNZ_OK) {
+				std::fprintf(stderr, "[错误] 打开压缩包内文件失败: %s, err: %d\n",
+					filename_inzip, err);
+				err = unzGoToNextFile(uf);
+				if (err == UNZ_END_OF_LIST_OF_FILE)
+					break;
+				continue;
+			}
+
+			// 创建输出文件。
+			FILE* fout = std::fopen(output_path.string().c_str(), "wb");
+			if (fout == nullptr) {
+				std::fprintf(stderr, "[错误] 创建输出文件失败: %s\n",
+					output_path.string().c_str());
+				unzCloseCurrentFile(uf);
+				err = unzGoToNextFile(uf);
+				if (err == UNZ_END_OF_LIST_OF_FILE)
+					break;
+				continue;
+			}
+
+			// 读取并写入。
+			do {
+				int read_bytes = unzReadCurrentFile(uf, buf.data(), (unsigned)kBufferSize);
+				if (read_bytes < 0) {
+					std::fprintf(stderr, "[错误] 读取压缩包内文件失败: %s, err: %d\n",
+						filename_inzip, read_bytes);
+					break;
+				}
+				if (read_bytes == 0)
+					break;
+				if (std::fwrite(buf.data(), 1, read_bytes, fout) != (std::size_t)read_bytes) {
+					std::fprintf(stderr, "[错误] 写入文件失败: %s\n",
+						output_path.string().c_str());
+					break;
+				}
+			} while (true);
+
+			std::fclose(fout);
+
+			// 关闭当前文件。
+			int close_err = unzCloseCurrentFile(uf);
+			if (close_err == UNZ_CRCERROR) {
+				std::fprintf(stderr, "[warn] 文件 CRC 校验失败: %s\n", filename_inzip);
+			}
+
+			// 设置文件权限为可执行（对于 Unix 系统）。
+#if !defined(_WIN32)
+			boost::system::error_code perm_ec;
+			fs::permissions(output_path,
+				fs::owner_read | fs::owner_write | fs::owner_exe |
+				fs::group_read | fs::group_exe |
+				fs::others_read | fs::others_exe,
+				perm_ec);
+#endif
+		}
+
+		err = unzGoToNextFile(uf);
+		if (err == UNZ_END_OF_LIST_OF_FILE)
+			break;
+		if (err != UNZ_OK) {
+			std::fprintf(stderr, "[错误] 跳转压缩包内下一文件失败: %d\n", err);
+			break;
+		}
+	} while (true);
+
+	unzClose(uf);
+	return true;
+}
+
+// 通过 httpc 下载 proxy_server 压缩包；成功返回 true。
+net::awaitable<bool> download_proxy_server(net::io_context& ioc,
+	const std::string& download_path)
+{
+	httpc::http_client client(ioc.get_executor(),
+		net::buffer(default_root_certificates()));
+	httpc::http_request req;
+	req.method(httpc::verb::get);
+	client.set_download_file(download_path);
+	client.max_redirects(10);
+	client.user_agent("curl/8.21.0");
+
+	auto result = co_await client.async_perform(kProxyServerDownloadUrl, req);
+	if (result)
+		co_return true;
+
+	std::fprintf(stderr, "\x1b[31m[错误] 下载 proxy_server 失败: %s\x1b[0m\n",
+		result.error().message().c_str());
+	co_return false;
+}
 
 // 在系统 $PATH 中查找可执行文件；找到返回绝对路径，未找到返回空字符串。
 std::string find_in_path(const std::string& exe)
@@ -176,13 +360,35 @@ int main(int argc, char** argv)
 	}
 
 	// 解析 proxy_server 可执行文件路径。
-	// 未显式指定 --proxy_server 时：优先当前目录下的 proxy_server，其次在系统 $PATH 中查找。
+	// 未显式指定 --proxy_server 时：优先当前目录下的 proxy_server，其次在系统 $PATH 中查找，
+	// 全部找不到时自动从 nightly.link 下载并解压到 /tmp 使用。
 	if (vm["proxy_server"].defaulted()) {
 		boost::system::error_code ec;
 		if (!fs::exists(proxy_path, ec)) {
 			std::string found = find_in_path("proxy_server");
-			if (!found.empty())
+			if (!found.empty()) {
 				proxy_path = std::move(found);
+			} else {
+				// 全部找不到：优先复用 /tmp 下已下载的 proxy_server，否则自动下载。
+				proxy_path = kProxyServerDownloadedExe;
+				if (!fs::is_regular_file(proxy_path, ec)) {
+					std::fprintf(stderr, "[info] 未找到本地 proxy_server，正在从 nightly.link 下载...\n");
+					net::io_context ioc;
+					bool ok = false;
+					net::co_spawn(ioc, [&]() -> net::awaitable<void> {
+						ok = co_await download_proxy_server(ioc, kProxyServerDownloadZip);
+					}, net::detached);
+					ioc.run();
+					if (!ok || !unzip_proxy_server(kProxyServerDownloadZip)) {
+						std::fprintf(stderr, "\x1b[31m[错误] 自动获取 proxy_server 失败，"
+							"请将 proxy_server 放到 launcher 的当前目录或系统 $PATH 中，"
+							"或使用 --proxy_server 指定其路径。\x1b[0m\n");
+						return 1;
+					}
+					std::fprintf(stderr, "[info] proxy_server 已下载并解压到 %s\n",
+						proxy_path.c_str());
+				}
+			}
 		}
 	}
 

@@ -51,6 +51,9 @@ add_executable(launcher
 target_link_libraries(launcher
 	${OPENSSL_LIBRARIES}
 	${PROXY_LIBRARIES}
+	${ZLIB_LIBRARIES}
+	httpc::httpc
+	MINIZIP::minizipstatic
 	Boost::program_options
 )
 
