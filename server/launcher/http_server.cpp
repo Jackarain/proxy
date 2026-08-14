@@ -394,8 +394,8 @@ bool load_certificates(const std::string& dir, std::vector<cert_entry>& entries,
 		}
 		// 校验 key 与证书匹配。
 		if (X509_check_private_key(chain[0], pkey) != 1) {
-			X509_free(chain[0]);
-			chain.clear();
+			for (auto* c : chain)
+				X509_free(c);
 			EVP_PKEY_free(pkey);
 			continue;
 		}
@@ -452,6 +452,26 @@ struct sni_ctx {
 	std::vector<EVP_PKEY*> keys;
 	std::vector<std::string> domains;
 	std::vector<std::vector<std::string>> sans;
+
+	// 释放本对象持有的证书与私钥引用。
+	// 注意：首条链的额外证书 (i>=1) 已通过 SSL_CTX_add_extra_chain_cert
+	// 转移所有权给 SSL_CTX，由 SSL_CTX 析构时释放，不能在此重复释放。
+	~sni_ctx()
+	{
+		for (std::size_t i = 0; i < chains.size(); ++i)
+		{
+			if (i == 0)
+			{
+				if (!chains[i].empty())
+					X509_free(chains[i][0]);
+				continue;
+			}
+			for (auto* c : chains[i])
+				X509_free(c);
+		}
+		for (auto* k : keys)
+			EVP_PKEY_free(k);
+	}
 };
 
 int sni_callback(SSL* ssl, int* /*al*/, void* arg)
@@ -485,7 +505,8 @@ int sni_callback(SSL* ssl, int* /*al*/, void* arg)
 
 } // namespace
 
-std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entry>& entries)
+std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entry>& entries,
+	std::shared_ptr<void>& sni_holder)
 {
 	auto ctx = std::make_shared<net::ssl::context>(net::ssl::context::tls_server);
 	net::ssl::context::options opts = net::ssl::context::default_workarounds |
@@ -538,8 +559,8 @@ std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entr
 		SSL_CTX_set_tlsext_servername_callback(ctx->native_handle(), sni_callback);
 		SSL_CTX_set_tlsext_servername_arg(ctx->native_handle(), raw);
 	}
-	// 保存引用，防止析构。
-	// （通过 ssl::context 的共享所有权在 http_server 中持有。）
+	// 保存引用，防止析构（由调用方 http_server 持有，生命周期与 SSL context 一致）.
+	sni_holder = std::move(sni);
 	return ctx;
 }
 
@@ -601,7 +622,8 @@ bool http_server::start(const std::string& listen_addr, bool https,
 			err = "load ssl certificates failed: " + cerr;
 			return false;
 		}
-		m_ssl_ctx_ = build_ssl_context(entries);
+		m_sni_ctx_.reset();
+		m_ssl_ctx_ = build_ssl_context(entries, m_sni_ctx_);
 	}
 
 	m_acceptor_ = std::make_unique<tcp::acceptor>(m_ioc_.get_executor());
