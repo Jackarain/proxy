@@ -345,12 +345,13 @@ namespace jsonrpc
     void stop()
     {
       if (!running_.load())
-      {
-        BOOST_ASSERT(false && "not running");
         return;
-      }
 
       running_.store(false);
+
+      // 完成所有挂起的 RPC 调用（连接已关闭, 响应不可能再到达）,
+      // 避免等待响应的协程永久挂起导致 io_context 无法退出.
+      fail_pending_calls();
 
       auto self = this->shared_from_this();
       net::co_spawn(stream_.get_executor(),
@@ -738,20 +739,36 @@ namespace jsonrpc
             co_return;
           }, net::detached);
         }
+
+        // 连接已断开, 完成所有挂起的 RPC 调用.
+        fail_pending_calls();
       }
-      catch (const std::exception&)
+      catch (const std::exception& e)
       {
-        // 若服务已被显式停止 (running_ 为 false), 则视为正常关闭,
-        // 不再上报错误, 以便 session 析构时能干净退出.
         if (running_.load())
         {
           // 捕获异常并调用错误回调函数
           if (error_cb_)
-            error_cb_("exception occurred while running jsonrpc session");
-          else
-            BOOST_ASSERT(false && "exception occurred while running jsonrpc session");
+            error_cb_(e.what());
         }
+
+        // 连接异常断开, 完成所有挂起的 RPC 调用.
+        fail_pending_calls();
       }
+    }
+
+    // 完成所有挂起的 RPC 调用（连接关闭后响应不可能再到达）,
+    // 避免等待响应的协程永久挂起导致 io_context 无法退出.
+    void fail_pending_calls()
+    {
+      std::lock_guard<std::mutex> lock(call_op_mutex_);
+      for (auto& op : call_ops_)
+      {
+        if (op)
+          (*op)(boost::asio::error::operation_aborted);
+      }
+      call_ops_.clear();
+      id_recycle_.clear();
     }
 
     net::awaitable<void> dispatch_impl(json::object obj)
