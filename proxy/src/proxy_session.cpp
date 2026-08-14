@@ -5363,70 +5363,99 @@ R"x*x*x(<html>
 		if (m_option.tcp_rate_limit_ > 0 && m_option.tcp_rate_limit_ < buf_size)
 			buf_size = m_option.tcp_rate_limit_;
 
-		std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(buf_size), &std::free);
-		char* buf = bufs.get();
-
 		std::streamsize total = 0;
 
 		stream_rate_limit(m_local_socket, m_option.tcp_rate_limit_);
 
 #if defined (BOOST_ASIO_HAS_FILE)
-		for (; !m_abort;)
-		{
-			auto bytes_transferred = co_await file.async_read_some(net::buffer(buf, buf_size), net_awaitable[ec]);
-			if (ec)
-				co_return;
+		// 双缓冲并发读写, 发送文件时读和写同时进行, 尽量填满 IO.
+		std::unique_ptr<char, decltype(&std::free)> buf0((char*)std::malloc(buf_size), &std::free);
+		std::unique_ptr<char, decltype(&std::free)> buf1((char*)std::malloc(buf_size), &std::free);
+		auto primary_buf = buf0.get();
+		auto secondary_buf = buf1.get();
 
+		boost::system::error_code file_ec;
+
+		// 首先读取第一块数据作为预备, 以用于后面的交替读写逻辑.
+		std::streamsize remain = content_length;
+		auto bytes = co_await file.async_read_some(
+			net::buffer(primary_buf, std::min<std::streamsize>(remain, buf_size)),
+			net_awaitable[file_ec]);
+		remain -= bytes;
+		total += bytes;
+		if (file_ec || m_abort)
+			co_return;
+
+		for (; !m_abort && remain > 0;)
+		{
 			stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
 
-			total += bytes_transferred;
-			co_await net::async_write(m_local_socket, net::buffer(buf, bytes_transferred), net_awaitable[ec]);
-			if (ec)
-			{
-				log_conn_warning()
-					<< ", http async_write: "
-					<< ec.message()
-					<< ", already write: "
-					<< total;
-				co_return;
-			}
+			auto read_size = std::min<std::streamsize>(remain, buf_size);
 
-			if (total >= (std::streamsize)content_length)
+			// 并发读写, 将上次读到的数据 primary_buf 发给 socket, 同时继续读取文件.
+			auto [write_bytes, read_bytes] =
+				co_await(
+					net::async_write(m_local_socket,
+						net::buffer(primary_buf, bytes),
+						net_awaitable[ec])
+					&&
+					file.async_read_some(
+						net::buffer(secondary_buf, read_size),
+						net_awaitable[file_ec])
+				);
+			(void)write_bytes;
+
+			// 交换主从缓冲区.
+			std::swap(primary_buf, secondary_buf);
+
+			bytes = read_bytes;
+			remain -= bytes;
+			total += bytes;
+
+			// 读取到 EOF 或任一方出错即可退出.
+			if (read_bytes == 0 || ec || file_ec)
 				break;
 		}
+
+		if (!m_abort && bytes > 0)
+		{
+			stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
+			co_await net::async_write(
+				m_local_socket,
+				net::buffer(primary_buf, bytes),
+				net_awaitable[ec]);
+		}
+
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", http async_write: "
+				<< ec.message()
+				<< ", already write: "
+				<< total;
+			co_return;
+		}
 #else
+		std::unique_ptr<char, decltype(&std::free)> bufs((char*)std::malloc(buf_size), &std::free);
+		char* buf = bufs.get();
+
+		// 响应头已写出, 直接发送文件内容, 不再经由 serializer.
 		do
 		{
-			auto bytes_transferred = fileop::read(file, std::span<char>(buf, buf_size));
-			bytes_transferred = std::min<std::streamsize>(
-				bytes_transferred,
-				content_length - total
-			);
-			if (bytes_transferred == 0 ||
-				total >= (std::streamsize)content_length)
-			{
-				res.body().data = nullptr;
-				res.body().more = false;
-			}
-			else
-			{
-				res.body().data = buf;
-				res.body().size = bytes_transferred;
-				res.body().more = true;
-			}
+			auto bytes_transferred = fileop::read(
+				file,
+				std::span<char>(buf, std::min<std::streamsize>(buf_size, content_length - total)));
+			if (bytes_transferred <= 0)
+				break;
 
 			stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
 
-			co_await http::async_write(
+			co_await net::async_write(
 				m_local_socket,
-				sr,
+				net::buffer(buf, bytes_transferred),
+				net::transfer_all(),
 				net_awaitable[ec]);
 			total += bytes_transferred;
-			if (ec == http::error::need_buffer)
-			{
-				ec = {};
-				continue;
-			}
 			if (ec)
 			{
 				log_conn_warning()
@@ -5436,7 +5465,7 @@ R"x*x*x(<html>
 					<< total;
 				co_return;
 			}
-		} while (!sr.is_done() && !m_abort);
+		} while (!m_abort && total < content_length);
 #endif
 
 		XLOG_DBG << "connection id: "
