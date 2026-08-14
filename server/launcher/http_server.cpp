@@ -809,6 +809,10 @@ net::awaitable<void> http_server::serve_http(Stream& stream)
 				co_await timer.async_wait(net::use_awaitable);
 			}
 			m_mgr_->ws_detached(in, gen);
+			// default_method_callback 捕获了 sess 自身, 形成
+			// 会话 -> 回调 -> 会话 的引用循环; 连接关闭后必须清除,
+			// 否则会话及其持有的 socket 资源永远不会被释放.
+			sess->default_method_callback();
 			break;
 		}
 
