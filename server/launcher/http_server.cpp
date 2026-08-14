@@ -505,16 +505,10 @@ int sni_callback(SSL* ssl, int* /*al*/, void* arg)
 
 } // namespace
 
-std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entry>& entries,
-	std::shared_ptr<void>& sni_holder)
+std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entry>& entries)
 {
-	auto ctx = std::make_shared<net::ssl::context>(net::ssl::context::tls_server);
-	net::ssl::context::options opts = net::ssl::context::default_workarounds |
-		net::ssl::context::no_sslv2 | net::ssl::context::no_sslv3 |
-		net::ssl::context::no_tlsv1 | net::ssl::context::no_tlsv1_1;
-	ctx->set_options(opts);
-	SSL_CTX_set_min_proto_version(ctx->native_handle(), TLS1_2_VERSION);
-
+	// 先收集证书与私钥：SNI 回调按主机名动态选择证书，
+	// 数据须在握手期间存活，故由返回的 context 的 deleter 持有。
 	auto sni = std::make_shared<sni_ctx>();
 	for (const auto& e : entries) {
 		auto chain = read_cert_chain(e.cert_file_);
@@ -545,6 +539,17 @@ std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entr
 		sni->sans.push_back(e.sans_);
 	}
 
+	// 自定义 deleter：先释放 SSL_CTX（归还 add_extra_chain_cert 已转移
+	// 所有权的首条链额外证书），再释放 sni 持有的其余证书数据。
+	std::shared_ptr<net::ssl::context> ctx(
+		new net::ssl::context(net::ssl::context::tls_server),
+		[sni](net::ssl::context* c) { delete c; });
+	net::ssl::context::options opts = net::ssl::context::default_workarounds |
+		net::ssl::context::no_sslv2 | net::ssl::context::no_sslv3 |
+		net::ssl::context::no_tlsv1 | net::ssl::context::no_tlsv1_1;
+	ctx->set_options(opts);
+	SSL_CTX_set_min_proto_version(ctx->native_handle(), TLS1_2_VERSION);
+
 	// 首条作为默认证书。
 	if (sni->chains.empty())
 		return ctx;
@@ -555,12 +560,9 @@ std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entr
 
 	if (sni->chains.size() > 1) {
 		// 多证书：SNI 回调按主机名匹配。
-		sni_ctx* raw = sni.get();
 		SSL_CTX_set_tlsext_servername_callback(ctx->native_handle(), sni_callback);
-		SSL_CTX_set_tlsext_servername_arg(ctx->native_handle(), raw);
+		SSL_CTX_set_tlsext_servername_arg(ctx->native_handle(), sni.get());
 	}
-	// 保存引用，防止析构（由调用方 http_server 持有，生命周期与 SSL context 一致）.
-	sni_holder = std::move(sni);
 	return ctx;
 }
 
@@ -622,8 +624,7 @@ bool http_server::start(const std::string& listen_addr, bool https,
 			err = "load ssl certificates failed: " + cerr;
 			return false;
 		}
-		m_sni_ctx_.reset();
-		m_ssl_ctx_ = build_ssl_context(entries, m_sni_ctx_);
+		m_ssl_ctx_ = build_ssl_context(entries);
 	}
 
 	m_acceptor_ = std::make_unique<tcp::acceptor>(m_ioc_.get_executor());

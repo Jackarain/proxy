@@ -44,10 +44,9 @@ struct cert_entry
 bool load_certificates(const std::string& dir, std::vector<cert_entry>& entries, std::string& err);
 
 // 构建服务端 SSL 上下文（SNI 多证书匹配）。
-// sni_holder 用于保存 SNI 证书数据的引用，其生命周期须与返回的 ssl::context
-// 一致（由调用方持有），避免 SNI 回调访问已释放的证书数据。
-std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entry>& entries,
-	std::shared_ptr<void>& sni_holder);
+// SNI 回调所需的证书数据由返回的 shared_ptr 的自定义 deleter 持有，
+// 生命周期与 context 一致，调用方无需另行维护。
+std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entry>& entries);
 
 class http_server
 {
@@ -92,8 +91,6 @@ private:
 	std::string m_webui_password_;
 	std::string m_version_;
 	std::unique_ptr<net::ip::tcp::acceptor> m_acceptor_;
-	// 声明在 m_ssl_ctx_ 之前，保证析构时 SSL context 先于 SNI 证书数据释放.
-	std::shared_ptr<void> m_sni_ctx_;
 	std::shared_ptr<net::ssl::context> m_ssl_ctx_;
 	std::atomic<bool> m_stopped_{ false };
 
