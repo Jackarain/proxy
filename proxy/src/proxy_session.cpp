@@ -812,7 +812,10 @@ R"x*x*x(<html>
 	void proxy_session::stream_expires_after(
 		variant_stream_type& stream, net::steady_timer::duration expiry_time) noexcept
 	{
-		if (expiry_time.count() < 0)
+		// tcp_timeout <= 0 表示禁用超时, 与 idle_timeout 的语义保持一致.
+		// 若对 0 调用 expires_after(0), 下一次 I/O 会立即超时, 导致
+		// http 文件发送在写出响应头后无法发送 body.
+		if (expiry_time.count() <= 0)
 			return;
 
 		boost::variant2::visit([expiry_time](auto& s) mutable
