@@ -82,6 +82,16 @@ R"x*x*x(<html>
 </html>
 )x*x*x";
 
+	static const char* fake_405_content =
+R"x*x*x(<html>
+<head><title>405 Method Not Allowed</title></head>
+<body>
+<center><h1>405 Method Not Allowed</h1></center>
+<hr><center>nginx/1.20.2</center>
+</body>
+</html>
+)x*x*x";
+
 	static const char* fake_404_content_fmt =
 R"x*x*x(HTTP/1.1 404 Not Found
 Server: nginx/1.20.2
@@ -665,10 +675,17 @@ R"x*x*x(<html>
 		res.prepare_payload();
 
 		http::serializer<false, string_body, http::fields> sr(res);
-		co_await http::async_write(
-			m_local_socket,
-			sr,
-			net_awaitable[ec]);
+		// HEAD 请求只返回响应头, 不发送 body.
+		if (request.method() == http::verb::head)
+			co_await http::async_write_header(
+				m_local_socket,
+				sr,
+				net_awaitable[ec]);
+		else
+			co_await http::async_write(
+				m_local_socket,
+				sr,
+				net_awaitable[ec]);
 		if (ec)
 		{
 			log_conn_warning()
@@ -4834,6 +4851,21 @@ R"x*x*x(<html>
 				co_return;
 			}
 
+			// 静态文件服务只支持 GET/HEAD 方法, 其他方法返回 405.
+			// /dns-query 为 DNS over HTTPS 接口, 单独支持 POST (由
+			// on_http_dns_query 处理), 因此需要排除该路由.
+			bool dns_proxy = m_option.dns_upstream_.has_value();
+			if (req.method() != http::verb::get &&
+				req.method() != http::verb::head &&
+				!(dns_proxy &&
+					boost::regex_match(
+						std::string(req.target()),
+						boost::regex{R"(^\/dns-query(.*)$)"})))
+			{
+				co_await method_not_allowed_http_route(req);
+				co_return;
+			}
+
 			std::string target = req.target();
 			boost::smatch what;
 			http_context http_ctx{
@@ -4855,8 +4887,6 @@ R"x*x*x(<html>
 					req, \
 					fake_400_content, \
 					http::status::bad_request ); }
-
-			bool dns_proxy = m_option.dns_upstream_.has_value();
 
 			BEGIN_HTTP_ROUTE()
 				ON_HTTP_ROUTE(true, R"(^(.*)?\/$)", on_http_dir)
@@ -5019,10 +5049,17 @@ R"x*x*x(<html>
 				res.prepare_payload();
 
 				http::serializer<false, string_body, http::fields> sr(res);
-				co_await http::async_write(
-					m_local_socket,
-					sr,
-					net_awaitable[ec]);
+				// HEAD 请求只返回响应头, 不发送 body.
+				if (request.method() == http::verb::head)
+					co_await http::async_write_header(
+						m_local_socket,
+						sr,
+						net_awaitable[ec]);
+				else
+					co_await http::async_write(
+						m_local_socket,
+						sr,
+						net_awaitable[ec]);
 				if (ec)
 				{
 					log_conn_warning()
@@ -5083,10 +5120,17 @@ R"x*x*x(<html>
 		res.prepare_payload();
 
 		http::serializer<false, string_body, http::fields> sr(res);
-		co_await http::async_write(
-			m_local_socket,
-			sr,
-			net_awaitable[ec]);
+		// HEAD 请求只返回响应头, 不发送 body.
+		if (request.method() == http::verb::head)
+			co_await http::async_write_header(
+				m_local_socket,
+				sr,
+				net_awaitable[ec]);
+		else
+			co_await http::async_write(
+				m_local_socket,
+				sr,
+				net_awaitable[ec]);
 		if (ec)
 		{
 			log_conn_warning()
@@ -5294,6 +5338,10 @@ R"x*x*x(<html>
 
 			co_return;
 		}
+
+		// HEAD 请求只返回响应头, 不发送文件内容.
+		if (request.method() == http::verb::head)
+			co_return;
 
 		auto buf_size = 5 * 1024 * 1024;
 		if (m_option.tcp_rate_limit_ > 0 && m_option.tcp_rate_limit_ < buf_size)
@@ -6394,6 +6442,32 @@ R"x*x*x(<html>
 	co_await send_http_string_response(
 		request, http::status::forbidden, "text/html",
 		fake_403_content, true);
+	co_return;
+}
+
+net::awaitable<void> proxy_session::method_not_allowed_http_route(const string_request& request) noexcept
+{
+	boost::system::error_code ec;
+
+	// 405 响应必须携带 Allow 头, 声明服务端支持的方法.
+	string_response res{ http::status::method_not_allowed, request.version() };
+	res.set(http::field::server, version_string);
+	res.set(http::field::date, server_date_string());
+	res.set(http::field::content_type, "text/html");
+	res.set(http::field::allow, "GET, HEAD");
+	res.keep_alive(true);
+	res.body() = fake_405_content;
+	res.prepare_payload();
+
+	http::serializer<false, string_body, http::fields> sr(res);
+	co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+	if (ec)
+	{
+		log_conn_warning()
+			<< ", method not allowed http route err: "
+			<< ec.message();
+	}
+
 	co_return;
 }
 

@@ -909,6 +909,9 @@ namespace proxy {
 		// 返回 HTTP 403 Forbidden 响应.
 		net::awaitable<void> forbidden_http_route(const string_request& request) noexcept;
 
+		// 返回 HTTP 405 Method Not Allowed 响应 (含 Allow 头).
+		net::awaitable<void> method_not_allowed_http_route(const string_request& request) noexcept;
+
 		// 返回 HTTP 401 Unauthorized 响应.
 		net::awaitable<void> unauthorized_http_route(const string_request& request) noexcept;
 
