@@ -15,6 +15,10 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -34,6 +38,63 @@ namespace po = boost::program_options;
 using namespace launcher;
 
 namespace {
+
+// 在系统 $PATH 中查找可执行文件；找到返回绝对路径，未找到返回空字符串。
+std::string find_in_path(const std::string& exe)
+{
+	const char* path_env = std::getenv("PATH");
+	if (path_env == nullptr || *path_env == '\0')
+		return {};
+
+#ifdef _WIN32
+	const char path_sep = ';';
+#else
+	const char path_sep = ':';
+#endif
+
+	// Windows 下按 PATHEXT 依次尝试可执行文件扩展名。
+	std::vector<std::string> exts;
+#ifdef _WIN32
+	{
+		const char* pathext_env = std::getenv("PATHEXT");
+		std::string pathext = (pathext_env != nullptr && *pathext_env != '\0')
+			? pathext_env : ".COM;.EXE;.BAT;.CMD";
+		std::size_t pos = 0;
+		while (pos <= pathext.size()) {
+			std::size_t end = pathext.find(';', pos);
+			std::string ext = pathext.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
+			if (!ext.empty())
+				exts.push_back(std::move(ext));
+			if (end == std::string::npos)
+				break;
+			pos = end + 1;
+		}
+	}
+#else
+	exts.emplace_back();
+#endif
+
+	std::string path = path_env;
+	std::size_t pos = 0;
+	while (pos <= path.size()) {
+		std::size_t end = path.find(path_sep, pos);
+		std::string dir = path.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
+		for (const auto& ext : exts) {
+			fs::path candidate = fs::absolute(fs::path(dir) / (exe + ext));
+			boost::system::error_code ec;
+			if (fs::is_regular_file(candidate, ec)) {
+#ifndef _WIN32
+				if (::access(candidate.c_str(), X_OK) == 0)
+#endif
+					return candidate.string();
+			}
+		}
+		if (end == std::string::npos)
+			break;
+		pos = end + 1;
+	}
+	return {};
+}
 
 // 解析监听地址与端口。
 bool parse_listen_addr(const std::string& listen_addr, std::string& host, int& port)
@@ -114,12 +175,23 @@ int main(int argc, char** argv)
 		return EXIT_SUCCESS;
 	}
 
+	// 解析 proxy_server 可执行文件路径。
+	// 未显式指定 --proxy_server 时：优先当前目录下的 proxy_server，其次在系统 $PATH 中查找。
+	if (vm["proxy_server"].defaulted()) {
+		boost::system::error_code ec;
+		if (!fs::exists(proxy_path, ec)) {
+			std::string found = find_in_path("proxy_server");
+			if (!found.empty())
+				proxy_path = std::move(found);
+		}
+	}
+
 	// 检查 proxy_server 可执行文件是否存在。
 	{
 		boost::system::error_code ec;
 		if (!fs::exists(proxy_path, ec)) {
 			std::fprintf(stderr, "\x1b[31m[错误] 未找到 proxy_server 可执行文件: %s\x1b[0m\n", proxy_path.c_str());
-			std::fprintf(stderr, "请将 proxy_server 放到 launcher 的当前目录下，或使用 --proxy_server 指定其路径。\n");
+			std::fprintf(stderr, "请将 proxy_server 放到 launcher 的当前目录或系统 $PATH 中，或使用 --proxy_server 指定其路径。\n");
 			return 1;
 		}
 	}
