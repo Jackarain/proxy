@@ -6910,7 +6910,7 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 
 			// 发生错误, 重置超时时间, 避免另一个 transfer 因另一端忽略响应 eof 导致长期不退出.
 			if (m_transfer_timeout <= 0)
-				m_transfer_timeout.store(5, std::memory_order_relaxed);
+				m_transfer_timeout.store(tcp_session_expired_time, std::memory_order_relaxed);
 
 			log_conn_warning()
 				<< ", shutdown to endpoint: " << to_endpoint;
@@ -6999,7 +6999,7 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 
 				// 发生错误, 重置超时时间, 避免另一个 transfer 因另一端忽略响应 eof 导致长期不退出.
 				if (m_transfer_timeout <= 0)
-					m_transfer_timeout.store(5, std::memory_order_relaxed);
+					m_transfer_timeout.store(tcp_session_expired_time, std::memory_order_relaxed);
 
 				// shutdown 当前连接, 只关闭非 TLS 连接, 而 TLS 连接需要在 transfer 完成后再
 				// 操作, 否则有可能因为 async_shutdown 内部异步 io 导致未定义行业.
