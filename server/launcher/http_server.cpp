@@ -782,7 +782,7 @@ net::awaitable<void> http_server::serve_http(Stream& stream)
 			// 等待连接关闭（协程，运行在共享 io_context 上）。
 			auto ex = co_await net::this_coro::executor;
 			net::steady_timer timer(ex);
-			while (!closed->load()) {
+			while (!closed->load() && !m_stopped_.load()) {
 				timer.expires_after(std::chrono::milliseconds(50));
 				co_await timer.async_wait(net::use_awaitable);
 			}

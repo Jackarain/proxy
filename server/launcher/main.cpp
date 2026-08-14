@@ -423,6 +423,7 @@ int main(int argc, char** argv)
 	net::io_context ioc;
 
 	// HTTP 服务（WebUI 静态资源内嵌于可执行文件，从内存提供）。
+	// 优雅退出时 run() 返回意味着无挂起协程，server 在 ioc 存活时析构。
 	http_server server(mgr, ioc, webui_user, webui_password, build_version());
 	std::string err;
 	if (!server.start(listen_addr, https, ssl_dir, err)) {
@@ -449,24 +450,21 @@ int main(int argc, char** argv)
 		terminator.remove(SIGINT);
 		terminator.remove(SIGTERM);
 		std::fprintf(stderr, "[info] received signal, shutting down\n");
+		// 关闭监听与所有连接：连接协程随即自行完成。
 		server.stop();
 		if (!no_kill_on_exit) {
-			// 异步停止所有实例；完成后 stop 掉 io_context。
-			// 控制通道关闭后 RPC 调用可能无法取消（后台协程挂起），
-			// 因此需要显式停止 io_context 才能让 run() 返回。
-			net::co_spawn(ioc, [mgr, &ioc]() -> net::awaitable<void> {
+			// 异步停止所有实例（内部 RPC 调用均带超时），
+			// 全部协程完成后 run() 自然返回，无需停止 io_context。
+			net::co_spawn(ioc, [mgr]() -> net::awaitable<void> {
 				for (const auto& id : mgr->ids()) {
 					std::string err;
 					co_await mgr->stop(id, err);
 				}
-				ioc.stop();
 			}, net::detached);
-		} else {
-			ioc.stop();
 		}
 	});
 
-	// 单线程运行 io_context。
+	// 单线程运行 io_context；所有协程自然完成后返回（无挂起操作，析构安全）。
 	ioc.run();
 	return 0;
 }
