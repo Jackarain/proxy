@@ -443,6 +443,8 @@ if (ENABLE_USE_IO_URING)
 		message(STATUS "Linux using io_uring...")
 		add_compile_definitions(BOOST_ASIO_HAS_IO_URING BOOST_ASIO_DISABLE_EPOLL)
 		#link_libraries(${IOUring_LIBRARIES})
+	else()
+		message(FATAL_ERROR "io_uring librariy not found")
 	endif()
 endif()
 
