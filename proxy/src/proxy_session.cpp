@@ -438,6 +438,9 @@ R"x*x*x(<html>
 			// 例如文件长度为 10 字节, 则起始位置为 5,
 			// 结束位置为 9(数据总长度为[0-9]), 一共 5 字节.
 			offset = content_length - r.second;
+			// 后缀长度超过文件大小时, 从文件头开始返回整个文件.
+			if (offset < 0)
+				offset = 0;
 			end = content_length - 1;
 		}
 		else if (end == -1)
@@ -453,6 +456,11 @@ R"x*x*x(<html>
 
 		if (offset == -1)
 			return { offset, end, http::status::ok };
+
+		// 请求范围超出文件大小时, 将结束位置截断到文件末尾, 避免
+		// Content-Length 与实际发送字节数不一致.
+		if (end > content_length - 1)
+			end = content_length - 1;
 
 		return { offset, end, http::status::partial_content };
 	}
