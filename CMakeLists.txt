@@ -218,6 +218,9 @@ if (MSVC)
 		set(CMAKE_CXX_STANDARD_REQUIRED ON)
 		message(STATUS "Set default cxx standard: C++17")
 	endif()
+
+	# 源码使用 UTF-8 编码, 指定 MSVC 按 UTF-8 解析, 避免中文注释/字符串乱码.
+	add_compile_options(/utf-8)
 endif()
 
 ################################################################################
