@@ -15,6 +15,7 @@
 #include "proxy/fileop.hpp"
 
 #include <charconv>
+#include <limits>
 #include <vector>
 
 #ifdef USE_PAM_AUTH
@@ -219,7 +220,7 @@ R"x*x*x(<html>
 
 	//////////////////////////////////////////////////////////////////////////
 
-	static const std::unordered_map<std::string, std::string> global_mimes =
+	static const std::unordered_map<std::string_view, std::string_view> global_mimes =
 	{
 		{ ".html", "text/html; charset=utf-8" },
 		{ ".htm", "text/html; charset=utf-8" },
@@ -290,35 +291,48 @@ R"x*x*x(<html>
 	using http_ranges = std::vector<std::pair<int64_t, int64_t>>;
 
 	// parser_http_ranges 用于解析 http range 请求头.
-	static http_ranges parser_http_ranges(const std::string& range) noexcept
+	// 使用 string_view 解析, 解析过程不产生内存分配.
+	static http_ranges parser_http_ranges(std::string_view range) noexcept
 	{
 		http_ranges result;
 
+		// 去掉首尾空白.
+		while (!range.empty() && is_ascii_space(range.front()))
+			range.remove_prefix(1);
+		while (!range.empty() && is_ascii_space(range.back()))
+			range.remove_suffix(1);
+
+		// range 必须以 bytes= 开头, 否则返回空数组.
 		if (range.size() < 6 || range.substr(0, 6) != "bytes=")
 			return {};
 
-		std::string content = range.substr(6);
-		if (content.empty())
+		range.remove_prefix(6);
+		if (range.empty())
 			return {};
 
 		size_t start = 0;
-		while (start < content.size())
+		while (start < range.size())
 		{
-			size_t comma_pos = content.find(',', start);
+			size_t comma_pos = range.find(',', start);
 
-			std::string part = (comma_pos == std::string::npos)
-							? content.substr(start)
-							: content.substr(start, comma_pos - start);
+			std::string_view part = (comma_pos == std::string_view::npos)
+							? range.substr(start)
+							: range.substr(start, comma_pos - start);
 
 			// 去除首尾空白.
-			part.erase(0, part.find_first_not_of(" \t"));
-			part.erase(part.find_last_not_of(" \t") + 1);
+			while (!part.empty() && is_ascii_space(part.front()))
+				part.remove_prefix(1);
+			while (!part.empty() && is_ascii_space(part.back()))
+				part.remove_suffix(1);
 
 			if (part.empty())
 				return {};
 
 			// 统计 '-' 数量（最多1个）
-			size_t dash_count = std::count(part.begin(), part.end(), '-');
+			size_t dash_count = 0;
+			for (char c : part)
+				if (c == '-')
+					++dash_count;
 			if (dash_count > 1)
 				return {};  // 多个 '-' 非法（如 0-100-200）
 
@@ -328,62 +342,55 @@ R"x*x*x(<html>
 			if (dash_count == 0)
 			{
 				// 纯数字：如 "600" → {600, -1}
-				try {
-					first = std::stoll(part);
-					if (first < 0)
-						return {};
-					second = -1;
-				} catch (...) {
+				auto n = parse_num(part);
+				if (!n)
 					return {};
-				}
+				first = *n;
+				second = -1;
 			}
-			else if (part[0] == '-')
+			else if (part.front() == '-')
 			{
 				// 后缀长度：如 "-500"
-				std::string suffix = part.substr(1);
-				suffix.erase(0, suffix.find_first_not_of(" \t"));
+				auto suffix = part.substr(1);
+				while (!suffix.empty() && is_ascii_space(suffix.front()))
+					suffix.remove_prefix(1);
 				if (suffix.empty())
 					return {};
-				try {
-					second = std::stoll(suffix);
-					if (second <= 0)
-						return {};
-				} catch (...) {
+				auto n = parse_num(suffix);
+				if (!n || *n <= 0)
 					return {};
-				}
+				second = *n;
 			}
 			else {
 				// 普通范围： "0-100" 或 "200-"
 				size_t dash_pos = part.find('-');
-				std::string left = part.substr(0, dash_pos);
-				std::string right = part.substr(dash_pos + 1);
+				std::string_view left = part.substr(0, dash_pos);
+				std::string_view right = part.substr(dash_pos + 1);
 
 				// 去除空白
-				left.erase(0, left.find_first_not_of(" \t"));
-				left.erase(left.find_last_not_of(" \t") + 1);
-				right.erase(0, right.find_first_not_of(" \t"));
-				right.erase(right.find_last_not_of(" \t") + 1);
+				while (!left.empty() && is_ascii_space(left.front()))
+					left.remove_prefix(1);
+				while (!left.empty() && is_ascii_space(left.back()))
+					left.remove_suffix(1);
+				while (!right.empty() && is_ascii_space(right.front()))
+					right.remove_prefix(1);
+				while (!right.empty() && is_ascii_space(right.back()))
+					right.remove_suffix(1);
 
 				if (!left.empty())
 				{
-					try {
-						first = std::stoll(left);
-						if (first < 0)
-							return {};
-					} catch (...) {
+					auto n = parse_num(left);
+					if (!n)
 						return {};
-					}
+					first = *n;
 				}
 
 				if (!right.empty())
 				{
-					try {
-						second = std::stoll(right);
-						if (second < 0)
-							return {};
-					} catch (...) {
+					auto n = parse_num(right);
+					if (!n)
 						return {};
-					}
+					second = *n;
 				} else {
 					second = -1;  // "200-" 形式
 				}
@@ -397,7 +404,7 @@ R"x*x*x(<html>
 
 			result.emplace_back(first, second);
 
-			if (comma_pos == std::string::npos)
+			if (comma_pos == std::string_view::npos)
 				break;
 			start = comma_pos + 1;
 		}
@@ -4871,7 +4878,7 @@ R"x*x*x(<html>
 			http_context http_ctx{
 				{},
 				req,
-				target,
+				req.target(),
 				make_real_target_path(m_option.doc_directory_,req.target()) };
 
 #define BEGIN_HTTP_ROUTE() if (false) {}
@@ -5183,7 +5190,7 @@ R"x*x*x(<html>
 				else
 					url.set_scheme_id(urls::scheme::http);
 				url.set_encoded_authority(request[http::field::host]);
-				url.set_path(hctx.target_ + "/");
+				url.set_path(std::string(hctx.target_) + "/");
 
 				co_await location_http_route(request, url.buffer());
 			}
@@ -5251,7 +5258,8 @@ R"x*x*x(<html>
 			referer = std::string(request[http::field::referer]);
 
 		// 解析 http 协议中的 range 部分.
-		auto range = parser_http_ranges(boost::trim_copy(request["Range"]));
+		// parser_http_ranges 内部使用 string_view 解析并去除空白, 无需复制.
+		auto range = parser_http_ranges(request["Range"]);
 
 		// 计算 range 得到偏移位置.
 		auto [http_range_start, http_range_end, st] = offset_from_range(range, content_length);
@@ -5535,8 +5543,8 @@ R"x*x*x(<html>
 					auto vstart = kpos + key.size() + 1;
 					auto vend = query_str.find('&', vstart);
 					if (vend == std::string::npos)
-						return query_str.substr(vstart);
-					return query_str.substr(vstart, vend - vstart);
+						return std::string(query_str.substr(vstart));
+					return std::string(query_str.substr(vstart, vend - vstart));
 				};
 
 				auto qname = get_param("name");
@@ -5595,7 +5603,8 @@ R"x*x*x(<html>
 					request, fake_400_content, http::status::bad_request);
 				co_return;
 			}
-			auto b64 = target.substr(pos + 5);
+			// string_view 指向 request 内部数据, 需要拷贝后修改.
+			std::string b64(target.substr(pos + 5));
 			// base64url -> standard base64.
 			for (auto& c : b64)
 			{

@@ -586,7 +586,8 @@ namespace proxy {
 			string_request& request_;
 
 			// 保存 http 客户端请求的原始目标.
-			std::string target_;
+			// 指向 request 内部的字符串, 不拷贝, 生命周期与 request 一致.
+			std::string_view target_;
 
 			// 保存 http 客户端请求目标的具体路径, 即: doc 目录 + target_ 组成的路径.
 			fs::path target_path_;
