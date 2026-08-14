@@ -47,10 +47,24 @@ namespace {
 // 本地找不到 proxy_server 时，自动下载解压的地址与目录。
 static constexpr const char* kProxyServerDownloadUrl =
 	"https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-alpine_musl_x64.zip";
-static constexpr const char* kProxyServerDownloadZip = "/tmp/proxy_tmp/proxy_server.zip";
-static constexpr const char* kProxyServerDownloadedExe = "/tmp/proxy_tmp/proxy_server";
+// 下载/解压目录下的文件名（所在目录见 proxy_tmp_dir()）。
+static constexpr const char* kProxyServerDownloadZipName = "proxy_server.zip";
+static constexpr const char* kProxyServerDownloadedExeName = "proxy_server";
 
-// 解压 proxy_server.zip 到其所在目录（/tmp）。
+// 获取跨平台的临时工作目录：系统临时目录（unix 下为 /tmp，win32 下为 %TEMP%）
+// 下的 proxy_tmp 子目录；获取失败时回退到当前目录，目录不存在则自动创建。
+fs::path proxy_tmp_dir()
+{
+	boost::system::error_code ec;
+	fs::path tmp = fs::temp_directory_path(ec);
+	if (ec || tmp.empty())
+		tmp = fs::current_path();
+	fs::path dir = tmp / "proxy_tmp";
+	fs::create_directories(dir, ec);
+	return dir;
+}
+
+// 解压 proxy_server.zip 到其所在目录。
 bool unzip_proxy_server(const std::string& download_path)
 {
 	unzFile uf = unzOpen64(download_path.c_str());
@@ -59,7 +73,7 @@ bool unzip_proxy_server(const std::string& download_path)
 		return false;
 	}
 
-	// 解压目标目录为压缩包所在目录（/tmp）。
+	// 解压目标目录为压缩包所在目录。
 	fs::path target_dir = fs::path(download_path).parent_path();
 	if (target_dir.empty())
 		target_dir = ".";
@@ -206,7 +220,7 @@ bool unzip_proxy_server(const std::string& download_path)
 net::awaitable<bool> download_proxy_server(net::io_context& ioc,
 	const std::string& download_path)
 {
-	// 确保下载目录存在（如 /tmp/proxy_tmp）。
+	// 确保下载目录存在（临时目录下的 proxy_tmp）。
 	{
 		boost::system::error_code unused_ec;
 		fs::create_directories(fs::path(download_path).parent_path(), unused_ec);
@@ -367,7 +381,7 @@ int main(int argc, char** argv)
 
 	// 解析 proxy_server 可执行文件路径。
 	// 未显式指定 --proxy_server 时：优先当前目录下的 proxy_server，其次在系统 $PATH 中查找，
-	// 全部找不到时自动从 nightly.link 下载并解压到 /tmp 使用。
+	// 全部找不到时自动从 nightly.link 下载并解压到系统临时目录使用。
 	if (vm["proxy_server"].defaulted()) {
 		boost::system::error_code ec;
 		if (!fs::exists(proxy_path, ec)) {
@@ -375,17 +389,20 @@ int main(int argc, char** argv)
 			if (!found.empty()) {
 				proxy_path = std::move(found);
 			} else {
-				// 全部找不到：优先复用 /tmp 下已下载的 proxy_server，否则自动下载。
-				proxy_path = kProxyServerDownloadedExe;
+				// 全部找不到：优先复用临时目录下已下载的 proxy_server，否则自动下载。
+				fs::path tmp_dir = proxy_tmp_dir();
+				fs::path zip_path = tmp_dir / kProxyServerDownloadZipName;
+				fs::path exe_path = tmp_dir / kProxyServerDownloadedExeName;
+				proxy_path = exe_path.string();
 				if (!fs::is_regular_file(proxy_path, ec)) {
 					std::fprintf(stderr, "[info] 未找到本地 proxy_server，正在从 nightly.link 下载...\n");
 					net::io_context ioc;
 					bool ok = false;
 					net::co_spawn(ioc, [&]() -> net::awaitable<void> {
-						ok = co_await download_proxy_server(ioc, kProxyServerDownloadZip);
+						ok = co_await download_proxy_server(ioc, zip_path.string());
 					}, net::detached);
 					ioc.run();
-					if (!ok || !unzip_proxy_server(kProxyServerDownloadZip)) {
+					if (!ok || !unzip_proxy_server(zip_path.string())) {
 						std::fprintf(stderr, "\x1b[31m[错误] 自动获取 proxy_server 失败，"
 							"请将 proxy_server 放到 launcher 的当前目录或系统 $PATH 中，"
 							"或使用 --proxy_server 指定其路径。\x1b[0m\n");
