@@ -65,6 +65,7 @@ public:
     using executor_type = net::any_io_executor;
 
     using transfer_handler = std::function<int(void*, std::size_t)>;
+    using http_result_handler = std::function<void(const http_response&)>;
 
 public:
     // 构造函数.
@@ -166,6 +167,11 @@ public:
 
     // 设置传输回调函数, 用于获取传输进度.
     void set_transfer_handler(transfer_handler&& handler) noexcept;
+    transfer_handler& get_transfer_handler() noexcept;
+
+    // 设置 http_result 回调函数, 用于获取响应头和状态码.
+    void set_http_result_handler(http_result_handler&& handler) noexcept;
+    http_result_handler& get_http_result_handler() noexcept;
 
     // 设置 User-agent.
     void user_agent(const std::string& ua) noexcept;
@@ -207,6 +213,9 @@ private:
 
     // 传输回调.
     transfer_handler transfer_handler_;
+
+    // http_result 回调.
+    http_result_handler http_result_handler_;
 
     // 自定义 fclose 删除器.
     struct fclose_deleter

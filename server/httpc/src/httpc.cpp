@@ -166,6 +166,9 @@ namespace {
 
             auto& resp = *result;
 
+            if (client.get_http_result_handler())
+                client.get_http_result_handler()(resp);
+
             if (redirect_count < client.max_redirects())
             {
                 auto status = resp.result_int();
@@ -741,6 +744,21 @@ void http_client::set_download_file(const std::string& file_path) noexcept
 void http_client::set_transfer_handler(transfer_handler&& handler) noexcept
 {
     transfer_handler_ = std::move(handler);
+}
+
+http_client::transfer_handler& http_client::get_transfer_handler() noexcept
+{
+    return transfer_handler_;
+}
+
+void http_client::set_http_result_handler(http_client::http_result_handler&& handler) noexcept
+{
+    http_result_handler_ = std::move(handler);
+}
+
+http_client::http_result_handler& http_client::get_http_result_handler() noexcept
+{
+    return http_result_handler_;
 }
 
 void http_client::user_agent(const std::string& ua) noexcept
