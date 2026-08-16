@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <map>
@@ -54,6 +55,9 @@ namespace fs = boost::filesystem;
 namespace json = boost::json;
 
 using tcp = net::ip::tcp;
+
+// 证书过期后热更新重试间隔, 不超过 2 分钟.
+inline constexpr std::chrono::seconds kCertExpiredRetryInterval{ 60 };
 
 namespace {
 
@@ -404,6 +408,23 @@ bool load_certificates(const std::string& dir, std::vector<cert_entry>& entries,
 		e.cert_file_ = cf.string();
 		e.key_file_ = key_path;
 		extract_cert_names(chain[0], e.domain_, e.sans_);
+		// 提取证书过期时间（与 proxy_server 一致, 用于过期检查）.
+		const ASN1_TIME* not_after = X509_getm_notAfter(chain[0]);
+#ifdef OPENSSL_IS_BORINGSSL
+		std::time_t expiration_time = 0;
+		if (not_after && ASN1_TIME_to_time_t(not_after, &expiration_time))
+			e.expire_ = expiration_time;
+#else
+		std::tm expire_tm{};
+		if (not_after && ASN1_TIME_to_tm(not_after, &expire_tm))
+		{
+#ifdef _WIN32
+			e.expire_ = _mkgmtime(&expire_tm);
+#else
+			e.expire_ = ::timegm(&expire_tm);
+#endif
+		}
+#endif
 		entries.push_back(std::move(e));
 
 		for (std::size_t i = 1; i < chain.size(); i++)
@@ -625,6 +646,7 @@ bool http_server::start(const std::string& listen_addr, bool https,
 			return false;
 		}
 		m_ssl_ctx_ = build_ssl_context(entries);
+		m_ssl_dir_ = ssl_dir;
 	}
 
 	m_acceptor_ = std::make_unique<tcp::acceptor>(m_ioc_.get_executor());
@@ -648,6 +670,9 @@ bool http_server::start(const std::string& listen_addr, bool https,
 	m_stopped_ = false;
 	// 协程化的 accept 循环（挂在共享 io_context 上）。
 	net::co_spawn(m_ioc_, accept_loop(), net::detached);
+	// 证书过期自动热更新（仅 https 模式）.
+	if (https)
+		net::co_spawn(m_ioc_, certificate_check_loop(), net::detached);
 	return true;
 }
 
@@ -718,9 +743,15 @@ net::awaitable<void> http_server::accept_loop()
 net::awaitable<void> http_server::handle_connection(tcp::socket sock)
 {
 	boost::system::error_code ec;
-	if (m_ssl_ctx_) {
+	// 持有上下文副本: 证书热更新替换 m_ssl_ctx_ 后, 本连接仍可安全使用旧上下文.
+	std::shared_ptr<net::ssl::context> ssl_ctx;
+	{
+		std::lock_guard<std::mutex> lock(m_ssl_mu_);
+		ssl_ctx = m_ssl_ctx_;
+	}
+	if (ssl_ctx) {
 		try {
-			beast::ssl_stream<tcp::socket> stream(std::move(sock), *m_ssl_ctx_);
+			beast::ssl_stream<tcp::socket> stream(std::move(sock), *ssl_ctx);
 			co_await stream.async_handshake(ssl::stream_base::server,
 				net::redirect_error(net::use_awaitable, ec));
 			if (ec)
@@ -732,6 +763,93 @@ net::awaitable<void> http_server::handle_connection(tcp::socket sock)
 			co_await serve_http(sock);
 		} catch (...) {}
 	}
+}
+
+// 扫描证书目录检查过期; 存在过期证书时热更新 SSL 上下文.
+// 返回距下次检查的间隔, 0 表示存在过期证书且已热更新.
+std::chrono::seconds http_server::certificate_check()
+{
+	// 重新加载证书目录, 与 proxy_server 的证书过期检查一致.
+	std::vector<cert_entry> entries;
+	std::string err;
+	if (!load_certificates(m_ssl_dir_, entries, err))
+	{
+		std::fprintf(stderr, "[warn] reload ssl certificates failed: %s\n", err.c_str());
+		// 加载失败视为需要尽快重试.
+		return std::chrono::seconds::zero();
+	}
+
+	std::time_t now = std::time(nullptr);
+	std::chrono::seconds earliest_expiry = std::chrono::hours(24) * 365;
+	bool expired = false;
+
+	for (const auto& e : entries)
+	{
+		if (e.expire_ > 0 && now > e.expire_)
+		{
+			std::fprintf(stderr, "[warn] domain: '%s', cert: '%s', key: '%s', expired\n",
+				e.domain_.c_str(), e.cert_file_.c_str(), e.key_file_.c_str());
+			expired = true;
+			continue;
+		}
+
+		if (e.expire_ > 0)
+		{
+			auto remaining = std::chrono::seconds(e.expire_ - now);
+			earliest_expiry = std::min(earliest_expiry, remaining);
+		}
+	}
+
+	if (!expired)
+		return earliest_expiry;
+
+	// 存在过期证书, 热更新 SSL 上下文.
+	auto new_ctx = build_ssl_context(entries);
+	{
+		std::lock_guard<std::mutex> lock(m_ssl_mu_);
+		m_ssl_ctx_ = std::move(new_ctx);
+	}
+
+	return std::chrono::seconds::zero();
+}
+
+// 证书过期自动热更新协程 (参考 proxy_server 的 tick/certificate_check 实现):
+// 每秒 tick 一次, 到达检查时间点后扫描证书, 有过期证书则热更新并缩短周期
+// (不超过 2 分钟) 持续重试, 直到证书不再过期; 证书均有效时按最早过期时间检查.
+net::awaitable<void> http_server::certificate_check_loop()
+{
+	auto ex = co_await net::this_coro::executor;
+	net::steady_timer timer(ex);
+	auto check_time_point = std::chrono::steady_clock::now();
+
+	while (!m_stopped_.load())
+	{
+		timer.expires_after(std::chrono::seconds(1));
+		boost::system::error_code ec;
+		co_await timer.async_wait(net::redirect_error(net::use_awaitable, ec));
+		if (ec)
+			break;
+
+		auto now = std::chrono::steady_clock::now();
+		if (now < check_time_point)
+			continue;
+
+		// 返回距下次检查的间隔; 0 表示存在过期证书且已热更新.
+		auto duration = certificate_check();
+		if (duration == std::chrono::seconds::zero())
+		{
+			// 存在过期证书, 缩短周期持续重试, 直到证书不再过期
+			// (重试间隔不超过 2 分钟).
+			check_time_point = std::chrono::steady_clock::now() + kCertExpiredRetryInterval;
+		}
+		else
+		{
+			// 所有证书均有效, 至少在最早过期时间后再检查.
+			check_time_point = now + duration + std::chrono::minutes(5);
+		}
+	}
+
+	co_return;
 }
 
 template <class Stream>

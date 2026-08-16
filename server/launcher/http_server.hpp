@@ -14,6 +14,8 @@
 #define LAUNCHER_HTTP_SERVER_HPP
 
 #include <atomic>
+#include <chrono>
+#include <ctime>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -38,6 +40,7 @@ struct cert_entry
 	std::string key_file_;
 	std::string domain_;
 	std::vector<std::string> sans_;
+	std::time_t expire_ = 0; // 证书过期时间 (Unix 秒), 0 表示未知.
 };
 
 // 从证书目录加载证书（递归遍历，配对 cert/key）。
@@ -85,6 +88,15 @@ private:
 	void add_conn(net::ip::tcp::socket::native_handle_type h);
 	void remove_conn(net::ip::tcp::socket::native_handle_type h);
 
+	// 扫描证书目录检查过期；存在过期证书时热更新 SSL 上下文.
+	// 返回距下次检查的间隔, 0 表示存在过期证书且已热更新.
+	std::chrono::seconds certificate_check();
+
+	// 证书过期自动热更新协程（https 模式下启动, 参考 proxy_server 的
+	// certificate_check/tick 实现: 过期后以不超过 2 分钟的周期持续重试,
+	// 直到证书不再过期）.
+	net::awaitable<void> certificate_check_loop();
+
 	std::shared_ptr<manager> m_mgr_;
 	net::io_context& m_ioc_;
 	std::string m_webui_user_;
@@ -92,6 +104,10 @@ private:
 	std::string m_version_;
 	std::unique_ptr<net::ip::tcp::acceptor> m_acceptor_;
 	std::shared_ptr<net::ssl::context> m_ssl_ctx_;
+	// 证书目录（https 模式, 供证书过期热更新扫描）.
+	std::string m_ssl_dir_;
+	// 保护 m_ssl_ctx_ 的访问与热更新切换.
+	std::mutex m_ssl_mu_;
 	std::atomic<bool> m_stopped_{ false };
 
 	std::mutex m_conn_mu_;
