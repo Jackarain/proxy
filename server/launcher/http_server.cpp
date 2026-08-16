@@ -56,8 +56,8 @@ namespace json = boost::json;
 
 using tcp = net::ip::tcp;
 
-// 证书过期后热更新重试间隔, 不超过 2 分钟.
-inline constexpr std::chrono::seconds kCertExpiredRetryInterval{ 60 };
+// 证书过期后热更新重试间隔, 保证及时获取更新后的证书.
+inline constexpr std::chrono::seconds kCertExpiredRetryInterval{ 30 };
 
 namespace {
 
@@ -642,11 +642,15 @@ bool http_server::start(const std::string& listen_addr, bool https,
 		std::vector<cert_entry> entries;
 		std::string cerr;
 		if (!load_certificates(ssl_dir, entries, cerr)) {
-			err = "load ssl certificates failed: " + cerr;
-			return false;
+			// 证书目录不可用（例如仅有过期或无法配对的证书）时不拒绝启动,
+			// 告警并降级为明文 HTTP, 保证 launcher 仍可运行.
+			std::fprintf(stderr, "[warn] load ssl certificates failed: %s, "
+				"fallback to plain HTTP\n", cerr.c_str());
+			https = false;
+		} else {
+			m_ssl_ctx_ = build_ssl_context(entries);
+			m_ssl_dir_ = ssl_dir;
 		}
-		m_ssl_ctx_ = build_ssl_context(entries);
-		m_ssl_dir_ = ssl_dir;
 	}
 
 	m_acceptor_ = std::make_unique<tcp::acceptor>(m_ioc_.get_executor());
@@ -668,6 +672,7 @@ bool http_server::start(const std::string& listen_addr, bool https,
 	}
 
 	m_stopped_ = false;
+	m_https_ = https;
 	// 协程化的 accept 循环（挂在共享 io_context 上）。
 	net::co_spawn(m_ioc_, accept_loop(), net::detached);
 	// 证书过期自动热更新（仅 https 模式）.
@@ -765,8 +770,8 @@ net::awaitable<void> http_server::handle_connection(tcp::socket sock)
 	}
 }
 
-// 扫描证书目录检查过期; 存在过期证书时热更新 SSL 上下文.
-// 返回距下次检查的间隔, 0 表示存在过期证书且已热更新.
+// 扫描证书目录检查过期并热更新 SSL 上下文.
+// 返回距下次检查的间隔, 0 表示存在过期证书（应尽快重试）.
 std::chrono::seconds http_server::certificate_check()
 {
 	// 重新加载证书目录, 与 proxy_server 的证书过期检查一致.
@@ -800,17 +805,17 @@ std::chrono::seconds http_server::certificate_check()
 		}
 	}
 
-	if (!expired)
-		return earliest_expiry;
-
-	// 存在过期证书, 热更新 SSL 上下文.
+	// 每次检查都重建并热替换 SSL 上下文: 证书可能在两次检查之间被续期,
+	// 若仅在存在过期证书时才重载, 会漏掉间隙内更新的证书, 导致服务端
+	// 一直持有旧证书. 检查频率由调用方控制, 有效时最长间隔为
+	// 最早过期时间 + 5 分钟, 重建开销可忽略.
 	auto new_ctx = build_ssl_context(entries);
 	{
 		std::lock_guard<std::mutex> lock(m_ssl_mu_);
 		m_ssl_ctx_ = std::move(new_ctx);
 	}
 
-	return std::chrono::seconds::zero();
+	return expired ? std::chrono::seconds::zero() : earliest_expiry;
 }
 
 // 证书过期自动热更新协程 (参考 proxy_server 的 tick/certificate_check 实现):

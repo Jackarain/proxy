@@ -437,10 +437,8 @@ int main(int argc, char** argv)
 
 	// 实例管理器。
 	auto mgr = std::make_shared<manager>(data_dir, proxy_path, work_dir.string());
-	// 必须先设置 WS 地址再 Load：Load 会自动启动 autostart 实例，
-	// 此时需要正确的地址/端口来构造 --launcher 控制通道 URL。
+	// 请求的 HTTPS 模式（ssl_certificate_dir 非空即启用）.
 	bool https = !ssl_dir.empty();
-	mgr->set_ws_addr(host, port, https);
 
 	// 共享 io_context：HTTP 服务与实例 RPC 全部运行于此（main 持有）。
 	net::io_context ioc;
@@ -453,6 +451,12 @@ int main(int argc, char** argv)
 		std::fprintf(stderr, "%s\n", err.c_str());
 		return 1;
 	}
+
+	// 证书目录不可用时 start 会降级为明文 HTTP, 以实际生效的模式
+	// 设置控制通道地址. 必须先于 Load: Load 会自动启动 autostart 实例,
+	// 此时需要正确的地址/端口来构造 --launcher 控制通道 URL.
+	https = server.https_enabled();
+	mgr->set_ws_addr(host, port, https);
 
 	std::fprintf(stderr, "[info] launcher started, WebUI %s://%s (control channel port %d)\n",
 		https ? "https" : "http", listen_addr.c_str(), port);

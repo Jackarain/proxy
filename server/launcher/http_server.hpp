@@ -109,6 +109,8 @@ private:
 	// 保护 m_ssl_ctx_ 的访问与热更新切换.
 	std::mutex m_ssl_mu_;
 	std::atomic<bool> m_stopped_{ false };
+	// 实际生效的 HTTPS 模式, 由 start() 在成功启动时确定.
+	bool m_https_ = false;
 
 	std::mutex m_conn_mu_;
 	std::set<net::ip::tcp::socket::native_handle_type> m_conns_;
@@ -117,6 +119,8 @@ public:
 	std::shared_ptr<manager> mgr() const { return m_mgr_; }
 	const std::string& webui_user() const { return m_webui_user_; }
 	const std::string& webui_password() const { return m_webui_password_; }
+	// 实际生效的 HTTPS 模式（证书目录不可用时 start 会降级为明文 HTTP）.
+	bool https_enabled() const { return m_https_; }
 };
 
 } // namespace launcher
