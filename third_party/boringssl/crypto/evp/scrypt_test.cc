@@ -1,16 +1,16 @@
-/* Copyright (c) 2017, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2017 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <stdlib.h>
 #include <string.h>
@@ -38,7 +38,7 @@ static bool GetUint64(FileTest *t, uint64_t *out, const char *name) {
 }
 
 TEST(ScryptTest, TestVectors) {
-  FileTestGTest("crypto/evp/scrypt_tests.txt", [](FileTest *t) {
+  FileTestGTest("crypto/evp/test/scrypt_tests.txt", [](FileTest *t) {
     std::vector<uint8_t> password, salt, key;
     uint64_t N, r, p, max_mem = 0;
     ASSERT_TRUE(t->GetBytes(&password, "Password"));
@@ -79,24 +79,31 @@ TEST(ScryptTest, InvalidParameters) {
   // p and r are non-zero.
   EXPECT_FALSE(EVP_PBE_scrypt(nullptr, 0, nullptr, 0, 1024 /* N */, 0 /* r */,
                               1 /* p */, 0 /* max_mem */, key, sizeof(key)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PARAMETERS}}));
   EXPECT_FALSE(EVP_PBE_scrypt(nullptr, 0, nullptr, 0, 1024 /* N */, 8 /* r */,
                               0 /* p */, 0 /* max_mem */, key, sizeof(key)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PARAMETERS}}));
 
   // N must be a power of 2 > 1.
   EXPECT_FALSE(EVP_PBE_scrypt(nullptr, 0, nullptr, 0, 0 /* N */, 8 /* r */,
                               1 /* p */, 0 /* max_mem */, key, sizeof(key)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PARAMETERS}}));
   EXPECT_FALSE(EVP_PBE_scrypt(nullptr, 0, nullptr, 0, 1 /* N */, 8 /* r */,
                               1 /* p */, 0 /* max_mem */, key, sizeof(key)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PARAMETERS}}));
   EXPECT_FALSE(EVP_PBE_scrypt(nullptr, 0, nullptr, 0, 1023 /* N */, 8 /* r */,
                               1 /* p */, 0 /* max_mem */, key, sizeof(key)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PARAMETERS}}));
   EXPECT_TRUE(EVP_PBE_scrypt(nullptr, 0, nullptr, 0, 1024 /* N */, 8 /* r */,
-                              1 /* p */, 0 /* max_mem */, key, sizeof(key)));
+                             1 /* p */, 0 /* max_mem */, key, sizeof(key)));
   EXPECT_FALSE(EVP_PBE_scrypt(nullptr, 0, nullptr, 0, 1025 /* N */, 8 /* r */,
                               1 /* p */, 0 /* max_mem */, key, sizeof(key)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PARAMETERS}}));
 
   // N must be below 2^(128 * r / 8).
   EXPECT_FALSE(EVP_PBE_scrypt(nullptr, 0, nullptr, 0, 65536 /* N */, 1 /* r */,
                               1 /* p */, 0 /* max_mem */, key, sizeof(key)));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PARAMETERS}}));
   EXPECT_TRUE(EVP_PBE_scrypt(nullptr, 0, nullptr, 0, 32768 /* N */, 1 /* r */,
                              1 /* p */, 0 /* max_mem */, key, sizeof(key)));
 }

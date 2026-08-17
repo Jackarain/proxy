@@ -1,12 +1,27 @@
 // Copyright 2010 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "pem.h"
 
+#include <array>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include <gtest/gtest.h>
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 TEST(PEMTokenizerTest, BasicParsing) {
   const char data[] =
@@ -41,6 +56,37 @@ TEST(PEMTokenizerTest, CarriageReturnLineFeeds) {
   EXPECT_EQ("EXPECTED-BLOCK", tokenizer.block_type());
   EXPECT_EQ("MatchesAcceptedBlockType", tokenizer.data());
 
+  EXPECT_FALSE(tokenizer.GetNext());
+}
+
+TEST(PEMTokenizerTest, IgnoreWhitespace) {
+  const char data[] =
+      "-----BEGIN EXPECTED-BLOCK-----\n"
+      " \tTWF0Y2 \t\n \t\n \thlc0FjY2Vw   \tdGVkQmxvY2tUeXBl \t\n"
+      "-----END EXPECTED-BLOCK-----\n";
+  std::string_view string_piece(data);
+  std::vector<std::string> accepted_types;
+  accepted_types.push_back("EXPECTED-BLOCK");
+
+  PEMTokenizer tokenizer(string_piece, accepted_types);
+  EXPECT_TRUE(tokenizer.GetNext());
+
+  EXPECT_EQ("EXPECTED-BLOCK", tokenizer.block_type());
+  EXPECT_EQ("MatchesAcceptedBlockType", tokenizer.data());
+
+  EXPECT_FALSE(tokenizer.GetNext());
+}
+
+TEST(PEMTokenizerTest, InvalidBase64) {
+  const char data[] =
+      "-----BEGIN EXPECTED-BLOCK-----\n"
+      "??????\n"
+      "-----END EXPECTED-BLOCK-----\n";
+  std::string_view string_piece(data);
+  std::vector<std::string> accepted_types;
+  accepted_types.push_back("EXPECTED-BLOCK");
+
+  PEMTokenizer tokenizer(string_piece, accepted_types);
   EXPECT_FALSE(tokenizer.GetNext());
 }
 
@@ -166,6 +212,74 @@ TEST(PEMTokenizerTest, BlockWithHeader) {
   EXPECT_FALSE(tokenizer.GetNext());
 }
 
+TEST(PEMTokenizerTest, SpanConstructor) {
+  const std::string_view data =
+      "-----BEGIN EXPECTED-BLOCK-----\n"
+      "U3BhbkNvbnN0cnVjdG9y\n"
+      "-----END EXPECTED-BLOCK-----\n";
+  const std::array<std::string_view, 1> accepted_types = { "EXPECTED-BLOCK" };
+  PEMTokenizer tokenizer(data, bssl::Span(accepted_types));
+  EXPECT_TRUE(tokenizer.GetNext());
+  EXPECT_EQ("EXPECTED-BLOCK", tokenizer.block_type());
+  EXPECT_EQ("SpanConstructor", tokenizer.data());
+
+  EXPECT_FALSE(tokenizer.GetNext());
+}
+
+TEST(PEMDecodeTest, BasicSingle) {
+  const std::string_view data =
+      "-----BEGIN SINGLE-----\n"
+      "YmxvY2sgYm9keQ=="
+      "-----END SINGLE-----\n"
+      "-----BEGIN WRONG-----\n"
+      "d3JvbmcgYmxvY2sgYm9keQ=="
+      "-----END WRONG-----\n";
+  std::optional<std::string> result = PEMDecodeSingle(data, "SINGLE");
+  ASSERT_TRUE(result);
+  EXPECT_EQ(*result, "block body");
+}
+
+TEST(PEMDecodeTest, BasicMulti) {
+  const std::string_view data =
+      "-----BEGIN MULTI-1-----\n"
+      "YmxvY2sgYm9keSAx"
+      "-----END MULTI-1-----\n"
+      "-----BEGIN WRONG-----\n"
+      "d3JvbmcgYmxvY2sgYm9keQ=="
+      "-----END WRONG-----\n"
+      "-----BEGIN MULTI-2-----\n"
+      "YmxvY2sgYm9keSAy"
+      "-----END MULTI-2-----\n";
+  const std::array<std::string_view, 2> accepted_types = {"MULTI-1", "MULTI-2"};
+  std::vector<PEMToken> result = PEMDecode(data, accepted_types);
+  EXPECT_EQ(result.size(), 2u);
+  EXPECT_EQ(result[0].type, "MULTI-1");
+  EXPECT_EQ(result[0].data, "block body 1");
+  EXPECT_EQ(result[1].type, "MULTI-2");
+  EXPECT_EQ(result[1].data, "block body 2");
+}
+
+TEST(PEMDecodeTest, TypeMismatchSingle) {
+  const std::string_view data =
+      "-----BEGIN WRONG-----\n"
+      "d3JvbmcgYmxvY2sgYm9keQ=="
+      "-----END WRONG-----\n";
+  std::optional<std::string> result = PEMDecodeSingle(data, "SINGLE");
+  EXPECT_FALSE(result);
+}
+
+TEST(PEMDecodeTest, TooManySingle) {
+  const std::string_view data =
+      "-----BEGIN SINGLE-----\n"
+      "YmV0dGVyIG5vdCBzZWUgdGhpcw=="
+      "-----END SINGLE-----\n"
+      "-----BEGIN SINGLE-----\n"
+      "b3IgdGhpcw=="
+      "-----END SINGLE-----\n";
+  std::optional<std::string> result = PEMDecodeSingle(data, "SINGLE");
+  EXPECT_FALSE(result);
+}
+
 TEST(PEMEncodeTest, Basic) {
   EXPECT_EQ(
       "-----BEGIN BLOCK-ONE-----\n"
@@ -202,4 +316,4 @@ TEST(PEMEncodeTest, Wrapping) {
                 "WRAPPED LINE"));
 }
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

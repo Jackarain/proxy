@@ -1,18 +1,18 @@
 # coding=utf8
 
-# Copyright (c) 2015, Google Inc.
+# Copyright 2015 The BoringSSL Authors
 #
-# Permission to use, copy, modify, and/or distribute this software for any
-# purpose with or without fee is hereby granted, provided that the above
-# copyright notice and this permission notice appear in all copies.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-# SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
-# OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-# CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Enumerates source files for consumption by various build systems."""
 
@@ -24,26 +24,28 @@ import json
 
 
 PREFIX = None
-EMBED_TEST_DATA = False
 
 
 def PathOf(x):
   return x if not PREFIX else os.path.join(PREFIX, x)
 
 
-LICENSE_TEMPLATE = """Copyright (c) 2015, Google Inc.
+TARGET_PREFIX = ''
 
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
 
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
-OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.""".split("\n")
+LICENSE_TEMPLATE = """Copyright 2015 The BoringSSL Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.""".split("\n")
 
 def LicenseHeader(comment):
   lines = []
@@ -64,6 +66,7 @@ class Android(object):
 """
 
   def PrintVariableSection(self, out, name, files):
+    name = f'{TARGET_PREFIX}{name}'
     out.write('%s := \\\n' % name)
     for f in sorted(files):
       out.write('  %s\\\n' % f)
@@ -99,6 +102,7 @@ class Android(object):
 
   def PrintDefaults(self, blueprint, name, files, asm_files=[], data=[]):
     """Print a cc_defaults section from a list of C files and optionally assembly outputs"""
+    name = f'{TARGET_PREFIX}{name}'
     if asm_files:
       blueprint.write('\n')
       blueprint.write('%s_asm = [\n' % name)
@@ -237,6 +241,8 @@ class Bazel(object):
       self.PrintVariableSection(out, 'pki_sources', files['pki'])
       self.PrintVariableSection(out, 'rust_bssl_sys', files['rust_bssl_sys'])
       self.PrintVariableSection(out, 'rust_bssl_crypto', files['rust_bssl_crypto'])
+      self.PrintVariableSection(out, 'rust_bssl_macros', files['rust_bssl_macros'])
+      self.PrintVariableSection(out, 'rust_bssl_x509', files['rust_bssl_x509'])
       self.PrintVariableSection(out, 'tool_sources', files['tool'])
       self.PrintVariableSection(out, 'tool_headers', files['tool_headers'])
 
@@ -332,6 +338,8 @@ class GN(object):
       self.PrintVariableSection(out, 'rust_bssl_sys', files['rust_bssl_sys'])
       self.PrintVariableSection(out, 'rust_bssl_crypto',
                                 files['rust_bssl_crypto'])
+      self.PrintVariableSection(out, 'rust_bssl_macros', files['rust_bssl_macros'])
+      self.PrintVariableSection(out, 'rust_bssl_x509', files['rust_bssl_x509'])
       self.PrintVariableSection(out, 'ssl_sources',
                                 files['ssl'] + files['ssl_internal_headers'])
       self.PrintVariableSection(out, 'ssl_headers', files['ssl_headers'])
@@ -400,11 +408,11 @@ class CMake(object):
     self.header = LicenseHeader("#") + R'''
 # This file is created by generate_build_files.py. Do not edit manually.
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.16)
 
 project(BoringSSL LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -452,7 +460,7 @@ else()
     if(NOT WIN32)
       set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -Wa,--noexecstack")
     endif()
-    # Clang's integerated assembler does not support debug symbols.
+    # Clang's integrated assembler does not support debug symbols.
     if(NOT CMAKE_ASM_COMPILER_ID MATCHES "Clang")
       set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -Wa,-g")
     endif()
@@ -583,21 +591,6 @@ def FindCFiles(directory, filter_func):
   return cfiles
 
 
-def FindRustFiles(directory):
-  """Recurses through directory and returns a list of paths to all the Rust source
-  files."""
-  rust_files = []
-
-  for (path, dirnames, filenames) in os.walk(directory):
-    for filename in filenames:
-      if not filename.endswith('.rs'):
-        continue
-      rust_files.append(os.path.join(path, filename))
-
-  rust_files.sort()
-  return rust_files
-
-
 def FindHeaderFiles(directory, filter_func):
   """Recurses through directory and returns a list of paths to all the header files that pass filter_func."""
   hfiles = []
@@ -626,11 +619,6 @@ def main(platforms):
   with open(os.path.join('src', 'gen', 'sources.json')) as f:
     sources = json.load(f)
 
-  bssl_sys_files = FindRustFiles(os.path.join('src', 'rust', 'bssl-sys', 'src'))
-  bssl_crypto_files = FindRustFiles(os.path.join('src', 'rust', 'bssl-crypto', 'src'))
-
-  fuzz_c_files = FindCFiles(os.path.join('src', 'fuzz'), NoTests)
-
   # TODO(crbug.com/boringssl/542): generate_build_files.py historically reported
   # all the assembly files as part of libcrypto. Merge them for now, but we
   # should split them out later.
@@ -639,13 +627,6 @@ def main(platforms):
                       sources['test_support']['asm'])
   crypto_nasm = sorted(sources['bcm']['nasm'] + sources['crypto']['nasm'] +
                        sources['test_support']['nasm'])
-
-  if EMBED_TEST_DATA:
-    with open('crypto_test_data.cc', 'w+') as out:
-      subprocess.check_call(
-          ['go', 'run', 'util/embed_test_data.go'] + sources['crypto_test']['data'],
-          cwd='src',
-          stdout=out)
 
   files = {
       'bcm_crypto': PrefixWithSrc(sources['bcm']['srcs']),
@@ -658,14 +639,16 @@ def main(platforms):
       'crypto_test': PrefixWithSrc(sources['crypto_test']['srcs']),
       'crypto_test_data': PrefixWithSrc(sources['crypto_test']['data']),
       'fips_fragments': PrefixWithSrc(sources['bcm']['internal_hdrs']),
-      'fuzz': fuzz_c_files,
+      'fuzz': PrefixWithSrc(sources['fuzz']['srcs']),
       'pki': PrefixWithSrc(sources['pki']['srcs']),
       'pki_headers': PrefixWithSrc(sources['pki']['hdrs']),
       'pki_internal_headers': PrefixWithSrc(sources['pki']['internal_hdrs']),
       'pki_test': PrefixWithSrc(sources['pki_test']['srcs']),
       'pki_test_data': PrefixWithSrc(sources['pki_test']['data']),
-      'rust_bssl_crypto': bssl_crypto_files,
-      'rust_bssl_sys': bssl_sys_files,
+      'rust_bssl_crypto': PrefixWithSrc(sources['rust_bssl_crypto']['srcs']),
+      'rust_bssl_sys': PrefixWithSrc(sources['rust_bssl_sys']['srcs']),
+      'rust_bssl_macros': PrefixWithSrc(sources['rust_bssl_macros']['srcs']),
+      'rust_bssl_x509': PrefixWithSrc(sources['rust_bssl_x509']['srcs']),
       'ssl': PrefixWithSrc(sources['ssl']['srcs']),
       'ssl_headers': PrefixWithSrc(sources['ssl']['hdrs']),
       'ssl_internal_headers': PrefixWithSrc(sources['ssl']['internal_hdrs']),
@@ -696,18 +679,15 @@ ALL_PLATFORMS = {
 
 if __name__ == '__main__':
   parser = optparse.OptionParser(
-      usage='Usage: %%prog [--prefix=<path>] [all|%s]' %
+      usage='Usage: %%prog [--prefix=<path>] [--target-prefix=<prefix>] [all|%s]' %
       '|'.join(sorted(ALL_PLATFORMS.keys())))
   parser.add_option('--prefix', dest='prefix',
       help='For Bazel, prepend argument to all source files')
-  parser.add_option(
-      '--embed_test_data', dest='embed_test_data', action='store_true',
-      help='Generates the legacy crypto_test_data.cc file. To use, build with' +
-           ' -DBORINGSSL_CUSTOM_GET_TEST_DATA and add this file to ' +
-           'crypto_test.')
+  parser.add_option('--target-prefix', dest='target_prefix', default='',
+      help='For Android, prepend argument to all target names')
   options, args = parser.parse_args(sys.argv[1:])
   PREFIX = options.prefix
-  EMBED_TEST_DATA = options.embed_test_data
+  TARGET_PREFIX = options.target_prefix
 
   if not args:
     parser.print_help()

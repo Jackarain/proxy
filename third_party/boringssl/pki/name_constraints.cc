@@ -1,6 +1,16 @@
 // Copyright 2015 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "name_constraints.h"
 
@@ -21,7 +31,7 @@
 #include "string_util.h"
 #include "verify_name_match.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 namespace {
 
@@ -43,7 +53,7 @@ const int kSupportedNameTypes =
 // will match "bar.com" but not "foo.bar.com".
 enum WildcardMatchType { WILDCARD_PARTIAL_MATCH, WILDCARD_FULL_MATCH };
 
-// Returns true if |name| falls in the subtree defined by |dns_constraint|.
+// Returns true if `name` falls in the subtree defined by `dns_constraint`.
 // RFC 5280 section 4.2.1.10:
 // DNS name restrictions are expressed as host.example.com. Any DNS
 // name that can be constructed by simply adding zero or more labels
@@ -51,7 +61,7 @@ enum WildcardMatchType { WILDCARD_PARTIAL_MATCH, WILDCARD_FULL_MATCH };
 // example, www.host.example.com would satisfy the constraint but
 // host1.example.com would not.
 //
-// |wildcard_matching| controls handling of wildcard names (|name| starts with
+// `wildcard_matching` controls handling of wildcard names (`name` starts with
 // "*."). Wildcard handling is not specified by RFC 5280, but certificate
 // verification allows it, name constraints must check it similarly.
 bool DNSNameMatches(std::string_view name, std::string_view dns_constraint,
@@ -70,7 +80,7 @@ bool DNSNameMatches(std::string_view name, std::string_view dns_constraint,
   }
 
   // Wildcard partial-match handling ("*.bar.com" matching name constraint
-  // "foo.bar.com"). This only handles the case where the the dnsname and the
+  // "foo.bar.com"). This only handles the case where the dnsname and the
   // constraint match after removing the leftmost label, otherwise it is handled
   // by falling through to the check of whether the dnsname is fully within or
   // fully outside of the constraint.
@@ -112,10 +122,10 @@ bool DNSNameMatches(std::string_view name, std::string_view dns_constraint,
   return false;
 }
 
-// Parses a GeneralSubtrees |value| and store the contents in |subtrees|.
-// The individual values stored into |subtrees| are not validated by this
+// Parses a GeneralSubtrees `value` and store the contents in `subtrees`.
+// The individual values stored into `subtrees` are not validated by this
 // function.
-// NOTE: |subtrees| is not pre-initialized by the function(it is expected to be
+// NOTE: `subtrees` is not pre-initialized by the function(it is expected to be
 // a default initialized object), and it will be modified regardless of the
 // return value.
 [[nodiscard]] bool ParseGeneralSubtrees(der::Input value,
@@ -410,7 +420,7 @@ void NameConstraints::IsPermittedCert(der::Input subject_rdn_sequence,
       (constrained_name_types() & GENERAL_NAME_RFC822_NAME)) {
     if (!FindEmailAddressesInName(subject_rdn_sequence,
                                   &subject_email_addresses_to_check)) {
-      // Error parsing |subject_rdn_sequence|.
+      // Error parsing `subject_rdn_sequence`.
       errors->AddError(cert_errors::kNotPermittedByNameConstraints);
       return;
     }
@@ -624,7 +634,7 @@ bool NameConstraints::IsPermittedRfc822Name(
   for (const auto &permitted_name : permitted_subtrees_.rfc822_names) {
     if (Rfc822NameMatches(name_components[0], name_components[1],
                           permitted_name, Rfc822NameMatchType::kPermitted,
-                          /*case_insenitive_local_part=*/false)) {
+                          /*case_insensitive_local_part=*/false)) {
       return true;
     }
   }
@@ -707,4 +717,4 @@ bool NameConstraints::IsPermittedIP(der::Input ip) const {
   return false;
 }
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

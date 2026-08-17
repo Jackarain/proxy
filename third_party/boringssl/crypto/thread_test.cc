@@ -1,16 +1,16 @@
-/* Copyright (c) 2015, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2015 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "internal.h"
 
@@ -26,14 +26,17 @@
 #include "test/test_util.h"
 
 
+BSSL_NAMESPACE_BEGIN
+namespace {
+
 #if defined(OPENSSL_THREADS)
 
 static unsigned g_once_init_called = 0;
 
-static void once_init(void) {
+static void once_init() {
   g_once_init_called++;
 
-  // Sleep briefly so one |call_once_func| instance will call |CRYPTO_once|
+  // Sleep briefly so one `call_once_func` instance will call `CRYPTO_once`
   // while the other is running this function.
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
@@ -55,26 +58,23 @@ TEST(ThreadTest, Once) {
 }
 
 static CRYPTO_once_t once_init_value = CRYPTO_ONCE_INIT;
-static CRYPTO_once_t once_bss;
+static Mutex mutex_init_value;
+static ExDataClass ex_data_class_value;
 
-static CRYPTO_MUTEX mutex_init_value = CRYPTO_MUTEX_INIT;
-static CRYPTO_MUTEX mutex_bss;
-
-static CRYPTO_EX_DATA_CLASS ex_data_class_value = CRYPTO_EX_DATA_CLASS_INIT;
-static CRYPTO_EX_DATA_CLASS ex_data_class_bss;
+template <typename T>
+static void ExpectAllZeros(const T &t) {
+  uint8_t zeros[sizeof(T)] = {};
+  EXPECT_EQ(Bytes(zeros),
+            Bytes(reinterpret_cast<const uint8_t *>(&t), sizeof(t)));
+}
 
 TEST(ThreadTest, InitZeros) {
   if (FIPS_mode()) {
-    // Our FIPS tooling currently requires that |CRYPTO_ONCE_INIT|,
-    // |CRYPTO_MUTEX_INIT| and |CRYPTO_EX_DATA_CLASS| are all zeros and so can
-    // be placed in the BSS section.
-    EXPECT_EQ(Bytes((uint8_t *)&once_bss, sizeof(once_bss)),
-              Bytes((uint8_t *)&once_init_value, sizeof(once_init_value)));
-    EXPECT_EQ(Bytes((uint8_t *)&mutex_bss, sizeof(mutex_bss)),
-              Bytes((uint8_t *)&mutex_init_value, sizeof(mutex_init_value)));
-    EXPECT_EQ(
-        Bytes((uint8_t *)&ex_data_class_bss, sizeof(ex_data_class_bss)),
-        Bytes((uint8_t *)&ex_data_class_value, sizeof(ex_data_class_value)));
+    // Our FIPS tooling currently requires that these types are all zeros and so
+    // can be placed in the BSS section.
+    ExpectAllZeros(once_init_value);
+    ExpectAllZeros(mutex_init_value);
+    ExpectAllZeros(ex_data_class_value);
   }
 }
 
@@ -82,7 +82,7 @@ static int g_test_thread_ok = 0;
 static unsigned g_destructor_called_count = 0;
 
 static void thread_local_destructor(void *arg) {
-  if (arg == NULL) {
+  if (arg == nullptr) {
     return;
   }
 
@@ -95,7 +95,7 @@ TEST(ThreadTest, ThreadLocal) {
       << "Thread-local data was non-NULL at start.";
 
   std::thread thread([] {
-    if (CRYPTO_get_thread_local(OPENSSL_THREAD_LOCAL_TEST) != NULL ||
+    if (CRYPTO_get_thread_local(OPENSSL_THREAD_LOCAL_TEST) != nullptr ||
         !CRYPTO_set_thread_local(OPENSSL_THREAD_LOCAL_TEST,
                                  &g_destructor_called_count,
                                  thread_local_destructor) ||
@@ -131,24 +131,10 @@ TEST(ThreadTest, RandState) {
   thread.join();
 }
 
-TEST(ThreadTest, InitThreads) {
-  constexpr size_t kNumThreads = 10;
-
-  // |CRYPTO_library_init| is safe to call across threads.
-  std::vector<std::thread> threads;
-  threads.reserve(kNumThreads);
-  for (size_t i = 0; i < kNumThreads; i++) {
-    threads.emplace_back(&CRYPTO_library_init);
-  }
-  for (auto &thread : threads) {
-    thread.join();
-  }
-}
-
 TEST(ThreadTest, PreSandboxInitThreads) {
   constexpr size_t kNumThreads = 10;
 
-  // |CRYPTO_pre_sandbox_init| is safe to call across threads.
+  // `CRYPTO_pre_sandbox_init` is safe to call across threads.
   std::vector<std::thread> threads;
   threads.reserve(kNumThreads);
   for (size_t i = 0; i < kNumThreads; i++) {
@@ -160,3 +146,6 @@ TEST(ThreadTest, PreSandboxInitThreads) {
 }
 
 #endif  // OPENSSL_THREADS
+
+}  // namespace
+BSSL_NAMESPACE_END

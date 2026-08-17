@@ -1,16 +1,16 @@
-/* Copyright (c) 2020, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2020 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <openssl/hpke.h>
 
@@ -27,15 +27,19 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
-#include <openssl/sha.h>
+#include <openssl/sha2.h>
 #include <openssl/span.h>
 
 #include "../test/file_test.h"
 #include "../test/test_util.h"
 
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 namespace {
+
+const decltype(&EVP_hpke_x25519_hkdf_sha256) kAllKEMs[] = {
+    &EVP_hpke_p256_hkdf_sha256, &EVP_hpke_x25519_hkdf_sha256, &EVP_hpke_xwing,
+    &EVP_hpke_mlkem768, &EVP_hpke_mlkem1024};
 
 const decltype(&EVP_hpke_aes_128_gcm) kAllAEADs[] = {
     &EVP_hpke_aes_128_gcm,
@@ -45,6 +49,7 @@ const decltype(&EVP_hpke_aes_128_gcm) kAllAEADs[] = {
 
 const decltype(&EVP_hpke_hkdf_sha256) kAllKDFs[] = {
     &EVP_hpke_hkdf_sha256,
+    &EVP_hpke_hkdf_sha384,
 };
 
 // HPKETestVector corresponds to one array member in the published
@@ -57,7 +62,7 @@ class HPKETestVector {
   bool ReadFromFileTest(FileTest *t);
 
   void Verify() const {
-    const EVP_HPKE_KEM *kem = EVP_hpke_x25519_hkdf_sha256();
+    const EVP_HPKE_KEM *kem = GetKEM();
     const EVP_HPKE_AEAD *aead = GetAEAD();
     ASSERT_TRUE(aead);
     const EVP_HPKE_KDF *kdf = GetKDF();
@@ -67,12 +72,13 @@ class HPKETestVector {
     ScopedEVP_HPKE_CTX sender_ctx;
     uint8_t enc[EVP_HPKE_MAX_ENC_LENGTH];
     size_t enc_len = 0;
+
     switch (mode_) {
       case Mode::kBase:
         ASSERT_TRUE(EVP_HPKE_CTX_setup_sender_with_seed_for_testing(
             sender_ctx.get(), enc, &enc_len, sizeof(enc), kem, kdf, aead,
             public_key_r_.data(), public_key_r_.size(), info_.data(),
-            info_.size(), secret_key_e_.data(), secret_key_e_.size()));
+            info_.size(), sender_seed_.data(), sender_seed_.size()));
         break;
       case Mode::kAuth: {
         ScopedEVP_HPKE_KEY sender_key;
@@ -81,12 +87,12 @@ class HPKETestVector {
         ASSERT_TRUE(EVP_HPKE_CTX_setup_auth_sender_with_seed_for_testing(
             sender_ctx.get(), enc, &enc_len, sizeof(enc), sender_key.get(), kdf,
             aead, public_key_r_.data(), public_key_r_.size(), info_.data(),
-            info_.size(), secret_key_e_.data(), secret_key_e_.size()));
+            info_.size(), sender_seed_.data(), sender_seed_.size()));
         break;
       }
     }
 
-    EXPECT_EQ(Bytes(enc, enc_len), Bytes(public_key_e_));
+    EXPECT_EQ(Bytes(enc, enc_len), Bytes(enc_));
     VerifySender(sender_ctx.get());
 
     // Test the recipient.
@@ -94,9 +100,9 @@ class HPKETestVector {
     ASSERT_TRUE(EVP_HPKE_KEY_init(base_key.get(), kem, secret_key_r_.data(),
                                   secret_key_r_.size()));
 
-    enum class CopyMode { kOriginal, kCopy, kMove };
-    for (CopyMode copy :
-         {CopyMode::kOriginal, CopyMode::kCopy, CopyMode::kMove}) {
+    enum class CopyMode { kOriginal, kCopy, kMove, kDerive };
+    for (CopyMode copy : {CopyMode::kOriginal, CopyMode::kCopy, CopyMode::kMove,
+                          CopyMode::kDerive}) {
       SCOPED_TRACE(static_cast<int>(copy));
       const EVP_HPKE_KEY *key = base_key.get();
       ScopedEVP_HPKE_KEY key_copy;
@@ -109,6 +115,11 @@ class HPKETestVector {
           break;
         case CopyMode::kMove:
           EVP_HPKE_KEY_move(key_copy.get(), base_key.get());
+          key = key_copy.get();
+          break;
+        case CopyMode::kDerive:
+          ASSERT_TRUE(EVP_HPKE_KEY_derive(key_copy.get(), kem, ikm_r_.data(),
+                                          ikm_r_.size()));
           key = key_copy.get();
           break;
       }
@@ -145,6 +156,15 @@ class HPKETestVector {
   }
 
  private:
+  const EVP_HPKE_KEM *GetKEM() const {
+    for (const auto kem : kAllKEMs) {
+      if (EVP_HPKE_KEM_id(kem()) == kem_id_) {
+        return kem();
+      }
+    }
+    return nullptr;
+  }
+
   const EVP_HPKE_AEAD *GetAEAD() const {
     for (const auto aead : kAllAEADs) {
       if (EVP_HPKE_AEAD_id(aead()) == aead_id_) {
@@ -221,14 +241,16 @@ class HPKETestVector {
   };
 
   Mode mode_;
+  uint16_t kem_id_;
   uint16_t kdf_id_;
   uint16_t aead_id_;
   std::vector<uint8_t> context_;
   std::vector<uint8_t> info_;
-  std::vector<uint8_t> public_key_e_;
-  std::vector<uint8_t> secret_key_e_;
+  std::vector<uint8_t> enc_;
+  std::vector<uint8_t> sender_seed_;
   std::vector<uint8_t> public_key_r_;
   std::vector<uint8_t> secret_key_r_;
+  std::vector<uint8_t> ikm_r_;
   std::vector<uint8_t> public_key_s_;
   std::vector<uint8_t> secret_key_s_;
   std::vector<Encryption> encryptions_;
@@ -240,7 +262,7 @@ std::string BuildAttrName(const std::string &name, int iter) {
   return iter == 1 ? name : name + "/" + std::to_string(iter);
 }
 
-// Parses |s| as an unsigned integer of type T and writes the value to |out|.
+// Parses `s` as an unsigned integer of type T and writes the value to `out`.
 // Returns true on success. If the integer value exceeds the maximum T value,
 // returns false.
 template <typename T>
@@ -259,7 +281,7 @@ bool ParseIntSafe(T *out, const std::string &s) {
   return true;
 }
 
-// Read the |key| attribute from |file_test| and convert it to an integer.
+// Read the `key` attribute from `file_test` and convert it to an integer.
 template <typename T>
 bool FileTestReadInt(FileTest *file_test, T *out, const std::string &key) {
   std::string s;
@@ -270,13 +292,15 @@ bool FileTestReadInt(FileTest *file_test, T *out, const std::string &key) {
 bool HPKETestVector::ReadFromFileTest(FileTest *t) {
   uint8_t mode = 0;
   if (!FileTestReadInt(t, &mode, "mode") ||
+      !FileTestReadInt(t, &kem_id_, "kem_id") ||
       !FileTestReadInt(t, &kdf_id_, "kdf_id") ||
       !FileTestReadInt(t, &aead_id_, "aead_id") ||
-      !t->GetBytes(&info_, "info") ||
+      !t->GetBytes(&info_, "info") ||  //
       !t->GetBytes(&secret_key_r_, "skRm") ||
       !t->GetBytes(&public_key_r_, "pkRm") ||
-      !t->GetBytes(&secret_key_e_, "skEm") ||
-      !t->GetBytes(&public_key_e_, "pkEm")) {
+      !t->GetBytes(&ikm_r_, "ikmR") ||  //
+      !t->GetBytes(&sender_seed_, "sender_seed") ||
+      !t->GetBytes(&enc_, "enc")) {
     return false;
   }
 
@@ -328,6 +352,14 @@ TEST(HPKETest, VerifyTestVectors) {
   });
 }
 
+TEST(HPKETest, VerifyTestVectorsPQ) {
+  FileTestGTest("crypto/hpke/hpke_test_vectors_pq.txt", [](FileTest *t) {
+    HPKETestVector test_vec;
+    EXPECT_TRUE(test_vec.ReadFromFileTest(t));
+    test_vec.Verify();
+  });
+}
+
 // The test vectors used fixed sender ephemeral keys, while HPKE itself
 // generates new keys for each context. Test this codepath by checking we can
 // decrypt our own messages.
@@ -339,96 +371,101 @@ TEST(HPKETest, RoundTrip) {
   Span<const uint8_t> info_values[] = {{nullptr, 0}, info_a, info_b};
   Span<const uint8_t> ad_values[] = {{nullptr, 0}, ad_a, ad_b};
 
-  const EVP_HPKE_KEM *kem = EVP_hpke_x25519_hkdf_sha256();
+  for (const auto kem : kAllKEMs) {
+    SCOPED_TRACE(EVP_HPKE_KEM_id(kem()));
 
-  // Generate the recipient's keypair.
-  ScopedEVP_HPKE_KEY key;
-  ASSERT_TRUE(EVP_HPKE_KEY_generate(key.get(), kem));
-  uint8_t public_key_r[X25519_PUBLIC_VALUE_LEN];
-  size_t public_key_r_len;
-  ASSERT_TRUE(EVP_HPKE_KEY_public_key(key.get(), public_key_r,
-                                      &public_key_r_len, sizeof(public_key_r)));
+    // Generate the recipient's keypair.
+    ScopedEVP_HPKE_KEY key;
+    ASSERT_TRUE(EVP_HPKE_KEY_generate(key.get(), kem()));
+    uint8_t public_key_r[EVP_HPKE_MAX_PUBLIC_KEY_LENGTH];
+    size_t public_key_r_len;
+    ASSERT_TRUE(EVP_HPKE_KEY_public_key(
+        key.get(), public_key_r, &public_key_r_len, sizeof(public_key_r)));
 
-  // Generate the sender's keypair, for auth modes.
-  ScopedEVP_HPKE_KEY sender_key;
-  ASSERT_TRUE(
-      EVP_HPKE_KEY_generate(sender_key.get(), kem));
-  uint8_t public_key_s[X25519_PUBLIC_VALUE_LEN];
-  size_t public_key_s_len;
-  ASSERT_TRUE(EVP_HPKE_KEY_public_key(sender_key.get(), public_key_s,
-                                      &public_key_s_len, sizeof(public_key_r)));
+    // Generate the sender's keypair, for auth modes.
+    ScopedEVP_HPKE_KEY sender_key;
+    ASSERT_TRUE(EVP_HPKE_KEY_generate(sender_key.get(), kem()));
+    uint8_t public_key_s[EVP_HPKE_MAX_PUBLIC_KEY_LENGTH];
+    size_t public_key_s_len;
+    ASSERT_TRUE(EVP_HPKE_KEY_public_key(sender_key.get(), public_key_s,
+                                        &public_key_s_len,
+                                        sizeof(public_key_s)));
 
-  for (const auto kdf : kAllKDFs) {
-    SCOPED_TRACE(EVP_HPKE_KDF_id(kdf()));
-    for (const auto aead : kAllAEADs) {
-      SCOPED_TRACE(EVP_HPKE_AEAD_id(aead()));
-      for (const Span<const uint8_t> &info : info_values) {
-        SCOPED_TRACE(Bytes(info));
-        for (const Span<const uint8_t> &ad : ad_values) {
-          SCOPED_TRACE(Bytes(ad));
+    for (const auto kdf : kAllKDFs) {
+      SCOPED_TRACE(EVP_HPKE_KDF_id(kdf()));
+      for (const auto aead : kAllAEADs) {
+        SCOPED_TRACE(EVP_HPKE_AEAD_id(aead()));
+        for (const Span<const uint8_t> &info : info_values) {
+          SCOPED_TRACE(Bytes(info));
+          for (const Span<const uint8_t> &ad : ad_values) {
+            SCOPED_TRACE(Bytes(ad));
 
-          auto check_messages = [&](EVP_HPKE_CTX *sender_ctx,
-                                    EVP_HPKE_CTX *recipient_ctx) {
-            const char kCleartextPayload[] = "foobar";
+            auto check_messages = [&](EVP_HPKE_CTX *sender_ctx,
+                                      EVP_HPKE_CTX *recipient_ctx) {
+              const char kCleartextPayload[] = "foobar";
 
-            // Have sender encrypt message for the recipient.
-            std::vector<uint8_t> ciphertext(
-                sizeof(kCleartextPayload) +
-                EVP_HPKE_CTX_max_overhead(sender_ctx));
-            size_t ciphertext_len;
-            ASSERT_TRUE(EVP_HPKE_CTX_seal(
-                sender_ctx, ciphertext.data(), &ciphertext_len,
-                ciphertext.size(),
-                reinterpret_cast<const uint8_t *>(kCleartextPayload),
-                sizeof(kCleartextPayload), ad.data(), ad.size()));
+              // Have sender encrypt message for the recipient.
+              std::vector<uint8_t> ciphertext(
+                  sizeof(kCleartextPayload) +
+                  EVP_HPKE_CTX_max_overhead(sender_ctx));
+              size_t ciphertext_len;
+              ASSERT_TRUE(EVP_HPKE_CTX_seal(
+                  sender_ctx, ciphertext.data(), &ciphertext_len,
+                  ciphertext.size(),
+                  reinterpret_cast<const uint8_t *>(kCleartextPayload),
+                  sizeof(kCleartextPayload), ad.data(), ad.size()));
 
-            // Have recipient decrypt the message.
-            std::vector<uint8_t> cleartext(ciphertext.size());
-            size_t cleartext_len;
-            ASSERT_TRUE(EVP_HPKE_CTX_open(recipient_ctx, cleartext.data(),
-                                          &cleartext_len, cleartext.size(),
-                                          ciphertext.data(), ciphertext_len,
-                                          ad.data(), ad.size()));
+              // Have recipient decrypt the message.
+              std::vector<uint8_t> cleartext(ciphertext.size());
+              size_t cleartext_len;
+              ASSERT_TRUE(EVP_HPKE_CTX_open(recipient_ctx, cleartext.data(),
+                                            &cleartext_len, cleartext.size(),
+                                            ciphertext.data(), ciphertext_len,
+                                            ad.data(), ad.size()));
 
-            // Verify that decrypted message matches the original.
-            ASSERT_EQ(Bytes(cleartext.data(), cleartext_len),
-                      Bytes(kCleartextPayload, sizeof(kCleartextPayload)));
-          };
+              // Verify that decrypted message matches the original.
+              ASSERT_EQ(Bytes(cleartext.data(), cleartext_len),
+                        Bytes(kCleartextPayload, sizeof(kCleartextPayload)));
+            };
 
-          // Test the base mode.
-          {
-            ScopedEVP_HPKE_CTX sender_ctx;
-            uint8_t enc[X25519_PUBLIC_VALUE_LEN];
-            size_t enc_len;
-            ASSERT_TRUE(EVP_HPKE_CTX_setup_sender(
-                sender_ctx.get(), enc, &enc_len, sizeof(enc), kem, kdf(),
-                aead(), public_key_r, public_key_r_len, info.data(),
-                info.size()));
+            // Test the base mode.
+            {
+              ScopedEVP_HPKE_CTX sender_ctx;
+              uint8_t enc[EVP_HPKE_MAX_PUBLIC_KEY_LENGTH];
+              size_t enc_len;
+              ASSERT_TRUE(EVP_HPKE_CTX_setup_sender(
+                  sender_ctx.get(), enc, &enc_len, sizeof(enc), kem(), kdf(),
+                  aead(), public_key_r, public_key_r_len, info.data(),
+                  info.size()));
 
-            ScopedEVP_HPKE_CTX recipient_ctx;
-            ASSERT_TRUE(EVP_HPKE_CTX_setup_recipient(
-                recipient_ctx.get(), key.get(), kdf(), aead(), enc, enc_len,
-                info.data(), info.size()));
+              ScopedEVP_HPKE_CTX recipient_ctx;
+              ASSERT_TRUE(EVP_HPKE_CTX_setup_recipient(
+                  recipient_ctx.get(), key.get(), kdf(), aead(), enc, enc_len,
+                  info.data(), info.size()));
 
-            check_messages(sender_ctx.get(), recipient_ctx.get());
-          }
+              check_messages(sender_ctx.get(), recipient_ctx.get());
+            }
 
-          // Test the auth mode.
-          {
-            ScopedEVP_HPKE_CTX sender_ctx;
-            uint8_t enc[X25519_PUBLIC_VALUE_LEN];
-            size_t enc_len;
-            ASSERT_TRUE(EVP_HPKE_CTX_setup_auth_sender(
-                sender_ctx.get(), enc, &enc_len, sizeof(enc), sender_key.get(),
-                kdf(), aead(), public_key_r, public_key_r_len, info.data(),
-                info.size()));
+            // Test the auth mode.
+            // We skip X-Wing here since it does not support auth mode.
+            if (EVP_HPKE_KEM_id(kem()) != EVP_HPKE_XWING &&
+                EVP_HPKE_KEM_id(kem()) != EVP_HPKE_MLKEM768 &&
+                EVP_HPKE_KEM_id(kem()) != EVP_HPKE_MLKEM1024) {
+              ScopedEVP_HPKE_CTX sender_ctx;
+              uint8_t enc[EVP_HPKE_MAX_PUBLIC_KEY_LENGTH];
+              size_t enc_len;
+              ASSERT_TRUE(EVP_HPKE_CTX_setup_auth_sender(
+                  sender_ctx.get(), enc, &enc_len, sizeof(enc),
+                  sender_key.get(), kdf(), aead(), public_key_r,
+                  public_key_r_len, info.data(), info.size()));
 
-            ScopedEVP_HPKE_CTX recipient_ctx;
-            ASSERT_TRUE(EVP_HPKE_CTX_setup_auth_recipient(
-                recipient_ctx.get(), key.get(), kdf(), aead(), enc, enc_len,
-                info.data(), info.size(), public_key_s, public_key_s_len));
+              ScopedEVP_HPKE_CTX recipient_ctx;
+              ASSERT_TRUE(EVP_HPKE_CTX_setup_auth_recipient(
+                  recipient_ctx.get(), key.get(), kdf(), aead(), enc, enc_len,
+                  info.data(), info.size(), public_key_s, public_key_s_len));
 
-            check_messages(sender_ctx.get(), recipient_ctx.get());
+              check_messages(sender_ctx.get(), recipient_ctx.get());
+            }
           }
         }
       }
@@ -458,7 +495,7 @@ TEST(HPKETest, X25519EncapSmallOrderPoint) {
     SCOPED_TRACE(EVP_HPKE_KDF_id(kdf()));
     for (const auto aead : kAllAEADs) {
       SCOPED_TRACE(EVP_HPKE_AEAD_id(aead()));
-      // Set up the sender, passing in kSmallOrderPoint as |peer_public_key|.
+      // Set up the sender, passing in kSmallOrderPoint as `peer_public_key`.
       ScopedEVP_HPKE_CTX sender_ctx;
       uint8_t enc[X25519_PUBLIC_VALUE_LEN];
       size_t enc_len;
@@ -466,28 +503,33 @@ TEST(HPKETest, X25519EncapSmallOrderPoint) {
           sender_ctx.get(), enc, &enc_len, sizeof(enc),
           EVP_hpke_x25519_hkdf_sha256(), kdf(), aead(), kSmallOrderPoint,
           sizeof(kSmallOrderPoint), nullptr, 0));
+      EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PEER_KEY}}));
 
       // Likewise with auth.
       EXPECT_FALSE(EVP_HPKE_CTX_setup_auth_sender(
           sender_ctx.get(), enc, &enc_len, sizeof(enc), key.get(), kdf(),
           aead(), kSmallOrderPoint, sizeof(kSmallOrderPoint), nullptr, 0));
+      EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PEER_KEY}}));
 
-      // Set up the recipient, passing in kSmallOrderPoint as |enc|.
+      // Set up the recipient, passing in kSmallOrderPoint as `enc`.
       ScopedEVP_HPKE_CTX recipient_ctx;
       EXPECT_FALSE(EVP_HPKE_CTX_setup_recipient(
           recipient_ctx.get(), key.get(), kdf(), aead(), kSmallOrderPoint,
           sizeof(kSmallOrderPoint), nullptr, 0));
+      EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PEER_KEY}}));
 
       // Likewise with auth. With auth, a small-order point could appear as
-      // either |enc| or the peer public key.
+      // either `enc` or the peer public key.
       EXPECT_FALSE(EVP_HPKE_CTX_setup_auth_recipient(
           recipient_ctx.get(), key.get(), kdf(), aead(), kSmallOrderPoint,
           sizeof(kSmallOrderPoint), nullptr, 0, kValidPoint,
           sizeof(kValidPoint)));
+      EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PEER_KEY}}));
       EXPECT_FALSE(EVP_HPKE_CTX_setup_auth_recipient(
           recipient_ctx.get(), key.get(), kdf(), aead(), kValidPoint,
           sizeof(kValidPoint), nullptr, 0, kSmallOrderPoint,
           sizeof(kSmallOrderPoint)));
+      EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_EVP, EVP_R_INVALID_PEER_KEY}}));
     }
   }
 }
@@ -613,6 +655,18 @@ TEST(HPKETest, InvalidRecipientKey) {
                                  private_key, sizeof(private_key)));
 }
 
+TEST(HPKETest, InvalidP256PrivateKey) {
+  const uint8_t zero_key[32] = {0};
+  ScopedEVP_HPKE_KEY key;
+  EXPECT_FALSE(EVP_HPKE_KEY_init(key.get(), EVP_hpke_p256_hkdf_sha256(),
+                                 zero_key, sizeof(zero_key)));
+
+  uint8_t all_ones_key[32];
+  OPENSSL_memset(all_ones_key, 0xff, sizeof(all_ones_key));
+  EXPECT_FALSE(EVP_HPKE_KEY_init(key.get(), EVP_hpke_p256_hkdf_sha256(),
+                                 all_ones_key, sizeof(all_ones_key)));
+}
+
 TEST(HPKETest, InternalParseIntSafe) {
   uint8_t u8 = 0xff;
   ASSERT_FALSE(ParseIntSafe(&u8, "-1"));
@@ -635,5 +689,4 @@ TEST(HPKETest, InternalParseIntSafe) {
   ASSERT_FALSE(ParseIntSafe(&u16, "65536"));
 }
 
-
-}  // namespace bssl
+BSSL_NAMESPACE_END

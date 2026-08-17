@@ -1,8 +1,20 @@
 // Copyright 2015 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "verify_signed_data.h"
+
+#include <iterator>
 
 #include <openssl/bytestring.h>
 #include <openssl/digest.h>
@@ -10,7 +22,7 @@
 #include <openssl/evp.h>
 #include <openssl/pki/signature_verify_cache.h>
 #include <openssl/rsa.h>
-#include <openssl/sha.h>
+#include <openssl/sha2.h>
 
 #include "cert_errors.h"
 #include "input.h"
@@ -18,7 +30,7 @@
 #include "parser.h"
 #include "signature_algorithm.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 namespace {
 
@@ -67,12 +79,12 @@ std::string SignatureVerifyCacheKey(std::string_view algorithm_name,
 // leaving things in the error queue.
 class OpenSSLErrStackTracer {
  public:
-  ~OpenSSLErrStackTracer() { ERR_clear_error(); };
+  ~OpenSSLErrStackTracer() { ERR_clear_error(); }
 };
 
 }  // namespace
 
-// Parses an RSA public key or EC public key from SPKI to an EVP_PKEY. Returns
+// Parses an RSA, EC, or ML-DSA public key from SPKI to an EVP_PKEY. Returns
 // true on success.
 //
 // This function only recognizes the "pk-rsa" (rsaEncryption) flavor of RSA
@@ -141,15 +153,20 @@ bool ParsePublicKey(der::Input public_key_spki,
                     bssl::UniquePtr<EVP_PKEY> *public_key) {
   // Parse the SPKI to an EVP_PKEY.
   OpenSSLErrStackTracer err_tracer;
-
-  CBS cbs;
-  CBS_init(&cbs, public_key_spki.data(), public_key_spki.size());
-  public_key->reset(EVP_parse_public_key(&cbs));
-  if (!*public_key || CBS_len(&cbs) != 0) {
-    public_key->reset();
-    return false;
-  }
-  return true;
+  const EVP_PKEY_ALG *const algs[] = {
+      EVP_pkey_rsa(),
+      EVP_pkey_ec_p256(),
+      EVP_pkey_ec_p384(),
+      // TODO(davidben): Remove P-521 from here, or let callers configure this.
+      // We don't advertise it in TLS.
+      EVP_pkey_ec_p521(),
+      EVP_pkey_ml_dsa_44(),
+      EVP_pkey_ml_dsa_65(),
+      EVP_pkey_ml_dsa_87(),
+  };
+  public_key->reset(EVP_PKEY_from_subject_public_key_info(
+      public_key_spki.data(), public_key_spki.size(), algs, std::size(algs)));
+  return *public_key != nullptr;
 }
 
 bool VerifySignedData(SignatureAlgorithm algorithm, der::Input signed_data,
@@ -220,6 +237,23 @@ bool VerifySignedData(SignatureAlgorithm algorithm, der::Input signed_data,
       cache_algorithm_name = "RsaPssSha512";
       is_rsa_pss = true;
       break;
+
+    case SignatureAlgorithm::kMtcProofDraftDavidben08:
+      // This function can't verify MTC proofs.
+      return false;
+
+    case SignatureAlgorithm::kMldsa44:
+      expected_pkey_id = EVP_PKEY_ML_DSA_44;
+      cache_algorithm_name = "Mldsa44";
+      break;
+    case SignatureAlgorithm::kMldsa65:
+      expected_pkey_id = EVP_PKEY_ML_DSA_65;
+      cache_algorithm_name = "Mldsa65";
+      break;
+    case SignatureAlgorithm::kMldsa87:
+      expected_pkey_id = EVP_PKEY_ML_DSA_87;
+      cache_algorithm_name = "Mldsa87";
+      break;
   }
 
   if (expected_pkey_id != EVP_PKEY_id(public_key)) {
@@ -252,7 +286,7 @@ bool VerifySignedData(SignatureAlgorithm algorithm, der::Input signed_data,
   OpenSSLErrStackTracer err_tracer;
 
   bssl::ScopedEVP_MD_CTX ctx;
-  EVP_PKEY_CTX *pctx = nullptr;  // Owned by |ctx|.
+  EVP_PKEY_CTX *pctx = nullptr;  // Owned by `ctx`.
 
   if (!EVP_DigestVerifyInit(ctx.get(), &pctx, digest, nullptr, public_key)) {
     return false;
@@ -263,7 +297,7 @@ bool VerifySignedData(SignatureAlgorithm algorithm, der::Input signed_data,
     // also use the digest length as the salt length, which is specified with -1
     // in OpenSSL's API.
     if (!EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) ||
-        !EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, -1)) {
+        !EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, RSA_PSS_SALTLEN_DIGEST)) {
       return false;
     }
   }
@@ -290,4 +324,4 @@ bool VerifySignedData(SignatureAlgorithm algorithm, der::Input signed_data,
                           public_key.get(), cache);
 }
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

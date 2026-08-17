@@ -1,22 +1,24 @@
-/* Copyright (c) 2014, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2014 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <openssl/digest.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/hkdf.h>
 #include <openssl/kdf.h>
+
+#include <iterator>
 
 #include <gtest/gtest.h>
 
@@ -25,8 +27,11 @@
 #include "../../test/wycheproof_util.h"
 
 
+BSSL_NAMESPACE_BEGIN
+namespace {
+
 struct HKDFTestVector {
-  const EVP_MD *(*md_func)(void);
+  const EVP_MD *(*md_func)();
   const uint8_t ikm[80];
   const size_t ikm_len;
   const uint8_t salt[80];
@@ -41,6 +46,7 @@ struct HKDFTestVector {
 
 // These test vectors are from RFC 5869.
 static const HKDFTestVector kTests[] = {
+    // clang-format off
   {
     EVP_sha256,
     {
@@ -246,10 +252,11 @@ static const HKDFTestVector kTests[] = {
       0x70, 0xcc, 0xe7, 0xac, 0xfc, 0x48
     }
   },
+    // clang-format on
 };
 
 TEST(HKDFTest, TestVectors) {
-  for (size_t i = 0; i < OPENSSL_ARRAY_SIZE(kTests); i++) {
+  for (size_t i = 0; i < std::size(kTests); i++) {
     SCOPED_TRACE(i);
     const HKDFTestVector *test = &kTests[i];
 
@@ -269,9 +276,8 @@ TEST(HKDFTest, TestVectors) {
                      test->info_len));
     EXPECT_EQ(Bytes(test->out, test->out_len), Bytes(buf, test->out_len));
 
-    // Repeat the test with the OpenSSL compatibility |EVP_PKEY_derive| API.
-    bssl::UniquePtr<EVP_PKEY_CTX> ctx(
-        EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, nullptr));
+    // Repeat the test with the OpenSSL compatibility `EVP_PKEY_derive` API.
+    UniquePtr<EVP_PKEY_CTX> ctx(EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, nullptr));
     ASSERT_TRUE(ctx);
     ASSERT_TRUE(EVP_PKEY_derive_init(ctx.get()));
     ASSERT_TRUE(
@@ -283,7 +289,7 @@ TEST(HKDFTest, TestVectors) {
         EVP_PKEY_CTX_set1_hkdf_salt(ctx.get(), test->salt, test->salt_len));
     for (bool copy_ctx : {false, true}) {
       SCOPED_TRACE(copy_ctx);
-      bssl::UniquePtr<EVP_PKEY_CTX> copy;
+      UniquePtr<EVP_PKEY_CTX> copy;
       EVP_PKEY_CTX *use_ctx = ctx.get();
       if (copy_ctx) {
         copy.reset(EVP_PKEY_CTX_dup(ctx.get()));
@@ -322,14 +328,14 @@ TEST(HKDFTest, TestVectors) {
     ASSERT_TRUE(EVP_PKEY_CTX_set_hkdf_md(ctx.get(), test->md_func()));
     ASSERT_TRUE(
         EVP_PKEY_CTX_set1_hkdf_key(ctx.get(), test->prk, test->prk_len));
-    // |info| can be passed in multiple parts.
+    // `info` can be passed in multiple parts.
     size_t half = test->info_len / 2;
     ASSERT_TRUE(EVP_PKEY_CTX_add1_hkdf_info(ctx.get(), test->info, half));
     ASSERT_TRUE(EVP_PKEY_CTX_add1_hkdf_info(ctx.get(), test->info + half,
                                             test->info_len - half));
     for (bool copy_ctx : {false, true}) {
       SCOPED_TRACE(copy_ctx);
-      bssl::UniquePtr<EVP_PKEY_CTX> copy;
+      UniquePtr<EVP_PKEY_CTX> copy;
       EVP_PKEY_CTX *use_ctx = ctx.get();
       if (copy_ctx) {
         copy.reset(EVP_PKEY_CTX_dup(ctx.get()));
@@ -352,13 +358,13 @@ TEST(HKDFTest, TestVectors) {
         EVP_PKEY_CTX_set1_hkdf_key(ctx.get(), test->ikm, test->ikm_len));
     ASSERT_TRUE(
         EVP_PKEY_CTX_set1_hkdf_salt(ctx.get(), test->salt, test->salt_len));
-    // |info| can be passed in multiple parts.
+    // `info` can be passed in multiple parts.
     ASSERT_TRUE(EVP_PKEY_CTX_add1_hkdf_info(ctx.get(), test->info, half));
     ASSERT_TRUE(EVP_PKEY_CTX_add1_hkdf_info(ctx.get(), test->info + half,
                                             test->info_len - half));
     for (bool copy_ctx : {false, true}) {
       SCOPED_TRACE(copy_ctx);
-      bssl::UniquePtr<EVP_PKEY_CTX> copy;
+      UniquePtr<EVP_PKEY_CTX> copy;
       EVP_PKEY_CTX *use_ctx = ctx.get();
       if (copy_ctx) {
         copy.reset(EVP_PKEY_CTX_dup(ctx.get()));
@@ -416,3 +422,6 @@ TEST(HKDFTest, WycheproofSHA512) {
   RunWycheproofTest("third_party/wycheproof_testvectors/hkdf_sha512_test.txt",
                     EVP_sha512());
 }
+
+}  // namespace
+BSSL_NAMESPACE_END

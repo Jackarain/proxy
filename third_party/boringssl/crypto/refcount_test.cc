@@ -1,16 +1,16 @@
-/* Copyright (c) 2015, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2015 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "internal.h"
 
@@ -21,26 +21,29 @@
 #endif
 
 
+BSSL_NAMESPACE_BEGIN
+namespace {
+
 TEST(RefCountTest, Basic) {
   CRYPTO_refcount_t count = 0;
 
   CRYPTO_refcount_inc(&count);
-  EXPECT_EQ(1u, count);
+  EXPECT_EQ(1u, count.load());
 
   EXPECT_TRUE(CRYPTO_refcount_dec_and_test_zero(&count));
-  EXPECT_EQ(0u, count);
+  EXPECT_EQ(0u, count.load());
 
   count = CRYPTO_REFCOUNT_MAX;
   CRYPTO_refcount_inc(&count);
-  EXPECT_EQ(CRYPTO_REFCOUNT_MAX, count)
+  EXPECT_EQ(CRYPTO_REFCOUNT_MAX, count.load())
       << "Count did not saturate correctly when incrementing.";
   EXPECT_FALSE(CRYPTO_refcount_dec_and_test_zero(&count));
-  EXPECT_EQ(CRYPTO_REFCOUNT_MAX, count)
+  EXPECT_EQ(CRYPTO_REFCOUNT_MAX, count.load())
       << "Count did not saturate correctly when decrementing.";
 
   count = 2;
   EXPECT_FALSE(CRYPTO_refcount_dec_and_test_zero(&count));
-  EXPECT_EQ(1u, count);
+  EXPECT_EQ(1u, count.load());
 }
 
 #if defined(OPENSSL_THREADS)
@@ -53,7 +56,7 @@ TEST(RefCountTest, Threads) {
     std::thread thread([&] { CRYPTO_refcount_inc(&count); });
     CRYPTO_refcount_inc(&count);
     thread.join();
-    EXPECT_EQ(2u, count);
+    EXPECT_EQ(2u, count.load());
   }
 
   // Race an increment with a decrement.
@@ -61,7 +64,7 @@ TEST(RefCountTest, Threads) {
     std::thread thread([&] { CRYPTO_refcount_inc(&count); });
     EXPECT_FALSE(CRYPTO_refcount_dec_and_test_zero(&count));
     thread.join();
-    EXPECT_EQ(2u, count);
+    EXPECT_EQ(2u, count.load());
   }
 
   // Race two decrements.
@@ -71,9 +74,12 @@ TEST(RefCountTest, Threads) {
         [&] { thread_saw_zero = CRYPTO_refcount_dec_and_test_zero(&count); });
     bool saw_zero = CRYPTO_refcount_dec_and_test_zero(&count);
     thread.join();
-    EXPECT_EQ(0u, count);
+    EXPECT_EQ(0u, count.load());
     // Exactly one thread should see zero.
     EXPECT_NE(saw_zero, thread_saw_zero);
   }
 }
 #endif
+
+}  // namespace
+BSSL_NAMESPACE_END

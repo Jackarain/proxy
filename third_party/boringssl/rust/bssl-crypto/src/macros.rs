@@ -1,17 +1,16 @@
-/* Copyright (c) 2024, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
+// Copyright 2024 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 // Generates a hash function from init/update/final-style FFI functions. Rust
 // doesn't accept function pointers as a generic arguments so this is the only
@@ -27,7 +26,7 @@ macro_rules! unsafe_iuf_algo {
             const OUTPUT_LEN: usize = $output_len as usize;
             const BLOCK_LEN: usize = $block_len as usize;
 
-            fn get_md(_: sealed::Sealed) -> &'static MdRef {
+            fn get_md(_: sealed::SealedType) -> &'static MdRef {
                 // Safety:
                 // - this always returns a valid pointer to an EVP_MD.
                 unsafe { MdRef::from_ptr(bssl_sys::$evp_md() as *mut _) }
@@ -39,6 +38,34 @@ macro_rules! unsafe_iuf_algo {
 
             /// Create a new context for incremental hashing.
             fn new() -> Self {
+                $name::new()
+            }
+
+            /// Hash the contents of `input`.
+            fn update(&mut self, input: &[u8]) {
+                self.update(input);
+            }
+
+            /// Finish the hashing and return the digest.
+            fn digest_to_vec(self) -> alloc::vec::Vec<u8> {
+                self.digest().to_vec()
+            }
+        }
+
+        impl $name {
+            /// Digest `input` in a single operation.
+            pub fn hash(input: &[u8]) -> [u8; $output_len] {
+                // Safety: it is assumed that `$one_shot` indeed writes
+                // `$output_len` bytes.
+                unsafe {
+                    crate::with_output_array(|out, _| {
+                        bssl_sys::$one_shot(input.as_ffi_ptr(), input.len(), out);
+                    })
+                }
+            }
+
+            /// Create a new context for incremental hashing.
+            pub fn new() -> Self {
                 unsafe {
                     Self {
                         ctx: crate::initialized_struct(|ctx| {
@@ -51,7 +78,7 @@ macro_rules! unsafe_iuf_algo {
             }
 
             /// Hash the contents of `input`.
-            fn update(&mut self, input: &[u8]) {
+            pub fn update(&mut self, input: &[u8]) {
                 // Safety: arguments point to a valid buffer.
                 unsafe {
                     bssl_sys::$update(&mut self.ctx, input.as_ffi_void_ptr(), input.len());
@@ -59,32 +86,12 @@ macro_rules! unsafe_iuf_algo {
             }
 
             /// Finish the hashing and return the digest.
-            fn digest_to_vec(self) -> alloc::vec::Vec<u8> {
-                WithOutputLength::<$output_len>::digest(self).to_vec()
-            }
-        }
-
-        impl<const OUTPUT_LEN: usize> WithOutputLength<OUTPUT_LEN> for $name {
-            /// Finish the hashing and return the digest.
-            fn digest(mut self) -> [u8; OUTPUT_LEN] {
+            pub fn digest(mut self) -> [u8; $output_len] {
                 // Safety: it is assumed that `$final_func` indeed writes
                 // `$output_len` bytes.
                 unsafe {
                     crate::with_output_array(|out, _| {
                         bssl_sys::$final_func(out, &mut self.ctx);
-                    })
-                }
-            }
-        }
-
-        impl $name {
-            /// Digest `input` in a single operation.
-            pub fn hash(input: &[u8]) -> [u8; $output_len] {
-                // Safety: it is assumed that `$one_shot` indeed writes
-                // `$output_len` bytes.
-                unsafe {
-                    crate::with_output_array(|out, _| {
-                        bssl_sys::$one_shot(input.as_ffi_ptr(), input.len(), out);
                     })
                 }
             }

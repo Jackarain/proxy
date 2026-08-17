@@ -1,6 +1,16 @@
 // Copyright 2015 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "verify_certificate_chain.h"
 
@@ -10,9 +20,10 @@
 #include "simple_path_builder_delegate.h"
 #include "test_helpers.h"
 #include "trust_store.h"
+#include "trust_store_in_memory.h"
 #include "verify_certificate_chain_typed_unittest.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 namespace {
 
@@ -25,7 +36,7 @@ class VerifyCertificateChainTestDelegate {
     CertPathErrors errors;
     std::set<der::Input> user_constrained_policy_set;
     VerifyCertificateChain(
-        test.chain, test.last_cert_trust, &delegate, test.time,
+        test.chain, TrustAnchor(test.last_cert_trust), &delegate, test.time,
         test.key_purpose, test.initial_explicit_policy,
         test.user_initial_policy_set, test.initial_policy_mapping_inhibit,
         test.initial_any_policy_inhibit, &user_constrained_policy_set, &errors);
@@ -125,4 +136,4 @@ TEST(VerifyCertificateIsSelfSigned, SelfSigned) {
   EXPECT_EQ(cache.CacheStores(), 1U);
 }
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

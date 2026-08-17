@@ -1,10 +1,22 @@
 // Copyright 2010 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "pem.h"
 #include "string_util.h"
 
+#include <array>
+#include <limits>
 #include <string_view>
 
 namespace {
@@ -15,7 +27,7 @@ constexpr std::string_view kPEMHeaderTail = "-----";
 
 }  // namespace
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 
 
@@ -27,6 +39,16 @@ struct PEMTokenizer::PEMType {
 
 PEMTokenizer::PEMTokenizer(
     std::string_view str, const std::vector<std::string> &allowed_block_types) {
+  std::vector<std::string_view> types;
+  for (const auto &type : allowed_block_types) {
+    types.emplace_back(type);
+  }
+  Init(str, bssl::Span(types));
+}
+
+PEMTokenizer::PEMTokenizer(
+    std::string_view str,
+    bssl::Span<const std::string_view> allowed_block_types) {
   Init(str, allowed_block_types);
 }
 
@@ -60,10 +82,26 @@ bool PEMTokenizer::GetNext() {
       pos_ = footer_pos + it->footer.size();
       block_type_ = it->type;
 
+      // Arbitrarily limit PEM data to INT_MAX / 2 bytes, which "ought to be
+      // enough for anyone". Hardens against possible integer overflows
+      // downstream.
+      if (footer_pos - data_begin > static_cast<std::string_view::size_type>(
+                                        std::numeric_limits<int>::max() / 2)) {
+        return false;
+      }
+
+      // Remove whitespace from the base64 data.
       std::string_view encoded =
           str_.substr(data_begin, footer_pos - data_begin);
-      if (!string_util::Base64Decode(
-              string_util::CollapseWhitespaceASCII(encoded, true), &data_)) {
+      std::string trimmed;
+      trimmed.reserve(encoded.size());
+      for (char c : encoded) {
+        if (c != '\n' && c != '\r' && c != ' ' && c != '\t') {
+          trimmed.push_back(c);
+        }
+      }
+
+      if (!string_util::Base64Decode(trimmed, &data_)) {
         // The most likely cause for a decode failure is a datatype that
         // includes PEM headers, which are not supported.
         break;
@@ -73,7 +111,7 @@ bool PEMTokenizer::GetNext() {
     }
 
     // If the block did not match any acceptable type, move past it and
-    // continue the search. Otherwise, |pos_| has been updated to the most
+    // continue the search. Otherwise, `pos_` has been updated to the most
     // appropriate search position to continue searching from and should not
     // be adjusted.
     if (it == block_types_.end()) {
@@ -85,7 +123,7 @@ bool PEMTokenizer::GetNext() {
 }
 
 void PEMTokenizer::Init(std::string_view str,
-                        const std::vector<std::string> &allowed_block_types) {
+                        bssl::Span<const std::string_view> allowed_block_types) {
   str_ = str;
   pos_ = 0;
 
@@ -102,6 +140,35 @@ void PEMTokenizer::Init(std::string_view str,
     allowed_type.footer.append(kPEMHeaderTail);
     block_types_.push_back(allowed_type);
   }
+}
+
+std::vector<PEMToken> PEMDecode(
+    std::string_view data, bssl::Span<const std::string_view> allowed_types) {
+  std::vector<PEMToken> results;
+  PEMTokenizer tokenizer(data, allowed_types);
+  while (tokenizer.GetNext()) {
+    results.push_back(PEMToken{tokenizer.block_type(), tokenizer.data()});
+  }
+  return results;
+}
+
+std::optional<std::string> PEMDecodeSingle(
+    std::string_view data, std::string_view allowed_type) {
+  const std::array<const std::string_view, 1> allowed_types = {allowed_type};
+  PEMTokenizer tokenizer(data, allowed_types);
+  if (!tokenizer.GetNext()) {
+    return std::nullopt;
+  }
+
+  std::string result = tokenizer.data();
+
+  // We need exactly one token of the allowed types, so return nullopt if
+  // there's more than one.
+  if (tokenizer.GetNext()) {
+    return std::nullopt;
+  }
+
+  return result;
 }
 
 std::string PEMEncode(std::string_view data, const std::string &type) {
@@ -140,4 +207,4 @@ std::string PEMEncode(std::string_view data, const std::string &type) {
   return pem_encoded;
 }
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

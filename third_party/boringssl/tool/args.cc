@@ -1,28 +1,32 @@
-/* Copyright (c) 2014, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2014 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include <string>
-#include <vector>
-
+#include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include "internal.h"
 
+
+BSSL_NAMESPACE_BEGIN
 
 bool ParseKeyValueArguments(std::map<std::string, std::string> *out_args,
                             const std::vector<std::string> &args,
@@ -106,3 +110,33 @@ bool GetUnsigned(unsigned *out, const std::string &arg_name,
 
   return true;
 }
+
+std::vector<std::string_view> SplitString(std::string_view s,
+                                          std::string_view sep) {
+  assert(!sep.empty());
+  std::vector<std::string_view> ret;
+  while (true) {
+    size_t idx = s.find(sep);
+    if (idx == std::string_view::npos) {
+      ret.push_back(s);
+      break;
+    }
+    ret.push_back(s.substr(0, idx));
+    s = s.substr(idx + sep.size());
+  }
+  return ret;
+}
+
+std::string_view TrimSpace(std::string_view s) {
+  size_t pos = s.find_first_not_of("\t\n\v\f\r ");
+  if (pos == std::string_view::npos) {
+    return std::string_view();
+  }
+  s = s.substr(pos);
+  pos = s.find_last_not_of("\t\n\v\f\r ");
+  assert(pos != std::string_view::npos);
+  s = s.substr(0, pos + 1);
+  return s;
+}
+
+BSSL_NAMESPACE_END

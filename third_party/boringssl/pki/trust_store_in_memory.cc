@@ -1,17 +1,34 @@
 // Copyright 2016 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "trust_store_in_memory.h"
 
-namespace bssl {
+#include <openssl/span.h>
+
+BSSL_NAMESPACE_BEGIN
 
 TrustStoreInMemory::TrustStoreInMemory() = default;
 TrustStoreInMemory::~TrustStoreInMemory() = default;
 
-bool TrustStoreInMemory::IsEmpty() const { return entries_.empty(); }
+bool TrustStoreInMemory::IsEmpty() const {
+  return entries_.empty() && trusted_mtc_anchors_.empty();
+}
 
-void TrustStoreInMemory::Clear() { entries_.clear(); }
+void TrustStoreInMemory::Clear() {
+  entries_.clear();
+  trusted_mtc_anchors_.clear();
+}
 
 void TrustStoreInMemory::AddTrustAnchor(
     std::shared_ptr<const ParsedCertificate> cert) {
@@ -44,6 +61,18 @@ void TrustStoreInMemory::AddCertificateWithUnspecifiedTrust(
     std::shared_ptr<const ParsedCertificate> cert) {
   AddCertificate(std::move(cert), CertificateTrust::ForUnspecified());
 }
+bool TrustStoreInMemory::AddMTCTrustAnchor(
+    std::shared_ptr<const MTCAnchor> mtc_anchor) {
+  if (!mtc_anchor->IsValid()) {
+    return false;
+  }
+  std::string_view subject = BytesAsStringView(mtc_anchor->NormalizedSubject());
+  if (trusted_mtc_anchors_.find(subject) != trusted_mtc_anchors_.end()) {
+    return false;
+  }
+  trusted_mtc_anchors_.emplace(subject, std::move(mtc_anchor));
+  return true;
+}
 
 void TrustStoreInMemory::SyncGetIssuersOf(const ParsedCertificate *cert,
                                           ParsedCertificateList *issuers) {
@@ -65,8 +94,24 @@ CertificateTrust TrustStoreInMemory::GetTrust(const ParsedCertificate *cert) {
   return entry ? entry->trust : CertificateTrust::ForUnspecified();
 }
 
+std::shared_ptr<const MTCAnchor> TrustStoreInMemory::GetTrustedMTCIssuerOf(
+    const ParsedCertificate *cert) {
+  auto entry =
+      trusted_mtc_anchors_.find(BytesAsStringView(cert->normalized_issuer()));
+  if (entry == trusted_mtc_anchors_.end()) {
+    return nullptr;
+  }
+  return entry->second;
+}
+
 bool TrustStoreInMemory::Contains(const ParsedCertificate *cert) const {
   return GetEntry(cert) != nullptr;
+}
+
+bool TrustStoreInMemory::ContainsMTCAnchor(const MTCAnchor *anchor) const {
+  auto entry =
+      trusted_mtc_anchors_.find(BytesAsStringView(anchor->NormalizedSubject()));
+  return entry != trusted_mtc_anchors_.end();
 }
 
 TrustStoreInMemory::Entry::Entry() = default;
@@ -98,4 +143,4 @@ const TrustStoreInMemory::Entry *TrustStoreInMemory::GetEntry(
   return nullptr;
 }
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

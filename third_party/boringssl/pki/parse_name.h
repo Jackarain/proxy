@@ -1,6 +1,16 @@
 // Copyright 2016 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef BSSL_PKI_PARSE_NAME_H_
 #define BSSL_PKI_PARSE_NAME_H_
@@ -13,7 +23,7 @@
 #include "input.h"
 #include "parser.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 // id-at-commonName: 2.5.4.3 (RFC 5280)
 inline constexpr uint8_t kTypeCommonNameOid[] = {0x55, 0x04, 0x03};
@@ -75,12 +85,12 @@ struct OPENSSL_EXPORT X509NameAttribute {
   enum class PrintableStringHandling { kDefault, kAsUTF8Hack };
 
   // Attempts to convert the value represented by this struct into a
-  // UTF-8 string and store it in |out|, returning whether the conversion
+  // UTF-8 string and store it in `out`, returning whether the conversion
   // was successful.
   [[nodiscard]] bool ValueAsString(std::string *out) const;
 
   // Attempts to convert the value represented by this struct into a
-  // UTF-8 string and store it in |out|, returning whether the conversion
+  // UTF-8 string and store it in `out`, returning whether the conversion
   // was successful. Allows configuring some non-standard string handling
   // options.
   //
@@ -90,9 +100,9 @@ struct OPENSSL_EXPORT X509NameAttribute {
       std::string *out) const;
 
   // Attempts to convert the value represented by this struct into a
-  // std::string and store it in |out|, returning whether the conversion was
+  // std::string and store it in `out`, returning whether the conversion was
   // successful. Due to some encodings being incompatible, the caller must
-  // verify the attribute |value_tag|.
+  // verify the attribute `value_tag`.
   //
   // Note: Don't use this function unless you know what you're doing. Use
   // ValueAsString instead.
@@ -102,7 +112,7 @@ struct OPENSSL_EXPORT X509NameAttribute {
   [[nodiscard]] bool ValueAsStringUnsafe(std::string *out) const;
 
   // Formats the NameAttribute per RFC2253 into an ASCII string and stores
-  // the result in |out|, returning whether the conversion was successful.
+  // the result in `out`, returning whether the conversion was successful.
   [[nodiscard]] bool AsRFC2253String(std::string *out) const;
 
   der::Input type;
@@ -113,8 +123,8 @@ struct OPENSSL_EXPORT X509NameAttribute {
 typedef std::vector<X509NameAttribute> RelativeDistinguishedName;
 typedef std::vector<RelativeDistinguishedName> RDNSequence;
 
-// Parses all the ASN.1 AttributeTypeAndValue elements in |parser| and stores
-// each as an AttributeTypeAndValue object in |out|.
+// Parses all the ASN.1 AttributeTypeAndValue elements in `parser` and stores
+// each as an AttributeTypeAndValue object in `out`.
 //
 // AttributeTypeAndValue is defined in RFC 5280 section 4.1.2.4:
 //
@@ -139,19 +149,19 @@ typedef std::vector<RelativeDistinguishedName> RDNSequence;
                                           RelativeDistinguishedName *out);
 
 // Parses a DER-encoded "Name" as specified by 5280. Returns true on success
-// and sets the results in |out|.
+// and sets the results in `out`.
 [[nodiscard]] OPENSSL_EXPORT bool ParseName(der::Input name_tlv,
                                             RDNSequence *out);
 // Parses a DER-encoded "Name" value (without the sequence tag & length) as
-// specified by 5280. Returns true on success and sets the results in |out|.
+// specified by 5280. Returns true on success and sets the results in `out`.
 [[nodiscard]] OPENSSL_EXPORT bool ParseNameValue(der::Input name_value,
                                                  RDNSequence *out);
 
-// Formats a RDNSequence |rdn_sequence| per RFC2253 as an ASCII string and
-// stores the result into |out|, and returns whether the conversion was
+// Formats a RDNSequence `rdn_sequence` per RFC2253 as an ASCII string and
+// stores the result into `out`, and returns whether the conversion was
 // successful.
 [[nodiscard]] OPENSSL_EXPORT bool ConvertToRFC2253(
     const RDNSequence &rdn_sequence, std::string *out);
-}  // namespace bssl
+BSSL_NAMESPACE_END
 
 #endif  // BSSL_PKI_PARSE_NAME_H_

@@ -1,17 +1,16 @@
-/* Copyright (c) 2023, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
+// Copyright 2023 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 //! Implements the HMAC-based Key Derivation Function from
 //! <https://datatracker.ietf.org/doc/html/rfc5869>.
@@ -154,7 +153,7 @@ impl<MD: digest::Algorithm> Hkdf<MD> {
     pub fn extract(secret: &[u8], salt: Salt) -> Prk {
         let mut prk = [0u8; bssl_sys::EVP_MAX_MD_SIZE as usize];
         let mut prk_len = 0usize;
-        let evp_md = MD::get_md(sealed::Sealed).as_ptr();
+        let evp_md = MD::get_md(sealed::SealedType).as_ptr();
         unsafe {
             // Safety: `EVP_MAX_MD_SIZE` is the maximum output size of
             // `HKDF_extract` so it'll never overrun the buffer.
@@ -185,7 +184,15 @@ pub struct Prk {
     evp_md: *const bssl_sys::EVP_MD,
 }
 
-#[allow(clippy::let_unit_value)]
+// Safety: `EVP_MD`s are actually thread-safe because it is a descriptor of
+// digest algorithm input and output specification plus a virtual table.
+// It will remain read-only throughout program lifetime.
+unsafe impl Sync for Prk {}
+// Safety: the `EVP_MD` descriptor is constructed once and shared through-out
+// the program lifetime.
+unsafe impl Send for Prk {}
+
+#[allow(clippy::let_unit_value, clippy::unwrap_used)]
 impl Prk {
     /// Creates a Prk from bytes.
     pub fn new<MD: digest::Algorithm>(prk_bytes: &[u8]) -> Option<Self> {
@@ -203,15 +210,17 @@ impl Prk {
         Some(Prk {
             prk,
             len: MD::OUTPUT_LEN,
-            evp_md: MD::get_md(sealed::Sealed).as_ptr(),
+            evp_md: MD::get_md(sealed::SealedType).as_ptr(),
         })
     }
 
     /// Returns the bytes of the pseudorandom key.
     pub fn as_bytes(&self) -> &[u8] {
-        // `self.len` must be less than the length of `self.prk` thus
-        // this is always in bounds.
-        &self.prk[..self.len]
+        self.prk
+            .get(..self.len)
+            // unwrap:`self.len` must be less than the length of `self.prk` thus
+            // this is always in bounds.
+            .unwrap()
     }
 
     /// Derive key material for the given info parameter. Attempting
@@ -243,7 +252,7 @@ impl Prk {
                     info.len(),
                 );
                 // The output length is known to be within bounds so the only other
-                // possibily is an allocation failure, which we don't attempt to
+                // possibility is an allocation failure, which we don't attempt to
                 // handle.
                 assert_eq!(result, 1);
             })

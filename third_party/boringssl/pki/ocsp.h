@@ -1,6 +1,16 @@
 // Copyright 2016 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef BSSL_PKI_OCSP_H_
 #define BSSL_PKI_OCSP_H_
@@ -11,15 +21,14 @@
 #include <vector>
 
 #include <openssl/base.h>
+#include <openssl/pki/ocsp.h>
 
 #include "input.h"
-#include "ocsp_revocation_status.h"
-#include "ocsp_verify_result.h"
 #include "parse_values.h"
 #include "parser.h"
 #include "signature_algorithm.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 class ParsedCertificate;
 
@@ -42,8 +51,8 @@ struct OPENSSL_EXPORT OCSPCertID {
 };
 
 // OCSPCertStatus contains a representation of a DER-encoded RFC 6960
-// "CertStatus". |revocation_time| and |has_reason| are only valid when
-// |status| is REVOKED. |revocation_reason| is only valid when |has_reason| is
+// "CertStatus". `revocation_time` and `has_reason` are only valid when
+// `status` is REVOKED. `revocation_reason` is only valid when `has_reason` is
 // true.
 //
 // CertStatus ::= CHOICE {
@@ -98,10 +107,10 @@ struct OCSPCertStatus {
 };
 
 // OCSPSingleResponse contains a representation of a DER-encoded RFC 6960
-// "SingleResponse". The |cert_id_tlv| and |extensions| fields are pointers to
+// "SingleResponse". The `cert_id_tlv` and `extensions` fields are pointers to
 // the original object and are only valid as long as it is alive. They also
-// aren't verified until they are parsed. |next_update| is only valid if
-// |has_next_update| is true and |extensions| is only valid if |has_extensions|
+// aren't verified until they are parsed. `next_update` is only valid if
+// `has_next_update` is true and `extensions` is only valid if `has_extensions`
 // is true.
 //
 // SingleResponse ::= SEQUENCE {
@@ -125,10 +134,10 @@ struct OPENSSL_EXPORT OCSPSingleResponse {
 };
 
 // OCSPResponseData contains a representation of a DER-encoded RFC 6960
-// "ResponseData". The |responses| and |extensions| fields are pointers to the
+// "ResponseData". The `responses` and `extensions` fields are pointers to the
 // original object and are only valid as long as it is alive. They also aren't
 // verified until they are parsed into OCSPSingleResponse and ParsedExtensions.
-// |extensions| is only valid if |has_extensions| is true.
+// `extensions` is only valid if `has_extensions` is true.
 //
 // ResponseData ::= SEQUENCE {
 //      version              [0] EXPLICIT Version DEFAULT v1,
@@ -158,12 +167,12 @@ struct OPENSSL_EXPORT OCSPResponseData {
 };
 
 // OCSPResponse contains a representation of a DER-encoded RFC 6960
-// "OCSPResponse" and the corresponding "BasicOCSPResponse". The |data| field
+// "OCSPResponse" and the corresponding "BasicOCSPResponse". The `data` field
 // is a pointer to the original object and are only valid as long is it is
-// alive. The |data| field isn't verified until it is parsed into an
-// OCSPResponseData. |data|, |signature_algorithm|, |signature|, and
-// |has_certs| is only valid if |status| is SUCCESSFUL. |certs| is only valid
-// if |has_certs| is true.
+// alive. The `data` field isn't verified until it is parsed into an
+// OCSPResponseData. `data`, `signature_algorithm`, `signature`, and
+// `has_certs` is only valid if `status` is SUCCESSFUL. `certs` is only valid
+// if `has_certs` is true.
 //
 // OCSPResponse ::= SEQUENCE {
 //      responseStatus         OCSPResponseStatus,
@@ -226,65 +235,43 @@ inline constexpr uint8_t kBasicOCSPResponseOid[] = {
     0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x30, 0x01, 0x01};
 
 // Parses a DER-encoded OCSP "CertID" as specified by RFC 6960. Returns true on
-// success and sets the results in |out|.
+// success and sets the results in `out`.
 //
-// On failure |out| has an undefined state. Some of its fields may have been
+// On failure `out` has an undefined state. Some of its fields may have been
 // updated during parsing, whereas others may not have been changed.
 OPENSSL_EXPORT bool ParseOCSPCertID(der::Input raw_tlv, OCSPCertID *out);
 
 // Parses a DER-encoded OCSP "SingleResponse" as specified by RFC 6960. Returns
-// true on success and sets the results in |out|. The resulting |out|
-// references data from |raw_tlv| and is only valid for the lifetime of
-// |raw_tlv|.
+// true on success and sets the results in `out`. The resulting `out`
+// references data from `raw_tlv` and is only valid for the lifetime of
+// `raw_tlv`.
 //
-// On failure |out| has an undefined state. Some of its fields may have been
+// On failure `out` has an undefined state. Some of its fields may have been
 // updated during parsing, whereas others may not have been changed.
 OPENSSL_EXPORT bool ParseOCSPSingleResponse(der::Input raw_tlv,
                                             OCSPSingleResponse *out);
 
 // Parses a DER-encoded OCSP "ResponseData" as specified by RFC 6960. Returns
-// true on success and sets the results in |out|. The resulting |out|
-// references data from |raw_tlv| and is only valid for the lifetime of
-// |raw_tlv|.
+// true on success and sets the results in `out`. The resulting `out`
+// references data from `raw_tlv` and is only valid for the lifetime of
+// `raw_tlv`.
 //
-// On failure |out| has an undefined state. Some of its fields may have been
+// On failure `out` has an undefined state. Some of its fields may have been
 // updated during parsing, whereas others may not have been changed.
 OPENSSL_EXPORT bool ParseOCSPResponseData(der::Input raw_tlv,
                                           OCSPResponseData *out);
 
 // Parses a DER-encoded "OCSPResponse" as specified by RFC 6960. Returns true
-// on success and sets the results in |out|. The resulting |out|
-// references data from |raw_tlv| and is only valid for the lifetime of
-// |raw_tlv|.
+// on success and sets the results in `out`. The resulting `out`
+// references data from `raw_tlv` and is only valid for the lifetime of
+// `raw_tlv`.
 //
-// On failure |out| has an undefined state. Some of its fields may have been
+// On failure `out` has an undefined state. Some of its fields may have been
 // updated during parsing, whereas others may not have been changed.
 OPENSSL_EXPORT bool ParseOCSPResponse(der::Input raw_tlv, OCSPResponse *out);
 
-// Checks the revocation status of the certificate |certificate_der| by using
-// the DER-encoded |raw_response|.
-//
-// Returns GOOD if the OCSP response indicates the certificate is not revoked,
-// REVOKED if it indicates it is revoked, or UNKNOWN for all other cases.
-//
-//  * |raw_response|: A DER encoded OCSPResponse.
-//  * |certificate_der|: The certificate being checked for revocation.
-//  * |issuer_certificate_der|: The certificate that signed |certificate_der|.
-//        The caller must have already performed path verification.
-//  * |verify_time_epoch_seconds|: The time as the difference in seconds from
-//        the POSIX epoch to use when checking revocation status.
-//  * |max_age_seconds|: The maximum age in seconds for a CRL, implemented as
-//        time since the |thisUpdate| field in the CRL TBSCertList. Responses
-//        older than |max_age_seconds| will be considered invalid.
-//  * |response_details|: Additional details about failures.
-[[nodiscard]] OPENSSL_EXPORT OCSPRevocationStatus CheckOCSP(
-    std::string_view raw_response, std::string_view certificate_der,
-    std::string_view issuer_certificate_der, int64_t verify_time_epoch_seconds,
-    std::optional<int64_t> max_age_seconds,
-    OCSPVerifyResult::ResponseStatus *response_details);
-
-// Checks the revocation status of |certificate| by using the DER-encoded
-// |raw_response|.
+// Checks the revocation status of `certificate` by using the DER-encoded
+// `raw_response`.
 //
 // Arguments are the same as above, except that it takes already parsed
 // instances of the certificate and issuer certificate.
@@ -294,22 +281,22 @@ OPENSSL_EXPORT bool ParseOCSPResponse(der::Input raw_tlv, OCSPResponse *out);
     int64_t verify_time_epoch_seconds, std::optional<int64_t> max_age_seconds,
     OCSPVerifyResult::ResponseStatus *response_details);
 
-// Creates a DER-encoded OCSPRequest for |cert|. The request is fairly basic:
+// Creates a DER-encoded OCSPRequest for `cert`. The request is fairly basic:
 //  * No signature
 //  * No requestorName
 //  * No extensions
 //  * Uses SHA1 for all hashes.
 //
-// Returns true on success and fills |request_der| with the resulting bytes.
+// Returns true on success and fills `request_der` with the resulting bytes.
 OPENSSL_EXPORT bool CreateOCSPRequest(const ParsedCertificate *cert,
                                       const ParsedCertificate *issuer,
                                       std::vector<uint8_t> *request_der);
 
-// Creates a URL to issue a GET request for OCSP information for |cert|.
+// Creates a URL to issue a GET request for OCSP information for `cert`.
 OPENSSL_EXPORT std::optional<std::string> CreateOCSPGetURL(
     const ParsedCertificate *cert, const ParsedCertificate *issuer,
     std::string_view ocsp_responder_url);
 
-}  // namespace bssl
+BSSL_NAMESPACE_END
 
 #endif  // BSSL_PKI_OCSP_H_

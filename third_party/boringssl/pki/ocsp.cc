@@ -1,6 +1,16 @@
 // Copyright 2016 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "ocsp.h"
 
@@ -9,6 +19,8 @@
 #include <openssl/mem.h>
 #include <openssl/pool.h>
 #include <openssl/sha.h>
+#include <openssl/span.h>
+
 #include "cert_errors.h"
 #include "extended_key_usage.h"
 #include "parsed_certificate.h"
@@ -17,7 +29,7 @@
 #include "verify_name_match.h"
 #include "verify_signed_data.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 OCSPCertID::OCSPCertID() = default;
 OCSPCertID::~OCSPCertID() = default;
@@ -63,19 +75,17 @@ bool ParseOCSPCertID(der::Input raw_tlv, OCSPCertID *out) {
   if (!parser.ReadTag(CBS_ASN1_INTEGER, &out->serial_number)) {
     return false;
   }
-  CertErrors errors;
-  if (!VerifySerialNumber(out->serial_number, false /*warnings_only*/,
-                          &errors)) {
-    return false;
-  }
+  // TODO(crbug.com/533048005): We do not check `out->serial_number` is a valid
+  // INTEGER because our certificate serial parser does not yet check for valid
+  // INTEGERs. This ensures those non-integers can be represented in OCSP.
 
   return !parser.HasMore();
 }
 
 namespace {
 
-// Parses |raw_tlv| to extract an OCSP RevokedInfo (RFC 6960) and stores the
-// result in the OCSPCertStatus |out|. Returns whether the parsing was
+// Parses `raw_tlv` to extract an OCSP RevokedInfo (RFC 6960) and stores the
+// result in the OCSPCertStatus `out`. Returns whether the parsing was
 // successful.
 //
 // RevokedInfo ::= SEQUENCE {
@@ -120,8 +130,8 @@ bool ParseRevokedInfo(der::Input raw_tlv, OCSPCertStatus *out) {
   return !parser.HasMore();
 }
 
-// Parses |raw_tlv| to extract an OCSP CertStatus (RFC 6960) and stores the
-// result in the OCSPCertStatus |out|. Returns whether the parsing was
+// Parses `raw_tlv` to extract an OCSP CertStatus (RFC 6960) and stores the
+// result in the OCSPCertStatus `out`. Returns whether the parsing was
 // successful.
 //
 // CertStatus ::= CHOICE {
@@ -157,7 +167,7 @@ bool ParseCertStatus(der::Input raw_tlv, OCSPCertStatus *out) {
   return !parser.HasMore();
 }
 
-// Writes the hash of |value| as an OCTET STRING to |cbb|, using |hash_type| as
+// Writes the hash of `value` as an OCTET STRING to `cbb`, using `hash_type` as
 // the algorithm. Returns true on success.
 bool AppendHashAsOctetString(const EVP_MD *hash_type, CBB *cbb,
                              der::Input value) {
@@ -231,8 +241,8 @@ bool ParseOCSPSingleResponse(der::Input raw_tlv, OCSPSingleResponse *out) {
 
 namespace {
 
-// Parses |raw_tlv| to extract a ResponderID (RFC 6960) and stores the
-// result in the ResponderID |out|. Returns whether the parsing was successful.
+// Parses `raw_tlv` to extract a ResponderID (RFC 6960) and stores the
+// result in the ResponderID `out`. Returns whether the parsing was successful.
 //
 // ResponderID ::= CHOICE {
 //      byName               [1] Name,
@@ -297,7 +307,7 @@ bool ParseOCSPResponseData(der::Input raw_tlv, OCSPResponseData *out) {
     return false;
   }
 
-  // For compatibilty, we ignore the restriction from X.690 Section 11.5 that
+  // For compatibility, we ignore the restriction from X.690 Section 11.5 that
   // DEFAULT values should be omitted for values equal to the default value.
   // TODO: Add warning about non-strict parsing.
   if (version_present) {
@@ -351,8 +361,8 @@ bool ParseOCSPResponseData(der::Input raw_tlv, OCSPResponseData *out) {
 
 namespace {
 
-// Parses |raw_tlv| to extract a BasicOCSPResponse (RFC 6960) and stores the
-// result in the OCSPResponse |out|. Returns whether the parsing was
+// Parses `raw_tlv` to extract a BasicOCSPResponse (RFC 6960) and stores the
+// result in the OCSPResponse `out`. Returns whether the parsing was
 // successful.
 //
 // BasicOCSPResponse       ::= SEQUENCE {
@@ -480,7 +490,7 @@ bool ParseOCSPResponse(der::Input raw_tlv, OCSPResponse *out) {
       return false;
     }
 
-    // As per RFC 6960 Section 4.2.1, the value of |response| SHALL be the DER
+    // As per RFC 6960 Section 4.2.1, the value of `response` SHALL be the DER
     // encoding of BasicOCSPResponse.
     der::Input response;
     if (!bytes_parser.ReadTag(CBS_ASN1_OCTETSTRING, &response)) {
@@ -499,7 +509,7 @@ bool ParseOCSPResponse(der::Input raw_tlv, OCSPResponse *out) {
 
 namespace {
 
-// Checks that the |type| hash of |value| is equal to |hash|
+// Checks that the `type` hash of `value` is equal to `hash`
 bool VerifyHash(const EVP_MD *type, der::Input hash, der::Input value) {
   unsigned value_hash_len;
   uint8_t value_hash[EVP_MAX_MD_SIZE];
@@ -515,7 +525,7 @@ bool VerifyHash(const EVP_MD *type, der::Input hash, der::Input value) {
 // to say, the value of subjectPublicKey without the leading unused bit
 // count octet.
 //
-// Returns true on success and fills |*spk_tlv| with the result.
+// Returns true on success and fills `*spk_tlv` with the result.
 //
 // From RFC 5280, Section 4.1
 //   SubjectPublicKeyInfo  ::=  SEQUENCE  {
@@ -533,7 +543,7 @@ bool GetSubjectPublicKeyBytes(der::Input spki_tlv, der::Input *spk_tlv) {
   //   The subjectPublicKey field includes the unused bit count. For this
   //   application, the unused bit count must be zero, and is not included in
   //   the result. We extract the subjectPubicKey bit string, verify the first
-  //   byte is 0, and if so set |spk_tlv| to the remaining bytes.
+  //   byte is 0, and if so set `spk_tlv` to the remaining bytes.
   if (!CBS_get_asn1(&outer, &inner, CBS_ASN1_SEQUENCE) ||
       !CBS_get_asn1(&inner, &alg, CBS_ASN1_SEQUENCE) ||
       !CBS_get_asn1(&inner, &spk, CBS_ASN1_BITSTRING) ||
@@ -544,7 +554,7 @@ bool GetSubjectPublicKeyBytes(der::Input spki_tlv, der::Input *spk_tlv) {
   return true;
 }
 
-// Checks the OCSPCertID |id| identifies |certificate|.
+// Checks the OCSPCertID `id` identifies `certificate`.
 bool CheckCertIDMatchesCertificate(
     const OCSPCertID &id, const ParsedCertificate *certificate,
     const ParsedCertificate *issuer_certificate) {
@@ -589,7 +599,7 @@ bool CheckCertIDMatchesCertificate(
 // would either pass in the parsed bits, or have a better abstraction for lazily
 // parsing.
 std::shared_ptr<const ParsedCertificate> OCSPParseCertificate(
-    std::string_view der) {
+    Span<const uint8_t> der) {
   ParseCertificateOptions parse_options;
   parse_options.allow_invalid_serial_numbers = true;
 
@@ -601,12 +611,12 @@ std::shared_ptr<const ParsedCertificate> OCSPParseCertificate(
   // parsing model.
   CertErrors errors;
   return ParsedCertificate::Create(
-      bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
-          reinterpret_cast<const uint8_t *>(der.data()), der.size(), nullptr)),
-      {}, &errors);
+      bssl::UniquePtr<CRYPTO_BUFFER>(
+          CRYPTO_BUFFER_new(der.data(), der.size(), nullptr)),
+      parse_options, &errors);
 }
 
-// Checks that the ResponderID |id| matches the certificate |cert| either
+// Checks that the ResponderID `id` matches the certificate `cert` either
 // by verifying the name matches that of the certificate or that the hash
 // matches the certificate's public key hash (RFC 6960, 4.2.2.3).
 [[nodiscard]] bool CheckResponderIDMatchesCertificate(
@@ -634,8 +644,8 @@ std::shared_ptr<const ParsedCertificate> OCSPParseCertificate(
   return false;
 }
 
-// Verifies that |responder_certificate| has been authority for OCSP signing,
-// delegated to it by |issuer_certificate|.
+// Verifies that `responder_certificate` has been authority for OCSP signing,
+// delegated to it by `issuer_certificate`.
 //
 // TODO(eroman): No revocation checks are done (see id-pkix-ocsp-nocheck in the
 //     spec). extension).
@@ -682,8 +692,8 @@ std::shared_ptr<const ParsedCertificate> OCSPParseCertificate(
 }
 
 // Verifies that the OCSP response has a valid signature using
-// |issuer_certificate|, or an authorized responder issued by
-// |issuer_certificate| for OCSP signing.
+// `issuer_certificate`, or an authorized responder issued by
+// `issuer_certificate` for OCSP signing.
 [[nodiscard]] bool VerifyOCSPResponseSignature(
     const OCSPResponse &response, const OCSPResponseData &response_data,
     const ParsedCertificate *issuer_certificate) {
@@ -700,11 +710,11 @@ std::shared_ptr<const ParsedCertificate> OCSPParseCertificate(
   // Otherwise search through the provided certificates for the Authorized
   // Responder. Want a certificate that:
   //  (1) Matches the OCSP Responder ID.
-  //  (2) Has been given authority for OCSP signing by |issuer_certificate|.
+  //  (2) Has been given authority for OCSP signing by `issuer_certificate`.
   //  (3) Has signed the OCSP response using its public key.
   for (const auto &responder_cert_tlv : response.certs) {
     std::shared_ptr<const ParsedCertificate> cur_responder_certificate =
-        OCSPParseCertificate(BytesAsStringView(responder_cert_tlv));
+        OCSPParseCertificate(responder_cert_tlv);
 
     // If failed parsing the certificate, keep looking.
     if (!cur_responder_certificate) {
@@ -797,7 +807,7 @@ bool ParseOCSPSingleResponseExtensions(
   return true;
 }
 
-// Loops through the OCSPSingleResponses to find the best match for |cert|.
+// Loops through the OCSPSingleResponses to find the best match for `cert`.
 OCSPRevocationStatus GetRevocationStatusForCert(
     const OCSPResponseData &response_data, const ParsedCertificate *cert,
     const ParsedCertificate *issuer_certificate,
@@ -835,7 +845,7 @@ OCSPRevocationStatus GetRevocationStatusForCert(
     }
 
     // The SingleResponse matches the certificate, but may be out of date. Out
-    // of date responses are noted seperate from responses with mismatched
+    // of date responses are noted separate from responses with mismatched
     // serial numbers. If an OCSP responder provides both an up to date
     // response and an expired response, the up to date response takes
     // precedence (PROVIDED > INVALID_DATE).
@@ -877,14 +887,13 @@ OCSPRevocationStatus CheckOCSP(
     return OCSPRevocationStatus::UNKNOWN;
   }
 
-  der::Input response_der(raw_response);
   OCSPResponse response;
-  if (!ParseOCSPResponse(response_der, &response)) {
+  if (!ParseOCSPResponse(StringAsBytes(raw_response), &response)) {
     *response_details = OCSPVerifyResult::PARSE_RESPONSE_ERROR;
     return OCSPRevocationStatus::UNKNOWN;
   }
 
-  // RFC 6960 defines all responses |response_status| != SUCCESSFUL as error
+  // RFC 6960 defines all responses `response_status` != SUCCESSFUL as error
   // responses. No revocation information is provided on error responses, and
   // the OCSPResponseData structure is not set.
   if (response.status != OCSPResponse::ResponseStatus::SUCCESSFUL) {
@@ -925,11 +934,12 @@ OCSPRevocationStatus CheckOCSP(
   std::shared_ptr<const ParsedCertificate> parsed_certificate;
   std::shared_ptr<const ParsedCertificate> parsed_issuer_certificate;
   if (!certificate) {
-    parsed_certificate = OCSPParseCertificate(certificate_der);
+    parsed_certificate = OCSPParseCertificate(StringAsBytes(certificate_der));
     certificate = parsed_certificate.get();
   }
   if (!issuer_certificate) {
-    parsed_issuer_certificate = OCSPParseCertificate(issuer_certificate_der);
+    parsed_issuer_certificate =
+        OCSPParseCertificate(StringAsBytes(issuer_certificate_der));
     issuer_certificate = parsed_issuer_certificate.get();
   }
 
@@ -1046,6 +1056,11 @@ bool CreateOCSPRequest(const ParsedCertificate *cert,
   //       issuerNameHash      OCTET STRING, -- Hash of issuer's DN
   //       issuerKeyHash       OCTET STRING, -- Hash of issuer's public key
   //       serialNumber        CertificateSerialNumber }
+  //
+  // It is unclear whether the parameters for hashAlgorithm should be omitted or
+  // NULL. Section 2.1 of RFC 4055 would suggest omitting it is the right
+  // default behavior. However, both OpenSSL and Go include it, so we match them
+  // for now.
 
   // TODO(eroman): Don't use SHA1.
   const EVP_MD *md = EVP_sha1();
@@ -1120,4 +1135,4 @@ std::optional<std::string> CreateOCSPGetURL(
   return std::string(ocsp_responder_url) + "/" + b64_encoded;
 }
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

@@ -1,16 +1,16 @@
-/* Copyright (c) 2017, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2017 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <openssl/bn.h>
 #include <openssl/bytestring.h>
@@ -72,7 +72,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len) {
   }
 
   // Don't fuzz inputs larger than 512 bytes (4096 bits). This isn't ideal, but
-  // the naive |mod_exp| above is somewhat slow, so this otherwise causes the
+  // the naive `mod_exp` above is somewhat slow, so this otherwise causes the
   // fuzzers to spend a lot of time exploring timeouts.
   if (CBS_len(&child0) > 512 ||
       CBS_len(&child1) > 512 ||
@@ -109,7 +109,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len) {
     bssl::UniquePtr<BN_MONT_CTX> mont(
         BN_MONT_CTX_new_for_modulus(modulus.get(), ctx.get()));
     CHECK(mont);
-    // |BN_mod_exp_mont| and |BN_mod_exp_mont_consttime| require reduced inputs.
+    // `BN_mod_exp_mont` and `BN_mod_exp_mont_consttime` require reduced inputs.
     CHECK(BN_nnmod(base.get(), base.get(), modulus.get(), ctx.get()));
     CHECK(BN_mod_exp_mont(result.get(), base.get(), power.get(), modulus.get(),
                           ctx.get(), mont.get()));

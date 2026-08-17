@@ -1,6 +1,16 @@
 // Copyright 2015 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef BSSL_PKI_TEST_HELPERS_H_
 #define BSSL_PKI_TEST_HELPERS_H_
@@ -19,7 +29,7 @@
 #include "trust_store.h"
 #include "verify_certificate_chain.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 namespace der {
 
@@ -28,7 +38,7 @@ void PrintTo(Input data, ::std::ostream *os);
 
 }  // namespace der
 
-// Parses |s| as a DER SEQUENCE TLV and returns a der::Input corresponding to
+// Parses `s` as a DER SEQUENCE TLV and returns a der::Input corresponding to
 // the value portion. On error returns an empty der::Input and adds a gtest
 // failure.
 //
@@ -46,7 +56,7 @@ struct PemBlockMapping {
   std::string *value;
 
   // True to indicate that the block is not required to be present. If the
-  // block is optional and is not present, then |value| will not be modified.
+  // block is optional and is not present, then `value` will not be modified.
   bool optional = false;
 };
 
@@ -58,7 +68,7 @@ struct PemBlockMapping {
 //       "testdata/verify_signed_data_unittest/foopy.pem"
 //
 //   * mappings:
-//       An array of length |mappings_length| which maps the expected PEM
+//       An array of length `mappings_length` which maps the expected PEM
 //       headers to the destination to write its data.
 //
 // The function ensures that each of the chosen mappings is satisfied exactly
@@ -114,23 +124,23 @@ struct VerifyCertChainTest {
   SimplePathBuilderDelegate::DigestPolicy digest_policy =
       SimplePathBuilderDelegate::DigestPolicy::kWeakAllowSha1;
 
-  // Returns true if |expected_errors| contains any high severity errors (a
+  // Returns true if `expected_errors` contains any high severity errors (a
   // non-empty expected_errors doesn't necessarily mean verification is
   // expected to fail, as it may have contained warnings).
   bool HasHighSeverityErrors() const;
 };
 
-// Reads a test case from |file_path_ascii| (which is relative to //src).
-// Generally |file_path_ascii| will start with:
+// Reads a test case from `file_path_ascii` (which is relative to //src).
+// Generally `file_path_ascii` will start with:
 //   net/data/verify_certificate_chain_unittest/
 bool ReadVerifyCertChainTestFromFile(const std::string &file_path_ascii,
                                      VerifyCertChainTest *test);
 
-// Reads a certificate chain from |file_path_ascii|
+// Reads a certificate chain from `file_path_ascii`
 bool ReadCertChainFromFile(const std::string &file_path_ascii,
                            ParsedCertificateList *chain);
 
-// Reads a certificate from |file_path_ascii|. Returns nullptr if the file
+// Reads a certificate from `file_path_ascii`. Returns nullptr if the file
 // contained more that one certificate.
 std::shared_ptr<const ParsedCertificate> ReadCertFromFile(
     const std::string &file_path_ascii);
@@ -138,7 +148,7 @@ std::shared_ptr<const ParsedCertificate> ReadCertFromFile(
 // Reads a data file relative to the src root directory.
 std::string ReadTestFileToString(const std::string &file_path_ascii);
 
-// Asserts that |actual_errors| matches |expected_errors_str|.
+// Asserts that `actual_errors` matches `expected_errors_str`.
 //
 // This is a helper function to simplify rebasing the error expectations when
 // they originate from a test file.
@@ -147,7 +157,7 @@ void VerifyCertPathErrors(const std::string &expected_errors_str,
                           const ParsedCertificateList &chain,
                           const std::string &errors_file_path);
 
-// Asserts that |actual_errors| matches |expected_errors_str|.
+// Asserts that `actual_errors` matches `expected_errors_str`.
 //
 // This is a helper function to simplify rebasing the error expectations when
 // they originate from a test file.
@@ -155,13 +165,13 @@ void VerifyCertErrors(const std::string &expected_errors_str,
                       const CertErrors &actual_errors,
                       const std::string &errors_file_path);
 
-// Asserts that |actual_user_constrained_policy_set| matches
-// |expected_user_constrained_policy_set|.
+// Asserts that `actual_user_constrained_policy_set` matches
+// `expected_user_constrained_policy_set`.
 void VerifyUserConstrainedPolicySet(
     const std::set<std::string> &expected_user_constrained_policy_str_set,
     const std::set<der::Input> &actual_user_constrained_policy_set,
     const std::string &errors_file_path);
 
-}  // namespace bssl
+BSSL_NAMESPACE_END
 
 #endif  // BSSL_PKI_TEST_HELPERS_H_

@@ -1,6 +1,16 @@
 // Copyright 2015 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "parse_values.h"
 
@@ -8,7 +18,8 @@
 
 #include <gtest/gtest.h>
 
-namespace bssl::der::test {
+BSSL_NAMESPACE_BEGIN
+namespace der::test {
 
 namespace {
 
@@ -332,7 +343,7 @@ TEST(ParseValuesTest, ParseBitStringEmptyOneUnusedBit) {
   EXPECT_FALSE(bit_string.has_value());
 }
 
-// Tests parsing an empty BIT STRING that is not minmally encoded (the entire
+// Tests parsing an empty BIT STRING that is not minimally encoded (the entire
 // last byte is comprised of unused bits).
 TEST(ParseValuesTest, ParseBitStringNonEmptyTooManyUnusedBits) {
   const uint8_t kData[] = {0x08, 0x00};
@@ -461,4 +472,5 @@ TEST(ParseValuesTest, ParseUniversalString) {
       ParseUniversalString(der::Input(invalid_non_4_multiple_der), &s));
 }
 
-}  // namespace bssl::der::test
+}  // namespace der::test
+BSSL_NAMESPACE_END

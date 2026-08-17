@@ -4,8 +4,6 @@
 #include <openssl/asm_base.h>
 
 #if !defined(OPENSSL_NO_ASM) && defined(OPENSSL_AARCH64) && defined(_WIN32)
-#include <openssl/arm_arch.h>
-
 .text
 
 .globl	sha1_block_data_order_nohw
@@ -1210,7 +1208,9 @@ Loop_hw:
 	ret
 
 .section	.rodata
+
 .align	6
+sha1_constants:
 Lconst:
 .long	0x5a827999,0x5a827999,0x5a827999,0x5a827999	//K_00_19
 .long	0x6ed9eba1,0x6ed9eba1,0x6ed9eba1,0x6ed9eba1	//K_20_39

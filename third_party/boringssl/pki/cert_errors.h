@@ -1,6 +1,16 @@
 // Copyright 2016 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 // ----------------------------
 // Overview of error design
@@ -54,7 +64,7 @@
 #include "cert_error_id.h"
 #include "parsed_certificate.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 class CertErrorParams;
 class CertPathErrors;
@@ -90,7 +100,7 @@ class OPENSSL_EXPORT CertErrors {
   CertErrors &operator=(CertErrors &&);
   ~CertErrors();
 
-  // Adds an error/warning. |params| may be null.
+  // Adds an error/warning. `params` may be null.
   void Add(CertError::Severity severity, CertErrorId id,
            std::unique_ptr<CertErrorParams> params);
 
@@ -105,13 +115,13 @@ class OPENSSL_EXPORT CertErrors {
   // Dumps a textual representation of the errors for debugging purposes.
   std::string ToDebugString() const;
 
-  // Returns true if the error |id| was added to this CertErrors at
-  // severity |severity|
+  // Returns true if the error `id` was added to this CertErrors at
+  // severity `severity`
   bool ContainsErrorWithSeverity(CertErrorId id,
                                  CertError::Severity severity) const;
 
-  // Returns true if the error |id| was added to this CertErrors at
-  // high serverity.
+  // Returns true if the error `id` was added to this CertErrors at
+  // high severity.
   bool ContainsError(CertErrorId id) const;
 
   // Returns true if this contains any errors of the given severity level.
@@ -132,14 +142,14 @@ class OPENSSL_EXPORT CertPathErrors {
   CertPathErrors &operator=(CertPathErrors &&);
   ~CertPathErrors();
 
-  // Gets a bucket to put errors in for |cert_index|. This will lookup and
+  // Gets a bucket to put errors in for `cert_index`. This will lookup and
   // return the existing error bucket if one exists, or create a new one for the
-  // specified index. It is expected that |cert_index| is the corresponding
+  // specified index. It is expected that `cert_index` is the corresponding
   // index in a certificate chain (with 0 being the target).
   CertErrors *GetErrorsForCert(size_t cert_index);
 
   // Const version of the above, with the difference that if there is no
-  // existing bucket for |cert_index| returns nullptr rather than lazyily
+  // existing bucket for `cert_index` returns nullptr rather than lazyily
   // creating one.
   const CertErrors *GetErrorsForCert(size_t cert_index) const;
 
@@ -156,7 +166,7 @@ class OPENSSL_EXPORT CertPathErrors {
   bool ContainsAnyErrorWithSeverity(CertError::Severity severity) const;
 
   // If the path contains only one unique high severity error, return the
-  // error id and sets |out_depth| to the depth at which the error was
+  // error id and sets `out_depth` to the depth at which the error was
   // first seen. A depth of -1 means the error is not associated with
   // a single certificate of the path.
   std::optional<CertErrorId> FindSingleHighSeverityError(
@@ -176,6 +186,6 @@ class OPENSSL_EXPORT CertPathErrors {
   CertErrors other_errors_;
 };
 
-}  // namespace bssl
+BSSL_NAMESPACE_END
 
 #endif  // BSSL_PKI_CERT_ERRORS_H_

@@ -1,23 +1,31 @@
-/* Copyright (c) 2023, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2023 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "trust_store_in_memory.h"
 
-#include <gtest/gtest.h>
-#include "test_helpers.h"
+#include <memory>
+#include <vector>
 
-namespace bssl {
+#include <gtest/gtest.h>
+
+#include <openssl/span.h>
+
+#include "merkle_tree.h"
+#include "test_helpers.h"
+#include "trust_store.h"
+
+BSSL_NAMESPACE_BEGIN
 namespace {
 
 class TrustStoreInMemoryTest : public testing::Test {
@@ -108,5 +116,120 @@ TEST_F(TrustStoreInMemoryTest, DistrustBySPKIOverridesTrust) {
             trust.ToDebugString());
 }
 
+TEST_F(TrustStoreInMemoryTest, IsEmptyClear) {
+  TrustStoreInMemory in_memory;
+
+  // Trust store is empty with nothing in it.
+  EXPECT_TRUE(in_memory.IsEmpty());
+
+  // After adding a classical trust anchor, it is no longer empty:
+  in_memory.AddTrustAnchor(oldroot_);
+  EXPECT_FALSE(in_memory.IsEmpty());
+
+  // It is empty again after a call to Clear:
+  in_memory.Clear();
+  EXPECT_TRUE(in_memory.IsEmpty());
+
+  // After adding an MTC root, it is no longer empty:
+  static const uint8_t kValidLogId[] = {42};  // relative OID of 42
+  TrustedSubtree a;
+  a.range = Subtree{0, 4};
+  std::vector<TrustedSubtree> valid_subtrees = {a};
+  std::shared_ptr<MTCAnchor> valid_anchor =
+      std::make_shared<MTCAnchor>(kValidLogId, MakeSpan(valid_subtrees));
+  EXPECT_TRUE(valid_anchor->IsValid());
+  EXPECT_TRUE(in_memory.AddMTCTrustAnchor(valid_anchor));
+  EXPECT_FALSE(in_memory.IsEmpty());
+
+  // It is empty again after a call to Clear:
+  in_memory.Clear();
+  EXPECT_TRUE(in_memory.IsEmpty());
+}
+
+TEST_F(TrustStoreInMemoryTest, MTCAnchors) {
+  TrustStoreInMemory in_memory;
+
+  // AddMTCTrustAnchor should fail if the MTCAnchor is invalid.
+  static const uint8_t kValidLogId[] = {42};  // relative OID of 42
+  TrustedSubtree a;
+  a.range = Subtree{0, 4};
+  TrustedSubtree b;
+  b.range = Subtree{0, 6};
+  TrustedSubtree c;
+  c.range = Subtree{8, 9};
+  std::vector<TrustedSubtree> valid_subtrees = {a, b, c};
+  std::shared_ptr<MTCAnchor> valid_anchor =
+      std::make_shared<MTCAnchor>(kValidLogId, MakeSpan(valid_subtrees));
+  EXPECT_TRUE(valid_anchor->IsValid());
+  EXPECT_EQ(valid_anchor->log_id(), kValidLogId);
+  EXPECT_TRUE(in_memory.AddMTCTrustAnchor(valid_anchor));
+
+  {
+    // Attempting to add another MTCTrustAnchor with the same Log ID should fail
+    TrustedSubtree d;
+    d.range = Subtree{16, 17};
+    std::vector<TrustedSubtree> subtrees = {d};
+    std::shared_ptr<MTCAnchor> anchor =
+        std::make_shared<MTCAnchor>(kValidLogId, MakeSpan(subtrees));
+    EXPECT_TRUE(anchor->IsValid());
+    EXPECT_FALSE(in_memory.AddMTCTrustAnchor(anchor));
+  }
+
+  {
+    static const uint8_t kInvalidLogId[] = {
+        255};  // The high bit is set, indicating this relative OID has more
+               // bytes, but there are no more bytes.
+    std::shared_ptr<MTCAnchor> invalid_anchor =
+        std::make_shared<MTCAnchor>(kInvalidLogId, MakeSpan(valid_subtrees));
+    EXPECT_FALSE(invalid_anchor->IsValid());
+    EXPECT_FALSE(in_memory.AddMTCTrustAnchor(invalid_anchor));
+  }
+
+  {
+    std::vector<TrustedSubtree> invalid_subtrees = {b, a, c};
+    std::shared_ptr<MTCAnchor> invalid_anchor =
+        std::make_shared<MTCAnchor>(kValidLogId, MakeSpan(invalid_subtrees));
+    EXPECT_FALSE(invalid_anchor->IsValid());
+    EXPECT_FALSE(in_memory.AddMTCTrustAnchor(invalid_anchor));
+  }
+
+  {
+    TrustedSubtree subtree;
+    subtree.range = Subtree{4, 9};
+    std::vector<TrustedSubtree> invalid_subtrees = {subtree};
+    std::shared_ptr<MTCAnchor> invalid_anchor =
+        std::make_shared<MTCAnchor>(kValidLogId, MakeSpan(invalid_subtrees));
+    EXPECT_FALSE(invalid_anchor->IsValid());
+    EXPECT_FALSE(in_memory.AddMTCTrustAnchor(invalid_anchor));
+  }
+}
+
+TEST_F(TrustStoreInMemoryTest, ContainsMTCAnchor) {
+  TrustStoreInMemory in_memory1;
+  TrustStoreInMemory in_memory2;
+
+  static const uint8_t kValidLogId1[] = {42};  // relative OID of 42
+  static const uint8_t kValidLogId2[] = {43};  // relative OID of 43
+  std::vector<TrustedSubtree> subtrees;
+  std::shared_ptr<MTCAnchor> anchor1 =
+      std::make_shared<MTCAnchor>(kValidLogId1, MakeSpan(subtrees));
+  std::shared_ptr<MTCAnchor> anchor1_dup =
+      std::make_shared<MTCAnchor>(kValidLogId1, MakeSpan(subtrees));
+  std::shared_ptr<MTCAnchor> anchor2 =
+      std::make_shared<MTCAnchor>(kValidLogId2, MakeSpan(subtrees));
+  std::shared_ptr<MTCAnchor> anchor2_dup =
+      std::make_shared<MTCAnchor>(kValidLogId2, MakeSpan(subtrees));
+
+  ASSERT_TRUE(in_memory1.AddMTCTrustAnchor(anchor1));
+  ASSERT_TRUE(in_memory2.AddMTCTrustAnchor(anchor2));
+
+  EXPECT_TRUE(in_memory1.ContainsMTCAnchor(anchor1.get()));
+  EXPECT_TRUE(in_memory1.ContainsMTCAnchor(anchor1_dup.get()));
+  EXPECT_FALSE(in_memory1.ContainsMTCAnchor(anchor2.get()));
+  EXPECT_TRUE(in_memory2.ContainsMTCAnchor(anchor2.get()));
+  EXPECT_TRUE(in_memory2.ContainsMTCAnchor(anchor2_dup.get()));
+  EXPECT_FALSE(in_memory2.ContainsMTCAnchor(anchor1.get()));
+}
+
 }  // namespace
-}  // namespace bssl
+BSSL_NAMESPACE_END

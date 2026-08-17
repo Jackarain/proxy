@@ -1,16 +1,16 @@
-/* Copyright (c) 2015, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2015 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <stdio.h>
 
@@ -39,7 +39,7 @@ static void test(const char *name, const uint8_t *key, size_t key_len,
 
   bssl::UniquePtr<CMAC_CTX> ctx(CMAC_CTX_new());
   ASSERT_TRUE(ctx);
-  ASSERT_TRUE(CMAC_Init(ctx.get(), key, key_len, EVP_aes_128_cbc(), NULL));
+  ASSERT_TRUE(CMAC_Init(ctx.get(), key, key_len, EVP_aes_128_cbc(), nullptr));
 
   for (unsigned chunk_size = 1; chunk_size <= msg_len; chunk_size++) {
     SCOPED_TRACE(chunk_size);
@@ -58,7 +58,7 @@ static void test(const char *name, const uint8_t *key, size_t key_len,
     EXPECT_EQ(Bytes(expected, sizeof(out)), Bytes(out, out_len));
   }
 
-  // Test that |CMAC_CTX_copy| works.
+  // Test that `CMAC_CTX_copy` works.
   ASSERT_TRUE(CMAC_Reset(ctx.get()));
   size_t chunk = msg_len / 2;
   ASSERT_TRUE(CMAC_Update(ctx.get(), msg, chunk));
@@ -114,7 +114,7 @@ TEST(CMACTest, RFC4493TestVectors) {
       0xfc, 0x49, 0x74, 0x17, 0x79, 0x36, 0x3c, 0xfe,
   };
 
-  test("RFC 4493 #1", kKey, sizeof(kKey), NULL, 0, kOut1);
+  test("RFC 4493 #1", kKey, sizeof(kKey), nullptr, 0, kOut1);
   test("RFC 4493 #2", kKey, sizeof(kKey), kMsg2, sizeof(kMsg2), kOut2);
   test("RFC 4493 #3", kKey, sizeof(kKey), kMsg3, sizeof(kMsg3), kOut3);
   test("RFC 4493 #4", kKey, sizeof(kKey), kMsg4, sizeof(kMsg4), kOut4);
@@ -157,7 +157,7 @@ TEST(CMACTest, Wycheproof) {
     uint8_t out[16];
     bssl::UniquePtr<CMAC_CTX> ctx(CMAC_CTX_new());
     ASSERT_TRUE(ctx);
-    ASSERT_TRUE(CMAC_Init(ctx.get(), key.data(), key.size(), cipher, NULL));
+    ASSERT_TRUE(CMAC_Init(ctx.get(), key.data(), key.size(), cipher, nullptr));
     ASSERT_TRUE(CMAC_Update(ctx.get(), msg.data(), msg.size()));
     size_t out_len;
     ASSERT_TRUE(CMAC_Final(ctx.get(), out, &out_len));
@@ -219,7 +219,7 @@ static void RunCAVPTest(const char *path, const EVP_CIPHER *cipher,
     uint8_t out[16];
     bssl::UniquePtr<CMAC_CTX> ctx(CMAC_CTX_new());
     ASSERT_TRUE(ctx);
-    ASSERT_TRUE(CMAC_Init(ctx.get(), key.data(), key.size(), cipher, NULL));
+    ASSERT_TRUE(CMAC_Init(ctx.get(), key.data(), key.size(), cipher, nullptr));
     ASSERT_TRUE(CMAC_Update(ctx.get(), msg.data(), msg.size()));
     size_t out_len;
     ASSERT_TRUE(CMAC_Final(ctx.get(), out, &out_len));

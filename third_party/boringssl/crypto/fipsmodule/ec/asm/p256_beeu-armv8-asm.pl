@@ -1,16 +1,16 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 #
-# Permission to use, copy, modify, and/or distribute this software for any
-# purpose with or without fee is hereby granted, provided that the above
-# copyright notice and this permission notice appear in all copies.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-# SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
-# OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-# CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 #
 # This code is based on p256_beeu-x86_64-asm.pl (which is based on BN_mod_inverse_odd).
@@ -28,7 +28,7 @@ $0 =~ m/(.*[\/\\])[^\/\\]+$/; $dir=$1;
 ( $xlate="${dir}../../../perlasm/arm-xlate.pl" and -f $xlate) or
 die "can't locate arm-xlate.pl";
 
-open OUT,"| \"$^X\" $xlate $flavour $output";
+open OUT, "|-", $^X, $xlate, $flavour, $output;
 *STDOUT=*OUT;
 #############################################################################
 # extern int beeu_mod_inverse_vartime(BN_ULONG out[P256_LIMBS],
@@ -190,9 +190,11 @@ ___
 # What matters here is the order of instructions relative to certain other
 # instructions, i.e.
 # - lsr and lsl must precede orr of the corresponding registers.
-# - lsl must preced the lsr of the same register afterwards.
+# - lsl must precede the lsr of the same register afterwards.
 # The chosen order of the instructions overall is to try and maximize
 # the pipeline usage.
+#
+# shift must be at most 63.
 sub SHIFT256 {
   my ($var0, $var1, $var2, $var3) = @_;
   return <<___;
@@ -217,8 +219,6 @@ ___
 }
 
 $code.=<<___;
-#include "openssl/arm_arch.h"
-
 .text
 .globl  beeu_mod_inverse_vartime
 .type   beeu_mod_inverse_vartime, %function
@@ -287,6 +287,7 @@ beeu_mod_inverse_vartime:
 
     // shift := number of trailing 0s in $b0
     // (      = number of leading 0s in $t1; see the "rbit" instruction in TEST_B_ZERO)
+    orr     $t1, $t1, #1	// Clamp the shift to 63 bits (see SHIFT256)
     clz     $shift, $t1
 
     // If there is no shift, goto shift_A_Y
@@ -311,6 +312,7 @@ beeu_mod_inverse_vartime:
     // - The loop is only used to call SHIFT1(X)
     //   and $shift is decreased while executing the X loop.
     // - SHIFT256(B, $shift) is performed before right-shifting X; they are independent
+    // - "$shift" is clamped to 63 bits.
 
 .Lbeeu_shift_A_Y:
     // Same for A and Y.
@@ -318,6 +320,7 @@ beeu_mod_inverse_vartime:
     // Reverse the bit order of $a0
     // $shift := number of trailing 0s in $a0 (= number of leading 0s in $t1)
     rbit    $t1, $a0
+    orr     $t1, $t1, #1	// Clamp the shift to 63 bits (see SHIFT256)
     clz     $shift, $t1
 
     // If there is no shift, goto |B-A|, X+Y update

@@ -1,6 +1,16 @@
 // Copyright 2015 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "signature_algorithm.h"
 
@@ -10,7 +20,7 @@
 #include "input.h"
 #include "parser.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 namespace {
 
@@ -318,7 +328,7 @@ TEST(SignatureAlgorithmTest, ParseDerSha224WithRSAEncryptionNullParams) {
   EXPECT_FALSE(ParseSignatureAlgorithm(der::Input(kData)));
 }
 
-// Parses a ecdsa-with-SHA1 which contains no parameters field.
+// Parses an ecdsa-with-SHA1 which contains no parameters field.
 //
 //   SEQUENCE (1 elem)
 //       OBJECT IDENTIFIER  1.2.840.10045.4.1
@@ -334,7 +344,7 @@ TEST(SignatureAlgorithmTest, ParseDerEcdsaWithSHA1NoParams) {
             SignatureAlgorithm::kEcdsaSha1);
 }
 
-// Parses a ecdsa-with-SHA1 which contains a NULL parameters field.
+// Parses an ecdsa-with-SHA1 which contains a NULL parameters field.
 //
 //   SEQUENCE (2 elem)
 //       OBJECT IDENTIFIER  1.2.840.10045.4.1
@@ -351,7 +361,7 @@ TEST(SignatureAlgorithmTest, ParseDerEcdsaWithSHA1NullParams) {
   EXPECT_FALSE(ParseSignatureAlgorithm(der::Input(kData)));
 }
 
-// Parses a ecdsa-with-SHA256 which contains no parameters field.
+// Parses an ecdsa-with-SHA256 which contains no parameters field.
 //
 //   SEQUENCE (1 elem)
 //       OBJECT IDENTIFIER  1.2.840.10045.4.3.2
@@ -367,7 +377,7 @@ TEST(SignatureAlgorithmTest, ParseDerEcdsaWithSHA256NoParams) {
             SignatureAlgorithm::kEcdsaSha256);
 }
 
-// Parses a ecdsa-with-SHA256 which contains a NULL parameters field.
+// Parses an ecdsa-with-SHA256 which contains a NULL parameters field.
 //
 //   SEQUENCE (2 elem)
 //       OBJECT IDENTIFIER  1.2.840.10045.4.3.2
@@ -384,7 +394,7 @@ TEST(SignatureAlgorithmTest, ParseDerEcdsaWithSHA256NullParams) {
   EXPECT_FALSE(ParseSignatureAlgorithm(der::Input(kData)));
 }
 
-// Parses a ecdsa-with-SHA384 which contains no parameters field.
+// Parses an ecdsa-with-SHA384 which contains no parameters field.
 //
 //   SEQUENCE (1 elem)
 //       OBJECT IDENTIFIER  1.2.840.10045.4.3.3
@@ -400,7 +410,7 @@ TEST(SignatureAlgorithmTest, ParseDerEcdsaWithSHA384NoParams) {
             SignatureAlgorithm::kEcdsaSha384);
 }
 
-// Parses a ecdsa-with-SHA384 which contains a NULL parameters field.
+// Parses an ecdsa-with-SHA384 which contains a NULL parameters field.
 //
 //   SEQUENCE (2 elem)
 //       OBJECT IDENTIFIER  1.2.840.10045.4.3.3
@@ -417,7 +427,7 @@ TEST(SignatureAlgorithmTest, ParseDerEcdsaWithSHA384NullParams) {
   EXPECT_FALSE(ParseSignatureAlgorithm(der::Input(kData)));
 }
 
-// Parses a ecdsa-with-SHA512 which contains no parameters field.
+// Parses an ecdsa-with-SHA512 which contains no parameters field.
 //
 //   SEQUENCE (1 elem)
 //       OBJECT IDENTIFIER  1.2.840.10045.4.3.4
@@ -433,7 +443,7 @@ TEST(SignatureAlgorithmTest, ParseDerEcdsaWithSHA512NoParams) {
             SignatureAlgorithm::kEcdsaSha512);
 }
 
-// Parses a ecdsa-with-SHA512 which contains a NULL parameters field.
+// Parses an ecdsa-with-SHA512 which contains a NULL parameters field.
 //
 //   SEQUENCE (2 elem)
 //       OBJECT IDENTIFIER  1.2.840.10045.4.3.4
@@ -1448,4 +1458,4 @@ TEST(SignatureAlgorithmTest, ParseDerDsaWithSha256NoParams) {
 
 }  // namespace
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

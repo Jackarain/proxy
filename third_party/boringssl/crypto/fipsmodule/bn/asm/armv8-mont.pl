@@ -1,17 +1,22 @@
 #! /usr/bin/env perl
 # Copyright 2015-2016 The OpenSSL Project Authors. All Rights Reserved.
 #
-# Licensed under the OpenSSL license (the "License").  You may not use
-# this file except in compliance with the License.  You can obtain a copy
-# in the file LICENSE in the source distribution or at
-# https://www.openssl.org/source/license.html
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 # ====================================================================
 # Written by Andy Polyakov <appro@openssl.org> for the OpenSSL
-# project. The module is, however, dual licensed under OpenSSL and
-# CRYPTOGAMS licenses depending on where you obtain it. For further
-# details see http://www.openssl.org/~appro/cryptogams/.
+# project.
 # ====================================================================
 
 # March 2015
@@ -48,14 +53,14 @@ $0 =~ m/(.*[\/\\])[^\/\\]+$/; $dir=$1;
 ( $xlate="${dir}../../../perlasm/arm-xlate.pl" and -f $xlate) or
 die "can't locate arm-xlate.pl";
 
-open OUT,"| \"$^X\" \"$xlate\" $flavour \"$output\"";
+open OUT, "|-", $^X, $xlate, $flavour, $output;
 *STDOUT=*OUT;
 
 ($lo0,$hi0,$aj,$m0,$alo,$ahi,
  $lo1,$hi1,$nj,$m1,$nlo,$nhi,
  $ovf, $i,$j,$tp,$tj) = map("x$_",6..17,19..24);
 
-# int bn_mul_mont(
+# void bn_mul_mont_words(
 $rp="x0";	# BN_ULONG *rp,
 $ap="x1";	# const BN_ULONG *ap,
 $bp="x2";	# const BN_ULONG *bp,
@@ -64,19 +69,17 @@ $n0="x4";	# const BN_ULONG *n0,
 $num="x5";	# size_t num);
 
 $code.=<<___;
-#include <openssl/arm_arch.h>
-
 .text
 
-.globl	bn_mul_mont
-.type	bn_mul_mont,%function
+.globl	bn_mul_mont_words
+.type	bn_mul_mont_words,%function
 .align	5
-bn_mul_mont:
+bn_mul_mont_words:
 	AARCH64_SIGN_LINK_REGISTER
 	tst	$num,#7
-	b.eq	__bn_sqr8x_mont
+	b.eq	.Lsqr8x_mont
 	tst	$num,#3
-	b.eq	__bn_mul4x_mont
+	b.eq	.Lmul4x_mont
 .Lmul_mont:
 	stp	x29,x30,[sp,#-64]!
 	add	x29,sp,#0
@@ -99,6 +102,9 @@ bn_mul_mont:
 	umulh	$ahi,$aj,$m0
 
 	mul	$m1,$lo0,$n0		// "tp[0]"*n0
+	// This can allocate at most 8 * BN_MONTGOMERY_MAX_WORDS on the stack,
+	// or 2 KiB. This fits well within a page, so it is not necessary to
+	// fault pages in the correct order.
 	mov	sp,$tp			// alloca
 
 	// (*)	mul	$lo1,$hi1,$m1	// np[0]*m1
@@ -267,12 +273,11 @@ bn_mul_mont:
 	ldp	x19,x20,[x29,#16]
 	mov	sp,x29
 	ldp	x21,x22,[x29,#32]
-	mov	x0,#1
+	// No return value
 	ldp	x23,x24,[x29,#48]
 	ldr	x29,[sp],#64
 	AARCH64_VALIDATE_LINK_REGISTER
 	ret
-.size	bn_mul_mont,.-bn_mul_mont
 ___
 {
 ########################################################################
@@ -285,14 +290,14 @@ my ($cnt,$carry,$topmost)=("x27","x28","x30");
 my ($tp,$ap_end,$na0)=($bp,$np,$carry);
 
 $code.=<<___;
-.type	__bn_sqr8x_mont,%function
+.type	.Lsqr8x_mont,%function
 .align	5
-__bn_sqr8x_mont:
-	// Not adding AARCH64_SIGN_LINK_REGISTER here because __bn_sqr8x_mont is jumped to
-	// only from bn_mul_mont which has already signed the return address.
-	cmp	$ap,$bp
-	b.ne	__bn_mul4x_mont
 .Lsqr8x_mont:
+	// Not adding AARCH64_SIGN_LINK_REGISTER here because .Lsqr8x_mont is jumped to
+	// only from bn_mul_mont_words which has already signed the return address.
+	cmp	$ap,$bp
+	b.ne	.Lmul4x_mont
+
 	stp	x29,x30,[sp,#-128]!
 	add	x29,sp,#0
 	stp	x19,x20,[sp,#16]
@@ -307,6 +312,19 @@ __bn_sqr8x_mont:
 	ldp	$a4,$a5,[$ap,#8*4]
 	ldp	$a6,$a7,[$ap,#8*6]
 
+	// This can allocate at most 16 * BN_MONTGOMERY_MAX_WORDS on the stack,
+	// or 4 KiB. The fixed allocation above pushes to just above a page. On
+	// Windows, we must ensure new pages are first accessed in order. See
+	// https://learn.microsoft.com/en-us/cpp/build/arm64-windows-abi-conventions?view=msvc-170#stack
+	//
+	// The order is correct, but precariously so: the code above access as
+	// low as [sp,#16]. This leaves a jump of 16 + 4096 = 4112 bytes. If
+	// [sp,#16] were at page boundary, those 4112 bytes would span two
+	// pages. If [$tp] were the next access, we would skip a guard page.
+	//
+	// Fortunately, the first access is [$tp,#8*8], at .Lsqr8x_zero_start.
+	// We jump at most 4112 - 64 = 4048 bytes, less than a page. If any of
+	// this changes, we must insert a no-op access or call __chkstk.
 	sub	$tp,sp,$num,lsl#4
 	lsl	$num,$num,#3
 	ldr	$n0,[$n0]		// *n0
@@ -501,7 +519,7 @@ __bn_sqr8x_mont:
 	adc	$acc5,$acc5,$t1
 
 	adds	$acc5,$acc5,$t2
-	sub	$t0,$ap_end,$num	// rewinded ap
+	sub	$t0,$ap_end,$num	// rewound ap
 	adc	$acc6,xzr,xzr		// t[14]
 	add	$acc6,$acc6,$t3
 
@@ -851,7 +869,7 @@ $code.=<<___;
 					// to be zero at this point
 	ldp	$a0,$a1,[$tp,#8*0]
 	sub	$cnt,$np_end,$np	// done yet?
-	sub	$t2,$np_end,$num	// rewinded np
+	sub	$t2,$np_end,$num	// rewound np
 	ldp	$a2,$a3,[$tp,#8*2]
 	ldp	$a4,$a5,[$tp,#8*4]
 	ldp	$a6,$a7,[$tp,#8*6]
@@ -1041,7 +1059,7 @@ $code.=<<___;
 	ldp	x19,x20,[x29,#16]
 	mov	sp,x29
 	ldp	x21,x22,[x29,#32]
-	mov	x0,#1
+	// No return value
 	ldp	x23,x24,[x29,#48]
 	ldp	x25,x26,[x29,#64]
 	ldp	x27,x28,[x29,#80]
@@ -1049,7 +1067,6 @@ $code.=<<___;
 	// x30 is popped earlier
 	AARCH64_VALIDATE_LINK_REGISTER
 	ret
-.size	__bn_sqr8x_mont,.-__bn_sqr8x_mont
 ___
 }
 
@@ -1068,11 +1085,11 @@ my  $bp_end=$rp;
 my  ($carry,$topmost) = ($rp,"x30");
 
 $code.=<<___;
-.type	__bn_mul4x_mont,%function
+.type	.Lmul4x_mont,%function
 .align	5
-__bn_mul4x_mont:
-	// Not adding AARCH64_SIGN_LINK_REGISTER here because __bn_mul4x_mont is jumped to
-	// only from bn_mul_mont or __bn_mul8x_mont which have already signed the
+.Lmul4x_mont:
+	// Not adding AARCH64_SIGN_LINK_REGISTER here because .Lmul4x_mont is jumped to
+	// only from bn_mul_mont_words or __bn_mul8x_mont which have already signed the
 	// return address.
 	stp	x29,x30,[sp,#-128]!
 	add	x29,sp,#0
@@ -1082,6 +1099,9 @@ __bn_mul4x_mont:
 	stp	x25,x26,[sp,#64]
 	stp	x27,x28,[sp,#80]
 
+	// This can allocate at most 8 * BN_MONTGOMERY_MAX_WORDS on the stack,
+	// or 2 KiB. This fits well within a page, so it is not necessary to
+	// fault pages in the correct order.
 	sub	$tp,sp,$num,lsl#3
 	lsl	$num,$num,#3
 	ldr	$n0,[$n0]		// *n0
@@ -1209,7 +1229,7 @@ __bn_mul4x_mont:
 	//adc	$carry,$carry,xzr
 	cbnz	$cnt,.Loop_mul4x_1st_tail
 
-	sub	$t1,$ap_end,$num	// rewinded $ap
+	sub	$t1,$ap_end,$num	// rewound $ap
 	cbz	$t0,.Lmul4x_proceed
 
 	ldp	$a0,$a1,[$ap,#8*0]
@@ -1351,7 +1371,7 @@ __bn_mul4x_mont:
 	//adc	$carry,$carry,xzr
 	cbnz	$cnt,.Loop_mul4x_tail
 
-	sub	$t1,$np,$num		// rewinded np?
+	sub	$t1,$np,$num		// rewound np?
 	adc	$carry,$carry,xzr
 	cbz	$t0,.Loop_mul4x_break
 
@@ -1502,7 +1522,7 @@ __bn_mul4x_mont:
 	ldp	x19,x20,[x29,#16]
 	mov	sp,x29
 	ldp	x21,x22,[x29,#32]
-	mov	x0,#1
+	// No return value
 	ldp	x23,x24,[x29,#48]
 	ldp	x25,x26,[x29,#64]
 	ldp	x27,x28,[x29,#80]
@@ -1510,10 +1530,10 @@ __bn_mul4x_mont:
 	// x30 is popped earlier
 	AARCH64_VALIDATE_LINK_REGISTER
 	ret
-.size	__bn_mul4x_mont,.-__bn_mul4x_mont
 ___
 }
 $code.=<<___;
+.size	bn_mul_mont_words,.-bn_mul_mont_words
 .asciz	"Montgomery Multiplication for ARMv8, CRYPTOGAMS by <appro\@openssl.org>"
 .align	4
 ___

@@ -1,26 +1,23 @@
-/* Copyright (c) 2015, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2015 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
 
 #include <gtest/gtest.h>
 
 #include <openssl/curve25519.h>
 
-#include "internal.h"
 #include "../internal.h"
 #include "../test/abi_test.h"
 #include "../test/file_test.h"
@@ -28,9 +25,12 @@
 #include "../test/wycheproof_util.h"
 #include "internal.h"
 
-static inline int ctwrapX25519(uint8_t out_shared_key[32],
-                               const uint8_t private_key[32],
-                               const uint8_t peer_public_value[32]) {
+
+BSSL_NAMESPACE_BEGIN
+namespace {
+
+int ctwrapX25519(uint8_t out_shared_key[32], const uint8_t private_key[32],
+                 const uint8_t peer_public_value[32]) {
   uint8_t scalar[32], point[32];
   // Copy all the secrets into a temporary buffer, so we can run constant-time
   // validation on them.
@@ -151,14 +151,20 @@ TEST(X25519Test, SmallOrder) {
   EXPECT_FALSE(ctwrapX25519(out, private_key, kSmallOrderPoint))
       << "X25519 returned success with a small-order input.";
 
-  // For callers which don't check, |out| should still be filled with zeros.
+  // For callers which don't check, `out` should still be filled with zeros.
   static const uint8_t kZeros[32] = {0};
   EXPECT_EQ(Bytes(kZeros), Bytes(out));
 }
 
 TEST(X25519Test, Iterated) {
   // Taken from https://tools.ietf.org/html/rfc7748#section-5.2.
-  uint8_t scalar[32] = {9}, point[32] = {9}, out[32];
+  uint8_t scalar[32], point[32], out[32];
+  // This could simply be `uint8_t scalar[32] = {9}`, but GCC's -Warray-bounds
+  // warning is broken. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114826.
+  OPENSSL_memset(scalar, 0, sizeof(scalar));
+  scalar[0] = 9;
+  OPENSSL_memset(point, 0, sizeof(point));
+  point[0] = 9;
 
   for (unsigned i = 0; i < 1000; i++) {
     EXPECT_TRUE(ctwrapX25519(out, scalar, point));
@@ -177,7 +183,13 @@ TEST(X25519Test, Iterated) {
 
 TEST(X25519Test, DISABLED_IteratedLarge) {
   // Taken from https://tools.ietf.org/html/rfc7748#section-5.2.
-  uint8_t scalar[32] = {9}, point[32] = {9}, out[32];
+  uint8_t scalar[32], point[32], out[32];
+  // This could simply be `uint8_t scalar[32] = {9}`, but GCC's -Warray-bounds
+  // warning is broken. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114826.
+  OPENSSL_memset(scalar, 0, sizeof(scalar));
+  scalar[0] = 9;
+  OPENSSL_memset(point, 0, sizeof(point));
+  point[0] = 9;
 
   for (unsigned i = 0; i < 1000000; i++) {
     EXPECT_TRUE(ctwrapX25519(out, scalar, point));
@@ -195,25 +207,30 @@ TEST(X25519Test, DISABLED_IteratedLarge) {
 }
 
 TEST(X25519Test, Wycheproof) {
-  FileTestGTest("third_party/wycheproof_testvectors/x25519_test.txt",
-                [](FileTest *t) {
-      t->IgnoreInstruction("curve");
-      t->IgnoreAttribute("curve");
+  FileTestGTest(
+      "third_party/wycheproof_testvectors/x25519_test.txt", [](FileTest *t) {
+        t->IgnoreInstruction("curve");
+        t->IgnoreAttribute("curve");
 
-      WycheproofResult result;
-      ASSERT_TRUE(GetWycheproofResult(t, &result));
-      std::vector<uint8_t> priv, pub, shared;
-      ASSERT_TRUE(t->GetBytes(&priv, "private"));
-      ASSERT_TRUE(t->GetBytes(&pub, "public"));
-      ASSERT_TRUE(t->GetBytes(&shared, "shared"));
-      ASSERT_EQ(32u, priv.size());
-      ASSERT_EQ(32u, pub.size());
+        WycheproofResult result;
+        ASSERT_TRUE(GetWycheproofResult(t, &result));
+        std::vector<uint8_t> priv, pub, shared;
+        ASSERT_TRUE(t->GetBytes(&priv, "private"));
+        ASSERT_TRUE(t->GetBytes(&pub, "public"));
+        ASSERT_TRUE(t->GetBytes(&shared, "shared"));
+        ASSERT_EQ(32u, priv.size());
+        ASSERT_EQ(32u, pub.size());
 
-      uint8_t secret[32];
-      int ret = ctwrapX25519(secret, priv.data(), pub.data());
-      EXPECT_EQ(ret, result.IsValid({"NonCanonicalPublic", "Twist"}) ? 1 : 0);
-      EXPECT_EQ(Bytes(secret), Bytes(shared));
-  });
+        uint8_t secret[32];
+        int ret = ctwrapX25519(secret, priv.data(), pub.data());
+        EXPECT_EQ(ret, result.IsValid(
+                           {"NonCanonicalPublic", "Twist", "SpecialPublicKey",
+                            "EdgeCaseShared", "EdgeCaseMultiplication",
+                            "SmallPublicKey", "LowOrderPublic", "Ktv"})
+                           ? 1
+                           : 0);
+        EXPECT_EQ(Bytes(secret), Bytes(shared));
+      });
 }
 
 #if defined(BORINGSSL_X25519_NEON) && defined(SUPPORTS_ABI_TEST)
@@ -260,3 +277,6 @@ TEST(X25519Test, AdxSquareABI) {
   }
 }
 #endif  // BORINGSSL_FE25519_ADX && SUPPORTS_ABI_TEST
+
+}  // namespace
+BSSL_NAMESPACE_END

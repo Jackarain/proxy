@@ -1,10 +1,17 @@
 #! /usr/bin/env perl
 # Copyright 2015-2016 The OpenSSL Project Authors. All Rights Reserved.
 #
-# Licensed under the OpenSSL license (the "License").  You may not use
-# this file except in compliance with the License.  You can obtain a copy
-# in the file LICENSE in the source distribution or at
-# https://www.openssl.org/source/license.html
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 use strict;
 
@@ -16,6 +23,8 @@ $flavour = "linux32" if (!$flavour or $flavour eq "void");
 
 my %GLOBALS;
 my $dotinlocallabels=($flavour=~/linux/)?1:0;
+my $current_segment;
+my %segment_had_labels;
 
 ################################################################
 # directives which need special treatment on different platforms
@@ -23,6 +32,26 @@ my $dotinlocallabels=($flavour=~/linux/)?1:0;
 my $arch = sub {
     if ($flavour =~ /linux/)	{ ".arch\t".join(',',@_); }
     elsif ($flavour =~ /win64/) { ".arch\t".join(',',@_); }
+    elsif ($flavour =~ /ios/) {
+        # Apple's assembler does not support the .arch directive, but does
+        # support .arch_extension. We parse the .arch directive to extract the
+        # extensions and emit .arch_extension directives.
+        my @args = split(/,\s*/,shift);
+        my @extensions = ();
+        foreach my $arg (@args) {
+            # Parse "armv8.2-a+crypto+sha3" -> extract "crypto", "sha3"
+            if ($arg =~ /\+/) {
+                my @parts = split(/\+/, $arg);
+                shift @parts; # remove arch version (e.g. armv8.2-a)
+                push @extensions, @parts;
+            }
+        }
+        my $ret = "";
+        foreach my $ext (@extensions) {
+            $ret .= ".arch_extension $ext\n";
+        }
+        return $ret;
+    }
     else			{ ""; }
 };
 my $fpu = sub {
@@ -186,9 +215,16 @@ while(my $line=<>) {
 
     if ($line =~ m/^\s*(#|@|\/\/)/)	{ print $line; next; }
 
-    $line =~ s|/\*.*\*/||;	# get rid of C-style comments...
+    my @comments = ();
+
+    $line =~ s|/\*(.*)\*/||	# get rid of C-style comments...
+	and push @comments, $1;
     $line =~ s|^\s+||;		# ... and skip white spaces in beginning...
     $line =~ s|\s+$||;		# ... and at the end
+
+    if ($line =~ /^(\.data|\.text|\.section)\b(?:\s+(\S+))?/) {
+	$current_segment = $2 // $1;
+    }
 
     if ($flavour =~ /64/) {
 	my $copy = $line;
@@ -199,16 +235,42 @@ while(my $line=<>) {
 	}
     }
 
+    my $comments = join ' ', map { s|^\s+||; s|\s+$||; $_; } @comments;
+    my $commentprefix = @comments ? '// ' : '';
+    my $commentspace = @comments ? '  ' : '';
+
+    my $pre_line = '';
+
     {
 	$line =~ s|[\b\.]L(\w{2,})|L$1|g;	# common denominator for Locallabel
 	$line =~ s|\bL(\w{2,})|\.L$1|g	if ($dotinlocallabels);
     }
 
-    {
-	$line =~ s|(^[\.\w]+)\:\s*||;
+    if ($line =~ s|(^[\.\w]+)\:\s*||) {
 	my $label = $1;
 	if ($label) {
-	    printf "%s:",($GLOBALS{$label} or $label);
+	    my $name = ($GLOBALS{$label} or $label);
+	    if ($name =~ /^\.?L/) {
+		if (!$segment_had_labels{$current_segment}) {
+		    # With `.subsections_via_symbols`, an asm-local label
+		    # cannot be the first label of a section.
+		    die "Section $current_segment starts with an asm-local .Label - please add at least a file-local label at the start";
+		}
+	    } else {
+		if ($segment_had_labels{$current_segment}++ && $flavour =~ /ios/) {
+		    # The macOS linker may split object files at symbol
+		    # definitions to eliminate dead code. It however is unable
+		    # to track jumps across these bounds, and also, for some
+		    # data objects it may cause layout to change. Marking every
+		    # symbol an alternate entry point is safe and should turn
+		    # the optimization into a NOP for these assembly files and
+		    # may add necessary relocations. It however is invalid to
+		    # mark the _first_ symbol of a section so, as it always is
+		    # considered an entry point.
+		    $pre_line .= sprintf ".alt_entry %s\n", $name;
+		}
+	    }
+	    $pre_line .= sprintf "%s:", $name;
 	}
     }
 
@@ -245,8 +307,11 @@ while(my $line=<>) {
 	}
     }
 
-    print $line if ($line);
-    print "\n";
+    $line = $pre_line . $line;
+    $commentspace = ''
+	if $line !~ /[^\n]$/;
+
+    print $line, $commentspace, $commentprefix, $comments, "\n";
 }
 
 print <<___;

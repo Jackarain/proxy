@@ -1,6 +1,16 @@
 // Copyright 2015 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "test_helpers.h"
 
@@ -16,17 +26,19 @@
 #include <openssl/bytestring.h>
 #include <openssl/mem.h>
 #include <openssl/pool.h>
+#include <openssl/span.h>
 
 #include "../crypto/test/test_data.h"
 #include "cert_error_params.h"
 #include "cert_errors.h"
+#include "parse_values.h"
 #include "parser.h"
 #include "pem.h"
 #include "simple_path_builder_delegate.h"
 #include "string_util.h"
 #include "trust_store.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 namespace {
 
@@ -46,7 +58,7 @@ bool GetValue(std::string_view prefix, std::string_view line,
   return true;
 }
 
-// Returns a string containing the dotted numeric form of |oid|, or a
+// Returns a string containing the dotted numeric form of `oid`, or a
 // hex-encoded string on error.
 std::string OidToString(der::Input oid) {
   CBS cbs;
@@ -113,7 +125,7 @@ void PrintTo(Input data, ::std::ostream *os) {
 }  // namespace der
 
 der::Input SequenceValueFromString(std::string_view s) {
-  der::Parser parser((der::Input(s)));
+  der::Parser parser(StringAsBytes(s));
   der::Input data;
   if (!parser.ReadTag(CBS_ASN1_SEQUENCE, &data)) {
     ADD_FAILURE();
@@ -132,12 +144,12 @@ der::Input SequenceValueFromString(std::string_view s) {
   std::string file_data = ReadTestFileToString(file_path_ascii);
 
   // mappings_copy is used to keep track of which mappings have already been
-  // satisfied (by nulling the |value| field). This is used to track when
-  // blocks are mulitply defined.
+  // satisfied (by nulling the `value` field). This is used to track when
+  // blocks are multiply defined.
   std::vector<PemBlockMapping> mappings_copy(mappings,
                                              mappings + mappings_length);
 
-  // Build the |pem_headers| vector needed for PEMTokenzier.
+  // Build the `pem_headers` vector needed for PEMTokenzier.
   std::vector<std::string> pem_headers;
   for (const auto &mapping : mappings_copy) {
     pem_headers.push_back(mapping.block_name);
@@ -276,7 +288,7 @@ bool ReadVerifyCertChainTestFromFile(const std::string &file_path_ascii,
     // For details on the file format refer to:
     // net/data/verify_certificate_chain_unittest/README.
     if (GetValue("chain: ", line_piece, &value, &has_chain)) {
-      // Interpret the |chain| path as being relative to the .test file.
+      // Interpret the `chain` path as being relative to the .test file.
       size_t slash = file_path_ascii.rfind('/');
       if (slash == std::string::npos) {
         ADD_FAILURE() << "Bad path - expecting slashes";
@@ -289,7 +301,7 @@ bool ReadVerifyCertChainTestFromFile(const std::string &file_path_ascii,
       if (value == "DEFAULT") {
         value = "211005120000Z";
       }
-      if (!der::ParseUTCTime(der::Input(value), &test->time)) {
+      if (!der::ParseUTCTime(StringAsBytes(value), &test->time)) {
         ADD_FAILURE() << "Failed parsing UTC time";
         return false;
       }
@@ -309,6 +321,12 @@ bool ReadVerifyCertChainTestFromFile(const std::string &file_path_ascii,
         test->key_purpose = KeyPurpose::SERVER_AUTH_STRICT_LEAF;
       } else if (value == "CLIENT_AUTH_STRICT_LEAF") {
         test->key_purpose = KeyPurpose::CLIENT_AUTH_STRICT_LEAF;
+      } else if (value == "MLS_CLIENT_AUTH") {
+        test->key_purpose = KeyPurpose::RCS_MLS_CLIENT_AUTH;
+      } else if (value == "C2PA_TIMESTAMPING") {
+        test->key_purpose = KeyPurpose::C2PA_TIMESTAMPING;
+      } else if (value == "C2PA_MANIFEST") {
+        test->key_purpose = KeyPurpose::C2PA_MANIFEST;
       } else {
         ADD_FAILURE() << "Unrecognized key_purpose: " << value;
         return false;
@@ -483,4 +501,4 @@ void VerifyUserConstrainedPolicySet(
   }
 }
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

@@ -1,18 +1,19 @@
-/* Copyright (c) 2016, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2016 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <functional>
+#include <iterator>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -29,6 +30,8 @@
 #include <openssl/x509.h>
 
 #include "../crypto/internal.h"
+
+using namespace bssl;
 
 static const uint8_t kCertificateDER[] = {
     0x30, 0x82, 0x02, 0xff, 0x30, 0x82, 0x01, 0xe7, 0xa0, 0x03, 0x02, 0x01,
@@ -215,12 +218,12 @@ struct GlobalState {
     assert(cert_.get() != nullptr);
 
     certs_.reset(sk_X509_new_null());
-    bssl::PushToStack(certs_.get(), bssl::UpRef(cert_));
+    PushToStack(certs_.get(), UpRef(cert_));
   }
 
-  bssl::UniquePtr<EVP_PKEY> pkey_;
-  bssl::UniquePtr<X509> cert_;
-  bssl::UniquePtr<STACK_OF(X509)> certs_;
+  UniquePtr<EVP_PKEY> pkey_;
+  UniquePtr<X509> cert_;
+  UniquePtr<STACK_OF(X509)> certs_;
 };
 
 static GlobalState g_state;
@@ -231,14 +234,16 @@ static bool GetString(std::string *out, CBS *cbs) {
     return false;
   }
 
-  out->assign(reinterpret_cast<const char *>(CBS_data(&str)), CBS_len(&str));
+  *out = BytesAsStringView(str);
   return true;
 }
 
 template <typename T>
 static bool GetVector(std::vector<T> *out, CBS *cbs) {
-  static_assert(std::is_pod<T>::value,
-                "GetVector may only be called on POD types");
+  static_assert(
+      std::is_standard_layout_v<T> && std::is_trivially_copyable_v<T>,
+      "GetVector may only be called on standard layout, trivially copyable "
+      "types");
 
   CBS child;
   if (!CBS_get_u8_length_prefixed(cbs, &child)) {
@@ -500,7 +505,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len) {
         SSL_CTX_set1_sigalgs_list(ctx, sigalgs.c_str());
       },
       [](SSL_CTX *ctx, CBS *cbs) {
-        bssl::UniquePtr<SSL_ECH_KEYS> keys(SSL_ECH_KEYS_new());
+        UniquePtr<SSL_ECH_KEYS> keys(SSL_ECH_KEYS_new());
         if (keys == nullptr) {
           return;
         }
@@ -511,7 +516,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len) {
             !CBS_get_u16_length_prefixed(cbs, &private_key)) {
           return;
         }
-        bssl::ScopedEVP_HPKE_KEY key;
+        ScopedEVP_HPKE_KEY key;
         if (!EVP_HPKE_KEY_init(key.get(), EVP_hpke_x25519_hkdf_sha256(),
                                CBS_data(&private_key), CBS_len(&private_key)) ||
             !SSL_ECH_KEYS_add(keys.get(), is_retry_config,
@@ -523,11 +528,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len) {
       },
   };
 
-  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
+  UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
 
   // If the number of functions exceeds this limit then the code needs to do
   // more than sample a single uint8_t to pick the function.
-  static_assert(OPENSSL_ARRAY_SIZE(kAPIs) < 256, "kAPIs too large");
+  static_assert(std::size(kAPIs) < 256, "kAPIs too large");
 
   CBS cbs;
   CBS_init(&cbs, buf, len);
@@ -538,10 +543,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len) {
       break;
     }
 
-    kAPIs[index % OPENSSL_ARRAY_SIZE(kAPIs)](ctx.get(), &cbs);
+    kAPIs[index % std::size(kAPIs)](ctx.get(), &cbs);
   }
 
-  bssl::UniquePtr<SSL> ssl(SSL_new(ctx.get()));
+  UniquePtr<SSL> ssl(SSL_new(ctx.get()));
   ERR_clear_error();
 
   return 0;

@@ -1,10 +1,17 @@
 #! /usr/bin/env perl
 # Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
 #
-# Licensed under the OpenSSL license (the "License").  You may not use
-# this file except in compliance with the License.  You can obtain a copy
-# in the file LICENSE in the source distribution or at
-# https://www.openssl.org/source/license.html
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 # require 'x86asm.pl';
@@ -42,10 +49,10 @@ sub ::record_function_hit
     &preprocessor_ifdef("BORINGSSL_DISPATCH_TEST");
     &push("ebx");
     &push("edx");
-    &call(&label("pic"));
-    &set_label("pic");
+    &call(&label("pic_for_function_hit"));
+    &set_label("pic_for_function_hit");
     &blindpop("ebx");
-    &lea("ebx",&DWP("BORINGSSL_function_hit+$index"."-".&label("pic"),"ebx"));
+    &lea("ebx",&DWP("BORINGSSL_function_hit+$index"."-".&label("pic_for_function_hit"),"ebx"));
     &mov("edx", 1);
     &movb(&BP(0, "ebx"), "dl");
     &pop("edx");
@@ -105,65 +112,6 @@ sub ::movq
     {	&::pshufw($p1,$p2,0xe4);		}
     else
     {	&::generic("movq",@_);			}
-}
-
-# SSE>2 instructions
-my %regrm = (	"eax"=>0, "ecx"=>1, "edx"=>2, "ebx"=>3,
-		"esp"=>4, "ebp"=>5, "esi"=>6, "edi"=>7	);
-sub ::pextrd
-{ my($dst,$src,$imm)=@_;
-    if ("$dst:$src" =~ /(e[a-dsd][ixp]):xmm([0-7])/)
-    {	&::data_byte(0x66,0x0f,0x3a,0x16,0xc0|($2<<3)|$regrm{$1},$imm);	}
-    else
-    {	&::generic("pextrd",@_);		}
-}
-
-sub ::pinsrd
-{ my($dst,$src,$imm)=@_;
-    if ("$dst:$src" =~ /xmm([0-7]):(e[a-dsd][ixp])/)
-    {	&::data_byte(0x66,0x0f,0x3a,0x22,0xc0|($1<<3)|$regrm{$2},$imm);	}
-    else
-    {	&::generic("pinsrd",@_);		}
-}
-
-sub ::pshufb
-{ my($dst,$src)=@_;
-    if ("$dst:$src" =~ /xmm([0-7]):xmm([0-7])/)
-    {	&data_byte(0x66,0x0f,0x38,0x00,0xc0|($1<<3)|$2);	}
-    else
-    {	&::generic("pshufb",@_);		}
-}
-
-sub ::palignr
-{ my($dst,$src,$imm)=@_;
-    if ("$dst:$src" =~ /xmm([0-7]):xmm([0-7])/)
-    {	&::data_byte(0x66,0x0f,0x3a,0x0f,0xc0|($1<<3)|$2,$imm);	}
-    else
-    {	&::generic("palignr",@_);		}
-}
-
-sub ::pclmulqdq
-{ my($dst,$src,$imm)=@_;
-    if ("$dst:$src" =~ /xmm([0-7]):xmm([0-7])/)
-    {	&::data_byte(0x66,0x0f,0x3a,0x44,0xc0|($1<<3)|$2,$imm);	}
-    else
-    {	&::generic("pclmulqdq",@_);		}
-}
-
-sub ::rdrand
-{ my ($dst)=@_;
-    if ($dst =~ /(e[a-dsd][ixp])/)
-    {	&::data_byte(0x0f,0xc7,0xf0|$regrm{$dst});	}
-    else
-    {	&::generic("rdrand",@_);	}
-}
-
-sub ::rdseed
-{ my ($dst)=@_;
-    if ($dst =~ /(e[a-dsd][ixp])/)
-    {	&::data_byte(0x0f,0xc7,0xf8|$regrm{$dst});	}
-    else
-    {	&::generic("rdrand",@_);	}
 }
 
 sub rxb {
@@ -285,7 +233,7 @@ ___
     if ($win32) {
         print <<___ unless $masm;
 \%ifdef BORINGSSL_PREFIX
-\%include "boringssl_prefix_symbols_nasm.inc"
+\%include "boringssl_prefix_symbols_internal_x86_win_asm.inc"
 \%endif
 \%ifidn __OUTPUT_FORMAT__, win32
 ___

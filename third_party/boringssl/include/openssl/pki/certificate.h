@@ -1,28 +1,28 @@
-/* Copyright (c) 2023, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2023 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#if !defined(OPENSSL_HEADER_BSSL_PKI_CERTIFICATE_H_) && defined(__cplusplus)
+#ifndef OPENSSL_HEADER_BSSL_PKI_CERTIFICATE_H_
 #define OPENSSL_HEADER_BSSL_PKI_CERTIFICATE_H_
 
 #include <memory>
 #include <string>
 #include <string_view>
 
-#include <openssl/base.h>
+#include <openssl/base.h>   // IWYU pragma: export
 #include <openssl/span.h>
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 struct CertificateInternals;
 
@@ -35,17 +35,17 @@ class OPENSSL_EXPORT Certificate {
   ~Certificate();
   Certificate& operator=(const Certificate& other) = delete;
 
-  // FromDER returns a certificate from an DER-encoded X.509 object in |der|.
-  // In the event of a failure, it will return no value, and |out_diagnostic|
+  // FromDER returns a certificate from a DER-encoded X.509 object in `der`.
+  // In the event of a failure, it will return no value, and `out_diagnostic`
   // may be set to a string of human readable debugging information if
-  // information abou the failure is available.
+  // information about the failure is available.
   static std::unique_ptr<Certificate> FromDER(
       bssl::Span<const uint8_t> der, std::string *out_diagnostic);
 
   // FromPEM returns a certificate from the first CERTIFICATE PEM block in
-  // |pem|. In the event of a failure, it will return no value, and
-  // |out_diagnostic| may be set to a string of human readable debugging
-  // informtion if informaiton about the failuew is available.
+  // `pem`. In the event of a failure, it will return no value, and
+  // `out_diagnostic` may be set to a string of human readable debugging
+  // information if information about the failure is available.
   static std::unique_ptr<Certificate> FromPEM(
       std::string_view pem, std::string *out_diagnostic);
 
@@ -57,7 +57,7 @@ class OPENSSL_EXPORT Certificate {
   // may or may not be this, and may check other properties of the certificate.
   bool IsSelfIssued() const;
 
-  // Validity specifies the temporal validity of a cerificate, expressed in
+  // Validity specifies the temporal validity of a certificate, expressed in
   // POSIX time values of seconds since the POSIX epoch. The certificate is
   // valid at POSIX time t in second granularity, where not_before <= t <=
   // not_after.
@@ -78,6 +78,6 @@ class OPENSSL_EXPORT Certificate {
   std::unique_ptr<CertificateInternals> internals_;
 };
 
-}  // namespace bssl
+BSSL_NAMESPACE_END
 
-#endif  // OPENSSL_HEADER_BSSL_PKI_CERTIFICATE_H_ && __cplusplus
+#endif  // OPENSSL_HEADER_BSSL_PKI_CERTIFICATE_H_

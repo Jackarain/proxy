@@ -1,61 +1,16 @@
-/* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
- * All rights reserved.
- *
- * This package is an SSL implementation written
- * by Eric Young (eay@cryptsoft.com).
- * The implementation was written so as to conform with Netscapes SSL.
- *
- * This library is free for commercial and non-commercial use as long as
- * the following conditions are aheared to.  The following conditions
- * apply to all code found in this distribution, be it the RC4, RSA,
- * lhash, DES, etc., code; not just the SSL code.  The SSL documentation
- * included with this distribution is covered by the same copyright terms
- * except that the holder is Tim Hudson (tjh@cryptsoft.com).
- *
- * Copyright remains Eric Young's, and as such any Copyright notices in
- * the code are not to be removed.
- * If this package is used in a product, Eric Young should be given attribution
- * as the author of the parts of the library used.
- * This can be in the form of a textual message at program startup or
- * in documentation (online or textual) provided with the package.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    "This product includes cryptographic software written by
- *     Eric Young (eay@cryptsoft.com)"
- *    The word 'cryptographic' can be left out if the rouines from the library
- *    being used are not cryptographic related :-).
- * 4. If you include any Windows specific code (or a derivative thereof) from
- *    the apps directory (application code) you must include an acknowledgement:
- *    "This product includes software written by Tim Hudson (tjh@cryptsoft.com)"
- *
- * THIS SOFTWARE IS PROVIDED BY ERIC YOUNG ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * The licence and distribution terms for any publically available version or
- * derivative of this code cannot be changed.  i.e. this code cannot simply be
- * copied and put under another distribution licence
- * [including the GNU Public Licence.]
- *
- * The DSS routines are based on patches supplied by
- * Steven Schoch <schoch@sheba.arc.nasa.gov>. */
+// Copyright 1995-2016 The OpenSSL Project Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <openssl/dsa.h>
 
@@ -163,14 +118,13 @@ static const uint8_t fips_sig_bad_length[] = {
 
 // fips_sig_bad_r is fips_sig with a bad r value.
 static const uint8_t fips_sig_bad_r[] = {
-    0x30, 0x2d, 0x02, 0x15, 0x00, 0x8c, 0xac, 0x1a, 0xb6, 0x64, 0x10,
-    0x43, 0x5c, 0xb7, 0x18, 0x1f, 0x95, 0xb1, 0x6a, 0xb9, 0x7c, 0x92,
-    0xb3, 0x41, 0xc0, 0x02, 0x14, 0x41, 0xe2, 0x34, 0x5f, 0x1f, 0x56,
-    0xdf, 0x24, 0x58, 0xf4, 0x26, 0xd1, 0x55, 0xb4, 0xba, 0x2d, 0xb6,
-    0xdc, 0xd8, 0xc8,
+    0x30, 0x2d, 0x02, 0x15, 0x00, 0x8c, 0xac, 0x1a, 0xb6, 0x64, 0x10, 0x43,
+    0x5c, 0xb7, 0x18, 0x1f, 0x95, 0xb1, 0x6a, 0xb9, 0x7c, 0x92, 0xb3, 0x41,
+    0xc0, 0x02, 0x14, 0x41, 0xe2, 0x34, 0x5f, 0x1f, 0x56, 0xdf, 0x24, 0x58,
+    0xf4, 0x26, 0xd1, 0x55, 0xb4, 0xba, 0x2d, 0xb6, 0xdc, 0xd8, 0xc8,
 };
 
-static bssl::UniquePtr<DSA> GetFIPSDSAGroup(void) {
+static bssl::UniquePtr<DSA> GetFIPSDSAGroup() {
   bssl::UniquePtr<DSA> dsa(DSA_new());
   if (!dsa) {
     return nullptr;
@@ -181,14 +135,14 @@ static bssl::UniquePtr<DSA> GetFIPSDSAGroup(void) {
   if (!p || !q || !g || !DSA_set0_pqg(dsa.get(), p.get(), q.get(), g.get())) {
     return nullptr;
   }
-  // |DSA_set0_pqg| takes ownership.
+  // `DSA_set0_pqg` takes ownership.
   p.release();
   q.release();
   g.release();
   return dsa;
 }
 
-static bssl::UniquePtr<DSA> GetFIPSDSA(void) {
+static bssl::UniquePtr<DSA> GetFIPSDSA() {
   bssl::UniquePtr<DSA> dsa = GetFIPSDSAGroup();
   if (!dsa) {
     return nullptr;
@@ -199,7 +153,7 @@ static bssl::UniquePtr<DSA> GetFIPSDSA(void) {
       !DSA_set0_key(dsa.get(), pub_key.get(), priv_key.get())) {
     return nullptr;
   }
-  // |DSA_set0_key| takes ownership.
+  // `DSA_set0_key` takes ownership.
   pub_key.release();
   priv_key.release();
   return dsa;
@@ -243,6 +197,7 @@ TEST(DSATest, GenerateParamsTooLarge) {
       dsa.get(), 10001, /*seed=*/nullptr, /*seed_len=*/0,
       /*out_counter=*/nullptr, /*out_h=*/nullptr,
       /*cb=*/nullptr));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_DSA, DSA_R_INVALID_PARAMETERS}}));
 }
 
 TEST(DSATest, GenerateKeyTooLarge) {
@@ -254,10 +209,11 @@ TEST(DSATest, GenerateKeyTooLarge) {
   ASSERT_TRUE(BN_set_bit(large_p.get(), 0));
   ASSERT_TRUE(DSA_set0_pqg(dsa.get(), /*p=*/large_p.get(), /*q=*/nullptr,
                            /*g=*/nullptr));
-  large_p.release();  // |DSA_set0_pqg| takes ownership on success.
+  large_p.release();  // `DSA_set0_pqg` takes ownership on success.
 
   // Don't generate DSA keys if the group is too large.
   EXPECT_FALSE(DSA_generate_key(dsa.get()));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_DSA, DSA_R_MODULUS_TOO_LARGE}}));
 }
 
 TEST(DSATest, Verify) {
@@ -269,13 +225,60 @@ TEST(DSATest, Verify) {
   EXPECT_EQ(-1,
             DSA_verify(0, fips_digest, sizeof(fips_digest), fips_sig_negative,
                        sizeof(fips_sig_negative), dsa.get()));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_BN, BN_R_NEGATIVE_NUMBER}}));
   EXPECT_EQ(-1, DSA_verify(0, fips_digest, sizeof(fips_digest), fips_sig_extra,
                            sizeof(fips_sig_extra), dsa.get()));
+  EXPECT_EQ(0u, ERR_peek_error());
   EXPECT_EQ(-1,
             DSA_verify(0, fips_digest, sizeof(fips_digest), fips_sig_bad_length,
                        sizeof(fips_sig_bad_length), dsa.get()));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_DSA, DSA_R_DECODE_ERROR}}));
   EXPECT_EQ(0, DSA_verify(0, fips_digest, sizeof(fips_digest), fips_sig_bad_r,
                           sizeof(fips_sig_bad_r), dsa.get()));
+}
+
+TEST(DSATest, CheckSignature) {
+  bssl::UniquePtr<DSA> dsa = GetFIPSDSA();
+  ASSERT_TRUE(dsa);
+
+  int valid;
+
+  // Valid signature
+  valid = 42;
+  EXPECT_EQ(1, DSA_check_signature(&valid, fips_digest, sizeof(fips_digest),
+                                   fips_sig, sizeof(fips_sig), dsa.get()));
+  EXPECT_EQ(1, valid);
+
+  // Bad r (invalid signature, not error)
+  valid = 42;
+  EXPECT_EQ(1, DSA_check_signature(&valid, fips_digest, sizeof(fips_digest),
+                                   fips_sig_bad_r, sizeof(fips_sig_bad_r),
+                                   dsa.get()));
+  EXPECT_EQ(0, valid);
+
+  // Negative signature (error)
+  valid = 42;
+  EXPECT_EQ(0, DSA_check_signature(&valid, fips_digest, sizeof(fips_digest),
+                                   fips_sig_negative, sizeof(fips_sig_negative),
+                                   dsa.get()));
+  EXPECT_EQ(0, valid);
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_BN, BN_R_NEGATIVE_NUMBER}}));
+
+  // Extra data (error)
+  valid = 42;
+  EXPECT_EQ(0, DSA_check_signature(&valid, fips_digest, sizeof(fips_digest),
+                                   fips_sig_extra, sizeof(fips_sig_extra),
+                                   dsa.get()));
+  EXPECT_EQ(0, valid);
+  EXPECT_EQ(0u, ERR_peek_error());
+
+  // Bad length (error)
+  valid = 42;
+  EXPECT_EQ(0, DSA_check_signature(&valid, fips_digest, sizeof(fips_digest),
+                                   fips_sig_bad_length,
+                                   sizeof(fips_sig_bad_length), dsa.get()));
+  EXPECT_EQ(0, valid);
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_DSA, DSA_R_DECODE_ERROR}}));
 }
 
 TEST(DSATest, InvalidGroup) {
@@ -301,11 +304,13 @@ TEST(DSATest, MissingParameters) {
   ASSERT_TRUE(dsa);
   EXPECT_EQ(-1, DSA_verify(0, fips_digest, sizeof(fips_digest), fips_sig,
                            sizeof(fips_sig), dsa.get()));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_DSA, DSA_R_MISSING_PARAMETERS}}));
 
   std::vector<uint8_t> sig(DSA_size(dsa.get()));
   unsigned sig_len;
   EXPECT_FALSE(DSA_sign(0, fips_digest, sizeof(fips_digest), sig.data(),
                         &sig_len, dsa.get()));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_DSA, DSA_R_MISSING_PARAMETERS}}));
 }
 
 // Verifying should cleanly fail when the public key is missing.
@@ -314,6 +319,7 @@ TEST(DSATest, MissingPublic) {
   ASSERT_TRUE(dsa);
   EXPECT_EQ(-1, DSA_verify(0, fips_digest, sizeof(fips_digest), fips_sig,
                            sizeof(fips_sig), dsa.get()));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_DSA, DSA_R_MISSING_PARAMETERS}}));
 }
 
 // Signing should cleanly fail when the private key is missing.
@@ -325,6 +331,7 @@ TEST(DSATest, MissingPrivate) {
   unsigned sig_len;
   EXPECT_FALSE(DSA_sign(0, fips_digest, sizeof(fips_digest), sig.data(),
                         &sig_len, dsa.get()));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_DSA, DSA_R_MISSING_PARAMETERS}}));
 }
 
 // A zero private key is invalid and can cause signing to loop forever.
@@ -341,6 +348,7 @@ TEST(DSATest, ZeroPrivateKey) {
   unsigned sig_len;
   EXPECT_FALSE(DSA_sign(0, kZeroDigest, sizeof(kZeroDigest), sig.data(),
                         &sig_len, dsa.get()));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_DSA, DSA_R_INVALID_PARAMETERS}}));
 }
 
 // If the "field" is actually a ring and the "generator" of the multiplicative
@@ -364,6 +372,7 @@ Epvg
   unsigned sig_len;
   EXPECT_FALSE(DSA_sign(0, fips_digest, sizeof(fips_digest), sig.data(),
                         &sig_len, dsa.get()));
+  EXPECT_TRUE(ErrorsAreAndClear({{ERR_LIB_DSA, DSA_R_TOO_MANY_ITERATIONS}}));
 }
 
 TEST(DSATest, Overwrite) {
@@ -412,7 +421,7 @@ s2lmkAIcLIFUDFrbC2nViaB5ATM9ARKk6F2QwnCfGCyZ6A==
   bssl::UniquePtr<BIGNUM> g(BN_bin2bn(fips_g, sizeof(fips_g), nullptr));
   ASSERT_TRUE(g);
   ASSERT_TRUE(DSA_set0_pqg(dsa.get(), p.get(), q.get(), g.get()));
-  // |DSA_set0_pqg| takes ownership on success.
+  // `DSA_set0_pqg` takes ownership on success.
   p.release();
   q.release();
   g.release();
@@ -421,7 +430,7 @@ s2lmkAIcLIFUDFrbC2nViaB5ATM9ARKk6F2QwnCfGCyZ6A==
   bssl::UniquePtr<BIGNUM> priv_key(BN_bin2bn(fips_x, sizeof(fips_x), nullptr));
   ASSERT_TRUE(priv_key);
   ASSERT_TRUE(DSA_set0_key(dsa.get(), pub_key.get(), priv_key.get()));
-  // |DSA_set0_key| takes ownership on success.
+  // `DSA_set0_key` takes ownership on success.
   pub_key.release();
   priv_key.release();
 

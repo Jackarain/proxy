@@ -1,16 +1,16 @@
-/* Copyright (c) 2018, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2018 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <assert.h>
 #include <errno.h>
@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <cstdio>
 #include <memory>
 
 #include <openssl/bytestring.h>
@@ -48,94 +49,6 @@ ssize_t write_eintr(int fd, const void *in, size_t len) {
   return ret;
 }
 
-bool HandbackReady(SSL *ssl, int ret) {
-  return ret < 0 && SSL_get_error(ssl, ret) == SSL_ERROR_HANDBACK;
-}
-
-bool Handshaker(const TestConfig *config, int rfd, int wfd,
-                Span<const uint8_t> input, int control) {
-  UniquePtr<SSL_CTX> ctx = config->SetupCtx(/*old_ctx=*/nullptr);
-  if (!ctx) {
-    return false;
-  }
-  UniquePtr<SSL> ssl =
-      config->NewSSL(ctx.get(), /*session=*/nullptr, /*test_state=*/nullptr);
-  if (!ssl) {
-    fprintf(stderr, "Error creating SSL object in handshaker.\n");
-    ERR_print_errors_fp(stderr);
-    return false;
-  }
-
-  // Set |O_NONBLOCK| in order to break out of the loop when we hit
-  // |SSL_ERROR_WANT_READ|, so that we can send |kControlMsgWantRead| to the
-  // proxy.
-  if (fcntl(rfd, F_SETFL, O_NONBLOCK) != 0) {
-    perror("fcntl");
-    return false;
-  }
-  SSL_set_rfd(ssl.get(), rfd);
-  SSL_set_wfd(ssl.get(), wfd);
-
-  CBS cbs, handoff;
-  CBS_init(&cbs, input.data(), input.size());
-  if (!CBS_get_asn1_element(&cbs, &handoff, CBS_ASN1_SEQUENCE) ||
-      !DeserializeContextState(&cbs, ctx.get()) ||
-      !SetTestState(ssl.get(), TestState::Deserialize(&cbs, ctx.get())) ||
-      !GetTestState(ssl.get()) ||
-      !SSL_apply_handoff(ssl.get(), handoff)) {
-    fprintf(stderr, "Handoff application failed.\n");
-    return false;
-  }
-
-  int ret = 0;
-  for (;;) {
-    ret = CheckIdempotentError(
-        "SSL_do_handshake", ssl.get(),
-        [&]() -> int { return SSL_do_handshake(ssl.get()); });
-    if (SSL_get_error(ssl.get(), ret) == SSL_ERROR_WANT_READ) {
-      // Synchronize with the proxy, i.e. don't let the handshake continue until
-      // the proxy has sent more data.
-      char msg = kControlMsgWantRead;
-      if (write_eintr(control, &msg, 1) != 1 ||
-          read_eintr(control, &msg, 1) != 1 ||
-          msg != kControlMsgWriteCompleted) {
-        fprintf(stderr, "read via proxy failed\n");
-        return false;
-      }
-      continue;
-    }
-    if (!RetryAsync(ssl.get(), ret)) {
-      break;
-    }
-  }
-  if (!HandbackReady(ssl.get(), ret)) {
-    fprintf(stderr, "Handshaker: %s\n",
-            SSL_error_description(SSL_get_error(ssl.get(), ret)));
-    ERR_print_errors_fp(stderr);
-    return false;
-  }
-
-  ScopedCBB output;
-  CBB handback;
-  if (!CBB_init(output.get(), 1024) ||
-      !CBB_add_u24_length_prefixed(output.get(), &handback) ||
-      !SSL_serialize_handback(ssl.get(), &handback) ||
-      !SerializeContextState(ctx.get(), output.get()) ||
-      !GetTestState(ssl.get())->Serialize(output.get())) {
-    fprintf(stderr, "Handback serialisation failed.\n");
-    return false;
-  }
-
-  char msg = kControlMsgDone;
-  if (write_eintr(control, &msg, 1) == -1 ||
-      write_eintr(control, CBB_data(output.get()), CBB_len(output.get())) ==
-          -1) {
-    perror("write");
-    return false;
-  }
-  return true;
-}
-
 bool GenerateHandshakeHint(const TestConfig *config,
                            bssl::Span<const uint8_t> request, int control) {
   // The handshake hint contains the ClientHello and the capabilities string.
@@ -161,7 +74,7 @@ bool GenerateHandshakeHint(const TestConfig *config,
     return false;
   }
 
-  // TODO(davidben): When split handshakes is replaced, move this into |NewSSL|.
+  // TODO(davidben): When split handshakes is replaced, move this into `NewSSL`.
   assert(config->is_server);
   SSL_set_accept_state(ssl.get());
 
@@ -215,6 +128,14 @@ bool GenerateHandshakeHint(const TestConfig *config,
   return true;
 }
 
+int SignalUnimplemented() {
+  const char msg = kControlMsgUnimplemented;
+  if (write_eintr(kFdControl, &msg, 1) != 1) {
+    return 2;
+  }
+  return 1;
+}
+
 int SignalError() {
   const char msg = kControlMsgError;
   if (write_eintr(kFdControl, &msg, 1) != 1) {
@@ -226,26 +147,9 @@ int SignalError() {
 }  // namespace
 
 int main(int argc, char **argv) {
-  TestConfig initial_config, resume_config, retry_config;
-  if (!ParseConfig(argc - 1, argv + 1, /*is_shim=*/false, &initial_config,
-                   &resume_config, &retry_config)) {
-    return SignalError();
-  }
-  const TestConfig *config =
-      initial_config.handshaker_resume ? &resume_config : &initial_config;
-#if defined(BORINGSSL_UNSAFE_DETERMINISTIC_MODE)
-  if (initial_config.handshaker_resume) {
-    // If the PRNG returns exactly the same values when trying to resume then a
-    // "random" session ID will happen to exactly match the session ID
-    // "randomly" generated on the initial connection. The client will thus
-    // incorrectly believe that the server is resuming.
-    uint8_t byte;
-    RAND_bytes(&byte, 1);
-  }
-#endif  // BORINGSSL_UNSAFE_DETERMINISTIC_MODE
-
-  // read() will return the entire message in one go, because it's a datagram
-  // socket.
+  // Read the request before parsing the configuration. This ensures that
+  // flag-parsing errors are signaled at a reliable point in time. read() will
+  // return the entire message in one go, because it's a datagram socket.
   constexpr size_t kBufSize = 1024 * 1024;
   std::vector<uint8_t> request(kBufSize);
   ssize_t len = read_eintr(kFdControl, request.data(), request.size());
@@ -255,15 +159,34 @@ int main(int argc, char **argv) {
   }
   request.resize(static_cast<size_t>(len));
 
-  if (config->handshake_hints) {
-    if (!GenerateHandshakeHint(config, request, kFdControl)) {
-      return SignalError();
-    }
-  } else {
-    if (!Handshaker(config, kFdProxyToHandshaker, kFdHandshakerToProxy,
-                    request, kFdControl)) {
-      return SignalError();
-    }
+  TestConfig initial_config, resume_config, retry_config;
+  if (!ParseConfig(argc - 1, argv + 1, /*is_shim=*/false, &initial_config,
+                   &resume_config, &retry_config)) {
+    return SignalUnimplemented();
+  }
+  const TestConfig *config =
+      initial_config.handshaker_resume ? &resume_config : &initial_config;
+#if defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
+  if (initial_config.fuzzer_mode) {
+    CRYPTO_set_fuzzer_mode(1);
+  }
+  if (initial_config.handshaker_resume) {
+    // If the PRNG returns exactly the same values when trying to resume then a
+    // "random" session ID will happen to exactly match the session ID
+    // "randomly" generated on the initial connection. The client will thus
+    // incorrectly believe that the server is resuming.
+    uint8_t byte;
+    RAND_bytes(&byte, 1);
+  }
+#endif  // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+
+  if (!config->handshake_hints) {
+    // Historically omitting -handshake-hints ran the split handshakes mode.
+    fprintf(stderr, "Handshaker missing -handshake-hints flag.");
+    return SignalError();
+  }
+  if (!GenerateHandshakeHint(config, request, kFdControl)) {
+    return SignalError();
   }
   return 0;
 }

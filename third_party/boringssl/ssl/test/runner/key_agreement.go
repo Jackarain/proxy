@@ -6,19 +6,18 @@ package runner
 
 import (
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/elliptic"
+	"crypto/mlkem"
 	"crypto/rsa"
-	"crypto/subtle"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
+	"slices"
 
-	"boringssl.googlesource.com/boringssl/ssl/test/runner/kyber"
-	"golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/cryptobyte"
 )
 
 type keyType int
@@ -34,12 +33,12 @@ var errServerKeyExchange = errors.New("tls: invalid ServerKeyExchange message")
 // rsaKeyAgreement implements the standard TLS key agreement where the client
 // encrypts the pre-master secret to the server's public key.
 type rsaKeyAgreement struct {
-	version       uint16
+	version       version
 	clientVersion uint16
 	exportKey     *rsa.PrivateKey
 }
 
-func (ka *rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Credential, clientHello *clientHelloMsg, hello *serverHelloMsg, version uint16) (*serverKeyExchangeMsg, error) {
+func (ka *rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Credential, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
 	// Save the client version for comparison later.
 	ka.clientVersion = clientHello.vers
 
@@ -49,54 +48,49 @@ func (ka *rsaKeyAgreement) generateServerKeyExchange(config *Config, cert *Crede
 
 	// Generate an ephemeral RSA key to use instead of the real
 	// one, as in RSA_EXPORT.
-	key, err := rsa.GenerateKey(config.rand(), 512)
+	key, err := rsa.GenerateKey(config.rand(), 1024)
 	if err != nil {
 		return nil, err
 	}
 	ka.exportKey = key
 
-	modulus := key.N.Bytes()
-	exponent := big.NewInt(int64(key.E)).Bytes()
-	serverRSAParams := make([]byte, 0, 2+len(modulus)+2+len(exponent))
-	serverRSAParams = append(serverRSAParams, byte(len(modulus)>>8), byte(len(modulus)))
-	serverRSAParams = append(serverRSAParams, modulus...)
-	serverRSAParams = append(serverRSAParams, byte(len(exponent)>>8), byte(len(exponent)))
-	serverRSAParams = append(serverRSAParams, exponent...)
+	bb := cryptobyte.NewBuilder(nil)
+	addUint16LengthPrefixedBytes(bb, key.N.Bytes())
+	addUint16LengthPrefixedBytes(bb, big.NewInt(int64(key.E)).Bytes())
+	serverRSAParams, err := bb.Bytes()
+	if err != nil {
+		return nil, err
+	}
 
 	var sigAlg signatureAlgorithm
-	if ka.version >= VersionTLS12 {
-		sigAlg, err = selectSignatureAlgorithm(ka.version, cert, config, clientHello.signatureAlgorithms)
+	if ka.version.protocolVersion() >= VersionTLS12 {
+		sigAlg, err = selectSignatureAlgorithm(false /* server */, ka.version, cert, config, clientHello.signatureAlgorithms)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	sig, err := signMessage(ka.version, cert.PrivateKey, config, sigAlg, serverRSAParams)
+	sig, err := signMessage(false /* server */, ka.version, cert.PrivateKey, config, sigAlg, serverRSAParams)
 	if err != nil {
 		return nil, errors.New("failed to sign RSA parameters: " + err.Error())
 	}
 
 	skx := new(serverKeyExchangeMsg)
-	sigAlgsLen := 0
-	if ka.version >= VersionTLS12 {
-		sigAlgsLen = 2
+	bb = cryptobyte.NewBuilder(nil)
+	bb.AddBytes(serverRSAParams)
+	if ka.version.protocolVersion() >= VersionTLS12 {
+		bb.AddUint16(uint16(sigAlg))
 	}
-	skx.key = make([]byte, len(serverRSAParams)+sigAlgsLen+2+len(sig))
-	copy(skx.key, serverRSAParams)
-	k := skx.key[len(serverRSAParams):]
-	if ka.version >= VersionTLS12 {
-		k[0] = byte(sigAlg >> 8)
-		k[1] = byte(sigAlg)
-		k = k[2:]
+	addUint16LengthPrefixedBytes(bb, sig)
+	skx.key, err = bb.Bytes()
+	if err != nil {
+		return nil, err
 	}
-	k[0] = byte(len(sig) >> 8)
-	k[1] = byte(len(sig))
-	copy(k[2:], sig)
 
 	return skx, nil
 }
 
-func (ka *rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Credential, ckx *clientKeyExchangeMsg, version uint16) ([]byte, error) {
+func (ka *rsaKeyAgreement) processClientKeyExchange(config *Config, cert *Credential, ckx *clientKeyExchangeMsg) ([]byte, error) {
 	preMasterSecret := make([]byte, 48)
 	_, err := io.ReadFull(config.rand(), preMasterSecret[2:])
 	if err != nil {
@@ -168,7 +162,7 @@ func nonZeroRandomBytes(s []byte, rand io.Reader) {
 	}
 }
 
-func (ka *rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
+func (ka *rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, serverPublicKey crypto.PublicKey) ([]byte, *clientKeyExchangeMsg, error) {
 	bad := config.Bugs.BadRSAClientKeyExchange
 	preMasterSecret := make([]byte, 48)
 	vers := clientHello.vers
@@ -193,7 +187,7 @@ func (ka *rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello
 	}
 
 	// Pad for PKCS#1 v1.5.
-	padded := make([]byte, rsaSize(cert.PublicKey.(*rsa.PublicKey)))
+	padded := make([]byte, rsaSize(serverPublicKey.(*rsa.PublicKey)))
 	padded[1] = 2
 	nonZeroRandomBytes(padded[2:len(padded)-len(sentPreMasterSecret)-1], config.rand())
 	copy(padded[len(padded)-len(sentPreMasterSecret):], sentPreMasterSecret)
@@ -210,7 +204,7 @@ func (ka *rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello
 		}
 	}
 
-	encrypted, err := rsaRawEncrypt(cert.PublicKey.(*rsa.PublicKey), padded)
+	encrypted, err := rsaRawEncrypt(serverPublicKey.(*rsa.PublicKey), padded)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -233,221 +227,309 @@ func (ka *rsaKeyAgreement) peerSignatureAlgorithm() signatureAlgorithm {
 
 // A kemImplementation is an instance of KEM-style construction for TLS.
 type kemImplementation interface {
+	encapsulationKeySize() int
+	ciphertextSize() int
+
 	// generate generates a keypair using rand. It returns the encoded public key.
-	generate(rand io.Reader) (publicKey []byte, err error)
+	generate(config *Config) (publicKey []byte, err error)
 
 	// encap generates a symmetric, shared secret, encapsulates it with |peerKey|.
 	// It returns the encapsulated shared secret and the secret itself.
-	encap(rand io.Reader, peerKey []byte) (ciphertext []byte, secret []byte, err error)
+	encap(config *Config, peerKey []byte) (ciphertext []byte, secret []byte, err error)
 
 	// decap decapsulates |ciphertext| and returns the resulting shared secret.
-	decap(ciphertext []byte) (secret []byte, err error)
+	decap(config *Config, ciphertext []byte) (secret []byte, err error)
 }
 
-// ecdhKEM implements kemImplementation with an elliptic.Curve.
-//
-// TODO(davidben): Move this to Go's crypto/ecdh.
+func applyBugsToECDHPublicKey(config *Config, publicKey []byte) []byte {
+	if config.Bugs.SendCompressedCoordinates {
+		l := (len(publicKey) - 1) / 2
+		tmp := make([]byte, 1+l)
+		// Extract the low-order bit of the y-coordinate.
+		tmp[0] = byte(2 | (publicKey[len(publicKey)-1] & 1))
+		copy(tmp[1:], publicKey[1:1+l])
+		publicKey = tmp
+	}
+	if config.Bugs.ECDHPointNotOnCurve {
+		// Flip a bit, so the point is no longer on the curve. This is
+		// guaranteed to be off the curve because we preserve x. That
+		// means the only other valid y is y' = p - y, but we've kept
+		// y's parity, so we cannot have accidentally reached y'.
+		publicKey[len(publicKey)-1] ^= 0x80
+	}
+	return publicKey
+}
+
+// ecdhKEM implements kemImplementation with crypto/ecdh.
 type ecdhKEM struct {
-	curve          elliptic.Curve
-	privateKey     []byte
-	sendCompressed bool
+	curve      ecdh.Curve
+	privateKey *ecdh.PrivateKey
 }
 
-func (e *ecdhKEM) generate(rand io.Reader) (publicKey []byte, err error) {
-	var x, y *big.Int
-	e.privateKey, x, y, err = elliptic.GenerateKey(e.curve, rand)
+func (e *ecdhKEM) encapsulationKeySize() int {
+	switch e.curve {
+	case ecdh.P256():
+		return 1 + 2*32
+	case ecdh.P384():
+		return 1 + 2*48
+	case ecdh.P521():
+		return 1 + 2*66
+	case ecdh.X25519():
+		return 32
+	}
+	panic(fmt.Sprintf("unknown curve %q", e.curve))
+}
+
+func (e *ecdhKEM) ciphertextSize() int {
+	return e.encapsulationKeySize()
+}
+
+func (e *ecdhKEM) generate(config *Config) (publicKey []byte, err error) {
+	if e.curve == ecdh.X25519() && config.Bugs.LowOrderX25519Point {
+		publicKey = []byte{0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae, 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a, 0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd, 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00}
+		return
+	}
+	e.privateKey, err = e.curve.GenerateKey(config.rand())
 	if err != nil {
 		return nil, err
 	}
-	ret := elliptic.Marshal(e.curve, x, y)
-	if e.sendCompressed {
-		l := (len(ret) - 1) / 2
-		tmp := make([]byte, 1+l)
-		tmp[0] = byte(2 | y.Bit(0))
-		copy(tmp[1:], ret[1:1+l])
-		ret = tmp
+	ret := e.privateKey.PublicKey().Bytes()
+	if e.curve == ecdh.X25519() {
+		if config.Bugs.SetX25519HighBit {
+			ret[31] |= 0x80
+		}
+	} else {
+		ret = applyBugsToECDHPublicKey(config, ret)
 	}
 	return ret, nil
 }
 
-func (e *ecdhKEM) encap(rand io.Reader, peerKey []byte) (ciphertext []byte, secret []byte, err error) {
-	ciphertext, err = e.generate(rand)
+func (e *ecdhKEM) encap(config *Config, peerKey []byte) (ciphertext []byte, secret []byte, err error) {
+	ciphertext, err = e.generate(config)
 	if err != nil {
 		return nil, nil, err
 	}
-	secret, err = e.decap(peerKey)
+	secret, err = e.decap(config, peerKey)
 	if err != nil {
 		return nil, nil, err
 	}
 	return
 }
 
-func (e *ecdhKEM) decap(ciphertext []byte) (secret []byte, err error) {
-	x, y := elliptic.Unmarshal(e.curve, ciphertext)
-	if x == nil {
-		return nil, errors.New("tls: invalid peer key")
+func (e *ecdhKEM) decap(config *Config, ciphertext []byte) (secret []byte, err error) {
+	if e.curve == ecdh.X25519() && config.Bugs.LowOrderX25519Point {
+		secret = make([]byte, 32)
+		return
 	}
-	x, _ = e.curve.ScalarMult(x, y, e.privateKey)
-	secret = make([]byte, (e.curve.Params().BitSize+7)>>3)
-	xBytes := x.Bytes()
-	copy(secret[len(secret)-len(xBytes):], xBytes)
-	return secret, nil
+	peerKey, err := e.curve.NewPublicKey(ciphertext)
+	if err != nil {
+		return nil, fmt.Errorf("tls: invalid peer ECDH key: %s", err)
+	}
+	return e.privateKey.ECDH(peerKey)
 }
 
-// x25519KEM implements kemImplementation with X25519.
-type x25519KEM struct {
-	privateKey [32]byte
-	setHighBit bool
+// mlkem768KEM implements ML-KEM-768
+type mlkem768KEM struct {
+	decapKey *mlkem.DecapsulationKey768
 }
 
-func (e *x25519KEM) generate(rand io.Reader) (publicKey []byte, err error) {
-	_, err = io.ReadFull(rand, e.privateKey[:])
+func (e *mlkem768KEM) encapsulationKeySize() int {
+	return mlkem.EncapsulationKeySize768
+}
+
+func (e *mlkem768KEM) ciphertextSize() int {
+	return mlkem.CiphertextSize768
+}
+
+func (m *mlkem768KEM) generate(config *Config) (publicKey []byte, err error) {
+	m.decapKey, err = mlkem.GenerateKey768()
 	if err != nil {
 		return
 	}
-	var out [32]byte
-	curve25519.ScalarBaseMult(&out, &e.privateKey)
-	if e.setHighBit {
-		out[31] |= 0x80
-	}
-	return out[:], nil
-}
-
-func (e *x25519KEM) encap(rand io.Reader, peerKey []byte) (ciphertext []byte, secret []byte, err error) {
-	ciphertext, err = e.generate(rand)
-	if err != nil {
-		return nil, nil, err
-	}
-	secret, err = e.decap(peerKey)
-	if err != nil {
-		return nil, nil, err
+	publicKey = m.decapKey.EncapsulationKey().Bytes()
+	if config.Bugs.MLKEMEncapKeyNotReduced {
+		// Set the first 12 bits so that the first word is definitely
+		// not reduced.
+		publicKey[0] |= 0xff
+		publicKey[1] |= 0xf
 	}
 	return
 }
 
-func (e *x25519KEM) decap(ciphertext []byte) (secret []byte, err error) {
-	if len(ciphertext) != 32 {
-		return nil, errors.New("tls: invalid peer key")
-	}
-	var out [32]byte
-	curve25519.ScalarMult(&out, &e.privateKey, (*[32]byte)(ciphertext))
-
-	// Per RFC 7748, reject the all-zero value in constant time.
-	var zeros [32]byte
-	if subtle.ConstantTimeCompare(zeros[:], out[:]) == 1 {
-		return nil, errors.New("tls: X25519 value with wrong order")
-	}
-
-	return out[:], nil
-}
-
-// kyberKEM implements Kyber combined with X25519.
-type kyberKEM struct {
-	x25519PrivateKey [32]byte
-	kyberPrivateKey  *kyber.PrivateKey
-}
-
-func (e *kyberKEM) generate(rand io.Reader) (publicKey []byte, err error) {
-	if _, err := io.ReadFull(rand, e.x25519PrivateKey[:]); err != nil {
-		return nil, err
-	}
-	var x25519Public [32]byte
-	curve25519.ScalarBaseMult(&x25519Public, &e.x25519PrivateKey)
-
-	var kyberEntropy [64]byte
-	if _, err := io.ReadFull(rand, kyberEntropy[:]); err != nil {
-		return nil, err
-	}
-	var kyberPublic *[kyber.PublicKeySize]byte
-	e.kyberPrivateKey, kyberPublic = kyber.NewPrivateKey(&kyberEntropy)
-
-	var ret []byte
-	ret = append(ret, x25519Public[:]...)
-	ret = append(ret, kyberPublic[:]...)
-	return ret, nil
-}
-
-func (e *kyberKEM) encap(rand io.Reader, peerKey []byte) (ciphertext []byte, secret []byte, err error) {
-	if len(peerKey) != 32+kyber.PublicKeySize {
-		return nil, nil, errors.New("tls: bad length Kyber offer")
-	}
-
-	if _, err := io.ReadFull(rand, e.x25519PrivateKey[:]); err != nil {
+func (m *mlkem768KEM) encap(config *Config, peerKey []byte) (ciphertext []byte, secret []byte, err error) {
+	key, err := mlkem.NewEncapsulationKey768(peerKey)
+	if err != nil {
 		return nil, nil, err
 	}
-
-	var x25519Shared, x25519PeerKey, x25519Public [32]byte
-	copy(x25519PeerKey[:], peerKey)
-	curve25519.ScalarBaseMult(&x25519Public, &e.x25519PrivateKey)
-	curve25519.ScalarMult(&x25519Shared, &e.x25519PrivateKey, &x25519PeerKey)
-
-	// Per RFC 7748, reject the all-zero value in constant time.
-	var zeros [32]byte
-	if subtle.ConstantTimeCompare(zeros[:], x25519Shared[:]) == 1 {
-		return nil, nil, errors.New("tls: X25519 value with wrong order")
-	}
-
-	kyberPublicKey, ok := kyber.UnmarshalPublicKey((*[kyber.PublicKeySize]byte)(peerKey[32:]))
-	if !ok {
-		return nil, nil, errors.New("tls: bad Kyber offer")
-	}
-
-	var kyberShared, kyberEntropy [32]byte
-	if _, err := io.ReadFull(rand, kyberEntropy[:]); err != nil {
-		return nil, nil, err
-	}
-	kyberCiphertext := kyberPublicKey.Encap(kyberShared[:], &kyberEntropy)
-
-	ciphertext = append(ciphertext, x25519Public[:]...)
-	ciphertext = append(ciphertext, kyberCiphertext[:]...)
-	secret = append(secret, x25519Shared[:]...)
-	secret = append(secret, kyberShared[:]...)
-
-	return ciphertext, secret, nil
+	secret, ciphertext = key.Encapsulate()
+	return
 }
 
-func (e *kyberKEM) decap(ciphertext []byte) (secret []byte, err error) {
-	if len(ciphertext) != 32+kyber.CiphertextSize {
-		return nil, errors.New("tls: bad length Kyber reply")
+func (m *mlkem768KEM) decap(config *Config, ciphertext []byte) (secret []byte, err error) {
+	return m.decapKey.Decapsulate(ciphertext)
+}
+
+// mlkem1024KEM implements ML-KEM-1024
+type mlkem1024KEM struct {
+	decapKey *mlkem.DecapsulationKey1024
+}
+
+func (e *mlkem1024KEM) encapsulationKeySize() int {
+	return mlkem.EncapsulationKeySize1024
+}
+
+func (e *mlkem1024KEM) ciphertextSize() int {
+	return mlkem.CiphertextSize1024
+}
+
+func (m *mlkem1024KEM) generate(config *Config) (publicKey []byte, err error) {
+	m.decapKey, err = mlkem.GenerateKey1024()
+	if err != nil {
+		return
 	}
-
-	var x25519Shared, x25519PeerKey [32]byte
-	copy(x25519PeerKey[:], ciphertext)
-	curve25519.ScalarMult(&x25519Shared, &e.x25519PrivateKey, &x25519PeerKey)
-
-	// Per RFC 7748, reject the all-zero value in constant time.
-	var zeros [32]byte
-	if subtle.ConstantTimeCompare(zeros[:], x25519Shared[:]) == 1 {
-		return nil, errors.New("tls: X25519 value with wrong order")
+	publicKey = m.decapKey.EncapsulationKey().Bytes()
+	if config.Bugs.MLKEMEncapKeyNotReduced {
+		// Set the first 12 bits so that the first word is definitely
+		// not reduced.
+		publicKey[0] |= 0xff
+		publicKey[1] |= 0xf
 	}
+	return
+}
 
-	var kyberShared [32]byte
-	e.kyberPrivateKey.Decap(kyberShared[:], (*[kyber.CiphertextSize]byte)(ciphertext[32:]))
+func (m *mlkem1024KEM) encap(config *Config, peerKey []byte) (ciphertext []byte, secret []byte, err error) {
+	key, err := mlkem.NewEncapsulationKey1024(peerKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	secret, ciphertext = key.Encapsulate()
+	return
+}
 
-	secret = append(secret, x25519Shared[:]...)
-	secret = append(secret, kyberShared[:]...)
+func (m *mlkem1024KEM) decap(config *Config, ciphertext []byte) (secret []byte, err error) {
+	return m.decapKey.Decapsulate(ciphertext)
+}
 
-	return secret, nil
+// concatKEM concatenates two kemImplementations.
+type concatKEM struct {
+	kem1, kem2 kemImplementation
+}
+
+func (c *concatKEM) encapsulationKeySize() int {
+	return c.kem1.encapsulationKeySize() + c.kem2.encapsulationKeySize()
+}
+
+func (c *concatKEM) ciphertextSize() int {
+	return c.kem1.ciphertextSize() + c.kem2.ciphertextSize()
+}
+
+func (c *concatKEM) generate(config *Config) (publicKey []byte, err error) {
+	publicKey1, err := c.kem1.generate(config)
+	if err != nil {
+		return nil, err
+	}
+	publicKey2, err := c.kem2.generate(config)
+	if err != nil {
+		return nil, err
+	}
+	return slices.Concat(publicKey1, publicKey2), nil
+}
+
+func (c *concatKEM) encap(config *Config, peerKey []byte) (ciphertext []byte, secret []byte, err error) {
+	encapKeySize1 := c.kem1.encapsulationKeySize()
+	if len(peerKey) < encapKeySize1 {
+		return nil, nil, errors.New("tls: invalid peer key")
+	}
+	peerKey1, peerKey2 := peerKey[:encapKeySize1], peerKey[encapKeySize1:]
+	ciphertext1, secret1, err := c.kem1.encap(config, peerKey1)
+	if err != nil {
+		return nil, nil, err
+	}
+	ciphertext2, secret2, err := c.kem2.encap(config, peerKey2)
+	if err != nil {
+		return nil, nil, err
+	}
+	return slices.Concat(ciphertext1, ciphertext2), slices.Concat(secret1, secret2), nil
+}
+
+func (c *concatKEM) decap(config *Config, ciphertext []byte) (secret []byte, err error) {
+	ciphertextSize1 := c.kem1.ciphertextSize()
+	if len(ciphertext) < ciphertextSize1 {
+		return nil, errors.New("tls: invalid ciphertext")
+	}
+	ciphertext1, ciphertext2 := ciphertext[:ciphertextSize1], ciphertext[ciphertextSize1:]
+	secret1, err := c.kem1.decap(config, ciphertext1)
+	if err != nil {
+		return nil, err
+	}
+	secret2, err := c.kem2.decap(config, ciphertext2)
+	if err != nil {
+		return nil, err
+	}
+	return slices.Concat(secret1, secret2), nil
+}
+
+type transformKEM struct {
+	kem       kemImplementation
+	transform func([]byte) []byte
+}
+
+func (t *transformKEM) encapsulationKeySize() int {
+	return t.kem.encapsulationKeySize()
+}
+
+func (t *transformKEM) ciphertextSize() int {
+	return t.kem.ciphertextSize()
+}
+
+func (t *transformKEM) generate(config *Config) (publicKey []byte, err error) {
+	publicKey, err = t.kem.generate(config)
+	if err == nil {
+		publicKey = t.transform(publicKey)
+	}
+	return
+}
+
+func (t *transformKEM) encap(config *Config, peerKey []byte) (ciphertext []byte, secret []byte, err error) {
+	ciphertext, secret, err = t.kem.encap(config, peerKey)
+	if err == nil {
+		ciphertext = t.transform(ciphertext)
+	}
+	return
+}
+
+func (t *transformKEM) decap(config *Config, ciphertext []byte) (secret []byte, err error) {
+	return t.kem.decap(config, ciphertext)
 }
 
 func kemForCurveID(id CurveID, config *Config) (kemImplementation, bool) {
+	var kem kemImplementation
 	switch id {
-	case CurveP224:
-		return &ecdhKEM{curve: elliptic.P224(), sendCompressed: config.Bugs.SendCompressedCoordinates}, true
 	case CurveP256:
-		return &ecdhKEM{curve: elliptic.P256(), sendCompressed: config.Bugs.SendCompressedCoordinates}, true
+		kem = &ecdhKEM{curve: ecdh.P256()}
 	case CurveP384:
-		return &ecdhKEM{curve: elliptic.P384(), sendCompressed: config.Bugs.SendCompressedCoordinates}, true
+		kem = &ecdhKEM{curve: ecdh.P384()}
 	case CurveP521:
-		return &ecdhKEM{curve: elliptic.P521(), sendCompressed: config.Bugs.SendCompressedCoordinates}, true
+		kem = &ecdhKEM{curve: ecdh.P521()}
 	case CurveX25519:
-		return &x25519KEM{setHighBit: config.Bugs.SetX25519HighBit}, true
-	case CurveX25519Kyber768:
-		return &kyberKEM{}, true
+		kem = &ecdhKEM{curve: ecdh.X25519()}
+	case CurveX25519MLKEM768:
+		// RFC 10024
+		kem = &concatKEM{kem1: &mlkem768KEM{}, kem2: &ecdhKEM{curve: ecdh.X25519()}}
+	case CurveMLKEM1024:
+		// draft-ietf-tls-mlkem-04
+		kem = &mlkem1024KEM{}
 	default:
 		return nil, false
 	}
 
+	if config.Bugs.TruncateKeyShare {
+		kem = &transformKEM{kem: kem, transform: func(b []byte) []byte { return b[:len(b)-1] }}
+	}
+	if config.Bugs.PadKeyShare {
+		kem = &transformKEM{kem: kem, transform: func(b []byte) []byte { return slices.Concat(b, []byte{0}) }}
+	}
+	return kem, true
 }
 
 // keyAgreementAuthentication is a helper interface that specifies how
@@ -475,7 +557,7 @@ func (ka *nilKeyAgreementAuthentication) verifyParameters(config *Config, client
 // server's private key.
 type signedKeyAgreement struct {
 	keyType                keyType
-	version                uint16
+	version                version
 	peerSignatureAlgorithm signatureAlgorithm
 }
 
@@ -488,14 +570,14 @@ func (ka *signedKeyAgreement) signParameters(config *Config, cert *Credential, c
 
 	var sigAlg signatureAlgorithm
 	var err error
-	if ka.version >= VersionTLS12 {
-		sigAlg, err = selectSignatureAlgorithm(ka.version, cert, config, clientHello.signatureAlgorithms)
+	if ka.version.protocolVersion() >= VersionTLS12 {
+		sigAlg, err = selectSignatureAlgorithm(false /* server */, ka.version, cert, config, clientHello.signatureAlgorithms)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	sig, err := signMessage(ka.version, cert.PrivateKey, config, sigAlg, msg)
+	sig, err := signMessage(false /* server */, ka.version, cert.PrivateKey, config, sigAlg, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -507,21 +589,16 @@ func (ka *signedKeyAgreement) signParameters(config *Config, cert *Credential, c
 	if config.Bugs.UnauthenticatedECDH {
 		skx.key = params
 	} else {
-		sigAlgsLen := 0
-		if ka.version >= VersionTLS12 {
-			sigAlgsLen = 2
+		bb := cryptobyte.NewBuilder(nil)
+		bb.AddBytes(params)
+		if ka.version.protocolVersion() >= VersionTLS12 {
+			bb.AddUint16(uint16(sigAlg))
 		}
-		skx.key = make([]byte, len(params)+sigAlgsLen+2+len(sig))
-		copy(skx.key, params)
-		k := skx.key[len(params):]
-		if ka.version >= VersionTLS12 {
-			k[0] = byte(sigAlg >> 8)
-			k[1] = byte(sigAlg)
-			k = k[2:]
+		addUint16LengthPrefixedBytes(bb, sig)
+		skx.key, err = bb.Bytes()
+		if err != nil {
+			return nil, err
 		}
-		k[0] = byte(len(sig) >> 8)
-		k[1] = byte(len(sig))
-		copy(k[2:], sig)
 	}
 
 	return skx, nil
@@ -552,7 +629,7 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 	msg = append(msg, params...)
 
 	var sigAlg signatureAlgorithm
-	if ka.version >= VersionTLS12 {
+	if ka.version.protocolVersion() >= VersionTLS12 {
 		if len(sig) < 2 {
 			return errServerKeyExchange
 		}
@@ -571,11 +648,11 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 	}
 	sig = sig[2:]
 
-	return verifyMessage(ka.version, publicKey, config, sigAlg, msg, sig)
+	return verifyMessage(true /* client */, ka.version, publicKey, config, sigAlg, msg, sig)
 }
 
 // ecdheKeyAgreement implements a TLS key agreement where the server
-// generates a ephemeral EC public/private key pair and signs it. The
+// generates an ephemeral EC public/private key pair and signs it. The
 // pre-master secret is then calculated using ECDH. The signature may
 // either be ECDSA or RSA.
 type ecdheKeyAgreement struct {
@@ -585,62 +662,57 @@ type ecdheKeyAgreement struct {
 	peerKey []byte
 }
 
-func (ka *ecdheKeyAgreement) generateServerKeyExchange(config *Config, cert *Credential, clientHello *clientHelloMsg, hello *serverHelloMsg, version uint16) (*serverKeyExchangeMsg, error) {
-	var curveid CurveID
+func (ka *ecdheKeyAgreement) generateServerKeyExchange(config *Config, cert *Credential, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
+	var curveID CurveID
 	preferredCurves := config.curvePreferences()
-
-NextCandidate:
 	for _, candidate := range preferredCurves {
-		if isPqGroup(candidate) && version < VersionTLS13 {
+		if isPqGroup(candidate) {
 			// Post-quantum "groups" require TLS 1.3.
 			continue
 		}
 
-		for _, c := range clientHello.supportedCurves {
-			if candidate == c {
-				curveid = c
-				break NextCandidate
-			}
+		if slices.Contains(clientHello.supportedCurves, candidate) {
+			curveID = candidate
+			break
 		}
 	}
 
-	if curveid == 0 {
+	if curveID == 0 {
 		return nil, errors.New("tls: no supported elliptic curves offered")
 	}
 
 	var ok bool
-	if ka.kem, ok = kemForCurveID(curveid, config); !ok {
+	if ka.kem, ok = kemForCurveID(curveID, config); !ok {
 		return nil, errors.New("tls: preferredCurves includes unsupported curve")
 	}
-	ka.curveID = curveid
+	ka.curveID = curveID
 
-	publicKey, err := ka.kem.generate(config.rand())
+	publicKey, err := ka.kem.generate(config)
 	if err != nil {
 		return nil, err
 	}
 
 	// http://tools.ietf.org/html/rfc4492#section-5.4
-	serverECDHParams := make([]byte, 1+2+1+len(publicKey))
-	serverECDHParams[0] = 3 // named curve
+	bb := cryptobyte.NewBuilder(nil)
+	bb.AddUint8(3) // named curve
 	if config.Bugs.SendCurve != 0 {
-		curveid = config.Bugs.SendCurve
+		curveID = config.Bugs.SendCurve
 	}
-	serverECDHParams[1] = byte(curveid >> 8)
-	serverECDHParams[2] = byte(curveid)
-	serverECDHParams[3] = byte(len(publicKey))
-	copy(serverECDHParams[4:], publicKey)
-	if config.Bugs.InvalidECDHPoint {
-		serverECDHParams[4] ^= 0xff
+	bb.AddUint16(uint16(curveID))
+	addUint8LengthPrefixedBytes(bb, publicKey)
+	serverECDHParams, err := bb.Bytes()
+	if err != nil {
+		return nil, err
 	}
 
 	return ka.auth.signParameters(config, cert, clientHello, hello, serverECDHParams)
 }
 
-func (ka *ecdheKeyAgreement) processClientKeyExchange(config *Config, cert *Credential, ckx *clientKeyExchangeMsg, version uint16) ([]byte, error) {
+func (ka *ecdheKeyAgreement) processClientKeyExchange(config *Config, cert *Credential, ckx *clientKeyExchangeMsg) ([]byte, error) {
 	if len(ckx.ciphertext) == 0 || int(ckx.ciphertext[0]) != len(ckx.ciphertext)-1 {
 		return nil, errClientKeyExchange
 	}
-	return ka.kem.decap(ckx.ciphertext[1:])
+	return ka.kem.decap(config, ckx.ciphertext[1:])
 }
 
 func (ka *ecdheKeyAgreement) processServerKeyExchange(config *Config, clientHello *clientHelloMsg, serverHello *serverHelloMsg, key crypto.PublicKey, skx *serverKeyExchangeMsg) error {
@@ -671,12 +743,12 @@ func (ka *ecdheKeyAgreement) processServerKeyExchange(config *Config, clientHell
 	return ka.auth.verifyParameters(config, clientHello, serverHello, key, serverECDHParams, sig)
 }
 
-func (ka *ecdheKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
+func (ka *ecdheKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, serverPublicKey crypto.PublicKey) ([]byte, *clientKeyExchangeMsg, error) {
 	if ka.kem == nil {
 		return nil, nil, errors.New("missing ServerKeyExchange message")
 	}
 
-	ciphertext, secret, err := ka.kem.encap(config.rand(), ka.peerKey)
+	ciphertext, secret, err := ka.kem.encap(config, ka.peerKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -685,9 +757,6 @@ func (ka *ecdheKeyAgreement) generateClientKeyExchange(config *Config, clientHel
 	ckx.ciphertext = make([]byte, 1+len(ciphertext))
 	ckx.ciphertext[0] = byte(len(ciphertext))
 	copy(ckx.ciphertext[1:], ciphertext)
-	if config.Bugs.InvalidECDHPoint {
-		ckx.ciphertext[1] ^= 0xff
-	}
 
 	return secret, ckx, nil
 }
@@ -703,11 +772,11 @@ func (ka *ecdheKeyAgreement) peerSignatureAlgorithm() signatureAlgorithm {
 // exchange.
 type nilKeyAgreement struct{}
 
-func (ka *nilKeyAgreement) generateServerKeyExchange(config *Config, cert *Credential, clientHello *clientHelloMsg, hello *serverHelloMsg, version uint16) (*serverKeyExchangeMsg, error) {
+func (ka *nilKeyAgreement) generateServerKeyExchange(config *Config, cert *Credential, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
 	return nil, nil
 }
 
-func (ka *nilKeyAgreement) processClientKeyExchange(config *Config, cert *Credential, ckx *clientKeyExchangeMsg, version uint16) ([]byte, error) {
+func (ka *nilKeyAgreement) processClientKeyExchange(config *Config, cert *Credential, ckx *clientKeyExchangeMsg) ([]byte, error) {
 	if len(ckx.ciphertext) != 0 {
 		return nil, errClientKeyExchange
 	}
@@ -726,7 +795,7 @@ func (ka *nilKeyAgreement) processServerKeyExchange(config *Config, clientHello 
 	return nil
 }
 
-func (ka *nilKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
+func (ka *nilKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, serverPublicKey crypto.PublicKey) ([]byte, *clientKeyExchangeMsg, error) {
 	// Although in plain PSK, otherSecret is all zeros, the base key
 	// agreement does not access to the length of the pre-shared
 	// key. pskKeyAgreement instead interprets nil to mean to use all zeros
@@ -755,7 +824,7 @@ type pskKeyAgreement struct {
 	identityHint string
 }
 
-func (ka *pskKeyAgreement) generateServerKeyExchange(config *Config, cert *Credential, clientHello *clientHelloMsg, hello *serverHelloMsg, version uint16) (*serverKeyExchangeMsg, error) {
+func (ka *pskKeyAgreement) generateServerKeyExchange(config *Config, cert *Credential, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
 	// Assemble the identity hint.
 	bytes := make([]byte, 2+len(config.PreSharedKeyIdentity))
 	bytes[0] = byte(len(config.PreSharedKeyIdentity) >> 8)
@@ -764,7 +833,7 @@ func (ka *pskKeyAgreement) generateServerKeyExchange(config *Config, cert *Crede
 
 	// If there is one, append the base key agreement's
 	// ServerKeyExchange.
-	baseSkx, err := ka.base.generateServerKeyExchange(config, cert, clientHello, hello, version)
+	baseSkx, err := ka.base.generateServerKeyExchange(config, cert, clientHello, hello)
 	if err != nil {
 		return nil, err
 	}
@@ -782,7 +851,7 @@ func (ka *pskKeyAgreement) generateServerKeyExchange(config *Config, cert *Crede
 	return skx, nil
 }
 
-func (ka *pskKeyAgreement) processClientKeyExchange(config *Config, cert *Credential, ckx *clientKeyExchangeMsg, version uint16) ([]byte, error) {
+func (ka *pskKeyAgreement) processClientKeyExchange(config *Config, cert *Credential, ckx *clientKeyExchangeMsg) ([]byte, error) {
 	// First, process the PSK identity.
 	if len(ckx.ciphertext) < 2 {
 		return nil, errClientKeyExchange
@@ -805,7 +874,7 @@ func (ka *pskKeyAgreement) processClientKeyExchange(config *Config, cert *Creden
 	// pre-master secret.
 	newCkx := new(clientKeyExchangeMsg)
 	newCkx.ciphertext = ckx.ciphertext[2+identityLen:]
-	otherSecret, err := ka.base.processClientKeyExchange(config, cert, newCkx, version)
+	otherSecret, err := ka.base.processClientKeyExchange(config, cert, newCkx)
 	if err != nil {
 		return nil, err
 	}
@@ -833,7 +902,7 @@ func (ka *pskKeyAgreement) processServerKeyExchange(config *Config, clientHello 
 	return ka.base.processServerKeyExchange(config, clientHello, serverHello, key, newSkx)
 }
 
-func (ka *pskKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
+func (ka *pskKeyAgreement) generateClientKeyExchange(config *Config, clientHello *clientHelloMsg, serverPublicKey crypto.PublicKey) ([]byte, *clientKeyExchangeMsg, error) {
 	// The server only sends an identity hint but, for purposes of
 	// test code, the server always sends the hint and it is
 	// required to match.
@@ -848,7 +917,7 @@ func (ka *pskKeyAgreement) generateClientKeyExchange(config *Config, clientHello
 	copy(bytes[2:], []byte(config.PreSharedKeyIdentity))
 
 	// Append the base key exchange's ClientKeyExchange.
-	otherSecret, baseCkx, err := ka.base.generateClientKeyExchange(config, clientHello, cert)
+	otherSecret, baseCkx, err := ka.base.generateClientKeyExchange(config, clientHello, serverPublicKey)
 	if err != nil {
 		return nil, nil, err
 	}

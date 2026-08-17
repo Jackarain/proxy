@@ -1,110 +1,16 @@
-/* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
- * All rights reserved.
- *
- * This package is an SSL implementation written
- * by Eric Young (eay@cryptsoft.com).
- * The implementation was written so as to conform with Netscapes SSL.
- *
- * This library is free for commercial and non-commercial use as long as
- * the following conditions are aheared to.  The following conditions
- * apply to all code found in this distribution, be it the RC4, RSA,
- * lhash, DES, etc., code; not just the SSL code.  The SSL documentation
- * included with this distribution is covered by the same copyright terms
- * except that the holder is Tim Hudson (tjh@cryptsoft.com).
- *
- * Copyright remains Eric Young's, and as such any Copyright notices in
- * the code are not to be removed.
- * If this package is used in a product, Eric Young should be given attribution
- * as the author of the parts of the library used.
- * This can be in the form of a textual message at program startup or
- * in documentation (online or textual) provided with the package.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. All advertising materials mentioning features or use of this software
- *    must display the following acknowledgement:
- *    "This product includes cryptographic software written by
- *     Eric Young (eay@cryptsoft.com)"
- *    The word 'cryptographic' can be left out if the rouines from the library
- *    being used are not cryptographic related :-).
- * 4. If you include any Windows specific code (or a derivative thereof) from
- *    the apps directory (application code) you must include an acknowledgement:
- *    "This product includes software written by Tim Hudson (tjh@cryptsoft.com)"
- *
- * THIS SOFTWARE IS PROVIDED BY ERIC YOUNG ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * The licence and distribution terms for any publically available version or
- * derivative of this code cannot be changed.  i.e. this code cannot simply be
- * copied and put under another distribution licence
- * [including the GNU Public Licence.]
- */
-/* ====================================================================
- * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *
- * 3. All advertising materials mentioning features or use of this
- *    software must display the following acknowledgment:
- *    "This product includes software developed by the OpenSSL Project
- *    for use in the OpenSSL Toolkit. (http://www.openssl.org/)"
- *
- * 4. The names "OpenSSL Toolkit" and "OpenSSL Project" must not be used to
- *    endorse or promote products derived from this software without
- *    prior written permission. For written permission, please contact
- *    openssl-core@openssl.org.
- *
- * 5. Products derived from this software may not be called "OpenSSL"
- *    nor may "OpenSSL" appear in their names without prior written
- *    permission of the OpenSSL Project.
- *
- * 6. Redistributions of any form whatsoever must retain the following
- *    acknowledgment:
- *    "This product includes software developed by the OpenSSL Project
- *    for use in the OpenSSL Toolkit (http://www.openssl.org/)"
- *
- * THIS SOFTWARE IS PROVIDED BY THE OpenSSL PROJECT ``AS IS'' AND ANY
- * EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE OpenSSL PROJECT OR
- * ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- * ====================================================================
- *
- * This product includes cryptographic software written by Eric Young
- * (eay@cryptsoft.com).  This product includes software written by Tim
- * Hudson (tjh@cryptsoft.com). */
+// Copyright 1995-2016 The OpenSSL Project Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <openssl/ssl.h>
 
@@ -126,10 +32,10 @@
 
 BSSL_NAMESPACE_BEGIN
 
-static int do_tls_write(SSL *ssl, size_t *out_bytes_written, uint8_t type,
+static int do_tls_write(SSLImpl *ssl, size_t *out_bytes_written, uint8_t type,
                         Span<const uint8_t> in);
 
-int tls_write_app_data(SSL *ssl, bool *out_needs_handshake,
+int tls_write_app_data(SSLImpl *ssl, bool *out_needs_handshake,
                        size_t *out_bytes_written, Span<const uint8_t> in) {
   assert(ssl_can_write(ssl));
   assert(!ssl->s3->aead_write_ctx->is_null_cipher());
@@ -143,10 +49,10 @@ int tls_write_app_data(SSL *ssl, bool *out_needs_handshake,
 
   size_t total_bytes_written = ssl->s3->unreported_bytes_written;
   if (in.size() < total_bytes_written) {
-    // This can happen if the caller disables |SSL_MODE_ENABLE_PARTIAL_WRITE|,
+    // This can happen if the caller disables `SSL_MODE_ENABLE_PARTIAL_WRITE`,
     // asks us to write some input of length N, we successfully encrypt M bytes
     // and write it, but fail to write the rest. We will report
-    // |SSL_ERROR_WANT_WRITE|. If the caller then retries with fewer than M
+    // `SSL_ERROR_WANT_WRITE`. If the caller then retries with fewer than M
     // bytes, we cannot satisfy that request. The caller is required to always
     // retry with at least as many bytes as the previous attempt.
     OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_LENGTH);
@@ -181,7 +87,7 @@ int tls_write_app_data(SSL *ssl, bool *out_needs_handshake,
       return ret;
     }
 
-    // Note |bytes_written| may be less than |to_write| if there was a pending
+    // Note `bytes_written` may be less than `to_write` if there was a pending
     // record from a smaller write attempt.
     assert(bytes_written <= to_write);
     total_bytes_written += bytes_written;
@@ -198,10 +104,30 @@ int tls_write_app_data(SSL *ssl, bool *out_needs_handshake,
   }
 }
 
+// tls_seal_align_prefix_len returns the length of the prefix before the start
+// of the bulk of the ciphertext when sealing a record with `ssl`. Callers may
+// use this to align buffers.
+//
+// Note when TLS 1.0 CBC record-splitting is enabled, this includes the one byte
+// record and is the offset into second record's ciphertext. Thus sealing a
+// small record may result in a smaller output than this value.
+//
+// TODO(davidben): Is this alignment valuable? Record-splitting makes this a
+// mess.
+static size_t tls_seal_align_prefix_len(const SSLImpl *ssl) {
+  size_t ret =
+      SSL3_RT_HEADER_LENGTH + ssl->s3->aead_write_ctx->ExplicitNonceLen();
+  if (ssl_needs_record_splitting(ssl)) {
+    ret += SSL3_RT_HEADER_LENGTH;
+    ret += ssl_cipher_get_record_split_len(ssl->s3->aead_write_ctx->cipher());
+  }
+  return ret;
+}
+
 // do_tls_write writes an SSL record of the given type. On success, it sets
-// |*out_bytes_written| to number of bytes successfully written and returns one.
-// On error, it returns a value <= 0 from the underlying |BIO|.
-static int do_tls_write(SSL *ssl, size_t *out_bytes_written, uint8_t type,
+// `*out_bytes_written` to number of bytes successfully written and returns one.
+// On error, it returns a value <= 0 from the underlying `BIO`.
+static int do_tls_write(SSLImpl *ssl, size_t *out_bytes_written, uint8_t type,
                         Span<const uint8_t> in) {
   // If there is a pending write, the retry must be consistent.
   if (!ssl->s3->pending_write.empty() &&
@@ -214,7 +140,7 @@ static int do_tls_write(SSL *ssl, size_t *out_bytes_written, uint8_t type,
   }
 
   // Flush any unwritten data to the transport. There may be data to flush even
-  // if |wpend_tot| is zero.
+  // if `wpend_tot` is zero.
   int ret = ssl_write_buffer_flush(ssl);
   if (ret <= 0) {
     return ret;
@@ -237,14 +163,14 @@ static int do_tls_write(SSL *ssl, size_t *out_bytes_written, uint8_t type,
     return -1;
   }
 
-  // We may have unflushed handshake data that must be written before |in|. This
+  // We may have unflushed handshake data that must be written before `in`. This
   // may be a KeyUpdate acknowledgment, 0-RTT key change messages, or a
   // NewSessionTicket.
   Span<const uint8_t> pending_flight;
   if (ssl->s3->pending_flight != nullptr) {
-    pending_flight = MakeConstSpan(
-        reinterpret_cast<const uint8_t *>(ssl->s3->pending_flight->data),
-        ssl->s3->pending_flight->length);
+    pending_flight =
+        Span(reinterpret_cast<const uint8_t *>(ssl->s3->pending_flight->data),
+             ssl->s3->pending_flight->length);
     pending_flight = pending_flight.subspan(ssl->s3->pending_flight_offset);
   }
 
@@ -265,12 +191,12 @@ static int do_tls_write(SSL *ssl, size_t *out_bytes_written, uint8_t type,
     return 1;
   }
 
-  if (!buf->EnsureCap(pending_flight.size() + ssl_seal_align_prefix_len(ssl),
+  if (!buf->EnsureCap(pending_flight.size() + tls_seal_align_prefix_len(ssl),
                       max_out)) {
     return -1;
   }
 
-  // Copy |pending_flight| to the output.
+  // Copy `pending_flight` to the output.
   if (!pending_flight.empty()) {
     OPENSSL_memcpy(buf->remaining().data(), pending_flight.data(),
                    pending_flight.size());
@@ -307,7 +233,7 @@ static int do_tls_write(SSL *ssl, size_t *out_bytes_written, uint8_t type,
   return 1;
 }
 
-ssl_open_record_t tls_open_app_data(SSL *ssl, Span<uint8_t> *out,
+ssl_open_record_t tls_open_app_data(SSLImpl *ssl, Span<uint8_t> *out,
                                     size_t *out_consumed, uint8_t *out_alert,
                                     Span<uint8_t> in) {
   assert(ssl_can_read(ssl));
@@ -324,8 +250,8 @@ ssl_open_record_t tls_open_app_data(SSL *ssl, Span<uint8_t> *out,
 
   if (type == SSL3_RT_HANDSHAKE) {
     // Post-handshake data prior to TLS 1.3 is always renegotiation, which we
-    // never accept as a server. Otherwise |tls_get_message| will send
-    // |SSL_R_EXCESSIVE_MESSAGE_SIZE|.
+    // never accept as a server. Otherwise `tls_get_message` will send
+    // `SSL_R_EXCESSIVE_MESSAGE_SIZE`.
     if (ssl->server && ssl_protocol_version(ssl) < TLS1_3_VERSION) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_NO_RENEGOTIATION);
       *out_alert = SSL_AD_NO_RENEGOTIATION;
@@ -363,7 +289,8 @@ ssl_open_record_t tls_open_app_data(SSL *ssl, Span<uint8_t> *out,
   return ssl_open_record_success;
 }
 
-ssl_open_record_t tls_open_change_cipher_spec(SSL *ssl, size_t *out_consumed,
+ssl_open_record_t tls_open_change_cipher_spec(SSLImpl *ssl,
+                                              size_t *out_consumed,
                                               uint8_t *out_alert,
                                               Span<uint8_t> in) {
   uint8_t type;
@@ -389,10 +316,10 @@ ssl_open_record_t tls_open_change_cipher_spec(SSL *ssl, size_t *out_consumed,
   return ssl_open_record_success;
 }
 
-void ssl_send_alert(SSL *ssl, int level, int desc) {
+void ssl_send_alert(SSLImpl *ssl, int level, int desc) {
   // This function is called in response to a fatal error from the peer. Ignore
   // any failures writing the alert and report only the original error. In
-  // particular, if the transport uses |SSL_write|, our existing error will be
+  // particular, if the transport uses `SSL_write`, our existing error will be
   // clobbered so we must save and restore the error queue. See
   // https://crbug.com/959305.
   //
@@ -406,7 +333,7 @@ void ssl_send_alert(SSL *ssl, int level, int desc) {
   ERR_restore_state(err_state.get());
 }
 
-int ssl_send_alert_impl(SSL *ssl, int level, int desc) {
+int ssl_send_alert_impl(SSLImpl *ssl, int level, int desc) {
   // It is illegal to send an alert when we've already sent a closing one.
   if (ssl->s3->write_shutdown != ssl_shutdown_none) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_PROTOCOL_IS_SHUTDOWN);
@@ -434,9 +361,9 @@ int ssl_send_alert_impl(SSL *ssl, int level, int desc) {
   return -1;
 }
 
-int tls_dispatch_alert(SSL *ssl) {
-  if (ssl->quic_method) {
-    if (!ssl->quic_method->send_alert(ssl, ssl->s3->write_level,
+int tls_dispatch_alert(SSLImpl *ssl) {
+  if (SSL_is_quic(ssl)) {
+    if (!ssl->quic_method->send_alert(ssl, ssl->s3->quic_write_level,
                                       ssl->s3->send_alert[1])) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_QUIC_INTERNAL_ERROR);
       return 0;

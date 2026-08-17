@@ -4,15 +4,15 @@
 #include <openssl/asm_base.h>
 
 #if !defined(OPENSSL_NO_ASM) && defined(OPENSSL_ARM) && defined(__ELF__)
-#include <openssl/arm_arch.h>
-
 #if __ARM_MAX_ARCH__>=7
 .text
 .arch	armv7-a	@ don't confuse not-so-latest binutils with argv8 :-)
 .fpu	neon
 .code	32
 #undef	__thumb2__
+
 .align	5
+aes_hw_constants:
 .Lrcon:
 .long	0x01,0x01,0x01,0x01
 .long	0x0c0f0e0d,0x0c0f0e0d,0x0c0f0e0d,0x0c0f0e0d	@ rotate-n-splat

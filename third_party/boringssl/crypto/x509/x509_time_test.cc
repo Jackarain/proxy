@@ -1,11 +1,16 @@
-/*
- * Copyright 2017 The OpenSSL Project Authors. All Rights Reserved.
- *
- * Licensed under the OpenSSL license (the "License").  You may not use
- * this file except in compliance with the License.  You can obtain a copy
- * in the file LICENSE in the source distribution or at
- * https://www.openssl.org/source/license.html
- */
+// Copyright 2017 The OpenSSL Project Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 // Tests for X509 time functions.
 
@@ -16,6 +21,9 @@
 
 #include <gtest/gtest.h>
 #include <openssl/asn1.h>
+
+
+namespace {
 
 struct TestData {
   const char *data;
@@ -305,11 +313,13 @@ TEST(X509TimeTest, TestCmpTime) {
 }
 
 TEST(X509TimeTest, TestCmpTimeCurrent) {
-  time_t now = time(NULL);
+  time_t now = time(nullptr);
   // Pick a day earlier and later, relative to any system clock.
-  bssl::UniquePtr<ASN1_TIME> asn1_before(ASN1_TIME_adj(NULL, now, -1, 0));
-  bssl::UniquePtr<ASN1_TIME> asn1_after(ASN1_TIME_adj(NULL, now, 1, 0));
+  bssl::UniquePtr<ASN1_TIME> asn1_before(ASN1_TIME_adj(nullptr, now, -1, 0));
+  bssl::UniquePtr<ASN1_TIME> asn1_after(ASN1_TIME_adj(nullptr, now, 1, 0));
 
-  ASSERT_EQ(-1, X509_cmp_time(asn1_before.get(), NULL));
-  ASSERT_EQ(1, X509_cmp_time(asn1_after.get(), NULL));
+  ASSERT_EQ(-1, X509_cmp_time(asn1_before.get(), nullptr));
+  ASSERT_EQ(1, X509_cmp_time(asn1_after.get(), nullptr));
 }
+
+}  // namespace

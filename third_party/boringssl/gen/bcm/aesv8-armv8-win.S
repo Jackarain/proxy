@@ -4,13 +4,13 @@
 #include <openssl/asm_base.h>
 
 #if !defined(OPENSSL_NO_ASM) && defined(OPENSSL_AARCH64) && defined(_WIN32)
-#include <openssl/arm_arch.h>
-
 #if __ARM_MAX_ARCH__>=7
 .text
 .arch	armv8-a+crypto
 .section	.rodata
+
 .align	5
+aes_hw_constants:
 Lrcon:
 .long	0x01,0x01,0x01,0x01
 .long	0x0c0f0e0d,0x0c0f0e0d,0x0c0f0e0d,0x0c0f0e0d	// rotate-n-splat

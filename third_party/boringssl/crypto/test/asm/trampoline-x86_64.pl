@@ -1,17 +1,17 @@
 #!/usr/bin/env perl
-# Copyright (c) 2018, Google Inc.
+# Copyright 2018 The BoringSSL Authors
 #
-# Permission to use, copy, modify, and/or distribute this software for any
-# purpose with or without fee is hereby granted, provided that the above
-# copyright notice and this permission notice appear in all copies.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-# SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
-# OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-# CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # This file defines helper functions for crypto/test/abi_test.h on x86_64. See
 # that header for details on how to use this.
@@ -43,7 +43,7 @@ my $xlate;
 ( $xlate="${dir}../../perlasm/x86_64-xlate.pl" and -f $xlate) or
 die "can't locate x86_64-xlate.pl";
 
-open OUT, "| \"$^X\" \"$xlate\" $flavour \"$output\"";
+open OUT, "|-", $^X, $xlate, $flavour, $output;
 *STDOUT = *OUT;
 
 # @inp is the registers used for function inputs, in order.
@@ -135,8 +135,8 @@ my $code = <<____;
 # uint64_t abi_test_trampoline(void (*func)(...), CallerState *state,
 #                              const uint64_t *argv, size_t argc,
 #                              int unwind);
-.type	abi_test_trampoline, \@abi-omnipotent
 .globl	abi_test_trampoline
+.type	abi_test_trampoline, \@abi-omnipotent
 .align	16
 abi_test_trampoline:
 .cfi_startproc
@@ -185,7 +185,7 @@ $code .= <<____ if (!$win64);
 	movq	$unwind, $unwind_offset(%rsp)
 ____
 # Store our caller's state. This is needed because we modify it ourselves, and
-# also to isolate the test infrastruction from the function under test failing
+# also to isolate the test infrastructure from the function under test failing
 # to save some register.
 $code .= store_caller_state($caller_state_offset, "%rsp", sub {
   my ($off, $reg) = @_;
@@ -305,8 +305,8 @@ ____
 # the ABI-testing framework.
 foreach ("ax", "bx", "cx", "dx", "di", "si", "bp", 8..15) {
   $code .= <<____;
-.type	abi_test_clobber_r$_, \@abi-omnipotent
 .globl	abi_test_clobber_r$_
+.type	abi_test_clobber_r$_, \@abi-omnipotent
 .align	16
 abi_test_clobber_r$_:
 	_CET_ENDBR
@@ -318,8 +318,8 @@ ____
 
 foreach (0..15) {
   $code .= <<____;
-.type	abi_test_clobber_xmm$_, \@abi-omnipotent
 .globl	abi_test_clobber_xmm$_
+.type	abi_test_clobber_xmm$_, \@abi-omnipotent
 .align	16
 abi_test_clobber_xmm$_:
 	_CET_ENDBR
@@ -333,8 +333,8 @@ $code .= <<____;
 # abi_test_bad_unwind_wrong_register preserves the ABI, but annotates the wrong
 # register in unwind metadata.
 # void abi_test_bad_unwind_wrong_register(void);
-.type	abi_test_bad_unwind_wrong_register, \@abi-omnipotent
 .globl	abi_test_bad_unwind_wrong_register
+.type	abi_test_bad_unwind_wrong_register, \@abi-omnipotent
 .align	16
 abi_test_bad_unwind_wrong_register:
 .cfi_startproc
@@ -358,8 +358,8 @@ abi_test_bad_unwind_wrong_register:
 # abi_test_bad_unwind_temporary preserves the ABI, but temporarily corrupts the
 # storage space for a saved register, breaking unwind.
 # void abi_test_bad_unwind_temporary(void);
-.type	abi_test_bad_unwind_temporary, \@abi-omnipotent
 .globl	abi_test_bad_unwind_temporary
+.type	abi_test_bad_unwind_temporary, \@abi-omnipotent
 .align	16
 abi_test_bad_unwind_temporary:
 .cfi_startproc
@@ -389,8 +389,8 @@ abi_test_bad_unwind_temporary:
 # abi_test_get_and_clear_direction_flag clears the direction flag. If the flag
 # was previously set, it returns one. Otherwise, it returns zero.
 # int abi_test_get_and_clear_direction_flag(void);
-.type	abi_test_set_direction_flag, \@abi-omnipotent
 .globl	abi_test_get_and_clear_direction_flag
+.type	abi_test_get_and_clear_direction_flag, \@abi-omnipotent
 abi_test_get_and_clear_direction_flag:
 	_CET_ENDBR
 	pushfq
@@ -403,8 +403,8 @@ abi_test_get_and_clear_direction_flag:
 
 # abi_test_set_direction_flag sets the direction flag.
 # void abi_test_set_direction_flag(void);
-.type	abi_test_set_direction_flag, \@abi-omnipotent
 .globl	abi_test_set_direction_flag
+.type	abi_test_set_direction_flag, \@abi-omnipotent
 abi_test_set_direction_flag:
 	_CET_ENDBR
 	std
@@ -418,8 +418,8 @@ if ($win64) {
 # prolog, but the epilog does not match Win64's rules, breaking unwind during
 # the epilog.
 # void abi_test_bad_unwind_epilog(void);
-.type	abi_test_bad_unwind_epilog, \@abi-omnipotent
 .globl	abi_test_bad_unwind_epilog
+.type	abi_test_bad_unwind_epilog, \@abi-omnipotent
 .align	16
 abi_test_bad_unwind_epilog:
 .seh_startproc

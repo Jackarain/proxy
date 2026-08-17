@@ -1,16 +1,16 @@
-// Copyright (c) 2017, Google Inc.
+// Copyright 2017 The BoringSSL Authors
 //
-// Permission to use, copy, modify, and/or distribute this software for any
-// purpose with or without fee is hereby granted, provided that the above
-// copyright notice and this permission notice appear in all copies.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
-// OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-// CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 // ar.go contains functions for parsing .a archive files.
 
@@ -25,6 +25,10 @@ import (
 	"strings"
 )
 
+var (
+	NotAnArchiveFile = errors.New("ar: not an archive file")
+)
+
 // ParseAR parses an archive file from r and returns a map from filename to
 // contents, or else an error.
 func ParseAR(r io.Reader) (map[string][]byte, error) {
@@ -35,7 +39,7 @@ func ParseAR(r io.Reader) (map[string][]byte, error) {
 		return nil, err
 	}
 	if string(magic[:]) != expectedMagic {
-		return nil, errors.New("ar: not an archive file")
+		return nil, NotAnArchiveFile
 	}
 
 	const filenameTableName = "//"
@@ -97,7 +101,7 @@ func ParseAR(r io.Reader) (map[string][]byte, error) {
 				return nil, errors.New("ar: filename offset overflow")
 			}
 
-			if int(offset) > len(longFilenameTable) {
+			if offset > uint64(len(longFilenameTable)) {
 				return nil, errors.New("ar: filename offset out of bounds")
 			}
 

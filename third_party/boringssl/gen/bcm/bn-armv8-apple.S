@@ -4,8 +4,6 @@
 #include <openssl/asm_base.h>
 
 #if !defined(OPENSSL_NO_ASM) && defined(OPENSSL_AARCH64) && defined(__APPLE__)
-#include <openssl/arm_arch.h>
-
 .text
 
 // BN_ULONG bn_add_words(BN_ULONG *rp, const BN_ULONG *ap, const BN_ULONG *bp,
@@ -53,6 +51,7 @@ Ladd_exit:
 .globl	_bn_sub_words
 .private_extern	_bn_sub_words
 .align	4
+.alt_entry _bn_sub_words
 _bn_sub_words:
 	AARCH64_VALID_CALL_TARGET
 	# Set the carry flag. Arm's borrow bit is flipped from the carry flag,

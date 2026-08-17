@@ -1,17 +1,22 @@
 #! /usr/bin/env perl
 # Copyright 2011-2016 The OpenSSL Project Authors. All Rights Reserved.
 #
-# Licensed under the OpenSSL license (the "License").  You may not use
-# this file except in compliance with the License.  You can obtain a copy
-# in the file LICENSE in the source distribution or at
-# https://www.openssl.org/source/license.html
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 # ====================================================================
 # Written by Andy Polyakov <appro@openssl.org> for the OpenSSL
-# project. The module is, however, dual licensed under OpenSSL and
-# CRYPTOGAMS licenses depending on where you obtain it. For further
-# details see http://www.openssl.org/~appro/cryptogams/.
+# project.
 # ====================================================================
 
 # August 2011.
@@ -42,7 +47,7 @@ $0 =~ m/(.*[\/\\])[^\/\\]+$/; $dir=$1;
 ( $xlate="${dir}../../../perlasm/x86_64-xlate.pl" and -f $xlate) or
 die "can't locate x86_64-xlate.pl";
 
-open OUT,"| \"$^X\" \"$xlate\" $flavour \"$output\"";
+open OUT, "|-", $^X, $xlate, $flavour, $output;
 *STDOUT=*OUT;
 
 # In upstream, this is controlled by shelling out to the compiler to check
@@ -3474,7 +3479,7 @@ bn_gather5:
 	# I can't trust assembler to use specific encoding:-(
 	.byte	0x4c,0x8d,0x14,0x24			#lea    (%rsp),%r10
 .cfi_def_cfa_register	%r10
-	.byte	0x48,0x81,0xec,0x08,0x01,0x00,0x00	#sub	$0x108,%rsp
+	.byte	0x48,0x81,0xec,0x08,0x01,0x00,0x00	#sub	\$0x108,%rsp
 	lea	.Linc(%rip),%rax
 	and	\$-16,%rsp		# shouldn't be formally required
 
@@ -3570,7 +3575,9 @@ ___
 }
 $code.=<<___;
 .section .rodata
+
 .align	64
+mont5_increments:
 .Linc:
 	.long	0,0, 1,1
 	.long	2,2, 2,2

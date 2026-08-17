@@ -1,20 +1,21 @@
-/* Copyright (c) 2015, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2015 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <gtest/gtest.h>
 
 #include <openssl/digest.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 
 #include "../internal.h"
@@ -29,7 +30,7 @@ TEST(PBKDFTest, EmptyPassword) {
                           0x5d, 0x36, 0xea, 0x43, 0x63, 0xa2};
   uint8_t key[sizeof(kKey)];
 
-  ASSERT_TRUE(PKCS5_PBKDF2_HMAC(NULL, 0, (const uint8_t *)"salt", 4, 1,
+  ASSERT_TRUE(PKCS5_PBKDF2_HMAC(nullptr, 0, (const uint8_t *)"salt", 4, 1,
                                 EVP_sha1(), sizeof(kKey), key));
   EXPECT_EQ(Bytes(kKey), Bytes(key));
 
@@ -47,7 +48,7 @@ TEST(PBKDFTest, EmptySalt) {
                           0x5e, 0x22, 0xdb, 0xea, 0xfa, 0x46, 0x34, 0xf6};
   uint8_t key[sizeof(kKey)];
 
-  ASSERT_TRUE(PKCS5_PBKDF2_HMAC("password", 8, NULL, 0, 2, EVP_sha256(),
+  ASSERT_TRUE(PKCS5_PBKDF2_HMAC("password", 8, nullptr, 0, 2, EVP_sha256(),
                                 sizeof(kKey), key));
   EXPECT_EQ(Bytes(kKey), Bytes(key));
 
@@ -148,3 +149,18 @@ TEST(PBKDFTest, ZeroIterations) {
   // the out key.
   EXPECT_EQ(expected_first_byte, key[0]);
 }
+
+#if defined(OPENSSL_64_BIT)
+TEST(PBKDFTest, HugeKeyLen) {
+  static const char kPassword[] = "password";
+  static const uint8_t kSalt[] = {1, 2, 3, 4};
+  // Try a size chosen to clearly exceed the limit of 2^32-1 SHA-1 blocks by 1.
+  // In case the function does not reject this input, it will crash on writing
+  // to the nullptr.
+  EXPECT_FALSE(PKCS5_PBKDF2_HMAC(kPassword, strlen(kPassword), kSalt,
+                                 sizeof(kSalt), 1, EVP_sha1(),
+                                 size_t{SHA_DIGEST_LENGTH} << 32, nullptr));
+  EXPECT_TRUE(
+      ErrorEquals(ERR_get_error(), ERR_LIB_EVP, EVP_R_INVALID_SECRET_LENGTH));
+}
+#endif

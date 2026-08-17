@@ -1,54 +1,17 @@
-/* ====================================================================
- * Copyright (c) 1998-2005 The OpenSSL Project.  All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *
- * 3. All advertising materials mentioning features or use of this
- *    software must display the following acknowledgment:
- *    "This product includes software developed by the OpenSSL Project
- *    for use in the OpenSSL Toolkit. (http://www.OpenSSL.org/)"
- *
- * 4. The names "OpenSSL Toolkit" and "OpenSSL Project" must not be used to
- *    endorse or promote products derived from this software without
- *    prior written permission. For written permission, please contact
- *    openssl-core@OpenSSL.org.
- *
- * 5. Products derived from this software may not be called "OpenSSL"
- *    nor may "OpenSSL" appear in their names without prior written
- *    permission of the OpenSSL Project.
- *
- * 6. Redistributions of any form whatsoever must retain the following
- *    acknowledgment:
- *    "This product includes software developed by the OpenSSL Project
- *    for use in the OpenSSL Toolkit (http://www.OpenSSL.org/)"
- *
- * THIS SOFTWARE IS PROVIDED BY THE OpenSSL PROJECT ``AS IS'' AND ANY
- * EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE OpenSSL PROJECT OR
- * ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- * ====================================================================
- *
- * This product includes cryptographic software written by Eric Young
- * (eay@cryptsoft.com).  This product includes software written by Tim
- * Hudson (tjh@cryptsoft.com). */
+// Copyright 2002-2016 The OpenSSL Project Authors. All Rights Reserved.
+// Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <openssl/ecdsa.h>
 
@@ -69,22 +32,22 @@
 #include "../../test/test_util.h"
 
 
-static bssl::UniquePtr<BIGNUM> HexToBIGNUM(const char *hex) {
-  BIGNUM *bn = nullptr;
-  BN_hex2bn(&bn, hex);
-  return bssl::UniquePtr<BIGNUM>(bn);
-}
-
-// Though we do not support secp160r1, it is reachable from the deprecated
+// Though we do not support secp224k1, it is reachable from the deprecated
 // custom curve APIs and has some unique properties (n is larger than p with the
 // difference crossing a word boundary on 32-bit), so test it explicitly.
-static bssl::UniquePtr<EC_GROUP> NewSecp160r1Group() {
-  static const char kP[] = "ffffffffffffffffffffffffffffffff7fffffff";
-  static const char kA[] = "ffffffffffffffffffffffffffffffff7ffffffc";
-  static const char kB[] = "1c97befc54bd7a8b65acf89f81d4d4adc565fa45";
-  static const char kX[] = "4a96b5688ef573284664698968c38bb913cbfc82";
-  static const char kY[] = "23a628553168947d59dcc912042351377ac5fb32";
-  static const char kN[] = "0100000000000000000001f4c8f927aed3ca752257";
+static bssl::UniquePtr<EC_GROUP> NewSecp224k1Group() {
+  static const char kP[] =
+      "fffffffffffffffffffffffffffffffffffffffffffffffeffffe56d";
+  static const char kA[] =
+      "00000000000000000000000000000000000000000000000000000000";
+  static const char kB[] =
+      "00000000000000000000000000000000000000000000000000000005";
+  static const char kX[] =
+      "a1455b334df099df30fc28a169a467e9e47075a90f7e650eb6b7a45c";
+  static const char kY[] =
+      "7e089fed7fba344282cafbd6f7e319f7c0b0bd59e2ca4bdb556d61a5";
+  static const char kN[] =
+      "010000000000000000000000000001dce8d2ec6184caf0a971769fb1f7";
 
   bssl::UniquePtr<BIGNUM> p = HexToBIGNUM(kP), a = HexToBIGNUM(kA),
                           b = HexToBIGNUM(kB), x = HexToBIGNUM(kX),
@@ -113,7 +76,7 @@ enum API {
   kRawAPI,
 };
 
-// VerifyECDSASig checks that verifying |ecdsa_sig| gives |expected_result|.
+// VerifyECDSASig checks that verifying `ecdsa_sig` gives `expected_result`.
 static void VerifyECDSASig(API api, const uint8_t *digest, size_t digest_len,
                            const ECDSA_SIG *ecdsa_sig, EC_KEY *eckey,
                            int expected_result) {
@@ -139,7 +102,7 @@ static void VerifyECDSASig(API api, const uint8_t *digest, size_t digest_len,
 }
 
 // TestTamperedSig verifies that signature verification fails when a valid
-// signature is tampered with. |ecdsa_sig| must be a valid signature, which will
+// signature is tampered with. `ecdsa_sig` must be a valid signature, which will
 // be modified.
 static void TestTamperedSig(API api, const uint8_t *digest,
                             size_t digest_len, ECDSA_SIG *ecdsa_sig,
@@ -193,15 +156,15 @@ TEST(ECDSATest, BuiltinCurves) {
       { NID_X9_62_prime256v1, "secp256r1" },
       { NID_secp384r1, "secp384r1" },
       { NID_secp521r1, "secp521r1" },
-      { NID_secp160r1, "secp160r1" },
+      { NID_secp224k1, "secp224k1" },
   };
 
   for (const auto &curve : kCurves) {
     SCOPED_TRACE(curve.name);
 
     bssl::UniquePtr<EC_GROUP> group;
-    if (curve.nid == NID_secp160r1) {
-      group = NewSecp160r1Group();
+    if (curve.nid == NID_secp224k1) {
+      group = NewSecp224k1Group();
     } else {
       group.reset(EC_GROUP_new_by_curve_name(curve.nid));
     }
@@ -285,6 +248,14 @@ TEST(ECDSATest, BuiltinCurves) {
 
     // Verify a tampered signature.
     TestTamperedSig(kRawAPI, digest, 20, ecdsa_sig.get(), eckey.get(), order);
+
+    // Negative components should not be accepted.
+    BN_set_negative(ecdsa_sig->r, 1);
+    EXPECT_FALSE(ECDSA_do_verify(digest, 20, ecdsa_sig.get(), eckey.get()));
+    BN_set_negative(ecdsa_sig->r, 0);
+    BN_set_negative(ecdsa_sig->s, 1);
+    EXPECT_FALSE(ECDSA_do_verify(digest, 20, ecdsa_sig.get(), eckey.get()));
+    BN_set_negative(ecdsa_sig->s, 0);
   }
 }
 
@@ -298,7 +269,7 @@ TEST(ECDSATest, MaxSigLen) {
     SCOPED_TRACE(bits);
     size_t order_len = BitsToBytes(bits);
 
-    // Create the largest possible |ECDSA_SIG| of the given constraints.
+    // Create the largest possible `ECDSA_SIG` of the given constraints.
     bssl::UniquePtr<ECDSA_SIG> sig(ECDSA_SIG_new());
     ASSERT_TRUE(sig);
     std::vector<uint8_t> bytes(order_len, 0xff);
@@ -332,8 +303,8 @@ static bssl::UniquePtr<EC_GROUP> GetCurve(FileTest *t, const char *key) {
   if (curve_name == "P-521") {
     return bssl::UniquePtr<EC_GROUP>(const_cast<EC_GROUP *>(EC_group_p521()));
   }
-  if (curve_name == "secp160r1") {
-    return NewSecp160r1Group();
+  if (curve_name == "secp224k1") {
+    return NewSecp224k1Group();
   }
 
   ADD_FAILURE() << "Unknown curve: " << curve_name;

@@ -1,16 +1,16 @@
-// Copyright (c) 2020, Google Inc.
+// Copyright 2020 The BoringSSL Authors
 //
-// Permission to use, copy, modify, and/or distribute this software for any
-// purpose with or without fee is hereby granted, provided that the above
-// copyright notice and this permission notice appear in all copies.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-// SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
-// OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-// CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package subprocess
 
@@ -36,6 +36,7 @@ type rsaKeyGenGroup struct {
 	ID          uint64          `json:"tgId"`
 	Type        string          `json:"testType"`
 	ModulusBits uint32          `json:"modulo"`
+	KeyFormat   string          `json:"keyFormat"`
 	Tests       []rsaKeyGenTest `json:"tests"`
 }
 
@@ -49,12 +50,15 @@ type rsaKeyGenTestGroupResponse struct {
 }
 
 type rsaKeyGenTestResponse struct {
-	ID uint64 `json:"tcId"`
-	E  string `json:"e"`
-	P  string `json:"p"`
-	Q  string `json:"q"`
-	N  string `json:"n"`
-	D  string `json:"d"`
+	ID   uint64 `json:"tcId"`
+	E    string `json:"e"`
+	P    string `json:"p"`
+	Q    string `json:"q"`
+	N    string `json:"n"`
+	D    string `json:"d"`
+	Dmp1 string `json:"dmp1,omitempty"`
+	Dmq1 string `json:"dmq1,omitempty"`
+	Iqmp string `json:"iqmp,omitempty"`
 }
 
 type rsaSigGenTestVectorSet struct {
@@ -67,6 +71,7 @@ type rsaSigGenGroup struct {
 	SigType     string          `json:"sigType"`
 	ModulusBits uint32          `json:"modulo"`
 	Hash        string          `json:"hashAlg"`
+	SaltLen     uint32          `json:"saltLen"`
 	Tests       []rsaSigGenTest `json:"tests"`
 }
 
@@ -134,22 +139,41 @@ func processKeyGen(vectorSet []byte, m Transactable) (any, error) {
 			return nil, fmt.Errorf("RSA KeyGen test group has type %q, but only generation tests (%q) are supported", group.Type, expectedType)
 		}
 
+		if group.KeyFormat != "standard" && group.KeyFormat != "crt" {
+			return nil, fmt.Errorf("RSA KeyGen test group has keyFormat %q, but only standard and crt are supported", group.KeyFormat)
+		}
+
 		response := rsaKeyGenTestGroupResponse{
 			ID: group.ID,
 		}
 
 		for _, test := range group.Tests {
 			test := test
+			cmd := "RSA/keyGen"
+			expectedResults := 5
 
-			m.TransactAsync("RSA/keyGen", 5, [][]byte{uint32le(group.ModulusBits)}, func(result [][]byte) error {
-				response.Tests = append(response.Tests, rsaKeyGenTestResponse{
+			if group.KeyFormat == "crt" {
+				cmd = cmd + "/crt"
+				expectedResults = 8
+			}
+
+			m.TransactAsync(cmd, expectedResults, [][]byte{uint32le(group.ModulusBits)}, func(result [][]byte) error {
+				keyGenResponse := rsaKeyGenTestResponse{
 					ID: test.ID,
 					E:  hex.EncodeToString(result[0]),
 					P:  hex.EncodeToString(result[1]),
 					Q:  hex.EncodeToString(result[2]),
 					N:  hex.EncodeToString(result[3]),
 					D:  hex.EncodeToString(result[4]),
-				})
+				}
+
+				if group.KeyFormat == "crt" {
+					keyGenResponse.Dmp1 = hex.EncodeToString(result[5])
+					keyGenResponse.Dmq1 = hex.EncodeToString(result[6])
+					keyGenResponse.Iqmp = hex.EncodeToString(result[7])
+				}
+
+				response.Tests = append(response.Tests, keyGenResponse)
 				return nil
 			})
 		}
@@ -183,6 +207,10 @@ func processSigGen(vectorSet []byte, m Transactable) (any, error) {
 			return nil, fmt.Errorf("RSA SigGen test group has type %q, but only generation tests (%q) are supported", group.Type, expectedType)
 		}
 
+		if group.SigType != "pss" && group.SaltLen > 0 {
+			return nil, fmt.Errorf("RSA SigGen test group %d has sig type %s but saltLen %d - not 0", group.ID, group.SigType, group.SaltLen)
+		}
+
 		response := rsaSigGenTestGroupResponse{
 			ID: group.ID,
 		}
@@ -197,7 +225,12 @@ func processSigGen(vectorSet []byte, m Transactable) (any, error) {
 				return nil, fmt.Errorf("test case %d/%d contains invalid hex: %s", group.ID, test.ID, err)
 			}
 
-			m.TransactAsync(operation, 3, [][]byte{uint32le(group.ModulusBits), msg}, func(result [][]byte) error {
+			args := [][]byte{uint32le(group.ModulusBits), msg}
+			if group.SigType == "pss" {
+				args = append(args, uint32le(group.SaltLen))
+			}
+
+			m.TransactAsync(operation, 3, args, func(result [][]byte) error {
 				if len(response.N) == 0 {
 					response.N = hex.EncodeToString(result[0])
 					response.E = hex.EncodeToString(result[1])

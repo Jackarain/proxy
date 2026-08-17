@@ -1,6 +1,16 @@
 // Copyright 2017 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef BSSL_PKI_GENERAL_NAMES_H_
 #define BSSL_PKI_GENERAL_NAMES_H_
@@ -14,7 +24,7 @@
 
 #include "cert_error_id.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 class CertErrors;
 
@@ -59,10 +69,10 @@ struct OPENSSL_EXPORT GeneralNames {
   ~GeneralNames();
 
   // Create a GeneralNames object representing the DER-encoded
-  // |general_names_tlv|. The returned object may reference data from
-  // |general_names_tlv|, so is only valid as long as |general_names_tlv| is.
-  // Returns nullptr on failure, and may fill |errors| with
-  // additional information. |errors| must be non-null.
+  // `general_names_tlv`. The returned object may reference data from
+  // `general_names_tlv`, so is only valid as long as `general_names_tlv` is.
+  // Returns nullptr on failure, and may fill `errors` with
+  // additional information. `errors` must be non-null.
   static std::unique_ptr<GeneralNames> Create(der::Input general_names_tlv,
                                               CertErrors *errors);
 
@@ -116,16 +126,16 @@ struct OPENSSL_EXPORT GeneralNames {
   int present_name_types = GENERAL_NAME_NONE;
 };
 
-// Parses a GeneralName value and adds it to |subtrees|.
-// |ip_address_type| specifies how to parse iPAddress names.
-// Returns false on failure, and may fill |errors| with additional information.
-// |errors| must be non-null.
+// Parses a GeneralName value and adds it to `subtrees`.
+// `ip_address_type` specifies how to parse iPAddress names.
+// Returns false on failure, and may fill `errors` with additional information.
+// `errors` must be non-null.
 // TODO(mattm): should this be a method on GeneralNames?
 [[nodiscard]] OPENSSL_EXPORT bool ParseGeneralName(
     der::Input input,
     GeneralNames::ParseGeneralNameIPAddressType ip_address_type,
     GeneralNames *subtrees, CertErrors *errors);
 
-}  // namespace bssl
+BSSL_NAMESPACE_END
 
 #endif  // BSSL_PKI_GENERAL_NAMES_H_

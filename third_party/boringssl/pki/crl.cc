@@ -1,12 +1,23 @@
 // Copyright 2019 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <algorithm>
 #include <iterator>
 
 #include <openssl/base.h>
 #include <openssl/bytestring.h>
+#include <openssl/span.h>
 
 #include "cert_errors.h"
 #include "crl.h"
@@ -18,7 +29,7 @@
 #include "verify_name_match.h"
 #include "verify_signed_data.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 namespace {
 
@@ -156,10 +167,10 @@ bool ParseCrlTbsCertList(der::Input tbs_tlv, ParsedCrlTbsCertList *out) {
 
   //         revokedCertificates     SEQUENCE OF SEQUENCE  { ... } OPTIONAL,
   der::Input unused_revoked_certificates;
-  CBS_ASN1_TAG maybe_revoked_certifigates_tag;
-  if (tbs_parser.PeekTagAndValue(&maybe_revoked_certifigates_tag,
+  CBS_ASN1_TAG maybe_revoked_certificates_tag;
+  if (tbs_parser.PeekTagAndValue(&maybe_revoked_certificates_tag,
                                  &unused_revoked_certificates) &&
-      maybe_revoked_certifigates_tag == CBS_ASN1_SEQUENCE) {
+      maybe_revoked_certificates_tag == CBS_ASN1_SEQUENCE) {
     der::Input revoked_certificates_tlv;
     if (!tbs_parser.ReadRawTLV(&revoked_certificates_tlv)) {
       return false;
@@ -349,6 +360,11 @@ CRLRevocationStatus GetCRLStatusForCert(
       return CRLRevocationStatus::UNKNOWN;
     }
 
+    // TODO(crbug.com/533048005): We do not check `revoked_cert_serial_number`
+    // is a valid INTEGER because our certificate parser does not yet check for
+    // valid INTEGERs. This ensures those non-integers can be represented in
+    // CRLs.
+
     //              revocationDate          Time,
     der::GeneralizedTime unused_revocation_date;
     if (!ReadUTCOrGeneralizedTime(&crl_entry_parser, &unused_revocation_date)) {
@@ -397,7 +413,7 @@ CRLRevocationStatus GetCRLStatusForCert(
     return CRLRevocationStatus::REVOKED;
   }
 
-  // |cert| is not present in the revokedCertificates list.
+  // `cert` is not present in the revokedCertificates list.
   return CRLRevocationStatus::GOOD;
 }
 
@@ -434,7 +450,7 @@ CRLRevocationStatus CheckCRL(std::string_view raw_crl,
   der::Input tbs_cert_list_tlv;
   der::Input signature_algorithm_tlv;
   der::BitString signature_value;
-  if (!ParseCrlCertificateList(der::Input(raw_crl), &tbs_cert_list_tlv,
+  if (!ParseCrlCertificateList(StringAsBytes(raw_crl), &tbs_cert_list_tlv,
                                &signature_algorithm_tlv, &signature_value)) {
     return CRLRevocationStatus::UNKNOWN;
   }
@@ -509,7 +525,8 @@ CRLRevocationStatus CheckCRL(std::string_view raw_crl,
   if (!NormalizeNameTLV(tbs_cert_list.issuer_tlv, &normalized_crl_issuer)) {
     return CRLRevocationStatus::UNKNOWN;
   }
-  if (der::Input(normalized_crl_issuer) != target_cert->normalized_issuer()) {
+  if (der::Input(StringAsBytes(normalized_crl_issuer)) !=
+      target_cert->normalized_issuer()) {
     return CRLRevocationStatus::UNKNOWN;
   }
 
@@ -614,7 +631,7 @@ CRLRevocationStatus CheckCRL(std::string_view raw_crl,
   // cases of key rollover without requiring additional CRL issuer cert
   // discovery & path building.
   // TODO(https://crbug.com/749276): should this loop start at
-  // |target_cert_index|? There doesn't seem to be anything in the specs that
+  // `target_cert_index`? There doesn't seem to be anything in the specs that
   // precludes a CRL signed by a self-issued cert from covering itself. On the
   // other hand it seems like a pretty weird thing to allow and causes NIST
   // PKITS 4.5.3 to pass when it seems like it would not be intended to (since
@@ -627,9 +644,9 @@ CRLRevocationStatus CheckCRL(std::string_view raw_crl,
     //           path MUST be the same as the trust anchor used to validate
     //           the target certificate.
     //
-    // As the |issuer_cert| is from the already validated chain, it is already
+    // As the `issuer_cert` is from the already validated chain, it is already
     // known to chain to the same trust anchor as the target certificate.
-    if (der::Input(normalized_crl_issuer) !=
+    if (der::Input(StringAsBytes(normalized_crl_issuer)) !=
         issuer_cert->normalized_subject()) {
       continue;
     }
@@ -657,7 +674,7 @@ CRLRevocationStatus CheckCRL(std::string_view raw_crl,
     //           in Section 5.3.3, then set the cert_status variable to the
     //           indicated reason as described in step (i).
     //
-    // CRL is valid and covers |target_cert|, check if |target_cert| is present
+    // CRL is valid and covers `target_cert`, check if `target_cert` is present
     // in the revokedCertificates sequence.
     return GetCRLStatusForCert(target_cert->tbs().serial_number,
                                tbs_cert_list.version,
@@ -666,8 +683,8 @@ CRLRevocationStatus CheckCRL(std::string_view raw_crl,
     // 6.3.3 (k,l) skipped. This implementation does not support reason codes.
   }
 
-  // Did not find the issuer & signer of |raw_crl| in |valid_chain|.
+  // Did not find the issuer & signer of `raw_crl` in `valid_chain`.
   return CRLRevocationStatus::UNKNOWN;
 }
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

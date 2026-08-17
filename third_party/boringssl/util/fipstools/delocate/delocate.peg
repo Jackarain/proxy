@@ -1,16 +1,16 @@
-# Copyright (c) 2017, Google Inc.
+# Copyright 2017 The BoringSSL Authors
 #
-# Permission to use, copy, modify, and/or distribute this software for any
-# purpose with or without fee is hereby granted, provided that the above
-# copyright notice and this permission notice appear in all copies.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-# SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
-# OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-# CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # This is a rough parser for x86-64 and aarch64 assembly designed to work with
 # https://github.com/pointlander/peg. delocate.go has a go:generate line for
@@ -30,7 +30,9 @@ type Asm Peg {}
 AsmFile <- Statement* !.
 Statement <- WS? (Label / ((GlobalDirective /
                             LocationDirective /
+                            SymbolDefiningDirective /
                             LabelContainingDirective /
+                            PrefAlignDirective /
                             Instruction /
                             Directive /
                             Comment / ) WS? ((Comment? '\n') / ';')))
@@ -41,11 +43,18 @@ LocationDirective <- FileDirective / LocDirective
 FileDirective <- ".file" WS [^#\n]+
 LocDirective <- ".loc" WS [^#/\n]+
 Args <- Arg ((WS? ',' WS?) Arg)*
-Arg <- QuotedArg / [[0-9a-z%+\-*_@.]]*
+Arg <- QuotedArg / [[0-9a-z%+\-*_@.$]]*
 QuotedArg <- '"' QuotedText '"'
 QuotedText <- (EscapedChar / [^"])*
+SymbolDefiningDirective <- (SymbolDefiningDirectiveName WS (LocalSymbol / SymbolName) WS? ',' WS? SymbolArg /
+                            (LocalSymbol / SymbolName) WS? '=' WS? SymbolArg)
+SymbolDefiningDirectiveName <- ".equiv" / ".equ" / ".set"
 LabelContainingDirective <- LabelContainingDirectiveName WS SymbolArgs
-LabelContainingDirectiveName <- ".xword" / ".word" / ".hword" / ".long" / ".set" / ".byte" / ".8byte" / ".4byte" / ".quad" / ".tc" / ".localentry" / ".size" / ".type" / ".uleb128" / ".sleb128"
+LabelContainingDirectiveName <- ".xword" / ".word" / ".hword" / ".long" / ".byte" / ".8byte" / ".4byte" / ".quad" / ".tc" / ".localentry" / ".size" / ".type" / ".uleb128" / ".sleb128"
+# Prior to https://github.com/llvm/llvm-project/commit/193d7a6ace9f7016e03c90c63626fdb7fdf99bc0,
+# .prefalign took a single integer. Afterwards, it took three parameters with a
+# symbol as the second argument. Parse both forms.
+PrefAlignDirective <- ".prefalign" WS Arg (WS? ',' WS? SymbolArg WS? ',' WS? Arg)?
 SymbolArgs <- SymbolArg ((WS? ',' WS?) SymbolArg)*
 
 SymbolArg <- SymbolExpr
@@ -77,19 +86,21 @@ AVX512Token <- WS? '{' '%'? [0-9a-z]* '}'
 TOCRefHigh <- '.TOC.-' ('0b' / ('.L' [a-zA-Z_0-9]+)) "@ha"
 TOCRefLow <- '.TOC.-' ('0b' / ('.L' [a-zA-Z_0-9]+)) "@l"
 IndirectionIndicator <- '*'
+Float <- [0-9]+ '.' [0-9]*
 RegisterOrConstant <- (('%'[[A-Z]][[A-Z0-9]]*) /
                        ('$'? ((Offset Offset) / Offset)) /
-                       ('#' Offset ('*' [0-9]+ ('-' [0-9] [0-9]*)?)? ) /
-                       ('#' '~'? '(' [0-9] WS? "<<" WS? [0-9] ')' ) /
+                       ('#'? Float ) /
+                       ('#'? Offset ('*' [0-9]+ ('-' [0-9] [0-9]*)?)? ) /
+                       ('#'? '~'? '(' [0-9] WS? "<<" WS? [0-9] ')' ) /
                        ARMRegister)
                       ![fb:(+\-]
-ARMConstantTweak <- ((([us] "xt" [xwhb]) / "lsl" / "lsr" / "ror" / "asr") (WS '#' Offset)?) /
+ARMConstantTweak <- ((([us] "xt" [xwhb]) / "lsl" / "lsr" / "ror" / "asr" / "msl") (WS '#'? Offset)?) /
                     "mul vl"  / # multiply offset by the hardware's vector length
-                    "mul #" [0-9]
+                    "mul #" [0-9][0-9]?
 ARMRegister <- "sp" /
                ([xwdqshb] [0-9] [0-9]?) /
                "xzr" / "wzr" / "NZCV" / SVE2PredicateRegister / ARMVectorRegister / SVE2SpecialValue /
-               ('{' WS? ARMVectorRegister (',' WS? ARMVectorRegister)* WS? '}' ('[' [0-9] [0-9]? ']')? )
+               ('{' WS? ARMVectorRegister (WS? [-,] WS? ARMVectorRegister)* WS? '}' ('[' [0-9] [0-9]? ']')? )
 ARMVectorRegister <- [pvz] [0-9] [0-9]? ![[0-9a-z_]] ('.' [0-9]* [bsdhq] ('[' [0-9] [0-9]? ']')? )?
 SVE2PredicateRegister <- "p" [0-9] [0-9]? "/" [[mz]]
 # https://developer.arm.com/documentation/ddi0596/2020-12/SVE-Instructions/INCD--INCH--INCW--vector---Increment-vector-by-multiple-of-predicate-constraint-element-count-
@@ -107,8 +118,8 @@ MemoryRef <- (SymbolRef BaseIndexScale /
               ARMBaseIndexScale /
               BaseIndexScale)
 SymbolRef <- (Offset* '+')? (LocalSymbol / SymbolName) Offset* ('@' Section Offset*)?
-Low12BitsSymbolRef <- ":lo12:" (LocalSymbol / SymbolName) Offset?
-ARMBaseIndexScale <- '[' ARMRegister (',' WS? (('#' Offset (('*' [0-9]+) / ('*' '(' [0-9]+ Operator [0-9]+ ')') / (('+' [0-9]+)*))? ) / ARMGOTLow12 / Low12BitsSymbolRef / ARMRegister) (',' WS? ARMConstantTweak)?)? ']' ARMPostincrement?
+Low12BitsSymbolRef <- '#'? ":lo12:" (LocalSymbol / SymbolName) Offset?
+ARMBaseIndexScale <- '[' ARMRegister (',' WS? (('#'? Offset (('*' [0-9]+) / ('*' '(' [0-9]+ Operator [0-9]+ ')') / (('+' [0-9]+)*))? ) / ARMGOTLow12 / Low12BitsSymbolRef / ARMRegister) (',' WS? ARMConstantTweak)?)? ']' ARMPostincrement?
 ARMGOTLow12 <- ":got_lo12:" SymbolName
 ARMPostincrement <- '!'
 BaseIndexScale <- '(' RegisterOrConstant? WS? (',' WS? RegisterOrConstant WS? (',' [0-9]+)? )? ')'

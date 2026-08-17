@@ -1,17 +1,22 @@
 #! /usr/bin/env perl
 # Copyright 2014-2016 The OpenSSL Project Authors. All Rights Reserved.
 #
-# Licensed under the OpenSSL license (the "License").  You may not use
-# this file except in compliance with the License.  You can obtain a copy
-# in the file LICENSE in the source distribution or at
-# https://www.openssl.org/source/license.html
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 #
 # ====================================================================
 # Written by Andy Polyakov <appro@openssl.org> for the OpenSSL
-# project. The module is, however, dual licensed under OpenSSL and
-# CRYPTOGAMS licenses depending on where you obtain it. For further
-# details see http://www.openssl.org/~appro/cryptogams/.
+# project.
 # ====================================================================
 #
 # This module implements support for ARMv8 AES instructions. The
@@ -47,14 +52,12 @@ $0 =~ m/(.*[\/\\])[^\/\\]+$/; $dir=$1;
 ( $xlate="${dir}../../../perlasm/arm-xlate.pl" and -f $xlate) or
 die "can't locate arm-xlate.pl";
 
-open OUT,"| \"$^X\" \"$xlate\" $flavour \"$output\"";
+open OUT, "|-", $^X, $xlate, $flavour, $output;
 *STDOUT=*OUT;
 
 $prefix="aes_hw";
 
 $code=<<___;
-#include <openssl/arm_arch.h>
-
 #if __ARM_MAX_ARCH__>=7
 .text
 ___
@@ -81,7 +84,9 @@ my ($zero,$rcon,$mask,$in0,$in1,$tmp,$key)=
 # execute-only memory. On AArch32, put it in .text and use adr.
 $code.= ".section .rodata\n" if ($flavour =~ /64/);
 $code.=<<___;
+
 .align	5
+${prefix}_constants:
 .Lrcon:
 .long	0x01,0x01,0x01,0x01
 .long	0x0c0f0e0d,0x0c0f0e0d,0x0c0f0e0d,0x0c0f0e0d	// rotate-n-splat

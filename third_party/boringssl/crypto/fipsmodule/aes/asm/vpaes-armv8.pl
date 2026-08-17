@@ -1,10 +1,17 @@
 #! /usr/bin/env perl
 # Copyright 2015-2016 The OpenSSL Project Authors. All Rights Reserved.
 #
-# Licensed under the OpenSSL license (the "License").  You may not use
-# this file except in compliance with the License.  You can obtain a copy
-# in the file LICENSE in the source distribution or at
-# https://www.openssl.org/source/license.html
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 ######################################################################
@@ -45,12 +52,10 @@ $0 =~ m/(.*[\/\\])[^\/\\]+$/; $dir=$1;
 ( $xlate="${dir}../../../perlasm/arm-xlate.pl" and -f $xlate) or
 die "can't locate arm-xlate.pl";
 
-open OUT,"| \"$^X\" \"$xlate\" $flavour \"$output\"";
+open OUT, "|-", $^X, $xlate, $flavour, $output;
 *STDOUT=*OUT;
 
 $code.=<<___;
-#include <openssl/arm_arch.h>
-
 .section	.rodata
 
 .type	_vpaes_consts,%object
@@ -1129,7 +1134,7 @@ vpaes_cbc_encrypt:
 	AARCH64_SIGN_LINK_REGISTER
 	cbz	$len, .Lcbc_abort
 	cmp	w5, #0			// check direction
-	b.eq	vpaes_cbc_decrypt
+	b.eq	.Lcbc_decrypt
 
 	stp	x29,x30,[sp,#-16]!
 	add	x29,sp,#0
@@ -1156,12 +1161,10 @@ vpaes_cbc_encrypt:
 .Lcbc_abort:
 	AARCH64_VALIDATE_LINK_REGISTER
 	ret
-.size	vpaes_cbc_encrypt,.-vpaes_cbc_encrypt
 
-.type	vpaes_cbc_decrypt,%function
 .align	4
-vpaes_cbc_decrypt:
-	// Not adding AARCH64_SIGN_LINK_REGISTER here because vpaes_cbc_decrypt is jumped to
+.Lcbc_decrypt:
+	// Not adding AARCH64_SIGN_LINK_REGISTER here because .Lcbc_decrypt is jumped to
 	// only from vpaes_cbc_encrypt which has already signed the return address.
 	stp	x29,x30,[sp,#-16]!
 	add	x29,sp,#0
@@ -1206,7 +1209,7 @@ vpaes_cbc_decrypt:
 	ldp	x29,x30,[sp],#16
 	AARCH64_VALIDATE_LINK_REGISTER
 	ret
-.size	vpaes_cbc_decrypt,.-vpaes_cbc_decrypt
+.size	vpaes_cbc_encrypt,.-vpaes_cbc_encrypt
 ___
 # We omit vpaes_ecb_* in BoringSSL. They are unused.
 if (0) {

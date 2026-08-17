@@ -1,20 +1,30 @@
 // Copyright 2016 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "parse_name.h"
 
 #include <gtest/gtest.h>
 #include "test_helpers.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 namespace {
 // Loads test data from file. The filename is constructed from the parameters:
-// |prefix| describes the type of data being tested, e.g. "ascii",
+// `prefix` describes the type of data being tested, e.g. "ascii",
 // "unicode_bmp", "unicode_supplementary", and "invalid".
-// |value_type| indicates what ASN.1 type is used to encode the data.
-// |suffix| indicates any additional modifications, such as caseswapping,
+// `value_type` indicates what ASN.1 type is used to encode the data.
+// `suffix` indicates any additional modifications, such as caseswapping,
 // whitespace adding, etc.
 ::testing::AssertionResult LoadTestData(const std::string &prefix,
                                         const std::string &value_type,
@@ -363,4 +373,4 @@ TEST(ParseNameTest, RFC2253FormatUTF8) {
   ASSERT_EQ("SN=Lu\\C4\\8Di\\C4\\87", output);
 }
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

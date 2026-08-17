@@ -1,16 +1,16 @@
-/* Copyright (c) 2023, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2023 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <optional>
 #include <string_view>
@@ -24,27 +24,16 @@
 #include "pem.h"
 #include "parse_values.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 namespace {
 
 std::shared_ptr<const bssl::ParsedCertificate> ParseCertificateFromDer(
     bssl::Span<const uint8_t>cert, std::string *out_diagnostic) {
   bssl::ParseCertificateOptions default_options{};
-  // We follow Chromium in setting |allow_invalid_serial_numbers| in order to
-  // not choke on 21-byte serial numbers, which are common.  davidben explains
-  // why:
-  //
-  // The reason for the discrepancy is that unsigned numbers with the high bit
-  // otherwise set get an extra 0 byte in front to keep them positive. So if you
-  // do:
-  //    var num [20]byte
-  //    fillWithRandom(num[:])
-  //    serialNumber := new(big.Int).SetBytes(num[:])
-  //    encodeASN1Integer(serialNumber)
-  //
-  // Then half of your serial numbers will be encoded with 21 bytes. (And
-  // 1/512th will have 19 bytes instead of 20.)
+  // TODO(crbug.com/533048005): Remove this option. It now only controls serials
+  // that aren't even valid integers. Historically, people needed to set it to
+  // tolerate length over 20, but this is now always enabled.
   default_options.allow_invalid_serial_numbers = true;
 
   bssl::UniquePtr<CRYPTO_BUFFER> buffer(
@@ -114,4 +103,4 @@ bssl::Span<const uint8_t> Certificate::GetSerialNumber() const {
   return internals_->cert->tbs().serial_number;
 }
 
-}  // namespace boringssl
+BSSL_NAMESPACE_END

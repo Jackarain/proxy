@@ -1,16 +1,16 @@
-/* Copyright (c) 2014, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2014 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <openssl/base.h>
 
@@ -40,13 +40,18 @@
 #include "internal.h"
 
 
+BSSL_NAMESPACE_BEGIN
+
 static const struct argument kArguments[] = {
     {
-     "-dump", kOptionalArgument,
-     "Dump the key and contents of the given file to stdout",
+        "-dump",
+        kOptionalArgument,
+        "Dump the key and contents of the given file to stdout",
     },
     {
-     "", kOptionalArgument, "",
+        "",
+        kOptionalArgument,
+        "",
     },
 };
 
@@ -116,14 +121,14 @@ bool DoPKCS12(const std::vector<std::string> &args) {
   CBS_init(&pkcs12, contents.get(), size);
 
   EVP_PKEY *key;
-  bssl::UniquePtr<STACK_OF(X509)> certs(sk_X509_new_null());
+  UniquePtr<STACK_OF(X509)> certs(sk_X509_new_null());
 
   if (!PKCS12_get_key_and_certs(&key, certs.get(), &pkcs12, password)) {
     fprintf(stderr, "Failed to parse PKCS#12 data:\n");
     ERR_print_errors_fp(stderr);
     return false;
   }
-  bssl::UniquePtr<EVP_PKEY> key_owned(key);
+  UniquePtr<EVP_PKEY> key_owned(key);
 
   if (key != NULL) {
     PEM_write_PrivateKey(stdout, key, NULL, NULL, 0, NULL, NULL);
@@ -135,3 +140,5 @@ bool DoPKCS12(const std::vector<std::string> &args) {
 
   return true;
 }
+
+BSSL_NAMESPACE_END

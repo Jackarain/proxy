@@ -22,7 +22,7 @@ L000pic_point:
 	popl	%eax
 	movdqa	Lreverse_bytes-L000pic_point(%eax),%xmm7
 	movdqa	Llow4_mask-L000pic_point(%eax),%xmm2
-.byte	102,15,56,0,199
+	pshufb	%xmm7,%xmm0
 	movdqa	%xmm2,%xmm1
 	pandn	%xmm0,%xmm1
 	psrld	$4,%xmm1
@@ -31,15 +31,15 @@ L000pic_point:
 	pxor	%xmm3,%xmm3
 	movl	$5,%eax
 L001loop_row_1:
-	movdqa	(%esi),%xmm4
+	movdqu	(%esi),%xmm4
 	leal	16(%esi),%esi
 	movdqa	%xmm2,%xmm6
-.byte	102,15,58,15,243,1
+	palignr	$1,%xmm3,%xmm6
 	movdqa	%xmm6,%xmm3
 	psrldq	$1,%xmm2
 	movdqa	%xmm4,%xmm5
-.byte	102,15,56,0,224
-.byte	102,15,56,0,233
+	pshufb	%xmm0,%xmm4
+	pshufb	%xmm1,%xmm5
 	pxor	%xmm5,%xmm2
 	movdqa	%xmm4,%xmm5
 	psllq	$60,%xmm5
@@ -62,15 +62,15 @@ L001loop_row_1:
 	pxor	%xmm3,%xmm3
 	movl	$5,%eax
 L002loop_row_2:
-	movdqa	(%esi),%xmm4
+	movdqu	(%esi),%xmm4
 	leal	16(%esi),%esi
 	movdqa	%xmm2,%xmm6
-.byte	102,15,58,15,243,1
+	palignr	$1,%xmm3,%xmm6
 	movdqa	%xmm6,%xmm3
 	psrldq	$1,%xmm2
 	movdqa	%xmm4,%xmm5
-.byte	102,15,56,0,224
-.byte	102,15,56,0,233
+	pshufb	%xmm0,%xmm4
+	pshufb	%xmm1,%xmm5
 	pxor	%xmm5,%xmm2
 	movdqa	%xmm4,%xmm5
 	psllq	$60,%xmm5
@@ -93,15 +93,15 @@ L002loop_row_2:
 	pxor	%xmm3,%xmm3
 	movl	$6,%eax
 L003loop_row_3:
-	movdqa	(%esi),%xmm4
+	movdqu	(%esi),%xmm4
 	leal	16(%esi),%esi
 	movdqa	%xmm2,%xmm6
-.byte	102,15,58,15,243,1
+	palignr	$1,%xmm3,%xmm6
 	movdqa	%xmm6,%xmm3
 	psrldq	$1,%xmm2
 	movdqa	%xmm4,%xmm5
-.byte	102,15,56,0,224
-.byte	102,15,56,0,233
+	pshufb	%xmm0,%xmm4
+	pshufb	%xmm1,%xmm5
 	pxor	%xmm5,%xmm2
 	movdqa	%xmm4,%xmm5
 	psllq	$60,%xmm5
@@ -122,7 +122,7 @@ L003loop_row_3:
 	psrlq	$5,%xmm3
 	pxor	%xmm3,%xmm2
 	pxor	%xmm3,%xmm3
-.byte	102,15,56,0,215
+	pshufb	%xmm7,%xmm2
 	movdqu	%xmm2,(%edi)
 	pxor	%xmm0,%xmm0
 	pxor	%xmm1,%xmm1
@@ -155,12 +155,12 @@ L004pic_point:
 	popl	%ebx
 	movdqa	Lreverse_bytes-L004pic_point(%ebx),%xmm7
 	andl	$-16,%ecx
-.byte	102,15,56,0,199
+	pshufb	%xmm7,%xmm0
 	pxor	%xmm3,%xmm3
 L005loop_ghash:
 	movdqa	Llow4_mask-L004pic_point(%ebx),%xmm2
 	movdqu	(%edx),%xmm1
-.byte	102,15,56,0,207
+	pshufb	%xmm7,%xmm1
 	pxor	%xmm1,%xmm0
 	movdqa	%xmm2,%xmm1
 	pandn	%xmm0,%xmm1
@@ -169,15 +169,15 @@ L005loop_ghash:
 	pxor	%xmm2,%xmm2
 	movl	$5,%eax
 L006loop_row_4:
-	movdqa	(%esi),%xmm4
+	movdqu	(%esi),%xmm4
 	leal	16(%esi),%esi
 	movdqa	%xmm2,%xmm6
-.byte	102,15,58,15,243,1
+	palignr	$1,%xmm3,%xmm6
 	movdqa	%xmm6,%xmm3
 	psrldq	$1,%xmm2
 	movdqa	%xmm4,%xmm5
-.byte	102,15,56,0,224
-.byte	102,15,56,0,233
+	pshufb	%xmm0,%xmm4
+	pshufb	%xmm1,%xmm5
 	pxor	%xmm5,%xmm2
 	movdqa	%xmm4,%xmm5
 	psllq	$60,%xmm5
@@ -200,15 +200,15 @@ L006loop_row_4:
 	pxor	%xmm3,%xmm3
 	movl	$5,%eax
 L007loop_row_5:
-	movdqa	(%esi),%xmm4
+	movdqu	(%esi),%xmm4
 	leal	16(%esi),%esi
 	movdqa	%xmm2,%xmm6
-.byte	102,15,58,15,243,1
+	palignr	$1,%xmm3,%xmm6
 	movdqa	%xmm6,%xmm3
 	psrldq	$1,%xmm2
 	movdqa	%xmm4,%xmm5
-.byte	102,15,56,0,224
-.byte	102,15,56,0,233
+	pshufb	%xmm0,%xmm4
+	pshufb	%xmm1,%xmm5
 	pxor	%xmm5,%xmm2
 	movdqa	%xmm4,%xmm5
 	psllq	$60,%xmm5
@@ -231,15 +231,15 @@ L007loop_row_5:
 	pxor	%xmm3,%xmm3
 	movl	$6,%eax
 L008loop_row_6:
-	movdqa	(%esi),%xmm4
+	movdqu	(%esi),%xmm4
 	leal	16(%esi),%esi
 	movdqa	%xmm2,%xmm6
-.byte	102,15,58,15,243,1
+	palignr	$1,%xmm3,%xmm6
 	movdqa	%xmm6,%xmm3
 	psrldq	$1,%xmm2
 	movdqa	%xmm4,%xmm5
-.byte	102,15,56,0,224
-.byte	102,15,56,0,233
+	pshufb	%xmm0,%xmm4
+	pshufb	%xmm1,%xmm5
 	pxor	%xmm5,%xmm2
 	movdqa	%xmm4,%xmm5
 	psllq	$60,%xmm5
@@ -265,7 +265,7 @@ L008loop_row_6:
 	leal	16(%edx),%edx
 	subl	$16,%ecx
 	jnz	L005loop_ghash
-.byte	102,15,56,0,199
+	pshufb	%xmm7,%xmm0
 	movdqu	%xmm0,(%edi)
 	pxor	%xmm0,%xmm0
 	pxor	%xmm1,%xmm1

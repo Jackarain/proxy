@@ -1,17 +1,31 @@
 // Copyright 2016 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "ocsp.h"
 
 #include <gtest/gtest.h>
+
 #include <openssl/base64.h>
 #include <openssl/pool.h>
+#include <openssl/span.h>
+
 #include "encode_values.h"
+#include "parsed_certificate.h"
 #include "string_util.h"
 #include "test_helpers.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 namespace {
 
@@ -24,11 +38,15 @@ std::string GetFilePath(const std::string &file_name) {
 std::shared_ptr<const ParsedCertificate> ParseCertificate(
     std::string_view data) {
   CertErrors errors;
+  auto bytes = StringAsBytes(data);
+  // TODO(crbug.com/533048005): Remove this option when
+  // good_response_invalid_serial is removed.
+  ParseCertificateOptions options;
+  options.allow_invalid_serial_numbers = true;
   return ParsedCertificate::Create(
       bssl::UniquePtr<CRYPTO_BUFFER>(
-          CRYPTO_BUFFER_new(reinterpret_cast<const uint8_t *>(data.data()),
-                            data.size(), nullptr)),
-      {}, &errors);
+          CRYPTO_BUFFER_new(bytes.data(), bytes.size(), nullptr)),
+      options, &errors);
 }
 
 struct TestParams {
@@ -42,83 +60,75 @@ class CheckOCSPTest : public ::testing::TestWithParam<TestParams> {};
 const TestParams kTestParams[] = {
     {"good_response.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
     {"good_response_sha256.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
+    {"good_response_invalid_serial.pem", OCSPRevocationStatus::GOOD,
+     OCSPVerifyResult::PROVIDED},
     {"no_response.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::NO_MATCHING_RESPONSE},
-
     {"malformed_request.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::ERROR_RESPONSE},
-
     {"bad_status.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::PARSE_RESPONSE_ERROR},
-
     {"bad_ocsp_type.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::PARSE_RESPONSE_ERROR},
-
     {"bad_signature.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::PROVIDED},
-
     {"ocsp_sign_direct.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
     {"ocsp_sign_indirect.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
     {"ocsp_sign_indirect_missing.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::PROVIDED},
-
     {"ocsp_sign_bad_indirect.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::PROVIDED},
-
     {"ocsp_extra_certs.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
     {"has_version.pem", OCSPRevocationStatus::GOOD, OCSPVerifyResult::PROVIDED},
-
     {"responder_name.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
     {"responder_id.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
     {"has_extension.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
     {"good_response_next_update.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
     {"revoke_response.pem", OCSPRevocationStatus::REVOKED,
      OCSPVerifyResult::PROVIDED},
-
     {"revoke_response_reason.pem", OCSPRevocationStatus::REVOKED,
      OCSPVerifyResult::PROVIDED},
-
     {"unknown_response.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::PROVIDED},
-
     {"multiple_response.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::PROVIDED},
-
     {"other_response.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::NO_MATCHING_RESPONSE},
-
     {"has_single_extension.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
     {"has_critical_single_extension.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::UNHANDLED_CRITICAL_EXTENSION},
-
     {"has_critical_response_extension.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::UNHANDLED_CRITICAL_EXTENSION},
-
     {"has_critical_ct_extension.pem", OCSPRevocationStatus::GOOD,
      OCSPVerifyResult::PROVIDED},
-
     {"missing_response.pem", OCSPRevocationStatus::UNKNOWN,
      OCSPVerifyResult::NO_MATCHING_RESPONSE},
+    {"stale_response.pem", OCSPRevocationStatus::UNKNOWN,
+     OCSPVerifyResult::INVALID_DATE},
+    {"future_response.pem", OCSPRevocationStatus::UNKNOWN,
+     OCSPVerifyResult::INVALID_DATE},
+    {"old_response.pem", OCSPRevocationStatus::UNKNOWN,
+     OCSPVerifyResult::INVALID_DATE},
+    {"produced_early_response.pem", OCSPRevocationStatus::UNKNOWN,
+     OCSPVerifyResult::BAD_PRODUCED_AT},
+    {"produced_late_response.pem", OCSPRevocationStatus::UNKNOWN,
+     OCSPVerifyResult::BAD_PRODUCED_AT},
+    {"invalid_response.pem", OCSPRevocationStatus::UNKNOWN,
+     OCSPVerifyResult::PARSE_RESPONSE_ERROR},
+    {"invalid_response_data.pem", OCSPRevocationStatus::UNKNOWN,
+     OCSPVerifyResult::PARSE_RESPONSE_DATA_ERROR},
+    {"multiple_response_good_revoked.pem", OCSPRevocationStatus::REVOKED,
+     OCSPVerifyResult::PROVIDED},
 };
 
 // Parameterised test name generator for tests depending on RenderTextBackend.
@@ -172,7 +182,8 @@ TEST_P(CheckOCSPTest, FromFile) {
   std::vector<uint8_t> encoded_request;
   ASSERT_TRUE(CreateOCSPRequest(cert.get(), issuer.get(), &encoded_request));
 
-  EXPECT_EQ(der::Input(encoded_request), der::Input(request_data));
+  EXPECT_EQ(der::Input(encoded_request),
+            der::Input(StringAsBytes(request_data)));
 }
 
 std::string_view kGetURLTestParams[] = {
@@ -214,7 +225,7 @@ TEST_P(CreateOCSPGetURLTest, Basic) {
       CreateOCSPGetURL(cert.get(), issuer.get(), GetParam());
   ASSERT_TRUE(url);
 
-  // Try to extract the encoded data and compare against |request_data|.
+  // Try to extract the encoded data and compare against `request_data`.
   //
   // A known answer output test would be better as this just reverses the logic
   // from the implementation file.
@@ -239,4 +250,4 @@ TEST_P(CreateOCSPGetURLTest, Basic) {
 
 }  // namespace
 
-}  // namespace bssl
+BSSL_NAMESPACE_END

@@ -1,7 +1,17 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright 2015 The Chromium Authors
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """This script is called without any arguments to re-format all of the *.pem
 files in the script's parent directory.
@@ -55,8 +65,9 @@ def GenerateCommentForBlock(block_name, block_data):
                        stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                        stderr=subprocess.PIPE)
   stdout_data, stderr_data = p.communicate(input=block_data)
-  generated_comment = '$ openssl asn1parse -i < [%s]\n%s' % (block_name,
-                                                             stdout_data)
+  stdout_lines = stdout_data.decode('utf-8').splitlines()
+  out = "\n".join([line.rstrip() for line in stdout_lines])
+  generated_comment = '$ openssl asn1parse -i < [%s]\n%s' % (block_name, out)
   return generated_comment.strip('\n')
 
 
@@ -99,7 +110,7 @@ def WrapTextToLineWidth(text, column_width):
 
 
 def EncodeDataForPem(data):
-  result = base64.b64encode(data)
+  result = base64.b64encode(data).decode('utf-8')
   return WrapTextToLineWidth(result, 75)
 
 
@@ -152,12 +163,12 @@ def WriteStringToFile(data, path):
 
 def main():
   for path in GetPemFilePaths():
-    print "Processing %s ..." % (path)
+    print("Processing %s ..." % (path))
     original_data = ReadFileToString(path)
     transformed_data = Transform(original_data)
     if original_data != transformed_data:
       WriteStringToFile(transformed_data, path)
-      print "Rewrote %s" % (path)
+      print("Rewrote %s" % (path))
 
 
 if __name__ == "__main__":

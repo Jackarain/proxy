@@ -1,22 +1,25 @@
-# Copyright (c) 2024, Google Inc.
+# Copyright 2024 The BoringSSL Authors
 #
-# Permission to use, copy, modify, and/or distribute this software for any
-# purpose with or without fee is hereby granted, provided that the above
-# copyright notice and this permission notice appear in all copies.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
-# SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
-# OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-# CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+load("@rules_license//rules:license.bzl", "license")
 load(
     ":gen/sources.bzl",
     "bcm_internal_headers",
     "bcm_sources",
     "bcm_sources_asm",
+    "bench_internal_headers",
+    "bench_sources",
     "bssl_internal_headers",
     "bssl_sources",
     "crypto_headers",
@@ -25,6 +28,7 @@ load(
     "crypto_sources_asm",
     "crypto_test_data",
     "crypto_test_sources",
+    "crypto_test_internal_headers",
     "decrepit_internal_headers",
     "decrepit_sources",
     "decrepit_test_sources",
@@ -44,7 +48,22 @@ load(
 )
 load(":util/util.bzl", "bssl_cc_binary", "bssl_cc_library", "bssl_cc_test")
 
-licenses(["notice"])
+package(
+    default_applicable_licenses = [":license"],
+    # TODO(crbug.com/399387924): Enable parse_headers feature. Not all of our
+    # headers are self-contained. We may need to rename or fix some of them per
+    # https://google.github.io/styleguide/cppguide.html#Self_contained_Headers
+    features = ["-parse_headers"],
+)
+
+license(
+    name = "license",
+    package_name = "BoringSSL",
+    license_kinds = [
+        "@rules_license//licenses/spdx:Apache-2.0",
+    ],
+    license_text = "LICENSE",
+)
 
 exports_files(["LICENSE"])
 
@@ -71,9 +90,12 @@ bssl_cc_library(
     srcs = ssl_sources,
     hdrs = ssl_headers,
     copts = ["-DBORINGSSL_IMPLEMENTATION"],
+    # ssl_sources also depend on :crypto's internal headers.
+    implementation_deps = [":crypto_internal"],
     internal_hdrs = ssl_internal_headers,
     visibility = ["//visibility:public"],
-    deps = [":crypto_internal"],
+    # ssl_headers depend on :crypto's exported headers.
+    deps = [":crypto"],
 )
 
 bssl_cc_library(
@@ -93,7 +115,7 @@ bssl_cc_library(
 bssl_cc_test(
     name = "crypto_test",
     size = "large",
-    srcs = crypto_test_sources,
+    srcs = crypto_test_sources + crypto_test_internal_headers,
     data = crypto_test_data,
     # crypto_test references assembly symbols directly and thus must be linked
     # statically.
@@ -134,6 +156,16 @@ bssl_cc_binary(
     deps = [
         ":crypto_internal",
         ":ssl_internal",
+    ],
+)
+
+bssl_cc_binary(
+    name = "bssl_bench",
+    srcs = bench_sources + bench_internal_headers,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":crypto_internal",
+        "@google_benchmark//:benchmark",
     ],
 )
 

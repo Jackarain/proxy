@@ -1,6 +1,16 @@
 // Copyright 2016 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef BSSL_PKI_PARSED_CERTIFICATE_H_
 #define BSSL_PKI_PARSED_CERTIFICATE_H_
@@ -11,13 +21,14 @@
 #include <vector>
 
 #include <openssl/base.h>
+#include <openssl/span.h>
 
 #include "certificate_policies.h"
 #include "input.h"
 #include "parse_certificate.h"
 #include "signature_algorithm.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 struct GeneralNames;
 class NameConstraints;
@@ -37,7 +48,7 @@ using ParsedCertificateList =
 class OPENSSL_EXPORT ParsedCertificate {
  private:
   // Used to make constructors private while still being compatible with
-  // |std::make_shared|.
+  // `std::make_shared`.
   class PrivateConstructor {
    private:
     friend ParsedCertificate;
@@ -52,17 +63,17 @@ class OPENSSL_EXPORT ParsedCertificate {
   // Creates a ParsedCertificate given a DER-encoded Certificate. Returns
   // nullptr on failure. Failure will occur if the standard certificate fields
   // and supported extensions cannot be parsed.
-  // On either success or failure, if |errors| is non-null it may have error
+  // On either success or failure, if `errors` is non-null it may have error
   // information added to it.
   static std::shared_ptr<const ParsedCertificate> Create(
       bssl::UniquePtr<CRYPTO_BUFFER> cert_data,
       const ParseCertificateOptions &options, CertErrors *errors);
 
-  // Creates a ParsedCertificate by copying the provided |data|, and appends it
-  // to |chain|. Returns true if the certificate was successfully parsed and
-  // added. If false is return, |chain| is unmodified.
+  // Creates a ParsedCertificate by copying the provided `data`, and appends it
+  // to `chain`. Returns true if the certificate was successfully parsed and
+  // added. If false is return, `chain` is unmodified.
   //
-  // On either success or failure, if |errors| is non-null it may have error
+  // On either success or failure, if `errors` is non-null it may have error
   // information added to it.
   static bool CreateAndAddToVector(
       bssl::UniquePtr<CRYPTO_BUFFER> cert_data,
@@ -107,7 +118,7 @@ class OPENSSL_EXPORT ParsedCertificate {
   // Sequence tag). This is guaranteed to be valid DER, though the contents of
   // unhandled string types are treated as raw bytes.
   der::Input normalized_subject() const {
-    return der::Input(normalized_subject_);
+    return StringAsBytes(normalized_subject_);
   }
   // Returns the DER-encoded raw issuer value (including the outer sequence
   // tag). This is guaranteed to be valid DER, though the contents of unhandled
@@ -117,7 +128,7 @@ class OPENSSL_EXPORT ParsedCertificate {
   // Sequence tag). This is guaranteed to be valid DER, though the contents of
   // unhandled string types are treated as raw bytes.
   der::Input normalized_issuer() const {
-    return der::Input(normalized_issuer_);
+    return StringAsBytes(normalized_issuer_);
   }
 
   // Returns true if the certificate has a BasicConstraints extension.
@@ -243,7 +254,7 @@ class OPENSSL_EXPORT ParsedCertificate {
   // Returns a map of all the extensions in the certificate.
   const ExtensionsMap &extensions() const { return extensions_; }
 
-  // Gets the value for extension matching |extension_oid|. Returns false if the
+  // Gets the value for extension matching `extension_oid`. Returns false if the
   // extension is not present.
   bool GetExtension(der::Input extension_oid,
                     ParsedExtension *parsed_extension) const;
@@ -323,6 +334,6 @@ class OPENSSL_EXPORT ParsedCertificate {
   ExtensionsMap extensions_;
 };
 
-}  // namespace bssl
+BSSL_NAMESPACE_END
 
 #endif  // BSSL_PKI_PARSED_CERTIFICATE_H_

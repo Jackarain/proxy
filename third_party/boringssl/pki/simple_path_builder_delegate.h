@@ -1,6 +1,16 @@
 // Copyright 2017 The Chromium Authors
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef BSSL_PKI_SIMPLE_PATH_BUILDER_DELEGATE_H_
 #define BSSL_PKI_SIMPLE_PATH_BUILDER_DELEGATE_H_
@@ -13,17 +23,17 @@
 #include "path_builder.h"
 #include "signature_algorithm.h"
 
-namespace bssl {
+BSSL_NAMESPACE_BEGIN
 
 class CertErrors;
 
 // SimplePathBuilderDelegate is an implementation of CertPathBuilderDelegate
 // that uses some default policies:
 //
-//   * RSA public keys must be >= |min_rsa_modulus_length_bits|.
+//   * RSA public keys must be >= `min_rsa_modulus_length_bits`.
 //   * Signature algorithm can be RSA PKCS#1, RSASSA-PSS or ECDSA
 //   * Digest algorithm can be SHA256, SHA348 or SHA512.
-//       * If the |digest_policy| was set to kAllowSha1, then SHA1 is
+//       * If the `digest_policy` was set to kAllowSha1, then SHA1 is
 //         additionally accepted.
 //   * EC named curve can be P-256, P-384, P-521.
 class OPENSSL_EXPORT SimplePathBuilderDelegate
@@ -51,7 +61,7 @@ class OPENSSL_EXPORT SimplePathBuilderDelegate
   bool IsSignatureAlgorithmAcceptable(SignatureAlgorithm signature_algorithm,
                                       CertErrors *errors) override;
 
-  // Requires RSA keys be >= |min_rsa_modulus_length_bits_|.
+  // Requires RSA keys be >= `min_rsa_modulus_length_bits_`.
   bool IsPublicKeyAcceptable(EVP_PKEY *public_key, CertErrors *errors) override;
 
   // No-op implementation.
@@ -73,11 +83,20 @@ class OPENSSL_EXPORT SimplePathBuilderDelegate
   // No-op implementation.
   bool AcceptPreCertificates() override;
 
+  // No-op implementation.
+  std::optional<MTCCosigner> GetMTCCosigner(
+      Span<const uint8_t> cosigner_id) override;
+
+  // No-op implementation (does not require any valid additional cosigners).
+  bool IsCosignatureVerificationResultAcceptable(
+      const MTCAnchor* mtc_anchor,
+      std::vector<std::vector<uint8_t>> valid_additional_cosigners) override;
+
  private:
   const size_t min_rsa_modulus_length_bits_;
   const DigestPolicy digest_policy_;
 };
 
-}  // namespace bssl
+BSSL_NAMESPACE_END
 
 #endif  // BSSL_PKI_SIMPLE_PATH_BUILDER_DELEGATE_H_

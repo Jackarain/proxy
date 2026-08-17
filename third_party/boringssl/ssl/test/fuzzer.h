@@ -1,16 +1,16 @@
-/* Copyright (c) 2017, Google Inc.
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
+// Copyright 2017 The BoringSSL Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef HEADER_SSL_TEST_FUZZER
 #define HEADER_SSL_TEST_FUZZER
@@ -20,20 +20,28 @@
 #include <string.h>
 
 #include <algorithm>
+#include <iterator>
 #include <vector>
 
 #include <openssl/bio.h>
 #include <openssl/bytestring.h>
+#include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/hpke.h>
 #include <openssl/rand.h>
-#include <openssl/rsa.h>
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
 
 #include "../../crypto/internal.h"
 #include "./fuzzer_tags.h"
+
+#if defined(OPENSSL_WINDOWS)
+// Windows defines struct timeval in winsock2.h.
+#include <winsock2.h>
+#else
+#include <sys/time.h>
+#endif
 
 namespace {
 
@@ -275,10 +283,20 @@ class TLSFuzzer {
     kServer,
   };
 
-  TLSFuzzer(Protocol protocol, Role role)
+  enum FuzzerMode {
+    kFuzzerModeOn,
+    kFuzzerModeOff,
+  };
+
+  TLSFuzzer(Protocol protocol, Role role, FuzzerMode fuzzer_mode)
       : debug_(getenv("BORINGSSL_FUZZER_DEBUG") != nullptr),
         protocol_(protocol),
         role_(role) {
+#if defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
+    if (fuzzer_mode == kFuzzerModeOn) {
+      CRYPTO_set_fuzzer_mode(1);
+    }
+#endif
     if (!Init()) {
       abort();
     }
@@ -298,7 +316,9 @@ class TLSFuzzer {
   }
 
   int TestOneInput(const uint8_t *buf, size_t len) {
+#if defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
     RAND_reset_for_fuzzing();
+#endif
 
     CBS cbs;
     CBS_init(&cbs, buf, len);
@@ -315,60 +335,19 @@ class TLSFuzzer {
       SSL_set_tlsext_host_name(ssl.get(), "hostname");
     }
 
-    // ssl_handoff may or may not be used.
-    bssl::UniquePtr<SSL> ssl_handoff(SSL_new(ctx_.get()));
-    bssl::UniquePtr<SSL> ssl_handback(SSL_new(ctx_.get()));
-    SSL_set_accept_state(ssl_handoff.get());
-
     SSL_set0_rbio(ssl.get(), MakeBIO(CBS_data(&cbs), CBS_len(&cbs)).release());
     SSL_set0_wbio(ssl.get(), BIO_new(BIO_s_mem()));
 
-    SSL *ssl_handshake = ssl.get();
-    bool handshake_successful = false;
-    bool handback_successful = false;
-    for (;;) {
-      int ret = SSL_do_handshake(ssl_handshake);
-      if (ret < 0 && SSL_get_error(ssl_handshake, ret) == SSL_ERROR_HANDOFF) {
-        MoveBIOs(ssl_handoff.get(), ssl.get());
-        // Ordinarily we would call SSL_serialize_handoff(ssl.get().  But for
-        // fuzzing, use the serialized handoff that's getting fuzzed.
-        if (!bssl::SSL_apply_handoff(ssl_handoff.get(), handoff_)) {
-          if (debug_) {
-            fprintf(stderr, "Handoff failed.\n");
-          }
-          break;
-        }
-        ssl_handshake = ssl_handoff.get();
-      } else if (ret < 0 &&
-                 SSL_get_error(ssl_handshake, ret) == SSL_ERROR_HANDBACK) {
-        MoveBIOs(ssl_handback.get(), ssl_handoff.get());
-        if (!bssl::SSL_apply_handback(ssl_handback.get(), handback_)) {
-          if (debug_) {
-            fprintf(stderr, "Handback failed.\n");
-          }
-          break;
-        }
-        handback_successful = true;
-        ssl_handshake = ssl_handback.get();
-      } else {
-        handshake_successful = ret == 1;
-        break;
-      }
-    }
-
-    if (debug_) {
-      if (!handshake_successful) {
-        fprintf(stderr, "Handshake failed.\n");
-      } else if (handback_successful) {
-        fprintf(stderr, "Handback successful.\n");
-      }
+    bool handshake_successful = SSL_do_handshake(ssl.get()) == 1;
+    if (debug_ && !handshake_successful) {
+      fprintf(stderr, "Handshake failed.\n");
     }
 
     if (handshake_successful) {
       // Keep reading application data until error or EOF.
       uint8_t tmp[1024];
       for (;;) {
-        if (SSL_read(ssl_handshake, tmp, sizeof(tmp)) <= 0) {
+        if (SSL_read(ssl.get(), tmp, sizeof(tmp)) <= 0) {
           break;
         }
       }
@@ -382,20 +361,18 @@ class TLSFuzzer {
   }
 
  private:
-  // Init initializes |ctx_| with settings common to all inputs.
+  // Init initializes `ctx_` with settings common to all inputs.
   bool Init() {
     ctx_.reset(SSL_CTX_new(protocol_ == kDTLS ? DTLS_method() : TLS_method()));
-    bssl::UniquePtr<EVP_PKEY> pkey(EVP_PKEY_new());
-    bssl::UniquePtr<RSA> privkey(RSA_private_key_from_bytes(
-        kRSAPrivateKeyDER, sizeof(kRSAPrivateKeyDER)));
-    if (!ctx_ || !privkey || !pkey ||
-        !EVP_PKEY_set1_RSA(pkey.get(), privkey.get()) ||
-        !SSL_CTX_use_PrivateKey(ctx_.get(), pkey.get())) {
+    bssl::UniquePtr<EVP_PKEY> pkey(EVP_PKEY_from_rsa_private_key(
+        EVP_pkey_rsa(), kRSAPrivateKeyDER, sizeof(kRSAPrivateKeyDER)));
+    if (!ctx_ || !pkey || !SSL_CTX_use_PrivateKey(ctx_.get(), pkey.get())) {
       return false;
     }
 
     const uint8_t *bufp = kCertificateDER;
-    bssl::UniquePtr<X509> cert(d2i_X509(NULL, &bufp, sizeof(kCertificateDER)));
+    bssl::UniquePtr<X509> cert(
+        d2i_X509(nullptr, &bufp, sizeof(kCertificateDER)));
     if (!cert ||
         !SSL_CTX_use_certificate(ctx_.get(), cert.get()) ||
         !SSL_CTX_set_ocsp_response(ctx_.get(), kOCSPResponse,
@@ -404,6 +381,12 @@ class TLSFuzzer {
                                                 sizeof(kSCT))) {
       return false;
     }
+
+    // Use a constant clock.
+    SSL_CTX_set_current_time_cb(ctx_.get(),
+                                [](const SSL *ssl, timeval *out_clock) {
+                                  *out_clock = {1234, 1234};
+                                });
 
     // When accepting peer certificates, allow any certificate.
     SSL_CTX_set_cert_verify_callback(
@@ -414,15 +397,19 @@ class TLSFuzzer {
     SSL_CTX_enable_ocsp_stapling(ctx_.get());
 
     // Enable versions and ciphers that are off by default.
-    if (!SSL_CTX_set_strict_cipher_list(ctx_.get(), "ALL:3DES")) {
+    uint16_t min_version = protocol_ == kDTLS ? DTLS1_VERSION : TLS1_VERSION;
+    uint16_t max_version =
+        protocol_ == kDTLS ? DTLS1_3_VERSION : TLS1_3_VERSION;
+    if (!SSL_CTX_set_min_proto_version(ctx_.get(), min_version) ||
+        !SSL_CTX_set_max_proto_version(ctx_.get(), max_version) ||
+        !SSL_CTX_set_strict_cipher_list(ctx_.get(), "ALL:3DES")) {
       return false;
     }
 
     static const uint16_t kGroups[] = {
-        SSL_GROUP_X25519_KYBER768_DRAFT00, SSL_GROUP_X25519,
-        SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1, SSL_GROUP_SECP521R1};
-    if (!SSL_CTX_set1_group_ids(ctx_.get(), kGroups,
-                                OPENSSL_ARRAY_SIZE(kGroups))) {
+        SSL_GROUP_X25519_MLKEM768, SSL_GROUP_MLKEM1024, SSL_GROUP_X25519,
+        SSL_GROUP_SECP256R1,       SSL_GROUP_SECP384R1, SSL_GROUP_SECP521R1};
+    if (!SSL_CTX_set1_group_ids(ctx_.get(), kGroups, std::size(kGroups))) {
       return false;
     }
 
@@ -454,7 +441,7 @@ class TLSFuzzer {
       if (!keys ||
           !EVP_HPKE_KEY_init(key.get(), EVP_hpke_x25519_hkdf_sha256(), kECHKey,
                              sizeof(kECHKey)) ||
-          // Match |echConfig| in |addEncryptedClientHelloTests| from runner.go.
+          // Match `echConfig` in `addEncryptedClientHelloTests` from runner.go.
           !SSL_marshal_ech_config(&ech_config, &ech_config_len,
                                   /*config_id=*/42, key.get(), "public.example",
                                   /*max_name_len=*/64)) {
@@ -471,15 +458,13 @@ class TLSFuzzer {
     return true;
   }
 
-  // SetupTest parses parameters from |cbs| and returns a newly-configured |SSL|
+  // SetupTest parses parameters from `cbs` and returns a newly-configured `SSL`
   // object or nullptr on error. On success, the caller should feed the
-  // remaining input in |cbs| to the SSL stack.
+  // remaining input in `cbs` to the SSL stack.
   bssl::UniquePtr<SSL> SetupTest(CBS *cbs) {
-    // |ctx| is shared between runs, so we must clear any modifications to it
+    // `ctx` is shared between runs, so we must clear any modifications to it
     // made later on in this function.
     SSL_CTX_flush_sessions(ctx_.get(), 0);
-    handoff_ = {};
-    handback_ = {};
 
     bssl::UniquePtr<SSL> ssl(SSL_new(ctx_.get()));
     if (role_ == kServer) {
@@ -523,28 +508,6 @@ class TLSFuzzer {
           SSL_set_verify(ssl.get(), SSL_VERIFY_PEER, nullptr);
           break;
 
-        case kHandoffTag: {
-          CBS handoff;
-          if (!CBS_get_u24_length_prefixed(cbs, &handoff)) {
-            return nullptr;
-          }
-          handoff_.assign(CBS_data(&handoff),
-                          CBS_data(&handoff) + CBS_len(&handoff));
-          bssl::SSL_set_handoff_mode(ssl.get(), 1);
-          break;
-        }
-
-        case kHandbackTag: {
-          CBS handback;
-          if (!CBS_get_u24_length_prefixed(cbs, &handback)) {
-            return nullptr;
-          }
-          handback_.assign(CBS_data(&handback),
-                           CBS_data(&handback) + CBS_len(&handback));
-          bssl::SSL_set_handoff_mode(ssl.get(), 1);
-          break;
-        }
-
         case kHintsTag: {
           CBS hints;
           if (!CBS_get_u24_length_prefixed(cbs, &hints)) {
@@ -570,15 +533,14 @@ class TLSFuzzer {
     b->protocol = protocol_;
     CBS_init(&b->cbs, in, len);
 
-    bssl::UniquePtr<BIO> bio(BIO_new(&kBIOMethod));
-    bio->init = 1;
-    bio->ptr = b;
+    bssl::UniquePtr<BIO> bio(BIO_new(BIOMethod()));
+    BIO_set_init(bio.get(), 1);
+    BIO_set_data(bio.get(), b);
     return bio;
   }
 
   static int BIORead(BIO *bio, char *out, int len) {
-    assert(bio->method == &kBIOMethod);
-    BIOData *b = reinterpret_cast<BIOData *>(bio->ptr);
+    BIOData *b = reinterpret_cast<BIOData *>(BIO_get_data(bio));
     if (b->protocol == kTLS) {
       len = std::min(static_cast<size_t>(len), CBS_len(&b->cbs));
       memcpy(out, CBS_data(&b->cbs), len);
@@ -597,32 +559,26 @@ class TLSFuzzer {
   }
 
   static int BIODestroy(BIO *bio) {
-    assert(bio->method == &kBIOMethod);
-    BIOData *b = reinterpret_cast<BIOData *>(bio->ptr);
+    BIOData *b = reinterpret_cast<BIOData *>(BIO_get_data(bio));
     delete b;
     return 1;
   }
 
-  static const BIO_METHOD kBIOMethod;
+  static const BIO_METHOD *BIOMethod() {
+    static const BIO_METHOD *method = [] {
+      BIO_METHOD *ret = BIO_meth_new(0, nullptr);
+      BSSL_CHECK(ret);
+      BSSL_CHECK(BIO_meth_set_read(ret, BIORead));
+      BSSL_CHECK(BIO_meth_set_destroy(ret, BIODestroy));
+      return ret;
+    }();
+    return method;
+  }
 
   bool debug_;
   Protocol protocol_;
   Role role_;
   bssl::UniquePtr<SSL_CTX> ctx_;
-  std::vector<uint8_t> handoff_, handback_;
-};
-
-const BIO_METHOD TLSFuzzer::kBIOMethod = {
-    0,        // type
-    nullptr,  // name
-    nullptr,  // bwrite
-    TLSFuzzer::BIORead,
-    nullptr,  // bputs
-    nullptr,  // bgets
-    nullptr,  // ctrl
-    nullptr,  // create
-    TLSFuzzer::BIODestroy,
-    nullptr,  // callback_ctrl
 };
 
 }  // namespace
