@@ -1024,7 +1024,9 @@ static inline void *OPENSSL_memchr(const void *s, int c, size_t n) {
     return NULL;
   }
 
-  return memchr(s, c, n);
+  // glibc 2.43+ declares memchr with a const-correct overload. Cast away the
+  // const here, mirroring the C++ branch, to avoid -Wdiscarded-qualifiers.
+  return (void *)memchr(s, c, n);
 }
 
 #endif  // __cplusplus
