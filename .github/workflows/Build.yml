@@ -72,6 +72,30 @@ jobs:
             build/bin/proxy_server
             build/bin/launcher
 
+  BoringSSL:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Update OS and Compilers
+        run: |
+          sudo apt update
+          sudo apt install -y cmake ninja-build
+
+      - name: Build proxy
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=ON -G Ninja
+          # boringssl 编译较重, 限制并行度以避免 runner 内存不足.
+          cmake --build build --config Release -- -j2
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: proxy_server-linux_glibc_x64_boringssl
+          path: |
+            build/bin/proxy_server
+            build/bin/launcher
+
   Alpine:
     runs-on: ubuntu-24.04
     container:
