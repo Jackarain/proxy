@@ -1,0 +1,181 @@
+﻿#include "xproxy.hpp"
+
+#include "proxy/proxy.hpp"
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/executor_work_guard.hpp>
+#include <boost/json.hpp>
+#include <boost/url.hpp>
+
+#include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
+
+namespace xproxy {
+
+namespace {
+
+namespace net = boost::asio;
+namespace json = boost::json;
+namespace urls = boost::urls;
+
+// 当前运行的 io_context 池与 proxy 服务实例.
+class io_context_pool
+{
+public:
+	io_context_pool()
+		: m_work(net::make_work_guard(m_ioc))
+	{
+		m_thread = std::thread([this] { m_ioc.run(); });
+	}
+
+	~io_context_pool()
+	{
+		stop();
+	}
+
+	void stop()
+	{
+		m_work.reset();
+		m_ioc.stop();
+		if (m_thread.joinable())
+			m_thread.join();
+	}
+
+	net::any_io_executor executor()
+	{
+		return m_ioc.get_executor();
+	}
+
+private:
+	net::io_context m_ioc;
+	net::executor_work_guard<net::io_context::executor_type> m_work;
+	std::thread m_thread;
+};
+
+std::unique_ptr<io_context_pool> g_io_pool;
+std::shared_ptr<proxy::proxy_server> g_server;
+// 保护 g_server/g_io_pool: start/stop 可能来自不同线程
+// (Android 上 stop 常由 UI 线程调用, 启停在工作线程).
+std::mutex g_mutex;
+
+// 停止并释放服务实例; 调用方须持有 g_mutex.
+void stop_locked()
+{
+	if (g_server)
+		g_server->close();
+	if (g_io_pool)
+		g_io_pool->stop();
+
+	g_server.reset();
+	g_io_pool.reset();
+}
+
+// 从 json 对象取字符串数组, 不存在或类型不符时返回空.
+std::vector<std::string> json_string_array(
+	const json::object& obj, const char* key)
+{
+	std::vector<std::string> out;
+	auto it = obj.if_contains(key);
+	if (!it || !it->is_array())
+		return out;
+	for (const auto& v : it->as_array())
+	{
+		if (v.is_string())
+			out.emplace_back(v.as_string().c_str());
+	}
+	return out;
+}
+
+// JSON 配置转 proxy_server_option, 失败返回 false.
+bool config_to_option(const std::string& config, proxy::proxy_server_option& opt)
+{
+	auto value = json::parse(config);
+	if (!value.is_object())
+		return false;
+	const auto& obj = value.as_object();
+
+	// tun 模式必须指定 proxy_pass 上游代理.
+	auto proxy_pass = obj.if_contains("proxy_pass");
+	if (!proxy_pass || !proxy_pass->is_string() ||
+		proxy_pass->as_string().empty())
+		return false;
+	auto url = urls::parse_uri(proxy_pass->as_string().c_str());
+	if (!url.has_value())
+		return false;
+	opt.proxy_pass_ = url.value();
+
+	// tun 相关选项.
+	if (auto it = obj.if_contains("tun"); it && it->is_bool())
+		opt.tun_ = it->as_bool();
+	else
+		opt.tun_ = true;
+	if (auto it = obj.if_contains("tun_mtu"); it && it->is_int64())
+		opt.tun_mtu_ = static_cast<int>(it->as_int64());
+	if (auto it = obj.if_contains("tun_wait_fd"); it && it->is_bool())
+		opt.tun_wait_fd_ = it->as_bool();
+
+	// 分流表.
+	opt.proxy_domains_ = json_string_array(obj, "proxy_domains");
+	opt.proxy_cidr_ = json_string_array(obj, "proxy_cidr");
+
+	// launcher 控制通道 (Android app 端 WebSocket 服务器地址).
+	if (auto it = obj.if_contains("launcher_url"); it && it->is_string())
+		opt.launcher_url_ = it->as_string().c_str();
+
+	if (auto it = obj.if_contains("disable_check_cert"); it && it->is_bool())
+		opt.disable_check_cert_ = it->as_bool();
+
+	return true;
+}
+
+} // namespace
+
+std::string min_sdk_version()
+{
+	return "minSdkVersion: " + std::to_string(__ANDROID_MIN_SDK_VERSION__);
+}
+
+int start(const std::string& config)
+{
+	std::lock_guard<std::mutex> lock(g_mutex);
+
+	// 已有实例先停止, 保证同一时刻只有一个 proxy 服务.
+	if (g_server)
+		stop_locked();
+
+	try {
+		proxy::proxy_server_option opt;
+		if (!config_to_option(config, opt))
+		{
+			stop_locked();
+			return -1;
+		}
+
+		g_io_pool = std::make_unique<io_context_pool>();
+		g_server = proxy::proxy_server::make(
+			g_io_pool->executor(), std::move(opt));
+		if (!g_server)
+		{
+			stop_locked();
+			return -1;
+		}
+
+		g_server->start();
+	} catch (...) {
+		stop_locked();
+		return -1;
+	}
+
+	return 0;
+}
+
+void stop()
+{
+	std::lock_guard<std::mutex> lock(g_mutex);
+	stop_locked();
+}
+
+} // namespace xproxy

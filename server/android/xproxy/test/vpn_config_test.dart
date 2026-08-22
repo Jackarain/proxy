@@ -1,0 +1,124 @@
+import 'dart:convert';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:xproxy/models/vpn_config.dart';
+import 'package:xproxy/services/storage_service.dart';
+
+void main() {
+  group('VpnConfig', () {
+    test('json 往返保持一致', () {
+      final c = VpnConfig(
+        id: 'abc',
+        name: '测试',
+        proxyPass: 'https://user:pass@host:443',
+        tunMtu: 1400,
+        proxyDomains: ['google.com', 'youtube.com'],
+        proxyCidr: ['1.1.1.0/24'],
+        disableCheckCert: true,
+        tunAddress: '10.0.0.2',
+        tunPrefix: 24,
+        routes: ['0.0.0.0/0'],
+        dns: ['8.8.8.8'],
+        testUrl: 'https://google.com',
+        bypassCn: true,
+      );
+      final restored = VpnConfig.fromJson(c.toJson());
+      expect(restored.id, c.id);
+      expect(restored.name, c.name);
+      expect(restored.proxyPass, c.proxyPass);
+      expect(restored.tunMtu, 1400);
+      expect(restored.proxyDomains, ['google.com', 'youtube.com']);
+      expect(restored.proxyCidr, ['1.1.1.0/24']);
+      expect(restored.disableCheckCert, true);
+      expect(restored.routes, ['0.0.0.0/0']);
+      expect(restored.bypassCn, true);
+    });
+
+    test('toProxyJson 含 proxy 原生键与 launcher_url', () {
+      final c = VpnConfig(
+        id: 'abc',
+        name: '测试',
+        proxyPass: 'https://user:pass@host:443',
+        tunMtu: 1400,
+        proxyDomains: ['google.com'],
+        proxyCidr: ['1.1.1.0/24'],
+      );
+      final map =
+          jsonDecode(c.toProxyJson(launcherPort: 12345)) as Map<String, dynamic>;
+      expect(map['proxy_pass'], 'https://user:pass@host:443');
+      expect(map['tun'], true);
+      expect(map['tun_wait_fd'], true);
+      expect(map['tun_mtu'], 1400);
+      expect(map['proxy_domains'], ['google.com']);
+      expect(map['proxy_cidr'], ['1.1.1.0/24']);
+      expect(map['launcher_url'], 'ws://127.0.0.1:12345');
+    });
+
+    test('deriveTun 默认与配置取值', () {
+      final def = VpnConfig(id: '1', name: 'c');
+      expect(def.deriveTun(), ('10.0.0.2', 24));
+
+      final custom = VpnConfig(
+        id: '2',
+        name: 'c',
+        tunAddress: '172.16.0.2',
+        tunPrefix: 16,
+      );
+      expect(custom.deriveTun(), ('172.16.0.2', 16));
+    });
+
+    test('校验: proxy_pass 必填且 scheme 合法', () {
+      final empty = VpnConfig(id: '1', name: 'a');
+      expect(empty.validate(), isNotEmpty);
+
+      final bad = VpnConfig(
+        id: '2',
+        name: 'b',
+        proxyPass: 'not-a-url',
+      );
+      expect(bad.validate(), isNotEmpty);
+
+      final good = VpnConfig(
+        id: '3',
+        name: 'c',
+        proxyPass: 'https://user:pass@host:443',
+      );
+      expect(good.validate(), isEmpty);
+    });
+
+    test('字符串列表解析支持换行/逗号/分号', () {
+      final c = VpnConfig.fromJson({
+        'proxyDomains': 'google.com\nyoutube.com,example.com;test.com',
+      });
+      expect(c.proxyDomains, ['google.com', 'youtube.com', 'example.com', 'test.com']);
+    });
+  });
+
+  group('StorageService', () {
+    test('配置持久化往返', () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = StorageService();
+      final list = [
+        VpnConfig(id: '1', name: 'a', proxyPass: 'https://x:1'),
+        VpnConfig(id: '2', name: 'b', proxyPass: 'socks5://y:2'),
+      ];
+      await storage.saveConfigs(list);
+      final loaded = await storage.loadConfigs();
+      expect(loaded.length, 2);
+      expect(loaded[0].name, 'a');
+      expect(loaded[1].proxyPass, 'socks5://y:2');
+    });
+
+    test('运行状态保存/清理', () async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = StorageService();
+      expect(await storage.loadRunState(), isNull);
+      await storage.saveRunState('cfg1', 9999);
+      final state = await storage.loadRunState();
+      expect(state, ('cfg1', 9999));
+      await storage.clearRunState();
+      expect(await storage.loadRunState(), isNull);
+    });
+  });
+}
