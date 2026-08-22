@@ -219,7 +219,8 @@ namespace proxy {
 			const proxy_server_option& opt,
 			const tcp_flow_key& key,
 			const net::ip::udp::endpoint& client,
-			const net::ip::udp::endpoint& target);
+			const net::ip::udp::endpoint& target,
+			const std::string& dns_qname);
 
 		~tun_udp_flow();
 
@@ -266,6 +267,9 @@ namespace proxy {
 
 		// m_target 保存客户端请求的目标地址.
 		net::ip::udp::endpoint m_target;
+
+		// m_dns_qname 保存 DNS 查询域名（目标 53 端口时），用于按域名分流.
+		std::string m_dns_qname;
 
 		// m_backend 保存与上游代理或目标的 UDP 连接.
 		std::optional<net::ip::udp::socket> m_backend;
@@ -335,6 +339,12 @@ namespace proxy {
 		// 判断域名是否命中 proxy_domains_ 代理表（后缀匹配）.
 		bool domain_match(const std::string& domain) const noexcept;
 
+		// 判断目标地址是否命中代理表（proxy_cidr_ 或域名解析缓存）.
+		bool ip_match_proxy(const net::ip::address& addr) const noexcept;
+
+		// 记录 DNS 响应中的 A/AAAA 解析结果（仅命中 proxy_domains_ 时生效）.
+		void record_dns_answer(const char* data, size_t len) noexcept;
+
 		// 处理 TCP 包（由 run 协程调用，内部再派生子协程）.
 		void handle_tcp_packet(ip_packet& pkt) noexcept;
 
@@ -381,6 +391,20 @@ namespace proxy {
 		// m_udp_flows 保存当前所有 UDP 会话.
 		std::unordered_map<tcp_flow_key, std::shared_ptr<tun_udp_flow>,
 			tcp_flow_key_hash> m_udp_flows;
+
+		// dns_ip_entry 保存域名解析缓存条目（IP 与过期时间）.
+		struct dns_ip_entry
+		{
+			net::ip::address ip;
+			std::chrono::steady_clock::time_point expire;
+		};
+
+		// m_domain_ips 保存命中 proxy_domains_ 的域名解析结果（域名 -> IP 列表）.
+		// 声明为 mutable 以便 ip_match_proxy 等 const 方法惰性清理过期条目.
+		mutable std::unordered_map<std::string, std::vector<dns_ip_entry>> m_domain_ips;
+
+		// 保护 m_domain_ips 的并发访问.
+		mutable std::mutex m_domain_ips_mutex;
 
 		// m_abort 停止标志.
 		bool m_abort { false };

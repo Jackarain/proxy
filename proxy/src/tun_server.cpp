@@ -10,15 +10,18 @@
 
 #include "proxy/tun_server.hpp"
 
+#include "proxy/dns_server.hpp"
 #include "proxy/http_proxy_client.hpp"
 #include "proxy/logging.hpp"
 #include "proxy/proxy_util.hpp"
 #include "proxy/socks_client.hpp"
+#include "proxy/socks_io.hpp"
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/functional/hash.hpp>
 
+#include <algorithm>
 #include <cstring>
 #include <random>
 
@@ -589,8 +592,8 @@ namespace proxy {
 		const std::string target_host = m_key.dst.to_string();
 		const uint16_t target_port = m_key.dst_port;
 
-		// 分流判定：命中 proxy_cidr_ 走上游代理，否则直连.
-		const bool use_proxy = m_owner && m_owner->cidr_match(m_key.dst);
+		// 分流判定：命中 proxy_cidr_ 或代理域名解析缓存走上游代理，否则直连.
+		const bool use_proxy = m_owner && m_owner->ip_match_proxy(m_key.dst);
 
 		XLOG_DBG << "tun tcp connect " << target_host << ":" << target_port
 			<< (use_proxy ? " via proxy" : " direct")
@@ -925,13 +928,15 @@ namespace proxy {
 		const proxy_server_option& opt,
 		const tcp_flow_key& key,
 		const net::ip::udp::endpoint& client,
-		const net::ip::udp::endpoint& target)
+		const net::ip::udp::endpoint& target,
+		const std::string& dns_qname)
 		: m_executor(std::move(executor))
 		, m_owner(owner)
 		, m_option(opt)
 		, m_key(std::move(key))
 		, m_client(client)
 		, m_target(target)
+		, m_dns_qname(dns_qname)
 	{
 		m_expire.emplace(m_executor);
 	}
@@ -1060,12 +1065,18 @@ namespace proxy {
 		auto self = shared_from_this();
 		boost::system::error_code ec;
 
-		const bool use_proxy = m_owner && m_owner->cidr_match(m_target.address());
+		bool use_proxy = m_owner && m_owner->ip_match_proxy(m_target.address());
+
+		// DNS 查询按查询域名分流：命中 proxy_domains_ 走代理，否则直连.
+		if (!use_proxy && m_target.port() == 53 && !m_dns_qname.empty())
+			use_proxy = m_owner && m_owner->domain_match(m_dns_qname);
+
 		m_proxy = use_proxy && m_option.proxy_pass_;
 
 		XLOG_DBG << "tun udp flow " << m_client.address().to_string() << ":"
 			<< m_client.port() << " -> " << m_target.address().to_string() << ":"
-			<< m_target.port() << (m_proxy ? " via proxy" : " direct");
+			<< m_target.port() << (m_proxy ? " via proxy" : " direct")
+			<< (m_dns_qname.empty() ? "" : (", qname=" + m_dns_qname));
 
 		// 打开后端 UDP socket（与上游代理或目标通信）.
 		m_backend.emplace(m_executor);
@@ -1294,6 +1305,10 @@ namespace proxy {
 	{
 		if (!m_owner)
 			return;
+
+		// DNS 响应回包时记录 A/AAAA 解析结果，供数据面按域名分流.
+		if (m_target.port() == 53)
+			m_owner->record_dns_answer(data, len);
 
 		// 目标 -> 客户端方向.
 		auto packet = build_udp_segment(
@@ -1611,6 +1626,143 @@ namespace proxy {
 		return false;
 	}
 
+	// parse_dns_response 解析 DNS 响应报文中的问题域名与 A/AAAA 答案.
+	// 成功返回 true，qname/answers 为解析结果（answers 元素为 IP 与 TTL）.
+	static bool parse_dns_response(const char* data, size_t len,
+		std::string& qname,
+		std::vector<std::pair<net::ip::address, uint32_t>>& answers)
+	{
+		if (len < 12)
+			return false;
+
+		const char* msg_start = data;
+		const char* end = data + len;
+
+		const char* qd_p = data + 4;
+		const char* an_p = data + 6;
+		uint16_t qdcount = io_util::read<uint16_t>(qd_p);
+		uint16_t ancount = io_util::read<uint16_t>(an_p);
+
+		// 解析问题区，取第一个问题域名.
+		const char* p = data + 12;
+		for (uint16_t i = 0; i < qdcount; ++i)
+		{
+			auto [name, np] = dns_parse_name(p, end, msg_start);
+			if (!np || np + 4 > end)
+				return false;
+
+			if (i == 0)
+				qname = name;
+			p = np + 4;
+		}
+		if (qdcount == 0 || qname.empty())
+			return false;
+
+		// 去掉末尾的 '.'.
+		if (!qname.empty() && qname.back() == '.')
+			qname.pop_back();
+
+		// 遍历 Answer 区提取 A/AAAA 记录.
+		for (uint16_t i = 0; i < ancount; ++i)
+		{
+			if (p + 10 > end)
+				break;
+
+			auto [name, np] = dns_parse_name(p, end, msg_start);
+			if (!np || np + 10 > end)
+				break;
+
+			const char* type_p = np;
+			const char* ttl_p = np + 4;
+			const char* rdl_p = np + 8;
+			uint16_t type = io_util::read<uint16_t>(type_p);
+			uint32_t ttl = io_util::read<uint32_t>(ttl_p);
+			uint16_t rdlength = io_util::read<uint16_t>(rdl_p);
+			const char* rdata = np + 10;
+			if (rdata + rdlength > end)
+				break;
+
+			if (type == 1 && rdlength == 4)
+			{
+				net::ip::address_v4::bytes_type bytes;
+				std::memcpy(bytes.data(), rdata, 4);
+				answers.emplace_back(net::ip::address_v4(bytes), ttl);
+			}
+			else if (type == 28 && rdlength == 16)
+			{
+				net::ip::address_v6::bytes_type bytes;
+				std::memcpy(bytes.data(), rdata, 16);
+				answers.emplace_back(net::ip::address_v6(bytes), ttl);
+			}
+
+			p = rdata + rdlength;
+		}
+
+		return !answers.empty();
+	}
+
+	void tun_server::record_dns_answer(const char* data, size_t len) noexcept
+	{
+		std::string qname;
+		std::vector<std::pair<net::ip::address, uint32_t>> answers;
+		if (!parse_dns_response(data, len, qname, answers))
+			return;
+
+		// 仅记录命中代理域名列表的解析结果.
+		if (!domain_match(qname))
+			return;
+
+		auto now = std::chrono::steady_clock::now();
+		std::vector<dns_ip_entry> entries;
+		entries.reserve(answers.size());
+		for (const auto& [ip, ttl] : answers)
+		{
+			auto expire = now + std::chrono::seconds(ttl > 0 ? ttl : 60);
+			entries.push_back({ ip, expire });
+		}
+
+		{
+			std::lock_guard<std::mutex> lk(m_domain_ips_mutex);
+			m_domain_ips[qname] = std::move(entries);
+		}
+	}
+
+	bool tun_server::ip_match_proxy(const net::ip::address& addr) const noexcept
+	{
+		if (cidr_match(addr))
+			return true;
+
+		// 域名解析缓存：目标 IP 命中且对应域名在代理表时走代理.
+		std::lock_guard<std::mutex> lk(m_domain_ips_mutex);
+
+		auto now = std::chrono::steady_clock::now();
+		for (auto it = m_domain_ips.begin(); it != m_domain_ips.end();)
+		{
+			auto& entries = it->second;
+
+			// 清理过期条目.
+			entries.erase(std::remove_if(entries.begin(), entries.end(),
+				[now](const dns_ip_entry& e) { return e.expire <= now; }),
+				entries.end());
+
+			if (entries.empty())
+			{
+				it = m_domain_ips.erase(it);
+				continue;
+			}
+
+			for (const auto& e : entries)
+			{
+				if (e.ip == addr)
+					return true;
+			}
+
+			++it;
+		}
+
+		return false;
+	}
+
 	void tun_server::handle_udp_packet(ip_packet& pkt) noexcept
 	{
 		// 目前仅支持 IPv4 转发.
@@ -1638,8 +1790,19 @@ namespace proxy {
 			{
 				net::ip::udp::endpoint client(pkt.src, pkt.src_port);
 				net::ip::udp::endpoint target(pkt.dst, pkt.dst_port);
+
+				// DNS 查询报文解析查询域名，用于按 proxy_domains_ 分流.
+				std::string dns_qname;
+				if (pkt.dst_port == 53 && pkt.payload_len > 0)
+				{
+					std::string query(pkt.payload, pkt.payload_len);
+					uint16_t qtype = 0;
+					dns_parse_query(query, dns_qname, qtype);
+				}
+
 				flow = std::make_shared<tun_udp_flow>(
-					m_executor, shared_from_this(), m_option, key, client, target);
+					m_executor, shared_from_this(), m_option, key,
+					client, target, dns_qname);
 				m_udp_flows.emplace(key, flow);
 				created = true;
 			}
