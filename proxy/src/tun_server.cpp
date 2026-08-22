@@ -110,45 +110,12 @@ namespace proxy {
 
 	namespace {
 
-		// 读取大端序 16 位整数.
-		inline uint16_t read_be16(const char* p) noexcept
-		{
-			return static_cast<uint16_t>(
-				(static_cast<uint8_t>(p[0]) << 8) | static_cast<uint8_t>(p[1]));
-		}
-
-		// 写入大端序 16 位整数.
-		inline void write_be16(char* p, uint16_t v) noexcept
-		{
-			p[0] = static_cast<char>(v >> 8);
-			p[1] = static_cast<char>(v & 0xff);
-		}
-
-		// 读取大端序 32 位整数.
-		inline uint32_t read_be32(const char* p) noexcept
-		{
-			return (static_cast<uint32_t>(static_cast<uint8_t>(p[0])) << 24) |
-				(static_cast<uint32_t>(static_cast<uint8_t>(p[1])) << 16) |
-				(static_cast<uint32_t>(static_cast<uint8_t>(p[2])) << 8) |
-				static_cast<uint32_t>(static_cast<uint8_t>(p[3]));
-		}
-
-		// 写入大端序 32 位整数.
-		inline void write_be32(char* p, uint32_t v) noexcept
-		{
-			p[0] = static_cast<char>(v >> 24);
-			p[1] = static_cast<char>((v >> 16) & 0xff);
-			p[2] = static_cast<char>((v >> 8) & 0xff);
-			p[3] = static_cast<char>(v & 0xff);
-		}
-
 		// 计算校验和（RFC 1071）.
 		uint16_t checksum(const char* data, size_t len, uint32_t sum = 0) noexcept
 		{
 			while (len > 1)
 			{
-				sum += read_be16(data);
-				data += 2;
+				sum += io_util::read<uint16_t>(data);
 				len -= 2;
 			}
 			// 奇数长度时末尾字节补零到高位.
@@ -159,6 +126,27 @@ namespace proxy {
 				sum = (sum & 0xffff) + (sum >> 16);
 
 			return static_cast<uint16_t>(~sum);
+		}
+
+		// 计算传输层校验和（含 IPv4 伪头）.
+		uint16_t l4_checksum(const net::ip::address& src,
+			const net::ip::address& dst, uint8_t proto,
+			const std::string& segment) noexcept
+		{
+			auto s4 = src.to_v4().to_bytes();
+			auto d4 = dst.to_v4().to_bytes();
+
+			std::string pseudo;
+			pseudo.reserve(12 + segment.size());
+			pseudo.append(reinterpret_cast<const char*>(s4.data()), 4);
+			pseudo.append(reinterpret_cast<const char*>(d4.data()), 4);
+			pseudo.push_back(0);
+			pseudo.push_back(proto);
+			char* len_p = pseudo.data() + 10;
+			io_util::write<uint16_t>(static_cast<uint16_t>(segment.size()), len_p);
+			pseudo.append(segment);
+
+			return checksum(pseudo.data(), pseudo.size());
 		}
 
 		// 从 IPv6 头部偏移处跳过扩展头, 返回传输层协议号与偏移.
@@ -213,42 +201,29 @@ namespace proxy {
 			std::string tcp(tcp_hdr_len + payload_len, '\0');
 			char* p = tcp.data();
 
-			write_be16(p, src_port);
-			write_be16(p + 2, dst_port);
-			write_be32(p + 4, seq);
-			write_be32(p + 8, ack);
-			p[12] = static_cast<char>((tcp_hdr_len / 4) << 4);
-			p[13] = static_cast<char>(flags);
-			write_be16(p + 14, 0xffff);  // window.
-			write_be16(p + 18, 0);       // urgent pointer.
+			io_util::write<uint16_t>(src_port, p);
+			io_util::write<uint16_t>(dst_port, p);
+			io_util::write<uint32_t>(seq, p);
+			io_util::write<uint32_t>(ack, p);
+			*p++ = static_cast<char>((tcp_hdr_len / 4) << 4);
+			*p++ = static_cast<char>(flags);
+			io_util::write<uint16_t>(0xffff, p);  // window.
+			io_util::write<uint16_t>(0, p);       // checksum 占位.
+			io_util::write<uint16_t>(0, p);       // urgent pointer.
 
 			if (with_mss)
 			{
-				p[20] = 2;              // kind.
-				p[21] = 4;              // length.
-				write_be16(p + 22, with_mss);
+				*p++ = 2;              // kind.
+				*p++ = 4;              // length.
+				io_util::write<uint16_t>(with_mss, p);
 			}
 
 			if (payload_len)
-				std::memcpy(p + tcp_hdr_len, payload, payload_len);
+				std::memcpy(p, payload, payload_len);
 
-			auto s4 = src.to_v4().to_bytes();
-			auto d4 = dst.to_v4().to_bytes();
-
-			// 计算 TCP 校验和（含 IPv4 伪头）.
-			std::string pseudo;
-			pseudo.reserve(12 + tcp.size());
-			pseudo.append(reinterpret_cast<const char*>(s4.data()), 4);
-			pseudo.append(reinterpret_cast<const char*>(d4.data()), 4);
-			pseudo.push_back(0);
-			pseudo.push_back(ip_proto_tcp);
-			pseudo.push_back(0);  // TCP 长度占位.
-			pseudo.push_back(0);
-			write_be16(pseudo.data() + 10, static_cast<uint16_t>(tcp.size()));
-			pseudo.append(tcp);
-
-			uint16_t sum = checksum(pseudo.data(), pseudo.size());
-			write_be16(p + 16, sum);
+			char* sum_p = tcp.data() + 16;
+			io_util::write<uint16_t>(
+				l4_checksum(src, dst, ip_proto_tcp, tcp), sum_p);
 
 			return build_ip_packet(src, dst, ip_proto_tcp, tcp);
 		}
@@ -266,63 +241,243 @@ namespace proxy {
 			std::string udp(8 + payload_len, '\0');
 			char* p = udp.data();
 
-			write_be16(p, src_port);
-			write_be16(p + 2, dst_port);
-			write_be16(p + 4, static_cast<uint16_t>(udp.size()));
-			write_be16(p + 6, 0);  // checksum 占位.
+			io_util::write<uint16_t>(src_port, p);
+			io_util::write<uint16_t>(dst_port, p);
+			io_util::write<uint16_t>(static_cast<uint16_t>(udp.size()), p);
+			io_util::write<uint16_t>(0, p);  // checksum 占位.
 
 			if (payload_len)
-				std::memcpy(p + 8, payload, payload_len);
+				std::memcpy(p, payload, payload_len);
 
-			auto s4 = src.to_v4().to_bytes();
-			auto d4 = dst.to_v4().to_bytes();
-
-			// 计算 UDP 校验和（含 IPv4 伪头）.
-			std::string pseudo;
-			pseudo.reserve(12 + udp.size());
-			pseudo.append(reinterpret_cast<const char*>(s4.data()), 4);
-			pseudo.append(reinterpret_cast<const char*>(d4.data()), 4);
-			pseudo.push_back(0);
-			pseudo.push_back(ip_proto_udp);
-			pseudo.push_back(0);  // UDP 长度占位.
-			pseudo.push_back(0);
-			write_be16(pseudo.data() + 10, static_cast<uint16_t>(udp.size()));
-			pseudo.append(udp);
-
-			uint16_t sum = checksum(pseudo.data(), pseudo.size());
-			write_be16(p + 6, sum);
+			char* sum_p = udp.data() + 6;
+			io_util::write<uint16_t>(
+				l4_checksum(src, dst, ip_proto_udp, udp), sum_p);
 
 			return build_ip_packet(src, dst, ip_proto_udp, udp);
 		}
 
-	} // namespace
+		// proxy_pass 是否使用 SSL 加密（https/wss 或显式配置 proxy_pass_ssl）.
+		inline bool proxy_use_ssl(const urls::url& url,
+			const proxy_server_option& opt) noexcept
+		{
+			if (opt.proxy_pass_use_ssl_)
+				return true;
+			auto scheme = boost::to_lower_copy(std::string(url.scheme()));
+			return scheme.ends_with("s");
+		}
 
-	bool parse_ip_packet(const char* data, size_t len, ip_packet& pkt) noexcept
-	{
-		if (!data || len < 20)
-			return false;
+		// 按 MTU 计算 TCP MSS 通告值.
+		inline uint16_t tun_mss(const proxy_server_option& opt) noexcept
+		{
+			return static_cast<uint16_t>(
+				std::max(536, opt.tun_mtu_ > 0 ? opt.tun_mtu_ - 40 : 1460));
+		}
 
-		uint8_t version = static_cast<uint8_t>(data[0]) >> 4;
-		size_t l4_off = 0;
-		size_t total_len = 0;
+		// 配置了 SO_MARK 时对 socket 应用标记（配合策略路由防止环路）.
+		template <typename Socket>
+		void apply_so_mark_if(Socket& sock,
+			const proxy_server_option& opt) noexcept
+		{
+			if (!opt.so_mark_)
+				return;
 
-		if (version == 4)
+			auto ret = apply_so_mark(sock.native_handle(), opt.so_mark_);
+			if (ret.has_error())
+				XLOG_WARN << "tun set socket mark: " << ret.error().message();
+		}
+
+		// 构造 SOCKS5 UDP 请求/应答头（RSV + FRAG + ATYP + 地址 + 端口）.
+		std::string build_socks5_udp_header(
+			const net::ip::udp::endpoint& target)
+		{
+			std::string header;
+
+			if (target.address().is_v4())
+			{
+				header.resize(10);
+				char* hp = header.data();
+				io_util::write<uint16_t>(0, hp);  // RSV.
+				*hp++ = 0;                        // FRAG.
+				*hp++ = SOCKS5_ATYP_IPV4;
+				auto addr = target.address().to_v4().to_bytes();
+				std::memcpy(hp, addr.data(), 4);
+				hp += 4;
+				io_util::write<uint16_t>(target.port(), hp);
+			}
+			else
+			{
+				header.resize(22);
+				char* hp = header.data();
+				io_util::write<uint16_t>(0, hp);  // RSV.
+				*hp++ = 0;                        // FRAG.
+				*hp++ = SOCKS5_ATYP_IPV6;
+				auto addr = target.address().to_v6().to_bytes();
+				std::memcpy(hp, addr.data(), 16);
+				hp += 16;
+				io_util::write<uint16_t>(target.port(), hp);
+			}
+
+			return header;
+		}
+
+		// 解析 SOCKS5 UDP 应答头，返回头部长度；非法包头返回 0.
+		size_t socks5_udp_header_size(const char* data, size_t len) noexcept
+		{
+			if (len < 4 || static_cast<uint8_t>(data[2]) != 0)
+				return 0;  // 不支持分片（FRAG 非 0）.
+
+			size_t header_size = 0;
+			switch (static_cast<uint8_t>(data[3]))
+			{
+			case SOCKS5_ATYP_IPV4:
+				header_size = 10;
+				break;
+			case SOCKS5_ATYP_DOMAINNAME:
+				if (len < 5)
+					return 0;
+				header_size = 7 + static_cast<uint8_t>(data[4]);
+				break;
+			case SOCKS5_ATYP_IPV6:
+				header_size = 22;
+				break;
+			default:
+				return 0;
+			}
+
+			return header_size <= len ? header_size : 0;
+		}
+
+		// 解析并连接目标（直连），成功返回已连接的 socket；失败返回未打开的 socket.
+		net::awaitable<tcp::socket> connect_direct(
+			net::any_io_executor executor,
+			const proxy_server_option& opt,
+			const net::ip::address& dst, uint16_t port)
+		{
+			boost::system::error_code ec;
+
+			tcp::socket sock(executor);
+			tcp::endpoint endp(dst, port);
+
+			sock.open(endp.protocol(), ec);
+			if (!ec)
+			{
+				apply_so_mark_if(sock, opt);
+				co_await sock.async_connect(endp, net_awaitable[ec]);
+			}
+			if (ec)
+			{
+				XLOG_WARN << "tun connect direct: " << dst.to_string()
+					<< ":" << port << ", error: " << ec.message();
+				co_return tcp::socket(executor);
+			}
+
+			co_return sock;
+		}
+
+		// 构造 RFC 9298 CONNECT-UDP 请求（absolute-form URI）.
+		http::request<http::empty_body> build_connect_udp_request(
+			const urls::url& proxy_url,
+			const net::ip::udp::endpoint& target)
+		{
+			std::string proxy_host(proxy_url.encoded_host());
+			uint16_t proxy_port = proxy_url.port_number();
+			if (proxy_port == 0)
+				proxy_port = urls::default_port(proxy_url.scheme_id());
+
+			std::string target_host = target.address().to_string();
+			if (target.address().is_v6())
+				boost::replace_all(target_host, ":", "%3A");
+
+			std::string uri =
+				"https://" + proxy_host + ":" + std::to_string(proxy_port) +
+				"/.well-known/masque/udp/" + target_host + "/" +
+				std::to_string(target.port()) + "/";
+
+			http::request<http::empty_body> req{ http::verb::get, uri, 11 };
+			req.set(http::field::host, proxy_host + ":" + std::to_string(proxy_port));
+			req.set(http::field::connection, "Upgrade");
+			req.set(http::field::upgrade, "connect-udp");
+			req.set("Capsule-Protocol", "?1");
+
+			// 需要认证时添加 Proxy-Authorization 头.
+			if (!proxy_url.user().empty())
+			{
+				const auto userinfo =
+					std::string(proxy_url.user()) + ":" +
+					std::string(proxy_url.password());
+				req.set(http::field::proxy_authorization,
+					"Basic " + strutil::base64_encode(userinfo));
+			}
+
+			return req;
+		}
+
+		// 解析并连接上游代理服务器，成功返回已连接的 socket；失败返回未打开的 socket.
+		net::awaitable<tcp::socket> connect_proxy_pass(
+			net::any_io_executor executor,
+			const proxy_server_option& opt,
+			const urls::url& proxy_url)
+		{
+			boost::system::error_code ec;
+
+			std::string proxy_host(proxy_url.encoded_host());
+			uint16_t proxy_port = proxy_url.port_number();
+			if (proxy_port == 0)
+				proxy_port = urls::default_port(proxy_url.scheme_id());
+			if (proxy_port == 0)
+				proxy_port = 1080;  // socks 等未定义默认端口的 scheme.
+
+			tcp::resolver resolver(executor);
+			auto targets = co_await resolver.async_resolve(
+				proxy_host, std::to_string(proxy_port), net_awaitable[ec]);
+			if (ec || targets.empty())
+			{
+				XLOG_WARN << "tun resolve proxy_pass: " << proxy_host
+					<< ", error: " << ec.message();
+				co_return tcp::socket(executor);
+			}
+
+			for (const auto& t : targets)
+			{
+				tcp::socket sock(executor);
+				sock.open(t.endpoint().protocol(), ec);
+				if (ec)
+					continue;
+
+				// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
+				apply_so_mark_if(sock, opt);
+
+				co_await sock.async_connect(t.endpoint(), net_awaitable[ec]);
+				if (!ec)
+					co_return sock;
+			}
+
+			XLOG_WARN << "tun connect proxy_pass: " << proxy_host
+				<< ", error: " << ec.message();
+			co_return tcp::socket(executor);
+		}
+
+		// 解析 IPv4 头，成功返回传输层偏移并填充 pkt；失败返回 0.
+		size_t parse_ipv4_header(const char* data, size_t len,
+			ip_packet& pkt) noexcept
 		{
 			uint8_t ihl = (static_cast<uint8_t>(data[0]) & 0x0f) * 4;
 			if (ihl < 20 || len < ihl)
-				return false;
+				return 0;
 
-			total_len = read_be16(data + 2);
+			const char* total_p = data + 2;
+			size_t total_len = io_util::read<uint16_t>(total_p);
 			if (total_len < ihl)
-				return false;
+				return 0;
 			if (total_len > len)
 				total_len = len;
 
 			// 分片包（fragment offset 非 0 或 MF 置位）直接丢弃.
 			// 注意 flags 中的 DF（不分片）位不影响判断.
-			uint16_t frag = read_be16(data + 6);
+			const char* frag_p = data + 6;
+			uint16_t frag = io_util::read<uint16_t>(frag_p);
 			if ((frag & 0x1fff) != 0 || (frag & 0x2000) != 0)
-				return false;
+				return 0;
 
 			pkt.proto = static_cast<uint8_t>(data[9]);
 			pkt.src = net::ip::make_address_v4(
@@ -338,17 +493,22 @@ namespace proxy {
 					static_cast<uint8_t>(data[18]),
 					static_cast<uint8_t>(data[19]) });
 
-			l4_off = ihl;
+			pkt.raw = data;
+			pkt.raw_len = total_len;
+			return ihl;
 		}
-		else if (version == 6)
+
+		// 解析 IPv6 头，成功返回传输层偏移并填充 pkt；失败返回 0.
+		size_t parse_ipv6_header(const char* data, size_t len,
+			ip_packet& pkt) noexcept
 		{
 			if (len < 40)
-				return false;
+				return 0;
 
 			uint8_t proto = 0;
 			size_t off = 0;
 			if (!ipv6_next_header(data, len, off, proto))
-				return false;
+				return 0;
 
 			pkt.proto = proto;
 			net::ip::address_v6::bytes_type s6{};
@@ -358,62 +518,80 @@ namespace proxy {
 			pkt.src = net::ip::make_address_v6(s6);
 			pkt.dst = net::ip::make_address_v6(d6);
 
-			uint16_t payload_len = read_be16(data + 4);
-			total_len = static_cast<size_t>(payload_len) + 40;
+			const char* payload_p = data + 4;
+			size_t total_len =
+				static_cast<size_t>(io_util::read<uint16_t>(payload_p)) + 40;
 			if (total_len > len)
 				total_len = len;
 
-			l4_off = off;
+			pkt.raw = data;
+			pkt.raw_len = total_len;
+			return off;
 		}
+
+		// 解析传输层头（TCP/UDP），成功返回 true.
+		bool parse_l4_header(const char* l4, size_t l4_len,
+			ip_packet& pkt) noexcept
+		{
+			if (pkt.proto == ip_proto_tcp)
+			{
+				if (l4_len < 20)
+					return false;
+
+				const char* q = l4;
+				pkt.src_port = io_util::read<uint16_t>(q);
+				pkt.dst_port = io_util::read<uint16_t>(q);
+				pkt.seq = io_util::read<uint32_t>(q);
+				pkt.ack = io_util::read<uint32_t>(q);
+
+				uint16_t tcp_hdr_len = (static_cast<uint8_t>(l4[12]) >> 4) * 4;
+				if (tcp_hdr_len < 20 || tcp_hdr_len > l4_len)
+					return false;
+
+				pkt.tcp_hdr_len = tcp_hdr_len;
+				pkt.flags = static_cast<uint8_t>(l4[13]) & 0x3f;
+				pkt.payload = l4 + tcp_hdr_len;
+				pkt.payload_len = l4_len - tcp_hdr_len;
+				return true;
+			}
+
+			if (pkt.proto == ip_proto_udp)
+			{
+				if (l4_len < 8)
+					return false;
+
+				const char* q = l4;
+				pkt.src_port = io_util::read<uint16_t>(q);
+				pkt.dst_port = io_util::read<uint16_t>(q);
+				pkt.payload = l4 + 8;
+				pkt.payload_len = l4_len - 8;
+				return true;
+			}
+
+			return false;
+		}
+
+	} // namespace
+
+	bool parse_ip_packet(const char* data, size_t len, ip_packet& pkt) noexcept
+	{
+		if (!data || len < 20)
+			return false;
+
+		uint8_t version = static_cast<uint8_t>(data[0]) >> 4;
+		size_t l4_off = 0;
+
+		if (version == 4)
+			l4_off = parse_ipv4_header(data, len, pkt);
+		else if (version == 6)
+			l4_off = parse_ipv6_header(data, len, pkt);
 		else
-		{
-			return false;
-		}
-
-		if (total_len < l4_off)
 			return false;
 
-		const char* l4 = data + l4_off;
-		size_t l4_len = total_len - l4_off;
-
-		if (pkt.proto == ip_proto_tcp)
-		{
-			if (l4_len < 20)
-				return false;
-
-			pkt.src_port = read_be16(l4);
-			pkt.dst_port = read_be16(l4 + 2);
-			pkt.seq = read_be32(l4 + 4);
-			pkt.ack = read_be32(l4 + 8);
-
-			uint16_t tcp_hdr_len = (static_cast<uint8_t>(l4[12]) >> 4) * 4;
-			if (tcp_hdr_len < 20 || tcp_hdr_len > l4_len)
-				return false;
-
-			pkt.tcp_hdr_len = tcp_hdr_len;
-			pkt.flags = static_cast<uint8_t>(l4[13]) & 0x3f;
-			pkt.payload = l4 + tcp_hdr_len;
-			pkt.payload_len = l4_len - tcp_hdr_len;
-		}
-		else if (pkt.proto == ip_proto_udp)
-		{
-			if (l4_len < 8)
-				return false;
-
-			pkt.src_port = read_be16(l4);
-			pkt.dst_port = read_be16(l4 + 2);
-			pkt.payload = l4 + 8;
-			pkt.payload_len = l4_len - 8;
-		}
-		else
-		{
+		if (l4_off == 0 || pkt.raw_len < l4_off)
 			return false;
-		}
 
-		pkt.raw = data;
-		pkt.raw_len = total_len;
-
-		return true;
+		return parse_l4_header(data + l4_off, pkt.raw_len - l4_off, pkt);
 	}
 
 	std::string build_ip_packet(
@@ -433,9 +611,8 @@ namespace proxy {
 		p[0] = 0x45;
 		p[1] = 0;
 
-		uint16_t total = static_cast<uint16_t>(out.size());
-		p[2] = static_cast<char>(total >> 8);
-		p[3] = static_cast<char>(total & 0xff);
+		char* len_p = p + 2;
+		io_util::write<uint16_t>(static_cast<uint16_t>(out.size()), len_p);
 
 		p[4] = p[5] = 0;  // identification.
 		p[6] = p[7] = 0;  // flags/fragment offset.
@@ -446,9 +623,8 @@ namespace proxy {
 		std::memcpy(p + 12, s4.data(), 4);
 		std::memcpy(p + 16, d4.data(), 4);
 
-		uint16_t sum = checksum(p, 20);
-		p[10] = static_cast<char>(sum >> 8);
-		p[11] = static_cast<char>(sum & 0xff);
+		char* sum_p = p + 10;
+		io_util::write<uint16_t>(checksum(p, 20), sum_p);
 
 		if (!payload.empty())
 			std::memcpy(p + 20, payload.data(), payload.size());
@@ -496,8 +672,7 @@ namespace proxy {
 		net::co_spawn(m_executor,
 			[this, self]() -> net::awaitable<void>
 			{
-				co_await do_connect();
-				co_return;
+				return do_connect();
 			}, net::detached);
 	}
 
@@ -587,7 +762,6 @@ namespace proxy {
 	net::awaitable<void> tun_tcp_flow::do_connect()
 	{
 		auto self = shared_from_this();
-		boost::system::error_code ec;
 
 		const std::string target_host = m_key.dst.to_string();
 		const uint16_t target_port = m_key.dst_port;
@@ -603,54 +777,9 @@ namespace proxy {
 		{
 			const auto& proxy_url = *m_option.proxy_pass_;
 
-			// 解析上游代理服务器地址.
-			std::string proxy_host(proxy_url.encoded_host());
-			std::string port_str = proxy_url.port();
-			uint16_t proxy_port = static_cast<uint16_t>(
-				port_str.empty() ? 1080 : std::atoi(port_str.c_str()));
-
-			tcp::resolver resolver(m_executor);
-			auto targets = co_await resolver.async_resolve(
-				proxy_host, std::to_string(proxy_port), net_awaitable[ec]);
-			if (ec || targets.empty())
+			auto sock = co_await connect_proxy_pass(m_executor, m_option, proxy_url);
+			if (!sock.is_open())
 			{
-				XLOG_WARN << "tun resolve proxy_pass: " << proxy_host
-					<< ", error: " << ec.message();
-				send_rst();
-				close();
-				co_return;
-			}
-
-			// 依次尝试连接.
-			tcp::socket sock(m_executor);
-			bool connected = false;
-			for (const auto& t : targets)
-			{
-				sock = tcp::socket(m_executor);
-				sock.open(t.endpoint().protocol(), ec);
-				if (ec)
-					continue;
-
-				// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
-				if (m_option.so_mark_)
-				{
-					auto ret = apply_so_mark(sock.native_handle(), m_option.so_mark_);
-					if (ret.has_error())
-						XLOG_WARN << "tun set socket mark: " << ret.error().message();
-				}
-
-				co_await sock.async_connect(t.endpoint(), net_awaitable[ec]);
-				if (!ec)
-				{
-					connected = true;
-					break;
-				}
-			}
-
-			if (!connected)
-			{
-				XLOG_WARN << "tun connect proxy_pass: " << proxy_host
-					<< ", error: " << ec.message();
 				send_rst();
 				close();
 				co_return;
@@ -658,42 +787,8 @@ namespace proxy {
 
 			m_upstream = init_proxy_stream(std::move(sock));
 
-			auto scheme = boost::to_lower_copy(std::string(proxy_url.scheme()));
-
-			if (scheme.starts_with("socks"))
+			if (!co_await do_proxy_handshake(proxy_url))
 			{
-				socks_client_option opt;
-				opt.target_host = target_host;
-				opt.target_port = target_port;
-				// IP 目标直接以地址类型发送，域名目标交由代理解析.
-				opt.proxy_hostname = !m_key.dst.is_v4() && !m_key.dst.is_v6();
-				opt.username = std::string(proxy_url.user());
-				opt.password = std::string(proxy_url.password());
-
-				co_await async_socks_handshake(m_upstream, opt, net_awaitable[ec]);
-			}
-			else if (scheme.starts_with("http"))
-			{
-				http_proxy_client_option opt;
-				opt.target_host = target_host;
-				opt.target_port = target_port;
-				opt.username = std::string(proxy_url.user());
-				opt.password = std::string(proxy_url.password());
-
-				co_await async_http_proxy_handshake(m_upstream, opt, net_awaitable[ec]);
-			}
-			else
-			{
-				XLOG_WARN << "tun unsupported proxy_pass scheme: " << scheme;
-				send_rst();
-				close();
-				co_return;
-			}
-
-			if (ec)
-			{
-				XLOG_WARN << "tun proxy_pass handshake: " << proxy_host
-					<< ", error: " << ec.message();
 				send_rst();
 				close();
 				co_return;
@@ -702,23 +797,9 @@ namespace proxy {
 		else
 		{
 			// 直连目标.
-			tcp::socket sock(m_executor);
-			tcp::endpoint endp(net::ip::make_address(target_host), target_port);
-
-			sock.open(endp.protocol(), ec);
-			if (!ec)
-			{
-				// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
-				if (m_option.so_mark_)
-				{
-					auto ret = apply_so_mark(sock.native_handle(), m_option.so_mark_);
-					if (ret.has_error())
-						XLOG_WARN << "tun set socket mark: " << ret.error().message();
-				}
-
-				co_await sock.async_connect(endp, net_awaitable[ec]);
-			}
-			if (ec)
+			auto sock = co_await connect_direct(
+				m_executor, m_option, m_key.dst, target_port);
+			if (!sock.is_open())
 			{
 				send_rst();
 				close();
@@ -733,10 +814,8 @@ namespace proxy {
 		XLOG_DBG << "tun tcp established " << target_host << ":" << target_port;
 
 		// 回 SYN-ACK，通告 MSS 以减少分片.
-		uint16_t mss = static_cast<uint16_t>(
-			std::max(536, m_option.tun_mtu_ > 0 ? m_option.tun_mtu_ - 40 : 1460));
 		send_tcp(m_server_isn, m_client_isn + 1,
-			tcp_flag_syn | tcp_flag_ack, nullptr, 0, true, mss);
+			tcp_flag_syn | tcp_flag_ack, nullptr, 0, true, tun_mss(m_option));
 
 		// SYN 消耗一个序号，后续数据段从 server_isn + 1 开始.
 		m_server_next_seq = m_server_isn + 1;
@@ -745,16 +824,61 @@ namespace proxy {
 		net::co_spawn(m_executor,
 			[this, self]() -> net::awaitable<void>
 			{
-				co_await tx_loop();
-				co_return;
+				return tx_loop();
 			}, net::detached);
 
 		net::co_spawn(m_executor,
 			[this, self]() -> net::awaitable<void>
 			{
-				co_await rx_loop();
-				co_return;
+				return rx_loop();
 			}, net::detached);
+	}
+
+	net::awaitable<bool> tun_tcp_flow::do_proxy_handshake(const urls::url& proxy_url)
+	{
+		boost::system::error_code ec;
+
+		const std::string target_host = m_key.dst.to_string();
+		const uint16_t target_port = m_key.dst_port;
+		auto scheme = boost::to_lower_copy(std::string(proxy_url.scheme()));
+
+		if (scheme.starts_with("socks"))
+		{
+			socks_client_option opt;
+			opt.target_host = target_host;
+			opt.target_port = target_port;
+			// IP 目标直接以地址类型发送，域名目标交由代理解析.
+			opt.proxy_hostname = !m_key.dst.is_v4() && !m_key.dst.is_v6();
+			opt.username = std::string(proxy_url.user());
+			opt.password = std::string(proxy_url.password());
+
+			co_await async_socks_handshake(m_upstream, opt, net_awaitable[ec]);
+		}
+		else if (scheme.starts_with("http"))
+		{
+			http_proxy_client_option opt;
+			opt.target_host = target_host;
+			opt.target_port = target_port;
+			opt.username = std::string(proxy_url.user());
+			opt.password = std::string(proxy_url.password());
+
+			co_await async_http_proxy_handshake(m_upstream, opt, net_awaitable[ec]);
+		}
+		else
+		{
+			XLOG_WARN << "tun unsupported proxy_pass scheme: " << scheme;
+			co_return false;
+		}
+
+		if (ec)
+		{
+			XLOG_WARN << "tun proxy_pass handshake: "
+				<< std::string(proxy_url.encoded_host())
+				<< ", error: " << ec.message();
+			co_return false;
+		}
+
+		co_return true;
 	}
 
 	net::awaitable<void> tun_tcp_flow::tx_loop()
@@ -814,8 +938,7 @@ namespace proxy {
 
 	net::awaitable<void> tun_tcp_flow::rx_loop()
 	{
-		uint16_t mss = static_cast<uint16_t>(
-			std::max(536, m_option.tun_mtu_ > 0 ? m_option.tun_mtu_ - 40 : 1460));
+		uint16_t mss = tun_mss(m_option);
 
 		char buffer[8192];
 
@@ -953,8 +1076,7 @@ namespace proxy {
 		net::co_spawn(m_executor,
 			[this, self]() -> net::awaitable<void>
 			{
-				co_await do_open();
-				co_return;
+				return do_open();
 			}, net::detached);
 	}
 
@@ -993,46 +1115,17 @@ namespace proxy {
 		}
 
 		// SOCKS5 UDP 请求头：RSV(2) + FRAG(1) + ATYP(1) + 地址 + 端口.
-		char header[22];
-		char* hp = header;
+		auto header = build_socks5_udp_header(m_target);
 
-		write_be16(hp, 0);
-		hp += 2;
-		hp[0] = 0;
-		hp += 1;
-
-		if (m_target.address().is_v4())
-		{
-			hp[0] = SOCKS5_ATYP_IPV4;
-			hp += 1;
-			auto addr = m_target.address().to_v4().to_bytes();
-			std::memcpy(hp, addr.data(), 4);
-			hp += 4;
-			write_be16(hp, m_target.port());
-			hp += 2;
-		}
-		else
-		{
-			hp[0] = SOCKS5_ATYP_IPV6;
-			hp += 1;
-			auto addr = m_target.address().to_v6().to_bytes();
-			std::memcpy(hp, addr.data(), 16);
-			hp += 16;
-			write_be16(hp, m_target.port());
-			hp += 2;
-		}
-
-		size_t header_len = static_cast<size_t>(hp - header);
-
-		if (header_len + len > 65535)
+		if (header.size() + len > 65535)
 		{
 			close();
 			return;
 		}
 
 		std::string buf;
-		buf.reserve(header_len + len);
-		buf.append(header, header_len);
+		buf.reserve(header.size() + len);
+		buf.append(header);
 		buf.append(data, len);
 
 		boost::system::error_code ec;
@@ -1078,7 +1171,6 @@ namespace proxy {
 	net::awaitable<void> tun_udp_flow::do_open()
 	{
 		auto self = shared_from_this();
-		boost::system::error_code ec;
 
 		bool use_proxy = m_owner && m_owner->ip_match_proxy(m_target.address());
 
@@ -1094,155 +1186,45 @@ namespace proxy {
 			<< (m_dns_qname.empty() ? "" : (", qname=" + m_dns_qname));
 
 		// HTTP 代理通过 RFC 9298 CONNECT-UDP 隧道转发，无需本地 UDP 后端 socket.
-		bool connect_udp = false;
 		if (m_proxy)
 		{
 			auto scheme = boost::to_lower_copy(
 				std::string((*m_option.proxy_pass_).scheme()));
-			connect_udp = scheme.starts_with("http");
+			m_connect_udp = scheme.starts_with("http");
+			if (!scheme.starts_with("http") && !scheme.starts_with("socks"))
+			{
+				XLOG_WARN << "tun udp unsupported proxy_pass scheme: " << scheme;
+				close();
+				co_return;
+			}
 		}
 
-		if (!connect_udp)
+		// 直连或 SOCKS5 需要本地 UDP 后端 socket.
+		if (!m_connect_udp && !co_await open_backend())
 		{
-			// 打开后端 UDP socket（与上游代理或目标通信）.
-			m_backend.emplace(m_executor);
-			m_backend->open(m_target.protocol(), ec);
-			if (ec)
-			{
-				XLOG_WARN << "tun udp open backend socket: " << ec.message();
-				close();
-				co_return;
-			}
-
-			// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
-			if (m_option.so_mark_)
-			{
-				auto ret = apply_so_mark(m_backend->native_handle(), m_option.so_mark_);
-				if (ret.has_error())
-					XLOG_WARN << "tun udp set socket mark: " << ret.error().message();
-			}
-
-			m_backend->bind(net::ip::udp::endpoint(m_target.protocol(), 0), ec);
-			if (ec)
-			{
-				XLOG_WARN << "tun udp bind backend socket: " << ec.message();
-				close();
-				co_return;
-			}
+			close();
+			co_return;
 		}
 
 		if (m_proxy)
 		{
 			const auto& proxy_url = *m_option.proxy_pass_;
 
-			std::string proxy_host(proxy_url.encoded_host());
-			std::string port_str = proxy_url.port();
-			uint16_t proxy_port = static_cast<uint16_t>(
-				port_str.empty() ? 1080 : std::atoi(port_str.c_str()));
-
-			tcp::resolver resolver(m_executor);
-			auto targets = co_await resolver.async_resolve(
-				proxy_host, std::to_string(proxy_port), net_awaitable[ec]);
-			if (ec || targets.empty())
+			auto sock = co_await connect_proxy_pass(m_executor, m_option, proxy_url);
+			if (!sock.is_open())
 			{
-				XLOG_WARN << "tun udp resolve proxy_pass: " << proxy_host
-					<< ", error: " << ec.message();
 				close();
 				co_return;
 			}
 
-			// 依次尝试连接.
-			tcp::socket sock(m_executor);
-			bool connected = false;
-			for (const auto& t : targets)
+			// HTTP 代理：RFC 9298 CONNECT-UDP 隧道；SOCKS5：UDP ASSOCIATE.
+			bool ok = m_connect_udp ?
+				co_await do_connect_udp(std::move(sock)) :
+				co_await do_socks5_associate(std::move(sock));
+			if (!ok)
 			{
-				sock = tcp::socket(m_executor);
-				sock.open(t.endpoint().protocol(), ec);
-				if (ec)
-					continue;
-
-				if (m_option.so_mark_)
-				{
-					auto ret = apply_so_mark(sock.native_handle(), m_option.so_mark_);
-					if (ret.has_error())
-						XLOG_WARN << "tun udp set socket mark: " << ret.error().message();
-				}
-
-				co_await sock.async_connect(t.endpoint(), net_awaitable[ec]);
-				if (!ec)
-				{
-					connected = true;
-					break;
-				}
-			}
-
-			if (!connected)
-			{
-				XLOG_WARN << "tun udp connect proxy_pass: " << proxy_host
-					<< ", error: " << ec.message();
 				close();
 				co_return;
-			}
-
-			auto scheme = boost::to_lower_copy(std::string(proxy_url.scheme()));
-
-			if (scheme.starts_with("http"))
-			{
-				// HTTP 代理：RFC 9298 CONNECT-UDP 隧道（内部按需建立 SSL）.
-				bool ok = co_await do_connect_udp(std::move(sock));
-				if (!ok)
-				{
-					close();
-					co_return;
-				}
-			}
-			else if (!scheme.starts_with("socks"))
-			{
-				XLOG_WARN << "tun udp unsupported proxy_pass scheme: " << scheme;
-				close();
-				co_return;
-			}
-			else
-			{
-				// SOCKS5 UDP ASSOCIATE 握手，获取代理的 UDP 中继端点.
-				m_control.emplace(init_proxy_stream(std::move(sock)));
-
-				socks_client_option opt;
-				opt.target_host = "0.0.0.0";
-				opt.target_port = 21;
-				opt.proxy_hostname = true;
-				opt.command = SOCKS5_CMD_UDP;
-				opt.username = std::string(proxy_url.user());
-				opt.password = std::string(proxy_url.password());
-
-				auto backend = co_await async_socks_handshake(
-					*m_control, opt, net_awaitable[ec]);
-				if (ec || !backend)
-				{
-					XLOG_WARN << "tun udp SOCKS5 associate: " << ec.message();
-					close();
-					co_return;
-				}
-
-				m_backend_endp = *backend;
-
-				// 某些代理只返回端口，地址为空，此时用控制连接的远端地址补全.
-				if (m_backend_endp.address().is_unspecified())
-				{
-					net::ip::address remote_addr;
-					auto& tcp_sock = boost::variant2::get<proxy_tcp_socket>(*m_control);
-					remote_addr = tcp_sock.lowest_layer().remote_endpoint(ec).address();
-					if (!ec)
-						m_backend_endp.address(remote_addr);
-				}
-
-				// 保持控制连接存活，断开时关闭整个会话.
-				net::co_spawn(m_executor,
-					[this, self]() -> net::awaitable<void>
-					{
-						co_await control_loop();
-						co_return;
-					}, net::detached);
 			}
 		}
 
@@ -1252,8 +1234,7 @@ namespace proxy {
 			net::co_spawn(m_executor,
 				[this, self]() -> net::awaitable<void>
 				{
-					co_await recv_loop();
-					co_return;
+					return recv_loop();
 				}, net::detached);
 		}
 
@@ -1266,6 +1247,78 @@ namespace proxy {
 		touch();
 	}
 
+	net::awaitable<bool> tun_udp_flow::open_backend()
+	{
+		boost::system::error_code ec;
+
+		// 打开后端 UDP socket（与上游代理或目标通信）.
+		m_backend.emplace(m_executor);
+		m_backend->open(m_target.protocol(), ec);
+		if (ec)
+		{
+			XLOG_WARN << "tun udp open backend socket: " << ec.message();
+			co_return false;
+		}
+
+		// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
+		apply_so_mark_if(*m_backend, m_option);
+
+		m_backend->bind(net::ip::udp::endpoint(m_target.protocol(), 0), ec);
+		if (ec)
+		{
+			XLOG_WARN << "tun udp bind backend socket: " << ec.message();
+			co_return false;
+		}
+
+		co_return true;
+	}
+
+	net::awaitable<bool> tun_udp_flow::do_socks5_associate(tcp::socket sock)
+	{
+		auto self = shared_from_this();
+		boost::system::error_code ec;
+
+		const auto& proxy_url = *m_option.proxy_pass_;
+
+		m_control.emplace(init_proxy_stream(std::move(sock)));
+
+		socks_client_option opt;
+		opt.target_host = "0.0.0.0";
+		opt.target_port = 21;
+		opt.proxy_hostname = true;
+		opt.command = SOCKS5_CMD_UDP;
+		opt.username = std::string(proxy_url.user());
+		opt.password = std::string(proxy_url.password());
+
+		auto backend = co_await async_socks_handshake(
+			*m_control, opt, net_awaitable[ec]);
+		if (ec || !backend)
+		{
+			XLOG_WARN << "tun udp SOCKS5 associate: " << ec.message();
+			co_return false;
+		}
+
+		m_backend_endp = *backend;
+
+		// 某些代理只返回端口，地址为空，此时用控制连接的远端地址补全.
+		if (m_backend_endp.address().is_unspecified())
+		{
+			auto& tcp_sock = boost::variant2::get<proxy_tcp_socket>(*m_control);
+			auto remote = tcp_sock.lowest_layer().remote_endpoint(ec);
+			if (!ec)
+				m_backend_endp.address(remote.address());
+		}
+
+		// 保持控制连接存活，断开时关闭整个会话.
+		net::co_spawn(m_executor,
+			[this, self]() -> net::awaitable<void>
+			{
+				return control_loop();
+			}, net::detached);
+
+		co_return true;
+	}
+
 	net::awaitable<bool> tun_udp_flow::do_connect_udp(tcp::socket sock)
 	{
 		auto self = shared_from_this();
@@ -1274,14 +1327,9 @@ namespace proxy {
 		const auto& proxy_url = *m_option.proxy_pass_;
 
 		std::string proxy_host(proxy_url.encoded_host());
-		uint16_t proxy_port = proxy_url.port_number();
-		if (proxy_port == 0)
-			proxy_port = urls::default_port(proxy_url.scheme_id());
 
 		// 判断是否使用 SSL：显式配置 proxy_pass_ssl 或 scheme 以 's' 结尾（https/wss）.
-		bool use_ssl = m_option.proxy_pass_use_ssl_;
-		if (proxy_url.scheme().ends_with("s"))
-			use_ssl = true;
+		bool use_ssl = proxy_use_ssl(proxy_url, m_option);
 
 		if (use_ssl)
 		{
@@ -1301,31 +1349,8 @@ namespace proxy {
 			m_control.emplace(init_proxy_stream(std::move(sock)));
 		}
 
-		// 构建 RFC 9298 connect-udp 请求（absolute-form URI）.
-		std::string target_host = m_target.address().to_string();
-		if (m_target.address().is_v6())
-			boost::replace_all(target_host, ":", "%3A");
-
-		std::string target =
-			"https://" + proxy_host + ":" + std::to_string(proxy_port) +
-			"/.well-known/masque/udp/" + target_host + "/" +
-			std::to_string(m_target.port()) + "/";
-
-		http::request<http::empty_body> req{ http::verb::get, target, 11 };
-		req.set(http::field::host, proxy_host + ":" + std::to_string(proxy_port));
-		req.set(http::field::connection, "Upgrade");
-		req.set(http::field::upgrade, "connect-udp");
-		req.set("Capsule-Protocol", "?1");
-
-		// 如果 proxy_pass 需要认证，添加 Proxy-Authorization 头.
-		if (!proxy_url.user().empty())
-		{
-			const auto userinfo =
-				std::string(proxy_url.user()) + ":" +
-				std::string(proxy_url.password());
-			req.set(http::field::proxy_authorization,
-				"Basic " + strutil::base64_encode(userinfo));
-		}
+		// 构建 RFC 9298 CONNECT-UDP 请求（absolute-form URI）.
+		auto req = build_connect_udp_request(proxy_url, m_target);
 
 		auto& http_sock = *m_control;
 
@@ -1364,18 +1389,15 @@ namespace proxy {
 		net::co_spawn(m_executor,
 			[this, self]() -> net::awaitable<void>
 			{
-				co_await tx_loop();
-				co_return;
+				return tx_loop();
 			}, net::detached);
 
 		net::co_spawn(m_executor,
 			[this, self]() -> net::awaitable<void>
 			{
-				co_await recv_connect_udp_loop();
-				co_return;
+				return recv_connect_udp_loop();
 			}, net::detached);
 
-		m_connect_udp = true;
 		co_return true;
 	}
 
@@ -1541,34 +1563,11 @@ namespace proxy {
 			}
 
 			// SOCKS5 UDP 应答头：RSV(2) + FRAG(1) + ATYP(1) + 地址 + 端口.
-			if (n < 6)
-				continue;
-
-			const char* p = buf;
-			size_t header_size = 0;
-
-			if (static_cast<uint8_t>(p[2]) != 0)
-				continue;  // 不支持分片.
-
-			switch (static_cast<uint8_t>(p[3]))
-			{
-			case SOCKS5_ATYP_IPV4:
-				header_size = 10;
-				break;
-			case SOCKS5_ATYP_DOMAINNAME:
-				header_size = 7 + static_cast<uint8_t>(p[4]);
-				break;
-			case SOCKS5_ATYP_IPV6:
-				header_size = 22;
-				break;
-			default:
-				continue;
-			}
-
+			size_t header_size = socks5_udp_header_size(buf, n);
 			if (n <= header_size)
 				continue;
 
-			reply(p + header_size, n - header_size);
+			reply(buf + header_size, n - header_size);
 		}
 
 		close();
@@ -1691,8 +1690,7 @@ namespace proxy {
 		net::co_spawn(m_executor,
 			[this, self]() -> net::awaitable<void>
 			{
-				co_await run();
-				co_return;
+				return run();
 			}, net::detached);
 	}
 

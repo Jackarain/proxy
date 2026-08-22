@@ -135,6 +135,9 @@ namespace proxy {
 		// 发起上游连接（代理握手或直连），成功后回 SYN-ACK.
 		net::awaitable<void> do_connect();
 
+		// 与上游代理完成协议握手（SOCKS5 或 HTTP CONNECT）.
+		net::awaitable<bool> do_proxy_handshake(const urls::url& proxy_url);
+
 		// 客户端数据转发到上游的发送协程.
 		net::awaitable<void> tx_loop();
 
@@ -236,6 +239,12 @@ namespace proxy {
 	private:
 		// 建立后端连接（代理或直连）.
 		net::awaitable<void> do_open();
+
+		// 打开本地 UDP 后端 socket（直连或 SOCKS5 模式使用）.
+		net::awaitable<bool> open_backend();
+
+		// 与上游代理完成 SOCKS5 UDP ASSOCIATE 握手.
+		net::awaitable<bool> do_socks5_associate(tcp::socket sock);
 
 		// 建立 HTTP CONNECT-UDP 隧道（proxy_pass 为 http/https 时替代 SOCKS5 ASSOCIATE）.
 		// sock 为已连接到上游代理的 TCP socket，由 do_open 传入.
