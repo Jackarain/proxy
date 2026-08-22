@@ -12,9 +12,13 @@
 #define INCLUDE__2026_08_22__TUN_SERVER_HPP
 
 #include "proxy/proxy_session.hpp"
+#include "proxy/proxy_stream.hpp"
 #include "proxy/tun_device.hpp"
 
+#include <deque>
 #include <memory>
+#include <mutex>
+#include <tuple>
 
 #if defined(__linux__)
 # include <boost/asio/posix/stream_descriptor.hpp>
@@ -69,6 +73,135 @@ namespace proxy {
 		uint8_t proto, const std::string& payload) noexcept;
 
 	//////////////////////////////////////////////////////////////////////////
+	// TCP flow
+
+	// tcp_flow_key 标识一个 TCP 连接（源/目的地址与端口）.
+	struct tcp_flow_key
+	{
+		net::ip::address src;
+		uint16_t src_port { 0 };
+		net::ip::address dst;
+		uint16_t dst_port { 0 };
+
+		bool operator==(const tcp_flow_key&) const = default;
+	};
+
+	// tcp_flow_key 的哈希函数.
+	struct tcp_flow_key_hash
+	{
+		size_t operator()(const tcp_flow_key& k) const noexcept
+		{
+			size_t h = std::hash<net::ip::address>{}(k.src);
+			boost::hash_combine(h, k.src_port);
+			boost::hash_combine(h, std::hash<net::ip::address>{}(k.dst));
+			boost::hash_combine(h, k.dst_port);
+			return h;
+		}
+	};
+
+	// tun_server 前置声明（供 tun_tcp_flow 访问写回接口）.
+	class tun_server;
+
+	// tun_tcp_flow 实现一个 TCP 连接的状态机与转发：
+	// - 收到客户端 SYN 后按分流规则经 proxy_pass 或直连建立上游连接；
+	// - 维护客户端/上游两侧的序号映射，payload 双向透传；
+	// - 生成 ACK/SYN-ACK/FIN/RST 应答客户端。
+	class tun_tcp_flow
+		: public std::enable_shared_from_this<tun_tcp_flow>
+	{
+		friend class tun_server;
+
+	public:
+		tun_tcp_flow(net::any_io_executor executor,
+			const std::shared_ptr<tun_server>& owner,
+			const proxy_server_option& opt,
+			tcp_flow_key key,
+			const ip_packet& syn);
+
+		~tun_tcp_flow();
+
+		// 发起上游连接（由 tun_server 收到 SYN 时调用）.
+		void start();
+
+		// 处理来自客户端的 TCP 包.
+		void handle_packet(const ip_packet& pkt);
+
+		// 关闭 flow，释放上游连接.
+		void close();
+
+		bool closed() const noexcept { return m_closed; }
+
+	private:
+		// 发起上游连接（代理握手或直连），成功后回 SYN-ACK.
+		net::awaitable<void> do_connect();
+
+		// 客户端数据转发到上游的发送协程.
+		net::awaitable<void> tx_loop();
+
+		// 读取上游数据并转发到客户端的接收协程.
+		net::awaitable<void> rx_loop();
+
+		// 构造 TCP 段并写回 TUN 设备.
+		void send_tcp(uint32_t seq, uint32_t ack, uint8_t flags,
+			const char* payload, size_t payload_len,
+			bool with_mss = false, uint16_t mss = 0);
+
+		// 向客户端回 ACK 包.
+		void send_ack();
+
+		// 向客户端发送 FIN 包.
+		void send_fin();
+
+		// 向客户端发送 RST 包.
+		void send_rst();
+
+		// 客户端数据入队并唤醒发送协程.
+		void push_tx(std::string data);
+
+		// 上游连接异常/关闭处理.
+		void on_upstream_closed();
+
+	private:
+		// m_executor 保存当前 io_context 的 executor.
+		net::any_io_executor m_executor;
+
+		// m_owner 保存所属 tun_server（写回 TUN 设备）.
+		std::shared_ptr<tun_server> m_owner;
+
+		// m_option 保存服务器配置选项.
+		proxy_server_option m_option;
+
+		// m_key 保存本连接的标识.
+		tcp_flow_key m_key;
+
+		// m_upstream 保存与上游代理或目标的连接.
+		variant_stream_type m_upstream;
+
+		// 连接状态.
+		bool m_closed { false };
+		bool m_connected { false };
+		bool m_client_fin { false };
+
+		// 序号状态.
+		uint32_t m_client_isn { 0 };
+		uint32_t m_server_isn { 0 };
+		uint32_t m_client_next_seq { 0 };
+		uint32_t m_client_ack_seq { 0 };
+		uint32_t m_server_next_seq { 0 };
+
+		// 客户端已发送 FIN（发送协程清空队列后需半关闭上游）.
+		bool m_tx_fin { false };
+
+		// 上游已关闭（等待客户端 FIN 完成四路挥手）.
+		bool m_upstream_eof { false };
+
+		// 客户端到上游的发送队列.
+		std::deque<std::string> m_tx_queue;
+		std::mutex m_tx_mutex;
+		std::optional<net::steady_timer> m_tx_signal;
+	};
+
+	//////////////////////////////////////////////////////////////////////////
 	// tun_server
 
 #if defined(__linux__)
@@ -79,6 +212,7 @@ namespace proxy {
 	class tun_server
 		: public std::enable_shared_from_this<tun_server>
 	{
+		friend class tun_tcp_flow;
 		tun_server(const tun_server&) = delete;
 		tun_server& operator=(const tun_server&) = delete;
 
@@ -115,6 +249,15 @@ namespace proxy {
 		// 处理 UDP 包（由 run 协程调用，内部再派生子协程）.
 		void handle_udp_packet(ip_packet& pkt) noexcept;
 
+		// 写 IP 包到 TUN 设备（串行化，多 flow 并发安全）.
+		void write_packet(std::string packet);
+
+		// 依次写出写队列中的 IP 包（写完成回调中链式调用）.
+		void do_write();
+
+		// 移除并关闭 TCP flow（由 flow 自身或 close 调用）.
+		void remove_tcp_flow(const tcp_flow_key& key);
+
 	private:
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
@@ -127,6 +270,18 @@ namespace proxy {
 
 		// m_stream 封装 TUN 设备 fd 的异步读写.
 		std::optional<net::posix::stream_descriptor> m_stream;
+
+		// m_tcp_flows 保存当前所有 TCP 连接.
+		std::unordered_map<tcp_flow_key, std::shared_ptr<tun_tcp_flow>,
+			tcp_flow_key_hash> m_tcp_flows;
+
+		// 保护 m_tcp_flows 的并发访问.
+		std::mutex m_flows_mutex;
+
+		// TUN 设备写队列（多 flow 串行写）.
+		std::deque<std::string> m_write_queue;
+		std::mutex m_write_mutex;
+		bool m_writing { false };
 
 		// m_abort 停止标志.
 		bool m_abort { false };

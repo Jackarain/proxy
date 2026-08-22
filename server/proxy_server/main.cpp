@@ -131,38 +131,42 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	auto& uds_listens = opt.uds_listens_;
 	boost::system::error_code ec;
 
-	for (const auto& listen : server_listens)
+	// TUN 模式不监听 TCP/UDS 端口，跳过监听解析.
+	if (!tun)
 	{
-		std::string host, port;
-		bool v6only = false;
-
-		if (listen.starts_with("unix://"))
+		for (const auto& listen : server_listens)
 		{
-			auto uds_path = listen.substr(7);
-			uds_listens.emplace_back(uds_path);
-			fs::remove(uds_path, ec);
+			std::string host, port;
+			bool v6only = false;
 
-			continue;
-		}
+			if (listen.starts_with("unix://"))
+			{
+				auto uds_path = listen.substr(7);
+				uds_listens.emplace_back(uds_path);
+				fs::remove(uds_path, ec);
 
-		if (!parse_endpoint_string(listen, host, port, v6only))
-		{
-			XLOG_ERR << "Parse listen endpoint fail: " << listen;
-			co_return;
-		}
+				continue;
+			}
 
-		listens.emplace_back(
-			tcp::endpoint{
-				net::ip::make_address(host, ec),
-				(unsigned short)atoi(port.c_str())},
-			v6only
-		);
+			if (!parse_endpoint_string(listen, host, port, v6only))
+			{
+				XLOG_ERR << "Parse listen endpoint fail: " << listen;
+				co_return;
+			}
 
-		if (ec)
-		{
-			XLOG_ERR << "Parse make endpoint fail: " << listen
-				<< ", error: " << ec.message();
-			co_return;
+			listens.emplace_back(
+				tcp::endpoint{
+					net::ip::make_address(host, ec),
+					(unsigned short)atoi(port.c_str())},
+				v6only
+			);
+
+			if (ec)
+			{
+				XLOG_ERR << "Parse make endpoint fail: " << listen
+					<< ", error: " << ec.message();
+				co_return;
+			}
 		}
 	}
 
