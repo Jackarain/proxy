@@ -1093,7 +1093,8 @@ target_compile_definitions(crypto PUBLIC
 target_compile_definitions(ssl PUBLIC -DOPENSSL_NO_ENGINE)
 target_compile_definitions(ssl INTERFACE -DOPENSSL_NO_ENGINE)
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+# 桌面端不支持 32 位构建, Android 32 位 (armeabi-v7a/x86) 仍然支持.
+if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ANDROID)
     message(FATAL_ERROR "32-bit builds are not supported !!!")
 endif()
 
