@@ -11,6 +11,7 @@
 #include "proxy/proxy_server.hpp"
 #include "proxy/proxy_util.hpp"
 #include "proxy/strutil.hpp"
+#include "proxy/tun_server.hpp"
 
 #include <boost/functional/hash.hpp>
 
@@ -1678,6 +1679,20 @@ void proxy_server::start() noexcept
 	}
 
 	// 如果作为透明代理.
+	if (m_option.tun_)
+	{
+		// 启动 TUN 设备模式（TUN2SOCKS）.
+#if defined(__linux__)
+		m_tun_server = tun_server::make(m_executor, m_option);
+		if (m_tun_server)
+			m_tun_server->start();
+#else
+		XLOG_WARN << "tun proxy only support linux";
+#endif
+	}
+	else
+	{
+	// 如果作为透明代理.
 	if (m_option.transparent_)
 	{
 #if defined(__linux__)
@@ -1723,6 +1738,7 @@ void proxy_server::start() noexcept
 			start_udp_tproxy(), net::detached);
 	}
 #endif // defined(__linux__)
+	}
 
 	// 启动 launcher 控制通道（URL 来自 m_option.launcher_url_, 为空不启动）.
 	launcher_start();
@@ -1784,6 +1800,10 @@ void proxy_server::close() noexcept
 	// 停止 UDP DNS 服务器（关闭监听 socket 使协程退出）.
 	if (m_dns_server)
 		m_dns_server->close();
+
+	// 停止 TUN 设备模式服务器（关闭设备 fd 使读包协程退出）.
+	if (m_tun_server)
+		m_tun_server->close();
 
 	m_backend_context.stop();
 	if (m_backend_thread && m_backend_thread->joinable())

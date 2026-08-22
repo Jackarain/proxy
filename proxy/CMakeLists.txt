@@ -34,8 +34,11 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/dns_response_cache.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/dns_server.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/uds_socket.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tun_device.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tun_server.hpp
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/tun_server.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ip_database.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/launcher_log.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session.cpp

@@ -33,6 +33,9 @@ namespace jsonrpc {
 
 namespace proxy {
 
+	// tun_server 前置声明（完整定义在 tun_server.hpp）.
+	class tun_server;
+
 	// launcher 控制通道状态结构体（完整定义在 proxy_server.cpp 中，避免在
 	// 头文件中暴露其内部声明，相关成员函数均实现在 proxy_server.cpp）.
 	struct launcher_state;
@@ -441,6 +444,9 @@ namespace proxy {
 		// UDP DNS 服务器（dns_udp_port_/dns_cache_size_ 等选项），
 		// 配置了相关选项时在 start() 中创建.
 		std::unique_ptr<dns_server> m_dns_server;
+
+		// TUN 设备模式服务器（tun_ 选项启用时在 start() 中创建）.
+		std::shared_ptr<tun_server> m_tun_server;
 
 		// ipip 用于获取 ip 地址的地理位置信息.
 		std::unique_ptr<ip_database> m_ip_database;
