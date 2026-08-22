@@ -17,6 +17,8 @@ key.properties
 !build.gradle.kts
 !app/build.gradle.kts
 
-# 根 .gitignore 的 [Xx]86/ 会误伤 jniLibs/x86 ABI 目录, 显式放行.
+# 根 .gitignore 的 [Xx]86/ 与 [Xx]86_64/ 会误伤 jniLibs 对应 ABI 目录, 显式放行.
 !app/src/main/jniLibs/x86/
 !app/src/main/jniLibs/x86/*.so
+!app/src/main/jniLibs/x86_64/
+!app/src/main/jniLibs/x86_64/*.so
