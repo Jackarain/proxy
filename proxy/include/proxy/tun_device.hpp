@@ -48,6 +48,11 @@ public:
 	// name 为空时由系统自动分配设备名；mtu 小于等于 0 时保持默认。
 	boost::system::error_code open(const std::string& name, int mtu) noexcept;
 
+	// 包装外部传入的 TUN fd（Android VpnService 建立后 detach 的 fd）.
+	// 设备地址/路由/MTU 由外部（VpnService）配置，此处仅接管读写.
+	// 成功返回空错误码；fd 小于 0 返回 invalid_argument.
+	boost::system::error_code open(int fd, int mtu) noexcept;
+
 	// 关闭设备，非持久化设备随之销毁。
 	void close() noexcept;
 

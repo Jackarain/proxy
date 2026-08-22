@@ -368,6 +368,15 @@ namespace proxy {
 		// TUN 设备 MTU，默认 1500。
 		int tun_mtu_{ 1500 };
 
+		// 外部注入的 TUN 设备文件描述符（Android VpnService 场景），-1 表示不使用.
+		// 非 -1 时 tun_server 直接包装该 fd，不再自行打开 /dev/net/tun.
+		int tun_fd_{ -1 };
+
+		// 是否等待外部注入 TUN fd（Android VpnService 场景）.
+		// 为 true 时 tun_server 启动后不创建设备，等待 launcher 控制通道
+		// 下发 set_tun_fd 后注入 fd 并开始读包.
+		bool tun_wait_fd_{ false };
+
 		// 代理域名列表（后缀匹配）：命中该列表的域名解析走上游 DoH，
 		// 数据面按解析结果经 proxy_pass_ 转发；未命中走本地解析并直连。
 		std::vector<std::string> proxy_domains_;

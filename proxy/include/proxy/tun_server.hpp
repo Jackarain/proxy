@@ -16,6 +16,7 @@
 #include "proxy/tun_device.hpp"
 
 #include <deque>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <tuple>
@@ -379,10 +380,24 @@ namespace proxy {
 		~tun_server();
 
 		// 打开 TUN 设备并启动读包循环.
+		// - tun_wait_fd_ 为 true 时不创建设备，等待 set_tun_fd 注入后启动.
+		// - 否则按 tun_fd_（外部注入）或 tun_name_（自建设备）打开.
 		void start() noexcept;
 
 		// 停止读包循环并关闭设备.
 		void close() noexcept;
+
+		// 注入外部 TUN fd（Android VpnService 建立后 detach 的 fd）.
+		// 替换旧设备并启动读包循环（若尚未启动）；须在 io_context 线程调用.
+		void set_tun_fd(int fd) noexcept;
+
+		// 设置出站 socket 的 protect 请求回调（Android VpnService 场景）.
+		// 回调在 io_context 线程执行；为空表示无需 protect（放行）.
+		void set_protect_handler(
+			std::function<net::awaitable<bool>(int)> handler);
+
+		// 请求对出站 socket fd 执行 protect（经回调）, 无回调或失败时放行.
+		net::awaitable<bool> protect_socket(int fd);
 
 	private:
 		// 读包循环协程.
@@ -435,6 +450,12 @@ namespace proxy {
 
 		// m_tun 保存 TUN 设备对象.
 		std::unique_ptr<tun_device> m_tun;
+
+		// m_protect_handler 保存出站 socket 的 protect 请求回调.
+		std::function<net::awaitable<bool>(int)> m_protect_handler;
+
+		// m_running 标记读包循环是否在运行（io_context 线程访问）.
+		bool m_running { false };
 
 		// m_tcp_flows 保存当前所有 TCP 连接.
 		std::unordered_map<tcp_flow_key, std::shared_ptr<tun_tcp_flow>,

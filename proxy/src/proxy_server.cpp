@@ -75,6 +75,10 @@ struct launcher_state
 	std::atomic_bool stopped_{ false };
 	std::atomic_bool session_closed_{ false };
 
+	// 当前会话的 protect 请求发送器（serve 期间有效, 会话断开后清空）.
+	// 经它向 app 发起 protect 请求放行出站 socket; 为空表示无会话 (放行).
+	std::function<net::awaitable<bool>(int)> call_protect_;
+
 	// 在途请求处理协程计数（serve 结束时等待其归零, 确保会话对象存活期内
 	// 所有引用会话的协程已完成, 从而无需 shared_ptr 管理会话生命周期）.
 	std::atomic<int> active_requests_{ 0 };
@@ -1163,6 +1167,27 @@ net::awaitable<void> proxy_server::launcher_serve(jsonrpc::jsonrpc_session<WsStr
 	// 否则会话尚未进入运行态, 入队的写消息可能无法发出.
 	sess.start();
 
+	// 设置 protect 请求发送器: tun 出站连接经它请求 app 放行 socket.
+	// 会话生命周期由 launcher_serve 管理, 发送器仅在 serve 期间有效.
+	m_launcher_state->call_protect_ =
+		[&sess](int fd) -> net::awaitable<bool>
+		{
+			json::object params;
+			params["fd"] = fd;
+			try
+			{
+				auto result = co_await sess.async_call("protect", params);
+				if (result.if_contains("ok") && result.at("ok").is_bool())
+					co_return result.at("ok").as_bool();
+			}
+			catch (...)
+			{
+				// 控制通道异常时放行, 避免阻塞连接建立.
+				XLOG_WARN << "protect rpc failed, allow socket";
+			}
+			co_return true;
+		};
+
 	// 注册实例信息.
 	json::object reg;
 	reg["instance_id"] = launcher_parse_instance_id(m_option.launcher_url_);
@@ -1187,8 +1212,9 @@ net::awaitable<void> proxy_server::launcher_serve(jsonrpc::jsonrpc_session<WsStr
 		launcher_update_report(sess);
 	}
 
-	// 清理: 关闭会话.
+	// 清理: 关闭会话并清空 protect 请求发送器.
 	sess.stop();
+	m_launcher_state->call_protect_ = {};
 
 	// 等待所有在途请求处理完成（它们通过引用访问本会话, 必须在本协程
 	// 返回前结束, 调用方才能安全销毁会话对象）. 会话已停止, 不再有新请求.
@@ -1388,6 +1414,26 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 				set_user_usage(u->as_object());
 		}
 		return json::object{};
+	}
+
+	if (method == "set_tun_fd")
+	{
+		// Android VpnService 场景: app 建立 tun 后经控制通道注入 fd.
+		int fd = -1;
+		if (params.is_object())
+		{
+			auto it = params.as_object().if_contains("fd");
+			if (it && it->is_int64())
+				fd = static_cast<int>(it->as_int64());
+		}
+		if (fd < 0)
+			throw launcher_error{ -32602, "invalid set_tun_fd params" };
+		if (!m_tun_server)
+			throw launcher_error{ -32000, "tun server not running" };
+		m_tun_server->set_tun_fd(fd);
+		json::object ok;
+		ok["ok"] = true;
+		return ok;
 	}
 
 	if (method == "shutdown")
@@ -1685,7 +1731,17 @@ void proxy_server::start() noexcept
 #if defined(__linux__)
 		m_tun_server = tun_server::make(m_executor, m_option);
 		if (m_tun_server)
+		{
+			// Android VpnService 场景: 出站 socket 经 launcher 请求 app protect.
+			m_tun_server->set_protect_handler(
+				[this](int fd) -> net::awaitable<bool>
+				{
+					if (m_launcher_state->call_protect_)
+						co_return co_await m_launcher_state->call_protect_(fd);
+					co_return true;
+				});
 			m_tun_server->start();
+		}
 #else
 		XLOG_WARN << "tun proxy only support linux";
 #endif
@@ -1795,6 +1851,7 @@ void proxy_server::close() noexcept
 	m_abort = true;
 
 	// 停止 launcher 控制通道: 关闭当前连接, 使 launcher 协程退出.
+	m_launcher_state->call_protect_ = {};
 	launcher_stop();
 
 	// 停止 UDP DNS 服务器（关闭监听 socket 使协程退出）.

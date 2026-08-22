@@ -213,6 +213,26 @@ namespace proxy {
 		return ec;
 	}
 
+	boost::system::error_code tun_device::open(int fd, int mtu) noexcept
+	{
+		close();
+
+		if (fd < 0)
+			return make_error_code(boost::system::errc::invalid_argument);
+
+		boost::system::error_code ec;
+
+		// 外部注入的 fd 由 VpnService 配置好地址/路由/MTU, 仅接管读写.
+		m_stream.assign(fd, ec);
+		if (ec)
+			return ec;
+
+		m_mtu = mtu > 0 ? mtu : 1500;
+		m_opened = true;
+
+		return ec;
+	}
+
 	void tun_device::close() noexcept
 	{
 		if (m_opened)
@@ -256,6 +276,12 @@ namespace proxy {
 		m_mtu = mtu > 0 ? mtu : 1500;
 		m_opened = true;
 		return {};
+	}
+
+	boost::system::error_code tun_device::open(int fd, int mtu) noexcept
+	{
+		// 外部 fd 注入仅 Linux/Android VpnService 场景支持.
+		return make_error_code(boost::system::errc::not_supported);
 	}
 
 	void tun_device::close() noexcept
@@ -970,6 +996,9 @@ namespace proxy {
 			if (!sock.is_open())
 				co_return false;
 
+			// Android VpnService 场景: 放行到上游代理的 socket, 避免回环进 tun.
+			co_await m_owner->protect_socket(sock.native_handle());
+
 			m_upstream = init_proxy_stream(std::move(sock));
 
 			co_return co_await do_proxy_handshake(proxy_url);
@@ -980,6 +1009,9 @@ namespace proxy {
 			m_executor, m_option, m_key.dst, target_port);
 		if (!sock.is_open())
 			co_return false;
+
+		// Android VpnService 场景: 放行到目标的 socket, 避免回环进 tun.
+		co_await m_owner->protect_socket(sock.native_handle());
 
 		m_upstream = init_proxy_stream(std::move(sock));
 		co_return true;
@@ -1432,6 +1464,9 @@ namespace proxy {
 		if (!sock.is_open())
 			co_return false;
 
+		// Android VpnService 场景: 放行到上游代理的 TCP 控制连接, 避免回环进 tun.
+		co_await m_owner->protect_socket(sock.native_handle());
+
 		// HTTP 代理：RFC 9298 CONNECT-UDP 隧道；SOCKS5：UDP ASSOCIATE.
 		co_return m_connect_udp ?
 			co_await do_connect_udp(std::move(sock)) :
@@ -1453,6 +1488,9 @@ namespace proxy {
 
 		// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
 		apply_so_mark_if(*m_backend, m_option);
+
+		// Android VpnService 场景: 放行后端 UDP socket, 避免回环进 tun.
+		co_await m_owner->protect_socket(m_backend->native_handle());
 
 		m_backend->bind(net::ip::udp::endpoint(m_target.protocol(), 0), ec);
 		if (ec)
@@ -1878,9 +1916,22 @@ namespace proxy {
 
 	void tun_server::start() noexcept
 	{
+		// 等待外部注入 TUN fd 模式（Android VpnService）：不创建设备,
+		// 由 launcher 控制通道 set_tun_fd 注入后启动读包循环.
+		if (m_option.tun_wait_fd_)
+			return;
+
 		if (!m_tun->is_open())
 		{
-			boost::system::error_code ec = m_tun->open(m_option.tun_name_, m_option.tun_mtu_);
+			boost::system::error_code ec;
+			if (m_option.tun_fd_ >= 0)
+			{
+				ec = m_tun->open(m_option.tun_fd_, m_option.tun_mtu_);
+			}
+			else
+			{
+				ec = m_tun->open(m_option.tun_name_, m_option.tun_mtu_);
+			}
 			if (ec)
 			{
 				XLOG_ERR << "tun open device failed: " << ec.message();
@@ -1899,9 +1950,54 @@ namespace proxy {
 			}, net::detached);
 	}
 
+	void tun_server::set_tun_fd(int fd) noexcept
+	{
+		if (m_abort)
+			return;
+
+		if (m_tun->is_open())
+			m_tun->close();
+
+		boost::system::error_code ec = m_tun->open(fd, m_option.tun_mtu_);
+		if (ec)
+		{
+			XLOG_ERR << "tun inject fd failed: " << ec.message();
+			return;
+		}
+
+		XLOG_INFO << "tun device injected: fd=" << fd
+			<< ", mtu: " << m_tun->mtu();
+
+		// 读包循环尚未启动（tun_wait_fd_ 模式）时启动.
+		if (!m_running)
+		{
+			m_running = true;
+			auto self = shared_from_this();
+			net::co_spawn(m_executor,
+				[this, self]() -> net::awaitable<void>
+				{
+					return run();
+				}, net::detached);
+		}
+	}
+
+	void tun_server::set_protect_handler(
+		std::function<net::awaitable<bool>(int)> handler)
+	{
+		m_protect_handler = std::move(handler);
+	}
+
+	net::awaitable<bool> tun_server::protect_socket(int fd)
+	{
+		if (m_protect_handler)
+			co_return co_await m_protect_handler(fd);
+		co_return true;
+	}
+
 	void tun_server::close() noexcept
 	{
 		m_abort = true;
+		m_running = false;
 
 		// 锁内搬出 flow，锁外逐个关闭，避免 flow 析构时
 		// 反向调用 remove_*_flow 再次加锁造成死锁.
@@ -1930,6 +2026,7 @@ namespace proxy {
 
 	net::awaitable<void> tun_server::run()
 	{
+		m_running = true;
 		// TUN 设备一次 read 返回一个完整 IP 包，缓冲取 64K 上限.
 		char buffer[65536];
 
@@ -1940,13 +2037,20 @@ namespace proxy {
 				net::buffer(buffer), net_awaitable[ec]);
 			if (ec)
 			{
-				XLOG_WARN << "tun read: " << ec.message();
-				break;
+				// 设备被替换（Android 注入新 fd）后旧 read 会以错误退出:
+				// 设备仍打开时继续读取, 否则结束读包循环.
+				if (m_abort || !m_tun->is_open())
+				{
+					XLOG_WARN << "tun read: " << ec.message();
+					break;
+				}
+				continue;
 			}
 
 			handle_packet(buffer, n);
 		}
 
+		m_running = false;
 		co_return;
 	}
 
