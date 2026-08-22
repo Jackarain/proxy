@@ -260,10 +260,62 @@ curl -X POST -H "Content-Type: application/dns-json" \
 
 本人的 [blog](https://www.jackarain.org) 就是直接运行在 `proxy_server` 上的静态页面(由 `jekyll` 生成)，它同时也是我的代理服务，还是我的 [音乐播放器](https://www.jackarain.org/music/index.html)
 
-## 其它相关
+## TUN 模式（TUN2SOCKS）
+
+`proxy_server` 支持以 TUN 设备方式捕获本机（或通过路由引导的其它主机）的 IP 流量，解析 TCP/UDP 后按分流规则经上游代理转发或直连，实现全局透明代理（仅支持 Linux）。
+
+### 参数
+
+``` text
+--tun <bool>            启用 TUN 设备模式（TUN2SOCKS），启用时必须同时指定 --proxy_pass
+--tun_name <name>       TUN 设备名称，为空时由系统自动分配
+--tun_mtu <mtu>         TUN 设备 MTU，默认 1500
+--proxy_domains <域>    代理域名列表（后缀匹配，可重复），命中的域名解析与数据面走代理
+--proxy_cidr <CIDR>     代理 CIDR 列表（IPv4/IPv6，可重复），命中的目标地址走代理
+--so_mark <mark>        出站连接打 SO_MARK 标记，配合策略路由排除代理自身流量防止环路
+```
+
+`proxy_pass` 支持 `socks5` 与 `http` 协议，`--tun true` 时必须指定。
+
+### 分流规则
+
+- `proxy_domains`：域名后缀匹配。命中时该域名的 DNS 查询（UDP 53）经上游代理转发，响应中的 A/AAAA 地址被记录到域名解析缓存，后续访问这些地址的 TCP/UDP 流量走代理；未命中则 DNS 走本地解析、数据面直连。
+- `proxy_cidr`：目标地址前缀匹配。命中的 TCP/UDP 流量走代理，未命中直连。
+- 两类规则独立判定，任一命中即走代理。
+
+### 防环路由配置
+
+TUN 模式会把目标流量引入 `tun` 设备，因此代理自身发起的出站连接必须避免再次进入 TUN 设备形成环路。推荐通过 `--so_mark` 配合策略路由排除：
+
+``` bash
+# 代理出站连接打 mark 100（--so_mark 100），走独立路由表绕过 TUN
+ip rule add fwmark 100 priority 100 table 100
+ip route add default via <网关> dev <物理网卡> table 100
+```
+
+同时把需要代理的流量路由进 TUN 设备，例如：
+
+``` bash
+ip addr add 198.19.0.1/24 dev tun0
+ip link set tun0 up
+ip route add 0.0.0.0/1 dev tun0
+ip route add 128.0.0.0/1 dev tun0
+```
+
+### 示例
+
+``` bash
+# 上游代理（监听 1080，出站打 mark 100 防环）
+proxy_server --server_listen 0.0.0.0:1080 --so_mark 100
+
+# TUN 代理：example.com 域名与 10.0.0.0/8 走上游代理，其余直连
+proxy_server --tun true --proxy_pass socks5://127.0.0.1:1080 \
+    --proxy_domains example.com --proxy_cidr 10.0.0.0/8 --so_mark 100
+```
+
+### 其它相关
 
 [在路由器上配置全局代理科学上网](https://github.com/Jackarain/proxy/wiki/%E5%9C%A8%E8%B7%AF%E7%94%B1%E5%99%A8%E4%B8%8A%E5%88%9B%E5%BB%BA%E5%85%A8%E5%B1%80%E4%BB%A3%E7%90%86%E6%A8%A1%E5%BC%8F)
 
 ---
-
 有任何问题可加tg账号: [https://t.me/jackarain](https://t.me/jackarain) 或tg群组: [https://t.me/joinchat/C3WytT4RMvJ4lqxiJiIVhg](https://t.me/joinchat/C3WytT4RMvJ4lqxiJiIVhg)
