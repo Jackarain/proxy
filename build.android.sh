@@ -36,10 +36,17 @@ for ARCH in "${ARCHITECTURES[@]}"
 do
     cmake -S ${SRC_PATH} -B android/$ARCH -DCMAKE_TOOLCHAIN_FILE=${NDK_PATH}/build/cmake/android.toolchain.cmake -DANDROID_ABI=${ARCH} -DANDROID_PLATFORM=android-19 -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -G Ninja
     cmake --build android/$ARCH
-    ${NDK_PATH}/toolchains/llvm/prebuilt/${HOST_TAG}/bin/llvm-strip android/$ARCH/bin/*
     mkdir -p release/$ARCH
-    cp android/$ARCH/bin/* release/$ARCH/
+    # 桌面端可执行文件 (非 Android 场景).
+    if ls android/$ARCH/bin/* >/dev/null 2>&1; then
+        ${NDK_PATH}/toolchains/llvm/prebuilt/${HOST_TAG}/bin/llvm-strip android/$ARCH/bin/*
+        cp android/$ARCH/bin/* release/$ARCH/
+    fi
+    # SWIG 库 (libxproxy.so) 与生成的 Java 包装文件.
+    ${NDK_PATH}/toolchains/llvm/prebuilt/${HOST_TAG}/bin/llvm-strip android/$ARCH/lib/libxproxy.so
+    cp android/$ARCH/lib/libxproxy.so release/$ARCH/
     mkdir -p outputs/binaries
+    cp -r android/$ARCH/swig/* outputs/
     cp -r release/* outputs/binaries/
 done
 

@@ -677,7 +677,9 @@ if (ENABLE_BUILD_EXAMPLES)
 endif()
 
 ################################################################################
-# 安装 proxy_server 服务
+# 安装 proxy_server 服务 (Android 场景仅构建 SWIG 库, 跳过安装).
+
+if (NOT ANDROID)
 
 configure_file(proxy.service.in proxy-server@.service)
 
@@ -686,3 +688,5 @@ install(TARGETS proxy_server RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/proxy-server@.service DESTINATION /usr/lib/systemd/system/)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/doc/server.conf.example DESTINATION /etc/proxy_server/)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/doc/client.conf.example DESTINATION /etc/proxy_server/)
+
+endif()

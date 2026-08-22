@@ -551,6 +551,103 @@ namespace logger_aux__ {
 		return ret;
 	}
 
+#elif defined(__ANDROID__)
+	// Android bionic 的 libc++ 不导出 codecvt<char16_t, char8_t> 特化
+	// 符号, 这里提供手写的 UTF 转换实现, 避免链接失败.
+	inline std::optional<std::wstring> string_wide(const std::string_view& src)
+	{
+		// 非合法 UTF-8 输入时保持原样 (日志场景近似处理).
+		return std::wstring(src.begin(), src.end());
+	}
+
+	inline std::optional<std::wstring> utf8_utf16(std::string_view utf8)
+	{
+		std::wstring out;
+		out.reserve(utf8.size());
+		for (size_t i = 0; i < utf8.size();)
+		{
+			unsigned char c = static_cast<unsigned char>(utf8[i]);
+			uint32_t cp = 0;
+			int extra = 0;
+			if (c < 0x80)
+			{
+				cp = c;
+			}
+			else if ((c & 0xe0) == 0xc0)
+			{
+				cp = c & 0x1f; extra = 1;
+			}
+			else if ((c & 0xf0) == 0xe0)
+			{
+				cp = c & 0x0f; extra = 2;
+			}
+			else if ((c & 0xf8) == 0xf0)
+			{
+				cp = c & 0x07; extra = 3;
+			}
+			else
+			{
+				return {};
+			}
+			if (i + extra >= utf8.size())
+				return {};
+			for (int j = 0; j < extra; ++j)
+			{
+				unsigned char cc = static_cast<unsigned char>(utf8[++i]);
+				if ((cc & 0xc0) != 0x80)
+					return {};
+				cp = (cp << 6) | (cc & 0x3f);
+			}
+			++i;
+			out.push_back(static_cast<wchar_t>(cp));
+		}
+		return out;
+	}
+
+	inline std::optional<std::string> utf16_utf8(std::wstring_view utf16)
+	{
+		std::string out;
+		out.reserve(utf16.size() * 3);
+		for (size_t i = 0; i < utf16.size(); ++i)
+		{
+			uint32_t cp = static_cast<uint32_t>(utf16[i]);
+			// 处理 UTF-16 代理对 (wchar_t 在 Android 为 32 位, 兼容传入
+			// 的 UTF-16 编码串).
+			if (cp >= 0xd800 && cp <= 0xdbff && i + 1 < utf16.size())
+			{
+				uint32_t low = static_cast<uint32_t>(utf16[i + 1]);
+				if (low >= 0xdc00 && low <= 0xdfff)
+				{
+					cp = 0x10000 + ((cp - 0xd800) << 10) + (low - 0xdc00);
+					++i;
+				}
+			}
+			if (cp < 0x80)
+			{
+				out.push_back(static_cast<char>(cp));
+			}
+			else if (cp < 0x800)
+			{
+				out.push_back(static_cast<char>(0xc0 | (cp >> 6)));
+				out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
+			}
+			else if (cp < 0x10000)
+			{
+				out.push_back(static_cast<char>(0xe0 | (cp >> 12)));
+				out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3f)));
+				out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
+			}
+			else
+			{
+				out.push_back(static_cast<char>(0xf0 | (cp >> 18)));
+				out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3f)));
+				out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3f)));
+				out.push_back(static_cast<char>(0x80 | (cp & 0x3f)));
+			}
+		}
+		return out;
+	}
+
 #else
 	inline std::optional<std::wstring> string_wide(const std::string_view& src)
 	{

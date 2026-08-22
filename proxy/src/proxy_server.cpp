@@ -2770,7 +2770,9 @@ net::awaitable<void> proxy_server::get_local_address() noexcept
 	// OpenWrt 等嵌入式系统的 /etc/hosts 常缺少本机 IP 映射，
 	// 仅靠 host_name + DNS 解析拿不到本机地址，会导致 transparent
 	// 模式把访问本机监听端口的连接误判为 tproxy 转发目标。
-#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+	// 注: Android bionic 的 getifaddrs 需 API 24+, 且 transparent 模式
+	// 在 Android 上不可用, 直接跳过接口枚举.
+#if (defined(__linux__) || defined(__APPLE__) || defined(__unix__)) && !defined(__ANDROID__)
 	struct ifaddrs* ifa = nullptr;
 	if (::getifaddrs(&ifa) == 0)
 	{
