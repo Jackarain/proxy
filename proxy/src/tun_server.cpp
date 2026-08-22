@@ -33,6 +33,17 @@
 # include <sys/ioctl.h>
 # include <sys/socket.h>
 # include <unistd.h>
+#elif defined(__APPLE__)
+# include <fcntl.h>
+# include <net/if.h>
+# include <net/if_utun.h>
+# include <netinet/in.h>
+# include <cstdlib>
+# include <sys/ioctl.h>
+# include <sys/kern_control.h>
+# include <sys/socket.h>
+# include <sys/sys_domain.h>
+# include <unistd.h>
 #endif
 
 namespace proxy {
@@ -40,7 +51,12 @@ namespace proxy {
 	//////////////////////////////////////////////////////////////////////////
 	// tun_device
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
+
+	tun_device::tun_device(net::any_io_executor executor)
+		: m_executor(std::move(executor))
+		, m_stream(m_executor)
+	{}
 
 	tun_device::~tun_device()
 	{
@@ -53,8 +69,9 @@ namespace proxy {
 
 		boost::system::error_code ec;
 
-		m_fd = ::open("/dev/net/tun", O_RDWR | O_CLOEXEC);
-		if (m_fd < 0)
+#if defined(__linux__)
+		int fd = ::open("/dev/net/tun", O_RDWR | O_CLOEXEC);
+		if (fd < 0)
 		{
 			ec = boost::system::error_code(errno, boost::system::generic_category());
 			return ec;
@@ -65,14 +82,71 @@ namespace proxy {
 		if (!name.empty())
 			std::strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ - 1);
 
-		if (::ioctl(m_fd, TUNSETIFF, &ifr) < 0)
+		if (::ioctl(fd, TUNSETIFF, &ifr) < 0)
 		{
 			ec = boost::system::error_code(errno, boost::system::generic_category());
-			close();
+			::close(fd);
 			return ec;
 		}
 
 		m_name = ifr.ifr_name;
+#elif defined(__APPLE__)
+		// 打开 utun 设备（内核控制接口）.
+		struct ctl_info ctl_info;
+		std::memset(&ctl_info, 0, sizeof(ctl_info));
+		std::strncpy(ctl_info.ctl_name, UTUN_CONTROL_NAME,
+			sizeof(ctl_info.ctl_name));
+
+		int fd = ::socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
+		if (fd < 0)
+		{
+			ec = boost::system::error_code(errno, boost::system::generic_category());
+			return ec;
+		}
+
+		if (::ioctl(fd, CTLIOCGINFO, &ctl_info) < 0)
+		{
+			ec = boost::system::error_code(errno, boost::system::generic_category());
+			::close(fd);
+			return ec;
+		}
+
+		struct sockaddr_ctl sc;
+		std::memset(&sc, 0, sizeof(sc));
+		sc.sc_id = ctl_info.ctl_id;
+		sc.sc_len = sizeof(sc);
+		sc.sc_family = AF_SYSTEM;
+		sc.ss_sysaddr = AF_SYS_CONTROL;
+		sc.sc_unit = 0;  // 动态分配.
+
+		// 若指定了 utun 名称 (如 "utun5"), 使用对应单元.
+		if (name.compare(0, 4, "utun") == 0 && name.size() > 4)
+			sc.sc_unit = std::atoi(name.c_str() + 4) + 1;
+
+		if (::connect(fd, reinterpret_cast<struct sockaddr*>(&sc),
+				sizeof(sc)) < 0)
+		{
+			ec = boost::system::error_code(errno, boost::system::generic_category());
+			::close(fd);
+			return ec;
+		}
+
+		char ifname[64] = { 0 };
+		socklen_t len = sizeof(ifname);
+		if (::getsockopt(fd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME,
+				ifname, &len) < 0)
+		{
+			ec = boost::system::error_code(errno, boost::system::generic_category());
+			::close(fd);
+			return ec;
+		}
+
+		m_name = ifname;
+
+		// 设置非阻塞.
+		int flags = ::fcntl(fd, F_GETFL, 0);
+		::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+#endif
 
 		if (mtu > 0)
 		{
@@ -90,20 +164,76 @@ namespace proxy {
 
 		m_mtu = mtu > 0 ? mtu : 1500;
 
+		m_stream.assign(fd, ec);
+		if (ec)
+		{
+			::close(fd);
+			return ec;
+		}
+
+		m_opened = true;
+
 		return ec;
 	}
 
 	void tun_device::close() noexcept
 	{
-		if (m_fd >= 0)
+		if (m_opened)
 		{
-			::close(m_fd);
-			m_fd = -1;
+			boost::system::error_code ec;
+			m_stream.close(ec);
+			m_opened = false;
 		}
 		m_name.clear();
 	}
 
-#endif // defined(__linux__)
+	int tun_device::native_handle() const noexcept
+	{
+		return m_stream.native_handle();
+	}
+
+#endif // defined(__linux__) || defined(__APPLE__)
+
+#if defined(_WIN32)
+
+	tun_device::tun_device(net::any_io_executor executor)
+		: m_executor(std::move(executor))
+		, m_wintun(m_executor)
+	{}
+
+	tun_device::~tun_device()
+	{
+		close();
+	}
+
+	boost::system::error_code tun_device::open(
+		const std::string& name, int mtu) noexcept
+	{
+		close();
+
+		auto ec = m_wintun.open(name, mtu);
+		if (ec)
+			return ec;
+
+		m_name = m_wintun.device_name();
+		m_mtu = mtu > 0 ? mtu : 1500;
+		m_opened = true;
+		return {};
+	}
+
+	void tun_device::close() noexcept
+	{
+		m_wintun.close();
+		m_opened = false;
+		m_name.clear();
+	}
+
+	int tun_device::native_handle() const noexcept
+	{
+		return -1;
+	}
+
+#endif // defined(_WIN32)
 
 	//////////////////////////////////////////////////////////////////////////
 	// IP 包解析
@@ -635,7 +765,7 @@ namespace proxy {
 	//////////////////////////////////////////////////////////////////////////
 	// tun_tcp_flow
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
 
 	tun_tcp_flow::tun_tcp_flow(net::any_io_executor executor,
 		const std::shared_ptr<tun_server>& owner,
@@ -1614,7 +1744,7 @@ namespace proxy {
 	tun_server::tun_server(net::any_io_executor executor, proxy_server_option opt)
 		: m_executor(std::move(executor))
 		, m_option(std::move(opt))
-		, m_tun(std::make_unique<tun_device>())
+		, m_tun(std::make_unique<tun_device>(m_executor))
 	{}
 
 	std::shared_ptr<tun_server>
@@ -1683,9 +1813,6 @@ namespace proxy {
 				<< ", mtu: " << m_tun->mtu();
 		}
 
-		if (!m_stream)
-			m_stream.emplace(m_executor, m_tun->native_handle());
-
 		auto self = shared_from_this();
 		net::co_spawn(m_executor,
 			[this, self]() -> net::awaitable<void>
@@ -1705,12 +1832,6 @@ namespace proxy {
 			m_udp_flows.clear();
 		}
 
-		if (m_stream)
-		{
-			boost::system::error_code ec;
-			m_stream->close(ec);
-		}
-
 		if (m_tun)
 			m_tun->close();
 	}
@@ -1723,7 +1844,7 @@ namespace proxy {
 		for (; !m_abort;)
 		{
 			boost::system::error_code ec;
-			size_t n = co_await m_stream->async_read_some(
+			size_t n = co_await m_tun->async_read_some(
 				net::buffer(buffer), net_awaitable[ec]);
 			if (ec)
 			{
@@ -1754,7 +1875,7 @@ namespace proxy {
 
 	void tun_server::write_packet(std::string packet)
 	{
-		if (m_abort || !m_stream)
+		if (m_abort || !m_tun || !m_tun->is_open())
 			return;
 
 		bool need_start = false;
@@ -1780,7 +1901,7 @@ namespace proxy {
 
 	void tun_server::do_write()
 	{
-		if (m_abort || !m_stream)
+		if (m_abort || !m_tun || !m_tun->is_open())
 		{
 			std::lock_guard<std::mutex> lk(m_write_mutex);
 			m_writing = false;
@@ -1801,7 +1922,7 @@ namespace proxy {
 		}
 
 		auto self = shared_from_this();
-		m_stream->async_write_some(net::buffer(*buf),
+		m_tun->async_write_some(net::buffer(*buf),
 			[this, self, buf](const boost::system::error_code& ec, size_t)
 			{
 				if (ec)
@@ -2125,7 +2246,7 @@ namespace proxy {
 		flow->send(pkt.payload, pkt.payload_len);
 	}
 
-#else // !defined(__linux__)
+#else // 不支持的平台
 
 	std::shared_ptr<tun_server>
 	tun_server::make(net::any_io_executor executor, proxy_server_option opt)
@@ -2135,6 +2256,6 @@ namespace proxy {
 		return nullptr;
 	}
 
-#endif // defined(__linux__)
+#endif // defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
 
 } // namespace proxy

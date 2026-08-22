@@ -608,6 +608,14 @@ if (WIN32)
 			mswsock
 			bcrypt
 			iphlpapi
+			setupapi
+			cfgmgr32
+			newdev
+			shlwapi
+			ole32
+			advapi32
+			user32
+			gdi32
 		)
 	else()
 		link_libraries(
@@ -616,6 +624,16 @@ if (WIN32)
 			Crypt32.lib
 			Winmm.lib
 			Mswsock.lib
+			Ws2_32.lib
+			Iphlpapi.lib
+			Setupapi.lib
+			Cfgmgr32.lib
+			Newdev.lib
+			Shlwapi.lib
+			Ole32.lib
+			Advapi32.lib
+			User32.lib
+			Gdi32.lib
 		)
 	endif()
 elseif (UNIX AND NOT APPLE)

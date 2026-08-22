@@ -262,7 +262,13 @@ curl -X POST -H "Content-Type: application/dns-json" \
 
 ## TUN 模式（TUN2SOCKS）
 
-`proxy_server` 支持以 TUN 设备方式捕获本机（或通过路由引导的其它主机）的 IP 流量，解析 TCP/UDP 后按分流规则经上游代理转发或直连，实现全局透明代理（仅支持 Linux）。
+`proxy_server` 支持以 TUN 设备方式捕获本机（或通过路由引导的其它主机）的 IP 流量，解析 TCP/UDP 后按分流规则经上游代理转发或直连，实现全局透明代理。
+
+支持平台：
+
+- Linux：`/dev/net/tun`。
+- macOS：`utun` 内核控制接口。
+- Windows：`wintun` 驱动（需管理员权限；驱动文件 `wintun.sys/inf/cat` 内嵌于 exe 资源，首次运行时自动解压并用 `pnputil` 安装，`wintun.dll` 随程序分发并动态加载）。
 
 ### 参数
 
@@ -272,7 +278,7 @@ curl -X POST -H "Content-Type: application/dns-json" \
 --tun_mtu <mtu>         TUN 设备 MTU，默认 1500
 --proxy_domains <域>    代理域名列表（后缀匹配，可重复），命中的域名解析与数据面走代理
 --proxy_cidr <CIDR>     代理 CIDR 列表（IPv4/IPv6，可重复），命中的目标地址走代理
---so_mark <mark>        出站连接打 SO_MARK 标记，配合策略路由排除代理自身流量防止环路
+--so_mark <mark>        出站连接打 SO_MARK 标记（仅 Linux），配合策略路由排除代理自身流量防止环路
 ```
 
 `proxy_pass` 支持 `socks5` 与 `http` 协议，`--tun true` 时必须指定。

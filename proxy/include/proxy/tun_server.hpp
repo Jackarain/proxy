@@ -20,10 +20,6 @@
 #include <mutex>
 #include <tuple>
 
-#if defined(__linux__)
-# include <boost/asio/posix/stream_descriptor.hpp>
-#endif
-
 namespace proxy {
 
 	//////////////////////////////////////////////////////////////////////////
@@ -331,7 +327,7 @@ namespace proxy {
 	//////////////////////////////////////////////////////////////////////////
 	// tun_server
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
 
 	// tun_server 实现 TUN2SOCKS 服务：从 TUN 设备读取 IP 数据包，解析
 	// TCP/UDP 后按分流规则（proxy_domains_/proxy_cidr_）经 proxy_pass_
@@ -410,9 +406,6 @@ namespace proxy {
 		// m_tun 保存 TUN 设备对象.
 		std::unique_ptr<tun_device> m_tun;
 
-		// m_stream 封装 TUN 设备 fd 的异步读写.
-		std::optional<net::posix::stream_descriptor> m_stream;
-
 		// m_tcp_flows 保存当前所有 TCP 连接.
 		std::unordered_map<tcp_flow_key, std::shared_ptr<tun_tcp_flow>,
 			tcp_flow_key_hash> m_tcp_flows;
@@ -450,7 +443,7 @@ namespace proxy {
 		bool m_abort { false };
 	};
 
-#else // !defined(__linux__)
+#else // 不支持的平台
 
 	// 非 Linux 平台的空实现.
 	class tun_server
@@ -469,7 +462,7 @@ namespace proxy {
 		proxy_server_option m_option;
 	};
 
-#endif // defined(__linux__)
+#endif // defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
 
 } // namespace proxy
 

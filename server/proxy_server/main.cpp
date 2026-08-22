@@ -500,7 +500,7 @@ int main(int argc, char** argv)
 		("local_ip", po::value<std::string>(&local_ip), "Specify the local IP address for outbound TCP connections.")
 
 		("transparent", po::value<bool>(&transparent)->default_value(false, "false"), "Enable transparent proxy mode (Linux only).")
-		("tun", po::value<bool>(&tun)->default_value(false, "false"), "Enable TUN device mode (TUN2SOCKS, Linux only, requires proxy_pass).")
+		("tun", po::value<bool>(&tun)->default_value(false, "false"), "Enable TUN device mode (TUN2SOCKS, requires proxy_pass).")
 		("tun_name", po::value<std::string>(&tun_name)->value_name("name"), "TUN device name (empty = auto assign).")
 		("tun_mtu", po::value<int>(&tun_mtu)->default_value(1500), "TUN device MTU (default 1500).")
 		("proxy_domains", po::value<std::vector<std::string>>(&proxy_domains)->multitoken(), "Domain suffix list to route via the upstream proxy (repeatable).")
