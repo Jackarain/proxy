@@ -147,6 +147,16 @@ namespace proxy {
 		net::awaitable<std::size_t> do_write(std::string_view buf,
 			boost::system::error_code& ec);
 
+		// 创建/打开 wintun 适配器, 成功返回空错误码.
+		boost::system::error_code create_adapter(const std::wstring& name,
+			const GUID& guid);
+
+		// 创建并注册 ring buffer, 成功返回空错误码.
+		boost::system::error_code setup_rings();
+
+		// 设置 IPv4/IPv6 的 MTU.
+		void setup_mtu(int mtu);
+
 		struct initiate_async_read_some
 		{
 			using executor_type = net::any_io_executor;

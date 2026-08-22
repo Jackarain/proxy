@@ -38,6 +38,15 @@ namespace proxy {
 			return std::string(buf, n);
 		}
 
+		// 构造 Windows 错误码并记录日志.
+		boost::system::error_code win_error_code(const char* msg)
+		{
+			DWORD err = GetLastError();
+			XLOG_ERR << msg << ": " << win_error(err);
+			return boost::system::error_code(err,
+				boost::system::system_category());
+		}
+
 		struct windows_driver
 		{
 			std::string component_id_;	// 小写.
@@ -46,12 +55,10 @@ namespace proxy {
 		};
 
 		// 枚举已安装网卡驱动 (registry), 参考 avpn utils::enum_windows_devices.
-		std::vector<windows_driver> enum_windows_devices()
+		std::vector<windows_driver> enum_adapter_drivers()
 		{
 			const char* adapter_key = "SYSTEM\\CurrentControlSet\\Control\\"
 				"Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}";
-			const char* network_connections_key = "SYSTEM\\CurrentControlSet\\"
-				"Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}";
 			std::vector<windows_driver> result;
 
 			HKEY key;
@@ -104,10 +111,19 @@ namespace proxy {
 			}
 			RegCloseKey(key);
 
-			// 从网络连接信息中获取适配器名称 (如 "AVPN").
+			return result;
+		}
+
+		// 从网络连接信息中获取适配器名称 (如 "AVPN").
+		void fill_connection_names(std::vector<windows_driver>& result)
+		{
+			const char* network_connections_key = "SYSTEM\\CurrentControlSet\\"
+				"Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}";
+
+			HKEY key;
 			if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, network_connections_key, 0,
 					KEY_READ, &key) != ERROR_SUCCESS)
-				return result;
+				return;
 
 			for (int i = 0;; i++)
 			{
@@ -140,7 +156,13 @@ namespace proxy {
 						dev.name_ = name;
 			}
 			RegCloseKey(key);
+		}
 
+		// 枚举已安装 wintun 相关网卡驱动.
+		std::vector<windows_driver> enum_windows_devices()
+		{
+			auto result = enum_adapter_drivers();
+			fill_connection_names(result);
 			return result;
 		}
 
@@ -339,6 +361,22 @@ namespace proxy {
 				FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, nullptr);
 		}
 
+		// 将 wintun 驱动文件从资源解压到指定目录.
+		bool extract_driver_files(const std::filesystem::path& dir)
+		{
+			auto sys_path = dir / "wintun.sys";
+			auto inf_path = dir / "wintun.inf";
+			auto cat_path = dir / "wintun.cat";
+			if (!resource_copy_to_file("wintun.sys", sys_path) ||
+				!resource_copy_to_file("wintun.inf", inf_path) ||
+				!resource_copy_to_file("wintun.cat", cat_path))
+			{
+				XLOG_ERR << "install wintun, extract resource failed";
+				return false;
+			}
+			return true;
+		}
+
 		bool install_wintun()
 		{
 			// 已安装 wintun 驱动则直接返回.
@@ -363,19 +401,14 @@ namespace proxy {
 				return false;
 			}
 
-			auto sys_path = tmp / "wintun.sys";
-			auto inf_path = tmp / "wintun.inf";
-			auto cat_path = tmp / "wintun.cat";
-			if (!resource_copy_to_file("wintun.sys", sys_path) ||
-				!resource_copy_to_file("wintun.inf", inf_path) ||
-				!resource_copy_to_file("wintun.cat", cat_path))
+			if (!extract_driver_files(tmp))
 			{
-				XLOG_ERR << "install wintun, extract resource failed";
 				std::filesystem::remove_all(tmp, ec);
 				return false;
 			}
 
 			// 使用 pnputil 安装驱动.
+			auto inf_path = tmp / "wintun.inf";
 			wchar_t win_dir[MAX_PATH] = { 0 };
 			GetWindowsDirectoryW(win_dir, MAX_PATH);
 			std::wstring pnputil = std::wstring(win_dir) +
@@ -423,13 +456,11 @@ namespace proxy {
 		m_abort = false;
 
 		// 失败时记录错误并清理已创建资源.
-		auto fail = [this](const char* msg) -> boost::system::error_code
+		auto fail = [this](boost::system::error_code ec)
+			-> boost::system::error_code
 		{
-			DWORD err = GetLastError();
-			XLOG_ERR << msg << ": " << win_error(err);
 			close();
-			return boost::system::error_code(err,
-				boost::system::system_category());
+			return ec;
 		};
 
 		// 安装驱动并加载 wintun.dll.
@@ -447,36 +478,53 @@ namespace proxy {
 				GetLastError(), boost::system::system_category());
 
 		std::wstring wname(adapter_name.begin(), adapter_name.end());
+		if (auto ec = create_adapter(wname, adapter_guid); ec)
+			return ec;
+
+		m_wintun_file = wintun_detail::open_wintun(adapter_name);
+		if (m_wintun_file == INVALID_HANDLE_VALUE)
+			return fail(win_error_code("open wintun device failed"));
+
+		if (auto ec = setup_rings(); ec)
+			return fail(ec);
+
+		setup_mtu(mtu);
+
+		m_opened = true;
+		XLOG_INFO << "wintun opened: " << m_devname;
+		return {};
+	}
+
+	boost::system::error_code wintun_tun_device::create_adapter(
+		const std::wstring& name, const GUID& guid)
+	{
 		for (int n = 0; n < 5; n++)
 		{
 			m_wintun_handle = m_api->create_adapter(
-				wname.data(), L"Wintun", &adapter_guid);
+				name.data(), L"Wintun", &guid);
 			if (!m_wintun_handle)
 				XLOG_WARN << "WintunCreateAdapter fail: "
 					<< win_error(GetLastError());
 			if (!m_wintun_handle)
-				m_wintun_handle = m_api->open_adapter(wname.data());
+				m_wintun_handle = m_api->open_adapter(name.data());
 			if (m_wintun_handle)
-				break;
-		}
-		if (!m_wintun_handle)
-		{
-			XLOG_ERR << "wintun adapter open failed: "
-				<< win_error(GetLastError());
-			return boost::system::error_code(
-				GetLastError(), boost::system::system_category());
+				return {};
 		}
 
-		m_wintun_file = wintun_detail::open_wintun(adapter_name);
-		if (m_wintun_file == INVALID_HANDLE_VALUE)
-			return fail("open wintun device failed");
+		XLOG_ERR << "wintun adapter open failed: "
+			<< win_error(GetLastError());
+		return boost::system::error_code(
+			GetLastError(), boost::system::system_category());
+	}
 
+	boost::system::error_code wintun_tun_device::setup_rings()
+	{
 		m_send_ring_handle = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr,
 			PAGE_READWRITE, 0, sizeof(struct tun_ring), nullptr);
 		m_receive_ring_handle = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr,
 			PAGE_READWRITE, 0, sizeof(struct tun_ring), nullptr);
 		if (!m_send_ring_handle || !m_receive_ring_handle)
-			return fail("wintun create file mapping failed");
+			return win_error_code("wintun create file mapping failed");
 
 		m_send_ring = static_cast<struct tun_ring*>(MapViewOfFile(
 			m_send_ring_handle, FILE_MAP_ALL_ACCESS, 0, 0,
@@ -485,12 +533,12 @@ namespace proxy {
 			m_receive_ring_handle, FILE_MAP_ALL_ACCESS, 0, 0,
 			sizeof(struct tun_ring)));
 		if (!m_send_ring || !m_receive_ring)
-			return fail("wintun map view failed");
+			return win_error_code("wintun map view failed");
 
 		m_send_event_moved = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 		m_receive_event_moved = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 		if (!m_send_event_moved || !m_receive_event_moved)
-			return fail("wintun create event failed");
+			return win_error_code("wintun create event failed");
 		m_receive_object_moved.assign(m_receive_event_moved);
 
 		struct tun_register_rings rr;
@@ -503,36 +551,35 @@ namespace proxy {
 		rr.receive.tail_moved = m_send_event_moved;
 
 		DWORD bytes_returned = 0;
-		BOOL res = DeviceIoControl(m_wintun_file, TUN_IOCTL_REGISTER_RINGS,
-			&rr, sizeof(rr), nullptr, 0, &bytes_returned, nullptr);
-		if (!res)
-			return fail("wintun register rings failed");
+		if (!DeviceIoControl(m_wintun_file, TUN_IOCTL_REGISTER_RINGS,
+				&rr, sizeof(rr), nullptr, 0, &bytes_returned, nullptr))
+			return win_error_code("wintun register rings failed");
 
-		// 设置 MTU (IPv4 与 IPv6).
+		return {};
+	}
+
+	void wintun_tun_device::setup_mtu(int mtu)
+	{
 		NET_IFINDEX index = 0;
 		NET_LUID luid;
 		m_api->get_adapter_luid(m_wintun_handle, &luid);
-		if (ConvertInterfaceLuidToIndex(&luid, &index) == NO_ERROR)
-		{
-			auto set_mtu = [&](short family, int value) {
-				MIB_IPINTERFACE_ROW ipiface;
-				std::memset(&ipiface, 0, sizeof(ipiface));
-				InitializeIpInterfaceEntry(&ipiface);
-				ipiface.Family = family;
-				ipiface.InterfaceIndex = index;
-				if (GetIpInterfaceEntry(&ipiface) == NO_ERROR)
-				{
-					ipiface.NlMtu = value;
-					SetIpInterfaceEntry(&ipiface);
-				}
-			};
-			set_mtu(AF_INET, mtu > 0 ? mtu : 1500);
-			set_mtu(AF_INET6, std::max(mtu > 0 ? mtu : 1500, 1280));
-		}
+		if (ConvertInterfaceLuidToIndex(&luid, &index) != NO_ERROR)
+			return;
 
-		m_opened = true;
-		XLOG_INFO << "wintun opened: " << m_devname;
-		return {};
+		auto set_mtu = [&](short family, int value) {
+			MIB_IPINTERFACE_ROW ipiface;
+			std::memset(&ipiface, 0, sizeof(ipiface));
+			InitializeIpInterfaceEntry(&ipiface);
+			ipiface.Family = family;
+			ipiface.InterfaceIndex = index;
+			if (GetIpInterfaceEntry(&ipiface) == NO_ERROR)
+			{
+				ipiface.NlMtu = value;
+				SetIpInterfaceEntry(&ipiface);
+			}
+		};
+		set_mtu(AF_INET, mtu > 0 ? mtu : 1500);
+		set_mtu(AF_INET6, std::max(mtu > 0 ? mtu : 1500, 1280));
 	}
 
 	void wintun_tun_device::close()
@@ -664,18 +711,20 @@ namespace proxy {
 
 		for (;;)
 		{
+			// 先尝试读取, 消化 ring 中积压的数据包.
+			int n = read_wintun(buf);
+			if (n > 0)
+				co_return static_cast<std::size_t>(n);
+			if (n < 0)
+			{
+				ec = net::error::operation_aborted;
+				co_return 0;
+			}
+
+			// 无数据, 挂起等待接收事件.
 			co_await m_receive_object_moved.async_wait(net_awaitable[ec]);
 			if (ec)
 				co_return 0;
-
-			int n = read_wintun(buf);
-			if (n == 0)
-				continue;
-			if (n > 0)
-				co_return static_cast<std::size_t>(n);
-
-			ec = net::error::operation_aborted;
-			co_return 0;
 		}
 	}
 
