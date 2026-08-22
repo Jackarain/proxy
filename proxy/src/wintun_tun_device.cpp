@@ -18,6 +18,7 @@
 #include <vector>
 #include <string>
 #include <cctype>
+#include <chrono>
 #include <cstring>
 
 namespace proxy {
@@ -421,6 +422,16 @@ namespace proxy {
 		// 提前标记可关闭, 使 open() 中途失败时 close() 能正确清理已创建资源.
 		m_abort = false;
 
+		// 失败时记录错误并清理已创建资源.
+		auto fail = [this](const char* msg) -> boost::system::error_code
+		{
+			DWORD err = GetLastError();
+			XLOG_ERR << msg << ": " << win_error(err);
+			close();
+			return boost::system::error_code(err,
+				boost::system::system_category());
+		};
+
 		// 安装驱动并加载 wintun.dll.
 		static bool wintun_inited = false;
 		if (!wintun_inited)
@@ -458,26 +469,14 @@ namespace proxy {
 
 		m_wintun_file = wintun_detail::open_wintun(adapter_name);
 		if (m_wintun_file == INVALID_HANDLE_VALUE)
-		{
-			XLOG_ERR << "open wintun device failed: "
-				<< win_error(GetLastError());
-			close();
-			return boost::system::error_code(
-				GetLastError(), boost::system::system_category());
-		}
+			return fail("open wintun device failed");
 
 		m_send_ring_handle = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr,
 			PAGE_READWRITE, 0, sizeof(struct tun_ring), nullptr);
 		m_receive_ring_handle = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr,
 			PAGE_READWRITE, 0, sizeof(struct tun_ring), nullptr);
 		if (!m_send_ring_handle || !m_receive_ring_handle)
-		{
-			XLOG_ERR << "wintun create file mapping failed: "
-				<< win_error(GetLastError());
-			close();
-			return boost::system::error_code(
-				GetLastError(), boost::system::system_category());
-		}
+			return fail("wintun create file mapping failed");
 
 		m_send_ring = static_cast<struct tun_ring*>(MapViewOfFile(
 			m_send_ring_handle, FILE_MAP_ALL_ACCESS, 0, 0,
@@ -486,24 +485,12 @@ namespace proxy {
 			m_receive_ring_handle, FILE_MAP_ALL_ACCESS, 0, 0,
 			sizeof(struct tun_ring)));
 		if (!m_send_ring || !m_receive_ring)
-		{
-			XLOG_ERR << "wintun map view failed: "
-				<< win_error(GetLastError());
-			close();
-			return boost::system::error_code(
-				GetLastError(), boost::system::system_category());
-		}
+			return fail("wintun map view failed");
 
 		m_send_event_moved = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 		m_receive_event_moved = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 		if (!m_send_event_moved || !m_receive_event_moved)
-		{
-			XLOG_ERR << "wintun create event failed: "
-				<< win_error(GetLastError());
-			close();
-			return boost::system::error_code(
-				GetLastError(), boost::system::system_category());
-		}
+			return fail("wintun create event failed");
 		m_receive_object_moved.assign(m_receive_event_moved);
 
 		struct tun_register_rings rr;
@@ -519,13 +506,7 @@ namespace proxy {
 		BOOL res = DeviceIoControl(m_wintun_file, TUN_IOCTL_REGISTER_RINGS,
 			&rr, sizeof(rr), nullptr, 0, &bytes_returned, nullptr);
 		if (!res)
-		{
-			XLOG_ERR << "wintun register rings failed: "
-				<< win_error(GetLastError());
-			close();
-			return boost::system::error_code(
-				GetLastError(), boost::system::system_category());
-		}
+			return fail("wintun register rings failed");
 
 		// 设置 MTU (IPv4 与 IPv6).
 		NET_IFINDEX index = 0;
@@ -561,9 +542,6 @@ namespace proxy {
 
 		m_abort = true;
 		m_opened = false;
-
-		if (m_wintun_handle)
-			DeleteUnicastIpAddressEntry(&m_address_row);
 
 		if (m_send_event_moved != INVALID_HANDLE_VALUE)
 		{
@@ -673,6 +651,73 @@ namespace proxy {
 			SetEvent(m_send_event_moved);
 
 		return static_cast<int>(buf.size());
+	}
+
+	net::awaitable<std::size_t> wintun_tun_device::do_read(
+		std::string_view buf, boost::system::error_code& ec)
+	{
+		if (m_abort)
+		{
+			ec = net::error::operation_aborted;
+			co_return 0;
+		}
+
+		for (;;)
+		{
+			co_await m_receive_object_moved.async_wait(net_awaitable[ec]);
+			if (ec)
+				co_return 0;
+
+			int n = read_wintun(buf);
+			if (n == 0)
+				continue;
+			if (n > 0)
+				co_return static_cast<std::size_t>(n);
+
+			ec = net::error::operation_aborted;
+			co_return 0;
+		}
+	}
+
+	net::awaitable<std::size_t> wintun_tun_device::do_write(
+		std::string_view buf, boost::system::error_code& ec)
+	{
+		if (m_abort)
+		{
+			ec = net::error::operation_aborted;
+			co_return 0;
+		}
+
+		int n = write_wintun(buf);
+		if (n < 0)
+		{
+			ec = net::error::operation_aborted;
+			co_return 0;
+		}
+
+		while (n == 0)
+		{
+			// send ring 已满, 定时重试写入.
+			net::steady_timer wait_timer(m_executor);
+			wait_timer.expires_after(std::chrono::milliseconds(1));
+			co_await wait_timer.async_wait(net_awaitable[ec]);
+			if (ec)
+				co_return 0;
+			if (m_abort)
+			{
+				ec = net::error::operation_aborted;
+				co_return 0;
+			}
+
+			n = write_wintun(buf);
+			if (n < 0)
+			{
+				ec = net::error::operation_aborted;
+				co_return 0;
+			}
+		}
+
+		co_return static_cast<std::size_t>(n);
 	}
 
 } // namespace proxy

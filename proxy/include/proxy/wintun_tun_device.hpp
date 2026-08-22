@@ -139,6 +139,14 @@ namespace proxy {
 		// 0 表示 ring 已满, -1 表示错误.
 		int write_wintun(std::string_view buf);
 
+		// 异步读取一个数据包: 暂无数据时等待接收事件.
+		net::awaitable<std::size_t> do_read(std::string_view buf,
+			boost::system::error_code& ec);
+
+		// 异步写入一个数据包: send ring 满时定时重试.
+		net::awaitable<std::size_t> do_write(std::string_view buf,
+			boost::system::error_code& ec);
+
 		struct initiate_async_read_some
 		{
 			using executor_type = net::any_io_executor;
@@ -159,128 +167,20 @@ namespace proxy {
 				// wintun 一次只处理一个数据包, 仅使用第一个缓冲区,
 				// 避免多缓冲区序列按总大小拷贝导致越界.
 				auto buf = net::buffer_sequence_begin(buffers);
-				auto bufsize = buf->size();
-				auto bufptr = static_cast<uint8_t*>(buf->data());
 				std::string_view bufs(
-					reinterpret_cast<const char*>(bufptr), bufsize);
-				boost::system::error_code ec;
-
-				auto bytes_transferred = self_->read_wintun(bufs);
-				if (bytes_transferred == 0)
-				{
-					// 短暂 spin 等待驱动写入数据, 减少协程切换开销.
-					LARGE_INTEGER frequency;
-					QueryPerformanceFrequency(&frequency);
-					ULONG64 spin_max =
-						frequency.QuadPart / 1000 / 10; // 100us.
-
-					LARGE_INTEGER spin_start;
-					QueryPerformanceCounter(&spin_start);
-
-					for (; !self_->m_abort;)
+					reinterpret_cast<const char*>(buf->data()), buf->size());
+				net::co_spawn(self_->get_executor(),
+					[self = self_, bufs,
+						handler = std::forward<Handler>(handler)]() mutable
+						-> net::awaitable<void>
 					{
-						bytes_transferred = self_->read_wintun(bufs);
-						if (bytes_transferred > 0)
-							break;
-
-						if (bytes_transferred == 0)
-						{
-							LARGE_INTEGER spin_now;
-							QueryPerformanceCounter(&spin_now);
-							if (static_cast<ULONG64>(spin_now.QuadPart) -
-								static_cast<ULONG64>(spin_start.QuadPart) >= spin_max)
-								break;
-
-							Sleep(0);
-							continue;
-						}
-					}
-
-					// 被中止操作.
-					if (self_->m_abort)
-					{
-						ec = net::error::operation_aborted;
-						net::post(self_->get_executor(),
-							[handler = std::move(handler), ec]() mutable {
-								handler(ec, 0);
-							});
-						return;
-					}
-				}
-
-				// spin 后仍无数据, 挂起等待接收事件.
-				if (bytes_transferred == 0)
-				{
-					net::co_spawn(this->get_executor(),
-						[self = self_, handler = std::move(handler),
-							bufs = std::move(bufs)]() mutable -> net::awaitable<void>
-						{
 							boost::system::error_code ec;
-							int bytes_transferred = 0;
-							bool done = false;
-
-							auto complete = [&]() mutable
-							{
-								if (done)
-									return;
-								done = true;
-								net::post(self->get_executor(),
-									[handler = std::move(handler), ec,
-										bytes_transferred]() mutable {
-										handler(ec, bytes_transferred);
-									});
-							};
-
-							if (self->m_abort)
-							{
-								ec = net::error::operation_aborted;
-								complete();
-								co_return;
-							}
-
-							auto& object = self->m_receive_object_moved;
-							for (;;)
-							{
-								co_await object.async_wait(net_awaitable[ec]);
-								if (ec)
-								{
-									complete();
-									co_return;
-								}
-
-								bytes_transferred = self->read_wintun(bufs);
-								if (bytes_transferred == 0)
-									continue;
-								if (bytes_transferred > 0)
-									break;
-								if (bytes_transferred < 0)
-								{
-									ec = net::error::operation_aborted;
-									bytes_transferred = 0;
-									complete();
-									co_return;
-								}
-							}
-
-							ec = {};
-							complete();
-							co_return;
+							auto n = co_await self->do_read(bufs, ec);
+							net::post(self->get_executor(),
+								[handler = std::move(handler), ec, n]() mutable {
+									handler(ec, n);
+								});
 						}, net::detached);
-
-					return;
-				}
-
-				if (bytes_transferred < 0)
-				{
-					ec = net::error::operation_aborted;
-					bytes_transferred = 0;
-				}
-
-				net::post(self_->get_executor(),
-					[handler = std::move(handler), ec,
-						bytes_transferred]() mutable {
-						handler(ec, bytes_transferred);
-					});
 			}
 
 			wintun_tun_device* self_;
@@ -306,90 +206,20 @@ namespace proxy {
 				// wintun 一次只处理一个数据包, 仅使用第一个缓冲区,
 				// 避免多缓冲区序列按总大小拷贝导致越界.
 				auto buf = net::buffer_sequence_begin(buffers);
-				auto bufptr = static_cast<uint8_t*>(buf->data());
-				auto bufsize = buf->size();
 				std::string_view bufs(
-					reinterpret_cast<const char*>(bufptr), bufsize);
-				boost::system::error_code ec;
-
-				auto bytes_transferred = self_->write_wintun(bufs);
-				if (bytes_transferred < 0 || self_->m_abort)
-				{
-					ec = net::error::operation_aborted;
-					net::post(self_->get_executor(),
-						[handler = std::move(handler), ec]() mutable {
-							handler(ec, 0);
-						});
-					return;
-				}
-
-				if (bytes_transferred == 0)
-				{
-					// send ring 已满, 定时重试写入.
-					net::co_spawn(self_->get_executor(),
-						[self = self_, handler = std::move(handler),
-							bufs = std::move(bufs)]() mutable -> net::awaitable<void>
-						{
-							auto bytes_transferred = self->write_wintun(bufs);
+					reinterpret_cast<const char*>(buf->data()), buf->size());
+				net::co_spawn(self_->get_executor(),
+					[self = self_, bufs,
+						handler = std::forward<Handler>(handler)]() mutable
+						-> net::awaitable<void>
+					{
 							boost::system::error_code ec;
-							bool done = false;
-
-							auto complete = [&]() mutable
-							{
-								if (done)
-									return;
-								done = true;
-								net::post(self->get_executor(),
-									[handler = std::move(handler), ec,
-										bytes_transferred]() mutable {
-										handler(ec, bytes_transferred);
-									});
-							};
-
-							if (bytes_transferred < 0 || self->m_abort)
-							{
-								ec = net::error::operation_aborted;
-								bytes_transferred = 0;
-								complete();
-								co_return;
-							}
-
-							while (bytes_transferred == 0)
-							{
-								net::steady_timer wait_timer(
-									self->get_executor());
-								wait_timer.expires_after(
-									std::chrono::milliseconds(1));
-								co_await wait_timer.async_wait(
-									net_awaitable[ec]);
-								if (ec)
-								{
-									complete();
-									co_return;
-								}
-
-								bytes_transferred = self->write_wintun(bufs);
-								if (bytes_transferred < 0 || self->m_abort)
-								{
-									ec = net::error::operation_aborted;
-									bytes_transferred = 0;
-									complete();
-									co_return;
-								}
-							}
-
-							ec = {};
-							complete();
-							co_return;
+							auto n = co_await self->do_write(bufs, ec);
+							net::post(self->get_executor(),
+								[handler = std::move(handler), ec, n]() mutable {
+									handler(ec, n);
+								});
 						}, net::detached);
-					return;
-				}
-
-				net::post(self_->get_executor(),
-					[handler = std::move(handler), ec,
-						bytes_transferred]() mutable {
-						handler(ec, bytes_transferred);
-					});
 			}
 
 			wintun_tun_device* self_;
@@ -412,7 +242,6 @@ namespace proxy {
 		struct tun_ring* m_receive_ring{ nullptr };
 
 		WINTUN_ADAPTER_HANDLE m_wintun_handle{ nullptr };
-		MIB_UNICASTIPADDRESS_ROW m_address_row{ 0 };
 
 		bool m_abort{ true };
 		bool m_opened{ false };
