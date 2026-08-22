@@ -202,6 +202,97 @@ namespace proxy {
 	};
 
 	//////////////////////////////////////////////////////////////////////////
+	// UDP flow
+
+	// tun_udp_flow 实现一个 UDP 会话的转发：
+	// - 收到客户端 UDP 包后按分流规则经 SOCKS5 ASSOCIATE 或直连发送；
+	// - 从后端接收应答并封装为 IP 包写回 TUN 设备；
+	// - 无流量超时后自动关闭，释放后端连接。
+	class tun_udp_flow
+		: public std::enable_shared_from_this<tun_udp_flow>
+	{
+		friend class tun_server;
+
+	public:
+		tun_udp_flow(net::any_io_executor executor,
+			const std::shared_ptr<tun_server>& owner,
+			const proxy_server_option& opt,
+			const tcp_flow_key& key,
+			const net::ip::udp::endpoint& client,
+			const net::ip::udp::endpoint& target);
+
+		~tun_udp_flow();
+
+		// 发起后端连接（SOCKS5 ASSOCIATE 或直连）并启动接收循环.
+		void start();
+
+		// 转发客户端数据到后端.
+		void send(const char* data, size_t len) noexcept;
+
+		// 关闭 flow，释放后端连接.
+		void close();
+
+	private:
+		// 建立后端连接（代理或直连）.
+		net::awaitable<void> do_open();
+
+		// 保持 SOCKS5 ASSOCIATE 控制连接存活（读取直到断开）.
+		net::awaitable<void> control_loop();
+
+		// 接收后端应答并写回 TUN 设备.
+		net::awaitable<void> recv_loop();
+
+		// 向客户端回包（封装 IP/UDP 后写回 TUN）.
+		void reply(const char* data, size_t len);
+
+		// 重置过期计时器.
+		void touch();
+
+	private:
+		// m_executor 保存当前 io_context 的 executor.
+		net::any_io_executor m_executor;
+
+		// m_owner 保存所属 tun_server（写回 TUN 设备）.
+		std::shared_ptr<tun_server> m_owner;
+
+		// m_option 保存服务器配置选项.
+		proxy_server_option m_option;
+
+		// m_key 保存本会话的标识.
+		tcp_flow_key m_key;
+
+		// m_client 保存 TUN 侧客户端地址.
+		net::ip::udp::endpoint m_client;
+
+		// m_target 保存客户端请求的目标地址.
+		net::ip::udp::endpoint m_target;
+
+		// m_backend 保存与上游代理或目标的 UDP 连接.
+		std::optional<net::ip::udp::socket> m_backend;
+
+		// m_control 保存 SOCKS5 ASSOCIATE 控制连接（代理模式）.
+		std::optional<variant_stream_type> m_control;
+
+		// m_backend_endp 保存代理返回的 UDP 中继地址.
+		net::ip::udp::endpoint m_backend_endp;
+
+		// m_proxy 标记是否走上游代理.
+		bool m_proxy { false };
+
+		// m_ready 标记后端已就绪（do_open 完成后置位）.
+		bool m_ready { false };
+
+		// m_closed 标记是否已关闭.
+		bool m_closed { false };
+
+		// m_pending 保存后端就绪前到达的客户端数据，就绪后补发.
+		std::deque<std::string> m_pending;
+
+		// m_expire 无流量超时定时器.
+		std::optional<net::steady_timer> m_expire;
+	};
+
+	//////////////////////////////////////////////////////////////////////////
 	// tun_server
 
 #if defined(__linux__)
@@ -213,6 +304,7 @@ namespace proxy {
 		: public std::enable_shared_from_this<tun_server>
 	{
 		friend class tun_tcp_flow;
+		friend class tun_udp_flow;
 		tun_server(const tun_server&) = delete;
 		tun_server& operator=(const tun_server&) = delete;
 
@@ -258,6 +350,9 @@ namespace proxy {
 		// 移除并关闭 TCP flow（由 flow 自身或 close 调用）.
 		void remove_tcp_flow(const tcp_flow_key& key);
 
+		// 移除并关闭 UDP flow（由 flow 自身或 close 调用）.
+		void remove_udp_flow(const tcp_flow_key& key);
+
 	private:
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
@@ -282,6 +377,10 @@ namespace proxy {
 		std::deque<std::string> m_write_queue;
 		std::mutex m_write_mutex;
 		bool m_writing { false };
+
+		// m_udp_flows 保存当前所有 UDP 会话.
+		std::unordered_map<tcp_flow_key, std::shared_ptr<tun_udp_flow>,
+			tcp_flow_key_hash> m_udp_flows;
 
 		// m_abort 停止标志.
 		bool m_abort { false };

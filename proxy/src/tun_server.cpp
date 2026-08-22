@@ -148,8 +148,9 @@ namespace proxy {
 				data += 2;
 				len -= 2;
 			}
+			// 奇数长度时末尾字节补零到高位.
 			if (len)
-				sum += static_cast<uint8_t>(*data);
+				sum += static_cast<uint8_t>(*data) << 8;
 
 			while (sum >> 16)
 				sum = (sum & 0xffff) + (sum >> 16);
@@ -247,6 +248,48 @@ namespace proxy {
 			write_be16(p + 16, sum);
 
 			return build_ip_packet(src, dst, ip_proto_tcp, tcp);
+		}
+
+		// 构造 UDP 段并封装为 IPv4 包（含 UDP 校验和）.
+		// src/dst 必须为 IPv4 地址.
+		std::string build_udp_segment(
+			const net::ip::address& src, const net::ip::address& dst,
+			uint16_t src_port, uint16_t dst_port,
+			const char* payload, size_t payload_len) noexcept
+		{
+			if (!src.is_v4() || !dst.is_v4())
+				return {};
+
+			std::string udp(8 + payload_len, '\0');
+			char* p = udp.data();
+
+			write_be16(p, src_port);
+			write_be16(p + 2, dst_port);
+			write_be16(p + 4, static_cast<uint16_t>(udp.size()));
+			write_be16(p + 6, 0);  // checksum 占位.
+
+			if (payload_len)
+				std::memcpy(p + 8, payload, payload_len);
+
+			auto s4 = src.to_v4().to_bytes();
+			auto d4 = dst.to_v4().to_bytes();
+
+			// 计算 UDP 校验和（含 IPv4 伪头）.
+			std::string pseudo;
+			pseudo.reserve(12 + udp.size());
+			pseudo.append(reinterpret_cast<const char*>(s4.data()), 4);
+			pseudo.append(reinterpret_cast<const char*>(d4.data()), 4);
+			pseudo.push_back(0);
+			pseudo.push_back(ip_proto_udp);
+			pseudo.push_back(0);  // UDP 长度占位.
+			pseudo.push_back(0);
+			write_be16(pseudo.data() + 10, static_cast<uint16_t>(udp.size()));
+			pseudo.append(udp);
+
+			uint16_t sum = checksum(pseudo.data(), pseudo.size());
+			write_be16(p + 6, sum);
+
+			return build_ip_packet(src, dst, ip_proto_udp, udp);
 		}
 
 	} // namespace
@@ -619,7 +662,8 @@ namespace proxy {
 				socks_client_option opt;
 				opt.target_host = target_host;
 				opt.target_port = target_port;
-				opt.proxy_hostname = true;
+				// IP 目标直接以地址类型发送，域名目标交由代理解析.
+				opt.proxy_hostname = !m_key.dst.is_v4() && !m_key.dst.is_v6();
 				opt.username = std::string(proxy_url.user());
 				opt.password = std::string(proxy_url.password());
 
@@ -874,6 +918,410 @@ namespace proxy {
 	}
 
 	//////////////////////////////////////////////////////////////////////////
+	// tun_udp_flow
+
+	tun_udp_flow::tun_udp_flow(net::any_io_executor executor,
+		const std::shared_ptr<tun_server>& owner,
+		const proxy_server_option& opt,
+		const tcp_flow_key& key,
+		const net::ip::udp::endpoint& client,
+		const net::ip::udp::endpoint& target)
+		: m_executor(std::move(executor))
+		, m_owner(owner)
+		, m_option(opt)
+		, m_key(std::move(key))
+		, m_client(client)
+		, m_target(target)
+	{
+		m_expire.emplace(m_executor);
+	}
+
+	tun_udp_flow::~tun_udp_flow()
+	{
+		close();
+	}
+
+	void tun_udp_flow::start()
+	{
+		auto self = shared_from_this();
+
+		net::co_spawn(m_executor,
+			[this, self]() -> net::awaitable<void>
+			{
+				co_await do_open();
+				co_return;
+			}, net::detached);
+	}
+
+	void tun_udp_flow::send(const char* data, size_t len) noexcept
+	{
+		if (m_closed)
+			return;
+
+		// 后端尚未就绪（异步建连/ASSOCIATE 进行中），缓存数据稍后补发.
+		if (!m_backend || !m_ready)
+		{
+			m_pending.emplace_back(data, len);
+			return;
+		}
+
+		if (!m_proxy)
+		{
+			// 直连目标.
+			boost::system::error_code ec;
+			m_backend->send_to(net::buffer(data, len), m_target, 0, ec);
+			if (ec)
+			{
+				close();
+				return;
+			}
+			touch();
+			return;
+		}
+
+		// SOCKS5 UDP 请求头：RSV(2) + FRAG(1) + ATYP(1) + 地址 + 端口.
+		char header[22];
+		char* hp = header;
+
+		write_be16(hp, 0);
+		hp += 2;
+		hp[0] = 0;
+		hp += 1;
+
+		if (m_target.address().is_v4())
+		{
+			hp[0] = SOCKS5_ATYP_IPV4;
+			hp += 1;
+			auto addr = m_target.address().to_v4().to_bytes();
+			std::memcpy(hp, addr.data(), 4);
+			hp += 4;
+			write_be16(hp, m_target.port());
+			hp += 2;
+		}
+		else
+		{
+			hp[0] = SOCKS5_ATYP_IPV6;
+			hp += 1;
+			auto addr = m_target.address().to_v6().to_bytes();
+			std::memcpy(hp, addr.data(), 16);
+			hp += 16;
+			write_be16(hp, m_target.port());
+			hp += 2;
+		}
+
+		size_t header_len = static_cast<size_t>(hp - header);
+
+		if (header_len + len > 65535)
+		{
+			close();
+			return;
+		}
+
+		std::string buf;
+		buf.reserve(header_len + len);
+		buf.append(header, header_len);
+		buf.append(data, len);
+
+		boost::system::error_code ec;
+		m_backend->send_to(net::buffer(buf), m_backend_endp, 0, ec);
+		if (ec)
+		{
+			XLOG_WARN << "tun udp send error: " << ec.message();
+			close();
+			return;
+		}
+		touch();
+	}
+
+	void tun_udp_flow::close()
+	{
+		if (m_closed)
+			return;
+
+		m_closed = true;
+
+		m_pending.clear();
+
+		if (m_expire)
+			m_expire->cancel();
+
+		boost::system::error_code ec;
+		if (m_backend)
+			m_backend->close(ec);
+		if (m_control)
+			net_tcp_socket(*m_control).close(ec);
+
+		if (m_owner)
+			m_owner->remove_udp_flow(m_key);
+	}
+
+	net::awaitable<void> tun_udp_flow::do_open()
+	{
+		auto self = shared_from_this();
+		boost::system::error_code ec;
+
+		const bool use_proxy = m_owner && m_owner->cidr_match(m_target.address());
+		m_proxy = use_proxy && m_option.proxy_pass_;
+
+		XLOG_DBG << "tun udp flow " << m_client.address().to_string() << ":"
+			<< m_client.port() << " -> " << m_target.address().to_string() << ":"
+			<< m_target.port() << (m_proxy ? " via proxy" : " direct");
+
+		// 打开后端 UDP socket（与上游代理或目标通信）.
+		m_backend.emplace(m_executor);
+		m_backend->open(m_target.protocol(), ec);
+		if (ec)
+		{
+			XLOG_WARN << "tun udp open backend socket: " << ec.message();
+			close();
+			co_return;
+		}
+
+		// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
+		if (m_option.so_mark_)
+		{
+			auto ret = apply_so_mark(m_backend->native_handle(), m_option.so_mark_);
+			if (ret.has_error())
+				XLOG_WARN << "tun udp set socket mark: " << ret.error().message();
+		}
+
+		m_backend->bind(net::ip::udp::endpoint(m_target.protocol(), 0), ec);
+		if (ec)
+		{
+			XLOG_WARN << "tun udp bind backend socket: " << ec.message();
+			close();
+			co_return;
+		}
+
+		if (m_proxy)
+		{
+			const auto& proxy_url = *m_option.proxy_pass_;
+
+			std::string proxy_host(proxy_url.encoded_host());
+			std::string port_str = proxy_url.port();
+			uint16_t proxy_port = static_cast<uint16_t>(
+				port_str.empty() ? 1080 : std::atoi(port_str.c_str()));
+
+			tcp::resolver resolver(m_executor);
+			auto targets = co_await resolver.async_resolve(
+				proxy_host, std::to_string(proxy_port), net_awaitable[ec]);
+			if (ec || targets.empty())
+			{
+				XLOG_WARN << "tun udp resolve proxy_pass: " << proxy_host
+					<< ", error: " << ec.message();
+				close();
+				co_return;
+			}
+
+			// 依次尝试连接.
+			tcp::socket sock(m_executor);
+			bool connected = false;
+			for (const auto& t : targets)
+			{
+				sock = tcp::socket(m_executor);
+				sock.open(t.endpoint().protocol(), ec);
+				if (ec)
+					continue;
+
+				if (m_option.so_mark_)
+				{
+					auto ret = apply_so_mark(sock.native_handle(), m_option.so_mark_);
+					if (ret.has_error())
+						XLOG_WARN << "tun udp set socket mark: " << ret.error().message();
+				}
+
+				co_await sock.async_connect(t.endpoint(), net_awaitable[ec]);
+				if (!ec)
+				{
+					connected = true;
+					break;
+				}
+			}
+
+			if (!connected)
+			{
+				XLOG_WARN << "tun udp connect proxy_pass: " << proxy_host
+					<< ", error: " << ec.message();
+				close();
+				co_return;
+			}
+
+			m_control.emplace(init_proxy_stream(std::move(sock)));
+
+			auto scheme = boost::to_lower_copy(std::string(proxy_url.scheme()));
+			if (!scheme.starts_with("socks"))
+			{
+				XLOG_WARN << "tun udp only supports socks proxy_pass: " << scheme;
+				close();
+				co_return;
+			}
+
+			// SOCKS5 UDP ASSOCIATE 握手，获取代理的 UDP 中继端点.
+			socks_client_option opt;
+			opt.target_host = "0.0.0.0";
+			opt.target_port = 21;
+			opt.proxy_hostname = true;
+			opt.command = SOCKS5_CMD_UDP;
+			opt.username = std::string(proxy_url.user());
+			opt.password = std::string(proxy_url.password());
+
+			auto backend = co_await async_socks_handshake(
+				*m_control, opt, net_awaitable[ec]);
+			if (ec || !backend)
+			{
+				XLOG_WARN << "tun udp SOCKS5 associate: " << ec.message();
+				close();
+				co_return;
+			}
+
+			m_backend_endp = *backend;
+
+			// 某些代理只返回端口，地址为空，此时用控制连接的远端地址补全.
+			if (m_backend_endp.address().is_unspecified())
+			{
+				net::ip::address remote_addr;
+				auto& tcp_sock = boost::variant2::get<proxy_tcp_socket>(*m_control);
+				remote_addr = tcp_sock.lowest_layer().remote_endpoint(ec).address();
+				if (!ec)
+					m_backend_endp.address(remote_addr);
+			}
+
+			// 保持控制连接存活，断开时关闭整个会话.
+			net::co_spawn(m_executor,
+				[this, self]() -> net::awaitable<void>
+				{
+					co_await control_loop();
+					co_return;
+				}, net::detached);
+		}
+
+		// 启动后端接收循环.
+		net::co_spawn(m_executor,
+			[this, self]() -> net::awaitable<void>
+			{
+				co_await recv_loop();
+				co_return;
+			}, net::detached);
+
+		// 后端就绪，补发等待期间缓存的客户端数据.
+		m_ready = true;
+		for (auto& p : m_pending)
+			send(p.data(), p.size());
+		m_pending.clear();
+
+		touch();
+	}
+
+	net::awaitable<void> tun_udp_flow::control_loop()
+	{
+		if (!m_control)
+			co_return;
+
+		char buf[64];
+
+		for (; !m_closed;)
+		{
+			boost::system::error_code ec;
+			co_await m_control->async_read_some(
+				net::buffer(buf), net_awaitable[ec]);
+			if (ec)
+				break;
+		}
+
+		// 控制连接断开后 ASSOCIATE 会话失效，关闭整个 flow.
+		close();
+	}
+
+	net::awaitable<void> tun_udp_flow::recv_loop()
+	{
+		if (!m_backend)
+			co_return;
+
+		char buf[65535];
+
+		for (; !m_closed;)
+		{
+			boost::system::error_code ec;
+			size_t n = co_await m_backend->async_receive(
+				net::buffer(buf), net_awaitable[ec]);
+			if (ec)
+				break;
+
+			touch();
+
+			if (!m_proxy)
+			{
+				// 直连：应答即为目标返回的数据.
+				reply(buf, n);
+				continue;
+			}
+
+			// SOCKS5 UDP 应答头：RSV(2) + FRAG(1) + ATYP(1) + 地址 + 端口.
+			if (n < 6)
+				continue;
+
+			const char* p = buf;
+			size_t header_size = 0;
+
+			if (static_cast<uint8_t>(p[2]) != 0)
+				continue;  // 不支持分片.
+
+			switch (static_cast<uint8_t>(p[3]))
+			{
+			case SOCKS5_ATYP_IPV4:
+				header_size = 10;
+				break;
+			case SOCKS5_ATYP_DOMAINNAME:
+				header_size = 7 + static_cast<uint8_t>(p[4]);
+				break;
+			case SOCKS5_ATYP_IPV6:
+				header_size = 22;
+				break;
+			default:
+				continue;
+			}
+
+			if (n <= header_size)
+				continue;
+
+			reply(p + header_size, n - header_size);
+		}
+
+		close();
+	}
+
+	void tun_udp_flow::reply(const char* data, size_t len)
+	{
+		if (!m_owner)
+			return;
+
+		// 目标 -> 客户端方向.
+		auto packet = build_udp_segment(
+			m_target.address(), m_client.address(),
+			m_target.port(), m_client.port(),
+			data, len);
+
+		if (!packet.empty())
+			m_owner->write_packet(std::move(packet));
+	}
+
+	void tun_udp_flow::touch()
+	{
+		if (!m_expire)
+			return;
+
+		// 每次活动重置超时计时，超时后关闭会话.
+		m_expire->expires_after(std::chrono::seconds(180));
+		m_expire->async_wait(
+			[this](const boost::system::error_code& ec)
+			{
+				if (ec)
+					return;  // 计时器被取消（新活动重置）.
+				close();
+			});
+	}
+
+	//////////////////////////////////////////////////////////////////////////
 	// tun_server
 
 	tun_server::tun_server(net::any_io_executor executor, proxy_server_option opt)
@@ -925,10 +1373,11 @@ namespace proxy {
 	{
 		m_abort = true;
 
-		// 关闭所有 TCP flow.
+		// 关闭所有 TCP/UDP flow.
 		{
 			std::lock_guard<std::mutex> lk(m_flows_mutex);
 			m_tcp_flows.clear();
+			m_udp_flows.clear();
 		}
 
 		if (m_stream)
@@ -1091,6 +1540,12 @@ namespace proxy {
 		m_tcp_flows.erase(key);
 	}
 
+	void tun_server::remove_udp_flow(const tcp_flow_key& key)
+	{
+		std::lock_guard<std::mutex> lk(m_flows_mutex);
+		m_udp_flows.erase(key);
+	}
+
 	bool tun_server::cidr_match(const net::ip::address& addr) const noexcept
 	{
 		boost::system::error_code ec;
@@ -1158,8 +1613,43 @@ namespace proxy {
 
 	void tun_server::handle_udp_packet(ip_packet& pkt) noexcept
 	{
-		(void)pkt;
-		// UDP 会话转发在后续实现.
+		// 目前仅支持 IPv4 转发.
+		if (!pkt.src.is_v4() || !pkt.dst.is_v4())
+			return;
+
+		tcp_flow_key key{
+			pkt.src,
+			pkt.src_port,
+			pkt.dst,
+			pkt.dst_port
+		};
+
+		std::shared_ptr<tun_udp_flow> flow;
+		bool created = false;
+
+		{
+			std::lock_guard<std::mutex> lk(m_flows_mutex);
+			auto it = m_udp_flows.find(key);
+			if (it != m_udp_flows.end())
+			{
+				flow = it->second;
+			}
+			else
+			{
+				net::ip::udp::endpoint client(pkt.src, pkt.src_port);
+				net::ip::udp::endpoint target(pkt.dst, pkt.dst_port);
+				flow = std::make_shared<tun_udp_flow>(
+					m_executor, shared_from_this(), m_option, key, client, target);
+				m_udp_flows.emplace(key, flow);
+				created = true;
+			}
+		}
+
+		// 新创建的 flow 启动建连（重传包不重复建连）.
+		if (created)
+			flow->start();
+
+		flow->send(pkt.payload, pkt.payload_len);
 	}
 
 #else // !defined(__linux__)
