@@ -139,10 +139,11 @@ export default function ConfigTab({ id, active }: { id: string; active: boolean 
     setBusy(true);
     try {
       const cfg = collectConfig(options, configValues);
-      const res = await api<ApplyResult>(`/api/instances/${id}/config`, {
-        method: "PUT",
-        body: JSON.stringify({ config: cfg }),
-      });
+      const res =
+        (await api<ApplyResult>(`/api/instances/${id}/config`, {
+          method: "PUT",
+          body: JSON.stringify({ config: cfg }),
+        })) ?? {};
       if (useApp.getState().curId !== id) return; // 竞态防护
       const parts: string[] = [];
       if (res.applied?.length) parts.push("已生效: " + res.applied.join(", "));

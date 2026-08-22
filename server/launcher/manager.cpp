@@ -815,6 +815,13 @@ net::awaitable<bool> manager::apply_config(const std::string& id, json::object c
 			co_return false;
 		}
 		result = res.result_;
+	} else {
+		// 实例未运行：配置仅保存，启动后生效；返回与运行期一致的结果结构。
+		json::object saved;
+		saved["applied"] = json::array();
+		saved["needs_restart"] = json::array();
+		saved["errors"] = json::object();
+		result = std::move(saved);
 	}
 	{
 		std::lock_guard<std::mutex> lock(m_mu_);
