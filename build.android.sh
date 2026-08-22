@@ -36,8 +36,11 @@ for ARCH in "${ARCHITECTURES[@]}"
 do
     cmake -S ${SRC_PATH} -B android/$ARCH -DCMAKE_TOOLCHAIN_FILE=${NDK_PATH}/build/cmake/android.toolchain.cmake -DANDROID_ABI=${ARCH} -DANDROID_PLATFORM=android-19 -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -G Ninja
     cmake --build android/$ARCH
+    ${NDK_PATH}/toolchains/llvm/prebuilt/${HOST_TAG}/bin/llvm-strip android/$ARCH/bin/*
     mkdir -p release/$ARCH
     cp android/$ARCH/bin/* release/$ARCH/
+    mkdir -p outputs/binaries
+    cp -r release/* outputs/binaries/
 done
 
 echo "Build finished."
