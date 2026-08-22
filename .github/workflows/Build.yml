@@ -476,6 +476,124 @@ jobs:
             build/bin/proxy_server
             build/bin/launcher
 
+  OpenWrtX64:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            cmake ninja-build clang lld llvm curl xz-utils make perl
+
+      # OpenWrt 23.05 x86_64: musl libc, 系统 openssl 3.0.16.
+      # 使用 buildroot musl 交叉工具链 + 宿主 clang 交叉编译 (与 doc 一致).
+      - name: Download musl cross toolchain
+        run: |
+          curl -fsSL -o /tmp/toolchain.tar.xz \
+            https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64/tarballs/x86-64--musl--bleeding-edge-2025.08-1.tar.xz
+          mkdir -p "$HOME/crossdevelop"
+          tar -xJf /tmp/toolchain.tar.xz -C "$HOME/crossdevelop"
+
+      - name: Cross-build openssl and liburing
+        run: |
+          set -euxo pipefail
+          TC="$HOME/crossdevelop/x86-64--musl--bleeding-edge-2025.08-1"
+          SYSROOT="$TC/x86_64-buildroot-linux-musl/sysroot"
+          STAGE="$GITHUB_WORKSPACE/owrt-stage"
+          mkdir -p "$STAGE/openssl" "$STAGE/liburing/include/liburing" "$STAGE/liburing/lib" "$STAGE/src"
+
+          # openssl 3.0.16: 版本需与 OpenWrt 系统 openssl 一致 (运行时 ABI 匹配).
+          curl -fsSL -o /tmp/openssl.tar.gz https://www.openssl.org/source/openssl-3.0.16.tar.gz
+          tar -xzf /tmp/openssl.tar.gz -C "$STAGE/src"
+          cd "$STAGE/src/openssl-3.0.16"
+          ./Configure linux-x86_64-clang \
+            --prefix="$STAGE/openssl" --openssldir="$STAGE/openssl/ssl" \
+            no-tests no-asm shared \
+            CC="clang --target=x86_64-buildroot-linux-musl --gcc-toolchain=$TC --sysroot=$SYSROOT" \
+            AR=llvm-ar RANLIB=llvm-ranlib
+          make -j"$(nproc)" build_libs
+          make install_sw
+
+          # liburing 2.7: 路由器没有该库, 静态链接.
+          curl -fsSL -o /tmp/liburing.tar.gz \
+            https://github.com/axboe/liburing/archive/refs/tags/liburing-2.7.tar.gz
+          tar -xzf /tmp/liburing.tar.gz -C "$STAGE/src"
+          cd "$STAGE/src/liburing-liburing-2.7"
+          CC="clang --target=x86_64-buildroot-linux-musl --gcc-toolchain=$TC --sysroot=$SYSROOT" ./configure
+          make -j"$(nproc)" library \
+            CC="clang --target=x86_64-buildroot-linux-musl --gcc-toolchain=$TC --sysroot=$SYSROOT" \
+            AR=llvm-ar RANLIB=llvm-ranlib \
+            CFLAGS="-fPIC -O2"
+          cp src/include/liburing.h "$STAGE/liburing/include/"
+          cp src/include/liburing/*.h "$STAGE/liburing/include/liburing/"
+          cp src/liburing.a "$STAGE/liburing/lib/"
+
+      - name: Generate clang cross toolchain file
+        run: |
+          TC="$HOME/crossdevelop/x86-64--musl--bleeding-edge-2025.08-1"
+          SYSROOT="$TC/x86_64-buildroot-linux-musl/sysroot"
+          STAGE="$GITHUB_WORKSPACE/owrt-stage"
+          cat > "$GITHUB_WORKSPACE/openwrt-clang-musl.cmake" <<EOF
+          set(CMAKE_SYSTEM_NAME Linux)
+          set(CMAKE_SYSTEM_PROCESSOR x86_64)
+          set(CMAKE_C_COMPILER clang)
+          set(CMAKE_CXX_COMPILER clang++)
+          set(CMAKE_C_COMPILER_TARGET x86_64-buildroot-linux-musl)
+          set(CMAKE_CXX_COMPILER_TARGET x86_64-buildroot-linux-musl)
+          set(TOOLCHAIN_ROOT $TC)
+          set(CMAKE_SYSROOT $SYSROOT)
+          # 头文件须对所有编译单元可见 (asio ssl/io_uring 后端), 不只链接目标.
+          set(CMAKE_C_FLAGS "--gcc-toolchain=$TC -D_GNU_SOURCE -isystem $STAGE/openssl/include -isystem $STAGE/liburing/include" CACHE STRING "" FORCE)
+          set(CMAKE_CXX_FLAGS "--gcc-toolchain=$TC -D_GNU_SOURCE -isystem $STAGE/openssl/include -isystem $STAGE/liburing/include" CACHE STRING "" FORCE)
+          # 路由器 libstdc++ 较旧须静态链接; --as-needed 丢弃无引用的 libatomic.
+          set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld -static-libstdc++ -static-libgcc -Wl,--as-needed" CACHE STRING "" FORCE)
+          set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld" CACHE STRING "" FORCE)
+          # 不把宿主 staging 路径写入 ELF RUNPATH; 运行时从路由器 /usr/lib 解析系统 openssl.
+          set(CMAKE_SKIP_BUILD_RPATH TRUE CACHE BOOL "" FORCE)
+          set(CMAKE_SKIP_RPATH TRUE CACHE BOOL "" FORCE)
+          set(CMAKE_AR llvm-ar)
+          set(CMAKE_RANLIB llvm-ranlib)
+          set(CMAKE_NM llvm-nm)
+          set(CMAKE_STRIP llvm-strip)
+          set(CMAKE_FIND_ROOT_PATH $STAGE/openssl $STAGE/liburing $SYSROOT)
+          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+          set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+          EOF
+
+      - name: Build proxy (clang + snmalloc + system openssl + io_uring)
+        run: |
+          cmake -S . -B build-openwrt -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/openwrt-clang-musl.cmake" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_SNMALLOC_STATIC=ON \
+            -DENABLE_USE_IO_URING=ON \
+            -DBOOST_FILESYSTEM_DISABLE_STATX=ON \
+            -DOPENSSL_INCLUDE_DIR="$GITHUB_WORKSPACE/owrt-stage/openssl/include" \
+            -DOPENSSL_SSL_LIBRARY="$GITHUB_WORKSPACE/owrt-stage/openssl/lib64/libssl.so" \
+            -DOPENSSL_CRYPTO_LIBRARY="$GITHUB_WORKSPACE/owrt-stage/openssl/lib64/libcrypto.so" \
+            -DIOUring_INCLUDE_DIR="$GITHUB_WORKSPACE/owrt-stage/liburing/include" \
+            -DIOUring_LIBRARY="$GITHUB_WORKSPACE/owrt-stage/liburing/lib/liburing.a"
+          ninja -C build-openwrt proxy_server launcher
+
+      - name: Verify artifacts
+        run: |
+          file build-openwrt/bin/proxy_server build-openwrt/bin/launcher
+          echo "NEEDED:"; readelf -d build-openwrt/bin/proxy_server | grep NEEDED || true
+          ls -la build-openwrt/bin/proxy_server build-openwrt/bin/launcher
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: proxy_server-openwrt_x86_64_clang_musl
+          path: |
+            build-openwrt/bin/proxy_server
+            build-openwrt/bin/launcher
+
   MacOS:
     runs-on: macos-latest
     steps:
