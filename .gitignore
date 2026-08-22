@@ -22,6 +22,10 @@ libstream/include/version.hpp
 [Bb]uild/
 bld/
 [Bb]in/
+# wintun.dll 构建必需, 覆盖上面的 [Bb]in/ 忽略规则.
+!third_party/wintun/bin/
+!third_party/wintun/bin/*/
+!third_party/wintun/bin/*/*.dll
 [Oo]bj/
 
 # Visual Studio 2015 cache/options directory
