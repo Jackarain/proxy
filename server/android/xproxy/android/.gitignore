@@ -16,3 +16,7 @@ key.properties
 # 根 .gitignore 的 build* 会误伤构建脚本, 显式放行.
 !build.gradle.kts
 !app/build.gradle.kts
+
+# 根 .gitignore 的 [Xx]86/ 会误伤 jniLibs/x86 ABI 目录, 显式放行.
+!app/src/main/jniLibs/x86/
+!app/src/main/jniLibs/x86/*.so
