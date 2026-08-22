@@ -1184,14 +1184,12 @@ namespace proxy {
 				co_return;
 			}
 
-			m_control.emplace(init_proxy_stream(std::move(sock)));
-
 			auto scheme = boost::to_lower_copy(std::string(proxy_url.scheme()));
 
 			if (scheme.starts_with("http"))
 			{
-				// HTTP 代理：RFC 9298 CONNECT-UDP 隧道.
-				bool ok = co_await do_connect_udp();
+				// HTTP 代理：RFC 9298 CONNECT-UDP 隧道（内部按需建立 SSL）.
+				bool ok = co_await do_connect_udp(std::move(sock));
 				if (!ok)
 				{
 					close();
@@ -1204,10 +1202,11 @@ namespace proxy {
 				close();
 				co_return;
 			}
-
-			if (!m_connect_udp)
+			else
 			{
 				// SOCKS5 UDP ASSOCIATE 握手，获取代理的 UDP 中继端点.
+				m_control.emplace(init_proxy_stream(std::move(sock)));
+
 				socks_client_option opt;
 				opt.target_host = "0.0.0.0";
 				opt.target_port = 21;
@@ -1245,17 +1244,17 @@ namespace proxy {
 						co_return;
 					}, net::detached);
 			}
+		}
 
-			// 非 CONNECT-UDP 模式启动后端接收循环（SOCKS5 或直连）.
-			if (!m_connect_udp)
-			{
-				net::co_spawn(m_executor,
-					[this, self]() -> net::awaitable<void>
-					{
-						co_await recv_loop();
-						co_return;
-					}, net::detached);
-			}
+		// 非 CONNECT-UDP 模式启动后端接收循环（SOCKS5 或直连）.
+		if (!m_connect_udp)
+		{
+			net::co_spawn(m_executor,
+				[this, self]() -> net::awaitable<void>
+				{
+					co_await recv_loop();
+					co_return;
+				}, net::detached);
 		}
 
 		// 后端就绪，补发等待期间缓存的客户端数据.
@@ -1267,19 +1266,40 @@ namespace proxy {
 		touch();
 	}
 
-	net::awaitable<bool> tun_udp_flow::do_connect_udp()
+	net::awaitable<bool> tun_udp_flow::do_connect_udp(tcp::socket sock)
 	{
 		auto self = shared_from_this();
 		boost::system::error_code ec;
 
 		const auto& proxy_url = *m_option.proxy_pass_;
 
-		// 上游 TCP 连接由 do_open 建立（m_control），HTTP CONNECT-UDP 当前仅支持
-		// 非加密 http 上游（与 tun TCP 的 HTTP 转发一致）.
 		std::string proxy_host(proxy_url.encoded_host());
-		std::string port_str = proxy_url.port();
-		uint16_t proxy_port = static_cast<uint16_t>(
-			port_str.empty() ? 80 : std::atoi(port_str.c_str()));
+		uint16_t proxy_port = proxy_url.port_number();
+		if (proxy_port == 0)
+			proxy_port = urls::default_port(proxy_url.scheme_id());
+
+		// 判断是否使用 SSL：显式配置 proxy_pass_ssl 或 scheme 以 's' 结尾（https/wss）.
+		bool use_ssl = m_option.proxy_pass_use_ssl_;
+		if (proxy_url.scheme().ends_with("s"))
+			use_ssl = true;
+
+		if (use_ssl)
+		{
+			auto sni = m_option.proxy_ssl_name_.empty() ?
+				proxy_host : m_option.proxy_ssl_name_;
+			auto res = co_await m_owner->make_ssl_socket(sock, sni, m_control);
+			if (res.has_error())
+			{
+				XLOG_WARN << "tun udp make_ssl_socket: " << res.error().message();
+				co_return false;
+			}
+
+			XLOG_DBG << "tun udp SSL handshake with " << sni << " succeeded";
+		}
+		else
+		{
+			m_control.emplace(init_proxy_stream(std::move(sock)));
+		}
 
 		// 构建 RFC 9298 connect-udp 请求（absolute-form URI）.
 		std::string target_host = m_target.address().to_string();
@@ -1287,7 +1307,7 @@ namespace proxy {
 			boost::replace_all(target_host, ":", "%3A");
 
 		std::string target =
-			"http://" + proxy_host + ":" + std::to_string(proxy_port) +
+			"https://" + proxy_host + ":" + std::to_string(proxy_port) +
 			"/.well-known/masque/udp/" + target_host + "/" +
 			std::to_string(m_target.port()) + "/";
 
@@ -1608,6 +1628,45 @@ namespace proxy {
 	tun_server::~tun_server()
 	{
 		close();
+	}
+
+	net::awaitable<boost::system::result<bool>>
+	tun_server::make_ssl_socket(tcp::socket& remote_socket,
+		std::string_view sni, std::optional<variant_stream_type>& ssl_sock)
+	{
+		boost::system::error_code ec;
+
+		if (!m_ssl_client_context)
+		{
+			m_ssl_client_context.emplace(net::ssl::context::sslv23_client);
+
+			// 使用通用函数配置 SSL context（验证模式、CA 证书、主机名验证）.
+			ec = configure_ssl_client_ctx(*m_ssl_client_context,
+				m_option.disable_check_cert_,
+				std::string(sni),
+				m_option.ssl_cacert_path_);
+			if (ec)
+			{
+				// 配置失败，重置 context，使下次调用重新初始化.
+				m_ssl_client_context.reset();
+				co_return ec;
+			}
+		}
+
+		// 初始化为 SSL 加密的 TCP 流.
+		ssl_sock.emplace(init_proxy_stream(std::move(remote_socket), *m_ssl_client_context));
+		auto& ssl_socket = boost::variant2::get<ssl_tcp_stream>(*ssl_sock);
+
+		// 设置 SNI 主机名以兼容需要 SNI 的服务器.
+		SSL_set_tlsext_host_name(ssl_socket.native_handle(), sni.data());
+
+		// 进行 SSL 握手.
+		co_await ssl_socket.async_handshake(
+			net::ssl::stream_base::client, net_awaitable[ec]);
+		if (ec)
+			co_return ec;
+
+		co_return true;
 	}
 
 	void tun_server::start() noexcept

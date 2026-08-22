@@ -237,8 +237,9 @@ namespace proxy {
 		// 建立后端连接（代理或直连）.
 		net::awaitable<void> do_open();
 
-		// 建立 HTTP CONNECT-UDP 隧道（proxy_pass 为 http 时替代 SOCKS5 ASSOCIATE）.
-		net::awaitable<bool> do_connect_udp();
+		// 建立 HTTP CONNECT-UDP 隧道（proxy_pass 为 http/https 时替代 SOCKS5 ASSOCIATE）.
+		// sock 为已连接到上游代理的 TCP socket，由 do_open 传入.
+		net::awaitable<bool> do_connect_udp(tcp::socket sock);
 
 		// 串行发送 CONNECT-UDP capsule 到 TCP 控制连接.
 		net::awaitable<void> tx_loop();
@@ -367,6 +368,11 @@ namespace proxy {
 		// 记录 DNS 响应中的 A/AAAA 解析结果（仅命中 proxy_domains_ 时生效）.
 		void record_dns_answer(const char* data, size_t len) noexcept;
 
+		// 建立与上游代理的 SSL 连接（按需初始化客户端 SSL context）.
+		net::awaitable<boost::system::result<bool>>
+		make_ssl_socket(tcp::socket& remote_socket,
+			std::string_view sni, std::optional<variant_stream_type>& ssl_sock);
+
 		// 处理 TCP 包（由 run 协程调用，内部再派生子协程）.
 		void handle_tcp_packet(ip_packet& pkt) noexcept;
 
@@ -420,6 +426,9 @@ namespace proxy {
 			net::ip::address ip;
 			std::chrono::steady_clock::time_point expire;
 		};
+
+		// m_ssl_client_context 保存与上游代理建立 SSL 连接使用的客户端 context.
+		std::optional<net::ssl::context> m_ssl_client_context;
 
 		// m_domain_ips 保存命中 proxy_domains_ 的域名解析结果（域名 -> IP 列表）.
 		// 声明为 mutable 以便 ip_match_proxy 等 const 方法惰性清理过期条目.
