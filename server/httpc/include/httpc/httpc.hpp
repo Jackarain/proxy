@@ -1,4 +1,4 @@
-//
+﻿//
 // httpc.hpp
 // ~~~~~~~~~
 //
@@ -176,6 +176,9 @@ public:
     // 设置 User-agent.
     void user_agent(const std::string& ua) noexcept;
 
+    // 设置 TLS SNI (为空则不发送 SNI).
+    void set_sni(const std::string& sni) noexcept;
+
     // 检查和设置证书认证是否启用 (默认关闭).
     bool check_certificate() const noexcept;
     void check_certificate(bool check) noexcept;
@@ -231,6 +234,9 @@ private:
 
     // User-agent.
     std::string user_agent_;
+
+    // TLS SNI 扩展.
+    std::string sni_;
 
     // 证书验证开关.
     bool check_certificate_ {false};

@@ -1,4 +1,4 @@
-//
+﻿//
 // httpc.cpp
 // ~~~~~~~~~
 //
@@ -20,6 +20,10 @@
 #include <boost/beast/http/write.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+
+#if defined(OPENSSL_VERSION_NUMBER)
+# include <openssl/ssl.h>
+#endif
 
 #if defined(BUILD_ASIO_SSL_AND_BEAST_SRC)
 # include <boost/asio/ssl/impl/src.hpp>
@@ -206,7 +210,7 @@ http_client::http_client(net::any_io_executor ex, const net::const_buffer& ca_ce
     , user_agent_(default_user_agent)
 {
     // 分配保留缓存空间.
-    buffer_.reserve(5 * 1024 * 1024);
+    buffer_.reserve(64 * 1024);
 
     // 配置 SSL 上下文
     ssl_ctx_.set_default_verify_paths();
@@ -308,7 +312,13 @@ net::awaitable<boost::system::error_code> http_client::async_connect(const urls:
         auto ssl_sock = std::make_unique<ssl_stream>(std::move(*tcp_sock), ssl_ctx_);
         // tcp_sock 此时为空 (moved-from)
 
-        // 3. SSL 握手
+        // 3. SSL 握手 (可选 SNI)
+        if (!sni_.empty())
+        {
+#if defined(OPENSSL_VERSION_NUMBER)
+            SSL_set_tlsext_host_name(ssl_sock->native_handle(), sni_.c_str());
+#endif
+        }
         if (!has_timeout)
             ssl_sock->next_layer().expires_after(connect_timeout_);
         co_await ssl_sock->async_handshake(ssl::stream_base::client, net::redirect_error(ec));
@@ -456,7 +466,10 @@ net::awaitable<http_result> http_client::async_read_response()
                     transfer_handler_((char*)data, size);
                 }
             }
-            body.clear();
+            // 未设置下载文件/传输回调时保留 body 内容, 供调用方
+            // 通过 resp.body() 读取完整响应体; 否则消费后清空.
+            if (download_file_ || transfer_handler_)
+                body.clear();
 
             // 检查错误
             if (ec)
@@ -764,6 +777,11 @@ http_client::http_result_handler& http_client::get_http_result_handler() noexcep
 void http_client::user_agent(const std::string& ua) noexcept
 {
     user_agent_ = ua;
+}
+
+void http_client::set_sni(const std::string& sni) noexcept
+{
+    sni_ = sni;
 }
 
 bool http_client::check_certificate() const noexcept
