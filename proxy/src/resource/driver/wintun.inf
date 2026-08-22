@@ -1,0 +1,70 @@
+; SPDX-License-Identifier: GPL-2.0
+;
+; Copyright (C) 2018-2021 WireGuard LLC. All Rights Reserved.
+
+[Version]
+Signature = "$Windows NT$"
+Class = Net
+ClassGUID = {4D36E972-E325-11CE-BFC1-08002BE10318}
+Provider = %Wintun.CompanyName%
+CatalogFile.NT = wintun.cat
+PnpLockdown = 1
+DriverVer = 10/13/2021,0.14.0.0
+
+[Manufacturer]
+%Wintun.CompanyName% = %Wintun.Name%, NTamd64
+
+[SourceDisksNames]
+1 = %Wintun.DiskDesc%, "", ,
+
+[SourceDisksFiles]
+wintun.sys = 1
+
+[DestinationDirs]
+DefaultDestDir = 12
+Wintun.CopyFiles.Sys = 12
+
+[Wintun.CopyFiles.Sys]
+wintun.sys, , , 0x00004002 ; COPYFLG_IN_USE_RENAME | COPYFLG_NOSKIP
+
+[Wintun.NTamd64]
+%Wintun.DeviceDesc% = Wintun.Install, Wintun
+
+[Wintun.Install]
+Characteristics = 0x1 ; NCF_VIRTUAL
+AddReg = Wintun.Ndi
+AddProperty = Wintun.Properties
+CopyFiles = Wintun.CopyFiles.Sys
+*IfType = 53 ; IF_TYPE_PROP_VIRTUAL
+*MediaType = 19 ; NdisMediumIP
+*PhysicalMediaType = 0 ; NdisPhysicalMediumUnspecified
+EnableDhcp = 0 ; Disable DHCP
+
+[Wintun.Properties]
+DeviceVendorWebsite,,,,"https://www.wintun.net/"
+
+[Wintun.Install.Services]
+AddService = wintun, 2, Wintun.Service, Wintun.EventLog ; 2=SPSVCINST_ASSOCSERVICE
+
+[Wintun.Ndi]
+HKR, Ndi, Service, 0, wintun
+HKR, Ndi\Interfaces, UpperRange, , "ndis5"
+HKR, Ndi\Interfaces, LowerRange, , "nolower"
+
+[Wintun.Service]
+DisplayName = %Wintun.Name%
+Description = %Wintun.DeviceDesc%
+ServiceType = 1 ; SERVICE_KERNEL_DRIVER
+StartType = 3 ; SERVICE_DEMAND_START
+ErrorControl = 1 ; SERVICE_ERROR_NORMAL
+ServiceBinary = %12%\wintun.sys
+
+[Wintun.EventLog]
+HKR, , EventMessageFile, 0x00020000, "%11%\IoLogMsg.dll;%12%\wintun.sys"
+HKR, , TypesSupported, 0x00010001, 7
+
+[Strings]
+Wintun.Name = "Wintun"
+Wintun.DiskDesc = "Wintun Driver Install Disk"
+Wintun.DeviceDesc = "Wintun Userspace Tunnel"
+Wintun.CompanyName = "WireGuard LLC"

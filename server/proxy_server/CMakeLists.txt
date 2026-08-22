@@ -16,6 +16,21 @@ target_include_directories(proxy_server
     ../common
 )
 
+if (WIN32)
+    # wintun 驱动文件 (sys/inf/cat) 通过 rc 资源嵌入 exe, 运行时解压并
+    # 使用 pnputil 安装; wintun.dll 拷贝到输出目录, 运行时动态加载.
+    set(PROXY_RESOURCE_DIR ${CMAKE_SOURCE_DIR}/proxy/src/resource)
+    configure_file(${PROXY_RESOURCE_DIR}/proxy.rc.in
+        ${CMAKE_CURRENT_BINARY_DIR}/proxy.rc @ONLY NEWLINE_STYLE LF)
+    target_sources(proxy_server PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proxy.rc)
+
+    add_custom_command(TARGET proxy_server POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_SOURCE_DIR}/third_party/wintun/bin/amd64/wintun.dll
+            $<TARGET_FILE_DIR:proxy_server>/wintun.dll
+    )
+endif()
+
 if (TARGET IOUring::IOUring)
     target_link_libraries(proxy_server IOUring::IOUring)
 endif()
