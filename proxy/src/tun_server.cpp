@@ -964,9 +964,17 @@ namespace proxy {
 			return;
 
 		// 后端尚未就绪（异步建连/ASSOCIATE 进行中），缓存数据稍后补发.
-		if (!m_backend || !m_ready)
+		if (!m_ready)
 		{
 			m_pending.emplace_back(data, len);
+			return;
+		}
+
+		if (m_connect_udp)
+		{
+			// HTTP CONNECT-UDP：封装 DATAGRAM capsule 写入隧道.
+			push_capsule(data, len);
+			touch();
 			return;
 		}
 
@@ -1047,8 +1055,15 @@ namespace proxy {
 
 		m_pending.clear();
 
+		{
+			std::lock_guard<std::mutex> lk(m_tx_mutex);
+			m_tx_queue.clear();
+		}
+
 		if (m_expire)
 			m_expire->cancel();
+		if (m_tx_signal)
+			m_tx_signal->cancel();
 
 		boost::system::error_code ec;
 		if (m_backend)
@@ -1078,30 +1093,42 @@ namespace proxy {
 			<< m_target.port() << (m_proxy ? " via proxy" : " direct")
 			<< (m_dns_qname.empty() ? "" : (", qname=" + m_dns_qname));
 
-		// 打开后端 UDP socket（与上游代理或目标通信）.
-		m_backend.emplace(m_executor);
-		m_backend->open(m_target.protocol(), ec);
-		if (ec)
+		// HTTP 代理通过 RFC 9298 CONNECT-UDP 隧道转发，无需本地 UDP 后端 socket.
+		bool connect_udp = false;
+		if (m_proxy)
 		{
-			XLOG_WARN << "tun udp open backend socket: " << ec.message();
-			close();
-			co_return;
+			auto scheme = boost::to_lower_copy(
+				std::string((*m_option.proxy_pass_).scheme()));
+			connect_udp = scheme.starts_with("http");
 		}
 
-		// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
-		if (m_option.so_mark_)
+		if (!connect_udp)
 		{
-			auto ret = apply_so_mark(m_backend->native_handle(), m_option.so_mark_);
-			if (ret.has_error())
-				XLOG_WARN << "tun udp set socket mark: " << ret.error().message();
-		}
+			// 打开后端 UDP socket（与上游代理或目标通信）.
+			m_backend.emplace(m_executor);
+			m_backend->open(m_target.protocol(), ec);
+			if (ec)
+			{
+				XLOG_WARN << "tun udp open backend socket: " << ec.message();
+				close();
+				co_return;
+			}
 
-		m_backend->bind(net::ip::udp::endpoint(m_target.protocol(), 0), ec);
-		if (ec)
-		{
-			XLOG_WARN << "tun udp bind backend socket: " << ec.message();
-			close();
-			co_return;
+			// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
+			if (m_option.so_mark_)
+			{
+				auto ret = apply_so_mark(m_backend->native_handle(), m_option.so_mark_);
+				if (ret.has_error())
+					XLOG_WARN << "tun udp set socket mark: " << ret.error().message();
+			}
+
+			m_backend->bind(net::ip::udp::endpoint(m_target.protocol(), 0), ec);
+			if (ec)
+			{
+				XLOG_WARN << "tun udp bind backend socket: " << ec.message();
+				close();
+				co_return;
+			}
 		}
 
 		if (m_proxy)
@@ -1160,59 +1187,76 @@ namespace proxy {
 			m_control.emplace(init_proxy_stream(std::move(sock)));
 
 			auto scheme = boost::to_lower_copy(std::string(proxy_url.scheme()));
-			if (!scheme.starts_with("socks"))
+
+			if (scheme.starts_with("http"))
 			{
-				XLOG_WARN << "tun udp only supports socks proxy_pass: " << scheme;
-				close();
-				co_return;
-			}
-
-			// SOCKS5 UDP ASSOCIATE 握手，获取代理的 UDP 中继端点.
-			socks_client_option opt;
-			opt.target_host = "0.0.0.0";
-			opt.target_port = 21;
-			opt.proxy_hostname = true;
-			opt.command = SOCKS5_CMD_UDP;
-			opt.username = std::string(proxy_url.user());
-			opt.password = std::string(proxy_url.password());
-
-			auto backend = co_await async_socks_handshake(
-				*m_control, opt, net_awaitable[ec]);
-			if (ec || !backend)
-			{
-				XLOG_WARN << "tun udp SOCKS5 associate: " << ec.message();
-				close();
-				co_return;
-			}
-
-			m_backend_endp = *backend;
-
-			// 某些代理只返回端口，地址为空，此时用控制连接的远端地址补全.
-			if (m_backend_endp.address().is_unspecified())
-			{
-				net::ip::address remote_addr;
-				auto& tcp_sock = boost::variant2::get<proxy_tcp_socket>(*m_control);
-				remote_addr = tcp_sock.lowest_layer().remote_endpoint(ec).address();
-				if (!ec)
-					m_backend_endp.address(remote_addr);
-			}
-
-			// 保持控制连接存活，断开时关闭整个会话.
-			net::co_spawn(m_executor,
-				[this, self]() -> net::awaitable<void>
+				// HTTP 代理：RFC 9298 CONNECT-UDP 隧道.
+				bool ok = co_await do_connect_udp();
+				if (!ok)
 				{
-					co_await control_loop();
+					close();
 					co_return;
-				}, net::detached);
-		}
-
-		// 启动后端接收循环.
-		net::co_spawn(m_executor,
-			[this, self]() -> net::awaitable<void>
+				}
+			}
+			else if (!scheme.starts_with("socks"))
 			{
-				co_await recv_loop();
+				XLOG_WARN << "tun udp unsupported proxy_pass scheme: " << scheme;
+				close();
 				co_return;
-			}, net::detached);
+			}
+
+			if (!m_connect_udp)
+			{
+				// SOCKS5 UDP ASSOCIATE 握手，获取代理的 UDP 中继端点.
+				socks_client_option opt;
+				opt.target_host = "0.0.0.0";
+				opt.target_port = 21;
+				opt.proxy_hostname = true;
+				opt.command = SOCKS5_CMD_UDP;
+				opt.username = std::string(proxy_url.user());
+				opt.password = std::string(proxy_url.password());
+
+				auto backend = co_await async_socks_handshake(
+					*m_control, opt, net_awaitable[ec]);
+				if (ec || !backend)
+				{
+					XLOG_WARN << "tun udp SOCKS5 associate: " << ec.message();
+					close();
+					co_return;
+				}
+
+				m_backend_endp = *backend;
+
+				// 某些代理只返回端口，地址为空，此时用控制连接的远端地址补全.
+				if (m_backend_endp.address().is_unspecified())
+				{
+					net::ip::address remote_addr;
+					auto& tcp_sock = boost::variant2::get<proxy_tcp_socket>(*m_control);
+					remote_addr = tcp_sock.lowest_layer().remote_endpoint(ec).address();
+					if (!ec)
+						m_backend_endp.address(remote_addr);
+				}
+
+				// 保持控制连接存活，断开时关闭整个会话.
+				net::co_spawn(m_executor,
+					[this, self]() -> net::awaitable<void>
+					{
+						co_await control_loop();
+						co_return;
+					}, net::detached);
+			}
+
+			// 非 CONNECT-UDP 模式启动后端接收循环（SOCKS5 或直连）.
+			if (!m_connect_udp)
+			{
+				net::co_spawn(m_executor,
+					[this, self]() -> net::awaitable<void>
+					{
+						co_await recv_loop();
+						co_return;
+					}, net::detached);
+			}
+		}
 
 		// 后端就绪，补发等待期间缓存的客户端数据.
 		m_ready = true;
@@ -1221,6 +1265,215 @@ namespace proxy {
 		m_pending.clear();
 
 		touch();
+	}
+
+	net::awaitable<bool> tun_udp_flow::do_connect_udp()
+	{
+		auto self = shared_from_this();
+		boost::system::error_code ec;
+
+		const auto& proxy_url = *m_option.proxy_pass_;
+
+		// 上游 TCP 连接由 do_open 建立（m_control），HTTP CONNECT-UDP 当前仅支持
+		// 非加密 http 上游（与 tun TCP 的 HTTP 转发一致）.
+		std::string proxy_host(proxy_url.encoded_host());
+		std::string port_str = proxy_url.port();
+		uint16_t proxy_port = static_cast<uint16_t>(
+			port_str.empty() ? 80 : std::atoi(port_str.c_str()));
+
+		// 构建 RFC 9298 connect-udp 请求（absolute-form URI）.
+		std::string target_host = m_target.address().to_string();
+		if (m_target.address().is_v6())
+			boost::replace_all(target_host, ":", "%3A");
+
+		std::string target =
+			"http://" + proxy_host + ":" + std::to_string(proxy_port) +
+			"/.well-known/masque/udp/" + target_host + "/" +
+			std::to_string(m_target.port()) + "/";
+
+		http::request<http::empty_body> req{ http::verb::get, target, 11 };
+		req.set(http::field::host, proxy_host + ":" + std::to_string(proxy_port));
+		req.set(http::field::connection, "Upgrade");
+		req.set(http::field::upgrade, "connect-udp");
+		req.set("Capsule-Protocol", "?1");
+
+		// 如果 proxy_pass 需要认证，添加 Proxy-Authorization 头.
+		if (!proxy_url.user().empty())
+		{
+			const auto userinfo =
+				std::string(proxy_url.user()) + ":" +
+				std::string(proxy_url.password());
+			req.set(http::field::proxy_authorization,
+				"Basic " + strutil::base64_encode(userinfo));
+		}
+
+		auto& http_sock = *m_control;
+
+		co_await http::async_write(http_sock, req, net_awaitable[ec]);
+		if (ec)
+		{
+			XLOG_WARN << "tun udp send connect-udp request: " << ec.message();
+			co_return false;
+		}
+
+		beast::flat_buffer resp_buf;
+		http::response_parser<http::empty_body> resp_parser;
+		resp_parser.skip(true);
+
+		co_await http::async_read_header(
+			http_sock, resp_buf, resp_parser, net_awaitable[ec]);
+		if (ec)
+		{
+			XLOG_WARN << "tun udp read connect-udp response: " << ec.message();
+			co_return false;
+		}
+
+		auto resp = resp_parser.release();
+		if (resp.result() != http::status::switching_protocols)
+		{
+			XLOG_WARN << "tun udp connect-udp rejected: "
+				<< static_cast<int>(resp.result());
+			co_return false;
+		}
+
+		XLOG_DBG << "tun udp connect-udp established to target: " << m_target;
+
+		// 启动串行发送协程与 capsule 接收循环.
+		m_tx_signal.emplace(m_executor);
+
+		net::co_spawn(m_executor,
+			[this, self]() -> net::awaitable<void>
+			{
+				co_await tx_loop();
+				co_return;
+			}, net::detached);
+
+		net::co_spawn(m_executor,
+			[this, self]() -> net::awaitable<void>
+			{
+				co_await recv_connect_udp_loop();
+				co_return;
+			}, net::detached);
+
+		m_connect_udp = true;
+		co_return true;
+	}
+
+	void tun_udp_flow::push_capsule(const char* data, size_t len)
+	{
+		uint8_t buf[65536];
+		size_t pos = 0;
+
+		pos += varint_int_encode(udp_proxy_capsule_type, buf + pos);
+		pos += varint_int_encode(1 + len, buf + pos);
+		pos += varint_int_encode(0, buf + pos);
+
+		if (pos + len > sizeof(buf))
+		{
+			close();
+			return;
+		}
+
+		std::memcpy(buf + pos, data, len);
+		pos += len;
+
+		{
+			std::lock_guard<std::mutex> lk(m_tx_mutex);
+			m_tx_queue.emplace_back(buf, buf + pos);
+		}
+
+		if (m_tx_signal)
+			m_tx_signal->cancel();
+	}
+
+	net::awaitable<void> tun_udp_flow::tx_loop()
+	{
+		for (; !m_closed;)
+		{
+			std::vector<char> item;
+
+			{
+				std::lock_guard<std::mutex> lk(m_tx_mutex);
+				if (!m_tx_queue.empty())
+				{
+					item = std::move(m_tx_queue.front());
+					m_tx_queue.pop_front();
+				}
+			}
+
+			if (item.empty())
+			{
+				boost::system::error_code ec;
+				m_tx_signal->expires_at(net::steady_timer::time_point::max());
+				co_await m_tx_signal->async_wait(net_awaitable[ec]);
+				continue;
+			}
+
+			boost::system::error_code ec;
+			co_await net::async_write(*m_control, net::buffer(item), net_awaitable[ec]);
+			if (ec)
+				break;
+		}
+
+		close();
+	}
+
+	net::awaitable<void> tun_udp_flow::recv_connect_udp_loop()
+	{
+		if (!m_control)
+			co_return;
+
+		boost::system::error_code ec;
+
+		for (; !m_closed;)
+		{
+			// 读取 capsule type 与 length（varint）.
+			auto capsule_type = co_await read_varint_from_stream(*m_control, ec);
+			if (ec)
+				break;
+
+			auto capsule_length = co_await read_varint_from_stream(*m_control, ec);
+			if (ec)
+				break;
+
+			if (capsule_length > 65535)
+			{
+				XLOG_WARN << "tun udp capsule too large: " << capsule_length;
+				break;
+			}
+
+			std::vector<char> capsule_value(
+				static_cast<size_t>(capsule_length), '\0');
+			if (capsule_length > 0)
+			{
+				co_await net::async_read(
+					*m_control, net::buffer(capsule_value), net_awaitable[ec]);
+				if (ec)
+					break;
+			}
+
+			// 仅处理 DATAGRAM capsule（RFC 9297）.
+			if (capsule_type != udp_proxy_capsule_type)
+				continue;
+
+			if (capsule_value.empty())
+				continue;
+
+			// 解析 context ID（本项目固定使用 0）.
+			auto val_data = reinterpret_cast<const uint8_t*>(capsule_value.data());
+			auto [ctx_id_len, ctx_id] = varint_int_decode(val_data);
+			if (ctx_id != 0)
+				continue;
+
+			size_t udp_len = capsule_value.size() - ctx_id_len;
+			if (udp_len == 0)
+				continue;
+
+			touch();
+			reply(capsule_value.data() + ctx_id_len, udp_len);
+		}
+
+		close();
 	}
 
 	net::awaitable<void> tun_udp_flow::control_loop()

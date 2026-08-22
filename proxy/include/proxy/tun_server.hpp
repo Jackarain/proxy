@@ -237,6 +237,18 @@ namespace proxy {
 		// 建立后端连接（代理或直连）.
 		net::awaitable<void> do_open();
 
+		// 建立 HTTP CONNECT-UDP 隧道（proxy_pass 为 http 时替代 SOCKS5 ASSOCIATE）.
+		net::awaitable<bool> do_connect_udp();
+
+		// 串行发送 CONNECT-UDP capsule 到 TCP 控制连接.
+		net::awaitable<void> tx_loop();
+
+		// 从 TCP 控制连接接收 capsule 并回写客户端.
+		net::awaitable<void> recv_connect_udp_loop();
+
+		// 将客户端 UDP 数据封装为 DATAGRAM capsule 并入队.
+		void push_capsule(const char* data, size_t len);
+
 		// 保持 SOCKS5 ASSOCIATE 控制连接存活（读取直到断开）.
 		net::awaitable<void> control_loop();
 
@@ -270,6 +282,16 @@ namespace proxy {
 
 		// m_dns_qname 保存 DNS 查询域名（目标 53 端口时），用于按域名分流.
 		std::string m_dns_qname;
+
+		// m_connect_udp 标记 HTTP CONNECT-UDP 模式（proxy_pass 为 http 时）.
+		bool m_connect_udp { false };
+
+		// m_tx_queue 保存待发送的 CONNECT-UDP capsule（串行写 TCP 控制连接）.
+		std::mutex m_tx_mutex;
+		std::deque<std::vector<char>> m_tx_queue;
+
+		// m_tx_signal 通知发送协程有新数据到达.
+		std::optional<net::steady_timer> m_tx_signal;
 
 		// m_backend 保存与上游代理或目标的 UDP 连接.
 		std::optional<net::ip::udp::socket> m_backend;
