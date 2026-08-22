@@ -691,7 +691,7 @@ and/or open issues at https://github.com/Jackarain/proxy)"
 
 	print_args(argc, argv, vm);
 
-	if (stdio_target.empty())
+	if (stdio_target.empty() && !tun)
 	{
 		for (const auto& server_listen : server_listens)
 			XLOG_DBG << "Start server: " << server_listen;
