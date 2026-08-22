@@ -6673,22 +6673,40 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 			co_await asio_util::async_connect(
 				socket,
 				targets,
-				[this](const auto&, auto& stream, auto&)
+				[this](const auto&, auto& stream, auto& endp)
 				{
 					boost::system::error_code ec;
 
-					if (!m_bind_interface)
-						return true;
+					if (m_bind_interface)
+					{
+						tcp::endpoint bind_endpoint(*m_bind_interface, 0);
 
-					tcp::endpoint bind_endpoint(*m_bind_interface, 0);
+						stream.open(bind_endpoint.protocol(), ec);
+						if (ec)
+							return false;
 
-					stream.open(bind_endpoint.protocol(), ec);
-					if (ec)
-						return false;
+						stream.bind(bind_endpoint, ec);
+						if (ec)
+							return false;
+					}
+					else
+					{
+						stream.open(endp.endpoint().protocol(), ec);
+						if (ec)
+							return false;
+					}
 
-					stream.bind(bind_endpoint, ec);
-					if (ec)
-						return false;
+					// 路由决策发生在 connect 时，须在连接前设置 SO_MARK.
+					if (m_option.so_mark_)
+					{
+						auto ret = apply_so_mark(stream.native_handle(), m_option.so_mark_);
+						if (ret.has_error())
+						{
+							log_conn_warning()
+								<< ", set socket mark error: "
+								<< ret.error().message();
+						}
+					}
 
 					return true;
 				},
@@ -6740,17 +6758,6 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 				}
 			}
 
-			if (m_option.so_mark_)
-			{
-				auto ret = apply_so_mark(socket.native_handle(), m_option.so_mark_);
-				if (ret.has_error())
-				{
-					log_conn_warning()
-						<< ", set socket mark error: "
-						<< ret.error().message();
-				}
-			}
-
 			co_return ec;
 		}
 
@@ -6797,6 +6804,24 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 					ec);
 				if (ec)
 					break;
+			}
+			else
+			{
+				socket.open(endpoint.endpoint().protocol(), ec);
+				if (ec)
+					break;
+			}
+
+			// 路由决策发生在 connect 时，须在连接前设置 SO_MARK.
+			if (m_option.so_mark_)
+			{
+				auto ret = apply_so_mark(socket.native_handle(), m_option.so_mark_);
+				if (ret.has_error())
+				{
+					log_conn_warning()
+						<< ", set socket mark error: "
+						<< ret.error().message();
+				}
 			}
 
 			co_await socket.async_connect(
@@ -6846,17 +6871,6 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 					{
 						log_conn_warning()
 							<< ", tcp buffer sizes error: "
-							<< ret.error().message();
-					}
-				}
-
-				if (m_option.so_mark_)
-				{
-					auto ret = apply_so_mark(socket.native_handle(), m_option.so_mark_);
-					if (ret.has_error())
-					{
-						log_conn_warning()
-							<< ", set socket mark error: "
 							<< ret.error().message();
 					}
 				}

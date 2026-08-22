@@ -3078,35 +3078,43 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 		auto endp = co_await asio_util::async_connect(
 			remote_socket,
 			targets,
-			[this](const auto&, auto& stream, auto&)
+			[this](const auto&, auto& stream, auto& endp)
 			{
 				boost::system::error_code ec;
 
 				auto interface = net::ip::make_address(m_option.local_ip_, ec);
-				if (ec)
-					return true;
+				if (!ec)
+				{
+					tcp::endpoint bind_endpoint(interface, 0);
+					stream.open(bind_endpoint.protocol(), ec);
+					if (ec)
+						return false;
 
-				tcp::endpoint bind_endpoint(interface, 0);
-				stream.open(bind_endpoint.protocol(), ec);
-				if (ec)
-					return false;
+					stream.bind(bind_endpoint, ec);
+					if (ec)
+						return false;
+				}
+				else
+				{
+					stream.open(endp.endpoint().protocol(), ec);
+					if (ec)
+						return false;
+				}
 
-				stream.bind(bind_endpoint, ec);
-				if (ec)
-					return false;
+				// 路由决策发生在 connect 时，须在连接前设置 SO_MARK.
+				if (m_option.so_mark_)
+				{
+					auto ret = apply_so_mark(stream.native_handle());
+					if (ret.has_error())
+					{
+						XLOG_WARN << "connect_to_proxy setsockopt SO_MARK error: "
+							<< ret.error().message();
+					}
+				}
 
 				return true;
 			},
 			net_awaitable[ec]);
-		if (!ec)
-		{
-			auto ret = apply_so_mark(remote_socket.native_handle());
-			if (ret.has_error())
-			{
-				XLOG_WARN << "connect_to_proxy setsockopt SO_MARK error: "
-					<< ret.error().message();
-			}
-		}
 
 		co_return ec;
 	}
@@ -3129,17 +3137,27 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 
 		remote_socket.close(ec);
 
-		co_await remote_socket.async_connect(endp, net_awaitable[ec]);
-		if (!ec)
+		if (m_option.so_mark_)
 		{
+			if (!remote_socket.is_open())
+			{
+				remote_socket.open(endp.endpoint().protocol(), ec);
+				if (ec)
+					continue;
+			}
+
+			// 路由决策发生在 connect 时，须在连接前设置 SO_MARK.
 			auto ret = apply_so_mark(remote_socket.native_handle());
 			if (ret.has_error())
 			{
 				XLOG_WARN << "connect_to_proxy setsockopt SO_MARK error: "
 					<< ret.error().message();
 			}
-			co_return ec;
 		}
+
+		co_await remote_socket.async_connect(endp, net_awaitable[ec]);
+		if (!ec)
+			co_return ec;
 	}
 
 	co_return boost::asio::error::host_not_found;
