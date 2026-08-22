@@ -354,6 +354,28 @@ namespace proxy {
 		// - 启用后通常意味着需要特殊的 socket 选项与策略路由，才能“伪装”源地址或接管流量。
 		bool transparent_{ false };
 
+		// 是否启用 TUN 设备模式（TUN2SOCKS）。
+		//
+		// - 仅 Linux 场景可用，创建 TUN 设备抓取 IP 数据包，解析 TCP/UDP
+		//   后按分流规则转发到上游代理（proxy_pass）或直接连接目标。
+		// - 启用时必须同时指定 proxy_pass_，否则启动失败。
+		// - 系统路由需要由外部脚本/文档配置，程序只负责创建设备与清理。
+		bool tun_{ false };
+
+		// TUN 设备名称，为空使用系统默认分配的名称。
+		std::string tun_name_;
+
+		// TUN 设备 MTU，默认 1500。
+		int tun_mtu_{ 1500 };
+
+		// 代理域名列表（后缀匹配）：命中该列表的域名解析走上游 DoH，
+		// 数据面按解析结果经 proxy_pass_ 转发；未命中走本地解析并直连。
+		std::vector<std::string> proxy_domains_;
+
+		// 代理 CIDR 列表（IPv4/IPv6）：命中该列表的目标地址经
+		// proxy_pass_ 转发，未命中直连目标。
+		std::vector<std::string> proxy_cidr_;
+
 		// 向外连接发起时使用的 SO_MARK（Linux）标记。
 		//
 		// - 设置后，所有由本代理发起的 TCP/UDP 出站连接都会带上此标记，

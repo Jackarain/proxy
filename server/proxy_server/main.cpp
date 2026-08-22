@@ -79,8 +79,14 @@ std::string dns_upstream;
 std::string pam_auth;
 
 bool transparent = false;
+bool tun = false;
 bool autoindex = false;
 bool htpasswd = false;
+
+std::string tun_name;
+int tun_mtu = 1500;
+std::vector<std::string> proxy_domains;
+std::vector<std::string> proxy_cidr;
 
 bool disable_http = false;
 bool disable_insecure = true;
@@ -326,6 +332,19 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 			co_return;
 		}
 	}
+	opt.tun_ = tun;
+	opt.tun_name_ = tun_name;
+	opt.tun_mtu_ = tun_mtu;
+	opt.proxy_domains_ = proxy_domains;
+	opt.proxy_cidr_ = proxy_cidr;
+	if (opt.tun_)
+	{
+		if (proxy_pass.empty())
+		{
+			XLOG_ERR << "tun proxy requires a proxy_pass";
+			co_return;
+		}
+	}
 	if (linux_so_mark > 0 && linux_so_mark <= std::numeric_limits<uint32_t>::max())
 		opt.so_mark_.emplace(linux_so_mark);
 
@@ -477,6 +496,11 @@ int main(int argc, char** argv)
 		("local_ip", po::value<std::string>(&local_ip), "Specify the local IP address for outbound TCP connections.")
 
 		("transparent", po::value<bool>(&transparent)->default_value(false, "false"), "Enable transparent proxy mode (Linux only).")
+		("tun", po::value<bool>(&tun)->default_value(false, "false"), "Enable TUN device mode (TUN2SOCKS, Linux only, requires proxy_pass).")
+		("tun_name", po::value<std::string>(&tun_name)->value_name("name"), "TUN device name (empty = auto assign).")
+		("tun_mtu", po::value<int>(&tun_mtu)->default_value(1500), "TUN device MTU (default 1500).")
+		("proxy_domains", po::value<std::vector<std::string>>(&proxy_domains)->multitoken(), "Domain suffix list to route via the upstream proxy (repeatable).")
+		("proxy_cidr", po::value<std::vector<std::string>>(&proxy_cidr)->multitoken(), "CIDR list to route via the upstream proxy (IPv4/IPv6, repeatable).")
 		("so_mark", po::value<int64_t>(&linux_so_mark)->default_value(-1), "Set the SO_MARK socket option for outbound connections (Linux only).")
 
 		("tcp_timeout", po::value<int>(&tcp_timeout)->default_value(-1), "Set the idle timeout in seconds for TCP connections (-1 = disable).")
@@ -544,6 +568,7 @@ int main(int argc, char** argv)
 		const std::vector<std::string> int_opts = {
 			"so_mark", "noise_length", "tcp_timeout", "udp_timeout",
 			"rate_limit", "dns_udp_port", "dns_cache_size", "dns_cache_ttl",
+			"tun_mtu",
 		};
 		auto is_int_opt = [&int_opts](const std::string& n) {
 			return std::find(int_opts.begin(), int_opts.end(), n) != int_opts.end();
