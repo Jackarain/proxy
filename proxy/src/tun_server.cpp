@@ -51,6 +51,125 @@ namespace proxy {
 	//////////////////////////////////////////////////////////////////////////
 	// tun_device
 
+	namespace {
+
+#if defined(__linux__)
+		// 打开 /dev/net/tun 并配置 TUNSETIFF, 返回 fd; 失败返回 -1 并设置 ec.
+		int open_linux_tun(const std::string& name, std::string& dev_name,
+			boost::system::error_code& ec) noexcept
+		{
+			int fd = ::open("/dev/net/tun", O_RDWR | O_CLOEXEC);
+			if (fd < 0)
+			{
+				ec = boost::system::error_code(errno,
+					boost::system::generic_category());
+				return -1;
+			}
+
+			struct ifreq ifr {};
+			ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
+			if (!name.empty())
+				std::strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ - 1);
+
+			if (::ioctl(fd, TUNSETIFF, &ifr) < 0)
+			{
+				ec = boost::system::error_code(errno,
+					boost::system::generic_category());
+				::close(fd);
+				return -1;
+			}
+
+			dev_name = ifr.ifr_name;
+			return fd;
+		}
+#elif defined(__APPLE__)
+		// 打开 utun 设备（内核控制接口）, 返回 fd; 失败返回 -1 并设置 ec.
+		int open_macos_tun(const std::string& name, std::string& dev_name,
+			boost::system::error_code& ec) noexcept
+		{
+			struct ctl_info ctl_info;
+			std::memset(&ctl_info, 0, sizeof(ctl_info));
+			std::strncpy(ctl_info.ctl_name, UTUN_CONTROL_NAME,
+				sizeof(ctl_info.ctl_name));
+
+			int fd = ::socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
+			if (fd < 0)
+			{
+				ec = boost::system::error_code(errno,
+					boost::system::generic_category());
+				return -1;
+			}
+
+			if (::ioctl(fd, CTLIOCGINFO, &ctl_info) < 0)
+			{
+				ec = boost::system::error_code(errno,
+					boost::system::generic_category());
+				::close(fd);
+				return -1;
+			}
+
+			struct sockaddr_ctl sc;
+			std::memset(&sc, 0, sizeof(sc));
+			sc.sc_id = ctl_info.ctl_id;
+			sc.sc_len = sizeof(sc);
+			sc.sc_family = AF_SYSTEM;
+			sc.ss_sysaddr = AF_SYS_CONTROL;
+			sc.sc_unit = 0;  // 动态分配.
+
+			// 若指定了 utun 名称 (如 "utun5"), 使用对应单元.
+			if (name.compare(0, 4, "utun") == 0 && name.size() > 4)
+				sc.sc_unit = std::atoi(name.c_str() + 4) + 1;
+
+			if (::connect(fd, reinterpret_cast<struct sockaddr*>(&sc),
+					sizeof(sc)) < 0)
+			{
+				ec = boost::system::error_code(errno,
+					boost::system::generic_category());
+				::close(fd);
+				return -1;
+			}
+
+			char ifname[64] = { 0 };
+			socklen_t len = sizeof(ifname);
+			if (::getsockopt(fd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME,
+					ifname, &len) < 0)
+			{
+				ec = boost::system::error_code(errno,
+					boost::system::generic_category());
+				::close(fd);
+				return -1;
+			}
+
+			dev_name = ifname;
+
+			// 设置非阻塞.
+			int flags = ::fcntl(fd, F_GETFL, 0);
+			::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+			return fd;
+		}
+#endif
+
+#if defined(__linux__) || defined(__APPLE__)
+		// 设置设备 MTU.
+		void set_tun_mtu(const std::string& dev_name, int mtu,
+			boost::system::error_code& ec) noexcept
+		{
+			int sock = ::socket(AF_INET, SOCK_DGRAM, 0);
+			if (sock < 0)
+				return;
+
+			struct ifreq mtu_ifr {};
+			std::strncpy(mtu_ifr.ifr_name, dev_name.c_str(), IFNAMSIZ - 1);
+			mtu_ifr.ifr_mtu = mtu;
+			if (::ioctl(sock, SIOCSIFMTU, &mtu_ifr) < 0)
+				ec = boost::system::error_code(errno,
+					boost::system::generic_category());
+			::close(sock);
+		}
+#endif
+
+	} // namespace
+
 #if defined(__linux__) || defined(__APPLE__)
 
 	tun_device::tun_device(net::any_io_executor executor)
@@ -70,97 +189,15 @@ namespace proxy {
 		boost::system::error_code ec;
 
 #if defined(__linux__)
-		int fd = ::open("/dev/net/tun", O_RDWR | O_CLOEXEC);
-		if (fd < 0)
-		{
-			ec = boost::system::error_code(errno, boost::system::generic_category());
-			return ec;
-		}
-
-		struct ifreq ifr {};
-		ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-		if (!name.empty())
-			std::strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ - 1);
-
-		if (::ioctl(fd, TUNSETIFF, &ifr) < 0)
-		{
-			ec = boost::system::error_code(errno, boost::system::generic_category());
-			::close(fd);
-			return ec;
-		}
-
-		m_name = ifr.ifr_name;
+		int fd = open_linux_tun(name, m_name, ec);
 #elif defined(__APPLE__)
-		// 打开 utun 设备（内核控制接口）.
-		struct ctl_info ctl_info;
-		std::memset(&ctl_info, 0, sizeof(ctl_info));
-		std::strncpy(ctl_info.ctl_name, UTUN_CONTROL_NAME,
-			sizeof(ctl_info.ctl_name));
-
-		int fd = ::socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
-		if (fd < 0)
-		{
-			ec = boost::system::error_code(errno, boost::system::generic_category());
-			return ec;
-		}
-
-		if (::ioctl(fd, CTLIOCGINFO, &ctl_info) < 0)
-		{
-			ec = boost::system::error_code(errno, boost::system::generic_category());
-			::close(fd);
-			return ec;
-		}
-
-		struct sockaddr_ctl sc;
-		std::memset(&sc, 0, sizeof(sc));
-		sc.sc_id = ctl_info.ctl_id;
-		sc.sc_len = sizeof(sc);
-		sc.sc_family = AF_SYSTEM;
-		sc.ss_sysaddr = AF_SYS_CONTROL;
-		sc.sc_unit = 0;  // 动态分配.
-
-		// 若指定了 utun 名称 (如 "utun5"), 使用对应单元.
-		if (name.compare(0, 4, "utun") == 0 && name.size() > 4)
-			sc.sc_unit = std::atoi(name.c_str() + 4) + 1;
-
-		if (::connect(fd, reinterpret_cast<struct sockaddr*>(&sc),
-				sizeof(sc)) < 0)
-		{
-			ec = boost::system::error_code(errno, boost::system::generic_category());
-			::close(fd);
-			return ec;
-		}
-
-		char ifname[64] = { 0 };
-		socklen_t len = sizeof(ifname);
-		if (::getsockopt(fd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME,
-				ifname, &len) < 0)
-		{
-			ec = boost::system::error_code(errno, boost::system::generic_category());
-			::close(fd);
-			return ec;
-		}
-
-		m_name = ifname;
-
-		// 设置非阻塞.
-		int flags = ::fcntl(fd, F_GETFL, 0);
-		::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+		int fd = open_macos_tun(name, m_name, ec);
 #endif
+		if (ec)
+			return ec;
 
 		if (mtu > 0)
-		{
-			int sock = ::socket(AF_INET, SOCK_DGRAM, 0);
-			if (sock >= 0)
-			{
-				struct ifreq mtu_ifr {};
-				std::strncpy(mtu_ifr.ifr_name, m_name.c_str(), IFNAMSIZ - 1);
-				mtu_ifr.ifr_mtu = mtu;
-				if (::ioctl(sock, SIOCSIFMTU, &mtu_ifr) < 0)
-					ec = boost::system::error_code(errno, boost::system::generic_category());
-				::close(sock);
-			}
-		}
+			set_tun_mtu(m_name, mtu, ec);
 
 		m_mtu = mtu > 0 ? mtu : 1500;
 
@@ -854,22 +891,27 @@ namespace proxy {
 		if (!m_connected)
 			return;
 
-		if (pkt.payload_len > 0)
+		handle_data(pkt);
+	}
+
+	void tun_tcp_flow::handle_data(const ip_packet& pkt)
+	{
+		if (pkt.payload_len == 0)
+			return;
+
+		if (pkt.seq != m_client_next_seq)
 		{
-			if (pkt.seq != m_client_next_seq)
-			{
-				// 乱序或重传：通告期望序号，丢弃数据（简化实现不做缓存重排）.
-				if (pkt.seq > m_client_next_seq)
-					send_ack();
-				return;
-			}
-
-			m_client_next_seq += static_cast<uint32_t>(pkt.payload_len);
-			m_client_ack_seq = m_client_next_seq;
-
-			push_tx(std::string(pkt.payload, pkt.payload_len));
-			send_ack();
+			// 乱序或重传：通告期望序号，丢弃数据（简化实现不做缓存重排）.
+			if (pkt.seq > m_client_next_seq)
+				send_ack();
+			return;
 		}
+
+		m_client_next_seq += static_cast<uint32_t>(pkt.payload_len);
+		m_client_ack_seq = m_client_next_seq;
+
+		push_tx(std::string(pkt.payload, pkt.payload_len));
+		send_ack();
 	}
 
 	void tun_tcp_flow::close()
@@ -903,45 +945,49 @@ namespace proxy {
 			<< (use_proxy ? " via proxy" : " direct")
 			<< ", cidr_size=" << m_option.proxy_cidr_.size();
 
+		if (!co_await establish_upstream(target_host, target_port, use_proxy))
+		{
+			send_rst();
+			close();
+			co_return;
+		}
+
+		m_connected = true;
+
+		XLOG_DBG << "tun tcp established " << target_host << ":" << target_port;
+
+		start_data_plane();
+	}
+
+	net::awaitable<bool> tun_tcp_flow::establish_upstream(
+		const std::string& target_host, uint16_t target_port, bool use_proxy)
+	{
 		if (use_proxy && m_option.proxy_pass_)
 		{
 			const auto& proxy_url = *m_option.proxy_pass_;
 
 			auto sock = co_await connect_proxy_pass(m_executor, m_option, proxy_url);
 			if (!sock.is_open())
-			{
-				send_rst();
-				close();
-				co_return;
-			}
+				co_return false;
 
 			m_upstream = init_proxy_stream(std::move(sock));
 
-			if (!co_await do_proxy_handshake(proxy_url))
-			{
-				send_rst();
-				close();
-				co_return;
-			}
-		}
-		else
-		{
-			// 直连目标.
-			auto sock = co_await connect_direct(
-				m_executor, m_option, m_key.dst, target_port);
-			if (!sock.is_open())
-			{
-				send_rst();
-				close();
-				co_return;
-			}
-
-			m_upstream = init_proxy_stream(std::move(sock));
+			co_return co_await do_proxy_handshake(proxy_url);
 		}
 
-		m_connected = true;
+		// 直连目标.
+		auto sock = co_await connect_direct(
+			m_executor, m_option, m_key.dst, target_port);
+		if (!sock.is_open())
+			co_return false;
 
-		XLOG_DBG << "tun tcp established " << target_host << ":" << target_port;
+		m_upstream = init_proxy_stream(std::move(sock));
+		co_return true;
+	}
+
+	void tun_tcp_flow::start_data_plane()
+	{
+		auto self = shared_from_this();
 
 		// 回 SYN-ACK，通告 MSS 以减少分片.
 		send_tcp(m_server_isn, m_client_isn + 1,
@@ -1222,35 +1268,43 @@ namespace proxy {
 			return;
 		}
 
+		bool ok = false;
 		if (m_connect_udp)
 		{
 			// HTTP CONNECT-UDP：封装 DATAGRAM capsule 写入隧道.
 			push_capsule(data, len);
-			touch();
-			return;
+			ok = true;
 		}
+		else if (m_proxy)
+			ok = send_via_socks5(data, len);
+		else
+			ok = send_direct(data, len);
 
-		if (!m_proxy)
+		if (ok)
+			touch();
+	}
+
+	bool tun_udp_flow::send_direct(const char* data, size_t len)
+	{
+		boost::system::error_code ec;
+		m_backend->send_to(net::buffer(data, len), m_target, 0, ec);
+		if (ec)
 		{
-			// 直连目标.
-			boost::system::error_code ec;
-			m_backend->send_to(net::buffer(data, len), m_target, 0, ec);
-			if (ec)
-			{
-				close();
-				return;
-			}
-			touch();
-			return;
+			close();
+			return false;
 		}
+		return true;
+	}
 
+	bool tun_udp_flow::send_via_socks5(const char* data, size_t len)
+	{
 		// SOCKS5 UDP 请求头：RSV(2) + FRAG(1) + ATYP(1) + 地址 + 端口.
 		auto header = build_socks5_udp_header(m_target);
 
 		if (header.size() + len > 65535)
 		{
 			close();
-			return;
+			return false;
 		}
 
 		std::string buf;
@@ -1264,9 +1318,9 @@ namespace proxy {
 		{
 			XLOG_WARN << "tun udp send error: " << ec.message();
 			close();
-			return;
+			return false;
 		}
-		touch();
+		return true;
 	}
 
 	void tun_udp_flow::close()
@@ -1302,31 +1356,10 @@ namespace proxy {
 	{
 		auto self = shared_from_this();
 
-		bool use_proxy = m_owner && m_owner->ip_match_proxy(m_target.address());
-
-		// DNS 查询按查询域名分流：命中 proxy_domains_ 走代理，否则直连.
-		if (!use_proxy && m_target.port() == 53 && !m_dns_qname.empty())
-			use_proxy = m_owner && m_owner->domain_match(m_dns_qname);
-
-		m_proxy = use_proxy && m_option.proxy_pass_;
-
-		XLOG_DBG << "tun udp flow " << m_client.address().to_string() << ":"
-			<< m_client.port() << " -> " << m_target.address().to_string() << ":"
-			<< m_target.port() << (m_proxy ? " via proxy" : " direct")
-			<< (m_dns_qname.empty() ? "" : (", qname=" + m_dns_qname));
-
-		// HTTP 代理通过 RFC 9298 CONNECT-UDP 隧道转发，无需本地 UDP 后端 socket.
-		if (m_proxy)
+		if (!resolve_proxy_mode())
 		{
-			auto scheme = boost::to_lower_copy(
-				std::string((*m_option.proxy_pass_).scheme()));
-			m_connect_udp = scheme.starts_with("http");
-			if (!scheme.starts_with("http") && !scheme.starts_with("socks"))
-			{
-				XLOG_WARN << "tun udp unsupported proxy_pass scheme: " << scheme;
-				close();
-				co_return;
-			}
+			close();
+			co_return;
 		}
 
 		// 直连或 SOCKS5 需要本地 UDP 后端 socket.
@@ -1336,26 +1369,10 @@ namespace proxy {
 			co_return;
 		}
 
-		if (m_proxy)
+		if (m_proxy && !co_await establish_proxy())
 		{
-			const auto& proxy_url = *m_option.proxy_pass_;
-
-			auto sock = co_await connect_proxy_pass(m_executor, m_option, proxy_url);
-			if (!sock.is_open())
-			{
-				close();
-				co_return;
-			}
-
-			// HTTP 代理：RFC 9298 CONNECT-UDP 隧道；SOCKS5：UDP ASSOCIATE.
-			bool ok = m_connect_udp ?
-				co_await do_connect_udp(std::move(sock)) :
-				co_await do_socks5_associate(std::move(sock));
-			if (!ok)
-			{
-				close();
-				co_return;
-			}
+			close();
+			co_return;
 		}
 
 		// 非 CONNECT-UDP 模式启动后端接收循环（SOCKS5 或直连）.
@@ -1375,6 +1392,50 @@ namespace proxy {
 		m_pending.clear();
 
 		touch();
+	}
+
+	bool tun_udp_flow::resolve_proxy_mode()
+	{
+		bool use_proxy = m_owner && m_owner->ip_match_proxy(m_target.address());
+
+		// DNS 查询按查询域名分流：命中 proxy_domains_ 走代理，否则直连.
+		if (!use_proxy && m_target.port() == 53 && !m_dns_qname.empty())
+			use_proxy = m_owner && m_owner->domain_match(m_dns_qname);
+
+		m_proxy = use_proxy && m_option.proxy_pass_;
+
+		XLOG_DBG << "tun udp flow " << m_client.address().to_string() << ":"
+			<< m_client.port() << " -> " << m_target.address().to_string() << ":"
+			<< m_target.port() << (m_proxy ? " via proxy" : " direct")
+			<< (m_dns_qname.empty() ? "" : (", qname=" + m_dns_qname));
+
+		if (!m_proxy)
+			return true;
+
+		// HTTP 代理通过 RFC 9298 CONNECT-UDP 隧道转发，无需本地 UDP 后端 socket.
+		auto scheme = boost::to_lower_copy(
+			std::string((*m_option.proxy_pass_).scheme()));
+		m_connect_udp = scheme.starts_with("http");
+		if (!scheme.starts_with("http") && !scheme.starts_with("socks"))
+		{
+			XLOG_WARN << "tun udp unsupported proxy_pass scheme: " << scheme;
+			return false;
+		}
+		return true;
+	}
+
+	net::awaitable<bool> tun_udp_flow::establish_proxy()
+	{
+		const auto& proxy_url = *m_option.proxy_pass_;
+
+		auto sock = co_await connect_proxy_pass(m_executor, m_option, proxy_url);
+		if (!sock.is_open())
+			co_return false;
+
+		// HTTP 代理：RFC 9298 CONNECT-UDP 隧道；SOCKS5：UDP ASSOCIATE.
+		co_return m_connect_udp ?
+			co_await do_connect_udp(std::move(sock)) :
+			co_await do_socks5_associate(std::move(sock));
 	}
 
 	net::awaitable<bool> tun_udp_flow::open_backend()
@@ -1456,28 +1517,8 @@ namespace proxy {
 
 		const auto& proxy_url = *m_option.proxy_pass_;
 
-		std::string proxy_host(proxy_url.encoded_host());
-
-		// 判断是否使用 SSL：显式配置 proxy_pass_ssl 或 scheme 以 's' 结尾（https/wss）.
-		bool use_ssl = proxy_use_ssl(proxy_url, m_option);
-
-		if (use_ssl)
-		{
-			auto sni = m_option.proxy_ssl_name_.empty() ?
-				proxy_host : m_option.proxy_ssl_name_;
-			auto res = co_await m_owner->make_ssl_socket(sock, sni, m_control);
-			if (res.has_error())
-			{
-				XLOG_WARN << "tun udp make_ssl_socket: " << res.error().message();
-				co_return false;
-			}
-
-			XLOG_DBG << "tun udp SSL handshake with " << sni << " succeeded";
-		}
-		else
-		{
-			m_control.emplace(init_proxy_stream(std::move(sock)));
-		}
+		if (!co_await make_control_stream(std::move(sock)))
+			co_return false;
 
 		// 构建 RFC 9298 CONNECT-UDP 请求（absolute-form URI）.
 		auto req = build_connect_udp_request(proxy_url, m_target);
@@ -1527,6 +1568,35 @@ namespace proxy {
 			{
 				return recv_connect_udp_loop();
 			}, net::detached);
+
+		co_return true;
+	}
+
+	net::awaitable<bool> tun_udp_flow::make_control_stream(tcp::socket sock)
+	{
+		const auto& proxy_url = *m_option.proxy_pass_;
+		std::string proxy_host(proxy_url.encoded_host());
+
+		// 判断是否使用 SSL：显式配置 proxy_pass_ssl 或 scheme 以 's' 结尾（https/wss）.
+		bool use_ssl = proxy_use_ssl(proxy_url, m_option);
+
+		if (use_ssl)
+		{
+			auto sni = m_option.proxy_ssl_name_.empty() ?
+				proxy_host : m_option.proxy_ssl_name_;
+			auto res = co_await m_owner->make_ssl_socket(sock, sni, m_control);
+			if (res.has_error())
+			{
+				XLOG_WARN << "tun udp make_ssl_socket: " << res.error().message();
+				co_return false;
+			}
+
+			XLOG_DBG << "tun udp SSL handshake with " << sni << " succeeded";
+		}
+		else
+		{
+			m_control.emplace(init_proxy_stream(std::move(sock)));
+		}
 
 		co_return true;
 	}
@@ -1595,40 +1665,16 @@ namespace proxy {
 		if (!m_control)
 			co_return;
 
-		boost::system::error_code ec;
-
 		for (; !m_closed;)
 		{
-			// 读取 capsule type 与 length（varint）.
-			auto capsule_type = co_await read_varint_from_stream(*m_control, ec);
+			boost::system::error_code ec;
+			auto [capsule_type, capsule_value] = co_await read_capsule(ec);
 			if (ec)
 				break;
-
-			auto capsule_length = co_await read_varint_from_stream(*m_control, ec);
-			if (ec)
-				break;
-
-			if (capsule_length > 65535)
-			{
-				XLOG_WARN << "tun udp capsule too large: " << capsule_length;
-				break;
-			}
-
-			std::vector<char> capsule_value(
-				static_cast<size_t>(capsule_length), '\0');
-			if (capsule_length > 0)
-			{
-				co_await net::async_read(
-					*m_control, net::buffer(capsule_value), net_awaitable[ec]);
-				if (ec)
-					break;
-			}
 
 			// 仅处理 DATAGRAM capsule（RFC 9297）.
-			if (capsule_type != udp_proxy_capsule_type)
-				continue;
-
-			if (capsule_value.empty())
+			if (capsule_type != udp_proxy_capsule_type ||
+				capsule_value.empty())
 				continue;
 
 			// 解析 context ID（本项目固定使用 0）.
@@ -1646,6 +1692,38 @@ namespace proxy {
 		}
 
 		close();
+	}
+
+	net::awaitable<std::pair<uint64_t, std::vector<char>>>
+	tun_udp_flow::read_capsule(boost::system::error_code& ec)
+	{
+		// 读取 capsule type 与 length（varint）.
+		auto capsule_type = co_await read_varint_from_stream(*m_control, ec);
+		if (ec)
+			co_return std::pair<uint64_t, std::vector<char>>{};
+
+		auto capsule_length = co_await read_varint_from_stream(*m_control, ec);
+		if (ec)
+			co_return std::pair<uint64_t, std::vector<char>>{};
+
+		if (capsule_length > 65535)
+		{
+			XLOG_WARN << "tun udp capsule too large: " << capsule_length;
+			ec = net::error::invalid_argument;
+			co_return std::pair<uint64_t, std::vector<char>>{};
+		}
+
+		std::vector<char> capsule_value(
+			static_cast<size_t>(capsule_length), '\0');
+		if (capsule_length > 0)
+		{
+			co_await net::async_read(
+				*m_control, net::buffer(capsule_value), net_awaitable[ec]);
+			if (ec)
+				co_return std::pair<uint64_t, std::vector<char>>{};
+		}
+
+		co_return std::make_pair(capsule_type, std::move(capsule_value));
 	}
 
 	net::awaitable<void> tun_udp_flow::control_loop()
@@ -1825,12 +1903,26 @@ namespace proxy {
 	{
 		m_abort = true;
 
-		// 关闭所有 TCP/UDP flow.
+		// 锁内搬出 flow，锁外逐个关闭，避免 flow 析构时
+		// 反向调用 remove_*_flow 再次加锁造成死锁.
+		std::vector<std::shared_ptr<tun_tcp_flow>> tcp_flows;
+		std::vector<std::shared_ptr<tun_udp_flow>> udp_flows;
 		{
 			std::lock_guard<std::mutex> lk(m_flows_mutex);
+			tcp_flows.reserve(m_tcp_flows.size());
+			for (auto& [key, flow] : m_tcp_flows)
+				tcp_flows.push_back(flow);
+			udp_flows.reserve(m_udp_flows.size());
+			for (auto& [key, flow] : m_udp_flows)
+				udp_flows.push_back(flow);
 			m_tcp_flows.clear();
 			m_udp_flows.clear();
 		}
+
+		for (auto& flow : tcp_flows)
+			flow->close();
+		for (auto& flow : udp_flows)
+			flow->close();
 
 		if (m_tun)
 			m_tun->close();

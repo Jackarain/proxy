@@ -131,8 +131,19 @@ namespace proxy {
 		// 发起上游连接（代理握手或直连），成功后回 SYN-ACK.
 		net::awaitable<void> do_connect();
 
+		// 建立上游连接（代理握手或直连），成功返回 true.
+		net::awaitable<bool> establish_upstream(
+			const std::string& target_host, uint16_t target_port,
+			bool use_proxy);
+
+		// 回 SYN-ACK 并启动双向数据搬运协程.
+		void start_data_plane();
+
 		// 与上游代理完成协议握手（SOCKS5 或 HTTP CONNECT）.
 		net::awaitable<bool> do_proxy_handshake(const urls::url& proxy_url);
+
+		// 处理客户端数据段（序号检查后透传上游）.
+		void handle_data(const ip_packet& pkt);
 
 		// 客户端数据转发到上游的发送协程.
 		net::awaitable<void> tx_loop();
@@ -236,6 +247,15 @@ namespace proxy {
 		// 建立后端连接（代理或直连）.
 		net::awaitable<void> do_open();
 
+		// 判定代理模式（分流结果与 CONNECT-UDP/SOCKS5 选择），不支持时返回 false.
+		bool resolve_proxy_mode();
+
+		// 建立与上游代理的连接并完成 UDP 协议握手.
+		net::awaitable<bool> establish_proxy();
+
+		// 初始化 CONNECT-UDP 控制流（TCP 或 SSL）.
+		net::awaitable<bool> make_control_stream(tcp::socket sock);
+
 		// 打开本地 UDP 后端 socket（直连或 SOCKS5 模式使用）.
 		net::awaitable<bool> open_backend();
 
@@ -254,6 +274,16 @@ namespace proxy {
 
 		// 将客户端 UDP 数据封装为 DATAGRAM capsule 并入队.
 		void push_capsule(const char* data, size_t len);
+
+		// 从控制流读取一个完整 capsule（type + value）.
+		net::awaitable<std::pair<uint64_t, std::vector<char>>>
+		read_capsule(boost::system::error_code& ec);
+
+		// 直连模式发送 UDP 数据到目标, 成功返回 true.
+		bool send_direct(const char* data, size_t len);
+
+		// SOCKS5 模式封装 UDP 头后发送到中继, 成功返回 true.
+		bool send_via_socks5(const char* data, size_t len);
 
 		// 保持 SOCKS5 ASSOCIATE 控制连接存活（读取直到断开）.
 		net::awaitable<void> control_loop();
