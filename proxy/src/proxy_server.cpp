@@ -2020,14 +2020,13 @@ boost::json::object proxy_server::snapshot_report()
 	int active = 0;
 
 	// tun 模式（Android VpnService/透明代理）: 流量与连接由 tun_server
-	// 统计, 并入全局统计（tun 无用户概念, 不进入用户明细）.
+	// 统计, 并入全局统计（tun 无用户概念, 连接明细在下方并入匿名用户）.
 	uint64_t tun_conn_total = 0;
 	if (m_tun_server)
 	{
 		auto ts = m_tun_server->get_stats();
 		global_rx += ts.rx_bytes;
 		global_tx += ts.tx_bytes;
-		active += static_cast<int>(ts.active_connections);
 		tun_conn_total = ts.conn_total;
 	}
 
@@ -2115,6 +2114,44 @@ boost::json::object proxy_server::snapshot_report()
 			conn["rx_bytes"] = static_cast<int64_t>(rx);
 			conn["tx_bytes"] = static_cast<int64_t>(tx);
 			conns.emplace_back(std::move(conn));
+		}
+	}
+
+	// tun 模式连接并入 "(匿名)" 用户明细（tun 无用户概念）, 使 launcher
+	// 能展示 tun 活跃连接的 target/proto 等信息.
+	if (m_tun_server)
+	{
+		auto ts = m_tun_server->get_stats();
+		if (ts.active_connections > 0)
+		{
+			active += static_cast<int>(ts.active_connections);
+
+			auto& a = users_agg[k_anon_user];
+			a.rx += ts.rx_bytes;
+			a.tx += ts.tx_bytes;
+			uint64_t closed = ts.conn_total > ts.active_connections ?
+				ts.conn_total - ts.active_connections : 0;
+			a.closed_conns += closed;
+			a.active += static_cast<int>(ts.active_connections);
+
+			// 组装连接明细（限制条数，避免大连接数时 JSON 过大）.
+			auto tun_conns = m_tun_server->connections();
+			auto& conns = user_conns[k_anon_user];
+			for (auto& c : tun_conns)
+			{
+				if (conns.size() >= max_conn_per_user)
+					break;
+
+				boost::json::object conn;
+				conn["id"] = static_cast<int64_t>(c.id);
+				conn["client_ip"] = std::move(c.client_ip);
+				conn["target"] = std::move(c.target);
+				conn["proto"] = std::move(c.proto);
+				conn["elapsed"] = c.elapsed;
+				conn["rx_bytes"] = static_cast<int64_t>(c.rx_bytes);
+				conn["tx_bytes"] = static_cast<int64_t>(c.tx_bytes);
+				conns.emplace_back(std::move(conn));
+			}
 		}
 	}
 

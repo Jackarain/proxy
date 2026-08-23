@@ -22,6 +22,7 @@
 #include <boost/functional/hash.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 #include <random>
 
@@ -858,6 +859,11 @@ namespace proxy {
 		, m_owner(owner)
 		, m_option(opt)
 		, m_key(std::move(key))
+		, m_conn_id(owner ? owner->next_conn_id() : 0)
+		, m_client(m_key.src, m_key.src_port)
+		, m_target(m_key.dst, m_key.dst_port)
+		, m_started(std::chrono::steady_clock::now())
+		, m_proto(static_cast<uint8_t>(tun_conn_proto::tcp))
 		, m_upstream(init_proxy_stream(m_executor))
 		, m_client_isn(syn.seq)
 	{
@@ -963,6 +969,7 @@ namespace proxy {
 
 		m_client_next_seq += static_cast<uint32_t>(pkt.payload_len);
 		m_client_ack_seq = m_client_next_seq;
+		m_rx_bytes += static_cast<uint64_t>(pkt.payload_len);
 
 		push_tx(std::string(pkt.payload, pkt.payload_len));
 		send_ack();
@@ -1024,6 +1031,14 @@ namespace proxy {
 		if (use_proxy && m_option.proxy_pass_)
 		{
 			const auto& proxy_url = *m_option.proxy_pass_;
+			auto scheme = boost::to_lower_copy(
+				std::string(proxy_url.scheme()));
+			if (scheme.starts_with("socks"))
+				m_proto.store(static_cast<uint8_t>(tun_conn_proto::socks5));
+			else if (proxy_use_ssl(proxy_url, m_option))
+				m_proto.store(static_cast<uint8_t>(tun_conn_proto::https));
+			else
+				m_proto.store(static_cast<uint8_t>(tun_conn_proto::http));
 
 			auto sock = co_await connect_proxy_pass(
 				m_executor, m_option, proxy_url, protect);
@@ -1217,8 +1232,11 @@ namespace proxy {
 				net::buffer(buffer), net_awaitable[ec]);
 
 			if (n > 0)
+			{
+				m_tx_bytes += static_cast<uint64_t>(n);
 				XLOG_DBG << "tun tcp rx " << m_key.dst.to_string() << ":"
 					<< m_key.dst_port << " len=" << n;
+			}
 
 			if (ec || n == 0)
 			{
@@ -1332,6 +1350,9 @@ namespace proxy {
 		, m_client(client)
 		, m_target(target)
 		, m_dns_qname(dns_qname)
+		, m_conn_id(owner ? owner->next_conn_id() : 0)
+		, m_started(std::chrono::steady_clock::now())
+		, m_proto(static_cast<uint8_t>(tun_conn_proto::udp))
 	{
 		m_expire.emplace(m_executor);
 	}
@@ -1356,6 +1377,8 @@ namespace proxy {
 	{
 		if (m_closed)
 			return;
+
+		m_rx_bytes += static_cast<uint64_t>(len);
 
 		// 后端尚未就绪（异步建连/ASSOCIATE 进行中），缓存数据稍后补发.
 		if (!m_ready)
@@ -1519,6 +1542,7 @@ namespace proxy {
 		}
 
 		m_proxy = use_proxy && m_option.proxy_pass_;
+		m_proto.store(static_cast<uint8_t>(tun_conn_proto::udp));
 
 		XLOG_DBG << "tun udp flow " << m_client.address().to_string() << ":"
 			<< m_client.port() << " -> " << m_target.address().to_string() << ":"
@@ -1532,6 +1556,8 @@ namespace proxy {
 		auto scheme = boost::to_lower_copy(
 			std::string((*m_option.proxy_pass_).scheme()));
 		m_connect_udp = scheme.starts_with("http");
+		m_proto.store(static_cast<uint8_t>(m_connect_udp ?
+			tun_conn_proto::connect_udp : tun_conn_proto::socks5));
 		if (!scheme.starts_with("http") && !scheme.starts_with("socks"))
 		{
 			XLOG_WARN << "tun udp unsupported proxy_pass scheme: " << scheme;
@@ -1923,6 +1949,8 @@ namespace proxy {
 		if (!m_owner)
 			return;
 
+		m_tx_bytes += static_cast<uint64_t>(len);
+
 		// DNS 响应回包时记录 A/AAAA 解析结果，供数据面按域名分流.
 		if (m_target.port() == 53)
 			m_owner->record_dns_answer(data, len);
@@ -2156,6 +2184,93 @@ namespace proxy {
 			st.active_connections = m_tcp_flows.size() + m_udp_flows.size();
 		}
 		return st;
+	}
+
+	std::vector<tun_server::conn_info> tun_server::connections() noexcept
+	{
+		std::vector<conn_info> out;
+
+		std::vector<std::shared_ptr<tun_tcp_flow>> tcp_flows;
+		std::vector<std::shared_ptr<tun_udp_flow>> udp_flows;
+		{
+			std::lock_guard<std::mutex> lk(m_flows_mutex);
+			tcp_flows.reserve(m_tcp_flows.size());
+			for (auto& [key, flow] : m_tcp_flows)
+				tcp_flows.push_back(flow);
+			udp_flows.reserve(m_udp_flows.size());
+			for (auto& [key, flow] : m_udp_flows)
+				udp_flows.push_back(flow);
+		}
+
+		const auto now = std::chrono::steady_clock::now();
+		out.reserve(tcp_flows.size() + udp_flows.size());
+
+		auto append = [&](uint64_t id, const std::string& client,
+			const std::string& target, uint8_t proto,
+			const std::chrono::steady_clock::time_point& started,
+			uint64_t rx, uint64_t tx)
+		{
+			conn_info c;
+			c.id = id;
+			c.client_ip = client;
+			c.target = target;
+			switch (static_cast<tun_conn_proto>(proto))
+			{
+			case tun_conn_proto::http:
+				c.proto = "http";
+				break;
+			case tun_conn_proto::https:
+				c.proto = "https";
+				break;
+			case tun_conn_proto::socks5:
+				c.proto = "socks5";
+				break;
+			case tun_conn_proto::connect_udp:
+				c.proto = "connect-udp";
+				break;
+			case tun_conn_proto::udp:
+				c.proto = "udp";
+				break;
+			default:
+				c.proto = "tcp";
+				break;
+			}
+			auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+				now - started).count();
+			c.elapsed = elapsed < 0 ? 0 : static_cast<int64_t>(elapsed);
+			c.rx_bytes = rx;
+			c.tx_bytes = tx;
+			out.emplace_back(std::move(c));
+		};
+
+		for (auto& flow : tcp_flows)
+		{
+			std::string client = flow->m_client.address().to_string() +
+				":" + std::to_string(flow->m_client.port());
+			std::string target = flow->m_target.address().to_string() +
+				":" + std::to_string(flow->m_target.port());
+			append(flow->m_conn_id, client, target,
+				flow->m_proto.load(), flow->m_started,
+				flow->m_rx_bytes.load(), flow->m_tx_bytes.load());
+		}
+
+		for (auto& flow : udp_flows)
+		{
+			std::string client = flow->m_client.address().to_string() +
+				":" + std::to_string(flow->m_client.port());
+			std::string target = flow->m_target.address().to_string() +
+				":" + std::to_string(flow->m_target.port());
+			append(flow->m_conn_id, client, target,
+				flow->m_proto.load(), flow->m_started,
+				flow->m_rx_bytes.load(), flow->m_tx_bytes.load());
+		}
+
+		return out;
+	}
+
+	uint64_t tun_server::next_conn_id() noexcept
+	{
+		return m_conn_seq.fetch_add(1, std::memory_order_relaxed) + 1;
 	}
 
 	net::awaitable<void> tun_server::run()

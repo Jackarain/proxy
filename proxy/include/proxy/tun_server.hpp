@@ -15,12 +15,14 @@
 #include "proxy/proxy_stream.hpp"
 #include "proxy/tun_device.hpp"
 
+#include <chrono>
 #include <deque>
 #include <atomic>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <tuple>
+#include <vector>
 
 namespace proxy {
 
@@ -95,6 +97,17 @@ namespace proxy {
 			boost::hash_combine(h, k.dst_port);
 			return h;
 		}
+	};
+
+	// 连接协议标识（供 launcher 连接明细展示）.
+	enum class tun_conn_proto : uint8_t
+	{
+		tcp = 1,        // TCP 直连
+		http,           // HTTP CONNECT 代理隧道
+		https,          // HTTPS CONNECT 代理隧道
+		socks5,         // SOCKS5（TCP 或 UDP ASSOCIATE）
+		udp,            // UDP 直连
+		connect_udp,    // RFC 9298 CONNECT-UDP 隧道
 	};
 
 	// tun_server 前置声明（供 tun_tcp_flow 访问写回接口）.
@@ -185,6 +198,23 @@ namespace proxy {
 
 		// m_key 保存本连接的标识.
 		tcp_flow_key m_key;
+
+		// m_conn_id 保存本连接在 launcher 连接明细中的唯一标识.
+		uint64_t m_conn_id { 0 };
+
+		// m_client/m_target 保存连接的四元组（供连接明细展示）.
+		net::ip::tcp::endpoint m_client;
+		net::ip::tcp::endpoint m_target;
+
+		// m_started 记录连接创建时间（供连接明细计算已持续时长）.
+		std::chrono::steady_clock::time_point m_started;
+
+		// 本连接累计收发字节数（客户端 → 上游 / 上游 → 客户端）.
+		std::atomic<uint64_t> m_rx_bytes { 0 };
+		std::atomic<uint64_t> m_tx_bytes { 0 };
+
+		// m_proto 保存协议标识（tun_conn_proto 值）.
+		std::atomic<uint8_t> m_proto { 0 };
 
 		// m_upstream 保存与上游代理或目标的连接.
 		variant_stream_type m_upstream;
@@ -321,6 +351,19 @@ namespace proxy {
 		// m_dns_qname 保存 DNS 查询域名（目标 53 端口时），用于按域名分流.
 		std::string m_dns_qname;
 
+		// m_conn_id 保存本会话在 launcher 连接明细中的唯一标识.
+		uint64_t m_conn_id { 0 };
+
+		// m_started 记录会话创建时间（供连接明细计算已持续时长）.
+		std::chrono::steady_clock::time_point m_started;
+
+		// 本会话累计收发字节数（客户端 → 后端 / 后端 → 客户端）.
+		std::atomic<uint64_t> m_rx_bytes { 0 };
+		std::atomic<uint64_t> m_tx_bytes { 0 };
+
+		// m_proto 保存协议标识（tun_conn_proto 值）.
+		std::atomic<uint8_t> m_proto { 0 };
+
 		// m_connect_udp 标记 HTTP CONNECT-UDP 模式（proxy_pass 为 http 时）.
 		bool m_connect_udp { false };
 
@@ -417,6 +460,21 @@ namespace proxy {
 		// 返回当前流量与连接统计.
 		stats get_stats() noexcept;
 
+		// 单条活跃连接明细（供 launcher 状态上报的连接列表）.
+		struct conn_info
+		{
+			uint64_t id { 0 };
+			std::string client_ip;
+			std::string target;
+			std::string proto;
+			int64_t elapsed { 0 };
+			uint64_t rx_bytes { 0 };
+			uint64_t tx_bytes { 0 };
+		};
+
+		// 返回当前活跃连接的明细快照（供 launcher 状态上报合并）.
+		std::vector<conn_info> connections() noexcept;
+
 	private:
 		// 读包循环协程.
 		net::awaitable<void> run();
@@ -459,6 +517,9 @@ namespace proxy {
 		// 移除并关闭 UDP flow（由 flow 自身或 close 调用）.
 		void remove_udp_flow(const tcp_flow_key& key);
 
+		// 分配连接明细用的唯一标识.
+		uint64_t next_conn_id() noexcept;
+
 	private:
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
@@ -486,6 +547,9 @@ namespace proxy {
 		std::atomic<uint64_t> m_rx_bytes { 0 };
 		std::atomic<uint64_t> m_tx_bytes { 0 };
 		std::atomic<uint64_t> m_conn_total { 0 };
+
+		// m_conn_seq 连接明细标识分配器.
+		std::atomic<uint64_t> m_conn_seq { 0 };
 
 		// TUN 设备写队列（多 flow 串行写）.
 		std::deque<std::string> m_write_queue;
