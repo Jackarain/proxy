@@ -1741,7 +1741,7 @@ void proxy_server::start() noexcept
 	if (m_option.tun_)
 	{
 		// 启动 TUN 设备模式（TUN2SOCKS）.
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
 		m_tun_server = tun_server::make(m_executor, m_option);
 		if (m_tun_server)
 		{
@@ -1761,7 +1761,7 @@ void proxy_server::start() noexcept
 			m_tun_server->start();
 		}
 #else
-		XLOG_WARN << "tun proxy only support linux";
+		XLOG_WARN << "tun proxy not supported on this platform";
 #endif
 	}
 	else
