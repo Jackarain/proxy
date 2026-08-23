@@ -635,40 +635,6 @@ namespace proxy {
 			if (proxy_port == 0)
 				proxy_port = 1080;  // socks 等未定义默认端口的 scheme.
 
-			// Android VpnService 场景: app 侧已预解析代理域名, 直连该 IP,
-			// 避免本进程 DNS 查询受全隧道路由影响无法解析.
-			if (!opt.proxy_pass_ip_.empty())
-			{
-				boost::system::error_code ip_ec;
-				auto ip = net::ip::make_address(opt.proxy_pass_ip_, ip_ec);
-				if (!ip_ec)
-				{
-					tcp::socket sock(executor);
-					tcp::endpoint endp(ip, proxy_port);
-
-					sock.open(endp.protocol(), ec);
-					if (!ec)
-					{
-						apply_so_mark_if(sock, opt);
-						if (protect &&
-							!co_await protect(sock.native_handle()))
-						{
-							XLOG_WARN << "tun connect proxy_pass not protected: "
-								<< proxy_host;
-							co_return tcp::socket(executor);
-						}
-						co_await sock.async_connect(
-							endp, net_awaitable[ec]);
-					}
-					if (!ec)
-						co_return sock;
-
-					XLOG_WARN << "tun connect proxy_pass: " << proxy_host
-						<< ", error: " << ec.message();
-					co_return tcp::socket(executor);
-				}
-			}
-
 			tcp::resolver resolver(executor);
 			auto targets = co_await resolver.async_resolve(
 				proxy_host, std::to_string(proxy_port), net_awaitable[ec]);

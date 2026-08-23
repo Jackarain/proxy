@@ -236,11 +236,6 @@ namespace proxy {
 		// - 为空表示不启用该功能。
 		std::string stdio_target_;
 
-		// proxy_pass 域名预解析的 IP（Android VpnService 场景下由 app 侧
-		// 系统解析器解析后注入）. 非空时直连该 IP, 避免本进程 DNS 查询
-		// 受全隧道路由影响无法解析.
-		std::string proxy_pass_ip_;
-
 		// launcher 控制通道 URL。
 		//
 		// - 为空表示不启用 launcher 控制通道。

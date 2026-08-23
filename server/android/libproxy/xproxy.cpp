@@ -107,12 +107,6 @@ bool config_to_option(const std::string& config, proxy::proxy_server_option& opt
 		return false;
 	opt.proxy_pass_ = url.value();
 
-	// proxy_pass 域名预解析 IP（app 侧解析, 避免 VpnService 全隧道下
-	// 本进程 DNS 查询回环无法解析）.
-	if (auto it = obj.if_contains("proxy_pass_ip");
-		it && it->is_string())
-		opt.proxy_pass_ip_ = it->as_string().c_str();
-
 	// tun 相关选项.
 	if (auto it = obj.if_contains("tun"); it && it->is_bool())
 		opt.tun_ = it->as_bool();

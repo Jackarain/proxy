@@ -291,3 +291,6 @@ xcode/
 .idea/
 .cache/
 .qwen/
+
+# Android cmake 构建产物
+/android/
