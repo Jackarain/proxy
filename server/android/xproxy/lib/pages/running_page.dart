@@ -234,30 +234,6 @@ class _RunningPageState extends State<RunningPage>
           ],
         ),
         const SizedBox(height: 12),
-        _infoTile('运行时长', _fmtUptime(s['uptime'])),
-        _infoTile('活动连接', '${s['active_connections'] ?? 0}'),
-        _infoTile('累计连接', '${s['conn_total'] ?? 0}'),
-        if (sessions.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text('会话', style: Theme.of(context).textTheme.titleSmall),
-          for (final item in sessions)
-              Card(
-                child: ListTile(
-                  dense: true,
-                  title: Text(
-    '${item['proto'] ?? '-'}  → ${item['target'] ?? '-'}',
-                  ),
-                  subtitle: Text(
-    'client: ${item['client_ip'] ?? '-'}\n'
-                    'up ${_fmtBytes(item['rx_bytes'])} '
-                    'down ${_fmtBytes(item['tx_bytes'])} '
-                    '(${_fmtRate(item['rx_rate_bps'])} / ${_fmtRate(item['tx_rate_bps'])})',
-                  ),
-                  isThreeLine: true,
-                ),
-              ),
-        ],
-        const SizedBox(height: 24),
         FilledButton.icon(
           onPressed: _testing ? null : _testVpn,
           icon: Icon(_testing ? Icons.hourglass_top : Icons.speed),
@@ -273,6 +249,40 @@ class _RunningPageState extends State<RunningPage>
                   ? Colors.green
                   : Theme.of(context).colorScheme.error,
             ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        _infoTile('运行时长', _fmtUptime(s['uptime'])),
+        _infoTile('活动连接', '${s['active_connections'] ?? 0}'),
+        _infoTile('累计连接', '${s['conn_total'] ?? 0}'),
+        if (sessions.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          ExpansionTile(
+            leading: const Icon(Icons.dns_outlined),
+            title: Text('会话', style: Theme.of(context).textTheme.titleSmall),
+            subtitle: Text('${sessions.length} 个活跃连接'),
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: const EdgeInsets.only(bottom: 8),
+            shape: const Border(),
+            collapsedShape: const Border(),
+            children: [
+              for (final item in sessions)
+                Card(
+                  child: ListTile(
+                    dense: true,
+                    title: Text(
+                      '${item['proto'] ?? '-'}  → ${item['target'] ?? '-'}',
+                    ),
+                    subtitle: Text(
+                      'client: ${item['client_ip'] ?? '-'}\n'
+                      'up ${_fmtBytes(item['rx_bytes'])} '
+                      'down ${_fmtBytes(item['tx_bytes'])} '
+                      '(${_fmtRate(item['rx_rate_bps'])} / ${_fmtRate(item['tx_rate_bps'])})',
+                    ),
+                    isThreeLine: true,
+                  ),
+                ),
+            ],
           ),
         ],
       ],
