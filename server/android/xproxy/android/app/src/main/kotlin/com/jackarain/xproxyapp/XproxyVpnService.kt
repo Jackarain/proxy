@@ -184,12 +184,6 @@ class XproxyVpnService : VpnService() {
         if (underlying.isNotEmpty()) {
             builder.setUnderlyingNetworks(underlying.toTypedArray())
         }
-        // 将本应用（proxy 进程）自身排除出 VPN: 到上游代理的出站连接
-        // 由系统直接放行物理网络, 不依赖 protectSocket 的路由表.
-        try {
-            builder.addDisallowedApplication(packageName)
-        } catch (_: Throwable) {
-        }
         builder.setBlocking(true)
         val fd = builder.establish()
             ?: throw IllegalStateException("VpnService establish 失败")
