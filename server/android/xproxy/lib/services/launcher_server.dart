@@ -174,8 +174,8 @@ class LauncherServer {
     } else {
       routes = _strList(cfg['routes']);
     }
-    // 未配置路由时默认全隧道.
-    if (routes.isEmpty) routes = ['0.0.0.0/0'];
+    // 未配置路由时默认全隧道 (IPv4 + IPv6).
+    if (routes.isEmpty) routes = ['0.0.0.0/0', '::/0'];
     var dns = _strList(cfg['dns']);
     if (dns.isEmpty) dns = ['8.8.8.8', '114.114.114.114'];
     try {

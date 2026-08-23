@@ -169,8 +169,9 @@ class XproxyVpnService : VpnService() {
                 addRoute(builder, route)
             }
         } else {
-            // 默认全隧道.
+            // 默认全隧道 (IPv4 + IPv6).
             builder.addRoute("0.0.0.0", 0)
+            builder.addRoute("::", 0)
         }
         for (server in dns) {
             if (server.isNotBlank()) builder.addDnsServer(server.trim())
