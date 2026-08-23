@@ -644,51 +644,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Update OS and Compilers
-        run: |
-          sudo apt update
-          sudo apt install -y cmake ninja-build swig
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: '3.29.3'
+          flutter-version: 3.29.3
           cache: true
 
-      - name: Install Android NDK
-        run: |
-          yes | sdkmanager --install "ndk;26.3.11579264" "ndk;27.0.12077973" "platforms;android-35" "build-tools;35.0.0"
-          yes | sdkmanager --licenses
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle
-
-      - name: Build native libs
-        run: |
-          bash build.android.sh "$GITHUB_WORKSPACE" "$ANDROID_SDK_ROOT/ndk/26.3.11579264" linux-x86_64
-
-      - name: Deploy native libs and SWIG java
-        run: |
-          APP=server/android/xproxy/android/app/src/main
-          for arch in arm64-v8a armeabi-v7a x86 x86_64; do
-            mkdir -p "$APP/jniLibs/$arch"
-            cp "release/$arch/libxproxy.so" "$APP/jniLibs/$arch/"
-          done
-          cp outputs/xproxy.java outputs/xproxyJNI.java "$APP/java/com/jackarain/"
-
-      - name: Build APK
+      - name: Build Android apk
         working-directory: server/android/xproxy
         run: |
           flutter pub get
