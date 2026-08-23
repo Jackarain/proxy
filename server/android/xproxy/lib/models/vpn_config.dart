@@ -15,6 +15,7 @@ class VpnConfig {
     List<String>? proxyDomains,
     List<String>? proxyCidr,
     this.disableCheckCert = true,
+    this.udpTimeout = 300,
     this.tunAddress = '',
     this.tunPrefix = 0,
     List<String>? routes,
@@ -44,6 +45,9 @@ class VpnConfig {
 
   /// 关闭上游代理的证书校验 (自签证书场景).
   bool disableCheckCert;
+
+  /// UDP 流过期时间 (秒), 经 udp_timeout 传给 native; 默认 300.
+  int udpTimeout;
 
   // ---- Android VpnService ----
   String tunAddress;
@@ -90,6 +94,9 @@ class VpnConfig {
     if (tunMtu <= 0 || tunMtu > 65535) {
       errors.add('MTU 需在 1-65535 之间');
     }
+    if (udpTimeout <= 0) {
+      errors.add('UDP 超时需大于 0');
+    }
     final test = testUrl.trim();
     if (test.isEmpty ||
         (!test.startsWith('https://') && !test.startsWith('http://'))) {
@@ -117,6 +124,7 @@ class VpnConfig {
       if (proxyDomains.isNotEmpty) 'proxy_domains': proxyDomains,
       if (proxyCidr.isNotEmpty) 'proxy_cidr': proxyCidr,
       'disable_check_cert': disableCheckCert,
+      'udp_timeout': udpTimeout,
       if (launcherPort > 0) 'launcher_url': 'ws://127.0.0.1:$launcherPort',
     };
     return jsonEncode(map);
@@ -141,6 +149,7 @@ class VpnConfig {
     'proxyDomains': proxyDomains,
     'proxyCidr': proxyCidr,
     'disableCheckCert': disableCheckCert,
+    'udpTimeout': udpTimeout,
     'tunAddress': tunAddress,
     'tunPrefix': tunPrefix,
     'routes': routes,
@@ -157,6 +166,7 @@ class VpnConfig {
     proxyDomains: _strList(json['proxyDomains']),
     proxyCidr: _strList(json['proxyCidr']),
     disableCheckCert: json['disableCheckCert'] as bool? ?? true,
+    udpTimeout: json['udpTimeout'] as int? ?? 300,
     tunAddress: json['tunAddress'] as String? ?? '',
     tunPrefix: json['tunPrefix'] as int? ?? 0,
     routes: _strList(json['routes']),

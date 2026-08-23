@@ -40,6 +40,7 @@ object XproxyBridge {
             out.put("proxy_cidr", cfg.optJSONArray("proxyCidr") ?: JSONArray())
         }
         out.put("disable_check_cert", cfg.optBoolean("disableCheckCert", true))
+        out.put("udp_timeout", cfg.optInt("udpTimeout", 300))
         out.put("launcher_url", "ws://127.0.0.1:$launcherPort")
         return xproxy.start(out.toString())
     }

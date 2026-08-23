@@ -116,6 +116,8 @@ bool config_to_option(const std::string& config, proxy::proxy_server_option& opt
 		opt.tun_mtu_ = static_cast<int>(it->as_int64());
 	if (auto it = obj.if_contains("tun_wait_fd"); it && it->is_bool())
 		opt.tun_wait_fd_ = it->as_bool();
+	if (auto it = obj.if_contains("udp_timeout"); it && it->is_int64())
+		opt.udp_timeout_ = static_cast<int>(it->as_int64());
 
 	// 分流表.
 	opt.proxy_domains_ = json_string_array(obj, "proxy_domains");

@@ -187,7 +187,7 @@ namespace proxy {
 	inline const int tcp_session_expired_time = 60;
 
 	// udp_session_expire_time 用于指定 udp session 的过期时间, 单位为秒.
-	inline const int udp_session_expired_time = 60;
+	inline const int udp_session_expired_time = 300;
 
 	// noise_injection_max_len 用于指定噪声注入的最大长度, 单位为字节.
 	inline const uint16_t noise_injection_max_len = 0x0fff;
@@ -401,7 +401,7 @@ namespace proxy {
 		// UDP 会话/流过期时间（秒）。
 		//
 		// - 用于控制 UDP 会话的生命周期，尤其在透明代理模式下用于清理过期的流。
-		// - 默认值为 60 秒（可根据实际需求调整）。
+		// - 默认值为 300 秒（可根据实际需求调整）。
 		int udp_timeout_{ udp_session_expired_time };
 
 		// TCP 连接速率限制（全局），单位：bytes/second。

@@ -1943,7 +1943,10 @@ namespace proxy {
 			return;
 
 		// 每次活动重置超时计时，超时后关闭会话.
-		m_expire->expires_after(std::chrono::seconds(180));
+		// 超时取 udp_timeout_ 配置（不大于 0 时用默认 300 秒兜底）.
+		int timeout = m_option.udp_timeout_ > 0 ?
+			m_option.udp_timeout_ : 300;
+		m_expire->expires_after(std::chrono::seconds(timeout));
 		m_expire->async_wait(
 			[this](const boost::system::error_code& ec)
 			{
