@@ -1380,6 +1380,28 @@ namespace proxy {
 
 		m_rx_bytes += static_cast<uint64_t>(len);
 
+		// DoH 模式：每个 DNS 查询独立发起 DoH 请求到 proxy_pass.
+		if (m_doh_mode)
+		{
+			auto self = shared_from_this();
+			std::string query(data, len);
+			net::co_spawn(m_executor,
+				[this, self, query = std::move(query)]()
+				-> net::awaitable<void>
+				{
+					std::string response;
+					bool ok = co_await doh_query(query, response);
+					if (m_closed)
+						co_return;
+					// 查询失败返回 SERVFAIL, 避免客户端等待超时重试.
+					if (!ok || response.empty())
+						response = dns_build_response(query, 2, {});
+					reply(response.data(), response.size());
+					touch();
+				}, net::detached);
+			return;
+		}
+
 		// 后端尚未就绪（异步建连/ASSOCIATE 进行中），缓存数据稍后补发.
 		if (!m_ready)
 		{
@@ -1445,6 +1467,102 @@ namespace proxy {
 		return true;
 	}
 
+	// doh_query 将 DNS 查询以 DoH (DNS over HTTPS) 方式转发到 proxy_pass,
+	// 成功返回 true 并填充 output（DNS wire-format 响应）.
+	net::awaitable<bool> tun_udp_flow::doh_query(
+		const std::string& dns_query, std::string& output)
+	{
+		boost::system::error_code ec;
+
+		const auto& proxy_url = *m_option.proxy_pass_;
+		std::string proxy_host(proxy_url.encoded_host());
+		uint16_t proxy_port = proxy_url.port_number();
+		if (proxy_port == 0)
+			proxy_port = urls::default_port(proxy_url.scheme_id());
+		if (proxy_port == 0)
+			proxy_port = 443;
+
+		// 连接上游代理（protect 放行, 避免回环进 tun）.
+		const auto protect = m_owner ?
+			std::function<net::awaitable<bool>(int)>(
+				[owner = m_owner](int fd)
+				{ return owner->protect_socket(fd); }) :
+			std::function<net::awaitable<bool>(int)>();
+
+		auto sock = co_await connect_proxy_pass(
+			m_executor, m_option, proxy_url, protect);
+		if (!sock.is_open())
+			co_return false;
+
+		// 构造 DoH POST 请求.
+		http::request<http::string_body> doh_req{
+			http::verb::post, "/dns-query", 11 };
+		doh_req.set(http::field::host, proxy_host);
+		doh_req.set(http::field::content_type, "application/dns-message");
+		doh_req.set(http::field::accept, "application/dns-message");
+		if (!proxy_url.user().empty())
+		{
+			const auto userinfo = std::string(proxy_url.user()) + ":" +
+				std::string(proxy_url.password());
+			doh_req.set(http::field::authorization,
+				"Basic " + strutil::base64_encode(userinfo));
+		}
+		doh_req.body() = dns_query;
+		doh_req.prepare_payload();
+
+		// https 时以 TLS 封装请求.
+		if (proxy_use_ssl(proxy_url, m_option))
+		{
+			std::optional<variant_stream_type> ssl_sock;
+			std::string sni = m_option.proxy_ssl_name_.empty() ?
+				proxy_host : m_option.proxy_ssl_name_;
+			auto ssl_res = co_await m_owner->make_ssl_socket(
+				sock, sni, ssl_sock);
+			if (ssl_res.has_error())
+				co_return false;
+
+			auto& ssl = boost::variant2::get<ssl_tcp_stream>(*ssl_sock);
+			co_await http::async_write(ssl, doh_req, net_awaitable[ec]);
+			if (ec)
+				co_return false;
+
+			beast::flat_buffer buf;
+			http::response<http::string_body> doh_res;
+			co_await http::async_read(ssl, buf, doh_res, net_awaitable[ec]);
+			if (ec)
+				co_return false;
+
+			if (doh_res.result() != http::status::ok)
+			{
+				XLOG_WARN << "tun doh response status: "
+					<< doh_res.result_int();
+				co_return false;
+			}
+			output = std::move(doh_res.body());
+			co_return true;
+		}
+
+		// http 明文.
+		co_await http::async_write(sock, doh_req, net_awaitable[ec]);
+		if (ec)
+			co_return false;
+
+		beast::flat_buffer buf;
+		http::response<http::string_body> doh_res;
+		co_await http::async_read(sock, buf, doh_res, net_awaitable[ec]);
+		if (ec)
+			co_return false;
+
+		if (doh_res.result() != http::status::ok)
+		{
+			XLOG_WARN << "tun doh response status: "
+				<< doh_res.result_int();
+			co_return false;
+		}
+		output = std::move(doh_res.body());
+		co_return true;
+	}
+
 	void tun_udp_flow::close()
 	{
 		if (m_closed)
@@ -1484,27 +1602,31 @@ namespace proxy {
 			co_return;
 		}
 
-		// 直连或 SOCKS5 需要本地 UDP 后端 socket.
-		if (!m_connect_udp && !co_await open_backend())
+		// DoH 模式无需后端连接（每个查询独立发起 DoH 请求）.
+		if (!m_doh_mode)
 		{
-			close();
-			co_return;
-		}
+			// 直连或 SOCKS5 需要本地 UDP 后端 socket.
+			if (!m_connect_udp && !co_await open_backend())
+			{
+				close();
+				co_return;
+			}
 
-		if (m_proxy && !co_await establish_proxy())
-		{
-			close();
-			co_return;
-		}
+			if (m_proxy && !co_await establish_proxy())
+			{
+				close();
+				co_return;
+			}
 
-		// 非 CONNECT-UDP 模式启动后端接收循环（SOCKS5 或直连）.
-		if (!m_connect_udp)
-		{
-			net::co_spawn(m_executor,
-				[this, self]() -> net::awaitable<void>
-				{
-					return recv_loop();
-				}, net::detached);
+			// 非 CONNECT-UDP 模式启动后端接收循环（SOCKS5 或直连）.
+			if (!m_connect_udp)
+			{
+				net::co_spawn(m_executor,
+					[this, self]() -> net::awaitable<void>
+					{
+						return recv_loop();
+					}, net::detached);
+			}
 		}
 
 		// 后端就绪，补发等待期间缓存的客户端数据.
@@ -1520,12 +1642,12 @@ namespace proxy {
 	{
 		bool use_proxy = m_owner && m_owner->ip_match_proxy(m_target.address());
 
+		bool self_query = false;
 		// DNS 查询按查询域名分流：命中 proxy_domains_ 走代理，否则直连.
 		if (m_target.port() == 53 && !m_dns_qname.empty())
 		{
 			// proxy 自身解析 proxy_pass 域名的查询必须直连, 否则会
 			// 经代理转发又需要解析该域名, 形成解析循环.
-			bool self_query = false;
 			if (m_option.proxy_pass_)
 			{
 				auto host = boost::to_lower_copy(
@@ -1544,12 +1666,26 @@ namespace proxy {
 				use_proxy = m_owner && m_owner->domain_match(m_dns_qname);
 		}
 
-		m_proxy = use_proxy && m_option.proxy_pass_;
-		m_proto.store(static_cast<uint8_t>(tun_conn_proto::udp));
+		// DNS 查询默认经 DoH 转发到 proxy_pass（把 proxy_pass 当作 DoH
+		// 服务器解析客户端查询），而非按普通 UDP 走代理通道或直连查询.
+		m_doh_mode = false;
+		if (m_target.port() == 53 && !self_query && m_option.proxy_pass_)
+		{
+			auto scheme = boost::to_lower_copy(
+				std::string((*m_option.proxy_pass_).scheme()));
+			if (scheme.starts_with("http"))
+				m_doh_mode = true;
+		}
+
+		m_proxy = use_proxy && m_option.proxy_pass_ && !m_doh_mode;
+		m_proto.store(static_cast<uint8_t>(m_doh_mode ?
+			tun_conn_proto::doh_dns : tun_conn_proto::udp));
 
 		XLOG_DBG << "tun udp flow " << m_client.address().to_string() << ":"
 			<< m_client.port() << " -> " << m_target.address().to_string() << ":"
-			<< m_target.port() << (m_proxy ? " via proxy" : " direct")
+			<< m_target.port()
+			<< (m_doh_mode ? " via doh"
+				: (m_proxy ? " via proxy" : " direct"))
 			<< (m_dns_qname.empty() ? "" : (", qname=" + m_dns_qname));
 
 		if (!m_proxy)
@@ -2235,6 +2371,9 @@ namespace proxy {
 				break;
 			case tun_conn_proto::connect_udp:
 				c.proto = "connect-udp";
+				break;
+			case tun_conn_proto::doh_dns:
+				c.proto = "doh-dns";
 				break;
 			case tun_conn_proto::udp:
 				c.proto = "udp";

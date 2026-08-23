@@ -108,6 +108,7 @@ namespace proxy {
 		socks5,         // SOCKS5（TCP 或 UDP ASSOCIATE）
 		udp,            // UDP 直连
 		connect_udp,    // RFC 9298 CONNECT-UDP 隧道
+		doh_dns,        // DNS 查询经 DoH 转发到 proxy_pass
 	};
 
 	// tun_server 前置声明（供 tun_tcp_flow 访问写回接口）.
@@ -294,6 +295,11 @@ namespace proxy {
 		// 与上游代理完成 SOCKS5 UDP ASSOCIATE 握手.
 		net::awaitable<bool> do_socks5_associate(tcp::socket sock);
 
+		// 以 DoH (DNS over HTTPS) 方式将 DNS 查询转发到 proxy_pass,
+		// 成功返回 true 并填充 output（DNS wire-format 响应）.
+		net::awaitable<bool> doh_query(
+			const std::string& dns_query, std::string& output);
+
 		// 建立 HTTP CONNECT-UDP 隧道（proxy_pass 为 http/https 时替代 SOCKS5 ASSOCIATE）.
 		// sock 为已连接到上游代理的 TCP socket，由 do_open 传入.
 		net::awaitable<bool> do_connect_udp(tcp::socket sock);
@@ -366,6 +372,9 @@ namespace proxy {
 
 		// m_connect_udp 标记 HTTP CONNECT-UDP 模式（proxy_pass 为 http 时）.
 		bool m_connect_udp { false };
+
+		// m_doh_mode 标记 DNS 查询经 DoH 转发到 proxy_pass 的模式.
+		bool m_doh_mode { false };
 
 		// m_tx_queue 保存待发送的 CONNECT-UDP capsule（串行写 TCP 控制连接）.
 		std::mutex m_tx_mutex;
