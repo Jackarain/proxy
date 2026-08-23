@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'cn_ip_list.dart';
 import 'vpn_channel.dart';
 
@@ -63,9 +65,11 @@ class LauncherServer {
   }
 
   Future<void> _handleRequest(HttpRequest request) async {
+    debugPrint('launcher ws request: ${request.uri} headers=${request.headers}');
     if (WebSocketTransformer.isUpgradeRequest(request)) {
       try {
         final ws = await WebSocketTransformer.upgrade(request);
+        debugPrint('launcher ws upgraded');
         _socket?.close();
         _socket = ws;
         _connCtrl.add(true);
@@ -190,6 +194,7 @@ class LauncherServer {
       }
       _tunEstablished = true;
     } catch (e) {
+      debugPrint('launcher establishTun failed: $e');
       _logLocal('建立 TUN 失败: $e');
     }
   }

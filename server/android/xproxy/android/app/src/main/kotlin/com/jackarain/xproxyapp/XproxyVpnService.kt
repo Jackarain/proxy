@@ -6,6 +6,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.Handler
 import android.os.HandlerThread
@@ -173,10 +176,33 @@ class XproxyVpnService : VpnService() {
             if (server.isNotBlank()) builder.addDnsServer(server.trim())
         }
         if (mtu > 0) builder.setMtu(mtu)
+        // 指定底层物理网络: 使系统填充"排除 VPN"的路由表,
+        // 否则 protectSocket 放行的连接无法路由 (SYN 卡住).
+        val underlying = underlyingNetworks()
+        android.util.Log.w("xproxy-tun", "underlying: ${underlying.joinToString { it.toString() }}")
+        if (underlying.isNotEmpty()) {
+            builder.setUnderlyingNetworks(underlying.toTypedArray())
+        }
+        // 将本应用（proxy 进程）自身排除出 VPN: 到上游代理的出站连接
+        // 由系统直接放行物理网络, 不依赖 protectSocket 的路由表.
+        try {
+            builder.addDisallowedApplication(packageName)
+        } catch (_: Throwable) {
+        }
         builder.setBlocking(true)
         val fd = builder.establish()
             ?: throw IllegalStateException("VpnService establish 失败")
         return fd.detachFd()
+    }
+
+    /** 当前已连接的物理网络 (排除 VPN 自身), 供 setUnderlyingNetworks 使用. */
+    private fun underlyingNetworks(): List<Network> {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        return cm.allNetworks.filter { n ->
+            val caps = cm.getNetworkCapabilities(n) ?: return@filter false
+            !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+                cm.getNetworkInfo(n)?.isConnected == true
+        }
     }
 
     /** 放行对外 socket (经控制通道 protect 请求到达), 避免回环进 tun. */

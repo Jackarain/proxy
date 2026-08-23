@@ -399,6 +399,11 @@ namespace proxy {
 		// 请求对出站 socket fd 执行 protect（经回调）, 无回调或失败时放行.
 		net::awaitable<bool> protect_socket(int fd);
 
+		// 单个方向 (TCP/UDP) 并发 flow 数量上限. 超过时拒绝新建 flow,
+		// 防止异常场景下流量风暴耗尽进程 fd.
+		static constexpr size_t k_max_tcp_flows = 4096;
+		static constexpr size_t k_max_udp_flows = 4096;
+
 	private:
 		// 读包循环协程.
 		net::awaitable<void> run();

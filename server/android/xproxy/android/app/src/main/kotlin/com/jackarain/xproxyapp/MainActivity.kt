@@ -47,7 +47,13 @@ class MainActivity : FlutterActivity() {
                     // 控制通道 protect 请求: 放行 libproxy 的对外 socket.
                     "protect" -> {
                         val fd = call.argument<Int>("fd") ?: -1
-                        result.success(XproxyVpnService.instance?.protectSocket(fd) ?: false)
+                        val inst = XproxyVpnService.instance
+                        val ok = inst?.protectSocket(fd) ?: false
+                        android.util.Log.w(
+                            "xproxy-protect",
+                            "fd=$fd ok=$ok hasInstance=${inst != null}"
+                        )
+                        result.success(ok)
                     }
                     // 控制通道连接建立后: 以用户配置的地址建立 tun.
                     "establish_tun" -> {

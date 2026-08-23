@@ -1177,15 +1177,28 @@ net::awaitable<void> proxy_server::launcher_serve(jsonrpc::jsonrpc_session<WsStr
 			try
 			{
 				auto result = co_await sess.async_call("protect", params);
-				if (result.if_contains("ok") && result.at("ok").is_bool())
-					co_return result.at("ok").as_bool();
+				// tinyrpc async_call 返回完整 JSON-RPC 响应
+				// ({"jsonrpc","id","result":{...}}), ok 位于 result 内.
+				if (auto r = result.if_contains("result");
+					r && r->is_object())
+				{
+					auto& robj = r->as_object();
+					if (auto ok = robj.if_contains("ok");
+						ok && ok->is_bool())
+					{
+						XLOG_DBG << "protect fd=" << fd
+							<< " ok=" << ok->as_bool();
+						co_return ok->as_bool();
+					}
+				}
 			}
 			catch (...)
 			{
-				// 控制通道异常时放行, 避免阻塞连接建立.
-				XLOG_WARN << "protect rpc failed, allow socket";
+				// Android VpnService 下未放行的 socket 会回环进 tun,
+				// 异常时返回失败阻断连接, 避免形成环路.
+				XLOG_WARN << "protect rpc failed";
 			}
-			co_return true;
+			co_return false;
 		};
 
 	// 注册实例信息.
@@ -1736,9 +1749,14 @@ void proxy_server::start() noexcept
 			m_tun_server->set_protect_handler(
 				[this](int fd) -> net::awaitable<bool>
 				{
+					// 非 Android 场景无 launcher 控制通道, 无需 protect.
+					if (m_option.launcher_url_.empty())
+						co_return true;
 					if (m_launcher_state->call_protect_)
 						co_return co_await m_launcher_state->call_protect_(fd);
-					co_return true;
+					// Android VpnService: launcher 未就绪时不得放行, 否则
+					// 未保护的出站连接会回环进 tun 形成环路.
+					co_return false;
 				});
 			m_tun_server->start();
 		}

@@ -335,6 +335,9 @@ namespace proxy {
 			pseudo.append(reinterpret_cast<const char*>(d4.data()), 4);
 			pseudo.push_back(0);
 			pseudo.push_back(proto);
+			// 伪头补齐到 12 字节再 append 段数据：长度字段占 [10..11],
+			// 若先 append 段再写长度会覆盖段首字节.
+			pseudo.resize(12);
 			char* len_p = pseudo.data() + 10;
 			io_util::write<uint16_t>(static_cast<uint16_t>(segment.size()), len_p);
 			pseudo.append(segment);
@@ -544,7 +547,8 @@ namespace proxy {
 		net::awaitable<tcp::socket> connect_direct(
 			net::any_io_executor executor,
 			const proxy_server_option& opt,
-			const net::ip::address& dst, uint16_t port)
+			const net::ip::address& dst, uint16_t port,
+			const std::function<net::awaitable<bool>(int)>& protect)
 		{
 			boost::system::error_code ec;
 
@@ -555,6 +559,16 @@ namespace proxy {
 			if (!ec)
 			{
 				apply_so_mark_if(sock, opt);
+
+				// Android VpnService 场景必须先放行再 connect：否则 SYN 会按
+				// 全隧道路由回环进 tun，被当成新连接再次转发，形成环路.
+				if (protect && !co_await protect(sock.native_handle()))
+				{
+					XLOG_WARN << "tun connect direct not protected: "
+						<< dst.to_string() << ":" << port;
+					co_return tcp::socket(executor);
+				}
+
 				co_await sock.async_connect(endp, net_awaitable[ec]);
 			}
 			if (ec)
@@ -609,7 +623,8 @@ namespace proxy {
 		net::awaitable<tcp::socket> connect_proxy_pass(
 			net::any_io_executor executor,
 			const proxy_server_option& opt,
-			const urls::url& proxy_url)
+			const urls::url& proxy_url,
+			const std::function<net::awaitable<bool>(int)>& protect)
 		{
 			boost::system::error_code ec;
 
@@ -619,6 +634,40 @@ namespace proxy {
 				proxy_port = urls::default_port(proxy_url.scheme_id());
 			if (proxy_port == 0)
 				proxy_port = 1080;  // socks 等未定义默认端口的 scheme.
+
+			// Android VpnService 场景: app 侧已预解析代理域名, 直连该 IP,
+			// 避免本进程 DNS 查询受全隧道路由影响无法解析.
+			if (!opt.proxy_pass_ip_.empty())
+			{
+				boost::system::error_code ip_ec;
+				auto ip = net::ip::make_address(opt.proxy_pass_ip_, ip_ec);
+				if (!ip_ec)
+				{
+					tcp::socket sock(executor);
+					tcp::endpoint endp(ip, proxy_port);
+
+					sock.open(endp.protocol(), ec);
+					if (!ec)
+					{
+						apply_so_mark_if(sock, opt);
+						if (protect &&
+							!co_await protect(sock.native_handle()))
+						{
+							XLOG_WARN << "tun connect proxy_pass not protected: "
+								<< proxy_host;
+							co_return tcp::socket(executor);
+						}
+						co_await sock.async_connect(
+							endp, net_awaitable[ec]);
+					}
+					if (!ec)
+						co_return sock;
+
+					XLOG_WARN << "tun connect proxy_pass: " << proxy_host
+						<< ", error: " << ec.message();
+					co_return tcp::socket(executor);
+				}
+			}
 
 			tcp::resolver resolver(executor);
 			auto targets = co_await resolver.async_resolve(
@@ -639,6 +688,10 @@ namespace proxy {
 
 				// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
 				apply_so_mark_if(sock, opt);
+
+				// 先放行再 connect，防止 SYN 回环进 tun 形成环路.
+				if (protect && !co_await protect(sock.native_handle()))
+					continue;
 
 				co_await sock.async_connect(t.endpoint(), net_awaitable[ec]);
 				if (!ec)
@@ -928,10 +981,19 @@ namespace proxy {
 		if (pkt.seq != m_client_next_seq)
 		{
 			// 乱序或重传：通告期望序号，丢弃数据（简化实现不做缓存重排）.
+			XLOG_DBG << "tun tcp data seq mismatch dst="
+				<< m_key.dst.to_string() << ":" << m_key.dst_port
+				<< " got=" << pkt.seq
+				<< " expect=" << m_client_next_seq
+				<< " len=" << pkt.payload_len;
 			if (pkt.seq > m_client_next_seq)
 				send_ack();
 			return;
 		}
+
+		XLOG_DBG << "tun tcp data rx dst="
+			<< m_key.dst.to_string() << ":" << m_key.dst_port
+			<< " len=" << pkt.payload_len;
 
 		m_client_next_seq += static_cast<uint32_t>(pkt.payload_len);
 		m_client_ack_seq = m_client_next_seq;
@@ -988,30 +1050,60 @@ namespace proxy {
 	net::awaitable<bool> tun_tcp_flow::establish_upstream(
 		const std::string& target_host, uint16_t target_port, bool use_proxy)
 	{
+		const auto protect = m_owner ?
+			std::function<net::awaitable<bool>(int)>(
+				[owner = m_owner](int fd) { return owner->protect_socket(fd); }) :
+			std::function<net::awaitable<bool>(int)>();
+
 		if (use_proxy && m_option.proxy_pass_)
 		{
 			const auto& proxy_url = *m_option.proxy_pass_;
 
-			auto sock = co_await connect_proxy_pass(m_executor, m_option, proxy_url);
+			auto sock = co_await connect_proxy_pass(
+				m_executor, m_option, proxy_url, protect);
 			if (!sock.is_open())
+			{
+				XLOG_WARN << "tun tcp connect proxy_pass failed: "
+					<< target_host << ":" << target_port;
 				co_return false;
+			}
 
-			// Android VpnService 场景: 放行到上游代理的 socket, 避免回环进 tun.
-			co_await m_owner->protect_socket(sock.native_handle());
+			XLOG_DBG << "tun tcp proxy connected: "
+				<< target_host << ":" << target_port;
 
-			m_upstream = init_proxy_stream(std::move(sock));
+			// https/wss 等 SSL 代理需要先建立 TLS 再执行代理握手.
+			if (proxy_use_ssl(proxy_url, m_option))
+			{
+				if (!m_owner)
+					co_return false;
+
+				std::string proxy_host(proxy_url.encoded_host());
+				auto sni = m_option.proxy_ssl_name_.empty() ?
+					proxy_host : m_option.proxy_ssl_name_;
+				std::optional<variant_stream_type> ssl_stream;
+				auto res = co_await m_owner->make_ssl_socket(
+					sock, sni, ssl_stream);
+				if (res.has_error())
+				{
+					XLOG_WARN << "tun tcp make_ssl_socket: "
+						<< res.error().message();
+					co_return false;
+				}
+				m_upstream = std::move(*ssl_stream);
+			}
+			else
+			{
+				m_upstream = init_proxy_stream(std::move(sock));
+			}
 
 			co_return co_await do_proxy_handshake(proxy_url);
 		}
 
 		// 直连目标.
 		auto sock = co_await connect_direct(
-			m_executor, m_option, m_key.dst, target_port);
+			m_executor, m_option, m_key.dst, target_port, protect);
 		if (!sock.is_open())
 			co_return false;
-
-		// Android VpnService 场景: 放行到目标的 socket, 避免回环进 tun.
-		co_await m_owner->protect_socket(sock.native_handle());
 
 		m_upstream = init_proxy_stream(std::move(sock));
 		co_return true;
@@ -1117,6 +1209,8 @@ namespace proxy {
 			if (!data.empty())
 			{
 				boost::system::error_code ec;
+				XLOG_DBG << "tun tcp tx " << m_key.dst.to_string() << ":"
+					<< m_key.dst_port << " len=" << data.size();
 				co_await net::async_write(m_upstream, net::buffer(data), net_awaitable[ec]);
 				if (ec)
 				{
@@ -1155,6 +1249,10 @@ namespace proxy {
 			boost::system::error_code ec;
 			size_t n = co_await m_upstream.async_read_some(
 				net::buffer(buffer), net_awaitable[ec]);
+
+			if (n > 0)
+				XLOG_DBG << "tun tcp rx " << m_key.dst.to_string() << ":"
+					<< m_key.dst_port << " len=" << n;
 
 			if (ec || n == 0)
 			{
@@ -1431,8 +1529,28 @@ namespace proxy {
 		bool use_proxy = m_owner && m_owner->ip_match_proxy(m_target.address());
 
 		// DNS 查询按查询域名分流：命中 proxy_domains_ 走代理，否则直连.
-		if (!use_proxy && m_target.port() == 53 && !m_dns_qname.empty())
-			use_proxy = m_owner && m_owner->domain_match(m_dns_qname);
+		if (m_target.port() == 53 && !m_dns_qname.empty())
+		{
+			// proxy 自身解析 proxy_pass 域名的查询必须直连, 否则会
+			// 经代理转发又需要解析该域名, 形成解析循环.
+			bool self_query = false;
+			if (m_option.proxy_pass_)
+			{
+				auto host = boost::to_lower_copy(
+					std::string((*m_option.proxy_pass_).encoded_host()));
+				if (!host.empty())
+				{
+					std::string qname = boost::to_lower_copy(m_dns_qname);
+					if (!qname.empty() && qname.back() == '.')
+						qname.pop_back();
+					self_query = (qname == host);
+				}
+			}
+			if (self_query)
+				use_proxy = false;
+			else if (!use_proxy)
+				use_proxy = m_owner && m_owner->domain_match(m_dns_qname);
+		}
 
 		m_proxy = use_proxy && m_option.proxy_pass_;
 
@@ -1460,12 +1578,15 @@ namespace proxy {
 	{
 		const auto& proxy_url = *m_option.proxy_pass_;
 
-		auto sock = co_await connect_proxy_pass(m_executor, m_option, proxy_url);
+		const auto protect = m_owner ?
+			std::function<net::awaitable<bool>(int)>(
+				[owner = m_owner](int fd) { return owner->protect_socket(fd); }) :
+			std::function<net::awaitable<bool>(int)>();
+
+		auto sock = co_await connect_proxy_pass(
+			m_executor, m_option, proxy_url, protect);
 		if (!sock.is_open())
 			co_return false;
-
-		// Android VpnService 场景: 放行到上游代理的 TCP 控制连接, 避免回环进 tun.
-		co_await m_owner->protect_socket(sock.native_handle());
 
 		// HTTP 代理：RFC 9298 CONNECT-UDP 隧道；SOCKS5：UDP ASSOCIATE.
 		co_return m_connect_udp ?
@@ -1490,7 +1611,13 @@ namespace proxy {
 		apply_so_mark_if(*m_backend, m_option);
 
 		// Android VpnService 场景: 放行后端 UDP socket, 避免回环进 tun.
-		co_await m_owner->protect_socket(m_backend->native_handle());
+		// 放行失败（launcher 未就绪等）时不得继续使用, 否则流量回环.
+		if (m_owner &&
+			!co_await m_owner->protect_socket(m_backend->native_handle()))
+		{
+			XLOG_WARN << "tun udp backend socket not protected";
+			co_return false;
+		}
 
 		m_backend->bind(net::ip::udp::endpoint(m_target.protocol(), 0), ec);
 		if (ec)
@@ -1644,6 +1771,9 @@ namespace proxy {
 		uint8_t buf[65536];
 		size_t pos = 0;
 
+		XLOG_DBG << "tun udp tx capsule to " << m_target.address().to_string()
+			<< ":" << m_target.port() << " len=" << len;
+
 		pos += varint_int_encode(udp_proxy_capsule_type, buf + pos);
 		pos += varint_int_encode(1 + len, buf + pos);
 		pos += varint_int_encode(0, buf + pos);
@@ -1709,6 +1839,9 @@ namespace proxy {
 			auto [capsule_type, capsule_value] = co_await read_capsule(ec);
 			if (ec)
 				break;
+
+			XLOG_DBG << "tun udp rx capsule type=" << capsule_type
+				<< " len=" << capsule_value.size();
 
 			// 仅处理 DATAGRAM capsule（RFC 9297）.
 			if (capsule_type != udp_proxy_capsule_type ||
@@ -1916,6 +2049,25 @@ namespace proxy {
 
 	void tun_server::start() noexcept
 	{
+		// 预初始化上游代理 SSL context: 多协程（TCP/UDP 流）并发建连时
+		// 若各自惰性初始化会产生数据竞争, 导致部分 SSL 握手挂起.
+		if (!m_ssl_client_context && m_option.proxy_pass_ &&
+			proxy_use_ssl(*m_option.proxy_pass_, m_option))
+		{
+			boost::system::error_code ec;
+			std::string proxy_host((*m_option.proxy_pass_).encoded_host());
+			auto sni = m_option.proxy_ssl_name_.empty() ?
+				proxy_host : m_option.proxy_ssl_name_;
+			m_ssl_client_context.emplace(net::ssl::context::sslv23_client);
+			ec = configure_ssl_client_ctx(*m_ssl_client_context,
+				m_option.disable_check_cert_, sni, m_option.ssl_cacert_path_);
+			if (ec)
+			{
+				XLOG_WARN << "tun init ssl client context: " << ec.message();
+				m_ssl_client_context.reset();
+			}
+		}
+
 		// 等待外部注入 TUN fd 模式（Android VpnService）：不创建设备,
 		// 由 launcher 控制通道 set_tun_fd 注入后启动读包循环.
 		if (m_option.tun_wait_fd_)
@@ -2162,6 +2314,20 @@ namespace proxy {
 				if (!(pkt.flags & tcp_flag_syn))
 					return;
 
+				// 并发 flow 超限: 拒绝新连接, 防止流量风暴耗尽 fd.
+				if (m_tcp_flows.size() >= k_max_tcp_flows)
+				{
+					auto rst = build_tcp_segment(
+						pkt.dst, pkt.src,
+						pkt.dst_port, pkt.src_port,
+						pkt.seq, pkt.seq + 1,
+						tcp_flag_rst | tcp_flag_ack,
+						nullptr, 0, 0);
+					if (!rst.empty())
+						write_packet(std::move(rst));
+					return;
+				}
+
 				flow = std::make_shared<tun_tcp_flow>(
 					m_executor, shared_from_this(), m_option, key, pkt);
 				m_tcp_flows.emplace(key, flow);
@@ -2356,6 +2522,12 @@ namespace proxy {
 
 	bool tun_server::ip_match_proxy(const net::ip::address& addr) const noexcept
 	{
+		// 配置了上游代理但未指定任何分流规则时，默认全部走代理.
+		if (m_option.proxy_pass_ &&
+			m_option.proxy_cidr_.empty() &&
+			m_option.proxy_domains_.empty())
+			return true;
+
 		if (cidr_match(addr))
 			return true;
 
@@ -2417,6 +2589,10 @@ namespace proxy {
 			{
 				net::ip::udp::endpoint client(pkt.src, pkt.src_port);
 				net::ip::udp::endpoint target(pkt.dst, pkt.dst_port);
+
+				// 并发 flow 超限: 丢弃新会话, 防止流量风暴耗尽 fd.
+				if (m_udp_flows.size() >= k_max_udp_flows)
+					return;
 
 				// DNS 查询报文解析查询域名，用于按 proxy_domains_ 分流.
 				std::string dns_qname;

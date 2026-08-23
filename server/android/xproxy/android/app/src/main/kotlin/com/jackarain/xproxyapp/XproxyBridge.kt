@@ -3,6 +3,8 @@ package com.jackarain.xproxyapp
 import com.jackarain.xproxy
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.InetAddress
+import java.net.URI
 
 /**
  * libxproxy.so 的 JNI 桥.
@@ -30,6 +32,19 @@ object XproxyBridge {
         val cfg = JSONObject(config)
         val out = JSONObject()
         out.put("proxy_pass", cfg.optString("proxyPass", ""))
+        // VpnService 全隧道下 native 进程的 DNS 查询会回环进 tun 无法解析,
+        // 这里用系统解析器预解析 proxy_pass 域名, 让 native 直连 IP.
+        val proxyPass = cfg.optString("proxyPass", "")
+        if (proxyPass.isNotBlank()) {
+            try {
+                val host = URI(proxyPass).host
+                if (host != null && host.isNotBlank() && !host.contains(':')) {
+                    val ip = InetAddress.getAllByName(host).firstOrNull()?.hostAddress
+                    if (ip != null) out.put("proxy_pass_ip", ip)
+                }
+            } catch (_: Exception) {
+            }
+        }
         out.put("tun", true)
         out.put("tun_mtu", cfg.optInt("tunMtu", 1400))
         out.put("tun_wait_fd", true)
