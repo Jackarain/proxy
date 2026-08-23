@@ -190,6 +190,10 @@ namespace proxy {
 		bool jumped = false;
 		const char* next = nullptr;
 
+		// 压缩指针跳转次数上限, 防止恶意报文中的指针环导致死循环.
+		constexpr int k_max_compression_jumps = 16;
+		int jumps = 0;
+
 		while (p < end)
 		{
 			uint8_t len = static_cast<uint8_t>(*p);
@@ -200,10 +204,15 @@ namespace proxy {
 			}
 			if ((len & 0xC0) == 0xC0)
 			{
+				// 指针跳转: 限制次数并校验目标偏移, 防止越界或循环.
+				if (++jumps > k_max_compression_jumps)
+					break;
 				if (p + 1 >= end) break;
 				uint16_t offset =
 					((static_cast<uint16_t>(len & 0x3F)) << 8) |
 					static_cast<uint8_t>(*(p + 1));
+				if (offset >= static_cast<uint16_t>(end - msg_start))
+					break;
 				if (!jumped) next = p + 2;
 				p = msg_start + offset;
 				jumped = true;
@@ -217,7 +226,7 @@ namespace proxy {
 
 		if (!name.empty())
 		{
-			if (!jumped && next == nullptr)
+			if (!jumped && next == nullptr && p < end)
 				next = p + 1; // 正常结束于 0 长度标签.
 			name += '.';
 		}

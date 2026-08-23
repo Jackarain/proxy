@@ -953,13 +953,13 @@ namespace proxy {
 		if (pkt.seq != m_client_next_seq)
 		{
 			// 乱序或重传：通告期望序号，丢弃数据（简化实现不做缓存重排）.
+			// 重传旧段时同样回 ACK, 否则客户端会一直重传直至连接超时.
 			XLOG_DBG << "tun tcp data seq mismatch dst="
 				<< m_key.dst.to_string() << ":" << m_key.dst_port
 				<< " got=" << pkt.seq
 				<< " expect=" << m_client_next_seq
 				<< " len=" << pkt.payload_len;
-			if (pkt.seq > m_client_next_seq)
-				send_ack();
+			send_ack();
 			return;
 		}
 
@@ -1383,6 +1383,9 @@ namespace proxy {
 		// 后端尚未就绪（异步建连/ASSOCIATE 进行中），缓存数据稍后补发.
 		if (!m_ready)
 		{
+			// 超出缓存上限直接丢弃, 防止后端建连缓慢时内存无界增长.
+			if (m_pending.size() >= k_max_udp_pending)
+				return;
 			m_pending.emplace_back(data, len);
 			return;
 		}
@@ -1781,6 +1784,9 @@ namespace proxy {
 
 		{
 			std::lock_guard<std::mutex> lk(m_tx_mutex);
+			// 发送协程消费速度跟不上时丢弃新包, 防止队列无界增长.
+			if (m_tx_queue.size() >= k_max_udp_pending)
+				return;
 			m_tx_queue.emplace_back(buf, buf + pos);
 		}
 
@@ -1841,9 +1847,11 @@ namespace proxy {
 				continue;
 
 			// 解析 context ID（本项目固定使用 0）.
+			// 使用带边界的解码, 防止畸形 capsule 导致越界读取.
 			auto val_data = reinterpret_cast<const uint8_t*>(capsule_value.data());
-			auto [ctx_id_len, ctx_id] = varint_int_decode(val_data);
-			if (ctx_id != 0)
+			auto [ctx_id_len, ctx_id] = varint_int_decode_bounded(
+				val_data, capsule_value.size());
+			if (ctx_id_len == 0 || ctx_id != 0)
 				continue;
 
 			size_t udp_len = capsule_value.size() - ctx_id_len;

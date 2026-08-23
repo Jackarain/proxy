@@ -3649,8 +3649,9 @@ R"x*x*x(<html>
 				if (data_len == 0)
 					continue;
 
-				auto [ctx_id_len, ctx_id] = varint_int_decode(data);
-				if (ctx_id != 0)
+				auto [ctx_id_len, ctx_id] = varint_int_decode_bounded(
+					data, data_len);
+				if (ctx_id_len == 0 || ctx_id != 0)
 				{
 					log_conn_debug()
 						<< ", connect-udp: unknown context ID: "
@@ -4087,8 +4088,9 @@ R"x*x*x(<html>
 
 					if (data_len == 0) continue;
 
-					auto [ctx_id_len, ctx_id] = varint_int_decode(data);
-					if (ctx_id != 0) continue;
+					auto [ctx_id_len, ctx_id] = varint_int_decode_bounded(
+						data, data_len);
+					if (ctx_id_len == 0 || ctx_id != 0) continue;
 
 					// UDP payload.
 					size_t udp_payload_len = data_len - ctx_id_len;

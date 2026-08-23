@@ -395,6 +395,10 @@ namespace proxy {
 		// m_pending 保存后端就绪前到达的客户端数据，就绪后补发.
 		std::deque<std::string> m_pending;
 
+		// 后端就绪前缓存客户端数据包的数量上限, 超出直接丢弃,
+		// 防止后端建连缓慢时内存无界增长.
+		static constexpr size_t k_max_udp_pending = 1024;
+
 		// m_expire 无流量超时定时器.
 		std::optional<net::steady_timer> m_expire;
 	};

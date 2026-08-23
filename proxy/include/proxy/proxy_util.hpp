@@ -433,6 +433,21 @@ namespace proxy {
 		}
 	}
 
+	// 从 buf 解码一个 QUIC 变长整数并做边界检查, 返回 {字节数, 值}.
+	// 输入长度不足以容纳该变长整数时返回 {0, 0}, 调用方需处理该情况.
+	inline std::pair<size_t, uint64_t> varint_int_decode_bounded(
+		const uint8_t* buf, size_t len) noexcept
+	{
+		if (len == 0)
+			return { 0, 0 };
+
+		size_t need = static_cast<size_t>(1) << (buf[0] >> 6);
+		if (len < need)
+			return { 0, 0 };
+
+		return varint_int_decode(buf);
+	}
+
 	// 从流中读取一个 QUIC 变长整数 (varint), 用于 RFC 9298 capsule 协议解析.
 	// 注意: 需要调用方已包含 proxy_stream.hpp 和 use_awaitable.hpp.
 	// 返回读取到的值, ec 非零表示读取失败.

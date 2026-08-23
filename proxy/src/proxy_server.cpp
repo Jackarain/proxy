@@ -4109,8 +4109,9 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 		if (val_len == 0)
 			continue;
 
-		auto [ctx_id_len, ctx_id] = varint_int_decode(val_data);
-		if (ctx_id != 0)
+		auto [ctx_id_len, ctx_id] = varint_int_decode_bounded(
+			val_data, val_len);
+		if (ctx_id_len == 0 || ctx_id != 0)
 		{
 			XLOG_DBG << "tproxy flow: " << flow->flow_key_
 				<< ", unknown context ID: " << ctx_id;
