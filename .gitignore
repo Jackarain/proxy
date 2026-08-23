@@ -294,3 +294,5 @@ xcode/
 
 # Android cmake 构建产物
 /android/
+/release/
+/outputs/
