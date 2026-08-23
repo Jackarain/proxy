@@ -29,10 +29,11 @@ Flutter (Dart)                          Android 原生 (Kotlin)                 
 
 ```sh
 # 1. 编译 libxproxy.so (仓库根目录, 参见 build.android.sh)
+#    脚本会自动把 libxproxy.so 同步到 android/app/src/main/jniLibs/<abi>/,
+#    无需手工拷贝.
 ./build.android.sh /root/proxy /opt/android-sdk/ndk/26.3.11579264 linux-x86_64
 
-# 2. 将产物同步到本工程 (或直接手工拷贝)
-cp /root/proxy/release/*/libxproxy.so android/app/src/main/jniLibs/<abi>/
+# 2. 同步 SWIG 生成的 Java 包装文件到本工程
 cp /root/proxy/outputs/*.java android/app/src/main/java/com/jackarain/
 
 # 3. 构建 APK

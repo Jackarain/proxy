@@ -45,6 +45,13 @@ do
     # SWIG 库 (libxproxy.so) 与生成的 Java 包装文件.
     ${NDK_PATH}/toolchains/llvm/prebuilt/${HOST_TAG}/bin/llvm-strip android/$ARCH/lib/libxproxy.so
     cp android/$ARCH/lib/libxproxy.so release/$ARCH/
+    # 同步 libxproxy.so 到 Android 客户端工程 (Flutter), 避免 APK 编译时缺少 .so.
+    JNI_LIBS_DIR=${SRC_PATH}/server/android/xproxy/android/app/src/main/jniLibs/${ARCH}
+    if [ -d "${SRC_PATH}/server/android/xproxy/android/app" ]; then
+        mkdir -p ${JNI_LIBS_DIR}
+        cp android/$ARCH/lib/libxproxy.so ${JNI_LIBS_DIR}/libxproxy.so
+        echo "copied libxproxy.so -> ${JNI_LIBS_DIR}/libxproxy.so"
+    fi
     mkdir -p outputs/binaries
     cp -r android/$ARCH/swig/* outputs/
     cp -r release/* outputs/binaries/
