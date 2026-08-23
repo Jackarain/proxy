@@ -16,6 +16,7 @@
 #include "proxy/tun_device.hpp"
 
 #include <deque>
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -404,6 +405,18 @@ namespace proxy {
 		static constexpr size_t k_max_tcp_flows = 4096;
 		static constexpr size_t k_max_udp_flows = 4096;
 
+		// 流量与连接统计快照（供 launcher 状态上报合并）.
+		struct stats
+		{
+			uint64_t rx_bytes { 0 };
+			uint64_t tx_bytes { 0 };
+			uint64_t conn_total { 0 };
+			size_t active_connections { 0 };
+		};
+
+		// 返回当前流量与连接统计.
+		stats get_stats() noexcept;
+
 	private:
 		// 读包循环协程.
 		net::awaitable<void> run();
@@ -468,6 +481,11 @@ namespace proxy {
 
 		// 保护 m_tcp_flows 的并发访问.
 		std::mutex m_flows_mutex;
+
+		// 流量统计（原子计数, 多 flow 并发累加）.
+		std::atomic<uint64_t> m_rx_bytes { 0 };
+		std::atomic<uint64_t> m_tx_bytes { 0 };
+		std::atomic<uint64_t> m_conn_total { 0 };
 
 		// TUN 设备写队列（多 flow 串行写）.
 		std::deque<std::string> m_write_queue;

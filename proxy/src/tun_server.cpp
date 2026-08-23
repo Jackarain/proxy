@@ -2142,6 +2142,19 @@ namespace proxy {
 			m_tun->close();
 	}
 
+	tun_server::stats tun_server::get_stats() noexcept
+	{
+		stats st;
+		st.rx_bytes = m_rx_bytes.load();
+		st.tx_bytes = m_tx_bytes.load();
+		st.conn_total = m_conn_total.load();
+		{
+			std::lock_guard<std::mutex> lk(m_flows_mutex);
+			st.active_connections = m_tcp_flows.size() + m_udp_flows.size();
+		}
+		return st;
+	}
+
 	net::awaitable<void> tun_server::run()
 	{
 		m_running = true;
@@ -2166,6 +2179,7 @@ namespace proxy {
 			}
 
 			handle_packet(buffer, n);
+			m_rx_bytes += n;
 		}
 
 		m_running = false;
@@ -2191,6 +2205,8 @@ namespace proxy {
 	{
 		if (m_abort || !m_tun || !m_tun->is_open())
 			return;
+
+		m_tx_bytes += packet.size();
 
 		bool need_start = false;
 
@@ -2298,6 +2314,7 @@ namespace proxy {
 					m_executor, shared_from_this(), m_option, key, pkt);
 				m_tcp_flows.emplace(key, flow);
 				created = true;
+				++m_conn_total;
 			}
 		}
 
@@ -2574,6 +2591,7 @@ namespace proxy {
 					client, target, dns_qname);
 				m_udp_flows.emplace(key, flow);
 				created = true;
+				++m_conn_total;
 			}
 		}
 

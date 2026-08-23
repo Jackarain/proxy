@@ -2019,6 +2019,18 @@ boost::json::object proxy_server::snapshot_report()
 	uint64_t global_tx = stats.global_tx_.load();
 	int active = 0;
 
+	// tun 模式（Android VpnService/透明代理）: 流量与连接由 tun_server
+	// 统计, 并入全局统计（tun 无用户概念, 不进入用户明细）.
+	uint64_t tun_conn_total = 0;
+	if (m_tun_server)
+	{
+		auto ts = m_tun_server->get_stats();
+		global_rx += ts.rx_bytes;
+		global_tx += ts.tx_bytes;
+		active += static_cast<int>(ts.active_connections);
+		tun_conn_total = ts.conn_total;
+	}
+
 	// 按用户聚合:
 	//   rx/tx          已关闭累计 + 当前活跃实时（本次运行期会话级）
 	//   closed_conns   已关闭会话累积连接数
@@ -2134,7 +2146,8 @@ boost::json::object proxy_server::snapshot_report()
 	global["tx_bytes"] = static_cast<int64_t>(global_tx);
 	report["global"] = std::move(global);
 	report["active_connections"] = active;
-	report["conn_total"] = static_cast<int64_t>(stats.conn_total_.load());
+	report["conn_total"] = static_cast<int64_t>(
+		stats.conn_total_.load() + tun_conn_total);
 
 	// 6) 组装用户明细.
 	//    usage_total = rx + tx + 续接基线, 为含续接基线的累计总流量,
