@@ -1873,11 +1873,15 @@ namespace proxy {
 						m_target = *dns;
 				}
 			}
-			else if (scheme.starts_with("http"))
+			else
 			{
-				// 未配置域名分流：DNS 查询默认经 DoH 转发到 proxy_pass
-				// （把 proxy_pass 当作 DoH 服务器解析客户端查询）.
-				m_doh_mode = true;
+				// 未配置域名分流：全部按国外域名处理，原始 DNS 数据包经
+				// 代理转发到国外 DNS 解析（未显式配置 DoH 时不再把
+				// proxy_pass 当作 DoH 服务器）.
+				use_proxy = true;
+				if (auto dns = pick_dns_server(
+					m_option.dns_foreign_, m_target))
+					m_target = *dns;
 			}
 		}
 
