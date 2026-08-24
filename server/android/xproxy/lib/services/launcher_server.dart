@@ -176,8 +176,11 @@ class LauncherServer {
     }
     // 未配置路由时默认全隧道 (IPv4 + IPv6).
     if (routes.isEmpty) routes = ['0.0.0.0/0', '::/0'];
-    var dns = _strList(cfg['dns']);
-    if (dns.isEmpty) dns = ['8.8.8.8', '114.114.114.114'];
+    // 固定注入国外 DNS 保证查询进入 TUN，同时注入可配置的国内 DNS.
+    final dns = <String>['8.8.8.8', '1.1.1.1'];
+    for (final d in _strList(cfg['dns'])) {
+      if (d.isNotEmpty && !dns.contains(d)) dns.add(d);
+    }
     try {
       final fd = await VpnChannel.establishTun(
         address: address,

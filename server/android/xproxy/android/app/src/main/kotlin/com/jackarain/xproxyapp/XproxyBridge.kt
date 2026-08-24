@@ -39,6 +39,17 @@ object XproxyBridge {
         if (cfg.has("proxyCidr")) {
             out.put("proxy_cidr", cfg.optJSONArray("proxyCidr") ?: JSONArray())
         }
+        // DNS 分流: 国内 DNS 直连解析, 国外 DNS/DoH 经代理解析.
+        if (cfg.has("dns")) {
+            out.put("dns_domestic", cfg.optJSONArray("dns") ?: JSONArray())
+        }
+        if (cfg.has("dnsForeign")) {
+            out.put("dns_foreign", cfg.optJSONArray("dnsForeign") ?: JSONArray())
+        }
+        val doh = cfg.optString("dnsForeignDoh", "").trim()
+        if (doh.isNotEmpty()) {
+            out.put("dns_doh", doh)
+        }
         out.put("disable_check_cert", cfg.optBoolean("disableCheckCert", true))
         out.put("udp_timeout", cfg.optInt("udpTimeout", 300))
         out.put("launcher_url", "ws://127.0.0.1:$launcherPort")
