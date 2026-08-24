@@ -1439,23 +1439,28 @@ namespace proxy {
 			{
 				// 配置了 local_ip_ 出口地址：绑定源地址后连接，保证 DoH 查询
 				// 与业务流量走同一出站链路.
-				doh_socket.close(ec);
 				tcp::endpoint bind_endpoint(*m_bind_interface, 0);
 				doh_socket.open(bind_endpoint.protocol(), ec);
 				if (ec)
+				{
+					doh_socket.close(ec);
 					continue;
+				}
 				doh_socket.bind(bind_endpoint, ec);
 				if (ec)
 				{
 					XLOG_WARN << "doh bind source address: "
 						<< m_bind_interface->to_string()
 						<< ", error: " << ec.message();
+					doh_socket.close(ec);
 					continue;
 				}
 			}
 			co_await doh_socket.async_connect(endp, net_awaitable[ec]);
 			if (!ec)
 				break;
+			// 连接失败：关闭 socket，供下一轮重新打开.
+			doh_socket.close(ec);
 		}
 		if (ec)
 			co_return false;
