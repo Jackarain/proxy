@@ -23,6 +23,7 @@ class VpnConfig {
     List<String>? dnsForeign,
     this.dnsForeignDoh = '',
     this.dnsCache = true,
+    this.noIpv6 = true,
     this.testUrl = 'https://google.com',
     this.bypassCn = false,
   }) : proxyDomains = proxyDomains ?? [],
@@ -72,6 +73,10 @@ class VpnConfig {
 
   /// 是否启用 DNS 查询结果缓存（native 按域名缓存解析结果，命中直接回包）.
   bool dnsCache;
+
+  /// 是否禁用 IPv6 解析：AAAA 查询直接返回空应答，不转发上游
+  /// （上游 DoH 不支持 IPv6 时可避免每次查询的等待延迟）.
+  bool noIpv6;
 
   /// 国外 DNS/DoH 输入行拆分: IP 归入国外 DNS 列表, http(s):// 开头
   /// 视为 DoH URL（多个 DoH 时取最后一个）.
@@ -188,6 +193,7 @@ class VpnConfig {
       if (dnsForeignDoh.trim().isNotEmpty) 'dns_doh': dnsForeignDoh.trim(),
       if (dnsCache) 'dns_cache_size': 4096,
       if (dnsCache) 'dns_cache_ttl': 300,
+      if (noIpv6) 'dns_no_ipv6': true,
       if (launcherPort > 0) 'launcher_url': 'ws://127.0.0.1:$launcherPort',
     };
     return jsonEncode(map);
@@ -219,6 +225,7 @@ class VpnConfig {
     'dnsForeign': dnsForeign,
     'dnsForeignDoh': dnsForeignDoh,
     'dnsCache': dnsCache,
+    'noIpv6': noIpv6,
     'testUrl': testUrl,
     'bypassCn': bypassCn,
   };
@@ -238,6 +245,7 @@ class VpnConfig {
     dnsForeign: _strList(json['dnsForeign']),
     dnsForeignDoh: json['dnsForeignDoh'] as String? ?? '',
     dnsCache: json['dnsCache'] as bool? ?? true,
+    noIpv6: json['noIpv6'] as bool? ?? true,
     testUrl: json['testUrl'] as String? ?? 'https://google.com',
     bypassCn: json['bypassCn'] as bool? ?? false,
   );

@@ -46,6 +46,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
   late bool _disableCheckCert = c.disableCheckCert;
   late bool _bypassCn = c.bypassCn;
   late bool _dnsCache = c.dnsCache;
+  late bool _noIpv6 = c.noIpv6;
 
   @override
   void dispose() {
@@ -92,6 +93,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           ..dnsForeign = foreignIps
           ..dnsForeignDoh = foreignDoh
           ..dnsCache = _dnsCache
+          ..noIpv6 = _noIpv6
           ..testUrl = _testUrl.text.trim()
           ..disableCheckCert = _disableCheckCert
           ..bypassCn = _bypassCn;
@@ -175,6 +177,13 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             subtitle: const Text('缓存解析结果，重复查询直接回包'),
             value: _dnsCache,
             onChanged: (v) => setState(() => _dnsCache = v),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('禁用 IPv6 解析'),
+            subtitle: const Text('AAAA 查询直接返回空应答，避免上游 DoH 不支持 IPv6 时每次等待'),
+            value: _noIpv6,
+            onChanged: (v) => setState(() => _noIpv6 = v),
           ),
 
           _section('TUN 网络'),

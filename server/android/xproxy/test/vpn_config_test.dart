@@ -21,6 +21,7 @@ void main() {
         dns: ['8.8.8.8'],
         dnsForeign: ['1.1.1.1'],
         dnsForeignDoh: 'https://dns.google/dns-query',
+        noIpv6: false,
         testUrl: 'https://google.com',
         bypassCn: true,
       );
@@ -35,6 +36,7 @@ void main() {
       expect(restored.dns, ['8.8.8.8']);
       expect(restored.dnsForeign, ['1.1.1.1']);
       expect(restored.dnsForeignDoh, 'https://dns.google/dns-query');
+      expect(restored.noIpv6, false);
       expect(restored.bypassCn, true);
     });
 
@@ -83,7 +85,29 @@ void main() {
       expect(map['dns_doh'], 'https://dns.google/dns-query');
       expect(map['dns_cache_size'], 4096);
       expect(map['dns_cache_ttl'], 300);
+      expect(map['dns_no_ipv6'], true);
       expect(map['launcher_url'], 'ws://127.0.0.1:12345');
+    });
+
+    test('禁用 IPv6 解析默认启用并随 json 迁移', () {
+      final def = VpnConfig(id: '1', name: 'c');
+      expect(def.noIpv6, isTrue);
+      final restored = VpnConfig.fromJson(def.toJson());
+      expect(restored.noIpv6, isTrue);
+      // 旧配置无该字段时回退默认启用.
+      final legacy = VpnConfig.fromJson({'id': '2', 'name': 'c'});
+      expect(legacy.noIpv6, isTrue);
+    });
+
+    test('关闭禁用 IPv6 解析时不下发 dns_no_ipv6', () {
+      final c = VpnConfig(
+        id: 'abc',
+        name: '测试',
+        proxyPass: 'https://user:pass@host:443',
+        noIpv6: false,
+      );
+      final map = jsonDecode(c.toProxyJson()) as Map<String, dynamic>;
+      expect(map.containsKey('dns_no_ipv6'), isFalse);
     });
 
     test('关闭 DNS 缓存时不下发缓存参数', () {
