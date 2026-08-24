@@ -192,6 +192,20 @@ namespace proxy {
 		// 建立到 DoH 服务的连接（直连或经代理 CONNECT 隧道），成功返回 true.
 		net::awaitable<bool> connect();
 
+		// 经代理 CONNECT 隧道转发到 DoH 服务（https 代理先建外层 TLS，
+		// 再建 CONNECT 隧道，内层按需 TLS），成功返回 true.
+		net::awaitable<bool> connect_via_proxy(tcp::socket sock);
+
+		// 直连 DoH 服务（与 proxy_pass 同服务，或把 proxy_pass 当作 DoH
+		// 服务器），成功返回 true.
+		net::awaitable<bool> connect_direct(tcp::socket sock);
+
+		// 惰性初始化并配置 SSL context（证书校验与 SNI 使用 verify_host）.
+		net::awaitable<bool> setup_tls(const std::string& verify_host);
+
+		// 对 m_stream 中的 SSL 流设置 SNI 并完成客户端握手.
+		net::awaitable<bool> tls_handshake(const std::string& host);
+
 		// 发送单个 DNS 查询并读取响应，成功返回 true 并填充 output.
 		net::awaitable<bool> exchange(const std::string& dns_query, std::string& output);
 

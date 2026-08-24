@@ -251,140 +251,144 @@ namespace proxy {
 
 	net::awaitable<bool> doh_connection::connect()
 	{
-		boost::system::error_code ec;
-
 		const auto& proxy_url = *m_option.proxy_pass_;
-		const std::string proxy_host(proxy_url.encoded_host());
 
 		auto sock = co_await connect_proxy_pass(
 			m_executor, m_option, proxy_url, m_protect);
 		if (!sock.is_open())
 			co_return false;
 
-		if (m_doh_via_proxy)
-		{
-			// 经代理 CONNECT 隧道转发到 DoH 服务.
-			const std::string authority =
-				m_doh_host + ":" + std::to_string(m_doh_port);
-			const std::string proxy_sni = m_option.proxy_ssl_name_.empty() ?
-				proxy_host : m_option.proxy_ssl_name_;
+		// 经代理 CONNECT 隧道转发，或与代理同服务直连.
+		co_return m_doh_via_proxy ?
+			co_await connect_via_proxy(std::move(sock)) :
+			co_await connect_direct(std::move(sock));
+	}
 
-			// https 代理先与代理建立外层 TLS.
-			std::optional<ssl_tcp_stream> outer;
-			std::optional<net::ssl::context> outer_ctx;
-			if (proxy_use_ssl(proxy_url, m_option))
-			{
-				outer_ctx.emplace(net::ssl::context::sslv23_client);
-				ec = configure_ssl_client_ctx(*outer_ctx,
-					m_option.disable_check_cert_, proxy_sni,
-					m_option.ssl_cacert_path_);
-				if (ec)
-					co_return false;
-				outer.emplace(std::move(sock), *outer_ctx);
-				SSL_set_tlsext_host_name(
-					outer->native_handle(), proxy_sni.c_str());
-				co_await outer->async_handshake(
-					net::ssl::stream_base::client, net_awaitable[ec]);
-				if (ec)
-					co_return false;
-			}
+	// connect_via_proxy 经代理 CONNECT 隧道转发到 DoH 服务：
+	// https 代理先与代理建立外层 TLS，再建立 CONNECT 隧道，
+	// 隧道内按需与 DoH 服务建立内层 TLS.
+	net::awaitable<bool> doh_connection::connect_via_proxy(tcp::socket sock)
+	{
+		boost::system::error_code ec;
 
-			// 建立 CONNECT 隧道.
-			if (outer)
-			{
-				if (!co_await http_connect_tunnel(
-					*outer, authority, proxy_url))
-					co_return false;
-			}
-			else
-			{
-				if (!co_await http_connect_tunnel(
-					sock, authority, proxy_url))
-					co_return false;
-			}
+		const auto& proxy_url = *m_option.proxy_pass_;
+		const std::string proxy_host(proxy_url.encoded_host());
+		const std::string authority =
+			m_doh_host + ":" + std::to_string(m_doh_port);
+		const std::string proxy_sni = m_option.proxy_ssl_name_.empty() ?
+			proxy_host : m_option.proxy_ssl_name_;
 
-			// 取出隧道底层 TCP socket 供内层 TLS 复用.
-			tcp::socket tunnel = outer ?
-				std::move(outer->next_layer().lowest_layer()) :
-				std::move(sock);
-
-			if (m_doh_https)
-			{
-				if (!m_ssl_ctx)
-				{
-					m_ssl_ctx.emplace(net::ssl::context::sslv23_client);
-					m_ssl_configured = false;
-				}
-				if (!m_ssl_configured)
-				{
-					ec = configure_ssl_client_ctx(*m_ssl_ctx,
-						m_option.disable_check_cert_, m_doh_host,
-						m_option.ssl_cacert_path_);
-					if (ec)
-						co_return false;
-					m_ssl_configured = true;
-				}
-
-				m_stream.emplace(
-					init_proxy_stream(std::move(tunnel), *m_ssl_ctx));
-				auto& inner =
-					boost::variant2::get<ssl_tcp_stream>(*m_stream);
-				SSL_set_tlsext_host_name(
-					inner.native_handle(), m_doh_host.c_str());
-				co_await inner.async_handshake(
-					net::ssl::stream_base::client, net_awaitable[ec]);
-				if (ec)
-				{
-					m_stream.reset();
-					co_return false;
-				}
-			}
-			else
-			{
-				m_stream.emplace(init_proxy_stream(std::move(tunnel)));
-			}
-
-			co_return true;
-		}
-
-		// 直连 DoH：与 proxy_pass 同服务（或未配置 dns_doh_ 时把 proxy_pass
-		// 当作 DoH 服务器）.
+		// https 代理先与代理建立外层 TLS.
+		std::optional<ssl_tcp_stream> outer;
+		std::optional<net::ssl::context> outer_ctx;
 		if (proxy_use_ssl(proxy_url, m_option))
 		{
-			const std::string sni = m_option.proxy_ssl_name_.empty() ?
-				proxy_host : m_option.proxy_ssl_name_;
-
-			if (!m_ssl_ctx)
-			{
-				m_ssl_ctx.emplace(net::ssl::context::sslv23_client);
-				m_ssl_configured = false;
-			}
-			if (!m_ssl_configured)
-			{
-				ec = configure_ssl_client_ctx(*m_ssl_ctx,
-					m_option.disable_check_cert_, sni,
-					m_option.ssl_cacert_path_);
-				if (ec)
-					co_return false;
-				m_ssl_configured = true;
-			}
-
-			m_stream.emplace(init_proxy_stream(std::move(sock), *m_ssl_ctx));
-			auto& ssl = boost::variant2::get<ssl_tcp_stream>(*m_stream);
-			SSL_set_tlsext_host_name(ssl.native_handle(), sni.c_str());
-			co_await ssl.async_handshake(
+			outer_ctx.emplace(net::ssl::context::sslv23_client);
+			ec = configure_ssl_client_ctx(*outer_ctx,
+				m_option.disable_check_cert_, proxy_sni,
+				m_option.ssl_cacert_path_);
+			if (ec)
+				co_return false;
+			outer.emplace(std::move(sock), *outer_ctx);
+			SSL_set_tlsext_host_name(
+				outer->native_handle(), proxy_sni.c_str());
+			co_await outer->async_handshake(
 				net::ssl::stream_base::client, net_awaitable[ec]);
 			if (ec)
-			{
-				m_stream.reset();
 				co_return false;
-			}
+		}
+
+		// 建立 CONNECT 隧道.
+		if (outer)
+		{
+			if (!co_await http_connect_tunnel(
+				*outer, authority, proxy_url))
+				co_return false;
 		}
 		else
 		{
-			m_stream.emplace(init_proxy_stream(std::move(sock)));
+			if (!co_await http_connect_tunnel(
+				sock, authority, proxy_url))
+				co_return false;
 		}
 
+		// 取出隧道底层 TCP socket 供内层 TLS 复用.
+		tcp::socket tunnel = outer ?
+			std::move(outer->next_layer().lowest_layer()) :
+			std::move(sock);
+
+		if (!m_doh_https)
+		{
+			m_stream.emplace(init_proxy_stream(std::move(tunnel)));
+			co_return true;
+		}
+
+		if (!co_await setup_tls(m_doh_host))
+			co_return false;
+		m_stream.emplace(init_proxy_stream(std::move(tunnel), *m_ssl_ctx));
+		co_return co_await tls_handshake(m_doh_host);
+	}
+
+	// connect_direct 直连 DoH 服务：与 proxy_pass 同服务（或未配置
+	// dns_doh_ 时把 proxy_pass 当作 DoH 服务器），https 时走 TLS.
+	net::awaitable<bool> doh_connection::connect_direct(tcp::socket sock)
+	{
+		const auto& proxy_url = *m_option.proxy_pass_;
+		const std::string proxy_host(proxy_url.encoded_host());
+
+		if (!proxy_use_ssl(proxy_url, m_option))
+		{
+			m_stream.emplace(init_proxy_stream(std::move(sock)));
+			co_return true;
+		}
+
+		const std::string sni = m_option.proxy_ssl_name_.empty() ?
+			proxy_host : m_option.proxy_ssl_name_;
+
+		if (!co_await setup_tls(sni))
+			co_return false;
+		m_stream.emplace(init_proxy_stream(std::move(sock), *m_ssl_ctx));
+		co_return co_await tls_handshake(sni);
+	}
+
+	// setup_tls 惰性初始化 SSL context，并以 verify_host 配置证书校验与 SNI.
+	net::awaitable<bool> doh_connection::setup_tls(
+		const std::string& verify_host)
+	{
+		boost::system::error_code ec;
+
+		if (!m_ssl_ctx)
+		{
+			m_ssl_ctx.emplace(net::ssl::context::sslv23_client);
+			m_ssl_configured = false;
+		}
+		if (!m_ssl_configured)
+		{
+			ec = configure_ssl_client_ctx(*m_ssl_ctx,
+				m_option.disable_check_cert_, verify_host,
+				m_option.ssl_cacert_path_);
+			if (ec)
+				co_return false;
+			m_ssl_configured = true;
+		}
+		co_return true;
+	}
+
+	// tls_handshake 对 m_stream 中的 SSL 流设置 SNI 并完成客户端握手，
+	// 失败时销毁流后返回 false.
+	net::awaitable<bool> doh_connection::tls_handshake(
+		const std::string& host)
+	{
+		boost::system::error_code ec;
+		auto& ssl = boost::variant2::get<ssl_tcp_stream>(*m_stream);
+		SSL_set_tlsext_host_name(ssl.native_handle(), host.c_str());
+		co_await ssl.async_handshake(
+			net::ssl::stream_base::client, net_awaitable[ec]);
+		if (ec)
+		{
+			m_stream.reset();
+			co_return false;
+		}
 		co_return true;
 	}
 
