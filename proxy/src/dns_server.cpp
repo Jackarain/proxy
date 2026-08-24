@@ -1548,6 +1548,74 @@ namespace proxy {
 		co_return co_await doh_http_post(ssl_stream, *info, dns_query, output);
 	}
 
+	// append_address_answers 从系统解析结果中按 qtype 提取 A/AAAA 记录.
+	static void append_address_answers(
+		const tcp::resolver::results_type& targets,
+		uint16_t qtype, const std::string& qname,
+		std::vector<dns_answer>& answers)
+	{
+		for (const auto& t : targets)
+		{
+			auto addr = t.endpoint().address();
+			if (qtype == DNS_TYPE_A)
+			{
+				if (!addr.is_v4())
+					continue;
+				auto bytes = addr.to_v4().to_bytes();
+				std::string data(
+					reinterpret_cast<const char*>(bytes.data()),
+					bytes.size());
+				answers.push_back({
+					qname + ".", DNS_TYPE_A, dns_local_ttl,
+					std::move(data) });
+			}
+			else
+			{
+				if (!addr.is_v6())
+					continue;
+				auto bytes = addr.to_v6().to_bytes();
+				std::string data(
+					reinterpret_cast<const char*>(bytes.data()),
+					bytes.size());
+				answers.push_back({
+					qname + ".", DNS_TYPE_AAAA, dns_local_ttl,
+					std::move(data) });
+			}
+		}
+	}
+
+	// resolve_address_query 通过系统解析 qname 的 A/AAAA 地址并构造应答.
+	net::awaitable<void> dns_server::resolve_address_query(
+		const std::string& dns_query, const std::string& qname,
+		uint16_t qtype, std::string& output)
+	{
+		boost::system::error_code ec;
+
+		// 在 backend 执行上下文执行同步解析.
+		auto ex = co_await backend_switch_to(
+			m_scheduler_locking, m_backend_context, m_executor);
+
+		tcp::resolver resolver{ ex };
+		auto targets = co_await resolver.async_resolve(
+			qname, "", net_awaitable[ec]);
+
+		co_await backend_switch_from(m_scheduler_locking, m_executor);
+
+		// 查询失败统一返回 NXDOMAIN.
+		if (ec)
+		{
+			output = dns_build_response(dns_query, 3, {});
+			co_return;
+		}
+
+		// 从解析结果中按 qtype 提取匹配的地址记录.
+		std::vector<dns_answer> answers;
+		append_address_answers(targets, qtype, qname, answers);
+
+		output = dns_build_response(dns_query, 0, answers);
+		co_return;
+	}
+
 	// resolve_normal 按系统默认解析流程处理 DNS 查询并构造响应.
 	net::awaitable<void> dns_server::resolve_normal(
 		const std::string& dns_query, std::string& output)
@@ -1572,60 +1640,8 @@ namespace proxy {
 		{
 		case DNS_TYPE_A:
 		case DNS_TYPE_AAAA:
-		{
-			// 在 backend 执行上下文执行同步解析.
-			boost::system::error_code ec;
-			auto ex = co_await backend_switch_to(
-				m_scheduler_locking, m_backend_context, m_executor);
-
-			tcp::resolver resolver{ ex };
-			auto targets = co_await resolver.async_resolve(
-				qname, "", net_awaitable[ec]);
-
-			co_await backend_switch_from(m_scheduler_locking, m_executor);
-
-			// 查询失败统一返回 NXDOMAIN.
-			if (ec)
-			{
-				output = dns_build_response(dns_query, 3, {});
-				co_return;
-			}
-
-			std::vector<dns_answer> answers;
-			for (const auto& t : targets)
-			{
-				auto addr = t.endpoint().address();
-				if (qtype == DNS_TYPE_A)
-				{
-					if (addr.is_v4())
-					{
-						auto bytes = addr.to_v4().to_bytes();
-						std::string data(
-							reinterpret_cast<const char*>(bytes.data()),
-							bytes.size());
-						answers.push_back({
-							qname + ".", DNS_TYPE_A, dns_local_ttl,
-							std::move(data) });
-					}
-				}
-				else
-				{
-					if (addr.is_v6())
-					{
-						auto bytes = addr.to_v6().to_bytes();
-						std::string data(
-							reinterpret_cast<const char*>(bytes.data()),
-							bytes.size());
-						answers.push_back({
-							qname + ".", DNS_TYPE_AAAA, dns_local_ttl,
-							std::move(data) });
-					}
-				}
-			}
-
-			output = dns_build_response(dns_query, 0, answers);
-			co_return;
-		}
+			co_return co_await resolve_address_query(
+				dns_query, qname, qtype, output);
 		default:
 			// 其余类型（CNAME/MX/TXT/SOA 等）返回 NOERROR 且无应答.
 			output = dns_build_response(dns_query, 0, {});

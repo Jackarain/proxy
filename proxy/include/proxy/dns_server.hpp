@@ -227,6 +227,11 @@ namespace proxy {
 		net::awaitable<void> resolve_normal(
 			const std::string& dns_query, std::string& output);
 
+		// 通过系统解析 qname 的 A/AAAA 地址并构造应答（backend 上下文）.
+		net::awaitable<void> resolve_address_query(
+			const std::string& dns_query, const std::string& qname,
+			uint16_t qtype, std::string& output);
+
 		// 根据当前配置重建缓存（size/ttl 变化时清空重建）.
 		void rebuild_cache() noexcept;
 
