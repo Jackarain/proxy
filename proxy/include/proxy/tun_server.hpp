@@ -285,6 +285,17 @@ namespace proxy {
 		// 判定代理模式（分流结果与 CONNECT-UDP/SOCKS5 选择），不支持时返回 false.
 		bool resolve_proxy_mode();
 
+		// 判定该 UDP 流是否走上游代理（IP/CIDR 与域名分流，proxy 自身
+		// 域名的解析查询强制直连），self_query 输出该查询是否解析 proxy_pass 域名.
+		bool resolve_proxy_route(bool& self_query);
+
+		// DNS 查询分流：按查询域名区分国内/国外，决定 DoH 模式或替换目标
+		// DNS 服务器，修改 use_proxy 与 m_target，并设置 m_doh_mode/m_doh_via_proxy.
+		void resolve_dns_route(bool& use_proxy, bool self_query);
+
+		// 判定 UDP 传输模式（CONNECT-UDP 或 SOCKS5）并校验代理 scheme.
+		bool resolve_udp_transport();
+
 		// 建立与上游代理的连接并完成 UDP 协议握手.
 		net::awaitable<bool> establish_proxy();
 

@@ -1555,11 +1555,14 @@ namespace proxy {
 		touch();
 	}
 
-	bool tun_udp_flow::resolve_proxy_mode()
+	// resolve_proxy_route 判定该 UDP 流是否走上游代理：目标 IP 命中
+	// proxy_cidr_ 或查询域名命中 proxy_domains_ 走代理，否则直连.
+	// proxy 自身解析 proxy_pass 域名的查询强制直连，避免解析循环.
+	bool tun_udp_flow::resolve_proxy_route(bool& self_query)
 	{
 		bool use_proxy = m_owner && m_owner->ip_match_proxy(m_target.address());
 
-		bool self_query = false;
+		self_query = false;
 		// DNS 查询按查询域名分流：命中 proxy_domains_ 走代理，否则直连.
 		if (m_target.port() == 53 && !m_dns_qname.empty())
 		{
@@ -1582,65 +1585,100 @@ namespace proxy {
 			else if (!use_proxy)
 				use_proxy = m_owner && m_owner->domain_match(m_dns_qname);
 		}
+		return use_proxy;
+	}
 
+	// resolve_dns_route 对 DNS 查询按域名区分国内/国外分流：
+	// 国外域名可走 DoH（同服务直连或经代理 CONNECT 隧道）或经代理转发到
+	// 国外 DNS，国内域名直连国内 DNS；use_proxy 与 m_target 随之调整.
+	void tun_udp_flow::resolve_dns_route(bool& use_proxy, bool self_query)
+	{
 		m_doh_mode = false;
 		m_doh_via_proxy = false;
-		if (m_target.port() == 53 && !self_query && m_option.proxy_pass_)
-		{
-			auto scheme = boost::to_lower_copy(
-				std::string((*m_option.proxy_pass_).scheme()));
+		if (m_target.port() != 53 || self_query || !m_option.proxy_pass_)
+			return;
 
-			// 配置了 proxy_domains_（启用域名分流）：按 qname 区分国内/国外 DNS；
-			// 未配置时全部按国外域名处理.
-			bool foreign = m_option.proxy_domains_.empty() ||
-				(m_owner && m_owner->domain_match(m_dns_qname));
-			if (foreign)
+		auto scheme = boost::to_lower_copy(
+			std::string((*m_option.proxy_pass_).scheme()));
+
+		// 配置了 proxy_domains_（启用域名分流）：按 qname 区分国内/国外 DNS；
+		// 未配置时全部按国外域名处理.
+		bool foreign = m_option.proxy_domains_.empty() ||
+			(m_owner && m_owner->domain_match(m_dns_qname));
+		if (foreign)
+		{
+			// 国外域名：经代理转发 DNS 请求或发起 DoH.
+			// DoH 仅对 http(s) 代理生效（CONNECT 隧道为 HTTP 协议）；
+			// socks 上游回退为原始查询经 socks 转发.
+			if (!m_option.dns_doh_.empty() &&
+				scheme.starts_with("http"))
 			{
-				// 国外域名：经代理转发 DNS 请求或发起 DoH.
-				// DoH 仅对 http(s) 代理生效（CONNECT 隧道为 HTTP 协议）；
-				// socks 上游回退为原始查询经 socks 转发.
-				if (!m_option.dns_doh_.empty() &&
-					scheme.starts_with("http"))
-				{
-					// 与 proxy_pass 同服务的 DoH 直连，否则经代理 CONNECT.
-					std::string doh_host;
-					if (auto r = urls::parse_uri(m_option.dns_doh_);
-						r.has_value())
-						doh_host = std::string(r->encoded_host());
-					std::string proxy_host = boost::to_lower_copy(
-						std::string((*m_option.proxy_pass_).encoded_host()));
-					m_doh_via_proxy = !doh_host.empty() &&
-						doh_host != proxy_host;
-					m_doh_mode = !m_doh_via_proxy;
-					use_proxy = false;
-				}
-				else if (!m_option.dns_foreign_.empty() ||
-					!m_option.proxy_domains_.empty())
-				{
-					// 原始 DNS 数据包经代理转发到国外 DNS（未配置国外 DNS 时
-					// 不替换目标，保持 addDnsServer 注入的 8.8.8.8/1.1.1.1）.
-					use_proxy = true;
-					if (auto dns = pick_dns_server(
-						m_option.dns_foreign_, m_target))
-						m_target = *dns;
-				}
-				else
-				{
-					// 未配置域名分流且国外 DNS/DoH 均留空：把 proxy_pass
-					// 尝试作为 DoH 服务器解析客户端查询.
-					m_doh_mode = true;
-					use_proxy = false;
-				}
+				// 与 proxy_pass 同服务的 DoH 直连，否则经代理 CONNECT.
+				std::string doh_host;
+				if (auto r = urls::parse_uri(m_option.dns_doh_);
+					r.has_value())
+					doh_host = std::string(r->encoded_host());
+				std::string proxy_host = boost::to_lower_copy(
+					std::string((*m_option.proxy_pass_).encoded_host()));
+				m_doh_via_proxy = !doh_host.empty() &&
+					doh_host != proxy_host;
+				m_doh_mode = !m_doh_via_proxy;
+				use_proxy = false;
+			}
+			else if (!m_option.dns_foreign_.empty() ||
+				!m_option.proxy_domains_.empty())
+			{
+				// 原始 DNS 数据包经代理转发到国外 DNS（未配置国外 DNS 时
+				// 不替换目标，保持 addDnsServer 注入的 8.8.8.8/1.1.1.1）.
+				use_proxy = true;
+				if (auto dns = pick_dns_server(
+					m_option.dns_foreign_, m_target))
+					m_target = *dns;
 			}
 			else
 			{
-				// 国内域名：直连国内 DNS 解析.
+				// 未配置域名分流且国外 DNS/DoH 均留空：把 proxy_pass
+				// 尝试作为 DoH 服务器解析客户端查询.
+				m_doh_mode = true;
 				use_proxy = false;
-				if (auto dns = pick_dns_server(
-					m_option.dns_domestic_, m_target))
-					m_target = *dns;
 			}
 		}
+		else
+		{
+			// 国内域名：直连国内 DNS 解析.
+			use_proxy = false;
+			if (auto dns = pick_dns_server(
+				m_option.dns_domestic_, m_target))
+				m_target = *dns;
+		}
+	}
+
+	// resolve_udp_transport 判定 UDP 传输模式：http(s) 代理走 RFC 9298
+	// CONNECT-UDP 隧道，socks 代理走 UDP ASSOCIATE，其余 scheme 不支持.
+	bool tun_udp_flow::resolve_udp_transport()
+	{
+		// HTTP 代理通过 RFC 9298 CONNECT-UDP 隧道转发，无需本地 UDP 后端 socket.
+		auto scheme = boost::to_lower_copy(
+			std::string((*m_option.proxy_pass_).scheme()));
+		m_connect_udp = scheme.starts_with("http");
+		m_proto.store(static_cast<uint8_t>(m_connect_udp ?
+			tun_conn_proto::connect_udp : tun_conn_proto::socks5));
+		if (!scheme.starts_with("http") && !scheme.starts_with("socks"))
+		{
+			XLOG_WARN << "tun udp unsupported proxy_pass scheme: " << scheme;
+			return false;
+		}
+		return true;
+	}
+
+	// resolve_proxy_mode 综合分流结果确定代理模式：
+	// 依次判定走代理与否、DNS 分流，再设置代理标记与传输模式.
+	bool tun_udp_flow::resolve_proxy_mode()
+	{
+		bool self_query = false;
+		bool use_proxy = resolve_proxy_route(self_query);
+
+		resolve_dns_route(use_proxy, self_query);
 
 		m_proxy = use_proxy && m_option.proxy_pass_ &&
 			!m_doh_mode && !m_doh_via_proxy;
@@ -1657,18 +1695,7 @@ namespace proxy {
 		if (!m_proxy)
 			return true;
 
-		// HTTP 代理通过 RFC 9298 CONNECT-UDP 隧道转发，无需本地 UDP 后端 socket.
-		auto scheme = boost::to_lower_copy(
-			std::string((*m_option.proxy_pass_).scheme()));
-		m_connect_udp = scheme.starts_with("http");
-		m_proto.store(static_cast<uint8_t>(m_connect_udp ?
-			tun_conn_proto::connect_udp : tun_conn_proto::socks5));
-		if (!scheme.starts_with("http") && !scheme.starts_with("socks"))
-		{
-			XLOG_WARN << "tun udp unsupported proxy_pass scheme: " << scheme;
-			return false;
-		}
-		return true;
+		return resolve_udp_transport();
 	}
 
 	net::awaitable<bool> tun_udp_flow::establish_proxy()
