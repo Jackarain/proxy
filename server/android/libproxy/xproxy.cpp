@@ -134,6 +134,9 @@ bool config_to_option(const std::string& config, proxy::proxy_server_option& opt
 		opt.dns_cache_size_ = static_cast<int>(it->as_int64());
 	if (auto it = obj.if_contains("dns_cache_ttl"); it && it->is_int64())
 		opt.dns_cache_ttl_ = static_cast<int>(it->as_int64());
+	// 禁用 IPv6 解析返回：AAAA 查询直接回空应答，不转发上游.
+	if (auto it = obj.if_contains("dns_no_ipv6"); it && it->is_bool())
+		opt.dns_no_ipv6_ = it->as_bool();
 
 	// launcher 控制通道 (Android app 端 WebSocket 服务器地址).
 	if (auto it = obj.if_contains("launcher_url"); it && it->is_string())

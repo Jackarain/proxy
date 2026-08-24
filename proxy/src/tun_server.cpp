@@ -1488,21 +1488,37 @@ namespace proxy {
 
 		m_rx_bytes += static_cast<uint64_t>(len);
 
-		// DNS 查询缓存：命中后改写事务 ID 直接回包，不再向上游查询.
+		// DNS 查询：解析 qname/qtype，禁用 IPv6 时 AAAA 直接回空应答，
+		// 其余查询命中缓存后改写事务 ID 直接回包，不再向上游查询.
 		std::string cache_key;  // 未命中时保存当前查询键，供 DoH 写入缓存.
 		if (m_target.port() == 53 && len > 0)
 		{
-			auto cache = m_owner ? m_owner->dns_cache() : nullptr;
-			if (cache)
+			std::string query(data, len);
+			std::string qname;
+			uint16_t qtype = 0;
+			bool cd = false;
+			bool do_flag = false;
+			if (dns_parse_query(query, qname, qtype) && !qname.empty())
 			{
-				std::string query(data, len);
-				std::string qname;
-				uint16_t qtype = 0;
-				bool cd = false;
-				bool do_flag = false;
-				if (dns_parse_query(query, qname, qtype) && !qname.empty())
+				// 禁用 IPv6 解析返回：AAAA 查询直接回 NODATA，不查缓存也不转发上游.
+				if (m_option.dns_no_ipv6_ && qtype == DNS_TYPE_AAAA)
 				{
-					dns_query_flags(query, cd, do_flag);
+					auto resp = dns_build_response(query, 0, {});
+					if (!resp.empty())
+					{
+						XLOG_DBG << "tun udp dns query: " << qname << " type "
+							<< dns_type_to_string(qtype)
+							<< ", ipv6 disabled, return empty";
+						reply(resp.data(), resp.size(), false);
+						touch();
+					}
+					return;
+				}
+
+				dns_query_flags(query, cd, do_flag);
+				auto cache = m_owner ? m_owner->dns_cache() : nullptr;
+				if (cache)
+				{
 					auto key = dns_cache_key(qname, qtype, cd, do_flag);
 					if (auto hit = cache->get(key); hit)
 					{
