@@ -2735,6 +2735,69 @@ namespace proxy {
 		return false;
 	}
 
+	// parse_dns_question 解析问题区，取第一个问题域名填充 qname，
+	// 成功返回解析后的偏移位置，失败返回 nullptr.
+	static const char* parse_dns_question(const char* p, const char* end,
+		const char* msg_start, uint16_t qdcount, std::string& qname)
+	{
+		for (uint16_t i = 0; i < qdcount; ++i)
+		{
+			auto [name, np] = dns_parse_name(p, end, msg_start);
+			if (!np || np + 4 > end)
+				return nullptr;
+
+			if (i == 0)
+				qname = name;
+			p = np + 4;
+		}
+		if (qdcount == 0 || qname.empty())
+			return nullptr;
+
+		// 去掉末尾的 '.'.
+		if (!qname.empty() && qname.back() == '.')
+			qname.pop_back();
+		return p;
+	}
+
+	// parse_dns_answer 解析单条 Answer 记录，A/AAAA 记录加入 answers，
+	// 成功返回下一条记录的偏移位置，失败返回 nullptr.
+	static const char* parse_dns_answer(const char* p, const char* end,
+		const char* msg_start,
+		std::vector<std::pair<net::ip::address, uint32_t>>& answers)
+	{
+		if (p + 10 > end)
+			return nullptr;
+
+		auto [name, np] = dns_parse_name(p, end, msg_start);
+		if (!np || np + 10 > end)
+			return nullptr;
+
+		const char* type_p = np;
+		const char* ttl_p = np + 4;
+		const char* rdl_p = np + 8;
+		uint16_t type = io_util::read<uint16_t>(type_p);
+		uint32_t ttl = io_util::read<uint32_t>(ttl_p);
+		uint16_t rdlength = io_util::read<uint16_t>(rdl_p);
+		const char* rdata = np + 10;
+		if (rdata + rdlength > end)
+			return nullptr;
+
+		if (type == 1 && rdlength == 4)
+		{
+			net::ip::address_v4::bytes_type bytes;
+			std::memcpy(bytes.data(), rdata, 4);
+			answers.emplace_back(net::ip::address_v4(bytes), ttl);
+		}
+		else if (type == 28 && rdlength == 16)
+		{
+			net::ip::address_v6::bytes_type bytes;
+			std::memcpy(bytes.data(), rdata, 16);
+			answers.emplace_back(net::ip::address_v6(bytes), ttl);
+		}
+
+		return rdata + rdlength;
+	}
+
 	// parse_dns_response 解析 DNS 响应报文中的问题域名与 A/AAAA 答案.
 	// 成功返回 true，qname/answers 为解析结果（answers 元素为 IP 与 TTL）.
 	static bool parse_dns_response(const char* data, size_t len,
@@ -2753,58 +2816,17 @@ namespace proxy {
 		uint16_t ancount = io_util::read<uint16_t>(an_p);
 
 		// 解析问题区，取第一个问题域名.
-		const char* p = data + 12;
-		for (uint16_t i = 0; i < qdcount; ++i)
-		{
-			auto [name, np] = dns_parse_name(p, end, msg_start);
-			if (!np || np + 4 > end)
-				return false;
-
-			if (i == 0)
-				qname = name;
-			p = np + 4;
-		}
-		if (qdcount == 0 || qname.empty())
+		const char* p = parse_dns_question(
+			data + 12, end, msg_start, qdcount, qname);
+		if (!p)
 			return false;
-
-		// 去掉末尾的 '.'.
-		if (!qname.empty() && qname.back() == '.')
-			qname.pop_back();
 
 		// 遍历 Answer 区提取 A/AAAA 记录.
 		for (uint16_t i = 0; i < ancount; ++i)
 		{
-			if (p + 10 > end)
+			p = parse_dns_answer(p, end, msg_start, answers);
+			if (!p)
 				break;
-
-			auto [name, np] = dns_parse_name(p, end, msg_start);
-			if (!np || np + 10 > end)
-				break;
-
-			const char* type_p = np;
-			const char* ttl_p = np + 4;
-			const char* rdl_p = np + 8;
-			uint16_t type = io_util::read<uint16_t>(type_p);
-			uint32_t ttl = io_util::read<uint32_t>(ttl_p);
-			uint16_t rdlength = io_util::read<uint16_t>(rdl_p);
-			const char* rdata = np + 10;
-			if (rdata + rdlength > end)
-				break;
-
-			if (type == 1 && rdlength == 4)
-			{
-				net::ip::address_v4::bytes_type bytes;
-				std::memcpy(bytes.data(), rdata, 4);
-				answers.emplace_back(net::ip::address_v4(bytes), ttl);
-			}
-			else if (type == 28 && rdlength == 16)
-			{
-				net::ip::address_v6::bytes_type bytes;
-				std::memcpy(bytes.data(), rdata, 16);
-				answers.emplace_back(net::ip::address_v6(bytes), ttl);
-			}
-
-			p = rdata + rdlength;
 		}
 
 		return !answers.empty();
