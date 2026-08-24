@@ -1148,7 +1148,8 @@ namespace proxy {
 		const std::string& dns_query, std::string& output)
 	{
 		auto& upstream = *m_option.dns_upstream_;
-		if (boost::istarts_with(upstream, "https://"))
+		if (boost::istarts_with(upstream, "https://") ||
+			boost::istarts_with(upstream, "http://"))
 			co_return co_await doh_query_raw(dns_query, output);
 		co_return co_await udp_query_raw(dns_query, output);
 	}
@@ -1383,6 +1384,7 @@ namespace proxy {
 			return std::nullopt;
 
 		doh_url_info info;
+		info.scheme = std::string(u->scheme());
 		info.host = std::string(u->encoded_host());
 		info.port = u->port_number();
 		if (info.port == 0)
@@ -1486,10 +1488,11 @@ namespace proxy {
 		co_return true;
 	}
 
-	// doh_http_post 经已建立的 TLS 连接发送 DoH POST 请求并读取响应，
-	// 成功返回 true.
+	// doh_http_post 经已建立的连接发送 DoH POST 请求并读取响应（Stream
+	// 为 TLS 流或明文 socket），成功返回 true.
+	template <typename Stream>
 	net::awaitable<bool> dns_server::doh_http_post(
-		net::ssl::stream<tcp::socket>& ssl_stream,
+		Stream& stream,
 		const doh_url_info& info,
 		const std::string& dns_query, std::string& output)
 	{
@@ -1504,13 +1507,13 @@ namespace proxy {
 		doh_req.body() = dns_query;
 		doh_req.prepare_payload();
 
-		co_await http::async_write(ssl_stream, doh_req, net_awaitable[ec]);
+		co_await http::async_write(stream, doh_req, net_awaitable[ec]);
 		if (ec)
 			co_return false;
 
 		beast::flat_buffer buf;
 		http::response<http::string_body> doh_res;
-		co_await http::async_read(ssl_stream, buf, doh_res, net_awaitable[ec]);
+		co_await http::async_read(stream, buf, doh_res, net_awaitable[ec]);
 		if (ec)
 			co_return false;
 
@@ -1545,6 +1548,11 @@ namespace proxy {
 		tcp::socket doh_socket(m_executor);
 		if (!co_await connect_doh_target(doh_socket, targets))
 			co_return false;
+
+		// 明文 http 上游：直接在已连接 socket 上完成 POST 交互，不做 TLS.
+		if (info->scheme == "http")
+			co_return co_await doh_http_post(
+				doh_socket, *info, dns_query, output);
 
 		// 创建 per-request SSL context, 确保每个 DoH 服务器使用正确的主机名校验.
 		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
@@ -1666,6 +1674,14 @@ namespace proxy {
 			co_return;
 		}
 	}
+
+	template net::awaitable<bool> dns_server::doh_http_post<tcp::socket>(
+		tcp::socket&, const dns_server::doh_url_info&,
+		const std::string&, std::string&);
+	template net::awaitable<bool> dns_server::doh_http_post<
+		net::ssl::stream<tcp::socket>>(
+		net::ssl::stream<tcp::socket>&, const dns_server::doh_url_info&,
+		const std::string&, std::string&);
 
 }
 

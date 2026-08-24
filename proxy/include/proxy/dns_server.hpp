@@ -189,6 +189,7 @@ namespace proxy {
 		// DoH 上游 URL 解析结果.
 		struct doh_url_info
 		{
+			std::string scheme;    // 上游协议: http 或 https.
 			std::string host;      // 服务器主机名（IP 或域名）.
 			uint16_t port { 443 }; // 端口.
 			std::string path;      // 请求路径（不含 query）.
@@ -213,9 +214,11 @@ namespace proxy {
 			net::ssl::stream<tcp::socket>& ssl_stream,
 			const doh_url_info& info);
 
-		// 经已建立的 TLS 连接发送 DoH POST 请求并读取响应，成功返回 true.
+		// 经已建立的连接发送 DoH POST 请求并读取响应（Stream 为 TLS 流或
+		// 明文 socket），成功返回 true.
+		template <typename Stream>
 		net::awaitable<bool> doh_http_post(
-			net::ssl::stream<tcp::socket>& ssl_stream,
+			Stream& stream,
 			const doh_url_info& info,
 			const std::string& dns_query, std::string& output);
 
