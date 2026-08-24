@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 /// 一条 proxy 配置.
@@ -20,12 +21,17 @@ class VpnConfig {
     this.tunPrefix = 0,
     List<String>? routes,
     List<String>? dns,
+    List<String>? dnsForeign,
+    this.dnsForeignDoh = '',
     this.testUrl = 'https://google.com',
     this.bypassCn = false,
   }) : proxyDomains = proxyDomains ?? [],
        proxyCidr = proxyCidr ?? [],
        routes = routes ?? [],
-       dns = dns ?? [];
+       dns = (dns == null || dns.isEmpty) ? ['223.6.6.6', '119.29.29.29'] : dns,
+       dnsForeign = (dnsForeign == null || dnsForeign.isEmpty)
+           ? ['8.8.8.8', '1.1.1.1']
+           : dnsForeign;
 
   String id;
   String name;
@@ -53,7 +59,18 @@ class VpnConfig {
   String tunAddress;
   int tunPrefix;
   List<String> routes;
+
+  /// 国内 DNS 列表（仅 IP），经 addDnsServer 注入，且未命中
+  /// proxy_domains 的查询由 native 直连这些服务器解析.
   List<String> dns;
+
+  /// 国外 DNS 列表（仅 IP），命中 proxy_domains 的查询经
+  /// proxy_pass 代理转发到这些服务器解析.
+  List<String> dnsForeign;
+
+  /// 国外 DoH URL（可选，如 https://dns.google/dns-query），命中
+  /// proxy_domains 的查询以 DoH 方式解析.
+  String dnsForeignDoh;
 
   // ---- UI 工具 ----
   String testUrl; // 测试连接的 URL, 用于运行页测量 VPN 延迟.
@@ -97,6 +114,24 @@ class VpnConfig {
     if (udpTimeout <= 0) {
       errors.add('UDP 超时需大于 0');
     }
+    final badDomestic = dns
+        .where((d) => InternetAddress.tryParse(d.trim()) == null)
+        .toList();
+    if (badDomestic.isNotEmpty) {
+      errors.add('国内 DNS 仅支持 IP 地址: ${badDomestic.join(', ')}');
+    }
+    final badForeign = dnsForeign
+        .where((d) => InternetAddress.tryParse(d.trim()) == null)
+        .toList();
+    if (badForeign.isNotEmpty) {
+      errors.add('国外 DNS 仅支持 IP 地址: ${badForeign.join(', ')}');
+    }
+    final doh = dnsForeignDoh.trim();
+    if (doh.isNotEmpty &&
+        !doh.startsWith('https://') &&
+        !doh.startsWith('http://')) {
+      errors.add('国外 DoH 需以 http:// 或 https:// 开头');
+    }
     final test = testUrl.trim();
     if (test.isEmpty ||
         (!test.startsWith('https://') && !test.startsWith('http://'))) {
@@ -125,6 +160,9 @@ class VpnConfig {
       if (proxyCidr.isNotEmpty) 'proxy_cidr': proxyCidr,
       'disable_check_cert': disableCheckCert,
       'udp_timeout': udpTimeout,
+      'dns_domestic': dns,
+      'dns_foreign': dnsForeign,
+      if (dnsForeignDoh.trim().isNotEmpty) 'dns_doh': dnsForeignDoh.trim(),
       if (launcherPort > 0) 'launcher_url': 'ws://127.0.0.1:$launcherPort',
     };
     return jsonEncode(map);
@@ -154,6 +192,8 @@ class VpnConfig {
     'tunPrefix': tunPrefix,
     'routes': routes,
     'dns': dns,
+    'dnsForeign': dnsForeign,
+    'dnsForeignDoh': dnsForeignDoh,
     'testUrl': testUrl,
     'bypassCn': bypassCn,
   };
@@ -171,6 +211,8 @@ class VpnConfig {
     tunPrefix: json['tunPrefix'] as int? ?? 0,
     routes: _strList(json['routes']),
     dns: _strList(json['dns']),
+    dnsForeign: _strList(json['dnsForeign']),
+    dnsForeignDoh: json['dnsForeignDoh'] as String? ?? '',
     testUrl: json['testUrl'] as String? ?? 'https://google.com',
     bypassCn: json['bypassCn'] as bool? ?? false,
   );

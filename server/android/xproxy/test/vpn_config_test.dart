@@ -20,6 +20,8 @@ void main() {
         tunPrefix: 24,
         routes: ['0.0.0.0/0'],
         dns: ['8.8.8.8'],
+        dnsForeign: ['1.1.1.1'],
+        dnsForeignDoh: 'https://dns.google/dns-query',
         testUrl: 'https://google.com',
         bypassCn: true,
       );
@@ -32,7 +34,30 @@ void main() {
       expect(restored.proxyCidr, ['1.1.1.0/24']);
       expect(restored.disableCheckCert, true);
       expect(restored.routes, ['0.0.0.0/0']);
+      expect(restored.dns, ['8.8.8.8']);
+      expect(restored.dnsForeign, ['1.1.1.1']);
+      expect(restored.dnsForeignDoh, 'https://dns.google/dns-query');
       expect(restored.bypassCn, true);
+    });
+
+    test('国内/国外 DNS 默认值与旧配置迁移', () {
+      final def = VpnConfig(id: '1', name: 'c');
+      expect(def.dns, ['223.6.6.6', '119.29.29.29']);
+      expect(def.dnsForeign, ['8.8.8.8', '1.1.1.1']);
+      expect(def.dnsForeignDoh, isEmpty);
+
+      // 旧配置无新字段时回退默认值.
+      final legacy = VpnConfig.fromJson({'id': '2', 'name': 'c'});
+      expect(legacy.dns, ['223.6.6.6', '119.29.29.29']);
+      expect(legacy.dnsForeign, ['8.8.8.8', '1.1.1.1']);
+
+      // 旧配置已有 dns 时原样迁移为国内 DNS.
+      final migrated = VpnConfig.fromJson({
+        'id': '3',
+        'name': 'c',
+        'dns': ['114.114.114.114'],
+      });
+      expect(migrated.dns, ['114.114.114.114']);
     });
 
     test('toProxyJson 含 proxy 原生键与 launcher_url', () {
@@ -43,6 +68,9 @@ void main() {
         tunMtu: 1400,
         proxyDomains: ['google.com'],
         proxyCidr: ['1.1.1.0/24'],
+        dns: ['223.6.6.6'],
+        dnsForeign: ['8.8.8.8'],
+        dnsForeignDoh: 'https://dns.google/dns-query',
       );
       final map =
           jsonDecode(c.toProxyJson(launcherPort: 12345)) as Map<String, dynamic>;
@@ -52,6 +80,9 @@ void main() {
       expect(map['tun_mtu'], 1400);
       expect(map['proxy_domains'], ['google.com']);
       expect(map['proxy_cidr'], ['1.1.1.0/24']);
+      expect(map['dns_domestic'], ['223.6.6.6']);
+      expect(map['dns_foreign'], ['8.8.8.8']);
+      expect(map['dns_doh'], 'https://dns.google/dns-query');
       expect(map['launcher_url'], 'ws://127.0.0.1:12345');
     });
 
@@ -83,6 +114,42 @@ void main() {
         id: '3',
         name: 'c',
         proxyPass: 'https://user:pass@host:443',
+      );
+      expect(good.validate(), isEmpty);
+    });
+
+    test('校验: DNS 仅支持 IP 且 DoH 需为 URL', () {
+      final badIp = VpnConfig(
+        id: '1',
+        name: 'a',
+        proxyPass: 'https://user:pass@host:443',
+        dns: ['not-an-ip'],
+      );
+      expect(badIp.validate(), isNotEmpty);
+
+      final badForeign = VpnConfig(
+        id: '2',
+        name: 'b',
+        proxyPass: 'https://user:pass@host:443',
+        dnsForeign: ['example.com'],
+      );
+      expect(badForeign.validate(), isNotEmpty);
+
+      final badDoh = VpnConfig(
+        id: '3',
+        name: 'c',
+        proxyPass: 'https://user:pass@host:443',
+        dnsForeignDoh: 'dns.google/dns-query',
+      );
+      expect(badDoh.validate(), isNotEmpty);
+
+      final good = VpnConfig(
+        id: '4',
+        name: 'd',
+        proxyPass: 'https://user:pass@host:443',
+        dns: ['223.6.6.6'],
+        dnsForeign: ['8.8.8.8'],
+        dnsForeignDoh: 'https://dns.google/dns-query',
       );
       expect(good.validate(), isEmpty);
     });

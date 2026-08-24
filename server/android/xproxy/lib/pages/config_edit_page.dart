@@ -40,6 +40,12 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
   late final TextEditingController _dns = TextEditingController(
     text: c.dns.join('\n'),
   );
+  late final TextEditingController _dnsForeign = TextEditingController(
+    text: c.dnsForeign.join('\n'),
+  );
+  late final TextEditingController _dnsForeignDoh = TextEditingController(
+    text: c.dnsForeignDoh,
+  );
   late final TextEditingController _testUrl = TextEditingController(
     text: c.testUrl,
   );
@@ -58,6 +64,8 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
       _proxyCidr,
       _routes,
       _dns,
+      _dnsForeign,
+      _dnsForeignDoh,
       _testUrl,
     ]) {
       t.dispose();
@@ -86,6 +94,8 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           ..proxyCidr = _lines(_proxyCidr.text)
           ..routes = _lines(_routes.text)
           ..dns = _lines(_dns.text)
+          ..dnsForeign = _lines(_dnsForeign.text)
+          ..dnsForeignDoh = _dnsForeignDoh.text.trim()
           ..testUrl = _testUrl.text.trim()
           ..disableCheckCert = _disableCheckCert
           ..bypassCn = _bypassCn;
@@ -187,8 +197,27 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             controller: _dns,
             maxLines: 2,
             decoration: const InputDecoration(
-              labelText: 'DNS 服务器 (每行一个)',
-              hintText: '8.8.8.8\n114.114.114.114',
+              labelText: '国内 DNS (每行一个 IP)',
+              hintText: '223.6.6.6\n119.29.29.29',
+              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _dnsForeign,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              labelText: '国外 DNS (每行一个 IP)',
+              hintText: '8.8.8.8\n1.1.1.1',
+              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _dnsForeignDoh,
+            decoration: const InputDecoration(
+              labelText: '国外 DoH URL (留空不使用)',
+              hintText: 'https://dns.google/dns-query',
               border: OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
           ),
