@@ -38,10 +38,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
     text: c.dns.join('\n'),
   );
   late final TextEditingController _dnsForeign = TextEditingController(
-    text: c.dnsForeign.join('\n'),
-  );
-  late final TextEditingController _dnsForeignDoh = TextEditingController(
-    text: c.dnsForeignDoh,
+    text: c.joinForeignDns().join('\n'),
   );
   late final TextEditingController _testUrl = TextEditingController(
     text: c.testUrl,
@@ -61,7 +58,6 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
       _proxyCidr,
       _dns,
       _dnsForeign,
-      _dnsForeignDoh,
       _testUrl,
     ]) {
       t.dispose();
@@ -79,6 +75,9 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           .toList();
 
   void _save() {
+    final (foreignIps, foreignDoh) = VpnConfig.splitForeignDns(
+      _lines(_dnsForeign.text),
+    );
     final vpn =
         c
           ..name = _name.text.trim().isEmpty ? '未命名' : _name.text.trim()
@@ -89,8 +88,8 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           ..proxyDomains = _lines(_proxyDomains.text)
           ..proxyCidr = _lines(_proxyCidr.text)
           ..dns = _lines(_dns.text)
-          ..dnsForeign = _lines(_dnsForeign.text)
-          ..dnsForeignDoh = _dnsForeignDoh.text.trim()
+          ..dnsForeign = foreignIps
+          ..dnsForeignDoh = foreignDoh
           ..testUrl = _testUrl.text.trim()
           ..disableCheckCert = _disableCheckCert
           ..bypassCn = _bypassCn;
@@ -162,19 +161,9 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             controller: _dnsForeign,
             maxLines: 2,
             decoration: const InputDecoration(
-              labelText: '国外 DNS (每行一个 IP)',
-              hintText: '8.8.8.8\n1.1.1.1',
-              helperText: '国外域名经代理转发解析',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _dnsForeignDoh,
-            decoration: const InputDecoration(
-              labelText: '国外 DoH URL (留空不使用)',
-              hintText: 'https://dns.google/dns-query',
-              helperText: '配置后国外域名以 DoH 方式解析',
+              labelText: '国外 DNS / DoH (每行一个)',
+              hintText: '8.8.8.8\nhttps://dns.google/dns-query',
+              helperText: 'IP 为 DNS 服务器, http(s):// 开头为 DoH',
               border: OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
           ),

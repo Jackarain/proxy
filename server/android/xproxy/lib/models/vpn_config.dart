@@ -69,6 +69,27 @@ class VpnConfig {
   /// proxy_domains 的查询以 DoH 方式解析.
   String dnsForeignDoh;
 
+  /// 国外 DNS/DoH 输入行拆分: IP 归入国外 DNS 列表, http(s):// 开头
+  /// 视为 DoH URL（多个 DoH 时取最后一个）.
+  static (List<String>, String) splitForeignDns(List<String> lines) {
+    final ips = <String>[];
+    String doh = '';
+    for (final line in lines) {
+      final s = line.trim();
+      if (s.isEmpty) continue;
+      if (s.startsWith('http://') || s.startsWith('https://')) {
+        doh = s;
+      } else {
+        ips.add(s);
+      }
+    }
+    return (ips, doh);
+  }
+
+  /// 国外 DNS/DoH 展示合并行（DoH 追加在末尾）.
+  List<String> joinForeignDns() =>
+      [...dnsForeign, if (dnsForeignDoh.isNotEmpty) dnsForeignDoh];
+
   // ---- UI 工具 ----
   String testUrl; // 测试连接的 URL, 用于运行页测量 VPN 延迟.
 

@@ -165,6 +165,28 @@ void main() {
       });
       expect(c.proxyDomains, ['google.com', 'youtube.com', 'example.com', 'test.com']);
     });
+
+    test('国外 DNS/DoH 单输入框拆分与合并', () {
+      final (ips, doh) = VpnConfig.splitForeignDns(
+        ['8.8.8.8', '1.1.1.1', 'https://dns.google/dns-query', ''],
+      );
+      expect(ips, ['8.8.8.8', '1.1.1.1']);
+      expect(doh, 'https://dns.google/dns-query');
+
+      final c = VpnConfig(
+        id: '1',
+        name: 'c',
+        dnsForeign: ['8.8.8.8', '1.1.1.1'],
+        dnsForeignDoh: 'https://dns.google/dns-query',
+      );
+      expect(
+        c.joinForeignDns(),
+        ['8.8.8.8', '1.1.1.1', 'https://dns.google/dns-query'],
+      );
+
+      final noDoh = VpnConfig(id: '2', name: 'c', dnsForeign: ['8.8.8.8']);
+      expect(noDoh.joinForeignDns(), ['8.8.8.8']);
+    });
   });
 
   group('StorageService', () {
