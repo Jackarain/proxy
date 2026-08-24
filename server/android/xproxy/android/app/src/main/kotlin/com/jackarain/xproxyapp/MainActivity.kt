@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
+import java.util.concurrent.Executors
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
@@ -22,6 +23,9 @@ class MainActivity : FlutterActivity() {
     }
 
     private var pendingPrepare: MethodChannel.Result? = null
+
+    /** VpnService 建立 (含逐条 addRoute) 在后台线程执行, 避免阻塞主线程. */
+    private val tunExecutor = Executors.newSingleThreadExecutor()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -67,14 +71,18 @@ class MainActivity : FlutterActivity() {
                         if (instance == null) {
                             result.error("NO_SERVICE", "VpnService 未运行", null)
                         } else {
-                            try {
-                                result.success(
-                                    instance.establishTun(
-                                        address, prefix, mtu, routes, dns, session
+                            // VpnService 建立与 addRoute 在后台线程执行: bypassCn 时
+                            // 路由多达上万条, 主线程同步执行会阻塞 UI 造成卡顿.
+                            tunExecutor.execute {
+                                try {
+                                    result.success(
+                                        instance.establishTun(
+                                            address, prefix, mtu, routes, dns, session
+                                        )
                                     )
-                                )
-                            } catch (e: Exception) {
-                                result.error("ESTABLISH_FAILED", e.message, null)
+                                } catch (e: Exception) {
+                                    result.error("ESTABLISH_FAILED", e.message, null)
+                                }
                             }
                         }
                     }
