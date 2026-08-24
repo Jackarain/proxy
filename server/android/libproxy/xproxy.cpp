@@ -129,6 +129,12 @@ bool config_to_option(const std::string& config, proxy::proxy_server_option& opt
 	if (auto it = obj.if_contains("dns_doh"); it && it->is_string())
 		opt.dns_doh_ = it->as_string().c_str();
 
+	// DNS 查询结果缓存（TUN 内重复查询命中直接回包）.
+	if (auto it = obj.if_contains("dns_cache_size"); it && it->is_int64())
+		opt.dns_cache_size_ = static_cast<int>(it->as_int64());
+	if (auto it = obj.if_contains("dns_cache_ttl"); it && it->is_int64())
+		opt.dns_cache_ttl_ = static_cast<int>(it->as_int64());
+
 	// launcher 控制通道 (Android app 端 WebSocket 服务器地址).
 	if (auto it = obj.if_contains("launcher_url"); it && it->is_string())
 		opt.launcher_url_ = it->as_string().c_str();
