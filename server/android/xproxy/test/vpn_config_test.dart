@@ -18,7 +18,6 @@ void main() {
         disableCheckCert: true,
         tunAddress: '10.0.0.2',
         tunPrefix: 24,
-        routes: ['0.0.0.0/0'],
         dns: ['8.8.8.8'],
         dnsForeign: ['1.1.1.1'],
         dnsForeignDoh: 'https://dns.google/dns-query',
@@ -33,7 +32,6 @@ void main() {
       expect(restored.proxyDomains, ['google.com', 'youtube.com']);
       expect(restored.proxyCidr, ['1.1.1.0/24']);
       expect(restored.disableCheckCert, true);
-      expect(restored.routes, ['0.0.0.0/0']);
       expect(restored.dns, ['8.8.8.8']);
       expect(restored.dnsForeign, ['1.1.1.1']);
       expect(restored.dnsForeignDoh, 'https://dns.google/dns-query');

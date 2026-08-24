@@ -156,7 +156,7 @@ class LauncherServer {
 
   /// 控制通道连接建立后: 以用户配置的地址建立 VpnService tun, 再注入
   /// libproxy (经 set_tun_fd). tun2socks 无需服务端分配地址, 直接使用
-  /// VpnConfig 中的 tunAddress/routes/dns 配置.
+  /// VpnConfig 中的 tunAddress/dns 配置.
   Future<void> _handleEstablishTun() async {
     if (_tunEstablished) return;
     final cfg = _vpnConfig ?? const <String, dynamic>{};
@@ -167,12 +167,8 @@ class LauncherServer {
       // 绕过中国大陆: 仅非中国段接入 VPN, 中国段走系统物理网络直连.
       final cn = await CnIpList.update();
       routes = CnIpList.vpnRoutes(cn);
-      if (routes.isEmpty) {
-        // 无缓存且拉取失败时回退用户配置路由.
-        routes = _strList(cfg['routes']);
-      }
     } else {
-      routes = _strList(cfg['routes']);
+      routes = const [];
     }
     // 未配置路由时默认全隧道 (IPv4 + IPv6).
     if (routes.isEmpty) routes = ['0.0.0.0/0', '::/0'];

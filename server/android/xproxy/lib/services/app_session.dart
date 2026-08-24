@@ -104,7 +104,6 @@ class AppSession extends ChangeNotifier {
       );
       return old.tunAddress != config.tunAddress ||
           old.tunPrefix != config.tunPrefix ||
-          old.routes.join(',') != config.routes.join(',') ||
           old.dns.join(',') != config.dns.join(',') ||
           old.dnsForeign.join(',') != config.dnsForeign.join(',') ||
           old.dnsForeignDoh != config.dnsForeignDoh ||

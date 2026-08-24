@@ -34,9 +34,6 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
   late final TextEditingController _proxyCidr = TextEditingController(
     text: c.proxyCidr.join('\n'),
   );
-  late final TextEditingController _routes = TextEditingController(
-    text: c.routes.join('\n'),
-  );
   late final TextEditingController _dns = TextEditingController(
     text: c.dns.join('\n'),
   );
@@ -62,7 +59,6 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
       _tunPrefix,
       _proxyDomains,
       _proxyCidr,
-      _routes,
       _dns,
       _dnsForeign,
       _dnsForeignDoh,
@@ -92,7 +88,6 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           ..tunPrefix = _toInt(_tunPrefix.text, 0)
           ..proxyDomains = _lines(_proxyDomains.text)
           ..proxyCidr = _lines(_proxyCidr.text)
-          ..routes = _lines(_routes.text)
           ..dns = _lines(_dns.text)
           ..dnsForeign = _lines(_dnsForeign.text)
           ..dnsForeignDoh = _dnsForeignDoh.text.trim()
@@ -179,16 +174,6 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: const InputDecoration(
               labelText: 'MTU',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _routes,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'VPN 路由 (每行一个 CIDR, 空为全隧道)',
-              hintText: '0.0.0.0/0',
               border: OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
           ),

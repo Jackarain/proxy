@@ -6,7 +6,7 @@ import 'dart:math';
 ///
 /// 同时包含 proxy 原生配置字段 (proxy_pass/proxy_domains/proxy_cidr 等,
 /// 通过 json 传入 libxproxy.so) 与 Android VpnService 专用字段
-/// (tunAddress/routes/dns 等).
+/// (tunAddress/dns 等).
 class VpnConfig {
   VpnConfig({
     required this.id,
@@ -19,7 +19,6 @@ class VpnConfig {
     this.udpTimeout = 300,
     this.tunAddress = '',
     this.tunPrefix = 0,
-    List<String>? routes,
     List<String>? dns,
     List<String>? dnsForeign,
     this.dnsForeignDoh = '',
@@ -27,7 +26,6 @@ class VpnConfig {
     this.bypassCn = false,
   }) : proxyDomains = proxyDomains ?? [],
        proxyCidr = proxyCidr ?? [],
-       routes = routes ?? [],
        dns = (dns == null || dns.isEmpty) ? ['223.6.6.6', '119.29.29.29'] : dns,
        dnsForeign = (dnsForeign == null || dnsForeign.isEmpty)
            ? ['8.8.8.8', '1.1.1.1']
@@ -58,7 +56,6 @@ class VpnConfig {
   // ---- Android VpnService ----
   String tunAddress;
   int tunPrefix;
-  List<String> routes;
 
   /// 国内 DNS 列表（仅 IP），经 addDnsServer 注入，且未命中
   /// proxy_domains 的查询由 native 直连这些服务器解析.
@@ -190,7 +187,6 @@ class VpnConfig {
     'udpTimeout': udpTimeout,
     'tunAddress': tunAddress,
     'tunPrefix': tunPrefix,
-    'routes': routes,
     'dns': dns,
     'dnsForeign': dnsForeign,
     'dnsForeignDoh': dnsForeignDoh,
@@ -209,7 +205,6 @@ class VpnConfig {
     udpTimeout: json['udpTimeout'] as int? ?? 300,
     tunAddress: json['tunAddress'] as String? ?? '',
     tunPrefix: json['tunPrefix'] as int? ?? 0,
-    routes: _strList(json['routes']),
     dns: _strList(json['dns']),
     dnsForeign: _strList(json['dnsForeign']),
     dnsForeignDoh: json['dnsForeignDoh'] as String? ?? '',
