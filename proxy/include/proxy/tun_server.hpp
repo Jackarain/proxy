@@ -179,6 +179,12 @@ namespace proxy {
 		// 读取上游数据并转发到客户端的接收协程.
 		net::awaitable<void> rx_loop();
 
+		// 处理上游读取结束：EOF 向客户端发 FIN，异常直接关闭.
+		void handle_read_error(boost::system::error_code ec, size_t n);
+
+		// 将 payload 按 MSS 切片发送给客户端.
+		void send_to_client(const char* data, size_t len, uint16_t mss);
+
 		// 构造 TCP 段并写回 TUN 设备.
 		void send_tcp(uint32_t seq, uint32_t ack, uint8_t flags,
 			const char* payload, size_t payload_len,

@@ -1207,41 +1207,56 @@ namespace proxy {
 					<< m_key.dst_port << " len=" << n;
 			}
 
+			// 读取结束：处理 EOF/FIN 或异常后退出循环.
 			if (ec || n == 0)
 			{
-				if (ec == net::error::eof || n == 0)
-				{
-					// 上游关闭：向客户端发送 FIN.
-					if (!m_upstream_eof)
-					{
-						m_upstream_eof = true;
-						send_fin();
-					}
-					if (m_client_fin)
-						close();
-				}
-				else
-				{
-					// 异常：直接关闭.
-					close();
-				}
-				co_return;
+				handle_read_error(ec, n);
+				break;
 			}
 
 			// 按 MSS 切片发送给客户端.
-			size_t off = 0;
-			while (off < n)
-			{
-				size_t chunk = (std::min)(n - off, static_cast<size_t>(mss));
-				send_tcp(m_server_next_seq, m_client_ack_seq,
-					tcp_flag_ack | tcp_flag_psh,
-					buffer + off, chunk);
-				m_server_next_seq += static_cast<uint32_t>(chunk);
-				off += chunk;
-			}
+			send_to_client(buffer, n, mss);
 		}
 
 		co_return;
+	}
+
+	// handle_read_error 处理上游读取结束：EOF 向客户端发 FIN（客户端也
+	// FIN 时关闭连接），异常直接关闭.
+	void tun_tcp_flow::handle_read_error(
+		boost::system::error_code ec, size_t n)
+	{
+		if (ec == net::error::eof || n == 0)
+		{
+			// 上游关闭：向客户端发送 FIN.
+			if (!m_upstream_eof)
+			{
+				m_upstream_eof = true;
+				send_fin();
+			}
+			if (m_client_fin)
+				close();
+		}
+		else
+		{
+			// 异常：直接关闭.
+			close();
+		}
+	}
+
+	// send_to_client 将 payload 按 MSS 切片发送给客户端.
+	void tun_tcp_flow::send_to_client(const char* data, size_t len, uint16_t mss)
+	{
+		size_t off = 0;
+		while (off < len)
+		{
+			size_t chunk = (std::min)(len - off, static_cast<size_t>(mss));
+			send_tcp(m_server_next_seq, m_client_ack_seq,
+				tcp_flag_ack | tcp_flag_psh,
+				data + off, chunk);
+			m_server_next_seq += static_cast<uint32_t>(chunk);
+			off += chunk;
+		}
 	}
 
 	void tun_tcp_flow::send_tcp(uint32_t seq, uint32_t ack, uint8_t flags,
