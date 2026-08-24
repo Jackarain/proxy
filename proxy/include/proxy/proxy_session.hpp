@@ -385,6 +385,18 @@ namespace proxy {
 		// proxy_pass_ 转发，未命中直连目标。
 		std::vector<std::string> proxy_cidr_;
 
+		// DNS 分流配置（Android app 端）.
+		//
+		// - dns_domestic_：国内 DNS 列表（仅 IP），未命中 proxy_domains_
+		//   的 DNS 查询直连这些服务器解析。
+		// - dns_foreign_：国外 DNS 列表（仅 IP），命中 proxy_domains_ 的
+		//   DNS 查询经 proxy_pass_ 转发到这些服务器解析。
+		// - dns_doh_：国外 DoH URL（可选），命中 proxy_domains_ 的查询
+		//   以 DoH 方式解析；与 proxy_pass_ 同服务时直连，否则经代理转发。
+		std::vector<std::string> dns_domestic_;
+		std::vector<std::string> dns_foreign_;
+		std::string dns_doh_;
+
 		// 向外连接发起时使用的 SO_MARK（Linux）标记。
 		//
 		// - 设置后，所有由本代理发起的 TCP/UDP 出站连接都会带上此标记，

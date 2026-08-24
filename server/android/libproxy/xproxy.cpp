@@ -123,6 +123,12 @@ bool config_to_option(const std::string& config, proxy::proxy_server_option& opt
 	opt.proxy_domains_ = json_string_array(obj, "proxy_domains");
 	opt.proxy_cidr_ = json_string_array(obj, "proxy_cidr");
 
+	// DNS 分流（国内/国外 DNS 与国外 DoH）.
+	opt.dns_domestic_ = json_string_array(obj, "dns_domestic");
+	opt.dns_foreign_ = json_string_array(obj, "dns_foreign");
+	if (auto it = obj.if_contains("dns_doh"); it && it->is_string())
+		opt.dns_doh_ = it->as_string().c_str();
+
 	// launcher 控制通道 (Android app 端 WebSocket 服务器地址).
 	if (auto it = obj.if_contains("launcher_url"); it && it->is_string())
 		opt.launcher_url_ = it->as_string().c_str();
