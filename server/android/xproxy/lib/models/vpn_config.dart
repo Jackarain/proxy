@@ -103,7 +103,7 @@ class VpnConfig {
     if (pass.isEmpty) {
       errors.add('请填写上游代理地址');
     } else if (!_isValidProxyUrl(pass)) {
-      errors.add('代理地址需以 http(s):// 或 socks(4/5):// 开头');
+      errors.add('代理地址需以 http(s):// 或 socks(4/5/5s):// 开头');
     }
     if (tunMtu <= 0 || tunMtu > 65535) {
       errors.add('MTU 需在 1-65535 之间');
@@ -141,7 +141,8 @@ class VpnConfig {
     return url.startsWith('http://') ||
         url.startsWith('https://') ||
         url.startsWith('socks4://') ||
-        url.startsWith('socks5://');
+        url.startsWith('socks5://') ||
+        url.startsWith('socks5s://');
   }
 
   VpnConfig copy() => VpnConfig.fromJson(toJson());

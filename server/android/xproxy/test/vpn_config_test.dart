@@ -114,6 +114,13 @@ void main() {
         proxyPass: 'https://user:pass@host:443',
       );
       expect(good.validate(), isEmpty);
+
+      final socks5s = VpnConfig(
+        id: '4',
+        name: 'd',
+        proxyPass: 'socks5s://user:pass@host:1080',
+      );
+      expect(socks5s.validate(), isEmpty);
     });
 
     test('校验: DNS 仅支持 IP 且 DoH 需为 URL', () {
