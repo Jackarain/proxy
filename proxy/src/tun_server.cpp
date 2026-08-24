@@ -1838,7 +1838,10 @@ namespace proxy {
 				if (foreign)
 				{
 					// 国外域名：经代理转发 DNS 请求或发起 DoH.
-					if (!m_option.dns_doh_.empty())
+					// DoH 仅对 http(s) 代理生效（CONNECT 隧道为 HTTP 协议）；
+					// socks 上游回退为原始查询经 socks 转发.
+					if (!m_option.dns_doh_.empty() &&
+						scheme.starts_with("http"))
 					{
 						// 与 proxy_pass 同服务的 DoH 直连，否则经代理 CONNECT.
 						std::string doh_host;
