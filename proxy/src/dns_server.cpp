@@ -1166,7 +1166,17 @@ namespace proxy {
 		uint16_t qtype = DNS_TYPE_A;
 		bool cd = false;
 		bool do_flag = false;
-		dns_parse_query(query, qname, qtype);
+		// 报文无法解析（过短或域名格式错误）时返回 FORMERR，与本地解析路径
+		// 一致，不再将损坏报文转发上游.
+		if (!dns_parse_query(query, qname, qtype))
+		{
+			auto resp = dns_build_response(query, 1, {});
+			if (!resp.empty() && !co_await send_response(sock, peer, resp))
+				co_return;
+			XLOG_DBG << "udp dns query malformed from " << peer
+				<< ", return formerr";
+			co_return;
+		}
 		dns_query_flags(query, cd, do_flag);
 
 		// 禁用 IPv6 解析返回：AAAA 查询直接返回空应答（NODATA），不转发上游.
