@@ -149,140 +149,158 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isNew ? '添加配置' : '编辑配置'),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: Text(_saving ? '拉取中…' : '保存'),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _section('基本'),
-          TextField(
-            controller: _name,
-            decoration: const InputDecoration(
-              labelText: '名称',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.isNew ? '添加配置' : '编辑配置'),
+          actions: [
+            TextButton(
+              onPressed: _saving ? null : _save,
+              child: Text(_saving ? '拉取中…' : '保存'),
             ),
+          ],
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: '基本'),
+              Tab(text: 'DNS 配置'),
+              Tab(text: '分流'),
+            ],
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _proxyPass,
-            decoration: const InputDecoration(
-              labelText: '上游代理 proxy_pass',
-              hintText: 'https://user:pass@host:443',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('关闭上游证书校验'),
-            subtitle: const Text('自签证书场景启用'),
-            value: _disableCheckCert,
-            onChanged: (v) => setState(() => _disableCheckCert = v),
-          ),
-
-          _section('DNS'),
-          Text(
-            '国内 DNS 用于未命中分流规则的域名直连解析，国外 DNS/DoH '
-            '用于命中分流规则的域名经代理转发解析',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _dns,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: '国内 DNS (每行一个 IP)',
-              hintText: '223.6.6.6\n119.29.29.29',
-              helperText: '国内域名直连解析',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _dnsForeign,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: '国外 DNS / DoH (每行一个)',
-              hintText: '8.8.8.8\nhttps://dns.google/dns-query',
-              helperText: 'IP 为 DNS 服务器, http(s):// 开头为 DoH',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('DNS 缓存'),
-            subtitle: const Text('缓存解析结果，重复查询直接回包'),
-            value: _dnsCache,
-            onChanged: (v) => setState(() => _dnsCache = v),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('禁用 IPv6 解析'),
-            subtitle: const Text('AAAA 查询直接返回空应答，避免上游 DoH 不支持 IPv6 时每次等待'),
-            value: _noIpv6,
-            onChanged: (v) => setState(() => _noIpv6 = v),
-          ),
-
-          _section('分流规则'),
-          TextField(
-            controller: _proxyDomains,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: '代理域名 (每行一个, 支持列表 URL)',
-              hintText: 'google.com\nyoutube.com\nhttps://example.com/proxy.txt',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _proxyCidr,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: '代理 CIDR (每行一个, 支持列表 URL)',
-              hintText: '1.1.1.0/24\nhttps://example.com/cidr.txt',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('绕过中国大陆'),
-            subtitle: const Text('拉取中国 IP 段, 非中国段接入 VPN'),
-            value: _bypassCn,
-            onChanged: (v) => setState(() => _bypassCn = v),
-          ),
-
-          _section('测试'),
-          TextField(
-            controller: _testUrl,
-            decoration: const InputDecoration(
-              labelText: '测试连接 URL',
-              hintText: 'https://google.com',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-        ],
+        ),
+        body: TabBarView(
+          children: [
+            _buildBasicTab(context),
+            _buildDnsTab(context),
+            _buildProxyTab(context),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _section(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 8),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.bold,
+  Widget _buildBasicTab(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        TextField(
+          controller: _name,
+          decoration: const InputDecoration(
+            labelText: '名称',
+            border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+          ),
         ),
-      ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _proxyPass,
+          decoration: const InputDecoration(
+            labelText: '上游代理 proxy_pass',
+            hintText: '******host:443',
+            border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('关闭上游证书校验'),
+          subtitle: const Text('自签证书场景启用'),
+          value: _disableCheckCert,
+          onChanged: (v) => setState(() => _disableCheckCert = v),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _testUrl,
+          decoration: const InputDecoration(
+            labelText: '测试连接 URL',
+            hintText: 'https://google.com',
+            border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDnsTab(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          '国内 DNS 用于未命中分流规则的域名直连解析，国外 DNS/DoH '
+          '用于命中分流规则的域名经代理转发解析',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _dns,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            labelText: '国内 DNS (每行一个 IP)',
+            hintText: '223.6.6.6\n119.29.29.29',
+            helperText: '国内域名直连解析',
+            border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _dnsForeign,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            labelText: '国外 DNS / DoH (每行一个)',
+            hintText: '8.8.8.8\nhttps://dns.google/dns-query',
+            helperText: 'IP 为 DNS 服务器, http(s):// 开头为 DoH',
+            border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+          ),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('DNS 缓存'),
+          subtitle: const Text('缓存解析结果，重复查询直接回包'),
+          value: _dnsCache,
+          onChanged: (v) => setState(() => _dnsCache = v),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('禁用 IPv6 解析'),
+          subtitle: const Text('AAAA 查询直接返回空应答，避免上游 DoH 不支持 IPv6 时每次等待'),
+          value: _noIpv6,
+          onChanged: (v) => setState(() => _noIpv6 = v),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProxyTab(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        TextField(
+          controller: _proxyDomains,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: '代理域名 (每行一个, 支持列表 URL)',
+            hintText: 'google.com\nyoutube.com\nhttps://example.com/proxy.txt',
+            border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _proxyCidr,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: '代理 CIDR (每行一个, 支持列表 URL)',
+            hintText: '1.1.1.0/24\nhttps://example.com/cidr.txt',
+            border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('绕过中国大陆'),
+          subtitle: const Text('拉取中国 IP 段, 非中国段接入 VPN'),
+          value: _bypassCn,
+          onChanged: (v) => setState(() => _bypassCn = v),
+        ),
+      ],
     );
   }
 }
