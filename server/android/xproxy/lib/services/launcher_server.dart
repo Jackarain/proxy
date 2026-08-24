@@ -161,7 +161,7 @@ class LauncherServer {
     if (_tunEstablished) return;
     final cfg = _vpnConfig ?? const <String, dynamic>{};
     final (address, prefix) = _tunAddress(cfg);
-    final mtu = (cfg['tunMtu'] as num?)?.toInt() ?? 1400;
+    final mtu = (cfg['tunMtu'] as num?)?.toInt() ?? 1500;
     List<String> routes;
     if (cfg['bypassCn'] == true) {
       // 绕过中国大陆: 仅非中国段接入 VPN, 中国段走系统物理网络直连.

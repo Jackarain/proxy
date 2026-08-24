@@ -12,7 +12,7 @@ void main() {
         id: 'abc',
         name: '测试',
         proxyPass: 'https://user:pass@host:443',
-        tunMtu: 1400,
+        tunMtu: 1500,
         proxyDomains: ['google.com', 'youtube.com'],
         proxyCidr: ['1.1.1.0/24'],
         disableCheckCert: true,
@@ -29,7 +29,7 @@ void main() {
       expect(restored.id, c.id);
       expect(restored.name, c.name);
       expect(restored.proxyPass, c.proxyPass);
-      expect(restored.tunMtu, 1400);
+      expect(restored.tunMtu, 1500);
       expect(restored.proxyDomains, ['google.com', 'youtube.com']);
       expect(restored.proxyCidr, ['1.1.1.0/24']);
       expect(restored.disableCheckCert, true);
@@ -65,7 +65,7 @@ void main() {
         id: 'abc',
         name: '测试',
         proxyPass: 'https://user:pass@host:443',
-        tunMtu: 1400,
+        tunMtu: 1500,
         proxyDomains: ['google.com'],
         proxyCidr: ['1.1.1.0/24'],
         dns: ['223.6.6.6'],
@@ -77,7 +77,7 @@ void main() {
       expect(map['proxy_pass'], 'https://user:pass@host:443');
       expect(map['tun'], true);
       expect(map['tun_wait_fd'], true);
-      expect(map['tun_mtu'], 1400);
+      expect(map['tun_mtu'], 1500);
       expect(map['proxy_domains'], ['google.com']);
       expect(map['proxy_cidr'], ['1.1.1.0/24']);
       expect(map['dns_domestic'], ['223.6.6.6']);

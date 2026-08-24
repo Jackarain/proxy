@@ -429,7 +429,6 @@ class _ConfigListPageState extends State<ConfigListPage> {
     b.write(
       '代理: ${config.proxyPass.isEmpty ? '未配置 proxy_pass' : config.proxyPass}',
     );
-    if (config.tunMtu > 0) b.write(', MTU ${config.tunMtu}');
     if (config.proxyDomains.isNotEmpty || config.proxyCidr.isNotEmpty) {
       b.write(', 分流: ${config.proxyDomains.length + config.proxyCidr.length} 条');
     }

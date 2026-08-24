@@ -59,7 +59,7 @@ class MainActivity : FlutterActivity() {
                     "establish_tun" -> {
                         val address = call.argument<String>("address") ?: ""
                         val prefix = call.argument<Int>("prefix") ?: 24
-                        val mtu = call.argument<Int>("mtu") ?: 1400
+                        val mtu = call.argument<Int>("mtu") ?: 1500
                         val routes = call.argument<List<String>>("routes") ?: emptyList()
                         val dns = call.argument<List<String>>("dns") ?: emptyList()
                         val session = call.argument<String>("session") ?: "proxy"

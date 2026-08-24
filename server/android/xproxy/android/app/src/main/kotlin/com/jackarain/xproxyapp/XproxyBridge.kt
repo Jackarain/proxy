@@ -31,7 +31,7 @@ object XproxyBridge {
         val out = JSONObject()
         out.put("proxy_pass", cfg.optString("proxyPass", ""))
         out.put("tun", true)
-        out.put("tun_mtu", cfg.optInt("tunMtu", 1400))
+        out.put("tun_mtu", cfg.optInt("tunMtu", 1500))
         out.put("tun_wait_fd", true)
         if (cfg.has("proxyDomains")) {
             out.put("proxy_domains", cfg.optJSONArray("proxyDomains") ?: JSONArray())
