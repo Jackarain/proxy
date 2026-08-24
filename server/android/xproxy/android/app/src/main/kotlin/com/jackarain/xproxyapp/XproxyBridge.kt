@@ -50,6 +50,12 @@ object XproxyBridge {
         if (doh.isNotEmpty()) {
             out.put("dns_doh", doh)
         }
+        // DNS 查询结果缓存与禁用 IPv6 解析.
+        if (cfg.optBoolean("dnsCache", true)) {
+            out.put("dns_cache_size", 4096)
+            out.put("dns_cache_ttl", 300)
+        }
+        out.put("dns_no_ipv6", cfg.optBoolean("noIpv6", true))
         out.put("disable_check_cert", cfg.optBoolean("disableCheckCert", true))
         out.put("udp_timeout", cfg.optInt("udpTimeout", 300))
         out.put("launcher_url", "ws://127.0.0.1:$launcherPort")
