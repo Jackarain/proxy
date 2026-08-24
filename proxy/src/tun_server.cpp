@@ -2631,7 +2631,15 @@ namespace proxy {
 		st.conn_total = m_conn_total.load();
 		{
 			std::lock_guard<std::mutex> lk(m_flows_mutex);
-			st.active_connections = m_tcp_flows.size() + m_udp_flows.size();
+			size_t active = m_tcp_flows.size();
+			// DNS 查询流（目标 53 端口）为内部基础设施流量, 不纳入活跃连接.
+			for (auto& [key, flow] : m_udp_flows)
+			{
+				if (flow->m_target.port() == 53)
+					continue;
+				++active;
+			}
+			st.active_connections = active;
 		}
 		return st;
 	}
@@ -2709,6 +2717,10 @@ namespace proxy {
 
 		for (auto& flow : udp_flows)
 		{
+			// DNS 查询流（目标 53 端口）不列入会话明细, 避免大量
+			// 查询刷屏会话列表.
+			if (flow->m_target.port() == 53)
+				continue;
 			std::string client = flow->m_client.address().to_string() +
 				":" + std::to_string(flow->m_client.port());
 			std::string target = flow->m_target.address().to_string() +
@@ -3162,7 +3174,10 @@ namespace proxy {
 					client, target, dns_qname);
 				m_udp_flows.emplace(key, flow);
 				created = true;
-				++m_conn_total;
+				// DNS 查询流（目标 53 端口）为内部基础设施流量,
+				// 不纳入累计连接统计.
+				if (pkt.dst_port != 53)
+					++m_conn_total;
 			}
 		}
 
