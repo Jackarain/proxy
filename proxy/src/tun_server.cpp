@@ -1834,14 +1834,28 @@ namespace proxy {
 	net::awaitable<bool> tun_udp_flow::do_connect_udp(tcp::socket sock)
 	{
 		auto self = shared_from_this();
-		boost::system::error_code ec;
-
-		const auto& proxy_url = *m_option.proxy_pass_;
 
 		if (!co_await make_control_stream(std::move(sock)))
 			co_return false;
 
-		// 构建 RFC 9298 CONNECT-UDP 请求（absolute-form URI）.
+		// 发送 RFC 9298 CONNECT-UDP 请求并校验 101 响应.
+		if (!co_await send_connect_udp_request())
+			co_return false;
+		if (!co_await read_connect_udp_response())
+			co_return false;
+
+		// 启动串行发送协程与 capsule 接收循环.
+		start_data_loops();
+
+		co_return true;
+	}
+
+	// send_connect_udp_request 发送 RFC 9298 CONNECT-UDP 请求（absolute-form URI）.
+	net::awaitable<bool> tun_udp_flow::send_connect_udp_request()
+	{
+		boost::system::error_code ec;
+
+		const auto& proxy_url = *m_option.proxy_pass_;
 		auto req = build_connect_udp_request(proxy_url, m_target);
 
 		auto& http_sock = *m_control;
@@ -1852,6 +1866,16 @@ namespace proxy {
 			XLOG_WARN << "tun udp send connect-udp request: " << ec.message();
 			co_return false;
 		}
+
+		co_return true;
+	}
+
+	// read_connect_udp_response 读取并校验 CONNECT-UDP 响应（须为 101）.
+	net::awaitable<bool> tun_udp_flow::read_connect_udp_response()
+	{
+		boost::system::error_code ec;
+
+		auto& http_sock = *m_control;
 
 		beast::flat_buffer resp_buf;
 		http::response_parser<http::empty_body> resp_parser;
@@ -1874,8 +1898,14 @@ namespace proxy {
 		}
 
 		XLOG_DBG << "tun udp connect-udp established to target: " << m_target;
+		co_return true;
+	}
 
-		// 启动串行发送协程与 capsule 接收循环.
+	// start_data_loops 启动串行发送协程与 capsule 接收循环.
+	void tun_udp_flow::start_data_loops()
+	{
+		auto self = shared_from_this();
+
 		m_tx_signal.emplace(m_executor);
 
 		net::co_spawn(m_executor,
@@ -1889,8 +1919,6 @@ namespace proxy {
 			{
 				return recv_connect_udp_loop();
 			}, net::detached);
-
-		co_return true;
 	}
 
 	net::awaitable<bool> tun_udp_flow::make_control_stream(tcp::socket sock)

@@ -328,6 +328,15 @@ namespace proxy {
 		// sock 为已连接到上游代理的 TCP socket，由 do_open 传入.
 		net::awaitable<bool> do_connect_udp(tcp::socket sock);
 
+		// 发送 RFC 9298 CONNECT-UDP 请求，成功返回 true.
+		net::awaitable<bool> send_connect_udp_request();
+
+		// 读取并校验 CONNECT-UDP 响应（须为 101），成功返回 true.
+		net::awaitable<bool> read_connect_udp_response();
+
+		// 启动串行发送协程与 capsule 接收循环.
+		void start_data_loops();
+
 		// 串行发送 CONNECT-UDP capsule 到 TCP 控制连接.
 		net::awaitable<void> tx_loop();
 
