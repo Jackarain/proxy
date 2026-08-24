@@ -1857,7 +1857,7 @@ namespace proxy {
 					!m_option.proxy_domains_.empty())
 				{
 					// 原始 DNS 数据包经代理转发到国外 DNS（未配置国外 DNS 时
-					// 保持注入的固定目标 8.8.8.8/1.1.1.1）.
+					// 不替换目标，保持 addDnsServer 注入的 8.8.8.8/1.1.1.1）.
 					use_proxy = true;
 					if (auto dns = pick_dns_server(
 						m_option.dns_foreign_, m_target))

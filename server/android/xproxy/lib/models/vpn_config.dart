@@ -60,8 +60,9 @@ class VpnConfig {
   List<String> dns;
 
   /// 国外 DNS 列表（仅 IP），命中 proxy_domains 的查询经
-  /// proxy_pass 代理转发到这些服务器解析；留空时保持
-  /// addDnsServer 固定注入的 8.8.8.8/1.1.1.1 目标.
+  /// proxy_pass 代理转发到这些服务器解析. addDnsServer 始终
+  /// 固定注入 8.8.8.8/1.1.1.1 与本配置无关，留空时 native
+  /// 不替换查询目标，保持注入的固定地址.
   List<String> dnsForeign;
 
   /// 国外 DoH URL（可选，如 https://dns.google/dns-query），命中
