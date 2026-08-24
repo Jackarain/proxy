@@ -1829,56 +1829,54 @@ namespace proxy {
 			auto scheme = boost::to_lower_copy(
 				std::string((*m_option.proxy_pass_).scheme()));
 
-			// 配置了 proxy_domains_（启用域名分流）：按 qname 区分国内/国外 DNS.
-			if (!m_option.proxy_domains_.empty())
+			// 配置了 proxy_domains_（启用域名分流）：按 qname 区分国内/国外 DNS；
+			// 未配置时全部按国外域名处理.
+			bool foreign = m_option.proxy_domains_.empty() ||
+				(m_owner && m_owner->domain_match(m_dns_qname));
+			if (foreign)
 			{
-				bool foreign = m_owner && m_owner->domain_match(m_dns_qname);
-				if (foreign)
+				// 国外域名：经代理转发 DNS 请求或发起 DoH.
+				// DoH 仅对 http(s) 代理生效（CONNECT 隧道为 HTTP 协议）；
+				// socks 上游回退为原始查询经 socks 转发.
+				if (!m_option.dns_doh_.empty() &&
+					scheme.starts_with("http"))
 				{
-					// 国外域名：经代理转发 DNS 请求或发起 DoH.
-					// DoH 仅对 http(s) 代理生效（CONNECT 隧道为 HTTP 协议）；
-					// socks 上游回退为原始查询经 socks 转发.
-					if (!m_option.dns_doh_.empty() &&
-						scheme.starts_with("http"))
-					{
-						// 与 proxy_pass 同服务的 DoH 直连，否则经代理 CONNECT.
-						std::string doh_host;
-						if (auto r = urls::parse_uri(m_option.dns_doh_);
-							r.has_value())
-							doh_host = std::string(r->encoded_host());
-						std::string proxy_host = boost::to_lower_copy(
-							std::string((*m_option.proxy_pass_).encoded_host()));
-						m_doh_via_proxy = !doh_host.empty() &&
-							doh_host != proxy_host;
-						m_doh_mode = !m_doh_via_proxy;
-						use_proxy = false;
-					}
-					else
-					{
-						// 原始 DNS 数据包经代理转发到国外 DNS.
-						use_proxy = true;
-						if (auto dns = pick_dns_server(
-							m_option.dns_foreign_, m_target))
-							m_target = *dns;
-					}
+					// 与 proxy_pass 同服务的 DoH 直连，否则经代理 CONNECT.
+					std::string doh_host;
+					if (auto r = urls::parse_uri(m_option.dns_doh_);
+						r.has_value())
+						doh_host = std::string(r->encoded_host());
+					std::string proxy_host = boost::to_lower_copy(
+						std::string((*m_option.proxy_pass_).encoded_host()));
+					m_doh_via_proxy = !doh_host.empty() &&
+						doh_host != proxy_host;
+					m_doh_mode = !m_doh_via_proxy;
+					use_proxy = false;
+				}
+				else if (!m_option.dns_foreign_.empty() ||
+					!m_option.proxy_domains_.empty())
+				{
+					// 原始 DNS 数据包经代理转发到国外 DNS（未配置国外 DNS 时
+					// 保持注入的固定目标 8.8.8.8/1.1.1.1）.
+					use_proxy = true;
+					if (auto dns = pick_dns_server(
+						m_option.dns_foreign_, m_target))
+						m_target = *dns;
 				}
 				else
 				{
-					// 国内域名：直连国内 DNS 解析.
+					// 未配置域名分流且国外 DNS/DoH 均留空：把 proxy_pass
+					// 尝试作为 DoH 服务器解析客户端查询.
+					m_doh_mode = true;
 					use_proxy = false;
-					if (auto dns = pick_dns_server(
-						m_option.dns_domestic_, m_target))
-						m_target = *dns;
 				}
 			}
 			else
 			{
-				// 未配置域名分流：全部按国外域名处理，原始 DNS 数据包经
-				// 代理转发到国外 DNS 解析（未显式配置 DoH 时不再把
-				// proxy_pass 当作 DoH 服务器）.
-				use_proxy = true;
+				// 国内域名：直连国内 DNS 解析.
+				use_proxy = false;
 				if (auto dns = pick_dns_server(
-					m_option.dns_foreign_, m_target))
+					m_option.dns_domestic_, m_target))
 					m_target = *dns;
 			}
 		}
