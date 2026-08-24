@@ -1489,6 +1489,7 @@ namespace proxy {
 		m_rx_bytes += static_cast<uint64_t>(len);
 
 		// DNS 查询缓存：命中后改写事务 ID 直接回包，不再向上游查询.
+		std::string cache_key;  // 未命中时保存当前查询键，供 DoH 写入缓存.
 		if (m_target.port() == 53 && len > 0)
 		{
 			auto cache = m_owner ? m_owner->dns_cache() : nullptr;
@@ -1509,10 +1510,12 @@ namespace proxy {
 							(static_cast<uint8_t>(query[0]) << 8) |
 							static_cast<uint8_t>(query[1]));
 						auto resp = dns_set_id(*hit, qid);
+						XLOG_DBG << "tun udp dns cache hit: " << qname;
 						reply(resp.data(), resp.size(), false);
 						touch();
 						return;
 					}
+					cache_key = key;
 				}
 			}
 		}
@@ -1523,7 +1526,8 @@ namespace proxy {
 			auto self = shared_from_this();
 			std::string query(data, len);
 			net::co_spawn(m_executor,
-				[this, self, query = std::move(query)]()
+				[this, self, query = std::move(query),
+					key = std::move(cache_key)]()
 				-> net::awaitable<void>
 				{
 					std::string response;
@@ -1533,7 +1537,17 @@ namespace proxy {
 					// 查询失败返回 SERVFAIL, 避免客户端等待超时重试.
 					if (!ok || response.empty())
 						response = dns_build_response(query, 2, {});
-					reply(response.data(), response.size());
+					// 缓存写入使用查询侧键（DoH 响应与查询一一对应）.
+					if (!key.empty() && dns_cacheable(response))
+					{
+						auto cache = m_owner ? m_owner->dns_cache() : nullptr;
+						if (cache)
+						{
+							cache->put(key, dns_strip_id(response));
+							XLOG_DBG << "tun udp dns cache put: " << key;
+						}
+					}
+					reply(response.data(), response.size(), false);
 					touch();
 				}, net::detached);
 			return;
@@ -2368,9 +2382,9 @@ namespace proxy {
 		bool cd = false;
 		bool do_flag = false;
 		dns_query_flags(resp, cd, do_flag);
-		cache->put(
-			dns_cache_key(qname, qtype, cd, do_flag),
-			dns_strip_id(resp));
+		auto key = dns_cache_key(qname, qtype, cd, do_flag);
+		cache->put(key, dns_strip_id(resp));
+		XLOG_DBG << "tun udp dns cache put: " << key;
 	}
 
 	void tun_udp_flow::touch()
@@ -2547,6 +2561,8 @@ namespace proxy {
 	void tun_server::set_dns_cache(dns_response_cache* cache) noexcept
 	{
 		m_dns_cache = cache;
+		XLOG_INFO << "tun dns cache "
+			<< (cache ? "enabled" : "disabled");
 	}
 
 	dns_response_cache* tun_server::dns_cache() const noexcept
