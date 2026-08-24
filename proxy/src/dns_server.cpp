@@ -1262,12 +1262,30 @@ namespace proxy {
 			co_return false;
 		}
 
+		// 解析上游地址：IP 直接构造 endpoint，域名（如 dns.google:53）
+		// 经 resolve_host 解析后取首个地址，与 DoH 上游支持域名保持一致.
+		tcp::resolver::results_type targets;
+		if (is_hostname(dns_host))
+		{
+			targets = co_await resolve_host(dns_host, dns_port);
+			if (targets.empty())
+				co_return false;
+		}
+		else
+		{
+			auto addr = net::ip::make_address(dns_host, ec);
+			if (ec)
+				co_return false;
+			targets = tcp::resolver::results_type::create(
+				tcp::endpoint(addr, static_cast<uint16_t>(dns_port)),
+				dns_host, "");
+		}
+
 		auto dns_socket = std::make_shared<udp::socket>(
 			co_await net::this_coro::executor);
 		udp::endpoint dns_endpoint(
-			net::ip::make_address(dns_host, ec), static_cast<uint16_t>(dns_port));
-		if (ec)
-			co_return false;
+			targets.begin()->endpoint().address(),
+			targets.begin()->endpoint().port());
 
 		dns_socket->open(dns_endpoint.protocol(), ec);
 		if (ec)
