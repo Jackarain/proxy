@@ -13,6 +13,7 @@
 
 #include "proxy/proxy_session.hpp"
 #include "proxy/proxy_stream.hpp"
+#include "proxy/dns_response_cache.hpp"
 #include "proxy/tun_device.hpp"
 
 #include <chrono>
@@ -330,7 +331,10 @@ namespace proxy {
 		net::awaitable<void> recv_loop();
 
 		// 向客户端回包（封装 IP/UDP 后写回 TUN）.
-		void reply(const char* data, size_t len);
+		void reply(const char* data, size_t len, bool cache_resp = true);
+
+		// 将 DNS 响应写入查询结果缓存（从响应报文解析键）.
+		void cache_dns_response(const char* data, size_t len) noexcept;
 
 		// 重置过期计时器.
 		void touch();
@@ -456,6 +460,13 @@ namespace proxy {
 		void set_protect_handler(
 			std::function<net::awaitable<bool>(int)> handler);
 
+		// 设置 DNS 查询结果缓存（TUN 内 DNS 查询命中直接回包；
+		// 未启用缓存时为 nullptr）.
+		void set_dns_cache(dns_response_cache* cache) noexcept;
+
+		// 返回当前 DNS 查询结果缓存（未启用为 nullptr）.
+		dns_response_cache* dns_cache() const noexcept;
+
 		// 请求对出站 socket fd 执行 protect（经回调）, 无回调或失败时放行.
 		net::awaitable<bool> protect_socket(int fd);
 
@@ -543,6 +554,10 @@ namespace proxy {
 		// m_option 保存服务器配置选项.
 		proxy_server_option m_option;
 
+		// m_dns_cache 保存 DNS 查询结果缓存（由 proxy_server 注入，
+		// 热改重建后更新；未启用为 nullptr）.
+		dns_response_cache* m_dns_cache { nullptr };
+
 		// m_tun 保存 TUN 设备对象.
 		std::unique_ptr<tun_device> m_tun;
 
@@ -610,6 +625,7 @@ namespace proxy {
 
 		void start() noexcept {}
 		void close() noexcept {}
+		void set_dns_cache(dns_response_cache*) noexcept {}
 
 	private:
 		net::any_io_executor m_executor;

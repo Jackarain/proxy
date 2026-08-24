@@ -1827,6 +1827,11 @@ void proxy_server::start() noexcept
 		m_dns_server->start();
 	}
 
+	// 注入 DNS 查询结果缓存到 TUN 路径（未启用缓存时注入 nullptr）.
+	if (m_tun_server)
+		m_tun_server->set_dns_cache(
+			m_dns_server ? m_dns_server->cache() : nullptr);
+
 	// 启动定时器.
 	net::co_spawn(m_executor,
 		tick(), net::detached);
@@ -1856,11 +1861,19 @@ std::string proxy_server::apply_dns_options() noexcept
 				m_executor, m_backend_context, m_scheduler_locking, m_option);
 			m_dns_server->start();
 		}
-		return {};
+	}
+	else
+	{
+		// 已创建：热改到 dns_server（端口/缓存/no_ipv6 变化由 dns_server 内部处理）.
+		m_dns_server->apply_options(m_option);
 	}
 
-	// 已创建：热改到 dns_server（端口/缓存/no_ipv6 变化由 dns_server 内部处理）.
-	return m_dns_server->apply_options(m_option);
+	// 缓存可能在热改中重建（size/ttl 变化），同步更新到 TUN 路径.
+	if (m_tun_server)
+		m_tun_server->set_dns_cache(
+			m_dns_server ? m_dns_server->cache() : nullptr);
+
+	return {};
 }
 
 void proxy_server::close() noexcept

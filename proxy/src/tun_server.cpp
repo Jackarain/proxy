@@ -1488,6 +1488,35 @@ namespace proxy {
 
 		m_rx_bytes += static_cast<uint64_t>(len);
 
+		// DNS 查询缓存：命中后改写事务 ID 直接回包，不再向上游查询.
+		if (m_target.port() == 53 && len > 0)
+		{
+			auto cache = m_owner ? m_owner->dns_cache() : nullptr;
+			if (cache)
+			{
+				std::string query(data, len);
+				std::string qname;
+				uint16_t qtype = 0;
+				bool cd = false;
+				bool do_flag = false;
+				if (dns_parse_query(query, qname, qtype) && !qname.empty())
+				{
+					dns_query_flags(query, cd, do_flag);
+					auto key = dns_cache_key(qname, qtype, cd, do_flag);
+					if (auto hit = cache->get(key); hit)
+					{
+						uint16_t qid = static_cast<uint16_t>(
+							(static_cast<uint8_t>(query[0]) << 8) |
+							static_cast<uint8_t>(query[1]));
+						auto resp = dns_set_id(*hit, qid);
+						reply(resp.data(), resp.size(), false);
+						touch();
+						return;
+					}
+				}
+			}
+		}
+
 		// DoH 模式：每个 DNS 查询独立发起 DoH 请求.
 		if (m_doh_mode || m_doh_via_proxy)
 		{
@@ -2293,16 +2322,22 @@ namespace proxy {
 		close();
 	}
 
-	void tun_udp_flow::reply(const char* data, size_t len)
+	void tun_udp_flow::reply(
+		const char* data, size_t len, bool cache_resp)
 	{
 		if (!m_owner)
 			return;
 
 		m_tx_bytes += static_cast<uint64_t>(len);
 
-		// DNS 响应回包时记录 A/AAAA 解析结果，供数据面按域名分流.
+		// DNS 响应回包时记录 A/AAAA 解析结果供数据面按域名分流，
+		// 并写入查询结果缓存.
 		if (m_target.port() == 53)
+		{
 			m_owner->record_dns_answer(data, len);
+			if (cache_resp)
+				cache_dns_response(data, len);
+		}
 
 		// 目标 -> 客户端方向.
 		auto packet = build_udp_segment(
@@ -2312,6 +2347,30 @@ namespace proxy {
 
 		if (!packet.empty())
 			m_owner->write_packet(std::move(packet));
+	}
+
+	// cache_dns_response 将 DNS 响应写入查询结果缓存，键从响应报文
+	// 回显的 question 区解析（域名 + 类型 + CD/DO 标志）.
+	void tun_udp_flow::cache_dns_response(const char* data, size_t len) noexcept
+	{
+		auto cache = m_owner ? m_owner->dns_cache() : nullptr;
+		if (!cache || len < 2)
+			return;
+
+		std::string resp(data, len);
+		std::string qname;
+		uint16_t qtype = 0;
+		if (!dns_parse_query(resp, qname, qtype) || qname.empty())
+			return;
+		if (!dns_cacheable(resp))
+			return;
+
+		bool cd = false;
+		bool do_flag = false;
+		dns_query_flags(resp, cd, do_flag);
+		cache->put(
+			dns_cache_key(qname, qtype, cd, do_flag),
+			dns_strip_id(resp));
 	}
 
 	void tun_udp_flow::touch()
@@ -2483,6 +2542,16 @@ namespace proxy {
 		std::function<net::awaitable<bool>(int)> handler)
 	{
 		m_protect_handler = std::move(handler);
+	}
+
+	void tun_server::set_dns_cache(dns_response_cache* cache) noexcept
+	{
+		m_dns_cache = cache;
+	}
+
+	dns_response_cache* tun_server::dns_cache() const noexcept
+	{
+		return m_dns_cache;
 	}
 
 	net::awaitable<bool> tun_server::protect_socket(int fd)
