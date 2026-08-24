@@ -27,9 +27,7 @@ class VpnConfig {
   }) : proxyDomains = proxyDomains ?? [],
        proxyCidr = proxyCidr ?? [],
        dns = (dns == null || dns.isEmpty) ? ['223.6.6.6', '119.29.29.29'] : dns,
-       dnsForeign = (dnsForeign == null || dnsForeign.isEmpty)
-           ? ['8.8.8.8', '1.1.1.1']
-           : dnsForeign;
+       dnsForeign = dnsForeign ?? [];
 
   String id;
   String name;
@@ -62,7 +60,8 @@ class VpnConfig {
   List<String> dns;
 
   /// 国外 DNS 列表（仅 IP），命中 proxy_domains 的查询经
-  /// proxy_pass 代理转发到这些服务器解析.
+  /// proxy_pass 代理转发到这些服务器解析；留空时保持
+  /// addDnsServer 固定注入的 8.8.8.8/1.1.1.1 目标.
   List<String> dnsForeign;
 
   /// 国外 DoH URL（可选，如 https://dns.google/dns-query），命中

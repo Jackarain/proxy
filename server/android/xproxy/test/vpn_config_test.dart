@@ -41,13 +41,13 @@ void main() {
     test('国内/国外 DNS 默认值与旧配置迁移', () {
       final def = VpnConfig(id: '1', name: 'c');
       expect(def.dns, ['223.6.6.6', '119.29.29.29']);
-      expect(def.dnsForeign, ['8.8.8.8', '1.1.1.1']);
+      expect(def.dnsForeign, isEmpty);
       expect(def.dnsForeignDoh, isEmpty);
 
       // 旧配置无新字段时回退默认值.
       final legacy = VpnConfig.fromJson({'id': '2', 'name': 'c'});
       expect(legacy.dns, ['223.6.6.6', '119.29.29.29']);
-      expect(legacy.dnsForeign, ['8.8.8.8', '1.1.1.1']);
+      expect(legacy.dnsForeign, isEmpty);
 
       // 旧配置已有 dns 时原样迁移为国内 DNS.
       final migrated = VpnConfig.fromJson({

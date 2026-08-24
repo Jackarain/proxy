@@ -172,11 +172,9 @@ class LauncherServer {
     }
     // 未配置路由时默认全隧道 (IPv4 + IPv6).
     if (routes.isEmpty) routes = ['0.0.0.0/0', '::/0'];
-    // 固定注入国外 DNS 保证查询进入 TUN，同时注入可配置的国内 DNS.
+    // 固定注入 8.8.8.8/1.1.1.1 保证所有 DNS 查询进入 TUN,
+    // 进入 TUN 后由 native 按 qname 分流转发.
     final dns = <String>['8.8.8.8', '1.1.1.1'];
-    for (final d in _strList(cfg['dns'])) {
-      if (d.isNotEmpty && !dns.contains(d)) dns.add(d);
-    }
     try {
       final fd = await VpnChannel.establishTun(
         address: address,
@@ -220,11 +218,6 @@ class LauncherServer {
         ],
       });
     } catch (_) {}
-  }
-
-  static List<String> _strList(dynamic v) {
-    if (v is List) return v.whereType<String>().toList();
-    return const [];
   }
 
   void _onMessage(dynamic data) {
