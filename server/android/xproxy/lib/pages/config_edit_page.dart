@@ -45,6 +45,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
   );
   late bool _disableCheckCert = c.disableCheckCert;
   late bool _bypassCn = c.bypassCn;
+  late bool _dnsCache = c.dnsCache;
 
   @override
   void dispose() {
@@ -90,6 +91,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           ..dns = _lines(_dns.text)
           ..dnsForeign = foreignIps
           ..dnsForeignDoh = foreignDoh
+          ..dnsCache = _dnsCache
           ..testUrl = _testUrl.text.trim()
           ..disableCheckCert = _disableCheckCert
           ..bypassCn = _bypassCn;
@@ -166,6 +168,13 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
               helperText: 'IP 为 DNS 服务器, http(s):// 开头为 DoH',
               border: OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('DNS 缓存'),
+            subtitle: const Text('缓存解析结果，重复查询直接回包'),
+            value: _dnsCache,
+            onChanged: (v) => setState(() => _dnsCache = v),
           ),
 
           _section('TUN 网络'),

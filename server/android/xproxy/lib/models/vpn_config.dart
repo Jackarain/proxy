@@ -22,6 +22,7 @@ class VpnConfig {
     List<String>? dns,
     List<String>? dnsForeign,
     this.dnsForeignDoh = '',
+    this.dnsCache = true,
     this.testUrl = 'https://google.com',
     this.bypassCn = false,
   }) : proxyDomains = proxyDomains ?? [],
@@ -68,6 +69,9 @@ class VpnConfig {
   /// 国外 DoH URL（可选，如 https://dns.google/dns-query），命中
   /// proxy_domains 的查询以 DoH 方式解析.
   String dnsForeignDoh;
+
+  /// 是否启用 DNS 查询结果缓存（native 按域名缓存解析结果，命中直接回包）.
+  bool dnsCache;
 
   /// 国外 DNS/DoH 输入行拆分: IP 归入国外 DNS 列表, http(s):// 开头
   /// 视为 DoH URL（多个 DoH 时取最后一个）.
@@ -182,6 +186,8 @@ class VpnConfig {
       'dns_domestic': dns,
       'dns_foreign': dnsForeign,
       if (dnsForeignDoh.trim().isNotEmpty) 'dns_doh': dnsForeignDoh.trim(),
+      if (dnsCache) 'dns_cache_size': 4096,
+      if (dnsCache) 'dns_cache_ttl': 300,
       if (launcherPort > 0) 'launcher_url': 'ws://127.0.0.1:$launcherPort',
     };
     return jsonEncode(map);
@@ -212,6 +218,7 @@ class VpnConfig {
     'dns': dns,
     'dnsForeign': dnsForeign,
     'dnsForeignDoh': dnsForeignDoh,
+    'dnsCache': dnsCache,
     'testUrl': testUrl,
     'bypassCn': bypassCn,
   };
@@ -230,6 +237,7 @@ class VpnConfig {
     dns: _strList(json['dns']),
     dnsForeign: _strList(json['dnsForeign']),
     dnsForeignDoh: json['dnsForeignDoh'] as String? ?? '',
+    dnsCache: json['dnsCache'] as bool? ?? true,
     testUrl: json['testUrl'] as String? ?? 'https://google.com',
     bypassCn: json['bypassCn'] as bool? ?? false,
   );

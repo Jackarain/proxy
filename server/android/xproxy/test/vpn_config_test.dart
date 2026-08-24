@@ -81,7 +81,29 @@ void main() {
       expect(map['dns_domestic'], ['223.6.6.6']);
       expect(map['dns_foreign'], ['8.8.8.8']);
       expect(map['dns_doh'], 'https://dns.google/dns-query');
+      expect(map['dns_cache_size'], 4096);
+      expect(map['dns_cache_ttl'], 300);
       expect(map['launcher_url'], 'ws://127.0.0.1:12345');
+    });
+
+    test('关闭 DNS 缓存时不下发缓存参数', () {
+      final c = VpnConfig(
+        id: 'abc',
+        name: '测试',
+        proxyPass: 'https://user:pass@host:443',
+        dnsCache: false,
+      );
+      final map =
+          jsonDecode(c.toProxyJson()) as Map<String, dynamic>;
+      expect(map.containsKey('dns_cache_size'), isFalse);
+      expect(map.containsKey('dns_cache_ttl'), isFalse);
+    });
+
+    test('DNS 缓存默认启用', () {
+      final def = VpnConfig(id: '1', name: 'c');
+      expect(def.dnsCache, isTrue);
+      final restored = VpnConfig.fromJson(def.toJson());
+      expect(restored.dnsCache, isTrue);
     });
 
     test('deriveTun 默认与配置取值', () {
