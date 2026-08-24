@@ -36,10 +36,12 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/uds_socket.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tun_device.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tun_server.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/doh_client.hpp
 	$<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/wintun_tun_device.hpp>
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/tun_server.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/doh_client.cpp
 	$<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_SOURCE_DIR}/src/wintun_tun_device.cpp>
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ip_database.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/launcher_log.cpp

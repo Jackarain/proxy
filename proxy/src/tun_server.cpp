@@ -453,34 +453,11 @@ namespace proxy {
 			return build_ip_packet(src, dst, ip_proto_udp, udp);
 		}
 
-		// proxy_pass 是否使用 SSL 加密（https/wss 或显式配置 proxy_pass_ssl）.
-		inline bool proxy_use_ssl(const urls::url& url,
-			const proxy_server_option& opt) noexcept
-		{
-			if (opt.proxy_pass_use_ssl_)
-				return true;
-			auto scheme = boost::to_lower_copy(std::string(url.scheme()));
-			return scheme.ends_with("s");
-		}
-
 		// 按 MTU 计算 TCP MSS 通告值.
 		inline uint16_t tun_mss(const proxy_server_option& opt) noexcept
 		{
 			return static_cast<uint16_t>(
 				std::max(536, opt.tun_mtu_ > 0 ? opt.tun_mtu_ - 40 : 1460));
-		}
-
-		// 配置了 SO_MARK 时对 socket 应用标记（配合策略路由防止环路）.
-		template <typename Socket>
-		void apply_so_mark_if(Socket& sock,
-			const proxy_server_option& opt) noexcept
-		{
-			if (!opt.so_mark_)
-				return;
-
-			auto ret = apply_so_mark(sock.native_handle(), opt.so_mark_);
-			if (ret.has_error())
-				XLOG_WARN << "tun set socket mark: " << ret.error().message();
 		}
 
 		// 构造 SOCKS5 UDP 请求/应答头（RSV + FRAG + ATYP + 地址 + 端口）.
@@ -618,139 +595,6 @@ namespace proxy {
 			}
 
 			return req;
-		}
-
-		// 解析并连接上游代理服务器，成功返回已连接的 socket；失败返回未打开的 socket.
-		net::awaitable<tcp::socket> connect_proxy_pass(
-			net::any_io_executor executor,
-			const proxy_server_option& opt,
-			const urls::url& proxy_url,
-			const std::function<net::awaitable<bool>(int)>& protect)
-		{
-			boost::system::error_code ec;
-
-			std::string proxy_host(proxy_url.encoded_host());
-			uint16_t proxy_port = proxy_url.port_number();
-			if (proxy_port == 0)
-				proxy_port = proxy_pass_default_port(proxy_url);
-
-			tcp::resolver resolver(executor);
-			auto targets = co_await resolver.async_resolve(
-				proxy_host, std::to_string(proxy_port), net_awaitable[ec]);
-			if (ec || targets.empty())
-			{
-				XLOG_WARN << "tun resolve proxy_pass: " << proxy_host
-					<< ", error: " << ec.message();
-				co_return tcp::socket(executor);
-			}
-
-			for (const auto& t : targets)
-			{
-				tcp::socket sock(executor);
-				sock.open(t.endpoint().protocol(), ec);
-				if (ec)
-					continue;
-
-				// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
-				apply_so_mark_if(sock, opt);
-
-				// 先放行再 connect，防止 SYN 回环进 tun 形成环路.
-				if (protect && !co_await protect(sock.native_handle()))
-					continue;
-
-				co_await sock.async_connect(t.endpoint(), net_awaitable[ec]);
-				if (!ec)
-					co_return sock;
-			}
-
-			XLOG_WARN << "tun connect proxy_pass: " << proxy_host
-				<< ", error: " << ec.message();
-			co_return tcp::socket(executor);
-		}
-
-		// 发送 HTTP CONNECT 请求建立隧道，成功返回 true.
-		template <typename Stream>
-		net::awaitable<bool> http_connect_tunnel(Stream& stream,
-			const std::string& authority, const urls::url& proxy_url)
-		{
-			boost::system::error_code ec;
-
-			http::request<http::empty_body> req{
-				http::verb::connect, authority, 11 };
-			req.set(http::field::host, authority);
-			req.set(http::field::user_agent, "xproxy/1.0");
-			if (!proxy_url.user().empty())
-			{
-				const auto userinfo = std::string(proxy_url.user()) + ":" +
-					std::string(proxy_url.password());
-				req.set(http::field::proxy_authorization,
-					"Basic " + strutil::base64_encode(userinfo));
-			}
-
-			co_await http::async_write(stream, req, net_awaitable[ec]);
-			if (ec)
-				co_return false;
-
-			beast::flat_buffer buf;
-			http::response_parser<http::empty_body> parser;
-			parser.skip(true);
-			co_await http::async_read_header(
-				stream, buf, parser, net_awaitable[ec]);
-			if (ec)
-				co_return false;
-
-			auto res = parser.release();
-			if (res.result() != http::status::ok)
-			{
-				XLOG_WARN << "tun doh connect tunnel rejected: "
-					<< static_cast<int>(res.result());
-				co_return false;
-			}
-			co_return true;
-		}
-
-		// 发送 DoH POST 请求并读取响应，成功返回 true 并填充 output.
-		template <typename Stream>
-		net::awaitable<bool> doh_post(Stream& stream,
-			const std::string& host, const std::string& path,
-			const std::string& dns_query, std::string& output,
-			const std::string& username = {},
-			const std::string& password = {})
-		{
-			boost::system::error_code ec;
-
-			http::request<http::string_body> req{
-				http::verb::post, path, 11 };
-			req.set(http::field::host, host);
-			req.set(http::field::content_type, "application/dns-message");
-			req.set(http::field::accept, "application/dns-message");
-			if (!username.empty())
-			{
-				const auto userinfo = username + ":" + password;
-				req.set(http::field::authorization,
-					"Basic " + strutil::base64_encode(userinfo));
-			}
-			req.body() = dns_query;
-			req.prepare_payload();
-
-			co_await http::async_write(stream, req, net_awaitable[ec]);
-			if (ec)
-				co_return false;
-
-			beast::flat_buffer buf;
-			http::response<http::string_body> res;
-			co_await http::async_read(stream, buf, res, net_awaitable[ec]);
-			if (ec)
-				co_return false;
-
-			if (res.result() != http::status::ok)
-			{
-				XLOG_WARN << "tun doh response status: "
-					<< res.result_int();
-				co_return false;
-			}
-			output = std::move(res.body());
-			co_return true;
 		}
 
 		// 从 DNS 服务器列表中选择与 target 同地址族的条目（端口 53），
@@ -1536,7 +1380,7 @@ namespace proxy {
 			}
 		}
 
-		// DoH 模式：每个 DNS 查询独立发起 DoH 请求.
+		// DoH 模式：经 doh_client 连接池复用 keep-alive 连接发起查询.
 		if (m_doh_mode || m_doh_via_proxy)
 		{
 			auto self = shared_from_this();
@@ -1547,11 +1391,13 @@ namespace proxy {
 				-> net::awaitable<void>
 				{
 					std::string response;
-					bool ok = co_await doh_query(query, response);
+					auto pool = m_owner ? m_owner->doh_pool() : nullptr;
+					if (pool)
+						response = co_await pool->query(query);
 					if (m_closed)
 						co_return;
 					// 查询失败返回 SERVFAIL, 避免客户端等待超时重试.
-					if (!ok || response.empty())
+					if (response.empty())
 						response = dns_build_response(query, 2, {});
 					// 缓存写入使用查询侧键（DoH 响应与查询一一对应）.
 					if (!key.empty() && dns_cacheable(response))
@@ -1632,150 +1478,6 @@ namespace proxy {
 			return false;
 		}
 		return true;
-	}
-
-	// doh_query 将 DNS 查询以 DoH (DNS over HTTPS) 方式转发到 proxy_pass,
-	// 成功返回 true 并填充 output（DNS wire-format 响应）.
-	net::awaitable<bool> tun_udp_flow::doh_query(
-		const std::string& dns_query, std::string& output)
-	{
-		boost::system::error_code ec;
-
-		const auto& proxy_url = *m_option.proxy_pass_;
-		std::string proxy_host(proxy_url.encoded_host());
-		uint16_t proxy_port = proxy_url.port_number();
-		if (proxy_port == 0)
-			proxy_port = urls::default_port(proxy_url.scheme_id());
-		if (proxy_port == 0)
-			proxy_port = 443;
-
-		// 解析国外 DoH 目标（未配置时默认把 proxy_pass 当作 DoH 服务）.
-		std::string doh_host;
-		std::string doh_path = "/dns-query";
-		uint16_t doh_port = 443;
-		bool doh_https = true;
-		if (!m_option.dns_doh_.empty())
-		{
-			if (auto r = urls::parse_uri(m_option.dns_doh_); r.has_value())
-			{
-				doh_host = std::string(r->encoded_host());
-				if (!r->path().empty())
-					doh_path = std::string(r->path());
-				doh_port = r->port_number();
-				if (doh_port == 0)
-					doh_port = urls::default_port(r->scheme_id());
-				if (doh_port == 0)
-					doh_port = 443;
-				auto scheme = boost::to_lower_copy(std::string(r->scheme()));
-				doh_https = scheme.ends_with("s");
-			}
-		}
-		if (doh_host.empty())
-			doh_host = proxy_host;
-
-		// 连接上游代理（protect 放行, 避免回环进 tun）.
-		const auto protect = m_owner ?
-			std::function<net::awaitable<bool>(int)>(
-				[owner = m_owner](int fd)
-				{ return owner->protect_socket(fd); }) :
-			std::function<net::awaitable<bool>(int)>();
-
-		auto sock = co_await connect_proxy_pass(
-			m_executor, m_option, proxy_url, protect);
-		if (!sock.is_open())
-			co_return false;
-
-		if (m_doh_via_proxy)
-		{
-			// 经代理 CONNECT 隧道转发到国外 DoH 服务.
-			std::string authority = doh_host + ":" + std::to_string(doh_port);
-			std::string proxy_sni = m_option.proxy_ssl_name_.empty() ?
-				proxy_host : m_option.proxy_ssl_name_;
-
-			// https 代理先与代理建立外层 TLS.
-			std::optional<ssl_tcp_stream> outer;
-			std::optional<net::ssl::context> outer_ctx;
-			if (proxy_use_ssl(proxy_url, m_option))
-			{
-				outer_ctx.emplace(net::ssl::context::sslv23_client);
-				ec = configure_ssl_client_ctx(*outer_ctx,
-					m_option.disable_check_cert_, proxy_sni,
-					m_option.ssl_cacert_path_);
-				if (ec)
-					co_return false;
-				outer.emplace(std::move(sock), *outer_ctx);
-				SSL_set_tlsext_host_name(
-					outer->native_handle(), proxy_sni.c_str());
-				co_await outer->async_handshake(
-					net::ssl::stream_base::client, net_awaitable[ec]);
-				if (ec)
-					co_return false;
-			}
-
-			// 建立 CONNECT 隧道.
-			if (outer)
-			{
-				if (!co_await http_connect_tunnel(
-					*outer, authority, proxy_url))
-					co_return false;
-			}
-			else
-			{
-				if (!co_await http_connect_tunnel(
-					sock, authority, proxy_url))
-					co_return false;
-			}
-
-			// 取出隧道底层 TCP socket 供内层 TLS 复用.
-			tcp::socket tunnel = outer ?
-				std::move(outer->next_layer().lowest_layer()) :
-				std::move(sock);
-
-			if (doh_https)
-			{
-				net::ssl::context doh_ctx(net::ssl::context::sslv23_client);
-				ec = configure_ssl_client_ctx(doh_ctx,
-					m_option.disable_check_cert_, doh_host,
-					m_option.ssl_cacert_path_);
-				if (ec)
-					co_return false;
-				ssl_tcp_stream inner(std::move(tunnel), doh_ctx);
-				SSL_set_tlsext_host_name(
-					inner.native_handle(), doh_host.c_str());
-				co_await inner.async_handshake(
-					net::ssl::stream_base::client, net_awaitable[ec]);
-				if (ec)
-					co_return false;
-				co_return co_await doh_post(inner, doh_host,
-					doh_path, dns_query, output);
-			}
-
-			co_return co_await doh_post(tunnel, doh_host,
-				doh_path, dns_query, output);
-		}
-
-		// 直连 DoH：与 proxy_pass 同服务（或未配置 dns_doh_ 时按原行为
-		// 把 proxy_pass 当作 DoH 服务器）.
-		const auto auth_user = std::string(proxy_url.user());
-		const auto auth_pass = std::string(proxy_url.password());
-		if (proxy_use_ssl(proxy_url, m_option))
-		{
-			std::optional<variant_stream_type> ssl_sock;
-			std::string sni = m_option.proxy_ssl_name_.empty() ?
-				proxy_host : m_option.proxy_ssl_name_;
-			auto ssl_res = co_await m_owner->make_ssl_socket(
-				sock, sni, ssl_sock);
-			if (ssl_res.has_error())
-				co_return false;
-
-			auto& ssl = boost::variant2::get<ssl_tcp_stream>(*ssl_sock);
-			co_return co_await doh_post(ssl, doh_host, doh_path,
-				dns_query, output, auth_user, auth_pass);
-		}
-
-		// http 明文.
-		co_return co_await doh_post(sock, doh_host, doh_path,
-			dns_query, output, auth_user, auth_pass);
 	}
 
 	void tun_udp_flow::close()
@@ -2618,6 +2320,10 @@ namespace proxy {
 			flow->close();
 		for (auto& flow : udp_flows)
 			flow->close();
+
+		// 关闭 DoH 连接池（唤醒所有挂起的 DNS 查询）.
+		if (m_doh_client)
+			m_doh_client->close();
 
 		if (m_tun)
 			m_tun->close();

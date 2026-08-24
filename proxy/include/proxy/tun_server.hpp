@@ -15,6 +15,7 @@
 #include "proxy/proxy_stream.hpp"
 #include "proxy/dns_response_cache.hpp"
 #include "proxy/tun_device.hpp"
+#include "proxy/doh_client.hpp"
 
 #include <chrono>
 #include <deque>
@@ -296,11 +297,6 @@ namespace proxy {
 		// 与上游代理完成 SOCKS5 UDP ASSOCIATE 握手.
 		net::awaitable<bool> do_socks5_associate(tcp::socket sock);
 
-		// 以 DoH (DNS over HTTPS) 方式将 DNS 查询转发到 proxy_pass,
-		// 成功返回 true 并填充 output（DNS wire-format 响应）.
-		net::awaitable<bool> doh_query(
-			const std::string& dns_query, std::string& output);
-
 		// 建立 HTTP CONNECT-UDP 隧道（proxy_pass 为 http/https 时替代 SOCKS5 ASSOCIATE）.
 		// sock 为已连接到上游代理的 TCP socket，由 do_open 传入.
 		net::awaitable<bool> do_connect_udp(tcp::socket sock);
@@ -547,6 +543,20 @@ namespace proxy {
 		// 分配连接明细用的唯一标识.
 		uint64_t next_conn_id() noexcept;
 
+		// 返回 DoH 连接池（惰性创建；DNS 查询走 keep-alive 复用）.
+		// 仅在 DoH 模式（proxy_pass_ 非空）下调用.
+		doh_client* doh_pool()
+		{
+			if (!m_doh_client)
+			{
+				m_doh_client = std::make_unique<doh_client>(
+					m_executor, m_option,
+					[this](int fd) -> net::awaitable<bool>
+					{ return protect_socket(fd); });
+			}
+			return m_doh_client.get();
+		}
+
 	private:
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
@@ -557,6 +567,10 @@ namespace proxy {
 		// m_dns_cache 保存 DNS 查询结果缓存（由 proxy_server 注入，
 		// 热改重建后更新；未启用为 nullptr）.
 		dns_response_cache* m_dns_cache { nullptr };
+
+		// m_doh_client 保存 DoH 连接池（DNS 查询 keep-alive 复用，
+		// 惰性创建，tun_server 关闭时一并关闭）.
+		std::unique_ptr<doh_client> m_doh_client;
 
 		// m_tun 保存 TUN 设备对象.
 		std::unique_ptr<tun_device> m_tun;
