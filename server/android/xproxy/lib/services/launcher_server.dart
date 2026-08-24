@@ -166,7 +166,8 @@ class LauncherServer {
     if (cfg['bypassCn'] == true) {
       // 绕过中国大陆: 仅非中国段接入 VPN, 中国段走系统物理网络直连.
       final cn = await CnIpList.update();
-      routes = CnIpList.vpnRoutes(cn);
+      // 路由计算在独立 isolate 执行, 避免大量 CIDR 区间运算阻塞 UI.
+      routes = await compute(CnIpList.vpnRoutes, cn);
     } else {
       routes = const [];
     }
