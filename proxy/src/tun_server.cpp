@@ -972,6 +972,8 @@ namespace proxy {
 		start_data_plane();
 	}
 
+	// establish_upstream 依据分流结果经上游代理或直连建立连接，
+	// 成功后设置 m_upstream 并返回 true.
 	net::awaitable<bool> tun_tcp_flow::establish_upstream(
 		const std::string& target_host, uint16_t target_port, bool use_proxy)
 	{
@@ -981,58 +983,73 @@ namespace proxy {
 			std::function<net::awaitable<bool>(int)>();
 
 		if (use_proxy && m_option.proxy_pass_)
+			co_return co_await establish_via_proxy(
+				target_host, target_port, protect);
+
+		co_return co_await establish_direct(target_port, protect);
+	}
+
+	// establish_via_proxy 经上游代理建立连接：按 scheme 记录协议类型，
+	// 连接 proxy_pass 后视 SSL 代理先建 TLS，再完成代理协议握手.
+	net::awaitable<bool> tun_tcp_flow::establish_via_proxy(
+		const std::string& target_host, uint16_t target_port,
+		const std::function<net::awaitable<bool>(int)>& protect)
+	{
+		const auto& proxy_url = *m_option.proxy_pass_;
+		auto scheme = boost::to_lower_copy(
+			std::string(proxy_url.scheme()));
+		if (scheme.starts_with("socks"))
+			m_proto.store(static_cast<uint8_t>(tun_conn_proto::socks5));
+		else if (proxy_use_ssl(proxy_url, m_option))
+			m_proto.store(static_cast<uint8_t>(tun_conn_proto::https));
+		else
+			m_proto.store(static_cast<uint8_t>(tun_conn_proto::http));
+
+		auto sock = co_await connect_proxy_pass(
+			m_executor, m_option, proxy_url, protect);
+		if (!sock.is_open())
 		{
-			const auto& proxy_url = *m_option.proxy_pass_;
-			auto scheme = boost::to_lower_copy(
-				std::string(proxy_url.scheme()));
-			if (scheme.starts_with("socks"))
-				m_proto.store(static_cast<uint8_t>(tun_conn_proto::socks5));
-			else if (proxy_use_ssl(proxy_url, m_option))
-				m_proto.store(static_cast<uint8_t>(tun_conn_proto::https));
-			else
-				m_proto.store(static_cast<uint8_t>(tun_conn_proto::http));
-
-			auto sock = co_await connect_proxy_pass(
-				m_executor, m_option, proxy_url, protect);
-			if (!sock.is_open())
-			{
-				XLOG_WARN << "tun tcp connect proxy_pass failed: "
-					<< target_host << ":" << target_port;
-				co_return false;
-			}
-
-			XLOG_DBG << "tun tcp proxy connected: "
+			XLOG_WARN << "tun tcp connect proxy_pass failed: "
 				<< target_host << ":" << target_port;
-
-			// https/wss 等 SSL 代理需要先建立 TLS 再执行代理握手.
-			if (proxy_use_ssl(proxy_url, m_option))
-			{
-				if (!m_owner)
-					co_return false;
-
-				std::string proxy_host(proxy_url.encoded_host());
-				auto sni = m_option.proxy_ssl_name_.empty() ?
-					proxy_host : m_option.proxy_ssl_name_;
-				std::optional<variant_stream_type> ssl_stream;
-				auto res = co_await m_owner->make_ssl_socket(
-					sock, sni, ssl_stream);
-				if (res.has_error())
-				{
-					XLOG_WARN << "tun tcp make_ssl_socket: "
-						<< res.error().message();
-					co_return false;
-				}
-				m_upstream = std::move(*ssl_stream);
-			}
-			else
-			{
-				m_upstream = init_proxy_stream(std::move(sock));
-			}
-
-			co_return co_await do_proxy_handshake(proxy_url);
+			co_return false;
 		}
 
-		// 直连目标.
+		XLOG_DBG << "tun tcp proxy connected: "
+			<< target_host << ":" << target_port;
+
+		// https/wss 等 SSL 代理需要先建立 TLS 再执行代理握手.
+		if (proxy_use_ssl(proxy_url, m_option))
+		{
+			if (!m_owner)
+				co_return false;
+
+			std::string proxy_host(proxy_url.encoded_host());
+			auto sni = m_option.proxy_ssl_name_.empty() ?
+				proxy_host : m_option.proxy_ssl_name_;
+			std::optional<variant_stream_type> ssl_stream;
+			auto res = co_await m_owner->make_ssl_socket(
+				sock, sni, ssl_stream);
+			if (res.has_error())
+			{
+				XLOG_WARN << "tun tcp make_ssl_socket: "
+					<< res.error().message();
+				co_return false;
+			}
+			m_upstream = std::move(*ssl_stream);
+		}
+		else
+		{
+			m_upstream = init_proxy_stream(std::move(sock));
+		}
+
+		co_return co_await do_proxy_handshake(proxy_url);
+	}
+
+	// establish_direct 直连目标建立连接，成功设置 m_upstream 并返回 true.
+	net::awaitable<bool> tun_tcp_flow::establish_direct(
+		uint16_t target_port,
+		const std::function<net::awaitable<bool>(int)>& protect)
+	{
 		auto sock = co_await connect_direct(
 			m_executor, m_option, m_key.dst, target_port, protect);
 		if (!sock.is_open())

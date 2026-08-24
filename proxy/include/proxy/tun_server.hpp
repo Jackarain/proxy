@@ -154,6 +154,16 @@ namespace proxy {
 			const std::string& target_host, uint16_t target_port,
 			bool use_proxy);
 
+		// 经上游代理建立连接（含 TLS 与代理协议握手），成功返回 true.
+		net::awaitable<bool> establish_via_proxy(
+			const std::string& target_host, uint16_t target_port,
+			const std::function<net::awaitable<bool>(int)>& protect);
+
+		// 直连目标建立连接，成功返回 true.
+		net::awaitable<bool> establish_direct(
+			uint16_t target_port,
+			const std::function<net::awaitable<bool>(int)>& protect);
+
 		// 回 SYN-ACK 并启动双向数据搬运协程.
 		void start_data_plane();
 
