@@ -140,6 +140,45 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             onChanged: (v) => setState(() => _disableCheckCert = v),
           ),
 
+          _section('DNS'),
+          Text(
+            '国内 DNS 用于未命中分流规则的域名直连解析，国外 DNS/DoH '
+            '用于命中分流规则的域名经代理转发解析',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _dns,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              labelText: '国内 DNS (每行一个 IP)',
+              hintText: '223.6.6.6\n119.29.29.29',
+              helperText: '国内域名直连解析',
+              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _dnsForeign,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              labelText: '国外 DNS (每行一个 IP)',
+              hintText: '8.8.8.8\n1.1.1.1',
+              helperText: '国外域名经代理转发解析',
+              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _dnsForeignDoh,
+            decoration: const InputDecoration(
+              labelText: '国外 DoH URL (留空不使用)',
+              hintText: 'https://dns.google/dns-query',
+              helperText: '配置后国外域名以 DoH 方式解析',
+              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+            ),
+          ),
+
           _section('TUN 网络'),
           Row(
             children: [
@@ -174,35 +213,6 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: const InputDecoration(
               labelText: 'MTU',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _dns,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: '国内 DNS (每行一个 IP)',
-              hintText: '223.6.6.6\n119.29.29.29',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _dnsForeign,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: '国外 DNS (每行一个 IP)',
-              hintText: '8.8.8.8\n1.1.1.1',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _dnsForeignDoh,
-            decoration: const InputDecoration(
-              labelText: '国外 DoH URL (留空不使用)',
-              hintText: 'https://dns.google/dns-query',
               border: OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
           ),
