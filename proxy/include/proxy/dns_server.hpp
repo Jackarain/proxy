@@ -186,6 +186,39 @@ namespace proxy {
 		net::awaitable<bool> doh_query_raw(
 			const std::string& dns_query, std::string& output);
 
+		// DoH 上游 URL 解析结果.
+		struct doh_url_info
+		{
+			std::string host;      // 服务器主机名（IP 或域名）.
+			uint16_t port { 443 }; // 端口.
+			std::string path;      // 请求路径（不含 query）.
+			std::string tls_host;  // TLS 校验与 SNI 使用的主机名.
+		};
+
+		// 解析 DoH 上游 URL，返回 host/port/路径/TLS 主机名.
+		// URL 非法或未配置上游时返回 nullopt.
+		std::optional<doh_url_info> parse_doh_url() const;
+
+		// 解析 DoH 服务器地址（IP 直接构造 endpoint，域名走 resolve_host）.
+		net::awaitable<tcp::resolver::results_type>
+		resolve_doh_target(const doh_url_info& info);
+
+		// 连接到 DoH 服务器；配置了 local_ip_ 出口地址时绑定源地址后连接.
+		net::awaitable<bool> connect_doh_target(
+			tcp::socket& doh_socket,
+			const tcp::resolver::results_type& targets);
+
+		// 设置 SNI 并完成与 DoH 服务器的客户端 TLS 握手，成功返回 true.
+		net::awaitable<bool> doh_tls_handshake(
+			net::ssl::stream<tcp::socket>& ssl_stream,
+			const doh_url_info& info);
+
+		// 经已建立的 TLS 连接发送 DoH POST 请求并读取响应，成功返回 true.
+		net::awaitable<bool> doh_http_post(
+			net::ssl::stream<tcp::socket>& ssl_stream,
+			const doh_url_info& info,
+			const std::string& dns_query, std::string& output);
+
 		// 解析 DoH 上游主机地址.
 		net::awaitable<tcp::resolver::results_type>
 		resolve_host(const std::string& host, uint16_t port);

@@ -1350,29 +1350,31 @@ namespace proxy {
 		co_return targets;
 	}
 
-	// doh_query_raw 通过 DoH (DNS over HTTPS) 上游转发 DNS 查询.
-	net::awaitable<bool> dns_server::doh_query_raw(
-		const std::string& dns_query, std::string& output)
+	// parse_doh_url 解析 DoH 上游 URL，返回 host/port/路径/TLS 主机名.
+	// URL 非法或未配置上游时返回 nullopt.
+	std::optional<dns_server::doh_url_info> dns_server::parse_doh_url() const
 	{
-		boost::system::error_code ec;
+		if (!m_option.dns_upstream_)
+			return std::nullopt;
 
 		// 使用 boost.url 标准解析 DoH 上游 URL，获取 host/port/path，以及
 		// query 中指定的 SNI（如 https://1.2.3.4/dns-query?sni=example.com
 		// 时 SNI 为 example.com）；query 本身不随 POST 请求转发给上游.
 		auto u = boost::urls::parse_uri(*m_option.dns_upstream_);
 		if (!u)
-			co_return false;
+			return std::nullopt;
 
-		std::string doh_host = std::string(u->encoded_host());
-		uint16_t doh_port = u->port_number();
-		if (doh_port == 0)
-			doh_port = boost::urls::default_port(u->scheme_id());
+		doh_url_info info;
+		info.host = std::string(u->encoded_host());
+		info.port = u->port_number();
+		if (info.port == 0)
+			info.port = boost::urls::default_port(u->scheme_id());
 
 		// 请求路径（不含 query）.
-		std::string request_path = "/dns-query";
+		info.path = "/dns-query";
 		auto path = u->path();
 		if (!path.empty() && path != "/")
-			request_path = std::string(path);
+			info.path = std::string(path);
 
 		// query 中指定的 SNI（用于 TLS 握手与证书校验）.
 		std::string doh_sni;
@@ -1381,28 +1383,34 @@ namespace proxy {
 			doh_sni = std::string((*it).value);
 
 		// TLS 校验与 SNI 使用的主机名：配置了 sni 参数时优先使用.
-		std::string tls_host =
-			doh_sni.empty() ? doh_host : doh_sni;
+		info.tls_host = doh_sni.empty() ? info.host : doh_sni;
 
-		// 解析 DoH 服务器地址.
-		tcp::resolver::results_type targets;
-		if (!is_hostname(doh_host))
+		return info;
+	}
+
+	// resolve_doh_target 解析 DoH 服务器地址（IP 直接构造 endpoint，
+	// 域名走 resolve_host 解析）.
+	net::awaitable<tcp::resolver::results_type>
+	dns_server::resolve_doh_target(const doh_url_info& info)
+	{
+		if (!is_hostname(info.host))
 		{
 			tcp::endpoint endp(
-				net::ip::make_address(doh_host), doh_port);
-			targets = tcp::resolver::results_type::create(
-				endp, std::string(doh_host), "");
-		}
-		else
-		{
-			targets = co_await resolve_host(doh_host, doh_port);
+				net::ip::make_address(info.host), info.port);
+			co_return tcp::resolver::results_type::create(
+				endp, std::string(info.host), "");
 		}
 
-		if (targets.empty())
-			co_return false;
+		co_return co_await resolve_host(info.host, info.port);
+	}
 
-		// 连接到 DoH 服务器.
-		tcp::socket doh_socket(m_executor);
+	// connect_doh_target 连接到 DoH 服务器；配置了 local_ip_ 出口地址时
+	// 绑定源地址后连接，成功返回 true.
+	net::awaitable<bool> dns_server::connect_doh_target(
+		tcp::socket& doh_socket,
+		const tcp::resolver::results_type& targets)
+	{
+		boost::system::error_code ec;
 		ec = boost::asio::error::host_not_found;
 		for (const auto& entry : targets)
 		{
@@ -1432,38 +1440,47 @@ namespace proxy {
 		if (ec)
 			co_return false;
 
-		// 创建 per-request SSL context, 确保每个 DoH 服务器使用正确的主机名校验.
-		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
-		ec = configure_ssl_client_ctx(doh_ssl_ctx,
-			m_option.disable_check_cert_,
-			tls_host);
-		if (ec)
-		{
-			XLOG_WARN << "configure ssl context for doh: " << tls_host
-				<< " error: " << ec.message();
-			co_return false;
-		}
+		co_return true;
+	}
 
-		net::ssl::stream<tcp::socket> ssl_stream(std::move(doh_socket), doh_ssl_ctx);
+	// doh_tls_handshake 设置 SNI 并完成与 DoH 服务器的客户端 TLS 握手，
+	// 成功返回 true.
+	net::awaitable<bool> dns_server::doh_tls_handshake(
+		net::ssl::stream<tcp::socket>& ssl_stream,
+		const doh_url_info& info)
+	{
+		boost::system::error_code ec;
 
 		if (!SSL_set_tlsext_host_name(
-			ssl_stream.native_handle(), tls_host.c_str()))
+			ssl_stream.native_handle(), info.tls_host.c_str()))
 		{
-			XLOG_DBG << "doh set sni name: " << tls_host << " failed";
+			XLOG_DBG << "doh set sni name: " << info.tls_host << " failed";
 		}
 
 		co_await ssl_stream.async_handshake(
 			net::ssl::stream_base::client, net_awaitable[ec]);
 		if (ec)
 		{
-			XLOG_WARN << "doh tls handshake with " << doh_host << " failed";
+			XLOG_WARN << "doh tls handshake with " << info.host << " failed";
 			co_return false;
 		}
 
+		co_return true;
+	}
+
+	// doh_http_post 经已建立的 TLS 连接发送 DoH POST 请求并读取响应，
+	// 成功返回 true.
+	net::awaitable<bool> dns_server::doh_http_post(
+		net::ssl::stream<tcp::socket>& ssl_stream,
+		const doh_url_info& info,
+		const std::string& dns_query, std::string& output)
+	{
+		boost::system::error_code ec;
+
 		// 构造 HTTP POST 请求.
 		http::request<http::string_body> doh_req{
-			http::verb::post, request_path, 11 };
-		doh_req.set(http::field::host, tls_host);
+			http::verb::post, info.path, 11 };
+		doh_req.set(http::field::host, info.tls_host);
 		doh_req.set(http::field::content_type, "application/dns-message");
 		doh_req.set(http::field::accept, "application/dns-message");
 		doh_req.body() = dns_query;
@@ -1488,6 +1505,47 @@ namespace proxy {
 
 		output = std::move(doh_res.body());
 		co_return true;
+	}
+
+	// doh_query_raw 通过 DoH (DNS over HTTPS) 上游转发 DNS 查询.
+	net::awaitable<bool> dns_server::doh_query_raw(
+		const std::string& dns_query, std::string& output)
+	{
+		boost::system::error_code ec;
+
+		// 解析 DoH 上游 URL.
+		auto info = parse_doh_url();
+		if (!info)
+			co_return false;
+
+		// 解析 DoH 服务器地址.
+		auto targets = co_await resolve_doh_target(*info);
+		if (targets.empty())
+			co_return false;
+
+		// 连接到 DoH 服务器.
+		tcp::socket doh_socket(m_executor);
+		if (!co_await connect_doh_target(doh_socket, targets))
+			co_return false;
+
+		// 创建 per-request SSL context, 确保每个 DoH 服务器使用正确的主机名校验.
+		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
+		ec = configure_ssl_client_ctx(doh_ssl_ctx,
+			m_option.disable_check_cert_,
+			info->tls_host);
+		if (ec)
+		{
+			XLOG_WARN << "configure ssl context for doh: " << info->tls_host
+				<< " error: " << ec.message();
+			co_return false;
+		}
+
+		// 建立 TLS 连接并完成 DoH POST 查询交互.
+		net::ssl::stream<tcp::socket> ssl_stream(std::move(doh_socket), doh_ssl_ctx);
+		if (!co_await doh_tls_handshake(ssl_stream, *info))
+			co_return false;
+
+		co_return co_await doh_http_post(ssl_stream, *info, dns_query, output);
 	}
 
 	// resolve_normal 按系统默认解析流程处理 DNS 查询并构造响应.
