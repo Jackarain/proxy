@@ -155,7 +155,7 @@ docker build . -t proxy:v1
 ./proxy_server --server_listen 0.0.0.0:1080 --proxy_pass https://jack:1111@example.com:1080/
 ```
 
-上游代理服务若是 `socks5` 协议且需要使用 `ssl` 加密传输时，`url` 的 `scheme` 必须以 `s` 结尾，如: `socks5s://jack:1111@example.com:1080/`。
+上游代理服务若是 `socks5` 协议且需要使用 `ssl` 加密传输时，`url` 的 `scheme` 必须以 `s` 结尾，如: `socks5s://jack:1111@example.com:1080/`。`url` 未显式指定端口时，`http`/`https`/`ws`/`wss` 使用标准默认端口，以 `s` 结尾的加密 `scheme`（如 `socks5s`）默认使用 `443`，其余 `socks` 类 `scheme`（如 `socks5`/`socks4`）默认使用 `1080`。
 
 当作为服务器启用 SSL 加密传输时，需要配置 `ssl_certificate_dir` 参数指定证书密钥等文件目录，这样客户端就可以通过 `https`/`socks5s` 加密协议连接到 `proxy_server` 进行代理，示例如下：
 

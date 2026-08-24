@@ -141,6 +141,20 @@ namespace proxy {
 		return false;
 	}
 
+	// 计算 proxy_pass 未显式指定端口时的默认端口: 已知 scheme (http/https/ws/wss)
+	// 使用标准默认端口; 未定义默认端口的 scheme 中, 以 's' 结尾(ssl 加密)默认 443,
+	// 其余 (socks4/socks5 等) 默认 1080.
+	inline uint16_t proxy_pass_default_port(const urls::url& url) noexcept
+	{
+		auto port = urls::default_port(url.scheme_id());
+		if (port != 0)
+			return port;
+		auto scheme = boost::to_lower_copy(std::string(url.scheme()));
+		if (scheme.ends_with("s"))
+			return 443;
+		return 1080;
+	}
+
 	// 解析十进制数字字符串为 int64_t, 失败或溢出时返回空 optional.
 	// 仅接受非负十进制数字, 不进行动态内存分配, 用于解析 HTTP 头等场景.
 	inline std::optional<int64_t> parse_num(std::string_view s) noexcept

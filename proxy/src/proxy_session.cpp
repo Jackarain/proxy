@@ -6635,7 +6635,7 @@ net::awaitable<void> proxy_session::unauthorized_http_route(const string_request
 		uint16_t proxy_port_number = 0;
 
 		if (m_proxy_pass->port_number() == 0)
-			proxy_port_number = urls::default_port(m_proxy_pass->scheme_id());
+			proxy_port_number = proxy_pass_default_port(*m_proxy_pass);
 		else
 			proxy_port_number = m_proxy_pass->port_number();
 

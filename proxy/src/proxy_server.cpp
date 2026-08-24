@@ -3153,7 +3153,7 @@ proxy_server::resolve_proxy_pass(const boost::urls::url& proxy_pass)
 	uint16_t proxy_port = 0;
 
 	if (proxy_pass.port_number() == 0)
-		proxy_port = urls::default_port(proxy_pass.scheme_id());
+		proxy_port = proxy_pass_default_port(proxy_pass);
 	else
 		proxy_port = proxy_pass.port_number();
 
@@ -3900,7 +3900,7 @@ net::awaitable<void> proxy_server::udp_tproxy_http_udp_loop(udp_tproxy_flow_ptr 
 	auto proxy_host = std::string(proxy_pass.host());
 	auto proxy_port = proxy_pass.port_number();
 	if (proxy_port == 0)
-		proxy_port = urls::default_port(proxy_pass.scheme_id());
+		proxy_port = proxy_pass_default_port(proxy_pass);
 
 	auto targets = co_await resolve_proxy_pass(proxy_pass);
 	if (!targets || targets->empty())

@@ -590,7 +590,7 @@ namespace proxy {
 			std::string proxy_host(proxy_url.encoded_host());
 			uint16_t proxy_port = proxy_url.port_number();
 			if (proxy_port == 0)
-				proxy_port = urls::default_port(proxy_url.scheme_id());
+				proxy_port = proxy_pass_default_port(proxy_url);
 
 			std::string target_host = target.address().to_string();
 			if (target.address().is_v6())
@@ -632,9 +632,7 @@ namespace proxy {
 			std::string proxy_host(proxy_url.encoded_host());
 			uint16_t proxy_port = proxy_url.port_number();
 			if (proxy_port == 0)
-				proxy_port = urls::default_port(proxy_url.scheme_id());
-			if (proxy_port == 0)
-				proxy_port = 1080;  // socks 等未定义默认端口的 scheme.
+				proxy_port = proxy_pass_default_port(proxy_url);
 
 			tcp::resolver resolver(executor);
 			auto targets = co_await resolver.async_resolve(
