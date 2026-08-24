@@ -373,8 +373,11 @@ namespace proxy {
 		// m_connect_udp 标记 HTTP CONNECT-UDP 模式（proxy_pass 为 http 时）.
 		bool m_connect_udp { false };
 
-		// m_doh_mode 标记 DNS 查询经 DoH 转发到 proxy_pass 的模式.
+		// m_doh_mode 标记 DNS 查询以 DoH 直连 proxy_pass（同服务）的模式.
 		bool m_doh_mode { false };
+
+		// m_doh_via_proxy 标记 DNS 查询以 DoH 经 proxy_pass CONNECT 隧道转发.
+		bool m_doh_via_proxy { false };
 
 		// m_tx_queue 保存待发送的 CONNECT-UDP capsule（串行写 TCP 控制连接）.
 		std::mutex m_tx_mutex;
