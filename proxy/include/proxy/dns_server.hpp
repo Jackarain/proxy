@@ -169,6 +169,15 @@ namespace proxy {
 			const std::shared_ptr<udp::socket>& sock,
 			const udp::endpoint& peer, std::string query);
 
+		// 向 peer 回送 DNS 响应报文，成功返回 true；失败记录日志.
+		net::awaitable<bool> send_response(
+			const std::shared_ptr<udp::socket>& sock,
+			const udp::endpoint& peer, const std::string& response);
+
+		// 经配置的上游转发 DNS 查询：https 走 DoH，其余走 UDP.
+		net::awaitable<bool> query_upstream(
+			const std::string& dns_query, std::string& output);
+
 		// 通过 UDP 上游转发 DNS 查询，成功返回 true.
 		net::awaitable<bool> udp_query_raw(
 			const std::string& dns_query, std::string& output);

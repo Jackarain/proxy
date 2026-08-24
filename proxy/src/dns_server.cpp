@@ -1127,6 +1127,32 @@ namespace proxy {
 		co_return;
 	}
 
+	// send_response 向 peer 回送 DNS 响应报文，成功返回 true.
+	net::awaitable<bool> dns_server::send_response(
+		const std::shared_ptr<udp::socket>& sock,
+		const udp::endpoint& peer, const std::string& response)
+	{
+		boost::system::error_code ec;
+		co_await sock->async_send_to(
+			net::buffer(response), peer, net_awaitable[ec]);
+		if (ec)
+		{
+			XLOG_WARN << "udp dns write response error: " << ec.message();
+			co_return false;
+		}
+		co_return true;
+	}
+
+	// query_upstream 经配置的上游转发 DNS 查询，成功返回 true.
+	net::awaitable<bool> dns_server::query_upstream(
+		const std::string& dns_query, std::string& output)
+	{
+		auto& upstream = *m_option.dns_upstream_;
+		if (boost::istarts_with(upstream, "https://"))
+			co_return co_await doh_query_raw(dns_query, output);
+		co_return co_await udp_query_raw(dns_query, output);
+	}
+
 	// handle_query 处理单个 UDP DNS 请求：配置了 dns_upstream 时转发到上游，
 	// 否则按系统默认解析流程构造响应.
 	net::awaitable<void> dns_server::handle_query(
@@ -1148,13 +1174,8 @@ namespace proxy {
 			auto resp = dns_build_response(query, 0, {});
 			if (!resp.empty())
 			{
-				co_await sock->async_send_to(
-					net::buffer(resp), peer, net_awaitable[ec]);
-				if (ec)
-				{
-					XLOG_WARN << "udp dns write response error: " << ec.message();
+				if (!co_await send_response(sock, peer, resp))
 					co_return;
-				}
 			}
 			XLOG_DBG << "udp dns query: " << qname << " type "
 				<< dns_type_to_string(qtype)
@@ -1176,13 +1197,8 @@ namespace proxy {
 					(static_cast<uint8_t>(query[0]) << 8) |
 					static_cast<uint8_t>(query[1]));
 				auto resp = dns_set_id(*hit, qid);
-				co_await sock->async_send_to(
-					net::buffer(resp), peer, net_awaitable[ec]);
-				if (ec)
-				{
-					XLOG_WARN << "udp dns write response error: " << ec.message();
+				if (!co_await send_response(sock, peer, resp))
 					co_return;
-				}
 				XLOG_DBG << "udp dns query: " << qname << " type "
 					<< dns_type_to_string(qtype)
 					<< " from " << peer << ", cache hit";
@@ -1194,13 +1210,7 @@ namespace proxy {
 		std::string response;
 		if (m_option.dns_upstream_ && !m_option.dns_upstream_->empty())
 		{
-			auto& upstream = *m_option.dns_upstream_;
-			bool ok = false;
-			if (boost::istarts_with(upstream, "https://"))
-				ok = co_await doh_query_raw(query, response);
-			else
-				ok = co_await udp_query_raw(query, response);
-			if (!ok)
+			if (!co_await query_upstream(query, response))
 				response = dns_build_response(query, 2, {}); // SERVFAIL
 		}
 		else
@@ -1216,13 +1226,8 @@ namespace proxy {
 			dns_cacheable(response))
 			m_cache->put(cache_key, dns_strip_id(response));
 
-		co_await sock->async_send_to(
-			net::buffer(response), peer, net_awaitable[ec]);
-		if (ec)
-		{
-			XLOG_WARN << "udp dns write response error: " << ec.message();
+		if (!co_await send_response(sock, peer, response))
 			co_return;
-		}
 
 		std::string answer_summary = dns_answer_summary(response);
 		XLOG_DBG << "udp dns query: " << qname << " type "
