@@ -1,5 +1,7 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../models/vpn_config.dart';
 
@@ -18,15 +20,6 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
   late final TextEditingController _name = TextEditingController(text: c.name);
   late final TextEditingController _proxyPass = TextEditingController(
     text: c.proxyPass,
-  );
-  late final TextEditingController _tunMtu = TextEditingController(
-    text: c.tunMtu.toString(),
-  );
-  late final TextEditingController _tunAddress = TextEditingController(
-    text: c.tunAddress,
-  );
-  late final TextEditingController _tunPrefix = TextEditingController(
-    text: c.tunPrefix.toString(),
   );
   late final TextEditingController _proxyDomains = TextEditingController(
     text: c.proxyDomains.join('\n'),
@@ -47,15 +40,13 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
   late bool _bypassCn = c.bypassCn;
   late bool _dnsCache = c.dnsCache;
   late bool _noIpv6 = c.noIpv6;
+  bool _saving = false;
 
   @override
   void dispose() {
     for (final t in [
       _name,
       _proxyPass,
-      _tunMtu,
-      _tunAddress,
-      _tunPrefix,
       _proxyDomains,
       _proxyCidr,
       _dns,
@@ -67,8 +58,6 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
     super.dispose();
   }
 
-  int _toInt(String v, int def) => int.tryParse(v.trim()) ?? def;
-
   List<String> _lines(String v) =>
       v
           .split(RegExp(r'[\r\n,;]+'))
@@ -76,7 +65,25 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           .where((s) => s.isNotEmpty)
           .toList();
 
-  void _save() {
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      final domains = await _expandUrlLines(_lines(_proxyDomains.text));
+      final cidrs = await _expandUrlLines(_lines(_proxyCidr.text));
+      _finishSave(domains, cidrs);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('拉取分流列表失败: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _finishSave(List<String> domains, List<String> cidrs) {
     final (foreignIps, foreignDoh) = VpnConfig.splitForeignDns(
       _lines(_dnsForeign.text),
     );
@@ -84,11 +91,8 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
         c
           ..name = _name.text.trim().isEmpty ? '未命名' : _name.text.trim()
           ..proxyPass = _proxyPass.text.trim()
-          ..tunMtu = _toInt(_tunMtu.text, 1400)
-          ..tunAddress = _tunAddress.text.trim()
-          ..tunPrefix = _toInt(_tunPrefix.text, 0)
-          ..proxyDomains = _lines(_proxyDomains.text)
-          ..proxyCidr = _lines(_proxyCidr.text)
+          ..proxyDomains = domains
+          ..proxyCidr = cidrs
           ..dns = _lines(_dns.text)
           ..dnsForeign = foreignIps
           ..dnsForeignDoh = foreignDoh
@@ -107,12 +111,53 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
     Navigator.of(context).pop(vpn);
   }
 
+  /// 展开输入中的列表 URL: 逐行判断, http(s):// 开头的行拉取远程
+  /// 列表内容（每行一项, 跳过空行与 # 注释行）, 其余行原样保留.
+  Future<List<String>> _expandUrlLines(List<String> lines) async {
+    final out = <String>[];
+    for (final line in lines) {
+      if (line.startsWith('http://') || line.startsWith('https://')) {
+        out.addAll(await _fetchList(line));
+      } else {
+        out.add(line);
+      }
+    }
+    return out;
+  }
+
+  Future<List<String>> _fetchList(String url) async {
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 15);
+    try {
+      final req = await client.getUrl(Uri.parse(url));
+      final resp = await req.close();
+      if (resp.statusCode != HttpStatus.ok) {
+        throw HttpException('HTTP ${resp.statusCode}');
+      }
+      final text = await resp.transform(utf8.decoder).join();
+      final items = <String>[];
+      for (final line in text.split(RegExp(r'[\r\n]+'))) {
+        final t = line.trim();
+        if (t.isEmpty || t.startsWith('#')) continue;
+        items.add(t);
+      }
+      return items;
+    } finally {
+      client.close();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isNew ? '添加配置' : '编辑配置'),
-        actions: [TextButton(onPressed: _save, child: const Text('保存'))],
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _save,
+            child: Text(_saving ? '拉取中…' : '保存'),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -186,51 +231,13 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             onChanged: (v) => setState(() => _noIpv6 = v),
           ),
 
-          _section('TUN 网络'),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _tunAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'TUN 地址',
-                    hintText: '10.0.0.2',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _tunPrefix,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    labelText: '前缀',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _tunMtu,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: 'MTU',
-              border: OutlineInputBorder(borderRadius: BorderRadius.zero),
-            ),
-          ),
-
           _section('分流规则'),
           TextField(
             controller: _proxyDomains,
             maxLines: 4,
             decoration: const InputDecoration(
-              labelText: '代理域名 (每行一个, 后缀匹配)',
-              hintText: 'google.com\nyoutube.com',
+              labelText: '代理域名 (每行一个, 支持列表 URL)',
+              hintText: 'google.com\nyoutube.com\nhttps://example.com/proxy.txt',
               border: OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
           ),
@@ -239,8 +246,8 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             controller: _proxyCidr,
             maxLines: 4,
             decoration: const InputDecoration(
-              labelText: '代理 CIDR (每行一个)',
-              hintText: '1.1.1.0/24',
+              labelText: '代理 CIDR (每行一个, 支持列表 URL)',
+              hintText: '1.1.1.0/24\nhttps://example.com/cidr.txt',
               border: OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
           ),
