@@ -212,7 +212,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           controller: _testUrl,
           decoration: const InputDecoration(
             labelText: '测试连接 URL',
-            hintText: 'https://google.com',
+            hintText: 'https://www.google.com',
             border: OutlineInputBorder(borderRadius: BorderRadius.zero),
           ),
         ),

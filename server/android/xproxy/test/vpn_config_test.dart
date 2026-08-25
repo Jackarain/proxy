@@ -22,7 +22,7 @@ void main() {
         dnsForeign: ['1.1.1.1'],
         dnsForeignDoh: 'https://dns.google/dns-query',
         noIpv6: false,
-        testUrl: 'https://google.com',
+        testUrl: 'https://www.google.com',
         bypassCn: true,
       );
       final restored = VpnConfig.fromJson(c.toJson());

@@ -302,7 +302,7 @@ class _RunningPageState extends State<RunningPage>
       return;
     }
     final url = config.testUrl.trim().isEmpty
-        ? 'https://google.com'
+        ? 'https://www.google.com'
         : config.testUrl.trim();
 
     setState(() {

@@ -24,7 +24,7 @@ class VpnConfig {
     this.dnsForeignDoh = '',
     this.dnsCache = true,
     this.noIpv6 = true,
-    this.testUrl = 'https://google.com',
+    this.testUrl = 'https://www.google.com',
     this.bypassCn = false,
   }) : proxyDomains = proxyDomains ?? [],
        proxyCidr = proxyCidr ?? [],
@@ -246,7 +246,7 @@ class VpnConfig {
     dnsForeignDoh: json['dnsForeignDoh'] as String? ?? '',
     dnsCache: json['dnsCache'] as bool? ?? true,
     noIpv6: json['noIpv6'] as bool? ?? true,
-    testUrl: json['testUrl'] as String? ?? 'https://google.com',
+    testUrl: json['testUrl'] as String? ?? 'https://www.google.com',
     bypassCn: json['bypassCn'] as bool? ?? false,
   );
 
