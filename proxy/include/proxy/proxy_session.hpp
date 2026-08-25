@@ -318,6 +318,14 @@ namespace proxy {
 		// - 若 proxy_pass_ 为 HTTP/HTTPS proxy，是否加密同时也由 URL scheme 决定（http vs https）。
 		bool proxy_pass_use_ssl_{ false };
 
+		// proxy_pass 预选连接池大小（TUN 模式）。
+		//
+		// - 预先建立若干条到 proxy_pass 的 TCP(+TLS) 连接并保活，TCP flow
+		//   需要走代理时优先从池中取一条已建立的连接，避免重复握手。
+		// - 取走后池自动异步补充，始终维持该数量的空闲连接。
+		// - 0 表示不启用预选连接池；默认 4。
+		size_t proxy_pass_pool_size_{ 4 };
+
 		// 指定本代理在向外（上游/目标）发起连接时绑定的本地源地址。
 		//
 		// - 适用于多网卡/多出口场景，通过绑定不同 local_ip_ 控制出站链路。

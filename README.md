@@ -109,6 +109,7 @@ docker build . -t proxy:v1
 | users_rate_limit | 指定认证用户的 TCP 连接 I/O 速率，单位为字节/秒，默认不限速。格式如：`user1:102400 user2:204800` |
 | proxy_pass | 当前服务作为中间级联服务时，指定上游代理服务地址，格式为 URL。如有认证信息须包含在内，如：`https://jack:1111@example.com:1080/` |
 | proxy_pass_ssl | 向 `proxy_pass` 指定的上游代理发起连接时，是否通过 SSL 加密传输。注意上游代理服务必须启用 SSL 相关证书 |
+| proxy_pass_pool_size | TUN 模式下预连接到 `proxy_pass` 的连接池大小（默认 4）。预先建立并保活若干条到上游的 TCP(+TLS) 连接，TCP flow 走代理时优先从池中获取，避免重复握手；取走后自动异步补充。`0` 表示禁用 |
 | proxy_ssl_name | 指定 SNI 用于在单一 IP 上支持多个 SSL 证书的域名匹配，取代已废弃的 `ssl_sni` 选项 |
 | ssl_certificate_dir | SSL 证书密钥存放目录。`proxy_server` 会自动递归查找子目录，每个目录对应一个域名的证书文件（若私钥已加密，则需在相应目录下放置 `password.txt` 指明密码）。证书过期后将自动每 5 分钟热加载一次，无需重启服务 |
 | ssl_cacert_dir | 指定 CA 证书文件目录，用于客户端 SSL 连接验证。若不指定则默认使用内置的 cacert 文件（来自 <https://curl.se/docs/caextract.html>） |

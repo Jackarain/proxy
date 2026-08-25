@@ -99,6 +99,7 @@ bool happyeyeballs = true;
 bool connect_v6only = false;
 bool connect_v4only = false;
 bool proxy_pass_ssl = false;
+int proxy_pass_pool_size = 4;
 bool reuse_port = false;
 bool scramble = false;
 bool ssl_prefer_server_ciphers = false;
@@ -278,6 +279,8 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 	opt.pam_auth_ = pam_auth;
 #endif
 	opt.proxy_pass_use_ssl_ = proxy_pass_ssl;
+	opt.proxy_pass_pool_size_ = proxy_pass_pool_size > 0 ?
+		static_cast<size_t>(proxy_pass_pool_size) : 0;
 
 	opt.ssl_cert_path_ = ssl_cert_dir;
 	opt.ssl_cacert_path_ = ssl_cacert_dir;
@@ -522,6 +525,7 @@ int main(int argc, char** argv)
 
 		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify the upstream proxy URL (e.g: socks5://user:passwd@ip:port).")
 		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL/TLS for the upstream proxy connection.")
+		("proxy_pass_pool_size", po::value<int>(&proxy_pass_pool_size)->default_value(4), "Size of the pre-connected proxy_pass pool in TUN mode (0 = disable).")
 
 		("ssl_certificate_dir", po::value<std::string>(&ssl_cert_dir)->value_name("path"), "Directory containing SSL/TLS certificates.")
 		("ssl_cacert_dir", po::value<std::string>(&ssl_cacert_dir)->value_name("path"), "Directory containing SSL/TLS CA certificates for verification.")

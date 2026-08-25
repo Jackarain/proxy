@@ -22,6 +22,7 @@
 #include <deque>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
@@ -283,6 +284,73 @@ namespace proxy {
 		std::function<net::awaitable<bool>(int)> m_protect;
 
 		std::vector<std::shared_ptr<doh_connection>> m_conns;
+	};
+
+	//////////////////////////////////////////////////////////////////////////
+	// proxy_pass 预选连接池
+
+	// proxy_pass_pool 维护一组预先建立好的到 proxy_pass 的连接
+	// （TCP 与可选 TLS 握手均已完成），供 tun_server 的 TCP flow 复用，
+	// 避免每次新连接都重复 TCP 三次握手与 TLS 握手.
+	//
+	// - acquire() 取走一条连接后，池自动异步补充，始终维持目标数量；
+	// - 使用方不归还连接（代理隧道为点对点，取走后即独占），用毕关闭；
+	// - 空闲连接超过 k_idle_timeout 未被使用会被整体重建（保活），
+	//   防止代理端空闲超时断开导致复用失败.
+	class proxy_pass_pool
+		: public std::enable_shared_from_this<proxy_pass_pool>
+	{
+	public:
+		proxy_pass_pool(net::any_io_executor executor,
+			proxy_server_option opt,
+			std::function<net::awaitable<bool>(int)> protect,
+			size_t target);
+
+		~proxy_pass_pool();
+
+		proxy_pass_pool(const proxy_pass_pool&) = delete;
+		proxy_pass_pool& operator=(const proxy_pass_pool&) = delete;
+
+		// 启动维护协程（预建连接并保活）.
+		void start();
+
+		// 从池中取出一条已建立（TCP/TLS 已完成）的连接；
+		// 池空时直接新建一条返回；失败返回 nullopt.
+		net::awaitable<std::optional<variant_stream_type>> acquire();
+
+		// 关闭池并释放所有空闲连接.
+		void close();
+
+	private:
+		// 维护协程：空闲连接不足时异步补充，空闲超时后整体重建.
+		net::awaitable<void> maintain();
+
+		// 建立一条到 proxy_pass 的连接（TCP + 可选 TLS），
+		// 成功返回已连接的流，失败返回未打开的流.
+		net::awaitable<variant_stream_type> make_connection();
+
+	private:
+		// 空闲连接保活超时：超过后整体重建，避免被代理端空闲断开.
+		static constexpr std::chrono::seconds k_idle_timeout{ 60 };
+
+		net::any_io_executor m_executor;
+		proxy_server_option m_option;
+		std::function<net::awaitable<bool>(int)> m_protect;
+
+		// 维持的空闲连接目标数量.
+		size_t m_target { 0 };
+
+		// 空闲连接池（variant_stream_type 为 move-only）.
+		std::deque<variant_stream_type> m_idle;
+		std::mutex m_mutex;
+
+		// SSL context（惰性初始化，供 TLS 连接复用）.
+		std::optional<net::ssl::context> m_ssl_ctx;
+
+		// 保活定时器与维护协程运行状态.
+		std::optional<net::steady_timer> m_timer;
+		bool m_maintaining { false };
+		bool m_closed { false };
 	};
 
 } // namespace proxy

@@ -19,6 +19,203 @@
 namespace proxy {
 
 	//////////////////////////////////////////////////////////////////////////
+	// proxy_pass_pool
+
+	proxy_pass_pool::proxy_pass_pool(net::any_io_executor executor,
+		proxy_server_option opt,
+		std::function<net::awaitable<bool>(int)> protect,
+		size_t target)
+		: m_executor(std::move(executor))
+		, m_option(std::move(opt))
+		, m_protect(std::move(protect))
+		, m_target(target)
+	{
+		m_timer.emplace(m_executor);
+	}
+
+	proxy_pass_pool::~proxy_pass_pool()
+	{
+		close();
+	}
+
+	void proxy_pass_pool::start()
+	{
+		if (m_target == 0 || m_closed)
+			return;
+
+		if (m_maintaining)
+			return;
+		m_maintaining = true;
+
+		net::co_spawn(m_executor,
+			[self = shared_from_this()]() -> net::awaitable<void>
+			{
+				co_await self->maintain();
+			}, net::detached);
+	}
+
+	void proxy_pass_pool::close()
+	{
+		if (m_closed)
+			return;
+		m_closed = true;
+
+		std::deque<variant_stream_type> idle;
+		{
+			std::lock_guard<std::mutex> lk(m_mutex);
+			idle.swap(m_idle);
+		}
+		for (auto& s : idle)
+		{
+			boost::system::error_code ec;
+			s.close(ec);
+		}
+
+		if (m_timer)
+			m_timer->cancel();
+	}
+
+	net::awaitable<std::optional<variant_stream_type>>
+	proxy_pass_pool::acquire()
+	{
+		{
+			std::lock_guard<std::mutex> lk(m_mutex);
+			if (!m_idle.empty())
+			{
+				auto s = std::move(m_idle.front());
+				m_idle.pop_front();
+				// 唤醒维护协程补充空闲连接.
+				if (m_timer)
+					m_timer->cancel();
+				co_return s;
+			}
+		}
+
+		// 池空：直接新建一条（避免等待维护协程补充的延迟）.
+		auto stream = co_await make_connection();
+		if (stream.is_open())
+			co_return std::move(stream);
+		co_return std::nullopt;
+	}
+
+	net::awaitable<void> proxy_pass_pool::maintain()
+	{
+		for (;;)
+		{
+			if (m_closed)
+			{
+				m_maintaining = false;
+				co_return;
+			}
+
+			// 补充空闲连接，维持目标数量.
+			for (;;)
+			{
+				if (m_closed)
+					break;
+
+				size_t idle = 0;
+				{
+					std::lock_guard<std::mutex> lk(m_mutex);
+					idle = m_idle.size();
+				}
+				if (idle >= m_target)
+					break;
+
+				auto stream = co_await make_connection();
+				if (!stream.is_open())
+					break;  // 建连失败，稍后重试.
+
+				{
+					std::lock_guard<std::mutex> lk(m_mutex);
+					if (m_closed)
+					{
+						boost::system::error_code ec;
+						stream.close(ec);
+						break;
+					}
+					m_idle.push_back(std::move(stream));
+				}
+			}
+
+			if (m_closed)
+			{
+				m_maintaining = false;
+				co_return;
+			}
+
+			// 等待保活超时或被 acquire 唤醒.
+			m_timer->expires_after(k_idle_timeout);
+			boost::system::error_code ec;
+			co_await m_timer->async_wait(net_awaitable[ec]);
+			if (ec != net::error::operation_aborted)
+			{
+				// 空闲超时：整体重建所有空闲连接（保活），
+				// 防止代理端空闲断开导致后续复用失败.
+				std::deque<variant_stream_type> stale;
+				{
+					std::lock_guard<std::mutex> lk(m_mutex);
+					stale.swap(m_idle);
+				}
+				for (auto& s : stale)
+				{
+					boost::system::error_code close_ec;
+					s.close(close_ec);
+				}
+			}
+		}
+	}
+
+	net::awaitable<variant_stream_type>
+	proxy_pass_pool::make_connection()
+	{
+		const auto& proxy_url = *m_option.proxy_pass_;
+
+		auto sock = co_await connect_proxy_pass(
+			m_executor, m_option, proxy_url, m_protect);
+		if (!sock.is_open())
+			co_return init_proxy_stream(m_executor);
+
+		// SSL 代理（https/wss 或显式配置 proxy_pass_ssl）需要先完成 TLS 握手.
+		if (proxy_use_ssl(proxy_url, m_option))
+		{
+			boost::system::error_code ec;
+
+			std::string proxy_host(proxy_url.encoded_host());
+			const std::string sni = m_option.proxy_ssl_name_.empty() ?
+				proxy_host : m_option.proxy_ssl_name_;
+
+			if (!m_ssl_ctx)
+			{
+				m_ssl_ctx.emplace(net::ssl::context::sslv23_client);
+				ec = configure_ssl_client_ctx(*m_ssl_ctx,
+					m_option.disable_check_cert_, sni,
+					m_option.ssl_cacert_path_);
+				if (ec)
+				{
+					m_ssl_ctx.reset();
+					co_return init_proxy_stream(m_executor);
+				}
+			}
+
+			auto stream = init_proxy_stream(std::move(sock), *m_ssl_ctx);
+			auto& ssl_stream = boost::variant2::get<ssl_tcp_stream>(stream);
+			SSL_set_tlsext_host_name(
+				ssl_stream.native_handle(), sni.c_str());
+
+			co_await ssl_stream.async_handshake(
+				net::ssl::stream_base::client, net_awaitable[ec]);
+			if (ec)
+				co_return init_proxy_stream(m_executor);
+
+			co_return stream;
+		}
+
+		co_return init_proxy_stream(std::move(sock));
+	}
+
+
+	//////////////////////////////////////////////////////////////////////////
 	// connect_proxy_pass
 
 	net::awaitable<tcp::socket> connect_proxy_pass(

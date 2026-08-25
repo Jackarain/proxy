@@ -1005,6 +1005,37 @@ namespace proxy {
 		else
 			m_proto.store(static_cast<uint8_t>(tun_conn_proto::http));
 
+		// 优先从 proxy_pass 预选连接池获取已建立的连接（TCP/TLS 已完成）.
+		std::shared_ptr<proxy_pass_pool> pool;
+		if (m_option.proxy_pass_pool_size_ > 0 && m_owner)
+			pool = m_owner->proxy_conn_pool();
+		if (pool)
+		{
+			auto conn = co_await pool->acquire();
+			if (conn && conn->is_open())
+			{
+				m_upstream = std::move(*conn);
+				if (co_await do_proxy_handshake(proxy_url))
+				{
+					XLOG_DBG << "tun tcp proxy from pool: "
+						<< target_host << ":" << target_port;
+					co_return true;
+				}
+
+				// 池中连接握手失败（代理端可能已断开），丢弃并回退新建连接.
+				XLOG_WARN << "tun tcp proxy pool handshake failed, "
+					"fallback connect: " << target_host << ":"
+					<< target_port;
+				m_upstream = init_proxy_stream(m_executor);
+			}
+			else
+			{
+				XLOG_WARN << "tun tcp proxy pool acquire failed, "
+					"fallback connect: " << target_host << ":"
+					<< target_port;
+			}
+		}
+
 		auto sock = co_await connect_proxy_pass(
 			m_executor, m_option, proxy_url, protect);
 		if (!sock.is_open())
@@ -2297,6 +2328,10 @@ namespace proxy {
 		if (m_option.tun_wait_fd_)
 			return;
 
+		// 预建 proxy_pass 连接池（TCP flow 走代理时复用已建立的连接）.
+		if (m_option.proxy_pass_ && m_option.proxy_pass_pool_size_ > 0)
+			proxy_conn_pool();
+
 		if (!m_tun->is_open())
 		{
 			boost::system::error_code ec;
@@ -2355,6 +2390,10 @@ namespace proxy {
 					return run();
 				}, net::detached);
 		}
+
+		// 预建 proxy_pass 连接池（TCP flow 走代理时复用已建立的连接）.
+		if (m_option.proxy_pass_ && m_option.proxy_pass_pool_size_ > 0)
+			proxy_conn_pool();
 	}
 
 	void tun_server::set_protect_handler(
@@ -2411,6 +2450,10 @@ namespace proxy {
 		// 关闭 DoH 连接池（唤醒所有挂起的 DNS 查询）.
 		if (m_doh_client)
 			m_doh_client->close();
+
+		// 关闭 proxy_pass 预选连接池（释放所有空闲连接）.
+		if (m_proxy_pool)
+			m_proxy_pool->close();
 
 		if (m_tun)
 			m_tun->close();

@@ -593,6 +593,22 @@ namespace proxy {
 			return m_doh_client.get();
 		}
 
+		// 返回 proxy_pass 预选连接池（惰性创建；TCP flow 走代理时复用）.
+		// 仅在 TUN 模式且 proxy_pass_ 非空时调用.
+		std::shared_ptr<proxy_pass_pool> proxy_conn_pool()
+		{
+			if (!m_proxy_pool)
+			{
+				m_proxy_pool = std::make_shared<proxy_pass_pool>(
+					m_executor, m_option,
+					[this](int fd) -> net::awaitable<bool>
+					{ return protect_socket(fd); },
+					m_option.proxy_pass_pool_size_);
+				m_proxy_pool->start();
+			}
+			return m_proxy_pool;
+		}
+
 	private:
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
@@ -607,6 +623,10 @@ namespace proxy {
 		// m_doh_client 保存 DoH 连接池（DNS 查询 keep-alive 复用，
 		// 惰性创建，tun_server 关闭时一并关闭）.
 		std::unique_ptr<doh_client> m_doh_client;
+
+		// m_proxy_pool 保存 proxy_pass 预选连接池（TCP flow 走代理时
+		// 复用已建立的连接，惰性创建，tun_server 关闭时一并关闭）.
+		std::shared_ptr<proxy_pass_pool> m_proxy_pool;
 
 		// m_tun 保存 TUN 设备对象.
 		std::unique_ptr<tun_device> m_tun;
