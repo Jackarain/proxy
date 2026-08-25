@@ -661,17 +661,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build swig cmake
-          NDK_ROOT="$ANDROID_SDK_ROOT/ndk/28.2.13676358"
-          cmake -S "$GITHUB_WORKSPACE" -B android/arm64-v8a \
-            -DCMAKE_TOOLCHAIN_FILE="$NDK_ROOT/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-19 \
-            -DCMAKE_BUILD_TYPE=Release -G Ninja
-          cmake --build android/arm64-v8a
-          "$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip" \
-            android/arm64-v8a/lib/libxproxy.so
-          mkdir -p server/android/xproxy/android/app/src/main/jniLibs/arm64-v8a
-          cp android/arm64-v8a/lib/libxproxy.so \
-            server/android/xproxy/android/app/src/main/jniLibs/arm64-v8a/
+          # 编译 arm64 的 libxproxy.so 并自动同步到 Flutter 工程 jniLibs.
+          ./build.android.sh "$GITHUB_WORKSPACE" \
+            "$ANDROID_SDK_ROOT/ndk/28.2.13676358" linux-x86_64 arm64-v8a
 
       - name: Build Android apk
         working-directory: server/android/xproxy
