@@ -291,6 +291,7 @@ xcode/
 .idea/
 .cache/
 .qwen/
+.github/copilot-instructions.md
 
 # Android cmake 构建产物
 /android/
