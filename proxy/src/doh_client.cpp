@@ -13,8 +13,13 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
+#include <cerrno>
 #include <algorithm>
 #include <utility>
+
+#if !defined(_WIN32)
+# include <sys/socket.h>
+#endif
 
 namespace proxy {
 
@@ -84,7 +89,7 @@ namespace proxy {
 			{
 				auto s = std::move(m_idle.front());
 				m_idle.pop_front();
-				// 唤醒维护协程补充空闲连接.
+				// 唤醒维护协程立即补充空闲连接.
 				if (m_timer)
 					m_timer->cancel();
 				co_return s;
@@ -100,6 +105,8 @@ namespace proxy {
 
 	net::awaitable<void> proxy_pass_pool::maintain()
 	{
+		auto last_rebuild = std::chrono::steady_clock::now();
+
 		for (;;)
 		{
 			if (m_closed)
@@ -108,50 +115,42 @@ namespace proxy {
 				co_return;
 			}
 
-			// 补充空闲连接，维持目标数量.
-			for (;;)
+			// 健康检查：剔除已被对端断开的空闲连接.
+			prune_dead();
+
+			// 补充连接.
+			if (idle_count() < m_target)
 			{
-				if (m_closed)
-					break;
-
-				size_t idle = 0;
+				if (m_reached_target)
 				{
-					std::lock_guard<std::mutex> lk(m_mutex);
-					idle = m_idle.size();
-				}
-				if (idle >= m_target)
-					break;
-
-				auto stream = co_await make_connection();
-				if (!stream.is_open())
-					break;  // 建连失败，稍后重试.
-
-				{
-					std::lock_guard<std::mutex> lk(m_mutex);
+					// 稳态：连接被取走/断开后立即补满.
+					while (idle_count() < m_target && !m_closed)
+					{
+						if (!co_await build_one())
+							break;
+					}
 					if (m_closed)
 					{
-						boost::system::error_code ec;
-						stream.close(ec);
-						break;
+						m_maintaining = false;
+						co_return;
 					}
-					m_idle.push_back(std::move(stream));
+					continue;  // 已补满，回到循环.
+				}
+
+				// 预热：每 k_prewarm_interval 建 1 条.
+				co_await build_one();
+				if (idle_count() >= m_target)
+				{
+					m_reached_target = true;
+					continue;
 				}
 			}
 
-			if (m_closed)
+			// 保活：空闲连接超过 k_idle_timeout 未被使用，整体重建.
+			auto now = std::chrono::steady_clock::now();
+			if (m_reached_target && idle_count() >= m_target &&
+				now - last_rebuild >= k_idle_timeout)
 			{
-				m_maintaining = false;
-				co_return;
-			}
-
-			// 等待保活超时或被 acquire 唤醒.
-			m_timer->expires_after(k_idle_timeout);
-			boost::system::error_code ec;
-			co_await m_timer->async_wait(net_awaitable[ec]);
-			if (ec != net::error::operation_aborted)
-			{
-				// 空闲超时：整体重建所有空闲连接（保活），
-				// 防止代理端空闲断开导致后续复用失败.
 				std::deque<variant_stream_type> stale;
 				{
 					std::lock_guard<std::mutex> lk(m_mutex);
@@ -159,11 +158,102 @@ namespace proxy {
 				}
 				for (auto& s : stale)
 				{
-					boost::system::error_code close_ec;
-					s.close(close_ec);
+					boost::system::error_code ec;
+					s.close(ec);
 				}
+				last_rebuild = now;
+				continue;  // 重建后回到循环立即补齐.
+			}
+
+			// 等待建连间隔（或被 acquire 取走唤醒）.
+			m_timer->expires_after(k_prewarm_interval);
+			boost::system::error_code ec;
+			co_await m_timer->async_wait(net_awaitable[ec]);
+			if (m_closed)
+			{
+				m_maintaining = false;
+				co_return;
+			}
+			// operation_aborted 表示有连接被取走，立即补充.
+		}
+	}
+
+	net::awaitable<bool> proxy_pass_pool::build_one()
+	{
+		auto stream = co_await make_connection();
+		if (!stream.is_open())
+			co_return false;
+
+		{
+			std::lock_guard<std::mutex> lk(m_mutex);
+			if (m_closed)
+			{
+				boost::system::error_code ec;
+				stream.close(ec);
+				co_return false;
+			}
+			m_idle.push_back(std::move(stream));
+		}
+		co_return true;
+	}
+
+	size_t proxy_pass_pool::idle_count() const
+	{
+		std::lock_guard<std::mutex> lk(m_mutex);
+		return m_idle.size();
+	}
+
+	void proxy_pass_pool::prune_dead()
+	{
+		std::lock_guard<std::mutex> lk(m_mutex);
+		for (auto it = m_idle.begin(); it != m_idle.end(); )
+		{
+			if (!is_conn_alive(*it))
+			{
+				boost::system::error_code ec;
+				it->close(ec);
+				it = m_idle.erase(it);
+			}
+			else
+			{
+				++it;
 			}
 		}
+	}
+
+	bool proxy_pass_pool::is_conn_alive(
+		variant_stream_type& stream) noexcept
+	{
+		if (!stream.is_open())
+			return false;
+
+		tcp::socket& sock = net_tcp_socket(stream);
+		int fd = sock.native_handle();
+		if (fd < 0)
+			return false;
+
+#if defined(_WIN32)
+		// Windows 上不做非阻塞探测，依赖 k_idle_timeout 周期重建保活.
+		(void)fd;
+		return true;
+#else
+		// 非阻塞 peek 探测对端是否已断开：
+		// - 返回 0 表示对端已 FIN（EOF）；
+		// - EAGAIN/EWOULDBLOCK 表示连接正常，无数据可读；
+		// - 其他错误表示连接已断开.
+		char buf;
+		ssize_t n = ::recv(fd, &buf, 1, MSG_PEEK | MSG_DONTWAIT);
+		if (n == 0)
+			return false;
+		if (n < 0)
+		{
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				return true;
+			return false;
+		}
+		// 空闲连接不应有数据，若有说明连接状态异常，丢弃.
+		return false;
+#endif
 	}
 
 	net::awaitable<variant_stream_type>

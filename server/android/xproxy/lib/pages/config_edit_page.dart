@@ -40,6 +40,9 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
   late bool _bypassCn = c.bypassCn;
   late bool _dnsCache = c.dnsCache;
   late bool _noIpv6 = c.noIpv6;
+  late final TextEditingController _proxyPassPoolSize = TextEditingController(
+    text: c.proxyPassPoolSize.toString(),
+  );
   bool _saving = false;
 
   @override
@@ -52,6 +55,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
       _dns,
       _dnsForeign,
       _testUrl,
+      _proxyPassPoolSize,
     ]) {
       t.dispose();
     }
@@ -98,6 +102,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           ..dnsForeignDoh = foreignDoh
           ..dnsCache = _dnsCache
           ..noIpv6 = _noIpv6
+          ..proxyPassPoolSize = int.tryParse(_proxyPassPoolSize.text.trim()) ?? 0
           ..testUrl = _testUrl.text.trim()
           ..disableCheckCert = _disableCheckCert
           ..bypassCn = _bypassCn;
@@ -206,6 +211,16 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           subtitle: const Text('自签证书场景启用'),
           value: _disableCheckCert,
           onChanged: (v) => setState(() => _disableCheckCert = v),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _proxyPassPoolSize,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: '代理连接池大小',
+            helperText: '预连到上游的 TCP/TLS 连接数, 0 表示禁用',
+            border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+          ),
         ),
         const SizedBox(height: 12),
         TextField(

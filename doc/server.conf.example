@@ -10,7 +10,7 @@
 
 # proxy_pass 当前服务作为中间级联服务时，proxy_pass 指定上游代理服务地址，格式为 url 格式，如果有认证信息并必须包含认证信息，如: https://jack:1111@example.com:1080/
 
-# proxy_pass_pool_size TUN 模式下预连接到 proxy_pass 的连接池大小（默认 4），0 表示禁用；预先建立并保活若干条上游连接，TCP flow 走代理时优先复用，避免重复握手.
+# proxy_pass_pool_size TUN 模式下预连接到 proxy_pass 的连接池大小（默认 20），0 表示禁用；启动后每 5 秒建立 1 条上游连接，直到池满该数量；连接被取走或断开后立即异步补充，TCP flow 走代理时优先复用，避免重复握手.
 
 # ssl_certificate_dir 表示相关 ssl 证书文件位置（如：/etc/letsencrypt/live/），支持多份不同证书加载，proxy_server 将自动搜索匹配.
 

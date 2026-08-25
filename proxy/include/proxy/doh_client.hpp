@@ -293,8 +293,8 @@ namespace proxy {
 	// （TCP 与可选 TLS 握手均已完成），供 tun_server 的 TCP flow 复用，
 	// 避免每次新连接都重复 TCP 三次握手与 TLS 握手.
 	//
-	// - acquire() 取走一条连接后，池自动异步补充，始终维持目标数量；
-	// - 使用方不归还连接（代理隧道为点对点，取走后即独占），用毕关闭；
+	// - 启动后每 k_prewarm_interval 建 1 条连接，直到池满 m_target 条；
+	// - 连接被取走、意外/超时断开或保活重建后，立即异步补建维持池满；
 	// - 空闲连接超过 k_idle_timeout 未被使用会被整体重建（保活），
 	//   防止代理端空闲超时断开导致复用失败.
 	class proxy_pass_pool
@@ -322,14 +322,30 @@ namespace proxy {
 		void close();
 
 	private:
-		// 维护协程：空闲连接不足时异步补充，空闲超时后整体重建.
+		// 维护协程：预热每 k_prewarm_interval 建 1 条，池满后
+		// 连接减少立即补建，空闲超时整体重建保活.
 		net::awaitable<void> maintain();
 
 		// 建立一条到 proxy_pass 的连接（TCP + 可选 TLS），
 		// 成功返回已连接的流，失败返回未打开的流.
 		net::awaitable<variant_stream_type> make_connection();
 
+		// 建立并加入一条空闲连接，成功返回 true.
+		net::awaitable<bool> build_one();
+
+		// 返回当前空闲连接数量.
+		size_t idle_count() const;
+
+		// 健康检查：剔除已被对端断开的空闲连接.
+		void prune_dead();
+
+		// 判定一条空闲连接是否仍可用（对端未断开）.
+		static bool is_conn_alive(variant_stream_type& stream) noexcept;
+
 	private:
+		// 预热建连间隔：启动后每该时长建 1 条连接.
+		static constexpr std::chrono::seconds k_prewarm_interval{ 5 };
+
 		// 空闲连接保活超时：超过后整体重建，避免被代理端空闲断开.
 		static constexpr std::chrono::seconds k_idle_timeout{ 60 };
 
@@ -340,14 +356,19 @@ namespace proxy {
 		// 维持的空闲连接目标数量.
 		size_t m_target { 0 };
 
+		// 标记池是否曾达到过目标数量（预热完成进入稳态）.
+		bool m_reached_target { false };
+
 		// 空闲连接池（variant_stream_type 为 move-only）.
 		std::deque<variant_stream_type> m_idle;
-		std::mutex m_mutex;
+
+		// 保护 m_idle 的并发访问（idle_count 为 const 方法故声明 mutable）.
+		mutable std::mutex m_mutex;
 
 		// SSL context（惰性初始化，供 TLS 连接复用）.
 		std::optional<net::ssl::context> m_ssl_ctx;
 
-		// 保活定时器与维护协程运行状态.
+		// 维护定时器与维护协程运行状态.
 		std::optional<net::steady_timer> m_timer;
 		bool m_maintaining { false };
 		bool m_closed { false };

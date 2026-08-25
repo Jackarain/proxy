@@ -99,7 +99,7 @@ bool happyeyeballs = true;
 bool connect_v6only = false;
 bool connect_v4only = false;
 bool proxy_pass_ssl = false;
-int proxy_pass_pool_size = 4;
+int proxy_pass_pool_size = 20;
 bool reuse_port = false;
 bool scramble = false;
 bool ssl_prefer_server_ciphers = false;
@@ -525,7 +525,7 @@ int main(int argc, char** argv)
 
 		("proxy_pass", po::value<std::string>(&proxy_pass)->default_value("")->value_name(""), "Specify the upstream proxy URL (e.g: socks5://user:passwd@ip:port).")
 		("proxy_pass_ssl", po::value<bool>(&proxy_pass_ssl)->default_value(false, "false")->value_name(""), "Enable SSL/TLS for the upstream proxy connection.")
-		("proxy_pass_pool_size", po::value<int>(&proxy_pass_pool_size)->default_value(4), "Size of the pre-connected proxy_pass pool in TUN mode (0 = disable).")
+		("proxy_pass_pool_size", po::value<int>(&proxy_pass_pool_size)->default_value(20), "Size of the pre-connected proxy_pass pool in TUN mode (0 = disable).")
 
 		("ssl_certificate_dir", po::value<std::string>(&ssl_cert_dir)->value_name("path"), "Directory containing SSL/TLS certificates.")
 		("ssl_cacert_dir", po::value<std::string>(&ssl_cacert_dir)->value_name("path"), "Directory containing SSL/TLS CA certificates for verification.")

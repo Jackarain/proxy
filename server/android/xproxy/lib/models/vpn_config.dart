@@ -17,6 +17,7 @@ class VpnConfig {
     List<String>? proxyCidr,
     this.disableCheckCert = true,
     this.udpTimeout = 300,
+    this.proxyPassPoolSize = 20,
     this.tunAddress = '',
     this.tunPrefix = 0,
     List<String>? dns,
@@ -52,6 +53,11 @@ class VpnConfig {
 
   /// UDP 流过期时间 (秒), 经 udp_timeout 传给 native; 默认 300.
   int udpTimeout;
+
+  /// proxy_pass 预选连接池大小, 经 proxy_pass_pool_size 传给 native;
+  /// 启动后每 5 秒建立 1 条到上游的 TCP(+TLS) 连接, 取走/断开后立即补充;
+  /// 0 表示禁用连接池. 默认 20.
+  int proxyPassPoolSize;
 
   // ---- Android VpnService ----
   String tunAddress;
@@ -141,6 +147,9 @@ class VpnConfig {
     if (udpTimeout <= 0) {
       errors.add('UDP 超时需大于 0');
     }
+    if (proxyPassPoolSize < 0) {
+      errors.add('连接池大小不能为负数');
+    }
     final badDomestic = dns
         .where((d) => InternetAddress.tryParse(d.trim()) == null)
         .toList();
@@ -188,6 +197,7 @@ class VpnConfig {
       if (proxyCidr.isNotEmpty) 'proxy_cidr': proxyCidr,
       'disable_check_cert': disableCheckCert,
       'udp_timeout': udpTimeout,
+      if (proxyPassPoolSize > 0) 'proxy_pass_pool_size': proxyPassPoolSize,
       'dns_domestic': dns,
       'dns_foreign': dnsForeign,
       if (dnsForeignDoh.trim().isNotEmpty) 'dns_doh': dnsForeignDoh.trim(),
@@ -219,6 +229,7 @@ class VpnConfig {
     'proxyCidr': proxyCidr,
     'disableCheckCert': disableCheckCert,
     'udpTimeout': udpTimeout,
+    'proxyPassPoolSize': proxyPassPoolSize,
     'tunAddress': tunAddress,
     'tunPrefix': tunPrefix,
     'dns': dns,
@@ -239,6 +250,7 @@ class VpnConfig {
     proxyCidr: _strList(json['proxyCidr']),
     disableCheckCert: json['disableCheckCert'] as bool? ?? true,
     udpTimeout: json['udpTimeout'] as int? ?? 300,
+    proxyPassPoolSize: json['proxyPassPoolSize'] as int? ?? 20,
     tunAddress: json['tunAddress'] as String? ?? '',
     tunPrefix: json['tunPrefix'] as int? ?? 0,
     dns: _strList(json['dns']),

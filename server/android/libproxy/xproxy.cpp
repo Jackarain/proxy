@@ -123,6 +123,10 @@ bool config_to_option(const std::string& config, proxy::proxy_server_option& opt
 	if (auto it = obj.if_contains("udp_timeout"); it && it->is_int64())
 		opt.udp_timeout_ = static_cast<int>(it->as_int64());
 
+	// proxy_pass 预选连接池大小 (0 表示禁用).
+	if (auto it = obj.if_contains("proxy_pass_pool_size"); it && it->is_int64())
+		opt.proxy_pass_pool_size_ = static_cast<size_t>(it->as_int64());
+
 	// 分流表.
 	opt.proxy_domains_ = json_string_array(obj, "proxy_domains");
 	opt.proxy_cidr_ = json_string_array(obj, "proxy_cidr");
