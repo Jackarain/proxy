@@ -33,6 +33,12 @@ class VpnChannel {
     await _channel.invokeMethod('stop');
   }
 
+  /// 返回 libxproxy 编译时记录的 git commit hash 前 6 位.
+  static Future<String> buildVersion() async {
+    final v = await _channel.invokeMethod<String>('build_version');
+    return v ?? '';
+  }
+
   /// 不停服务重建 VPN (TUN 参数变更): 原生端在单个任务内 停旧->启新.
   static Future<void> restart(String configJson, int launcherPort) async {
     final ok = await _channel.invokeMethod<bool>('restart', {

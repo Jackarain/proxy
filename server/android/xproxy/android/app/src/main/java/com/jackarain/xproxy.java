@@ -13,6 +13,10 @@ public class xproxy {
     return xproxyJNI.min_sdk_version();
   }
 
+  public static String build_version() {
+    return xproxyJNI.build_version();
+  }
+
   public static int start(String config) {
     return xproxyJNI.start(config);
   }

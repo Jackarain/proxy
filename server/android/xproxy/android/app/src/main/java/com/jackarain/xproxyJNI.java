@@ -10,6 +10,7 @@ package com.jackarain;
 
 public class xproxyJNI {
   public final static native String min_sdk_version();
+  public final static native String build_version();
   public final static native int start(String jarg1);
   public final static native void stop();
 }

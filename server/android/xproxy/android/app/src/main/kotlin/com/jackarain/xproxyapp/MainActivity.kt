@@ -48,6 +48,10 @@ class MainActivity : FlutterActivity() {
                         XproxyVpnService.requestStop(this)
                         result.success(true)
                     }
+                    // libxproxy 编译时记录的 git commit hash 前 6 位.
+                    "build_version" -> {
+                        result.success(XproxyBridge.buildVersion())
+                    }
                     // 控制通道 protect 请求: 放行 libproxy 的对外 socket.
                     "protect" -> {
                         val fd = call.argument<Int>("fd") ?: -1

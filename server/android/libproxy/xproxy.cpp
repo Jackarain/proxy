@@ -13,6 +13,10 @@
 #include <thread>
 #include <vector>
 
+#ifndef VERSION_GIT
+# define VERSION_GIT ""
+#endif
+
 namespace xproxy {
 
 namespace {
@@ -153,6 +157,18 @@ bool config_to_option(const std::string& config, proxy::proxy_server_option& opt
 std::string min_sdk_version()
 {
 	return "minSdkVersion: " + std::to_string(__ANDROID_MIN_SDK_VERSION__);
+}
+
+std::string build_version()
+{
+	// VERSION_GIT 形如 "abc1234 (2026-08-08 10:00:00)"，取 hash 前 6 位。
+	std::string v = VERSION_GIT;
+	auto pos = v.find(' ');
+	if (pos != std::string::npos)
+		v = v.substr(0, pos);
+	if (v.size() > 6)
+		v = v.substr(0, 6);
+	return v;
 }
 
 int start(const std::string& config)

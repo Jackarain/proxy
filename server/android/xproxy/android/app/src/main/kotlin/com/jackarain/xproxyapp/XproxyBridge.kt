@@ -63,4 +63,7 @@ object XproxyBridge {
     }
 
     fun stop() = xproxy.stop()
+
+    /** libxproxy 编译时记录的 git commit hash 前 6 位. */
+    fun buildVersion(): String = xproxy.build_version()
 }
