@@ -1507,7 +1507,9 @@ namespace proxy {
 	bool tun_udp_flow::send_direct(const char* data, size_t len)
 	{
 		boost::system::error_code ec;
-		m_backend->send_to(net::buffer(data, len), m_target, 0, ec);
+		// self_query 时改发国内 DNS（m_send_endp），其余发往原始目标.
+		const auto& dst = m_send_endp.port() != 0 ? m_send_endp : m_target;
+		m_backend->send_to(net::buffer(data, len), dst, 0, ec);
 		if (ec)
 		{
 			close();
@@ -1658,8 +1660,19 @@ namespace proxy {
 	{
 		m_doh_mode = false;
 		m_doh_via_proxy = false;
-		if (m_target.port() != 53 || self_query || !m_option.proxy_pass_)
+		if (m_target.port() != 53 || !m_option.proxy_pass_)
 			return;
+
+		// proxy 自身解析 proxy_pass 域名的查询（self_query）：改发国内
+		// DNS 可靠解析，避免直连 VpnService 注入的 8.8.8.8 等国外 DNS 时
+		// 被污染返回 NXDOMAIN. 注意只改发送目标（m_send_endp），响应回包
+		// 源地址仍用 m_target（原始 DNS），客户端 socket 与之建立连接.
+		if (self_query)
+		{
+			if (auto dns = pick_dns_server(m_option.dns_domestic_, m_target))
+				m_send_endp = *dns;
+			return;
+		}
 
 		auto scheme = boost::to_lower_copy(
 			std::string((*m_option.proxy_pass_).scheme()));

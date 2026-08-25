@@ -839,7 +839,8 @@ namespace proxy {
 	}
 
 	// dns_cacheable 判断响应是否可缓存：SERVFAIL（rcode=2）是上游临时
-	// 故障，不缓存.
+	// 故障，NXDOMAIN（rcode=3）可能是污染结果，均不缓存，避免错误结果
+	// 被长期复用导致解析持续失败.
 	bool dns_cacheable(const std::string& resp) noexcept
 	{
 		if (resp.size() < 4)
@@ -847,7 +848,8 @@ namespace proxy {
 		auto flags = static_cast<uint16_t>(
 			(static_cast<uint8_t>(resp[2]) << 8) |
 			static_cast<uint8_t>(resp[3]));
-		return (flags & 0x0F) != 2;
+		auto rcode = flags & 0x0F;
+		return rcode != 2 && rcode != 3;
 	}
 
 	// dns_build_response 根据查询报文构建 DNS wire-format 响应，回显问题并

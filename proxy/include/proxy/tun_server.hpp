@@ -431,6 +431,12 @@ namespace proxy {
 		// m_backend_endp 保存代理返回的 UDP 中继地址.
 		net::ip::udp::endpoint m_backend_endp;
 
+		// m_send_endp 保存 DNS 查询的实际发送目标（直连模式）.
+		// self_query（proxy 自身解析 proxy_pass 域名）时为避免直连被污染的
+		// 注入 DNS（8.8.8.8 等），改发国内 DNS；响应回包源地址仍用 m_target
+		// （客户端 socket 与原始 DNS 建立连接，源地址必须与之匹配）.
+		net::ip::udp::endpoint m_send_endp;
+
 		// m_proxy 标记是否走上游代理.
 		bool m_proxy { false };
 
