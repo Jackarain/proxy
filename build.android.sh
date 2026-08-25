@@ -1,22 +1,26 @@
 #!/bin/bash
-# arm64-v8a   armeabi-v7a    x86         x86_64
+# arm64-v8a   armeabi-v7a   x86         x86_64
 #
 # 使用方法:
-#
-# ./build.android.sh <path-to-src> <path-to-ndk> <host-tag>
+# ./build.android.sh <path-to-src> <path-to-ndk> [host-tag] [architecture]
 # 示例:
 # ./build.android.sh ~/Documents/proxy /Users/jack/Library/Android/sdk/ndk/26.1.10909125
-# ./build.android.sh ~/Documents/proxy /Users/jack/Library/Android/sdk/ndk/26.1.10909125 darwin-x86_64
-# ./build.android.sh /root/proxy /root/ndk linux-x86_64
-# ./build.android.sh ~/proxy ~/ndk windows-x86_64
+# ./build.android.sh ~/Documents/proxy /Users/jack/Library/Android/sdk/ndk/26.1.10909125 darwin-x86_64 arm64-v8a
+# ./build.android.sh /root/proxy /root/ndk linux-x86_64 armeabi-v7a
 #
-
-ARCHITECTURES=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
 
 SRC_PATH=$1
 NDK_PATH=$2
 HOST_TAG=${3:-windows-x86_64}
+TARGET_ARCH=$4
 BUILD_TYPE="Release"
+
+# 如果指定了具体的架构则只编译该架构，否则默认编译所有架构
+if [ -n "$TARGET_ARCH" ]; then
+    ARCHITECTURES=("$TARGET_ARCH")
+else
+    ARCHITECTURES=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
+fi
 
 kernel=$(uname -s)
 
@@ -31,6 +35,7 @@ fi
 echo "SRC_PATH: ${SRC_PATH}"
 echo "NDK_PATH: ${NDK_PATH}"
 echo "HOST_TAG: ${HOST_TAG}"
+echo "ARCHITECTURES: ${ARCHITECTURES[*]}"
 
 for ARCH in "${ARCHITECTURES[@]}"
 do
@@ -53,7 +58,9 @@ do
         echo "copied libxproxy.so -> ${JNI_LIBS_DIR}/libxproxy.so"
     fi
     mkdir -p outputs/binaries
-    cp -r android/$ARCH/swig/* outputs/
+    if [ -d "android/$ARCH/swig" ]; then
+        cp -r android/$ARCH/swig/* outputs/
+    fi
     cp -r release/* outputs/binaries/
 done
 
