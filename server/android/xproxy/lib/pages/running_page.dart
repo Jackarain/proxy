@@ -319,11 +319,16 @@ class _RunningPageState extends State<RunningPage>
       // 不跟随重定向, 如实反映配置的测试 URL 首跳响应状态.
       req.followRedirects = false;
       final res = await req.close().timeout(const Duration(seconds: 10));
-      // 首字节到达时间即延迟.
-      final latencyMs = stopwatch.elapsedMilliseconds;
+      // 收到响应头的时间作为空响应体时的延迟兜底.
+      final headerMs = stopwatch.elapsedMilliseconds;
       // 继续读取响应体, 按字节数/耗时计算下载速率.
       var received = 0;
+      var latencyMs = headerMs;
       await for (final chunk in res) {
+        // 从发出请求到收到第一个数据的时间作为延迟.
+        if (latencyMs == headerMs) {
+          latencyMs = stopwatch.elapsedMilliseconds;
+        }
         received += chunk.length;
       }
       final totalMs = stopwatch.elapsedMilliseconds;
