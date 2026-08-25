@@ -316,6 +316,8 @@ class _RunningPageState extends State<RunningPage>
       final req = await client
           .openUrl('GET', Uri.parse(url))
           .timeout(const Duration(seconds: 10));
+      // 不跟随重定向, 如实反映配置的测试 URL 首跳响应状态.
+      req.followRedirects = false;
       final res = await req.close().timeout(const Duration(seconds: 10));
       // 首字节到达时间即延迟.
       final latencyMs = stopwatch.elapsedMilliseconds;
