@@ -158,16 +158,21 @@ namespace proxy {
 		std::function<void(const boost::system::error_code&, std::string)> handler;
 	};
 
+	// proxy_pass_pool 前置声明（doh_connection 持有其指针复用已建立连接）.
+	class proxy_pass_pool;
+
 	// doh_connection 实现一条到 DoH 服务的持久连接（HTTP/1.1 keep-alive）.
 	// 查询请求入队后由 pump 协程串行发送（同一连接同一时刻仅一个 in-flight
 	// 请求），空闲超过 k_idle_timeout 后自动关闭，请求失败时重建连接重试一次.
+	// 建连时优先从 proxy_pass_pool 取一条已建立（TCP/TLS 已完成）的连接复用.
 	class doh_connection
 		: public std::enable_shared_from_this<doh_connection>
 	{
 	public:
 		doh_connection(net::any_io_executor executor,
 			proxy_server_option opt,
-			std::function<net::awaitable<bool>(int)> protect);
+			std::function<net::awaitable<bool>(int)> protect,
+			std::shared_ptr<proxy_pass_pool> proxy_pool);
 		~doh_connection();
 
 		doh_connection(const doh_connection&) = delete;
@@ -191,7 +196,12 @@ namespace proxy {
 		net::awaitable<void> pump();
 
 		// 建立到 DoH 服务的连接（直连或经代理 CONNECT 隧道），成功返回 true.
+		// 优先从 proxy_pass_pool 获取已建立的连接，取不到再新建.
 		net::awaitable<bool> connect();
+
+		// 基于从连接池获取的已有连接（TCP/TLS 已完成）建立 DoH 连接，
+		// 成功返回 true.
+		net::awaitable<bool> connect_pooled(variant_stream_type stream);
 
 		// 经代理 CONNECT 隧道转发到 DoH 服务（https 代理先建外层 TLS，
 		// 再建 CONNECT 隧道，内层按需 TLS），成功返回 true.
@@ -226,6 +236,9 @@ namespace proxy {
 		net::any_io_executor m_executor;
 		proxy_server_option m_option;
 		std::function<net::awaitable<bool>(int)> m_protect;
+
+		// proxy_pass 预选连接池（可空；建连时优先从中复用已建立的连接）.
+		std::shared_ptr<proxy_pass_pool> m_proxy_pool;
 
 		// DoH 目标（构造时解析）.
 		std::string m_doh_host;
@@ -262,7 +275,8 @@ namespace proxy {
 	public:
 		doh_client(net::any_io_executor executor,
 			proxy_server_option opt,
-			std::function<net::awaitable<bool>(int)> protect);
+			std::function<net::awaitable<bool>(int)> protect,
+			std::shared_ptr<proxy_pass_pool> proxy_pool);
 
 		// 提交 DNS 查询（wire-format），返回 wire-format 响应；
 		// 失败返回空串（调用方按 SERVFAIL 处理）.
@@ -282,6 +296,9 @@ namespace proxy {
 		net::any_io_executor m_executor;
 		proxy_server_option m_option;
 		std::function<net::awaitable<bool>(int)> m_protect;
+
+		// proxy_pass 预选连接池（传递到各 doh_connection 复用）.
+		std::shared_ptr<proxy_pass_pool> m_proxy_pool;
 
 		std::vector<std::shared_ptr<doh_connection>> m_conns;
 	};

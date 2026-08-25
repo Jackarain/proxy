@@ -585,10 +585,15 @@ namespace proxy {
 		{
 			if (!m_doh_client)
 			{
+				// DoH 建连复用 proxy_pass 预选连接池（若启用）.
+				std::shared_ptr<proxy_pass_pool> proxy_pool;
+				if (m_option.proxy_pass_pool_size_ > 0)
+					proxy_pool = proxy_conn_pool();
 				m_doh_client = std::make_unique<doh_client>(
 					m_executor, m_option,
 					[this](int fd) -> net::awaitable<bool>
-					{ return protect_socket(fd); });
+					{ return protect_socket(fd); },
+					std::move(proxy_pool));
 			}
 			return m_doh_client.get();
 		}

@@ -360,10 +360,12 @@ namespace proxy {
 
 	doh_connection::doh_connection(net::any_io_executor executor,
 		proxy_server_option opt,
-		std::function<net::awaitable<bool>(int)> protect)
+		std::function<net::awaitable<bool>(int)> protect,
+		std::shared_ptr<proxy_pass_pool> proxy_pool)
 		: m_executor(std::move(executor))
 		, m_option(std::move(opt))
 		, m_protect(std::move(protect))
+		, m_proxy_pool(std::move(proxy_pool))
 		, m_idle_timer(m_executor)
 		, m_req_timer(m_executor)
 	{
@@ -540,6 +542,22 @@ namespace proxy {
 	{
 		const auto& proxy_url = *m_option.proxy_pass_;
 
+		// 优先从 proxy_pass 预选连接池获取已建立（TCP/TLS 已完成）的连接.
+		if (m_proxy_pool)
+		{
+			auto conn = co_await m_proxy_pool->acquire();
+			if (conn && conn->is_open())
+			{
+				if (co_await connect_pooled(std::move(*conn)))
+					co_return true;
+
+				// 池中连接不可用（代理端已断开等），关闭后回退新建连接.
+				XLOG_WARN << "tun doh pool connection failed, "
+					"fallback connect";
+				teardown();
+			}
+		}
+
 		auto sock = co_await connect_proxy_pass(
 			m_executor, m_option, proxy_url, m_protect);
 		if (!sock.is_open())
@@ -549,6 +567,44 @@ namespace proxy {
 		co_return m_doh_via_proxy ?
 			co_await connect_via_proxy(std::move(sock)) :
 			co_await connect_direct(std::move(sock));
+	}
+
+	// connect_pooled 基于连接池获取的已有连接建立 DoH 连接：
+	// 池连接的外层 TLS（proxy 为 https 时）已握手完成，直接复用；
+	// 经代理 CONNECT 隧道时在其上建隧道，隧道内按需建内层 DoH TLS.
+	net::awaitable<bool> doh_connection::connect_pooled(
+		variant_stream_type stream)
+	{
+		const auto& proxy_url = *m_option.proxy_pass_;
+
+		if (m_doh_via_proxy)
+		{
+			// 经代理 CONNECT 隧道转发到 DoH 服务.
+			const std::string authority =
+				m_doh_host + ":" + std::to_string(m_doh_port);
+
+			if (!co_await http_connect_tunnel(
+				stream, authority, proxy_url))
+				co_return false;
+
+			// 取出隧道底层 TCP socket 供内层 TLS 复用.
+			// 池连接只会是 proxy_tcp_socket 或 ssl_tcp_stream，均返回 tcp::socket.
+			tcp::socket tunnel = std::move(net_tcp_socket(stream));
+
+			if (!m_doh_https)
+			{
+				m_stream.emplace(init_proxy_stream(std::move(tunnel)));
+				co_return true;
+			}
+			if (!co_await setup_tls(m_doh_host))
+				co_return false;
+			m_stream.emplace(init_proxy_stream(std::move(tunnel), *m_ssl_ctx));
+			co_return co_await tls_handshake(m_doh_host);
+		}
+
+		// 与 proxy_pass 同服务：池连接（TCP/TLS 已完成）即为 DoH 连接.
+		m_stream = std::move(stream);
+		co_return true;
 	}
 
 	// connect_via_proxy 经代理 CONNECT 隧道转发到 DoH 服务：
@@ -715,10 +771,12 @@ namespace proxy {
 
 	doh_client::doh_client(net::any_io_executor executor,
 		proxy_server_option opt,
-		std::function<net::awaitable<bool>(int)> protect)
+		std::function<net::awaitable<bool>(int)> protect,
+		std::shared_ptr<proxy_pass_pool> proxy_pool)
 		: m_executor(std::move(executor))
 		, m_option(std::move(opt))
 		, m_protect(std::move(protect))
+		, m_proxy_pool(std::move(proxy_pool))
 	{}
 
 	net::awaitable<std::string> doh_client::query(
@@ -781,7 +839,7 @@ namespace proxy {
 		if (m_conns.size() < k_max_connections)
 		{
 			auto conn = std::make_shared<doh_connection>(
-				m_executor, m_option, m_protect);
+				m_executor, m_option, m_protect, m_proxy_pool);
 			m_conns.push_back(conn);
 			return conn;
 		}
