@@ -300,9 +300,25 @@ class _RunningPageState extends State<RunningPage>
           ),
         ],
         const SizedBox(height: 12),
-        _infoTile('运行时长', _fmtUptime(s['uptime'])),
-        _infoTile('活动连接', '${s['active_connections'] ?? 0}'),
-        _infoTile('累计连接', '${s['conn_total'] ?? 0}'),
+        Row(
+          children: [
+            Expanded(child: _infoTile('运行时长', _fmtUptime(s['uptime']))),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _infoTile('活动连接', '${s['active_connections'] ?? 0}'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(child: _infoTile('累计连接', '${s['conn_total'] ?? 0}')),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _infoTile('池连接数', '${s['pool_connections'] ?? 0}'),
+            ),
+          ],
+        ),
         if (sessions.isNotEmpty) ...[
           const SizedBox(height: 8),
           ExpansionTile(
