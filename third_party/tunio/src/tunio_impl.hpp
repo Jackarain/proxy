@@ -51,7 +51,7 @@ public:
     }
     engine_stats &stats() noexcept
     {
-        return stats_;
+        return *stats_;
     }
     net::any_io_executor strand() const noexcept
     {
@@ -118,7 +118,6 @@ private:
     uint64_t read_epoch_ =
         0; // 当前读操作发起时的代际，用于识别旧设备的迟到回调
     tun_config cfg_;
-    engine_stats stats_;
     net::ip::address local_ip_{}; // 用于 local_address()
     uint8_t local_ip4_[4] = {};   // 网络字节序
     uint8_t local_ip6_[16] = {};  // 网络字节序
@@ -126,11 +125,12 @@ private:
     bool have_ip6_ = false;
     size_t mtu_ = 1500;
 
-    std::unique_ptr<packet_device> device_;
-    std::unique_ptr<device_writer> writer_;
+    std::shared_ptr<packet_device> device_;
+    std::shared_ptr<device_writer> writer_;
     std::shared_ptr<tcp_engine> tcp_;
     std::shared_ptr<udp_engine> udp_;
     std::shared_ptr<buffer_accountant> account_;
+    std::shared_ptr<engine_stats> stats_;
 
     packet_buffer read_buf_;
     bool reading_ = false;

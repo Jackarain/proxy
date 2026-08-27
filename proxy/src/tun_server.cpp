@@ -2155,12 +2155,23 @@ namespace proxy {
 			impl();
 			return;
 		}
+		// 即使 impl() 抛异常也要解除调用方阻塞, 避免 stop 线程
+		// 永久等待（io_context 捕获异常后不会再执行本 handler 剩余部分）.
 		std::promise<void> done;
+		struct done_guard
+		{
+			std::promise<void>* p;
+			~done_guard()
+			{
+				if (p)
+					p->set_value();
+			}
+		};
 		net::dispatch(m_executor,
 			[impl, &done]() mutable
 			{
+				done_guard g{&done};
 				impl();
-				done.set_value();
 			});
 		done.get_future().wait();
 	}

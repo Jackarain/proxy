@@ -30,14 +30,19 @@ namespace detail {
 //
 // 底层描述符同一时刻仅允许一个未完成的异步写操作，所有写请求统一进入
 // 队列，由 Strand 上的泵循环依次下发；本类所有方法都必须在 Strand 上调用。
-class device_writer
+//
+// 生命周期: 写完成回调捕获自身的 shared_ptr 保活, 引擎重建（reopen）释放
+// 旧 writer 时, 在途写操作的迟到完成回调不会访问已释放对象; 设备与统计
+// 对象同样以 shared_ptr 共享, 避免回调晚于引擎析构时引用悬垂.
+class device_writer : public std::enable_shared_from_this<device_writer>
 {
 public:
-    device_writer(net::any_io_executor strand, packet_device &dev,
-                  engine_stats &stats)
+    device_writer(net::any_io_executor strand,
+                  std::shared_ptr<packet_device> dev,
+                  std::shared_ptr<engine_stats> stats)
         : strand_(std::move(strand))
-        , dev_(dev)
-        , stats_(stats)
+        , dev_(std::move(dev))
+        , stats_(std::move(stats))
     {
     }
 
@@ -116,7 +121,7 @@ private:
 
     void pump()
     {
-        if (current_ || queue_.empty()) {
+        if (cancelled_ || current_ || queue_.empty()) {
             return;
         }
         // 当前写入的 entry 作为成员保存（零堆分配），cancel_all 清空队列时
@@ -124,31 +129,37 @@ private:
         current_ = std::move(queue_.front());
         queue_.pop_front();
         packet_buffer &buf = current_->buf;
-        dev_.async_write_packet(
-            buf,
-            net::bind_executor(strand_, [this](boost::system::error_code ec,
-                                               size_t n) {
-                if (!ec) {
-                    stats_.tx_packets.fetch_add(1, std::memory_order_relaxed);
-                }
-                if (cancelled_) {
-                    if (current_->handler) {
-                        current_->handler(boost::system::error_code(
-                                              net::error::operation_aborted),
-                                          0);
-                    }
-                } else if (current_->handler) {
-                    current_->handler(ec, n);
-                }
-                recycle(std::move(current_->buf));
-                current_.reset();
-                pump();
+        auto self = shared_from_this();
+        dev_->async_write_packet(
+            buf, net::bind_executor(strand_, [self](boost::system::error_code ec,
+                                                   size_t n) {
+                self->on_write_done(ec, n);
             }));
     }
 
+    // 写完成回调（在 Strand 上执行）
+    void on_write_done(const boost::system::error_code &ec, size_t n)
+    {
+        if (!ec) {
+            stats_->tx_packets.fetch_add(1, std::memory_order_relaxed);
+        }
+        if (cancelled_) {
+            if (current_->handler) {
+                current_->handler(
+                    boost::system::error_code(net::error::operation_aborted),
+                    0);
+            }
+        } else if (current_->handler) {
+            current_->handler(ec, n);
+        }
+        recycle(std::move(current_->buf));
+        current_.reset();
+        pump();
+    }
+
     net::any_io_executor strand_;
-    packet_device &dev_;
-    engine_stats &stats_;
+    std::shared_ptr<packet_device> dev_;
+    std::shared_ptr<engine_stats> stats_;
     std::deque<entry> queue_;
     std::vector<packet_buffer> pool_;
     std::optional<entry> current_; // 正在写入的数据包

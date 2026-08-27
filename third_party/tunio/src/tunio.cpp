@@ -24,7 +24,8 @@ namespace detail {
 
 tunio_impl::tunio_impl(net::io_context &ctx)
     : strand_ex_(net::make_strand(ctx))
-    , device_(std::make_unique<packet_device>(ctx))
+    , stats_(std::make_shared<engine_stats>())
+    , device_(std::make_shared<packet_device>(ctx))
     , read_buf_(2048, 64)
 {
 }
@@ -131,10 +132,10 @@ bool tunio_impl::open(const tun_config &cfg, boost::system::error_code &ec)
 
     account_ = std::make_shared<buffer_accountant>();
     account_->limit = cfg.max_total_buffer;
-    writer_ = std::make_unique<device_writer>(strand_ex_, *device_, stats_);
-    tcp_ = std::make_shared<tcp_engine>(strand_ex_, *writer_, cfg_, stats_,
+    writer_ = std::make_shared<device_writer>(strand_ex_, device_, stats_);
+    tcp_ = std::make_shared<tcp_engine>(strand_ex_, *writer_, cfg_, *stats_,
                                         account_);
-    udp_ = std::make_shared<udp_engine>(strand_ex_, *writer_, cfg_, stats_,
+    udp_ = std::make_shared<udp_engine>(strand_ex_, *writer_, cfg_, *stats_,
                                         account_);
     tcp_->start_sweep();
 
@@ -156,17 +157,33 @@ void tunio_impl::close()
     auto tcp = tcp_;
     auto udp = udp_;
     net::dispatch(strand_ex_, [self = shared_from_this(), epoch, tcp, udp]() {
-        if (tcp) {
-            tcp->close_all();
+        // 引擎会话清理（close_all 触发完成回调恢复上层协程）可能抛异常
+        //（如协程访问已释放对象）, 必须捕获, 确保设备与写队列一定被
+        // 关闭/取消: 否则旧引擎的读循环继续运行, 注入的 tun fd 无法
+        // 撤销, 反复启停后 io_context 残留任务忙跑.
+        try {
+            if (tcp) {
+                tcp->close_all();
+            }
+        } catch (...) {
+            // 忽略会话清理异常, 保证设备与写队列一定被关闭/取消.
         }
-        if (udp) {
-            udp->close_all();
+        try {
+            if (udp) {
+                udp->close_all();
+            }
+        } catch (...) {
+            // 忽略会话清理异常, 保证设备与写队列一定被关闭/取消.
         }
         // 设备与写队列指向共享成员（reopen 后可能已指向新实例），
         // 仅当未被重新 open 时才允许关闭，避免误关新引擎。
         if (epoch == self->epoch_) {
-            if (self->writer_) {
-                self->writer_->cancel_all();
+            try {
+                if (self->writer_) {
+                    self->writer_->cancel_all();
+                }
+            } catch (...) {
+                // 忽略取消异常, 设备仍须关闭.
             }
             if (self->device_) {
                 self->device_->close();
@@ -251,7 +268,7 @@ void tunio_impl::on_read(const boost::system::error_code &ec, size_t n)
         if (total_len > read_buf_.capacity() - read_buf_.headroom()) {
             // 声明长度超出缓冲可容纳上限（正常 MTU 内报文不可能出现）：
             // 该报文永远无法凑齐，丢弃全部缓冲并重新开始，避免读循环停滞。
-            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
             read_buf_.reset();
             start_read();
             return;
@@ -259,7 +276,7 @@ void tunio_impl::on_read(const boost::system::error_code &ec, size_t n)
         if (offset + total_len > avail) {
             break; // 报文体不完整，等待续读
         }
-        stats_.rx_packets.fetch_add(1, std::memory_order_relaxed);
+        stats_->rx_packets.fetch_add(1, std::memory_order_relaxed);
         handle_packet(base + offset, total_len);
         offset += total_len;
     }
@@ -275,7 +292,7 @@ void tunio_impl::on_read(const boost::system::error_code &ec, size_t n)
 void tunio_impl::handle_packet(const uint8_t *pkt, size_t len)
 {
     if (len < 20) {
-        stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+        stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
         return;
     }
 
@@ -286,30 +303,30 @@ void tunio_impl::handle_packet(const uint8_t *pkt, size_t len)
     const uint8_t version = pkt[0] >> 4;
     if (version == 4) {
         if (len < sizeof(ipv4_header)) {
-            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
             return;
         }
         ipv4_header h;
         std::memcpy(&h, pkt, sizeof(h));
         const size_t ihl = h.header_len();
         if (ihl < sizeof(ipv4_header) || ihl > len) {
-            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
             return;
         }
         const size_t total_len = ntohs(h.total_len);
         if (total_len < ihl || total_len > len) {
-            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
             return;
         }
         // 丢弃分片包（带分片偏移或 MF 标志）：引擎不做 IP 重组
         const uint16_t frag = ntohs(h.frag_off);
         if ((frag & 0x1fff) != 0 || (frag & 0x2000) != 0) {
-            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
             return;
         }
         // 校验 IP 头部校验和
         if (verify_ipv4_checksum(pkt, ihl) != 0) {
-            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
             return;
         }
         ip.family = 4;
@@ -320,21 +337,21 @@ void tunio_impl::handle_packet(const uint8_t *pkt, size_t len)
         payload_len = total_len - ihl;
     } else if (version == 6) {
         if (len < sizeof(ipv6_header)) {
-            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
             return;
         }
         ipv6_header h;
         std::memcpy(&h, pkt, sizeof(h));
         const size_t payload_len_field = ntohs(h.payload_len);
         if (sizeof(ipv6_header) + payload_len_field > len) {
-            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
             return;
         }
         // 丢弃带扩展头的报文（Hop-by-Hop=0、Routing=43、Fragment=44、
         // AH=51、Dest-Options=60）：引擎不做 IP 重组且不解析扩展头链
         if (h.next_header == 0 || h.next_header == 43 || h.next_header == 44 ||
             h.next_header == 51 || h.next_header == 60) {
-            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
             return;
         }
         ip.family = 6;
@@ -344,7 +361,7 @@ void tunio_impl::handle_packet(const uint8_t *pkt, size_t len)
         payload = pkt + sizeof(ipv6_header);
         payload_len = payload_len_field;
     } else {
-        stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+        stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
         return;
     }
 
@@ -373,7 +390,7 @@ void tunio_impl::handle_packet(const uint8_t *pkt, size_t len)
                             std::memcmp(ip.src_ip, local_ip6_, 16) == 0);
     if (src_local || is_reserved_local(ip.src_ip, ip.family) ||
         is_reserved_local(ip.dst_ip, ip.family)) {
-        stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+        stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
         return;
     }
 #endif
@@ -392,7 +409,7 @@ void tunio_impl::handle_packet(const uint8_t *pkt, size_t len)
         udp_->on_packet(ip, payload, payload_len);
         break;
     default:
-        stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+        stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
         break;
     }
 }
@@ -429,7 +446,7 @@ void tunio_impl::handle_icmp(const ip_packet_info &ip, const uint8_t *icmp,
     oicmp[3] = static_cast<uint8_t>(csum & 0xff);
 
     writer_->async_write_and_forget(std::move(reply));
-    stats_.icmp_replies.fetch_add(1, std::memory_order_relaxed);
+    stats_->icmp_replies.fetch_add(1, std::memory_order_relaxed);
 }
 
 void tunio_impl::handle_icmpv6(const ip_packet_info &ip, const uint8_t *icmp,
@@ -466,7 +483,7 @@ void tunio_impl::handle_icmpv6(const ip_packet_info &ip, const uint8_t *icmp,
     oicmp[3] = static_cast<uint8_t>(csum & 0xff);
 
     writer_->async_write_and_forget(std::move(reply));
-    stats_.icmp_replies.fetch_add(1, std::memory_order_relaxed);
+    stats_->icmp_replies.fetch_add(1, std::memory_order_relaxed);
 }
 
 } // namespace detail

@@ -1886,12 +1886,23 @@ void proxy_server::close() noexcept
 	// 停止标志与 protect 发送器会在 io_context 线程被 serve 协程/tun
 	// 协程访问, 投递到 io_context 串行执行, 避免与本线程并发读写
 	// std::function 造成数据竞争.
+	// 即使 handler 抛异常也要解除调用方阻塞: io_context 捕获异常后
+	// handler 剩余部分不再执行, 若不设值 close() 将永久等待.
 	std::promise<void> launcher_done;
+	struct done_guard
+	{
+		std::promise<void>* p;
+		~done_guard()
+		{
+			if (p)
+				p->set_value();
+		}
+	};
 	net::dispatch(m_executor, [this, &launcher_done]() mutable
 		{
+			done_guard g{&launcher_done};
 			m_launcher_state->call_protect_ = {};
 			launcher_stop();
-			launcher_done.set_value();
 		});
 	launcher_done.get_future().wait();
 
@@ -1901,11 +1912,11 @@ void proxy_server::close() noexcept
 	std::promise<void> server_done;
 	net::dispatch(m_executor, [this, &server_done]() mutable
 		{
+			done_guard g{&server_done};
 			if (m_dns_server)
 				m_dns_server->close();
 			if (m_tun_server)
 				m_tun_server->close();
-			server_done.set_value();
 		});
 	server_done.get_future().wait();
 
