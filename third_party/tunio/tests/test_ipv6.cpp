@@ -41,8 +41,12 @@ static void test_tcp6_handshake_data_fin()
     tun_stream peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
-    acceptor.async_accept(
-        peer, [&](boost::system::error_code ec) { accept_done.set_value(ec); });
+    acceptor.async_accept(peer, [&](boost::system::error_code ec) {
+        if (!ec) {
+            peer.accept();
+        }
+        accept_done.set_value(ec);
+    });
 
     // 客户端 SYN
     env.dev.send(make_tcp6(CLIENT_V6, DEST_V6, CLIENT_PORT, DEST_PORT, 0x02,

@@ -353,7 +353,9 @@ void tunio_impl::handle_packet(const uint8_t *pkt, size_t len)
     // 的入包。这类地址只会来自本机进程（未绕过 tun 的出站回环、mDNS 等
     // 链路本地流量），正常客户端流量不可能使用；若不拦截会被当作新连接
     // 无限放大，形成连接风暴。目标为本地虚拟 IP 的入包（如 ICMP 回显）
-    // 仍保留处理。
+    // 仍保留处理。默认启用；编译时定义 TUNIO_DISABLE_LOOPBACK_GUARD
+    // 可关闭该防护。
+#ifndef TUNIO_DISABLE_LOOPBACK_GUARD
     const auto is_reserved_local = [](const uint8_t *a, int family) noexcept {
         if (family == 4) {
             return a[0] == 0x7f || a[0] == 0x00; // 127.0.0.0/8, 0.0.0.0/8
@@ -365,16 +367,16 @@ void tunio_impl::handle_packet(const uint8_t *pkt, size_t len)
         }
         return a[0] == 0xfe && (a[1] & 0xc0) == 0x80; // fe80::/10
     };
-    const bool src_local =
-        (have_ip4_ && ip.family == 4 &&
-         std::memcmp(ip.src_ip, local_ip4_, 4) == 0) ||
-        (have_ip6_ && ip.family == 6 &&
-         std::memcmp(ip.src_ip, local_ip6_, 16) == 0);
+    const bool src_local = (have_ip4_ && ip.family == 4 &&
+                            std::memcmp(ip.src_ip, local_ip4_, 4) == 0) ||
+                           (have_ip6_ && ip.family == 6 &&
+                            std::memcmp(ip.src_ip, local_ip6_, 16) == 0);
     if (src_local || is_reserved_local(ip.src_ip, ip.family) ||
         is_reserved_local(ip.dst_ip, ip.family)) {
         stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
         return;
     }
+#endif
 
     switch (ip.protocol) {
     case IPPROTO_ICMP_V:

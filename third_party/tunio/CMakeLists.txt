@@ -52,6 +52,11 @@ else()
   list(APPEND TUNIO_SOURCES src/packet_device_posix.cpp)
 endif()
 
+# 环路与本地地址防护默认启用；设置为 ON 时定义
+# TUNIO_DISABLE_LOOPBACK_GUARD，关闭对源为本机虚拟 IP 或保留地址
+# 入包的丢弃（编译宏也可通过 -DTUNIO_DISABLE_LOOPBACK_GUARD 直接定义）。
+option(TUNIO_DISABLE_LOOPBACK_GUARD "Disable loopback/local-address traffic guard" OFF)
+
 add_library(tunio STATIC ${TUNIO_SOURCES})
 target_include_directories(tunio PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -63,6 +68,12 @@ target_include_directories(tunio PUBLIC
 # 使用方编译含 tunio 头的代码时同样生效.
 if(WIN32)
   target_compile_definitions(tunio PUBLIC NOMINMAX)
+endif()
+
+# 环路与本地地址防护默认启用；设置为 ON 时定义
+# TUNIO_DISABLE_LOOPBACK_GUARD 关闭防护（见上方 option 注释）。
+if(TUNIO_DISABLE_LOOPBACK_GUARD)
+  target_compile_definitions(tunio PUBLIC TUNIO_DISABLE_LOOPBACK_GUARD)
 endif()
 
 # Wintun 所需编译定义及系统库.

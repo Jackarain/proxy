@@ -203,7 +203,7 @@ struct tcp_minimal_state {
 
     // ---- 状态机 ----
     enum State : uint8_t {
-        CLOSED, SYN_SENT, SYN_RCVD,
+        CLOSED, SYN_SENT, SYN_RCVD, SYN_ACK_SENT,
         ESTABLISHED,
         FIN_WAIT_1, FIN_WAIT_2, CLOSE_WAIT,
         LAST_ACK, TIME_WAIT
@@ -383,11 +383,15 @@ private:
 
 #### 5.1 握手阶段
 
-- 收到客户端 SYN 后，引擎分配一个 `tcp_minimal_state` 实例，记录 `irs = SYN.seq`。
-- 引擎立即回复 SYN-ACK，携带本端 `iss`（随机生成）与固定 MSS 值（由 MTU 推导：
-  IPv4 默认 `MSS = MTU - 40`，IPv6 默认 `MSS = MTU - 60`，分别通告给对应地址族的连接）。
-- 收到客户端 ACK 后，状态切换为 `ESTABLISHED`，并触发 `tun_acceptor::async_accept` 完成事件。
-- 若应用层在 `tcp_accept_timeout`（默认 30 秒）内未通过 `async_accept` 领取该连接，引擎发送 RST 中断连接并回收资源，避免未领取连接长期驻留。
+- 收到客户端 SYN 后，引擎分配一个 `tcp_minimal_state` 实例，记录 `irs = SYN.seq`，
+  状态为 `SYN_RCVD`，并立即触发 `tun_acceptor::async_accept` 完成事件（此时连接尚未建立）。
+- 引擎不立即回复 SYN-ACK：握手结果由应用在领取流后决定，通过
+  `tun_stream::accept()` 回复 SYN-ACK（携带本端 `iss` 与固定 MSS 值，由 MTU 推导：
+  IPv4 默认 `MSS = MTU - 40`，IPv6 默认 `MSS = MTU - 60`），或通过
+  `tun_stream::reject()` 回复 RST；未显式调用时，首次读写视为隐式批准握手。
+- 收到客户端 ACK 后，状态切换为 `ESTABLISHED`，数据通路开始工作。
+- 若应用层在 `tcp_syn_timeout`（默认 30 秒）内未完成握手（`SYN_RCVD` /
+  `SYN_ACK_SENT` 半开连接），引擎发送 RST 中断连接并回收资源，避免未领取连接长期驻留。
 
 #### 5.2 数据接收与转发
 
@@ -416,7 +420,7 @@ private:
 - 收到 FIN 段时，引擎回复 ACK，状态进入 `CLOSE_WAIT`，并向应用层指示 `EOF`。FIN 可与数据同段（其序号为 `SEQ + 载荷长度`），引擎按 RFC 语义一并确认。
 - 当应用层关闭 `tun_stream` 时，引擎发送 FIN 段，完成四次挥手。
 - 收到 RST 段时，直接销毁 TCB 并通知应用层连接重置。
-- 半开连接（`SYN_RCVD`）在 `tcp_syn_timeout`（默认 30 秒）后清理；关闭流程
+- 半开连接（`SYN_RCVD` / `SYN_ACK_SENT`）在 `tcp_syn_timeout`（默认 30 秒）后清理；关闭流程
   （`FIN_WAIT_1` / `FIN_WAIT_2` / `LAST_ACK`）在 `tcp_close_timeout`（默认 30 秒）
   后强制清理，避免对端异常时控制块长期驻留。
 
@@ -511,7 +515,8 @@ private:
 
 #### 7.2 `tun_acceptor`（TCP 连接监听器）
 
-`async_accept` 在三次握手完成（收到 ACK）时触发完成回调，此时连接处于 `ESTABLISHED` 状态。
+`async_accept` 在收到客户端 SYN 时触发完成回调，此时连接处于 `SYN_RCVD` 状态（尚未建立）；
+三次握手由应用在领取流后通过 `tun_stream::accept()`/`reject()` 决定（未显式调用时首次读写隐式批准）。
 
 ```cpp
 class tun_acceptor {
@@ -602,7 +607,8 @@ private:
 #### 8.1 后端连接失败处理
 
 当引擎尝试连接后端代理失败时（如 `ECONNREFUSED`）：
-- 由于客户端已收到 SYN-ACK 并进入 ESTABLISHED 状态，**绝不能**静默关闭连接。
+- 由于应用已批准握手（`accept()`/首次读写回复 SYN-ACK）且客户端已进入 ESTABLISHED 状态，
+  **绝不能**静默关闭连接。
 - 引擎**必须**向客户端发送 TCP **RST** 包，强制客户端立即中断连接。
 
 #### 8.2 ICMP Echo 响应
@@ -674,7 +680,7 @@ struct tun_config {
     // ---- 超时策略 ----
     std::chrono::seconds udp_idle_timeout{30};
     std::chrono::seconds tcp_time_wait_timeout{10};
-    std::chrono::seconds tcp_accept_timeout{30}; // 已建立但未被 async_accept 领取的连接超时
+    std::chrono::seconds tcp_accept_timeout{30}; // 兜底：已建立但未被 async_accept 领取的连接超时
     std::chrono::seconds tcp_syn_timeout{30};    // 未完成握手的半开连接超时
     std::chrono::seconds tcp_close_timeout{30};  // 关闭流程（FIN 挥手）未完成时的强制清理超时
 
@@ -695,7 +701,7 @@ struct tun_config {
   新写入以 `no_buffer_space` 完成，避免内存无限增长）。
 - `max_total_buffer` 为跨 TCP/UDP 队列的全局缓冲记账上限，发送侧排队缓冲
   不占用该记账（仅受 `max_tx_queue_per_flow` 约束）。
-- 半开连接（`SYN_RCVD`）在 `tcp_syn_timeout` 后清理；关闭流程
+- 半开连接（`SYN_RCVD` / `SYN_ACK_SENT`）在 `tcp_syn_timeout` 后清理；关闭流程
   （`FIN_WAIT_1` / `FIN_WAIT_2` / `LAST_ACK`）在 `tcp_close_timeout` 后
   强制清理。
 

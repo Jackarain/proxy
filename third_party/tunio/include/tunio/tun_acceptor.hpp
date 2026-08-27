@@ -23,8 +23,8 @@ class tunio;
 //
 // async_accept 在收到客户端 SYN 时触发完成回调，三次握手由应用通过
 // stream.accept()/stream.reject() 决定（未显式调用时，首次读写会隐式
-// 批准握手）。完成回调触发时流尚未建立连接，应用需在领取后决定握手结果；
-// 此时连接处于 ESTABLISHED 状态。
+// 批准握手）。完成回调触发时流处于 SYN_RCVD 状态，应用需在领取后决定
+// 握手结果。
 //
 // 生命周期约束：与 Boost.Asio 的 acceptor::async_accept(socket) 一致，
 // 挂起 accept 期间传入的 tun_stream 必须存活至完成回调触发；提前销毁
