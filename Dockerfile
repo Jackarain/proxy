@@ -13,12 +13,10 @@ RUN ln -s /lib/libpam.* /usr/lib/
 ADD . /proxy
 
 RUN cd /proxy && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=ON -DCMAKE_EXE_LINKER_FLAGS="-static" -G Ninja && ninja -j1
-RUN cd /proxy && mkdir -p wolfssl && cd wolfssl && cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=ON -DENABLE_USE_OPENSSL=OFF -DENABLE_USE_WOLFSSL=ON -DCMAKE_EXE_LINKER_FLAGS="-static" -G Ninja && ninja -j1
 
 FROM alpine:edge
 COPY --from=builder /proxy/build/bin/proxy_server /usr/local/bin/
 COPY --from=builder /proxy/build/bin/launcher /usr/local/bin/
-COPY --from=builder /proxy/wolfssl/bin/proxy_server /usr/local/bin/proxy_server-wolfssl
 
 WORKDIR /root
 ENTRYPOINT ["proxy_server"]
