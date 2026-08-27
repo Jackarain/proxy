@@ -337,8 +337,8 @@ class _RunningPageState extends State<RunningPage>
     );
   }
 
-  /// 通过配置的测试 URL 发起下载 (流量走 VPN 隧道),
-  /// 测量网络延迟 (首字节) 与下载速率.
+  /// 通过配置的测试 URL 发起连接 (流量走 VPN 隧道),
+  /// 以发起连接到连接完成 (TCP/TLS 握手) 的时间作为延迟.
   Future<void> _testVpn() async {
     final config = _runningConfig();
     if (config == null) {
@@ -352,50 +352,44 @@ class _RunningPageState extends State<RunningPage>
     final url = config.testUrl.trim().isEmpty
         ? 'https://www.google.com'
         : config.testUrl.trim();
+    final Uri uri;
+    try {
+      uri = Uri.parse(url);
+    } catch (_) {
+      if (mounted) setState(() => _testResult = '测试失败: URL 无效');
+      return;
+    }
+    final bool secure = uri.scheme == 'https';
+    final int port = uri.hasPort ? uri.port : (secure ? 443 : 80);
 
     setState(() {
       _testing = true;
       _testResult = '';
     });
     final stopwatch = Stopwatch()..start();
-    HttpClient? client;
     try {
-      client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
-      final req = await client
-          .openUrl('GET', Uri.parse(url))
-          .timeout(const Duration(seconds: 10));
-      // 不跟随重定向, 如实反映配置的测试 URL 首跳响应状态.
-      req.followRedirects = false;
-      final res = await req.close().timeout(const Duration(seconds: 10));
-      // 收到响应头的时间作为空响应体时的延迟兜底.
-      final headerMs = stopwatch.elapsedMilliseconds;
-      // 继续读取响应体, 按字节数/耗时计算下载速率.
-      var received = 0;
-      var latencyMs = headerMs;
-      await for (final chunk in res) {
-        // 从发出请求到收到第一个数据的时间作为延迟.
-        if (latencyMs == headerMs) {
-          latencyMs = stopwatch.elapsedMilliseconds;
-        }
-        received += chunk.length;
-      }
-      final totalMs = stopwatch.elapsedMilliseconds;
-      final kbPerSec = totalMs > 0 ? received * 1000.0 / totalMs / 1024.0 : 0.0;
-      final speedText = kbPerSec >= 1024
-          ? '${(kbPerSec / 1024).toStringAsFixed(2)} MB/s'
-          : '${kbPerSec.toStringAsFixed(1)} KB/s';
+      final socket = secure
+          ? await SecureSocket.connect(
+              uri.host,
+              port,
+              timeout: const Duration(seconds: 5),
+            )
+          : await Socket.connect(
+              uri.host,
+              port,
+              timeout: const Duration(seconds: 5),
+            );
+      // 连接建立完成 (TCP 或 TLS 握手结束) 即记录延迟.
+      final connectMs = stopwatch.elapsedMilliseconds;
+      socket.destroy();
       if (mounted) {
-        setState(
-          () => _testResult =
-              '延迟: $latencyMs ms\n速率: $speedText (HTTP ${res.statusCode})',
-        );
+        setState(() => _testResult = '延迟: $connectMs ms');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _testResult = '测试失败: $e');
       }
     } finally {
-      client?.close(force: true);
       if (mounted) setState(() => _testing = false);
     }
   }
