@@ -21,7 +21,9 @@ class tunio;
 
 // TCP 连接监听器
 //
-// async_accept 在三次握手完成（收到客户端 ACK）时触发完成回调，
+// async_accept 在收到客户端 SYN 时触发完成回调，三次握手由应用通过
+// stream.accept()/stream.reject() 决定（未显式调用时，首次读写会隐式
+// 批准握手）。完成回调触发时流尚未建立连接，应用需在领取后决定握手结果；
 // 此时连接处于 ESTABLISHED 状态。
 //
 // 生命周期约束：与 Boost.Asio 的 acceptor::async_accept(socket) 一致，

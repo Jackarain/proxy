@@ -92,6 +92,20 @@ void tun_stream::reset()
     }
 }
 
+void tun_stream::accept()
+{
+    if (flow_) {
+        detail::tcp_flow_accept(flow_);
+    }
+}
+
+void tun_stream::reject()
+{
+    if (flow_) {
+        detail::tcp_flow_reject(flow_);
+    }
+}
+
 bool tun_stream::is_open() const noexcept
 {
     return detail::tcp_flow_is_open(flow_);

@@ -26,9 +26,12 @@ struct tcp_flow;
 
 // TCP 虚拟流套接字
 //
-// 表示一条已由引擎完成 TCP 三次握手的虚拟连接。应用层可像使用
+// 表示一条由引擎识别的虚拟连接（客户端 SYN 已到达）。应用层可像使用
 // net::ip::tcp::socket 一样进行异步读写，数据经引擎封装为 IP/TCP
 // 报文后写入 TUN 设备，发往虚拟网内的客户端。
+//
+// 握手: 收到 SYN 后引擎不立即回复, 由 accept()/reject() 或首次读写
+// （隐式批准）决定握手结果; 三次握手完成前读写操作会缓冲, 完成后交付.
 class tun_stream
 {
 public:
@@ -87,6 +90,13 @@ public:
 
     // 中止连接：立即向客户端发送 RST（后端连接失败等场景）
     void reset();
+
+    // 批准握手: 向客户端回复 SYN+ACK (幂等, 已回复过则忽略).
+    // 未调用时, 首次 async_read_some/async_write_some 也会隐式批准.
+    void accept();
+
+    // 拒绝握手: 立即向客户端发送 RST (幂等, 与 reset 语义一致).
+    void reject();
 
     bool is_open() const noexcept;
 

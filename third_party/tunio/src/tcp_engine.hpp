@@ -51,7 +51,8 @@ struct buffer_accountant
 
 enum class tcp_state : uint8_t {
     CLOSED,
-    SYN_RCVD,
+    SYN_RCVD,     // 收到客户端 SYN, 尚未回复 SYN+ACK (等待 accept/reject)
+    SYN_ACK_SENT, // 已回复 SYN+ACK, 等待客户端 ACK
     ESTABLISHED,
     FIN_WAIT_1,
     FIN_WAIT_2,
@@ -202,6 +203,11 @@ public:
     void abort_flow(tcp_flow &f);
     void close_flow(tcp_flow &f, const boost::system::error_code &err);
 
+    // 批准握手: 向客户端回复 SYN+ACK (幂等, 已回复过则忽略).
+    void accept_flow(tcp_flow &f);
+    // 拒绝握手: 立即向客户端发送 RST (幂等).
+    void reject_flow(tcp_flow &f);
+
 private:
     friend struct tcp_flow;
     template <typename Handler>
@@ -273,6 +279,10 @@ void tcp_flow_start_read(std::shared_ptr<tcp_flow> flow,
             handler(boost::system::error_code(net::error::connection_reset), 0);
             return;
         }
+        if (flow.state == tcp_state::SYN_RCVD) {
+            // 握手尚未批准: 首次读视为隐式 accept, 回复 SYN+ACK.
+            eng->accept_flow(flow);
+        }
         if (total == 0) {
             handler(boost::system::error_code{}, 0);
             return;
@@ -311,6 +321,10 @@ void tcp_flow_start_write(std::shared_ptr<tcp_flow> flow,
             handler(boost::system::error_code(net::error::connection_reset), 0);
             return;
         }
+        if (flow.state == tcp_state::SYN_RCVD) {
+            // 握手尚未批准: 首次写视为隐式 accept, 回复 SYN+ACK.
+            eng->accept_flow(flow);
+        }
         if (total == 0) {
             handler(boost::system::error_code{}, 0);
             return;
@@ -346,6 +360,8 @@ void tcp_flow_shutdown_send(std::shared_ptr<tcp_flow> flow);
 void tcp_flow_shutdown_receive(std::shared_ptr<tcp_flow> flow);
 void tcp_flow_close(std::shared_ptr<tcp_flow> flow);
 void tcp_flow_reset(std::shared_ptr<tcp_flow> flow);
+void tcp_flow_accept(std::shared_ptr<tcp_flow> flow);
+void tcp_flow_reject(std::shared_ptr<tcp_flow> flow);
 bool tcp_flow_is_open(const std::shared_ptr<tcp_flow> &flow);
 
 } // namespace detail

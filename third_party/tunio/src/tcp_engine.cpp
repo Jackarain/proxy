@@ -74,7 +74,8 @@ void tcp_engine::on_sweep(const boost::system::error_code &ec)
     std::vector<std::shared_ptr<tcp_flow>> victims;
     for (const auto &[key, f] : flows_) {
         (void)key;
-        if (f->state == tcp_state::SYN_RCVD &&
+        if ((f->state == tcp_state::SYN_RCVD ||
+             f->state == tcp_state::SYN_ACK_SENT) &&
             now - f->created_at > cfg_.tcp_syn_timeout) {
             // 未完成握手的半开连接，超时后清理
             victims.push_back(f);
@@ -94,7 +95,10 @@ void tcp_engine::on_sweep(const boost::system::error_code &ec)
         }
     }
     for (auto &f : victims) {
-        if (f->state == tcp_state::ESTABLISHED && !f->accepted) {
+        if (f->state == tcp_state::SYN_RCVD ||
+            f->state == tcp_state::SYN_ACK_SENT ||
+            (f->state == tcp_state::ESTABLISHED && !f->accepted)) {
+            // 半开连接或未被领取的连接: 发 RST 通知客户端后回收.
             abort_flow(*f);
         } else {
             close_flow(*f, net::error::operation_aborted);
@@ -155,9 +159,9 @@ void tcp_engine::on_packet(const ip_packet_info &ip, const uint8_t *payload,
         f->peer_wnd = ntohs(th.window);
         f->created_at = std::chrono::steady_clock::now();
         flows_.emplace(key, f);
-        // 回复 SYN-ACK（携带 MSS 选项）
-        send_segment(*f, f->iss, TCP_SYN | TCP_ACK, nullptr, 0, true);
-        f->snd_nxt = f->iss + 1; // SYN 消耗一个序号
+        // 延迟握手: 不立即回复 SYN+ACK, 交给 async_accept 领取后由
+        // 应用 accept()/reject() 或首次读写（隐式批准）决定握手结果.
+        notify_accept(*f);
         return;
     }
     // 持有强引用：handle_segment 内会内联调用用户完成回调（当流绑定引擎
@@ -213,6 +217,11 @@ void tcp_engine::handle_segment(const std::shared_ptr<tcp_flow> &f,
 
     // ---- 握手状态 ----
     if (f->state == tcp_state::SYN_RCVD) {
+        // 尚未批准握手: 客户端重传 SYN 忽略, 等应用决定后回 SYN+ACK
+        // (accept/隐式批准) 或 RST (reject).
+        return;
+    }
+    if (f->state == tcp_state::SYN_ACK_SENT) {
         if ((flags & TCP_SYN) && seq == f->irs) {
             // 客户端重传 SYN：重新发送 SYN-ACK
             send_segment(*f, f->iss, TCP_SYN | TCP_ACK, nullptr, 0, true);
@@ -221,7 +230,10 @@ void tcp_engine::handle_segment(const std::shared_ptr<tcp_flow> &f,
         if ((flags & TCP_ACK) && ack == f->iss + 1) {
             f->state = tcp_state::ESTABLISHED;
             stats_.tcp_connections.fetch_add(1, std::memory_order_relaxed);
-            notify_accept(*f);
+            // 流已在收到 SYN 时交付给 async_accept, 不再重复通知.
+            if (!f->accepted) {
+                notify_accept(*f);
+            }
             if (data_len > 0 && seq == f->rcv_nxt) {
                 deliver_data(*f, data, data_len);
             }
@@ -528,12 +540,33 @@ void tcp_engine::send_fin(tcp_flow &f)
         f.snd_nxt += 1;
         break;
     case tcp_state::SYN_RCVD:
-        // 握手尚未完成：直接关闭，不发送 FIN
+        // 握手尚未批准：直接关闭，不发送 FIN
         close_flow(f, net::error::operation_aborted);
+        break;
+    case tcp_state::SYN_ACK_SENT:
+        // 已回 SYN+ACK 但未完成握手：RST 告知客户端连接被放弃
+        abort_flow(f);
         break;
     default:
         break;
     }
+}
+
+void tcp_engine::accept_flow(tcp_flow &f)
+{
+    if (f.state != tcp_state::SYN_RCVD) {
+        // 幂等: 已回复过 SYN+ACK 或已关闭时忽略多余的 accept.
+        return;
+    }
+    // 回复 SYN-ACK（携带 MSS 选项）
+    send_segment(f, f.iss, TCP_SYN | TCP_ACK, nullptr, 0, true);
+    f.snd_nxt = f.iss + 1; // SYN 消耗一个序号
+    f.state = tcp_state::SYN_ACK_SENT;
+}
+
+void tcp_engine::reject_flow(tcp_flow &f)
+{
+    abort_flow(f); // 幂等: CLOSED 时忽略; 发 RST 并关闭
 }
 
 void tcp_engine::abort_flow(tcp_flow &f)
@@ -567,7 +600,8 @@ void tcp_engine::close_flow(tcp_flow &f, const boost::system::error_code &err)
     }
     f.rx_data.clear();
     f.rx_head = 0;
-    if (f.state != tcp_state::SYN_RCVD) {
+    if (f.state != tcp_state::SYN_RCVD &&
+        f.state != tcp_state::SYN_ACK_SENT) {
         stats_.tcp_connections.fetch_sub(1, std::memory_order_relaxed);
     }
     f.state = tcp_state::CLOSED;
@@ -712,6 +746,34 @@ void tcp_flow_reset(std::shared_ptr<tcp_flow> flow)
             return;
         }
         eng->abort_flow(f);
+    });
+}
+
+void tcp_flow_accept(std::shared_ptr<tcp_flow> flow)
+{
+    if (!flow) {
+        return;
+    }
+    auto eng = flow->eng.lock();
+    if (!eng) {
+        return;
+    }
+    net::dispatch(eng->strand(), [flow, eng]() {
+        eng->accept_flow(*flow);
+    });
+}
+
+void tcp_flow_reject(std::shared_ptr<tcp_flow> flow)
+{
+    if (!flow) {
+        return;
+    }
+    auto eng = flow->eng.lock();
+    if (!eng) {
+        return;
+    }
+    net::dispatch(eng->strand(), [flow, eng]() {
+        eng->reject_flow(*flow);
     });
 }
 
