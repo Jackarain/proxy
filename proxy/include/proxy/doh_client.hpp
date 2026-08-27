@@ -338,6 +338,9 @@ namespace proxy {
 		// 关闭池并释放所有空闲连接.
 		void close();
 
+		// 返回当前可用（空闲）连接数量.
+		size_t idle_count() const noexcept;
+
 	private:
 		// 维护协程：预热每 k_prewarm_interval 建 1 条，池满后
 		// 连接减少立即补建，空闲超时整体重建保活.
@@ -349,9 +352,6 @@ namespace proxy {
 
 		// 建立并加入一条空闲连接，成功返回 true.
 		net::awaitable<bool> build_one();
-
-		// 返回当前空闲连接数量.
-		size_t idle_count() const;
 
 		// 健康检查：剔除已被对端断开的空闲连接.
 		void prune_dead();

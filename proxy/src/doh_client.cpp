@@ -197,7 +197,7 @@ namespace proxy {
 		co_return true;
 	}
 
-	size_t proxy_pass_pool::idle_count() const
+	size_t proxy_pass_pool::idle_count() const noexcept
 	{
 		std::lock_guard<std::mutex> lk(m_mutex);
 		return m_idle.size();
