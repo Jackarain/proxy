@@ -307,7 +307,7 @@ void tcp_engine::deliver_data(tcp_flow &f, const uint8_t *data, size_t len)
             std::memcpy(buf.data(), data + copied, take);
             copied += take;
         }
-        f.rcv_nxt += len;
+        f.rcv_nxt += static_cast<uint32_t>(len);
         account_->release(n);
         op.handler(boost::system::error_code{}, n);
         if (n < len) {
@@ -326,7 +326,7 @@ void tcp_engine::deliver_data(tcp_flow &f, const uint8_t *data, size_t len)
     }
     f.rx_data.insert(f.rx_data.end(), data, data + len);
     f.rx_bytes += len;
-    f.rcv_nxt += len;
+    f.rcv_nxt += static_cast<uint32_t>(len);
     // delayed ACK：每 2 个数据段确认一次；单段交由 40ms 定时器兜底，
     // 期间引擎发送的任何段都会捎带最新 rcv_nxt（见 send_segment）。
     if (++f.ack_pending >= 2) {
