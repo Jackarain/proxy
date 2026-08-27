@@ -68,7 +68,11 @@ if(WIN32 AND USE_WINTUN_DRIVER)
 endif()
 
 target_link_libraries(tunio PUBLIC ${TUNIO_BOOST_LIBS})
-target_compile_options(tunio PRIVATE -Wall -Wextra)
+if(MSVC)
+  target_compile_options(tunio PRIVATE /W4)
+else()
+  target_compile_options(tunio PRIVATE -Wall -Wextra)
+endif()
 
 option(TUNIO_BUILD_TESTS "构建单元测试" ON)
 option(TUNIO_BUILD_EXAMPLES "构建示例程序" ON)
