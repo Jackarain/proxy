@@ -337,8 +337,9 @@ class _RunningPageState extends State<RunningPage>
     );
   }
 
-  /// 通过配置的测试 URL 发起连接 (流量走 VPN 隧道),
-  /// 以发起连接到连接完成 (TCP/TLS 握手) 的时间作为延迟.
+  /// 通过配置的测试 URL 发起下载 (流量走 VPN 隧道),
+  /// 延迟为发起连接到连接完成 (TCP/TLS 握手) 的时间,
+  /// 速率按下载阶段字节数/耗时计算.
   Future<void> _testVpn() async {
     final config = _runningConfig();
     if (config == null) {
@@ -366,7 +367,10 @@ class _RunningPageState extends State<RunningPage>
       _testing = true;
       _testResult = '';
     });
+
+    // 延迟: 发起连接到连接建立完成 (TCP 或 TLS 握手结束) 的时间.
     final stopwatch = Stopwatch()..start();
+    int latencyMs = 0;
     try {
       final socket = secure
           ? await SecureSocket.connect(
@@ -379,17 +383,49 @@ class _RunningPageState extends State<RunningPage>
               port,
               timeout: const Duration(seconds: 5),
             );
-      // 连接建立完成 (TCP 或 TLS 握手结束) 即记录延迟.
-      final connectMs = stopwatch.elapsedMilliseconds;
+      latencyMs = stopwatch.elapsedMilliseconds;
       socket.destroy();
+    } catch (e) {
       if (mounted) {
-        setState(() => _testResult = '延迟: $connectMs ms');
+        setState(() => _testResult = '测试失败: $e');
+        setState(() => _testing = false);
+      }
+      return;
+    }
+
+    // 下载测速: 与连接测量独立计时, 按字节数/耗时计算速率.
+    HttpClient? client;
+    try {
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
+      final req = await client
+          .openUrl('GET', uri)
+          .timeout(const Duration(seconds: 10));
+      // 不跟随重定向, 如实反映配置的测试 URL 首跳响应状态.
+      req.followRedirects = false;
+      final res = await req.close().timeout(const Duration(seconds: 10));
+      final downloadStopwatch = Stopwatch()..start();
+      var received = 0;
+      await for (final chunk in res) {
+        received += chunk.length;
+      }
+      final totalMs = downloadStopwatch.elapsedMilliseconds;
+      final kbPerSec =
+          totalMs > 0 ? received * 1000.0 / totalMs / 1024.0 : 0.0;
+      final speedText = kbPerSec >= 1024
+          ? '${(kbPerSec / 1024).toStringAsFixed(2)} MB/s'
+          : '${kbPerSec.toStringAsFixed(1)} KB/s';
+      if (mounted) {
+        setState(
+          () => _testResult =
+              '延迟: $latencyMs ms\n速率: $speedText (HTTP ${res.statusCode})',
+        );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _testResult = '测试失败: $e');
       }
     } finally {
+      client?.close(force: true);
       if (mounted) setState(() => _testing = false);
     }
   }
