@@ -7,6 +7,7 @@
 #include <boost/json.hpp>
 #include <boost/url.hpp>
 
+#include <future>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -70,6 +71,20 @@ void stop_locked()
 {
 	if (g_server)
 		g_server->close();
+
+	// close() 内部（tunio 引擎/launcher 协程等）通过 post/dispatch 在
+	// io_context 上异步清理; 停止 io_context 前必须先消费完这些任务,
+	// 否则注入的 tun fd 不会被关闭: 会导致 Android VpnService 的 VPN
+	// 无法撤销、服务无法销毁, 反复启停后 tun 设备残留直至崩溃.
+	// 单线程 io_context 保证已提交任务先于哨兵执行.
+	if (g_io_pool)
+	{
+		std::promise<void> done;
+		net::post(g_io_pool->executor(),
+			[&done]() { done.set_value(); });
+		done.get_future().wait();
+	}
+
 	if (g_io_pool)
 		g_io_pool->stop();
 

@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
+#include <future>
 #include <optional>
 #include <sstream>
 #include <unordered_set>
@@ -1882,16 +1883,31 @@ void proxy_server::close() noexcept
 	m_abort = true;
 
 	// 停止 launcher 控制通道: 关闭当前连接, 使 launcher 协程退出.
-	m_launcher_state->call_protect_ = {};
-	launcher_stop();
+	// 停止标志与 protect 发送器会在 io_context 线程被 serve 协程/tun
+	// 协程访问, 投递到 io_context 串行执行, 避免与本线程并发读写
+	// std::function 造成数据竞争.
+	std::promise<void> launcher_done;
+	net::dispatch(m_executor, [this, &launcher_done]() mutable
+		{
+			m_launcher_state->call_protect_ = {};
+			launcher_stop();
+			launcher_done.set_value();
+		});
+	launcher_done.get_future().wait();
 
-	// 停止 UDP DNS 服务器（关闭监听 socket 使协程退出）.
-	if (m_dns_server)
-		m_dns_server->close();
-
-	// 停止 TUN 设备模式服务器（关闭设备 fd 使读包协程退出）.
-	if (m_tun_server)
-		m_tun_server->close();
+	// 停止 UDP DNS 服务器与 TUN 设备模式服务器. 两者内部状态都在
+	// io_context 线程被数据通路协程访问（dns_server 头文件明确要求成员
+	// 函数在 io_context 线程调用）, 投递到 io_context 串行执行.
+	std::promise<void> server_done;
+	net::dispatch(m_executor, [this, &server_done]() mutable
+		{
+			if (m_dns_server)
+				m_dns_server->close();
+			if (m_tun_server)
+				m_tun_server->close();
+			server_done.set_value();
+		});
+	server_done.get_future().wait();
 
 	m_backend_context.stop();
 	if (m_backend_thread && m_backend_thread->joinable())

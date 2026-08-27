@@ -24,6 +24,13 @@ object XproxyEvents {
     }
 
     private fun post(data: Map<String, Any?>) {
-        mainHandler.post { sink?.success(data) }
+        mainHandler.post {
+            val s = sink ?: return@post
+            try {
+                s.success(data)
+            } catch (_: Throwable) {
+                // 引擎销毁/通道取消等场景 sink 已失效, 忽略避免崩溃.
+            }
+        }
     }
 }

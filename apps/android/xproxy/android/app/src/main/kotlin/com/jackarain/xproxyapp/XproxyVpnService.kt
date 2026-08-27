@@ -58,7 +58,12 @@ class XproxyVpnService : VpnService() {
                 Intent(context, XproxyVpnService::class.java).setAction(ACTION_STOP)
             )
         }
+
+        /** 服务实例代次: 每次新实例 onCreate 递增, 旧实例 onDestroy 据此判断是否让位. */
+        @Volatile
+        private var generation = 0L
     }
+
 
     private val workerThread = HandlerThread("xproxy-worker").apply { start() }
     private val worker = Handler(workerThread.looper)
@@ -66,8 +71,12 @@ class XproxyVpnService : VpnService() {
     @Volatile
     private var started = false
 
+    /** 本实例的代次: onCreate 时从 companion 领取, onDestroy 据此判断是否让位新实例. */
+    private var myGeneration = 0L
+
     override fun onCreate() {
         super.onCreate()
+        myGeneration = ++generation
         instance = this
     }
 
@@ -228,10 +237,15 @@ class XproxyVpnService : VpnService() {
     /** 停止 proxy 并释放资源; 幂等, 可重复调用. tun fd 由 libproxy 持有并关闭. */
     private fun teardown() {
         if (started) {
-            try {
-                XproxyBridge.stop()
-            } catch (_: Throwable) {
-                // 忽略停止时的异常.
+            // 代次检查: 快速 停止->再运行 时若已有新实例接管 (其 start 流程会
+            // 停旧启新), 本实例不得再停 proxy, 否则会误停新实例刚启动的服务,
+            // 表现为重新启动后 VPN 无法正常工作.
+            if (myGeneration == generation) {
+                try {
+                    XproxyBridge.stop()
+                } catch (_: Throwable) {
+                    // 忽略停止时的异常.
+                }
             }
             started = false
         }
@@ -247,6 +261,7 @@ class XproxyVpnService : VpnService() {
         if (instance === this) instance = null
         // 工作线程可能正持有资源, 排队清理后退出.
         worker.post {
+            // teardown() 内部会做代次检查, 不会误停新实例的 proxy.
             teardown()
             workerThread.quitSafely()
         }

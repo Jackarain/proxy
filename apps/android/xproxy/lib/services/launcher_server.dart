@@ -154,6 +154,13 @@ class LauncherServer {
   // 是否已建立 tun 并注入 (仅首次连接时建立, 重连不重复注入).
   bool _tunEstablished = false;
 
+  /// 重建 VPN (restart) 后清除 tun 注入标记: 新 proxy 实例重新连接时
+  /// 需要按其最新配置重建 VpnService tun 并注入, 否则新实例无 tun 无法转发.
+  void resetTunState() {
+    _tunEstablished = false;
+    _logLocal('TUN 状态已重置, 等待新实例建立');
+  }
+
   /// 控制通道连接建立后: 以用户配置的地址建立 VpnService tun, 再注入
   /// libproxy (经 set_tun_fd). tun2socks 无需服务端分配地址, 直接使用
   /// VpnConfig 中的 tunAddress/dns 配置.
@@ -185,12 +192,27 @@ class LauncherServer {
         dns: dns,
         session: cfg['name'] as String? ?? 'proxy',
       );
-      final result = await call('set_tun_fd', {'fd': fd});
-      if (result['ok'] != true) {
-        _logLocal('set_tun_fd 失败: ${result['error']}');
-        return;
+      var injected = false;
+      try {
+        final result = await call('set_tun_fd', {'fd': fd});
+        if (result['ok'] == true) {
+          injected = true;
+          _tunEstablished = true;
+        } else {
+          _logLocal('set_tun_fd 失败: ${result['error']}');
+        }
+      } catch (e) {
+        debugPrint('launcher set_tun_fd failed: $e');
+        _logLocal('注入 TUN 失败: $e');
+      } finally {
+        // 注入失败/被停止流程中断时 fd 未被 native 接管, 必须关闭,
+        // 否则 VpnService tun 设备残留.
+        if (!injected) {
+          try {
+            await VpnChannel.closeTunFd(fd);
+          } catch (_) {}
+        }
       }
-      _tunEstablished = true;
     } catch (e) {
       debugPrint('launcher establishTun failed: $e');
       _logLocal('建立 TUN 失败: $e');

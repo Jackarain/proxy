@@ -75,6 +75,10 @@ class AppSession extends ChangeNotifier {
 
     if (_tunFieldsChanged(config)) {
       final fullJson = jsonEncode(config.toJson());
+      // 更新 vpnConfig 快照并清除 tun 注入标记: 新实例连接后按最新
+      // TUN 配置重建设备, 否则会沿用旧快照/跳过注入导致无法转发.
+      server.setVpnConfig(config.toJson());
+      server.resetTunState();
       await VpnChannel.restart(fullJson, server.port);
       beginRun(config.id, configJson: fullJson);
       await StorageService().saveRunState(config.id, server.port);

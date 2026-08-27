@@ -46,7 +46,6 @@ class _ConfigListPageState extends State<ConfigListPage> {
     final (configId, port) = state;
 
     final session = AppSession.instance;
-    session.beginRun(configId);
     // 同进程内 Activity 重建时可能已有控制通道, 直接复用.
     var server = session.server;
     if (server == null) {
@@ -61,12 +60,19 @@ class _ConfigListPageState extends State<ConfigListPage> {
       }
     }
 
-    // 等待 proxy 经控制通道连上; 未连上说明服务已不在运行, 清理状态.
+    // 先确认 proxy 经控制通道连上再标记运行: 避免服务已死时界面显示
+    // 假"运行中", 用户点卡片进入运行控制台后永远等不到连接.
     if (!await _waitLauncherConnected(server)) {
       await _storage.clearRunState();
-      session.endRun();
+      // 关闭未连上的控制通道并释放引用, 避免占用端口导致后续启动异常.
+      if (session.server == server) session.server = null;
+      try {
+        await server.close();
+      } catch (_) {}
       return;
     }
+
+    session.beginRun(configId);
 
     // 恢复 vpnConfig 快照, 连接建立后据此建立 tun.
     final configs = await _storage.loadConfigs();

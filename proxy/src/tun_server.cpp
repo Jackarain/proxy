@@ -34,6 +34,7 @@
 #include <chrono>
 #include <cstring>
 #include <deque>
+#include <future>
 #include <string>
 #include <vector>
 
@@ -2124,21 +2125,44 @@ namespace proxy {
 
 	void tun_server::close() noexcept
 	{
-		m_abort = true;
-		m_running = false;
+		auto impl = [this]()
+		{
+			m_abort = true;
+			m_running = false;
 
-		close_flows();
+			close_flows();
 
-		// 关闭 DoH 连接池（唤醒所有挂起的 DNS 查询）.
-		if (m_doh_client)
-			m_doh_client->close();
+			// 关闭 DoH 连接池（唤醒所有挂起的 DNS 查询）.
+			if (m_doh_client)
+				m_doh_client->close();
 
-		// 关闭 proxy_pass 预选连接池（释放所有空闲连接）.
-		if (m_proxy_pool)
-			m_proxy_pool->close();
+			// 关闭 proxy_pass 预选连接池（释放所有空闲连接）.
+			if (m_proxy_pool)
+				m_proxy_pool->close();
 
-		if (m_tunio)
-			m_tunio->close();
+			if (m_tunio)
+				m_tunio->close();
+		};
+
+		// close() 可能由非 io_context 线程调用（Android 上 stop 常由
+		// 服务工作线程触发）, 而 flows/DoH 连接池/proxy 连接池/tunio 引擎
+		// 都在 io_context 线程上被数据通路协程访问: 直接在本线程关闭会与
+		// 数据通路产生数据竞争（实测 doh_client 连接池并发释放导致
+		// scudo double free）. 投递到 io_context 串行执行后再返回.
+		if (m_ioc.stopped())
+		{
+			// io_context 已停止（析构路径）: 无并发协程, 直接清理.
+			impl();
+			return;
+		}
+		std::promise<void> done;
+		net::dispatch(m_executor,
+			[impl, &done]() mutable
+			{
+				impl();
+				done.set_value();
+			});
+		done.get_future().wait();
 	}
 
 	tun_server::stats tun_server::get_stats() noexcept

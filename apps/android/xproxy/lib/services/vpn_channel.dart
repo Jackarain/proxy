@@ -79,6 +79,12 @@ class VpnChannel {
     return fd;
   }
 
+  /// 关闭未成功注入 native 的 tun fd (VpnService detach 出的 fd),
+  /// 避免建立后未被接管时 tun 设备残留.
+  static Future<void> closeTunFd(int fd) async {
+    await _channel.invokeMethod('close_tun_fd', {'fd': fd});
+  }
+
   /// 原生事件: {"type":"log"|"vpn_state", ...}.
   static Stream<Map<String, dynamic>> events() {
     return _events.receiveBroadcastStream().map(

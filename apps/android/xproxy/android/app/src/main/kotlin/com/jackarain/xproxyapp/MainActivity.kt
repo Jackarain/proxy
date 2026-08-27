@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
+import android.os.ParcelFileDescriptor
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -61,6 +62,23 @@ class MainActivity : FlutterActivity() {
                             "xproxy-protect",
                             "fd=$fd ok=$ok hasInstance=${inst != null}"
                         )
+                        result.success(ok)
+                    }
+                    // 关闭未成功注入 native 的 tun fd. 不能依赖服务实例:
+                    // 停止流程可能已销毁服务, 此时 instance 为 null; fd 为
+                    // 普通文件描述符, 直接在进程内关闭.
+                    "close_tun_fd" -> {
+                        val fd = call.argument<Int>("fd") ?: -1
+                        val ok = if (fd >= 0) {
+                            try {
+                                ParcelFileDescriptor.adoptFd(fd).close()
+                                true
+                            } catch (_: Throwable) {
+                                false
+                            }
+                        } else {
+                            false
+                        }
                         result.success(ok)
                     }
                     // 控制通道连接建立后: 以用户配置的地址建立 tun.
