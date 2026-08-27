@@ -150,6 +150,7 @@ class DartEngine {
       log: log,
       tunnel: _tunnel!,
       version: _buildVersion,
+      poolCount: () => _upstream?.poolCount ?? 0,
       onShutdown: () => unawaited(stop()),
       onApplyConfig: _applyConfig,
     );

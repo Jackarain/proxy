@@ -19,6 +19,7 @@ class EngineAgent {
     required this.log,
     required this.tunnel,
     required this.version,
+    this.poolCount,
     required this.onShutdown,
     required this.onApplyConfig,
   });
@@ -28,6 +29,7 @@ class EngineAgent {
   final EngineLog log;
   final TunnelEngine tunnel;
   final String version;
+  final int Function()? poolCount;
   final void Function() onShutdown;
   final Future<void> Function(Map<String, dynamic> options) onApplyConfig;
 
@@ -202,6 +204,7 @@ class EngineAgent {
       'rates': {'rx_rate_bps': rxRate, 'tx_rate_bps': txRate},
       'active_connections': tunnel.sessionConnections.length,
       'conn_total': s.connTotal,
+      'pool_connections': poolCount?.call() ?? 0,
       'users': [
         {
           'name': '(匿名)',

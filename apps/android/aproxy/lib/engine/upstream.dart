@@ -108,6 +108,9 @@ class UpstreamClient {
     _fillOne();
   }
 
+  /// 当前连接池中可用（空闲）连接数.
+  int get poolCount => _pool.length;
+
   /// 预建连接池: 元素为已建立到上游代理 TCP(+TLS) 的连接
   /// (proxy 握手在取用时完成)。取走后不回收,
   /// 池数量低于 [poolSize] 时后台预建补充。
