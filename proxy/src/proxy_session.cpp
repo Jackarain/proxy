@@ -4817,7 +4817,9 @@ R"x*x*x(<html>
 				parser->body_limit(1024 * 1024 * 10);
 				m_local_buffer.consume(m_local_buffer.size());
 
-				co_await http::async_read_header(
+				// keepalive 下须连同 body 一起读取: /dns-query 走 POST,
+				// 只读请求头会导致后续请求 body 为空而被拒.
+				co_await http::async_read(
 					m_local_socket,
 					m_local_buffer,
 					*parser,
@@ -4826,7 +4828,7 @@ R"x*x*x(<html>
 				{
 					log_conn_debug()
 						<< (keep_alive ? ", keepalive" : "")
-						<< ", web async_read_header: "
+						<< ", web async_read: "
 						<< ec.message();
 					co_return;
 				}
