@@ -25,6 +25,8 @@ class _RunningPageState extends State<RunningPage>
   late final TabController _tabs = TabController(length: 2, vsync: this);
   final StorageService _storage = StorageService();
   final List<Map<String, dynamic>> _logs = [];
+  final ScrollController _logScrollController = ScrollController();
+  bool _autoScroll = true;
   String _stateMessage = '';
   Map<String, dynamic>? _status;
   bool _busy = false;
@@ -41,6 +43,7 @@ class _RunningPageState extends State<RunningPage>
   @override
   void initState() {
     super.initState();
+    _tabs.addListener(_onTabChanged);
     final server = _server;
     if (server != null) {
       _connSub = server.connectionStream.listen((c) {
@@ -94,7 +97,36 @@ class _RunningPageState extends State<RunningPage>
           }
         }
       });
+      _autoScrollToBottom();
     }
+  }
+
+  /// 自动滚动: 开启且原本处于底部时跟随新日志, 用户手动上滚时不强制拉回.
+  void _autoScrollToBottom() {
+    if (!_autoScroll || !_logScrollController.hasClients) return;
+    final p = _logScrollController.position;
+    if (!p.hasContentDimensions) return;
+    if (p.maxScrollExtent > 0 && p.pixels < p.maxScrollExtent - 4) return;
+    // 列表更新后布局完成再滚动到末尾, 否则 maxScrollExtent 仍是旧值.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_logScrollController.hasClients) return;
+      final pos = _logScrollController.position;
+      if (pos.hasContentDimensions && pos.maxScrollExtent > 0) {
+        pos.jumpTo(pos.maxScrollExtent);
+      }
+    });
+  }
+
+  /// 切到日志页时, 自动滚动开启则直接滚到末尾 (日志在状态页期间可能已积压).
+  void _onTabChanged() {
+    if (_tabs.index != 1 || !_autoScroll) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_logScrollController.hasClients) return;
+      final pos = _logScrollController.position;
+      if (pos.hasContentDimensions && pos.maxScrollExtent > 0) {
+        pos.jumpTo(pos.maxScrollExtent);
+      }
+    });
   }
 
   @override
@@ -103,7 +135,9 @@ class _RunningPageState extends State<RunningPage>
     _logSub?.cancel();
     _connSub?.cancel();
     _nativeEventsSub?.cancel();
+    _tabs.removeListener(_onTabChanged);
     _tabs.dispose();
+    _logScrollController.dispose();
     super.dispose();
   }
 
@@ -134,6 +168,15 @@ class _RunningPageState extends State<RunningPage>
             onPressed: _logs.isEmpty ? null : _copyAllLogs,
             icon: const Icon(Icons.copy_all),
             tooltip: '复制全部日志',
+          ),
+          IconButton(
+            onPressed: _logs.isEmpty
+                ? null
+                : () => setState(() => _autoScroll = !_autoScroll),
+            icon: Icon(
+              _autoScroll ? Icons.vertical_align_bottom : Icons.do_not_disturb,
+            ),
+            tooltip: _autoScroll ? '自动滚动: 开' : '自动滚动: 关',
           ),
           IconButton(
             onPressed: _logs.isEmpty ? null : _clearLogs,
@@ -384,6 +427,7 @@ class _RunningPageState extends State<RunningPage>
       return const Center(child: Text('暂无日志'));
     }
     return ListView.builder(
+      controller: _logScrollController,
       padding: const EdgeInsets.all(12),
       itemCount: _logs.length,
       itemBuilder: (context, i) {
