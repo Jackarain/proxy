@@ -22,6 +22,14 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/functional/hash.hpp>
 
+#if defined(__linux__)
+# include <arpa/inet.h>
+# include <net/if.h>
+# include <sys/ioctl.h>
+# include <sys/socket.h>
+# include <unistd.h>
+#endif
+
 #include <algorithm>
 #include <chrono>
 #include <cstring>
@@ -38,6 +46,50 @@ namespace proxy {
 		{
 			return opt.udp_timeout_ > 0 ? opt.udp_timeout_ : 300;
 		}
+
+#if defined(__linux__)
+		// 查询 tun 设备当前 IPv4 地址（外部 ip addr add 配置），
+		// 供环路防护识别本地地址.
+		void query_tun_device_ip(const std::string& dev, std::string& ip)
+		{
+			const int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+			if (fd < 0)
+				return;
+			struct ifreq ifr {};
+			std::strncpy(ifr.ifr_name, dev.c_str(), IFNAMSIZ - 1);
+			if (::ioctl(fd, SIOCGIFADDR, &ifr) == 0)
+			{
+				const auto* sin = reinterpret_cast<const sockaddr_in*>(
+					&ifr.ifr_addr);
+				char buf[INET_ADDRSTRLEN] = {};
+				if (::inet_ntop(AF_INET, &sin->sin_addr, buf, sizeof(buf)))
+					ip = buf;
+			}
+			::close(fd);
+		}
+
+		// 判断客户端地址是否为 tun 设备自身地址：tun 接管路由后，未绕过
+		// tun 的出站连接会以本地地址为源回环进 tun（环路风暴的根源）.
+		// 每次调用查询设备地址（ioctl 开销极小），1 秒内缓存避免高频查询.
+		bool is_tun_loopback_source(const net::ip::address& addr,
+			const std::string& dev) noexcept
+		{
+			static std::chrono::steady_clock::time_point last;
+			static std::string cached;
+			const auto now = std::chrono::steady_clock::now();
+			if (now - last > std::chrono::seconds(1))
+			{
+				cached.clear();
+				query_tun_device_ip(dev, cached);
+				last = now;
+			}
+			if (cached.empty())
+				return false;
+			boost::system::error_code ec;
+			const auto local = net::ip::make_address(cached, ec);
+			return !ec && local == addr;
+		}
+#endif
 
 		// 构造 SOCKS5 UDP 请求/应答头（RSV + FRAG + ATYP + 地址 + 端口）.
 		std::string build_socks5_udp_header(
@@ -1783,8 +1835,14 @@ namespace proxy {
 		cfg.mtu = m_option.tun_mtu_ > 0 ? m_option.tun_mtu_ : 1500;
 		cfg.udp_idle_timeout = std::chrono::seconds(udp_idle_timeout(m_option));
 
-		// 地址/路由由外部脚本或 VpnService 配置，引擎只创建设备.
+		// 地址/路由由外部脚本或 VpnService 配置，引擎只创建设备；
+		// 但环路防护需要本地地址：Linux 下从设备查询实际 IP 供 tunio
+		// 丢弃以本地地址为源的回环入包（其余平台由外部配置，留空则不启用）.
+#if defined(__linux__)
+		query_tun_device_ip(m_option.tun_name_, cfg.ipv4_addr);
+#else
 		cfg.ipv4_addr.clear();
+#endif
 		cfg.netmask.clear();
 
 		// Android VpnService 场景: 注入外部已打开的 fd.
@@ -1857,6 +1915,23 @@ namespace proxy {
 			const auto remote = peer.remote_endpoint();
 			const auto target = peer.original_destination();
 
+#if defined(__linux__)
+			// 环路防护：客户端地址等于 tun 设备自身地址说明该连接是
+			// 未绕过 tun 的出站连接回环（Android protect 失败 / Linux
+			// 未配置 SO_MARK 策略路由），若继续转发将形成连接风暴.
+			if (is_tun_loopback_source(remote.address(),
+				m_option.tun_name_))
+			{
+				XLOG_WARN << "tun loopback connection rejected: "
+					<< remote.address().to_string() << ":"
+					<< remote.port() << " -> "
+					<< target.address().to_string() << ":"
+					<< target.port();
+				peer.reset();
+				continue;
+			}
+#endif
+
 			tcp_flow_key key{
 				remote.address(), remote.port(),
 				target.address(), target.port()
@@ -1900,6 +1975,19 @@ namespace proxy {
 				break;
 			if (m_abort)
 				break;
+
+#if defined(__linux__)
+			// 环路防护（与 TCP 一致）：客户端地址等于 tun 设备自身地址的
+			// UDP 会话是未绕过 tun 的出站流量回环，拒绝避免形成风暴.
+			if (is_tun_loopback_source(
+				peer.client_endpoint().address(), m_option.tun_name_))
+			{
+				XLOG_WARN << "tun loopback udp session rejected: "
+					<< peer.client_endpoint().address().to_string()
+					<< ":" << peer.client_endpoint().port();
+				continue;
+			}
+#endif
 
 			// 并发 flow 超限: 关闭会话, 防止流量风暴耗尽 fd.
 			{
