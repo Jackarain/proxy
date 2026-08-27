@@ -82,9 +82,13 @@ class _RunningPageState extends State<RunningPage>
   /// 单日文本框显示的最大行数 (与 webui 上限一致).
   static const int _maxLogLines = 2000;
 
-  String _fmtLogLine(Map<String, dynamic> entry) =>
-      '[${_fmtTimeMs(entry['time'] as int? ?? 0)}] '
-      '${entry['message'] as String? ?? ''}';
+  String _fmtLogLine(Map<String, dynamic> entry) {
+    // launcher_log 上报的整行文本已含时间戳与级别前缀, 无结构化时间时
+    // 原样展示, 不再附加无意义的时间戳.
+    final time = entry['time'] as int? ?? 0;
+    final message = entry['message'] as String? ?? '';
+    return time > 0 ? '[${_fmtTimeMs(time)}] $message' : message;
+  }
 
   void _addLog(Map<String, dynamic> entry) {
     _logs.add(entry);
