@@ -47,6 +47,7 @@ class _RunningPageState extends State<RunningPage>
   @override
   void initState() {
     super.initState();
+    _tabs.addListener(_onTabChanged);
     final server = _server;
     if (server != null) {
       _connSub = server.connectionStream.listen((c) {
@@ -130,10 +131,30 @@ class _RunningPageState extends State<RunningPage>
   void _autoScrollToBottom() {
     if (!_autoScroll || !_logScrollController.hasClients) return;
     final p = _logScrollController.position;
-    if (!p.hasContentDimensions || p.maxScrollExtent <= 0) return;
-    if (p.pixels >= p.maxScrollExtent - 4) {
-      p.jumpTo(p.maxScrollExtent);
-    }
+    if (!p.hasContentDimensions) return;
+    if (p.maxScrollExtent > 0 && p.pixels < p.maxScrollExtent - 4) return;
+    // 文本更新后布局完成再滚动到末尾, 否则 maxScrollExtent 仍是旧值,
+    // 无法真正到达最新日志.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_logScrollController.hasClients) return;
+      final pos = _logScrollController.position;
+      if (pos.hasContentDimensions && pos.maxScrollExtent > 0) {
+        pos.jumpTo(pos.maxScrollExtent);
+      }
+    });
+  }
+
+  /// 切到日志页时, 自动滚动开启则直接滚到末尾 (日志在状态页期间可能
+  /// 已积压).
+  void _onTabChanged() {
+    if (_tabs.index != 1 || !_autoScroll) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_logScrollController.hasClients) return;
+      final pos = _logScrollController.position;
+      if (pos.hasContentDimensions && pos.maxScrollExtent > 0) {
+        pos.jumpTo(pos.maxScrollExtent);
+      }
+    });
   }
 
   @override
@@ -142,6 +163,7 @@ class _RunningPageState extends State<RunningPage>
     _logSub?.cancel();
     _connSub?.cancel();
     _nativeEventsSub?.cancel();
+    _tabs.removeListener(_onTabChanged);
     _tabs.dispose();
     _logTextController.dispose();
     _logScrollController.dispose();
