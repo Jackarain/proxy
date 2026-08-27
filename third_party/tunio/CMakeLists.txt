@@ -58,6 +58,13 @@ target_include_directories(tunio PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
+# Windows 下 windows.h 会定义 min/max 宏, 在包含任何 Windows 头之前
+# 通过编译定义禁用, 避免破坏 std::min/std::max. PUBLIC 传播给使用方,
+# 使用方编译含 tunio 头的代码时同样生效.
+if(WIN32)
+  target_compile_definitions(tunio PUBLIC NOMINMAX)
+endif()
+
 # Wintun 所需编译定义及系统库.
 if(WIN32 AND USE_WINTUN_DRIVER)
   # 头文件按 USE_WINTUN_DRIVER 选择设备实现 (packet_device.hpp), 必须
