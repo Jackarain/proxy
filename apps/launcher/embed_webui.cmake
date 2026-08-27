@@ -5,7 +5,7 @@
 # Distributed under the Boost Software License, Version 1.0. (See accompanying
 # file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 #
-# 把 server/launcher/webui 目录下的全部静态资源编译期内嵌到 launcher 可执行文件
+# 把 apps/launcher/webui 目录下的全部静态资源编译期内嵌到 launcher 可执行文件
 # 中（静态资源直接编入可执行文件），生成 webui_embedded.cpp。
 #
 # 用法（由 CMakeLists.txt 在构建时调用）：

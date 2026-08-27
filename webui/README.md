@@ -14,7 +14,7 @@ launcher WebUI：实例管理、状态监控、用户管理、配置热改与日
 ```
 web/
 ├── index.html            # Vite 入口
-├── vite.config.ts        # 构建输出到 server/launcher/webui（launcher 编译期内嵌）
+├── vite.config.ts        # 构建输出到 apps/launcher/webui（launcher 编译期内嵌）
 ├── src/
 │   ├── main.tsx          # 入口
 │   ├── App.tsx           # 布局 + 2 秒轮询调度
@@ -50,12 +50,12 @@ npm run dev        # http://localhost:5173
 
 ```bash
 cd web
-npm run build      # 产物输出到 server/launcher/webui/（含 assets/ 与 index.html）
+npm run build      # 产物输出到 apps/launcher/webui/（含 assets/ 与 index.html）
 ```
 
 要点：
 
-- `vite.config.ts` 的 `build.outDir` 指向 `../server/launcher/webui`，即 launcher
+- `vite.config.ts` 的 `build.outDir` 指向 `../apps/launcher/webui`，即 launcher
   在编译期内嵌 WebUI 资源的目录（由 `embed_webui.cmake` 生成 `webui_embedded.cpp`，
   静态资源直接编入可执行文件），构建后无需手动拷贝；更新 webui 文件后 CMake
   （`CONFIGURE_DEPENDS`）会自动重新收集。
@@ -67,7 +67,7 @@ npm run build      # 产物输出到 server/launcher/webui/（含 assets/ 与 in
 | 命令 | 说明 |
 |---|---|
 | `npm run dev` | 启动 Vite 开发服务器（/api 代理到 127.0.0.1:18080，热更新） |
-| `npm run build` | TypeScript 类型检查 + 生产构建（输出到 `server/launcher/webui/`） |
+| `npm run build` | TypeScript 类型检查 + 生产构建（输出到 `apps/launcher/webui/`） |
 | `npm run preview` | 本地预览构建产物 |
 | `npm run typecheck` | 仅 TypeScript 类型检查 |
 

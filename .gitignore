@@ -297,4 +297,4 @@ xcode/
 /android/
 /release/
 /outputs/
-/server/android/xproxy/android/app/src/main/jniLibs/
+/apps/android/xproxy/android/app/src/main/jniLibs/

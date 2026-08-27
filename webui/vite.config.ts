@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
-// 构建产物直接输出到 server/launcher/webui（launcher 编译期内嵌目录）。
+// 构建产物直接输出到 apps/launcher/webui（launcher 编译期内嵌目录）。
 // base 用相对路径，保证在 launcher 任意子路径下都能正确加载资源。
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -24,7 +24,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../server/launcher/webui",
+    outDir: "../apps/launcher/webui",
     emptyOutDir: true,
     sourcemap: false,
   },

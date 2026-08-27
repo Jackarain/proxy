@@ -666,7 +666,7 @@ jobs:
             "$ANDROID_SDK_ROOT/ndk/28.2.13676358" linux-x86_64 arm64-v8a
 
       - name: Build Android apk
-        working-directory: server/android/xproxy
+        working-directory: apps/android/xproxy
         run: |
           flutter pub get
           flutter build apk --release
@@ -676,4 +676,4 @@ jobs:
         with:
           name: proxy_server-android-release-apk
           path: |
-            server/android/xproxy/build/app/outputs/flutter-apk/app-release.apk
+            apps/android/xproxy/build/app/outputs/flutter-apk/app-release.apk

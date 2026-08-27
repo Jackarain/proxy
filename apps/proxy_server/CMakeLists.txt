@@ -36,7 +36,7 @@ if (TARGET IOUring::IOUring)
 endif()
 
 set_property(SOURCE ../common/version.cpp PROPERTY COMPILE_DEFINITIONS "VERSION_GIT=\"${PVERSION}\"")
-set_property(TARGET proxy_server PROPERTY FOLDER "server/proxy_server")
+set_property(TARGET proxy_server PROPERTY FOLDER "apps/proxy_server")
 
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129 AND CMAKE_VERSION VERSION_GREATER 3.20.3)
 	set_property(TARGET proxy_server PROPERTY CXX_STANDARD 23)

@@ -71,7 +71,7 @@ target_include_directories(launcher
 )
 
 set_property(SOURCE version.cpp PROPERTY COMPILE_DEFINITIONS "VERSION_GIT=\"${PVERSION}\"")
-set_property(TARGET launcher PROPERTY FOLDER "server/launcher")
+set_property(TARGET launcher PROPERTY FOLDER "apps/launcher")
 
 # 严格要求 C++23 标准（协程 / 现代特性）。
 set_property(TARGET launcher PROPERTY CXX_STANDARD 23)
