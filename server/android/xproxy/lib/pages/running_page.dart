@@ -128,7 +128,7 @@ class _RunningPageState extends State<RunningPage>
   /// 自动滚动: 开启且原本处于底部时跟随新日志, 用户手动上滚 (进行选择)
   /// 时不强制拉回, 避免打断选择.
   void _autoScrollToBottom() {
-    if (!_autoScroll) return;
+    if (!_autoScroll || !_logScrollController.hasClients) return;
     final p = _logScrollController.position;
     if (!p.hasContentDimensions || p.maxScrollExtent <= 0) return;
     if (p.pixels >= p.maxScrollExtent - 4) {
