@@ -579,6 +579,8 @@ namespace proxy {
 			}
 
 			m_rx_bytes += static_cast<uint64_t>(n);
+			if (m_owner)
+				m_owner->add_traffic(n, 0);
 
 			XLOG_DBG << "tun tcp tx " << m_target.address().to_string() << ":"
 				<< m_target.port() << " len=" << n;
@@ -616,6 +618,8 @@ namespace proxy {
 			}
 
 			m_tx_bytes += static_cast<uint64_t>(n);
+			if (m_owner)
+				m_owner->add_traffic(0, n);
 
 			XLOG_DBG << "tun tcp rx " << m_target.address().to_string() << ":"
 				<< m_target.port() << " len=" << n;
@@ -878,6 +882,8 @@ namespace proxy {
 			co_return;
 
 		m_rx_bytes += static_cast<uint64_t>(len);
+		if (m_owner)
+			m_owner->add_traffic(len, 0);
 
 		// DNS 查询：解析 qname/qtype，禁用 IPv6 时 AAAA 直接回空应答，
 		// 其余查询命中缓存后改写事务 ID 直接回包，不再向上游查询.
@@ -1645,6 +1651,8 @@ namespace proxy {
 			co_return;
 
 		m_tx_bytes += static_cast<uint64_t>(len);
+		if (m_owner)
+			m_owner->add_traffic(0, len);
 
 		// DNS 响应回包时记录 A/AAAA 解析结果供数据面按域名分流，
 		// 并写入查询结果缓存.

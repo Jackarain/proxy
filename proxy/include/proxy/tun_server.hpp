@@ -510,6 +510,13 @@ namespace proxy {
 		// 累计一条非 DNS 会话（m_conn_total++）.
 		void on_conn_created() noexcept { ++m_conn_total; }
 
+		// 累计隧道收发流量（由 flow 转发数据时同步累加）.
+		void add_traffic(uint64_t rx, uint64_t tx) noexcept
+		{
+			m_rx_bytes += rx;
+			m_tx_bytes += tx;
+		}
+
 		// 返回 DoH 连接池（惰性创建；DNS 查询走 keep-alive 复用）.
 		// 仅在 DoH 模式（proxy_pass_ 非空）下调用.
 		doh_client* doh_pool()
