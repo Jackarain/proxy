@@ -16,448 +16,27 @@
 #include "proxy/proxy_util.hpp"
 #include "proxy/socks_client.hpp"
 #include "proxy/socks_io.hpp"
+#include "proxy/wintun_install.hpp"
 
 #include <boost/algorithm/string/case_conv.hpp>
-#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/functional/hash.hpp>
 
 #include <algorithm>
 #include <chrono>
 #include <cstring>
-#include <random>
-
-#if defined(__linux__)
-# include <fcntl.h>
-# include <linux/if.h>
-# include <linux/if_tun.h>
-# include <netinet/in.h>
-# include <sys/ioctl.h>
-# include <sys/socket.h>
-# include <unistd.h>
-#elif defined(__APPLE__)
-# include <fcntl.h>
-# include <net/if.h>
-# include <net/if_utun.h>
-# include <netinet/in.h>
-# include <cstdlib>
-# include <sys/ioctl.h>
-# include <sys/kern_control.h>
-# include <sys/socket.h>
-# include <sys/sys_domain.h>
-# include <unistd.h>
-#endif
+#include <deque>
+#include <string>
+#include <vector>
 
 namespace proxy {
 
-	//////////////////////////////////////////////////////////////////////////
-	// tun_device
-
 	namespace {
 
-#if defined(__linux__)
-		// 打开 /dev/net/tun 并配置 TUNSETIFF, 返回 fd; 失败返回 -1 并设置 ec.
-		int open_linux_tun(const std::string& name, std::string& dev_name,
-			boost::system::error_code& ec) noexcept
+		// udp 会话空闲超时（配置不大于 0 时用默认 300 秒兜底）.
+		int udp_idle_timeout(const proxy_server_option& opt) noexcept
 		{
-			int fd = ::open("/dev/net/tun", O_RDWR | O_CLOEXEC);
-			if (fd < 0)
-			{
-				ec = boost::system::error_code(errno,
-					boost::system::generic_category());
-				return -1;
-			}
-
-			struct ifreq ifr {};
-			ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-			if (!name.empty())
-				std::strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ - 1);
-
-			if (::ioctl(fd, TUNSETIFF, &ifr) < 0)
-			{
-				ec = boost::system::error_code(errno,
-					boost::system::generic_category());
-				::close(fd);
-				return -1;
-			}
-
-			dev_name = ifr.ifr_name;
-			return fd;
-		}
-#elif defined(__APPLE__)
-		// 打开 utun 设备（内核控制接口）, 返回 fd; 失败返回 -1 并设置 ec.
-		int open_macos_tun(const std::string& name, std::string& dev_name,
-			boost::system::error_code& ec) noexcept
-		{
-			struct ctl_info ctl_info;
-			std::memset(&ctl_info, 0, sizeof(ctl_info));
-			std::strncpy(ctl_info.ctl_name, UTUN_CONTROL_NAME,
-				sizeof(ctl_info.ctl_name));
-
-			int fd = ::socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
-			if (fd < 0)
-			{
-				ec = boost::system::error_code(errno,
-					boost::system::generic_category());
-				return -1;
-			}
-
-			if (::ioctl(fd, CTLIOCGINFO, &ctl_info) < 0)
-			{
-				ec = boost::system::error_code(errno,
-					boost::system::generic_category());
-				::close(fd);
-				return -1;
-			}
-
-			struct sockaddr_ctl sc;
-			std::memset(&sc, 0, sizeof(sc));
-			sc.sc_id = ctl_info.ctl_id;
-			sc.sc_len = sizeof(sc);
-			sc.sc_family = AF_SYSTEM;
-			sc.ss_sysaddr = AF_SYS_CONTROL;
-			sc.sc_unit = 0;  // 动态分配.
-
-			// 若指定了 utun 名称 (如 "utun5"), 使用对应单元.
-			if (name.compare(0, 4, "utun") == 0 && name.size() > 4)
-				sc.sc_unit = std::atoi(name.c_str() + 4) + 1;
-
-			if (::connect(fd, reinterpret_cast<struct sockaddr*>(&sc),
-					sizeof(sc)) < 0)
-			{
-				ec = boost::system::error_code(errno,
-					boost::system::generic_category());
-				::close(fd);
-				return -1;
-			}
-
-			char ifname[64] = { 0 };
-			socklen_t len = sizeof(ifname);
-			if (::getsockopt(fd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME,
-					ifname, &len) < 0)
-			{
-				ec = boost::system::error_code(errno,
-					boost::system::generic_category());
-				::close(fd);
-				return -1;
-			}
-
-			dev_name = ifname;
-
-			// 设置非阻塞.
-			int flags = ::fcntl(fd, F_GETFL, 0);
-			::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-			return fd;
-		}
-#endif
-
-#if defined(__linux__) || defined(__APPLE__)
-		// 设置设备 MTU.
-		void set_tun_mtu(const std::string& dev_name, int mtu,
-			boost::system::error_code& ec) noexcept
-		{
-			int sock = ::socket(AF_INET, SOCK_DGRAM, 0);
-			if (sock < 0)
-				return;
-
-			struct ifreq mtu_ifr {};
-			std::strncpy(mtu_ifr.ifr_name, dev_name.c_str(), IFNAMSIZ - 1);
-			mtu_ifr.ifr_mtu = mtu;
-			if (::ioctl(sock, SIOCSIFMTU, &mtu_ifr) < 0)
-				ec = boost::system::error_code(errno,
-					boost::system::generic_category());
-			::close(sock);
-		}
-#endif
-
-	} // namespace
-
-#if defined(__linux__) || defined(__APPLE__)
-
-	tun_device::tun_device(net::any_io_executor executor)
-		: m_executor(std::move(executor))
-		, m_stream(m_executor)
-	{}
-
-	tun_device::~tun_device()
-	{
-		close();
-	}
-
-	boost::system::error_code tun_device::open(const std::string& name, int mtu) noexcept
-	{
-		close();
-
-		boost::system::error_code ec;
-
-#if defined(__linux__)
-		int fd = open_linux_tun(name, m_name, ec);
-#elif defined(__APPLE__)
-		int fd = open_macos_tun(name, m_name, ec);
-#endif
-		if (ec)
-			return ec;
-
-		if (mtu > 0)
-			set_tun_mtu(m_name, mtu, ec);
-
-		m_mtu = mtu > 0 ? mtu : 1500;
-
-		m_stream.assign(fd, ec);
-		if (ec)
-		{
-			::close(fd);
-			return ec;
-		}
-
-		m_opened = true;
-
-		return ec;
-	}
-
-	boost::system::error_code tun_device::open(int fd, int mtu) noexcept
-	{
-		close();
-
-		if (fd < 0)
-			return make_error_code(boost::system::errc::invalid_argument);
-
-		boost::system::error_code ec;
-
-		// 外部注入的 fd 由 VpnService 配置好地址/路由/MTU, 仅接管读写.
-		m_stream.assign(fd, ec);
-		if (ec)
-			return ec;
-
-		m_mtu = mtu > 0 ? mtu : 1500;
-		m_opened = true;
-
-		return ec;
-	}
-
-	void tun_device::close() noexcept
-	{
-		if (m_opened)
-		{
-			boost::system::error_code ec;
-			m_stream.close(ec);
-			m_opened = false;
-		}
-		m_name.clear();
-	}
-
-	int tun_device::native_handle() const noexcept
-	{
-		return m_stream.native_handle();
-	}
-
-#endif // defined(__linux__) || defined(__APPLE__)
-
-#if defined(_WIN32)
-
-	tun_device::tun_device(net::any_io_executor executor)
-		: m_executor(std::move(executor))
-		, m_wintun(m_executor)
-	{}
-
-	tun_device::~tun_device()
-	{
-		close();
-	}
-
-	boost::system::error_code tun_device::open(
-		const std::string& name, int mtu) noexcept
-	{
-		close();
-
-		auto ec = m_wintun.open(name, mtu);
-		if (ec)
-			return ec;
-
-		m_name = m_wintun.device_name();
-		m_mtu = mtu > 0 ? mtu : 1500;
-		m_opened = true;
-		return {};
-	}
-
-	boost::system::error_code tun_device::open(int fd, int mtu) noexcept
-	{
-		// 外部 fd 注入仅 Linux/Android VpnService 场景支持.
-		return make_error_code(boost::system::errc::not_supported);
-	}
-
-	void tun_device::close() noexcept
-	{
-		m_wintun.close();
-		m_opened = false;
-		m_name.clear();
-	}
-
-	int tun_device::native_handle() const noexcept
-	{
-		return -1;
-	}
-
-#endif // defined(_WIN32)
-
-	//////////////////////////////////////////////////////////////////////////
-	// IP 包解析
-
-	namespace {
-
-		// 计算校验和（RFC 1071）.
-		uint16_t checksum(const char* data, size_t len, uint32_t sum = 0) noexcept
-		{
-			while (len > 1)
-			{
-				sum += io_util::read<uint16_t>(data);
-				len -= 2;
-			}
-			// 奇数长度时末尾字节补零到高位.
-			if (len)
-				sum += static_cast<uint8_t>(*data) << 8;
-
-			while (sum >> 16)
-				sum = (sum & 0xffff) + (sum >> 16);
-
-			return static_cast<uint16_t>(~sum);
-		}
-
-		// 计算传输层校验和（含 IPv4 伪头）.
-		uint16_t l4_checksum(const net::ip::address& src,
-			const net::ip::address& dst, uint8_t proto,
-			const std::string& segment) noexcept
-		{
-			auto s4 = src.to_v4().to_bytes();
-			auto d4 = dst.to_v4().to_bytes();
-
-			std::string pseudo;
-			pseudo.reserve(12 + segment.size());
-			pseudo.append(reinterpret_cast<const char*>(s4.data()), 4);
-			pseudo.append(reinterpret_cast<const char*>(d4.data()), 4);
-			pseudo.push_back(0);
-			pseudo.push_back(proto);
-			// 伪头补齐到 12 字节再 append 段数据：长度字段占 [10..11],
-			// 若先 append 段再写长度会覆盖段首字节.
-			pseudo.resize(12);
-			char* len_p = pseudo.data() + 10;
-			io_util::write<uint16_t>(static_cast<uint16_t>(segment.size()), len_p);
-			pseudo.append(segment);
-
-			return checksum(pseudo.data(), pseudo.size());
-		}
-
-		// 从 IPv6 头部偏移处跳过扩展头, 返回传输层协议号与偏移.
-		// 分片/认证/封装安全载荷等不支持的头返回 false.
-		bool ipv6_next_header(const char* data, size_t len,
-			size_t& off, uint8_t& proto) noexcept
-		{
-			off = 40;
-			proto = static_cast<uint8_t>(data[6]);
-
-			for (;;)
-			{
-				switch (proto)
-				{
-				case 0:    // Hop-by-Hop
-				case 43:   // Routing
-				case 60:   // Destination Options
-					if (off + 2 > len)
-						return false;
-					{
-						uint8_t next = static_cast<uint8_t>(data[off]);
-						uint8_t hdr_ext_len = static_cast<uint8_t>(data[off + 1]);
-						off += (static_cast<size_t>(hdr_ext_len) + 1) * 8;
-						if (off > len)
-							return false;
-						proto = next;
-					}
-					break;
-				case 44:   // Fragment
-				case 51:   // AH
-				case 50:   // ESP
-					return false;
-				default:
-					return true;
-				}
-			}
-		}
-
-		// 构造 TCP 段并封装为 IPv4 包（含 TCP 校验和）.
-		// src/dst 必须为 IPv4 地址；with_mss 非 0 时在 TCP 头附加 MSS 选项.
-		std::string build_tcp_segment(
-			const net::ip::address& src, const net::ip::address& dst,
-			uint16_t src_port, uint16_t dst_port,
-			uint32_t seq, uint32_t ack, uint8_t flags,
-			const char* payload, size_t payload_len,
-			uint16_t with_mss = 0) noexcept
-		{
-			if (!src.is_v4() || !dst.is_v4())
-				return {};
-
-			size_t tcp_hdr_len = 20 + (with_mss ? 4 : 0);
-			std::string tcp(tcp_hdr_len + payload_len, '\0');
-			char* p = tcp.data();
-
-			io_util::write<uint16_t>(src_port, p);
-			io_util::write<uint16_t>(dst_port, p);
-			io_util::write<uint32_t>(seq, p);
-			io_util::write<uint32_t>(ack, p);
-			*p++ = static_cast<char>((tcp_hdr_len / 4) << 4);
-			*p++ = static_cast<char>(flags);
-			io_util::write<uint16_t>(0xffff, p);  // window.
-			io_util::write<uint16_t>(0, p);       // checksum 占位.
-			io_util::write<uint16_t>(0, p);       // urgent pointer.
-
-			if (with_mss)
-			{
-				*p++ = 2;              // kind.
-				*p++ = 4;              // length.
-				io_util::write<uint16_t>(with_mss, p);
-			}
-
-			if (payload_len)
-				std::memcpy(p, payload, payload_len);
-
-			char* sum_p = tcp.data() + 16;
-			io_util::write<uint16_t>(
-				l4_checksum(src, dst, ip_proto_tcp, tcp), sum_p);
-
-			return build_ip_packet(src, dst, ip_proto_tcp, tcp);
-		}
-
-		// 构造 UDP 段并封装为 IPv4 包（含 UDP 校验和）.
-		// src/dst 必须为 IPv4 地址.
-		std::string build_udp_segment(
-			const net::ip::address& src, const net::ip::address& dst,
-			uint16_t src_port, uint16_t dst_port,
-			const char* payload, size_t payload_len) noexcept
-		{
-			if (!src.is_v4() || !dst.is_v4())
-				return {};
-
-			std::string udp(8 + payload_len, '\0');
-			char* p = udp.data();
-
-			io_util::write<uint16_t>(src_port, p);
-			io_util::write<uint16_t>(dst_port, p);
-			io_util::write<uint16_t>(static_cast<uint16_t>(udp.size()), p);
-			io_util::write<uint16_t>(0, p);  // checksum 占位.
-
-			if (payload_len)
-				std::memcpy(p, payload, payload_len);
-
-			char* sum_p = udp.data() + 6;
-			io_util::write<uint16_t>(
-				l4_checksum(src, dst, ip_proto_udp, udp), sum_p);
-
-			return build_ip_packet(src, dst, ip_proto_udp, udp);
-		}
-
-		// 按 MTU 计算 TCP MSS 通告值.
-		inline uint16_t tun_mss(const proxy_server_option& opt) noexcept
-		{
-			return static_cast<uint16_t>(
-				std::max(536, opt.tun_mtu_ > 0 ? opt.tun_mtu_ - 40 : 1460));
+			return opt.udp_timeout_ > 0 ? opt.udp_timeout_ : 300;
 		}
 
 		// 构造 SOCKS5 UDP 请求/应答头（RSV + FRAG + ATYP + 地址 + 端口）.
@@ -622,180 +201,104 @@ namespace proxy {
 			return std::nullopt;
 		}
 
-		// 解析 IPv4 头，成功返回传输层偏移并填充 pkt；失败返回 0.
-		size_t parse_ipv4_header(const char* data, size_t len,
-			ip_packet& pkt) noexcept
+		// parse_dns_question 解析问题区，取第一个问题域名填充 qname，
+		// 成功返回解析后的偏移位置，失败返回 nullptr.
+		const char* parse_dns_question(const char* p, const char* end,
+			const char* msg_start, uint16_t qdcount, std::string& qname)
 		{
-			uint8_t ihl = (static_cast<uint8_t>(data[0]) & 0x0f) * 4;
-			if (ihl < 20 || len < ihl)
-				return 0;
+			for (uint16_t i = 0; i < qdcount; ++i)
+			{
+				auto [name, np] = dns_parse_name(p, end, msg_start);
+				if (!np || np + 4 > end)
+					return nullptr;
 
-			const char* total_p = data + 2;
-			size_t total_len = io_util::read<uint16_t>(total_p);
-			if (total_len < ihl)
-				return 0;
-			if (total_len > len)
-				total_len = len;
+				if (i == 0)
+					qname = name;
+				p = np + 4;
+			}
+			if (qdcount == 0 || qname.empty())
+				return nullptr;
 
-			// 分片包（fragment offset 非 0 或 MF 置位）直接丢弃.
-			// 注意 flags 中的 DF（不分片）位不影响判断.
-			const char* frag_p = data + 6;
-			uint16_t frag = io_util::read<uint16_t>(frag_p);
-			if ((frag & 0x1fff) != 0 || (frag & 0x2000) != 0)
-				return 0;
-
-			pkt.proto = static_cast<uint8_t>(data[9]);
-			pkt.src = net::ip::make_address_v4(
-				net::ip::address_v4::bytes_type{
-					static_cast<uint8_t>(data[12]),
-					static_cast<uint8_t>(data[13]),
-					static_cast<uint8_t>(data[14]),
-					static_cast<uint8_t>(data[15]) });
-			pkt.dst = net::ip::make_address_v4(
-				net::ip::address_v4::bytes_type{
-					static_cast<uint8_t>(data[16]),
-					static_cast<uint8_t>(data[17]),
-					static_cast<uint8_t>(data[18]),
-					static_cast<uint8_t>(data[19]) });
-
-			pkt.raw = data;
-			pkt.raw_len = total_len;
-			return ihl;
+			// 去掉末尾的 '.'.
+			if (!qname.empty() && qname.back() == '.')
+				qname.pop_back();
+			return p;
 		}
 
-		// 解析 IPv6 头，成功返回传输层偏移并填充 pkt；失败返回 0.
-		size_t parse_ipv6_header(const char* data, size_t len,
-			ip_packet& pkt) noexcept
+		// parse_dns_answer 解析单条 Answer 记录，A/AAAA 记录加入 answers，
+		// 成功返回下一条记录的偏移位置，失败返回 nullptr.
+		const char* parse_dns_answer(const char* p, const char* end,
+			const char* msg_start,
+			std::vector<std::pair<net::ip::address, uint32_t>>& answers)
 		{
-			if (len < 40)
-				return 0;
+			if (p + 10 > end)
+				return nullptr;
 
-			uint8_t proto = 0;
-			size_t off = 0;
-			if (!ipv6_next_header(data, len, off, proto))
-				return 0;
+			auto [name, np] = dns_parse_name(p, end, msg_start);
+			if (!np || np + 10 > end)
+				return nullptr;
 
-			pkt.proto = proto;
-			net::ip::address_v6::bytes_type s6{};
-			net::ip::address_v6::bytes_type d6{};
-			std::memcpy(s6.data(), data + 8, 16);
-			std::memcpy(d6.data(), data + 24, 16);
-			pkt.src = net::ip::make_address_v6(s6);
-			pkt.dst = net::ip::make_address_v6(d6);
+			const char* type_p = np;
+			const char* ttl_p = np + 4;
+			const char* rdl_p = np + 8;
+			uint16_t type = io_util::read<uint16_t>(type_p);
+			uint32_t ttl = io_util::read<uint32_t>(ttl_p);
+			uint16_t rdlength = io_util::read<uint16_t>(rdl_p);
+			const char* rdata = np + 10;
+			if (rdata + rdlength > end)
+				return nullptr;
 
-			const char* payload_p = data + 4;
-			size_t total_len =
-				static_cast<size_t>(io_util::read<uint16_t>(payload_p)) + 40;
-			if (total_len > len)
-				total_len = len;
+			if (type == 1 && rdlength == 4)
+			{
+				net::ip::address_v4::bytes_type bytes;
+				std::memcpy(bytes.data(), rdata, 4);
+				answers.emplace_back(net::ip::address_v4(bytes), ttl);
+			}
+			else if (type == 28 && rdlength == 16)
+			{
+				net::ip::address_v6::bytes_type bytes;
+				std::memcpy(bytes.data(), rdata, 16);
+				answers.emplace_back(net::ip::address_v6(bytes), ttl);
+			}
 
-			pkt.raw = data;
-			pkt.raw_len = total_len;
-			return off;
+			return rdata + rdlength;
 		}
 
-		// 解析传输层头（TCP/UDP），成功返回 true.
-		bool parse_l4_header(const char* l4, size_t l4_len,
-			ip_packet& pkt) noexcept
+		// parse_dns_response 解析 DNS 响应报文中的问题域名与 A/AAAA 答案.
+		// 成功返回 true，qname/answers 为解析结果（answers 元素为 IP 与 TTL）.
+		bool parse_dns_response(const char* data, size_t len,
+			std::string& qname,
+			std::vector<std::pair<net::ip::address, uint32_t>>& answers)
 		{
-			if (pkt.proto == ip_proto_tcp)
+			if (len < 12)
+				return false;
+
+			const char* msg_start = data;
+			const char* end = data + len;
+
+			const char* qd_p = data + 4;
+			const char* an_p = data + 6;
+			uint16_t qdcount = io_util::read<uint16_t>(qd_p);
+			uint16_t ancount = io_util::read<uint16_t>(an_p);
+
+			// 解析问题区，取第一个问题域名.
+			const char* p = parse_dns_question(
+				data + 12, end, msg_start, qdcount, qname);
+			if (!p)
+				return false;
+
+			// 遍历 Answer 区提取 A/AAAA 记录.
+			for (uint16_t i = 0; i < ancount; ++i)
 			{
-				if (l4_len < 20)
-					return false;
-
-				const char* q = l4;
-				pkt.src_port = io_util::read<uint16_t>(q);
-				pkt.dst_port = io_util::read<uint16_t>(q);
-				pkt.seq = io_util::read<uint32_t>(q);
-				pkt.ack = io_util::read<uint32_t>(q);
-
-				uint16_t tcp_hdr_len = (static_cast<uint8_t>(l4[12]) >> 4) * 4;
-				if (tcp_hdr_len < 20 || tcp_hdr_len > l4_len)
-					return false;
-
-				pkt.tcp_hdr_len = tcp_hdr_len;
-				pkt.flags = static_cast<uint8_t>(l4[13]) & 0x3f;
-				pkt.payload = l4 + tcp_hdr_len;
-				pkt.payload_len = l4_len - tcp_hdr_len;
-				return true;
+				p = parse_dns_answer(p, end, msg_start, answers);
+				if (!p)
+					break;
 			}
 
-			if (pkt.proto == ip_proto_udp)
-			{
-				if (l4_len < 8)
-					return false;
-
-				const char* q = l4;
-				pkt.src_port = io_util::read<uint16_t>(q);
-				pkt.dst_port = io_util::read<uint16_t>(q);
-				pkt.payload = l4 + 8;
-				pkt.payload_len = l4_len - 8;
-				return true;
-			}
-
-			return false;
+			return !answers.empty();
 		}
 
 	} // namespace
-
-	bool parse_ip_packet(const char* data, size_t len, ip_packet& pkt) noexcept
-	{
-		if (!data || len < 20)
-			return false;
-
-		uint8_t version = static_cast<uint8_t>(data[0]) >> 4;
-		size_t l4_off = 0;
-
-		if (version == 4)
-			l4_off = parse_ipv4_header(data, len, pkt);
-		else if (version == 6)
-			l4_off = parse_ipv6_header(data, len, pkt);
-		else
-			return false;
-
-		if (l4_off == 0 || pkt.raw_len < l4_off)
-			return false;
-
-		return parse_l4_header(data + l4_off, pkt.raw_len - l4_off, pkt);
-	}
-
-	std::string build_ip_packet(
-		const net::ip::address& src, const net::ip::address& dst,
-		uint8_t proto, const std::string& payload) noexcept
-	{
-		if (!src.is_v4() || !dst.is_v4())
-			return {};
-
-		auto s4 = src.to_v4().to_bytes();
-		auto d4 = dst.to_v4().to_bytes();
-
-		std::string out;
-		out.resize(20 + payload.size());
-
-		char* p = out.data();
-		p[0] = 0x45;
-		p[1] = 0;
-
-		char* len_p = p + 2;
-		io_util::write<uint16_t>(static_cast<uint16_t>(out.size()), len_p);
-
-		p[4] = p[5] = 0;  // identification.
-		p[6] = p[7] = 0;  // flags/fragment offset.
-		p[8] = 64;        // TTL.
-		p[9] = static_cast<char>(proto);
-		p[10] = p[11] = 0; // checksum 占位.
-
-		std::memcpy(p + 12, s4.data(), 4);
-		std::memcpy(p + 16, d4.data(), 4);
-
-		char* sum_p = p + 10;
-		io_util::write<uint16_t>(checksum(p, 20), sum_p);
-
-		if (!payload.empty())
-			std::memcpy(p + 20, payload.data(), payload.size());
-
-		return out;
-	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// tun_tcp_flow
@@ -806,29 +309,19 @@ namespace proxy {
 		const std::shared_ptr<tun_server>& owner,
 		const proxy_server_option& opt,
 		tcp_flow_key key,
-		const ip_packet& syn)
+		tunio::tun_stream stream)
 		: m_executor(std::move(executor))
 		, m_owner(owner)
 		, m_option(opt)
 		, m_key(std::move(key))
 		, m_conn_id(owner ? owner->next_conn_id() : 0)
-		, m_client(m_key.src, m_key.src_port)
-		, m_target(m_key.dst, m_key.dst_port)
+		, m_client(stream.remote_endpoint())
+		, m_target(stream.original_destination())
 		, m_started(std::chrono::steady_clock::now())
 		, m_proto(static_cast<uint8_t>(tun_conn_proto::tcp))
+		, m_client_stream(std::move(stream))
 		, m_upstream(init_proxy_stream(m_executor))
-		, m_client_isn(syn.seq)
-	{
-		std::random_device rd;
-		std::mt19937 gen(rd());
-		m_server_isn = gen();
-
-		m_client_next_seq = m_client_isn + 1;
-		m_client_ack_seq = m_client_isn + 1;
-		m_server_next_seq = m_server_isn;
-
-		m_tx_signal.emplace(m_executor);
-	}
+	{}
 
 	tun_tcp_flow::~tun_tcp_flow()
 	{
@@ -846,113 +339,15 @@ namespace proxy {
 			}, net::detached);
 	}
 
-	void tun_tcp_flow::handle_packet(const ip_packet& pkt)
-	{
-		if (m_closed)
-			return;
-
-		auto flags = pkt.flags;
-
-		if (flags & tcp_flag_rst)
-		{
-			close();
-			return;
-		}
-
-		if (flags & tcp_flag_fin)
-		{
-			m_client_fin = true;
-
-			if (pkt.payload_len > 0 && m_connected && pkt.seq == m_client_next_seq)
-			{
-				m_client_next_seq += static_cast<uint32_t>(pkt.payload_len);
-				m_client_ack_seq = m_client_next_seq;
-				push_tx(std::string(pkt.payload, pkt.payload_len));
-			}
-
-			// FIN 消耗一个序号.
-			m_client_ack_seq = m_client_next_seq + 1;
-
-			// 通知发送协程在队列清空后半关闭上游写方向.
-			{
-				std::lock_guard<std::mutex> lk(m_tx_mutex);
-				m_tx_fin = true;
-			}
-			if (m_tx_signal)
-				m_tx_signal->cancel();
-
-			if (m_connected)
-				send_ack();
-
-			// 上游已关闭时，客户端 FIN 到达则完成四路挥手.
-			if (m_upstream_eof)
-				close();
-
-			return;
-		}
-
-		if (!m_connected)
-			return;
-
-		handle_data(pkt);
-	}
-
-	void tun_tcp_flow::handle_data(const ip_packet& pkt)
-	{
-		if (pkt.payload_len == 0)
-			return;
-
-		if (pkt.seq != m_client_next_seq)
-		{
-			// 乱序或重传：通告期望序号，丢弃数据（简化实现不做缓存重排）.
-			// 重传旧段时同样回 ACK, 否则客户端会一直重传直至连接超时.
-			XLOG_DBG << "tun tcp data seq mismatch dst="
-				<< m_key.dst.to_string() << ":" << m_key.dst_port
-				<< " got=" << pkt.seq
-				<< " expect=" << m_client_next_seq
-				<< " len=" << pkt.payload_len;
-			send_ack();
-			return;
-		}
-
-		XLOG_DBG << "tun tcp data rx dst="
-			<< m_key.dst.to_string() << ":" << m_key.dst_port
-			<< " len=" << pkt.payload_len;
-
-		m_client_next_seq += static_cast<uint32_t>(pkt.payload_len);
-		m_client_ack_seq = m_client_next_seq;
-		m_rx_bytes += static_cast<uint64_t>(pkt.payload_len);
-
-		push_tx(std::string(pkt.payload, pkt.payload_len));
-		send_ack();
-	}
-
-	void tun_tcp_flow::close()
-	{
-		if (m_closed)
-			return;
-
-		m_closed = true;
-
-		boost::system::error_code ec;
-		net_tcp_socket(m_upstream).close(ec);
-
-		if (m_tx_signal)
-			m_tx_signal->cancel();
-
-		if (m_owner)
-			m_owner->remove_tcp_flow(m_key);
-	}
-
 	net::awaitable<void> tun_tcp_flow::do_connect()
 	{
 		auto self = shared_from_this();
 
-		const std::string target_host = m_key.dst.to_string();
-		const uint16_t target_port = m_key.dst_port;
+		const std::string target_host = m_target.address().to_string();
+		const uint16_t target_port = m_target.port();
 
 		// 分流判定：命中 proxy_cidr_ 或代理域名解析缓存走上游代理，否则直连.
-		const bool use_proxy = m_owner && m_owner->ip_match_proxy(m_key.dst);
+		const bool use_proxy = m_owner && m_owner->ip_match_proxy(m_target.address());
 
 		XLOG_DBG << "tun tcp connect " << target_host << ":" << target_port
 			<< (use_proxy ? " via proxy" : " direct")
@@ -960,7 +355,8 @@ namespace proxy {
 
 		if (!co_await establish_upstream(target_host, target_port, use_proxy))
 		{
-			send_rst();
+			// 后端连接失败：向客户端发送 RST 并关闭.
+			m_client_stream.reset();
 			close();
 			co_return;
 		}
@@ -969,7 +365,18 @@ namespace proxy {
 
 		XLOG_DBG << "tun tcp established " << target_host << ":" << target_port;
 
-		start_data_plane();
+		// 启动双向数据搬运协程.
+		net::co_spawn(m_executor,
+			[this, self]() -> net::awaitable<void>
+			{
+				return tx_loop();
+			}, net::detached);
+
+		net::co_spawn(m_executor,
+			[this, self]() -> net::awaitable<void>
+			{
+				return rx_loop();
+			}, net::detached);
 	}
 
 	// establish_upstream 依据分流结果经上游代理或直连建立连接，
@@ -1082,7 +489,7 @@ namespace proxy {
 		const std::function<net::awaitable<bool>(int)>& protect)
 	{
 		auto sock = co_await connect_direct(
-			m_executor, m_option, m_key.dst, target_port, protect);
+			m_executor, m_option, m_target.address(), target_port, protect);
 		if (!sock.is_open())
 			co_return false;
 
@@ -1090,37 +497,12 @@ namespace proxy {
 		co_return true;
 	}
 
-	void tun_tcp_flow::start_data_plane()
-	{
-		auto self = shared_from_this();
-
-		// 回 SYN-ACK，通告 MSS 以减少分片.
-		send_tcp(m_server_isn, m_client_isn + 1,
-			tcp_flag_syn | tcp_flag_ack, nullptr, 0, true, tun_mss(m_option));
-
-		// SYN 消耗一个序号，后续数据段从 server_isn + 1 开始.
-		m_server_next_seq = m_server_isn + 1;
-
-		// 启动双向数据搬运协程.
-		net::co_spawn(m_executor,
-			[this, self]() -> net::awaitable<void>
-			{
-				return tx_loop();
-			}, net::detached);
-
-		net::co_spawn(m_executor,
-			[this, self]() -> net::awaitable<void>
-			{
-				return rx_loop();
-			}, net::detached);
-	}
-
 	net::awaitable<bool> tun_tcp_flow::do_proxy_handshake(const urls::url& proxy_url)
 	{
 		boost::system::error_code ec;
 
-		const std::string target_host = m_key.dst.to_string();
-		const uint16_t target_port = m_key.dst_port;
+		const std::string target_host = m_target.address().to_string();
+		const uint16_t target_port = m_target.port();
 		auto scheme = boost::to_lower_copy(std::string(proxy_url.scheme()));
 
 		if (scheme.starts_with("socks"))
@@ -1129,7 +511,8 @@ namespace proxy {
 			opt.target_host = target_host;
 			opt.target_port = target_port;
 			// IP 目标直接以地址类型发送，域名目标交由代理解析.
-			opt.proxy_hostname = !m_key.dst.is_v4() && !m_key.dst.is_v6();
+			opt.proxy_hostname = !m_target.address().is_v4() &&
+				!m_target.address().is_v6();
 			opt.username = std::string(proxy_url.user());
 			opt.password = std::string(proxy_url.password());
 
@@ -1162,67 +545,62 @@ namespace proxy {
 		co_return true;
 	}
 
+	// tx_loop 读取客户端（tun_stream）数据并转发到上游.
 	net::awaitable<void> tun_tcp_flow::tx_loop()
 	{
+		char buffer[16384];
+
 		for (; !m_closed;)
 		{
-			std::string data;
-			bool fin = false;
-
+			boost::system::error_code ec;
+			size_t n = co_await m_client_stream.async_read_some(
+				net::buffer(buffer), net_awaitable[ec]);
+			if (ec)
 			{
-				std::lock_guard<std::mutex> lk(m_tx_mutex);
-				if (!m_tx_queue.empty())
-				{
-					data = std::move(m_tx_queue.front());
-					m_tx_queue.pop_front();
-				}
-				fin = m_tx_fin && m_tx_queue.empty();
+				// 客户端流异常（RST/关闭）：整体关闭连接.
+				close();
+				co_return;
 			}
 
-			if (data.empty() && !fin)
+			if (n == 0)
 			{
-				boost::system::error_code ec;
-				m_tx_signal->expires_at(net::steady_timer::time_point::max());
-				co_await m_tx_signal->async_wait(net_awaitable[ec]);
-				continue;
-			}
-
-			if (!data.empty())
-			{
-				boost::system::error_code ec;
-				XLOG_DBG << "tun tcp tx " << m_key.dst.to_string() << ":"
-					<< m_key.dst_port << " len=" << data.size();
-				co_await net::async_write(m_upstream, net::buffer(data), net_awaitable[ec]);
-				if (ec)
+				// 客户端 FIN：半关闭上游写方向，等待上游 EOF 后整体关闭.
+				m_client_fin = true;
+				if (m_upstream_eof)
 				{
-					on_upstream_closed();
+					close();
 					co_return;
 				}
-			}
 
-			if (fin)
-			{
-				// 客户端已发送 FIN，半关闭上游写方向（只执行一次）.
-				m_tx_fin = false;
-
-				boost::system::error_code ec;
+				boost::system::error_code sec;
 				net_tcp_socket(m_upstream).shutdown(
-					tcp::socket::shutdown_send, ec);
-				if (ec)
-				{
+					tcp::socket::shutdown_send, sec);
+				co_return;
+			}
+
+			m_rx_bytes += static_cast<uint64_t>(n);
+
+			XLOG_DBG << "tun tcp tx " << m_target.address().to_string() << ":"
+				<< m_target.port() << " len=" << n;
+
+			co_await net::async_write(
+				m_upstream, net::buffer(buffer, n), net_awaitable[ec]);
+			if (ec)
+			{
+				if (ec == net::error::eof)
+					handle_upstream_eof(ec, 0);
+				else
 					on_upstream_closed();
-					co_return;
-				}
+				co_return;
 			}
 		}
 
 		co_return;
 	}
 
+	// rx_loop 读取上游数据并转发到客户端（tun_stream）.
 	net::awaitable<void> tun_tcp_flow::rx_loop()
 	{
-		uint16_t mss = tun_mss(m_option);
-
 		char buffer[8192];
 
 		for (; !m_closed;)
@@ -1231,121 +609,91 @@ namespace proxy {
 			size_t n = co_await m_upstream.async_read_some(
 				net::buffer(buffer), net_awaitable[ec]);
 
-			if (n > 0)
-			{
-				m_tx_bytes += static_cast<uint64_t>(n);
-				XLOG_DBG << "tun tcp rx " << m_key.dst.to_string() << ":"
-					<< m_key.dst_port << " len=" << n;
-			}
-
-			// 读取结束：处理 EOF/FIN 或异常后退出循环.
 			if (ec || n == 0)
 			{
-				handle_read_error(ec, n);
-				break;
+				handle_upstream_eof(ec, n);
+				co_return;
 			}
 
-			// 按 MSS 切片发送给客户端.
-			send_to_client(buffer, n, mss);
+			m_tx_bytes += static_cast<uint64_t>(n);
+
+			XLOG_DBG << "tun tcp rx " << m_target.address().to_string() << ":"
+				<< m_target.port() << " len=" << n;
+
+			co_await write_to_client(buffer, n);
 		}
 
 		co_return;
 	}
 
-	// handle_read_error 处理上游读取结束：EOF 向客户端发 FIN（客户端也
-	// FIN 时关闭连接），异常直接关闭.
-	void tun_tcp_flow::handle_read_error(
-		boost::system::error_code ec, size_t n)
+	// write_to_client 将数据写入客户端流；引擎按 MSS 自动分片，
+	// 客户端窗口满时等待 ACK 后继续.
+	net::awaitable<void> tun_tcp_flow::write_to_client(const char* data, size_t len)
+	{
+		for (size_t off = 0; off < len && !m_closed;)
+		{
+			boost::system::error_code ec;
+			size_t n = co_await m_client_stream.async_write_some(
+				net::buffer(data + off, len - off), net_awaitable[ec]);
+			if (ec)
+			{
+				// 客户端流不可写（已关闭/RST）：整体关闭连接.
+				close();
+				co_return;
+			}
+			off += n;
+		}
+	}
+
+	// handle_upstream_eof 处理上游读取结束：EOF 向客户端发 FIN，
+	// 异常向客户端发 RST 并关闭.
+	void tun_tcp_flow::handle_upstream_eof(boost::system::error_code ec, size_t n)
 	{
 		if (ec == net::error::eof || n == 0)
 		{
-			// 上游关闭：向客户端发送 FIN.
+			// 上游关闭：向客户端发送 FIN（半关闭发送侧）.
 			if (!m_upstream_eof)
 			{
 				m_upstream_eof = true;
-				send_fin();
+
+				boost::system::error_code sec;
+				m_client_stream.shutdown(
+					net::ip::tcp::socket::shutdown_send, sec);
 			}
 			if (m_client_fin)
 				close();
 		}
 		else
 		{
-			// 异常：直接关闭.
+			// 上游异常：向客户端发送 RST 并关闭.
+			m_client_stream.reset();
 			close();
 		}
 	}
 
-	// send_to_client 将 payload 按 MSS 切片发送给客户端.
-	void tun_tcp_flow::send_to_client(const char* data, size_t len, uint16_t mss)
-	{
-		size_t off = 0;
-		while (off < len)
-		{
-			size_t chunk = (std::min)(len - off, static_cast<size_t>(mss));
-			send_tcp(m_server_next_seq, m_client_ack_seq,
-				tcp_flag_ack | tcp_flag_psh,
-				data + off, chunk);
-			m_server_next_seq += static_cast<uint32_t>(chunk);
-			off += chunk;
-		}
-	}
-
-	void tun_tcp_flow::send_tcp(uint32_t seq, uint32_t ack, uint8_t flags,
-		const char* payload, size_t payload_len, bool with_mss, uint16_t mss)
-	{
-		if (!m_owner)
-			return;
-
-		auto packet = build_tcp_segment(
-			m_key.dst, m_key.src,
-			m_key.dst_port, m_key.src_port,
-			seq, ack, flags, payload, payload_len,
-			with_mss ? mss : 0);
-
-		if (!packet.empty())
-			m_owner->write_packet(std::move(packet));
-	}
-
-	void tun_tcp_flow::send_ack()
-	{
-		send_tcp(m_server_next_seq, m_client_ack_seq, tcp_flag_ack, nullptr, 0);
-	}
-
-	void tun_tcp_flow::send_fin()
-	{
-		send_tcp(m_server_next_seq, m_client_ack_seq,
-			tcp_flag_fin | tcp_flag_ack, nullptr, 0);
-		m_server_next_seq += 1;
-	}
-
-	void tun_tcp_flow::send_rst()
-	{
-		send_tcp(m_server_next_seq, m_client_ack_seq, tcp_flag_rst | tcp_flag_ack,
-			nullptr, 0);
-	}
-
-	void tun_tcp_flow::push_tx(std::string data)
-	{
-		if (m_closed)
-			return;
-
-		{
-			std::lock_guard<std::mutex> lk(m_tx_mutex);
-			m_tx_queue.push_back(std::move(data));
-		}
-
-		if (m_tx_signal)
-			m_tx_signal->cancel();
-	}
-
+	// on_upstream_closed 处理上游连接异常/关闭.
 	void tun_tcp_flow::on_upstream_closed()
 	{
 		if (m_closed)
 			return;
 
-		// 上游异常关闭：向客户端发送 RST 并关闭.
-		send_rst();
+		m_client_stream.reset();
 		close();
+	}
+
+	void tun_tcp_flow::close()
+	{
+		if (m_closed)
+			return;
+
+		m_closed = true;
+
+		boost::system::error_code ec;
+		net_tcp_socket(m_upstream).close(ec);
+		m_client_stream.close();
+
+		if (m_owner)
+			m_owner->remove_tcp_flow(m_key, this);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -1354,22 +702,21 @@ namespace proxy {
 	tun_udp_flow::tun_udp_flow(net::any_io_executor executor,
 		const std::shared_ptr<tun_server>& owner,
 		const proxy_server_option& opt,
-		const tcp_flow_key& key,
-		const net::ip::udp::endpoint& client,
-		const net::ip::udp::endpoint& target,
-		const std::string& dns_qname)
+		tunio::tun_udp_socket socket)
 		: m_executor(std::move(executor))
 		, m_owner(owner)
 		, m_option(opt)
-		, m_key(std::move(key))
-		, m_client(client)
-		, m_target(target)
-		, m_dns_qname(dns_qname)
 		, m_conn_id(owner ? owner->next_conn_id() : 0)
+		, m_client(socket.client_endpoint())
 		, m_started(std::chrono::steady_clock::now())
 		, m_proto(static_cast<uint8_t>(tun_conn_proto::udp))
+		, m_client_socket(std::move(socket))
 	{
 		m_expire.emplace(m_executor);
+
+		// 引擎侧会话超时留出宽限，空闲回收由 m_expire 计时器统一负责.
+		m_client_socket.set_timeout(std::chrono::seconds(
+			udp_idle_timeout(m_option) + 30));
 	}
 
 	tun_udp_flow::~tun_udp_flow()
@@ -1388,10 +735,147 @@ namespace proxy {
 			}, net::detached);
 	}
 
-	void tun_udp_flow::send(const char* data, size_t len) noexcept
+	net::awaitable<void> tun_udp_flow::do_open()
+	{
+		auto self = shared_from_this();
+
+		// 接收首数据报，确定会话目标并注册.
+		{
+			char buf[65535];
+			net::ip::udp::endpoint sender;
+			boost::system::error_code ec;
+			size_t n = co_await m_client_socket.async_receive_from(
+				net::buffer(buf), sender, net_awaitable[ec]);
+			if (ec)
+			{
+				close();
+				co_return;
+			}
+
+			m_target = sender;
+			m_orig_target = sender;
+			m_key = tcp_flow_key{
+				m_client.address(), m_client.port(),
+				m_target.address(), m_target.port()
+			};
+
+			// DNS 查询报文解析查询域名，用于按 proxy_domains_ 分流.
+			if (m_target.port() == 53 && n > 0)
+			{
+				std::string query(buf, n);
+				uint16_t qtype = 0;
+				dns_parse_query(query, m_dns_qname, qtype);
+			}
+
+			if (m_owner)
+				m_owner->register_udp_flow(m_key, self);
+
+			// DNS 查询流（目标 53 端口）为内部基础设施流量，不纳入累计连接统计.
+			if (m_target.port() != 53 && m_owner)
+				m_owner->on_conn_created();
+
+			// 先分流再处理首数据报：DNS 缓存命中可立即回包，无需等待后端.
+			if (!resolve_proxy_mode())
+			{
+				close();
+				co_return;
+			}
+
+			co_await handle_datagram(buf, n);
+			if (m_closed)
+				co_return;
+		}
+
+		// DoH 模式无需后端连接（每个查询独立发起 DoH 请求）.
+		if (!m_doh_mode && !m_doh_via_proxy)
+		{
+			// 直连或 SOCKS5 需要本地 UDP 后端 socket.
+			if (!m_connect_udp && !co_await open_backend())
+			{
+				close();
+				co_return;
+			}
+
+			if (m_proxy && !co_await establish_proxy())
+			{
+				close();
+				co_return;
+			}
+
+			if (m_connect_udp)
+			{
+				// HTTP CONNECT-UDP：启动串行发送协程与 capsule 接收循环.
+				start_data_loops();
+			}
+			else
+			{
+				// 直连/SOCKS5：启动后端应答接收循环.
+				net::co_spawn(m_executor,
+					[this, self]() -> net::awaitable<void>
+					{
+						return recv_loop();
+					}, net::detached);
+			}
+		}
+
+		// 后端就绪，补发等待期间缓存的客户端数据.
+		m_ready = true;
+		for (auto& p : m_pending)
+		{
+			bool ok = false;
+			if (m_connect_udp)
+			{
+				push_capsule(p.data(), p.size());
+				ok = true;
+			}
+			else if (m_proxy)
+				ok = send_via_socks5(p.data(), p.size());
+			else
+				ok = send_direct(p.data(), p.size());
+			if (ok)
+				touch();
+		}
+		m_pending.clear();
+
+		touch();
+
+		// 启动客户端数据报接收循环.
+		net::co_spawn(m_executor,
+			[this, self]() -> net::awaitable<void>
+			{
+				char buf[65535];
+
+				for (; !m_closed;)
+				{
+					net::ip::udp::endpoint sender;
+					boost::system::error_code ec;
+					size_t n = co_await m_client_socket.async_receive_from(
+						net::buffer(buf), sender, net_awaitable[ec]);
+					if (ec)
+						break;
+
+					// tunio 会话按客户端三元组复用（1 对 N）：目标变化时
+					// 关闭会话，交由引擎为新目标重建会话并重新分流.
+					if (sender != m_orig_target)
+					{
+						close();
+						break;
+					}
+
+					co_await handle_datagram(buf, n);
+					if (m_closed)
+						break;
+				}
+
+				close();
+			}, net::detached);
+	}
+
+	// handle_datagram 处理一个客户端数据报（DNS 缓存/DoH/转发）.
+	net::awaitable<void> tun_udp_flow::handle_datagram(const char* data, size_t len)
 	{
 		if (m_closed)
-			return;
+			co_return;
 
 		m_rx_bytes += static_cast<uint64_t>(len);
 
@@ -1416,10 +900,10 @@ namespace proxy {
 						XLOG_DBG << "tun udp dns query: " << qname << " type "
 							<< dns_type_to_string(qtype)
 							<< ", ipv6 disabled, return empty";
-						reply(resp.data(), resp.size(), false);
+						co_await reply(resp.data(), resp.size(), false);
 						touch();
 					}
-					return;
+					co_return;
 				}
 
 				dns_query_flags(query, cd, do_flag);
@@ -1434,9 +918,9 @@ namespace proxy {
 							static_cast<uint8_t>(query[1]));
 						auto resp = dns_set_id(*hit, qid);
 						XLOG_DBG << "tun udp dns cache hit: " << qname;
-						reply(resp.data(), resp.size(), false);
+						co_await reply(resp.data(), resp.size(), false);
 						touch();
-						return;
+						co_return;
 					}
 					cache_key = key;
 				}
@@ -1472,10 +956,10 @@ namespace proxy {
 							XLOG_DBG << "tun udp dns cache put: " << key;
 						}
 					}
-					reply(response.data(), response.size(), false);
+					co_await reply(response.data(), response.size(), false);
 					touch();
 				}, net::detached);
-			return;
+			co_return;
 		}
 
 		// 后端尚未就绪（异步建连/ASSOCIATE 进行中），缓存数据稍后补发.
@@ -1483,9 +967,9 @@ namespace proxy {
 		{
 			// 超出缓存上限直接丢弃, 防止后端建连缓慢时内存无界增长.
 			if (m_pending.size() >= k_max_udp_pending)
-				return;
+				co_return;
 			m_pending.emplace_back(data, len);
-			return;
+			co_return;
 		}
 
 		bool ok = false;
@@ -1570,54 +1054,10 @@ namespace proxy {
 		if (m_control)
 			net_tcp_socket(*m_control).close(ec);
 
+		m_client_socket.close();
+
 		if (m_owner)
-			m_owner->remove_udp_flow(m_key);
-	}
-
-	net::awaitable<void> tun_udp_flow::do_open()
-	{
-		auto self = shared_from_this();
-
-		if (!resolve_proxy_mode())
-		{
-			close();
-			co_return;
-		}
-
-		// DoH 模式无需后端连接（每个查询独立发起 DoH 请求）.
-		if (!m_doh_mode && !m_doh_via_proxy)
-		{
-			// 直连或 SOCKS5 需要本地 UDP 后端 socket.
-			if (!m_connect_udp && !co_await open_backend())
-			{
-				close();
-				co_return;
-			}
-
-			if (m_proxy && !co_await establish_proxy())
-			{
-				close();
-				co_return;
-			}
-
-			// 非 CONNECT-UDP 模式启动后端接收循环（SOCKS5 或直连）.
-			if (!m_connect_udp)
-			{
-				net::co_spawn(m_executor,
-					[this, self]() -> net::awaitable<void>
-					{
-						return recv_loop();
-					}, net::detached);
-			}
-		}
-
-		// 后端就绪，补发等待期间缓存的客户端数据.
-		m_ready = true;
-		for (auto& p : m_pending)
-			send(p.data(), p.size());
-		m_pending.clear();
-
-		touch();
+			m_owner->remove_udp_flow(m_key, this);
 	}
 
 	// resolve_proxy_route 判定该 UDP 流是否走上游代理：目标 IP 命中
@@ -1836,7 +1276,29 @@ namespace proxy {
 
 		const auto& proxy_url = *m_option.proxy_pass_;
 
-		m_control.emplace(init_proxy_stream(std::move(sock)));
+		// 与 do_connect_udp 一致：SSL 代理（scheme 以 s 结尾，如 socks5s/
+		// https）先建立 TLS 再执行 SOCKS5 握手，否则明文发往 TLS 端口
+		// 会被对端直接 RST.
+		if (proxy_use_ssl(proxy_url, m_option))
+		{
+			if (!m_owner)
+				co_return false;
+			std::string proxy_host(proxy_url.encoded_host());
+			auto sni = m_option.proxy_ssl_name_.empty() ?
+				proxy_host : m_option.proxy_ssl_name_;
+			auto res = co_await m_owner->make_ssl_socket(sock, sni, m_control);
+			if (res.has_error())
+			{
+				XLOG_WARN << "tun udp make_ssl_socket: "
+					<< res.error().message();
+				co_return false;
+			}
+			XLOG_DBG << "tun udp SSL handshake with " << sni << " succeeded";
+		}
+		else
+		{
+			m_control.emplace(init_proxy_stream(std::move(sock)));
+		}
 
 		socks_client_option opt;
 		opt.target_host = "0.0.0.0";
@@ -1879,8 +1341,27 @@ namespace proxy {
 	{
 		auto self = shared_from_this();
 
-		if (!co_await make_control_stream(std::move(sock)))
-			co_return false;
+		const auto& proxy_url = *m_option.proxy_pass_;
+		std::string proxy_host(proxy_url.encoded_host());
+
+		// 判断是否使用 SSL：显式配置 proxy_pass_ssl 或 scheme 以 's' 结尾（https/wss）.
+		if (proxy_use_ssl(proxy_url, m_option))
+		{
+			auto sni = m_option.proxy_ssl_name_.empty() ?
+				proxy_host : m_option.proxy_ssl_name_;
+			auto res = co_await m_owner->make_ssl_socket(sock, sni, m_control);
+			if (res.has_error())
+			{
+				XLOG_WARN << "tun udp make_ssl_socket: " << res.error().message();
+				co_return false;
+			}
+
+			XLOG_DBG << "tun udp SSL handshake with " << sni << " succeeded";
+		}
+		else
+		{
+			m_control.emplace(init_proxy_stream(std::move(sock)));
+		}
 
 		// 发送 RFC 9298 CONNECT-UDP 请求并校验 101 响应.
 		if (!co_await send_connect_udp_request())
@@ -1963,35 +1444,6 @@ namespace proxy {
 			{
 				return recv_connect_udp_loop();
 			}, net::detached);
-	}
-
-	net::awaitable<bool> tun_udp_flow::make_control_stream(tcp::socket sock)
-	{
-		const auto& proxy_url = *m_option.proxy_pass_;
-		std::string proxy_host(proxy_url.encoded_host());
-
-		// 判断是否使用 SSL：显式配置 proxy_pass_ssl 或 scheme 以 's' 结尾（https/wss）.
-		bool use_ssl = proxy_use_ssl(proxy_url, m_option);
-
-		if (use_ssl)
-		{
-			auto sni = m_option.proxy_ssl_name_.empty() ?
-				proxy_host : m_option.proxy_ssl_name_;
-			auto res = co_await m_owner->make_ssl_socket(sock, sni, m_control);
-			if (res.has_error())
-			{
-				XLOG_WARN << "tun udp make_ssl_socket: " << res.error().message();
-				co_return false;
-			}
-
-			XLOG_DBG << "tun udp SSL handshake with " << sni << " succeeded";
-		}
-		else
-		{
-			m_control.emplace(init_proxy_stream(std::move(sock)));
-		}
-
-		co_return true;
 	}
 
 	void tun_udp_flow::push_capsule(const char* data, size_t len)
@@ -2092,7 +1544,7 @@ namespace proxy {
 				continue;
 
 			touch();
-			reply(capsule_value.data() + ctx_id_len, udp_len);
+			co_await reply(capsule_value.data() + ctx_id_len, udp_len);
 		}
 
 		close();
@@ -2170,7 +1622,7 @@ namespace proxy {
 			if (!m_proxy)
 			{
 				// 直连：应答即为目标返回的数据.
-				reply(buf, n);
+				co_await reply(buf, n);
 				continue;
 			}
 
@@ -2179,17 +1631,18 @@ namespace proxy {
 			if (n <= header_size)
 				continue;
 
-			reply(buf + header_size, n - header_size);
+			co_await reply(buf + header_size, n - header_size);
 		}
 
 		close();
 	}
 
-	void tun_udp_flow::reply(
+	// reply 向客户端回包（源地址为会话目标 m_target）.
+	net::awaitable<void> tun_udp_flow::reply(
 		const char* data, size_t len, bool cache_resp)
 	{
 		if (!m_owner)
-			return;
+			co_return;
 
 		m_tx_bytes += static_cast<uint64_t>(len);
 
@@ -2202,14 +1655,16 @@ namespace proxy {
 				cache_dns_response(data, len);
 		}
 
-		// 目标 -> 客户端方向.
-		auto packet = build_udp_segment(
-			m_target.address(), m_client.address(),
-			m_target.port(), m_client.port(),
-			data, len);
-
-		if (!packet.empty())
-			m_owner->write_packet(std::move(packet));
+		// 目标 -> 客户端方向：经 tunio 会话回写，源地址为 m_target.
+		std::string payload(data, len);
+		boost::system::error_code ec;
+		co_await m_client_socket.async_send_to(
+			m_target, net::buffer(payload), net_awaitable[ec]);
+		if (ec)
+		{
+			XLOG_WARN << "tun udp reply error: " << ec.message();
+			close();
+		}
 	}
 
 	// cache_dns_response 将 DNS 响应写入查询结果缓存，键从响应报文
@@ -2238,14 +1693,11 @@ namespace proxy {
 
 	void tun_udp_flow::touch()
 	{
-		if (!m_expire)
+		if (m_closed || !m_expire)
 			return;
 
 		// 每次活动重置超时计时，超时后关闭会话.
-		// 超时取 udp_timeout_ 配置（不大于 0 时用默认 300 秒兜底）.
-		int timeout = m_option.udp_timeout_ > 0 ?
-			m_option.udp_timeout_ : 300;
-		m_expire->expires_after(std::chrono::seconds(timeout));
+		m_expire->expires_after(std::chrono::seconds(udp_idle_timeout(m_option)));
 		m_expire->async_wait(
 			[this](const boost::system::error_code& ec)
 			{
@@ -2259,9 +1711,10 @@ namespace proxy {
 	// tun_server
 
 	tun_server::tun_server(net::any_io_executor executor, proxy_server_option opt)
-		: m_executor(std::move(executor))
+		: m_ioc(static_cast<net::io_context&>(executor.context()))
+		, m_executor(std::move(executor))
 		, m_option(std::move(opt))
-		, m_tun(std::make_unique<tun_device>(m_executor))
+		, m_tunio(std::make_unique<tunio::tunio>(m_ioc))
 	{}
 
 	std::shared_ptr<tun_server>
@@ -2315,8 +1768,144 @@ namespace proxy {
 		co_return true;
 	}
 
+	bool tun_server::open_engine() noexcept
+	{
+		tunio::tun_config cfg;
+		cfg.dev_name = m_option.tun_name_;
+		cfg.mtu = m_option.tun_mtu_ > 0 ? m_option.tun_mtu_ : 1500;
+		cfg.udp_idle_timeout = std::chrono::seconds(udp_idle_timeout(m_option));
+
+		// 地址/路由由外部脚本或 VpnService 配置，引擎只创建设备.
+		cfg.ipv4_addr.clear();
+		cfg.netmask.clear();
+
+		// Android VpnService 场景: 注入外部已打开的 fd.
+		if (m_option.tun_fd_ >= 0)
+		{
+			cfg.external_handle = m_option.tun_fd_;
+			cfg.external_mtu = cfg.mtu;
+		}
+
+		boost::system::error_code ec;
+
+#if defined(_WIN32)
+		// Windows 下 tunio 使用 wintun 驱动: 未安装时先从 exe 资源解压安装.
+		if (!ensure_wintun_driver())
+		{
+			XLOG_ERR << "tun open engine failed: wintun driver unavailable";
+			return false;
+		}
+#endif
+		if (!m_tunio->open(cfg, ec))
+		{
+			XLOG_ERR << "tun open engine failed: " << ec.message();
+			return false;
+		}
+
+		m_tcp_acceptor = std::make_unique<tunio::tun_acceptor>(*m_tunio);
+		m_udp_acceptor = std::make_unique<tunio::tun_udp_acceptor>(*m_tunio);
+
+		return true;
+	}
+
+	void tun_server::start_accept_loops() noexcept
+	{
+		m_running = true;
+
+		auto self = shared_from_this();
+		net::co_spawn(m_executor,
+			[this, self]() -> net::awaitable<void>
+			{
+				return run_accept_tcp();
+			}, net::detached);
+		net::co_spawn(m_executor,
+			[this, self]() -> net::awaitable<void>
+			{
+				return run_accept_udp();
+			}, net::detached);
+	}
+
+	net::awaitable<void> tun_server::run_accept_tcp()
+	{
+		auto self = shared_from_this();
+
+		for (; !m_abort;)
+		{
+			tunio::tun_stream peer(m_executor);
+			boost::system::error_code ec;
+			co_await m_tcp_acceptor->async_accept(peer, net_awaitable[ec]);
+			if (ec)
+				break;
+			if (m_abort)
+				break;
+
+			const auto remote = peer.remote_endpoint();
+			const auto target = peer.original_destination();
+
+			tcp_flow_key key{
+				remote.address(), remote.port(),
+				target.address(), target.port()
+			};
+
+			{
+				std::lock_guard<std::mutex> lk(m_flows_mutex);
+				// 并发 flow 超限: 拒绝新连接, 防止流量风暴耗尽 fd.
+				if (m_tcp_flows.size() >= k_max_tcp_flows)
+					continue;
+
+				auto flow = std::make_shared<tun_tcp_flow>(
+					m_executor, self, m_option, key, std::move(peer));
+				auto [it, inserted] = m_tcp_flows.emplace(key, flow);
+				if (inserted)
+				{
+					flow->start();
+					++m_conn_total;
+				}
+				else
+				{
+					// 键冲突（理论不可达）：关闭新连接.
+					flow->close();
+				}
+			}
+		}
+
+		co_return;
+	}
+
+	net::awaitable<void> tun_server::run_accept_udp()
+	{
+		auto self = shared_from_this();
+
+		for (; !m_abort;)
+		{
+			tunio::tun_udp_socket peer(m_executor);
+			boost::system::error_code ec;
+			co_await m_udp_acceptor->async_accept(peer, net_awaitable[ec]);
+			if (ec)
+				break;
+			if (m_abort)
+				break;
+
+			// 并发 flow 超限: 关闭会话, 防止流量风暴耗尽 fd.
+			{
+				std::lock_guard<std::mutex> lk(m_flows_mutex);
+				if (m_udp_flows.size() >= k_max_udp_flows)
+					continue;
+			}
+
+			auto flow = std::make_shared<tun_udp_flow>(
+				m_executor, self, m_option, std::move(peer));
+			flow->start();
+		}
+
+		co_return;
+	}
+
 	void tun_server::start() noexcept
 	{
+		if (m_abort)
+			return;
+
 		// 预初始化上游代理 SSL context: 多协程（TCP/UDP 流）并发建连时
 		// 若各自惰性初始化会产生数据竞争, 导致部分 SSL 握手挂起.
 		if (!m_ssl_client_context && m_option.proxy_pass_ &&
@@ -2337,7 +1926,7 @@ namespace proxy {
 		}
 
 		// 等待外部注入 TUN fd 模式（Android VpnService）：不创建设备,
-		// 由 launcher 控制通道 set_tun_fd 注入后启动读包循环.
+		// 由 launcher 控制通道 set_tun_fd 注入后启动 accept 循环.
 		if (m_option.tun_wait_fd_)
 			return;
 
@@ -2345,33 +1934,12 @@ namespace proxy {
 		if (m_option.proxy_pass_ && m_option.proxy_pass_pool_size_ > 0)
 			proxy_conn_pool();
 
-		if (!m_tun->is_open())
-		{
-			boost::system::error_code ec;
-			if (m_option.tun_fd_ >= 0)
-			{
-				ec = m_tun->open(m_option.tun_fd_, m_option.tun_mtu_);
-			}
-			else
-			{
-				ec = m_tun->open(m_option.tun_name_, m_option.tun_mtu_);
-			}
-			if (ec)
-			{
-				XLOG_ERR << "tun open device failed: " << ec.message();
-				return;
-			}
+		if (!open_engine())
+			return;
 
-			XLOG_INFO << "tun device: " << m_tun->name()
-				<< ", mtu: " << m_tun->mtu();
-		}
+		XLOG_INFO << "tun device opened, mtu: " << m_tunio->mtu();
 
-		auto self = shared_from_this();
-		net::co_spawn(m_executor,
-			[this, self]() -> net::awaitable<void>
-			{
-				return run();
-			}, net::detached);
+		start_accept_loops();
 	}
 
 	void tun_server::set_tun_fd(int fd) noexcept
@@ -2379,30 +1947,23 @@ namespace proxy {
 		if (m_abort)
 			return;
 
-		if (m_tun->is_open())
-			m_tun->close();
+		// 关闭现有 flow：其流对象绑定旧引擎，重开后全部失效.
+		close_flows();
 
-		boost::system::error_code ec = m_tun->open(fd, m_option.tun_mtu_);
-		if (ec)
-		{
-			XLOG_ERR << "tun inject fd failed: " << ec.message();
+		// 关闭旧引擎（取消挂起 accept，旧 accept 循环随之退出）.
+		m_tunio->close();
+
+		// 记录注入 fd，open_engine 以外部句柄模式打开新设备.
+		m_option.tun_fd_ = fd;
+
+		if (!open_engine())
 			return;
-		}
 
 		XLOG_INFO << "tun device injected: fd=" << fd
-			<< ", mtu: " << m_tun->mtu();
+			<< ", mtu: " << m_tunio->mtu();
 
-		// 读包循环尚未启动（tun_wait_fd_ 模式）时启动.
-		if (!m_running)
-		{
-			m_running = true;
-			auto self = shared_from_this();
-			net::co_spawn(m_executor,
-				[this, self]() -> net::awaitable<void>
-				{
-					return run();
-				}, net::detached);
-		}
+		// 重启 accept 循环.
+		start_accept_loops();
 
 		// 预建 proxy_pass 连接池（TCP flow 走代理时复用已建立的连接）.
 		if (m_option.proxy_pass_ && m_option.proxy_pass_pool_size_ > 0)
@@ -2434,11 +1995,8 @@ namespace proxy {
 		co_return true;
 	}
 
-	void tun_server::close() noexcept
+	void tun_server::close_flows() noexcept
 	{
-		m_abort = true;
-		m_running = false;
-
 		// 锁内搬出 flow，锁外逐个关闭，避免 flow 析构时
 		// 反向调用 remove_*_flow 再次加锁造成死锁.
 		std::vector<std::shared_ptr<tun_tcp_flow>> tcp_flows;
@@ -2459,6 +2017,14 @@ namespace proxy {
 			flow->close();
 		for (auto& flow : udp_flows)
 			flow->close();
+	}
+
+	void tun_server::close() noexcept
+	{
+		m_abort = true;
+		m_running = false;
+
+		close_flows();
 
 		// 关闭 DoH 连接池（唤醒所有挂起的 DNS 查询）.
 		if (m_doh_client)
@@ -2468,8 +2034,8 @@ namespace proxy {
 		if (m_proxy_pool)
 			m_proxy_pool->close();
 
-		if (m_tun)
-			m_tun->close();
+		if (m_tunio)
+			m_tunio->close();
 	}
 
 	tun_server::stats tun_server::get_stats() noexcept
@@ -2587,186 +2153,29 @@ namespace proxy {
 		return m_conn_seq.fetch_add(1, std::memory_order_relaxed) + 1;
 	}
 
-	net::awaitable<void> tun_server::run()
-	{
-		m_running = true;
-		// TUN 设备一次 read 返回一个完整 IP 包，缓冲取 64K 上限.
-		char buffer[65536];
-
-		for (; !m_abort;)
-		{
-			boost::system::error_code ec;
-			size_t n = co_await m_tun->async_read_some(
-				net::buffer(buffer), net_awaitable[ec]);
-			if (ec)
-			{
-				// 设备被替换（Android 注入新 fd）后旧 read 会以错误退出:
-				// 设备仍打开时继续读取, 否则结束读包循环.
-				if (m_abort || !m_tun->is_open())
-				{
-					XLOG_WARN << "tun read: " << ec.message();
-					break;
-				}
-				continue;
-			}
-
-			handle_packet(buffer, n);
-			m_rx_bytes += n;
-		}
-
-		m_running = false;
-		co_return;
-	}
-
-	void tun_server::handle_packet(const char* data, size_t len) noexcept
-	{
-		ip_packet pkt;
-
-		if (!parse_ip_packet(data, len, pkt))
-			return;
-
-		if (pkt.proto == ip_proto_tcp)
-			handle_tcp_packet(pkt);
-		else if (pkt.proto == ip_proto_udp)
-			handle_udp_packet(pkt);
-		else
-			XLOG_DBG << "tun proto " << static_cast<int>(pkt.proto);
-	}
-
-	void tun_server::write_packet(std::string packet)
-	{
-		if (m_abort || !m_tun || !m_tun->is_open())
-			return;
-
-		m_tx_bytes += packet.size();
-
-		bool need_start = false;
-
-		{
-			std::lock_guard<std::mutex> lk(m_write_mutex);
-			m_write_queue.push_back(std::move(packet));
-			need_start = !m_writing;
-			if (need_start)
-				m_writing = true;
-		}
-
-		if (need_start)
-		{
-			auto self = shared_from_this();
-			net::post(m_executor,
-				[this, self]() mutable
-				{
-					do_write();
-				});
-		}
-	}
-
-	void tun_server::do_write()
-	{
-		if (m_abort || !m_tun || !m_tun->is_open())
-		{
-			std::lock_guard<std::mutex> lk(m_write_mutex);
-			m_writing = false;
-			return;
-		}
-
-		auto buf = std::make_shared<std::string>();
-
-		{
-			std::lock_guard<std::mutex> lk(m_write_mutex);
-			if (m_write_queue.empty())
-			{
-				m_writing = false;
-				return;
-			}
-			*buf = std::move(m_write_queue.front());
-			m_write_queue.pop_front();
-		}
-
-		auto self = shared_from_this();
-		m_tun->async_write_some(net::buffer(*buf),
-			[this, self, buf](const boost::system::error_code& ec, size_t)
-			{
-				if (ec)
-				{
-					XLOG_WARN << "tun write: " << ec.message();
-
-					// 写失败后复位写状态，避免后续包永久卡在队列.
-					std::lock_guard<std::mutex> lk(m_write_mutex);
-					m_writing = false;
-					return;
-				}
-				do_write();
-			});
-	}
-
-	void tun_server::handle_tcp_packet(ip_packet& pkt) noexcept
-	{
-		// 目前仅支持 IPv4 转发.
-		if (!pkt.src.is_v4() || !pkt.dst.is_v4())
-			return;
-
-		tcp_flow_key key{
-			pkt.src,
-			pkt.src_port,
-			pkt.dst,
-			pkt.dst_port
-		};
-
-		std::shared_ptr<tun_tcp_flow> flow;
-		bool created = false;
-
-		{
-			std::lock_guard<std::mutex> lk(m_flows_mutex);
-			auto it = m_tcp_flows.find(key);
-			if (it != m_tcp_flows.end())
-			{
-				flow = it->second;
-			}
-			else
-			{
-				if (!(pkt.flags & tcp_flag_syn))
-					return;
-
-				// 并发 flow 超限: 拒绝新连接, 防止流量风暴耗尽 fd.
-				if (m_tcp_flows.size() >= k_max_tcp_flows)
-				{
-					auto rst = build_tcp_segment(
-						pkt.dst, pkt.src,
-						pkt.dst_port, pkt.src_port,
-						pkt.seq, pkt.seq + 1,
-						tcp_flag_rst | tcp_flag_ack,
-						nullptr, 0, 0);
-					if (!rst.empty())
-						write_packet(std::move(rst));
-					return;
-				}
-
-				flow = std::make_shared<tun_tcp_flow>(
-					m_executor, shared_from_this(), m_option, key, pkt);
-				m_tcp_flows.emplace(key, flow);
-				created = true;
-				++m_conn_total;
-			}
-		}
-
-		flow->handle_packet(pkt);
-
-		// 新创建的 flow 启动建连（SYN 重传不重复建连）.
-		if (created)
-			flow->start();
-	}
-
-	void tun_server::remove_tcp_flow(const tcp_flow_key& key)
+	void tun_server::register_udp_flow(const tcp_flow_key& key,
+		const std::shared_ptr<tun_udp_flow>& flow)
 	{
 		std::lock_guard<std::mutex> lk(m_flows_mutex);
-		m_tcp_flows.erase(key);
+		m_udp_flows.emplace(key, flow);
 	}
 
-	void tun_server::remove_udp_flow(const tcp_flow_key& key)
+	void tun_server::remove_tcp_flow(const tcp_flow_key& key,
+		const tun_tcp_flow* flow)
 	{
 		std::lock_guard<std::mutex> lk(m_flows_mutex);
-		m_udp_flows.erase(key);
+		auto it = m_tcp_flows.find(key);
+		if (it != m_tcp_flows.end() && it->second.get() == flow)
+			m_tcp_flows.erase(it);
+	}
+
+	void tun_server::remove_udp_flow(const tcp_flow_key& key,
+		const tun_udp_flow* flow)
+	{
+		std::lock_guard<std::mutex> lk(m_flows_mutex);
+		auto it = m_udp_flows.find(key);
+		if (it != m_udp_flows.end() && it->second.get() == flow)
+			m_udp_flows.erase(it);
 	}
 
 	bool tun_server::cidr_match(const net::ip::address& addr) const noexcept
@@ -2832,103 +2241,6 @@ namespace proxy {
 		}
 
 		return false;
-	}
-
-	// parse_dns_question 解析问题区，取第一个问题域名填充 qname，
-	// 成功返回解析后的偏移位置，失败返回 nullptr.
-	static const char* parse_dns_question(const char* p, const char* end,
-		const char* msg_start, uint16_t qdcount, std::string& qname)
-	{
-		for (uint16_t i = 0; i < qdcount; ++i)
-		{
-			auto [name, np] = dns_parse_name(p, end, msg_start);
-			if (!np || np + 4 > end)
-				return nullptr;
-
-			if (i == 0)
-				qname = name;
-			p = np + 4;
-		}
-		if (qdcount == 0 || qname.empty())
-			return nullptr;
-
-		// 去掉末尾的 '.'.
-		if (!qname.empty() && qname.back() == '.')
-			qname.pop_back();
-		return p;
-	}
-
-	// parse_dns_answer 解析单条 Answer 记录，A/AAAA 记录加入 answers，
-	// 成功返回下一条记录的偏移位置，失败返回 nullptr.
-	static const char* parse_dns_answer(const char* p, const char* end,
-		const char* msg_start,
-		std::vector<std::pair<net::ip::address, uint32_t>>& answers)
-	{
-		if (p + 10 > end)
-			return nullptr;
-
-		auto [name, np] = dns_parse_name(p, end, msg_start);
-		if (!np || np + 10 > end)
-			return nullptr;
-
-		const char* type_p = np;
-		const char* ttl_p = np + 4;
-		const char* rdl_p = np + 8;
-		uint16_t type = io_util::read<uint16_t>(type_p);
-		uint32_t ttl = io_util::read<uint32_t>(ttl_p);
-		uint16_t rdlength = io_util::read<uint16_t>(rdl_p);
-		const char* rdata = np + 10;
-		if (rdata + rdlength > end)
-			return nullptr;
-
-		if (type == 1 && rdlength == 4)
-		{
-			net::ip::address_v4::bytes_type bytes;
-			std::memcpy(bytes.data(), rdata, 4);
-			answers.emplace_back(net::ip::address_v4(bytes), ttl);
-		}
-		else if (type == 28 && rdlength == 16)
-		{
-			net::ip::address_v6::bytes_type bytes;
-			std::memcpy(bytes.data(), rdata, 16);
-			answers.emplace_back(net::ip::address_v6(bytes), ttl);
-		}
-
-		return rdata + rdlength;
-	}
-
-	// parse_dns_response 解析 DNS 响应报文中的问题域名与 A/AAAA 答案.
-	// 成功返回 true，qname/answers 为解析结果（answers 元素为 IP 与 TTL）.
-	static bool parse_dns_response(const char* data, size_t len,
-		std::string& qname,
-		std::vector<std::pair<net::ip::address, uint32_t>>& answers)
-	{
-		if (len < 12)
-			return false;
-
-		const char* msg_start = data;
-		const char* end = data + len;
-
-		const char* qd_p = data + 4;
-		const char* an_p = data + 6;
-		uint16_t qdcount = io_util::read<uint16_t>(qd_p);
-		uint16_t ancount = io_util::read<uint16_t>(an_p);
-
-		// 解析问题区，取第一个问题域名.
-		const char* p = parse_dns_question(
-			data + 12, end, msg_start, qdcount, qname);
-		if (!p)
-			return false;
-
-		// 遍历 Answer 区提取 A/AAAA 记录.
-		for (uint16_t i = 0; i < ancount; ++i)
-		{
-			p = parse_dns_answer(p, end, msg_start, answers);
-			if (!p)
-				break;
-		}
-
-		return !answers.empty();
 	}
 
 	void tun_server::record_dns_answer(const char* data, size_t len) noexcept
@@ -2997,66 +2309,6 @@ namespace proxy {
 		}
 
 		return false;
-	}
-
-	void tun_server::handle_udp_packet(ip_packet& pkt) noexcept
-	{
-		// 目前仅支持 IPv4 转发.
-		if (!pkt.src.is_v4() || !pkt.dst.is_v4())
-			return;
-
-		tcp_flow_key key{
-			pkt.src,
-			pkt.src_port,
-			pkt.dst,
-			pkt.dst_port
-		};
-
-		std::shared_ptr<tun_udp_flow> flow;
-		bool created = false;
-
-		{
-			std::lock_guard<std::mutex> lk(m_flows_mutex);
-			auto it = m_udp_flows.find(key);
-			if (it != m_udp_flows.end())
-			{
-				flow = it->second;
-			}
-			else
-			{
-				net::ip::udp::endpoint client(pkt.src, pkt.src_port);
-				net::ip::udp::endpoint target(pkt.dst, pkt.dst_port);
-
-				// 并发 flow 超限: 丢弃新会话, 防止流量风暴耗尽 fd.
-				if (m_udp_flows.size() >= k_max_udp_flows)
-					return;
-
-				// DNS 查询报文解析查询域名，用于按 proxy_domains_ 分流.
-				std::string dns_qname;
-				if (pkt.dst_port == 53 && pkt.payload_len > 0)
-				{
-					std::string query(pkt.payload, pkt.payload_len);
-					uint16_t qtype = 0;
-					dns_parse_query(query, dns_qname, qtype);
-				}
-
-				flow = std::make_shared<tun_udp_flow>(
-					m_executor, shared_from_this(), m_option, key,
-					client, target, dns_qname);
-				m_udp_flows.emplace(key, flow);
-				created = true;
-				// DNS 查询流（目标 53 端口）为内部基础设施流量,
-				// 不纳入累计连接统计.
-				if (pkt.dst_port != 53)
-					++m_conn_total;
-			}
-		}
-
-		// 新创建的 flow 启动建连（重传包不重复建连）.
-		if (created)
-			flow->start();
-
-		flow->send(pkt.payload, pkt.payload_len);
 	}
 
 #else // 不支持的平台

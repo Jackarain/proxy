@@ -574,6 +574,15 @@ set(FMT_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/fmt/include)
 set(FMT_LIBRARIES fmt)
 
 ################################################################################
+# 使用 tunio（第三方用户态 TUN 网络引擎）
+
+set(TUNIO_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(TUNIO_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+# Windows 下使用 wintun 驱动（与旧 wintun_tun_device 行为一致）.
+set(USE_WINTUN_DRIVER ON CACHE BOOL "" FORCE)
+add_subdirectory(third_party/tunio)
+
+################################################################################
 # 添加 proxy 项目
 
 add_subdirectory(proxy)

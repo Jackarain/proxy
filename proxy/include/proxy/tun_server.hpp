@@ -14,8 +14,13 @@
 #include "proxy/proxy_session.hpp"
 #include "proxy/proxy_stream.hpp"
 #include "proxy/dns_response_cache.hpp"
-#include "proxy/tun_device.hpp"
 #include "proxy/doh_client.hpp"
+
+#include "tunio/tunio.hpp"
+#include "tunio/tun_stream.hpp"
+#include "tunio/tun_acceptor.hpp"
+#include "tunio/tun_udp_socket.hpp"
+#include "tunio/tun_udp_acceptor.hpp"
 
 #include <chrono>
 #include <deque>
@@ -23,61 +28,25 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <tuple>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace proxy {
 
-	//////////////////////////////////////////////////////////////////////////
-	// IP 包解析
-
-	// IP 协议号.
-	inline constexpr uint8_t ip_proto_tcp = 6;
-	inline constexpr uint8_t ip_proto_udp = 17;
-
-	// TCP 标志位.
-	inline constexpr uint8_t tcp_flag_fin = 0x01;
-	inline constexpr uint8_t tcp_flag_syn = 0x02;
-	inline constexpr uint8_t tcp_flag_rst = 0x04;
-	inline constexpr uint8_t tcp_flag_psh = 0x08;
-	inline constexpr uint8_t tcp_flag_ack = 0x10;
-
-	// ip_packet 保存从 TUN 设备读取的 IP 包解析结果.
-	struct ip_packet
+	// 连接协议标识（供 launcher 连接明细展示）.
+	enum class tun_conn_proto : uint8_t
 	{
-		net::ip::address src;
-		net::ip::address dst;
-		uint8_t proto { 0 };
-		uint16_t src_port { 0 };
-		uint16_t dst_port { 0 };
-
-		// TCP 字段.
-		uint32_t seq { 0 };
-		uint32_t ack { 0 };
-		uint8_t flags { 0 };
-		uint16_t tcp_hdr_len { 0 };
-
-		// 载荷与完整包数据.
-		const char* payload { nullptr };
-		size_t payload_len { 0 };
-		const char* raw { nullptr };
-		size_t raw_len { 0 };
+		tcp = 1,        // TCP 直连
+		http,           // HTTP CONNECT 代理隧道
+		https,          // HTTPS CONNECT 代理隧道
+		socks5,         // SOCKS5（TCP 或 UDP ASSOCIATE）
+		udp,            // UDP 直连
+		connect_udp,    // RFC 9298 CONNECT-UDP 隧道
+		doh_dns,        // DNS 查询经 DoH 转发到 proxy_pass
 	};
 
-	// parse_ip_packet 解析 IP 包（IPv4/IPv6，支持 TCP/UDP）.
-	// 成功返回 true；分片包或未知协议返回 false（调用方丢弃）.
-	bool parse_ip_packet(const char* data, size_t len, ip_packet& pkt) noexcept;
-
-	// build_ip_packet 从 IP 层信息构造完整 IP 数据包，用于写回 TUN 设备.
-	// 目前仅支持 IPv4，返回空串表示失败.
-	std::string build_ip_packet(
-		const net::ip::address& src, const net::ip::address& dst,
-		uint8_t proto, const std::string& payload) noexcept;
-
-	//////////////////////////////////////////////////////////////////////////
-	// TCP flow
-
-	// tcp_flow_key 标识一个 TCP 连接（源/目的地址与端口）.
+	// tcp_flow_key 标识一个 TCP 连接或 UDP 会话（源/目的地址与端口）.
 	struct tcp_flow_key
 	{
 		net::ip::address src;
@@ -101,25 +70,13 @@ namespace proxy {
 		}
 	};
 
-	// 连接协议标识（供 launcher 连接明细展示）.
-	enum class tun_conn_proto : uint8_t
-	{
-		tcp = 1,        // TCP 直连
-		http,           // HTTP CONNECT 代理隧道
-		https,          // HTTPS CONNECT 代理隧道
-		socks5,         // SOCKS5（TCP 或 UDP ASSOCIATE）
-		udp,            // UDP 直连
-		connect_udp,    // RFC 9298 CONNECT-UDP 隧道
-		doh_dns,        // DNS 查询经 DoH 转发到 proxy_pass
-	};
-
-	// tun_server 前置声明（供 tun_tcp_flow 访问写回接口）.
+	// tun_server 前置声明（供 flow 访问写回接口）.
 	class tun_server;
 
-	// tun_tcp_flow 实现一个 TCP 连接的状态机与转发：
-	// - 收到客户端 SYN 后按分流规则经 proxy_pass 或直连建立上游连接；
-	// - 维护客户端/上游两侧的序号映射，payload 双向透传；
-	// - 生成 ACK/SYN-ACK/FIN/RST 应答客户端。
+	// tun_tcp_flow 实现一个 TCP 连接的转发：
+	// - tunio 引擎完成三次握手后经 async_accept 交付 tun_stream；
+	// - 按分流规则经 proxy_pass 或直连建立上游连接；
+	// - 双向搬运客户端（tun_stream）与上游之间的数据，处理半关闭。
 	class tun_tcp_flow
 		: public std::enable_shared_from_this<tun_tcp_flow>
 	{
@@ -130,23 +87,20 @@ namespace proxy {
 			const std::shared_ptr<tun_server>& owner,
 			const proxy_server_option& opt,
 			tcp_flow_key key,
-			const ip_packet& syn);
+			tunio::tun_stream stream);
 
 		~tun_tcp_flow();
 
-		// 发起上游连接（由 tun_server 收到 SYN 时调用）.
+		// 发起上游连接（由 tun_server 收到 accept 时调用）.
 		void start();
 
-		// 处理来自客户端的 TCP 包.
-		void handle_packet(const ip_packet& pkt);
-
-		// 关闭 flow，释放上游连接.
+		// 关闭 flow，释放上游连接与客户端流.
 		void close();
 
 		bool closed() const noexcept { return m_closed; }
 
 	private:
-		// 发起上游连接（代理握手或直连），成功后回 SYN-ACK.
+		// 发起上游连接（代理握手或直连），成功后启动双向搬运协程.
 		net::awaitable<void> do_connect();
 
 		// 建立上游连接（代理握手或直连），成功返回 true.
@@ -164,43 +118,20 @@ namespace proxy {
 			uint16_t target_port,
 			const std::function<net::awaitable<bool>(int)>& protect);
 
-		// 回 SYN-ACK 并启动双向数据搬运协程.
-		void start_data_plane();
-
 		// 与上游代理完成协议握手（SOCKS5 或 HTTP CONNECT）.
 		net::awaitable<bool> do_proxy_handshake(const urls::url& proxy_url);
 
-		// 处理客户端数据段（序号检查后透传上游）.
-		void handle_data(const ip_packet& pkt);
-
-		// 客户端数据转发到上游的发送协程.
+		// 客户端（tun_stream）数据转发到上游的发送协程.
 		net::awaitable<void> tx_loop();
 
 		// 读取上游数据并转发到客户端的接收协程.
 		net::awaitable<void> rx_loop();
 
-		// 处理上游读取结束：EOF 向客户端发 FIN，异常直接关闭.
-		void handle_read_error(boost::system::error_code ec, size_t n);
+		// 将数据写入客户端流，发送队列积压时等待后重试.
+		net::awaitable<void> write_to_client(const char* data, size_t len);
 
-		// 将 payload 按 MSS 切片发送给客户端.
-		void send_to_client(const char* data, size_t len, uint16_t mss);
-
-		// 构造 TCP 段并写回 TUN 设备.
-		void send_tcp(uint32_t seq, uint32_t ack, uint8_t flags,
-			const char* payload, size_t payload_len,
-			bool with_mss = false, uint16_t mss = 0);
-
-		// 向客户端回 ACK 包.
-		void send_ack();
-
-		// 向客户端发送 FIN 包.
-		void send_fin();
-
-		// 向客户端发送 RST 包.
-		void send_rst();
-
-		// 客户端数据入队并唤醒发送协程.
-		void push_tx(std::string data);
+		// 处理上游读取结束：EOF 向客户端发 FIN，异常发送 RST 并关闭.
+		void handle_upstream_eof(boost::system::error_code ec, size_t n);
 
 		// 上游连接异常/关闭处理.
 		void on_upstream_closed();
@@ -209,7 +140,7 @@ namespace proxy {
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
 
-		// m_owner 保存所属 tun_server（写回 TUN 设备）.
+		// m_owner 保存所属 tun_server（统计与 flow 管理）.
 		std::shared_ptr<tun_server> m_owner;
 
 		// m_option 保存服务器配置选项.
@@ -235,6 +166,9 @@ namespace proxy {
 		// m_proto 保存协议标识（tun_conn_proto 值）.
 		std::atomic<uint8_t> m_proto { 0 };
 
+		// m_client_stream 保存 tunio 交付的客户端 TCP 流.
+		tunio::tun_stream m_client_stream;
+
 		// m_upstream 保存与上游代理或目标的连接.
 		variant_stream_type m_upstream;
 
@@ -242,32 +176,16 @@ namespace proxy {
 		bool m_closed { false };
 		bool m_connected { false };
 		bool m_client_fin { false };
-
-		// 序号状态.
-		uint32_t m_client_isn { 0 };
-		uint32_t m_server_isn { 0 };
-		uint32_t m_client_next_seq { 0 };
-		uint32_t m_client_ack_seq { 0 };
-		uint32_t m_server_next_seq { 0 };
-
-		// 客户端已发送 FIN（发送协程清空队列后需半关闭上游）.
-		bool m_tx_fin { false };
-
-		// 上游已关闭（等待客户端 FIN 完成四路挥手）.
 		bool m_upstream_eof { false };
-
-		// 客户端到上游的发送队列.
-		std::deque<std::string> m_tx_queue;
-		std::mutex m_tx_mutex;
-		std::optional<net::steady_timer> m_tx_signal;
 	};
 
 	//////////////////////////////////////////////////////////////////////////
 	// UDP flow
 
 	// tun_udp_flow 实现一个 UDP 会话的转发：
-	// - 收到客户端 UDP 包后按分流规则经 SOCKS5 ASSOCIATE 或直连发送；
-	// - 从后端接收应答并封装为 IP 包写回 TUN 设备；
+	// - tunio 引擎按客户端三元组建立会话，首数据报确定会话目标；
+	// - 按分流规则经 SOCKS5 ASSOCIATE / CONNECT-UDP 隧道或直连发送；
+	// - 从后端接收应答并经 tun_udp_socket 回写客户端；
 	// - 无流量超时后自动关闭，释放后端连接。
 	class tun_udp_flow
 		: public std::enable_shared_from_this<tun_udp_flow>
@@ -278,45 +196,45 @@ namespace proxy {
 		tun_udp_flow(net::any_io_executor executor,
 			const std::shared_ptr<tun_server>& owner,
 			const proxy_server_option& opt,
-			const tcp_flow_key& key,
-			const net::ip::udp::endpoint& client,
-			const net::ip::udp::endpoint& target,
-			const std::string& dns_qname);
+			tunio::tun_udp_socket socket);
 
 		~tun_udp_flow();
 
-		// 发起后端连接（SOCKS5 ASSOCIATE 或直连）并启动接收循环.
+		// 发起后端连接并进入接收循环（由 tun_server 收到 accept 时调用）.
 		void start();
 
-		// 转发客户端数据到后端.
-		void send(const char* data, size_t len) noexcept;
-
-		// 关闭 flow，释放后端连接.
+		// 关闭会话，释放后端连接与客户端流.
 		void close();
 
+		bool closed() const noexcept { return m_closed; }
+
 	private:
-		// 建立后端连接（代理或直连）.
+		// 接收首数据报确定会话目标，建立后端后进入接收循环.
 		net::awaitable<void> do_open();
 
-		// 判定代理模式（分流结果与 CONNECT-UDP/SOCKS5 选择），不支持时返回 false.
-		bool resolve_proxy_mode();
+		// 处理一个客户端数据报（DNS 缓存/DoH/转发）.
+		net::awaitable<void> handle_datagram(const char* data, size_t len);
 
-		// 判定该 UDP 流是否走上游代理（IP/CIDR 与域名分流，proxy 自身
-		// 域名的解析查询强制直连），self_query 输出该查询是否解析 proxy_pass 域名.
+		// 直连模式发送 UDP 数据到目标, 成功返回 true.
+		bool send_direct(const char* data, size_t len);
+
+		// SOCKS5 模式封装 UDP 头后发送到中继, 成功返回 true.
+		bool send_via_socks5(const char* data, size_t len);
+
+		// 判定该 UDP 流是否走上游代理.
 		bool resolve_proxy_route(bool& self_query);
 
-		// DNS 查询分流：按查询域名区分国内/国外，决定 DoH 模式或替换目标
-		// DNS 服务器，修改 use_proxy 与 m_target，并设置 m_doh_mode/m_doh_via_proxy.
+		// 对 DNS 查询按域名区分国内/国外分流.
 		void resolve_dns_route(bool& use_proxy, bool self_query);
 
-		// 判定 UDP 传输模式（CONNECT-UDP 或 SOCKS5）并校验代理 scheme.
+		// 判定 UDP 传输模式（CONNECT-UDP / SOCKS5 ASSOCIATE）.
 		bool resolve_udp_transport();
 
-		// 建立与上游代理的连接并完成 UDP 协议握手.
-		net::awaitable<bool> establish_proxy();
+		// 综合分流结果确定代理模式.
+		bool resolve_proxy_mode();
 
-		// 初始化 CONNECT-UDP 控制流（TCP 或 SSL）.
-		net::awaitable<bool> make_control_stream(tcp::socket sock);
+		// 与上游代理建立 UDP 通道（CONNECT-UDP 或 SOCKS5 ASSOCIATE）.
+		net::awaitable<bool> establish_proxy();
 
 		// 打开本地 UDP 后端 socket（直连或 SOCKS5 模式使用）.
 		net::awaitable<bool> open_backend();
@@ -325,7 +243,6 @@ namespace proxy {
 		net::awaitable<bool> do_socks5_associate(tcp::socket sock);
 
 		// 建立 HTTP CONNECT-UDP 隧道（proxy_pass 为 http/https 时替代 SOCKS5 ASSOCIATE）.
-		// sock 为已连接到上游代理的 TCP socket，由 do_open 传入.
 		net::awaitable<bool> do_connect_udp(tcp::socket sock);
 
 		// 发送 RFC 9298 CONNECT-UDP 请求，成功返回 true.
@@ -350,20 +267,15 @@ namespace proxy {
 		net::awaitable<std::pair<uint64_t, std::vector<char>>>
 		read_capsule(boost::system::error_code& ec);
 
-		// 直连模式发送 UDP 数据到目标, 成功返回 true.
-		bool send_direct(const char* data, size_t len);
-
-		// SOCKS5 模式封装 UDP 头后发送到中继, 成功返回 true.
-		bool send_via_socks5(const char* data, size_t len);
-
 		// 保持 SOCKS5 ASSOCIATE 控制连接存活（读取直到断开）.
 		net::awaitable<void> control_loop();
 
-		// 接收后端应答并写回 TUN 设备.
+		// 接收后端应答并回写客户端.
 		net::awaitable<void> recv_loop();
 
-		// 向客户端回包（封装 IP/UDP 后写回 TUN）.
-		void reply(const char* data, size_t len, bool cache_resp = true);
+		// 向客户端回包（源地址为会话目标 m_target）.
+		net::awaitable<void> reply(
+			const char* data, size_t len, bool cache_resp = true);
 
 		// 将 DNS 响应写入查询结果缓存（从响应报文解析键）.
 		void cache_dns_response(const char* data, size_t len) noexcept;
@@ -375,7 +287,7 @@ namespace proxy {
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
 
-		// m_owner 保存所属 tun_server（写回 TUN 设备）.
+		// m_owner 保存所属 tun_server（统计与 flow 管理）.
 		std::shared_ptr<tun_server> m_owner;
 
 		// m_option 保存服务器配置选项.
@@ -387,8 +299,12 @@ namespace proxy {
 		// m_client 保存 TUN 侧客户端地址.
 		net::ip::udp::endpoint m_client;
 
-		// m_target 保存客户端请求的目标地址.
+		// m_target 保存会话目标地址（DNS 分流可能改写为实际转发目标）.
 		net::ip::udp::endpoint m_target;
+
+		// m_orig_target 保存客户端请求的原始目标（首数据报远端），
+		// 用于识别会话目标变化（tunio 会话按客户端三元组复用）.
+		net::ip::udp::endpoint m_orig_target;
 
 		// m_dns_qname 保存 DNS 查询域名（目标 53 端口时），用于按域名分流.
 		std::string m_dns_qname;
@@ -443,15 +359,18 @@ namespace proxy {
 		// m_ready 标记后端已就绪（do_open 完成后置位）.
 		bool m_ready { false };
 
-		// m_closed 标记是否已关闭.
-		bool m_closed { false };
-
 		// m_pending 保存后端就绪前到达的客户端数据，就绪后补发.
 		std::deque<std::string> m_pending;
 
-		// 后端就绪前缓存客户端数据包的数量上限, 超出直接丢弃,
-		// 防止后端建连缓慢时内存无界增长.
+		// 待发送数据（m_pending/m_tx_queue）上限，防止后端建连缓慢时
+		// 内存无界增长.
 		static constexpr size_t k_max_udp_pending = 1024;
+
+		// m_closed 标记是否已关闭.
+		bool m_closed { false };
+
+		// m_client_socket 保存 tunio 交付的客户端 UDP 会话.
+		tunio::tun_udp_socket m_client_socket;
 
 		// m_expire 无流量超时定时器.
 		std::optional<net::steady_timer> m_expire;
@@ -462,8 +381,8 @@ namespace proxy {
 
 #if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
 
-	// tun_server 实现 TUN2SOCKS 服务：从 TUN 设备读取 IP 数据包，解析
-	// TCP/UDP 后按分流规则（proxy_domains_/proxy_cidr_）经 proxy_pass_
+	// tun_server 实现 TUN2SOCKS 服务：基于 tunio 引擎从 TUN 设备捕获
+	// TCP/UDP 流量，按分流规则（proxy_domains_/proxy_cidr_）经 proxy_pass_
 	// 转发到上游代理，未命中则直连目标.
 	class tun_server
 		: public std::enable_shared_from_this<tun_server>
@@ -481,16 +400,16 @@ namespace proxy {
 
 		~tun_server();
 
-		// 打开 TUN 设备并启动读包循环.
+		// 打开 TUN 设备并启动 accept 循环.
 		// - tun_wait_fd_ 为 true 时不创建设备，等待 set_tun_fd 注入后启动.
 		// - 否则按 tun_fd_（外部注入）或 tun_name_（自建设备）打开.
 		void start() noexcept;
 
-		// 停止读包循环并关闭设备.
+		// 停止 accept 循环并关闭引擎.
 		void close() noexcept;
 
 		// 注入外部 TUN fd（Android VpnService 建立后 detach 的 fd）.
-		// 替换旧设备并启动读包循环（若尚未启动）；须在 io_context 线程调用.
+		// 替换旧设备并重启 accept 循环（若尚未启动）；须在 io_context 线程调用.
 		void set_tun_fd(int fd) noexcept;
 
 		// 设置出站 socket 的 protect 请求回调（Android VpnService 场景）.
@@ -541,11 +460,17 @@ namespace proxy {
 		std::vector<conn_info> connections() noexcept;
 
 	private:
-		// 读包循环协程.
-		net::awaitable<void> run();
+		// 打开 tunio 引擎（自建设备或外部句柄注入），成功返回 true.
+		bool open_engine() noexcept;
 
-		// 处理一个 IP 数据包（解析后分发到 TCP/UDP 处理）.
-		void handle_packet(const char* data, size_t len) noexcept;
+		// 启动 TCP/UDP accept 循环.
+		void start_accept_loops() noexcept;
+
+		// TCP accept 循环：接受新连接并创建 tun_tcp_flow.
+		net::awaitable<void> run_accept_tcp();
+
+		// UDP accept 循环：接受新会话并创建 tun_udp_flow.
+		net::awaitable<void> run_accept_udp();
 
 		// 判断目标地址是否命中 proxy_cidr_ 代理表.
 		bool cidr_match(const net::ip::address& addr) const noexcept;
@@ -564,26 +489,26 @@ namespace proxy {
 		make_ssl_socket(tcp::socket& remote_socket,
 			std::string_view sni, std::optional<variant_stream_type>& ssl_sock);
 
-		// 处理 TCP 包（由 run 协程调用，内部再派生子协程）.
-		void handle_tcp_packet(ip_packet& pkt) noexcept;
-
-		// 处理 UDP 包（由 run 协程调用，内部再派生子协程）.
-		void handle_udp_packet(ip_packet& pkt) noexcept;
-
-		// 写 IP 包到 TUN 设备（串行化，多 flow 并发安全）.
-		void write_packet(std::string packet);
-
-		// 依次写出写队列中的 IP 包（写完成回调中链式调用）.
-		void do_write();
+		// 注册 UDP 会话（首数据报解析目标后调用）.
+		void register_udp_flow(const tcp_flow_key& key,
+			const std::shared_ptr<tun_udp_flow>& flow);
 
 		// 移除并关闭 TCP flow（由 flow 自身或 close 调用）.
-		void remove_tcp_flow(const tcp_flow_key& key);
+		void remove_tcp_flow(const tcp_flow_key& key,
+			const tun_tcp_flow* flow);
 
 		// 移除并关闭 UDP flow（由 flow 自身或 close 调用）.
-		void remove_udp_flow(const tcp_flow_key& key);
+		void remove_udp_flow(const tcp_flow_key& key,
+			const tun_udp_flow* flow);
+
+		// 关闭全部活动 flow（锁外逐个关闭，避免析构回调再次加锁）.
+		void close_flows() noexcept;
 
 		// 分配连接明细用的唯一标识.
 		uint64_t next_conn_id() noexcept;
+
+		// 累计一条非 DNS 会话（m_conn_total++）.
+		void on_conn_created() noexcept { ++m_conn_total; }
 
 		// 返回 DoH 连接池（惰性创建；DNS 查询走 keep-alive 复用）.
 		// 仅在 DoH 模式（proxy_pass_ 非空）下调用.
@@ -621,6 +546,9 @@ namespace proxy {
 		}
 
 	private:
+		// m_ioc 保存引擎所属的 io_context（tunio 构造需要）.
+		net::io_context& m_ioc;
+
 		// m_executor 保存当前 io_context 的 executor.
 		net::any_io_executor m_executor;
 
@@ -639,38 +567,40 @@ namespace proxy {
 		// 复用已建立的连接，惰性创建，tun_server 关闭时一并关闭）.
 		std::shared_ptr<proxy_pass_pool> m_proxy_pool;
 
-		// m_tun 保存 TUN 设备对象.
-		std::unique_ptr<tun_device> m_tun;
+		// m_tunio 保存用户态 TUN 网络引擎（tunio 第三方库）.
+		std::unique_ptr<tunio::tunio> m_tunio;
+
+		// m_tcp_acceptor/m_udp_acceptor 保存引擎的 accept 接口.
+		std::unique_ptr<tunio::tun_acceptor> m_tcp_acceptor;
+		std::unique_ptr<tunio::tun_udp_acceptor> m_udp_acceptor;
 
 		// m_protect_handler 保存出站 socket 的 protect 请求回调.
 		std::function<net::awaitable<bool>(int)> m_protect_handler;
 
-		// m_running 标记读包循环是否在运行（io_context 线程访问）.
+		// m_running 标记 accept 循环是否在运行（io_context 线程访问）.
 		bool m_running { false };
+
+		// m_abort 停止标志.
+		std::atomic<bool> m_abort { false };
 
 		// m_tcp_flows 保存当前所有 TCP 连接.
 		std::unordered_map<tcp_flow_key, std::shared_ptr<tun_tcp_flow>,
 			tcp_flow_key_hash> m_tcp_flows;
 
-		// 保护 m_tcp_flows 的并发访问.
+		// m_udp_flows 保存当前所有 UDP 会话.
+		std::unordered_map<tcp_flow_key, std::shared_ptr<tun_udp_flow>,
+			tcp_flow_key_hash> m_udp_flows;
+
+		// 保护 m_tcp_flows/m_udp_flows 的并发访问.
 		std::mutex m_flows_mutex;
 
-		// 流量统计（原子计数, 多 flow 并发累加）.
+		// 流量统计（flow 累计, 原子计数, 多 flow 并发累加）.
 		std::atomic<uint64_t> m_rx_bytes { 0 };
 		std::atomic<uint64_t> m_tx_bytes { 0 };
 		std::atomic<uint64_t> m_conn_total { 0 };
 
 		// m_conn_seq 连接明细标识分配器.
 		std::atomic<uint64_t> m_conn_seq { 0 };
-
-		// TUN 设备写队列（多 flow 串行写）.
-		std::deque<std::string> m_write_queue;
-		std::mutex m_write_mutex;
-		bool m_writing { false };
-
-		// m_udp_flows 保存当前所有 UDP 会话.
-		std::unordered_map<tcp_flow_key, std::shared_ptr<tun_udp_flow>,
-			tcp_flow_key_hash> m_udp_flows;
 
 		// dns_ip_entry 保存域名解析缓存条目（IP 与过期时间）.
 		struct dns_ip_entry
@@ -688,9 +618,6 @@ namespace proxy {
 
 		// 保护 m_domain_ips 的并发访问.
 		mutable std::mutex m_domain_ips_mutex;
-
-		// m_abort 停止标志.
-		bool m_abort { false };
 	};
 
 #else // 不支持的平台

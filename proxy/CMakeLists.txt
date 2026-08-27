@@ -34,15 +34,13 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/dns_response_cache.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/dns_server.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/uds_socket.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tun_device.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/tun_server.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/doh_client.hpp
-	$<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/wintun_tun_device.hpp>
+	$<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_SOURCE_DIR}/include/proxy/wintun_install.hpp>
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/lib_asio_beast.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/tun_server.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/doh_client.cpp
-	$<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_SOURCE_DIR}/src/wintun_tun_device.cpp>
 	${CMAKE_CURRENT_SOURCE_DIR}/src/ip_database.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/launcher_log.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/proxy_session.cpp
@@ -50,12 +48,12 @@ target_sources(libproxy
 	${CMAKE_CURRENT_SOURCE_DIR}/src/dns_server.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/default_cert.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/xxhash.cpp
+	$<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_SOURCE_DIR}/src/wintun_install.cpp>
 )
 
 target_include_directories(libproxy
 	PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include/
-	$<$<PLATFORM_ID:Windows>:${CMAKE_SOURCE_DIR}/third_party/wintun/include>
 	# tinyrpc jsonrpc 头文件（launcher 控制通道直接使用）.
 	${CMAKE_SOURCE_DIR}/third_party/tinyrpc/include
 )
@@ -76,6 +74,7 @@ if (ENABLE_SYSTEM_BOOST)
 		Boost::json
 
 		fmt
+		tunio
 		${OPENSSL_LIBRARIES}
 )
 else()
@@ -94,6 +93,7 @@ else()
 		Boost::scope
 
 		fmt
+		tunio
 		${OPENSSL_LIBRARIES}
 	)
 endif()
