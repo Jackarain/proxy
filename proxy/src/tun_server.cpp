@@ -1790,7 +1790,14 @@ namespace proxy {
 		// Android VpnService 场景: 注入外部已打开的 fd.
 		if (m_option.tun_fd_ >= 0)
 		{
+#if defined(_WIN32)
+			// Windows 下 native_handle_type 为 HANDLE(void*), 外部注入
+			// 的句柄经 int 传递后按整型宽度转换.
+			cfg.external_handle = reinterpret_cast<tunio::native_handle_type>(
+				static_cast<intptr_t>(m_option.tun_fd_));
+#else
 			cfg.external_handle = m_option.tun_fd_;
+#endif
 			cfg.external_mtu = cfg.mtu;
 		}
 
