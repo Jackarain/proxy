@@ -2905,6 +2905,10 @@ R"x*x*x(<html>
 			if (!first)
 				m_local_buffer.consume(m_local_buffer.size());
 
+			// 慢速请求防护: 请求头/请求体读取期间同样受 tcp_timeout 约束,
+			// 避免攻击者只发半个请求头或缓慢发送 body 长期占用连接.
+			stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
+
 			// 读取 http 请求头.
 			auto req_bytes = co_await http::async_read(
 				m_local_socket,
@@ -3284,6 +3288,9 @@ R"x*x*x(<html>
 		http::request_parser<http::string_body> parser;
 
 		parser.header_limit(128 * 1024);
+
+		// 慢速请求防护: CONNECT 请求头读取同样受 tcp_timeout 约束.
+		stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
 
 		// 读取 http 请求头.
 		co_await http::async_read_header(m_local_socket,
@@ -4816,6 +4823,9 @@ R"x*x*x(<html>
 				parser.emplace();
 				parser->body_limit(1024 * 1024 * 10);
 				m_local_buffer.consume(m_local_buffer.size());
+
+				// 慢速请求防护: keepalive 后续请求读取同样受 tcp_timeout 约束.
+				stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
 
 				// keepalive 下须连同 body 一起读取: /dns-query 走 POST,
 				// 只读请求头会导致后续请求 body 为空而被拒.
