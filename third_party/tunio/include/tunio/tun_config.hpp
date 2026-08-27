@@ -10,6 +10,14 @@
 
 #pragma once
 
+// Windows 下 windows.h 会定义 min/max 函数宏, 破坏 std::min/std::max;
+// 在包含任何 Windows 头之前统一禁用, 代码中全部使用 std::min/std::max.
+#if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#endif
+
 #include <array>
 #include <atomic>
 #include <chrono>
