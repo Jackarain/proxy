@@ -286,7 +286,14 @@ class _ConfigListPageState extends State<ConfigListPage> {
     final session = AppSession.instance;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('proxy 配置'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset('assets/logo.png', width: 26, height: 26),
+            const SizedBox(width: 8),
+            const Text('xProxy'),
+          ],
+        ),
         actions: [
           if (_gitHash.isNotEmpty)
             Center(

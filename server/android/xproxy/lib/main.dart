@@ -12,7 +12,7 @@ class XproxyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'proxy',
+      title: 'xProxy',
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       home: const ConfigListPage(),
