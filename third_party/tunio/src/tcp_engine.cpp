@@ -293,7 +293,7 @@ void tcp_engine::handle_segment(const std::shared_ptr<tcp_flow> &f,
         }
     }
 
-    flush_writes(*f);
+    signal_write(*f);
 }
 
 void tcp_engine::deliver_data(tcp_flow &f, const uint8_t *data, size_t len)
@@ -392,52 +392,9 @@ void tcp_engine::flush_reads(tcp_flow &f)
     }
 }
 
-void tcp_engine::flush_writes(tcp_flow &f)
-{
-    while (!f.pending_writes.empty()) {
-        auto &op = f.pending_writes.front();
-        const uint32_t in_flight = f.snd_nxt - f.snd_una;
-        if (in_flight >= f.peer_wnd) {
-            // 窗口耗尽：等待客户端 ACK 更新窗口
-            break;
-        }
-        // 定位 op.offset 对应的用户缓冲区及其区内偏移
-        size_t buf_index = 0;
-        size_t buf_off = op.offset;
-        while (buf_index < op.buffers.size() &&
-               buf_off >= op.buffers[buf_index].size()) {
-            buf_off -= op.buffers[buf_index].size();
-            ++buf_index;
-        }
-        if (buf_index == op.buffers.size()) {
-            break;
-        }
-        const size_t remaining = op.total - op.offset;
-        const size_t avail = op.buffers[buf_index].size() - buf_off;
-        const size_t chunk =
-            std::min({remaining, avail, mss(f.key.family),
-                      static_cast<size_t>(f.peer_wnd - in_flight)});
-        if (chunk == 0) {
-            break;
-        }
-        const uint8_t *payload = static_cast<const uint8_t *>(
-                                     op.buffers[buf_index].data()) +
-                                 buf_off;
-        send_segment(f, f.snd_nxt, TCP_ACK | TCP_PSH,
-                     payload, chunk, false);
-        f.snd_nxt += static_cast<uint32_t>(chunk);
-        f.tx_bytes -= chunk;
-        op.offset += chunk;
-        if (op.offset == op.total) {
-            auto h = std::move(op.handler);
-            f.pending_writes.pop_front();
-            h(boost::system::error_code{}, op.total);
-        }
-    }
-}
-
-void tcp_engine::send_segment(tcp_flow &f, uint32_t seq, uint8_t flags,
-                              const uint8_t *payload, size_t len, bool with_mss)
+packet_buffer tcp_engine::build_segment(tcp_flow &f, uint32_t seq,
+                                        uint8_t flags, const uint8_t *payload,
+                                        size_t len, bool with_mss)
 {
     // 任何段都携带最新 rcv_nxt，视为已完成一次数据确认
     f.ack_pending = 0;
@@ -478,7 +435,110 @@ void tcp_engine::send_segment(tcp_flow &f, uint32_t seq, uint8_t flags,
         tcp_udp_checksum(family, f.key.dst_ip.data(), f.key.src_ip.data(),
                          IPPROTO_TCP_V, base + ip_hdr_len, tcp_hdr_len + len));
 
-    writer_.async_write_and_forget(std::move(pkt));
+    return pkt;
+}
+
+void tcp_engine::send_segment(tcp_flow &f, uint32_t seq, uint8_t flags,
+                              const uint8_t *payload, size_t len, bool with_mss)
+{
+    // 控制段（SYN/SYN+ACK/FIN/RST/ACK）直通：不参与数据背压，确保
+    // 连接建立/关闭的关键段不被数据发送队列阻塞.
+    writer_.async_write_and_forget(
+        build_segment(f, seq, flags, payload, len, with_mss));
+}
+
+net::awaitable<void> tcp_engine::write_loop(std::shared_ptr<tcp_flow> f)
+{
+    // 强引用保活：协程可能在引擎/设备写器析构后仍挂起（等写完成回调），
+    // 捕获 shared_ptr 避免协程恢复时访问已销毁对象.
+    auto eng = shared_from_this();
+    auto writer = writer_.shared_from_this();
+    auto &flow = *f;
+
+    if (!flow.write_ch) {
+        flow.write_ch.emplace(strand_);
+    }
+
+    try {
+        while (flow.active_write && flow.state != tcp_state::CLOSED &&
+               !flow.rst && !flow.fin_sent) {
+            const uint32_t in_flight = flow.snd_nxt - flow.snd_una;
+            if (in_flight >= flow.peer_wnd) {
+                // 窗口耗尽：挂起等待 ACK 更新窗口（signal_write 唤醒）
+                co_await flow.write_ch->async_receive(net::use_awaitable);
+                continue;
+            }
+            // 定位 op.offset 对应的用户缓冲区及其区内偏移（不跨挂起点持有引用）
+            size_t buf_index = 0;
+            size_t buf_off = 0;
+            size_t chunk = 0;
+            packet_buffer pkt{};
+            {
+                auto &op = *flow.active_write;
+                buf_off = op.offset;
+                while (buf_index < op.buffers.size() &&
+                       buf_off >= op.buffers[buf_index].size()) {
+                    buf_off -= op.buffers[buf_index].size();
+                    ++buf_index;
+                }
+                if (buf_index == op.buffers.size()) {
+                    break;
+                }
+                const size_t remaining = op.total - op.offset;
+                const size_t avail = op.buffers[buf_index].size() - buf_off;
+                chunk = std::min(
+                    {remaining, avail, mss(f->key.family),
+                     static_cast<size_t>(flow.peer_wnd - in_flight)});
+                if (chunk == 0) {
+                    break;
+                }
+                const uint8_t *payload =
+                    static_cast<const uint8_t *>(
+                        op.buffers[buf_index].data()) +
+                    buf_off;
+                pkt = build_segment(flow, flow.snd_nxt, TCP_ACK | TCP_PSH,
+                                    payload, chunk, false);
+            }
+            // 数据段经设备写完成回调驱动背压：设备写通道拥塞时协程挂起，
+            // 内存占用受"每流单写 + 设备队列水位"约束，不再无界累积.
+            auto [ec, n] = co_await writer->async_write(
+                std::move(pkt), net::as_tuple(net::use_awaitable));
+            if (ec) {
+                break;
+            }
+            if (!flow.active_write) {
+                // 挂起期间连接被关闭：写操作已由关闭路径完成，停止推进.
+                break;
+            }
+            auto &op = *flow.active_write;
+            flow.snd_nxt += static_cast<uint32_t>(chunk);
+            op.offset += chunk;
+            if (op.offset == op.total) {
+                auto h = std::move(op.handler);
+                flow.active_write.reset();
+                h(boost::system::error_code{}, op.total);
+                co_return;
+            }
+        }
+    } catch (...) {
+        // 异常兜底：以错误完成挂起写操作，避免 detached 协程抛出
+    }
+
+    if (flow.active_write) {
+        auto err = flow.rst ? net::error::connection_reset
+                            : net::error::bad_descriptor;
+        auto h = std::move(flow.active_write->handler);
+        flow.active_write.reset();
+        h(err, 0);
+    }
+    co_return;
+}
+
+void tcp_engine::signal_write(tcp_flow &f)
+{
+    if (f.write_ch && f.write_ch->is_open()) {
+        f.write_ch->try_send(boost::system::error_code{});
+    }
 }
 
 void tcp_engine::send_ack(tcp_flow &f)
@@ -594,11 +654,16 @@ void tcp_engine::close_flow(tcp_flow &f, const boost::system::error_code &err)
         op.handler(err, 0);
     }
     f.pending_reads.clear();
-    for (auto &op : f.pending_writes) {
-        op.handler(err, 0);
+    if (f.active_write) {
+        auto h = std::move(f.active_write->handler);
+        f.active_write.reset();
+        h(err, 0);
     }
-    f.pending_writes.clear();
-    f.tx_bytes = 0;
+    if (f.write_ch) {
+        // 关闭信号通道：唤醒挂起等待窗口的发送协程，协程恢复后
+        // 因 active_write 已清空而直接退出.
+        f.write_ch->close();
+    }
     if (f.rx_bytes > 0) {
         account_->release(f.rx_bytes);
         f.rx_bytes = 0;
@@ -720,12 +785,14 @@ void tcp_flow_close(std::shared_ptr<tcp_flow> flow)
                        0);
         }
         f.pending_reads.clear();
-        for (auto &op : f.pending_writes) {
-            op.handler(boost::system::error_code(net::error::operation_aborted),
-                       0);
+        if (f.active_write) {
+            auto h = std::move(f.active_write->handler);
+            f.active_write.reset();
+            h(boost::system::error_code(net::error::operation_aborted), 0);
         }
-        f.pending_writes.clear();
-        f.tx_bytes = 0;
+        if (f.write_ch) {
+            f.write_ch->close();
+        }
         if (f.rx_bytes > 0) {
             eng->account().release(f.rx_bytes);
             f.rx_bytes = 0;

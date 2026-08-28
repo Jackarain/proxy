@@ -405,9 +405,22 @@ private:
 
 #### 5.3 数据发送
 
-- 应用层调用 `tun_tcp_socket::async_write` 时，引擎直接获取数据，封装为 TCP 载荷，分配 `snd_nxt` 序列号，构造 IP 包后通过 `packet_device::async_write_packet` 写入 TUN 设备。
-- 发送缓冲由 `device_writer` 维护的 Strand 内自由列表池化复用（写完成后回收，容量不足时新建），避免每个报文一次堆分配。
-- **发送队列上限**：每条连接排队待发送的字节数受 `max_tx_queue_per_flow` 约束。客户端接收窗口为 0 或队列积压时，应用层持续写入会导致排队数据增长，超限后新写入以 `no_buffer_space` 立即完成，避免内存无限增长（施加背压）。
+- **单写模型**：每条连接同一时刻至多持有一个未完成的写操作（符合
+  Boost.Asio 串行写规则）。应用层调用 `async_write_some` 时，引擎接受
+  任意大小的单次写入（不再按队列空间拒绝），由该流的发送协程持有，
+  按客户端接收窗口与 MSS 循环分片。
+- **设备写背压**：发送协程每个分片经 `device_writer::async_write`
+  （带完成回调）下发，等待设备写完成后再构造下一分片——设备写通道
+  拥塞时协程自然挂起，内存占用受"每流单写 + 设备队列水位"约束，
+  不再无界累积。发送缓冲由 `device_writer` 的 Strand 内自由列表池化
+  复用（写完成后回收，容量不足时新建），避免每个报文一次堆分配。
+- **窗口挂起**：客户端接收窗口耗尽时，发送协程经每流信号通道挂起，
+  收到 ACK 更新窗口后由引擎唤醒继续发送。
+- **控制段直通**：SYN/SYN+ACK/FIN/RST/ACK 等控制段不走数据背压路径，
+  直接入设备写队列（`async_write_and_forget`），确保连接建立与关闭的
+  关键段不被数据拥塞阻塞。
+- **重叠写拒绝**：上一写操作未完成时新写入以 `no_buffer_space` 立即
+  完成（应用违反串行写规则时的背压兜底）。
 - **不维护重传队列，不设置 RTO 定时器**（40ms ACK 延迟定时器仅用于合并确认，不属于重传定时器）。如果该数据包在传输途中丢失，客户端未收到响应时会主动重发之前的请求，引擎收到重发的请求后再重新生成响应，或由上层代理逻辑处理超时。
 
 #### 5.4 接收窗口
@@ -674,7 +687,7 @@ struct tun_config {
     size_t max_tcp_flows = 65536;
     size_t max_udp_flows = 65536;
     size_t max_rx_queue_per_flow = 1024 * 1024;
-    size_t max_tx_queue_per_flow = 1024 * 1024;  // 每条 TCP 连接排队待发送的字节数上限
+    size_t max_tx_queue_per_flow = 1024 * 1024;  // 兼容占位：发送背压由设备写回调驱动
     size_t max_total_buffer = 512 * 1024 * 1024;
 
     // ---- 超时策略 ----
@@ -696,11 +709,11 @@ struct tun_config {
 
 **资源上限说明**：
 - `max_rx_queue_per_flow` 限制每条 TCP 连接的接收队列与每条 UDP 会话的
-  数据报队列字节数；`max_tx_queue_per_flow` 限制每条 TCP 连接排队待发送的
-  字节数（客户端接收窗口为 0 时，应用层持续写入会触发队列积压，超限后
-  新写入以 `no_buffer_space` 完成，避免内存无限增长）。
-- `max_total_buffer` 为跨 TCP/UDP 队列的全局缓冲记账上限，发送侧排队缓冲
-  不占用该记账（仅受 `max_tx_queue_per_flow` 约束）。
+  数据报队列字节数；`max_tx_queue_per_flow` 为兼容占位（TCP 发送采用
+  单写模型，发送背压由"每流单写 + 设备写完成回调"驱动，不再按排队
+  字节数拒绝写入）。
+- `max_total_buffer` 为跨 TCP/UDP 接收队列的全局缓冲记账上限；发送侧
+  数据由应用缓冲持有（引擎只引用不拷贝），不占用该记账。
 - 半开连接（`SYN_RCVD` / `SYN_ACK_SENT`）在 `tcp_syn_timeout` 后清理；关闭流程
   （`FIN_WAIT_1` / `FIN_WAIT_2` / `LAST_ACK`）在 `tcp_close_timeout` 后
   强制清理。

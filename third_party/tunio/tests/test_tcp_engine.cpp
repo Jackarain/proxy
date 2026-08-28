@@ -636,7 +636,8 @@ static void test_unaccepted_connection_cleanup()
 
 static void test_write_queue_limit()
 {
-    // 发送队列字节数上限：窗口为 0 时排队写满上限后应返回 no_buffer_space
+    // 单写模型：窗口为 0 时写操作挂起等待窗口更新，
+    // 上一写未完成时重叠写立即返回 no_buffer_space.
     engine_env env(1500, std::chrono::seconds(1), std::chrono::seconds(30),
                    std::chrono::seconds(30), 1024 * 1024, 16);
     auto &io = env.io;
@@ -674,32 +675,99 @@ static void test_write_queue_limit()
                           engine_iss + 1, 0, {}));
     future_get(accept_done.get_future());
 
-    // 两个 8 字节写排队（合计 16 字节 = 上限）
-    std::promise<std::pair<boost::system::error_code, size_t>> w1, w2;
+    // 第一个写：窗口为 0，挂起等待窗口更新
+    std::promise<std::pair<boost::system::error_code, size_t>> w1;
     peer.async_write_some(
         net::buffer("aaaaaaaa", 8),
         [&](boost::system::error_code ec, size_t n) { w1.set_value({ec, n}); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // 第二个写：上一写未完成，重叠写立即返回 no_buffer_space
+    std::promise<std::pair<boost::system::error_code, size_t>> w2;
     peer.async_write_some(
         net::buffer("bbbbbbbb", 8),
         [&](boost::system::error_code ec, size_t n) { w2.set_value({ec, n}); });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    auto [w2ec, w2n] = future_get(w2.get_future());
+    assert(w2ec == net::error::no_buffer_space);
+    assert(w2n == 0);
 
-    // 第三个写超出上限：立即返回 no_buffer_space
-    std::promise<std::pair<boost::system::error_code, size_t>> w3;
-    peer.async_write_some(
-        net::buffer("c", 1),
-        [&](boost::system::error_code ec, size_t n) { w3.set_value({ec, n}); });
-    auto [w3ec, w3n] = future_get(w3.get_future());
-    assert(w3ec == net::error::no_buffer_space);
-    assert(w3n == 0);
-
-    // 窗口更新后，前两个写完成
+    // 窗口更新后，第一个写完成
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12352, DEST_PORT, 0x10, 8001,
                           engine_iss + 1, 4096, {}));
     auto [w1ec, w1n] = future_get(w1.get_future());
     assert(!w1ec && w1n == 8);
-    auto [w2ec, w2n] = future_get(w2.get_future());
-    assert(!w2ec && w2n == 8);
+    peer.close();
+}
+
+static void test_write_large_single_op()
+{
+    // 单写模型：单次写入可大于队列上限，数据按 MSS 分片全部发送后
+    // 才回调，不受"队列空间"限制（无排队字节记账）.
+    engine_env env(1500, std::chrono::seconds(1), std::chrono::seconds(30),
+                   std::chrono::seconds(30), 1024 * 1024, 16);
+    auto &io = env.io;
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
+
+    std::promise<boost::system::error_code> accept_done;
+    acceptor.async_accept(peer, [&](boost::system::error_code ec) {
+        if (!ec) {
+            peer.accept();
+        }
+        accept_done.set_value(ec);
+    });
+
+    env.dev.send(
+        make_tcp(CLIENT_IP, DEST_IP, 12355, DEST_PORT, 0x02, 10000, 0, 0, {}));
+    std::vector<uint8_t> pkt;
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no SYN-ACK");
+    }
+    if (!verify_packet(pkt)) {
+        throw std::runtime_error("verify_packet failed");
+    }
+    ip_hdr_info ipi;
+    tcp_hdr_info ti;
+    if (!parse_ip(pkt, ipi)) {
+        throw std::runtime_error("parse_ip failed");
+    }
+    if (!parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse_tcp failed");
+    }
+    const uint32_t engine_iss = ti.seq;
+    // 客户端 ACK（窗口充足）
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12355, DEST_PORT, 0x10, 10001,
+                          engine_iss + 1, 4096, {}));
+    future_get(accept_done.get_future());
+
+    // 单次写入 3000 字节（超过队列上限 16 与单段 MSS）：应全部接受，
+    // 按 MSS 分 3 段发送，全部发出后才回调.
+    const std::string payload(3000, 'a');
+    std::promise<std::pair<boost::system::error_code, size_t>> w1;
+    peer.async_write_some(
+        net::buffer(payload),
+        [&](boost::system::error_code ec, size_t n) { w1.set_value({ec, n}); });
+    auto [w1ec, w1n] = future_get(w1.get_future());
+    assert(!w1ec && w1n == payload.size());
+
+    // 设备收到 3 段，载荷合计等于写入字节数（MSS 1460: 1460+1460+80）
+    size_t received = 0;
+    for (int i = 0; i < 3; ++i) {
+        if (!env.dev.read_packet(pkt)) {
+            throw std::runtime_error("no data packet");
+        }
+        if (!verify_packet(pkt)) {
+            throw std::runtime_error("verify_packet failed");
+        }
+        if (!parse_ip(pkt, ipi)) {
+            throw std::runtime_error("parse_ip failed");
+        }
+        if (!parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+            throw std::runtime_error("parse_tcp failed");
+        }
+        received += ti.len;
+    }
+    assert(received == payload.size());
     peer.close();
 }
 
@@ -1258,6 +1326,7 @@ int main()
     test_write_after_shutdown_send();
     test_unaccepted_connection_cleanup();
     test_write_queue_limit();
+    test_write_large_single_op();
     test_close_reopen();
     test_fragmented_packet_dropped();
     test_oversized_declared_length();

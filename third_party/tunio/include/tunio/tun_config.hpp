@@ -152,8 +152,9 @@ struct tun_config
     size_t max_tcp_flows = 65536;
     size_t max_udp_flows = 65536;
     size_t max_rx_queue_per_flow = 1024 * 1024;
-    size_t max_tx_queue_per_flow =
-        1024 * 1024; // 每条 TCP 连接排队待发送的字节数上限
+    // 单写模型下为兼容占位：发送背压由"每流单写 + 设备写回调"约束，
+    // 该字段不再参与发送路径判定.
+    size_t max_tx_queue_per_flow = 1024 * 1024;
     size_t max_total_buffer = 512 * 1024 * 1024;
 
     // ---- 超时策略 ----

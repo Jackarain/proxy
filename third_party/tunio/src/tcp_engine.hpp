@@ -11,14 +11,20 @@
 #pragma once
 
 #include "ip_headers.hpp"
+#include "tunio/packet_buffer.hpp"
 #include "tunio/tun_config.hpp"
 
 #include <boost/asio.hpp>
+#include <boost/asio/as_tuple.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/experimental/channel.hpp>
+#include <boost/asio/use_awaitable.hpp>
 
 #include <chrono>
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -127,6 +133,7 @@ struct tcp_flow : public std::enable_shared_from_this<tcp_flow>
     };
     std::deque<read_op> pending_reads;
 
+    // ---- 挂起写操作（单写模型：同一时刻至多一个未完成写）----
     struct write_op
     {
         std::vector<net::const_buffer> buffers; // 用户数据引用，回调 handler 前由调用方保证有效
@@ -135,8 +142,10 @@ struct tcp_flow : public std::enable_shared_from_this<tcp_flow>
         net::any_completion_handler<void(boost::system::error_code, size_t)>
             handler;
     };
-    std::deque<write_op> pending_writes;
-    size_t tx_bytes = 0; // 排队待发送的字节数（含未发送部分）
+    std::optional<write_op> active_write;
+    // 窗口可写信号：发送协程在窗口耗尽时挂起等待，ACK 更新窗口后由引擎唤醒.
+    std::optional<net::experimental::channel<void(boost::system::error_code)>>
+        write_ch;
 
     net::ip::tcp::endpoint original_destination() const;
     bool is_open() const;
@@ -191,17 +200,19 @@ public:
     {
         return family == 6 ? mss6_ : mss4_;
     }
-    size_t max_tx_queue() const
-    {
-        return cfg_.max_tx_queue_per_flow;
-    }
-
     // ---- 由 tcp_flow 调用的发送辅助 ----
+    packet_buffer build_segment(tcp_flow &f, uint32_t seq, uint8_t flags,
+                                const uint8_t *payload, size_t len,
+                                bool with_mss);
     void send_segment(tcp_flow &f, uint32_t seq, uint8_t flags,
                       const uint8_t *payload, size_t len, bool with_mss);
     void send_fin(tcp_flow &f);
     void abort_flow(tcp_flow &f);
     void close_flow(tcp_flow &f, const boost::system::error_code &err);
+    // 发送协程：持有单个写操作，按窗口/MSS 循环分片，
+    // 设备写完成回调驱动背压；窗口耗尽时经 write_ch 挂起等待 ACK.
+    net::awaitable<void> write_loop(std::shared_ptr<tcp_flow> f);
+    void signal_write(tcp_flow &f);
 
     // 批准握手: 向客户端回复 SYN+ACK (幂等, 已回复过则忽略).
     void accept_flow(tcp_flow &f);
@@ -227,7 +238,6 @@ private:
     void on_ack_timer(const boost::system::error_code &ec);
     void deliver_data(tcp_flow &f, const uint8_t *data, size_t len);
     void flush_reads(tcp_flow &f);
-    void flush_writes(tcp_flow &f);
     void notify_accept(tcp_flow &f);
     void on_sweep(const boost::system::error_code &ec);
 
@@ -268,7 +278,7 @@ void tcp_flow_start_read(std::shared_ptr<tcp_flow> flow,
     auto strand = eng->strand();
     net::dispatch(strand, [f = std::move(flow), eng,
                            buffers = std::move(buffers), total,
-                           handler = std::move(handler)]() mutable {
+                           handler = std::move(handler), strand]() mutable {
         auto &flow = *f;
         if (flow.state == tcp_state::CLOSED || flow.app_closed ||
             flow.rx_shutdown) {
@@ -310,7 +320,7 @@ void tcp_flow_start_write(std::shared_ptr<tcp_flow> flow,
     auto strand = eng->strand();
     net::dispatch(strand, [f = std::move(flow), eng,
                            buffers = std::move(buffers), total,
-                           handler = std::move(handler)]() mutable {
+                           handler = std::move(handler), strand]() mutable {
         auto &flow = *f;
         if (flow.state == tcp_state::CLOSED || flow.app_closed ||
             flow.fin_sent) {
@@ -329,15 +339,14 @@ void tcp_flow_start_write(std::shared_ptr<tcp_flow> flow,
             handler(boost::system::error_code{}, 0);
             return;
         }
-        if (flow.tx_bytes + total > eng->max_tx_queue()) {
-            // 发送队列积压超限：拒绝本次写入以施加背压，避免内存无限增长
+        if (flow.active_write) {
+            // 单写模型：上一写操作尚未完成，拒绝重叠写以施加背压
             handler(boost::system::error_code(net::error::no_buffer_space), 0);
             return;
         }
-        flow.pending_writes.push_back(
-            {std::move(buffers), total, 0, std::move(handler)});
-        flow.tx_bytes += total;
-        eng->flush_writes(flow);
+        flow.active_write = tcp_flow::write_op{
+            std::move(buffers), total, 0, std::move(handler)};
+        net::co_spawn(strand, eng->write_loop(f), net::detached);
     });
 }
 

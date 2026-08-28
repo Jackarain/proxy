@@ -307,7 +307,7 @@ CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 | `mtu` | `1500` | 自主打开模式 MTU |
 | `external_handle` / `external_mtu` | `invalid` / `1500` | 外部句柄注入（优先于自主打开） |
 | `max_tcp_flows` / `max_udp_flows` | `65536` | 流/会话数上限 |
-| `max_rx_queue_per_flow` / `max_tx_queue_per_flow` | `1 MiB` | 每流收发队列字节上限 |
+| `max_rx_queue_per_flow` / `max_tx_queue_per_flow` | `1 MiB` | 每流接收队列字节上限；发送侧兼容占位（单写模型由设备写回调背压） |
 | `max_total_buffer` | `512 MiB` | 全局缓冲上限 |
 | `udp_idle_timeout` | `30s` | UDP 会话空闲超时 |
 | `tcp_time_wait_timeout` / `tcp_accept_timeout` | `10s` / `30s` | TCP 清理超时 |
