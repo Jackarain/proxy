@@ -15,9 +15,9 @@
 //
 // TCP：将虚拟连接转发到本机 127.0.0.1:echo 端口；
 // UDP：直接在引擎层面回显数据报。
-#include "tunio/tun_acceptor.hpp"
+#include "tunio/tun_tcp_acceptor.hpp"
 #include "tunio/tun_config.hpp"
-#include "tunio/tun_stream.hpp"
+#include "tunio/tun_tcp_socket.hpp"
 #include "tunio/tun_udp_acceptor.hpp"
 #include "tunio/tun_udp_socket.hpp"
 #include "tunio/tunio.hpp"
@@ -81,7 +81,7 @@ options parse_args(int argc, char **argv)
 }
 
 // ---- TCP 全双工数据泵（DESIGN.md §10.1）----
-net::awaitable<void> bidirectional_bridge(tunio::tun_stream client,
+net::awaitable<void> bidirectional_bridge(tunio::tun_tcp_socket client,
                                           net::ip::tcp::endpoint target)
 {
     auto ex = co_await net::this_coro::executor;
@@ -93,7 +93,7 @@ net::awaitable<void> bidirectional_bridge(tunio::tun_stream client,
         client.reset();
         co_return;
     }
-    auto c = std::make_shared<tunio::tun_stream>(std::move(client));
+    auto c = std::make_shared<tunio::tun_tcp_socket>(std::move(client));
 
     net::co_spawn(
         ex,
@@ -134,9 +134,9 @@ net::awaitable<void> bidirectional_bridge(tunio::tun_stream client,
 net::awaitable<void> tcp_listener(tunio::tunio &engine, uint16_t echo_port)
 {
     auto ex = co_await net::this_coro::executor;
-    tunio::tun_acceptor acceptor(engine);
+    tunio::tun_tcp_acceptor acceptor(engine);
     for (;;) {
-        tunio::tun_stream client(ex);
+        tunio::tun_tcp_socket client(ex);
         boost::system::error_code ec;
         co_await acceptor.async_accept(
             client, net::redirect_error(net::use_awaitable, ec));

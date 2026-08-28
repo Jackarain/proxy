@@ -29,17 +29,17 @@
 |              (使用 Boost.Asio, co_await, 业务路由逻辑)                       |
 +-----------------------------------------------------------------------------+
                                     ▲
-               Async API Boundary   │  tun_stream / tun_acceptor
+               Async API Boundary   │  tun_tcp_socket / tun_tcp_acceptor
                                     │  tun_udp_socket / tun_udp_acceptor
                                     ▼
 +-----------------------------------------------------------------------------+
 |                           异步 API 接口层                                    |
 |  +----------------------------+   +---------------------------------------+ |
-|  |       tun_stream           |   |         tun_udp_socket               | |
+|  |       tun_tcp_socket           |   |         tun_udp_socket               | |
 |  |  (TCP Virtual Socket)      |   |  (UDP Datagram Socket)              | |
 |  +----------------------------+   +---------------------------------------+ |
 |  +----------------------------+   +---------------------------------------+ |
-|  |       tun_acceptor         |   |         tun_udp_acceptor             | |
+|  |       tun_tcp_acceptor         |   |         tun_udp_acceptor             | |
 |  |  (TCP Listener)            |   |  (UDP Session Listener)              | |
 |  +----------------------------+   +---------------------------------------+ |
 +-----------------------------------------------------------------------------+
@@ -384,11 +384,11 @@ private:
 #### 5.1 握手阶段
 
 - 收到客户端 SYN 后，引擎分配一个 `tcp_minimal_state` 实例，记录 `irs = SYN.seq`，
-  状态为 `SYN_RCVD`，并立即触发 `tun_acceptor::async_accept` 完成事件（此时连接尚未建立）。
+  状态为 `SYN_RCVD`，并立即触发 `tun_tcp_acceptor::async_accept` 完成事件（此时连接尚未建立）。
 - 引擎不立即回复 SYN-ACK：握手结果由应用在领取流后决定，通过
-  `tun_stream::accept()` 回复 SYN-ACK（携带本端 `iss` 与固定 MSS 值，由 MTU 推导：
+  `tun_tcp_socket::accept()` 回复 SYN-ACK（携带本端 `iss` 与固定 MSS 值，由 MTU 推导：
   IPv4 默认 `MSS = MTU - 40`，IPv6 默认 `MSS = MTU - 60`），或通过
-  `tun_stream::reject()` 回复 RST；未显式调用时，首次读写视为隐式批准握手。
+  `tun_tcp_socket::reject()` 回复 RST；未显式调用时，首次读写视为隐式批准握手。
 - 收到客户端 ACK 后，状态切换为 `ESTABLISHED`，数据通路开始工作。
 - 若应用层在 `tcp_syn_timeout`（默认 30 秒）内未完成握手（`SYN_RCVD` /
   `SYN_ACK_SENT` 半开连接），引擎发送 RST 中断连接并回收资源，避免未领取连接长期驻留。
@@ -399,13 +399,13 @@ private:
 - **IP 分片策略**：引擎不做 IP 重组，收到 IPv4 分片包（带分片偏移或 MF 标志）或带 Fragment 扩展头（Next Header = 44）的 IPv6 报文时直接丢弃并计入 `rx_dropped`。
 
 - **顺序检查**：收到数据段后，检查 `SEQ == rcv_nxt`。
-  - **若顺序正确**：提取应用层 Payload，追加到 `tun_stream` 的连续接收缓冲（`vector<uint8_t>` + 头部消费偏移，应用读取后按需压缩，避免逐字节队列），唤醒挂起的 `async_read` 操作；随后 `rcv_nxt += payload_len`，并启用 **delayed ACK**：每累计 2 个数据段立即确认一次，单段由 40ms ACK 定时器兜底；引擎发送的任何出段都会捎带最新 `rcv_nxt`，视为完成一次确认。
+  - **若顺序正确**：提取应用层 Payload，追加到 `tun_tcp_socket` 的连续接收缓冲（`vector<uint8_t>` + 头部消费偏移，应用读取后按需压缩，避免逐字节队列），唤醒挂起的 `async_read` 操作；随后 `rcv_nxt += payload_len`，并启用 **delayed ACK**：每累计 2 个数据段立即确认一次，单段由 40ms ACK 定时器兜底；引擎发送的任何出段都会捎带最新 `rcv_nxt`，视为完成一次确认。
   - **若序列号超前（`SEQ > rcv_nxt`）**：引擎**不缓存**该数据段，直接丢弃，并回复一个 **Dup-ACK**（重复确认，携带期望的 `rcv_nxt`）。该机制会触发客户端内核的快速重传（Fast Retransmit），由客户端负责重发丢失的数据。
   - **若序列号小于 `rcv_nxt`**：视为重复包，直接丢弃，不回复任何内容。
 
 #### 5.3 数据发送
 
-- 应用层调用 `tun_stream::async_write` 时，引擎直接获取数据，封装为 TCP 载荷，分配 `snd_nxt` 序列号，构造 IP 包后通过 `packet_device::async_write_packet` 写入 TUN 设备。
+- 应用层调用 `tun_tcp_socket::async_write` 时，引擎直接获取数据，封装为 TCP 载荷，分配 `snd_nxt` 序列号，构造 IP 包后通过 `packet_device::async_write_packet` 写入 TUN 设备。
 - 发送缓冲由 `device_writer` 维护的 Strand 内自由列表池化复用（写完成后回收，容量不足时新建），避免每个报文一次堆分配。
 - **发送队列上限**：每条连接排队待发送的字节数受 `max_tx_queue_per_flow` 约束。客户端接收窗口为 0 或队列积压时，应用层持续写入会导致排队数据增长，超限后新写入以 `no_buffer_space` 立即完成，避免内存无限增长（施加背压）。
 - **不维护重传队列，不设置 RTO 定时器**（40ms ACK 延迟定时器仅用于合并确认，不属于重传定时器）。如果该数据包在传输途中丢失，客户端未收到响应时会主动重发之前的请求，引擎收到重发的请求后再重新生成响应，或由上层代理逻辑处理超时。
@@ -418,7 +418,7 @@ private:
 #### 5.5 连接终止
 
 - 收到 FIN 段时，引擎回复 ACK，状态进入 `CLOSE_WAIT`，并向应用层指示 `EOF`。FIN 可与数据同段（其序号为 `SEQ + 载荷长度`），引擎按 RFC 语义一并确认。
-- 当应用层关闭 `tun_stream` 时，引擎发送 FIN 段，完成四次挥手。
+- 当应用层关闭 `tun_tcp_socket` 时，引擎发送 FIN 段，完成四次挥手。
 - 收到 RST 段时，直接销毁 TCB 并通知应用层连接重置。
 - 半开连接（`SYN_RCVD` / `SYN_ACK_SENT`）在 `tcp_syn_timeout`（默认 30 秒）后清理；关闭流程
   （`FIN_WAIT_1` / `FIN_WAIT_2` / `LAST_ACK`）在 `tcp_close_timeout`（默认 30 秒）
@@ -462,18 +462,18 @@ struct udp_session {
 
 所有 API 严格遵循 Boost.Asio 的 `async_initiate` 模型，保证与 `use_awaitable`、`use_future` 及自定义 CompletionToken 的完全兼容。
 
-#### 7.1 `tun_stream`（TCP 虚拟流套接字）
+#### 7.1 `tun_tcp_socket`（TCP 虚拟流套接字）
 
 ```cpp
-class tun_stream {
+class tun_tcp_socket {
 public:
     using executor_type = boost::asio::any_io_executor;
 
-    explicit tun_stream(executor_type ex);
-    ~tun_stream();
+    explicit tun_tcp_socket(executor_type ex);
+    ~tun_tcp_socket();
 
-    tun_stream(tun_stream&&) noexcept;
-    tun_stream& operator=(tun_stream&&) noexcept;
+    tun_tcp_socket(tun_tcp_socket&&) noexcept;
+    tun_tcp_socket& operator=(tun_tcp_socket&&) noexcept;
 
     executor_type get_executor() const noexcept;
 
@@ -509,22 +509,22 @@ public:
 private:
     class impl;
     std::shared_ptr<impl> impl_;
-    friend class tun_acceptor;
+    friend class tun_tcp_acceptor;
 };
 ```
 
-#### 7.2 `tun_acceptor`（TCP 连接监听器）
+#### 7.2 `tun_tcp_acceptor`（TCP 连接监听器）
 
 `async_accept` 在收到客户端 SYN 时触发完成回调，此时连接处于 `SYN_RCVD` 状态（尚未建立）；
-三次握手由应用在领取流后通过 `tun_stream::accept()`/`reject()` 决定（未显式调用时首次读写隐式批准）。
+三次握手由应用在领取流后通过 `tun_tcp_socket::accept()`/`reject()` 决定（未显式调用时首次读写隐式批准）。
 
 ```cpp
-class tun_acceptor {
+class tun_tcp_acceptor {
 public:
-    explicit tun_acceptor(tunio& engine);
+    explicit tun_tcp_acceptor(tunio& engine);
 
     template <typename CompletionToken>
-    auto async_accept(tun_stream& peer, CompletionToken&& token) {
+    auto async_accept(tun_tcp_socket& peer, CompletionToken&& token) {
         return boost::asio::async_initiate<CompletionToken, void(error_code)>(
             [this, &peer](auto handler) {
                 this->do_accept(peer, std::move(handler));
@@ -718,9 +718,9 @@ struct tun_config {
 
 namespace net = boost::asio;
 
-net::awaitable<void> bidirectional_bridge(tun_stream client, net::ip::tcp::socket proxy) {
+net::awaitable<void> bidirectional_bridge(tun_tcp_socket client, net::ip::tcp::socket proxy) {
     auto executor = co_await net::this_coro::executor;
-    auto client_ptr = std::make_shared<tun_stream>(std::move(client));
+    auto client_ptr = std::make_shared<tun_tcp_socket>(std::move(client));
     auto proxy_ptr  = std::make_shared<net::ip::tcp::socket>(std::move(proxy));
 
     net::co_spawn(executor, [client_ptr, proxy_ptr]() -> net::awaitable<void> {
@@ -747,11 +747,11 @@ net::awaitable<void> bidirectional_bridge(tun_stream client, net::ip::tcp::socke
 }
 
 net::awaitable<void> tcp_listener(tunio& engine) {
-    tun_acceptor acceptor(engine);
+    tun_tcp_acceptor acceptor(engine);
     auto executor = co_await net::this_coro::executor;
 
     for (;;) {
-        tun_stream client(executor);
+        tun_tcp_socket client(executor);
         co_await acceptor.async_accept(client, net::use_awaitable);
 
         auto dest = client.original_destination();
@@ -821,19 +821,7 @@ int main() {
 
 ---
 
-### 11. 实施路线图
-
-| 阶段 | 周期 | 核心交付物 |
-| :--- | :--- | :--- |
-| **Phase 1：核心骨架** | 1.5 周 | 实现 `packet_device`（Linux）、自主打开与句柄注入、TCP 三次握手与 `async_accept`。 |
-| **Phase 2：TCP/UDP 数据通路** | 1.5 周 | TCP 顺序转发与 Dup-ACK、UDP Datagram 收发、UDP 新会话通知与 `tun_udp_acceptor`。 |
-| **Phase 3：跨平台适配** | 1 周 | macOS utun、Windows Wintun，验证句柄注入。 |
-| **Phase 4：健壮性** | 1 周 | 资源上限、ICMP Ping、最小堆老化、统计接口、Strand 线程安全加固。 |
-| **Phase 5：IPv6 双栈** | 1 周 | 双栈报文解析与构造、ICMPv6 回显、netlink 地址配置、IPv6 测试覆盖。 |
-
----
-
-### 12. 总结
+### 11. 总结
 
 本设计文档定义了一个**极简、高性能且设备管理方式灵活**的用户态 TUN 网络引擎。其核心特征在于：
 
@@ -841,7 +829,7 @@ int main() {
 
 2. **完全 Asio 风格的异步接口**：`packet_device` 的 I/O 及所有公开 API 均采用 `CompletionToken` 与 `async_initiate`，与 `use_awaitable`、`use_future` 等无缝协作。
 
-3. **TCP 与 UDP 的对称抽象**：TCP 提供 `tun_stream`/`tun_acceptor`，UDP 提供 `tun_udp_socket`/`tun_udp_acceptor`，两者均遵循 Asio 的命名与行为习惯，降低学习成本。
+3. **TCP 与 UDP 的对称抽象**：TCP 提供 `tun_tcp_socket`/`tun_tcp_acceptor`，UDP 提供 `tun_udp_socket`/`tun_udp_acceptor`，两者均遵循 Asio 的命名与行为习惯，降低学习成本。
 
 4. **极低的协议开销**：放弃复杂的重传与重组，通过 Dup-ACK 触发客户端快速重传，将可靠性交还给对端内核，实现低 CPU 占用的高速转发。
 

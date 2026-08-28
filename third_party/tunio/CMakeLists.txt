@@ -32,9 +32,9 @@ set(TUNIO_SOURCES
   src/packet_buffer.cpp
   src/tcp_engine.cpp
   src/udp_engine.cpp
-  src/tun_acceptor.cpp
+  src/tun_tcp_acceptor.cpp
   src/tunio.cpp
-  src/tun_stream.cpp
+  src/tun_tcp_socket.cpp
   src/tun_udp_acceptor.cpp
   src/tun_udp_socket.cpp
 )

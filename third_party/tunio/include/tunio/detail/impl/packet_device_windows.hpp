@@ -21,7 +21,7 @@ namespace tunio {
 namespace net = boost::asio;
 namespace detail {
 
-// Windows 实现 (Wintun / Overlapped)：基于 windows::overlapped_handle。
+// Windows 实现 (Overlapped)：基于 windows::random_access_handle。
 // 平台相关打开逻辑（Wintun 会话创建）见 src/packet_device_windows.cpp。
 class windows_packet_device_impl
 {
@@ -76,7 +76,7 @@ public:
                                     std::forward<Handler>(handler));
     }
 
-    net::windows::overlapped_handle handle_;
+    net::windows::random_access_handle handle_;
     size_t mtu_ = 1500;
     bool open_ = false;
 };

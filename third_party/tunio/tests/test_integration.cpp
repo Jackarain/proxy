@@ -57,11 +57,11 @@ static net::awaitable<void> echo_server(net::ip::tcp::acceptor &srv)
     }
 }
 
-static net::awaitable<void> bridge(tun_stream client,
+static net::awaitable<void> bridge(tun_tcp_socket client,
                                    net::ip::tcp::endpoint target)
 {
     auto ex = co_await net::this_coro::executor;
-    auto c = std::make_shared<tun_stream>(std::move(client));
+    auto c = std::make_shared<tun_tcp_socket>(std::move(client));
     auto p = std::make_shared<net::ip::tcp::socket>(ex);
     boost::system::error_code ec;
 
@@ -132,12 +132,12 @@ int main()
     net::co_spawn(io, echo_server(srv), net::detached);
 
     // 桥接器：接受虚拟连接并转发到回显服务
-    tun_acceptor acceptor(env.engine);
+    tun_tcp_acceptor acceptor(env.engine);
     net::co_spawn(
         io,
         [&]() -> net::awaitable<void> {
             auto ex = co_await net::this_coro::executor;
-            tun_stream client(ex);
+            tun_tcp_socket client(ex);
             boost::system::error_code ec;
             co_await acceptor.async_accept(
                 client, net::redirect_error(net::use_awaitable, ec));

@@ -362,7 +362,7 @@ namespace proxy {
 		const std::shared_ptr<tun_server>& owner,
 		const proxy_server_option& opt,
 		tcp_flow_key key,
-		tunio::tun_stream stream)
+		tunio::tun_tcp_socket stream)
 		: m_executor(std::move(executor))
 		, m_owner(owner)
 		, m_option(opt)
@@ -598,7 +598,7 @@ namespace proxy {
 		co_return true;
 	}
 
-	// tx_loop 读取客户端（tun_stream）数据并转发到上游.
+	// tx_loop 读取客户端（tun_tcp_socket）数据并转发到上游.
 	net::awaitable<void> tun_tcp_flow::tx_loop()
 	{
 		char buffer[16384];
@@ -653,7 +653,7 @@ namespace proxy {
 		co_return;
 	}
 
-	// rx_loop 读取上游数据并转发到客户端（tun_stream）.
+	// rx_loop 读取上游数据并转发到客户端（tun_tcp_socket）.
 	net::awaitable<void> tun_tcp_flow::rx_loop()
 	{
 		char buffer[8192];
@@ -1876,7 +1876,7 @@ namespace proxy {
 			return false;
 		}
 
-		m_tcp_acceptor = std::make_unique<tunio::tun_acceptor>(*m_tunio);
+		m_tcp_acceptor = std::make_unique<tunio::tun_tcp_acceptor>(*m_tunio);
 		m_udp_acceptor = std::make_unique<tunio::tun_udp_acceptor>(*m_tunio);
 
 		return true;
@@ -1905,7 +1905,7 @@ namespace proxy {
 
 		for (; !m_abort;)
 		{
-			tunio::tun_stream peer(m_executor);
+			tunio::tun_tcp_socket peer(m_executor);
 			boost::system::error_code ec;
 			co_await m_tcp_acceptor->async_accept(peer, net_awaitable[ec]);
 			if (ec)

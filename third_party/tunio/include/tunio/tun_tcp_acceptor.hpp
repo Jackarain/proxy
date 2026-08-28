@@ -1,5 +1,5 @@
 ﻿//
-// tun_acceptor.hpp
+// tun_tcp_acceptor.hpp
 // ~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "tunio/tun_stream.hpp"
+#include "tunio/tun_tcp_socket.hpp"
 
 #include <boost/asio.hpp>
 
@@ -27,18 +27,18 @@ class tunio;
 // 握手结果。
 //
 // 生命周期约束：与 Boost.Asio 的 acceptor::async_accept(socket) 一致，
-// 挂起 accept 期间传入的 tun_stream 必须存活至完成回调触发；提前销毁
+// 挂起 accept 期间传入的 tun_tcp_socket 必须存活至完成回调触发；提前销毁
 // peer 将导致未定义行为。
-class tun_acceptor
+class tun_tcp_acceptor
 {
 public:
-    explicit tun_acceptor(tunio &engine)
+    explicit tun_tcp_acceptor(tunio &engine)
         : engine_(engine)
     {
     }
 
     template <typename CompletionToken>
-    auto async_accept(tun_stream &peer, CompletionToken &&token)
+    auto async_accept(tun_tcp_socket &peer, CompletionToken &&token)
     {
         return net::async_initiate<CompletionToken,
                                    void(boost::system::error_code)>(
@@ -53,11 +53,11 @@ public:
 
 private:
     template <typename Handler>
-    void do_accept(tun_stream &peer, Handler handler);
+    void do_accept(tun_tcp_socket &peer, Handler handler);
 
     tunio &engine_;
 };
 
 } // namespace tunio
 
-#include "tunio/detail/tun_acceptor_ops.hpp"
+#include "tunio/detail/tun_tcp_acceptor_ops.hpp"

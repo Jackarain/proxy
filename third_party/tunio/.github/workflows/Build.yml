@@ -1,0 +1,117 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  Linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Update OS and Compilers
+        run: |
+          sudo apt update
+          sudo apt install -y cmake ninja-build
+
+      - name: Install Boost headers
+        run: |
+          curl -fL --retry 3 -o "$RUNNER_TEMP/boost.tar.gz" \
+            https://archives.boost.io/release/1.92.0/source/boost_1_92_0.tar.gz
+          tar -xzf "$RUNNER_TEMP/boost.tar.gz" -C "$RUNNER_TEMP"
+          echo "BOOST_ROOT=$RUNNER_TEMP/boost_1_92_0" >> "$GITHUB_ENV"
+
+      - name: Build tunio
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -G Ninja
+          cmake --build build --config Release
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+  MacOS:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          brew install cmake ninja
+
+      - name: Install Boost headers
+        run: |
+          curl -fL --retry 3 -o "$RUNNER_TEMP/boost.tar.gz" \
+            https://archives.boost.io/release/1.92.0/source/boost_1_92_0.tar.gz
+          tar -xzf "$RUNNER_TEMP/boost.tar.gz" -C "$RUNNER_TEMP"
+          echo "BOOST_ROOT=$RUNNER_TEMP/boost_1_92_0" >> "$GITHUB_ENV"
+
+      - name: "Build tunio (Universal Binary: x86_64 + arm64)"
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -G Ninja
+          cmake --build build --config Release
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+  Windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 覆盖两种 Windows 设备实现: 默认 overlapped I/O 与 Wintun.
+        device: [overlapped, wintun]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Boost headers
+        shell: bash
+        run: |
+          # Windows 下 RUNNER_TEMP 为 D:\... 反斜杠路径, tar 会把盘符
+          # 误解析为远程主机, 先经 cygpath 转为 POSIX 路径再解压;
+          # BOOST_ROOT 写给原生 cmake, 使用混合分隔符路径.
+          RT="$(cygpath -u "$RUNNER_TEMP")"
+          RTW="$(cygpath -m "$RUNNER_TEMP")"
+          curl -fL --retry 3 -o "$RUNNER_TEMP/boost.tar.gz" \
+            https://archives.boost.io/release/1.92.0/source/boost_1_92_0.tar.gz
+          tar -xzf "$RT/boost.tar.gz" -C "$RT"
+          echo "BOOST_ROOT=$RTW/boost_1_92_0" >> "$GITHUB_ENV"
+
+      # tests/examples 目前依赖 POSIX 头文件, Windows 下仅构建库.
+      - name: Build tunio
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DUSE_WINTUN_DRIVER=${{ matrix.device == 'wintun' && 'ON' || 'OFF' }} -DTUNIO_BUILD_TESTS=OFF -DTUNIO_BUILD_EXAMPLES=OFF
+          cmake --build build --config Release --parallel
+
+  Mingw:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # 覆盖两种 Windows 设备实现: 默认 overlapped I/O 与 Wintun.
+        device: [overlapped, wintun]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Update OS and Compilers
+        run: |
+          sudo apt update
+          sudo apt install -y cmake ninja-build mingw-w64
+
+      # 交叉编译工具链以 /usr/x86_64-w64-mingw32 为 sysroot, 需把
+      # Boost 头文件复制进 sysroot, 否则 find_package(Boost) 找不到.
+      - name: Install Boost headers into MinGW sysroot
+        run: |
+          curl -fL --retry 3 -o "$RUNNER_TEMP/boost.tar.gz" \
+            https://archives.boost.io/release/1.92.0/source/boost_1_92_0.tar.gz
+          tar -xzf "$RUNNER_TEMP/boost.tar.gz" -C "$RUNNER_TEMP"
+          sudo cp -r "$RUNNER_TEMP/boost_1_92_0/boost" /usr/x86_64-w64-mingw32/include/
+
+      - name: Build tunio
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DUSE_WINTUN_DRIVER=${{ matrix.device == 'wintun' && 'ON' || 'OFF' }} -DTUNIO_BUILD_TESTS=OFF -DTUNIO_BUILD_EXAMPLES=OFF
+          cmake --build build --config Release

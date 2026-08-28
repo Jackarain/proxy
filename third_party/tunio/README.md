@@ -18,7 +18,7 @@ C++20 协程（`co_await`），适用于 tun2socks、透明代理与轻量级 VP
 - **完全 Asio 风格异步接口**：所有公开 API 采用 `CompletionToken` 与
   `async_initiate` 实现，与 `use_awaitable`、`use_future` 及自定义
   CompletionToken 无缝协作。
-- **TCP/UDP 对称抽象**：TCP 提供 `tun_stream`/`tun_acceptor`，UDP 提供
+- **TCP/UDP 对称抽象**：TCP 提供 `tun_tcp_socket`/`tun_tcp_acceptor`，UDP 提供
   `tun_udp_socket`/`tun_udp_acceptor`，命名与行为习惯对齐 Boost.Asio，
   降低学习成本。
 - **极低协议开销**：放弃重传与重组，通过 Dup-ACK 触发客户端快速重传，将
@@ -71,9 +71,9 @@ ctest --test-dir build --output-on-failure
 `examples/tun_echo.cpp`。
 
 ```cpp
-#include "tunio/tun_acceptor.hpp"
+#include "tunio/tun_tcp_acceptor.hpp"
 #include "tunio/tun_config.hpp"
-#include "tunio/tun_stream.hpp"
+#include "tunio/tun_tcp_socket.hpp"
 #include "tunio/tun_udp_acceptor.hpp"
 #include "tunio/tun_udp_socket.hpp"
 #include "tunio/tunio.hpp"
@@ -85,13 +85,13 @@ ctest --test-dir build --output-on-failure
 #include <memory>
 
 namespace net = boost::asio;
-using tunio::tun_acceptor;
-using tunio::tun_stream;
+using tunio::tun_tcp_acceptor;
+using tunio::tun_tcp_socket;
 using tunio::tun_udp_acceptor;
 using tunio::tun_udp_socket;
 
 // ---- TCP 全双工桥接：虚拟连接 <-> 本机 echo 服务 ----
-net::awaitable<void> bidirectional_bridge(tun_stream client,
+net::awaitable<void> bidirectional_bridge(tun_tcp_socket client,
                                           net::ip::tcp::endpoint target)
 {
     auto ex = co_await net::this_coro::executor;
@@ -103,7 +103,7 @@ net::awaitable<void> bidirectional_bridge(tun_stream client,
         client.reset(); // 后端不可达：立即向客户端发送 RST
         co_return;
     }
-    auto c = std::make_shared<tun_stream>(std::move(client));
+    auto c = std::make_shared<tun_tcp_socket>(std::move(client));
 
     net::co_spawn(
         ex,
@@ -145,9 +145,9 @@ net::awaitable<void> bidirectional_bridge(tun_stream client,
 net::awaitable<void> tcp_listener(tunio::tunio &engine, uint16_t echo_port)
 {
     auto ex = co_await net::this_coro::executor;
-    tun_acceptor acceptor(engine);
+    tun_tcp_acceptor acceptor(engine);
     for (;;) {
-        tun_stream client(ex);
+        tun_tcp_socket client(ex);
         boost::system::error_code ec;
         co_await acceptor.async_accept(
             client, net::redirect_error(net::use_awaitable, ec));
@@ -243,7 +243,7 @@ sudo ip route add 10.0.0.0/24 dev tun0   # 或由外部路由/策略路由注入
 应用层 (Proxy Logic / SOCKS5 Client)
     |  co_await / CompletionToken
 异步 API 层
-    tun_stream / tun_acceptor   tun_udp_socket / tun_udp_acceptor
+    tun_tcp_socket / tun_tcp_acceptor   tun_udp_socket / tun_udp_acceptor
 协议引擎层
     TCP Flow Engine             UDP Flow Engine
     Flow Dispatcher & NAT 表 (运行于 Strand)
@@ -258,8 +258,8 @@ sudo ip route add 10.0.0.0/24 dev tun0   # 或由外部路由/策略路由注入
 | `tunio::tunio` | `tunio/tunio.hpp` | 引擎入口：打开/关闭设备、查询 MTU/本地 IP/统计 |
 | `tunio::tun_config` | `tunio/tun_config.hpp` | 引擎配置：网络、句柄注入、资源上限、超时 |
 | `tunio::engine_stats` | `tunio/tun_config.hpp` | 原子统计计数（收发包/丢弃/连接/会话/ICMP） |
-| `tunio::tun_stream` | `tunio/tun_stream.hpp` | 虚拟 TCP 流，可读写、握手批准/拒绝、RST |
-| `tunio::tun_acceptor` | `tunio/tun_acceptor.hpp` | 虚拟 TCP 监听器，SYN 到达时触发 accept |
+| `tunio::tun_tcp_socket` | `tunio/tun_tcp_socket.hpp` | 虚拟 TCP 流，可读写、握手批准/拒绝、RST |
+| `tunio::tun_tcp_acceptor` | `tunio/tun_tcp_acceptor.hpp` | 虚拟 TCP 监听器，SYN 到达时触发 accept |
 | `tunio::tun_udp_socket` | `tunio/tun_udp_socket.hpp` | 虚拟 UDP 数据报会话，一次一报 |
 | `tunio::tun_udp_acceptor` | `tunio/tun_udp_acceptor.hpp` | 新 UDP 会话监听器 |
 
@@ -285,10 +285,10 @@ executor_type get_executor() const noexcept;   // 引擎内部 Strand
 四个套接字类型的行为与 Boost.Asio 对应类型对齐，全部异步操作均支持
 CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 
-- `tun_stream`：`async_read_some` / `async_write_some` /
+- `tun_tcp_socket`：`async_read_some` / `async_write_some` /
   `original_destination()` / `remote_endpoint()` / `accept()` / `reject()` /
   `reset()` / `shutdown()` / `close()` / `is_open()`。
-- `tun_acceptor`：`async_accept(tun_stream &peer, token)` / `cancel()`。
+- `tun_tcp_acceptor`：`async_accept(tun_tcp_socket &peer, token)` / `cancel()`。
 - `tun_udp_socket`：`async_receive_from` / `async_send_to(remote, ...)` /
   `client_endpoint()` / `set_timeout()` / `close()` / `is_open()`。
 - `tun_udp_acceptor`：`async_accept(tun_udp_socket &peer, token)` /
@@ -316,7 +316,7 @@ CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 ### 生命周期与线程安全
 
 - 首次 `open()` 必须在 `io_context` 开始运行（`io.run()`）之前调用。
-- 引擎必须在所有 `tun_stream` / `tun_udp_socket` 销毁之后、`io_context`
+- 引擎必须在所有 `tun_tcp_socket` / `tun_udp_socket` 销毁之后、`io_context`
   停止运行之前销毁（与 Boost.Asio 对 socket 的约束一致）。
 - 对已打开（或 close 后尚未完成异步清理）的引擎再次 `open()` 时，
   `io_context` 必须正在运行：`open()` 会在 Strand 上同步收尾上一代实例，

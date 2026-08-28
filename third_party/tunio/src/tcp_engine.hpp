@@ -250,7 +250,7 @@ private:
     bool ack_timer_waiting_ = false;
 };
 
-// ---- 供 tun_stream 调用的入口（内部自动派发到 Strand）----
+// ---- 供 tun_tcp_socket 调用的入口（内部自动派发到 Strand）----
 template <typename Handler>
 void tcp_flow_start_read(std::shared_ptr<tcp_flow> flow,
                          std::vector<net::mutable_buffer> buffers, size_t total,

@@ -17,8 +17,8 @@
 #include "proxy/doh_client.hpp"
 
 #include "tunio/tunio.hpp"
-#include "tunio/tun_stream.hpp"
-#include "tunio/tun_acceptor.hpp"
+#include "tunio/tun_tcp_socket.hpp"
+#include "tunio/tun_tcp_acceptor.hpp"
 #include "tunio/tun_udp_socket.hpp"
 #include "tunio/tun_udp_acceptor.hpp"
 
@@ -74,9 +74,9 @@ namespace proxy {
 	class tun_server;
 
 	// tun_tcp_flow 实现一个 TCP 连接的转发：
-	// - tunio 引擎完成三次握手后经 async_accept 交付 tun_stream；
+	// - tunio 引擎完成三次握手后经 async_accept 交付 tun_tcp_socket；
 	// - 按分流规则经 proxy_pass 或直连建立上游连接；
-	// - 双向搬运客户端（tun_stream）与上游之间的数据，处理半关闭。
+	// - 双向搬运客户端（tun_tcp_socket）与上游之间的数据，处理半关闭。
 	class tun_tcp_flow
 		: public std::enable_shared_from_this<tun_tcp_flow>
 	{
@@ -87,7 +87,7 @@ namespace proxy {
 			const std::shared_ptr<tun_server>& owner,
 			const proxy_server_option& opt,
 			tcp_flow_key key,
-			tunio::tun_stream stream);
+			tunio::tun_tcp_socket stream);
 
 		~tun_tcp_flow();
 
@@ -121,7 +121,7 @@ namespace proxy {
 		// 与上游代理完成协议握手（SOCKS5 或 HTTP CONNECT）.
 		net::awaitable<bool> do_proxy_handshake(const urls::url& proxy_url);
 
-		// 客户端（tun_stream）数据转发到上游的发送协程.
+		// 客户端（tun_tcp_socket）数据转发到上游的发送协程.
 		net::awaitable<void> tx_loop();
 
 		// 读取上游数据并转发到客户端的接收协程.
@@ -167,7 +167,7 @@ namespace proxy {
 		std::atomic<uint8_t> m_proto { 0 };
 
 		// m_client_stream 保存 tunio 交付的客户端 TCP 流.
-		tunio::tun_stream m_client_stream;
+		tunio::tun_tcp_socket m_client_stream;
 
 		// m_upstream 保存与上游代理或目标的连接.
 		variant_stream_type m_upstream;
@@ -580,7 +580,7 @@ namespace proxy {
 		std::unique_ptr<tunio::tunio> m_tunio;
 
 		// m_tcp_acceptor/m_udp_acceptor 保存引擎的 accept 接口.
-		std::unique_ptr<tunio::tun_acceptor> m_tcp_acceptor;
+		std::unique_ptr<tunio::tun_tcp_acceptor> m_tcp_acceptor;
 		std::unique_ptr<tunio::tun_udp_acceptor> m_udp_acceptor;
 
 		// m_protect_handler 保存出站 socket 的 protect 请求回调.

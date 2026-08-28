@@ -1,5 +1,5 @@
 ﻿//
-// tun_stream.hpp
+// tun_tcp_socket.hpp
 // ~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
@@ -32,16 +32,16 @@ struct tcp_flow;
 //
 // 握手: 收到 SYN 后引擎不立即回复, 由 accept()/reject() 或首次读写
 // （隐式批准）决定握手结果; 三次握手完成前读写操作会缓冲, 完成后交付.
-class tun_stream
+class tun_tcp_socket
 {
 public:
     using executor_type = net::any_io_executor;
 
-    explicit tun_stream(executor_type ex);
-    ~tun_stream();
+    explicit tun_tcp_socket(executor_type ex);
+    ~tun_tcp_socket();
 
-    tun_stream(tun_stream &&) noexcept;
-    tun_stream &operator=(tun_stream &&) noexcept;
+    tun_tcp_socket(tun_tcp_socket &&) noexcept;
+    tun_tcp_socket &operator=(tun_tcp_socket &&) noexcept;
 
     executor_type get_executor() const noexcept;
 
@@ -109,9 +109,9 @@ private:
     executor_type ex_;
     std::shared_ptr<detail::tcp_flow> flow_;
 
-    friend class tun_acceptor;
+    friend class tun_tcp_acceptor;
 };
 
 } // namespace tunio
 
-#include "tunio/detail/tun_stream_ops.hpp"
+#include "tunio/detail/tun_tcp_socket_ops.hpp"

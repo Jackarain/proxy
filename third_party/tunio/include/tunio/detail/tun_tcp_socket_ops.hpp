@@ -1,5 +1,5 @@
 ﻿//
-// tun_stream_ops.hpp
+// tun_tcp_socket_ops.hpp
 // ~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
@@ -11,7 +11,7 @@
 #pragma once
 
 #include "tcp_engine.hpp"
-#include "tunio/tun_stream.hpp"
+#include "tunio/tun_tcp_socket.hpp"
 
 #include <memory>
 #include <vector>
@@ -23,7 +23,7 @@ namespace detail {
 } // namespace detail
 
 template <typename MutableBufferSequence, typename Handler>
-void tun_stream::do_read_some(MutableBufferSequence &&buffers, Handler handler)
+void tun_tcp_socket::do_read_some(MutableBufferSequence &&buffers, Handler handler)
 {
     std::vector<net::mutable_buffer> seq;
     size_t total = 0;
@@ -45,7 +45,7 @@ void tun_stream::do_read_some(MutableBufferSequence &&buffers, Handler handler)
 }
 
 template <typename ConstBufferSequence, typename Handler>
-void tun_stream::do_write_some(ConstBufferSequence &&buffers, Handler handler)
+void tun_tcp_socket::do_write_some(ConstBufferSequence &&buffers, Handler handler)
 {
     std::vector<net::const_buffer> seq;
     size_t total = 0;

@@ -37,8 +37,8 @@ static void test_handshake_data_fin()
 {
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -209,8 +209,8 @@ static void test_fin_retransmit_reacked()
 {
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -271,8 +271,8 @@ static void test_zero_window_flow_control()
 {
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -345,8 +345,8 @@ static void test_rst()
 {
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -398,8 +398,8 @@ static void test_app_reset()
 {
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -452,8 +452,8 @@ static void test_data_with_fin()
 {
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -535,8 +535,8 @@ static void test_write_after_shutdown_send()
 {
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -640,8 +640,8 @@ static void test_write_queue_limit()
     engine_env env(1500, std::chrono::seconds(1), std::chrono::seconds(30),
                    std::chrono::seconds(30), 1024 * 1024, 16);
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -723,8 +723,8 @@ static void test_close_reopen()
     }
 
     // 验证新引擎数据通路正常：完成一次握手（经 dev2）
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code e) {
         if (!e) {
@@ -785,8 +785,8 @@ static void test_oversized_declared_length()
     // 后续合法报文仍须正常处理（on_read 拆包防护）。
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -831,9 +831,9 @@ static void test_reentrant_reset_in_handler()
     // 读完成回调在引擎 Strand 上内联执行时，回调内 reset() 并销毁流：
     // 引擎在回调返回后仍须安全使用流（on_packet 强引用保活），否则 UAF。
     engine_env env;
-    tun_acceptor acceptor(env.engine);
+    tun_tcp_acceptor acceptor(env.engine);
     // 使用引擎 Strand 作为执行器：完成回调在 Strand 上内联执行
-    auto stream = std::make_shared<tun_stream>(env.engine.get_executor());
+    auto stream = std::make_shared<tun_tcp_socket>(env.engine.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(*stream, [&](boost::system::error_code e) {
@@ -890,8 +890,8 @@ static void test_reject_handshake()
     // 应用 reject() 拒绝握手：引擎应回复 RST 并回收流
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -927,8 +927,8 @@ static void test_syn_retransmit_reack()
     // SYN_ACK_SENT 状态下客户端重传 SYN：引擎应重新发送 SYN-ACK
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -977,8 +977,8 @@ static void test_implicit_accept_on_first_write()
     // 不调用 accept()：首次 async_write_some 隐式批准握手
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(
@@ -1038,8 +1038,8 @@ static void test_implicit_accept_on_first_read()
     // 不调用 accept()：首次 async_read_some 隐式批准握手
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(
@@ -1091,8 +1091,8 @@ static void test_accepted_no_ack_cleanup()
     engine_env env(1500, std::chrono::seconds(1), std::chrono::seconds(1),
                    std::chrono::seconds(1));
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {
@@ -1134,8 +1134,8 @@ static void test_accept_idempotent()
     // accept() 幂等：重复调用只回复一次 SYN-ACK
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {

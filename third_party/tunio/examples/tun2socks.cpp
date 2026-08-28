@@ -18,9 +18,9 @@
 //   - TCP：引擎终止虚拟连接，应用层经 SOCKS5 CONNECT 连到代理后全双工桥接；
 //   - UDP：引擎维护 NAT 会话，应用层经 SOCKS5 UDP ASSOCIATE 中继转发；
 //   - 后端连接失败时向客户端发送 RST。
-#include "tunio/tun_acceptor.hpp"
+#include "tunio/tun_tcp_acceptor.hpp"
 #include "tunio/tun_config.hpp"
-#include "tunio/tun_stream.hpp"
+#include "tunio/tun_tcp_socket.hpp"
 #include "tunio/tun_udp_acceptor.hpp"
 #include "tunio/tun_udp_socket.hpp"
 #include "tunio/tunio.hpp"
@@ -120,7 +120,7 @@ options parse_args(int argc, char **argv)
 }
 
 // ---- TCP 全双工数据泵（与 DESIGN.md §10.1 一致）----
-net::awaitable<void> tcp_bridge(tunio::tun_stream client,
+net::awaitable<void> tcp_bridge(tunio::tun_tcp_socket client,
                                 net::ip::tcp::endpoint proxy)
 {
     auto ex = co_await net::this_coro::executor;
@@ -137,7 +137,7 @@ net::awaitable<void> tcp_bridge(tunio::tun_stream client,
         co_return;
     }
 
-    auto c = std::make_shared<tunio::tun_stream>(std::move(client));
+    auto c = std::make_shared<tunio::tun_tcp_socket>(std::move(client));
     net::co_spawn(
         ex,
         [c, upstream]() -> net::awaitable<void> {
@@ -178,9 +178,9 @@ net::awaitable<void> tcp_listener(tunio::tunio &engine,
                                   net::ip::tcp::endpoint proxy)
 {
     auto ex = co_await net::this_coro::executor;
-    tunio::tun_acceptor acceptor(engine);
+    tunio::tun_tcp_acceptor acceptor(engine);
     for (;;) {
-        tunio::tun_stream client(ex);
+        tunio::tun_tcp_socket client(ex);
         boost::system::error_code ec;
         co_await acceptor.async_accept(
             client, net::redirect_error(net::use_awaitable, ec));

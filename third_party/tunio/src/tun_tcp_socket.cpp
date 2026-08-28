@@ -1,5 +1,5 @@
 ﻿//
-// tun_stream.cpp
+// tun_tcp_socket.cpp
 // ~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
@@ -8,28 +8,28 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "tunio/tun_stream.hpp"
+#include "tunio/tun_tcp_socket.hpp"
 
 #include "tcp_engine.hpp"
-#include "tunio/detail/tun_stream_ops.hpp"
+#include "tunio/detail/tun_tcp_socket_ops.hpp"
 
 #include <utility>
 
 namespace tunio {
 
-tun_stream::tun_stream(executor_type ex)
+tun_tcp_socket::tun_tcp_socket(executor_type ex)
     : ex_(std::move(ex))
 {
 }
 
-tun_stream::~tun_stream()
+tun_tcp_socket::~tun_tcp_socket()
 {
     close();
 }
 
-tun_stream::tun_stream(tun_stream &&) noexcept = default;
+tun_tcp_socket::tun_tcp_socket(tun_tcp_socket &&) noexcept = default;
 
-tun_stream &tun_stream::operator=(tun_stream &&other) noexcept
+tun_tcp_socket &tun_tcp_socket::operator=(tun_tcp_socket &&other) noexcept
 {
     if (this != &other) {
         close();
@@ -39,12 +39,12 @@ tun_stream &tun_stream::operator=(tun_stream &&other) noexcept
     return *this;
 }
 
-tun_stream::executor_type tun_stream::get_executor() const noexcept
+tun_tcp_socket::executor_type tun_tcp_socket::get_executor() const noexcept
 {
     return ex_;
 }
 
-net::ip::tcp::endpoint tun_stream::original_destination() const
+net::ip::tcp::endpoint tun_tcp_socket::original_destination() const
 {
     if (!flow_) {
         return {};
@@ -52,7 +52,7 @@ net::ip::tcp::endpoint tun_stream::original_destination() const
     return flow_->original_destination();
 }
 
-net::ip::tcp::endpoint tun_stream::remote_endpoint() const
+net::ip::tcp::endpoint tun_tcp_socket::remote_endpoint() const
 {
     if (!flow_) {
         return {};
@@ -60,7 +60,7 @@ net::ip::tcp::endpoint tun_stream::remote_endpoint() const
     return flow_->remote_endpoint();
 }
 
-void tun_stream::shutdown(net::ip::tcp::socket::shutdown_type what,
+void tun_tcp_socket::shutdown(net::ip::tcp::socket::shutdown_type what,
                           boost::system::error_code &ec)
 {
     ec = {};
@@ -78,35 +78,35 @@ void tun_stream::shutdown(net::ip::tcp::socket::shutdown_type what,
     }
 }
 
-void tun_stream::close()
+void tun_tcp_socket::close()
 {
     if (flow_) {
         detail::tcp_flow_close(flow_);
     }
 }
 
-void tun_stream::reset()
+void tun_tcp_socket::reset()
 {
     if (flow_) {
         detail::tcp_flow_reset(flow_);
     }
 }
 
-void tun_stream::accept()
+void tun_tcp_socket::accept()
 {
     if (flow_) {
         detail::tcp_flow_accept(flow_);
     }
 }
 
-void tun_stream::reject()
+void tun_tcp_socket::reject()
 {
     if (flow_) {
         detail::tcp_flow_reject(flow_);
     }
 }
 
-bool tun_stream::is_open() const noexcept
+bool tun_tcp_socket::is_open() const noexcept
 {
     return detail::tcp_flow_is_open(flow_);
 }

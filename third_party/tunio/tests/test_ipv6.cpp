@@ -37,8 +37,8 @@ static void test_tcp6_handshake_data_fin()
 {
     engine_env env;
     auto &io = env.io;
-    tun_acceptor acceptor(env.engine);
-    tun_stream peer(io.get_executor());
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
 
     std::promise<boost::system::error_code> accept_done;
     acceptor.async_accept(peer, [&](boost::system::error_code ec) {

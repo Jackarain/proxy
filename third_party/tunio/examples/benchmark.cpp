@@ -8,9 +8,9 @@
 // 使用：cmake 构建后运行 examples/benchmark；对比不同版本时可用
 // -DBENCH_TAG=\"after\" 之类的宏标记输出，并保证两次运行使用相同
 // 的构建配置（Release/Debug 一致）。
-#include "tunio/tun_acceptor.hpp"
+#include "tunio/tun_tcp_acceptor.hpp"
 #include "tunio/tun_config.hpp"
-#include "tunio/tun_stream.hpp"
+#include "tunio/tun_tcp_socket.hpp"
 #include "tunio/tun_udp_acceptor.hpp"
 #include "tunio/tun_udp_socket.hpp"
 #include "tunio/tunio.hpp"
@@ -375,10 +375,10 @@ constexpr uint16_t CLIENT_PORT = 12345;
 constexpr uint16_t DEST_PORT = 80;
 
 // ---- TCP 握手：返回已建立的 stream ----
-tun_stream establish_tcp(engine_env &env, tun_acceptor &acc,
+tun_tcp_socket establish_tcp(engine_env &env, tun_tcp_acceptor &acc,
                          uint32_t &engine_iss)
 {
-    tun_stream peer(env.io.get_executor());
+    tun_tcp_socket peer(env.io.get_executor());
     latch done;
     acc.async_accept(peer, [&](boost::system::error_code) { done.post(); });
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x02,
@@ -398,9 +398,9 @@ tun_stream establish_tcp(engine_env &env, tun_acceptor &acc,
 static void bench_tcp_read(long long n, long long warmup)
 {
     engine_env env;
-    tun_acceptor acc(env.engine);
+    tun_tcp_acceptor acc(env.engine);
     uint32_t engine_iss = 0;
-    tun_stream peer = establish_tcp(env, acc, engine_iss);
+    tun_tcp_socket peer = establish_tcp(env, acc, engine_iss);
     latch done;
 
     char buf[64];
@@ -423,9 +423,9 @@ static void bench_tcp_read(long long n, long long warmup)
 static void bench_tcp_write(long long n, long long warmup)
 {
     engine_env env;
-    tun_acceptor acc(env.engine);
+    tun_tcp_acceptor acc(env.engine);
     uint32_t engine_iss = 0;
-    tun_stream peer = establish_tcp(env, acc, engine_iss);
+    tun_tcp_socket peer = establish_tcp(env, acc, engine_iss);
     latch done;
 
     auto ack_seg = make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x10,
@@ -499,17 +499,17 @@ static void bench_udp(long long n, long long warmup)
 static void bench_accept(long long n, long long warmup)
 {
     engine_env env;
-    tun_acceptor acc(env.engine);
+    tun_tcp_acceptor acc(env.engine);
     auto syn = make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x02, 1000,
                         0, 65535, {}, true);
     std::vector<uint8_t> synack;
-    std::vector<tun_stream> conns;
+    std::vector<tun_tcp_socket> conns;
     conns.reserve(static_cast<size_t>(n + warmup));
     latch done;
     uint16_t cport = CLIENT_PORT;
     measure("accept", n, warmup, [&] {
         conns.emplace_back(env.io.get_executor());
-        tun_stream &peer = conns.back();
+        tun_tcp_socket &peer = conns.back();
         acc.async_accept(peer, [&](boost::system::error_code) { done.post(); });
         const uint16_t p = htons(cport++);
         std::memcpy(syn.data() + 20, &p, 2);

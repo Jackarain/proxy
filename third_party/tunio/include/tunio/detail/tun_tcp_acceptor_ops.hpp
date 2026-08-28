@@ -1,5 +1,5 @@
 ﻿//
-// tun_acceptor_ops.hpp
+// tun_tcp_acceptor_ops.hpp
 // ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
@@ -10,13 +10,13 @@
 
 #pragma once
 
-#include "tunio/tun_acceptor.hpp"
+#include "tunio/tun_tcp_acceptor.hpp"
 #include "tunio_impl.hpp"
 
 namespace tunio {
 
 template <typename Handler>
-void tun_acceptor::do_accept(tun_stream &peer, Handler handler)
+void tun_tcp_acceptor::do_accept(tun_tcp_socket &peer, Handler handler)
 {
     auto ex = peer.get_executor();
     engine_.impl_->async_accept_tcp(

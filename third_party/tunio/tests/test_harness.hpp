@@ -11,9 +11,9 @@
 #pragma once
 
 #include "tunio/packet_buffer.hpp"
-#include "tunio/tun_acceptor.hpp"
+#include "tunio/tun_tcp_acceptor.hpp"
 #include "tunio/tun_config.hpp"
-#include "tunio/tun_stream.hpp"
+#include "tunio/tun_tcp_socket.hpp"
 #include "tunio/tun_udp_acceptor.hpp"
 #include "tunio/tun_udp_socket.hpp"
 #include "tunio/tunio.hpp"
@@ -45,9 +45,9 @@ using tunio::five_tuple;
 using tunio::invalid_native_handle;
 using tunio::native_handle_type;
 using tunio::packet_buffer;
-using tunio::tun_acceptor;
+using tunio::tun_tcp_acceptor;
 using tunio::tun_config;
-using tunio::tun_stream;
+using tunio::tun_tcp_socket;
 using tunio::tun_udp_acceptor;
 using tunio::tun_udp_socket;
 
