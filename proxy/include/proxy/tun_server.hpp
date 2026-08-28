@@ -440,6 +440,7 @@ namespace proxy {
 			uint64_t conn_total { 0 };
 			size_t active_connections { 0 };
 			size_t pool_connections { 0 };
+			size_t pool_target { 0 };
 		};
 
 		// 返回当前流量与连接统计.

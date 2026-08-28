@@ -118,32 +118,30 @@ namespace proxy {
 			// 健康检查：剔除已被对端断开的空闲连接.
 			prune_dead();
 
-			// 补充连接.
+			// 补充连接：池未满立即连续建连直到补满
+			// （启动预热与取走/断开后的补充均不限速）.
 			if (idle_count() < m_target)
 			{
-				if (m_reached_target)
+				bool filled = true;
+				while (idle_count() < m_target && !m_closed)
 				{
-					// 稳态：连接被取走/断开后立即补满.
-					while (idle_count() < m_target && !m_closed)
+					if (!co_await build_one())
 					{
-						if (!co_await build_one())
-							break;
+						filled = false;
+						break;
 					}
-					if (m_closed)
-					{
-						m_maintaining = false;
-						co_return;
-					}
-					continue;  // 已补满，回到循环.
 				}
-
-				// 预热：每 k_prewarm_interval 建 1 条.
-				co_await build_one();
-				if (idle_count() >= m_target)
+				if (m_closed)
+				{
+					m_maintaining = false;
+					co_return;
+				}
+				if (filled)
 				{
 					m_reached_target = true;
-					continue;
+					continue;  // 已补满，回到循环.
 				}
+				// 建连失败：落到下方等待 k_retry_interval 后重试.
 			}
 
 			// 保活：空闲连接超过 k_idle_timeout 未被使用，整体重建.
@@ -165,8 +163,9 @@ namespace proxy {
 				continue;  // 重建后回到循环立即补齐.
 			}
 
-			// 等待建连间隔（或被 acquire 取走唤醒）.
-			m_timer->expires_after(k_prewarm_interval);
+			// 等待：建连失败后的重试间隔，或被 acquire 取走连接时
+			// 取消定时器立即唤醒补充.
+			m_timer->expires_after(k_retry_interval);
 			boost::system::error_code ec;
 			co_await m_timer->async_wait(net_awaitable[ec]);
 			if (m_closed)
@@ -241,6 +240,9 @@ namespace proxy {
 		// - 返回 0 表示对端已 FIN（EOF）；
 		// - EAGAIN/EWOULDBLOCK 表示连接正常，无数据可读；
 		// - 其他错误表示连接已断开.
+		// 注意：有数据可读不代表连接异常——TLS 会话中服务端可能主动
+		// 发送 NewSessionTicket、HTTP/2 设置帧等（PEEK 只能看到密文），
+		// 若据此丢弃会导致池连接被反复误剔，故有数据时判定连接存活.
 		char buf;
 		ssize_t n = ::recv(fd, &buf, 1, MSG_PEEK | MSG_DONTWAIT);
 		if (n == 0)
@@ -251,8 +253,7 @@ namespace proxy {
 				return true;
 			return false;
 		}
-		// 空闲连接不应有数据，若有说明连接状态异常，丢弃.
-		return false;
+		return true;
 #endif
 	}
 

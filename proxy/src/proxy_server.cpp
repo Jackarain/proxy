@@ -2063,6 +2063,7 @@ boost::json::object proxy_server::snapshot_report()
 	// 统计, 并入全局统计（tun 无用户概念, 连接明细在下方并入匿名用户）.
 	uint64_t tun_conn_total = 0;
 	size_t tun_pool_connections = 0;
+	size_t tun_pool_target = 0;
 	if (m_tun_server)
 	{
 		auto ts = m_tun_server->get_stats();
@@ -2070,6 +2071,7 @@ boost::json::object proxy_server::snapshot_report()
 		global_tx += ts.tx_bytes;
 		tun_conn_total = ts.conn_total;
 		tun_pool_connections = ts.pool_connections;
+		tun_pool_target = ts.pool_target;
 	}
 
 	// 按用户聚合:
@@ -2228,6 +2230,7 @@ boost::json::object proxy_server::snapshot_report()
 	report["conn_total"] = static_cast<int64_t>(
 		stats.conn_total_.load() + tun_conn_total);
 	report["pool_connections"] = static_cast<int64_t>(tun_pool_connections);
+	report["pool_target"] = static_cast<int64_t>(tun_pool_target);
 
 	// 6) 组装用户明细.
 	//    usage_total = rx + tx + 续接基线, 为含续接基线的累计总流量,

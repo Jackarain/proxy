@@ -341,7 +341,12 @@ class _RunningPageState extends State<RunningPage>
             Expanded(child: _infoTile('累计连接', '${s['conn_total'] ?? 0}')),
             const SizedBox(width: 12),
             Expanded(
-              child: _infoTile('池连接数', '${s['pool_connections'] ?? 0}'),
+              child: _infoTile(
+                '池连接数',
+                (s['pool_target'] ?? 0) > 0
+                    ? '${s['pool_connections'] ?? 0}/${s['pool_target']}'
+                    : '${s['pool_connections'] ?? 0}',
+              ),
             ),
           ],
         ),

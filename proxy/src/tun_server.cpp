@@ -2183,6 +2183,7 @@ namespace proxy {
 		st.tx_bytes = m_tx_bytes.load();
 		st.conn_total = m_conn_total.load();
 		st.pool_connections = m_proxy_pool ? m_proxy_pool->idle_count() : 0;
+		st.pool_target = m_proxy_pool ? m_proxy_pool->target() : 0;
 		{
 			std::lock_guard<std::mutex> lk(m_flows_mutex);
 			size_t active = m_tcp_flows.size();

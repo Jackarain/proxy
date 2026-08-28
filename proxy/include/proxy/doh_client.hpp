@@ -310,8 +310,9 @@ namespace proxy {
 	// （TCP 与可选 TLS 握手均已完成），供 tun_server 的 TCP flow 复用，
 	// 避免每次新连接都重复 TCP 三次握手与 TLS 握手.
 	//
-	// - 启动后每 k_prewarm_interval 建 1 条连接，直到池满 m_target 条；
+	// - 启动后立即连续建连直到池满 m_target 条（预热不限速）；
 	// - 连接被取走、意外/超时断开或保活重建后，立即异步补建维持池满；
+	// - 建连失败按 k_retry_interval 间隔重试；
 	// - 空闲连接超过 k_idle_timeout 未被使用会被整体重建（保活），
 	//   防止代理端空闲超时断开导致复用失败.
 	class proxy_pass_pool
@@ -341,9 +342,12 @@ namespace proxy {
 		// 返回当前可用（空闲）连接数量.
 		size_t idle_count() const noexcept;
 
+		// 返回池目标连接数量.
+		size_t target() const noexcept { return m_target; }
+
 	private:
-		// 维护协程：预热每 k_prewarm_interval 建 1 条，池满后
-		// 连接减少立即补建，空闲超时整体重建保活.
+		// 维护协程：池未满立即连续补建（预热不限速），
+		// 建连失败按 k_retry_interval 重试，空闲超时整体重建保活.
 		net::awaitable<void> maintain();
 
 		// 建立一条到 proxy_pass 的连接（TCP + 可选 TLS），
@@ -360,8 +364,8 @@ namespace proxy {
 		static bool is_conn_alive(variant_stream_type& stream) noexcept;
 
 	private:
-		// 预热建连间隔：启动后每该时长建 1 条连接.
-		static constexpr std::chrono::seconds k_prewarm_interval{ 5 };
+		// 建连失败后的重试间隔.
+		static constexpr std::chrono::seconds k_retry_interval{ 5 };
 
 		// 空闲连接保活超时：超过后整体重建，避免被代理端空闲断开.
 		static constexpr std::chrono::seconds k_idle_timeout{ 60 };
