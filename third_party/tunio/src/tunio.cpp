@@ -24,8 +24,8 @@ namespace detail {
 
 tunio_impl::tunio_impl(net::io_context &ctx)
     : strand_ex_(net::make_strand(ctx))
-    , stats_(std::make_shared<engine_stats>())
     , device_(std::make_shared<packet_device>(ctx))
+    , stats_(std::make_shared<engine_stats>())
     , read_buf_(2048, 64)
 {
 }
@@ -199,11 +199,16 @@ void tunio_impl::start_read()
     }
     reading_ = true;
     read_epoch_ = epoch_;
-    auto self = shared_from_this();
+    // 弱引用避免读回调自持有形成引用环：引擎释放后迟到读回调直接跳过
+    auto self = weak_from_this();
     device_->async_read_packet(
         read_buf_, net::bind_executor(
                        strand_ex_, [self](const boost::system::error_code &ec,
-                                          size_t n) { self->on_read(ec, n); }));
+                                          size_t n) {
+                           if (auto s = self.lock()) {
+                               s->on_read(ec, n);
+                           }
+                       }));
 }
 
 void tunio_impl::on_read(const boost::system::error_code &ec, size_t n)

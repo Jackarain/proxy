@@ -59,9 +59,12 @@ void tcp_engine::start_sweep()
 {
     sweep_timer_.expires_after(std::chrono::seconds(1));
     // 定时器以引擎 Strand 构造，完成回调已在 Strand 上，无需再派发
+    // 弱引用避免定时器回调自持有形成引用环，引擎释放后回调直接跳过
     sweep_timer_.async_wait(
-        [self = shared_from_this()](const boost::system::error_code &ec) {
-            self->on_sweep(ec);
+        [self = weak_from_this()](const boost::system::error_code &ec) {
+            if (auto s = self.lock()) {
+                s->on_sweep(ec);
+            }
         });
 }
 
@@ -497,8 +500,10 @@ void tcp_engine::defer_ack(tcp_flow &f)
     ack_timer_.expires_after(std::chrono::milliseconds(40));
     // 定时器以引擎 Strand 构造，完成回调已在 Strand 上，无需再派发
     ack_timer_.async_wait(
-        [self = shared_from_this()](const boost::system::error_code &ec) {
-            self->on_ack_timer(ec);
+        [self = weak_from_this()](const boost::system::error_code &ec) {
+            if (auto s = self.lock()) {
+                s->on_ack_timer(ec);
+            }
         });
 }
 
