@@ -240,6 +240,9 @@ void tcp_engine::handle_segment(const std::shared_ptr<tcp_flow> &f,
             if (data_len > 0 && seq == f->rcv_nxt) {
                 deliver_data(*f, data, data_len);
             }
+            // 握手完成可能激活此前因窗口为 0 挂起的发送协程
+            // （SYN_ACK_SENT 分支提前返回，不会走到末尾的 signal_write）.
+            signal_write(*f);
         }
         return;
     }
