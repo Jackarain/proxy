@@ -33,7 +33,10 @@ namespace detail {
 class tunio_impl : public std::enable_shared_from_this<tunio_impl>
 {
 public:
-    explicit tunio_impl(net::io_context &ctx);
+    // single_thread=true（默认）时内部串行执行器直接使用 io_context 的
+    // 执行器，无 Strand 派发开销，要求 io_context 单线程 run；false 时
+    // 使用 Strand，支持多线程 run.
+    explicit tunio_impl(net::io_context &ctx, bool single_thread = true);
     ~tunio_impl();
 
     bool open(const tun_config &cfg, boost::system::error_code &ec);

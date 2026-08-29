@@ -9,8 +9,10 @@ C++20 协程（`co_await`），适用于 tun2socks、透明代理与轻量级 VP
 协议栈采用轻量级转发策略：接收方向维护乱序重排缓存并按序交付，动态
 接收窗口（按剩余缓冲通告）避免对端超发；发送方向以最精简的 RTO 重传
 （直接重读用户写缓冲，无重传队列）与零窗口持久探测保证写操作在丢包链路
-上仍能完成，从而兼顾低 CPU 开销与基本可靠性。所有内部状态变更强制运行于
-单个 Strand 之上，支持多线程运行 `io_context` 且无锁竞争。
+上仍能完成，从而兼顾低 CPU 开销与基本可靠性。所有内部状态变更强制串行执行：
+单线程模式（默认）直接运行于 `io_context` 执行器上，省去每包 Strand 派发
+开销；多线程模式运行于单个 Strand 上，无锁竞争。构造时通过
+`tunio(io, single_thread)` 选择。
 
 ## 特性
 
@@ -236,9 +238,11 @@ sudo ip route add 10.0.0.0/24 dev tun0   # 或由外部路由/策略路由注入
 ### 架构概览
 
 系统采用四层解耦架构：设备抽象层（`packet_device`）负责跨平台 TUN I/O；
-协议引擎层（TCP/UDP Flow Engine）在 Strand 上维护流表与 NAT；异步 API 层
-向上层暴露四个套接字抽象；应用层通过协程实现业务逻辑。所有内部状态变更
-均运行于引擎的 Strand 之上，多线程 `io_context` 下无锁竞争。
+协议引擎层（TCP/UDP Flow Engine）在引擎串行执行器上维护流表与 NAT；
+异步 API 层向上层暴露四个套接字抽象；应用层通过协程实现业务逻辑。所有
+内部状态变更均串行执行：单线程模式（默认）要求 `io_context` 单线程
+`run()`；多线程模式（`tunio(io, false)`）使用 Strand，多线程 `io_context`
+下无锁竞争。
 
 ```
 应用层 (Proxy Logic / SOCKS5 Client)
@@ -247,7 +251,7 @@ sudo ip route add 10.0.0.0/24 dev tun0   # 或由外部路由/策略路由注入
     tun_tcp_socket / tun_tcp_acceptor   tun_udp_socket / tun_udp_acceptor
 协议引擎层
     TCP Flow Engine             UDP Flow Engine
-    Flow Dispatcher & NAT 表 (运行于 Strand)
+    Flow Dispatcher & NAT 表 (串行执行器)
 设备抽象层
     packet_device (Linux TUN / macOS utun / Windows Wintun)
 ```
@@ -267,19 +271,19 @@ sudo ip route add 10.0.0.0/24 dev tun0   # 或由外部路由/策略路由注入
 ### 引擎入口 `tunio`
 
 ```cpp
-explicit tunio(net::io_context &ctx);
+explicit tunio(net::io_context &ctx, bool single_thread = true);
 bool open(const tun_config &config, boost::system::error_code &ec);
 void close();
 bool is_open() const noexcept;
 size_t mtu() const noexcept;
 net::ip::address local_address() const noexcept;
 const engine_stats &stats() const noexcept;
-executor_type get_executor() const noexcept;   // 引擎内部 Strand
+executor_type get_executor() const noexcept;   // 引擎内部串行执行器
 ```
 
 `open()` 同步完成设备创建与配置；`close()` 停止数据通路并清理全部会话与
-挂起操作；`get_executor()` 返回引擎内部 Strand，应用层可借其提交任务与
-引擎状态串行化。
+挂起操作；`get_executor()` 返回引擎内部串行执行器（单线程模式为 io 执行器，
+多线程模式为 Strand），应用层可借其提交任务与引擎状态串行化。
 
 ### 套接字抽象
 
@@ -321,12 +325,13 @@ CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 - 引擎必须在所有 `tun_tcp_socket` / `tun_udp_socket` 销毁之后、`io_context`
   停止运行之前销毁（与 Boost.Asio 对 socket 的约束一致）。
 - 对已打开（或 close 后尚未完成异步清理）的引擎再次 `open()` 时，
-  `io_context` 必须正在运行：`open()` 会在 Strand 上同步收尾上一代实例，
+  `io_context` 必须正在运行：`open()` 会在串行执行器上同步收尾上一代实例，
   `io_context` 未运行时该收尾任务无法执行，将导致调用线程阻塞等待。
 - 运行期间需要重新 `open()` 时，请通过 `get_executor()` 派发屏障任务，
-  确保与引擎 Strand 上的任务串行。
+  确保与引擎内部任务串行。
 - 所有异步操作完成回调在调用方绑定的执行器上触发；引擎内部状态由
-  Strand 串行化，多线程运行 `io_context` 是安全的。
+  串行执行器串行化。单线程模式要求 `io_context` 单线程 `run()`；多线程
+  模式由 Strand 串行化，多线程运行 `io_context` 是安全的。
 - `async_write_some` / `async_send_to` 的缓冲区必须保持有效至完成回调
   触发（与 Boost.Asio 语义一致，引擎只引用不拷贝）。
 

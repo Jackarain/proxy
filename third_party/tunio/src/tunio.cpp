@@ -22,8 +22,9 @@
 namespace tunio {
 namespace detail {
 
-tunio_impl::tunio_impl(net::io_context &ctx)
-    : strand_ex_(net::make_strand(ctx))
+tunio_impl::tunio_impl(net::io_context &ctx, bool single_thread)
+    : strand_ex_(single_thread ? net::any_io_executor(ctx.get_executor())
+                               : net::any_io_executor(net::make_strand(ctx)))
     , device_(std::make_shared<packet_device>(ctx))
     , stats_(std::make_shared<engine_stats>())
 {
@@ -498,8 +499,8 @@ void tunio_impl::handle_icmpv6(const ip_packet_info &ip, const uint8_t *icmp,
 
 } // namespace detail
 
-tunio::tunio(net::io_context &ctx)
-    : impl_(std::make_shared<detail::tunio_impl>(ctx))
+tunio::tunio(net::io_context &ctx, bool single_thread)
+    : impl_(std::make_shared<detail::tunio_impl>(ctx, single_thread))
 {
 }
 

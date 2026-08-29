@@ -288,7 +288,9 @@ int main(int argc, char **argv)
     }
 
     net::io_context io(opt.threads);
-    tunio::tunio engine(io);
+    // 单线程 io 使用无 Strand 派发开销的单线程模式；多线程 io 时引擎
+    // 内部以 Strand 串行化，保证线程安全.
+    tunio::tunio engine(io, opt.threads == 1);
 
     tunio::tun_config cfg;
     cfg.dev_name = opt.dev_name;

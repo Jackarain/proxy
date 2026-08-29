@@ -29,22 +29,26 @@ class udp_engine;
 //
 // 引擎封装 TUN 设备 I/O、TCP/UDP 协议引擎与 NAT 会话表，向应用层暴露
 // tun_tcp_socket / tun_tcp_acceptor / tun_udp_socket / tun_udp_acceptor 等异步接口。
-// 所有内部状态变更均运行于引擎的 Strand 之上，支持多线程运行 io_context。
+// 内部状态串行化有两种模式：单线程模式（默认）直接运行于 io_context 执行器
+// 上，省去每包 Strand 派发开销，要求 io_context 单线程 run；多线程模式使用
+// Strand，支持多线程运行 io_context。两种模式下所有内部状态变更均串行执行。
 //
 // 生命周期要求：引擎必须在所有 tun_tcp_socket / tun_udp_socket 销毁之后、
 // io_context 停止运行之前销毁（与 Boost.Asio 对 socket 的约束一致）。
 // open() 会同步重建引擎内部状态，必须在 io_context 开始运行（io.run()）之前
 // 首次调用；若在运行期间调用 open()，请通过 get_executor() 派发屏障任务，
-// 确保与引擎 Strand 上的任务串行，避免与数据通路回调产生数据竞争。
+// 确保与引擎串行执行器上的任务串行，避免与数据通路回调产生数据竞争。
 // 对已打开（或 close 后尚未完成异步清理）的引擎再次调用 open() 时，
-// io_context 必须正在运行：open() 会在 Strand 上同步收尾上一代实例，
+// io_context 必须正在运行：open() 会在串行执行器上同步收尾上一代实例，
 // io_context 未运行时该收尾任务无法执行，将导致调用线程阻塞等待。
 class tunio
 {
 public:
     using executor_type = net::any_io_executor;
 
-    explicit tunio(net::io_context &ctx);
+    // single_thread=true（默认）时引擎内部状态运行于 io_context 执行器上，
+    // 要求 io_context 单线程 run；false 时使用 Strand，支持多线程 run.
+    explicit tunio(net::io_context &ctx, bool single_thread = true);
     ~tunio();
 
     tunio(const tunio &) = delete;
@@ -65,7 +69,7 @@ public:
 
     const engine_stats &stats() const noexcept;
 
-    // 引擎内部 Strand 的执行器；应用层也可通过其提交任务保证与引擎状态串行化。
+    // 引擎内部串行执行器；应用层也可通过其提交任务保证与引擎状态串行化。
     executor_type get_executor() const noexcept;
 
 private:
