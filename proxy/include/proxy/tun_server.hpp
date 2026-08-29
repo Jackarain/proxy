@@ -356,6 +356,10 @@ namespace proxy {
 		// m_proxy 标记是否走上游代理.
 		bool m_proxy { false };
 
+		// m_data_loops_started 标记 CONNECT-UDP 收发协程已启动
+		// （do_connect_udp 与 do_open 均可能触发, 防止重复启动）.
+		bool m_data_loops_started { false };
+
 		// m_ready 标记后端已就绪（do_open 完成后置位）.
 		bool m_ready { false };
 

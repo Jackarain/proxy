@@ -859,14 +859,10 @@ namespace proxy {
 				co_return;
 			}
 
-			if (m_connect_udp)
-			{
-				// HTTP CONNECT-UDP：启动串行发送协程与 capsule 接收循环.
-				start_data_loops();
-			}
-			else
+			if (!m_connect_udp)
 			{
 				// 直连/SOCKS5：启动后端应答接收循环.
+				// CONNECT-UDP 的收发协程由 do_connect_udp 启动.
 				net::co_spawn(m_executor,
 					[this, self]() -> net::awaitable<void>
 					{
@@ -1488,6 +1484,10 @@ namespace proxy {
 	// start_data_loops 启动串行发送协程与 capsule 接收循环.
 	void tun_udp_flow::start_data_loops()
 	{
+		if (m_data_loops_started)
+			return;
+		m_data_loops_started = true;
+
 		auto self = shared_from_this();
 
 		m_tx_signal.emplace(m_executor);
