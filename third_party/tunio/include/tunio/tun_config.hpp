@@ -151,10 +151,11 @@ struct tun_config
     // ---- 资源上限 ----
     size_t max_tcp_flows = 65536;
     size_t max_udp_flows = 65536;
-    size_t max_rx_queue_per_flow = 1024 * 1024;
-    // 单写模型下为兼容占位：发送背压由"每流单写 + 设备写回调"约束，
-    // 该字段不再参与发送路径判定.
-    size_t max_tx_queue_per_flow = 1024 * 1024;
+    size_t max_rx_queue_per_flow = 8 * 1024 * 1024;
+    // 乱序重排缓存：单流最多缓存的乱序段数（超出后丢弃并发 Dup-ACK，
+    // 防止恶意对端用海量乱序段耗尽内存）。需覆盖大窗口（1MB/MSS≈757 段）
+    // 下并发读产生的整窗乱序，否则乱序段被拒导致重传风暴.
+    size_t tcp_ooo_max_segments = 4096;
     size_t max_total_buffer = 512 * 1024 * 1024;
 
     // ---- 超时策略 ----
@@ -165,11 +166,14 @@ struct tun_config
     std::chrono::seconds tcp_syn_timeout{30}; // 未完成握手的半开连接超时
     std::chrono::seconds tcp_close_timeout{
         30}; // 关闭流程（FIN 挥手）未完成时的强制清理超时
+    // 零窗口持久计时器初始间隔：对端通告窗口 0 时周期性发送窗口探测，
+    // 探测被确认后按指数退避加倍，上限 60s.
+    std::chrono::milliseconds tcp_persist_timeout{5000};
+    // 数据段重传（RTO）：初始超时与最大重传次数。发送侧对未确认数据按
+    // 指数退避（上限 60s）重传，超过最大次数判定发送超时并以 RST 关闭.
+    std::chrono::milliseconds tcp_rto_timeout{200};
+    int tcp_rto_max_retransmits = 8;
 
-    // ---- 可选 Checksum 控制 ----
-    // 用户态 TUN 收发的报文必须由本引擎计算校验和，该开关保留用于兼容设计文档；
-    // 引擎始终计算并校验 IP/TCP/UDP 校验和。当前实现不使用该字段（兼容占位）。
-    [[maybe_unused]] bool enable_checksum_offload = true;
 };
 
 // 引擎统计信息
@@ -178,6 +182,7 @@ struct engine_stats
     std::atomic<uint64_t> rx_packets{0};
     std::atomic<uint64_t> tx_packets{0};
     std::atomic<uint64_t> rx_dropped{0};
+    std::atomic<uint64_t> rx_ooo{0}; // 乱序缓存段数
     std::atomic<uint64_t> tcp_connections{0};
     std::atomic<uint64_t> udp_sessions{0};
     std::atomic<uint64_t> icmp_replies{0};

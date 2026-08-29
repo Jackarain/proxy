@@ -21,6 +21,7 @@
 
 #include <boost/asio.hpp>
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -105,7 +106,9 @@ public:
 
 private:
     void start_read();
-    void on_read(const boost::system::error_code &ec, size_t n);
+    void start_read_slot(size_t index);
+    void on_read(const boost::system::error_code &ec, size_t n, size_t index,
+                 uint64_t epoch);
     void handle_packet(const uint8_t *pkt, size_t len);
     void handle_icmp(const ip_packet_info &ip, const uint8_t *icmp,
                      size_t icmp_len);
@@ -115,8 +118,6 @@ private:
     net::any_io_executor strand_ex_;
     std::atomic<bool> open_{false};
     uint64_t epoch_ = 0; // 代际计数：close 的异步清理据此判断是否已被重新 open
-    uint64_t read_epoch_ =
-        0; // 当前读操作发起时的代际，用于识别旧设备的迟到回调
     tun_config cfg_;
     net::ip::address local_ip_{}; // 用于 local_address()
     uint8_t local_ip4_[4] = {};   // 网络字节序
@@ -132,8 +133,11 @@ private:
     std::shared_ptr<buffer_accountant> account_;
     std::shared_ptr<engine_stats> stats_;
 
-    packet_buffer read_buf_;
-    bool reading_ = false;
+    // 并发读槽：同一时刻保持 k_read_slots 个未完成读取，TUN 包设备下
+    // 每个读回调独立拿到完整报文，拆包处理与重发起互不依赖。
+    static constexpr size_t k_read_slots = 32;
+    std::array<packet_buffer, k_read_slots> read_bufs_;
+    std::array<bool, k_read_slots> read_inflight_{};
 };
 
 } // namespace detail

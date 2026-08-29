@@ -201,7 +201,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    net::io_context io(1);
+    net::io_context io(4);
     tunio::tunio engine(io);
 
     tunio::tun_config cfg;

@@ -213,7 +213,9 @@ public:
     fake_device()
     {
         int sv[2];
-        if (::socketpair(AF_UNIX, SOCK_STREAM, 0, sv) != 0) {
+        // SOCK_DGRAM：一次 read 恰为一个完整报文，与真实 TUN 包语义一致，
+        // 引擎按包语义读取（无流拆包），流式注入会出现半包/粘包随机丢包.
+        if (::socketpair(AF_UNIX, SOCK_DGRAM, 0, sv) != 0) {
             throw std::runtime_error("socketpair failed");
         }
         fd_ = sv[0];
@@ -380,7 +382,12 @@ tun_tcp_socket establish_tcp(engine_env &env, tun_tcp_acceptor &acc,
 {
     tun_tcp_socket peer(env.io.get_executor());
     latch done;
-    acc.async_accept(peer, [&](boost::system::error_code) { done.post(); });
+    acc.async_accept(peer, [&](boost::system::error_code ec) {
+        if (!ec) {
+            peer.accept();
+        }
+        done.post();
+    });
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x02,
                           1000, 0, 65535, {}, true));
     std::vector<uint8_t> synack;
@@ -437,7 +444,6 @@ static void bench_tcp_write(long long n, long long warmup)
     measure("tcp_write_some", n, warmup, [&] {
         peer.async_write_some(net::buffer(wbuf), [&](boost::system::error_code,
                                                      size_t) { done.post(); });
-        done.wait();
         if (!env.dev.read_packet(pkt)) {
             throw std::runtime_error("no tcp data segment");
         }
@@ -449,6 +455,7 @@ static void bench_tcp_write(long long n, long long warmup)
         std::memcpy(ack_seg.data() + 28, &a, 4);
         refresh_tcp_checksum(ack_seg, CLIENT_IP, DEST_IP);
         env.dev.send(ack_seg);
+        done.wait();
     });
 }
 
@@ -510,7 +517,12 @@ static void bench_accept(long long n, long long warmup)
     measure("accept", n, warmup, [&] {
         conns.emplace_back(env.io.get_executor());
         tun_tcp_socket &peer = conns.back();
-        acc.async_accept(peer, [&](boost::system::error_code) { done.post(); });
+        acc.async_accept(peer, [&](boost::system::error_code ec) {
+            if (!ec) {
+                peer.accept();
+            }
+            done.post();
+        });
         const uint16_t p = htons(cport++);
         std::memcpy(syn.data() + 20, &p, 2);
         refresh_tcp_checksum(syn, CLIENT_IP, DEST_IP);

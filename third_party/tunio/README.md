@@ -6,10 +6,11 @@ utun 及 Windows Wintun 设备产生的 L3 原始 IP 包处理全面封装于内
 C++20 协程（`co_await`），适用于 tun2socks、透明代理与轻量级 VPN 网关等
 场景。
 
-协议栈采用轻量级转发策略：不维护复杂的重传队列、RTO 定时器或乱序重组缓冲
-区，而是依赖底层 IP 网络和对端内核协议栈保证可靠性，从而大幅降低 CPU 开
-销与内存占用。所有内部状态变更强制运行于单个 Strand 之上，支持多线程运行
-`io_context` 且无锁竞争。
+协议栈采用轻量级转发策略：接收方向维护乱序重排缓存并按序交付，动态
+接收窗口（按剩余缓冲通告）避免对端超发；发送方向以最精简的 RTO 重传
+（直接重读用户写缓冲，无重传队列）与零窗口持久探测保证写操作在丢包链路
+上仍能完成，从而兼顾低 CPU 开销与基本可靠性。所有内部状态变更强制运行于
+单个 Strand 之上，支持多线程运行 `io_context` 且无锁竞争。
 
 ## 特性
 
@@ -21,8 +22,8 @@ C++20 协程（`co_await`），适用于 tun2socks、透明代理与轻量级 VP
 - **TCP/UDP 对称抽象**：TCP 提供 `tun_tcp_socket`/`tun_tcp_acceptor`，UDP 提供
   `tun_udp_socket`/`tun_udp_acceptor`，命名与行为习惯对齐 Boost.Asio，
   降低学习成本。
-- **极低协议开销**：放弃重传与重组，通过 Dup-ACK 触发客户端快速重传，将
-  可靠性交还给对端内核，实现低 CPU 占用的高速转发。
+- **极低协议开销**：接收方向缓存乱序段并静默等待补齐，避免人为乱序触发
+  快速重传；发送方向仅以 RTO 计时器重读用户缓冲实现重传，无重传队列与拷贝。
 - **IPv4/IPv6 双栈**：双栈报文解析与构造，内置 ICMP/ICMPv6 回显响应，
   丢弃分片与扩展头报文。
 - **生产级健壮性**：资源上限（流数、队列字节数、总缓冲）、空闲超时与
@@ -35,7 +36,7 @@ C++20 协程（`co_await`），适用于 tun2socks、透明代理与轻量级 VP
 | 平台 | 设备实现 | 说明 |
 | :--- | :--- | :--- |
 | Linux | TUN（`posix::stream_descriptor`） | 需 root 或 `CAP_NET_ADMIN` |
-| macOS | utun | 需 root |
+| macOS | utun | 需 root；当前仅支持句柄注入（自主打开 Phase 3 未实现） |
 | Windows | overlapped I/O 或 Wintun | 编译时 `USE_WINTUN_DRIVER` 切换 |
 
 ## 构建
@@ -296,7 +297,8 @@ CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 
 握手语义：收到客户端 SYN 后引擎不立即回复，由 `accept()`/`reject()`（或
 首次读写隐式批准）决定握手结果；三次握手完成前的读写操作会缓冲，完成后
-交付。TCP 转发为顺序转发（无乱序缓存），超时与资源上限见 `tun_config`。
+交付。TCP 转发为按序交付（乱序段经重排缓存补齐），超时与资源上限见
+`tun_config`。
 
 ### `tun_config` 关键配置
 
@@ -307,7 +309,7 @@ CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 | `mtu` | `1500` | 自主打开模式 MTU |
 | `external_handle` / `external_mtu` | `invalid` / `1500` | 外部句柄注入（优先于自主打开） |
 | `max_tcp_flows` / `max_udp_flows` | `65536` | 流/会话数上限 |
-| `max_rx_queue_per_flow` / `max_tx_queue_per_flow` | `1 MiB` | 每流接收队列字节上限；发送侧兼容占位（单写模型由设备写回调背压） |
+| `max_rx_queue_per_flow` | `8 MiB` | 每流接收队列字节上限 |
 | `max_total_buffer` | `512 MiB` | 全局缓冲上限 |
 | `udp_idle_timeout` | `30s` | UDP 会话空闲超时 |
 | `tcp_time_wait_timeout` / `tcp_accept_timeout` | `10s` / `30s` | TCP 清理超时 |

@@ -22,7 +22,7 @@ namespace net = boost::asio;
 namespace detail {
 
 // Windows 实现 (Overlapped)：基于 windows::random_access_handle。
-// 平台相关打开逻辑（Wintun 会话创建）见 src/packet_device_windows.cpp。
+// 平台相关打开逻辑见 src/packet_device_windows.cpp。
 class windows_packet_device_impl
 {
 public:

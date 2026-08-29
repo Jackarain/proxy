@@ -314,9 +314,11 @@ inline std::vector<uint8_t> make_tcp(uint32_t src, uint32_t dst, uint16_t sport,
                                      uint16_t dport, uint8_t flags,
                                      uint32_t seq, uint32_t ack, uint16_t win,
                                      const std::vector<uint8_t> &data,
-                                     bool mss = false)
+                                     bool mss = false, int wscale = -1)
 {
-    const size_t hlen = mss ? 24 : 20;
+    // wscale >= 0 时携带 Window Scale 选项（RFC 7323 kind=3, len=3）
+    const bool with_ws = wscale >= 0;
+    const size_t hlen = 20 + (mss ? 4 : 0) + (with_ws ? 4 : 0);
     std::vector<uint8_t> seg(hlen + data.size(), 0);
     seg[0] = static_cast<uint8_t>(sport >> 8);
     seg[1] = static_cast<uint8_t>(sport & 0xff);
@@ -325,15 +327,24 @@ inline std::vector<uint8_t> make_tcp(uint32_t src, uint32_t dst, uint16_t sport,
     uint32_t s = htonl(seq), a = htonl(ack);
     std::memcpy(&seg[4], &s, 4);
     std::memcpy(&seg[8], &a, 4);
-    seg[12] = static_cast<uint8_t>((mss ? 6 : 5) << 4);
+    seg[12] = static_cast<uint8_t>((hlen / 4) << 4);
     seg[13] = flags;
     seg[14] = static_cast<uint8_t>(win >> 8);
     seg[15] = static_cast<uint8_t>(win & 0xff);
+    size_t opt = 20;
     if (mss) {
-        seg[20] = 2; // MSS 选项
-        seg[21] = 4;
-        seg[22] = 0x05;
-        seg[23] = 0xb4;
+        seg[opt] = 2; // MSS 选项
+        seg[opt + 1] = 4;
+        seg[opt + 2] = 0x05;
+        seg[opt + 3] = 0xb4;
+        opt += 4;
+    }
+    if (with_ws) {
+        seg[opt] = 3; // Window Scale 选项
+        seg[opt + 1] = 3;
+        seg[opt + 2] = static_cast<uint8_t>(wscale);
+        seg[opt + 3] = 1; // NOP 对齐
+        opt += 4;
     }
     if (!data.empty()) {
         std::memcpy(seg.data() + hlen, data.data(), data.size());
@@ -501,14 +512,16 @@ inline bool parse_udp(const uint8_t *p, size_t n, udp_hdr_info &out)
     return true;
 }
 
-// ---- 虚拟 TUN 设备（socketpair 注入）----
+// ---- 虚拟 TUN 设备（socketpair 数据报注入，对齐 TUN 包语义）----
 class fake_device
 {
 public:
     fake_device()
     {
         int sv[2];
-        if (::socketpair(AF_UNIX, SOCK_STREAM, 0, sv) != 0) {
+        // SOCK_DGRAM：一次 read 恰为一个完整报文，与真实 TUN 包语义一致，
+        // 引擎无需按流拆包拼接.
+        if (::socketpair(AF_UNIX, SOCK_DGRAM, 0, sv) != 0) {
             throw std::runtime_error("socketpair failed");
         }
         fd_ = sv[0];
@@ -613,7 +626,12 @@ struct engine_env
         std::chrono::seconds udp_timeout = std::chrono::seconds(1),
         std::chrono::seconds tcp_accept_timeout = std::chrono::seconds(30),
         std::chrono::seconds tcp_syn_timeout = std::chrono::seconds(30),
-        size_t max_rx_queue = 1024 * 1024, size_t max_tx_queue = 1024 * 1024)
+        size_t max_rx_queue = 1024 * 1024,
+        std::chrono::milliseconds persist_timeout =
+            std::chrono::milliseconds(5000),
+        std::chrono::milliseconds rto_timeout =
+            std::chrono::milliseconds(200),
+        int rto_max_retransmits = 8)
         : engine(io)
         , guard(net::make_work_guard(io))
     {
@@ -628,7 +646,9 @@ struct engine_env
         cfg.tcp_accept_timeout = tcp_accept_timeout;
         cfg.tcp_syn_timeout = tcp_syn_timeout;
         cfg.max_rx_queue_per_flow = max_rx_queue;
-        cfg.max_tx_queue_per_flow = max_tx_queue;
+        cfg.tcp_persist_timeout = persist_timeout;
+        cfg.tcp_rto_timeout = rto_timeout;
+        cfg.tcp_rto_max_retransmits = rto_max_retransmits;
         boost::system::error_code ec;
         if (!engine.open(cfg, ec)) {
             throw std::runtime_error("engine open failed: " + ec.message());

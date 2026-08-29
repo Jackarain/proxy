@@ -29,7 +29,6 @@ else()
 endif()
 
 set(TUNIO_SOURCES
-  src/packet_buffer.cpp
   src/tcp_engine.cpp
   src/udp_engine.cpp
   src/tun_tcp_acceptor.cpp

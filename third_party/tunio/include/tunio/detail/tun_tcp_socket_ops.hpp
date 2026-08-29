@@ -25,7 +25,8 @@ namespace detail {
 template <typename MutableBufferSequence, typename Handler>
 void tun_tcp_socket::do_read_some(MutableBufferSequence &&buffers, Handler handler)
 {
-    std::vector<net::mutable_buffer> seq;
+    // 单缓冲区（最常见调用形式）由 small_vector 栈上存储，避免堆分配
+    boost::container::small_vector<net::mutable_buffer, 1> seq;
     size_t total = 0;
     // 兼容单缓冲区（net::buffer(char[]) 返回 mutable_buffer）与
     // 缓冲区序列两种调用形式，语义与 Boost.Asio async_read_some 一致.
@@ -47,7 +48,7 @@ void tun_tcp_socket::do_read_some(MutableBufferSequence &&buffers, Handler handl
 template <typename ConstBufferSequence, typename Handler>
 void tun_tcp_socket::do_write_some(ConstBufferSequence &&buffers, Handler handler)
 {
-    std::vector<net::const_buffer> seq;
+    boost::container::small_vector<net::const_buffer, 1> seq;
     size_t total = 0;
     // 兼容单缓冲区与缓冲区序列两种调用形式，语义与 Boost.Asio
     // async_write_some 一致.

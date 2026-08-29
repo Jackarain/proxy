@@ -275,11 +275,6 @@ struct ip_packet_info
 };
 
 // 序列号比较（RFC 1982 环形比较）
-inline bool seq_lt(uint32_t a, uint32_t b)
-{
-    return static_cast<int32_t>(a - b) < 0;
-}
-
 inline bool seq_gt(uint32_t a, uint32_t b)
 {
     return static_cast<int32_t>(a - b) > 0;

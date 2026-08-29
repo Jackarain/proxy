@@ -141,7 +141,7 @@ net::awaitable<void> tcp_bridge(tunio::tun_tcp_socket client,
     net::co_spawn(
         ex,
         [c, upstream]() -> net::awaitable<void> {
-            std::array<char, 8192> buf;
+            std::array<char, 65536> buf;
             try {
                 for (;;) {
                     size_t n = co_await c->async_read_some(net::buffer(buf),
@@ -149,7 +149,12 @@ net::awaitable<void> tcp_bridge(tunio::tun_tcp_socket client,
                     co_await net::async_write(*upstream, net::buffer(buf, n),
                                               net::use_awaitable);
                 }
-            } catch (...) {
+            } catch (const boost::system::system_error &e) {
+                std::cerr << "[bridge] client->upstream exit: " << e.what()
+                          << std::endl;
+            } catch (const std::exception &e) {
+                std::cerr << "[bridge] client->upstream exit: " << e.what()
+                          << std::endl;
             }
             boost::system::error_code sec;
             upstream->shutdown(net::ip::tcp::socket::shutdown_send, sec);
@@ -159,7 +164,7 @@ net::awaitable<void> tcp_bridge(tunio::tun_tcp_socket client,
     net::co_spawn(
         ex,
         [c, upstream]() -> net::awaitable<void> {
-            std::array<char, 8192> buf;
+            std::array<char, 65536> buf;
             try {
                 for (;;) {
                     size_t n = co_await upstream->async_read_some(
@@ -167,7 +172,13 @@ net::awaitable<void> tcp_bridge(tunio::tun_tcp_socket client,
                     co_await net::async_write(*c, net::buffer(buf, n),
                                               net::use_awaitable);
                 }
-            } catch (...) {
+            } catch (const boost::system::system_error &e) {
+                std::cerr << "[bridge] upstream->client exit: " << e.what()
+                          << std::endl;
+                c->close();
+            } catch (const std::exception &e) {
+                std::cerr << "[bridge] upstream->client exit: " << e.what()
+                          << std::endl;
                 c->close();
             }
         },
@@ -307,11 +318,27 @@ int main(int argc, char **argv)
         net::co_spawn(io, udp_listener(engine, proxy), net::detached);
     }
 
-    net::signal_set signals(io, SIGINT, SIGTERM);
-    signals.async_wait([&](const boost::system::error_code &, int) {
-        std::cout << "\n正在关闭..." << std::endl;
-        engine.close();
-    });
+    net::signal_set signals(io, SIGINT, SIGTERM, SIGUSR1);
+    std::function<void(const boost::system::error_code &, int)> on_signal;
+    on_signal = [&](const boost::system::error_code &ec, int signum) {
+        if (ec) {
+            return;
+        }
+        if (signum == SIGUSR1) {
+            const auto &st = engine.stats();
+            std::cout << "[stats] rx_packets=" << st.rx_packets.load()
+                      << " tx_packets=" << st.tx_packets.load()
+                      << " rx_dropped=" << st.rx_dropped.load()
+                      << " rx_ooo=" << st.rx_ooo.load()
+                      << " tcp_connections=" << st.tcp_connections.load()
+                      << std::endl;
+            signals.async_wait(on_signal);
+        } else {
+            std::cout << "\n正在关闭..." << std::endl;
+            engine.close();
+        }
+    };
+    signals.async_wait(on_signal);
 
     io.run();
     return 0;

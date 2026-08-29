@@ -16,6 +16,7 @@
 #include "tunio/tun_config.hpp"
 
 #include <boost/asio.hpp>
+#include <boost/unordered/unordered_flat_map.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -169,7 +170,9 @@ private:
     std::shared_ptr<buffer_accountant> account_;
     size_t mtu_ = 1500;
 
-    std::unordered_map<udp_session_key, std::shared_ptr<udp_session>> sessions_;
+    boost::unordered_flat_map<udp_session_key, std::shared_ptr<udp_session>,
+                              std::hash<udp_session_key>>
+        sessions_;
     std::deque<net::any_completion_handler<void(boost::system::error_code,
                                                 std::shared_ptr<udp_session>)>>
         pending_accepts_;

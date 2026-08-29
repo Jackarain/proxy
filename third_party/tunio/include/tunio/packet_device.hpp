@@ -15,9 +15,6 @@
 
 #include <boost/asio.hpp>
 
-#include <memory>
-#include <variant>
-
 // 平台实现按文件拆分，参考 Asio 的 impl 目录布局：
 //   detail/impl/packet_device_posix.hpp
 //   detail/impl/packet_device_windows.hpp
@@ -37,17 +34,15 @@ namespace tunio {
 namespace net = boost::asio;
 namespace detail {
 
-using device_impl_variant = std::variant<
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
-    posix_packet_device_impl
+using device_impl = posix_packet_device_impl;
 #elif defined(_WIN32) && defined(USE_WINTUN_DRIVER)
-    wintun_packet_device_impl
+using device_impl = wintun_packet_device_impl;
 #elif defined(BOOST_ASIO_HAS_WINDOWS_OVERLAPPED_PTR)
-    windows_packet_device_impl
+using device_impl = windows_packet_device_impl;
 #else
-    unsupported_packet_device
+using device_impl = unsupported_packet_device;
 #endif
-    >;
 
 } // namespace detail
 
@@ -64,59 +59,36 @@ class packet_device
 {
 public:
     explicit packet_device(net::io_context &ctx)
-        : ctx_(ctx)
-        , impl_(std::in_place_index<0>, ctx)
+        : impl_(ctx)
     {
     }
 
     // ---- 模式 1: 自主打开 ----
     bool open(const device_config &cfg, boost::system::error_code &ec)
     {
-#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
-        impl_.emplace<detail::posix_packet_device_impl>(ctx_);
-#elif defined(_WIN32) && defined(USE_WINTUN_DRIVER)
-        impl_.emplace<detail::wintun_packet_device_impl>(ctx_);
-#elif defined(BOOST_ASIO_HAS_WINDOWS_OVERLAPPED_PTR)
-        impl_.emplace<detail::windows_packet_device_impl>(ctx_);
-#else
-        impl_.emplace<detail::unsupported_packet_device>(ctx_);
-#endif
-        return std::visit([&](auto &impl) { return impl.open(cfg, ec); },
-                          impl_);
+        return impl_.open(cfg, ec);
     }
 
     // ---- 模式 2: 句柄注入 ----
     bool assign(native_handle_type handle, size_t mtu,
                 boost::system::error_code &ec)
     {
-#if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
-        impl_.emplace<detail::posix_packet_device_impl>(ctx_);
-#elif defined(_WIN32) && defined(USE_WINTUN_DRIVER)
-        impl_.emplace<detail::wintun_packet_device_impl>(ctx_);
-#elif defined(BOOST_ASIO_HAS_WINDOWS_OVERLAPPED_PTR)
-        impl_.emplace<detail::windows_packet_device_impl>(ctx_);
-#else
-        impl_.emplace<detail::unsupported_packet_device>(ctx_);
-#endif
-        return std::visit(
-            [&](auto &impl) { return impl.assign(handle, mtu, ec); }, impl_);
+        return impl_.assign(handle, mtu, ec);
     }
 
     void close()
     {
-        std::visit([](auto &impl) { impl.close(); }, impl_);
+        impl_.close();
     }
 
     size_t mtu() const
     {
-        return std::visit([](const auto &impl) -> size_t { return impl.mtu(); },
-                          impl_);
+        return impl_.mtu();
     }
 
     bool is_open() const
     {
-        return std::visit(
-            [](const auto &impl) -> bool { return impl.is_open(); }, impl_);
+        return impl_.is_open();
     }
 
     // ---- 异步读取一个完整数据包 ----
@@ -126,11 +98,7 @@ public:
         return net::async_initiate<CompletionToken,
                                    void(boost::system::error_code, size_t)>(
             [this, &buf](auto handler) {
-                std::visit(
-                    [&buf, h = std::move(handler)](auto &impl) mutable {
-                        impl.async_read(buf, std::move(h));
-                    },
-                    impl_);
+                impl_.async_read(buf, std::move(handler));
             },
             token);
     }
@@ -142,18 +110,13 @@ public:
         return net::async_initiate<CompletionToken,
                                    void(boost::system::error_code, size_t)>(
             [this, &buf](auto handler) {
-                std::visit(
-                    [&buf, h = std::move(handler)](auto &impl) mutable {
-                        impl.async_write(buf, std::move(h));
-                    },
-                    impl_);
+                impl_.async_write(buf, std::move(handler));
             },
             token);
     }
 
 private:
-    net::io_context &ctx_;
-    detail::device_impl_variant impl_;
+    detail::device_impl impl_;
 };
 
 } // namespace tunio

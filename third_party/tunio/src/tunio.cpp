@@ -26,7 +26,6 @@ tunio_impl::tunio_impl(net::io_context &ctx)
     : strand_ex_(net::make_strand(ctx))
     , device_(std::make_shared<packet_device>(ctx))
     , stats_(std::make_shared<engine_stats>())
-    , read_buf_(2048, 64)
 {
 }
 
@@ -128,7 +127,12 @@ bool tunio_impl::open(const tun_config &cfg, boost::system::error_code &ec)
     }
 
     mtu_ = device_->mtu();
-    read_buf_ = packet_buffer(mtu_ + 64, 64);
+    // 并发读槽复位：旧代际残留的 in-flight 标记一律清空，确保重建后
+    // start_read() 能为全部槽重新发起读取（旧设备迟到回调由代际检查拦截）。
+    read_inflight_.fill(false);
+    for (auto &buf : read_bufs_) {
+        buf = packet_buffer(mtu_ + 64, 64);
+    }
 
     account_ = std::make_shared<buffer_accountant>();
     account_->limit = cfg.max_total_buffer;
@@ -194,104 +198,105 @@ void tunio_impl::close()
 
 void tunio_impl::start_read()
 {
-    if (!open_.load(std::memory_order_acquire) || reading_) {
+    if (!open_.load(std::memory_order_acquire)) {
         return;
     }
-    reading_ = true;
-    read_epoch_ = epoch_;
+    for (size_t i = 0; i < k_read_slots; ++i) {
+        start_read_slot(i);
+    }
+}
+
+void tunio_impl::start_read_slot(size_t index)
+{
+    if (!open_.load(std::memory_order_acquire) || read_inflight_[index]) {
+        return;
+    }
+    read_inflight_[index] = true;
     // 弱引用避免读回调自持有形成引用环：引擎释放后迟到读回调直接跳过
     auto self = weak_from_this();
     device_->async_read_packet(
-        read_buf_, net::bind_executor(
-                       strand_ex_, [self](const boost::system::error_code &ec,
-                                          size_t n) {
-                           if (auto s = self.lock()) {
-                               s->on_read(ec, n);
-                           }
-                       }));
+        read_bufs_[index],
+        net::bind_executor(
+            strand_ex_,
+            [self, index, epoch = epoch_](
+                const boost::system::error_code &ec, size_t n) {
+                if (auto s = self.lock()) {
+                    s->on_read(ec, n, index, epoch);
+                }
+            }));
 }
 
-void tunio_impl::on_read(const boost::system::error_code &ec, size_t n)
+void tunio_impl::on_read(const boost::system::error_code &ec, size_t n,
+                         size_t index, uint64_t epoch)
 {
-    reading_ = false;
+    // 迟到回调（引擎已关闭、或设备已 close 后重新 open 的旧代际读）：
+    // 不触碰任何读状态，槽位标记由 open() 的 fill(false) 与当前代际回调
+    // 复位，避免误清重建后已重新发起读取的槽。
+    if (epoch != epoch_ || !open_.load(std::memory_order_acquire)) {
+        return;
+    }
+    read_inflight_[index] = false;
     if (ec) {
-        // 仅当错误来自当前代际的读操作时才视为当前引擎的设备故障；
-        // 旧设备（重新 open 前）的迟到回调（如 bad_descriptor）不得关闭新引擎。
-        if (read_epoch_ == epoch_ && ec != net::error::operation_aborted) {
+        // 非取消错误视为设备故障：关闭引擎，避免读循环空转。
+        if (ec != net::error::operation_aborted) {
             open_.store(false, std::memory_order_release);
         }
         if (open_.load(std::memory_order_acquire)) {
-            start_read(); // 设备被 close 后重新 open 的场景：继续读取新设备
+            start_read_slot(index); // 设备被 close 后重新 open 的场景：续读
         }
         return;
     }
-    // 丢弃迟到数据：引擎已关闭（close() 不递增 epoch，仅查 read_epoch_ 不够），
-    // 或数据来自已被重新 open 替换的旧设备；两种情况都不得注入当前引擎。
-    if (!open_.load(std::memory_order_acquire) || read_epoch_ != epoch_) {
-        read_buf_.reset();
-        if (open_.load(std::memory_order_acquire)) {
-            start_read();
-        }
+    packet_buffer &buf = read_bufs_[index];
+    buf.commit(n);
+    // TUN 设备为包语义：每次读取恰为一个完整 IP 报文，无需按流拆包拼接。
+    // 仅保留对非法/残缺报文的防御性检查（正常 TUN 包不会触发）.
+    const uint8_t *base = buf.data();
+    const size_t avail = buf.size();
+    if (avail < sizeof(ipv4_header)) {
+        stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
+        buf.reset();
+        start_read_slot(index);
         return;
     }
-    read_buf_.commit(n);
-    // 注：注入设备为字节流（如 socketpair）时，一次读取可能粘合/拆散多个报文；
-    // 按 IP 头中的总长度逐包解析，完整处理缓冲区内全部报文（IPv4/IPv6
-    // 均支持），
-    // 未凑成完整报文的尾部字节保留在缓冲区内，与下一次读取拼接后继续解析。
-    const uint8_t *base = read_buf_.data();
-    const size_t avail = read_buf_.size();
-    size_t offset = 0;
-    while (offset + 4 <= avail) {
-        size_t total_len = 0;
-        const uint8_t version = base[offset] >> 4;
-        if (version == 4) {
-            if (offset + sizeof(ipv4_header) > avail) {
-                break; // 头部不完整，等待续读
-            }
-            total_len =
-                static_cast<size_t>((base[offset + 2] << 8) | base[offset + 3]);
-            if (total_len < sizeof(ipv4_header)) {
-                ++offset; // 非法长度：跳过该字节继续扫描
-                continue;
-            }
-        } else if (version == 6) {
-            if (offset + sizeof(ipv6_header) > avail) {
-                break; // 头部不完整，等待续读
-            }
-            total_len =
-                sizeof(ipv6_header) +
-                static_cast<size_t>((base[offset + 4] << 8) | base[offset + 5]);
-            if (total_len < sizeof(ipv6_header)) {
-                ++offset; // 非法长度：跳过该字节继续扫描
-                continue;
-            }
-        } else {
-            ++offset; // 非 IP 报文：跳过该字节继续扫描
-            continue;
-        }
-        if (total_len > read_buf_.capacity() - read_buf_.headroom()) {
-            // 声明长度超出缓冲可容纳上限（正常 MTU 内报文不可能出现）：
-            // 该报文永远无法凑齐，丢弃全部缓冲并重新开始，避免读循环停滞。
+    size_t total_len = 0;
+    const uint8_t version = base[0] >> 4;
+    if (version == 4) {
+        total_len =
+            static_cast<size_t>((base[2] << 8) | base[3]);
+        if (total_len < sizeof(ipv4_header)) {
             stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
-            read_buf_.reset();
-            start_read();
+            buf.reset();
+            start_read_slot(index);
             return;
         }
-        if (offset + total_len > avail) {
-            break; // 报文体不完整，等待续读
+    } else if (version == 6) {
+        total_len =
+            sizeof(ipv6_header) +
+            static_cast<size_t>((base[4] << 8) | base[5]);
+        if (total_len < sizeof(ipv6_header)) {
+            stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            buf.reset();
+            start_read_slot(index);
+            return;
         }
-        stats_->rx_packets.fetch_add(1, std::memory_order_relaxed);
-        handle_packet(base + offset, total_len);
-        offset += total_len;
-    }
-    const size_t kept = avail - offset;
-    if (kept > 0) {
-        read_buf_.rewind(kept);
     } else {
-        read_buf_.reset();
+        stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
+        buf.reset();
+        start_read_slot(index);
+        return;
     }
-    start_read();
+    if (total_len > avail || total_len > buf.capacity() - buf.headroom()) {
+        // 声明长度超限或读到的字节不足一个完整报文：按包语义丢弃
+        // （真实 TUN 包设备不会出现半包；防御非法/残缺报文）。
+        stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
+        buf.reset();
+        start_read_slot(index);
+        return;
+    }
+    stats_->rx_packets.fetch_add(1, std::memory_order_relaxed);
+    handle_packet(base, total_len);
+    buf.reset();
+    start_read_slot(index);
 }
 
 void tunio_impl::handle_packet(const uint8_t *pkt, size_t len)

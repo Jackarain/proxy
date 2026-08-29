@@ -15,6 +15,7 @@
 
 #include <boost/asio.hpp>
 
+#include <cstring>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -165,7 +166,7 @@ struct wintun_api
     do {                                                                       \
         FARPROC _fp = GetProcAddress(api->module, symbol);                     \
         if (_fp) {                                                             \
-            api->member = reinterpret_cast<decltype(api->member)>(_fp);        \
+            std::memcpy(&api->member, &_fp, sizeof(_fp));                      \
         } else {                                                               \
             api->module = nullptr;                                             \
             api->member = nullptr;                                             \
