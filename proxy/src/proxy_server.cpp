@@ -2113,6 +2113,12 @@ boost::json::object proxy_server::snapshot_report()
 			if (!s || !s->alive())
 				continue;
 
+			// 跳过空闲会话：尚未收到任何请求（如手机端 proxy_pass 预选
+			// 连接池保持的空闲连接）没有协议标记，不应计入活跃连接，
+			// 否则手机端业务连接数与服务端活跃数会出现巨大差异.
+			if (s->proto().empty())
+				continue;
+
 			uint64_t rx = s->total_rx();
 			uint64_t tx = s->total_tx();
 			std::string user = s->auth_user();
