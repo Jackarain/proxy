@@ -191,18 +191,6 @@ struct tcp_flow : public std::enable_shared_from_this<tcp_flow>
     std::optional<net::experimental::channel<void(boost::system::error_code)>>
         write_ch;
 
-    // ---- 发送尾部重传缓冲（写完成回调提前后的流级 RTO 数据源）----
-    // 写操作在数据全部交给设备后即回调；完成时若仍有未确认字节，拷贝进
-    // tail_buf（用户缓冲可能已复用，重传不能继续引用原写缓冲）。tail_buf
-    // 覆盖序列号范围 [tail_seq, tail_end)，其中 tail_end 可能比 snd_nxt
-    // 大 1（零窗口探测字节未计入 snd_nxt，但仍需重传覆盖）.
-    std::vector<uint8_t> tail_buf;
-    uint32_t tail_seq = 0; // tail_buf[0] 对应的序列号（可能落后于 snd_una）
-    uint32_t tail_end = 0; // 尾部数据末尾序列号（不含未发送探测字节时等于 snd_nxt）
-    std::chrono::milliseconds tail_rto{0}; // 当前重传退避间隔
-    int tail_retransmits = 0;              // 连续无进展重传次数
-    std::unique_ptr<net::steady_timer> tail_timer;
-
     net::ip::tcp::endpoint original_destination() const;
     bool is_open() const;
 };
@@ -273,22 +261,9 @@ public:
     void send_fin(tcp_flow &f);
     void abort_flow(tcp_flow &f);
     void close_flow(tcp_flow &f, const boost::system::error_code &err);
-    // 重传本次写操作未确认数据 [max(snd_una, start_seq), snd_nxt) 至多
-    // max_bytes 字节（零窗口探测与 RTO 超时共用）；更早的未确认尾部由
-    // 流级尾部重传（tail_buf）负责，此处仅限当前写操作的缓冲范围.
+    // 重传未确认数据 [snd_una, snd_nxt) 至多 max_bytes 字节（零窗口探测
+    // 与 RTO 超时共用）；数据仍在 active_write 的用户缓冲中，无需拷贝.
     void retransmit_unacked(tcp_flow &f, size_t max_bytes);
-    // ---- 流级发送尾部重传（写完成后未确认数据的重传恢复）----
-    // 写操作在数据全部交给设备后即完成回调；完成时若仍有未确认字节，
-    // capture_tail 将其拷贝进 tail_buf 并启动独立 RTO 定时器，重传至
-    // 对端确认或重传次数超过 tcp_rto_max_retransmits 以 RST 释放连接.
-    void capture_tail(tcp_flow &f);
-    void retransmit_tail(tcp_flow &f, size_t max_bytes);
-    void arm_tail_timer(tcp_flow &f);
-    void clear_tail(tcp_flow &f);
-    void tail_ack_progress(tcp_flow &f);
-    void on_tail_rto(const tcp_flow_ptr &f);
-    // tail_buf 是否覆盖序列号 seq（含零窗口探测字节等未计入 snd_nxt 的字节）
-    static bool tail_covers(const tcp_flow &f, uint32_t seq);
     // 发送协程：持有单个写操作，按窗口/MSS 循环分片，
     // 设备写完成回调驱动背压；窗口耗尽时经 write_ch 挂起等待 ACK.
     net::awaitable<void> write_loop(tcp_flow_ptr f);

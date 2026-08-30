@@ -16,7 +16,6 @@
 #include <cstdint>
 #include <cstring>
 #include <future>
-#include <map>
 #include <memory>
 #include <string>
 #include <thread>
@@ -151,7 +150,7 @@ static void test_handshake_data_fin()
     assert(std::string(reinterpret_cast<const char *>(ti.data), ti.len) ==
         world);
 
-    // 客户端 ACK 数据：写回调已在数据发出时完成，ACK 用于推进未确认范围
+    // 客户端 ACK 数据：写操作在数据被确认后才完成（ACK 确认制）
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x10,
         1001 + hello.size(),
         engine_iss + 1 + world.size(), 65535, {}));
@@ -699,7 +698,7 @@ static void test_zero_window_flow_control()
     }
     assert(ti.len == 1 && ti.data[0] == 'x');
 
-    // 客户端 ACK 数据字节：写回调已在数据发出时完成，ACK 释放尾部重传
+    // 客户端 ACK 数据字节：写操作在数据确认后完成
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12346, DEST_PORT, 0x10, 2001,
         engine_iss + 2, 4096, {}));
     auto [wec, wn] = future_get(std::move(wf));
@@ -1491,7 +1490,7 @@ static void test_write_queue_limit()
     assert(w2ec == net::error::no_buffer_space);
     assert(w2n == 0);
 
-    // 窗口更新后数据发出，写回调随即完成；ACK 释放尾部重传
+    // 窗口更新后数据发出；客户端 ACK 数据后第一个写完成
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12352, DEST_PORT, 0x10, 8001,
         engine_iss + 1, 4096, {}));
     std::vector<uint8_t> pkt2;
@@ -1559,7 +1558,7 @@ static void test_write_large_single_op()
     future_get(accept_done.get_future());
 
     // 单次写入 3000 字节（超过队列上限 16 与单段 MSS）：应全部接受，
-    // 按 MSS 分 3 段发送，全部发出后回调（不等对端 ACK）.
+    // 按 MSS 分 3 段发送，全部确认后才回调.
     const std::string payload(3000, 'a');
     std::promise<std::pair<boost::system::error_code, size_t>> w1;
     peer.async_write_some(
@@ -1585,7 +1584,7 @@ static void test_write_large_single_op()
     }
     assert(received == payload.size());
 
-    // 客户端 ACK 全部数据：写回调已提前完成，ACK 释放尾部重传
+    // 客户端 ACK 全部数据：写操作在数据确认后完成
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12355, DEST_PORT, 0x10, 10001,
         engine_iss + 1 + static_cast<uint32_t>(payload.size()),
         4096, {}));
@@ -1595,10 +1594,10 @@ static void test_write_large_single_op()
     peer.close();
 }
 
-static void test_write_completion_on_send()
+static void test_write_completion_requires_ack()
 {
-    // 写操作在数据全部交给设备后即完成回调（不等对端 ACK）：设备收到
-    // 数据段时写已完成，未确认数据由流级尾部 RTO 重传兜底.
+    // 写操作在数据被对端确认后才完成（ACK 确认制）：设备仅收到数据段时
+    // 写仍挂起，ACK 到达后回调.
     engine_env env;
     auto &io = env.io;
     tun_tcp_acceptor acceptor(env.engine);
@@ -1639,7 +1638,7 @@ static void test_write_completion_on_send()
         });
     auto wf = write_done.get_future();
 
-    // 设备收到数据段：写已完成（数据已发出即回调，不等待 ACK）
+    // 设备收到数据段，但写未完成（等待对端 ACK）
     if (!env.dev.read_packet(pkt)) {
         throw std::runtime_error("no data packet");
     }
@@ -1650,27 +1649,24 @@ static void test_write_completion_on_send()
         throw std::runtime_error("parse data failed");
     }
     assert(ti.seq == engine_iss + 1 && ti.len == 1 && ti.data[0] == 'x');
-    if (wf.wait_for(std::chrono::milliseconds(100)) ==
-        std::future_status::timeout) {
-        throw std::runtime_error("write must complete once data is sent");
+    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+    if (wf.wait_for(std::chrono::milliseconds(0)) ==
+        std::future_status::ready) {
+        throw std::runtime_error("write must not complete before ACK");
     }
 
-    // 客户端 ACK 数据：尾部重传释放，写回调已成功完成
+    // 客户端 ACK 数据：写完成
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12362, DEST_PORT, 0x10, 18001,
         engine_iss + 2, 65535, {}));
     auto [wec, wn] = future_get(std::move(wf));
     assert(!wec && wn == 1);
-    if (env.dev.read_packet(pkt, 200)) {
-        throw std::runtime_error("no packet expected after ACK");
-    }
     peer.close();
 }
 
 static void test_rto_retransmit()
 {
-    // 流级尾部 RTO 重传：写完成回调提前（数据发出即完成）后，未确认数据
-    // 由引擎流级 tail_buf 接管；链路丢失（对端不 ACK）时按 RTO 周期重传
-    // 相同序号与载荷，确认后停止重传.
+    // RTO 重传：数据段在链路丢失（对端不 ACK）时，引擎按 RTO 周期重传
+    // 未确认数据（相同序号与载荷），确认后写完成且不再重传.
     engine_env env(1500, std::chrono::seconds(1), std::chrono::seconds(30),
         std::chrono::seconds(30), 1024 * 1024,
         std::chrono::milliseconds(5000),
@@ -1751,274 +1747,6 @@ static void test_rto_retransmit()
         65535, {}));
     auto [wec, wn] = future_get(std::move(wf));
     assert(!wec && wn == payload.size());
-    // 尾部已确认：不再重传
-    if (env.dev.read_packet(pkt, 200)) {
-        throw std::runtime_error("no retransmit expected after ACK");
-    }
-    peer.close();
-}
-
-static void test_tail_retransmit_sequential_writes()
-{
-    // 连续小写（不等待 ACK）：两次写均提前回调，未确认尾部由流级 RTO
-    // 接管；部分 ACK 后剩余尾部按正确序号/载荷重传，全部确认后停止.
-    engine_env env(1500, std::chrono::seconds(1), std::chrono::seconds(30),
-        std::chrono::seconds(30), 1024 * 1024,
-        std::chrono::milliseconds(5000),
-        std::chrono::milliseconds(100));
-    auto &io = env.io;
-    tun_tcp_acceptor acceptor(env.engine);
-    tun_tcp_socket peer(io.get_executor());
-
-    std::promise<boost::system::error_code> accept_done;
-    acceptor.async_accept(peer, [&](boost::system::error_code ec) {
-        if (!ec) {
-            peer.accept();
-        }
-        accept_done.set_value(ec);
-    });
-
-    env.dev.send(
-        make_tcp(CLIENT_IP, DEST_IP, 12367, DEST_PORT, 0x02, 23000, 0, 0,
-        {}));
-    std::vector<uint8_t> pkt;
-    if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no SYN-ACK");
-    }
-    if (!verify_packet(pkt)) {
-        throw std::runtime_error("verify_packet failed");
-    }
-    ip_hdr_info ipi;
-    tcp_hdr_info ti;
-    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
-        throw std::runtime_error("parse SYN-ACK failed");
-    }
-    const uint32_t engine_iss = ti.seq;
-    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12367, DEST_PORT, 0x10, 23001,
-        engine_iss + 1, 4096, {}));
-    future_get(accept_done.get_future());
-
-    // 写 1 "aaaa"：数据发出即回调，尾部 [iss+1, iss+5) 未确认
-    std::promise<std::pair<boost::system::error_code, size_t>> w1;
-    peer.async_write_some(net::buffer("aaaa", 4),
-        [&](boost::system::error_code ec, size_t n) {
-            w1.set_value({ec, n});
-        });
-    if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no first data packet");
-    }
-    if (!verify_packet(pkt)) {
-        throw std::runtime_error("verify_packet failed");
-    }
-    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
-        throw std::runtime_error("parse first data failed");
-    }
-    assert(ti.seq == engine_iss + 1 && ti.len == 4 &&
-        std::string(reinterpret_cast<const char *>(ti.data), ti.len) ==
-        "aaaa");
-    auto [w1ec, w1n] = future_get(w1.get_future());
-    assert(!w1ec && w1n == 4);
-
-    // 写 2 "bbbb"：序列号紧跟写 1，尾部扩展为 [iss+1, iss+9)
-    std::promise<std::pair<boost::system::error_code, size_t>> w2;
-    peer.async_write_some(net::buffer("bbbb", 4),
-        [&](boost::system::error_code ec, size_t n) {
-            w2.set_value({ec, n});
-        });
-    if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no second data packet");
-    }
-    if (!verify_packet(pkt)) {
-        throw std::runtime_error("verify_packet failed");
-    }
-    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
-        throw std::runtime_error("parse second data failed");
-    }
-    assert(ti.seq == engine_iss + 5 && ti.len == 4 &&
-        std::string(reinterpret_cast<const char *>(ti.data), ti.len) ==
-        "bbbb");
-    auto [w2ec, w2n] = future_get(w2.get_future());
-    assert(!w2ec && w2n == 4);
-
-    // 客户端仅确认前 4 字节：剩余尾部 [iss+5, iss+9) 由流级 RTO 重传
-    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12367, DEST_PORT, 0x10, 23001,
-        engine_iss + 5, 4096, {}));
-    if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no tail retransmit");
-    }
-    if (!verify_packet(pkt)) {
-        throw std::runtime_error("verify_packet failed");
-    }
-    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
-        throw std::runtime_error("parse tail retransmit failed");
-    }
-    assert(ti.seq == engine_iss + 5 && ti.len == 4 &&
-        std::string(reinterpret_cast<const char *>(ti.data), ti.len) ==
-        "bbbb");
-
-    // 确认全部：尾部释放，不再重传
-    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12367, DEST_PORT, 0x10, 23001,
-        engine_iss + 9, 4096, {}));
-    if (env.dev.read_packet(pkt, 200)) {
-        throw std::runtime_error("no retransmit expected after ACK");
-    }
-    peer.close();
-}
-
-static void test_tail_rto_with_active_write()
-{
-    // 流级尾部 RTO 与发送协程 RTO 并存：前一写完成（尾部未确认）后立即
-    // 发起大写入（窗口受限未发完），两条 RTO 各自重传不重叠的范围，且
-    // 发送协程重传从本次写操作首字节起，不误读已被复用的前一写缓冲.
-    engine_env env(1500, std::chrono::seconds(1), std::chrono::seconds(30),
-        std::chrono::seconds(30), 1024 * 1024,
-        std::chrono::milliseconds(5000),
-        std::chrono::milliseconds(100));
-    auto &io = env.io;
-    tun_tcp_acceptor acceptor(env.engine);
-    tun_tcp_socket peer(io.get_executor());
-
-    std::promise<boost::system::error_code> accept_done;
-    acceptor.async_accept(peer, [&](boost::system::error_code ec) {
-        if (!ec) {
-            peer.accept();
-        }
-        accept_done.set_value(ec);
-    });
-
-    env.dev.send(
-        make_tcp(CLIENT_IP, DEST_IP, 12368, DEST_PORT, 0x02, 24000, 0, 0,
-        {}));
-    std::vector<uint8_t> pkt;
-    if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no SYN-ACK");
-    }
-    if (!verify_packet(pkt)) {
-        throw std::runtime_error("verify_packet failed");
-    }
-    ip_hdr_info ipi;
-    tcp_hdr_info ti;
-    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
-        throw std::runtime_error("parse SYN-ACK failed");
-    }
-    const uint32_t engine_iss = ti.seq;
-    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12368, DEST_PORT, 0x10, 24001,
-        engine_iss + 1, 4096, {}));
-    future_get(accept_done.get_future());
-
-    const std::string a(1460, 'a');
-    const std::string b(6000, 'b');
-    std::promise<std::pair<boost::system::error_code, size_t>> w1;
-    peer.async_write_some(net::buffer(a),
-        [&](boost::system::error_code ec, size_t n) {
-            w1.set_value({ec, n});
-        });
-    if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no first data packet");
-    }
-    if (!verify_packet(pkt)) {
-        throw std::runtime_error("verify_packet failed");
-    }
-    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
-        throw std::runtime_error("parse first data failed");
-    }
-    assert(ti.seq == engine_iss + 1 && ti.len == 1460 &&
-        std::string(reinterpret_cast<const char *>(ti.data), ti.len) == a);
-    auto [w1ec, w1n] = future_get(w1.get_future());
-    assert(!w1ec && w1n == a.size());
-
-    // 写 2：6000 字节，写 1 尾部仍占用 1460 在途，窗口 4096 下先发
-    // 2 段（1460+1176=2636）后挂起
-    std::promise<std::pair<boost::system::error_code, size_t>> w2;
-    peer.async_write_some(net::buffer(b),
-        [&](boost::system::error_code ec, size_t n) {
-            w2.set_value({ec, n});
-        });
-    const std::array<uint32_t, 2> init_seqs = {
-        engine_iss + 1461u, engine_iss + 2921u};
-    const std::array<size_t, 2> init_lens = {1460, 1176};
-    for (size_t i = 0; i < init_seqs.size(); ++i) {
-        if (!env.dev.read_packet(pkt)) {
-            throw std::runtime_error("no data packet");
-        }
-        if (!verify_packet(pkt)) {
-            throw std::runtime_error("verify_packet failed");
-        }
-        if (!parse_ip(pkt, ipi) ||
-            !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
-            throw std::runtime_error("parse data failed");
-        }
-        assert(ti.seq == init_seqs[i] && ti.len == init_lens[i] &&
-            std::string(reinterpret_cast<const char *>(ti.data), ti.len) ==
-            b.substr(0, init_lens[i]));
-    }
-
-    // 两条 RTO 同时触发：收集重传段，覆盖 [iss+1, iss+1461)（尾部）与
-    // [iss+1461, iss+4097)（发送协程，1460+1176），范围不重叠
-    std::map<uint32_t, std::string> seen;
-    for (int i = 0; i < 6 && seen.size() < 3; ++i) {
-        if (!env.dev.read_packet(pkt)) {
-            break;
-        }
-        if (!verify_packet(pkt)) {
-            throw std::runtime_error("verify_packet failed");
-        }
-        if (!parse_ip(pkt, ipi) ||
-            !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
-            throw std::runtime_error("parse retransmit failed");
-        }
-        seen.emplace(ti.seq,
-            std::string(reinterpret_cast<const char *>(ti.data), ti.len));
-    }
-    assert(seen.size() == 3);
-    assert(seen[engine_iss + 1] == a);
-    assert(seen[engine_iss + 1461] == b.substr(0, 1460));
-    assert(seen[engine_iss + 2921] == b.substr(1460, 1176));
-    // 排空可能紧随的合法重传，避免干扰后续断言
-    while (env.dev.read_packet(pkt, 30)) {
-        if (!verify_packet(pkt)) {
-            throw std::runtime_error("verify_packet failed");
-        }
-        if (!parse_ip(pkt, ipi) ||
-            !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
-            throw std::runtime_error("parse retransmit failed");
-        }
-        const auto it = seen.find(ti.seq);
-        assert(it != seen.end());
-        assert(std::string(reinterpret_cast<const char *>(ti.data),
-                   ti.len) == it->second);
-    }
-
-    // 确认至 iss+4097：写协程恢复发送剩余 3364 字节（1460+1460+444）
-    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12368, DEST_PORT, 0x10, 24001,
-        engine_iss + 4097, 4096, {}));
-    const std::array<uint32_t, 3> resume_seqs = {
-        engine_iss + 4097u, engine_iss + 5557u, engine_iss + 7017u};
-    const std::array<size_t, 3> resume_lens = {1460, 1460, 444};
-    for (size_t i = 0; i < resume_seqs.size(); ++i) {
-        if (!env.dev.read_packet(pkt)) {
-            throw std::runtime_error("no resume data packet");
-        }
-        if (!verify_packet(pkt)) {
-            throw std::runtime_error("verify_packet failed");
-        }
-        if (!parse_ip(pkt, ipi) ||
-            !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
-            throw std::runtime_error("parse resume data failed");
-        }
-        assert(ti.seq == resume_seqs[i] && ti.len == resume_lens[i] &&
-            std::string(reinterpret_cast<const char *>(ti.data), ti.len) ==
-            std::string(resume_lens[i], 'b'));
-    }
-    auto [w2ec, w2n] = future_get(w2.get_future());
-    assert(!w2ec && w2n == b.size());
-
-    // 确认全部：尾部释放，不再重传
-    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12368, DEST_PORT, 0x10, 24001,
-        engine_iss + 7461, 4096, {}));
-    if (env.dev.read_packet(pkt, 200)) {
-        throw std::runtime_error("no retransmit expected after ACK");
-    }
     peer.close();
 }
 
@@ -2164,10 +1892,10 @@ static void test_close_with_unacked_sends_rst()
     }
     assert(ti.len == 1 && ti.data[0] == 'x');
 
-    // 数据未确认时 close：写回调已提前成功完成，设备收到 RST 释放连接
+    // 数据未确认时 close：写以 operation_aborted 完成，设备收到 RST
     peer.close();
     auto [wec, wn] = future_get(std::move(wf));
-    assert(!wec && wn == 1);
+    assert(wec == net::error::operation_aborted && wn == 0);
     if (!env.dev.read_packet(pkt)) {
         throw std::runtime_error("no RST");
     }
@@ -2182,8 +1910,8 @@ static void test_close_with_unacked_sends_rst()
 
 static void test_rto_exhaustion()
 {
-    // RTO 重传超限：写完成回调提前（成功），随后对端始终不确认，流级
-    // 尾部重传次数超过上限后引擎发送 RST 快速释放连接，避免连接永久悬挂.
+    // RTO 重传超限：对端始终不确认，重传次数超过上限后引擎发送 RST
+    // 并以 connection_reset 完成挂起写，避免连接永久悬挂.
     engine_env env(1500, std::chrono::seconds(1), std::chrono::seconds(30),
         std::chrono::seconds(30), 1024 * 1024,
         std::chrono::milliseconds(5000),
@@ -2237,7 +1965,7 @@ static void test_rto_exhaustion()
     }
     assert(ti.len == 1 && ti.data[0] == 'x');
 
-    // 重传超限后：设备收到 RST；写回调早已以成功完成（数据发出即回调）
+    // 重传超限后：设备收到 RST，写以 connection_reset 完成
     bool rst_seen = false;
     for (int i = 0; i < 8 && !rst_seen; ++i) {
         if (!env.dev.read_packet(pkt)) {
@@ -2254,7 +1982,7 @@ static void test_rto_exhaustion()
     }
     assert(rst_seen);
     auto [wec, wn] = future_get(std::move(wf));
-    assert(!wec && wn == 1);
+    assert(wec == net::error::connection_reset && wn == 0);
 }
 
 static void test_close_reopen()
@@ -2583,7 +2311,7 @@ static void test_implicit_accept_on_first_write()
     // 客户端 ACK 完成握手
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12360, DEST_PORT, 0x10, 16001,
         engine_iss + 1, 65535, {}));
-    // 客户端 ACK 数据：写回调已在数据发出时完成，ACK 释放尾部重传
+    // 客户端 ACK 数据：写操作在数据确认后才完成
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12360, DEST_PORT, 0x10, 16001,
         engine_iss + 6, 65535, {}));
     auto [wec, wn] = future_get(write_done.get_future());
@@ -2909,10 +2637,8 @@ int main()
     test_unaccepted_connection_cleanup();
     test_write_queue_limit();
     test_write_large_single_op();
-    test_write_completion_on_send();
+    test_write_completion_requires_ack();
     test_rto_retransmit();
-    test_tail_retransmit_sequential_writes();
-    test_tail_rto_with_active_write();
     test_fin_deferred_until_acked();
     test_close_with_unacked_sends_rst();
     test_rto_exhaustion();

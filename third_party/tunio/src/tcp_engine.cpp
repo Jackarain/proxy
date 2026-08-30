@@ -230,12 +230,10 @@ void tcp_engine::handle_segment(const tcp_flow_ptr &f,
     if (flags & TCP_ACK) {
         if (seq_gt(ack, f->snd_una) && seq_ge(f->snd_nxt, ack)) {
             f->snd_una = ack;
-        } else if (ack == f->snd_nxt + 1 && seq_gt(ack, f->snd_una) &&
-                   (f->probe_in_flight ||
-                       tail_covers(*f, f->snd_nxt))) {
-            // 确认序号比已计入 snd_nxt 的数据末尾多 1：零窗口探测字节
-            // （未计入 snd_nxt）被对端接收，或该字节正由流级尾部重传
-            // 覆盖；同步推进序号与写偏移，避免 in_flight 回绕与数据错位.
+        } else if (f->probe_in_flight && ack == f->snd_nxt + 1 &&
+                   seq_gt(ack, f->snd_una)) {
+            // 零窗口探测的 1 字节被对端接收：探测未计入 snd_nxt，确认后
+            // 同步推进序号与写偏移，避免 in_flight 回绕与数据错位.
             f->snd_una = ack;
             f->snd_nxt = ack;
             if (f->active_write &&
@@ -246,13 +244,9 @@ void tcp_engine::handle_segment(const tcp_flow_ptr &f,
         }
         // 任何 ACK 都意味着对端对探测做出了回应（确认或丢弃），探测状态结束
         f->probe_in_flight = false;
-        // 尾部未确认范围随 ACK 推进：全部确认则释放拷贝缓冲，部分确认
-        // 则复位退避，尽快重传剩余部分.
-        tail_ack_progress(*f);
         // 数据全部确认且无未发送数据：补发被推迟的 FIN（ACK 是发送侧
         // 数据进展的可靠信号，避免 FIN 与在途数据段序列号重叠）
         if (f->fin_pending && f->snd_una == f->snd_nxt &&
-            !tail_covers(*f, f->snd_nxt) &&
             (!f->active_write ||
              f->active_write->offset == f->active_write->total)) {
             f->fin_pending = false;
@@ -274,16 +268,7 @@ void tcp_engine::handle_segment(const tcp_flow_ptr &f,
         }
     }
     // 对端通告的窗口字段按协商 scale 放大后才是实际可用发送窗口（RFC 7323）
-    const uint32_t old_wnd = f->peer_wnd;
     f->peer_wnd = static_cast<uint32_t>(wnd) << f->snd_wnd_scale;
-    if (old_wnd == 0 && f->peer_wnd > 0 && !f->tail_buf.empty() &&
-        f->snd_una < f->tail_end) {
-        // 窗口从 0 恢复且仍有未确认尾部：复位退避，避免窗口恢复后仍需
-        // 等待最长 60s 退避才重传.
-        f->tail_rto = cfg_.tcp_rto_timeout;
-        f->tail_retransmits = 0;
-        arm_tail_timer(*f);
-    }
 
     if (flags & TCP_RST) {
         f->rst = true;
@@ -671,11 +656,10 @@ net::awaitable<void> tcp_engine::write_loop(tcp_flow_ptr f)
             const uint32_t write_end =
                 flow.active_write->start_seq +
                 static_cast<uint32_t>(flow.active_write->total);
-            if (flow.active_write->offset == flow.active_write->total) {
-                // 数据已全部发出即完成写操作：避免逐片等待对端 ACK 时，
-                // 小段触发 delayed ACK(40ms) 拖慢大流量吞吐；未确认数据
-                // 由流级尾部 RTO 重传兜底，与直连/代理端行为一致.
-                capture_tail(flow);
+            if (flow.active_write->offset == flow.active_write->total &&
+                flow.snd_una == write_end) {
+                // 全部数据已发出并被对端确认：成功完成写操作（写操作在
+                // 数据确认后才回调，保证对端已实际收到全部字节）.
                 auto h = std::move(flow.active_write->handler);
                 const size_t done = flow.active_write->total;
                 flow.active_write.reset();
@@ -852,11 +836,7 @@ void tcp_engine::retransmit_unacked(tcp_flow &f, size_t max_bytes)
     auto &op = *f.active_write;
     // 未确认范围 [snd_una, snd_nxt) 映射为写缓冲偏移（offset 与
     // snd_nxt - start_seq 同步推进，探测字节确认时两者同步递增）.
-    // 起点限制在本次写操作首字节：更早的未确认尾部由流级重传负责，
-    // 用户缓冲此时可能已被应用复用，不能重读.
-    const size_t begin = static_cast<size_t>(
-        (f.snd_una > op.start_seq ? f.snd_una : op.start_seq) -
-        op.start_seq);
+    const size_t begin = static_cast<size_t>(f.snd_una - op.start_seq);
     // 终点不得超过用户缓冲长度：FIN 发送后 snd_nxt 含 FIN 的序号空间.
     const size_t end =
         std::min(static_cast<size_t>(f.snd_nxt - op.start_seq), op.total);
@@ -888,176 +868,6 @@ void tcp_engine::retransmit_unacked(tcp_flow &f, size_t max_bytes)
             ++bi;
         }
     }
-}
-
-bool tcp_engine::tail_covers(const tcp_flow &f, uint32_t seq)
-{
-    return !f.tail_buf.empty() && f.tail_seq <= seq && seq < f.tail_end;
-}
-
-void tcp_engine::capture_tail(tcp_flow &f)
-{
-    auto &op = *f.active_write;
-    const uint32_t end_seq =
-        op.start_seq + static_cast<uint32_t>(op.total);
-    if (f.snd_una >= end_seq) {
-        // 数据已全部确认：无需保留尾部（残留 tail 由 ACK 路径清理）
-        if (!f.tail_buf.empty()) {
-            clear_tail(f);
-        }
-        return;
-    }
-    if (!f.tail_buf.empty() && f.snd_una >= f.tail_end) {
-        // 防御：上一尾部已全部确认但尚未被清理
-        clear_tail(f);
-    }
-    // 丢弃已确认前缀，保持 tail_buf 从未确认起点开始
-    if (!f.tail_buf.empty() && f.snd_una > f.tail_seq) {
-        const size_t drop = static_cast<size_t>(f.snd_una - f.tail_seq);
-        f.tail_buf.erase(
-            f.tail_buf.begin(),
-            f.tail_buf.begin() + static_cast<std::ptrdiff_t>(drop));
-        f.tail_seq = f.snd_una;
-    }
-    // 追加本次写操作全部字节：有尾时 tail_end == start_seq（序列空间
-    // 连续）；无尾时从已确认起点拷贝（snd_una >= start_seq，防御性钳到 0）.
-    const size_t begin_off = f.tail_buf.empty()
-        ? (f.snd_una > op.start_seq
-               ? static_cast<size_t>(f.snd_una - op.start_seq)
-               : 0)
-        : 0;
-    if (f.tail_buf.empty()) {
-        f.tail_seq = op.start_seq + static_cast<uint32_t>(begin_off);
-    }
-    const size_t want = op.total - begin_off;
-    f.tail_buf.reserve(f.tail_buf.size() + want);
-    size_t bi = 0;
-    size_t base = 0;
-    while (bi < op.buffers.size() &&
-           base + op.buffers[bi].size() <= begin_off) {
-        base += op.buffers[bi].size();
-        ++bi;
-    }
-    size_t copied = 0;
-    while (bi < op.buffers.size() && copied < want) {
-        const size_t bo = begin_off + copied - base;
-        const size_t avail = op.buffers[bi].size() - bo;
-        const size_t take = std::min(avail, want - copied);
-        if (take == 0) {
-            break;
-        }
-        const uint8_t *src =
-            static_cast<const uint8_t *>(op.buffers[bi].data()) + bo;
-        f.tail_buf.insert(f.tail_buf.end(), src, src + take);
-        copied += take;
-        if (copied < want) {
-            base += op.buffers[bi].size();
-            ++bi;
-        }
-    }
-    f.tail_end = end_seq;
-    // 启动/复位流级 RTO：重传 [snd_una, tail_end) 直至确认或超限
-    f.tail_rto = cfg_.tcp_rto_timeout;
-    f.tail_retransmits = 0;
-    arm_tail_timer(f);
-}
-
-void tcp_engine::retransmit_tail(tcp_flow &f, size_t max_bytes)
-{
-    if (f.tail_buf.empty() || f.snd_una >= f.tail_end) {
-        return;
-    }
-    const size_t begin = static_cast<size_t>(f.snd_una - f.tail_seq);
-    const size_t end = f.tail_buf.size();
-    if (begin >= end) {
-        return; // 防御：尾部已全部确认但尚未清理
-    }
-    size_t off = begin;
-    size_t budget = max_bytes;
-    const size_t seg_mss = mss(f.key.family);
-    while (off < end && budget > 0) {
-        const size_t want = std::min({end - off, budget, seg_mss});
-        send_segment(f, f.tail_seq + static_cast<uint32_t>(off),
-            TCP_ACK | TCP_PSH, f.tail_buf.data() + off, want, false);
-        off += want;
-        budget -= want;
-    }
-}
-
-void tcp_engine::arm_tail_timer(tcp_flow &f)
-{
-    if (!f.tail_timer) {
-        f.tail_timer = std::make_unique<net::steady_timer>(strand_);
-    }
-    f.tail_timer->expires_after(f.tail_rto);
-    // 弱引用避免定时器回调自持有形成引用环；流/引擎销毁后回调直接跳过.
-    f.tail_timer->async_wait(
-        [self = weak_from_this(),
-            flow = std::weak_ptr<tcp_flow>(f.shared_from_this())](
-            const boost::system::error_code &ec) {
-            if (ec) {
-                return;
-            }
-            auto eng = self.lock();
-            auto flow_ptr = flow.lock();
-            if (eng && flow_ptr) {
-                eng->on_tail_rto(flow_ptr);
-            }
-        });
-}
-
-void tcp_engine::clear_tail(tcp_flow &f)
-{
-    f.tail_buf.clear();
-    f.tail_seq = 0;
-    f.tail_end = 0;
-    f.tail_rto = std::chrono::milliseconds(0);
-    f.tail_retransmits = 0;
-    if (f.tail_timer) {
-        f.tail_timer->cancel();
-    }
-}
-
-void tcp_engine::tail_ack_progress(tcp_flow &f)
-{
-    if (f.tail_buf.empty()) {
-        return;
-    }
-    if (f.snd_una >= f.tail_end) {
-        // 尾部数据全部确认：释放拷贝缓冲并停止重传
-        clear_tail(f);
-        return;
-    }
-    if (f.snd_una > f.tail_seq) {
-        // 部分确认（累计推进）：复位退避并尽快重传剩余部分；仅推进时
-        // 复位，避免对端持续重复 ACK 时无限激进重传.
-        f.tail_rto = cfg_.tcp_rto_timeout;
-        f.tail_retransmits = 0;
-        arm_tail_timer(f);
-    }
-}
-
-void tcp_engine::on_tail_rto(const tcp_flow_ptr &f)
-{
-    if (f->state == tcp_state::CLOSED || f->rst) {
-        return;
-    }
-    if (f->tail_buf.empty() || f->snd_una >= f->tail_end) {
-        clear_tail(*f);
-        return;
-    }
-    if (++f->tail_retransmits > cfg_.tcp_rto_max_retransmits) {
-        // 重传超限：与发送协程 RTO 行为一致，以 RST 快速释放连接
-        abort_flow(*f);
-        return;
-    }
-    // 窗口允许时重传未确认尾部；窗口为 0 时等待窗口更新（持续退避）
-    if (f->peer_wnd > 0) {
-        retransmit_tail(*f, f->peer_wnd);
-    }
-    f->tail_rto =
-        std::min(f->tail_rto * 2, std::chrono::milliseconds(60000));
-    arm_tail_timer(*f);
 }
 
 void tcp_engine::signal_write(tcp_flow &f)
@@ -1114,10 +924,9 @@ void tcp_engine::send_fin(tcp_flow &f)
     }
     if ((f.active_write &&
          f.active_write->offset < f.active_write->total) ||
-        f.snd_una != f.snd_nxt || tail_covers(f, f.snd_nxt)) {
-        // 仍有未发送/未确认数据，或零窗口探测字节（未计入 snd_nxt）尚未
-        // 确认：推迟 FIN，等数据全部确认后再发送，避免 FIN 与在途数据段
-        // 序列号重叠导致对端丢弃 FIN 或后续数据.
+        f.snd_una != f.snd_nxt) {
+        // 仍有未发送或未确认数据：推迟 FIN，等数据全部确认后再发送，
+        // 避免 FIN 与在途数据段序列号重叠导致对端丢弃 FIN 或后续数据.
         f.fin_pending = true;
         return;
     }
@@ -1182,7 +991,6 @@ void tcp_engine::close_flow(tcp_flow &f,
     if (f.state == tcp_state::CLOSED) {
         return;
     }
-    clear_tail(f);
     if (f.active_read) {
         auto op = std::move(*f.active_read);
         f.active_read.reset();
