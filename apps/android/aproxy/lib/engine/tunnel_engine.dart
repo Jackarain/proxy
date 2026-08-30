@@ -15,6 +15,19 @@ class EngineStats {
   int connTotal = 0;
 }
 
+/// 按 [mss] 把下行数据切块; 每块单独成为一个 TCP 段, 保证不超对端 MSS。
+List<Uint8List> sliceByMss(Uint8List data, int mss) {
+  if (mss <= 0 || data.length <= mss) return [data];
+  final out = <Uint8List>[];
+  var off = 0;
+  while (off < data.length) {
+    final n = mss < data.length - off ? mss : data.length - off;
+    out.add(Uint8List.sublistView(data, off, off + n));
+    off += n;
+  }
+  return out;
+}
+
 /// 数据面引擎: 消费 TUN 原始 IP 报文, 执行分流、TCP 会话与 UDP/DNS 处理。
 class TunnelEngine {
   TunnelEngine({
@@ -24,6 +37,7 @@ class TunnelEngine {
     required this.forwarder,
     required this.dnsConfig,
     required this.disableCheckCert,
+    this.tunMtu = 1500,
   }) {
     _resolver = DnsResolver(
       config: dnsConfig,
@@ -41,6 +55,7 @@ class TunnelEngine {
   final Forwarder forwarder;
   final DnsConfig dnsConfig;
   final bool disableCheckCert;
+  final int tunMtu;
 
   final stats = EngineStats();
   final List<SessionConn> sessionConnections = [];
@@ -96,6 +111,7 @@ class TunnelEngine {
     required int flags,
     int window = 65535,
     List<int>? data,
+    List<int>? options,
   }) {
     final pkt = buildTcpPacket(
       version: version,
@@ -108,9 +124,21 @@ class TunnelEngine {
       flags: flags,
       window: window,
       data: data,
+      options: options,
     ).wrap();
     if (pkt != null) sendPacket(pkt);
   }
+
+  /// 按 TUN MTU 计算该 IP 版本下的 MSS (IPv4: MTU-40, IPv6: MTU-60)。
+  int mssFor(int version) {
+    final overhead = version == 6 ? 60 : 40;
+    final mss = tunMtu - overhead;
+    return mss > 536 ? mss : 536;
+  }
+
+  /// IPv4/IPv6 报文允许的 TCP 载荷上限 (IP 总长 65535 约束, 防 16 位截断)。
+  int maxTcpPayload(int version) =>
+      version == 6 ? 65535 - 40 - 20 : 65535 - 20 - 20;
 
   /// 构造并发送一个 UDP 段 (v4/v6 自适应).
   void sendUdp({

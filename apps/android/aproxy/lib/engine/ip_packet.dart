@@ -227,6 +227,7 @@ TcpHeader? tryParseTcp(Uint8List p) {
   final dataOffsetNib = p[12] >> 4;
   final flags = p[13] & 0x3f;
   final window = (p[14] << 8) | p[15];
+  final start = dataOffsetNib * 4;
   final t = TcpHeader(
     srcPort: srcPort & 0xffff,
     dstPort: dstPort & 0xffff,
@@ -235,8 +236,8 @@ TcpHeader? tryParseTcp(Uint8List p) {
     dataOffset: dataOffsetNib,
     flags: flags,
     window: window,
+    options: start > 20 ? Uint8List.sublistView(p, 20, start) : null,
   );
-  final start = dataOffsetNib * 4;
   if (start <= p.length) {
     t.dataStart = start;
     t.dataLength = p.length - start;
@@ -339,9 +340,11 @@ IpPacketBuilder buildTcpPacket({
   required int flags,
   int window = 65535,
   List<int>? data,
+  List<int>? options,
 }) {
   final segment = _buildTcp(
     srcIp, dstIp, srcPort, dstPort, seq, ack, flags, window, data,
+    options: options,
     isV6: version == 6,
   );
   return IpPacketBuilder(
@@ -381,11 +384,13 @@ Uint8List _buildTcp(
   int ack,
   int flags,
   int window,
-  List<int>? data,
-  {required bool isV6}
-) {
+  List<int>? data, {
+  List<int>? options,
+  required bool isV6,
+}) {
   final dataBytes = data ?? const [];
-  final tcpLen = 20;
+  final optBytes = options ?? const [];
+  final tcpLen = 20 + optBytes.length;
   final out = Uint8List(tcpLen + dataBytes.length);
   out[0] = (srcPort >> 8) & 0xff;
   out[1] = srcPort & 0xff;
@@ -399,10 +404,13 @@ Uint8List _buildTcp(
   out[9] = (ack >> 16) & 0xff;
   out[10] = (ack >> 8) & 0xff;
   out[11] = ack & 0xff;
-  out[12] = (5 << 4) & 0xf0;
+  out[12] = ((tcpLen >> 2) << 4) & 0xf0;
   out[13] = flags & 0x3f;
   out[14] = (window >> 8) & 0xff;
   out[15] = window & 0xff;
+  for (var i = 0; i < optBytes.length; i++) {
+    out[20 + i] = optBytes[i];
+  }
   for (var i = 0; i < dataBytes.length; i++) {
     out[tcpLen + i] = dataBytes[i];
   }
@@ -412,6 +420,33 @@ Uint8List _buildTcp(
   out[16] = (cs >> 8) & 0xff;
   out[17] = cs & 0xff;
   return out;
+}
+
+/// 构造 TCP MSS 选项 (kind=2, len=4)。
+Uint8List tcpMssOption(int mss) =>
+    Uint8List.fromList([2, 4, (mss >> 8) & 0xff, mss & 0xff]);
+
+/// 从 TCP options 字节中解析 MSS 值; 未携带返回 null。
+int? parseTcpMss(Uint8List? options) {
+  final opts = options;
+  if (opts == null || opts.isEmpty) return null;
+  var off = 0;
+  while (off < opts.length) {
+    final kind = opts[off];
+    if (kind == 0) break; // EOL
+    if (kind == 1) {
+      off += 1; // NOP
+      continue;
+    }
+    if (off + 1 >= opts.length) break;
+    final len = opts[off + 1];
+    if (len < 2 || off + len > opts.length) break;
+    if (kind == 2 && len >= 4) {
+      return ((opts[off + 2] << 8) | opts[off + 3]) & 0xffff;
+    }
+    off += len;
+  }
+  return null;
 }
 
 Uint8List _buildUdp(

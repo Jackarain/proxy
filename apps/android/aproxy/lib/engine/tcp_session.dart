@@ -37,6 +37,7 @@ class TcpSession {
   late int _serverIsn;
   late int _clientNextSeq; // 期望下一个来自客户端 data 的 seq (不含 payload).
   late int _serverNextSeq = (_serverIsn + 1) & 0xffffffff;
+  int _clientMss = 536; // 对端通告 MSS (未携带时按 RFC 默认 536).
 
   ProtectedChannel? _upstream;
   bool _established = false;
@@ -60,6 +61,8 @@ class TcpSession {
     if (tcp.syn && !tcp.hasAck) {
       _clientIsn = tcp.seq;
       _clientNextSeq = (_clientIsn + 1) & 0xffffffff;
+      final mss = parseTcpMss(tcp.options);
+      if (mss != null && mss > 0) _clientMss = mss;
       _connectUpstream();
       return true; // 应回 SYN+ACK.
     }
@@ -144,6 +147,7 @@ class TcpSession {
       seq: _serverIsn,
       ack: _clientNextSeq,
       flags: 0x12, // SYN|ACK
+      options: tcpMssOption(engine.mssFor(version)),
     );
     log('SYN+ACK 已发');
   }
@@ -203,19 +207,24 @@ class TcpSession {
   }
 
   void _pushToClient(Uint8List data) {
-    engine.sendTcp(
-      version: version,
-      srcIp: dstIp,
-      dstIp: srcIp,
-      srcPort: dstPort,
-      dstPort: srcPort,
-      seq: _serverNextSeq,
-      ack: _clientNextSeq,
-      flags: 0x18, // PSH|ACK
-      data: data,
-    );
-    _serverNextSeq = (_serverNextSeq + data.length) & 0xffffffff;
-    bytesDown += data.length;
+    final cap = _clientMss < engine.maxTcpPayload(version)
+        ? _clientMss
+        : engine.maxTcpPayload(version);
+    for (final chunk in sliceByMss(data, cap)) {
+      engine.sendTcp(
+        version: version,
+        srcIp: dstIp,
+        dstIp: srcIp,
+        srcPort: dstPort,
+        dstPort: srcPort,
+        seq: _serverNextSeq,
+        ack: _clientNextSeq,
+        flags: 0x18, // PSH|ACK
+        data: chunk,
+      );
+      _serverNextSeq = (_serverNextSeq + chunk.length) & 0xffffffff;
+      bytesDown += chunk.length;
+    }
   }
 
   void _sendFin() {

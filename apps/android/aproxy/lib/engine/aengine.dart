@@ -108,6 +108,7 @@ class DartEngine {
       forwarder: _forwarder!,
       dnsConfig: dnsConfig,
       disableCheckCert: cfg.disableCheckCert,
+      tunMtu: cfg.tunMtu,
     );
 
     // 让上游解析 proxy_pass 域名时复用引擎的 DnsResolver。
