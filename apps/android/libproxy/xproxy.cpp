@@ -167,6 +167,11 @@ bool config_to_option(const std::string& config, proxy::proxy_server_option& opt
 
 	if (auto it = obj.if_contains("disable_check_cert"); it && it->is_bool())
 		opt.disable_check_cert_ = it->as_bool();
+	// 与 proxy_pass 建立 TLS 连接时使用的 SNI (空表示用 proxy_pass 主机名).
+	if (auto it = obj.if_contains("ssl_sni"); it && it->is_string())
+		opt.proxy_ssl_name_ = it->as_string().c_str();
+	else if (auto it = obj.if_contains("proxy_ssl_name"); it && it->is_string())
+		opt.proxy_ssl_name_ = it->as_string().c_str();
 
 	return true;
 }

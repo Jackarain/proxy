@@ -12,6 +12,7 @@ class VpnConfig {
     required this.id,
     required this.name,
     this.proxyPass = '',
+    this.sni = '',
     this.tunMtu = 1500,
     List<String>? proxyDomains,
     List<String>? proxyCidr,
@@ -38,6 +39,10 @@ class VpnConfig {
   // ---- proxy 原生配置 ----
   /// 上游代理地址, 如 https://user:pass@host:443.
   String proxyPass;
+
+  /// 与 proxy_pass 建立 TLS 连接时使用的 SNI, 空表示使用
+  /// proxy_pass 的主机名 (经 ssl_sni 传给 native).
+  String sni;
 
   /// TUN 设备 MTU.
   int tunMtu;
@@ -150,6 +155,10 @@ class VpnConfig {
     if (proxyPassPoolSize < 0) {
       errors.add('连接池大小不能为负数');
     }
+    final sni = this.sni.trim();
+    if (sni.isNotEmpty && sni.contains(RegExp(r'\s'))) {
+      errors.add('SNI 不能包含空白字符');
+    }
     final badDomestic = dns
         .where((d) => InternetAddress.tryParse(d.trim()) == null)
         .toList();
@@ -190,6 +199,7 @@ class VpnConfig {
   String toProxyJson({int launcherPort = 0}) {
     final map = <String, dynamic>{
       'proxy_pass': proxyPass.trim(),
+      if (sni.trim().isNotEmpty) 'ssl_sni': sni.trim(),
       'tun': true,
       'tun_mtu': tunMtu,
       'tun_wait_fd': true,
@@ -224,6 +234,7 @@ class VpnConfig {
     'id': id,
     'name': name,
     'proxyPass': proxyPass,
+    'sni': sni,
     'tunMtu': tunMtu,
     'proxyDomains': proxyDomains,
     'proxyCidr': proxyCidr,
@@ -245,6 +256,7 @@ class VpnConfig {
     id: json['id'] as String? ?? VpnConfig.newId(),
     name: json['name'] as String? ?? '未命名',
     proxyPass: json['proxyPass'] as String? ?? '',
+    sni: json['sni'] as String? ?? '',
     tunMtu: json['tunMtu'] as int? ?? 1500,
     proxyDomains: _strList(json['proxyDomains']),
     proxyCidr: _strList(json['proxyCidr']),

@@ -12,6 +12,7 @@ void main() {
         id: 'abc',
         name: '测试',
         proxyPass: 'https://user:pass@host:443',
+        sni: 'custom.example.com',
         tunMtu: 1500,
         proxyDomains: ['google.com', 'youtube.com'],
         proxyCidr: ['1.1.1.0/24'],
@@ -29,6 +30,7 @@ void main() {
       expect(restored.id, c.id);
       expect(restored.name, c.name);
       expect(restored.proxyPass, c.proxyPass);
+      expect(restored.sni, 'custom.example.com');
       expect(restored.tunMtu, 1500);
       expect(restored.proxyDomains, ['google.com', 'youtube.com']);
       expect(restored.proxyCidr, ['1.1.1.0/24']);
@@ -75,6 +77,7 @@ void main() {
       final map =
           jsonDecode(c.toProxyJson(launcherPort: 12345)) as Map<String, dynamic>;
       expect(map['proxy_pass'], 'https://user:pass@host:443');
+      expect(map.containsKey('ssl_sni'), isFalse);
       expect(map['tun'], true);
       expect(map['tun_wait_fd'], true);
       expect(map['tun_mtu'], 1500);
@@ -87,6 +90,34 @@ void main() {
       expect(map['dns_cache_ttl'], 300);
       expect(map['dns_no_ipv6'], true);
       expect(map['launcher_url'], 'ws://127.0.0.1:12345');
+    });
+
+    test('指定 SNI 时下发 ssl_sni, 空时不下发', () {
+      final withSni = VpnConfig(
+        id: 'abc',
+        name: '测试',
+        proxyPass: 'https://user:pass@host:443',
+        sni: 'custom.example.com',
+      );
+      final map =
+          jsonDecode(withSni.toProxyJson()) as Map<String, dynamic>;
+      expect(map['ssl_sni'], 'custom.example.com');
+      // SNI 变更经 _tunFieldsChanged 触发 VPN 重建, 不走 set_config 热更新.
+      expect(withSni.toProxyOptions().containsKey('ssl_sni'), isFalse);
+
+      final empty = VpnConfig(id: 'abc', name: '测试', proxyPass: 'https://a:443');
+      expect(empty.sni, '');
+      expect(jsonDecode(empty.toProxyJson()), isNot(contains('ssl_sni')));
+    });
+
+    test('SNI 含空白字符时校验失败', () {
+      final bad = VpnConfig(
+        id: 'abc',
+        name: '测试',
+        proxyPass: 'https://user:pass@host:443',
+        sni: 'bad name.example.com',
+      );
+      expect(bad.validate(), contains('SNI 不能包含空白字符'));
     });
 
     test('禁用 IPv6 解析默认启用并随 json 迁移', () {

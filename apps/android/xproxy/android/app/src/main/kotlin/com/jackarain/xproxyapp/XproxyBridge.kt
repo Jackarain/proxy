@@ -57,6 +57,8 @@ object XproxyBridge {
         }
         out.put("dns_no_ipv6", cfg.optBoolean("noIpv6", true))
         out.put("disable_check_cert", cfg.optBoolean("disableCheckCert", true))
+        // 与 proxy_pass 建立 TLS 连接时使用的 SNI (空表示用 proxy_pass 主机名).
+        out.put("ssl_sni", cfg.optString("sni", ""))
         out.put("udp_timeout", cfg.optInt("udpTimeout", 300))
         out.put("launcher_url", "ws://127.0.0.1:$launcherPort")
         return xproxy.start(out.toString())

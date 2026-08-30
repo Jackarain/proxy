@@ -21,6 +21,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
   late final TextEditingController _proxyPass = TextEditingController(
     text: c.proxyPass,
   );
+  late final TextEditingController _sni = TextEditingController(text: c.sni);
   late final TextEditingController _proxyDomains = TextEditingController(
     text: c.proxyDomains.join('\n'),
   );
@@ -50,6 +51,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
     for (final t in [
       _name,
       _proxyPass,
+      _sni,
       _proxyDomains,
       _proxyCidr,
       _dns,
@@ -95,6 +97,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
         c
           ..name = _name.text.trim().isEmpty ? '未命名' : _name.text.trim()
           ..proxyPass = _proxyPass.text.trim()
+          ..sni = _sni.text.trim()
           ..proxyDomains = domains
           ..proxyCidr = cidrs
           ..dns = _lines(_dns.text)
@@ -201,6 +204,15 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
           decoration: const InputDecoration(
             labelText: '上游代理 proxy_pass',
             hintText: '******host:443',
+            border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _sni,
+          decoration: const InputDecoration(
+            labelText: 'SNI',
+            helperText: '与 proxy_pass 建立 TLS 连接时使用的 SNI, 留空用主机名',
             border: OutlineInputBorder(borderRadius: BorderRadius.zero),
           ),
         ),
