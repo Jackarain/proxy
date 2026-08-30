@@ -20,6 +20,7 @@
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/functional/hash.hpp>
 
 #if defined(__linux__)
@@ -32,6 +33,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <future>
@@ -601,50 +603,94 @@ namespace proxy {
 	// tx_loop 读取客户端（tun_tcp_socket）数据并转发到上游.
 	net::awaitable<void> tun_tcp_flow::tx_loop()
 	{
-		char buffer[16384];
+		using namespace net::experimental::awaitable_operators;
+
+		constexpr size_t buf_size = 65536;
+
+		std::unique_ptr<char, decltype(&std::free)> buf0(
+			(char*)std::malloc(buf_size), &std::free);
+		std::unique_ptr<char, decltype(&std::free)> buf1(
+			(char*)std::malloc(buf_size), &std::free);
+
+		// 分别使用主从缓冲指针用于并发读写.
+		auto primary_buf = buf0.get();
+		auto secondary_buf = buf1.get();
+
+		boost::system::error_code read_ec;
+		boost::system::error_code write_ec;
+
+		// 首先读取客户端数据作为预备, 以用于后面的交替读写逻辑.
+		size_t bytes = co_await m_client_stream.async_read_some(
+			net::buffer(primary_buf, buf_size), net_awaitable[read_ec]);
+		if (read_ec)
+		{
+			// 客户端流异常（RST/关闭）：整体关闭连接.
+			close();
+			co_return;
+		}
+
+		if (bytes == 0)
+		{
+			// 客户端 FIN：半关闭上游写方向，等待上游 EOF 后整体关闭.
+			handle_client_fin();
+			co_return;
+		}
+
+		m_rx_bytes += static_cast<uint64_t>(bytes);
+		if (m_owner)
+			m_owner->add_traffic(bytes, 0);
 
 		for (; !m_closed;)
 		{
-			boost::system::error_code ec;
-			size_t n = co_await m_client_stream.async_read_some(
-				net::buffer(buffer), net_awaitable[ec]);
-			if (ec)
+			// 并发读写, 将上次接收到的客户端数据 primary_buf 转发给上游,
+			// 同时异步读取客户端的数据到 secondary_buf 中.
+			auto [write_bytes, read_bytes] = co_await(
+				net::async_write(m_upstream,
+					net::buffer(primary_buf, bytes),
+					[bytes](const boost::system::error_code& ec, std::size_t)
+						-> std::size_t {
+							return ec ? 0 : bytes;
+						}, net_awaitable[write_ec])
+				&&
+				m_client_stream.async_read_some(
+					net::buffer(secondary_buf, buf_size),
+					net_awaitable[read_ec])
+			);
+			(void)write_bytes;
+
+			// 交换主从缓冲区.
+			std::swap(primary_buf, secondary_buf);
+
+			// 保存接收到的数据大小用于转发给上游, 以及计算整个传输数据量.
+			bytes = read_bytes;
+
+			// 客户端流异常（RST/关闭）：整体关闭连接.
+			if (read_ec)
 			{
-				// 客户端流异常（RST/关闭）：整体关闭连接.
 				close();
 				co_return;
 			}
 
-			if (n == 0)
+			// 客户端 FIN：半关闭上游写方向，等待上游 EOF 后整体关闭.
+			if (bytes == 0)
 			{
-				// 客户端 FIN：半关闭上游写方向，等待上游 EOF 后整体关闭.
-				m_client_fin = true;
-				if (m_upstream_eof)
-				{
-					close();
-					co_return;
-				}
-
-				boost::system::error_code sec;
-				net_tcp_socket(m_upstream).shutdown(
-					tcp::socket::shutdown_send, sec);
+				handle_client_fin();
 				co_return;
 			}
 
-			m_rx_bytes += static_cast<uint64_t>(n);
-			if (m_owner)
-				m_owner->add_traffic(n, 0);
-
-			co_await net::async_write(
-				m_upstream, net::buffer(buffer, n), net_awaitable[ec]);
-			if (ec)
+			// 上游写入失败：EOF 向客户端发 FIN，异常发送 RST 并关闭.
+			if (write_ec)
 			{
-				if (ec == net::error::eof)
-					handle_upstream_eof(ec, 0);
+				if (write_ec == net::error::eof)
+					handle_upstream_eof(write_ec, 0);
 				else
 					on_upstream_closed();
 				co_return;
 			}
+
+			m_rx_bytes += static_cast<uint64_t>(bytes);
+			if (m_owner)
+				m_owner->add_traffic(bytes, 0);
 		}
 
 		co_return;
@@ -653,47 +699,95 @@ namespace proxy {
 	// rx_loop 读取上游数据并转发到客户端（tun_tcp_socket）.
 	net::awaitable<void> tun_tcp_flow::rx_loop()
 	{
-		char buffer[65536];
+		using namespace net::experimental::awaitable_operators;
+
+		constexpr size_t buf_size = 65536;
+
+		std::unique_ptr<char, decltype(&std::free)> buf0(
+			(char*)std::malloc(buf_size), &std::free);
+		std::unique_ptr<char, decltype(&std::free)> buf1(
+			(char*)std::malloc(buf_size), &std::free);
+
+		// 分别使用主从缓冲指针用于并发读写.
+		auto primary_buf = buf0.get();
+		auto secondary_buf = buf1.get();
+
+		boost::system::error_code read_ec;
+		boost::system::error_code write_ec;
+
+		// 首先读取上游数据作为预备, 以用于后面的交替读写逻辑.
+		size_t bytes = co_await m_upstream.async_read_some(
+			net::buffer(primary_buf, buf_size), net_awaitable[read_ec]);
+		if (read_ec || bytes == 0)
+		{
+			// 上游读取结束：EOF 向客户端发 FIN，异常发送 RST 并关闭.
+			handle_upstream_eof(read_ec, bytes);
+			co_return;
+		}
+
+		m_tx_bytes += static_cast<uint64_t>(bytes);
+		if (m_owner)
+			m_owner->add_traffic(0, bytes);
 
 		for (; !m_closed;)
 		{
-			boost::system::error_code ec;
-			size_t n = co_await m_upstream.async_read_some(
-				net::buffer(buffer), net_awaitable[ec]);
+			// 并发读写, 将上次接收到的上游数据 primary_buf 写给客户端,
+			// 同时异步读取上游的数据到 secondary_buf 中.
+			auto [write_bytes, read_bytes] = co_await(
+				net::async_write(m_client_stream,
+					net::buffer(primary_buf, bytes),
+					[bytes](const boost::system::error_code& ec, std::size_t)
+						-> std::size_t {
+							return ec ? 0 : bytes;
+						}, net_awaitable[write_ec])
+				&&
+				m_upstream.async_read_some(
+					net::buffer(secondary_buf, buf_size),
+					net_awaitable[read_ec])
+			);
+			(void)write_bytes;
 
-			if (ec || n == 0)
+			// 交换主从缓冲区.
+			std::swap(primary_buf, secondary_buf);
+
+			// 保存接收到的数据大小用于转发给客户端, 以及计算整个传输数据量.
+			bytes = read_bytes;
+
+			// 上游读取结束：EOF 向客户端发 FIN，异常发送 RST 并关闭.
+			if (read_ec || bytes == 0)
 			{
-				handle_upstream_eof(ec, n);
+				handle_upstream_eof(read_ec, bytes);
 				co_return;
 			}
 
-			m_tx_bytes += static_cast<uint64_t>(n);
-			if (m_owner)
-				m_owner->add_traffic(0, n);
+			// 客户端流不可写（已关闭/RST）：整体关闭连接.
+			if (write_ec)
+			{
+				close();
+				co_return;
+			}
 
-			co_await write_to_client(buffer, n);
+			m_tx_bytes += static_cast<uint64_t>(bytes);
+			if (m_owner)
+				m_owner->add_traffic(0, bytes);
 		}
 
 		co_return;
 	}
 
-	// write_to_client 将数据写入客户端流；引擎按 MSS 自动分片，
-	// 客户端窗口满时等待 ACK 后继续.
-	net::awaitable<void> tun_tcp_flow::write_to_client(const char* data, size_t len)
+	// handle_client_fin 处理客户端 FIN：半关闭上游写方向，等待上游 EOF
+	// 后整体关闭.
+	void tun_tcp_flow::handle_client_fin()
 	{
-		for (size_t off = 0; off < len && !m_closed;)
+		m_client_fin = true;
+		if (m_upstream_eof)
 		{
-			boost::system::error_code ec;
-			size_t n = co_await m_client_stream.async_write_some(
-				net::buffer(data + off, len - off), net_awaitable[ec]);
-			if (ec)
-			{
-				// 客户端流不可写（已关闭/RST）：整体关闭连接.
-				close();
-				co_return;
-			}
-			off += n;
+			close();
+			return;
 		}
+
+		boost::system::error_code ec;
+		net_tcp_socket(m_upstream).shutdown(tcp::socket::shutdown_send, ec);
 	}
 
 	// handle_upstream_eof 处理上游读取结束：EOF 向客户端发 FIN，

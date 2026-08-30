@@ -127,8 +127,8 @@ namespace proxy {
 		// 读取上游数据并转发到客户端的接收协程.
 		net::awaitable<void> rx_loop();
 
-		// 将数据写入客户端流，发送队列积压时等待后重试.
-		net::awaitable<void> write_to_client(const char* data, size_t len);
+		// 处理客户端 FIN：半关闭上游写方向，等待上游 EOF 后整体关闭.
+		void handle_client_fin();
 
 		// 处理上游读取结束：EOF 向客户端发 FIN，异常发送 RST 并关闭.
 		void handle_upstream_eof(boost::system::error_code ec, size_t n);
