@@ -1,6 +1,6 @@
 ﻿//
 // tun_tcp_socket.hpp
-// ~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
@@ -54,13 +54,13 @@ public:
     // 异步读取：返回已按序确认的字节流
     template <typename MutableBufferSequence, typename CompletionToken>
     auto async_read_some(MutableBufferSequence &&buffers,
-                         CompletionToken &&token)
+        CompletionToken &&token)
     {
         return net::async_initiate<CompletionToken,
-                                   void(boost::system::error_code, size_t)>(
+            void(boost::system::error_code, size_t)>(
             [this](auto handler, auto buffers) mutable {
                 do_read_some(std::move(buffers),
-                             net::bind_executor(ex_, std::move(handler)));
+                    net::bind_executor(ex_, std::move(handler)));
             },
             token, std::forward<MutableBufferSequence>(buffers));
     }
@@ -70,20 +70,20 @@ public:
     // 的 async_write_some 语义一致），引擎在发送期间只引用而不拷贝用户数据。
     template <typename ConstBufferSequence, typename CompletionToken>
     auto async_write_some(ConstBufferSequence &&buffers,
-                          CompletionToken &&token)
+        CompletionToken &&token)
     {
         return net::async_initiate<CompletionToken,
-                                   void(boost::system::error_code, size_t)>(
+            void(boost::system::error_code, size_t)>(
             [this](auto handler, auto buffers) mutable {
                 do_write_some(std::move(buffers),
-                              net::bind_executor(ex_, std::move(handler)));
+                    net::bind_executor(ex_, std::move(handler)));
             },
             token, std::forward<ConstBufferSequence>(buffers));
     }
 
     // 优雅关闭：发送 FIN 完成四次挥手
     void shutdown(net::ip::tcp::socket::shutdown_type what,
-                  boost::system::error_code &ec);
+        boost::system::error_code &ec);
 
     // 优雅关闭（与 shutdown(send) 等价）
     void close();

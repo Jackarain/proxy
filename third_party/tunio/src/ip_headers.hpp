@@ -200,8 +200,8 @@ inline uint16_t verify_ipv4_checksum(const uint8_t *ip, size_t hlen)
 
 // TCP/UDP/ICMPv6 伪头部校验和（family: 4 或 6，地址均为网络字节序）
 inline uint16_t tcp_udp_checksum(int family, const uint8_t *src_ip,
-                                 const uint8_t *dst_ip, uint8_t protocol,
-                                 const uint8_t *segment, size_t seg_len)
+    const uint8_t *dst_ip, uint8_t protocol, const uint8_t *segment,
+    size_t seg_len)
 {
     uint32_t sum = 0;
     const size_t addr_len = family == 6 ? 16 : 4;
@@ -219,8 +219,7 @@ inline uint16_t tcp_udp_checksum(int family, const uint8_t *src_ip,
 
 // TCP/UDP 伪头部校验和（IPv4 便捷重载，参数为网络字节序地址）
 inline uint16_t tcp_udp_checksum(uint32_t src_ip, uint32_t dst_ip,
-                                 uint8_t protocol, const uint8_t *segment,
-                                 size_t seg_len)
+    uint8_t protocol, const uint8_t *segment, size_t seg_len)
 {
     // 地址按网络字节序存储：直接按内存字节拆成 16 位字，避免主机字节序干扰
     const uint8_t *s = reinterpret_cast<const uint8_t *>(&src_ip);
@@ -237,8 +236,8 @@ inline size_t ip_header_size(int family) noexcept
 // 构建 IP 头部（IPv4 自动计算头部校验和，IPv6 无校验和字段）；
 // buf 需至少容纳 ip_header_size(family) 字节，返回头部长度。
 inline size_t build_ip_header(uint8_t *buf, int family, const uint8_t *src_ip,
-                              const uint8_t *dst_ip, uint8_t protocol,
-                              size_t total_len, uint16_t ip_id)
+    const uint8_t *dst_ip, uint8_t protocol, size_t total_len,
+    uint16_t ip_id)
 {
     if (family == 4) {
         auto *ip = reinterpret_cast<ipv4_header *>(buf);

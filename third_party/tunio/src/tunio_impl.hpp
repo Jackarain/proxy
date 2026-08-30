@@ -71,7 +71,7 @@ public:
                     tcp->async_accept(std::move(h));
                 } else {
                     h(boost::system::error_code(net::error::bad_descriptor),
-                      nullptr);
+                        nullptr);
                 }
             });
     }
@@ -84,7 +84,7 @@ public:
                     udp->async_accept(std::move(h));
                 } else {
                     h(boost::system::error_code(net::error::bad_descriptor),
-                      nullptr);
+                        nullptr);
                 }
             });
     }
@@ -111,12 +111,12 @@ private:
     void start_read();
     void start_read_slot(size_t index);
     void on_read(const boost::system::error_code &ec, size_t n, size_t index,
-                 uint64_t epoch);
+        uint64_t epoch);
     void handle_packet(const uint8_t *pkt, size_t len);
     void handle_icmp(const ip_packet_info &ip, const uint8_t *icmp,
-                     size_t icmp_len);
+        size_t icmp_len);
     void handle_icmpv6(const ip_packet_info &ip, const uint8_t *icmp,
-                       size_t icmp_len);
+        size_t icmp_len);
 
     net::any_io_executor strand_ex_;
     std::atomic<bool> open_{false};

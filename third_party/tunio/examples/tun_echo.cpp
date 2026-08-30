@@ -82,13 +82,13 @@ options parse_args(int argc, char **argv)
 
 // ---- TCP 全双工数据泵（DESIGN.md §10.1）----
 net::awaitable<void> bidirectional_bridge(tunio::tun_tcp_socket client,
-                                          net::ip::tcp::endpoint target)
+    net::ip::tcp::endpoint target)
 {
     auto ex = co_await net::this_coro::executor;
     auto proxy = std::make_shared<net::ip::tcp::socket>(ex);
     boost::system::error_code ec;
     co_await proxy->async_connect(target,
-                                  net::redirect_error(net::use_awaitable, ec));
+        net::redirect_error(net::use_awaitable, ec));
     if (ec) {
         client.reset();
         co_return;
@@ -102,9 +102,9 @@ net::awaitable<void> bidirectional_bridge(tunio::tun_tcp_socket client,
             try {
                 for (;;) {
                     size_t n = co_await c->async_read_some(net::buffer(buf),
-                                                           net::use_awaitable);
+                        net::use_awaitable);
                     co_await net::async_write(*proxy, net::buffer(buf, n),
-                                              net::use_awaitable);
+                        net::use_awaitable);
                 }
             } catch (...) {
             }
@@ -122,7 +122,7 @@ net::awaitable<void> bidirectional_bridge(tunio::tun_tcp_socket client,
                     size_t n = co_await proxy->async_read_some(
                         net::buffer(buf), net::use_awaitable);
                     co_await net::async_write(*c, net::buffer(buf, n),
-                                              net::use_awaitable);
+                        net::use_awaitable);
                 }
             } catch (...) {
                 c->close();
@@ -148,11 +148,11 @@ net::awaitable<void> tcp_listener(tunio::tunio &engine, uint16_t echo_port)
         const net::ip::tcp::endpoint target =
             dest.address().is_v6()
                 ? net::ip::tcp::endpoint(net::ip::address_v6::loopback(),
-                                         echo_port)
+                    echo_port)
                 : net::ip::tcp::endpoint(net::ip::address_v4::loopback(),
-                                         echo_port);
+                    echo_port);
         net::co_spawn(ex, bidirectional_bridge(std::move(client), target),
-                      net::detached);
+            net::detached);
     }
 }
 
@@ -166,7 +166,7 @@ net::awaitable<void> udp_echo_handler(tunio::tun_udp_socket session)
             size_t n = co_await session.async_receive_from(
                 net::buffer(buf), sender, net::use_awaitable);
             co_await session.async_send_to(sender, net::buffer(buf, n),
-                                           net::use_awaitable);
+                net::use_awaitable);
         }
     } catch (...) {
         session.close();
@@ -222,8 +222,8 @@ int main(int argc, char **argv)
         return 1;
     }
     std::cout << "tun_echo: " << cfg.dev_name << " " << cfg.ipv4_addr
-              << (cfg.ipv6_addr.empty() ? "" : " / " + cfg.ipv6_addr)
-              << std::endl;
+        << (cfg.ipv6_addr.empty() ? "" : " / " + cfg.ipv6_addr)
+        << std::endl;
 
     net::co_spawn(io, tcp_listener(engine, opt.echo_port), net::detached);
     net::co_spawn(io, udp_listener(engine), net::detached);

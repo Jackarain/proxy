@@ -35,7 +35,8 @@ public:
         return false;
     }
 
-    bool assign(native_handle_type, size_t, boost::system::error_code &ec)
+    bool assign(native_handle_type, size_t, bool,
+        boost::system::error_code &ec)
     {
         ec = make_error_code(boost::system::errc::operation_not_supported);
         return false;

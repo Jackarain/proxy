@@ -26,6 +26,10 @@ namespace tunio {
 namespace net = boost::asio;
 namespace detail {
 
+// 设备写完成处理器（与 Boost.Asio 异步操作完成签名一致）
+using device_write_handler =
+    net::any_completion_handler<void(boost::system::error_code, size_t)>;
+
 // 串行化设备写队列
 //
 // 底层描述符同一时刻仅允许一个未完成的异步写操作，所有写请求统一进入
@@ -38,8 +42,8 @@ class device_writer : public std::enable_shared_from_this<device_writer>
 {
 public:
     device_writer(net::any_io_executor strand,
-                  std::shared_ptr<packet_device> dev,
-                  std::shared_ptr<engine_stats> stats)
+        std::shared_ptr<packet_device> dev,
+        std::shared_ptr<engine_stats> stats)
         : strand_(std::move(strand))
         , dev_(std::move(dev))
         , stats_(std::move(stats))
@@ -115,8 +119,7 @@ private:
     struct entry
     {
         packet_buffer buf;
-        net::any_completion_handler<void(boost::system::error_code, size_t)>
-            handler;
+        device_write_handler handler;
     };
 
     void pump()
@@ -130,9 +133,9 @@ private:
         queue_.pop_front();
         packet_buffer &buf = current_->buf;
         auto self = shared_from_this();
-        dev_->async_write_packet(
-            buf, net::bind_executor(strand_, [self](boost::system::error_code ec,
-                                                   size_t n) {
+        dev_->async_write_packet(buf,
+            net::bind_executor(strand_, [self](
+                boost::system::error_code ec, size_t n) {
                 self->on_write_done(ec, n);
             }));
     }

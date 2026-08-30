@@ -1,6 +1,6 @@
 ﻿//
 // tun_tcp_socket.cpp
-// ~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
@@ -61,7 +61,7 @@ net::ip::tcp::endpoint tun_tcp_socket::remote_endpoint() const
 }
 
 void tun_tcp_socket::shutdown(net::ip::tcp::socket::shutdown_type what,
-                          boost::system::error_code &ec)
+    boost::system::error_code &ec)
 {
     ec = {};
     if (!flow_) {

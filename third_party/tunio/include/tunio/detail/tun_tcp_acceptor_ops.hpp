@@ -1,6 +1,6 @@
 ﻿//
 // tun_tcp_acceptor_ops.hpp
-// ~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
@@ -22,7 +22,7 @@ void tun_tcp_acceptor::do_accept(tun_tcp_socket &peer, Handler handler)
     engine_.impl_->async_accept_tcp(
         [ex, &peer, handler = std::move(handler)](
             boost::system::error_code ec,
-            std::shared_ptr<detail::tcp_flow> f) mutable {
+            detail::tcp_flow_ptr f) mutable {
             if (!ec && f) {
                 peer.flow_ = std::move(f);
             }

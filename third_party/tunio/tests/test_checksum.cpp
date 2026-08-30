@@ -30,7 +30,7 @@ int main()
     const uint32_t src = test::ip("10.0.0.2");
     const uint32_t dst = test::ip("8.8.8.8");
     std::vector<uint8_t> pkt = test::make_tcp(src, dst, 12345, 80, 0x10, 100,
-                                              200, 65535, {'a', 'b', 'c'});
+        200, 65535, {'a', 'b', 'c'});
 
     // 生成器：ipv4_checksum 应等于报文中的校验和字段
     uint16_t stored = static_cast<uint16_t>((pkt[10] << 8) | pkt[11]);
@@ -57,7 +57,7 @@ int main()
     // 独立计算参考值
     // 地址按 host 序拆成 16 位字参与伪头求和
     uint32_t pseudo = (src >> 16) + (src & 0xffff) + (dst >> 16) +
-                      (dst & 0xffff) + 6 + seg_len;
+        (dst & 0xffff) + 6 + seg_len;
     uint16_t ref = test::csum16(seg, seg_len, pseudo);
     assert(ref == 0);
 
@@ -74,7 +74,7 @@ int main()
 
     // TCP
     std::vector<uint8_t> pkt6 = test::make_tcp6(s6, d6, 12345, 80, 0x10, 100,
-                                                200, 65535, {'a', 'b', 'c'});
+        200, 65535, {'a', 'b', 'c'});
     const uint8_t *seg6 = pkt6.data() + 40;
     const size_t seg6_len = pkt6.size() - 40;
     assert(tcp_udp_checksum(6, s6.data(), d6.data(), 6, seg6, seg6_len) == 0);

@@ -22,7 +22,7 @@ void tun_udp_acceptor::do_accept(tun_udp_socket &peer, Handler handler)
     engine_.impl_->async_accept_udp(
         [ex, &peer, handler = std::move(handler)](
             boost::system::error_code ec,
-            std::shared_ptr<detail::udp_session> s) mutable {
+            detail::udp_session_ptr s) mutable {
             if (!ec && s) {
                 peer.session_ = std::move(s);
             }

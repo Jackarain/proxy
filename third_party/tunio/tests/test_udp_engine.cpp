@@ -42,7 +42,7 @@ static void test_datagram_roundtrip()
 
     const std::string query = "dns-query-bytes";
     env.dev.send(make_udp(CLIENT_IP, DEST_IP, 53000, 53,
-                          std::vector<uint8_t>(query.begin(), query.end())));
+        std::vector<uint8_t>(query.begin(), query.end())));
 
     // 新会话通知
     auto aec = future_get(accept_done.get_future());
@@ -61,7 +61,7 @@ static void test_datagram_roundtrip()
     assert(!rec && rn == query.size());
     assert(std::string(buf, rn) == query);
     assert(sender == net::ip::udp::endpoint(
-                         net::ip::make_address_v4("8.8.8.8"), 53));
+        net::ip::make_address_v4("8.8.8.8"), 53));
 
     // 客户端端点
     auto cli = session.client_endpoint();
@@ -72,9 +72,9 @@ static void test_datagram_roundtrip()
     const std::string reply = "dns-answer";
     std::promise<std::pair<boost::system::error_code, size_t>> send_done;
     session.async_send_to(sender, net::buffer(reply),
-                          [&](boost::system::error_code ec, size_t n) {
-                              send_done.set_value({ec, n});
-                          });
+        [&](boost::system::error_code ec, size_t n) {
+            send_done.set_value({ec, n});
+        });
     auto [sec, sn] = future_get(send_done.get_future());
     assert(!sec && sn == reply.size());
 
@@ -115,10 +115,10 @@ static void test_multiple_remotes()
     // 同一客户端端口发往两个不同远端：仅创建一次会话（1 对 N）
     const std::string q1 = "query-to-8.8.8.8";
     env.dev.send(make_udp(CLIENT_IP, DEST_IP, 53100, 53,
-                          std::vector<uint8_t>(q1.begin(), q1.end())));
+        std::vector<uint8_t>(q1.begin(), q1.end())));
     const std::string q2 = "query-to-1.1.1.1";
     env.dev.send(make_udp(CLIENT_IP, DEST_IP2, 53100, 80,
-                          std::vector<uint8_t>(q2.begin(), q2.end())));
+        std::vector<uint8_t>(q2.begin(), q2.end())));
     auto aec = future_get(accept_done.get_future());
     assert(!aec);
 
@@ -134,7 +134,7 @@ static void test_multiple_remotes()
     assert(!ec1 && n1 == q1.size());
     assert(std::string(buf, n1) == q1);
     assert(s1 == net::ip::udp::endpoint(
-                    net::ip::make_address_v4("8.8.8.8"), 53));
+        net::ip::make_address_v4("8.8.8.8"), 53));
 
     std::promise<std::pair<boost::system::error_code, size_t>> r2;
     net::ip::udp::endpoint s2;
@@ -146,14 +146,14 @@ static void test_multiple_remotes()
     assert(!ec2 && n2 == q2.size());
     assert(std::string(buf, n2) == q2);
     assert(s2 == net::ip::udp::endpoint(
-                    net::ip::make_address_v4("1.1.1.1"), 80));
+        net::ip::make_address_v4("1.1.1.1"), 80));
 
     // 两路 send_to 各自构造正确的响应报文
     std::promise<std::pair<boost::system::error_code, size_t>> d1;
     session.async_send_to(s1, net::buffer(q1),
-                          [&](boost::system::error_code ec, size_t n) {
-                              d1.set_value({ec, n});
-                          });
+        [&](boost::system::error_code ec, size_t n) {
+            d1.set_value({ec, n});
+        });
     auto [e1, sn1] = future_get(d1.get_future());
     assert(!e1 && sn1 == q1.size());
     std::vector<uint8_t> pkt1;
@@ -173,9 +173,9 @@ static void test_multiple_remotes()
 
     std::promise<std::pair<boost::system::error_code, size_t>> d2;
     session.async_send_to(s2, net::buffer(q2),
-                          [&](boost::system::error_code ec, size_t n) {
-                              d2.set_value({ec, n});
-                          });
+        [&](boost::system::error_code ec, size_t n) {
+            d2.set_value({ec, n});
+        });
     auto [e2, sn2] = future_get(d2.get_future());
     assert(!e2 && sn2 == q2.size());
     std::vector<uint8_t> pkt2;
@@ -277,7 +277,7 @@ static void test_large_datagram_fragmented()
     });
 
     env.dev.send(make_udp(CLIENT_IP, DEST_IP, 53000, 53,
-                          std::vector<uint8_t>{'q'}));
+        std::vector<uint8_t>{'q'}));
     auto aec = future_get(accept_done.get_future());
     assert(!aec);
 
@@ -296,9 +296,9 @@ static void test_large_datagram_fragmented()
     std::string big(2000, 'x');
     std::promise<std::pair<boost::system::error_code, size_t>> send_done;
     session.async_send_to(sender, net::buffer(big),
-                          [&](boost::system::error_code ec, size_t n) {
-                              send_done.set_value({ec, n});
-                          });
+        [&](boost::system::error_code ec, size_t n) {
+            send_done.set_value({ec, n});
+        });
     auto [sec, sn] = future_get(send_done.get_future());
     assert(!sec && sn == big.size());
 
@@ -338,10 +338,10 @@ static void test_large_datagram_fragmented()
     std::memcpy(full.data() + 8, udp + 8, 1472);
     std::memcpy(full.data() + 8 + 1472, i2.payload, i2.payload_len);
     const uint32_t pseudo = (i1.src >> 16) + (i1.src & 0xffff) +
-                            (i1.dst >> 16) + (i1.dst & 0xffff) + 17 + ulen;
+        (i1.dst >> 16) + (i1.dst & 0xffff) + 17 + ulen;
     assert(csum16(full.data(), ulen, pseudo) == 0);
     assert(std::string(reinterpret_cast<const char *>(full.data()) + 8,
-                       ulen - 8) == big);
+        ulen - 8) == big);
 }
 
 int main(int argc, char **argv)

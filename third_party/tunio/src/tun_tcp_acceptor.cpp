@@ -1,6 +1,6 @@
 ﻿//
 // tun_tcp_acceptor.cpp
-// ~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //

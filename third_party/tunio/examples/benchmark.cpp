@@ -109,13 +109,13 @@ inline uint16_t big16(const uint8_t *p)
 inline uint32_t big32(const uint8_t *p)
 {
     return (static_cast<uint32_t>(p[0]) << 24) |
-           (static_cast<uint32_t>(p[1]) << 16) |
-           (static_cast<uint32_t>(p[2]) << 8) | p[3];
+        (static_cast<uint32_t>(p[1]) << 16) |
+        (static_cast<uint32_t>(p[2]) << 8) | p[3];
 }
 
 // ---- 报文构造 ----
 inline std::vector<uint8_t> make_ipv4(uint32_t src, uint32_t dst, uint8_t proto,
-                                      const std::vector<uint8_t> &payload)
+    const std::vector<uint8_t> &payload)
 {
     std::vector<uint8_t> pkt(20, 0);
     pkt[0] = 0x45;
@@ -134,10 +134,10 @@ inline std::vector<uint8_t> make_ipv4(uint32_t src, uint32_t dst, uint8_t proto,
     return pkt;
 }
 inline std::vector<uint8_t> make_tcp(uint32_t src, uint32_t dst, uint16_t sport,
-                                     uint16_t dport, uint8_t flags,
-                                     uint32_t seq, uint32_t ack, uint16_t win,
-                                     const std::vector<uint8_t> &data,
-                                     bool mss = false)
+    uint16_t dport, uint8_t flags,
+    uint32_t seq, uint32_t ack, uint16_t win,
+    const std::vector<uint8_t> &data,
+    bool mss = false)
 {
     const size_t hlen = mss ? 24 : 20;
     std::vector<uint8_t> seg(hlen + data.size(), 0);
@@ -162,15 +162,14 @@ inline std::vector<uint8_t> make_tcp(uint32_t src, uint32_t dst, uint16_t sport,
         std::memcpy(seg.data() + hlen, data.data(), data.size());
     }
     const uint32_t pseudo = (src >> 16) + (src & 0xffff) + (dst >> 16) +
-                            (dst & 0xffff) + 6 + seg.size();
+        (dst & 0xffff) + 6 + seg.size();
     uint16_t c = csum16(seg.data(), seg.size(), pseudo);
     seg[16] = static_cast<uint8_t>(c >> 8);
     seg[17] = static_cast<uint8_t>(c & 0xff);
     return make_ipv4(src, dst, 6, seg);
 }
 inline std::vector<uint8_t> make_udp(uint32_t src, uint32_t dst, uint16_t sport,
-                                     uint16_t dport,
-                                     const std::vector<uint8_t> &data)
+    uint16_t dport, const std::vector<uint8_t> &data)
 {
     std::vector<uint8_t> seg(8 + data.size(), 0);
     seg[0] = static_cast<uint8_t>(sport >> 8);
@@ -184,7 +183,7 @@ inline std::vector<uint8_t> make_udp(uint32_t src, uint32_t dst, uint16_t sport,
         std::memcpy(seg.data() + 8, data.data(), data.size());
     }
     const uint32_t pseudo = (src >> 16) + (src & 0xffff) + (dst >> 16) +
-                            (dst & 0xffff) + 17 + seg.size();
+        (dst & 0xffff) + 17 + seg.size();
     uint16_t c = csum16(seg.data(), seg.size(), pseudo);
     seg[6] = static_cast<uint8_t>(c >> 8);
     seg[7] = static_cast<uint8_t>(c & 0xff);
@@ -194,13 +193,13 @@ inline std::vector<uint8_t> make_udp(uint32_t src, uint32_t dst, uint16_t sport,
 // 修改 seq/ack 字段后重算 IPv4 TCP 校验和（seg 为完整 IP 包，源/目的为 host
 // order）
 inline void refresh_tcp_checksum(std::vector<uint8_t> &seg, uint32_t src,
-                                 uint32_t dst)
+    uint32_t dst)
 {
     seg[36] = 0;
     seg[37] = 0;
     const size_t tcp_len = seg.size() - 20;
     const uint32_t pseudo = (src >> 16) + (src & 0xffff) + (dst >> 16) +
-                            (dst & 0xffff) + 6 + tcp_len;
+        (dst & 0xffff) + 6 + tcp_len;
     const uint16_t c = csum16(seg.data() + 20, tcp_len, pseudo);
     seg[36] = static_cast<uint8_t>(c >> 8);
     seg[37] = static_cast<uint8_t>(c & 0xff);
@@ -244,7 +243,7 @@ public:
     bool read_packet(std::vector<uint8_t> &out, int timeout_ms = 3000)
     {
         const auto deadline = std::chrono::steady_clock::now() +
-                              std::chrono::milliseconds(timeout_ms);
+            std::chrono::milliseconds(timeout_ms);
         for (;;) {
             while (stash_.size() >= 4) {
                 size_t total = 0;
@@ -273,8 +272,8 @@ public:
             if (now >= deadline)
                 return false;
             const int remaining = static_cast<int>(
-                std::chrono::duration_cast<std::chrono::milliseconds>(deadline -
-                                                                      now)
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    deadline - now)
                     .count());
             struct pollfd pfd{fd_, POLLIN, 0};
             const int r = ::poll(&pfd, 1, remaining);
@@ -366,8 +365,8 @@ void measure(const char *name, long long n, long long warmup, F &&f)
     const double sec = std::chrono::duration<double>(t1 - t0).count();
     const long long alloc = g_alloc_store.load();
     std::printf("%-16s %8lld ops  %8.1f ms  %10.0f ops/s  %7.2f alloc/op\n",
-                name, n, sec * 1000.0, static_cast<double>(n) / sec,
-                static_cast<double>(alloc) / static_cast<double>(n));
+        name, n, sec * 1000.0, static_cast<double>(n) / sec,
+        static_cast<double>(alloc) / static_cast<double>(n));
 }
 
 // ---- 常量 ----
@@ -378,7 +377,7 @@ constexpr uint16_t DEST_PORT = 80;
 
 // ---- TCP 握手：返回已建立的 stream ----
 tun_tcp_socket establish_tcp(engine_env &env, tun_tcp_acceptor &acc,
-                         uint32_t &engine_iss)
+    uint32_t &engine_iss)
 {
     tun_tcp_socket peer(env.io.get_executor());
     latch done;
@@ -389,14 +388,14 @@ tun_tcp_socket establish_tcp(engine_env &env, tun_tcp_acceptor &acc,
         done.post();
     });
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x02,
-                          1000, 0, 65535, {}, true));
+        1000, 0, 65535, {}, true));
     std::vector<uint8_t> synack;
     if (!env.dev.read_packet(synack)) {
         throw std::runtime_error("no SYN-ACK");
     }
     engine_iss = big32(synack.data() + 24);
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x10,
-                          1001, engine_iss + 1, 65535, {}));
+        1001, engine_iss + 1, 65535, {}));
     done.wait();
     return peer;
 }
@@ -412,11 +411,11 @@ static void bench_tcp_read(long long n, long long warmup)
 
     char buf[64];
     auto seg = make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x18, 1001,
-                        engine_iss + 1, 65535, std::vector<uint8_t>(16, 0x61));
+        engine_iss + 1, 65535, std::vector<uint8_t>(16, 0x61));
     uint32_t seq = 1001;
     measure("tcp_read_some", n, warmup, [&] {
         peer.async_read_some(net::buffer(buf), [&](boost::system::error_code,
-                                                   size_t) { done.post(); });
+            size_t) { done.post(); });
         const uint32_t s = htonl(seq);
         seq += 16;
         std::memcpy(seg.data() + 24, &s, 4);
@@ -436,14 +435,14 @@ static void bench_tcp_write(long long n, long long warmup)
     latch done;
 
     auto ack_seg = make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x10,
-                            1001, 0, 65535, {});
+        1001, 0, 65535, {});
     std::vector<uint8_t> pkt;
     char wbuf[16];
     std::memset(wbuf, 0x62, sizeof(wbuf));
     uint32_t client_ack = engine_iss + 1;
     measure("tcp_write_some", n, warmup, [&] {
         peer.async_write_some(net::buffer(wbuf), [&](boost::system::error_code,
-                                                     size_t) { done.post(); });
+            size_t) { done.post(); });
         if (!env.dev.read_packet(pkt)) {
             throw std::runtime_error("no tcp data segment");
         }
@@ -468,11 +467,11 @@ static void bench_udp(long long n, long long warmup)
     tun_udp_socket sock(env.io.get_executor());
     acc.async_accept(sock, [&](boost::system::error_code) { done.post(); });
     env.dev.send(make_udp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT,
-                          std::vector<uint8_t>(16, 0x63)));
+        std::vector<uint8_t>(16, 0x63)));
     done.wait();
 
     auto udp_seg = make_udp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT,
-                            std::vector<uint8_t>(16, 0x63));
+        std::vector<uint8_t>(16, 0x63));
     std::vector<uint8_t> pkt;
     char buf[64];
     char sbuf[16];
@@ -483,18 +482,18 @@ static void bench_udp(long long n, long long warmup)
 
     measure("udp_receive", n, warmup, [&] {
         sock.async_receive_from(net::buffer(buf), sender,
-                                [&](boost::system::error_code, size_t) {
-                                    done.post();
-                                });
+            [&](boost::system::error_code, size_t) {
+                done.post();
+            });
         env.dev.send(udp_seg);
         done.wait();
     });
 
     measure("udp_send", n, warmup, [&] {
         sock.async_send_to(remote, net::buffer(sbuf),
-                           [&](boost::system::error_code, size_t) {
-                               done.post();
-                           });
+            [&](boost::system::error_code, size_t) {
+                done.post();
+            });
         done.wait();
         if (!env.dev.read_packet(pkt)) {
             throw std::runtime_error("no udp packet");
@@ -508,7 +507,7 @@ static void bench_accept(long long n, long long warmup)
     engine_env env;
     tun_tcp_acceptor acc(env.engine);
     auto syn = make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x02, 1000,
-                        0, 65535, {}, true);
+        0, 65535, {}, true);
     std::vector<uint8_t> synack;
     std::vector<tun_tcp_socket> conns;
     conns.reserve(static_cast<size_t>(n + warmup));
@@ -532,7 +531,7 @@ static void bench_accept(long long n, long long warmup)
         }
         const uint32_t engine_iss = big32(synack.data() + 24);
         auto ack = make_tcp(CLIENT_IP, DEST_IP, cport - 1, DEST_PORT, 0x10,
-                            1001, engine_iss + 1, 65535, {});
+            1001, engine_iss + 1, 65535, {});
         env.dev.send(ack);
         done.wait();
     });
@@ -543,7 +542,7 @@ int main()
     g_alloc = &g_alloc_store;
     std::setvbuf(stdout, nullptr, _IONBF, 0);
     std::printf("=== handler 包装 benchmark tag=%s pid=%d ===\n", BENCH_TAG,
-                static_cast<int>(::getpid()));
+        static_cast<int>(::getpid()));
     std::printf("[bench] tcp_read start\n");
     bench_tcp_read(50000, 3000);
     std::printf("[bench] tcp_write start\n");

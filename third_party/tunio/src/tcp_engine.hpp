@@ -33,9 +33,26 @@
 
 namespace tunio {
 namespace net = boost::asio;
+
+// 通用缓冲区序列：单缓冲区（最常见调用形式）由 small_vector 栈上存储，
+// 避免堆分配；兼容单缓冲区与缓冲区序列两种调用形式。
+using mutable_buffer_sequence =
+    boost::container::small_vector<net::mutable_buffer, 1>;
+using const_buffer_sequence =
+    boost::container::small_vector<net::const_buffer, 1>;
+
 namespace detail {
 
 class device_writer;
+
+// ---- TCP 引擎常用类型 ----
+// 时间统一采用单调时钟（steady_clock），不受系统时间调整影响
+using tcp_clock = std::chrono::steady_clock;
+using tcp_time_point = tcp_clock::time_point;
+// TCP 读/写完成处理器（与 Boost.Asio 异步操作完成签名一致）
+using tcp_read_handler =
+    net::any_completion_handler<void(boost::system::error_code, size_t)>;
+using tcp_write_handler = tcp_read_handler;
 
 // 全局缓冲区记账：跨 TCP/UDP 队列统计占用，施加 max_total_buffer 上限
 struct buffer_accountant
@@ -111,11 +128,11 @@ struct tcp_flow : public std::enable_shared_from_this<tcp_flow>
     bool rx_shutdown = false; // 应用层已关闭接收侧
     bool accepted = false;    // 已交付给 accept
     bool probe_in_flight = false; // 零窗口探测已发出、尚未被对端确认
-    std::chrono::steady_clock::time_point created_at;
-    std::chrono::steady_clock::time_point destroy_at;
+    tcp_time_point created_at;
+    tcp_time_point destroy_at;
     // 关闭流程开始时间（发送 FIN 时记录），用于 FIN_WAIT/LAST_ACK 强制清理
     // 超时计时；避免以连接创建时间为基准导致长连接关闭时立即被清理。
-    std::chrono::steady_clock::time_point close_started_at;
+    tcp_time_point close_started_at;
 
     // 客户端（虚拟网内）端点：key 中的源地址与源端口
     net::ip::tcp::endpoint remote_endpoint() const
@@ -151,56 +168,72 @@ struct tcp_flow : public std::enable_shared_from_this<tcp_flow>
     struct read_op
     {
         // 小缓冲优化：单缓冲区（最常见调用形式）在栈上存储，避免堆分配
-        boost::container::small_vector<net::mutable_buffer, 1> buffers;
+        mutable_buffer_sequence buffers;
         size_t total = 0;
-        net::any_completion_handler<void(boost::system::error_code, size_t)>
-            handler;
+        tcp_read_handler handler;
     };
     std::optional<read_op> active_read;
 
     // ---- 挂起写操作（单写模型：同一时刻至多一个未完成写）----
     struct write_op
     {
-        boost::container::small_vector<net::const_buffer, 1>
-            buffers; // 用户数据引用，回调 handler 前由调用方保证有效
-        size_t total = 0;                       // 待发送总字节数（buffers 求和）
+        const_buffer_sequence buffers; // 用户数据引用，回调 handler 前由调用方保证有效
+        size_t total = 0;              // 待发送总字节数（buffers 求和）
         size_t offset = 0;
         size_t buf_index = 0; // 当前发送位置所在缓冲区下标（增量推进，避免每段重扫）
         size_t buf_off = 0;   // 当前发送位置在 buf_index 缓冲区内的偏移
         uint32_t start_seq = 0; // 本次写操作首字节的发送序号（snd_nxt 快照）,
                                 // 用于将未确认序列号范围映射回缓冲偏移以重传
-        net::any_completion_handler<void(boost::system::error_code, size_t)>
-            handler;
+        tcp_write_handler handler;
     };
     std::optional<write_op> active_write;
     // 窗口可写信号：发送协程在窗口耗尽时挂起等待，ACK 更新窗口后由引擎唤醒.
     std::optional<net::experimental::channel<void(boost::system::error_code)>>
         write_ch;
 
+    // ---- 发送尾部重传缓冲（写完成回调提前后的流级 RTO 数据源）----
+    // 写操作在数据全部交给设备后即回调；完成时若仍有未确认字节，拷贝进
+    // tail_buf（用户缓冲可能已复用，重传不能继续引用原写缓冲）。tail_buf
+    // 覆盖序列号范围 [tail_seq, tail_end)，其中 tail_end 可能比 snd_nxt
+    // 大 1（零窗口探测字节未计入 snd_nxt，但仍需重传覆盖）.
+    std::vector<uint8_t> tail_buf;
+    uint32_t tail_seq = 0; // tail_buf[0] 对应的序列号（可能落后于 snd_una）
+    uint32_t tail_end = 0; // 尾部数据末尾序列号（不含未发送探测字节时等于 snd_nxt）
+    std::chrono::milliseconds tail_rto{0}; // 当前重传退避间隔
+    int tail_retransmits = 0;              // 连续无进展重传次数
+    std::unique_ptr<net::steady_timer> tail_timer;
+
     net::ip::tcp::endpoint original_destination() const;
     bool is_open() const;
 };
 
+// 流指针 / accept 完成处理器 / 流表（依赖 tcp_flow 定义）
+using tcp_flow_ptr = std::shared_ptr<tcp_flow>;
+using tcp_accept_handler =
+    net::any_completion_handler<void(boost::system::error_code,
+        tcp_flow_ptr)>;
+using tcp_flow_map =
+    boost::unordered_flat_map<five_tuple, tcp_flow_ptr,
+        std::hash<five_tuple>>;
+
 template <typename Handler>
-void tcp_flow_start_read(std::shared_ptr<tcp_flow>,
-                         boost::container::small_vector<net::mutable_buffer, 1>,
-                         size_t, Handler);
+void tcp_flow_start_read(tcp_flow_ptr flow, mutable_buffer_sequence buffers,
+    size_t total, Handler handler);
 template <typename Handler>
-void tcp_flow_start_write(std::shared_ptr<tcp_flow>,
-                          boost::container::small_vector<net::const_buffer, 1>,
-                          size_t, Handler);
+void tcp_flow_start_write(tcp_flow_ptr flow, const_buffer_sequence buffers,
+    size_t total, Handler handler);
 
 class tcp_engine : public std::enable_shared_from_this<tcp_engine>
 {
 public:
     tcp_engine(net::any_io_executor strand, device_writer &writer,
-               const tun_config &cfg, engine_stats &stats,
-               std::shared_ptr<buffer_accountant> account);
+        const tun_config &cfg, engine_stats &stats,
+        std::shared_ptr<buffer_accountant> account);
     ~tcp_engine();
 
     // 处理一个 TCP 报文段（Strand 上调用）
     void on_packet(const ip_packet_info &ip, const uint8_t *payload,
-                   size_t len);
+        size_t len);
 
     // 等待新连接；完成回调签名 void(error_code, shared_ptr<tcp_flow>)
     template <typename Handler> void async_accept(Handler handler);
@@ -234,19 +267,31 @@ public:
     }
     // ---- 由 tcp_flow 调用的发送辅助 ----
     packet_buffer build_segment(tcp_flow &f, uint32_t seq, uint8_t flags,
-                                const uint8_t *payload, size_t len,
-                                bool with_mss);
+        const uint8_t *payload, size_t len, bool with_mss);
     void send_segment(tcp_flow &f, uint32_t seq, uint8_t flags,
-                      const uint8_t *payload, size_t len, bool with_mss);
+        const uint8_t *payload, size_t len, bool with_mss);
     void send_fin(tcp_flow &f);
     void abort_flow(tcp_flow &f);
     void close_flow(tcp_flow &f, const boost::system::error_code &err);
-    // 重传未确认数据 [snd_una, snd_nxt) 至多 max_bytes 字节（零窗口探测
-    // 与 RTO 超时共用）；数据仍在 active_write 的用户缓冲中，无需拷贝.
+    // 重传本次写操作未确认数据 [max(snd_una, start_seq), snd_nxt) 至多
+    // max_bytes 字节（零窗口探测与 RTO 超时共用）；更早的未确认尾部由
+    // 流级尾部重传（tail_buf）负责，此处仅限当前写操作的缓冲范围.
     void retransmit_unacked(tcp_flow &f, size_t max_bytes);
+    // ---- 流级发送尾部重传（写完成后未确认数据的重传恢复）----
+    // 写操作在数据全部交给设备后即完成回调；完成时若仍有未确认字节，
+    // capture_tail 将其拷贝进 tail_buf 并启动独立 RTO 定时器，重传至
+    // 对端确认或重传次数超过 tcp_rto_max_retransmits 以 RST 释放连接.
+    void capture_tail(tcp_flow &f);
+    void retransmit_tail(tcp_flow &f, size_t max_bytes);
+    void arm_tail_timer(tcp_flow &f);
+    void clear_tail(tcp_flow &f);
+    void tail_ack_progress(tcp_flow &f);
+    void on_tail_rto(const tcp_flow_ptr &f);
+    // tail_buf 是否覆盖序列号 seq（含零窗口探测字节等未计入 snd_nxt 的字节）
+    static bool tail_covers(const tcp_flow &f, uint32_t seq);
     // 发送协程：持有单个写操作，按窗口/MSS 循环分片，
     // 设备写完成回调驱动背压；窗口耗尽时经 write_ch 挂起等待 ACK.
-    net::awaitable<void> write_loop(std::shared_ptr<tcp_flow> f);
+    net::awaitable<void> write_loop(tcp_flow_ptr f);
     void signal_write(tcp_flow &f);
 
     // 批准握手: 向客户端回复 SYN+ACK (幂等, 已回复过则忽略).
@@ -257,19 +302,14 @@ public:
 private:
     friend struct tcp_flow;
     template <typename Handler>
-    friend void tcp_flow_start_read(std::shared_ptr<tcp_flow>,
-                                    boost::container::small_vector<
-                                        net::mutable_buffer, 1>,
-                                    size_t, Handler);
+    friend void tcp_flow_start_read(tcp_flow_ptr, mutable_buffer_sequence,
+        size_t, Handler);
     template <typename Handler>
-    friend void tcp_flow_start_write(std::shared_ptr<tcp_flow>,
-                                     boost::container::small_vector<
-                                         net::const_buffer, 1>,
-                                     size_t, Handler);
+    friend void tcp_flow_start_write(tcp_flow_ptr, const_buffer_sequence,
+        size_t, Handler);
 
-    void handle_segment(const std::shared_ptr<tcp_flow> &f,
-                        const tcp_header &th, const uint8_t *data,
-                        size_t data_len);
+    void handle_segment(const tcp_flow_ptr &f, const tcp_header &th,
+        const uint8_t *data, size_t data_len);
     void send_ack(tcp_flow &f);
     uint32_t current_wnd(const tcp_flow &f) const;
     void notify_window_updated(tcp_flow &f);
@@ -277,7 +317,7 @@ private:
     void flush_reads(tcp_flow &f);
     void flush_ooo(tcp_flow &f);
     bool ooo_append(tcp_flow &f, uint32_t seq, const uint8_t *data,
-                    size_t len, bool fin);
+        size_t len, bool fin);
     void handle_fin(tcp_flow &f, uint32_t fin_seq);
     void notify_accept(tcp_flow &f);
     void on_sweep(const boost::system::error_code &ec);
@@ -290,22 +330,16 @@ private:
     size_t mss4_ = 536;  // IPv4 MSS = MTU - 20(IP) - 20(TCP)
     size_t mss6_ = 1220; // IPv6 MSS = MTU - 40(IP) - 20(TCP)
 
-    boost::unordered_flat_map<five_tuple, std::shared_ptr<tcp_flow>,
-                              std::hash<five_tuple>>
-        flows_;
-    std::deque<net::any_completion_handler<void(boost::system::error_code,
-                                                std::shared_ptr<tcp_flow>)>>
-        pending_accepts_;
-    std::deque<std::shared_ptr<tcp_flow>> pending_flows_;
+    tcp_flow_map flows_;
+    std::deque<tcp_accept_handler> pending_accepts_;
+    std::deque<tcp_flow_ptr> pending_flows_;
     net::steady_timer sweep_timer_;
 };
 
 // ---- 供 tun_tcp_socket 调用的入口（内部自动派发到 Strand）----
 template <typename Handler>
-void tcp_flow_start_read(std::shared_ptr<tcp_flow> flow,
-                         boost::container::small_vector<net::mutable_buffer, 1>
-                             buffers,
-                         size_t total, Handler handler)
+void tcp_flow_start_read(tcp_flow_ptr flow, mutable_buffer_sequence buffers,
+    size_t total, Handler handler)
 {
     if (!flow) {
         handler(boost::system::error_code(net::error::bad_descriptor), 0);
@@ -318,8 +352,8 @@ void tcp_flow_start_read(std::shared_ptr<tcp_flow> flow,
     }
     auto strand = eng->strand();
     net::dispatch(strand, [f = std::move(flow), eng,
-                           buffers = std::move(buffers), total,
-                           handler = std::move(handler)]() mutable {
+        buffers = std::move(buffers), total,
+        handler = std::move(handler)]() mutable {
         auto &flow = *f;
         if (flow.state == tcp_state::CLOSED || flow.app_closed ||
             flow.rx_shutdown) {
@@ -344,16 +378,14 @@ void tcp_flow_start_read(std::shared_ptr<tcp_flow> flow,
             return;
         }
         flow.active_read = tcp_flow::read_op{std::move(buffers), total,
-                                             std::move(handler)};
+            std::move(handler)};
         eng->flush_reads(flow);
     });
 }
 
 template <typename Handler>
-void tcp_flow_start_write(std::shared_ptr<tcp_flow> flow,
-                          boost::container::small_vector<net::const_buffer, 1>
-                              buffers,
-                          size_t total, Handler handler)
+void tcp_flow_start_write(tcp_flow_ptr flow, const_buffer_sequence buffers,
+    size_t total, Handler handler)
 {
     if (!flow) {
         handler(boost::system::error_code(net::error::bad_descriptor), 0);
@@ -366,8 +398,8 @@ void tcp_flow_start_write(std::shared_ptr<tcp_flow> flow,
     }
     auto strand = eng->strand();
     net::dispatch(strand, [f = std::move(flow), eng,
-                           buffers = std::move(buffers), total,
-                           handler = std::move(handler), strand]() mutable {
+        buffers = std::move(buffers), total,
+        handler = std::move(handler), strand]() mutable {
         auto &flow = *f;
         if (flow.state == tcp_state::CLOSED || flow.app_closed ||
             flow.fin_sent) {
@@ -412,13 +444,13 @@ template <typename Handler> void tcp_engine::async_accept(Handler handler)
     pending_accepts_.push_back(std::move(handler));
 }
 
-void tcp_flow_shutdown_send(std::shared_ptr<tcp_flow> flow);
-void tcp_flow_shutdown_receive(std::shared_ptr<tcp_flow> flow);
-void tcp_flow_close(std::shared_ptr<tcp_flow> flow);
-void tcp_flow_reset(std::shared_ptr<tcp_flow> flow);
-void tcp_flow_accept(std::shared_ptr<tcp_flow> flow);
-void tcp_flow_reject(std::shared_ptr<tcp_flow> flow);
-bool tcp_flow_is_open(const std::shared_ptr<tcp_flow> &flow);
+void tcp_flow_shutdown_send(tcp_flow_ptr flow);
+void tcp_flow_shutdown_receive(tcp_flow_ptr flow);
+void tcp_flow_close(tcp_flow_ptr flow);
+void tcp_flow_reset(tcp_flow_ptr flow);
+void tcp_flow_accept(tcp_flow_ptr flow);
+void tcp_flow_reject(tcp_flow_ptr flow);
+bool tcp_flow_is_open(const tcp_flow_ptr &flow);
 
 } // namespace detail
 } // namespace tunio

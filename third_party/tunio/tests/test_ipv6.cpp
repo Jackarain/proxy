@@ -50,7 +50,7 @@ static void test_tcp6_handshake_data_fin()
 
     // 客户端 SYN
     env.dev.send(make_tcp6(CLIENT_V6, DEST_V6, CLIENT_PORT, DEST_PORT, 0x02,
-                           1000, 0, 65535, {}, true));
+        1000, 0, 65535, {}, true));
 
     // 引擎 SYN-ACK（携带 MSS 选项，IPv6 下 MSS = MTU - 60）
     std::vector<uint8_t> pkt;
@@ -77,7 +77,7 @@ static void test_tcp6_handshake_data_fin()
 
     // 客户端 ACK
     env.dev.send(make_tcp6(CLIENT_V6, DEST_V6, CLIENT_PORT, DEST_PORT, 0x10,
-                           1001, engine_iss + 1, 65535, {}));
+        1001, engine_iss + 1, 65535, {}));
 
     // accept 完成，原始目标地址为 IPv6
     auto aec = future_get(accept_done.get_future());
@@ -91,16 +91,16 @@ static void test_tcp6_handshake_data_fin()
     // 客户端发送数据 "hello"
     const std::string hello = "hello";
     env.dev.send(make_tcp6(CLIENT_V6, DEST_V6, CLIENT_PORT, DEST_PORT, 0x18,
-                           1001, engine_iss + 1, 65535,
-                           std::vector<uint8_t>(hello.begin(), hello.end())));
+        1001, engine_iss + 1, 65535,
+        std::vector<uint8_t>(hello.begin(), hello.end())));
 
     // 应用读取到字节流
     std::promise<std::pair<boost::system::error_code, size_t>> read_done;
     char buf[64];
     peer.async_read_some(net::buffer(buf),
-                         [&](boost::system::error_code ec, size_t n) {
-                             read_done.set_value({ec, n});
-                         });
+        [&](boost::system::error_code ec, size_t n) {
+            read_done.set_value({ec, n});
+        });
     auto [rec, rn] = future_get(read_done.get_future());
     assert(!rec && rn == hello.size());
     assert(std::string(buf, rn) == hello);
@@ -122,7 +122,7 @@ static void test_tcp6_handshake_data_fin()
 
     // 客户端发送 FIN（与数据同段序号语义：FIN 序号 = 1001 + 5）
     env.dev.send(make_tcp6(CLIENT_V6, DEST_V6, CLIENT_PORT, DEST_PORT, 0x11,
-                           1006, engine_iss + 6, 65535, {}));
+        1006, engine_iss + 6, 65535, {}));
     if (!env.dev.read_packet(pkt)) {
         throw std::runtime_error("no IPv6 FIN ack");
     }
@@ -159,7 +159,7 @@ static void test_tcp6_handshake_data_fin()
 
     // 客户端 ACK 引擎 FIN
     env.dev.send(make_tcp6(CLIENT_V6, DEST_V6, CLIENT_PORT, DEST_PORT, 0x10,
-                           1007, engine_iss + 2, 65535, {}));
+        1007, engine_iss + 2, 65535, {}));
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
 
@@ -177,7 +177,7 @@ static void test_udp6_roundtrip()
 
     const std::string query = "ipv6-dns-query";
     env.dev.send(make_udp6(CLIENT_V6, DEST_V6, 53000, 53,
-                           std::vector<uint8_t>(query.begin(), query.end())));
+        std::vector<uint8_t>(query.begin(), query.end())));
 
     // 新会话通知
     auto aec = future_get(accept_done.get_future());
@@ -201,9 +201,9 @@ static void test_udp6_roundtrip()
     const std::string reply = "ipv6-dns-answer";
     std::promise<std::pair<boost::system::error_code, size_t>> send_done;
     session.async_send_to(sender, net::buffer(reply),
-                          [&](boost::system::error_code ec, size_t n) {
-                              send_done.set_value({ec, n});
-                          });
+        [&](boost::system::error_code ec, size_t n) {
+            send_done.set_value({ec, n});
+        });
     auto [sec, sn] = future_get(send_done.get_future());
     assert(!sec && sn == reply.size());
 
@@ -297,13 +297,13 @@ static void test_v4_v6_coexist()
     char buf[64];
     net::ip::udp::endpoint s4s, s6s;
     s4.async_receive_from(net::buffer(buf), s4s,
-                          [&](boost::system::error_code ec, size_t n) {
-                              r4.set_value({ec, n});
-                          });
+        [&](boost::system::error_code ec, size_t n) {
+            r4.set_value({ec, n});
+        });
     s6.async_receive_from(net::buffer(buf), s6s,
-                          [&](boost::system::error_code ec, size_t n) {
-                              r6.set_value({ec, n});
-                          });
+        [&](boost::system::error_code ec, size_t n) {
+            r6.set_value({ec, n});
+        });
     const auto r4ec = future_get(r4.get_future());
     const auto r6ec = future_get(r6.get_future());
     assert(!r4ec.first && !r6ec.first);

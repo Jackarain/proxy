@@ -38,7 +38,7 @@ namespace detail {
 namespace {
 
 void addattr_l(struct nlmsghdr *n, size_t maxlen, int type, const void *data,
-               size_t alen)
+    size_t alen)
 {
     const size_t len = RTA_LENGTH(alen);
     if (NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len) > maxlen) {
@@ -54,13 +54,13 @@ void addattr_l(struct nlmsghdr *n, size_t maxlen, int type, const void *data,
 
 // 通过 netlink 为接口添加 IPv6 地址（RTM_NEWADDR），等待内核 ACK
 bool add_ipv6_address(int ioctl_sock, const std::string &ifname,
-                      const std::string &addr, uint8_t prefix_len,
-                      boost::system::error_code &ec)
+    const std::string &addr, uint8_t prefix_len,
+    boost::system::error_code &ec)
 {
     struct in6_addr a6;
     if (::inet_pton(AF_INET6, addr.c_str(), &a6) != 1) {
         ec = boost::system::error_code(EINVAL,
-                                       boost::system::generic_category());
+            boost::system::generic_category());
         return false;
     }
 
@@ -147,7 +147,7 @@ bool add_ipv6_address(int ioctl_sock, const std::string &ifname,
 #endif
 
 bool posix_packet_device_impl::open(const device_config &cfg,
-                                    boost::system::error_code &ec)
+    boost::system::error_code &ec)
 {
 #if defined(__linux__)
     const int fd = ::open("/dev/net/tun", O_RDWR | O_CLOEXEC);

@@ -39,7 +39,7 @@ public:
     auto async_accept(tun_udp_socket &peer, CompletionToken &&token)
     {
         return net::async_initiate<CompletionToken,
-                                   void(boost::system::error_code)>(
+            void(boost::system::error_code)>(
             [this, &peer](auto handler) {
                 do_accept(peer, std::move(handler));
             },

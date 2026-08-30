@@ -50,7 +50,7 @@ static net::awaitable<void> echo_server(net::ip::tcp::acceptor &srv)
             co_return;
         }
         co_await net::async_write(s, net::buffer(buf, n),
-                                  net::redirect_error(net::use_awaitable, ec));
+            net::redirect_error(net::use_awaitable, ec));
         if (ec) {
             co_return;
         }
@@ -58,7 +58,7 @@ static net::awaitable<void> echo_server(net::ip::tcp::acceptor &srv)
 }
 
 static net::awaitable<void> bridge(tun_tcp_socket client,
-                                   net::ip::tcp::endpoint target)
+    net::ip::tcp::endpoint target)
 {
     auto ex = co_await net::this_coro::executor;
     auto c = std::make_shared<tun_tcp_socket>(std::move(client));
@@ -66,7 +66,7 @@ static net::awaitable<void> bridge(tun_tcp_socket client,
     boost::system::error_code ec;
 
     co_await p->async_connect(target,
-                              net::redirect_error(net::use_awaitable, ec));
+        net::redirect_error(net::use_awaitable, ec));
     if (ec) {
         c->reset(); // 后端连接失败：RST 客户端
         co_return;
@@ -147,15 +147,15 @@ int main()
             (void)client
                 .original_destination(); // 原始目标（本例忽略，固定转发到本地服务）
             net::co_spawn(ex,
-                          bridge(std::move(client),
-                                 {net::ip::address_v4::loopback(), port}),
-                          net::detached);
+                bridge(std::move(client),
+                    {net::ip::address_v4::loopback(), port}),
+                net::detached);
         },
         net::detached);
 
     // ---- 客户端握手 ----
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x02,
-                          5000, 0, 65535, {}));
+        5000, 0, 65535, {}));
     std::vector<uint8_t> pkt;
     if (!env.dev.read_packet(pkt)) {
         throw std::runtime_error("no SYN-ACK");
@@ -170,13 +170,13 @@ int main()
     }
     const uint32_t engine_iss = ti.seq;
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x10,
-                          5001, engine_iss + 1, 65535, {}));
+        5001, engine_iss + 1, 65535, {}));
 
     // ---- 客户端发送数据，等待回显 ----
     const std::string msg = "ping-through-tun";
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x18,
-                          5001, engine_iss + 1, 65535,
-                          std::vector<uint8_t>(msg.begin(), msg.end())));
+        5001, engine_iss + 1, 65535,
+        std::vector<uint8_t>(msg.begin(), msg.end())));
 
     // 回显数据段携带对客户端数据的 ACK（delayed ACK 合并，可能先出现纯 ACK）
     bool echo_seen = false;
@@ -203,8 +203,8 @@ int main()
 
     // ---- 客户端 FIN 关闭 ----
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x11,
-                          5001 + msg.size(), engine_iss + 1 + msg.size(), 65535,
-                          {}));
+        5001 + msg.size(), engine_iss + 1 + msg.size(), 65535,
+        {}));
     if (!env.dev.read_packet(pkt)) {
         throw std::runtime_error("no fin ack");
     }
@@ -236,8 +236,8 @@ int main()
 
     // 客户端 ACK 引擎 FIN
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x10,
-                          5001 + msg.size() + 1,
-                          engine_iss + 1 + msg.size() + 1, 65535, {}));
+        5001 + msg.size() + 1,
+        engine_iss + 1 + msg.size() + 1, 65535, {}));
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     return 0;
 }

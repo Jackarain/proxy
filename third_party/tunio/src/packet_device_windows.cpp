@@ -17,11 +17,12 @@ namespace tunio {
 namespace detail {
 
 bool windows_packet_device_impl::open(const device_config &,
-                                      boost::system::error_code &ec)
+    boost::system::error_code &ec)
 {
     // Overlapped 设备自主打开尚未实现（Phase 3），句柄注入 assign() 已可用。
-    ec = boost::system::error_code(boost::system::errc::operation_not_supported,
-                                   boost::system::generic_category());
+    ec = boost::system::error_code(
+        boost::system::errc::operation_not_supported,
+        boost::system::generic_category());
     return false;
 }
 

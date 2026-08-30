@@ -70,10 +70,10 @@ public:
     }
 
     // ---- 模式 2: 句柄注入 ----
-    bool assign(native_handle_type handle, size_t mtu,
-                boost::system::error_code &ec)
+    bool assign(native_handle_type handle, size_t mtu, bool utun_prefix,
+        boost::system::error_code &ec)
     {
-        return impl_.assign(handle, mtu, ec);
+        return impl_.assign(handle, mtu, utun_prefix, ec);
     }
 
     void close()
@@ -96,7 +96,7 @@ public:
     auto async_read_packet(packet_buffer &buf, CompletionToken &&token)
     {
         return net::async_initiate<CompletionToken,
-                                   void(boost::system::error_code, size_t)>(
+            void(boost::system::error_code, size_t)>(
             [this, &buf](auto handler) {
                 impl_.async_read(buf, std::move(handler));
             },
@@ -108,7 +108,7 @@ public:
     auto async_write_packet(packet_buffer &buf, CompletionToken &&token)
     {
         return net::async_initiate<CompletionToken,
-                                   void(boost::system::error_code, size_t)>(
+            void(boost::system::error_code, size_t)>(
             [this, &buf](auto handler) {
                 impl_.async_write(buf, std::move(handler));
             },

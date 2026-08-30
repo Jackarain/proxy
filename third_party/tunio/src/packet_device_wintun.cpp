@@ -24,11 +24,11 @@ boost::system::error_code win_last_error()
 {
     DWORD err = GetLastError();
     char buf[512] = {0};
-    DWORD n = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM |
-                                 FORMAT_MESSAGE_IGNORE_INSERTS,
-                             nullptr, err, 0, buf, sizeof(buf), nullptr);
+    DWORD n = FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr, err, 0, buf, sizeof(buf), nullptr);
     while (n > 0 &&
-           (buf[n - 1] == '\r' || buf[n - 1] == '\n' || buf[n - 1] == ' '))
+        (buf[n - 1] == '\r' || buf[n - 1] == '\n' || buf[n - 1] == ' '))
         buf[--n] = 0;
     return boost::system::error_code(static_cast<int>(err),
                                      boost::system::system_category());
@@ -80,14 +80,14 @@ void fill_connection_names(std::vector<windows_driver_info> &result)
 
     HKEY key;
     if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, net_connections_key, 0, KEY_READ,
-                      &key) != ERROR_SUCCESS)
+        &key) != ERROR_SUCCESS)
         return;
 
     for (int i = 0;; ++i) {
         wchar_t enum_name[256] = {0};
         DWORD len = static_cast<DWORD>(sizeof(enum_name) / sizeof(wchar_t));
         if (RegEnumKeyExW(key, i, enum_name, &len, nullptr, nullptr, nullptr,
-                          nullptr) != ERROR_SUCCESS)
+            nullptr) != ERROR_SUCCESS)
             break;
 
         std::wstring conn = net_connections_key;
@@ -97,14 +97,13 @@ void fill_connection_names(std::vector<windows_driver_info> &result)
 
         HKEY conn_key;
         if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, conn.c_str(), 0, KEY_READ,
-                          &conn_key) != ERROR_SUCCESS)
+            &conn_key) != ERROR_SUCCESS)
             continue;
 
         wchar_t name_buf[256] = {0};
         len = static_cast<DWORD>(sizeof(name_buf) / sizeof(wchar_t));
         if (RegQueryValueExW(conn_key, L"Name", nullptr, nullptr,
-                             reinterpret_cast<LPBYTE>(name_buf),
-                             &len) == ERROR_SUCCESS) {
+            reinterpret_cast<LPBYTE>(name_buf), &len) == ERROR_SUCCESS) {
             std::string ename_narrow = narrow_from_wide(enum_name);
             for (auto &dev : result)
                 if (dev.guid == ename_narrow)
@@ -127,18 +126,17 @@ std::vector<std::pair<std::wstring, std::wstring>> enum_net_device_interfaces()
             SP_DEVICE_INTERFACE_DATA iface_data{};
             iface_data.cbSize = sizeof(iface_data);
             if (SetupDiEnumDeviceInterfaces(h_devs, &dev_info, &iface_guid, j,
-                                            &iface_data)) {
+                &iface_data)) {
                 DWORD required = 0;
                 SetupDiGetDeviceInterfaceDetailW(h_devs, &iface_data, nullptr,
-                                                 0, &required, nullptr);
+                    0, &required, nullptr);
                 auto buffer = std::make_unique<BYTE[]>(required);
                 auto *detail =
                     reinterpret_cast<SP_DEVICE_INTERFACE_DETAIL_DATA_W *>(
                         buffer.get());
                 detail->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_W) + 2;
                 if (SetupDiGetDeviceInterfaceDetailW(h_devs, &iface_data,
-                                                     detail, required,
-                                                     &required, nullptr)) {
+                    detail, required, &required, nullptr)) {
                     HKEY reg_hk = SetupDiOpenDevRegKey(
                         h_devs, &dev_info, DICS_FLAG_GLOBAL, 0, DIREG_DRV,
                         KEY_QUERY_VALUE);
@@ -148,9 +146,8 @@ std::vector<std::pair<std::wstring, std::wstring>> enum_net_device_interfaces()
                         DWORD l =
                             static_cast<DWORD>(sizeof(nid) / sizeof(wchar_t));
                         if (RegQueryValueExW(reg_hk, L"NetCfgInstanceId",
-                                             nullptr, &t,
-                                             reinterpret_cast<LPBYTE>(nid),
-                                             &l) == ERROR_SUCCESS) {
+                            nullptr, &t, reinterpret_cast<LPBYTE>(nid),
+                            &l) == ERROR_SUCCESS) {
                             if (l >= 2 && std::wstring(nid) == found_guid) {
                                 out_path = detail->DevicePath;
                             }
@@ -171,14 +168,13 @@ std::vector<std::pair<std::wstring, std::wstring>> enum_net_device_interfaces()
     SP_DEVINFO_DATA data{};
     for (DWORD i = 0; SetupDiEnumDeviceInfo(h_all, i, &data); ++i) {
         HKEY dev_key = SetupDiOpenDevRegKey(h_all, &data, DICS_FLAG_GLOBAL, 0,
-                                            DIREG_DRV, KEY_QUERY_VALUE);
+            DIREG_DRV, KEY_QUERY_VALUE);
         if (dev_key != INVALID_HANDLE_VALUE) {
             wchar_t nid[256] = {0};
             DWORD t = 0;
             DWORD l = static_cast<DWORD>(sizeof(nid) / sizeof(wchar_t));
             if (RegQueryValueExW(dev_key, L"NetCfgInstanceId", nullptr, &t,
-                                 reinterpret_cast<LPBYTE>(nid),
-                                 &l) == ERROR_SUCCESS) {
+                reinterpret_cast<LPBYTE>(nid), &l) == ERROR_SUCCESS) {
                 std::wstring path;
                 add_from_devinfo(h_all, std::wstring(nid), path);
                 if (!path.empty())
@@ -205,7 +201,7 @@ HANDLE open_wintun_device(const std::wstring &name)
             wchar_t enum_name[256] = {0};
             DWORD len = static_cast<DWORD>(sizeof(enum_name) / sizeof(wchar_t));
             if (RegEnumKeyExW(key, i, enum_name, &len, nullptr, nullptr,
-                              nullptr, nullptr) != ERROR_SUCCESS)
+                nullptr, nullptr) != ERROR_SUCCESS)
                 break;
 
             std::wstring unit = adapter_key;
@@ -214,7 +210,7 @@ HANDLE open_wintun_device(const std::wstring &name)
 
             HKEY unit_key;
             if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, unit.c_str(), 0, KEY_READ,
-                              &unit_key) != ERROR_SUCCESS)
+                &unit_key) != ERROR_SUCCESS)
                 continue;
 
             char comp_id[256] = {0};
@@ -223,8 +219,8 @@ HANDLE open_wintun_device(const std::wstring &name)
             DWORD cplen = static_cast<DWORD>(sizeof(comp_id));
             bool has_comp =
                 RegQueryValueExA(unit_key, "ComponentId", nullptr, &type,
-                                 reinterpret_cast<LPBYTE>(comp_id),
-                                 &cplen) == ERROR_SUCCESS;
+                    reinterpret_cast<LPBYTE>(comp_id), &cplen) ==
+                ERROR_SUCCESS;
             bool has_inst = false;
             if (has_comp) {
                 std::transform(comp_id, comp_id + strlen(comp_id), comp_id,
@@ -234,8 +230,8 @@ HANDLE open_wintun_device(const std::wstring &name)
                 len = static_cast<DWORD>(sizeof(inst_id));
                 has_inst =
                     RegQueryValueExA(unit_key, "NetCfgInstanceId", nullptr,
-                                     &type, reinterpret_cast<LPBYTE>(inst_id),
-                                     &len) == ERROR_SUCCESS;
+                        &type, reinterpret_cast<LPBYTE>(inst_id), &len) ==
+                    ERROR_SUCCESS;
             }
 
             if (has_comp && has_inst) {
@@ -266,17 +262,15 @@ HANDLE open_wintun_device(const std::wstring &name)
     auto interfaces = enum_net_device_interfaces();
     for (auto &pair : interfaces)
         if (pair.first == found_guid_w)
-            return CreateFileW(pair.second.data(), GENERIC_READ | GENERIC_WRITE,
-                               0, nullptr, OPEN_EXISTING,
-                               FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
-                               nullptr);
+            return CreateFileW(pair.second.data(),
+                GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
+                FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, nullptr);
 
     return INVALID_HANDLE_VALUE;
 }
 
 bool register_rings_ioct(HANDLE dev_handle, struct tun_ring *send_ring,
-                         struct tun_ring *recv_ring, HANDLE send_evt,
-                         HANDLE recv_evt)
+    struct tun_ring *recv_ring, HANDLE send_evt, HANDLE recv_evt)
 {
     struct tun_register_rings rr;
     ZeroMemory(&rr, sizeof(rr));
@@ -433,7 +427,7 @@ void wintun_packet_device_impl::setup_mtu(int mtu)
 }
 
 bool wintun_packet_device_impl::open(const device_config &cfg,
-                                     boost::system::error_code &ec)
+    boost::system::error_code &ec)
 {
     close();
 
@@ -480,10 +474,10 @@ bool wintun_packet_device_impl::open(const device_config &cfg,
 
     send_ring_fh_ =
         CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0,
-                           sizeof(struct tun_ring), nullptr);
+            sizeof(struct tun_ring), nullptr);
     recv_ring_fh_ =
         CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0,
-                           sizeof(struct tun_ring), nullptr);
+            sizeof(struct tun_ring), nullptr);
     if (!send_ring_fh_ || !recv_ring_fh_) {
         cleanup_rings();
         CloseHandle(dev_handle_);
@@ -521,7 +515,7 @@ bool wintun_packet_device_impl::open(const device_config &cfg,
     }
 
     if (!register_rings_ioct(dev_handle_, send_ring_, recv_ring_, send_evt_,
-                             recv_evt_)) {
+        recv_evt_)) {
         cleanup_rings();
         CloseHandle(dev_handle_);
         dev_handle_ = INVALID_HANDLE_VALUE;
@@ -546,7 +540,7 @@ bool wintun_packet_device_impl::open(const device_config &cfg,
 }
 
 bool wintun_packet_device_impl::assign(native_handle_type handle, size_t mtu,
-                                       boost::system::error_code &ec)
+    bool, boost::system::error_code &ec)
 {
     close();
     dev_handle_ = reinterpret_cast<HANDLE>(handle);
@@ -600,8 +594,8 @@ bool wintun_packet_device_impl::assign(native_handle_type handle, size_t mtu,
         rr.receive.ring = recv_ring_;
         rr.receive.tail_moved = recv_evt_;
         DWORD bytes_returned;
-        DeviceIoControl(dev_handle_, TUN_IOCTL_REGISTER_RINGS, &rr, sizeof(rr),
-                        nullptr, 0, &bytes_returned, nullptr);
+        DeviceIoControl(dev_handle_, TUN_IOCTL_REGISTER_RINGS, &rr,
+            sizeof(rr), nullptr, 0, &bytes_returned, nullptr);
     }
 
     send_ring_->head = 0;

@@ -178,7 +178,7 @@ inline bool verify_packet(const std::vector<uint8_t> &pkt)
 
 // ---- 报文构造（host order 地址入参）----
 inline std::vector<uint8_t> make_ipv4(uint32_t src, uint32_t dst, uint8_t proto,
-                                      const std::vector<uint8_t> &payload)
+    const std::vector<uint8_t> &payload)
 {
     std::vector<uint8_t> pkt;
     pkt.reserve(20 + payload.size());
@@ -202,9 +202,8 @@ inline std::vector<uint8_t> make_ipv4(uint32_t src, uint32_t dst, uint8_t proto,
 
 // ---- IPv6 报文构造（网络字节序地址字节入参）----
 inline std::vector<uint8_t> make_ipv6(const std::array<uint8_t, 16> &src,
-                                      const std::array<uint8_t, 16> &dst,
-                                      uint8_t proto,
-                                      const std::vector<uint8_t> &payload)
+    const std::array<uint8_t, 16> &dst, uint8_t proto,
+    const std::vector<uint8_t> &payload)
 {
     std::vector<uint8_t> pkt(40, 0);
     pkt[0] = 0x60;
@@ -219,11 +218,10 @@ inline std::vector<uint8_t> make_ipv6(const std::array<uint8_t, 16> &src,
     return pkt;
 }
 
-inline std::vector<uint8_t>
-make_tcp6(const std::array<uint8_t, 16> &src,
-          const std::array<uint8_t, 16> &dst, uint16_t sport, uint16_t dport,
-          uint8_t flags, uint32_t seq, uint32_t ack, uint16_t win,
-          const std::vector<uint8_t> &data, bool mss = false)
+inline std::vector<uint8_t> make_tcp6(const std::array<uint8_t, 16> &src,
+    const std::array<uint8_t, 16> &dst, uint16_t sport, uint16_t dport,
+    uint8_t flags, uint32_t seq, uint32_t ack, uint16_t win,
+    const std::vector<uint8_t> &data, bool mss = false)
 {
     const size_t hlen = mss ? 24 : 20;
     std::vector<uint8_t> seg(hlen + data.size(), 0);
@@ -259,9 +257,8 @@ make_tcp6(const std::array<uint8_t, 16> &src,
 }
 
 inline std::vector<uint8_t> make_udp6(const std::array<uint8_t, 16> &src,
-                                      const std::array<uint8_t, 16> &dst,
-                                      uint16_t sport, uint16_t dport,
-                                      const std::vector<uint8_t> &data)
+    const std::array<uint8_t, 16> &dst, uint16_t sport, uint16_t dport,
+    const std::vector<uint8_t> &data)
 {
     std::vector<uint8_t> seg(8 + data.size(), 0);
     seg[0] = static_cast<uint8_t>(sport >> 8);
@@ -286,9 +283,8 @@ inline std::vector<uint8_t> make_udp6(const std::array<uint8_t, 16> &src,
 }
 
 inline std::vector<uint8_t> make_icmp6_echo(const std::array<uint8_t, 16> &src,
-                                            const std::array<uint8_t, 16> &dst,
-                                            uint16_t id, uint16_t seqno,
-                                            const std::vector<uint8_t> &data)
+    const std::array<uint8_t, 16> &dst, uint16_t id, uint16_t seqno,
+    const std::vector<uint8_t> &data)
 {
     std::vector<uint8_t> icmp(8 + data.size(), 0);
     icmp[0] = 128; // Echo Request
@@ -311,10 +307,10 @@ inline std::vector<uint8_t> make_icmp6_echo(const std::array<uint8_t, 16> &src,
 }
 
 inline std::vector<uint8_t> make_tcp(uint32_t src, uint32_t dst, uint16_t sport,
-                                     uint16_t dport, uint8_t flags,
-                                     uint32_t seq, uint32_t ack, uint16_t win,
-                                     const std::vector<uint8_t> &data,
-                                     bool mss = false, int wscale = -1)
+    uint16_t dport, uint8_t flags,
+    uint32_t seq, uint32_t ack, uint16_t win,
+    const std::vector<uint8_t> &data,
+    bool mss = false, int wscale = -1)
 {
     // wscale >= 0 时携带 Window Scale 选项（RFC 7323 kind=3, len=3）
     const bool with_ws = wscale >= 0;
@@ -350,7 +346,7 @@ inline std::vector<uint8_t> make_tcp(uint32_t src, uint32_t dst, uint16_t sport,
         std::memcpy(seg.data() + hlen, data.data(), data.size());
     }
     const uint32_t pseudo = (src >> 16) + (src & 0xffff) + (dst >> 16) +
-                            (dst & 0xffff) + 6 + seg.size();
+        (dst & 0xffff) + 6 + seg.size();
     uint16_t c = csum16(seg.data(), seg.size(), pseudo);
     seg[16] = static_cast<uint8_t>(c >> 8);
     seg[17] = static_cast<uint8_t>(c & 0xff);
@@ -358,8 +354,7 @@ inline std::vector<uint8_t> make_tcp(uint32_t src, uint32_t dst, uint16_t sport,
 }
 
 inline std::vector<uint8_t> make_udp(uint32_t src, uint32_t dst, uint16_t sport,
-                                     uint16_t dport,
-                                     const std::vector<uint8_t> &data)
+    uint16_t dport, const std::vector<uint8_t> &data)
 {
     std::vector<uint8_t> seg(8 + data.size(), 0);
     seg[0] = static_cast<uint8_t>(sport >> 8);
@@ -373,7 +368,7 @@ inline std::vector<uint8_t> make_udp(uint32_t src, uint32_t dst, uint16_t sport,
         std::memcpy(seg.data() + 8, data.data(), data.size());
     }
     const uint32_t pseudo = (src >> 16) + (src & 0xffff) + (dst >> 16) +
-                            (dst & 0xffff) + 17 + seg.size();
+        (dst & 0xffff) + 17 + seg.size();
     uint16_t c = csum16(seg.data(), seg.size(), pseudo);
     seg[6] = static_cast<uint8_t>(c >> 8);
     seg[7] = static_cast<uint8_t>(c & 0xff);
@@ -381,8 +376,8 @@ inline std::vector<uint8_t> make_udp(uint32_t src, uint32_t dst, uint16_t sport,
 }
 
 inline std::vector<uint8_t> make_icmp_echo(uint32_t src, uint32_t dst,
-                                           uint16_t id, uint16_t seqno,
-                                           const std::vector<uint8_t> &data)
+    uint16_t id, uint16_t seqno,
+    const std::vector<uint8_t> &data)
 {
     std::vector<uint8_t> icmp(8 + data.size(), 0);
     icmp[0] = 8; // Echo Request
@@ -554,7 +549,7 @@ public:
     bool read_packet(std::vector<uint8_t> &out, int timeout_ms = 3000)
     {
         const auto deadline = std::chrono::steady_clock::now() +
-                              std::chrono::milliseconds(timeout_ms);
+            std::chrono::milliseconds(timeout_ms);
         for (;;) {
             while (stash_.size() >= 4) {
                 size_t total = 0;
@@ -587,8 +582,8 @@ public:
                 return false;
             }
             const int remaining = static_cast<int>(
-                std::chrono::duration_cast<std::chrono::milliseconds>(deadline -
-                                                                      now)
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    deadline - now)
                     .count());
             struct pollfd pfd{fd_, POLLIN, 0};
             const int r = ::poll(&pfd, 1, remaining);

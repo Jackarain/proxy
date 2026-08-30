@@ -48,14 +48,13 @@ public:
     // 语义一致）。
     template <typename MutableBufferSequence, typename CompletionToken>
     auto async_receive_from(MutableBufferSequence &&buffers,
-                            net::ip::udp::endpoint &sender,
-                            CompletionToken &&token)
+        net::ip::udp::endpoint &sender, CompletionToken &&token)
     {
         return net::async_initiate<CompletionToken,
-                                   void(boost::system::error_code, size_t)>(
+            void(boost::system::error_code, size_t)>(
             [this, &sender](auto handler, auto buffers) mutable {
                 do_receive_from(std::move(buffers), sender,
-                                net::bind_executor(ex_, std::move(handler)));
+                    net::bind_executor(ex_, std::move(handler)));
             },
             token, std::forward<MutableBufferSequence>(buffers));
     }
@@ -66,13 +65,13 @@ public:
     // 用户数据。
     template <typename ConstBufferSequence, typename CompletionToken>
     auto async_send_to(const net::ip::udp::endpoint &remote,
-                       ConstBufferSequence &&buffers, CompletionToken &&token)
+        ConstBufferSequence &&buffers, CompletionToken &&token)
     {
         return net::async_initiate<CompletionToken,
-                                   void(boost::system::error_code, size_t)>(
+            void(boost::system::error_code, size_t)>(
             [this, remote](auto handler, auto buffers) mutable {
                 do_send_to(remote, std::move(buffers),
-                            net::bind_executor(ex_, std::move(handler)));
+                    net::bind_executor(ex_, std::move(handler)));
             },
             token, std::forward<ConstBufferSequence>(buffers));
     }

@@ -114,8 +114,8 @@ typedef WINTUN_ADAPTER_HANDLE(WINAPI *PfnWintunOpenAdapter)(LPCWSTR Name);
 
 typedef VOID(WINAPI *PfnWintunCloseAdapter)(WINTUN_ADAPTER_HANDLE Adapter);
 
-typedef VOID(WINAPI *PfnWintunGetAdapterLUID)(WINTUN_ADAPTER_HANDLE Adapter,
-                                              NET_LUID *Luid);
+typedef VOID(WINAPI *PfnWintunGetAdapterLUID)(
+    WINTUN_ADAPTER_HANDLE Adapter, NET_LUID *Luid);
 
 namespace tunio {
 namespace net = boost::asio;
@@ -125,16 +125,16 @@ namespace detail {
 // Boost.Asio version (post(executor, token) only).
 template <typename ExecutorT, typename HandlerT, typename EcT, typename BytesT>
 void async_post_with_result(const ExecutorT &ex, HandlerT &&h, EcT ec,
-                            BytesT bytes)
+    BytesT bytes)
 {
     net::post(ex, [h = std::forward<HandlerT>(h), ec = std::move(ec),
-                   bytes = std::move(bytes)]() mutable { h(ec, bytes); });
+        bytes = std::move(bytes)]() mutable { h(ec, bytes); });
 }
 
 // Post helper that captures an error_code into a closure.
 template <typename ExecutorT, typename HandlerT>
 void async_post_with_error(const ExecutorT &ex, HandlerT &&h,
-                           boost::system::error_code ec)
+    boost::system::error_code ec)
 {
     net::post(ex, [h = std::forward<HandlerT>(h), ec]() mutable { h(ec, 0); });
 }
@@ -197,8 +197,8 @@ public:
     }
 
     bool open(const device_config &cfg, boost::system::error_code &ec);
-    bool assign(native_handle_type handle, size_t mtu,
-                boost::system::error_code &ec);
+    bool assign(native_handle_type handle, size_t mtu, bool,
+        boost::system::error_code &ec);
     void close();
 
     size_t mtu() const
@@ -214,7 +214,7 @@ public:
     void async_read(packet_buffer &buf, Handler &&handler)
     {
         net::post(strand_, [self = shared_from_this(), &buf,
-                            h = std::forward<Handler>(handler)]() mutable {
+            h = std::forward<Handler>(handler)]() mutable {
             self->recv_poll_loop(buf, std::move(h));
         });
     }
@@ -223,7 +223,7 @@ public:
     void async_write(packet_buffer &buf, Handler &&handler)
     {
         net::post(strand_, [self = shared_from_this(), &buf,
-                            h = std::forward<Handler>(handler)]() mutable {
+            h = std::forward<Handler>(handler)]() mutable {
             self->send_try_and_maybe_retry(buf, std::move(h));
         });
     }
@@ -238,7 +238,7 @@ private:
     void recv_poll_loop(packet_buffer &buf, Handler &&handler)
     {
         int n = recv_one({reinterpret_cast<const char *>(buf.writable_data()),
-                          buf.writable_size()});
+            buf.writable_size()});
 
         if (n > 0) {
             buf.commit(static_cast<size_t>(n));
@@ -260,8 +260,8 @@ private:
         // 无数据，定时重试.
         recv_timer_.expires_after(std::chrono::milliseconds(1));
         recv_timer_.async_wait([self = shared_from_this(), &buf,
-                                h = std::forward<Handler>(handler)](
-                                   boost::system::error_code timer_ec) mutable {
+            h = std::forward<Handler>(handler)](
+                boost::system::error_code timer_ec) mutable {
             if (!timer_ec && self->is_open())
                 self->recv_poll_loop(buf, std::move(h));
             else
@@ -293,8 +293,8 @@ private:
 
         send_timer_.expires_after(std::chrono::milliseconds(1));
         send_timer_.async_wait([self = shared_from_this(), &buf,
-                                h = std::move(handler)](
-                                   boost::system::error_code timer_ec) mutable {
+            h = std::move(handler)](
+                boost::system::error_code timer_ec) mutable {
             if (timer_ec) {
                 h(timer_ec, 0);
                 return;

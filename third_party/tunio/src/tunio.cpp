@@ -23,8 +23,9 @@ namespace tunio {
 namespace detail {
 
 tunio_impl::tunio_impl(net::io_context &ctx, bool single_thread)
-    : strand_ex_(single_thread ? net::any_io_executor(ctx.get_executor())
-                               : net::any_io_executor(net::make_strand(ctx)))
+    : strand_ex_(single_thread
+            ? net::any_io_executor(ctx.get_executor())
+            : net::any_io_executor(net::make_strand(ctx)))
     , device_(std::make_shared<packet_device>(ctx))
     , stats_(std::make_shared<engine_stats>())
 {
@@ -111,7 +112,8 @@ bool tunio_impl::open(const tun_config &cfg, boost::system::error_code &ec)
 
     // 设备初始化：优先使用外部句柄注入
     if (cfg.external_handle != invalid_native_handle) {
-        if (!device_->assign(cfg.external_handle, cfg.external_mtu, ec)) {
+        if (!device_->assign(cfg.external_handle, cfg.external_mtu,
+                             cfg.utun_prefix, ec)) {
             return false;
         }
     } else {
@@ -139,9 +141,9 @@ bool tunio_impl::open(const tun_config &cfg, boost::system::error_code &ec)
     account_->limit = cfg.max_total_buffer;
     writer_ = std::make_shared<device_writer>(strand_ex_, device_, stats_);
     tcp_ = std::make_shared<tcp_engine>(strand_ex_, *writer_, cfg_, *stats_,
-                                        account_);
+        account_);
     udp_ = std::make_shared<udp_engine>(strand_ex_, *writer_, cfg_, *stats_,
-                                        account_);
+        account_);
     tcp_->start_sweep();
 
     ++epoch_; // 递增代际：使任何在途的 close 清理任务失效，避免误关新实例
@@ -228,7 +230,7 @@ void tunio_impl::start_read_slot(size_t index)
 }
 
 void tunio_impl::on_read(const boost::system::error_code &ec, size_t n,
-                         size_t index, uint64_t epoch)
+    size_t index, uint64_t epoch)
 {
     // 迟到回调（引擎已关闭、或设备已 close 后重新 open 的旧代际读）：
     // 不触碰任何读状态，槽位标记由 open() 的 fill(false) 与当前代际回调
@@ -426,7 +428,7 @@ void tunio_impl::handle_packet(const uint8_t *pkt, size_t len)
 }
 
 void tunio_impl::handle_icmp(const ip_packet_info &ip, const uint8_t *icmp,
-                             size_t icmp_len)
+    size_t icmp_len)
 {
     if (!have_ip4_ || icmp_len < 8) {
         return;
@@ -444,8 +446,8 @@ void tunio_impl::handle_icmp(const ip_packet_info &ip, const uint8_t *icmp,
     reply.resize(20 + icmp_len);
     uint8_t *out = reply.data();
 
-    build_ip_header(out, 4, ip.dst_ip, ip.src_ip, IPPROTO_ICMP_V, 20 + icmp_len,
-                    writer_->alloc_ip_id());
+    build_ip_header(out, 4, ip.dst_ip, ip.src_ip, IPPROTO_ICMP_V,
+        20 + icmp_len, writer_->alloc_ip_id());
 
     uint8_t *oicmp = out + 20;
     std::memcpy(oicmp, icmp, icmp_len);
@@ -461,7 +463,7 @@ void tunio_impl::handle_icmp(const ip_packet_info &ip, const uint8_t *icmp,
 }
 
 void tunio_impl::handle_icmpv6(const ip_packet_info &ip, const uint8_t *icmp,
-                               size_t icmp_len)
+    size_t icmp_len)
 {
     if (!have_ip6_ || icmp_len < 8) {
         return;
@@ -472,7 +474,7 @@ void tunio_impl::handle_icmpv6(const ip_packet_info &ip, const uint8_t *icmp,
     }
     // ICMPv6 校验和必须包含 IPv6 伪头部
     if (tcp_udp_checksum(6, ip.src_ip, ip.dst_ip, IPPROTO_ICMPV6_V, icmp,
-                         icmp_len) != 0) {
+        icmp_len) != 0) {
         return;
     }
 
@@ -481,7 +483,7 @@ void tunio_impl::handle_icmpv6(const ip_packet_info &ip, const uint8_t *icmp,
     uint8_t *out = reply.data();
 
     build_ip_header(out, 6, ip.dst_ip, ip.src_ip, IPPROTO_ICMPV6_V,
-                    40 + icmp_len, 0);
+        40 + icmp_len, 0);
 
     uint8_t *oicmp = out + 40;
     std::memcpy(oicmp, icmp, icmp_len);
@@ -489,7 +491,7 @@ void tunio_impl::handle_icmpv6(const ip_packet_info &ip, const uint8_t *icmp,
     oicmp[2] = 0;   // 清零校验和字段后再计算
     oicmp[3] = 0;
     const uint16_t csum = tcp_udp_checksum(6, ip.dst_ip, ip.src_ip,
-                                           IPPROTO_ICMPV6_V, oicmp, icmp_len);
+        IPPROTO_ICMPV6_V, oicmp, icmp_len);
     oicmp[2] = static_cast<uint8_t>(csum >> 8);
     oicmp[3] = static_cast<uint8_t>(csum & 0xff);
 
