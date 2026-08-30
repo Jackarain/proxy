@@ -699,35 +699,3 @@ jobs:
           name: proxy_server-android-release-apk
           path: |
             apps/android/xproxy/build/app/outputs/flutter-apk/app-release.apk
-
-  AndroidAproxy:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          # aproxy 为纯 Dart 引擎 + Kotlin VpnService, 无 JNI/native 编译,
-          # 无需安装 NDK.
-          packages: 'tools platform-tools'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: 3.47.1
-          cache: true
-
-      - name: Build Android apk
-        working-directory: apps/android/aproxy
-        run: |
-          flutter pub get
-          flutter build apk --release
-
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: aproxy-android-release-apk
-          path: |
-            apps/android/aproxy/build/app/outputs/flutter-apk/app-release.apk
