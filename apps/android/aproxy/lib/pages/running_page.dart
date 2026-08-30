@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -25,6 +26,10 @@ class _RunningPageState extends State<RunningPage>
   late final TabController _tabs = TabController(length: 2, vsync: this);
   final StorageService _storage = StorageService();
   final List<Map<String, dynamic>> _logs = [];
+  // 单一日志文本框: 与 webui 一致, 整段日志放入一个只读文本框,
+  // 可自由跨行选择, 滚动/自动滚动不会取消文本选择.
+  final List<String> _logLines = [];
+  final TextEditingController _logTextController = TextEditingController();
   final ScrollController _logScrollController = ScrollController();
   bool _autoScroll = true;
   String _stateMessage = '';
@@ -55,33 +60,60 @@ class _RunningPageState extends State<RunningPage>
       _logSub = server.logStream.listen(_onLog);
     }
     // 事件通道 (native vpn_state; 日志已全部经 WS 控制通道上报).
-    _nativeEventsSub = VpnChannel.events().listen((e) {
-      if (e['type'] == 'vpn_state') {
-        final state = e['state'] as String? ?? '';
-        if (state == 'error') {
-          // native 启动失败/异常退出: 清理运行状态, 界面提示.
-          _storage.clearRunState();
-          AppSession.instance.endRun();
+    _nativeEventsSub = VpnChannel.events().listen(
+      (e) {
+        if (e['type'] == 'vpn_state') {
+          final state = e['state'] as String? ?? '';
+          if (state == 'error') {
+            // native 启动失败/异常退出: 清理运行状态, 界面提示.
+            _storage.clearRunState();
+            AppSession.instance.endRun();
+          }
+          if (mounted) {
+            setState(() {
+              _stateMessage = e['message'] as String? ?? '';
+            });
+          }
         }
-        if (mounted) {
-          setState(() {
-            _stateMessage = e['message'] as String? ?? '';
-          });
-        }
-      }
-    }, onError: (Object _) {
-      // 引擎分离等场景下事件流中断, 状态仍由 WS 控制通道维持.
-    });
+      },
+      onError: (Object _) {
+        // 引擎分离等场景下事件流中断, 状态仍由 WS 控制通道维持.
+      },
+    );
     _connected = server?.connected ?? false;
   }
 
-  static const int _maxLogLines = 500;
+  /// 单日文本框显示的最大行数 (与 webui 上限一致).
+  static const int _maxLogLines = 2000;
+
+  String _fmtLogLine(Map<String, dynamic> entry) {
+    // launcher_log 上报的整行文本已含时间戳与级别前缀, 无结构化时间时
+    // 原样展示, 不再附加无意义的时间戳.
+    final time = entry['time'] as int? ?? 0;
+    final message = entry['message'] as String? ?? '';
+    return time > 0 ? '[${_fmtTimeMs(time)}] $message' : message;
+  }
 
   void _addLog(Map<String, dynamic> entry) {
     _logs.add(entry);
     if (_logs.length > _maxLogLines) {
       _logs.removeRange(0, _logs.length - _maxLogLines);
     }
+    _logLines.add(_fmtLogLine(entry));
+    if (_logLines.length > _maxLogLines) {
+      _logLines.removeRange(0, _logLines.length - _maxLogLines);
+    }
+  }
+
+  /// 重建日志文本框文本, 保留既有文本选择 (追加/裁剪头部不影响选中内容,
+  /// 选中超出新长度时回退到末尾).
+  void _rebuildLogText() {
+    final text = _logLines.join('\n');
+    var sel = _logTextController.selection;
+    if (sel.start > text.length) {
+      sel = TextSelection.collapsed(offset: text.length);
+    }
+    _logTextController.value = TextEditingValue(text: text, selection: sel);
   }
 
   void _onLog(Map<String, dynamic> log) {
@@ -96,18 +128,21 @@ class _RunningPageState extends State<RunningPage>
             _addLog({'time': 0, 'level': 1, 'message': line});
           }
         }
+        _rebuildLogText();
+        _autoScrollToBottom();
       });
-      _autoScrollToBottom();
     }
   }
 
-  /// 自动滚动: 开启且原本处于底部时跟随新日志, 用户手动上滚时不强制拉回.
+  /// 自动滚动: 开启且原本处于底部时跟随新日志, 用户手动上滚 (进行选择)
+  /// 时不强制拉回, 避免打断选择.
   void _autoScrollToBottom() {
     if (!_autoScroll || !_logScrollController.hasClients) return;
     final p = _logScrollController.position;
     if (!p.hasContentDimensions) return;
     if (p.maxScrollExtent > 0 && p.pixels < p.maxScrollExtent - 4) return;
-    // 列表更新后布局完成再滚动到末尾, 否则 maxScrollExtent 仍是旧值.
+    // 文本更新后布局完成再滚动到末尾, 否则 maxScrollExtent 仍是旧值,
+    // 无法真正到达最新日志.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_logScrollController.hasClients) return;
       final pos = _logScrollController.position;
@@ -137,6 +172,7 @@ class _RunningPageState extends State<RunningPage>
     _nativeEventsSub?.cancel();
     _tabs.removeListener(_onTabChanged);
     _tabs.dispose();
+    _logTextController.dispose();
     _logScrollController.dispose();
     super.dispose();
   }
@@ -149,9 +185,8 @@ class _RunningPageState extends State<RunningPage>
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('停止失败: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('停止失败: $e')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -165,9 +200,9 @@ class _RunningPageState extends State<RunningPage>
         title: const Text('运行控制台'),
         actions: [
           IconButton(
-            onPressed: _logs.isEmpty ? null : _copyAllLogs,
+            onPressed: _logs.isEmpty ? null : _copyLogs,
             icon: const Icon(Icons.copy_all),
-            tooltip: '复制全部日志',
+            tooltip: '复制选中的日志; 未选中时复制全部',
           ),
           IconButton(
             onPressed: _logs.isEmpty
@@ -195,7 +230,10 @@ class _RunningPageState extends State<RunningPage>
           _statusBanner(context),
           TabBar(
             controller: _tabs,
-            tabs: const [Tab(text: '状态'), Tab(text: '日志')],
+            tabs: const [
+              Tab(text: '状态'),
+              Tab(text: '日志'),
+            ],
           ),
           Expanded(
             child: TabBarView(
@@ -310,7 +348,12 @@ class _RunningPageState extends State<RunningPage>
             Expanded(child: _infoTile('累计连接', '${s['conn_total'] ?? 0}')),
             const SizedBox(width: 12),
             Expanded(
-              child: _infoTile('池连接数', '${s['pool_connections'] ?? 0}'),
+              child: _infoTile(
+                '池连接数',
+                (s['pool_target'] ?? 0) > 0
+                    ? '${s['pool_connections'] ?? 0}/${s['pool_target']}'
+                    : '${s['pool_connections'] ?? 0}',
+              ),
             ),
           ],
         ),
@@ -349,48 +392,76 @@ class _RunningPageState extends State<RunningPage>
   }
 
   /// 通过配置的测试 URL 发起下载 (流量走 VPN 隧道),
-  /// 测量网络延迟 (首字节) 与下载速率.
+  /// 延迟为发起连接到连接完成 (TCP/TLS 握手) 的时间,
+  /// 速率按下载阶段字节数/耗时计算.
   Future<void> _testVpn() async {
     final config = _runningConfig();
     if (config == null) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('无法获取当前配置')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('无法获取当前配置')));
       }
       return;
     }
     final url = config.testUrl.trim().isEmpty
         ? 'https://www.google.com'
         : config.testUrl.trim();
+    final Uri uri;
+    try {
+      uri = Uri.parse(url);
+    } catch (_) {
+      if (mounted) setState(() => _testResult = '测试失败: URL 无效');
+      return;
+    }
+    final bool secure = uri.scheme == 'https';
+    final int port = uri.hasPort ? uri.port : (secure ? 443 : 80);
 
     setState(() {
       _testing = true;
       _testResult = '';
     });
+
+    // 延迟: 发起连接到连接建立完成 (TCP 或 TLS 握手结束) 的时间.
     final stopwatch = Stopwatch()..start();
+    int latencyMs = 0;
+    try {
+      final socket = secure
+          ? await SecureSocket.connect(
+              uri.host,
+              port,
+              timeout: const Duration(seconds: 5),
+            )
+          : await Socket.connect(
+              uri.host,
+              port,
+              timeout: const Duration(seconds: 5),
+            );
+      latencyMs = stopwatch.elapsedMilliseconds;
+      socket.destroy();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _testResult = '测试失败: $e');
+        setState(() => _testing = false);
+      }
+      return;
+    }
+
+    // 下载测速: 与连接测量独立计时, 按字节数/耗时计算速率.
     HttpClient? client;
     try {
       client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
       final req = await client
-          .openUrl('GET', Uri.parse(url))
+          .openUrl('GET', uri)
           .timeout(const Duration(seconds: 10));
       // 不跟随重定向, 如实反映配置的测试 URL 首跳响应状态.
       req.followRedirects = false;
       final res = await req.close().timeout(const Duration(seconds: 10));
-      // 收到响应头的时间作为空响应体时的延迟兜底.
-      final headerMs = stopwatch.elapsedMilliseconds;
-      // 继续读取响应体, 按字节数/耗时计算下载速率.
+      final downloadStopwatch = Stopwatch()..start();
       var received = 0;
-      var latencyMs = headerMs;
       await for (final chunk in res) {
-        // 从发出请求到收到第一个数据的时间作为延迟.
-        if (latencyMs == headerMs) {
-          latencyMs = stopwatch.elapsedMilliseconds;
-        }
         received += chunk.length;
       }
-      final totalMs = stopwatch.elapsedMilliseconds;
+      final totalMs = downloadStopwatch.elapsedMilliseconds;
       final kbPerSec = totalMs > 0 ? received * 1000.0 / totalMs / 1024.0 : 0.0;
       final speedText = kbPerSec >= 1024
           ? '${(kbPerSec / 1024).toStringAsFixed(2)} MB/s'
@@ -426,45 +497,51 @@ class _RunningPageState extends State<RunningPage>
     if (_logs.isEmpty) {
       return const Center(child: Text('暂无日志'));
     }
-    return ListView.builder(
+    // 单一只读文本框承载全部日志: 可自由跨行选择文本, 滚动/自动滚动
+    // 不会取消已选文本. 与 webui 日志行为一致.
+    return Scrollbar(
       controller: _logScrollController,
-      padding: const EdgeInsets.all(12),
-      itemCount: _logs.length,
-      itemBuilder: (context, i) {
-        final log = _logs[i];
-        final level = log['level'] as int? ?? 1;
-        final message = log['message'] as String? ?? '';
-        final time = log['time'] as int? ?? 0;
-        final color = switch (level) {
-          0 => Colors.grey,
-          2 => Colors.orange,
-          3 => Colors.red,
-          _ => Theme.of(context).colorScheme.onSurface,
-        };
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: SelectableText(
-            '[${_fmtTimeMs(time)}] $message',
-            style: TextStyle(fontSize: 12, color: color),
-          ),
-        );
-      },
+      child: TextField(
+        controller: _logTextController,
+        scrollController: _logScrollController,
+        readOnly: true,
+        maxLines: null,
+        minLines: null,
+        keyboardType: TextInputType.multiline,
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          isCollapsed: true,
+          contentPadding: EdgeInsets.all(12),
+        ),
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
     );
   }
 
   void _clearLogs() {
-    setState(() => _logs.clear());
+    _logs.clear();
+    _logLines.clear();
+    setState(() => _logTextController.clear());
   }
 
-  Future<void> _copyAllLogs() async {
-    final text = _logs
-        .map((log) => '[${_fmtTimeMs(log['time'] as int? ?? 0)}] '
-            '${log['message'] as String? ?? ''}')
-        .join('\n');
+  /// 复制日志: 有文本选择时复制选中部分, 否则复制全部.
+  Future<void> _copyLogs() async {
+    final sel = _logTextController.selection;
+    var text = '';
+    var copiedSelected = false;
+    final full = _logTextController.text;
+    if (!sel.isCollapsed && sel.isValid && sel.end <= full.length) {
+      text = full.substring(sel.start, sel.end);
+      copiedSelected = text.trim().isNotEmpty;
+    }
+    if (!copiedSelected) text = full;
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已复制全部日志到剪贴板')),
+      SnackBar(content: Text(copiedSelected ? '已复制选中的日志到剪贴板' : '已复制全部日志到剪贴板')),
     );
   }
 
@@ -479,9 +556,8 @@ class _RunningPageState extends State<RunningPage>
             const SizedBox(height: 4),
             Text(
               value,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -528,7 +604,6 @@ class _RunningPageState extends State<RunningPage>
     final s = n % 60;
     return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
-
 
   String _fmtTimeMs(int ms) {
     if (ms <= 0) return '--:--:--';

@@ -184,7 +184,7 @@ class AproxyVpnService : VpnService() {
 
     private fun startForegroundCompat() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(CHANNEL_ID, "aproxy", NotificationManager.IMPORTANCE_LOW)
+        val channel = NotificationChannel(CHANNEL_ID, "aProxy", NotificationManager.IMPORTANCE_LOW)
         manager.createNotificationChannel(channel)
         val contentIntent = packageManager.getLaunchIntentForPackage(packageName)
         val pending = PendingIntent.getActivity(
@@ -192,7 +192,7 @@ class AproxyVpnService : VpnService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("aproxy")
+            .setContentTitle("aProxy")
             .setContentText("VPN 运行中")
             .setSmallIcon(R.drawable.ic_vpn)
             .setContentIntent(pending)
