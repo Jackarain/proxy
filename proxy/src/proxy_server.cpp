@@ -1549,6 +1549,66 @@ void proxy_server::launcher_update_report(jsonrpc::jsonrpc_session<WsStream>& se
 						user_rates[name] = std::move(ur);
 					}
 				}
+
+				// 连接级速率: 按连接 id 对上一份快照差分, 与全局/用户速率
+				// 同口径 (计数回退或新连接时钳制为 0).
+				std::map<int64_t, std::pair<int64_t, int64_t>> prev_conns;
+				if (auto pu = m_launcher_state->last_report_.as_object().if_contains("users");
+					pu && pu->is_array())
+				{
+					for (const auto& u : pu->as_array())
+					{
+						if (!u.is_object())
+							continue;
+						auto cit = u.as_object().if_contains("connections");
+						if (!cit || !cit->is_array())
+							continue;
+						for (const auto& c : cit->as_array())
+						{
+							if (!c.is_object())
+								continue;
+							const auto& co = c.as_object();
+							auto it = co.find("id");
+							if (it == co.end() || !it->value().is_int64())
+								continue;
+							int64_t cid = it->value().as_int64();
+							prev_conns[cid] = {
+								detail::json_num(co, "rx_bytes"),
+								detail::json_num(co, "tx_bytes")
+							};
+						}
+					}
+				}
+				if (auto cu = rep.if_contains("users"); cu && cu->is_array())
+				{
+					for (auto& u : cu->as_array())
+					{
+						if (!u.is_object())
+							continue;
+						auto cit = u.as_object().if_contains("connections");
+						if (!cit || !cit->is_array())
+							continue;
+						for (auto& c : cit->as_array())
+						{
+							if (!c.is_object())
+								continue;
+							auto& co = c.as_object();
+							auto it = co.find("id");
+							if (it == co.end() || !it->value().is_int64())
+								continue;
+							int64_t cid = it->value().as_int64();
+							auto p = prev_conns.find(cid);
+							if (p == prev_conns.end())
+								continue;
+							int64_t cur_r = detail::json_num(co, "rx_bytes");
+							int64_t cur_t = detail::json_num(co, "tx_bytes");
+							co["rx_rate_bps"] = cur_r > p->second.first
+								? (cur_r - p->second.first) / sec : 0;
+							co["tx_rate_bps"] = cur_t > p->second.second
+								? (cur_t - p->second.second) / sec : 0;
+						}
+					}
+				}
 			}
 		}
 	}
