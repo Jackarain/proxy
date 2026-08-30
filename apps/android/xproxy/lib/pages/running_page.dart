@@ -376,12 +376,11 @@ class _RunningPageState extends State<RunningPage>
                       '${item['proto'] ?? '-'}  → ${item['target'] ?? '-'}',
                     ),
                     subtitle: Text(
-                      'client: ${item['client_ip'] ?? '-'}\n'
-                      'up ${_fmtBytes(item['rx_bytes'])} '
-                      'down ${_fmtBytes(item['tx_bytes'])} '
+                      '上传 ${_fmtBytes(item['rx_bytes'])} '
+                      '下载 ${_fmtBytes(item['tx_bytes'])} '
                       '(${_fmtRate(item['rx_rate_bps'])} / ${_fmtRate(item['tx_rate_bps'])})',
                     ),
-                    isThreeLine: true,
+                    isThreeLine: false,
                   ),
                 ),
             ],
