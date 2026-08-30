@@ -657,10 +657,10 @@ net::awaitable<void> tcp_engine::write_loop(std::shared_ptr<tcp_flow> f)
             const uint32_t write_end =
                 flow.active_write->start_seq +
                 static_cast<uint32_t>(flow.active_write->total);
-            if (flow.active_write->offset == flow.active_write->total &&
-                flow.snd_una == write_end) {
-                // 全部数据已发出并被对端确认：成功完成写操作（写操作在
-                // 数据确认后才回调，保证对端已实际收到全部字节）.
+            if (flow.active_write->offset == flow.active_write->total) {
+                // 数据已全部发出即完成写操作: 避免逐片等待对端 ACK 时,
+                // 小段触发 delayed ACK(40ms) 拖慢大流量吞吐; 未确认数据
+                // 由 RTO 重传机制兜底, 与直连/代理端行为一致.
                 auto h = std::move(flow.active_write->handler);
                 const size_t done = flow.active_write->total;
                 flow.active_write.reset();
