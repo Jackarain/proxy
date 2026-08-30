@@ -635,9 +635,6 @@ namespace proxy {
 			if (m_owner)
 				m_owner->add_traffic(n, 0);
 
-			XLOG_DBG << "tun tcp tx " << m_target.address().to_string() << ":"
-				<< m_target.port() << " len=" << n;
-
 			co_await net::async_write(
 				m_upstream, net::buffer(buffer, n), net_awaitable[ec]);
 			if (ec)
@@ -656,7 +653,7 @@ namespace proxy {
 	// rx_loop 读取上游数据并转发到客户端（tun_tcp_socket）.
 	net::awaitable<void> tun_tcp_flow::rx_loop()
 	{
-		char buffer[8192];
+		char buffer[65536];
 
 		for (; !m_closed;)
 		{
@@ -673,9 +670,6 @@ namespace proxy {
 			m_tx_bytes += static_cast<uint64_t>(n);
 			if (m_owner)
 				m_owner->add_traffic(0, n);
-
-			XLOG_DBG << "tun tcp rx " << m_target.address().to_string() << ":"
-				<< m_target.port() << " len=" << n;
 
 			co_await write_to_client(buffer, n);
 		}
