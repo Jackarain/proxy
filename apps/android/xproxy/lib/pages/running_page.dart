@@ -59,23 +59,26 @@ class _RunningPageState extends State<RunningPage>
       _logSub = server.logStream.listen(_onLog);
     }
     // 事件通道 (native vpn_state; 日志已全部经 WS 控制通道上报).
-    _nativeEventsSub = VpnChannel.events().listen((e) {
-      if (e['type'] == 'vpn_state') {
-        final state = e['state'] as String? ?? '';
-        if (state == 'error') {
-          // native 启动失败/异常退出: 清理运行状态, 界面提示.
-          _storage.clearRunState();
-          AppSession.instance.endRun();
+    _nativeEventsSub = VpnChannel.events().listen(
+      (e) {
+        if (e['type'] == 'vpn_state') {
+          final state = e['state'] as String? ?? '';
+          if (state == 'error') {
+            // native 启动失败/异常退出: 清理运行状态, 界面提示.
+            _storage.clearRunState();
+            AppSession.instance.endRun();
+          }
+          if (mounted) {
+            setState(() {
+              _stateMessage = e['message'] as String? ?? '';
+            });
+          }
         }
-        if (mounted) {
-          setState(() {
-            _stateMessage = e['message'] as String? ?? '';
-          });
-        }
-      }
-    }, onError: (Object _) {
-      // 引擎分离等场景下事件流中断, 状态仍由 WS 控制通道维持.
-    });
+      },
+      onError: (Object _) {
+        // 引擎分离等场景下事件流中断, 状态仍由 WS 控制通道维持.
+      },
+    );
     _connected = server?.connected ?? false;
   }
 
@@ -203,10 +206,13 @@ class _RunningPageState extends State<RunningPage>
             tooltip: '复制选中的日志; 未选中时复制全部',
           ),
           IconButton(
-            onPressed: _logs.isEmpty
-                ? null
-                : () => setState(() => _autoScroll = !_autoScroll),
-            icon: Icon(_autoScroll ? Icons.vertical_align_bottom : Icons.do_not_disturb),
+            onPressed:
+                _logs.isEmpty
+                    ? null
+                    : () => setState(() => _autoScroll = !_autoScroll),
+            icon: Icon(
+              _autoScroll ? Icons.vertical_align_bottom : Icons.do_not_disturb,
+            ),
             tooltip: _autoScroll ? '自动滚动: 开' : '自动滚动: 关',
           ),
           IconButton(
@@ -319,9 +325,10 @@ class _RunningPageState extends State<RunningPage>
             _testResult,
             style: TextStyle(
               fontSize: 13,
-              color: _testResult.startsWith('延迟')
-                  ? Colors.green
-                  : Theme.of(context).colorScheme.error,
+              color:
+                  _testResult.startsWith('延迟')
+                      ? Colors.green
+                      : Theme.of(context).colorScheme.error,
             ),
           ),
         ],
@@ -385,8 +392,7 @@ class _RunningPageState extends State<RunningPage>
   }
 
   /// 通过配置的测试 URL 发起下载 (流量走 VPN 隧道),
-  /// 延迟为发起连接到连接完成 (TCP/TLS 握手) 的时间,
-  /// 速率按下载阶段字节数/耗时计算.
+  /// 延迟为发起请求到收到响应体首字节的时间, 速率按整体字节数/耗时计算.
   Future<void> _testVpn() async {
     final config = _runningConfig();
     if (config == null) {
@@ -397,74 +403,48 @@ class _RunningPageState extends State<RunningPage>
       }
       return;
     }
-    final url = config.testUrl.trim().isEmpty
-        ? 'https://www.google.com'
-        : config.testUrl.trim();
-    final Uri uri;
-    try {
-      uri = Uri.parse(url);
-    } catch (_) {
-      if (mounted) setState(() => _testResult = '测试失败: URL 无效');
-      return;
-    }
-    final bool secure = uri.scheme == 'https';
-    final int port = uri.hasPort ? uri.port : (secure ? 443 : 80);
-
+    final url =
+        config.testUrl.trim().isEmpty
+            ? 'https://www.google.com'
+            : config.testUrl.trim();
     setState(() {
       _testing = true;
       _testResult = '';
     });
 
-    // 延迟: 发起连接到连接建立完成 (TCP 或 TLS 握手结束) 的时间.
     final stopwatch = Stopwatch()..start();
-    int latencyMs = 0;
-    try {
-      final socket = secure
-          ? await SecureSocket.connect(
-              uri.host,
-              port,
-              timeout: const Duration(seconds: 5),
-            )
-          : await Socket.connect(
-              uri.host,
-              port,
-              timeout: const Duration(seconds: 5),
-            );
-      latencyMs = stopwatch.elapsedMilliseconds;
-      socket.destroy();
-    } catch (e) {
-      if (mounted) {
-        setState(() => _testResult = '测试失败: $e');
-        setState(() => _testing = false);
-      }
-      return;
-    }
-
-    // 下载测速: 与连接测量独立计时, 按字节数/耗时计算速率.
     HttpClient? client;
     try {
       client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
       final req = await client
-          .openUrl('GET', uri)
+          .openUrl('GET', Uri.parse(url))
           .timeout(const Duration(seconds: 10));
       // 不跟随重定向, 如实反映配置的测试 URL 首跳响应状态.
       req.followRedirects = false;
       final res = await req.close().timeout(const Duration(seconds: 10));
-      final downloadStopwatch = Stopwatch()..start();
+      // 收到响应头的时间作为空响应体时的延迟兜底.
+      final headerMs = stopwatch.elapsedMilliseconds;
+      // 继续读取响应体, 按字节数/耗时计算下载速率.
       var received = 0;
+      var latencyMs = headerMs;
       await for (final chunk in res) {
+        // 从发出请求到收到第一个数据的时间作为延迟.
+        if (latencyMs == headerMs) {
+          latencyMs = stopwatch.elapsedMilliseconds;
+        }
         received += chunk.length;
       }
-      final totalMs = downloadStopwatch.elapsedMilliseconds;
-      final kbPerSec =
-          totalMs > 0 ? received * 1000.0 / totalMs / 1024.0 : 0.0;
-      final speedText = kbPerSec >= 1024
-          ? '${(kbPerSec / 1024).toStringAsFixed(2)} MB/s'
-          : '${kbPerSec.toStringAsFixed(1)} KB/s';
+      final totalMs = stopwatch.elapsedMilliseconds;
+      final kbPerSec = totalMs > 0 ? received * 1000.0 / totalMs / 1024.0 : 0.0;
+      final speedText =
+          kbPerSec >= 1024
+              ? '${(kbPerSec / 1024).toStringAsFixed(2)} MB/s'
+              : '${kbPerSec.toStringAsFixed(1)} KB/s';
       if (mounted) {
         setState(
-          () => _testResult =
-              '延迟: $latencyMs ms\n速率: $speedText (HTTP ${res.statusCode})',
+          () =>
+              _testResult =
+                  '延迟: $latencyMs ms\n速率: $speedText (HTTP ${res.statusCode})',
         );
       }
     } catch (e) {
@@ -536,11 +516,7 @@ class _RunningPageState extends State<RunningPage>
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          copiedSelected ? '已复制选中的日志到剪贴板' : '已复制全部日志到剪贴板',
-        ),
-      ),
+      SnackBar(content: Text(copiedSelected ? '已复制选中的日志到剪贴板' : '已复制全部日志到剪贴板')),
     );
   }
 
@@ -604,7 +580,6 @@ class _RunningPageState extends State<RunningPage>
     final s = n % 60;
     return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
-
 
   String _fmtTimeMs(int ms) {
     if (ms <= 0) return '--:--:--';
