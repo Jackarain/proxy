@@ -232,9 +232,9 @@ struct device_config {
     size_t mtu = 1500;
 };
 
-class packet_device {
+class tun_device {
 public:
-    explicit packet_device(boost::asio::io_context& ctx) : ctx_(ctx) {}
+    explicit tun_device(boost::asio::io_context& ctx) : ctx_(ctx) {}
 
     // ---- 模式 1: 自主打开 ----
     bool open(const device_config& cfg, boost::system::error_code& ec) {
@@ -642,7 +642,7 @@ private:
 - IPv4：识别 IP 协议字段为 1（ICMP）且 Type=8，构造 Type=0（Echo Reply）并计算 ICMP 校验和。
 - IPv6：识别 Next Header 为 58（ICMPv6）且 Type=128，构造 Type=129（Echo Reply），
   校验和必须包含 IPv6 伪头部（源/目的地址、载荷长度、Next Header=58）。
-- 回包不经过上层应用层，直接通过 `packet_device::async_write_packet` 写回；
+- 回包不经过上层应用层，直接通过 `tun_device::async_write_packet` 写回；
   仅响应发往引擎本地虚拟 IP 的 Echo Request。
 
 #### 8.3 统计接口
@@ -712,8 +712,8 @@ struct tun_config {
 ```
 
 **初始化逻辑**：
-1. 若 `external_handle != invalid_native_handle`，引擎调用 `packet_device::assign(external_handle, external_mtu, ec)`。
-2. 否则，引擎调用 `packet_device::open(cfg)`。
+1. 若 `external_handle != invalid_native_handle`，引擎调用 `tun_device::assign(external_handle, external_mtu, ec)`。
+2. 否则，引擎调用 `tun_device::open(cfg)`。
 3. 所有内部表、定时器及 Strand 在构造时初始化。
 
 **资源上限说明**：
@@ -846,9 +846,9 @@ int main() {
 
 本设计文档定义了一个**极简、高性能且设备管理方式灵活**的用户态 TUN 网络引擎。其核心特征在于：
 
-1. **统一的双模设备管理**：支持引擎自主打开设备与外部句柄注入，句柄注入时需显式指定 MTU 以确保 `packet_device` 返回正确参数。
+1. **统一的双模设备管理**：支持引擎自主打开设备与外部句柄注入，句柄注入时需显式指定 MTU 以确保 `tun_device` 返回正确参数。
 
-2. **完全 Asio 风格的异步接口**：`packet_device` 的 I/O 及所有公开 API 均采用 `CompletionToken` 与 `async_initiate`，与 `use_awaitable`、`use_future` 等无缝协作。
+2. **完全 Asio 风格的异步接口**：`tun_device` 的 I/O 及所有公开 API 均采用 `CompletionToken` 与 `async_initiate`，与 `use_awaitable`、`use_future` 等无缝协作。
 
 3. **TCP 与 UDP 的对称抽象**：TCP 提供 `tun_tcp_socket`/`tun_tcp_acceptor`，UDP 提供 `tun_udp_socket`/`tun_udp_acceptor`，两者均遵循 Asio 的命名与行为习惯，降低学习成本。
 

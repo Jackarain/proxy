@@ -11,7 +11,7 @@
 #pragma once
 
 #include "tunio/packet_buffer.hpp"
-#include "tunio/packet_device.hpp"
+#include "tunio/tun_device.hpp"
 #include "tunio/tun_config.hpp"
 
 #include <boost/asio.hpp>
@@ -42,7 +42,7 @@ class device_writer : public std::enable_shared_from_this<device_writer>
 {
 public:
     device_writer(net::any_io_executor strand,
-        std::shared_ptr<packet_device> dev,
+        std::shared_ptr<tun_device> dev,
         std::shared_ptr<engine_stats> stats)
         : strand_(std::move(strand))
         , dev_(std::move(dev))
@@ -161,7 +161,7 @@ private:
     }
 
     net::any_io_executor strand_;
-    std::shared_ptr<packet_device> dev_;
+    std::shared_ptr<tun_device> dev_;
     std::shared_ptr<engine_stats> stats_;
     std::deque<entry> queue_;
     std::vector<packet_buffer> pool_;

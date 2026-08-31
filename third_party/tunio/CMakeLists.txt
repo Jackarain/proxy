@@ -39,16 +39,16 @@ set(TUNIO_SOURCES
 )
 
 # 平台相关实现按平台拆分（参考 Asio 的 impl 布局）：
-#   Windows -> packet_device_windows.cpp
-#   其他 POSIX -> packet_device_posix.cpp
-#   Windows + USE_WINTUN_DRIVER -> packet_device_wintun.cpp
+#   Windows -> tun_device_windows.cpp
+#   其他 POSIX -> tun_device_posix.cpp
+#   Windows + USE_WINTUN_DRIVER -> tun_device_wintun.cpp
 option(USE_WINTUN_DRIVER "Use Wintun driver on Windows" OFF)
 if(WIN32 AND USE_WINTUN_DRIVER)
-  list(APPEND TUNIO_SOURCES src/packet_device_wintun.cpp)
+  list(APPEND TUNIO_SOURCES src/tun_device_wintun.cpp)
 elseif(WIN32)
-  list(APPEND TUNIO_SOURCES src/packet_device_windows.cpp)
+  list(APPEND TUNIO_SOURCES src/tun_device_windows.cpp)
 else()
-  list(APPEND TUNIO_SOURCES src/packet_device_posix.cpp)
+  list(APPEND TUNIO_SOURCES src/tun_device_posix.cpp)
 endif()
 
 # 环路与本地地址防护默认启用；设置为 ON 时定义
@@ -77,7 +77,7 @@ endif()
 
 # Wintun 所需编译定义及系统库.
 if(WIN32 AND USE_WINTUN_DRIVER)
-  # 头文件按 USE_WINTUN_DRIVER 选择设备实现 (packet_device.hpp), 必须
+  # 头文件按 USE_WINTUN_DRIVER 选择设备实现 (tun_device.hpp), 必须
   # 对链接 tunio 的使用方可见, 否则使用方会选到 windows overlapped 实现.
   target_compile_definitions(tunio PUBLIC USE_WINTUN_DRIVER)
   # 链接 Wintun 所需的 Windows 系统库.

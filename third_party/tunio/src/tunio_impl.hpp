@@ -11,7 +11,7 @@
 #pragma once
 
 #include "tunio/packet_buffer.hpp"
-#include "tunio/packet_device.hpp"
+#include "tunio/tun_device.hpp"
 #include "tunio/tun_config.hpp"
 #include "tunio/tunio.hpp"
 
@@ -129,7 +129,7 @@ private:
     bool have_ip6_ = false;
     size_t mtu_ = 1500;
 
-    std::shared_ptr<packet_device> device_;
+    std::shared_ptr<tun_device> device_;
     std::shared_ptr<device_writer> writer_;
     std::shared_ptr<tcp_engine> tcp_;
     std::shared_ptr<udp_engine> udp_;

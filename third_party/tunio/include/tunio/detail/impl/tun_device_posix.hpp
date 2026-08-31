@@ -1,6 +1,6 @@
 ﻿//
-// packet_device_posix.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~~
+// tun_device_posix.hpp
+// ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
@@ -24,11 +24,11 @@ namespace net = boost::asio;
 namespace detail {
 
 // POSIX 实现 (Linux TUN / macOS utun)：基于 posix::stream_descriptor。
-// 平台相关打开逻辑见 src/packet_device_posix.cpp。
-class posix_packet_device_impl
+// 平台相关打开逻辑见 src/tun_device_posix.cpp。
+class posix_tun_device_impl
 {
 public:
-    explicit posix_packet_device_impl(net::io_context &ctx)
+    explicit posix_tun_device_impl(net::io_context &ctx)
         : desc_(ctx)
     {
     }

@@ -1,6 +1,6 @@
 //
-// packet_device_wintun.cpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~
+// tun_device_wintun.cpp
+// ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
@@ -8,7 +8,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "tunio/detail/impl/packet_device_wintun.hpp"
+#include "tunio/detail/impl/tun_device_wintun.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -304,7 +304,7 @@ inline ULONG wintun_ring_packet_align(ULONG size)
     return (size + (WINTUN_PACKET_ALIGN - 1)) & ~(WINTUN_PACKET_ALIGN - 1);
 }
 
-int wintun_packet_device_impl::recv_one(std::string_view buf)
+int wintun_tun_device_impl::recv_one(std::string_view buf)
 {
     if (!opened_ || !recv_ring_)
         return -1;
@@ -339,7 +339,7 @@ int wintun_packet_device_impl::recv_one(std::string_view buf)
     return static_cast<int>(pkt->size);
 }
 
-int wintun_packet_device_impl::send_try(std::string_view buf)
+int wintun_tun_device_impl::send_try(std::string_view buf)
 {
     if (!opened_ || !send_ring_)
         return -1;
@@ -370,7 +370,7 @@ int wintun_packet_device_impl::send_try(std::string_view buf)
 //////////////////////////////////////////////////////////////////////////
 // Lifecycle
 
-void wintun_packet_device_impl::cleanup_rings()
+void wintun_tun_device_impl::cleanup_rings()
 {
     if (send_ring_) {
         UnmapViewOfFile(send_ring_);
@@ -398,7 +398,7 @@ void wintun_packet_device_impl::cleanup_rings()
     }
 }
 
-void wintun_packet_device_impl::setup_mtu(int mtu)
+void wintun_tun_device_impl::setup_mtu(int mtu)
 {
     if (!g_api || !wintun_handle_)
         return;
@@ -426,7 +426,7 @@ void wintun_packet_device_impl::setup_mtu(int mtu)
     set_mtu_for_family(AF_INET6, std::max(mtu > 0 ? mtu : 1500, 1280));
 }
 
-bool wintun_packet_device_impl::open(const device_config &cfg,
+bool wintun_tun_device_impl::open(const device_config &cfg,
     boost::system::error_code &ec)
 {
     close();
@@ -539,7 +539,7 @@ bool wintun_packet_device_impl::open(const device_config &cfg,
     return true;
 }
 
-bool wintun_packet_device_impl::assign(native_handle_type handle, size_t mtu,
+bool wintun_tun_device_impl::assign(native_handle_type handle, size_t mtu,
     bool, boost::system::error_code &ec)
 {
     close();
@@ -610,7 +610,7 @@ bool wintun_packet_device_impl::assign(native_handle_type handle, size_t mtu,
     return true;
 }
 
-void wintun_packet_device_impl::close()
+void wintun_tun_device_impl::close()
 {
     if (!opened_)
         return;

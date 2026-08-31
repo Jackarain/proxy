@@ -1,6 +1,6 @@
 ﻿//
-// packet_device_unsupported.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// tun_device_unsupported.hpp
+// ~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
@@ -22,10 +22,10 @@ namespace net = boost::asio;
 namespace detail {
 
 // 无平台实现时的兜底类型：所有操作立即失败。
-class unsupported_packet_device
+class unsupported_tun_device
 {
 public:
-    explicit unsupported_packet_device(net::io_context &)
+    explicit unsupported_tun_device(net::io_context &)
     {
     }
 

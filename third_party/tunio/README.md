@@ -237,7 +237,7 @@ sudo ip route add 10.0.0.0/24 dev tun0   # 或由外部路由/策略路由注入
 
 ### 架构概览
 
-系统采用四层解耦架构：设备抽象层（`packet_device`）负责跨平台 TUN I/O；
+系统采用四层解耦架构：设备抽象层（`tun_device`）负责跨平台 TUN I/O；
 协议引擎层（TCP/UDP Flow Engine）在引擎串行执行器上维护流表与 NAT；
 异步 API 层向上层暴露四个套接字抽象；应用层通过协程实现业务逻辑。所有
 内部状态变更均串行执行：单线程模式（默认）要求 `io_context` 单线程
@@ -253,7 +253,7 @@ sudo ip route add 10.0.0.0/24 dev tun0   # 或由外部路由/策略路由注入
     TCP Flow Engine             UDP Flow Engine
     Flow Dispatcher & NAT 表 (串行执行器)
 设备抽象层
-    packet_device (Linux TUN / macOS utun / Windows Wintun)
+    tun_device (Linux TUN / macOS utun / Windows Wintun)
 ```
 
 ### 核心类型

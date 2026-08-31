@@ -1,6 +1,6 @@
 ﻿//
-// packet_device_posix.cpp
-// ~~~~~~~~~~~~~~~~~~~~~~~
+// tun_device_posix.cpp
+// ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
@@ -8,7 +8,7 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "tunio/packet_device.hpp"
+#include "tunio/tun_device.hpp"
 
 #include <algorithm>
 #include <cerrno>
@@ -146,7 +146,7 @@ bool add_ipv6_address(int ioctl_sock, const std::string &ifname,
 } // namespace
 #endif
 
-bool posix_packet_device_impl::open(const device_config &cfg,
+bool posix_tun_device_impl::open(const device_config &cfg,
     boost::system::error_code &ec)
 {
 #if defined(__linux__)

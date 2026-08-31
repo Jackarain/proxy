@@ -1,6 +1,6 @@
 ﻿//
-// packet_device_windows.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
+// tun_device_windows.hpp
+// ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
@@ -22,11 +22,11 @@ namespace net = boost::asio;
 namespace detail {
 
 // Windows 实现 (Overlapped)：基于 windows::random_access_handle。
-// 平台相关打开逻辑见 src/packet_device_windows.cpp。
-class windows_packet_device_impl
+// 平台相关打开逻辑见 src/tun_device_windows.cpp。
+class windows_tun_device_impl
 {
 public:
-    explicit windows_packet_device_impl(net::io_context &ctx)
+    explicit windows_tun_device_impl(net::io_context &ctx)
         : handle_(ctx)
     {
     }

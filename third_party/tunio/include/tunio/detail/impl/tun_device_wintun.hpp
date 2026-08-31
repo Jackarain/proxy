@@ -1,6 +1,6 @@
 //
-// packet_device_wintun.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~
+// tun_device_wintun.hpp
+// ~~~~~~~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
@@ -185,11 +185,11 @@ struct wintun_api
     }
 };
 
-class wintun_packet_device_impl
-    : public std::enable_shared_from_this<wintun_packet_device_impl>
+class wintun_tun_device_impl
+    : public std::enable_shared_from_this<wintun_tun_device_impl>
 {
 public:
-    explicit wintun_packet_device_impl(net::io_context &ctx)
+    explicit wintun_tun_device_impl(net::io_context &ctx)
         : strand_(ctx.get_executor())
         , recv_timer_(ctx)
         , send_timer_(ctx)

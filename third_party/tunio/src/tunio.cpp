@@ -26,7 +26,7 @@ tunio_impl::tunio_impl(net::io_context &ctx, bool single_thread)
     : strand_ex_(single_thread
             ? net::any_io_executor(ctx.get_executor())
             : net::any_io_executor(net::make_strand(ctx)))
-    , device_(std::make_shared<packet_device>(ctx))
+    , device_(std::make_shared<tun_device>(ctx))
     , stats_(std::make_shared<engine_stats>())
 {
 }

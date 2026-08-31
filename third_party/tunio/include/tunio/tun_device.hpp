@@ -1,6 +1,6 @@
 //
-// packet_device.hpp
-// ~~~~~~~~~~~~~~~~~
+// tun_device.hpp
+// ~~~~~~~~~~~~~~
 //
 // Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
@@ -16,18 +16,18 @@
 #include <boost/asio.hpp>
 
 // 平台实现按文件拆分，参考 Asio 的 impl 目录布局：
-//   detail/impl/packet_device_posix.hpp
-//   detail/impl/packet_device_windows.hpp
-//   detail/impl/packet_device_wintun.hpp
-//   detail/impl/packet_device_unsupported.hpp
+//   detail/impl/tun_device_posix.hpp
+//   detail/impl/tun_device_windows.hpp
+//   detail/impl/tun_device_wintun.hpp
+//   detail/impl/tun_device_unsupported.hpp
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
-#include "tunio/detail/impl/packet_device_posix.hpp"
+#include "tunio/detail/impl/tun_device_posix.hpp"
 #elif defined(_WIN32) && defined(USE_WINTUN_DRIVER)
-#include "tunio/detail/impl/packet_device_wintun.hpp"
+#include "tunio/detail/impl/tun_device_wintun.hpp"
 #elif defined(BOOST_ASIO_HAS_WINDOWS_OVERLAPPED_PTR)
-#include "tunio/detail/impl/packet_device_windows.hpp"
+#include "tunio/detail/impl/tun_device_windows.hpp"
 #else
-#include "tunio/detail/impl/packet_device_unsupported.hpp"
+#include "tunio/detail/impl/tun_device_unsupported.hpp"
 #endif
 
 namespace tunio {
@@ -35,13 +35,13 @@ namespace net = boost::asio;
 namespace detail {
 
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
-using device_impl = posix_packet_device_impl;
+using tun_device_impl = posix_tun_device_impl;
 #elif defined(_WIN32) && defined(USE_WINTUN_DRIVER)
-using device_impl = wintun_packet_device_impl;
+using tun_device_impl = wintun_tun_device_impl;
 #elif defined(BOOST_ASIO_HAS_WINDOWS_OVERLAPPED_PTR)
-using device_impl = windows_packet_device_impl;
+using tun_device_impl = windows_tun_device_impl;
 #else
-using device_impl = unsupported_packet_device;
+using tun_device_impl = unsupported_tun_device;
 #endif
 
 } // namespace detail
@@ -55,10 +55,10 @@ using device_impl = unsupported_packet_device;
 // 异步 I/O 完全对齐 Boost.Asio 范式：async_read_packet / async_write_packet
 // 使用 CompletionToken 模板参数，通过 async_initiate 实现，可与 use_awaitable、
 // use_future 及自定义 CompletionToken 无缝协作。
-class packet_device
+class tun_device
 {
 public:
-    explicit packet_device(net::io_context &ctx)
+    explicit tun_device(net::io_context &ctx)
         : impl_(ctx)
     {
     }
@@ -116,7 +116,7 @@ public:
     }
 
 private:
-    detail::device_impl impl_;
+    detail::tun_device_impl impl_;
 };
 
 } // namespace tunio
