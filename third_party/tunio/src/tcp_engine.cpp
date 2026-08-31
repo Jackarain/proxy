@@ -893,7 +893,7 @@ uint32_t tcp_engine::current_wnd(const tcp_flow &f) const
     } else {
         wnd = 0;
     }
-    const uint32_t mss_bytes = mss(f.key.family);
+    const size_t mss_bytes = mss(f.key.family);
     if (wnd < mss_bytes) {
         wnd = 0; // 小于一个 MSS 通告 0，触发对端窗口探测
     }
@@ -906,7 +906,7 @@ void tcp_engine::notify_window_updated(tcp_flow &f)
         return;
     }
     const uint32_t wnd = current_wnd(f);
-    const uint32_t mss_bytes = mss(f.key.family);
+    const size_t mss_bytes = mss(f.key.family);
     const bool was_zero = f.last_wnd_advertised == 0;
     // 窗口从 0 恢复（>=MSS）或增长超过一个 MSS：主动发 ACK 通告新窗口，
     // 避免零窗口死锁下仅靠对端窗口探测（指数退避）缓慢恢复.

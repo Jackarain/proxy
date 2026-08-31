@@ -67,6 +67,10 @@ target_include_directories(tunio PUBLIC
 # 使用方编译含 tunio 头的代码时同样生效.
 if(WIN32)
   target_compile_definitions(tunio PUBLIC NOMINMAX)
+  # 显式声明 Windows 目标版本（Windows 7 及以上）, 消除 windows.h 的
+  # "Please define _WIN32_WINNT" 告警并启用对应版本的 API 声明.
+  # PUBLIC 传播, 使用方包含 windows.h 的代码同样受益.
+  target_compile_definitions(tunio PUBLIC _WIN32_WINNT=0x0601)
 endif()
 
 # 环路与本地地址防护默认启用；设置为 ON 时定义
@@ -82,11 +86,21 @@ if(WIN32 AND USE_WINTUN_DRIVER)
   target_compile_definitions(tunio PUBLIC USE_WINTUN_DRIVER)
   # 链接 Wintun 所需的 Windows 系统库.
   target_link_libraries(tunio PRIVATE iphlpapi cfgmgr32 setupapi ws2_32)
+elseif(WIN32)
+  # TAP 驱动自主打开 (tun_device_windows.cpp) 所需系统库:
+  #   ws2_32    -> inet_pton (ws2tcpip.h)
+  #   iphlpapi  -> GetAdapterIndex / GetIpInterfaceEntry / SetIpInterfaceEntry
+  target_link_libraries(tunio PRIVATE ws2_32 iphlpapi)
 endif()
 
 target_link_libraries(tunio PUBLIC ${TUNIO_BOOST_LIBS})
 if(MSVC)
   target_compile_options(tunio PRIVATE /W4)
+  # 源文件为 UTF-8（含中文注释）, 简体中文 Windows 默认代码页 936 下
+  # MSVC 会误判字符集, 触发 C4819 告警甚至产生乱码; /utf-8 同时设定
+  # 源字符集与执行字符集为 UTF-8. PUBLIC 传播给链接 tunio 的示例与
+  # 测试, 其包含 tunio 头时同样受益.
+  target_compile_options(tunio PUBLIC /utf-8)
 else()
   target_compile_options(tunio PRIVATE -Wall -Wextra)
 endif()

@@ -43,6 +43,18 @@ inline constexpr native_handle_type invalid_native_handle =
     -1;
 #endif
 
+// 从整型构造外部句柄：POSIX 下句柄即文件描述符（int）；Windows 下句柄为
+// 指针类型，按位模式转换（intptr_t 保证整型宽度足够），语义由注入方保证.
+// 供 --inject-fd 之类的 CLI 注入路径使用，避免平台差异类型无法直接赋值.
+inline native_handle_type native_handle_from_int(int handle) noexcept
+{
+#ifdef _WIN32
+    return reinterpret_cast<native_handle_type>(static_cast<intptr_t>(handle));
+#else
+    return handle;
+#endif
+}
+
 // 统一五元组，用于 NAT 查表与 Flow 索引
 //
 // IP 地址以网络字节序原始字节保存（IPv4 仅前 4 字节有效），family 区分

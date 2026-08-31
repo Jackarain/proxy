@@ -21,7 +21,8 @@ namespace tunio {
 namespace net = boost::asio;
 namespace detail {
 
-// Windows 实现 (Overlapped)：基于 windows::random_access_handle。
+// Windows 实现 (TAP/Overlapped)：基于 windows::random_access_handle。
+// 自主打开支持 TAP 驱动设备（tap0901、tapnordvpn、tap-tb-0901 等），
 // 平台相关打开逻辑见 src/tun_device_windows.cpp。
 class windows_tun_device_impl
 {
@@ -34,7 +35,7 @@ public:
     bool open(const device_config &cfg, boost::system::error_code &ec);
 
     bool assign(native_handle_type handle, size_t mtu, bool,
-        boost::system::error_code &ec)
+                boost::system::error_code &ec)
     {
         handle_.assign(handle, ec);
         if (!ec) {
@@ -44,13 +45,7 @@ public:
         return !ec;
     }
 
-    void close()
-    {
-        if (open_) {
-            handle_.close();
-            open_ = false;
-        }
-    }
+    void close();
 
     size_t mtu() const
     {
@@ -73,7 +68,7 @@ public:
     void async_write(packet_buffer &buf, Handler &&handler)
     {
         handle_.async_write_some_at(0, net::buffer(buf.data(), buf.size()),
-            std::forward<Handler>(handler));
+                                    std::forward<Handler>(handler));
     }
 
     net::windows::random_access_handle handle_;

@@ -304,7 +304,7 @@ int main(int argc, char **argv)
     cfg.ipv6_prefix_len = opt.ipv6_prefix_len;
     cfg.mtu = opt.mtu;
     if (opt.inject_fd >= 0) {
-        cfg.external_handle = opt.inject_fd;
+        cfg.external_handle = tunio::native_handle_from_int(opt.inject_fd);
         cfg.external_mtu = opt.mtu;
         cfg.utun_prefix = opt.utun_prefix;
     }
@@ -325,12 +325,18 @@ int main(int argc, char **argv)
         net::co_spawn(io, udp_listener(engine, proxy), net::detached);
     }
 
-    net::signal_set signals(io, SIGINT, SIGTERM, SIGUSR1);
+    // SIGUSR1 为 POSIX 信号，Windows CRT 未定义；统计转储功能仅 POSIX 可用.
+    net::signal_set signals(io, SIGINT, SIGTERM
+#ifndef _WIN32
+        , SIGUSR1
+#endif
+    );
     std::function<void(const boost::system::error_code &, int)> on_signal;
     on_signal = [&](const boost::system::error_code &ec, int signum) {
         if (ec) {
             return;
         }
+#ifndef _WIN32
         if (signum == SIGUSR1) {
             const auto &st = engine.stats();
             std::cout << "[stats] rx_packets=" << st.rx_packets.load()
@@ -340,10 +346,11 @@ int main(int argc, char **argv)
                 << " tcp_connections=" << st.tcp_connections.load()
                 << std::endl;
             signals.async_wait(on_signal);
-        } else {
-            std::cout << "\n正在关闭..." << std::endl;
-            engine.close();
+            return;
         }
+#endif
+        std::cout << "\n正在关闭..." << std::endl;
+        engine.close();
     };
     signals.async_wait(on_signal);
 

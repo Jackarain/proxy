@@ -39,7 +39,7 @@ C++20 协程（`co_await`），适用于 tun2socks、透明代理与轻量级 VP
 | :--- | :--- | :--- |
 | Linux | TUN（`posix::stream_descriptor`） | 需 root 或 `CAP_NET_ADMIN` |
 | macOS | utun | 需 root；当前仅支持句柄注入（自主打开 Phase 3 未实现） |
-| Windows | overlapped I/O 或 Wintun | 编译时 `USE_WINTUN_DRIVER` 切换 |
+| Windows | TAP（overlapped I/O）或 Wintun | 自主打开支持 `tap0901` 等 TAP 驱动；编译时 `USE_WINTUN_DRIVER` 切换 Wintun |
 
 ## 构建
 
@@ -50,6 +50,7 @@ C++20 协程（`co_await`），适用于 tun2socks、透明代理与轻量级 VP
 - Boost 1.74+（asio 头文件；作为第三方库被 superproject 引入时可复用其
   内置 Boost 目标）
 - Windows + Wintun 还需链接 `iphlpapi`、`cfgmgr32`、`setupapi`、`ws2_32`
+- Windows + TAP 驱动需链接 `ws2_32`、`iphlpapi`（CMake 已自动处理）
 
 ### 编译与测试
 

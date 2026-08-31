@@ -212,7 +212,7 @@ int main(int argc, char **argv)
     cfg.ipv6_prefix_len = opt.ipv6_prefix_len;
     cfg.mtu = opt.mtu;
     if (opt.inject_fd >= 0) {
-        cfg.external_handle = opt.inject_fd;
+        cfg.external_handle = tunio::native_handle_from_int(opt.inject_fd);
         cfg.external_mtu = opt.mtu;
     }
 
