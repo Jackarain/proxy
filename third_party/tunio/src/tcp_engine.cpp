@@ -697,6 +697,21 @@ net::awaitable<void> tcp_engine::write_loop(tcp_flow_ptr f)
                 h(boost::system::error_code{}, done);
                 co_return;
             }
+            if (flow.state != tcp_state::ESTABLISHED &&
+                !flow.active_write->implicit_accept) {
+                // 显式 accept() 后、客户端 ACK 尚未处理时启动的写：SYN 的
+                // 窗口字段未缩放且不代表协商后的接收窗口，按 peer_wnd 发送
+                // 会超发（对端可能在 ACK 中通告更小的窗口）。等待握手完成：
+                // 客户端 ACK 处理（handle_segment 置 ESTABLISHED 并
+                // signal_write 唤醒）后再按真实窗口发送；RTO 仅兜底重查，
+                // 尚无已发数据无需重传，半开连接由 tcp_syn_timeout 清理.
+                rto_timer.expires_after(rto);
+                co_await (flow.write_ch->async_receive(
+                              net::as_tuple(net::use_awaitable)) ||
+                          rto_timer.async_wait(
+                              net::as_tuple(net::use_awaitable)));
+                continue;
+            }
             if (flow.peer_wnd == 0) {
                 // 零窗口：等待窗口更新信号与持久计时器竞速；定时器超时则
                 // 发送窗口探测（对端即使窗口仍为 0 也会回复 ACK 通告窗口，

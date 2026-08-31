@@ -186,6 +186,9 @@ struct tcp_flow : public std::enable_shared_from_this<tcp_flow>
         size_t buf_off = 0;   // 当前发送位置在 buf_index 缓冲区内的偏移
         uint32_t start_seq = 0; // 本次写操作首字节的发送序号（snd_nxt 快照）,
                                 // 用于将未确认序列号范围映射回缓冲偏移以重传
+        bool implicit_accept = false; // 本次写隐式批准了握手（首次写触发
+                                      // SYN-ACK）：允许在握手完成前按 SYN
+                                      // 窗口乐观发送，避免代理首包延迟一个 RTT
         tcp_write_handler handler;
     };
     std::optional<write_op> active_write;
@@ -391,7 +394,12 @@ void tcp_flow_start_write(tcp_flow_ptr flow, const_buffer_sequence buffers,
             handler(boost::system::error_code(net::error::connection_reset), 0);
             return;
         }
-        if (flow.state == tcp_state::SYN_RCVD) {
+        // 隐式 accept 标记：本次写触发 SYN-ACK（而非应用显式 accept()）。
+        // 隐式 accept 保留"SYN-ACK 后立即发数据"的乐观路径；显式 accept
+        // 后、客户端 ACK 到达前的写由 write_loop 等待握手完成——SYN 窗口
+        // 字段未缩放且不代表协商后的接收窗口，按 peer_wnd 发送会超发.
+        const bool implicit_accept = flow.state == tcp_state::SYN_RCVD;
+        if (implicit_accept) {
             // 握手尚未批准: 首次写视为隐式 accept, 回复 SYN+ACK.
             eng->accept_flow(flow);
         }
@@ -404,8 +412,8 @@ void tcp_flow_start_write(tcp_flow_ptr flow, const_buffer_sequence buffers,
             handler(boost::system::error_code(net::error::no_buffer_space), 0);
             return;
         }
-        flow.active_write = tcp_flow::write_op{
-            std::move(buffers), total, 0, 0, 0, 0, std::move(handler)};
+        flow.active_write = tcp_flow::write_op{std::move(buffers), total,
+            0, 0, 0, 0, implicit_accept, std::move(handler)};
         net::co_spawn(strand, eng->write_loop(f), net::detached);
     });
 }
