@@ -33,8 +33,13 @@ class udp_engine;
 // 上，省去每包 Strand 派发开销，要求 io_context 单线程 run；多线程模式使用
 // Strand，支持多线程运行 io_context。两种模式下所有内部状态变更均串行执行。
 //
-// 生命周期要求：引擎必须在所有 tun_tcp_socket / tun_udp_socket 销毁之后、
-// io_context 停止运行之前销毁（与 Boost.Asio 对 socket 的约束一致）。
+// 生命周期要求：引擎必须在所有 tun_tcp_socket / tun_udp_socket 销毁之后，
+// 且 io_context 停止运行（所有 run() 已返回、io 线程已 join，无任何线程
+// 正在执行完成回调）之后销毁。若在 io 线程仍在执行回调时销毁引擎，引擎
+// 内部状态与在途异步操作将与销毁线程并发访问（数据竞争），且设备层读
+// 回调引用的内部缓冲可能已释放（与 Boost.Asio "socket 须在 io_context
+// 销毁前析构"的约束互补）。运行期间需要关闭请调用 close()，其内部会在
+// 串行执行器上完成清理。
 // open() 会同步重建引擎内部状态，必须在 io_context 开始运行（io.run()）之前
 // 首次调用；若在运行期间调用 open()，请通过 get_executor() 派发屏障任务，
 // 确保与引擎串行执行器上的任务串行，避免与数据通路回调产生数据竞争。

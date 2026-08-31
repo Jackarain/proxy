@@ -1,4 +1,4 @@
-//
+﻿//
 // tun_device.hpp
 // ~~~~~~~~~~~~~~
 //
@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "tunio/ip_packet.hpp"
 #include "tunio/packet_buffer.hpp"
 #include "tunio/tun_config.hpp"
 
@@ -55,6 +56,12 @@ using tun_device_impl = unsupported_tun_device;
 // 异步 I/O 完全对齐 Boost.Asio 范式：async_read_packet / async_write_packet
 // 使用 CompletionToken 模板参数，通过 async_initiate 实现，可与 use_awaitable、
 // use_future 及自定义 CompletionToken 无缝协作。
+//
+// 除原始字节包 I/O 外，还提供解析级接口 async_read_ip / async_write_ip：
+// async_read_ip 读取并解析一个完整 IP 报文到 ip_packet（含 IP 头信息，TCP/
+// UDP/ICMP 等传输层协议信息与载荷视图），async_write_ip 写出 ip_packet
+// （支持字段构造并自动计算校验和）。macOS utun 的 4 字节家族前缀在平台
+// 实现层透明剥离/附加，ip_packet 始终看到纯 IP 报文。
 class tun_device
 {
 public:
@@ -111,6 +118,63 @@ public:
             void(boost::system::error_code, size_t)>(
             [this, &buf](auto handler) {
                 impl_.async_write(buf, std::move(handler));
+            },
+            token);
+    }
+
+    // ---- 异步读取并解析一个 IP 报文 ----
+    //
+    // 设备将报文直接读入 pkt 的内部缓冲并立即解析（零拷贝），完成后即可
+    // 通过 pkt 的版本/地址/端口/传输层视图/载荷等访问器读取具体协议信息。
+    // 完成签名与 async_read_packet 一致：void(error_code, size_t)，ec 仅反映
+    // 设备 I/O 错误（含 pkt 缓冲容量不足以容纳一个 MTU 报文时的
+    // net::error::message_size）；报文结构非法（解析失败）时 ec 为 no_error，
+    // 通过 pkt.valid() / pkt.error() 判断。每个未完成的 async_read_ip 需要
+    // 独立的 ip_packet 对象（自持缓冲），同一对象不可并发发起多次读取。
+    template <typename CompletionToken>
+    auto async_read_ip(ip_packet &pkt, CompletionToken &&token)
+    {
+        return net::async_initiate<CompletionToken,
+            void(boost::system::error_code, size_t)>(
+            [this, &pkt](auto handler) {
+                pkt.buffer().reset();
+                // 容量不足容纳一个完整报文（utun 读含 4 字节前缀）时立即以
+                // message_size 完成，避免截断读入后解析报出令人困惑的
+                // invalid_total_length.
+                if (impl_.read_size_hint() != 0 &&
+                    pkt.buffer().writable_size() < impl_.read_size_hint()) {
+                    // 用 dispatch 在 handler 的关联执行器上完成（post 在
+                    // Asio 1.38+ 的默认 inline_executor 上无法编译）.
+                    net::dispatch(net::get_associated_executor(handler),
+                        [h = std::move(handler)]() mutable {
+                            h(make_error_code(net::error::message_size), 0);
+                        });
+                    return;
+                }
+                impl_.async_read(pkt.buffer(),
+                    [h = std::move(handler),
+                        &pkt](const boost::system::error_code &ec, size_t n) mutable {
+                        if (!ec) {
+                            pkt.parse(pkt.buffer(), n);
+                        }
+                        std::move(h)(ec, n);
+                    });
+            },
+            token);
+    }
+
+    // ---- 异步写入一个 IP 报文 ----
+    //
+    // 写出 pkt.buffer() 中的完整报文。报文可通过 pkt 的字段构造接口
+    // （begin_ipv4/begin_ipv6 -> begin_tcp/udp/icmp -> append_payload ->
+    // finalize()）构建，或直接复用读入/改写的原始字节。
+    template <typename CompletionToken>
+    auto async_write_ip(ip_packet &pkt, CompletionToken &&token)
+    {
+        return net::async_initiate<CompletionToken,
+            void(boost::system::error_code, size_t)>(
+            [this, &pkt](auto handler) {
+                impl_.async_write(pkt.buffer(), std::move(handler));
             },
             token);
     }

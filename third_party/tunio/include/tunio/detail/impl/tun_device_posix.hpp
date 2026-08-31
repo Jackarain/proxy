@@ -59,6 +59,11 @@ public:
     {
         return mtu_;
     }
+    // 单次读取可能需要的最大字节数（utun 含 4 字节家族前缀）
+    size_t read_size_hint() const
+    {
+        return mtu_ + (utun_prefix_ ? 4 : 0);
+    }
     bool is_open() const
     {
         return open_;
@@ -76,7 +81,10 @@ public:
                     const boost::system::error_code &ec, size_t n) mutable {
                     size_t pkt_n = n;
                     if (!ec && n > 4) {
-                        std::memmove(buf.data(), buf.data() + 4, n - 4);
+                        // 从实际读入位置（writable_data）剥离前缀，兼容
+                        // 调用方未 reset 时 data() != 读入位置的场景.
+                        uint8_t *base = buf.writable_data();
+                        std::memmove(base, base + 4, n - 4);
                         pkt_n = n - 4;
                     }
                     std::move(h)(ec, pkt_n);
@@ -94,6 +102,12 @@ public:
         if (utun_prefix_) {
             // macOS utun 写入必须前置 4 字节家族前缀（大端 AF_INET/AF_INET6），
             // 前缀写入 packet_buffer 的 headroom 区域（引擎出包 headroom >= 64）.
+            // headroom 不足 4 字节时写入会越过堆分配起始地址（下溢），拒绝.
+            if (buf.headroom() < 4) {
+                std::forward<Handler>(handler)(
+                    make_error_code(net::error::invalid_argument), 0);
+                return;
+            }
             uint8_t *prefix = buf.data() - 4;
             const uint32_t family =
                 (buf.data()[0] >> 4) == 6 ? AF_INET6 : AF_INET;

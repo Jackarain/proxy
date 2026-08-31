@@ -35,11 +35,11 @@ uint32_t random_iss()
 
 } // namespace
 
-tcp_engine::tcp_engine(net::any_io_executor strand, device_writer &writer,
-    const tun_config &cfg, engine_stats &stats,
-    std::shared_ptr<buffer_accountant> account)
+tcp_engine::tcp_engine(net::any_io_executor strand,
+    std::shared_ptr<device_writer> writer, const tun_config &cfg,
+    engine_stats &stats, std::shared_ptr<buffer_accountant> account)
     : strand_(std::move(strand))
-    , writer_(writer)
+    , writer_(std::move(writer))
     , cfg_(cfg)
     , stats_(stats)
     , account_(std::move(account))
@@ -92,7 +92,10 @@ void tcp_engine::on_sweep(const boost::system::error_code &ec)
                     f->state == tcp_state::FIN_WAIT_2 ||
                     f->state == tcp_state::LAST_ACK) &&
                    now - f->close_started_at > cfg_.tcp_close_timeout) {
-            // 关闭流程长期未完成（对端未确认 FIN / 未回复 FIN），超时后强制清理
+            // 关闭流程长期未完成（对端未确认 FIN / 未回复 FIN），超时后强制
+            // 清理。注意：FIN_WAIT_2 下长生命周期的单向关闭连接（对端已收
+            // FIN 但不再发送）也会在此被提前切断，属资源回收优先的设计取舍
+            //（可通过调大 tcp_close_timeout 放宽）.
             victims.push_back(f);
         }
     }
@@ -142,12 +145,23 @@ void tcp_engine::on_packet(const ip_packet_info &ip, const uint8_t *payload,
     const size_t data_len = len - hlen;
 
     auto it = flows_.find(key);
+    if (it != flows_.end() && it->second->state == tcp_state::TIME_WAIT &&
+        is_syn) {
+        // RFC 1122 §4.2.2.13：TIME_WAIT 收到同元组新 SYN 时重建连接（TIME_WAIT
+        // 复用）。否则关闭后 tcp_time_wait_timeout 内对端重连全部失败，且
+        // 对端 SYN 重传会被静默吞掉，重连延迟被拉长到超时之后.
+        tcp_flow_ptr old = it->second;
+        close_flow(*old, boost::system::error_code{}); // 内部会 flows_.erase
+        it = flows_.end();
+    }
     if (it == flows_.end()) {
         if (!is_syn) {
             // 未知流且非 SYN：丢弃
             return;
         }
         if (flows_.size() >= cfg_.max_tcp_flows) {
+            // 流数达上限：静默丢弃新 SYN（未按 RFC 793 回 RST 拒绝，避免
+            // 在资源耗尽时进一步放大出包量；对端将以 SYN 重传超时失败）.
             stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
             return;
         }
@@ -327,8 +341,25 @@ void tcp_engine::handle_segment(const tcp_flow_ptr &f,
                 send_ack(*f);
             }
         } else {
-            // 重复或已接收段：静默丢弃
-            stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+            // 段头低于 rcv_nxt：可能是重复段，也可能是 ACK 丢失后对端从
+            // snd_una 重传的部分重叠段（段尾超出 rcv_nxt）。后者若整段丢弃，
+            // 对端每次 RTO 重传同一段又被丢弃，连接死锁至重传耗尽后 RST。
+            const uint32_t seg_end = seq + static_cast<uint32_t>(data_len);
+            if (seq_gt(seg_end, f->rcv_nxt)) {
+                // 部分重叠：修剪已确认前缀，仅交付 [rcv_nxt, seg_end) 尾部
+                //（rcv_nxt - seq 为前向距离，因 seg_end > rcv_nxt 必小于
+                // data_len，不会下溢）.
+                const size_t skip =
+                    static_cast<size_t>(f->rcv_nxt - seq);
+                deliver_data(*f, data + skip, data_len - skip);
+                // 尾部补齐后继续交付后续连续乱序段
+                flush_ooo(*f);
+            } else {
+                // 整段已被确认（重复段）：补发 re-ACK 使 ACK 丢失后重传的
+                // 对端立即推进 snd_una，而非再等一个 RTO 周期.
+                stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
+                send_ack(*f);
+            }
         }
     }
 
@@ -537,13 +568,13 @@ packet_buffer tcp_engine::build_segment(tcp_flow &f, uint32_t seq,
     // MSS(4) + Window Scale(3) + NOP(1) 对齐到 8 字节
     const size_t tcp_hdr_len = with_mss ? 28 : 20;
     const size_t total = ip_hdr_len + tcp_hdr_len + len;
-    packet_buffer pkt = writer_.acquire(cfg_.mtu + 64, 64);
+    packet_buffer pkt = writer_->acquire(cfg_.mtu + 64, 64);
     pkt.resize(total);
     uint8_t *base = pkt.data();
 
     build_ip_header(base, family, f.key.dst_ip.data(),
         f.key.src_ip.data(), IPPROTO_TCP_V, total,
-        writer_.alloc_ip_id());
+        writer_->alloc_ip_id());
 
     auto *th = reinterpret_cast<tcp_header *>(base + ip_hdr_len);
     th->src_port = f.key.dst_port;
@@ -607,7 +638,7 @@ void tcp_engine::send_segment(tcp_flow &f, uint32_t seq, uint8_t flags,
 {
     // 控制段（SYN/SYN+ACK/FIN/RST/ACK）直通：不参与数据背压，确保
     // 连接建立/关闭的关键段不被数据发送队列阻塞.
-    writer_.async_write_and_forget(
+    writer_->async_write_and_forget(
         build_segment(f, seq, flags, payload, len, with_mss));
 }
 
@@ -616,7 +647,7 @@ net::awaitable<void> tcp_engine::write_loop(tcp_flow_ptr f)
     // 强引用保活：协程可能在引擎/设备写器析构后仍挂起（等写完成回调），
     // 捕获 shared_ptr 避免协程恢复时访问已销毁对象.
     auto eng = shared_from_this();
-    auto writer = writer_.shared_from_this();
+    auto writer = writer_;
     auto &flow = *f;
 
     if (!flow.active_write) {
@@ -893,6 +924,14 @@ uint32_t tcp_engine::current_wnd(const tcp_flow &f) const
     } else {
         wnd = 0;
     }
+    // 全局缓冲记账：通告窗口同时受 max_total_buffer 剩余预算约束，避免
+    // 全局预算耗尽时窗口内段被 deliver_data 静默丢弃造成重传风暴.
+    if (account_->limit != 0) {
+        const size_t global_avail = account_->limit > account_->used
+            ? account_->limit - account_->used
+            : 0;
+        wnd = std::min(wnd, static_cast<uint32_t>(global_avail));
+    }
     const size_t mss_bytes = mss(f.key.family);
     if (wnd < mss_bytes) {
         wnd = 0; // 小于一个 MSS 通告 0，触发对端窗口探测
@@ -945,8 +984,9 @@ void tcp_engine::send_fin(tcp_flow &f)
         f.snd_nxt += 1;
         break;
     case tcp_state::SYN_RCVD:
-        // 握手尚未批准：直接关闭，不发送 FIN
-        close_flow(f, net::error::operation_aborted);
+        // 握手尚未批准：向客户端发送 RST 使其快速失败，避免客户端反复
+        // 重传 SYN 创建新流并重复向应用投递 accept（幻影连接）.
+        abort_flow(f);
         break;
     case tcp_state::SYN_ACK_SENT:
         // 已回 SYN+ACK 但未完成握手：RST 告知客户端连接被放弃
@@ -991,6 +1031,17 @@ void tcp_engine::close_flow(tcp_flow &f,
     if (f.state == tcp_state::CLOSED) {
         return;
     }
+    if (f.pending_accept) {
+        // 从 accept 待领取队列移除：应用停止调用 async_accept 时，死流不再
+        // 永久滞留 pending_flows_（否则可累积至 max_tcp_flows 个完整
+        // tcp_flow 对象）.
+        f.pending_accept = false;
+        const auto it = std::find(pending_flows_.begin(), pending_flows_.end(),
+            f.shared_from_this());
+        if (it != pending_flows_.end()) {
+            pending_flows_.erase(it);
+        }
+    }
     if (f.active_read) {
         auto op = std::move(*f.active_read);
         f.active_read.reset();
@@ -1034,6 +1085,7 @@ void tcp_engine::notify_accept(tcp_flow &f)
         f.accepted = true;
         h(boost::system::error_code{}, f.shared_from_this());
     } else {
+        f.pending_accept = true;
         pending_flows_.push_back(f.shared_from_this());
     }
 }
@@ -1214,6 +1266,8 @@ void tcp_flow_reject(tcp_flow_ptr flow)
     });
 }
 
+// 仅限在 io 线程（或引擎 Strand 上）调用：直接读取可变状态，多线程模式下
+// 与应用线程并发调用构成数据竞争（见 tun_tcp_socket::is_open 文档）.
 bool tcp_flow_is_open(const tcp_flow_ptr &flow)
 {
     return flow && !flow->eng.expired() &&

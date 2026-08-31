@@ -55,10 +55,15 @@ struct udp_session : public std::enable_shared_from_this<udp_session>
     std::weak_ptr<udp_engine> eng;
 
     bool closed = false;
-    bool accepted = false;
     std::chrono::seconds timeout{30};
     udp_time_point expiry;
     uint64_t expiry_gen = 0; // 与堆条目配对，用于懒失效
+    // 最近一次向 expiry 堆推入条目的时间：持续流量下节流推入频率，
+    // 避免堆大小随包速率无界增长（条目到期时被代次懒失效弹出）.
+    udp_time_point last_heap_push{};
+    // 当前是否有一条有效堆条目（节流推入 / 到期延长时维护，保证每个
+    // 会话始终至少有一条活条目可触发清理）.
+    bool heap_live = false;
 
     // 收到的数据报及其目标远端端点（客户端发出的数据报需送达的对端）
     struct datagram
@@ -108,8 +113,8 @@ using udp_session_map =
 
 template <typename Handler>
 void udp_session_start_receive(udp_session_ptr session,
-    mutable_buffer_sequence buffers, size_t total, size_t,
-    net::ip::udp::endpoint &, Handler);
+    mutable_buffer_sequence buffers, size_t total,
+    net::ip::udp::endpoint &sender, Handler handler);
 
 template <typename Handler>
 void udp_session_start_send(udp_session_ptr session,
@@ -118,9 +123,9 @@ void udp_session_start_send(udp_session_ptr session,
 class udp_engine : public std::enable_shared_from_this<udp_engine>
 {
 public:
-    udp_engine(net::any_io_executor strand, device_writer &writer,
-        const tun_config &cfg, engine_stats &stats,
-        std::shared_ptr<buffer_accountant> account);
+    udp_engine(net::any_io_executor strand,
+        std::shared_ptr<device_writer> writer, const tun_config &cfg,
+        engine_stats &stats, std::shared_ptr<buffer_accountant> account);
     ~udp_engine();
 
     // 处理一个 UDP 数据报（Strand 上调用）
@@ -131,6 +136,7 @@ public:
     template <typename Handler> void async_accept(Handler handler);
     void cancel_accepts();
     void close_all();
+    // 仅限在 io 线程（或引擎 Strand 上）调用：直接读取会话表大小
     size_t session_count() const
     {
         return sessions_.size();
@@ -142,7 +148,7 @@ public:
     }
     device_writer &writer()
     {
-        return writer_;
+        return *writer_;
     }
     engine_stats &stats()
     {
@@ -180,7 +186,10 @@ private:
     void remove_session(udp_session_ptr s);
 
     net::any_io_executor strand_;
-    device_writer &writer_;
+    // 以 shared_ptr 持有：io 运行期间引擎被销毁后，排队的 Strand 任务
+    //（保活引擎的 shared_ptr）仍能经 writer_ 安全访问设备写队列，避免
+    // 悬垂引用（与 tunio_impl 的 writer_ 同源）.
+    std::shared_ptr<device_writer> writer_;
     tun_config cfg_;
     engine_stats &stats_;
     std::shared_ptr<buffer_accountant> account_;
@@ -303,6 +312,18 @@ void udp_session_start_send(udp_session_ptr session,
         }
         const size_t ip_hdr_len = ip_header_size(family);
         const size_t mtu = eng->mtu();
+        // UDP 长度字段为 16 位：数据报总长（含 UDP 头）不得超过 65535，
+        // 否则长度字段截断损坏.
+        if (sizeof(udp_header) + total > 65535) {
+            handler(
+                boost::system::error_code(net::error::message_size), 0);
+            return;
+        }
+        // mtu 下限保护：mtu 小于 IP 头 + UDP 头时可用载荷为 0，
+        // 避免下方 `mtu - ip_hdr_len - sizeof(udp_header)` 无符号下溢.
+        const size_t max_udp_payload = mtu > ip_hdr_len + sizeof(udp_header)
+            ? mtu - ip_hdr_len - sizeof(udp_header)
+            : 0;
 
         uint8_t src_addr[16] = {};
         if (remote_v6) {
@@ -313,7 +334,7 @@ void udp_session_start_send(udp_session_ptr session,
             std::memcpy(src_addr, b.data(), 4);
         }
 
-        if (total > mtu - ip_hdr_len - sizeof(udp_header)) {
+        if (total > max_udp_payload) {
             if (family != 4) {
                 // IPv6 无扩展头分片支持：拒绝超出 MTU 的报文
                 handler(boost::system::error_code(
@@ -327,7 +348,10 @@ void udp_session_start_send(udp_session_ptr session,
             eng->refresh_expiry(s);
 
             const size_t max_frag_payload =
-                (mtu - sizeof(ipv4_header)) & ~size_t(7);
+                (mtu > sizeof(ipv4_header)
+                        ? mtu - sizeof(ipv4_header)
+                        : 0) &
+                ~size_t(7);
             // 首片 IP 载荷 = UDP 头 + 数据，需保证第二片偏移仍为 8 的倍数
             const size_t first_data =
                 max_frag_payload > sizeof(udp_header)
@@ -362,6 +386,14 @@ void udp_session_start_send(udp_session_ptr session,
                 const size_t frag_data = off == 0
                     ? (std::min)(sizeof(udp_header) + first_data, remain)
                     : (std::min)(max_frag_payload, remain);
+                if (frag_data == 0) {
+                    // 退化 MTU 下无法拆分（首片已耗尽可用载荷）：拒绝而非
+                    // 死循环挂死 Strand.
+                    handler(boost::system::error_code(
+                        net::error::message_size),
+                        0);
+                    return;
+                }
                 const size_t frag_total = sizeof(ipv4_header) + frag_data;
                 packet_buffer frag = eng->writer().acquire(mtu + 64, 64);
                 frag.resize(frag_total);
@@ -442,7 +474,6 @@ template <typename Handler> void udp_engine::async_accept(Handler handler)
         if (s->closed) {
             continue;
         }
-        s->accepted = true;
         handler(boost::system::error_code{}, std::move(s));
         return;
     }

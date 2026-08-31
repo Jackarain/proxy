@@ -83,6 +83,9 @@ public:
     void set_timeout(std::chrono::seconds timeout);
 
     void close();
+    // 会话是否仍打开。线程安全：仅限在 io 线程（或与引擎串行执行器同步
+    // 的上下文）调用；多线程模式下与 Strand 上的状态更新并发访问构成数据
+    // 竞争（与 Boost.Asio 对共享 socket 对象"并发访问不安全"的约定一致）.
     bool is_open() const noexcept;
 
 private:

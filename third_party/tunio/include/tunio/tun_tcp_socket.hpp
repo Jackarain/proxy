@@ -98,6 +98,11 @@ public:
     // 拒绝握手: 立即向客户端发送 RST (幂等, 与 reset 语义一致).
     void reject();
 
+    // 连接是否仍打开。
+    // 线程安全：仅限在 io 线程（或与引擎串行执行器同步的上下文）调用。
+    // 本方法直接读取流状态，多线程模式下与 Strand 上的状态更新并发访问
+    // 构成数据竞争（与 Boost.Asio 对共享 socket 对象"并发访问不安全"的
+    // 约定一致）；单线程模式（默认）无此限制.
     bool is_open() const noexcept;
 
 private:

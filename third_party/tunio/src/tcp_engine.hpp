@@ -62,7 +62,8 @@ struct buffer_accountant
 
     bool reserve(size_t n)
     {
-        if (used + n > limit) {
+        // 溢出防护：n 超过剩余预算时拒绝（避免 used + n 回绕）
+        if (n > limit || used > limit - n) {
             return false;
         }
         used += n;
@@ -127,6 +128,7 @@ struct tcp_flow : public std::enable_shared_from_this<tcp_flow>
     bool app_closed = false;  // 应用层已关闭
     bool rx_shutdown = false; // 应用层已关闭接收侧
     bool accepted = false;    // 已交付给 accept
+    bool pending_accept = false; // 位于 pending_flows_ 等待 async_accept 领取
     bool probe_in_flight = false; // 零窗口探测已发出、尚未被对端确认
     tcp_time_point created_at;
     tcp_time_point destroy_at;
@@ -214,9 +216,9 @@ void tcp_flow_start_write(tcp_flow_ptr flow, const_buffer_sequence buffers,
 class tcp_engine : public std::enable_shared_from_this<tcp_engine>
 {
 public:
-    tcp_engine(net::any_io_executor strand, device_writer &writer,
-        const tun_config &cfg, engine_stats &stats,
-        std::shared_ptr<buffer_accountant> account);
+    tcp_engine(net::any_io_executor strand,
+        std::shared_ptr<device_writer> writer, const tun_config &cfg,
+        engine_stats &stats, std::shared_ptr<buffer_accountant> account);
     ~tcp_engine();
 
     // 处理一个 TCP 报文段（Strand 上调用）
@@ -228,6 +230,7 @@ public:
     void cancel_accepts();
     void close_all();
     void start_sweep();
+    // 仅限在 io 线程（或引擎 Strand 上）调用：直接读取流表大小
     size_t flow_count() const
     {
         return flows_.size();
@@ -239,7 +242,7 @@ public:
     }
     device_writer &writer()
     {
-        return writer_;
+        return *writer_;
     }
     engine_stats &stats()
     {
@@ -298,7 +301,10 @@ private:
     void on_sweep(const boost::system::error_code &ec);
 
     net::any_io_executor strand_;
-    device_writer &writer_;
+    // 以 shared_ptr 持有：io 运行期间引擎被销毁后，排队的 Strand 任务
+    //（保活引擎的 shared_ptr）仍能经 writer_ 安全访问设备写队列，避免
+    // 悬垂引用（与 tunio_impl 的 writer_ 同源）.
+    std::shared_ptr<device_writer> writer_;
     tun_config cfg_;
     engine_stats &stats_;
     std::shared_ptr<buffer_accountant> account_;
@@ -409,6 +415,7 @@ template <typename Handler> void tcp_engine::async_accept(Handler handler)
     while (!pending_flows_.empty()) {
         auto f = std::move(pending_flows_.front());
         pending_flows_.pop_front();
+        f->pending_accept = false;
         if (f->state == tcp_state::CLOSED) {
             continue;
         }

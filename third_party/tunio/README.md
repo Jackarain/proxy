@@ -1,4 +1,4 @@
-﻿# tunio
+# tunio
 
 基于 Boost.Asio 范式的用户态 TUN 虚拟网络引擎。引擎将 Linux TUN、macOS
 utun 及 Windows Wintun 设备产生的 L3 原始 IP 包处理全面封装于内部，向上层
@@ -47,8 +47,9 @@ C++20 协程（`co_await`），适用于 tun2socks、透明代理与轻量级 VP
 
 - CMake 3.20+
 - C++20 编译器
-- Boost 1.74+（asio 头文件；作为第三方库被 superproject 引入时可复用其
-  内置 Boost 目标）
+- Boost 1.81+（asio 头文件；代码使用 `boost::unordered_flat_map` 与
+  `net::any_completion_handler`，最低要求 1.81；作为第三方库被 superproject
+  引入时可复用其内置 Boost 目标）
 - Windows + Wintun 还需链接 `iphlpapi`、`cfgmgr32`、`setupapi`、`ws2_32`
 - Windows + TAP 驱动需链接 `ws2_32`、`iphlpapi`（CMake 已自动处理）
 
@@ -255,6 +256,8 @@ sudo ip route add 10.0.0.0/24 dev tun0   # 或由外部路由/策略路由注入
     Flow Dispatcher & NAT 表 (串行执行器)
 设备抽象层
     tun_device (Linux TUN / macOS utun / Windows Wintun)
+      └─ async_read_packet / async_write_packet  (原始字节包)
+      └─ async_read_ip    / async_write_ip      (ip_packet 解析级接口)
 ```
 
 ### 核心类型
@@ -268,6 +271,8 @@ sudo ip route add 10.0.0.0/24 dev tun0   # 或由外部路由/策略路由注入
 | `tunio::tun_tcp_acceptor` | `tunio/tun_tcp_acceptor.hpp` | 虚拟 TCP 监听器，SYN 到达时触发 accept |
 | `tunio::tun_udp_socket` | `tunio/tun_udp_socket.hpp` | 虚拟 UDP 数据报会话，一次一报 |
 | `tunio::tun_udp_acceptor` | `tunio/tun_udp_acceptor.hpp` | 新 UDP 会话监听器 |
+| `tunio::tun_device` | `tunio/tun_device.hpp` | 跨平台设备抽象：自主打开/句柄注入，原始字节包与解析级 IP 包异步 I/O |
+| `tunio::ip_packet` | `tunio/ip_packet.hpp` | 解析后的 IP 报文：IP 头信息 + TCP/UDP/ICMP 传输层视图 + 载荷；支持字段构造与校验和计算 |
 
 ### 引擎入口 `tunio`
 
@@ -305,11 +310,67 @@ CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 交付。TCP 转发为按序交付（乱序段经重排缓存补齐），超时与资源上限见
 `tun_config`。
 
+### 设备层 `tun_device` 与 `ip_packet`
+
+`tun_device` 可脱离引擎独立使用：打开真实 TUN 设备或注入外部句柄后，直接
+读写 IP 报文。除原始字节包接口 `async_read_packet` / `async_write_packet`
+外，还提供解析级接口 `async_read_ip` / `async_write_ip`，操作对象为
+`ip_packet` —— 一次读取即得到一个完整解析的 IP 报文：
+
+```cpp
+#include "tunio/tun_device.hpp"
+#include "tunio/ip_packet.hpp"
+
+tunio::tun_device dev(io);
+boost::system::error_code ec;
+if (!dev.open(cfg, ec)) { /* ... */ }
+
+// 读：解析 IP 头 + 传输层（TCP/UDP/ICMP）视图 + 载荷，零拷贝
+tunio::ip_packet pkt;
+size_t n = co_await dev.async_read_ip(pkt, net::use_awaitable);
+if (pkt.valid()) {
+    const net::ip::address src = pkt.source_address();
+    const net::ip::address dst = pkt.destination_address();
+    if (pkt.is_tcp()) {
+        uint16_t sport = pkt.source_port();      // 主机字节序
+        const auto *tcp = pkt.tcp();             // 原始 TCP 头视图
+        const uint8_t *data = pkt.transport_data();
+    } else if (pkt.is_udp()) {
+        // ...
+    } else if (pkt.is_icmp() && pkt.icmp_type() == 8) {
+        uint16_t id = pkt.icmp_echo_id();
+    }
+}
+
+// 写：从字段构造报文（自动计算长度与 IP/TCP/UDP/ICMP 校验和）后写出
+tunio::ip_packet out;
+out.begin_ipv4(src_v4, dst_v4);
+out.begin_udp(12345, 53);
+out.append_payload(data, len);
+out.finalize();
+co_await dev.async_write_ip(out, net::use_awaitable);
+```
+
+行为约定：
+
+- `async_read_ip` 完成签名为 `void(error_code, size_t)`，`ec` 仅反映设备
+  I/O 错误；报文结构非法时 `ec` 为 `no_error`，通过 `pkt.valid()` /
+  `pkt.error()` 判断（解析失败原因含非法版本、报文过短、IHL/total_len 非法、
+  传输层头非法等）。
+- 解析只做结构校验，不验证校验和；IPv4 分片包解析并暴露
+  `fragmented()` / `fragment_offset()`（分片非首片不解析传输层视图）；
+  IPv6 扩展头不遍历，`ip_protocol()` 返回原始扩展头号。
+- 每个未完成的 `async_read_ip` 需要独立的 `ip_packet` 对象（自持缓冲），
+  同一对象不可并发发起多次读取；`packet_buffer` 默认容量 2048，大 MTU
+  场景构造 `ip_packet(dev.mtu() + 64)`。
+- macOS utun 的 4 字节家族前缀在平台实现层透明剥离/附加，`ip_packet`
+  始终看到纯 IP 报文。
+
 ### `tun_config` 关键配置
 
 | 字段 | 默认值 | 说明 |
 | :--- | :--- | :--- |
-| `dev_name` / `ipv4_addr` / `netmask` | `tun0` / 空 | 自主打开模式下的设备名与 IPv4 配置 |
+| `dev_name` / `ipv4_addr` / `netmask` | 空 / 空 | 自主打开模式下的设备名（默认空，Linux 内核自动命名）与 IPv4 配置 |
 | `ipv6_addr` / `ipv6_prefix_len` | 空 / `64` | 可选 IPv6 地址 |
 | `mtu` | `1500` | 自主打开模式 MTU |
 | `external_handle` / `external_mtu` | `invalid` / `1500` | 外部句柄注入（优先于自主打开） |
@@ -323,8 +384,11 @@ CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 ### 生命周期与线程安全
 
 - 首次 `open()` 必须在 `io_context` 开始运行（`io.run()`）之前调用。
-- 引擎必须在所有 `tun_tcp_socket` / `tun_udp_socket` 销毁之后、`io_context`
-  停止运行之前销毁（与 Boost.Asio 对 socket 的约束一致）。
+- 引擎必须在所有 `tun_tcp_socket` / `tun_udp_socket` 销毁之后、且
+  `io_context` 停止运行（所有 `run()` 已返回、io 线程已 join）之后销毁。
+  若在 io 线程仍在执行完成回调时销毁引擎，引擎内部状态与在途异步操作将
+  与销毁线程并发访问（数据竞争），设备层读回调引用的内部缓冲也可能已
+  释放。运行期间需要关闭请调用 `close()`，其内部在串行执行器上完成清理。
 - 对已打开（或 close 后尚未完成异步清理）的引擎再次 `open()` 时，
   `io_context` 必须正在运行：`open()` 会在串行执行器上同步收尾上一代实例，
   `io_context` 未运行时该收尾任务无法执行，将导致调用线程阻塞等待。
@@ -333,6 +397,9 @@ CompletionToken（协程 `co_await` 或 `net::use_future` 等）：
 - 所有异步操作完成回调在调用方绑定的执行器上触发；引擎内部状态由
   串行执行器串行化。单线程模式要求 `io_context` 单线程 `run()`；多线程
   模式由 Strand 串行化，多线程运行 `io_context` 是安全的。
+- `is_open()` 等同步状态查询仅在 io 线程（或与引擎串行执行器同步的
+  上下文）调用（与 Boost.Asio 对共享 socket 对象"并发访问不安全"的约定
+  一致）；多线程模式下从任意线程调用会构成数据竞争。
 - `async_write_some` / `async_send_to` 的缓冲区必须保持有效至完成回调
   触发（与 Boost.Asio 语义一致，引擎只引用不拷贝）。
 
@@ -383,7 +450,8 @@ for (auto &t : threads) {
 | :--- | :--- |
 | `tun_echo` | 最小示例：TCP 桥接本机 echo 服务 + UDP 回显 |
 | `tun2socks` | SOCKS5 透明代理：TCP CONNECT + UDP ASSOCIATE |
-| `benchmark` | 异步接口每操作堆分配与吞吐基准（基于 socketpair 注入t） |
+| `tun_packet` | 原始 IP 包中继/打印：直接使用 `tun_device` + `ip_packet`，解析并打印 TCP/UDP/ICMP 协议详情，`--echo` 回环中继 |
+| `benchmark` | 异步接口每操作堆分配与吞吐基准（基于 socketpair 注入） |
 
 ## 许可证
 

@@ -1,4 +1,4 @@
-//
+﻿//
 // tun_device_wintun.cpp
 // ~~~~~~~~~~~~~~~~~~~~
 //
@@ -11,6 +11,7 @@
 #include "tunio/detail/impl/tun_device_wintun.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <devguid.h>
 #include <setupapi.h>
@@ -317,6 +318,9 @@ int wintun_tun_device_impl::recv_one(std::string_view buf)
     if (head == tail)
         return 0;
 
+    // acquire 屏障：确保 head/tail 读取后、读取包数据前，驱动已发布的
+    // 数据（写 receive ring）对本线程可见（MinGW/gcc 下 volatile 不足）.
+    std::atomic_thread_fence(std::memory_order_acquire);
     ULONG content_len = wintun_ring_wrap(tail - head);
     if (content_len < sizeof(struct TUN_PACKET_HEADER))
         return -1;
@@ -334,6 +338,9 @@ int wintun_tun_device_impl::recv_one(std::string_view buf)
 
     memcpy(const_cast<char *>(buf.data()), pkt->data, pkt->size);
     head = wintun_ring_wrap(head + aligned);
+    // release 屏障：消费完成后置 head 前，确保本线程此前对包的读取
+    // 已完成后才允许驱动复用该区域.
+    std::atomic_thread_fence(std::memory_order_release);
     recv_ring_->head = head;
 
     return static_cast<int>(pkt->size);
@@ -350,6 +357,9 @@ int wintun_tun_device_impl::send_try(std::string_view buf)
     if (head >= WINTUN_RING_CAPACITY || tail >= WINTUN_RING_CAPACITY)
         return -1;
 
+    // acquire 屏障：读取 head（驱动的消费进度）后、计算可用空间前，
+    // 确保驱动释放的区域对本线程可见.
+    std::atomic_thread_fence(std::memory_order_acquire);
     ULONG aligned = wintun_ring_packet_align(sizeof(struct TUN_PACKET_HEADER) +
                                              static_cast<ULONG>(buf.size()));
     ULONG avail = wintun_ring_wrap(head - tail - WINTUN_PACKET_ALIGN);
@@ -359,6 +369,9 @@ int wintun_tun_device_impl::send_try(std::string_view buf)
     auto *pkt = reinterpret_cast<struct TUN_PACKET *>(&send_ring_->data[tail]);
     pkt->size = static_cast<uint32_t>(buf.size());
     memcpy(pkt->data, buf.data(), buf.size());
+    // release 屏障：包数据写入完成后才推进 tail，确保驱动看到 tail 更新
+    // 时包数据已就绪.
+    std::atomic_thread_fence(std::memory_order_release);
     send_ring_->tail = wintun_ring_wrap(tail + aligned);
 
     if (send_ring_->alertable != 0)
@@ -556,6 +569,8 @@ bool wintun_tun_device_impl::assign(native_handle_type handle, size_t mtu,
         CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0,
                            sizeof(struct tun_ring), nullptr);
     if (!send_ring_fh_ || !recv_ring_fh_) {
+        // 可能仅一个 mapping 创建成功：清理已创建的句柄，避免泄漏
+        cleanup_rings();
         CloseHandle(dev_handle_);
         dev_handle_ = INVALID_HANDLE_VALUE;
         ec = win_last_error();
@@ -594,8 +609,15 @@ bool wintun_tun_device_impl::assign(native_handle_type handle, size_t mtu,
         rr.receive.ring = recv_ring_;
         rr.receive.tail_moved = recv_evt_;
         DWORD bytes_returned;
-        DeviceIoControl(dev_handle_, TUN_IOCTL_REGISTER_RINGS, &rr,
-            sizeof(rr), nullptr, 0, &bytes_returned, nullptr);
+        if (!DeviceIoControl(dev_handle_, TUN_IOCTL_REGISTER_RINGS, &rr,
+                sizeof(rr), nullptr, 0, &bytes_returned, nullptr)) {
+            // 注入句柄非 Wintun 或驱动拒绝注册：失败而非静默置 opened_
+            cleanup_rings();
+            CloseHandle(dev_handle_);
+            dev_handle_ = INVALID_HANDLE_VALUE;
+            ec = win_last_error();
+            return false;
+        }
     }
 
     send_ring_->head = 0;
@@ -616,12 +638,21 @@ void wintun_tun_device_impl::close()
         return;
     opened_ = false;
 
-    cleanup_rings();
+    // 先取消轮询定时器：挂起的读/写将以 operation_aborted 完成，而非
+    // 误导性的"成功读 0 字节"；同时杜绝 close 后陈旧回调携带旧 &buf
+    // 在新 ring / 已释放缓冲上继续轮询.
+    recv_timer_.cancel();
+    send_timer_.cancel();
 
+    // 先关闭设备句柄（触发驱动 IRP_MJ_CLOSE 释放对 ring 的引用），再解除
+    // ring 映射并关闭事件，与官方 WintunEndSession 的清理顺序一致，避免
+    // 关闭瞬间驱动在途写仍访问已解除映射的 ring 页面.
     if (dev_handle_ != INVALID_HANDLE_VALUE) {
         CloseHandle(dev_handle_);
         dev_handle_ = INVALID_HANDLE_VALUE;
     }
+
+    cleanup_rings();
 
     if (wintun_handle_) {
         g_api->close_adapter(wintun_handle_);

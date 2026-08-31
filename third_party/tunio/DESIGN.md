@@ -1,4 +1,4 @@
-﻿# 基于 Boost.Asio 范式的用户态 TUN 虚拟网络引擎
+# 基于 Boost.Asio 范式的用户态 TUN 虚拟网络引擎
 ## 架构与设计说明书
 
 **版本**：3.0
@@ -69,8 +69,8 @@
 |  |  ② 句柄注入: assign(handle, mtu) → 接管外部已打开的句柄              | |
 |  |                                                                       | |
 |  |  异步 I/O 完全对齐 Asio 范式:                                        | |
-|  |  async_read_packet(CompletionToken)                                   | |
-|  |  async_write_packet(CompletionToken)                                  | |
+|  |  async_read_packet / async_write_packet (原始字节包)              | |
+|  |  async_read_ip / async_write_ip (ip_packet 解析级接口)            | |
 |  +-----------------------------------------------------------------------+ |
 |  +------------------+  +------------------+  +----------------------------+ |
 |  | Linux TUN (fd)   |  | macOS utun       |  | Windows Wintun (Overlapped)| |
@@ -175,12 +175,11 @@ public:
     const uint8_t* data() const noexcept { return storage_.get() + data_offset_; }
     size_t size() const noexcept { return data_size_; }
 
-    // 零拷贝前置头部
-    void prepend(size_t len) noexcept { data_offset_ -= len; data_size_ += len; }
-    // 零拷贝裁剪头部
-    void trim(size_t len) noexcept { data_offset_ += len; data_size_ -= len; }
-
-    size_t headroom_available() const noexcept { return data_offset_; }
+    // 实际接口（详见 packet_buffer.hpp，无 prepend/trim/headroom_available）：
+    //   commit(len)          读取完成后推进数据长度
+    //   resize(len)          直接设定数据长度（写报文场景）
+    //   writable_data()/writable_size()  可写区（供异步读取）
+    //   headroom()           头部预留大小（macOS utun 写前缀等需要 >= 4）
 };
 ```
 
@@ -215,7 +214,7 @@ struct tcp_minimal_state {
 
 ### 4. 跨平台设备抽象层
 
-引擎核心不直接依赖任何平台特定的系统调用，通过 `std::variant` 持有平台具体实现，在统一的外壳类中完成 I/O 调度。该外壳支持两种初始化模式：
+引擎核心不直接依赖任何平台特定的系统调用：`tun_device` 经类型别名 `detail::tun_device_impl` 持有按平台拆分的实现类（posix/windows/wintun/unsupported，位于 `include/tunio/detail/impl/`），在统一的外壳类中完成 I/O 调度。该外壳支持两种初始化模式：
 
 - **自主打开模式**：传入设备配置（设备名、IP 等），内部根据平台构造对应的实现类。
 - **句柄注入模式**：传入外部已打开的平台原生句柄及 MTU，直接构造对应的实现类。
@@ -249,7 +248,10 @@ public:
     }
 
     // ---- 模式 2: 句柄注入 ----
-    bool assign(native_handle_type handle, size_t mtu, boost::system::error_code& ec) {
+    // 注：真实签名含第 4 个参数 utun_prefix（macOS utun 读写携带 4 字节
+    // 家族前缀时置 true），且实现按平台拆分于 detail/impl/*.hpp，此处为
+    // 简化示意.
+    bool assign(native_handle_type handle, size_t mtu, bool utun_prefix, boost::system::error_code& ec) {
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
         impl_.emplace<posix_impl>(ctx_);
 #elif defined(BOOST_ASIO_HAS_WINDOWS_OVERLAPPED_PTR)
@@ -374,6 +376,35 @@ private:
     std::variant<posix_impl, windows_impl> impl_;
 };
 ```
+
+#### 4.1 解析级包接口：`ip_packet`
+
+在原始字节包 I/O（`async_read_packet` / `async_write_packet`）之上，
+`tun_device` 提供解析级接口 `async_read_ip` / `async_write_ip`，操作对象为
+公开类型 `ip_packet`（`include/tunio/ip_packet.hpp`）。该类型内部组合一个
+`packet_buffer`，读路径设备将报文直接读入其内部缓冲并就地解析（零拷贝），
+写路径既支持原样写出也支持从字段构造报文（自动计算长度与校验和）。
+
+- **解析语义**：读完成即做结构校验并填充类型化视图 —— IP 层（版本/协议号/
+  地址/总长/分片字段 + `ipv4_header` / `ipv6_header` 原始视图），传输层
+  （TCP/UDP 头部视图与主机序端口、ICMP/ICMPv6 type/code/校验和/Echo id/seq），
+  以及零拷贝载荷（`payload()` 为 IP 头之后的传输层报文段，
+  `transport_data()` 为传输层头之后的纯应用数据）。
+- **错误语义**：`async_read_ip` 完成签名 `void(error_code, size_t)`，`ec`
+  仅反映设备 I/O 错误；报文结构非法时 `ec` 为 `no_error`，通过
+  `pkt.valid()` / `pkt.error()`（枚举 `ip_packet::parse_error`）判断。
+  解析只做结构校验、不验证校验和（转发/中继场景可能需原样处理坏校验和包）。
+- **策略差异**（与引擎内部 `handle_packet` 不同，`ip_packet` 是通用解析器）：
+  IPv4 分片包解析并暴露 `fragmented()` / `fragment_offset()`，不丢弃（分片
+  非首片从流中间开始，不解析传输层视图）；IPv6 扩展头不遍历链，
+  `next_header` 为扩展头号时传输层视图为空、`ip_protocol()` 返回原始号。
+- **写路径 builder**：`begin_ipv4/begin_ipv6 -> begin_tcp/begin_udp/
+  begin_icmp -> [append_payload] -> finalize()`，`finalize()` 回填长度并计算
+  IP/TCP/UDP/ICMP 校验和（含伪头部），完成后访问器立即可用。
+- **复用**：`src/ip_headers.hpp` 中的报文头部结构体与校验和工具已提升至
+  公开头 `tunio/ip_packet.hpp`（`tunio` 命名空间），引擎内部经由
+  `detail` 命名空间的 using 声明引用，行为与 ABI 均不变；引擎自身的
+  `handle_packet` 解析/丢弃策略保持不变。
 
 ---
 
@@ -652,6 +683,7 @@ struct engine_stats {
     std::atomic<uint64_t> rx_packets;
     std::atomic<uint64_t> tx_packets;
     std::atomic<uint64_t> rx_dropped;
+    std::atomic<uint64_t> rx_ooo;        // 乱序缓存段数
     std::atomic<uint64_t> tcp_connections;
     std::atomic<uint64_t> udp_sessions;
     std::atomic<uint64_t> icmp_replies;
@@ -698,7 +730,7 @@ struct tun_config {
     // ---- 资源上限 ----
     size_t max_tcp_flows = 65536;
     size_t max_udp_flows = 65536;
-    size_t max_rx_queue_per_flow = 1024 * 1024;
+    size_t max_rx_queue_per_flow = 8 * 1024 * 1024;
     size_t max_total_buffer = 512 * 1024 * 1024;
 
     // ---- 超时策略 ----
@@ -729,6 +761,10 @@ struct tun_config {
 ---
 
 ### 10. 完整使用示例（C++20 Coroutine）
+
+> 除引擎级示例（本节）外，`examples/tun_packet.cpp` 是**设备层**原始 IP 包
+> 中继/打印示例：直接使用 `tun_device` + `ip_packet`，不依赖引擎，读取并
+> 打印 TCP/UDP/ICMP 协议详情，`--echo` 时原样写回设备实现包回环中继。
 
 #### 10.1 TCP 全双工数据泵
 
@@ -827,7 +863,7 @@ int main() {
     config.netmask = "255.255.255.0";
     config.mtu = 1500;
 
-    net::error_code ec;
+    boost::system::error_code ec;
     if (!engine.open(config, ec)) {
         std::cerr << "Failed to open TUN: " << ec.message() << std::endl;
         return -1;

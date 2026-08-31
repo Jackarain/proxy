@@ -318,8 +318,16 @@ int main(int argc, char **argv)
         << (cfg.ipv6_addr.empty() ? "" : " / " + cfg.ipv6_addr) << " -> "
         << opt.proxy_host << ":" << opt.proxy_port << std::endl;
 
-    net::ip::tcp::endpoint proxy(net::ip::make_address(opt.proxy_host),
-        opt.proxy_port);
+    // 代理地址可为 IP 或域名：make_address 仅接受 IP，非法输入抛异常，
+    // 在此捕获避免 terminate；域名解析由 socks5_connect 内部处理.
+    net::ip::address proxy_addr;
+    try {
+        proxy_addr = net::ip::make_address(opt.proxy_host);
+    } catch (const boost::system::system_error &) {
+        std::cerr << "invalid proxy address: " << opt.proxy_host << std::endl;
+        return 1;
+    }
+    net::ip::tcp::endpoint proxy(proxy_addr, opt.proxy_port);
     net::co_spawn(io, tcp_listener(engine, proxy), net::detached);
     if (opt.udp) {
         net::co_spawn(io, udp_listener(engine, proxy), net::detached);

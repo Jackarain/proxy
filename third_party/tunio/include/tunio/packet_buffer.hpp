@@ -76,8 +76,11 @@ public:
     }
 
     // 异步读取完成后推进数据长度
-    void commit(size_t len) noexcept
+    void commit(size_t len)
     {
+        if (len > capacity_ - data_offset_ - data_size_) {
+            throw std::length_error("packet_buffer::commit exceeds capacity");
+        }
         data_size_ += len;
     }
 

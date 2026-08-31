@@ -50,13 +50,14 @@ public:
     {
     }
 
-    // 从池中获取发送缓冲：池内存在容量足够的缓冲则复用，否则新建
+    // 从池中获取发送缓冲：池内存在容量与 headroom 均匹配的缓冲则复用，
+    // 否则新建（所有调用方均使用 headroom=64，回收缓冲 headroom 恒定）.
     packet_buffer acquire(size_t capacity, size_t headroom)
     {
         while (!pool_.empty()) {
             auto b = std::move(pool_.back());
             pool_.pop_back();
-            if (b.capacity() >= capacity) {
+            if (b.capacity() >= capacity && b.headroom() == headroom) {
                 return b;
             }
         }
@@ -74,8 +75,13 @@ public:
 
     // 写后无需回调的发送路径（引擎内 TCP/UDP/ICMP 出包）：
     // 跳过 CompletionToken 包装与 handler 堆分配，直接在 Strand 上入队。
+    // 设备写停滞（对端/宿主变慢）时队列无界积压会耗尽内存：达到上限后
+    // 丢弃新包作为安全阀（控制段丢失的代价远小于内存耗尽）.
     void async_write_and_forget(packet_buffer &&buf)
     {
+        if (queue_.size() >= k_queue_max_entries) {
+            return;
+        }
         queue_.push_back(entry{std::move(buf), {}});
         pump();
     }
@@ -87,6 +93,18 @@ public:
         return net::async_initiate<CompletionToken,
                                    void(boost::system::error_code, size_t)>(
             [this](auto handler, packet_buffer buf) {
+                if (queue_.size() >= k_queue_max_entries) {
+                    // 队列饱和：以 no_buffer_space 完成，避免无界积压。
+                    // 用 dispatch 在 handler 的关联执行器上完成：新版 Asio
+                    // （1.38+）的默认关联执行器为 inline_executor，无法满足
+                    // post 的 blocking.never 约束（编译失败），dispatch 无此
+                    // 限制，且与引擎其余完成回调派发方式保持一致.
+                    net::dispatch(net::get_associated_executor(handler),
+                        [h = std::move(handler)]() mutable {
+                            h(make_error_code(net::error::no_buffer_space), 0);
+                        });
+                    return;
+                }
                 queue_.push_back(entry{std::move(buf), std::move(handler)});
                 pump();
             },
@@ -170,6 +188,9 @@ private:
     uint16_t ip_id_ = 0;
 
     static constexpr size_t k_pool_max = 64; // 池上限，避免长期闲置占用内存
+    // 写队列条目上限（安全阀）：设备写停滞时丢弃/报错而非无界积压；
+    // 16384 条 × ~2KB ≈ 32MB 最坏占用
+    static constexpr size_t k_queue_max_entries = 16384;
 };
 
 } // namespace detail

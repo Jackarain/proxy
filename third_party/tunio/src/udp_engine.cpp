@@ -24,6 +24,10 @@ namespace detail {
 
 namespace {
 
+// 会话超时堆推入节流间隔：持续流量下限制每条会话的入堆频率，
+// 避免 expiry_heap_ 随包速率无界增长（见 refresh_expiry）.
+constexpr auto k_expiry_push_interval = std::chrono::milliseconds(500);
+
 // 由网络字节序地址字节与端口构造 Asio endpoint（family: 4 或 6）
 net::ip::udp::endpoint make_udp_endpoint(uint8_t family,
     const uint8_t *addr, uint16_t port)
@@ -40,11 +44,11 @@ net::ip::udp::endpoint make_udp_endpoint(uint8_t family,
 
 } // namespace
 
-udp_engine::udp_engine(net::any_io_executor strand, device_writer &writer,
-    const tun_config &cfg, engine_stats &stats,
-    std::shared_ptr<buffer_accountant> account)
+udp_engine::udp_engine(net::any_io_executor strand,
+    std::shared_ptr<device_writer> writer, const tun_config &cfg,
+    engine_stats &stats, std::shared_ptr<buffer_accountant> account)
     : strand_(std::move(strand))
-    , writer_(writer)
+    , writer_(std::move(writer))
     , cfg_(cfg)
     , stats_(stats)
     , account_(std::move(account))
@@ -78,8 +82,8 @@ void udp_engine::on_packet(const ip_packet_info &ip, const uint8_t *payload,
 
     // 校验 UDP 校验和（IPv4 下 0 表示发送方未计算，允许；IPv6 下校验和强制）
     const uint16_t csum = ntohs(uh.checksum);
-    const bool v6_zero_csum = ip.family == 6 && csum == 0;
-    if (v6_zero_csum ||
+    const bool v6_missing_checksum = ip.family == 6 && csum == 0;
+    if (v6_missing_checksum ||
         (csum != 0 && tcp_udp_checksum(ip.family, ip.src_ip, ip.dst_ip,
                                        IPPROTO_UDP_V, payload, len) != 0)) {
         stats_.rx_dropped.fetch_add(1, std::memory_order_relaxed);
@@ -126,7 +130,6 @@ void udp_engine::on_packet(const ip_packet_info &ip, const uint8_t *payload,
     if (!pending_accepts_.empty()) {
         auto h = std::move(pending_accepts_.front());
         pending_accepts_.pop_front();
-        s->accepted = true;
         h(boost::system::error_code{}, s);
     } else {
         pending_new_sessions_.push_back(s);
@@ -181,7 +184,17 @@ void udp_engine::refresh_expiry(const udp_session_ptr &s)
         return;
     }
     s->expiry = udp_clock::now() + s->timeout;
+    // 堆条目节流：持续流量下每会话最多每 500ms 推入一条新条目，旧条目
+    // 到期时经代次懒失效弹出，避免堆大小随包速率无界增长。节流期间不
+    // 递增 expiry_gen、不清 heap_live：已推入的条目保持有效，保证会话
+    // 仍会在（至多早一个节流周期的）当前 expiry 被清理.
+    const auto now = udp_clock::now();
+    if (s->heap_live && now - s->last_heap_push < k_expiry_push_interval) {
+        return;
+    }
     ++s->expiry_gen;
+    s->heap_live = true;
+    s->last_heap_push = now;
     expiry_heap_.push_back({s->expiry, s->expiry_gen, s});
     std::push_heap(expiry_heap_.begin(), expiry_heap_.end(),
                    expiry_entry_cmp{});
@@ -240,6 +253,9 @@ void udp_engine::on_expiry_timer(const boost::system::error_code &ec)
         return;
     }
     const auto now = udp_clock::now();
+    // 条目到期但会话已被刷新延长（节流期间未重新入堆）：收集后按当前
+    // expiry 重新入堆，保证空闲会话仍会在其当前 expiry 被清理
+    std::vector<udp_session_ptr> extended;
     while (!expiry_heap_.empty()) {
         auto &top = expiry_heap_.front();
         if (top.at > now) {
@@ -249,10 +265,16 @@ void udp_engine::on_expiry_timer(const boost::system::error_code &ec)
         const bool stale = !sp || sp->closed || sp->expiry_gen != top.gen;
         if (!stale && sp->expiry <= now) {
             remove_session(sp);
+        } else if (!stale) {
+            sp->heap_live = false;
+            extended.push_back(sp);
         }
         std::pop_heap(expiry_heap_.begin(), expiry_heap_.end(),
                       expiry_entry_cmp{});
         expiry_heap_.pop_back();
+    }
+    for (auto &sp : extended) {
+        refresh_expiry(sp); // heap_live == false -> 立即重新入堆
     }
     arm_expiry_timer();
 }

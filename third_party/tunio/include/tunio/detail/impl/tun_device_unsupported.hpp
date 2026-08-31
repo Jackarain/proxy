@@ -49,6 +49,10 @@ public:
     {
         return 0;
     }
+    size_t read_size_hint() const
+    {
+        return 0;
+    }
     bool is_open() const
     {
         return false;

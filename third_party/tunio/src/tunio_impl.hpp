@@ -22,6 +22,7 @@
 #include <boost/asio.hpp>
 
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -120,7 +121,10 @@ private:
 
     net::any_io_executor strand_ex_;
     std::atomic<bool> open_{false};
-    uint64_t epoch_ = 0; // 代际计数：close 的异步清理据此判断是否已被重新 open
+    // 代际计数：close 的异步清理据此判断是否已被重新 open。
+    // 原子化：open() 在用户线程写入、on_read 在 io 线程读取，普通 uint64_t
+    // 跨线程读写构成数据竞争（UB）.
+    std::atomic<uint64_t> epoch_{0};
     tun_config cfg_;
     net::ip::address local_ip_{}; // 用于 local_address()
     uint8_t local_ip4_[4] = {};   // 网络字节序

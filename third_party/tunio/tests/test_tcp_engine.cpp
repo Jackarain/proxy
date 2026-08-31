@@ -977,6 +977,282 @@ static void test_syn_with_data()
     peer.close();
 }
 
+// 部分重叠重传：ACK 丢失后对端从 snd_una 重传整段（头低于 rcv_nxt、尾超出），
+// 引擎必须修剪已确认前缀并交付尾部，而非整段丢弃（否则死锁至对端 RST）。
+static void test_partial_overlap_retransmit()
+{
+    engine_env env;
+    auto &io = env.io;
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
+
+    std::promise<boost::system::error_code> accept_done;
+    acceptor.async_accept(peer, [&](boost::system::error_code ec) {
+        if (!ec) {
+            peer.accept();
+        }
+        accept_done.set_value(ec);
+    });
+
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12341, DEST_PORT, 0x02, 1000, 0,
+        65535, {}));
+    std::vector<uint8_t> pkt;
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no SYN-ACK");
+    }
+    ip_hdr_info ipi;
+    tcp_hdr_info ti;
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse failed");
+    }
+    const uint32_t engine_iss = ti.seq;
+    future_get(accept_done.get_future());
+
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12341, DEST_PORT, 0x10, 1001,
+        engine_iss + 1, 65535, {}));
+
+    // 客户端发送 "hello"（seq 1001），引擎交付
+    const std::string hello = "hello";
+    std::promise<std::pair<boost::system::error_code, size_t>> r1;
+    char buf[64];
+    peer.async_read_some(net::buffer(buf),
+        [&](boost::system::error_code ec, size_t n) {
+            r1.set_value({ec, n});
+        });
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12341, DEST_PORT, 0x18, 1001,
+        engine_iss + 1, 65535, {hello.begin(), hello.end()}));
+    auto [e1, n1] = future_get(r1.get_future());
+    assert(!e1 && n1 == hello.size());
+    assert(std::string(buf, n1) == hello);
+
+    // 引擎 ACK 1006（假设该 ACK 在链路上丢失）
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no ack1");
+    }
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse failed");
+    }
+    assert((ti.flags & 0x10) != 0 && ti.ack == 1006);
+
+    // 对端重传 [1001, 1011) = "helloworld"：头 1001 < rcv_nxt 1006、尾超出，
+    // 须修剪掉已确认的 "hello" 前缀，仅交付尾部 "world"
+    const std::string world = "world";
+    std::promise<std::pair<boost::system::error_code, size_t>> r2;
+    peer.async_read_some(net::buffer(buf),
+        [&](boost::system::error_code ec, size_t n) {
+            r2.set_value({ec, n});
+        });
+    const std::string hw = hello + world;
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12341, DEST_PORT, 0x18, 1001,
+        engine_iss + 1, 65535, {hw.begin(), hw.end()}));
+    auto [e2, n2] = future_get(r2.get_future());
+    assert(!e2 && n2 == world.size());
+    assert(std::string(buf, n2) == world);
+
+    // 引擎 ACK 推进到 1011
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no ack2");
+    }
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse failed");
+    }
+    assert((ti.flags & 0x10) != 0 && ti.ack == 1011);
+
+    peer.close();
+}
+
+// 整段已被确认的重复段（对端 ACK 丢失后重传）：引擎必须补发 re-ACK 使对端
+// 立即推进 snd_una，而非静默丢弃等下一个 RTO（否则连接死锁）。
+static void test_duplicate_segment_reack()
+{
+    engine_env env;
+    auto &io = env.io;
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
+
+    std::promise<boost::system::error_code> accept_done;
+    acceptor.async_accept(peer, [&](boost::system::error_code ec) {
+        if (!ec) {
+            peer.accept();
+        }
+        accept_done.set_value(ec);
+    });
+
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12342, DEST_PORT, 0x02, 2000, 0,
+        65535, {}));
+    std::vector<uint8_t> pkt;
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no SYN-ACK");
+    }
+    ip_hdr_info ipi;
+    tcp_hdr_info ti;
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse failed");
+    }
+    const uint32_t engine_iss = ti.seq;
+    future_get(accept_done.get_future());
+
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12342, DEST_PORT, 0x10, 2001,
+        engine_iss + 1, 65535, {}));
+
+    // 交付完整 10 字节（rcv_nxt = 2011）
+    const std::string data = "helloworld";
+    std::promise<std::pair<boost::system::error_code, size_t>> r1;
+    char buf[64];
+    peer.async_read_some(net::buffer(buf),
+        [&](boost::system::error_code ec, size_t n) {
+            r1.set_value({ec, n});
+        });
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12342, DEST_PORT, 0x18, 2001,
+        engine_iss + 1, 65535, {data.begin(), data.end()}));
+    auto [e1, n1] = future_get(r1.get_future());
+    assert(!e1 && n1 == data.size());
+    assert(std::string(buf, n1) == data);
+
+    // 引擎 ACK 2011
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no ack1");
+    }
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse failed");
+    }
+    assert((ti.flags & 0x10) != 0 && ti.ack == 2011);
+
+    // 对端重传已确认的前 5 字节 [2001, 2006)：整段低于 rcv_nxt，引擎须
+    // 补发 re-ACK 2011（含 no-data），而非静默丢弃
+    const std::string hello = "hello";
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12342, DEST_PORT, 0x18, 2001,
+        engine_iss + 1, 65535, {hello.begin(), hello.end()}));
+
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no re-ack");
+    }
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse failed");
+    }
+    assert((ti.flags & 0x10) != 0 && (ti.flags & 0x08) == 0); // ACK 且无数据
+    assert(ti.ack == 2011);
+    assert(ipi.payload_len == 20); // 纯 ACK 段
+
+    peer.close();
+}
+
+// TIME_WAIT 收到同元组新 SYN：须重建连接（RFC 1122 §4.2.2.13），
+// 否则关闭后 tcp_time_wait_timeout 内对端重连全部失败。
+static void test_time_wait_reconnect()
+{
+    engine_env env;
+    auto &io = env.io;
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
+
+    std::promise<boost::system::error_code> accept_done;
+    acceptor.async_accept(peer, [&](boost::system::error_code ec) {
+        if (!ec) {
+            peer.accept();
+        }
+        accept_done.set_value(ec);
+    });
+
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12343, DEST_PORT, 0x02, 4000, 0,
+        65535, {}));
+    std::vector<uint8_t> pkt;
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no SYN-ACK");
+    }
+    ip_hdr_info ipi;
+    tcp_hdr_info ti;
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse failed");
+    }
+    const uint32_t engine_iss = ti.seq;
+    future_get(accept_done.get_future());
+
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12343, DEST_PORT, 0x10, 4001,
+        engine_iss + 1, 65535, {}));
+
+    // 同步握手完成：客户端发 1 字节数据，应用读到即证明已 ESTABLISHED
+    //（避免 shutdown 的 Strand 派发与握手 ACK 处理竞态，后者在
+    // SYN_ACK_SENT 状态下会以 RST 关闭）.
+    {
+        const uint8_t sync = 0x01;
+        std::promise<std::pair<boost::system::error_code, size_t>> sr;
+        char sbuf[8];
+        peer.async_read_some(net::buffer(sbuf),
+            [&](boost::system::error_code ec, size_t n) {
+                sr.set_value({ec, n});
+            });
+        env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12343, DEST_PORT, 0x18,
+            4001, engine_iss + 1, 65535, {sync}));
+        auto [se, sn] = future_get(sr.get_future());
+        assert(!se && sn == 1 && sbuf[0] == sync);
+        // 引擎 ACK 4002
+        if (!env.dev.read_packet(pkt)) {
+            throw std::runtime_error("no sync ack");
+        }
+        if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len,
+                ti)) {
+            throw std::runtime_error("parse failed");
+        }
+        assert((ti.flags & 0x10) != 0 && ti.ack == 4002);
+    }
+
+    // 应用关闭发送侧：引擎发 FIN 进入 FIN_WAIT_1
+    boost::system::error_code sec;
+    peer.shutdown(net::ip::tcp::socket::shutdown_send, sec);
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no FIN");
+    }
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse failed");
+    }
+    assert((ti.flags & 0x01) != 0); // FIN
+    const uint32_t fin_seq = ti.seq;
+    assert(fin_seq == engine_iss + 1);
+
+    // 客户端 ACK FIN -> FIN_WAIT_2（客户端序号已推进到 4002）
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12343, DEST_PORT, 0x10, 4002,
+        fin_seq + 1, 65535, {}));
+
+    // 客户端 FIN -> 引擎 TIME_WAIT（引擎 ACK 4003）
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12343, DEST_PORT, 0x11, 4002,
+        fin_seq + 1, 65535, {}));
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no FIN ack");
+    }
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse failed");
+    }
+    assert((ti.flags & 0x10) != 0 && ti.ack == 4003);
+
+    // 同元组新 SYN：引擎须重建连接而非静默丢弃
+    std::promise<boost::system::error_code> accept2;
+    tun_tcp_socket peer2(io.get_executor());
+    acceptor.async_accept(
+        peer2, [&](boost::system::error_code ec) {
+            if (!ec) {
+                peer2.accept(); // 延迟握手：批准后引擎才回复新 SYN-ACK
+            }
+            accept2.set_value(ec);
+        });
+
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12343, DEST_PORT, 0x02, 8000, 0,
+        65535, {}));
+    if (!env.dev.read_packet(pkt)) {
+        throw std::runtime_error("no SYN-ACK2");
+    }
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        throw std::runtime_error("parse failed");
+    }
+    assert((ti.flags & 0x12) == 0x12); // 新 SYN-ACK
+    assert(ti.ack == 8001);            // 新连接的 irs + 1
+    auto aec2 = future_get(accept2.get_future());
+    assert(!aec2);
+
+    peer.close();
+    peer2.close();
+}
+
 static void test_rst()
 {
     engine_env env;
@@ -2631,6 +2907,9 @@ int main()
     test_wscale_negotiation();
     test_synack_wscale_buffer_reuse();
     test_syn_with_data();
+    test_partial_overlap_retransmit();
+    test_duplicate_segment_reack();
+    test_time_wait_reconnect();
     test_rst();
     test_app_reset();
     test_write_after_shutdown_send();

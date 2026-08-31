@@ -150,6 +150,9 @@ bool posix_tun_device_impl::open(const device_config &cfg,
     boost::system::error_code &ec)
 {
 #if defined(__linux__)
+    // 重复 open 前先关闭已打开的设备，避免新 fd 泄漏与旧设备残留
+    close();
+
     const int fd = ::open("/dev/net/tun", O_RDWR | O_CLOEXEC);
     if (fd < 0) {
         ec =
@@ -167,6 +170,10 @@ bool posix_tun_device_impl::open(const device_config &cfg,
         ::close(fd);
         return false;
     }
+    // 空设备名自动命名时内核会把分配的名字写回 ifr.ifr_name：
+    // 后续所有 ioctl 必须使用该有效名，而非 cfg.name（空串）.
+    const std::string dev_name =
+        ifr.ifr_name[0] != '\0' ? ifr.ifr_name : cfg.name;
 
     // 配置 IP / 掩码（需要 CAP_NET_ADMIN）
     const int s = ::socket(AF_INET, SOCK_DGRAM, 0);
@@ -181,7 +188,7 @@ bool posix_tun_device_impl::open(const device_config &cfg,
     // 不与外部配置冲突；与“只创建设备”的旧语义保持一致。
     if (cfg.ipv4.empty()) {
         std::memset(&ifr, 0, sizeof(ifr));
-        std::strncpy(ifr.ifr_name, cfg.name.c_str(), IFNAMSIZ - 1);
+        std::strncpy(ifr.ifr_name, dev_name.c_str(), IFNAMSIZ - 1);
         ifr.ifr_mtu = static_cast<int>(std::max<size_t>(cfg.mtu, 576));
         if (::ioctl(s, SIOCSIFMTU, &ifr) < 0) {
             ec = boost::system::error_code(
@@ -193,20 +200,24 @@ bool posix_tun_device_impl::open(const device_config &cfg,
         ::close(s);
 
         desc_.assign(fd, ec);
-        if (!ec) {
-            open_ = true;
-            mtu_ = static_cast<size_t>(ifr.ifr_mtu);
+        if (ec) {
+            // Asio assign 失败时不接管句柄：显式关闭避免泄漏
+            ::close(fd);
+            return false;
         }
-        return !ec;
+        open_ = true;
+        mtu_ = static_cast<size_t>(ifr.ifr_mtu);
+        return true;
     }
 
     auto set_ifr = [&](int cmd, const char *addr) -> bool {
         struct ifreq aifr;
         std::memset(&aifr, 0, sizeof(aifr));
-        std::strncpy(aifr.ifr_name, cfg.name.c_str(), IFNAMSIZ - 1);
+        std::strncpy(aifr.ifr_name, dev_name.c_str(), IFNAMSIZ - 1);
         auto *sin = reinterpret_cast<struct sockaddr_in *>(&aifr.ifr_addr);
         sin->sin_family = AF_INET;
         if (::inet_pton(AF_INET, addr, &sin->sin_addr) != 1) {
+            errno = EINVAL; // 地址解析失败：给出明确 errno，避免陈旧值误导
             return false;
         }
         return ::ioctl(s, cmd, &aifr) == 0;
@@ -229,7 +240,7 @@ bool posix_tun_device_impl::open(const device_config &cfg,
 
     // 配置 IPv6 地址（可选）
     if (!cfg.ipv6.empty() &&
-        !add_ipv6_address(s, cfg.name, cfg.ipv6, cfg.ipv6_prefix_len, ec)) {
+        !add_ipv6_address(s, dev_name, cfg.ipv6, cfg.ipv6_prefix_len, ec)) {
         ::close(s);
         ::close(fd);
         return false;
@@ -237,7 +248,7 @@ bool posix_tun_device_impl::open(const device_config &cfg,
 
     // 设置 MTU 并启用接口
     std::memset(&ifr, 0, sizeof(ifr));
-    std::strncpy(ifr.ifr_name, cfg.name.c_str(), IFNAMSIZ - 1);
+    std::strncpy(ifr.ifr_name, dev_name.c_str(), IFNAMSIZ - 1);
     ifr.ifr_mtu = static_cast<int>(std::max<size_t>(cfg.mtu, 576));
     if (::ioctl(s, SIOCSIFMTU, &ifr) < 0) {
         ec =
@@ -264,11 +275,14 @@ bool posix_tun_device_impl::open(const device_config &cfg,
     ::close(s);
 
     desc_.assign(fd, ec);
-    if (!ec) {
-        open_ = true;
-        mtu_ = static_cast<size_t>(ifr.ifr_mtu);
+    if (ec) {
+        // Asio assign 失败时不接管句柄：显式关闭避免泄漏
+        ::close(fd);
+        return false;
     }
-    return !ec;
+    open_ = true;
+    mtu_ = static_cast<size_t>(ifr.ifr_mtu);
+    return true;
 #else
     // macOS utun / 其他 POSIX 平台的自主打开尚未实现（Phase 3），
     // 句柄注入模式 assign() 在所有平台可用。

@@ -22,13 +22,30 @@ jobs:
           tar -xzf "$RUNNER_TEMP/boost.tar.gz" -C "$RUNNER_TEMP"
           echo "BOOST_ROOT=$RUNNER_TEMP/boost_1_92_0" >> "$GITHUB_ENV"
 
-      - name: Build tunio
+      - name: Build tunio (Release)
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -G Ninja
-          cmake --build build --config Release
+          # 非 tests 保持 Release 构建（库 + 示例）
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTUNIO_BUILD_TESTS=OFF -G Ninja
+          cmake --build build
 
-      - name: Run tests
-        run: ctest --test-dir build --output-on-failure
+      - name: Build and run tests (Debug)
+        run: |
+          # 测试在 Debug 构建下运行：Release 的 NDEBUG 会编译掉测试断言
+          cmake -S . -B build-tests -DCMAKE_BUILD_TYPE=Debug -DTUNIO_BUILD_EXAMPLES=OFF -G Ninja
+          cmake --build build-tests
+          ctest --test-dir build-tests --output-on-failure
+
+      - name: Check UTF-8 BOM on code files
+        run: |
+          # 项目编码风格为 UTF-8 (with BOM)
+          err=0
+          while IFS= read -r f; do
+            if ! head -c3 "$f" | od -An -tx1 | tr -d ' \n' | grep -q 'efbbbf'; then
+              echo "missing BOM: $f"
+              err=1
+            fi
+          done < <(find include src tests examples \( -name '*.hpp' -o -name '*.cpp' \) | sort)
+          exit $err
 
   MacOS:
     runs-on: macos-latest
@@ -46,17 +63,26 @@ jobs:
           tar -xzf "$RUNNER_TEMP/boost.tar.gz" -C "$RUNNER_TEMP"
           echo "BOOST_ROOT=$RUNNER_TEMP/boost_1_92_0" >> "$GITHUB_ENV"
 
-      - name: "Build tunio (Universal Binary: x86_64 + arm64)"
+      - name: "Build tunio (Release, Universal Binary: x86_64 + arm64)"
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
+            -DTUNIO_BUILD_TESTS=OFF \
             -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
             -G Ninja
-          cmake --build build --config Release
+          cmake --build build
 
-      - name: Run tests
-        run: ctest --test-dir build --output-on-failure
+      - name: "Build and run tests (Debug, Universal Binary)"
+        run: |
+          cmake -S . -B build-tests \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DTUNIO_BUILD_EXAMPLES=OFF \
+            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -G Ninja
+          cmake --build build-tests
+          ctest --test-dir build-tests --output-on-failure
 
   Windows:
     runs-on: windows-latest

@@ -1,4 +1,4 @@
-//
+﻿//
 // tun_device_wintun.hpp
 // ~~~~~~~~~~~~~~~~~~~~
 //
@@ -168,7 +168,8 @@ struct wintun_api
         if (_fp) {                                                             \
             std::memcpy(&api->member, &_fp, sizeof(_fp));                      \
         } else {                                                               \
-            api->module = nullptr;                                             \
+            /* 保留 api->module：unique_ptr 析构时仍会 FreeLibrary，           \
+             * 避免 LoadLibrary 成功而 GetProcAddress 失败时 DLL 泄漏 */       \
             api->member = nullptr;                                             \
             return nullptr;                                                    \
         }                                                                      \
@@ -202,6 +203,11 @@ public:
     void close();
 
     size_t mtu() const
+    {
+        return mtu_;
+    }
+    // 单次读取可能需要的最大字节数
+    size_t read_size_hint() const
     {
         return mtu_;
     }
@@ -241,7 +247,11 @@ private:
             buf.writable_size()});
 
         if (n > 0) {
-            buf.commit(static_cast<size_t>(n));
+            // 与 posix 实现保持一致：不在此 commit，由调用方按
+            // packet_buffer 契约在读取成功后 commit（引擎 on_read 与
+            // tun_device::async_read_ip 均会 commit），避免同一公共 API
+            // 的平台间行为漂移（wintun 内部 commit + 调用方再 commit
+            // 会二次推进 data_size_）.
             async_post_with_result(strand_, std::forward<Handler>(handler),
                                    boost::system::error_code{},
                                    static_cast<size_t>(n));

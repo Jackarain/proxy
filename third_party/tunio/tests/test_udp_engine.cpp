@@ -198,7 +198,7 @@ static void test_multiple_remotes()
 
 static void test_session_timeout()
 {
-    // 短空闲超时（500ms）
+    // 短空闲超时（1s）
     engine_env env(1500, std::chrono::seconds(1));
     auto &io = env.io;
     tun_udp_acceptor acceptor(env.engine);
@@ -363,6 +363,8 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    // 默认运行全部用例（含数据报往返）；"roundtrip" 等参数仅用于单独调试.
+    test_datagram_roundtrip();
     test_multiple_remotes();
     test_large_datagram_fragmented();
     test_session_timeout();

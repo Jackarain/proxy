@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 project(tunio VERSION 3.0.0 LANGUAGES CXX)
 
 # CMake 3.30+ 移除 FindBoost 模块（CMP0167）：系统提供 BoostConfig 时
-# find_package 自动回退到 config 模式，此处显式声明旧策略以抑制告警。
+# find_package 自动回退到 config 模式，此处显式声明旧策略（CMake 3.30+
+# 对 set-to-OLD 本身仍会打印弃用告警，属预期）.
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 OLD)
 endif()
@@ -12,6 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  # 未显式指定时默认 Debug：断言与调试符号可用；Release 请显式传入
+  # -DCMAKE_BUILD_TYPE=Release（CI 的测试构建须用 Debug，见 Build.yml）
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
@@ -22,13 +25,16 @@ endif()
 if(TARGET Boost::asio)
   set(TUNIO_BOOST_LIBS Boost::asio)
 elseif(NOT TARGET Boost::headers)
-  find_package(Boost 1.74 REQUIRED)
+  # 代码实际使用 boost::unordered_flat_map（Boost 1.81 引入）与
+  # net::any_completion_handler（Boost 1.77 引入），最低要求 1.81
+  find_package(Boost 1.81 REQUIRED)
   set(TUNIO_BOOST_LIBS Boost::headers)
 else()
   set(TUNIO_BOOST_LIBS Boost::headers)
 endif()
 
 set(TUNIO_SOURCES
+  src/ip_packet.cpp
   src/tcp_engine.cpp
   src/udp_engine.cpp
   src/tun_tcp_acceptor.cpp

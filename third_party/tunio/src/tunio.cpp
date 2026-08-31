@@ -140,13 +140,14 @@ bool tunio_impl::open(const tun_config &cfg, boost::system::error_code &ec)
     account_ = std::make_shared<buffer_accountant>();
     account_->limit = cfg.max_total_buffer;
     writer_ = std::make_shared<device_writer>(strand_ex_, device_, stats_);
-    tcp_ = std::make_shared<tcp_engine>(strand_ex_, *writer_, cfg_, *stats_,
+    tcp_ = std::make_shared<tcp_engine>(strand_ex_, writer_, cfg_, *stats_,
         account_);
-    udp_ = std::make_shared<udp_engine>(strand_ex_, *writer_, cfg_, *stats_,
+    udp_ = std::make_shared<udp_engine>(strand_ex_, writer_, cfg_, *stats_,
         account_);
     tcp_->start_sweep();
 
-    ++epoch_; // 递增代际：使任何在途的 close 清理任务失效，避免误关新实例
+    epoch_.store(epoch_.load(std::memory_order_relaxed) + 1,
+        std::memory_order_release);
     open_.store(true, std::memory_order_release);
     start_read();
     return true;
@@ -157,7 +158,7 @@ void tunio_impl::close()
     if (!open_.exchange(false, std::memory_order_acq_rel)) {
         return;
     }
-    const uint64_t epoch = epoch_;
+    const uint64_t epoch = epoch_.load(std::memory_order_acquire);
     // 捕获当前（旧）引擎：即使随后被重新 open 替换，旧引擎也可能被自身的
     // 定时器回调（self 捕获）保活，必须通过捕获的 shared_ptr 在 Strand 上
     // 取消其定时器并清理，否则 io_context 将因挂起定时器永不退出。
@@ -217,11 +218,12 @@ void tunio_impl::start_read_slot(size_t index)
     read_inflight_[index] = true;
     // 弱引用避免读回调自持有形成引用环：引擎释放后迟到读回调直接跳过
     auto self = weak_from_this();
+    const uint64_t epoch = epoch_.load(std::memory_order_acquire);
     device_->async_read_packet(
         read_bufs_[index],
         net::bind_executor(
             strand_ex_,
-            [self, index, epoch = epoch_](
+            [self, index, epoch](
                 const boost::system::error_code &ec, size_t n) {
                 if (auto s = self.lock()) {
                     s->on_read(ec, n, index, epoch);
@@ -235,7 +237,11 @@ void tunio_impl::on_read(const boost::system::error_code &ec, size_t n,
     // 迟到回调（引擎已关闭、或设备已 close 后重新 open 的旧代际读）：
     // 不触碰任何读状态，槽位标记由 open() 的 fill(false) 与当前代际回调
     // 复位，避免误清重建后已重新发起读取的槽。
-    if (epoch != epoch_ || !open_.load(std::memory_order_acquire)) {
+    // 先读 open_（acquire 与 open() 的 release 存储同步），再读 epoch_：
+    // open_ 为 true 时 epoch_ 的递增必然可见，旧代际回调（epoch 不匹配）
+    // 一定被拦截，杜绝"两次独立装载"的 TOCTOU 穿过守卫.
+    if (!open_.load(std::memory_order_acquire) ||
+        epoch != epoch_.load(std::memory_order_acquire)) {
         return;
     }
     read_inflight_[index] = false;
@@ -288,8 +294,8 @@ void tunio_impl::on_read(const boost::system::error_code &ec, size_t n,
         start_read_slot(index);
         return;
     }
-    if (total_len > avail || total_len > buf.capacity() - buf.headroom()) {
-        // 声明长度超限或读到的字节不足一个完整报文：按包语义丢弃
+    if (total_len > avail) {
+        // 声明长度超限（读到的字节不足一个完整报文）：按包语义丢弃
         // （真实 TUN 包设备不会出现半包；防御非法/残缺报文）。
         stats_->rx_dropped.fetch_add(1, std::memory_order_relaxed);
         buf.reset();
@@ -297,7 +303,13 @@ void tunio_impl::on_read(const boost::system::error_code &ec, size_t n,
         return;
     }
     stats_->rx_packets.fetch_add(1, std::memory_order_relaxed);
-    handle_packet(base, total_len);
+    // 用户完成回调（如 TCP 直投路径）可能抛异常：捕获后仍复位读槽并
+    // 继续读泵，避免单个回调异常使 32 槽读路径整体停摆；异常被吞掉
+    //（不再经 io.run() 传播），以换读取循环的持续可用.
+    try {
+        handle_packet(base, total_len);
+    } catch (...) {
+    }
     buf.reset();
     start_read_slot(index);
 }

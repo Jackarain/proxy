@@ -51,6 +51,11 @@ public:
     {
         return mtu_;
     }
+    // 单次读取可能需要的最大字节数
+    size_t read_size_hint() const
+    {
+        return mtu_;
+    }
     bool is_open() const
     {
         return open_;
