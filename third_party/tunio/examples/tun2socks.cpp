@@ -54,6 +54,7 @@ struct options
     bool utun_prefix = false;
     int inject_fd = -1;
     size_t threads = 1;
+    size_t num_queues = 1;
 };
 
 void usage(const char *prog)
@@ -66,6 +67,7 @@ void usage(const char *prog)
         << "  --ip6 <addr>           本地虚拟 IPv6 地址（可选，如 fd00::1）\n"
         << "  --ip6-prefix <len>     IPv6 前缀长度（默认 64）\n"
         << "  --mtu <bytes>          MTU（默认 1500）\n"
+        << "  --queues <n>           Linux TUN 多队列数（IFF_MULTI_QUEUE，默认 1）\n"
         << "  --proxy <host:port>    SOCKS5 代理地址（默认 127.0.0.1:1080）\n"
         << "  --utun-prefix          注入的 fd 为 macOS utun（读写带 4 字节家族前缀）\n"
         << "  --no-udp               禁用 UDP 转发\n"
@@ -96,6 +98,14 @@ options parse_args(int argc, char **argv)
             opt.ipv6_prefix_len = static_cast<uint8_t>(std::stoul(next()));
         } else if (arg == "--mtu") {
             opt.mtu = static_cast<size_t>(std::stoul(next()));
+        } else if (arg == "--queues") {
+            opt.num_queues = static_cast<size_t>(std::stoul(next()));
+            if (opt.num_queues < 1 ||
+                opt.num_queues > tunio::max_multi_queues) {
+                throw std::runtime_error(
+                    "--queues 需在 1.." +
+                    std::to_string(tunio::max_multi_queues) + " 之间");
+            }
         } else if (arg == "--proxy") {
             const std::string val = next();
             const auto pos = val.rfind(':');
@@ -303,6 +313,7 @@ int main(int argc, char **argv)
     cfg.ipv6_addr = opt.ipv6_addr;
     cfg.ipv6_prefix_len = opt.ipv6_prefix_len;
     cfg.mtu = opt.mtu;
+    cfg.num_queues = opt.num_queues;
     if (opt.inject_fd >= 0) {
         cfg.external_handle = tunio::native_handle_from_int(opt.inject_fd);
         cfg.external_mtu = opt.mtu;
@@ -316,7 +327,8 @@ int main(int argc, char **argv)
     }
     std::cout << "tun2socks 已启动: " << cfg.dev_name << " " << cfg.ipv4_addr
         << (cfg.ipv6_addr.empty() ? "" : " / " + cfg.ipv6_addr) << " -> "
-        << opt.proxy_host << ":" << opt.proxy_port << std::endl;
+        << opt.proxy_host << ":" << opt.proxy_port << " (队列 x"
+        << engine.queue_count() << ")" << std::endl;
 
     // 代理地址可为 IP 或域名：make_address 仅接受 IP，非法输入抛异常，
     // 在此捕获避免 terminate；域名解析由 socks5_connect 内部处理.

@@ -8,6 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#define BOOST_TEST_MODULE udp_engine
+#include <boost/test/included/unit_test.hpp>
 #include "test_harness.hpp"
 
 #include <cassert>
@@ -28,7 +30,7 @@ constexpr uint32_t DEST_IP = 0x08080808;   // 8.8.8.8
 constexpr uint32_t DEST_IP2 = 0x01010101;  // 1.1.1.1
 } // namespace
 
-static void test_datagram_roundtrip()
+BOOST_AUTO_TEST_CASE(test_datagram_roundtrip)
 {
     engine_env env;
     auto &io = env.io;
@@ -46,7 +48,7 @@ static void test_datagram_roundtrip()
 
     // 新会话通知
     auto aec = future_get(accept_done.get_future());
-    assert(!aec);
+    TEST_ASSERT(!aec);
 
     // 接收完整数据报
     std::promise<std::pair<boost::system::error_code, size_t>> recv_done;
@@ -58,15 +60,15 @@ static void test_datagram_roundtrip()
             recv_done.set_value({ec, n});
         });
     auto [rec, rn] = future_get(recv_done.get_future());
-    assert(!rec && rn == query.size());
-    assert(std::string(buf, rn) == query);
-    assert(sender == net::ip::udp::endpoint(
+    TEST_ASSERT(!rec && rn == query.size());
+    TEST_ASSERT(std::string(buf, rn) == query);
+    TEST_ASSERT(sender == net::ip::udp::endpoint(
         net::ip::make_address_v4("8.8.8.8"), 53));
 
     // 客户端端点
     auto cli = session.client_endpoint();
-    assert(cli.address().to_v4().to_uint() == CLIENT_IP);
-    assert(cli.port() == 53000);
+    TEST_ASSERT(cli.address().to_v4().to_uint() == CLIENT_IP);
+    TEST_ASSERT(cli.port() == 53000);
 
     // 发送回复数据报
     const std::string reply = "dns-answer";
@@ -76,31 +78,31 @@ static void test_datagram_roundtrip()
             send_done.set_value({ec, n});
         });
     auto [sec, sn] = future_get(send_done.get_future());
-    assert(!sec && sn == reply.size());
+    TEST_ASSERT(!sec && sn == reply.size());
 
     std::vector<uint8_t> pkt;
     if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no UDP reply packet");
+        TEST_THROW("no UDP reply packet");
     }
     if (!verify_packet(pkt)) {
-        throw std::runtime_error("verify_packet failed");
+        TEST_THROW("verify_packet failed");
     }
     ip_hdr_info ipi;
     if (!parse_ip(pkt, ipi)) {
-        throw std::runtime_error("parse_ip failed");
+        TEST_THROW("parse_ip failed");
     }
-    assert(ipi.src == DEST_IP && ipi.dst == CLIENT_IP && ipi.proto == 17);
+    TEST_ASSERT(ipi.src == DEST_IP && ipi.dst == CLIENT_IP && ipi.proto == 17);
     udp_hdr_info ui;
     if (!parse_udp(ipi.payload, ipi.payload_len, ui)) {
-        throw std::runtime_error("parse_udp failed");
+        TEST_THROW("parse_udp failed");
     }
-    assert(ui.sport == 53 && ui.dport == 53000);
-    assert(std::string(reinterpret_cast<const char *>(ui.data), ui.n) == reply);
+    TEST_ASSERT(ui.sport == 53 && ui.dport == 53000);
+    TEST_ASSERT(std::string(reinterpret_cast<const char *>(ui.data), ui.n) == reply);
 
     session.close();
 }
 
-static void test_multiple_remotes()
+BOOST_AUTO_TEST_CASE(test_multiple_remotes)
 {
     engine_env env;
     auto &io = env.io;
@@ -120,7 +122,7 @@ static void test_multiple_remotes()
     env.dev.send(make_udp(CLIENT_IP, DEST_IP2, 53100, 80,
         std::vector<uint8_t>(q2.begin(), q2.end())));
     auto aec = future_get(accept_done.get_future());
-    assert(!aec);
+    TEST_ASSERT(!aec);
 
     // 两份数据报的 sender 各自为对应远端
     std::promise<std::pair<boost::system::error_code, size_t>> r1;
@@ -131,9 +133,9 @@ static void test_multiple_remotes()
             r1.set_value({ec, n});
         });
     auto [ec1, n1] = future_get(r1.get_future());
-    assert(!ec1 && n1 == q1.size());
-    assert(std::string(buf, n1) == q1);
-    assert(s1 == net::ip::udp::endpoint(
+    TEST_ASSERT(!ec1 && n1 == q1.size());
+    TEST_ASSERT(std::string(buf, n1) == q1);
+    TEST_ASSERT(s1 == net::ip::udp::endpoint(
         net::ip::make_address_v4("8.8.8.8"), 53));
 
     std::promise<std::pair<boost::system::error_code, size_t>> r2;
@@ -143,9 +145,9 @@ static void test_multiple_remotes()
             r2.set_value({ec, n});
         });
     auto [ec2, n2] = future_get(r2.get_future());
-    assert(!ec2 && n2 == q2.size());
-    assert(std::string(buf, n2) == q2);
-    assert(s2 == net::ip::udp::endpoint(
+    TEST_ASSERT(!ec2 && n2 == q2.size());
+    TEST_ASSERT(std::string(buf, n2) == q2);
+    TEST_ASSERT(s2 == net::ip::udp::endpoint(
         net::ip::make_address_v4("1.1.1.1"), 80));
 
     // 两路 send_to 各自构造正确的响应报文
@@ -155,21 +157,21 @@ static void test_multiple_remotes()
             d1.set_value({ec, n});
         });
     auto [e1, sn1] = future_get(d1.get_future());
-    assert(!e1 && sn1 == q1.size());
+    TEST_ASSERT(!e1 && sn1 == q1.size());
     std::vector<uint8_t> pkt1;
     if (!env.dev.read_packet(pkt1)) {
-        throw std::runtime_error("no first udp reply");
+        TEST_THROW("no first udp reply");
     }
     ip_hdr_info i1;
     if (!parse_ip(pkt1, i1)) {
-        throw std::runtime_error("parse first reply failed");
+        TEST_THROW("parse first reply failed");
     }
-    assert(i1.src == DEST_IP && i1.dst == CLIENT_IP);
+    TEST_ASSERT(i1.src == DEST_IP && i1.dst == CLIENT_IP);
     udp_hdr_info u1;
     if (!parse_udp(i1.payload, i1.payload_len, u1)) {
-        throw std::runtime_error("parse first udp failed");
+        TEST_THROW("parse first udp failed");
     }
-    assert(u1.sport == 53 && u1.dport == 53100);
+    TEST_ASSERT(u1.sport == 53 && u1.dport == 53100);
 
     std::promise<std::pair<boost::system::error_code, size_t>> d2;
     session.async_send_to(s2, net::buffer(q2),
@@ -177,26 +179,26 @@ static void test_multiple_remotes()
             d2.set_value({ec, n});
         });
     auto [e2, sn2] = future_get(d2.get_future());
-    assert(!e2 && sn2 == q2.size());
+    TEST_ASSERT(!e2 && sn2 == q2.size());
     std::vector<uint8_t> pkt2;
     if (!env.dev.read_packet(pkt2)) {
-        throw std::runtime_error("no second udp reply");
+        TEST_THROW("no second udp reply");
     }
     ip_hdr_info i2;
     if (!parse_ip(pkt2, i2)) {
-        throw std::runtime_error("parse second reply failed");
+        TEST_THROW("parse second reply failed");
     }
-    assert(i2.src == DEST_IP2 && i2.dst == CLIENT_IP);
+    TEST_ASSERT(i2.src == DEST_IP2 && i2.dst == CLIENT_IP);
     udp_hdr_info u2;
     if (!parse_udp(i2.payload, i2.payload_len, u2)) {
-        throw std::runtime_error("parse second udp failed");
+        TEST_THROW("parse second udp failed");
     }
-    assert(u2.sport == 80 && u2.dport == 53100);
+    TEST_ASSERT(u2.sport == 80 && u2.dport == 53100);
 
     session.close();
 }
 
-static void test_session_timeout()
+BOOST_AUTO_TEST_CASE(test_session_timeout)
 {
     // 短空闲超时（1s）
     engine_env env(1500, std::chrono::seconds(1));
@@ -222,7 +224,7 @@ static void test_session_timeout()
             first_read.set_value({ec, n});
         });
     auto [fec, fn] = future_get(first_read.get_future());
-    assert(!fec && fn == 3);
+    TEST_ASSERT(!fec && fn == 3);
 
     // 挂起第二个读取，等待空闲超时唤醒
     std::promise<std::pair<boost::system::error_code, size_t>> timeout_read;
@@ -232,11 +234,11 @@ static void test_session_timeout()
             timeout_read.set_value({ec, n});
         });
     auto [tec, tn] = future_get(timeout_read.get_future(), 5000);
-    assert(tec == net::error::operation_aborted);
-    assert(!session.is_open());
+    TEST_ASSERT(tec == net::error::operation_aborted);
+    TEST_ASSERT(!session.is_open());
 }
 
-static void test_session_recreated_after_expiry()
+BOOST_AUTO_TEST_CASE(test_session_recreated_after_expiry)
 {
     engine_env env(1500, std::chrono::seconds(1));
     auto &io = env.io;
@@ -264,7 +266,7 @@ static void test_session_recreated_after_expiry()
     s2.close();
 }
 
-static void test_large_datagram_fragmented()
+BOOST_AUTO_TEST_CASE(test_large_datagram_fragmented)
 {
     engine_env env(1500);
     auto &io = env.io;
@@ -279,7 +281,7 @@ static void test_large_datagram_fragmented()
     env.dev.send(make_udp(CLIENT_IP, DEST_IP, 53000, 53,
         std::vector<uint8_t>{'q'}));
     auto aec = future_get(accept_done.get_future());
-    assert(!aec);
+    TEST_ASSERT(!aec);
 
     char buf[512];
     net::ip::udp::endpoint sender;
@@ -290,7 +292,7 @@ static void test_large_datagram_fragmented()
             recv_done.set_value({ec, n});
         });
     auto [rec, rn] = future_get(recv_done.get_future());
-    assert(!rec && rn == 1);
+    TEST_ASSERT(!rec && rn == 1);
 
     // 发送 2000 字节大响应：MTU 1500 下应拆为 2 个 IP 分片
     std::string big(2000, 'x');
@@ -300,38 +302,38 @@ static void test_large_datagram_fragmented()
             send_done.set_value({ec, n});
         });
     auto [sec, sn] = future_get(send_done.get_future());
-    assert(!sec && sn == big.size());
+    TEST_ASSERT(!sec && sn == big.size());
 
     std::vector<uint8_t> f1, f2;
     if (!env.dev.read_packet(f1)) {
-        throw std::runtime_error("no first fragment");
+        TEST_THROW("no first fragment");
     }
     if (!env.dev.read_packet(f2)) {
-        throw std::runtime_error("no second fragment");
+        TEST_THROW("no second fragment");
     }
 
     ip_hdr_info i1, i2;
     if (!parse_ip(f1, i1) || !parse_ip(f2, i2)) {
-        throw std::runtime_error("parse fragment failed");
+        TEST_THROW("parse fragment failed");
     }
-    assert(i1.proto == 17 && i2.proto == 17);
-    assert(i1.src == DEST_IP && i2.src == DEST_IP);
-    assert(i1.dst == CLIENT_IP && i2.dst == CLIENT_IP);
+    TEST_ASSERT(i1.proto == 17 && i2.proto == 17);
+    TEST_ASSERT(i1.src == DEST_IP && i2.src == DEST_IP);
+    TEST_ASSERT(i1.dst == CLIENT_IP && i2.dst == CLIENT_IP);
 
     const uint16_t id1 = static_cast<uint16_t>((f1[4] << 8) | f1[5]);
     const uint16_t id2 = static_cast<uint16_t>((f2[4] << 8) | f2[5]);
-    assert(id1 == id2); // 分片共享同一 IP Identification
+    TEST_ASSERT(id1 == id2); // 分片共享同一 IP Identification
 
     const uint16_t fo1 = static_cast<uint16_t>((f1[6] << 8) | f1[7]);
     const uint16_t fo2 = static_cast<uint16_t>((f2[6] << 8) | f2[7]);
-    assert((fo1 & 0x2000) != 0 && (fo1 & 0x1fff) == 0);     // 首片带 MF
-    assert((fo2 & 0x2000) == 0 && (fo2 & 0x1fff) == 185);   // 末片偏移 1480/8
-    assert(i1.total_len == 1500 && i2.total_len == 548);
+    TEST_ASSERT((fo1 & 0x2000) != 0 && (fo1 & 0x1fff) == 0);     // 首片带 MF
+    TEST_ASSERT((fo2 & 0x2000) == 0 && (fo2 & 0x1fff) == 185);   // 末片偏移 1480/8
+    TEST_ASSERT(i1.total_len == 1500 && i2.total_len == 548);
 
     // UDP 头与校验和位于首片，覆盖完整数据报
     const uint8_t *udp = i1.payload;
     const size_t ulen = static_cast<size_t>((udp[4] << 8) | udp[5]);
-    assert(ulen == 8 + big.size());
+    TEST_ASSERT(ulen == 8 + big.size());
 
     std::vector<uint8_t> full(ulen);
     std::memcpy(full.data(), udp, 8);
@@ -339,35 +341,8 @@ static void test_large_datagram_fragmented()
     std::memcpy(full.data() + 8 + 1472, i2.payload, i2.payload_len);
     const uint32_t pseudo = (i1.src >> 16) + (i1.src & 0xffff) +
         (i1.dst >> 16) + (i1.dst & 0xffff) + 17 + ulen;
-    assert(csum16(full.data(), ulen, pseudo) == 0);
-    assert(std::string(reinterpret_cast<const char *>(full.data()) + 8,
+    TEST_ASSERT(csum16(full.data(), ulen, pseudo) == 0);
+    TEST_ASSERT(std::string(reinterpret_cast<const char *>(full.data()) + 8,
         ulen - 8) == big);
 }
 
-int main(int argc, char **argv)
-{
-    if (argc > 1 && std::string(argv[1]) == "roundtrip") {
-        test_datagram_roundtrip();
-        return 0;
-    }
-    if (argc > 1 && std::string(argv[1]) == "multi") {
-        test_multiple_remotes();
-        return 0;
-    }
-    if (argc > 1 && std::string(argv[1]) == "timeout") {
-        test_session_timeout();
-        return 0;
-    }
-    if (argc > 1 && std::string(argv[1]) == "recreate") {
-        test_session_recreated_after_expiry();
-        return 0;
-    }
-
-    // 默认运行全部用例（含数据报往返）；"roundtrip" 等参数仅用于单独调试.
-    test_datagram_roundtrip();
-    test_multiple_remotes();
-    test_large_datagram_fragmented();
-    test_session_timeout();
-    test_session_recreated_after_expiry();
-    return 0;
-}

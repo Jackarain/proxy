@@ -8,6 +8,8 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#define BOOST_TEST_MODULE icmp
+#include <boost/test/included/unit_test.hpp>
 #include "test_harness.hpp"
 
 #include <cassert>
@@ -17,7 +19,7 @@
 
 using namespace test;
 
-int main()
+BOOST_AUTO_TEST_CASE(icmp)
 {
     engine_env env;
     auto &io = env.io;
@@ -30,35 +32,34 @@ int main()
 
     std::vector<uint8_t> pkt;
     if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no ICMP reply");
+        TEST_THROW("no ICMP reply");
     }
     if (!verify_packet(pkt)) {
-        throw std::runtime_error("verify_packet failed");
+        TEST_THROW("verify_packet failed");
     }
     ip_hdr_info ipi;
     if (!parse_ip(pkt, ipi)) {
-        throw std::runtime_error("parse_ip failed");
+        TEST_THROW("parse_ip failed");
     }
-    assert(ipi.src == 0x0a000001 && ipi.dst == 0x0a000002 && ipi.proto == 1);
+    TEST_ASSERT(ipi.src == 0x0a000001 && ipi.dst == 0x0a000002 && ipi.proto == 1);
 
     // Echo Reply：type=0，ID/序号/数据保持
     const uint8_t *icmp = ipi.payload;
-    assert(icmp[0] == 0);
-    assert(icmp[1] == 0);
-    assert(icmp[4] == 0x12 && icmp[5] == 0x34); // identifier
-    assert(icmp[6] == 0x00 && icmp[7] == 0x01); // sequence
-    assert(ipi.payload_len == 8 + payload.size());
-    assert(std::memcmp(icmp + 8, payload.data(), payload.size()) == 0);
+    TEST_ASSERT(icmp[0] == 0);
+    TEST_ASSERT(icmp[1] == 0);
+    TEST_ASSERT(icmp[4] == 0x12 && icmp[5] == 0x34); // identifier
+    TEST_ASSERT(icmp[6] == 0x00 && icmp[7] == 0x01); // sequence
+    TEST_ASSERT(ipi.payload_len == 8 + payload.size());
+    TEST_ASSERT(std::memcmp(icmp + 8, payload.data(), payload.size()) == 0);
 
     // ICMP 校验和有效
     const uint16_t c = csum16(icmp, ipi.payload_len);
-    assert(c == 0);
+    TEST_ASSERT(c == 0);
 
     // 发给其他地址的 Echo 不应响应
     env.dev.send(make_icmp_echo(0x0a000002, 0x0a000003, 0x0001, 0x0002, {}));
     std::vector<uint8_t> ignored;
     if (env.dev.read_packet(ignored, 300)) {
-        throw std::runtime_error("unexpected reply to non-local address");
+        TEST_THROW("unexpected reply to non-local address");
     }
-    return 0;
 }

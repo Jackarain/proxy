@@ -15,7 +15,7 @@
 #include "tunio/tun_config.hpp"
 #include "tunio/tunio.hpp"
 
-#include "device_writer.hpp"
+#include "tun_queue_writer.hpp"
 #include "tcp_engine.hpp"
 #include "udp_engine.hpp"
 
@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace tunio {
 namespace net = boost::asio;
@@ -49,6 +50,11 @@ public:
     size_t mtu() const noexcept
     {
         return mtu_;
+    }
+    // 打开生效的队列数（Linux TUN 多队列；其余平台恒为 1）
+    size_t queue_count() const noexcept
+    {
+        return num_queues_;
     }
     net::ip::address local_address() const noexcept
     {
@@ -134,17 +140,23 @@ private:
     size_t mtu_ = 1500;
 
     std::shared_ptr<tun_device> device_;
-    std::shared_ptr<device_writer> writer_;
+    std::shared_ptr<tun_queue_writer> writer_;
     std::shared_ptr<tcp_engine> tcp_;
     std::shared_ptr<udp_engine> udp_;
     std::shared_ptr<buffer_accountant> account_;
     std::shared_ptr<engine_stats> stats_;
 
-    // 并发读槽：同一时刻保持 k_read_slots 个未完成读取，TUN 包设备下
-    // 每个读回调独立拿到完整报文，拆包处理与重发起互不依赖。
+    // 并发读槽：同一时刻保持 k_read_slots 个未完成读取（单队列基准），
+    // TUN 包设备下每个读回调独立拿到完整报文，拆包处理与重发起互不依赖。
+    // 多队列下每队列分得 slots_per_queue_ 个槽，队列与内核并行投递、
+    // 槽与槽在 Strand 上串行处理，读吞吐随队列数扩展.
     static constexpr size_t k_read_slots = 32;
-    std::array<packet_buffer, k_read_slots> read_bufs_;
-    std::array<bool, k_read_slots> read_inflight_{};
+    // 队列数上限：与 tunio::max_multi_queues（内核 MAX_TAP_QUEUES）一致.
+    static constexpr size_t k_max_queues = 256;
+    std::vector<packet_buffer> read_bufs_;
+    std::vector<bool> read_inflight_{};
+    size_t num_queues_ = 1;
+    size_t slots_per_queue_ = k_read_slots;
 };
 
 } // namespace detail

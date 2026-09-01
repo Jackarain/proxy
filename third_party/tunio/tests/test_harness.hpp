@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "test_throw.hpp"
+
 #include "tunio/packet_buffer.hpp"
 #include "tunio/tun_tcp_acceptor.hpp"
 #include "tunio/tun_config.hpp"
@@ -62,7 +64,7 @@ inline std::array<uint8_t, 16> v6(const char *s)
 {
     std::array<uint8_t, 16> b{};
     if (::inet_pton(AF_INET6, s, b.data()) != 1) {
-        throw std::runtime_error(std::string("bad ipv6 address: ") + s);
+        TEST_THROW(std::string("bad ipv6 address: ") + s);
     }
     return b;
 }
@@ -508,44 +510,65 @@ inline bool parse_udp(const uint8_t *p, size_t n, udp_hdr_info &out)
 }
 
 // ---- 虚拟 TUN 设备（socketpair 数据报注入，对齐 TUN 包语义）----
+// 支持多队列：每队列一个独立 socketpair，模拟 Linux TUN IFF_MULTI_QUEUE
+// 下每队列一个 fd 的读写语义。引擎写出的包按五元组哈希进入任意队列，
+// 因此 read_packet 轮询所有队列 fd.
 class fake_device
 {
 public:
-    fake_device()
+    explicit fake_device(size_t queues = 1)
     {
-        int sv[2];
-        // SOCK_DGRAM：一次 read 恰为一个完整报文，与真实 TUN 包语义一致，
-        // 引擎无需按流拆包拼接.
-        if (::socketpair(AF_UNIX, SOCK_DGRAM, 0, sv) != 0) {
-            throw std::runtime_error("socketpair failed");
+        fds_.reserve(queues);
+        inject_fds_.reserve(queues);
+        for (size_t i = 0; i < queues; ++i) {
+            int sv[2];
+            // SOCK_DGRAM：一次 read 恰为一个完整报文，与真实 TUN 包语义一致，
+            // 引擎无需按流拆包拼接.
+            if (::socketpair(AF_UNIX, SOCK_DGRAM, 0, sv) != 0) {
+                TEST_THROW("socketpair failed");
+            }
+            fds_.push_back(sv[0]);
+            inject_fds_.push_back(sv[1]);
         }
-        fd_ = sv[0];
-        inject_fd_ = sv[1];
     }
 
     ~fake_device()
     {
-        ::close(fd_);
+        for (const int f : fds_) {
+            ::close(f);
+        }
     }
 
     int inject_fd() const
     {
-        return inject_fd_;
+        return inject_fds_[0];
     }
 
-    void send(const std::vector<uint8_t> &pkt)
+    const std::vector<int> &inject_fds() const
+    {
+        return inject_fds_;
+    }
+
+    size_t queue_count() const
+    {
+        return fds_.size();
+    }
+
+    // 向指定队列注入报文（引擎从对应队列读到）
+    void send(const std::vector<uint8_t> &pkt, size_t queue = 0)
     {
         size_t off = 0;
         while (off < pkt.size()) {
-            const ssize_t n = ::write(fd_, pkt.data() + off, pkt.size() - off);
+            const ssize_t n =
+                ::write(fds_[queue], pkt.data() + off, pkt.size() - off);
             if (n <= 0) {
-                throw std::runtime_error("fake_device send failed");
+                TEST_THROW("fake_device send failed");
             }
             off += static_cast<size_t>(n);
         }
     }
 
-    // 读取一个完整 IP 包；支持粘包拆包；超时返回 false
+    // 读取一个完整 IP 包（轮询所有队列）；支持粘包拆包；超时返回 false
     bool read_packet(std::vector<uint8_t> &out, int timeout_ms = 3000)
     {
         const auto deadline = std::chrono::steady_clock::now() +
@@ -585,23 +608,32 @@ public:
                 std::chrono::duration_cast<std::chrono::milliseconds>(
                     deadline - now)
                     .count());
-            struct pollfd pfd{fd_, POLLIN, 0};
-            const int r = ::poll(&pfd, 1, remaining);
+            std::vector<struct pollfd> pfds;
+            pfds.reserve(fds_.size());
+            for (const int f : fds_) {
+                pfds.push_back(pollfd{f, POLLIN, 0});
+            }
+            const int r = ::poll(pfds.data(), pfds.size(), remaining);
             if (r <= 0) {
                 return false;
             }
-            uint8_t buf[65536];
-            const ssize_t n = ::read(fd_, buf, sizeof(buf));
-            if (n <= 0) {
-                return false;
+            for (size_t i = 0; i < pfds.size(); ++i) {
+                if ((pfds[i].revents & POLLIN) == 0) {
+                    continue;
+                }
+                uint8_t buf[65536];
+                const ssize_t n = ::read(fds_[i], buf, sizeof(buf));
+                if (n <= 0) {
+                    continue;
+                }
+                stash_.insert(stash_.end(), buf, buf + n);
             }
-            stash_.insert(stash_.end(), buf, buf + n);
         }
     }
 
 private:
-    int fd_ = -1;
-    int inject_fd_ = -1;
+    std::vector<int> fds_;
+    std::vector<int> inject_fds_;
     std::vector<uint8_t> stash_;
 };
 
@@ -626,12 +658,14 @@ struct engine_env
             std::chrono::milliseconds(5000),
         std::chrono::milliseconds rto_timeout =
             std::chrono::milliseconds(200),
-        int rto_max_retransmits = 8)
+        int rto_max_retransmits = 8,
+        size_t queues = 1)
         : engine(io)
+        , dev(queues)
         , guard(net::make_work_guard(io))
     {
         tun_config cfg;
-        cfg.external_handle = dev.inject_fd();
+        cfg.external_handles = dev.inject_fds();
         cfg.external_mtu = mtu;
         cfg.ipv4_addr = "10.0.0.1";
         cfg.netmask = "255.255.255.0";
@@ -646,7 +680,7 @@ struct engine_env
         cfg.tcp_rto_max_retransmits = rto_max_retransmits;
         boost::system::error_code ec;
         if (!engine.open(cfg, ec)) {
-            throw std::runtime_error("engine open failed: " + ec.message());
+            TEST_THROW("engine open failed: " + ec.message());
         }
         thread = std::thread([this] { io.run(); });
     }
@@ -667,7 +701,7 @@ inline T future_get(std::future<T> fut, int timeout_ms = 5000)
 {
     if (fut.wait_for(std::chrono::milliseconds(timeout_ms)) !=
         std::future_status::ready) {
-        throw std::runtime_error("future timeout");
+        TEST_THROW("future timeout");
     }
     return fut.get();
 }

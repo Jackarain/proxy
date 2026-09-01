@@ -16,6 +16,7 @@
 #include <boost/asio.hpp>
 
 #include <functional>
+#include <vector>
 
 namespace tunio {
 namespace net = boost::asio;
@@ -42,6 +43,13 @@ public:
         return false;
     }
 
+    bool assign_queues(const std::vector<native_handle_type> &,
+        size_t, bool, boost::system::error_code &ec)
+    {
+        ec = make_error_code(boost::system::errc::operation_not_supported);
+        return false;
+    }
+
     void close()
     {
     }
@@ -52,6 +60,10 @@ public:
     size_t read_size_hint() const
     {
         return 0;
+    }
+    size_t queue_count() const
+    {
+        return 1;
     }
     bool is_open() const
     {
@@ -65,9 +77,21 @@ public:
     }
 
     template <typename Handler>
+    void async_read(packet_buffer &buf, size_t, Handler &&handler)
+    {
+        async_read(buf, std::forward<Handler>(handler));
+    }
+
+    template <typename Handler>
     void async_write(packet_buffer &, Handler &&handler)
     {
         std::forward<Handler>(handler)(net::error::bad_descriptor, 0);
+    }
+
+    template <typename Handler>
+    void async_write(packet_buffer &buf, size_t, Handler &&handler)
+    {
+        async_write(buf, std::forward<Handler>(handler));
     }
 };
 

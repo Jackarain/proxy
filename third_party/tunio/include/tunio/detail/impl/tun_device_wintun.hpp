@@ -200,6 +200,13 @@ public:
     bool open(const device_config &cfg, boost::system::error_code &ec);
     bool assign(native_handle_type handle, size_t mtu, bool,
         boost::system::error_code &ec);
+    // Wintun 无多队列概念：注入多个句柄不支持.
+    bool assign_queues(const std::vector<native_handle_type> &, size_t, bool,
+        boost::system::error_code &ec)
+    {
+        ec = make_error_code(boost::system::errc::operation_not_supported);
+        return false;
+    }
     void close();
 
     size_t mtu() const
@@ -210,6 +217,10 @@ public:
     size_t read_size_hint() const
     {
         return mtu_;
+    }
+    size_t queue_count() const
+    {
+        return 1;
     }
     bool is_open() const
     {
@@ -226,12 +237,24 @@ public:
     }
 
     template <typename Handler>
+    void async_read(packet_buffer &buf, size_t, Handler &&handler)
+    {
+        async_read(buf, std::forward<Handler>(handler));
+    }
+
+    template <typename Handler>
     void async_write(packet_buffer &buf, Handler &&handler)
     {
         net::post(strand_, [self = shared_from_this(), &buf,
             h = std::forward<Handler>(handler)]() mutable {
             self->send_try_and_maybe_retry(buf, std::move(h));
         });
+    }
+
+    template <typename Handler>
+    void async_write(packet_buffer &buf, size_t, Handler &&handler)
+    {
+        async_write(buf, std::forward<Handler>(handler));
     }
 
 private:

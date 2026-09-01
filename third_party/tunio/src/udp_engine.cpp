@@ -10,7 +10,7 @@
 
 #include "udp_engine.hpp"
 
-#include "device_writer.hpp"
+#include "tun_queue_writer.hpp"
 #include "tcp_engine.hpp"
 
 #include <boost/asio.hpp>
@@ -45,7 +45,7 @@ net::ip::udp::endpoint make_udp_endpoint(uint8_t family,
 } // namespace
 
 udp_engine::udp_engine(net::any_io_executor strand,
-    std::shared_ptr<device_writer> writer, const tun_config &cfg,
+    std::shared_ptr<tun_queue_writer> writer, const tun_config &cfg,
     engine_stats &stats, std::shared_ptr<buffer_accountant> account)
     : strand_(std::move(strand))
     , writer_(std::move(writer))

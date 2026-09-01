@@ -11,6 +11,8 @@
 // IPv6 专项测试：TCP 握手/数据/FIN、UDP 会话收发、ICMPv6 Echo 回显，
 // 以及 IPv4/IPv6 双栈会话共存。
 
+#define BOOST_TEST_MODULE ipv6
+#include <boost/test/included/unit_test.hpp>
 #include "test_harness.hpp"
 
 #include <cassert>
@@ -33,7 +35,7 @@ constexpr uint16_t CLIENT_PORT = 12345;
 constexpr uint16_t DEST_PORT = 80;
 } // namespace
 
-static void test_tcp6_handshake_data_fin()
+BOOST_AUTO_TEST_CASE(test_tcp6_handshake_data_fin)
 {
     engine_env env;
     auto &io = env.io;
@@ -55,25 +57,25 @@ static void test_tcp6_handshake_data_fin()
     // 引擎 SYN-ACK（携带 MSS 选项，IPv6 下 MSS = MTU - 60）
     std::vector<uint8_t> pkt;
     if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no IPv6 SYN-ACK");
+        TEST_THROW("no IPv6 SYN-ACK");
     }
     if (!verify_packet6(pkt)) {
-        throw std::runtime_error("verify_packet6 failed");
+        TEST_THROW("verify_packet6 failed");
     }
     ip6_hdr_info i6;
     if (!parse_ip6(pkt, i6)) {
-        throw std::runtime_error("parse_ip6 failed");
+        TEST_THROW("parse_ip6 failed");
     }
-    assert(i6.src == DEST_V6 && i6.dst == CLIENT_V6 && i6.proto == 6);
+    TEST_ASSERT(i6.src == DEST_V6 && i6.dst == CLIENT_V6 && i6.proto == 6);
     tcp_hdr_info ti;
     if (!parse_tcp(i6.payload, i6.payload_len, ti)) {
-        throw std::runtime_error("parse_tcp failed");
+        TEST_THROW("parse_tcp failed");
     }
-    assert((ti.flags & 0x12) == 0x12); // SYN|ACK
-    assert(ti.ack == 1001);
+    TEST_ASSERT((ti.flags & 0x12) == 0x12); // SYN|ACK
+    TEST_ASSERT(ti.ack == 1001);
     const uint32_t engine_iss = ti.seq;
-    assert(i6.payload_len >= 24); // MSS 选项
-    assert(static_cast<size_t>((i6.payload[22] << 8) | i6.payload[23]) == 1440);
+    TEST_ASSERT(i6.payload_len >= 24); // MSS 选项
+    TEST_ASSERT(static_cast<size_t>((i6.payload[22] << 8) | i6.payload[23]) == 1440);
 
     // 客户端 ACK
     env.dev.send(make_tcp6(CLIENT_V6, DEST_V6, CLIENT_PORT, DEST_PORT, 0x10,
@@ -81,12 +83,12 @@ static void test_tcp6_handshake_data_fin()
 
     // accept 完成，原始目标地址为 IPv6
     auto aec = future_get(accept_done.get_future());
-    assert(!aec);
+    TEST_ASSERT(!aec);
     const auto dest = peer.original_destination();
-    assert(dest.address().is_v6());
+    TEST_ASSERT(dest.address().is_v6());
     const auto b = dest.address().to_v6().to_bytes();
-    assert(std::equal(b.begin(), b.end(), DEST_V6.begin()));
-    assert(dest.port() == DEST_PORT);
+    TEST_ASSERT(std::equal(b.begin(), b.end(), DEST_V6.begin()));
+    TEST_ASSERT(dest.port() == DEST_PORT);
 
     // 客户端发送数据 "hello"
     const std::string hello = "hello";
@@ -102,40 +104,40 @@ static void test_tcp6_handshake_data_fin()
             read_done.set_value({ec, n});
         });
     auto [rec, rn] = future_get(read_done.get_future());
-    assert(!rec && rn == hello.size());
-    assert(std::string(buf, rn) == hello);
+    TEST_ASSERT(!rec && rn == hello.size());
+    TEST_ASSERT(std::string(buf, rn) == hello);
 
     // 消费引擎对数据的 ACK
     if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no IPv6 data ack");
+        TEST_THROW("no IPv6 data ack");
     }
     if (!verify_packet6(pkt)) {
-        throw std::runtime_error("verify_packet6 failed");
+        TEST_THROW("verify_packet6 failed");
     }
     if (!parse_ip6(pkt, i6)) {
-        throw std::runtime_error("parse_ip6 failed");
+        TEST_THROW("parse_ip6 failed");
     }
     if (!parse_tcp(i6.payload, i6.payload_len, ti)) {
-        throw std::runtime_error("parse_tcp failed");
+        TEST_THROW("parse_tcp failed");
     }
-    assert((ti.flags & 0x10) != 0 && ti.ack == 1006);
+    TEST_ASSERT((ti.flags & 0x10) != 0 && ti.ack == 1006);
 
     // 客户端发送 FIN（与数据同段序号语义：FIN 序号 = 1001 + 5）
     env.dev.send(make_tcp6(CLIENT_V6, DEST_V6, CLIENT_PORT, DEST_PORT, 0x11,
         1006, engine_iss + 6, 65535, {}));
     if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no IPv6 FIN ack");
+        TEST_THROW("no IPv6 FIN ack");
     }
     if (!verify_packet6(pkt)) {
-        throw std::runtime_error("verify_packet6 failed");
+        TEST_THROW("verify_packet6 failed");
     }
     if (!parse_ip6(pkt, i6)) {
-        throw std::runtime_error("parse_ip6 failed");
+        TEST_THROW("parse_ip6 failed");
     }
     if (!parse_tcp(i6.payload, i6.payload_len, ti)) {
-        throw std::runtime_error("parse_tcp failed");
+        TEST_THROW("parse_tcp failed");
     }
-    assert((ti.flags & 0x10) != 0 && ti.ack == 1007);
+    TEST_ASSERT((ti.flags & 0x10) != 0 && ti.ack == 1007);
 
     // 应用关闭后引擎应发送 FIN
     boost::system::error_code sec;
@@ -146,16 +148,16 @@ static void test_tcp6_handshake_data_fin()
             break;
         }
         if (!parse_ip6(pkt, i6)) {
-            throw std::runtime_error("parse_ip6 failed");
+            TEST_THROW("parse_ip6 failed");
         }
         if (!parse_tcp(i6.payload, i6.payload_len, ti)) {
-            throw std::runtime_error("parse_tcp failed");
+            TEST_THROW("parse_tcp failed");
         }
         if ((ti.flags & 0x01) != 0) {
             fin_seen = true;
         }
     }
-    assert(fin_seen);
+    TEST_ASSERT(fin_seen);
 
     // 客户端 ACK 引擎 FIN
     env.dev.send(make_tcp6(CLIENT_V6, DEST_V6, CLIENT_PORT, DEST_PORT, 0x10,
@@ -163,7 +165,7 @@ static void test_tcp6_handshake_data_fin()
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
 
-static void test_udp6_roundtrip()
+BOOST_AUTO_TEST_CASE(test_udp6_roundtrip)
 {
     engine_env env;
     auto &io = env.io;
@@ -181,7 +183,7 @@ static void test_udp6_roundtrip()
 
     // 新会话通知
     auto aec = future_get(accept_done.get_future());
-    assert(!aec);
+    TEST_ASSERT(!aec);
 
     // 接收完整数据报
     std::promise<std::pair<boost::system::error_code, size_t>> recv_done;
@@ -193,9 +195,9 @@ static void test_udp6_roundtrip()
             recv_done.set_value({ec, n});
         });
     auto [rec, rn] = future_get(recv_done.get_future());
-    assert(!rec && rn == query.size());
-    assert(std::string(buf, rn) == query);
-    assert(sender == net::ip::udp::endpoint(net::ip::address_v6(DEST_V6), 53));
+    TEST_ASSERT(!rec && rn == query.size());
+    TEST_ASSERT(std::string(buf, rn) == query);
+    TEST_ASSERT(sender == net::ip::udp::endpoint(net::ip::address_v6(DEST_V6), 53));
 
     // 发送回复数据报
     const std::string reply = "ipv6-dns-answer";
@@ -205,31 +207,31 @@ static void test_udp6_roundtrip()
             send_done.set_value({ec, n});
         });
     auto [sec, sn] = future_get(send_done.get_future());
-    assert(!sec && sn == reply.size());
+    TEST_ASSERT(!sec && sn == reply.size());
 
     std::vector<uint8_t> pkt;
     if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no IPv6 UDP reply packet");
+        TEST_THROW("no IPv6 UDP reply packet");
     }
     if (!verify_packet6(pkt)) {
-        throw std::runtime_error("verify_packet6 failed");
+        TEST_THROW("verify_packet6 failed");
     }
     ip6_hdr_info i6;
     if (!parse_ip6(pkt, i6)) {
-        throw std::runtime_error("parse_ip6 failed");
+        TEST_THROW("parse_ip6 failed");
     }
-    assert(i6.src == DEST_V6 && i6.dst == CLIENT_V6 && i6.proto == 17);
+    TEST_ASSERT(i6.src == DEST_V6 && i6.dst == CLIENT_V6 && i6.proto == 17);
     udp_hdr_info ui;
     if (!parse_udp(i6.payload, i6.payload_len, ui)) {
-        throw std::runtime_error("parse_udp failed");
+        TEST_THROW("parse_udp failed");
     }
-    assert(ui.sport == 53 && ui.dport == 53000);
-    assert(std::string(reinterpret_cast<const char *>(ui.data), ui.n) == reply);
+    TEST_ASSERT(ui.sport == 53 && ui.dport == 53000);
+    TEST_ASSERT(std::string(reinterpret_cast<const char *>(ui.data), ui.n) == reply);
 
     session.close();
 }
 
-static void test_icmp6_echo()
+BOOST_AUTO_TEST_CASE(test_icmp6_echo)
 {
     engine_env env;
     auto &io = env.io;
@@ -242,35 +244,35 @@ static void test_icmp6_echo()
 
     std::vector<uint8_t> pkt;
     if (!env.dev.read_packet(pkt)) {
-        throw std::runtime_error("no ICMPv6 reply");
+        TEST_THROW("no ICMPv6 reply");
     }
     if (!verify_packet6(pkt)) {
-        throw std::runtime_error("verify_packet6 failed");
+        TEST_THROW("verify_packet6 failed");
     }
     ip6_hdr_info i6;
     if (!parse_ip6(pkt, i6)) {
-        throw std::runtime_error("parse_ip6 failed");
+        TEST_THROW("parse_ip6 failed");
     }
-    assert(i6.src == local && i6.dst == CLIENT_V6 && i6.proto == 58);
+    TEST_ASSERT(i6.src == local && i6.dst == CLIENT_V6 && i6.proto == 58);
 
     // Echo Reply：type=129，ID/序号/数据保持
     const uint8_t *icmp = i6.payload;
-    assert(icmp[0] == 129);
-    assert(icmp[1] == 0);
-    assert(icmp[4] == 0x12 && icmp[5] == 0x34);
-    assert(icmp[6] == 0x00 && icmp[7] == 0x01);
-    assert(i6.payload_len == 8 + payload.size());
-    assert(std::memcmp(icmp + 8, payload.data(), payload.size()) == 0);
+    TEST_ASSERT(icmp[0] == 129);
+    TEST_ASSERT(icmp[1] == 0);
+    TEST_ASSERT(icmp[4] == 0x12 && icmp[5] == 0x34);
+    TEST_ASSERT(icmp[6] == 0x00 && icmp[7] == 0x01);
+    TEST_ASSERT(i6.payload_len == 8 + payload.size());
+    TEST_ASSERT(std::memcmp(icmp + 8, payload.data(), payload.size()) == 0);
 
     // 发给其他地址的 Echo 不应响应
     env.dev.send(make_icmp6_echo(CLIENT_V6, v6("fd00::3"), 0x0001, 0x0002, {}));
     std::vector<uint8_t> ignored;
     if (env.dev.read_packet(ignored, 300)) {
-        throw std::runtime_error("unexpected reply to non-local address");
+        TEST_THROW("unexpected reply to non-local address");
     }
 }
 
-static void test_v4_v6_coexist()
+BOOST_AUTO_TEST_CASE(test_v4_v6_coexist)
 {
     engine_env env;
     auto &io = env.io;
@@ -290,7 +292,7 @@ static void test_v4_v6_coexist()
 
     const auto a4ec = future_get(a4.get_future());
     const auto a6ec = future_get(a6.get_future());
-    assert(!a4ec && !a6ec);
+    TEST_ASSERT(!a4ec && !a6ec);
 
     // 各自接收数据报，sender 地址族与会话一致
     std::promise<std::pair<boost::system::error_code, size_t>> r4, r6;
@@ -306,18 +308,10 @@ static void test_v4_v6_coexist()
         });
     const auto r4ec = future_get(r4.get_future());
     const auto r6ec = future_get(r6.get_future());
-    assert(!r4ec.first && !r6ec.first);
-    assert(s4s.address().is_v4() && s6s.address().is_v6());
+    TEST_ASSERT(!r4ec.first && !r6ec.first);
+    TEST_ASSERT(s4s.address().is_v4() && s6s.address().is_v6());
 
     s4.close();
     s6.close();
 }
 
-int main()
-{
-    test_tcp6_handshake_data_fin();
-    test_udp6_roundtrip();
-    test_icmp6_echo();
-    test_v4_v6_coexist();
-    return 0;
-}

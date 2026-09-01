@@ -69,6 +69,10 @@ public:
     bool is_open() const noexcept;
     size_t mtu() const noexcept;
 
+    // 打开生效的队列数：Linux TUN 多队列（IFF_MULTI_QUEUE）下为队列数，
+    // 其余平台恒为 1。仅引擎打开后有效.
+    size_t queue_count() const noexcept;
+
     // 引擎本地虚拟 IP（用于 ICMP 回显响应等）。
     net::ip::address local_address() const noexcept;
 

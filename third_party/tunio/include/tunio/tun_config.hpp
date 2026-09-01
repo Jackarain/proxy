@@ -26,6 +26,7 @@
 #include <cstring>
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace tunio {
 
@@ -42,6 +43,10 @@ inline constexpr native_handle_type invalid_native_handle =
 #else
     -1;
 #endif
+
+// Linux TUN 多队列（IFF_MULTI_QUEUE）的队列数上限，与内核
+// drivers/net/tun.c 的 MAX_TAP_QUEUES 一致；超出视为非法配置.
+inline constexpr size_t max_multi_queues = 256;
 
 // 从整型构造外部句柄：POSIX 下句柄即文件描述符（int）；Windows 下句柄为
 // 指针类型，按位模式转换（intptr_t 保证整型宽度足够），语义由注入方保证.
@@ -142,6 +147,10 @@ struct device_config
     std::string ipv6;             // 可选 IPv6 地址，如 "fd00::1"
     uint8_t ipv6_prefix_len = 64; // IPv6 前缀长度
     size_t mtu = 1500;
+    // Linux TUN 多队列（IFF_MULTI_QUEUE）队列数：>1 时按多队列模式打开，
+    // 每个队列一个独立 fd，读按队列并发、写按五元组哈希分发到队列；
+    // 其他平台忽略（恒为单队列）.
+    size_t num_queues = 1;
     // macOS utun 设备读写携带 4 字节家族前缀（大端 AF_INET/AF_INET6）；
     // 自主打开 utun 时自动启用。socketpair 等纯 IP 注入保持 false.
     bool utun_prefix = false;
@@ -157,10 +166,16 @@ struct tun_config
     std::string ipv6_addr;        // 可选 IPv6 地址，如 "fd00::1"
     uint8_t ipv6_prefix_len = 64; // IPv6 前缀长度
     size_t mtu = 1500;
+    // Linux TUN 多队列（IFF_MULTI_QUEUE）队列数（自主打开时生效）；
+    // 其他平台忽略.
+    size_t num_queues = 1;
 
     // ---- 外部句柄注入 ----
     native_handle_type external_handle = invalid_native_handle;
     size_t external_mtu = 1500;
+    // 多句柄注入：非空时优先于 external_handle，按元素顺序注入为各队列
+    // fd（仅 Linux TUN 多队列有意义，队列数 = 句柄数）；其他平台不支持.
+    std::vector<native_handle_type> external_handles;
     // 注入的句柄是否为 macOS utun 设备（读写带 4 字节家族前缀）.
     // 真实 utun fd 注入时置 true；socketpair 注入（测试/模拟）保持 false.
     bool utun_prefix = false;

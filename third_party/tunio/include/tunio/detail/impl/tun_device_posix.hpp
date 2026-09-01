@@ -18,39 +18,90 @@
 #include <sys/socket.h>
 
 #include <functional>
+#include <vector>
 
 namespace tunio {
 namespace net = boost::asio;
 namespace detail {
 
 // POSIX 实现 (Linux TUN / macOS utun)：基于 posix::stream_descriptor。
-// 平台相关打开逻辑见 src/tun_device_posix.cpp。
+// Linux 下支持 IFF_MULTI_QUEUE 多队列：每个队列一个独立 fd（stream_descriptor），
+// 读按队列并发、写按队列分发。平台相关打开逻辑见 src/tun_device_posix.cpp。
 class posix_tun_device_impl
 {
 public:
     explicit posix_tun_device_impl(net::io_context &ctx)
-        : desc_(ctx)
+        : ctx_(ctx)
     {
     }
 
     bool open(const device_config &cfg, boost::system::error_code &ec);
 
+    // 对注入的 TUN fd 应用默认发送队列长度（Linux 下经 TUNGETIFF 取接口名
+    // 后设置；非 TUN 句柄或无权限时静默跳过，失败不视为错误）.
+    void apply_default_tx_queue_len(native_handle_type handle);
+
     bool assign(native_handle_type handle, size_t mtu, bool utun_prefix,
         boost::system::error_code &ec)
     {
-        desc_.assign(static_cast<native_handle_type>(handle), ec);
-        if (!ec) {
-            open_ = true;
-            mtu_ = mtu;
-            utun_prefix_ = utun_prefix;
-        }
-        return !ec;
+        return assign_queues({handle}, mtu, utun_prefix, ec);
     }
+
+    // 多句柄注入：每个句柄对应一个队列 fd（Linux TUN 多队列）。
+    // 注入方需保证句柄为同一设备的独立队列 fd；单队列场景传单个句柄即可。
+    // 失败时不关闭任何注入句柄（所有权始终归调用方）.
+    bool assign_queues(const std::vector<native_handle_type> &handles,
+        size_t mtu, bool utun_prefix, boost::system::error_code &ec)
+    {
+        if (handles.empty()) {
+            ec = boost::system::error_code(EINVAL,
+                boost::system::generic_category());
+            return false;
+        }
+        // 与自主打开一致：句柄数（队列数）上限为内核 MAX_TAP_QUEUES.
+        if (handles.size() > max_multi_queues) {
+            ec = boost::system::error_code(EINVAL,
+                boost::system::generic_category());
+            return false;
+        }
+        // 与自主打开一致：对注入的设备 fd 同样调整默认发送队列长度.
+        std::vector<net::posix::stream_descriptor> new_descs;
+        new_descs.reserve(handles.size());
+        for (const auto h : handles) {
+            apply_default_tx_queue_len(h);
+            net::posix::stream_descriptor d(ctx_);
+            d.assign(static_cast<native_handle_type>(h), ec);
+            if (ec) {
+                // Asio assign 失败时不接管句柄；把已接管的部分归还
+                //（release 放弃所有权），保证失败路径不关闭任何注入句柄.
+                for (auto &dd : new_descs) {
+                    dd.release();
+                }
+                new_descs.clear();
+                return false;
+            }
+            new_descs.push_back(std::move(d));
+        }
+        // 成功接管：替换成员，旧描述符析构关闭旧句柄.
+        descs_ = std::move(new_descs);
+        open_ = true;
+        mtu_ = mtu;
+        utun_prefix_ = utun_prefix;
+        return true;
+    }
+
+    // 自主打开路径：把一组 fd 逐个接管进 descs_；中途失败时关闭所有
+    // 未接管的 fd（这些 fd 由本类打开，所有权属于本类）.
+    bool adopt_fds(std::vector<int> &&fds, size_t mtu,
+        boost::system::error_code &ec);
 
     void close()
     {
         if (open_) {
-            desc_.close();
+            for (auto &d : descs_) {
+                d.close();
+            }
+            descs_.clear();
             open_ = false;
         }
     }
@@ -64,6 +115,11 @@ public:
     {
         return mtu_ + (utun_prefix_ ? 4 : 0);
     }
+    // 队列数：Linux TUN 多队列下为打开的队列 fd 数，其余恒为 1
+    size_t queue_count() const
+    {
+        return descs_.size();
+    }
     bool is_open() const
     {
         return open_;
@@ -72,10 +128,22 @@ public:
     template <typename Handler>
     void async_read(packet_buffer &buf, Handler &&handler)
     {
+        async_read(buf, 0, std::forward<Handler>(handler));
+    }
+
+    template <typename Handler>
+    void async_read(packet_buffer &buf, size_t queue, Handler &&handler)
+    {
+        if (queue >= descs_.size()) {
+            std::forward<Handler>(handler)(
+                make_error_code(net::error::bad_descriptor), 0);
+            return;
+        }
+        auto &desc = descs_[queue];
         if (utun_prefix_) {
             // macOS utun 每次读取携带 4 字节家族前缀（大端 AF_INET/AF_INET6）：
             // 读入后跳过前缀，引擎仍按"完整 IP 报文"解析.
-            desc_.async_read_some(
+            desc.async_read_some(
                 net::buffer(buf.writable_data(), buf.writable_size()),
                 [h = std::forward<Handler>(handler), &buf](
                     const boost::system::error_code &ec, size_t n) mutable {
@@ -90,7 +158,7 @@ public:
                     std::move(h)(ec, pkt_n);
                 });
         } else {
-            desc_.async_read_some(
+            desc.async_read_some(
                 net::buffer(buf.writable_data(), buf.writable_size()),
                 std::forward<Handler>(handler));
         }
@@ -99,6 +167,18 @@ public:
     template <typename Handler>
     void async_write(packet_buffer &buf, Handler &&handler)
     {
+        async_write(buf, 0, std::forward<Handler>(handler));
+    }
+
+    template <typename Handler>
+    void async_write(packet_buffer &buf, size_t queue, Handler &&handler)
+    {
+        if (queue >= descs_.size()) {
+            std::forward<Handler>(handler)(
+                make_error_code(net::error::bad_descriptor), 0);
+            return;
+        }
+        auto &desc = descs_[queue];
         if (utun_prefix_) {
             // macOS utun 写入必须前置 4 字节家族前缀（大端 AF_INET/AF_INET6），
             // 前缀写入 packet_buffer 的 headroom 区域（引擎出包 headroom >= 64）.
@@ -115,15 +195,16 @@ public:
             prefix[1] = static_cast<uint8_t>(family >> 16);
             prefix[2] = static_cast<uint8_t>(family >> 8);
             prefix[3] = static_cast<uint8_t>(family);
-            desc_.async_write_some(net::buffer(prefix, buf.size() + 4),
-                                   std::forward<Handler>(handler));
+            desc.async_write_some(net::buffer(prefix, buf.size() + 4),
+                                  std::forward<Handler>(handler));
         } else {
-            desc_.async_write_some(net::buffer(buf.data(), buf.size()),
-                                   std::forward<Handler>(handler));
+            desc.async_write_some(net::buffer(buf.data(), buf.size()),
+                                  std::forward<Handler>(handler));
         }
     }
 
-    net::posix::stream_descriptor desc_;
+    net::io_context &ctx_;
+    std::vector<net::posix::stream_descriptor> descs_;
     size_t mtu_ = 1500;
     bool open_ = false;
     bool utun_prefix_ = false;

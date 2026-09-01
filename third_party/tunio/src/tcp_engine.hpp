@@ -43,7 +43,7 @@ using const_buffer_sequence =
 
 namespace detail {
 
-class device_writer;
+class tun_queue_writer;
 
 // ---- TCP 引擎常用类型 ----
 // 时间统一采用单调时钟（steady_clock），不受系统时间调整影响
@@ -220,7 +220,7 @@ class tcp_engine : public std::enable_shared_from_this<tcp_engine>
 {
 public:
     tcp_engine(net::any_io_executor strand,
-        std::shared_ptr<device_writer> writer, const tun_config &cfg,
+        std::shared_ptr<tun_queue_writer> writer, const tun_config &cfg,
         engine_stats &stats, std::shared_ptr<buffer_accountant> account);
     ~tcp_engine();
 
@@ -243,7 +243,7 @@ public:
     {
         return strand_;
     }
-    device_writer &writer()
+    tun_queue_writer &writer()
     {
         return *writer_;
     }
@@ -307,7 +307,7 @@ private:
     // 以 shared_ptr 持有：io 运行期间引擎被销毁后，排队的 Strand 任务
     //（保活引擎的 shared_ptr）仍能经 writer_ 安全访问设备写队列，避免
     // 悬垂引用（与 tunio_impl 的 writer_ 同源）.
-    std::shared_ptr<device_writer> writer_;
+    std::shared_ptr<tun_queue_writer> writer_;
     tun_config cfg_;
     engine_stats &stats_;
     std::shared_ptr<buffer_accountant> account_;

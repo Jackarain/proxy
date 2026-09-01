@@ -110,8 +110,14 @@ bool tunio_impl::open(const tun_config &cfg, boost::system::error_code &ec)
         have_ip6_ = true;
     }
 
-    // 设备初始化：优先使用外部句柄注入
-    if (cfg.external_handle != invalid_native_handle) {
+    // 设备初始化：优先多句柄注入（Linux TUN 多队列），其次单句柄注入，
+    // 最后自主打开.
+    if (!cfg.external_handles.empty()) {
+        if (!device_->assign_queues(cfg.external_handles, cfg.external_mtu,
+                                    cfg.utun_prefix, ec)) {
+            return false;
+        }
+    } else if (cfg.external_handle != invalid_native_handle) {
         if (!device_->assign(cfg.external_handle, cfg.external_mtu,
                              cfg.utun_prefix, ec)) {
             return false;
@@ -124,22 +130,29 @@ bool tunio_impl::open(const tun_config &cfg, boost::system::error_code &ec)
         dc.ipv6 = cfg.ipv6_addr;
         dc.ipv6_prefix_len = cfg.ipv6_prefix_len;
         dc.mtu = cfg.mtu;
+        dc.num_queues = cfg.num_queues;
         if (!device_->open(dc, ec)) {
             return false;
         }
     }
 
     mtu_ = device_->mtu();
-    // 并发读槽复位：旧代际残留的 in-flight 标记一律清空，确保重建后
-    // start_read() 能为全部槽重新发起读取（旧设备迟到回调由代际检查拦截）。
-    read_inflight_.fill(false);
-    for (auto &buf : read_bufs_) {
-        buf = packet_buffer(mtu_ + 64, 64);
+    // 并发读槽按队列数分配：每队列均分 k_read_slots（至少 1 个），单队列
+    // 保持原有 32 槽行为；旧代际残留的 in-flight 标记一律清空，确保重建后
+    // start_read() 能为全部槽重新发起读取（旧设备迟到回调由代际检查拦截）.
+    num_queues_ =
+        std::clamp(device_->queue_count(), size_t{1}, k_max_queues);
+    slots_per_queue_ = std::max<size_t>(1, k_read_slots / num_queues_);
+    read_bufs_.clear();
+    read_bufs_.reserve(num_queues_ * slots_per_queue_);
+    for (size_t i = 0; i < num_queues_ * slots_per_queue_; ++i) {
+        read_bufs_.emplace_back(mtu_ + 64, 64);
     }
+    read_inflight_.assign(num_queues_ * slots_per_queue_, false);
 
     account_ = std::make_shared<buffer_accountant>();
     account_->limit = cfg.max_total_buffer;
-    writer_ = std::make_shared<device_writer>(strand_ex_, device_, stats_);
+    writer_ = std::make_shared<tun_queue_writer>(strand_ex_, device_, stats_);
     tcp_ = std::make_shared<tcp_engine>(strand_ex_, writer_, cfg_, *stats_,
         account_);
     udp_ = std::make_shared<udp_engine>(strand_ex_, writer_, cfg_, *stats_,
@@ -205,22 +218,30 @@ void tunio_impl::start_read()
     if (!open_.load(std::memory_order_acquire)) {
         return;
     }
-    for (size_t i = 0; i < k_read_slots; ++i) {
+    // 槽总数 = num_queues_ * slots_per_queue_（队列数 > 32 时每队列 1 槽，
+    // 总数可能大于 k_read_slots），必须按实际槽数启动，保证每个队列
+    // 至少挂起一个读取，否则后半队列的入站包无人读取.
+    const size_t total = read_inflight_.size();
+    for (size_t i = 0; i < total; ++i) {
         start_read_slot(i);
     }
 }
 
 void tunio_impl::start_read_slot(size_t index)
 {
-    if (!open_.load(std::memory_order_acquire) || read_inflight_[index]) {
+    if (!open_.load(std::memory_order_acquire) ||
+        index >= read_inflight_.size() || read_inflight_[index]) {
         return;
     }
     read_inflight_[index] = true;
+    // 槽号按队列连续分配：槽 index 归属队列 index / slots_per_queue_，
+    // 多队列下各队列的读互不阻塞（独立 fd 上的异步读）.
+    const size_t queue = index / slots_per_queue_;
     // 弱引用避免读回调自持有形成引用环：引擎释放后迟到读回调直接跳过
     auto self = weak_from_this();
     const uint64_t epoch = epoch_.load(std::memory_order_acquire);
     device_->async_read_packet(
-        read_bufs_[index],
+        read_bufs_[index], queue,
         net::bind_executor(
             strand_ex_,
             [self, index, epoch](
@@ -538,6 +559,11 @@ bool tunio::is_open() const noexcept
 size_t tunio::mtu() const noexcept
 {
     return impl_->mtu();
+}
+
+size_t tunio::queue_count() const noexcept
+{
+    return impl_->queue_count();
 }
 
 net::ip::address tunio::local_address() const noexcept

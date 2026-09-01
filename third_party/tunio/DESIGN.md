@@ -406,6 +406,37 @@ private:
   `detail` 命名空间的 using 声明引用，行为与 ABI 均不变；引擎自身的
   `handle_packet` 解析/丢弃策略保持不变。
 
+#### 4.2 Linux TUN 多队列（`IFF_MULTI_QUEUE`）
+
+Linux TUN 驱动支持多队列模式（`IFF_MULTI_QUEUE`，内核 ≥ 2.6.30）：对同一
+设备多次 `TUNSETIFF`（设备名相同、均携带 `IFF_MULTI_QUEUE`）可获得多个
+独立 fd，每个 fd 对应内核侧一个收发队列；内核按流哈希把入站包并行投递到
+各队列 fd，出站包写任意队列 fd 均可（内核按哈希选择实际出口队列）。
+
+- **打开**：`device_config::num_queues > 1` 时，首个 fd 的 `TUNSETIFF`
+  携带 `IFF_MULTI_QUEUE`（空设备名自动命名后回写），随后按回写名逐个
+  打开其余队列 fd；任一队列打开失败即回滚关闭全部 fd（内核随之销毁
+  设备）。`num_queues` 校验范围 `[1, 256]`（内核 `MAX_TAP_QUEUES`），
+  非法或内核不支持时 `open()` 返回 `EINVAL`，不静默降级。单队列（默认）
+  保持不带 `IFF_MULTI_QUEUE` 的旧行为，兼容老内核。
+- **实现**：`posix_tun_device_impl` 由单个 `stream_descriptor` 改为
+  `std::vector<stream_descriptor>`（每个队列一个），`async_read` /
+  `async_write` 增加队列参数（越界返回 `bad_descriptor`），`queue_count()`
+  返回队列数。注入模式增加 `assign_queues(handles, ...)` 多句柄注入
+  （每个句柄一个队列，失败不关闭注入句柄）；非 POSIX 平台恒为单队列。
+- **读侧**：`tunio_impl` 并发读槽按队列均分 —— 单队列保持原有 32 槽，
+  多队列时每队列 `max(1, 32 / num_queues)` 个槽（队列数 ≤ 32 时总槽数
+  保持 32，超过时每队列 1 槽、总槽数 = 队列数）；槽号 `index` 经
+  `index / slots_per_queue` 归属队列，各队列读互不阻塞。
+- **写侧**：`tun_queue_writer` 按报文五元组（地址族 + 源/目的地址 + 协议
+  + 端口）做 FNV-1a 哈希取模把写请求分发到对应队列的独立写链
+  （`pick_tx_queue`）：同队列内由 Strand 上的泵串行下发（同流稳定同队列、
+  保持流内顺序），不同队列的写链互不阻塞——各队列 fd 独立，可同时处于
+  未完成写状态，写吞吐随队列数扩展；单队列短路返回 0，零额外开销。
+- **示例**：`tun2socks --queues N`；测试 `tests/test_multi_queue.cpp`
+  覆盖写队列选择单元测试、多 socketpair 注入集成测试（含多线程 Strand
+  模式）与真实 TUN 设备环回测试（无权限环境自动跳过）。
+
 ---
 
 ### 5. TCP 协议引擎
@@ -440,10 +471,10 @@ private:
   Boost.Asio 串行写规则）。应用层调用 `async_write_some` 时，引擎接受
   任意大小的单次写入（不再按队列空间拒绝），由该流的发送协程持有，
   按客户端接收窗口与 MSS 循环分片。
-- **设备写背压**：发送协程每个分片经 `device_writer::async_write`
+- **设备写背压**：发送协程每个分片经 `tun_queue_writer::async_write`
   （带完成回调）下发，等待设备写完成后再构造下一分片——设备写通道
   拥塞时协程自然挂起，内存占用受"每流单写 + 设备队列水位"约束，
-  不再无界累积。发送缓冲由 `device_writer` 的串行执行器内自由列表池化
+  不再无界累积。发送缓冲由 `tun_queue_writer` 的串行执行器内自由列表池化
   复用（写完成后回收，容量不足时新建），避免每个报文一次堆分配。
 - **窗口挂起**：客户端接收窗口耗尽时，发送协程经每流信号通道挂起，
   收到 ACK 更新窗口后由引擎唤醒继续发送。

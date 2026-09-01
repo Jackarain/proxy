@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "device_writer.hpp"
+#include "tun_queue_writer.hpp"
 #include "ip_headers.hpp"
 #include "tcp_engine.hpp"
 #include "tunio/tun_config.hpp"
@@ -33,7 +33,7 @@ namespace net = boost::asio;
 
 namespace detail {
 
-class device_writer;
+class tun_queue_writer;
 struct buffer_accountant;
 class udp_engine;
 
@@ -124,7 +124,7 @@ class udp_engine : public std::enable_shared_from_this<udp_engine>
 {
 public:
     udp_engine(net::any_io_executor strand,
-        std::shared_ptr<device_writer> writer, const tun_config &cfg,
+        std::shared_ptr<tun_queue_writer> writer, const tun_config &cfg,
         engine_stats &stats, std::shared_ptr<buffer_accountant> account);
     ~udp_engine();
 
@@ -146,7 +146,7 @@ public:
     {
         return strand_;
     }
-    device_writer &writer()
+    tun_queue_writer &writer()
     {
         return *writer_;
     }
@@ -189,7 +189,7 @@ private:
     // 以 shared_ptr 持有：io 运行期间引擎被销毁后，排队的 Strand 任务
     //（保活引擎的 shared_ptr）仍能经 writer_ 安全访问设备写队列，避免
     // 悬垂引用（与 tunio_impl 的 writer_ 同源）.
-    std::shared_ptr<device_writer> writer_;
+    std::shared_ptr<tun_queue_writer> writer_;
     tun_config cfg_;
     engine_stats &stats_;
     std::shared_ptr<buffer_accountant> account_;
@@ -455,7 +455,7 @@ void udp_session_start_send(udp_session_ptr session,
         uh->checksum = htons(csum);
 
         const size_t sent = total;
-        // device_writer 保证完成回调在引擎 Strand 上触发，无需再派发
+        // tun_queue_writer 保证完成回调在引擎 Strand 上触发，无需再派发
         eng->writer().async_write(
             std::move(pkt),
             [h = std::move(handler), sent](

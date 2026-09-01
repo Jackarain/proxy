@@ -10,7 +10,7 @@
 
 #include "tcp_engine.hpp"
 
-#include "device_writer.hpp"
+#include "tun_queue_writer.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -36,7 +36,7 @@ uint32_t random_iss()
 } // namespace
 
 tcp_engine::tcp_engine(net::any_io_executor strand,
-    std::shared_ptr<device_writer> writer, const tun_config &cfg,
+    std::shared_ptr<tun_queue_writer> writer, const tun_config &cfg,
     engine_stats &stats, std::shared_ptr<buffer_accountant> account)
     : strand_(std::move(strand))
     , writer_(std::move(writer))

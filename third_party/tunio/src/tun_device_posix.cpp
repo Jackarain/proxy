@@ -143,6 +143,18 @@ bool add_ipv6_address(int ioctl_sock, const std::string &ifname,
     }
 }
 
+// 通过 ioctl socket 设置接口发送队列长度；非致命——失败时保留内核默认值.
+void set_tx_queue_len(int sock, const char *ifname, int qlen)
+{
+    struct ifreq ifr;
+    std::memset(&ifr, 0, sizeof(ifr));
+    std::strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
+    ifr.ifr_qlen = qlen;
+    if (::ioctl(sock, SIOCSIFTXQLEN, &ifr) < 0) {
+        // 非致命：保留内核默认队列长度.
+    }
+}
+
 } // namespace
 #endif
 
@@ -153,6 +165,16 @@ bool posix_tun_device_impl::open(const device_config &cfg,
     // 重复 open 前先关闭已打开的设备，避免新 fd 泄漏与旧设备残留
     close();
 
+    // 多队列校验：0 或超上限（内核 MAX_TAP_QUEUES）视为非法配置；
+    // 单队列（默认）保持不带 IFF_MULTI_QUEUE 的旧行为，兼容老内核.
+    if (cfg.num_queues < 1 || cfg.num_queues > max_multi_queues) {
+        ec = boost::system::error_code(EINVAL,
+            boost::system::generic_category());
+        return false;
+    }
+    const bool multi = cfg.num_queues > 1;
+
+    // 打开第一个队列 fd（多队列模式下 TUNSETIFF 携带 IFF_MULTI_QUEUE）
     const int fd = ::open("/dev/net/tun", O_RDWR | O_CLOEXEC);
     if (fd < 0) {
         ec =
@@ -163,7 +185,7 @@ bool posix_tun_device_impl::open(const device_config &cfg,
     struct ifreq ifr;
     std::memset(&ifr, 0, sizeof(ifr));
     std::strncpy(ifr.ifr_name, cfg.name.c_str(), IFNAMSIZ - 1);
-    ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
+    ifr.ifr_flags = IFF_TUN | IFF_NO_PI | (multi ? IFF_MULTI_QUEUE : 0);
     if (::ioctl(fd, TUNSETIFF, &ifr) < 0) {
         ec =
             boost::system::error_code(errno, boost::system::generic_category());
@@ -175,14 +197,56 @@ bool posix_tun_device_impl::open(const device_config &cfg,
     const std::string dev_name =
         ifr.ifr_name[0] != '\0' ? ifr.ifr_name : cfg.name;
 
+    // 打开其余队列 fd（同一设备名，必须再次携带 IFF_MULTI_QUEUE）.
+    // 任一队列打开失败时回滚关闭全部 fd，内核随之销毁该 tun 设备.
+    std::vector<int> fds;
+    fds.reserve(cfg.num_queues);
+    fds.push_back(fd);
+    for (size_t q = 1; q < cfg.num_queues; ++q) {
+        const int qfd = ::open("/dev/net/tun", O_RDWR | O_CLOEXEC);
+        if (qfd < 0) {
+            ec = boost::system::error_code(errno,
+                boost::system::generic_category());
+            for (const int f : fds) {
+                ::close(f);
+            }
+            return false;
+        }
+        struct ifreq qifr;
+        std::memset(&qifr, 0, sizeof(qifr));
+        std::strncpy(qifr.ifr_name, dev_name.c_str(), IFNAMSIZ - 1);
+        qifr.ifr_flags = IFF_TUN | IFF_NO_PI | IFF_MULTI_QUEUE;
+        if (::ioctl(qfd, TUNSETIFF, &qifr) < 0) {
+            ec = boost::system::error_code(errno,
+                boost::system::generic_category());
+            ::close(qfd);
+            for (const int f : fds) {
+                ::close(f);
+            }
+            return false;
+        }
+        fds.push_back(qfd);
+    }
+
+    // 失败回滚：关闭全部已打开队列 fd，内核随之销毁该 tun 设备
+    auto close_all = [&]() {
+        for (const int f : fds) {
+            ::close(f);
+        }
+    };
+
     // 配置 IP / 掩码（需要 CAP_NET_ADMIN）
     const int s = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (s < 0) {
         ec =
             boost::system::error_code(errno, boost::system::generic_category());
-        ::close(fd);
+        close_all();
         return false;
     }
+
+    // 默认调整发送队列长度（txqueuelen）为 4096，避免设备写拥塞时内核
+    // 队列过短导致突发丢包；非致命——失败时保留内核默认值，不阻断打开.
+    set_tx_queue_len(s, dev_name.c_str(), 4096);
 
     // 未指定 IPv4 地址时（如外部脚本负责配置地址/路由/UP），仅设置 MTU，
     // 不与外部配置冲突；与“只创建设备”的旧语义保持一致。
@@ -194,20 +258,12 @@ bool posix_tun_device_impl::open(const device_config &cfg,
             ec = boost::system::error_code(
                 errno, boost::system::generic_category());
             ::close(s);
-            ::close(fd);
+            close_all();
             return false;
         }
         ::close(s);
 
-        desc_.assign(fd, ec);
-        if (ec) {
-            // Asio assign 失败时不接管句柄：显式关闭避免泄漏
-            ::close(fd);
-            return false;
-        }
-        open_ = true;
-        mtu_ = static_cast<size_t>(ifr.ifr_mtu);
-        return true;
+        return adopt_fds(std::move(fds), static_cast<size_t>(ifr.ifr_mtu), ec);
     }
 
     auto set_ifr = [&](int cmd, const char *addr) -> bool {
@@ -227,14 +283,14 @@ bool posix_tun_device_impl::open(const device_config &cfg,
         ec =
             boost::system::error_code(errno, boost::system::generic_category());
         ::close(s);
-        ::close(fd);
+        close_all();
         return false;
     }
     if (!set_ifr(SIOCSIFNETMASK, cfg.netmask.c_str())) {
         ec =
             boost::system::error_code(errno, boost::system::generic_category());
         ::close(s);
-        ::close(fd);
+        close_all();
         return false;
     }
 
@@ -242,7 +298,7 @@ bool posix_tun_device_impl::open(const device_config &cfg,
     if (!cfg.ipv6.empty() &&
         !add_ipv6_address(s, dev_name, cfg.ipv6, cfg.ipv6_prefix_len, ec)) {
         ::close(s);
-        ::close(fd);
+        close_all();
         return false;
     }
 
@@ -254,14 +310,14 @@ bool posix_tun_device_impl::open(const device_config &cfg,
         ec =
             boost::system::error_code(errno, boost::system::generic_category());
         ::close(s);
-        ::close(fd);
+        close_all();
         return false;
     }
     if (::ioctl(s, SIOCGIFFLAGS, &ifr) < 0) {
         ec =
             boost::system::error_code(errno, boost::system::generic_category());
         ::close(s);
-        ::close(fd);
+        close_all();
         return false;
     }
     ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
@@ -269,20 +325,12 @@ bool posix_tun_device_impl::open(const device_config &cfg,
         ec =
             boost::system::error_code(errno, boost::system::generic_category());
         ::close(s);
-        ::close(fd);
+        close_all();
         return false;
     }
     ::close(s);
 
-    desc_.assign(fd, ec);
-    if (ec) {
-        // Asio assign 失败时不接管句柄：显式关闭避免泄漏
-        ::close(fd);
-        return false;
-    }
-    open_ = true;
-    mtu_ = static_cast<size_t>(ifr.ifr_mtu);
-    return true;
+    return adopt_fds(std::move(fds), static_cast<size_t>(ifr.ifr_mtu), ec);
 #else
     // macOS utun / 其他 POSIX 平台的自主打开尚未实现（Phase 3），
     // 句柄注入模式 assign() 在所有平台可用。
@@ -290,6 +338,54 @@ bool posix_tun_device_impl::open(const device_config &cfg,
     ec = boost::system::error_code(boost::system::errc::operation_not_supported,
                                    boost::system::generic_category());
     return false;
+#endif
+}
+
+bool posix_tun_device_impl::adopt_fds(std::vector<int> &&fds, size_t mtu,
+    boost::system::error_code &ec)
+{
+    // 逐个 assign 到 stream_descriptor：全部成功后才替换成员，任何一步
+    // 失败即回滚——已接管的由 new_descs 析构关闭，未接管的显式关闭
+    //（自主打开路径下这些 fd 由本类打开，所有权属于本类）.
+    std::vector<net::posix::stream_descriptor> new_descs;
+    new_descs.reserve(fds.size());
+    for (size_t i = 0; i < fds.size(); ++i) {
+        net::posix::stream_descriptor d(ctx_);
+        d.assign(fds[i], ec);
+        if (ec) {
+            new_descs.clear();
+            for (size_t j = i; j < fds.size(); ++j) {
+                ::close(fds[j]);
+            }
+            return false;
+        }
+        new_descs.push_back(std::move(d));
+    }
+    descs_ = std::move(new_descs);
+    open_ = true;
+    mtu_ = mtu;
+    return true;
+}
+
+void posix_tun_device_impl::apply_default_tx_queue_len(
+    native_handle_type handle)
+{
+#if defined(__linux__)
+    // 注入的 TUN fd 经 TUNGETIFF 取回接口名，再经 ioctl socket 应用默认
+    // 发送队列长度；非 TUN 句柄（如测试用 socketpair）或缺少权限时静默跳过.
+    struct ifreq ifr;
+    std::memset(&ifr, 0, sizeof(ifr));
+    if (::ioctl(handle, TUNGETIFF, &ifr) < 0) {
+        return;
+    }
+    const int s = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (s < 0) {
+        return;
+    }
+    set_tx_queue_len(s, ifr.ifr_name, 4096);
+    ::close(s);
+#else
+    (void)handle;
 #endif
 }
 

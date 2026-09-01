@@ -63,7 +63,8 @@ ctest --test-dir build --output-on-failure
 
 常用选项：
 
-- `TUNIO_BUILD_TESTS`（默认 `ON`）：构建单元测试。
+- `TUNIO_BUILD_TESTS`（默认 `ON`）：构建单元测试（基于 Boost.Test，
+  header-only 模式，无需额外链接测试库）。
 - `TUNIO_BUILD_EXAMPLES`（默认 `ON`）：构建示例程序。
 - `USE_WINTUN_DRIVER`（默认 `OFF`，仅 Windows）：使用 Wintun 驱动。
 - `TUNIO_DISABLE_LOOPBACK_GUARD`（默认 `OFF`）：关闭环路与本地地址防护
@@ -373,7 +374,9 @@ co_await dev.async_write_ip(out, net::use_awaitable);
 | `dev_name` / `ipv4_addr` / `netmask` | 空 / 空 | 自主打开模式下的设备名（默认空，Linux 内核自动命名）与 IPv4 配置 |
 | `ipv6_addr` / `ipv6_prefix_len` | 空 / `64` | 可选 IPv6 地址 |
 | `mtu` | `1500` | 自主打开模式 MTU |
+| `num_queues` | `1` | Linux TUN 多队列数（`IFF_MULTI_QUEUE`，上限 256；其他平台忽略） |
 | `external_handle` / `external_mtu` | `invalid` / `1500` | 外部句柄注入（优先于自主打开） |
+| `external_handles` | 空 | 多句柄注入：每元素一个队列 fd（非空时优先于 `external_handle`；仅 Linux TUN 多队列有意义） |
 | `max_tcp_flows` / `max_udp_flows` | `65536` | 流/会话数上限 |
 | `max_rx_queue_per_flow` | `8 MiB` | 每流接收队列字节上限 |
 | `max_total_buffer` | `512 MiB` | 全局缓冲上限 |
@@ -404,6 +407,33 @@ co_await dev.async_write_ip(out, net::use_awaitable);
   触发（与 Boost.Asio 语义一致，引擎只引用不拷贝）。
 
 ## 更多示例
+
+### Linux TUN 多队列（IFF_MULTI_QUEUE）
+
+Linux 下可通过 `num_queues` 以多队列模式打开 TUN 设备（内核 ≥ 2.6.30，
+需 `CAP_NET_ADMIN`）：每个队列一个独立 fd，内核按流哈希并行投递入站包，
+引擎为每个队列分配并发读槽、出站包按五元组哈希分发到各队列 fd，读写
+吞吐随队列数扩展（建议配合多线程 `io_context` 使用）：
+
+```cpp
+tunio::tun_config cfg;
+cfg.dev_name = "tun0";
+cfg.ipv4_addr = "10.0.0.1";
+cfg.netmask = "255.255.255.0";
+cfg.num_queues = 4;  // 4 队列多队列模式
+
+boost::system::error_code ec;
+if (!engine.open(cfg, ec)) {
+    std::cerr << "open failed: " << ec.message() << std::endl;
+    return 1;
+}
+std::cout << "queues: " << engine.queue_count() << std::endl;  // 4
+```
+
+多队列也可以经 `external_handles` 注入外部已打开的队列 fd（每个句柄对应
+一个队列，队列数 = 句柄数）；非 Linux 平台忽略多队列配置，`queue_count()`
+恒为 1。若内核不支持 `IFF_MULTI_QUEUE`（老内核），显式请求多队列打开会
+失败并返回 `EINVAL`，不会静默降级。
 
 ### 外部句柄注入
 
