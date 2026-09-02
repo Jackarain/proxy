@@ -219,6 +219,254 @@ private:
     uint64_t wait_gen_ = 0;
 };
 
+// ---- UDP 会话收发内部辅助 ----
+// （供下方 tun_udp_socket 入口函数调用；本组函数均在引擎 Strand 上执行）
+
+// 将远端端点解析为网络序地址字节（响应报文中的源地址）；v4-mapped 地址
+// 视为 IPv4。addr 至少容纳 16 字节；返回实际地址族（4 或 6）。
+inline int udp_endpoint_to_addr_bytes(
+    const net::ip::udp::endpoint& ep, uint8_t* addr) noexcept
+{
+    if (ep.address().is_v6() && !ep.address().to_v6().is_v4_mapped())
+    {
+        const auto b = ep.address().to_v6().to_bytes();
+        std::memcpy(addr, b.data(), 16);
+        return 6;
+    }
+    const auto b = ep.address().to_v4().to_bytes();
+    std::memcpy(addr, b.data(), 4);
+    return 4;
+}
+
+// 在 dst 处组装一条 UDP 数据报（UDP 头 + 载荷）并填充校验和，返回数据报
+// 总长。src/dst 为网络序地址字节（伪头部校验和用），src_port / dst_port
+// 为主机序端口；载荷来自 buffers（共 payload_len 字节），dst 容量须足以
+// 容纳 sizeof(udp_header) + payload_len。
+inline size_t udp_build_datagram(int family,
+    const uint8_t* src_addr,
+    const uint8_t* dst_addr,
+    uint16_t src_port,
+    uint16_t dst_port,
+    const const_buffer_sequence& buffers,
+    size_t payload_len,
+    uint8_t* dst)
+{
+    auto* uh = reinterpret_cast<udp_header*>(dst);
+    uh->src_port = htons(src_port);
+    uh->dst_port = htons(dst_port);
+    uh->length =
+        htons(static_cast<uint16_t>(sizeof(udp_header) + payload_len));
+    uh->checksum = 0;
+
+    // 逐段收集用户载荷
+    size_t copied = 0;
+    for (const auto& buf : buffers)
+    {
+        if (copied >= payload_len)
+            break;
+
+        const size_t take = std::min(buf.size(), payload_len - copied);
+        std::memcpy(dst + sizeof(udp_header) + copied, buf.data(), take);
+        copied += take;
+    }
+
+    uint16_t csum = tcp_udp_checksum(family,
+        src_addr,
+        dst_addr,
+        IPPROTO_UDP_V,
+        dst,
+        sizeof(udp_header) + payload_len);
+    // IPv6 下 UDP 校验和不可为 0；按 RFC 768/8200 以 0xffff 替代
+    if (csum == 0)
+        csum = 0xffff;
+    uh->checksum = htons(csum);
+    return sizeof(udp_header) + payload_len;
+}
+
+// 将完整 UDP 数据报（含 UDP 头）切分为多个 IPv4 分片依次写入设备
+//（RFC 791）：首片携带 UDP 头 + 载荷，后续片仅携带载荷；所有分片共享
+// 同一 IP id，DF 位清零，非末片置 MF。返回 false 表示退化 MTU 下无法
+// 拆分（调用方应以 message_size 拒绝，而非死循环挂死 Strand）。
+inline bool udp_write_ipv4_fragments(tun_queue_writer& writer,
+    size_t mtu,
+    const uint8_t* src_addr,
+    const uint8_t* dst_addr,
+    const std::vector<uint8_t>& datagram)
+{
+    const size_t max_frag_payload =
+        (mtu > sizeof(ipv4_header) ? mtu - sizeof(ipv4_header) : 0) &
+        ~size_t(7);
+    // 首片 IP 载荷 = UDP 头 + 数据，需保证第二片偏移仍为 8 的倍数
+    const size_t first_data = max_frag_payload > sizeof(udp_header)
+        ? (max_frag_payload - sizeof(udp_header)) & ~size_t(7)
+        : 0;
+
+    const uint16_t ip_id = writer.alloc_ip_id();
+
+    // off 为相对完整 UDP 数据报（含 UDP 头）的偏移，即分片偏移字段的
+    // 字节基准：首片消费 UDP 头 + first_data，后续片消费载荷。
+    size_t off = 0;
+    while (off < datagram.size())
+    {
+        const size_t remain = datagram.size() - off;
+        const size_t frag_data = off == 0
+            ? (std::min)(sizeof(udp_header) + first_data, remain)
+            : (std::min)(max_frag_payload, remain);
+        if (frag_data == 0)
+            return false;
+
+        const size_t frag_total = sizeof(ipv4_header) + frag_data;
+        packet_buffer frag = writer.acquire(mtu + 64, 64);
+        frag.resize(frag_total);
+        uint8_t* fb = frag.data();
+        auto* ip = reinterpret_cast<ipv4_header*>(fb);
+        ip->version_ihl = 0x45;
+        ip->tos = 0;
+        ip->total_len = htons(static_cast<uint16_t>(frag_total));
+        ip->id = htons(ip_id);
+        const bool last = off + frag_data >= datagram.size();
+        ip->frag_off = htons(static_cast<uint16_t>(
+            (last ? 0 : 0x2000) | static_cast<uint16_t>(off / 8)));
+        ip->ttl = 64;
+        ip->protocol = IPPROTO_UDP_V;
+        ip->checksum = 0;
+        std::memcpy(&ip->src_ip, src_addr, 4);
+        std::memcpy(&ip->dst_ip, dst_addr, 4);
+
+        ip->checksum = htons(ipv4_checksum(fb, sizeof(ipv4_header)));
+        std::memcpy(
+            fb + sizeof(ipv4_header), datagram.data() + off, frag_data);
+
+        off += frag_data;
+        writer.async_write_and_forget(std::move(frag));
+    }
+    return true;
+}
+
+// 单报文发送（载荷不超 MTU，热路径）：构造 IP + UDP 报文并异步写入设备。
+// tun_queue_writer 保证完成回调在引擎 Strand 上触发，无需再派发。
+template <typename Handler>
+void udp_send_single(udp_session& session,
+    udp_engine& eng,
+    const net::ip::udp::endpoint& remote,
+    int family,
+    const uint8_t* src_addr,
+    const const_buffer_sequence& buffers,
+    size_t total,
+    Handler handler)
+{
+    const size_t ip_hdr_len = ip_header_size(family);
+    const size_t total_len = ip_hdr_len + sizeof(udp_header) + total;
+    packet_buffer pkt = eng.writer().acquire(eng.mtu() + 64, 64);
+    pkt.resize(total_len);
+    uint8_t* base = pkt.data();
+
+    // 源地址为客户端请求的目标地址（对端远端）
+    build_ip_header(base,
+        family,
+        src_addr,
+        session.key.src_ip.data(),
+        IPPROTO_UDP_V,
+        total_len,
+        eng.writer().alloc_ip_id());
+
+    udp_build_datagram(family,
+        src_addr,
+        session.key.src_ip.data(),
+        remote.port(),
+        ntohs(session.key.src_port),
+        buffers,
+        total,
+        base + ip_hdr_len);
+
+    const size_t sent = total;
+    eng.writer().async_write(std::move(pkt),
+        [h = std::move(handler), sent](
+            const boost::system::error_code& ec, size_t) mutable
+        {
+            // 设备写失败时透传错误码，避免向调用方误报成功
+            std::move(h)(ec, ec ? 0 : sent);
+        });
+}
+
+// IPv4 大报文分片发送（载荷超 MTU）：先组装完整 UDP 数据报（校验和按
+// 整体计算），再切分为多个 IP 分片依次写入设备。分片全部入队即视为
+// 发送完成——数据已由引擎持有，直接以成功调用 handler。
+template <typename Handler>
+void udp_send_fragmented(udp_session& session,
+    udp_engine& eng,
+    const net::ip::udp::endpoint& remote,
+    const uint8_t* src_addr,
+    const const_buffer_sequence& buffers,
+    size_t total,
+    Handler handler)
+{
+    std::vector<uint8_t> datagram(sizeof(udp_header) + total);
+    udp_build_datagram(4,
+        src_addr,
+        session.key.src_ip.data(),
+        remote.port(),
+        ntohs(session.key.src_port),
+        buffers,
+        total,
+        datagram.data());
+
+    if (!udp_write_ipv4_fragments(eng.writer(),
+            eng.mtu(),
+            src_addr,
+            session.key.src_ip.data(),
+            datagram))
+    {
+        // 退化 MTU 下无法拆分（首片已耗尽可用载荷）：拒绝而非死循环
+        handler(boost::system::error_code(net::error::message_size), 0);
+        return;
+    }
+
+    std::move(handler)(boost::system::error_code{}, total);
+}
+
+// 出队一条排队数据报并交付给本次读请求；无排队数据报时返回 false，由
+// 调用方将读操作挂入 pending_reads。数据报大于用户缓冲区时按 UDP 截断
+// 丢弃并以 message_size 完成本次读。
+template <typename Handler>
+bool udp_pop_queued_datagram(udp_session& session,
+    udp_engine& eng,
+    const mutable_buffer_sequence& buffers,
+    size_t total,
+    net::ip::udp::endpoint& sender,
+    Handler& handler)
+{
+    if (session.rx_datagrams.empty())
+        return false;
+
+    auto dg = std::move(session.rx_datagrams.front());
+    session.rx_datagrams.pop_front();
+    session.rx_bytes -= dg.data.size();
+    eng.account().release(dg.data.size());
+
+    if (dg.data.size() > total)
+    {
+        handler(boost::system::error_code(net::error::message_size), 0);
+        return true;
+    }
+
+    sender = dg.sender;
+
+    size_t copied = 0;
+    for (const auto& buf : buffers)
+    {
+        if (copied >= dg.data.size())
+            break;
+
+        const size_t take = std::min(buf.size(), dg.data.size() - copied);
+        std::memcpy(buf.data(), dg.data.data() + copied, take);
+        copied += take;
+    }
+
+    handler(boost::system::error_code{}, dg.data.size());
+    return true;
+}
+
 // ---- 供 tun_udp_socket 调用的入口（内部自动派发到 Strand）----
 template <typename Handler>
 void udp_session_start_receive(udp_session_ptr session,
@@ -264,40 +512,14 @@ void udp_session_start_receive(udp_session_ptr session,
                 return;
             }
 
-            if (!session.rx_datagrams.empty())
+            // 先尝试交付已排队的入站数据报；队列为空则将本次读挂起，
+            // 等待后续数据报到达（见 udp_engine::deliver_datagram）。
+            if (!udp_pop_queued_datagram(
+                    session, *eng, buffers, total, sender, handler))
             {
-                auto dg = std::move(session.rx_datagrams.front());
-                session.rx_datagrams.pop_front();
-                session.rx_bytes -= dg.data.size();
-                eng->account().release(dg.data.size());
-
-                if (dg.data.size() > total)
-                {
-                    handler(
-                        boost::system::error_code(net::error::message_size), 0);
-                    return;
-                }
-
-                sender = dg.sender;
-
-                size_t copied = 0;
-                for (auto& buf : buffers)
-                {
-                    if (copied >= dg.data.size())
-                        break;
-
-                    const size_t take =
-                        std::min(buf.size(), dg.data.size() - copied);
-                    std::memcpy(buf.data(), dg.data.data() + copied, take);
-                    copied += take;
-                }
-
-                handler(boost::system::error_code{}, dg.data.size());
-                return;
+                session.pending_reads.push_back(
+                    {std::move(buffers), total, &sender, std::move(handler)});
             }
-
-            session.pending_reads.push_back(
-                {std::move(buffers), total, &sender, std::move(handler)});
         });
 }
 
@@ -339,10 +561,10 @@ void udp_session_start_send(udp_session_ptr session,
                 return;
             }
 
+            // 校验地址族并解析远端地址为响应报文的源地址字节
+            uint8_t src_addr[16] = {};
             const int family = session.key.family;
-            const bool remote_v6 = remote.address().is_v6() &&
-                !remote.address().to_v6().is_v4_mapped();
-            if ((family == 6) != remote_v6)
+            if (family != udp_endpoint_to_addr_bytes(remote, src_addr))
             {
                 handler(boost::system::error_code(
                             net::error::address_family_not_supported),
@@ -361,178 +583,47 @@ void udp_session_start_send(udp_session_ptr session,
                 return;
             }
 
-            // mtu 下限保护：mtu 小于 IP 头 + UDP 头时可用载荷为 0，
-            // 避免下方 `mtu - ip_hdr_len - sizeof(udp_header)` 无符号下溢。
+            // mtu 下限保护：mtu 小于 IP 头 + UDP 头时可用载荷为 0，避免
+            // 下方 `mtu - ip_hdr_len - sizeof(udp_header)` 无符号下溢。
             const size_t max_udp_payload = mtu > ip_hdr_len + sizeof(udp_header)
                 ? mtu - ip_hdr_len - sizeof(udp_header)
                 : 0;
+            const bool oversized = total > max_udp_payload;
 
-            uint8_t src_addr[16] = {};
-            if (remote_v6)
+            if (oversized && family != 4)
             {
-                const auto b = remote.address().to_v6().to_bytes();
-                std::memcpy(src_addr, b.data(), 16);
-            }
-            else
-            {
-                const auto b = remote.address().to_v4().to_bytes();
-                std::memcpy(src_addr, b.data(), 4);
-            }
-
-            if (total > max_udp_payload)
-            {
-                if (family != 4)
-                {
-                    // IPv6 无扩展头分片支持：拒绝超出 MTU 的报文
-                    handler(
-                        boost::system::error_code(net::error::message_size), 0);
-                    return;
-                }
-
-                // ---- IPv4 大报文分片（RFC 791）----
-                // 数据报超出 MTU 时按 8 字节对齐拆分为多个 IP 分片依次写入设备：
-                // 首片携带 UDP 头与完整校验和，后续片仅携带载荷，DF 位清零。
-                eng->refresh_expiry(s);
-
-                const size_t max_frag_payload =
-                    (mtu > sizeof(ipv4_header) ? mtu - sizeof(ipv4_header)
-                                               : 0) &
-                    ~size_t(7);
-                // 首片 IP 载荷 = UDP 头 + 数据，需保证第二片偏移仍为 8 的倍数
-                const size_t first_data = max_frag_payload > sizeof(udp_header)
-                    ? (max_frag_payload - sizeof(udp_header)) & ~size_t(7)
-                    : 0;
-
-                // 组装完整 UDP 数据报（含 UDP 头），校验和按整个数据报计算
-                std::vector<uint8_t> full(sizeof(udp_header) + total);
-                auto* uh = reinterpret_cast<udp_header*>(full.data());
-                uh->src_port = htons(remote.port());
-                uh->dst_port = session.key.src_port;
-                uh->length = htons(static_cast<uint16_t>(full.size()));
-                uh->checksum = 0;
-
-                uint8_t* dst = full.data() + sizeof(udp_header);
-                for (const auto& buf : buffers)
-                {
-                    std::memcpy(dst, buf.data(), buf.size());
-                    dst += buf.size();
-                }
-
-                uint16_t csum = tcp_udp_checksum(4,
-                    src_addr,
-                    session.key.src_ip.data(),
-                    IPPROTO_UDP_V,
-                    full.data(),
-                    full.size());
-                if (csum == 0)
-                    csum = 0xffff;
-                uh->checksum = htons(csum);
-
-                const uint16_t ip_id = eng->writer().alloc_ip_id();
-
-                // off 为相对完整 UDP 数据报（含 UDP 头）的偏移，即分片偏移字段
-                // 的字节基准：首片消费 UDP 头 + first_data，后续片消费载荷。
-                size_t off = 0;
-                while (off < full.size())
-                {
-                    const size_t remain = full.size() - off;
-                    const size_t frag_data = off == 0
-                        ? (std::min)(sizeof(udp_header) + first_data, remain)
-                        : (std::min)(max_frag_payload, remain);
-                    if (frag_data == 0)
-                    {
-                        // 退化 MTU 下无法拆分（首片已耗尽可用载荷）：拒绝而非
-                        // 死循环挂死 Strand.
-                        handler(
-                            boost::system::error_code(net::error::message_size),
-                            0);
-                        return;
-                    }
-
-                    const size_t frag_total = sizeof(ipv4_header) + frag_data;
-                    packet_buffer frag = eng->writer().acquire(mtu + 64, 64);
-                    frag.resize(frag_total);
-                    uint8_t* fb = frag.data();
-                    auto* ip = reinterpret_cast<ipv4_header*>(fb);
-                    ip->version_ihl = 0x45;
-                    ip->tos = 0;
-                    ip->total_len = htons(static_cast<uint16_t>(frag_total));
-                    ip->id = htons(ip_id);
-                    const bool last = off + frag_data >= full.size();
-                    ip->frag_off = htons(static_cast<uint16_t>(
-                        (last ? 0 : 0x2000) | static_cast<uint16_t>(off / 8)));
-                    ip->ttl = 64;
-                    ip->protocol = IPPROTO_UDP_V;
-                    ip->checksum = 0;
-                    std::memcpy(&ip->src_ip, src_addr, 4);
-                    std::memcpy(&ip->dst_ip, session.key.src_ip.data(), 4);
-
-                    ip->checksum =
-                        htons(ipv4_checksum(fb, sizeof(ipv4_header)));
-                    std::memcpy(
-                        fb + sizeof(ipv4_header), full.data() + off, frag_data);
-
-                    off += frag_data;
-                    eng->writer().async_write_and_forget(std::move(frag));
-                }
-
-                // 分片全部入队即视为发送完成：数据已由引擎持有，直接调用 handler
-                std::move(handler)(boost::system::error_code{}, total);
+                // IPv6 无扩展头分片支持：拒绝超出 MTU 的报文
+                handler(
+                    boost::system::error_code(net::error::message_size), 0);
                 return;
             }
 
+            // 会话活跃：刷新空闲超时（校验通过后、发送前执行，与原实现
+            // 各发送分支的刷新时机一致）。
             eng->refresh_expiry(s);
 
-            // 构造 IP + UDP 报文（源地址为客户端请求的目标地址）
-            const size_t total_len = ip_hdr_len + sizeof(udp_header) + total;
-            packet_buffer pkt = eng->writer().acquire(mtu + 64, 64);
-            pkt.resize(total_len);
-            uint8_t* base = pkt.data();
-
-            build_ip_header(base,
-                family,
-                src_addr,
-                session.key.src_ip.data(),
-                IPPROTO_UDP_V,
-                total_len,
-                eng->writer().alloc_ip_id());
-
-            auto* uh = reinterpret_cast<udp_header*>(base + ip_hdr_len);
-            uh->src_port = htons(remote.port());
-            uh->dst_port = session.key.src_port;
-            uh->length =
-                htons(static_cast<uint16_t>(sizeof(udp_header) + total));
-            uh->checksum = 0;
-
-            uint8_t* dst = base + ip_hdr_len + sizeof(udp_header);
-            for (const auto& buf : buffers)
+            if (oversized)
             {
-                std::memcpy(dst, buf.data(), buf.size());
-                dst += buf.size();
+                // 载荷超 MTU：走 IPv4 分片发送
+                udp_send_fragmented(session,
+                    *eng,
+                    remote,
+                    src_addr,
+                    buffers,
+                    total,
+                    std::move(handler));
+                return;
             }
 
-            uint16_t csum = tcp_udp_checksum(family,
+            // 单报文发送（热路径）
+            udp_send_single(session,
+                *eng,
+                remote,
+                family,
                 src_addr,
-                session.key.src_ip.data(),
-                IPPROTO_UDP_V,
-                base + ip_hdr_len,
-                sizeof(udp_header) + total);
-
-            // IPv6 下 UDP 校验和不可为 0；按 RFC 768/8200 以 0xffff 替代
-            if (csum == 0)
-                csum = 0xffff;
-            uh->checksum = htons(csum);
-
-            const size_t sent = total;
-
-            // tun_queue_writer 保证完成回调在引擎 Strand 上触发，无需再派发
-            eng->writer().async_write(std::move(pkt),
-                [h = std::move(handler), sent](
-                    const boost::system::error_code& ec, size_t) mutable
-                {
-                    // 设备写失败时透传错误码，避免向调用方误报成功
-                    std::move(h)(ec, ec ? 0 : sent);
-                });
+                buffers,
+                total,
+                std::move(handler));
         });
 }
 
