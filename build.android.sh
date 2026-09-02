@@ -39,7 +39,7 @@ echo "ARCHITECTURES: ${ARCHITECTURES[*]}"
 
 for ARCH in "${ARCHITECTURES[@]}"
 do
-    cmake -S ${SRC_PATH} -B android/$ARCH -DCMAKE_TOOLCHAIN_FILE=${NDK_PATH}/build/cmake/android.toolchain.cmake -DANDROID_ABI=${ARCH} -DANDROID_PLATFORM=android-19 -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -G Ninja
+    cmake -S ${SRC_PATH} -B android/$ARCH -DCMAKE_TOOLCHAIN_FILE=${NDK_PATH}/build/cmake/android.toolchain.cmake -DANDROID_ABI=${ARCH} -DANDROID_PLATFORM=android-19 -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=ON -G Ninja
     cmake --build android/$ARCH
     mkdir -p release/$ARCH
     # 桌面端可执行文件 (非 Android 场景).
