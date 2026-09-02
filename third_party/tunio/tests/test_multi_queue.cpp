@@ -24,6 +24,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <future>
 #include <iostream>
@@ -337,7 +338,7 @@ BOOST_AUTO_TEST_CASE(test_real_multi_queue_tun)
     }
     struct ifreq ifr;
     std::memset(&ifr, 0, sizeof(ifr));
-    std::strncpy(ifr.ifr_name, dev_name.c_str(), IFNAMSIZ - 1);
+    std::snprintf(ifr.ifr_name, IFNAMSIZ, "%s", dev_name.c_str());
     ifr.ifr_flags = IFF_TUN | IFF_NO_PI | IFF_MULTI_QUEUE;
     if (::ioctl(inject_fd, TUNSETIFF, &ifr) < 0) {
         std::cout << "[skip] 附加注入队列失败: " << std::strerror(errno)

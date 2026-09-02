@@ -32,17 +32,15 @@ class tunio;
 class tun_tcp_acceptor
 {
 public:
-    explicit tun_tcp_acceptor(tunio &engine)
-        : engine_(engine)
-    {
-    }
+    explicit tun_tcp_acceptor(tunio& engine);
 
     template <typename CompletionToken>
-    auto async_accept(tun_tcp_socket &peer, CompletionToken &&token)
+    auto async_accept(tun_tcp_socket& peer, CompletionToken&& token)
     {
         return net::async_initiate<CompletionToken,
             void(boost::system::error_code)>(
-            [this, &peer](auto handler) {
+            [this, &peer](auto handler)
+            {
                 do_accept(peer, std::move(handler));
             },
             token);
@@ -53,9 +51,9 @@ public:
 
 private:
     template <typename Handler>
-    void do_accept(tun_tcp_socket &peer, Handler handler);
+    void do_accept(tun_tcp_socket& peer, Handler handler);
 
-    tunio &engine_;
+    tunio& engine_;
 };
 
 } // namespace tunio

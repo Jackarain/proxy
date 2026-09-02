@@ -10,8 +10,8 @@
 
 #pragma once
 
-// Windows 下 windows.h 会定义 min/max 函数宏, 破坏 std::min/std::max;
-// 在包含任何 Windows 头之前统一禁用, 代码中全部使用 std::min/std::max.
+// Windows 下 windows.h 会定义 min/max 函数宏，破坏 std::min/std::max;
+// 在包含任何 Windows 头之前统一禁用，代码中全部使用 std::min/std::max.
 #if defined(_WIN32)
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -32,7 +32,7 @@ namespace tunio {
 
 // 平台原生句柄类型，支持外部句柄注入
 #ifdef _WIN32
-using native_handle_type = void *;
+using native_handle_type = void*;
 #else
 using native_handle_type = int;
 #endif
@@ -45,12 +45,12 @@ inline constexpr native_handle_type invalid_native_handle =
 #endif
 
 // Linux TUN 多队列（IFF_MULTI_QUEUE）的队列数上限，与内核
-// drivers/net/tun.c 的 MAX_TAP_QUEUES 一致；超出视为非法配置.
+// drivers/net/tun.c 的 MAX_TAP_QUEUES 一致；超出视为非法配置。
 inline constexpr size_t max_multi_queues = 256;
 
 // 从整型构造外部句柄：POSIX 下句柄即文件描述符（int）；Windows 下句柄为
-// 指针类型，按位模式转换（intptr_t 保证整型宽度足够），语义由注入方保证.
-// 供 --inject-fd 之类的 CLI 注入路径使用，避免平台差异类型无法直接赋值.
+// 指针类型，按位模式转换（intptr_t 保证整型宽度足够），语义由注入方保证。
+// 供 --inject-fd 之类的 CLI 注入路径使用，避免平台差异类型无法直接赋值。
 inline native_handle_type native_handle_from_int(int handle) noexcept
 {
 #ifdef _WIN32
@@ -77,9 +77,8 @@ struct five_tuple
 #pragma pack(pop)
 
 // 构造五元组：IP 为网络字节序字节，IPv4 仅拷贝前 4 字节
-inline five_tuple make_five_tuple(const uint8_t *src_ip, const uint8_t *dst_ip,
-    uint16_t src_port, uint16_t dst_port, uint8_t protocol,
-    uint8_t family) noexcept
+inline five_tuple make_five_tuple(const uint8_t* src_ip, const uint8_t* dst_ip,
+    uint16_t src_port, uint16_t dst_port, uint8_t protocol, uint8_t family) noexcept
 {
     five_tuple k{};
     k.family = family;
@@ -92,14 +91,14 @@ inline five_tuple make_five_tuple(const uint8_t *src_ip, const uint8_t *dst_ip,
     return k;
 }
 
-inline bool operator==(const five_tuple &lhs, const five_tuple &rhs) noexcept
+inline bool operator==(const five_tuple& lhs, const five_tuple& rhs) noexcept
 {
     return lhs.family == rhs.family && lhs.src_ip == rhs.src_ip &&
         lhs.dst_ip == rhs.dst_ip && lhs.src_port == rhs.src_port &&
         lhs.dst_port == rhs.dst_port && lhs.protocol == rhs.protocol;
 }
 
-inline bool operator!=(const five_tuple &lhs, const five_tuple &rhs) noexcept
+inline bool operator!=(const five_tuple& lhs, const five_tuple& rhs) noexcept
 {
     return !(lhs == rhs);
 }
@@ -114,8 +113,8 @@ struct udp_session_key
 };
 
 // 构造 UDP 会话键：IP 为网络字节序字节，IPv4 仅拷贝前 4 字节
-inline udp_session_key make_udp_session_key(const uint8_t *src_ip,
-    uint16_t src_port, uint8_t family) noexcept
+inline udp_session_key make_udp_session_key(
+    const uint8_t* src_ip, uint16_t src_port, uint8_t family) noexcept
 {
     udp_session_key k{};
     k.family = family;
@@ -125,15 +124,15 @@ inline udp_session_key make_udp_session_key(const uint8_t *src_ip,
     return k;
 }
 
-inline bool operator==(const udp_session_key &lhs,
-    const udp_session_key &rhs) noexcept
+inline bool operator==(
+    const udp_session_key& lhs, const udp_session_key& rhs) noexcept
 {
     return lhs.family == rhs.family && lhs.src_ip == rhs.src_ip &&
         lhs.src_port == rhs.src_port;
 }
 
-inline bool operator!=(const udp_session_key &lhs,
-    const udp_session_key &rhs) noexcept
+inline bool operator!=(
+    const udp_session_key& lhs, const udp_session_key& rhs) noexcept
 {
     return !(lhs == rhs);
 }
@@ -167,14 +166,14 @@ struct tun_config
     uint8_t ipv6_prefix_len = 64; // IPv6 前缀长度
     size_t mtu = 1500;
     // Linux TUN 多队列（IFF_MULTI_QUEUE）队列数（自主打开时生效）；
-    // 其他平台忽略.
+    // 其他平台忽略。
     size_t num_queues = 1;
 
     // ---- 外部句柄注入 ----
     native_handle_type external_handle = invalid_native_handle;
     size_t external_mtu = 1500;
     // 多句柄注入：非空时优先于 external_handle，按元素顺序注入为各队列
-    // fd（仅 Linux TUN 多队列有意义，队列数 = 句柄数）；其他平台不支持.
+    // fd（仅 Linux TUN 多队列有意义，队列数 = 句柄数）；其他平台不支持。
     std::vector<native_handle_type> external_handles;
     // 注入的句柄是否为 macOS utun 设备（读写带 4 字节家族前缀）.
     // 真实 utun fd 注入时置 true；socketpair 注入（测试/模拟）保持 false.
@@ -186,7 +185,7 @@ struct tun_config
     size_t max_rx_queue_per_flow = 8 * 1024 * 1024;
     // 乱序重排缓存：单流最多缓存的乱序段数（超出后丢弃并发 Dup-ACK，
     // 防止恶意对端用海量乱序段耗尽内存）。需覆盖大窗口（1MB/MSS≈757 段）
-    // 下并发读产生的整窗乱序，否则乱序段被拒导致重传风暴.
+    // 下并发读产生的整窗乱序，否则乱序段被拒导致重传风暴。
     size_t tcp_ooo_max_segments = 4096;
     size_t max_total_buffer = 512 * 1024 * 1024;
 
@@ -202,10 +201,9 @@ struct tun_config
     // 探测被确认后按指数退避加倍，上限 60s.
     std::chrono::milliseconds tcp_persist_timeout{5000};
     // 数据段重传（RTO）：初始超时与最大重传次数。发送侧对未确认数据按
-    // 指数退避（上限 60s）重传，超过最大次数判定发送超时并以 RST 关闭.
+    // 指数退避（上限 60s）重传，超过最大次数判定发送超时并以 RST 关闭。
     std::chrono::milliseconds tcp_rto_timeout{200};
     int tcp_rto_max_retransmits = 8;
-
 };
 
 // 引擎统计信息
@@ -225,10 +223,10 @@ struct engine_stats
 namespace std {
 template <> struct hash<tunio::five_tuple>
 {
-    size_t operator()(const tunio::five_tuple &k) const noexcept
+    size_t operator()(const tunio::five_tuple& k) const noexcept
     {
         // 64 位字混合哈希：一次 memcpy 加载 8 字节（未用字节恒为
-        // 0，不引入碰撞）， 替代逐字节 FNV 循环，减少每包查找的指令数。
+        // 0，不引入碰撞），替代逐字节 FNV 循环，减少每包查找的指令数。
         uint64_t h = 1469598103934665603ULL; // FNV offset basis
         uint64_t v[6];
         std::memcpy(v, k.src_ip.data(), 8);
@@ -236,10 +234,11 @@ template <> struct hash<tunio::five_tuple>
         std::memcpy(v + 2, k.dst_ip.data(), 8);
         std::memcpy(v + 3, k.dst_ip.data() + 8, 8);
         v[4] = static_cast<uint64_t>(k.src_port) |
-               (static_cast<uint64_t>(k.dst_port) << 16);
+            (static_cast<uint64_t>(k.dst_port) << 16);
         v[5] = static_cast<uint64_t>(k.protocol) |
-               (static_cast<uint64_t>(k.family) << 8);
-        for (uint64_t x : v) {
+            (static_cast<uint64_t>(k.family) << 8);
+        for (uint64_t x : v)
+        {
             h ^= x;
             h *= 1099511628211ULL; // FNV prime
         }
@@ -249,17 +248,18 @@ template <> struct hash<tunio::five_tuple>
 
 template <> struct hash<tunio::udp_session_key>
 {
-    size_t operator()(const tunio::udp_session_key &k) const noexcept
+    size_t operator()(const tunio::udp_session_key& k) const noexcept
     {
         // 64 位字混合哈希：一次 memcpy 加载 8 字节（未用字节恒为
-        // 0，不引入碰撞）， 替代逐字节 FNV 循环，减少每包查找的指令数。
+        // 0，不引入碰撞），替代逐字节 FNV 循环，减少每包查找的指令数。
         uint64_t h = 1469598103934665603ULL; // FNV offset basis
         uint64_t v[3];
         std::memcpy(v, k.src_ip.data(), 8);
         std::memcpy(v + 1, k.src_ip.data() + 8, 8);
         v[2] = static_cast<uint64_t>(k.src_port) |
-               (static_cast<uint64_t>(k.family) << 16);
-        for (uint64_t x : v) {
+            (static_cast<uint64_t>(k.family) << 16);
+        for (uint64_t x : v)
+        {
             h ^= x;
             h *= 1099511628211ULL; // FNV prime
         }

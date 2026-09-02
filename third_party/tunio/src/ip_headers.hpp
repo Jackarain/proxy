@@ -41,7 +41,8 @@ constexpr uint8_t IPPROTO_TCP_V = ip_protocol_tcp;
 constexpr uint8_t IPPROTO_UDP_V = ip_protocol_udp;
 
 // TCP 标志位
-enum tcp_flag : uint8_t {
+enum tcp_flag : uint8_t
+{
     TCP_FIN = 0x01,
     TCP_SYN = 0x02,
     TCP_RST = 0x04,
@@ -60,12 +61,12 @@ struct ip_packet_info
 };
 
 // 序列号比较（RFC 1982 环形比较）
-inline bool seq_gt(uint32_t a, uint32_t b)
+inline bool seq_gt(uint32_t a, uint32_t b) noexcept
 {
     return static_cast<int32_t>(a - b) > 0;
 }
 
-inline bool seq_ge(uint32_t a, uint32_t b)
+inline bool seq_ge(uint32_t a, uint32_t b) noexcept
 {
     return a == b || seq_gt(a, b);
 }

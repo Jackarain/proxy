@@ -30,17 +30,16 @@ public:
         , data_offset_(headroom)
         , data_size_(0)
     {
-        if (capacity == 0 || headroom >= capacity) {
+        if (capacity == 0 || headroom >= capacity)
             throw std::invalid_argument(
                 "packet_buffer: headroom must be less than capacity");
-        }
     }
 
-    uint8_t *data() noexcept
+    uint8_t* data() noexcept
     {
         return storage_.get() + data_offset_;
     }
-    const uint8_t *data() const noexcept
+    const uint8_t* data() const noexcept
     {
         return storage_.get() + data_offset_;
     }
@@ -59,7 +58,7 @@ public:
     }
 
     // 可写区域（供 async_read_packet 使用，读取成功后调用 commit）
-    uint8_t *writable_data() noexcept
+    uint8_t* writable_data() noexcept
     {
         return storage_.get() + data_offset_ + data_size_;
     }
@@ -78,18 +77,16 @@ public:
     // 异步读取完成后推进数据长度
     void commit(size_t len)
     {
-        if (len > capacity_ - data_offset_ - data_size_) {
+        if (len > capacity_ - data_offset_ - data_size_)
             throw std::length_error("packet_buffer::commit exceeds capacity");
-        }
         data_size_ += len;
     }
 
     // 直接设定数据长度（写报文场景）
     void resize(size_t len)
     {
-        if (len > capacity_ - data_offset_ - data_size_) {
+        if (len > capacity_ - data_offset_ - data_size_)
             throw std::length_error("packet_buffer::resize exceeds capacity");
-        }
         data_size_ = len;
     }
 

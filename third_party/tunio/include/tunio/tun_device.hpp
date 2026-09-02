@@ -71,68 +71,49 @@ using tun_device_impl = unsupported_tun_device;
 class tun_device
 {
 public:
-    explicit tun_device(net::io_context &ctx)
-        : impl_(ctx)
-    {
-    }
+    explicit tun_device(net::io_context& ctx);
 
-    // ---- 模式 1: 自主打开 ----
-    bool open(const device_config &cfg, boost::system::error_code &ec)
-    {
-        return impl_.open(cfg, ec);
-    }
+    // ---- 模式 1：自主打开 ----
+    bool open(const device_config& cfg, boost::system::error_code& ec);
 
-    // ---- 模式 2: 句柄注入 ----
-    bool assign(native_handle_type handle, size_t mtu, bool utun_prefix,
-        boost::system::error_code &ec)
-    {
-        return impl_.assign(handle, mtu, utun_prefix, ec);
-    }
+    // ---- 模式 2：句柄注入 ----
+    bool assign(native_handle_type handle,
+        size_t mtu,
+        bool utun_prefix,
+        boost::system::error_code& ec);
 
     // 多句柄注入：每个句柄对应一个队列 fd（Linux TUN 多队列，队列数 =
     // 句柄数）；非 POSIX 平台不支持（返回 operation_not_supported）.
-    bool assign_queues(const std::vector<native_handle_type> &handles,
-        size_t mtu, bool utun_prefix, boost::system::error_code &ec)
-    {
-        return impl_.assign_queues(handles, mtu, utun_prefix, ec);
-    }
+    bool assign_queues(const std::vector<native_handle_type>& handles,
+        size_t mtu,
+        bool utun_prefix,
+        boost::system::error_code& ec);
 
-    void close()
-    {
-        impl_.close();
-    }
+    void close();
 
-    size_t mtu() const
-    {
-        return impl_.mtu();
-    }
+    size_t mtu() const noexcept;
 
     // 队列数：Linux TUN 多队列下为打开的队列数，其余平台恒为 1
-    size_t queue_count() const
-    {
-        return impl_.queue_count();
-    }
+    size_t queue_count() const noexcept;
 
-    bool is_open() const
-    {
-        return impl_.is_open();
-    }
+    bool is_open() const noexcept;
 
     // ---- 异步读取一个完整数据包（队列 0）----
     template <typename CompletionToken>
-    auto async_read_packet(packet_buffer &buf, CompletionToken &&token)
+    auto async_read_packet(packet_buffer& buf, CompletionToken&& token)
     {
         return async_read_packet(buf, 0, std::forward<CompletionToken>(token));
     }
 
     // ---- 异步读取一个完整数据包（指定队列）----
     template <typename CompletionToken>
-    auto async_read_packet(packet_buffer &buf, size_t queue,
-        CompletionToken &&token)
+    auto async_read_packet(
+        packet_buffer& buf, size_t queue, CompletionToken&& token)
     {
         return net::async_initiate<CompletionToken,
             void(boost::system::error_code, size_t)>(
-            [this, &buf, queue](auto handler) {
+            [this, &buf, queue](auto handler)
+            {
                 impl_.async_read(buf, queue, std::move(handler));
             },
             token);
@@ -140,20 +121,20 @@ public:
 
     // ---- 异步写入一个完整数据包（队列 0）----
     template <typename CompletionToken>
-    auto async_write_packet(packet_buffer &buf, CompletionToken &&token)
+    auto async_write_packet(packet_buffer& buf, CompletionToken&& token)
     {
-        return async_write_packet(buf, 0,
-            std::forward<CompletionToken>(token));
+        return async_write_packet(buf, 0, std::forward<CompletionToken>(token));
     }
 
     // ---- 异步写入一个完整数据包（指定队列）----
     template <typename CompletionToken>
-    auto async_write_packet(packet_buffer &buf, size_t queue,
-        CompletionToken &&token)
+    auto async_write_packet(
+        packet_buffer& buf, size_t queue, CompletionToken&& token)
     {
         return net::async_initiate<CompletionToken,
             void(boost::system::error_code, size_t)>(
-            [this, &buf, queue](auto handler) {
+            [this, &buf, queue](auto handler)
+            {
                 impl_.async_write(buf, queue, std::move(handler));
             },
             token);
@@ -169,38 +150,42 @@ public:
     // 通过 pkt.valid() / pkt.error() 判断。每个未完成的 async_read_ip 需要
     // 独立的 ip_packet 对象（自持缓冲），同一对象不可并发发起多次读取。
     template <typename CompletionToken>
-    auto async_read_ip(ip_packet &pkt, CompletionToken &&token)
+    auto async_read_ip(ip_packet& pkt, CompletionToken&& token)
     {
         return async_read_ip(pkt, 0, std::forward<CompletionToken>(token));
     }
 
     // ---- 异步读取并解析一个 IP 报文（指定队列）----
     template <typename CompletionToken>
-    auto async_read_ip(ip_packet &pkt, size_t queue, CompletionToken &&token)
+    auto async_read_ip(ip_packet& pkt, size_t queue, CompletionToken&& token)
     {
         return net::async_initiate<CompletionToken,
             void(boost::system::error_code, size_t)>(
-            [this, &pkt, queue](auto handler) {
+            [this, &pkt, queue](auto handler)
+            {
                 pkt.buffer().reset();
                 // 容量不足容纳一个完整报文（utun 读含 4 字节前缀）时立即以
                 // message_size 完成，避免截断读入后解析报出令人困惑的
                 // invalid_total_length.
                 if (impl_.read_size_hint() != 0 &&
-                    pkt.buffer().writable_size() < impl_.read_size_hint()) {
+                    pkt.buffer().writable_size() < impl_.read_size_hint())
+                {
                     // 用 dispatch 在 handler 的关联执行器上完成（post 在
                     // Asio 1.38+ 的默认 inline_executor 上无法编译）.
                     net::dispatch(net::get_associated_executor(handler),
-                        [h = std::move(handler)]() mutable {
+                        [h = std::move(handler)]() mutable
+                        {
                             h(make_error_code(net::error::message_size), 0);
                         });
                     return;
                 }
-                impl_.async_read(pkt.buffer(), queue,
-                    [h = std::move(handler),
-                        &pkt](const boost::system::error_code &ec, size_t n) mutable {
-                        if (!ec) {
+                impl_.async_read(pkt.buffer(),
+                    queue,
+                    [h = std::move(handler), &pkt](
+                        const boost::system::error_code& ec, size_t n) mutable
+                    {
+                        if (!ec)
                             pkt.parse(pkt.buffer(), n);
-                        }
                         std::move(h)(ec, n);
                     });
             },
@@ -213,18 +198,19 @@ public:
     // （begin_ipv4/begin_ipv6 -> begin_tcp/udp/icmp -> append_payload ->
     // finalize()）构建，或直接复用读入/改写的原始字节。
     template <typename CompletionToken>
-    auto async_write_ip(ip_packet &pkt, CompletionToken &&token)
+    auto async_write_ip(ip_packet& pkt, CompletionToken&& token)
     {
         return async_write_ip(pkt, 0, std::forward<CompletionToken>(token));
     }
 
     // ---- 异步写入一个 IP 报文（指定队列）----
     template <typename CompletionToken>
-    auto async_write_ip(ip_packet &pkt, size_t queue, CompletionToken &&token)
+    auto async_write_ip(ip_packet& pkt, size_t queue, CompletionToken&& token)
     {
         return net::async_initiate<CompletionToken,
             void(boost::system::error_code, size_t)>(
-            [this, &pkt, queue](auto handler) {
+            [this, &pkt, queue](auto handler)
+            {
                 impl_.async_write(pkt.buffer(), queue, std::move(handler));
             },
             token);

@@ -26,34 +26,31 @@ namespace detail {
 class unsupported_tun_device
 {
 public:
-    explicit unsupported_tun_device(net::io_context &)
-    {
-    }
+    explicit unsupported_tun_device(net::io_context&) {}
 
-    bool open(const device_config &, boost::system::error_code &ec)
+    bool open(const device_config&, boost::system::error_code& ec)
     {
         ec = make_error_code(boost::system::errc::operation_not_supported);
         return false;
     }
 
-    bool assign(native_handle_type, size_t, bool,
-        boost::system::error_code &ec)
+    bool assign(native_handle_type, size_t, bool, boost::system::error_code& ec)
     {
         ec = make_error_code(boost::system::errc::operation_not_supported);
         return false;
     }
 
-    bool assign_queues(const std::vector<native_handle_type> &,
-        size_t, bool, boost::system::error_code &ec)
+    bool assign_queues(const std::vector<native_handle_type>&,
+        size_t,
+        bool,
+        boost::system::error_code& ec)
     {
         ec = make_error_code(boost::system::errc::operation_not_supported);
         return false;
     }
 
-    void close()
-    {
-    }
-    size_t mtu() const
+    void close() {}
+    size_t mtu() const noexcept
     {
         return 0;
     }
@@ -61,35 +58,35 @@ public:
     {
         return 0;
     }
-    size_t queue_count() const
+    size_t queue_count() const noexcept
     {
         return 1;
     }
-    bool is_open() const
+    bool is_open() const noexcept
     {
         return false;
     }
 
     template <typename Handler>
-    void async_read(packet_buffer &, Handler &&handler)
+    void async_read(packet_buffer&, Handler&& handler)
     {
         std::forward<Handler>(handler)(net::error::bad_descriptor, 0);
     }
 
     template <typename Handler>
-    void async_read(packet_buffer &buf, size_t, Handler &&handler)
+    void async_read(packet_buffer& buf, size_t, Handler&& handler)
     {
         async_read(buf, std::forward<Handler>(handler));
     }
 
     template <typename Handler>
-    void async_write(packet_buffer &, Handler &&handler)
+    void async_write(packet_buffer&, Handler&& handler)
     {
         std::forward<Handler>(handler)(net::error::bad_descriptor, 0);
     }
 
     template <typename Handler>
-    void async_write(packet_buffer &buf, size_t, Handler &&handler)
+    void async_write(packet_buffer& buf, size_t, Handler&& handler)
     {
         async_write(buf, std::forward<Handler>(handler));
     }

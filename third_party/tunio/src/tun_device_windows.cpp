@@ -76,23 +76,28 @@ struct tap_device_info
 boost::system::error_code win_last_error()
 {
     const DWORD err = ::GetLastError();
-    return boost::system::error_code(static_cast<int>(err),
-                                     boost::system::system_category());
+    return boost::system::error_code(
+        static_cast<int>(err), boost::system::system_category());
 }
 
 std::string ascii_lower(std::string s)
 {
-    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
+    std::transform(s.begin(),
+        s.end(),
+        s.begin(),
+        [](unsigned char c)
+        {
+            return static_cast<char>(std::tolower(c));
+        });
     return s;
 }
 
-bool iequals(const std::string &lhs, const std::string &rhs)
+bool iequals(const std::string& lhs, const std::string& rhs)
 {
     if (lhs.size() != rhs.size())
         return false;
-    for (size_t i = 0; i < lhs.size(); ++i) {
+    for (size_t i = 0; i < lhs.size(); ++i)
+    {
         if (std::tolower(static_cast<unsigned char>(lhs[i])) !=
             std::tolower(static_cast<unsigned char>(rhs[i])))
             return false;
@@ -101,7 +106,7 @@ bool iequals(const std::string &lhs, const std::string &rhs)
 }
 
 // 去掉 GUID 字符串中的花括号（"{xxx}" -> "xxx"）。
-std::string strip_braces(const std::string &s)
+std::string strip_braces(const std::string& s)
 {
     std::string out;
     out.reserve(s.size());
@@ -111,7 +116,7 @@ std::string strip_braces(const std::string &s)
     return out;
 }
 
-std::wstring widen(const std::string &s)
+std::wstring widen(const std::string& s)
 {
     if (s.empty())
         return {};
@@ -126,17 +131,20 @@ std::wstring widen(const std::string &s)
     return result;
 }
 
-std::string narrow(const std::wstring &ws)
+std::string narrow(const std::wstring& ws)
 {
     if (ws.empty())
         return {};
-    const int len = ::WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), -1, nullptr,
-                                          0, nullptr, nullptr);
+
+    const int len = ::WideCharToMultiByte(
+        CP_UTF8, 0, ws.c_str(), -1, nullptr, 0, nullptr, nullptr);
     if (len <= 0)
         return {};
+
     std::string result(static_cast<size_t>(len), '\0');
-    ::WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), -1, &result[0], len, nullptr,
-                          nullptr);
+    ::WideCharToMultiByte(
+        CP_UTF8, 0, ws.c_str(), -1, &result[0], len, nullptr, nullptr);
+
     while (!result.empty() && result.back() == '\0')
         result.pop_back();
     return result;
@@ -156,16 +164,16 @@ std::string normalize_component_id(std::string id)
 // 是否为 TAP 驱动：显式支持 tap0901、tapnordvpn、tap-tb-0901 等常见
 // ComponentId，以及任何以 "tap" 开头的变体（tap0801、tapoas 等）。
 // 入参为已归一化的 ComponentId（无 "root\" 前缀）。
-bool is_tap_component(const std::string &component_id)
+bool is_tap_component(const std::string& component_id)
 {
-    static const char *const known[] = {"tap0901", "tapnordvpn", "tap-tb-0901"};
-    for (const char *k : known)
+    static const char* const known[] = {"tap0901", "tapnordvpn", "tap-tb-0901"};
+    for (const char* k : known)
         if (component_id == k)
             return true;
     return component_id.starts_with("tap");
 }
 
-// 枚举注册表中的 TAP 网卡，返回 {component_id, guid, 显示名} 列表。
+// 枚举注册表中的 TAP 网卡，返回 {component_id, guid，显示名} 列表。
 std::vector<tap_device_info> enum_tap_devices()
 {
     std::vector<tap_device_info> result;
@@ -175,11 +183,13 @@ std::vector<tap_device_info> enum_tap_devices()
         ERROR_SUCCESS)
         return result;
 
-    for (int i = 0;; ++i) {
+    for (int i = 0;; ++i)
+    {
         wchar_t enum_name[256] = {0};
         DWORD len = static_cast<DWORD>(sizeof(enum_name) / sizeof(wchar_t));
-        if (::RegEnumKeyExW(key, i, enum_name, &len, nullptr, nullptr, nullptr,
-                            nullptr) != ERROR_SUCCESS)
+        if (::RegEnumKeyExW(
+                key, i, enum_name, &len, nullptr, nullptr, nullptr, nullptr) !=
+            ERROR_SUCCESS)
             break;
 
         std::wstring unit = k_adapter_key;
@@ -187,8 +197,9 @@ std::vector<tap_device_info> enum_tap_devices()
         unit += enum_name;
 
         HKEY unit_key;
-        if (::RegOpenKeyExW(HKEY_LOCAL_MACHINE, unit.c_str(), 0, KEY_READ,
-                            &unit_key) != ERROR_SUCCESS)
+        if (::RegOpenKeyExW(
+                HKEY_LOCAL_MACHINE, unit.c_str(), 0, KEY_READ, &unit_key) !=
+            ERROR_SUCCESS)
             continue;
 
         char comp_id[256] = {0};
@@ -197,33 +208,41 @@ std::vector<tap_device_info> enum_tap_devices()
         wchar_t desc_id[256] = {0};
         DWORD type = 0;
         DWORD comp_len = static_cast<DWORD>(sizeof(comp_id));
-        const bool has_comp =
-            ::RegQueryValueExA(unit_key, "ComponentId", nullptr, &type,
-                               reinterpret_cast<LPBYTE>(comp_id),
-                               &comp_len) == ERROR_SUCCESS;
+        const bool has_comp = ::RegQueryValueExA(unit_key,
+                                  "ComponentId",
+                                  nullptr,
+                                  &type,
+                                  reinterpret_cast<LPBYTE>(comp_id),
+                                  &comp_len) == ERROR_SUCCESS;
         // NetCfgInstanceId 独立读取：不依赖 ComponentId 是否存在，
         // 以便 ComponentId 缺失时仍能走 MatchingDeviceId 兜底。
         len = static_cast<DWORD>(sizeof(inst_id));
-        const bool has_inst =
-            ::RegQueryValueExA(unit_key, "NetCfgInstanceId", nullptr, &type,
-                               reinterpret_cast<LPBYTE>(inst_id),
-                               &len) == ERROR_SUCCESS;
+        const bool has_inst = ::RegQueryValueExA(unit_key,
+                                  "NetCfgInstanceId",
+                                  nullptr,
+                                  &type,
+                                  reinterpret_cast<LPBYTE>(inst_id),
+                                  &len) == ERROR_SUCCESS;
         bool has_match = false;
         {
             DWORD mlen = static_cast<DWORD>(sizeof(match_id));
-            has_match =
-                ::RegQueryValueExA(unit_key, "MatchingDeviceId", nullptr, &type,
-                                   reinterpret_cast<LPBYTE>(match_id),
-                                   &mlen) == ERROR_SUCCESS;
+            has_match = ::RegQueryValueExA(unit_key,
+                            "MatchingDeviceId",
+                            nullptr,
+                            &type,
+                            reinterpret_cast<LPBYTE>(match_id),
+                            &mlen) == ERROR_SUCCESS;
         }
         bool has_desc = false;
         {
             // DriverDesc 可能本地化（非 ASCII），用宽字符 API 读取。
             DWORD dlen = static_cast<DWORD>(sizeof(desc_id));
-            has_desc =
-                ::RegQueryValueExW(unit_key, L"DriverDesc", nullptr, &type,
-                                   reinterpret_cast<LPBYTE>(desc_id),
-                                   &dlen) == ERROR_SUCCESS;
+            has_desc = ::RegQueryValueExW(unit_key,
+                           L"DriverDesc",
+                           nullptr,
+                           &type,
+                           reinterpret_cast<LPBYTE>(desc_id),
+                           &dlen) == ERROR_SUCCESS;
         }
         ::RegCloseKey(unit_key);
 
@@ -232,16 +251,15 @@ std::vector<tap_device_info> enum_tap_devices()
 
         // 硬件 ID 信号：优先 ComponentId，缺失时退回 MatchingDeviceId，
         // 两者都归一化（小写 + 去 "root\" 前缀）。
-        std::string component_id =
-            has_comp ? normalize_component_id(comp_id)
-                     : (has_match ? normalize_component_id(match_id)
-                                  : std::string());
-        const bool is_tap =
-            is_tap_component(component_id) ||
+        std::string component_id = has_comp
+            ? normalize_component_id(comp_id)
+            : (has_match ? normalize_component_id(match_id) : std::string());
+        const bool is_tap = is_tap_component(component_id) ||
             (has_desc &&
-             ascii_lower(narrow(desc_id)).find("tap") != std::string::npos);
+                ascii_lower(narrow(desc_id)).find("tap") != std::string::npos);
 
-        if (is_tap) {
+        if (is_tap)
+        {
             tap_device_info dev;
             dev.component_id = std::move(component_id);
             dev.guid.assign(inst_id);
@@ -253,15 +271,18 @@ std::vector<tap_device_info> enum_tap_devices()
     ::RegCloseKey(key);
 
     // 读取网卡显示名（网络连接分支：...\<GUID>\Connection 下的 Name）。
-    if (::RegOpenKeyExW(HKEY_LOCAL_MACHINE, k_network_connections_key, 0,
-                        KEY_READ, &key) != ERROR_SUCCESS)
+    if (::RegOpenKeyExW(
+            HKEY_LOCAL_MACHINE, k_network_connections_key, 0, KEY_READ, &key) !=
+        ERROR_SUCCESS)
         return result;
 
-    for (int i = 0;; ++i) {
+    for (int i = 0;; ++i)
+    {
         wchar_t enum_name[256] = {0};
         DWORD len = static_cast<DWORD>(sizeof(enum_name) / sizeof(wchar_t));
-        if (::RegEnumKeyExW(key, i, enum_name, &len, nullptr, nullptr, nullptr,
-                            nullptr) != ERROR_SUCCESS)
+        if (::RegEnumKeyExW(
+                key, i, enum_name, &len, nullptr, nullptr, nullptr, nullptr) !=
+            ERROR_SUCCESS)
             break;
 
         std::wstring conn = k_network_connections_key;
@@ -270,18 +291,23 @@ std::vector<tap_device_info> enum_tap_devices()
         conn += L"\\Connection";
 
         HKEY conn_key;
-        if (::RegOpenKeyExW(HKEY_LOCAL_MACHINE, conn.c_str(), 0, KEY_READ,
-                            &conn_key) != ERROR_SUCCESS)
+        if (::RegOpenKeyExW(
+                HKEY_LOCAL_MACHINE, conn.c_str(), 0, KEY_READ, &conn_key) !=
+            ERROR_SUCCESS)
             continue;
 
         wchar_t name_buf[256] = {0};
         len = static_cast<DWORD>(sizeof(name_buf) / sizeof(wchar_t));
-        if (::RegQueryValueExW(conn_key, L"Name", nullptr, nullptr,
-                               reinterpret_cast<LPBYTE>(name_buf),
-                               &len) == ERROR_SUCCESS) {
+        if (::RegQueryValueExW(conn_key,
+                L"Name",
+                nullptr,
+                nullptr,
+                reinterpret_cast<LPBYTE>(name_buf),
+                &len) == ERROR_SUCCESS)
+        {
             const std::string guid = narrow(enum_name);
             const std::string name = narrow(name_buf);
-            for (auto &dev : result)
+            for (auto& dev : result)
                 if (iequals(dev.guid, guid))
                     dev.name = name;
         }
@@ -291,7 +317,7 @@ std::vector<tap_device_info> enum_tap_devices()
 
     // 显示名兜底：网络连接分支缺失时退回 DriverDesc（TAP-Windows
     // Adapter V9 的 DriverDesc 与显示名通常一致）。
-    for (auto &dev : result)
+    for (auto& dev : result)
         if (dev.name.empty())
             dev.name = dev.driver_desc;
 
@@ -304,8 +330,8 @@ std::vector<tap_device_info> enum_tap_devices()
 //   ③ 设备路径，如 "\\.\Global\{GUID}.tap"；
 //   ④ 网卡显示名（如 "TAP-Windows Adapter V9"）；
 //   ⑤ ComponentId（如 "tap0901" 或 "root\tap0901" -> 第一块该驱动的网卡）。
-std::string resolve_tap_guid(const std::vector<tap_device_info> &devs,
-                             const std::string &name)
+std::string resolve_tap_guid(
+    const std::vector<tap_device_info>& devs, const std::string& name)
 {
     if (devs.empty())
         return {};
@@ -314,12 +340,14 @@ std::string resolve_tap_guid(const std::vector<tap_device_info> &devs,
         return devs.front().guid;
 
     // 设备路径形式：\\.\Global\{GUID}.tap
-    if (name.size() > 4 && name.compare(0, 4, "\\\\.\\") == 0) {
+    if (name.size() > 4 && name.compare(0, 4, "\\\\.\\") == 0)
+    {
         const size_t open = name.find('{');
         const size_t close = name.find('}', open);
-        if (open != std::string::npos && close != std::string::npos) {
+        if (open != std::string::npos && close != std::string::npos)
+        {
             const std::string guid = name.substr(open, close - open + 1);
-            for (const auto &dev : devs)
+            for (const auto& dev : devs)
                 if (iequals(dev.guid, guid))
                     return dev.guid;
         }
@@ -328,7 +356,8 @@ std::string resolve_tap_guid(const std::vector<tap_device_info> &devs,
 
     const std::string bare = strip_braces(name);
 
-    for (const auto &dev : devs) {
+    for (const auto& dev : devs)
+    {
         if (iequals(dev.guid, name) || iequals(strip_braces(dev.guid), bare))
             return dev.guid;
     }
@@ -336,7 +365,8 @@ std::string resolve_tap_guid(const std::vector<tap_device_info> &devs,
     // 显示名 / ComponentId（输入与存储的 component_id 均做归一化，
     // 因此 "tap0901" 与 "root\tap0901" 写法都能匹配）。
     const std::string norm_name = normalize_component_id(name);
-    for (const auto &dev : devs) {
+    for (const auto& dev : devs)
+    {
         if (iequals(dev.name, name) || iequals(dev.component_id, norm_name))
             return dev.guid;
     }
@@ -346,7 +376,7 @@ std::string resolve_tap_guid(const std::vector<tap_device_info> &devs,
 
 // 同步 Windows IP 协议栈的接口 MTU（GetAdapterIndex + SetIpInterfaceEntry），
 // 使驱动 MTU 与协议栈 MTU 一致；失败时忽略（需要管理员权限等）。
-void set_interface_mtu(const std::string &guid, int mtu)
+void set_interface_mtu(const std::string& guid, int mtu)
 {
     if (mtu <= 0)
         return;
@@ -357,13 +387,15 @@ void set_interface_mtu(const std::string &guid, int mtu)
     if (::GetAdapterIndex(&name[0], &index) != NO_ERROR)
         return;
 
-    auto set_family_mtu = [&](ADDRESS_FAMILY family, int value) {
+    auto set_family_mtu = [&](ADDRESS_FAMILY family, int value)
+    {
         MIB_IPINTERFACE_ROW row;
         ZeroMemory(&row, sizeof(row));
         InitializeIpInterfaceEntry(&row);
         row.Family = family;
         row.InterfaceIndex = index;
-        if (GetIpInterfaceEntry(&row) == NO_ERROR) {
+        if (GetIpInterfaceEntry(&row) == NO_ERROR)
+        {
             row.NlMtu = static_cast<ULONG>(value);
             SetIpInterfaceEntry(&row);
         }
@@ -376,25 +408,54 @@ void set_interface_mtu(const std::string &guid, int mtu)
 
 } // namespace
 
-bool windows_tun_device_impl::open(const device_config &cfg,
-                                   boost::system::error_code &ec)
+bool windows_tun_device_impl::assign(
+    native_handle_type handle, size_t mtu, bool, boost::system::error_code& ec)
+{
+    handle_.assign(handle, ec);
+    if (!ec)
+    {
+        open_ = true;
+        mtu_ = mtu;
+    }
+    return !ec;
+}
+
+bool windows_tun_device_impl::assign_queues(
+    const std::vector<native_handle_type>&,
+    size_t,
+    bool,
+    boost::system::error_code& ec)
+{
+    // Windows TAP 驱动无多队列概念：注入多个句柄不支持。
+    ec = make_error_code(boost::system::errc::operation_not_supported);
+    return false;
+}
+
+bool windows_tun_device_impl::open(
+    const device_config& cfg, boost::system::error_code& ec)
 {
     close();
 
     const std::vector<tap_device_info> devs = enum_tap_devices();
     const std::string guid = resolve_tap_guid(devs, cfg.name);
-    if (guid.empty()) {
+    if (guid.empty())
+    {
         ec = boost::system::error_code(static_cast<int>(ERROR_FILE_NOT_FOUND),
-                                       boost::system::system_category());
+            boost::system::system_category());
         return false;
     }
 
     const std::wstring device_path = L"\\\\.\\Global\\" + widen(guid) + L".tap";
 
-    const HANDLE handle = ::CreateFileW(
-        device_path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr,
-        OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, nullptr);
-    if (handle == INVALID_HANDLE_VALUE) {
+    const HANDLE handle = ::CreateFileW(device_path.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        0,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
+        nullptr);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
         ec = win_last_error();
         return false;
     }
@@ -408,9 +469,15 @@ bool windows_tun_device_impl::open(const device_config &cfg,
         unsigned long minor;
         unsigned long debug;
     } version = {0, 0, 0};
-    if (!::DeviceIoControl(handle, TAP_IOCTL_GET_VERSION, &version,
-                           sizeof(version), &version, sizeof(version), &bytes,
-                           nullptr)) {
+    if (!::DeviceIoControl(handle,
+            TAP_IOCTL_GET_VERSION,
+            &version,
+            sizeof(version),
+            &version,
+            sizeof(version),
+            &bytes,
+            nullptr))
+    {
         ec = win_last_error();
         ::CloseHandle(handle);
         return false;
@@ -419,22 +486,31 @@ bool windows_tun_device_impl::open(const device_config &cfg,
     // 切换到 TUN 模式（剥离以太网头，仅透传 IP 报文）。
     // 未配置 IPv4 时传入全零地址：仍启用 TUN 模式，不做子网过滤。
     uint32_t tun_addrs[3] = {0, 0, 0};
-    if (!cfg.ipv4.empty()) {
+    if (!cfg.ipv4.empty())
+    {
         const std::string mask =
             cfg.netmask.empty() ? std::string("255.255.255.0") : cfg.netmask;
         if (::inet_pton(AF_INET, cfg.ipv4.c_str(), &tun_addrs[0]) != 1 ||
-            ::inet_pton(AF_INET, mask.c_str(), &tun_addrs[1]) != 1) {
-            ec = boost::system::error_code(static_cast<int>(WSAEINVAL),
-                                           boost::system::system_category());
+            ::inet_pton(AF_INET, mask.c_str(), &tun_addrs[1]) != 1)
+        {
+            ec = boost::system::error_code(
+                static_cast<int>(WSAEINVAL), boost::system::system_category());
             ::CloseHandle(handle);
             return false;
         }
+
         tun_addrs[2] = tun_addrs[1];                // mask
         tun_addrs[1] = tun_addrs[2] & tun_addrs[0]; // network = ip & mask
     }
-    if (!::DeviceIoControl(handle, TAP_IOCTL_CONFIG_TUN, tun_addrs,
-                           sizeof(tun_addrs), tun_addrs, sizeof(tun_addrs),
-                           &bytes, nullptr)) {
+    if (!::DeviceIoControl(handle,
+            TAP_IOCTL_CONFIG_TUN,
+            tun_addrs,
+            sizeof(tun_addrs),
+            tun_addrs,
+            sizeof(tun_addrs),
+            &bytes,
+            nullptr))
+    {
         ec = win_last_error();
         ::CloseHandle(handle);
         return false;
@@ -442,10 +518,16 @@ bool windows_tun_device_impl::open(const device_config &cfg,
 
     // 查询驱动 MTU。
     ULONG driver_mtu = 0;
-    if (!::DeviceIoControl(handle, TAP_IOCTL_GET_MTU, &driver_mtu,
-                           sizeof(driver_mtu), &driver_mtu, sizeof(driver_mtu),
-                           &bytes, nullptr) ||
-        driver_mtu == 0) {
+    if (!::DeviceIoControl(handle,
+            TAP_IOCTL_GET_MTU,
+            &driver_mtu,
+            sizeof(driver_mtu),
+            &driver_mtu,
+            sizeof(driver_mtu),
+            &bytes,
+            nullptr) ||
+        driver_mtu == 0)
+    {
         driver_mtu = 1500;
     }
     size_t mtu = cfg.mtu > 0 ? cfg.mtu : static_cast<size_t>(driver_mtu);
@@ -459,18 +541,31 @@ bool windows_tun_device_impl::open(const device_config &cfg,
     //   ep[2] = DHCP 服务器伪装地址（取网络地址，满足驱动
     //           CheckIfDhcpAndTunMode 的归属校验）
     //   ep[3] = 租约时间（秒），必须 > 0
-    if (!cfg.ipv4.empty()) {
+    if (!cfg.ipv4.empty())
+    {
         uint32_t ep[4] = {tun_addrs[0], tun_addrs[2], tun_addrs[1], 86400};
-        ::DeviceIoControl(handle, TAP_IOCTL_CONFIG_DHCP_MASQ, ep, sizeof(ep),
-                          ep, sizeof(ep), &bytes, nullptr);
+        ::DeviceIoControl(handle,
+            TAP_IOCTL_CONFIG_DHCP_MASQ,
+            ep,
+            sizeof(ep),
+            ep,
+            sizeof(ep),
+            &bytes,
+            nullptr);
     }
 
     // 启用链路（media status）。
     {
         ULONG status = TRUE;
-        if (!::DeviceIoControl(handle, TAP_IOCTL_SET_MEDIA_STATUS, &status,
-                               sizeof(status), &status, sizeof(status), &bytes,
-                               nullptr)) {
+        if (!::DeviceIoControl(handle,
+                TAP_IOCTL_SET_MEDIA_STATUS,
+                &status,
+                sizeof(status),
+                &status,
+                sizeof(status),
+                &bytes,
+                nullptr))
+        {
             ec = win_last_error();
             ::CloseHandle(handle);
             return false;
@@ -482,7 +577,8 @@ bool windows_tun_device_impl::open(const device_config &cfg,
 
     // 交给 Asio 接管句柄（Overlapped I/O）。
     handle_.assign(handle, ec);
-    if (ec) {
+    if (ec)
+    {
         ::CloseHandle(handle);
         return false;
     }
@@ -499,13 +595,19 @@ void windows_tun_device_impl::close()
     open_ = false;
 
     const HANDLE handle = handle_.native_handle();
-    if (handle != INVALID_HANDLE_VALUE) {
+    if (handle != INVALID_HANDLE_VALUE)
+    {
         // 关闭前先置链路 down，避免残留的假媒体状态。
         ULONG status = FALSE;
         DWORD bytes = 0;
-        ::DeviceIoControl(handle, TAP_IOCTL_SET_MEDIA_STATUS, &status,
-                          sizeof(status), &status, sizeof(status), &bytes,
-                          nullptr);
+        ::DeviceIoControl(handle,
+            TAP_IOCTL_SET_MEDIA_STATUS,
+            &status,
+            sizeof(status),
+            &status,
+            sizeof(status),
+            &bytes,
+            nullptr);
     }
 
     boost::system::error_code ignore;

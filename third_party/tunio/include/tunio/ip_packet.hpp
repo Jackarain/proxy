@@ -49,15 +49,15 @@ struct ipv4_header
     uint32_t src_ip;
     uint32_t dst_ip;
 
-    uint8_t version() const
+    uint8_t version() const noexcept
     {
         return static_cast<uint8_t>(version_ihl >> 4);
     }
-    uint8_t ihl() const
+    uint8_t ihl() const noexcept
     {
         return static_cast<uint8_t>(version_ihl & 0x0f);
     }
-    size_t header_len() const
+    size_t header_len() const noexcept
     {
         return static_cast<size_t>(ihl()) * 4;
     }
@@ -85,7 +85,7 @@ struct tcp_header
     uint16_t checksum;
     uint16_t urgent;
 
-    size_t header_len() const
+    size_t header_len() const noexcept
     {
         return static_cast<size_t>(data_offset >> 4) * 4;
     }
@@ -103,31 +103,41 @@ struct udp_header
 // ---- 校验和工具（RFC 1071 反码和；实现见 src/ip_packet.cpp）----
 
 // 对 data[0, len) 计算反码和校验
-uint16_t ip_checksum(const uint8_t *data, size_t len);
+uint16_t ip_checksum(const uint8_t* data, size_t len) noexcept;
 
 // IPv4 头部校验和（自动跳过 checksum 字段本身）
-uint16_t ipv4_checksum(const uint8_t *ip, size_t hlen);
+uint16_t ipv4_checksum(const uint8_t* ip, size_t hlen) noexcept;
 
 // IPv4 头部校验和验证（包含 checksum 字段求和，合法头部结果为 0）
-uint16_t verify_ipv4_checksum(const uint8_t *ip, size_t hlen);
+uint16_t verify_ipv4_checksum(const uint8_t* ip, size_t hlen) noexcept;
 
 // TCP/UDP/ICMPv6 伪头部校验和（family: 4 或 6，地址均为网络字节序）
-uint16_t tcp_udp_checksum(int family, const uint8_t *src_ip,
-    const uint8_t *dst_ip, uint8_t protocol, const uint8_t *segment,
-    size_t seg_len);
+uint16_t tcp_udp_checksum(int family,
+    const uint8_t* src_ip,
+    const uint8_t* dst_ip,
+    uint8_t protocol,
+    const uint8_t* segment,
+    size_t seg_len) noexcept;
 
 // TCP/UDP 伪头部校验和（IPv4 便捷重载，参数为网络字节序地址）
-uint16_t tcp_udp_checksum(uint32_t src_ip, uint32_t dst_ip, uint8_t protocol,
-    const uint8_t *segment, size_t seg_len);
+uint16_t tcp_udp_checksum(uint32_t src_ip,
+    uint32_t dst_ip,
+    uint8_t protocol,
+    const uint8_t* segment,
+    size_t seg_len) noexcept;
 
 // IP 头部长度（IPv4 20 字节 / IPv6 40 字节）
 size_t ip_header_size(int family) noexcept;
 
 // 构建 IP 头部（IPv4 自动计算头部校验和，IPv6 无校验和字段）；
 // buf 需至少容纳 ip_header_size(family) 字节，返回头部长度。
-size_t build_ip_header(uint8_t *buf, int family, const uint8_t *src_ip,
-    const uint8_t *dst_ip, uint8_t protocol, size_t total_len,
-    uint16_t ip_id);
+size_t build_ip_header(uint8_t* buf,
+    int family,
+    const uint8_t* src_ip,
+    const uint8_t* dst_ip,
+    uint8_t protocol,
+    size_t total_len,
+    uint16_t ip_id) noexcept;
 
 // 从 TUN 设备读取/向 TUN 设备写入的一个完整 IP 报文。
 //
@@ -165,10 +175,10 @@ public:
     }
 
     // ip_packet 自持 packet_buffer（内含 unique_ptr 存储），仅可移动
-    ip_packet(const ip_packet &) = delete;
-    ip_packet &operator=(const ip_packet &) = delete;
-    ip_packet(ip_packet &&) = default;
-    ip_packet &operator=(ip_packet &&) = default;
+    ip_packet(const ip_packet&) = delete;
+    ip_packet& operator=(const ip_packet&) = delete;
+    ip_packet(ip_packet&&) = default;
+    ip_packet& operator=(ip_packet&&) = default;
 
     // 复位缓冲与解析状态，可复用对象进行下一次读取/构造
     void reset() noexcept;
@@ -176,10 +186,10 @@ public:
     // ---- 解析（读路径）----
 
     // 解析外部缓冲区中的报文（拷贝进内部缓冲）；src 允许为自身 buffer()
-    void parse(const packet_buffer &src, size_t len);
+    void parse(const packet_buffer& src, size_t len);
 
     // 解析裸字节报文（拷贝进内部缓冲）
-    void parse(const uint8_t *data, size_t len);
+    void parse(const uint8_t* data, size_t len);
 
     bool valid() const noexcept
     {
@@ -189,26 +199,7 @@ public:
     {
         return parse_error_;
     }
-    static const char *error_message(parse_error e) noexcept
-    {
-        switch (e) {
-        case parse_error::none:
-            return "no error";
-        case parse_error::invalid_version:
-            return "invalid IP version";
-        case parse_error::packet_too_short:
-            return "packet too short";
-        case parse_error::buffer_too_small:
-            return "buffer too small";
-        case parse_error::invalid_ip_header_length:
-            return "invalid IP header length";
-        case parse_error::invalid_total_length:
-            return "invalid total length";
-        case parse_error::invalid_transport_header:
-            return "invalid transport header";
-        }
-        return "unknown error";
-    }
+    static const char* error_message(parse_error e) noexcept;
 
     // ---- IP 层 ----
 
@@ -241,20 +232,20 @@ public:
     net::ip::address source_address() const noexcept;
     net::ip::address destination_address() const noexcept;
     // 网络字节序地址字节（IPv4 仅前 4 字节有效），零拷贝热路径
-    const uint8_t *source_ip_bytes() const noexcept
+    const uint8_t* source_ip_bytes() const noexcept
     {
         return src_ip_;
     }
-    const uint8_t *destination_ip_bytes() const noexcept
+    const uint8_t* destination_ip_bytes() const noexcept
     {
         return dst_ip_;
     }
     // 原始头部视图（版本不匹配时为 nullptr）
-    const ipv4_header *ipv4() const noexcept
+    const ipv4_header* ipv4() const noexcept
     {
         return version_ == 4 ? &v4_ : nullptr;
     }
-    const ipv6_header *ipv6() const noexcept
+    const ipv6_header* ipv6() const noexcept
     {
         return version_ == 6 ? &v6_ : nullptr;
     }
@@ -278,32 +269,14 @@ public:
         return protocol_ == ip_protocol_icmpv6;
     }
     // 主机字节序端口（非 TCP/UDP 或传输层未解析时为 0）
-    uint16_t source_port() const noexcept
-    {
-        if (is_tcp() && transport_parsed_) {
-            return ntohs(tcp_.src_port);
-        }
-        if (is_udp() && transport_parsed_) {
-            return ntohs(udp_.src_port);
-        }
-        return 0;
-    }
-    uint16_t destination_port() const noexcept
-    {
-        if (is_tcp() && transport_parsed_) {
-            return ntohs(tcp_.dst_port);
-        }
-        if (is_udp() && transport_parsed_) {
-            return ntohs(udp_.dst_port);
-        }
-        return 0;
-    }
+    uint16_t source_port() const noexcept;
+    uint16_t destination_port() const noexcept;
     // 类型化传输层头部（协议不匹配、解析失败或分片非首片时为 nullptr）
-    const tcp_header *tcp() const noexcept
+    const tcp_header* tcp() const noexcept
     {
         return is_tcp() && transport_parsed_ ? &tcp_ : nullptr;
     }
-    const udp_header *udp() const noexcept
+    const udp_header* udp() const noexcept
     {
         return is_udp() && transport_parsed_ ? &udp_ : nullptr;
     }
@@ -333,7 +306,7 @@ public:
 
     // 传输层报文段（IP 头之后的全部字节，含 TCP/UDP/ICMP 头部），指向内部
     // 缓冲，零拷贝；分片非首片为分片内容。仅在 valid() 时可靠。
-    const uint8_t *payload() const noexcept
+    const uint8_t* payload() const noexcept
     {
         return payload_;
     }
@@ -343,58 +316,31 @@ public:
     }
     // 纯应用数据（传输层头部之后）；传输层未解析（未知协议或分片非首片）
     // 时与 payload() 相同（此时无传输层视图可裁剪）。
-    const uint8_t *transport_data() const noexcept
-    {
-        if (payload_ == nullptr) {
-            return nullptr;
-        }
-        if (is_tcp() && transport_parsed_) {
-            return payload_ + tcp_.header_len();
-        }
-        if (is_udp() && transport_parsed_) {
-            return payload_ + sizeof(udp_header);
-        }
-        if ((is_icmp() || is_icmpv6()) && transport_parsed_) {
-            return payload_ + 8;
-        }
-        return payload_;
-    }
-    size_t transport_data_size() const noexcept
-    {
-        if (payload_ == nullptr) {
-            return 0;
-        }
-        if (is_tcp() && transport_parsed_) {
-            return payload_len_ > tcp_.header_len()
-                ? payload_len_ - tcp_.header_len()
-                : 0;
-        }
-        if (is_udp() && transport_parsed_) {
-            return payload_len_ > sizeof(udp_header)
-                ? payload_len_ - sizeof(udp_header)
-                : 0;
-        }
-        if ((is_icmp() || is_icmpv6()) && transport_parsed_) {
-            return payload_len_ > 8 ? payload_len_ - 8 : 0;
-        }
-        return payload_len_;
-    }
+    const uint8_t* transport_data() const noexcept;
+    size_t transport_data_size() const noexcept;
 
     // ---- 写路径（字段构造）----
 
     // 以下 begin_* 系列必须按 begin_ipv4/begin_ipv6 -> begin_tcp/udp/icmp ->
     // [append_payload] -> finalize() 的顺序使用；每个报文构造前自动复位缓冲，
     // 传输层 begin_* 仅允许调用一次（重复调用抛 std::logic_error）。
-    void begin_ipv4(const net::ip::address_v4 &src,
-        const net::ip::address_v4 &dst, uint8_t ttl = 64);
-    void begin_ipv6(const net::ip::address_v6 &src,
-        const net::ip::address_v6 &dst, uint8_t hop_limit = 64);
+    void begin_ipv4(const net::ip::address_v4& src,
+        const net::ip::address_v4& dst,
+        uint8_t ttl = 64);
+    void begin_ipv6(const net::ip::address_v6& src,
+        const net::ip::address_v6& dst,
+        uint8_t hop_limit = 64);
 
     // options/options_len 为可选的 TCP 选项区（MSS 等），长度须为 4 的倍数且
     // 不超过 40 字节；不传表示无选项（data offset 20）。
-    void begin_tcp(uint16_t src_port, uint16_t dst_port, uint32_t seq,
-        uint32_t ack, uint8_t flags, uint16_t window,
-        const void *options = nullptr, size_t options_len = 0);
+    void begin_tcp(uint16_t src_port,
+        uint16_t dst_port,
+        uint32_t seq,
+        uint32_t ack,
+        uint8_t flags,
+        uint16_t window,
+        const void* options = nullptr,
+        size_t options_len = 0);
     void begin_udp(uint16_t src_port, uint16_t dst_port);
 
     // type/code 为 ICMP 头部字段；Echo 类报文（v4 8/0，v6 128/129）需再调用
@@ -410,7 +356,7 @@ public:
     }
 
     // 追加传输层载荷（可多次调用）
-    void append_payload(const void *data, size_t len);
+    void append_payload(const void* data, size_t len);
 
     // 回填 IP/传输层长度与全部校验和；完成后即可通过访问器读取各字段
     //（内部会对自身做一次解析以同步视图）。
@@ -424,22 +370,22 @@ public:
     }
 
     // 底层缓冲：读路径设备直接读入其中；原始写路径 async_write_ip 写出其内容
-    packet_buffer &buffer() noexcept
+    packet_buffer& buffer() noexcept
     {
         return buf_;
     }
-    const packet_buffer &buffer() const noexcept
+    const packet_buffer& buffer() const noexcept
     {
         return buf_;
     }
 
 private:
     void clear_state() noexcept;
-    void copy_and_parse(const uint8_t *data, size_t len);
+    void copy_and_parse(const uint8_t* data, size_t len);
     void builder_begin(uint8_t version);
     void reserve_transport();
-    void parse_transport(uint8_t protocol, const uint8_t *seg, size_t seg_len);
-    void do_parse(const uint8_t *data, size_t len);
+    void parse_transport(uint8_t protocol, const uint8_t* seg, size_t seg_len);
+    void do_parse(const uint8_t* data, size_t len);
 
     packet_buffer buf_;
     parse_error parse_error_ = parse_error::none;
@@ -459,7 +405,7 @@ private:
     uint16_t icmp_checksum_ = 0;
     uint16_t icmp_echo_id_ = 0;
     uint16_t icmp_echo_seq_ = 0;
-    const uint8_t *payload_ = nullptr;
+    const uint8_t* payload_ = nullptr;
     size_t payload_len_ = 0;
     // 传输层头部是否已成功解析（协议号匹配但解析失败/分片非首片时为 false）
     bool transport_parsed_ = false;

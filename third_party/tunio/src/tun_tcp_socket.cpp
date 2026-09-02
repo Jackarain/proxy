@@ -27,11 +27,12 @@ tun_tcp_socket::~tun_tcp_socket()
     close();
 }
 
-tun_tcp_socket::tun_tcp_socket(tun_tcp_socket &&) noexcept = default;
+tun_tcp_socket::tun_tcp_socket(tun_tcp_socket&&) noexcept = default;
 
-tun_tcp_socket &tun_tcp_socket::operator=(tun_tcp_socket &&other) noexcept
+tun_tcp_socket& tun_tcp_socket::operator=(tun_tcp_socket&& other) noexcept
 {
-    if (this != &other) {
+    if (this != &other)
+    {
         close();
         flow_ = std::move(other.flow_);
         ex_ = std::move(other.ex_);
@@ -44,66 +45,63 @@ tun_tcp_socket::executor_type tun_tcp_socket::get_executor() const noexcept
     return ex_;
 }
 
-net::ip::tcp::endpoint tun_tcp_socket::original_destination() const
+net::ip::tcp::endpoint tun_tcp_socket::original_destination() const noexcept
 {
-    if (!flow_) {
+    if (!flow_)
         return {};
-    }
     return flow_->original_destination();
 }
 
-net::ip::tcp::endpoint tun_tcp_socket::remote_endpoint() const
+net::ip::tcp::endpoint tun_tcp_socket::remote_endpoint() const noexcept
 {
-    if (!flow_) {
+    if (!flow_)
         return {};
-    }
     return flow_->remote_endpoint();
 }
 
-void tun_tcp_socket::shutdown(net::ip::tcp::socket::shutdown_type what,
-    boost::system::error_code &ec)
+void tun_tcp_socket::shutdown(
+    net::ip::tcp::socket::shutdown_type what, boost::system::error_code& ec)
 {
     ec = {};
-    if (!flow_) {
+    if (!flow_)
+    {
         ec = net::error::bad_descriptor;
         return;
     }
     if (what == net::ip::tcp::socket::shutdown_send ||
-        what == net::ip::tcp::socket::shutdown_both) {
+        what == net::ip::tcp::socket::shutdown_both)
+    {
         detail::tcp_flow_shutdown_send(flow_);
     }
     if (what == net::ip::tcp::socket::shutdown_receive ||
-        what == net::ip::tcp::socket::shutdown_both) {
+        what == net::ip::tcp::socket::shutdown_both)
+    {
         detail::tcp_flow_shutdown_receive(flow_);
     }
 }
 
 void tun_tcp_socket::close()
 {
-    if (flow_) {
+    if (flow_)
         detail::tcp_flow_close(flow_);
-    }
 }
 
 void tun_tcp_socket::reset()
 {
-    if (flow_) {
+    if (flow_)
         detail::tcp_flow_reset(flow_);
-    }
 }
 
 void tun_tcp_socket::accept()
 {
-    if (flow_) {
+    if (flow_)
         detail::tcp_flow_accept(flow_);
-    }
 }
 
 void tun_tcp_socket::reject()
 {
-    if (flow_) {
+    if (flow_)
         detail::tcp_flow_reject(flow_);
-    }
 }
 
 bool tun_tcp_socket::is_open() const noexcept

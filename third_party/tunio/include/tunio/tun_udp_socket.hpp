@@ -37,8 +37,8 @@ public:
     explicit tun_udp_socket(executor_type ex);
     ~tun_udp_socket();
 
-    tun_udp_socket(tun_udp_socket &&) noexcept;
-    tun_udp_socket &operator=(tun_udp_socket &&) noexcept;
+    tun_udp_socket(tun_udp_socket&&) noexcept;
+    tun_udp_socket& operator=(tun_udp_socket&&) noexcept;
 
     executor_type get_executor() const noexcept;
 
@@ -47,16 +47,20 @@ public:
     // 前保持有效，失败路径不保证填充（与 Boost.Asio 的 async_receive_from
     // 语义一致）。
     template <typename MutableBufferSequence, typename CompletionToken>
-    auto async_receive_from(MutableBufferSequence &&buffers,
-        net::ip::udp::endpoint &sender, CompletionToken &&token)
+    auto async_receive_from(MutableBufferSequence&& buffers,
+        net::ip::udp::endpoint& sender,
+        CompletionToken&& token)
     {
         return net::async_initiate<CompletionToken,
             void(boost::system::error_code, size_t)>(
-            [this, &sender](auto handler, auto buffers) mutable {
-                do_receive_from(std::move(buffers), sender,
+            [this, &sender](auto handler, auto buffers) mutable
+            {
+                do_receive_from(std::move(buffers),
+                    sender,
                     net::bind_executor(ex_, std::move(handler)));
             },
-            token, std::forward<MutableBufferSequence>(buffers));
+            token,
+            std::forward<MutableBufferSequence>(buffers));
     }
 
     // 异步发送一个完整数据报：构造并注入 src=remote → dst=客户端 的响应
@@ -64,20 +68,24 @@ public:
     // Boost.Asio 的 async_send 语义一致），引擎在发送期间只引用而不拷贝
     // 用户数据。
     template <typename ConstBufferSequence, typename CompletionToken>
-    auto async_send_to(const net::ip::udp::endpoint &remote,
-        ConstBufferSequence &&buffers, CompletionToken &&token)
+    auto async_send_to(const net::ip::udp::endpoint& remote,
+        ConstBufferSequence&& buffers,
+        CompletionToken&& token)
     {
         return net::async_initiate<CompletionToken,
             void(boost::system::error_code, size_t)>(
-            [this, remote](auto handler, auto buffers) mutable {
-                do_send_to(remote, std::move(buffers),
+            [this, remote](auto handler, auto buffers) mutable
+            {
+                do_send_to(remote,
+                    std::move(buffers),
                     net::bind_executor(ex_, std::move(handler)));
             },
-            token, std::forward<ConstBufferSequence>(buffers));
+            token,
+            std::forward<ConstBufferSequence>(buffers));
     }
 
     // 客户端（虚拟网内）端点：源地址与源端口
-    net::ip::udp::endpoint client_endpoint() const;
+    net::ip::udp::endpoint client_endpoint() const noexcept;
 
     // 设置会话空闲超时
     void set_timeout(std::chrono::seconds timeout);
@@ -90,11 +98,13 @@ public:
 
 private:
     template <typename MutableBufferSequence, typename Handler>
-    void do_receive_from(MutableBufferSequence &&buffers,
-                         net::ip::udp::endpoint &sender, Handler handler);
+    void do_receive_from(MutableBufferSequence&& buffers,
+        net::ip::udp::endpoint& sender,
+        Handler handler);
     template <typename ConstBufferSequence, typename Handler>
-    void do_send_to(const net::ip::udp::endpoint &remote,
-                    ConstBufferSequence &&buffers, Handler handler);
+    void do_send_to(const net::ip::udp::endpoint& remote,
+        ConstBufferSequence&& buffers,
+        Handler handler);
 
     executor_type ex_;
     std::shared_ptr<detail::udp_session> session_;

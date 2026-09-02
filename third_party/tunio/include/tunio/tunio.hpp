@@ -53,15 +53,15 @@ public:
 
     // single_thread=true（默认）时引擎内部状态运行于 io_context 执行器上，
     // 要求 io_context 单线程 run；false 时使用 Strand，支持多线程 run.
-    explicit tunio(net::io_context &ctx, bool single_thread = true);
+    explicit tunio(net::io_context& ctx, bool single_thread = true);
     ~tunio();
 
-    tunio(const tunio &) = delete;
-    tunio &operator=(const tunio &) = delete;
+    tunio(const tunio&) = delete;
+    tunio& operator=(const tunio&) = delete;
 
     // 打开 TUN 设备并启动数据通路；外部句柄注入时 config.external_handle
     // 必须有效。
-    bool open(const tun_config &config, boost::system::error_code &ec);
+    bool open(const tun_config& config, boost::system::error_code& ec);
 
     // 关闭引擎：停止数据通路并清理全部会话与挂起操作。
     void close();
@@ -70,13 +70,13 @@ public:
     size_t mtu() const noexcept;
 
     // 打开生效的队列数：Linux TUN 多队列（IFF_MULTI_QUEUE）下为队列数，
-    // 其余平台恒为 1。仅引擎打开后有效.
+    // 其余平台恒为 1。仅引擎打开后有效。
     size_t queue_count() const noexcept;
 
     // 引擎本地虚拟 IP（用于 ICMP 回显响应等）。
     net::ip::address local_address() const noexcept;
 
-    const engine_stats &stats() const noexcept;
+    const engine_stats& stats() const noexcept;
 
     // 引擎内部串行执行器；应用层也可通过其提交任务保证与引擎状态串行化。
     executor_type get_executor() const noexcept;

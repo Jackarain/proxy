@@ -28,35 +28,27 @@ namespace detail {
 class windows_tun_device_impl
 {
 public:
-    explicit windows_tun_device_impl(net::io_context &ctx)
+    explicit windows_tun_device_impl(net::io_context& ctx)
         : handle_(ctx)
     {
     }
 
-    bool open(const device_config &cfg, boost::system::error_code &ec);
+    bool open(const device_config& cfg, boost::system::error_code& ec);
 
-    bool assign(native_handle_type handle, size_t mtu, bool,
-                boost::system::error_code &ec)
-    {
-        handle_.assign(handle, ec);
-        if (!ec) {
-            open_ = true;
-            mtu_ = mtu;
-        }
-        return !ec;
-    }
+    bool assign(native_handle_type handle,
+        size_t mtu,
+        bool,
+        boost::system::error_code& ec);
 
-    // Windows TAP 驱动无多队列概念：注入多个句柄不支持.
-    bool assign_queues(const std::vector<native_handle_type> &, size_t, bool,
-        boost::system::error_code &ec)
-    {
-        ec = make_error_code(boost::system::errc::operation_not_supported);
-        return false;
-    }
+    // Windows TAP 驱动无多队列概念：注入多个句柄不支持。
+    bool assign_queues(const std::vector<native_handle_type>&,
+        size_t,
+        bool,
+        boost::system::error_code& ec);
 
     void close();
 
-    size_t mtu() const
+    size_t mtu() const noexcept
     {
         return mtu_;
     }
@@ -65,38 +57,39 @@ public:
     {
         return mtu_;
     }
-    size_t queue_count() const
+    size_t queue_count() const noexcept
     {
         return 1;
     }
-    bool is_open() const
+    bool is_open() const noexcept
     {
         return open_;
     }
 
     template <typename Handler>
-    void async_read(packet_buffer &buf, Handler &&handler)
+    void async_read(packet_buffer& buf, Handler&& handler)
     {
-        handle_.async_read_some_at(
-            0, net::buffer(buf.writable_data(), buf.writable_size()),
+        handle_.async_read_some_at(0,
+            net::buffer(buf.writable_data(), buf.writable_size()),
             std::forward<Handler>(handler));
     }
 
     template <typename Handler>
-    void async_read(packet_buffer &buf, size_t, Handler &&handler)
+    void async_read(packet_buffer& buf, size_t, Handler&& handler)
     {
         async_read(buf, std::forward<Handler>(handler));
     }
 
     template <typename Handler>
-    void async_write(packet_buffer &buf, Handler &&handler)
+    void async_write(packet_buffer& buf, Handler&& handler)
     {
-        handle_.async_write_some_at(0, net::buffer(buf.data(), buf.size()),
-                                    std::forward<Handler>(handler));
+        handle_.async_write_some_at(0,
+            net::buffer(buf.data(), buf.size()),
+            std::forward<Handler>(handler));
     }
 
     template <typename Handler>
-    void async_write(packet_buffer &buf, size_t, Handler &&handler)
+    void async_write(packet_buffer& buf, size_t, Handler&& handler)
     {
         async_write(buf, std::forward<Handler>(handler));
     }

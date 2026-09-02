@@ -38,10 +38,10 @@ public:
     // single_thread=true（默认）时内部串行执行器直接使用 io_context 的
     // 执行器，无 Strand 派发开销，要求 io_context 单线程 run；false 时
     // 使用 Strand，支持多线程 run.
-    explicit tunio_impl(net::io_context &ctx, bool single_thread = true);
+    explicit tunio_impl(net::io_context& ctx, bool single_thread = true);
     ~tunio_impl();
 
-    bool open(const tun_config &cfg, boost::system::error_code &ec);
+    bool open(const tun_config& cfg, boost::system::error_code& ec);
     void close();
     bool is_open() const noexcept
     {
@@ -60,7 +60,7 @@ public:
     {
         return local_ip_;
     }
-    engine_stats &stats() noexcept
+    engine_stats& stats() noexcept
     {
         return *stats_;
     }
@@ -72,58 +72,46 @@ public:
     // ---- accept 入口（自动派发到 Strand）----
     template <typename Handler> void async_accept_tcp(Handler handler)
     {
-        net::dispatch(
-            strand_ex_, [tcp = tcp_, h = std::move(handler)]() mutable {
-                if (tcp) {
+        net::dispatch(strand_ex_,
+            [tcp = tcp_, h = std::move(handler)]() mutable
+            {
+                if (tcp)
                     tcp->async_accept(std::move(h));
-                } else {
+                else
                     h(boost::system::error_code(net::error::bad_descriptor),
                         nullptr);
-                }
             });
     }
 
     template <typename Handler> void async_accept_udp(Handler handler)
     {
-        net::dispatch(
-            strand_ex_, [udp = udp_, h = std::move(handler)]() mutable {
-                if (udp) {
+        net::dispatch(strand_ex_,
+            [udp = udp_, h = std::move(handler)]() mutable
+            {
+                if (udp)
                     udp->async_accept(std::move(h));
-                } else {
+                else
                     h(boost::system::error_code(net::error::bad_descriptor),
                         nullptr);
-                }
             });
     }
 
-    void cancel_tcp_accepts()
-    {
-        net::dispatch(strand_ex_, [tcp = tcp_]() {
-            if (tcp) {
-                tcp->cancel_accepts();
-            }
-        });
-    }
+    void cancel_tcp_accepts();
 
-    void cancel_udp_accepts()
-    {
-        net::dispatch(strand_ex_, [udp = udp_]() {
-            if (udp) {
-                udp->cancel_accepts();
-            }
-        });
-    }
+    void cancel_udp_accepts();
 
 private:
     void start_read();
     void start_read_slot(size_t index);
-    void on_read(const boost::system::error_code &ec, size_t n, size_t index,
+    void on_read(const boost::system::error_code& ec,
+        size_t n,
+        size_t index,
         uint64_t epoch);
-    void handle_packet(const uint8_t *pkt, size_t len);
-    void handle_icmp(const ip_packet_info &ip, const uint8_t *icmp,
-        size_t icmp_len);
-    void handle_icmpv6(const ip_packet_info &ip, const uint8_t *icmp,
-        size_t icmp_len);
+    void handle_packet(const uint8_t* pkt, size_t len);
+    void handle_icmp(
+        const ip_packet_info& ip, const uint8_t* icmp, size_t icmp_len);
+    void handle_icmpv6(
+        const ip_packet_info& ip, const uint8_t* icmp, size_t icmp_len);
 
     net::any_io_executor strand_ex_;
     std::atomic<bool> open_{false};
@@ -149,9 +137,9 @@ private:
     // 并发读槽：同一时刻保持 k_read_slots 个未完成读取（单队列基准），
     // TUN 包设备下每个读回调独立拿到完整报文，拆包处理与重发起互不依赖。
     // 多队列下每队列分得 slots_per_queue_ 个槽，队列与内核并行投递、
-    // 槽与槽在 Strand 上串行处理，读吞吐随队列数扩展.
+    // 槽与槽在 Strand 上串行处理，读吞吐随队列数扩展。
     static constexpr size_t k_read_slots = 32;
-    // 队列数上限：与 tunio::max_multi_queues（内核 MAX_TAP_QUEUES）一致.
+    // 队列数上限：与 tunio::max_multi_queues（内核 MAX_TAP_QUEUES）一致。
     static constexpr size_t k_max_queues = 256;
     std::vector<packet_buffer> read_bufs_;
     std::vector<bool> read_inflight_{};

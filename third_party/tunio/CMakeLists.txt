@@ -35,6 +35,7 @@ endif()
 
 set(TUNIO_SOURCES
   src/ip_packet.cpp
+  src/tun_device.cpp
   src/tcp_engine.cpp
   src/udp_engine.cpp
   src/tun_tcp_acceptor.cpp

@@ -16,6 +16,11 @@
 
 namespace tunio {
 
+tun_udp_acceptor::tun_udp_acceptor(tunio& engine)
+    : engine_(engine)
+{
+}
+
 void tun_udp_acceptor::cancel()
 {
     engine_.impl_->cancel_udp_accepts();

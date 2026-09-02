@@ -27,11 +27,12 @@ tun_udp_socket::~tun_udp_socket()
     close();
 }
 
-tun_udp_socket::tun_udp_socket(tun_udp_socket &&) noexcept = default;
+tun_udp_socket::tun_udp_socket(tun_udp_socket&&) noexcept = default;
 
-tun_udp_socket &tun_udp_socket::operator=(tun_udp_socket &&other) noexcept
+tun_udp_socket& tun_udp_socket::operator=(tun_udp_socket&& other) noexcept
 {
-    if (this != &other) {
+    if (this != &other)
+    {
         close();
         session_ = std::move(other.session_);
         ex_ = std::move(other.ex_);
@@ -44,26 +45,23 @@ tun_udp_socket::executor_type tun_udp_socket::get_executor() const noexcept
     return ex_;
 }
 
-net::ip::udp::endpoint tun_udp_socket::client_endpoint() const
+net::ip::udp::endpoint tun_udp_socket::client_endpoint() const noexcept
 {
-    if (!session_) {
+    if (!session_)
         return {};
-    }
     return session_->client_endpoint();
 }
 
 void tun_udp_socket::set_timeout(std::chrono::seconds timeout)
 {
-    if (session_) {
+    if (session_)
         detail::udp_session_set_timeout(session_, timeout);
-    }
 }
 
 void tun_udp_socket::close()
 {
-    if (session_) {
+    if (session_)
         detail::udp_session_close(session_);
-    }
 }
 
 bool tun_udp_socket::is_open() const noexcept
