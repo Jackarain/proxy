@@ -319,8 +319,8 @@ jobs:
             -DENABLE_BUILD_WERROR=OFF \
             -DENABLE_SNMALLOC_STATIC=ON -DENABLE_SYSTEM_OPENSSL=ON \
             -DENABLE_BUILD_EXAMPLES=OFF \
-            -DCMAKE_C_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled" \
-            -DCMAKE_CXX_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -mcx16" \
+            -DCMAKE_C_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date" \
+            -DCMAKE_CXX_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date -mcx16" \
             -DCMAKE_EXE_LINKER_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata"
           ninja -C /workspace/build -j2
 
@@ -482,8 +482,8 @@ jobs:
             -DENABLE_USE_IO_URING=ON \
             -DENABLE_SNMALLOC_STATIC=ON -DENABLE_SYSTEM_OPENSSL=ON \
             -DENABLE_BUILD_EXAMPLES=OFF \
-            -DCMAKE_C_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled" \
-            -DCMAKE_CXX_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -mcx16" \
+            -DCMAKE_C_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date" \
+            -DCMAKE_CXX_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date -mcx16" \
             -DCMAKE_EXE_LINKER_FLAGS="-luring -flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata"
           ninja -C /workspace/build -j2
           ls -la /workspace/build/bin/proxy_server
