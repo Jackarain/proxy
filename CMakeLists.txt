@@ -370,6 +370,10 @@ endif()
 
 if (ENABLE_USE_BORINGSSL)
 	set(OPENSSL_FOUND TRUE)
+
+	# boringssl 未接入 CTest 且本仓库不运行其测试，关闭测试目标编译
+	set(BUILD_TESTING OFF)
+
 	add_subdirectory(third_party/boringssl)
 
 	# BORINGSSL_INCLUDE_DIRS 用于 boringssl 的头文件包含.
