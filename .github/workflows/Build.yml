@@ -14,7 +14,7 @@ jobs:
       - name: Update OS and Compilers
         run: |
           sudo apt install -y cmake ninja-build
-          sudo apt install -y mingw-w64
+          sudo apt install -y mingw-w64 nasm
 
       - name: Build proxy
         run: |

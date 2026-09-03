@@ -1,6 +1,9 @@
 # the name of the target operating system
 set(CMAKE_SYSTEM_NAME Windows)
 
+# target processor, boringssl uses it to select NASM assembly
+set(CMAKE_SYSTEM_PROCESSOR x86_64)
+
 # which compilers to use for C and C++
 # x86_64-w64-mingw32-g++
 
