@@ -475,21 +475,14 @@ struct sni_ctx {
 	std::vector<std::vector<std::string>> sans;
 
 	// 释放本对象持有的证书与私钥引用。
-	// 注意：首条链的额外证书 (i>=1) 已通过 SSL_CTX_add_extra_chain_cert
-	// 转移所有权给 SSL_CTX，由 SSL_CTX 析构时释放，不能在此重复释放。
+	// 所有证书所有权均归本对象持有：SSL_CTX_use_certificate /
+	// SSL_CTX_add1_chain_cert 在 OpenSSL/wolfSSL 下自行增加引用，
+	// 在 BoringSSL 下仅序列化副本，均不转移所有权，因此统一在此释放。
 	~sni_ctx()
 	{
-		for (std::size_t i = 0; i < chains.size(); ++i)
-		{
-			if (i == 0)
-			{
-				if (!chains[i].empty())
-					X509_free(chains[i][0]);
-				continue;
-			}
-			for (auto* c : chains[i])
+		for (auto& chain : chains)
+			for (auto* c : chain)
 				X509_free(c);
-		}
 		for (auto* k : keys)
 			EVP_PKEY_free(k);
 	}
@@ -560,8 +553,8 @@ std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entr
 		sni->sans.push_back(e.sans_);
 	}
 
-	// 自定义 deleter：先释放 SSL_CTX（归还 add_extra_chain_cert 已转移
-	// 所有权的首条链额外证书），再释放 sni 持有的其余证书数据。
+	// 自定义 deleter：先释放 SSL_CTX（释放其自行持有的引用/副本），
+	// 再释放 sni 持有的证书数据，保证 SSL_CTX 内不再引用 sni 的证书。
 	std::shared_ptr<net::ssl::context> ctx(
 		new net::ssl::context(net::ssl::context::tls_server),
 		[sni](net::ssl::context* c) { delete c; });
@@ -576,7 +569,7 @@ std::shared_ptr<net::ssl::context> build_ssl_context(const std::vector<cert_entr
 		return ctx;
 	SSL_CTX_use_certificate(ctx->native_handle(), sni->chains[0][0]);
 	for (std::size_t i = 1; i < sni->chains[0].size(); i++)
-		SSL_CTX_add_extra_chain_cert(ctx->native_handle(), sni->chains[0][i]);
+		SSL_CTX_add1_chain_cert(ctx->native_handle(), sni->chains[0][i]);
 	SSL_CTX_use_PrivateKey(ctx->native_handle(), sni->keys[0]);
 
 	if (sni->chains.size() > 1) {
