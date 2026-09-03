@@ -207,7 +207,7 @@ if (MSVC)
 	endif()
 
 	# 源码使用 UTF-8 编码, 指定 MSVC 按 UTF-8 解析, 避免中文注释/字符串乱码.
-	add_compile_options(/utf-8)
+	add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/utf-8>)
 endif()
 
 ################################################################################
