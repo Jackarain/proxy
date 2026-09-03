@@ -340,10 +340,11 @@ if (ENABLE_USE_WOLFSSL)
 	# 打开 TLSX 以允许 alpn 设置.
 	set(WOLFSSL_TLSX ON)
 
-	# gcc 编译时 wolfssl 会有一些 stringop-overflow 警告, 这里忽略掉.
+	# gcc 编译时 wolfssl 会有一些 stringop/数组越界类警告, 这里忽略掉.
+	# (wolfssl 自身 CMake 加了 -Werror, 这些警告会被提升为错误.)
 	if (NOT MSVC AND NOT APPLE)
 		if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overflow -Wno-stringop-overread -Wno-maybe-uninitialized")
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-overflow -Wno-stringop-overread -Wno-stringop-truncation -Wno-maybe-uninitialized -Wno-array-bounds -Wno-restrict")
 		endif()
 	endif()
 

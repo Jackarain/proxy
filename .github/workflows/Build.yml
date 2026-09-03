@@ -48,55 +48,161 @@ jobs:
           name: proxy_server-linux_musl_x64
           path: build/docker/
 
+  ##############################################################################
+  # Linux (glibc, gcc): 覆盖 boringssl / openssl(系统) / openssl(内置) / wolfssl
+  # 三种 TLS 后端, 并与 snmalloc / mimalloc / io_uring / PAM 组合.
+  ##############################################################################
   Linux:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: boringssl, ssl: boringssl }
+          - { name: boringssl-pam, ssl: boringssl, pam: true }
+          - { name: boringssl-snmalloc, ssl: boringssl, alloc: snmalloc }
+          - { name: boringssl-iouring, ssl: boringssl, uring: true }
+          - { name: openssl-system, ssl: openssl-system }
+          - { name: openssl-system-snmalloc, ssl: openssl-system, alloc: snmalloc }
+          - { name: openssl-system-iouring-snmalloc, ssl: openssl-system, alloc: snmalloc, uring: true }
+          - { name: openssl-bundled, ssl: openssl-bundled }
+          - { name: wolfssl, ssl: wolfssl }
+          - { name: wolfssl-snmalloc, ssl: wolfssl, alloc: snmalloc }
+          - { name: mimalloc, ssl: boringssl, alloc: mimalloc }
     steps:
       - uses: actions/checkout@v6
 
-      - name: Update OS and Compilers
+      - name: Install dependencies
+        shell: bash
         run: |
-          sudo apt update
-          sudo apt install -y cmake ninja-build libpam0g-dev
-
-      - name: Build proxy
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -DENABLE_USE_PAM_AUTH=ON -G Ninja
-          cmake --build build --config Release
-
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: proxy_server-linux_glibc_x64
-          path: |
-            build/bin/proxy_server
-            build/bin/launcher
-
-  BoringSSL:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Update OS and Compilers
-        run: |
+          set -euxo pipefail
           sudo apt update
           sudo apt install -y cmake ninja-build
+          if [ "${{ matrix.ssl }}" = "openssl-system" ]; then
+            sudo apt install -y libssl-dev
+          fi
+          if [ "${{ matrix.pam }}" = "true" ]; then
+            sudo apt install -y libpam0g-dev
+          fi
+          if [ "${{ matrix.uring }}" = "true" ]; then
+            sudo apt install -y liburing-dev
+          fi
+          if [ "${{ matrix.alloc }}" = "mimalloc" ]; then
+            git clone --depth 1 --branch v2.1.2 https://github.com/microsoft/mimalloc.git
+            cd mimalloc && mkdir build && cd build
+            cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=OFF \
+              -DMI_BUILD_STATIC=ON -DMI_BUILD_SHARED=OFF -DMI_BUILD_TESTS=OFF -DMI_BUILD_OBJECT=ON ..
+            make -j4
+            sudo make install
+          fi
 
-      - name: Build proxy
+      - name: Build proxy (${{ matrix.name }})
+        shell: bash
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=ON -G Ninja
-          # boringssl 编译较重, 限制并行度以避免 runner 内存不足.
-          cmake --build build --config Release -- -j2
+          set -euxo pipefail
+          case "${{ matrix.ssl }}" in
+            boringssl)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=ON -DENABLE_USE_WOLFSSL=OFF" ;;
+            openssl-system)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=ON -DENABLE_SYSTEM_OPENSSL=ON -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=OFF" ;;
+            openssl-bundled)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=ON -DENABLE_SYSTEM_OPENSSL=OFF -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=OFF" ;;
+            wolfssl)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=ON" ;;
+          esac
+          ALLOC_ARGS=""
+          if [ "${{ matrix.alloc }}" = "snmalloc" ]; then ALLOC_ARGS="-DENABLE_SNMALLOC_STATIC=ON"; fi
+          if [ "${{ matrix.alloc }}" = "mimalloc" ]; then ALLOC_ARGS="-DENABLE_MIMALLOC_STATIC=ON"; fi
+          URING_ARGS=""
+          if [ "${{ matrix.uring }}" = "true" ]; then URING_ARGS="-DENABLE_USE_IO_URING=ON"; fi
+          PAM_ARGS=""
+          if [ "${{ matrix.pam }}" = "true" ]; then PAM_ARGS="-DENABLE_USE_PAM_AUTH=ON"; fi
+
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_BUILD_WERROR=OFF -DENABLE_BUILD_EXAMPLES=OFF \
+            $SSL_ARGS $ALLOC_ARGS $URING_ARGS $PAM_ARGS
+          cmake --build build --config Release
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: proxy_server-linux_glibc_x64_boringssl
+          name: proxy_server-linux_glibc_x64_${{ matrix.name }}
           path: |
             build/bin/proxy_server
             build/bin/launcher
 
+  ##############################################################################
+  # Linux (glibc, clang): 覆盖 clang 编译下的不同 TLS 后端及 libc++.
+  ##############################################################################
+  LinuxClang:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: boringssl-snmalloc, ssl: boringssl, alloc: snmalloc }
+          - { name: openssl-system, ssl: openssl-system }
+          - { name: openssl-system-libcxx, ssl: openssl-system, libcxx: true }
+          - { name: wolfssl, ssl: wolfssl }
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt update
+          sudo apt install -y cmake ninja-build clang
+          if [ "${{ matrix.ssl }}" = "openssl-system" ]; then
+            sudo apt install -y libssl-dev
+          fi
+          if [ "${{ matrix.libcxx }}" = "true" ]; then
+            sudo apt install -y libc++-dev
+          fi
+
+      - name: Build proxy (${{ matrix.name }})
+        shell: bash
+        run: |
+          set -euxo pipefail
+          case "${{ matrix.ssl }}" in
+            boringssl)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=ON -DENABLE_USE_WOLFSSL=OFF" ;;
+            openssl-system)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=ON -DENABLE_SYSTEM_OPENSSL=ON -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=OFF" ;;
+            wolfssl)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=ON" ;;
+          esac
+          ALLOC_ARGS=""
+          if [ "${{ matrix.alloc }}" = "snmalloc" ]; then ALLOC_ARGS="-DENABLE_SNMALLOC_STATIC=ON"; fi
+          LIBCXX_ARGS=""
+          if [ "${{ matrix.libcxx }}" = "true" ]; then LIBCXX_ARGS="-DENABLE_BUILD_WITH_LIBCXX=ON"; fi
+
+          CC=clang CXX=clang++ cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_BUILD_WERROR=OFF -DENABLE_BUILD_EXAMPLES=OFF \
+            $SSL_ARGS $ALLOC_ARGS $LIBCXX_ARGS
+          cmake --build build --config Release
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: proxy_server-linux_glibc_x64_clang_${{ matrix.name }}
+          path: |
+            build/bin/proxy_server
+            build/bin/launcher
+
+  ##############################################################################
+  # Linux (musl / Alpine): 静态构建, 覆盖 boringssl 与 wolfssl+snmalloc.
+  ##############################################################################
   Alpine:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: boringssl, ssl: boringssl }
+          - { name: wolfssl-snmalloc, ssl: wolfssl, alloc: snmalloc }
     container:
       image: alpine:3.20.1
     steps:
@@ -105,94 +211,28 @@ jobs:
 
       - uses: actions/checkout@v6
 
-      - name: Build proxy
+      - name: Build proxy (${{ matrix.name }})
+        shell: bash
         run: |
-          CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-static" -G Ninja
+          set -euxo pipefail
+          case "${{ matrix.ssl }}" in
+            boringssl)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=ON -DENABLE_USE_WOLFSSL=OFF" ;;
+            wolfssl)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=ON" ;;
+          esac
+          ALLOC_ARGS=""
+          if [ "${{ matrix.alloc }}" = "snmalloc" ]; then ALLOC_ARGS="-DENABLE_SNMALLOC_STATIC=ON"; fi
+          CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXE_LINKER_FLAGS="-static" \
+            -DENABLE_BUILD_WERROR=OFF -DENABLE_BUILD_EXAMPLES=OFF \
+            $SSL_ARGS $ALLOC_ARGS -G Ninja
           cmake --build build --config Release
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: proxy_server-alpine_musl_x64
-          path: |
-            build/bin/proxy_server
-            build/bin/launcher
-
-  WolfSSL:
-    runs-on: ubuntu-24.04
-    container:
-      image: alpine:3.20.1
-    steps:
-      - name: Install packages
-        run: apk add bash git nasm yasm pkgconfig build-base clang cmake ninja linux-headers linux-pam-dev
-
-      - uses: actions/checkout@v6
-
-      - name: Build proxy
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=ON -DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=ON -DCMAKE_EXE_LINKER_FLAGS="-static" -G Ninja
-          # wolfssl 编译较重, 限制并行度以避免 runner 内存不足.
-          cmake --build build --config Release -- -j2
-
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: proxy_server-linux_musl_x64_wolfssl
-          path: |
-            build/bin/proxy_server
-
-  MiMalloc:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Update OS and Compilers
-        run: |
-          sudo apt update
-          sudo apt install -y cmake ninja-build libpam0g-dev
-
-      - name: Build mimalloc
-        run: |
-          git clone https://github.com/microsoft/mimalloc.git
-          cd mimalloc && mkdir build && cd build && git checkout tags/v2.1.2
-          echo "Building mimalloc..."
-          cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=OFF -DMI_BUILD_STATIC=ON -DMI_BUILD_SHARED=OFF -DMI_BUILD_TESTS=OFF -DMI_BUILD_OBJECT=ON ..
-          make -j4
-          echo "Installing mimalloc..."
-          sudo make install
-
-      - name: Build proxy
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -DENABLE_MIMALLOC_STATIC=ON -DENABLE_USE_PAM_AUTH=ON -G Ninja
-          cmake --build build --config Release
-
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: proxy_server-linux_mimalloc
-          path: |
-            build/bin/proxy_server
-            build/bin/launcher
-
-  SnMalloc:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Update OS and Compilers
-        run: |
-          sudo apt update
-          sudo apt install -y cmake ninja-build libpam0g-dev
-
-      - name: Build proxy
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF -DENABLE_SNMALLOC_STATIC=ON -G Ninja
-          cmake --build build --config Release
-
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: proxy_server-linux_snmalloc
+          name: proxy_server-alpine_musl_x64_${{ matrix.name }}
           path: |
             build/bin/proxy_server
             build/bin/launcher
@@ -229,7 +269,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
             -DENABLE_BUILD_WERROR=OFF \
-            -DENABLE_SNMALLOC_STATIC=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_USE_OPENSSL=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=OFF \
+            -DENABLE_SNMALLOC_STATIC=ON \
             -DENABLE_BUILD_EXAMPLES=OFF \
             -DCMAKE_C_FLAGS="-fprofile-instr-generate" \
             -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -mcx16" \
@@ -317,7 +359,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
             -DENABLE_BUILD_WERROR=OFF \
-            -DENABLE_SNMALLOC_STATIC=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_USE_OPENSSL=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=OFF \
+            -DENABLE_SNMALLOC_STATIC=ON \
             -DENABLE_BUILD_EXAMPLES=OFF \
             -DCMAKE_C_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date" \
             -DCMAKE_CXX_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date -mcx16" \
@@ -375,7 +419,9 @@ jobs:
             -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
             -DENABLE_BUILD_WERROR=OFF \
             -DENABLE_USE_IO_URING=ON \
-            -DENABLE_SNMALLOC_STATIC=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_USE_OPENSSL=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=OFF \
+            -DENABLE_SNMALLOC_STATIC=ON \
             -DENABLE_BUILD_EXAMPLES=OFF \
             -DCMAKE_C_FLAGS="-fprofile-instr-generate" \
             -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -mcx16" \
@@ -480,7 +526,9 @@ jobs:
             -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
             -DENABLE_BUILD_WERROR=OFF \
             -DENABLE_USE_IO_URING=ON \
-            -DENABLE_SNMALLOC_STATIC=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_USE_OPENSSL=ON -DENABLE_SYSTEM_OPENSSL=ON \
+            -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=OFF \
+            -DENABLE_SNMALLOC_STATIC=ON \
             -DENABLE_BUILD_EXAMPLES=OFF \
             -DCMAKE_C_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date" \
             -DCMAKE_CXX_FLAGS="-flto=thin -fprofile-instr-use=/workspace/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date -mcx16" \
@@ -616,8 +664,17 @@ jobs:
             build-openwrt/bin/proxy_server
             build-openwrt/bin/launcher
 
+  ##############################################################################
+  # macOS: Universal Binary (x86_64 + arm64), 覆盖 boringssl 与 wolfssl.
+  ##############################################################################
   MacOS:
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: universal, ssl: boringssl }
+          - { name: universal-wolfssl, ssl: wolfssl }
     steps:
       - uses: actions/checkout@v6
 
@@ -625,38 +682,61 @@ jobs:
         run: |
           brew install cmake ninja
 
-      - name: "Build proxy (Universal Binary: x86_64 + arm64)"
+      - name: "Build proxy (${{ matrix.name }}) (Universal Binary: x86_64 + arm64)"
+        shell: bash
         run: |
+          case "${{ matrix.ssl }}" in
+            boringssl)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=ON -DENABLE_USE_WOLFSSL=OFF" ;;
+            wolfssl)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=ON" ;;
+          esac
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_BUILD_WERROR=OFF \
             -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
-            -G Ninja
+            $SSL_ARGS -G Ninja
           cmake --build build --config Release
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: proxy_server-macos-universal
+          name: proxy_server-macos-${{ matrix.name }}
           path: |
             build/bin/proxy_server
             build/bin/launcher
 
+  ##############################################################################
+  # Windows (MSVC): 覆盖 boringssl 与 wolfssl.
+  ##############################################################################
   Windows:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: boringssl, ssl: boringssl }
+          - { name: wolfssl, ssl: wolfssl }
     steps:
       - uses: actions/checkout@v6
 
-      - name: Build proxy
+      - name: Build proxy (${{ matrix.name }})
+        shell: bash
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF
+          case "${{ matrix.ssl }}" in
+            boringssl)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=ON -DENABLE_USE_WOLFSSL=OFF" ;;
+            wolfssl)
+              SSL_ARGS="-DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=ON" ;;
+          esac
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_WERROR=OFF $SSL_ARGS
           cmake --build build --config Release
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: proxy_server-msvc_x64
+          name: proxy_server-msvc_x64_${{ matrix.name }}
           path: |
             build/bin/release/proxy_server.exe
             build/bin/release/launcher.exe
