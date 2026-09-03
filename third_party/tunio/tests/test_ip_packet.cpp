@@ -398,6 +398,45 @@ BOOST_AUTO_TEST_CASE(test_build_ipv6_udp)
     TEST_ASSERT(verify_packet6(raw));
 }
 
+BOOST_AUTO_TEST_CASE(test_build_ipv6_udp_checksum_zero)
+{
+    // RFC 768/8200：IPv6 UDP 校验和强制存在且不可为 0（0 在 IPv4 中表示
+    // 未计算），计算得 0 时必须传输 0xffff，否则生成非法报文被对端丢弃.
+    const auto src6 = net::ip::make_address_v6("fd00::1").to_bytes();
+    const auto dst6 = net::ip::make_address_v6("fd00::2").to_bytes();
+    uint8_t seg[8];
+    seg[0] = 0x75;             // sport 30000
+    seg[1] = 0x30;
+    seg[4] = 0;                // udp length = 8（无载荷）
+    seg[5] = 8;
+    seg[6] = 0;                // checksum 占位
+    seg[7] = 0;
+
+    // 遍历目标端口（16 位全空间，按模 65535 必命中）定位校验和为 0 的组合.
+    uint16_t zero_port = 0;
+    bool found = false;
+    for (uint32_t port = 0; port <= 0xffff; ++port) {
+        seg[2] = static_cast<uint8_t>(port >> 8);
+        seg[3] = static_cast<uint8_t>(port & 0xff);
+        if (tunio::tcp_udp_checksum(6, src6.data(), dst6.data(),
+                tunio::ip_protocol_udp, seg, sizeof(seg)) == 0) {
+            zero_port = static_cast<uint16_t>(port);
+            found = true;
+            break;
+        }
+    }
+    TEST_ASSERT(found);
+
+    ip_packet p;
+    p.begin_ipv6(net::ip::make_address_v6("fd00::1"),
+        net::ip::make_address_v6("fd00::2"));
+    p.begin_udp(30000, zero_port);
+    p.finalize();
+    TEST_ASSERT(p.valid() && p.is_udp());
+    TEST_ASSERT(p.udp() != nullptr);
+    TEST_ASSERT(p.udp()->checksum == 0xffff);
+}
+
 BOOST_AUTO_TEST_CASE(test_build_ipv6_icmp6_echo)
 {
     ip_packet p;

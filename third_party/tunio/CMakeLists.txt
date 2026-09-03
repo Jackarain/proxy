@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 project(tunio VERSION 3.0.0 LANGUAGES CXX)
 
+# 安装路径基准（CMAKE_INSTALL_*，供安装/导出规则与 INSTALL_INTERFACE
+# include 目录使用）.
+include(GNUInstallDirs)
+
 # CMake 3.30+ 移除 FindBoost 模块（CMP0167）：系统提供 BoostConfig 时
 # find_package 自动回退到 config 模式，此处显式声明旧策略（CMake 3.30+
 # 对 set-to-OLD 本身仍会打印弃用告警，属预期）.
@@ -64,9 +68,13 @@ endif()
 option(TUNIO_DISABLE_LOOPBACK_GUARD "Disable loopback/local-address traffic guard" OFF)
 
 add_library(tunio STATIC ${TUNIO_SOURCES})
+# BUILD_INTERFACE 保持 add_subdirectory 场景行为（含 src 目录，实现头位于
+# src/ 下，测试直接包含实现头）；INSTALL_INTERFACE 只暴露公开头目录，使
+# 安装导出的目标可重定位，不写死构建机源码路径.
 target_include_directories(tunio PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 # Windows 下 windows.h 会定义 min/max 宏, 在包含任何 Windows 头之前
@@ -122,4 +130,52 @@ endif()
 
 if(TUNIO_BUILD_EXAMPLES)
   add_subdirectory(examples)
+endif()
+
+# 安装/导出规则（cmake --install、find_package(tunio)、pkg-config）.
+# 默认 OFF：tunio 常以 add_subdirectory 方式被 superproject 集成，对外
+# 安装属可选能力；需要对外发布时以 -DTUNIO_INSTALL=ON 开启.
+option(TUNIO_INSTALL "Generate install/export rules (find_package(tunio), pkg-config)" OFF)
+
+if(TUNIO_INSTALL)
+  include(CMakePackageConfigHelpers)
+
+  install(TARGETS tunio
+    EXPORT tunioTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  )
+  install(DIRECTORY include/tunio
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
+
+  # 导出目标（tunio::tunio）与包配置：安装侧解析 Boost 依赖.
+  install(EXPORT tunioTargets
+    FILE tunioTargets.cmake
+    NAMESPACE tunio::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/tunio
+  )
+  configure_package_config_file(
+    cmake/tunioConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/tunioConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/tunio
+  )
+  write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/tunioConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+  )
+  install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/tunioConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/tunioConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/tunio
+  )
+
+  # pkg-config（随安装导出一并提供，按 CMAKE_INSTALL_PREFIX 可重定位）.
+  configure_file(cmake/tunio.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/tunio.pc @ONLY)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/tunio.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+  )
 endif()

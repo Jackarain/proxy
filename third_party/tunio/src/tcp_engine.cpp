@@ -887,6 +887,9 @@ net::awaitable<void> tcp_engine::write_loop(tcp_flow_ptr f)
     net::steady_timer persist_timer(strand_);
     auto persist_interval = cfg_.tcp_persist_timeout;
     const auto persist_max = std::chrono::milliseconds(60000);
+    // 零窗口探测计数：对端持续窗口 0 且不恢复时递增，超限后以 RST 中断，
+    // 防止挂起写与流表条目无限期滞留（收到窗口信号时复位）.
+    int persist_probes = 0;
 
     // RTO 重传计时器：对端窗口允许但 ACK 迟迟不推进时，周期性重传未确认
     // 数据（指数退避，上限 60s）；超过最大重传次数判定发送超时以 RST 关闭。
@@ -948,6 +951,13 @@ net::awaitable<void> tcp_engine::write_loop(tcp_flow_ptr f)
                     std::get<0>(std::get<1>(result)) ==
                         boost::system::error_code{})
                 {
+                    // 探测超限（对端持续窗口 0 且静默）：RST 中断连接并以
+                    // connection_reset 完成挂起写，避免无限期滞留.
+                    if (++persist_probes > cfg_.tcp_persist_max_probes)
+                    {
+                        abort_flow(flow);
+                        break;
+                    }
                     if (flow.active_write->offset < flow.active_write->total)
                     {
                         // 常规探测：发送下一个未发送字节（不推进序号，确认
@@ -963,8 +973,11 @@ net::awaitable<void> tcp_engine::write_loop(tcp_flow_ptr f)
                             std::min(persist_interval * 2, persist_max);
                 }
                 else
-                    // 收到窗口信号（ACK 更新窗口）：重置退避后重新检查
+                {
+                    // 收到窗口信号（ACK 更新窗口）：复位探测计数并重置退避
+                    persist_probes = 0;
                     persist_interval = cfg_.tcp_persist_timeout;
+                }
                 continue;
             }
             const uint32_t in_flight = flow.snd_nxt - flow.snd_una;

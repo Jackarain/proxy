@@ -48,6 +48,11 @@ size_t tun_device::mtu() const noexcept
     return impl_.mtu();
 }
 
+size_t tun_device::read_size_hint() const noexcept
+{
+    return impl_.read_size_hint();
+}
+
 size_t tun_device::queue_count() const noexcept
 {
     return impl_.queue_count();

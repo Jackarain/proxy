@@ -171,9 +171,14 @@ bool tunio_impl::open(const tun_config& cfg, boost::system::error_code& ec)
     slots_per_queue_ = std::max<size_t>(1, k_read_slots / num_queues_);
     read_bufs_.clear();
     read_bufs_.reserve(num_queues_ * slots_per_queue_);
+    // 读槽容量须容纳单次读取返回的全部字节：utun 注入路径每帧含 4 字节
+    // 家族前缀（read_size_hint = mtu + 4），读槽 headroom 为 64、容量取
+    // hint + 64，reset 后 writable_size 恰为 hint，避免满 MTU 帧读入时被
+    // 截断后按残缺报文丢弃.
+    const size_t read_capacity = device_->read_size_hint() + 64;
     for (size_t i = 0; i < num_queues_ * slots_per_queue_; ++i)
     {
-        read_bufs_.emplace_back(mtu_ + 64, 64);
+        read_bufs_.emplace_back(read_capacity, 64);
     }
     read_inflight_.assign(num_queues_ * slots_per_queue_, false);
 

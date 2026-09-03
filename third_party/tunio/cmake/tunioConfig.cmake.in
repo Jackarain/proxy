@@ -1,0 +1,16 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(Boost 1.81)
+
+# 导出目标在构建期可能引用 Boost::asio（superproject 内置 Boost 场景）；
+# 系统 Boost 的 CMake 包通常只提供 Boost::headers，此处补一个等价别名，
+# 保证安装导出的 INTERFACE 链接描述在消费方总能解析.
+if(NOT TARGET Boost::asio AND TARGET Boost::headers)
+  add_library(Boost::asio INTERFACE IMPORTED)
+  set_target_properties(Boost::asio PROPERTIES
+    INTERFACE_LINK_LIBRARIES Boost::headers)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/tunioTargets.cmake")
+check_required_components(tunio)

@@ -1,0 +1,10 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: tunio
+Description: User-space TUN virtual network engine based on Boost.Asio
+Version: @PROJECT_VERSION@
+Libs: -L${libdir} -ltunio
+Cflags: -I${includedir}

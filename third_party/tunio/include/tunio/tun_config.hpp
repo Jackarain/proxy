@@ -200,6 +200,11 @@ struct tun_config
     // 零窗口持久计时器初始间隔：对端通告窗口 0 时周期性发送窗口探测，
     // 探测被确认后按指数退避加倍，上限 60s.
     std::chrono::milliseconds tcp_persist_timeout{5000};
+    // 零窗口持久探测最大次数：对端持续通告窗口 0 且不恢复（窗口更新/ACK
+    // 缺失）时，探测按上述间隔退避周期性发送，超过该次数判定对端无窗口
+    // 恢复能力，以 RST 关闭连接并以 connection_reset 完成挂起写，避免
+    // 流表条目与挂起写永久滞留；收到窗口更新或有效 ACK 时复位计数。
+    int tcp_persist_max_probes = 15;
     // 数据段重传（RTO）：初始超时与最大重传次数。发送侧对未确认数据按
     // 指数退避（上限 60s）重传，超过最大次数判定发送超时并以 RST 关闭。
     std::chrono::milliseconds tcp_rto_timeout{200};

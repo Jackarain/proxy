@@ -568,8 +568,13 @@ void ip_packet::finalize()
         uh.length = htons(static_cast<uint16_t>(seg_len));
         std::memcpy(seg, &uh, sizeof(uh));
 
-        const uint16_t csum = tcp_udp_checksum(
+        uint16_t csum = tcp_udp_checksum(
             family, bld_.src, bld_.dst, ip_protocol_udp, seg, seg_len);
+        // 校验和为 0 时以 0xffff 替代（RFC 768/8200，与 udp_build_datagram
+        // 一致）：IPv4 下 0 保留为"未计算"标志，IPv6 下 UDP 校验和强制
+        // 存在，两者都不应输出 0.
+        if (csum == 0)
+            csum = 0xffff;
         seg[6] = static_cast<uint8_t>(csum >> 8);
         seg[7] = static_cast<uint8_t>(csum & 0xff);
         break;

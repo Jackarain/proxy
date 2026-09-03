@@ -823,6 +823,103 @@ BOOST_AUTO_TEST_CASE(test_zero_window_persist_probe)
     peer.close();
 }
 
+BOOST_AUTO_TEST_CASE(test_zero_window_persist_exhausted)
+{
+    // 零窗口持久探测上限：客户端持续通告窗口 0 且静默（窗口更新/ACK 缺失）
+    // 时，引擎在探测次数超过上限后以 RST 中断连接并以 connection_reset
+    // 完成挂起写（回归：修复前无限探测，流表条目与挂起写永久滞留）.
+    engine_env env(1500, std::chrono::seconds(1), std::chrono::seconds(30),
+        std::chrono::seconds(30), 1024 * 1024,
+        std::chrono::milliseconds(150), std::chrono::milliseconds(200), 8,
+        1, false, 3);
+    auto &io = env.io;
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
+
+    std::promise<boost::system::error_code> accept_done;
+    acceptor.async_accept(peer, [&](boost::system::error_code ec) {
+        if (!ec) {
+            peer.accept();
+        }
+        accept_done.set_value(ec);
+    });
+
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12399, DEST_PORT, 0x02, 5000,
+        0, 0, {}));
+    std::vector<uint8_t> pkt;
+    if (!env.dev.read_packet(pkt)) {
+        TEST_THROW("no SYN-ACK");
+    }
+    if (!verify_packet(pkt)) {
+        TEST_THROW("verify_packet failed");
+    }
+    ip_hdr_info ipi;
+    tcp_hdr_info ti;
+    if (!parse_ip(pkt, ipi)) {
+        TEST_THROW("parse_ip failed");
+    }
+    if (!parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        TEST_THROW("parse_tcp failed");
+    }
+    const uint32_t engine_iss = ti.seq;
+
+    // 客户端 ACK（窗口 0）后写入挂起
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12399, DEST_PORT, 0x10, 5001,
+        engine_iss + 1, 0, {}));
+    future_get(accept_done.get_future());
+
+    std::promise<std::pair<boost::system::error_code, size_t>> write_done;
+    peer.async_write_some(net::buffer("x", 1),
+        [&](boost::system::error_code ec, size_t n) {
+            write_done.set_value({ec, n});
+        });
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    auto wf = write_done.get_future();
+    if (wf.wait_for(std::chrono::milliseconds(0)) ==
+        std::future_status::ready) {
+        TEST_THROW("write should be blocked by zero window");
+    }
+
+    // 三轮窗口探测（150ms 起指数退避），客户端始终不回应
+    for (int i = 0; i < 3; ++i) {
+        if (!env.dev.read_packet(pkt)) {
+            TEST_THROW("no window probe");
+        }
+        if (!verify_packet(pkt)) {
+            TEST_THROW("verify_packet failed");
+        }
+        if (!parse_ip(pkt, ipi)) {
+            TEST_THROW("parse_ip failed");
+        }
+        if (!parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+            TEST_THROW("parse_tcp failed");
+        }
+        TEST_ASSERT((ti.flags & 0x10) != 0);
+        TEST_ASSERT(ti.seq == engine_iss + 1);
+        TEST_ASSERT(ti.len == 1 && ti.data[0] == 'x');
+    }
+
+    // 探测超限：引擎发送 RST 并以 connection_reset 完成挂起写
+    if (!env.dev.read_packet(pkt)) {
+        TEST_THROW("no RST after persist probes exhausted");
+    }
+    if (!verify_packet(pkt)) {
+        TEST_THROW("verify_packet failed");
+    }
+    if (!parse_ip(pkt, ipi)) {
+        TEST_THROW("parse_ip failed");
+    }
+    if (!parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        TEST_THROW("parse_tcp failed");
+    }
+    TEST_ASSERT((ti.flags & 0x04) != 0); // RST
+
+    auto [wec, wn] = future_get(std::move(wf));
+    TEST_ASSERT(wec == net::error::connection_reset);
+
+    peer.close();
+}
+
 BOOST_AUTO_TEST_CASE(test_synack_wscale_buffer_reuse)
 {
     // 回归：缓冲池复用不得让"不带 WS"的 SYN-ACK 残留上一连接的 WS 选项。

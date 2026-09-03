@@ -93,6 +93,11 @@ public:
 
     size_t mtu() const noexcept;
 
+    // 单次异步读取可能返回的最大字节数（含平台帧头，如 macOS utun 的
+    // 4 字节家族前缀）：读缓冲的 writable_size 须不小于该值，否则满 MTU
+    // 帧会被截断。引擎内部读槽按其分配容量。
+    size_t read_size_hint() const noexcept;
+
     // 队列数：Linux TUN 多队列下为打开的队列数，其余平台恒为 1
     size_t queue_count() const noexcept;
 

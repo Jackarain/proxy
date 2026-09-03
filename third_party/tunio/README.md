@@ -69,6 +69,34 @@ ctest --test-dir build --output-on-failure
 - `USE_WINTUN_DRIVER`（默认 `OFF`，仅 Windows）：使用 Wintun 驱动。
 - `TUNIO_DISABLE_LOOPBACK_GUARD`（默认 `OFF`）：关闭环路与本地地址防护
   （定义编译宏 `TUNIO_DISABLE_LOOPBACK_GUARD` 效果相同）。
+- `TUNIO_INSTALL`（默认 `OFF`）：生成安装/导出规则（`cmake --install`、
+  `find_package(tunio)` 与 pkg-config）；tunio 多以 `add_subdirectory` 方式
+  集成，需要对外安装发布时才开启。
+
+### 安装与 find_package 集成
+
+默认仅支持 `add_subdirectory` 集成；需要 `cmake --install` / `find_package`
+时以 `TUNIO_INSTALL=ON` 配置并安装：
+
+```sh
+cmake -B build -DTUNIO_INSTALL=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+cmake --install build --prefix /usr/local
+```
+
+随安装提供 `tunioConfig.cmake` 与版本文件（依赖 Boost 1.81+），消费方通过
+导出的 `tunio::tunio` 目标使用：
+
+```cmake
+find_package(tunio CONFIG REQUIRED)
+target_link_libraries(app PRIVATE tunio::tunio)
+```
+
+安装目录同时提供 `tunio.pc`，可用 pkg-config 获取编译与链接参数：
+
+```sh
+pkg-config --cflags --libs tunio
+```
 
 ## 快速上手
 
@@ -383,6 +411,7 @@ co_await dev.async_write_ip(out, net::use_awaitable);
 | `udp_idle_timeout` | `30s` | UDP 会话空闲超时 |
 | `tcp_time_wait_timeout` / `tcp_accept_timeout` | `10s` / `30s` | TCP 清理超时 |
 | `tcp_syn_timeout` / `tcp_close_timeout` | `30s` / `30s` | 半开/关闭流程超时 |
+| `tcp_persist_timeout` / `tcp_persist_max_probes` | `5s` / `15` | 零窗口探测初始间隔与最大次数（超限以 RST 关闭连接） |
 
 ### 生命周期与线程安全
 
