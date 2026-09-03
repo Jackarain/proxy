@@ -32,7 +32,7 @@ namespace proxy {
 	// - 缓存条数上限（max_items），0 表示不启用缓存；
 	// - 过期时间（ttl 秒），命中后重置过期时间（滑动 TTL）；
 	// - 超过条数上限按最近最少使用（LRU）淘汰；
-	// - 访问时惰性清理已过期条目。
+	// - 命中时惰性清理该项；超容量时按 LRU 淘汰（不遍历全表）。
 	class dns_response_cache
 	{
 		dns_response_cache(const dns_response_cache&) = delete;
@@ -76,17 +76,23 @@ namespace proxy {
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
 
-			// 惰性清理已过期条目（避免过期条目占用容量）.
-			evict_expired();
-
 			auto it = m_cache_map.find(key);
 			if (it == m_cache_map.end())
 				return std::nullopt;
 
+			auto now = std::chrono::steady_clock::now();
+
+			// 命中项已过期则移除, 不返回过期数据.
+			if (now > it->second->second.expire)
+			{
+				m_lru_list.erase(it->second);
+				m_cache_map.erase(it);
+				return std::nullopt;
+			}
+
 			// 滑动 TTL：命中后重置过期时间.
 			auto& node = *it->second;
-			node.second.expire =
-				std::chrono::steady_clock::now() + m_ttl;
+			node.second.expire = now + m_ttl;
 
 			// 移到 LRU 前端.
 			m_lru_list.splice(m_lru_list.begin(), m_lru_list, it->second);
@@ -99,9 +105,6 @@ namespace proxy {
 		inline void put(const key_type& key, value_type resp)
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
-
-			// 惰性清理已过期条目（避免过期条目占用容量）.
-			evict_expired();
 
 			auto now = std::chrono::steady_clock::now();
 
@@ -138,25 +141,6 @@ namespace proxy {
 		}
 
 	private:
-		// 惰性清理所有已过期条目（须在持锁状态下调用）.
-		void evict_expired() noexcept
-		{
-			auto now = std::chrono::steady_clock::now();
-			auto it = m_cache_map.begin();
-			while (it != m_cache_map.end())
-			{
-				if (now > it->second->second.expire)
-				{
-					m_lru_list.erase(it->second);
-					it = m_cache_map.erase(it);
-				}
-				else
-				{
-					++it;
-				}
-			}
-		}
-
 	private:
 		mutable std::mutex m_mutex;
 		list_type m_lru_list;
