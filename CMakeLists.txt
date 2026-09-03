@@ -66,8 +66,8 @@ option(ENABLE_SYSTEM_BOOST			"Build with system installed Boost support" OFF)
 option(ENABLE_USE_SYSTEMD_LOG		"Build with systemd log support" OFF)
 option(ENABLE_USE_PAM_AUTH 			"Build with PAM authentication support" OFF)
 
-option(ENABLE_USE_OPENSSL			"Build with openssl support" ON)
-option(ENABLE_USE_BORINGSSL			"Build with boringssl support" OFF)
+option(ENABLE_USE_OPENSSL			"Build with openssl support" OFF)
+option(ENABLE_USE_BORINGSSL			"Build with boringssl support" ON)
 option(ENABLE_USE_WOLFSSL			"Build with wolfssl support" OFF)
 
 option(ENABLE_ASIO_HANDLER_TRACKING "Enable asio handler tracking" OFF)
