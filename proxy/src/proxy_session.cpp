@@ -3177,6 +3177,9 @@ R"x*x*x(<html>
 			// 仅转发响应头.
 			{
 				http::serializer<false, http::buffer_body> sr(res);
+				// 请求阶段的固定截止时间不随传输顺延, 转发响应前须按
+				// 当前时刻刷新超时, 避免长时间回传时首个写操作被立即判超时.
+				stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
 				co_await http::async_write_header(
 					m_local_socket, sr, net_awaitable[ec]);
 			}
@@ -3233,6 +3236,8 @@ R"x*x*x(<html>
 				const auto n = body_buf_size - res.body().size;
 				if (n > 0)
 				{
+					// 每轮写出前刷新超时, 使活跃下载不受固定截止时间限制.
+					stream_expires_after(m_local_socket, std::chrono::seconds(m_option.tcp_timeout_));
 					co_await net::async_write(
 						m_local_socket,
 						net::buffer(body_buf.get(), n),
@@ -3411,6 +3416,10 @@ R"x*x*x(<html>
 
 			co_return false;
 		}
+
+		// 清除请求阶段设置的 socket 超时, 隧道期的超时交给 idle_timeout
+		// 管理, 否则 Beast 的固定截止时间会因上传方向读挂起而误断活跃连接.
+		stream_expires_never(m_local_socket);
 
 		co_await concurrent_transfer();
 
@@ -4342,6 +4351,9 @@ R"x*x*x(<html>
 			log_conn_debug()
 				<< ", connect-udp: tunnel established via upstream, "
 				<< "starting raw tcp forwarding";
+
+			// 同上, 隧道建立后清除请求阶段的 socket 超时, 交由 idle_timeout 管理.
+			stream_expires_never(m_local_socket);
 
 			co_await concurrent_transfer();
 		}
