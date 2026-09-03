@@ -1040,7 +1040,7 @@ namespace proxy {
 					auto resp = dns_build_response(query, 0, {});
 					if (!resp.empty())
 					{
-						XLOG_DBG << "tun udp dns query: " << qname << " type "
+						AXLOG_DBG << "tun udp dns query: " << qname << " type "
 							<< dns_type_to_string(qtype)
 							<< ", ipv6 disabled, return empty";
 						co_await reply(resp.data(), resp.size(), false);
@@ -1060,7 +1060,7 @@ namespace proxy {
 							(static_cast<uint8_t>(query[0]) << 8) |
 							static_cast<uint8_t>(query[1]));
 						auto resp = dns_set_id(*hit, qid);
-						XLOG_DBG << "tun udp dns cache hit: " << qname;
+						AXLOG_DBG << "tun udp dns cache hit: " << qname;
 						co_await reply(resp.data(), resp.size(), false);
 						touch();
 						co_return;
@@ -1096,7 +1096,7 @@ namespace proxy {
 						if (cache)
 						{
 							cache->put(key, dns_strip_id(response));
-							XLOG_DBG << "tun udp dns cache put: " << key;
+							AXLOG_DBG << "tun udp dns cache put: " << key;
 						}
 					}
 					co_await reply(response.data(), response.size(), false);
@@ -1598,7 +1598,7 @@ namespace proxy {
 		uint8_t buf[65536];
 		size_t pos = 0;
 
-		XLOG_DBG << "tun udp tx capsule to " << m_target.address().to_string()
+		AXLOG_DBG << "tun udp tx capsule to " << m_target.address().to_string()
 			<< ":" << m_target.port() << " len=" << len;
 
 		pos += varint_int_encode(udp_proxy_capsule_type, buf + pos);
@@ -1670,7 +1670,7 @@ namespace proxy {
 			if (ec)
 				break;
 
-			XLOG_DBG << "tun udp rx capsule type=" << capsule_type
+			AXLOG_DBG << "tun udp rx capsule type=" << capsule_type
 				<< " len=" << capsule_value.size();
 
 			// 仅处理 DATAGRAM capsule（RFC 9297）.
@@ -1837,7 +1837,7 @@ namespace proxy {
 		dns_query_flags(resp, cd, do_flag);
 		auto key = dns_cache_key(qname, qtype, cd, do_flag);
 		cache->put(key, dns_strip_id(resp));
-		XLOG_DBG << "tun udp dns cache put: " << key;
+		AXLOG_DBG << "tun udp dns cache put: " << key;
 	}
 
 	void tun_udp_flow::touch()

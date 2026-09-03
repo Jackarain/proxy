@@ -5863,6 +5863,10 @@ R"x*x*x(<html>
 		const std::string& response_msg,
 		const std::string& json_body) const noexcept
 	{
+		// debug 日志被级别过滤时直接返回, 避免无谓的 JSON 解析与格式化.
+		if (xlogger::logging_level() > xlogger::_logger_debug_id__)
+			return;
+
 		std::string qname;
 		uint16_t qtype = DNS_TYPE_A;
 

@@ -1175,7 +1175,7 @@ namespace proxy {
 			auto resp = dns_build_response(query, 1, {});
 			if (!resp.empty() && !co_await send_response(sock, peer, resp))
 				co_return;
-			XLOG_DBG << "udp dns query malformed from " << peer
+			AXLOG_DBG << "udp dns query malformed from " << peer
 				<< ", return formerr";
 			co_return;
 		}
@@ -1190,7 +1190,7 @@ namespace proxy {
 				if (!co_await send_response(sock, peer, resp))
 					co_return;
 			}
-			XLOG_DBG << "udp dns query: " << qname << " type "
+			AXLOG_DBG << "udp dns query: " << qname << " type "
 				<< dns_type_to_string(qtype)
 				<< " from " << peer << ", ipv6 disabled, return empty";
 			co_return;
@@ -1212,7 +1212,7 @@ namespace proxy {
 				auto resp = dns_set_id(*hit, qid);
 				if (!co_await send_response(sock, peer, resp))
 					co_return;
-				XLOG_DBG << "udp dns query: " << qname << " type "
+				AXLOG_DBG << "udp dns query: " << qname << " type "
 					<< dns_type_to_string(qtype)
 					<< " from " << peer << ", cache hit";
 				co_return;
@@ -1243,7 +1243,7 @@ namespace proxy {
 			co_return;
 
 		std::string answer_summary = dns_answer_summary(response);
-		XLOG_DBG << "udp dns query: " << qname << " type "
+		AXLOG_DBG << "udp dns query: " << qname << " type "
 			<< dns_type_to_string(qtype)
 			<< " from " << peer
 			<< ", answer: "

@@ -1017,6 +1017,9 @@ enum logger_level__ {
 	_logger_file_id__
 };
 
+// 日志最低输出级别, 低于该级别的日志（如 debug）直接丢弃, 不做格式化.
+inline std::atomic<logger_level__> global_logging_level___ = _logger_debug_id__;
+
 const inline std::string _LOGGER_STR__[] = {
 	" DEBUG ",
 	" INFO  ",
@@ -1443,6 +1446,17 @@ inline void toggle_write_logging(bool enable) noexcept
 	global_write_logging___ = enable;
 }
 
+inline void set_log_level(logger_level__ level) noexcept
+{
+	// 低于 level 的日志（如 debug）将被直接丢弃, 不做格式化与输出.
+	global_logging_level___.store(level, std::memory_order_relaxed);
+}
+
+inline logger_level__ logging_level() noexcept
+{
+	return global_logging_level___.load(std::memory_order_relaxed);
+}
+
 inline void toggle_console_logging(bool enable) noexcept
 {
 	global_console_logging___ = enable;
@@ -1478,12 +1492,27 @@ class logger___
 	// c++11 noncopyable.
 	logger___(const logger___&) = delete;
 	logger___& operator=(const logger___&) = delete;
+private:
+	// 级别低于全局最低日志级别时返回 true, 表示该条日志应被丢弃.
+	static inline bool level_filtered(const logger_level__& level) noexcept
+	{
+		return level < global_logging_level___.
+			load(std::memory_order_relaxed);
+	}
+
+	// 日志总开关关闭或本条已被丢弃时, 所有输出操作均为空操作.
+	inline bool disabled() const noexcept
+	{
+		return ignore_ || !global_logging___;
+	}
+
 public:
 	inline logger___(logger___&& other) noexcept
-		: level_(other.level_)
+		: out_(std::move(other.out_))
+		, level_(other.level_)
 		, async_(other.async_)
 		, disable_cout_(other.disable_cout_)
-		, out_(std::move(other.out_))
+		, ignore_(other.ignore_)
 	{
 		other.ignore_ = true;
 	}
@@ -1496,6 +1525,7 @@ public:
 		async_ = other.async_;
 		disable_cout_ = other.disable_cout_;
 		out_ = std::move(other.out_);
+		ignore_ = other.ignore_;
 		other.ignore_ = true;
 		return *this;
 	}
@@ -1506,8 +1536,10 @@ public:
 		, async_(async)
 		, disable_cout_(disable_cout)
 	{
-		if (!global_logging___)
-			return;
+		// 级别低于全局最低日志级别时直接标记忽略, 后续所有输出
+		// 操作（格式化与写盘）均为空操作.
+		if (disabled() || level_filtered(level_))
+			ignore_ = true;
 	}
 	~logger___()
 	{
@@ -1527,7 +1559,7 @@ public:
 	template <class... Args>
 	inline logger___& format_to(std::string_view fmt, Args&&... args)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		out_ += xlogger::vformat(fmt,
 			xlogger::make_format_args(args...));
@@ -1537,7 +1569,7 @@ public:
 	template <class T>
 	inline logger___& strcat_impl(T const& v) noexcept
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}", v);
 		return *this;
@@ -1597,7 +1629,7 @@ public:
 	}
 	inline logger___& operator<<(const std::string& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 #ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(v))
@@ -1616,7 +1648,7 @@ public:
 #if defined (__cpp_lib_polymorphic_allocator)
 	inline logger___& operator<<(const std::pmr::string& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 #ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(v))
@@ -1635,7 +1667,7 @@ public:
 #endif
 	inline logger___& operator<<(const std::wstring& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		auto value = logger_aux__::utf16_utf8(v);
 		if (value)
@@ -1644,7 +1676,7 @@ public:
 	}
 	inline logger___& operator<<(const std::u16string& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		auto value = logger_aux__::utf16_utf8(
 			{ (const wchar_t*)v.data(), v.size() });
@@ -1660,7 +1692,7 @@ public:
 #endif
 	inline logger___& operator<<(const std::string_view& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 #ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(v))
@@ -1679,7 +1711,7 @@ public:
 	inline logger___& operator<<(const boost::string_view& v)
 	{
 		std::string_view sv{v.data(), v.length()};
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 #ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(sv))
@@ -1698,7 +1730,7 @@ public:
 	inline logger___& operator<<(const char* v)
 	{
 		std::string_view sv(v);
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 #ifdef LOGGING_ENABLE_AUTO_UTF8
 		if (!logger_aux__::utf8_check_is_valid(sv))
@@ -1716,7 +1748,7 @@ public:
 	}
 	inline logger___& operator<<(const wchar_t* v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		auto value = logger_aux__::utf16_utf8(v);
 		if (value)
@@ -1725,49 +1757,49 @@ public:
 	}
 	inline logger___& operator<<(const void *v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{:#010x}", (std::size_t)v);
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::nanoseconds& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}ns", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::microseconds& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}us", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::milliseconds& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}ms", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::seconds& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}s", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::minutes& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}min", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::hours& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}h", v.count());
 		return *this;
@@ -1776,7 +1808,7 @@ public:
 #ifndef LOGGING_DISABLE_BOOST_ASIO_ENDPOINT
 	inline logger___& operator<<(const net::ip::tcp::endpoint& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		if (v.address().is_v6())
 			xlogger::format_to(std::back_inserter(out_),
@@ -1788,7 +1820,7 @@ public:
 	}
 	inline logger___& operator<<(const net::ip::udp::endpoint& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		if (v.address().is_v6())
 			xlogger::format_to(std::back_inserter(out_),
@@ -1803,35 +1835,35 @@ public:
 #if (__cplusplus >= 202002L)
 	inline logger___& operator<<(const std::chrono::days& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}d", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::weeks& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}weeks", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::years& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}years", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::months& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		xlogger::format_to(std::back_inserter(out_), "{}months", v.count());
 		return *this;
 	}
 	inline logger___& operator<<(const std::chrono::weekday& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		switch (v.c_encoding())
 		{
@@ -1857,7 +1889,7 @@ public:
 	}
 	inline logger___& operator<<(const std::chrono::year& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 #if 0
 		xlogger::format_to(std::back_inserter(out_),
@@ -1871,7 +1903,7 @@ public:
 	}
 	inline logger___& operator<<(const std::chrono::month& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		switch (static_cast<unsigned int>(v))
 		{
@@ -1907,7 +1939,7 @@ public:
 	}
 	inline logger___& operator<<(const std::chrono::day& v)
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 #ifndef __cpp_lib_char8_t
 		xlogger::format_to(std::back_inserter(out_),
@@ -1922,7 +1954,7 @@ public:
 #endif
 	inline logger___& operator<<(const std::filesystem::path& p) noexcept
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		auto ret = logger_aux__::utf16_utf8(p.wstring());
 		if (ret)
@@ -1932,7 +1964,7 @@ public:
 #ifndef LOGGING_DISABLE_BOOST_FILESYSTEM
 	inline logger___& operator<<(const boost::filesystem::path& p) noexcept
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		auto ret = logger_aux__::utf16_utf8(p.wstring());
 		if (ret)
@@ -1943,7 +1975,7 @@ public:
 #ifndef LOGGING_DISABLE_BOOST_POSIX_TIME
 	inline logger___& operator<<(const boost::posix_time::ptime& p) noexcept
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 
 		if (!p.is_not_a_date_time())
@@ -1981,7 +2013,7 @@ public:
 #endif
 	inline logger___& operator<<(const std::thread::id& id) noexcept
 	{
-		if (!global_logging___)
+		if (disabled())
 			return *this;
 		std::ostringstream oss;
 		oss << id;
@@ -2019,6 +2051,8 @@ namespace xlogger {
 	inline void turnon_logging() noexcept;
 	inline void toggle_write_logging(bool enable) noexcept;
 	inline void toggle_console_logging(bool enable) noexcept;
+	inline void set_log_level(logger_level__ level) noexcept;
+	inline logger_level__ logging_level() noexcept;
 	inline void set_logfile_maxsize(int64_t size) noexcept;
 }
 
