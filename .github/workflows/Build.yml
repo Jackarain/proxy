@@ -130,7 +130,7 @@ jobs:
 
       - name: Build proxy
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=ON -DENABLE_USE_OPENSSL=OFF -DENABLE_USE_WOLFSSL=ON -DCMAKE_EXE_LINKER_FLAGS="-static" -G Ninja
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_SNMALLOC_STATIC=ON -DENABLE_USE_OPENSSL=OFF -DENABLE_USE_BORINGSSL=OFF -DENABLE_USE_WOLFSSL=ON -DCMAKE_EXE_LINKER_FLAGS="-static" -G Ninja
           # wolfssl 编译较重, 限制并行度以避免 runner 内存不足.
           cmake --build build --config Release -- -j2
 
