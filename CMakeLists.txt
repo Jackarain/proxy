@@ -133,19 +133,6 @@ endif()
 
 ################################################################################
 
-if (ENABLE_SNMALLOC_STATIC)
-	set(SNMALLOC_HEADER_ONLY_LIBRARY ON)
-
-	add_definitions(-DUSE_SNMALLOC)
-	add_definitions(-DSNMALLOC_USE_WAIT_ON_ADDRESS=1)
-	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/snmalloc EXCLUDE_FROM_ALL)
-
-	link_libraries(snmalloc)
-	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/snmalloc)
-endif()
-
-################################################################################
-
 if (ENABLE_USE_SYSTEMD_LOG)
 	add_definitions(-DUSE_SYSTEMD_LOGGING)
 	link_libraries(systemd)
@@ -582,6 +569,20 @@ set(TUNIO_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 # Windows 下使用 wintun 驱动（与旧 wintun_tun_device 行为一致）.
 set(USE_WINTUN_DRIVER ON CACHE BOOL "" FORCE)
 add_subdirectory(third_party/tunio)
+
+################################################################################
+# 使用 snmalloc 内存分配器, 仅链接到工程自身的可执行目标.
+
+if (ENABLE_SNMALLOC_STATIC)
+	set(SNMALLOC_HEADER_ONLY_LIBRARY ON)
+
+	add_definitions(-DUSE_SNMALLOC)
+	add_definitions(-DSNMALLOC_USE_WAIT_ON_ADDRESS=1)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/snmalloc EXCLUDE_FROM_ALL)
+
+	link_libraries(snmalloc)
+	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/snmalloc)
+endif()
 
 ################################################################################
 # 添加 proxy 项目
