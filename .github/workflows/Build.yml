@@ -6,7 +6,8 @@ on:
       - 'unixdomain'
 
 jobs:
-  Mingw:
+  windows-mingw:
+    name: Windows (MinGW-w64 cross)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -29,7 +30,8 @@ jobs:
             build/bin/release/proxy_server.exe
             build/bin/release/launcher.exe
 
-  Docker:
+  linux-musl-docker:
+    name: Linux (musl, docker)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -52,7 +54,8 @@ jobs:
   # Linux (glibc, gcc): 覆盖 boringssl / openssl(系统) / openssl(内置) / wolfssl
   # 三种 TLS 后端, 并与 snmalloc / mimalloc / io_uring / PAM 组合.
   ##############################################################################
-  Linux:
+  linux-glibc-gcc:
+    name: Linux (glibc, gcc) - ${{ matrix.name }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -135,7 +138,8 @@ jobs:
   ##############################################################################
   # Linux (glibc, clang): 覆盖 clang 编译下的不同 TLS 后端及 libc++.
   ##############################################################################
-  LinuxClang:
+  linux-glibc-clang:
+    name: Linux (glibc, clang) - ${{ matrix.name }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -195,7 +199,8 @@ jobs:
   ##############################################################################
   # Linux (musl / Alpine): 静态构建, 覆盖 boringssl 与 wolfssl+snmalloc.
   ##############################################################################
-  Alpine:
+  linux-musl-alpine:
+    name: Linux (musl, alpine, clang) - ${{ matrix.name }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -237,7 +242,8 @@ jobs:
             build/bin/proxy_server
             build/bin/launcher
 
-  LinuxClangLtoPgo:
+  linux-clang-lto-pgo-openssl:
+    name: Linux (clang, LTO+PGO, system openssl, snmalloc)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -382,7 +388,8 @@ jobs:
             build/bin/proxy_server
             build/bin/launcher
 
-  LinuxClangLtoPgoIoUring:
+  linux-clang-lto-pgo-iouring-openssl:
+    name: Linux (clang, LTO+PGO, io_uring, system openssl, snmalloc)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -546,7 +553,8 @@ jobs:
             build/bin/proxy_server
             build/bin/launcher
 
-  OpenWrtX64:
+  openwrt-x86-64-musl-clang:
+    name: OpenWrt (x86_64, musl, clang, system openssl, io_uring)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -667,7 +675,8 @@ jobs:
   ##############################################################################
   # macOS: Universal Binary (x86_64 + arm64), 覆盖 boringssl 与 wolfssl.
   ##############################################################################
-  MacOS:
+  macos-universal:
+    name: macOS (Universal x86_64+arm64) - ${{ matrix.name }}
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -710,7 +719,8 @@ jobs:
   ##############################################################################
   # Windows (MSVC): 覆盖 boringssl 与 wolfssl.
   ##############################################################################
-  Windows:
+  windows-msvc:
+    name: Windows (MSVC) - ${{ matrix.name }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -741,7 +751,8 @@ jobs:
             build/bin/release/proxy_server.exe
             build/bin/release/launcher.exe
 
-  Android:
+  android-arm64-apk:
+    name: Android (arm64-v8a, boringssl, APK)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
