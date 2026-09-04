@@ -25,6 +25,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -1556,20 +1557,50 @@ namespace proxy {
 		if (!info)
 			co_return false;
 
+		// DoH 交互总超时: 黑洞网络下 connect/TLS/HTTP 任一步都可能无限
+		// 挂起且 socket 为查询局部对象, 连接关闭(会话/服务停止)无法中止;
+		// 超时后关闭当前底层连接使在途操作立即失败.
+		net::steady_timer query_timer(m_executor);
+		query_timer.expires_after(std::chrono::seconds(15));
+		std::function<void()> abort_conn;
+		query_timer.async_wait(
+			[&abort_conn](const boost::system::error_code& tec)
+			{
+				if (tec)
+					return;
+				if (abort_conn)
+					abort_conn();
+			});
+
 		// 解析 DoH 服务器地址.
 		auto targets = co_await resolve_doh_target(*info);
 		if (targets.empty())
+		{
+			query_timer.cancel();
 			co_return false;
+		}
 
 		// 连接到 DoH 服务器.
 		tcp::socket doh_socket(m_executor);
+		abort_conn = [&doh_socket]()
+			{
+				boost::system::error_code sec;
+				doh_socket.close(sec);
+			};
 		if (!co_await connect_doh_target(doh_socket, targets))
+		{
+			query_timer.cancel();
 			co_return false;
+		}
 
 		// 明文 http 上游：直接在已连接 socket 上完成 POST 交互，不做 TLS.
 		if (info->scheme == "http")
-			co_return co_await doh_http_post(
+		{
+			auto ok = co_await doh_http_post(
 				doh_socket, *info, dns_query, output);
+			query_timer.cancel();
+			co_return ok;
+		}
 
 		// 创建 per-request SSL context, 确保每个 DoH 服务器使用正确的主机名校验.
 		net::ssl::context doh_ssl_ctx(net::ssl::context::sslv23_client);
@@ -1580,15 +1611,26 @@ namespace proxy {
 		{
 			XLOG_WARN << "configure ssl context for doh: " << info->tls_host
 				<< " error: " << ec.message();
+			query_timer.cancel();
 			co_return false;
 		}
 
 		// 建立 TLS 连接并完成 DoH POST 查询交互.
 		net::ssl::stream<tcp::socket> ssl_stream(std::move(doh_socket), doh_ssl_ctx);
+		abort_conn = [&ssl_stream]()
+			{
+				boost::system::error_code sec;
+				ssl_stream.next_layer().close(sec);
+			};
 		if (!co_await doh_tls_handshake(ssl_stream, *info))
+		{
+			query_timer.cancel();
 			co_return false;
+		}
 
-		co_return co_await doh_http_post(ssl_stream, *info, dns_query, output);
+		auto ok = co_await doh_http_post(ssl_stream, *info, dns_query, output);
+		query_timer.cancel();
+		co_return ok;
 	}
 
 	// append_address_answers 从系统解析结果中按 qtype 提取 A/AAAA 记录.

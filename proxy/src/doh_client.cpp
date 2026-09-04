@@ -332,25 +332,52 @@ namespace proxy {
 			co_return tcp::socket(executor);
 		}
 
+		// 建连（含 protect/多地址重试）总超时, 黑洞网络下可能悬挂:
+		// 超时后关闭在途 socket 使 async_connect 立即失败并退出.
+		net::steady_timer conn_timer(executor);
+		auto current = std::make_shared<tcp::socket>(executor);
+		bool timed_out = false;
+		conn_timer.expires_after(std::chrono::seconds(15));
+		conn_timer.async_wait(
+			[current, &timed_out](const boost::system::error_code& tec)
+			{
+				if (tec)
+					return;
+				timed_out = true;
+				boost::system::error_code sec;
+				current->close(sec);
+			});
+
 		for (const auto& t : targets)
 		{
-			tcp::socket sock(executor);
-			sock.open(t.endpoint().protocol(), ec);
+			if (timed_out)
+				break;
+
+			boost::system::error_code sec;
+			current->close(sec);
+			current->open(t.endpoint().protocol(), ec);
 			if (ec)
 				continue;
 
 			// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
-			apply_so_mark_if(sock, opt);
+			apply_so_mark_if(*current, opt);
 
 			// 先放行再 connect，防止 SYN 回环进 tun 形成环路.
-			if (protect && !co_await protect(sock.native_handle()))
+			if (protect && !co_await protect(current->native_handle()))
 				continue;
 
-			co_await sock.async_connect(t.endpoint(), net_awaitable[ec]);
+			if (timed_out)
+				break;
+
+			co_await current->async_connect(t.endpoint(), net_awaitable[ec]);
 			if (!ec)
-				co_return sock;
+			{
+				conn_timer.cancel();
+				co_return std::move(*current);
+			}
 		}
 
+		conn_timer.cancel();
 		XLOG_WARN << "tun connect proxy_pass: " << proxy_host
 			<< ", error: " << ec.message();
 		co_return tcp::socket(executor);

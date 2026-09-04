@@ -164,25 +164,39 @@ namespace proxy {
 		{
 			boost::system::error_code ec;
 
-			tcp::socket sock(executor);
 			tcp::endpoint endp(dst, port);
 
-			sock.open(endp.protocol(), ec);
+			// 建连总超时（黑洞网络下 connect/protect 可能无限挂起）:
+			// 超时关闭在途 socket 使 async_connect 立即失败.
+			auto sock = std::make_shared<tcp::socket>(executor);
+			net::steady_timer conn_timer(executor);
+			conn_timer.expires_after(std::chrono::seconds(15));
+			conn_timer.async_wait(
+				[sock](const boost::system::error_code& tec)
+				{
+					if (tec)
+						return;
+					boost::system::error_code sec;
+					sock->close(sec);
+				});
+
+			sock->open(endp.protocol(), ec);
 			if (!ec)
 			{
-				apply_so_mark_if(sock, opt);
+				apply_so_mark_if(*sock, opt);
 
 				// Android VpnService 场景必须先放行再 connect：否则 SYN 会按
 				// 全隧道路由回环进 tun，被当成新连接再次转发，形成环路.
-				if (protect && !co_await protect(sock.native_handle()))
+				if (protect && !co_await protect(sock->native_handle()))
 				{
 					XLOG_WARN << "tun connect direct not protected: "
 						<< dst.to_string() << ":" << port;
 					co_return tcp::socket(executor);
 				}
 
-				co_await sock.async_connect(endp, net_awaitable[ec]);
+				co_await sock->async_connect(endp, net_awaitable[ec]);
 			}
+			conn_timer.cancel();
 			if (ec)
 			{
 				XLOG_WARN << "tun connect direct: " << dst.to_string()
@@ -190,7 +204,7 @@ namespace proxy {
 				co_return tcp::socket(executor);
 			}
 
-			co_return sock;
+			co_return std::move(*sock);
 		}
 
 		// 构造 RFC 9298 CONNECT-UDP 请求（absolute-form URI）.
@@ -401,6 +415,19 @@ namespace proxy {
 		const std::string target_host = m_target.address().to_string();
 		const uint16_t target_port = m_target.port();
 
+		// 建连总超时: 黑洞网络下代理握手等阶段可能无限挂起, 超时关闭
+		// 整个 flow (客户端流与上游) 使在途建连操作失败, 避免协程在
+		// 停止后仍残留挂起点 (io_context 析构需逐个清理这些帧).
+		net::steady_timer conn_timer(m_executor);
+		conn_timer.expires_after(std::chrono::seconds(15));
+		conn_timer.async_wait(
+			[self](const boost::system::error_code& tec)
+			{
+				if (tec)
+					return;
+				self->close();
+			});
+
 		// 分流判定：命中 proxy_cidr_ 或代理域名解析缓存走上游代理，否则直连.
 		const bool use_proxy = m_owner && m_owner->ip_match_proxy(m_target.address());
 
@@ -411,10 +438,12 @@ namespace proxy {
 		if (!co_await establish_upstream(target_host, target_port, use_proxy))
 		{
 			// 后端连接失败：向客户端发送 RST 并关闭.
+			conn_timer.cancel();
 			m_client_stream.reset();
 			close();
 			co_return;
 		}
+		conn_timer.cancel();
 
 		m_connected = true;
 
@@ -931,6 +960,19 @@ namespace proxy {
 				co_return;
 		}
 
+		// UDP 后端建立总超时: 代理 ASSOCIATE/CONNECT-UDP 响应不来时
+		// 读响应协程会一直挂起 (黑洞/代理假活), 超时关闭会话使在途
+		// 操作失败, 避免停止后残留挂起点.
+		net::steady_timer conn_timer(m_executor);
+		conn_timer.expires_after(std::chrono::seconds(15));
+		conn_timer.async_wait(
+			[self](const boost::system::error_code& tec)
+			{
+				if (tec)
+					return;
+				self->close();
+			});
+
 		// DoH 模式无需后端连接（每个查询独立发起 DoH 请求）.
 		if (!m_doh_mode && !m_doh_via_proxy)
 		{
@@ -960,6 +1002,7 @@ namespace proxy {
 		}
 
 		// 后端就绪，补发等待期间缓存的客户端数据.
+		conn_timer.cancel();
 		m_ready = true;
 		for (auto& p : m_pending)
 		{
@@ -1908,9 +1951,25 @@ namespace proxy {
 		// 设置 SNI 主机名以兼容需要 SNI 的服务器.
 		SSL_set_tlsext_host_name(ssl_socket.native_handle(), sni.data());
 
+		// TLS 握手超时: 服务器无响应时挂起 (建连期 socket 尚在局部
+		// ssl_sock 中, flow 关闭无法中止), 超时关闭底层连接使其失败.
+		net::steady_timer tls_timer(m_executor);
+		tls_timer.expires_after(std::chrono::seconds(15));
+		tls_timer.async_wait(
+			[&ssl_sock](const boost::system::error_code& tec)
+			{
+				if (tec)
+					return;
+				if (!ssl_sock)
+					return;
+				boost::system::error_code sec;
+				net_tcp_socket(*ssl_sock).close(sec);
+			});
+
 		// 进行 SSL 握手.
 		co_await ssl_socket.async_handshake(
 			net::ssl::stream_base::client, net_awaitable[ec]);
+		tls_timer.cancel();
 		if (ec)
 			co_return ec;
 
