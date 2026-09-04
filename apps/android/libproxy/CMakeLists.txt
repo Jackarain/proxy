@@ -26,6 +26,13 @@ target_link_libraries(proxy_android
 	${LOG_LIBRARY}
 )
 
+# 编译期开关: ON 时退役对象在停止线程同步析构, 不使用后台回收线程
+# (reaper), 用于对比验证 reaper 的必要性. 默认 OFF, 即 reaper 启用.
+option(XPROXY_SYNC_DESTROY "退役对象改为同步析构 (禁用后台回收线程)" OFF)
+if (XPROXY_SYNC_DESTROY)
+	target_compile_definitions(proxy_android PRIVATE -DXPROXY_SYNC_DESTROY)
+endif()
+
 if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129
     AND CMAKE_VERSION VERSION_GREATER 3.20.3)
 	set_property(TARGET proxy_android PROPERTY CXX_STANDARD 23)

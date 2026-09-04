@@ -113,6 +113,10 @@ std::mutex g_mutex;
 // 为服务工作线程) 同步析构, 会阻塞后续启停 (UI 表现为点停止卡顿).
 // 退役对象移入队列, 由独立回收线程异步析构: 停止线程只做同步必须项
 // (关闭 tun/停 io 线程), 用户立即点开始即可创建新实例, 互不影响.
+// 编译期开关 XPROXY_SYNC_DESTROY 关闭该回收线程, 改为停止线程同步
+// 析构 (正常路径下 io_context 残留帧极少, 同步析构同样很快), 用于
+// 对比验证. 默认不定义, 即启用回收线程.
+#ifndef XPROXY_SYNC_DESTROY
 struct retired_objects
 {
 	std::unique_ptr<io_context_pool> pool;
@@ -168,6 +172,7 @@ void ensure_reaper()
 			std::thread(reaper_main).detach();
 		});
 }
+#endif // !XPROXY_SYNC_DESTROY
 
 // io_context/backend 线程因卡死被分离后, 池与服务对象不能随引用释放
 // (运行中的线程仍可能访问其成员). 移入僵尸列表保活; 仅发生在 io_context
@@ -225,10 +230,18 @@ void stop_locked()
 	}
 	else if (g_io_pool || g_server)
 	{
+#ifdef XPROXY_SYNC_DESTROY
+		// 开关模式: 对象析构 (io_context 清理残留协程帧等) 在本线程
+		// 同步执行. 正常路径残留帧极少, 实测多为数十毫秒; 慢析构
+		// 偶发时 (不可预测挂起点) 才会阻塞停止线程.
+		g_server.reset();
+		g_io_pool.reset();
+#else
 		// 正常路径: 对象析构 (io_context 清理残留协程帧等) 可能耗时,
 		// 移到后台回收线程执行, 停止线程不被阻塞, 也不影响下一次启动.
 		ensure_reaper();
 		retire_objects(std::move(g_io_pool), std::move(g_server));
+#endif
 	}
 
 	g_server.reset();
