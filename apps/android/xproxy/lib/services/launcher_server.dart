@@ -326,6 +326,8 @@ class LauncherServer {
   }
 
   Future<void> close() async {
+    // 幂等: endRun/启动失败清理等多条路径可能重复关闭, 直接返回.
+    if (_closed) return;
     _closed = true;
     for (final c in _pending.values) {
       if (!c.isCompleted) {

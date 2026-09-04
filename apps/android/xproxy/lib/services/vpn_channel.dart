@@ -29,8 +29,15 @@ class VpnChannel {
   }
 
   /// 停止 VpnService 并调用 xproxy.stop().
+  ///
+  /// native 端在 VpnService 实例完全销毁(onDestroy)后才完成本调用, 使
+  /// Flutter 停止流程与服务真实生命周期同步: 否则下一次 START 可能提交
+  /// 到正在销毁的旧实例, 导致 VpnService 未运行、establish_tun 失败.
+  /// 带超时保护: native 停止异常卡死时最多等待 [timeout], 避免永久阻塞.
   static Future<void> stop() async {
-    await _channel.invokeMethod('stop');
+    await _channel
+        .invokeMethod('stop')
+        .timeout(const Duration(seconds: 8), onTimeout: () => null);
   }
 
   /// 返回 libxproxy 编译时记录的 git commit hash 前 6 位.

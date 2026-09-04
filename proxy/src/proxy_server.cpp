@@ -16,10 +16,12 @@
 #include <boost/functional/hash.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <ctime>
 #include <future>
 #include <optional>
+#include <pthread.h>
 #include <sstream>
 #include <unordered_set>
 
@@ -1737,7 +1739,11 @@ void proxy_server::start() noexcept
 		m_backend_thread = std::make_unique<std::thread>([this, self]() mutable
 			{
 				backend_thread_run();
+				m_backend_finished.store(true, std::memory_order_release);
 			});
+#if defined(__linux__) && !defined(_WIN32)
+		pthread_setname_np(m_backend_thread->native_handle(), "xproxy-backend");
+#endif
 	}
 
 	// 如果是 stdio 模式, 则直接启动 stdio 监听协程.
@@ -1964,7 +1970,11 @@ void proxy_server::close() noexcept
 			m_launcher_state->call_protect_ = {};
 			launcher_stop();
 		});
-	launcher_done.get_future().wait();
+	// io_context 线程可能被异常卡死（如数据面协程忙循环）而无法执行
+	// 本 dispatch: 无界等待会永久阻塞停止线程, 进而持锁卡死后续启停
+	// (Android 端表现为反复启停后界面永远等待控制通道). 有限等待, 超时
+	// 后继续向下, 由调用方根据线程回收情况决定是否保活本对象.
+	launcher_done.get_future().wait_for(std::chrono::milliseconds(2000));
 
 	// 停止 UDP DNS 服务器与 TUN 设备模式服务器. 两者内部状态都在
 	// io_context 线程被数据通路协程访问（dns_server 头文件明确要求成员
@@ -1978,12 +1988,32 @@ void proxy_server::close() noexcept
 			if (m_tun_server)
 				m_tun_server->close();
 		});
-	server_done.get_future().wait();
+	server_done.get_future().wait_for(std::chrono::milliseconds(2000));
 
 	m_backend_context.stop();
-	if (m_backend_thread && m_backend_thread->joinable())
-		m_backend_thread->join();
-
+	// backend 线程可能因协程卡死无法退出: join 会永久阻塞停止线程.
+	// 有限等待, 超时则分离并标记, 由调用方保活本对象避免悬空访问.
+	if (m_backend_thread && m_backend_thread->joinable() &&
+		m_backend_thread->get_id() != std::this_thread::get_id())
+	{
+		// 不能以 joinable() 轮询判断线程是否退出(join 前恒为 true),
+		// 以线程入口设置的完成标志为准, 正常停止立即 join 成功.
+		const auto deadline = std::chrono::steady_clock::now() +
+			std::chrono::milliseconds(2000);
+		while (!m_backend_finished.load(std::memory_order_acquire) &&
+			std::chrono::steady_clock::now() < deadline)
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		if (m_backend_finished.load(std::memory_order_acquire))
+		{
+			if (m_backend_thread->joinable())
+				m_backend_thread->join();
+		}
+		else
+		{
+			m_backend_thread->detach();
+			m_backend_detached = true;
+		}
+	}
 	m_timer.cancel();
 
 	for (auto& acc : m_tcp_acceptors)

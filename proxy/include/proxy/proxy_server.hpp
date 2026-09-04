@@ -188,6 +188,13 @@ namespace proxy {
 		// 关闭代理服务, 停止所有监听和会话.
 		void close() noexcept;
 
+		// backend 线程是否因卡死在 close() 中被分离: close() 返回后
+		// 供调用方判断是否需要保活本对象（分离的线程可能仍访问其成员）.
+		bool backend_detached() const noexcept
+		{
+			return m_backend_detached;
+		}
+
 		// 获取 DNS 查询结果缓存（UDP DNS 服务器与 HTTP DNS 路径共享）.
 		// 未启用缓存时返回 nullptr.
 		dns_response_cache* dns_query_cache() noexcept override;
@@ -417,6 +424,12 @@ namespace proxy {
 
 		// 用于运行 m_backend_context 的线程.
 		std::unique_ptr<std::thread> m_backend_thread;
+
+		// close() 中 backend 线程因超时被 detach 的标记.
+		bool m_backend_detached = false;
+
+		// backend 线程入口完成后置位 (close() 以其判断线程是否已退出).
+		std::atomic<bool> m_backend_finished{ false };
 
 		// 作为中继桥接的时候, 下游代理服务器解析的地址缓存.
 		dns_cache m_dns_cache{ 128 };

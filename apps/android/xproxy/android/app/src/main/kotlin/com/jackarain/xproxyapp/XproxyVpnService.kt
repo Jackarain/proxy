@@ -62,6 +62,18 @@ class XproxyVpnService : VpnService() {
         /** 服务实例代次: 每次新实例 onCreate 递增, 旧实例 onDestroy 据此判断是否让位. */
         @Volatile
         private var generation = 0L
+
+        /** 停止完成回调: MainActivity 的 stop MethodChannel 据此在实例销毁
+         *  (onDestroy) 后再返回, 使 Flutter 停止流程与 native teardown 同步. */
+        @Volatile
+        private var onStopComplete: (() -> Unit)? = null
+
+        /** 注册停止完成回调; 已有未决回调时返回 false(并发 stop 兜底). */
+        fun registerStopCallback(cb: () -> Unit): Boolean {
+            if (onStopComplete != null) return false
+            onStopComplete = cb
+            return true
+        }
     }
 
 
@@ -82,7 +94,9 @@ class XproxyVpnService : VpnService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_STOP -> worker.post { teardownAndStop() }
+            ACTION_STOP -> worker.post {
+                teardownAndStop()
+            }
             ACTION_RESTART -> {
                 val config = intent.getStringExtra(EXTRA_CONFIG) ?: ""
                 val port = intent.getIntExtra(EXTRA_LAUNCHER_PORT, 0)
@@ -259,12 +273,21 @@ class XproxyVpnService : VpnService() {
 
     override fun onDestroy() {
         if (instance === this) instance = null
-        // 工作线程可能正持有资源, 排队清理后退出.
-        worker.post {
-            // teardown() 内部会做代次检查, 不会误停新实例的 proxy.
-            teardown()
-            workerThread.quitSafely()
+        // 通知 Flutter 停止已完成(实例已销毁): 取走回调并清空, 使下一次
+        // 连接由新实例执行, 避免 establish_tun 时实例已销毁导致 TUN 失败.
+        val cb = onStopComplete
+        onStopComplete = null
+        try {
+            cb?.invoke()
+        } catch (_: Throwable) {
         }
+        // 注意: 这里不再 teardown() 停止 proxy. 复用同一服务实例快速
+        // 启停时, 旧实例的 onDestroy 若 teardown 会误停队列中刚启动的
+        // 新 proxy(started 指向新 proxy, 同实例代次未变), 表现为快速
+        // 启停后 proxy 刚启动就被停, 控制通道永远连不上. proxy 的停止
+        // 统一由显式 ACTION_STOP(teardownAndStop) 与下一次启动的防御性
+        // teardown 负责, onDestroy 只回收工作线程.
+        worker.post { workerThread.quitSafely() }
         super.onDestroy()
     }
 }

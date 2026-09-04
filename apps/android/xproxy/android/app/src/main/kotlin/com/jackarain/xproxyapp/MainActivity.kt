@@ -46,8 +46,27 @@ class MainActivity : FlutterActivity() {
                         handleRestart(config, port, result)
                     }
                     "stop" -> {
+                        // 等待 VpnService 实例销毁(onDestroy)后再返回:
+                        // 使 Flutter 侧停止流程与 native teardown 的真实
+                        // 生命周期同步, 避免下一次 START 提交到正在销毁的
+                        // 旧实例(VpnService 未运行, establish_tun 失败).
+                        // 正常情况下 onDestroy 在停止请求后立即触发, 回调
+                        // 在数百毫秒内完成, 不会明显卡顿.
+                        val registered = XproxyVpnService.registerStopCallback {
+                            runOnUiThread {
+                                try {
+                                    result.success(true)
+                                } catch (_: Throwable) {
+                                    // result 已失效(如 Flutter 侧超时), 忽略.
+                                }
+                            }
+                        }
+                        if (!registered) {
+                            // 已有未决的 stop 回调(并发 stop 的兜底):
+                            // 立即返回, 避免本 result 永久挂起.
+                            result.success(true)
+                        }
                         XproxyVpnService.requestStop(this)
-                        result.success(true)
                     }
                     // libxproxy 编译时记录的 git commit hash 前 6 位.
                     "build_version" -> {

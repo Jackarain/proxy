@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -39,13 +40,6 @@ class AppSession extends ChangeNotifier {
       await VpnChannel.stop();
     } finally {
       await StorageService().clearRunState();
-      final server = this.server;
-      this.server = null;
-      try {
-        await server?.close();
-      } catch (_) {
-        // 关闭控制通道失败不影响停止流程.
-      }
       endRun();
     }
   }
@@ -54,6 +48,13 @@ class AppSession extends ChangeNotifier {
     runningConfigId = null;
     connected = false;
     startedConfigJson = null;
+    // 统一在此释放并关闭控制通道 server: 覆盖停止/启动失败/页面重建各
+    // 路径, 避免残留陈旧 server(占用端口/内部状态) 被下次启动复用.
+    final server = this.server;
+    if (server != null) {
+      this.server = null;
+      unawaited(server.close());
+    }
     notifyListeners();
   }
 

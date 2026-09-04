@@ -135,6 +135,8 @@ class _ConfigListPageState extends State<ConfigListPage> {
       return;
     }
     setState(() => _busy = true);
+    final session = AppSession.instance;
+    var createdServer = false;
     try {
       final ok = await VpnChannel.prepare();
       if (!ok) {
@@ -146,13 +148,16 @@ class _ConfigListPageState extends State<ConfigListPage> {
         return;
       }
 
-      final session = AppSession.instance;
-      var server = session.server;
-      if (server == null) {
-        server = LauncherServer();
-        await server.start();
-        session.server = server;
-      }
+      // 总是新建控制通道 server: 不复用 session.server, 避免快速启停时
+      // 复用到上一轮已关闭/正在关闭的旧实例(旧端口已无监听/内部状态
+      // 残留), 导致 proxy 连不上控制通道, 界面永远等待 proxy 连接.
+      final oldServer = session.server;
+      session.server = null;
+      if (oldServer != null) unawaited(oldServer.close());
+      final server = LauncherServer();
+      await server.start();
+      session.server = server;
+      createdServer = true;
       server.connectionStream.listen((c) => session.setConnected(c));
 
       final fullJson = jsonEncode(config.toJson());
@@ -167,6 +172,15 @@ class _ConfigListPageState extends State<ConfigListPage> {
       );
       if (mounted) setState(() {});
     } catch (e) {
+      // 启动失败: 若本次新建了控制通道且未进入运行态, 关闭释放,
+      // 避免陈旧 server 残留(占用端口/状态) 被下次启动复用.
+      if (createdServer && !AppSession.instance.running) {
+        final server = session.server;
+        if (server != null) {
+          session.server = null;
+          unawaited(server.close());
+        }
+      }
       if (mounted) {
         ScaffoldMessenger.of(
           context,

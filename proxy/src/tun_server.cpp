@@ -2261,7 +2261,10 @@ namespace proxy {
 				done_guard g{&done};
 				impl();
 			});
-		done.get_future().wait();
+		// io_context 线程被数据面协程卡死时本 dispatch 永不执行: 无界
+		// 等待会永久阻塞调用线程（Android 上为服务工作线程, 卡死后
+		// 反复启停全部失败）. 有限等待, 超时交由上层按线程回收情况处理.
+		done.get_future().wait_for(std::chrono::milliseconds(2000));
 	}
 
 	tun_server::stats tun_server::get_stats() noexcept
