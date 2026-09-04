@@ -17,6 +17,8 @@
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/detached.hpp>
+#include <boost/asio/cancellation_signal.hpp>
+#include <boost/asio/cancellation_type.hpp>
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
@@ -438,6 +440,12 @@ namespace jsonrpc
         using handler_executor_type = std::decay_t<decltype(executor)>;
         using rpc_call_op_type = detail::rpc_call_op<CallHandler, handler_executor_type>;
 
+        // 取消能力: 调用方可通过 completion token 关联的 cancellation_slot
+        // 取消本次挂起调用 (超时等场景), 使等待协程以 operation_aborted
+        // 恢复. 须在 handler 移入 op 前读取 slot.
+        auto slot = net::get_associated_cancellation_slot(handler);
+        const bool cancellable = slot.is_connected();
+
         auto op = std::make_unique<rpc_call_op_type>(
           std::forward<CallHandler>(handler), executor);
 
@@ -466,6 +474,13 @@ namespace jsonrpc
             auto session_id = static_cast<int64_t>(self_->call_ops_.size());
             data["id"] = session_id;
             self_->call_ops_.emplace_back(std::move(op));
+            if (cancellable)
+              slot.assign([self = self_, session_id](net::cancellation_type type)
+                {
+                  if ((type & net::cancellation_type::terminal) !=
+                    net::cancellation_type::none)
+                    self->cancel_call(session_id);
+                });
           }
           else
           {
@@ -474,6 +489,13 @@ namespace jsonrpc
 
             data["id"] = session_id;
             self_->call_ops_[session_id] = std::move(op);
+            if (cancellable)
+              slot.assign([self = self_, session_id](net::cancellation_type type)
+                {
+                  if ((type & net::cancellation_type::terminal) !=
+                    net::cancellation_type::none)
+                    self->cancel_call(session_id);
+                });
           }
         }
 
@@ -781,6 +803,24 @@ namespace jsonrpc
       }
       call_ops_.clear();
       id_recycle_.clear();
+    }
+
+    // 取消一个挂起的 RPC 调用（调用方超时等场景使用）: 从 call_ops_
+    // 移除并以 operation_aborted 完成, 使等待该响应的协程恢复退出.
+    // 若调用已完成/已被取消则无操作.
+    void cancel_call(int64_t session_id)
+    {
+      call_op_ptr op;
+      {
+        std::lock_guard<std::mutex> lock(call_op_mutex_);
+        if (session_id < 0 || session_id >= static_cast<int64_t>(call_ops_.size()) ||
+          !call_ops_[session_id])
+          return;
+        op = std::move(call_ops_[session_id]);
+        id_recycle_.push_back(session_id);
+      }
+      if (op)
+        (*op)(boost::asio::error::operation_aborted);
     }
 
     net::awaitable<void> dispatch_impl(json::object obj)

@@ -13,6 +13,8 @@
 #include "proxy/strutil.hpp"
 #include "proxy/tun_server.hpp"
 
+#include <boost/asio/bind_cancellation_slot.hpp>
+#include <boost/asio/cancellation_signal.hpp>
 #include <boost/functional/hash.hpp>
 
 #include <algorithm>
@@ -105,6 +107,9 @@ using launcher_wss = beast::websocket::stream<beast::ssl_stream<tcp::socket>>;
 
 // 状态上报间隔.
 inline constexpr std::chrono::milliseconds k_launcher_status_interval{ 2000 };
+// protect RPC 超时: app 端无响应时 tinyrpc 调用无超时会永久挂起,
+// 黑洞下所有出站连接都会被悬挂; 超时后按未放行处理并取消该调用.
+inline constexpr std::chrono::milliseconds k_launcher_protect_timeout{ 3000 };
 // 建立连接（含解析/连接/握手）超时.
 inline constexpr std::chrono::milliseconds k_launcher_dial_timeout{ 10000 };
 // 重连最大退避.
@@ -1179,7 +1184,22 @@ net::awaitable<void> proxy_server::launcher_serve(jsonrpc::jsonrpc_session<WsStr
 			params["fd"] = fd;
 			try
 			{
-				auto result = co_await sess.async_call("protect", params);
+				auto ex = co_await net::this_coro::executor;
+				// app 不响应时取消挂起的调用, 避免等待协程永久悬挂.
+				net::steady_timer timer(ex);
+				timer.expires_after(k_launcher_protect_timeout);
+				net::cancellation_signal cancel_sig;
+				timer.async_wait(
+					[&cancel_sig](const boost::system::error_code& tec)
+					{
+						if (tec)
+							return;
+						cancel_sig.emit(net::cancellation_type::terminal);
+					});
+				auto result = co_await sess.async_call("protect", params,
+					net::bind_cancellation_slot(
+						cancel_sig.slot(), net::use_awaitable));
+				timer.cancel();
 				// tinyrpc async_call 返回完整 JSON-RPC 响应
 				// ({"jsonrpc","id","result":{...}}), ok 位于 result 内.
 				if (auto r = result.if_contains("result");
