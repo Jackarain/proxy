@@ -247,9 +247,9 @@ class _ConfigListPageState extends State<ConfigListPage> {
           }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('保存成功, 但应用失败: $e')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('保存成功, 但应用失败: $e')));
           }
         }
       }
@@ -368,92 +368,97 @@ class _ConfigListPageState extends State<ConfigListPage> {
                     final config = _configs[i];
                     final running = session.runningConfigId == config.id;
                     return Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          child: Icon(Icons.vpn_key_outlined),
-                        ),
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                config.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                      // 单击保留原语义 (运行中进入控制台/未运行编辑),
+                      // 双击配置行直接启动; 单击会有约 300ms 双击判定延迟.
+                      child: GestureDetector(
+                        onTap: () {
+                          if (running) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => RunningPage(configId: config.id),
+                              ),
+                            );
+                          } else {
+                            _editConfig(config);
+                          }
+                        },
+                        onDoubleTap: running ? null : () => _runConfig(config),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            child: Icon(Icons.vpn_key_outlined),
+                          ),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  config.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                            ),
-                            if (running)
-                              const Chip(
-                                label: Text('运行中'),
-                                visualDensity: VisualDensity.compact,
-                                backgroundColor: Colors.green,
-                                labelStyle: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
+                              if (running)
+                                const Chip(
+                                  label: Text('运行中'),
+                                  visualDensity: VisualDensity.compact,
+                                  backgroundColor: Colors.green,
+                                  labelStyle: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          subtitle: Text(
+                            _subtitle(config),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: running ? '正在运行' : '运行此配置',
+                                onPressed:
+                                    running ? null : () => _runConfig(config),
+                                icon: Icon(
+                                  running
+                                      ? Icons.play_circle_filled
+                                      : Icons.play_circle_outline,
+                                  color: running ? Colors.green : null,
                                 ),
                               ),
-                          ],
-                        ),
-                        subtitle: Text(
-                          _subtitle(config),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: running ? '正在运行' : '运行此配置',
-                              onPressed:
-                                  running ? null : () => _runConfig(config),
-                              icon: Icon(
-                                running
-                                    ? Icons.play_circle_filled
-                                    : Icons.play_circle_outline,
-                                color: running ? Colors.green : null,
-                              ),
-                            ),
-                            PopupMenuButton<String>(
-                              onSelected: (action) {
-                                switch (action) {
-                                  case 'edit':
-                                    _editConfig(config);
-                                  case 'duplicate':
-                                    _duplicateConfig(config);
-                                  case 'delete':
-                                    _deleteConfig(config);
-                                }
-                              },
-                              itemBuilder:
-                                  (_) => const [
-                                    PopupMenuItem(
-                                      value: 'edit',
-                                      child: Text('编辑'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: 'duplicate',
-                                      child: Text('复制'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: 'delete',
-                                      child: Text('删除'),
-                                    ),
-                                  ],
-                            ),
-                          ],
-                        ),
-                        onTap:
-                            () =>
-                                running
-                                    ? Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder:
-                                            (_) => RunningPage(
-                                              configId: config.id,
-                                            ),
+                              PopupMenuButton<String>(
+                                onSelected: (action) {
+                                  switch (action) {
+                                    case 'edit':
+                                      _editConfig(config);
+                                    case 'duplicate':
+                                      _duplicateConfig(config);
+                                    case 'delete':
+                                      _deleteConfig(config);
+                                  }
+                                },
+                                itemBuilder:
+                                    (_) => const [
+                                      PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('编辑'),
                                       ),
-                                    )
-                                    : _editConfig(config),
+                                      PopupMenuItem(
+                                        value: 'duplicate',
+                                        child: Text('复制'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text('删除'),
+                                      ),
+                                    ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -474,7 +479,9 @@ class _ConfigListPageState extends State<ConfigListPage> {
       '代理: ${config.proxyPass.isEmpty ? '未配置 proxy_pass' : config.proxyPass}',
     );
     if (config.proxyDomains.isNotEmpty || config.proxyCidr.isNotEmpty) {
-      b.write(', 分流: ${config.proxyDomains.length + config.proxyCidr.length} 条');
+      b.write(
+        ', 分流: ${config.proxyDomains.length + config.proxyCidr.length} 条',
+      );
     }
     return b.toString();
   }
