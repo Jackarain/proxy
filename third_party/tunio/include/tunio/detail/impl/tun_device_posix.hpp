@@ -58,9 +58,10 @@ public:
         boost::system::error_code& ec);
 
     // 自主打开路径：把一组 fd 逐个接管进 descs_；中途失败时关闭所有
-    // 未接管的 fd（这些 fd 由本类打开，所有权属于本类）.
-    bool adopt_fds(
-        std::vector<int>&& fds, size_t mtu, boost::system::error_code& ec);
+    // 未接管的 fd（这些 fd 由本类打开，所有权属于本类）。utun_prefix
+    // 标记设备是否携带 4 字节家族前缀（macOS utun 自主打开时置 true）.
+    bool adopt_fds(std::vector<int>&& fds, size_t mtu, bool utun_prefix,
+        boost::system::error_code& ec);
 
     void close();
 

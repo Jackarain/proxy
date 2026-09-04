@@ -132,6 +132,21 @@ if(TUNIO_BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
+# bindings：C 绑定构建 tunio_c（c_api.h 单一函数族：阻塞调用与 *_async_*
+# 回调变体共享同一套句柄），供 bindings/python/tunio 的 ctypes 封装直接
+# import；产物输出到 bindings/python/tunio/ 目录（见 bindings/python/CMakeLists.txt）。
+# TUNIO_BUILD_C 单独开启时仅构建 C 绑定，不依赖 Python。
+option(TUNIO_BUILD_C "构建 C 绑定（tunio_c C API 共享库）" OFF)
+option(TUNIO_BUILD_PYTHON "构建 Python 绑定（依赖 tunio_c C API 共享库）" OFF)
+
+if(TUNIO_BUILD_C OR TUNIO_BUILD_PYTHON)
+  add_subdirectory(bindings/c)
+endif()
+
+if(TUNIO_BUILD_PYTHON)
+  add_subdirectory(bindings/python)
+endif()
+
 # 安装/导出规则（cmake --install、find_package(tunio)、pkg-config）.
 # 默认 OFF：tunio 常以 add_subdirectory 方式被 superproject 集成，对外
 # 安装属可选能力；需要对外发布时以 -DTUNIO_INSTALL=ON 开启.

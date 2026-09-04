@@ -741,7 +741,9 @@ public:
 - **发送构造**：TCP/UDP 引擎按流所属地址族构建 IPv4/IPv6 头部；IPv4 计算头部
   校验和，IPv6 无头部校验和但 TCP/UDP/ICMPv6 伪头部校验和强制有效。
 - **IPv6 地址配置**：Linux 自主打开模式下通过 netlink（`RTM_NEWADDR`）为 TUN
-  接口配置 IPv6 地址与前缀长度（`device_config.ipv6` / `ipv6_prefix_len`）。
+  接口配置 IPv6 地址与前缀长度（`device_config.ipv6` / `ipv6_prefix_len`）；
+  macOS 下经 `SIOCAIFADDR_IN6`（`struct in6_aliasreq`，ifconfig inet6 add 同款
+  机制）配置。
 - **SOCKS5 代理**：`tun2socks` 示例中 SOCKS5 CONNECT 与 UDP ASSOCIATE 均支持
   IPv6 目标（ATYP=4），引擎的 `original_destination()` 按地址族返回 IPv6
   端点，UDP 会话的远端端点随 `async_receive_from` 的 sender 出参返回。

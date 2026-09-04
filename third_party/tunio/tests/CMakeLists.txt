@@ -21,4 +21,11 @@ if(NOT WIN32)
     endif()
     add_test(NAME ${t} COMMAND ${t})
   endforeach()
+
+  # macOS utun 自主打开测试：需 root 才能创建 utun，仅 Apple 平台构建。
+  if(APPLE)
+    add_executable(test_mac_utun_open test_mac_utun_open.cpp)
+    target_link_libraries(test_mac_utun_open PRIVATE tunio)
+    add_test(NAME test_mac_utun_open COMMAND test_mac_utun_open)
+  endif()
 endif()

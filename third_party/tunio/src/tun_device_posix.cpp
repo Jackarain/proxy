@@ -11,8 +11,10 @@
 #include "tunio/tun_device.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 
@@ -27,6 +29,15 @@
 #include <linux/if_tun.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#endif
+
+#if defined(__APPLE__)
+#include <arpa/inet.h>
+#include <net/if.h>
+#include <net/if_utun.h>
+#include <netinet6/in6_var.h>
+#include <sys/kern_control.h>
+#include <sys/sys_domain.h>
 #endif
 
 #if defined(BOOST_ASIO_HAS_POSIX_STREAM_DESCRIPTOR)
@@ -166,6 +177,231 @@ void set_tx_queue_len(int sock, const char* ifname, int qlen)
 }
 
 } // namespace
+#elif defined(__APPLE__)
+namespace {
+
+// UTUN_OPT_IFNAME 定义于 macOS <net/if_utun.h>；低版本 SDK 缺省时兜底。
+#ifndef UTUN_OPT_IFNAME
+#define UTUN_OPT_IFNAME 2
+#endif
+
+// 经内核控制套接字打开 utun 设备（WireGuard / OpenVPN 同款流程）：
+// socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL) -> CTLIOCGINFO ->
+// connect(sockaddr_ctl) -> getsockopt(UTUN_OPT_IFNAME) 取回接口名。
+//
+// name 为空或 "utun" 时 sc_unit = 0，由内核分配最低可用单元；否则须为
+// "utunN"（sc_unit = N + 1，内核据此创建 utunN，单元占用时 connect 失败）。
+bool open_utun(const std::string& name, int& out_fd, std::string& out_ifname,
+    boost::system::error_code& ec)
+{
+    // 解析单元号：空 / "utun" -> 自动分配（unit = -1，sc_unit = 0）.
+    int unit = -1;
+    if (!name.empty() && name != "utun")
+    {
+        if (name.compare(0, 4, "utun") != 0 ||
+            !std::isdigit(static_cast<unsigned char>(name[4])))
+        {
+            ec = boost::system::error_code(
+                EINVAL, boost::system::generic_category());
+            return false;
+        }
+        char* end = nullptr;
+        const long n = std::strtol(name.c_str() + 4, &end, 10);
+        if (end == name.c_str() + 4 || *end != '\0' || n < 0)
+        {
+            ec = boost::system::error_code(
+                EINVAL, boost::system::generic_category());
+            return false;
+        }
+        unit = static_cast<int>(n);
+    }
+
+    const int fd = ::socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
+    if (fd < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        return false;
+    }
+
+    struct ctl_info info;
+    std::memset(&info, 0, sizeof(info));
+    std::snprintf(info.ctl_name, sizeof(info.ctl_name), "%s",
+        "com.apple.net.utun_control");
+    if (::ioctl(fd, CTLIOCGINFO, &info) < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        ::close(fd);
+        return false;
+    }
+
+    struct sockaddr_ctl sc;
+    std::memset(&sc, 0, sizeof(sc));
+    sc.sc_id = info.ctl_id;
+    sc.sc_len = sizeof(sc);
+    sc.sc_family = AF_SYSTEM;
+    sc.ss_sysaddr = AF_SYS_CONTROL;
+    // 单元号 + 1：connect 成功后内核创建 utun(单元号)；unit = -1 时
+    // sc_unit = 0 表示自动分配最低可用单元。
+    sc.sc_unit = static_cast<unsigned int>(unit + 1);
+    if (::connect(fd, reinterpret_cast<struct sockaddr*>(&sc), sizeof(sc)) < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        ::close(fd);
+        return false;
+    }
+
+    // 取回内核分配的接口名（如 "utun3"），供后续 ioctl 配置使用。
+    char ifname[IF_NAMESIZE] = {};
+    socklen_t ifname_len = static_cast<socklen_t>(sizeof(ifname));
+    if (::getsockopt(
+            fd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME, ifname, &ifname_len) < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        ::close(fd);
+        return false;
+    }
+
+    // utun fd 须为非阻塞（Asio stream_descriptor 需求）与 close-on-exec。
+    const int flags = ::fcntl(fd, F_GETFL, 0);
+    if (flags < 0 || ::fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0 ||
+        ::fcntl(fd, F_SETFD, FD_CLOEXEC) < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        ::close(fd);
+        return false;
+    }
+
+    out_fd = fd;
+    out_ifname = ifname;
+    return true;
+}
+
+// 通过 AF_INET 配置 socket 对 ifname 执行取值型 ioctl（地址/掩码/对端）.
+bool set_ioctl_addr(int s, const char* ifname, unsigned long cmd,
+    const std::string& addr, boost::system::error_code& ec)
+{
+    struct ifreq ifr;
+    std::memset(&ifr, 0, sizeof(ifr));
+    std::snprintf(ifr.ifr_name, IFNAMSIZ, "%s", ifname);
+    auto* sin = reinterpret_cast<struct sockaddr_in*>(&ifr.ifr_addr);
+    sin->sin_family = AF_INET;
+    if (::inet_pton(AF_INET, addr.c_str(), &sin->sin_addr) != 1)
+    {
+        ec = boost::system::error_code(
+            EINVAL, boost::system::generic_category());
+        return false;
+    }
+    if (::ioctl(s, cmd, &ifr) < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        return false;
+    }
+    return true;
+}
+
+// 设置接口 MTU 并读回内核生效值（对齐 Linux 分支的 ifr.ifr_mtu 语义）.
+bool set_ioctl_mtu(int s, const char* ifname, size_t mtu,
+    size_t& out_mtu, boost::system::error_code& ec)
+{
+    struct ifreq ifr;
+    std::memset(&ifr, 0, sizeof(ifr));
+    std::snprintf(ifr.ifr_name, IFNAMSIZ, "%s", ifname);
+    ifr.ifr_mtu = static_cast<int>(std::max<size_t>(mtu, 576));
+    if (::ioctl(s, SIOCSIFMTU, &ifr) < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        return false;
+    }
+    std::memset(&ifr, 0, sizeof(ifr));
+    std::snprintf(ifr.ifr_name, IFNAMSIZ, "%s", ifname);
+    if (::ioctl(s, SIOCGIFMTU, &ifr) == 0)
+        out_mtu = static_cast<size_t>(ifr.ifr_mtu);
+    else
+        out_mtu = mtu;
+    return true;
+}
+
+// 启用接口（IFF_UP；IFF_RUNNING 由内核根据链路状态自动维护，与 ifconfig
+// 语义一致）.
+bool set_if_up(int s, const char* ifname, boost::system::error_code& ec)
+{
+    struct ifreq ifr;
+    std::memset(&ifr, 0, sizeof(ifr));
+    std::snprintf(ifr.ifr_name, IFNAMSIZ, "%s", ifname);
+    if (::ioctl(s, SIOCGIFFLAGS, &ifr) < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        return false;
+    }
+    ifr.ifr_flags |= IFF_UP;
+    if (::ioctl(s, SIOCSIFFLAGS, &ifr) < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        return false;
+    }
+    return true;
+}
+
+// 通过 SIOCAIFADDR_IN6 为接口添加 IPv6 地址（ifconfig inet6 add 同款
+// 机制，需 root）；地址已存在视为幂等成功（对齐 Linux netlink 的
+// EEXIST 处理）.
+bool add_ipv6_address(const char* ifname, const std::string& addr,
+    uint8_t prefix_len, boost::system::error_code& ec)
+{
+    struct in6_addr a6;
+    if (::inet_pton(AF_INET6, addr.c_str(), &a6) != 1)
+    {
+        ec = boost::system::error_code(
+            EINVAL, boost::system::generic_category());
+        return false;
+    }
+
+    const int s6 = ::socket(AF_INET6, SOCK_DGRAM, 0);
+    if (s6 < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        return false;
+    }
+
+    struct in6_aliasreq ifra;
+    std::memset(&ifra, 0, sizeof(ifra));
+    std::snprintf(ifra.ifra_name, IFNAMSIZ, "%s", ifname);
+
+    ifra.ifra_addr.sin6_family = AF_INET6;
+    ifra.ifra_addr.sin6_len = static_cast<uint8_t>(sizeof(ifra.ifra_addr));
+    ifra.ifra_addr.sin6_addr = a6;
+
+    // 前缀掩码：前缀长度位全置 1（BSD sockaddr_in6 的 sin6_addr 存掩码）.
+    uint8_t mask[16] = {};
+    for (uint8_t i = 0; i < prefix_len; ++i)
+        mask[i / 8] |= static_cast<uint8_t>(0x80 >> (i % 8));
+    ifra.ifra_prefixmask.sin6_family = AF_INET6;
+    ifra.ifra_prefixmask.sin6_len =
+        static_cast<uint8_t>(sizeof(ifra.ifra_prefixmask));
+    std::memcpy(&ifra.ifra_prefixmask.sin6_addr, mask, sizeof(mask));
+
+    if (::ioctl(s6, SIOCAIFADDR_IN6, &ifra) < 0 && errno != EEXIST)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        ::close(s6);
+        return false;
+    }
+    ::close(s6);
+    return true;
+}
+
+} // namespace
 #endif
 
 bool posix_tun_device_impl::open(
@@ -286,7 +522,8 @@ bool posix_tun_device_impl::open(
         }
         ::close(s);
 
-        return adopt_fds(std::move(fds), static_cast<size_t>(ifr.ifr_mtu), ec);
+        return adopt_fds(
+            std::move(fds), static_cast<size_t>(ifr.ifr_mtu), false, ec);
     }
 
     auto set_ifr = [&](int cmd, const char* addr) -> bool
@@ -361,10 +598,76 @@ bool posix_tun_device_impl::open(
     }
     ::close(s);
 
-    return adopt_fds(std::move(fds), static_cast<size_t>(ifr.ifr_mtu), ec);
+    return adopt_fds(std::move(fds), static_cast<size_t>(ifr.ifr_mtu), false, ec);
+#elif defined(__APPLE__)
+    // macOS utun 自主打开：经内核控制套接字创建 utun 设备（WireGuard /
+    // OpenVPN 同款流程），创建后按 device_config 配置 MTU / 地址并启用。
+    // utun 读写携带 4 字节家族前缀，adopt 时置 utun_prefix = true。
+    // 设备名须为 utunN 或空（自动分配最低可用单元）。
+    close();
+
+    int fd = -1;
+    std::string ifname;
+    if (!open_utun(cfg.name, fd, ifname, ec))
+        return false;
+
+    // 配置 socket（IPv4 地址 / 掩码 / 对端 / MTU / 接口 flags）.
+    const int s = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (s < 0)
+    {
+        ec =
+            boost::system::error_code(errno, boost::system::generic_category());
+        ::close(fd);
+        return false;
+    }
+
+    size_t mtu = cfg.mtu;
+    if (!set_ioctl_mtu(s, ifname.c_str(), cfg.mtu, mtu, ec))
+    {
+        ::close(s);
+        ::close(fd);
+        return false;
+    }
+
+    const bool need_config = !cfg.ipv4.empty() || !cfg.ipv6.empty();
+
+    if (!cfg.ipv4.empty())
+    {
+        // 点对点接口：本地地址、对端地址（置为自身，ifconfig utunX <ip>
+        // <ip> 语义）与掩码。
+        if (!set_ioctl_addr(s, ifname.c_str(), SIOCSIFADDR, cfg.ipv4, ec) ||
+            !set_ioctl_addr(
+                s, ifname.c_str(), SIOCSIFDSTADDR, cfg.ipv4, ec) ||
+            !set_ioctl_addr(s, ifname.c_str(), SIOCSIFNETMASK,
+                cfg.netmask.empty() ? "255.255.255.0" : cfg.netmask, ec))
+        {
+            ::close(s);
+            ::close(fd);
+            return false;
+        }
+    }
+
+    if (!cfg.ipv6.empty() &&
+        !add_ipv6_address(ifname.c_str(), cfg.ipv6, cfg.ipv6_prefix_len, ec))
+    {
+        ::close(s);
+        ::close(fd);
+        return false;
+    }
+
+    if (need_config && !set_if_up(s, ifname.c_str(), ec))
+    {
+        ::close(s);
+        ::close(fd);
+        return false;
+    }
+
+    ::close(s);
+
+    return adopt_fds(std::vector<int>{fd}, mtu, true, ec);
 #else
-    // macOS utun / 其他 POSIX 平台的自主打开尚未实现（Phase 3），
-    // 句柄注入模式 assign() 在所有平台可用。
+    // 其他 POSIX 平台的自主打开尚未实现，句柄注入模式 assign() 在所有
+    // 平台可用。
     (void)cfg;
     ec = boost::system::error_code(boost::system::errc::operation_not_supported,
         boost::system::generic_category());
@@ -437,8 +740,8 @@ void posix_tun_device_impl::close()
     }
 }
 
-bool posix_tun_device_impl::adopt_fds(
-    std::vector<int>&& fds, size_t mtu, boost::system::error_code& ec)
+bool posix_tun_device_impl::adopt_fds(std::vector<int>&& fds, size_t mtu,
+    bool utun_prefix, boost::system::error_code& ec)
 {
     // 逐个 assign 到 stream_descriptor：全部成功后才替换成员，任何一步
     // 失败即回滚——已接管的由 new_descs 析构关闭，未接管的显式关闭
@@ -463,6 +766,7 @@ bool posix_tun_device_impl::adopt_fds(
     descs_ = std::move(new_descs);
     open_ = true;
     mtu_ = mtu;
+    utun_prefix_ = utun_prefix;
     return true;
 }
 

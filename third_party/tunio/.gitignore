@@ -1,1 +1,7 @@
 /build*/
+
+# Python 绑定构建产物（libtunio_c 共享库位于 bindings/python/tunio/ 包目录内）
+/bindings/python/tunio/libtunio_c.so
+/bindings/python/tunio/libtunio_c.dylib
+/bindings/python/tunio/tunio_c.dll
+__pycache__/
