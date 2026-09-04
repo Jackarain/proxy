@@ -220,8 +220,17 @@ namespace proxy {
 		// 发送单个 DNS 查询并读取响应，成功返回 true 并填充 output.
 		net::awaitable<bool> exchange(const std::string& dns_query, std::string& output);
 
-		// 关闭底层连接（不唤醒等待者）.
+		// 关闭并销毁底层连接（不唤醒等待者）.
+		// 仅允许在流上无在途异步操作时调用（pump 协程内 exchange/connect
+		// 返回之后）: asio 禁止在异步操作未完成时销毁 I/O 对象, 若此时
+		// 销毁 ssl 流, 后续恢复的读操作会访问已释放的 engine/BIO,
+		// 表现为 io 线程在单 handler 内 100% 自旋.
 		void teardown();
+
+		// 仅关闭底层连接以中止在途异步操作, 不销毁流对象.
+		// 可安全地在流上仍有挂起异步操作时调用（请求超时/连接关闭）,
+		// 流对象由 pump 协程在操作完成后统一销毁.
+		void abort();
 
 	private:
 		// 空闲超时：队列空后无新请求则关闭连接释放资源.
@@ -266,6 +275,10 @@ namespace proxy {
 		bool m_closed { false };
 		bool m_pumping { false };
 		bool m_busy { false };
+
+		// 请求序号: 用于丢弃上一请求残留的过期超时定时器回调,
+		// 避免其误中止下一请求正在使用的连接.
+		uint64_t m_req_seq { 0 };
 	};
 
 	// doh_client 维护到 DoH 服务的连接池（最多 k_max_connections 条），

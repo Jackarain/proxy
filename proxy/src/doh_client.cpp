@@ -449,9 +449,11 @@ namespace proxy {
 			return;
 		m_closed = true;
 
-		teardown();
 		m_idle_timer.cancel();
 		m_req_timer.cancel();
+		// 只中止在途操作, 不销毁流对象: pump 协程可能正挂在该流的
+		// 异步读写上, 销毁动作交由 pump 在操作完成后执行.
+		abort();
 
 		// 唤醒所有排队请求（失败）.
 		auto queue = std::move(m_queue);
@@ -467,11 +469,16 @@ namespace proxy {
 
 	void doh_connection::teardown()
 	{
+		abort();
+		m_stream.reset();
+	}
+
+	void doh_connection::abort()
+	{
 		if (m_stream)
 		{
 			boost::system::error_code ec;
 			m_stream->close(ec);
-			m_stream.reset();
 		}
 	}
 
@@ -742,18 +749,22 @@ namespace proxy {
 		if (!m_stream)
 			co_return false;
 
-		// 单次请求超时：超时后关闭连接使挂起的读写立即失败.
+		// 单次请求超时：超时后仅关闭底层连接使挂起的读写立即失败,
+		// 不得在此销毁流对象（pump 协程正挂在该流的异步读上, asio
+		// 禁止在异步操作未完成时销毁 I/O 对象, 销毁 ssl 流会访问已
+		// 释放的 engine/BIO, 导致 io 线程单 handler 内无限自旋）.
 		// 用 weak_ptr 防止连接析构后 handler 访问已销毁对象.
+		const auto seq = ++m_req_seq;
 		m_req_timer.expires_after(k_request_timeout);
 		std::weak_ptr<doh_connection> weak = shared_from_this();
 		m_req_timer.async_wait(
-			[weak](const boost::system::error_code& ec)
+			[weak, seq](const boost::system::error_code& ec)
 			{
 				if (ec)
 					return;
 				if (auto self = weak.lock();
-					self && !self->m_closed)
-					self->teardown();
+					self && !self->m_closed && seq == self->m_req_seq)
+					self->abort();
 			});
 
 		// 经代理隧道转发时认证头仅用于代理 CONNECT（由 http_connect_tunnel
