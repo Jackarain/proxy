@@ -369,6 +369,7 @@ namespace proxy {
 		, m_proxy_pool(std::move(proxy_pool))
 		, m_idle_timer(m_executor)
 		, m_req_timer(m_executor)
+		, m_conn_timer(m_executor)
 	{
 		// 解析 DoH 目标（未配置 dns_doh_ 时把 proxy_pass 当作 DoH 服务）.
 		const auto& proxy_url = *m_option.proxy_pass_;
@@ -451,6 +452,7 @@ namespace proxy {
 
 		m_idle_timer.cancel();
 		m_req_timer.cancel();
+		m_conn_timer.cancel();
 		// 只中止在途操作, 不销毁流对象: pump 协程可能正挂在该流的
 		// 异步读写上, 销毁动作交由 pump 在操作完成后执行.
 		abort();
@@ -548,33 +550,135 @@ namespace proxy {
 
 	net::awaitable<bool> doh_connection::connect()
 	{
-		const auto& proxy_url = *m_option.proxy_pass_;
+		// 建连整体超时: 黑洞网络下（对端无响应）TCP/TLS/隧道任一步都
+		// 可能无限挂起, 超时后 abort() 关闭 m_stream 使在途建连操作
+		// 立即失败, 避免 pump 与排队请求被永久悬挂.
+		m_connect_aborted = false;
+		const auto seq = ++m_conn_seq;
+		m_conn_timer.expires_after(k_connect_timeout);
+		std::weak_ptr<doh_connection> weak = shared_from_this();
+		m_conn_timer.async_wait(
+			[weak, seq](const boost::system::error_code& ec)
+			{
+				if (ec)
+					return;
+				if (auto self = weak.lock();
+					self && !self->m_closed && seq == self->m_conn_seq)
+				{
+					self->m_connect_aborted = true;
+					self->abort();
+				}
+			});
 
-		// 优先从 proxy_pass 预选连接池获取已建立（TCP/TLS 已完成）的连接.
+		bool ok = co_await connect_impl();
+
+		// 使已排队（cancel 无法撤回）的超时回调过期, 避免其在后续
+		// 请求阶段误中止新连接.
+		++m_conn_seq;
+		m_conn_timer.cancel();
+		co_return ok;
+	}
+
+	net::awaitable<bool> doh_connection::connect_impl()
+	{
+		// 优先复用 proxy_pass 预选连接池中已建立（TCP/TLS 已完成）的连接.
 		if (m_proxy_pool)
 		{
-			auto conn = co_await m_proxy_pool->acquire();
-			if (conn && conn->is_open())
+			// 仅在确有现成空闲连接时复用: 空闲连接可立即取走, 不会等待
+			// 池维护协程新建连接（该等待不受本连接超时控制, 可能悬挂）.
+			if (m_proxy_pool->idle_count() > 0)
 			{
-				if (co_await connect_pooled(std::move(*conn)))
-					co_return true;
+				auto conn = co_await m_proxy_pool->acquire();
+				// 超时回调可能在 acquire 等待期间触发: 此时 m_stream 尚为
+				// 空, abort() 无法中止任何在途操作, 故取到连接后须再检查
+				// 中止标记, 避免超时后仍继续建立隧道/握手.
+				if (m_closed || m_connect_aborted)
+				{
+					if (conn && conn->is_open())
+					{
+						boost::system::error_code ec;
+						conn->close(ec);
+					}
+					co_return false;
+				}
+				if (conn && conn->is_open())
+				{
+					if (co_await connect_pooled(std::move(*conn)))
+						co_return true;
 
-				// 池中连接不可用（代理端已断开等），关闭后回退新建连接.
-				XLOG_WARN << "tun doh pool connection failed, "
-					"fallback connect";
-				teardown();
+					// 池中连接不可用（代理端已断开等），回退新建连接.
+					XLOG_WARN << "tun doh pool connection failed, "
+						"fallback connect";
+				}
 			}
 		}
 
-		auto sock = co_await connect_proxy_pass(
-			m_executor, m_option, proxy_url, m_protect);
-		if (!sock.is_open())
+		// 新建到代理的 TCP 连接（流挂在 m_stream 上, 可被 abort 中止）.
+		if (!co_await connect_tcp_proxy())
 			co_return false;
 
 		// 经代理 CONNECT 隧道转发，或与代理同服务直连.
 		co_return m_doh_via_proxy ?
-			co_await connect_via_proxy(std::move(sock)) :
-			co_await connect_direct(std::move(sock));
+			co_await connect_via_proxy() :
+			co_await connect_direct();
+	}
+
+	// connect_tcp_proxy 新建到代理的 TCP 连接.
+	net::awaitable<bool> doh_connection::connect_tcp_proxy()
+	{
+		boost::system::error_code ec;
+		const auto& proxy_url = *m_option.proxy_pass_;
+		std::string proxy_host(proxy_url.encoded_host());
+		uint16_t proxy_port = proxy_url.port_number();
+		if (proxy_port == 0)
+			proxy_port = proxy_pass_default_port(proxy_url);
+
+		tcp::resolver resolver(m_executor);
+		auto targets = co_await resolver.async_resolve(
+			proxy_host, std::to_string(proxy_port), net_awaitable[ec]);
+		if (ec || targets.empty())
+		{
+			XLOG_WARN << "tun resolve proxy_pass: " << proxy_host
+				<< ", error: " << ec.message();
+			co_return false;
+		}
+
+		for (const auto& t : targets)
+		{
+			// 建连被中止（超时）或连接已关闭: 不再尝试剩余地址.
+			if (m_closed || m_connect_aborted)
+				co_return false;
+
+			// 连接中的流挂在 m_stream 上: abort()（建连超时/连接关闭）
+			// 可随时关闭底层 socket 中止这次尝试, 不会残留悬挂的连接.
+			m_stream.emplace(init_proxy_stream(m_executor));
+			auto& sock = net_tcp_socket(*m_stream);
+			sock.open(t.endpoint().protocol(), ec);
+			if (ec)
+			{
+				m_stream.reset();
+				continue;
+			}
+
+			// 设置 SO_MARK（配合策略路由排除代理自身流量，防止环路）.
+			apply_so_mark_if(sock, m_option);
+
+			// 先放行再 connect，防止 SYN 回环进 tun 形成环路.
+			if (m_protect && !co_await m_protect(sock.native_handle()))
+			{
+				m_stream.reset();
+				continue;
+			}
+
+			co_await sock.async_connect(t.endpoint(), net_awaitable[ec]);
+			if (!ec)
+				co_return true;
+			m_stream.reset();
+		}
+
+		XLOG_WARN << "tun connect proxy_pass: " << proxy_host
+			<< ", error: " << ec.message();
+		co_return false;
 	}
 
 	// connect_pooled 基于连接池获取的已有连接建立 DoH 连接：
@@ -585,43 +689,43 @@ namespace proxy {
 	{
 		const auto& proxy_url = *m_option.proxy_pass_;
 
-		if (m_doh_via_proxy)
+		// 池连接（TCP/TLS 已完成）先挂到 m_stream: 隧道建立过程也受
+		// abort()（建连超时/关闭）控制.
+		m_stream = std::move(stream);
+
+		if (!m_doh_via_proxy)
+			co_return true;  // 同服务: 池连接即为 DoH 连接.
+
+		// 经代理 CONNECT 隧道转发到 DoH 服务.
+		const std::string authority =
+			m_doh_host + ":" + std::to_string(m_doh_port);
+		if (!co_await http_connect_tunnel(
+			*m_stream, authority, proxy_url))
 		{
-			// 经代理 CONNECT 隧道转发到 DoH 服务.
-			const std::string authority =
-				m_doh_host + ":" + std::to_string(m_doh_port);
-
-			if (!co_await http_connect_tunnel(
-				stream, authority, proxy_url))
-				co_return false;
-
-			// 取出隧道底层 TCP socket 供内层 TLS 复用.
-			// 池连接只会是 proxy_tcp_socket 或 ssl_tcp_stream，均返回 tcp::socket.
-			tcp::socket tunnel = std::move(net_tcp_socket(stream));
-
-			if (!m_doh_https)
-			{
-				m_stream.emplace(init_proxy_stream(std::move(tunnel)));
-				co_return true;
-			}
-			if (!co_await setup_tls(m_doh_host))
-				co_return false;
-			m_stream.emplace(init_proxy_stream(std::move(tunnel), *m_ssl_ctx));
-			co_return co_await tls_handshake(m_doh_host);
+			m_stream.reset();
+			co_return false;
 		}
 
-		// 与 proxy_pass 同服务：池连接（TCP/TLS 已完成）即为 DoH 连接.
-		m_stream = std::move(stream);
-		co_return true;
+		// 取出隧道底层 TCP socket 供内层 TLS 复用.
+		tcp::socket tunnel = std::move(net_tcp_socket(*m_stream));
+		m_stream.reset();
+
+		if (!m_doh_https)
+		{
+			m_stream.emplace(init_proxy_stream(std::move(tunnel)));
+			co_return true;
+		}
+		if (!co_await setup_tls(m_doh_host))
+			co_return false;
+		m_stream.emplace(init_proxy_stream(std::move(tunnel), *m_ssl_ctx));
+		co_return co_await tls_handshake(m_doh_host);
 	}
 
 	// connect_via_proxy 经代理 CONNECT 隧道转发到 DoH 服务：
 	// https 代理先与代理建立外层 TLS，再建立 CONNECT 隧道，
 	// 隧道内按需与 DoH 服务建立内层 TLS.
-	net::awaitable<bool> doh_connection::connect_via_proxy(tcp::socket sock)
+	net::awaitable<bool> doh_connection::connect_via_proxy()
 	{
-		boost::system::error_code ec;
-
 		const auto& proxy_url = *m_option.proxy_pass_;
 		const std::string proxy_host(proxy_url.encoded_host());
 		const std::string authority =
@@ -629,44 +733,43 @@ namespace proxy {
 		const std::string proxy_sni = m_option.proxy_ssl_name_.empty() ?
 			proxy_host : m_option.proxy_ssl_name_;
 
-		// https 代理先与代理建立外层 TLS.
-		std::optional<ssl_tcp_stream> outer;
-		std::optional<net::ssl::context> outer_ctx;
+		// https 代理先与代理建立外层 TLS（流由 m_stream 持有, 可被中止）.
 		if (proxy_use_ssl(proxy_url, m_option))
 		{
-			outer_ctx.emplace(net::ssl::context::sslv23_client);
-			ec = configure_ssl_client_ctx(*outer_ctx,
-				m_option.disable_check_cert_, proxy_sni,
-				m_option.ssl_cacert_path_);
-			if (ec)
-				co_return false;
-			outer.emplace(std::move(sock), *outer_ctx);
-			SSL_set_tlsext_host_name(
-				outer->native_handle(), proxy_sni.c_str());
-			co_await outer->async_handshake(
-				net::ssl::stream_base::client, net_awaitable[ec]);
-			if (ec)
+			if (!m_proxy_ssl_ctx)
+			{
+				m_proxy_ssl_ctx.emplace(net::ssl::context::sslv23_client);
+				boost::system::error_code ec;
+				ec = configure_ssl_client_ctx(*m_proxy_ssl_ctx,
+					m_option.disable_check_cert_, proxy_sni,
+					m_option.ssl_cacert_path_);
+				if (ec)
+				{
+					m_proxy_ssl_ctx.reset();
+					m_stream.reset();
+					co_return false;
+				}
+			}
+
+			// 把明文 TCP 流升级为外层 TLS 流（当前无在途操作, 安全重建）.
+			tcp::socket raw = std::move(net_tcp_socket(*m_stream));
+			m_stream.reset();
+			m_stream.emplace(init_proxy_stream(std::move(raw), *m_proxy_ssl_ctx));
+			if (!co_await tls_handshake(proxy_sni))
 				co_return false;
 		}
 
 		// 建立 CONNECT 隧道.
-		if (outer)
+		if (!co_await http_connect_tunnel(
+			*m_stream, authority, proxy_url))
 		{
-			if (!co_await http_connect_tunnel(
-				*outer, authority, proxy_url))
-				co_return false;
-		}
-		else
-		{
-			if (!co_await http_connect_tunnel(
-				sock, authority, proxy_url))
-				co_return false;
+			m_stream.reset();
+			co_return false;
 		}
 
 		// 取出隧道底层 TCP socket 供内层 TLS 复用.
-		tcp::socket tunnel = outer ?
-			std::move(outer->next_layer().lowest_layer()) :
-			std::move(sock);
+		tcp::socket tunnel = std::move(net_tcp_socket(*m_stream));
+		m_stream.reset();
 
 		if (!m_doh_https)
 		{
@@ -682,23 +785,27 @@ namespace proxy {
 
 	// connect_direct 直连 DoH 服务：与 proxy_pass 同服务（或未配置
 	// dns_doh_ 时把 proxy_pass 当作 DoH 服务器），https 时走 TLS.
-	net::awaitable<bool> doh_connection::connect_direct(tcp::socket sock)
+	net::awaitable<bool> doh_connection::connect_direct()
 	{
 		const auto& proxy_url = *m_option.proxy_pass_;
-		const std::string proxy_host(proxy_url.encoded_host());
 
 		if (!proxy_use_ssl(proxy_url, m_option))
-		{
-			m_stream.emplace(init_proxy_stream(std::move(sock)));
-			co_return true;
-		}
+			co_return true;  // 明文直连: m_stream 已是连接好的明文流.
 
+		const std::string proxy_host(proxy_url.encoded_host());
 		const std::string sni = m_option.proxy_ssl_name_.empty() ?
 			proxy_host : m_option.proxy_ssl_name_;
 
 		if (!co_await setup_tls(sni))
+		{
+			m_stream.reset();
 			co_return false;
-		m_stream.emplace(init_proxy_stream(std::move(sock), *m_ssl_ctx));
+		}
+
+		// 把明文 TCP 流升级为 TLS 流（当前无在途操作, 安全重建）.
+		tcp::socket raw = std::move(net_tcp_socket(*m_stream));
+		m_stream.reset();
+		m_stream.emplace(init_proxy_stream(std::move(raw), *m_ssl_ctx));
 		co_return co_await tls_handshake(sni);
 	}
 

@@ -196,8 +196,17 @@ namespace proxy {
 		net::awaitable<void> pump();
 
 		// 建立到 DoH 服务的连接（直连或经代理 CONNECT 隧道），成功返回 true.
+		// 全程受 k_connect_timeout 超时保护: 超时后中止在途建连操作,
+		// 避免黑洞网络（对端不响应）下 resolve/connect/握手/隧道无限挂起.
 		// 优先从 proxy_pass_pool 获取已建立的连接，取不到再新建.
 		net::awaitable<bool> connect();
+
+		// connect() 主体（不含超时包装）.
+		net::awaitable<bool> connect_impl();
+
+		// 新建到代理的 TCP 连接; 连接中的流挂在 m_stream 上,
+		// 使 abort()（超时/关闭）能中止进行中的 connect.
+		net::awaitable<bool> connect_tcp_proxy();
 
 		// 基于从连接池获取的已有连接（TCP/TLS 已完成）建立 DoH 连接，
 		// 成功返回 true.
@@ -205,11 +214,11 @@ namespace proxy {
 
 		// 经代理 CONNECT 隧道转发到 DoH 服务（https 代理先建外层 TLS，
 		// 再建 CONNECT 隧道，内层按需 TLS），成功返回 true.
-		net::awaitable<bool> connect_via_proxy(tcp::socket sock);
+		net::awaitable<bool> connect_via_proxy();
 
 		// 直连 DoH 服务（与 proxy_pass 同服务，或把 proxy_pass 当作 DoH
 		// 服务器），成功返回 true.
-		net::awaitable<bool> connect_direct(tcp::socket sock);
+		net::awaitable<bool> connect_direct();
 
 		// 惰性初始化并配置 SSL context（证书校验与 SNI 使用 verify_host）.
 		net::awaitable<bool> setup_tls(const std::string& verify_host);
@@ -239,6 +248,9 @@ namespace proxy {
 		// 单次请求处理超时：超时后关闭连接使挂起的读写立即失败.
 		static constexpr std::chrono::seconds k_request_timeout{ 15 };
 
+		// 单次建连超时：超时后中止在途建连操作（resolve/TCP/TLS/CONNECT）.
+		static constexpr std::chrono::seconds k_connect_timeout{ 15 };
+
 		// 单连接请求队列上限，超出直接丢弃（客户端可重试）.
 		static constexpr size_t k_max_pending = 128;
 
@@ -264,13 +276,18 @@ namespace proxy {
 		// 请求队列（单 io_context 线程访问，无需加锁）.
 		std::deque<doh_request> m_queue;
 
-		// 空闲/请求超时定时器.
+		// 空闲/请求/建连超时定时器.
 		net::steady_timer m_idle_timer;
 		net::steady_timer m_req_timer;
+		net::steady_timer m_conn_timer;
 
 		// 直连/内层 TLS 使用的 SSL context（连接重建时复用）.
 		std::optional<net::ssl::context> m_ssl_ctx;
 		bool m_ssl_configured { false };
+
+		// 与 proxy_pass 建立外层 TLS（CONNECT 隧道场景）使用的 SSL
+		// context; 与 m_ssl_ctx 分离, 两者证书校验/SNI 主机可能不同.
+		std::optional<net::ssl::context> m_proxy_ssl_ctx;
 
 		bool m_closed { false };
 		bool m_pumping { false };
@@ -279,6 +296,14 @@ namespace proxy {
 		// 请求序号: 用于丢弃上一请求残留的过期超时定时器回调,
 		// 避免其误中止下一请求正在使用的连接.
 		uint64_t m_req_seq { 0 };
+
+		// 连接尝试序号: 使已排队（cancel 无法撤回）的过期建连超时
+		// 回调失效, 避免其在后续请求阶段误中止连接.
+		uint64_t m_conn_seq { 0 };
+
+		// 建连被超时中止标记: 置位后不再尝试下一个目标地址,
+		// 直接以失败退出本轮建连.
+		bool m_connect_aborted { false };
 	};
 
 	// doh_client 维护到 DoH 服务的连接池（最多 k_max_connections 条），
