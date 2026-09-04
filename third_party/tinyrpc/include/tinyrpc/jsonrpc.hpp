@@ -202,9 +202,11 @@ namespace jsonrpc
     class rpc_call_op : public rpc_operation
     {
     public:
-      rpc_call_op(Handler &&h, ExecutorType executor)
+      rpc_call_op(Handler &&h, ExecutorType executor,
+        net::cancellation_slot slot)
         : handler_(std::forward<Handler>(h))
         , executor_(executor)
+        , slot_(slot)
       {
       }
 
@@ -213,12 +215,18 @@ namespace jsonrpc
       rpc_call_op(rpc_call_op &&other) noexcept
         : handler_(std::forward<Handler>(other.handler_))
         , executor_(other.executor_)
+        , slot_(other.slot_)
         , data_(std::move(other.data_))
       {
       }
 
       void operator()(const boost::system::error_code &ec) override
       {
+        // 完成前解除关联的取消回调, 避免迟到的取消信号作用于
+        // 已结束的调用.
+        if (slot_.is_connected())
+          slot_.clear();
+
         // 使用 net::dispatch 将结果发送到指定的执行器上
         // 这样可以确保在正确的线程或上下文中调用处理程序
         net::dispatch(
@@ -238,11 +246,153 @@ namespace jsonrpc
     private:
       Handler handler_;
       ExecutorType executor_;
+      net::cancellation_slot slot_;
       json::object data_;
     };
 
     // RPC 操作的智能指针类型
     using call_op_ptr = std::unique_ptr<rpc_operation>;
+
+    // 挂起 RPC 调用的状态.
+    enum class call_state
+    {
+      free,       // 空闲: 调用已完成或迟到的响应已消费, id 可复用
+      pending,    // 已发出请求, 等待远端响应
+      cancelled   // 已被取消 (已以 operation_aborted 回调), id 暂不复用
+    };
+
+    // 挂起调用登记表: 统一管理调用槽位与 id 的生命周期.
+    //
+    // 槽位迁移:
+    //   free -> pending      发起调用 (add)
+    //   pending -> free      正常响应到达 (take_response), 回调一次并回收 id
+    //   pending -> cancelled 取消 (cancel), 以 operation_aborted 回调一次
+    //   cancelled -> free    迟到响应到达 (take_response), 丢弃并回收 id
+    //   任意 -> (清空)       会话停止 (fail_all), 挂起调用以 aborted 完成
+    //
+    // 被取消的调用只在取消路径回调一次; 之后即使远端迟到的响应到达也只会
+    // 被丢弃, 不会再次回调. 取消的 id 在迟到响应到达前不会被复用, 因此
+    // 迟到的响应不会误投递给新调用. 每个槽位携带 generation, 使已失效的
+    // 取消回调无法取消到复用同一 id 的新调用.
+    class rpc_call_table
+    {
+    public:
+      // 分配结果: 槽位 id 与代次.
+      struct slot_info
+      {
+        int64_t id;
+        uint64_t generation;
+      };
+
+      // 登记一个新挂起调用并分配 id.
+      slot_info add(call_op_ptr op)
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto generation = ++generation_;
+        int64_t id;
+        if (free_ids_.empty())
+        {
+          id = static_cast<int64_t>(calls_.size());
+          calls_.push_back({std::move(op), call_state::pending, generation});
+        }
+        else
+        {
+          id = free_ids_.back();
+          free_ids_.pop_back();
+          calls_[static_cast<std::size_t>(id)] =
+            {std::move(op), call_state::pending, generation};
+        }
+        return {id, generation};
+      }
+
+      // 响应处理结果.
+      enum class take_result
+      {
+        completed,  // 正常响应: op 已移出, 槽位已回收为 free
+        cancelled,  // 取消后的迟到响应: 已消费并回收 id, 不应再次回调
+        invalid,    // id 越界
+        unknown     // 无该挂起调用 (重复响应等)
+      };
+
+      // 取回响应对应的挂起调用. 仅 completed 时 op 非空.
+      take_result take_response(int64_t id, call_op_ptr& op)
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (id < 0 || id >= static_cast<int64_t>(calls_.size()))
+          return take_result::invalid;
+        auto& call = calls_[static_cast<std::size_t>(id)];
+        switch (call.state)
+        {
+          case call_state::pending:
+            op = std::move(call.op);
+            recycle(id);
+            return take_result::completed;
+          case call_state::cancelled:
+            recycle(id);
+            return take_result::cancelled;
+          default:
+            return take_result::unknown;
+        }
+      }
+
+      // 取消一个挂起调用: 成功则移出 op (状态置 cancelled) 返回 true,
+      // 由调用方以 operation_aborted 完成; 否则返回 false (已结束或不存在).
+      bool cancel(int64_t id, uint64_t generation, call_op_ptr& op)
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (id < 0 || id >= static_cast<int64_t>(calls_.size()))
+          return false;
+        auto& call = calls_[static_cast<std::size_t>(id)];
+        if (call.state != call_state::pending || call.generation != generation)
+          return false;
+        op = std::move(call.op);
+        call.state = call_state::cancelled;
+        return true;
+      }
+
+      // 会话停止: 取出全部挂起调用并清空登记表 (含已取消的槽位).
+      std::vector<call_op_ptr> fail_all()
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::vector<call_op_ptr> ops;
+        for (auto& call : calls_)
+        {
+          if (call.op)
+            ops.push_back(std::move(call.op));
+        }
+        calls_.clear();
+        free_ids_.clear();
+        return ops;
+      }
+
+      // 是否从未登记过任何调用.
+      bool empty()
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return calls_.empty();
+      }
+
+    private:
+      // 单个调用槽位.
+      struct entry
+      {
+        call_op_ptr op;
+        call_state state;
+        uint64_t generation;
+      };
+
+      // 回收 id 到空闲池 (调用方须已持有锁).
+      void recycle(int64_t id)
+      {
+        calls_[static_cast<std::size_t>(id)].state = call_state::free;
+        free_ids_.push_back(id);
+      }
+
+      std::mutex mutex_;
+      std::vector<entry> calls_;
+      std::vector<int64_t> free_ids_;
+      uint64_t generation_ = 0;
+    };
 
 
     // 从 JSON-RPC 对象中提取 'id' 字段, 保持原始 JSON 类型.
@@ -447,59 +597,19 @@ namespace jsonrpc
         const bool cancellable = slot.is_connected();
 
         auto op = std::make_unique<rpc_call_op_type>(
-          std::forward<CallHandler>(handler), executor);
+          std::forward<CallHandler>(handler), executor, slot);
 
         json::object data;
-
         data["jsonrpc"] = "2.0";
         data["method"] = method;
         data["params"] = params;
 
-        {
-          std::lock_guard<std::mutex> lock(self_->call_op_mutex_);
-          // 会话消息循环已结束（连接已断开/已停止），此时挂起调用永远不会
-          // 被 fail_pending_calls 或响应完成，立即以错误完成调用，避免调用
-          // 协程永久挂起并持续持有会话资源.
-          if (!self_->running_.load())
-          {
-            net::post(executor,
-              [op = std::move(op)]() mutable
-              {
-                (*op)(boost::asio::error::operation_aborted);
-              });
-            return;
-          }
-          if (self_->id_recycle_.empty())
-          {
-            auto session_id = static_cast<int64_t>(self_->call_ops_.size());
-            data["id"] = session_id;
-            self_->call_ops_.emplace_back(std::move(op));
-            if (cancellable)
-              slot.assign([self = self_, session_id](net::cancellation_type type)
-                {
-                  if ((type & net::cancellation_type::terminal) !=
-                    net::cancellation_type::none)
-                    self->cancel_call(session_id);
-                });
-          }
-          else
-          {
-            auto session_id = self_->id_recycle_.back();
-            self_->id_recycle_.pop_back();
+        // 登记挂起调用; 会话已停止时返回 -1, 调用以 operation_aborted 完成.
+        auto session_id = self_->register_call(std::move(op), data, cancellable, slot);
+        if (session_id < 0)
+          return;
 
-            data["id"] = session_id;
-            self_->call_ops_[session_id] = std::move(op);
-            if (cancellable)
-              slot.assign([self = self_, session_id](net::cancellation_type type)
-                {
-                  if ((type & net::cancellation_type::terminal) !=
-                    net::cancellation_type::none)
-                    self->cancel_call(session_id);
-                });
-          }
-        }
-
-        // 发送 JSON 请求数据
+        // 发送 JSON 请求数据.
         auto context = std::make_unique<std::string>(json::serialize(data));
         self_->write_message(std::move(context));
       }
@@ -616,6 +726,7 @@ namespace jsonrpc
           {
             handler(std::move(obj));
           }
+          co_return;
         };
 
       remote_methods_[std::string(method_name)] = std::move(coroutine_handler);
@@ -697,81 +808,17 @@ namespace jsonrpc
     //////////////////////////////////////////////////////////////////////////
 
   private:
-    // 运行服务的协程, 负责接收 WebSocket 消息并解析为 JSON 对象, 然
-    // 后通过创建一个新的协程来处理接收到的 JSON 对象.
+    // 运行服务的协程: 循环接收 WebSocket 消息并派发, 连接断开或会话
+    // 停止时退出, 并完成所有挂起的调用.
     net::awaitable<void> run()
     {
       try
       {
-        boost::system::error_code ec;
         beast::flat_buffer buf;
-        auto executor = co_await net::this_coro::executor;
-
         while (running_.load())
         {
           auto bytes = co_await stream_.async_read(buf, net::use_awaitable);
-
-          auto bufdata = buf.data();
-          std::string_view sv;
-          std::string data;
-
-          if (data_cb_)
-          {
-            data = data_cb_(std::string_view((const char*)bufdata.data(), bufdata.size()));
-            sv = data;
-          }
-          else {
-            sv = std::string_view((const char*)bufdata.data(), bufdata.size());
-          }
-
-          json::value jv = json::parse(
-            sv,
-            ec,
-            json::storage_ptr{},
-            {64, json::number_precision::imprecise, true, true, true});
-          if (ec)
-          {
-            // 解析失败, 可能是因为接收到的消息不是有效的 JSON, 忽略该消息
-            // 并继续等待下一个消息.
-            if (error_cb_)
-              error_cb_("parse json failed");
-            else
-              BOOST_ASSERT(false && "parse json failed");
-
-            buf.consume(bytes);
-
-            continue;
-          }
-
-          buf.consume(bytes);
-          if (!jv.if_object())
-          {
-            // 解析结果不是一个 JSON 对象, 忽略该消息并继续等待下一个消息.
-            if (error_cb_)
-              error_cb_("parsed json is not an object");
-            else
-              BOOST_ASSERT(false && "parsed json is not an object");
-            continue;
-          }
-          auto obj = jv.as_object();
-          if (!obj.if_contains("jsonrpc"))
-          {
-            // 解析结果不是一个 JSONRPC 协议.
-            if (error_cb_)
-              error_cb_("jsonrpc field not found");
-            else
-              BOOST_ASSERT(false && "jsonrpc field not found");
-            continue;
-          }
-
-          if (!running_.load())
-            co_return; // 如果服务已经停止, 则退出协程
-
-          net::co_spawn(executor, [self = this->shared_from_this(), obj = std::move(obj)]() mutable -> net::awaitable<void>
-          {
-            co_await self->dispatch_impl(std::move(obj));
-            co_return;
-          }, net::detached);
+          handle_frame(buf, bytes);
         }
 
         // 连接已断开, 完成所有挂起的 RPC 调用.
@@ -779,47 +826,139 @@ namespace jsonrpc
       }
       catch (const std::exception& e)
       {
-        if (running_.load())
-        {
-          // 捕获异常并调用错误回调函数
-          if (error_cb_)
-            error_cb_(e.what());
-        }
+        // 连接异常断开, 上报错误并完成所有挂起的 RPC 调用.
+        if (running_.load() && error_cb_)
+          error_cb_(e.what());
 
-        // 连接异常断开, 完成所有挂起的 RPC 调用.
         fail_pending_calls();
       }
     }
 
-    // 完成所有挂起的 RPC 调用（连接关闭后响应不可能再到达）,
+    // 解析并派发一帧 WebSocket 消息; 解析或格式校验失败仅上报
+    // 错误, 不影响消息循环继续接收后续消息.
+    void handle_frame(beast::flat_buffer& buf, std::size_t bytes)
+    {
+      // 读取原始数据; 设置了 data_cb_ 时在解析前转换 (如去除帧前缀).
+      auto raw = buf.data();
+      std::string_view sv(static_cast<const char*>(raw.data()), raw.size());
+      std::string converted;
+      if (data_cb_)
+      {
+        converted = data_cb_(sv);
+        sv = converted;
+      }
+
+      boost::system::error_code ec;
+      json::value jv = json::parse(
+        sv,
+        ec,
+        json::storage_ptr{},
+        {64, json::number_precision::imprecise, true, true, true});
+      buf.consume(bytes);
+
+      if (ec)
+      {
+        report_error("parse json failed");
+        return;
+      }
+      if (!jv.if_object())
+      {
+        report_error("parsed json is not an object");
+        return;
+      }
+
+      auto obj = jv.as_object();
+      if (!obj.if_contains("jsonrpc"))
+      {
+        report_error("jsonrpc field not found");
+        return;
+      }
+      if (!running_.load())
+        return; // 服务已停止, 交由消息循环退出.
+
+      // 通过独立协程派发消息, 避免消息处理阻塞接收循环.
+      net::co_spawn(stream_.get_executor(),
+        [self = this->shared_from_this(), obj = std::move(obj)]() mutable -> net::awaitable<void>
+        {
+          co_await self->dispatch_impl(std::move(obj));
+          co_return;
+        }, net::detached);
+    }
+
+    // 上报协议/解析错误: 设置了 error_cb_ 时回调, 否则在调试构建中断言.
+    void report_error(std::string_view message)
+    {
+      if (error_cb_)
+        error_cb_(message);
+      else
+        BOOST_ASSERT(false && "error_callback not set");
+    }
+
+    // 登记一个挂起的 RPC 调用: 分配 session_id, 填充请求 id, 并按需关联
+    // 取消回调. 会话已停止时返回 -1, 调用以 operation_aborted 立即完成,
+    // 请求不会发送.
+    int64_t register_call(call_op_ptr op, json::object& data,
+      bool cancellable, net::cancellation_slot slot)
+    {
+      call_op_ptr rejected;
+      int64_t session_id = -1;
+      {
+        // 与 fail_pending_calls 互斥: 保证调用要么被登记后由停止流程完成,
+        // 要么在此处发现会话已停止而立即失败, 不会出现遗漏.
+        std::lock_guard<std::mutex> lock(call_op_mutex_);
+        if (!running_.load())
+        {
+          rejected = std::move(op);
+        }
+        else
+        {
+          auto info = call_table_.add(std::move(op));
+          session_id = info.id;
+          data["id"] = session_id;
+
+          if (cancellable)
+          {
+            slot.assign(
+              [self = this->shared_from_this(), session_id, info]
+              (net::cancellation_type type)
+              {
+                if ((type & net::cancellation_type::terminal) !=
+                  net::cancellation_type::none)
+                  self->cancel_call(session_id, info.generation);
+              });
+          }
+        }
+      }
+
+      if (rejected)
+        (*rejected)(boost::asio::error::operation_aborted);
+      return session_id;
+    }
+
+    // 完成所有挂起的 RPC 调用（连接关闭/会话停止后响应不可能再到达）,
     // 避免等待响应的协程永久挂起导致 io_context 无法退出.
     void fail_pending_calls()
     {
-      std::lock_guard<std::mutex> lock(call_op_mutex_);
-      for (auto& op : call_ops_)
+      std::vector<call_op_ptr> ops;
+      {
+        std::lock_guard<std::mutex> lock(call_op_mutex_);
+        ops = call_table_.fail_all();
+      }
+      for (auto& op : ops)
       {
         if (op)
           (*op)(boost::asio::error::operation_aborted);
       }
-      call_ops_.clear();
-      id_recycle_.clear();
     }
 
-    // 取消一个挂起的 RPC 调用（调用方超时等场景使用）: 从 call_ops_
-    // 移除并以 operation_aborted 完成, 使等待该响应的协程恢复退出.
-    // 若调用已完成/已被取消则无操作.
-    void cancel_call(int64_t session_id)
+    // 取消一个挂起的 RPC 调用 (调用方超时等场景使用): 从登记表移出并
+    // 以 operation_aborted 完成, 使等待该响应的协程恢复退出. 已结束或
+    // 已取消的调用为空操作. generation 校验保证旧调用实例残留的取消
+    // 回调不会取消到复用同一 id 的新调用.
+    void cancel_call(int64_t session_id, uint64_t generation)
     {
       call_op_ptr op;
-      {
-        std::lock_guard<std::mutex> lock(call_op_mutex_);
-        if (session_id < 0 || session_id >= static_cast<int64_t>(call_ops_.size()) ||
-          !call_ops_[session_id])
-          return;
-        op = std::move(call_ops_[session_id]);
-        id_recycle_.push_back(session_id);
-      }
-      if (op)
+      if (call_table_.cancel(session_id, generation, op) && op)
         (*op)(boost::asio::error::operation_aborted);
     }
 
@@ -828,119 +967,95 @@ namespace jsonrpc
       auto try_id = obj.try_at("id");
       if (!try_id.has_value())
       {
-        // 这是一个通知消息，回调通知处理函数
+        // 无 id 字段是通知消息, 交给通知回调处理.
         if (notify_cb_)
           notify_cb_(std::move(obj));
         co_return;
       }
 
-      // 这是一个请求或响应消息，检查 id 字段
       auto id = *try_id;
       if (!id.is_string() && !id.is_number())
       {
-        // id 字段不是字符串或数字，忽略该消息
-        BOOST_ASSERT(false && "id must be string or number");
+        // id 字段不是字符串或数字, 忽略该消息.
+        report_error("id must be string or number");
         co_return;
       }
 
       if (obj.if_contains("result") || obj.if_contains("error"))
       {
-        // 包含 result 或 error 的 json 对象说明当前是作为调用者身份
-        // 向远端发起 RPC 请求的回应.
-        if (call_ops_.empty())
-        {
-          // 如果没有正在进行的调用操作，忽略该消息
-          BOOST_ASSERT(false && "no call operation in progress");
-          co_return;
-        }
-
-        int64_t session_id = -1;
-        try
-        {
-          session_id = (id.is_number() ? id.as_int64() : std::stoi(std::string(id.as_string())));
-        }
-        catch(const std::exception&)
-        {
-          // 转换失败，忽略该消息
-          if (error_cb_)
-            error_cb_("invalid id format");
-          else
-            BOOST_ASSERT(false && "invalid id format");
-          co_return;
-        }
-
-        co_await handle_call(std::move(obj), session_id);
-
+        // 含 result/error 的是调用者身份收到的响应消息.
+        co_await dispatch_response(std::move(obj), id);
         co_return;
       }
-      else if (obj.if_contains("method"))
+
+      if (obj.if_contains("method"))
       {
         if (!obj["method"].is_string())
         {
-          // method 字段不是字符串，忽略该消息
-          if (error_cb_)
-            error_cb_("method must be string");
-          else
-            BOOST_ASSERT(false && "method must be string");
+          // method 字段不是字符串, 忽略该消息.
+          report_error("method must be string");
           co_return;
         }
 
-        // 包含 method 字段的 json 对象说明当前是作为服务端身份
-        std::string method (obj["method"].as_string());
+        // 含 method 字段的是服务端身份收到的请求消息.
+        std::string method(obj["method"].as_string());
         co_await handle_method(std::move(obj), method);
-
-        // 处理方法调用消息
         co_return;
       }
-      else
+
+      // 既不是请求也不是响应, 忽略该消息.
+      report_error("not a request or response");
+      co_return;
+    }
+
+    // 处理响应消息: 从 id 提取 session_id 并完成对应的挂起调用.
+    net::awaitable<void> dispatch_response(json::object obj, json::value id)
+    {
+      if (call_table_.empty())
       {
-        // 既不是请求也不是响应，忽略该消息
-        BOOST_ASSERT(false && "not a request or response");
+        // 从未登记过调用, 忽略该消息.
+        BOOST_ASSERT(false && "no call operation in progress");
+        co_return;
       }
 
+      int64_t session_id = -1;
+      try
+      {
+        session_id = id.is_number()
+          ? id.as_int64()
+          : std::stoll(std::string(id.as_string()));
+      }
+      catch (const std::exception&)
+      {
+        // id 无法转换为数字, 忽略该消息.
+        report_error("invalid id format");
+        co_return;
+      }
+
+      co_await handle_call(std::move(obj), session_id);
       co_return;
     }
 
     net::awaitable<void> handle_call(json::object obj, int64_t session_id)
     {
-      // 查找是否有对应的调用操作
       call_op_ptr handler;
-
+      switch (call_table_.take_response(session_id, handler))
       {
-        std::lock_guard<std::mutex> lock(call_op_mutex_);
-        if (session_id < 0 || session_id >= static_cast<int>(call_ops_.size()))
-        {
-          // id 不在有效范围内，忽略该消息
-          if (error_cb_)
-            error_cb_("invalid session id");
-          else
-            BOOST_ASSERT(false && "invalid session id");
-          co_return;
-        }
-        // 获取对应的调用操作
-        handler = std::move(call_ops_[session_id]);
-
-        // 回收 RPC 调用操作的 id
-        id_recycle_.push_back(session_id);
-
-        BOOST_ASSERT(handler && "call op is nullptr!");
+        case rpc_call_table::take_result::completed:
+          // 正常响应: 填入响应数据并完成调用.
+          handler->result() = std::move(obj);
+          (*handler)(boost::system::error_code{});
+          break;
+        case rpc_call_table::take_result::cancelled:
+          // 取消后的迟到响应: 取消时已回调过, 直接丢弃.
+          break;
+        case rpc_call_table::take_result::invalid:
+          report_error("invalid session id");
+          break;
+        case rpc_call_table::take_result::unknown:
+          report_error("no call operation found for id");
+          break;
       }
-
-      if (handler)
-      {
-        // 调用操作存在，执行它
-        handler->result() = std::move(obj);
-        (*handler)(boost::system::error_code{});
-      }
-      else
-      {
-        // 没有找到对应的调用操作，忽略该消息
-        if (error_cb_)
-          error_cb_("no call operation found for id");
-        else
-          BOOST_ASSERT(false && "no call operation found for id");
-      }
-
       co_return;
     }
 
@@ -1061,10 +1176,12 @@ namespace jsonrpc
     // 注册的 RPC 调用方法.
     std::unordered_map<std::string, coroutine_type> remote_methods_;
 
-    // 保护调用操作的互斥锁.
+    // 登记/停止互斥锁: 串行化 register_call 与 fail_pending_calls,
+    // 保证挂起调用必然被两者之一完成, 不会遗漏或重复完成.
     std::mutex call_op_mutex_;
-    std::vector<int64_t> id_recycle_;
-    std::vector<call_op_ptr> call_ops_;
+
+    // 挂起调用登记表: 管理调用槽位与 id 的生命周期 (见 rpc_call_table).
+    rpc_call_table call_table_;
 
     // 消息发送队列.
     write_message_queue write_msgs_;
