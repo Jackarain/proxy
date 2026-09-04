@@ -9,6 +9,8 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <deque>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -105,6 +107,68 @@ std::shared_ptr<proxy::proxy_server> g_server;
 // (Android 上 stop 常由 UI 线程调用, 启停在工作线程).
 std::mutex g_mutex;
 
+// 退役对象回收: io_context 停线程后, 其对象中可能仍残留 stop 时挂起的
+// 协程帧 (如 launcher 控制通道的 ws 读/关闭协程), 析构 io_context 需
+// 逐个销毁这些帧, 实测可能耗时数百毫秒到数秒. 若在停止线程 (Android 上
+// 为服务工作线程) 同步析构, 会阻塞后续启停 (UI 表现为点停止卡顿).
+// 退役对象移入队列, 由独立回收线程异步析构: 停止线程只做同步必须项
+// (关闭 tun/停 io 线程), 用户立即点开始即可创建新实例, 互不影响.
+struct retired_objects
+{
+	std::unique_ptr<io_context_pool> pool;
+	std::shared_ptr<proxy::proxy_server> server;
+};
+
+std::mutex g_retire_mutex;
+std::condition_variable g_retire_cv;
+std::deque<retired_objects> g_retired;
+std::atomic<bool> g_retire_done{ false };
+
+void retire_objects(std::unique_ptr<io_context_pool> pool,
+	std::shared_ptr<proxy::proxy_server> server)
+{
+	{
+		std::lock_guard<std::mutex> lk(g_retire_mutex);
+		g_retired.emplace_back(
+			retired_objects{ std::move(pool), std::move(server) });
+	}
+	g_retire_cv.notify_one();
+}
+
+void reaper_main()
+{
+	for (;;)
+	{
+		retired_objects objs;
+		{
+			std::unique_lock<std::mutex> lk(g_retire_mutex);
+			g_retire_cv.wait(lk, []()
+				{
+					return !g_retired.empty() || g_retire_done.load();
+				});
+			if (g_retired.empty())
+				return;
+			objs = std::move(g_retired.front());
+			g_retired.pop_front();
+		}
+		// 析构在本线程执行: 可能耗时 (清理残留协程帧/慢析构成员), 不影响
+		// 停止与下一次启动.
+		objs.server.reset();
+		objs.pool.reset();
+	}
+}
+
+std::once_flag g_reaper_once;
+
+void ensure_reaper()
+{
+	std::call_once(g_reaper_once, []()
+		{
+			// 进程退出时随 OS 回收, 无需 join.
+			std::thread(reaper_main).detach();
+		});
+}
+
 // io_context/backend 线程因卡死被分离后, 池与服务对象不能随引用释放
 // (运行中的线程仍可能访问其成员). 移入僵尸列表保活; 仅发生在 io_context
 // 忙循环无法回收的异常路径, 数量极少, 进程退出时随 OS 回收.
@@ -158,6 +222,13 @@ void stop_locked()
 			g_zombie_pools.push_back(std::move(g_io_pool));
 		if (g_server)
 			g_zombie_servers.push_back(std::move(g_server));
+	}
+	else if (g_io_pool || g_server)
+	{
+		// 正常路径: 对象析构 (io_context 清理残留协程帧等) 可能耗时,
+		// 移到后台回收线程执行, 停止线程不被阻塞, 也不影响下一次启动.
+		ensure_reaper();
+		retire_objects(std::move(g_io_pool), std::move(g_server));
 	}
 
 	g_server.reset();
