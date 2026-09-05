@@ -203,10 +203,12 @@ namespace jsonrpc
     {
     public:
       rpc_call_op(Handler &&h, ExecutorType executor,
-        net::cancellation_slot slot)
+        net::cancellation_slot slot,
+        std::function<void(std::string_view)> report_error)
         : handler_(std::forward<Handler>(h))
         , executor_(executor)
         , slot_(slot)
+        , report_error_(std::move(report_error))
       {
       }
 
@@ -217,6 +219,7 @@ namespace jsonrpc
         , executor_(other.executor_)
         , slot_(other.slot_)
         , data_(std::move(other.data_))
+        , report_error_(std::move(other.report_error_))
       {
       }
 
@@ -231,9 +234,25 @@ namespace jsonrpc
         // 这样可以确保在正确的线程或上下文中调用处理程序
         net::dispatch(
           executor_,
-          [handler = std::move(handler_), data = std::move(data_), ec]() mutable
+          [handler = std::move(handler_), data = std::move(data_), ec,
+            report_error = std::move(report_error_)]() mutable
           {
-            handler(ec, data);
+            // 用户 completion handler 抛出的异常若逃逸到 asio 执行上下文,
+            // 可能导致 io_context 以未捕获异常终止, 这里捕获后转交错误回调.
+            try
+            {
+              handler(ec, data);
+            }
+            catch (const std::exception& e)
+            {
+              if (report_error)
+                report_error(e.what());
+            }
+            catch (...)
+            {
+              if (report_error)
+                report_error("unknown exception in async_call completion handler");
+            }
           });
       }
 
@@ -248,6 +267,7 @@ namespace jsonrpc
       ExecutorType executor_;
       net::cancellation_slot slot_;
       json::object data_;
+      std::function<void(std::string_view)> report_error_;
     };
 
     // RPC 操作的智能指针类型
@@ -274,6 +294,11 @@ namespace jsonrpc
     // 被丢弃, 不会再次回调. 取消的 id 在迟到响应到达前不会被复用, 因此
     // 迟到的响应不会误投递给新调用. 每个槽位携带 generation, 使已失效的
     // 取消回调无法取消到复用同一 id 的新调用.
+    //
+    // 代价: 若对端从不响应, 被取消的槽位会一直保留到迟到响应到达或会话
+    // 停止 (fail_all 清空登记表). 持续取消且对端无响应的场景下登记表会
+    // 随取消次数单调增长, 这是防止迟到响应串扰的正确性取舍, 内存最终由
+    // 会话停止时一并回收.
     class rpc_call_table
     {
     public:
@@ -459,15 +484,30 @@ namespace jsonrpc
     // 函数来派发 JSONRPC 协议消息.
     // 亦可手工调用 dispatch() 来处理 JSONRPC 消息, 但请注意这种情况下，我们
     // 不可以调用 start() 来驱动服务, 否则会导致逻辑错误.
+    // 注意: 无论是 start() 驱动 (模式 A) 还是手工 dispatch (模式 B), 会话
+    // 都可发起 async_call 调用或应答对方请求, 两种模式在使用上没有差别,
+    // 区别仅在于接收消息的方式. 调用过 stop() 的会话不能再调用 start().
     void start()
     {
-      if (running_.load())
+      // 状态检查与置位与 stop() 在同一互斥量下完成: running_/stopped_
+      // 若分开置位, stop() 与 start() 交错时理论上可能出现 stop() 之后
+      // start() 仍成功拉起消息循环, 这里消除该窗口.
       {
-        BOOST_ASSERT(false && "already running");
-        return;
-      }
+        std::lock_guard<std::mutex> lock(call_op_mutex_);
+        if (running_.load())
+        {
+          BOOST_ASSERT(false && "already running");
+          return;
+        }
 
-      running_.store(true);
+        if (stopped_.load())
+        {
+          BOOST_ASSERT(false && "session already stopped");
+          return;
+        }
+
+        running_.store(true);
+      }
 
       // 通过 shared_from_this 持有自身, 保证 run() 协程执行期间本服务存活.
       auto self = this->shared_from_this();
@@ -490,18 +530,25 @@ namespace jsonrpc
       }, net::detached);
     }
 
-    // 停止服务, 关闭 WebSocket 连接, 如果服务没有运行, 则什么都不做.
-    // 注意: 调用此函数后, 不能再调用 start() 启动服务, 如果需要重新
-    // 启动服务, 请创建一个新的 jsonrpc_session 实例并调用 start()
-    // 方法.
+    // 停止服务: 完成所有挂起的 RPC 调用并关闭 WebSocket 连接.
+    // 会话无论是否处于运行状态 (start 驱动或手工 dispatch) 都可调用此
+    // 函数终止会话, 之后不能再调用 start() 启动服务, 如果需要重新
+    // 启动服务, 请创建一个新的 jsonrpc_session 实例并调用 start() 方法.
     void stop()
     {
-      if (!running_.load())
-        return;
+      {
+        // 与 start() 在同一互斥量下完成 stopped_ 检查与 running_/stopped_
+        // 置位, 消除 start()/stop() 交错时 "stop() 之后 start() 仍拉起
+        // 消息循环" 的理论竞态.
+        std::lock_guard<std::mutex> lock(call_op_mutex_);
+        if (stopped_.load())
+          return;
 
-      running_.store(false);
+        running_.store(false);
+        stopped_.store(true);
+      }
 
-      // 完成所有挂起的 RPC 调用（连接已关闭, 响应不可能再到达）,
+      // 完成所有挂起的 RPC 调用（会话已停止, 响应不可能再到达）,
       // 避免等待响应的协程永久挂起导致 io_context 无法退出.
       fail_pending_calls();
 
@@ -541,6 +588,12 @@ namespace jsonrpc
         BOOST_ASSERT(false && "jsonrpc field not found");
         return;
       }
+
+      // 会话已停止: 忽略手工派发的消息, 不进入方法回调, 也不向已关闭
+      // 的连接写响应. dispatch_impl 开头还会再检查一次, 覆盖协程晚于
+      // 调用线程执行的交错.
+      if (stopped_.load())
+        return;
 
       // 通过 shared_from_this 持有自身, 保证 dispatch 协程执行期间本服务存活.
       auto self = this->shared_from_this();
@@ -596,8 +649,21 @@ namespace jsonrpc
         auto slot = net::get_associated_cancellation_slot(handler);
         const bool cancellable = slot.is_connected();
 
+        // 用户 completion handler 抛异常时无法再向其传递结果, 由会话
+        // 错误回调接收, 避免异常逃逸到 asio 执行上下文导致 io_context 终止.
+        // 注意须以弱引用捕获会话: op 存放在会话的登记表中, 若强引用会话
+        // 会与登记表形成引用环, 使未完成的挂起调用导致会话无法析构.
+        auto report_error =
+          [weak_self = std::weak_ptr<jsonrpc_session_service<StreamType>>(
+            self_->shared_from_this())](std::string_view message)
+          {
+            if (auto self = weak_self.lock())
+              self->report_handler_error(message);
+          };
+
         auto op = std::make_unique<rpc_call_op_type>(
-          std::forward<CallHandler>(handler), executor, slot);
+          std::forward<CallHandler>(handler), executor, slot,
+          std::move(report_error));
 
         json::object data;
         data["jsonrpc"] = "2.0";
@@ -826,9 +892,17 @@ namespace jsonrpc
       }
       catch (const std::exception& e)
       {
-        // 连接异常断开, 上报错误并完成所有挂起的 RPC 调用.
+        // 连接异常断开, 上报错误并完成所有挂起的 RPC 调用. 用户
+        // error_callback 自身抛异常不应阻断挂起调用的清理.
         if (running_.load() && error_cb_)
-          error_cb_(e.what());
+        {
+          try
+          {
+            error_cb_(e.what());
+          }
+          catch (...)
+          {}
+        }
 
         fail_pending_calls();
       }
@@ -844,8 +918,25 @@ namespace jsonrpc
       std::string converted;
       if (data_cb_)
       {
-        converted = data_cb_(sv);
-        sv = converted;
+        try
+        {
+          converted = data_cb_(sv);
+          sv = converted;
+        }
+        catch (const std::exception& e)
+        {
+          // 数据转换回调抛异常属于用户错误: 丢弃该帧并继续接收后续
+          // 消息, 不使整个消息循环因用户回调异常而失败关闭.
+          buf.consume(bytes);
+          report_handler_error(e.what());
+          return;
+        }
+        catch (...)
+        {
+          buf.consume(bytes);
+          report_handler_error("unknown exception in data callback");
+          return;
+        }
       }
 
       boost::system::error_code ec;
@@ -894,9 +985,33 @@ namespace jsonrpc
         BOOST_ASSERT(false && "error_callback not set");
     }
 
+    // 上报用户代码 (方法回调/completion handler) 抛出的异常.
+    // 这类异常属于用户错误而非协议错误, 设置了 error_cb_ 时通知之,
+    // 未设置时忽略 (相应错误响应仍会发出, 调用方不会被挂起).
+    void report_handler_error(std::string_view message)
+    {
+      auto self = this->shared_from_this();
+      net::dispatch(stream_.get_executor(),
+        [self, message = std::string(message)]() mutable
+        {
+          if (self->error_cb_)
+          {
+            try
+            {
+              self->error_cb_(message);
+            }
+            catch (...)
+            {}
+          }
+        });
+    }
+
     // 登记一个挂起的 RPC 调用: 分配 session_id, 填充请求 id, 并按需关联
-    // 取消回调. 会话已停止时返回 -1, 调用以 operation_aborted 立即完成,
-    // 请求不会发送.
+    // 取消回调. 会话已停止 (stop() 或消息循环自然结束) 时返回 -1, 调用
+    // 以 operation_aborted 立即完成, 请求不会发送.
+    // 注意: 门禁状态是 stopped_ 而非 running_: 手工 dispatch 模式 (模式 B)
+    // 不调用 start(), running_ 恒为 false, 但会话仍可接收响应并完成调用,
+    // 因此只有真正停止的会话才拒绝新调用.
     int64_t register_call(call_op_ptr op, json::object& data,
       bool cancellable, net::cancellation_slot slot)
     {
@@ -906,7 +1021,7 @@ namespace jsonrpc
         // 与 fail_pending_calls 互斥: 保证调用要么被登记后由停止流程完成,
         // 要么在此处发现会话已停止而立即失败, 不会出现遗漏.
         std::lock_guard<std::mutex> lock(call_op_mutex_);
-        if (!running_.load())
+        if (stopped_.load())
         {
           rejected = std::move(op);
         }
@@ -937,11 +1052,14 @@ namespace jsonrpc
 
     // 完成所有挂起的 RPC 调用（连接关闭/会话停止后响应不可能再到达）,
     // 避免等待响应的协程永久挂起导致 io_context 无法退出.
+    // 同时置 stopped_ 标记: 与 register_call 在同一互斥量下完成, 保证
+    // 之后的 register_call 必然看到 stopped_ 而拒绝新调用.
     void fail_pending_calls()
     {
       std::vector<call_op_ptr> ops;
       {
         std::lock_guard<std::mutex> lock(call_op_mutex_);
+        stopped_.store(true);
         ops = call_table_.fail_all();
       }
       for (auto& op : ops)
@@ -964,12 +1082,32 @@ namespace jsonrpc
 
     net::awaitable<void> dispatch_impl(json::object obj)
     {
+      // 协程可能晚于调用线程执行: 会话已停止时忽略派发的请求/响应/
+      // 通知, 避免向已关闭的连接写响应或触发 "无挂起调用" 断言.
+      if (stopped_.load())
+        co_return;
+
       auto try_id = obj.try_at("id");
       if (!try_id.has_value())
       {
         // 无 id 字段是通知消息, 交给通知回调处理.
         if (notify_cb_)
-          notify_cb_(std::move(obj));
+        {
+          try
+          {
+            notify_cb_(std::move(obj));
+          }
+          catch (const std::exception& e)
+          {
+            // 通知无 id, 不能回复错误响应; 通知回调异常转交
+            // error_callback 上报, 不使其逃逸 detached 协程.
+            report_handler_error(e.what());
+          }
+          catch (...)
+          {
+            report_handler_error("unknown exception in notify callback");
+          }
+        }
         co_return;
       }
 
@@ -1061,32 +1199,64 @@ namespace jsonrpc
 
     net::awaitable<void> handle_method(json::object obj, std::string_view method_name)
     {
-      // 检查远程方法是否已注册
-      auto it = remote_methods_.find(std::string(method_name));
-      if (it != remote_methods_.end())
+      // 请求 id 须在 obj 移交给用户回调前取出, 供异常路径回复错误响应.
+      auto id = jsonrpc_id(obj);
+      try
       {
-        co_await it->second(std::move(obj));
-      }
-      else if (method_cb_)
-      {
-        method_cb_(std::move(obj));
-      }
-      else
-      {
-        // 方法未找到且没有设置默认回调，返回 JSON-RPC 标准 -32601 错误响应
-        auto id = jsonrpc_id(obj);
-        if (!id.is_null())
+        // 检查远程方法是否已注册
+        auto it = remote_methods_.find(std::string(method_name));
+        if (it != remote_methods_.end())
         {
-          json::object error_obj = {
-            {"code", -32601},
-            {"message", "Method not found"}
-          };
-          reply(std::move(error_obj), std::move(id), true);
+          co_await it->second(std::move(obj));
+        }
+        else if (method_cb_)
+        {
+          method_cb_(std::move(obj));
         }
         else
         {
-          BOOST_ASSERT(false && "no method callback set");
+          // 方法未找到且没有设置默认回调，返回 JSON-RPC 标准 -32601 错误响应
+          if (!id.is_null())
+          {
+            json::object error_obj = {
+              {"code", -32601},
+              {"message", "Method not found"}
+            };
+            reply(std::move(error_obj), std::move(id), true);
+          }
+          else
+          {
+            BOOST_ASSERT(false && "no method callback set");
+          }
         }
+      }
+      catch (const std::exception& e)
+      {
+        // 用户绑定的回调抛出异常: 不捕获将沿 detached 协程被 asio 静默
+        // 丢弃, 导致调用方无响应而永久挂起. 这里回复 JSON-RPC 标准
+        // -32603 内部错误响应, 并将异常详情放入 data 字段.
+        if (!id.is_null())
+        {
+          json::object error_obj = {
+            {"code", -32603},
+            {"message", "Internal error"},
+            {"data", e.what()}
+          };
+          reply(std::move(error_obj), std::move(id), true);
+        }
+        report_handler_error(e.what());
+      }
+      catch (...)
+      {
+        if (!id.is_null())
+        {
+          json::object error_obj = {
+            {"code", -32603},
+            {"message", "Internal error"}
+          };
+          reply(std::move(error_obj), std::move(id), true);
+        }
+        report_handler_error("unknown exception in method handler");
       }
 
       co_return;
@@ -1145,7 +1315,13 @@ namespace jsonrpc
         if (error_cb_)
         {
           write_msgs_.clear();
-          error_cb_(std::string_view(e.what()));
+          // 用户 error_callback 自身抛异常不应再次逃逸写协程.
+          try
+          {
+            error_cb_(std::string_view(e.what()));
+          }
+          catch (...)
+          {}
         }
       }
     }
@@ -1154,8 +1330,13 @@ namespace jsonrpc
     // Stream 对象, 用于与远程服务进行通信.
     stream_type stream_;
 
-    // 会话运行状态标志.
+    // 会话运行状态标志: 表示 start() 驱动的接收消息循环是否在运行.
     std::atomic_bool running_{false};
+
+    // 会话停止标志: stop() 或消息循环自然结束后置位, 之后拒绝发起新的
+    // 调用. 与 running_ 相互独立: 手工 dispatch 模式 (模式 B) 不调用
+    // start(), running_ 恒为 false, 但只要未停止即可发起调用.
+    std::atomic_bool stopped_{false};
 
     // 回调函数, 用于处理请求、通知消息和错误消息.
     std::function<void(json::object)> method_cb_;
@@ -1230,13 +1411,17 @@ namespace jsonrpc
         impl_->stop();
     }
 
-    // 启动服务, 开始接收 WebSocket 消息.
+    // 启动服务, 开始接收 WebSocket 消息 (模式 A).
+    // 也可以不调用 start(), 由使用者手工读取消息后调用 dispatch() 驱动
+    // (模式 B). 两种模式下均可发起 async_call 调用或应答请求, 调用过
+    // stop() 的会话不能再调用 start().
     void start()
     {
       impl_->start();
     }
 
-    // 停止服务, 关闭 WebSocket 连接.
+    // 停止服务: 完成所有挂起调用并关闭 WebSocket 连接.
+    // 会话无论处于运行状态还是手工 dispatch 模式 (模式 B) 均可调用.
     void stop()
     {
       impl_->stop();
