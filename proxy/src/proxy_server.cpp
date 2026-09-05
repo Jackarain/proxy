@@ -23,14 +23,14 @@
 #include <ctime>
 #include <future>
 #include <optional>
-#include <pthread.h>
 #include <sstream>
 #include <unordered_set>
+#include <cstring>
 
 #if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+# include <pthread.h>
 # include <ifaddrs.h>
 # include <netinet/in.h>
-# include <cstring>
 #endif
 
 #include <tinyrpc/jsonrpc.hpp>
