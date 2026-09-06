@@ -16,6 +16,9 @@ class VpnConfig {
     this.tunMtu = 1500,
     List<String>? proxyDomains,
     List<String>? proxyCidr,
+    this.globalProxy = false,
+    this.proxyDomainsUrl = '',
+    this.proxyCidrUrl = '',
     this.disableCheckCert = true,
     this.udpTimeout = 300,
     this.proxyPassPoolSize = 20,
@@ -52,6 +55,16 @@ class VpnConfig {
 
   /// 代理 CIDR 列表 (IPv4/IPv6): 命中走上游代理, 未命中直连.
   List<String> proxyCidr;
+
+  /// 全局代理: 开启后所有流量均走上游代理, 忽略 proxyDomains/proxyCidr
+  /// 分流规则 (经原生层空列表即全局代理的语义实现).
+  bool globalProxy;
+
+  /// 上次从 URL 拉取代理域名列表的地址 (用于拉取弹窗回填).
+  String proxyDomainsUrl;
+
+  /// 上次从 URL 拉取代理 CIDR 列表的地址 (用于拉取弹窗回填).
+  String proxyCidrUrl;
 
   /// 关闭上游代理的证书校验 (自签证书场景).
   bool disableCheckCert;
@@ -203,8 +216,8 @@ class VpnConfig {
       'tun': true,
       'tun_mtu': tunMtu,
       'tun_wait_fd': true,
-      if (proxyDomains.isNotEmpty) 'proxy_domains': proxyDomains,
-      if (proxyCidr.isNotEmpty) 'proxy_cidr': proxyCidr,
+      if (!globalProxy && proxyDomains.isNotEmpty) 'proxy_domains': proxyDomains,
+      if (!globalProxy && proxyCidr.isNotEmpty) 'proxy_cidr': proxyCidr,
       'disable_check_cert': disableCheckCert,
       'udp_timeout': udpTimeout,
       if (proxyPassPoolSize > 0) 'proxy_pass_pool_size': proxyPassPoolSize,
@@ -223,8 +236,9 @@ class VpnConfig {
   Map<String, dynamic> toProxyOptions() {
     final map = <String, dynamic>{
       'proxy_pass': proxyPass.trim(),
-      'proxy_domains': proxyDomains,
-      'proxy_cidr': proxyCidr,
+      // 全局代理时下发空列表，使原生层恢复「全部走代理」语义.
+      'proxy_domains': globalProxy ? <String>[] : proxyDomains,
+      'proxy_cidr': globalProxy ? <String>[] : proxyCidr,
       'disable_check_cert': disableCheckCert,
     };
     return map;
@@ -238,6 +252,9 @@ class VpnConfig {
     'tunMtu': tunMtu,
     'proxyDomains': proxyDomains,
     'proxyCidr': proxyCidr,
+    'globalProxy': globalProxy,
+    'proxyDomainsUrl': proxyDomainsUrl,
+    'proxyCidrUrl': proxyCidrUrl,
     'disableCheckCert': disableCheckCert,
     'udpTimeout': udpTimeout,
     'proxyPassPoolSize': proxyPassPoolSize,
@@ -260,6 +277,9 @@ class VpnConfig {
     tunMtu: json['tunMtu'] as int? ?? 1500,
     proxyDomains: _strList(json['proxyDomains']),
     proxyCidr: _strList(json['proxyCidr']),
+    globalProxy: json['globalProxy'] as bool? ?? false,
+    proxyDomainsUrl: json['proxyDomainsUrl'] as String? ?? '',
+    proxyCidrUrl: json['proxyCidrUrl'] as String? ?? '',
     disableCheckCert: json['disableCheckCert'] as bool? ?? true,
     udpTimeout: json['udpTimeout'] as int? ?? 300,
     proxyPassPoolSize: json['proxyPassPoolSize'] as int? ?? 20,

@@ -92,6 +92,45 @@ void main() {
       expect(map['launcher_url'], 'ws://127.0.0.1:12345');
     });
 
+    test('全局代理时不下发分流列表, 热更新下发空列表', () {
+      final c = VpnConfig(
+        id: 'abc',
+        name: '测试',
+        proxyPass: 'https://user:pass@host:443',
+        globalProxy: true,
+        proxyDomains: ['google.com'],
+        proxyCidr: ['1.1.1.0/24'],
+      );
+      final map =
+          jsonDecode(c.toProxyJson()) as Map<String, dynamic>;
+      expect(map.containsKey('proxy_domains'), isFalse);
+      expect(map.containsKey('proxy_cidr'), isFalse);
+
+      final opts = c.toProxyOptions();
+      expect(opts['proxy_domains'], isEmpty);
+      expect(opts['proxy_cidr'], isEmpty);
+
+      final restored = VpnConfig.fromJson(c.toJson());
+      expect(restored.globalProxy, isTrue);
+      expect(restored.proxyDomainsUrl, '');
+      expect(restored.proxyCidrUrl, '');
+    });
+
+    test('未开启全局代理时正常下发分流列表', () {
+      final c = VpnConfig(
+        id: 'abc',
+        name: '测试',
+        proxyPass: 'https://user:pass@host:443',
+        globalProxy: false,
+        proxyDomains: ['google.com'],
+        proxyCidr: ['1.1.1.0/24'],
+      );
+      final map =
+          jsonDecode(c.toProxyJson()) as Map<String, dynamic>;
+      expect(map['proxy_domains'], ['google.com']);
+      expect(map['proxy_cidr'], ['1.1.1.0/24']);
+    });
+
     test('指定 SNI 时下发 ssl_sni, 空时不下发', () {
       final withSni = VpnConfig(
         id: 'abc',
