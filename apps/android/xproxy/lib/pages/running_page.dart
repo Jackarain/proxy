@@ -24,7 +24,6 @@ class _RunningPageState extends State<RunningPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs = TabController(length: 2, vsync: this);
   final StorageService _storage = StorageService();
-  final List<Map<String, dynamic>> _logs = [];
   // 单一日志文本框: 与 webui 一致, 整段日志放入一个只读文本框,
   // 可自由跨行选择, 滚动/自动滚动不会取消文本选择.
   final List<String> _logLines = [];
@@ -94,10 +93,6 @@ class _RunningPageState extends State<RunningPage>
   }
 
   void _addLog(Map<String, dynamic> entry) {
-    _logs.add(entry);
-    if (_logs.length > _maxLogLines) {
-      _logs.removeRange(0, _logs.length - _maxLogLines);
-    }
     _logLines.add(_fmtLogLine(entry));
     if (_logLines.length > _maxLogLines) {
       _logLines.removeRange(0, _logLines.length - _maxLogLines);
@@ -201,13 +196,13 @@ class _RunningPageState extends State<RunningPage>
         title: const Text('运行控制台'),
         actions: [
           IconButton(
-            onPressed: _logs.isEmpty ? null : _copyLogs,
+            onPressed: _logLines.isEmpty ? null : _copyLogs,
             icon: const Icon(Icons.copy_all),
             tooltip: '复制选中的日志; 未选中时复制全部',
           ),
           IconButton(
             onPressed:
-                _logs.isEmpty
+                _logLines.isEmpty
                     ? null
                     : () => setState(() => _autoScroll = !_autoScroll),
             icon: Icon(
@@ -216,7 +211,7 @@ class _RunningPageState extends State<RunningPage>
             tooltip: _autoScroll ? '自动滚动: 开' : '自动滚动: 关',
           ),
           IconButton(
-            onPressed: _logs.isEmpty ? null : _clearLogs,
+            onPressed: _logLines.isEmpty ? null : _clearLogs,
             icon: const Icon(Icons.delete_sweep),
             tooltip: '清空日志',
           ),
@@ -468,7 +463,7 @@ class _RunningPageState extends State<RunningPage>
   }
 
   Widget _buildLogTab() {
-    if (_logs.isEmpty) {
+    if (_logLines.isEmpty) {
       return const Center(child: Text('暂无日志'));
     }
     // 单一只读文本框承载全部日志: 可自由跨行选择文本, 滚动/自动滚动
@@ -496,7 +491,6 @@ class _RunningPageState extends State<RunningPage>
   }
 
   void _clearLogs() {
-    _logs.clear();
     _logLines.clear();
     setState(() => _logTextController.clear());
   }

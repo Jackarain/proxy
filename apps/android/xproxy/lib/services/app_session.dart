@@ -66,7 +66,8 @@ class AppSession extends ChangeNotifier {
   }
 
   /// 将配置应用到运行中的会话:
-  /// - TUN 字段变更时整体重建 VPN (VpnService 重新 establish);
+  /// - 需要整体重建 VPN 的字段变更时 (TUN 参数/分流规则/连接池等, native
+  ///   set_config 无法热改或需重建 VpnService 路由的) 走 restart;
   /// - 其余参数经控制通道 set_config 热更新.
   /// 返回 'restarted' / 'updated'; 配置未在运行时返回 null.
   Future<String?> applyConfig(VpnConfig config) async {
@@ -74,10 +75,10 @@ class AppSession extends ChangeNotifier {
     final server = this.server;
     if (server == null) throw StateError('控制通道未就绪');
 
-    if (_tunFieldsChanged(config)) {
+    if (_needsRestart(config)) {
       final fullJson = jsonEncode(config.toJson());
       // 更新 vpnConfig 快照并清除 tun 注入标记: 新实例连接后按最新
-      // TUN 配置重建设备, 否则会沿用旧快照/跳过注入导致无法转发.
+      // 配置重建设备, 否则会沿用旧快照/跳过注入导致无法转发.
       server.setVpnConfig(config.toJson());
       server.resetTunState();
       await VpnChannel.restart(fullJson, server.port);
@@ -99,8 +100,10 @@ class AppSession extends ChangeNotifier {
     return needsRestart.isNotEmpty ? 'restarted' : 'updated';
   }
 
-  /// TUN 相关字段是否与启动时不同.
-  bool _tunFieldsChanged(VpnConfig config) {
+  /// 需要整体重建 VPN 的字段是否与启动时不同. native set_config 无法热改
+  /// 这些字段 (TUN 参数需重建 VpnService; 分流规则/连接池大小/绕过中国段
+  /// 仅启动时生效), 变更时必须重启, 否则会被静默丢弃.
+  bool _needsRestart(VpnConfig config) {
     final started = startedConfigJson;
     if (started == null || started.isEmpty) return false;
     try {
@@ -110,10 +113,15 @@ class AppSession extends ChangeNotifier {
       return old.tunAddress != config.tunAddress ||
           old.tunPrefix != config.tunPrefix ||
           old.sni != config.sni ||
+          old.tunMtu != config.tunMtu ||
+          old.bypassCn != config.bypassCn ||
+          old.globalProxy != config.globalProxy ||
+          old.proxyPassPoolSize != config.proxyPassPoolSize ||
           old.dns.join(',') != config.dns.join(',') ||
           old.dnsForeign.join(',') != config.dnsForeign.join(',') ||
           old.dnsForeignDoh != config.dnsForeignDoh ||
-          old.tunMtu != config.tunMtu;
+          old.proxyDomains.join(',') != config.proxyDomains.join(',') ||
+          old.proxyCidr.join(',') != config.proxyCidr.join(',');
     } catch (_) {
       return false;
     }

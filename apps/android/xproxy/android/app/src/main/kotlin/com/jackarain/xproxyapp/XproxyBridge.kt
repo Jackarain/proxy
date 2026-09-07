@@ -33,11 +33,14 @@ object XproxyBridge {
         out.put("tun", true)
         out.put("tun_mtu", cfg.optInt("tunMtu", 1500))
         out.put("tun_wait_fd", true)
-        if (cfg.has("proxyDomains")) {
-            out.put("proxy_domains", cfg.optJSONArray("proxyDomains") ?: JSONArray())
-        }
-        if (cfg.has("proxyCidr")) {
-            out.put("proxy_cidr", cfg.optJSONArray("proxyCidr") ?: JSONArray())
+        // 全局代理时不下发分流列表, 使原生层恢复「全部走代理」语义.
+        if (!cfg.optBoolean("globalProxy", false)) {
+            if (cfg.has("proxyDomains")) {
+                out.put("proxy_domains", cfg.optJSONArray("proxyDomains") ?: JSONArray())
+            }
+            if (cfg.has("proxyCidr")) {
+                out.put("proxy_cidr", cfg.optJSONArray("proxyCidr") ?: JSONArray())
+            }
         }
         // DNS 分流: 国内 DNS 直连解析, 国外 DNS/DoH 经代理解析.
         if (cfg.has("dns")) {
@@ -60,6 +63,9 @@ object XproxyBridge {
         // 与 proxy_pass 建立 TLS 连接时使用的 SNI (空表示用 proxy_pass 主机名).
         out.put("ssl_sni", cfg.optString("sni", ""))
         out.put("udp_timeout", cfg.optInt("udpTimeout", 300))
+        // proxy_pass 预选连接池大小 (0 表示禁用): 显式下发, 否则 native
+        // 缺省为 20, 配置 0 禁用时若省略该键会被静默忽略.
+        out.put("proxy_pass_pool_size", cfg.optInt("proxyPassPoolSize", 20))
         out.put("launcher_url", "ws://127.0.0.1:$launcherPort")
         return xproxy.start(out.toString())
     }

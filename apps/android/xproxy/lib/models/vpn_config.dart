@@ -220,7 +220,9 @@ class VpnConfig {
       if (!globalProxy && proxyCidr.isNotEmpty) 'proxy_cidr': proxyCidr,
       'disable_check_cert': disableCheckCert,
       'udp_timeout': udpTimeout,
-      if (proxyPassPoolSize > 0) 'proxy_pass_pool_size': proxyPassPoolSize,
+      // 显式下发连接池大小: native 以 >0 判断启用, 缺省为 20; 配置 0 禁用
+      // 时若省略该键会被静默忽略 (沿用默认 20).
+      'proxy_pass_pool_size': proxyPassPoolSize,
       'dns_domestic': dns,
       'dns_foreign': dnsForeign,
       if (dnsForeignDoh.trim().isNotEmpty) 'dns_doh': dnsForeignDoh.trim(),
@@ -233,6 +235,9 @@ class VpnConfig {
   }
 
   /// 运行期热更新参数 (经控制通道 set_config 下发, 键与 xproxy 配置一致).
+  /// 仅包含 native 端 set_config 可热改的字段 (proxy_pass/证书校验/超时/
+  /// DNS 缓存/禁用 IPv6); TUN 与分流相关字段由 AppSession._needsRestart
+  /// 判断后整体重建 VPN.
   Map<String, dynamic> toProxyOptions() {
     final map = <String, dynamic>{
       'proxy_pass': proxyPass.trim(),
@@ -240,6 +245,12 @@ class VpnConfig {
       'proxy_domains': globalProxy ? <String>[] : proxyDomains,
       'proxy_cidr': globalProxy ? <String>[] : proxyCidr,
       'disable_check_cert': disableCheckCert,
+      'udp_timeout': udpTimeout,
+      // 缓存大小/ttl 显式下发: 关闭时置 0 (native 以 >0 判断启用). 若仅
+      // 在开启时下发, 运行期关闭会被静默忽略 (沿用启动时的旧缓存配置).
+      'dns_cache_size': dnsCache ? 4096 : 0,
+      'dns_cache_ttl': dnsCache ? 300 : 0,
+      'dns_no_ipv6': noIpv6,
     };
     return map;
   }

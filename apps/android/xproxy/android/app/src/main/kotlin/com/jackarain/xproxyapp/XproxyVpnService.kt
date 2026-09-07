@@ -214,6 +214,10 @@ class XproxyVpnService : VpnService() {
     }
 
     /** 当前已连接的物理网络 (排除 VPN 自身), 供 setUnderlyingNetworks 使用. */
+    // 保留 getNetworkInfo().isConnected 而非改用 NET_CAPABILITY_VALIDATED:
+    // 被墙/未验证网络的流量同样需要经底层物理网卡发出, 过严的过滤会导致
+    // 无 underlying network、protect 放行的连接无法路由.
+    @Suppress("DEPRECATION")
     private fun underlyingNetworks(): List<Network> {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         return cm.allNetworks.filter { n ->

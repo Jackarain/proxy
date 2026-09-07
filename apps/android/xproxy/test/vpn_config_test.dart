@@ -89,7 +89,51 @@ void main() {
       expect(map['dns_cache_size'], 4096);
       expect(map['dns_cache_ttl'], 300);
       expect(map['dns_no_ipv6'], true);
+      expect(map['proxy_pass_pool_size'], 20);
       expect(map['launcher_url'], 'ws://127.0.0.1:12345');
+    });
+
+    test('连接池大小显式下发: 默认 20, 配置 0 表示禁用', () {
+      final c = VpnConfig(
+        id: 'abc',
+        name: '测试',
+        proxyPass: 'https://a:443',
+        proxyPassPoolSize: 0,
+      );
+      final map = jsonDecode(c.toProxyJson()) as Map<String, dynamic>;
+      // 0 也须显式下发: native 缺省为 20, 省略该键会导致「禁用」被静默忽略.
+      expect(map['proxy_pass_pool_size'], 0);
+
+      final on = VpnConfig(id: 'x', name: 'y', proxyPass: 'https://a:443');
+      final mapOn =
+          jsonDecode(on.toProxyJson()) as Map<String, dynamic>;
+      expect(mapOn['proxy_pass_pool_size'], 20);
+    });
+
+    test('toProxyOptions 下发 native 可热改字段, 关闭时显式置 0/false', () {
+      final c = VpnConfig(id: 'abc', name: '测试', proxyPass: 'https://a:443');
+      final opts = c.toProxyOptions();
+      expect(opts['udp_timeout'], 300);
+      expect(opts['dns_cache_size'], 4096);
+      expect(opts['dns_cache_ttl'], 300);
+      expect(opts['dns_no_ipv6'], isTrue);
+      expect(opts['proxy_pass'], 'https://a:443');
+
+      // 关闭时显式下发 0/false, 否则 native 沿用启动时的旧缓存/IPv6 配置,
+      // 运行期关闭不生效.
+      final off = VpnConfig(
+        id: 'x',
+        name: 'y',
+        proxyPass: 'https://a:443',
+        dnsCache: false,
+        noIpv6: false,
+        udpTimeout: 60,
+      );
+      final optsOff = off.toProxyOptions();
+      expect(optsOff['dns_cache_size'], 0);
+      expect(optsOff['dns_cache_ttl'], 0);
+      expect(optsOff['dns_no_ipv6'], isFalse);
+      expect(optsOff['udp_timeout'], 60);
     });
 
     test('全局代理时不下发分流列表, 热更新下发空列表', () {
