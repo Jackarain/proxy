@@ -799,7 +799,7 @@ struct tun_config {
 
 ### 10. 完整使用示例（C++20 Coroutine）
 
-> 除引擎级示例（本节）外，`examples/tun_packet.cpp` 是**设备层**原始 IP 包
+> 除引擎级示例（本节）外，`examples/cpp/tun_packet.cpp` 是**设备层**原始 IP 包
 > 中继/打印示例：直接使用 `tun_device` + `ip_packet`，不依赖引擎，读取并
 > 打印 TCP/UDP/ICMP 协议详情，`--echo` 时原样写回设备实现包回环中继。
 

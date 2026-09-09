@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# tun2socks：tunio Python 绑定的 SOCKS5 透明代理示例（对应 examples/tun2socks.cpp）。
+# tun2socks：tunio Python 绑定的 SOCKS5 透明代理示例（对应 examples/cpp/tun2socks.cpp）。
 #
 # TCP：引擎终止虚拟连接，应用层经 SOCKS5 CONNECT 连到代理后全双工桥接；
 # UDP：引擎维护 NAT 会话，应用层经 SOCKS5 UDP ASSOCIATE 中继转发；

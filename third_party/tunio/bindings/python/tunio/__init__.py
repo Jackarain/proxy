@@ -81,7 +81,7 @@ def _encode_string(value: str, field_name: str, size: int) -> bytes:
 
 
 # Python 关键字与 tun_config 字段的映射。
-# 字符串字段在未提供时采用与 examples/tun_echo.cpp 一致的便捷默认值。
+# 字符串字段在未提供时采用与 examples/cpp/tun_echo.cpp 一致的便捷默认值。
 _STRING_DEFAULTS = {
     "dev_name": "tun0",
     "ipv4_addr": "10.0.0.1",

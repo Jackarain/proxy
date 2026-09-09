@@ -5,7 +5,7 @@
 // 通过全局 operator new 计数统计分配；基于 socketpair 注入的虚拟
 // TUN 设备运行引擎，无需 root 权限。
 //
-// 使用：cmake 构建后运行 examples/benchmark；对比不同版本时可用
+// 使用：cmake 构建后从构建目录运行 bin/benchmark；对比不同版本时可用
 // -DBENCH_TAG=\"after\" 之类的宏标记输出，并保证两次运行使用相同
 // 的构建配置（Release/Debug 一致）。
 #include "tunio/tun_tcp_acceptor.hpp"

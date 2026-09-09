@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# tun_echo：tunio Python 绑定回显示例（对应 examples/tun_echo.cpp）。
+# tun_echo：tunio Python 绑定回显示例（对应 examples/cpp/tun_echo.cpp）。
 #
 # TCP：把虚拟连接收到的数据原样写回（引擎层面回显，省略 C++ 示例中
 #      桥接本机 echo 服务的后端连接）；

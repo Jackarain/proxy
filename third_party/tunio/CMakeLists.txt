@@ -22,6 +22,16 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+# 构建产物集中输出：可执行文件统一到 bin/，库统一到 lib/（静态库与
+# Windows 导入库属 ARCHIVE）。以 add_subdirectory 方式被 superproject 集成
+# 时不覆盖宿主项目的输出布局；bindings/python 对 tunio_c 另有 per-target
+# 覆盖，保持其共享库位于 Python 包目录内（见 bindings/python/CMakeLists.txt）。
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+endif()
+
 # 作为独立项目构建时查找系统 Boost；作为第三方库被 superproject（如
 # proxy 内置 Boost）引入时复用已存在的 Boost 目标，避免混用版本。
 # 优先复用 Boost::asio（内置 Boost 独立编译 asio 时提供头文件与符号来源，

@@ -61,6 +61,9 @@ cmake --build build -j
 ctest --test-dir build --output-on-failure
 ```
 
+构建产物统一输出：可执行文件（示例与测试）位于 `build/bin/`，库位于
+`build/lib/`。
+
 常用选项：
 
 - `TUNIO_BUILD_TESTS`（默认 `ON`）：构建单元测试（基于 Boost.Test，
@@ -164,7 +167,7 @@ pkg-config --cflags --libs tunio
 
 以下是一个完整的最小示例：打开 TUN 设备，将虚拟网内的 TCP 连接桥接到本机
 回环端口的 echo 服务，并在引擎层直接回显 UDP 数据报。完整版本见
-`examples/tun_echo.cpp`。
+`examples/cpp/tun_echo.cpp`。
 
 ```cpp
 #include "tunio/tun_tcp_acceptor.hpp"
@@ -322,7 +325,7 @@ int main()
 以 root 运行并配置路由后，虚拟网内客户端即可访问本机 echo 服务：
 
 ```sh
-sudo ./tun_echo --tun tun0 --ip 10.0.0.1 --netmask 255.255.255.0
+sudo ./build/bin/tun_echo --tun tun0 --ip 10.0.0.1 --netmask 255.255.255.0
 sudo ip route add 10.0.0.0/24 dev tun0   # 或由外部路由/策略路由注入流量
 ```
 
@@ -567,12 +570,17 @@ for (auto &t : threads) {
 
 ## 示例程序
 
+示例源码按语言分目录存放：C++ 示例位于 `examples/cpp/`，C 示例位于
+`examples/c/`（需开启 `TUNIO_BUILD_C` 或 `TUNIO_BUILD_PYTHON`），Python
+示例位于 `examples/python/`。
+
 | 程序 | 说明 |
 | :--- | :--- |
 | `tun_echo` | 最小示例：TCP 桥接本机 echo 服务 + UDP 回显 |
 | `tun2socks` | SOCKS5 透明代理：TCP CONNECT + UDP ASSOCIATE |
 | `examples/python/tun_echo.py` | `tun_echo` 的 Python 绑定版本（ctypes 绑定） |
 | `examples/python/tun2socks.py` | `tun2socks` 的 Python 绑定版本（纯 Python SOCKS5 客户端） |
+| `examples/c/tun2socks.c` | `tun2socks` 的 C API 版本（阻塞接口 + pthread，构建产物 `tun2socks_c`） |
 | `tun_packet` | 原始 IP 包中继/打印：直接使用 `tun_device` + `ip_packet`，解析并打印 TCP/UDP/ICMP 协议详情，`--echo` 回环中继 |
 | `benchmark` | 异步接口每操作堆分配与吞吐基准（基于 socketpair 注入） |
 
