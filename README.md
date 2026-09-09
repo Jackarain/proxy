@@ -244,22 +244,6 @@ curl -X POST -H "Content-Type: application/dns-json" \
     https://domain:1080/dns-query
 ```
 
-## 静态文件 http 服务器(可配置为云音乐播放器)
-
-`proxy server` 不仅是一个 `proxy` 服务器，同时还可以做为一个真实的静态文件 `http` 服务，且支持 `http range`，所以也可以作为 `http` 音视频文件服务器，播放器播放 `http` 音视频文件时通过 `http` 的 `bytes range` 协议进行 `seek`（快进快退），使用方法如下
-
-``` bash
-./proxy_server --autoindex true --http_doc /user/music --server_listen 0.0.0.0:1080
-```
-
-在目录 `/user/music` 中添加音乐文件（以及`.lrc`歌词文件），复制本项目中 `example/music` 下的 `index.html` 放入 `/user/music` 目录中，然后使用浏览器打开地址 `http://localhost:1080/` 运行效果（浏览器打开）：
-
-![image](https://github.com/user-attachments/assets/3910015e-f4d6-4162-912b-8b7594c41d88)
-
-当然，如果你希望只有你自己可以访问，那么在上面命令行添加参数 `--htpasswd true` 并通过参数 `--auth_users` 配置登录用户名和密码，打开页面时就会要求验证登录。
-
-本人的 [blog](https://www.jackarain.org) 就是直接运行在 `proxy_server` 上的静态页面(由 `jekyll` 生成)，它同时也是我的代理服务，还是我的 [音乐播放器](https://www.jackarain.org/music/index.html)
-
 ## TUN 模式（TUN2SOCKS）
 
 `proxy_server` 支持以 TUN 设备方式捕获本机（或通过路由引导的其它主机）的 IP 流量，解析 TCP/UDP 后按分流规则经上游代理转发或直连，实现全局透明代理。
@@ -318,6 +302,74 @@ proxy_server --server_listen 0.0.0.0:1080 --so_mark 100
 proxy_server --tun true --proxy_pass socks5://127.0.0.1:1080 \
     --proxy_domains example.com --proxy_cidr 10.0.0.0/8 --so_mark 100
 ```
+
+## Android app 客户端
+
+`proxy server` 同时提供一个 Android 端客户端（源码位于 `apps/android/`），将本项目的
+TUN 模式直接运行在手机上：通过 Android `VpnService` 建立虚拟网卡接管系统流量，在应用
+进程内加载 C++ 代理内核按分流规则转发，无需 root 即可实现全局代理。
+
+客户端由两部分组成：
+
+- `apps/android/libproxy/` — C++ 代理内核的 Android 封装，经 SWIG/JNI 编译为
+  `libxproxy.so`，对外提供 `xproxy.start(json)`/`xproxy.stop()`/`xproxy.build_version()`
+  等最小接口。
+- `apps/android/xproxy/` — Flutter 客户端应用，负责配置管理、`VpnService` 建立、控制
+  通道与交互界面，在应用进程内直接调用 `libxproxy.so` 运行代理。
+
+主要功能：
+
+- **多配置管理**：多条配置以 JSON 形式保存在本地，支持添加、编辑、切换与快速启动。
+- **上游代理**：`proxy_pass` 支持 `http(s)://`、`socks4`/`socks5`/`socks5s://` 等
+  协议，可配置 SNI、关闭证书校验（自签证书场景）、预连接池大小等参数。
+- **分流规则**：支持代理域名（后缀匹配）与代理 CIDR 分流，列表可手工编辑或从 URL
+  拉取；开启全局代理后所有流量均走上游；也可开启"绕过中国大陆"使国内网段直连。
+- **DNS 配置**：国内/国外 DNS 分开配置，国外支持 DoH；另有 DNS 缓存、禁用 IPv6 解析
+  （AAAA 查询直接返回空应答）等选项。
+- **运行状态**：实时显示上传/下载速率、流量统计、运行时长、连接数与活动会话列表，
+  内置连接测试与运行日志查看。
+
+技术要点：`VpnService.establish()` 建立的 TUN 描述符经本地 WS 控制通道注入代理内核
+（`tun_wait_fd` 模式）；内核创建出站连接时经控制通道发起 `protect` 请求，由原生侧调用
+`VpnService.protect(fd)` 放行，避免代理自身流量回环进 TUN；控制通道同时用于运行期
+状态/日志上报与 `set_config` 热更新。
+
+构建 APK 的大致流程如下（详细说明见 `apps/android/README.md` 与
+`apps/android/xproxy/README.md`）：
+
+``` bash
+# 1. 编译各 ABI 的 libxproxy.so（仓库根目录，需指定 Android NDK 路径）
+#    脚本会自动将 libxproxy.so 同步到 Flutter 工程的 jniLibs 目录
+./build.android.sh /root/proxy <ndk-path> linux-x86_64
+
+# 2. 同步 SWIG 生成的 Java 包装文件到 Flutter 工程
+cp outputs/*.java apps/android/xproxy/android/app/src/main/java/com/jackarain/
+
+# 3. 构建 APK
+cd apps/android/xproxy
+flutter pub get
+flutter build apk
+```
+
+运行效果：
+
+![image](https://github.com/user-attachments/assets/a512799b-df0e-4e7d-b289-0160ec5f882b)
+
+## 静态文件 http 服务器(可配置为云音乐播放器)
+
+`proxy server` 不仅是一个 `proxy` 服务器，同时还可以做为一个真实的静态文件 `http` 服务，且支持 `http range`，所以也可以作为 `http` 音视频文件服务器，播放器播放 `http` 音视频文件时通过 `http` 的 `bytes range` 协议进行 `seek`（快进快退），使用方法如下
+
+``` bash
+./proxy_server --autoindex true --http_doc /user/music --server_listen 0.0.0.0:1080
+```
+
+在目录 `/user/music` 中添加音乐文件（以及`.lrc`歌词文件），复制本项目中 `example/music` 下的 `index.html` 放入 `/user/music` 目录中，然后使用浏览器打开地址 `http://localhost:1080/` 运行效果（浏览器打开）：
+
+![image](https://github.com/user-attachments/assets/3910015e-f4d6-4162-912b-8b7594c41d88)
+
+当然，如果你希望只有你自己可以访问，那么在上面命令行添加参数 `--htpasswd true` 并通过参数 `--auth_users` 配置登录用户名和密码，打开页面时就会要求验证登录。
+
+本人的 [blog](https://www.jackarain.org) 就是直接运行在 `proxy_server` 上的静态页面(由 `jekyll` 生成)，它同时也是我的代理服务，还是我的 [音乐播放器](https://www.jackarain.org/music/index.html)
 
 ### 其它相关
 
