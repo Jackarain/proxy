@@ -2,12 +2,14 @@
 // webui_embedded.hpp
 // ~~~~~~~~~~~~~~~~~~
 //
-// WebUI 静态资源内嵌查找接口。资源由构建期脚本 embed_webui.cmake 生成的
-// webui_embedded.cpp 提供（静态资源直接编入可执行文件），
-// 使 launcher 单文件即可提供完整 WebUI，无需在可执行文件旁放置 webui 目录。
+// Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// WebUI 静态资源内嵌查找接口。资源由构建期脚本 embed_webui.cmake 生成的
+// webui_embedded.cpp 提供（静态资源直接编入可执行文件），
+// 使 launcher 单文件即可提供完整 WebUI，无需在可执行文件旁放置 webui 目录。
 //
 
 #ifndef LAUNCHER_WEBUI_EMBEDDED_HPP

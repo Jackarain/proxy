@@ -2,10 +2,12 @@
 // proc_unix.cpp
 // ~~~~~~~~~~~~~
 //
-// POSIX 平台的子进程管理实现：fork/exec/pipe/waitpid + 进程组信号。
+// Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// POSIX 平台的子进程管理实现：fork/exec/pipe/waitpid + 进程组信号。
 //
 
 // musl 下 id_t 等类型仅在 _GNU_SOURCE/_BSD_SOURCE 时可见；

@@ -2,11 +2,13 @@
 // proc_windows.cpp
 // ~~~~~~~~~~~~~~~~
 //
-// Windows 平台的子进程管理实现：CreateProcessW + 匿名管道 +
-// TerminateProcess（Windows 无 SIGTERM/进程组语义，直接强制终止）。
+// Copyright (c) 2026 Jack (jack dot wgm at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+//
+// Windows 平台的子进程管理实现：CreateProcessW + 匿名管道 +
+// TerminateProcess（Windows 无 SIGTERM/进程组语义，直接强制终止）。
 //
 
 #include "proc.hpp"
