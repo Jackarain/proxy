@@ -63,6 +63,16 @@ void addattr_l(
     n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len);
 }
 
+// NLMSG_OK 宏在 nlmsg_len（__u32）与 int len 比较时会触发 -Wsign-compare，
+// 这里做等价判断：剩余长度足够，且消息长度不超过剩余长度。
+bool nlmsg_ok(const struct nlmsghdr* nlh, int len)
+{
+    if (len < static_cast<int>(sizeof(struct nlmsghdr)))
+        return false;
+    return nlh->nlmsg_len >= sizeof(struct nlmsghdr) &&
+        static_cast<size_t>(nlh->nlmsg_len) <= static_cast<size_t>(len);
+}
+
 // 通过 netlink 为接口添加 IPv6 地址（RTM_NEWADDR），等待内核 ACK
 bool add_ipv6_address(int ioctl_sock,
     const std::string& ifname,
@@ -143,7 +153,7 @@ bool add_ipv6_address(int ioctl_sock,
         }
         int len = static_cast<int>(rd);
         for (struct nlmsghdr* h = reinterpret_cast<struct nlmsghdr*>(rbuf);
-            NLMSG_OK(h, len);
+            nlmsg_ok(h, len);
             h = NLMSG_NEXT(h, len))
         {
             if (h->nlmsg_type != NLMSG_ERROR)
