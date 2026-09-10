@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 自适应图标前景：「X」字标，控制在 66dp 安全区内。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="54"
+        android:translateY="54">
+        <group android:rotation="-45">
+            <path
+                android:fillColor="#C9D0FA"
+                android:pathData="M -26.95 0
+                    A 6.055 6.055 0 0 1 -20.895 -6.055
+                    H 20.895
+                    A 6.055 6.055 0 0 1 26.95 0
+                    A 6.055 6.055 0 0 1 20.895 6.055
+                    H -20.895
+                    A 6.055 6.055 0 0 1 -26.95 0 Z"/>
+        </group>
+        <group android:rotation="45">
+            <path
+                android:fillColor="#FFFFFF"
+                android:pathData="M -26.95 0
+                    A 6.055 6.055 0 0 1 -20.895 -6.055
+                    H 20.895
+                    A 6.055 6.055 0 0 1 26.95 0
+                    A 6.055 6.055 0 0 1 20.895 6.055
+                    H -20.895
+                    A 6.055 6.055 0 0 1 -26.95 0 Z"/>
+        </group>
+    </group>
+</vector>

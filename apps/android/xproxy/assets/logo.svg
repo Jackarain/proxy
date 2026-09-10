@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  xProxy logo source.
+
+  设计说明：圆角方形底 + 白色交织的「X」字标。
+  「X」取自 xProxy 首字母，两条笔画一前一后交织，寓意请求在代理之间转发、
+  交叉（relay）；白色笔画在靛蓝渐变底上保证 26px 小尺寸下依然清晰。
+  底图渐变、高光与字标配色如下，导出的 PNG 由本文件生成。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6D6FF3"/>
+      <stop offset="1" stop-color="#3B3BC0"/>
+    </linearGradient>
+    <linearGradient id="strokeOver" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9ECFF"/>
+    </linearGradient>
+    <linearGradient id="strokeUnder" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#D8DDFF"/>
+      <stop offset="1" stop-color="#B7C0F4"/>
+    </linearGradient>
+    <radialGradient id="gloss" cx="0.3" cy="0.18" r="0.95">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.2"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="232" fill="url(#gloss)"/>
+  <g transform="translate(512 512)">
+    <rect x="-356" y="-80" width="712" height="160" rx="80" fill="url(#strokeUnder)" transform="rotate(-45)"/>
+    <rect x="-356" y="-80" width="712" height="160" rx="80" fill="url(#strokeOver)" transform="rotate(45)"/>
+  </g>
+</svg>
