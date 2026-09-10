@@ -55,7 +55,7 @@ struct rpc_result
 	int error_code_ = 0;
 	std::string error_message_;
 
-	bool ok() const { return error_code_ == 0; }
+	bool ok() const;
 };
 
 // 控制通道 WebSocket 流：明文 / TLS。
@@ -93,10 +93,6 @@ class jsonrpc_session
 		std::shared_ptr<jsonrpc::jsonrpc_session<ws_plain>>,
 		std::shared_ptr<jsonrpc::jsonrpc_session<ws_tls>>>
 {
-	using base_type = boost::variant2::variant<
-		std::shared_ptr<jsonrpc::jsonrpc_session<ws_plain>>,
-		std::shared_ptr<jsonrpc::jsonrpc_session<ws_tls>>>;
-
 public:
 	using executor_type = net::any_io_executor;
 
@@ -115,40 +111,18 @@ public:
 	jsonrpc_session& operator=(const jsonrpc_session&) = default;
 
 	// 是否持有有效会话。
-	bool valid() const
-	{
-		return boost::variant2::visit(
-			[](const auto& sp) { return sp != nullptr; }, *this);
-	}
+	bool valid() const;
 
-	void start()
-	{
-		boost::variant2::visit([](auto& sp) { if (sp) sp->start(); }, *this);
-	}
+	void start();
 
-	void stop()
-	{
-		boost::variant2::visit([](auto& sp) { if (sp) sp->stop(); }, *this);
-	}
+	void stop();
 
-	bool running() const
-	{
-		return boost::variant2::visit(
-			[](const auto& sp) { return sp != nullptr && sp->running(); }, *this);
-	}
+	bool running() const;
 
 	// 发送 JSON-RPC 通知（无 id）。
-	void notify(const std::string& method, const json::value& params)
-	{
-		boost::variant2::visit([&](auto& sp) {
-			if (sp) sp->notify(method, params);
-		}, *this);
-	}
+	void notify(const std::string& method, const json::value& params);
 
-	net::any_io_executor get_executor()
-	{
-		return boost::variant2::visit([](auto& sp) { return sp->get_executor(); }, *this);
-	}
+	net::any_io_executor get_executor();
 
 	// 异步 JSON-RPC 调用（协程）。与超时定时器竞争，先完成者胜出；
 	// 响应 / 错误 / 超时统一转为 rpc_result，不抛异常。
@@ -156,80 +130,12 @@ public:
 	// （它要等所有分支完成才返回，RPC 分支挂起会导致整体永久挂起）。
 	// 这里改为：RPC 完成时取消定时器立即返回，定时器先触发则返回超时。
 	net::awaitable<rpc_result> async_call(const std::string& method,
-		const json::value& params, std::chrono::milliseconds timeout)
-	{
-		auto ex = co_await net::this_coro::executor;
-		// 持有会话拷贝，保证后台 RPC 协程执行期间会话对象存活。
-		auto sess = *this;
+		const json::value& params, std::chrono::milliseconds timeout);
 
-		struct race_state
-		{
-			bool done_ = false;
-			boost::system::error_code ec_;
-			json::object resp_;
-		};
-		auto st = std::make_shared<race_state>();
-		net::steady_timer timer(ex, timeout);
-		auto cancel_sig = std::make_shared<net::cancellation_signal>();
-
-		// 后台 RPC 分支：完成后记录结果并取消定时器，唤醒等待的调用者。
-		net::co_spawn(ex,
-			[sess = std::move(sess), st, method, params, cancel_sig]() mutable -> net::awaitable<void>
-			{
-				boost::system::error_code ec;
-				json::object resp;
-				try {
-					resp = co_await boost::variant2::visit(
-						[&](auto& sp) -> net::awaitable<json::object> {
-							return sp->async_call(method, params,
-								net::redirect_error(net::use_awaitable, ec));
-						}, sess);
-				} catch (...) {
-					ec = boost::asio::error::operation_aborted;
-				}
-				// 在 io_context 上串行记录结果（单线程，与超时判断互斥）。
-				net::dispatch(co_await net::this_coro::executor,
-					[st, resp = std::move(resp), ec, cancel_sig]() mutable {
-						if (!st->done_) {
-							st->done_ = true;
-							st->ec_ = ec;
-							st->resp_ = std::move(resp);
-							cancel_sig->emit(net::cancellation_type::all);
-						}
-					});
-			}, net::detached);
-
-		// 等待定时器；RPC 完成时会取消定时器。
-		auto slot = cancel_sig->slot();
-		slot.assign([&timer](net::cancellation_type_t) { timer.cancel(); });
-		boost::system::error_code tec;
-		co_await timer.async_wait(net::redirect_error(net::use_awaitable, tec));
-		slot.clear();
-
-		if (!st->done_) {
-			// 定时器先触发：超时。
-			rpc_result res;
-			res.error_code_ = kCodeServer;
-			res.error_message_ = "rpc call timeout";
-			co_return res;
-		}
-
-		rpc_result res;
-		if (st->ec_) {
-			res.error_code_ = kCodeServer;
-			res.error_message_ = st->ec_.message();
-			co_return res;
-		}
-		const auto& resp = st->resp_;
-		if (auto e = resp.if_contains("error"); e && e->is_object()) {
-			const auto& eo = e->as_object();
-			res.error_code_ = json_num(eo, "code");
-			res.error_message_ = json_str(eo, "message");
-		} else if (auto r = resp.if_contains("result"); r) {
-			res.result_ = *r;
-		}
-		co_return res;
-	}
+private:
+	using base_type = boost::variant2::variant<
+		std::shared_ptr<jsonrpc::jsonrpc_session<ws_plain>>,
+		std::shared_ptr<jsonrpc::jsonrpc_session<ws_tls>>>;
 };
 
 } // namespace launcher

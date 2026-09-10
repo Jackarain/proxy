@@ -591,6 +591,26 @@ http_server::http_server(std::shared_ptr<manager> mgr, net::io_context& ioc,
 	, m_version_(std::move(version))
 {}
 
+std::shared_ptr<manager> http_server::mgr() const
+{
+	return m_mgr_;
+}
+
+const std::string& http_server::webui_user() const
+{
+	return m_webui_user_;
+}
+
+const std::string& http_server::webui_password() const
+{
+	return m_webui_password_;
+}
+
+bool http_server::https_enabled() const
+{
+	return m_https_;
+}
+
 http_server::~http_server()
 {
 	stop();

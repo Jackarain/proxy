@@ -74,27 +74,13 @@ struct instance : public std::enable_shared_from_this<instance>
 	time_point last_exit_;  // 上次意外退出的时间
 
 	// 控制通道是否已建立。
-	bool online() const { return online_.load(); }
+	bool online() const;
 
 	// 根据控制通道与进程状态推导实例状态。
-	std::string state() const
-	{
-		if (online_.load())
-			return "running";
-		if (proc_ != nullptr && proc_->alive_)
-			return "starting";
-		if (proc_ != nullptr)
-			return "error";
-		return "stopped";
-	}
+	std::string state() const;
 
 	// 进程 PID：优先取本 launcher 拉起的进程，否则用 register 上报的孤儿 PID。
-	process_id pid() const
-	{
-		if (proc_ != nullptr && proc_->alive_)
-			return proc_->pid_;
-		return reg_pid_;
-	}
+	process_id pid() const;
 };
 
 // 实例列表摘要（供列表页使用）。
@@ -216,7 +202,7 @@ public:
 	// 生成控制通道地址。
 	std::string ws_url(const instance_ptr& in) const;
 
-	std::string data_dir() const { return m_data_dir_; }
+	std::string data_dir() const;
 
 private:
 	// 加锁查找实例；不存在返回 nullptr。

@@ -41,6 +41,8 @@ add_executable(launcher
 	main.cpp
 	options.cpp
 	${LAUNCHER_PROC_SRC}
+	ringbuf.cpp
+	jsonrpc.cpp
 	manager.cpp
 	http_server.cpp
 	version.cpp

@@ -254,6 +254,29 @@ std::string serialize_pretty(const json::value& v, int indent = 0)
 
 } // namespace
 
+bool instance::online() const
+{
+	return online_.load();
+}
+
+std::string instance::state() const
+{
+	if (online_.load())
+		return "running";
+	if (proc_ != nullptr && proc_->alive_)
+		return "starting";
+	if (proc_ != nullptr)
+		return "error";
+	return "stopped";
+}
+
+process_id instance::pid() const
+{
+	if (proc_ != nullptr && proc_->alive_)
+		return proc_->pid_;
+	return reg_pid_;
+}
+
 manager::manager(std::string data_dir, std::string proxy_path, std::string work_dir)
 	: m_data_dir_(std::move(data_dir))
 	, m_proxy_path_(std::move(proxy_path))
@@ -271,6 +294,11 @@ void manager::set_ws_addr(const std::string& host, int port, bool https)
 std::string manager::persist_path() const
 {
 	return (fs::path(m_data_dir_) / kInstancesFile).string();
+}
+
+std::string manager::data_dir() const
+{
+	return m_data_dir_;
 }
 
 std::string manager::pid_file_path(const std::string& id) const

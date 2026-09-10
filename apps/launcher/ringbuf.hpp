@@ -12,7 +12,6 @@
 #ifndef LAUNCHER_RINGBUF_HPP
 #define LAUNCHER_RINGBUF_HPP
 
-#include <chrono>
 #include <cstdint>
 #include <mutex>
 #include <string>
@@ -23,69 +22,23 @@ namespace launcher {
 class ringbuf
 {
 public:
-	explicit ringbuf(int max = 2000)
-		: max_(max > 0 ? max : 2000)
-		, gen_(std::chrono::system_clock::now().time_since_epoch().count())
-	{}
+	explicit ringbuf(int max = 2000);
 
 	// 追加一行，超出容量时丢弃最旧行。
-	void add(const std::string& line)
-	{
-		std::lock_guard<std::mutex> lock(mu_);
-		if (lines_.size() == static_cast<std::size_t>(max_)) {
-			lines_.erase(lines_.begin());
-			seq_.erase(seq_.begin());
-		}
-		lines_.push_back(line);
-		seq_.push_back(next_);
-		next_++;
-	}
+	void add(const std::string& line);
 
 	// 返回最近 n 行。
-	std::vector<std::string> tail(int n)
-	{
-		std::lock_guard<std::mutex> lock(mu_);
-		if (n <= 0 || n > static_cast<int>(lines_.size()))
-			n = static_cast<int>(lines_.size());
-		std::vector<std::string> out(lines_.end() - n, lines_.end());
-		return out;
-	}
+	std::vector<std::string> tail(int n);
 
 	// 返回最近 n 行及其序号。
-	void tail_seq(int n, std::vector<std::string>& lines, std::vector<std::int64_t>& seqs)
-	{
-		std::lock_guard<std::mutex> lock(mu_);
-		if (n <= 0 || n > static_cast<int>(lines_.size()))
-			n = static_cast<int>(lines_.size());
-		lines.assign(lines_.end() - n, lines_.end());
-		seqs.assign(seq_.end() - n, seq_.end());
-	}
+	void tail_seq(int n, std::vector<std::string>& lines, std::vector<std::int64_t>& seqs);
 
 	// 返回序号大于 pos 的行及其序号。
-	void since(std::int64_t pos, std::vector<std::string>& lines, std::vector<std::int64_t>& seqs)
-	{
-		std::lock_guard<std::mutex> lock(mu_);
-		lines.clear();
-		seqs.clear();
-		for (std::size_t i = 0; i < seq_.size(); i++) {
-			if (seq_[i] > pos) {
-				lines.push_back(lines_[i]);
-				seqs.push_back(seq_[i]);
-			}
-		}
-	}
+	void since(std::int64_t pos, std::vector<std::string>& lines, std::vector<std::int64_t>& seqs);
 
-	std::int64_t next_seq()
-	{
-		std::lock_guard<std::mutex> lock(mu_);
-		return next_;
-	}
+	std::int64_t next_seq();
 
-	std::int64_t generation()
-	{
-		std::lock_guard<std::mutex> lock(mu_);
-		return gen_;
-	}
+	std::int64_t generation();
 
 private:
 	std::mutex mu_;
