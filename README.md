@@ -353,7 +353,7 @@ flutter build apk
 
 运行效果：
 
-![image](https://github.com/user-attachments/assets/a512799b-df0e-4e7d-b289-0160ec5f882b)
+![image](https://github.com/user-attachments/assets/45960412-acc6-459f-b249-9872bf0ac2ff)
 
 ## 静态文件 http 服务器(可配置为云音乐播放器)
 
