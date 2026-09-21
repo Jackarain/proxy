@@ -172,6 +172,9 @@ public:
 	net::awaitable<bool> set_user_quota(const std::string& id, const std::string& user, std::int64_t quota,
 		boost::json::value& result, std::string& err);
 
+	net::awaitable<bool> set_user_conn_limit(const std::string& id, const std::string& user, int limit,
+		boost::json::value& result, std::string& err);
+
 	// ---- 视图 ----
 
 	boost::json::value summaries();

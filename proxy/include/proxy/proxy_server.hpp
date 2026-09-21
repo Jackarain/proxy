@@ -227,6 +227,9 @@ namespace proxy {
 		// 设置单个用户的流量配额（quota<=0 取消配额；按上行+下行总和计算）。
 		bool set_auth_user_quota(const std::string& user, std::int64_t quota);
 
+		// 设置单个用户的连接数限制（limit<=0 取消限制）。
+		bool set_auth_user_conn_limit(const std::string& user, int limit);
+
 		// 查询用户流量配额（字节）；<=0 或未配置表示不限制. 线程安全.
 		int64_t user_quota(const std::string& user) override;
 
@@ -237,7 +240,11 @@ namespace proxy {
 		// 续接 launcher 持久化的用户已用量（配额续接）。
 		void set_user_usage(const boost::json::object& usage);
 
-		// 当前用户状态（auth_users / users_rate_limit / users_quota）。
+		// 申请/释放用户连接计数槽位（用户连接数限制；覆盖 proxy_server_base）。
+		bool acquire_user_connection(const std::string& user) override;
+		void release_user_connection(const std::string& user) override;
+
+		// 当前用户状态（auth_users / users_rate_limit / users_quota / users_conn_limit）。
 		boost::json::object users_state() const;
 
 		// 服务启动时间（Unix 秒）。

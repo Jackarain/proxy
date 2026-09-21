@@ -55,6 +55,8 @@ const option k_options[] = {
 	  "按用户独立限速（可添加多条）。格式 user:字节/秒，支持单位（如 jack:2.5M、alice:10.8G）。留空则所有用户使用全局限速。", "限速" },
 	{ "users_quota", option_kind::string_list, "按用户流量配额（上行+下行总和，字节），格式 user:bytes（可重复添加；超限停止该用户）。", false, false, 0, "", {}, false, false, false,
 	  "按用户流量配额（可添加多条）。格式 user:字节或带单位（如 jack:2.5G、alice:10.8M）。上行+下行总量超过配额后该用户被停止连接，默认不限制。", "限速" },
+	{ "users_conn_limit", option_kind::string_list, "按用户连接数限制，格式 user:count（可重复添加）。", false, false, 0, "", {}, false, false, false,
+	  "按用户同时连接数限制（可添加多条）。格式 user:最大连接数（如 jack:10）。达到上限后拒绝该用户的新连接，默认不限制。", "限速" },
 	{ "allow_region", option_kind::string_list, "仅允许指定地区或 CIDR 的连接（可重复添加）。", false, false, 0, "", {}, false, false, false,
 	  "仅允许这些地区/网段访问（可添加多条）。地区如 CN、US；网段如 1.2.3.0/24。需配置 IPIP 数据库。", "地区" },
 	{ "deny_region", option_kind::string_list, "拒绝指定地区或 CIDR 的连接（可重复添加）。", false, false, 0, "", {}, false, false, false,

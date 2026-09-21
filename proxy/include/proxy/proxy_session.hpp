@@ -280,6 +280,13 @@ namespace proxy {
 		// - 用于 launcher 状态展示与配额续接（超限停止该用户连接）。
 		std::unordered_map<std::string, int64_t> users_quota_;
 
+		// 用户连接数限制（按用户名粒度，单位：同时存在的连接数）。
+		//
+		// - key   ：用户名
+		// - value ：允许的最大同时连接数，<=0 表示不限制
+		// - 仅在认证成功时拒绝超出限制的新连接，不影响已建立的连接。
+		std::unordered_map<std::string, int> users_conn_limit_;
+
 		// 允许访问的地区集合（白名单）。
 		//
 		// - 例如：{ "中国", "香港", "台湾" }
@@ -595,6 +602,14 @@ namespace proxy {
 		// 当前会话），用于配额超限判断；未配置返回 0. 线程安全.
 		// self 为发起检查的会话指针（可为空，为空则仅统计历史与已关闭部分）.
 		virtual int64_t user_total_flow(const proxy_session* self) = 0;
+
+		// 申请一个用户连接计数槽位（用于用户连接数限制）；返回 false 表示
+		// 当前连接数已达限制. user 为空（匿名）时直接返回 true. 线程安全.
+		virtual bool acquire_user_connection(const std::string& user) = 0;
+
+		// 释放一个用户连接计数槽位（与 acquire_user_connection 配对）.
+		// user 为空时不做任何处理. 线程安全.
+		virtual void release_user_connection(const std::string& user) = 0;
 
 		// 获取 DNS 查询结果缓存（UDP DNS 服务器与 HTTP DNS 路径共享）。
 		// 未启用缓存时返回 nullptr. 默认空实现.
@@ -982,6 +997,10 @@ namespace proxy {
 		// 配置指定用户的速率限制.
 		void user_rate_limit_config(const std::string& user) noexcept;
 
+		// 登记用户连接计数（用于用户连接数限制）；同一连接内重复认证同一
+		// 用户不重复计数，返回 false 表示已达连接数限制.
+		bool user_conn_acquire(const std::string& user) noexcept;
+
 		// 检查当前认证用户是否已超出流量配额（上行+下行总和，含历史已用流量与其他会话流量）.
 		bool quota_exceeded() const noexcept;
 
@@ -1111,6 +1130,10 @@ namespace proxy {
 
 		// m_auth_user 认证成功的用户名（匿名/未认证为空串）。
 		std::string m_auth_user;
+
+		// m_conn_user 已登记用户连接计数的用户名（空串表示未登记）。
+		// HTTP keep-alive 同一连接内多次认证时避免重复计数.
+		std::string m_conn_user;
 
 		// m_conn_mutex 保护 m_target/m_proto（运行期可变字段），
 		// 避免与 launcher 状态上报并发读取产生数据竞争.

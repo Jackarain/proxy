@@ -98,4 +98,5 @@ export interface UserState {
   auth_users: string[];
   users_rate_limit: string[];
   users_quota: string[];
+  users_conn_limit: string[];
 }

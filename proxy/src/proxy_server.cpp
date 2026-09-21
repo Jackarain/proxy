@@ -73,6 +73,11 @@ struct launcher_state
 	std::mutex usage_mutex_;
 	std::map<std::string, int64_t> user_usage_;
 
+	// 当前已认证的连接数（user -> 连接数），用于用户连接数限制.
+	// acquire 在锁内完成“比较 + 自增”，保证并发认证不会超出限制.
+	std::mutex user_conn_mutex_;
+	std::map<std::string, int> user_conn_count_;
+
 	// 最近一次状态报告（get_status 返回用；仅 io_context 线程访问）.
 	boost::json::value last_report_;
 
@@ -1440,6 +1445,21 @@ json::value proxy_server::launcher_dispatch(const std::string& method, const jso
 		return users_state();
 	}
 
+	if (method == "set_user_conn_limit")
+	{
+		std::string user;
+		int limit = 0;
+		if (params.is_object())
+		{
+			user = detail::json_str(params.as_object(), "user");
+			limit = static_cast<int>(detail::json_num(params.as_object(), "limit"));
+		}
+		if (user.empty())
+			throw launcher_error{ -32602, "user is required" };
+		set_auth_user_conn_limit(user, limit);
+		return users_state();
+	}
+
 
 	if (method == "set_user_usage")
 	{
@@ -2554,6 +2574,19 @@ boost::json::object proxy_server::apply_options(const boost::json::object& optio
 			m_option.users_quota_ = std::move(map);
 			ok = true;
 		}
+		else if (name == "users_conn_limit")
+		{
+			std::unordered_map<std::string, int> map;
+			for (const auto& e : detail::to_str_list(val))
+			{
+				auto pos = e.find(':');
+				if (pos == std::string::npos)
+					continue;
+				map[e.substr(0, pos)] = std::atoi(e.substr(pos + 1).c_str());
+			}
+			m_option.users_conn_limit_ = std::move(map);
+			ok = true;
+		}
 
 		else if (name == "allow_region")
 		{
@@ -2830,6 +2863,51 @@ bool proxy_server::set_auth_user_quota(const std::string& user, int64_t quota)
 	return true;
 }
 
+bool proxy_server::set_auth_user_conn_limit(const std::string& user, int limit)
+{
+	std::lock_guard<std::mutex> lock(m_option_mutex);
+	if (limit <= 0)
+		m_option.users_conn_limit_.erase(user);
+	else
+		m_option.users_conn_limit_[user] = limit;
+	return true;
+}
+
+bool proxy_server::acquire_user_connection(const std::string& user)
+{
+	if (user.empty())
+		return true;
+
+	int limit = 0;
+	{
+		// 先取限制值再登记计数，避免与 m_option_mutex 形成嵌套加锁.
+		std::lock_guard<std::mutex> lock(m_option_mutex);
+		auto it = m_option.users_conn_limit_.find(user);
+		if (it != m_option.users_conn_limit_.end())
+			limit = it->second;
+	}
+
+	std::lock_guard<std::mutex> lock(m_launcher_state->user_conn_mutex_);
+	auto& count = m_launcher_state->user_conn_count_[user];
+	if (limit > 0 && count >= limit)
+		return false;
+	count++;
+	return true;
+}
+
+void proxy_server::release_user_connection(const std::string& user)
+{
+	if (user.empty())
+		return;
+
+	std::lock_guard<std::mutex> lock(m_launcher_state->user_conn_mutex_);
+	auto it = m_launcher_state->user_conn_count_.find(user);
+	if (it == m_launcher_state->user_conn_count_.end())
+		return;
+	if (--it->second <= 0)
+		m_launcher_state->user_conn_count_.erase(it);
+}
+
 
 
 void proxy_server::set_user_usage(const boost::json::object& usage)
@@ -2904,6 +2982,7 @@ boost::json::object proxy_server::users_state() const
 	boost::json::array auth_users;
 	boost::json::array users_rate_limit;
 	boost::json::array users_quota;
+	boost::json::array users_conn_limit;
 
 	std::lock_guard<std::mutex> lock(m_option_mutex);
 	for (const auto& [user, pwd, addr, proxy_pass] : m_option.auth_users_)
@@ -2924,11 +3003,14 @@ boost::json::object proxy_server::users_state() const
 		users_rate_limit.emplace_back(user + ":" + std::to_string(rate));
 	for (const auto& [user, quota] : m_option.users_quota_)
 		users_quota.emplace_back(user + ":" + std::to_string(quota));
+	for (const auto& [user, limit] : m_option.users_conn_limit_)
+		users_conn_limit.emplace_back(user + ":" + std::to_string(limit));
 
 	boost::json::object st;
 	st["auth_users"] = std::move(auth_users);
 	st["users_rate_limit"] = std::move(users_rate_limit);
 	st["users_quota"] = std::move(users_quota);
+	st["users_conn_limit"] = std::move(users_conn_limit);
 	return st;
 }
 

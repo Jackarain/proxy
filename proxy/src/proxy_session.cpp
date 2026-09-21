@@ -767,6 +767,26 @@ R"x*x*x(<html>
 		}
 	}
 
+	bool proxy_session::user_conn_acquire(const std::string& user) noexcept
+	{
+		// 同一连接内重复认证同一用户（如 HTTP keep-alive 多次请求）不重复计数.
+		if (m_conn_user == user)
+			return true;
+
+		auto server = m_proxy_server.lock();
+		if (!server)
+			return true;
+
+		if (!server->acquire_user_connection(user))
+			return false;
+
+		// 同一连接切换为其他用户时释放旧计数.
+		if (!m_conn_user.empty())
+			server->release_user_connection(m_conn_user);
+		m_conn_user = user;
+		return true;
+	}
+
 	bool proxy_session::quota_exceeded() const noexcept
 	{
 		// 匿名/未认证会话不参与配额限制.
@@ -1018,6 +1038,15 @@ R"x*x*x(<html>
 				if (!skip_passwd && passwd != pwd)
 					continue;
 
+				// 用户连接数限制: 已达该用户连接数上限则视为认证失败.
+				if (!user_conn_acquire(user))
+				{
+					log_conn_warning()
+						<< ", user connection limit exceeded, user: "
+						<< user;
+					co_return false;
+				}
+
 				// 记录认证用户（供 launcher 状态按用户统计）.
 				m_auth_user = user;
 
@@ -1040,6 +1069,15 @@ R"x*x*x(<html>
 				m_option.pam_auth_, net_awaitable[ec]);
 			if (result)
 			{
+				// 用户连接数限制: 已达该用户连接数上限则视为认证失败.
+				if (!user_conn_acquire(username))
+				{
+					log_conn_warning()
+						<< ", user connection limit exceeded, user: "
+						<< username;
+					co_return false;
+				}
+
 				// 记录认证用户（供 launcher 状态按用户统计）.
 				m_auth_user = username;
 
@@ -6433,6 +6471,10 @@ R"x*x*x(<html>
 		auto server = m_proxy_server.lock();
 		if (!server)
 			return;
+
+		// 释放用户连接计数槽位（用户连接数限制）.
+		if (!m_conn_user.empty())
+			server->release_user_connection(m_conn_user);
 
 		// 上报会话结束，并汇报累计流量.
 		server->session_closed(m_connection_id,

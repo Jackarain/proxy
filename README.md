@@ -107,6 +107,7 @@ docker build . -t proxy:v1
 | pam_auth | 指定使用 PAM 认证模块进行认证，参数值为 PAM 服务名称。PAM 可与 `auth_users` 同时用于认证，优先使用 `auth_users`。需在编译时添加 `-DENABLE_USE_PAM_AUTH=ON` 选项以启用 PAM 模块 |
 | auth_users | 认证信息列表，客户端必须满足其中一对用户/密码才能握手通过。默认用户密码为 `jack:1111`（默认需要认证以避免被误用作跳板）。若需设为无认证模式，须将 `auth_users` 置为 "" |
 | users_rate_limit | 指定认证用户的 TCP 连接 I/O 速率，单位为字节/秒，默认不限速。格式如：`user1:102400 user2:204800` |
+| users_conn_limit | 指定认证用户的最大同时连接数，默认不限制；达到上限后拒绝该用户的新连接。格式如：`user1:10 user2:50` |
 | proxy_pass | 当前服务作为中间级联服务时，指定上游代理服务地址，格式为 URL。如有认证信息须包含在内，如：`https://jack:1111@example.com:1080/` |
 | proxy_pass_ssl | 向 `proxy_pass` 指定的上游代理发起连接时，是否通过 SSL 加密传输。注意上游代理服务必须启用 SSL 相关证书 |
 | proxy_pass_pool_size | TUN 模式下预连接到 `proxy_pass` 的连接池大小（默认 20）。启动后每 5 秒建立 1 条到上游的 TCP(+TLS) 连接，直到池满该数量；TCP flow 走代理时优先从池中获取，避免重复握手；连接被取走或断开后立即异步补充。`0` 表示禁用 |

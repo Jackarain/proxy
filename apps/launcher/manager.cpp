@@ -198,6 +198,19 @@ std::vector<std::string> set_user_quota_entry(const std::vector<std::string>& li
 	return out;
 }
 
+// 替换或移除指定用户的连接数限制条目（limit<=0 移除）。
+std::vector<std::string> set_user_conn_limit_entry(const std::vector<std::string>& list,
+	const std::string& user, int limit)
+{
+	std::vector<std::string> out;
+	for (const auto& e : list)
+		if (user_of_entry(e) != user)
+			out.push_back(e);
+	if (limit > 0)
+		out.push_back(user + ":" + std::to_string(limit));
+	return out;
+}
+
 // 提取配置中的 stringlist。
 std::vector<std::string> config_list(const json::object& cfg, const char* key)
 {
@@ -867,9 +880,11 @@ boost::json::value manager::current_users_state(const instance_ptr& in)
 	st["auth_users"] = json::array();
 	st["users_rate_limit"] = json::array();
 	st["users_quota"] = json::array();
+	st["users_conn_limit"] = json::array();
 	set_config_list(st, "auth_users", config_list(in->config_, "auth_users"));
 	set_config_list(st, "users_rate_limit", config_list(in->config_, "users_rate_limit"));
 	set_config_list(st, "users_quota", config_list(in->config_, "users_quota"));
+	set_config_list(st, "users_conn_limit", config_list(in->config_, "users_conn_limit"));
 	return st;
 }
 
@@ -878,7 +893,7 @@ void manager::sync_users_state(const instance_ptr& in, const json::value& st)
 	if (!st.is_object())
 		return;
 	const auto& obj = st.as_object();
-	for (const char* key : { "auth_users", "users_rate_limit", "users_quota" }) {
+	for (const char* key : { "auth_users", "users_rate_limit", "users_quota", "users_conn_limit" }) {
 		if (auto it = obj.find(key); it != obj.end())
 			in->config_[key] = it->value();
 	}
@@ -1101,6 +1116,48 @@ net::awaitable<bool> manager::set_user_quota(const std::string& id, const std::s
 		auto list = config_list(in->config_, "users_quota");
 		list = set_user_quota_entry(list, user, quota);
 		set_config_list(in->config_, "users_quota", list);
+	}
+	result = current_users_state(in);
+	save();
+	co_return true;
+}
+
+net::awaitable<bool> manager::set_user_conn_limit(const std::string& id, const std::string& user, int limit,
+	json::value& result, std::string& err)
+{
+	if (user.empty()) {
+		err = "user is required";
+		co_return false;
+	}
+	jsonrpc_session sess;
+	instance_ptr in = find_instance(id);
+	if (!in) {
+		err = "instance not found";
+		co_return false;
+	}
+	{
+		std::lock_guard<std::mutex> lock(m_mu_);
+		sess = in->channel_;
+	}
+	if (sess.valid()) {
+		json::object params;
+		params["user"] = user;
+		params["limit"] = limit;
+		auto res = co_await sess.async_call("set_user_conn_limit", params, std::chrono::seconds(10));
+		if (!res.ok()) {
+			err = res.error_message_;
+			co_return false;
+		}
+		result = res.result_;
+		sync_users_state(in, res.result_);
+		save();
+		co_return true;
+	}
+	{
+		std::lock_guard<std::mutex> lock(m_mu_);
+		auto list = config_list(in->config_, "users_conn_limit");
+		list = set_user_conn_limit_entry(list, user, limit);
+		set_config_list(in->config_, "users_conn_limit", list);
 	}
 	result = current_users_state(in);
 	save();

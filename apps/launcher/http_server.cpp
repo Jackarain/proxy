@@ -1233,6 +1233,12 @@ net::awaitable<response> http_server::route(const http::request<http::string_bod
 						co_return make_error(http::status::bad_request, err);
 					co_return make_json_response(http::status::ok, result);
 				}
+				if (parts.size() >= 4 && parts[3] == "conn_limit") {
+					int limit = static_cast<int>(as_int(obj.if_contains("limit") ? obj.at("limit") : json::value()));
+					if (!co_await m_mgr_->set_user_conn_limit(id, user, limit, result, err))
+						co_return make_error(http::status::bad_request, err);
+					co_return make_json_response(http::status::ok, result);
+				}
 				std::string password = as_str(obj.if_contains("password") ? obj.at("password") : json::value());
 				if (password.empty())
 					co_return make_error(http::status::bad_request, "password is required");

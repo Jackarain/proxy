@@ -37,6 +37,7 @@ export interface InstanceState {
   // 用户页
   userRates: Record<string, string>;
   userQuotas: Record<string, string>;
+  userConnLimits: Record<string, string>;
   // 配置应用结果条
   applyResult: { text: string; kind: "ok" | "err"; needsRestart: string[] } | null;
 }
@@ -60,6 +61,7 @@ export function defaultInstanceState(): InstanceState {
     userConns: {},
     userRates: {},
     userQuotas: {},
+    userConnLimits: {},
     applyResult: null,
   };
 }

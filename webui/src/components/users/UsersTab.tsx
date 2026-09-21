@@ -14,7 +14,7 @@ interface UserEntry {
   proxy: string;
 }
 
-// 解析 user:value 配置数组（users_rate_limit / users_quota）。
+// 解析 user:value 配置数组（users_rate_limit / users_quota / users_conn_limit）。
 function parsePairs(arr: unknown): Record<string, string> {
   const out: Record<string, string> = {};
   for (const e of (Array.isArray(arr) ? arr : []) as string[]) {
@@ -29,6 +29,7 @@ export default function UsersTab({ id, active }: { id: string; active: boolean }
   const patchInstState = useApp((s) => s.patchInstState);
   const userRates = useApp((s) => s.perInst[id]?.userRates);
   const userQuotas = useApp((s) => s.perInst[id]?.userQuotas);
+  const userConnLimits = useApp((s) => s.perInst[id]?.userConnLimits);
   const openPrompt = useDialogs((s) => s.openPrompt);
 
   const [users, setUsers] = useState<UserEntry[]>([]);
@@ -52,7 +53,12 @@ export default function UsersTab({ id, active }: { id: string; active: boolean }
         const list = ((cfg.auth_users as string[]) || []).map(String);
         const rates = parsePairs(cfg.users_rate_limit);
         const quotas = parsePairs(cfg.users_quota);
-        patchInstState(id, { userRates: rates, userQuotas: quotas });
+        const connLimits = parsePairs(cfg.users_conn_limit);
+        patchInstState(id, {
+          userRates: rates,
+          userQuotas: quotas,
+          userConnLimits: connLimits,
+        });
         setUsers(
           list.map((entry) => {
             const parts = String(entry).split(":");
@@ -97,7 +103,7 @@ export default function UsersTab({ id, active }: { id: string; active: boolean }
     }
   };
 
-  // 每行操作：改密码 / 限速 / 限额 / 删除。
+  // 每行操作：改密码 / 限速 / 限额 / 连接数 / 删除。
   const act = async (user: string, action: string) => {
     try {
       if (action === "del") {
@@ -166,6 +172,31 @@ export default function UsersTab({ id, active }: { id: string; active: boolean }
           quota > 0
             ? `用户 ${user} 流量配额已设置为 ${formatSize(quota)}`
             : `用户 ${user} 流量配额已取消`,
+          "ok"
+        );
+      } else if (action === "conn_limit") {
+        const cur = userConnLimits?.[user] || "";
+        const c = await openPrompt(
+          `输入用户 ${user} 的最大连接数（正整数；0 或留空取消限制）：`,
+          { value: cur }
+        );
+        if (c == null) return;
+        const limit = c.trim() === "" ? 0 : Number(c.trim());
+        if (!Number.isInteger(limit) || limit < 0) {
+          showToast("连接数格式无效，请输入正整数", "warn");
+          return;
+        }
+        await api(
+          `/api/instances/${id}/users/${encodeURIComponent(user)}/conn_limit`,
+          {
+            method: "PUT",
+            body: JSON.stringify({ limit }),
+          }
+        );
+        showToast(
+          limit > 0
+            ? `用户 ${user} 最大连接数已设置为 ${limit}`
+            : `用户 ${user} 连接数限制已取消`,
           "ok"
         );
       }
@@ -255,6 +286,11 @@ export default function UsersTab({ id, active }: { id: string; active: boolean }
                     {userQuotas?.[u.user]
                       ? `限额 ${formatSize(parseSize(userQuotas[u.user]))}`
                       : "限额"}
+                  </Button>
+                  <Button size="sm" onClick={() => act(u.user, "conn_limit")}>
+                    {userConnLimits?.[u.user]
+                      ? `连接数 ${userConnLimits[u.user]}`
+                      : "连接数"}
                   </Button>
                   <Button
                     size="sm"

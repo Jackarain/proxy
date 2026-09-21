@@ -28,7 +28,7 @@ launcher 启动 `proxy_server` 时通过 `--launcher ws://host:port/rpc?instance
   需重启项由 `proxy_server` 判定（`stdio`、`transparent`、`ssl_ciphers`、
   `ssl_prefer_server_ciphers`），其余选项立即生效；WebUI 另按选项表的 `restart_only`
   标记（含 `tun` / `tun_name` / `tun_mtu` / `proxy_domains` / `proxy_cidr`）作静态提示。
-- **用户管理**：新增/删除用户、修改密码、设置限速与流量配额，配置与运行期双向同步。
+- **用户管理**：新增/删除用户、修改密码、设置限速、流量配额与连接数限制，配置与运行期双向同步。
 - **用量续接**：用户累计流量在 launcher 侧持久化，实例重启后经 `set_user_usage` 续接配额计数。
 - **状态监控**：实例经控制通道上报状态，WebUI 展示在线状态、PID、连接数、上下行速率与连接明细。
 - **日志采集**：每个实例保留最近 2000 行（环形缓冲），支持按序号增量拉取。
@@ -89,7 +89,7 @@ WebUI 由 `webui/` 下的 React + Vite 前端构建（详见 `webui/README.md`�
 - **实例列表 / 详情**：2 秒轮询刷新，展示状态、PID、监听地址、连接数与速率；
   支持启动/停止/重启、重命名、删除、切换开机自启、复制实例地址。
 - **状态页**：实例摘要、用户表（用量 / 限速 / 配额）、连接明细。
-- **用户页**：用户增删、改密码、限速与配额管理。
+- **用户页**：用户增删、改密码、限速、配额与连接数管理。
 - **配置页**：按选项注册表渲染表单（常用配置置顶），保存后热改并提示需重启项。
 - **日志页**：增量渲染、过滤、自动滚动。
 
@@ -115,6 +115,7 @@ WebUI 由 `webui/` 下的 React + Vite 前端构建（详见 `webui/README.md`�
 | `PUT /api/instances/:id/users/:user` | 修改密码，body：`{"password"}` |
 | `PUT /api/instances/:id/users/:user/rate` | 设置限速，body：`{"rate":<字节/秒>}` |
 | `PUT /api/instances/:id/users/:user/quota` | 设置流量配额，body：`{"quota":<字节>}` |
+| `PUT /api/instances/:id/users/:user/conn_limit` | 设置最大连接数，body：`{"limit":<整数>}` |
 
 ## 控制通道（`/rpc`）
 

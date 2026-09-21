@@ -60,6 +60,7 @@ std::vector<std::string> server_listens;
 std::vector<std::string> auth_users;
 std::vector<std::string> users_rate_limit;
 std::vector<std::string> users_quota;
+std::vector<std::string> users_conn_limit;
 std::vector<std::string> deny_region;
 std::vector<std::string> allow_region;
 
@@ -249,6 +250,21 @@ start_proxy_server(net::io_context& ioc, server_ptr& server)
 			continue;
 		}
 		opt.users_quota_.insert_or_assign(name, quota);
+	}
+
+	for (const auto& entry : users_conn_limit)
+	{
+		if (entry.empty())
+			continue;
+
+		auto pos = entry.find(':');
+		if (pos == std::string::npos)
+			continue;
+
+		auto name = entry.substr(0, pos);
+		auto limit = std::atoi(entry.substr(pos + 1).c_str());
+
+		opt.users_conn_limit_.insert_or_assign(name, limit);
 	}
 
 	if (!proxy_pass.empty())
@@ -519,6 +535,7 @@ int main(int argc, char** argv)
 		("auth_users", po::value<std::vector<std::string>>(&auth_users)->multitoken()->default_value(std::vector<std::string>{"jack:1111"}), "List of authorized users (default: jack:1111), format: user:password[:addr[:proxy_url]] (repeatable).")
 		("users_rate_limit", po::value<std::vector<std::string>>(&users_rate_limit)->multitoken(), "Per-user rate limit in bytes/second, format: user:rate (repeatable).")
 		("users_quota", po::value<std::vector<std::string>>(&users_quota)->multitoken(), "Per-user traffic quota (upload+download) in bytes, format: user:bytes (repeatable).")
+		("users_conn_limit", po::value<std::vector<std::string>>(&users_conn_limit)->multitoken(), "Per-user concurrent connection limit, format: user:count (repeatable).")
 
 		("allow_region", po::value<std::vector<std::string>>(&allow_region)->multitoken(), "Allow connections only from the specified regions/CIDRs (repeatable).")
 		("deny_region", po::value<std::vector<std::string>>(&deny_region)->multitoken(), "Deny connections from the specified regions/CIDRs (repeatable).")
