@@ -24,8 +24,10 @@ launcher 启动 `proxy_server` 时通过 `--launcher ws://host:port/rpc?instance
 ## 主要功能
 
 - **多实例管理**：创建/删除/启动/停止/重启，支持实例重命名与开机自启（autostart）。
-- **配置热更新**：经 `set_config` 下发热改，返回 `applied` / `needs_restart` / `errors`；
-  `stdio`、`transparent`、`tun` 等仅重启生效的选项会标记为需重启。
+- **配置热更新**：经 `set_config` 下发热改，返回 `applied` / `needs_restart` / `errors`。
+  需重启项由 `proxy_server` 判定（`stdio`、`transparent`、`ssl_ciphers`、
+  `ssl_prefer_server_ciphers`），其余选项立即生效；WebUI 另按选项表的 `restart_only`
+  标记（含 `tun` / `tun_name` / `tun_mtu` / `proxy_domains` / `proxy_cidr`）作静态提示。
 - **用户管理**：新增/删除用户、修改密码、设置限速与流量配额，配置与运行期双向同步。
 - **用量续接**：用户累计流量在 launcher 侧持久化，实例重启后经 `set_user_usage` 续接配额计数。
 - **状态监控**：实例经控制通道上报状态，WebUI 展示在线状态、PID、连接数、上下行速率与连接明细。
