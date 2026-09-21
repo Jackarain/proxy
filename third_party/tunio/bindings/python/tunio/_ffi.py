@@ -139,6 +139,7 @@ class TunioStats(ctypes.Structure):
         ("tcp_connections", ctypes.c_uint64),
         ("udp_sessions", ctypes.c_uint64),
         ("icmp_replies", ctypes.c_uint64),
+        ("tx_dropped", ctypes.c_uint64),
     ]
 
 

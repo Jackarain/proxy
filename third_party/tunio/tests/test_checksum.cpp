@@ -10,7 +10,7 @@
 
 #define BOOST_TEST_MODULE checksum
 #include <boost/test/included/unit_test.hpp>
-#include "../src/ip_headers.hpp"
+#include "tunio/detail/ip_headers.hpp"
 
 #include "test_harness.hpp"
 #include "tunio/tun_config.hpp"

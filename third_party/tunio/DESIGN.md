@@ -401,8 +401,8 @@ private:
 - **写路径 builder**：`begin_ipv4/begin_ipv6 -> begin_tcp/begin_udp/
   begin_icmp -> [append_payload] -> finalize()`，`finalize()` 回填长度并计算
   IP/TCP/UDP/ICMP 校验和（含伪头部），完成后访问器立即可用。
-- **复用**：`src/ip_headers.hpp` 中的报文头部结构体与校验和工具已提升至
-  公开头 `tunio/ip_packet.hpp`（`tunio` 命名空间），引擎内部经由
+- **复用**：`include/tunio/detail/ip_headers.hpp` 中的报文头部结构体与校验和
+  工具已提升至公开头 `tunio/ip_packet.hpp`（`tunio` 命名空间），引擎内部经由
   `detail` 命名空间的 using 声明引用，行为与 ABI 均不变；引擎自身的
   `handle_packet` 解析/丢弃策略保持不变。
 
@@ -546,6 +546,17 @@ struct udp_session {
 ```
 
 - **老化策略**：采用**最小堆（Min-Heap）** 管理会话超时。堆顶元素为最早即将过期的会话，定时器仅等待堆顶超时，避免轮询扫描全表。每次收到数据包时更新会话的 `expiry` 并调整堆位置。
+
+#### 6.4 出包与分片
+
+- **单包路径**：载荷不超过 MTU 时构造一个完整 IP + UDP 报文并写入设备，
+  完成回调透传设备写错误（失败时长度为 0）。
+- **分片路径**：IPv4 下超过 MTU 的数据报（含 UDP 头）按 RFC 791 切分为
+  多个 IP 分片，全部分片写出设备后以首个错误（或成功）完成一次回调；
+  退化 MTU 下无法继续拆分时以 `message_size` 完成且不写入任何分片。
+- **丢弃可见**：写队列安全阀（条目上限）丢弃、设备写失败、引擎关闭
+  （含取消后入队）时的队列清理均计入 `tx_dropped`，并如实向调用方上报
+  错误，避免丢弃后仍报成功。
 
 ---
 
@@ -722,6 +733,7 @@ struct engine_stats {
     std::atomic<uint64_t> tcp_connections;
     std::atomic<uint64_t> udp_sessions;
     std::atomic<uint64_t> icmp_replies;
+    std::atomic<uint64_t> tx_dropped;    // 未成功写出的出包数
 };
 
 class tunio {
@@ -729,6 +741,12 @@ public:
     const engine_stats& stats() const noexcept;
 };
 ```
+
+`rx_dropped` 与 `tx_dropped` 覆盖两个方向的丢弃：收包侧为解析失败、环路
+防护、乱序/队列超限等；出包侧为写队列安全阀（条目上限）丢弃、引擎关闭
+（含取消后入队）时的队列清理、以及设备写失败（重试超限或不可重试）。
+`tx_packets` 只统计真正写出设备的包，故 `tx_packets + tx_dropped` 即交给
+写队列的出包总数。
 
 ---
 

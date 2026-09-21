@@ -13,7 +13,7 @@ jobs:
       - name: Update OS and Compilers
         run: |
           sudo apt update
-          sudo apt install -y cmake ninja-build
+          sudo apt install -y cmake ninja-build pkg-config
 
       - name: Install Boost headers
         run: |
@@ -34,6 +34,35 @@ jobs:
           cmake -S . -B build-tests -DCMAKE_BUILD_TYPE=Debug -DTUNIO_BUILD_EXAMPLES=OFF -G Ninja
           cmake --build build-tests
           ctest --test-dir build-tests --output-on-failure
+
+      - name: Install smoke test (find_package + pkg-config)
+        run: |
+          # 安装导出包必须能脱离源码树被消费方使用：公开头内联包含的
+          # detail/ 实现头（引擎头等）需随包导出（见根 CMakeLists.txt 的
+          # 安装规则）。此步骤安装到临时前缀，并用 find_package 与
+          # pkg-config 两条路径各编译一次消费方.
+          prefix="$RUNNER_TEMP/tunio-prefix"
+          cmake -S . -B build-install -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DTUNIO_INSTALL=ON \
+            -DTUNIO_BUILD_TESTS=OFF -DTUNIO_BUILD_EXAMPLES=OFF
+          cmake --build build-install
+          cmake --install build-install --prefix "$prefix"
+
+          # find_package(tunio)：独立消费方工程经导入目标编译并链接
+          cmake -S tests/install -B build-consumer -G Ninja \
+            -DCMAKE_PREFIX_PATH="$prefix"
+          cmake --build build-consumer
+          ./build-consumer/tunio_install_consumer
+
+          # pkg-config：等价的编译与链接参数（Boost 头文件不在默认搜索
+          # 路径时由 BOOST_ROOT 补充，与 find_package 路径一致）
+          export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
+          boost_include=""
+          if [ -n "$BOOST_ROOT" ]; then boost_include="-I$BOOST_ROOT"; fi
+          c++ -std=c++20 $boost_include tests/install/consumer.cpp \
+            $(pkg-config --cflags tunio) $(pkg-config --libs tunio) \
+            -o "$RUNNER_TEMP/tunio-pc-consumer"
+          "$RUNNER_TEMP/tunio-pc-consumer"
 
       - name: Check UTF-8 BOM on code files
         run: |

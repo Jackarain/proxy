@@ -10,8 +10,8 @@
 
 #include "tunio/tunio.hpp"
 
-#include "ip_headers.hpp"
-#include "tunio_impl.hpp"
+#include "tunio/detail/ip_headers.hpp"
+#include "tunio/detail/tunio_impl.hpp"
 
 #include <boost/asio.hpp>
 

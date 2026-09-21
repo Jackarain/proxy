@@ -10,7 +10,7 @@
 
 #include "tunio/tun_tcp_socket.hpp"
 
-#include "tcp_engine.hpp"
+#include "tunio/detail/tcp_engine.hpp"
 #include "tunio/detail/tun_tcp_socket_ops.hpp"
 
 #include <utility>

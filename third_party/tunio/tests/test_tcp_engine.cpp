@@ -2623,6 +2623,104 @@ BOOST_AUTO_TEST_CASE(test_reentrant_reset_in_handler)
         std::vector<uint8_t>{'h', 'i'}));
     future_get(read_done.get_future());
     // 引擎不得崩溃：on_packet 的强引用保证回调返回后 f 仍有效
+    //
+    // reset() 已发出 RST 并置 CLOSED：回调返回后的收尾不得再为该流出段
+    // （修复前会补发一个 RST 之后的纯 ACK）.
+    std::vector<uint8_t> rst;
+    TEST_ASSERT(env.dev.read_packet(rst));
+    ip_hdr_info rip;
+    tcp_hdr_info rtcp;
+    TEST_ASSERT(parse_ip(rst, rip));
+    TEST_ASSERT(parse_tcp(rip.payload, rip.payload_len, rtcp));
+    TEST_ASSERT((rtcp.flags & 0x04) != 0); // RST
+    std::vector<uint8_t> extra;
+    TEST_ASSERT(!env.dev.read_packet(extra, 300));
+}
+
+BOOST_AUTO_TEST_CASE(test_reentrant_reset_in_ooo_delivery)
+{
+    // 乱序交付路径：读回调内续发下一个读，缺口段补齐后 flush_ooo 把缓存的
+    // 乱序段直投给新读，该回调内 reset()。回调返回后引擎须停止出段（修复前
+    // deliver_data 与 flush_ooo 两处收尾会各补发一个 RST 之后的纯 ACK）.
+    engine_env env;
+    tun_tcp_acceptor acceptor(env.engine);
+    auto stream = std::make_shared<tun_tcp_socket>(env.engine.get_executor());
+
+    std::promise<boost::system::error_code> accept_done;
+    acceptor.async_accept(*stream, [&](boost::system::error_code ec) {
+        if (!ec) {
+            stream->accept();
+        }
+        accept_done.set_value(ec);
+    });
+
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12360, DEST_PORT, 0x02, 16000,
+        0, 65535, {}));
+    std::vector<uint8_t> pkt;
+    if (!env.dev.read_packet(pkt)) {
+        TEST_THROW("no SYN-ACK");
+    }
+    ip_hdr_info ipi;
+    tcp_hdr_info ti;
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        TEST_THROW("parse SYN-ACK failed");
+    }
+    const uint32_t engine_iss = ti.seq;
+    const uint32_t base = 16001;
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12360, DEST_PORT, 0x10, base,
+        engine_iss + 1, 65535, {}));
+    future_get(accept_done.get_future());
+
+    std::promise<size_t> first_n;
+    std::promise<void> second_done;
+    char buf[64];
+    char buf2[64];
+    std::string second_data;
+    stream->async_read_some(
+        net::buffer(buf),
+        [&](boost::system::error_code, size_t n) {
+            first_n.set_value(n);
+            stream->async_read_some(
+                net::buffer(buf2),
+                [&](boost::system::error_code, size_t n2) {
+                    second_data.assign(buf2, n2);
+                    stream->reset();
+                    second_done.set_value();
+                });
+        });
+
+    // 超前段（seq = base + 2）先缓存：此时无 Dup-ACK
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12360, DEST_PORT, 0x18,
+        base + 2, engine_iss + 1, 65535, {'x', 'y'}));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    // 缺口段补齐：直投 "hi" 给首个读，flush_ooo 再把 "xy" 直投给第二个读
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, 12360, DEST_PORT, 0x18, base,
+        engine_iss + 1, 65535, {'h', 'i'}));
+
+    TEST_ASSERT(future_get(first_n.get_future()) == 2);
+    future_get(second_done.get_future());
+    TEST_ASSERT(second_data == "xy");
+
+    // 期望仅有两个出段：补齐段的即时 ACK，随后 reset() 的 RST
+    std::vector<std::vector<uint8_t>> out;
+    for (;;) {
+        std::vector<uint8_t> p;
+        if (!env.dev.read_packet(p, 300) || out.size() >= 3) {
+            break;
+        }
+        out.push_back(p);
+    }
+    TEST_ASSERT(out.size() == 2);
+    ip_hdr_info ack_ipi;
+    tcp_hdr_info ack_ti;
+    TEST_ASSERT(parse_ip(out[0], ack_ipi));
+    TEST_ASSERT(parse_tcp(ack_ipi.payload, ack_ipi.payload_len, ack_ti));
+    TEST_ASSERT((ack_ti.flags & 0x14) == 0x10); // 纯 ACK
+    ip_hdr_info rst_ipi;
+    tcp_hdr_info rst_ti;
+    TEST_ASSERT(parse_ip(out[1], rst_ipi));
+    TEST_ASSERT(parse_tcp(rst_ipi.payload, rst_ipi.payload_len, rst_ti));
+    TEST_ASSERT((rst_ti.flags & 0x04) != 0); // RST
 }
 
 BOOST_AUTO_TEST_CASE(test_reject_handshake)

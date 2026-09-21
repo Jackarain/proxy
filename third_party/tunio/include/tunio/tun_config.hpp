@@ -221,6 +221,9 @@ struct engine_stats
     std::atomic<uint64_t> tcp_connections{0};
     std::atomic<uint64_t> udp_sessions{0};
     std::atomic<uint64_t> icmp_replies{0};
+    // 未成功写出设备的出包数：写队列安全阀丢弃、取消清理、设备写失败。
+    // 追加在结构末尾：C 绑定与 Python 镜像结构的既有字段偏移保持不变.
+    std::atomic<uint64_t> tx_dropped{0};
 };
 
 } // namespace tunio

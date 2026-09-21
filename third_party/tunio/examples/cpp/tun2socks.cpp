@@ -362,6 +362,7 @@ int main(int argc, char **argv)
             std::cout << "[stats] rx_packets=" << st.rx_packets.load()
                 << " tx_packets=" << st.tx_packets.load()
                 << " rx_dropped=" << st.rx_dropped.load()
+                << " tx_dropped=" << st.tx_dropped.load()
                 << " rx_ooo=" << st.rx_ooo.load()
                 << " tcp_connections=" << st.tcp_connections.load()
                 << std::endl;

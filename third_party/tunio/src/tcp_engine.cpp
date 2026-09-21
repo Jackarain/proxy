@@ -8,9 +8,9 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "tcp_engine.hpp"
+#include "tunio/detail/tcp_engine.hpp"
 
-#include "tun_queue_writer.hpp"
+#include "tunio/detail/tun_queue_writer.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -527,6 +527,10 @@ void tcp_engine::deliver_data(tcp_flow& f, const uint8_t* data, size_t len)
             f.rx_bytes += len - n;
         }
         op.handler(boost::system::error_code{}, n);
+        // 回调内可重入 close()/reset()：关闭路径已发 FIN/RST 并清理流，
+        // 不再交付残留数据或补发 ACK.
+        if (f.state == tcp_state::CLOSED)
+            return;
         if (n < len)
             flush_reads(f);
         // 直投路径保持逐段即时 ACK：数据已交付用户，交互式单段请求的
@@ -628,8 +632,9 @@ void tcp_engine::flush_ooo(tcp_flow& f)
     }
 
     // 批量补齐后立即确认全部缓存段：避免各段 delayed ACK（每 2 段/40ms）
-    // 累积延迟，使内核尽快推进发送窗口，降低 RTO 概率。
-    if (delivered)
+    // 累积延迟，使内核尽快推进发送窗口，降低 RTO 概率；交付/EOF 回调内
+    // 重入关闭连接时不再补发.
+    if (delivered && f.state != tcp_state::CLOSED)
         send_ack(f);
 }
 
@@ -793,6 +798,12 @@ void tcp_engine::send_segment(tcp_flow& f,
     size_t len,
     bool with_mss)
 {
+    // 状态守卫：连接已关闭（reset/引擎 close/超时回收）后不再出段。用户
+    // 完成回调可重入关闭路径，收尾代码恢复执行时流可能已 CLOSED；RST 在
+    // abort_flow 中先于置 CLOSED 发出，不受此守卫影响.
+    if (f.state == tcp_state::CLOSED)
+        return;
+
     // 所有出段均携带 ACK（ack 字段 = 当前 rcv_nxt）：数据段捎带确认与
     // 独立 ACK 等效，清除挂起标记，避免后续重复补发.
     f.ack_pending = false;

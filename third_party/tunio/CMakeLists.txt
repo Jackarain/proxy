@@ -78,12 +78,13 @@ endif()
 option(TUNIO_DISABLE_LOOPBACK_GUARD "Disable loopback/local-address traffic guard" OFF)
 
 add_library(tunio STATIC ${TUNIO_SOURCES})
-# BUILD_INTERFACE 保持 add_subdirectory 场景行为（含 src 目录，实现头位于
-# src/ 下，测试直接包含实现头）；INSTALL_INTERFACE 只暴露公开头目录，使
-# 安装导出的目标可重定位，不写死构建机源码路径.
+# 公开头与实现头统一位于 include/ 下（detail/ 内的实现头被公开头包含，
+# 如 tun_tcp_socket.hpp -> detail/tun_tcp_socket_ops.hpp ->
+# detail/tcp_engine.hpp，模板定义必须对使用方可见），因此 BUILD_INTERFACE
+# 与 INSTALL_INTERFACE 指向同一目录树：安装后消费方无需 src/ 也能编译.
+# INSTALL_INTERFACE 不写死构建机源码路径，保证导出目标可重定位.
 target_include_directories(tunio PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
@@ -171,6 +172,9 @@ if(TUNIO_INSTALL)
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
+  # detail/ 下的实现头（tcp_engine.hpp / udp_engine.hpp / tunio_impl.hpp /
+  # tun_queue_writer.hpp / ip_headers.hpp）被公开头内联包含的模板定义引用，
+  # 必须随包导出，否则消费方包含 acceptor/socket 头即编译失败.
   install(DIRECTORY include/tunio
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )

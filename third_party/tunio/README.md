@@ -163,6 +163,11 @@ target_link_libraries(app PRIVATE tunio::tunio)
 pkg-config --cflags --libs tunio
 ```
 
+安装包包含公开头内联依赖的实现头（`include/tunio/detail/` 下的引擎、队列
+写入器等，被 `tun_tcp_socket_ops.hpp` 等模板定义引用），消费方无需源码树
+即可编译；CI 每次构建都会安装到临时前缀，并以 `find_package` 与
+pkg-config 两条路径各编译一次消费方（`tests/install/`）做冒烟验证。
+
 ## 快速上手
 
 以下是一个完整的最小示例：打开 TUN 设备，将虚拟网内的 TCP 连接桥接到本机

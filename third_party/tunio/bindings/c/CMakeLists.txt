@@ -11,7 +11,7 @@ add_library(tunio_c SHARED src/c_api.cpp)
 target_include_directories(tunio_c PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
-# tunio 的 BUILD_INTERFACE 提供引擎公开头与实现头所在目录（include/、src/）.
+# tunio 的 BUILD_INTERFACE 提供引擎公开头与实现头所在目录（include/）.
 target_link_libraries(tunio_c PRIVATE tunio Threads::Threads)
 
 if(WIN32)

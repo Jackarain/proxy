@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "tcp_engine.hpp"
+#include "tunio/detail/tcp_engine.hpp"
 #include "tunio/tun_tcp_socket.hpp"
 
 #include <memory>

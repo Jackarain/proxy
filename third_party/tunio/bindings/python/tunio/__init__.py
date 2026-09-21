@@ -238,7 +238,7 @@ class Engine:
 
     @property
     def stats(self) -> dict[str, int]:
-        """引擎统计信息字典（rx_packets/tx_packets/... 等 7 项）。"""
+        """引擎统计信息字典（rx_packets/tx_packets/... 等 8 项）。"""
         if not self._handle:
             return {}
         stats = _ffi.TunioStats()
@@ -253,6 +253,7 @@ class Engine:
             "tcp_connections": int(stats.tcp_connections),
             "udp_sessions": int(stats.udp_sessions),
             "icmp_replies": int(stats.icmp_replies),
+            "tx_dropped": int(stats.tx_dropped),
         }
 
     def accept_tcp(self) -> "TcpSocket":

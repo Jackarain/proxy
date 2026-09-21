@@ -129,11 +129,16 @@ public:
     // 写后无需回调的发送路径（引擎内 TCP/UDP/ICMP 出包）：
     // 跳过 CompletionToken 包装与 handler 堆分配，直接在 Strand 上入队。
     // 设备写停滞（对端/宿主变慢）时队列无界积压会耗尽内存：达到上限后
-    // 丢弃新包作为安全阀（控制段丢失的代价远小于内存耗尽）。
+    // 丢弃新包作为安全阀（控制段丢失的代价远小于内存耗尽）。已取消
+    // （cancel_all）的 writer 不再具备发送能力，入队包同样丢弃。本路径
+    // 无完成回调，丢弃只反映在 tx_dropped 计数上。
     void async_write_and_forget(packet_buffer&& buf)
     {
-        if (queued_total_ >= k_queue_max_entries)
+        if (cancelled_ || queued_total_ >= k_queue_max_entries)
+        {
+            stats_->tx_dropped.fetch_add(1, std::memory_order_relaxed);
             return;
+        }
 
         const size_t q = pick_tx_queue(buf, queue_count_);
         states_[q].queue.push_back(entry{std::move(buf), {}, q});
@@ -149,17 +154,24 @@ public:
             void(boost::system::error_code, size_t)>(
             [this](auto handler, packet_buffer buf)
             {
-                if (queued_total_ >= k_queue_max_entries)
+                if (cancelled_ || queued_total_ >= k_queue_max_entries)
                 {
-                    // 队列饱和：以 no_buffer_space 完成，避免无界积压。
+                    // 队列饱和（no_buffer_space）或 writer 已取消
+                    // （operation_aborted）：立即以错误完成，避免无界积压
+                    // 与堆积后永不触发回调。该包未写出，同时计入
+                    // tx_dropped（调用方可能忽略错误）.
+                    stats_->tx_dropped.fetch_add(1, std::memory_order_relaxed);
+                    const auto err = make_error_code(cancelled_
+                            ? net::error::operation_aborted
+                            : net::error::no_buffer_space);
                     // 用 dispatch 在 handler 的关联执行器上完成：新版 Asio
                     // （1.38+）的默认关联执行器为 inline_executor，无法满足
                     // post 的 blocking.never 约束（编译失败），dispatch 无此
                     // 限制，且与引擎其余完成回调派发方式保持一致。
                     net::dispatch(net::get_associated_executor(handler),
-                        [h = std::move(handler)]() mutable
+                        [h = std::move(handler), err]() mutable
                         {
-                            h(make_error_code(net::error::no_buffer_space), 0);
+                            h(err, 0);
                         });
                     return;
                 }
@@ -218,6 +230,7 @@ public:
                 auto e = std::move(st.queue.front());
                 st.queue.pop_front();
                 --queued_total_;
+                stats_->tx_dropped.fetch_add(1, std::memory_order_relaxed);
                 recycle(std::move(e.buf));
                 if (e.handler)
                     e.handler(
@@ -312,7 +325,11 @@ private:
             return;
         }
 
-        if (!ec)
+        // 设备写成功计 tx_packets，失败（重试超限或不可重试）计 tx_dropped：
+        // 出包要么写出设备、要么被丢弃，两者之和即本 writer 处理的包数。
+        if (ec)
+            stats_->tx_dropped.fetch_add(1, std::memory_order_relaxed);
+        else
             stats_->tx_packets.fetch_add(1, std::memory_order_relaxed);
 
         if (st.current->handler)
@@ -343,7 +360,7 @@ private:
 
     net::any_io_executor strand_;         // 串行执行器（所有方法必须在此执行）
     std::shared_ptr<tun_device> dev_;     // TUN 设备（多队列时为多 fd 写句柄）
-    std::shared_ptr<engine_stats> stats_; // 统计对象（写成功计数）
+    std::shared_ptr<engine_stats> stats_; // 统计对象（写成功/丢弃计数）
     size_t queue_count_ = 1;              // 设备队列数（构造时从设备缓存）
     std::vector<queue_state> states_;     // 每队列一个写链状态
     std::vector<packet_buffer> pool_;     // 发送缓冲池（写完成后回收复用）

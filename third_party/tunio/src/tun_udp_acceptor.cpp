@@ -10,7 +10,7 @@
 
 #include "tunio/tun_udp_acceptor.hpp"
 
-#include "tunio_impl.hpp"
+#include "tunio/detail/tunio_impl.hpp"
 
 #include <utility>
 

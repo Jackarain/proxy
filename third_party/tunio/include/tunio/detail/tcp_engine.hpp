@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "ip_headers.hpp"
+#include "tunio/detail/ip_headers.hpp"
 #include "tunio/packet_buffer.hpp"
 #include "tunio/tun_config.hpp"
 

@@ -152,6 +152,7 @@ typedef struct tunio_stats
     uint64_t tcp_connections;
     uint64_t udp_sessions;
     uint64_t icmp_replies;
+    uint64_t tx_dropped;
 } tunio_stats;
 
 // ---- 线程局部错误信息 ----

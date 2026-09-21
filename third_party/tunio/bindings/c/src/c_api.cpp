@@ -641,6 +641,7 @@ extern "C" int tunio_engine_stats(const tunio_engine* engine,
     stats->tcp_connections = s.tcp_connections.load(std::memory_order_relaxed);
     stats->udp_sessions = s.udp_sessions.load(std::memory_order_relaxed);
     stats->icmp_replies = s.icmp_replies.load(std::memory_order_relaxed);
+    stats->tx_dropped = s.tx_dropped.load(std::memory_order_relaxed);
     return TUNIO_OK;
 }
 

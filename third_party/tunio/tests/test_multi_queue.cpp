@@ -19,7 +19,7 @@
 #define BOOST_TEST_MODULE multi_queue
 #include <boost/test/included/unit_test.hpp>
 #include "test_harness.hpp"
-#include "tun_queue_writer.hpp"
+#include "tunio/detail/tun_queue_writer.hpp"
 
 #include <atomic>
 #include <cassert>

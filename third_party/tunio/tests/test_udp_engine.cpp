@@ -11,6 +11,7 @@
 #define BOOST_TEST_MODULE udp_engine
 #include <boost/test/included/unit_test.hpp>
 #include "test_harness.hpp"
+#include "tunio/detail/udp_engine.hpp"
 
 #include <cassert>
 #include <chrono>
@@ -346,3 +347,63 @@ BOOST_AUTO_TEST_CASE(test_large_datagram_fragmented)
         ulen - 8) == big);
 }
 
+// 分片发送的设备写失败必须上报调用方：每片失败都计入 tx_dropped，完成
+// 回调带首个错误（此前"入队即成功"会把设备写失败误报为成功）
+BOOST_AUTO_TEST_CASE(test_fragmented_write_failure_reported)
+{
+    net::io_context io;
+    net::any_io_executor strand = net::make_strand(io);
+    // 未 assign 队列 fd：设备写立即以 bad_descriptor 失败
+    auto dev = std::make_shared<tunio::tun_device>(io);
+    auto stats = std::make_shared<tunio::engine_stats>();
+    auto writer = std::make_shared<tunio::detail::tun_queue_writer>(
+        strand, dev, stats);
+
+    const uint8_t src[4] = {10, 0, 0, 1};
+    const uint8_t dst[4] = {10, 0, 0, 2};
+    // 4000 字节数据报在 MTU 1500 下切为 3 片（1480 + 1480 + 1040）
+    std::vector<uint8_t> datagram(4000, 0x77);
+
+    bool called = false;
+    boost::system::error_code result;
+    tunio::detail::udp_write_ipv4_fragments(*writer, 1500, src, dst,
+        datagram,
+        [&](boost::system::error_code ec) {
+            called = true;
+            result = ec;
+        });
+
+    TEST_ASSERT(called);
+    TEST_ASSERT(result == net::error::bad_descriptor);
+    TEST_ASSERT(stats->tx_packets.load() == 0);
+    TEST_ASSERT(stats->tx_dropped.load() == 3);
+}
+
+// 退化 MTU（无法拆分）：以 message_size 完成且不写入任何分片
+BOOST_AUTO_TEST_CASE(test_fragmented_degenerate_mtu_reports_message_size)
+{
+    net::io_context io;
+    net::any_io_executor strand = net::make_strand(io);
+    auto dev = std::make_shared<tunio::tun_device>(io);
+    auto stats = std::make_shared<tunio::engine_stats>();
+    auto writer = std::make_shared<tunio::detail::tun_queue_writer>(
+        strand, dev, stats);
+
+    const uint8_t src[4] = {10, 0, 0, 1};
+    const uint8_t dst[4] = {10, 0, 0, 2};
+    std::vector<uint8_t> datagram(64, 0x11);
+
+    bool called = false;
+    boost::system::error_code result;
+    // MTU 20 = IP 头长度：第二片可用载荷为 0，无法继续拆分
+    tunio::detail::udp_write_ipv4_fragments(*writer, 20, src, dst, datagram,
+        [&](boost::system::error_code ec) {
+            called = true;
+            result = ec;
+        });
+
+    TEST_ASSERT(called);
+    TEST_ASSERT(result == net::error::message_size);
+    TEST_ASSERT(stats->tx_packets.load() == 0);
+    TEST_ASSERT(stats->tx_dropped.load() == 0);
+}

@@ -10,7 +10,7 @@
 
 #define BOOST_TEST_MODULE tun_queue_writer
 #include <boost/test/included/unit_test.hpp>
-#include "tun_queue_writer.hpp"
+#include "tunio/detail/tun_queue_writer.hpp"
 #include "tunio/tun_config.hpp"
 #include "test_throw.hpp"
 
@@ -51,6 +51,16 @@ write_result wait_future(std::future<write_result> fut, int timeout_ms)
     if (fut.wait_for(std::chrono::milliseconds(timeout_ms)) !=
         std::future_status::ready) {
         TEST_THROW("write future timeout");
+    }
+    return fut.get();
+}
+
+template <typename T>
+T wait_future_value(std::future<T> fut, int timeout_ms)
+{
+    if (fut.wait_for(std::chrono::milliseconds(timeout_ms)) !=
+        std::future_status::ready) {
+        TEST_THROW("future timeout");
     }
     return fut.get();
 }
@@ -117,6 +127,116 @@ struct io_guard
         }
         dev->close();
         ::close(fd);
+    }
+};
+
+// 背压环境：对端不读的小缓冲 socketpair，制造设备写挂起与写队列积压
+struct backpressure_env
+{
+    net::io_context io;
+    net::any_io_executor strand = net::make_strand(io);
+    std::shared_ptr<tunio::tun_device> dev;
+    std::shared_ptr<tunio::engine_stats> stats;
+    std::shared_ptr<tunio::detail::tun_queue_writer> writer;
+    net::executor_work_guard<net::io_context::executor_type> guard;
+    std::thread thread;
+    int peer = -1;
+
+    backpressure_env()
+        : dev(std::make_shared<tunio::tun_device>(io))
+        , stats(std::make_shared<tunio::engine_stats>())
+        , guard(net::make_work_guard(io))
+    {
+        int sv[2];
+        if (::socketpair(AF_UNIX, SOCK_DGRAM, 0, sv) != 0) {
+            TEST_THROW("socketpair failed");
+        }
+        peer = sv[0];
+        // 收缩收发缓冲：少量报文即填满，设备写随即挂起
+        const int bufsz = 2048;
+        ::setsockopt(sv[0], SOL_SOCKET, SO_RCVBUF, &bufsz, sizeof(bufsz));
+        ::setsockopt(sv[1], SOL_SOCKET, SO_SNDBUF, &bufsz, sizeof(bufsz));
+        const int flags = ::fcntl(sv[1], F_GETFL, 0);
+        ::fcntl(sv[1], F_SETFL, flags | O_NONBLOCK);
+        boost::system::error_code ec;
+        if (!dev->assign(sv[1], 1500, false, ec)) {
+            TEST_THROW("device assign failed: " + ec.message());
+        }
+        writer = std::make_shared<tunio::detail::tun_queue_writer>(
+            strand, dev, stats);
+        thread = std::thread([this] { io.run(); });
+    }
+
+    ~backpressure_env()
+    {
+        io.stop();
+        if (thread.joinable()) {
+            thread.join();
+        }
+        dev->close();
+        ::close(peer);
+    }
+
+    // 在 Strand 上连续投递 count 条出包（丢弃路径：无完成回调）
+    void post_forgets(size_t count, size_t payload_len)
+    {
+        std::vector<uint8_t> payload(payload_len, 0xee);
+        std::promise<void> posted;
+        auto fut = posted.get_future();
+        auto w = writer;
+        net::post(strand, [w, payload, count, &posted]() {
+            for (size_t i = 0; i < count; ++i) {
+                tunio::packet_buffer buf(payload.size() + 64, 64);
+                std::memcpy(
+                    buf.writable_data(), payload.data(), payload.size());
+                buf.resize(payload.size());
+                w->async_write_and_forget(std::move(buf));
+            }
+            posted.set_value();
+        });
+        wait_future_value(std::move(fut), 5000);
+    }
+
+    // 非阻塞读尽对端当前可用报文，返回读取数量
+    size_t drain_available()
+    {
+        size_t n = 0;
+        for (;;)
+        {
+            struct pollfd pfd{peer, POLLIN, 0};
+            if (::poll(&pfd, 1, 5) <= 0) {
+                break;
+            }
+            uint8_t buf[65536];
+            const ssize_t r = ::read(peer, buf, sizeof(buf));
+            if (r <= 0) {
+                break;
+            }
+            ++n;
+        }
+        return n;
+    }
+
+    // 已结算的出包数（写出设备 + 丢弃）
+    uint64_t settled() const
+    {
+        return stats->tx_packets.load() + stats->tx_dropped.load();
+    }
+
+    // 排空对端直到出包全部结算；超时返回 false
+    bool wait_settled(uint64_t total, int timeout_ms)
+    {
+        const auto deadline = std::chrono::steady_clock::now() +
+            std::chrono::milliseconds(timeout_ms);
+        while (settled() < total)
+        {
+            drain_available();
+            if (std::chrono::steady_clock::now() >= deadline) {
+                return false;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        return true;
     }
 };
 
@@ -197,4 +317,72 @@ BOOST_AUTO_TEST_CASE(tun_queue_writer)
         }
         TEST_ASSERT(stash.size() == k_packets * k_payload);
     }
+}
+
+// 设备写失败：出包计入 tx_dropped，不计入 tx_packets
+BOOST_AUTO_TEST_CASE(tun_queue_writer_failed_write_counted_as_dropped)
+{
+    net::io_context io;
+    net::any_io_executor strand = net::make_strand(io);
+    // 未 assign 队列 fd：写立即以 bad_descriptor 完成
+    auto dev = std::make_shared<tunio::tun_device>(io);
+    auto stats = std::make_shared<tunio::engine_stats>();
+    auto writer = std::make_shared<tunio::detail::tun_queue_writer>(
+        strand, dev, stats);
+
+    std::vector<uint8_t> payload(k_payload, 0x5a);
+    auto fut = post_write(writer, strand, payload);
+    io.run(); // 写失败立即完成，无挂起 I/O：处理完本次写即返回
+    const auto r = wait_future(std::move(fut), 5000);
+
+    TEST_ASSERT(r.ec == net::error::bad_descriptor);
+    TEST_ASSERT(stats->tx_packets.load() == 0);
+    TEST_ASSERT(stats->tx_dropped.load() == 1);
+}
+
+// 写队列安全阀：设备写停滞（对端不读）时超限出包被丢弃，丢弃计入
+// tx_dropped（此前完全静默）；排空后写出与丢弃之和恰为投递总数
+BOOST_AUTO_TEST_CASE(tun_queue_writer_queue_full_counted_as_dropped)
+{
+    backpressure_env env;
+    // 队列上限 16384 条，另有 1 条在写：多投 32 条保证触发安全阀
+    const uint64_t total = 16384 + 1 + 32;
+    env.post_forgets(total, 128);
+
+    TEST_ASSERT(env.wait_settled(total, 20000));
+    TEST_ASSERT(env.stats->tx_dropped.load() >= 1);
+    TEST_ASSERT(env.stats->tx_packets.load() >= 1);
+    TEST_ASSERT(env.settled() == total);
+}
+
+// 引擎关闭清理：排队中的出包被丢弃并计入 tx_dropped，不计入 tx_packets
+BOOST_AUTO_TEST_CASE(tun_queue_writer_cancel_counted_as_dropped)
+{
+    backpressure_env env;
+    const uint64_t posts = 64;
+    env.post_forgets(posts, k_payload);
+
+    std::promise<void> cancelled;
+    auto fut = cancelled.get_future();
+    auto w = env.writer;
+    net::post(env.strand, [w, &cancelled]() {
+        w->cancel_all();
+        cancelled.set_value();
+    });
+    wait_future_value(std::move(fut), 5000);
+
+    // 在飞的一条仍会写出设备，其余排队条目在 cancel_all 中丢弃
+    TEST_ASSERT(env.wait_settled(posts, 20000));
+    TEST_ASSERT(env.stats->tx_dropped.load() >= posts - 4);
+    TEST_ASSERT(env.stats->tx_packets.load() <= 4);
+
+    // 取消后再入队：不再挂起（无回调路径直接计丢弃，带回调路径以
+    // operation_aborted 完成），避免滞留队列且永不触发回调
+    const uint64_t dropped = env.stats->tx_dropped.load();
+    env.post_forgets(1, k_payload);
+    const auto r = wait_future(
+        post_write(env.writer, env.strand, std::vector<uint8_t>(k_payload, 0x5b)),
+        5000);
+    TEST_ASSERT(r.ec == net::error::operation_aborted);
+    TEST_ASSERT(env.stats->tx_dropped.load() == dropped + 2);
 }

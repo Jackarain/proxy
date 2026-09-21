@@ -10,9 +10,9 @@
 
 #pragma once
 
-#include "tun_queue_writer.hpp"
-#include "ip_headers.hpp"
-#include "tcp_engine.hpp"
+#include "tunio/detail/tun_queue_writer.hpp"
+#include "tunio/detail/ip_headers.hpp"
+#include "tunio/detail/tcp_engine.hpp"
 #include "tunio/tun_config.hpp"
 
 #include <boost/asio.hpp>
@@ -283,15 +283,18 @@ inline size_t udp_build_datagram(int family,
     return sizeof(udp_header) + payload_len;
 }
 
-// 将完整 UDP 数据报（含 UDP 头）切分为多个 IPv4 分片依次写入设备
+// 将完整 UDP 数据报（含 UDP 头）切分为多个 IPv4 分片异步写入设备
 //（RFC 791）：首片携带 UDP 头 + 载荷，后续片仅携带载荷；所有分片共享
-// 同一 IP id，DF 位清零，非末片置 MF。返回 false 表示退化 MTU 下无法
-// 拆分（调用方应以 message_size 拒绝，而非死循环挂死 Strand）。
-inline bool udp_write_ipv4_fragments(tun_queue_writer& writer,
+// 同一 IP id，DF 位清零，非末片置 MF。全部分片写出设备后以首个错误
+//（或成功）调用一次 on_done；退化 MTU 下无法拆分时以 message_size 调用
+//（此时不写入任何分片），因此 on_done 恒被调用且仅调用一次。
+template <typename Handler>
+void udp_write_ipv4_fragments(tun_queue_writer& writer,
     size_t mtu,
     const uint8_t* src_addr,
     const uint8_t* dst_addr,
-    const std::vector<uint8_t>& datagram)
+    const std::vector<uint8_t>& datagram,
+    Handler on_done)
 {
     const size_t max_frag_payload =
         (mtu > sizeof(ipv4_header) ? mtu - sizeof(ipv4_header) : 0) &
@@ -301,10 +304,21 @@ inline bool udp_write_ipv4_fragments(tun_queue_writer& writer,
         ? (max_frag_payload - sizeof(udp_header)) & ~size_t(7)
         : 0;
 
+    // 退化 MTU（连一个 UDP 头都放不下）：无法拆分，未写入任何分片，直接以
+    // message_size 完成（否则构造首片会越过发送缓冲可用容量）。
+    if (max_frag_payload < sizeof(udp_header))
+    {
+        on_done(make_error_code(net::error::message_size));
+        return;
+    }
+
     const uint16_t ip_id = writer.alloc_ip_id();
 
     // off 为相对完整 UDP 数据报（含 UDP 头）的偏移，即分片偏移字段的
     // 字节基准：首片消费 UDP 头 + first_data，后续片消费载荷。
+    // 先完成全部切片再入队：分片计数在入队前即可确定（设备写可能内联
+    // 完成回调，计数后置会下溢）。
+    std::vector<packet_buffer> frags;
     size_t off = 0;
     while (off < datagram.size())
     {
@@ -312,9 +326,6 @@ inline bool udp_write_ipv4_fragments(tun_queue_writer& writer,
         const size_t frag_data = off == 0
             ? (std::min)(sizeof(udp_header) + first_data, remain)
             : (std::min)(max_frag_payload, remain);
-        if (frag_data == 0)
-            return false;
-
         const size_t frag_total = sizeof(ipv4_header) + frag_data;
         packet_buffer frag = writer.acquire(mtu + 64, 64);
         frag.resize(frag_total);
@@ -338,9 +349,36 @@ inline bool udp_write_ipv4_fragments(tun_queue_writer& writer,
             fb + sizeof(ipv4_header), datagram.data() + off, frag_data);
 
         off += frag_data;
-        writer.async_write_and_forget(std::move(frag));
+        frags.push_back(std::move(frag));
     }
-    return true;
+
+    // 分片完成聚合：全部分片写出后一次性完成，透传首个错误（设备写失败
+    // 或写队列安全阀丢弃都计入 tx_dropped，并由本错误码上报调用方）.
+    struct state
+    {
+        state(Handler h, size_t pending_count)
+            : handler(std::move(h))
+            , pending(pending_count)
+        {
+        }
+
+        Handler handler;
+        size_t pending = 0;
+        boost::system::error_code first_error;
+    };
+    auto st = std::make_shared<state>(std::move(on_done), frags.size());
+    auto on_frag = [st](const boost::system::error_code& ec, size_t)
+    {
+        if (ec && !st->first_error)
+            st->first_error = ec;
+        if (--st->pending != 0)
+            return;
+        auto h = std::move(st->handler);
+        h(st->first_error);
+    };
+
+    for (auto& frag : frags)
+        writer.async_write(std::move(frag), on_frag);
 }
 
 // 单报文发送（载荷不超 MTU，热路径）：构造 IP + UDP 报文并异步写入设备。
@@ -390,8 +428,9 @@ void udp_send_single(udp_session& session,
 }
 
 // IPv4 大报文分片发送（载荷超 MTU）：先组装完整 UDP 数据报（校验和按
-// 整体计算），再切分为多个 IP 分片依次写入设备。分片全部入队即视为
-// 发送完成——数据已由引擎持有，直接以成功调用 handler。
+// 整体计算），再切分为多个 IP 分片写出。全部分片写出设备后以首个错误
+//（或成功）完成 handler——与单包路径语义一致：设备写失败或写队列饱和
+// 不再向调用方误报成功。
 template <typename Handler>
 void udp_send_fragmented(udp_session& session,
     udp_engine& eng,
@@ -411,18 +450,16 @@ void udp_send_fragmented(udp_session& session,
         total,
         datagram.data());
 
-    if (!udp_write_ipv4_fragments(eng.writer(),
-            eng.mtu(),
-            src_addr,
-            session.key.src_ip.data(),
-            datagram))
-    {
-        // 退化 MTU 下无法拆分（首片已耗尽可用载荷）：拒绝而非死循环
-        handler(boost::system::error_code(net::error::message_size), 0);
-        return;
-    }
-
-    std::move(handler)(boost::system::error_code{}, total);
+    udp_write_ipv4_fragments(eng.writer(),
+        eng.mtu(),
+        src_addr,
+        session.key.src_ip.data(),
+        datagram,
+        [h = std::move(handler), total](boost::system::error_code ec) mutable
+        {
+            // 成功时报告完整数据报长度；失败时长度为 0（与单包路径一致）
+            std::move(h)(ec, ec ? 0 : total);
+        });
 }
 
 // 出队一条排队数据报并交付给本次读请求；无排队数据报时返回 false，由

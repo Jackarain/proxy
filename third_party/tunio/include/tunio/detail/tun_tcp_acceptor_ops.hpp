@@ -11,7 +11,7 @@
 #pragma once
 
 #include "tunio/tun_tcp_acceptor.hpp"
-#include "tunio_impl.hpp"
+#include "tunio/detail/tunio_impl.hpp"
 
 namespace tunio {
 
