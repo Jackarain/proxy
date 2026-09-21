@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(Boost 1.84 CONFIG COMPONENTS url system)
+find_dependency(OpenSSL)
+find_dependency(Threads)
+
+include("${CMAKE_CURRENT_LIST_DIR}/httpcTargets.cmake")
+check_required_components(httpc)

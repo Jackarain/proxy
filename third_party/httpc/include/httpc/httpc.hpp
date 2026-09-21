@@ -91,8 +91,10 @@ public:
     //  if (result)
     //      auto& resp = *result;    // http_response
     //
+    // 参数按值传入: 该接口是惰性协程, 调用后可能延迟到实参离开作用域才恢复,
+    // 因此协程帧必须持有 url/req 的独立副本.
     net::awaitable<http_result>
-    async_perform(const std::string& url, const http_request& req) noexcept;
+    async_perform(std::string url, http_request req) noexcept;
 
     // 异步上传文件到服务器.
     // 使用 http::file_body 流式上传, 支持重定向.
@@ -111,9 +113,9 @@ public:
     //      auto& resp = *result;    // http_response
     //
     net::awaitable<http_result> async_upload_file(
-        const std::string& url,
-        const std::string& file_path,
-        const http_request& req = http_request {}) noexcept;
+        std::string url,
+        std::string file_path,
+        http_request req = http_request {}) noexcept;
 
     // 异步上传流数据.
     // 使用 upload_handler 作为数据源流式上传, 支持重定向.
@@ -128,7 +130,7 @@ public:
     //      "https://example.com/upload", req);
     //
     net::awaitable<http_result>
-    async_upload_stream(const std::string& url, const http_request& req) noexcept;
+    async_upload_stream(std::string url, http_request req) noexcept;
 
     // ------------------------------------------------------------
     // 以下接口为手工精细控制.
@@ -141,7 +143,12 @@ public:
     async_send_request(const urls::url_view& url, const http_request& req);
 
     // 读取完整响应 (处理下载文件/传输回调).
-    net::awaitable<http_result> async_read_response();
+    //
+    // redirects_remaining 为调用方剩余可跟随的重定向次数. 当响应为重定向
+    // (且带 Location) 且 redirects_remaining > 0 时, 仅读取响应头, 不将响应体
+    // 写入下载文件, 也不触发 transfer_handler, 以免跳转过程中的响应体混入
+    // 最终下载内容; 调用方随后可安全地跟随该重定向.
+    net::awaitable<http_result> async_read_response(int redirects_remaining = 0);
 
     // 仅发送 HTTP 请求头.
     net::awaitable<boost::system::error_code>
