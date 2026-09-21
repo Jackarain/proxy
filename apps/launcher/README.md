@@ -77,7 +77,7 @@ cmake --build build
 1. 当前目录下的 `./proxy_server`；
 2. 系统 `$PATH` 中的 `proxy_server`；
 3. 系统临时目录 `proxy_tmp/proxy_server`（若此前已自动下载则直接复用）；
-4. 从 nightly.link 自动下载 `proxy_server-alpine_musl_x64.zip` 并解压到该临时目录。
+4. 从 nightly.link 自动下载 `proxy_server-alpine_musl_x64_boringssl.zip` 并解压到该临时目录。
 
 全部失败时打印错误并退出。显式指定 `--proxy_server` 时跳过上述流程，仅校验文件是否存在。
 

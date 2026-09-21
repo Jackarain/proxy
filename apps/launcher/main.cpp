@@ -46,7 +46,7 @@ namespace {
 
 // 本地找不到 proxy_server 时，自动下载解压的地址与目录。
 static constexpr const char* kProxyServerDownloadUrl =
-	"https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-alpine_musl_x64.zip";
+	"https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-alpine_musl_x64_boringssl.zip";
 // 下载/解压目录下的文件名（所在目录见 proxy_tmp_dir()）。
 static constexpr const char* kProxyServerDownloadZipName = "proxy_server.zip";
 static constexpr const char* kProxyServerDownloadedExeName = "proxy_server";
