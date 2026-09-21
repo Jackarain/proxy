@@ -86,7 +86,6 @@ const option k_options[] = {
 	{ "dns_no_ipv6", option_kind::boolean, "禁用 DNS 的 IPv6 解析返回，开启后 AAAA 查询返回空应答，只返回 IPv4 地址。", false, false, 0, "", {}, false, false, false, "", "DNS" },
 	{ "logs_path", option_kind::string, "指定日志文件输出目录。", false, false, 0, "", {}, false, false, false, "", "日志" },
 	{ "disable_logs", option_kind::boolean, "禁止在终端输出日志。", false, false, 0, "", {}, false, false, false, "", "日志" },
-	{ "http2", option_kind::boolean, "启用 HTTP/2 协议（TLS 协商 h2 与明文 h2c），默认关闭。", false, false, 0, "", {}, false, false, false, "", "协议" },
 	{ "disable_http", option_kind::boolean, "禁用 HTTP 代理协议。", false, false, 0, "", {}, false, false, false, "", "协议" },
 	{ "disable_socks", option_kind::boolean, "禁用 SOCKS 代理协议。", false, false, 0, "", {}, false, false, false, "", "协议" },
 	{ "disable_udp", option_kind::boolean, "禁用 UDP 代理功能。", false, false, 0, "", {}, false, false, false, "", "协议" },
