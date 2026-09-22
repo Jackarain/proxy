@@ -19,7 +19,7 @@ web/
 │   ├── main.tsx          # 入口
 │   ├── App.tsx           # 布局 + 2 秒轮询调度
 │   ├── index.css         # Tailwind v4 + 深色主题 CSS 变量
-│   ├── lib/              # api 客户端、格式化工具、日志增量、复制地址等
+│   ├── lib/              # api 客户端、格式化工具、日志增量、累计流量缓存、复制地址等
 │   ├── store/            # zustand：app（实例/每实例状态/轮询）+ dialogs（弹窗）
 │   └── components/
 │       ├── ui/           # shadcn/ui 组件（button/input/dialog/checkbox/switch/badge）
@@ -89,6 +89,9 @@ npm run build      # 产物输出到 apps/launcher/webui/（含 assets/ 与 inde
 - 每实例独立状态（`store/app.ts` 的 `perInst`）：当前页签、配置草稿与搜索词、
   日志缓冲/过滤/自动滚动/清空标记、连接展开/排序、用户限速/配额回显等，切换
   实例互不串扰。
+- 累计流量缓存：实例上报的 `rx_bytes`/`tx_bytes` 为会话级累计值（重启归零），
+  WebUI 按用户折算增量并写入 IndexedDB（`lib/usage.ts`），使状态页「累计上传/
+  累计下载」跨实例重启、页面刷新与 launcher 重启延续；支持按用户或整体重置。
 - 竞态防护：异步响应返回后校验 `curId` 未变化，否则丢弃过期响应。
 - 日志增量渲染：快照序号（seq）作 React key，由 keyed reconciliation 完成
   「移除顶部旧行 + 追加新行」，保持滚动位置与选中；实例重启（gen 变化）时

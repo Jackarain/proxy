@@ -2,6 +2,15 @@ import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useApp } from "@/store/app";
 import { api } from "@/lib/api";
 import { fmtBytes, fmtDur, fmtRate } from "@/lib/format";
+import { showToast } from "@/lib/toast";
+import {
+  accumulateUsage,
+  loadUsage,
+  resetAllUsage,
+  resetUserUsage,
+  type UsageTotals,
+} from "@/lib/usage";
+import { Button } from "@/components/ui/button";
 import type {
   ConnectionInfo,
   StatusData,
@@ -22,8 +31,19 @@ export function compareConns(a: ConnectionInfo, b: ConnectionInfo, key: string):
     (Number(b[key as "id" | "elapsed" | "rx_bytes" | "tx_bytes"]) || 0);
 }
 
-// 状态摘要条（横向单行，可换行）。
-function StatsBar({ report }: { report: StatusReport | null }) {
+// 状态摘要条（横向单行，可换行）。上传/下载为 IndexedDB 缓存的全部用户累计值，
+// 可就地重置所有用户的累计上传/下载。
+function StatsBar({
+  report,
+  sumRx,
+  sumTx,
+  onResetAll,
+}: {
+  report: StatusReport | null;
+  sumRx: number;
+  sumTx: number;
+  onResetAll: () => void;
+}) {
   const r = report;
   return (
     <div className="mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-1 border border-border bg-card px-4 py-2.5 text-[13px]">
@@ -55,16 +75,21 @@ function StatsBar({ report }: { report: StatusReport | null }) {
       </div>
       <div className="flex items-baseline gap-1.5 whitespace-nowrap">
         <span className="text-xs text-muted-foreground">上传</span>
-        <span className="num font-semibold opacity-75">
-          {fmtBytes(r?.global?.rx_bytes)}
-        </span>
+        <span className="num font-semibold opacity-75">{fmtBytes(sumRx)}</span>
       </div>
       <div className="flex items-baseline gap-1.5 whitespace-nowrap">
         <span className="text-xs text-muted-foreground">下载</span>
-        <span className="num font-semibold opacity-75">
-          {fmtBytes(r?.global?.tx_bytes)}
-        </span>
+        <span className="num font-semibold opacity-75">{fmtBytes(sumTx)}</span>
       </div>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={onResetAll}
+        disabled={!sumRx && !sumTx}
+        title="重置所有用户的累计上传/下载"
+      >
+        重置累计
+      </Button>
     </div>
   );
 }
@@ -226,12 +251,55 @@ function ConnectionTable({
   );
 }
 
+// 用户统计表列定义；「用户」「操作」两列不参与数字右对齐。
+const USER_COLS = [
+  "用户",
+  "存活连接",
+  "累积连接",
+  "上传速率",
+  "下载速率",
+  "累计上传",
+  "累计下载",
+  "操作",
+];
+const USER_NUM_COLS = new Set(
+  USER_COLS.filter((h) => h !== "用户" && h !== "操作")
+);
+
+// 汇总所有用户的本地累计流量。
+function sumTotals(usage: Record<string, UsageTotals>): {
+  sumRx: number;
+  sumTx: number;
+} {
+  let sumRx = 0;
+  let sumTx = 0;
+  for (const t of Object.values(usage)) {
+    sumRx += t.rx;
+    sumTx += t.tx;
+  }
+  return { sumRx, sumTx };
+}
+
 export default function StatusTab({ id, active }: { id: string; active: boolean }) {
   const [report, setReport] = useState<StatusReport | null>(null);
+  const [usage, setUsage] = useState<Record<string, UsageTotals>>({});
   const tick = useApp((s) => s.tick);
   const expanded = useApp((s) => s.perInst[id]?.expanded);
   const patchInstState = useApp((s) => s.patchInstState);
   const userConns = useApp((s) => s.perInst[id]?.userConns);
+
+  // 切换实例时先载入本地累计缓存，避免等待首份状态报告。
+  useEffect(() => {
+    let cancelled = false;
+    loadUsage(id)
+      .then((u) => {
+        if (!cancelled) setUsage(u);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   // 2 秒轮询刷新状态（仅活跃页签）。
   useEffect(() => {
@@ -248,6 +316,17 @@ export default function StatusTab({ id, active }: { id: string; active: boolean 
           if (u.connections?.length) conns[u.user] = u.connections;
         }
         patchInstState(id, { userConns: conns });
+        // 以会话级原始值推进 IndexedDB 累计（实例重启计数归零后仍延续）。
+        const merged = await accumulateUsage(
+          id,
+          (s.report?.users || []).map((u) => ({
+            user: u.user,
+            rx: u.rx_bytes || 0,
+            tx: u.tx_bytes || 0,
+          }))
+        );
+        if (cancelled || useApp.getState().curId !== id) return;
+        setUsage(merged);
       } catch {
         /* 静默，等下一轮 */
       }
@@ -259,34 +338,53 @@ export default function StatusTab({ id, active }: { id: string; active: boolean 
 
   const r = report;
   const users = r?.users || [];
+  const { sumRx, sumTx } = sumTotals(usage);
+
+  const resetUser = async (user: string) => {
+    if (!window.confirm(`确认重置用户 ${user} 的累计上传/下载？`)) return;
+    try {
+      setUsage(await resetUserUsage(id, user));
+      showToast(`用户 ${user} 的累计流量已重置`, "ok");
+    } catch (err) {
+      showToast((err as Error).message, "err");
+    }
+  };
+
+  const resetAll = async () => {
+    if (!window.confirm("确认重置所有用户的累计上传/下载？")) return;
+    try {
+      setUsage(await resetAllUsage(id));
+      showToast("所有用户的累计流量已重置", "ok");
+    } catch (err) {
+      showToast((err as Error).message, "err");
+    }
+  };
 
   return (
     <div>
-      <StatsBar report={r} />
+      <StatsBar report={r} sumRx={sumRx} sumTx={sumTx} onResetAll={resetAll} />
       <div className="mb-2 mt-1 text-[13px] font-semibold text-muted-foreground">
         按用户统计
       </div>
       <table className="w-full border-separate border-spacing-0 border border-border bg-card">
         <thead>
           <tr>
-            {["用户", "存活连接", "累积连接", "上传速率", "下载速率", "累计上传", "累计下载"].map(
-              (h, i) => (
-                <th
-                  key={h}
-                  className={`whitespace-nowrap bg-secondary px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground ${
-                    i > 0 ? "num" : ""
-                  }`}
-                >
-                  {h}
-                </th>
-              )
-            )}
+            {USER_COLS.map((h) => (
+              <th
+                key={h}
+                className={`whitespace-nowrap bg-secondary px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground ${
+                  USER_NUM_COLS.has(h) ? "num" : ""
+                }`}
+              >
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {!users.length && (
             <tr>
-              <td colSpan={7} className="px-3 py-7 text-center text-muted-foreground">
+              <td colSpan={USER_COLS.length} className="px-3 py-7 text-center text-muted-foreground">
                 暂无连接
               </td>
             </tr>
@@ -307,6 +405,8 @@ export default function StatusTab({ id, active }: { id: string; active: boolean 
                 isOpen={isOpen}
                 conns={u.connections || []}
                 userConns={userConns}
+                usage={usage[u.user]}
+                onReset={resetUser}
               />
             );
           })}
@@ -325,6 +425,8 @@ function UserRow({
   isOpen,
   conns,
   userConns,
+  usage,
+  onReset,
 }: {
   id: string;
   u: {
@@ -342,6 +444,8 @@ function UserRow({
   isOpen: boolean;
   conns: ConnectionInfo[];
   userConns?: Record<string, ConnectionInfo[]>;
+  usage?: UsageTotals;
+  onReset: (user: string) => void;
 }) {
   const patchInstState = useApp((s) => s.patchInstState);
   const toggle = () => {
@@ -351,14 +455,9 @@ function UserRow({
     });
   };
 
-  const txCell =
-    u.quota > 0 ? (
-      <span className={overQuota ? "font-semibold text-err" : ""}>
-        {fmtBytes(u.usage_total)} / {fmtBytes(u.quota)}
-      </span>
-    ) : (
-      fmtBytes(u.tx_bytes)
-    );
+  // 累计值以本地缓存为准（跨实例重启延续），缓存未就绪时回退到会话级原始值。
+  const cachedRx = usage?.rx ?? u.rx_bytes;
+  const cachedTx = usage?.tx ?? u.tx_bytes;
 
   return (
     <>
@@ -374,12 +473,37 @@ function UserRow({
         <td className="num px-3 py-2 text-muted-foreground">{u.conn_total || 0}</td>
         <td className="num px-3 py-2 text-ok">{fmtRate(rates.rx_rate_bps)}</td>
         <td className="num px-3 py-2 text-warn">{fmtRate(rates.tx_rate_bps)}</td>
-        <td className="num px-3 py-2">{fmtBytes(u.rx_bytes)}</td>
-        <td className="num px-3 py-2">{txCell}</td>
+        <td className="num px-3 py-2">{fmtBytes(cachedRx)}</td>
+        <td className="num px-3 py-2">
+          {fmtBytes(cachedTx)}
+          {u.quota > 0 && (
+            <span
+              className={`ml-1.5 text-[11px] ${
+                overQuota ? "font-semibold text-err" : "text-muted-foreground"
+              }`}
+              title="配额已用量 / 配额"
+            >
+              ({fmtBytes(u.usage_total)}/{fmtBytes(u.quota)})
+            </span>
+          )}
+        </td>
+        <td className="px-3 py-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            title="重置该用户的累计上传/下载"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReset(u.user);
+            }}
+          >
+            重置
+          </Button>
+        </td>
       </tr>
       {hasConns && isOpen && (
         <tr className="border-t border-border">
-          <td colSpan={7} className="bg-primary/5 px-3 py-2 pl-8">
+          <td colSpan={USER_COLS.length} className="bg-primary/5 px-3 py-2 pl-8">
             <ConnectionTable id={id} conns={userConns?.[u.user] || conns} />
           </td>
         </tr>
