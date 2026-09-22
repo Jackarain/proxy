@@ -57,12 +57,21 @@ export interface StatusReport {
   user_rates?: Record<string, { rx_rate_bps: number; tx_rate_bps: number }>;
 }
 
+// launcher 侧持久化的单用户累计流量（字节）。total 为含续接基线的合并总量
+// （配额口径，重置不清零），rx/tx 为累计上行（上传）/下行（下载）。
+export interface UserUsage {
+  total: number;
+  rx: number;
+  tx: number;
+}
+
 export interface StatusData {
   online: boolean;
   state: string;
   pid?: number;
   last_seen?: string;
   report?: StatusReport;
+  usage?: Record<string, UserUsage>;
 }
 
 export interface InstanceDetail {

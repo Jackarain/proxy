@@ -1249,6 +1249,27 @@ net::awaitable<response> http_server::route(const http::request<http::string_bod
 			co_return make_error(http::status::method_not_allowed, "method not allowed");
 		}
 
+		// 重置用户累计上传/下载；请求体 {"user":"..."} 重置单个用户，
+		// 缺省或空 user 重置该实例全部用户。
+		if (action == "usage" && parts.size() >= 3 && parts[2] == "reset") {
+			if (req.method() != http::verb::post)
+				co_return make_error(http::status::method_not_allowed, "method not allowed");
+			std::string user;
+			if (!req.body().empty()) {
+				boost::system::error_code ec;
+				auto jv = json::parse(req.body(), ec);
+				if (!ec && jv.is_object()) {
+					if (auto u = jv.as_object().if_contains("user"); u && u->is_string())
+						user = std::string(u->as_string());
+				}
+			}
+			json::value out;
+			std::string err;
+			if (!m_mgr_->reset_usage(id, user, out, err))
+				co_return make_error(http::status::not_found, err);
+			co_return make_json_response(http::status::ok, out);
+		}
+
 		co_return make_error(http::status::not_found, "not found");
 	}
 

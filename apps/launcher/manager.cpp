@@ -74,6 +74,45 @@ std::string as_string(const json::value& v)
 	return {};
 }
 
+// 读取对象的数值字段（缺失/类型不符返回 0）。
+std::int64_t obj_num(const json::object& o, const char* key)
+{
+	auto it = o.find(key);
+	return it == o.end() ? 0 : as_int64(it->value());
+}
+
+// 用量记录 -> JSON（对外视图，不含会话级折算用的 last_* 字段）。
+json::object usage_view(const std::map<std::string, usage_record>& m)
+{
+	json::object out;
+	for (const auto& [user, rec] : m) {
+		json::object r;
+		r["total"] = rec.total;
+		r["rx"] = rec.rx;
+		r["tx"] = rec.tx;
+		out[user] = std::move(r);
+	}
+	return out;
+}
+
+// 从持久化 JSON 解析单个用户用量；兼容旧版单值（合并总量）格式。
+usage_record parse_usage_record(const json::value& v)
+{
+	usage_record rec;
+	if (v.is_object()) {
+		const auto& o = v.as_object();
+		rec.total = obj_num(o, "total");
+		rec.rx = obj_num(o, "rx");
+		rec.tx = obj_num(o, "tx");
+		rec.last_rx = obj_num(o, "last_rx");
+		rec.last_tx = obj_num(o, "last_tx");
+	} else {
+		// 旧版仅持久化合并总量，无法拆分方向：计入配额基线，展示口径从零起算。
+		rec.total = as_int64(v);
+	}
+	return rec;
+}
+
 // 随机 hex 字符串（crypto 强度，跨平台：OpenSSL RAND_bytes）。
 std::string random_hex(std::size_t bytes)
 {
@@ -397,8 +436,10 @@ bool manager::load_from_disk()
 			in->config_ = c->as_object();
 		if (in->config_.empty())
 			in->config_ = json::object();
-		if (auto u = obj.if_contains("user_usage"); u && u->is_object())
-			in->user_usage_ = u->as_object();
+		if (auto u = obj.if_contains("user_usage"); u && u->is_object()) {
+			for (const auto& [user, v] : u->as_object())
+				in->user_usage_[std::string(user)] = parse_usage_record(v);
+		}
 		if (auto t = obj.if_contains("created_at"); t && t->is_string()) {
 			time_point tp;
 			if (rfc3339_parse(std::string(t->as_string()), tp))
@@ -430,25 +471,42 @@ std::vector<std::string> manager::ids()
 
 bool manager::save()
 {
-	std::vector<std::pair<instance_ptr, json::object>> list;
+	struct save_item
+	{
+		instance_ptr in;
+		json::object cfg;
+		std::map<std::string, usage_record> usage;
+	};
+	std::vector<save_item> list;
 	{
 		std::lock_guard<std::mutex> lock(m_mu_);
 		list.reserve(m_instances_.size());
 		for (const auto& [_, in] : m_instances_) {
 			// 深拷贝 map：锁外序列化期间其他线程可能在锁内就地修改 config_/user_usage_。
-			list.emplace_back(in, json::object(in->config_));
+			list.push_back(save_item{ in, json::object(in->config_), in->user_usage_ });
 		}
 	}
 	json::array arr;
-	for (auto& [in, cfg] : list) {
+	for (auto& it : list) {
+		auto& in = it.in;
+		json::object usage;
+		for (const auto& [user, rec] : it.usage) {
+			json::object r;
+			r["total"] = rec.total;
+			r["rx"] = rec.rx;
+			r["tx"] = rec.tx;
+			r["last_rx"] = rec.last_rx;
+			r["last_tx"] = rec.last_tx;
+			usage[user] = std::move(r);
+		}
 		json::object item;
 		item["id"] = in->id_;
 		item["name"] = in->name_;
-		item["config"] = std::move(cfg);
+		item["config"] = std::move(it.cfg);
 		item["autostart"] = in->autostart_;
 		item["token"] = in->token_;
 		item["created_at"] = rfc3339_format(in->created_at_);
-		item["user_usage"] = json::object(in->user_usage_);
+		item["user_usage"] = std::move(usage);
 		arr.emplace_back(std::move(item));
 	}
 
@@ -1255,6 +1313,48 @@ bool manager::status_view(const std::string& id, json::value& out)
 	o["pid"] = in->pid();
 	o["last_seen"] = rfc3339_format(in->last_seen_);
 	o["report"] = in->last_report_.is_object() ? in->last_report_ : json::value(json::object_kind);
+	// 各用户累计上下行（WebUI 展示口径），与实时报告合并返回。
+	o["usage"] = usage_view(in->user_usage_);
+	out = std::move(o);
+	return true;
+}
+
+bool manager::reset_usage(const std::string& id, const std::string& user,
+	json::value& out, std::string& err)
+{
+	bool changed = false;
+	json::object usage;
+	{
+		std::lock_guard<std::mutex> lock(m_mu_);
+		auto in = find_instance_unlocked(id);
+		if (!in) {
+			err = "not found";
+			return false;
+		}
+		// 仅清零展示口径 rx/tx，配额累计 total 保留（不因统计重置而放开配额）。
+		if (user.empty()) {
+			for (auto& [_, rec] : in->user_usage_) {
+				if (rec.rx || rec.tx) {
+					rec.rx = 0;
+					rec.tx = 0;
+					changed = true;
+				}
+			}
+		} else if (auto it = in->user_usage_.find(user); it != in->user_usage_.end()) {
+			if (it->second.rx || it->second.tx) {
+				it->second.rx = 0;
+				it->second.tx = 0;
+				changed = true;
+			}
+		}
+		usage = usage_view(in->user_usage_);
+	}
+	// 重置需立即落盘，不走节流。
+	if (changed)
+		save();
+	json::object o;
+	o["ok"] = true;
+	o["usage"] = std::move(usage);
 	out = std::move(o);
 	return true;
 }
@@ -1313,10 +1413,14 @@ void manager::ws_attached(const instance_ptr& in, jsonrpc_session sess)
 		old.stop();
 
 	// 续接持久化的用户已用量，使配额在重启/重连后延续（proxy 侧只增不减）。
+	// 配额口径为合并总量 total（累计上下行由 launcher 单独维护）。
 	json::object usage;
 	{
 		std::lock_guard<std::mutex> lock(m_mu_);
-		usage = json::object(in->user_usage_);
+		for (const auto& [user, rec] : in->user_usage_) {
+			if (rec.total > 0)
+				usage[user] = rec.total;
+		}
 	}
 	if (!usage.empty()) {
 		jsonrpc_session cur;
@@ -1355,7 +1459,8 @@ void manager::handle_notify(const instance_ptr& in, const std::string& method,
 			std::lock_guard<std::mutex> lock(m_mu_);
 			in->last_report_ = params;
 			in->last_seen_ = now_time();
-			// 记录用户已用量（usage_total 为含续接基线的累计总流量），重启后续接。
+			// 记录用户已用量：total 为含续接基线的累计总流量（配额续接），
+			// rx/tx 为按会话级原始值折算的累计上下行（实例重启归零后仍延续）。
 			// 兼容旧版 proxy_server：未上报 usage_total 时回退到会话级 tx+rx。
 			bool usage_changed = false;
 			if (params.is_object()) {
@@ -1376,16 +1481,26 @@ void manager::handle_notify(const instance_ptr& in, const std::string& method,
 							total = as_int64(ut->value());
 						if (total <= 0) {
 							// 兼容旧版 proxy_server：未上报 usage_total 时回退到会话级 tx+rx。
-							auto tx_it = uo.find("tx_bytes");
-							auto rx_it = uo.find("rx_bytes");
-							total = (tx_it != uo.end() ? as_int64(tx_it->value()) : 0)
-								+ (rx_it != uo.end() ? as_int64(rx_it->value()) : 0);
+							total = obj_num(uo, "tx_bytes") + obj_num(uo, "rx_bytes");
 						}
-						std::int64_t cur = 0;
-						if (auto it = in->user_usage_.find(user); it != in->user_usage_.end())
-							cur = as_int64(it->value());
-						if (total > cur) {
-							in->user_usage_[user] = total;
+						// 会话级原始值单调递增；回退说明实例重启，增量从当前值起算。
+						std::int64_t raw_rx = obj_num(uo, "rx_bytes");
+						std::int64_t raw_tx = obj_num(uo, "tx_bytes");
+						auto& rec = in->user_usage_[user];
+						if (total > rec.total) {
+							rec.total = total;
+							usage_changed = true;
+						}
+						std::int64_t delta_rx = raw_rx >= rec.last_rx ? raw_rx - rec.last_rx : raw_rx;
+						std::int64_t delta_tx = raw_tx >= rec.last_tx ? raw_tx - rec.last_tx : raw_tx;
+						if (delta_rx > 0 || delta_tx > 0) {
+							rec.rx += delta_rx;
+							rec.tx += delta_tx;
+							usage_changed = true;
+						}
+						if (raw_rx != rec.last_rx || raw_tx != rec.last_tx) {
+							rec.last_rx = raw_rx;
+							rec.last_tx = raw_tx;
 							usage_changed = true;
 						}
 					}

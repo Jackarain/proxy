@@ -37,6 +37,20 @@ namespace net = boost::asio;
 
 using instance_ptr = std::shared_ptr<struct instance>;
 
+// 单个用户的累计流量（字节），随实例持久化。
+//   total    含续接基线的累计总流量（上行+下行），用于配额续接；重置不清零。
+//   rx/tx    累计上行（上传）/下行（下载）；重置仅清零这两个展示口径。
+//   last_rx/last_tx  最近一次会话级原始上报值，用于把重启归零的会话计数
+//                    折算成增量（回退即视为实例重启）。
+struct usage_record
+{
+	std::int64_t total = 0;
+	std::int64_t rx = 0;
+	std::int64_t tx = 0;
+	std::int64_t last_rx = 0;
+	std::int64_t last_tx = 0;
+};
+
 // 一个被管理的 proxy_server 实例。
 struct instance : public std::enable_shared_from_this<instance>
 {
@@ -47,7 +61,7 @@ struct instance : public std::enable_shared_from_this<instance>
 	bool autostart_ = false;
 	time_point created_at_;
 	// 各用户累计流量用量（字节），持久化；重启实例后续接配额计数。
-	boost::json::object user_usage_;
+	std::map<std::string, usage_record> user_usage_;
 	// 控制通道认证令牌（持久化；launcher 崩溃后孤儿进程可凭旧 token 重连）。
 	std::string token_;
 
@@ -180,6 +194,11 @@ public:
 	boost::json::value summaries();
 	bool view(const std::string& id, view& out);
 	bool status_view(const std::string& id, boost::json::value& out);
+
+	// 重置用户累计上传/下载（user 为空表示重置该实例全部用户）。返回是否成功；
+	// out 为重置后的用量视图（{ok, usage}）。配额累计（total）不随重置清零。
+	bool reset_usage(const std::string& id, const std::string& user,
+		boost::json::value& out, std::string& err);
 	// 日志增量。since<0 时返回最近快照（含每行序号）。
 	bool logs(const std::string& id, std::int64_t since, boost::json::value& out);
 
