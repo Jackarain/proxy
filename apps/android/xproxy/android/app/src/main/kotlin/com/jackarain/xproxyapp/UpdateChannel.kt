@@ -35,7 +35,10 @@ class UpdateChannel(private val activity: Activity) {
                 when (call.method) {
                     // 下载落地目录: 应用私有外部目录(空间充足), 不可用时退回内部 cache.
                     "update_dir" -> result.success(updateDir().absolutePath)
-                    "installed_apk" -> result.success(activity.applicationInfo.sourceDir)
+                    // 已安装 APK 的整文件 SHA-1: 与下载站给出的校验值比对判断有无更新.
+                    "installed_apk_hash" -> inWorker(result) {
+                        sha1Hex(File(activity.applicationInfo.sourceDir))
+                    }
                     "current_version" -> {
                         try {
                             result.success(infoMap(packageInfo(activity.packageName)))
@@ -43,10 +46,11 @@ class UpdateChannel(private val activity: Activity) {
                             result.error("UPDATE_FAILED", e.message, null)
                         }
                     }
-                    // 读取已下载 APK 的版本/签名(不安装), 供 Flutter 侧判定是否更新.
+                    // 读取已下载 APK 的版本/签名/校验值(不安装), 供 Flutter 侧校验与提示.
                     "inspect_apk" -> inWorker(result) {
                         val apk = updateDirApk(call.argument<String>("apk").orEmpty())
-                        infoMap(packageInfo(apk.absolutePath))
+                        infoMap(packageInfo(apk.absolutePath)) +
+                            mapOf("sha1" to sha1Hex(apk))
                     }
                     "install" -> install(call.argument<String>("apk").orEmpty(), result)
                     else -> result.notImplemented()
@@ -150,6 +154,20 @@ class UpdateChannel(private val activity: Activity) {
         val signer = signers?.firstOrNull() ?: return ""
         val digest = MessageDigest.getInstance("SHA-256").digest(signer.toByteArray())
         return digest.joinToString("") { "%02x".format(it) }
+    }
+
+    /** 整文件 SHA-1 (小写十六进制), 与下载站返回的校验值同一算法. */
+    private fun sha1Hex(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-1")
+        val buffer = ByteArray(1 shl 20)
+        file.inputStream().use { input ->
+            while (true) {
+                val read = input.read(buffer)
+                if (read <= 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun infoMap(info: PackageInfo?): Map<String, Any> {

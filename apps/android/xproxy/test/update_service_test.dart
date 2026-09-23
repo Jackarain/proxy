@@ -1,9 +1,23 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:xproxy/services/update_service.dart';
+
+/// 发布目录列表的真实响应形态.
+const String _indexJson = '''
+[
+  {"last_write_time":"09-24-2026 02:53","filename":"app-release.apk","is_dir":false,
+   "filesize":133496348,"hash":"5FEDC82B81A856B782EBCF9AF4ED62924FE1FA52"},
+  {"last_write_time":"09-12-2026 23:43","filename":"proxy_server-android-release-apk.zip",
+   "is_dir":false,"filesize":32481488,
+   "hash":"9cca542338a0044aaf2f3abaada652cb7c895de0"}
+]
+''';
+
+const String _apkSha1 = '5fedc82b81a856b782ebcf9af4ed62924fe1fa52';
 
 /// 起一个本地更新服务, 处理器异常不向测试框架抛出 (客户端主动断开属预期).
 Future<HttpServer> _serve(
@@ -23,16 +37,14 @@ Future<HttpServer> _serve(
 Uri _urlOf(HttpServer server, String path) =>
     Uri.parse('http://127.0.0.1:${server.port}$path');
 
-/// 生成一段可区分的内容 (头部字节不同即指纹不同).
-List<int> _content(int length, int seed) => List<int>.generate(
-  length,
-  (i) => (i * 31 + seed * 7) & 0xff,
-  growable: false,
-);
+Future<HttpServer> _serveIndex(String body) => _serve((req) async {
+  req.response.headers.contentType = ContentType.json;
+  req.response.write(body);
+  await req.response.close();
+});
 
-/// 远端指纹只覆盖头部字节, 期望值同样只取头部.
-String _headFingerprint(List<int> content) =>
-    apkFingerprint(content.sublist(0, kApkFingerprintBytes));
+UpdateService _serviceFor(HttpServer server) =>
+    UpdateService(indexUrl: _urlOf(server, '/download/?q=json&hash=1'));
 
 void main() {
   late Directory temp;
@@ -45,115 +57,80 @@ void main() {
     if (await temp.exists()) await temp.delete(recursive: true);
   });
 
-  group('probe', () {
-    test('按 Range 只取头部字节并给出内容指纹', () async {
-      const total = 78928413;
-      final content = _content(total, 1);
-      final ranges = <String?>[];
-      var written = 0;
-      final server = await _serve((req) async {
-        ranges.add(req.headers.value(HttpHeaders.rangeHeader));
-        req.response.statusCode = HttpStatus.partialContent;
-        req.response.headers.set(
-          HttpHeaders.contentRangeHeader,
-          'bytes 0-${kApkFingerprintBytes - 1}/$total',
-        );
-        final head = content.sublist(0, kApkFingerprintBytes);
-        req.response.add(head);
-        written += head.length;
-        await req.response.close();
-      });
+  group('fetch', () {
+    test('从列表里取安装包的 SHA-1 与大小', () async {
+      final server = await _serveIndex(_indexJson);
       addTearDown(() => server.close(force: true));
 
-      final probed =
-          await UpdateService(url: _urlOf(server, '/app.apk')).probe();
+      final remote = await _serviceFor(server).fetch();
 
-      expect(probed.fingerprint, _headFingerprint(content));
-      expect(probed.size, total);
-      expect(ranges, ['bytes=0-${kApkFingerprintBytes - 1}']);
-      // 只读了头部: 没有为了拿指纹而拉整个包.
-      expect(written, kApkFingerprintBytes);
+      expect(remote.hash, _apkSha1);
+      expect(remote.size, 133496348);
+      expect(remote.lastWriteTime, '09-24-2026 02:53');
     });
 
-    test('服务端忽略 Range 时读满头部即断开', () async {
-      const total = 16 * 1024 * 1024;
-      final content = _content(total, 2);
-      var written = 0;
-      final server = await _serve((req) async {
-        req.response.statusCode = HttpStatus.ok;
-        req.response.headers.contentLength = total;
-        while (written < total) {
-          final end = written + 64 * 1024;
-          req.response.add(content.sublist(written, end));
-          await req.response.flush();
-          written = end;
-        }
-        await req.response.close();
-      });
-      addTearDown(() => server.close(force: true));
-
-      final probed =
-          await UpdateService(url: _urlOf(server, '/big.apk')).probe();
-
-      expect(probed.fingerprint, _headFingerprint(content));
-      expect(probed.size, total);
-      expect(written, lessThan(total));
-    });
-
-    test('内容不同则指纹不同', () async {
-      Future<String> fingerprintOf(List<int> content) async {
-        final server = await _serve((req) async {
-          req.response.headers.contentLength = content.length;
-          req.response.add(content);
-          await req.response.close();
-        });
-        addTearDown(() => server.close(force: true));
-        return (await UpdateService(url: _urlOf(server, '/a.apk')).probe())
-            .fingerprint;
-      }
-
-      final a = await fingerprintOf(_content(200 * 1024, 3));
-      final b = await fingerprintOf(_content(200 * 1024, 4));
-      final again = await fingerprintOf(_content(200 * 1024, 3));
-      expect(a, again);
-      expect(a, isNot(b));
-    });
-
-    test('404 报告为可重试的失败', () async {
-      final server = await _serve((req) async {
-        req.response.statusCode = HttpStatus.notFound;
-        await req.response.close();
-      });
+    test('列表里没有安装包时报错', () async {
+      final server = await _serveIndex(
+        jsonEncode([
+          {'filename': 'other.apk', 'filesize': 1, 'hash': 'a' * 40},
+        ]),
+      );
       addTearDown(() => server.close(force: true));
 
       expect(
-        UpdateService(url: _urlOf(server, '/missing.apk')).probe(),
-        throwsA(isA<UpdateException>()),
+        _serviceFor(server).fetch(),
+        throwsA(
+          isA<UpdateException>().having(
+            (e) => e.message,
+            'message',
+            contains('app-release.apk'),
+          ),
+        ),
       );
     });
-  });
 
-  group('local apk', () {
-    test('本地包头部指纹与远端同一份内容一致', () async {
-      const total = 300 * 1024;
-      final content = _content(total, 5);
-      final server = await _serve((req) async {
-        req.response.headers.contentLength = total;
-        req.response.add(content);
-        await req.response.close();
-      });
+    test('校验值缺失或格式不对时报错', () async {
+      for (final hash in ['', 'abc', 'z' * 40, 'a' * 64]) {
+        final server = await _serveIndex(
+          jsonEncode([
+            {'filename': 'app-release.apk', 'filesize': 1, 'hash': hash},
+          ]),
+        );
+        addTearDown(() => server.close(force: true));
+        expect(
+          _serviceFor(server).fetch(),
+          throwsA(isA<UpdateException>()),
+          reason: 'hash=$hash',
+        );
+      }
+    });
+
+    test('响应不是 JSON 时报错', () async {
+      final server = await _serveIndex('<html>nginx</html>');
       addTearDown(() => server.close(force: true));
 
-      final probed = await UpdateService(url: _urlOf(server, '/a.apk')).probe();
+      expect(_serviceFor(server).fetch(), throwsA(isA<UpdateException>()));
+    });
 
-      final same = File('${temp.path}/same.apk');
-      await same.writeAsBytes(content);
-      final other = File('${temp.path}/other.apk');
-      await other.writeAsBytes(_content(total, 6));
+    test('响应过大时报错', () async {
+      final server = await _serveIndex('x' * (kUpdateIndexMaxBytes + 1024));
+      addTearDown(() => server.close(force: true));
 
-      expect(await apkFileFingerprint(same.path), probed.fingerprint);
-      expect(await apkFileFingerprint(other.path), isNot(probed.fingerprint));
-      expect(await apkFileFingerprint('${temp.path}/none.apk'), isNull);
+      expect(_serviceFor(server).fetch(), throwsA(isA<UpdateException>()));
+    });
+
+    test('HTTP 异常状态报错', () async {
+      for (final status in [
+        HttpStatus.notFound,
+        HttpStatus.internalServerError,
+      ]) {
+        final server = await _serve((req) async {
+          req.response.statusCode = status;
+          await req.response.close();
+        });
+        addTearDown(() => server.close(force: true));
+        expect(_serviceFor(server).fetch(), throwsA(isA<UpdateException>()));
+      }
     });
   });
 
@@ -173,10 +150,10 @@ void main() {
       });
       addTearDown(() => server.close(force: true));
 
-      final target = File('${temp.path}/app-release.apk');
+      final target = File('${temp.path}/$kUpdateApkName');
       final progress = <int>[];
       final received = await UpdateDownload(
-        url: _urlOf(server, '/app.apk'),
+        url: _urlOf(server, '/app-release.apk'),
         target: target,
       ).start(onProgress: (r, _) => progress.add(r));
 
@@ -244,18 +221,18 @@ void main() {
   });
 
   group('update state', () {
-    test('记录已处理指纹与检查时间', () async {
+    test('记录已处理的校验值与检查时间', () async {
       SharedPreferences.setMockInitialValues({});
       final state = UpdateState();
 
-      expect(await state.fingerprint(), '');
+      expect(await state.handledHash(), '');
       expect(await state.lastCheck(), isNull);
 
-      await state.saveFingerprint('"v1"');
+      await state.saveHandledHash(_apkSha1);
       final now = DateTime(2026, 9, 24, 10, 30);
       await state.saveLastCheck(now);
 
-      expect(await state.fingerprint(), '"v1"');
+      expect(await state.handledHash(), _apkSha1);
       expect(await state.lastCheck(), now);
     });
 
@@ -264,19 +241,19 @@ void main() {
       final state = UpdateState();
 
       expect(await state.hasInstalling(), isFalse);
-      await state.markInstalling('deadbeef', 1216);
+      await state.markInstalling('new' * 13 + 'a');
       expect(await state.hasInstalling(), isTrue);
 
-      // 版本没变(用户取消了安装器): 不记为已处理, 下次仍会提示.
-      await state.resolveInstalling(1215);
+      // 装完后的包校验值仍是旧的(用户取消了安装器): 不记为已处理, 下次仍提示.
+      await state.resolveInstalling('old' * 13 + 'a');
       expect(await state.hasInstalling(), isFalse);
-      expect(await state.fingerprint(), '');
+      expect(await state.handledHash(), '');
 
-      // 再次安装并确认装成: 记为已处理, 不再重复提示.
-      await state.markInstalling('deadbeef', 1216);
-      await state.resolveInstalling(1216);
+      // 装成后已安装包就是待核对的那份: 记为已处理, 不再重复提示.
+      await state.markInstalling(_apkSha1);
+      await state.resolveInstalling(_apkSha1);
       expect(await state.hasInstalling(), isFalse);
-      expect(await state.fingerprint(), 'deadbeef');
+      expect(await state.handledHash(), _apkSha1);
     });
   });
 
@@ -285,7 +262,7 @@ void main() {
       expect(formatBytes(0), '0 B');
       expect(formatBytes(1023), '1023 B');
       expect(formatBytes(1536), '1.5 KB');
-      expect(formatBytes(78928413), '75.3 MB');
+      expect(formatBytes(133496348), '127 MB');
       expect(formatSpeed(0), '');
       expect(formatSpeed(1258291), '1.2 MB/s');
     });

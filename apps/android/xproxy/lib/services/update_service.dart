@@ -1,20 +1,29 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// APK 分发地址 (站点上的正式签名包).
+/// 发布目录的列表地址: `hash=1` 时每项带上整文件 SHA-1.
+final Uri kUpdateIndexUrl = Uri.parse(
+  'https://www.jackarain.org/download/?q=json&hash=1',
+);
+
+/// 安装包下载地址.
 final Uri kUpdateApkUrl = Uri.parse(
   'https://www.jackarain.org/download/app-release.apk',
 );
 
+/// 发布目录里安装包的文件名.
+const String kUpdateApkName = 'app-release.apk';
+
 /// 启动后自动检查更新的最小间隔.
 const Duration kUpdateCheckInterval = Duration(hours: 24);
 
-/// 指纹取 APK 头部字节数: 覆盖 zip 首部若干 entry(含清单/代码), 足以区分不同构建.
-const int kApkFingerprintBytes = 64 * 1024;
+/// 列表响应允许的最大长度, 避免异常响应撑爆内存.
+const int kUpdateIndexMaxBytes = 256 * 1024;
 
-/// 更新检查/下载中可预期的失败 (网络异常、服务端异常状态等).
+/// 更新检查/下载中可预期的失败 (网络异常、服务端异常状态、响应格式不符等).
 class UpdateException implements Exception {
   UpdateException(this.message);
 
@@ -30,89 +39,58 @@ class UpdateCancelled implements Exception {
   String toString() => '已取消下载';
 }
 
-/// 远端安装包描述: 由头部探测得到, 不需要拉取完整内容.
+/// 发布目录里的安装包信息.
 class RemoteApk {
-  const RemoteApk({required this.fingerprint, required this.size});
+  const RemoteApk({
+    required this.hash,
+    required this.size,
+    this.lastWriteTime = '',
+  });
 
-  /// 内容指纹, 见 [apkFingerprint].
-  final String fingerprint;
+  /// 整文件 SHA-1 (小写十六进制).
+  final String hash;
 
-  /// 完整包长度, 未知为 -1.
+  /// 文件长度, 未知为 -1.
   final int size;
+
+  /// 服务器上的最后写入时间, 仅用于展示.
+  final String lastWriteTime;
 }
 
-/// APK 内容指纹: 取头部 [kApkFingerprintBytes] 字节做 FNV-1a 摘要.
-///
-/// 站点未提供 `ETag`/`Last-Modified`, 只能以内容比对; 头部已包含 zip 目录项与
-/// 清单/代码, 同一份包必然同值, 重新构建必然变值. 非加密用途, 只用于判重.
-String apkFingerprint(List<int> head) {
-  var hash = 0xcbf29ce484222325;
-  for (final byte in head) {
-    // int 固定 64 位, 乘法自然回绕; 末次掩码保证输出为无符号十六进制.
-    hash = (hash ^ byte) * 0x100000001b3;
-  }
-  return (hash & 0x7FFFFFFFFFFFFFFF).toRadixString(16).padLeft(16, '0');
-}
-
-/// 读取本地 APK 头部计算指纹 (与远端探测同一算法), 用于判断已安装包是否就是远端那份.
-///
-/// 读不到时返回 null, 调用方退化为下载后再判定版本.
-Future<String?> apkFileFingerprint(String path) async {
-  RandomAccessFile? file;
-  try {
-    file = await File(path).open();
-    final head = await file.read(kApkFingerprintBytes);
-    if (head.isEmpty) return null;
-    return apkFingerprint(head);
-  } catch (_) {
-    return null;
-  } finally {
-    try {
-      await file?.close();
-    } catch (_) {}
-  }
-}
-
-/// 远端安装包的探测与下载.
+/// 远端发布信息的查询与安装包下载.
 class UpdateService {
-  UpdateService({Uri? url, Duration? timeout})
-    : url = url ?? kUpdateApkUrl,
+  UpdateService({Uri? indexUrl, Uri? apkUrl, Duration? timeout})
+    : indexUrl = indexUrl ?? kUpdateIndexUrl,
+      apkUrl = apkUrl ?? kUpdateApkUrl,
       timeout = timeout ?? const Duration(seconds: 20);
 
-  final Uri url;
+  final Uri indexUrl;
+  final Uri apkUrl;
   final Duration timeout;
 
   static const String _userAgent = 'xproxy-android';
 
-  /// 探测远端安装包: 只拉取头部 [kApkFingerprintBytes] 字节算指纹, 用于判断远端
-  /// 是否就是本机已处理过/已安装的那份, 不需要完整下载.
-  Future<RemoteApk> probe() async {
+  /// 查询发布目录: 取 [kUpdateApkName] 的 SHA-1 与大小.
+  ///
+  /// 判断有无更新只依赖这个 SHA-1 与本地已安装包的 SHA-1 是否相同,
+  /// 因此不需要下载安装包本身.
+  Future<RemoteApk> fetch() async {
     final client = HttpClient()..connectionTimeout = timeout;
     try {
-      final req = await client.getUrl(url).timeout(timeout);
+      final req = await client.getUrl(indexUrl).timeout(timeout);
       req.headers.set(HttpHeaders.acceptEncodingHeader, 'identity');
       req.headers.set(HttpHeaders.userAgentHeader, _userAgent);
-      req.headers.set(
-        HttpHeaders.rangeHeader,
-        'bytes=0-${kApkFingerprintBytes - 1}',
-      );
       final resp = await req.close().timeout(timeout);
-      final status = resp.statusCode;
-      if (status != HttpStatus.partialContent && status != HttpStatus.ok) {
+      if (resp.statusCode != HttpStatus.ok) {
         await _discard(resp);
         throw UpdateException(
-          status == HttpStatus.notFound
-              ? '更新地址暂不可用 (HTTP 404), 请稍后再试'
-              : '更新地址返回 HTTP $status',
+          resp.statusCode == HttpStatus.notFound
+              ? '更新列表不可用 (HTTP 404), 请稍后再试'
+              : '更新列表返回 HTTP ${resp.statusCode}',
         );
       }
-      final size = _totalFrom(
-        resp.headers.value(HttpHeaders.contentRangeHeader),
-        resp.contentLength,
-      );
-      final head = await _readHead(resp);
-      if (head.isEmpty) throw UpdateException('更新包内容为空');
-      return RemoteApk(fingerprint: apkFingerprint(head), size: size);
+      final body = await _readBody(resp, kUpdateIndexMaxBytes);
+      return _parseIndex(utf8.decode(body, allowMalformed: true));
     } on UpdateException {
       rethrow;
     } on TimeoutException {
@@ -126,30 +104,39 @@ class UpdateService {
     }
   }
 
-  static int _totalFrom(String? contentRange, int contentLength) {
-    if (contentRange != null) {
-      final slash = contentRange.lastIndexOf('/');
-      if (slash >= 0) {
-        final total = int.tryParse(contentRange.substring(slash + 1).trim());
-        if (total != null && total > 0) return total;
-      }
+  static RemoteApk _parseIndex(String body) {
+    Object? decoded;
+    try {
+      decoded = jsonDecode(body);
+    } on FormatException {
+      throw UpdateException('更新列表不是合法的 JSON');
     }
-    return contentLength;
+    if (decoded is! List) throw UpdateException('更新列表格式不符合预期');
+    for (final item in decoded) {
+      if (item is! Map) continue;
+      if (item['filename'] != kUpdateApkName) continue;
+      final hash = (item['hash'] as String? ?? '').trim().toLowerCase();
+      if (!_isSha1(hash)) throw UpdateException('发布信息缺少有效的 SHA-1 校验值');
+      return RemoteApk(
+        hash: hash,
+        size: (item['filesize'] as num?)?.toInt() ?? -1,
+        lastWriteTime: item['last_write_time'] as String? ?? '',
+      );
+    }
+    throw UpdateException('更新列表里没有 $kUpdateApkName');
   }
 
-  /// 读取至多 [kApkFingerprintBytes] 字节即断开连接 (服务端忽略 Range 时避免拉全量).
-  static Future<List<int>> _readHead(HttpClientResponse resp) async {
-    final head = <int>[];
+  static final RegExp _sha1Pattern = RegExp(r'^[0-9a-f]{40}$');
+
+  static bool _isSha1(String value) => _sha1Pattern.hasMatch(value);
+
+  static Future<List<int>> _readBody(HttpClientResponse resp, int max) async {
+    final body = <int>[];
     await for (final chunk in resp) {
-      final remain = kApkFingerprintBytes - head.length;
-      if (chunk.length <= remain) {
-        head.addAll(chunk);
-      } else {
-        head.addAll(chunk.sublist(0, remain));
-      }
-      if (head.length >= kApkFingerprintBytes) break;
+      body.addAll(chunk);
+      if (body.length > max) throw UpdateException('更新列表响应过大');
     }
-    return head;
+    return body;
   }
 
   /// 只消费首个数据块后断开连接 (主动中断产生的异常无需上报).
@@ -192,7 +179,7 @@ class UpdateDownload {
         await UpdateService._discard(resp);
         throw UpdateException(
           resp.statusCode == HttpStatus.notFound
-              ? '更新包不存在 (HTTP 404)'
+              ? '安装包不存在 (HTTP 404)'
               : '下载失败: HTTP ${resp.statusCode}',
         );
       }
@@ -241,21 +228,21 @@ class UpdateDownload {
 
 /// 更新检查的持久化状态.
 class UpdateState {
-  static const String _fingerprintKey = 'xproxy_update_fingerprint';
+  static const String _handledHashKey = 'xproxy_update_apk_hash';
   static const String _lastCheckKey = 'xproxy_update_last_check';
 
-  /// 已发起安装但结果未知的更新 (`versionCode|fingerprint`).
+  /// 已发起安装但结果未知的安装包 SHA-1.
   static const String _installingKey = 'xproxy_update_installing';
 
-  /// 已处理的远端指纹 (已安装或用户选择跳过该版本).
-  Future<String> fingerprint() async {
+  /// 已处理过的远端 SHA-1 (已安装或用户选择跳过该版本).
+  Future<String> handledHash() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_fingerprintKey) ?? '';
+    return prefs.getString(_handledHashKey) ?? '';
   }
 
-  Future<void> saveFingerprint(String value) async {
+  Future<void> saveHandledHash(String value) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_fingerprintKey, value);
+    await prefs.setString(_handledHashKey, value);
   }
 
   /// 是否已发起过安装但没有核对结果.
@@ -265,23 +252,19 @@ class UpdateState {
   }
 
   /// 记录已发起的安装: 安装会终止当前进程, 只能在下一次启动核对结果.
-  Future<void> markInstalling(String fingerprint, int versionCode) async {
+  Future<void> markInstalling(String hash) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_installingKey, '$versionCode|$fingerprint');
+    await prefs.setString(_installingKey, hash);
   }
 
-  /// 核对上次发起的安装: 版本已达到(或超过)说明装成功, 记为已处理;
+  /// 核对上次发起的安装: 已安装包的 SHA-1 与记录相同说明装成功, 记为已处理;
   /// 否则视为用户取消/安装失败, 丢弃记录以便重新提示.
-  Future<void> resolveInstalling(int currentVersionCode) async {
+  Future<void> resolveInstalling(String installedHash) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_installingKey);
-    if (raw == null) return;
-    final sep = raw.indexOf('|');
-    if (sep > 0) {
-      final versionCode = int.tryParse(raw.substring(0, sep)) ?? 0;
-      if (versionCode > 0 && currentVersionCode >= versionCode) {
-        await prefs.setString(_fingerprintKey, raw.substring(sep + 1));
-      }
+    final pending = prefs.getString(_installingKey);
+    if (pending == null) return;
+    if (pending.isNotEmpty && pending == installedHash) {
+      await prefs.setString(_handledHashKey, pending);
     }
     await prefs.remove(_installingKey);
   }
@@ -298,7 +281,7 @@ class UpdateState {
   }
 }
 
-/// 人类可读的字节数, 如 `31.0 MB`.
+/// 人类可读的字节数, 如 `127.3 MB`.
 String formatBytes(int bytes) {
   if (bytes <= 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB'];

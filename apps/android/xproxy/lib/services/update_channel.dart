@@ -6,6 +6,7 @@ class ApkInfo {
     required this.versionCode,
     required this.versionName,
     required this.signerSha256,
+    this.sha1 = '',
   });
 
   final int versionCode;
@@ -13,6 +14,9 @@ class ApkInfo {
 
   /// 签名证书 SHA-256 (小写十六进制, 空表示读取失败).
   final String signerSha256;
+
+  /// 文件整包 SHA-1 (小写十六进制, 空表示未计算/读取失败).
+  final String sha1;
 
   /// 显示用版本号, 如 `1.0.0 (1216)`.
   String get display =>
@@ -36,13 +40,13 @@ class UpdateChannel {
     return dir;
   }
 
-  /// 当前已安装 APK 的路径 (用于比对远端包是否为同一份).
-  static Future<String> installedApkPath() async {
-    final path = await _channel.invokeMethod<String>('installed_apk');
-    if (path == null || path.isEmpty) {
-      throw StateError('无法获取已安装 APK 路径');
+  /// 当前已安装 APK 的整包 SHA-1, 用于与发布目录里的校验值比对.
+  static Future<String> installedApkHash() async {
+    final hash = await _channel.invokeMethod<String>('installed_apk_hash');
+    if (hash == null || hash.isEmpty) {
+      throw StateError('无法读取已安装 APK 的校验值');
     }
-    return path;
+    return hash.toLowerCase();
   }
 
   /// 当前已安装应用的版本与签名指纹.
@@ -53,7 +57,7 @@ class UpdateChannel {
     return _parseInfo(map!);
   }
 
-  /// 读取已下载 APK 的版本与签名指纹 (不安装).
+  /// 读取已下载 APK 的版本、签名指纹与整包 SHA-1 (不安装).
   static Future<ApkInfo> inspectApk(String apkPath) async {
     final map = await _channel.invokeMethod<Map<dynamic, dynamic>>(
       'inspect_apk',
@@ -78,6 +82,7 @@ class UpdateChannel {
       versionCode: (map['versionCode'] as num?)?.toInt() ?? 0,
       versionName: map['versionName'] as String? ?? '',
       signerSha256: (map['signerSha256'] as String? ?? '').toLowerCase(),
+      sha1: (map['sha1'] as String? ?? '').toLowerCase(),
     );
   }
 }

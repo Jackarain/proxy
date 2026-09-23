@@ -52,15 +52,14 @@ Future<void> checkUpdateNow(BuildContext context) async {
   }
 }
 
-/// 远端包是否与本机已安装的是同一份: 是则记下指纹, 省掉整包下载.
-Future<bool> _matchInstalledBuild(UpdateState state, String fingerprint) async {
+/// 远端包是否与本机已安装的完全相同 (整包 SHA-1 一致): 是则记下校验值, 省掉整包下载.
+Future<bool> _installedMatches(UpdateState state, String hash) async {
   try {
-    final path = await UpdateChannel.installedApkPath();
-    if (await apkFileFingerprint(path) != fingerprint) return false;
-    await state.saveFingerprint(fingerprint);
+    if (await UpdateChannel.installedApkHash() != hash) return false;
+    await state.saveHandledHash(hash);
     return true;
   } catch (_) {
-    // 读不到已安装包信息时退化为完整下载后再判定.
+    // 读不到已安装包校验值时退化为完整下载后再判定.
     return false;
   }
 }
@@ -69,10 +68,9 @@ Future<bool> _matchInstalledBuild(UpdateState state, String fingerprint) async {
 Future<void> _resolveInstalling(UpdateState state) async {
   if (!await state.hasInstalling()) return;
   try {
-    final current = await UpdateChannel.currentVersion();
-    await state.resolveInstalling(current.versionCode);
+    await state.resolveInstalling(await UpdateChannel.installedApkHash());
   } catch (_) {
-    // 读不到本地版本时保留记录, 下次启动再核对.
+    // 读不到已安装包校验值时保留记录, 下次启动再核对.
   }
 }
 
@@ -101,28 +99,28 @@ Future<void> _checkAndPrompt(
   required bool manual,
 }) async {
   final service = UpdateService();
-  final probed = await service.probe();
-  if (probed.fingerprint == await state.fingerprint()) {
+  final remote = await service.fetch();
+  if (remote.hash == await state.handledHash()) {
     if (manual && context.mounted) _toast(context, '当前已是最新版本');
     return;
   }
-  // 远端包与本机已安装的是同一份(如刚装上或首次检查): 不必下载即可确认是最新.
-  if (await _matchInstalledBuild(state, probed.fingerprint)) {
+  // 本机已安装的就是发布目录里那份(如刚装上或首次检查): 不必下载即可确认是最新.
+  if (await _installedMatches(state, remote.hash)) {
     if (manual && context.mounted) _toast(context, '当前已是最新版本');
     return;
   }
   if (!context.mounted) return;
-  final choice = await _promptDownload(context, probed);
+  final choice = await _promptDownload(context, remote);
   if (choice == _PromptResult.skip) {
-    // 记下指纹: 该版本不再提示, 直到远端包发生变化.
-    await state.saveFingerprint(probed.fingerprint);
+    // 记下校验值: 该版本不再提示, 直到发布目录上的安装包再次变化.
+    await state.saveHandledHash(remote.hash);
     return;
   }
   if (choice != _PromptResult.download) return;
 
   final File apk;
   try {
-    apk = File('${await UpdateChannel.updateDir()}/app-release.apk');
+    apk = File('${await UpdateChannel.updateDir()}/$kUpdateApkName');
   } catch (e) {
     if (context.mounted) _toast(context, '无法准备下载目录: $e');
     return;
@@ -133,9 +131,9 @@ Future<void> _checkAndPrompt(
     barrierDismissible: false,
     builder:
         (_) => _DownloadDialog(
-          url: service.url,
+          url: service.apkUrl,
           target: apk,
-          expected: probed.size,
+          expected: remote.size,
         ),
   );
   if (result == null || result.outcome == _DownloadOutcome.cancelled) return;
@@ -147,29 +145,39 @@ Future<void> _checkAndPrompt(
   final ApkInfo info;
   final ApkInfo current;
   try {
-    // 读下载包自身的版本: 远端包变了不代表版本更新, 以 versionCode 为准.
     info = await UpdateChannel.inspectApk(apk.path);
     current = await UpdateChannel.currentVersion();
   } catch (e) {
-    if (context.mounted) _toast(context, '更新包不可用: $e');
+    if (context.mounted) _toast(context, '安装包不可用: $e');
     return;
   }
-  if (info.versionCode <= current.versionCode) {
-    await state.saveFingerprint(probed.fingerprint);
-    if (context.mounted) {
-      _toast(context, '当前已是最新版本 (${info.display})');
-    }
+  // 下载内容必须与发布目录给出的校验值一致: 传输截断或被换成别的包都会挡在这里.
+  if (info.sha1 != remote.hash) {
+    await _deleteQuietly(apk);
+    if (context.mounted) _toast(context, '下载的安装包校验不通过, 请稍后重试');
+    return;
+  }
+  if (info.versionCode < current.versionCode) {
+    // 系统拒绝降级安装, 提前说明并记录校验值, 避免每次检查都重下同一个包.
+    await state.saveHandledHash(remote.hash);
+    if (!context.mounted) return;
+    await _alert(
+      context,
+      '无法安装更新',
+      '发布目录里的安装包版本(${info.display})低于当前版本'
+          '(${current.display}), 系统会拒绝降级安装.',
+    );
     return;
   }
   if (current.signerSha256.isNotEmpty &&
       info.signerSha256 != current.signerSha256) {
     // 签名不同时系统必然拒绝覆盖安装, 提前说明避免用户反复重试.
-    await state.saveFingerprint(probed.fingerprint);
+    await state.saveHandledHash(remote.hash);
     if (!context.mounted) return;
     await _alert(
       context,
       '无法安装更新',
-      '更新包与当前应用签名不一致, 系统会拒绝覆盖安装.\n'
+      '安装包与当前应用签名不一致, 系统会拒绝覆盖安装.\n'
           '若当前版本是本地 debug 签名构建的, 需要先卸载再安装正式包.',
     );
     return;
@@ -179,7 +187,7 @@ Future<void> _checkAndPrompt(
 
   // 安装会终止当前进程, 先记下待核对的更新: 装成则记为已处理, 用户取消则
   // 下次启动仍会提示, 不会被静默跳过.
-  await state.markInstalling(probed.fingerprint, info.versionCode);
+  await state.markInstalling(remote.hash);
   if (AppSession.instance.running) {
     // 安装会替换应用并终止进程, 先停 VPN 让 native 侧正常收尾.
     try {
@@ -227,15 +235,17 @@ class _DownloadResult {
 
 Future<_PromptResult> _promptDownload(
   BuildContext context,
-  RemoteApk probed,
+  RemoteApk remote,
 ) async {
-  final size = probed.size > 0 ? ' (约 ${formatBytes(probed.size)})' : '';
+  final size = remote.size > 0 ? ' (约 ${formatBytes(remote.size)})' : '';
+  final time =
+      remote.lastWriteTime.isEmpty ? '' : ', 构建时间 ${remote.lastWriteTime}';
   final result = await showDialog<_PromptResult>(
     context: context,
     builder:
         (context) => AlertDialog(
           title: const Text('发现新版本'),
-          content: Text('检测到新的安装包$size, 下载后可直接安装.'),
+          content: Text('发布目录上的安装包有更新$size$time, 下载后可直接安装.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, _PromptResult.skip),
@@ -317,6 +327,13 @@ Future<void> _alert(BuildContext context, String title, String message) {
           ],
         ),
   );
+}
+
+/// 删除下载失败/校验不通过的安装包 (清理失败不影响主流程).
+Future<void> _deleteQuietly(File file) async {
+  try {
+    if (await file.exists()) await file.delete();
+  } catch (_) {}
 }
 
 void _toast(BuildContext context, String message) {
