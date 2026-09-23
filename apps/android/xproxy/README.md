@@ -57,8 +57,12 @@ release 包使用 `android/key.properties` 指定的正式密钥签名; 该文�
 (`android/.gitignore` 已忽略 `key.properties` / `*.keystore` / `*.jks`).
 
 本地日常开发不需要它: 文件不存在时 release 构建回退 debug 签名, `flutter run` /
-`flutter build apk` 照常可用. CI 会设置 `REQUIRE_RELEASE_SIGNING=1` 强制要求密钥存在,
-缺密钥直接失败, 不会静默产出装不上的包.
+`flutter build apk` 照常可用.
+
+CI 行为: secrets 齐全时设置 `REQUIRE_RELEASE_SIGNING=1`, 强制用正式密钥签名并校验指纹;
+secrets 缺失时(镜像等未配置的仓库)只打 warning, 不中断 job — 仍然编译一次 release APK
+验证构建(回退 debug 签名), 但跳过签名校验与产物上传, 避免流出装不上的包. 结论写在
+job 的 Summary 里.
 
 生成密钥并转 base64 (口令与别名务必另存备份, 丢失后已安装用户只能卸载重装):
 

@@ -1108,8 +1108,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # 先备好 release 签名密钥, 缺配置时立刻失败, 不浪费后面的 native 编译时间.
+      # 先备好 release 签名密钥; 缺配置时只降级为构建验证, 不让整个 job 失败.
       - name: Prepare release keystore
+        id: keystore
         working-directory: apps/android/xproxy
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -1125,8 +1126,16 @@ jobs:
           [ -n "${ANDROID_KEY_ALIAS:-}" ] || missing="$missing ANDROID_KEY_ALIAS"
           [ -n "${ANDROID_KEY_PASSWORD:-}" ] || missing="$missing ANDROID_KEY_PASSWORD"
           if [ -n "$missing" ]; then
-            echo "::error::缺少签名配置:$missing (Settings -> Secrets and variables -> Actions)"
-            exit 1
+            # 未配置 secrets 的仓库(镜像等): 不签名, 也不上传产物, 只保证构建可验证.
+            echo "::warning::缺少签名配置:$missing (Settings -> Secrets and variables -> Actions), 本次不产出 release 签名 APK."
+            echo "signed=0" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Android APK 未产出"
+              echo ""
+              echo "- 缺少签名配置:$missing"
+              echo "- 已按 debug 签名编译 release APK 做构建验证, 但不上传产物."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
           chmod 600 "$RUNNER_TEMP/release.keystore"
@@ -1137,6 +1146,7 @@ jobs:
             printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
             printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
           } > android/key.properties
+          echo "signed=1" >> "$GITHUB_OUTPUT"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
@@ -1162,13 +1172,14 @@ jobs:
       - name: Build Android apk
         working-directory: apps/android/xproxy
         env:
-          # 强制要求正式密钥, 密钥缺失时 Gradle 直接失败而不是回退 debug 签名.
-          REQUIRE_RELEASE_SIGNING: '1'
+          # 有正式密钥时强制 Gradle 使用它; 缺密钥时留空, 回退 debug 签名只做构建验证.
+          REQUIRE_RELEASE_SIGNING: ${{ steps.keystore.outputs.signed }}
         run: |
           flutter pub get
           flutter build apk --release
 
       - name: Verify release signing
+        if: steps.keystore.outputs.signed == '1'
         working-directory: apps/android/xproxy
         run: |
           set -euo pipefail
@@ -1184,6 +1195,7 @@ jobs:
           fi
 
       - name: Archive artifacts
+        if: steps.keystore.outputs.signed == '1'
         uses: actions/upload-artifact@v7
         with:
           name: proxy_server-android-release-apk
