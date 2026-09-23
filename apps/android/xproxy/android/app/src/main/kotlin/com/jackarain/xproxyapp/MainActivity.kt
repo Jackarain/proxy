@@ -131,6 +131,9 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
+        // 更新包解压/校验/安装.
+        UpdateChannel(this).attach(flutterEngine)
+
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENTS)
             .setStreamHandler(object : EventChannel.StreamHandler {
                 override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {

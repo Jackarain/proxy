@@ -1176,7 +1176,8 @@ jobs:
           REQUIRE_RELEASE_SIGNING: ${{ steps.keystore.outputs.signed }}
         run: |
           flutter pub get
-          flutter build apk --release
+          # versionCode 取 run number: 客户端据此判定是否需要更新(见自动更新一节).
+          flutter build apk --release --build-number="$GITHUB_RUN_NUMBER"
 
       - name: Verify release signing
         if: steps.keystore.outputs.signed == '1'
@@ -1191,6 +1192,20 @@ jobs:
             echo "::warning::未设置 vars.ANDROID_SIGNING_CERT_SHA256, 跳过签名指纹比对."
           elif ! grep -qi "$EXPECTED" "$RUNNER_TEMP/certs.txt"; then
             echo "::error::APK 签名证书与 vars.ANDROID_SIGNING_CERT_SHA256 不一致."
+            exit 1
+          fi
+
+      # 客户端按 versionCode 判定更新, 必须等于本次 run number.
+      - name: Verify apk version code
+        working-directory: apps/android/xproxy
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          AAPT2=$(find "${ANDROID_SDK_ROOT:?}/build-tools" -name aapt2 | sort -V | tail -1)
+          CODE=$("$AAPT2" dump badging "$APK" | sed -n "s/^package:.*versionCode='\([0-9]*\)'.*/\1/p")
+          echo "versionCode=$CODE (run number=$GITHUB_RUN_NUMBER)"
+          if [ "$CODE" != "$GITHUB_RUN_NUMBER" ]; then
+            echo "::error::APK versionCode($CODE) 与 run number($GITHUB_RUN_NUMBER) 不一致, 客户端无法识别更新."
             exit 1
           fi
 

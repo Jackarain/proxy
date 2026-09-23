@@ -106,6 +106,48 @@ keyPassword=...
 注意: 从 debug 签名切到正式签名后, 已安装用户需要**卸载重装**一次才能继续更新
 (签名不一致时系统会拒绝覆盖安装).
 
+## 自动更新
+
+应用启动后(延迟 3s)在后台检查更新, 顶部工具栏的 `检查更新` 按钮可手动触发.
+更新源是 CI 产出的 artifact, 经 [nightly.link](https://nightly.link) 提供匿名直链
+(不需要 token, 普通用户也能下载):
+
+```
+https://nightly.link/Jackarain/proxy/workflows/Build/master/proxy_server-android-release-apk.zip
+```
+
+流程:
+
+1. **探测**: 带 `Range: bytes=0-0` 只取 1 字节, 用响应头里的 `ETag` 作为内容指纹
+   (缺失时退化为 `Last-Modified` + 长度), 服务端不支持 Range 时读完响应头即断开,
+   不会为了比对而拉整个包.
+2. **提示**: 指纹与本机记录(已安装或「跳过此版本」)不同才提示 `发现新版本`;
+   自动检查 24h 内只做一次, VPN 运行中不自动检查(此时应用自身流量受 TUN 影响).
+3. **下载**: 落地到应用私有外部目录 `update/update.zip`, 弹进度条显示百分比与速度, 可取消.
+4. **校验**: 解压出 APK 后用 `PackageManager` 读取其 `versionCode` 与签名证书 SHA-256,
+   与当前应用比对: `versionCode` 不大于当前版本则视为已是最新(记录指纹后静默结束);
+   签名不一致则直接说明需要卸载重装, 而不是让系统安装器抛出难以理解的失败.
+5. **安装**: 更新包目录经 `FileProvider` 交给系统安装器(`REQUEST_INSTALL_PACKAGES`),
+   Android 8.0+ 未授权时会跳到「安装未知应用」页, 授权后返回即可继续.
+   安装会终止应用进程, 因此发起安装时先记录「待核对」状态, 下次启动发现版本已提升才
+   记为已处理; 用户若在系统安装器里取消, 记录会被丢弃, 之后仍会再次提示该版本.
+
+版本号约定: CI 用 `--build-number="$GITHUB_RUN_NUMBER"` 构建, 即 APK 的 `versionCode`
+等于该次 workflow 的 run number, 客户端据此判断新旧的唯一依据. CI 末尾会
+`aapt2 dump badging` 校验 `versionCode` 与 run number 一致, 防止注入失效后客户端失去
+更新判据. 因此本地构建(`versionCode` 仍是 pubspec 的 1)不会覆盖 CI 产物.
+
+已知限制:
+
+- 上游 `master` 每次 push 都会产出新构建, 客户端因此可能频繁提示; 只想偶尔发版时应改
+  用打 tag 触发 CI.
+- nightly.link 是第三方服务, 偶发 404/不可用(如构建仍在进行)时只会提示检查失败,
+  不会影响其它功能.
+- 首次检查(本机没有指纹记录)一定会有一次完整下载才能读到包内 `versionCode`;
+  之后靠指纹比对, 未变化时只花 1 个字节.
+- 从 debug 签名的旧包切到正式签名包, 必须先卸载(见上一节), 否则校验阶段就会拒绝.
+- 上架 Google Play 的版本不能自带更新(政策限制), 该功能仅用于自签名分发的包.
+
 ## 测试
 
 ```sh

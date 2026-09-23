@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 更新包经 FileProvider 交给系统安装器, 只暴露应用私有的更新目录. -->
+<paths>
+    <external-files-path
+        name="update"
+        path="update/" />
+    <cache-path
+        name="update_cache"
+        path="update/" />
+</paths>
