@@ -6,11 +6,14 @@ import '../models/vpn_config.dart';
 
 /// 配置持久化: 以 json 数组形式存于 SharedPreferences.
 class StorageService {
-  static const String _key = 'xproxy_configs_v1';
+  static const String configsKey = 'xproxy_configs_v1';
+
+  /// 配置解析失败时另存的原始内容 (避免下一次保存把损坏数据彻底覆盖).
+  static const String corruptKey = 'xproxy_configs_v1_corrupt';
 
   Future<List<VpnConfig>> loadConfigs() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_key);
+    final raw = prefs.getString(configsKey);
     if (raw == null || raw.isEmpty) return [];
     try {
       final list = jsonDecode(raw) as List<dynamic>;
@@ -19,14 +22,24 @@ class StorageService {
           .map(VpnConfig.fromJson)
           .toList();
     } catch (_) {
+      // 解析失败时备份原始内容并保留旧备份: 界面据此提示用户, 数据仍可人工恢复.
+      if ((prefs.getString(corruptKey) ?? '').isEmpty) {
+        await prefs.setString(corruptKey, raw);
+      }
       return [];
     }
+  }
+
+  /// 是否存在解析失败的配置备份 (供界面提示).
+  Future<bool> hasCorruptBackup() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getString(corruptKey) ?? '').isNotEmpty;
   }
 
   Future<void> saveConfigs(List<VpnConfig> configs) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = jsonEncode(configs.map((c) => c.toJson()).toList());
-    await prefs.setString(_key, raw);
+    await prefs.setString(configsKey, raw);
   }
 
   /// 正在运行的配置 (界面关闭/进程存活的场景下用于恢复控制通道).

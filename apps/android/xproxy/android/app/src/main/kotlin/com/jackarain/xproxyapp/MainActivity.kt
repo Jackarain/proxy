@@ -25,6 +25,9 @@ class MainActivity : FlutterActivity() {
 
     private var pendingPrepare: MethodChannel.Result? = null
 
+    /** 自更新通道 (持工作线程), 引擎销毁时回收. */
+    private var updateChannel: UpdateChannel? = null
+
     /** VpnService 建立 (含逐条 addRoute) 在后台线程执行, 避免阻塞主线程. */
     private val tunExecutor = Executors.newSingleThreadExecutor()
 
@@ -134,7 +137,7 @@ class MainActivity : FlutterActivity() {
             }
 
         // 更新包的版本/签名读取与安装.
-        UpdateChannel(this).attach(flutterEngine)
+        updateChannel = UpdateChannel(this).also { it.attach(flutterEngine) }
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENTS)
             .setStreamHandler(object : EventChannel.StreamHandler {
@@ -145,7 +148,15 @@ class MainActivity : FlutterActivity() {
                 override fun onCancel(arguments: Any?) {
                     XproxyEvents.setSink(null)
                 }
-            })
+        })
+    }
+
+    /** 界面/引擎销毁: 回收本实例创建的线程池 (已排队任务继续执行). */
+    override fun onDestroy() {
+        updateChannel?.close()
+        updateChannel = null
+        tunExecutor.shutdown()
+        super.onDestroy()
     }
 
     private fun handlePrepare(result: MethodChannel.Result) {

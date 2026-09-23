@@ -347,6 +347,26 @@ void main() {
       final noDoh = VpnConfig(id: '2', name: 'c', dnsForeign: ['8.8.8.8']);
       expect(noDoh.joinForeignDns(), ['8.8.8.8']);
     });
+
+    test('展示用上游地址脱敏', () {
+      final masked = VpnConfig(
+        id: '1',
+        name: 'a',
+        proxyPass: 'https://user:secret@example.com:443',
+      );
+      expect(masked.maskedProxyPass, 'https://user:***@example.com:443');
+
+      final noPassword = VpnConfig(
+        id: '2',
+        name: 'b',
+        proxyPass: 'socks5://example.com:1080',
+      );
+      expect(noPassword.maskedProxyPass, 'socks5://example.com:1080');
+
+      // 无 scheme/无 userinfo 时原样返回, 不做猜测性改写.
+      final plain = VpnConfig(id: '3', name: 'c', proxyPass: 'not-a-url');
+      expect(plain.maskedProxyPass, 'not-a-url');
+    });
   });
 
   group('StorageService', () {
@@ -373,6 +393,18 @@ void main() {
       expect(state, ('cfg1', 9999, 'abcdef0123456789'));
       await storage.clearRunState();
       expect(await storage.loadRunState(), isNull);
+    });
+
+    test('配置解析失败时备份原始内容', () async {
+      SharedPreferences.setMockInitialValues({
+        StorageService.configsKey: '{不是数组',
+      });
+      final storage = StorageService();
+
+      expect(await storage.loadConfigs(), isEmpty);
+      expect(await storage.hasCorruptBackup(), isTrue);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(StorageService.corruptKey), '{不是数组');
     });
   });
 }

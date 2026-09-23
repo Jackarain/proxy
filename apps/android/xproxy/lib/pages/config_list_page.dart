@@ -25,6 +25,8 @@ class _ConfigListPageState extends State<ConfigListPage> {
   bool _loading = true;
   bool _busy = false;
   String _gitHash = '';
+  // 配置损坏提示只弹一次 (下拉刷新会重复加载).
+  bool _corruptWarned = false;
 
   /// 启动后延迟检查更新的定时器 (延时是为了不拖慢首屏).
   Timer? _updateTimer;
@@ -132,6 +134,13 @@ class _ConfigListPageState extends State<ConfigListPage> {
       _configs = list;
       _loading = false;
     });
+    if (list.isEmpty && !_corruptWarned && await _storage.hasCorruptBackup()) {
+      _corruptWarned = true;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('配置数据无法解析, 原始内容已备份, 请重新添加配置')),
+      );
+    }
   }
 
   Future<void> _save() => _storage.saveConfigs(_configs);
@@ -492,9 +501,8 @@ class _ConfigListPageState extends State<ConfigListPage> {
 
   String _subtitle(VpnConfig config) {
     final b = StringBuffer();
-    b.write(
-      '代理: ${config.proxyPass.isEmpty ? '未配置 proxy_pass' : config.proxyPass}',
-    );
+    final proxy = config.maskedProxyPass;
+    b.write('代理: ${proxy.isEmpty ? '未配置 proxy_pass' : proxy}');
     if (config.proxyDomains.isNotEmpty || config.proxyCidr.isNotEmpty) {
       b.write(
         ', 分流: ${config.proxyDomains.length + config.proxyCidr.length} 条',

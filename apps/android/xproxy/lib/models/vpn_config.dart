@@ -150,6 +150,22 @@ class VpnConfig {
     return ('10.0.0.2', 24);
   }
 
+  /// 脱敏后的上游地址: 隐藏 userinfo 里的口令, 供界面展示, 避免直接暴露在
+  /// 屏幕上(截图/旁观). 非法或没有口令时原样返回.
+  String get maskedProxyPass {
+    final url = proxyPass.trim();
+    final at = url.lastIndexOf('@');
+    if (at <= 0) return url;
+    final schemeEnd = url.indexOf('://');
+    final userStart = schemeEnd >= 0 ? schemeEnd + 3 : 0;
+    if (userStart >= at) return url;
+    final userInfo = url.substring(userStart, at);
+    final colon = userInfo.indexOf(':');
+    if (colon < 0) return url;
+    return '${url.substring(0, userStart)}'
+        '${userInfo.substring(0, colon)}:***@${url.substring(at + 1)}';
+  }
+
   /// 校验配置, 返回错误描述列表; 为空表示可运行.
   List<String> validate() {
     final errors = <String>[];

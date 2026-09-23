@@ -387,6 +387,9 @@ class _RunningPageState extends State<RunningPage>
 
   /// 通过配置的测试 URL 发起下载 (流量走 VPN 隧道),
   /// 延迟为发起请求到收到响应体首字节的时间, 速率按整体字节数/耗时计算.
+  /// 只测速, 读到 [_maxTestBytes] 即断开, 避免测试 URL 指向大文件时白耗流量.
+  static const int _maxTestBytes = 8 * 1024 * 1024;
+
   Future<void> _testVpn() async {
     final config = _runningConfig();
     if (config == null) {
@@ -427,6 +430,7 @@ class _RunningPageState extends State<RunningPage>
           latencyMs = stopwatch.elapsedMilliseconds;
         }
         received += chunk.length;
+        if (received >= _maxTestBytes) break;
       }
       final totalMs = stopwatch.elapsedMilliseconds;
       final kbPerSec = totalMs > 0 ? received * 1000.0 / totalMs / 1024.0 : 0.0;

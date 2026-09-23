@@ -37,7 +37,7 @@ if (hasReleaseKey) {
 if (System.getenv("REQUIRE_RELEASE_SIGNING") == "1" && !hasReleaseKey) {
     throw GradleException(
         "REQUIRE_RELEASE_SIGNING=1 但未找到 ${keystorePropertiesFile.absolutePath}, " +
-            "拒绝用 debug 密钥生成 release 包; 请先配置 ANDROID_KEYSTORE_* secrets."
+            "拒绝用 debug 密钥生成 release 包; 请先在该文件里配置正式密钥."
     )
 }
 

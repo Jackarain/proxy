@@ -146,6 +146,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
         ],
       ),
     );
+    urlController.dispose();
     if (url == null || url.isEmpty) return false;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       if (mounted) {
@@ -181,6 +182,8 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
   }
 
   Future<List<String>> _fetchList(String url) async {
+    // 列表体积上限: 异常/恶意响应不至于把整段内容读进内存.
+    const maxBytes = 512 * 1024;
     final client =
         HttpClient()..connectionTimeout = const Duration(seconds: 15);
     try {
@@ -189,7 +192,12 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
       if (resp.statusCode != HttpStatus.ok) {
         throw HttpException('HTTP ${resp.statusCode}');
       }
-      final text = await resp.transform(utf8.decoder).join();
+      final body = <int>[];
+      await for (final chunk in resp) {
+        body.addAll(chunk);
+        if (body.length > maxBytes) throw HttpException('列表内容过大');
+      }
+      final text = utf8.decode(body, allowMalformed: true);
       final items = <String>[];
       for (final line in text.split(RegExp(r'[\r\n]+'))) {
         final t = line.trim();

@@ -29,6 +29,11 @@ class UpdateChannel(private val activity: Activity) {
 
     private val worker = Executors.newSingleThreadExecutor()
 
+    /** 引擎销毁时回收工作线程 (已提交的任务继续跑完). */
+    fun close() {
+        worker.shutdown()
+    }
+
     fun attach(engine: FlutterEngine) {
         MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->

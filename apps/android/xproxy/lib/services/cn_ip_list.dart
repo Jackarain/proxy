@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 中国大陆 IP 段 (CIDR) 列表服务.
 ///
 /// 数据源默认 https://ispip.clang.cn/all_cn.txt, 拉取结果缓存到本地,
-/// 启动时自动更新, 每日最多拉取一次; 更新时与缓存合并 (新增项保留),
+/// 启动时自动更新, 每日最多拉取一次; 拉到新列表即整体替换缓存,
 /// 下次建立 VPN 时应用完整列表.
 ///
 /// "绕过中国大陆" 的实现: VpnService 的 addRoute 是"接入 VPN"的路由,
@@ -49,10 +49,12 @@ class CnIpList {
     try {
       final fresh = await fetchFromSource();
       if (fresh.isNotEmpty) {
-        final merged = <String>{...cached, ...fresh}.toList()..sort();
-        _cached = merged;
-        await saveCache(merged);
-        return merged;
+        // 以最新列表为准: 取并集会让已回收/改划的网段永久留在直连列表里
+        // (即不再走代理).
+        final sorted = [...fresh]..sort();
+        _cached = sorted;
+        await saveCache(sorted);
+        return sorted;
       }
     } catch (_) {
       // 拉取失败时回退缓存.
@@ -76,6 +78,8 @@ class CnIpList {
   }
 
   static Future<List<String>> fetchFromSource() async {
+    // 响应上限: 列表约数百 KB, 超限视为异常响应.
+    const maxBytes = 8 * 1024 * 1024;
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 15);
     try {
@@ -84,7 +88,12 @@ class CnIpList {
       if (resp.statusCode != HttpStatus.ok) {
         throw HttpException('HTTP ${resp.statusCode}');
       }
-      final text = await resp.transform(utf8.decoder).join();
+      final body = <int>[];
+      await for (final chunk in resp) {
+        body.addAll(chunk);
+        if (body.length > maxBytes) throw HttpException('列表内容过大');
+      }
+      final text = utf8.decode(body, allowMalformed: true);
       final cidrs = <String>[];
       for (final line in text.split(RegExp(r'[\r\n]+'))) {
         final t = line.trim();

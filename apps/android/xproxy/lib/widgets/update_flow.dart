@@ -381,6 +381,8 @@ class _DownloadDialogState extends State<_DownloadDialog> {
   @override
   void dispose() {
     _ticker?.cancel();
+    // 对话框被销毁 (页面退出/引擎销毁) 时中断下载, 不留后台任务与半成品文件.
+    _download.cancel();
     super.dispose();
   }
 
