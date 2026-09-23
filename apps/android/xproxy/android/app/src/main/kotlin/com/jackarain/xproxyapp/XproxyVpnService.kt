@@ -40,6 +40,7 @@ class XproxyVpnService : VpnService() {
         const val ACTION_STOP = "com.jackarain.xproxyapp.STOP"
         const val EXTRA_CONFIG = "config"
         const val EXTRA_LAUNCHER_PORT = "launcher_port"
+        const val EXTRA_LAUNCHER_TOKEN = "launcher_token"
 
         private const val CHANNEL_ID = "xproxy_vpn"
         private const val NOTIFY_ID = 1001
@@ -100,18 +101,20 @@ class XproxyVpnService : VpnService() {
             ACTION_RESTART -> {
                 val config = intent.getStringExtra(EXTRA_CONFIG) ?: ""
                 val port = intent.getIntExtra(EXTRA_LAUNCHER_PORT, 0)
+                val token = intent.getStringExtra(EXTRA_LAUNCHER_TOKEN) ?: ""
                 // 前台通知必须在 startForegroundService 后尽快发出 (主线程同步).
                 startForegroundCompat()
                 // 在单个工作线程任务内完成 停旧->启新, 避免 stopSelf 与 START
                 // 交错导致服务被系统销毁 (进而误停新实例).
-                worker.post { restartVpn(config, port) }
+                worker.post { restartVpn(config, port, token) }
             }
             ACTION_START -> {
                 val config = intent.getStringExtra(EXTRA_CONFIG) ?: ""
                 val port = intent.getIntExtra(EXTRA_LAUNCHER_PORT, 0)
+                val token = intent.getStringExtra(EXTRA_LAUNCHER_TOKEN) ?: ""
                 // 前台通知必须在 startForegroundService 后尽快发出 (主线程同步).
                 startForegroundCompat()
-                worker.post { startVpn(config, port) }
+                worker.post { startVpn(config, port, token) }
             }
         }
         return START_NOT_STICKY
@@ -129,28 +132,35 @@ class XproxyVpnService : VpnService() {
             this, 0, contentIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
+        // 通知栏直接停止: 撤下通知/被系统接管时用户不必再进应用.
+        val stopPending = PendingIntent.getService(
+            this, 1,
+            Intent(this, XproxyVpnService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("proxy")
             .setContentText("VPN 运行中")
             .setSmallIcon(R.drawable.ic_vpn)
             .setContentIntent(pending)
+            .addAction(R.drawable.ic_vpn, "停止", stopPending)
             .setOngoing(true)
             .build()
         startForeground(NOTIFY_ID, notification)
     }
 
-    private fun restartVpn(configJson: String, launcherPort: Int) {
+    private fun restartVpn(configJson: String, launcherPort: Int, launcherToken: String) {
         teardown()
-        startVpn(configJson, launcherPort)
+        startVpn(configJson, launcherPort, launcherToken)
     }
 
-    private fun startVpn(configJson: String, launcherPort: Int) {
+    private fun startVpn(configJson: String, launcherPort: Int, launcherToken: String) {
         // 防御: 重复的 START 先停旧实例, 保证同一时刻只有一个.
         if (started) teardown()
         try {
             // 启动 proxy (tun_wait_fd 模式, 无 tun): 控制通道连接后
             // Flutter 建立 VpnService tun 再经 set_tun_fd 注入.
-            val rc = XproxyBridge.start(configJson, launcherPort)
+            val rc = XproxyBridge.start(configJson, launcherPort, launcherToken)
             if (rc != 0) {
                 XproxyEvents.emitVpnState("error", "xproxy.start 失败: rc=$rc")
                 teardownAndStop()
@@ -273,6 +283,17 @@ class XproxyVpnService : VpnService() {
         teardown()
         stopForeground(true)
         stopSelf()
+    }
+
+    /**
+     * VPN 被撤销 (用户在系统设置里断开, 或另一个 VPN 应用接管): 系统已关闭
+     * 本服务的 tun, 必须停掉 proxy 与前台服务并让界面复位, 否则应用仍显示
+     * 运行中而流量不再经隧道.
+     */
+    override fun onRevoke() {
+        worker.post { teardownAndStop() }
+        XproxyEvents.emitVpnState("revoked", "VPN 已被系统撤销, 连接已停止")
+        super.onRevoke()
     }
 
     override fun onDestroy() {

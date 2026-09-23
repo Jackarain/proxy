@@ -18,7 +18,7 @@ void main() {
     });
     addTearDown(connSub.cancel);
 
-    final ws = await WebSocket.connect('ws://127.0.0.1:$port');
+    final ws = await WebSocket.connect('ws://127.0.0.1:$port/${server.token}');
     addTearDown(ws.close);
 
     // 消息队列: 单订阅 WebSocket 流只能监听一次.
@@ -150,10 +150,46 @@ void main() {
         await server.close();
       } catch (_) {}
     });
-    final ws = await WebSocket.connect('ws://127.0.0.1:${server.port}');
+    final ws = await WebSocket.connect(
+      'ws://127.0.0.1:${server.port}/${server.token}',
+    );
     addTearDown(ws.close);
     await Future<void>.delayed(const Duration(milliseconds: 100));
     await server.close();
     await expectLater(server.call('get_status', const {}), throwsA(anything));
+  });
+
+  test('控制通道只接受带 token 路径的连接', () async {
+    final server = LauncherServer();
+    await server.start();
+    addTearDown(server.close);
+
+    expect(server.token, isNotEmpty);
+    await expectLater(
+      WebSocket.connect('ws://127.0.0.1:${server.port}'),
+      throwsA(isA<WebSocketException>()),
+    );
+    await expectLater(
+      WebSocket.connect('ws://127.0.0.1:${server.port}/wrong-token'),
+      throwsA(isA<WebSocketException>()),
+    );
+
+    // 带正确 token 的连接可用.
+    final ws = await WebSocket.connect(
+      'ws://127.0.0.1:${server.port}/${server.token}',
+    );
+    await ws.close();
+  });
+
+  test('start 可复用指定 token (界面重建后 proxy 仍能重连)', () async {
+    final server = LauncherServer();
+    await server.start(token: 'abcdef0123456789');
+    addTearDown(server.close);
+
+    expect(server.token, 'abcdef0123456789');
+    final ws = await WebSocket.connect(
+      'ws://127.0.0.1:${server.port}/abcdef0123456789',
+    );
+    await ws.close();
   });
 }

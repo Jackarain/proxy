@@ -50,7 +50,7 @@ class _ConfigListPageState extends State<ConfigListPage> {
   Future<void> _tryResumeSession() async {
     final state = await _storage.loadRunState();
     if (state == null) return;
-    final (configId, port) = state;
+    final (configId, port, token) = state;
 
     final session = AppSession.instance;
     // 同进程内 Activity 重建时可能已有控制通道, 直接复用.
@@ -58,7 +58,8 @@ class _ConfigListPageState extends State<ConfigListPage> {
     if (server == null) {
       try {
         server = LauncherServer();
-        await server.start(port: port);
+        // 复用原端口与 token: 运行中的 proxy 仍按原地址重连.
+        await server.start(port: port, token: token);
         session.server = server;
       } catch (_) {
         // 原端口被占用等情况下控制通道暂不可用, 不影响 VPN 本身运行.
@@ -174,9 +175,9 @@ class _ConfigListPageState extends State<ConfigListPage> {
       final fullJson = jsonEncode(config.toJson());
       // 设置 vpnConfig 快照: 控制通道连接后据此建立 VpnService tun.
       server.setVpnConfig(config.toJson());
-      await VpnChannel.start(fullJson, server.port);
+      await VpnChannel.start(fullJson, server.port, server.token);
       session.beginRun(config.id, configJson: fullJson);
-      await _storage.saveRunState(config.id, server.port);
+      await _storage.saveRunState(config.id, server.port, server.token);
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => RunningPage(configId: config.id)),

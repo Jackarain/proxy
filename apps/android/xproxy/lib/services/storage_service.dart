@@ -32,24 +32,41 @@ class StorageService {
   /// 正在运行的配置 (界面关闭/进程存活的场景下用于恢复控制通道).
   static const String runIdKey = 'xproxy_running_id';
   static const String runPortKey = 'xproxy_launcher_port';
+  static const String runTokenKey = 'xproxy_launcher_token';
 
-  Future<void> saveRunState(String configId, int launcherPort) async {
+  Future<void> saveRunState(
+    String configId,
+    int launcherPort,
+    String launcherToken,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(runIdKey, configId);
     await prefs.setInt(runPortKey, launcherPort);
+    await prefs.setString(runTokenKey, launcherToken);
   }
 
-  Future<(String, int)?> loadRunState() async {
+  /// 恢复运行状态: (配置 id, 控制通道端口, 控制通道 token).
+  ///
+  /// token 必须与运行中的 proxy 使用的地址一致, 否则重连会被控制通道拒绝.
+  Future<(String, int, String)?> loadRunState() async {
     final prefs = await SharedPreferences.getInstance();
     final id = prefs.getString(runIdKey);
     final port = prefs.getInt(runPortKey);
-    if (id == null || id.isEmpty || port == null || port <= 0) return null;
-    return (id, port);
+    final token = prefs.getString(runTokenKey) ?? '';
+    if (id == null ||
+        id.isEmpty ||
+        port == null ||
+        port <= 0 ||
+        token.isEmpty) {
+      return null;
+    }
+    return (id, port, token);
   }
 
   Future<void> clearRunState() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(runIdKey);
     await prefs.remove(runPortKey);
+    await prefs.remove(runTokenKey);
   }
 }

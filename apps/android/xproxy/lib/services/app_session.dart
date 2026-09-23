@@ -81,9 +81,9 @@ class AppSession extends ChangeNotifier {
       // 配置重建设备, 否则会沿用旧快照/跳过注入导致无法转发.
       server.setVpnConfig(config.toJson());
       server.resetTunState();
-      await VpnChannel.restart(fullJson, server.port);
+      await VpnChannel.restart(fullJson, server.port, server.token);
       beginRun(config.id, configJson: fullJson);
-      await StorageService().saveRunState(config.id, server.port);
+      await StorageService().saveRunState(config.id, server.port, server.token);
       return 'restarted';
     }
 

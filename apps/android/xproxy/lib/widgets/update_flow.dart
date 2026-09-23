@@ -21,7 +21,6 @@ Future<void> autoCheckUpdate(BuildContext context) async {
         DateTime.now().difference(last) < kUpdateCheckInterval) {
       return;
     }
-    await state.saveLastCheck(DateTime.now());
     if (!context.mounted) return;
     // VPN 运行中不自动检查: 此时应用自身流量也被 TUN 接管, 下载不受控.
     if (AppSession.instance.running) return;
@@ -40,7 +39,6 @@ Future<void> checkUpdateNow(BuildContext context) async {
   final state = UpdateState();
   try {
     await _resolveInstalling(state);
-    await state.saveLastCheck(DateTime.now());
     if (!context.mounted) return;
     await _locked(
       context,
@@ -100,6 +98,8 @@ Future<void> _checkAndPrompt(
 }) async {
   final service = UpdateService();
   final remote = await service.fetch();
+  // 只在查询成功后记账: 离线/超时等失败不占用自动检查的 24h 间隔.
+  await state.saveLastCheck(DateTime.now());
   if (remote.hash == await state.handledHash()) {
     if (manual && context.mounted) _toast(context, '当前已是最新版本');
     return;

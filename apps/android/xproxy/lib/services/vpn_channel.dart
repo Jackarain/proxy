@@ -18,10 +18,18 @@ class VpnChannel {
   }
 
   /// 启动 VpnService 并调用 xproxy.start(configJson).
-  static Future<void> start(String configJson, int launcherPort) async {
+  ///
+  /// [launcherToken] 拼进 native 侧的控制通道地址
+  /// (`ws://127.0.0.1:<port>/<token>`), 与控制通道校验的一致.
+  static Future<void> start(
+    String configJson,
+    int launcherPort,
+    String launcherToken,
+  ) async {
     final ok = await _channel.invokeMethod<bool>('start', {
       'config': configJson,
       'launcherPort': launcherPort,
+      'token': launcherToken,
     });
     if (ok != true) {
       throw StateError('native start failed');
@@ -47,10 +55,15 @@ class VpnChannel {
   }
 
   /// 不停服务重建 VPN (TUN 参数变更): 原生端在单个任务内 停旧->启新.
-  static Future<void> restart(String configJson, int launcherPort) async {
+  static Future<void> restart(
+    String configJson,
+    int launcherPort,
+    String launcherToken,
+  ) async {
     final ok = await _channel.invokeMethod<bool>('restart', {
       'config': configJson,
       'launcherPort': launcherPort,
+      'token': launcherToken,
     });
     if (ok != true) {
       throw StateError('native restart failed');

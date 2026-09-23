@@ -9,7 +9,9 @@
     <application
         android:label="xProxy"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false">
         <activity
             android:name="com.jackarain.xproxyapp.MainActivity"
             android:exported="true"

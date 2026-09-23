@@ -38,12 +38,14 @@ class MainActivity : FlutterActivity() {
                     "start" -> {
                         val config = call.argument<String>("config") ?: ""
                         val port = call.argument<Int>("launcherPort") ?: 0
-                        handleStart(config, port, result)
+                        val token = call.argument<String>("token") ?: ""
+                        handleStart(config, port, token, result)
                     }
                     "restart" -> {
                         val config = call.argument<String>("config") ?: ""
                         val port = call.argument<Int>("launcherPort") ?: 0
-                        handleRestart(config, port, result)
+                        val token = call.argument<String>("token") ?: ""
+                        handleRestart(config, port, token, result)
                     }
                     "stop" -> {
                         // 等待 VpnService 实例销毁(onDestroy)后再返回:
@@ -184,10 +186,14 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun sendServiceCommand(
-        action: String, config: String, launcherPort: Int, result: MethodChannel.Result
+        action: String,
+        config: String,
+        launcherPort: Int,
+        launcherToken: String,
+        result: MethodChannel.Result,
     ) {
-        if (config.isEmpty() || launcherPort <= 0) {
-            result.error("BAD_ARGS", "config/launcherPort 缺失", null)
+        if (config.isEmpty() || launcherPort <= 0 || launcherToken.isEmpty()) {
+            result.error("BAD_ARGS", "config/launcherPort/token 缺失", null)
             return
         }
         try {
@@ -195,6 +201,7 @@ class MainActivity : FlutterActivity() {
                 this.action = action
                 putExtra(XproxyVpnService.EXTRA_CONFIG, config)
                 putExtra(XproxyVpnService.EXTRA_LAUNCHER_PORT, launcherPort)
+                putExtra(XproxyVpnService.EXTRA_LAUNCHER_TOKEN, launcherToken)
             }
             XproxyVpnService.startForegroundServiceCompat(this, intent)
             result.success(true)
@@ -203,11 +210,25 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun handleStart(config: String, launcherPort: Int, result: MethodChannel.Result) {
-        sendServiceCommand(XproxyVpnService.ACTION_START, config, launcherPort, result)
+    private fun handleStart(
+        config: String,
+        launcherPort: Int,
+        launcherToken: String,
+        result: MethodChannel.Result,
+    ) {
+        sendServiceCommand(
+            XproxyVpnService.ACTION_START, config, launcherPort, launcherToken, result
+        )
     }
 
-    private fun handleRestart(config: String, launcherPort: Int, result: MethodChannel.Result) {
-        sendServiceCommand(XproxyVpnService.ACTION_RESTART, config, launcherPort, result)
+    private fun handleRestart(
+        config: String,
+        launcherPort: Int,
+        launcherToken: String,
+        result: MethodChannel.Result,
+    ) {
+        sendServiceCommand(
+            XproxyVpnService.ACTION_RESTART, config, launcherPort, launcherToken, result
+        )
     }
 }

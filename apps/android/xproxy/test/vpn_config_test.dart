@@ -368,9 +368,9 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final storage = StorageService();
       expect(await storage.loadRunState(), isNull);
-      await storage.saveRunState('cfg1', 9999);
+      await storage.saveRunState('cfg1', 9999, 'abcdef0123456789');
       final state = await storage.loadRunState();
-      expect(state, ('cfg1', 9999));
+      expect(state, ('cfg1', 9999, 'abcdef0123456789'));
       await storage.clearRunState();
       expect(await storage.loadRunState(), isNull);
     });

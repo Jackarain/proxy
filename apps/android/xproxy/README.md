@@ -19,9 +19,11 @@ Flutter (Dart)                          Android 原生 (Kotlin)                 
   libproxy (tun_wait_fd 模式), 同进程直接使用.
 - **protect**: libproxy 创建到上游代理/目标的出站 socket 后, 经控制通道
   `protect` 请求由 Kotlin 侧调用 `VpnService.protect(fd)` 放行, 避免回环进 TUN.
-- **控制通道**: Flutter 内置本地 WS 服务 (`127.0.0.1:<port>`), 经 `launcher_url`
-  字段交给 proxy, proxy 主动连接并上报 `register/status/log`;
-  应用可下发 `get_status` / `set_config` / `set_tun_fd` / `shutdown` RPC.
+- **控制通道**: Flutter 内置本地 WS 服务, 地址为 `ws://127.0.0.1:<port>/<token>`
+  (`token` 每次运行随机生成, 只有带该路径的升级请求才被接受, 防止同机其它
+  应用抢占端口冒充 proxy), 经 `launcher_url` 字段交给 proxy; proxy 主动连接并
+  上报 `register/status/log`; 应用可下发 `get_status` / `set_config` /
+  `set_tun_fd` / `shutdown` RPC.
 - **线程模型**: VpnService 的建立/启停/teardown 全部在专用工作线程串行执行,
   不阻塞主线程, 也天然避免了 START/STOP 竞态.
 
@@ -108,6 +110,11 @@ https://www.jackarain.org/download/?q=json&hash=1
 重新签名)后上传到该地址; 客户端按发布目录里 `app-release.apk` 的整文件 SHA-1 判断有无
 更新, 因此重新构建或重新上传就会提示, 不强制递增版本号.
 
+版本号: 只写在 `pubspec.yaml` 的 `version: 1.0.0+N`(N 即 `versionCode`), 本地与 CI 都按它
+构建, 不要另外传 `--build-number`(否则两种构建来源产出的 versionCode 不一致, 用户装过高
+号的那份就再也装不上低号的包). 客户端不靠版本号判断有无更新, 但 `versionCode` 决定能否
+覆盖安装: 新包必须 >= 已安装版本, 低于时系统会拒绝降级安装.
+
 流程:
 
 1. **查询**: 取发布目录列表(`?q=json&hash=1`), 找到 `filename` 为 `app-release.apk` 的那项,
@@ -125,9 +132,9 @@ https://www.jackarain.org/download/?q=json&hash=1
    安装时先记录「待核对」的 hash, 下次启动发现已安装包的 SHA-1 与记录一致才记为已处理;
    用户若在系统安装器里取消, 记录会被丢弃, 之后仍会再次提示该版本.
 
-版本号约定: 判断有无更新只看发布目录里的 SHA-1, 与 `versionCode` 无关, 发布新包不必再
-强制递增版本号. `versionCode`(`pubspec.yaml` 里 `1.0.0+N` 的 N)只影响能否覆盖安装:
-包内版本低于已安装版本时系统会拒绝降级, 客户端会先行提示并记录该 hash, 不再重复下载.
+版本号约定: 判断有无更新只看发布目录里的 SHA-1, 与 `versionCode` 无关; `versionCode`
+按上面的单一来源维护, 它只影响能否覆盖安装(包内版本低于已安装版本时系统会拒绝降级,
+客户端会先行提示并记录该 hash, 不再重复下载).
 
 已知限制:
 

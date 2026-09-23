@@ -209,7 +209,7 @@ class VpnConfig {
   VpnConfig copy() => VpnConfig.fromJson(toJson());
 
   /// 传给 libxproxy.so 的启动配置 json (键名与 xproxy 配置解析一致).
-  String toProxyJson({int launcherPort = 0}) {
+  String toProxyJson({int launcherPort = 0, String launcherToken = ''}) {
     final map = <String, dynamic>{
       'proxy_pass': proxyPass.trim(),
       if (sni.trim().isNotEmpty) 'ssl_sni': sni.trim(),
@@ -229,7 +229,10 @@ class VpnConfig {
       if (dnsCache) 'dns_cache_size': 4096,
       if (dnsCache) 'dns_cache_ttl': 300,
       if (noIpv6) 'dns_no_ipv6': true,
-      if (launcherPort > 0) 'launcher_url': 'ws://127.0.0.1:$launcherPort',
+      if (launcherPort > 0)
+        'launcher_url':
+            'ws://127.0.0.1:$launcherPort'
+            '${launcherToken.isEmpty ? '' : '/$launcherToken'}',
     };
     return jsonEncode(map);
   }

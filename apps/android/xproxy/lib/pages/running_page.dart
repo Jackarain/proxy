@@ -62,8 +62,8 @@ class _RunningPageState extends State<RunningPage>
       (e) {
         if (e['type'] == 'vpn_state') {
           final state = e['state'] as String? ?? '';
-          if (state == 'error') {
-            // native 启动失败/异常退出: 清理运行状态, 界面提示.
+          if (state == 'error' || state == 'revoked') {
+            // native 启动失败/异常退出, 或 VPN 被系统撤销: 清理运行状态.
             _storage.clearRunState();
             AppSession.instance.endRun();
           }

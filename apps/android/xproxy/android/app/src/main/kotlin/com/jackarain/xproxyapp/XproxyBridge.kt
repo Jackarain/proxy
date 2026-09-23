@@ -25,8 +25,9 @@ object XproxyBridge {
      *
      * @param config 用户配置 json (VpnConfig.toJson, 含 VpnService 专用字段).
      * @param launcherPort 本地 JSON-RPC over WS 控制端端口.
+     * @param launcherToken 控制通道路径 token (由 Flutter 侧生成并校验).
      */
-    fun start(config: String, launcherPort: Int): Int {
+    fun start(config: String, launcherPort: Int, launcherToken: String): Int {
         val cfg = JSONObject(config)
         val out = JSONObject()
         out.put("proxy_pass", cfg.optString("proxyPass", ""))
@@ -66,7 +67,11 @@ object XproxyBridge {
         // proxy_pass 预选连接池大小 (0 表示禁用): 显式下发, 否则 native
         // 缺省为 20, 配置 0 禁用时若省略该键会被静默忽略.
         out.put("proxy_pass_pool_size", cfg.optInt("proxyPassPoolSize", 20))
-        out.put("launcher_url", "ws://127.0.0.1:$launcherPort")
+        out.put(
+            "launcher_url",
+            "ws://127.0.0.1:$launcherPort" +
+                (if (launcherToken.isEmpty()) "" else "/$launcherToken")
+        )
         return xproxy.start(out.toString())
     }
 

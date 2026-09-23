@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -10,13 +11,14 @@ import 'vpn_channel.dart';
 /// 本地 JSON-RPC over WebSocket 控制服务端.
 ///
 /// 作为 libproxy launcher 的控制端: proxy 启动后会主动连接
-/// ws://127.0.0.1:port, 注册实例并持续上报 status/log;
+/// `ws://127.0.0.1:port/<token>`, 注册实例并持续上报 status/log;
 /// 本端可向其发起 get_status / set_config / shutdown 等 RPC 请求,
 /// 并响应 proxy 的 protect 请求 (放行对外 socket).
 class LauncherServer {
   HttpServer? _server;
   WebSocket? _socket;
   int _nextId = 1;
+  String _token = '';
   final Map<int, Completer<Map<String, dynamic>>> _pending = {};
   // 流控制器随 start() 创建; close() 后实例不可再用, 需新建.
   late StreamController<Map<String, dynamic>> _statusCtrl;
@@ -28,6 +30,21 @@ class LauncherServer {
 
   /// 监听端口 (start 后有效).
   int get port => _server?.port ?? 0;
+
+  /// 控制通道路径 token (start 后有效).
+  ///
+  /// 回环地址上的端口同机其它应用同样能连, 只接受带本次运行随机 token 的
+  /// 升级请求, 避免抢占端口/冒充 proxy 注入状态或代答 set_tun_fd.
+  String get token => _token;
+
+  /// 生成新的控制通道 token (16 字节十六进制).
+  static String newToken() {
+    final rand = Random.secure();
+    return List.generate(
+      16,
+      (_) => rand.nextInt(0x100).toRadixString(16).padLeft(2, '0'),
+    ).join();
+  }
 
   /// 启动时的 VpnConfig.toJson 快照 (建立 tun 用).
   Map<String, dynamic>? _vpnConfig;
@@ -50,11 +67,12 @@ class LauncherServer {
   /// 连接状态变化 (true=已连接).
   Stream<bool> get connectionStream => _connCtrl.stream;
 
-  /// 启动本地控制端. [port] 用于进程重启后恢复原端口以便 proxy 重连;
-  /// 绑定失败时抛出异常 (调用方决定是否回退).
-  Future<void> start({int? port}) async {
+  /// 启动本地控制端. [port] 与 [token] 用于界面重建后恢复原地址以便仍在
+  /// 运行的 proxy 重连(不传则新建); 绑定失败时抛出异常 (调用方决定是否回退).
+  Future<void> start({int? port, String? token}) async {
     if (_closed) throw StateError('launcher 已关闭, 请创建新实例');
     if (_server != null) throw StateError('launcher 已启动');
+    _token = token ?? newToken();
     _statusCtrl = StreamController<Map<String, dynamic>>.broadcast();
     _logCtrl = StreamController<Map<String, dynamic>>.broadcast();
     _registerCtrl = StreamController<Map<String, dynamic>>.broadcast();
@@ -66,7 +84,8 @@ class LauncherServer {
 
   Future<void> _handleRequest(HttpRequest request) async {
     debugPrint('launcher ws request: ${request.uri} headers=${request.headers}');
-    if (WebSocketTransformer.isUpgradeRequest(request)) {
+    if (WebSocketTransformer.isUpgradeRequest(request) &&
+        request.uri.path == '/$_token') {
       try {
         final ws = await WebSocketTransformer.upgrade(request);
         debugPrint('launcher ws upgraded');
