@@ -41,7 +41,9 @@ class UpdateChannel(private val activity: Activity) {
                     }
                     "current_version" -> {
                         try {
-                            result.success(infoMap(packageInfo(activity.packageName)))
+                            val info = installedPackageInfo()
+                                ?: throw IllegalStateException("无法读取已安装应用信息")
+                            result.success(infoMap(info))
                         } catch (e: Throwable) {
                             result.error("UPDATE_FAILED", e.message, null)
                         }
@@ -49,7 +51,7 @@ class UpdateChannel(private val activity: Activity) {
                     // 读取已下载 APK 的版本/签名/校验值(不安装), 供 Flutter 侧校验与提示.
                     "inspect_apk" -> inWorker(result) {
                         val apk = updateDirApk(call.argument<String>("apk").orEmpty())
-                        infoMap(packageInfo(apk.absolutePath)) +
+                        infoMap(archivePackageInfo(apk.absolutePath)) +
                             mapOf("sha1" to sha1Hex(apk))
                     }
                     "install" -> install(call.argument<String>("apk").orEmpty(), result)
@@ -117,10 +119,11 @@ class UpdateChannel(private val activity: Activity) {
     /** 校验待安装 apk: 签名必须与当前应用一致, 否则系统必然拒绝覆盖安装. */
     private fun planInstall(apkPath: String): File {
         val apk = updateDirApk(apkPath)
-        val remote = signerSha256(packageInfo(apk.absolutePath))
+        val remote = signerSha256(archivePackageInfo(apk.absolutePath))
         if (remote.isEmpty()) throw IllegalStateException("无法读取更新包签名")
-        val local = signerSha256(packageInfo(activity.packageName))
-        if (local.isNotEmpty() && remote != local) {
+        val local = signerSha256(installedPackageInfo())
+        if (local.isEmpty()) throw IllegalStateException("无法读取当前应用签名")
+        if (remote != local) {
             throw IllegalStateException("更新包签名与当前应用不一致")
         }
         return apk
@@ -133,15 +136,24 @@ class UpdateChannel(private val activity: Activity) {
         return dir
     }
 
+    /** 读取签名所需的 flags: API 28+ 用 GET_SIGNING_CERTIFICATES, 更早用 GET_SIGNATURES. */
     @Suppress("DEPRECATION")
-    private fun packageInfo(path: String): PackageInfo? {
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+    private fun signatureFlags(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             PackageManager.GET_SIGNING_CERTIFICATES
         } else {
             PackageManager.GET_SIGNATURES
         }
-        return activity.packageManager.getPackageArchiveInfo(path, flags)
-    }
+
+    /** 解析 APK 归档文件: 只接受文件路径, 传包名会解析失败返回 null. */
+    @Suppress("DEPRECATION")
+    private fun archivePackageInfo(path: String): PackageInfo? =
+        activity.packageManager.getPackageArchiveInfo(path, signatureFlags())
+
+    /** 已安装应用自身的信息: 必须走 getPackageInfo, getPackageArchiveInfo 无法按包名查询. */
+    @Suppress("DEPRECATION")
+    private fun installedPackageInfo(): PackageInfo? =
+        activity.packageManager.getPackageInfo(activity.packageName, signatureFlags())
 
     @Suppress("DEPRECATION")
     private fun signerSha256(info: PackageInfo?): String {
