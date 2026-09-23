@@ -3,14 +3,16 @@ import 'dart:io';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Android release 包的分发地址 (CI 每次构建产出的 artifact).
-final Uri kUpdateArtifactUrl = Uri.parse(
-  'https://nightly.link/Jackarain/proxy/workflows/Build/master/'
-  'proxy_server-android-release-apk.zip',
+/// APK 分发地址 (站点上的正式签名包, 由 CI 产物发布而来).
+final Uri kUpdateApkUrl = Uri.parse(
+  'https://www.jackarain.org/download/app-release.apk',
 );
 
 /// 启动后自动检查更新的最小间隔.
 const Duration kUpdateCheckInterval = Duration(hours: 24);
+
+/// 指纹取 APK 头部字节数: 覆盖 zip 首部若干 entry(含清单/代码), 足以区分不同构建.
+const int kApkFingerprintBytes = 64 * 1024;
 
 /// 更新检查/下载中可预期的失败 (网络异常、服务端异常状态等).
 class UpdateException implements Exception {
@@ -28,21 +30,53 @@ class UpdateCancelled implements Exception {
   String toString() => '已取消下载';
 }
 
-/// 远端构建包描述: 由 1 字节探测得到, 不需要拉取完整内容.
-class UpdateArtifact {
-  const UpdateArtifact({required this.fingerprint, required this.size});
+/// 远端安装包描述: 由头部探测得到, 不需要拉取完整内容.
+class RemoteApk {
+  const RemoteApk({required this.fingerprint, required this.size});
 
-  /// 内容指纹: ETag 优先, 缺失时退化为 Last-Modified + 长度.
+  /// 内容指纹, 见 [apkFingerprint].
   final String fingerprint;
 
   /// 完整包长度, 未知为 -1.
   final int size;
 }
 
-/// 远端更新包的探测与下载.
+/// APK 内容指纹: 取头部 [kApkFingerprintBytes] 字节做 FNV-1a 摘要.
+///
+/// 站点未提供 `ETag`/`Last-Modified`, 只能以内容比对; 头部已包含 zip 目录项与
+/// 清单/代码, 同一份包必然同值, 重新构建必然变值. 非加密用途, 只用于判重.
+String apkFingerprint(List<int> head) {
+  var hash = 0xcbf29ce484222325;
+  for (final byte in head) {
+    // int 固定 64 位, 乘法自然回绕; 末次掩码保证输出为无符号十六进制.
+    hash = (hash ^ byte) * 0x100000001b3;
+  }
+  return (hash & 0x7FFFFFFFFFFFFFFF).toRadixString(16).padLeft(16, '0');
+}
+
+/// 读取本地 APK 头部计算指纹 (与远端探测同一算法), 用于判断已安装包是否就是远端那份.
+///
+/// 读不到时返回 null, 调用方退化为下载后再判定版本.
+Future<String?> apkFileFingerprint(String path) async {
+  RandomAccessFile? file;
+  try {
+    file = await File(path).open();
+    final head = await file.read(kApkFingerprintBytes);
+    if (head.isEmpty) return null;
+    return apkFingerprint(head);
+  } catch (_) {
+    return null;
+  } finally {
+    try {
+      await file?.close();
+    } catch (_) {}
+  }
+}
+
+/// 远端安装包的探测与下载.
 class UpdateService {
   UpdateService({Uri? url, Duration? timeout})
-    : url = url ?? kUpdateArtifactUrl,
+    : url = url ?? kUpdateApkUrl,
       timeout = timeout ?? const Duration(seconds: 20);
 
   final Uri url;
@@ -50,44 +84,39 @@ class UpdateService {
 
   static const String _userAgent = 'xproxy-android';
 
-  /// 探测远端构建包: 只请求第一个字节, 由响应头判断内容是否变化.
-  ///
-  /// 服务端若不支持 Range 会返回整个包, 此时读完响应头即断开连接,
-  /// 避免为了比对指纹而拉取数十兆数据.
-  Future<UpdateArtifact> probe() async {
+  /// 探测远端安装包: 只拉取头部 [kApkFingerprintBytes] 字节算指纹, 用于判断远端
+  /// 是否就是本机已处理过/已安装的那份, 不需要完整下载.
+  Future<RemoteApk> probe() async {
     final client = HttpClient()..connectionTimeout = timeout;
     try {
       final req = await client.getUrl(url).timeout(timeout);
       req.headers.set(HttpHeaders.acceptEncodingHeader, 'identity');
       req.headers.set(HttpHeaders.userAgentHeader, _userAgent);
-      req.headers.set(HttpHeaders.rangeHeader, 'bytes=0-0');
+      req.headers.set(
+        HttpHeaders.rangeHeader,
+        'bytes=0-${kApkFingerprintBytes - 1}',
+      );
       final resp = await req.close().timeout(timeout);
       final status = resp.statusCode;
-      final etag = resp.headers.value(HttpHeaders.etagHeader);
-      final lastModified = resp.headers.value(HttpHeaders.lastModifiedHeader);
+      if (status != HttpStatus.partialContent && status != HttpStatus.ok) {
+        await _discard(resp);
+        throw UpdateException(
+          status == HttpStatus.notFound
+              ? '更新地址暂不可用 (HTTP 404), 请稍后再试'
+              : '更新地址返回 HTTP $status',
+        );
+      }
       final size = _totalFrom(
         resp.headers.value(HttpHeaders.contentRangeHeader),
         resp.contentLength,
       );
-      await _discard(resp);
-      if (status == HttpStatus.notFound) {
-        throw UpdateException('更新服务暂时不可用 (HTTP 404), 请稍后再试');
-      }
-      if (status != HttpStatus.partialContent && status != HttpStatus.ok) {
-        throw UpdateException('更新服务返回 HTTP $status');
-      }
-      final fingerprint =
-          (etag != null && etag.isNotEmpty)
-              ? etag
-              : '${lastModified ?? ''}:$size';
-      if (etag == null && lastModified == null) {
-        throw UpdateException('更新服务未返回可比对的内容标识');
-      }
-      return UpdateArtifact(fingerprint: fingerprint, size: size);
+      final head = await _readHead(resp);
+      if (head.isEmpty) throw UpdateException('更新包内容为空');
+      return RemoteApk(fingerprint: apkFingerprint(head), size: size);
     } on UpdateException {
       rethrow;
     } on TimeoutException {
-      throw UpdateException('连接更新服务超时');
+      throw UpdateException('连接更新地址超时');
     } on SocketException catch (e) {
       throw UpdateException('网络错误: ${e.message}');
     } on HttpException catch (e) {
@@ -106,6 +135,21 @@ class UpdateService {
       }
     }
     return contentLength;
+  }
+
+  /// 读取至多 [kApkFingerprintBytes] 字节即断开连接 (服务端忽略 Range 时避免拉全量).
+  static Future<List<int>> _readHead(HttpClientResponse resp) async {
+    final head = <int>[];
+    await for (final chunk in resp) {
+      final remain = kApkFingerprintBytes - head.length;
+      if (chunk.length <= remain) {
+        head.addAll(chunk);
+      } else {
+        head.addAll(chunk.sublist(0, remain));
+      }
+      if (head.length >= kApkFingerprintBytes) break;
+    }
+    return head;
   }
 
   /// 只消费首个数据块后断开连接 (主动中断产生的异常无需上报).

@@ -131,7 +131,7 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
-        // 更新包解压/校验/安装.
+        // 更新包的版本/签名读取与安装.
         UpdateChannel(this).attach(flutterEngine)
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENTS)

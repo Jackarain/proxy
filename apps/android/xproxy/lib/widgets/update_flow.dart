@@ -52,6 +52,19 @@ Future<void> checkUpdateNow(BuildContext context) async {
   }
 }
 
+/// 远端包是否与本机已安装的是同一份: 是则记下指纹, 省掉整包下载.
+Future<bool> _matchInstalledBuild(UpdateState state, String fingerprint) async {
+  try {
+    final path = await UpdateChannel.installedApkPath();
+    if (await apkFileFingerprint(path) != fingerprint) return false;
+    await state.saveFingerprint(fingerprint);
+    return true;
+  } catch (_) {
+    // 读不到已安装包信息时退化为完整下载后再判定.
+    return false;
+  }
+}
+
 /// 核对上次发起的安装是否成功: 安装会终止应用, 结果只能等下次启动确认.
 Future<void> _resolveInstalling(UpdateState state) async {
   if (!await state.hasInstalling()) return;
@@ -88,23 +101,28 @@ Future<void> _checkAndPrompt(
   required bool manual,
 }) async {
   final service = UpdateService();
-  final artifact = await service.probe();
-  if (artifact.fingerprint == await state.fingerprint()) {
+  final probed = await service.probe();
+  if (probed.fingerprint == await state.fingerprint()) {
+    if (manual && context.mounted) _toast(context, '当前已是最新版本');
+    return;
+  }
+  // 远端包与本机已安装的是同一份(如刚装上或首次检查): 不必下载即可确认是最新.
+  if (await _matchInstalledBuild(state, probed.fingerprint)) {
     if (manual && context.mounted) _toast(context, '当前已是最新版本');
     return;
   }
   if (!context.mounted) return;
-  final choice = await _promptDownload(context, artifact);
+  final choice = await _promptDownload(context, probed);
   if (choice == _PromptResult.skip) {
-    // 记下指纹: 该版本不再提示, 直到远端出现新的构建.
-    await state.saveFingerprint(artifact.fingerprint);
+    // 记下指纹: 该版本不再提示, 直到远端包发生变化.
+    await state.saveFingerprint(probed.fingerprint);
     return;
   }
   if (choice != _PromptResult.download) return;
 
-  final File zip;
+  final File apk;
   try {
-    zip = File('${await UpdateChannel.downloadDir()}/update.zip');
+    apk = File('${await UpdateChannel.updateDir()}/app-release.apk');
   } catch (e) {
     if (context.mounted) _toast(context, '无法准备下载目录: $e');
     return;
@@ -116,8 +134,8 @@ Future<void> _checkAndPrompt(
     builder:
         (_) => _DownloadDialog(
           url: service.url,
-          target: zip,
-          expected: artifact.size,
+          target: apk,
+          expected: probed.size,
         ),
   );
   if (result == null || result.outcome == _DownloadOutcome.cancelled) return;
@@ -126,27 +144,27 @@ Future<void> _checkAndPrompt(
     return;
   }
 
-  final UpdateArchive archive;
+  final ApkInfo info;
   final ApkInfo current;
   try {
-    // 解压并读取更新包自身的版本: 指纹变化不代表版本更新, 以 versionCode 为准.
-    archive = await UpdateChannel.inspectArchive(zip.path);
+    // 读下载包自身的版本: 远端包变了不代表版本更新, 以 versionCode 为准.
+    info = await UpdateChannel.inspectApk(apk.path);
     current = await UpdateChannel.currentVersion();
   } catch (e) {
     if (context.mounted) _toast(context, '更新包不可用: $e');
     return;
   }
-  if (archive.info.versionCode <= current.versionCode) {
-    await state.saveFingerprint(artifact.fingerprint);
+  if (info.versionCode <= current.versionCode) {
+    await state.saveFingerprint(probed.fingerprint);
     if (context.mounted) {
-      _toast(context, '当前已是最新版本 (${archive.info.display})');
+      _toast(context, '当前已是最新版本 (${info.display})');
     }
     return;
   }
   if (current.signerSha256.isNotEmpty &&
-      archive.info.signerSha256 != current.signerSha256) {
+      info.signerSha256 != current.signerSha256) {
     // 签名不同时系统必然拒绝覆盖安装, 提前说明避免用户反复重试.
-    await state.saveFingerprint(artifact.fingerprint);
+    await state.saveFingerprint(probed.fingerprint);
     if (!context.mounted) return;
     await _alert(
       context,
@@ -157,11 +175,11 @@ Future<void> _checkAndPrompt(
     return;
   }
   if (!context.mounted) return;
-  if (await _confirmInstall(context, archive.info) != true) return;
+  if (await _confirmInstall(context, info) != true) return;
 
   // 安装会终止当前进程, 先记下待核对的更新: 装成则记为已处理, 用户取消则
   // 下次启动仍会提示, 不会被静默跳过.
-  await state.markInstalling(artifact.fingerprint, archive.info.versionCode);
+  await state.markInstalling(probed.fingerprint, info.versionCode);
   if (AppSession.instance.running) {
     // 安装会替换应用并终止进程, 先停 VPN 让 native 侧正常收尾.
     try {
@@ -171,7 +189,7 @@ Future<void> _checkAndPrompt(
     }
   }
   if (!context.mounted) return;
-  await _install(context, archive.apkPath);
+  await _install(context, apk.path);
 }
 
 /// 调起系统安装器, 缺「安装未知应用」权限时引导授权后重试.
@@ -209,15 +227,15 @@ class _DownloadResult {
 
 Future<_PromptResult> _promptDownload(
   BuildContext context,
-  UpdateArtifact artifact,
+  RemoteApk probed,
 ) async {
-  final size = artifact.size > 0 ? ' (约 ${formatBytes(artifact.size)})' : '';
+  final size = probed.size > 0 ? ' (约 ${formatBytes(probed.size)})' : '';
   final result = await showDialog<_PromptResult>(
     context: context,
     builder:
         (context) => AlertDialog(
           title: const Text('发现新版本'),
-          content: Text('检测到新的构建包$size, 下载后可直接安装.'),
+          content: Text('检测到新的安装包$size, 下载后可直接安装.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, _PromptResult.skip),

@@ -21,27 +21,28 @@ class ApkInfo {
           : '$versionName (build $versionCode)';
 }
 
-/// 解压后的更新包: 其中 APK 的落地路径与版本信息.
-class UpdateArchive {
-  const UpdateArchive({required this.apkPath, required this.info});
-
-  final String apkPath;
-  final ApkInfo info;
-}
-
-/// 更新包安装相关的原生能力 (落地目录/解压校验/调起系统安装器).
+/// 更新包安装相关的原生能力 (落地目录/版本与签名读取/调起系统安装器).
 class UpdateChannel {
   static const MethodChannel _channel = MethodChannel(
     'com.jackarain.xproxy/update',
   );
 
   /// 更新包落地目录 (应用私有外部目录, 无需额外存储权限).
-  static Future<String> downloadDir() async {
-    final dir = await _channel.invokeMethod<String>('download_dir');
+  static Future<String> updateDir() async {
+    final dir = await _channel.invokeMethod<String>('update_dir');
     if (dir == null || dir.isEmpty) {
       throw StateError('无法获取更新包目录');
     }
     return dir;
+  }
+
+  /// 当前已安装 APK 的路径 (用于比对远端包是否为同一份).
+  static Future<String> installedApkPath() async {
+    final path = await _channel.invokeMethod<String>('installed_apk');
+    if (path == null || path.isEmpty) {
+      throw StateError('无法获取已安装 APK 路径');
+    }
+    return path;
   }
 
   /// 当前已安装应用的版本与签名指纹.
@@ -52,19 +53,13 @@ class UpdateChannel {
     return _parseInfo(map!);
   }
 
-  /// 解压更新包并读取其中 APK 的版本与签名指纹 (不安装).
-  ///
-  /// 解压成功后压缩包即被删除: 后续安装直接使用解压出的 APK.
-  static Future<UpdateArchive> inspectArchive(String zipPath) async {
+  /// 读取已下载 APK 的版本与签名指纹 (不安装).
+  static Future<ApkInfo> inspectApk(String apkPath) async {
     final map = await _channel.invokeMethod<Map<dynamic, dynamic>>(
-      'inspect_zip',
-      {'zip': zipPath},
+      'inspect_apk',
+      {'apk': apkPath},
     );
-    final data = Map<String, dynamic>.from(map!);
-    return UpdateArchive(
-      apkPath: data['apkPath'] as String? ?? '',
-      info: _parseInfo(data),
-    );
+    return _parseInfo(map!);
   }
 
   /// 调起系统安装器.
