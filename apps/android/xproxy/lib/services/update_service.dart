@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// APK 分发地址 (站点上的正式签名包, 由 CI 产物发布而来).
+/// APK 分发地址 (站点上的正式签名包).
 final Uri kUpdateApkUrl = Uri.parse(
   'https://www.jackarain.org/download/app-release.apk',
 );

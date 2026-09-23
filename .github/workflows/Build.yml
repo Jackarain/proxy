@@ -1108,51 +1108,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # 先备好 release 签名密钥; 缺配置时只降级为构建验证, 不让整个 job 失败.
-      - name: Prepare release keystore
-        id: keystore
-        working-directory: apps/android/xproxy
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          umask 077
-          missing=""
-          [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] || missing="$missing ANDROID_KEYSTORE_BASE64"
-          [ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
-          [ -n "${ANDROID_KEY_ALIAS:-}" ] || missing="$missing ANDROID_KEY_ALIAS"
-          [ -n "${ANDROID_KEY_PASSWORD:-}" ] || missing="$missing ANDROID_KEY_PASSWORD"
-          if [ -n "$missing" ]; then
-            # 未配置 secrets 的仓库(镜像等): 不签名, 也不上传产物, 只保证构建可验证.
-            echo "::warning::缺少签名配置:$missing (Settings -> Secrets and variables -> Actions), 本次不产出 release 签名 APK."
-            echo "signed=0" >> "$GITHUB_OUTPUT"
-            {
-              echo "### Android APK 未产出"
-              echo ""
-              echo "- 缺少签名配置:$missing"
-              echo "- 已按 debug 签名编译 release APK 做构建验证, 但不上传产物."
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
-          chmod 600 "$RUNNER_TEMP/release.keystore"
-          # storeFile 用绝对路径: Gradle 的 file() 以 app 模块目录为基准.
-          {
-            printf 'storeFile=%s\n' "$RUNNER_TEMP/release.keystore"
-            printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
-            printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
-            printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
-          } > android/key.properties
-          echo "signed=1" >> "$GITHUB_OUTPUT"
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
-          # NDK 与 flutter.ndkVersion 一致(native 编译与 gradle 共用); build-tools 提供 apksigner.
-          packages: 'tools platform-tools build-tools;36.0.0 ndk;28.2.13676358'
+          # 安装 NDK: 与 flutter.ndkVersion 一致, native 编译与 gradle 共用.
+          packages: 'tools platform-tools ndk;28.2.13676358'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -1171,54 +1131,13 @@ jobs:
 
       - name: Build Android apk
         working-directory: apps/android/xproxy
-        env:
-          # 有正式密钥时强制 Gradle 使用它; 缺密钥时留空, 回退 debug 签名只做构建验证.
-          REQUIRE_RELEASE_SIGNING: ${{ steps.keystore.outputs.signed }}
         run: |
           flutter pub get
-          # versionCode 取 run number: 客户端据此判定是否需要更新(见自动更新一节).
-          flutter build apk --release --build-number="$GITHUB_RUN_NUMBER"
-
-      - name: Verify release signing
-        if: steps.keystore.outputs.signed == '1'
-        working-directory: apps/android/xproxy
-        run: |
-          set -euo pipefail
-          APK=build/app/outputs/flutter-apk/app-release.apk
-          APKSIGNER=$(find "${ANDROID_SDK_ROOT:?}/build-tools" -name apksigner | sort -V | tail -1)
-          "$APKSIGNER" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
-          EXPECTED='${{ vars.ANDROID_SIGNING_CERT_SHA256 }}'
-          if [ -z "$EXPECTED" ]; then
-            echo "::warning::未设置 vars.ANDROID_SIGNING_CERT_SHA256, 跳过签名指纹比对."
-          elif ! grep -qi "$EXPECTED" "$RUNNER_TEMP/certs.txt"; then
-            echo "::error::APK 签名证书与 vars.ANDROID_SIGNING_CERT_SHA256 不一致."
-            exit 1
-          fi
-
-      # 客户端按 versionCode 判定更新, 必须等于本次 run number.
-      - name: Verify apk version code
-        working-directory: apps/android/xproxy
-        run: |
-          set -euo pipefail
-          APK=build/app/outputs/flutter-apk/app-release.apk
-          AAPT2=$(find "${ANDROID_SDK_ROOT:?}/build-tools" -name aapt2 | sort -V | tail -1)
-          CODE=$("$AAPT2" dump badging "$APK" | sed -n "s/^package:.*versionCode='\([0-9]*\)'.*/\1/p")
-          echo "versionCode=$CODE (run number=$GITHUB_RUN_NUMBER)"
-          if [ "$CODE" != "$GITHUB_RUN_NUMBER" ]; then
-            echo "::error::APK versionCode($CODE) 与 run number($GITHUB_RUN_NUMBER) 不一致, 客户端无法识别更新."
-            exit 1
-          fi
+          flutter build apk --release
 
       - name: Archive artifacts
-        if: steps.keystore.outputs.signed == '1'
         uses: actions/upload-artifact@v7
         with:
           name: proxy_server-android-release-apk
           path: |
             apps/android/xproxy/build/app/outputs/flutter-apk/app-release.apk
-
-      - name: Clean up release keystore
-        if: always()
-        working-directory: apps/android/xproxy
-        run: |
-          rm -f "$RUNNER_TEMP/release.keystore" android/key.properties

@@ -59,12 +59,12 @@ release 包使用 `android/key.properties` 指定的正式密钥签名; 该文�
 本地日常开发不需要它: 文件不存在时 release 构建回退 debug 签名, `flutter run` /
 `flutter build apk` 照常可用.
 
-CI 行为: secrets 齐全时设置 `REQUIRE_RELEASE_SIGNING=1`, 强制用正式密钥签名并校验指纹;
-secrets 缺失时(镜像等未配置的仓库)只打 warning, 不中断 job — 仍然编译一次 release APK
-验证构建(回退 debug 签名), 但跳过签名校验与产物上传, 避免流出装不上的包. 结论写在
-job 的 Summary 里.
+CI 不持有签名密钥: `android-arm64-apk` 只编译 release APK 并上传 artifact(仓库里没有
+`android/key.properties`, 因此回退 debug 签名). 要发布正式包, 在本地用上面的
+`key.properties` 构建后再上传到下载地址; 本地也可以 `REQUIRE_RELEASE_SIGNING=1` 构建,
+缺密钥时直接失败而不是静默产出装不上的包.
 
-生成密钥并转 base64 (口令与别名务必另存备份, 丢失后已安装用户只能卸载重装):
+生成密钥 (口令与别名务必另存备份, 丢失后已安装用户只能卸载重装):
 
 ```sh
 keytool -genkeypair -v -keystore release.keystore -alias xproxy \
@@ -72,21 +72,9 @@ keytool -genkeypair -v -keystore release.keystore -alias xproxy \
   -dname "CN=xProxy, O=jackarain, C=CN"
 # PKCS12 下 keyPassword 必须与 storePassword 相同.
 # -validity 必须显式给: keytool 默认只有 90 天.
-base64 -w0 release.keystore > release.keystore.b64
-# macOS: base64 -i release.keystore -o release.keystore.b64
 ```
 
-在 Settings -> Secrets and variables -> Actions 配置:
-
-| 类型 | 名称 | 说明 |
-| --- | --- | --- |
-| Secret | `ANDROID_KEYSTORE_BASE64` | `release.keystore.b64` 的内容 |
-| Secret | `ANDROID_KEYSTORE_PASSWORD` | keystore 口令 |
-| Secret | `ANDROID_KEY_ALIAS` | 密钥别名 |
-| Secret | `ANDROID_KEY_PASSWORD` | 密钥口令 (PKCS12 下同 keystore 口令) |
-| Variable | `ANDROID_SIGNING_CERT_SHA256` | 期望的证书 SHA-256 指纹, CI 构建后校验; 留空则只打印不比对 |
-
-指纹取值 (含冒号, 大小写不敏感):
+核对产物签名用的证书指纹 (含冒号, 大小写不敏感), 每次发版都应由同一个密钥签名:
 
 ```sh
 apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk
@@ -115,8 +103,8 @@ keyPassword=...
 https://www.jackarain.org/download/app-release.apk
 ```
 
-发布方式: 把 `master` 的 CI 产物(artifact `proxy_server-android-release-apk`)传到该地址即可;
-客户端只认这个地址和包内的 `versionCode`, 不依赖 CI 本身.
+发布方式: 构建正式签名的 `app-release.apk`(本地用 `key.properties`, 或对 CI 产物用正式密钥
+重新签名), **递增版本号**后上传到该地址; 客户端只认这个地址和包内的 `versionCode`.
 
 流程:
 
@@ -134,15 +122,14 @@ https://www.jackarain.org/download/app-release.apk
    安装时先记录「待核对」状态, 下次启动发现版本已提升才记为已处理; 用户若在系统安装器里
    取消, 记录会被丢弃, 之后仍会再次提示该版本.
 
-版本号约定: CI 用 `--build-number="$GITHUB_RUN_NUMBER"` 构建, APK 的 `versionCode` 即该次
-workflow 的 run number, 保证每次发布都大于上一版(客户端判断更新的唯一依据). CI 末尾会
-`aapt2 dump badging` 校验 `versionCode` 与 run number 一致, 防止注入失效后客户端失去判据.
-本地构建(`versionCode` 仍是 pubspec 里的 1)不会覆盖线上正式包.
+版本号约定: 客户端判断更新只看包内 `versionCode`(`pubspec.yaml` 里 `1.0.0+N` 的 N).
+发布新包必须比线上那版更大, 改 `pubspec.yaml` 的版本号, 或构建时传
+`flutter build apk --release --build-number=<递增整数>`. 版本号没变大时, 客户端会判定
+「已是最新」而不提示, 无论包内容是否变化.
 
 已知限制:
 
-- 是否更新只看包内 `versionCode`: 发布新包必须递增版本号(pubspec 的 `+N` 被 CI 覆盖,
-  手工发版需自己传 `--build-number`).
+- 是否更新只看包内 `versionCode`: 发布新包必须递增版本号, 否则不会提示更新.
 - 头部 64KB 指纹相同即视为同一份包, 因此只有 `versionCode` 或头部内容变化时才会提示.
 - 上游每次 push `master` 都会产出新构建, 频繁发布时客户端提示也会频繁; 想低频发版就
   只在需要时上传新包.
