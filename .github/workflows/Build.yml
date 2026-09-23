@@ -1108,11 +1108,41 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # 先备好 release 签名密钥, 缺配置时立刻失败, 不浪费后面的 native 编译时间.
+      - name: Prepare release keystore
+        working-directory: apps/android/xproxy
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          missing=""
+          [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] || missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -n "${ANDROID_KEY_ALIAS:-}" ] || missing="$missing ANDROID_KEY_ALIAS"
+          [ -n "${ANDROID_KEY_PASSWORD:-}" ] || missing="$missing ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::缺少签名配置:$missing (Settings -> Secrets and variables -> Actions)"
+            exit 1
+          fi
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          chmod 600 "$RUNNER_TEMP/release.keystore"
+          # storeFile 用绝对路径: Gradle 的 file() 以 app 模块目录为基准.
+          {
+            printf 'storeFile=%s\n' "$RUNNER_TEMP/release.keystore"
+            printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
+          } > android/key.properties
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
-          # 安装 NDK: 与 flutter.ndkVersion 一致, native 编译与 gradle 共用.
-          packages: 'tools platform-tools ndk;28.2.13676358'
+          # NDK 与 flutter.ndkVersion 一致(native 编译与 gradle 共用); build-tools 提供 apksigner.
+          packages: 'tools platform-tools build-tools;36.0.0 ndk;28.2.13676358'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -1131,9 +1161,27 @@ jobs:
 
       - name: Build Android apk
         working-directory: apps/android/xproxy
+        env:
+          # 强制要求正式密钥, 密钥缺失时 Gradle 直接失败而不是回退 debug 签名.
+          REQUIRE_RELEASE_SIGNING: '1'
         run: |
           flutter pub get
           flutter build apk --release
+
+      - name: Verify release signing
+        working-directory: apps/android/xproxy
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER=$(find "${ANDROID_SDK_ROOT:?}/build-tools" -name apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
+          EXPECTED='${{ vars.ANDROID_SIGNING_CERT_SHA256 }}'
+          if [ -z "$EXPECTED" ]; then
+            echo "::warning::未设置 vars.ANDROID_SIGNING_CERT_SHA256, 跳过签名指纹比对."
+          elif ! grep -qi "$EXPECTED" "$RUNNER_TEMP/certs.txt"; then
+            echo "::error::APK 签名证书与 vars.ANDROID_SIGNING_CERT_SHA256 不一致."
+            exit 1
+          fi
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v7
@@ -1141,3 +1189,9 @@ jobs:
           name: proxy_server-android-release-apk
           path: |
             apps/android/xproxy/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Clean up release keystore
+        if: always()
+        working-directory: apps/android/xproxy
+        run: |
+          rm -f "$RUNNER_TEMP/release.keystore" android/key.properties

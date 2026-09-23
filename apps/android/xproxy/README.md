@@ -51,6 +51,57 @@ flutter build apk --debug
 - 运行时注入 (无需手填): `tun_wait_fd`, `launcher_url`.
 - 保存前做基础校验 (需填写上游代理、MTU/测试 URL 范围等).
 
+## 发布签名
+
+release 包使用 `android/key.properties` 指定的正式密钥签名; 该文件不入库
+(`android/.gitignore` 已忽略 `key.properties` / `*.keystore` / `*.jks`).
+
+本地日常开发不需要它: 文件不存在时 release 构建回退 debug 签名, `flutter run` /
+`flutter build apk` 照常可用. CI 会设置 `REQUIRE_RELEASE_SIGNING=1` 强制要求密钥存在,
+缺密钥直接失败, 不会静默产出装不上的包.
+
+生成密钥并转 base64 (口令与别名务必另存备份, 丢失后已安装用户只能卸载重装):
+
+```sh
+keytool -genkeypair -v -keystore release.keystore -alias xproxy \
+  -keyalg RSA -keysize 4096 -validity 10000 -storetype PKCS12 \
+  -dname "CN=xProxy, O=jackarain, C=CN"
+# PKCS12 下 keyPassword 必须与 storePassword 相同.
+# -validity 必须显式给: keytool 默认只有 90 天.
+base64 -w0 release.keystore > release.keystore.b64
+# macOS: base64 -i release.keystore -o release.keystore.b64
+```
+
+在 Settings -> Secrets and variables -> Actions 配置:
+
+| 类型 | 名称 | 说明 |
+| --- | --- | --- |
+| Secret | `ANDROID_KEYSTORE_BASE64` | `release.keystore.b64` 的内容 |
+| Secret | `ANDROID_KEYSTORE_PASSWORD` | keystore 口令 |
+| Secret | `ANDROID_KEY_ALIAS` | 密钥别名 |
+| Secret | `ANDROID_KEY_PASSWORD` | 密钥口令 (PKCS12 下同 keystore 口令) |
+| Variable | `ANDROID_SIGNING_CERT_SHA256` | 期望的证书 SHA-256 指纹, CI 构建后校验; 留空则只打印不比对 |
+
+指纹取值 (含冒号, 大小写不敏感):
+
+```sh
+apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk
+```
+
+本地要出正式签名包时, 在本工程写 `android/key.properties` (勿提交):
+
+```properties
+storeFile=/绝对路径/release.keystore
+storePassword=...
+keyAlias=xproxy
+keyPassword=...
+```
+
+`storeFile` 必须是绝对路径: Gradle 的 `file()` 以 app 模块目录(`android/app`)为基准.
+
+注意: 从 debug 签名切到正式签名后, 已安装用户需要**卸载重装**一次才能继续更新
+(签名不一致时系统会拒绝覆盖安装).
+
 ## 测试
 
 ```sh
