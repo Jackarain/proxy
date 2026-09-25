@@ -5544,7 +5544,6 @@ R"x*x*x(<html>
 
 	net::awaitable<void> proxy_session::on_http_dns_query(const http_context& hctx) noexcept
 	{
-		boost::system::error_code ec;
 		const auto& request = hctx.request_;
 
 		// 检查请求方法.
@@ -6060,8 +6059,6 @@ R"x*x*x(<html>
 		bool cd_flag,
 		bool do_flag) noexcept
 	{
-		boost::system::error_code ec;
-
 		// 1. 构建 DNS wire-format 查询.
 		auto dns_query = build_dns_wire_query(
 			question_name, question_type, cd_flag, do_flag);

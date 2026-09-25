@@ -39,7 +39,6 @@ namespace proxy {
 		boost::system::result<value_type> parse(char const*& it, char const* const end) const noexcept
 		{
 			std::string_view scheme, user, passwd, host, port, resource;
-			char const* start = it;
 
 			// 匹配 scheme: 字母开头，后跟字母、数字、+、-、.
 			auto scheme_res = boost::urls::grammar::parse(it, end,

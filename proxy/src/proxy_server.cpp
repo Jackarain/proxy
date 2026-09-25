@@ -945,8 +945,6 @@ int proxy_server::sni_callback(SSL *ssl, [[maybe_unused]] int *ad) noexcept
 
 net::awaitable<std::chrono::seconds> proxy_server::certificate_check()
 {
-	boost::system::error_code ec;
-
 	// 找到下次需要检查证书的时间间隔, 如果有证书过期, 返回 0 表示应尽快检查.
 	// 如果所有证书都有效, 返回距最早过期的时间.
 
@@ -3446,7 +3444,7 @@ proxy_server::connect_to_proxy(tcp::socket& remote_socket, const tcp::resolver::
 	if (m_option.happyeyeballs_)
 	{
 		// 使用 Happy Eyeballs 并发连接 (RFC 8305), 加快连接建立速度.
-		auto endp = co_await asio_util::async_connect(
+		co_await asio_util::async_connect(
 			remote_socket,
 			targets,
 			[this](const auto&, auto& stream, auto& endp)

@@ -1163,8 +1163,6 @@ namespace proxy {
 		const std::shared_ptr<udp::socket>& sock,
 		const udp::endpoint& peer, std::string query)
 	{
-		boost::system::error_code ec;
-
 		std::string qname;
 		uint16_t qtype = DNS_TYPE_A;
 		bool cd = false;
