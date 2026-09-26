@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io' show GZipCodec;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:xproxy/models/vpn_config.dart';
 import 'package:xproxy/services/config_share.dart';
@@ -71,5 +74,56 @@ void main() {
       () => decodeConfigShare('not a json'),
       throwsA(isA<FormatException>()),
     );
+  });
+
+  test('分享内容经字典压缩, 体积远小于明文 JSON', () {
+    final config = VpnConfig(
+      id: '4',
+      name: '压缩',
+      proxyPass: 'https://user:password@proxy.example.com:443',
+      proxyDomains: List.generate(10, (i) => 'sub$i.example.com'),
+      proxyCidr: List.generate(10, (i) => '10.0.$i.0/24'),
+    );
+
+    final raw = encodeConfigShare(config);
+    expect(raw.startsWith('xproxy2:'), isTrue);
+    expect(raw.startsWith('{'), isFalse);
+
+    final plain = jsonEncode({
+      'type': 'xproxy-config',
+      'version': 1,
+      'config': config.toJson(),
+    });
+    // 预共享字典下压缩后应远小于明文 (base64 后仍不到其 1/3).
+    expect(raw.length, lessThan(plain.length ~/ 3));
+    // 压缩格式可正常还原.
+    expect(decodeConfigShare(raw).proxyDomains.length, 10);
+  });
+
+  test('兼容 v1 gzip 格式', () {
+    final config = VpnConfig(id: '6', name: '旧版', proxyDomains: ['a.com']);
+    final body = utf8.encode(
+      jsonEncode({
+        'type': 'xproxy-config',
+        'version': 1,
+        'config': config.toJson(),
+      }),
+    );
+    final raw = 'xproxy1:${base64Url.encode(GZipCodec(level: 9).encode(body))}';
+
+    final decoded = decodeConfigShare(raw);
+    expect(decoded.name, '旧版');
+    expect(decoded.proxyDomains, ['a.com']);
+  });
+
+  test('兼容未压缩的明文 JSON', () {
+    final config = VpnConfig(id: '5', name: '明文');
+    final raw = jsonEncode({
+      'type': 'xproxy-config',
+      'version': 1,
+      'config': config.toJson(),
+    });
+
+    expect(decodeConfigShare(raw).name, '明文');
   });
 }
