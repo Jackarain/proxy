@@ -33,6 +33,8 @@ void main() {
 
     expect(find.text('名称'), findsOneWidget);
     expect(find.text('上游代理'), findsOneWidget);
+    expect(find.text('TLS'), findsOneWidget);
+    expect(find.text('关闭上游证书校验'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('测试连接'), 200, scrollable: _list);
     expect(find.text('测试连接 URL'), findsOneWidget);
   });

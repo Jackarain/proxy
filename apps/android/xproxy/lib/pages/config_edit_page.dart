@@ -245,6 +245,9 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             label: '上游代理 proxy_pass',
             hint: '如 https://1.2.3.4:443 或 socks5://1.2.3.4:1080',
           ),
+          _numberField(_proxyPassPoolSize, label: '代理连接池大小'),
+        ], subtitle: '预连到上游的 TCP/TLS 连接数, 0 表示禁用连接池'),
+        _section('TLS', [
           _textField(_sni, label: 'SNI', hint: '与代理建立 TLS 连接时的 SNI, 留空用主机名'),
           _switch(
             title: '关闭上游证书校验',
@@ -252,8 +255,7 @@ class _ConfigEditPageState extends State<ConfigEditPage> {
             value: _disableCheckCert,
             onChanged: (v) => setState(() => _disableCheckCert = v),
           ),
-          _numberField(_proxyPassPoolSize, label: '代理连接池大小'),
-        ], subtitle: '预连到上游的 TCP/TLS 连接数, 0 表示禁用连接池'),
+        ], subtitle: '与上游建立 TLS 连接时的 SNI 与证书校验'),
         _section('测试连接', [
           _textField(
             _testUrl,
