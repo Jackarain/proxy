@@ -29,10 +29,16 @@ void main() {
     expect(find.text('分享配置'), findsNothing);
     expect(find.text('办公室'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
-    final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+    final dialog = tester.widget<Dialog>(find.byType(Dialog));
     expect(dialog.backgroundColor, Colors.white);
     final qr = tester.widget<QrImageView>(find.byType(QrImageView));
     expect(qr.size, greaterThan(240));
     expect(qr.padding, EdgeInsets.zero);
+
+    // 无关闭按钮, 点击弹窗任意位置关闭.
+    expect(find.text('关闭'), findsNothing);
+    await tester.tap(find.byType(QrImageView));
+    await tester.pumpAndSettle();
+    expect(find.byType(QrImageView), findsNothing);
   });
 }

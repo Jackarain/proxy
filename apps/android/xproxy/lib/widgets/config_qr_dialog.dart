@@ -21,56 +21,56 @@ class _ConfigQrDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 二维码尽量占满弹窗宽度, 同时避免高度不足时溢出 (留出按钮/名称).
+    // 二维码尽量占满弹窗宽度, 同时避免高度不足时溢出 (留出名称与内边距).
     final media = MediaQuery.sizeOf(context);
     final side =
         math
-            .min(media.width - 64, media.height - 200)
+            .min(media.width - 64, media.height - 160)
             .clamp(160.0, 420.0)
             .toDouble();
-    return AlertDialog(
+    return Dialog(
       // 整个弹窗保持白底, 深色主题下二维码仍有足够对比度.
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.all(16),
-      contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 固定尺寸: QrImageView 内部使用 LayoutBuilder, 不加约束时
-          // AlertDialog 的固有尺寸测量会报错.
-          SizedBox(
-            width: side,
-            height: side,
-            child: QrImageView(
-              data: encodeConfigShare(config),
-              size: side,
-              version: QrVersions.auto,
-              errorCorrectionLevel: QrErrorCorrectLevel.M,
-              backgroundColor: Colors.white,
-              // 不留静默边距, 二维码铺满整个区域.
-              padding: EdgeInsets.zero,
-              errorStateBuilder:
-                  (_, _) => const Text(
-                    '配置内容过大, 无法生成二维码',
-                    style: TextStyle(color: Colors.black87),
-                  ),
-            ),
+      // 点击弹窗内任意位置关闭.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: side,
+                height: side,
+                child: QrImageView(
+                  data: encodeConfigShare(config),
+                  size: side,
+                  version: QrVersions.auto,
+                  errorCorrectionLevel: QrErrorCorrectLevel.M,
+                  backgroundColor: Colors.white,
+                  // 不留静默边距, 二维码铺满整个区域.
+                  padding: EdgeInsets.zero,
+                  errorStateBuilder:
+                      (_, _) => const Text(
+                        '配置内容过大, 无法生成二维码',
+                        style: TextStyle(color: Colors.black87),
+                      ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                config.name,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(color: Colors.black87),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            config.name,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(color: Colors.black87),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('关闭', style: TextStyle(color: Colors.black87)),
         ),
-      ],
+      ),
     );
   }
 }
