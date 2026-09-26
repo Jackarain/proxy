@@ -26,9 +26,11 @@ void main() {
     await tester.tap(find.text('分享'));
     await tester.pumpAndSettle();
 
-    expect(find.text('分享配置'), findsOneWidget);
+    expect(find.text('分享配置'), findsNothing);
     expect(find.text('办公室'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
+    final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+    expect(dialog.backgroundColor, Colors.white);
     final qr = tester.widget<QrImageView>(find.byType(QrImageView));
     expect(qr.size, greaterThan(240));
     expect(qr.padding, EdgeInsets.zero);
