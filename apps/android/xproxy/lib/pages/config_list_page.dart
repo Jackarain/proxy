@@ -5,12 +5,15 @@ import 'package:flutter/material.dart';
 
 import '../models/vpn_config.dart';
 import '../services/app_session.dart';
+import '../services/config_share.dart';
 import '../services/storage_service.dart';
 import '../services/vpn_channel.dart';
 import '../services/launcher_server.dart';
+import '../widgets/config_qr_dialog.dart';
 import '../widgets/update_flow.dart';
 import 'config_edit_page.dart';
 import 'running_page.dart';
+import 'scan_config_page.dart';
 
 class ConfigListPage extends StatefulWidget {
   const ConfigListPage({super.key});
@@ -242,6 +245,70 @@ class _ConfigListPageState extends State<ConfigListPage> {
     }
   }
 
+  /// 添加配置入口: 手动添加或扫码添加.
+  Future<void> _showAddMenu() async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder:
+          (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('手动添加'),
+                  onTap: () => Navigator.of(ctx).pop('manual'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.qr_code_scanner),
+                  title: const Text('扫码添加'),
+                  onTap: () => Navigator.of(ctx).pop('scan'),
+                ),
+              ],
+            ),
+          ),
+    );
+    if (!mounted || action == null) return;
+    if (action == 'manual') {
+      await _addConfig();
+    } else {
+      await _scanConfig();
+    }
+  }
+
+  /// 扫码导入: 解析二维码内容并直接保存为新配置 (重新生成 id).
+  Future<void> _scanConfig() async {
+    final raw = await Navigator.of(
+      context,
+    ).push<String>(MaterialPageRoute(builder: (_) => const ScanConfigPage()));
+    if (raw == null || !mounted) return;
+
+    final VpnConfig config;
+    try {
+      config = decodeConfigShare(raw);
+    } on FormatException catch (e) {
+      _toast(e.message);
+      return;
+    } catch (e) {
+      _toast('无法解析二维码: $e');
+      return;
+    }
+    config.id = VpnConfig.newId();
+    _configs.add(config);
+    await _save();
+    _reload();
+    if (mounted) _toast('已添加配置「${config.name}」');
+  }
+
+  Future<void> _shareConfig(VpnConfig config) =>
+      showConfigQrDialog(context, config);
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _editConfig(VpnConfig config) async {
     final saved = await Navigator.of(context).push<VpnConfig>(
       MaterialPageRoute(
@@ -463,6 +530,8 @@ class _ConfigListPageState extends State<ConfigListPage> {
                                     _editConfig(config);
                                   case 'duplicate':
                                     _duplicateConfig(config);
+                                  case 'share':
+                                    _shareConfig(config);
                                   case 'delete':
                                     _deleteConfig(config);
                                 }
@@ -478,6 +547,10 @@ class _ConfigListPageState extends State<ConfigListPage> {
                                       child: Text('复制'),
                                     ),
                                     PopupMenuItem(
+                                      value: 'share',
+                                      child: Text('分享'),
+                                    ),
+                                    PopupMenuItem(
                                       value: 'delete',
                                       child: Text('删除'),
                                     ),
@@ -491,7 +564,7 @@ class _ConfigListPageState extends State<ConfigListPage> {
                 ),
               ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _busy ? null : _addConfig,
+        onPressed: _busy ? null : _showAddMenu,
         icon: const Icon(Icons.add),
         label: const Text('添加配置'),
       ),

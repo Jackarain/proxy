@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- 扫码添加配置需要相机; 相册选图走系统 Photo Picker, 无需额外权限. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <!-- 安装自更新包需要用户授权「安装未知应用」. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <application
