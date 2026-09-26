@@ -35,6 +35,7 @@ class XproxyApp extends StatelessWidget {
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(shape: square),
       dialogTheme: DialogThemeData(shape: square),
+      bottomSheetTheme: BottomSheetThemeData(shape: square),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: square,
