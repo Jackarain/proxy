@@ -29,5 +29,8 @@ void main() {
     expect(find.text('分享配置'), findsOneWidget);
     expect(find.text('办公室'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
+    final qr = tester.widget<QrImageView>(find.byType(QrImageView));
+    expect(qr.size, greaterThan(240));
+    expect(qr.padding, EdgeInsets.zero);
   });
 }

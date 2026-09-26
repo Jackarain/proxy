@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -19,27 +21,34 @@ class _ConfigQrDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 二维码尽量占满弹窗宽度, 同时避免高度不足时溢出 (留出标题/按钮/名称).
+    final media = MediaQuery.sizeOf(context);
+    final side =
+        math
+            .min(media.width - 64, media.height - 230)
+            .clamp(160.0, 420.0)
+            .toDouble();
     return AlertDialog(
       title: const Text('分享配置'),
+      insetPadding: const EdgeInsets.all(16),
+      contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.all(12),
-            // 固定尺寸: QrImageView 内部使用 LayoutBuilder, 不加约束时
-            // AlertDialog 的固有尺寸测量会报错.
-            child: SizedBox(
-              width: 240,
-              height: 240,
-              child: QrImageView(
-                data: encodeConfigShare(config),
-                size: 240,
-                version: QrVersions.auto,
-                errorCorrectionLevel: QrErrorCorrectLevel.M,
-                backgroundColor: Colors.white,
-                errorStateBuilder: (_, _) => const Text('配置内容过大, 无法生成二维码'),
-              ),
+          // 固定尺寸: QrImageView 内部使用 LayoutBuilder, 不加约束时
+          // AlertDialog 的固有尺寸测量会报错.
+          SizedBox(
+            width: side,
+            height: side,
+            child: QrImageView(
+              data: encodeConfigShare(config),
+              size: side,
+              version: QrVersions.auto,
+              errorCorrectionLevel: QrErrorCorrectLevel.M,
+              backgroundColor: Colors.white,
+              // 不留静默边距, 二维码铺满整个区域.
+              padding: EdgeInsets.zero,
+              errorStateBuilder: (_, _) => const Text('配置内容过大, 无法生成二维码'),
             ),
           ),
           const SizedBox(height: 12),
