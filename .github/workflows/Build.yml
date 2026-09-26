@@ -581,11 +581,23 @@ jobs:
           apt-get install -y -qq --no-install-recommends \
             ca-certificates git cmake ninja-build pkg-config curl \
             python3 openssl g++ gnupg lsb-release software-properties-common
-          curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
+          # 手动配置 apt.llvm.org 源: llvm.sh 内置的 HEAD 探测在 CI 网络下
+          # 偶发失败会误判发行版不受支持, 这里改为显式配源并全程重试.
+          . /etc/os-release
+          curl -fsSL --retry 10 --retry-all-errors --retry-delay 3 \
+            https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
           LLVM_VER=$(grep -oP 'CURRENT_LLVM_STABLE=\K[0-9]+' /tmp/llvm.sh)
-          chmod +x /tmp/llvm.sh
-          /tmp/llvm.sh "$LLVM_VER"
-          apt-get install -y -qq --no-install-recommends llvm-"$LLVM_VER"
+          LLVM_VER=${LLVM_VER%%$'\n'*}
+          test -n "$LLVM_VER"
+          curl -fsSL --retry 10 --retry-all-errors --retry-delay 3 \
+            https://apt.llvm.org/llvm-snapshot.gpg.key -o /tmp/llvm-key.asc
+          install -D -m 0644 /tmp/llvm-key.asc \
+            /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb https://apt.llvm.org/$VERSION_CODENAME/ llvm-toolchain-$VERSION_CODENAME-$LLVM_VER main" \
+            > /etc/apt/sources.list.d/apt.llvm.org.list
+          apt-get -o Acquire::Retries=10 update -qq
+          apt-get -o Acquire::Retries=10 install -y -qq --no-install-recommends \
+            clang-"$LLVM_VER" lld-"$LLVM_VER" llvm-"$LLVM_VER"
           clang-$LLVM_VER --version
 
           # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
@@ -749,11 +761,23 @@ jobs:
           apt-get install -y -qq --no-install-recommends \
             ca-certificates git cmake ninja-build pkg-config liburing-dev curl \
             python3 openssl g++ gnupg lsb-release software-properties-common
-          curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
+          # 手动配置 apt.llvm.org 源: llvm.sh 内置的 HEAD 探测在 CI 网络下
+          # 偶发失败会误判发行版不受支持, 这里改为显式配源并全程重试.
+          . /etc/os-release
+          curl -fsSL --retry 10 --retry-all-errors --retry-delay 3 \
+            https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
           LLVM_VER=$(grep -oP 'CURRENT_LLVM_STABLE=\K[0-9]+' /tmp/llvm.sh)
-          chmod +x /tmp/llvm.sh
-          /tmp/llvm.sh "$LLVM_VER"
-          apt-get install -y -qq --no-install-recommends llvm-"$LLVM_VER"
+          LLVM_VER=${LLVM_VER%%$'\n'*}
+          test -n "$LLVM_VER"
+          curl -fsSL --retry 10 --retry-all-errors --retry-delay 3 \
+            https://apt.llvm.org/llvm-snapshot.gpg.key -o /tmp/llvm-key.asc
+          install -D -m 0644 /tmp/llvm-key.asc \
+            /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb https://apt.llvm.org/$VERSION_CODENAME/ llvm-toolchain-$VERSION_CODENAME-$LLVM_VER main" \
+            > /etc/apt/sources.list.d/apt.llvm.org.list
+          apt-get -o Acquire::Retries=10 update -qq
+          apt-get -o Acquire::Retries=10 install -y -qq --no-install-recommends \
+            clang-"$LLVM_VER" lld-"$LLVM_VER" llvm-"$LLVM_VER"
           clang-$LLVM_VER --version
 
           # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
@@ -860,11 +884,24 @@ jobs:
           apt-get install -y -qq --no-install-recommends \
             ca-certificates git cmake ninja-build pkg-config liburing-dev curl \
             python3 openssl g++ gnupg lsb-release software-properties-common
-          curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
+          # 手动配置 apt.llvm.org 源: llvm.sh 内置的 HEAD 探测在 CI 网络下
+          # 偶发失败会误判发行版不受支持, 这里改为显式配源并全程重试.
+          . /etc/os-release
+          curl -fsSL --retry 10 --retry-all-errors --retry-delay 3 \
+            https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
           LLVM_VER=$(grep -oP 'CURRENT_LLVM_STABLE=\K[0-9]+' /tmp/llvm.sh)
-          chmod +x /tmp/llvm.sh
-          /tmp/llvm.sh "$LLVM_VER"
-          apt-get install -y -qq --no-install-recommends llvm-"$LLVM_VER"
+          LLVM_VER=${LLVM_VER%%$'\n'*}
+          test -n "$LLVM_VER"
+          curl -fsSL --retry 10 --retry-all-errors --retry-delay 3 \
+            https://apt.llvm.org/llvm-snapshot.gpg.key -o /tmp/llvm-key.asc
+          install -D -m 0644 /tmp/llvm-key.asc \
+            /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb https://apt.llvm.org/$VERSION_CODENAME/ llvm-toolchain-$VERSION_CODENAME-$LLVM_VER main" \
+            > /etc/apt/sources.list.d/apt.llvm.org.list
+          apt-get -o Acquire::Retries=10 update -qq
+          apt-get -o Acquire::Retries=10 install -y -qq --no-install-recommends \
+            clang-"$LLVM_VER" lld-"$LLVM_VER" llvm-"$LLVM_VER"
+          clang-$LLVM_VER --version
 
           # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
           # 否则 gitGetVersion 拿不到 commit hash. (需在安装 git 之后执行)
