@@ -597,7 +597,8 @@ jobs:
             > /etc/apt/sources.list.d/apt.llvm.org.list
           apt-get -o Acquire::Retries=10 update -qq
           apt-get -o Acquire::Retries=10 install -y -qq --no-install-recommends \
-            clang-"$LLVM_VER" lld-"$LLVM_VER" llvm-"$LLVM_VER"
+            clang-"$LLVM_VER" lld-"$LLVM_VER" llvm-"$LLVM_VER" \
+            libclang-rt-"$LLVM_VER"-dev
           clang-$LLVM_VER --version
 
           # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
@@ -777,7 +778,8 @@ jobs:
             > /etc/apt/sources.list.d/apt.llvm.org.list
           apt-get -o Acquire::Retries=10 update -qq
           apt-get -o Acquire::Retries=10 install -y -qq --no-install-recommends \
-            clang-"$LLVM_VER" lld-"$LLVM_VER" llvm-"$LLVM_VER"
+            clang-"$LLVM_VER" lld-"$LLVM_VER" llvm-"$LLVM_VER" \
+            libclang-rt-"$LLVM_VER"-dev
           clang-$LLVM_VER --version
 
           # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
@@ -900,7 +902,8 @@ jobs:
             > /etc/apt/sources.list.d/apt.llvm.org.list
           apt-get -o Acquire::Retries=10 update -qq
           apt-get -o Acquire::Retries=10 install -y -qq --no-install-recommends \
-            clang-"$LLVM_VER" lld-"$LLVM_VER" llvm-"$LLVM_VER"
+            clang-"$LLVM_VER" lld-"$LLVM_VER" llvm-"$LLVM_VER" \
+            libclang-rt-"$LLVM_VER"-dev
           clang-$LLVM_VER --version
 
           # 容器以 root 运行, checkout 的仓库属于 runner 用户, 需要放行 safe.directory
