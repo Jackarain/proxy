@@ -130,14 +130,16 @@ uint16_t tcp_udp_checksum(uint32_t src_ip,
 size_t ip_header_size(int family) noexcept;
 
 // 构建 IP 头部（IPv4 自动计算头部校验和，IPv6 无校验和字段）；
-// buf 需至少容纳 ip_header_size(family) 字节，返回头部长度。
+// ttl 为 IPv4 TTL / IPv6 Hop Limit；buf 需至少容纳
+// ip_header_size(family) 字节，返回头部长度。
 size_t build_ip_header(uint8_t* buf,
     int family,
     const uint8_t* src_ip,
     const uint8_t* dst_ip,
     uint8_t protocol,
     size_t total_len,
-    uint16_t ip_id) noexcept;
+    uint16_t ip_id,
+    uint8_t ttl = 64) noexcept;
 
 // 从 TUN 设备读取/向 TUN 设备写入的一个完整 IP 报文。
 //

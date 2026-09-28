@@ -1160,8 +1160,8 @@ BOOST_AUTO_TEST_CASE(test_partial_overlap_retransmit)
     peer.close();
 }
 
-// 批量 ACK（延迟 ACK）：无读挂起时数据进入缓冲路径，按序数据段不逐段
-// 确认，每 2 段合并补发一次；应用读取后由读完成补发挂起的 ACK.
+// 批量 ACK（延迟 ACK）：无读挂起时数据进入缓冲路径，确认窗口（40ms）
+// 内连续到达的数据段合并为单个 ACK；孤立段由延迟确认定时器兜底补发.
 BOOST_AUTO_TEST_CASE(test_delayed_ack_batching)
 {
     engine_env env;
@@ -1194,51 +1194,54 @@ BOOST_AUTO_TEST_CASE(test_delayed_ack_batching)
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x10,
         1001, engine_iss + 1, 65535, {}));
 
-    // 无读挂起时，首个数据段不立即 ACK（挂起等待合并）
+    // 无读挂起时，确认窗口内连续两段合并为单个 ACK（ack = 1009）
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x18,
         1001, engine_iss + 1, 65535, {'a', 'b', 'c', 'd'}));
-    if (env.dev.read_packet(pkt, 200)) {
-        TEST_THROW("unexpected immediate ACK for first segment");
-    }
-
-    // 连续第 2 段：合并补发一个 ACK，覆盖两段（ack = 1009）
     env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x18,
         1005, engine_iss + 1, 65535, {'e', 'f', 'g', 'h'}));
-    if (!env.dev.read_packet(pkt)) {
+    if (!env.dev.read_packet(pkt, 1000)) {
         TEST_THROW("no batched ACK");
     }
     if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
         TEST_THROW("parse failed");
     }
     TEST_ASSERT((ti.flags & 0x10) != 0 && ti.ack == 1001 + 8);
+    // 合并确认后不应再补发重复 ACK
     if (env.dev.read_packet(pkt, 200)) {
         TEST_THROW("duplicate ACK after batch");
     }
 
-    // 第 3 段再次挂起；应用读取后由读完成补发 ACK（ack = 1013）
-    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x18,
-        1009, engine_iss + 1, 65535, {'i', 'j', 'k', 'l'}));
-    if (env.dev.read_packet(pkt, 200)) {
-        TEST_THROW("unexpected immediate ACK for third segment");
-    }
-
-    std::promise<std::pair<boost::system::error_code, size_t>> read_done;
+    // 应用读取已确认的 8 字节
     char buf[64];
+    std::promise<std::pair<boost::system::error_code, size_t>> read1;
     peer.async_read_some(net::buffer(buf),
         [&](boost::system::error_code ec, size_t n) {
-            read_done.set_value({ec, n});
+            read1.set_value({ec, n});
         });
-    auto [rec, rn] = future_get(read_done.get_future());
-    TEST_ASSERT(!rec && rn == 12);
-    TEST_ASSERT(std::string(buf, rn) == "abcdefghijkl");
+    auto [rec1, rn1] = future_get(read1.get_future());
+    TEST_ASSERT(!rec1 && rn1 == 8);
+    TEST_ASSERT(std::string(buf, rn1) == "abcdefgh");
 
-    if (!env.dev.read_packet(pkt)) {
-        TEST_THROW("no ACK after read");
+    // 孤立第 3 段：无读挂起时由延迟确认定时器确认（ack = 1013）
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x18,
+        1009, engine_iss + 1, 65535, {'i', 'j', 'k', 'l'}));
+    if (!env.dev.read_packet(pkt, 1000)) {
+        TEST_THROW("no delayed ACK for isolated segment");
     }
     if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
         TEST_THROW("parse failed");
     }
     TEST_ASSERT((ti.flags & 0x10) != 0 && ti.ack == 1001 + 12);
+
+    // 读取剩余 4 字节
+    std::promise<std::pair<boost::system::error_code, size_t>> read2;
+    peer.async_read_some(net::buffer(buf),
+        [&](boost::system::error_code ec, size_t n) {
+            read2.set_value({ec, n});
+        });
+    auto [rec2, rn2] = future_get(read2.get_future());
+    TEST_ASSERT(!rec2 && rn2 == 4);
+    TEST_ASSERT(std::string(buf, rn2) == "ijkl");
 
     peer.close();
 }
@@ -3171,6 +3174,59 @@ BOOST_AUTO_TEST_CASE(test_loopback_local_address_guard)
     expect_dropped(make_tcp6(CLIENT_V6, v6_link, 12373, DEST_PORT, 0x02, 20000,
         0, 65535, {}),
         dropped);
+}
+
+BOOST_AUTO_TEST_CASE(test_delayed_ack_single_segment)
+{
+    engine_env env;
+    auto &io = env.io;
+    tun_tcp_acceptor acceptor(env.engine);
+    tun_tcp_socket peer(io.get_executor());
+
+    std::promise<boost::system::error_code> accept_done;
+    acceptor.async_accept(peer, [&](boost::system::error_code ec) {
+        if (!ec) {
+            peer.accept();
+        }
+        accept_done.set_value(ec);
+    });
+
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x02,
+        1000, 0, 65535, {}));
+
+    std::vector<uint8_t> pkt;
+    if (!env.dev.read_packet(pkt)) {
+        TEST_THROW("no SYN-ACK");
+    }
+    ip_hdr_info ipi;
+    tcp_hdr_info ti;
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        TEST_THROW("parse SYN-ACK failed");
+    }
+    const uint32_t engine_iss = ti.seq;
+    TEST_ASSERT(future_get(accept_done.get_future()) ==
+        boost::system::error_code{});
+
+    // 客户端 ACK 完成握手
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x10,
+        1001, engine_iss + 1, 65535, {}));
+
+    // 应用此时不发起读：单个按序数据段必须在延迟确认定时器到期后得到
+    // ACK，而非只能等对端 RTO 重传（回归：此前无任何 ACK 定时器）。
+    env.dev.send(make_tcp(CLIENT_IP, DEST_IP, CLIENT_PORT, DEST_PORT, 0x18,
+        1001, engine_iss + 1, 65535, {'X'}));
+
+    if (!env.dev.read_packet(pkt, 1000)) {
+        TEST_THROW("no delayed ACK");
+    }
+    if (!verify_packet(pkt)) {
+        TEST_THROW("verify_packet failed");
+    }
+    if (!parse_ip(pkt, ipi) || !parse_tcp(ipi.payload, ipi.payload_len, ti)) {
+        TEST_THROW("parse delayed ACK failed");
+    }
+    TEST_ASSERT((ti.flags & 0x10) != 0); // ACK
+    TEST_ASSERT(ti.ack == 1001 + 1);
 }
 
 // socketpair 注入场景下，关闭读端后引擎仍可能写回（FIN 等），忽略 SIGPIPE

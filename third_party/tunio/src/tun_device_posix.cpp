@@ -80,6 +80,13 @@ bool add_ipv6_address(int ioctl_sock,
     uint8_t prefix_len,
     boost::system::error_code& ec)
 {
+    if (prefix_len > 128)
+    {
+        ec = boost::system::error_code(
+            EINVAL, boost::system::generic_category());
+        return false;
+    }
+
     struct in6_addr a6;
     if (::inet_pton(AF_INET6, addr.c_str(), &a6) != 1)
     {
@@ -367,6 +374,14 @@ bool set_if_up(int s, const char* ifname, boost::system::error_code& ec)
 bool add_ipv6_address(const char* ifname, const std::string& addr,
     uint8_t prefix_len, boost::system::error_code& ec)
 {
+    // 掩码缓冲区为 16 字节定长：prefix_len > 128 会越界写栈，直接拒绝。
+    if (prefix_len > 128)
+    {
+        ec = boost::system::error_code(
+            EINVAL, boost::system::generic_category());
+        return false;
+    }
+
     struct in6_addr a6;
     if (::inet_pton(AF_INET6, addr.c_str(), &a6) != 1)
     {

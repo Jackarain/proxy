@@ -26,6 +26,9 @@ namespace detail {
 
 namespace {
 
+// 延迟确认超时：RFC 1122 §4.2.3.2 要求确认延迟小于 0.5s，取常用实现值 40ms。
+constexpr auto k_delayed_ack_timeout = std::chrono::milliseconds(40);
+
 uint32_t random_iss()
 {
     // thread_local：多个引擎（不同线程）并发时避免共享 RNG 的数据竞争
@@ -1141,9 +1144,34 @@ void tcp_engine::send_ack(tcp_flow& f)
 void tcp_engine::note_data_ack(tcp_flow& f)
 {
     if (f.ack_pending)
+    {
         send_ack(f); // 连续第 2 段：立即补发，覆盖前一段
-    else
-        f.ack_pending = true;
+        return;
+    }
+
+    f.ack_pending = true;
+
+    // 首个待确认段：启动延迟确认定时器，到期补发单独 ACK。避免应用无
+    // 挂起读时对端必须等 RTO 重传才收到确认（RFC 1122 §4.2.3.2 要求
+    // 延迟 < 0.5s）；直投路径不经过此分支，仍逐段即时 ACK。
+    if (!f.ack_timer)
+        f.ack_timer.emplace(strand_);
+    f.ack_timer->expires_after(k_delayed_ack_timeout);
+    f.ack_timer->async_wait(
+        [self = weak_from_this(), wf = f.weak_from_this()](
+            const boost::system::error_code& ec)
+        {
+            if (ec)
+                return; // 已被后续段/事件重排
+            auto eng = self.lock();
+            auto flow = wf.lock();
+            if (!eng || !flow || flow->state == tcp_state::CLOSED ||
+                !flow->ack_pending)
+            {
+                return;
+            }
+            eng->send_ack(*flow);
+        });
 }
 
 // 补发挂起的 ACK：读完成等事件触发时立即发送，避免稀疏单段流量的 ACK
@@ -1279,6 +1307,10 @@ void tcp_engine::close_flow(tcp_flow& f, const boost::system::error_code& err)
 {
     if (f.state == tcp_state::CLOSED)
         return;
+
+    // 关闭后不再补发延迟确认。
+    if (f.ack_timer)
+        f.ack_timer->cancel();
 
     if (f.pending_accept)
     {

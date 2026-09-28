@@ -176,7 +176,8 @@ size_t build_ip_header(uint8_t* buf,
     const uint8_t* dst_ip,
     uint8_t protocol,
     size_t total_len,
-    uint16_t ip_id) noexcept
+    uint16_t ip_id,
+    uint8_t ttl) noexcept
 {
     if (family == 4)
     {
@@ -188,7 +189,7 @@ size_t build_ip_header(uint8_t* buf,
         ip->total_len = htons(static_cast<uint16_t>(total_len));
         ip->id = htons(ip_id);
         ip->frag_off = htons(0x4000); // DF
-        ip->ttl = 64;
+        ip->ttl = ttl;
         ip->protocol = protocol;
         ip->checksum = 0;
         std::memcpy(&ip->src_ip, src_ip, 4);
@@ -205,7 +206,7 @@ size_t build_ip_header(uint8_t* buf,
     ip->payload_len =
         htons(static_cast<uint16_t>(total_len > 40 ? total_len - 40 : 0));
     ip->next_header = protocol;
-    ip->hop_limit = 64;
+    ip->hop_limit = ttl;
     std::memcpy(ip->src_ip, src_ip, 16);
     std::memcpy(ip->dst_ip, dst_ip, 16);
 
@@ -523,14 +524,16 @@ void ip_packet::finalize()
 
     if (family == 4)
     {
-        build_ip_header(
-            out, 4, bld_.src, bld_.dst, bld_.protocol, total, bld_.ip_id);
-        out[8] = bld_.ttl_hop;
+        // TTL 必须在计算头部校验和前写入：build_ip_header 会按传入的
+        // ttl 填充字段并据此算出校验和（曾先算校验和再覆盖 TTL，导致
+        // 非默认 TTL 的 IPv4 报文头部校验和错误）。
+        build_ip_header(out, 4, bld_.src, bld_.dst, bld_.protocol, total,
+            bld_.ip_id, bld_.ttl_hop);
     }
     else
     {
-        build_ip_header(out, 6, bld_.src, bld_.dst, bld_.protocol, total, 0);
-        out[7] = bld_.ttl_hop;
+        build_ip_header(out, 6, bld_.src, bld_.dst, bld_.protocol, total, 0,
+            bld_.ttl_hop);
     }
 
     uint8_t* seg = out + bld_.ip_hlen;

@@ -132,10 +132,14 @@ struct tcp_flow : public std::enable_shared_from_this<tcp_flow>
 
     // ---- 批量 ACK（延迟 ACK）----
     // 缓冲路径（无读挂起时数据入队）按序数据段到达时不立即回 ACK，置
-    // pending 后每 2 段合并一次；挂起 ACK 由读完成/FIN/窗口更新等事件
-    // 补发。直投路径（读挂起、数据直接交付用户）保持逐段即时 ACK，
-    // 交互式单段请求的确认延迟不受影响.
+    // pending 后每 2 段合并一次，并由延迟确认定时器兜底补发；直投路径
+    // （读挂起、数据直接交付用户）保持逐段即时 ACK，交互式单段请求的
+    // 确认延迟不受影响.
     bool ack_pending = false;
+    // 延迟确认定时器（惰性创建，仅缓冲路径使用）：首个待确认段启动，
+    // 到期补发单独 ACK，满足 RFC 1122 §4.2.3.2 的延迟 < 0.5s 要求，
+    // 避免应用无挂起读时对端须等 RTO 重传才收到确认。
+    std::optional<net::steady_timer> ack_timer;
 
     // ---- 接收队列（已按序确认的字节流，连续缓冲 + 消费偏移）----
     std::vector<uint8_t> rx_data;

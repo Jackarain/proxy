@@ -315,3 +315,34 @@ BOOST_AUTO_TEST_CASE(test_v4_v6_coexist)
     s6.close();
 }
 
+BOOST_AUTO_TEST_CASE(test_ipv6_prefix_len_validation)
+{
+    // 回归：ipv6_prefix_len > 128 曾导致 macOS utun 掩码构造越界写栈。
+    // 配置入口应提前以 invalid_argument 拒绝，而非进入设备配置路径。
+    net::io_context io;
+    tunio::tunio engine(io);
+
+    tun_config cfg;
+    cfg.ipv4_addr = "10.0.0.1";
+    cfg.netmask = "255.255.255.0";
+    cfg.ipv6_addr = "fd00::1";
+    cfg.ipv6_prefix_len = 200;
+
+    boost::system::error_code ec;
+    const bool ok = engine.open(cfg, ec);
+    TEST_ASSERT(!ok);
+    TEST_ASSERT(ec ==
+        boost::system::errc::make_error_code(
+            boost::system::errc::invalid_argument));
+
+    // 边界值 128 合法：注入句柄下应能正常打开（不由前缀长度拒绝）。
+    net::io_context io2;
+    tunio::tunio engine2(io2);
+    fake_device dev(1);
+    tun_config cfg2 = cfg;
+    cfg2.external_handles = dev.inject_fds();
+    cfg2.external_mtu = 1500;
+    cfg2.ipv6_prefix_len = 128;
+    boost::system::error_code ec2;
+    TEST_ASSERT(engine2.open(cfg2, ec2));
+}

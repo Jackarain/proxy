@@ -466,6 +466,28 @@ BOOST_AUTO_TEST_CASE(test_build_ip_id)
     TEST_ASSERT(ntohs(p.ipv4()->id) == 0x1234);
 }
 
+BOOST_AUTO_TEST_CASE(test_build_ipv4_custom_ttl_checksum)
+{
+    // 回归：finalize 曾在校验和计算完成后再覆盖 TTL，导致非默认 TTL 的
+    // IPv4 报文头部校验和错误（verify_packet 会因校验和非 0 判为非法）。
+    for (const uint8_t ttl : {1, 64, 100, 255})
+    {
+        ip_packet p;
+        p.begin_ipv4(net::ip::make_address_v4("10.0.0.1"),
+            net::ip::make_address_v4("8.8.8.8"), ttl);
+        p.begin_udp(12345, 53);
+        const char payload[] = "x";
+        p.append_payload(payload, 1);
+        p.finalize();
+        TEST_ASSERT(p.valid() && p.is_udp());
+        std::vector<uint8_t> raw(
+            p.buffer().data(), p.buffer().data() + p.buffer().size());
+        TEST_ASSERT(raw.size() >= 20);
+        TEST_ASSERT(raw[8] == ttl);
+        TEST_ASSERT(verify_packet(raw));
+    }
+}
+
 BOOST_AUTO_TEST_CASE(test_builder_precondition)
 {
     ip_packet p;
@@ -735,4 +757,3 @@ BOOST_AUTO_TEST_CASE(test_device_read_capacity_guard)
 }
 
 } // namespace
-

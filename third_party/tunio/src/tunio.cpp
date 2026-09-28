@@ -117,6 +117,15 @@ bool tunio_impl::open(const tun_config& cfg, boost::system::error_code& ec)
     }
     if (!cfg.ipv6_addr.empty())
     {
+        // IPv6 前缀长度须在 [0,128]：超过 128 会在设备侧构造地址掩码时
+        // 越界（macOS utun 掩码为 16 字节定长缓冲区），此处提前以 EINVAL
+        // 拒绝，避免内存被破坏。
+        if (cfg.ipv6_prefix_len > 128)
+        {
+            ec = boost::system::errc::make_error_code(
+                boost::system::errc::invalid_argument);
+            return false;
+        }
         boost::system::error_code parse_ec;
         const auto v6 = net::ip::make_address_v6(cfg.ipv6_addr, parse_ec);
         if (parse_ec)
