@@ -1,0 +1,257 @@
+﻿{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-preset/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ENABLE_BUILD_WERROR": "OFF",
+        "ENABLE_BUILD_EXAMPLES": "OFF"
+      }
+    },
+
+    { "name": "linux-base", "hidden": true, "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" } },
+    { "name": "macos-base", "hidden": true, "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" } },
+    { "name": "windows-msvc-base", "hidden": true, "inherits": "base",
+      "generator": "Visual Studio 17 2022",
+      "architecture": { "value": "x64", "strategy": "external" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } },
+
+    { "name": "tls-boringssl", "hidden": true, "cacheVariables": {
+      "ENABLE_USE_OPENSSL": "OFF", "ENABLE_USE_BORINGSSL": "ON", "ENABLE_USE_WOLFSSL": "OFF" } },
+    { "name": "tls-openssl-bundled", "hidden": true, "cacheVariables": {
+      "ENABLE_USE_OPENSSL": "ON", "ENABLE_SYSTEM_OPENSSL": "OFF",
+      "ENABLE_USE_BORINGSSL": "OFF", "ENABLE_USE_WOLFSSL": "OFF" } },
+    { "name": "tls-openssl-system", "hidden": true, "cacheVariables": {
+      "ENABLE_USE_OPENSSL": "ON", "ENABLE_SYSTEM_OPENSSL": "ON",
+      "ENABLE_USE_BORINGSSL": "OFF", "ENABLE_USE_WOLFSSL": "OFF" } },
+    { "name": "tls-wolfssl", "hidden": true, "cacheVariables": {
+      "ENABLE_USE_OPENSSL": "OFF", "ENABLE_USE_BORINGSSL": "OFF", "ENABLE_USE_WOLFSSL": "ON" } },
+
+    { "name": "alloc-snmalloc", "hidden": true, "cacheVariables": { "ENABLE_SNMALLOC_STATIC": "ON" } },
+    { "name": "alloc-mimalloc", "hidden": true, "cacheVariables": { "ENABLE_MIMALLOC_STATIC": "ON" } },
+
+    { "name": "feat-iouring", "hidden": true, "cacheVariables": { "ENABLE_USE_IO_URING": "ON" } },
+    { "name": "feat-pam", "hidden": true, "cacheVariables": { "ENABLE_USE_PAM_AUTH": "ON" } },
+    { "name": "feat-libcxx", "hidden": true, "cacheVariables": { "ENABLE_BUILD_WITH_LIBCXX": "ON" } },
+    { "name": "cc-clang", "hidden": true, "cacheVariables": {
+      "CMAKE_C_COMPILER": "clang", "CMAKE_CXX_COMPILER": "clang++" } },
+    { "name": "musl-static", "hidden": true, "cacheVariables": { "CMAKE_EXE_LINKER_FLAGS": "-static" } },
+
+    { "name": "pgo-instr-flags", "hidden": true, "cacheVariables": {
+      "CMAKE_C_FLAGS": "-fprofile-instr-generate",
+      "CMAKE_CXX_FLAGS": "-fprofile-instr-generate -mcx16",
+      "CMAKE_EXE_LINKER_FLAGS": "-fprofile-instr-generate" } },
+    { "name": "pgo-instr-flags-iouring", "hidden": true, "cacheVariables": {
+      "CMAKE_C_FLAGS": "-fprofile-instr-generate",
+      "CMAKE_CXX_FLAGS": "-fprofile-instr-generate -mcx16",
+      "CMAKE_EXE_LINKER_FLAGS": "-luring -fprofile-instr-generate" } },
+    { "name": "pgo-use-flags", "hidden": true, "cacheVariables": {
+      "CMAKE_C_FLAGS": "-flto=thin -fprofile-instr-use=${sourceDir}/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date",
+      "CMAKE_CXX_FLAGS": "-flto=thin -fprofile-instr-use=${sourceDir}/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date -mcx16",
+      "CMAKE_EXE_LINKER_FLAGS": "-flto=thin -fprofile-instr-use=${sourceDir}/pgo-ci/merged.profdata" } },
+    { "name": "pgo-use-flags-iouring", "hidden": true, "cacheVariables": {
+      "CMAKE_C_FLAGS": "-flto=thin -fprofile-instr-use=${sourceDir}/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date",
+      "CMAKE_CXX_FLAGS": "-flto=thin -fprofile-instr-use=${sourceDir}/pgo-ci/merged.profdata -Wno-error=profile-instr-unprofiled -Wno-error=profile-instr-out-of-date -mcx16",
+      "CMAKE_EXE_LINKER_FLAGS": "-luring -flto=thin -fprofile-instr-use=${sourceDir}/pgo-ci/merged.profdata" } },
+
+    {
+      "name": "debug",
+      "displayName": "Debug (host, boringssl)",
+      "description": "本机 Debug 构建, boringssl 后端",
+      "inherits": "base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+
+    { "name": "linux-gcc-boringssl", "displayName": "Linux glibc/gcc · boringssl",
+      "inherits": ["linux-base", "tls-boringssl"] },
+    { "name": "linux-gcc-boringssl-pam", "displayName": "Linux glibc/gcc · boringssl + PAM",
+      "inherits": ["linux-base", "tls-boringssl", "feat-pam"] },
+    { "name": "linux-gcc-boringssl-snmalloc", "displayName": "Linux glibc/gcc · boringssl + snmalloc",
+      "inherits": ["linux-base", "tls-boringssl", "alloc-snmalloc"] },
+    { "name": "linux-gcc-boringssl-iouring", "displayName": "Linux glibc/gcc · boringssl + io_uring",
+      "inherits": ["linux-base", "tls-boringssl", "feat-iouring"] },
+    { "name": "linux-gcc-openssl-system", "displayName": "Linux glibc/gcc · system openssl",
+      "inherits": ["linux-base", "tls-openssl-system"] },
+    { "name": "linux-gcc-openssl-system-snmalloc", "displayName": "Linux glibc/gcc · system openssl + snmalloc",
+      "inherits": ["linux-base", "tls-openssl-system", "alloc-snmalloc"] },
+    { "name": "linux-gcc-openssl-system-iouring-snmalloc", "displayName": "Linux glibc/gcc · system openssl + io_uring + snmalloc",
+      "inherits": ["linux-base", "tls-openssl-system", "alloc-snmalloc", "feat-iouring"] },
+    { "name": "linux-gcc-openssl-bundled", "displayName": "Linux glibc/gcc · bundled openssl",
+      "inherits": ["linux-base", "tls-openssl-bundled"] },
+    { "name": "linux-gcc-wolfssl", "displayName": "Linux glibc/gcc · wolfssl",
+      "inherits": ["linux-base", "tls-wolfssl"] },
+    { "name": "linux-gcc-wolfssl-snmalloc", "displayName": "Linux glibc/gcc · wolfssl + snmalloc",
+      "inherits": ["linux-base", "tls-wolfssl", "alloc-snmalloc"] },
+    { "name": "linux-gcc-mimalloc", "displayName": "Linux glibc/gcc · boringssl + mimalloc",
+      "description": "需要预先编译安装 mimalloc 2.1.2 静态对象到 /usr/local/lib/mimalloc-2.1",
+      "inherits": ["linux-base", "tls-boringssl", "alloc-mimalloc"] },
+
+    { "name": "linux-clang-boringssl-snmalloc", "displayName": "Linux glibc/clang · boringssl + snmalloc",
+      "inherits": ["linux-base", "cc-clang", "tls-boringssl", "alloc-snmalloc"] },
+    { "name": "linux-clang-openssl-system", "displayName": "Linux glibc/clang · system openssl",
+      "inherits": ["linux-base", "cc-clang", "tls-openssl-system"] },
+    { "name": "linux-clang-openssl-system-libcxx", "displayName": "Linux glibc/clang · system openssl + libc++",
+      "inherits": ["linux-base", "cc-clang", "tls-openssl-system", "feat-libcxx"] },
+    { "name": "linux-clang-wolfssl", "displayName": "Linux glibc/clang · wolfssl",
+      "inherits": ["linux-base", "cc-clang", "tls-wolfssl"] },
+
+    { "name": "alpine-musl-boringssl", "displayName": "Alpine musl/clang · boringssl (静态链接)",
+      "description": "需在 Alpine (musl) 环境下构建, 使用 -static",
+      "inherits": ["linux-base", "cc-clang", "tls-boringssl", "musl-static"] },
+    { "name": "alpine-musl-wolfssl-snmalloc", "displayName": "Alpine musl/clang · wolfssl + snmalloc (静态链接)",
+      "description": "需在 Alpine (musl) 环境下构建, 使用 -static",
+      "inherits": ["linux-base", "cc-clang", "tls-wolfssl", "alloc-snmalloc", "musl-static"] },
+
+    { "name": "lto-pgo-boringssl", "displayName": "Linux clang LTO+PGO · boringssl + snmalloc",
+      "description": "使用 ${sourceDir}/pgo-ci/merged.profdata, 需先执行 lto-pgo-instr-* 采集 profile",
+      "inherits": ["linux-base", "cc-clang", "tls-boringssl", "alloc-snmalloc", "pgo-use-flags"] },
+    { "name": "lto-pgo-iouring-boringssl", "displayName": "Linux clang LTO+PGO · boringssl + snmalloc + io_uring",
+      "description": "使用 ${sourceDir}/pgo-ci/merged.profdata",
+      "inherits": ["linux-base", "cc-clang", "tls-boringssl", "alloc-snmalloc", "feat-iouring", "pgo-use-flags-iouring"] },
+    { "name": "lto-pgo-openssl", "displayName": "Linux clang LTO+PGO · system openssl + snmalloc",
+      "description": "使用 ${sourceDir}/pgo-ci/merged.profdata",
+      "inherits": ["linux-base", "cc-clang", "tls-openssl-system", "alloc-snmalloc", "pgo-use-flags"] },
+    { "name": "lto-pgo-iouring-openssl", "displayName": "Linux clang LTO+PGO · system openssl + snmalloc + io_uring",
+      "description": "使用 ${sourceDir}/pgo-ci/merged.profdata",
+      "inherits": ["linux-base", "cc-clang", "tls-openssl-system", "alloc-snmalloc", "feat-iouring", "pgo-use-flags-iouring"] },
+    { "name": "lto-pgo-instr-boringssl", "displayName": "Linux clang PGO 埋点 · boringssl + snmalloc",
+      "description": "阶段 1: 生成带 -fprofile-instr-generate 的埋点版, 运行后得到 pgo-ci/*.profraw",
+      "inherits": ["linux-base", "cc-clang", "tls-boringssl", "alloc-snmalloc", "pgo-instr-flags"] },
+    { "name": "lto-pgo-instr-iouring-boringssl", "displayName": "Linux clang PGO 埋点 · boringssl + snmalloc + io_uring",
+      "inherits": ["linux-base", "cc-clang", "tls-boringssl", "alloc-snmalloc", "feat-iouring", "pgo-instr-flags-iouring"] },
+    { "name": "lto-pgo-instr-openssl", "displayName": "Linux clang PGO 埋点 · system openssl + snmalloc",
+      "inherits": ["linux-base", "cc-clang", "tls-openssl-system", "alloc-snmalloc", "pgo-instr-flags"] },
+    { "name": "lto-pgo-instr-iouring-openssl", "displayName": "Linux clang PGO 埋点 · system openssl + snmalloc + io_uring",
+      "inherits": ["linux-base", "cc-clang", "tls-openssl-system", "alloc-snmalloc", "feat-iouring", "pgo-instr-flags-iouring"] },
+
+    { "name": "macos-universal-boringssl", "displayName": "macOS Universal · boringssl",
+      "description": "x86_64 + arm64 通用二进制",
+      "inherits": ["macos-base", "tls-boringssl"],
+      "cacheVariables": { "CMAKE_OSX_ARCHITECTURES": "x86_64;arm64", "CMAKE_OSX_DEPLOYMENT_TARGET": "13.0" } },
+    { "name": "macos-universal-wolfssl", "displayName": "macOS Universal · wolfssl",
+      "description": "x86_64 + arm64 通用二进制",
+      "inherits": ["macos-base", "tls-wolfssl"],
+      "cacheVariables": { "CMAKE_OSX_ARCHITECTURES": "x86_64;arm64", "CMAKE_OSX_DEPLOYMENT_TARGET": "13.0" } },
+
+    { "name": "windows-msvc-boringssl", "displayName": "Windows MSVC x64 · boringssl",
+      "inherits": ["windows-msvc-base", "tls-boringssl"] },
+    { "name": "windows-msvc-wolfssl", "displayName": "Windows MSVC x64 · wolfssl",
+      "inherits": ["windows-msvc-base", "tls-wolfssl"] },
+
+    { "name": "windows-mingw", "displayName": "Windows MinGW-w64 交叉 · boringssl",
+      "description": "使用 cmake/mingw.cmake 交叉工具链 (Linux 上需安装 mingw-w64 nasm)",
+      "inherits": "base",
+      "toolchainFile": "${sourceDir}/cmake/mingw.cmake",
+      "cacheVariables": {
+        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
+        "BOOST_EXCLUDE_LIBRARIES": "stacktrace;redis;mysql;multiprecision;log;iostreams;charconv;locale"
+      } },
+
+    { "name": "android-base", "hidden": true, "inherits": "base",
+      "toolchainFile": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+      "cacheVariables": {
+        "ANDROID_PLATFORM": "android-19",
+        "ENABLE_USE_OPENSSL": "OFF", "ENABLE_USE_BORINGSSL": "ON", "ENABLE_USE_WOLFSSL": "OFF"
+      },
+      "condition": { "type": "anyOf", "conditions": [
+        { "type": "notEquals", "lhs": "$env{ANDROID_NDK_HOME}", "rhs": "" } ] } },
+    { "name": "android-arm64-v8a", "displayName": "Android arm64-v8a · boringssl",
+      "description": "需设置 ANDROID_NDK_HOME",
+      "inherits": "android-base", "cacheVariables": { "ANDROID_ABI": "arm64-v8a" } },
+    { "name": "android-armeabi-v7a", "displayName": "Android armeabi-v7a · boringssl",
+      "description": "需设置 ANDROID_NDK_HOME",
+      "inherits": "android-base", "cacheVariables": { "ANDROID_ABI": "armeabi-v7a" } },
+    { "name": "android-x86", "displayName": "Android x86 · boringssl",
+      "description": "需设置 ANDROID_NDK_HOME",
+      "inherits": "android-base", "cacheVariables": { "ANDROID_ABI": "x86" } },
+    { "name": "android-x86_64", "displayName": "Android x86_64 · boringssl",
+      "description": "需设置 ANDROID_NDK_HOME",
+      "inherits": "android-base", "cacheVariables": { "ANDROID_ABI": "x86_64" } },
+
+    { "name": "openwrt-x86-64-musl-clang", "displayName": "OpenWrt x86_64 musl/clang · system openssl + io_uring + snmalloc",
+      "description": "需设置 OPENWRT_TOOLCHAIN_FILE 指向交叉工具链文件",
+      "inherits": "base",
+      "toolchainFile": "$env{OPENWRT_TOOLCHAIN_FILE}",
+      "cacheVariables": {
+        "ENABLE_SYSTEM_OPENSSL": "ON", "ENABLE_USE_OPENSSL": "ON",
+        "ENABLE_USE_BORINGSSL": "OFF", "ENABLE_USE_WOLFSSL": "OFF",
+        "ENABLE_SNMALLOC_STATIC": "ON", "ENABLE_USE_IO_URING": "ON",
+        "BOOST_FILESYSTEM_DISABLE_STATX": "ON"
+      },
+      "condition": { "type": "anyOf", "conditions": [
+        { "type": "notEquals", "lhs": "$env{OPENWRT_TOOLCHAIN_FILE}", "rhs": "" } ] } }
+  ],
+
+  "buildPresets": [
+    { "name": "build-base", "hidden": true, "configuration": "Release" },
+
+    { "name": "debug", "configurePreset": "debug", "inherits": "build-base",
+      "configuration": "Debug" },
+
+    { "name": "linux-gcc-boringssl", "configurePreset": "linux-gcc-boringssl", "inherits": "build-base" },
+    { "name": "linux-gcc-boringssl-pam", "configurePreset": "linux-gcc-boringssl-pam", "inherits": "build-base" },
+    { "name": "linux-gcc-boringssl-snmalloc", "configurePreset": "linux-gcc-boringssl-snmalloc", "inherits": "build-base" },
+    { "name": "linux-gcc-boringssl-iouring", "configurePreset": "linux-gcc-boringssl-iouring", "inherits": "build-base" },
+    { "name": "linux-gcc-openssl-system", "configurePreset": "linux-gcc-openssl-system", "inherits": "build-base" },
+    { "name": "linux-gcc-openssl-system-snmalloc", "configurePreset": "linux-gcc-openssl-system-snmalloc", "inherits": "build-base" },
+    { "name": "linux-gcc-openssl-system-iouring-snmalloc", "configurePreset": "linux-gcc-openssl-system-iouring-snmalloc", "inherits": "build-base" },
+    { "name": "linux-gcc-openssl-bundled", "configurePreset": "linux-gcc-openssl-bundled", "inherits": "build-base" },
+    { "name": "linux-gcc-wolfssl", "configurePreset": "linux-gcc-wolfssl", "inherits": "build-base" },
+    { "name": "linux-gcc-wolfssl-snmalloc", "configurePreset": "linux-gcc-wolfssl-snmalloc", "inherits": "build-base" },
+    { "name": "linux-gcc-mimalloc", "configurePreset": "linux-gcc-mimalloc", "inherits": "build-base" },
+
+    { "name": "linux-clang-boringssl-snmalloc", "configurePreset": "linux-clang-boringssl-snmalloc", "inherits": "build-base" },
+    { "name": "linux-clang-openssl-system", "configurePreset": "linux-clang-openssl-system", "inherits": "build-base" },
+    { "name": "linux-clang-openssl-system-libcxx", "configurePreset": "linux-clang-openssl-system-libcxx", "inherits": "build-base" },
+    { "name": "linux-clang-wolfssl", "configurePreset": "linux-clang-wolfssl", "inherits": "build-base" },
+
+    { "name": "alpine-musl-boringssl", "configurePreset": "alpine-musl-boringssl", "inherits": "build-base" },
+    { "name": "alpine-musl-wolfssl-snmalloc", "configurePreset": "alpine-musl-wolfssl-snmalloc", "inherits": "build-base" },
+
+    { "name": "lto-pgo-boringssl", "configurePreset": "lto-pgo-boringssl", "inherits": "build-base" },
+    { "name": "lto-pgo-iouring-boringssl", "configurePreset": "lto-pgo-iouring-boringssl", "inherits": "build-base" },
+    { "name": "lto-pgo-openssl", "configurePreset": "lto-pgo-openssl", "inherits": "build-base" },
+    { "name": "lto-pgo-iouring-openssl", "configurePreset": "lto-pgo-iouring-openssl", "inherits": "build-base" },
+    { "name": "lto-pgo-instr-boringssl", "configurePreset": "lto-pgo-instr-boringssl", "inherits": "build-base" },
+    { "name": "lto-pgo-instr-iouring-boringssl", "configurePreset": "lto-pgo-instr-iouring-boringssl", "inherits": "build-base" },
+    { "name": "lto-pgo-instr-openssl", "configurePreset": "lto-pgo-instr-openssl", "inherits": "build-base" },
+    { "name": "lto-pgo-instr-iouring-openssl", "configurePreset": "lto-pgo-instr-iouring-openssl", "inherits": "build-base" },
+
+    { "name": "macos-universal-boringssl", "configurePreset": "macos-universal-boringssl", "inherits": "build-base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" } },
+    { "name": "macos-universal-wolfssl", "configurePreset": "macos-universal-wolfssl", "inherits": "build-base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" } },
+
+    { "name": "windows-msvc-boringssl", "configurePreset": "windows-msvc-boringssl", "inherits": "build-base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } },
+    { "name": "windows-msvc-wolfssl", "configurePreset": "windows-msvc-wolfssl", "inherits": "build-base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" } },
+
+    { "name": "windows-mingw", "configurePreset": "windows-mingw", "inherits": "build-base" },
+
+    { "name": "android-arm64-v8a", "configurePreset": "android-arm64-v8a", "inherits": "build-base",
+      "condition": { "type": "anyOf", "conditions": [
+        { "type": "notEquals", "lhs": "$env{ANDROID_NDK_HOME}", "rhs": "" } ] } },
+    { "name": "android-armeabi-v7a", "configurePreset": "android-armeabi-v7a", "inherits": "build-base",
+      "condition": { "type": "anyOf", "conditions": [
+        { "type": "notEquals", "lhs": "$env{ANDROID_NDK_HOME}", "rhs": "" } ] } },
+    { "name": "android-x86", "configurePreset": "android-x86", "inherits": "build-base",
+      "condition": { "type": "anyOf", "conditions": [
+        { "type": "notEquals", "lhs": "$env{ANDROID_NDK_HOME}", "rhs": "" } ] } },
+    { "name": "android-x86_64", "configurePreset": "android-x86_64", "inherits": "build-base",
+      "condition": { "type": "anyOf", "conditions": [
+        { "type": "notEquals", "lhs": "$env{ANDROID_NDK_HOME}", "rhs": "" } ] } },
+
+    { "name": "openwrt-x86-64-musl-clang", "configurePreset": "openwrt-x86-64-musl-clang", "inherits": "build-base",
+      "condition": { "type": "anyOf", "conditions": [
+        { "type": "notEquals", "lhs": "$env{OPENWRT_TOOLCHAIN_FILE}", "rhs": "" } ] } }
+  ]
+}
