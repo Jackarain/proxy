@@ -245,34 +245,20 @@ export class VpnRuntime implements LauncherEvents {
     }
   }
 
+  /**
+   * 建立 VPN 连接并返回 tun fd. 先按完整路由 (含 IPv6 默认路由) 创建; 设备
+   * 不接受 IPv6 路由时退回仅 IPv4 路由, 避免整体建立失败.
+   */
   private async createTun(address: string, prefix: number, mtu: number, routes: string[],
     dns: string[]): Promise<number> {
     const connection: vpnExtension.VpnConnection = vpnExtension.createVpnConnection(this.context);
     this.connection = connection;
-    const routeInfos: vpnExtension.RouteInfo[] = [];
-    for (const cidr of routes) {
-      const parsed: RouteSpec | undefined = parseRoute(cidr, address, prefix);
-      if (parsed !== undefined) {
-        routeInfos.push(parsed.route);
-      }
+    try {
+      return await connection.create(buildVpnConfig(address, prefix, mtu, routes, dns, true));
+    } catch (err) {
+      log.warn(`含 IPv6 路由创建 VPN 失败, 退回仅 IPv4: ${err}`);
+      return await connection.create(buildVpnConfig(address, prefix, mtu, routes, dns, false));
     }
-    const version: number = address.indexOf(':') >= 0 ? 2 : 1;
-    const config: vpnExtension.VpnConfig = {
-      addresses: [
-        {
-          address: { address: address, family: version },
-          prefixLength: prefix
-        }
-      ],
-      routes: routeInfos,
-      dnsAddresses: dns,
-      mtu: mtu,
-      isIPv4Accepted: true,
-      isIPv6Accepted: true,
-      isInternal: false,
-      isBlocking: true
-    };
-    return await connection.create(config);
   }
 
   /** 放行 native 对外 socket, 避免流量回环进 tun. */
@@ -447,31 +433,61 @@ function numberParam(params: Record<string, Object>, key: string, fallback: numb
   return typeof value === 'number' ? value : fallback;
 }
 
-/** 路由条目与其地址族解析结果. */
-interface RouteSpec {
-  route: vpnExtension.RouteInfo;
+/** 构造 vpnExtension.VpnConfig. [withIpv6] 为 false 时丢弃 IPv6 路由. */
+function buildVpnConfig(address: string, prefix: number, mtu: number, routes: string[],
+  dns: string[], withIpv6: boolean): vpnExtension.VpnConfig {
+  const routeInfos: vpnExtension.RouteInfo[] = [];
+  for (const cidr of routes) {
+    const route: vpnExtension.RouteInfo | undefined = parseRoute(cidr, address);
+    if (route === undefined) {
+      continue;
+    }
+    if (!withIpv6 && isIpv6Route(cidr)) {
+      continue;
+    }
+    routeInfos.push(route);
+  }
+  const ipv6: boolean = address.indexOf(':') >= 0;
+  const config: vpnExtension.VpnConfig = {
+    addresses: [
+      {
+        address: { address: address, family: ipv6 ? 2 : 1 },
+        prefixLength: prefix
+      }
+    ],
+    routes: routeInfos,
+    dnsAddresses: dns,
+    mtu: mtu,
+    isIPv4Accepted: true,
+    isIPv6Accepted: withIpv6,
+    isInternal: false,
+    isBlocking: true
+  };
+  return config;
+}
+
+function isIpv6Route(cidr: string): boolean {
+  const slash: number = cidr.indexOf('/');
+  const host: string = slash > 0 ? cidr.substring(0, slash) : cidr;
+  return host.indexOf(':') >= 0;
 }
 
 /** 解析 "a.b.c.d/prefix" 或 "::/0" 为 VPN 路由条目. */
-function parseRoute(cidr: string, tunAddress: string, tunPrefix: number): RouteSpec | undefined {
+function parseRoute(cidr: string, tunAddress: string): vpnExtension.RouteInfo | undefined {
   const slash: number = cidr.indexOf('/');
   if (slash <= 0) {
     return undefined;
   }
   const host: string = cidr.substring(0, slash).trim();
   const prefix: number = Number.parseInt(cidr.substring(slash + 1).trim(), 10);
-  if (host.length === 0 || !Number.isFinite(prefix)) {
+  if (host.length === 0 || !Number.isFinite(prefix) || prefix < 0) {
     return undefined;
   }
   const family: number = host.indexOf(':') >= 0 ? 2 : 1;
-  if (family === 2) {
-    return undefined;
-  }
-  const gateway: connection.NetAddress = {
-    address: tunAddress,
-    family: tunAddress.indexOf(':') >= 0 ? 2 : 1
-  };
-  const isDefault: boolean = prefix === 0;
+  const gatewayAddress: string = family === 2
+    ? (tunAddress.indexOf(':') >= 0 ? tunAddress : '::')
+    : (tunAddress.indexOf(':') >= 0 ? '0.0.0.0' : tunAddress);
+  const gateway: connection.NetAddress = { address: gatewayAddress, family: family };
   const route: vpnExtension.RouteInfo = {
     interface: 'vpn-tun',
     destination: {
@@ -480,9 +496,9 @@ function parseRoute(cidr: string, tunAddress: string, tunPrefix: number): RouteS
     },
     gateway: gateway,
     hasGateway: false,
-    isDefaultRoute: isDefault
+    isDefaultRoute: prefix === 0
   };
-  return { route: route };
+  return route;
 }
 
 /** 关闭未成功注入 native 的 tun fd. */
