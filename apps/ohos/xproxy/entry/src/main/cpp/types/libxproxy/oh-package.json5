@@ -1,0 +1,8 @@
+﻿{
+  "name": "libxproxy.so",
+  "version": "1.0.0",
+  "description": "libxproxy 原生接口类型声明",
+  "types": "./index.d.ts",
+  "author": "jackarain",
+  "license": "Apache-2.0"
+}

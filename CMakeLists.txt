@@ -240,7 +240,9 @@ endif()
 if (NOT MSVC)
 	if(NOT APPLE)
 		if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-			if (ENABLE_BUILD_WITH_LIBCXX)
+			if (OHOS)
+				# OHOS NDK 使用 libc++ (c++_shared), 不支持 -static-libstdc++/-static-libgcc.
+			elseif (ENABLE_BUILD_WITH_LIBCXX)
 				set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 				CHECK_LINKER_FLAG(CXX "-rtlib=compiler-rt" IS_COMPILER_RT_SUPPORTED)
 
@@ -270,9 +272,16 @@ if (NOT MSVC)
 			add_definitions(-DENABLE_REUSEPORT)
 		endif()
 	endif()
-	if (ANDROID)
+	if (ANDROID OR OHOS)
 		add_definitions(-DDISABLE_WRITE_LOGGING)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie")
+	endif()
+	if (OHOS)
+		# OHOS NDK 工具链会注入 --gcc-toolchain, 目标 SDK 无配套 GCC 时 clang
+		# 报 unused-command-line-argument; boringssl/wolfssl 等自带 -Werror 会
+		# 将其升级为错误, 这里全局关闭该告警 (显式 -Wno- 不会被 -Werror 重开).
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-command-line-argument")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
 	endif()
 	if(COMPILER_HAS_STD_CXX20)
 		set(CMAKE_CXX_STANDARD 20)
@@ -497,6 +506,18 @@ else()
 
 	add_subdirectory(third_party/boost EXCLUDE_FROM_ALL)
 
+	if (OHOS AND TARGET boost_uuid)
+		# OHOS NDK 不提供 libatomic; aarch64 原子操作由编译器内建提供.
+		# Boost.UUID 以 INTERFACE 方式传递 atomic, 会生成 -latomic 导致链接失败,
+		# 这里仅移除该项, 保留其余接口依赖.
+		get_target_property(_boost_uuid_iface boost_uuid INTERFACE_LINK_LIBRARIES)
+		if (_boost_uuid_iface)
+			list(REMOVE_ITEM _boost_uuid_iface atomic)
+			set_property(TARGET boost_uuid
+				PROPERTY INTERFACE_LINK_LIBRARIES "${_boost_uuid_iface}")
+		endif()
+	endif()
+
 	set_property(TARGET boost_assert PROPERTY FOLDER "third_party/boost")
 	set_property(TARGET boost_container PROPERTY FOLDER "third_party/boost")
 	set_property(TARGET boost_atomic PROPERTY FOLDER "third_party/boost")
@@ -705,9 +726,9 @@ if (ENABLE_BUILD_EXAMPLES)
 endif()
 
 ################################################################################
-# 安装 proxy_server 服务 (Android 场景仅构建 SWIG 库, 跳过安装).
+# 安装 proxy_server 服务 (Android/OHOS 场景仅构建库, 跳过安装).
 
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT OHOS)
 
 configure_file(proxy.service.in proxy-server@.service)
 

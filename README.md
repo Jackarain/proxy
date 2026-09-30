@@ -356,6 +356,36 @@ flutter build apk
 
 ![image](https://github.com/user-attachments/assets/45960412-acc6-459f-b249-9872bf0ac2ff)
 
+## OpenHarmony app 客户端
+
+`proxy server` 同时提供 OpenHarmony (HarmonyOS NEXT) 端客户端（源码位于 `apps/ohos/`），
+同样以 TUN 模式在手机上运行本项目的代理内核：通过 `VpnExtensionAbility`
+（`@ohos.net.vpnExtension`）建立虚拟网卡接管系统流量，在应用进程内加载 C++ 代理内核按
+分流规则转发，无需 root。
+
+客户端由两部分组成：
+
+- `apps/ohos/libproxy/` — C++ 代理内核的 OpenHarmony 封装（NAPI），编译为 `libxproxy.so`，
+  对外提供 `start(json)`/`stop()`/`build_version()` 等最小接口。
+- `apps/ohos/xproxy/` — ArkTS/ArkUI 客户端应用，负责配置管理、VPN 建立、控制通道与交互
+  界面，与 Android 端功能对齐（多配置管理、分流规则、DNS 配置、运行状态与日志、二维码
+  分享与扫码导入、自动更新）。
+
+技术要点：`VpnConnection.create()` 建立的 TUN 描述符经本地 WS 控制通道注入代理内核
+（`tun_wait_fd` 模式）；内核创建出站连接时经控制通道发起 `protect` 请求，由 VPN 扩展调用
+`VpnConnection.protect(fd)` 放行，避免代理自身流量回环进 TUN。
+
+构建 HAP 的流程（详细说明见 `apps/ohos/README.md`）：
+
+``` bash
+# 工具链默认位于 /opt/ohos/command-line-tools
+export DEVECO_SDK_HOME=/opt/ohos/command-line-tools/sdk
+export DEVECO_NODE_HOME=/opt/ohos/command-line-tools/tool/node
+
+# 编译 libxproxy.so 并构建 HAP
+./build.ohos.sh /root/proxy arm64-v8a /opt/ohos/command-line-tools/sdk /opt/ohos/command-line-tools
+```
+
 ## 静态文件 http 服务器(可配置为云音乐播放器)
 
 `proxy server` 不仅是一个 `proxy` 服务器，同时还可以做为一个真实的静态文件 `http` 服务，且支持 `http range`，所以也可以作为 `http` 音视频文件服务器，播放器播放 `http` 音视频文件时通过 `http` 的 `bytes range` 协议进行 `seek`（快进快退），使用方法如下

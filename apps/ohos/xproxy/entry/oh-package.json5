@@ -1,0 +1,11 @@
+﻿{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "xProxy OpenHarmony 客户端主模块",
+  "main": "",
+  "author": "jackarain",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "libxproxy.so": "file:./src/main/cpp/types/libxproxy"
+  }
+}

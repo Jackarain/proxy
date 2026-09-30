@@ -1,0 +1,24 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "xProxy OpenHarmony 客户端主模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "xProxy"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "xProxy"
+    },
+    {
+      "name": "VpnExtAbility_desc",
+      "value": "xProxy VPN 隧道"
+    },
+    {
+      "name": "camera_reason",
+      "value": "扫描配置二维码"
+    }
+  ]
+}

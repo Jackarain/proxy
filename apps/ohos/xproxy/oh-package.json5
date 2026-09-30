@@ -1,0 +1,13 @@
+﻿{
+  "modelVersion": "5.0.0",
+  "name": "xproxy",
+  "version": "1.0.0",
+  "description": "xProxy OpenHarmony 客户端",
+  "main": "",
+  "author": "jackarain",
+  "license": "Apache-2.0",
+  "dependencies": {},
+  "devDependencies": {
+    "@ohos/hypium": "1.0.21"
+  }
+}

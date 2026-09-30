@@ -1,0 +1,7 @@
+# 混淆规则配置文件 (release 构建引用).
+# 当前 build-profile.json5 中 ruleOptions.enable 为 false, 不启用混淆;
+# 如需启用, 在此填写具体规则, 例如:
+# -enable-property-obfuscation
+# -enable-toplevel-obfuscation
+# -enable-filename-obfuscation
+# -enable-export-obfuscation

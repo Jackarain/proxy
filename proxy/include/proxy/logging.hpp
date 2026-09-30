@@ -102,6 +102,23 @@
 # endif
 #endif
 
+#if defined(__OHOS__)
+# if __has_include(<hilog/log.h>)
+#   ifndef LOG_DOMAIN
+#     define LOG_DOMAIN 0
+#   endif
+#   ifndef LOG_TAG
+#     define LOG_TAG "proxy"
+#   endif
+#   include <hilog/log.h>
+#   if !defined(DISABLE_WRITE_LOGGING) && !defined(ENABLE_OHOS_LOG)
+#    define DISABLE_WRITE_LOGGING
+#   endif
+# else
+#  error "hilog/log.h not found"
+# endif
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 #ifndef LOGGING_DISABLE_COMPRESS_LOGS
 # if defined(__has_include)
@@ -1173,6 +1190,21 @@ inline void logger_output_android__(
 }
 #endif // __ANDROID__
 
+#ifdef __OHOS__
+inline void logger_output_ohos__(
+	const int& level, const std::string& message) noexcept
+{
+	if (level == _logger_info_id__)
+		OH_LOG_INFO(LOG_APP, "%{public}s", message.c_str());
+	else if (level == _logger_debug_id__)
+		OH_LOG_DEBUG(LOG_APP, "%{public}s", message.c_str());
+	else if (level == _logger_warn_id__)
+		OH_LOG_WARN(LOG_APP, "%{public}s", message.c_str());
+	else if (level == _logger_error_id__)
+		OH_LOG_ERROR(LOG_APP, "%{public}s", message.c_str());
+}
+#endif // __OHOS__
+
 inline const std::string& logger_level_string__(const logger_level__& level) noexcept
 {
 	return _LOGGER_STR__[level];
@@ -1255,8 +1287,13 @@ inline void logger_writer__(int64_t time, const logger_level__& level,
 	logger_output_android__(level, message);
 #endif // __ANDROID__
 
+	// Output to OpenHarmony hilog.
+#ifdef __OHOS__
+	logger_output_ohos__(level, message);
+#endif // __OHOS__
+
 	// Output to console.
-#if !defined(USE_SYSTEMD_LOGGING) && !defined(__ANDROID__)
+#if !defined(USE_SYSTEMD_LOGGING) && !defined(__ANDROID__) && !defined(__OHOS__)
 	if (global_console_logging___ && !disable_cout)
 		logger_output_console__(level, prefix, tmp);
 #endif

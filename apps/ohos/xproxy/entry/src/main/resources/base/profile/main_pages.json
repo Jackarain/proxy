@@ -1,0 +1,9 @@
+{
+  "src": [
+    "pages/Index",
+    "pages/ConfigEditPage",
+    "pages/RunningPage",
+    "pages/SharePage",
+    "pages/ScanPage"
+  ]
+}

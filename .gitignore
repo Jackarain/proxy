@@ -298,3 +298,10 @@ xcode/
 /release/
 /outputs/
 /apps/android/xproxy/android/app/src/main/jniLibs/
+
+# OpenHarmony cmake 构建产物与客户端本地产物
+/ohos/
+/apps/ohos/xproxy/entry/libs/
+/apps/ohos/xproxy/.hvigor/
+/apps/ohos/xproxy/oh_modules/
+/apps/ohos/xproxy/oh-package-lock.json5
