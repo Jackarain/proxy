@@ -102,6 +102,23 @@
 # endif
 #endif
 
+#if defined(__OHOS__)
+# if __has_include(<hilog/log.h>)
+#   ifndef LOG_DOMAIN
+#     define LOG_DOMAIN 0
+#   endif
+#   ifndef LOG_TAG
+#     define LOG_TAG "xlog"
+#   endif
+#   include <hilog/log.h>
+#   if !defined(DISABLE_WRITE_LOGGING) && !defined(ENABLE_OHOS_LOG)
+#    define DISABLE_WRITE_LOGGING
+#   endif
+# else
+#  error "hilog/log.h not found"
+# endif
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 #ifndef LOGGING_DISABLE_COMPRESS_LOGS
 # if defined(__has_include)
@@ -118,9 +135,15 @@
 # endif
 #endif
 
+// 需要 <version> 来探测 __cpp_lib_format: 该宏由标准库头文件定义, 而
+// 此处的探测在包含 <format> 之前. 若上游没有包含 Boost 等会顺带定义该
+// 宏的头文件, 缺了 <version> 会把环境误判成"没有 std::format", 从而在
+// 未安装 {fmt} 的平台(如 MSVC)上错误地回退到 {fmt}.
+#include <version>
+
 #if defined(FORCE_USE_FMT_FORMAT) || \
 	!defined(__cpp_lib_format) || \
-	(_LIBCPP_VERSION < 170000) || \
+	(defined(_LIBCPP_VERSION) && (_LIBCPP_VERSION < 170000)) || \
 	defined(__ANDROID__)
 
 # ifdef _MSC_VER
@@ -155,10 +178,11 @@ namespace xlogger {
 # error "format not found"
 #endif
 
-#include <version>
+#include <cassert>
 #include <codecvt>
 #include <clocale>
 #include <sstream>
+#include <iostream>
 #include <chrono>
 #include <mutex>
 #include <memory>
@@ -662,7 +686,7 @@ namespace logger_aux__ {
 
 		using codecvt_type = std::codecvt<wchar_t, char, mbstate_t>;
 		std::locale sys_locale("");
-		mbstate_t in_state;
+		mbstate_t in_state{};
 
 		auto ret = std::use_facet<codecvt_type>(sys_locale).in(
 			in_state, first, last, snext, dest, dest + result.size(), dnext);
@@ -1047,12 +1071,12 @@ inline void logger_output_console__([[maybe_unused]] const logger_level__& level
 	if (title_opt)
 		title = *title_opt;
 	else
-		BOOST_ASSERT(false && "Log prefix is not valid UTF-8");
+		assert(false && "Log prefix is not valid UTF-8");
 	auto msg_opt = logger_aux__::utf8_utf16(message);
 	if (msg_opt)
 		msg = *msg_opt;
 	else
-		BOOST_ASSERT(false && "Log message is not valid UTF-8");
+		assert(false && "Log message is not valid UTF-8");
 #endif
 
 #if !defined(DISABLE_XLOGGER_TO_CONSOLE)
@@ -1173,6 +1197,21 @@ inline void logger_output_android__(
 }
 #endif // __ANDROID__
 
+#ifdef __OHOS__
+inline void logger_output_ohos__(
+	const int& level, const std::string& message) noexcept
+{
+	if (level == _logger_info_id__)
+		OH_LOG_INFO(LOG_APP, "%{public}s", message.c_str());
+	else if (level == _logger_debug_id__)
+		OH_LOG_DEBUG(LOG_APP, "%{public}s", message.c_str());
+	else if (level == _logger_warn_id__)
+		OH_LOG_WARN(LOG_APP, "%{public}s", message.c_str());
+	else if (level == _logger_error_id__)
+		OH_LOG_ERROR(LOG_APP, "%{public}s", message.c_str());
+}
+#endif // __OHOS__
+
 inline const std::string& logger_level_string__(const logger_level__& level) noexcept
 {
 	return _LOGGER_STR__[level];
@@ -1255,8 +1294,13 @@ inline void logger_writer__(int64_t time, const logger_level__& level,
 	logger_output_android__(level, message);
 #endif // __ANDROID__
 
+	// Output to OpenHarmony hilog.
+#ifdef __OHOS__
+	logger_output_ohos__(level, message);
+#endif // __OHOS__
+
 	// Output to console.
-#if !defined(USE_SYSTEMD_LOGGING) && !defined(__ANDROID__)
+#if !defined(USE_SYSTEMD_LOGGING) && !defined(__ANDROID__) && !defined(__OHOS__)
 	if (global_console_logging___ && !disable_cout)
 		logger_output_console__(level, prefix, tmp);
 #endif
@@ -1708,6 +1752,7 @@ public:
 #endif
 		return strcat_impl(v);
 	}
+#ifndef LOGGING_DISABLE_BOOST_STRING_VIEW
 	inline logger___& operator<<(const boost::string_view& v)
 	{
 		std::string_view sv{v.data(), v.length()};
@@ -1727,6 +1772,7 @@ public:
 #endif
 		return strcat_impl(sv);
 	}
+#endif
 	inline logger___& operator<<(const char* v)
 	{
 		std::string_view sv(v);
@@ -2004,7 +2050,7 @@ public:
 		}
 		else
 		{
-			BOOST_ASSERT("Not a date time" && false);
+			assert("Not a date time" && false);
 			out_ += "NOT A DATE TIME";
 		}
 
