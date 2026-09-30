@@ -1,0 +1,70 @@
+﻿import { util } from '@kit.ArkTS';
+
+/**
+ * 二维码分享格式 v2 的预共享字典 (deflate 预置窗口), 与 Android 端
+ * `config_share_dict.dart` 完全一致.
+ *
+ * 由若干有代表性的配置 JSON 正文拼接而成, 编解码双方必须完全一致;
+ * 一经发布不可更改, 需要调整时应改用新的格式前缀.
+ */
+const CONFIG_SHARE_DICTIONARY_BASE64: string =
+  'eyJ0eXBlIjoieHByb3h5LWNvbmZpZyIsInZlcnNpb24iOjEsImNvbmZpZyI6eyJpZCI6InJlcDEiLCJuYW1lIjoi' +
+  '5Yqe5YWs5a6kIiwicHJveHlQYXNzIjoiaHR0cHM6Ly91c2VyOnBhc3NAcHJveHkuZXhhbXBsZS5jb206NDQzIiwi' +
+  'c25pIjoicHJveHkuZXhhbXBsZS5jb20iLCJ0dW5NdHUiOjE1MDAsInByb3h5RG9tYWlucyI6WyJnb29nbGUuY29t' +
+  'IiwieW91dHViZS5jb20iLCJ0d2l0dGVyLmNvbSIsImdpdGh1Yi5jb20iXSwicHJveHlDaWRyIjpbXSwiZ2xvYmFs' +
+  'UHJveHkiOmZhbHNlLCJwcm94eURvbWFpbnNVcmwiOiIiLCJwcm94eUNpZHJVcmwiOiIiLCJkaXNhYmxlQ2hlY2tD' +
+  'ZXJ0Ijp0cnVlLCJ1ZHBUaW1lb3V0IjozMDAsInByb3h5UGFzc1Bvb2xTaXplIjoyMCwidHVuQWRkcmVzcyI6IiIs' +
+  'InR1blByZWZpeCI6MCwiZG5zIjpbIjIyMy42LjYuNiIsIjExOS4yOS4yOS4yOSJdLCJkbnNGb3JlaWduIjpbIjgu' +
+  'OC44LjgiLCIxLjEuMS4xIl0sImRuc0ZvcmVpZ25Eb2giOiJodHRwczovL2Rucy5nb29nbGUvZG5zLXF1ZXJ5Iiwi' +
+  'ZG5zQ2FjaGUiOnRydWUsIm5vSXB2NiI6dHJ1ZSwidGVzdFVybCI6Imh0dHBzOi8vd3d3Lmdvb2dsZS5jb20iLCJi' +
+  'eXBhc3NDbiI6ZmFsc2V9fXsidHlwZSI6Inhwcm94eS1jb25maWciLCJ2ZXJzaW9uIjoxLCJjb25maWciOnsiaWQi' +
+  'OiJyZXAyIiwibmFtZSI6IuWutuW6rSIsInByb3h5UGFzcyI6Imh0dHBzOi8vdXNlcjpwYXNzQGdhdGV3YXkuZXhh' +
+  'bXBsZS5uZXQ6ODQ0MyIsInNuaSI6IiIsInR1bk10dSI6MTUwMCwicHJveHlEb21haW5zIjpbXSwicHJveHlDaWRy' +
+  'IjpbIjEuMS4xLjAvMjQiLCIyNjA2OjQ3MDA6Oi8zMiIsIjEwLjEwLjAuMC8xNiJdLCJnbG9iYWxQcm94eSI6ZmFs' +
+  'c2UsInByb3h5RG9tYWluc1VybCI6IiIsInByb3h5Q2lkclVybCI6IiIsImRpc2FibGVDaGVja0NlcnQiOmZhbHNl' +
+  'LCJ1ZHBUaW1lb3V0IjozMDAsInByb3h5UGFzc1Bvb2xTaXplIjoyMCwidHVuQWRkcmVzcyI6IiIsInR1blByZWZp' +
+  'eCI6MCwiZG5zIjpbIjIyMy42LjYuNiIsIjExOS4yOS4yOS4yOSJdLCJkbnNGb3JlaWduIjpbXSwiZG5zRm9yZWln' +
+  'bkRvaCI6IiIsImRuc0NhY2hlIjp0cnVlLCJub0lwdjYiOnRydWUsInRlc3RVcmwiOiJodHRwczovL3d3dy5nb29n' +
+  'bGUuY29tIiwiYnlwYXNzQ24iOnRydWV9fXsidHlwZSI6Inhwcm94eS1jb25maWciLCJ2ZXJzaW9uIjoxLCJjb25m' +
+  'aWciOnsiaWQiOiJyZXAzIiwibmFtZSI6IuWFrOWPuCIsInByb3h5UGFzcyI6InNvY2tzNTovL3VzZXI6cGFzc0Bo' +
+  'ay1ub2RlLTAxLnZwbi5leGFtcGxlLm9yZzoxMDgwIiwic25pIjoiIiwidHVuTXR1IjoxNTAwLCJwcm94eURvbWFp' +
+  'bnMiOltdLCJwcm94eUNpZHIiOltdLCJnbG9iYWxQcm94eSI6dHJ1ZSwicHJveHlEb21haW5zVXJsIjoiaHR0cHM6' +
+  'Ly9leGFtcGxlLmNvbS9kb21haW5zLnR4dCIsInByb3h5Q2lkclVybCI6Imh0dHBzOi8vZXhhbXBsZS5jb20vY2lk' +
+  'ci50eHQiLCJkaXNhYmxlQ2hlY2tDZXJ0Ijp0cnVlLCJ1ZHBUaW1lb3V0IjozMDAsInByb3h5UGFzc1Bvb2xTaXpl' +
+  'IjoyMCwidHVuQWRkcmVzcyI6IiIsInR1blByZWZpeCI6MCwiZG5zIjpbIjIyMy42LjYuNiIsIjExOS4yOS4yOS4y' +
+  'OSJdLCJkbnNGb3JlaWduIjpbXSwiZG5zRm9yZWlnbkRvaCI6IiIsImRuc0NhY2hlIjp0cnVlLCJub0lwdjYiOnRy' +
+  'dWUsInRlc3RVcmwiOiJodHRwczovL3d3dy5nb29nbGUuY29tIiwiYnlwYXNzQ24iOmZhbHNlfX17InR5cGUiOiJ4' +
+  'cHJveHktY29uZmlnIiwidmVyc2lvbiI6MSwiY29uZmlnIjp7ImlkIjoicmVwNCIsIm5hbWUiOiLot6/nlLHlmagi' +
+  'LCJwcm94eVBhc3MiOiJodHRwczovL3VzZXI6cGFzc3dvcmRAcXVpdGUtbG9uZy1wcm94eS1ob3N0bmFtZS5leGFt' +
+  'cGxlLmNvbTo4NDQzIiwic25pIjoiIiwidHVuTXR1IjoxNTAwLCJwcm94eURvbWFpbnMiOlsic3ViMC5pbnRlcm5h' +
+  'bC5jb3Jwb3JhdGUuZXhhbXBsZS5jb20iLCJzdWIxLmludGVybmFsLmNvcnBvcmF0ZS5leGFtcGxlLmNvbSIsInN1' +
+  'YjIuaW50ZXJuYWwuY29ycG9yYXRlLmV4YW1wbGUuY29tIiwic3ViMy5pbnRlcm5hbC5jb3Jwb3JhdGUuZXhhbXBs' +
+  'ZS5jb20iLCJzdWI0LmludGVybmFsLmNvcnBvcmF0ZS5leGFtcGxlLmNvbSIsInN1YjUuaW50ZXJuYWwuY29ycG9y' +
+  'YXRlLmV4YW1wbGUuY29tIiwic3ViNi5pbnRlcm5hbC5jb3Jwb3JhdGUuZXhhbXBsZS5jb20iLCJzdWI3LmludGVy' +
+  'bmFsLmNvcnBvcmF0ZS5leGFtcGxlLmNvbSIsInN1YjguaW50ZXJuYWwuY29ycG9yYXRlLmV4YW1wbGUuY29tIiwi' +
+  'c3ViOS5pbnRlcm5hbC5jb3Jwb3JhdGUuZXhhbXBsZS5jb20iXSwicHJveHlDaWRyIjpbIjEwLjAuMC4wLzE2Iiwi' +
+  'MTAuMS4wLjAvMTYiLCIxMC4yLjAuMC8xNiIsIjEwLjMuMC4wLzE2IiwiMTAuNC4wLjAvMTYiLCIxMC41LjAuMC8x' +
+  'NiIsIjEwLjYuMC4wLzE2IiwiMTAuNy4wLjAvMTYiLCIxMC44LjAuMC8xNiIsIjEwLjkuMC4wLzE2Il0sImdsb2Jh' +
+  'bFByb3h5IjpmYWxzZSwicHJveHlEb21haW5zVXJsIjoiIiwicHJveHlDaWRyVXJsIjoiIiwiZGlzYWJsZUNoZWNr' +
+  'Q2VydCI6dHJ1ZSwidWRwVGltZW91dCI6MzAwLCJwcm94eVBhc3NQb29sU2l6ZSI6MjAsInR1bkFkZHJlc3MiOiIi' +
+  'LCJ0dW5QcmVmaXgiOjAsImRucyI6WyIyMjMuNi42LjYiLCIxMTkuMjkuMjkuMjkiXSwiZG5zRm9yZWlnbiI6WyI4' +
+  'LjguOC44Il0sImRuc0ZvcmVpZ25Eb2giOiJodHRwczovL2Nsb3VkZmxhcmUtZG5zLmNvbS9kbnMtcXVlcnkiLCJk' +
+  'bnNDYWNoZSI6dHJ1ZSwibm9JcHY2Ijp0cnVlLCJ0ZXN0VXJsIjoiaHR0cHM6Ly93d3cuZ29vZ2xlLmNvbSIsImJ5' +
+  'cGFzc0NuIjpmYWxzZX19eyJ0eXBlIjoieHByb3h5LWNvbmZpZyIsInZlcnNpb24iOjEsImNvbmZpZyI6eyJpZCI6' +
+  'InJlcDUiLCJuYW1lIjoi5Li05pe2IiwicHJveHlQYXNzIjoiaHR0cHM6Ly8xLjIuMy40OjQ0MyIsInNuaSI6IiIs' +
+  'InR1bk10dSI6MTUwMCwicHJveHlEb21haW5zIjpbXSwicHJveHlDaWRyIjpbXSwiZ2xvYmFsUHJveHkiOmZhbHNl' +
+  'LCJwcm94eURvbWFpbnNVcmwiOiIiLCJwcm94eUNpZHJVcmwiOiIiLCJkaXNhYmxlQ2hlY2tDZXJ0Ijp0cnVlLCJ1' +
+  'ZHBUaW1lb3V0IjozMDAsInByb3h5UGFzc1Bvb2xTaXplIjoyMCwidHVuQWRkcmVzcyI6IiIsInR1blByZWZpeCI6' +
+  'MCwiZG5zIjpbIjIyMy42LjYuNiIsIjExOS4yOS4yOS4yOSJdLCJkbnNGb3JlaWduIjpbXSwiZG5zRm9yZWlnbkRv' +
+  'aCI6IiIsImRuc0NhY2hlIjp0cnVlLCJub0lwdjYiOnRydWUsInRlc3RVcmwiOiJodHRwczovL3d3dy5nb29nbGUu' +
+  'Y29tIiwiYnlwYXNzQ24iOmZhbHNlfX0=';
+
+let cachedDictionary: Uint8Array | undefined = undefined;
+
+/** 预共享字典字节 (首次访问时解码并缓存). */
+export function configShareDictionary(): Uint8Array {
+  if (cachedDictionary === undefined) {
+    cachedDictionary = new util.Base64Helper().decodeSync(CONFIG_SHARE_DICTIONARY_BASE64);
+  }
+  return cachedDictionary;
+}

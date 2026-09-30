@@ -56,8 +56,10 @@ ArkTS 客户端，配置管理与界面参考 Android 端实现：
   `https://www.jackarain.org/download/ohos-release.hap`；下载到应用私有目录后调起
   系统安装器，安装由用户确认。当前无公开的静默安装接口，也没有可读取已安装包
   SHA-1 的接口，因此以"上次已处理的远端 SHA-1"记录更新状态。
-- **二维码分享**：分享正文为明文 JSON（Android 端可解析），反之 Android 端
-  `xproxy2:`/`xproxy1:` 压缩二维码当前无法解析。
+- **二维码分享**：与 Android 端完全互通。分享正文以 deflate + 预共享字典
+  （`config_share_dict.dart` 中的同一份字典）压缩后做 base64url，前缀
+  `xproxy2:`；扫码端同时兼容 `xproxy1:`（gzip）与明文 JSON。压缩/解压为
+  ArkTS 自实现（`service/Deflate.ets`、`service/Inflate.ets`）。
 - **包标识**：沿用 `com.jackarain.xproxy`。
 
 ## 构建
