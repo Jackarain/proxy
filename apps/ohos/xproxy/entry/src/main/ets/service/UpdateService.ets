@@ -11,9 +11,9 @@ const log = new Logger('update');
 /** 发布目录的列表地址: `hash=1` 时每项带上整文件 SHA-1. */
 export const UPDATE_INDEX_URL: string = 'https://www.jackarain.org/download/?q=json&hash=1';
 /** 安装包下载地址. */
-export const UPDATE_PACKAGE_URL: string = 'https://www.jackarain.org/download/ohos-release.apk';
+export const UPDATE_PACKAGE_URL: string = 'https://www.jackarain.org/download/ohos-release.hap';
 /** 发布目录里安装包的文件名. */
-export const UPDATE_PACKAGE_NAME: string = 'ohos-release.apk';
+export const UPDATE_PACKAGE_NAME: string = 'ohos-release.hap';
 /** 启动后自动检查更新的最小间隔. */
 const CHECK_INTERVAL: number = 24 * 60 * 60 * 1000;
 /** 列表响应允许的最大长度. */

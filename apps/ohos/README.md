@@ -53,7 +53,7 @@ ArkTS 客户端，配置管理与界面参考 Android 端实现：
 - **IPv6**：与 Android 一致下发 IPv6 默认路由以接管 IPv6 流量；设备不接受 IPv6 路由时
   自动退回仅 IPv4 路由（此时 IPv6 不进入隧道），避免整体建立失败。
 - **自更新**：发布目录仍取 SHA-1 判断有无更新，安装包地址为
-  `https://www.jackarain.org/download/ohos-release.apk`；下载到应用私有目录后调起
+  `https://www.jackarain.org/download/ohos-release.hap`；下载到应用私有目录后调起
   系统安装器，安装由用户确认。当前无公开的静默安装接口，也没有可读取已安装包
   SHA-1 的接口，因此以"上次已处理的远端 SHA-1"记录更新状态。
 - **二维码分享**：分享正文为明文 JSON（Android 端可解析），反之 Android 端
