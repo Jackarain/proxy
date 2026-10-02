@@ -756,6 +756,62 @@ R"x*x*x(<html>
 		}
 	}
 
+	bool proxy_session::should_send_not_modified(
+		const string_request& request,
+		const std::string& etag,
+		std::time_t mtime,
+		bool mtime_valid) noexcept
+	{
+		// If-None-Match 的优先级高于 If-Modified-Since.
+		if (request.count(http::field::if_none_match))
+		{
+			auto value = request[http::field::if_none_match];
+			std::string_view tags(value.data(), value.size());
+
+			// 存在 If-None-Match 时, 无论是否命中都不再使用 If-Modified-Since.
+			return http_etag_match(tags, etag);
+		}
+
+		if (request.count(http::field::if_modified_since) && mtime_valid)
+		{
+			auto value = request[http::field::if_modified_since];
+			std::string_view since(value.data(), value.size());
+
+			if (auto time_c = parse_http_date(since))
+				return mtime <= *time_c;
+		}
+
+		return false;
+	}
+
+	bool proxy_session::if_range_matches(
+		std::string_view value,
+		const std::string& etag,
+		std::time_t mtime,
+		bool mtime_valid) noexcept
+	{
+		while (!value.empty() && (value.front() == ' ' || value.front() == '\t'))
+			value.remove_prefix(1);
+		while (!value.empty() && (value.back() == ' ' || value.back() == '\t'))
+			value.remove_suffix(1);
+
+		if (value.empty())
+			return false;
+
+		// ETag 形式使用强比较, 弱校验前缀 W/ 不参与匹配.
+		if (value.front() == '"' || value.starts_with("W/"))
+			return !etag.empty() && value == etag;
+
+		// 时间形式, 文件最后修改时间不得晚于 If-Range 给出的时间.
+		if (!mtime_valid)
+			return false;
+
+		if (auto time_c = parse_http_date(value))
+			return mtime <= *time_c;
+
+		return false;
+	}
+
 	void proxy_session::user_rate_limit_config(const std::string& user) noexcept
 	{
 		// 在这里使用用户指定的速率设置替换全局速率配置.
@@ -5111,6 +5167,26 @@ R"x*x*x(<html>
 
 		if (fs::exists(index_html_path, ec))
 		{
+			// index.html 同样支持 Last-Modified / ETag 缓存协商.
+			boost::system::error_code size_ec;
+			auto index_length = fs::file_size(index_html_path, size_ec);
+			auto [mtime, mtime_valid, unc_path] = file_last_write_time_raw(index_html_path);
+			(void)unc_path;
+
+			std::string last_modified;
+			std::string etag;
+			if (!size_ec && mtime_valid)
+			{
+				last_modified = http_date_string(mtime);
+				etag = make_file_etag(mtime, index_length);
+			}
+
+			if (should_send_not_modified(request, etag, mtime, mtime_valid))
+			{
+				co_await send_not_modified_http_route(request, etag, last_modified);
+				co_return;
+			}
+
 			boost::nowide::fstream file(index_html_path, std::ios::in | std::ios::binary);
 			if (file)
 			{
@@ -5126,6 +5202,10 @@ R"x*x*x(<html>
 					res.set(http::field::content_type, global_mimes.at(ext));
 				else
 					res.set(http::field::content_type, "text/plain");
+				if (!etag.empty())
+					res.set(http::field::etag, etag);
+				if (!last_modified.empty())
+					res.set(http::field::last_modified, last_modified);
 				res.keep_alive(request.keep_alive());
 				res.body() = content;
 				res.prepare_payload();
@@ -5291,6 +5371,30 @@ R"x*x*x(<html>
 			co_return;
 		}
 
+		// 获取文件元数据, 生成 Last-Modified / ETag 用于缓存协商.
+		auto [mtime, mtime_valid, unc_path] = file_last_write_time_raw(path);
+		(void)unc_path;
+
+		std::string last_modified;
+		std::string etag;
+		if (mtime_valid)
+		{
+			last_modified = http_date_string(mtime);
+			etag = make_file_etag(mtime, content_length);
+		}
+
+		// 条件请求命中(If-None-Match / If-Modified-Since)则返回 304.
+		if (should_send_not_modified(request, etag, mtime, mtime_valid))
+		{
+			log_conn_debug()
+				<< ", http "
+				<< hctx.target_
+				<< " not modified";
+
+			co_await send_not_modified_http_route(request, etag, last_modified);
+			co_return;
+		}
+
 #if defined (BOOST_ASIO_HAS_FILE)
 # if defined(_WIN32)
 		net::stream_file file(co_await net::this_coro::executor);
@@ -5330,6 +5434,16 @@ R"x*x*x(<html>
 		// 解析 http 协议中的 range 部分.
 		// parser_http_ranges 内部使用 string_view 解析并去除空白, 无需复制.
 		auto range = parser_http_ranges(request["Range"]);
+
+		// If-Range 校验失败时忽略 Range, 返回完整内容而非部分内容.
+		if (!range.empty() && request.count(http::field::if_range))
+		{
+			auto value = request[http::field::if_range];
+			std::string_view if_range(value.data(), value.size());
+
+			if (!if_range_matches(if_range, etag, mtime, mtime_valid))
+				range.clear();
+		}
 
 		// 计算 range 得到偏移位置.
 		auto [http_range_start, http_range_end, st] = offset_from_range(range, content_length);
@@ -5380,6 +5494,12 @@ R"x*x*x(<html>
 			res.set(http::field::content_type, global_mimes.at(ext));
 		else
 			res.set(http::field::content_type, "text/plain");
+
+		// 返回缓存校验头, 便于客户端进行条件请求.
+		if (!etag.empty())
+			res.set(http::field::etag, etag);
+		if (!last_modified.empty())
+			res.set(http::field::last_modified, last_modified);
 
 		if (st == http::status::ok)
 			res.set(http::field::accept_ranges, "bytes");
@@ -6509,6 +6629,36 @@ R"x*x*x(<html>
 		{
 			log_conn_warning()
 				<< ", send http response error: "
+				<< ec.message();
+		}
+
+		co_return;
+	}
+
+	net::awaitable<void> proxy_session::send_not_modified_http_route(
+		const string_request& request,
+		const std::string& etag,
+		const std::string& last_modified) noexcept
+	{
+		boost::system::error_code ec;
+
+		string_response res{ http::status::not_modified, request.version() };
+		res.set(http::field::server, version_string);
+		res.set(http::field::date, server_date_string());
+		if (!etag.empty())
+			res.set(http::field::etag, etag);
+		if (!last_modified.empty())
+			res.set(http::field::last_modified, last_modified);
+		res.keep_alive(request.keep_alive());
+		res.body() = std::string{};
+		res.prepare_payload();
+
+		http::serializer<false, string_body, http::fields> sr(res);
+		co_await http::async_write(m_local_socket, sr, net_awaitable[ec]);
+		if (ec)
+		{
+			log_conn_warning()
+				<< ", send 304 response error: "
 				<< ec.message();
 		}
 

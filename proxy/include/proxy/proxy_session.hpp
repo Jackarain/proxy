@@ -991,6 +991,26 @@ namespace proxy {
 			std::string body,
 			bool keep_alive = true) noexcept;
 
+		// 根据 If-None-Match / If-Modified-Since 判断是否应返回 304 Not Modified.
+		static bool should_send_not_modified(
+			const string_request& request,
+			const std::string& etag,
+			std::time_t mtime,
+			bool mtime_valid) noexcept;
+
+		// 根据 If-Range 判断 range 请求是否仍然有效(无效则忽略 Range 返回完整内容).
+		static bool if_range_matches(
+			std::string_view value,
+			const std::string& etag,
+			std::time_t mtime,
+			bool mtime_valid) noexcept;
+
+		// 发送 304 Not Modified 响应(带 ETag 与 Last-Modified).
+		net::awaitable<void> send_not_modified_http_route(
+			const string_request& request,
+			const std::string& etag,
+			const std::string& last_modified) noexcept;
+
 		//////////////////////////////////////////////////////////////////////////
 		// 流控制工具
 
