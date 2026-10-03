@@ -1003,9 +1003,9 @@ private:
 			return;
 
 #ifdef WIN32
-		::_write(m_fd, str, static_cast<unsigned int>(size));
+		(void)::_write(m_fd, str, static_cast<unsigned int>(size));
 #else
-		::write(m_fd, str, static_cast<size_t>(size));
+		(void)::write(m_fd, str, static_cast<size_t>(size));
 #endif
 	}
 
